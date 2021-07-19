@@ -1,8 +1,8 @@
-#include "../../interface/petscdevice.hpp"
+#include "../../interface/cupmdevice.hpp"
 
 namespace Petsc {
 
-// Internal "impls" class for CUPMDevice. Each instance represents a single cupm device
+/* internal "impls" class for CUPMDevice. Each instance represents a single cupm device */
 template <CUPMDeviceKind T>
 class CUPMDevice<T>::PetscDeviceInternal
 {
@@ -11,8 +11,7 @@ private:
   cupmDeviceProp_t _dprop;
 
 protected:
-  //! Default constructor
-  // protected since this class should never be instantiated outside CUPMDevice
+  /* default constructor, protected since this class should never be instantiated outside CUPMDevice */
   explicit PetscDeviceInternal(int dev) PETSC_NOEXCEPT : _id(dev) {}
 
   PETSC_NODISCARD PetscErrorCode __initialize() PETSC_NOEXCEPT
@@ -36,24 +35,23 @@ PetscErrorCode CUPMDevice<T>::__initialize() PETSC_NOEXCEPT
   cerr = cupmGetDeviceCount(&ndev);CHKERRCUPM(cerr);
   _devices.reserve(ndev);
   for (int i = 0; i < ndev; ++i) {
-    PetscDeviceInternal pdi = new PetscDeviceInternal(i);
-    PetscErrorCode      ierr;
+    PetscErrorCode ierr;
 
-    ierr = pdi->__initialize();CHKERRQ(ierr);
-    _devices.emplace_back(pdi);
+    _devices.emplace_back(std::unique_ptr<PetscDeviceInternal>(new PetscDeviceInternal(i)));
+    ierr = _devices[i]->__initialize();CHKERRQ(ierr);
   }
   _initialized = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
 template <CUPMDeviceKind T>
-PetscErrorCode CUPMDevice<T>::getDefaultDevice(PetscDevice &device) PETSC_NOEXCEPT
+PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice &device) PETSC_NOEXCEPT
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = this->__initialize();CHKERRQ(ierr);
-  // default device is always the first device for now?
+  /* default device is always the first device for now? */
   device->deviceId = _devices[0]->_id;
   device->ops->createcontext = this->_create;
   PetscFunctionReturn(0);
@@ -63,8 +61,8 @@ template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::configureDevice(PetscDevice &device) PETSC_NOEXCEPT
 {
   PetscFunctionBegin;
-  // does nothing for now
+  /* does nothing for now */
   PetscFunctionReturn(0);
 }
 
-} // namespace Petsc
+} /* namespace Petsc */

@@ -8,43 +8,6 @@ static PetscBool PetscDeviceRegisterAllCalled  = PETSC_FALSE;
 static PetscBool PetscDevicePackageInitialized = PETSC_FALSE;
 
 /*@C
-  PetscDeviceContextSetFromOptions - Configure a PetscDeviceContext from the options database
-
-  Collective on comm, Asynchronous
-
-  Input Parameters:
-+ comm   - MPI communicator on which to query the options database
-. prefix - prefix to prepend to all options database queries, NULL if not needed
-- dctx   - The PetscDeviceContext to configure
-
-  Output Parameter:
-. dctx - The PetscDeviceContext
-
-  Options Database:
-. -device_context_stream_type - type of stream to create inside the PetscDeviceContext -
-  PetscDeviceContextSetStreamType()
-
-  Level: beginner
-
-.seealso: PetscDeviceContextSetStreamType()
-@*/
-PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix[], PetscDeviceContext dctx)
-{
-  PetscBool      flag;
-  PetscInt       stype;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (prefix) {PetscValidCharPointer(prefix,2);}
-  PetscValidDeviceContext(dctx,3);
-  ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
-  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,3,PetscStreamTypes[dctx->streamType],&stype,&flag);CHKERRQ(ierr);
-  if (flag) {ierr = PetscDeviceContextSetStreamType(dctx,(PetscStreamType)stype);CHKERRQ(ierr);}
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
   PetscDeviceRegisterAll - Registers all the components in the PetscDevice package.
 
   Not Collective
@@ -95,6 +58,7 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  if (PETSC_DEVICE_DEFAULT == PETSC_DEVICE_INVALID) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"No suitable PetscDeviceKind found, must configure PETSc with a device backend enabled");
   if (PetscDevicePackageInitialized) PetscFunctionReturn(0);
   PetscDevicePackageInitialized = PETSC_TRUE;
   ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);

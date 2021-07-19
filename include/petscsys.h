@@ -119,13 +119,13 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR           constexpr
 #  define PETSC_NOEXCEPT            noexcept
 #  define PETSC_NOEXCEPT_ARG(cond_) noexcept(cond_)
-#  define PETSC_EXPLICIT_DEFAULT    = default
+#  define PETSC_CXX_DEFAULT(func_)  func_ = default
 #else
 #  define PETSC_NULLPTR             NULL
 #  define PETSC_CONSTEXPR
 #  define PETSC_NOEXCEPT
 #  define PETSC_NOEXCEPT_ARG(cond_)
-#  define PETSC_EXPLICIT_DEFAULT
+#  define PETSC_CXX_DEFAULT(func_)
 #endif
 
 #if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX17)

@@ -4,14 +4,6 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
-#if PetscDefined(HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
-#endif
-#if PetscDefined(HAVE_HIP)
-PETSC_EXTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
-#endif
-
-#warning FIX ME! Need to change petsclanglinter to parse new error macros
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 void PetscValidDeviceKind(int,int);
 template <typename T>
@@ -67,7 +59,9 @@ void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #define PetscValidDeviceContext(_p_dev_ctx__,_p_arg__)              \
   do {                                                              \
     PetscValidPointer(_p_dev_ctx__,_p_arg__);                       \
-    PetscValidDevice((_p_dev_ctx__)->device,_p_arg__);              \
+    if ((_p_dev_ctx__)->device) {                                   \
+      PetscValidDevice((_p_dev_ctx__)->device,_p_arg__);            \
+    }                                                               \
     PetscValidStreamType((_p_dev_ctx__)->streamType,_p_arg__);      \
   } while (0)
 
@@ -131,8 +125,8 @@ struct _n_PetscDeviceContext {
   PetscBool                 setup;
 };
 
-/* Called in debug-mode when a context claims it is idle to check that it isn't lying. A no-op when debugging is
- disabled */
+/* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
+   no-op when debugging is disabled */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
@@ -146,6 +140,23 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(Petsc
   PetscFunctionReturn(0);
 }
 
-/* Internal functions */
+/* PetscDevice Internal Functions */
+PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevices_Internal(void);
+PETSC_INTERN PetscDevice    PetscDeviceDefaultKind_Internal(PetscDeviceKind);
+/* More general form of PetscDeviceDefaultKind_Internal(), as it calls the former using
+   the automatically selected default PetscDeviceKind */
+PETSC_STATIC_INLINE PetscDevice PetscDeviceDefault_Internal(void)
+{
+  return PetscDeviceDefaultKind_Internal(PETSC_DEVICE_DEFAULT);
+}
+
+/* PetscDeviceContext Internal Functions */
 PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm,const char[]);
+#if PetscDefined(HAVE_CUDA)
+PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
+#endif
+#if PetscDefined(HAVE_HIP)
+PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
+#endif
+
 #endif /* PETSC_DEVICEIMPL_H */

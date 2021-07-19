@@ -1171,9 +1171,10 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 #endif
 
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  /* guard for cuda and hip since not all devices yet supported */
+  ierr = PetscDeviceInitializeDefaultDevices_Internal();CHKERRQ(ierr);
   ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD,NULL);CHKERRQ(ierr);
 #endif
+
   /*
       Set flag that we are completely initialized
   */

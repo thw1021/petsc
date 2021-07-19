@@ -1,4 +1,4 @@
-#include "../contextcupm.hpp" /*I "petscdevice.h" I*/
+#include "../cupmcontext.hpp" /*I "petscdevice.h" I*/
 
 static const Petsc::CUPMContextHip contextHip(PetscDeviceContextCreate_HIP);
 

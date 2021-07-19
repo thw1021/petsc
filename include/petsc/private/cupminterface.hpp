@@ -1,43 +1,50 @@
-#ifndef PETSC_CUPMTRAITS_HPP
-#define PETSC_CUPMTRAITS_HPP
+#ifndef PETSCCUPMINTERFACE_HPP
+#define PETSCCUPMINTERFACE_HPP
+
+#if defined(__cplusplus)
 
 #include <petsc/private/traithelpers.hpp>
 
 namespace Petsc {
 
-static PETSC_CONSTEXPR const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDeviceKind","CUPMDeviceKind::",PETSC_NULLPTR};
-
+/* enum describing available cupm devices */
 enum class CUPMDeviceKind : int {
   CUDA,
   HIP
 };
+static PETSC_CONSTEXPR const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDeviceKind","CUPMDeviceKind::",PETSC_NULLPTR};
 
 #if defined(CHKERRCUPM)
 #error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
 #endif
-// A backend agnostic CHKERRCUPM() function, this will only work inside the member
-// functions of a class inheriting from cupmTypeTraits
+/* A backend agnostic CHKERRCUPM() function, this will only work inside the member
+   functions of a class inheriting from CUPMInterface */
 #define CHKERRCUPM(cerr)                                                \
   do {                                                                  \
     if (PetscUnlikely(cerr)) {                                          \
       const char *name    = cupmGetErrorName(cerr);                     \
       const char *descr   = cupmGetErrorString(cerr);                   \
       const char *backend = cupmName();                                 \
-      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",backend,static_cast<int>(cerr),name,descr); \
+      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
+               backend,static_cast<int>(cerr),name,descr);              \
     }                                                                   \
   } while (0)
 
-// Forward declare
-template <CUPMDeviceKind T> struct CUPMTypeTraits;
+/*
+  A templated C++ struct that defines the entire CUPM interface. Use of templating vs
+  preprocessor macros allows us to use both interfaces simultaneously as well as easily
+  import them into classes.
+ */
+template <CUPMDeviceKind T> struct CUPMInterface;
 
 #if PetscDefined(HAVE_CUDA)
 template <>
-struct CUPMTypeTraits<CUPMDeviceKind::CUDA>
+struct CUPMInterface<CUPMDeviceKind::CUDA>
 {
   static PETSC_CONSTEXPR const CUPMDeviceKind kind = CUPMDeviceKind::CUDA;
 
   PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
-  { return CUPMDeviceKinds[static_cast<int>(CUPMDeviceKind::CUDA)];}
+  { return CUPMDeviceKinds[static_cast<int>(kind)];}
 
   using cupmError_t        = cudaError_t;
   using cupmEvent_t        = cudaEvent_t;
@@ -48,16 +55,16 @@ struct CUPMTypeTraits<CUPMDeviceKind::CUDA>
   using cupmSolverError_t  = cusolverStatus_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
 
-  // Error functions
+  /* error functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,cudaGetErrorName);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
-  // Values
+  /* values */
   static PETSC_CONSTEXPR const auto cupmSuccess           = cudaSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady     = cudaErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = cudaStreamNonBlocking;
 
-  // Regular functions
+  /* regular functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,cudaGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,cudaEventDestroy);
@@ -69,10 +76,10 @@ struct CUPMTypeTraits<CUPMDeviceKind::CUDA>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,cudaStreamQuery);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,cudaStreamSynchronize);
 
-  // There isn't a good way to auto-template this stuff between the cublas handle and
-  // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
-  // mention their hip counterparts) do ~slightly~ different things. So we just overload
-  // and accept the bloat.
+  /* There isn't a good way to auto-template this stuff between the cublas handle and
+     cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
+     mention their hip counterparts) do ~slightly~ different things. So we just overload
+     and accept the bloat */
   PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
@@ -165,12 +172,12 @@ struct CUPMTypeTraits<CUPMDeviceKind::CUDA>
 
 #if PetscDefined(HAVE_HIP)
 template <>
-struct CUPMTypeTraits<CUPMDeviceKind::HIP>
+struct CUPMInterface<CUPMDeviceKind::HIP>
 {
   static PETSC_CONSTEXPR const CUPMDeviceKind kind = CUPMDeviceKind::HIP;
 
   PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
-  { return CUPMDeviceKinds[static_cast<int>(CUPMDeviceKind::HIP)];}
+  { return CUPMDeviceKinds[static_cast<int>(kind)];}
 
   using cupmError_t        = hipError_t;
   using cupmEvent_t        = hipEvent_t;
@@ -181,16 +188,16 @@ struct CUPMTypeTraits<CUPMDeviceKind::HIP>
   using cupmSolverError_t  = hipsolverStatus_t;
   using cupmDeviceProp_t   = hipDeviceProp;
 
-  // Error functions
+  /* error functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
-  // Values
+  /* values */
   static PETSC_CONSTEXPR const auto cupmSuccess           = hipSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady     = hipErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = hipStreamNonBlocking;
 
-  // Functions
+  /* functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,hipEventDestroy);
@@ -275,37 +282,43 @@ struct CUPMTypeTraits<CUPMDeviceKind::HIP>
 };
 #endif /* PetscDefined(HAVE_HIP) */
 
-} // namespace Petsc
+} /* namespace Petsc */
 
-// shorthand for bringing all of the typedefs from the base CUPMTypeTraits class into your
-// own, it's annoying that c++ doesn't have a way to do this automatically
-#define PETSC_CUPM_INHERIT_TRAITS_TYPEDEFS_USING(base_name_)    \
-  /* types */                                                   \
-  using typename base_name_::cupmError_t;                       \
-  using typename base_name_::cupmEvent_t;                       \
-  using typename base_name_::cupmStream_t;                      \
-  using typename base_name_::cupmBlasError_t;                   \
-  using typename base_name_::cupmSolverError_t;                 \
-  using typename base_name_::cupmBlasHandle_t;                  \
-  using typename base_name_::cupmSolverHandle_t;                \
-  using typename base_name_::cupmDeviceProp_t;                  \
-  /* variables */                                               \
-  using base_name_::cupmSuccess;                                \
-  using base_name_::cupmErrorNotReady;                          \
-  using base_name_::cupmStreamNonBlocking;                      \
-  /* functions */                                               \
-  using base_name_::cupmName;                                   \
-  using base_name_::cupmGetDeviceCount;                         \
-  using base_name_::cupmGetErrorName;                           \
-  using base_name_::cupmGetErrorString;                         \
-  using base_name_::cupmEventCreate;                            \
-  using base_name_::cupmEventDestroy;                           \
-  using base_name_::cupmEventRecord;                            \
-  using base_name_::cupmStreamCreate;                           \
-  using base_name_::cupmStreamCreateWithFlags;                  \
-  using base_name_::cupmStreamDestroy;                          \
-  using base_name_::cupmStreamWaitEvent;                        \
-  using base_name_::cupmStreamQuery;                            \
+/* shorthand for bringing all of the typedefs from the base CUPMTypeTraits class into your
+   own, it's annoying that c++ doesn't have a way to do this automatically */
+
+#define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
+  using base_name_ = CUPMInterface<Tp_>;                                \
+  /* introspective typedefs */                                          \
+  using base_name_::kind;                                               \
+  /* types */                                                           \
+  using typename base_name_::cupmError_t;                               \
+  using typename base_name_::cupmEvent_t;                               \
+  using typename base_name_::cupmStream_t;                              \
+  using typename base_name_::cupmBlasError_t;                           \
+  using typename base_name_::cupmSolverError_t;                         \
+  using typename base_name_::cupmBlasHandle_t;                          \
+  using typename base_name_::cupmSolverHandle_t;                        \
+  using typename base_name_::cupmDeviceProp_t;                          \
+  /* variables */                                                       \
+  using base_name_::cupmSuccess;                                        \
+  using base_name_::cupmErrorNotReady;                                  \
+  using base_name_::cupmStreamNonBlocking;                              \
+  /* functions */                                                       \
+  using base_name_::cupmName;                                           \
+  using base_name_::cupmGetDeviceCount;                                 \
+  using base_name_::cupmGetErrorName;                                   \
+  using base_name_::cupmGetErrorString;                                 \
+  using base_name_::cupmEventCreate;                                    \
+  using base_name_::cupmEventDestroy;                                   \
+  using base_name_::cupmEventRecord;                                    \
+  using base_name_::cupmStreamCreate;                                   \
+  using base_name_::cupmStreamCreateWithFlags;                          \
+  using base_name_::cupmStreamDestroy;                                  \
+  using base_name_::cupmStreamWaitEvent;                                \
+  using base_name_::cupmStreamQuery;                                    \
   using base_name_::cupmStreamSynchronize;
+
+#endif /* __cplusplus */
 
 #endif /* PETSC_CUPMTRAITS_HPP */

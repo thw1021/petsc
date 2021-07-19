@@ -2,7 +2,7 @@
 #define PETSCDEVICECONTEXTCUPM_HPP
 
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
-#include <petsc/private/cupmtraits.hpp>
+#include <petsc/private/cupminterface.hpp>
 
 #if !defined(PETSC_HAVE_CXX_DIALECT_CXX11)
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
@@ -14,11 +14,10 @@ namespace Petsc {
 template <CUPMDeviceKind T> class CUPMContext;
 
 template <CUPMDeviceKind T>
-class CUPMContext : CUPMTypeTraits<T>
+class CUPMContext : CUPMInterface<T>
 {
 public:
-  using cupmType_t = CUPMTypeTraits<T>;
-  PETSC_CUPM_INHERIT_TRAITS_TYPEDEFS_USING(cupmType_t);
+  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
 
   // This is the canonical PETSc "impls" struct that normally resides in a standalone impls
   // header, but since we are using the power of templates it must be declared part of

@@ -12,7 +12,6 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
     PetscErrorCode     ierr;
 
     PetscFunctionBegin;
-    *dctx          = PETSC_NULLPTR;
     ierr           = PetscNew(&dc);CHKERRQ(ierr);
     dc->id         = PetscDeviceContextID++;
     dc->idle       = PETSC_TRUE;
@@ -27,7 +26,7 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
 
     PetscFunctionBegin;
     if (PetscUnlikelyDebug(dctx->numChildren)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %D un-restored children, must call PetscDeviceContextRestore() on all children before destroying",dctx->numChildren);
-    ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);
+    if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
     ierr = PetscDeviceDestroy(&dctx->device);CHKERRQ(ierr);
     ierr = PetscFree(dctx->childIDs);CHKERRQ(ierr);
     ierr = PetscFree(dctx);CHKERRQ(ierr);
@@ -100,7 +99,7 @@ PetscErrorCode objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::final
 
   Level: beginner
 
-.seealso: PetscDeviceContextDuplicate(), PetscDeviceContextSetType(),
+.seealso: PetscDeviceContextDuplicate(), PetscDeviceContextSetDevice(),
 PetscDeviceContextSetStreamType(), PetscDeviceContextSetUp(), PetscDeviceContextDestroy(),
 PetscDeviceContextSetFromOptions()
 @*/
@@ -135,7 +134,7 @@ PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetUp(), PetscDeviceContextSynchronize()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextSetUp(), PetscDeviceContextSynchronize()
 @*/
 PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 {
@@ -168,7 +167,7 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 
   Level: intermediate
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(),
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(),
 PetscDeviceContextGetStreamType(), PetscDeviceContextSetUp(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStreamType type)
@@ -202,7 +201,7 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
 
   Level: intermediate
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(),
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(),
 PetscDeviceContextSetStreamType(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStreamType *type)
@@ -214,6 +213,25 @@ PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStr
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextSetDevice - Set the underlying device for the PetscDeviceContext
+
+  Not Collective, Possibly Synchronous
+
+  Input Paramaters:
++ dctx   - The PetscDeviceContext
+- device - The PetscDevice
+
+  Notes:
+  This routine is effectively PetscDeviceContext's "set-type" (so every PetscDeviceContext
+  must also have an attached PetscDevice). Unlike the usual set-type semantics, it is
+  not stricly necessary to set a contexts device to enable usage, any created device
+  contexts will always come equipped with the "default" device.
+
+  Level: intermediate
+
+.seealso: PetscDeviceGetDevice(), PetscDeviceContextGetDevice()
+@*/
 PetscErrorCode PetscDeviceContextSetDevice(PetscDeviceContext dctx, PetscDevice device)
 {
   PetscErrorCode ierr;
@@ -231,6 +249,22 @@ PetscErrorCode PetscDeviceContextSetDevice(PetscDeviceContext dctx, PetscDevice 
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscDeviceContextGetDevice - Get the underlying PetscDevice for a PetscDeviceContext
+
+  Not Collective, Asynchronous
+
+  Input Parameter:
+. dctx - the PetscDeviceContext
+
+  Output Parameter:
+. device - The PetscDevice
+
+  Notes:
+  This is a borrowed reference, the user should not destroy the device.
+
+.seealso: PetscDeviceContextSetDevice(), PetscDevice
+@*/
 PetscErrorCode PetscDeviceContextGetDevice(PetscDeviceContext dctx, PetscDevice *device)
 {
   PetscFunctionBegin;
@@ -255,7 +289,7 @@ PetscErrorCode PetscDeviceContextGetDevice(PetscDeviceContext dctx, PetscDevice 
   Level: beginner
 
 .seealso: PetscDeviceContextTypes, PetscDeviceContextCreate(),
-PetscDeviceContextSetType(), PetscDeviceContextDestroy(), PetscDeviceContextSetFromOptions()
+PetscDeviceContextSetDevice(), PetscDeviceContextDestroy(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 {
@@ -263,6 +297,10 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
+  if (!dctx->device) {
+    ierr = PetscInfo2(NULL,"PetscDeviceContext %d did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetDevice(dctx,PetscDeviceDefault_Internal());CHKERRQ(ierr);
+  }
   if (dctx->setup) PetscFunctionReturn(0);
   ierr = (*dctx->ops->setup)(dctx);CHKERRQ(ierr);
   dctx->setup = PETSC_TRUE;
@@ -288,7 +326,7 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetType(), PetscDeviceContextSetStreamType()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextSetStreamType()
 @*/
 PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceContext *dctxdup)
 {
@@ -647,76 +685,6 @@ static PetscDeviceContext globalContext      = PETSC_NULLPTR;
 static PetscBool          globalContextSetup = PETSC_FALSE;
 static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
 
-#if 0
-/*@C
-  PetscDeviceContextSetDefaultRootContextSettings - Set the default settings for the root global context
-
-  Input Parameters:
-+ type  - The PetscDeviceContextType, NULL if not needed
-- stype - The PetscStreamType, PETSC_STREAM_MAX_TYPE if not needed
-
-  Notes:
-  This is one of the few functions that one should only call before PetscInitialize(), as calling this routine after
-  the root PetscDeviceContext has already been created will have no effect. It is highly unlikely that the user would
-  need to call this routine however, the default values are automatically optimally chosen based on availability.
-
-  Level: advanced
-
-.seealso: PetscDeviceContextGetDefaultRootContextSettings(), PetscDeviceContextGetCurrentContext()
-@*/
-PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDevice device, PetscStreamType stype)
-{
-  if (PetscUnlikelyDebug(globalContextSetup)) {
-    PetscBool petscInit;
-
-    PetscInitialized(&petscInit);
-    if (petscInit) {
-      PetscFunctionBegin; /* PetscFunctionBegin so SETERRQ knows where we are */
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Root PetscDeviceContext has already been setup and created, setting default has no effect");
-    } else {
-      /* Since this may be called before PetscInitialize() we can't use PetscError() */
-      printf("Root PetscDeviceContext has already been setup and created, setting default has no effect\n");
-    }
-  } else {
-    if (type)                      defaultContextType = type;
-    if (stype != PETSC_STREAM_MAX) defaultStreamType  = stype;
-  }
-  return 0;
-}
-
-/*@C
-  PetscDeviceContextGetDefaultRootContextSettings - Get the current default root context settings
-
-  Output Parameters:
-+ type  - The default PetscDeviceContextType, NULL if not needed
-- stype - The default PetscStreamType, NULL if not needed
-
-  Note:
-  Can be called prior to PetscInitialize(), but does no error checking
-
-  Level: advanced
-
-.seealso: PetscDeviceContextSetDefaultRootContextSettings(), PetscDeviceContextGetCurrentContext()
-@*/
-PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDeviceContextType *type, PetscStreamType *stype)
-{
-#if PetscDefined(USE_DEBUG)
-  PetscBool petscInit;
-
-  PetscInitialized(&petscInit);
-  if (petscInit) {
-    PetscFunctionBegin;
-    if (type)   *type = defaultContextType;
-    if (stype) *stype = defaultStreamType;
-    PetscFunctionReturn(0);
-  }
-#endif
-  if (type)   *type = defaultContextType;
-  if (stype) *stype = defaultStreamType;
-  return 0;
-}
-#endif
-
 /* automatically registered to PetscFinalize() when first context is instantiated, do not
    call */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Internal(void)
@@ -736,7 +704,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Intern
    SetUp() as the user may wish to change types after PetscInitialize() */
 PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm, const char prefix[])
 {
-  PetscDevice    device;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -744,9 +711,8 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm, c
   ierr = PetscRegisterFinalize(PetscDeviceContextDestroyGlobalContext_Internal);CHKERRQ(ierr);
   ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
   if (PetscUnlikelyDebug(globalContext->id != 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root current PetscDeviceContext should have id = 0, however it has id = %D",globalContext->id);
+  ierr = PetscDeviceContextSetDevice(globalContext,PetscDeviceDefault_Internal());CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
-  ierr = PetscDeviceGetDevice(PETSC_DEVICE_DEFAULT,&device);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetDevice(globalContext,device);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetFromOptions(comm,prefix,globalContext);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -778,6 +744,10 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
   PetscValidPointer(dctx,1);
   if (PetscUnlikely(!globalContextSetup)) {
     PetscErrorCode ierr;
+
+    /* if there is no available device backend, PetscDeviceInitializePackage() will fire a
+       PETSC_ERR_SUP_SYS error */
+    ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
     ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
     globalContextSetup = PETSC_TRUE;
   }
@@ -811,5 +781,47 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
   PetscValidDeviceContext(dctx,1);
   globalContext = dctx;
   ierr = PetscInfo1(NULL,"Set global device context id %D\n",dctx->id);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscDeviceContextSetFromOptions - Configure a PetscDeviceContext from the options database
+
+  Collective on comm, Asynchronous
+
+  Input Parameters:
++ comm   - MPI communicator on which to query the options database
+. prefix - prefix to prepend to all options database queries, NULL if not needed
+- dctx   - The PetscDeviceContext to configure
+
+  Output Parameter:
+. dctx - The PetscDeviceContext
+
+  Options Database:
+. -device_context_device_kind - the kind of PetscDevice to attach by default
+. -device_context_stream_type - type of stream to create inside the PetscDeviceContext -
+  PetscDeviceContextSetStreamType()
+
+  Level: beginner
+
+.seealso: PetscDeviceContextSetStreamType()
+@*/
+PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix[], PetscDeviceContext dctx)
+{
+  PetscBool      flag;
+  PetscInt       stype,dkind;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (prefix) {PetscValidCharPointer(prefix,2);}
+  PetscValidDeviceContext(dctx,3);
+  ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-device_context_device_kind","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceKinds+1,2,dctx->device ? PetscDeviceKinds[dctx->device->kind] : PetscDeviceKinds[PETSC_DEVICE_DEFAULT],&dkind,&flag);CHKERRQ(ierr);
+  if (flag) {
+    ierr = PetscDeviceContextSetDevice(dctx,PetscDeviceDefaultKind_Internal((PetscDeviceKind)dkind));CHKERRQ(ierr);
+  }
+  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,3,PetscStreamTypes[dctx->streamType],&stype,&flag);CHKERRQ(ierr);
+  if (flag) {ierr = PetscDeviceContextSetStreamType(dctx,(PetscStreamType)stype);CHKERRQ(ierr);}
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
