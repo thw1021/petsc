@@ -36,9 +36,9 @@ private:
   static cupmSolverHandle_t _solverhandle;
 
   // handle manipulation functions
-  using cupmType_t::InitializeHandle;
-  using cupmType_t::SetHandleStream;
-  using cupmType_t::DestroyHandle;
+  using cupmInterface_t::InitializeHandle;
+  using cupmInterface_t::SetHandleStream;
+  using cupmInterface_t::DestroyHandle;
 
   PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode finalizeBLASHandle(void) PETSC_NOEXCEPT
   { return DestroyHandle(_blashandle);}

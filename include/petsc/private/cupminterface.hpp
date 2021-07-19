@@ -3,6 +3,7 @@
 
 #if defined(__cplusplus)
 
+#include <petscdevice.h>
 #include <petsc/private/traithelpers.hpp>
 
 namespace Petsc {

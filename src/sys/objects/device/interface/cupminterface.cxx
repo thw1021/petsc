@@ -1,6 +1,7 @@
-#include <petsc/private/cupminterface.hpp>
+#include <petsc/private/cupminterface.hpp> /* I "petscdevice.h" */
 
 /* This file serves simply to store the definitions of all the static variables etc. */
+
 namespace Petsc {
 
 #if PetscDefined(HAVE_CUDA)
