@@ -17,14 +17,14 @@ int main(int argc,char ** argv)
   DM                plex;
   PetscSection      section;
   PetscInt          Ne,Ni;
-  PetscInt          nodeOffset,edgeOffset, k = 2,nnode,nedge;
+  PetscInt          nodeOffset,k = 2,nedge;
 
   ierr = PetscInitialize(&argc,&argv,NULL,NULL);if (ierr) return ierr;
   /* Work around bug that assumes DMNetwork edges must have DOF */
   ierr = PetscOptionsSetValue(NULL,"-petscpartitioner_use_vertex_weights","No");CHKERRQ(ierr);
   comm = PETSC_COMM_WORLD;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&network);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(network,"nodestruct",0,&keyNode);CHKERRQ(ierr);
@@ -33,10 +33,8 @@ int main(int argc,char ** argv)
   Ne = 2;
   Ni = 1;
   nodeOffset = (Ne+Ni)*rank;   /* The global node index of the first node defined on this process */
-  edgeOffset = k*Ni*rank;      /* The global edge index of the first onde on this process */
 
   /* There are three nodes on each rank and two edges. The edges only connect nodes on the given rank */
-  nnode = Ne + Ni;
   nedge = k * Ni;
 
   ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
@@ -46,14 +44,14 @@ int main(int argc,char ** argv)
   edgelist[3] = nodeOffset + 2;
 
   ierr = DMNetworkSetNumSubNetworks(network,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(network,"Subnetwork 1",nnode,nedge,edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(network,"Subnetwork 1",nedge,edgelist,NULL);CHKERRQ(ierr);
   ierr = DMNetworkLayoutSetUp(network);CHKERRQ(ierr);
 
   /* Add components and variables for the network */
   ierr = DMNetworkGetSubnetwork(network,0,&nv,&ne,&nodes,&edges);CHKERRQ(ierr);
   for (e = 0; e < ne; e++) {
     /* The edges have no degrees of freedom */
-    ierr = DMNetworkAddComponent(network,edges[e],keyEdge,NULL,0);CHKERRQ(ierr);
+    ierr = DMNetworkAddComponent(network,edges[e],keyEdge,NULL,1);CHKERRQ(ierr);
   }
   for (v = 0; v < nv; v++) {
     ierr = DMNetworkAddComponent(network,nodes[v],keyNode,NULL,2);CHKERRQ(ierr);
