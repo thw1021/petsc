@@ -107,8 +107,9 @@ PetscErrorCode CUPMContext<T>::changeStreamType(PetscDeviceContext dctx, PetscSt
   if (dci->stream) {
     cupmError_t cerr;
     cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);
+    dci->stream = PETSC_NULLPTR;
   }
-  // set these to null so they aren't usable until setup is called again
+  /* set these to null so they aren't usable until setup is called again */
   dci->blas   = PETSC_NULLPTR;
   dci->solver = PETSC_NULLPTR;
   PetscFunctionReturn(0);
@@ -122,6 +123,7 @@ PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
   cupmError_t              cerr;
 
   PetscFunctionBegin;
+  if (dci->stream) {cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);}
   switch (dctx->streamType) {
   case PETSC_STREAM_GLOBAL_BLOCKING:
     /* don't create a stream for global blocking */
@@ -137,7 +139,7 @@ PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %d",dctx->streamType);
     break;
   }
-  cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);
+  if (!dci->event) {cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);}
   ierr = setupHandles(dci);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -154,7 +156,7 @@ PetscErrorCode CUPMContext<T>::query(PetscDeviceContext dctx, PetscBool *idle) P
   else if (cerr == cupmErrorNotReady) {
     *idle = PETSC_FALSE;
   } else {
-    // somethings gone wrong
+    /* somethings gone wrong */
     CHKERRCUPM(cerr);
   }
   PetscFunctionReturn(0);
