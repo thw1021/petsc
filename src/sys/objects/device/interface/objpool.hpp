@@ -3,6 +3,7 @@
 
 #include <petscsys.h>
 #include <stack>
+#include <functional>
 
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
 #include <type_traits>
@@ -22,6 +23,7 @@ public:
   PETSC_NODISCARD PetscErrorCode create(value_type*)  PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode destroy(value_type&) PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode reset(value_type&)   PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode finalize(void)       PETSC_NOEXCEPT;
 
 protected:
   // make the constructor protected, this forces this class to be derived from to ever be
@@ -66,6 +68,8 @@ public:
     ierr = this->create(&obj);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
+
+  PETSC_NODISCARD PetscErrorCode finalize(void) const PETSC_NOEXCEPT { return 0;}
 };
 
 // Base class to object pool, defines helpful typedefs and stores the allocator instance
@@ -78,10 +82,10 @@ public:
 protected:
   allocator_t _alloc;
 
-  inline PETSC_NODISCARD allocator_t& getAllocator() PETSC_NOEXCEPT
+  inline PETSC_NODISCARD allocator_t& __getAllocator() PETSC_NOEXCEPT
   { return this->_alloc;}
 
-  inline PETSC_NODISCARD const allocator_t& getAllocator() const PETSC_NOEXCEPT
+  inline PETSC_NODISCARD const allocator_t& __getAllocator() const PETSC_NOEXCEPT
   { return this->_alloc;}
 
   // default constructor
@@ -119,19 +123,15 @@ public:
 
 protected:
   stack_type _stack;
-  PetscBool  _registered;
+  PetscBool  _registered = PETSC_FALSE;
 
-  // This exists to allow one to pass a function from C++ to PetscRegisterFinalize(). The
-  // reasons for its construction are as follows:
-  // 1. member-function-ness -> might need access to class internals, but I don't want a
-  //                            bloated interface.
-  // 2. static -> regular member functions have an implicit "this" pointer, no good for
-  //              C. Static functions do not.
-  static PETSC_NODISCARD PetscErrorCode finalize(void) PETSC_NOEXCEPT;
-
+private:
+  static PETSC_NODISCARD PetscErrorCode __staticFinalizer(void*) PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode __finalizer(void) PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode __registerFinalize(void) PETSC_NOEXCEPT;
 public:
   // default constructor
-  PETSC_CONSTEXPR objectPool() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) : _registered(PETSC_FALSE) {}
+  PETSC_CONSTEXPR objectPool() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) {}
 
   // copy constructor
   objectPool(objectPool &other) PETSC_NOEXCEPT_ARG(std::is_nothrow_copy_constructible<stack_type>::value) : _stack(other._stack),_registered(other._registered) {}
@@ -206,26 +206,65 @@ inline PetscBool operator<=(const objectPool<T,_Allocator> &l, const objectPool<
 }
 
 template <typename T, class _Allocator>
-PetscErrorCode objectPool<T,_Allocator>::get(value_type &obj) PETSC_NOEXCEPT
+PetscErrorCode objectPool<T,_Allocator>::__staticFinalizer(void *obj) PETSC_NOEXCEPT
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = static_cast<objectPool<T,_Allocator>*>(obj)->__finalizer();CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+template <typename T, class _Allocator>
+PetscErrorCode objectPool<T,_Allocator>::__finalizer(void) PETSC_NOEXCEPT
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  try {
+    while (!this->_stack.empty()) {
+      ierr = this->__getAllocator().destroy(this->_stack.top());CHKERRQ(ierr);
+      this->_stack.pop();
+    }
+  } catch (std::exception const &ex) {
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
+  }
+  ierr = this->__getAllocator().finalize();CHKERRQ(ierr);
+  this->_registered = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+template <typename T, class _Allocator>
+PetscErrorCode objectPool<T,_Allocator>::__registerFinalize(void) PETSC_NOEXCEPT
 {
   PetscFunctionBegin;
   if (PetscUnlikely(!this->_registered)) {
     PetscErrorCode ierr;
+    PetscContainer contain;
 
-    ierr = PetscRegisterFinalize(this->finalize);CHKERRQ(ierr);
+    /* use a PetscContainer as a form of thunk, it holds not only a pointer to this but
+       also the pointer to the static member function, which just converts the thunk back
+       to this. none of this would be needed if PetscRegisterFinalize() just took a void*
+       itself though...  */
+    ierr = PetscContainerCreate(PETSC_COMM_SELF,&contain);CHKERRQ(ierr);
+    ierr = PetscContainerSetPointer(contain,this);CHKERRQ(ierr);
+    ierr = PetscContainerSetUserDestroy(contain,this->__staticFinalizer);CHKERRQ(ierr);
+    ierr = PetscObjectRegisterDestroy((PetscObject)contain);CHKERRQ(ierr);
     this->_registered = PETSC_TRUE;
   }
+  PetscFunctionReturn(0);
+}
+
+template <typename T, class _Allocator>
+PetscErrorCode objectPool<T,_Allocator>::get(value_type &obj) PETSC_NOEXCEPT
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = this->__registerFinalize();CHKERRQ(ierr);
   try {
     if (this->_stack.empty()) {
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
-      // allows const allocator_t& to be used if allocator defines a const create
-      auto           alloc = this->getAllocator();
-#else
-      allocator_t&   alloc = this->getAllocator();
-#endif
-      PetscErrorCode ierr;
-
-      ierr = alloc.create(&obj);CHKERRQ(ierr);
+      ierr = this->__getAllocator().create(&obj);CHKERRQ(ierr);
     } else {
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
       obj = std::move(this->_stack.top());
@@ -243,26 +282,27 @@ PetscErrorCode objectPool<T,_Allocator>::get(value_type &obj) PETSC_NOEXCEPT
 template <typename T, class _Allocator>
 PetscErrorCode objectPool<T,_Allocator>::reclaim(value_type &obj) PETSC_NOEXCEPT
 {
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
-  // allows const allocator_t& to be used if allocator defines a const reset
-  auto           alloc = this->getAllocator();
-#else
-  allocator_t&   alloc = this->getAllocator();
-#endif
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = alloc.reset(obj);CHKERRQ(ierr);
-  try {
+  if (PetscUnlikely(!this->_registered)) {
+    /* this is necessary if an object is "reclaimed" within another PetscFinalize()
+       registered cleanup after this object pool has returned from it's finalizer. In
+       this case, instead of pushing onto the stack we just destroy the object directly */
+    ierr = this->__getAllocator().destroy(obj);CHKERRQ(ierr);
+  } else {
+    ierr = this->__getAllocator().reset(obj);CHKERRQ(ierr);
+    try {
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
-    this->_stack.push(std::move(obj));
+      this->_stack.push(std::move(obj));
 #else
-    this->_stack.push(obj);
+      this->_stack.push(obj);
 #endif
-  } catch (std::exception const &ex) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
+    }
+    obj = PETSC_NULLPTR;
   }
-  obj = PETSC_NULLPTR;
   PetscFunctionReturn(0);
 }
 
@@ -270,21 +310,28 @@ PetscErrorCode objectPool<T,_Allocator>::reclaim(value_type &obj) PETSC_NOEXCEPT
 template <typename T, class _Allocator>
 PetscErrorCode objectPool<T,_Allocator>::reclaim(value_type &&obj) PETSC_NOEXCEPT
 {
-  // allows const allocator_t& to be used if allocator defines a const reset
-  auto           alloc = this->getAllocator();
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = alloc.reset(obj);CHKERRQ(ierr);
-  try {
-    this->_stack.push(std::move(obj));
-  } catch (std::exception const &ex) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
+  if (PetscUnlikely(!this->_registered)) {
+    /* this is necessary if an object is "reclaimed" within another PetscFinalize()
+       registered cleanup after this object pool has returned from it's finalizer. In
+       this case, instead of pushing onto the stack we just destroy the object directly */
+    ierr = this->__getAllocator().destroy(obj);CHKERRQ(ierr);
+  } else {
+    // allows const allocator_t& to be used if allocator defines a const reset
+    ierr = this->__getAllocator().reset(obj);CHKERRQ(ierr);
+    try {
+      this->_stack.push(std::move(obj));
+    } catch (std::exception const &ex) {
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
+    }
+    obj = PETSC_NULLPTR;
   }
-  obj = PETSC_NULLPTR;
   PetscFunctionReturn(0);
 }
-#endif
-} // namespace Petsc
+#endif /* PETSC_HAVE_CXX_DIALECT_CXX11 */
+
+} /* namespace Petsc */
 
 #endif /* PETSCOBJECTPOOL_HPP */
