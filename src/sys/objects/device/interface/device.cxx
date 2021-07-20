@@ -124,7 +124,7 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
   PetscFunctionBegin;
   if (!*device) PetscFunctionReturn(0);
   if ((*device)->ops->destroy) {ierr = (*(*device)->ops->destroy)(*device);CHKERRQ(ierr);}
-  ierr = PetscFree(device);CHKERRQ(ierr);
+  ierr = PetscFree(*device);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
