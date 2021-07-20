@@ -187,7 +187,7 @@ PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
 
 /* PetscDevice */
-PETSC_EXTERN PetscErrorCode PetscDeviceGetDevice(PetscDeviceKind,PetscDevice*);
+PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceKind,PetscDevice*);
 PETSC_EXTERN PetscErrorCode PetscDeviceConfigure(PetscDevice);
 PETSC_EXTERN PetscErrorCode PetscDeviceDestroy(PetscDevice*);
 

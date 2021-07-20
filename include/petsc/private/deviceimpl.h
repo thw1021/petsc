@@ -106,6 +106,7 @@ struct _DeviceOps {
 struct _n_PetscDevice {
   struct _DeviceOps ops[1];
   PetscInt          refcnt;
+  PetscInt          id;
   PetscDeviceKind   kind;
   int               deviceId;
   void             *data;
@@ -126,12 +127,12 @@ struct _n_PetscDeviceContext {
   struct _DeviceContextOps  ops[1];
   PetscDevice               device;
   void                     *data;            /* solver contexts, event, stream */
-  PetscBool                 idle;            /* does this context think it has work? this value non-binding in debug mode */
-  PetscInt                 *childIDs;        /* array containing ids of context forked from this one */
   PetscInt                  id;              /* unique id per created context */
+  PetscInt                 *childIDs;        /* array containing ids of context forked from this one */
   PetscInt                  numChildren;     /* how many children does this context expect to destroy */
   PetscInt                  maxNumChildren;  /* how many children can this context have room for without realloc'ing */
   PetscStreamType           streamType;
+  PetscBool                 idle;            /* does this context think it has work? this value non-binding in debug mode */
   PetscBool                 setup;
 };
 
@@ -157,7 +158,7 @@ PETSC_INTERN PetscDevice    PetscDeviceDefaultKind_Internal(PetscDeviceKind);
 PETSC_STATIC_INLINE PetscDevice PetscDeviceReference(PetscDevice device)
 {
   PetscFunctionBegin;
-  ++device->refcnt;
+  ++(device->refcnt);
   PetscFunctionReturn(device);
 }
 
