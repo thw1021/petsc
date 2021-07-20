@@ -56,7 +56,7 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
 };
 PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 0;
 
-static Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
+static Petsc::ObjectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
 
 /*@C
   PetscDeviceContextCreate - Creates a PetscDeviceContext
@@ -117,12 +117,8 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 
   PetscFunctionBegin;
   if (!*dctx) PetscFunctionReturn(0);
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
   /* use move assignment whenever possible */
   ierr = contextPool.reclaim(std::move(*dctx));CHKERRQ(ierr);
-#else
-  ierr = contextPool.reclaim(*dctx);CHKERRQ(ierr);
-#endif
   PetscFunctionReturn(0);
 }
 
@@ -390,17 +386,6 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
   PetscFunctionReturn(0);
 }
 
-#if !defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-#include <sstream>
-
-template<typename T>
-std::string PetscToString(const T &value) {
-  std::ostringstream os;
-  os<<value;
-  return os.str();
-}
-#endif
-
 /*@C
   PetscDeviceContextFork - Create a set of dependent child contexts from a parent context
 
@@ -480,11 +465,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
       /* register the child with its parent */
       dctx->childIDs[i] = dsubTmp[i]->id;
 #if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
       idList += std::to_string(dsubTmp[i]->id);
-#else
-      idList += PetscToString(dsubTmp[i]->id);
-#endif
       if (n != 1) idList += ", ";
 #endif
       --n;
@@ -582,11 +563,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
     PetscCheckCompatibleDeviceContexts(dctx,1,(*dsub)[i],4);
     ierr = PetscDeviceContextWaitForContext(dctx,(*dsub)[i]);CHKERRQ(ierr);
 #if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX11)
     idList += std::to_string((*dsub)[i]->id);
-#else
-    idList += PetscToString((*dsub)[i]->id);
-#endif
     if (i+1 < n) idList += ", ";
 #endif
   }
