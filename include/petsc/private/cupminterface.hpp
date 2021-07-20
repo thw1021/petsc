@@ -62,13 +62,15 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
   /* values */
-  static PETSC_CONSTEXPR const auto cupmSuccess           = cudaSuccess;
-  static PETSC_CONSTEXPR const auto cupmErrorNotReady     = cudaErrorNotReady;
-  static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = cudaStreamNonBlocking;
+  static PETSC_CONSTEXPR const auto cupmSuccess                 = cudaSuccess;
+  static PETSC_CONSTEXPR const auto cupmErrorNotReady           = cudaErrorNotReady;
+  static PETSC_CONSTEXPR const auto cupmStreamNonBlocking       = cudaStreamNonBlocking;
+  static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = cudaErrorDeviceAlreadyInUse;
 
   /* regular functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,cudaGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,cudaGetDeviceProperties);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,cudaSetDevice);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,cudaEventDestroy);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,cudaEventRecord);
@@ -196,13 +198,15 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
   /* values */
-  static PETSC_CONSTEXPR const auto cupmSuccess           = hipSuccess;
-  static PETSC_CONSTEXPR const auto cupmErrorNotReady     = hipErrorNotReady;
-  static PETSC_CONSTEXPR const auto cupmStreamNonBlocking = hipStreamNonBlocking;
+  static PETSC_CONSTEXPR const auto cupmSuccess                 = hipSuccess;
+  static PETSC_CONSTEXPR const auto cupmErrorNotReady           = hipErrorNotReady;
+  static PETSC_CONSTEXPR const auto cupmStreamNonBlocking       = hipStreamNonBlocking;
+  static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = hipErrorDeviceAlreadyInUse;
 
   /* functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,hipGetDeviceProperties);
+  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,hipSetDevice);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,hipEventDestroy);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,hipEventRecord);
@@ -308,10 +312,12 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using base_name_::cupmSuccess;                                        \
   using base_name_::cupmErrorNotReady;                                  \
   using base_name_::cupmStreamNonBlocking;                              \
+  using base_name_::cupmErrorDeviceAlreadyInUse;                        \
   /* functions */                                                       \
   using base_name_::cupmName;                                           \
   using base_name_::cupmGetDeviceCount;                                 \
   using base_name_::cupmGetDeviceProperties;                            \
+  using base_name_::cupmSetDevice;                                      \
   using base_name_::cupmGetErrorName;                                   \
   using base_name_::cupmGetErrorString;                                 \
   using base_name_::cupmEventCreate;                                    \

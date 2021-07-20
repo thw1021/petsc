@@ -179,8 +179,8 @@ PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PETSC_HAVE_HIP */
 
-/* Cannot use the device context api without C++ */
-#if PetscDefined(HAVE_CXX)
+/* Cannot use the device context api without C++11 */
+#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
 PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
