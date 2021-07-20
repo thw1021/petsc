@@ -109,7 +109,7 @@ PetscErrorCode CUPMContext<T>::changeStreamType(PetscDeviceContext dctx, PetscSt
     cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);
     dci->stream = PETSC_NULLPTR;
   }
-  /* set these to null so they aren't usable until setup is called again */
+  // set these to null so they aren't usable until setup is called again
   dci->blas   = PETSC_NULLPTR;
   dci->solver = PETSC_NULLPTR;
   PetscFunctionReturn(0);
@@ -126,7 +126,7 @@ PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dctx) PETSC_NOEXCEPT
   if (dci->stream) {cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);}
   switch (dctx->streamType) {
   case PETSC_STREAM_GLOBAL_BLOCKING:
-    /* don't create a stream for global blocking */
+    // don't create a stream for global blocking
     dci->stream = PETSC_NULLPTR;
     break;
   case PETSC_STREAM_DEFAULT_BLOCKING:
@@ -156,7 +156,7 @@ PetscErrorCode CUPMContext<T>::query(PetscDeviceContext dctx, PetscBool *idle) P
   else if (cerr == cupmErrorNotReady) {
     *idle = PETSC_FALSE;
   } else {
-    /* somethings gone wrong */
+    // somethings gone wrong
     CHKERRCUPM(cerr);
   }
   PetscFunctionReturn(0);
@@ -182,7 +182,7 @@ PetscErrorCode CUPMContext<T>::synchronize(PetscDeviceContext dctx) PETSC_NOEXCE
   cupmError_t               cerr;
 
   PetscFunctionBegin;
-  /* in case anything was queued on the event */
+  // in case anything was queued on the event
   cerr = cupmStreamWaitEvent(dci->stream,dci->event,0);CHKERRCUPM(cerr);
   cerr = cupmStreamSynchronize(dci->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
