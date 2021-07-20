@@ -156,6 +156,7 @@ PetscErrorCode MatDestroy_Normal(Mat N)
   ierr = VecDestroy(&Na->leftwork);CHKERRQ(ierr);
   ierr = VecDestroy(&Na->rightwork);CHKERRQ(ierr);
   ierr = PetscFree(N->data);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatNormalGetMat_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -191,6 +192,43 @@ PetscErrorCode MatGetDiagonal_Normal(Mat N,Vec v)
   ierr   = VecRestoreArray(v,&values);CHKERRQ(ierr);
   ierr   = PetscFree2(diag,work);CHKERRQ(ierr);
   ierr   = VecScale(v,Na->scale);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatNormalGetMat_Normal(Mat A,Mat *M)
+{
+  Mat_Normal *Aa = (Mat_Normal*)A->data;
+
+  PetscFunctionBegin;
+  *M = Aa->A;
+  PetscFunctionReturn(0);
+}
+
+/*@
+      MatNormalGetMat - Gets the Mat object stored inside a MATNORMAL
+
+   Logically collective on Mat
+
+   Input Parameter:
+.   A  - the MATNORMAL matrix
+
+   Output Parameter:
+.   M - the matrix object stored inside A
+
+   Level: intermediate
+
+.seealso: MatCreateNormal()
+
+@*/
+PetscErrorCode MatNormalGetMat(Mat A,Mat *M)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidType(A,1);
+  PetscValidPointer(M,2);
+  ierr = PetscUseMethod(A,"MatNormalGetMat_C",(Mat,Mat*),(A,M));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -245,6 +283,7 @@ PetscErrorCode  MatCreateNormal(Mat A,Mat *N)
   (*N)->assembled             = PETSC_TRUE;
   (*N)->preallocated          = PETSC_TRUE;
 
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatNormalGetMat_C",MatNormalGetMat_Normal);CHKERRQ(ierr);
   ierr = MatSetOption(*N,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatGetVecType(A,&vtype);CHKERRQ(ierr);
   ierr = MatSetVecType(*N,vtype);CHKERRQ(ierr);
