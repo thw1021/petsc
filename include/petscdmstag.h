@@ -124,6 +124,7 @@ PETSC_EXTERN PetscErrorCode DMStagSetUniformCoordinatesProduct(DM,PetscReal,Pets
 
   Input Parameters:
 + dm - the DMStag object
+. dim - the dimension of the DMStag object
 . n - the number of DMStagStencil objects
 - pos - an array of n DMStagStencil objects
 
@@ -133,19 +134,19 @@ PETSC_EXTERN PetscErrorCode DMStagSetUniformCoordinatesProduct(DM,PetscReal,Pets
   Notes:
   The .c fields in pos must always be set (even if to 0).
 
+  Developer Notes:
+  This is a "hot" function, and accepts the dimension redundantly to avoid having to perform any error checking inside the function.
+
   Level: developer
 
 .seealso: DMSTAG, DMStagStencilLocation, DMStagStencil, DMGetLocalVector, DMCreateLocalVector
 @*/
-PETSC_STATIC_INLINE PetscErrorCode DMStagStencilToIndexLocal(DM dm,PetscInt n,const DMStagStencil *pos,PetscInt *ix)
+PETSC_STATIC_INLINE PetscErrorCode DMStagStencilToIndexLocal(DM dm,PetscInt dim,PetscInt n,const DMStagStencil *pos,PetscInt *ix)
 {
-  PetscErrorCode        ierr;
-  PetscInt              dim;
   const DM_Stag * const stag = (DM_Stag*)dm->data;
   const PetscInt        epe = stag->entriesPerElement;
 
   PetscFunctionBeginHot;
-  ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   if (dim == 1) {
     for (PetscInt idx=0; idx<n; ++idx) {
       const PetscInt eLocal = pos[idx].i - stag->startGhost[0];
