@@ -2,7 +2,7 @@
 
 namespace Petsc {
 
-/* internal "impls" class for CUPMDevice. Each instance represents a single cupm device */
+// internal "impls" class for CUPMDevice. Each instance represents a single cupm device
 template <CUPMDeviceKind T>
 class CUPMDevice<T>::PetscDeviceInternal
 {
@@ -11,8 +11,8 @@ private:
   cupmDeviceProp_t _dprop;
 
 public:
-  /* default constructor */
-  explicit PetscDeviceInternal(int dev) PETSC_NOEXCEPT : _id(dev) {}
+  // default constructor
+  explicit PetscDeviceInternal(int dev) PETSC_NOEXCEPT : _id{dev} {}
 
   PETSC_NODISCARD PetscErrorCode initialize() PETSC_NOEXCEPT
   {
@@ -23,7 +23,8 @@ public:
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD int id() const PETSC_NOEXCEPT { return _id;}
+  PETSC_NODISCARD int id() const PETSC_NOEXCEPT { return this->_id;}
+  PETSC_NODISCARD const cupmDeviceProp_t& deviceProp() const PETSC_NOEXCEPT { return this->_dprop;}
 };
 
 template <CUPMDeviceKind T>
@@ -40,7 +41,7 @@ PetscErrorCode CUPMDevice<T>::__initialize() PETSC_NOEXCEPT
     PetscErrorCode ierr;
 
     try {
-      _devices.emplace_back(std::unique_ptr<PetscDeviceInternal>(new PetscDeviceInternal(i)));
+      _devices.emplace_back(std::unique_ptr<PetscDeviceInternal>(new PetscDeviceInternal{i}));
       ierr = _devices[i]->initialize();CHKERRQ(ierr);
     } catch(const std::exception &ex) {
       SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"std::vector error %s",ex.what());
@@ -57,7 +58,7 @@ PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice &device) PETSC_NOEXCEPT
 
   PetscFunctionBegin;
   ierr = this->__initialize();CHKERRQ(ierr);
-  /* default device is always the first device for now? */
+  // default device is always the first device for now?
   device->deviceId = this->_devices[0]->id();
   device->ops->createcontext = this->_create;
   PetscFunctionReturn(0);
@@ -66,11 +67,18 @@ PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice &device) PETSC_NOEXCEPT
 template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::configureDevice(PetscDevice &device) PETSC_NOEXCEPT
 {
+  cupmError_t cerr;
+
   PetscFunctionBegin;
-  /* does nothing for now */
+  cerr = cupmSetDevice(device->deviceId);
+  // why on EARTH nvidia insists on making otherwise informational states into
+  // fully-fledged error codes is beyond me. Why couldn't a pointer to bool argument have
+  // sufficed?!?!?!
+  if (cerr != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
+// explicitly instantiate the classes
 #if PetscDefined(HAVE_CUDA)
 template class CUPMDevice<CUPMDeviceKind::CUDA>;
 #endif
@@ -78,4 +86,4 @@ template class CUPMDevice<CUPMDeviceKind::CUDA>;
 template class CUPMDevice<CUPMDeviceKind::HIP>;
 #endif
 
-} /* namespace Petsc */
+} // namespace Petsc
