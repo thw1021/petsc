@@ -23,8 +23,8 @@ int main(int argc,char ** argv)
   /* Work around bug that assumes DMNetwork edges must have DOF */
   ierr = PetscOptionsSetValue(NULL,"-petscpartitioner_use_vertex_weights","No");CHKERRQ(ierr);
   comm = PETSC_COMM_WORLD;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
   ierr = DMNetworkCreate(PETSC_COMM_WORLD,&network);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(network,"nodestruct",0,&keyNode);CHKERRQ(ierr);
