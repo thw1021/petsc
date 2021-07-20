@@ -46,42 +46,17 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
     dctx->streamType  = PETSC_STREAM_DEFAULT_BLOCKING;
     PetscFunctionReturn(0);
   }
+
+  PETSC_NODISCARD PetscErrorCode finalize(void) PETSC_NOEXCEPT
+  {
+    PetscFunctionBegin;
+    PetscDeviceContextID = 0;
+    PetscFunctionReturn(0);
+  }
 };
 PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 0;
 
 static Petsc::objectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
-
-namespace Petsc {
-
-/* finalizer also needs its specialization */
-template <>
-PetscErrorCode objectPool<PetscDeviceContext,PetscDeviceContextAllocator>::finalize(void) PETSC_NOEXCEPT
-{
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
-  auto         alloc = contextPool.getAllocator();
-#else
-  allocator_t& alloc = contextPool.getAllocator();
-#endif
-
-  PetscFunctionBegin;
-  try {
-    while (!contextPool._stack.empty()) {
-      PetscErrorCode ierr;
-
-      ierr = alloc.destroy(contextPool._stack.top());CHKERRQ(ierr);
-      contextPool._stack.pop();
-    }
-  } catch (std::exception const &ex) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from std::stack: %s",ex.what());
-  }
-  /* reset the ID counter, the first PetscDeviceContext created (i.e. the root) should
-     always expect to have ID 0 */
-  allocator_t::PetscDeviceContextID = 0;
-  contextPool._registered = PETSC_FALSE;
-  PetscFunctionReturn(0);
-}
-
-} /* namespace Petsc */
 
 /*@C
   PetscDeviceContextCreate - Creates a PetscDeviceContext
@@ -687,7 +662,7 @@ static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
 
 /* automatically registered to PetscFinalize() when first context is instantiated, do not
    call */
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextDestroyGlobalContext_Internal(void)
+static PetscErrorCode PetscDeviceContextDestroyGlobalContext_Private(void)
 {
   PetscErrorCode ierr;
 
@@ -713,7 +688,7 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm, c
   ierr = PetscDeviceContextSetDevice(globalContext,PetscDeviceDefault_Internal());CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetFromOptions(comm,prefix,globalContext);CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(PetscDeviceContextDestroyGlobalContext_Internal);CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(PetscDeviceContextDestroyGlobalContext_Private);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

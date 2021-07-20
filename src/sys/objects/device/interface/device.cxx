@@ -33,14 +33,15 @@ const char *const PetscDeviceKinds[] = {"invalid","cuda","hip","default","max","
 @*/
 PetscErrorCode PetscDeviceCreate(PetscDeviceKind kind, PetscDevice *device)
 {
-  PetscDevice    dev;
-  PetscErrorCode ierr;
+  static PetscInt PetscDeviceCounter = 0;
+  PetscDevice     dev;
+  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceKind(kind,1);
   PetscValidPointer(device,2);
   ierr = PetscNew(&dev);CHKERRQ(ierr);
-  dev->refcnt = 1;
+  dev->id   = PetscDeviceCounter++;
   dev->kind = kind;
   switch (kind) {
 #if PetscDefined(HAVE_CUDA)
@@ -118,13 +119,14 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
 {
   PetscFunctionBegin;
   if (!*device) PetscFunctionReturn(0);
+  /* can be negative here if a PetscDevice is created (with refcnt = 0) then immediately
+     destroyed */
   if (!--(*device)->refcnt) {
     PetscErrorCode ierr;
 
+    if (PetscUnlikelyDebug((*device)->refcnt <= -1)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %D reference count %D < -1",(*device)->id,(*device)->refcnt);
     if ((*device)->ops->destroy) {ierr = (*(*device)->ops->destroy)(*device);CHKERRQ(ierr);}
     ierr = PetscFree(*device);CHKERRQ(ierr);
-  } else if (PetscUnlikelyDebug((*device)->refcnt < 0)) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %d reference count %D < 0",(*device)->refcnt);
   }
   PetscFunctionReturn(0);
 }
@@ -141,6 +143,14 @@ static PetscErrorCode InitializeDeviceHelper_Private(int supported, PetscDeviceK
     ierr = PetscInfo1(NULL,"PetscDeviceKind %s supported, initializing\n",PetscDeviceKinds[kindIdx]);CHKERRQ(ierr);
     ierr = PetscDeviceCreate(kind,defaultDevices+kindIdx);CHKERRQ(ierr);
     ierr = PetscDeviceConfigure(defaultDevices[kindIdx]);CHKERRQ(ierr);
+    /* the default devices are all automatically "referenced" at least once, otherwise the
+       reference counting is off for them, could alternatively increase the reference
+       count when they are retrieved but that is a lot more brittle. whats to stop
+       someone from doing:
+
+       for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
+    */
+    defaultDevices[kindIdx] = PetscDeviceReference(defaultDevices[kindIdx]);
   } else {
     ierr = PetscInfo1(NULL,"PetscDeviceKind %s not supported\n",PetscDeviceKinds[kindIdx]);CHKERRQ(ierr);
     defaultDevices[kindIdx] = PETSC_NULLPTR;
