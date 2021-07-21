@@ -1,5 +1,12 @@
 #include "../../interface/cupmdevice.hpp"
 
+#define CHKERRCXX(_expr)                                                \
+  try {                                                                 \
+    _expr;                                                              \
+  } catch (const std::exception &ex) {                                  \
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SYS,"CXX error %s",ex.what());   \
+  }
+
 namespace Petsc {
 
 // internal "impls" class for CUPMDevice. Each instance represents a single cupm device
@@ -14,6 +21,8 @@ public:
   // default constructor
   explicit PetscDeviceInternal(int dev) PETSC_NOEXCEPT : _id{dev} {}
 
+  // gather all relevant information for a particular device, a cupmDeviceProp_t is
+  // usually sufficient here
   PETSC_NODISCARD PetscErrorCode initialize() PETSC_NOEXCEPT
   {
     cupmError_t cerr;
@@ -36,17 +45,14 @@ PetscErrorCode CUPMDevice<T>::__initialize() PETSC_NOEXCEPT
   PetscFunctionBegin;
   if (_initialized) PetscFunctionReturn(0);
   cerr = cupmGetDeviceCount(&ndev);CHKERRCUPM(cerr);
-  _devices.reserve(ndev);
+  CHKERRCXX(_devices.reserve(ndev));
   for (int i = 0; i < ndev; ++i) {
     PetscErrorCode ierr;
 
-    try {
-      _devices.emplace_back(std::unique_ptr<PetscDeviceInternal>(new PetscDeviceInternal{i}));
-      ierr = _devices[i]->initialize();CHKERRQ(ierr);
-    } catch(const std::exception &ex) {
-      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"std::vector error %s",ex.what());
-    }
+    CHKERRCXX(_devices.emplace_back(std::unique_ptr<PetscDeviceInternal>(new PetscDeviceInternal{i})));
+    ierr = _devices[i]->initialize();CHKERRQ(ierr);
   }
+  CHKERRCXX(_devices.shrink_to_fit());
   _initialized = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
