@@ -5,10 +5,14 @@
 #include <petsc/private/traithelpers.hpp>
 
 #if defined(__cplusplus)
+#if !PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#error CUPMInterface requires c++11
+#endif // PetscDefined(HAVE_CXX_DIALECT_CXX11)
 
 namespace Petsc {
 
-/* enum describing available cupm devices */
+// enum describing available cupm devices, this is used as the template parameter to any
+// class subclassing the CUPMInterface or using it as a member variable
 enum class CUPMDeviceKind : int {
   CUDA,
   HIP
@@ -18,9 +22,10 @@ static PETSC_CONSTEXPR const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPM
 
 #if defined(CHKERRCUPM)
 #error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
-#endif
-/* A backend agnostic CHKERRCUPM() function, this will only work inside the member
-   functions of a class inheriting from CUPMInterface */
+#endif // CHKERRCUPM
+
+// A backend agnostic CHKERRCUPM() function, this will only work inside the member
+// functions of a class inheriting from CUPMInterface
 #define CHKERRCUPM(cerr)                                                \
   do {                                                                  \
     if (PetscUnlikely(cerr)) {                                          \
@@ -32,11 +37,9 @@ static PETSC_CONSTEXPR const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPM
     }                                                                   \
   } while (0)
 
-/*
-  A templated C++ struct that defines the entire CUPM interface. Use of templating vs
-  preprocessor macros allows us to use both interfaces simultaneously as well as easily
-  import them into classes.
- */
+// A templated C++ struct that defines the entire CUPM interface. Use of templating vs
+// preprocessor macros allows us to use both interfaces simultaneously as well as easily
+// import them into classes.
 template <CUPMDeviceKind T> struct CUPMInterface;
 
 #if PetscDefined(HAVE_CUDA)
@@ -45,9 +48,10 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
 {
   static PETSC_CONSTEXPR const CUPMDeviceKind kind = CUPMDeviceKind::CUDA;
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
   { return CUPMDeviceKinds[static_cast<int>(kind)];}
 
+  // typedefs
   using cupmError_t        = cudaError_t;
   using cupmEvent_t        = cudaEvent_t;
   using cupmStream_t       = cudaStream_t;
@@ -57,17 +61,17 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   using cupmSolverError_t  = cusolverStatus_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
 
-  /* error functions */
+  // error functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,cudaGetErrorName);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
-  /* values */
+  // values
   static PETSC_CONSTEXPR const auto cupmSuccess                 = cudaSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady           = cudaErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking       = cudaStreamNonBlocking;
   static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = cudaErrorDeviceAlreadyInUse;
 
-  /* regular functions */
+  // regular functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,cudaGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,cudaGetDeviceProperties);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,cudaSetDevice);
@@ -81,11 +85,11 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,cudaStreamQuery);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,cudaStreamSynchronize);
 
-  /* There isn't a good way to auto-template this stuff between the cublas handle and
-     cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
-     mention their hip counterparts) do ~slightly~ different things. So we just overload
-     and accept the bloat */
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
+  // There isn't a good way to auto-template this stuff between the cublas handle and
+  // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
+  // mention their HIP counterparts) do ~slightly~ different things. So we just overload
+  // and accept the bloat
+  PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (!handle) {
@@ -104,7 +108,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (!handle) {
@@ -123,7 +127,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode SetHandleStream(cupmBlasHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode SetHandleStream(cupmBlasHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
   {
     cupmStream_t    cupmStream;
     cupmBlasError_t cberr;
@@ -136,7 +140,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
   {
     cupmStream_t      cupmStream;
     cupmSolverError_t cerr;
@@ -149,7 +153,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode DestroyHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode DestroyHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (handle) {
@@ -161,19 +165,19 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (handle) {
       cupmSolverError_t cerr;
 
-      cerr  = cusolverDnDestroy(handle);CHKERRCUSOLVER(cerr);
+      cerr   = cusolverDnDestroy(handle);CHKERRCUSOLVER(cerr);
       handle = PETSC_NULLPTR;
     }
     PetscFunctionReturn(0);
   }
 };
-#endif /* PetscDefined(HAVE_CUDA) */
+#endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
 template <>
@@ -181,9 +185,10 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
 {
   static PETSC_CONSTEXPR const CUPMDeviceKind kind = CUPMDeviceKind::HIP;
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PETSC_CONSTEXPR const char* cupmName(void) PETSC_NOEXCEPT
   { return CUPMDeviceKinds[static_cast<int>(kind)];}
 
+  // typedefs
   using cupmError_t        = hipError_t;
   using cupmEvent_t        = hipEvent_t;
   using cupmStream_t       = hipStream_t;
@@ -193,18 +198,18 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using cupmSolverError_t  = hipsolverStatus_t;
   using cupmDeviceProp_t   = hipDeviceProp_t;
 
-  /* error functions */
+  // error functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
-  /* values */
+  // values
   static PETSC_CONSTEXPR const auto cupmSuccess                 = hipSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady           = hipErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking       = hipStreamNonBlocking;
   // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
   static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
 
-  /* functions */
+  // regular functions
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,hipGetDeviceProperties);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,hipSetDevice);
@@ -218,7 +223,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,hipStreamQuery);
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,hipStreamSynchronize);
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (!handle) {
@@ -228,7 +233,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (!handle) {
@@ -238,7 +243,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode SetHandleStream(cupmBlasHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode SetHandleStream(cupmBlasHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
   {
     cupmStream_t    cupmStream;
     cupmBlasError_t cberr;
@@ -251,7 +256,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream) PETSC_NOEXCEPT
   {
     cupmStream_t      cupmStream;
     cupmSolverError_t cerr;
@@ -264,7 +269,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode DestroyHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode DestroyHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (handle) {
@@ -276,7 +281,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
     PetscFunctionReturn(0);
   }
 
-  PETSC_STATIC_INLINE PETSC_NODISCARD PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle) PETSC_NOEXCEPT
   {
     PetscFunctionBegin;
     if (handle) {
@@ -287,14 +292,13 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
     }
     PetscFunctionReturn(0);
   }
-
 };
-#endif /* PetscDefined(HAVE_HIP) */
+#endif // PetscDefined(HAVE_HIP)
 
-} /* namespace Petsc */
+} // namespace Petsc
 
-/* shorthand for bringing all of the typedefs from the base CUPMTypeTraits class into your
-   own, it's annoying that c++ doesn't have a way to do this automatically */
+// shorthand for bringing all of the typedefs from the base CUPMTypeTraits class into your
+// own, it's annoying that c++ doesn't have a way to do this automatically
 
 #define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
   using base_name_ = CUPMInterface<Tp_>;                                \
