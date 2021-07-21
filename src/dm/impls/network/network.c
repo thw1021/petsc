@@ -158,8 +158,8 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscIn
   /* Get global total Nvtx = max(edgelist[])+1 for this subnet */
   nvtx = -1; i = 0;
   for (j=0; j<ne; j++) {
-    if (nvtx < edgelist[i]) nvtx = edgelist[i]; i++;
-    if (nvtx < edgelist[i]) nvtx = edgelist[i]; i++;
+    nvtx = PetscMax(nvtx, edgelist[i]); i++;
+    nvtx = PetscMax(nvtx, edgelist[i]); i++;
   }
   nvtx++;
   ierr = MPIU_Allreduce(&nvtx,&Nvtx,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
@@ -1614,6 +1614,29 @@ PetscErrorCode DMNetworkAssembleGraphStructures(DM dm)
   PetscFunctionReturn(0);
 }
 
+/*
+   Add all subnetid for the input vertex v in this process to the btable
+   vertex_subnetid = supportingedge_subnetid
+*/
+static PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt Nsubnet,PetscBT btable)
+{
+  PetscErrorCode ierr;
+  PetscInt       e,nedges,offset;
+  const PetscInt *edges;
+  DM_Network     *newDMnetwork = (DM_Network*)dm->data;
+  DMNetworkComponentHeader header;
+
+  PetscFunctionBegin;
+  ierr = DMNetworkGetSupportingEdges(dm,v,&nedges,&edges);CHKERRQ(ierr);
+  ierr = PetscBTMemzero(Nsubnet,btable);CHKERRQ(ierr);
+  for (e=0; e<nedges; e++) {
+    ierr = PetscSectionGetOffset(newDMnetwork->DataSection,edges[e],&offset);CHKERRQ(ierr);
+    header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);
+    ierr = PetscBTSet(btable,header->subnetid);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@
   DMNetworkDistribute - Distributes the network and moves associated component data
 
@@ -1643,8 +1666,9 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   DM_Network     *newDMnetwork;
   PetscSF        pointsf=NULL;
   DM             newDM;
-  PetscInt       j,e,v,offset,*subnetvtx,nsubnet,gidx,svtx_idx,nv;
+  PetscInt       j,e,v,offset,*subnetvtx,Nsubnet,gidx,svtx_idx,nv;
   PetscInt       to_net,from_net,*svto;
+  PetscBT        btable;
   PetscPartitioner         part;
   DMNetworkComponentHeader header;
 
@@ -1683,14 +1707,14 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   newDMnetwork->nVertices = newDMnetwork->vEnd - newDMnetwork->vStart;
   newDMnetwork->NVertices = oldDMnetwork->NVertices;
   newDMnetwork->NEdges    = oldDMnetwork->NEdges;
-  newDMnetwork->svtable   = oldDMnetwork->svtable;
+  newDMnetwork->svtable   = oldDMnetwork->svtable; /* global table! */
   oldDMnetwork->svtable   = NULL;
 
   /* Set Dof section as the section for dm */
   ierr = DMSetLocalSection(newDMnetwork->plex,newDMnetwork->DofSection);CHKERRQ(ierr);
   ierr = DMGetGlobalSection(newDMnetwork->plex,&newDMnetwork->GlobalDofSection);CHKERRQ(ierr);
 
-  /* Set up subnetwork info in the newDM */
+  /* Setup subnetwork info in the newDM */
   newDMnetwork->Nsubnet = oldDMnetwork->Nsubnet;
   newDMnetwork->Nsvtx   = oldDMnetwork->Nsvtx;
   oldDMnetwork->Nsvtx   = 0;
@@ -1701,13 +1725,13 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   /* Copy over the global number of vertices and edges in each subnetwork.
      Note: these are calculated in DMNetworkLayoutSetUp()
   */
-  nsubnet = newDMnetwork->Nsubnet;
-  for (j = 0; j < nsubnet; j++) {
+  Nsubnet = newDMnetwork->Nsubnet;
+  for (j = 0; j < Nsubnet; j++) {
     newDMnetwork->subnet[j].Nvtx  = oldDMnetwork->subnet[j].Nvtx;
     newDMnetwork->subnet[j].Nedge = oldDMnetwork->subnet[j].Nedge;
   }
 
-  /* Get local nedges and nvtx for subnetworks */
+  /* Count local nedges for subnetworks */
   for (e = newDMnetwork->eStart; e < newDMnetwork->eEnd; e++) {
     ierr = PetscSectionGetOffset(newDMnetwork->DataSection,e,&offset);CHKERRQ(ierr);
     header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);
@@ -1721,10 +1745,11 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     newDMnetwork->subnet[header->subnetid].nedge++;
   }
 
+  /* Count local nvtx for subnetworks */
+  ierr = PetscBTCreate(Nsubnet,&btable);CHKERRQ(ierr);
   for (v = newDMnetwork->vStart; v < newDMnetwork->vEnd; v++) {
     ierr = PetscSectionGetOffset(newDMnetwork->DataSection,v,&offset);CHKERRQ(ierr);
     header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);CHKERRQ(ierr);
-
     /* Update pointers */
     header->size          = (PetscInt*)(header + 1);
     header->key           = header->size   + header->maxcomps;
@@ -1732,7 +1757,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     header->nvar          = header->offset + header->maxcomps;
     header->offsetvarrel  = header->nvar   + header->maxcomps;
 
-    /* shared vertices: use gidx = header->index to check if v is a shared vertex */
+    /* shared vertices: use gidx=header->index to check if v is a shared vertex */
     gidx = header->index;
     ierr = PetscTableFind(newDMnetwork->svtable,gidx+1,&svtx_idx);CHKERRQ(ierr);
     svtx_idx--;
@@ -1740,26 +1765,29 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     if (svtx_idx < 0) { /* not a shared vertex */
       newDMnetwork->subnet[header->subnetid].nvtx++;
     } else { /* a shared vertex belongs to more than one subnetworks, it is being counted by multiple subnets */
+      ierr = SetSubnetIdLookupBT(newDM,v,Nsubnet,btable);CHKERRQ(ierr);
+
       from_net = newDMnetwork->svtx[svtx_idx].sv[0];
-      newDMnetwork->subnet[from_net].nvtx++;
+      if (PetscBTLookup(btable,from_net)) newDMnetwork->subnet[from_net].nvtx++; /* sv is on from_net */
+
       for (j=1; j<newDMnetwork->svtx[svtx_idx].n; j++) {
         svto   = newDMnetwork->svtx[svtx_idx].sv + 2*j;
         to_net = svto[0];
-        newDMnetwork->subnet[to_net].nvtx++;
+        if (PetscBTLookup(btable,to_net)) newDMnetwork->subnet[to_net].nvtx++; /* sv is on to_net */
       }
     }
   }
 
   /* Get total local nvtx for subnetworks */
   nv = 0;
-  for (j=0; j<nsubnet; j++) nv += newDMnetwork->subnet[j].nvtx;
+  for (j=0; j<Nsubnet; j++) nv += newDMnetwork->subnet[j].nvtx;
   nv += newDMnetwork->Nsvtx;
 
   /* Now create the vertices and edge arrays for the subnetworks */
   ierr = PetscCalloc1(nv,&subnetvtx);CHKERRQ(ierr);
   newDMnetwork->subnetvtx = subnetvtx;
 
-  for (j=0; j<nsubnet; j++) {
+  for (j=0; j<Nsubnet; j++) {
     ierr = PetscCalloc1(newDMnetwork->subnet[j].nedge,&newDMnetwork->subnet[j].edges);CHKERRQ(ierr);
     newDMnetwork->subnet[j].vertices = subnetvtx;
     subnetvtx                       += newDMnetwork->subnet[j].nvtx;
@@ -1789,13 +1817,18 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
     } else { /* a shared vertex */
       newDMnetwork->svertices[nv++] = v;
 
+      /* add all subnetid for this shared vertex in this process to btable */
+      ierr = SetSubnetIdLookupBT(newDM,v,Nsubnet,btable);CHKERRQ(ierr);
+
       from_net = newDMnetwork->svtx[svtx_idx].sv[0];
-      newDMnetwork->subnet[from_net].vertices[newDMnetwork->subnet[from_net].nvtx++] = v;
+      if (PetscBTLookup(btable,from_net))
+        newDMnetwork->subnet[from_net].vertices[newDMnetwork->subnet[from_net].nvtx++] = v;
 
       for (j=1; j<newDMnetwork->svtx[svtx_idx].n; j++) {
         svto   = newDMnetwork->svtx[svtx_idx].sv + 2*j;
         to_net = svto[0];
-        newDMnetwork->subnet[to_net].vertices[newDMnetwork->subnet[to_net].nvtx++] = v;
+        if (PetscBTLookup(btable,to_net))
+          newDMnetwork->subnet[to_net].vertices[newDMnetwork->subnet[to_net].nvtx++] = v;
       }
     }
   }
@@ -1807,6 +1840,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   /* Free spaces */
   ierr = PetscSFDestroy(&pointsf);CHKERRQ(ierr);
   ierr = DMDestroy(dm);CHKERRQ(ierr);
+  ierr = PetscBTDestroy(&btable);CHKERRQ(ierr);
 
   /* View distributed dmnetwork */
   ierr = DMViewFromOptions(newDM,NULL,"-dmnetwork_view_distributed");CHKERRQ(ierr);
