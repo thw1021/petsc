@@ -149,6 +149,7 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
   /* only need to do complex swapping if the object has already been setup */
   if (dctx->setup && (dctx->streamType != type)) {
     PetscErrorCode ierr;
+
     ierr = (*dctx->ops->changestreamtype)(dctx,type);CHKERRQ(ierr);
     dctx->setup = PETSC_FALSE;
   }
@@ -211,10 +212,9 @@ PetscErrorCode PetscDeviceContextSetDevice(PetscDeviceContext dctx, PetscDevice 
   PetscValidDeviceContext(dctx,1);
   PetscValidDevice(device,2);
   if (dctx->device == device) PetscFunctionReturn(0);
-  if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
-  ierr = PetscMemzero(dctx->ops,sizeof(struct _DeviceContextOps));CHKERRQ(ierr);
-  ierr = (*device->ops->createcontext)(dctx);CHKERRQ(ierr);
   ierr = PetscDeviceDestroy(&dctx->device);CHKERRQ(ierr);
+  ierr = PetscMemzero(dctx->ops,sizeof(*dctx->ops));CHKERRQ(ierr);
+  ierr = (*device->ops->createcontext)(dctx);CHKERRQ(ierr);
   dctx->device = PetscDeviceReference(device);
   dctx->setup  = PETSC_FALSE;
   PetscFunctionReturn(0);

@@ -24,8 +24,8 @@ const char *const PetscDeviceKinds[] = {"invalid","cuda","hip","default","max","
 
   Notes:
   If this is the first time that a PetscDevice is created, this routine may initialize
-  the corresponding backend. If this is the case, this will cause a device
-  synchronization.
+  the corresponding backend. If this is the case, this will most likely cause some sort of
+  device synchronization.
 
   Level: beginner
 
@@ -119,13 +119,10 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
 {
   PetscFunctionBegin;
   if (!*device) PetscFunctionReturn(0);
-  /* can be negative here if a PetscDevice is created (with refcnt = 0) then immediately
-     destroyed */
   if (!--(*device)->refcnt) {
     PetscErrorCode ierr;
 
-    if (PetscUnlikelyDebug((*device)->refcnt <= -1)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %D reference count %D < -1",(*device)->id,(*device)->refcnt);
-    if ((*device)->ops->destroy) {ierr = (*(*device)->ops->destroy)(*device);CHKERRQ(ierr);}
+    if (PetscUnlikelyDebug((*device)->refcnt < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %D reference count %D < 0",(*device)->id,(*device)->refcnt);
     ierr = PetscFree(*device);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -133,20 +130,22 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
 
 static PetscDevice defaultDevices[PETSC_DEVICE_MAX];
 
-static PetscErrorCode InitializeDeviceHelper_Private(int supported, PetscDeviceKind kind)
+static PetscErrorCode InitializeDeviceHelper_Private(PetscDeviceKind kind, bool supported = false)
 {
   const int      kindIdx = static_cast<int>(kind);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (supported) {
+    /* on the off chance that someone fumbles calling this with INVALID or MAX */
+    PetscValidDeviceKind(kind,1);
     ierr = PetscInfo1(NULL,"PetscDeviceKind %s supported, initializing\n",PetscDeviceKinds[kindIdx]);CHKERRQ(ierr);
     ierr = PetscDeviceCreate(kind,defaultDevices+kindIdx);CHKERRQ(ierr);
     ierr = PetscDeviceConfigure(defaultDevices[kindIdx]);CHKERRQ(ierr);
     /* the default devices are all automatically "referenced" at least once, otherwise the
-       reference counting is off for them, could alternatively increase the reference
-       count when they are retrieved but that is a lot more brittle. whats to stop
-       someone from doing:
+       reference counting is off for them. We could alternatively increase the reference
+       count when they are retrieved but that is a lot more brittle; whats to stop someone
+       from doing thhe following?
 
        for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
     */
@@ -176,9 +175,9 @@ PetscErrorCode PetscDeviceInitializeDefaultDevices_Internal(void)
 
   PetscFunctionBegin;
   ierr = PetscRegisterFinalize(PetscDeviceFinalizeDefaultDevices_Private);CHKERRQ(ierr);
-  ierr = InitializeDeviceHelper_Private(PETSC_FALSE,PETSC_DEVICE_INVALID);CHKERRQ(ierr);
-  ierr = InitializeDeviceHelper_Private(PetscDefined(HAVE_CUDA),PETSC_DEVICE_CUDA);CHKERRQ(ierr);
-  ierr = InitializeDeviceHelper_Private(PetscDefined(HAVE_HIP),PETSC_DEVICE_HIP);CHKERRQ(ierr);
+  ierr = InitializeDeviceHelper_Private(PETSC_DEVICE_INVALID);CHKERRQ(ierr);
+  ierr = InitializeDeviceHelper_Private(PETSC_DEVICE_CUDA,PetscDefined(HAVE_CUDA));CHKERRQ(ierr);
+  ierr = InitializeDeviceHelper_Private(PETSC_DEVICE_HIP,PetscDefined(HAVE_HIP));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

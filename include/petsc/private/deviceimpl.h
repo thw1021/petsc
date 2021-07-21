@@ -94,27 +94,23 @@ void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 
 typedef struct _DeviceOps *DeviceOps;
 struct _DeviceOps {
-  PetscErrorCode (*configure)(PetscDevice);
-  PetscErrorCode (*createcontext)(PetscDeviceContext); /* the creation routine for the
-                                                          corresponding
-                                                          PetscDeviceContext, this is NOT
-                                                          intended to be called by the
-                                                          PetscDevice itself */
-  PetscErrorCode (*destroy)(PetscDevice);
+  /* the creation routine for the corresponding PetscDeviceContext, this is NOT intended
+     to be called by the PetscDevice itself */
+  PetscErrorCode (*createcontext)(PetscDeviceContext);
 };
 
 struct _n_PetscDevice {
   struct _DeviceOps ops[1];
-  PetscInt          refcnt;
-  PetscInt          id;
-  PetscDeviceKind   kind;
-  int               deviceId;
-  void             *data;
+  PetscInt          refcnt;   /* reference count for the device */
+  PetscInt          id;       /* unique id per created PetscDevice */
+  PetscDeviceKind   kind;     /* kind of device */
+  int               deviceId; /* the id of the underlying device, i.e. the return of
+                                 cudaGetDevice() for example */
+  void             *data;     /* placeholder */
 };
 
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
-  PetscErrorCode (*create)(PetscDeviceContext);
   PetscErrorCode (*destroy)(PetscDeviceContext);
   PetscErrorCode (*changestreamtype)(PetscDeviceContext,PetscStreamType);
   PetscErrorCode (*setup)(PetscDeviceContext);
@@ -125,31 +121,16 @@ struct _DeviceContextOps {
 
 struct _n_PetscDeviceContext {
   struct _DeviceContextOps  ops[1];
-  PetscDevice               device;
-  void                     *data;            /* solver contexts, event, stream */
-  PetscInt                  id;              /* unique id per created context */
-  PetscInt                 *childIDs;        /* array containing ids of context forked from this one */
-  PetscInt                  numChildren;     /* how many children does this context expect to destroy */
-  PetscInt                  maxNumChildren;  /* how many children can this context have room for without realloc'ing */
-  PetscStreamType           streamType;
-  PetscBool                 idle;            /* does this context think it has work? this value non-binding in debug mode */
+  PetscDevice               device;         /* the device this context stems from */
+  void                     *data;           /* solver contexts, event, stream */
+  PetscInt                  id;             /* unique id per created context */
+  PetscInt                 *childIDs;       /* array containing ids of contexts currently forked from this one */
+  PetscInt                  numChildren;    /* how many children does this context expect to destroy */
+  PetscInt                  maxNumChildren; /* how many children can this context have room for without realloc'ing */
+  PetscStreamType           streamType;     /* how should this contexts stream behave around other streams? */
+  PetscBool                 idle;           /* does this context think it has work? this value non-binding in debug mode */
   PetscBool                 setup;
 };
-
-/* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
-   no-op when debugging is disabled */
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  if (PetscDefined(USE_DEBUG)) {
-    PetscBool      idle;
-    PetscErrorCode ierr;
-
-    ierr = (*dctx->ops->query)(dctx,&idle);CHKERRQ(ierr);
-    if (PetscUnlikely(dctx->idle && !idle)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, stream thought it was idle when it still had work");
-  }
-  PetscFunctionReturn(0);
-}
 
 /* PetscDevice Internal Functions */
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevices_Internal(void);
@@ -171,6 +152,20 @@ PETSC_STATIC_INLINE PetscDevice PetscDeviceDefault_Internal(void)
 
 /* PetscDeviceContext Internal Functions */
 PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm,const char[]);
+/* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
+   no-op when debugging is disabled */
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG)) {
+    PetscBool      idle;
+    PetscErrorCode ierr;
+
+    ierr = (*dctx->ops->query)(dctx,&idle);CHKERRQ(ierr);
+    if (PetscUnlikely(dctx->idle && !idle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, context %D thought it was idle when it still had work",dctx->id);
+  }
+  PetscFunctionReturn(0);
+}
 #if PetscDefined(HAVE_CUDA)
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
 #endif

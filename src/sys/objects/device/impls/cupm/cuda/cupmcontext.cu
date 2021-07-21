@@ -1,6 +1,6 @@
 #include "../cupmcontext.hpp" /*I "petscdevice.h" I*/
 
-static const Petsc::CUPMContextCuda contextCuda(PetscDeviceContextCreate_CUDA);
+static const Petsc::CUPMContextCuda contextCuda;
 
 PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
 {
