@@ -15,51 +15,53 @@ public:
   typedef PetscErrorCode (*createContextFunc_t)(PetscDeviceContext);
   PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
 
-  /* default constructor */
-  explicit CUPMDevice(createContextFunc_t func) : _create(func) {}
+  // default constructor
+  explicit CUPMDevice(createContextFunc_t func) : _create{func} {}
 
-  /* copy constructor */
-  PETSC_CXX_DEFAULT(CUPMDevice(const CUPMDevice &other) PETSC_NOEXCEPT);
+  // copy constructor
+  CUPMDevice(const CUPMDevice &other) PETSC_NOEXCEPT = default;
 
-  /* move constructor */
-  PETSC_CXX_DEFAULT(CUPMDevice(CUPMDevice &&other) PETSC_NOEXCEPT);
+  // move constructor
+  CUPMDevice(CUPMDevice &&other) PETSC_NOEXCEPT = default;
 
-  /* destructor */
-  PETSC_CXX_DEFAULT(~CUPMDevice() PETSC_NOEXCEPT);
+  // destructor
+  ~CUPMDevice() PETSC_NOEXCEPT = default;
 
-  /* copy assignment operator */
-  PETSC_CXX_DEFAULT(CUPMDevice& operator=(const CUPMDevice &other));
+  // copy assignment operator
+  CUPMDevice& operator=(const CUPMDevice &other) = default;
 
-  /* move assignment operator */
-  PETSC_CXX_DEFAULT(CUPMDevice& operator=(CUPMDevice &&other) PETSC_NOEXCEPT);
+  // move assignment operator
+  CUPMDevice& operator=(CUPMDevice &&other) PETSC_NOEXCEPT = default;
 
   PETSC_NODISCARD PetscErrorCode getDevice(PetscDevice&) PETSC_NOEXCEPT;
 
   PETSC_NODISCARD PetscErrorCode configureDevice(PetscDevice&) PETSC_NOEXCEPT;
 
 private:
-  /* opaque class representing a single device */
-  class  PetscDeviceInternal;
+  // opaque class representing a single device
+  class PetscDeviceInternal;
 
-  /* all known devices */
-  static std::vector<std::unique_ptr<PetscDeviceInternal> > _devices;
+  // all known devices
+  static std::vector<std::unique_ptr<PetscDeviceInternal>> _devices;
 
-  /* function to create a PetscDeviceContext (the (*create) function pointer usually set via XXXSetType () for other PETSc objects) */
+  // function to create a PetscDeviceContext (the (*create) function pointer usually set
+  // via XXXSetType() for other PETSc objects)
   createContextFunc_t _create;
 
-  /* have we tried looking for devices */
+  // have we tried looking for devices
   static PetscBool _initialized;
 
-  /* look for devices */
-  static PETSC_NODISCARD PetscErrorCode __initialize() PETSC_NOEXCEPT;
+  // look for devices
+  PETSC_NODISCARD static PetscErrorCode __initialize() PETSC_NOEXCEPT;
 };
 
+// define static variables
 template <CUPMDeviceKind T_>
 PetscBool CUPMDevice<T_>::_initialized = PETSC_FALSE;
 
 template <CUPMDeviceKind T_>
-std::vector<std::unique_ptr<typename CUPMDevice<T_>::PetscDeviceInternal> > CUPMDevice<T_>::_devices;
+std::vector<std::unique_ptr<typename CUPMDevice<T_>::PetscDeviceInternal>> CUPMDevice<T_>::_devices;
 
-} /* namespace Petsc */
+} // namespace Petsc
 
 #endif /* PETSCCUPMDEVICE_HPP */
