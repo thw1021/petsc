@@ -191,7 +191,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using cupmBlasError_t    = hipblasStatus_t;
   using cupmSolverHandle_t = hipsolverHandle_t;
   using cupmSolverError_t  = hipsolverStatus_t;
-  using cupmDeviceProp_t   = hipDeviceProp;
+  using cupmDeviceProp_t   = hipDeviceProp_t;
 
   /* error functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
@@ -201,7 +201,8 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   static PETSC_CONSTEXPR const auto cupmSuccess                 = hipSuccess;
   static PETSC_CONSTEXPR const auto cupmErrorNotReady           = hipErrorNotReady;
   static PETSC_CONSTEXPR const auto cupmStreamNonBlocking       = hipStreamNonBlocking;
-  static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = hipErrorDeviceAlreadyInUse;
+  // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
+  static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
 
   /* functions */
   ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
