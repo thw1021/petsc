@@ -113,6 +113,14 @@ int main(int argc,char **argv)
       for principal unknowns (x) and governing residuals (f)
   */
   ierr = DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,4,4,PETSC_DECIDE,PETSC_DECIDE,4,1,0,0,&da);CHKERRQ(ierr);
+  /* allow make check to work without further command line options */
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+#if defined(PETSC_HAVE_HIP)
+  ierr = DMSetVecType(da,VECHIP);CHKERRQ(ierr);
+#elif defined(PETSC_HAVE_CUDA)
+  ierr = DMSetVecType(da,VECCUDA);CHKERRQ(ierr);
+#endif
+#endif
   ierr = DMSetFromOptions(da);CHKERRQ(ierr);
   ierr = DMSetUp(da);CHKERRQ(ierr);
   ierr = SNESSetDM(snes,(DM)da);CHKERRQ(ierr);
@@ -906,13 +914,14 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       suffix: hypre
       nsize: 2
       requires: hypre !complex
-      args: -da_refine 3 -snes_monitor_short -pc_type hypre
+      args: -da_refine 3 -snes_monitor_short -pc_type hypre -ksp_norm_type unpreconditioned
 
+   # ibcgs is broken when using device vectors
    test:
       suffix: ibcgs
       nsize: 2
       args: -ksp_type ibcgs -ksp_monitor_short -da_refine 2 -snes_view
-      requires: !complex !single
+      requires: !complex !single !define(PETSC_HAVE_HYPRE_DEVICE)
 
    test:
       suffix: kaczmarz
@@ -1136,19 +1145,19 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    test:
       suffix: euclid
       nsize: 2
-      requires: hypre !single !complex !define(PETSC_HAVE_HYPRE_MIXEDINT)
+      requires: hypre !single !complex !define(PETSC_HAVE_HYPRE_MIXEDINT) !define(PETSC_HAVE_HYPRE_DEVICE)
       args: -da_refine 2 -ksp_monitor -snes_monitor -snes_view -pc_type hypre -pc_hypre_type euclid
 
    test:
       suffix: euclid_bj
       nsize: 2
-      requires: hypre !single !complex !define(PETSC_HAVE_HYPRE_MIXEDINT)
+      requires: hypre !single !complex !define(PETSC_HAVE_HYPRE_MIXEDINT) !define(PETSC_HAVE_HYPRE_DEVICE)
       args: -da_refine 2 -ksp_monitor -snes_monitor -snes_view -pc_type hypre -pc_hypre_type euclid -pc_hypre_euclid_bj
 
    test:
       suffix: euclid_droptolerance
       nsize: 1
-      requires: hypre !single !complex !define(PETSC_HAVE_HYPRE_MIXEDINT)
+      requires: hypre !single !complex !define(PETSC_HAVE_HYPRE_MIXEDINT) !define(PETSC_HAVE_HYPRE_DEVICE)
       args: -da_refine 2 -ksp_monitor -snes_monitor -snes_view -pc_type hypre -pc_hypre_type euclid -pc_hypre_euclid_droptolerance .1
 
 TEST*/
