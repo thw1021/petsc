@@ -27,6 +27,7 @@ protected:
   // make the constructor protected, this forces this class to be derived from to ever be
   // instantiated
   Allocator() {}
+  ~Allocator() {}
 };
 
 // Default allocator that performs the bare minimum of petsc object creation and
@@ -85,7 +86,7 @@ protected:
   PETSC_NODISCARD const allocator_t& __getAllocator() const PETSC_NOEXCEPT { return this->_alloc;}
 
   // default constructor
-  PETSC_CONSTEXPR ObjectPoolBase() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) = default;
+  PETSC_CONSTEXPR ObjectPoolBase() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) : _alloc() {}
 
   // const copy constructor
   explicit ObjectPoolBase(const allocator_t &alloc) : _alloc{alloc} {}
@@ -126,7 +127,7 @@ private:
 
 public:
   // default constructor
-  PETSC_CONSTEXPR ObjectPool() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) = default;
+  PETSC_CONSTEXPR ObjectPool() PETSC_NOEXCEPT_ARG(std::is_nothrow_default_constructible<allocator_t>::value) {}
 
   // copy constructor
   ObjectPool(ObjectPool &other) PETSC_NOEXCEPT_ARG(std::is_nothrow_copy_constructible<stack_type>::value) : _stack{other._stack},_registered{other._registered} {}
