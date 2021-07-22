@@ -20,14 +20,17 @@ Changes: Development
 -  For --download-hdf5, disable --download-hdf5-fortran-bindings by default
 
 .. rubric:: Sys:
+-  Add ``PetscDevice`` class to manage discovered GPU devices
+-  Add ``PetscDeviceKind``
+-  Add ``PetscDeviceCreate()``, ``PetscDeviceConfigure()``, and ``PetscDeviceDestroy()``
 -  Add ``PetscDeviceContext`` class to manage asynchronous GPU compute support via a fork-join model
--  Deprecate ``petsccublas.h`` and ``petschipblas.h`` in favor of ``petscdevice.h``
--  Add ``PetscDeviceContextType``, ``PetscStreamType``, ``PetscDeviceContextJoinMode``
--  Add ``PetscDeviceContextCreate()``, ``PetscDeviceContextDestroy()``, ``PetscDeviceContextSetType()``, ``PetscDeviceContextGetType()``,
+-  Add ``PetscStreamType`` and ``PetscDeviceContextJoinMode``
+-  Add ``PetscDeviceContextCreate()``, ``PetscDeviceContextDestroy()``, ``PetscDeviceContextSetDevice()``, ``PetscDeviceContextGetDevice()``,
    ``PetscDeviceContextSetStreamType()``, ``PetscDeviceContextGetStreamType()``, ``PetscDeviceContextSetUp()``, ``PetscDeviceContextDuplicate()``,
    ``PetscDeviceContextQueryIdle()``, ``PetscDeviceContextWaitForContext()``, ``PetscDeviceContextFork()``, ``PetscDeviceContextJoin()``,
-   ``PetscDeviceContextSynchronize()``, ``PetscDeviceContextSetDefaultRootContextSettings()``, ``PetscDeviceContextGetDefaultRootContextSettings()``,
-   ``PetscDeviceContextGetCurrentContext()``, ``PetscDeviceContextSetCurrentContext()``, ``PetscDeviceContextRegister()``
+   ``PetscDeviceContextSynchronize()``, ``PetscDeviceContextGetCurrentContext()``, ``PetscDeviceContextSetCurrentContext()``, and
+   ``PetscDeviceContextSetFromOptions()``
+-  Deprecate ``petsccublas.h`` and ``petschipblas.h`` in favor of ``petscdevice.h`` and ``petscdevicetypes.h``
 -  Add GPU event timers to capture kernel execution time accurately
 -  Remove ``WaitForCUDA()`` and ``WaitForHIP()`` before ``PetscLogGpuTimeEnd()``
 -  Add MPIU_REAL_INT and MPIU_SCALAR_INT datatypes to be used for reduction operations

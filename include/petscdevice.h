@@ -31,7 +31,8 @@ PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
     if (PetscUnlikely(cerr)) {                                          \
       const char *name  = cudaGetErrorName(cerr);                       \
       const char *descr = cudaGetErrorString(cerr);                     \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d (%s) : %s",(int)cerr,name,descr); \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d (%s) : %s", \
+               (int)cerr,name,descr);                                   \
     }                                                                   \
   } while (0)
 #else
@@ -71,7 +72,7 @@ PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(void);
 
 PETSC_EXTERN PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
-#endif /* PETSC_HAVE_CUDA */
+#endif /* PetscDefined(HAVE_CUDA) */
 
 #if PetscDefined(HAVE_HIP)
 #include <hip/hip_runtime.h>
@@ -90,27 +91,31 @@ PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 /* hipBLAS does not have hipblasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRHIPBLAS macro */
 
-#define CHKERRHIP(cerr) \
-do { \
-   if (PetscUnlikely(cerr)) { \
-      const char *name  = hipGetErrorName(cerr); \
-      const char *descr = hipGetErrorString(cerr); \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_LIB,"hip error %d (%s) : %s",(int)cerr,name,descr); \
-   } \
-} while (0)
+#define CHKERRHIP(cerr)                                                 \
+  do {                                                                  \
+    if (PetscUnlikely(cerr)) {                                          \
+      const char *name  = hipGetErrorName(cerr);                        \
+      const char *descr = hipGetErrorString(cerr);                      \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_LIB,"hip error %d (%s) : %s",  \
+               (int)cerr,name,descr);                                   \
+    }                                                                   \
+  } while (0)
 
-#define CHKERRHIPBLAS(stat) \
-do { \
-   if (PetscUnlikely(stat)) { \
-      const char *name = PetscHIPBLASGetErrorName(stat); \
-      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"hipBLAS error %d (%s)",(int)stat,name); \
-   } \
-} while (0)
+#define CHKERRHIPBLAS(stat)                                             \
+  do {                                                                  \
+    if (PetscUnlikely(stat)) {                                          \
+      const char *name = PetscHIPBLASGetErrorName(stat);                \
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"hipBLAS error %d (%s)",   \
+               (int)stat,name);                                         \
+    }                                                                   \
+  } while (0)
 
 /* TODO: SEK:  Need to figure out the hipsolver issues */
 #define CHKERRHIPSOLVER(err)                                            \
   do {                                                                  \
-    if (PetscUnlikely(err)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"HIPSOLVER error %d",err); \
+    if (PetscUnlikely(err)) {                                           \
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"HIPSOLVER error %d",err); \
+    }                                                                   \
   } while (0)
 
 /* hipSolver does not exist yet so we work around it
@@ -177,14 +182,12 @@ PETSC_INTERN PetscErrorCode PetscHIPSOLVERInitializeHandle(void);
 
 PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
-#endif /* PETSC_HAVE_HIP */
+#endif /* PetscDefined(HAVE_HIP) */
 
 /* Cannot use the device context api without C++11 */
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
-PETSC_EXTERN PetscErrorCode PetscDeviceRegisterAll(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
 
 /* PetscDevice */
 PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceKind,PetscDevice*);
@@ -205,9 +208,8 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext,
 PETSC_EXTERN PetscErrorCode PetscDeviceContextFork(PetscDeviceContext,PetscInt,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext,PetscInt,PetscDeviceContextJoinMode,PetscDeviceContext**);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextSetDefaultRootContextSettings(PetscDevice,PetscStreamType);
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetDefaultRootContextSettings(PetscDevice*,PetscStreamType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
-#endif /* PETSC_HAVE_CXX */
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
+#endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
 #endif /* PETSCDEVICE_H */

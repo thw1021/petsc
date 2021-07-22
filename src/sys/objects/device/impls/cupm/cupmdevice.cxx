@@ -1,11 +1,17 @@
 #include "../../interface/cupmdevice.hpp"
 
+#if defined(CHKERRCXX)
+#error Junchaos branch was merged! get rid of this define
+#endif
+
 #define CHKERRCXX(_expr)                                                \
-  try {                                                                 \
-    _expr;                                                              \
-  } catch (const std::exception &ex) {                                  \
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SYS,"CXX error %s",ex.what());   \
-  }
+  do {                                                                  \
+    try {                                                               \
+      _expr;                                                            \
+    } catch (const std::exception &ex) {                                \
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SYS,"CXX error %s",ex.what()); \
+    }                                                                   \
+  } while (0)
 
 namespace Petsc {
 
@@ -49,7 +55,7 @@ PetscErrorCode CUPMDevice<T>::__initialize() PETSC_NOEXCEPT
   for (int i = 0; i < ndev; ++i) {
     PetscErrorCode ierr;
 
-    CHKERRCXX(_devices.emplace_back(std::unique_ptr<PetscDeviceInternal>(new PetscDeviceInternal{i})));
+    CHKERRCXX(_devices.emplace_back(std::unique_ptr<PetscDeviceInternal>{new PetscDeviceInternal{i}}));
     ierr = _devices[i]->initialize();CHKERRQ(ierr);
   }
   CHKERRCXX(_devices.shrink_to_fit());
