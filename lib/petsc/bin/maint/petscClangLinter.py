@@ -1733,7 +1733,7 @@ def getPetscExtraIncludes(petscDir,petscArch):
       line = pv.readline()
   cxxflags      = [l.strip().split(" ") for l in cxxflags if l]
   cxxflags      = [flag for flags in cxxflags for flag in flags if flag.startswith("-std=")]
-  cxxflags      = [cxxflags[-1]] # take only the last one
+  cxxflags      = [cxxflags[-1]] if cxxflags else [] # take only the last one
   extraIncludes = [l.strip().split(" ") for l in petscIncludes+mpiIncludes if l]
   extraIncludes = [item for sublist in extraIncludes for item in sublist if item.startswith("-I")]
   seen          = set()
