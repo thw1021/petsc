@@ -388,7 +388,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       i,j,ctr,np,*edges,*subnetvtx,vStart;
+  PetscInt       i,j,ctr,np,*edges,*subnetvtx,*subnetedge,vStart;
   PetscInt       k,*vidxlTog,Nsv=0,Nsubnet=network->Nsubnet;
   PetscInt       *sedgelist=network->sedgelist;
   const PetscInt *cone;
@@ -519,10 +519,13 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   }
 
   /* (4) Create edge and vertex arrays for the subnetworks */
-  ierr = PetscCalloc1(network->nVertices+network->nsvtx,&network->subnetvtx);CHKERRQ(ierr);
-  subnetvtx = network->subnetvtx;
+  ierr = PetscCalloc2(network->nEdges,&subnetedge,network->nVertices+network->nsvtx,&subnetvtx);CHKERRQ(ierr); /* Maps local edge/vertex to local subnetwork's edge/vertex */
+  network->subnetedge = subnetedge;
+  network->subnetvtx  = subnetvtx;
   for (j=0; j < Nsubnet; j++) {
-    ierr = PetscCalloc1(network->subnet[j].nedge,&network->subnet[j].edges);CHKERRQ(ierr);
+    network->subnet[j].edges = subnetedge;
+    subnetedge              += network->subnet[j].nedge;
+
     network->subnet[j].vertices = subnetvtx;
     subnetvtx                  += network->subnet[j].nvtx;
   }
@@ -620,7 +623,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx;
+  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx,*subnetedge;
   PetscInt       e,v,vfrom,vto,myvstart;
   const PetscInt *cone;
   MPI_Comm       comm;
@@ -679,10 +682,13 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   }
 
   /* Create edge and vertex arrays for the subnetworks */
-  ierr = PetscCalloc1(network->nVertices,&network->subnetvtx);CHKERRQ(ierr); /* Maps local vertex to local subnetwork's vertex */
-  subnetvtx = network->subnetvtx;
+  ierr = PetscCalloc2(network->nEdges,&subnetedge,network->nVertices,&subnetvtx);CHKERRQ(ierr); /* Maps local edge/vertex to local subnetwork's edge/vertex */
+  network->subnetedge = subnetedge;
+  network->subnetvtx  = subnetvtx;
   for (j=0; j < network->Nsubnet; j++) {
-    ierr = PetscCalloc1(network->subnet[j].nedge,&network->subnet[j].edges);CHKERRQ(ierr);
+    network->subnet[j].edges = subnetedge;
+    subnetedge              += network->subnet[j].nedge;
+
     network->subnet[j].vertices = subnetvtx;
     subnetvtx                  += network->subnet[j].nvtx;
   }
@@ -1666,7 +1672,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   DM_Network     *newDMnetwork;
   PetscSF        pointsf=NULL;
   DM             newDM;
-  PetscInt       j,e,v,offset,*subnetvtx,Nsubnet,gidx,svtx_idx,nv;
+  PetscInt       j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
   PetscInt       to_net,from_net,*svto;
   PetscBT        btable;
   PetscPartitioner         part;
@@ -1784,11 +1790,13 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   nv += newDMnetwork->Nsvtx;
 
   /* Now create the vertices and edge arrays for the subnetworks */
-  ierr = PetscCalloc1(nv,&subnetvtx);CHKERRQ(ierr);
-  newDMnetwork->subnetvtx = subnetvtx;
+  ierr = PetscCalloc2(newDMnetwork->nEdges,&subnetedge,nv,&subnetvtx);CHKERRQ(ierr); /* Maps local vertex to local subnetwork's vertex */
+  newDMnetwork->subnetedge = subnetedge;
+  newDMnetwork->subnetvtx  = subnetvtx;
+  for (j=0; j < newDMnetwork->Nsubnet; j++) {
+    newDMnetwork->subnet[j].edges = subnetedge;
+    subnetedge                   += newDMnetwork->subnet[j].nedge;
 
-  for (j=0; j<Nsubnet; j++) {
-    ierr = PetscCalloc1(newDMnetwork->subnet[j].nedge,&newDMnetwork->subnet[j].edges);CHKERRQ(ierr);
     newDMnetwork->subnet[j].vertices = subnetvtx;
     subnetvtx                       += newDMnetwork->subnet[j].nvtx;
 
@@ -2696,11 +2704,7 @@ PetscErrorCode DMDestroy_Network(DM dm)
     ierr = PetscFree(network->svtx[j].sv);CHKERRQ(ierr);
   }
   if (network->svtx) {ierr = PetscFree(network->svtx);CHKERRQ(ierr);}
-
-  for (j=0; j<network->Nsubnet; j++) {
-    ierr = PetscFree(network->subnet[j].edges);CHKERRQ(ierr);
-  }
-  if (network->subnetvtx) {ierr = PetscFree(network->subnetvtx);CHKERRQ(ierr);}
+  ierr = PetscFree2(network->subnetedge,network->subnetvtx);CHKERRQ(ierr);
 
   ierr = PetscTableDestroy(&network->svtable);CHKERRQ(ierr);
   ierr = PetscFree(network->subnet);CHKERRQ(ierr);
