@@ -139,15 +139,22 @@ PetscErrorCode DMNetworkSetNumSubNetworks(DM dm,PetscInt nsubnet,PetscInt Nsubne
   Example usage:
   Consider the following network:
 .vb
- network 1: v1 -> v2 -> v0
+ network 1:
+ rank[0]:
+   v0 -> v2; v1 -> v2
+ rank[1]:
+   v3 -> v5; v4 -> v5
 .ve
 
  The resulting input
-   edgelist = [1 2 | 2 0]
+ rank[0]:
+   edgelist = [0 2 | 1 2]
+ rank[1]:
+   edgelist = [3 5 | 4 5]
 
 .seealso: DMNetworkCreate(), DMNetworkSetNumSubnetworks()
 @*/
-PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt nv,PetscInt ne,PetscInt edgelist[],PetscInt *netnum)
+PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscInt edgelist[],PetscInt *netnum)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;

@@ -17,7 +17,7 @@ int main(int argc,char ** argv)
   DM                plex;
   PetscSection      section;
   PetscInt          Ne,Ni;
-  PetscInt          nodeOffset,k = 2,nnode,nedge;
+  PetscInt          nodeOffset,k = 2,nedge;
 
   ierr = PetscInitialize(&argc,&argv,NULL,NULL);if (ierr) return ierr;
   /* Work around bug that assumes DMNetwork edges must have DOF */
@@ -35,7 +35,6 @@ int main(int argc,char ** argv)
   nodeOffset = (Ne+Ni)*rank;   /* The global node index of the first node defined on this process */
 
   /* There are three nodes on each rank and two edges. The edges only connect nodes on the given rank */
-  nnode = Ne + Ni;
   nedge = k * Ni;
 
   ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
@@ -45,7 +44,7 @@ int main(int argc,char ** argv)
   edgelist[3] = nodeOffset + 2;
 
   ierr = DMNetworkSetNumSubNetworks(network,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(network,"Subnetwork 1",nnode,nedge,edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(network,"Subnetwork 1",nedge,edgelist,NULL);CHKERRQ(ierr);
   ierr = DMNetworkLayoutSetUp(network);CHKERRQ(ierr);
 
   /* Add components and variables for the network */
