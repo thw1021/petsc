@@ -1436,8 +1436,16 @@ PetscErrorCode  PCASMCreateSubdomains(Mat A, PetscInt n, IS* outis[])
 
   /* Get prefix, row distribution, and block size */
   ierr = MatGetOptionsPrefix(A,&prefix);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(A,&rstart,&rend);CHKERRQ(ierr);
-  ierr = MatGetBlockSize(A,&bs);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATNORMAL,&hasop);CHKERRQ(ierr);
+  if (hasop) {
+    ierr = MatNormalGetMat(A,&Ad);CHKERRQ(ierr);
+    ierr = MatGetOwnershipRangeColumn(Ad,&rstart,&rend);CHKERRQ(ierr);
+    ierr = MatGetBlockSize(Ad,&bs);CHKERRQ(ierr);
+    Ad = NULL;
+  } else {
+    ierr = MatGetOwnershipRange(A,&rstart,&rend);CHKERRQ(ierr);
+    ierr = MatGetBlockSize(A,&bs);CHKERRQ(ierr);
+  }
   if (rstart/bs*bs != rstart || rend/bs*bs != rend) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"bad row distribution [%D,%D) for matrix block size %D",rstart,rend,bs);
 
   /* Get diagonal block from matrix if possible */
