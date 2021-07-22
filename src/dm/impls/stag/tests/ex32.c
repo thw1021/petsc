@@ -6,7 +6,7 @@ int main(int argc,char **argv)
 {
   PetscErrorCode ierr;
   DM             dm,dm_coarse;
-  Vec            vec,vec_coarse;
+  Vec            vec,vec_coarse,vec_local,vec_local_coarse;
   PetscInt       dim,size_coarse;
   PetscReal      norm;
 
@@ -28,15 +28,26 @@ int main(int argc,char **argv)
   ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMCoarsen(dm,MPI_COMM_NULL,&dm_coarse);CHKERRQ(ierr);
+
   ierr = DMCreateGlobalVector(dm,&vec);CHKERRQ(ierr);
   ierr = VecSet(vec,1.0);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dm,&vec_local);CHKERRQ(ierr);
+  ierr = DMGlobalToLocal(dm,vec,INSERT_VALUES,vec_local);CHKERRQ(ierr);
+
   ierr = DMCreateGlobalVector(dm_coarse,&vec_coarse);CHKERRQ(ierr);
-  ierr = DMStagRestrictSimple(dm,vec,dm_coarse,vec_coarse);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(dm_coarse,&vec_local_coarse);CHKERRQ(ierr);
+
+  ierr = DMStagRestrictSimple(dm,vec_local,dm_coarse,vec_local_coarse);CHKERRQ(ierr);
+
+  ierr = DMLocalToGlobal(dm_coarse,vec_local_coarse,INSERT_VALUES,vec_coarse);CHKERRQ(ierr);
+
   ierr = VecGetSize(vec_coarse,&size_coarse);CHKERRQ(ierr);
   ierr = VecNorm(vec_coarse,NORM_1,&norm);CHKERRQ(ierr);
   if ((norm - size_coarse)/((PetscReal) size_coarse) > PETSC_MACHINE_EPSILON * 10.0) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Numerical test failed");
   ierr = VecDestroy(&vec_coarse);CHKERRQ(ierr);
   ierr = VecDestroy(&vec);CHKERRQ(ierr);
+  ierr = VecDestroy(&vec_local_coarse);CHKERRQ(ierr);
+  ierr = VecDestroy(&vec_local);CHKERRQ(ierr);
   ierr = DMDestroy(&dm_coarse);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = PetscFinalize();

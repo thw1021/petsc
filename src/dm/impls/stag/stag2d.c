@@ -51,12 +51,11 @@ PETSC_EXTERN PetscErrorCode DMStagCreate2d(MPI_Comm comm, DMBoundaryType bndx,DM
   PetscFunctionReturn(0);
 }
 
-PETSC_INTERN PetscErrorCode DMStagRestrictSimple_2d(DM dmf,Vec xf,DM dmc,Vec xc)
+PETSC_INTERN PetscErrorCode DMStagRestrictSimple_2d(DM dmf,Vec xf_local,DM dmc,Vec xc_local)
 {
   PetscErrorCode ierr;
   PetscScalar    ***LA_xf,***LA_xc;
   PetscInt       i,j,start[2],n[2],nextra[2],N[2];
-  Vec            xf_l,xc_l;
   PetscInt       d,dof[3];
   PetscInt       slot_down_left_coarse,slot_down_left_fine;
   PetscInt       slot_element_fine,slot_element_coarse;
@@ -74,14 +73,24 @@ PETSC_INTERN PetscErrorCode DMStagRestrictSimple_2d(DM dmf,Vec xf,DM dmc,Vec xc)
     for (d=0; d<3; ++d) if (dof_check[d] != dof[d]) SETERRQ(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Cannot transfer between DMStag objects with different dof on each stratum");
     for (d=0; d<2; ++d) if (n_fine[d] != 2*n[d]) SETERRQ(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Cannot transfer between DMStag objects unless there is a 2-1 coarsening");
     for (d=0; d<2; ++d) if (start_fine[d] != 2*start[d]) SETERRQ(PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Cannot transfer between DMStag objects unless there is a 2-1 coarsening");
+    {
+      PetscInt size_local,entries_local;
+
+      ierr = DMStagGetEntriesLocal(dmf,&entries_local);CHKERRQ(ierr);
+      ierr = VecGetLocalSize(xf_local,&size_local);CHKERRQ(ierr);
+      if (entries_local != size_local) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"Fine vector must be a local vector of size %D, but a vector of size %D was supplied",entries_local,size_local);
+    }
+    {
+      PetscInt size_local,entries_local;
+
+      ierr = DMStagGetEntriesLocal(dmc,&entries_local);CHKERRQ(ierr);
+      ierr = VecGetLocalSize(xc_local,&size_local);CHKERRQ(ierr);
+      if (entries_local != size_local) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"Coarse vector must be a local vector of size %D, but a vector of size %D was supplied",entries_local,size_local);
+    }
   }
-  ierr = VecZeroEntries(xc);CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(dmf,&xf_l);CHKERRQ(ierr);
-  ierr = DMCreateLocalVector(dmc,&xc_l);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dmf,xf,INSERT_VALUES,xf_l);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(dmf,xf,INSERT_VALUES,xf_l);CHKERRQ(ierr);
-  ierr = DMStagVecGetArray(dmf,xf_l,&LA_xf);CHKERRQ(ierr);
-  ierr = DMStagVecGetArray(dmc,xc_l,&LA_xc);CHKERRQ(ierr);
+  ierr = VecZeroEntries(xc_local);CHKERRQ(ierr);
+  ierr = DMStagVecGetArray(dmf,xf_local,&LA_xf); CHKERRQ(ierr);
+  ierr = DMStagVecGetArray(dmc,xc_local,&LA_xc); CHKERRQ(ierr);
   ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN_LEFT, 0,&slot_down_left_fine);CHKERRQ(ierr);
   ierr = DMStagGetLocationSlot(dmf,DMSTAG_LEFT,      0,&slot_left_fine);CHKERRQ(ierr);
   ierr = DMStagGetLocationSlot(dmf,DMSTAG_DOWN,      0,&slot_down_fine);CHKERRQ(ierr);
@@ -114,12 +123,8 @@ PETSC_INTERN PetscErrorCode DMStagRestrictSimple_2d(DM dmf,Vec xf,DM dmc,Vec xc)
       }
     }
   }
-  ierr = DMStagVecRestoreArray(dmf,xf_l,&LA_xf);CHKERRQ(ierr);
-  ierr = DMStagVecRestoreArray(dmc,xc_l,&LA_xc);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalBegin(dmc,xc_l,INSERT_VALUES,xc);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalEnd(dmc,xc_l,INSERT_VALUES,xc);CHKERRQ(ierr);
-  ierr = VecDestroy(&xf_l);CHKERRQ(ierr);
-  ierr = VecDestroy(&xc_l);CHKERRQ(ierr);
+  ierr = DMStagVecRestoreArray(dmf,xf_local,&LA_xf); CHKERRQ(ierr);
+  ierr = DMStagVecRestoreArray(dmc,xc_local,&LA_xc); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

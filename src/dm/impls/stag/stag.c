@@ -306,7 +306,7 @@ static PetscErrorCode DMCoarsen_Stag(DM dm,MPI_Comm comm,DM *dmc)
         ierr = DMGetCoordinateDM(subdm_fine,&subdm_coord_fine);CHKERRQ(ierr);
         ierr = DMProductGetDM(coordinate_dmc,d,&subdm_coarse);CHKERRQ(ierr);
         ierr = DMGetCoordinateDM(subdm_coarse,&subdm_coord_coarse);CHKERRQ(ierr);
-        ierr = DMStagRestrictSimple(subdm_coord_fine,subdm_fine->coordinates,subdm_coord_coarse,subdm_coarse->coordinates);CHKERRQ(ierr);
+        ierr = DMStagRestrictSimple(subdm_coord_fine,subdm_fine->coordinatesLocal,subdm_coord_coarse,subdm_coarse->coordinatesLocal);CHKERRQ(ierr);
       }
     } else SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unknown coordinate DM type");
   }
