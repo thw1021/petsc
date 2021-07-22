@@ -897,6 +897,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
   ierr = ISGetIndices(ixx,&xindices);CHKERRQ(ierr);
   ierr = ISGetIndices(iyy,&yindices);CHKERRQ(ierr);
   ierr = VecGetLayout(xx,&xlayout);CHKERRQ(ierr);
+  ierr = PetscLayoutSetUp(xlayout);CHKERRQ(ierr);
 
   if (ycommsize > 1) {
     /* PtoP or StoP */
