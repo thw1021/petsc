@@ -4,25 +4,7 @@ const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","gl
 
 const char *const PetscDeviceContextJoinModes[] = {"destroy","sync","no_sync","PetscDeviceContextJoinMode","PETSC_DEVICE_CONTEXT_JOIN_",PETSC_NULLPTR};
 
-static PetscBool PetscDeviceRegisterAllCalled  = PETSC_FALSE;
 static PetscBool PetscDevicePackageInitialized = PETSC_FALSE;
-
-/*@C
-  PetscDeviceRegisterAll - Registers all the components in the PetscDevice package.
-
-  Not Collective
-
-  Level: developer
-
-.seealso:  PetscDeviceContextCreate(), PetscDeviceFinalizePackage(), PetscDeviceInitializePackage(), PetscDeviceContextRegister()
-@*/
-PetscErrorCode PetscDeviceRegisterAll(void)
-{
-  PetscFunctionBegin;
-  if (PetscDeviceRegisterAllCalled) PetscFunctionReturn(0);
-  PetscDeviceRegisterAllCalled = PETSC_TRUE;
-  PetscFunctionReturn(0);
-}
 
 /*@C
   PetscDeviceFinalizePackage - This function cleans up all components of the PetscDevice package.
@@ -39,7 +21,6 @@ PetscErrorCode PetscDeviceRegisterAll(void)
 PetscErrorCode PetscDeviceFinalizePackage(void)
 {
   PetscFunctionBegin;
-  PetscDeviceRegisterAllCalled  = PETSC_FALSE;
   PetscDevicePackageInitialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -62,6 +43,5 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   if (PetscDevicePackageInitialized) PetscFunctionReturn(0);
   PetscDevicePackageInitialized = PETSC_TRUE;
   ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);
-  ierr = PetscDeviceRegisterAll();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

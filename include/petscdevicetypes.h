@@ -127,11 +127,11 @@ typedef enum {
 PETSC_EXTERN const char *const PetscDeviceContextJoinModes[];
 
 /*S
-  PetscDeviceContext - Container for efficient management of a device stream and solver context.
+  PetscDeviceContext - Container to manage stream dependencies and the various solver handles for asynchronous device compute.
 
   Level: beginner
 
-.seealso: PetscDevice, PetscDeviceContextCreate(), PetscDeviceContextType, PetscDeviceContextSetType(), PetscDeviceContextDestroy(),
+.seealso: PetscDevice, PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextDestroy(),
 PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
