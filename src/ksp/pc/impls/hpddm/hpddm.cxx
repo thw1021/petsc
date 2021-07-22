@@ -899,7 +899,15 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       is[0] = data->is;
       ierr = PetscOptionsGetBool(NULL, pcpre, "-pc_hpddm_define_subdomains", &subdomains, NULL);CHKERRQ(ierr);
       ierr = PetscOptionsGetBool(NULL, pcpre, "-pc_hpddm_has_neumann", &data->Neumann, NULL);CHKERRQ(ierr);
-      ierr = ISCreateStride(PetscObjectComm((PetscObject)data->is), P->rmap->n, P->rmap->rstart, 1, &loc);CHKERRQ(ierr);
+      ierr = PetscObjectTypeCompare((PetscObject)P, MATNORMAL, &flag);CHKERRQ(ierr);
+      if (!flag) {
+        ierr = ISCreateStride(PetscObjectComm((PetscObject)data->is), P->rmap->n, P->rmap->rstart, 1, &loc);CHKERRQ(ierr);
+      } else {
+        ierr = MatNormalGetMat(P, &weighted);CHKERRQ(ierr);
+        ierr = ISCreateStride(PetscObjectComm((PetscObject)data->is), weighted->cmap->n, weighted->cmap->rstart, 1, &loc);CHKERRQ(ierr);
+        weighted = NULL;
+        flag = PETSC_FALSE;
+      }
     }
     if (data->N > 1 && (data->aux || ismatis)) {
       if (!loadedSym) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "HPDDM library not loaded, cannot use more than one level");
@@ -1040,7 +1048,15 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       /* matrix pencil of the generalized eigenvalue problem on the overlap (GenEO) */
       if (!data->B) {
         ierr = MatDuplicate(sub[0], MAT_COPY_VALUES, &weighted);CHKERRQ(ierr);
-        ierr = MatDiagonalScale(weighted, data->levels[0]->D, data->levels[0]->D);CHKERRQ(ierr);
+        ierr = PetscObjectTypeCompare((PetscObject)weighted, MATNORMAL, &flag);CHKERRQ(ierr);
+        if (!flag) {
+          ierr = MatDiagonalScale(weighted, data->levels[0]->D, data->levels[0]->D);CHKERRQ(ierr);
+        } else { /* MATNORMAL applies MatDiagonalScale() in a matrix-free fashion, not what is needed since this won't be passed to SLEPc during the eigensolve */
+          ierr = MatNormalGetMat(weighted, &data->B);CHKERRQ(ierr);
+          ierr = MatDiagonalScale(data->B, NULL, data->levels[0]->D);CHKERRQ(ierr);
+          data->B = NULL;
+          flag = PETSC_FALSE;
+        }
         /* neither MatDuplicate() nor MatDiagonaleScale() handles the symmetry options, so propagate the options explicitly */
         /* only useful for -mat_type baij -pc_hpddm_levels_1_st_pc_type cholesky (no problem with MATAIJ or MATSBAIJ)       */
         ierr = MatPropagateSymmetryOptions(sub[0], weighted);CHKERRQ(ierr);
