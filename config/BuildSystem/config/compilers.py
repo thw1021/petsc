@@ -470,7 +470,7 @@ class Configure(config.base.Configure):
     return
 
   def checkDeviceHostCompiler(self,language):
-    """Set the host compiler for device compiler (DC) to the current host compiler (HC). This may be needed if the default compiler used by DC is ancient. If the DC already contains a flag that sets the corresponding HC this routine does nothing"""
+    """Set the host compiler (HC) of the device compiler (DC) to the HC unless the DC already explicitly sets its HC. This may be needed if the default HC used by the DC is ancient and PETSc uses a different HC (e.g., through --with-cxx=...)."""
     if language == 'CUDA':
       setHostFlag = '-ccbin'
     else:
@@ -502,6 +502,16 @@ class Configure(config.base.Configure):
       cxx14: gnu++14 or c++14
       cxx11: gnu++11 or c++11
       0: disable CxxDialect check and use compiler default
+
+    On return this function sets the following values:
+    - if needed, appends the relevant CXX dialect flag to <lang> compiler flags
+    - self.lang+'dialect'  = maxSupportedDialect (e.g. 'c++14')
+    - self.cxxDialectRange = (self.cxxDialectRange[0],maxSupportedDialect) (e.g. ('c++03','c++14'))
+    - self.addDefine('HAVE_{LANG}_DIALECT_CXX{DIALECT_NUM}',1) for every supported dialect
+
+    or raises a RuntimeException if either:
+    - The combination of specifically requested packages cannnot all be compiled with the same flag
+    - The compiler does not support at minimum -std=c++03 (or its equivalent)
     """
     lang = language.lower()
     LANG = language.upper()
@@ -692,44 +702,27 @@ class Configure(config.base.Configure):
         dialectNum = dlct['num'][3:] # extract '17' from c++17
         flag = dlct['num'].replace('c++',baseFlag)
         self.setCompilers.saveLog()
-        self.logPrint(' '.join(['checkCxxDialect: checking CXX',dialectNum,'for',language,'first without flag']))
+        self.logPrint(' '.join(['checkCxxDialect: checking CXX',dialectNum,'for',language,'with flag:',flag]))
         self.logWrite(self.setCompilers.restoreLog())
         # test with flag
         with self.setCompilers.Language(language):
-          # How this works:
-          # 1. Try to compile the code without using the flag first, some compilers will
-          #    have a default std setting (e.g. clang6 by default uses -std=gnu++14).
-          #    - If this fails, add the flag and try, try, try again
-          #      - If the flag also fails it will throw RTE and be caught in the
-          #        except. We give up and continue on down to the next tier
-          #    - If any part above succeeds, we enter the else clause where we record the
-          #      result and break out of the loop
           try:
-            # first try to compile without the flag, see if that works
-            if not self.checkCompile(includes=dlct['includes'],body=dlct['body']):
-              # didn't work without the flag
-              try:
-                # so this doesn't get caught in the outer try-catch if it ever throws something
-                self.setCompilers.saveLog()
-                self.logPrint(' '.join(['checkCxxDialect: without flag did not work, checking CXX',dialectNum,'for',language,'with flag:',flag]))
-                self.logWrite(self.setCompilers.restoreLog())
-              except RuntimeError:
-                pass
-              self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'],compilerOnly=True)
+            # try to compile the src with the flag
+            # needs compilerOnly=True as we need to keep the flag out of the linker flags
+            # (it doesn't make any sense, and someone might inadvertently pass those to
+            # a package)
+            self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'],compilerOnly=True)
           except RuntimeError:
-            # failure from addCompilerFlag
+            # failure from addCompilerFlag, flag is discarded, and we go back around
             maxDialect -= 1
+            if maxDialect < minDialect:
+              # we were not successful, compiler does not support the minimum required c++ dialect
+              packageBlame = '\n'.join('\t- '+s for s in self.cxxDialectPackageRanges[0][minPackDlct])
+              raise RuntimeError('Using {lang} dialect {flag} as lower bound due to package(s):\n{packs}\n\tBut {lang} compiler does not appear to be compliant with {flag}, or does not accept {flag} flag'.format(lang=LANG,flag=flag,packs=packageBlame))
           else:
-            # success, record our max supported flag
+            # success, record our new range
             self.cxxDialectRange = (self.cxxDialectRange[0],dlct['num'])
             break
-
-    if maxDialect < minDialect:
-      # we were not successful
-      if explicit:
-        packageBlame = '\n'.join('\t- '+s for s in self.cxxDialectPackageRanges[0][minPackDlct])
-        raise RuntimeError('Using {lang} dialect {flag} as lower bound due to package(s):\n{packs}\n\tBut {lang} compiler does not appear to be compliant with {flag}, or does not accept {flag} flag'.format(lang=LANG,flag=flag,packs=packageBlame))
-      raise RuntimeError('{lang} compiler does not appear to be compliant with {flag}, or does not accept {flag} flag'.format(lang=LANG,flag=flag))
 
     for dlct in dialects[:maxDialect]:
       self.addDefine('HAVE_{lng}_DIALECT_CXX{ver}'.format(lng=LANG,ver=dialectNum),1)
