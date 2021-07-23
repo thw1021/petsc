@@ -151,6 +151,7 @@ Changes: Development
 .. rubric:: DMNetwork:
 
 -  Add ``DMNetworkCreateIS()`` and ``DMNetworkCreateLocalIS()``
+-  Remove nv from ``DMNetworkAddSubnetwork()``
 
 .. rubric:: DT:
 
