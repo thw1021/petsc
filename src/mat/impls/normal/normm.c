@@ -79,8 +79,8 @@ PetscErrorCode MatCreateSubMatrices_Normal(Mat mat,PetscInt n,const IS irow[],co
   for (N = 1; N < n; ++N) col[N] = col[0];
   ierr = MatCreateSubMatrices(C,n,irow,col,MAT_INITIAL_MATRIX,&suba);CHKERRQ(ierr);
   for (N = 0; N < n; ++N) {
-    ierr = MatTranspose(suba[N],MAT_INITIAL_MATRIX,&B);
-    ierr = MatCreateNormal(B,*submat+N);
+    ierr = MatTranspose(suba[N],MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
+    ierr = MatCreateNormal(B,*submat+N);CHKERRQ(ierr);
     ((Mat_Normal*)(*submat)[N]->data)->scale = a->scale;
     ierr = MatDestroy(&B);
   }
@@ -124,17 +124,6 @@ PetscErrorCode MatDuplicate_Normal(Mat A, MatDuplicateOption op, Mat *B)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatAXPY_Normal(Mat Y,PetscScalar a,Mat X,MatStructure str)
-{
-  Mat_Normal     *y = (Mat_Normal*)Y->data,*x = (Mat_Normal*)X->data;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (y->left || y->right || x->left || x->right) SETERRQ(PetscObjectComm((PetscObject)Y),PETSC_ERR_SUP,"Not implemented");
-  ierr = MatAXPY(y->A,a*x->scale/y->scale,x->A,str);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode MatCopy_Normal(Mat A,Mat B,MatStructure str)
 {
   Mat_Normal     *a = (Mat_Normal*)A->data,*b = (Mat_Normal*)B->data;
@@ -142,7 +131,7 @@ PetscErrorCode MatCopy_Normal(Mat A,Mat B,MatStructure str)
 
   PetscFunctionBegin;
   if (a->left || a->right) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not implemented");
-  ierr = MatCopy(a->A,b->A,str);
+  ierr = MatCopy(a->A,b->A,str);CHKERRQ(ierr);
   b->scale = a->scale;
   ierr = VecDestroy(&b->left);CHKERRQ(ierr);
   ierr = VecDestroy(&b->right);CHKERRQ(ierr);
@@ -361,6 +350,7 @@ PetscErrorCode MatConvert_Normal_AIJ(Mat A,MatType newtype,MatReuse reuse,Mat *n
     ierr = MatProductSetType(B,MATPRODUCT_AtB);CHKERRQ(ierr);
     ierr = MatProductSetFromOptions(B);CHKERRQ(ierr);
     ierr = MatProductSymbolic(B);CHKERRQ(ierr);
+    ierr = MatSetOption(B,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
   }
   ierr = MatProductNumeric(B);CHKERRQ(ierr);
   if (reuse == MAT_INPLACE_MATRIX) {
@@ -531,7 +521,6 @@ PetscErrorCode  MatCreateNormal(Mat A,Mat *N)
   (*N)->ops->createsubmatrices = MatCreateSubMatrices_Normal;
   (*N)->ops->permute           = MatPermute_Normal;
   (*N)->ops->duplicate         = MatDuplicate_Normal;
-  (*N)->ops->axpy              = MatAXPY_Normal;
   (*N)->ops->copy              = MatCopy_Normal;
   (*N)->assembled              = PETSC_TRUE;
   (*N)->preallocated           = PETSC_TRUE;
