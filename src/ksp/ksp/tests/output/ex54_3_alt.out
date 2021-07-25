@@ -25,12 +25,15 @@ KSP Object: 2 MPI processes
   using UNPRECONDITIONED norm type for convergence test
 PC Object: 2 MPI processes
   type: none
-  linear system matrix = precond matrix:
+  linear system matrix followed by preconditioner matrix:
   Mat Object: 2 MPI processes
     type: mpidense
     rows=4, cols=3
     total: nonzeros=12, allocated nonzeros=12
     total number of mallocs used during MatSetValues calls=0
+  Mat Object: 2 MPI processes
+    type: normal
+    rows=3, cols=3
 Vec Object: 2 MPI processes
   type: mpi
 Process [0]
