@@ -1005,11 +1005,22 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         } else {
           Mat        D;
           const char *matpre;
+          PetscBool  cmp[2];
           ierr = KSPGetOperators(ksp[0], subA, subA + 1);CHKERRQ(ierr);
           ierr = MatDuplicate(subA[1], MAT_SHARE_NONZERO_PATTERN, &D);CHKERRQ(ierr);
           ierr = MatGetOptionsPrefix(subA[1], &matpre);CHKERRQ(ierr);
           ierr = MatSetOptionsPrefix(D, matpre);CHKERRQ(ierr);
-          ierr = MatAXPY(D, 1.0, C, SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+          ierr = PetscObjectTypeCompare((PetscObject)D, MATNORMAL, cmp);CHKERRQ(ierr);
+          ierr = PetscObjectTypeCompare((PetscObject)C, MATNORMAL, cmp + 1);CHKERRQ(ierr);
+          if (!cmp[0] != !cmp[1]) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "-pc_hpddm_levels_1_pc_asm_sub_mat_type %s and auxiliary Mat of type %s",((PetscObject)D)->type_name,((PetscObject)C)->type_name);
+          if (!cmp[0]) {
+            ierr = MatAXPY(D, 1.0, C, SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+          } else {
+            Mat mat[2];
+            ierr = MatNormalGetMat(D, mat);CHKERRQ(ierr);
+            ierr = MatNormalGetMat(C, mat + 1);CHKERRQ(ierr);
+            ierr = MatAXPY(mat[0], 1.0, mat[1], SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+          }
           ierr = MatPropagateSymmetryOptions(C, D);CHKERRQ(ierr);
           ierr = MatDestroy(&C);CHKERRQ(ierr);
           C = D;
