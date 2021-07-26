@@ -96,7 +96,7 @@ static PetscErrorCode MatSolve_SPQR_Internal(Mat F, cholmod_dense *cholB, cholmo
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!chol->pack) {
+  if (!chol->normal) {
     QTB_handle = SuiteSparseQR_C_qmult(SPQR_QTX, chol->spqrfact, cholB, chol->common);
     if (!QTB_handle) SETERRQ(PetscObjectComm((PetscObject)F), PETSC_ERR_LIB, "SuiteSparseQR_C_qmult failed");
     Y_handle = SuiteSparseQR_C_solve(SPQR_RETX_EQUALS_B, chol->spqrfact, QTB_handle, chol->common);
@@ -230,7 +230,7 @@ static PetscErrorCode MatQRFactorNumeric_SPQR(Mat F,Mat A,const MatFactorInfo *i
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)A,MATNORMAL,&flg);CHKERRQ(ierr);
-  chol->pack = flg;
+  chol->normal = flg;
   ierr = (*chol->Wrap)(A,PETSC_TRUE,&cholA,&aijalloc,&valloc);CHKERRQ(ierr);
   ierr = !SuiteSparseQR_C_numeric(PETSC_SMALL, &cholA, chol->spqrfact, chol->common);
   if (ierr) SETERRQ1(PetscObjectComm((PetscObject)F),PETSC_ERR_LIB,"SPQR factorization failed with status %d",chol->common->status);
@@ -240,7 +240,10 @@ static PetscErrorCode MatQRFactorNumeric_SPQR(Mat F,Mat A,const MatFactorInfo *i
 
   F->ops->solve             = MatSolve_SPQR;
   F->ops->matsolve          = MatMatSolve_SPQR;
-  if (A->cmap->n == A->rmap->n && !chol->pack) {
+  if (chol->normal) {
+    F->ops->solvetranspose    = MatSolve_SPQR;
+    F->ops->matsolvetranspose = MatMatSolve_SPQR;
+  } else if (A->cmap->n == A->rmap->n) {
     F->ops->solvetranspose    = MatSolveTranspose_SPQR;
     F->ops->matsolvetranspose = MatMatSolveTranspose_SPQR;
   }
@@ -256,7 +259,7 @@ PETSC_INTERN PetscErrorCode MatQRFactorSymbolic_SPQR(Mat F,Mat A,IS perm,const M
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)A,MATNORMAL,&flg);CHKERRQ(ierr);
-  chol->pack = flg;
+  chol->normal = flg;
   ierr = (*chol->Wrap)(A,PETSC_TRUE,&cholA,&aijalloc,&valloc);CHKERRQ(ierr);
   if (PetscDefined(USE_DEBUG)) {
     ierr = !cholmod_l_check_sparse(&cholA, chol->common);CHKERRQ(ierr);
