@@ -2,7 +2,7 @@
 #include <petsc/private/matimpl.h>          /*I "petscmat.h" I*/
 
 typedef struct {
-  Mat         A;
+  Mat         A,W;
   Vec         w,left,right,leftwork,rightwork;
   PetscScalar scale;
 } Mat_Normal;
@@ -38,6 +38,105 @@ PetscErrorCode MatDiagonalScale_Normal(Mat inA,Vec left,Vec right)
       ierr = VecPointwiseMult(a->right,right,a->right);CHKERRQ(ierr);
     }
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatIncreaseOverlap_Normal(Mat A,PetscInt is_max,IS is[],PetscInt ov)
+{
+  Mat_Normal     *a = (Mat_Normal*)A->data;
+  Mat            pattern;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (ov < 0) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
+  ierr = MatProductCreate(a->A,a->A,NULL,&pattern);CHKERRQ(ierr);
+  ierr = MatProductSetType(pattern,MATPRODUCT_AtB);CHKERRQ(ierr);
+  ierr = MatProductSetFromOptions(pattern);CHKERRQ(ierr);
+  ierr = MatProductSymbolic(pattern);CHKERRQ(ierr);
+  ierr = MatIncreaseOverlap(pattern,is_max,is,ov);CHKERRQ(ierr);
+  ierr = MatDestroy(&pattern);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatCreateSubMatrices_Normal(Mat mat,PetscInt n,const IS irow[],const IS icol[],MatReuse scall,Mat *submat[])
+{
+  Mat_Normal     *a = (Mat_Normal*)mat->data;
+  Mat            B = a->A, C, *suba;
+  IS             *col;
+  PetscInt       N;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (a->left || a->right || irow != icol) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Not implemented");
+  if (scall != MAT_REUSE_MATRIX) {
+    ierr = PetscCalloc1(n,submat);CHKERRQ(ierr);
+  }
+  ierr = MatTranspose(B,MAT_INITIAL_MATRIX,&C);CHKERRQ(ierr);
+  ierr = MatGetSize(C,NULL,&N);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n,&col);CHKERRQ(ierr);
+  ierr = ISCreateStride(PETSC_COMM_SELF,N,0,1,&col[0]);CHKERRQ(ierr);
+  ierr = ISSetIdentity(col[0]);CHKERRQ(ierr);
+  for (N = 1; N < n; ++N) col[N] = col[0];
+  ierr = MatCreateSubMatrices(C,n,irow,col,MAT_INITIAL_MATRIX,&suba);CHKERRQ(ierr);
+  for (N = 0; N < n; ++N) {
+    ierr = MatTranspose(suba[N],MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
+    ierr = MatCreateNormal(B,*submat+N);CHKERRQ(ierr);
+    ((Mat_Normal*)(*submat)[N]->data)->scale = a->scale;
+    ierr = MatDestroy(&B);
+  }
+  ierr = ISDestroy(&col[0]);CHKERRQ(ierr);
+  ierr = PetscFree(col);CHKERRQ(ierr);
+  ierr = MatDestroySubMatrices(n,&suba);CHKERRQ(ierr);
+  ierr = MatDestroy(&C);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatPermute_Normal(Mat A,IS rowp,IS colp,Mat *B)
+{
+  Mat_Normal     *a = (Mat_Normal*)A->data;
+  Mat            C,Aa = a->A;
+  IS             row;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (rowp != colp) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Row permutation and column permutation must be the same");
+  ierr = ISCreateStride(PetscObjectComm((PetscObject)Aa),Aa->rmap->n,Aa->rmap->rstart,1,&row);CHKERRQ(ierr);
+  ierr = ISSetIdentity(row);CHKERRQ(ierr);
+  ierr = MatPermute(Aa,row,colp,&C);CHKERRQ(ierr);
+  ierr = ISDestroy(&row);CHKERRQ(ierr);
+  ierr = MatCreateNormal(C,B);CHKERRQ(ierr);
+  ierr = MatDestroy(&C);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatDuplicate_Normal(Mat A, MatDuplicateOption op, Mat *B)
+{
+  Mat_Normal     *a = (Mat_Normal*)A->data;
+  Mat            C;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (a->left || a->right) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not implemented");
+  ierr = MatDuplicate(a->A,op,&C);CHKERRQ(ierr);
+  ierr = MatCreateNormal(C,B);CHKERRQ(ierr);
+  ierr = MatDestroy(&C);CHKERRQ(ierr);
+  ((Mat_Normal*)(*B)->data)->scale = a->scale;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatCopy_Normal(Mat A,Mat B,MatStructure str)
+{
+  Mat_Normal     *a = (Mat_Normal*)A->data,*b = (Mat_Normal*)B->data;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (a->left || a->right) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not implemented");
+  ierr = MatCopy(a->A,b->A,str);CHKERRQ(ierr);
+  b->scale = a->scale;
+  ierr = VecDestroy(&b->left);CHKERRQ(ierr);
+  ierr = VecDestroy(&b->right);CHKERRQ(ierr);
+  ierr = VecDestroy(&b->leftwork);CHKERRQ(ierr);
+  ierr = VecDestroy(&b->rightwork);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -155,7 +254,9 @@ PetscErrorCode MatDestroy_Normal(Mat N)
   ierr = VecDestroy(&Na->right);CHKERRQ(ierr);
   ierr = VecDestroy(&Na->leftwork);CHKERRQ(ierr);
   ierr = VecDestroy(&Na->rightwork);CHKERRQ(ierr);
+  ierr = MatDestroy(&Na->W);CHKERRQ(ierr);
   ierr = PetscFree(N->data);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatNormalGetMat_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -191,6 +292,179 @@ PetscErrorCode MatGetDiagonal_Normal(Mat N,Vec v)
   ierr   = VecRestoreArray(v,&values);CHKERRQ(ierr);
   ierr   = PetscFree2(diag,work);CHKERRQ(ierr);
   ierr   = VecScale(v,Na->scale);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatNormalGetMat_Normal(Mat A,Mat *M)
+{
+  Mat_Normal *Aa = (Mat_Normal*)A->data;
+
+  PetscFunctionBegin;
+  *M = Aa->A;
+  PetscFunctionReturn(0);
+}
+
+/*@
+      MatNormalGetMat - Gets the Mat object stored inside a MATNORMAL
+
+   Logically collective on Mat
+
+   Input Parameter:
+.   A  - the MATNORMAL matrix
+
+   Output Parameter:
+.   M - the matrix object stored inside A
+
+   Level: intermediate
+
+.seealso: MatCreateNormal()
+
+@*/
+PetscErrorCode MatNormalGetMat(Mat A,Mat *M)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
+  PetscValidType(A,1);
+  PetscValidPointer(M,2);
+  ierr = PetscUseMethod(A,"MatNormalGetMat_C",(Mat,Mat*),(A,M));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatConvert_Normal_AIJ(Mat A,MatType newtype,MatReuse reuse,Mat *newmat)
+{
+  Mat_Normal     *Aa = (Mat_Normal*)A->data;
+  Mat            B;
+  PetscInt       m,n,M,N;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
+  ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
+  if (reuse == MAT_REUSE_MATRIX) {
+    B = *newmat;
+    ierr = MatProductReplaceMats(Aa->A,Aa->A,NULL,B);CHKERRQ(ierr);
+  } else {
+    ierr = MatProductCreate(Aa->A,Aa->A,NULL,&B);CHKERRQ(ierr);
+    ierr = MatProductSetType(B,MATPRODUCT_AtB);CHKERRQ(ierr);
+    ierr = MatProductSetFromOptions(B);CHKERRQ(ierr);
+    ierr = MatProductSymbolic(B);CHKERRQ(ierr);
+    ierr = MatSetOption(B,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
+  }
+  ierr = MatProductNumeric(B);CHKERRQ(ierr);
+  if (reuse == MAT_INPLACE_MATRIX) {
+    ierr = MatHeaderReplace(A,&B);CHKERRQ(ierr);
+  } else if (reuse == MAT_INITIAL_MATRIX) *newmat = B;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatProductNumeric_Normal_Dense(Mat C)
+{
+  Mat            A,B,D;
+  Mat_Normal     *a;
+  PetscScalar    *array;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C,3);
+  A = C->product->A;
+  a = (Mat_Normal*)A->data;
+  B = C->product->B;
+  if (!C->product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data empty");
+  D = (Mat)C->product->data;
+  if (a->right) {
+    ierr = MatCopy(B,C,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+    ierr = MatDiagonalScale(C,a->right,NULL);CHKERRQ(ierr);
+  }
+  ierr = MatProductNumeric(a->W);CHKERRQ(ierr);
+  ierr = MatDenseGetArrayWrite(C,&array);CHKERRQ(ierr);
+  ierr = MatDensePlaceArray(D,array);CHKERRQ(ierr);
+  ierr = MatProductNumeric(D);CHKERRQ(ierr);
+  ierr = MatDenseRestoreArrayWrite(C,&array);CHKERRQ(ierr);
+  ierr = MatDenseResetArray(D);CHKERRQ(ierr);
+  ierr = MatSetOption(C,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(C,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatScale(C,a->scale);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatNormal_DenseDestroy(void *ctx)
+{
+  Mat            contents = (Mat)ctx;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatDestroy(&contents);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatProductSymbolic_Normal_Dense(Mat C)
+{
+  Mat            A,B;
+  Mat_Normal     *a;
+  PetscScalar    *array;
+  PetscInt       n,N,m,M;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  MatCheckProduct(C,4);
+  if (C->product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data not empty");
+  A = C->product->A;
+  a = (Mat_Normal*)A->data;
+  if (a->left) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_SUP,"Not implemented");
+  B = C->product->B;
+  ierr = MatGetLocalSize(C,&m,&n);CHKERRQ(ierr);
+  ierr = MatGetSize(C,&M,&N);CHKERRQ(ierr);
+  if (m == PETSC_DECIDE || n == PETSC_DECIDE || M == PETSC_DECIDE || N == PETSC_DECIDE) {
+    ierr = MatGetLocalSize(B,NULL,&n);CHKERRQ(ierr);
+    ierr = MatGetSize(B,NULL,&N);CHKERRQ(ierr);
+    ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
+    ierr = MatGetSize(A,&M,NULL);CHKERRQ(ierr);
+    ierr = MatSetSizes(C,m,n,M,N);CHKERRQ(ierr);
+  }
+  ierr = MatSetType(C,((PetscObject)B)->type_name);CHKERRQ(ierr);
+  ierr = MatSetUp(C);CHKERRQ(ierr);
+  if (a->right) {
+    ierr = MatProductCreate(a->A,C,NULL,&a->W);CHKERRQ(ierr);
+  } else {
+    ierr = MatProductCreate(a->A,B,NULL,&a->W);CHKERRQ(ierr);
+  }
+  ierr = MatProductSetType(a->W,MATPRODUCT_AB);CHKERRQ(ierr);
+  ierr = MatProductSetFromOptions(a->W);CHKERRQ(ierr);
+  ierr = MatProductSymbolic(a->W);CHKERRQ(ierr);
+  Mat D;
+  ierr = MatProductCreate(a->A,a->W,NULL,&D);CHKERRQ(ierr);
+  ierr = MatProductSetType(D,MATPRODUCT_AtB);CHKERRQ(ierr);
+  ierr = MatProductSetFromOptions(D);CHKERRQ(ierr);
+  ierr = MatProductSymbolic(D);CHKERRQ(ierr);
+  C->product->data = D;
+  C->product->destroy = MatNormal_DenseDestroy;
+  ierr = MatDenseGetArrayWrite(C,&array);CHKERRQ(ierr);
+  ierr = MatSeqDenseSetPreallocation(D,array);CHKERRQ(ierr);
+  ierr = MatMPIDenseSetPreallocation(D,array);CHKERRQ(ierr);
+  ierr = MatDenseRestoreArrayWrite(C,&array);CHKERRQ(ierr);
+  C->ops->productnumeric = MatProductNumeric_Normal_Dense;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatProductSetFromOptions_Normal_Dense_AB(Mat C)
+{
+  PetscFunctionBegin;
+  C->ops->productsymbolic = MatProductSymbolic_Normal_Dense;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode MatProductSetFromOptions_Normal_Dense(Mat C)
+{
+  Mat_Product    *product = C->product;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (product->type == MATPRODUCT_AB) {
+    ierr = MatProductSetFromOptions_Normal_Dense_AB(C);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -231,20 +505,32 @@ PetscErrorCode  MatCreateNormal(Mat A,Mat *N)
   ierr       = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
   Na->A      = A;
   Na->scale  = 1.0;
+  Na->W      = NULL;
 
   ierr = MatCreateVecs(A,NULL,&Na->w);CHKERRQ(ierr);
 
-  (*N)->ops->destroy          = MatDestroy_Normal;
-  (*N)->ops->mult             = MatMult_Normal;
-  (*N)->ops->multtranspose    = MatMultTranspose_Normal;
-  (*N)->ops->multtransposeadd = MatMultTransposeAdd_Normal;
-  (*N)->ops->multadd          = MatMultAdd_Normal;
-  (*N)->ops->getdiagonal      = MatGetDiagonal_Normal;
-  (*N)->ops->scale            = MatScale_Normal;
-  (*N)->ops->diagonalscale    = MatDiagonalScale_Normal;
-  (*N)->assembled             = PETSC_TRUE;
-  (*N)->preallocated          = PETSC_TRUE;
+  (*N)->ops->destroy           = MatDestroy_Normal;
+  (*N)->ops->mult              = MatMult_Normal;
+  (*N)->ops->multtranspose     = MatMultTranspose_Normal;
+  (*N)->ops->multtransposeadd  = MatMultTransposeAdd_Normal;
+  (*N)->ops->multadd           = MatMultAdd_Normal;
+  (*N)->ops->getdiagonal       = MatGetDiagonal_Normal;
+  (*N)->ops->scale             = MatScale_Normal;
+  (*N)->ops->diagonalscale     = MatDiagonalScale_Normal;
+  (*N)->ops->increaseoverlap   = MatIncreaseOverlap_Normal;
+  (*N)->ops->createsubmatrices = MatCreateSubMatrices_Normal;
+  (*N)->ops->permute           = MatPermute_Normal;
+  (*N)->ops->duplicate         = MatDuplicate_Normal;
+  (*N)->ops->copy              = MatCopy_Normal;
+  (*N)->assembled              = PETSC_TRUE;
+  (*N)->preallocated           = PETSC_TRUE;
 
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatNormalGetMat_C",MatNormalGetMat_Normal);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatConvert_normal_seqaij_C",MatConvert_Normal_AIJ);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatConvert_normal_mpiaij_C",MatConvert_Normal_AIJ);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatProductSetFromOptions_normal_seqdense_C",MatProductSetFromOptions_Normal_Dense);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatProductSetFromOptions_normal_mpidense_C",MatProductSetFromOptions_Normal_Dense);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)(*N),"MatProductSetFromOptions_normal_dense_C",MatProductSetFromOptions_Normal_Dense);CHKERRQ(ierr);
   ierr = MatSetOption(*N,MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatGetVecType(A,&vtype);CHKERRQ(ierr);
   ierr = MatSetVecType(*N,vtype);CHKERRQ(ierr);
