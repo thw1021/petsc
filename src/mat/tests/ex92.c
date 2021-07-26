@@ -97,9 +97,9 @@ int main(int argc,char **args)
   /* create a SeqSBAIJ matrix sA (= A) */
   ierr = MatConvert(A,MATSBAIJ,MAT_INITIAL_MATRIX,&sA);CHKERRQ(ierr);
   if (vid >= 0 && vid < size) {
-    if (!rank) printf("A: \n");
+    ierr = PetscPrintf(PETSC_COMM_SELF,"A: \n");CHKERRQ(ierr);
     ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    if (!rank) printf("sA: \n");
+    ierr = PetscPrintf(PETSC_COMM_SELF,"sA: \n");CHKERRQ(ierr);
     ierr = MatView(sA,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
 
@@ -135,7 +135,7 @@ int main(int argc,char **args)
       if (rank == vid) {
         PetscBool colflag;
         ierr = ISIdentity(is2[i],&colflag);CHKERRQ(ierr);
-        printf("[%d] is2[%d], colflag %d\n",rank,(int)i,(int)colflag);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] is2[%d], colflag %d\n",rank,(int)i,(int)colflag);CHKERRQ(ierr);
         ierr = ISView(is2[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
       }
     }
@@ -155,9 +155,9 @@ int main(int argc,char **args)
     ierr = PetscLogStagePop();CHKERRQ(ierr);
 
     if (rank == vid) {
-      printf("\n[%d] IS from BAIJ:\n",rank);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"\n[%d] IS from BAIJ:\n",rank);CHKERRQ(ierr);
       ierr = ISView(is1[0],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-      printf("\n[%d] IS from SBAIJ:\n",rank);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"\n[%d] IS from SBAIJ:\n",rank);CHKERRQ(ierr);
       ierr = ISView(is2[0],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
     }
 
@@ -166,9 +166,7 @@ int main(int argc,char **args)
       if (!flg) {
         if (!rank) {
           ierr = ISSort(is1[i]);CHKERRQ(ierr);
-          /* ISView(is1[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr); */
           ierr = ISSort(is2[i]);CHKERRQ(ierr);
-          /* ISView(is2[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr); */
         }
         SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"i=%D, is1 != is2",i);
       }
