@@ -591,7 +591,7 @@ PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
       ierr = VecNorm(pdipm->z,NORM_2,&res[1]);CHKERRQ(ierr);
       if (pdipm->Nci) {
         zarr = Xarr+pdipm->off_z;CHKERRQ(ierr);
-        ierr = VecGetArray(pdipm->z,&tmparr);
+        ierr = VecGetArray(pdipm->z,&tmparr);CHKERRQ(ierr);
         for (i=0; i<pdipm->nci; i++) {
           tmparr[i] /= Xarr[pdipm->off_z + i];
         }
@@ -793,7 +793,7 @@ PetscErrorCode PDIPMLineSearch(SNESLineSearch linesearch,void *ctx)
         } else {
           pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
         }
-        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);
+        ierr = PetscInfo4(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",pdipm->deltac,nneg,nzero,npos);CHKERRQ(ierr);
       }
     } else
       SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Requires an external package that supports MatGetInertia()");

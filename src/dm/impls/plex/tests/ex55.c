@@ -32,7 +32,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsString("-filename", "The mesh file", "ex5.c", options->filename, options->filename, sizeof(options->filename), NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-format", "Format to write and read", "ex5.c", PetscViewerFormats, (PetscEnum)options->format, (PetscEnum*)&options->format, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-second_write_read", "Write and read for the 2nd time", "ex5.c", options->second_write_read, &options->second_write_read, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 };
 

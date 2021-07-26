@@ -40,7 +40,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   dim = options->dim;
   ierr = PetscOptionsIntArray("-faces", "Number of faces per dimension", FILENAME, options->faces, &dim, NULL);CHKERRQ(ierr);
   if (dim) options->dim = dim;
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

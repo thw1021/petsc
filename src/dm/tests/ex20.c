@@ -18,7 +18,7 @@ int main(int argc,char **argv)
   ierr = PetscMemoryTrace("DMDACreate3d        ");CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(dm,&X);CHKERRQ(ierr);
-  ierr = PetscMemoryTrace("DMCreateGlobalVector");
+  ierr = PetscMemoryTrace("DMCreateGlobalVector");CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(dm,&Y);CHKERRQ(ierr);
   ierr = PetscMemoryTrace("DMCreateGlobalVector");CHKERRQ(ierr);
 

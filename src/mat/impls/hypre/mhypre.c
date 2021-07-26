@@ -1955,7 +1955,7 @@ static PetscErrorCode MatCopy_HYPRE(Mat A, Mat B, MatStructure str)
     ierr = MatHYPREGetParCSR_HYPRE(A,&acsr);CHKERRQ(ierr);
     ierr = MatHYPREGetParCSR_HYPRE(B,&bcsr);CHKERRQ(ierr);
     PetscStackCallStandard(hypre_ParCSRMatrixCopy,(acsr,bcsr,1));
-    ierr = MatSetOption(B,MAT_SORTED_FULL,PETSC_TRUE); /* "perfect" preallocation, so no need for hypre_AuxParCSRMatrixNeedAux */
+    ierr = MatSetOption(B,MAT_SORTED_FULL,PETSC_TRUE);CHKERRQ(ierr); /* "perfect" preallocation, so no need for hypre_AuxParCSRMatrixNeedAux */
     ierr = MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   } else {

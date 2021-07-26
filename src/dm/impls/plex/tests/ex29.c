@@ -37,7 +37,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   dim = options->dim;
   ierr = PetscOptionsIntArray("-faces", "Number of faces per dimension", "ex29.c", options->faces, &dim, NULL);CHKERRQ(ierr);
   if (dim) options->dim = dim;
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = PetscLogEventRegister("CreateMesh", DM_CLASSID, &options->createMeshEvent);CHKERRQ(ierr);
   ierr = PetscLogStageRegister("MeshLoad",       &options->stages[STAGE_LOAD]);CHKERRQ(ierr);

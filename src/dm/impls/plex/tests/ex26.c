@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   ierr = PetscSectionSetFieldComponents(section, fieldS, sdim*(sdim+1)/2);CHKERRQ(ierr);
 
   /* Going through cell sets then cells, and setting up storage for the sections */
-  ierr = DMGetLabelSize(dm, "Cell Sets", &numCS);
+  ierr = DMGetLabelSize(dm, "Cell Sets", &numCS);CHKERRQ(ierr);
   ierr = DMGetLabelIdIS(dm, "Cell Sets", &csIS);CHKERRQ(ierr);
   if (csIS) {ierr = ISGetIndices(csIS, &csID);CHKERRQ(ierr);}
   for (set = 0; set < numCS; set++) {
@@ -407,7 +407,7 @@ int main(int argc, char **argv) {
     ierr = DMGetCoordinateSection(dmS, &coordSection);CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(dmS, &coord);CHKERRQ(ierr);
     ierr = DMGetLabelIdIS(dmS, "Cell Sets", &csIS);CHKERRQ(ierr);
-    ierr = DMGetLabelSize(dmS, "Cell Sets", &numCS);
+    ierr = DMGetLabelSize(dmS, "Cell Sets", &numCS);CHKERRQ(ierr);
     ierr = ISGetIndices(csIS, &csID);CHKERRQ(ierr);
     for (set = 0; set < numCS; ++set) {
       /* We know that all cells in a cell set have the same type, so we can dimension cval and xyz once for each cell set */
@@ -446,7 +446,7 @@ int main(int argc, char **argv) {
     ierr = PetscObjectSetName((PetscObject) tmpVec, "Sigma");CHKERRQ(ierr);
     ierr = VecLoadPlex_ExodusII_Zonal_Internal(tmpVec, exoid, 1);CHKERRQ(ierr);
     ierr = VecAXPY(S, -1.0, tmpVec);CHKERRQ(ierr);
-    ierr = VecNorm(S, NORM_INFINITY, &norm);
+    ierr = VecNorm(S, NORM_INFINITY, &norm);CHKERRQ(ierr);
     if (norm > PETSC_SQRT_MACHINE_EPSILON) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Sigma ||Vin - Vout|| = %g\n", (double) norm);
     ierr = DMRestoreGlobalVector(dmS, &tmpVec);CHKERRQ(ierr);
   }

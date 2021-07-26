@@ -87,7 +87,7 @@ int main(int argc, char **argv)
   ierr = PetscObjectViewFromOptions((PetscObject)tagger,NULL,"-vec_tagger_view");CHKERRQ(ierr);
   ierr = VecTaggerGetBlockSize(tagger,&bs);CHKERRQ(ierr);
 
-  ierr = VecTaggerComputeBoxes(tagger,vec,&nint,&boxes);
+  ierr = VecTaggerComputeBoxes(tagger,vec,&nint,&boxes);CHKERRQ(ierr);
   if (ierr && ierr != PETSC_ERR_SUP) CHKERRQ(ierr);
   else {
     PetscViewer viewer = NULL;
