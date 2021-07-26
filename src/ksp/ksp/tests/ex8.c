@@ -175,7 +175,6 @@ int main(int argc,char **args)
 
     test:
       suffix: 3
-      args: -ksp_lsqr_monitor -ksp_type lsqr -setfromoptions_first
-      output_file: output/ex8_1.out
+      args: -ksp_lsqr_monitor -ksp_type lsqr -setfromoptions_first {{0 1}separate output}
 
 TEST*/
