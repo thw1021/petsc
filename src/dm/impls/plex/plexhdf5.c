@@ -1104,10 +1104,10 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
     ierr = PetscViewerHDF5ReadSizes(viewer, "order", NULL, &Np);CHKERRQ(ierr);
     ierr = PetscLayoutSetLocalSize(orderIS->map, !rank ? Np : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(orderIS->map, Np);CHKERRQ(ierr);
+    pEnd = !rank ? Np : 0;
     ierr = PetscViewerHDF5ReadSizes(viewer, "cones", NULL, &Np);CHKERRQ(ierr);
     ierr = PetscLayoutSetLocalSize(conesIS->map, !rank ? Np : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(conesIS->map, Np);CHKERRQ(ierr);
-    pEnd = !rank ? Np : 0;
     ierr = PetscViewerHDF5ReadSizes(viewer, "cells", NULL, &N);CHKERRQ(ierr);
     ierr = PetscLayoutSetLocalSize(cellsIS->map, !rank ? N : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(cellsIS->map, N);CHKERRQ(ierr);
