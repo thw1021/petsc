@@ -366,7 +366,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
     ierr = TSGetDM(ts,&da);CHKERRQ(ierr);
     ierr = DMDAGetRay(da,ddir,ray,&rayctx->ray,&rayctx->scatter);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)ts),&rank);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscViewerDrawOpen(PETSC_COMM_SELF,NULL,NULL,0,0,600,300,&rayctx->viewer);CHKERRQ(ierr);
     }
     rayctx->lgctx = NULL;
@@ -2153,7 +2153,7 @@ PetscErrorCode  TSView(TS ts,PetscViewer viewer)
 
     ierr = PetscObjectGetComm((PetscObject)ts,&comm);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT);CHKERRQ(ierr);
       ierr = PetscStrncpy(type,((PetscObject)ts)->type_name,256);CHKERRQ(ierr);
       ierr = PetscViewerBinaryWrite(viewer,type,256,PETSC_CHAR);CHKERRQ(ierr);
@@ -2191,7 +2191,7 @@ PetscErrorCode  TSView(TS ts,PetscViewer viewer)
 
     ierr = PetscObjectGetName((PetscObject)ts,&name);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-    if (!((PetscObject)ts)->amsmem && !rank) {
+    if (!((PetscObject)ts)->amsmem && rank == 0) {
       char       dir[1024];
 
       ierr = PetscObjectViewSAWs((PetscObject)ts,viewer);CHKERRQ(ierr);
@@ -3645,7 +3645,7 @@ PetscErrorCode TSMonitorDefault(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
   } else if (ibinary) {
     PetscMPIInt rank;
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       PetscBool skipHeader;
       PetscInt  classid = REAL_FILE_CLASSID;
 

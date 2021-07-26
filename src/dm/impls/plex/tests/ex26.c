@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
     int      CPU_word_size, IO_word_size, EXO_mode;
 
     ex_opts(EX_VERBOSE+EX_DEBUG);
-    if (!rank) {
+    if (rank == 0) {
       CPU_word_size = sizeof(PetscReal);
       IO_word_size  = sizeof(PetscReal);
       EXO_mode      = EX_CLOBBER;
@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
     }
     ierr = DMPlexView_ExodusII_Internal(dm, exoid, order);CHKERRQ(ierr);
 
-    if (!rank) {
+    if (rank == 0) {
       /* "Format" the exodus result file, i.e. allocate space for nodal and zonal variables */
       switch (sdim) {
       case 2:

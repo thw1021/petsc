@@ -19,7 +19,7 @@ static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt s
   ierr = VecCreateMPI(PetscObjectComm((PetscObject) viewer), rank ? 0 : 1, 1, &stamp);CHKERRQ(ierr);
   ierr = VecSetBlockSize(stamp, 1);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) stamp, seqname);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscReal timeScale;
     PetscBool istime;
 
@@ -53,7 +53,7 @@ PetscErrorCode DMSequenceLoad_HDF5_Internal(DM dm, const char *seqname, PetscInt
   ierr = PetscViewerHDF5SetTimestep(viewer, seqnum);CHKERRQ(ierr);
   ierr = VecLoad(stamp, viewer);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     const PetscScalar *a;
     PetscReal timeScale;
     PetscBool istime;
@@ -926,17 +926,17 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   {
     /* Force serial load */
     ierr = PetscViewerHDF5ReadSizes(viewer, "order", NULL, &pEnd);CHKERRQ(ierr);
-    ierr = PetscLayoutSetLocalSize(orderIS->map, !rank ? pEnd : 0);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(orderIS->map, rank == 0 ? pEnd : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(orderIS->map, pEnd);CHKERRQ(ierr);
     ierr = PetscViewerHDF5ReadSizes(viewer, "cones", NULL, &pEnd);CHKERRQ(ierr);
-    ierr = PetscLayoutSetLocalSize(conesIS->map, !rank ? pEnd : 0);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(conesIS->map, rank == 0 ? pEnd : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(conesIS->map, pEnd);CHKERRQ(ierr);
-    pEnd = !rank ? pEnd : 0;
+    pEnd = rank == 0 ? pEnd : 0;
     ierr = PetscViewerHDF5ReadSizes(viewer, "cells", NULL, &N);CHKERRQ(ierr);
-    ierr = PetscLayoutSetLocalSize(cellsIS->map, !rank ? N : 0);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(cellsIS->map, rank == 0 ? N : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(cellsIS->map, N);CHKERRQ(ierr);
     ierr = PetscViewerHDF5ReadSizes(viewer, "orientation", NULL, &N);CHKERRQ(ierr);
-    ierr = PetscLayoutSetLocalSize(orntsIS->map, !rank ? N : 0);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(orntsIS->map, rank == 0 ? N : 0);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(orntsIS->map, N);CHKERRQ(ierr);
   }
   ierr = ISLoad(orderIS, viewer);CHKERRQ(ierr);
@@ -951,7 +951,7 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   {
     /* Force serial load */
     ierr = PetscViewerHDF5ReadSizes(viewer, "vertices", &spatialDim, &N);CHKERRQ(ierr);
-    ierr = VecSetSizes(coordinates, !rank ? N : 0, N);CHKERRQ(ierr);
+    ierr = VecSetSizes(coordinates, rank == 0 ? N : 0, N);CHKERRQ(ierr);
     ierr = VecSetBlockSize(coordinates, spatialDim);CHKERRQ(ierr);
   }
   ierr = VecLoad(coordinates, viewer);CHKERRQ(ierr);

@@ -232,7 +232,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     const PetscInt debug = 0;
 
     /* ---------------------------------------------------------------------------------------------------
@@ -656,7 +656,7 @@ PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm comm, const char filename[], D
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_egads_print_model", &printModel, NULL);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 #if defined(PETSC_HAVE_EGADS)
-  if (!rank) {
+  if (rank == 0) {
 
     ierr = EG_open(&context);CHKERRQ(ierr);
     ierr = EG_loadModel(context, 0, filename, &model);CHKERRQ(ierr);

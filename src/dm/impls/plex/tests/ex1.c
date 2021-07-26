@@ -289,7 +289,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       const PetscInt  *points = NULL;
       PetscPartitioner part;
 
-      if (!rank) {
+      if (rank == 0) {
         if (dim == 2 && cellSimplex && size == 2) {
            sizes = triSizes_n2; points = triPoints_n2;
         } else if (dim == 2 && cellSimplex && size == 8) {

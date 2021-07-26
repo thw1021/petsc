@@ -133,7 +133,7 @@ PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal 
   ierr = MatGetSize(BA,&n,&n);CHKERRQ(ierr);
   if (size > 1) { /* assemble matrix on first processor */
     ierr = MatCreate(PetscObjectComm((PetscObject)ksp),&A);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatSetSizes(A,n,n,n,n);CHKERRQ(ierr);
     } else {
       ierr = MatSetSizes(A,0,0,n,n);CHKERRQ(ierr);
@@ -160,7 +160,7 @@ PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal 
 
 #if defined(PETSC_HAVE_ESSL)
   /* ESSL has a different calling sequence for dgeev() and zgeev() than standard LAPACK */
-  if (!rank) {
+  if (rank == 0) {
     PetscScalar  sdummy,*cwork;
     PetscReal    *work,*realpart;
     PetscBLASInt clen,idummy,lwork,bn,zero = 0;
@@ -212,7 +212,7 @@ PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal 
     ierr = PetscFree(cwork);CHKERRQ(ierr);
   }
 #elif !defined(PETSC_USE_COMPLEX)
-  if (!rank) {
+  if (rank == 0) {
     PetscScalar  *work;
     PetscReal    *realpart,*imagpart;
     PetscBLASInt idummy,lwork;
@@ -246,7 +246,7 @@ PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal 
     ierr = PetscFree2(realpart,imagpart);CHKERRQ(ierr);
   }
 #else
-  if (!rank) {
+  if (rank == 0) {
     PetscScalar  *work,*eigs;
     PetscReal    *rwork;
     PetscBLASInt idummy,lwork;

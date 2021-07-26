@@ -32,7 +32,7 @@ PetscErrorCode KSPAGMRESRoddecInitNeighboor(KSP ksp)
   ierr = MPIU_Allreduce(&rank, &First, 1, MPI_INT, MPI_MIN, comm);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&rank, &Last, 1, MPI_INT, MPI_MAX, comm);CHKERRQ(ierr);
 
-  if ((rank != Last) && (!rank)) {
+  if ((rank != Last) && (rank == 0)) {
     agmres->Ileft  = rank - 1;
     agmres->Iright = rank + 1;
   } else {

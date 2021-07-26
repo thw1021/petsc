@@ -316,7 +316,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
       ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
       ierr = DMPlexGetHeightStratum(*dm, 0, NULL, &cEnd);CHKERRQ(ierr);
-      if (!rank) {
+      if (rank == 0) {
         if (dim == 2 && user->simplex && size == 2 && cEnd == 8) {
            sizes = triSizes_n2; points = triPoints_n2;
         } else if (dim == 2 && user->simplex && size == 3 && cEnd == 8) {

@@ -240,7 +240,7 @@ int main(int argc,char **args)
 
 /* Write Tecplot solution file */
 #if 0
-  if (!rank)
+  if (rank == 0)
     f77TECFLO(&user.grid->nnodes,
               &user.grid->nnbound, &user.grid->nvbound, &user.grid->nfbound,
               &user.grid->nnfacet, &user.grid->nvfacet, &user.grid->nffacet,
@@ -262,7 +262,7 @@ int main(int argc,char **args)
 
 /* Write residual, lift, drag, and moment history file */
 /*
-   if (!rank)
+   if (rank == 0)
       f77PLLAN(&user.grid->nnodes, &rank);
 */
 
@@ -503,7 +503,7 @@ int Update(SNES snes, void *ctx)
     PreLoadFlag = 0;
   }
   */
-  if ((!rank) && (print_flag)) {
+  if ((rank == 0) && (print_flag)) {
     fptr = fopen("history.out", "w");
     fprintf(fptr, "VARIABLES = iter,cfl,fnorm,clift,cdrag,cmom,cpu\n");
   }
@@ -611,7 +611,7 @@ int Update(SNES snes, void *ctx)
                   tsCtx->cfl, tsCtx->fnorm, clift, cdrag, cmom);
       PetscPrintf(MPI_COMM_WORLD,"Wall clock time needed %g seconds for %d time steps\n",
                   cpuglo, i);
-      if (!rank)
+      if (rank == 0)
         fprintf(fptr, "%d\t%g\t%g\t%g\t%g\t%g\t%g\n",
                 i, tsCtx->cfl, tsCtx->fnorm, clift, cdrag, cmom, cpuglo);
       /* Write Tecplot solution file */
@@ -655,7 +655,7 @@ int Update(SNES snes, void *ctx)
       FieldOutput(grid, i);
       WriteRestartFile(grid,i);
   }*/
-  if ((!rank) && (print_flag)) fclose(fptr);
+  if ((rank == 0) && (print_flag)) fclose(fptr);
   if (PreLoadFlag) {
     tsCtx->fnorm_ini = 0.0;
     PetscPrintf(MPI_COMM_WORLD, "Preloading done ...\n");
@@ -751,7 +751,7 @@ int GetLocalOrdering(GRID *grid)
 
   /* Read the integer grid parameters */
   ICALLOC(grid_param,&tmp);
-  if (!rank) {
+  if (rank == 0) {
     PetscBool exists;
     ierr = PetscOptionsGetString(NULL,NULL,"-mesh",mesh_file,sizeof(mesh_file),&flg);CHKERRQ(ierr);
     ierr = PetscTestFile(mesh_file,'r',&exists);CHKERRQ(ierr);
@@ -803,7 +803,7 @@ int GetLocalOrdering(GRID *grid)
   for (i = 0; i < nnodes; i++) a2l[i] = -1;
   ierr = PetscTime(&time_ini);CHKERRQ(ierr);
 
-  if (!rank) {
+  if (rank == 0) {
     if (CommSize == 1) {
       ierr = PetscMemzero(v2p,nnodes*sizeof(int));CHKERRQ(ierr);
     } else {
@@ -1929,7 +1929,7 @@ int FieldOutput(GRID *grid, int timeStep)
   nnodesLoc = grid->nnodesLoc;
 
   /* First write the inviscid boundaries */
-  if (!rank) {
+  if (rank == 0) {
     nnbound = grid->nnbound;
     nsnode  = grid->nsnode;
     nnfacet = grid->nnfacet;
@@ -1977,7 +1977,7 @@ int FieldOutput(GRID *grid, int timeStep)
     xyz[in+2] = grid->z[i];
   }
   ierr = VecRestoreArray(xyzGlo, &xyz);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     ierr = VecCreateSeq(MPI_COMM_SELF,3*nsnode,&xyzLoc);
     ierr = ISCreateStride(MPI_COMM_SELF,3*nsnode,0,1,&islocal);CHKERRQ(ierr);
     ICALLOC(nsnode, &svertices);
@@ -1997,7 +1997,7 @@ int FieldOutput(GRID *grid, int timeStep)
   ierr = VecScatterBegin(scatter,xyzGlo,xyzLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(scatter,xyzGlo,xyzLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     ierr = VecGetArray(xyzLoc, &xyz);CHKERRQ(ierr);
     FCALLOC(nsnode, &x);
     FCALLOC(nsnode, &y);
@@ -2036,7 +2036,7 @@ int FieldOutput(GRID *grid, int timeStep)
 
   /* Next write the viscous boundaries */
   if (grid->nvnode > 0) {
-    if (!rank) {
+    if (rank == 0) {
       nvbound = grid->nvbound;
       nvnode  = grid->nvnode;
       nvfacet = grid->nvfacet;
@@ -2071,7 +2071,7 @@ int FieldOutput(GRID *grid, int timeStep)
     ierr = VecScatterEnd(scatter,grid->qnode,qnodeLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
     /* Get the coordinates */
-    if (!rank) {
+    if (rank == 0) {
       ierr = VecCreateSeq(MPI_COMM_SELF,3*nvnode,&xyzLoc);
       ierr = ISCreateStride(MPI_COMM_SELF,3*nvnode,0,1,&islocal);CHKERRQ(ierr);
       ICALLOC(nvnode, &svertices);
@@ -2091,7 +2091,7 @@ int FieldOutput(GRID *grid, int timeStep)
     ierr = VecScatterBegin(scatter,xyzGlo,xyzLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterEnd(scatter,xyzGlo,xyzLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = VecGetArray(xyzLoc, &xyz);CHKERRQ(ierr);
       FCALLOC(nvnode, &x);
       FCALLOC(nvnode, &y);
@@ -2130,7 +2130,7 @@ int FieldOutput(GRID *grid, int timeStep)
   }
 
   /* Finally write the free boundaries */
-  if (!rank) {
+  if (rank == 0) {
     nfbound = grid->nfbound;
     nfnode  = grid->nfnode;
     nffacet = grid->nffacet;
@@ -2167,7 +2167,7 @@ int FieldOutput(GRID *grid, int timeStep)
   ierr = VecScatterEnd(scatter,grid->qnode,qnodeLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
   /* Get the coordinates */
-  if (!rank) {
+  if (rank == 0) {
     ierr = VecCreateSeq(MPI_COMM_SELF,3*nfnode,&xyzLoc);
     ierr = ISCreateStride(MPI_COMM_SELF,3*nfnode,0,1,&islocal);CHKERRQ(ierr);
     ICALLOC(nfnode, &svertices);
@@ -2189,7 +2189,7 @@ int FieldOutput(GRID *grid, int timeStep)
   ierr = VecScatterEnd(scatter,xyzGlo,xyzLoc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&scatter);CHKERRQ(ierr);
   ierr = VecDestroy(&xyzGlo);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     ierr = VecGetArray(xyzLoc, &xyz);CHKERRQ(ierr);
     FCALLOC(nfnode, &x);
     FCALLOC(nfnode, &y);
@@ -2312,7 +2312,7 @@ int WriteRestartFile(GRID *grid, int timeStep)
   } else {
     /* Processor 0 writes the output to a file; others just send their
       pieces to it */
-    if (!rank) {
+    if (rank == 0) {
       ierr = VecGetArray(qnodeLoc, &qnode);
       if (timeStep < 10)        sprintf(fileName,"flow000%d.bin",timeStep);
       else if (timeStep < 100)  sprintf(fileName,"flow00%d.bin",timeStep);
@@ -2359,7 +2359,7 @@ int WriteRestartFile(GRID *grid, int timeStep)
         ierr = MPI_Send(qnode,bs*nnodesLoc,MPI_DOUBLE,0,1,MPI_COMM_WORLD);CHKERRMPI(ierr);
         ierr = VecRestoreArray(qnodeLoc, &qnode);CHKERRQ(ierr);
       }
-      if (!rank) {
+      if (rank == 0) {
         int        nnodesLocIpr;
         MPI_Status mstatus;
 
@@ -2385,7 +2385,7 @@ int WriteRestartFile(GRID *grid, int timeStep)
       }
       ierr = MPI_Barrier(MPI_COMM_WORLD);
     }
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscBinaryClose(fdes);CHKERRQ(ierr);
       printf("Restart file written to %s\n", fileName);
       if (flg_vtk) {
@@ -2422,7 +2422,7 @@ int ReadRestartFile(GRID *grid)
      to others; The suitable distributed vector is constructed out of
      these pieces by doing vector scattering */
   ierr = VecCreateSeq(MPI_COMM_SELF,bs*nnodesLoc,&qnodeLoc);
-  if (!rank) {
+  if (rank == 0) {
     ierr = VecGetArray(qnodeLoc, &qnode);
     ierr = PetscBinaryOpen("restart.bin",FILE_MODE_READ,&fdes);CHKERRQ(ierr);
     ierr = PetscBinaryRead(fdes,qnode,bs*nnodesLoc,PETSC_SCALAR);CHKERRQ(ierr);
@@ -2435,7 +2435,7 @@ int ReadRestartFile(GRID *grid)
       ierr = MPI_Recv(qnode,bs*nnodesLoc,MPI_DOUBLE,0,1,MPI_COMM_WORLD,&status);CHKERRMPI(ierr);
       ierr = VecRestoreArray(qnodeLoc, &qnode);CHKERRQ(ierr);
     }
-    if (!rank) {
+    if (rank == 0) {
       int nnodesLocIpr;
       ierr = MPI_Recv(&nnodesLocIpr,1,MPI_INT,i,0,MPI_COMM_WORLD,&status);CHKERRMPI(ierr);
       FCALLOC(bs*nnodesLocIpr, &qnode);
@@ -2445,7 +2445,7 @@ int ReadRestartFile(GRID *grid)
     }
     ierr = MPI_Barrier(MPI_COMM_WORLD);
   }
-  if (!rank) ierr = PetscBinaryClose(fdes);CHKERRQ(ierr);
+  if (rank == 0) ierr = PetscBinaryClose(fdes);CHKERRQ(ierr);
 
   /* Create a distributed vector in Petsc ordering */
   ICALLOC(nnodesLoc, &loc2pet);

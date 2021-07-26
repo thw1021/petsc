@@ -55,7 +55,7 @@ PetscErrorCode  PetscOptionsGetenv(MPI_Comm comm,const char name[],char env[],si
       ierr = PetscArrayzero(env,len);CHKERRQ(ierr);
 
       ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-      if (!rank) {
+      if (rank == 0) {
         str = getenv(name);
         if (str) flg = PETSC_TRUE;
         if (str && env) {ierr = PetscStrncpy(env,str,len);CHKERRQ(ierr);}
@@ -132,7 +132,7 @@ PetscErrorCode  PetscSetDisplay(void)
 #endif
   if (str[0] != ':' || singlehost) {
     ierr = PetscStrncpy(display,str,sizeof(display));CHKERRQ(ierr);
-  } else if (!rank) {
+  } else if (rank == 0) {
     ierr = PetscGetHostName(display,sizeof(display));CHKERRQ(ierr);
     ierr = PetscStrlcat(display,str,sizeof(display));CHKERRQ(ierr);
   }
