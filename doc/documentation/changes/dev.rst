@@ -59,7 +59,7 @@ Changes: Development
 .. rubric:: PF:
 
 .. rubric:: Vec:
--  Change  VecTaggerComputeBoxes() and VecTaggerComputeIS() to return boolen whose value is true if the list was create
+-  Change ``VecTaggerComputeBoxes()`` and ``VecTaggerComputeIS()`` to return a boolean whose value is true if the list was created
 
 .. rubric:: PetscSection:
 
