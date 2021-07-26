@@ -18,13 +18,15 @@
 // for you. You may then call bar exactly as you would foo.
 #if PetscDefined(HAVE_CXX_DIALECT_CXX14)
 // decltype(auto) is c++14
-#define ALIAS_FUNCTION(Alias_,Original_)                                \
-  template <typename... Args> decltype(auto) Alias_(Args&&... args)     \
+#define PETSC_ALIAS_FUNCTION(Alias_,Original_)                          \
+  template <typename... Args>                                           \
+  PETSC_NODISCARD decltype(auto) Alias_(Args&&... args)                 \
   { return Original_(std::forward<Args>(args)...);}
 #else
-#define ALIAS_FUNCTION(Alias_,Original_)                                \
+#define PETSC_ALIAS_FUNCTION(Alias_,Original_)                          \
   template <typename... Args>                                           \
-  auto Alias_(Args&&... args) -> decltype(Original_(std::forward<Args>(args)...)) \
+  PETSC_NODISCARD auto Alias_(Args&&... args)                           \
+    -> decltype(Original_(std::forward<Args>(args)...))                 \
   { return Original_(std::forward<Args>(args)...);}
 #endif /* PetscDefined(HAVE_CXX_DIALECT_CXX14) */
 
