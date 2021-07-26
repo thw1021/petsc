@@ -230,6 +230,7 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *c
     args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3
 
   test:
+    requires: hpddm
     suffix: 3
-    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3 -ksp_view_final_residual -ksp_hpddm_type bgcrodr
+    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3 -ksp_view_final_residual -ksp_hpddm_type bgcrodr -ksp_type hpddm
 TEST*/
