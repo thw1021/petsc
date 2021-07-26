@@ -1424,8 +1424,8 @@ PetscErrorCode  PCASMCreateSubdomains(Mat A, PetscInt n, IS* outis[])
   MatPartitioning mpart;
   const char      *prefix;
   PetscInt        i,j,rstart,rend,bs;
-  PetscBool       hasop, isbaij = PETSC_FALSE,foundpart = PETSC_FALSE;
-  Mat             Ad     = NULL, adj;
+  PetscBool       hasop,isbaij = PETSC_FALSE,foundpart = PETSC_FALSE,isnormal = PETSC_FALSE;
+  Mat             Ad     = NULL,adj;
   IS              ispart,isnumb,*is;
   PetscErrorCode  ierr;
 
@@ -1436,8 +1436,8 @@ PetscErrorCode  PCASMCreateSubdomains(Mat A, PetscInt n, IS* outis[])
 
   /* Get prefix, row distribution, and block size */
   ierr = MatGetOptionsPrefix(A,&prefix);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATNORMAL,&hasop);CHKERRQ(ierr);
-  if (hasop) {
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATNORMAL,&isnormal);CHKERRQ(ierr);
+  if (isnormal) {
     ierr = MatNormalGetMat(A,&Ad);CHKERRQ(ierr);
     ierr = MatGetOwnershipRangeColumn(Ad,&rstart,&rend);CHKERRQ(ierr);
     ierr = MatGetBlockSize(Ad,&bs);CHKERRQ(ierr);
