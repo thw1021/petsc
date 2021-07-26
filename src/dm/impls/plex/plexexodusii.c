@@ -277,7 +277,7 @@ static PetscErrorCode EXOGetVarIndex_Private(int exoid, ex_entity_type obj_type,
     for (j = 0; j < num_suffix; ++j){
       ierr = PetscStrncpy(ext_name, name, MAX_STR_LENGTH);CHKERRQ(ierr);
       ierr = PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH);CHKERRQ(ierr);
-      ierr = PetscStrcasecmp(ext_name, var_name, &flg);
+      ierr = PetscStrcasecmp(ext_name, var_name, &flg);CHKERRQ(ierr);
       if (flg) {
         *varIndex = i+1;
         PetscFunctionReturn(0);
@@ -579,7 +579,7 @@ PetscErrorCode DMPlexView_ExodusII_Internal(DM dm, int exoid, PetscInt degree)
     ierr = DMGetCoordinatesLocal(dm, &coord);CHKERRQ(ierr);
     ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
     for (p = pStart; p < pEnd; ++p) {
-      ierr = PetscSectionGetDof(section, p, &hasDof);
+      ierr = PetscSectionGetDof(section, p, &hasDof);CHKERRQ(ierr);
       if (hasDof) {
         PetscInt closureSize = 24, j;
 
@@ -612,7 +612,7 @@ PetscErrorCode DMPlexView_ExodusII_Internal(DM dm, int exoid, PetscInt degree)
       ierr = DMLabelGetStratumIS(vsLabel, vsIdx[vs], &stratumIS);CHKERRQ(ierr);
       ierr = ISGetIndices(stratumIS, &vertices);CHKERRQ(ierr);
       ierr = ISGetSize(stratumIS, &vsSize);CHKERRQ(ierr);
-      ierr = PetscMalloc1(vsSize, &nodeList);
+      ierr = PetscMalloc1(vsSize, &nodeList);CHKERRQ(ierr);
       for (i=0; i<vsSize; ++i) {
         nodeList[i] = vertices[i] - skipCells + 1;
       }

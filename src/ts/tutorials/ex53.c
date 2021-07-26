@@ -1887,8 +1887,8 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-      ierr = PetscPrintf(comm, "  Max displacement: %g %g\n", p->P_0*(p->ymax - p->ymin)*(1. - 2.*nu_u)/(2.*p->mu*(1. - nu_u)), p->P_0*(p->ymax - p->ymin)*(1. - 2.*nu)/(2.*p->mu*(1. - nu)));
-      ierr = PetscPrintf(comm, "  Relaxation time: %g\n", ctx->t_r);
+      ierr = PetscPrintf(comm, "  Max displacement: %g %g\n", p->P_0*(p->ymax - p->ymin)*(1. - 2.*nu_u)/(2.*p->mu*(1. - nu_u)), p->P_0*(p->ymax - p->ymin)*(1. - 2.*nu)/(2.*p->mu*(1. - nu)));CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "  Relaxation time: %g\n", ctx->t_r);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

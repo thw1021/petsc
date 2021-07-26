@@ -758,7 +758,7 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  ierr = VecGetOwnershipRange(y,&low,NULL);
+  ierr = VecGetOwnershipRange(y,&low,NULL);CHKERRQ(ierr);
 
   if (size==1) {
     ierr = VecGetSize(x,&vsize);CHKERRQ(ierr);
@@ -775,8 +775,8 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_1d(dim[0],comm,FFTW_FORWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = ISCreateStride(comm,local_n0,local_0_start,1,&list1);
-      ierr = ISCreateStride(comm,local_n0,low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0,local_0_start,1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0,low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -791,8 +791,8 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_2d(dim[0],dim[1],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1);
-      ierr = ISCreateStride(comm,local_n0*dim[1],low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0*dim[1],low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -838,8 +838,8 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_3d(dim[0],dim[1],dim[2],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1);
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -886,8 +886,8 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size(fftw->ndim_fftw,fftw->dim_fftw,comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1);
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -1006,8 +1006,8 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_1d(dim[0],comm,FFTW_BACKWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = ISCreateStride(comm,local_n1,local_1_start,1,&list1);
-      ierr = ISCreateStride(comm,local_n1,low,1,&list2);
+      ierr = ISCreateStride(comm,local_n1,local_1_start,1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n1,low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -1022,8 +1022,8 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_2d(dim[0],dim[1],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1);
-      ierr = ISCreateStride(comm,local_n0*dim[1],low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0*dim[1],low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list2,y,list1,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -1066,8 +1066,8 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_3d(dim[0],dim[1],dim[2],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1);
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -1112,8 +1112,8 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size(fftw->ndim_fftw,fftw->dim_fftw,comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1);
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2);
+      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1);CHKERRQ(ierr);
+      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2);CHKERRQ(ierr);
       ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
       ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
@@ -1248,7 +1248,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
       fftw_mpi_local_size_2d_transposed(dim[0],dim[1]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
       n    = 2*(PetscInt)local_n0*(dim[1]/2+1);
-      ierr = MatSetSizes(A,n,n,2*dim[0]*(dim[1]/2+1),2*dim[0]*(dim[1]/2+1));
+      ierr = MatSetSizes(A,n,n,2*dim[0]*(dim[1]/2+1),2*dim[0]*(dim[1]/2+1));CHKERRQ(ierr);
 #endif
       break;
     case 3:
@@ -1261,7 +1261,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
       fftw_mpi_local_size_3d_transposed(dim[0],dim[1],dim[2]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
       n   = 2*(PetscInt)local_n0*dim[1]*(dim[2]/2+1);
-      ierr = MatSetSizes(A,n,n,2*dim[0]*dim[1]*(dim[2]/2+1),2*dim[0]*dim[1]*(dim[2]/2+1));
+      ierr = MatSetSizes(A,n,n,2*dim[0]*dim[1]*(dim[2]/2+1),2*dim[0]*dim[1]*(dim[2]/2+1));CHKERRQ(ierr);
 #endif
       break;
     default:

@@ -40,12 +40,12 @@ int main(int argc,char **argv)
   ierr = VecSet(y,314);CHKERRQ(ierr);
 
   /* Pull y to CPU (make its offloadmask = PETSC_OFFLOAD_CPU) */
-  ierr = VecGetArray(y,&val);
+  ierr = VecGetArray(y,&val);CHKERRQ(ierr);
   ierr = VecRestoreArray(y,&val);CHKERRQ(ierr);
 
   /* The vscat is simply a vector copy */
-  ierr = ISCreateStride(PETSC_COMM_SELF,n,0,1,&ix);
-  ierr = ISCreateStride(PETSC_COMM_SELF,n,0,1,&iy);
+  ierr = ISCreateStride(PETSC_COMM_SELF,n,0,1,&ix);CHKERRQ(ierr);
+  ierr = ISCreateStride(PETSC_COMM_SELF,n,0,1,&iy);CHKERRQ(ierr);
   ierr = VecScatterCreate(x,ix,y,iy,&vscat);CHKERRQ(ierr);
 
   /* Do device to host vecscatter and then immediately use y on host. VecScat/SF may use asynchronous

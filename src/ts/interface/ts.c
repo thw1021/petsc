@@ -6982,7 +6982,7 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts,PetscInt step,PetscReal ptime,Vec 
     ierr = PetscDrawAxisSetLimits(axis, -5, 5, -5, 5);CHKERRQ(ierr);
     ierr = PetscDrawAxisSetHoldLimits(axis, PETSC_TRUE);CHKERRQ(ierr);
     ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
-    ierr = DMGetDimension(dm, &dim);
+    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
     if (dim!=2) SETERRQ(PETSC_COMM_SELF, ierr, "Dimensions improper for monitor arguments! Current support: two dimensions.");CHKERRQ(ierr);
     ierr = VecGetLocalSize(u, &Np);CHKERRQ(ierr);
     Np /= 2*dim;

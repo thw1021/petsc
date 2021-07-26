@@ -1315,7 +1315,7 @@ PetscErrorCode  SNESGetUseMatrixFree(SNES snes,PetscBool *mf_operator,PetscBool 
    This is useful for using lagged Jacobians (where one does not recompute the
    Jacobian at each SNES iteration). For example, the code
 .vb
-      ierr = SNESGetIterationNumber(snes,&it);
+      ierr = SNESGetIterationNumber(snes,&it);CHKERRQ(ierr);
       if (!(it % 2)) {
         [compute Jacobian here]
       }

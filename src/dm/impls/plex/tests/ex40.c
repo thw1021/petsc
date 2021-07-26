@@ -24,7 +24,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsInt("-dim", "The topological dimension", "ex40.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-ref_cell", "Use the reference cell", "ex40.c", DMPolytopeTypes, (PetscEnum) options->refCell, (PetscEnum *) &options->refCell, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-simplex", "Flag for simplices", "ex40.c", options->simplex, &options->simplex, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
