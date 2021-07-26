@@ -16,7 +16,7 @@ static PetscErrorCode PetscFEDestroy_OpenCL(PetscFE fem)
   PetscFunctionReturn(0);
 }
 
-#define CHKERRSTRING(err) do {CHKERRQ(err); string_tail += count; if (string_tail == end_of_buffer) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP,"Message to short");} while (0)
+#define CHKERRSTRING(err) do {CHKERRQ(err); string_tail += count; if (string_tail == end_of_buffer) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,"Buffer overflow");} while (0)
 enum {LAPLACIAN = 0, ELASTICITY = 1};
 
 /* NOTE: This is now broken for vector problems. Must redo loops to respect vector basis elements */
