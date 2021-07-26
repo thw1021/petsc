@@ -62,8 +62,8 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   using cupmDeviceProp_t   = cudaDeviceProp;
 
   // error functions
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,cudaGetErrorName);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,cudaGetErrorName);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,cudaGetErrorString);
 
   // values
   static PETSC_CONSTEXPR const auto cupmSuccess                 = cudaSuccess;
@@ -72,18 +72,18 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = cudaErrorDeviceAlreadyInUse;
 
   // regular functions
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,cudaGetDeviceCount);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,cudaGetDeviceProperties);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,cudaSetDevice);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,cudaEventDestroy);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,cudaEventRecord);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreate,cudaStreamCreate);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreateWithFlags,cudaStreamCreateWithFlags);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamDestroy,cudaStreamDestroy);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamWaitEvent,cudaStreamWaitEvent);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,cudaStreamQuery);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,cudaStreamSynchronize);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,cudaGetDeviceCount);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,cudaGetDeviceProperties);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,cudaSetDevice);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,cudaEventCreate);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,cudaEventDestroy);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,cudaEventRecord);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreate,cudaStreamCreate);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreateWithFlags,cudaStreamCreateWithFlags);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamDestroy,cudaStreamDestroy);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamWaitEvent,cudaStreamWaitEvent);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,cudaStreamQuery);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,cudaStreamSynchronize);
 
   // There isn't a good way to auto-template this stuff between the cublas handle and
   // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
@@ -199,8 +199,8 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using cupmDeviceProp_t   = hipDeviceProp_t;
 
   // error functions
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorName,hipGetErrorName);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetErrorString,hipGetErrorString);
 
   // values
   static PETSC_CONSTEXPR const auto cupmSuccess                 = hipSuccess;
@@ -210,18 +210,18 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   static PETSC_CONSTEXPR const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
 
   // regular functions
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,hipGetDeviceProperties);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,hipSetDevice);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,hipEventDestroy);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,hipEventRecord);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreate,hipStreamCreate);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreateWithFlags,hipStreamCreateWithFlags);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamDestroy,hipStreamDestroy);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamWaitEvent,hipStreamWaitEvent);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,hipStreamQuery);
-  ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,hipStreamSynchronize);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceCount,hipGetDeviceCount);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmGetDeviceProperties,hipGetDeviceProperties);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmSetDevice,hipSetDevice);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventCreate,hipEventCreate);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventDestroy,hipEventDestroy);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmEventRecord,hipEventRecord);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreate,hipStreamCreate);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamCreateWithFlags,hipStreamCreateWithFlags);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamDestroy,hipStreamDestroy);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamWaitEvent,hipStreamWaitEvent);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamQuery,hipStreamQuery);
+  PETSC_ALIAS_FUNCTION(static PETSC_CONSTEXPR cupmStreamSynchronize,hipStreamSynchronize);
 
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) PETSC_NOEXCEPT
   {
@@ -320,11 +320,11 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using base_name_::cupmErrorDeviceAlreadyInUse;                        \
   /* functions */                                                       \
   using base_name_::cupmName;                                           \
+  using base_name_::cupmGetErrorName;                                   \
+  using base_name_::cupmGetErrorString;                                 \
   using base_name_::cupmGetDeviceCount;                                 \
   using base_name_::cupmGetDeviceProperties;                            \
   using base_name_::cupmSetDevice;                                      \
-  using base_name_::cupmGetErrorName;                                   \
-  using base_name_::cupmGetErrorString;                                 \
   using base_name_::cupmEventCreate;                                    \
   using base_name_::cupmEventDestroy;                                   \
   using base_name_::cupmEventRecord;                                    \
