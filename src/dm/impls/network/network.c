@@ -1631,7 +1631,7 @@ PetscErrorCode DMNetworkAssembleGraphStructures(DM dm)
    Add all subnetid for the input vertex v in this process to the btable
    vertex_subnetid = supportingedge_subnetid
 */
-static PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt Nsubnet,PetscBT btable)
+PETSC_STATIC_INLINE PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt Nsubnet,PetscBT btable)
 {
   PetscErrorCode ierr;
   PetscInt       e,nedges,offset;
