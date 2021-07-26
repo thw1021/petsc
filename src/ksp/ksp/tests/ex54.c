@@ -86,7 +86,7 @@ int main(int argc, char** argv)
   ierr = PCSetType(pc, PCNONE);CHKERRQ(ierr);
   ierr = KSPSetType(QRsolver, KSPLSQR);CHKERRQ(ierr);
   ierr = KSPSetFromOptions(QRsolver);CHKERRQ(ierr);
-  ierr = KSPSetOperators(QRsolver, Q, C);CHKERRQ(ierr);
+  ierr = KSPSetOperators(QRsolver, Q, Q);CHKERRQ(ierr);
   ierr = MatViewFromOptions(Q, NULL, "-sys_view");CHKERRQ(ierr);
   ierr = VecViewFromOptions(a, NULL, "-rhs_view");CHKERRQ(ierr);
   ierr = KSPSolve(QRsolver, v, a);CHKERRQ(ierr);
