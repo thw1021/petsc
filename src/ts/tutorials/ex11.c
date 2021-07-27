@@ -755,8 +755,8 @@ static void PhysicsRiemann_Euler_Godunov( PetscInt dim, PetscInt Nf, const Petsc
     EulerNodeUnion  fL,fR;
     EulerFlux(phys,nn,uL,&(fL.eulernode));
     EulerFlux(phys,nn,uR,&(fR.eulernode));
-    ierr = eu->sound(&eu->pars[EULER_PAR_GAMMA],uL,&cL);if (ierr) exit(13);
-    ierr = eu->sound(&eu->pars[EULER_PAR_GAMMA],uR,&cR);if (ierr) exit(14);
+    ierr = eu->sound(&eu->pars[EULER_PAR_GAMMA],uL,&cL);if (ierr) exit(13);CHKERRQ(ierr);
+    ierr = eu->sound(&eu->pars[EULER_PAR_GAMMA],uR,&cR);if (ierr) exit(14);CHKERRQ(ierr);
     velL = DotDIMReal(uL->ru,nn)/uL->r;
     velR = DotDIMReal(uR->ru,nn)/uR->r;
     speed = PetscMax(velR + cR, velL + cL);
