@@ -186,12 +186,12 @@ PetscErrorCode PetscVSNPrintf(char *str,size_t len,const char *format,size_t *fu
     ierr = PetscStrlen(str,&leng);CHKERRQ(ierr);
     if (leng > 4) {
       for (cnt=0; cnt<leng-4; cnt++) {
-        if (str[cnt] == '[' && str[cnt+1] == '|'){
+        if (str[cnt] == '[' && str[cnt+1] == '|') {
           flen -= 4;
           cnt++; cnt++;
           foundedot = PETSC_FALSE;
           for (; cnt<leng-1; cnt++) {
-            if (str[cnt] == '|' && str[cnt+1] == ']'){
+            if (str[cnt] == '|' && str[cnt+1] == ']') {
               cnt++;
               if (!foundedot) str[ncnt++] = '.';
               ncnt--;
@@ -594,7 +594,6 @@ PetscErrorCode PetscSynchronizedFlush(MPI_Comm comm,FILE *fd)
     Fortran Note:
     This routine is not supported in Fortran.
 
-
 .seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(),
           PetscViewerASCIISynchronizedPrintf(), PetscSynchronizedFlush()
 @*/
@@ -638,7 +637,6 @@ PetscErrorCode PetscFPrintf(MPI_Comm comm,FILE* fd,const char format[],...)
     Fortran Note:
     The call sequence is PetscPrintf(MPI_Comm, character(*), PetscErrorCode ierr) from Fortran.
     That is, you can only pass a single character string from Fortran.
-
 
 .seealso: PetscFPrintf(), PetscSynchronizedPrintf(), PetscFormatConvert()
 @*/
@@ -685,7 +683,6 @@ PetscErrorCode PetscHelpPrintfDefault(MPI_Comm comm,const char format[],...)
 }
 
 /* ---------------------------------------------------------------------------------------*/
-
 
 /*@C
     PetscSynchronizedFGets - Several processors all get the same line from a file.

@@ -20,7 +20,8 @@ int main (int argc, char **argv)
   ierr = PetscOptionsGetBool(NULL, NULL, "-user_section", &userSection, NULL);CHKERRQ(ierr);
 
   /* Create a base DMPlex mesh */
-  ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, 2, PETSC_FALSE, NULL, NULL, NULL, NULL, PETSC_TRUE, &base);CHKERRQ(ierr);
+  ierr = DMCreate(PETSC_COMM_WORLD, &base);CHKERRQ(ierr);
+  ierr = DMSetType(base, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(base);CHKERRQ(ierr);
   ierr = DMViewFromOptions(base, NULL, "-dm_view");CHKERRQ(ierr);
 
@@ -117,7 +118,7 @@ int main (int argc, char **argv)
   ierr = VecDestroy(&l);CHKERRQ(ierr);
 
   /*  Save a vector*/
-  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forestHDF.h5", FILE_MODE_WRITE, &viewer);
+  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forestHDF.h5", FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
   ierr = VecView(g, viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
@@ -127,7 +128,7 @@ int main (int argc, char **argv)
   ierr = VecZeroEntries(g2);CHKERRQ(ierr);
 
   /*  Load a vector*/
-  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forestHDF.h5", FILE_MODE_READ, &viewer);
+  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forestHDF.h5", FILE_MODE_READ, &viewer);CHKERRQ(ierr);
   ierr = VecLoad(g2, viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
@@ -151,6 +152,6 @@ int main (int argc, char **argv)
   test:
     suffix: 0
     nsize: {{1 2 5}}
-    args: -adapt -dm_plex_box_faces 2,2
+    args: -adapt -dm_plex_simplex 0 -dm_plex_box_faces 2,2
 
 TEST*/

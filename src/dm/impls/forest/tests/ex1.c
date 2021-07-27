@@ -19,7 +19,8 @@ int main (int argc, char **argv)
 
   ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
 
-  ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, 2, PETSC_FALSE, NULL, NULL, NULL, NULL, PETSC_TRUE, &base);CHKERRQ(ierr);
+  ierr = DMCreate(PETSC_COMM_WORLD, &base);CHKERRQ(ierr);
+  ierr = DMSetType(base, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(base);CHKERRQ(ierr);
 
   ierr = DMCreate(PETSC_COMM_WORLD, &forest);CHKERRQ(ierr);
@@ -44,13 +45,13 @@ int main (int argc, char **argv)
   ierr = DMCreateGlobalVector(forest, &g);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) g, "g");CHKERRQ(ierr);
   ierr = VecSet(g, 1.0);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forest.h5", FILE_MODE_WRITE, &viewer);
+  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forest.h5", FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
   ierr = VecView(g, viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
   ierr = DMCreateGlobalVector(forest, &g2);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) g2, "g");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forest.h5", FILE_MODE_READ, &viewer);
+  ierr = PetscViewerHDF5Open(PETSC_COMM_WORLD, "forest.h5", FILE_MODE_READ, &viewer);CHKERRQ(ierr);
   ierr = VecLoad(g2, viewer);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
 
@@ -72,6 +73,6 @@ int main (int argc, char **argv)
     requires: hdf5 p4est
 
   test:
-    args: -dm_plex_box_faces 3,3
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 3,3
 
 TEST*/

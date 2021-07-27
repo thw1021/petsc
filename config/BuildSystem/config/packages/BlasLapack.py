@@ -226,6 +226,7 @@ class Configure(config.package.Package):
         yield ('Default compiler locations with gfortran', None, ['liblapack.a', 'libblas.a','libgfortran.a'],'unknown','unknown')
         self.logWrite('Did not detect default BLAS and LAPACK locations so using the value of MKLROOT to search as --with-blas-lapack-dir='+mkl)
         self.argDB['with-blaslapack-dir'] = mkl
+        self.checkingMKLROOTautomatically = 1
 
     if self.argDB['with-64-bit-blas-indices']:
       ILP64 = '_ilp64'
@@ -387,7 +388,10 @@ class Configure(config.package.Package):
       for lib in ['lib64','lib','']:
         if os.path.exists(os.path.join(dir,libdir)):
           yield ('User specified installation root BLAS/LAPACK',os.path.join(dir,lib,'libblas.a'),os.path.join(dir,lib,'liblapack.a'),'unknown','unknown')
-      raise RuntimeError('You set a value for --with-blaslapack-dir=<dir>, but '+self.argDB['with-blaslapack-dir']+' cannot be used\n')
+      if hasattr(self,'checkingMKROOTautomatically'):
+        raise RuntimeError('Unable to locate working BLAS/LAPACK libraries, even tried libraries in MKLROOT '+self.argDB['with-blaslapack-dir']+'\n')
+      else:
+        raise RuntimeError('You set a value for --with-blaslapack-dir=<dir>, but '+self.argDB['with-blaslapack-dir']+' cannot be used\n')
     if self.defaultPrecision == '__float128':
       raise RuntimeError('__float128 precision requires f2c libraries; suggest --download-f2cblaslapack\n')
 
@@ -559,6 +563,7 @@ class Configure(config.package.Package):
     self.libraries.saveLog()
     if self.libraries.check(self.dlib, 'mkl_set_num_threads'):
       self.mkl = 1
+      self.has_cheaders = 1
       self.addDefine('HAVE_MKL',1)
       '''Set include directory for mkl.h and friends'''
       '''(the include directory is in CPATH if mklvars.sh has been sourced.'''
@@ -603,6 +608,11 @@ class Configure(config.package.Package):
     '''Check for the IBM ESSL library'''
     self.libraries.saveLog()
     if self.libraries.check(self.dlib, 'iessl'):
+      if 'with-blaslapack-include' in self.argDB:
+        incl = self.argDB['with-blaslapack-include']
+        if not isinstance(incl, list): incl = [incl]
+        self.include = incl
+      self.has_cheaders = 1
       self.addDefine('HAVE_ESSL',1)
     self.logWrite(self.libraries.restoreLog())
     return
@@ -637,7 +647,7 @@ class Configure(config.package.Package):
     if self.foundLapack:
       mangleFunc = hasattr(self.compilers, 'FC') and not self.f2c
     routines = ['gelss','gerfs','gges','hgeqz','hseqr','orgqr','ormqr','stebz',
-                'stegr','stein','steqr','sytri','tgsen','trsen','trtrs']
+                'stegr','stein','steqr','sytri','tgsen','trsen','trtrs','geqp3']
     self.libraries.saveLog()
     oldLibs = self.compilers.LIBS
     found, missing = self.libraries.checkClassify(self.lapackLibrary, map(self.mangleBlas,routines), otherLibs = self.getOtherLibs(), fortranMangle = mangleFunc)
@@ -761,7 +771,6 @@ this warning message *****')
         self.addDefine('HAVE_64BIT_BLAS_INDICES', 1)
         self.has64bitindices = 1
         self.log.write('Checking for 64 bit blas indices: program did not return therefore assuming 64 bit blas indices\n')
-    if not self.defaultPrecision == 'single': return
     self.log.write('Checking if sdot() returns a float or a double\n')
     if 'known-sdot-returns-double' in self.argDB:
       if self.argDB['known-sdot-returns-double']:

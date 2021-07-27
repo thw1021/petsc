@@ -184,7 +184,6 @@ static PetscErrorCode GmshCellInfoSetUp(void)
       SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Unsupported Gmsh element type %d", _ct_); \
   } while (0)
 
-
 typedef struct {
   PetscViewer  viewer;
   int          fileFormat;
@@ -1710,8 +1709,8 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
       if (mesh->vertexMap[n] >= 0) {
         if (PetscUnlikely(mesh->periodMap[n] != n)) {
           PetscInt m = mesh->periodMap[n];
-          ierr= PetscBTSet(periodicVerts, mesh->vertexMap[n]);CHKERRQ(ierr);
-          ierr= PetscBTSet(periodicVerts, mesh->vertexMap[m]);CHKERRQ(ierr);
+          ierr = PetscBTSet(periodicVerts, mesh->vertexMap[n]);CHKERRQ(ierr);
+          ierr = PetscBTSet(periodicVerts, mesh->vertexMap[m]);CHKERRQ(ierr);
         }
       }
     }

@@ -1,8 +1,9 @@
-#if !defined(__CUSPARSEMATIMPL)
-#define __CUSPARSEMATIMPL
+#if !defined(CUSPARSEMATIMPL)
+#define CUSPARSEMATIMPL
 
 #include <petscpkg_version.h>
 #include <petsc/private/cudavecimpl.h>
+#include <petscaijdevice.h>
 
 #include <cusparse_v2.h>
 
@@ -211,6 +212,8 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   PetscInt                          nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
   PetscScalar                       *a_band_d; /* GPU data for banded CSR LU factorization matrix diag(L)=1 */
   int                               *i_band_d; /* this could be optimized away */
+  cudaDeviceProp                    dev_prop;
+  PetscBool                         init_dev_prop;
 };
 
 struct Mat_CusparseSpMV {
@@ -258,7 +261,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMMAlg_t            spmmAlg;
  #endif
   THRUSTINTARRAY               *csr2csc_i;
-  PetscSplitCSRDataStructure   *deviceMat;       /* Matrix on device for, eg, assembly */
+  PetscSplitCSRDataStructure   deviceMat;       /* Matrix on device for, eg, assembly */
   THRUSTINTARRAY               *cooPerm;
   THRUSTINTARRAY               *cooPerm_a;
 };

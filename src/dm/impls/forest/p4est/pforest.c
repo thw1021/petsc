@@ -607,7 +607,7 @@ static PetscErrorCode DMPforestGetRefinementLevel(DM dm, PetscInt *lev)
     p4est_tree_t *tree  = &(((p4est_tree_t*) p4est->trees->array)[t]);
     maxlevelloc = PetscMax((PetscInt)tree->maxlevel,maxlevelloc);
   }
-  ierr = MPIU_Allreduce(&maxlevelloc,lev,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&maxlevelloc,lev,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2369,7 +2369,7 @@ static PetscErrorCode DMPforestGetCellSFNodes(DM dm, PetscInt numClosureIndices,
   nleaves           = PetscMax(0,nleaves);
   nroots            = PetscMax(0,nroots);
   *numClosurePoints = numClosureIndices * (cEnd - cStart);
-  ierr              = PetscMalloc1(*numClosurePoints,closurePoints);
+  ierr              = PetscMalloc1(*numClosurePoints,closurePoints);CHKERRQ(ierr);
   ierr              = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRMPI(ierr);
   for (c = cStart, count = 0; c < cEnd; c++) {
     PetscInt i;
@@ -3303,7 +3303,7 @@ static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
         if (print) {
           PetscInt i;
 
-          ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Failed to find cell with point %D in its closure for label %s (starSize %D)\n",PetscGlobalRank,p,baseLabel ? ((PetscObject)baseLabel)->name : "_forest_base_subpoint_map",starSize);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Failed to find cell with point %D in its closure for label %s (starSize %D)\n",PetscGlobalRank,p,baseLabel ? ((PetscObject)baseLabel)->name : "_forest_base_subpoint_map",starSize);CHKERRQ(ierr);
           for (i = 0; i < starSize; i++) { ierr = PetscPrintf(PETSC_COMM_SELF,"  star[%D] = %D,%D\n",i,star[2*i],star[2*i+1]);CHKERRQ(ierr); }
         }
         ierr = DMPlexRestoreTransitiveClosure(plex,p,PETSC_FALSE,NULL,&star);CHKERRQ(ierr);
@@ -4553,7 +4553,7 @@ static PetscErrorCode DMCreateInterpolation_pforest(DM dmCoarse, DM dmFine, Mat 
     ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
     ierr = DMPlexComputeInterpolatorTree(plexC, plexF, sf, cids, *interpolation);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
-    ierr = PetscFree(cids);
+    ierr = PetscFree(cids);CHKERRQ(ierr);
   }
   ierr = MatViewFromOptions(*interpolation, NULL, "-interp_mat_view");CHKERRQ(ierr);
   /* Use naive scaling */
@@ -4594,7 +4594,7 @@ static PetscErrorCode DMCreateInjection_pforest(DM dmCoarse, DM dmFine, Mat *inj
     ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
     ierr = DMPlexComputeInjectorTree(plexC, plexF, sf, cids, *injection);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
-    ierr = PetscFree(cids);
+    ierr = PetscFree(cids);CHKERRQ(ierr);
   }
   ierr = MatViewFromOptions(*injection, NULL, "-inject_mat_view");CHKERRQ(ierr);
   /* Use naive scaling */
@@ -4617,19 +4617,19 @@ static PetscErrorCode DMForestTransferVecFromBase_pforest(DM dm, Vec vecIn, Vec 
   PetscFunctionBegin;
   ierr = VecGetDM(vecIn,&dmVecIn);CHKERRQ(ierr);
   ierr = DMGetDS(dmVecIn,&ds);CHKERRQ(ierr);
-  if (!ds) SETERRQ(PetscObjectComm((PetscObject)dmVecIn),PETSC_ERR_SUP,"Cannot transfer without a PetscDS object");CHKERRQ(ierr);
+  if (!ds) SETERRQ(PetscObjectComm((PetscObject)dmVecIn),PETSC_ERR_SUP,"Cannot transfer without a PetscDS object");
   { /* we cannot stick user contexts into function callbacks for DMProjectFieldLocal! */
     PetscSection section;
     PetscInt     Nf;
 
     ierr = DMGetLocalSection(dmVecIn,&section);CHKERRQ(ierr);
     ierr = PetscSectionGetNumFields(section,&Nf);CHKERRQ(ierr);
-    if (Nf > 3) SETERRQ1(PetscObjectComm((PetscObject)dmVecIn),PETSC_ERR_SUP,"Number of fields %D are currently not supported! Send an email at petsc-dev@mcs.anl.gov",Nf);CHKERRQ(ierr);
+    if (Nf > 3) SETERRQ1(PetscObjectComm((PetscObject)dmVecIn),PETSC_ERR_SUP,"Number of fields %D are currently not supported! Send an email at petsc-dev@mcs.anl.gov",Nf);
   }
   ierr = DMForestGetMinimumRefinement(dm,&minLevel);CHKERRQ(ierr);
-  if (minLevel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Cannot transfer with minimum refinement set to %D. Rerun with DMForestSetMinimumRefinement(dm,0)",minLevel);CHKERRQ(ierr);
+  if (minLevel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Cannot transfer with minimum refinement set to %D. Rerun with DMForestSetMinimumRefinement(dm,0)",minLevel);
   ierr = DMForestGetBaseDM(dm,&base);CHKERRQ(ierr);
-  if (!base) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Missing base DM");CHKERRQ(ierr);
+  if (!base) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Missing base DM");
 
   ierr = VecSet(vecOut,0.0);CHKERRQ(ierr);
   if (dmVecIn == base) { /* sequential runs */
@@ -4709,12 +4709,12 @@ static PetscErrorCode DMForestTransferVecFromBase_pforest(DM dm, Vec vecIn, Vec 
     ierr = DMPlexGetCellNumbering(plex,&gnum[1]);CHKERRQ(ierr);
     ierr = ISGetMinMax(gnum[0],NULL,&ncells[0]);CHKERRQ(ierr);
     ierr = ISGetMinMax(gnum[1],NULL,&ncells[1]);CHKERRQ(ierr);
-    ierr = MPIU_Allreduce(ncells,gncells,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRQ(ierr);
+    ierr = MPIU_Allreduce(ncells,gncells,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
     if (gncells[0] != gncells[1]) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Invalid number of base cells! Expected %D, found %D",gncells[0]+1,gncells[1]+1);
   }
 
   ierr = DMGetLabel(dmIn,"_forest_base_subpoint_map",&subpointMap);CHKERRQ(ierr);
-  if (!subpointMap) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing _forest_base_subpoint_map label");CHKERRQ(ierr);
+  if (!subpointMap) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing _forest_base_subpoint_map label");
 
   ierr = DMPlexGetMaxProjectionHeight(base,&mh);CHKERRQ(ierr);
   ierr = DMPlexSetMaxProjectionHeight(plex,mh);CHKERRQ(ierr);

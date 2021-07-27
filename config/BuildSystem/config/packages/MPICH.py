@@ -4,8 +4,9 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.download         = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-3.4.1-petsc1.tar.gz']
-    self.downloaddirnames  = ['mpich']
+    self.download         = ['https://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz',
+                             'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-3.4.2.tar.gz']
+    self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
     self.isMPI = 1
     return
@@ -14,7 +15,6 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.compilerFlags   = framework.require('config.compilerFlags',self)
     self.cuda            = framework.require('config.packages.cuda',self)
-    self.valgrind        = framework.require('config.packages.valgrind',self)
     self.hwloc           = framework.require('config.packages.hwloc',self)
     self.odeps           = [self.hwloc]
     return
@@ -64,7 +64,7 @@ class Configure(config.package.GNUPackage):
     args.append('--enable-g=meminit')
     if not self.setCompilers.isDarwin(self.log) and config.setCompilers.Configure.isClang(self.setCompilers.CC, self.log):
       args.append('pac_cv_have_float16=no')
-    if (not self.sharedLibraries.useShared or self.valgrind.found) and config.setCompilers.Configure.isDarwin(self.log):
+    if config.setCompilers.Configure.isDarwin(self.log):
       args.append('--disable-opencl')
 
     # MPICH configure errors out on certain standard configure arguments

@@ -18,7 +18,6 @@
    but again it seems that there has been a deliberate effort at obfuscation, probably to raise the bar for entrants.
 */
 
-
 /*@
   DMPlexSnapToGeomModel - Given a coordinate point 'mcoords' on the mesh point 'p', return the closest coordinate point 'gcoords' on the geometry model associated with that point.
 
@@ -102,7 +101,7 @@ PetscErrorCode DMPlexSnapToGeomModel(DM dm, PetscInt p, const PetscScalar mcoord
     double range[4]; // [umin, umax, vmin, vmax]
     int    peri;
     ierr = EG_getRange(face, range, &peri);CHKERRQ(ierr);
-    if ((paramsNew[0] < range[0]) || (paramsNew[0] > range[1]) || (paramsNew[1] < range[2]) || (paramsNew[1] > range[3])) SETERRQ();
+    if ((paramsNew[0] < range[0]) || (paramsNew[0] > range[1]) || (paramsNew[1] < range[2]) || (paramsNew[1] > range[3])) SETERRQ(PETSC_ERR_ARG_OUTOFRANGE);
   */
   /* Put coordinates for new vertex in result[] */
   ierr = EG_evaluate(obj, params, result);CHKERRQ(ierr);
@@ -171,7 +170,7 @@ static PetscErrorCode DMPlexEGADSPrintModel(ego model)
         ierr = PetscPrintf(PETSC_COMM_SELF, "            EDGE ID: %d (%d)\n", id, e);CHKERRQ(ierr);
 
         ierr = EG_getRange(edge, range, &peri);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  Range = %lf, %lf, %lf, %lf \n", range[0], range[1], range[2], range[3]);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  Range = %lf, %lf, %lf, %lf \n", range[0], range[1], range[2], range[3]);CHKERRQ(ierr);
 
         /* Get NODE info which associated with the current EDGE */
         ierr = EG_getTopology(edge, &geom, &oclass, &mtype, NULL, &Nv, &nobjs, &senses);CHKERRQ(ierr);
@@ -180,10 +179,10 @@ static PetscErrorCode DMPlexEGADSPrintModel(ego model)
         } else {
           params[0] = range[0];
           ierr = EG_evaluate(edge, params, result);CHKERRQ(ierr);
-          ierr = PetscPrintf(PETSC_COMM_SELF, "   between (%lf, %lf, %lf)", result[0], result[1], result[2]);
+          ierr = PetscPrintf(PETSC_COMM_SELF, "   between (%lf, %lf, %lf)", result[0], result[1], result[2]);CHKERRQ(ierr);
           params[0] = range[1];
           ierr = EG_evaluate(edge, params, result);CHKERRQ(ierr);
-          ierr = PetscPrintf(PETSC_COMM_SELF, " and (%lf, %lf, %lf)\n", result[0], result[1], result[2]);
+          ierr = PetscPrintf(PETSC_COMM_SELF, " and (%lf, %lf, %lf)\n", result[0], result[1], result[2]);CHKERRQ(ierr);
         }
 
         for (v = 0; v < Nv; ++v) {
@@ -194,7 +193,7 @@ static PetscErrorCode DMPlexEGADSPrintModel(ego model)
           ierr = EG_getTopology(vertex, &geom, &oclass, &mtype, limits, &dummy, &mobjs, &senses);CHKERRQ(ierr);
           id   = EG_indexBodyTopo(body, vertex);
           ierr = PetscPrintf(PETSC_COMM_SELF, "              NODE ID: %d \n", id);CHKERRQ(ierr);
-          ierr = PetscPrintf(PETSC_COMM_SELF, "                 (x, y, z) = (%lf, %lf, %lf) \n", limits[0], limits[1], limits[2]);
+          ierr = PetscPrintf(PETSC_COMM_SELF, "                 (x, y, z) = (%lf, %lf, %lf) \n", limits[0], limits[1], limits[2]);CHKERRQ(ierr);
 
           point[0] = point[0] + limits[0];
           point[1] = point[1] + limits[1];
@@ -554,7 +553,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
 
       lid  = EG_indexBodyTopo(body, loop);CHKERRQ(ierr);
       ierr = EG_getBodyTopos(body, loop, FACE, &Nf, &fobjs);CHKERRQ(ierr);
-      if (Nf > 1) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_SUP, "Loop %d has %d > 1 faces, which is not supported", lid, Nf);CHKERRQ(ierr);
+      if (Nf > 1) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_SUP, "Loop %d has %d > 1 faces, which is not supported", lid, Nf);
       fid  = EG_indexBodyTopo(body, fobjs[0]);CHKERRQ(ierr);
       EG_free(fobjs);
       ierr = EG_getTopology(loop, &geom, &oclass, &mtype, NULL, &Ne, &objs, &senses);CHKERRQ(ierr);

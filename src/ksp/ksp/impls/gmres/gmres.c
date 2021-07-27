@@ -3,7 +3,6 @@
     This file implements GMRES (a Generalized Minimal Residual) method.
     Reference:  Saad and Schultz, 1986.
 
-
     Some comments on left vs. right preconditioning, and restarts.
     Left and right preconditioning.
     If right preconditioning is chosen, then the problem being solved
@@ -128,7 +127,7 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
   if ((ksp->rnorm > 0.0) && (PetscAbsReal(res-ksp->rnorm) > gmres->breakdowntol*gmres->rnorm0)) {
       if (ksp->errorifnotconverged) SETERRQ3(PetscObjectComm((PetscObject)ksp),PETSC_ERR_CONV_FAILED,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);
       else {
-        ierr = PetscInfo3(ksp,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);
+        ierr = PetscInfo3(ksp,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);CHKERRQ(ierr);
         ksp->reason =  KSP_DIVERGED_BREAKDOWN;
         PetscFunctionReturn(0);
       }
@@ -213,7 +212,6 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
   }
 
   if (itcount) *itcount = it;
-
 
   /*
     Down here we have to solve for the "best" coefficients of the Krylov
@@ -769,7 +767,6 @@ PetscErrorCode  KSPGMRESGetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType *
   PetscFunctionReturn(0);
 }
 
-
 /*@
    KSPGMRESSetRestart - Sets number of iterations at which GMRES, FGMRES and LGMRES restarts.
 
@@ -888,7 +885,6 @@ PetscErrorCode  KSPGMRESSetBreakdownTolerance(KSP ksp,PetscReal tol)
      KSPGMRES - Implements the Generalized Minimal Residual method.
                 (Saad and Schultz, 1986) with restart
 
-
    Options Database Keys:
 +   -ksp_gmres_restart <restart> - the number of Krylov directions to orthogonalize against
 .   -ksp_gmres_haptol <tol> - sets the tolerance for "happy ending" (exact convergence)
@@ -940,7 +936,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_GMRES(KSP ksp)
   ksp->ops->setfromoptions               = KSPSetFromOptions_GMRES;
   ksp->ops->computeextremesingularvalues = KSPComputeExtremeSingularValues_GMRES;
   ksp->ops->computeeigenvalues           = KSPComputeEigenvalues_GMRES;
-#if !defined(PETSC_USE_COMPLEX) && !defined(PETSC_HAVE_ESSL)
+#if !defined(PETSC_USE_COMPLEX)
   ksp->ops->computeritz                  = KSPComputeRitz_GMRES;
 #endif
   ierr = PetscObjectComposeFunction((PetscObject)ksp,"KSPGMRESSetPreAllocateVectors_C",KSPGMRESSetPreAllocateVectors_GMRES);CHKERRQ(ierr);
