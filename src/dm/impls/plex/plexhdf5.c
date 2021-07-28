@@ -362,6 +362,7 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   ierr = PetscMalloc1(conesSize, &cones);CHKERRQ(ierr);
   ierr = PetscMalloc1(conesSize, &orientations);CHKERRQ(ierr);
   for (p = pStart; p < pEnd; ++p) {
+    //TODO Can gpoint[] elements really be negative? What does it mean? Should be explained in DMPlexCreateNumbering() manpage.
     if (gpoint[p] >= 0) {
       const PetscInt *cone, *ornt;
       PetscInt        coneSize, cp;
