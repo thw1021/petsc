@@ -137,12 +137,14 @@ int main(int argc, char **argv)
   #   Have to replace Exodus file, which is creating uninterpolated edges
   test:
     suffix: 0
-    requires: exodusii broken
+    TODO: broken
+    requires: exodusii
     args: -filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/Rect-tri3.exo -dm_view ascii::ascii_info_detail
     args: -format hdf5_petsc -compare
   test:
     suffix: 1
-    requires: exodusii parmetis !define(PETSC_USE_64BIT_INDICES) broken
+    TODO: broken
+    requires: exodusii parmetis !define(PETSC_USE_64BIT_INDICES)
     nsize: 2
     args: -filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/Rect-tri3.exo -dm_view ascii::ascii_info_detail
     args: -petscpartitioner_type parmetis
@@ -173,7 +175,7 @@ int main(int argc, char **argv)
     requires: !complex
     nsize: {{1 2 3 4 8}}
     args: -filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.h5
-    args: -dm_plex_create_from_hdf5_xdmf -distribute 0 -format hdf5_xdmf -second_write_read -compare
+    args: -dm_plex_create_from_hdf5_xdmf -distribute 0 -format {{hdf5_petsc hdf5_xdmf}} -second_write_read -compare
 
   # Use low level functions, DMPlexTopologyView()/Load(), DMPlexCoordinatesView()/Load(), and DMPlexLabelsView()/Load()
   # Output must be the same as ex55_2_nsize-2_format-hdf5_petsc_interpolate-0.out
@@ -193,7 +195,7 @@ int main(int argc, char **argv)
     nsize: {{1 2 4}}
     args: -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_geometry
     args: -filename ${DATAFILESPATH}/meshes/cube-hexahedra-refined.h5 -dm_plex_create_from_hdf5_xdmf -dm_plex_hdf5_topology_path /cells -dm_plex_hdf5_geometry_path /coordinates
-    args: -format hdf5_xdmf -second_write_read -compare
+    args: -format {{hdf5_petsc hdf5_xdmf}} -second_write_read -compare
     test:
       suffix: 9_hdf5_seqload
       args: -distribute -petscpartitioner_type simple
