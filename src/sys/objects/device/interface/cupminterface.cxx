@@ -7,17 +7,17 @@
 namespace Petsc {
 
 #if PetscDefined(HAVE_CUDA)
-const decltype(cudaSuccess)                 CUPMInterface<CUPMDeviceKind::CUDA>::cupmSuccess;
-const decltype(cudaErrorNotReady)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorNotReady;
-const decltype(cudaStreamNonBlocking)       CUPMInterface<CUPMDeviceKind::CUDA>::cupmStreamNonBlocking;
-const decltype(cudaErrorDeviceAlreadyInUse) CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorDeviceAlreadyInUse;
+PETSC_CONSTEXPR const decltype(cudaSuccess)                 CUPMInterface<CUPMDeviceKind::CUDA>::cupmSuccess;
+PETSC_CONSTEXPR const decltype(cudaErrorNotReady)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorNotReady;
+PETSC_CONSTEXPR const decltype(cudaStreamNonBlocking)       CUPMInterface<CUPMDeviceKind::CUDA>::cupmStreamNonBlocking;
+PETSC_CONSTEXPR const decltype(cudaErrorDeviceAlreadyInUse) CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorDeviceAlreadyInUse;
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
-const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmSuccess;
-const decltype(hipErrorNotReady)      CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorNotReady;
-const decltype(hipStreamNonBlocking)  CUPMInterface<CUPMDeviceKind::HIP>::cupmStreamNonBlocking;
-const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;
+PETSC_CONSTEXPR const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmSuccess;
+PETSC_CONSTEXPR const decltype(hipErrorNotReady)      CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorNotReady;
+PETSC_CONSTEXPR const decltype(hipStreamNonBlocking)  CUPMInterface<CUPMDeviceKind::HIP>::cupmStreamNonBlocking;
+PETSC_CONSTEXPR const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;
 #endif // PetscDefined(HAVE_HIP)
 
 } // namespace Petsc
