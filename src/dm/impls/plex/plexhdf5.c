@@ -331,23 +331,16 @@ PetscErrorCode VecLoad_Plex_HDF5_Native_Internal(Vec v, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, PetscViewer viewer)
+static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbers, PetscViewer viewer, PetscInt pStart, PetscInt pEnd, const char pointsName[], const char coneSizesName[], const char conesName[], const char orientationsName[])
 {
-  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
   IS              pointsIS, coneSizesIS, conesIS, orientationsIS;
   const PetscInt *gpoint;
   PetscInt       *points, *coneSizes, *cones, *orientations;
-  PetscInt        pStart, pEnd, nPoints = 0, conesSize = 0;
+  PetscInt        nPoints = 0, conesSize = 0;
   PetscInt        p, c, s;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  pointsName        = "order";
-  coneSizesName     = "cones";
-  conesName         = "cells";
-  orientationsName  = "orientation";
-  ierr = PetscViewerHDF5PushGroup(viewer, "/topology");CHKERRQ(ierr);
-  ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
   ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
   for (p = pStart; p < pEnd; ++p) {
     if (gpoint[p] >= 0) {
@@ -399,6 +392,23 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
   ierr = ISRestoreIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, PetscViewer viewer)
+{
+  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
+  PetscInt        pStart, pEnd;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  pointsName        = "order";
+  coneSizesName     = "cones";
+  conesName         = "cells";
+  orientationsName  = "orientation";
+  ierr = PetscViewerHDF5PushGroup(viewer, "/topology");CHKERRQ(ierr);
+  ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
+  ierr = DMPlexTopologyView_HDF5_Private(dm, globalPointNumbers, viewer, pStart, pEnd, pointsName, coneSizesName, conesName, orientationsName);CHKERRQ(ierr);
   {
     PetscInt dim;
     ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
