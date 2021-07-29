@@ -337,7 +337,8 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   IS              pointsIS, coneSizesIS, conesIS, orientationsIS;
   const PetscInt *gpoint;
   PetscInt       *points, *coneSizes, *cones, *orientations;
-  PetscInt        dim, pStart, pEnd, p, nPoints = 0, conesSize = 0, c = 0, s = 0;
+  PetscInt        pStart, pEnd, nPoints = 0, conesSize = 0;
+  PetscInt        p, c, s;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -345,9 +346,9 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   coneSizesName     = "cones";
   conesName         = "cells";
   orientationsName  = "orientation";
-  ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
-  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PushGroup(viewer, "/topology");CHKERRQ(ierr);
   ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
+  ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
   for (p = pStart; p < pEnd; ++p) {
     if (gpoint[p] >= 0) {
       PetscInt coneSize;
@@ -361,7 +362,7 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   ierr = PetscMalloc1(nPoints, &coneSizes);CHKERRQ(ierr);
   ierr = PetscMalloc1(conesSize, &cones);CHKERRQ(ierr);
   ierr = PetscMalloc1(conesSize, &orientations);CHKERRQ(ierr);
-  for (p = pStart; p < pEnd; ++p) {
+  for (p = pStart, c = 0, s = 0; p < pEnd; ++p) {
     //TODO Can gpoint[] elements really be negative? What does it mean? Should be explained in DMPlexCreateNumbering() manpage.
     if (gpoint[p] >= 0) {
       const PetscInt *cone, *ornt;
@@ -370,36 +371,40 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
       ierr = DMPlexGetConeSize(dm, p, &coneSize);CHKERRQ(ierr);
       ierr = DMPlexGetCone(dm, p, &cone);CHKERRQ(ierr);
       ierr = DMPlexGetConeOrientation(dm, p, &ornt);CHKERRQ(ierr);
-      points[s]   = gpoint[p];
-      coneSizes[s++] = coneSize;
+      points[s]    = gpoint[p];
+      coneSizes[s] = coneSize;
       for (cp = 0; cp < coneSize; ++cp, ++c) {
         cones[c] = gpoint[cone[cp]] < 0 ? -(gpoint[cone[cp]]+1) : gpoint[cone[cp]];
         orientations[c] = ornt[cp];
       }
+      ++s;
     }
   }
   if (s != nPoints) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_LIB, "Total number of points %d != %d", s, nPoints);
   if (c != conesSize) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_LIB, "Total number of cone points %d != %d", c, conesSize);
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), nPoints, points, PETSC_OWN_POINTER, &pointsIS);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), nPoints, coneSizes, PETSC_OWN_POINTER, &coneSizesIS);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), conesSize, cones, PETSC_OWN_POINTER, &conesIS);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) conesIS, conesName);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), conesSize, orientations, PETSC_OWN_POINTER, &orientationsIS);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) conesIS, conesName);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) orientationsIS, orientationsName);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5PushGroup(viewer, "/topology");CHKERRQ(ierr);
   ierr = ISView(pointsIS, viewer);CHKERRQ(ierr);
   ierr = ISView(coneSizesIS, viewer);CHKERRQ(ierr);
   ierr = ISView(conesIS, viewer);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5WriteObjectAttribute(viewer, (PetscObject) conesIS, "cell_dim", PETSC_INT, (void *) &dim);CHKERRQ(ierr);
   ierr = ISView(orientationsIS, viewer);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   ierr = ISDestroy(&pointsIS);CHKERRQ(ierr);
   ierr = ISDestroy(&coneSizesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
   ierr = ISRestoreIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
+  {
+    PetscInt dim;
+    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, conesName, "cell_dim", PETSC_INT, (void *) &dim);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
