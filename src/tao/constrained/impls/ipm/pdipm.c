@@ -801,7 +801,6 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
 
   /* if (PetscAbsReal(pdipm->gradL) < 0.9*pdipm->mu)  */
   pdipm->mu = pdipm->mu_update_factor * dot/pdipm->Nci;
-  /* printf("          alpha_p %g, alpha_d %g; normY %g; mu %g\n\n",alpha_p,alpha_d,norm,pdipm->mu); */
 
   /* Update F; get tao->residual and tao->cnorm */
   ierr = TaoSNESFunction_PDIPM_residual(snes,X,F,(void*)tao);CHKERRQ(ierr);
