@@ -82,7 +82,7 @@ PetscErrorCode MatCreateSubMatrices_Normal(Mat mat,PetscInt n,const IS irow[],co
     ierr = MatTranspose(suba[N],MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
     ierr = MatCreateNormal(B,*submat+N);CHKERRQ(ierr);
     ((Mat_Normal*)(*submat)[N]->data)->scale = a->scale;
-    ierr = MatDestroy(&B);
+    ierr = MatDestroy(&B);CHKERRQ(ierr);
   }
   ierr = ISDestroy(&col[0]);CHKERRQ(ierr);
   ierr = PetscFree(col);CHKERRQ(ierr);
