@@ -5,7 +5,7 @@
 // need this declaration...
 
 namespace Petsc {
-
+#if !PetscDefined(HAVE_CXX_DIALECT_CXX17)
 #if PetscDefined(HAVE_CUDA)
 PETSC_CONSTEXPR const decltype(cudaSuccess)                 CUPMInterface<CUPMDeviceKind::CUDA>::cupmSuccess;
 PETSC_CONSTEXPR const decltype(cudaErrorNotReady)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorNotReady;
@@ -19,5 +19,5 @@ PETSC_CONSTEXPR const decltype(hipErrorNotReady)      CUPMInterface<CUPMDeviceKi
 PETSC_CONSTEXPR const decltype(hipStreamNonBlocking)  CUPMInterface<CUPMDeviceKind::HIP>::cupmStreamNonBlocking;
 PETSC_CONSTEXPR const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;
 #endif // PetscDefined(HAVE_HIP)
-
+#endif
 } // namespace Petsc
