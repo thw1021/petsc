@@ -630,8 +630,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx,*subnetedge;
-  PetscInt       e,v,vfrom,vto,myvstart;
+  PetscInt       i,j,ctr,Nsubnet=network->Nsubnet,*eowners,np,*edges,*subnetvtx,*subnetedge,e,v;
   const PetscInt *cone;
   MPI_Comm       comm;
   PetscMPIInt    size,rank;
@@ -708,17 +707,6 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   for (i=2; i<=size; i++) eowners[i] += eowners[i-1];
 
   /* Setup edge and vertex arrays for subnetworks */
-  myvstart = 0;
-  if (network->Nsubnet == 1) {
-    /* Current implementation of DMNetwork reads
-    (1) a single subnetwork in parallel; or
-    (2) n subnetworks using n processors, one subnetwork/processor.
-    For (1), i.e., parallel input of 0-th network, myvstart is used for setting subnet[i].vertices[] */
-    ierr = MPI_Scan(&network->subnet[0].nvtx,&myvstart,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
-    myvstart -= network->subnet[0].nvtx;
-  }
-
-  /* Setup edge and vertex arrays for subnetworks */
   e = 0;
   for (i=0; i < Nsubnet; i++) {
     ctr = 0;
@@ -740,15 +728,13 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       v = cone[0];
       network->header[v].index     = edges[2*e];  /* Global vertex index */
       network->header[v].subnetid  = i;           /* Subnetwork id */
-      vfrom = network->subnet[i].edgelist[2*ctr]; /* =subnet[i].idx, user's index of the subnet! */
-      network->subnet[i].vertices[vfrom - myvstart] = v; /* user's subnet[].idx = petsc's v */
+      network->subnet[i].vertices[v - network->vStart] = v; /* user's subnet[].idx = petsc's v */
 
       /* vertex cone[1] */
       v = cone[1];
       network->header[v].index    = edges[2*e+1];   /* Global vertex index */
       network->header[v].subnetid = i;              /* Subnetwork id */
-      vto   = network->subnet[i].edgelist[2*ctr+1]; /* =subnet[i].idx, user's index of the subnet! */
-      network->subnet[i].vertices[vto - myvstart]  = v;  /* user's subnet[].idx = petsc's v */
+      network->subnet[i].vertices[v - network->vStart] = v; /* user's subnet[].idx = petsc's v */
 
       e++; ctr++;
     }
