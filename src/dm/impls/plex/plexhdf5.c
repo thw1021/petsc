@@ -418,6 +418,42 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v1(DM dm, IS globalPointNumbers, P
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, PetscViewer viewer)
+{
+  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
+  PetscInt        depth, h;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  pointsName        = "points";
+  coneSizesName     = "cone_sizes";
+  conesName         = "cones";
+  orientationsName  = "orientations";
+  ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PushGroup(viewer, "height_strata");CHKERRQ(ierr);
+  ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
+  for (h = 0; h <= depth; h++) {
+    PetscInt pStart, pEnd;
+    char     group[128];
+
+    ierr = PetscSNPrintf(group, sizeof(group), "%D", h);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5PushGroup(viewer, group);CHKERRQ(ierr);
+    ierr = DMPlexGetHeightStratum(dm, h, &pStart, &pEnd);CHKERRQ(ierr);
+    ierr = DMPlexTopologyView_HDF5_Private(dm, globalPointNumbers, viewer, pStart, pEnd, pointsName, coneSizesName, conesName, orientationsName);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  {
+    PetscInt ver = 2, dim;
+    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "cell_dim", PETSC_INT, &dim);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "depth", PETSC_INT, &depth);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "version", PETSC_INT, &ver);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, PetscViewer viewer)
 {
   PetscInt        version = 1;
@@ -429,6 +465,7 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   switch (version) {
     case 1: ierr = DMPlexTopologyView_HDF5_v1(dm, globalPointNumbers, viewer);CHKERRQ(ierr); break;
+    case 2: ierr = DMPlexTopologyView_HDF5_v2(dm, globalPointNumbers, viewer);CHKERRQ(ierr); break;
     default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyView() for topology version %D not implemented yet", version);
   }
   PetscFunctionReturn(0);
