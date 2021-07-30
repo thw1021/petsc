@@ -611,13 +611,11 @@ int main(int argc,char ** argv)
      requires: !complex double defined(PETSC_HAVE_ATTRIBUTEALIGNED)
 
    test:
-     TODO: crash at DMDestroy(). Data structures might need redo.
      args: -snes_rtol 1.e-3
      localrunfiles: poweroptions case9.m
      output_file: output/power_1.out
 
    test:
-     TODO: crash at DMDestroy(). Data structures might need redo.
      suffix: 2
      args: -snes_rtol 1.e-3 -petscpartitioner_type simple
      nsize: 4
