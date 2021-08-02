@@ -120,7 +120,7 @@ PetscErrorCode MatDuplicate_Normal(Mat A, MatDuplicateOption op, Mat *B)
   ierr = MatDuplicate(a->A,op,&C);CHKERRQ(ierr);
   ierr = MatCreateNormal(C,B);CHKERRQ(ierr);
   ierr = MatDestroy(&C);CHKERRQ(ierr);
-  ((Mat_Normal*)(*B)->data)->scale = a->scale;
+  if (op == MAT_COPY_VALUES) ((Mat_Normal*)(*B)->data)->scale = a->scale;
   PetscFunctionReturn(0);
 }
 
@@ -256,6 +256,11 @@ PetscErrorCode MatDestroy_Normal(Mat N)
   ierr = VecDestroy(&Na->rightwork);CHKERRQ(ierr);
   ierr = PetscFree(N->data);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)N,"MatNormalGetMat_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatConvert_normal_seqaij_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatConvert_normal_mpiaij_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatProductSetFromOptions_normal_seqdense_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatProductSetFromOptions_normal_mpidense_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)N,"MatProductSetFromOptions_normal_dense_C",NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -355,6 +360,7 @@ PetscErrorCode MatConvert_Normal_AIJ(Mat A,MatType newtype,MatReuse reuse,Mat *n
   if (reuse == MAT_INPLACE_MATRIX) {
     ierr = MatHeaderReplace(A,&B);CHKERRQ(ierr);
   } else if (reuse == MAT_INITIAL_MATRIX) *newmat = B;
+  ierr = MatConvert(*newmat,MATAIJ,MAT_INPLACE_MATRIX,newmat);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
