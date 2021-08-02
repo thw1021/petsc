@@ -1150,7 +1150,7 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *sf)
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer, PetscSF *sf)
 {
   MPI_Comm        comm;
   const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
@@ -1169,8 +1169,7 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  /* Read toplogy */
-  //TODO update HDF5 names
+  /* Read topology */
   ierr = PetscViewerHDF5PushGroup(viewer, "/topology");CHKERRQ(ierr);
   ierr = ISCreate(comm, &pointsIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
@@ -1254,6 +1253,20 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   /* Fill in the rest of the topology structure */
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *sf)
+{
+  PetscInt        version = 1;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscViewerHDF5ReadAttribute(viewer, "topology", "version", PETSC_INT, &version, &version);CHKERRQ(ierr);
+  switch (version) {
+    case 1: ierr = DMPlexTopologyLoad_HDF5_v1(dm, viewer, sf);CHKERRQ(ierr); break;
+    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyLoad() for topology version %D not implemented yet", version);
+  }
   PetscFunctionReturn(0);
 }
 
