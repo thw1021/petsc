@@ -61,9 +61,9 @@ PetscErrorCode MatIncreaseOverlap_Normal(Mat A,PetscInt is_max,IS is[],PetscInt 
 PetscErrorCode MatCreateSubMatrices_Normal(Mat mat,PetscInt n,const IS irow[],const IS icol[],MatReuse scall,Mat *submat[])
 {
   Mat_Normal     *a = (Mat_Normal*)mat->data;
-  Mat            B = a->A, C, *suba;
-  IS             *col;
-  PetscInt       N;
+  Mat            B = a->A, *suba;
+  IS             *row;
+  PetscInt       M;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -71,23 +71,19 @@ PetscErrorCode MatCreateSubMatrices_Normal(Mat mat,PetscInt n,const IS irow[],co
   if (scall != MAT_REUSE_MATRIX) {
     ierr = PetscCalloc1(n,submat);CHKERRQ(ierr);
   }
-  ierr = MatTranspose(B,MAT_INITIAL_MATRIX,&C);CHKERRQ(ierr);
-  ierr = MatGetSize(C,NULL,&N);CHKERRQ(ierr);
-  ierr = PetscMalloc1(n,&col);CHKERRQ(ierr);
-  ierr = ISCreateStride(PETSC_COMM_SELF,N,0,1,&col[0]);CHKERRQ(ierr);
-  ierr = ISSetIdentity(col[0]);CHKERRQ(ierr);
-  for (N = 1; N < n; ++N) col[N] = col[0];
-  ierr = MatCreateSubMatrices(C,n,irow,col,MAT_INITIAL_MATRIX,&suba);CHKERRQ(ierr);
-  for (N = 0; N < n; ++N) {
-    ierr = MatTranspose(suba[N],MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
-    ierr = MatCreateNormal(B,*submat+N);CHKERRQ(ierr);
-    ((Mat_Normal*)(*submat)[N]->data)->scale = a->scale;
-    ierr = MatDestroy(&B);CHKERRQ(ierr);
+  ierr = MatGetSize(B,&M,NULL);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n,&row);CHKERRQ(ierr);
+  ierr = ISCreateStride(PETSC_COMM_SELF,M,0,1,&row[0]);CHKERRQ(ierr);
+  ierr = ISSetIdentity(row[0]);CHKERRQ(ierr);
+  for (M = 1; M < n; ++M) row[M] = row[0];
+  ierr = MatCreateSubMatrices(B,n,row,icol,MAT_INITIAL_MATRIX,&suba);CHKERRQ(ierr);
+  for (M = 0; M < n; ++M) {
+    ierr = MatCreateNormal(suba[M],*submat+M);CHKERRQ(ierr);
+    ((Mat_Normal*)(*submat)[M]->data)->scale = a->scale;
   }
-  ierr = ISDestroy(&col[0]);CHKERRQ(ierr);
-  ierr = PetscFree(col);CHKERRQ(ierr);
+  ierr = ISDestroy(&row[0]);CHKERRQ(ierr);
+  ierr = PetscFree(row);CHKERRQ(ierr);
   ierr = MatDestroySubMatrices(n,&suba);CHKERRQ(ierr);
-  ierr = MatDestroy(&C);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
