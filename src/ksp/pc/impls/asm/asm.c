@@ -1424,8 +1424,8 @@ PetscErrorCode  PCASMCreateSubdomains(Mat A, PetscInt n, IS* outis[])
   MatPartitioning mpart;
   const char      *prefix;
   PetscInt        i,j,rstart,rend,bs;
-  PetscBool       hasop, isbaij = PETSC_FALSE,foundpart = PETSC_FALSE;
-  Mat             Ad     = NULL, adj;
+  PetscBool       hasop,isbaij = PETSC_FALSE,foundpart = PETSC_FALSE;
+  Mat             Ad     = NULL,adj;
   IS              ispart,isnumb,*is;
   PetscErrorCode  ierr;
 
