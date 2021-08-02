@@ -508,6 +508,8 @@ PetscErrorCode  MatCreateNormal(Mat A,Mat *N)
   ierr = MatCreate(PetscObjectComm((PetscObject)A),N);CHKERRQ(ierr);
   ierr = MatSetSizes(*N,n,n,nn,nn);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)*N,MATNORMAL);CHKERRQ(ierr);
+  ierr = PetscLayoutReference(A->cmap,&(*N)->rmap);CHKERRQ(ierr);
+  ierr = PetscLayoutReference(A->cmap,&(*N)->cmap);CHKERRQ(ierr);
 
   ierr       = PetscNewLog(*N,&Na);CHKERRQ(ierr);
   (*N)->data = (void*) Na;
