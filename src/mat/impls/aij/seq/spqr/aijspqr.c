@@ -10,7 +10,7 @@ EXTERN_C_END
 static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A,PetscBool values,cholmod_sparse *C,PetscBool *aijalloc,PetscBool *valloc)
 {
   Mat_SeqAIJ        *aij;
-  Mat               AT,B;
+  Mat               AT;
   const PetscScalar *aa;
   PetscScalar       *ca;
   const PetscInt    *ai, *aj;
@@ -20,21 +20,17 @@ static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A,PetscBool values,cholmod_
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  /* cholmod_sparse is compressed sparse column */
   ierr = PetscObjectTypeCompare((PetscObject)A, MATNORMAL, &flg);CHKERRQ(ierr);
-  if (!flg) {
-    PetscBool issym;
-
-    ierr = MatGetOption(A, MAT_SYMMETRIC, &issym);CHKERRQ(ierr);
-    if (issym) {
-      ierr = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
-      AT = A;
-    } else {
-      ierr = MatTranspose(A, MAT_INITIAL_MATRIX, &AT);CHKERRQ(ierr);
-    }
+  if (flg) {
+    ierr = MatNormalGetMat(A, &A);CHKERRQ(ierr);
+  }
+  /* cholmod_sparse is compressed sparse column */
+  ierr = MatGetOption(A, MAT_SYMMETRIC, &flg);CHKERRQ(ierr);
+  if (flg) {
+    ierr = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
+    AT = A;
   } else {
-    ierr = MatNormalGetMat(A, &B);CHKERRQ(ierr);
-    ierr = MatTranspose(B, MAT_INITIAL_MATRIX, &AT);CHKERRQ(ierr);
+    ierr = MatTranspose(A, MAT_INITIAL_MATRIX, &AT);CHKERRQ(ierr);
   }
   aij = (Mat_SeqAIJ*)AT->data;
   ai = aij->j;
