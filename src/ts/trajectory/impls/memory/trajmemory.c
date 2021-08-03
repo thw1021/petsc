@@ -30,8 +30,8 @@ typedef enum {NONE,TWO_LEVEL_NOREVOLVE,TWO_LEVEL_REVOLVE,TWO_LEVEL_TWO_REVOLVE,R
 
 typedef enum {UNSET=-1,SOLUTIONONLY=0,STAGESONLY=1,SOLUTION_STAGES=2} CheckpointType;
 
-typedef enum {TJ_REVOLVE, TJ_CAMS} PackageName;
-static const char *const PackageNames[] = {"REVOLVE","CAMS","PackageName","TJ_",NULL};
+typedef enum {TJ_REVOLVE, TJ_CAMS, TJ_PETSC} TSTrajectoryMemoryType;
+static const char *const TSTrajectoryMemoryTypes[] = {"REVOLVE","CAMS","PETSC","TSTrajectoryMemoryType","TJ_",NULL};
 
 #define HaveSolution(m) ((m) == SOLUTIONONLY || (m) == SOLUTION_STAGES)
 #define HaveStages(m)   ((m) == STAGESONLY || (m) == SOLUTION_STAGES)
@@ -91,7 +91,7 @@ typedef struct _DiskStack {
 
 typedef struct _TJScheduler {
   SchedulerType stype;
-  PackageName   packagename;
+  TSTrajectoryMemoryType tj_memory_type;
 #if defined(PETSC_HAVE_REVOLVE)
   RevolveCTX    *rctx,*rctx2;
   PetscBool     use_online;
@@ -338,7 +338,7 @@ static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,Pet
     ierr = VecView(X,viewer);CHKERRQ(ierr);
   }
   if (HaveStages(cptype)) {
-    for (i=numY-1; i>=0; i--) {
+    for (i=0; i<numY; i++) {
       /* For stiffly accurate TS methods, the last stage Y[ns-1] is the same as the solution X, thus does not need to be saved again. */
       if (stifflyaccurate && i == numY-1 && HaveSolution(cptype)) continue;
       ierr = VecView(Y[i],viewer);CHKERRQ(ierr);
@@ -360,7 +360,7 @@ static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,P
     ierr = VecLoad(X,viewer);CHKERRQ(ierr);
   }
   if (HaveStages(cptype)) {
-    for (i=numY-1; i>=0; i--) {
+    for (i=0; i<numY; i++) {
       /* For stiffly accurate TS methods, the last stage Y[ns-1] is the same as the solution X, thus does not need to be loaded again. */
       if (stifflyaccurate && i == numY-1 && HaveSolution(cptype)) continue;
       ierr = VecLoad(Y[i],viewer);CHKERRQ(ierr);
@@ -667,7 +667,7 @@ static PetscErrorCode TopLevelStore(TSTrajectory tj,TS ts,TJScheduler *tjsch,Pet
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_N(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e;
@@ -709,7 +709,7 @@ static PetscErrorCode SetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscRe
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajN_2(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_N_2(TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e;
@@ -733,7 +733,7 @@ static PetscErrorCode SetTrajN_2(TS ts,TJScheduler *tjsch,PetscInt stepnum,Petsc
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_N(TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e;
@@ -759,7 +759,7 @@ static PetscErrorCode GetTrajN(TS ts,TJScheduler *tjsch,PetscInt stepnum)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajN_2(TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_N_2(TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e = NULL;
@@ -772,7 +772,7 @@ static PetscErrorCode GetTrajN_2(TS ts,TJScheduler *tjsch,PetscInt stepnum)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajTLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_TLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack          *stack = &tjsch->stack;
   PetscInt       localstepnum,laststridesize;
@@ -805,7 +805,7 @@ static PetscErrorCode SetTrajTLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajTLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_TLNR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack          *stack = &tjsch->stack;
   PetscInt       id,localstepnum,laststridesize;
@@ -1039,7 +1039,7 @@ static PetscErrorCode ApplyRevolve(PetscViewer viewer,SchedulerType stype,Revolv
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_ROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack           *stack = &tjsch->stack;
   PetscInt        store;
@@ -1064,7 +1064,7 @@ static PetscErrorCode SetTrajROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_ROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack           *stack = &tjsch->stack;
   PetscInt        store;
@@ -1109,7 +1109,7 @@ static PetscErrorCode GetTrajROF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajRON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_RON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack           *stack = &tjsch->stack;
   Vec             *Y;
@@ -1154,7 +1154,7 @@ static PetscErrorCode SetTrajRON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajRON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_RON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack           *stack = &tjsch->stack;
   PetscRevolveInt whattodo,shift,rstepnum;
@@ -1199,7 +1199,7 @@ static PetscErrorCode GetTrajRON(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajTLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_TLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack           *stack = &tjsch->stack;
   PetscInt        store,localstepnum,laststridesize;
@@ -1249,7 +1249,7 @@ static PetscErrorCode SetTrajTLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajTLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_TLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack           *stack = &tjsch->stack;
   PetscRevolveInt whattodo,shift,rstepnum,rlocalstepnum,rtotal_steps;
@@ -1354,7 +1354,7 @@ static PetscErrorCode GetTrajTLR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajTLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_TLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack           *stack = &tjsch->stack;
   PetscInt        store,localstepnum,stridenum,laststridesize;
@@ -1415,7 +1415,7 @@ static PetscErrorCode SetTrajTLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajTLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_TLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack           *stack = &tjsch->stack;
   DiskStack       *diskstack = &tjsch->diskstack;
@@ -1578,7 +1578,7 @@ static PetscErrorCode GetTrajTLTR(TSTrajectory tj,TS ts,TJScheduler *tjsch,Petsc
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_RMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack           *stack = &tjsch->stack;
   PetscInt        store;
@@ -1605,7 +1605,7 @@ static PetscErrorCode SetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_RMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack           *stack = &tjsch->stack;
   PetscRevolveInt whattodo,shift,rstepnum;
@@ -1666,7 +1666,7 @@ static PetscErrorCode GetTrajRMS(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
 
 #if defined(PETSC_HAVE_CAMS)
 /* Optimal offline adjoint checkpointing for multistage time integration methods */
-static PetscErrorCode SetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
+static PetscErrorCode TSTrajectoryMemorySet_AOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e;
@@ -1727,7 +1727,7 @@ static PetscErrorCode SetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscI
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GetTrajAOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
+static PetscErrorCode TSTrajectoryMemoryGet_AOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e;
@@ -1809,41 +1809,41 @@ static PetscErrorCode TSTrajectorySet_Memory(TSTrajectory tj,TS ts,PetscInt step
   switch (tjsch->stype) {
     case NONE:
       if (tj->adjoint_solve_mode) {
-        ierr = SetTrajN(ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+        ierr = TSTrajectoryMemorySet_N(ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       } else {
-        ierr = SetTrajN_2(ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+        ierr = TSTrajectoryMemorySet_N_2(ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       }
       break;
     case TWO_LEVEL_NOREVOLVE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajTLNR(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_TLNR(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
 #if defined(PETSC_HAVE_REVOLVE)
     case TWO_LEVEL_REVOLVE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajTLR(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_TLR(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
     case TWO_LEVEL_TWO_REVOLVE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajTLTR(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_TLTR(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
     case REVOLVE_OFFLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajROF(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_ROF(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
     case REVOLVE_ONLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajRON(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_RON(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
     case REVOLVE_MULTISTAGE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajRMS(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_RMS(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
 #endif
 #if defined(PETSC_HAVE_CAMS)
     case CAMS_OFFLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = SetTrajAOF(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySet_AOF(tj,ts,tjsch,stepnum,time,X);CHKERRQ(ierr);
       break;
 #endif
     default:
@@ -1865,41 +1865,41 @@ static PetscErrorCode TSTrajectoryGet_Memory(TSTrajectory tj,TS ts,PetscInt step
   switch (tjsch->stype) {
     case NONE:
       if (tj->adjoint_solve_mode) {
-        ierr = GetTrajN(ts,tjsch,stepnum);CHKERRQ(ierr);
+        ierr = TSTrajectoryMemoryGet_N(ts,tjsch,stepnum);CHKERRQ(ierr);
       } else {
-        ierr = GetTrajN_2(ts,tjsch,stepnum);CHKERRQ(ierr);
+        ierr = TSTrajectoryMemoryGet_N_2(ts,tjsch,stepnum);CHKERRQ(ierr);
       }
       break;
     case TWO_LEVEL_NOREVOLVE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajTLNR(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_TLNR(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
 #if defined(PETSC_HAVE_REVOLVE)
     case TWO_LEVEL_REVOLVE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajTLR(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_TLR(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
     case TWO_LEVEL_TWO_REVOLVE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajTLTR(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_TLTR(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
     case REVOLVE_OFFLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajROF(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_ROF(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
     case REVOLVE_ONLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajRON(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_RON(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
     case REVOLVE_MULTISTAGE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajRMS(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_RMS(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
 #endif
 #if defined(PETSC_HAVE_CAMS)
     case CAMS_OFFLINE:
       if (!tj->adjoint_solve_mode) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
-      ierr = GetTrajAOF(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemoryGet_AOF(tj,ts,tjsch,stepnum);CHKERRQ(ierr);
       break;
 #endif
     default:
@@ -1955,13 +1955,13 @@ static PetscErrorCode TSTrajectorySetMaxUnitsDisk_Memory(TSTrajectory tj,PetscIn
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode TSTrajectorySetPackage_Memory(TSTrajectory tj,PackageName packagename)
+static PetscErrorCode TSTrajectoryMemorySetType_Memory(TSTrajectory tj,TSTrajectoryMemoryType tj_memory_type)
 {
   TJScheduler *tjsch = (TJScheduler*)tj->data;
 
   PetscFunctionBegin;
-  if (tj->setupcalled) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot change package name after TSTrajectory has been setup or used");
-  tjsch->packagename = packagename;
+  if (tj->setupcalled) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot change schedule software after TSTrajectory has been setup or used");
+  tjsch->tj_memory_type = tj_memory_type;
   PetscFunctionReturn(0);
 }
 
@@ -1995,28 +1995,28 @@ PETSC_UNUSED static PetscErrorCode TSTrajectorySetUseDRAM(TSTrajectory tj,PetscB
 }
 
 /*@C
-   TSTrajectorySetPackage - sets the software that is used to generate the checkpointing schedule.
+   TSTrajectoryMemorySetType - sets the software that is used to generate the checkpointing schedule.
 
    Logically Collective on TSTrajectory
 
    Input Parameters:
 +  tj - the TSTrajectory context
--  packagename - Revolve or CAMS
+-  tj_memory_type - Revolve or CAMS
 
    Options Database Key:
-.  -ts_trajectory_package <packagename> - revolve, cams
+.  -ts_trajectory_memory_type <tj_memory_type> - petsc, revolve, cams
 
    Level: intermediate
 
    Note:
      By default this will use Revolve if it exists
 @*/
-PetscErrorCode TSTrajectorySetPackage(TSTrajectory tj,PackageName packagename)
+PetscErrorCode TSTrajectoryMemorySetType(TSTrajectory tj,TSTrajectoryMemoryType tj_memory_type)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscTryMethod(tj,"TSTrajectorySetPackage_C",(TSTrajectory,PackageName),(tj,packagename));CHKERRQ(ierr);
+  ierr = PetscTryMethod(tj,"TSTrajectoryMemorySetType_C",(TSTrajectory,TSTrajectoryMemoryType),(tj,tj_memory_type));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2149,9 +2149,9 @@ static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscO
 #endif
     ierr = PetscOptionsBool("-ts_trajectory_save_stack","Save all stack to disk","TSTrajectorySetSaveStack",tjsch->save_stack,&tjsch->save_stack,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-ts_trajectory_use_dram","Use DRAM for checkpointing","TSTrajectorySetUseDRAM",tjsch->stack.use_dram,&tjsch->stack.use_dram,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsEnum("-ts_trajectory_set_package","Checkpointing package to use","TSTrajectorySetPackage",PackageNames,(PetscEnum)(int)(tjsch->packagename),&etmp,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsEnum("-ts_trajectory_memory_type","Checkpointing scchedule software to use","TSTrajectoryMemorySetType",TSTrajectoryMemoryTypes,(PetscEnum)(int)(tjsch->tj_memory_type),&etmp,&flg);CHKERRQ(ierr);
     if (flg) {
-      ierr = TSTrajectorySetPackage(tj,(PackageName)etmp);CHKERRQ(ierr);
+      ierr = TSTrajectoryMemorySetType(tj,(TSTrajectoryMemoryType)etmp);CHKERRQ(ierr);
     }
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
@@ -2205,9 +2205,20 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
     if (fixedtimestep) {
       if (tjsch->max_cps_ram >= tjsch->total_steps-1 || tjsch->max_cps_ram == -1)
         tjsch->stype = NONE; /* checkpoint all */
-      else { /* choose the package for offline checkpointing */
-        if (tjsch->packagename == TJ_CAMS) tjsch->stype = CAMS_OFFLINE;
-        if (tjsch->packagename == TJ_REVOLVE) tjsch->stype = (tjsch->max_cps_disk>1) ? REVOLVE_MULTISTAGE : REVOLVE_OFFLINE;
+      else { /* choose the schedule software for offline checkpointing */
+        switch (tjsch->tj_memory_type) {
+          case TJ_PETSC:
+            tjsch->stype = NONE;
+            break;
+          case TJ_CAMS:
+            tjsch->stype = CAMS_OFFLINE;
+            break;
+          case TJ_REVOLVE:
+            tjsch->stype = (tjsch->max_cps_disk>1) ? REVOLVE_MULTISTAGE : REVOLVE_OFFLINE;
+            break;
+          default:
+            break;
+        }
       }
     } else tjsch->stype = NONE; /* checkpoint all for adaptive time step */
 #if defined(PETSC_HAVE_REVOLVE)
@@ -2369,7 +2380,7 @@ static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsDisk_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetPackage_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectoryMemorySetType_C",NULL);CHKERRQ(ierr);
   ierr = PetscFree(tjsch);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2415,7 +2426,7 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Memory(TSTrajectory tj,TS ts)
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",TSTrajectorySetMaxCpsDisk_Memory);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",TSTrajectorySetMaxUnitsRAM_Memory);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsDisk_C",TSTrajectorySetMaxUnitsDisk_Memory);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetPackage_C",TSTrajectorySetPackage_Memory);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectoryMemorySetType_C",TSTrajectoryMemorySetType_Memory);CHKERRQ(ierr);
   tj->data = tjsch;
   PetscFunctionReturn(0);
 }

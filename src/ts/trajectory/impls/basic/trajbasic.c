@@ -26,7 +26,7 @@ static PetscErrorCode TSTrajectorySet_Basic(TSTrajectory tj,TS ts,PetscInt stepn
     Vec       *Y;
     PetscReal tprev;
     ierr = TSGetStages(ts,&ns,&Y);CHKERRQ(ierr);
-    for (i=ns-1; i>=0; i--) {
+    for (i=0; i<ns; i++) {
       /* For stiffly accurate TS methods, the last stage Y[ns-1] is the same as the solution X, thus does not need to be saved again. */
       if (ts->stifflyaccurate && i == ns-1) continue;
       ierr = VecView(Y[i],tjbasic->viewer);CHKERRQ(ierr);
@@ -79,7 +79,7 @@ static PetscErrorCode TSTrajectoryGet_Basic(TSTrajectory tj,TS ts,PetscInt stepn
     Vec       *Y;
     PetscReal timepre;
     ierr = TSGetStages(ts,&ns,&Y);CHKERRQ(ierr);
-    for (i=ns-1; i>=0; i--) {
+    for (i=0; i<ns; i++) {
       /* For stiffly accurate TS methods, the last stage Y[ns-1] is the same as the solution X, thus does not need to be loaded again. */
       if (ts->stifflyaccurate && i == ns-1) continue;
       ierr = VecLoad(Y[i],viewer);CHKERRQ(ierr);
