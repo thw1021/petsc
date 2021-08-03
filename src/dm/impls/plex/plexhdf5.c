@@ -338,9 +338,11 @@ static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbe
   PetscInt       *points, *coneSizes, *cones, *orientations;
   PetscInt        nPoints = 0, conesSize = 0;
   PetscInt        p, c, s;
+  MPI_Comm        comm;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
   ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
   for (p = pStart; p < pEnd; ++p) {
     if (gpoint[p] >= 0) {
@@ -375,10 +377,10 @@ static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbe
   }
   if (s != nPoints) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_LIB, "Total number of points %d != %d", s, nPoints);
   if (c != conesSize) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_LIB, "Total number of cone points %d != %d", c, conesSize);
-  ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), nPoints, points, PETSC_OWN_POINTER, &pointsIS);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), nPoints, coneSizes, PETSC_OWN_POINTER, &coneSizesIS);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), conesSize, cones, PETSC_OWN_POINTER, &conesIS);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PetscObjectComm((PetscObject) dm), conesSize, orientations, PETSC_OWN_POINTER, &orientationsIS);CHKERRQ(ierr);
+  ierr = ISCreateGeneral(comm, nPoints, points, PETSC_OWN_POINTER, &pointsIS);CHKERRQ(ierr);
+  ierr = ISCreateGeneral(comm, nPoints, coneSizes, PETSC_OWN_POINTER, &coneSizesIS);CHKERRQ(ierr);
+  ierr = ISCreateGeneral(comm, conesSize, cones, PETSC_OWN_POINTER, &conesIS);CHKERRQ(ierr);
+  ierr = ISCreateGeneral(comm, conesSize, orientations, PETSC_OWN_POINTER, &orientationsIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) conesIS, conesName);CHKERRQ(ierr);
