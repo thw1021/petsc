@@ -95,6 +95,9 @@ PetscErrorCode PetscSectionView_HDF5_Internal(PetscSection s, PetscViewer viewer
 
   PetscFunctionBegin;
   ierr = PetscViewerHDF5PushGroup(viewer, "section");CHKERRQ(ierr);
+  if (((PetscObject) s)->name) {
+    ierr = PetscViewerHDF5PushGroup(viewer, ((PetscObject) s)->name);CHKERRQ(ierr);
+  }
   ierr = PetscSectionGetNumFields(s, &numFields);CHKERRQ(ierr);
   ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "numFields", PETSC_INT, (void *) &numFields);CHKERRQ(ierr);
   ierr = PetscSectionView_HDF5_SingleField(s, viewer);CHKERRQ(ierr);
@@ -123,6 +126,9 @@ PetscErrorCode PetscSectionView_HDF5_Internal(PetscSection s, PetscViewer viewer
     ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  if (((PetscObject) s)->name) {
+    ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -286,6 +292,9 @@ PetscErrorCode PetscSectionLoad_HDF5_Internal(PetscSection s, PetscViewer viewer
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)s, &comm);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "section");CHKERRQ(ierr);
+  if (((PetscObject) s)->name) {
+    ierr = PetscViewerHDF5PushGroup(viewer, ((PetscObject) s)->name);CHKERRQ(ierr);
+  }
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "numFields", PETSC_INT, NULL, (void *)&numFields);CHKERRQ(ierr);
   if (s->pStart < 0 && s->pEnd < 0) n = PETSC_DECIDE;
   else {
@@ -325,6 +334,9 @@ PetscErrorCode PetscSectionLoad_HDF5_Internal(PetscSection s, PetscViewer viewer
     ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  if (((PetscObject) s)->name) {
+    ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
