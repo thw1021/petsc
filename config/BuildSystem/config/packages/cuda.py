@@ -54,6 +54,18 @@ class Configure(config.package.Package):
     yield self.cudaDir
     return
 
+
+  def getIncludeDirs(self, prefix, includeDir):
+    incDirs = config.package.Package.getIncludeDirs(self, prefix, includeDir)
+    nvhpcDir        = os.path.dirname(prefix) # /path/Linux_x86_64/21.5
+    nvhpcCudaIncDir = os.path.join(nvhpcDir,'cuda','include')
+    nvhpcMathIncDir = os.path.join(nvhpcDir,'math_libs','include')
+    if os.path.isdir(nvhpcCudaIncDir) and os.path.isdir(nvhpcMathIncDir):
+      if isinstance(incDirs, list):
+        return incDirs.extend([nvhpcCudaIncDir,nvhpcMathIncDir])
+      else:
+        return [incDirs,nvhpcCudaIncDir,nvhpcMathIncDir]
+
   def generateLibList(self, directory):
     '''NVHPC separated the libraries into a different math_libs directory and the directory with the basic CUDA library'''
     '''Thus configure needs to support finding both sets of libraries and include files given a single directory that points to CUDA directory'''
@@ -80,6 +92,20 @@ class Configure(config.package.Package):
       mathsubliblist = config.package.Package.generateLibList(self, newdirectory)
       liblist = [liblist[0],liblist[1],mathsubliblist[0] + subliblist[0]]
 
+    # When 'directory' is in format like /path/Linux_x86_64/21.5/compilers/lib, NVHPC directory structure is like
+    # /path/Linux_x86_64/21.5/compilers/bin/{nvcc,nvc,nvc++}
+    #                       +/comm_libs/mpi/bin/{mpicc,mpicxx,mpifort}
+    #                       +/cuda/{include,lib64}
+    #                       +/math_libs/{include,lib64}
+    nvhpcDir        = os.path.dirname(os.path.dirname(directory)) # /path/Linux_x86_64/21.5
+    nvhpcCudaLibDir = os.path.join(nvhpcDir,'cuda','lib64')
+    nvhpcMathLibDir = os.path.join(nvhpcDir,'math_libs','lib64')
+    if os.path.isdir(nvhpcCudaLibDir) and os.path.isdir(nvhpcMathLibDir):
+      self.liblist    = [self.basicliblist[0]]
+      subliblist      = config.package.Package.generateLibList(self, nvhpcCudaLibDir)
+      self.liblist    = [self.mathliblist[0]]
+      mathsubliblist  = config.package.Package.generateLibList(self, nvhpcMathLibDir)
+      liblist = [liblist[0],liblist[1],mathsubliblist[0] + subliblist[0]]
     return liblist
 
   def checkSizeofVoidP(self):
