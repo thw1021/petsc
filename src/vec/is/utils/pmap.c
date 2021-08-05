@@ -210,6 +210,46 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm,const PetscInt range[],
 }
 
 /*@
+  PetscLayoutCreateAlterBlockSize - Creates a new PetscLayout with the same number of blocks as the given PetscLayout but possibly different blocksize.
+
+  Collective
+
+  Input Parameters:
++ map   - the original layout
+- newbs - the new block size
+
+  Output Parameters:
+. newmap - the new layout
+
+  Notes:
+  If n or N is PETSC_DECIDE in map, it is set to PETSC_DECIDE in newmap as well.
+
+  Level: developer
+
+.seealso: PetscLayoutCreate(), PetscLayoutSetBlockSize()
+@*/
+PetscErrorCode PetscLayoutCreateAlterBlockSize(PetscLayout map,PetscInt newbs,PetscLayout *newmap)
+{
+  PetscLayout    map1;
+  PetscInt       oldbs;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (newbs < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Specified new blocksize must be >= 1 (have %D)",newbs);
+  oldbs = PetscAbs(map->bs);
+  ierr = PetscLayoutCreate(map->comm, &map1);CHKERRQ(ierr);
+  map1->bs = newbs;
+  if (map->n >= 0) {
+    map1->n = map->n / oldbs * newbs;
+  }
+  if (map->N >= 0) {
+    map1->N = map->N / oldbs * newbs;
+  }
+  *newmap = map1;
+  PetscFunctionReturn(0);
+}
+
+/*@
   PetscLayoutSetUp - given a map where you have set either the global or local
                      size sets up the map so that it may be used.
 

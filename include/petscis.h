@@ -335,6 +335,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLayoutFindOwnerIndex(PetscLayout map,Pet
 PETSC_EXTERN PetscErrorCode PetscLayoutCreate(MPI_Comm,PetscLayout*);
 PETSC_EXTERN PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscLayout*);
 PETSC_EXTERN PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm,const PetscInt[],PetscCopyMode,PetscInt,PetscLayout*);
+PETSC_EXTERN PetscErrorCode PetscLayoutCreateAlterBlockSize(PetscLayout,PetscInt,PetscLayout*);
 PETSC_EXTERN PetscErrorCode PetscLayoutSetUp(PetscLayout);
 PETSC_EXTERN PetscErrorCode PetscLayoutDestroy(PetscLayout*);
 PETSC_EXTERN PetscErrorCode PetscLayoutDuplicate(PetscLayout,PetscLayout*);
