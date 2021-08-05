@@ -17,15 +17,18 @@
 
 PETSC_EXTERN PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner, DM, PetscSection, PetscSection, IS *);
 
-PETSC_EXTERN PetscErrorCode DMPlexBuildFromCellList(DM, PetscInt, PetscInt, PetscInt, const PetscInt[]);
-PETSC_EXTERN PetscErrorCode DMPlexBuildFromCellListParallel(DM, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscSF *);
-PETSC_EXTERN PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM, PetscInt, const PetscReal[]);
-PETSC_EXTERN PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM, PetscInt, PetscSF, const PetscReal[]);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexTopologyBuild() (since version 3.16)") PetscErrorCode DMPlexBuildFromCellList(DM, PetscInt, PetscInt, PetscInt, const PetscInt[]);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexTopologyBuild() (since version 3.16)") PetscErrorCode DMPlexBuildFromCellListParallel(DM, PetscInt, PetscInt, PetscInt, PetscInt, const PetscInt[], PetscSF *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexGeometryBuild() (since version 3.16)") PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM, PetscInt, const PetscReal[]);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexGeometryBuild() (since version 3.16)") PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM, PetscInt, PetscSF, const PetscReal[]);
+PETSC_EXTERN PetscErrorCode DMPlexTopologyBuild(DM, IS, PetscLayout, PetscSF*);
+PETSC_EXTERN PetscErrorCode DMPlexGeometryBuild(DM, Vec, PetscSF);
 
 PETSC_EXTERN PetscErrorCode DMPlexCreate(MPI_Comm, DM*);
 PETSC_EXTERN PetscErrorCode DMPlexCreateCohesiveSubmesh(DM, PetscBool, const char [], PetscInt, DM *);
-PETSC_EXTERN PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscBool, const PetscInt[], PetscInt, const PetscReal[], DM*);
-PETSC_EXTERN PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscBool, const PetscInt[], PetscInt, const PetscReal[], PetscSF *, DM *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexCreateFromCellVertexData() (since version 3.16)") PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscBool, const PetscInt[], PetscInt, const PetscReal[], DM*);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexCreateFromCellVertexData() (since version 3.16)") PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscBool, const PetscInt[], PetscInt, const PetscReal[], PetscSF *, DM *);
+PETSC_EXTERN PetscErrorCode DMPlexCreateFromCellVertexData(MPI_Comm, PetscInt, IS, Vec, PetscBool, PetscSF*, DM*);
 PETSC_EXTERN PetscErrorCode DMPlexCreateFromDAG(DM, PetscInt, const PetscInt [], const PetscInt [], const PetscInt [], const PetscInt [], const PetscScalar []);
 PETSC_EXTERN PetscErrorCode DMPlexCreateReferenceCell(MPI_Comm, DMPolytopeType, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexSetOptionsPrefix(DM, const char []);

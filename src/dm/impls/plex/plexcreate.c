@@ -3,7 +3,7 @@
 #include <petsc/private/hashseti.h>          /*I   "petscdmplex.h"   I*/
 #include <petscsf.h>
 
-PetscLogEvent DMPLEX_CreateFromFile, DMPLEX_BuildFromCellList, DMPLEX_BuildCoordinatesFromCellList;
+PetscLogEvent DMPLEX_CreateFromFile, DMPLEX_TopologyBuild, DMPLEX_GeometryBuild;
 
 /* External function declarations here */
 static PetscErrorCode DMInitialize_Plex(DM dm);
@@ -3349,84 +3349,95 @@ PetscErrorCode DMPlexCreate(MPI_Comm comm, DM *mesh)
 }
 
 /*@C
-  DMPlexBuildFromCellListParallel - Build distributed DMPLEX topology from a list of vertices for each cell (common mesh generator output)
+  DMPlexBuildFromCellListParallel - Deprecated, use DMPlexTopologyBuild()
+
+  Level: deprecated
+
+@*/
+PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PetscSF *vertexSF)
+{
+  IS             cellVertexData;
+  PetscLayout    vertexLayout;
+  MPI_Comm       comm;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
+  ierr = ISCreateGeneral(comm, numCells*numCorners, cells, PETSC_USE_POINTER, &cellVertexData);CHKERRQ(ierr);
+  ierr = ISSetBlockSize(cellVertexData, numCorners);CHKERRQ(ierr);
+  ierr = PetscLayoutCreate(comm, &vertexLayout);CHKERRQ(ierr);
+  ierr = PetscLayoutSetLocalSize(vertexLayout, numVertices);CHKERRQ(ierr);
+  ierr = PetscLayoutSetSize(vertexLayout, NVertices);CHKERRQ(ierr);
+  ierr = DMPlexTopologyBuild(dm,cellVertexData,vertexLayout,vertexSF);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
+  ierr = ISDestroy(&cellVertexData);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMPlexTopologyBuild - Build distributed DMPLEX topology from a list of vertices for each cell (common mesh generator output)
 
   Input Parameters:
 + dm - The DM
-. numCells - The number of cells owned by this process
-. numVertices - The number of vertices owned by this process, or PETSC_DECIDE
-. NVertices - The global number of vertices, or PETSC_DECIDE
-. numCorners - The number of vertices for each cell
-- cells - An array of numCells*numCorners numbers, the global vertex numbers for each cell
+. cellVertexData - The cell-vertex data with global numbers of vertices of each cell
+- vertexLayout - The layout of vertices across processes
 
   Output Parameter:
 . vertexSF - (Optional) SF describing complete vertex ownership
 
   Notes:
-  Two triangles sharing a face
-$
-$        2
-$      / | \
-$     /  |  \
-$    /   |   \
-$   0  0 | 1  3
-$    \   |   /
-$     \  |  /
-$      \ | /
-$        1
-would have input
-$  numCells = 2, numVertices = 4
-$  cells = [0 1 2  1 3 2]
-$
-which would result in the DMPlex
-$
-$        4
-$      / | \
-$     /  |  \
-$    /   |   \
-$   2  0 | 1  5
-$    \   |   /
-$     \  |  /
-$      \ | /
-$        3
+  Let n, N and bs be local, global and block size of cellVertexData, respectively.
+  The block size bs is equal to number of vertices per cell.
+  The global number of cells is N/bs.
+  The local number of cells is n/bs.
 
-  Vertices are implicitly numbered consecutively 0,...,NVertices.
-  Each rank owns a chunk of numVertices consecutive vertices.
-  If numVertices is PETSC_DECIDE, PETSc will distribute them as evenly as possible using PetscLayout.
-  If both NVertices and numVertices are PETSC_DECIDE, NVertices is computed by PETSc as the maximum vertex index in cells + 1.
-  If only NVertices is PETSC_DECIDE, it is computed as the sum of numVertices over all ranks.
-
-  The cell distribution is arbitrary non-overlapping, independent of the vertex distribution.
-
-  Not currently supported in Fortran.
+  Let now n, N be local, global and block size of vertexLayout, respectively.
+  Its block size is always shrunk to 1 [creating a new internal PetscLayout using PetscLayoutCreateAlterBlockSize()].
+  Vertices are implicitly numbered consecutively 0, ..., N.
+  Each rank owns a chunk of n consecutive vertices.
+  Both n and N can be set to PETSC_DECIDE on entry to this function.
+  If n is PETSC_DECIDE, PETSc will distribute vertices as evenly as possible.
+  If both n and N are PETSC_DECIDE, N is computed by PETSc as ((the maximum vertex index in array cells) + 1).
+  If only N is PETSC_DECIDE and n is not, N is computed as the sum of n over all ranks.
 
   Level: advanced
 
-.seealso: DMPlexBuildFromCellList(), DMPlexCreateFromCellListParallelPetsc(), DMPlexBuildCoordinatesFromCellListParallel()
+.seealso: DMPlexCreateFromCellVertexData(), DMPlexGeometryBuild()
 @*/
-PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, const PetscInt cells[], PetscSF *vertexSF)
+PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexLayout, PetscSF *vertexSF)
 {
   PetscSF         sfPoint;
-  PetscLayout     layout;
-  PetscInt        numVerticesAdj, *verticesAdj, *cones, c, p;
+  PetscInt        *verticesAdj, *cones;
+  PetscInt        c, i, n, numCells, numCorners, numVerticesAdj;
+  const PetscInt  *cvd;
+  MPI_Comm        comm;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveInt(dm,NVertices,4);
-  ierr = PetscLogEventBegin(DMPLEX_BuildFromCellList,dm,0,0,0);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscValidHeaderSpecific(cellVertexData,IS_CLASSID,2);
+  if (vertexSF) PetscValidPointer(vertexSF,4);
+  PetscCheckSameComm(dm,1,cellVertexData,2);
+  //TODO PetscCheckSameComm(dm,1,vertexLayout,3);  once PetscLayout is PetscObject
+  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(DMPLEX_TopologyBuild,dm,0,0,0);CHKERRQ(ierr);
+  ierr = PetscLayoutCreateAlterBlockSize(vertexLayout, 1, &vertexLayout);CHKERRQ(ierr);
+  ierr = ISGetIndices(cellVertexData, &cvd);CHKERRQ(ierr);
+  ierr = ISGetBlockSize(cellVertexData, &numCorners);CHKERRQ(ierr);
+  ierr = ISGetLocalSize(cellVertexData, &n);CHKERRQ(ierr);
+  numCells = n / numCorners;
   /* Get/check global number of vertices */
   {
-    PetscInt NVerticesInCells, i;
-    const PetscInt len = numCells * numCorners;
+    PetscInt NVerticesInCells = PETSC_MIN_INT;
 
-    /* NVerticesInCells = max(cells) + 1 */
-    NVerticesInCells = PETSC_MIN_INT;
-    for (i=0; i<len; i++) if (cells[i] > NVerticesInCells) NVerticesInCells = cells[i];
+    /* NVerticesInCells = max(cellVertexData) + 1 */
+    for (i=0; i<n; i++) if (cvd[i] > NVerticesInCells) NVerticesInCells = cvd[i];
     ++NVerticesInCells;
-    ierr = MPI_Allreduce(MPI_IN_PLACE, &NVerticesInCells, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject) dm));CHKERRMPI(ierr);
+    ierr = MPI_Allreduce(MPI_IN_PLACE, &NVerticesInCells, 1, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
 
-    if (numVertices == PETSC_DECIDE && NVertices == PETSC_DECIDE) NVertices = NVerticesInCells;
-    else if (NVertices != PETSC_DECIDE && NVertices < NVerticesInCells) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",NVertices,NVerticesInCells);
+    if (vertexLayout->n == PETSC_DECIDE && vertexLayout->N == PETSC_DECIDE) vertexLayout->N = NVerticesInCells;
+    else if (vertexLayout->N != PETSC_DECIDE && vertexLayout->N < NVerticesInCells) SETERRQ2(comm, PETSC_ERR_ARG_WRONG, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",vertexLayout->N,NVerticesInCells);
+    ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
   }
   /* Count locally unique vertices */
   {
@@ -3434,10 +3445,8 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
     PetscInt off = 0;
 
     ierr = PetscHSetICreate(&vhash);CHKERRQ(ierr);
-    for (c = 0; c < numCells; ++c) {
-      for (p = 0; p < numCorners; ++p) {
-        ierr = PetscHSetIAdd(vhash, cells[c*numCorners+p]);CHKERRQ(ierr);
-      }
+    for (i = 0; i < n; ++i) {
+      ierr = PetscHSetIAdd(vhash, cvd[i]);CHKERRQ(ierr);
     }
     ierr = PetscHSetIGetSize(vhash, &numVerticesAdj);CHKERRQ(ierr);
     ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr);
@@ -3447,29 +3456,22 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
   }
   ierr = PetscSortInt(numVerticesAdj, verticesAdj);CHKERRQ(ierr);
   /* Create cones */
-  ierr = DMPlexSetChart(dm, 0, numCells+numVerticesAdj);CHKERRQ(ierr);
+  ierr = DMPlexSetChart(dm, 0, numCells + numVerticesAdj);CHKERRQ(ierr);
   for (c = 0; c < numCells; ++c) {ierr = DMPlexSetConeSize(dm, c, numCorners);CHKERRQ(ierr);}
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMPlexGetCones(dm,&cones);CHKERRQ(ierr);
-  for (c = 0; c < numCells; ++c) {
-    for (p = 0; p < numCorners; ++p) {
-      const PetscInt gv = cells[c*numCorners+p];
-      PetscInt       lv;
+  for (i = 0; i < n; ++i) {
+    const PetscInt gv = cvd[i];
+    PetscInt       lv;
 
-      /* Positions within verticesAdj form 0-based local vertex numbering;
-         we need to shift it by numCells to get correct DAG points (cells go first) */
-      ierr = PetscFindInt(gv, numVerticesAdj, verticesAdj, &lv);CHKERRQ(ierr);
-      if (lv < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not find global vertex %D in local connectivity", gv);
-      cones[c*numCorners+p] = lv+numCells;
-    }
+    /* Positions within verticesAdj form 0-based local vertex numbering;
+        we need to shift it by numCells to get correct DAG points (cells go first) */
+    ierr = PetscFindInt(gv, numVerticesAdj, verticesAdj, &lv);CHKERRQ(ierr);
+    if (lv < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not find global vertex %D in local connectivity", gv);
+    cones[i] = lv + numCells;
   }
   /* Build point sf */
-  ierr = PetscLayoutCreate(PetscObjectComm((PetscObject)dm), &layout);CHKERRQ(ierr);
-  ierr = PetscLayoutSetSize(layout, NVertices);CHKERRQ(ierr);
-  ierr = PetscLayoutSetLocalSize(layout, numVertices);CHKERRQ(ierr);
-  ierr = PetscLayoutSetBlockSize(layout, 1);CHKERRQ(ierr);
-  ierr = PetscSFCreateByMatchingIndices(layout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint);CHKERRQ(ierr);
-  ierr = PetscLayoutDestroy(&layout);CHKERRQ(ierr);
+  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint);CHKERRQ(ierr);
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) sfPoint, "point SF");CHKERRQ(ierr);
   if (dm->sf) {
@@ -3484,41 +3486,81 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
   /* Fill in the rest of the topology structure */
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(DMPLEX_BuildFromCellList,dm,0,0,0);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(cellVertexData, &cvd);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(DMPLEX_TopologyBuild,dm,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@C
-  DMPlexBuildCoordinatesFromCellListParallel - Build DM coordinates from a list of coordinates for each owned vertex (common mesh generator output)
+  DMPlexBuildCoordinatesFromCellListParallel - Deprecated, use DMPlexGeometryBuild()
+
+  Level: deprecated
+
+@*/
+PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceDim, PetscSF sfVert, const PetscReal vertexCoords[])
+{
+  Vec            vertexCoordsVec;
+  PetscInt       numVertices;
+  MPI_Comm       comm;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
+  ierr = PetscSFGetGraph(sfVert, &numVertices, NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = VecCreateMPIWithArray(comm, spaceDim, spaceDim * numVertices, PETSC_DECIDE, vertexCoords, &vertexCoordsVec);CHKERRQ(ierr);
+  ierr = DMPlexGeometryBuild(dm, vertexCoordsVec, sfVert);CHKERRQ(ierr);
+  ierr = VecDestroy(&vertexCoordsVec);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMPlexGeometryBuild - Build DM coordinates from a list of coordinates for each vertex (common mesh generator output)
 
   Input Parameters:
 + dm - The DM
-. spaceDim - The spatial dimension used for coordinates
-. sfVert - SF describing complete vertex ownership
-- vertexCoords - An array of numVertices*spaceDim numbers, the coordinates of each vertex
+. vertexCoords - The vector of coordinates for each vertex
+- sfVert - SF describing complete vertex ownership
 
   Level: advanced
 
   Notes:
-  Not currently supported in Fortran.
+  Vec vertexCoords has the local size of numVertices * spaceDim, where numVertices is the local number of vertices and spaceDim is the (constant) number of coordinates per vertex.
+  The blocksize of this Vec should be spaceDim.
 
-.seealso: DMPlexBuildCoordinatesFromCellList(), DMPlexCreateFromCellListParallelPetsc(), DMPlexBuildFromCellListParallel()
+  The roots of PetscSF sfVert are global vertex numbers partitioned across the same layout as vertexCoords shrunk by the factor of spaceDim.
+  The leaves are vertices of the complete self-contained local partition in the local numbering.
+
+.seealso: DMPlexCreateFromCellVertexData(), DMPlexTopologyBuild()
 @*/
-PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceDim, PetscSF sfVert, const PetscReal vertexCoords[])
+PetscErrorCode DMPlexGeometryBuild(DM dm, Vec vertexCoords, PetscSF sfVert)
 {
   PetscSection   coordSection;
-  Vec            coordinates;
-  PetscScalar   *coords;
-  PetscInt       numVertices, numVerticesAdj, coordSize, v, vStart, vEnd;
+  Vec            vertexCoordsAdj;
+  PetscInt       spaceDim, numVertices, numVerticesAdj, v, vStart, vEnd;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLogEventBegin(DMPLEX_BuildCoordinatesFromCellList,dm,0,0,0);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscValidHeaderSpecific(vertexCoords,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(sfVert,PETSCSF_CLASSID,3);
+  PetscCheckSameComm(dm,1,vertexCoords,2);
+  PetscCheckSameComm(dm,1,sfVert,3);
+  ierr = VecGetBlockSize(vertexCoords, &spaceDim);CHKERRQ(ierr);
+  ierr = VecGetLocalSize(vertexCoords, &numVertices);CHKERRQ(ierr);
+  numVertices /= spaceDim;
+  ierr = PetscLogEventBegin(DMPLEX_GeometryBuild,dm,0,0,0);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
-  if (vStart < 0 || vEnd < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "DM is not set up properly. DMPlexBuildFromCellList() should be called first.");
+  if (vStart < 0 || vEnd < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "DM is not set up properly. DMPlexTopologyBuild() should be called first.");
   ierr = DMSetCoordinateDim(dm, spaceDim);CHKERRQ(ierr);
-  ierr = PetscSFGetGraph(sfVert, &numVertices, &numVerticesAdj, NULL, NULL);CHKERRQ(ierr);
-  if (vEnd - vStart != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Supplied sfVert has wrong number of leaves = %D != %D = vEnd - vStart",numVerticesAdj,vEnd - vStart);
+  {
+    PetscInt numVertices0;
+
+    ierr = PetscSFGetGraph(sfVert, &numVertices0, &numVerticesAdj, NULL, NULL);CHKERRQ(ierr);
+    if (numVertices0 != numVertices) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Supplied sfVert has wrong number of roots = %D != %D = local size of vertexCoords",numVertices0,numVertices);
+    if (vEnd - vStart != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Supplied sfVert has wrong number of leaves = %D != %D = vEnd - vStart",numVerticesAdj,vEnd - vStart);
+  }
+
   ierr = DMGetCoordinateSection(dm, &coordSection);CHKERRQ(ierr);
   ierr = PetscSectionSetNumFields(coordSection, 1);CHKERRQ(ierr);
   ierr = PetscSectionSetFieldComponents(coordSection, 0, spaceDim);CHKERRQ(ierr);
@@ -3528,54 +3570,72 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
     ierr = PetscSectionSetFieldDof(coordSection, v, 0, spaceDim);CHKERRQ(ierr);
   }
   ierr = PetscSectionSetUp(coordSection);CHKERRQ(ierr);
-  ierr = PetscSectionGetStorageSize(coordSection, &coordSize);CHKERRQ(ierr);
-  ierr = VecCreate(PetscObjectComm((PetscObject)dm), &coordinates);CHKERRQ(ierr);
-  ierr = VecSetBlockSize(coordinates, spaceDim);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) coordinates, "coordinates");CHKERRQ(ierr);
-  ierr = VecSetSizes(coordinates, coordSize, PETSC_DETERMINE);CHKERRQ(ierr);
-  ierr = VecSetType(coordinates,VECSTANDARD);CHKERRQ(ierr);
-  ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
   {
-    MPI_Datatype coordtype;
+    PetscInt coordSectionSize;
 
-    /* Need a temp buffer for coords if we have complex/single */
+    ierr = PetscSectionGetStorageSize(coordSection, &coordSectionSize);CHKERRQ(ierr);
+    if (coordSectionSize != numVerticesAdj * spaceDim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Coordinate section storage size %D expected %D",coordSectionSize,numVerticesAdj * spaceDim);
+  }
+
+  ierr = VecCreate(PetscObjectComm((PetscObject)dm), &vertexCoordsAdj);CHKERRQ(ierr);
+  ierr = VecSetBlockSize(vertexCoordsAdj, spaceDim);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) vertexCoordsAdj, "coordinates");CHKERRQ(ierr);
+  ierr = VecSetSizes(vertexCoordsAdj, numVerticesAdj * spaceDim, PETSC_DETERMINE);CHKERRQ(ierr);
+  ierr = VecSetType(vertexCoordsAdj,VECSTANDARD);CHKERRQ(ierr);
+
+  /* This is like VecScatterBegin/End except the SF is on vertices but the two vectors have spaceDim coordinates for each vertex */
+  {
+    const PetscScalar *coords;
+    PetscScalar       *coordsAdj;
+    MPI_Datatype      coordtype;
+
+    ierr = VecGetArrayRead(vertexCoords, &coords);CHKERRQ(ierr);
+    ierr = VecGetArray(vertexCoordsAdj, &coordsAdj);CHKERRQ(ierr);
     ierr = MPI_Type_contiguous(spaceDim, MPIU_SCALAR, &coordtype);CHKERRMPI(ierr);
     ierr = MPI_Type_commit(&coordtype);CHKERRMPI(ierr);
-#if defined(PETSC_USE_COMPLEX)
-    {
-    PetscScalar *svertexCoords;
-    PetscInt    i;
-    ierr = PetscMalloc1(numVertices*spaceDim,&svertexCoords);CHKERRQ(ierr);
-    for (i=0; i<numVertices*spaceDim; i++) svertexCoords[i] = vertexCoords[i];
-    ierr = PetscSFBcastBegin(sfVert, coordtype, svertexCoords, coords,MPI_REPLACE);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sfVert, coordtype, svertexCoords, coords,MPI_REPLACE);CHKERRQ(ierr);
-    ierr = PetscFree(svertexCoords);CHKERRQ(ierr);
-    }
-#else
-    ierr = PetscSFBcastBegin(sfVert, coordtype, vertexCoords, coords,MPI_REPLACE);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sfVert, coordtype, vertexCoords, coords,MPI_REPLACE);CHKERRQ(ierr);
-#endif
+    ierr = PetscSFBcastBegin(sfVert, coordtype, coords, coordsAdj, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(sfVert, coordtype, coords, coordsAdj, MPI_REPLACE);CHKERRQ(ierr);
     ierr = MPI_Type_free(&coordtype);CHKERRMPI(ierr);
+    ierr = VecRestoreArrayRead(vertexCoords, &coords);CHKERRQ(ierr);
+    ierr = VecRestoreArray(vertexCoordsAdj, &coordsAdj);CHKERRQ(ierr);
   }
-  ierr = VecRestoreArray(coordinates, &coords);CHKERRQ(ierr);
-  ierr = DMSetCoordinatesLocal(dm, coordinates);CHKERRQ(ierr);
-  ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(DMPLEX_BuildCoordinatesFromCellList,dm,0,0,0);CHKERRQ(ierr);
+  ierr = DMSetCoordinatesLocal(dm, vertexCoordsAdj);CHKERRQ(ierr);
+  ierr = VecDestroy(&vertexCoordsAdj);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(DMPLEX_GeometryBuild,dm,0,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  DMPlexCreateFromCellListParallelPetsc - Deprecated, use DMPlexCreateFromCellVertexData()
+
+  Level: deprecated
+
+@*/
+PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PetscSF *vertexSF, DM *dm)
+{
+  IS             cellsIS;
+  Vec            vertexCoordsVec;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = ISCreateGeneral(comm, numCells * numCorners, cells, PETSC_USE_POINTER, &cellsIS);CHKERRQ(ierr);
+  ierr = ISSetBlockSize(cellsIS, numCorners);CHKERRQ(ierr);
+  ierr = VecCreateMPIWithArray(comm, spaceDim, numVertices * spaceDim, PETSC_DECIDE, vertexCoords, &vertexCoordsVec);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromCellVertexData(comm, dim, cellsIS, vertexCoordsVec, interpolate, vertexSF, dm);CHKERRQ(ierr);
+  ierr = ISDestroy(&cellsIS);CHKERRQ(ierr);
+  ierr = VecDestroy(&vertexCoordsVec);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@
-  DMPlexCreateFromCellListParallelPetsc - Create distributed DMPLEX from a list of vertices for each cell (common mesh generator output)
+  DMPlexCreateFromCellVertexData - Create distributed DMPLEX from a list of vertices for each cell and a list of coordinates for each vertex (common mesh generator output)
 
   Input Parameters:
 + comm - The communicator
 . dim - The topological dimension of the mesh
-. numCells - The number of cells owned by this process
-. numVertices - The number of vertices owned by this process, or PETSC_DECIDE
-. NVertices - The global number of vertices, or PETSC_DECIDE
-. numCorners - The number of vertices for each cell
+. cellVertexData - The cell-vertex data with global numbers of vertices of each cell; block size is number of vertices for each cell
+. vertexLayout - The layout of vertices across processes
 . interpolate - Flag indicating that intermediate mesh entities (faces, edges) should be created automatically
-. cells - An array of numCells*numCorners numbers, the global vertex numbers for each cell
 . spaceDim - The spatial dimension used for coordinates
 - vertexCoords - An array of numVertices*spaceDim numbers, the coordinates of each vertex
 
@@ -3585,27 +3645,29 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
 
   Notes:
   This function is just a convenient sequence of DMCreate(), DMSetType(), DMSetDimension(),
-  DMPlexBuildFromCellListParallel(), DMPlexInterpolate(), DMPlexBuildCoordinatesFromCellListParallel()
+  DMPlexTopologyBuild(), DMPlexGeometryBuild()
 
-  See DMPlexBuildFromCellListParallel() for an example and details about the topology-related parameters.
-  See DMPlexBuildCoordinatesFromCellListParallel() for details about the geometry-related parameters.
+  See DMPlexTopologyBuild() for an example and details about the topology-related parameters.
+  See DMPlexGeometryBuild() for details about the geometry-related parameters.
 
   Level: intermediate
 
-.seealso: DMPlexCreateFromCellListPetsc(), DMPlexBuildFromCellListParallel(), DMPlexBuildCoordinatesFromCellListParallel(), DMPlexCreateFromDAG(), DMPlexCreate()
+.seealso: DMCreate(), DMSetType(), DMSetDimension(), DMPlexTopologyBuild(), DMPlexGeometryBuild()
 @*/
-PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt NVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], PetscSF *vertexSF, DM *dm)
+PetscErrorCode DMPlexCreateFromCellVertexData(MPI_Comm comm, PetscInt dim, IS cellVertexData, Vec vertexCoords, PetscBool interpolate, PetscSF *vertexSF, DM *dm)
 {
   PetscSF        sfVert;
+  PetscLayout    vertexLayout;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  if (!dim) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "This is not appropriate for 0-dimensional meshes. Consider either creating the DM using DMPlexCreateFromDAG(), by hand, or using DMSwarm.");
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   PetscValidLogicalCollectiveInt(*dm, dim, 2);
-  PetscValidLogicalCollectiveInt(*dm, spaceDim, 9);
   ierr = DMSetDimension(*dm, dim);CHKERRQ(ierr);
-  ierr = DMPlexBuildFromCellListParallel(*dm, numCells, numVertices, NVertices, numCorners, cells, &sfVert);CHKERRQ(ierr);
+  ierr = VecGetLayout(vertexCoords, &vertexLayout);CHKERRQ(ierr);
+  ierr = DMPlexTopologyBuild(*dm, cellVertexData, vertexLayout, &sfVert);CHKERRQ(ierr);
   if (interpolate) {
     DM idm;
 
@@ -3613,65 +3675,18 @@ PetscErrorCode DMPlexCreateFromCellListParallelPetsc(MPI_Comm comm, PetscInt dim
     ierr = DMDestroy(dm);CHKERRQ(ierr);
     *dm  = idm;
   }
-  ierr = DMPlexBuildCoordinatesFromCellListParallel(*dm, spaceDim, sfVert, vertexCoords);CHKERRQ(ierr);
+  ierr = DMPlexGeometryBuild(*dm, vertexCoords, sfVert);CHKERRQ(ierr);
   if (vertexSF) *vertexSF = sfVert;
   else {ierr = PetscSFDestroy(&sfVert);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
-/*@C
-  DMPlexBuildFromCellList - Build DMPLEX topology from a list of vertices for each cell (common mesh generator output)
-
-  Input Parameters:
-+ dm - The DM
-. numCells - The number of cells owned by this process
-. numVertices - The number of vertices owned by this process, or PETSC_DECIDE
-. numCorners - The number of vertices for each cell
-- cells - An array of numCells*numCorners numbers, the global vertex numbers for each cell
-
-  Level: advanced
-
-  Notes:
-  Two triangles sharing a face
-$
-$        2
-$      / | \
-$     /  |  \
-$    /   |   \
-$   0  0 | 1  3
-$    \   |   /
-$     \  |  /
-$      \ | /
-$        1
-would have input
-$  numCells = 2, numVertices = 4
-$  cells = [0 1 2  1 3 2]
-$
-which would result in the DMPlex
-$
-$        4
-$      / | \
-$     /  |  \
-$    /   |   \
-$   2  0 | 1  5
-$    \   |   /
-$     \  |  /
-$      \ | /
-$        3
-
-  If numVertices is PETSC_DECIDE, it is computed by PETSc as the maximum vertex index in cells + 1.
-
-  Not currently supported in Fortran.
-
-.seealso: DMPlexBuildFromCellListParallel(), DMPlexBuildCoordinatesFromCellList(), DMPlexCreateFromCellListPetsc()
-@*/
-PetscErrorCode DMPlexBuildFromCellList(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt numCorners, const PetscInt cells[])
+static PetscErrorCode DMPlexBuildFromCellList_Private(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt numCorners, const PetscInt cells[])
 {
   PetscInt      *cones, c, p, dim;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLogEventBegin(DMPLEX_BuildFromCellList,dm,0,0,0);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   /* Get/check global number of vertices */
   {
@@ -3699,26 +3714,32 @@ PetscErrorCode DMPlexBuildFromCellList(DM dm, PetscInt numCells, PetscInt numVer
   }
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(DMPLEX_BuildFromCellList,dm,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@C
-  DMPlexBuildCoordinatesFromCellList - Build DM coordinates from a list of coordinates for each owned vertex (common mesh generator output)
+  DMPlexBuildFromCellList - Deprecated, use DMPlexTopologyBuild()
 
-  Input Parameters:
-+ dm - The DM
-. spaceDim - The spatial dimension used for coordinates
-- vertexCoords - An array of numVertices*spaceDim numbers, the coordinates of each vertex
+  Note:
+  This function is quite nonsensical because it creates a separate plex on each rank and the plexes are disconnected.
+  Use DMPlexTopologyBuild() that will create a correctly distributed plex.
+  You can create the DM on PETSC_COMM_SELF if you really want a disconnected plex on each rank,
+  or use IS with global size N = (total number of cells) and local size n = rank ? 0 : N if you want a serial plex on a single rank.
 
-  Level: advanced
+  Level: deprecated
 
-  Notes:
-  Not currently supported in Fortran.
-
-.seealso: DMPlexBuildCoordinatesFromCellListParallel(), DMPlexCreateFromCellListPetsc(), DMPlexBuildFromCellList()
 @*/
-PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM dm, PetscInt spaceDim, const PetscReal vertexCoords[])
+PetscErrorCode DMPlexBuildFromCellList(DM dm, PetscInt numCells, PetscInt numVertices, PetscInt numCorners, const PetscInt cells[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  /* Remove this function as well */
+  ierr = DMPlexBuildFromCellList_Private(dm, numCells, numVertices, numCorners, cells);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode DMPlexBuildCoordinatesFromCellList_Private(DM dm, PetscInt spaceDim, const PetscReal vertexCoords[])
 {
   PetscSection   coordSection;
   Vec            coordinates;
@@ -3728,7 +3749,6 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM dm, PetscInt spaceDim, cons
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLogEventBegin(DMPLEX_BuildCoordinatesFromCellList,dm,0,0,0);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
   if (vStart < 0 || vEnd < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "DM is not set up properly. DMPlexBuildFromCellList() should be called first.");
   ierr = DMSetCoordinateDim(dm, spaceDim);CHKERRQ(ierr);
@@ -3755,37 +3775,36 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM dm, PetscInt spaceDim, cons
   ierr = VecRestoreArrayWrite(coordinates, &coords);CHKERRQ(ierr);
   ierr = DMSetCoordinatesLocal(dm, coordinates);CHKERRQ(ierr);
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(DMPLEX_BuildCoordinatesFromCellList,dm,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-/*@
-  DMPlexCreateFromCellListPetsc - Create DMPLEX from a list of vertices for each cell (common mesh generator output)
+/*@C
+  DMPlexBuildCoordinatesFromCellList - Deprecated, use DMPlexGeometryBuild()
 
-  Input Parameters:
-+ comm - The communicator
-. dim - The topological dimension of the mesh
-. numCells - The number of cells
-. numVertices - The number of vertices owned by this process, or PETSC_DECIDE
-. numCorners - The number of vertices for each cell
-. interpolate - Flag indicating that intermediate mesh entities (faces, edges) should be created automatically
-. cells - An array of numCells*numCorners numbers, the vertices for each cell
-. spaceDim - The spatial dimension used for coordinates
-- vertexCoords - An array of numVertices*spaceDim numbers, the coordinates of each vertex
+  Note:
+  This function is nonsensical from the reasons explained in DMPlexBuildFromCellList().
 
-  Output Parameter:
-. dm - The DM
+  Level: deprecated
 
-  Notes:
-  This function is just a convenient sequence of DMCreate(), DMSetType(), DMSetDimension(), DMPlexBuildFromCellList(),
-  DMPlexInterpolate(), DMPlexBuildCoordinatesFromCellList()
+@*/
+PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM dm, PetscInt spaceDim, const PetscReal vertexCoords[])
+{
+  PetscErrorCode ierr;
 
-  See DMPlexBuildFromCellList() for an example and details about the topology-related parameters.
-  See DMPlexBuildCoordinatesFromCellList() for details about the geometry-related parameters.
+  PetscFunctionBegin;
+  /* Remove this function as well */
+  ierr = DMPlexBuildCoordinatesFromCellList_Private(dm, spaceDim, vertexCoords);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
-  Level: intermediate
+/*@C
+  DMPlexCreateFromCellListPetsc - Deprecated, use DMPlexCreateFromCellVertexData()
 
-.seealso: DMPlexCreateFromCellListParallelPetsc(), DMPlexBuildFromCellList(), DMPlexBuildCoordinatesFromCellList(), DMPlexCreateFromDAG(), DMPlexCreate()
+  Note:
+  This function is nonsensical from the reasons explained in DMPlexBuildFromCellList().
+
+  Level: deprecated
+
 @*/
 PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm comm, PetscInt dim, PetscInt numCells, PetscInt numVertices, PetscInt numCorners, PetscBool interpolate, const PetscInt cells[], PetscInt spaceDim, const PetscReal vertexCoords[], DM *dm)
 {
@@ -3796,7 +3815,7 @@ PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm comm, PetscInt dim, PetscI
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetDimension(*dm, dim);CHKERRQ(ierr);
-  ierr = DMPlexBuildFromCellList(*dm, numCells, numVertices, numCorners, cells);CHKERRQ(ierr);
+  ierr = DMPlexBuildFromCellList_Private(*dm, numCells, numVertices, numCorners, cells);CHKERRQ(ierr);
   if (interpolate) {
     DM idm;
 
@@ -3804,7 +3823,7 @@ PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm comm, PetscInt dim, PetscI
     ierr = DMDestroy(dm);CHKERRQ(ierr);
     *dm  = idm;
   }
-  ierr = DMPlexBuildCoordinatesFromCellList(*dm, spaceDim, vertexCoords);CHKERRQ(ierr);
+  ierr = DMPlexBuildCoordinatesFromCellList_Private(*dm, spaceDim, vertexCoords);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -3840,11 +3859,11 @@ $     \  |  /
 $      \ | /
 $        3
 $
-$ Notice that all points are numbered consecutively, unlike DMPlexCreateFromCellListPetsc()
+$ Notice that all points are numbered consecutively, unlike DMPlexCreateFromCellVertexData()
 
   Level: advanced
 
-.seealso: DMPlexCreateFromCellListPetsc(), DMPlexCreate()
+.seealso: DMPlexCreateFromCellVertexData(), DMPlexCreate()
 @*/
 PetscErrorCode DMPlexCreateFromDAG(DM dm, PetscInt depth, const PetscInt numPoints[], const PetscInt coneSize[], const PetscInt cones[], const PetscInt coneOrientations[], const PetscScalar vertexCoords[])
 {
@@ -4050,7 +4069,7 @@ $ -dm_plex_create_viewer_hdf5_collective
 
   Level: beginner
 
-.seealso: DMPlexCreateFromDAG(), DMPlexCreateFromCellListPetsc(), DMPlexCreate()
+.seealso: DMPlexCreateFromDAG(), DMPlexCreateFromCellVertexData(), DMPlexCreate()
 @*/
 PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {

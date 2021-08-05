@@ -1318,7 +1318,7 @@ PetscErrorCode DMPlexInterpolatePointSF(DM dm, PetscSF pointSF)
   Developer Notes:
     It sets plex->interpolated = DMPLEX_INTERPOLATED_FULL.
 
-.seealso: DMPlexUninterpolate(), DMPlexCreateFromCellListPetsc(), DMPlexCopyCoordinates()
+.seealso: DMPlexUninterpolate(), DMPlexCreateFromCellVertexData(), DMPlexCopyCoordinates()
 @*/
 PetscErrorCode DMPlexInterpolate(DM dm, DM *dmInt)
 {
@@ -1552,7 +1552,7 @@ PetscErrorCode DMPlexCopyCoordinates(DM dmA, DM dmB)
   Developer Notes:
     It sets plex->interpolated = DMPLEX_INTERPOLATED_NONE.
 
-.seealso: DMPlexInterpolate(), DMPlexCreateFromCellListPetsc(), DMPlexCopyCoordinates()
+.seealso: DMPlexInterpolate(), DMPlexCreateFromCellVertexData(), DMPlexCopyCoordinates()
 @*/
 PetscErrorCode DMPlexUninterpolate(DM dm, DM *dmUnint)
 {

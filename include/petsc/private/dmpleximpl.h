@@ -42,8 +42,8 @@ PETSC_EXTERN PetscLogEvent DMPLEX_IntegralFEM;
 PETSC_EXTERN PetscLogEvent DMPLEX_CreateGmsh;
 PETSC_EXTERN PetscLogEvent DMPLEX_RebalanceSharedPoints;
 PETSC_EXTERN PetscLogEvent DMPLEX_CreateFromFile;
-PETSC_EXTERN PetscLogEvent DMPLEX_BuildFromCellList;
-PETSC_EXTERN PetscLogEvent DMPLEX_BuildCoordinatesFromCellList;
+PETSC_EXTERN PetscLogEvent DMPLEX_TopologyBuild;
+PETSC_EXTERN PetscLogEvent DMPLEX_GeometryBuild;
 PETSC_EXTERN PetscLogEvent DMPLEX_LocatePoints;
 
 typedef struct _DMPlexCellRefinerOps *DMPlexCellRefinerOps;
