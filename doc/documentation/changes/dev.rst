@@ -84,20 +84,28 @@ Changes: Development
 -  Add ``MatSeqAIJKron()`` - Kronecker product of two ``MatSeqAIJ``
 
 .. rubric:: PC:
+
 -  Add ``PCQR`` - interface to SuiteSparse QR factorization
+-  ``PCShellGetContext()`` now takes ``void*`` as return argument
 
 .. rubric:: KSP:
+
+-  ``KSPGetMonitorContext()`` now takes ``void*`` as return argument
+-  ``KSPGetConvergenceContext()`` now takes ``void*`` as return argument
 
 .. rubric:: SNES:
 
 -  Add ``SNESSetComputeMFFunction()``
 -  Add support for ``-snes_mf_operator`` for use with ``SNESSetPicard``
+-  ``SNESShellGetContext()`` now takes ``void*`` as return argument
 
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
 
 .. rubric:: TAO:
+
+-  ``TaoShellGetContext()`` now takes ``void*`` as return argument
 
 .. rubric:: DM/DA:
 
@@ -109,6 +117,7 @@ Changes: Development
 -  Change interface for ``DMAddBoundary()``, ``PetscDSAddBoundary()``,
    ``PetscDSGetBoundary()``, ``PetscDSUpdateBoundary()``
 -  Add ``DMDAVecGetArrayDOFWrite()`` and ``DMDAVecRestoreArrayDOFWrite()``
+-  ``DMShellGetContext()`` now takes ``void*`` as return argument
 
 .. rubric:: DMSwarm:
 
@@ -172,6 +181,7 @@ Changes: Development
 
 -  Add ``PetscWeakFormCopy()``, ``PetscWeakFormClear()``, ``PetscWeakFormRewriteKeys()`` and ``PetscWeakFormClearIndex()``
 -  Add ``PetscDSDestroyBoundary()`` and ``PetscDSCopyExactSolutions()``
+-  ``PetscDSGetContext()`` now takes ``void*`` as return argument
 
 .. rubric:: Fortran:
 
