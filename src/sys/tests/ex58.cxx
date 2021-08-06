@@ -27,6 +27,21 @@ PetscErrorCode staticTestFunc(void *ctx, int x)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode testFuncOtherGraph(void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(ctx,1);
+  std::cout<<"other graph"<<std::endl;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode nativeFunction(int x)
+{
+  PetscFunctionBegin;
+  std::cout<<x<<std::endl;
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char *argv[])
 {
   PetscErrorCode ierr;
@@ -35,28 +50,37 @@ int main(int argc, char *argv[])
   ierr = PetscInitialize(&argc,&argv,NULL,NULL); if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
 
-  UserCtx ctx(3);
-  CallGraph graph;
+  UserCtx   ctx(3);
+  CallGraph graph2("smol graph");
   CallNode  node,node2 = CallNode();
 
   node2 = node;
+  graph2.setUserContext(&ctx);
+  graph2.emplace(testFuncOtherGraph);
+  //graph2.emplace(nativeFunction);
   std::cout<<"------"<<std::endl;
-  auto nodeMiddle = graph.emplace(testFunc);
-  auto nodeEnd    = graph.emplaceCall(staticTestFunc,2);
-  auto otherNodes = graph.emplace([](void *ctx, int x = 2)
   {
-    std::cout<<"lambda left branch"<<std::endl;
-    return 0;
-  }, [](void *ctx) {
-    std::cout<<"lambda right branch"<<std::endl;
-    return 0;
-  });
-  ierr = nodeMiddle->before(*std::get<1>(otherNodes));CHKERRQ(ierr);
-  ierr = nodeEnd->after(otherNodes);CHKERRQ(ierr);
+    CallGraph graph("big graph");
 
-  ierr = graph.setUserContext(&ctx);CHKERRQ(ierr);
-  ierr = graph.run();CHKERRQ(ierr);
+    auto graphNode  = graph.compose(graph2);
+    auto nodeMiddle = graph.emplace(testFunc);
+    auto nodeEnd    = graph.emplaceCall(staticTestFunc,2);
+    auto otherNodes = graph.emplace([](void *ctx, int x = 2)
+    {
+      std::cout<<"lambda left branch"<<std::endl;
+      return 0;
+    }, [](void *ctx) {
+      std::cout<<"lambda right branch"<<std::endl;
+      return 0;
+    });
+    ierr = nodeMiddle->before(*std::get<1>(otherNodes));CHKERRQ(ierr);
+    ierr = nodeEnd->after(otherNodes);CHKERRQ(ierr);
+    ierr = graphNode->after(*nodeEnd);CHKERRQ(ierr);
 
+    ierr = graph.setUserContext(&ctx);CHKERRQ(ierr);
+    ierr = graph.run();CHKERRQ(ierr);
+  }
+  ierr = graph2.run();CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
