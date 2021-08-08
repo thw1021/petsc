@@ -93,6 +93,7 @@ Changes: Development
 
 .. rubric:: KSP:
 
+-  Outer most ``KSPSolve()`` will error if KSP_DIVERGED_ITS and ```KSPSetErrorIfNotConverged()`` is used
 -  ``KSPGetMonitorContext()`` now takes ``void*`` as return argument
 -  ``KSPGetConvergenceContext()`` now takes ``void*`` as return argument
 
