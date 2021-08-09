@@ -445,13 +445,11 @@ class SourceFix(object):
     self.filename  = filename
     self.src       = src
     self.startLine = startline
-    if self.startLine < 1:
-      raise RuntimeError("startline {} < 1".format(self.startLine))
-    if end <= begin:
-      raise RuntimeError("end <= begin, ill-formed source fix")
+    assert self.startLine >= 1, "startline {} < 1".format(self.startLine)
+    assert end > begin, "end {} <= begin {}, ill-formed source fix".format(end,begin)
     self.begins    = [begin]
     self.ends      = [end]
-    value,replace  = str(value),self.src[begin:end]
+    value, replace = str(value),self.src[begin:end]
     # this is an error, since previous detection should not have created a fix
     assert value != replace, "trying to replace {} with itself".format(replace)
     self.replace   = [replace]
@@ -837,15 +835,24 @@ class PetscLinter(object):
     self.processRemoveDuplicates(tu)
     return
 
+  def getArgumentCursors(self,funcCursor):
+    return tuple(PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments()))
+
   def process(self,tu):
     for func,parent,_ in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
-      checkFunctionMap[func.spelling](self,func,parent)
+      try:
+        checkFunctionMap[func.spelling](self,func,parent)
+      except ParsingError as pe:
+        self.addWarning(str(pe))
     return
 
   def processRemoveDuplicates(self,tu):
     processedFuncs = {}
     for func,parent,scope in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
-      checkFunctionMap[func.spelling](self,func,parent)
+      try:
+        checkFunctionMap[func.spelling](self,func,parent)
+      except ParsingError as pe:
+        self.addWarning(str(pe))
       func  = PetscCursor(func)
       pname = PetscCursor.getNameFromCursor(parent)
       try:
@@ -871,9 +878,8 @@ class PetscLinter(object):
           self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
     return
 
-  def addErrorFromCursor(self,locCursor,errMsg,patch=None):
-    errPrefix = str(locCursor)
-    errMess   = "".join(["\nERROR {}: ".format(len(self.errors)),errPrefix,"\n",errMsg])
+  def addErrorFromCursor(self,cursor,errorMessage,patch=None):
+    errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
     self.errors.append((errMess,patch != None))
     try:
       self.patches[patch.filename].append(patch)
@@ -1189,7 +1195,8 @@ def checkIsPetscObject(linter,obj):
   elif obj.typename not in classIdMap:
     # Raise exception here since this isn't a bad source, moreso a failure of
     # this script since it should know about all petsc classes
-    raise RuntimeError("Unkown or invalid class "+str(obj))
+    errorMessage = "{}\nUnknown or invalid PETSc class '{}'. If you are introducing a new class, you must register it with this linter! See https://petsc.org/main/developers/linter/#registering-new-petsc-classes for more information\n".format(obj,obj.derivedtypename)
+    raise RuntimeError(errorMessage)
   validObject = True
   pObjType = obj.type.get_canonical().get_pointee()
   # Must have a struct here, e.g. _p_Vec
@@ -1412,13 +1419,9 @@ def checkObjIdxGenericN(linter,func,parent):
   __doc__="""
   For generic checks where the form is func(obj1,idx1,...,objN,idxN)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    # add warning since it isn't a source error but rather a parsing failure
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   for obj,idx in zip(funcArgs[::2],funcArgs[1::2]):
     checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
@@ -1427,12 +1430,9 @@ def checkPetscValidHeaderSpecificType(linter,func,parent):
   __doc__="""
   Specific check for PetscValidHeaderSpecificType(obj,classid,idx,type)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   # Don't need the type
   obj,classid,idx,_ = funcArgs
   checkMatchingClassid(linter,obj,classid)
@@ -1443,12 +1443,9 @@ def checkPetscValidHeaderSpecific(linter,func,parent):
   __doc__="""
   Specific check for PetscValidHeaderSpecific(obj,classid,idx)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   obj,classid,idx = funcArgs
   checkMatchingClassid(linter,obj,classid)
   checkMatchingArgNum(linter,obj,idx,parentArgs)
@@ -1458,12 +1455,9 @@ def checkPetscValidPointerAndType(linter,func,parent,filterFunctor):
   __doc__="""
   Generic check for PetscValidXXXPointer(obj,idx)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   obj,idx = funcArgs
   assert filterFunctor.pointer == True
   checkMatchingSpecificType(linter,obj,filterFunctor)
@@ -1514,12 +1508,9 @@ def checkPetscValidLogicalCollective(linter,func,parent,filterFunctor):
   __doc__="""
   Generic check for PetscValidLogicalCollectiveXXX(pobj,obj,idx)
   """
-  try:
-    funcArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   # dont need the petsc object, nothing to check there
   _,obj,idx = funcArgs
   assert filterFunctor.pointer == False
