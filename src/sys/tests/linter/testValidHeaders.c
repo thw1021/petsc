@@ -1,12 +1,19 @@
 #include <petscsys.h>
 
-void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
+struct _p_PetscDummy
+{
+  int x;
+};
+typedef struct _p_PetscDummy *PetscDummy;
+
+void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a, PetscDummy x)
 {
   /* incorrect */
   PetscValidHeaderSpecificType(r,PETSC_VIEWER_CLASSID,0,DMDA);
   PetscValidHeaderSpecificType(v,PETSC_DRAW_CLASSID,0,DMDA);
   PetscValidHeaderSpecificType(d,PETSC_DRAWAXIS_CLASSID,0,DMDA);
   PetscValidHeaderSpecificType(a,PETSC_RANDOM_CLASSID,0,DMDA);
+  PetscValidHeaderSpecificType(x,PETSC_RANDOM_CLASSID,0,DMDA);
 
   /* correct */
   PetscValidHeaderSpecificType(r,PETSC_RANDOM_CLASSID,1,DMDA);
