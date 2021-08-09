@@ -15,12 +15,7 @@ namespace Petsc {
 
 namespace detail {
 
-template <bool B, typename T = void>
-#if __cplusplus >= 201402L // c++14
-using enable_if_t = std::enable_if_t<B,T>;
-#else
-using enable_if_t = typename std::enable_if<B,T>::type;
-#endif
+namespace impl {
 
 template <typename T>
 struct is_callable_class
@@ -42,54 +37,129 @@ struct strip_function
 };
 
 template <typename T>
-struct function_traits : public function_traits<decltype(&T::operator())> {};
-// For generic types, directly use the result of the signature of its
-// 'operator()'
+struct is_callable_function : std::is_function<typename strip_function<T>::type>
+{ };
 
-template <typename ClassType, typename ReturnType, typename... Args>
-struct function_traits<ReturnType (ClassType::*)(Args...) const>
-// we specialize for pointers to member function
+template <bool... bs>
+struct all_true
 {
-  enum { arity = sizeof...(Args) };
+  template<bool...> struct bool_pack;
+
+  //if any are false, they'll be shifted in the second version, so types won't match
+  static constexpr bool value = std::is_same<bool_pack<bs...,true>,bool_pack<true,bs...>>::value;
+};
+
+template <typename... Ts>
+using all_true_exp = all_true<Ts::value...>;
+
+} // namespace impl
+
+template <bool B, typename T = void>
+#if __cplusplus >= 201402L // c++14
+using enable_if_t = std::enable_if_t<B,T>;
+#else
+using enable_if_t = typename std::enable_if<B,T>::type;
+#endif
+
+template <typename T> struct function_traits;
+
+// generic function form
+template <typename R, typename... Args>
+struct function_traits<R(Args...)>
+{
   // arity is the number of arguments.
+  enum { arity = sizeof...(Args) };
 
-  typedef ReturnType result_type;
+  using return_type = R;
 
-  template <size_t i> struct arg {
-    typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
-    // the i-th argument is equivalent to the i-th tuple element of a tuple
-    // composed of those arguments.
+  template <std::size_t N>
+  struct arg
+  {
+    static_assert((N < arity) && (N >= 0), "error: invalid parameter index.");
+    using type = typename std::tuple_element<N,std::tuple<Args...,void>>::type;
   };
 };
 
-template <typename T>
-using strip_function_t = typename strip_function<T>::type;
-
-template <typename T>
-struct is_callable_function : std::is_function<strip_function_t<T>>
+// function reference
+template <typename R, typename... Args>
+struct function_traits<R(&)(Args...)> : function_traits<R(Args...)>
 { };
+
+// function pointer
+template <typename R, typename... Args>
+struct function_traits<R(*)(Args...)> : function_traits<R(Args...)>
+{ };
+
+// member function pointer
+template <typename C, typename R, typename... Args>
+struct function_traits<R(C::*)(Args...)> : function_traits<R(Args...)>
+{ };
+
+// const member function pointer
+template <typename C, typename R, typename... Args>
+struct function_traits<R(C::*)(Args...) const> : function_traits<R(Args...)>
+{ };
+
+// member object pointer
+template <typename C, typename R>
+struct function_traits<R(C::*)> : function_traits<R()>
+{ };
+
+// std::function
+template <typename T>
+struct function_traits<std::function<T>> : public function_traits<T>
+{ };
+
+// lvalue reference
+template <typename T>
+struct function_traits<T&> : public function_traits<T>
+{ };
+
+// const lvalue reference
+template <typename T>
+struct function_traits<const T&> : public function_traits<T>
+{ };
+
+// rvalue reference
+template <typename T>
+struct function_traits<T&&> : public function_traits<T>
+{ };
+
+// lambda
+template <typename T>
+struct function_traits : public function_traits<decltype(&T::operator())>
+{ };
+
+// // functor
+// template <typename T>
+// struct function_traits
+// {
+// private:
+//   using call_type = function_traits<decltype(&T::operator())>;
+
+// public:
+//   using return_type = typename call_type::return_type;
+
+//   static constexpr std::size_t arity = call_type::arity;
+
+//   template <std::size_t N>
+//   struct arg
+//   {
+//     static_assert(N < arity, "error: invalid parameter index.");
+//     using type = typename call_type::template arg<N+1>::type;
+//   };
+// };
 
 template <class T>
 struct is_callable : std::conditional<
   std::is_class<T>::value,
-  is_callable_class<T>,
-  is_callable_function<T>
+  impl::is_callable_class<T>,
+  impl::is_callable_function<T>
   >::type
 { };
 
-template <bool... bs>
-struct all_true_impl
-{
-  template<bool...> struct bool_pack;
-  //if any are false, they'll be shifted in the second version, so types won't match
-  static constexpr bool value = std::is_same<bool_pack<bs..., true>,bool_pack<true, bs...>>::value;
-};
-
-template <typename... Ts>
-using all_true = all_true_impl<Ts::value...>;
-
 template <typename T, typename... Ts>
-using all_same = all_true<std::is_same<T,Ts>...>;
+using all_same = impl::all_true_exp<std::is_same<T,Ts>...>;
 
 template<int ...> struct IntegerSequence { };
 
@@ -97,10 +167,10 @@ template<int N, int ...S> struct SequenceGenerator : SequenceGenerator<N-1, N-1,
 
 template<int ...S> struct SequenceGenerator<0, S...> : IntegerSequence<S...> { };
 
-template <int I = 0, typename Tf, typename... Tp, detail::enable_if_t<I == sizeof...(Tp)>* = nullptr>
+template <int I = 0, typename Tf, typename... Tp, enable_if_t<I == sizeof...(Tp)>* = nullptr>
 inline constexpr PetscErrorCode forEachInTuple(Tf &&fn, std::tuple<Tp...> &tuple) { return 0;}
 
-template <int I = 0, typename Tf, typename... Tp, detail::enable_if_t<(I < sizeof...(Tp))>* = nullptr>
+template <int I = 0, typename Tf, typename... Tp, enable_if_t<(I < sizeof...(Tp))>* = nullptr>
 inline PetscErrorCode forEachInTuple(Tf &&fn, std::tuple<Tp...> &tuple)
 {
   PetscErrorCode ierr;
@@ -130,13 +200,13 @@ private:
   };
 
   template <typename... Args>
-  struct StaticCallable final : CallableBase // actual callable
+  struct WrappedCallable final : CallableBase // actual callable
   {
   public:
     using signature_t = PetscErrorCode(void*,Args...);
     using function_t  = std::function<signature_t>;
     using argPack_t   = std::tuple<Args...>;
-    using self_t = StaticCallable<Args...>;
+    using self_t = WrappedCallable<Args...>;
     using base_t = CallableBase;
 
   private:
@@ -158,7 +228,7 @@ private:
 
   public:
     template <typename T>
-    StaticCallable(T &&fn, argPack_t &&args)
+    WrappedCallable(T &&fn, argPack_t &&args)
       : _functor{std::forward<T>(fn)}, _params{std::forward<argPack_t>(args)}
     { }
 
@@ -216,16 +286,17 @@ private:
   };
 
 protected:
-  CallableBase::ptr_t   _functor;
-  std::vector<PetscInt> _inedges;
-  std::vector<PetscInt> _outedges;
-  const PetscInt        _id;
+  CallableBase::ptr_t    _functor = nullptr;
+  std::vector<CallNode*> _inedges;
+  std::vector<CallNode*> _outedges;
+  PetscInt               _stream = 0;
+  const PetscInt         _id;
 
   static PetscInt       counter;
 
 public:
   // Default constructor
-  CallNode() : _id{counter++} { std::cout<<"default ctor "<<_id<<std::endl;}
+  CallNode() : _id{counter++} { }
 
   // Copy constructor
   CallNode(const CallNode &other)
@@ -236,12 +307,33 @@ public:
   // Move constructor
   CallNode(CallNode &&other) noexcept = default;
 
-  // Templated constructor with tuple
-  template <typename T, typename ...Args>//, detail::enable_if_t<detail::function_traits<T>::arg<0>::type>* = nullptr>
+  // Templated constructor with (optional) tuple of arguments, only enabled if first
+  // argument is NOT a void *
+  template <typename T, typename ...Args,
+            detail::enable_if_t<
+              !std::is_same<
+                typename detail::function_traits<T>::template arg<0>::type,
+                void*
+                >::value
+              >* = nullptr>
   CallNode(T &&f, std::tuple<Args...> &&args)
-    : _functor{new StaticCallable<Args...>{std::forward<T>(f),std::forward<std::tuple<Args...>>(args)}},
+    : _functor{new NativeCallable<Args...>{std::forward<T>(f),std::forward<std::tuple<Args...>>(args)}},
       _id{counter++}
-  { std::cout<<"ctor "<<_id<<std::endl;}
+  { static_assert(sizeof...(Args), "need args for native call");}
+
+  // Templated constructor with (optional) tuple of arguments, only enabled if first
+  // argument is a void *
+  template <typename T, typename ...Args,
+            detail::enable_if_t<
+              std::is_same<
+                typename detail::function_traits<T>::template arg<0>::type,
+                void*
+                >::value
+              >* = nullptr>
+  CallNode(T &&f, std::tuple<Args...> &&args)
+    : _functor{new WrappedCallable<Args...>{std::forward<T>(f),std::forward<std::tuple<Args...>>(args)}},
+      _id{counter++}
+  { }
 
   // Templated constructor with bare arguments
   template <typename T, typename ...Args>
@@ -250,7 +342,7 @@ public:
   { }
 
   // Destructor
-  ~CallNode() {std::cout<<"dtor "<<_id<<std::endl;}
+  ~CallNode() {std::cout<<"node dtor "<<_id<<std::endl;}
 
   // Copy assignment operator
   CallNode& operator=(const CallNode&);
@@ -263,8 +355,10 @@ public:
 
   // Private member accessors
   PetscInt id() const { return _id;}
-  const std::vector<PetscInt>& inedges()  const { return _inedges; }
-  const std::vector<PetscInt>& outedges() const { return _outedges;}
+  const std::vector<CallNode*>& inedges()  const { return _inedges; }
+  const std::vector<CallNode*>& outedges() const { return _outedges;}
+  PetscInt stream() const { return _stream;}
+  PetscErrorCode setStream(PetscInt stream) { _stream = stream; return 0;}
 
   // Order enforcement
   PetscErrorCode before(CallNode&);
@@ -275,76 +369,6 @@ public:
   template <typename... Args,
             detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>* = nullptr>
   PetscErrorCode after(std::tuple<Args...> &others);
-};
-
-class CallGraph
-{
-private:
-  std::unordered_map<PetscInt,PetscInt> _idMap;
-  std::vector<CallNode*> _graph;
-  std::vector<CallNode*> _exec;
-  PetscBool              _finalized = PETSC_FALSE;
-  void                  *_userCtx   = nullptr;
-  const std::string      _name;
-
-  PetscErrorCode __topologicalSort(PetscInt v, std::vector<PetscBool> &visited)
-  {
-    const auto neigh = _graph[v]->inedges();
-
-    PetscFunctionBegin;
-    visited[v] = PETSC_TRUE;
-    for (auto i = neigh.begin(); i != neigh.end(); ++i) {
-      const auto imap = _idMap[*i];
-
-      if (!visited[imap]) {
-        PetscErrorCode ierr;
-
-        ierr = __topologicalSort(imap,visited);CHKERRQ(ierr);
-      }
-    }
-    CHKERRCXX(_exec.push_back(_graph[v]));
-    PetscFunctionReturn(0);
-  }
-
-protected:
-  // used when graphs are composed, this allows the graph to act like a function pointer
-  PetscErrorCode operator()(void *ctx)
-  {
-    PetscErrorCode ierr;
-
-    PetscFunctionBegin;
-    PetscValidPointer(ctx,1);
-    ierr = finalize();CHKERRQ(ierr);
-    for (const auto &node : _exec) {
-      std::cout<<_name<<" "<<node->id()<<" has "<<node->inedges().size()<<" parent(s)"<<std::endl;
-      std::cout<<_name<<" "<<node->id()<<" has "<<node->outedges().size()<<" children"<<std::endl;
-      ierr = (*node)(_userCtx);CHKERRQ(ierr);
-    }
-    PetscFunctionReturn(0);
-  }
-
-public:
-  CallGraph(const char name[] = "unnamed graph") : _name{name} { }
-
-  ~CallGraph() { for (auto cnode : _graph) delete cnode;}
-
-  const std::string& name() const { return _name;}
-
-  CallNode* compose(CallGraph&);
-
-  template <typename T>
-  CallNode* emplace(T&&);
-
-  template <typename... Argr, detail::enable_if_t<(sizeof...(Argr)>1)>* = nullptr>
-  auto emplace(Argr&&... rest) -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...));
-
-  template <typename T, typename... Argr,
-            detail::enable_if_t<detail::is_callable<T>::value && (sizeof...(Argr) > 0)>* = nullptr>
-  CallNode* emplaceCall(T&&,Argr&&...);
-
-  PetscErrorCode finalize();
-  PetscErrorCode setUserContext(void*);
-  PetscErrorCode run();
 };
 
 CallNode& CallNode::operator=(const CallNode &other)
@@ -374,8 +398,8 @@ PetscErrorCode CallNode::operator()(void *ctx) const
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  std::cout<<"running operator "<<_id<<std::endl;
-  CHKERRCXX(ierr = (*_functor)(ctx));CHKERRQ(ierr);
+  std::cout<<"- node "<<_id<<" running on stream "<<_stream<<'\n';
+  ierr = (*_functor)(ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -383,8 +407,8 @@ PetscErrorCode CallNode::before(CallNode &other)
 {
   PetscFunctionBegin;
   std::cout<<_id<<" before "<<other._id<<std::endl;
-  CHKERRCXX(other._inedges.push_back(_id));
-  CHKERRCXX(_outedges.push_back(other._id));
+  CHKERRCXX(other._inedges.push_back(this));
+  CHKERRCXX(_outedges.push_back(&other));
   PetscFunctionReturn(0);
 }
 
@@ -402,8 +426,8 @@ PetscErrorCode CallNode::after(CallNode &other)
 {
   PetscFunctionBegin;
   std::cout<<_id<<" after "<<other._id<<std::endl;
-  CHKERRCXX(_inedges.push_back(other._id));
-  CHKERRCXX(other._outedges.push_back(_id));
+  CHKERRCXX(_inedges.push_back(&other));
+  CHKERRCXX(other._outedges.push_back(this));
   PetscFunctionReturn(0);
 }
 
@@ -417,15 +441,145 @@ PetscErrorCode CallNode::after(std::tuple<Args...> &others)
   PetscFunctionReturn(0);
 }
 
+class CallGraph
+{
+private:
+  std::unordered_map<PetscInt,PetscInt> _idMap;
+  std::vector<CallNode*> _graph;
+  std::vector<CallNode*> _exec;
+  PetscBool              _finalized = PETSC_FALSE;
+  void                  *_userCtx   = nullptr;
+  const std::string      _name;
+
+  PetscErrorCode __topologicalSort(PetscInt v, std::vector<PetscBool> &visited)
+  {
+    const auto neigh = _graph[v]->inedges();
+
+    PetscFunctionBegin;
+    visited[v] = PETSC_TRUE;
+    for (auto node = neigh.begin(); node != neigh.end(); ++node) {
+      const auto imap = _idMap[(*node)->id()];
+
+      if (!visited[imap]) {
+        PetscErrorCode ierr;
+
+        ierr = __topologicalSort(imap,visited);CHKERRQ(ierr);
+      }
+    }
+    CHKERRCXX(_exec.push_back(_graph[v]));
+    PetscFunctionReturn(0);
+  }
+
+  static PetscErrorCode __printDeps(const CallNode &node)
+  {
+    PetscFunctionBegin;
+    CHKERRCXX(std::cout<<"node "<<node.id()<<" [in: ");
+    if (node.inedges().size()) {
+      for (const auto &in : node.inedges()) {
+        CHKERRCXX(std::cout<<in->id()<<",");
+      }
+    } else {
+      CHKERRCXX(std::cout<<"none");
+    }
+    CHKERRCXX(std::cout<<" out: ");
+    if (node.outedges().size()) {
+      for (const auto &out : node.outedges()) {
+        CHKERRCXX(std::cout<<out->id()<<",");
+      }
+    } else {
+      CHKERRCXX(std::cout<<"none");
+    }
+    CHKERRCXX(std::cout<<" ]\n");
+    PetscFunctionReturn(0);
+  }
+
+  static PetscErrorCode __joinAncestors(CallNode &node)
+  {
+    const auto     &inedges  = node.inedges();
+    PetscErrorCode  ierr;
+
+    PetscFunctionBegin;
+    switch (std::max(inedges.size()-node.outedges().size(),std::size_t(0))) {
+    case 0:
+      ierr = node.setStream(0);CHKERRQ(ierr);
+      break;
+    case 1:
+      ierr = node.setStream(inedges[0]->stream());CHKERRQ(ierr);
+    case 2:
+      const auto min = std::min_element(inedges.begin(),inedges.end(),[](const CallNode* l, const CallNode* r) { return (l->id() < r->id());});
+      const int minStream = (*min)->stream();
+      auto destroyStream = [=](const CallNode *node)
+      {
+        if (node->stream() != minStream) {std::cout<<"destroying stream "<<node->stream()<<'\n';}
+      };
+      CHKERRCXX(std::for_each(inedges.begin(),inedges.end(),destroyStream));
+      ierr = node.setStream(minStream);CHKERRQ(ierr);
+      break;
+    }
+    PetscFunctionReturn(0);
+  }
+
+protected:
+  // also used when graphs are composed, this allows the graph to act like a function
+  // pointer
+  PetscErrorCode operator()(void *ctx)
+  {
+    PetscErrorCode ierr;
+
+    PetscFunctionBegin;
+    PetscValidPointer(ctx,1);
+    ierr = finalize();CHKERRQ(ierr);
+    std::cout<<"----- "<<_name<<" begin run\n";
+    for (const auto *node : _exec) {
+      const int incoming = node->inedges().size();
+      const int outgoing = node->outedges().size();
+
+      ierr = __printDeps(*node);CHKERRQ(ierr);
+      std::cout<<"- node "<<node->id()<<" should join "<<incoming<<" and destroy "<<std::max(incoming-outgoing,0)<<" streams\n";
+      ierr = __joinAncestors(const_cast<CallNode&>(*node));CHKERRQ(ierr);
+      ierr = (*node)(_userCtx);CHKERRQ(ierr);
+    }
+    std::cout<<"----- "<<_name<<" end run\n";
+    PetscFunctionReturn(0);
+  }
+
+public:
+  CallGraph(const char name[] = "unnamed graph") : _name{name} { }
+
+  ~CallGraph()
+  {
+    for (auto cnode : _graph) delete cnode;
+    { std::cout<<_name<<" dtor"<<std::endl;}
+  }
+
+  const std::string& name() const { return _name;}
+
+  CallNode* compose(CallGraph&);
+
+  template <typename T>
+  CallNode* emplace(T&&);
+
+  template <typename... Argr, detail::enable_if_t<(sizeof...(Argr)>1)>* = nullptr>
+  auto emplace(Argr&&... rest) -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...));
+
+  template <typename T, typename... Argr,
+            detail::enable_if_t<detail::is_callable<T>::value && (sizeof...(Argr) > 0)>* = nullptr>
+  CallNode* emplaceCall(T&&,Argr&&...);
+
+  PetscErrorCode finalize();
+  PetscErrorCode setUserContext(void*);
+  PetscErrorCode run();
+};
+
 CallNode* CallGraph::compose(CallGraph &other)
 {
-  return emplace([&](void*ctx){return other(ctx);});
+  return emplace([&](void *ctx){return other(ctx);});
 }
 
 template <typename T>
 CallNode* CallGraph::emplace(T &&ftor)
 {
-  //static_assert(detail::is_callable<T>::value,"Entity passed to graph does not appear to be callable");
+  static_assert(detail::is_callable<T>::value,"Entity passed to graph does not appear to be callable");
   _finalized = PETSC_FALSE;
   _graph.emplace_back(new CallNode{std::forward<T>(ftor)});
   _idMap[_graph.back()->id()] = _graph.size()-1;
@@ -433,7 +587,8 @@ CallNode* CallGraph::emplace(T &&ftor)
 }
 
 template <typename... Argr, detail::enable_if_t<(sizeof...(Argr) > 1)>*>
-auto CallGraph::emplace(Argr&&... rest) -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...))
+auto CallGraph::emplace(Argr&&... rest)
+  -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...))
 {
   return std::make_tuple(emplace(std::forward<Argr>(rest))...);
 }
