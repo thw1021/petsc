@@ -31,7 +31,8 @@ PetscErrorCode DMPlexCreateMedFromFile(MPI_Comm comm, const char filename[], Pet
   med_int        *medCellList;
   PetscInt       *cellList;
   med_float      *coordinates = NULL;
-  PetscReal      *vertcoords = NULL;
+  PetscReal      *vertCoordsArr = NULL;
+  PetscBool       deallocate = PETSC_FALSE;
   PetscLayout     vLayout, cLayout;
   const PetscInt *vrange, *crange;
   PetscSF         sfVertices;
@@ -129,11 +130,12 @@ PetscErrorCode DMPlexCreateMedFromFile(MPI_Comm comm, const char filename[], Pet
   }
   ierr = PetscFree(medCellList);CHKERRQ(ierr);
   /* Generate the DM */
-  if (sizeof(med_float) == sizeof(PetscReal)) {
-    vertcoords = (PetscReal *) coordinates;
+  if (sizeof(med_float) == sizeof(PetscReal) && !PetscDefined(USE_COMPLEX)) {
+    vertCoordsArr = (PetscScalar *) coordinates;
   } else {
-    ierr = PetscMalloc1(numVerticesLocal*spaceDim, &vertcoords);CHKERRQ(ierr);
-    for (i = 0; i < numVerticesLocal*spaceDim; i++) vertcoords[i] = (PetscReal) coordinates[i];
+    ierr = PetscMalloc1(numVerticesLocal*spaceDim, &vertCoordsArr);CHKERRQ(ierr);
+    for (i = 0; i < numVerticesLocal*spaceDim; i++) vertCoordsArr[i] = (PetscScalar) coordinates[i];
+    deallocate = PETSC_TRUE;
   }
   /* Account for cell inversion */
   for (c = 0; c < numCellsLocal; ++c) {
@@ -148,11 +150,21 @@ PetscErrorCode DMPlexCreateMedFromFile(MPI_Comm comm, const char filename[], Pet
       }
     }
   }
-  ierr = DMPlexCreateFromCellListParallelPetsc(comm, meshDim, numCellsLocal, numVerticesLocal, numVertices, numCorners, interpolate, cellList, spaceDim, vertcoords, &sfVertices, dm);CHKERRQ(ierr);
-  if (sizeof(med_float) == sizeof(PetscReal)) {
-    vertcoords = NULL;
+  {
+    IS          cellVertexData;
+    Vec         vertCoords;
+
+    ierr = ISCreateGeneral(comm, numCellsLocal * numCorners, cellList, PETSC_USE_POINTER, &cellVertexData);CHKERRQ(ierr);
+    ierr = ISSetBlockSize(cellVertexData, numCorners);CHKERRQ(ierr);
+    ierr = VecCreateMPIWithArray(comm, spaceDim, numVerticesLocal * spaceDim, PETSC_DECIDE, vertCoordsArr, &vertCoords);CHKERRQ(ierr);
+    ierr = DMPlexCreateFromCellVertexData(comm, meshDim, cellVertexData, vertCoords, interpolate, &sfVertices, dm);CHKERRQ(ierr);
+    ierr = VecDestroy(&vertCoords);CHKERRQ(ierr);
+    ierr = ISDestroy(&cellVertexData);CHKERRQ(ierr);
+  }
+  if (!deallocate) {
+    vertCoordsArr = NULL;
   } else {
-    ierr = PetscFree(vertcoords);CHKERRQ(ierr);
+    ierr = PetscFree(vertCoordsArr);CHKERRQ(ierr);
   }
   if (ngeo > 1) {
     PetscInt        numFacets = 0, numFacetsLocal, numFacetCorners, numFacetsRendezvous;

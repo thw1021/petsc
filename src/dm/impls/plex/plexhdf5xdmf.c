@@ -59,7 +59,7 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
 {
   Vec             coordinates;
   IS              cells;
-  PetscInt        spatialDim, topoDim = -1, numCells, numVertices, NVertices, numCorners;
+  PetscInt        spatialDim, topoDim = -1;
   PetscMPIInt     rank;
   MPI_Comm        comm;
   PetscErrorCode  ierr;
@@ -87,67 +87,39 @@ PetscErrorCode DMPlexLoad_HDF5_Xdmf_Internal(DM dm, PetscViewer viewer)
   ierr = ISCreate(comm, &cells);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) cells, topo_name);CHKERRQ(ierr);
   if (seq) {
-    ierr = PetscViewerHDF5ReadSizes(viewer, topo_name, NULL, &numCells);CHKERRQ(ierr);
-    ierr = PetscLayoutSetSize(cells->map, numCells);CHKERRQ(ierr);
-    numCells = !rank ? numCells : 0;
-    ierr = PetscLayoutSetLocalSize(cells->map, numCells);CHKERRQ(ierr);
+    PetscInt n;
+    ierr = PetscViewerHDF5ReadSizes(viewer, topo_name, NULL, &n);CHKERRQ(ierr);
+    ierr = PetscLayoutSetSize(cells->map, n);CHKERRQ(ierr);
+    n = !rank ? n : 0;
+    ierr = PetscLayoutSetLocalSize(cells->map, n);CHKERRQ(ierr);
   }
   ierr = ISLoad(cells, viewer);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(cells, &numCells);CHKERRQ(ierr);
-  ierr = ISGetBlockSize(cells, &numCorners);CHKERRQ(ierr);
   ierr = PetscViewerHDF5ReadAttribute(viewer, topo_name, "cell_dim", PETSC_INT, &topoDim, &topoDim);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
-  numCells /= numCorners;
 
   /* Read geometry */
   ierr = PetscViewerHDF5PushGroup(viewer, geom_path);CHKERRQ(ierr);
   ierr = VecCreate(comm, &coordinates);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) coordinates, geom_name);CHKERRQ(ierr);
   if (seq) {
-    ierr = PetscViewerHDF5ReadSizes(viewer, geom_name, NULL, &numVertices);CHKERRQ(ierr);
-    ierr = PetscLayoutSetSize(coordinates->map, numVertices);CHKERRQ(ierr);
-    numVertices = !rank ? numVertices : 0;
-    ierr = PetscLayoutSetLocalSize(coordinates->map, numVertices);CHKERRQ(ierr);
+    PetscInt n;
+    ierr = PetscViewerHDF5ReadSizes(viewer, geom_name, NULL, &n);CHKERRQ(ierr);
+    ierr = PetscLayoutSetSize(coordinates->map, n);CHKERRQ(ierr);
+    n = !rank ? n : 0;
+    ierr = PetscLayoutSetLocalSize(coordinates->map, n);CHKERRQ(ierr);
   }
   ierr = VecLoad(coordinates, viewer);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(coordinates, &numVertices);CHKERRQ(ierr);
-  ierr = VecGetSize(coordinates, &NVertices);CHKERRQ(ierr);
   ierr = VecGetBlockSize(coordinates, &spatialDim);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
-  numVertices /= spatialDim;
-  NVertices /= spatialDim;
-
-  ierr = PetscInfo4(NULL, "Loaded mesh dimensions: numCells %D numCorners %D numVertices %D spatialDim %D\n", numCells, numCorners, numVertices, spatialDim);CHKERRQ(ierr);
   {
-    const PetscScalar *coordinates_arr;
-    PetscReal         *coordinates_arr_real;
-    const PetscInt    *cells_arr;
     PetscSF           sfVert = NULL;
-    PetscInt          i;
-
-    ierr = VecGetArrayRead(coordinates, &coordinates_arr);CHKERRQ(ierr);
-    ierr = ISGetIndices(cells, &cells_arr);CHKERRQ(ierr);
-
-    if (PetscDefined(USE_COMPLEX)) {
-      /* convert to real numbers if PetscScalar is complex */
-      /*TODO More systematic would be to change all the function arguments to PetscScalar */
-      ierr = PetscMalloc1(numVertices*spatialDim, &coordinates_arr_real);CHKERRQ(ierr);
-      for (i = 0; i < numVertices*spatialDim; ++i) {
-        coordinates_arr_real[i] = PetscRealPart(coordinates_arr[i]);
-        if (PetscUnlikelyDebug(PetscImaginaryPart(coordinates_arr[i]))) {
-          SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Vector of coordinates contains complex numbers but only real vectors are currently supported.");
-        }
-      }
-    } else coordinates_arr_real = (PetscReal*)coordinates_arr;
 
     ierr = DMSetDimension(dm, topoDim < 0 ? spatialDim : topoDim);CHKERRQ(ierr);
-    ierr = DMPlexBuildFromCellListParallel(dm, numCells, numVertices, NVertices, numCorners, cells_arr, &sfVert);CHKERRQ(ierr);
+    /* coordinates->map can be directly used as DMPlexTopologyBuild() shrinks its blocksize to 1 */
+    ierr = DMPlexTopologyBuild(dm, cells, coordinates->map, &sfVert);CHKERRQ(ierr);
     ierr = DMPlexInvertCells_XDMF_Private(dm);CHKERRQ(ierr);
-    ierr = DMPlexBuildCoordinatesFromCellListParallel(dm, spatialDim, sfVert, coordinates_arr_real);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(coordinates, &coordinates_arr);CHKERRQ(ierr);
-    ierr = ISRestoreIndices(cells, &cells_arr);CHKERRQ(ierr);
+    ierr = DMPlexGeometryBuild(dm, coordinates, sfVert);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&sfVert);CHKERRQ(ierr);
-    if (PetscDefined(USE_COMPLEX)) {ierr = PetscFree(coordinates_arr_real);CHKERRQ(ierr);}
   }
   ierr = ISDestroy(&cells);CHKERRQ(ierr);
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);

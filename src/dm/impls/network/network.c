@@ -467,10 +467,18 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
-  if (size == 1) {
-    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices-nmerged,2,edges);CHKERRQ(ierr);
-  } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices-nmerged,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
+  {
+    IS          edgesIS;
+    PetscLayout vertexLayout;
+    PetscInt    nCorners = 2;
+
+    ierr = ISCreateGeneral(comm, network->nEdges * nCorners, edges, PETSC_USE_POINTER, &edgesIS);CHKERRQ(ierr);
+    ierr = ISSetBlockSize(edgesIS, nCorners);CHKERRQ(ierr);
+    ierr = PetscLayoutCreate(comm, &vertexLayout);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(vertexLayout, network->nVertices-nmerged);CHKERRQ(ierr);
+    ierr = DMPlexTopologyBuild(network->plex,edgesIS,vertexLayout,NULL);CHKERRQ(ierr);
+    ierr = ISDestroy(&edgesIS);CHKERRQ(ierr);
+    ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
@@ -636,12 +644,19 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
-  if (size == 1) {
-    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,2,edges);CHKERRQ(ierr);
-  } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
+  {
+    IS          edgesIS;
+    PetscLayout vertexLayout;
+
+    ierr = ISCreateGeneral(comm, network->nEdges * 2, edges, PETSC_USE_POINTER, &edgesIS);CHKERRQ(ierr);
+    ierr = ISSetBlockSize(edgesIS, 2);CHKERRQ(ierr);
+    ierr = PetscLayoutCreate(comm, &vertexLayout);CHKERRQ(ierr);
+    ierr = PetscLayoutSetLocalSize(vertexLayout, network->nVertices);CHKERRQ(ierr);
+    ierr = DMPlexTopologyBuild(network->plex,edgesIS,vertexLayout,NULL);CHKERRQ(ierr);
+    ierr = ISDestroy(&edgesIS);CHKERRQ(ierr);
+    ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
   }
-  ierr = PetscFree(edges);CHKERRQ(ierr); /* local edge list with global idx used by DMPlexBuildFromCellList() */
+  ierr = PetscFree(edges);CHKERRQ(ierr);
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,0,&network->eStart,&network->eEnd);CHKERRQ(ierr);

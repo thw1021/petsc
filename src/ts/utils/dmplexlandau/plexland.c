@@ -859,7 +859,19 @@ static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, con
         pcell[0] = cells[j][0]; pcell[1] = cells[j][1];
         pcell[2] = cells[j][2]; pcell[3] = cells[j][3];
       }
-      ierr = DMPlexCreateFromCellListPetsc(comm,2,numCells,numVerts,4,ctx->interpolate,flatCells,2,flatCoords,dm);CHKERRQ(ierr);
+      {
+        IS          cellVertexData;
+        Vec         vertexCoordsVec;
+        PetscInt    numCorners = 4;
+        PetscInt    topoDim = 2, spaceDim = 2;
+
+        ierr = ISCreateGeneral(comm, numCells * numCorners, flatCells, PETSC_USE_POINTER, &cellVertexData);CHKERRQ(ierr);
+        ierr = ISSetBlockSize(cellVertexData, numCorners);CHKERRQ(ierr);
+        ierr = VecCreateMPIWithArray(comm, spaceDim, numVerts * spaceDim, PETSC_DECIDE, flatCoords, &vertexCoordsVec);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellVertexData(comm, topoDim, cellVertexData, vertexCoordsVec, ctx->interpolate, NULL, dm);CHKERRQ(ierr);
+        ierr = ISDestroy(&cellVertexData);CHKERRQ(ierr);
+        ierr = VecDestroy(&vertexCoordsVec);CHKERRQ(ierr);
+      }
       ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
     } else SETERRQ(ctx->comm, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
