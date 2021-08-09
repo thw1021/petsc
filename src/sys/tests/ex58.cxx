@@ -16,6 +16,7 @@ PetscErrorCode testFunc(void *ctx)
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
   auto context = static_cast<UserCtx*>(ctx);
+  (void)context;
   PetscFunctionReturn(0);
 }
 
@@ -24,6 +25,7 @@ PetscErrorCode staticTestFunc(void *ctx, int x)
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
   auto context = static_cast<UserCtx*>(ctx);
+  (void)context;
   PetscFunctionReturn(0);
 }
 
@@ -51,14 +53,14 @@ int main(int argc, char *argv[])
   comm = PETSC_COMM_WORLD;
 
   UserCtx   ctx(3);
-  CallGraph graph2("smol graph");
+  CallGraph graph2("small graph");
   CallNode  node,node2 = CallNode();
 
   node2 = node;
   graph2.setUserContext(&ctx);
   graph2.emplace(testFuncOtherGraph);
-  //graph2.emplace(nativeFunction);
-  std::cout<<"------"<<std::endl;
+  graph2.emplaceCall(nativeFunction,2);
+  std::cout<<"-------------------"<<std::endl;
   {
     CallGraph graph("big graph");
 
@@ -67,10 +69,10 @@ int main(int argc, char *argv[])
     auto nodeEnd    = graph.emplaceCall(staticTestFunc,2);
     auto otherNodes = graph.emplace([](void *ctx, int x = 2)
     {
-      std::cout<<"lambda left branch"<<std::endl;
+      //std::cout<<"lambda left branch"<<std::endl;
       return 0;
     }, [](void *ctx) {
-      std::cout<<"lambda right branch"<<std::endl;
+      //std::cout<<"lambda right branch"<<std::endl;
       return 0;
     });
     ierr = nodeMiddle->before(*std::get<1>(otherNodes));CHKERRQ(ierr);
