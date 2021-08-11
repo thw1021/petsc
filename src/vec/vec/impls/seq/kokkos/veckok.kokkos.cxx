@@ -850,7 +850,7 @@ PetscErrorCode VecGetArrayAndMemType_SeqKokkos(Vec v,PetscScalar** a,PetscMemTyp
     *a = veckok->v_dual.view_host().data();
     if (mtype) *mtype = PETSC_MEMTYPE_HOST;
   } else {
-    /* When device has newer or same data as host. We always return devcie data*/
+    /* When device has newer or same data as host, we always return device data */
     *a = veckok->v_dual.view_device().data();
     if (mtype) *mtype = PETSC_MEMTYPE_DEVICE;
   }
