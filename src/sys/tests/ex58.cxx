@@ -11,25 +11,27 @@ struct UserCtx
   UserCtx(int i) : value(i) { }
 };
 
-PetscErrorCode testFunc(void *ctx)
+PetscErrorCode testFunc(ExecutionContext *ctx)
 {
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
-  auto context = static_cast<UserCtx*>(ctx);
-  (void)context;
+  auto context = ctx->userCtx;
+  (void)(context);
+  std::cout<<"start node\n";
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode staticTestFunc(void *ctx, int x)
+PetscErrorCode staticTestFunc(ExecutionContext *ctx, int x)
 {
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
-  auto context = static_cast<UserCtx*>(ctx);
-  (void)context;
+  auto context = ctx->userCtx;
+  (void)(context);
+  std::cout<<"join node\n";
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode testFuncOtherGraph(void *ctx)
+PetscErrorCode testFuncOtherGraph(ExecutionContext *ctx)
 {
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
@@ -64,20 +66,29 @@ int main(int argc, char *argv[])
   {
     CallGraph graph("big graph");
 
-    auto graphNode  = graph.compose(graph2);
-    auto nodeMiddle = graph.emplace(testFunc);
-    auto nodeEnd    = graph.emplaceCall(staticTestFunc,2);
-    auto otherNodes = graph.emplace([](void *ctx, int x = 2)
+    auto graphNode = graph.compose(graph2);
+    auto nodeStart = graph.emplace(testFunc);
+    auto nodeJoin  = graph.emplaceCall(staticTestFunc,2);
+    auto midNodes  = graph.emplace([](ExecutionContext *ctx, int x = 2)
     {
-      //std::cout<<"lambda left branch"<<std::endl;
+      std::cout<<"mid node left\n";
       return 0;
-    }, [](void *ctx) {
-      //std::cout<<"lambda right branch"<<std::endl;
+    }, [](ExecutionContext *ctx) {
+      std::cout<<"mid node right\n";
       return 0;
     });
-    ierr = nodeMiddle->before(*std::get<1>(otherNodes));CHKERRQ(ierr);
-    ierr = nodeEnd->after(otherNodes);CHKERRQ(ierr);
-    ierr = graphNode->after(*nodeEnd);CHKERRQ(ierr);
+    auto nodeFork = graph.emplace([](ExecutionContext *ctx)
+    {
+      std::cout<<"fork node left\n";
+      return 0;
+    },[](ExecutionContext *ctx) {
+      std::cout<<"fork node right\n";
+      return 0;
+    });
+    ierr = nodeStart->before(*std::get<0>(midNodes));CHKERRQ(ierr);
+    ierr = nodeJoin->after(midNodes);CHKERRQ(ierr);
+    ierr = nodeJoin->before(nodeFork);CHKERRQ(ierr);
+    ierr = graphNode->after(nodeFork);CHKERRQ(ierr);
 
     ierr = graph.setUserContext(&ctx);CHKERRQ(ierr);
     ierr = graph.run();CHKERRQ(ierr);
