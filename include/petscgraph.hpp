@@ -130,26 +130,6 @@ template <typename T>
 struct function_traits : public function_traits<decltype(&T::operator())>
 { };
 
-// // functor
-// template <typename T>
-// struct function_traits
-// {
-// private:
-//   using call_type = function_traits<decltype(&T::operator())>;
-
-// public:
-//   using return_type = typename call_type::return_type;
-
-//   static constexpr std::size_t arity = call_type::arity;
-
-//   template <std::size_t N>
-//   struct arg
-//   {
-//     static_assert(N < arity, "error: invalid parameter index.");
-//     using type = typename call_type::template arg<N+1>::type;
-//   };
-// };
-
 template <class T>
 struct is_callable : std::conditional<
   std::is_class<T>::value,
@@ -183,6 +163,20 @@ inline PetscErrorCode forEachInTuple(Tf &&fn, std::tuple<Tp...> &tuple)
 
 } // namespace detail
 
+struct ExecutionContext
+{
+  void     *userCtx;
+  PetscInt  stream;
+
+  constexpr ExecutionContext(void *ctx, PetscInt strm) noexcept : userCtx{ctx},stream{strm} { }
+
+  static PetscInt newStream()
+  {
+    static PetscInt pool = 0;
+    return pool++;
+  }
+};
+
 class CallNode
 {
 private:
@@ -191,8 +185,8 @@ private:
   public:
     using ptr_t = std::unique_ptr<const CallableBase>;
 
-    virtual ~CallableBase()                        = default;
-    virtual PetscErrorCode operator()(void*) const = 0;
+    virtual ~CallableBase() = default;
+    virtual PetscErrorCode operator()(ExecutionContext*) const = 0;
     ptr_t clone() const { return ptr_t{cloneDerived()};}
 
   protected:
@@ -203,7 +197,7 @@ private:
   struct WrappedCallable final : CallableBase // actual callable
   {
   public:
-    using signature_t = PetscErrorCode(void*,Args...);
+    using signature_t = PetscErrorCode(ExecutionContext*,Args...);
     using function_t  = std::function<signature_t>;
     using argPack_t   = std::tuple<Args...>;
     using self_t = WrappedCallable<Args...>;
@@ -214,7 +208,7 @@ private:
     argPack_t        _params;
 
     template <int... S>
-    PetscErrorCode __callFunc(void *ctx, detail::IntegerSequence<S...>) const
+    PetscErrorCode __callFunc(ExecutionContext *ctx, detail::IntegerSequence<S...>) const
     {
       PetscErrorCode ierr;
 
@@ -232,7 +226,7 @@ private:
       : _functor{std::forward<T>(fn)}, _params{std::forward<argPack_t>(args)}
     { }
 
-    PetscErrorCode operator()(void *ctx) const override final
+    PetscErrorCode operator()(ExecutionContext *ctx) const override final
     {
       PetscErrorCode ierr;
 
@@ -275,21 +269,32 @@ private:
       : _functor{std::forward<T>(fn)}, _params{std::forward<argPack_t>(args)}
     { }
 
-    PetscErrorCode operator()(void *ctx) const override final
+    PetscErrorCode operator()(ExecutionContext *ctx) const override final
     {
       PetscErrorCode ierr;
 
       PetscFunctionBegin;
+      (void)(ctx); // unused
       ierr = __callFunc(detail::SequenceGenerator<sizeof...(Args)>());CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   };
 
+  struct Edge
+  {
+    const PetscInt _start,_end;
+    PetscInt       _stream = 0;
+
+    constexpr Edge(PetscInt start, PetscInt end) : _start{start},_end{end} { }
+  };
+
 protected:
+  friend class CallGraph;
+
   CallableBase::ptr_t    _functor = nullptr;
-  std::vector<CallNode*> _inedges;
-  std::vector<CallNode*> _outedges;
-  PetscInt               _stream = 0;
+  std::vector<std::shared_ptr<Edge>> _inedges;
+  std::vector<std::shared_ptr<Edge>> _outedges;
+  mutable PetscInt       _stream = 0;
   const PetscInt         _id;
 
   static PetscInt       counter;
@@ -313,7 +318,7 @@ public:
             detail::enable_if_t<
               !std::is_same<
                 typename detail::function_traits<T>::template arg<0>::type,
-                void*
+                ExecutionContext*
                 >::value
               >* = nullptr>
   CallNode(T &&f, std::tuple<Args...> &&args)
@@ -327,7 +332,7 @@ public:
             detail::enable_if_t<
               std::is_same<
                 typename detail::function_traits<T>::template arg<0>::type,
-                void*
+                ExecutionContext*
                 >::value
               >* = nullptr>
   CallNode(T &&f, std::tuple<Args...> &&args)
@@ -350,25 +355,21 @@ public:
   // Move assignment operator
   CallNode& operator=(CallNode &&) noexcept;
 
-  // Call operator
-  PetscErrorCode operator()(void*) const;
-
   // Private member accessors
   PetscInt id() const { return _id;}
-  const std::vector<CallNode*>& inedges()  const { return _inedges; }
-  const std::vector<CallNode*>& outedges() const { return _outedges;}
-  PetscInt stream() const { return _stream;}
-  PetscErrorCode setStream(PetscInt stream) { _stream = stream; return 0;}
 
   // Order enforcement
   PetscErrorCode before(CallNode&);
   template <typename... Args,
             detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>* = nullptr>
-  PetscErrorCode before(std::tuple<Args...> &others);
+  PetscErrorCode before(std::tuple<Args...>&);
   PetscErrorCode after(CallNode&);
   template <typename... Args,
             detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>* = nullptr>
-  PetscErrorCode after(std::tuple<Args...> &others);
+  PetscErrorCode after(std::tuple<Args...>&);
+
+  // Execution
+  PetscErrorCode run(ExecutionContext*) const;
 };
 
 CallNode& CallNode::operator=(const CallNode &other)
@@ -393,22 +394,14 @@ CallNode& CallNode::operator=(CallNode &&other) noexcept
   PetscFunctionReturn(*this);
 }
 
-PetscErrorCode CallNode::operator()(void *ctx) const
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  std::cout<<"- node "<<_id<<" running on stream "<<_stream<<'\n';
-  ierr = (*_functor)(ctx);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode CallNode::before(CallNode &other)
 {
   PetscFunctionBegin;
-  std::cout<<_id<<" before "<<other._id<<std::endl;
-  CHKERRCXX(other._inedges.push_back(this));
-  CHKERRCXX(_outedges.push_back(&other));
+  {
+    std::cout<<_id<<" before "<<other._id<<std::endl;
+    CHKERRCXX(_outedges.push_back(std::make_shared<Edge>(_id,other._id)));
+    CHKERRCXX(other._inedges.push_back(_outedges.back()));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -426,8 +419,8 @@ PetscErrorCode CallNode::after(CallNode &other)
 {
   PetscFunctionBegin;
   std::cout<<_id<<" after "<<other._id<<std::endl;
-  CHKERRCXX(_inedges.push_back(&other));
-  CHKERRCXX(other._outedges.push_back(this));
+  CHKERRCXX(_inedges.push_back(std::make_shared<Edge>(other._id,_id)));
+  CHKERRCXX(other._outedges.push_back(_inedges.back()));
   PetscFunctionReturn(0);
 }
 
@@ -441,24 +434,35 @@ PetscErrorCode CallNode::after(std::tuple<Args...> &others)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode CallNode::run(ExecutionContext *ctx) const
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  std::cout<<"- running on stream "<<ctx->stream<<":\n";
+  ierr = (*_functor)(ctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 class CallGraph
 {
 private:
-  std::unordered_map<PetscInt,PetscInt> _idMap;
-  std::vector<CallNode*> _graph;
-  std::vector<CallNode*> _exec;
-  PetscBool              _finalized = PETSC_FALSE;
-  void                  *_userCtx   = nullptr;
-  const std::string      _name;
+  using map_t   = std::unordered_map<PetscInt,PetscInt>;
+  using graph_t = std::vector<CallNode*>;
+
+  std::string _name;
+  map_t       _idMap;
+  graph_t     _graph;
+  graph_t     _exec;
+  PetscBool   _finalized = PETSC_FALSE;
+  void       *_userCtx   = nullptr;
 
   PetscErrorCode __topologicalSort(PetscInt v, std::vector<PetscBool> &visited)
   {
-    const auto neigh = _graph[v]->inedges();
-
     PetscFunctionBegin;
     visited[v] = PETSC_TRUE;
-    for (auto node = neigh.begin(); node != neigh.end(); ++node) {
-      const auto imap = _idMap[(*node)->id()];
+    for (const auto &edge : _graph[v]->_inedges) {
+      const auto imap = _idMap[edge->_start];
 
       if (!visited[imap]) {
         PetscErrorCode ierr;
@@ -473,18 +477,18 @@ private:
   static PetscErrorCode __printDeps(const CallNode &node)
   {
     PetscFunctionBegin;
-    CHKERRCXX(std::cout<<"node "<<node.id()<<" [in: ");
-    if (node.inedges().size()) {
-      for (const auto &in : node.inedges()) {
-        CHKERRCXX(std::cout<<in->id()<<",");
+    CHKERRCXX(std::cout<<"node "<<node._id<<" [in: ");
+    if (node._inedges.size()) {
+      for (const auto &in : node._inedges) {
+        CHKERRCXX(std::cout<<in->_start<<",");
       }
     } else {
       CHKERRCXX(std::cout<<"none");
     }
     CHKERRCXX(std::cout<<" out: ");
-    if (node.outedges().size()) {
-      for (const auto &out : node.outedges()) {
-        CHKERRCXX(std::cout<<out->id()<<",");
+    if (node._outedges.size()) {
+      for (const auto &out : node._outedges) {
+        CHKERRCXX(std::cout<<out->_end<<",");
       }
     } else {
       CHKERRCXX(std::cout<<"none");
@@ -493,52 +497,77 @@ private:
     PetscFunctionReturn(0);
   }
 
-  static PetscErrorCode __joinAncestors(CallNode &node)
+  static PetscErrorCode __joinAncestors(const CallNode &node, ExecutionContext &ctx)
   {
-    const auto     &inedges  = node.inedges();
-    PetscErrorCode  ierr;
-
     PetscFunctionBegin;
-    switch (std::max(inedges.size()-node.outedges().size(),std::size_t(0))) {
+    switch (node._inedges.size()) {
     case 0:
-      ierr = node.setStream(0);CHKERRQ(ierr);
+      // this node has no ancestors and is therefore *a* starting node of the graph
+      ctx.stream = ctx.newStream();
       break;
-    case 1:
-      ierr = node.setStream(inedges[0]->stream());CHKERRQ(ierr);
-    case 2:
-      const auto min = std::min_element(inedges.begin(),inedges.end(),[](const CallNode* l, const CallNode* r) { return (l->id() < r->id());});
-      const int minStream = (*min)->stream();
-      auto destroyStream = [=](const CallNode *node)
+    default:
+      // we have ancestors, meaning we must pick one of their streams and join all others
+      // on that stream. we arbitrarily choose the first ancestor as the stream donor.
+      ctx.stream = node._inedges[0]->_stream;
+      // destroy all other streams except for the one we want to use. In the case we have
+      // only 1 ancestor, this loop never fires
+      CHKERRCXX(std::for_each(node._inedges.begin()+1,node._inedges.end(),
+      [](const std::shared_ptr<CallNode::Edge> &edge)
       {
-        if (node->stream() != minStream) {std::cout<<"destroying stream "<<node->stream()<<'\n';}
-      };
-      CHKERRCXX(std::for_each(inedges.begin(),inedges.end(),destroyStream));
-      ierr = node.setStream(minStream);CHKERRQ(ierr);
+        std::cout<<"-- destroying ancestor stream "<<edge->_stream<<'\n';
+      }));
+      break;
+    }
+    PetscFunctionReturn(0);
+  }
+
+  static PetscErrorCode __forkDecendants(const CallNode &node, const ExecutionContext &ctx)
+  {
+    PetscFunctionBegin;
+    switch (node._outedges.size()) {
+    case 0:
+      // we have no decendants, meaning we should destroy this stream
+      std::cout<<"-- destroying stream "<<ctx.stream<<'\n';
+      break;
+    default:
+      // we have decendants, so we need to fork some streams off of the current one,
+      // although we need only create n-1 streams since we can give ours away. Once again
+      // arbitrarily pick our first outbound edge as the recipient of our stream
+      node._outedges[0]->_stream = ctx.stream;
+      // again, for more than 1 decendant this loop never fires
+      CHKERRCXX(std::for_each(node._outedges.begin()+1,node._outedges.end(),
+      [&](const std::shared_ptr<CallNode::Edge> &edge)
+      {
+        edge->_stream = ctx.newStream();
+        std::cout<<"-- creating decendant stream "<<edge->_stream<<'\n';
+      }));
       break;
     }
     PetscFunctionReturn(0);
   }
 
 protected:
-  // also used when graphs are composed, this allows the graph to act like a function
-  // pointer
-  PetscErrorCode operator()(void *ctx)
+  // when composing graphs we need to be able to distinguish the hosted graph from the
+  // hosting graph (since 1 of the graphs needs to manage the others streams and
+  // dependencies). Hence we have both "run" and operator(). run is only every called from
+  // the hosting graph, whereas the hosted graph is invoked via operator().
+  PetscErrorCode operator()(ExecutionContext *ctx)
   {
-    PetscErrorCode ierr;
+    const void     *oldCtx = _userCtx;
+    PetscErrorCode  ierr;
 
     PetscFunctionBegin;
     PetscValidPointer(ctx,1);
+    _userCtx = ctx->userCtx;
     ierr = finalize();CHKERRQ(ierr);
     std::cout<<"----- "<<_name<<" begin run\n";
-    for (const auto *node : _exec) {
-      const int incoming = node->inedges().size();
-      const int outgoing = node->outedges().size();
-
+    for (const auto *const node : _exec) {
       ierr = __printDeps(*node);CHKERRQ(ierr);
-      std::cout<<"- node "<<node->id()<<" should join "<<incoming<<" and destroy "<<std::max(incoming-outgoing,0)<<" streams\n";
-      ierr = __joinAncestors(const_cast<CallNode&>(*node));CHKERRQ(ierr);
-      ierr = (*node)(_userCtx);CHKERRQ(ierr);
+      ierr = __joinAncestors(*node,*ctx);CHKERRQ(ierr);
+      ierr = node->run(ctx);CHKERRQ(ierr);
+      ierr = __forkDecendants(*node,*ctx);CHKERRQ(ierr);
     }
+    _userCtx = const_cast<void*>(oldCtx);
     std::cout<<"----- "<<_name<<" end run\n";
     PetscFunctionReturn(0);
   }
@@ -549,7 +578,7 @@ public:
   ~CallGraph()
   {
     for (auto cnode : _graph) delete cnode;
-    { std::cout<<_name<<" dtor"<<std::endl;}
+    std::cout<<_name<<" dtor\n";
   }
 
   const std::string& name() const { return _name;}
@@ -573,7 +602,7 @@ public:
 
 CallNode* CallGraph::compose(CallGraph &other)
 {
-  return emplace([&](void *ctx){return other(ctx);});
+  return emplace([&](ExecutionContext *ctx){return other(ctx);});
 }
 
 template <typename T>
@@ -634,10 +663,11 @@ PetscErrorCode CallGraph::setUserContext(void *ctx)
 
 PetscErrorCode CallGraph::run()
 {
-  PetscErrorCode ierr;
+  ExecutionContext ctx{_userCtx,0};
+  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = (*this)(_userCtx);CHKERRQ(ierr);
+  ierr = (*this)(&ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
