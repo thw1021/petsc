@@ -119,7 +119,6 @@ PetscErrorCode DMNetworkSetNumSubNetworks(DM dm,PetscInt nsubnet,PetscInt Nsubne
   Input Parameters:
 + dm - the dm object
 . name - name of the subnetwork
-. nv - number of local vertices of this subnetwork
 . ne - number of local edges of this subnetwork
 - edgelist - list of edges for this subnetwork
 
@@ -132,7 +131,7 @@ PetscErrorCode DMNetworkSetNumSubNetworks(DM dm,PetscInt nsubnet,PetscInt Nsubne
 
   Current implementation of DMNetwork reads
   (1) a single subnetwork in parallel; or
-  (2) n subnetworks using n processors, one subnetwork/processor.
+  (2) n subnetworks using at least n processors, one subnetwork per processor.
 
   Level: beginner
 
@@ -614,7 +613,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   Collective on dm
 
   Input Parameters:
-. DM - the dmnetwork object
+. dm - the dmnetwork object
 
   Notes:
   This routine should be called after the network sizes and edgelists have been provided. It creates
