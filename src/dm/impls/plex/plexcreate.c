@@ -3,7 +3,7 @@
 #include <petsc/private/hashseti.h>          /*I   "petscdmplex.h"   I*/
 #include <petscsf.h>
 
-PetscLogEvent DMPLEX_CreateFromFile, DMPLEX_TopologyBuild, DMPLEX_GeometryBuild;
+PetscLogEvent DMPLEX_CreateFromFile, DMPLEX_TopologyBuild, DMPLEX_TopologyBuildSingleStratum, DMPLEX_GeometryBuild;
 
 /* External function declarations here */
 static PetscErrorCode DMInitialize_Plex(DM dm);
@@ -3406,10 +3406,8 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
 @*/
 PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexLayout, PetscSF *vertexSF)
 {
-  PetscSF         sfPoint;
-  PetscInt        *verticesAdj, *cones;
-  PetscInt        c, i, n, numCells, numCorners, numVerticesAdj;
-  const PetscInt  *cvd;
+  PetscSection    cellVertexSection;
+  PetscInt        c, n, numCells, numCorners;
   MPI_Comm        comm;
   PetscErrorCode  ierr;
 
@@ -3421,11 +3419,55 @@ PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexL
   //TODO PetscCheckSameComm(dm,1,vertexLayout,3);  once PetscLayout is PetscObject
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(DMPLEX_TopologyBuild,dm,0,0,0);CHKERRQ(ierr);
-  ierr = PetscLayoutCreateAlterBlockSize(vertexLayout, 1, &vertexLayout);CHKERRQ(ierr);
-  ierr = ISGetIndices(cellVertexData, &cvd);CHKERRQ(ierr);
   ierr = ISGetBlockSize(cellVertexData, &numCorners);CHKERRQ(ierr);
   ierr = ISGetLocalSize(cellVertexData, &n);CHKERRQ(ierr);
   numCells = n / numCorners;
+
+  ierr = PetscSectionCreate(comm, &cellVertexSection);CHKERRQ(ierr);
+  ierr = PetscSectionSetChart(cellVertexSection, 0, numCells);CHKERRQ(ierr);
+  for (c = 0; c < numCells; c++) {
+    ierr = PetscSectionSetDof(cellVertexSection, c, numCorners);CHKERRQ(ierr);
+  }
+  ierr = PetscSectionSetUp(cellVertexSection);CHKERRQ(ierr);
+
+  ierr = DMPlexTopologyBuildTwoStrata(dm, cellVertexSection, cellVertexData, NULL, vertexLayout, vertexSF);CHKERRQ(ierr);
+  ierr = PetscSectionDestroy(&cellVertexSection);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(DMPLEX_TopologyBuild,dm,0,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+//TODO manpage
+PetscErrorCode DMPlexTopologyBuildTwoStrata(DM dm, PetscSection coneSection, IS cellVertexData, IS coneOrientations, PetscLayout vertexLayout, PetscSF *vertexSF)
+{
+  PetscSF         sfPoint;
+  PetscInt        *verticesAdj, *cones, *orientations;
+  PetscInt        c, i, n, numVerticesAdj;
+  PetscInt        cStart, cEnd;
+  const PetscInt  *cvd, *co = NULL;
+  MPI_Comm        comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscCheckSameComm(dm,1,coneSection,2);
+  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(DMPLEX_TopologyBuildSingleStratum,dm,0,0,0);CHKERRQ(ierr);
+  ierr = ISGetIndices(cellVertexData, &cvd);CHKERRQ(ierr);
+  ierr = PetscLayoutCreateAlterBlockSize(vertexLayout, 1, &vertexLayout);CHKERRQ(ierr);
+  ierr = PetscSectionGetStorageSize(coneSection, &n);CHKERRQ(ierr);
+  {
+    PetscInt n0;
+    ierr = ISGetLocalSize(cellVertexData, &n0);CHKERRQ(ierr);
+    if (n != n0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Local size of IS cellVertexData = %D != %D = storage size of PetscSection coneSection",n0,n);
+    ierr = ISGetIndices(cellVertexData, &cvd);CHKERRQ(ierr);
+  }
+  if (coneOrientations) {
+    PetscInt n0;
+    ierr = ISGetLocalSize(coneOrientations, &n0);CHKERRQ(ierr);
+    if (n != n0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Local size of IS coneOrientations = %D != %D = storage size of PetscSection coneSection",n0,n);
+    ierr = ISGetIndices(coneOrientations, &co);CHKERRQ(ierr);
+  }
+  ierr = PetscSectionGetChart(coneSection, &cStart, &cEnd);CHKERRQ(ierr);
   /* Get/check global number of vertices */
   {
     PetscInt NVerticesInCells = PETSC_MIN_INT;
@@ -3436,7 +3478,7 @@ PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexL
     ierr = MPI_Allreduce(MPI_IN_PLACE, &NVerticesInCells, 1, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
 
     if (vertexLayout->n == PETSC_DECIDE && vertexLayout->N == PETSC_DECIDE) vertexLayout->N = NVerticesInCells;
-    else if (vertexLayout->N != PETSC_DECIDE && vertexLayout->N < NVerticesInCells) SETERRQ2(comm, PETSC_ERR_ARG_WRONG, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",vertexLayout->N,NVerticesInCells);
+    else if (vertexLayout->N != PETSC_DECIDE && vertexLayout->N < NVerticesInCells) SETERRQ2(comm, PETSC_ERR_ARG_SIZ, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",vertexLayout->N,NVerticesInCells);
     ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
   }
   /* Count locally unique vertices */
@@ -3452,14 +3494,20 @@ PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexL
     ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr);
     ierr = PetscHSetIGetElems(vhash, &off, verticesAdj);CHKERRQ(ierr);
     ierr = PetscHSetIDestroy(&vhash);CHKERRQ(ierr);
-    if (off != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
+    if (off != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
   }
   ierr = PetscSortInt(numVerticesAdj, verticesAdj);CHKERRQ(ierr);
   /* Create cones */
-  ierr = DMPlexSetChart(dm, 0, numCells + numVerticesAdj);CHKERRQ(ierr);
-  for (c = 0; c < numCells; ++c) {ierr = DMPlexSetConeSize(dm, c, numCorners);CHKERRQ(ierr);}
+  ierr = DMPlexSetChart(dm, cStart, cEnd + numVerticesAdj);CHKERRQ(ierr);
+  for (c = cStart; c < cEnd; ++c) {
+    PetscInt numCorners;
+
+    ierr = PetscSectionGetDof(coneSection, c, &numCorners);CHKERRQ(ierr);
+    ierr = DMPlexSetConeSize(dm, c, numCorners);CHKERRQ(ierr);
+  }
   ierr = DMSetUp(dm);CHKERRQ(ierr);
   ierr = DMPlexGetCones(dm,&cones);CHKERRQ(ierr);
+  ierr = DMPlexGetConeOrientations(dm,&orientations);CHKERRQ(ierr);
   for (i = 0; i < n; ++i) {
     const PetscInt gv = cvd[i];
     PetscInt       lv;
@@ -3468,10 +3516,11 @@ PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexL
         we need to shift it by numCells to get correct DAG points (cells go first) */
     ierr = PetscFindInt(gv, numVerticesAdj, verticesAdj, &lv);CHKERRQ(ierr);
     if (lv < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not find global vertex %D in local connectivity", gv);
-    cones[i] = lv + numCells;
+    cones[i] = lv + cEnd;
+    if (co) orientations[i] = co[i];
   }
   /* Build point sf */
-  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint);CHKERRQ(ierr);
+  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, NULL, cEnd, numVerticesAdj, verticesAdj, NULL, cEnd, vertexSF, &sfPoint);CHKERRQ(ierr);
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) sfPoint, "point SF");CHKERRQ(ierr);
   if (dm->sf) {
@@ -3488,7 +3537,10 @@ PetscErrorCode DMPlexTopologyBuild(DM dm, IS cellVertexData, PetscLayout vertexL
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
   ierr = ISRestoreIndices(cellVertexData, &cvd);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(DMPLEX_TopologyBuild,dm,0,0,0);CHKERRQ(ierr);
+  if (coneOrientations) {
+    ierr = ISRestoreIndices(coneOrientations, &co);CHKERRQ(ierr);
+  }
+  ierr = PetscLogEventEnd(DMPLEX_TopologyBuildSingleStratum,dm,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

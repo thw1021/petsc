@@ -79,6 +79,7 @@ PetscErrorCode  DMInitializePackage(void)
   ierr = PetscLogEventRegister("DMAdaptInterp",          DM_CLASSID,&DM_AdaptInterpolator);CHKERRQ(ierr);
 
   ierr = PetscLogEventRegister("DMPlexTopoBuild",        DM_CLASSID,&DMPLEX_TopologyBuild);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexTopoBuild1",       DM_CLASSID,&DMPLEX_TopologyBuildSingleStratum);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("DMPlexGeomBuild",        DM_CLASSID,&DMPLEX_GeometryBuild);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("DMPlexCreateGmsh",       DM_CLASSID,&DMPLEX_CreateGmsh);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("DMPlexCrFromFile",       DM_CLASSID,&DMPLEX_CreateFromFile);CHKERRQ(ierr);

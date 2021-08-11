@@ -22,6 +22,7 @@ PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexTopologyBuild() (since version
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexGeometryBuild() (since version 3.16)") PetscErrorCode DMPlexBuildCoordinatesFromCellList(DM, PetscInt, const PetscReal[]);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexGeometryBuild() (since version 3.16)") PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM, PetscInt, PetscSF, const PetscReal[]);
 PETSC_EXTERN PetscErrorCode DMPlexTopologyBuild(DM, IS, PetscLayout, PetscSF*);
+PETSC_EXTERN PetscErrorCode DMPlexTopologyBuildTwoStrata(DM, PetscSection, IS, IS, PetscLayout, PetscSF*);
 PETSC_EXTERN PetscErrorCode DMPlexGeometryBuild(DM, Vec, PetscSF);
 
 PETSC_EXTERN PetscErrorCode DMPlexCreate(MPI_Comm, DM*);

@@ -43,6 +43,7 @@ PETSC_EXTERN PetscLogEvent DMPLEX_CreateGmsh;
 PETSC_EXTERN PetscLogEvent DMPLEX_RebalanceSharedPoints;
 PETSC_EXTERN PetscLogEvent DMPLEX_CreateFromFile;
 PETSC_EXTERN PetscLogEvent DMPLEX_TopologyBuild;
+PETSC_EXTERN PetscLogEvent DMPLEX_TopologyBuildSingleStratum;
 PETSC_EXTERN PetscLogEvent DMPLEX_GeometryBuild;
 PETSC_EXTERN PetscLogEvent DMPLEX_LocatePoints;
 
