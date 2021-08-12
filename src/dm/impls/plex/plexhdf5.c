@@ -1258,6 +1258,134 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer, Pets
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_SingleStratum(PetscViewer viewer, PetscInt h, DM *dm1, PetscSF *sf)
+{
+  DM              dm;
+  MPI_Comm        comm;
+  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
+  IS              pointsIS, conesIS, orientationsIS;
+  PetscSection    coneSizesSection;
+  PetscLayout     pointsLayout;
+  PetscInt        s;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)viewer, &comm);CHKERRQ(ierr);
+  ierr = DMCreate(comm, &dm);CHKERRQ(ierr);
+  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
+
+  /* points and coneSizes have length of nPoints and loaded using the default layout */
+  ierr = ISCreate(comm, &pointsIS);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
+  ierr = ISLoad(pointsIS, viewer);CHKERRQ(ierr);
+  ierr = ISGetLayout(pointsIS, &pointsLayout);CHKERRQ(ierr);
+
+  /* create coneSizesSection from stored IS coneSizes */
+  {
+    IS              coneSizesIS;
+    const PetscInt *coneSizes;
+    PetscLayout     coneSizesLayout;
+    PetscBool       flg;
+
+    ierr = ISCreate(comm, &coneSizesIS);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
+    ierr = ISLoad(coneSizesIS, viewer);CHKERRQ(ierr);
+    ierr = ISGetLayout(pointsIS, &coneSizesLayout);CHKERRQ(ierr);
+    ierr = PetscLayoutCompare(pointsLayout, coneSizesLayout, &flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(comm, PETSC_ERR_PLIB, "points layout != coneSizes layout");
+    ierr = ISGetIndices(coneSizesIS, &coneSizes);CHKERRQ(ierr);
+    ierr = PetscSectionCreate(comm, &coneSizesSection);CHKERRQ(ierr);
+    ierr = PetscSectionSetChart(coneSizesSection, 0, pointsLayout->n);CHKERRQ(ierr);
+    for (s = 0; s < pointsLayout->n; ++s) {
+      ierr = PetscSectionSetDof(coneSizesSection, s, coneSizes[s]);CHKERRQ(ierr);
+    }
+    ierr = PetscSectionSetUp(coneSizesSection);CHKERRQ(ierr);
+    ierr = ISRestoreIndices(coneSizesIS, &coneSizes);CHKERRQ(ierr);
+    ierr = ISDestroy(&coneSizesIS);CHKERRQ(ierr);
+  }
+
+  /* use value layout of coneSizesSection as layout of cones and orientations */
+  {
+    PetscLayout conesLayout;
+
+    ierr = PetscSectionGetValueLayout(comm, coneSizesSection, &conesLayout);CHKERRQ(ierr);
+    ierr = ISCreate(comm, &conesIS);CHKERRQ(ierr);
+    ierr = ISCreate(comm, &orientationsIS);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) conesIS, conesName);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) orientationsIS, orientationsName);CHKERRQ(ierr);
+    ierr = PetscLayoutDuplicate(conesLayout, &conesIS->map);CHKERRQ(ierr);
+    ierr = PetscLayoutDuplicate(conesLayout, &orientationsIS->map);CHKERRQ(ierr);
+    ierr = ISLoad(conesIS, viewer);CHKERRQ(ierr);
+    ierr = ISLoad(orientationsIS, viewer);CHKERRQ(ierr);
+    ierr = PetscLayoutDestroy(&conesLayout);CHKERRQ(ierr);
+  }
+
+  /* check assertion that layout of points is the same as point layout of coneSizesSection */
+  {
+    PetscLayout pointsLayout0;
+    PetscBool   flg;
+    ierr = PetscSectionGetPointLayout(comm, coneSizesSection, &pointsLayout0);CHKERRQ(ierr);
+    ierr = PetscLayoutCompare(pointsLayout, pointsLayout0, &flg);CHKERRQ(ierr);
+    if (!flg) {
+      PetscSynchronizedPrintf(comm, "%D %D != %D %D", pointsLayout->n, pointsLayout->N, pointsLayout0->n, pointsLayout0->N);
+      PetscSynchronizedFlush(comm, PETSC_STDOUT);
+      SETERRQ(comm, PETSC_ERR_PLIB, "points layout != coneSizesSection point layout");
+    }
+    ierr = PetscLayoutDestroy(&pointsLayout0);CHKERRQ(ierr);
+  }
+
+  //ierr = DMPlexTopologyBuildSingleStratum(dm, coneSizesSection, const PetscInt *, const PetscInt *, PetscLayout, PetscSF *)
+
+  ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
+  ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *sf)
+{
+  MPI_Comm        comm;
+  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
+  PetscInt        depth;
+  PetscInt        h;
+  DM              *singleStratumDMs;
+  PetscSF         *singleStratumMigrationSFs;
+  PetscMPIInt     size, rank;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  pointsName        = "points";
+  coneSizesName     = "cone_sizes";
+  conesName         = "cones";
+  orientationsName  = "orientations";
+  ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
+  {
+    PetscInt dim;
+    ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "depth", PETSC_INT, NULL, &depth);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "cell_dim", PETSC_INT, NULL, &dim);CHKERRQ(ierr);
+    ierr = DMSetDimension(dm, dim);CHKERRQ(ierr);
+  }
+  ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+
+  ierr = PetscViewerHDF5PushGroup(viewer, "height_strata");CHKERRQ(ierr);
+  ierr = PetscCalloc2(depth, &singleStratumDMs, depth, &singleStratumMigrationSFs);CHKERRQ(ierr);
+  for (h = 0; h <= depth; h++) {
+    char            group[128];
+
+    ierr = PetscSNPrintf(group, sizeof(group), "%D", h);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5PushGroup(viewer, group);CHKERRQ(ierr);
+    ierr = DMPlexTopologyLoad_HDF5_v2_SingleStratum(viewer, h, &singleStratumDMs[h], &singleStratumMigrationSFs[h]);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  }
+
+  //TODO combine the DMs and SFs
+
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* height_strata */
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* topology */
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *sf)
 {
   PetscInt        version = 1;
@@ -1267,6 +1395,7 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   ierr = PetscViewerHDF5ReadAttribute(viewer, "topology", "version", PETSC_INT, &version, &version);CHKERRQ(ierr);
   switch (version) {
     case 1: ierr = DMPlexTopologyLoad_HDF5_v1(dm, viewer, sf);CHKERRQ(ierr); break;
+    case 2: ierr = DMPlexTopologyLoad_HDF5_v2(dm, viewer, sf);CHKERRQ(ierr); break;
     default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyLoad() for topology version %D not implemented yet", version);
   }
   PetscFunctionReturn(0);

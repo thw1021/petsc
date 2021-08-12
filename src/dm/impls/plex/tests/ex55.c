@@ -41,7 +41,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode DMPlexWriteAndReadHDF5(DM dm, const char filename[], const char prefix[], AppCtx user, DM *dm_new)
 {
-  DM             dmnew;
+  DM             dmnew=NULL;
   PetscViewer    v;
   PetscErrorCode ierr;
 
