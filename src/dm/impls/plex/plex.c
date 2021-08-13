@@ -648,16 +648,18 @@ PETSC_UNUSED static PetscErrorCode DMPlexView_Ascii_Geometry(DM dm, PetscViewer 
 static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
 {
   DM_Plex          *mesh = (DM_Plex*) dm->data;
-  DM                cdm;
-  PetscSection      coordSection;
+  DM                cdm = NULL;
+  PetscSection      coordSection = NULL;
   Vec               coordinates;
   PetscViewerFormat format;
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
-  ierr = DMGetLocalSection(cdm, &coordSection);CHKERRQ(ierr);
   ierr = DMGetCoordinatesLocal(dm, &coordinates);CHKERRQ(ierr);
+  if (coordinates) {
+    ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
+    ierr = DMGetLocalSection(cdm, &coordSection);CHKERRQ(ierr);
+  }
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
     const char *name;
