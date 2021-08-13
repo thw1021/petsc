@@ -65,8 +65,9 @@ int main(int argc, char *argv[])
   std::cout<<"-------------------"<<std::endl;
   {
     CallGraph graph("big graph");
+    CallNode  *graphNode;
 
-    auto graphNode = graph.compose(graph2);
+    ierr = graph.compose(graph2,graphNode);CHKERRQ(ierr);
     auto nodeStart = graph.emplace(testFunc);
     auto nodeJoin  = graph.emplaceCall(staticTestFunc,2);
     auto midNodes  = graph.emplace([](ExecutionContext *ctx, int x = 2)
