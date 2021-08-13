@@ -352,7 +352,7 @@ public:
   CallNode(T &&f, std::tuple<Args...> &&args)
     : _functor(new NativeCallable<Args...>(std::forward<T>(f),std::forward<std::tuple<Args...>>(args))),
       _id(counter++)
-  { static_assert(sizeof...(Args), "need args for native call");}
+  { static_assert(sizeof...(Args),"need args for native call"); }
 
   // Templated constructor with optional tuple of arguments, only enabled if first
   // argument is a void *
@@ -375,7 +375,7 @@ public:
   { }
 
   // Destructor
-  ~CallNode() {std::cout<<"node dtor "<<_id<<std::endl;}
+  ~CallNode() { std::cout<<"node dtor "<<_id<<'\n'; }
 
   // Copy assignment operator
   CallNode& operator=(const CallNode&);
@@ -384,7 +384,8 @@ public:
   CallNode& operator=(CallNode &&) noexcept;
 
   // Private member accessors
-  PetscInt id() const { return _id;}
+  PetscInt id() const { return _id; }
+  const std::string& name() const { return _name; }
 
   // Order enforcement
   PetscErrorCode before(CallNode&);
@@ -464,10 +465,10 @@ PetscErrorCode CallNode::after(std::tuple<Args...> &others)
 
 PetscErrorCode CallNode::run(ExecutionContext *ctx) const
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (_functor) {
+    PetscErrorCode ierr;
+
     std::cout<<"- running on stream "<<ctx->stream<<":\n";
     ierr = (*_functor)(ctx);CHKERRQ(ierr);
   }
@@ -506,21 +507,20 @@ private:
     PetscFunctionReturn(0);
   }
 
-  // this routine serves 2 purposes:
-  // 1. To find and remove the fake dependencies on the _begin and _end nodes. Since these
-  //    are shared_ptr's we need to delete them in both _begin and _end and the nodes they
-  //    are attached to in _graph.
-  // 2. To reset and clear _exec
-  PetscErrorCode __resetClosure(CallNode *closureBegin, CallNode *closureEnd)
+  // this routine finds and removes the fake dependencies on the _begin and _end
+  // nodes. Since these are shared_ptr's we need to delete them in both _begin and _end
+  // and the nodes they are attached to in _graph.
+  PetscErrorCode __resetClosure()
   {
     // normally when you erase an element in a vector all the elements after it must be
     // copied over by one to plug the gap. this routine optimizes this by copying the last
     // element of the vector in place of the element to be deleted, and then deleting the
-    // element at the back.
+    // now duplicate element at the back.
     const auto quickDelete = [](const CallNode::edge_t &edge, std::vector<CallNode::edge_t> &vec)
     {
       PetscFunctionBegin;
       auto loc = std::find(vec.begin(),vec.end(),edge);
+      if (PetscUnlikelyDebug(loc == vec.end())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_POINTER,"Could not find location of edge in edge vector");
       *loc = std::move(vec.back());
       CHKERRCXX(vec.pop_back());
       PetscFunctionReturn(0);
@@ -528,45 +528,42 @@ private:
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    for (const auto &edge : closureBegin->_outedges) {
+    for (const auto &edge : _begin._outedges) {
       ierr = quickDelete(edge,_graph[_idMap[edge->_end]]->_inedges);CHKERRQ(ierr);
     }
-    CHKERRCXX(closureBegin->_outedges.clear());
-    for (const auto &edge : closureEnd->_inedges) {
+    CHKERRCXX(_begin._outedges.clear());
+    for (const auto &edge : _end._inedges) {
       ierr = quickDelete(edge,_graph[_idMap[edge->_start]]->_outedges);CHKERRQ(ierr);
     }
-    CHKERRCXX(closureEnd->_inedges.clear());
+    CHKERRCXX(_end._inedges.clear());
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode __finalize(CallNode *closureBegin, CallNode *closureEnd)
+  PetscErrorCode __finalize()
   {
     PetscFunctionBegin;
     if (!_finalized) {
       std::vector<PetscBool> visited(_graph.size(),PETSC_FALSE);
       PetscErrorCode         ierr;
 
-      PetscValidPointer(closureBegin,1);
-      PetscValidPointer(closureEnd,2);
-      if (PetscUnlikelyDebug(!_userCtx)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_POINTER,"User must supply a user context before executing the graph");
       // reset our executable graph
       CHKERRCXX(_exec.clear());
       // reserve enough for the graph+enclosures
       CHKERRCXX(_exec.reserve(_graph.size()+2));
-      ierr = __resetClosure(closureBegin,closureEnd);CHKERRQ(ierr);
+      ierr = __resetClosure();CHKERRQ(ierr);
       // install the start of the closure
-      CHKERRCXX(_exec.push_back(closureBegin));
+      CHKERRCXX(_exec.push_back(&_begin));
       for (PetscInt i = 0; i < _graph.size(); ++i) {
         if (!visited[i]) {ierr = __topologicalSort(i,visited);CHKERRQ(ierr);}
-        // check if the node has no inedges, if not it is a "start" node
-        if (_graph[i]->_inedges.empty()) {_graph[i]->after(*closureBegin);}
-        // check if the node has no outedges, if not is is an "end" node
-        if (_graph[i]->_outedges.empty()) {_graph[i]->before(*closureEnd);}
+        // check if the node has inedges, if not it is a "start" node
+        if (_graph[i]->_inedges.empty()) {_graph[i]->after(_begin);}
+        // check if the node has outedges, if not is is an "end" node
+        if (_graph[i]->_outedges.empty()) {_graph[i]->before(_end);}
       }
-      ierr = closureBegin->__printDeps();CHKERRQ(ierr);
-      ierr = closureEnd->__printDeps();CHKERRQ(ierr);
+      ierr = _begin.__printDeps();CHKERRQ(ierr);
+      ierr = _end.__printDeps();CHKERRQ(ierr);
       // finish the closure
-      CHKERRCXX(_exec.push_back(closureEnd));
+      CHKERRCXX(_exec.push_back(&_end));
       _finalized = PETSC_TRUE;
     }
     PetscFunctionReturn(0);
@@ -589,7 +586,7 @@ private:
       ctx.stream = node._inedges[0]->_stream;
       // destroy all other streams except for the one we want to use. In the case we have
       // only 1 ancestor, this loop never fires
-      CHKERRCXX(std::for_each(node._inedges.begin()+1,node._inedges.end(),
+      CHKERRCXX(std::for_each(node._inedges.cbegin()+1,node._inedges.cend(),
       [](const std::shared_ptr<CallNode::Edge> &edge)
       {
         std::cout<<"-- joining ancestor stream "<<edge->_stream<<'\n';
@@ -614,8 +611,8 @@ private:
       // arbitrarily pick our first outbound edge as the recipient of our stream
       node._outedges[0]->_stream = ctx.stream;
       // again, for more than 1 decendant this loop never fires
-      CHKERRCXX(std::for_each(node._outedges.begin()+1,node._outedges.end(),
-      [&](const std::shared_ptr<CallNode::Edge> &edge)
+      CHKERRCXX(std::for_each(node._outedges.cbegin()+1,node._outedges.cend(),
+      [&](const CallNode::edge_t &edge)
       {
         edge->_stream = ctx.newStream();
         std::cout<<"-- creating decendant stream "<<edge->_stream<<'\n';
@@ -625,39 +622,16 @@ private:
     PetscFunctionReturn(0);
   }
 
-  // when composing graphs we need to be able to distinguish the hosted graph from the
-  // hosting graph (since 1 of the graphs needs to manage the others streams and
-  // dependencies). Hence we have both "run" and operator(). run is only every called from
-  // the hosting graph, whereas the hosted graph is invoked via operator().
-  PetscErrorCode operator()(ExecutionContext *ctx, CallNode *closureBegin, CallNode *closureEnd)
-  {
-    PetscErrorCode ierr;
-
-    PetscFunctionBegin;
-    PetscValidPointer(ctx,1);
-    ierr = __finalize(closureBegin,closureEnd);CHKERRQ(ierr);
-    std::cout<<"----- "<<_name<<" begin run\n";
-    for (const auto &node : _exec) {
-      ierr = node->__printDeps();CHKERRQ(ierr);
-      ierr = __joinAncestors(*node,*ctx);CHKERRQ(ierr);
-      ierr = node->run(ctx);CHKERRQ(ierr);
-      ierr = __forkDecendants(*node,*ctx);CHKERRQ(ierr);
-    }
-    std::cout<<"----- "<<_name<<" end run\n";
-    PetscFunctionReturn(0);
-  }
-
 public:
   CallGraph(const char name[] = "anonymous graph")
     : _name(name),_begin((_name+" closure begin").c_str()),_end((_name+" closure end").c_str()) { }
 
   ~CallGraph()
   {
-    for (auto cnode : _graph) delete cnode;
+    for (auto &cnode : _graph) delete cnode;
     std::cout<<_name<<" dtor\n";
   }
 
-  PetscErrorCode setName(const char*);
   const std::string& name() const { return _name;}
 
   PetscErrorCode compose(CallGraph&,CallNode*&);
@@ -732,7 +706,15 @@ PetscErrorCode CallGraph::run(PetscInt stream)
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = (*this)(&ctx,&_begin,&_end);CHKERRQ(ierr);
+  ierr = __finalize();CHKERRQ(ierr);
+  std::cout<<"----- "<<_name<<" begin run\n";
+  for (const auto &node : _exec) {
+    ierr = node->__printDeps();CHKERRQ(ierr);
+    ierr = __joinAncestors(*node,ctx);CHKERRQ(ierr);
+    ierr = node->run(&ctx);CHKERRQ(ierr);
+    ierr = __forkDecendants(*node,ctx);CHKERRQ(ierr);
+  }
+  std::cout<<"----- "<<_name<<" end run\n";
   PetscFunctionReturn(0);
 }
 
