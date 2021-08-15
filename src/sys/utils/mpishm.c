@@ -28,14 +28,27 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm comm,Petsc
   PetscFunctionReturn(MPI_SUCCESS);
 }
 
-/*@C
-    PetscShmCommGet - Given a PETSc communicator returns a communicator of all ranks that share a common memory
+/* Data structures to support freeing comms created in PetscShmCommGet() */
+#define MAX_SHMCOMM_DUPPED_COMMS 64
+static PetscInt       num_dupped_comms=0;
+static MPI_Comm       shmcomm_dupped_comms[MAX_SHMCOMM_DUPPED_COMMS];
+static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
+{
+  PetscErrorCode   ierr;
+  PetscInt         i;
+  PetscFunctionBegin;
+  for (i=0; i<num_dupped_comms; i++) {ierr = PetscCommDestroy(&shmcomm_dupped_comms[i]);CHKERRQ(ierr);}
+  num_dupped_comms = 0; /* reset so that petsc could be reinit'ed */
+  PetscFunctionReturn(0);
+}
 
+/*@C
+    PetscShmCommGet - Given a communicator returns a sub-communicator of all ranks that share a common memory
 
     Collective.
 
     Input Parameter:
-.   globcomm - MPI_Comm
+.   globcomm - MPI_Comm, which can be an user MPI_Comm or a petsc inner MPI_Comm
 
     Output Parameter:
 .   pshmcomm - the PETSc shared memory communicator object
@@ -43,9 +56,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm comm,Petsc
     Level: developer
 
     Notes:
-    This should be called only with an PetscCommDuplicate() communictor
-
-           When used with MPICH, MPICH must be configured with --download-mpich-device=ch3:nemesis
+       When used with MPICH, MPICH must be configured with --download-mpich-device=ch3:nemesis
 
 @*/
 PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
@@ -57,9 +68,27 @@ PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
   PetscCommCounter *counter;
 
   PetscFunctionBegin;
+  /* Get a petsc inner comm, since we always want to stash pshmcomm on petsc inner comms */
   ierr = MPI_Comm_get_attr(globcomm,Petsc_Counter_keyval,&counter,&flg);CHKERRMPI(ierr);
-  if (!flg) SETERRQ(globcomm,PETSC_ERR_ARG_CORRUPT,"Bad MPI communicator supplied; must be a PETSc communicator");
+  if (!flg) { /* globcomm is not a petsc comm */
+    union {MPI_Comm comm; void *ptr;} ucomm;
+    /* check if globcomm already has a linked petsc inner comm */
+    ierr = MPI_Comm_get_attr(globcomm,Petsc_InnerComm_keyval,&ucomm,&flg);CHKERRMPI(ierr);
+    if (!flg) {
+      /* globcomm does not has a linked petsc inner comm, so we create one and replace globcomm with it */
+      if (num_dupped_comms >= MAX_SHMCOMM_DUPPED_COMMS) SETERRQ1(globcomm,PETSC_ERR_PLIB,"PetscShmCommGet() is trying to dup more than %D MPI_Comms\n",MAX_SHMCOMM_DUPPED_COMMS);
+      ierr = PetscCommDuplicate(globcomm,&globcomm,NULL);CHKERRQ(ierr);
+      /* Register a function to free the dupped petsc comms at PetscFinalize at the first time */
+      if (num_dupped_comms == 0) {ierr = PetscRegisterFinalize(PetscShmCommDestroyDuppedComms);CHKERRQ(ierr);}
+      shmcomm_dupped_comms[num_dupped_comms] = globcomm;
+      num_dupped_comms++;
+    } else {
+      /* otherwise, we pull out the inner comm and use it as globcomm */
+      globcomm = ucomm.comm;
+    }
+  }
 
+  /* Check if globcomm already has an attached pshmcomm. If no, create one */
   ierr = MPI_Comm_get_attr(globcomm,Petsc_ShmComm_keyval,pshmcomm,&flg);CHKERRMPI(ierr);
   if (flg) PetscFunctionReturn(0);
 
