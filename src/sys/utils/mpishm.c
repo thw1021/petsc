@@ -44,7 +44,7 @@ static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
   PetscInt         i;
   PetscFunctionBegin;
   for (i=0; i<num_dupped_comms; i++) {ierr = PetscCommDestroy(&shmcomm_dupped_comms[i]);CHKERRQ(ierr);}
-  num_dupped_comms = 0; /* reset so that petsc could be reinit'ed */
+  num_dupped_comms = 0; /* reset so that PETSc can be reinitialized */
   PetscFunctionReturn(0);
 }
 #endif
@@ -55,7 +55,7 @@ static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
     Collective.
 
     Input Parameter:
-.   globcomm - MPI_Comm, which can be an user MPI_Comm or a petsc inner MPI_Comm
+.   globcomm - MPI_Comm, which can be a user MPI_Comm or a PETSc inner MPI_Comm
 
     Output Parameter:
 .   pshmcomm - the PETSc shared memory communicator object
@@ -83,7 +83,8 @@ PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
     ierr = MPI_Comm_get_attr(globcomm,Petsc_InnerComm_keyval,&ucomm,&flg);CHKERRMPI(ierr);
     if (!flg) {
       /* globcomm does not have a linked petsc inner comm, so we create one and replace globcomm with it */
-      if (num_dupped_comms >= MAX_SHMCOMM_DUPPED_COMMS) SETERRQ1(globcomm,PETSC_ERR_PLIB,"PetscShmCommGet() is trying to dup more than %D MPI_Comms\n",MAX_SHMCOMM_DUPPED_COMMS);
+      if (num_dupped_comms >= MAX_SHMCOMM_DUPPED_COMMS) SETERRQ1(globcomm,PETSC_ERR_PLIB,"PetscShmCommGet() is trying to dup more than %d MPI_Comms
+",MAX_SHMCOMM_DUPPED_COMMS);
       ierr = PetscCommDuplicate(globcomm,&globcomm,NULL);CHKERRQ(ierr);
       /* Register a function to free the dupped petsc comms at PetscFinalize at the first time */
       if (num_dupped_comms == 0) {ierr = PetscRegisterFinalize(PetscShmCommDestroyDuppedComms);CHKERRQ(ierr);}
