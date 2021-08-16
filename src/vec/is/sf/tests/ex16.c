@@ -65,8 +65,8 @@ int main(int argc, char **argv)
   PetscSF         sf;
   PetscLayout     layout;
   PetscInt        N, n;
-  PetscInt        nA=-1, *A, offsetA=-1;
-  PetscInt        nB=-1, *B, offsetB=-1;
+  PetscInt        nA=-1, *A=NULL, *Aloc=NULL, offsetA=-1;
+  PetscInt        nB=-1, *B=NULL, *Bloc=NULL, offsetB=-1;
   PetscMPIInt     size, rank;
   PetscInt        testnum;
   PetscErrorCode  ierr;
@@ -158,15 +158,51 @@ int main(int argc, char **argv)
     default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Must run with 3 MPI processes");
     }
     break;
+  case 3:
+    /* same as testnum 0 but use local index arrays instead of offsets */
+    N = 4;
+    n = PETSC_DECIDE;
+    switch (rank) {
+    case 0: nA = 3; offsetA = 0; nB = 1; offsetB = 0; break;
+    case 1: nA = 1; offsetA = 0; nB = 1; offsetB = 0; break;
+    case 2: nA = 1; offsetA = 0; nB = 2; offsetB = 0; break;
+    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Must run with 3 MPI processes");
+    }
+    ierr = PetscMalloc1(nA, &A);CHKERRQ(ierr);
+    ierr = PetscMalloc1(nB, &B);CHKERRQ(ierr);
+    ierr = PetscMalloc2(nA, &Aloc, nB, &Bloc);CHKERRQ(ierr);
+    switch (rank) {
+    case 0:
+      A[0] = 1; A[1] = 0; A[2] = 2;
+      B[0] = 0;
+      Aloc[0] = 100; Aloc[1] = 101; Aloc[2] = 102;
+      Bloc[0] = 400;
+      break;
+    case 1:
+      A[0] = 3;
+      B[0] = 2;
+      Aloc[0] = 200;
+      Bloc[0] = 500;
+      break;
+    case 2:
+      A[0] = 3;
+      B[0] = 0; B[1] = 3;
+      Aloc[0] = 300;
+      Bloc[0] = 600; Bloc[1] = 601;
+      break;
+    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Must run with 3 MPI processes");
+    }
+    break;
   }
   ierr = PetscLayoutCreate(PETSC_COMM_WORLD, &layout);CHKERRQ(ierr);
   ierr = PetscLayoutSetSize(layout, N);CHKERRQ(ierr);
   ierr = PetscLayoutSetLocalSize(layout, n);CHKERRQ(ierr);
   ierr = PetscLayoutSetBlockSize(layout, 1);CHKERRQ(ierr);
-  ierr = PetscSFCreateByMatchingIndices(layout, nA, A, NULL, offsetA, nB, B, NULL, offsetB, NULL, &sf);CHKERRQ(ierr);
+  ierr = PetscSFCreateByMatchingIndices(layout, nA, A, Aloc, offsetA, nB, B, Bloc, offsetB, NULL, &sf);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&layout);CHKERRQ(ierr);
   ierr = PetscFree(A);CHKERRQ(ierr);
   if (testnum != 1) {ierr = PetscFree(B);CHKERRQ(ierr);}
+  ierr = PetscFree2(Aloc, Bloc);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)sf, "sf");CHKERRQ(ierr);
   ierr = PetscSFView(sf, NULL);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
@@ -180,16 +216,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     nsize: 3
-    args: -testnum 0
-
-  test:
-    suffix: 1
-    nsize: 3
-    args: -testnum 1
-
-  test:
-    suffix: 2
-    nsize: 3
-    args: -testnum 2
+    args: -testnum {{0 1 2 3}separate output}
 
 TEST*/
