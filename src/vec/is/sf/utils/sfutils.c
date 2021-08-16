@@ -545,11 +545,11 @@ PetscErrorCode PetscLayoutMapLocal(PetscLayout map,PetscInt N,const PetscInt idx
 + layout - PetscLayout defining the global index space and the rank that brokers each index
 . numRootIndices - size of rootIndices
 . rootIndices - PetscInt array of global indices of which this process requests ownership
-. rootLocalIndices - root local index permutation (NULL if no permutation)
+. rootLocalIndices - root local indices (NULL for contiguous)
 . rootLocalOffset - offset to be added to root local indices
 . numLeafIndices - size of leafIndices
 . leafIndices - PetscInt array of global indices with which this process requires data associated
-. leafLocalIndices - leaf local index permutation (NULL if no permutation)
+. leafLocalIndices - leaf local indices (NULL for contiguous)
 - leafLocalOffset - offset to be added to leaf local indices
 
   Output Parameter:
