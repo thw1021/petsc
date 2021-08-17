@@ -1481,12 +1481,12 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
     PetscFEGeom      fegeom;
     PetscReal       *coords, *gcoords;
     PetscScalar     *funcVal, *interpolant;
-    PetscBool        isHybrid;
+    PetscBool        isCohesive;
     PetscInt         qNc, Nq, totNc, cStart = 0, cEnd, c, dsNf;
 
     ierr = DMGetRegionNumDS(dm, s, &label, &fieldIS, &ds);CHKERRQ(ierr);
     ierr = ISGetIndices(fieldIS, &fields);CHKERRQ(ierr);
-    ierr = PetscDSGetHybrid(ds, &isHybrid);CHKERRQ(ierr);
+    ierr = PetscDSIsCohesive(ds, &isCohesive);CHKERRQ(ierr);
     ierr = PetscDSGetNumFields(ds, &dsNf);CHKERRQ(ierr);
     ierr = PetscDSGetTotalComponents(ds, &totNc);CHKERRQ(ierr);
     ierr = PetscDSGetQuadrature(ds, &quad);CHKERRQ(ierr);
@@ -1501,28 +1501,30 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
       ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
     }
     for (c = cStart; c < cEnd; ++c) {
-      const PetscInt cell = points ? points[c] : c;
-      PetscScalar   *x    = NULL;
-      PetscInt       qc   = 0, fOff = 0, dep, fStart = isHybrid ? dsNf-1 : 0;
+      const PetscInt cell  = points ? points[c] : c;
+      PetscScalar    *x    = NULL;
+      const PetscInt *cone;
+      PetscInt        qc   = 0, fOff = 0, dep;
 
       ierr = DMLabelGetValue(depthLabel, cell, &dep);CHKERRQ(ierr);
       if (dep != depth-1) continue;
-      if (isHybrid) {
-        const PetscInt *cone;
-
+      if (isCohesive) {
         ierr = DMPlexGetCone(dm, cell, &cone);CHKERRQ(ierr);
         ierr = DMPlexComputeCellGeometryFEM(dm, cone[0], quad, coords, fegeom.J, fegeom.invJ, fegeom.detJ);CHKERRQ(ierr);
       } else {
         ierr = DMPlexComputeCellGeometryFEM(dm, cell, quad, coords, fegeom.J, fegeom.invJ, fegeom.detJ);CHKERRQ(ierr);
       }
       ierr = DMPlexVecGetClosure(dm, NULL, localX, cell, NULL, &x);CHKERRQ(ierr);
-      for (f = fStart; f < dsNf; ++f) {
+      for (f = 0; f < dsNf; ++f) {
         PetscObject  obj;
         PetscClassId id;
         void * const ctx = ctxs ? ctxs[fields[f]] : NULL;
         PetscInt     Nb, Nc, q, fc;
         PetscReal    elemDiff = 0.0;
+        PetscBool    cohesive;
 
+        ierr = PetscDSGetCohesive(ds, f, &cohesive);CHKERRQ(ierr);
+        if (!cohesive) continue;
         ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
         ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
         if (id == PETSCFE_CLASSID)      {ierr = PetscFEGetNumComponents((PetscFE) obj, &Nc);CHKERRQ(ierr);ierr = PetscFEGetDimension((PetscFE) obj, &Nb);CHKERRQ(ierr);}
@@ -4977,6 +4979,7 @@ PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, PetscFormKey key[], 
       PetscFEGeom    *chunkGeom = NULL, *remGeom = NULL;
       PetscQuadrature quad = affineQuad ? affineQuad : quads[f];
       PetscInt        numChunks, numBatches, batchSize, numBlocks, blockSize, Ne, Nr, offset, Nq, Nb;
+      PetscBool       isCohesiveField;
 
       ierr = PetscDSGetDiscretization(ds, f, (PetscObject *) &fe);CHKERRQ(ierr);
       if (!fe) continue;
@@ -4992,8 +4995,9 @@ PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, PetscFormKey key[], 
       offset    = numCells - Nr;
       ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
       ierr = PetscFEGeomGetChunk(geom,offset,numCells,&remGeom);CHKERRQ(ierr);
-      chunkGeom->isHybrid = remGeom->isHybrid = PETSC_TRUE;
-      if (f == Nf-1) {
+      ierr = PetscDSGetCohesive(ds, f, &isCohesiveField);CHKERRQ(ierr);
+      chunkGeom->isCohesive = remGeom->isCohesive = PETSC_TRUE;
+      if (isCohesiveField) {
         key[2].field = f;
         ierr = PetscFEIntegrateHybridResidual(ds, key[2], 0, Ne, chunkGeom, u, u_t, dsAux[2], a[2], t, elemVec);CHKERRQ(ierr);
         ierr = PetscFEIntegrateHybridResidual(ds, key[2], 0, Nr, remGeom,  &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux[2], &a[2][offset*totDimAux[2]], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
@@ -5615,6 +5619,7 @@ PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM dm, PetscFormKey key[], 
       PetscFEGeom    *chunkGeom = NULL, *remGeom = NULL;
       PetscQuadrature quad = affineQuad ? affineQuad : quads[fieldI];
       PetscInt        numChunks, numBatches, batchSize, numBlocks, blockSize, Ne, Nr, offset, Nq, Nb;
+      PetscBool       isCohesiveField;
 
       ierr = PetscDSGetDiscretization(ds, fieldI, (PetscObject *) &feI);CHKERRQ(ierr);
       if (!feI) continue;
@@ -5630,12 +5635,13 @@ PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM dm, PetscFormKey key[], 
       offset    = numCells - Nr;
       ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
       ierr = PetscFEGeomGetChunk(geom,offset,numCells,&remGeom);CHKERRQ(ierr);
+      ierr = PetscDSGetCohesive(ds, fieldI, &isCohesiveField);CHKERRQ(ierr);
       for (fieldJ = 0; fieldJ < Nf; ++fieldJ) {
         PetscFE feJ;
 
         ierr = PetscDSGetDiscretization(ds, fieldJ, (PetscObject *) &feJ);CHKERRQ(ierr);
         if (!feJ) continue;
-        if (fieldI == Nf-1) {
+        if (isCohesiveField) {
           key[2].field = fieldI*Nf+fieldJ;
           if (hasBdJac) {
             ierr = PetscFEIntegrateHybridJacobian(ds, PETSCFE_JACOBIAN, key[2], Ne, chunkGeom, u, u_t, dsAux[2], a[2], t, X_tShift, elemMat);CHKERRQ(ierr);

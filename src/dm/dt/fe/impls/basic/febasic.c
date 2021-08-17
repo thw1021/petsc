@@ -623,7 +623,7 @@ static PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscForm
     else         {ierr = PetscDSGetFaceTabulation(dsAux, &TfAux);CHKERRQ(ierr);}
     if (Tf[0]->Np != TfAux[0]->Np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of tabulation points %D != %D number of auxiliary tabulation points", Tf[0]->Np, TfAux[0]->Np);
   }
-  isCohesiveField = field == Nf-1 ? PETSC_TRUE : PETSC_FALSE;
+  ierr = PetscDSGetCohesive(ds, field, &isCohesiveField);CHKERRQ(ierr);
   NcI = Tf[field]->Nc;
   NcS = NcI;
   ierr = PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights);CHKERRQ(ierr);
@@ -1033,8 +1033,8 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscFEJacobianT
     else         {ierr = PetscDSGetFaceTabulation(dsAux, &TAux);CHKERRQ(ierr);}
     if (T[0]->Np != TAux[0]->Np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of tabulation points %D != %D number of auxiliary tabulation points", T[0]->Np, TAux[0]->Np);
   }
-  isCohesiveFieldI = fieldI == Nf-1 ? PETSC_TRUE : PETSC_FALSE;
-  isCohesiveFieldJ = fieldJ == Nf-1 ? PETSC_TRUE : PETSC_FALSE;
+  ierr = PetscDSGetCohesive(ds, fieldI, &isCohesiveFieldI);CHKERRQ(ierr);
+  ierr = PetscDSGetCohesive(ds, fieldJ, &isCohesiveFieldJ);CHKERRQ(ierr);
   NcI = T[fieldI]->Nc;
   NcJ = T[fieldJ]->Nc;
   NcS = isCohesiveFieldI ? NcI : 2*NcI;
