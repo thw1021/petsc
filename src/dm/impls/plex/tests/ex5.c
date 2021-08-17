@@ -301,11 +301,12 @@ Test 1:
 */
 
 typedef struct {
-  PetscInt  debug;         /* The debugging level */
-  PetscInt  dim;           /* The topological mesh dimension */
-  PetscBool cellSimplex;   /* Use simplices or hexes */
-  PetscBool testPartition; /* Use a fixed partitioning for testing */
-  PetscInt  testNum;       /* The particular mesh to test */
+  PetscInt  debug;          /* The debugging level */
+  PetscInt  dim;            /* The topological mesh dimension */
+  PetscBool cellSimplex;    /* Use simplices or hexes */
+  PetscBool testPartition;  /* Use a fixed partitioning for testing */
+  PetscInt  testNum;        /* The particular mesh to test */
+  PetscInt  cohesiveFields; /* The number of cohesive fields */
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -313,11 +314,12 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  options->debug         = 0;
-  options->dim           = 2;
-  options->cellSimplex   = PETSC_TRUE;
-  options->testPartition = PETSC_TRUE;
-  options->testNum       = 0;
+  options->debug          = 0;
+  options->dim            = 2;
+  options->cellSimplex    = PETSC_TRUE;
+  options->testPartition  = PETSC_TRUE;
+  options->testNum        = 0;
+  options->cohesiveFields = 1;
 
   ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-debug", "The debugging level", "ex5.c", options->debug, &options->debug, NULL,0);CHKERRQ(ierr);
@@ -325,6 +327,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsBool("-cell_simplex", "Use simplices if true, otherwise hexes", "ex5.c", options->cellSimplex, &options->cellSimplex, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-test_partition", "Use a fixed partition for testing", "ex5.c", options->testPartition, &options->testPartition, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-test_num", "The particular mesh to test", "ex5.c", options->testNum, &options->testNum, NULL,0);CHKERRQ(ierr);
+  ierr = PetscOptionsBoundedInt("-cohesive_fields", "The number of cohesive fields", "ex5.c", options->cohesiveFields, &options->cohesiveFields, NULL, 0);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -638,7 +641,7 @@ static PetscErrorCode CreateDiscretization(DM dm, AppCtx *user)
 {
   PetscFE        fe;
   DMLabel        fault;
-  PetscInt       dim;
+  PetscInt       dim, Ncf = user->cohesiveFields, f;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -651,10 +654,22 @@ static PetscErrorCode CreateDiscretization(DM dm, AppCtx *user)
   ierr = DMAddField(dm, NULL, (PetscObject) fe);CHKERRQ(ierr);
   ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
 
-  ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim-1, dim, user->cellSimplex, "faulttraction_", PETSC_DETERMINE, &fe);CHKERRQ(ierr);
-  ierr = PetscFESetName(fe, "fault traction");CHKERRQ(ierr);
-  ierr = DMAddField(dm, fault, (PetscObject) fe);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+  if (Ncf > 0) {
+    ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim-1, dim, user->cellSimplex, "faulttraction_", PETSC_DETERMINE, &fe);CHKERRQ(ierr);
+    ierr = PetscFESetName(fe, "fault traction");CHKERRQ(ierr);
+    ierr = DMAddField(dm, fault, (PetscObject) fe);CHKERRQ(ierr);
+    ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+  }
+  for (f = 1; f < Ncf; ++f) {
+    char name[256], opt[256];
+
+    ierr = PetscSNPrintf(name, 256, "fault field %D", f);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(opt,  256, "faultfield_%D_", f);CHKERRQ(ierr);
+    ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim-1, dim, user->cellSimplex, opt, PETSC_DETERMINE, &fe);CHKERRQ(ierr);
+    ierr = PetscFESetName(fe, name);CHKERRQ(ierr);
+    ierr = DMAddField(dm, fault, (PetscObject) fe);CHKERRQ(ierr);
+    ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+  }
 
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -937,12 +952,15 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   PetscDS          probh;
   DMLabel          fault, material;
   IS               cohesiveCells;
-  PetscFormKey keys[3];
+  PetscWeakForm    wf;
+  PetscFormKey     keys[3];
   PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
   PetscInt         dim, Nf, cMax, cEnd, id;
+  PetscMPIInt      rank;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexGetSimplexOrBoxCells(dm, 0, NULL, &cMax);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, NULL, &cEnd);CHKERRQ(ierr);
@@ -972,21 +990,30 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   ierr = VecViewFromOptions(locX, NULL, "-local_solution_view");CHKERRQ(ierr);
 
   ierr = DMGetCellDS(dm, cMax, &probh);CHKERRQ(ierr);
+  ierr = PetscDSGetWeakForm(probh, &wf);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(probh, &Nf);CHKERRQ(ierr);
-  ierr = PetscDSSetBdResidual(probh, 0, f0_bd_u, NULL);CHKERRQ(ierr);
-  if (Nf > 1) {ierr = PetscDSSetBdResidual(probh, 1, f0_bd_l, NULL);CHKERRQ(ierr);}
-  ierr = PetscDSSetBdJacobian(probh, 0, 1, g0_bd_ul, NULL, NULL, NULL);CHKERRQ(ierr);
-  if (Nf > 1) {ierr = PetscDSSetBdJacobian(probh, 1, 0, g0_bd_lu, NULL, NULL, NULL);CHKERRQ(ierr);}
+  ierr = PetscWeakFormSetIndexBdResidual(wf, material, 1, 0, 0, 0, f0_bd_u, 0, NULL);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexBdResidual(wf, material, 2, 0, 0, 0, f0_bd_u, 0, NULL);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexBdJacobian(wf, material, 1, 0, 1, 0, 0, g0_bd_ul, 0, NULL, 0, NULL, 0, NULL);CHKERRQ(ierr);
+  ierr = PetscWeakFormSetIndexBdJacobian(wf, material, 2, 0, 1, 0, 0, g0_bd_ul, 0, NULL, 0, NULL, 0, NULL);CHKERRQ(ierr);
+  if (Nf > 1) {
+    ierr = PetscWeakFormSetIndexBdResidual(wf, fault, 1, 1, 0, 0, f0_bd_l, 0, NULL);CHKERRQ(ierr);
+    ierr = PetscWeakFormSetIndexBdJacobian(wf, fault, 1, 1, 0, 0, 0, g0_bd_lu, 0, NULL, 0, NULL, 0, NULL);CHKERRQ(ierr);
+  }
+  if (!rank) {ierr = PetscDSView(probh, NULL);CHKERRQ(ierr);}
 
   keys[0].label = material;
   keys[0].value = 1;
   keys[0].field = 0;
+  keys[0].part  = 0;
   keys[1].label = material;
   keys[1].value = 2;
   keys[1].field = 0;
+  keys[1].part  = 0;
   keys[2].label = fault;
   keys[2].value = 1;
-  keys[2].field = 0;
+  keys[2].field = 1;
+  keys[2].part  = 0;
   ierr = VecSet(locF, 0.);CHKERRQ(ierr);
   ierr = DMPlexComputeResidual_Hybrid_Internal(dm, keys, cohesiveCells, 0.0, locX, NULL, 0.0, locF, user);CHKERRQ(ierr);
   ierr = VecViewFromOptions(locF, NULL, "-local_residual_view");CHKERRQ(ierr);
@@ -1021,7 +1048,7 @@ int main(int argc, char **argv)
 /*TEST
   testset:
     args: -orig_dm_plex_check_all -dm_plex_check_all \
-          -displacement_petscspace_degree 1 -faulttraction_petscspace_degree 1 -dm_petscds_view -local_section_view \
+          -displacement_petscspace_degree 1 -faulttraction_petscspace_degree 1 -local_section_view \
           -local_solution_view -local_residual_view -local_jacobian_view
     test:
       suffix: tri_0
@@ -1038,7 +1065,7 @@ int main(int argc, char **argv)
 
   testset:
     args: -orig_dm_plex_check_all -dm_plex_check_all \
-          -displacement_petscspace_degree 1 -faulttraction_petscspace_degree 1 -dm_petscds_view
+          -displacement_petscspace_degree 1 -faulttraction_petscspace_degree 1
     test:
       suffix: tet_1
       nsize: 2
@@ -1050,7 +1077,7 @@ int main(int argc, char **argv)
 
   testset:
     args: -orig_dm_plex_check_all -dm_plex_check_all \
-          -displacement_petscspace_degree 1 -faulttraction_petscspace_degree 1 -dm_petscds_view
+          -displacement_petscspace_degree 1 -faulttraction_petscspace_degree 1
     # 2D Quads
     test:
       suffix: quad_0
