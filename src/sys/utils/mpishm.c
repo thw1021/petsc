@@ -35,7 +35,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm comm,Petsc
   inner communicator, we use a simple static array to store dupped communicators
   on rare cases otherwise.
  */
-#define MAX_SHMCOMM_DUPPED_COMMS 64
+#define MAX_SHMCOMM_DUPPED_COMMS 16
 static PetscInt       num_dupped_comms=0;
 static MPI_Comm       shmcomm_dupped_comms[MAX_SHMCOMM_DUPPED_COMMS];
 static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
