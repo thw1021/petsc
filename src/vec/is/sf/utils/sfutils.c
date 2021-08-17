@@ -712,7 +712,7 @@ PetscErrorCode PetscSFCreateByMatchingIndices(PetscLayout layout, PetscInt numRo
     ierr = PetscMalloc1(nleaves, &iremote);CHKERRQ(ierr);
     for (i = 0, nleaves = 0; i < numLeafIndices; ++i) {
       if (owners[i].rank != rank) {
-        ilocal[nleaves]        = leafLocalOffset + i;
+        ilocal[nleaves]        = leafLocalOffset + (leafLocalIndices ? leafLocalIndices[i] : i);
         iremote[nleaves].rank  = owners[i].rank;
         iremote[nleaves].index = owners[i].index;
         ++nleaves;
