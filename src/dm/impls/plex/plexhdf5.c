@@ -1439,6 +1439,59 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata_Load(PetscViewer view
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata_DistributeCones(PetscSF vertexSF, IS pointsIS, PetscSection coneSizesSection, IS conesIS, IS orientationsIS, IS *newPointsIS_, PetscSection *newConeSizesSection_, IS *newConesIS_, IS *newOrientationsIS_)
+{
+  IS              newPointsIS, newConesIS, newOrientationsIS;
+  PetscSection    newConeSizesSection;
+  PetscBool       debug = PETSC_FALSE;
+  MPI_Comm        comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)vertexSF, &comm);CHKERRQ(ierr);
+  //TODO this should be ISDistribute() [see below] with NULL PetscSection
+  {
+    IS originalIS = pointsIS;
+    IS newIS;
+    const PetscInt *originalValues;
+    PetscInt *newValues;
+    PetscInt n, nLeaves;
+    ierr = ISGetLocalSize(originalIS, &n);CHKERRQ(ierr);
+    ierr = PetscMalloc1(n, &newValues);CHKERRQ(ierr);
+    ierr = ISGetIndices(originalIS, &originalValues);CHKERRQ(ierr);
+    ierr = PetscSFGetGraph(vertexSF, NULL, &nLeaves, NULL, NULL);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin(vertexSF, MPIU_INT, (PetscInt *) originalValues, newValues, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(vertexSF, MPIU_INT, (PetscInt *) originalValues, newValues, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = ISRestoreIndices(originalIS, &originalValues);CHKERRQ(ierr);
+    ierr = ISCreateGeneral(comm, nLeaves, newValues, PETSC_OWN_POINTER, &newIS);CHKERRQ(ierr);
+    newPointsIS = newIS;
+  }
+  ierr = PetscSectionCreate(comm, &newConeSizesSection);CHKERRQ(ierr);
+  //TODO rename to something like ISDistribute(), allow multiple ISs at once
+  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, coneSizesSection, conesIS, newConeSizesSection, &newConesIS);CHKERRQ(ierr);
+  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, coneSizesSection, orientationsIS, newConeSizesSection, &newOrientationsIS);CHKERRQ(ierr);
+
+  if (debug) {
+    PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
+
+    ierr = PetscObjectSetName((PetscObject) newPointsIS, "newPointsIS");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newConeSizesSection, "newConeSizesSection");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newConesIS, "newConesIS");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newOrientationsIS, "newOrientationsIS");CHKERRQ(ierr);
+    ierr = ISView(newPointsIS, v);CHKERRQ(ierr);
+    ierr = PetscSectionView(newConeSizesSection, v);CHKERRQ(ierr);
+    ierr = ISView(newConesIS, v);CHKERRQ(ierr);
+    ierr = ISView(newOrientationsIS, v);CHKERRQ(ierr);
+  }
+
+  *newPointsIS_         = newPointsIS;
+  *newConeSizesSection_ = newConeSizesSection;
+  *newConesIS_          = newConesIS;
+  *newOrientationsIS_   = newOrientationsIS;
+  PetscFunctionReturn(0);
+}
+
 #include <petsc/private/hashseti.h>
 static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata_CreateSFs(PetscSection coneSection, IS cellVertexData, IS coneOrientations, PetscLayout vertexLayout, PetscSF *vertexSF_, PetscSF *pointSF_)
 {
@@ -1549,7 +1602,19 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
 
     ierr = DMPlexTopologyLoad_HDF5_v2_TwoStrata_Load(viewer, h, pointsLayout, &pointsIS, &coneSizesSection, &conesIS, &orientationsIS, &vertexLayout);CHKERRQ(ierr);
     if (vertexSF) {
-      //TODO need to redistribute coneSizes, cones and orientations based on previous vertexSF
+      IS              newPointsIS, newConesIS, newOrientationsIS;
+      PetscSection    newConeSizesSection;
+
+      ierr = DMPlexTopologyLoad_HDF5_v2_TwoStrata_DistributeCones(vertexSF, pointsIS, coneSizesSection, conesIS, orientationsIS, &newPointsIS, &newConeSizesSection, &newConesIS, &newOrientationsIS);CHKERRQ(ierr);
+
+      ierr = ISDestroy(&pointsIS);CHKERRQ(ierr);
+      ierr = PetscSectionDestroy(&coneSizesSection);CHKERRQ(ierr);
+      ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
+      ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
+      pointsIS          = newPointsIS;
+      coneSizesSection  = newConeSizesSection;
+      conesIS           = newConesIS;
+      orientationsIS    = newOrientationsIS;
     }
     ierr = DMPlexTopologyLoad_HDF5_v2_TwoStrata_CreateSFs(coneSizesSection, conesIS, orientationsIS, vertexLayout, &newVertexSF, &pointSF);CHKERRQ(ierr);
 
