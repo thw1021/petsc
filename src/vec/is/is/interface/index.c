@@ -1133,7 +1133,7 @@ PetscErrorCode  ISGetLocalSize(IS is,PetscInt *size)
 
    Level: developer
 
-.seealso: ISGetSize(), ISGetLocalSize()
+.seealso: ISSetLayout(), ISGetSize(), ISGetLocalSize()
 @*/
 PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
 {
@@ -1142,6 +1142,30 @@ PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidPointer(map,2);
   *map = is->map;
+  PetscFunctionReturn(0);
+}
+
+/*@
+   ISSetLayout - set PetscLayout describing index set layout
+
+   Not Collective
+
+   Input Arguments:
++  is - the index set
+-  map - the layout
+
+   Level: developer
+
+.seealso: ISGetLayout(), ISGetSize(), ISGetLocalSize()
+@*/
+PetscErrorCode ISSetLayout(IS is,PetscLayout map)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(is,IS_CLASSID,1);
+  PetscValidPointer(map,2);
+  ierr = PetscLayoutReference(map,&is->map);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
