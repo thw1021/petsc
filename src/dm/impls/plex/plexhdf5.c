@@ -467,6 +467,7 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
   IS              globalPointNumbers0;
   const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
   PetscInt        depth, h;
+  PetscBool       debug = PETSC_FALSE;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -474,9 +475,19 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
   coneSizesName     = "cone_sizes";
   conesName         = "cones";
   orientationsName  = "orientations";
+  ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_view_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "height_strata");CHKERRQ(ierr);
   ierr = RenumberGlobalPointNumbersPerStratum_Private(dm, globalPointNumbers, &globalPointNumbers0);
+  if (debug) {
+    PetscViewer v = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject) dm));
+
+    ierr = PetscObjectSetName((PetscObject) globalPointNumbers, "globalPointNumbers");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) globalPointNumbers0, "globalPointNumbers0");CHKERRQ(ierr);
+    ierr = ISView(globalPointNumbers, v);CHKERRQ(ierr);
+    ierr = ISView(globalPointNumbers0, v);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
+  }
   ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
   for (h = 0; h <= depth; h++) {
     PetscInt pStart, pEnd;
