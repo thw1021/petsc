@@ -2,11 +2,14 @@
 
 static char help[] = "Solves a linear system using PCHPDDM.\n\n";
 
+static PetscErrorCode MatMult_Aux(Mat,Vec,Vec);
+static PetscErrorCode MatDestroy_Aux(Mat);
+
 int main(int argc,char **args)
 {
   Vec                x,b;        /* computed solution and RHS */
   Mat                A,aux,X,B;  /* linear system matrix */
-  KSP                ksp;        /* linear solver context */
+  KSP                ksp,st;     /* linear solver context */
   PC                 pc;
   IS                 is,sizes;
   const PetscInt     *idx;
@@ -67,11 +70,29 @@ int main(int argc,char **args)
   /* ready for testing */
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","","");CHKERRQ(ierr);
   ierr = PetscOptionsFList("-mat_type","Matrix type","MatSetType",MatList,deft,type,256,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   if (flg) {
     ierr = MatConvert(A,type,MAT_INPLACE_MATRIX,&A);CHKERRQ(ierr);
-    ierr = MatConvert(aux,type,MAT_INPLACE_MATRIX,&aux);CHKERRQ(ierr);
+    ierr = PetscOptionsFList("-aux_mat_type","Matrix type","MatSetType",MatList,deft,type,256,&flg);CHKERRQ(ierr);
+    ierr = PetscStrcmp(type,MATSHELL,&flg);CHKERRQ(ierr);
+    if (!flg) {
+      ierr = MatConvert(aux,type,MAT_INPLACE_MATRIX,&aux);CHKERRQ(ierr);
+    } else { /* users can specify a MatShell for the auxiliary Mat */
+      PC pc;
+      ierr = KSPCreate(PetscObjectComm((PetscObject)aux),&st);CHKERRQ(ierr);
+      ierr = KSPSetOperators(st,aux,aux);CHKERRQ(ierr);
+      ierr = KSPSetOptionsPrefix(st,"custom_ksp_for_st_");CHKERRQ(ierr);
+      ierr = KSPSetType(st,KSPPREONLY);CHKERRQ(ierr);
+      ierr = KSPGetPC(st,&pc);CHKERRQ(ierr);
+      ierr = PCSetType(pc,PCCHOLESKY);CHKERRQ(ierr);
+      ierr = KSPSetFromOptions(st);CHKERRQ(ierr);
+      ierr = MatGetSize(aux,&m,NULL);CHKERRQ(ierr);
+      ierr = MatDestroy(&aux);CHKERRQ(ierr);
+      ierr = MatCreateShell(PetscObjectComm((PetscObject)st),m,m,m,m,st,&aux);CHKERRQ(ierr); /* internally, PCHPDDM will use -pc_hpddm_levels_1_st_pc_type mat     */
+      ierr = MatShellSetOperation(aux,MATOP_MULT,(void (*)(void))MatMult_Aux);CHKERRQ(ierr); /* MATOP_MULT must provide the action of the inverse of auxiliary Mat */
+      ierr = MatShellSetOperation(aux,MATOP_DESTROY,(void (*)(void))MatDestroy_Aux);CHKERRQ(ierr);
+    }
   }
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
@@ -148,6 +169,28 @@ int main(int argc,char **args)
   return ierr;
 }
 
+static PetscErrorCode MatMult_Aux(Mat A,Vec x,Vec y)
+{
+  KSP            st;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = MatShellGetContext(A,&st);CHKERRQ(ierr);
+  ierr = KSPSolve(st,x,y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatDestroy_Aux(Mat A)
+{
+  KSP            st;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = MatShellGetContext(A,&st);CHKERRQ(ierr);
+  ierr = KSPDestroy(&st);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*TEST
 
    test:
@@ -155,11 +198,17 @@ int main(int argc,char **args)
       nsize: 4
       args: -ksp_rtol 1e-3 -ksp_converged_reason -pc_type {{bjacobi hpddm}shared output} -pc_hpddm_coarse_sub_pc_type lu -sub_pc_type lu -options_left no -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
 
-   test:
+   testset:
       requires: hpddm slepc datafilespath double !complex !define(PETSC_USE_64BIT_INDICES) define(PETSC_HAVE_DYNAMIC_LIBRARIES) define(PETSC_USE_SHARED_LIBRARIES)
-      suffix: geneo
       nsize: 4
-      args: -ksp_converged_reason -pc_type hpddm -pc_hpddm_levels_1_sub_pc_type cholesky -pc_hpddm_levels_1_eps_nev {{5 15}separate output} -pc_hpddm_levels_1_st_pc_type cholesky -pc_hpddm_coarse_p {{1 2}shared output} -pc_hpddm_coarse_pc_type redundant -mat_type {{aij baij sbaij}shared output} -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
+      args: -ksp_converged_reason -pc_type hpddm -pc_hpddm_levels_1_sub_pc_type cholesky -pc_hpddm_levels_1_st_pc_type cholesky -pc_hpddm_coarse_pc_type redundant -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
+      test:
+        suffix: geneo
+        args: -pc_hpddm_levels_1_eps_nev {{5 15}separate output} -pc_hpddm_coarse_p {{1 2}shared output} -mat_type {{aij baij sbaij}shared output}
+      test
+        suffix: geneo_shell
+        output_file: output/ex76_geneo_pc_hpddm_levels_1_eps_nev-15.out
+        args: -pc_hpddm_levels_1_eps_nev 15 -mat_type aij -aux_mat_type shell
 
    testset:
       requires: hpddm slepc datafilespath double !complex !define(PETSC_USE_64BIT_INDICES) define(PETSC_HAVE_DYNAMIC_LIBRARIES) define(PETSC_USE_SHARED_LIBRARIES)
