@@ -1347,15 +1347,11 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, P
   {
     IS              coneSizesIS;
     const PetscInt *coneSizes;
-    PetscLayout     coneSizesLayout;
-    PetscBool       flg;
 
     ierr = ISCreate(comm, &coneSizesIS);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
+    ierr = ISSetLayout(coneSizesIS, pointsLayout);CHKERRQ(ierr);
     ierr = ISLoad(coneSizesIS, viewer);CHKERRQ(ierr);
-    ierr = ISGetLayout(pointsIS, &coneSizesLayout);CHKERRQ(ierr);
-    ierr = PetscLayoutCompare(pointsLayout, coneSizesLayout, &flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(comm, PETSC_ERR_PLIB, "points layout != coneSizes layout");
     ierr = ISGetIndices(coneSizesIS, &coneSizes);CHKERRQ(ierr);
     ierr = PetscSectionCreate(comm, &coneSizesSection);CHKERRQ(ierr);
     ierr = PetscSectionSetChart(coneSizesSection, 0, pointsLayout->n);CHKERRQ(ierr);
