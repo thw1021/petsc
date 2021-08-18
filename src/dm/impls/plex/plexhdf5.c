@@ -1314,15 +1314,17 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer, Pets
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, PetscInt h, DM *dm, PetscSF *vertexSF)
+//TODO pointsIS should appear to be redundant
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata_Load(PetscViewer viewer, PetscInt h, PetscLayout pointsLayout, IS *pointsIS_, PetscSection *coneSizesSection_, IS *conesIS_, IS *orientationsIS_, PetscLayout *vertexLayout_)
 {
   char            path[128];
   MPI_Comm        comm;
   const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
-  PetscLayout     vertexLayout, pointsLayout;
+  PetscLayout     vertexLayout;
   PetscInt        s;
+  PetscBool       debug = PETSC_FALSE;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -1331,6 +1333,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, P
   conesName         = "cones";
   orientationsName  = "orientations";
 
+  ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)viewer, &comm);CHKERRQ(ierr);
 
   /* query size of next height stratum (1-lower dimension) */
@@ -1345,14 +1348,17 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, P
 
   ierr = PetscSNPrintf(path, sizeof(path), "%D", h);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, path);CHKERRQ(ierr);
-  ierr = DMCreate(comm, dm);CHKERRQ(ierr);
-  ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
 
   /* points and coneSizes have length of nPoints and loaded using the default layout */
   ierr = ISCreate(comm, &pointsIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
+  if (pointsLayout) {
+    ierr = ISSetLayout(pointsIS, pointsLayout);CHKERRQ(ierr);
+  }
   ierr = ISLoad(pointsIS, viewer);CHKERRQ(ierr);
-  ierr = ISGetLayout(pointsIS, &pointsLayout);CHKERRQ(ierr);
+  if (!pointsLayout) {
+    ierr = ISGetLayout(pointsIS, &pointsLayout);CHKERRQ(ierr);
+  }
 
   /* create coneSizesSection from stored IS coneSizes */
   {
@@ -1365,6 +1371,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, P
     ierr = ISLoad(coneSizesIS, viewer);CHKERRQ(ierr);
     ierr = ISGetIndices(coneSizesIS, &coneSizes);CHKERRQ(ierr);
     ierr = PetscSectionCreate(comm, &coneSizesSection);CHKERRQ(ierr);
+    //TODO different start ?
     ierr = PetscSectionSetChart(coneSizesSection, 0, pointsLayout->n);CHKERRQ(ierr);
     for (s = 0; s < pointsLayout->n; ++s) {
       ierr = PetscSectionSetDof(coneSizesSection, s, coneSizes[s]);CHKERRQ(ierr);
@@ -1399,9 +1406,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, P
     if (!flg) SETERRQ(comm, PETSC_ERR_PLIB, "points layout != coneSizesSection point layout");
     ierr = PetscLayoutDestroy(&pointsLayout0);CHKERRQ(ierr);
   }
-
-#if 1
-  {
+  if (debug) {
     const char *group;
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
 
@@ -1412,33 +1417,112 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata(PetscViewer viewer, P
     ierr = PetscSectionView(coneSizesSection, v);CHKERRQ(ierr);
     ierr = ISView(conesIS, v);CHKERRQ(ierr);
     ierr = ISView(orientationsIS, v);CHKERRQ(ierr);
+    //TODO PetscLayoutView()
     {
+      PetscMPIInt rank;
+
+      ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushSynchronized(v);CHKERRQ(ierr);
       ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(v, "vertexLayout n N %D %D\n", vertexLayout->n, vertexLayout->N);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopSynchronized(v);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(v, "[%d] vertexLayout n N rstart rend %D %D %D %D\n", rank, vertexLayout->n, vertexLayout->N, vertexLayout->rstart, vertexLayout->rend);CHKERRQ(ierr);
       ierr = PetscViewerFlush(v);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPopSynchronized(v);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   }
-#endif
-
-  ierr = DMPlexTopologyBuildTwoStrata(*dm, coneSizesSection, conesIS, orientationsIS, vertexLayout, vertexSF);CHKERRQ(ierr);
-
-  ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
-  ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
-  ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  *pointsIS_          = pointsIS;
+  *coneSizesSection_  = coneSizesSection;
+  *conesIS_           = conesIS;
+  *orientationsIS_    = orientationsIS;
+  *vertexLayout_      = vertexLayout;
+  PetscFunctionReturn(0);
+}
+
+#include <petsc/private/hashseti.h>
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v2_TwoStrata_CreateSFs(PetscSection coneSection, IS cellVertexData, IS coneOrientations, PetscLayout vertexLayout, PetscSF *vertexSF_, PetscSF *pointSF_)
+{
+  PetscSF         vertexSF, pointSF;
+  PetscInt        *verticesAdj;
+  PetscInt        i, n, numVerticesAdj;
+  const PetscInt  *cvd, *co = NULL;
+  PetscBool       debug = PETSC_FALSE;
+  MPI_Comm        comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)coneSection, &comm);CHKERRQ(ierr);
+  ierr = PetscSectionGetStorageSize(coneSection, &n);CHKERRQ(ierr);
+  {
+    PetscInt n0;
+    ierr = ISGetLocalSize(cellVertexData, &n0);CHKERRQ(ierr);
+    if (n != n0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Local size of IS cellVertexData = %D != %D = storage size of PetscSection coneSection",n0,n);
+    ierr = ISGetIndices(cellVertexData, &cvd);CHKERRQ(ierr);
+  }
+  if (coneOrientations) {
+    PetscInt n0;
+    ierr = ISGetLocalSize(coneOrientations, &n0);CHKERRQ(ierr);
+    if (n != n0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Local size of IS coneOrientations = %D != %D = storage size of PetscSection coneSection",n0,n);
+    ierr = ISGetIndices(coneOrientations, &co);CHKERRQ(ierr);
+  }
+  /* Get/check global number of vertices */
+  {
+    PetscInt NVerticesInCells = PETSC_MIN_INT;
+
+    /* NVerticesInCells = max(cellVertexData) + 1 */
+    for (i=0; i<n; i++) if (cvd[i] > NVerticesInCells) NVerticesInCells = cvd[i];
+    ++NVerticesInCells;
+    ierr = MPI_Allreduce(MPI_IN_PLACE, &NVerticesInCells, 1, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
+
+    if (vertexLayout->n == PETSC_DECIDE && vertexLayout->N == PETSC_DECIDE) vertexLayout->N = NVerticesInCells;
+    else if (vertexLayout->N != PETSC_DECIDE && vertexLayout->N < NVerticesInCells) SETERRQ2(comm, PETSC_ERR_ARG_SIZ, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",vertexLayout->N,NVerticesInCells);
+    ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
+  }
+  /* Count locally unique vertices */
+  {
+    PetscHSetI vhash;
+    PetscInt off = 0;
+
+    ierr = PetscHSetICreate(&vhash);CHKERRQ(ierr);
+    for (i = 0; i < n; ++i) {
+      ierr = PetscHSetIAdd(vhash, cvd[i]);CHKERRQ(ierr);
+    }
+    ierr = PetscHSetIGetSize(vhash, &numVerticesAdj);CHKERRQ(ierr);
+    ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr);
+    ierr = PetscHSetIGetElems(vhash, &off, verticesAdj);CHKERRQ(ierr);
+    ierr = PetscHSetIDestroy(&vhash);CHKERRQ(ierr);
+    if (off != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
+  }
+  ierr = PetscSortInt(numVerticesAdj, verticesAdj);CHKERRQ(ierr);
+
+  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, verticesAdj, 0, numVerticesAdj, verticesAdj, verticesAdj, 0, &vertexSF, &pointSF);CHKERRQ(ierr);
+
+  ierr = PetscObjectSetName((PetscObject) pointSF, "point SF");CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) vertexSF, "vertex SF");CHKERRQ(ierr);
+
+  if (debug) {
+    PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
+
+    ierr = PetscViewerASCIIPrintf(v, "verticesAdj:\n");CHKERRQ(ierr);
+    ierr = PetscIntView(numVerticesAdj, verticesAdj, v);CHKERRQ(ierr);
+    ierr = PetscSFView(pointSF, v);CHKERRQ(ierr);
+    ierr = PetscSFView(vertexSF, v);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
+  }
+  ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
+  *vertexSF_ = vertexSF;
+  *pointSF_ = pointSF;
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *sf)
 {
+  PetscLayout     pointsLayout = NULL;
+  PetscSF         vertexSF = NULL;
   MPI_Comm        comm;
   PetscInt        depth;
   PetscInt        h;
-  DM              *twoStrataDMs;
-  PetscSF         *twoStrataMigrationSFs;
   PetscMPIInt     size, rank;
   PetscErrorCode  ierr;
 
@@ -1456,20 +1540,31 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
 
   //TODO switch to (depth) strata?
   ierr = PetscViewerHDF5PushGroup(viewer, "height_strata");CHKERRQ(ierr);
-  ierr = PetscCalloc2(depth+1, &twoStrataDMs, depth+1, &twoStrataMigrationSFs);CHKERRQ(ierr);
 
   for (h = 0; h < depth; h++) {
-    DM              dm;
-    PetscSF         sf;
+    IS              pointsIS, conesIS, orientationsIS;
+    PetscSection    coneSizesSection;
+    PetscLayout     vertexLayout;
+    PetscSF         newVertexSF, pointSF;
 
-    ierr = DMPlexTopologyLoad_HDF5_v2_TwoStrata(viewer, h, &dm, &sf);CHKERRQ(ierr);
-    twoStrataDMs[h]          = dm;
-    twoStrataMigrationSFs[h] = sf;
+    ierr = DMPlexTopologyLoad_HDF5_v2_TwoStrata_Load(viewer, h, pointsLayout, &pointsIS, &coneSizesSection, &conesIS, &orientationsIS, &vertexLayout);CHKERRQ(ierr);
+    if (vertexSF) {
+      //TODO need to redistribute coneSizes, cones and orientations based on previous vertexSF
+    }
+    ierr = DMPlexTopologyLoad_HDF5_v2_TwoStrata_CreateSFs(coneSizesSection, conesIS, orientationsIS, vertexLayout, &newVertexSF, &pointSF);CHKERRQ(ierr);
+
+    ierr = ISDestroy(&pointsIS);CHKERRQ(ierr);
+    ierr = PetscSectionDestroy(&coneSizesSection);CHKERRQ(ierr);
+    ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
+    ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&pointSF);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
+    ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
+    pointsLayout = vertexLayout;
+    vertexSF = newVertexSF;
   }
-
-  //TODO combine the DMs and SFs
-
-  ierr = PetscFree2(twoStrataDMs, twoStrataMigrationSFs);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
 
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* height_strata */
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* topology */
