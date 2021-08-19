@@ -97,6 +97,8 @@ Changes: Development
 -  Add ``MatNormalGetMat()`` to retrieve the underlying ``Mat`` of a ``MATNORMAL``
 -  Add ``MatNormalHermitianGetMat()`` to retrieve the underlying ``Mat`` of a ``MATNORMALHERMITIAN``
 -  Add ``VecCreateMPICUDA()`` and ``VecCreateMPIHIP()`` to create MPI device vectors
+-  Add accessors routines for device index data of ``MATSEQAIJCUSPARSE`` matrices: ``MatSeqAIJCUSPARSEGetIJ`` and ``MatSeqAIJCUSPARSERestoreIJ``
+-  Add accessors routines for device data of ``MATSEQAIJCUSPARSE`` matrices: ``MatSeqAIJCUSPARSEGetArray``, ``MatSeqAIJCUSPARSERestoreArray``, ``MatSeqAIJCUSPARSEGetArrayRead``, ``MatSeqAIJCUSPARSERestoreArrayRead``. ``MatSeqAIJCUSPARSEGetArrayWrite``, ``MatSeqAIJCUSPARSERestoreArrayWrite``
 -  ``MatPreallocatorPreallocate`` performance `significantly improved <https://gitlab.com/petsc/petsc/-/merge_requests/4273>`_
 
 .. rubric:: PC:
