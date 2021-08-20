@@ -223,13 +223,15 @@ int main(int argc,char **args)
       args: -ksp_monitor -ksp_rtol 1e-6 -pc_type hmg -pc_hmg_coarsening_component 2  -pc_hmg_use_subspace_coarsening 1 -bs 4 -hmg_inner_pc_type gamg
 
    testset:
-      suffix: expl
+      output_file: output/ex4_expl.out
       nsize: {{1 2}}
       filter: grep -v "MPI processes" | grep -v " type:" | grep -v "Mat Object"
       args: -ksp_converged_reason -view_explicit_mat -pc_type none -ksp_type {{cg gmres}}
       test:
+        suffix: expl_aij
         args: -mat_type aij
       test:
+        suffix: expl_hypre
         requires: hypre
         args: -mat_type hypre
 
