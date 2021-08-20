@@ -673,10 +673,10 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
       poi = offd->i;
       poj = offd->j;
       if (sameint) {
-        hdi = pdi;
-        hdj = pdj;
-        hoi = poi;
-        hoj = poj;
+        hdi = (HYPRE_Int*)pdi;
+        hdj = (HYPRE_Int*)pdj;
+        hoi = (HYPRE_Int*)poi;
+        hoj = (HYPRE_Int*)poj;
       }
     }
     garray = a->garray;
@@ -698,8 +698,8 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
       pdi = diag->i;
       pdj = diag->j;
       if (sameint) {
-        hdi = pdi;
-        hdj = pdj;
+        hdi = (HYPRE_Int*)pdi;
+        hdj = (HYPRE_Int*)pdj;
       }
     }
     garray = NULL;

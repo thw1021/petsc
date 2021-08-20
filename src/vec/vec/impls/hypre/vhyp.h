@@ -9,7 +9,7 @@ struct VecHYPRE_IJVector_ {
   HYPRE_IJVector ij;
   /* Support for push/pop of PETSc's Vec memory into a ParVector */
   Vec            pvec;
-  PetscScalar    *hv;
+  HYPRE_Complex  *hv;
   PetscErrorCode (*restore)(Vec,PetscScalar**);
 };
 typedef struct VecHYPRE_IJVector_ *VecHYPRE_IJVector;
