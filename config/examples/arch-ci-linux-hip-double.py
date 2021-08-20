@@ -26,7 +26,7 @@ if __name__ == '__main__':
     '--download-fblaslapack=1',
     '--download-magma=1',
     '--download-hypre=1',
-    '--download-hypre-commit=hypre_petsc',
+    '--download-hypre-commit=origin/hypre_petsc',
     '--with-magma-fortran-bindings=0',
     '--with-magma-gputarget=gfx906',
   ]

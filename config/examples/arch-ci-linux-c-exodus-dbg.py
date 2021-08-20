@@ -34,7 +34,7 @@ if __name__ == '__main__':
     '--download-p4est',
     '--download-viennacl',
     '--download-hypre=1',
-    '--download-hypre-commit=hypre_petsc',
+    '--download-hypre-commit=origin/hypre_petsc',
     '--with-cuda',
     '--with-shared-libraries',
     '--download-magma',
