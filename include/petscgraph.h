@@ -1,7 +1,10 @@
-#ifndef PETSCGRAPH_HPP
-#define PETSCGRAPH_HPP
+#ifndef PETSCGRAPH_H
+#define PETSCGRAPH_H
 
-#include <petsc/private/petscimpl.h>
+#include <petscsys.h>
+#include <petscgraphtypes.h>
+
+PETSC_EXTERN PetscErrorCode PetscCallGraphCreate(MPI_Comm,PetscCallGraph*);
 
 #if defined(__cplusplus)
 
@@ -106,27 +109,27 @@ struct function_traits<R(C::*)> : function_traits<R()>
 
 // std::function
 template <typename T>
-struct function_traits<std::function<T>> : public function_traits<T>
+struct function_traits<std::function<T>> : function_traits<T>
 { };
 
 // lvalue reference
 template <typename T>
-struct function_traits<T&> : public function_traits<T>
+struct function_traits<T&> : function_traits<T>
 { };
 
 // const lvalue reference
 template <typename T>
-struct function_traits<const T&> : public function_traits<T>
+struct function_traits<const T&> : function_traits<T>
 { };
 
 // rvalue reference
 template <typename T>
-struct function_traits<T&&> : public function_traits<T>
+struct function_traits<T&&> : function_traits<T>
 { };
 
 // lambda
 template <typename T>
-struct function_traits : public function_traits<decltype(&T::operator())>
+struct function_traits : function_traits<decltype(&T::operator())>
 { };
 
 template <class T>
@@ -174,7 +177,6 @@ struct ExecutionContext
 
   static PetscInt newStream() { return pool++;}
 };
-PetscInt ExecutionContext::pool = 0;
 
 class CallNode
 {
@@ -289,9 +291,8 @@ private:
   std::vector<edge_t> _inedges;
   std::vector<edge_t> _outedges;
   std::string         _name;
-  const PetscInt      _id;
-
   static PetscInt     counter;
+  const PetscInt      _id = counter++;
 
   friend class CallGraph;
 
@@ -300,24 +301,18 @@ private:
     PetscFunctionBegin;
     if (PetscDefined(USE_DEBUG)) {
       CHKERRCXX(std::cout<<"node "<<_id);
-      if (!_name.empty()) {
-        CHKERRCXX(std::cout<<" ("<<_name<<')');
-      }
+      if (!_name.empty()) CHKERRCXX(std::cout<<" ("<<_name<<')');
       CHKERRCXX(std::cout<<" [in: ");
       if (_inedges.empty()) {
         CHKERRCXX(std::cout<<"none");
       } else {
-        for (const auto &in : _inedges) {
-          CHKERRCXX(std::cout<<in->_start<<",");
-        }
+        for (const auto &in : _inedges) CHKERRCXX(std::cout<<in->_start<<",");
       }
       CHKERRCXX(std::cout<<" out: ");
       if (_outedges.empty()) {
         CHKERRCXX(std::cout<<"none");
       } else {
-        for (const auto &out : _outedges) {
-          CHKERRCXX(std::cout<<out->_end<<",");
-        }
+        for (const auto &out : _outedges) CHKERRCXX(std::cout<<out->_end<<",");
       }
       CHKERRCXX(std::cout<<" ]"<<std::endl);
     }
@@ -326,15 +321,16 @@ private:
 
 public:
   // Default constructor
-  CallNode() : _id(counter++) { }
+  CallNode() { }
 
   // Named Default constructor
-  explicit CallNode(const char name[]) : _name(name),_id(counter++) { }
+  CallNode(std::string &&name) : _name(std::forward<std::string>(name)) { }
+  CallNode(const std::string &name) : _name(name) { }
+  CallNode(const char name[]) : _name(name) { }
 
   // Copy constructor
   CallNode(const CallNode &other)
-    : _functor(other._functor->clone()), _inedges(other._inedges), _outedges(other._outedges),
-      _id(counter++)
+    : _functor(other._functor->clone()), _inedges(other._inedges), _outedges(other._outedges)
   { }
 
   // Move constructor
@@ -350,8 +346,7 @@ public:
                 >::value
               >* = nullptr>
   CallNode(T &&f, std::tuple<Args...> &&args)
-    : _functor(new NativeCallable<Args...>(std::forward<T>(f),std::forward<std::tuple<Args...>>(args))),
-      _id(counter++)
+    : _functor(new NativeCallable<Args...>(std::forward<T>(f),std::forward<std::tuple<Args...>>(args)))
   { static_assert(sizeof...(Args),"need args for native call"); }
 
   // Templated constructor with optional tuple of arguments, only enabled if first
@@ -364,8 +359,7 @@ public:
                 >::value
               >* = nullptr>
   CallNode(T &&f, std::tuple<Args...> &&args)
-    : _functor(new WrappedCallable<Args...>(std::forward<T>(f),std::forward<std::tuple<Args...>>(args))),
-      _id(counter++)
+    : _functor(new WrappedCallable<Args...>(std::forward<T>(f),std::forward<std::tuple<Args...>>(args)))
   { }
 
   // Templated constructor with bare arguments
@@ -400,80 +394,6 @@ public:
   // Execution
   PetscErrorCode run(ExecutionContext*) const;
 };
-
-CallNode& CallNode::operator=(const CallNode &other)
-{
-  PetscFunctionBegin;
-  if (this != &other) {
-    if (other._functor) {_functor = other._functor->clone();}
-    _inedges  = other._inedges;
-    _outedges = other._outedges;
-  }
-  PetscFunctionReturn(*this);
-}
-
-CallNode& CallNode::operator=(CallNode &&other) noexcept
-{
-  PetscFunctionBegin;
-  if (this != &other) {
-    _functor  = std::move(other._functor);
-    _inedges  = std::move(other._inedges);
-    _outedges = std::move(other._outedges);
-  }
-  PetscFunctionReturn(*this);
-}
-
-PetscErrorCode CallNode::before(CallNode &other)
-{
-  PetscFunctionBegin;
-  {
-    std::cout<<_id<<" before "<<other._id<<std::endl;
-    CHKERRCXX(_outedges.push_back(std::make_shared<Edge>(_id,other._id)));
-    CHKERRCXX(other._inedges.push_back(_outedges.back()));
-  }
-  PetscFunctionReturn(0);
-}
-
-template <typename... Args, detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>*>
-PetscErrorCode CallNode::before(std::tuple<Args...> &others)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = detail::forEachInTuple([this](CallNode *other){return before(*other);},others);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode CallNode::after(CallNode &other)
-{
-  PetscFunctionBegin;
-  std::cout<<_id<<" after "<<other._id<<std::endl;
-  CHKERRCXX(_inedges.push_back(std::make_shared<Edge>(other._id,_id)));
-  CHKERRCXX(other._outedges.push_back(_inedges.back()));
-  PetscFunctionReturn(0);
-}
-
-template <typename... Args, detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>*>
-PetscErrorCode CallNode::after(std::tuple<Args...> &others)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = detail::forEachInTuple([this](CallNode *other){return after(*other);},others);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode CallNode::run(ExecutionContext *ctx) const
-{
-  PetscFunctionBegin;
-  if (_functor) {
-    PetscErrorCode ierr;
-
-    std::cout<<"- running on stream "<<ctx->stream<<":\n";
-    ierr = (*_functor)(ctx);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
 
 class CallGraph
 {
@@ -519,9 +439,11 @@ private:
     const auto quickDelete = [](const CallNode::edge_t &edge, std::vector<CallNode::edge_t> &vec)
     {
       PetscFunctionBegin;
-      auto loc = std::find(vec.begin(),vec.end(),edge);
-      if (PetscUnlikelyDebug(loc == vec.end())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_POINTER,"Could not find location of edge in edge vector");
-      *loc = std::move(vec.back());
+      CHKERRCXX(
+        auto loc = std::find(vec.begin(),vec.end(),edge);
+        if (PetscUnlikelyDebug(loc == vec.end())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_POINTER,"Could not find location of edge in edge vector");
+        *loc = std::move(vec.back());
+      );
       CHKERRCXX(vec.pop_back());
       PetscFunctionReturn(0);
     };
@@ -624,7 +546,7 @@ private:
 
 public:
   CallGraph(const char name[] = "anonymous graph")
-    : _name(name),_begin((_name+" closure begin").c_str()),_end((_name+" closure end").c_str()) { }
+    : _name(name),_begin(_name+" closure begin"),_end(_name+" closure end") { }
 
   ~CallGraph()
   {
@@ -650,23 +572,8 @@ public:
   PetscErrorCode run(PetscInt = -1);
 };
 
-PetscErrorCode CallGraph::compose(CallGraph &other, CallNode *&node)
-{
-  PetscFunctionBegin;
-  node = emplace([&](ExecutionContext *ctx)
-  {
-    PetscErrorCode ierr;
-
-    PetscFunctionBegin;
-    ierr = other.run(ctx->stream);CHKERRQ(ierr);
-    PetscFunctionReturn(0);
-  });
-  PetscFunctionReturn(0);
-
-}
-
 template <typename T>
-CallNode* CallGraph::emplace(T &&ftor)
+inline CallNode* CallGraph::emplace(T &&ftor)
 {
   static_assert(detail::is_callable<T>::value,"Entity passed to graph does not appear to be callable");
   _finalized = PETSC_FALSE;
@@ -676,7 +583,7 @@ CallNode* CallGraph::emplace(T &&ftor)
 }
 
 template <typename... Argr, detail::enable_if_t<(sizeof...(Argr) > 1)>*>
-auto CallGraph::emplace(Argr&&... rest)
+inline auto CallGraph::emplace(Argr&&... rest)
   -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...))
 {
   return std::make_tuple(emplace(std::forward<Argr>(rest))...);
@@ -684,7 +591,7 @@ auto CallGraph::emplace(Argr&&... rest)
 
 template <typename T, typename... Argr,
           detail::enable_if_t<detail::is_callable<T>::value && (sizeof...(Argr) > 0)>*>
-CallNode* CallGraph::emplaceCall(T &&f, Argr&&... args)
+inline CallNode* CallGraph::emplaceCall(T &&f, Argr&&... args)
 {
   _finalized = PETSC_FALSE;
   _graph.emplace_back(new CallNode(std::forward<T>(f),std::forward<Argr>(args)...));
@@ -692,29 +599,23 @@ CallNode* CallGraph::emplaceCall(T &&f, Argr&&... args)
   return _graph.back();
 }
 
-PetscErrorCode CallGraph::setUserContext(void *ctx)
+template <typename... Args, detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>*>
+inline PetscErrorCode CallNode::before(std::tuple<Args...> &others)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
-  PetscValidPointer(ctx,1);
-  _userCtx = ctx;
+  ierr = detail::forEachInTuple([this](CallNode *other){return before(*other);},others);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode CallGraph::run(PetscInt stream)
+template <typename... Args, detail::enable_if_t<detail::all_same<CallNode*,Args...>::value>*>
+inline PetscErrorCode CallNode::after(std::tuple<Args...> &others)
 {
-  ExecutionContext ctx(_userCtx,stream);
-  PetscErrorCode   ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = __finalize();CHKERRQ(ierr);
-  std::cout<<"----- "<<_name<<" begin run\n";
-  for (const auto &node : _exec) {
-    ierr = node->__printDeps();CHKERRQ(ierr);
-    ierr = __joinAncestors(*node,ctx);CHKERRQ(ierr);
-    ierr = node->run(&ctx);CHKERRQ(ierr);
-    ierr = __forkDecendants(*node,ctx);CHKERRQ(ierr);
-  }
-  std::cout<<"----- "<<_name<<" end run\n";
+  ierr = detail::forEachInTuple([this](CallNode *other){return after(*other);},others);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -722,4 +623,4 @@ PetscErrorCode CallGraph::run(PetscInt stream)
 
 #endif /* __cplusplus */
 
-#endif /* PETSCGRAPH_HPP */
+#endif

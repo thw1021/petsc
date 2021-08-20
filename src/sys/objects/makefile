@@ -11,7 +11,7 @@ SOURCEF	  =
 SOURCEH	  = ../../../include/petscoptions.h  cupminit.inc
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
-DIRS	  = hip cuda f2003-src cxx kokkos device
+DIRS	  = hip cuda f2003-src cxx kokkos device graph
 LOCDIR	  = src/sys/objects/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
