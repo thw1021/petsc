@@ -1,4 +1,5 @@
-#include <petscgraph.hpp>
+#include <petsc/private/petscimpl.h>
+#include <petscgraph.h>
 
 using namespace Petsc;
 
