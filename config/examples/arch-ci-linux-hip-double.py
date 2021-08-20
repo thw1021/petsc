@@ -17,6 +17,7 @@ if __name__ == '__main__':
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
+    'HIPPPFLAGS=-I/scratch/soft/mpich/include', # needed by HYPRE
     '--with-cuda=0',
     '--with-hip=1',
     '--with-hipc=hipcc',

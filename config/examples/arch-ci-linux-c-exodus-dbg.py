@@ -14,6 +14,7 @@ if __name__ == '__main__':
     'COPTFLAGS=-g -O',
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
+    'CUDAPPFLAGS=-I/home/petsc/soft/mpich-3.3.1/include', # needed by HYPRE
     '--with-gcov=1',
     '--download-suitesparse',
     '--download-mumps',
