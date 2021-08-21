@@ -205,10 +205,11 @@ PetscErrorCode testPTAPRectangular(void)
       output_file: output/ex93_1.out
 
    #HYPRE PtAP is broken for complex numbers
+   #New API for MatMat is broken for this test case
    test:
       suffix: hypre
       nsize: 3
-      requires: hypre !complex
+      requires: hypre !complex !define(PETSC_HAVE_HYPRE_DEVICE)
       args: -matmatmult_via hypre -matptap_via hypre -test_hypre
       output_file: output/ex93_hypre.out
 
