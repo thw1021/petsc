@@ -23,6 +23,12 @@ class Configure(config.package.GNUPackage):
     self.hastests          = 1
     self.hastestsdatafiles = 1
 
+  def setupHelp(self, help):
+    config.package.GNUPackage.setupHelp(self,help)
+    import nargs
+    help.addArgument('HYPRE', '-with-hypre-gpu-arch=<string>',  nargs.ArgString(None, 0, 'Value for --with-gpu-arch= configure option'))
+    return
+
   def setupDependencies(self, framework):
     config.package.GNUPackage.setupDependencies(self, framework)
     self.openmp        = framework.require('config.packages.openmp',self)
@@ -74,9 +80,14 @@ class Configure(config.package.GNUPackage):
     cucc = ''
     devflags = ''
     cudabuild = False
+    hasharch = 'with-gpu-arch' in  args
     if self.hip.found:
       args.append('--with-hip')
-      args.append('--with-gpu-arch=gfx908') #TODO unify
+      if not hasharch:
+        if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
+          args.append('--with-gpu-arch=gfx908') # default
+        else:
+          args.append('--with-gpu-arch='+self.argDB['with-hypre-gpu-arch'])
       self.pushLanguage('HIP')
       cucc = self.getCompiler()
       devflags += ' -x hip -std=c++14 '
@@ -87,8 +98,14 @@ class Configure(config.package.GNUPackage):
       cudabuild = True
       args.append('CUDA_HOME="'+self.cuda.cudaDir+'"')
       args.append('--with-cuda')
-      if hasattr(self.cuda,'gencodearch'):
-        args.append('--with-gpu-arch=' + self.cuda.gencodearch) #TODO unify
+      if not hasharch:
+        if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
+          if hasattr(self.cuda,'gencodearch'):
+            args.append('--with-gpu-arch=' + self.cuda.gencodearch)
+          else:
+            args.append('--with-gpu-arch=70') # default
+        else:
+          args.append('--with-gpu-arch='+self.argDB['with-hypre-gpu-arch'])
       self.pushLanguage('CUDA')
       cucc = self.getCompiler()
       devflags += ' -expt-extended-lambda -std=c++11 --x cu '
