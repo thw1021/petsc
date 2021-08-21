@@ -10,7 +10,7 @@ struct UserCtx
   UserCtx(PetscInt val) : value(val) { }
 };
 
-PetscErrorCode testFunc(ExecutionContext *exec)
+PetscErrorCode startFunc(ExecutionContext *exec)
 {
   static PetscBool rep = PETSC_TRUE;
   UserCtx          *ctx;
@@ -42,10 +42,11 @@ PetscErrorCode testFuncOtherGraph(ExecutionContext *ctx)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode nativeFunction(PetscInt x)
+PetscErrorCode nativeFunction(PetscInt *x)
 {
   PetscFunctionBegin;
-  std::cout<<x<<'\n';
+  std::cout<<"native function "<<*x<<'\n';
+  *x = 5;
   PetscFunctionReturn(0);
 }
 
@@ -57,6 +58,7 @@ int main(int argc, char *argv[])
   ierr = PetscInitialize(&argc,&argv,NULL,NULL); if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
 
+  PetscInt  x = 123456;
   UserCtx   ctx(3);
   CallGraph graph2("small graph");
   CallNode  node,node2 = CallNode();
@@ -64,16 +66,15 @@ int main(int argc, char *argv[])
   node2 = node;
   graph2.setUserContext(&ctx);
   graph2.emplace(testFuncOtherGraph);
-  graph2.emplaceCall(nativeFunction,2);
+  graph2.emplaceCall(nativeFunction,&x);
   std::cout<<"-------------------"<<std::endl;
   {
+    PetscInt  n = 2;
     CallGraph graph("big graph");
-    CallNode  *graphNode;
 
-    ierr = graph.compose(graph2,graphNode);CHKERRQ(ierr);
-    std::cout<<"-------------------"<<std::endl;
-    auto nodeStart = graph.emplace(testFunc);
-    auto nodeJoin  = graph.emplaceCall(joinNodeFunction,2);
+    auto graphNode = graph.emplace(graph2);
+    auto nodeStart = graph.emplace(startFunc);
+    auto nodeJoin  = graph.emplaceCall(joinNodeFunction,n);
     auto midNodes  = graph.emplace([](ExecutionContext *ctx)
     {
       std::cout<<"mid node left\n";
@@ -90,7 +91,7 @@ int main(int argc, char *argv[])
       std::cout<<"fork node right\n";
       return 0;
     });
-    ierr = nodeStart->before(*std::get<0>(midNodes));CHKERRQ(ierr);
+    ierr = nodeStart->before(std::get<0>(midNodes));CHKERRQ(ierr);
     ierr = nodeJoin->after(midNodes);CHKERRQ(ierr);
     ierr = nodeJoin->before(nodeFork);CHKERRQ(ierr);
     ierr = graphNode->after(nodeFork);CHKERRQ(ierr);
