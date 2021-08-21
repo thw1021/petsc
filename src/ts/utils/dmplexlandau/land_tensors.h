@@ -259,7 +259,7 @@ PETSC_DEVICE_FUNC_DECL void LandauTensor3DRelativistic(const PetscReal a_x1[], c
       err = sqrt(err);
       err2 = udiff2*(err)/(g1*g2);
 #if defined(PETSC_USE_REAL_SINGLE)
-      if (err2>9.e-8 || err!=err) printf("LandauTensor3D r^2*|Q.(u1/g1-u2/g2)|/(g1*g2) = %12.7e |Q.(u1/g1-u2/g2)| = %12.7e |u-u'|=%12.7e, x1= %12.5e , %12.5e , %12.5e, x2= %12.5e , %12.5e , %12.5e |u-u'|=%12.7e\n", err2, (err), udiff, a_x1[0],a_x1[1],a_x1[2], xp,yp,zp,udiff);
+      if (err>1.e-7 || err!=err) printf("LandauTensor3D r^2*|Q.(u1/g1-u2/g2)|/(g1*g2) = %12.7e |Q.(u1/g1-u2/g2)| = %12.7e |u-u'|=%12.7e, x1= %12.5e , %12.5e , %12.5e, x2= %12.5e , %12.5e , %12.5e |u-u'|=%12.7e\n", err2, (err), udiff, a_x1[0],a_x1[1],a_x1[2], xp,yp,zp,udiff);
 #else
       if (err>1.e-14 || err!=err) {
         printf("LandauTensor3D r^2*|Q.(u1/g1-u2/g2)|/(g1*g2) = %12.7e |Q.(u1/g1-u2/g2)| = %12.7e |u-u'|=%12.7e, x1= %12.5e , %12.5e , %12.5e, x2= %12.5e , %12.5e , %12.5e |u-u'|=%12.7e\n", err2, (err), udiff, a_x1[0],a_x1[1],a_x1[2], xp,yp,zp,udiff);

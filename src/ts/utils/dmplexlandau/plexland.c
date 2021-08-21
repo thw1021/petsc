@@ -213,7 +213,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             //for (int d = 0; d < dim; ++d) refSpaceDer[d] *= c02;
             for (int d = 0; d < dim; ++d) dg2_c2 += PetscSqr(refSpaceDer[d]);
             dg2_c2 *= (double)c02;
-            if ( dg2_c2 >= .999) {
+            if (dg2_c2 >= .999) {
               xx[gidx] = vj[qj * dim + 0]; /* coordinate */
               yy[gidx] = vj[qj * dim + 1];
               if (dim==3) zz[gidx] = vj[qj * dim + 2];
@@ -447,17 +447,6 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             if (ctx->use_relativistic_corrections) {
               PetscReal U2[3][3];
               LandauTensor3DRelativistic(vj, x, y, z, U, (ipidx/mask_factor==jpidx/mask_factor) ? 0. : 1., C_0(ctx->v_0));
-              // debug
-              /* LandauTensor3D(vj, x, y, z, U2, (ipidx==jpidx) ? 0. : 1.); */
-              /* for (int i=0;i<3;i++) { */
-              /*   PetscPrintf(ctx->comm,"# "); */
-              /*   for (int j=0;j<3;j++) { */
-              /*     //if (ipidx!=jpidx) PetscPrintf(ctx->comm," %12.5e ",U2[i][j]-U[i][j] ); */
-              /*     if (ipidx!=jpidx) PetscPrintf(ctx->comm," %12.5e --> %12.5e ",U2[i][j],U[i][j] ); */
-              /*   } */
-              /*   PetscPrintf(ctx->comm,"\n"); */
-              /* } */
-              /* PetscPrintf(ctx->comm,"\n"); */
             } else {
               LandauTensor3D(vj, x, y, z, U, (ipidx==jpidx) ? 0. : 1.);
             }
@@ -1743,23 +1732,12 @@ static PetscErrorCode gamma_n_f(PetscInt dim, PetscReal time, const PetscReal x[
   const PetscReal c02 = c2_0_arr[0];
 
   PetscFunctionBegin;
-  for (int s = 0 ; s < Nf ; s++ ) {
+  for (int s = 0 ; s < Nf ; s++) {
     PetscReal tmp1 = 0.;
     for (int i = 0; i < dim; ++i) tmp1 += x[i]*x[i];
     u[s] = sqrt(1. + tmp1/c02);
   }
   PetscFunctionReturn(0);
-}
-
-static void f0_s_f_n(PetscInt dim, PetscInt Nf, PetscInt NfAux,
-                     const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
-                     const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                     PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
-{
-  for (int s = 0 ; s < Nf ; s++ ) {
-    double tmp1 = 0.;
-    f0[s] = u[s];
-  }
 }
 
 /* < v, ru > */
