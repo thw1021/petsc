@@ -341,7 +341,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     PetscInt        ei, qi;
     PetscScalar     *elemMat,coef_buff[LANDAU_MAX_SPECIES*LANDAU_MAX_NQ];
     PetscReal       *ff, *dudx, *dudy, *dudz, *invJ, *invJ_a = (PetscReal*)ctx->SData_d->invJ, *xx = (PetscReal*)ctx->SData_d->x, *yy = (PetscReal*)ctx->SData_d->y, *zz = (PetscReal*)ctx->SData_d->z, *ww = (PetscReal*)ctx->SData_d->w, *mass_w = (PetscReal*)ctx->SData_d->mass_w;
-    const PetscInt  nip = Nq*numCells, mask_factor = (ctx->use_energy_tensor_trick && Nq==8) ? Nq : 1; // 3D Q1
+    const PetscInt  nip = Nq*numCells, mask_factor = (ctx->use_energy_tensor_trick && (Nq==8 || Nq==4)) ? Nq : 1; // 3D Q1
     const PetscReal *const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1];
     PetscReal       Eq_m[LANDAU_MAX_SPECIES], invMass[LANDAU_MAX_SPECIES], nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
     if (shift!=0.0) { // mass
@@ -441,7 +441,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
 #if LANDAU_DIM==2
             PetscReal       Ud[2][2], Uk[2][2];
-            LandauTensor2D(vj, x, y, Ud, Uk, (ipidx==jpidx) ? 0. : 1.);
+            LandauTensor2D(vj, x, y, Ud, Uk, (ipidx/mask_factor==jpidx/mask_factor) ? 0. : 1.);
 #else
             PetscReal U[3][3], z = zz[ipidx];
             if (ctx->use_relativistic_corrections) {
@@ -1843,7 +1843,7 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
         if (ii==0) {
           Vec            gamma_glob,Mf,v1,v2;
           PetscErrorCode (*gammaf[1])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *) = {gamma_n_f};
-          PetscReal      *c2_0[1], data[0], val;
+          PetscReal      *c2_0[1], data[1];
           PetscInt       N;
 
           data[0] = PetscSqr(C_0(ctx->v_0));
@@ -1862,10 +1862,11 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
           ierr = VecSetFromOptions(v1);CHKERRQ(ierr);
           ierr = VecSetFromOptions(v2);CHKERRQ(ierr);
           for (int i=0;i<ctx->num_species;i++) {
+            PetscScalar val;
             ierr = VecStrideGather(gamma_glob,i,v1,INSERT_VALUES);CHKERRQ(ierr);
             ierr = VecStrideGather(Mf,i,v2,INSERT_VALUES);CHKERRQ(ierr);
             ierr = VecDot(v1,v2,&val);CHKERRQ(ierr);
-            energy[i] = val*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[i];
+            energy[i] = PetscRealPart(val)*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[i];
           }
           ierr = DMRestoreGlobalVector(dm, &gamma_glob);CHKERRQ(ierr);
           ierr = DMRestoreGlobalVector(dm, &Mf);CHKERRQ(ierr);
