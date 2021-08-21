@@ -1375,7 +1375,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->init = PETSC_FALSE; // doit first time
   ctx->use_matrix_mass = PETSC_FALSE; /* fast but slightly fragile */
   ctx->plex = NULL;     /* cache as expensive to Convert */
-  ctx->use_relativistic_corrections = PETSC_TRUE; // debug
+  ctx->use_relativistic_corrections = PETSC_FALSE;
   ctx->use_energy_tensor_trick = PETSC_FALSE; /* Use Eero's trick for energy conservation v --> grad(v^2/2) */
   ierr = PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");CHKERRQ(ierr);
   {
