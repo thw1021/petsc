@@ -1,34 +1,36 @@
 #include <petsc/private/petscimpl.h>
-#include <petscgraph.h>
+#include <petscgraph.hpp>
 
 using namespace Petsc;
 
-PetscInt CallNode::counter = 0;
-
 struct UserCtx
 {
-  int value;
+  PetscInt value;
 
-  UserCtx(int i) : value(i) { }
+  UserCtx(PetscInt val) : value(val) { }
 };
 
-PetscErrorCode testFunc(ExecutionContext *ctx)
+PetscErrorCode testFunc(ExecutionContext *exec)
 {
+  static PetscBool rep = PETSC_TRUE;
+  UserCtx          *ctx;
+  PetscErrorCode   ierr;
+
   PetscFunctionBegin;
-  PetscValidPointer(ctx,1);
-  auto context = ctx->userCtx;
-  (void)(context);
-  std::cout<<"start node\n";
+  ierr = exec->getUserContext((void**)&ctx);CHKERRQ(ierr);
+  ierr = exec->repeat(rep);CHKERRQ(ierr);
+  rep  = PETSC_FALSE;
+  std::cout<<"start node, value = "<<ctx->value<<'\n';
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode staticTestFunc(ExecutionContext *ctx, int x)
+PetscErrorCode joinNodeFunction(ExecutionContext *ctx, PetscInt x)
 {
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
   auto context = ctx->userCtx;
   (void)(context);
-  std::cout<<"join node\n";
+  std::cout<<"join node, value = "<<x<<'\n';
   PetscFunctionReturn(0);
 }
 
@@ -36,14 +38,14 @@ PetscErrorCode testFuncOtherGraph(ExecutionContext *ctx)
 {
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
-  std::cout<<"other graph"<<std::endl;
+  std::cout<<"other graph\n";
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode nativeFunction(int x)
+PetscErrorCode nativeFunction(PetscInt x)
 {
   PetscFunctionBegin;
-  std::cout<<x<<std::endl;
+  std::cout<<x<<'\n';
   PetscFunctionReturn(0);
 }
 
@@ -69,9 +71,10 @@ int main(int argc, char *argv[])
     CallNode  *graphNode;
 
     ierr = graph.compose(graph2,graphNode);CHKERRQ(ierr);
+    std::cout<<"-------------------"<<std::endl;
     auto nodeStart = graph.emplace(testFunc);
-    auto nodeJoin  = graph.emplaceCall(staticTestFunc,2);
-    auto midNodes  = graph.emplace([](ExecutionContext *ctx, int x = 2)
+    auto nodeJoin  = graph.emplaceCall(joinNodeFunction,2);
+    auto midNodes  = graph.emplace([](ExecutionContext *ctx)
     {
       std::cout<<"mid node left\n";
       return 0;
