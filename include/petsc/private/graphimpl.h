@@ -1,7 +1,7 @@
 #ifndef PETSCGRAPHIMPL_H
 #define PETSCGRAPHIMPL_H
 
-#include <petscgraph.h>
+#include <petscgraph.hpp>
 #include <petsc/private/petscimpl.h>
 
 struct _GraphOps {
