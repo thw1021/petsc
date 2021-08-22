@@ -9,10 +9,11 @@ PETSC_EXTERN PetscErrorCode PetscCallGraphCreate(MPI_Comm,PetscCallGraph*);
 #if defined(__cplusplus)
 
 #include <vector>
+#include <array>
 #include <tuple>
+#include <unordered_map>
 #include <algorithm>
 #include <type_traits>
-#include <unordered_map>
 #include <iostream>
 #include <functional>
 
@@ -180,20 +181,6 @@ struct function_traits<R(Args...)>
     using type = tuple_element_t<N,std::tuple<Args...,void>>;
   };
 };
-
-template <int I = 0, typename Tf, typename... Tp, enable_if_t<I == sizeof...(Tp)>* = nullptr>
-inline constexpr PetscErrorCode forEachInTuple(Tf &&fn, std::tuple<Tp...> &tuple) { return 0;}
-
-template <int I = 0, typename Tf, typename... Tp, enable_if_t<(I < sizeof...(Tp))>* = nullptr>
-inline PetscErrorCode forEachInTuple(Tf &&fn, std::tuple<Tp...> &tuple)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = fn(std::get<I>(tuple));CHKERRQ(ierr);
-  ierr = forEachInTuple<I+1>(fn,tuple);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
 
 struct ExecutionContext
 {
@@ -472,13 +459,11 @@ public:
 
   // Order enforcement
   PetscErrorCode before(CallNode*);
-  template <typename... Args,
-            enable_if_t<all_same<CallNode*,Args...>::value>* = nullptr>
-  PetscErrorCode before(std::tuple<Args...>&);
+  template <std::size_t N>
+  PetscErrorCode before(std::array<CallNode*,N>&);
   PetscErrorCode after(CallNode*);
-  template <typename... Args,
-            enable_if_t<all_same<CallNode*,Args...>::value>* = nullptr>
-  PetscErrorCode after(std::tuple<Args...>&);
+  template <std::size_t N>
+  PetscErrorCode after(std::array<CallNode*,N>&);
 
   // Execution
   PetscErrorCode run(ExecutionContext*) const;
@@ -646,8 +631,8 @@ public:
   template <typename T>
   CallNode* emplace(T&&);
 
-  template <typename... Argr, enable_if_t<(sizeof...(Argr)>1)>* = nullptr>
-  auto emplace(Argr&&... rest) -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...));
+  template <typename... Args, enable_if_t<(sizeof...(Args)>1)>* = nullptr>
+  std::array<CallNode*,sizeof...(Args)> emplace(Args&&...);
 
   template <typename T, typename... Argr,
             enable_if_t<is_callable<T>::value && (sizeof...(Argr) > 0)>* = nullptr>
@@ -668,30 +653,34 @@ inline CallNode::CallNode(CallGraph &graph)
   },std::make_tuple())), _kind(NodeKind::COMPOSITION)
 { std::cout<<"COMPOSITION CTOR\n";}
 
-template <typename... Args, enable_if_t<all_same<CallNode*,Args...>::value>*>
-inline PetscErrorCode CallNode::before(std::tuple<Args...> &others)
+template <std::size_t N>
+inline PetscErrorCode CallNode::before(std::array<CallNode*,N> &others)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = forEachInTuple([this](CallNode *other){return before(other);},others);CHKERRQ(ierr);
+  for (auto &other : others) {
+    PetscErrorCode ierr;
+
+    ierr = before(other);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
-template <typename... Args, enable_if_t<all_same<CallNode*,Args...>::value>*>
-inline PetscErrorCode CallNode::after(std::tuple<Args...> &others)
+template <std::size_t N>
+inline PetscErrorCode CallNode::after(std::array<CallNode*,N> &others)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = forEachInTuple([this](CallNode *other){return after(other);},others);CHKERRQ(ierr);
+  for (auto &other : others) {
+    PetscErrorCode ierr;
+
+    ierr = after(other);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
 inline PetscErrorCode CallNode::before(CallNode *other)
 {
   PetscFunctionBegin;
-  std::cout<<_id<<" before "<<other->_id<<std::endl;
+  std::cout<<_id<<" ("<<_name<<") before "<<other->_id<<" ("<<other->_name<<")\n";
   CHKERRCXX(_outedges.push_back(std::make_shared<Edge>(_id,other->_id)));
   CHKERRCXX(other->_inedges.push_back(_outedges.back()));
   PetscFunctionReturn(0);
@@ -700,7 +689,7 @@ inline PetscErrorCode CallNode::before(CallNode *other)
 inline PetscErrorCode CallNode::after(CallNode *other)
 {
   PetscFunctionBegin;
-  std::cout<<_id<<" after "<<other->_id<<std::endl;
+  std::cout<<_id<<" ("<<_name<<") after "<<other->_id<<" ("<<other->_name<<")\n";
   CHKERRCXX(_inedges.push_back(std::make_shared<Edge>(other->_id,_id)));
   CHKERRCXX(other->_outedges.push_back(_inedges.back()));
   PetscFunctionReturn(0);
@@ -755,11 +744,11 @@ inline CallNode* CallGraph::emplace(T &&fn)
   PetscFunctionReturn(_graph.back());
 }
 
-template <typename... Argr, enable_if_t<(sizeof...(Argr) > 1)>*>
-inline auto CallGraph::emplace(Argr&&... rest)
-  -> decltype(std::make_tuple(emplace(std::forward<Argr>(rest))...))
+template <typename... Args, enable_if_t<(sizeof...(Args) > 1)>*>
+inline std::array<CallNode*,sizeof...(Args)> CallGraph::emplace(Args&&... rest)
 {
-  return std::make_tuple(emplace(std::forward<Argr>(rest))...);
+  _graph.reserve(_graph.size()+sizeof...(Args));
+  return {emplace(std::forward<Args>(rest))...};
 }
 
 template <typename T, typename... Argr,
@@ -770,13 +759,12 @@ inline CallNode* CallGraph::emplaceCall(T &&f, Argr&&... args)
   _finalized = PETSC_FALSE;
   _graph.emplace_back(new CallNode(std::forward<T>(f),std::forward<Argr>(args)...));
   _idMap[_graph.back()->_id] = _graph.size()-1;
-  return _graph.back();
+  PetscFunctionReturn(_graph.back());
 }
 
 inline PetscErrorCode CallGraph::setUserContext(void *ctx)
 {
   PetscFunctionBegin;
-  //PetscValidPointer(ctx,1);
   _userCtx = ctx;
   PetscFunctionReturn(0);
 }
@@ -791,9 +779,7 @@ inline PetscErrorCode CallGraph::run(PetscInt stream)
   std::cout<<"----- "<<_name<<" begin run\n";
   for (const auto &node : _exec) {
     ierr = __joinAncestors(*node,ctx);CHKERRQ(ierr);
-    do {
-      ierr = node->run(&ctx);CHKERRQ(ierr);
-    } while (ctx.repeatCall);
+    do {ierr = node->run(&ctx);CHKERRQ(ierr);} while (ctx.repeatCall);
     ierr = __forkDecendants(*node,ctx);CHKERRQ(ierr);
   }
   std::cout<<"----- "<<_name<<" end run\n";
