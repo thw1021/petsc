@@ -40,9 +40,7 @@ PetscErrorCode DMPlexOrientPoint(DM dm, PetscInt p, PetscInt o)
     nO   = DMPolytopeTypeGetNumArrangments(ft)/2;
     newcone[c] = cone[arr[c*2+0]];
     newornt[c] = DMPolytopeTypeComposeOrientation(ft, arr[c*2+1], ornt[arr[c*2+0]]);
-    if (newornt[c] && (newornt[c] >= nO || newornt[c] < -nO)) {
-      SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %D not in [%D,%D) for %s %D", newornt[c], -nO, nO, DMPolytopeTypes[ft], cone[c]);
-    }
+    if (newornt[c] && (newornt[c] >= nO || newornt[c] < -nO)) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %D not in [%D,%D) for %s %D", newornt[c], -nO, nO, DMPolytopeTypes[ft], cone[c]);
   }
   ierr = DMPlexSetCone(dm, p, newcone);CHKERRQ(ierr);
   ierr = DMPlexSetConeOrientation(dm, p, newornt);CHKERRQ(ierr);

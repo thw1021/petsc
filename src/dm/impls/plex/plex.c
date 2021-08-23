@@ -2866,15 +2866,13 @@ PetscErrorCode DMPlexGetConeOrientation(DM dm, PetscInt p, const PetscInt *coneO
   Input Parameters:
 + mesh - The DMPlex
 . p - The point, which must lie in the chart set with DMPlexSetChart()
-- coneOrientation - An array of orientations which are on the in-edges for point p. An orientation is an
-                    integer giving the prescription for cone traversal. If it is negative, the cone is
-                    traversed in the opposite direction. Its value 'o', or if negative '-(o+1)', gives
-                    the index of the cone point on which to start.
-
+- coneOrientation - An array of orientations
   Output Parameter:
 
-  Note:
+  Notes:
   This should be called after all calls to DMPlexSetConeSize() and DMSetUp().
+
+  The meaning of coneOrientation is detailed in DMPlexGetConeOrientation().
 
   Level: beginner
 
@@ -2950,6 +2948,9 @@ PetscErrorCode DMPlexInsertCone(DM dm, PetscInt p, PetscInt conePos, PetscInt co
 - coneOrientation - The point orientation to insert
 
   Level: beginner
+
+  Notes:
+  The meaning of coneOrientation values is detailed in DMPlexGetConeOrientation().
 
 .seealso: DMPlexCreate(), DMPlexGetCone(), DMPlexSetChart(), DMPlexSetConeSize(), DMSetUp()
 @*/
@@ -3141,6 +3142,7 @@ PetscErrorCode DMPlexInsertSupport(DM dm, PetscInt p, PetscInt supportPos, Petsc
   PetscFunctionReturn(0);
 }
 
+/* Converts an orientation o in the current numbering to the previous scheme used in Plex */
 PetscInt DMPolytopeConvertNewOrientation_Internal(DMPolytopeType ct, PetscInt o)
 {
   switch (ct) {
@@ -3163,6 +3165,7 @@ PetscInt DMPolytopeConvertNewOrientation_Internal(DMPolytopeType ct, PetscInt o)
   return o;
 }
 
+/* Converts an orientation o in the previous scheme used in Plex to the current numbering */
 PetscInt DMPolytopeConvertOldOrientation_Internal(DMPolytopeType ct, PetscInt o)
 {
   switch (ct) {
@@ -3186,6 +3189,7 @@ PetscInt DMPolytopeConvertOldOrientation_Internal(DMPolytopeType ct, PetscInt o)
   return o;
 }
 
+/* Takes in a mesh whose orientations are in the previous scheme and converts them all to the current numbering */
 PetscErrorCode DMPlexConvertOldOrientations_Internal(DM dm)
 {
   PetscInt       pStart, pEnd, p;
@@ -4976,11 +4980,16 @@ PetscErrorCode DMPlexGetCones(DM dm, PetscInt *cones[])
 . dm        - The DMPlex object
 
   Output Parameter:
-. coneOrientations - The cone orientation for each point
+. coneOrientations - The array of cone orientations for all points
 
   Level: developer
 
-.seealso: DMPlexGetConeSection()
+  Notes:
+  The PetscSection returned by DMPlexGetConeSection() partitions coneOrientations into cone orientations of particular points as returned by DMPlexGetConeOrientation().
+
+  The meaning of coneOrientations values is detailed in DMPlexGetConeOrientation().
+
+.seealso: DMPlexGetConeSection(), DMPlexGetConeOrientation()
 @*/
 PetscErrorCode DMPlexGetConeOrientations(DM dm, PetscInt *coneOrientations[])
 {

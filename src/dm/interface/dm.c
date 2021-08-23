@@ -9779,6 +9779,24 @@ PetscErrorCode DMCopyAuxiliaryVec(DM dm, DM dmNew)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  DMPolytopeMatchOrientation - Determine an orientation that takes the source face arrangement to the target face arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceCone - The source arrangement of faces
+- targetCone - The target arrangement of faces
+
+  Output Parameters:
++ ornt  - The orientation which will take the source arrangement to the target arrangement
+- found - Flag indicating that a suitable orientation was found
+
+  Level: advanced
+
+.seealso: DMPolytopeGetOrientation(), DMPolytopeMatchVertexOrientation()
+@*/
 PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt, PetscBool *found)
 {
   const PetscInt cS = DMPolytopeTypeGetConeSize(ct);
@@ -9797,6 +9815,25 @@ PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sour
   PetscFunctionReturn(0);
 }
 
+/*@C
+  DMPolytopeGetOrientation - Determine an orientation that takes the source face arrangement to the target face arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceCone - The source arrangement of faces
+- targetCone - The target arrangement of faces
+
+  Output Parameters:
+. ornt  - The orientation which will take the source arrangement to the target arrangement
+
+  Note: This function will fail if no suitable orientation can be found.
+
+  Level: advanced
+
+.seealso: DMPolytopeMatchOrientation(), DMPolytopeGetVertexOrientation()
+@*/
 PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt)
 {
   PetscBool      found;
@@ -9808,7 +9845,25 @@ PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType ct, const PetscInt source
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt, PetscBool *found)
+/*@C
+  DMPolytopeMatchVertexOrientation - Determine an orientation that takes the source vertex arrangement to the target vertex arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceVert - The source arrangement of vertices
+- targetVert - The target arrangement of vertices
+
+  Output Parameters:
++ ornt  - The orientation which will take the source arrangement to the target arrangement
+- found - Flag indicating that a suitable orientation was found
+
+  Level: advanced
+
+.seealso: DMPolytopeGetOrientation(), DMPolytopeMatchOrientation()
+@*/
+PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscInt sourceVert[], const PetscInt targetVert[], PetscInt *ornt, PetscBool *found)
 {
   const PetscInt cS = DMPolytopeTypeGetNumVertices(ct);
   const PetscInt nO = DMPolytopeTypeGetNumArrangments(ct)/2;
@@ -9819,13 +9874,32 @@ PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscIn
   for (o = -nO; o < nO; ++o) {
     const PetscInt *arr = DMPolytopeTypeGetVertexArrangment(ct, o);
 
-    for (c = 0; c < cS; ++c) if (sourceCone[arr[c]] != targetCone[c]) break;
+    for (c = 0; c < cS; ++c) if (sourceVert[arr[c]] != targetVert[c]) break;
     if (c == cS) {*ornt = o; break;}
   }
   *found = o == nO ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
+/*@C
+  DMPolytopeGetVertexOrientation - Determine an orientation that takes the source vertex arrangement to the target vertex arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceCone - The source arrangement of vertices
+- targetCone - The target arrangement of vertices
+
+  Output Parameters:
+. ornt  - The orientation which will take the source arrangement to the target arrangement
+
+  Note: This function will fail if no suitable orientation can be found.
+
+  Level: advanced
+
+.seealso: DMPolytopeMatchVertexOrientation(), DMPolytopeGetOrientation()
+@*/
 PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt)
 {
   PetscBool      found;
@@ -9837,6 +9911,22 @@ PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType ct, const PetscInt 
   PetscFunctionReturn(0);
 }
 
+/*@C
+  DMPolytopeInCellTest - Check whether a point lies inside the reference cell of given type
+
+  Not collective
+
+  Input Parameters:
++ ct    - The DMPolytopeType
+- point - Coordinates of the point
+
+  Output Parameters:
+. inside  - Flag indicating whether the point is inside the reference cell of given type
+
+  Level: advanced
+
+.seealso: DMLocatePoints()
+@*/
 PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], PetscBool *inside)
 {
   PetscReal sum = 0.0;
