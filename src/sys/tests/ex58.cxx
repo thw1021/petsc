@@ -67,6 +67,17 @@ int main(int argc, char *argv[])
   graph2.setUserContext(&ctx);
   graph2.emplace(testFuncOtherGraph);
   graph2.emplaceCall(nativeFunction,&x);
+
+  BranchOperator branch([](ExecutionContext *exec, const std::vector<CallNode*> &branches, PetscInt &id)
+  {
+    PetscFunctionBegin;
+    for (const auto branch : branches) {
+      std::cout<<branch->id()<<'\n';
+    }
+    id = branches[0]->id();
+    PetscFunctionReturn(0);
+  },&node,&node2);
+
   std::cout<<"-------------------"<<std::endl;
   {
     PetscInt  n = 2;
