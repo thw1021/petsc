@@ -113,6 +113,7 @@ Changes: Development
 -  Add option ``-ts_trajectory_memory_type <revolve | cams | petsc>`` to switch checkpointing schedule software
 -  Add option ``-ts_trajectory_max_units_ram`` to specify the maximum number of allowed checkpointing units
 -  Add option ``-ts_trajectory_storage_viewer_type <binary|hdf5>`` to support binary and hdf5 formats for trajectory files
+-  Add option ``-ts_trajectory_storage <binary|hdf5>[:dirname/filetemplate]`` to set format, directory name and file template for trajectory files
 
 .. rubric:: TAO:
 
