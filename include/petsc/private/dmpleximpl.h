@@ -302,6 +302,10 @@ PETSC_STATIC_INLINE PetscInt DihedralSwap(PetscInt N, PetscInt a, PetscInt b)
   return DihedralCompose(N,DihedralInvert(N,a),b);
 }
 #else
+/* TODO
+   This is a reimplementation of the tensor dihedral symmetries using the new orientations.
+   These should be turned on when we convert to new-style orientations in p4est.
+*/
 /* invert dihedral symmetry: return a^-1,
  * using the representation described in
  * DMPlexGetConeOrientation() */

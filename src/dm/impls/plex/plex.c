@@ -3232,7 +3232,7 @@ PetscErrorCode DMPlexConvertOldOrientations_Internal(DM dm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexGetTransitiveClosure_Depth1_Static(DM dm, PetscInt p, PetscInt ornt, PetscBool useCone, PetscInt *numPoints, PetscInt *points[])
+static PetscErrorCode DMPlexGetTransitiveClosure_Depth1_Private(DM dm, PetscInt p, PetscInt ornt, PetscBool useCone, PetscInt *numPoints, PetscInt *points[])
 {
   DMPolytopeType  ct = DM_POLYTOPE_UNKNOWN;
   PetscInt       *closure;
@@ -3363,7 +3363,7 @@ PetscErrorCode DMPlexGetTransitiveClosure_Internal(DM dm, PetscInt p, PetscInt o
   PetscFunctionBeginHot;
   ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
   if (depth == 1) {
-    ierr = DMPlexGetTransitiveClosure_Depth1_Static(dm, p, ornt, useCone, numPoints, points);CHKERRQ(ierr);
+    ierr = DMPlexGetTransitiveClosure_Depth1_Private(dm, p, ornt, useCone, numPoints, points);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
   ierr = DMPlexGetCellType(dm, p, &ct);CHKERRQ(ierr);
