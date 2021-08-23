@@ -1,4 +1,5 @@
 #include <petsc/private/tsimpl.h>        /*I "petscts.h"  I*/
+#include <petscviewerhdf5.h>
 #include <petscsys.h>
 #if defined(PETSC_HAVE_REVOLVE)
 #include <revolve_c.h>
@@ -111,7 +112,6 @@ typedef struct _TJScheduler {
   PetscInt      total_steps;    /* total number of steps */
   Stack         stack;
   DiskStack     diskstack;
-  PetscViewer   viewer;
 } TJScheduler;
 
 static PetscErrorCode TurnForwardWithStepsize(TS ts,PetscReal nextstepsize)
@@ -327,13 +327,22 @@ static PetscErrorCode StackFind(Stack *stack,StackElement *e,PetscInt index)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,PetscReal time,PetscReal timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer)
+static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,PetscReal time,PetscReal timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer,TSTrajectoryStorageViewerType storageviewertype)
 {
   PetscInt       i;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerBinaryWrite(viewer,&stepnum,1,PETSC_INT);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (storageviewertype == TJ_HDF5) {
+    ierr = PetscViewerHDF5WriteAttribute(viewer,NULL,"stepnum",PETSC_INT,(void*)&stepnum);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer,NULL,"time",PETSC_REAL,(void*)&time);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer,NULL,"timeprev",PETSC_REAL,(void*)&timeprev);CHKERRQ(ierr);
+  }
+#endif
+  if (storageviewertype == TJ_BINARY) {
+    ierr = PetscViewerBinaryWrite(viewer,&stepnum,1,PETSC_INT);CHKERRQ(ierr);
+  }
   if (HaveSolution(cptype)) {
     ierr = VecView(X,viewer);CHKERRQ(ierr);
   }
@@ -344,18 +353,27 @@ static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,Pet
       ierr = VecView(Y[i],viewer);CHKERRQ(ierr);
     }
   }
-  ierr = PetscViewerBinaryWrite(viewer,&time,1,PETSC_REAL);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryWrite(viewer,&timeprev,1,PETSC_REAL);CHKERRQ(ierr);
+  if (storageviewertype == TJ_BINARY) {
+    ierr = PetscViewerBinaryWrite(viewer,&time,1,PETSC_REAL);CHKERRQ(ierr);
+    ierr = PetscViewerBinaryWrite(viewer,&timeprev,1,PETSC_REAL);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,PetscReal *time,PetscReal *timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer)
+static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,PetscReal *time,PetscReal *timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer,TSTrajectoryStorageViewerType storageviewertype)
 {
   PetscInt       i;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerBinaryRead(viewer,stepnum,1,NULL,PETSC_INT);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (storageviewertype == TJ_HDF5) {
+    ierr = PetscViewerHDF5ReadAttribute(viewer,NULL,"stepnum",PETSC_INT,NULL,stepnum);CHKERRQ(ierr);
+  }
+#endif
+  if (storageviewertype == TJ_BINARY) {
+    ierr = PetscViewerBinaryRead(viewer,stepnum,1,NULL,PETSC_INT);CHKERRQ(ierr);
+  }
   if (HaveSolution(cptype)) {
     ierr = VecLoad(X,viewer);CHKERRQ(ierr);
   }
@@ -366,8 +384,16 @@ static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,P
       ierr = VecLoad(Y[i],viewer);CHKERRQ(ierr);
     }
   }
-  ierr = PetscViewerBinaryRead(viewer,time,1,NULL,PETSC_REAL);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryRead(viewer,timeprev,1,NULL,PETSC_REAL);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (storageviewertype == TJ_HDF5) {
+    ierr = PetscViewerHDF5ReadAttribute(viewer,NULL,"time",PETSC_REAL,NULL,time);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5ReadAttribute(viewer,NULL,"timeprev",PETSC_REAL,NULL,timeprev);CHKERRQ(ierr);
+  }
+#endif
+  if (storageviewertype == TJ_BINARY) {
+    ierr = PetscViewerBinaryRead(viewer,time,1,NULL,PETSC_REAL);CHKERRQ(ierr);
+    ierr = PetscViewerBinaryRead(viewer,timeprev,1,NULL,PETSC_REAL);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -376,7 +402,6 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   Vec            *Y;
   PetscInt       i,ndumped,cptype_int;
   StackElement   e = NULL;
-  TJScheduler    *tjsch = (TJScheduler*)tj->data;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
   MPI_Comm       comm;
@@ -388,17 +413,40 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Dump stack id %D to file\n",id);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(tj->monitor);CHKERRQ(ierr);
   }
-  ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
-  ierr = PetscViewerFileSetName(tjsch->viewer,filename);CHKERRQ(ierr);
-  ierr = PetscViewerSetUp(tjsch->viewer);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (tj->storageviewertype == TJ_HDF5) {
+    ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06d.h5",tj->dirname,id);CHKERRQ(ierr);
+  }
+#endif
+  if (tj->storageviewertype == TJ_BINARY) {
+    ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerFileSetName(tj->outputviewer,filename);CHKERRQ(ierr);
+  ierr = PetscViewerSetUp(tj->outputviewer);CHKERRQ(ierr);
   ndumped = stack->top+1;
-  ierr = PetscViewerBinaryWrite(tjsch->viewer,&ndumped,1,PETSC_INT);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (tj->storageviewertype == TJ_HDF5) {
+    ierr = PetscViewerHDF5WriteAttribute(tj->outputviewer,NULL,"ndumped",PETSC_INT,(void *)&ndumped);CHKERRQ(ierr);
+  }
+#endif
+  if (tj->storageviewertype == TJ_BINARY) {
+    ierr = PetscViewerBinaryWrite(tj->outputviewer,&ndumped,1,PETSC_INT);CHKERRQ(ierr);
+  }
   for (i=0;i<ndumped;i++) {
     e = stack->container[i];
     cptype_int = (PetscInt)e->cptype;
-    ierr = PetscViewerBinaryWrite(tjsch->viewer,&cptype_int,1,PETSC_INT);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+    if (tj->storageviewertype == TJ_HDF5) {
+      char attrname[PETSC_MAX_PATH_LEN];
+      ierr = PetscSNPrintf(attrname,sizeof(attrname),"cptype_int%d",i);CHKERRQ(ierr);
+      ierr = PetscViewerHDF5WriteAttribute(tj->outputviewer,NULL,attrname,PETSC_INT,(void *)&cptype_int);CHKERRQ(ierr);
+    }
+#endif
+    if (tj->storageviewertype == TJ_BINARY) {
+      ierr = PetscViewerBinaryWrite(tj->outputviewer,&cptype_int,1,PETSC_INT);CHKERRQ(ierr);
+    }
     ierr = PetscLogEventBegin(TSTrajectory_DiskWrite,tj,ts,0,0);CHKERRQ(ierr);
-    ierr = WriteToDisk(ts->stifflyaccurate,e->stepnum,e->time,e->timeprev,e->X,e->Y,stack->numY,e->cptype,tjsch->viewer);CHKERRQ(ierr);
+    ierr = WriteToDisk(ts->stifflyaccurate,e->stepnum,e->time,e->timeprev,e->X,e->Y,stack->numY,e->cptype,tj->outputviewer,tj->storageviewertype);CHKERRQ(ierr);
     ierr = PetscLogEventEnd(TSTrajectory_DiskWrite,tj,ts,0,0);CHKERRQ(ierr);
     ts->trajectory->diskwrites++;
     ierr = StackPop(stack,&e);CHKERRQ(ierr);
@@ -406,7 +454,7 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   /* save the last step for restart, the last step is in memory when using single level schemes, but not necessarily the case for multi level schemes */
   ierr = TSGetStages(ts,&stack->numY,&Y);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(TSTrajectory_DiskWrite,tj,ts,0,0);CHKERRQ(ierr);
-  ierr = WriteToDisk(ts->stifflyaccurate,ts->steps,ts->ptime,ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tjsch->viewer);CHKERRQ(ierr);
+  ierr = WriteToDisk(ts->stifflyaccurate,ts->steps,ts->ptime,ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tj->outputviewer,tj->storageviewertype);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(TSTrajectory_DiskWrite,tj,ts,0,0);CHKERRQ(ierr);
   ts->trajectory->diskwrites++;
   PetscFunctionReturn(0);
@@ -415,9 +463,8 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
 static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 {
   Vec            *Y;
-  PetscInt       i,nloaded,cptype_int;
+  PetscInt       i,nloaded = 0,cptype_int;
   StackElement   e;
-  PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
 
@@ -427,28 +474,47 @@ static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Load stack from file\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
   }
-  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
-  ierr = PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryRead(viewer,&nloaded,1,NULL,PETSC_INT);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (tj->storageviewertype == TJ_HDF5) {
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.h5",tj->dirname,id);CHKERRQ(ierr);
+    ierr = PetscViewerFileSetName(tj->inputviewer,filename);CHKERRQ(ierr); /* this triggers PetscViewer to be set up again */
+    ierr = PetscViewerSetUp(tj->inputviewer);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5ReadAttribute(tj->inputviewer,NULL,"ndumped",PETSC_INT,NULL,&nloaded);CHKERRQ(ierr);
+  }
+#endif
+  if (tj->storageviewertype == TJ_BINARY) {
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+    ierr = PetscViewerFileSetName(tj->inputviewer,filename);CHKERRQ(ierr); /* this triggers PetscViewer to be set up again */
+    ierr = PetscViewerSetUp(tj->inputviewer);CHKERRQ(ierr);
+    ierr = PetscViewerBinarySetSkipInfo(tj->inputviewer,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = PetscViewerBinaryRead(tj->inputviewer,&nloaded,1,NULL,PETSC_INT);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerPushFormat(tj->inputviewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
   for (i=0;i<nloaded;i++) {
-    ierr = PetscViewerBinaryRead(viewer,&cptype_int,1,NULL,PETSC_INT);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+    if (tj->storageviewertype == TJ_HDF5) {
+      char attrname[PETSC_MAX_PATH_LEN];
+      ierr = PetscSNPrintf(attrname,sizeof(attrname),"cptype_int%d",i);CHKERRQ(ierr);
+      ierr = PetscViewerHDF5ReadAttribute(tj->inputviewer,NULL,attrname,PETSC_INT,NULL,&cptype_int);CHKERRQ(ierr);
+    }
+#endif
+    if (tj->storageviewertype == TJ_BINARY) {
+      ierr = PetscViewerBinaryRead(tj->inputviewer,&cptype_int,1,NULL,PETSC_INT);CHKERRQ(ierr);
+    }
     ierr = ElementCreate(ts,(CheckpointType)cptype_int,stack,&e);CHKERRQ(ierr);
     ierr = StackPush(stack,e);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
-    ierr = ReadFromDisk(ts->stifflyaccurate,&e->stepnum,&e->time,&e->timeprev,e->X,e->Y,stack->numY,e->cptype,viewer);CHKERRQ(ierr);
+    ierr = ReadFromDisk(ts->stifflyaccurate,&e->stepnum,&e->time,&e->timeprev,e->X,e->Y,stack->numY,e->cptype,tj->inputviewer,tj->storageviewertype);CHKERRQ(ierr);
     ierr = PetscLogEventEnd(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
     ts->trajectory->diskreads++;
   }
   /* load the last step into TS */
   ierr = TSGetStages(ts,&stack->numY,&Y);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
-  ierr = ReadFromDisk(ts->stifflyaccurate,&ts->steps,&ts->ptime,&ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,viewer);CHKERRQ(ierr);
+  ierr = ReadFromDisk(ts->stifflyaccurate,&ts->steps,&ts->ptime,&ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tj->inputviewer,tj->storageviewertype);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
   ts->trajectory->diskreads++;
   ierr = TurnBackward(ts);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -457,7 +523,6 @@ static PetscErrorCode StackLoadLast(TSTrajectory tj,TS ts,Stack *stack,PetscInt 
 {
   Vec            *Y;
   PetscInt       size;
-  PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
 #if defined(PETSC_HAVE_MPIIO)
   PetscBool      usempiio;
@@ -477,28 +542,35 @@ static PetscErrorCode StackLoadLast(TSTrajectory tj,TS ts,Stack *stack,PetscInt 
   /* VecView writes to file two extra int's for class id and number of rows */
   off  = -((stack->solution_only?0:stack->numY)+1)*(size*PETSC_BINARY_SCALAR_SIZE+2*PETSC_BINARY_INT_SIZE)-PETSC_BINARY_INT_SIZE-2*PETSC_BINARY_SCALAR_SIZE;
 
-  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
-  ierr = PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_MPIIO)
-  ierr = PetscViewerBinaryGetUseMPIIO(viewer,&usempiio);CHKERRQ(ierr);
-  if (usempiio) {
-    ierr = PetscViewerBinaryGetMPIIODescriptor(viewer,(MPI_File*)&fd);CHKERRQ(ierr);
-    ierr = PetscBinarySynchronizedSeek(PetscObjectComm((PetscObject)tj),fd,off,PETSC_BINARY_SEEK_END,&offset);CHKERRQ(ierr);
-  } else {
-#endif
-    ierr = PetscViewerBinaryGetDescriptor(viewer,&fd);CHKERRQ(ierr);
-    ierr = PetscBinarySeek(fd,off,PETSC_BINARY_SEEK_END,&offset);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_MPIIO)
+#if defined(PETSC_HAVE_HDF5)
+  if (tj->storageviewertype == TJ_HDF5) {
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.h5",tj->dirname,id);CHKERRQ(ierr);
   }
 #endif
+  if (tj->storageviewertype == TJ_BINARY) {
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerFileSetName(tj->inputviewer,filename);CHKERRQ(ierr); /* this triggers PetscViewer to be set up again */
+  ierr = PetscViewerSetUp(tj->inputviewer);CHKERRQ(ierr);
+  if (tj->storageviewertype == TJ_BINARY) {
+#if defined(PETSC_HAVE_MPIIO)
+    ierr = PetscViewerBinaryGetUseMPIIO(tj->inputviewer,&usempiio);CHKERRQ(ierr);
+    if (usempiio) {
+      ierr = PetscViewerBinaryGetMPIIODescriptor(tj->inputviewer,(MPI_File*)&fd);CHKERRQ(ierr);
+      ierr = PetscBinarySynchronizedSeek(PetscObjectComm((PetscObject)tj),fd,off,PETSC_BINARY_SEEK_END,&offset);CHKERRQ(ierr);
+    } else {
+#endif
+      ierr = PetscViewerBinaryGetDescriptor(tj->inputviewer,&fd);CHKERRQ(ierr);
+      ierr = PetscBinarySeek(fd,off,PETSC_BINARY_SEEK_END,&offset);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_MPIIO)
+    }
+#endif
+  }
   /* load the last step into TS */
   ierr = PetscLogEventBegin(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
-  ierr = ReadFromDisk(ts->stifflyaccurate,&ts->steps,&ts->ptime,&ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,viewer);CHKERRQ(ierr);
+  ierr = ReadFromDisk(ts->stifflyaccurate,&ts->steps,&ts->ptime,&ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tj->inputviewer,tj->storageviewertype);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
   ts->trajectory->diskreads++;
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   ierr = TurnBackward(ts);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -508,7 +580,6 @@ static PetscErrorCode DumpSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 {
   Vec            *Y;
   PetscInt       stepnum;
-  TJScheduler    *tjsch = (TJScheduler*)tj->data;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
   MPI_Comm       comm;
@@ -521,13 +592,20 @@ static PetscErrorCode DumpSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
     ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
   }
   ierr = TSGetStepNumber(ts,&stepnum);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06d.bin",tj->dirname,id);CHKERRQ(ierr);
-  ierr = PetscViewerFileSetName(tjsch->viewer,filename);CHKERRQ(ierr);
-  ierr = PetscViewerSetUp(tjsch->viewer);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (tj->storageviewertype == TJ_HDF5) {
+    ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06d.h5",tj->dirname,id);CHKERRQ(ierr);
+  }
+#endif
+  if (tj->storageviewertype == TJ_BINARY) {
+    ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerFileSetName(tj->outputviewer,filename);CHKERRQ(ierr);
+  ierr = PetscViewerSetUp(tj->outputviewer);CHKERRQ(ierr);
 
   ierr = TSGetStages(ts,&stack->numY,&Y);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(TSTrajectory_DiskWrite,tj,ts,0,0);CHKERRQ(ierr);
-  ierr = WriteToDisk(ts->stifflyaccurate,stepnum,ts->ptime,ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tjsch->viewer);CHKERRQ(ierr);
+  ierr = WriteToDisk(ts->stifflyaccurate,stepnum,ts->ptime,ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tj->outputviewer,tj->storageviewertype);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(TSTrajectory_DiskWrite,tj,ts,0,0);CHKERRQ(ierr);
   ts->trajectory->diskwrites++;
   PetscFunctionReturn(0);
@@ -536,7 +614,6 @@ static PetscErrorCode DumpSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 static PetscErrorCode LoadSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 {
   Vec            *Y;
-  PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscErrorCode ierr;
 
@@ -546,16 +623,22 @@ static PetscErrorCode LoadSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Load a single point from file\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
   }
-  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06d.bin",tj->dirname,id);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
-  ierr = PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HDF5)
+  if (tj->storageviewertype == TJ_HDF5) {
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06d.h5",tj->dirname,id);CHKERRQ(ierr);
+  }
+#endif
+  if (tj->storageviewertype == TJ_BINARY) {
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  }
+  ierr = PetscViewerFileSetName(tj->inputviewer,filename);CHKERRQ(ierr); /* this triggers PetscViewer to be set up again */
+  ierr = PetscViewerSetUp(tj->inputviewer);CHKERRQ(ierr);
+  ierr = PetscViewerPushFormat(tj->inputviewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
   ierr = TSGetStages(ts,&stack->numY,&Y);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
-  ierr = ReadFromDisk(ts->stifflyaccurate,&ts->steps,&ts->ptime,&ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,viewer);CHKERRQ(ierr);
+  ierr = ReadFromDisk(ts->stifflyaccurate,&ts->steps,&ts->ptime,&ts->ptime_prev,ts->vec_sol,Y,stack->numY,SOLUTION_STAGES,tj->inputviewer,tj->storageviewertype);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(TSTrajectory_DiskRead,tj,ts,0,0);CHKERRQ(ierr);
   ts->trajectory->diskreads++;
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2375,7 +2458,6 @@ static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
 
   PetscFunctionBegin;
   ierr = StackDestroy(&tjsch->stack);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&tjsch->viewer);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsRAM_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxUnitsRAM_C",NULL);CHKERRQ(ierr);
@@ -2417,10 +2499,6 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Memory(TSTrajectory tj,TS ts)
   tjsch->save_stack   = PETSC_TRUE;
 
   tjsch->stack.solution_only = tj->solution_only;
-  ierr = PetscViewerCreate(PetscObjectComm((PetscObject)tj),&tjsch->viewer);CHKERRQ(ierr);
-  ierr = PetscViewerSetType(tjsch->viewer,PETSCVIEWERBINARY);CHKERRQ(ierr);
-  ierr = PetscViewerPushFormat(tjsch->viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
-  ierr = PetscViewerFileSetMode(tjsch->viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
 
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsRAM_C",TSTrajectorySetMaxCpsRAM_Memory);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)tj,"TSTrajectorySetMaxCpsDisk_C",TSTrajectorySetMaxCpsDisk_Memory);CHKERRQ(ierr);

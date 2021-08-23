@@ -126,6 +126,11 @@ struct _p_TSTrajectory {
   PetscBool      keepfiles;               /* keep the files generated during the run after the run is complete */
   char           *dirname,*filetemplate;  /* directory name and file name template for disk checkpoints */
   char           *dirfiletemplate;        /* complete directory and file name template for disk checkpoints */
+
+  PetscViewer                   inputviewer;       /* viewer for input trajectory files */
+  PetscViewer                   outputviewer;      /* viewer for output trajectory files */
+  TSTrajectoryStorageViewerType storageviewertype; /* storage viewer type for the trajectory files */
+
   PetscErrorCode (*transform)(void*,Vec,Vec*);
   PetscErrorCode (*transformdestroy)(void*);
   void*          transformctx;
