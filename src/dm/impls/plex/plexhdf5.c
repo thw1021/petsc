@@ -466,7 +466,7 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
 {
   IS              globalPointNumbers0;
   const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
-  PetscInt        depth, h;
+  PetscInt        depth, d;
   PetscBool       debug = PETSC_FALSE;
   PetscErrorCode  ierr;
 
@@ -477,7 +477,7 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
   orientationsName  = "orientations";
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_view_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5PushGroup(viewer, "height_strata");CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PushGroup(viewer, "strata");CHKERRQ(ierr);
   ierr = RenumberGlobalPointNumbersPerStratum_Private(dm, globalPointNumbers, &globalPointNumbers0);
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject) dm));
@@ -489,13 +489,13 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
   ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
-  for (h = 0; h <= depth; h++) {
+  for (d = 0; d <= depth; d++) {
     PetscInt pStart, pEnd;
     char     group[128];
 
-    ierr = PetscSNPrintf(group, sizeof(group), "%D", h);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(group, sizeof(group), "%D", d);CHKERRQ(ierr);
     ierr = PetscViewerHDF5PushGroup(viewer, group);CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(dm, h, &pStart, &pEnd);CHKERRQ(ierr);
+    ierr = DMPlexGetDepthStratum(dm, d, &pStart, &pEnd);CHKERRQ(ierr);
     ierr = DMPlexTopologyView_HDF5_Private(dm, globalPointNumbers0, viewer, pStart, pEnd, pointsName, coneSizesName, conesName, orientationsName);CHKERRQ(ierr);
     ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   }
@@ -1336,7 +1336,7 @@ static PetscErrorCode PlexLayerDestroy(PlexLayer *layer)
 }
 
 //TODO pointsIS should appear to be redundant
-static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt h, PetscLayout pointsLayout, PlexLayer *layer, PetscLayout *vertexLayout_)
+static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, PetscLayout pointsLayout, PlexLayer *layer, PetscLayout *vertexLayout_)
 {
   char            path[128];
   MPI_Comm        comm;
@@ -1357,17 +1357,17 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt h, Pets
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)viewer, &comm);CHKERRQ(ierr);
 
-  /* query size of next height stratum (1-lower dimension) */
+  /* query size of next lower depth stratum (next lower dimension) */
   {
     PetscInt NVertices;
-    ierr = PetscSNPrintf(path, sizeof(path), "%D/%s", h+1, coneSizesName);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(path, sizeof(path), "%D/%s", d-1, coneSizesName);CHKERRQ(ierr);
     ierr = PetscViewerHDF5ReadSizes(viewer, path, NULL, &NVertices);CHKERRQ(ierr);
     ierr = PetscLayoutCreate(comm, &vertexLayout);CHKERRQ(ierr);
     ierr = PetscLayoutSetSize(vertexLayout, NVertices);CHKERRQ(ierr);
     ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
   }
 
-  ierr = PetscSNPrintf(path, sizeof(path), "%D", h);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(path, sizeof(path), "%D", d);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, path);CHKERRQ(ierr);
 
   /* points and coneSizes have length of nPoints and loaded using the default layout */
@@ -1599,7 +1599,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   PetscSF         vertexSF = NULL;
   MPI_Comm        comm;
   PetscInt        depth;
-  PetscInt        h;
+  PetscInt        d;
   PetscMPIInt     size, rank;
   PetscErrorCode  ierr;
 
@@ -1615,15 +1615,13 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 
-  //TODO switch to (depth) strata?
-  ierr = PetscViewerHDF5PushGroup(viewer, "height_strata");CHKERRQ(ierr);
-
-  for (h = 0; h < depth; h++) {
+  ierr = PetscViewerHDF5PushGroup(viewer, "strata");CHKERRQ(ierr);
+  for (d = depth; d > 0; d--) {
     PlexLayer   layer;
     PetscLayout vertexLayout;
     PetscSF     newVertexSF, pointSF;
 
-    ierr = PlexLayerLoad_Private(viewer, h, pointsLayout, &layer, &vertexLayout);CHKERRQ(ierr);
+    ierr = PlexLayerLoad_Private(viewer, d, pointsLayout, &layer, &vertexLayout);CHKERRQ(ierr);
     if (vertexSF) {
       PlexLayer newPlexLayer;
 
@@ -1643,7 +1641,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
 
-  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* height_strata */
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* strata */
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* topology */
   PetscFunctionReturn(0);
 }
