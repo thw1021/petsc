@@ -1641,6 +1641,7 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout ve
 
 static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *sf)
 {
+  PlexLayer      *layers;
   IS              strataPermutation;
   PetscLayout     pointsLayout = NULL;
   PetscSF         vertexSF = NULL;
@@ -1681,6 +1682,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     ierr = ISView(strataPermutation, PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
   }
 
+  ierr = PetscCalloc1(depth+1, &layers);CHKERRQ(ierr);
   for (d = depth; d > 0; d--) {
     PlexLayer   layer;
     PetscLayout vertexLayout;
@@ -1696,12 +1698,18 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     }
     ierr = PlexLayerCreateSFs_Private(layer, vertexLayout, &newVertexSF);CHKERRQ(ierr);
 
-    ierr = PlexLayerDestroy(&layer);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
     ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
+
+    layers[d] = layer;
     pointsLayout = vertexLayout;
     vertexSF = newVertexSF;
   }
+
+  for (d = depth; d > 0; d--) {
+    ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
+  }
+  ierr = PetscFree(layers);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
   ierr = ISDestroy(&strataPermutation);CHKERRQ(ierr);
