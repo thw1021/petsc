@@ -1362,6 +1362,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer, Pets
 struct _n_PlexLayer {
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
+  PetscSF         pointSF;
 };
 typedef struct _n_PlexLayer* PlexLayer;
 
@@ -1375,6 +1376,7 @@ static PetscErrorCode PlexLayerDestroy(PlexLayer *layer)
   ierr = PetscSectionDestroy(&(*layer)->coneSizesSection);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->orientationsIS);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&(*layer)->pointSF);CHKERRQ(ierr);
   ierr = PetscFree(*layer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1558,7 +1560,7 @@ static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer, PetscSF 
 
 //TODO share code with DMPlexTopologyBuildTwoStrata
 #include <petsc/private/hashseti.h>
-static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout vertexLayout, PetscSF *vertexSF_, PetscSF *pointSF_)
+static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout vertexLayout, PetscSF *vertexSF_)
 {
   PetscSection    coneSection = layer->coneSizesSection;
   IS              cellVertexData = layer->conesIS;
@@ -1632,8 +1634,8 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout ve
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
+  layer->pointSF = pointSF;
   *vertexSF_ = vertexSF;
-  *pointSF_  = pointSF;
   PetscFunctionReturn(0);
 }
 
@@ -1682,7 +1684,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   for (d = depth; d > 0; d--) {
     PlexLayer   layer;
     PetscLayout vertexLayout;
-    PetscSF     newVertexSF, pointSF;
+    PetscSF     newVertexSF;
 
     ierr = PlexLayerLoad_Private(viewer, d, pointsLayout, &layer, &vertexLayout);CHKERRQ(ierr);
     if (vertexSF) {
@@ -1692,10 +1694,9 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
       ierr = PlexLayerDestroy(&layer);CHKERRQ(ierr);
       layer = newPlexLayer;
     }
-    ierr = PlexLayerCreateSFs_Private(layer, vertexLayout, &newVertexSF, &pointSF);CHKERRQ(ierr);
+    ierr = PlexLayerCreateSFs_Private(layer, vertexLayout, &newVertexSF);CHKERRQ(ierr);
 
     ierr = PlexLayerDestroy(&layer);CHKERRQ(ierr);
-    ierr = PetscSFDestroy(&pointSF);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
     ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
     pointsLayout = vertexLayout;
