@@ -1639,15 +1639,18 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout ve
 
 static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *sf)
 {
+  IS              strataPermutation;
   PetscLayout     pointsLayout = NULL;
   PetscSF         vertexSF = NULL;
   MPI_Comm        comm;
   PetscInt        depth;
   PetscInt        d;
   PetscMPIInt     size, rank;
+  PetscBool       debug = PETSC_FALSE;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
+  ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
   {
     PetscInt dim;
@@ -1660,6 +1663,22 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 
   ierr = PetscViewerHDF5PushGroup(viewer, "strata");CHKERRQ(ierr);
+  {
+    IS              spOnComm;
+
+    ierr = ISCreate(comm, &spOnComm);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) spOnComm, "permutation");CHKERRQ(ierr);
+    ierr = ISLoad(spOnComm, viewer);CHKERRQ(ierr);
+    /* have the same serial IS on every rank */
+    ierr = ISAllGather(spOnComm, &strataPermutation);CHKERRQ(ierr);
+    //TODO PetscObjectCopyName((PetscObject) spOnComm, (PetscObject) strataPermutation);
+    ierr = PetscObjectSetName((PetscObject) strataPermutation, ((PetscObject)spOnComm)->name);CHKERRQ(ierr);
+    ierr = ISDestroy(&spOnComm);CHKERRQ(ierr);
+  }
+  if (debug && !rank) {
+    ierr = ISView(strataPermutation, PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
+  }
+
   for (d = depth; d > 0; d--) {
     PlexLayer   layer;
     PetscLayout vertexLayout;
@@ -1684,6 +1703,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   }
   ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
+  ierr = ISDestroy(&strataPermutation);CHKERRQ(ierr);
 
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* strata */
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* topology */
