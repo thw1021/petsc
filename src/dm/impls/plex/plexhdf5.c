@@ -476,7 +476,15 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
   conesName         = "cones";
   orientationsName  = "orientations";
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_view_debug", &debug, NULL);CHKERRQ(ierr);
+  ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
+  {
+    PetscInt ver = 2, dim;
+    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "cell_dim", PETSC_INT, &dim);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "depth", PETSC_INT, &depth);CHKERRQ(ierr);
+    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "version", PETSC_INT, &ver);CHKERRQ(ierr);
+  }
   ierr = PetscViewerHDF5PushGroup(viewer, "strata");CHKERRQ(ierr);
   ierr = RenumberGlobalPointNumbersPerStratum_Private(dm, globalPointNumbers, &globalPointNumbers0);
   if (debug) {
@@ -488,7 +496,6 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
     ierr = ISView(globalPointNumbers0, v);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
-  ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
   for (d = 0; d <= depth; d++) {
     PetscInt pStart, pEnd;
     char     group[128];
@@ -499,15 +506,8 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
     ierr = DMPlexTopologyView_HDF5_Private(dm, globalPointNumbers0, viewer, pStart, pEnd, pointsName, coneSizesName, conesName, orientationsName);CHKERRQ(ierr);
     ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   }
-  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
-  {
-    PetscInt ver = 2, dim;
-    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "cell_dim", PETSC_INT, &dim);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "depth", PETSC_INT, &depth);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "version", PETSC_INT, &ver);CHKERRQ(ierr);
-  }
-  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* strata */
+  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* topology */
   ierr = ISDestroy(&globalPointNumbers0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
