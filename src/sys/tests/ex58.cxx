@@ -65,16 +65,16 @@ int main(int argc, char *argv[])
 
   node2 = node;
   ierr = graph2.setUserContext(&ctx);CHKERRQ(ierr);
-  auto smallGraphLeft    = graph2.emplaceCallOperator(testFuncOtherGraph);
+  auto smallGraphLeft    = graph2.emplaceFunctionOperator(testFuncOtherGraph);
   ierr = smallGraphLeft->setName("small graph left");CHKERRQ(ierr);
-  auto smallGraphLeftDep = graph2.emplaceCallOperator([](ExecutionContext*)
+  auto smallGraphLeftDep = graph2.emplaceFunctionOperator([](ExecutionContext*)
   {
     CHKERRCXX(std::cout<<"running left dep\n");
     return 0;
   });
   ierr = smallGraphLeftDep->setName("small graph left dependency");CHKERRQ(ierr);
   ierr = smallGraphLeftDep->after(smallGraphLeft);CHKERRQ(ierr);
-  auto smallGraphRight   = graph2.emplaceDirectCallOperator(nativeFunction,&x);
+  auto smallGraphRight   = graph2.emplaceDirectFunctionOperator(nativeFunction,&x);
   ierr = smallGraphRight->setName("small graph right");CHKERRQ(ierr);
 
   auto branchNode = graph2.emplaceBranchOperator([](ExecutionContext *exec, const std::vector<CallNode*> &branches, PetscInt &idx)
@@ -98,13 +98,13 @@ int main(int argc, char *argv[])
     CallGraph graph;
 
     ierr = graph.setName("big graph");CHKERRQ(ierr);
-    auto graphNode = graph.emplaceCallOperator(graph2);
+    auto graphNode = graph.emplaceFunctionOperator(graph2);
     ierr = graphNode->setName("graph node");CHKERRQ(ierr);
-    auto nodeStart = graph.emplaceCallOperator(startFunc);
+    auto nodeStart = graph.emplaceFunctionOperator(startFunc);
     ierr = nodeStart->setName("node start");CHKERRQ(ierr);
-    auto nodeJoin  = graph.emplaceDirectCallOperator(joinNodeFunction,n);
+    auto nodeJoin  = graph.emplaceDirectFunctionOperator(joinNodeFunction,n);
     ierr = nodeJoin->setName("join node");CHKERRQ(ierr);
-    auto midNodes  = graph.emplaceCallOperator([](ExecutionContext *ctx)
+    auto midNodes  = graph.emplaceFunctionOperator([](ExecutionContext *ctx)
     {
       std::cout<<"mid node left\n";
       return 0;
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     });
     ierr = midNodes[0]->setName("mid node left");CHKERRQ(ierr);
     ierr = midNodes[1]->setName("mid node right");CHKERRQ(ierr);
-    auto forkNodes = graph.emplaceCallOperator([](ExecutionContext *ctx)
+    auto forkNodes = graph.emplaceFunctionOperator([](ExecutionContext *ctx)
     {
       std::cout<<"fork node left\n";
       return 0;
