@@ -539,13 +539,13 @@ public:
 
   // Node emplacement
   template <typename T>
-  CallNode* emplaceCallOperator(T&&);
+  CallNode* emplaceFunctionOperator(T&&);
 
   template <typename... Args, enable_if_t<(sizeof...(Args)>1)>* = nullptr>
-  std::array<CallNode*,sizeof...(Args)> emplaceCallOperator(Args&&...);
+  std::array<CallNode*,sizeof...(Args)> emplaceFunctionOperator(Args&&...);
 
   template <typename T, typename... Argr>
-  CallNode* emplaceDirectCallOperator(T&&,Argr&&...);
+  CallNode* emplaceDirectFunctionOperator(T&&,Argr&&...);
 
   template <typename T, typename... Args>
   CallNode* emplaceBranchOperator(T&&,Args&&...);
@@ -819,7 +819,7 @@ inline CallNode& CallNode::operator=(const CallNode &other)
 }
 
 template <typename T>
-inline CallNode* CallGraph::emplaceCallOperator(T &&fn)
+inline CallNode* CallGraph::emplaceFunctionOperator(T &&fn)
 {
   PetscErrorCode ierr;
 
@@ -833,14 +833,14 @@ inline CallNode* CallGraph::emplaceCallOperator(T &&fn)
 }
 
 template <typename... Args, enable_if_t<(sizeof...(Args) > 1)>*>
-inline std::array<CallNode*,sizeof...(Args)> CallGraph::emplaceCallOperator(Args&&... rest)
+inline std::array<CallNode*,sizeof...(Args)> CallGraph::emplaceFunctionOperator(Args&&... rest)
 {
   _graph.reserve(_graph.size()+sizeof...(Args));
-  return {emplaceCallOperator(std::forward<Args>(rest))...};
+  return {emplaceFunctionOperator(std::forward<Args>(rest))...};
 }
 
 template <typename T, typename... Argr>
-inline CallNode* CallGraph::emplaceDirectCallOperator(T &&f, Argr&&... args)
+inline CallNode* CallGraph::emplaceDirectFunctionOperator(T &&f, Argr&&... args)
 {
   PetscErrorCode ierr;
 
