@@ -339,6 +339,21 @@ PETSC_EXTERN PetscErrorCode TSTrajectorySetDirname(TSTrajectory,const char[]);
 PETSC_EXTERN PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory,const char[]);
 PETSC_EXTERN PetscErrorCode TSGetTrajectory(TS,TSTrajectory*);
 
+/*E
+   TSTrajectoryStorageViewerType - storage viewer type for the trajectory files
+
+   Level: beginner
+
+   Supported types are:
+     TJ_BINARY
+     TJ_HDF5
+
+.seealso: TSTrajectorySetStorageViewerType()
+E*/
+typedef enum {TJ_BINARY, TJ_HDF5} TSTrajectoryStorageViewerType;
+PETSC_EXTERN const char *const TSTrajectoryStorageViewerTypes[];
+PETSC_EXTERN PetscErrorCode TSTrajectorySetStorageViewerType(TSTrajectory,TSTrajectoryStorageViewerType);
+
 PETSC_EXTERN PetscErrorCode TSSetCostGradients(TS,PetscInt,Vec*,Vec*);
 PETSC_EXTERN PetscErrorCode TSGetCostGradients(TS,PetscInt*,Vec**,Vec**);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSCreateQuadratureTS() then set up the sub-TS (since version 3.12)") PetscErrorCode TSSetCostIntegrand(TS,PetscInt,Vec,PetscErrorCode (*)(TS,PetscReal,Vec,Vec,void*),PetscErrorCode (*)(TS,PetscReal,Vec,Vec*,void*),PetscErrorCode (*)(TS,PetscReal,Vec,Vec*,void*),PetscBool,void*);

@@ -228,6 +228,13 @@ PetscErrorCode InitialConditions(DM da,Vec U)
       output_file: output/ex5adj_1.out
 
    test:
+      requires: hdf5
+      suffix: 6
+      nsize: 2
+      args: -ts_max_steps 10 -ts_dt 10 -ts_monitor -ts_adjoint_monitor -ksp_monitor_short -da_grid_x 20 -da_grid_y 20 -ts_trajectory_storage_viewer_type hdf5
+      output_file: output/ex5adj_2.out
+
+   test:
       suffix: knl
       args: -ts_max_steps 10 -ts_monitor -ts_adjoint_monitor -ts_trajectory_type memory -ts_trajectory_solution_only 0 -malloc_hbw -ts_trajectory_use_dram 1
       output_file: output/ex5adj_3.out
