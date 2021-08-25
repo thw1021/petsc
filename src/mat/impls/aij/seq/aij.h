@@ -1,4 +1,5 @@
 
+#include "petscsystypes.h"
 #if !defined(__AIJ_H)
 #define __AIJ_H
 
@@ -9,16 +10,16 @@
     Struct header shared by SeqAIJ, SeqBAIJ and SeqSBAIJ matrix formats
 */
 #define SEQAIJHEADER(datatype)        \
-  PetscBool roworiented;              /* if true, row-oriented input, default */ \
-  PetscInt  nonew;                    /* 1 don't add new nonzeros, -1 generate error on new */ \
-  PetscInt  nounused;                 /* -1 generate error on unused space */ \
-  PetscBool singlemalloc;             /* if true a, i, and j have been obtained with one big malloc */ \
-  PetscInt  maxnz;                    /* allocated nonzeros */ \
-  PetscInt  *imax;                    /* maximum space allocated for each row */ \
-  PetscInt  *ilen;                    /* actual length of each row */ \
-  PetscInt  *ipre;                    /* space preallocated for each row by user */ \
-  PetscBool free_imax_ilen;  \
-  PetscInt  reallocs;                 /* number of mallocs done during MatSetValues() \
+  PetscBool    roworiented;              /* if true, row-oriented input, default */ \
+  PetscInt     nonew;                    /* 1 don't add new nonzeros, -1 generate error on new */ \
+  PetscInt     nounused;                 /* -1 generate error on unused space */ \
+  PetscBool    singlemalloc;             /* if true a, i, and j have been obtained with one big malloc */ \
+  PetscBigInt maxnz;                    /* allocated nonzeros */ \
+  PetscInt     *imax;                    /* maximum space allocated for each row */ \
+  PetscInt     *ilen;                    /* actual length of each row */ \
+  PetscInt     *ipre;                    /* space preallocated for each row by user */ \
+  PetscBool    free_imax_ilen;                  \
+  PetscInt     reallocs;                 /* number of mallocs done during MatSetValues() \
                                         as more values are set than were prealloced */\
   PetscInt          rmax;             /* max nonzeros in any row */ \
   PetscBool         keepnonzeropattern;   /* keeps matrix structure same in calls to MatZeroRows()*/ \
@@ -27,9 +28,9 @@
   PetscBool         free_a;           /* free the numerical values when matrix is destroy */ \
   Mat_CompressedRow compressedrow;    /* use compressed row format */                      \
   PetscInt          nz;               /* nonzeros */                                       \
-  PetscInt          *i;               /* pointer to beginning of each row */               \
+  PetscBigInt      *i;               /* pointer to beginning of each row */               \
   PetscInt          *j;               /* column values: j + i[k] - 1 is start of row k */  \
-  PetscInt          *diag;            /* pointers to diagonal elements */                  \
+  PetscBigInt      *diag;            /* pointers to diagonal elements */                  \
   PetscInt          nonzerorowcnt;    /* how many rows have nonzero entries */             \
   PetscBool         free_diag;         \
   datatype          *a;               /* nonzero elements */                               \
@@ -127,7 +128,7 @@ typedef struct {
 /*
   Frees the a, i, and j arrays from the XAIJ (AIJ, BAIJ, and SBAIJ) matrix types
 */
-PETSC_STATIC_INLINE PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscInt **j,PetscInt **i)
+PETSC_STATIC_INLINE PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscInt **j,PetscBigInt **i)
 {
   PetscErrorCode ierr;
   Mat_SeqAIJ     *A = (Mat_SeqAIJ*) AA->data;
@@ -148,7 +149,8 @@ PETSC_STATIC_INLINE PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscI
   if (NROW >= RMAX) { \
     Mat_SeqAIJ *Ain = (Mat_SeqAIJ*)Amat->data; \
     /* there is no extra room in row, therefore enlarge */ \
-    PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_i=NULL,*new_j=NULL; \
+    PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_j=NULL; \
+    PetscBigInt *new_i=NULL; \
     datatype *new_a; \
  \
     if (NONEW == -2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%D,%D) caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
@@ -181,7 +183,8 @@ PETSC_STATIC_INLINE PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscI
   if (NROW >= RMAX) { \
     Mat_SeqAIJ *Ain = (Mat_SeqAIJ*)Amat->data; \
     /* there is no extra room in row, therefore enlarge */ \
-    PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_i=NULL,*new_j=NULL; \
+    PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_j=NULL; \
+    PetscBigInt *new_i=NULL; \
  \
     if (NONEW == -2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%D,%D) caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
     /* malloc new storage space */ \
@@ -241,7 +244,7 @@ PETSC_INTERN PetscErrorCode MatGetSymbolicTransposeReduced_SeqAIJ(Mat,PetscInt,P
 PETSC_INTERN PetscErrorCode MatRestoreSymbolicTranspose_SeqAIJ(Mat,PetscInt *[],PetscInt *[]);
 PETSC_INTERN PetscErrorCode MatTransposeSymbolic_SeqAIJ(Mat,Mat*);
 PETSC_INTERN PetscErrorCode MatTranspose_SeqAIJ(Mat,MatReuse,Mat*);
-PETSC_INTERN PetscErrorCode MatToSymmetricIJ_SeqAIJ(PetscInt,PetscInt*,PetscInt*,PetscBool,PetscInt,PetscInt,PetscInt**,PetscInt**);
+PETSC_INTERN PetscErrorCode MatToSymmetricIJ_SeqAIJ(PetscInt,PetscBigInt*,PetscInt*,PetscBool,PetscInt,PetscInt,PetscInt**,PetscInt**);
 PETSC_INTERN PetscErrorCode MatLUFactorSymbolic_SeqAIJ_inplace(Mat,Mat,IS,IS,const MatFactorInfo*);
 PETSC_INTERN PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat,Mat,IS,IS,const MatFactorInfo*);
 PETSC_INTERN PetscErrorCode MatLUFactorNumeric_SeqAIJ_inplace(Mat,Mat,const MatFactorInfo*);
@@ -332,8 +335,8 @@ PETSC_INTERN PetscErrorCode MatScale_SeqAIJ(Mat,PetscScalar);
 PETSC_INTERN PetscErrorCode MatDiagonalScale_SeqAIJ(Mat,Vec,Vec);
 PETSC_INTERN PetscErrorCode MatDiagonalSet_SeqAIJ(Mat,Vec,InsertMode);
 PETSC_INTERN PetscErrorCode MatAXPY_SeqAIJ(Mat,PetscScalar,Mat,MatStructure);
-PETSC_INTERN PetscErrorCode MatGetRowIJ_SeqAIJ(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool*);
-PETSC_INTERN PetscErrorCode MatRestoreRowIJ_SeqAIJ(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool*);
+PETSC_INTERN PetscErrorCode MatGetRowIJ_SeqAIJ(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscBigInt *[],const PetscInt *[],PetscBool*);
+PETSC_INTERN PetscErrorCode MatRestoreRowIJ_SeqAIJ(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscBigInt *[],const PetscInt *[],PetscBool*);
 PETSC_INTERN PetscErrorCode MatGetColumnIJ_SeqAIJ(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool*);
 PETSC_INTERN PetscErrorCode MatRestoreColumnIJ_SeqAIJ(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool*);
 PETSC_INTERN PetscErrorCode MatGetColumnIJ_SeqAIJ_Color(Mat,PetscInt,PetscBool,PetscBool,PetscInt*,const PetscInt *[],const PetscInt *[],PetscInt *[],PetscBool*);
@@ -372,7 +375,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJ(Mat);
 PETSC_INTERN PetscErrorCode MatAssemblyEnd_SeqAIJ(Mat,MatAssemblyType);
 PETSC_EXTERN PetscErrorCode MatZeroEntries_SeqAIJ(Mat);
 
-PETSC_INTERN PetscErrorCode MatAXPYGetPreallocation_SeqX_private(PetscInt,const PetscInt*,const PetscInt*,const PetscInt*,const PetscInt*,PetscInt*);
+PETSC_INTERN PetscErrorCode MatAXPYGetPreallocation_SeqX_private(PetscInt,const PetscBigInt*,const PetscInt*,const PetscBigInt*,const PetscInt*,PetscInt*);
 PETSC_INTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqAIJ(MPI_Comm,Mat,PetscInt,MatReuse,Mat*);
 PETSC_INTERN PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIAIJ(MPI_Comm,Mat,PetscInt,MatReuse,Mat*);
 

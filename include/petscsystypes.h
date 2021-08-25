@@ -3,6 +3,7 @@
 
 #include <petscconf.h>
 #include <petscfix.h>
+#include <stddef.h>
 
 /*MC
     PetscErrorCode - datatype used for return error code from almost all PETSc functions
@@ -101,6 +102,8 @@ M*/
 #else
    typedef int PetscInt;
 #endif
+
+typedef ptrdiff_t PetscBigInt;
 
 /*MC
    PetscBLASInt - datatype used to represent 'int' parameters to BLAS/LAPACK functions.

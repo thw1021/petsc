@@ -91,8 +91,8 @@ struct _MatOps {
   PetscErrorCode (*zerorowscolumns)(Mat,PetscInt,const PetscInt[],PetscScalar,Vec,Vec);
   /*49*/
   PetscErrorCode (*setrandom)(Mat,PetscRandom);
-  PetscErrorCode (*getrowij)(Mat,PetscInt,PetscBool ,PetscBool ,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool  *);
-  PetscErrorCode (*restorerowij)(Mat,PetscInt,PetscBool ,PetscBool ,PetscInt *,const PetscInt *[],const PetscInt *[],PetscBool  *);
+  PetscErrorCode (*getrowij)(Mat,PetscInt,PetscBool ,PetscBool ,PetscInt*,const PetscBigInt *[],const PetscInt *[],PetscBool  *);
+  PetscErrorCode (*restorerowij)(Mat,PetscInt,PetscBool ,PetscBool ,PetscInt *,const PetscBigInt *[],const PetscInt *[],PetscBool  *);
   PetscErrorCode (*getcolumnij)(Mat,PetscInt,PetscBool ,PetscBool ,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool  *);
   PetscErrorCode (*restorecolumnij)(Mat,PetscInt,PetscBool ,PetscBool ,PetscInt*,const PetscInt *[],const PetscInt *[],PetscBool  *);
   /*54*/
@@ -400,12 +400,12 @@ typedef struct {
 
 /* Info about using compressed row format */
 typedef struct {
-  PetscBool  use;                           /* indicates compressed rows have been checked and will be used */
-  PetscInt   nrows;                         /* number of non-zero rows */
-  PetscInt   *i;                            /* compressed row pointer  */
-  PetscInt   *rindex;                       /* compressed row index               */
+  PetscBool   use;             /* indicates compressed rows have been checked and will be used */
+  PetscInt    nrows;           /* number of non-zero rows */
+  PetscBigInt *i;              /* compressed row pointer  */
+  PetscInt    *rindex;         /* compressed row index               */
 } Mat_CompressedRow;
-PETSC_EXTERN PetscErrorCode MatCheckCompressedRow(Mat,PetscInt,Mat_CompressedRow*,PetscInt*,PetscInt,PetscReal);
+PETSC_EXTERN PetscErrorCode MatCheckCompressedRow(Mat,PetscInt,Mat_CompressedRow*,PetscBigInt*,PetscInt,PetscReal);
 
 typedef struct { /* used by MatCreateRedundantMatrix() for reusing matredundant */
   PetscInt     nzlocal,nsends,nrecvs;
