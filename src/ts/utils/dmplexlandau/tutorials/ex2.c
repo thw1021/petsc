@@ -60,14 +60,14 @@ static void f0_j_re(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static void f0_jz_sum(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                    const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
                    const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
-                   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
+                   PetscReal t, const PetscReal x[],  PetscInt numConstants, const PetscScalar qv0[], PetscScalar *f0)
 {
   PetscInt ii;
   f0[0] = 0;
   if (dim==2) {
-    for (ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*PETSC_PI*x[0] * x[1] * constants[ii]; /* n * r * v_|| * q */
+    for (ii=0;ii<numConstants;ii++) f0[0] += u[ii] * 2.*PETSC_PI*x[0] * x[1] * qv0[ii]; /* n * r * v_|| * q * v_0 */
   } else {
-    for (ii=0;ii<numConstants;ii++) f0[0] += u[ii]                * x[2] * constants[ii]; /* n * v_|| * q  */
+    for (ii=0;ii<numConstants;ii++) f0[0] += u[ii]                * x[2] * qv0[ii]; /* n * v_|| * q  * v_0 */
   }
 }
 
@@ -161,19 +161,19 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   static PetscReal  old_ratio = 1e10;
   TSConvergedReason reason;
   PetscReal         J,J_re,spit_eta,Te_kev=0,E,ratio,Z,n_e,v,v2;
-  PetscScalar       user[2] = {0.,ctx->charges[0]}, charges[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES],vz;
+  PetscScalar       user[2] = {0.,ctx->charges[0]}, qv[LANDAU_MAX_SPECIES],tt[LANDAU_MAX_SPECIES],vz;
   PetscReal         dt;
 
   PetscFunctionBeginUser;
   if (ctx->num_species<2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
   ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
-  /* get current */
-  for (ii=0;ii<ctx->num_species;ii++) charges[ii] = ctx->charges[ii];
-  ierr = PetscDSSetConstants(prob, ctx->num_species, charges);CHKERRQ(ierr);
+  /* get current for each grid (todo) */
+  for (ii=0;ii<ctx->num_species;ii++) qv[ii] = ctx->charges[ii]*ctx->v_0[ii];
+  ierr = PetscDSSetConstants(prob, ctx->num_species, qv);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-  J = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
+  J = -ctx->n_0*PetscRealPart(tt[0]);
   /* get N_e */
   ierr = PetscDSSetConstants(prob, 2, user);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
@@ -206,16 +206,16 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, DM plex, PetscInt stepi, PetscRe
   ierr = PetscDSSetConstants(prob, 1, &vz);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_ve_shift);CHKERRQ(ierr);
   ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
-  v = ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/n_e;   /* remove number density to get velocity */
-  v2 = PetscSqr(v);                                 /* use real space: m^2 / s^2 */
-  Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul; /* temperature in kev */
+  v = ctx->n_0*ctx->v_0[0]*PetscRealPart(tt[0])/n_e;   /* remove number density to get velocity */
+  v2 = PetscSqr(v);                                    /* use real space: m^2 / s^2 */
+  Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul;    /* temperature in kev */
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],Z,ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
   if (1) {
-    ierr = PetscDSSetConstants(prob, 1, charges);CHKERRQ(ierr);
+    ierr = PetscDSSetConstants(prob, 1, qv);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,NULL);CHKERRQ(ierr);
   } else tt[0] = 0;
-  J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
+  J_re = -ctx->n_0*PetscRealPart(tt[0]);
 
   if (rectx->use_spitzer_eta) {
     E = ctx->Ez = spit_eta*(rectx->j-J_re);
@@ -249,7 +249,7 @@ static void f0_0_diff_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   PetscInt        ii = rectx->idx, i;
   const PetscReal kT_m = ctx->k*ctx->thermal_temps[ii]/ctx->masses[ii]; /* kT/m */
   const PetscReal n = ctx->n[ii];
-  PetscReal       diff, f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
+  PetscReal       diff, f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0[ii]*ctx->v_0[ii]); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   f_maxwell = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
   diff = 2.*PETSC_PI*x[0]*(PetscRealPart(u[ii]) - f_maxwell);
@@ -265,7 +265,7 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   PetscInt        ii = rectx->idx, i;
   const PetscReal kT_m = ctx->k*ctx->thermal_temps[ii]/ctx->masses[ii]; /* kT/m */
   const PetscReal n = ctx->n[ii];
-  PetscReal       f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
+  PetscReal       f_maxwell, v2 = 0, theta = 2*kT_m/(ctx->v_0[ii]*ctx->v_0[ii]); /* theta = 2kT/mc^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   f_maxwell = 2.*PETSC_PI*x[0] * n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
   f0[0] = PetscPowReal(f_maxwell,ppp);
@@ -326,21 +326,21 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   PetscErrorCode    ierr;
   PetscInt          ii;
   DM                dm,plex;
-  PetscScalar       tt[LANDAU_MAX_SPECIES], constants[LANDAU_MAX_SPECIES];
+  PetscScalar       tt[LANDAU_MAX_SPECIES], qv0[LANDAU_MAX_SPECIES];
   PetscReal         dJ_dt;
   PetscDS           prob;
 
   PetscFunctionBeginUser;
-  for (ii=0;ii<ctx->num_species;ii++) constants[ii] = ctx->charges[ii];
+  for (ii=0;ii<ctx->num_species;ii++) qv0[ii] = ctx->charges[ii]*ctx->v_0[ii];
   ierr = VecGetDM(X, &dm);CHKERRQ(ierr);
   ierr = DMGetDS(dm, &prob);CHKERRQ(ierr);
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
   /* get d current / dt */
-  ierr = PetscDSSetConstants(prob, ctx->num_species, constants);CHKERRQ(ierr);
+  ierr = PetscDSSetConstants(prob, ctx->num_species, qv0);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
   if (!X_t) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "X_t");
   ierr = DMPlexComputeIntegralFEM(plex,X_t,tt,NULL);CHKERRQ(ierr);
-  dJ_dt = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/ctx->t_0;
+  dJ_dt = -ctx->n_0*PetscRealPart(tt[0])/ctx->t_0;
   /* E induction */
   *a_E = -rectx->L*dJ_dt + rectx->Ez_initial;
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
