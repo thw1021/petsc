@@ -16,8 +16,12 @@ petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
 
 # find MATLAB location
 import os
-import shutil
-matlab_dir=os.path.dirname(os.path.dirname(shutil.which('matlab')))
+try:
+  from shutil import which
+except ImportError:
+  from distutils.spawn import find_executable as which
+
+matlab_dir=os.path.dirname(os.path.dirname(which('matlab')))
 
 if __name__ == '__main__':
   import sys
