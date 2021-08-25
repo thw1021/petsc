@@ -140,7 +140,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       for (fieldA=0;fieldA<Nf;fieldA++) {
         invMass[fieldA] = m_0/ctx->masses[fieldA];
         nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
-        nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
+        nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0[fieldA],3);
       }
       if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
@@ -176,7 +176,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     ierr = MatZeroEntries(JacP);CHKERRQ(ierr);
     flops = (PetscLogDouble)numCells*(PetscLogDouble)Nq*(PetscLogDouble)(5*dim*dim*Nf*Nf + 165);
     for (fieldA=0;fieldA<Nf;fieldA++) {
-      Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
+      Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0[fieldA] * ctx->masses[fieldA]); /* normalize dimensionless */
       if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
     }
     if (!ctx->gpu_assembly || !container) {
@@ -232,10 +232,10 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ierr = PetscLogEventBegin(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
       for (fieldA=0;fieldA<Nf;fieldA++) {
         invMass[fieldA] = m_0/ctx->masses[fieldA];
-        Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0 * ctx->masses[fieldA]); /* normalize dimensionless */
+        Eq_m[fieldA] = ctx->Ez * ctx->t_0 * ctx->charges[fieldA] / (ctx->v_0[fieldA] * ctx->masses[fieldA]); /* normalize dimensionless */
         if (dim==2) Eq_m[fieldA] *=  2 * PETSC_PI; /* add the 2pi term that is not in Landau */
         nu_alpha[fieldA] = PetscSqr(ctx->charges[fieldA]/m_0)*m_0/ctx->masses[fieldA];
-        nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
+        nu_beta[fieldA] = PetscSqr(ctx->charges[fieldA]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0[fieldA],3);
       }
       ierr = PetscMalloc5(elemMatSize, &elemMat, nip*Nf, &ff, nip*Nf, &dudx, nip*Nf, &dudy, dim==3 ? nip*Nf : 0, &dudz);CHKERRQ(ierr);
       for (ei = cStart, invJ = invJ_a; ei < cEnd; ++ei, invJ += Nq*dim*dim) {
@@ -699,7 +699,7 @@ static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, co
     PetscReal absR, absZ;
     absR = PetscAbs(r);
     absZ = PetscAbs(z);
-    CircleInflate(ctx->i_radius,ctx->e_radius,ctx->radius,ctx->num_sections,absR,absZ,&absR,&absZ);
+    CircleInflate(ctx->i_radius[0],ctx->e_radius,ctx->radius[0],ctx->num_sections,absR,absZ,&absR,&absZ); // wrong: how do I know what grid I am on?
     r = (r > 0) ? absR : -absR;
     z = (z > 0) ? absZ : -absZ;
   }
@@ -710,191 +710,182 @@ static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, co
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode ErrorIndicator_Simple(PetscInt dim, PetscReal volume, PetscReal x[], PetscInt Nc, const PetscInt Nf[], const PetscScalar u[], const PetscScalar u_x[], PetscReal *error, void *actx)
-{
-  PetscReal err = 0.0;
-  PetscInt  f = *(PetscInt*)actx, j;
-  PetscFunctionBegin;
-  for (j = 0; j < dim; ++j) {
-    err += PetscSqr(PetscRealPart(u_x[f*dim+j]));
-  }
-  err = PetscRealPart(u[f]); /* just use rho */
-  *error = volume * err; /* * (ctx->axisymmetric ? 2.*PETSC_PI * r : 1); */
-  PetscFunctionReturn(0);
-}
-
 static PetscErrorCode LandauDMCreateVMesh(MPI_Comm comm, const PetscInt dim, const char prefix[], LandauCtx *ctx, DM *dm)
 {
   PetscErrorCode ierr;
-  PetscReal      radius = ctx->radius;
   size_t         len;
-  char           fname[128] = ""; /* we can add a file if we want */
+  char           fname[128] = ""; /* we can add a file if we want, for each grid */
 
   PetscFunctionBegin;
   /* create DM */
   ierr = PetscStrlen(fname, &len);CHKERRQ(ierr);
-  if (len) {
+  if (len) { // not used, need to loop over grids
     PetscInt dim2;
     ierr = DMPlexCreateFromFile(comm, fname, ctx->interpolate, dm);CHKERRQ(ierr);
     ierr = DMGetDimension(*dm, &dim2);CHKERRQ(ierr);
     if (LANDAU_DIM != dim2) SETERRQ2(comm, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim2,LANDAU_DIM);
   } else {    /* p4est, quads */
     /* Create plex mesh of Landau domain */
-    if (!ctx->sphere) {
-      PetscInt       cells[] = {2,2,2};
-      PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
-      DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-      if (dim==2) { lo[0] = 0; cells[0] = 1; }
-      ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, dm);CHKERRQ(ierr);
-      ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
-      if (dim==3) {ierr = PetscObjectSetName((PetscObject) *dm, "cube");CHKERRQ(ierr);}
-      else {ierr = PetscObjectSetName((PetscObject) *dm, "half-plane");CHKERRQ(ierr);}
-    } else if (dim==2) {
-      PetscInt       numCells,cells[16][4],i,j;
-      PetscInt       numVerts;
-      PetscReal      inner_radius1 = ctx->i_radius, inner_radius2 = ctx->e_radius;
-      PetscReal      *flatCoords = NULL;
-      PetscInt       *flatCells = NULL, *pcell;
-      if (ctx->num_sections==2) {
+    for (PetscInt grid=0;grid<ctx->num_grids;grid++) {
+      PetscReal radius = ctx->radius[grid];
+      if (!ctx->sphere) {
+        PetscInt       cells[] = {2,2,2};
+        PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
+        DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
+        if (dim==2) { lo[0] = 0; cells[0] = 1; }
+        ierr = DMPlexCreateBoxMesh(comm, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, dm);CHKERRQ(ierr); // todo: make composite and create dm[grid] here
+        ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
+        if (dim==3) {ierr = PetscObjectSetName((PetscObject) *dm, "cube");CHKERRQ(ierr);}
+        else {ierr = PetscObjectSetName((PetscObject) *dm, "half-plane");CHKERRQ(ierr);}
+      } else if (dim==2) { // sphere is all wrong. should just have one inner radius
+        PetscInt       numCells,cells[16][4],i,j;
+        PetscInt       numVerts;
+        PetscReal      inner_radius1 = ctx->i_radius[grid], inner_radius2 = ctx->e_radius;
+        PetscReal      *flatCoords = NULL;
+        PetscInt       *flatCells = NULL, *pcell;
+        if (ctx->num_sections==2) {
 #if 1
-        numCells = 5;
-        numVerts = 10;
-        int cells2[][4] = { {0,1,4,3},
-                            {1,2,5,4},
-                            {3,4,7,6},
-                            {4,5,8,7},
-                            {6,7,8,9} };
-        for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-        ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
-        {
-          PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
-          for (j = 0; j < numVerts-1; j++) {
-            PetscReal z, r, theta = -PETSC_PI/2 + (j%3) * PETSC_PI/2;
-            PetscReal rad = (j >= 6) ? inner_radius1 : (j >= 3) ? inner_radius2 : ctx->radius;
-            z = rad * PetscSinReal(theta);
-            coords[j][1] = z;
-            r = rad * PetscCosReal(theta);
-            coords[j][0] = r;
+          numCells = 5;
+          numVerts = 10;
+          int cells2[][4] = { {0,1,4,3},
+                              {1,2,5,4},
+                              {3,4,7,6},
+                              {4,5,8,7},
+                              {6,7,8,9} };
+          for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
+          ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
+          {
+            PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
+            for (j = 0; j < numVerts-1; j++) {
+              PetscReal z, r, theta = -PETSC_PI/2 + (j%3) * PETSC_PI/2;
+              PetscReal rad = (j >= 6) ? inner_radius1 : (j >= 3) ? inner_radius2 : ctx->radius[grid];
+              z = rad * PetscSinReal(theta);
+              coords[j][1] = z;
+              r = rad * PetscCosReal(theta);
+              coords[j][0] = r;
+            }
+            coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
           }
-          coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
-        }
 #else
-        numCells = 4;
-        numVerts = 8;
-        static int     cells2[][4] = {{0,1,2,3},
-                                      {4,5,1,0},
-                                      {5,6,2,1},
-                                      {6,7,3,2}};
-        for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-        ierr = loc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
-        {
-          PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
-          PetscInt j;
-          for (j = 0; j < 8; j++) {
-            PetscReal z, r;
-            PetscReal theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3.;
-            PetscReal rad = ctx->radius * ((j < 4) ? 0.5 : 1.0);
-            z = rad * PetscSinReal(theta);
-            coords[j][1] = z;
-            r = rad * PetscCosReal(theta);
-            coords[j][0] = r;
+          numCells = 4;
+          numVerts = 8;
+          static int     cells2[][4] = {{0,1,2,3},
+                                        {4,5,1,0},
+                                        {5,6,2,1},
+                                        {6,7,3,2}};
+          for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
+          ierr = loc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
+          {
+            PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
+            PetscInt j;
+            for (j = 0; j < 8; j++) {
+              PetscReal z, r;
+              PetscReal theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3.;
+              PetscReal rad = ctx->radius[grid] * ((j < 4) ? 0.5 : 1.0);
+              z = rad * PetscSinReal(theta);
+              coords[j][1] = z;
+              r = rad * PetscCosReal(theta);
+              coords[j][0] = r;
+            }
           }
-        }
 #endif
-      } else if (ctx->num_sections==3) {
-        numCells = 7;
-        numVerts = 12;
-        int cells2[][4] = { {0,1,5,4},
-                            {1,2,6,5},
-                            {2,3,7,6},
-                            {4,5,9,8},
-                            {5,6,10,9},
-                            {6,7,11,10},
-                            {8,9,10,11} };
-        for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-        ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
-        {
-          PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
-          for (j = 0; j < numVerts; j++) {
-            PetscReal z, r, theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3;
-            PetscReal rad = (j >= 8) ? inner_radius1 : (j >= 4) ? inner_radius2 : ctx->radius;
-            z = rad * PetscSinReal(theta);
-            coords[j][1] = z;
-            r = rad * PetscCosReal(theta);
-            coords[j][0] = r;
+        } else if (ctx->num_sections==3) {
+          numCells = 7;
+          numVerts = 12;
+          int cells2[][4] = { {0,1,5,4},
+                              {1,2,6,5},
+                              {2,3,7,6},
+                              {4,5,9,8},
+                              {5,6,10,9},
+                              {6,7,11,10},
+                              {8,9,10,11} };
+          for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
+          ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
+          {
+            PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
+            for (j = 0; j < numVerts; j++) {
+              PetscReal z, r, theta = -PETSC_PI/2 + (j%4) * PETSC_PI/3;
+              PetscReal rad = (j >= 8) ? inner_radius1 : (j >= 4) ? inner_radius2 : ctx->radius[grid];
+              z = rad * PetscSinReal(theta);
+              coords[j][1] = z;
+              r = rad * PetscCosReal(theta);
+              coords[j][0] = r;
+            }
           }
+        } else if (ctx->num_sections==4) {
+          numCells = 10;
+          numVerts = 16;
+          int cells2[][4] = { {0,1,6,5},
+                              {1,2,7,6},
+                              {2,3,8,7},
+                              {3,4,9,8},
+                              {5,6,11,10},
+                              {6,7,12,11},
+                              {7,8,13,12},
+                              {8,9,14,13},
+                              {10,11,12,15},
+                              {12,13,14,15}};
+          for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
+          ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
+          {
+            PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
+            for (j = 0; j < numVerts-1; j++) {
+              PetscReal z, r, theta = -PETSC_PI/2 + (j%5) * PETSC_PI/4;
+              PetscReal rad = (j >= 10) ? inner_radius1 : (j >= 5) ? inner_radius2 : ctx->radius[grid];
+              z = rad * PetscSinReal(theta);
+              coords[j][1] = z;
+              r = rad * PetscCosReal(theta);
+              coords[j][0] = r;
+            }
+            coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
+          }
+        } else {
+          numCells = 0;
+          numVerts = 0;
         }
-      } else if (ctx->num_sections==4) {
-        numCells = 10;
-        numVerts = 16;
-        int cells2[][4] = { {0,1,6,5},
-                            {1,2,7,6},
-                            {2,3,8,7},
-                            {3,4,9,8},
-                            {5,6,11,10},
-                            {6,7,12,11},
-                            {7,8,13,12},
-                            {8,9,14,13},
-                            {10,11,12,15},
-                            {12,13,14,15}};
-        for (i = 0; i < numCells; i++) for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-        ierr = PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells);CHKERRQ(ierr);
-        {
-          PetscReal (*coords)[2] = (PetscReal (*) [2]) flatCoords;
-          for (j = 0; j < numVerts-1; j++) {
-            PetscReal z, r, theta = -PETSC_PI/2 + (j%5) * PETSC_PI/4;
-            PetscReal rad = (j >= 10) ? inner_radius1 : (j >= 5) ? inner_radius2 : ctx->radius;
-            z = rad * PetscSinReal(theta);
-            coords[j][1] = z;
-            r = rad * PetscCosReal(theta);
-            coords[j][0] = r;
-          }
-          coords[numVerts-1][0] = coords[numVerts-1][1] = 0;
+        for (j = 0, pcell = flatCells; j < numCells; j++, pcell += 4) {
+          pcell[0] = cells[j][0]; pcell[1] = cells[j][1];
+          pcell[2] = cells[j][2]; pcell[3] = cells[j][3];
         }
-      } else {
-        numCells = 0;
-        numVerts = 0;
-      }
-      for (j = 0, pcell = flatCells; j < numCells; j++, pcell += 4) {
-        pcell[0] = cells[j][0]; pcell[1] = cells[j][1];
-        pcell[2] = cells[j][2]; pcell[3] = cells[j][3];
-      }
-      ierr = DMPlexCreateFromCellListPetsc(comm,2,numCells,numVerts,4,ctx->interpolate,flatCells,2,flatCoords,dm);CHKERRQ(ierr);
-      ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
-    } else SETERRQ(ctx->comm, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
-  }
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)*dm,prefix);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListPetsc(comm,2,numCells,numVerts,4,ctx->interpolate,flatCells,2,flatCoords,dm);CHKERRQ(ierr);
+        ierr = PetscFree2(flatCoords,flatCells);CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject) *dm, "semi-circle");CHKERRQ(ierr);
+      } else SETERRQ(ctx->comm, PETSC_ERR_PLIB, "Velocity space meshes does not support cubed sphere");
+    }
+    ierr = PetscObjectSetOptionsPrefix((PetscObject)*dm,prefix);CHKERRQ(ierr);
 
-  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr); /* Plex refine */
+    ierr = DMSetFromOptions(*dm);CHKERRQ(ierr); /* Plex refine */
 
-  { /* p4est? */
-    char      convType[256];
-    PetscBool flg;
-    ierr = PetscOptionsBegin(ctx->comm, prefix, "Mesh conversion options", "DMPLEX");CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-dm_landau_type","Convert DMPlex to another format (should not be Plex!)","plexland.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd();CHKERRQ(ierr);
-    if (flg) {
-      DM dmforest;
-      ierr = DMConvert(*dm,convType,&dmforest);CHKERRQ(ierr);
-      if (dmforest) {
-        PetscBool isForest;
-        if (dmforest->prealloc_only != (*dm)->prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"plex->prealloc_only != dm->prealloc_only");
-        ierr = PetscObjectSetOptionsPrefix((PetscObject)dmforest,prefix);CHKERRQ(ierr);
-        ierr = DMIsForest(dmforest,&isForest);CHKERRQ(ierr);
-        if (isForest) {
-          if (ctx->sphere && ctx->inflate) {
-            ierr = DMForestSetBaseCoordinateMapping(dmforest,GeometryDMLandau,ctx);CHKERRQ(ierr);
-          }
+    { /* p4est? */
+      char      convType[256];
+      PetscBool flg;
+      ierr = PetscOptionsBegin(ctx->comm, prefix, "Mesh conversion options", "DMPLEX");CHKERRQ(ierr);
+      ierr = PetscOptionsFList("-dm_landau_type","Convert DMPlex to another format (should not be Plex!)","plexland.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
+      ierr = PetscOptionsEnd();CHKERRQ(ierr);
+      if (flg) {
+        DM dmforest;
+        ierr = DMConvert(*dm,convType,&dmforest);CHKERRQ(ierr);
+        if (dmforest) {
+          PetscBool isForest;
           if (dmforest->prealloc_only != (*dm)->prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"plex->prealloc_only != dm->prealloc_only");
-          ierr = DMDestroy(dm);CHKERRQ(ierr);
-          *dm = dmforest;
-          ctx->errorIndicator = ErrorIndicator_Simple; /* flag for Forest */
-        } else SETERRQ(ctx->comm, PETSC_ERR_USER, "Converted to non Forest?");
-      } else SETERRQ(ctx->comm, PETSC_ERR_USER, "Convert failed?");
+          ierr = PetscObjectSetOptionsPrefix((PetscObject)dmforest,prefix);CHKERRQ(ierr);
+          ierr = DMIsForest(dmforest,&isForest);CHKERRQ(ierr);
+          if (isForest) {
+            if (ctx->sphere && ctx->inflate) {
+              ierr = DMForestSetBaseCoordinateMapping(dmforest,GeometryDMLandau,ctx);CHKERRQ(ierr);
+            }
+            if (dmforest->prealloc_only != (*dm)->prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"plex->prealloc_only != dm->prealloc_only");
+            ierr = DMDestroy(dm);CHKERRQ(ierr);
+            *dm = dmforest;
+            ctx->use_p4est = PETSC_TRUE; /* flag for Forest */
+          } else SETERRQ(ctx->comm, PETSC_ERR_USER, "Converted to non Forest?");
+        } else SETERRQ(ctx->comm, PETSC_ERR_USER, "Convert failed?");
+      }
     }
   }
+
   ierr = PetscObjectSetName((PetscObject) *dm, "Mesh");CHKERRQ(ierr);
+
   PetscFunctionReturn(0);
 }
 
@@ -945,7 +936,7 @@ static PetscErrorCode SetupDS(DM dm, PetscInt dim, LandauCtx *ctx)
 /* f(x;\theta)=\left(\frac{1}{\pi\theta}\right)^{3/2} \exp [ -x^2/\theta ] */
 
 typedef struct {
-  LandauCtx   *ctx;
+  PetscReal v_0;
   PetscReal kT_m;
   PetscReal n;
   PetscReal shift;
@@ -954,9 +945,8 @@ typedef struct {
 static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf_dummy, PetscScalar *u, void *actx)
 {
   MaxwellianCtx *mctx = (MaxwellianCtx*)actx;
-  LandauCtx     *ctx = mctx->ctx;
   PetscInt      i;
-  PetscReal     v2 = 0, theta = 2*mctx->kT_m/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 */
+  PetscReal     v2 = 0, theta = 2*mctx->kT_m/(mctx->v_0*mctx->v_0); /* theta = 2kT/mc^2 */
   PetscFunctionBegin;
   /* compute the exponents, v^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
@@ -1005,7 +995,7 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
   if (!ctx) { ierr = DMGetApplicationContext(dm, &ctx);CHKERRQ(ierr); }
   for (ii=0;ii<ctx->num_species;ii++) {
     mctxs[ii] = &data[ii];
-    data[ii].ctx = ctx;
+    data[ii].v_0 = ctx->v_0[ii];
     data[ii].kT_m = ctx->k*temps[ii]/ctx->masses[ii]; /* kT/m */
     data[ii].n = ns[ii];
     initu[ii] = maxwellian;
@@ -1045,7 +1035,7 @@ static PetscErrorCode LandauSetInitialCondition(DM dm, Vec X, void *actx)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTol[], PetscReal coarsenTol[], PetscInt type, LandauCtx *ctx, DM *newDM)
+static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, PetscInt grid, LandauCtx *ctx, DM *newDM)
 {
   DM               dm, plex, adaptedDM = NULL;
   PetscDS          prob;
@@ -1106,7 +1096,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
               eCellIdx[eMaxIdx++] = c;
             }
           }
-          if ((tt=r-ctx->i_radius) > 0) {
+          if ((tt=r-ctx->i_radius[grid]) > 0) {
             if (tt < iMinRad - 1.e-5) {
               iMinRad = tt;
               iMaxIdx = 0;
@@ -1149,9 +1139,9 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
         PetscReal z = PetscRealPart(coef[d*dim + (dim-1)]), x = PetscSqr(PetscRealPart(coef[d*dim + 0])) + ((dim==3) ? PetscSqr(PetscRealPart(coef[d*dim + 1])) : 0);
         x = PetscSqrtReal(x);
         if (x < PETSC_MACHINE_EPSILON*10. && PetscAbs(z)<PETSC_MACHINE_EPSILON*10.) doit = 1;             /* refine origin */
-        else if (type==0 && (z < -PETSC_MACHINE_EPSILON*10. || z > ctx->re_radius+PETSC_MACHINE_EPSILON*10.)) outside++;   /* first pass don't refine bottom */
-        else if (type==1 && (z > ctx->vperp0_radius1 || z < -ctx->vperp0_radius1)) outside++; /* don't refine outside electron refine radius */
-        else if (type==3 && (z > ctx->vperp0_radius2 || z < -ctx->vperp0_radius2)) outside++; /* don't refine outside ion refine radius */
+        else if (type==0 && (z < -PETSC_MACHINE_EPSILON*10. || z > ctx->re_radius[grid]+PETSC_MACHINE_EPSILON*10.)) outside++;   /* first pass don't refine bottom */
+        else if (type==1 && (z > ctx->vperp0_radius1[grid] || z < -ctx->vperp0_radius1[grid])) outside++; /* don't refine outside electron refine radius */
+        else if (type==3 && (z > ctx->vperp0_radius2[grid] || z < -ctx->vperp0_radius2[grid])) outside++; /* don't refine outside ion refine radius */
         if (x < PETSC_MACHINE_EPSILON*10.) nz++;
       }
       ierr = DMPlexVecRestoreClosure(cdm, cs, coords, c, &csize, &coef);CHKERRQ(ierr);
@@ -1180,22 +1170,24 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscReal refineTo
 static PetscErrorCode adapt(DM *dm, LandauCtx *ctx, Vec *uu)
 {
   PetscErrorCode  ierr;
-  PetscInt        type, limits[5] = {ctx->numRERefine,ctx->nZRefine1,ctx->maxRefIts,ctx->nZRefine2,ctx->postAMRRefine};
-  PetscInt        adaptIter;
+  PetscInt        adaptIter, grid;
 
   PetscFunctionBegin;
-  for (type=0;type<5;type++) {
-    for (adaptIter = 0; adaptIter<limits[type];adaptIter++) {
-      DM  dmNew = NULL;
-      ierr = adaptToleranceFEM(ctx->fe[0], *uu, ctx->refineTol, ctx->coarsenTol, type, ctx, &dmNew);CHKERRQ(ierr);
-      if (!dmNew) SETERRQ(ctx->comm,PETSC_ERR_ARG_WRONG,"should not happen");
-      else {
-        ierr = DMDestroy(dm);CHKERRQ(ierr);
-        ierr = VecDestroy(uu);CHKERRQ(ierr);
-        ierr = DMCreateGlobalVector(dmNew,uu);CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject) *uu, "u");CHKERRQ(ierr);
-        ierr = LandauSetInitialCondition(dmNew, *uu, ctx);CHKERRQ(ierr);
-        *dm = dmNew;
+  for (grid=0;grid<ctx->num_grids;grid++) {
+    PetscInt  type, limits[5] = {ctx->numRERefine[grid],ctx->nZRefine1[grid],ctx->maxRefIts[grid],ctx->nZRefine2[grid],ctx->postAMRRefine[grid]};
+    for (type=0;type<5;type++) {
+      for (adaptIter = 0; adaptIter<limits[type];adaptIter++) {
+        DM  dmNew = NULL;
+        ierr = adaptToleranceFEM(ctx->fe[0], *uu, type, grid, ctx, &dmNew);CHKERRQ(ierr);
+        if (!dmNew) SETERRQ(ctx->comm,PETSC_ERR_ARG_WRONG,"should not happen");
+        else {
+          ierr = DMDestroy(dm);CHKERRQ(ierr);
+          ierr = VecDestroy(uu);CHKERRQ(ierr);
+          ierr = DMCreateGlobalVector(dmNew,uu);CHKERRQ(ierr);
+          ierr = PetscObjectSetName((PetscObject) *uu, "u");CHKERRQ(ierr);
+          ierr = LandauSetInitialCondition(dmNew, *uu, ctx);CHKERRQ(ierr);
+          *dm = dmNew;
+        }
       }
     }
   }
@@ -1206,7 +1198,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 {
   PetscErrorCode    ierr;
   PetscBool         flg, sph_flg;
-  PetscInt          ii,nt,nm,nc;
+  PetscInt          ii,nt,nm,nc,num_species_grid[LANDAU_MAX_GRIDS];
   DM                dummy;
 
   PetscFunctionBegin;
@@ -1215,23 +1207,29 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->verbose = 1;
   ctx->interpolate = PETSC_TRUE;
   ctx->gpu_assembly = PETSC_TRUE;
+  ctx->aux_bool = PETSC_FALSE;
+  ctx->electronShift = 0;
+  /* geometry and grids */
   ctx->sphere = PETSC_FALSE;
   ctx->inflate = PETSC_FALSE;
-  ctx->electronShift = 0;
-  ctx->errorIndicator = NULL;
-  ctx->radius = 5.; /* electron thermal radius (velocity) */
-  ctx->re_radius = 0.;
-  ctx->vperp0_radius1 = 0;
-  ctx->vperp0_radius2 = 0;
-  ctx->e_radius = .1;
-  ctx->i_radius = .01;
-  ctx->maxRefIts = 5;
-  ctx->postAMRRefine = 0;
-  ctx->nZRefine1 = 0;
-  ctx->nZRefine2 = 0;
-  ctx->numRERefine = 0;
-  ctx->aux_bool = PETSC_FALSE;
+  ctx->use_p4est = PETSC_FALSE;
   ctx->num_sections = 3; /* 2, 3 or 4 */
+  for (ii=0;ii<LANDAU_MAX_GRIDS;ii++) {
+    ctx->radius[ii] = 5.; /* thermal radius (velocity) */
+    ctx->re_radius[ii] = 0.;
+    ctx->vperp0_radius1[ii] = 0;
+    ctx->vperp0_radius2[ii] = 0;
+    ctx->maxRefIts[ii] = 5;
+    ctx->postAMRRefine[ii] = 0;
+    ctx->nZRefine1[ii] = 0;
+    ctx->nZRefine2[ii] = 0;
+    ctx->numRERefine[ii] = 0;
+    ctx->species_grid_offset[ii+1] = 1; // one species default
+    num_species_grid[ii] = 0;
+  }
+  ctx->species_grid_offset[0] = 0;
+  num_species_grid[0] = 1; // one species default
+  for (ii=0;ii<LANDAU_MAX_SPECIES;ii++) ctx->v_0[ii] = 1; /* thermal velocity of each grid, we could start with a scale != 1 */
   /* species - [0] electrons, [1] one ion species eg, duetarium, [2] heavy impurity ion, ... */
   ctx->charges[0] = -1;  /* electron charge (MKS) */
   ctx->masses[0] = 1/1835.5; /* temporary value in proton mass */
@@ -1243,7 +1241,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->lnLam = 10;         /* cross section ratio large - small angle collisions */
   ctx->n_0 = 1.e20;        /* typical plasma n, but could set it to 1 */
   ctx->Ez = 0;
-  ctx->v_0 = 1; /* in electron thermal velocity */
   ctx->subThreadBlockSize = 1; /* for device and maybe OMP */
   ctx->numConcurrency = 1; /* for device */
   ctx->SData_d = NULL;     /* for device */
@@ -1285,27 +1282,15 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       }
     }
   }
-  ierr = PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL);CHKERRQ(ierr);
+
   ierr = PetscOptionsReal("-dm_landau_electron_shift","Shift in thermal velocity of electrons","none",ctx->electronShift,&ctx->electronShift, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_landau_inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "plexland.c", ctx->maxRefIts, &ctx->maxRefIts, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &ctx->postAMRRefine, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dm_landau_verbose", "", "plexland.c", ctx->verbose, &ctx->verbose, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_landau_re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","plexland.c",ctx->re_radius,&ctx->re_radius, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_landau_z_radius1","velocity range to refine r=0 axis (for electrons)","plexland.c",ctx->vperp0_radius1,&ctx->vperp0_radius1, &flg);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_landau_z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","plexland.c",ctx->vperp0_radius2,&ctx->vperp0_radius2, &flg);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dm_landau_Ez","Initial parallel electric field in unites of Conner-Hastie criticle field","plexland.c",ctx->Ez,&ctx->Ez, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dm_landau_n_0","Normalization constant for number density","plexland.c",ctx->n_0,&ctx->n_0, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dm_landau_ln_lambda","Cross section parameter","plexland.c",ctx->lnLam,&ctx->lnLam, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_landau_num_thread_teams", "The number of other concurrent runs to make room for", "plexland.c", ctx->numConcurrency, &ctx->numConcurrency, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_landau_use_mataxpy_mass", "Use fast but slightly fragile MATAXPY to add mass term", "plexland.c", ctx->use_matrix_mass, &ctx->use_matrix_mass, NULL);CHKERRQ(ierr);
 
-  /* get num species with tempurature*/
+  /* get num species with temperature*/
   {
     PetscReal arr[100];
     nt = 100;
@@ -1339,47 +1324,98 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   for (ii=0;ii<LANDAU_MAX_SPECIES;ii++) ctx->masses[ii] *= 1.6720e-27; /* scale by proton mass kg */
   ctx->masses[0] = 9.10938356e-31; /* electron mass kg (should be about right already) */
   ctx->m_0 = ctx->masses[0]; /* arbitrary reference mass, electrons */
-  ierr = PetscOptionsReal("-dm_landau_v_0","Velocity to normalize with in units of initial electrons thermal velocity (not recommended to change default)","plexland.c",ctx->v_0,&ctx->v_0, NULL);CHKERRQ(ierr);
-  ctx->v_0 *= PetscSqrtReal(ctx->k*ctx->thermal_temps[0]/(ctx->masses[0])); /* electron mean velocity in 1D (need 3D form in computing T from FE integral) */
   nc = LANDAU_MAX_SPECIES-1;
   ierr = PetscOptionsRealArray("-dm_landau_ion_charges", "Charge of each species in units of proton charge [i_0=2,i_1=18,...]", "plexland.c", &ctx->charges[1], &nc, &flg);CHKERRQ(ierr);
   if (flg && nc != ctx->num_species-1) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"num charges %D != num species %D",nc,ctx->num_species-1);
   for (ii=0;ii<LANDAU_MAX_SPECIES;ii++) ctx->charges[ii] *= 1.6022e-19; /* electron/proton charge (MKS) */
-  ctx->t_0 = 8*PETSC_PI*PetscSqr(ctx->epsilon0*ctx->m_0/PetscSqr(ctx->charges[0]))/ctx->lnLam/ctx->n_0*PetscPowReal(ctx->v_0,3); /* note, this t_0 makes nu[0,0]=1 */
-  /* geometry */
-  for (ii=0;ii<ctx->num_species;ii++) ctx->refineTol[ii]  = PETSC_MAX_REAL;
-  for (ii=0;ii<ctx->num_species;ii++) ctx->coarsenTol[ii] = 0.;
-  ii = LANDAU_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-dm_landau_refine_tol","tolerance for refining cells in AMR","plexland.c",ctx->refineTol, &ii, &flg);CHKERRQ(ierr);
-  if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #refine_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
-  ii = LANDAU_MAX_SPECIES;
-  ierr = PetscOptionsRealArray("-dm_landau_coarsen_tol","tolerance for coarsening cells in AMR","plexland.c",ctx->coarsenTol, &ii, &flg);CHKERRQ(ierr);
-  if (flg && ii != ctx->num_species) ierr = PetscInfo2(dummy, "Phase: Warning, #coarsen_tol %D != num_species %D\n",ii,ctx->num_species);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_landau_domain_radius","Phase space size in units of electron thermal velocity","plexland.c",ctx->radius,&ctx->radius, &flg);CHKERRQ(ierr);
-  if (flg && ctx->radius <= 0) { /* negative is ratio of c */
-    if (ctx->radius == 0) ctx->radius = 0.75;
-    else ctx->radius = -ctx->radius;
-    ctx->radius = ctx->radius*299792458.0/ctx->v_0;
-    ierr = PetscInfo1(dummy, "Change domain radius to %e\n",ctx->radius);CHKERRQ(ierr);
+  /* geometry and grids */
+  ctx->num_grids = 1;
+  ierr = PetscOptionsInt("-dm_landau_num_grids", "Number of grids", "plexland.c", ctx->num_grids, &ctx->num_grids, NULL);CHKERRQ(ierr);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsIntArray("-dm_landau_num_species_grid","Number of species on each grid: [ 1, ....] ","plexland.c", num_species_grid, &nt, &flg);CHKERRQ(ierr);
+  if (flg && nt!=ctx->num_grids) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_num_species_grid: size = %D != num grids %D",nt,ctx->num_grids);
+  if (num_species_grid[0] != 1) SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_num_species_grid: [0] = %D != 1. Only one species of electrons - but OK with batching or a super fast ion perhaps",num_species_grid[0]);
+  for (ii=nt=0;ii<ctx->num_grids;ii++) nt += num_species_grid[ii];
+  if (ctx->num_species != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_num_species_grid: sum %D != num_species = %D",nt,ctx->num_species);
+  for (ctx->species_grid_offset[0] = ii = 0; ii < ctx->num_grids ; ii++) ctx->species_grid_offset[ii+1] = ctx->species_grid_offset[ii] + num_species_grid[ii];
+  if (ctx->species_grid_offset[ctx->num_grids] != ctx->num_species) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"ctx->species_grid_offset[ctx->num_grids] %D != ctx->num_species = %D",ctx->species_grid_offset[ctx->num_grids],ctx->num_species);
+  for (int grid = 0; grid < ctx->num_grids ; grid++) {
+    const PetscInt i0 = ctx->species_grid_offset[grid], i1 = ctx->species_grid_offset[grid+1];
+    for (ii=i0;ii<i1;ii++) {
+      ctx->v_0[ii] *= PetscSqrtReal(ctx->k*ctx->thermal_temps[i0]/ctx->masses[i0]); /* arbitrary units for non dimensionalization: mean velocity in 1D of first species on grid */
+    }
   }
-  ierr = PetscOptionsReal("-dm_landau_i_radius","Ion thermal velocity, used for circular meshes","plexland.c",ctx->i_radius,&ctx->i_radius, &flg);CHKERRQ(ierr);
+  ctx->t_0 = 8*PETSC_PI*PetscSqr(ctx->epsilon0*ctx->m_0/PetscSqr(ctx->charges[0]))/ctx->lnLam/ctx->n_0*PetscPowReal(ctx->v_0[0],3); /* note, this t_0 makes nu[0,0]=1 */
+  /* domain */
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsRealArray("-dm_landau_domain_radius","Phase space size in units of thermal velocity of grid","plexland.c",ctx->radius,&nt, &flg);CHKERRQ(ierr);
+  if (flg && nt != ctx->num_grids) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_domain_radius: given %D radius != number grids %D",nt,ctx->num_grids);
+  for (int grid = 0; grid < ctx->num_grids ; grid++) {
+    if (flg && ctx->radius[grid] <= 0) { /* negative is ratio of c */
+      if (ctx->radius[grid] == 0) ctx->radius[grid] = 0.75;
+      else ctx->radius[grid] = -ctx->radius[grid];
+      ctx->radius[grid] = ctx->radius[grid]*299792458.0/ctx->v_0[ctx->species_grid_offset[grid]];
+      ierr = PetscInfo2(dummy, "Change domain radius to %e for grid %D\n",ctx->radius,grid);CHKERRQ(ierr);
+    }
+  }
+  /* amr parametres */
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsIntArray("-dm_landau_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_amr_re_level:s %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsIntArray("-dm_landau_amr_z_refine1",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_amr_z_refine1: %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsIntArray("-dm_landau_amr_z_refine2",  "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_amr_z_refine2: %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsIntArray("-dm_landau_amr_levels_max", "Number of AMR levels of refinement around origin after r=0 refinements", "plexland.c", ctx->maxRefIts, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_amr_levels_max: %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsIntArray("-dm_landau_amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_amr_post_refine: %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsRealArray("-dm_landau_re_radius","velocity range to refine on positive (z>0) r=0 axis for runaways","plexland.c",ctx->re_radius,&nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_re_radius: %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsRealArray("-dm_landau_z_radius1","velocity range to refine r=0 axis (for electrons)","plexland.c",ctx->vperp0_radius1,&nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_z_radius:1 %D != num_species = %D",nt,ctx->num_grids);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsRealArray("-dm_landau_z_radius2","velocity range to refine r=0 axis (for ions) after origin AMR","plexland.c",ctx->vperp0_radius2, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_z_radius2: %D != num_species = %D",nt,ctx->num_grids);
+  /* spherical domain (not used) */
+  ierr = PetscOptionsInt("-dm_landau_num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_landau_inflate", "With sphere, inflate for curved edges (no AMR)", "plexland.c", ctx->inflate, &ctx->inflate, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an ion radius but did not set sphere, user error really */
   if (!flg) {
-    ctx->i_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[1]/ctx->masses[1]/PETSC_PI)/ctx->v_0; /* normalized radius with thermal velocity of first ion */
+    ctx->i_radius[0] = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[1]/ctx->masses[1]/PETSC_PI)/ctx->v_0[0]; /* normalized radius with thermal velocity of first ion - wrong */
   }
-  ierr = PetscOptionsReal("-dm_landau_e_radius","Electron thermal velocity, used for circular meshes","plexland.c",ctx->e_radius,&ctx->e_radius, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_landau_e_radius","Electron thermal velocity, used for circular meshes","plexland.c",ctx->e_radius, &ctx->e_radius, &flg);CHKERRQ(ierr);
   if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an e radius but did not set sphere, user error really */
   if (!flg) {
-    ctx->e_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[0]/ctx->masses[0]/PETSC_PI)/ctx->v_0; /* normalized radius with thermal velocity of electrons */
+    ctx->e_radius = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[0]/ctx->masses[0]/PETSC_PI)/ctx->v_0[0]; /* normalized radius with thermal velocity of electrons - wrong */
   }
-  if (ctx->sphere && (ctx->e_radius <= ctx->i_radius || ctx->radius <= ctx->e_radius)) SETERRQ3(ctx->comm,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius,ctx->e_radius,ctx->radius);
+  nt = LANDAU_MAX_GRIDS;
+  ierr = PetscOptionsRealArray("-dm_landau_i_radius","Ion thermal velocity, used for circular meshes","plexland.c",ctx->i_radius, &nt, &flg);CHKERRQ(ierr);
+  if (flg && ctx->num_grids != nt) SETERRQ2(ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_i_radius: %D != num_species = %D",nt,ctx->num_grids);
+  if (ctx->sphere && ctx->e_radius <= ctx->i_radius[0]) SETERRQ3(ctx->comm,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius[0],ctx->e_radius,ctx->radius[0]);
+  /* processing options */
   ierr = PetscOptionsInt("-dm_landau_sub_thread_block_size", "Number of threads in Kokkos integration point subblock", "plexland.c", ctx->subThreadBlockSize, &ctx->subThreadBlockSize, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_landau_num_thread_teams", "The number of other concurrent runs to make room for", "plexland.c", ctx->numConcurrency, &ctx->numConcurrency, NULL);CHKERRQ(ierr);
+
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   for (ii=ctx->num_species;ii<LANDAU_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
   if (ctx->verbose > 0) {
-    ierr = PetscPrintf(ctx->comm, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
-    ierr = PetscPrintf(ctx->comm, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0);CHKERRQ(ierr);
-    ierr = PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->num_species>2 ? ctx->thermal_temps[2] : 0,ctx->v_0,ctx->n_0,ctx->t_0,ctx->radius);CHKERRQ(ierr);
+    ierr = PetscPrintf(ctx->comm, "masses:             e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0);CHKERRQ(ierr);
+    ierr = PetscPrintf(ctx->comm, "charges:            e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0);CHKERRQ(ierr);
+    ierr = PetscPrintf(ctx->comm, "velocity units v_0: e=%10.3e; ions: ", ctx->v_0[0]);CHKERRQ(ierr);
+    for (int grid = 1; grid < ctx->num_grids ; grid++) {
+      ierr = PetscPrintf(ctx->comm, "%10.3e ", ctx->v_0[grid]);CHKERRQ(ierr);
+    }
+    ierr = PetscPrintf(ctx->comm,"\n");
+    ierr = PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. electron v_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1],ctx->num_species>2 ? ctx->thermal_temps[2] : 0,ctx->v_0[0],ctx->n_0,ctx->t_0,ctx->radius);CHKERRQ(ierr);
   }
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
@@ -1463,7 +1499,7 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   ierr = LandauSetInitialCondition(*dm, *X, ctx);CHKERRQ(ierr);
   ierr = VecViewFromOptions(*X, NULL, "-dm_landau_pre_vec_view");CHKERRQ(ierr);
   /* forest refinement */
-  if (ctx->errorIndicator) {
+  if (ctx->use_p4est) {
     /* AMR */
     ierr = adapt(dm,ctx,X);CHKERRQ(ierr);
     if ((*dm)->prealloc_only != prealloc_only) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"(*dm)->prealloc_only != prealloc_only");
@@ -1670,10 +1706,10 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
       density[ii] = tt[0]*ctx->n_0*ctx->charges[ii];
       ierr = PetscDSSetObjective(prob, 0, &f0_s_rmom);CHKERRQ(ierr);
       ierr = DMPlexComputeIntegralFEM(ctx->plex,X,tt,ctx);CHKERRQ(ierr);
-      zmomentum[ii] = tt[0]*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      zmomentum[ii] = tt[0]*ctx->n_0*ctx->v_0[ii]*ctx->masses[ii];
       ierr = PetscDSSetObjective(prob, 0, &f0_s_rv2);CHKERRQ(ierr);
       ierr = DMPlexComputeIntegralFEM(ctx->plex,X,tt,ctx);CHKERRQ(ierr);
-      energy[ii] = tt[0]*0.5*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ii];
+      energy[ii] = tt[0]*0.5*ctx->n_0*ctx->v_0[ii]*ctx->v_0[ii]*ctx->masses[ii];
       zmomentumtot += zmomentum[ii];
       energytot  += energy[ii];
       densitytot += density[ii];
@@ -1685,16 +1721,16 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
       ierr = PetscDSSetObjective(prob, 0, &f0_s_mom);CHKERRQ(ierr);
       user[1] = 0;
       ierr = DMPlexComputeIntegralFEM(ctx->plex,X,tt,ctx);CHKERRQ(ierr);
-      xmomentum[ii]  = tt[0]*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      xmomentum[ii]  = tt[0]*ctx->n_0*ctx->v_0[ii]*ctx->masses[ii];
       user[1] = 1;
       ierr = DMPlexComputeIntegralFEM(ctx->plex,X,tt,ctx);CHKERRQ(ierr);
-      ymomentum[ii] = tt[0]*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      ymomentum[ii] = tt[0]*ctx->n_0*ctx->v_0[ii]*ctx->masses[ii];
       user[1] = 2;
       ierr = DMPlexComputeIntegralFEM(ctx->plex,X,tt,ctx);CHKERRQ(ierr);
-      zmomentum[ii] = tt[0]*ctx->n_0*ctx->v_0*ctx->masses[ii];
+      zmomentum[ii] = tt[0]*ctx->n_0*ctx->v_0[ii]*ctx->masses[ii];
       ierr = PetscDSSetObjective(prob, 0, &f0_s_v2);CHKERRQ(ierr);
       ierr = DMPlexComputeIntegralFEM(ctx->plex,X,tt,ctx);CHKERRQ(ierr);
-      energy[ii]    = 0.5*tt[0]*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ii];
+      energy[ii]    = 0.5*tt[0]*ctx->n_0*ctx->v_0[ii]*ctx->v_0[ii]*ctx->masses[ii];
       ierr = PetscPrintf(ctx->comm, "%3D) species %D: density=%20.13e, x-momentum=%20.13e, y-momentum=%20.13e, z-momentum=%20.13e, energy=%21.13e",
                          stepi,ii,PetscRealPart(density[ii]),PetscRealPart(xmomentum[ii]),PetscRealPart(ymomentum[ii]),PetscRealPart(zmomentum[ii]),PetscRealPart(energy[ii]));CHKERRQ(ierr);
       xmomentumtot += xmomentum[ii];

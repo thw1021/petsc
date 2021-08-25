@@ -19,9 +19,11 @@ PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,
 
 #if !defined(LANDAU_MAX_SPECIES)
 #if LANDAU_DIM==2
-#define LANDAU_MAX_SPECIES 10
+#define LANDAU_MAX_SPECIES 8
+#define LANDAU_MAX_GRIDS 3
 #else
-#define LANDAU_MAX_SPECIES 3
+#define LANDAU_MAX_SPECIES 1
+#define LANDAU_MAX_GRIDS 2
 #endif
 #endif
 
@@ -80,31 +82,29 @@ typedef struct {
   PetscBool      gpu_assembly;
   PetscFE        fe[LANDAU_MAX_SPECIES];
   /* geometry  */
-  PetscReal      i_radius;
+  PetscReal      i_radius[LANDAU_MAX_GRIDS];
   PetscReal      e_radius;
   PetscInt       num_sections;
-  PetscReal      radius;
-  PetscReal      re_radius;           /* radius of refinement along v_perp=0, z>0 */
-  PetscReal      vperp0_radius1;      /* radius of refinement along v_perp=0 */
-  PetscReal      vperp0_radius2;      /* radius of refinement along v_perp=0 after origin AMR refinement */
+  PetscReal      radius[LANDAU_MAX_GRIDS];
+  PetscReal      re_radius[LANDAU_MAX_GRIDS];           /* radius of refinement along v_perp=0, z>0 */
+  PetscReal      vperp0_radius1[LANDAU_MAX_GRIDS];      /* radius of refinement along v_perp=0 */
+  PetscReal      vperp0_radius2[LANDAU_MAX_GRIDS];      /* radius of refinement along v_perp=0 after origin AMR refinement */
   PetscBool      sphere;
   PetscBool      inflate;
-  PetscInt       numRERefine;       /* refinement along v_perp=0, z > 0 */
-  PetscInt       nZRefine1;          /* origin refinement after v_perp=0 refinement */
-  PetscInt       nZRefine2;          /* origin refinement after origin AMR refinement */
-  PetscInt       maxRefIts;         /* normal AMR - refine from origin */
-  PetscInt       postAMRRefine;     /* uniform refinement of AMR */
-  /* discretization - AMR */
-  PetscErrorCode (*errorIndicator)(PetscInt, PetscReal, PetscReal [], PetscInt, const PetscInt[], const PetscScalar[], const PetscScalar[], PetscReal *, void *);
-  PetscReal      refineTol[LANDAU_MAX_SPECIES];
-  PetscReal      coarsenTol[LANDAU_MAX_SPECIES];
+  PetscInt       numRERefine[LANDAU_MAX_GRIDS];       /* refinement along v_perp=0, z > 0 */
+  PetscInt       nZRefine1[LANDAU_MAX_GRIDS];          /* origin refinement after v_perp=0 refinement */
+  PetscInt       nZRefine2[LANDAU_MAX_GRIDS];          /* origin refinement after origin AMR refinement */
+  PetscInt       maxRefIts[LANDAU_MAX_GRIDS];         /* normal AMR - refine from origin */
+  PetscInt       postAMRRefine[LANDAU_MAX_GRIDS];     /* uniform refinement of AMR */
+  /* AMR (flag only) */
+  PetscBool      use_p4est;
   /* physics */
   PetscReal      thermal_temps[LANDAU_MAX_SPECIES];
   PetscReal      masses[LANDAU_MAX_SPECIES];  /* mass of each species  */
   PetscReal      charges[LANDAU_MAX_SPECIES]; /* charge of each species  */
   PetscReal      n[LANDAU_MAX_SPECIES];       /* number density of each species  */
   PetscReal      m_0;      /* reference mass */
-  PetscReal      v_0;      /* reference velocity */
+  PetscReal      v_0[LANDAU_MAX_SPECIES];      /* reference velocity, for each species. Really a grid quantity but simpler to store by species */
   PetscReal      n_0;      /* reference number density */
   PetscReal      t_0;      /* reference time */
   PetscReal      Ez;
@@ -113,6 +113,8 @@ typedef struct {
   PetscReal      lnLam;
   PetscReal      electronShift; /* for tests */
   PetscInt       num_species;
+  PetscInt       species_grid_offset[LANDAU_MAX_GRIDS+1];
+  PetscInt       num_grids;
   /* cache */
   Mat            J;
   Mat            M;
