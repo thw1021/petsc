@@ -1378,7 +1378,8 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer, Pets
 struct _n_PlexLayer {
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
-  PetscSF         pointSF;
+  PetscLayout     vertexLayout;
+  PetscSF         pointSF, vertexSF;
 };
 typedef struct _n_PlexLayer* PlexLayer;
 
@@ -1393,12 +1394,14 @@ static PetscErrorCode PlexLayerDestroy(PlexLayer *layer)
   ierr = ISDestroy(&(*layer)->conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->orientationsIS);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&(*layer)->pointSF);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&(*layer)->vertexSF);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&(*layer)->vertexLayout);CHKERRQ(ierr);
   ierr = PetscFree(*layer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 //TODO pointsIS should appear to be redundant
-static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, PetscLayout pointsLayout, PlexLayer *layer, PetscLayout *vertexLayout_)
+static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, PetscLayout pointsLayout, PlexLayer *layer)
 {
   char            path[128];
   MPI_Comm        comm;
@@ -1512,13 +1515,15 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, Pets
   (*layer)->coneSizesSection  = coneSizesSection;
   (*layer)->orientationsIS    = orientationsIS;
   (*layer)->pointsIS          = pointsIS;
-  *vertexLayout_ = vertexLayout;
+  (*layer)->vertexLayout      = vertexLayout;
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer, PetscSF vertexSF, PlexLayer *newPlexLayer)
+static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer)
 {
-  PlexLayer       newl;
+  PetscSF         vertexSF = layer->vertexSF;
+  IS              newPointsIS, newConesIS, newOrientationsIS;
+  PetscSection    newConeSizesSection;
   PetscBool       debug = PETSC_FALSE;
   MPI_Comm        comm;
   PetscErrorCode  ierr;
@@ -1526,7 +1531,6 @@ static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer, PetscSF 
   PetscFunctionBegin;
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)vertexSF, &comm);CHKERRQ(ierr);
-  ierr = PetscNew(&newl);CHKERRQ(ierr);
   //TODO this should be ISDistribute() [see below] with NULL PetscSection
   {
     IS originalIS = layer->pointsIS;
@@ -1542,34 +1546,46 @@ static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer, PetscSF 
     ierr = PetscSFBcastEnd(vertexSF, MPIU_INT, (PetscInt *) originalValues, newValues, MPI_REPLACE);CHKERRQ(ierr);
     ierr = ISRestoreIndices(originalIS, &originalValues);CHKERRQ(ierr);
     ierr = ISCreateGeneral(comm, nLeaves, newValues, PETSC_OWN_POINTER, &newIS);CHKERRQ(ierr);
-    newl->pointsIS = newIS;
+    newPointsIS = newIS;
   }
-  ierr = PetscSectionCreate(comm, &newl->coneSizesSection);CHKERRQ(ierr);
+  ierr = PetscSectionCreate(comm, &newConeSizesSection);CHKERRQ(ierr);
   //TODO rename to something like ISDistribute(), allow multiple ISs at once
-  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->conesIS, newl->coneSizesSection, &newl->conesIS);CHKERRQ(ierr);
-  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->orientationsIS, newl->coneSizesSection, &newl->orientationsIS);CHKERRQ(ierr);
+  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->conesIS, newConeSizesSection, &newConesIS);CHKERRQ(ierr);
+  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->orientationsIS, newConeSizesSection, &newOrientationsIS);CHKERRQ(ierr);
 
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
 
-    ierr = PetscObjectSetName((PetscObject) newl->pointsIS, "newPointsIS");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) newl->coneSizesSection, "newConeSizesSection");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) newl->conesIS, "newConesIS");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) newl->orientationsIS, "newOrientationsIS");CHKERRQ(ierr);
-    ierr = ISView(newl->pointsIS, v);CHKERRQ(ierr);
-    ierr = PetscSectionView(newl->coneSizesSection, v);CHKERRQ(ierr);
-    ierr = ISView(newl->conesIS, v);CHKERRQ(ierr);
-    ierr = ISView(newl->orientationsIS, v);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newPointsIS, "newPointsIS");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newConeSizesSection, "newConeSizesSection");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newConesIS, "newConesIS");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) newOrientationsIS, "newOrientationsIS");CHKERRQ(ierr);
+    ierr = ISView(newPointsIS, v);CHKERRQ(ierr);
+    ierr = PetscSectionView(newConeSizesSection, v);CHKERRQ(ierr);
+    ierr = ISView(newConesIS, v);CHKERRQ(ierr);
+    ierr = ISView(newOrientationsIS, v);CHKERRQ(ierr);
   }
 
-  *newPlexLayer = newl;
+  ierr = PetscObjectSetName((PetscObject) newPointsIS, ((PetscObject)layer->pointsIS)->name);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) newConeSizesSection, ((PetscObject)layer->coneSizesSection)->name);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) newConesIS, ((PetscObject)layer->conesIS)->name);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) newOrientationsIS, ((PetscObject)layer->orientationsIS)->name);CHKERRQ(ierr);
+  ierr = ISDestroy(&layer->pointsIS);CHKERRQ(ierr);
+  ierr = PetscSectionDestroy(&layer->coneSizesSection);CHKERRQ(ierr);
+  ierr = ISDestroy(&layer->conesIS);CHKERRQ(ierr);
+  ierr = ISDestroy(&layer->orientationsIS);CHKERRQ(ierr);
+  layer->pointsIS         = newPointsIS;
+  layer->coneSizesSection = newConeSizesSection;
+  layer->conesIS          = newConesIS;
+  layer->orientationsIS   = newOrientationsIS;
   PetscFunctionReturn(0);
 }
 
 //TODO share code with DMPlexTopologyBuildTwoStrata
 #include <petsc/private/hashseti.h>
-static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout vertexLayout, PetscSF *vertexSF_)
+static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *pointSF_, PetscSF *vertexSF_)
 {
+  PetscLayout     vertexLayout = layer->vertexLayout;
   PetscSection    coneSection = layer->coneSizesSection;
   IS              cellVertexData = layer->conesIS;
   IS              coneOrientations = layer->orientationsIS;
@@ -1642,8 +1658,8 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscLayout ve
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
-  layer->pointSF = pointSF;
-  *vertexSF_ = vertexSF;
+  *pointSF_   = pointSF;
+  *vertexSF_  = vertexSF;
   PetscFunctionReturn(0);
 }
 
@@ -1652,10 +1668,9 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   PlexLayer      *layers;
   IS              strataPermutation;
   PetscLayout     pointsLayout = NULL;
-  PetscSF         vertexSF = NULL;
-  MPI_Comm        comm;
   PetscInt        depth;
   PetscInt        d;
+  MPI_Comm        comm;
   PetscMPIInt     size, rank;
   PetscBool       debug = PETSC_FALSE;
   PetscErrorCode  ierr;
@@ -1692,36 +1707,22 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
 
   ierr = PetscMalloc1(depth+1, &layers);CHKERRQ(ierr);
   for (d = depth; d >= 0; d--) {
-    PlexLayer   layer;
-    PetscLayout vertexLayout;
-    PetscSF     newVertexSF = NULL;
-
-    ierr = PlexLayerLoad_Private(viewer, d, pointsLayout, &layer, &vertexLayout);CHKERRQ(ierr);
-    if (vertexSF) {
-      PlexLayer newPlexLayer;
-
-      ierr = PlexLayerDistributeCones_Private(layer, vertexSF, &newPlexLayer);CHKERRQ(ierr);
-      ierr = PlexLayerDestroy(&layer);CHKERRQ(ierr);
-      layer = newPlexLayer;
+    ierr = PlexLayerLoad_Private(viewer, d, pointsLayout, &layers[d]);CHKERRQ(ierr);
+    pointsLayout = layers[d]->vertexLayout;
+  }
+  for (d = depth; d >= 0; d--) {
+    if (layers[d]->vertexSF) {
+      ierr = PlexLayerDistributeCones_Private(layers[d]);CHKERRQ(ierr);
     }
-    if (vertexLayout) {
-      ierr = PlexLayerCreateSFs_Private(layer, vertexLayout, &newVertexSF);CHKERRQ(ierr);
+    if (d) {
+      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->pointSF, &layers[d-1]->vertexSF);CHKERRQ(ierr);
     }
-
-    ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
-    ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
-
-    layers[d] = layer;
-    pointsLayout = vertexLayout;
-    vertexSF = newVertexSF;
   }
 
   for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
   }
   ierr = PetscFree(layers);CHKERRQ(ierr);
-  ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
-  ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
   ierr = ISDestroy(&strataPermutation);CHKERRQ(ierr);
 
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* strata */
