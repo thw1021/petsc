@@ -12,14 +12,11 @@ struct UserCtx
 
 PetscErrorCode startFunc(ExecutionContext *exec)
 {
-  static PetscBool rep = PETSC_TRUE;
-  UserCtx          *ctx;
-  PetscErrorCode   ierr;
+  UserCtx        *ctx;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = exec->getUserContext((void**)&ctx);CHKERRQ(ierr);
-  ierr = exec->repeat(rep);CHKERRQ(ierr);
-  rep  = PETSC_FALSE;
   std::cout<<"start node, value = "<<ctx->value<<'\n';
   PetscFunctionReturn(0);
 }

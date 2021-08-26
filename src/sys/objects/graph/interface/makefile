@@ -3,8 +3,8 @@ ALL: lib
 
 CFLAGS    =
 FFLAGS    =
-SOURCEC   =
-SOURCECXX = graph.cxx
+SOURCEC   = graph.c
+SOURCECXX = graph_cxx.cxx
 SOURCEF   =
 SOURCEH   =
 MANSEC    = Sys
