@@ -6,6 +6,22 @@
 
 PETSC_EXTERN PetscErrorCode VecView_MPI(Vec, PetscViewer);
 
+//TODO move to PetscLayout, publish PetscLayoutView()
+static PetscErrorCode PetscLayoutView_ASCII(PetscLayout l, const char name[], PetscViewer v)
+{
+  MPI_Comm comm = l->comm;
+  PetscMPIInt rank;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  ierr = PetscViewerASCIIPushSynchronized(v);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(v, "[%d] PetscLayout %s n N rstart rend %D %D %D %D\n", rank, name, l->n, l->N, l->rstart, l->rend);CHKERRQ(ierr);
+  ierr = PetscViewerFlush(v);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPopSynchronized(v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 #if defined(PETSC_HAVE_HDF5)
 static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt seqnum, PetscScalar value, PetscViewer viewer)
 {
@@ -1484,16 +1500,8 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, Pets
     ierr = PetscSectionView(coneSizesSection, v);CHKERRQ(ierr);
     ierr = ISView(conesIS, v);CHKERRQ(ierr);
     ierr = ISView(orientationsIS, v);CHKERRQ(ierr);
-    //TODO PetscLayoutView()
-    {
-      PetscMPIInt rank;
-
-      ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPushSynchronized(v);CHKERRQ(ierr);
-      ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(v, "[%d] vertexLayout n N rstart rend %D %D %D %D\n", rank, vertexLayout->n, vertexLayout->N, vertexLayout->rstart, vertexLayout->rend);CHKERRQ(ierr);
-      ierr = PetscViewerFlush(v);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopSynchronized(v);CHKERRQ(ierr);
+    if (vertexLayout) {
+      ierr = PetscLayoutView_ASCII(vertexLayout, "vertexLayout", v);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   }
