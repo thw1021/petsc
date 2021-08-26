@@ -1499,14 +1499,17 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, Pets
     ierr = PetscViewerHDF5GetGroup(viewer, &group);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "group %s\n", group);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
+    ierr = PetscLayoutView_ASCII(pointsLayout, "pointsLayout", v);CHKERRQ(ierr);
     ierr = ISView(pointsIS, v);CHKERRQ(ierr);
     ierr = PetscSectionView(coneSizesSection, v);CHKERRQ(ierr);
     ierr = ISView(conesIS, v);CHKERRQ(ierr);
     ierr = ISView(orientationsIS, v);CHKERRQ(ierr);
+    ierr = PetscLayoutView_ASCII(pointsLayout, "pointsLayout", v);CHKERRQ(ierr);
     if (vertexLayout) {
       ierr = PetscLayoutView_ASCII(vertexLayout, "vertexLayout", v);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
 
@@ -1643,6 +1646,7 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
   }
   ierr = PetscSortInt(numVerticesAdj, verticesAdj);CHKERRQ(ierr);
 
+  //TODO maybe this could play with ISLocalToGlobalMapping() somehow
   ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, verticesAdj, 0, numVerticesAdj, verticesAdj, verticesAdj, 0, &vertexSF, &pointSF);CHKERRQ(ierr);
 
   ierr = PetscObjectSetName((PetscObject) pointSF, "point SF");CHKERRQ(ierr);
@@ -1650,11 +1654,15 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
 
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
+    ISLocalToGlobalMapping l2g;
 
-    ierr = PetscViewerASCIIPrintf(v, "verticesAdj:\n");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "PlexLayerCreateSFs_Private verticesAdj:\n");CHKERRQ(ierr);
     ierr = PetscIntView(numVerticesAdj, verticesAdj, v);CHKERRQ(ierr);
     ierr = PetscSFView(pointSF, v);CHKERRQ(ierr);
     ierr = PetscSFView(vertexSF, v);CHKERRQ(ierr);
+    ierr = ISLocalToGlobalMappingCreateSF(vertexSF, vertexLayout->rstart, &l2g);CHKERRQ(ierr);
+    ierr = ISLocalToGlobalMappingView(l2g, v);CHKERRQ(ierr);
+    ierr = ISLocalToGlobalMappingDestroy(&l2g);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
