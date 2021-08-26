@@ -1405,7 +1405,7 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, Pets
   const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
-  PetscLayout     vertexLayout;
+  PetscLayout     vertexLayout = NULL;
   PetscInt        s;
   PetscBool       debug = PETSC_FALSE;
   PetscErrorCode  ierr;
@@ -1420,7 +1420,7 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, Pets
   ierr = PetscObjectGetComm((PetscObject)viewer, &comm);CHKERRQ(ierr);
 
   /* query size of next lower depth stratum (next lower dimension) */
-  {
+  if (d > 0) {
     PetscInt NVertices;
     ierr = PetscSNPrintf(path, sizeof(path), "%D/%s", d-1, coneSizesName);CHKERRQ(ierr);
     ierr = PetscViewerHDF5ReadSizes(viewer, path, NULL, &NVertices);CHKERRQ(ierr);
@@ -1690,11 +1690,11 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     ierr = ISView(strataPermutation, PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
   }
 
-  ierr = PetscCalloc1(depth+1, &layers);CHKERRQ(ierr);
-  for (d = depth; d > 0; d--) {
+  ierr = PetscMalloc1(depth+1, &layers);CHKERRQ(ierr);
+  for (d = depth; d >= 0; d--) {
     PlexLayer   layer;
     PetscLayout vertexLayout;
-    PetscSF     newVertexSF;
+    PetscSF     newVertexSF = NULL;
 
     ierr = PlexLayerLoad_Private(viewer, d, pointsLayout, &layer, &vertexLayout);CHKERRQ(ierr);
     if (vertexSF) {
@@ -1704,7 +1704,9 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
       ierr = PlexLayerDestroy(&layer);CHKERRQ(ierr);
       layer = newPlexLayer;
     }
-    ierr = PlexLayerCreateSFs_Private(layer, vertexLayout, &newVertexSF);CHKERRQ(ierr);
+    if (vertexLayout) {
+      ierr = PlexLayerCreateSFs_Private(layer, vertexLayout, &newVertexSF);CHKERRQ(ierr);
+    }
 
     ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
     ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
@@ -1714,7 +1716,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     vertexSF = newVertexSF;
   }
 
-  for (d = depth; d > 0; d--) {
+  for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
   }
   ierr = PetscFree(layers);CHKERRQ(ierr);
