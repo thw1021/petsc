@@ -1400,8 +1400,17 @@ static PetscErrorCode PlexLayerDestroy(PlexLayer *layer)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PlexLayerCreate_Private(PlexLayer *layer)
+{
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscNew(layer);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 //TODO pointsIS should appear to be redundant
-static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, PetscLayout pointsLayout, PlexLayer *layer)
+static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer, PetscInt d, PetscLayout pointsLayout)
 {
   char            path[128];
   MPI_Comm        comm;
@@ -1513,12 +1522,11 @@ static PetscErrorCode PlexLayerLoad_Private(PetscViewer viewer, PetscInt d, Pets
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
 
-  ierr = PetscNew(layer);CHKERRQ(ierr);
-  (*layer)->conesIS           = conesIS;
-  (*layer)->coneSizesSection  = coneSizesSection;
-  (*layer)->orientationsIS    = orientationsIS;
-  (*layer)->pointsIS          = pointsIS;
-  (*layer)->vertexLayout      = vertexLayout;
+  layer->conesIS          = conesIS;
+  layer->coneSizesSection = coneSizesSection;
+  layer->orientationsIS   = orientationsIS;
+  layer->pointsIS         = pointsIS;
+  layer->vertexLayout     = vertexLayout;
   PetscFunctionReturn(0);
 }
 
@@ -1715,7 +1723,8 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
 
   ierr = PetscMalloc1(depth+1, &layers);CHKERRQ(ierr);
   for (d = depth; d >= 0; d--) {
-    ierr = PlexLayerLoad_Private(viewer, d, pointsLayout, &layers[d]);CHKERRQ(ierr);
+    ierr = PlexLayerCreate_Private(&layers[d]);CHKERRQ(ierr);
+    ierr = PlexLayerLoad_Private(layers[d], viewer, d, pointsLayout);CHKERRQ(ierr);
     pointsLayout = layers[d]->vertexLayout;
   }
   for (d = depth; d >= 0; d--) {
