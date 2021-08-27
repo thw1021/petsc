@@ -1533,7 +1533,7 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer)
+static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer)
 {
   PetscSF         vertexSF = layer->vertexSF;
   IS              newPointsIS, newConesIS, newOrientationsIS;
@@ -1570,7 +1570,7 @@ static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer)
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
 
-    ierr = PetscViewerASCIIPrintf(v, "PlexLayerDistributeCones_Private depth %D:\n", layer->d);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "PlexLayerDistribute_Private depth %D:\n", layer->d);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newPointsIS, "newPointsIS");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newConeSizesSection, "newConeSizesSection");CHKERRQ(ierr);
@@ -1737,7 +1737,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   }
   for (d = depth; d >= 0; d--) {
     if (layers[d]->vertexSF) {
-      ierr = PlexLayerDistributeCones_Private(layers[d]);CHKERRQ(ierr);
+      ierr = PlexLayerDistribute_Private(layers[d]);CHKERRQ(ierr);
     }
     if (d) {
       ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->pointSF, &layers[d-1]->vertexSF);CHKERRQ(ierr);
