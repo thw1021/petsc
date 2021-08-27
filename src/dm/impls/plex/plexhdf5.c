@@ -1376,6 +1376,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer, Pets
 
 /* Representation of two DMPlex strata in 0-based global numbering */
 struct _n_PlexLayer {
+  PetscInt        d;
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
   PetscLayout     vertexLayout;
@@ -1406,6 +1407,7 @@ static PetscErrorCode PlexLayerCreate_Private(PlexLayer *layer)
 
   PetscFunctionBegin;
   ierr = PetscNew(layer);CHKERRQ(ierr);
+  (*layer)->d = -1;
   PetscFunctionReturn(0);
 }
 
@@ -1522,6 +1524,7 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
 
+  layer->d                = d;
   layer->conesIS          = conesIS;
   layer->coneSizesSection = coneSizesSection;
   layer->orientationsIS   = orientationsIS;
@@ -1567,6 +1570,8 @@ static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer)
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
 
+    ierr = PetscViewerASCIIPrintf(v, "PlexLayerDistributeCones_Private depth %D:\n", layer->d);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newPointsIS, "newPointsIS");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newConeSizesSection, "newConeSizesSection");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newConesIS, "newConesIS");CHKERRQ(ierr);
@@ -1575,6 +1580,7 @@ static PetscErrorCode PlexLayerDistributeCones_Private(PlexLayer layer)
     ierr = PetscSectionView(newConeSizesSection, v);CHKERRQ(ierr);
     ierr = ISView(newConesIS, v);CHKERRQ(ierr);
     ierr = ISView(newOrientationsIS, v);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   }
 
   ierr = PetscObjectSetName((PetscObject) newPointsIS, ((PetscObject)layer->pointsIS)->name);CHKERRQ(ierr);
@@ -1664,14 +1670,16 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
     ISLocalToGlobalMapping l2g;
 
-    ierr = PetscViewerASCIIPrintf(v, "PlexLayerCreateSFs_Private verticesAdj:\n");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "PlexLayerCreateSFs_Private depth %D:\n", layer->d);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "verticesAdj:\n");CHKERRQ(ierr);
     ierr = PetscIntView(numVerticesAdj, verticesAdj, v);CHKERRQ(ierr);
     ierr = PetscSFView(pointSF, v);CHKERRQ(ierr);
     ierr = PetscSFView(vertexSF, v);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingCreateSF(vertexSF, vertexLayout->rstart, &l2g);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingView(l2g, v);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingDestroy(&l2g);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   }
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
   *pointSF_   = pointSF;
