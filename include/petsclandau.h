@@ -131,8 +131,8 @@ typedef struct {
   double         times[1];
   PetscBool      init;
   PetscBool      use_matrix_mass;
-  DM             dmv;
-  DM             plex;
+  DM             pack;
+  DM             plex[LANDAU_MAX_GRIDS];
   /* diagnostics */
   PetscInt       verbose;
   PetscLogEvent  events[20];
