@@ -1646,22 +1646,30 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
     else if (vertexLayout->N != PETSC_DECIDE && vertexLayout->N < NVerticesInCells) SETERRQ2(comm, PETSC_ERR_ARG_SIZ, "Specified global number of vertices %D must be greater than or equal to the number of vertices in cells %D",vertexLayout->N,NVerticesInCells);
     ierr = PetscLayoutSetUp(vertexLayout);CHKERRQ(ierr);
   }
-  /* Count locally unique vertices */
+  /* Find locally unique vertices in cellVertexData */
+  /* We keep the order of first encounter to improve consistency of local numbering */
   {
-    PetscHSetI vhash;
-    PetscInt off = 0;
+    PetscHSetI  vhash;
+    PetscInt    off = 0;
+    PetscBool   missing;
+    PetscInt   *verticesAdjTmp;
 
+    ierr = PetscMalloc1(n, &verticesAdjTmp);CHKERRQ(ierr);
     ierr = PetscHSetICreate(&vhash);CHKERRQ(ierr);
     for (i = 0; i < n; ++i) {
-      ierr = PetscHSetIAdd(vhash, cvd[i]);CHKERRQ(ierr);
+      ierr = PetscHSetIQueryAdd(vhash, cvd[i], &missing);CHKERRQ(ierr);
+      if (missing) {
+        verticesAdjTmp[off] = cvd[i];
+        off++;
+      }
     }
     ierr = PetscHSetIGetSize(vhash, &numVerticesAdj);CHKERRQ(ierr);
-    ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr);
-    ierr = PetscHSetIGetElems(vhash, &off, verticesAdj);CHKERRQ(ierr);
     ierr = PetscHSetIDestroy(&vhash);CHKERRQ(ierr);
     if (off != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
+    ierr = PetscMalloc1(numVerticesAdj, &verticesAdj);CHKERRQ(ierr);
+    ierr = PetscMemcpy(verticesAdj, verticesAdjTmp, numVerticesAdj * sizeof(PetscInt));CHKERRQ(ierr);
+    ierr = PetscFree(verticesAdjTmp);CHKERRQ(ierr);
   }
-  ierr = PetscSortInt(numVerticesAdj, verticesAdj);CHKERRQ(ierr);
 
   //TODO maybe this could play with ISLocalToGlobalMapping() somehow
   ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, verticesAdj, 0, numVerticesAdj, verticesAdj, verticesAdj, 0, &vertexSF, &pointSF);CHKERRQ(ierr);
