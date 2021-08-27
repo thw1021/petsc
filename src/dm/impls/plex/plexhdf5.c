@@ -1380,7 +1380,8 @@ struct _n_PlexLayer {
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
   PetscLayout     vertexLayout;
-  PetscSF         pointSF, vertexSF;
+  PetscSF         pointSF, vertexSF; //TODO maybe confusing names
+  PetscInt        offset, conesOffset;
 };
 typedef struct _n_PlexLayer* PlexLayer;
 
@@ -1408,6 +1409,8 @@ static PetscErrorCode PlexLayerCreate_Private(PlexLayer *layer)
   PetscFunctionBegin;
   ierr = PetscNew(layer);CHKERRQ(ierr);
   (*layer)->d = -1;
+  (*layer)->offset = -1;
+  (*layer)->conesOffset = -1;
   PetscFunctionReturn(0);
 }
 
@@ -1687,6 +1690,185 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMPlexBuildFromLayers_Private(DM dm, PetscInt depth, PlexLayer *layers, IS strataPermutation)
+{
+  const PetscInt *permArr;
+  PetscInt        d, nPoints;
+  MPI_Comm        comm;
+  PetscViewer     dbgv = NULL;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
+  {
+    PetscViewerFormat f;
+    ierr = PetscOptionsGetViewer(comm, NULL, NULL, "-dm_plex_build_from_layers_debug", &dbgv, &f, NULL);CHKERRQ(ierr);
+    if (dbgv) {ierr = PetscViewerPushFormat(dbgv, f);CHKERRQ(ierr);}
+  }
+  ierr = ISGetIndices(strataPermutation, &permArr);CHKERRQ(ierr);
+
+  /* Count points, strata offsets and cones offsets (taking strataPermutation into account) */
+  {
+    PetscInt stratumOffset  = 0;
+    PetscInt conesOffset    = 0;
+
+    for (d = 0; d <= depth; d++) {
+      const PetscInt  e = permArr[d];
+      const PlexLayer l = layers[e];
+      PetscInt lo, n, size;
+
+      ierr = PetscSectionGetChart(l->coneSizesSection, &lo, &n);CHKERRQ(ierr);
+      ierr = PetscSectionGetStorageSize(l->coneSizesSection, &size);CHKERRQ(ierr);
+      if (lo) SETERRQ1(comm, PETSC_ERR_PLIB, "starting point should be 0 in coneSizesSection %D", d);
+      l->offset = stratumOffset;
+      l->conesOffset = conesOffset;
+      stratumOffset += n;
+      conesOffset   += size;
+    }
+    nPoints = stratumOffset;
+  }
+
+  /* Set interval for all plex points */
+  //TODO we should store starting point of plex
+  ierr = DMPlexSetChart(dm, 0, nPoints);CHKERRQ(ierr);
+
+  /* Set up plex coneSection from layer coneSections */
+  {
+    PetscSection  coneSection;
+
+    ierr = DMPlexGetConeSection(dm, &coneSection);CHKERRQ(ierr);
+    for (d = 0; d <= depth; d++) {
+      const PlexLayer  l = layers[d];
+      PetscInt         n, q;
+
+      ierr = PetscSectionGetChart(l->coneSizesSection, NULL, &n);CHKERRQ(ierr);
+      for (q = 0; q < n; q++) {
+        const PetscInt p = l->offset + q;
+        PetscInt       coneSize;
+
+        ierr = PetscSectionGetDof(l->coneSizesSection, q, &coneSize);CHKERRQ(ierr);
+        ierr = PetscSectionSetDof(coneSection, p, coneSize);CHKERRQ(ierr);
+      }
+    }
+  }
+  //TODO this is terrible, DMSetUp_Plex() should be DMPlexSetUpSections() or so
+  ierr = DMSetUp(dm);CHKERRQ(ierr);
+
+  /* Renumber cones points from layer-global numbering to plex-local numbering */
+  {
+    PetscInt     *cones, *ornts;
+
+    ierr = DMPlexGetCones(dm, &cones);CHKERRQ(ierr);
+    ierr = DMPlexGetConeOrientations(dm, &ornts);CHKERRQ(ierr);
+    for (d = 1; d <= depth; d++) {
+      const PlexLayer  k = layers[d-1];
+      const PlexLayer  l = layers[d];
+      PetscInt         i, lConesSize;
+      PetscInt        *lCones;
+      const PetscInt  *lOrnts;
+      PetscInt        *pCones = &cones[l->conesOffset];
+      PetscInt        *pOrnts = &ornts[l->conesOffset];
+
+      ierr = PetscSectionGetStorageSize(l->coneSizesSection, &lConesSize);CHKERRQ(ierr);
+      /* Get cones in local plex numbering */
+      {
+        ISLocalToGlobalMapping  l2g;
+        PetscLayout             vertexLayout = l->vertexLayout;
+        PetscSF                 vertexSF = k->vertexSF;
+        const PetscInt         *gCones;
+        PetscInt                lConesSize0;
+
+        ierr = ISGetLocalSize(l->conesIS, &lConesSize0);CHKERRQ(ierr);
+        if (lConesSize0 != lConesSize) SETERRQ3(comm, PETSC_ERR_PLIB, "layer %D size(conesIS) = %D != %D = storageSize(coneSizesSection)", d, lConesSize0, lConesSize);
+        ierr = ISGetLocalSize(l->orientationsIS, &lConesSize0);CHKERRQ(ierr);
+        if (lConesSize0 != lConesSize) SETERRQ3(comm, PETSC_ERR_PLIB, "layer %D size(orientationsIS) = %D != %D = storageSize(coneSizesSection)", d, lConesSize0, lConesSize);
+
+        ierr = PetscMalloc1(lConesSize, &lCones);CHKERRQ(ierr);
+        ierr = ISGetIndices(l->conesIS, &gCones);CHKERRQ(ierr);
+        ierr = ISLocalToGlobalMappingCreateSF(vertexSF, vertexLayout->rstart, &l2g);CHKERRQ(ierr);
+        if (dbgv) {ierr = ISLocalToGlobalMappingView(l2g, dbgv);CHKERRQ(ierr);}
+        ierr = ISGlobalToLocalMappingApply(l2g, IS_GTOLM_MASK, lConesSize, gCones, &lConesSize0, lCones);CHKERRQ(ierr);
+        if (lConesSize0 != lConesSize) SETERRQ2(comm, PETSC_ERR_PLIB, "global to local does not cover all indices (%D of %D)", lConesSize0, lConesSize);
+        ierr = ISLocalToGlobalMappingDestroy(&l2g);CHKERRQ(ierr);
+        ierr = ISRestoreIndices(l->conesIS, &gCones);CHKERRQ(ierr);
+
+        if (dbgv) {
+          ierr = PetscViewerASCIIPrintf(dbgv, "DMPlexBuildFromLayers_Private depth %D\n", d);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(dbgv, "gCones\n");CHKERRQ(ierr);
+          ierr = PetscIntView(lConesSize, gCones, dbgv);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(dbgv, "lCones\n");CHKERRQ(ierr);
+          ierr = PetscIntView(lConesSize, lCones, dbgv);CHKERRQ(ierr);
+        }
+      }
+      ierr = ISGetIndices(l->orientationsIS, &lOrnts);CHKERRQ(ierr);
+      /* Set cones, need to add stratum offset */
+      for (i = 0; i < lConesSize; i++) {
+        pCones[i] = lCones[i] + k->offset;
+        pOrnts[i] = lOrnts[i];
+      }
+      if (dbgv) {
+        PetscMPIInt rank;
+        ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+        ierr = PetscViewerASCIIPushSynchronized(dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(dbgv, "[%d] stratum offset %D cones offset %D\n", rank, l->offset, l->conesOffset);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(dbgv, "pCones\n");CHKERRQ(ierr);
+        ierr = PetscIntView(lConesSize, pCones, dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerFlush(dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPopSynchronized(dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
+      }
+      ierr = PetscFree(lCones);CHKERRQ(ierr);
+      ierr = ISRestoreIndices(l->orientationsIS, &lOrnts);CHKERRQ(ierr);
+    }
+  }
+
+  if (dbgv) {
+    PetscMPIInt rank;
+
+    ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+    for (d = 0; d <= depth; d++) {
+      const PlexLayer   l = layers[d];
+      PetscInt          n, q;
+
+      ierr = PetscSectionGetChart(l->coneSizesSection, NULL, &n);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(dbgv, "DMPlexBuildFromLayers_Private depth %D\n", d);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPushSynchronized(dbgv);CHKERRQ(ierr);
+      for (q = 0; q < n; q++) {
+        const PetscInt p = l->offset + q;
+        PetscInt       coneSize, cp;
+        const PetscInt *cone, *ornt;
+
+        ierr = DMPlexGetConeSize(dm, p, &coneSize);CHKERRQ(ierr);
+        ierr = DMPlexGetCone(dm, p, &cone);CHKERRQ(ierr);
+        ierr = DMPlexGetConeOrientation(dm, p, &ornt);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(dbgv, "  [%2d] point %2D coneSize %D cone", rank, p, coneSize);CHKERRQ(ierr);
+        for (cp = 0; cp < coneSize; cp++) {
+          ierr = PetscViewerASCIISynchronizedPrintf(dbgv, " %2D", cone[cp]);CHKERRQ(ierr);
+        }
+        ierr = PetscViewerASCIISynchronizedPrintf(dbgv, "  orientation");CHKERRQ(ierr);
+        for (cp = 0; cp < coneSize; cp++) {
+          ierr = PetscViewerASCIISynchronizedPrintf(dbgv, " %2D", ornt[cp]);CHKERRQ(ierr);
+        }
+        ierr = PetscViewerASCIISynchronizedPrintf(dbgv, "\n");CHKERRQ(ierr);
+      }
+      ierr = PetscViewerFlush(dbgv);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPopSynchronized(dbgv);CHKERRQ(ierr);
+    }
+
+  }
+  ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
+  ierr = DMPlexStratify(dm);CHKERRQ(ierr);
+
+  if (dbgv) {
+    ierr = DMView(dm, dbgv);CHKERRQ(ierr);
+    ierr = PetscViewerPopFormat(dbgv);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&dbgv);CHKERRQ(ierr);
+  }
+  ierr = ISRestoreIndices(strataPermutation, &permArr);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *sf)
 {
   PlexLayer      *layers;
@@ -1743,6 +1925,8 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
       ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->pointSF, &layers[d-1]->vertexSF);CHKERRQ(ierr);
     }
   }
+
+  ierr = DMPlexBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
   for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
