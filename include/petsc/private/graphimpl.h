@@ -6,31 +6,48 @@
 #include <petsc/private/hashmapi.h>
 
 struct _n_PetscExecutionContext {
-  void *ctx;
+  void               *userctx;
+  PetscDeviceContext dctx;
+  const PetscBool    enclosed;
 };
-typedef struct _n_PetscExecutionContext *PetscExecutionContext;
+typedef struct _n_PetscExecutionContext _s_PetscExecutionContext;
 
 struct _n_PetscGraphEdge {
-  PetscCallNode begin;
-  PetscCallNode end;
-  PetscInt      stream;
-  PetscInt      refcnt;
+  PetscCallNode      begin;
+  PetscCallNode      end;
+  PetscDeviceContext dctx;
+  PetscInt           refcnt;
+  PetscInt           id;
 };
-typedef struct _n_PetscGraphEdge *PetscGraphEdge;
+
+struct _OperatorOps {
+  PetscErrorCode (*create)(PetscGraphOperator);
+  PetscErrorCode (*destroy)(PetscGraphOperator);
+  PetscErrorCode (*nodeafter)(PetscGraphOperator,PetscGraphEdge);
+  PetscErrorCode (*defaultstate)(PetscGraphOperator,PetscCallNodeState*);
+  PetscErrorCode (*execute)(PetscGraphOperator,PetscExecutionContext);
+};
+
+struct _n_PetscGraphOperator {
+  struct _OperatorOps ops[1];
+  void                *data;
+};
 
 struct _NodeOps {
   PetscErrorCode (*create)(PetscCallNode);
-  PetscErrorCode (*destroy)(PetscCallGraph);
+  PetscErrorCode (*destroy)(PetscCallNode);
 };
 
 struct _p_PetscCallNode {
   PETSCHEADER(struct _NodeOps);
-  PetscInt       id;
-  PetscGraphEdge *inedges;
-  PetscGraphEdge *outedges;
-  PetscInt       sizeIn,sizeOut;
-  PetscInt       capacityIn,capacityOut;
-  void           *data;
+  PetscInt           id;
+  PetscGraphOperator operator;
+  PetscGraphEdge     *inedges;
+  PetscGraphEdge     *outedges;
+  PetscInt           sizeIn,sizeOut;
+  PetscInt           capacityIn,capacityOut;
+  PetscCallNodeState state;
+  void               *data;
 };
 
 struct _GraphOps {
@@ -50,11 +67,11 @@ struct _p_PetscCallGraph {
   PetscHMapI    idMap;
   PetscBool     setup;
   PetscBool     assembled;
-  void          *userCtx;
+  void          *userctx;
   void          *data;
 };
 
-PetscErrorCode PetscCallGraphGrowArray_Private(MPI_Comm comm, PetscInt size, PetscInt *capacity, size_t sizeThing, void *array)
+PetscErrorCode PetscGrowArray_Private(MPI_Comm comm, PetscInt size, PetscInt *capacity, size_t sizeThing, void *array)
 {
   PetscErrorCode ierr;
 
@@ -75,14 +92,15 @@ PetscErrorCode PetscCallGraphGrowArray_Private(MPI_Comm comm, PetscInt size, Pet
   PetscFunctionReturn(0);
 }
 
-#define PetscCallGraphPushBackThing_Private(comm,thing,array,size,capacity) (PetscCallGraphGrowArray_Private((comm),(size),&(capacity),sizeof(**(array)),array) || ((*array)[(size)++] = (thing),0))
+#define PetscPushBackThing_Private(pobj,thing,array,size,capacity) (PetscGrowArray_Private(PetscObjectComm((PetscObject)(pobj)),(size),&(capacity),sizeof(**(array)),array) || ((*array)[(size)++] = (thing),0))
 
 PETSC_STATIC_INLINE PetscErrorCode PetscCallNodePushBackInEdge_Private(PetscCallNode node, PetscGraphEdge edge)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCallGraphPushBackThing_Private(PetscObjectComm((PetscObject)node),edge,&node->inedges,node->sizeIn,node->capacityIn);CHKERRQ(ierr);
+  ierr = PetscPushBackThing_Private(node,edge,&node->inedges,node->sizeIn,node->capacityIn);CHKERRQ(ierr);
+  ++edge->refcnt;
   PetscFunctionReturn(0);
 }
 
@@ -91,7 +109,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCallNodePushBackOutEdge_Private(PetscCal
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCallGraphPushBackThing_Private(PetscObjectComm((PetscObject)node),edge,&node->outedges,node->sizeOut,node->capacityOut);CHKERRQ(ierr);
+  ierr = PetscPushBackThing_Private(node,edge,&node->outedges,node->sizeOut,node->capacityOut);CHKERRQ(ierr);
+  ++edge->refcnt;
   PetscFunctionReturn(0);
 }
 
@@ -107,7 +126,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCallGraphPushBackNode_Private(PetscCallG
   for (PetscInt i = 0; i < graph->size; ++i) {
     if (PetscUnlikelyDebug(graph->nodes[i]->id == node->id)) SETERRQ(PetscObjectComm((PetscObject)graph),PETSC_ERR_ARG_WRONG,"Cannot insert duplicate node into the graph as a DAG containing duplicate nodes is ill-formed");
   }
-  ierr = PetscCallGraphPushBackThing_Private(PetscObjectComm((PetscObject)graph),node,&graph->nodes,graph->size,graph->capacity);CHKERRQ(ierr);
+  ierr = PetscPushBackThing_Private(graph,node,&graph->nodes,graph->size,graph->capacity);CHKERRQ(ierr);
   graph->assembled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }

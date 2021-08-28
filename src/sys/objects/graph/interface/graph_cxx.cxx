@@ -1,5 +1,6 @@
-#include <petsc/private/graphimpl.h>
 #if 0
+#include <petsc/private/graphimpl.h>
+
 PetscClassId PETSCCALLGRAPH_CLASSID;
 PetscClassId PETSCCALLNODE_CLASSID;
 

@@ -239,7 +239,7 @@ struct Edge
   PetscDeviceContext _dctx;
 
 
-  constexpr Edge(CallNode *begin, CallNode *end, PetscDeviceContext ctx = PETSC_NULLPTR) noexcept
+  constexpr Edge(CallNode *begin, CallNode *end, PetscDeviceContext ctx = nullptr) noexcept
     : _begin(begin), _end(end), _dctx(ctx)
   { }
 };
@@ -561,31 +561,35 @@ private:
 
   std::string             _name;
   map_t                   _idMap;
-  std::vector<CallNode*>  _graph;
-  std::vector<CallNode*>  _exec;
   CallNode                _begin;
   CallNode                _end;
+  std::vector<CallNode*>  _graph;
+  std::vector<CallNode*>  _exec{&_begin};
   PetscBool               _finalized = PETSC_FALSE;
-  void                   *_userCtx   = PETSC_NULLPTR;
+  void                   *_userCtx   = nullptr;
 
   template <typename... T>
   PETSC_NODISCARD PetscErrorCode __emplaceOperatorCommon(T&&... args)
   {
+    bool success;
+
     PetscFunctionBegin;
     _finalized = PETSC_FALSE;
     CHKERRCXX(_graph.emplace_back(new CallNode(std::forward<T>(args)...)));
-    CHKERRCXX(_idMap[_graph.back()->_id] = _graph.size()-1);
+    // success = false if the key already existed
+    CHKERRCXX(std::tie(std::ignore,success) = _idMap.insert({_graph.back()->_id,_graph.size()-1}));
+    if (PetscUnlikelyDebug(!success)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Attempted to insert duplicate node into graph");
     PetscFunctionReturn(0);
   }
 
   PETSC_NODISCARD PetscErrorCode __topologicalSort(PetscInt v, std::vector<PetscBool> &visited)
   {
+    PetscErrorCode ierr;
+
     PetscFunctionBegin;
     visited[v] = PETSC_TRUE;
     for (const auto &edge : _graph[v]->_inedges) {
       if (!visited[_idMap[edge->_begin->_id]]) {
-        PetscErrorCode ierr;
-
         ierr = __topologicalSort(_idMap[edge->_begin->_id],visited);CHKERRQ(ierr);
       }
     }
@@ -593,33 +597,35 @@ private:
     PetscFunctionReturn(0);
   }
 
+  template <typename T, typename T2>
+  PETSC_NODISCARD static PetscErrorCode __removeItemFrom(const T2 &item, T &container)
+  {
+    using std::begin;
+    using std::end;  // enable ADL
+    const auto found = [&](const T2 &it) { return it == item; };
+
+    PetscFunctionBegin;
+    CHKERRCXX(container.erase(std::remove_if(begin(container),end(container),found)));
+    PetscFunctionReturn(0);
+  }
+
   // this routine finds and removes the fake dependencies on the _begin and _end
   // nodes. Since these are shared_ptr's we need to delete them in both _begin and _end
-  // and the nodes they are attached to in _graph.
+  // as well as the nodes they are attached to in _graph.
   PETSC_NODISCARD PetscErrorCode __resetClosure()
   {
+    PetscErrorCode ierr;
+
     PetscFunctionBegin;
     for (const auto &edge : _begin._outedges) {
-      auto &vec = _graph[_idMap[edge->_end->_id]]->_inedges;
-
-      CHKERRCXX(vec.erase(std::remove_if(vec.begin(),vec.end(),
-      [&](const CallNode::edge_t &found)
-      {
-        return edge == found;
-      })));
+      ierr = __removeItemFrom(edge,_graph[_idMap[edge->_end->_id]]->_inedges);CHKERRQ(ierr);
     }
     CHKERRCXX(_begin._outedges.clear());
     for (const auto &edge : _end._inedges) {
-      auto &vec = _graph[_idMap[edge->_begin->_id]]->_outedges;
-
-      CHKERRCXX(vec.erase(std::remove_if(vec.begin(),vec.end(),
-      [&](const CallNode::edge_t &found)
-      {
-        return edge == found;
-      })));
+      ierr = __removeItemFrom(edge,_graph[_idMap[edge->_begin->_id]]->_outedges);CHKERRQ(ierr);
     }
     CHKERRCXX(_end._inedges.clear());
-    CHKERRCXX(_exec.clear());
+    CHKERRCXX(_exec.resize(1)); // the only callnode left should be _begin
     PetscFunctionReturn(0);
   }
 
@@ -631,8 +637,6 @@ private:
       PetscErrorCode         ierr;
 
       ierr = __resetClosure();CHKERRQ(ierr);
-      // install the start of the closure
-      CHKERRCXX(_exec.push_back(&_begin));
       for (PetscInt i = 0; i < _graph.size(); ++i) {
         if (!visited[i]) {ierr = __topologicalSort(i,visited);CHKERRQ(ierr);}
         // if the node has no inedges it is a "start" node
@@ -657,8 +661,7 @@ private:
     ierr = node->view();CHKERRQ(ierr);
     if (node->_inedges.size()) {
       PetscInt numCancelled = 0;
-      // destroy all other streams except for the one we want to use. In the case we have
-      // only 1 ancestor, this loop never fires
+
       for (PetscInt i = 0; i < node->_inedges.size(); ++i) {
         const auto &edge = node->_inedges[i];
         // we have ancestors, meaning we must pick one of their streams and join all others
@@ -667,10 +670,11 @@ private:
           ierr = PetscDeviceContextWaitForContext(exec.dctx,edge->_dctx);CHKERRQ(ierr);
           ierr = PetscDeviceContextDestroy(&edge->_dctx);CHKERRQ(ierr);
         } else {
-          // we arbitrarily choose the first ancestor as the stream donor
+          // we enforce strict primogeniture for the base stream inheritance, this is to ensure
+          // that when the streams are joined the correct parent stream is always selected
           exec.dctx = edge->_dctx;
         }
-        if (edge->_begin->_state == NodeState::DISABLED) ++numCancelled;
+        numCancelled += (edge->_begin->_state == NodeState::DISABLED);
       }
       // only if all ancestors of a node are cancelled do we truly want to cancel it
       CXXPRINT(numCancelled<<'\n');
@@ -696,7 +700,6 @@ private:
         ierr = PetscDeviceContextDuplicate(exec.dctx,&edge->_dctx);CHKERRQ(ierr);
         ierr = PetscDeviceContextWaitForContext(edge->_dctx,exec.dctx);CHKERRQ(ierr);
       } else {
-        // for consistency, the first outbound edge gets the stream
         edge->_dctx = exec.dctx;
       }
     }
@@ -706,18 +709,15 @@ private:
 
 inline PetscErrorCode BranchOperator::operator()(ExecutionContext *exec) const
 {
-  const std::vector<CallNode*> branches(_branches.cbegin(),_branches.cend());
-  PetscInt                     idx = -1;
-  PetscErrorCode               ierr;
+  PetscInt       id = -1;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = _functor(exec,branches,idx);CHKERRQ(ierr);
-  if (idx != -1) {
-    for (PetscInt i = 0; i < branches.size(); ++i) {
-      if (i != idx) {
-        CXXPRINT("cancelling node "<<branches[i]->id()<<'\n');
-        ierr = branches[i]->setState(NodeState::DISABLED);CHKERRQ(ierr);
-      }
+  ierr = _functor(exec,{_branches.cbegin(),_branches.cend()},id);CHKERRQ(ierr);
+  for (const auto &branch : _branches) {
+    if (id != branch->id()) {
+      CXXPRINT("cancelling node "<<branch->id()<<'\n');
+      ierr = branch->setState(NodeState::DISABLED);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -869,22 +869,19 @@ inline CallNode* CallGraph::emplaceBranchOperator(T&& f)
 
 inline PetscErrorCode CallGraph::run(PetscDeviceContext ctx)
 {
-  PetscDeviceContext dctx;
-  const PetscBool    enclosed = ctx ? PETSC_TRUE : PETSC_FALSE;
-  PetscErrorCode     ierr;
+  const PetscBool enclosed = ctx ? PETSC_TRUE : PETSC_FALSE;
+  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  if (enclosed) {
-    dctx = ctx;
-  } else {
-    ierr = PetscDeviceContextCreate(&dctx);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetStreamType(dctx,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
+  if (!enclosed) {
+    ierr = PetscDeviceContextCreate(&ctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetStreamType(ctx,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetUp(ctx);CHKERRQ(ierr);
   }
   ierr = __finalize();CHKERRQ(ierr);
   CXXPRINT("----- "<<_name<<" begin run\n");
   {
-    ExecutionContext exec(_userCtx,dctx,enclosed);
+    ExecutionContext exec(_userCtx,ctx,enclosed);
 
     for (const auto &enode : _exec) {
       ierr = __joinAncestors(enode,exec);CHKERRQ(ierr);
@@ -897,7 +894,10 @@ inline PetscErrorCode CallGraph::run(PetscDeviceContext ctx)
     ierr = node->setState(node->_operator->defaultNodeState());CHKERRQ(ierr);
   }
   CXXPRINT("----- "<<_name<<" end run\n");
-  if (!enclosed) {ierr = PetscDeviceContextDestroy(&dctx);CHKERRQ(ierr);}
+  if (!enclosed) {
+    ierr = PetscDeviceContextSynchronize(ctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextDestroy(&ctx);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
