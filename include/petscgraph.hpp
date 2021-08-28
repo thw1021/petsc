@@ -3,6 +3,7 @@
 
 #include <petscsys.h>
 #include <petscgraphtypes.h>
+#include <petsc/private/deviceimpl.h>
 
 PETSC_EXTERN PetscErrorCode PetscCallNodeCreate(MPI_Comm,PetscCallNode*);
 PETSC_EXTERN PetscErrorCode PetscCallNodeDestroy(PetscCallNode*);
@@ -206,7 +207,7 @@ class  Operator;
 class  CallNode;
 class  CallGraph;
 
-#if 0
+#if 1
 #  define CXXPRINT(message) CHKERRCXX(std::cout<<message)
 #else
 #  define CXXPRINT(message)
@@ -214,23 +215,18 @@ class  CallGraph;
 
 struct ExecutionContext
 {
-  void     *userCtx;
-  PetscInt  stream;
-  const     PetscBool enclosed;
+  void *const        userCtx;
+  PetscDeviceContext dctx;
+  const PetscBool    enclosed;
 
-  constexpr ExecutionContext(void *ctx, PetscInt strm) noexcept
-    : userCtx(ctx),stream(strm),enclosed(strm >= 0 ? PETSC_TRUE : PETSC_FALSE)
+  constexpr ExecutionContext(void *ctx, PetscDeviceContext strm, PetscBool enclosed) noexcept
+    : userCtx(ctx), dctx(strm), enclosed(enclosed)
   { }
 
-  static PetscInt newStream()
-  {
-    static PetscInt pool = 0;
-    return pool++;
-  }
-
-  PetscErrorCode getUserContext(void **ctx) const
+  PETSC_NODISCARD PetscErrorCode getUserContext(void **ctx) const
   {
     PetscFunctionBegin;
+    PetscValidPointer(ctx,1);
     *ctx = userCtx;
     PetscFunctionReturn(0);
   }
@@ -238,13 +234,14 @@ struct ExecutionContext
 
 struct Edge
 {
-  CallNode *const _begin;
-  CallNode *const _end;
-  PetscInt        _stream;
+  CallNode *const    _begin;
+  CallNode *const    _end;
+  PetscDeviceContext _dctx;
 
 
-  constexpr Edge(CallNode *begin, CallNode *end, PetscInt stream = 0) noexcept
-    : _begin(begin), _end(end), _stream(stream) { }
+  constexpr Edge(CallNode *begin, CallNode *end, PetscDeviceContext ctx = PETSC_NULLPTR) noexcept
+    : _begin(begin), _end(end), _dctx(ctx)
+  { }
 };
 
 enum class OperatorKind : int {
@@ -254,15 +251,20 @@ enum class OperatorKind : int {
   CONDITIONAL
 };
 
-inline std::ostream& operator<<(std::ostream &strm, OperatorKind kind)
+PETSC_NODISCARD inline const char* OperatorKindToString(OperatorKind kind)
 {
   switch (kind) {
-  case OperatorKind::EMPTY:       return strm<<"OPERATOR_KIND_EMPTY";
-  case OperatorKind::CALLABLE:    return strm<<"OPERATOR_KIND_CALLABLE";
-  case OperatorKind::COMPOSITION: return strm<<"OPERATOR_KIND_COMPOSITION";
-  case OperatorKind::CONDITIONAL: return strm<<"OPERATOR_KIND_CONDITIONAL";
-  default:                        return strm;
+  case OperatorKind::EMPTY:       return "OPERATOR_KIND_EMPTY";
+  case OperatorKind::CALLABLE:    return "OPERATOR_KIND_CALLABLE";
+  case OperatorKind::COMPOSITION: return "OPERATOR_KIND_COMPOSITION";
+  case OperatorKind::CONDITIONAL: return "OPERATOR_KIND_CONDITIONAL";
+  default:                        return "";
   }
+}
+
+inline std::ostream& operator<<(std::ostream &strm, OperatorKind kind)
+{
+  return strm<<OperatorKindToString(kind);
 }
 
 enum class NodeState : int {
@@ -271,14 +273,19 @@ enum class NodeState : int {
   PLACEHOLDER
 };
 
-inline std::ostream& operator<<(std::ostream &strm, NodeState state)
+PETSC_NODISCARD inline const char* NodeStateToString(NodeState state)
 {
   switch (state) {
-  case NodeState::ENABLED:     return strm<<"NODE_STATE_ENABLED";
-  case NodeState::DISABLED:    return strm<<"NODE_STATE_DISABLED";
-  case NodeState::PLACEHOLDER: return strm<<"NODE_STATE_PLACEHOLDER";
-  default:                     return strm;
+  case NodeState::ENABLED:     return "NODE_STATE_ENABLED";
+  case NodeState::DISABLED:    return "NODE_STATE_DISABLED";
+  case NodeState::PLACEHOLDER: return "NODE_STATE_PLACEHOLDER";
+  default:                     return "";
   }
+}
+
+inline std::ostream& operator<<(std::ostream &strm, NodeState state)
+{
+  return strm<<NodeStateToString(state);
 }
 
 class Operator
@@ -288,15 +295,15 @@ public:
 
   virtual ~Operator() = default;
 
-  virtual PetscErrorCode operator()(ExecutionContext*) const = 0;
+  PETSC_NODISCARD virtual PetscErrorCode operator()(ExecutionContext*) const = 0;
 
-  virtual OperatorKind kind() const = 0;
+  PETSC_NODISCARD virtual OperatorKind kind() const = 0;
 
-  ptr_t clone() const { return ptr_t(__cloneDerived());}
+  PETSC_NODISCARD ptr_t clone() const { return ptr_t(__cloneDerived());}
 
-  virtual PetscErrorCode orderCallBack(const Edge*) const { return 0; }
+  PETSC_NODISCARD virtual PetscErrorCode orderCallBack(const Edge*) const { return 0; }
 
-  virtual NodeState defaultNodeState() const { return NodeState::DISABLED; }
+  PETSC_NODISCARD virtual NodeState defaultNodeState() const { return NodeState::DISABLED; }
 
 protected:
   virtual Operator* __cloneDerived() const = 0;
@@ -311,24 +318,24 @@ public:
   template <typename T>
   BranchOperator(T &&fn) : _functor(std::forward<T>(fn)) { }
 
-  PetscErrorCode operator()(ExecutionContext*) const override final;
+  PETSC_NODISCARD PetscErrorCode operator()(ExecutionContext*) const override final;
 
-  OperatorKind kind() const override final { return OperatorKind::CONDITIONAL; }
+  PETSC_NODISCARD OperatorKind kind() const override final { return OperatorKind::CONDITIONAL; }
 
-  PetscErrorCode orderCallBack(const Edge *edge) const override final
+  PETSC_NODISCARD PetscErrorCode orderCallBack(const Edge *edge) const override final
   {
     PetscFunctionBegin;
     CHKERRCXX(_branches.insert(edge->_end));
     PetscFunctionReturn(0);
   }
 
-  NodeState defaultNodeState() const override final { return NodeState::ENABLED; }
+  PETSC_NODISCARD NodeState defaultNodeState() const override final { return NodeState::ENABLED; }
 
 private:
   const std::function<signature_t>      _functor;
   mutable std::unordered_set<CallNode*> _branches;
 
-  self_t* __cloneDerived() const override final { return new self_t(*this); }
+  PETSC_NODISCARD self_t* __cloneDerived() const override final { return new self_t(*this); }
 };
 
 template <typename T, typename... Args>
@@ -350,11 +357,9 @@ public:
 
   constexpr FunctionOperator(T &&fn, std::tuple<Args...> &&args)
     : _functor(std::forward<T>(fn)), _params(std::move(args))
-  {
-    //std::cout<<(is_wrapped::value ? "wrapped ctor\n" : "native ctor\n");
-  }
+  { }
 
-  PetscErrorCode operator()(ExecutionContext *ctx) const override final
+  PETSC_NODISCARD PetscErrorCode operator()(ExecutionContext *ctx) const override final
   {
     PetscErrorCode ierr;
 
@@ -363,19 +368,19 @@ public:
     PetscFunctionReturn(0);
   }
 
-  OperatorKind kind() const override final { return OperatorKind::CALLABLE; }
+  PETSC_NODISCARD OperatorKind kind() const override final { return OperatorKind::CALLABLE; }
 
-  NodeState defaultNodeState() const override final { return NodeState::ENABLED; }
+  PETSC_NODISCARD NodeState defaultNodeState() const override final { return NodeState::ENABLED; }
 
 private:
   const std::function<signature_t> _functor;
   const std::tuple<Args...>        _params;
 
-  self_t* __cloneDerived() const override final { return new self_t(*this); }
+  PETSC_NODISCARD self_t* __cloneDerived() const override final { return new self_t(*this); }
 
   // wrapped call, where we need to pass the execution context through
   template <std::size_t... S>
-  PetscErrorCode __callFunc(ExecutionContext *ctx, index_sequence<S...>, wrapped) const
+  PETSC_NODISCARD PetscErrorCode __callFunc(ExecutionContext *ctx, index_sequence<S...>, wrapped) const
   {
     PetscErrorCode ierr;
 
@@ -385,7 +390,7 @@ private:
   }
 
   template <std::size_t... S>
-  PetscErrorCode __callFunc(ExecutionContext*, index_sequence<S...>, not_wrapped) const
+  PETSC_NODISCARD PetscErrorCode __callFunc(ExecutionContext*, index_sequence<S...>, not_wrapped) const
   {
     PetscErrorCode ierr;
 
@@ -435,23 +440,23 @@ public:
   // Destructor
   ~CallNode()
   {
-    //std::cout<<"node "<<_id<<" dtor ("<<_name<<")\n";
+    std::cout<<"node "<<_id<<" dtor ("<<_name<<")\n";
   }
 
   // Private member getters
-  PetscInt id() const { return _id; }
-  const std::string& name() const { return _name; }
-  NodeState state() const { return _state; }
+  PETSC_NODISCARD PetscInt id() const { return _id; }
+  PETSC_NODISCARD const std::string& name() const { return _name; }
+  PETSC_NODISCARD NodeState state() const { return _state; }
 
   // Private member setters
-  PetscErrorCode setName(const std::string &name)
+  PETSC_NODISCARD PetscErrorCode setName(const std::string &name)
   {
     PetscFunctionBegin;
     _name = name;
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode setState(NodeState state)
+  PETSC_NODISCARD PetscErrorCode setState(NodeState state)
   {
     PetscFunctionBegin;
     _state = state;
@@ -460,17 +465,17 @@ public:
   }
 
   // Order enforcement
-  PetscErrorCode before(CallNode*);
+  PETSC_NODISCARD PetscErrorCode before(CallNode*);
   template <std::size_t N>
-  PetscErrorCode before(const std::array<CallNode*,N>&);
-  PetscErrorCode after(CallNode*);
+  PETSC_NODISCARD PetscErrorCode before(const std::array<CallNode*,N>&);
+  PETSC_NODISCARD PetscErrorCode after(CallNode*);
   template <std::size_t N>
-  PetscErrorCode after(const std::array<CallNode*,N>&);
+  PETSC_NODISCARD PetscErrorCode after(const std::array<CallNode*,N>&);
 
-  PetscErrorCode view() const;
+  PETSC_NODISCARD PetscErrorCode view() const;
 
   // Execution
-  PetscErrorCode run(ExecutionContext*) const;
+  PETSC_NODISCARD PetscErrorCode run(ExecutionContext*) const;
 
   // Copy assignment operator
   CallNode& operator=(const CallNode&);
@@ -501,7 +506,7 @@ class CallGraph
 public:
   // Default constructor
   CallGraph(std::string &&name = "anonymous graph")
-    : _name(name),_begin(_name+" closure begin"),_end(_name+" closure end")
+    : _name(name),_begin(name+" closure begin"),_end(name+" closure end")
   {
     _begin._state = _end._state = NodeState::PLACEHOLDER;
   }
@@ -512,25 +517,26 @@ public:
   ~CallGraph()
   {
     for (auto cnode : _graph) delete cnode;
-    //std::cout<<_name<<" dtor\n";
+    std::cout<<_name<<" dtor\n";
   }
 
   // Private member getters
-  const std::string& name() const { return _name;}
+  PETSC_NODISCARD const std::string& name() const { return _name;}
 
   // Private member setters
-  PetscErrorCode setName(const std::string &name)
+  PETSC_NODISCARD PetscErrorCode setName(const std::string &name)
   {
     PetscFunctionBegin;
-    _name = name;
-    _begin._name = _name+" closure begin";
-    _end._name   = _name+" closure end";
+    _name        = name;
+    _begin._name = name+" closure begin";
+    _end._name   = name+" closure end";
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode setUserContext(void *ctx)
+  PETSC_NODISCARD PetscErrorCode setUserContext(void *ctx)
   {
     PetscFunctionBegin;
+    PetscValidPointer(ctx,1);
     _userCtx = ctx;
     PetscFunctionReturn(0);
   }
@@ -548,28 +554,22 @@ public:
   template <typename T>
   CallNode* emplaceBranchOperator(T&&);
 
-  PetscErrorCode run(PetscInt = -1);
-
-  void unFinalize()
-  {
-    _finalized = PETSC_FALSE;
-  }
+  PETSC_NODISCARD PetscErrorCode run(PetscDeviceContext cxt = nullptr);
 
 private:
-  using map_t   = std::unordered_map<PetscInt,PetscInt>;
-  using graph_t = std::vector<CallNode*>;
+  using map_t = std::unordered_map<PetscInt,PetscInt>;
 
-  std::string _name;
-  map_t       _idMap;
-  graph_t     _graph;
-  graph_t     _exec;
-  CallNode    _begin;
-  CallNode    _end;
-  PetscBool   _finalized = PETSC_FALSE;
-  void       *_userCtx   = nullptr;
+  std::string             _name;
+  map_t                   _idMap;
+  std::vector<CallNode*>  _graph;
+  std::vector<CallNode*>  _exec;
+  CallNode                _begin;
+  CallNode                _end;
+  PetscBool               _finalized = PETSC_FALSE;
+  void                   *_userCtx   = PETSC_NULLPTR;
 
   template <typename... T>
-  PetscErrorCode __emplaceOperatorCommon(T&&... args)
+  PETSC_NODISCARD PetscErrorCode __emplaceOperatorCommon(T&&... args)
   {
     PetscFunctionBegin;
     _finalized = PETSC_FALSE;
@@ -578,7 +578,7 @@ private:
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode __topologicalSort(PetscInt v, std::vector<PetscBool> &visited)
+  PETSC_NODISCARD PetscErrorCode __topologicalSort(PetscInt v, std::vector<PetscBool> &visited)
   {
     PetscFunctionBegin;
     visited[v] = PETSC_TRUE;
@@ -596,7 +596,7 @@ private:
   // this routine finds and removes the fake dependencies on the _begin and _end
   // nodes. Since these are shared_ptr's we need to delete them in both _begin and _end
   // and the nodes they are attached to in _graph.
-  PetscErrorCode __resetClosure()
+  PETSC_NODISCARD PetscErrorCode __resetClosure()
   {
     PetscFunctionBegin;
     for (const auto &edge : _begin._outedges) {
@@ -619,22 +619,21 @@ private:
       })));
     }
     CHKERRCXX(_end._inedges.clear());
+    CHKERRCXX(_exec.clear());
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode __finalize()
+  PETSC_NODISCARD PetscErrorCode __finalize()
   {
     PetscFunctionBegin;
     if (!_finalized) {
-      const PetscInt         graphSize = _graph.size();
-      std::vector<PetscBool> visited(graphSize,PETSC_FALSE);
+      std::vector<PetscBool> visited(_graph.size(),PETSC_FALSE);
       PetscErrorCode         ierr;
 
       ierr = __resetClosure();CHKERRQ(ierr);
-      CHKERRCXX(_exec.clear());
       // install the start of the closure
       CHKERRCXX(_exec.push_back(&_begin));
-      for (PetscInt i = 0; i < graphSize; ++i) {
+      for (PetscInt i = 0; i < _graph.size(); ++i) {
         if (!visited[i]) {ierr = __topologicalSort(i,visited);CHKERRQ(ierr);}
         // if the node has no inedges it is a "start" node
         if (_graph[i]->_inedges.empty()) {ierr = _graph[i]->after(&_begin);CHKERRQ(ierr);}
@@ -650,63 +649,56 @@ private:
     PetscFunctionReturn(0);
   }
 
-  static PetscErrorCode __joinAncestors(CallNode &node, ExecutionContext &ctx)
+  PETSC_NODISCARD static PetscErrorCode __joinAncestors(CallNode *node, ExecutionContext &exec)
   {
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    ierr = node.view();CHKERRQ(ierr);
-    if (node._inedges.empty()) {
-      // this node has no ancestors and is therefore *a* starting node of the graph
-      CXXPRINT("no ancestors\n");
-      // however if the ctx is enclosed then it should not create a new stream, as the
-      // enclosing scope has already set it
-      if (!ctx.enclosed) ctx.stream = ctx.newStream();
-    } else {
-      PetscInt numCancelled = node._inedges[0]->_begin->_state == NodeState::DISABLED ? 1 : 0;
-      // we have ancestors, meaning we must pick one of their streams and join all others
-      // on that stream. we arbitrarily choose the first ancestor as the stream donor.
-      ctx.stream = node._inedges[0]->_stream;
+    ierr = node->view();CHKERRQ(ierr);
+    if (node->_inedges.size()) {
+      PetscInt numCancelled = 0;
       // destroy all other streams except for the one we want to use. In the case we have
       // only 1 ancestor, this loop never fires
-      CHKERRCXX(std::for_each(std::next(node._inedges.cbegin()),node._inedges.cend(),
-      [&](const CallNode::edge_t &edge)
-      {
-        PetscFunctionBegin;
+      for (PetscInt i = 0; i < node->_inedges.size(); ++i) {
+        const auto &edge = node->_inedges[i];
+        // we have ancestors, meaning we must pick one of their streams and join all others
+        // on that stream.
+        if (i) {
+          ierr = PetscDeviceContextWaitForContext(exec.dctx,edge->_dctx);CHKERRQ(ierr);
+          ierr = PetscDeviceContextDestroy(&edge->_dctx);CHKERRQ(ierr);
+        } else {
+          // we arbitrarily choose the first ancestor as the stream donor
+          exec.dctx = edge->_dctx;
+        }
         if (edge->_begin->_state == NodeState::DISABLED) ++numCancelled;
-        CXXPRINT("-- joining ancestor stream "<<edge->_stream<<'\n');
-        PetscFunctionReturn(0);
-      }));
+      }
       // only if all ancestors of a node are cancelled do we truly want to cancel it
       CXXPRINT(numCancelled<<'\n');
-      if (numCancelled == node._inedges.size()) {
+      if (numCancelled == node->_inedges.size()) {
         CXXPRINT("All ancestors were cancelled, disabling node!\n");
-        ierr = node.setState(NodeState::DISABLED);CHKERRQ(ierr);
+        ierr = node->setState(NodeState::DISABLED);CHKERRQ(ierr);
       }
     }
     PetscFunctionReturn(0);
   }
 
-  static PetscErrorCode __forkDecendants(const CallNode &node, const ExecutionContext &ctx)
+  PETSC_NODISCARD static PetscErrorCode __forkDecendants(const CallNode *node, const ExecutionContext &exec)
   {
     PetscFunctionBegin;
-    if (node._outedges.empty()) {
-      // we have no decendants, meaning we should destroy this stream (unless we are in
-      // someone elses closure)
-      if (!ctx.enclosed) CXXPRINT("-- destroying stream "<<ctx.stream<<'\n');
-    } else {
-      // we have decendants, so we need to fork some streams off of the current one,
-      // although we need only create n-1 streams since we can give ours away. Once again
-      // arbitrarily pick our first outbound edge as the recipient of our stream
-      node._outedges[0]->_stream = ctx.stream;
-      // again, for more than 1 decendant this loop never fires
-      CHKERRCXX(std::for_each(std::next(node._outedges.cbegin()),node._outedges.cend(),
-      [&](const CallNode::edge_t &edge)
-      {
-        edge->_stream = ctx.newStream();
-        CXXPRINT("-- creating decendant stream "<<edge->_stream<<'\n');
-        return 0;
-      }));
+    for (PetscInt i = 0; i < node->_outedges.size(); ++i) {
+      const auto &edge = node->_outedges[i];
+      // if this loop fires we have decendants, so we need to fork some streams off of the
+      // current one, although we need only create n-1 streams since we can give ours away.
+      if (i) {
+        PetscErrorCode ierr;
+
+        // everyone else gets duped and waits on donor stream
+        ierr = PetscDeviceContextDuplicate(exec.dctx,&edge->_dctx);CHKERRQ(ierr);
+        ierr = PetscDeviceContextWaitForContext(edge->_dctx,exec.dctx);CHKERRQ(ierr);
+      } else {
+        // for consistency, the first outbound edge gets the stream
+        edge->_dctx = exec.dctx;
+      }
     }
     PetscFunctionReturn(0);
   }
@@ -722,41 +714,36 @@ inline PetscErrorCode BranchOperator::operator()(ExecutionContext *exec) const
   ierr = _functor(exec,branches,idx);CHKERRQ(ierr);
   if (idx != -1) {
     for (PetscInt i = 0; i < branches.size(); ++i) {
-      if (i == idx) continue;
-      CXXPRINT("cancelling node "<<branches[i]->id()<<'\n');
-      ierr = branches[i]->setState(NodeState::DISABLED);CHKERRQ(ierr);
+      if (i != idx) {
+        CXXPRINT("cancelling node "<<branches[i]->id()<<'\n');
+        ierr = branches[i]->setState(NodeState::DISABLED);CHKERRQ(ierr);
+      }
     }
   }
   PetscFunctionReturn(0);
 }
 
 inline CallNode::CallNode(CallGraph &graph)
-  : CallNode([&](ExecutionContext *ctx) { return graph.run(ctx->stream); })
-{
-  //std::cout<<"COMPOSITION CTOR\n";
-}
+  : CallNode([&](ExecutionContext *ctx) { return graph.run(ctx->dctx); })
+{ }
 
 template <std::size_t N>
 inline PetscErrorCode CallNode::before(const std::array<CallNode*,N> &others)
 {
-  PetscFunctionBegin;
-  for (const auto other : others) {
-    PetscErrorCode ierr;
+  PetscErrorCode ierr;
 
-    ierr = before(other);CHKERRQ(ierr);
-  }
+  PetscFunctionBegin;
+  for (const auto &other : others) {ierr = before(other);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
 template <std::size_t N>
 inline PetscErrorCode CallNode::after(const std::array<CallNode*,N> &others)
 {
-  PetscFunctionBegin;
-  for (const auto other : others) {
-    PetscErrorCode ierr;
+  PetscErrorCode ierr;
 
-    ierr = after(other);CHKERRQ(ierr);
-  }
+  PetscFunctionBegin;
+  for (const auto &other : others) {ierr = after(other);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -777,7 +764,7 @@ inline PetscErrorCode CallNode::after(CallNode *other)
   CHKERRCXX(other->_outedges.push_back(_inedges.back()));
   if (other->_operator) {
     PetscErrorCode ierr;
-    ierr = other->_operator->orderCallBack(other->_outedges.back().get());CHKERRQ(ierr);
+    ierr = other->_operator->orderCallBack(_inedges.back().get());CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -811,7 +798,7 @@ inline PetscErrorCode CallNode::run(ExecutionContext *ctx) const
   if (_state == NodeState::ENABLED) {
     PetscErrorCode ierr;
 
-    CXXPRINT("- running on stream "<<ctx->stream<<":\n");
+    CXXPRINT("- running on stream "<<ctx->dctx->id<<":\n");
     ierr = (*_operator)(ctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -856,7 +843,6 @@ inline CallNode* CallGraph::emplaceFunctionOperator(T &&fn)
 template <typename... Args, enable_if_t<(sizeof...(Args) > 1)>*>
 inline std::array<CallNode*,sizeof...(Args)> CallGraph::emplaceFunctionOperator(Args&&... rest)
 {
-  _graph.reserve(_graph.size()+sizeof...(Args));
   return {emplaceFunctionOperator(std::forward<Args>(rest))...};
 }
 
@@ -881,24 +867,37 @@ inline CallNode* CallGraph::emplaceBranchOperator(T&& f)
   PetscFunctionReturn(_graph.back());
 }
 
-inline PetscErrorCode CallGraph::run(PetscInt stream)
+inline PetscErrorCode CallGraph::run(PetscDeviceContext ctx)
 {
-  ExecutionContext ctx(_userCtx,stream);
-  PetscErrorCode   ierr;
+  PetscDeviceContext dctx;
+  const PetscBool    enclosed = ctx ? PETSC_TRUE : PETSC_FALSE;
+  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
+  if (enclosed) {
+    dctx = ctx;
+  } else {
+    ierr = PetscDeviceContextCreate(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetStreamType(dctx,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
+  }
   ierr = __finalize();CHKERRQ(ierr);
   CXXPRINT("----- "<<_name<<" begin run\n");
-  for (const auto enode : _exec) {
-    ierr = __joinAncestors(*enode,ctx);CHKERRQ(ierr);
-    ierr = enode->run(&ctx);CHKERRQ(ierr);
-    ierr = __forkDecendants(*enode,ctx);CHKERRQ(ierr);
+  {
+    ExecutionContext exec(_userCtx,dctx,enclosed);
+
+    for (const auto &enode : _exec) {
+      ierr = __joinAncestors(enode,exec);CHKERRQ(ierr);
+      ierr = enode->run(&exec);CHKERRQ(ierr);
+      ierr = __forkDecendants(enode,exec);CHKERRQ(ierr);
+    }
   }
-  // re-enable any nodes that were disabled as part of the run
-  for (const auto node : _graph) {
+  // reset any nodes that were disabled as part of the run
+  for (const auto &node : _graph) {
     ierr = node->setState(node->_operator->defaultNodeState());CHKERRQ(ierr);
   }
   CXXPRINT("----- "<<_name<<" end run\n");
+  if (!enclosed) {ierr = PetscDeviceContextDestroy(&dctx);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
