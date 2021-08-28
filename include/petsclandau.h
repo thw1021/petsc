@@ -159,15 +159,15 @@ typedef struct _lP4estVertexMaps {
 PETSC_EXTERN PetscErrorCode LandauCreateColoring(Mat, DM, PetscContainer *);
 #if defined(PETSC_HAVE_CUDA)
 PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM, const PetscInt, PetscReal[], PetscScalar[], const PetscInt, const PetscScalar[], LandauGeomData *, const PetscInt, PetscReal, const PetscLogEvent[], Mat);
-PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *);
+PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *[LANDAU_MAX_GRIDS], pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *[LANDAU_MAX_GRIDS]);
 PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataSet(DM, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauGeomData *);
 PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *);
 #endif
 #if defined(PETSC_HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM, const PetscInt, PetscReal[], PetscScalar[],  const PetscInt, const PetscScalar[], LandauGeomData *, const PetscInt, PetscReal, const PetscLogEvent[], Mat);
-PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *);
+PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *[LANDAU_MAX_GRIDS], pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *[LANDAU_MAX_GRIDS]);
 PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauGeomData *);
 PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataClear(LandauGeomData *);
 #endif
