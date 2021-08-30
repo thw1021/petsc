@@ -1,5 +1,5 @@
 
-static char help[] = "Tests MatGetColumnNorms() for matrix read from file.";
+static char help[] = "Tests MatGetColumnNorms()/Sums()/Means() for matrix read from file.";
 
 #include <petscmat.h>
 
@@ -45,13 +45,13 @@ int main(int argc,char **args)
     ierr = PetscRealView(n,reductions,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
   }
 
-  ierr = MatGetColumnReductions(A,REDUCTION_SUM,reductions);CHKERRQ(ierr);
+  ierr = MatGetColumnSums(A,reductions);CHKERRQ(ierr);
   if (!rank) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"REDUCTION_SUM:\n");CHKERRQ(ierr);
     ierr = PetscRealView(n,reductions,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
   }
 
-  ierr = MatGetColumnReductions(A,REDUCTION_MEAN,reductions);CHKERRQ(ierr);
+  ierr = MatGetColumnMeans(A,reductions);CHKERRQ(ierr);
   if (!rank) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"REDUCTION_MEAN:\n");CHKERRQ(ierr);
     ierr = PetscRealView(n,reductions,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
