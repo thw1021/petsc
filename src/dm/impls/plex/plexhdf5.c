@@ -1671,7 +1671,7 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
   }
 
   //TODO maybe this could play with ISLocalToGlobalMapping() somehow
-  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, verticesAdj, 0, numVerticesAdj, verticesAdj, verticesAdj, 0, &vertexSF, &pointSF);CHKERRQ(ierr);
+  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, NULL, 0, numVerticesAdj, verticesAdj, NULL, 0, &vertexSF, &pointSF);CHKERRQ(ierr);
 
   ierr = PetscObjectSetName((PetscObject) pointSF, "point SF");CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) vertexSF, "vertex SF");CHKERRQ(ierr);
