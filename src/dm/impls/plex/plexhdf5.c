@@ -1722,15 +1722,15 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
     for (d = 0; d <= depth; d++) {
       const PetscInt  e = permArr[d];
       const PlexLayer l = layers[e];
-      PetscInt lo, n, size;
+      PetscInt        lo, n, size;
 
       ierr = PetscSectionGetChart(l->coneSizesSection, &lo, &n);CHKERRQ(ierr);
       ierr = PetscSectionGetStorageSize(l->coneSizesSection, &size);CHKERRQ(ierr);
       if (lo) SETERRQ1(comm, PETSC_ERR_PLIB, "starting point should be 0 in coneSizesSection %D", d);
-      l->offset = stratumOffset;
-      l->conesOffset = conesOffset;
-      stratumOffset += n;
-      conesOffset   += size;
+      l->offset       = stratumOffset;
+      l->conesOffset  = conesOffset;
+      stratumOffset  += n;
+      conesOffset    += size;
     }
     nPoints = stratumOffset;
   }
