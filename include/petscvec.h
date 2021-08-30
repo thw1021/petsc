@@ -220,85 +220,20 @@ M*/
 M*/
 
 /*E
-    ReductionType - determines what type of column reduction to compute
+    ReductionType - determines what type of column reduction (one that is not a type of norm defined in NormType) to compute
 
     Level: beginner
 
 .seealso: MatGetColumnReductions(), MatGetColumnNorms(), NormType
 E*/
-/* NOTE: If a new norm type is added, a corresponding ReductionType entry should be added. */
-typedef enum {REDUCTION_NORM_1=0,
-              REDUCTION_NORM_2=1,
-              REDUCTION_NORM_FROBENIUS=2,
-              REDUCTION_NORM_INFINITY=3,
-              REDUCTION_NORM_1_AND_2=4,
-              REDUCTION_SUM=5,
-              REDUCTION_MEAN=6
+/* NOTE: The integer constants defined in ReductionType MUST BE DISTINCT from those defined in NormType.
+ * This is because MatGetColumnReductions() is used to compute both norms and other types of reductions,
+ * and the constants defined in both NormType and ReductionType are used to designate the desired operation. */
+typedef enum {REDUCTION_SUM_REALPART=10,
+              REDUCTION_MEAN_REALPART=11,
+              REDUCTION_SUM_IMAGINARYPART=12,
+              REDUCTION_MEAN_IMAGINARYPART=13
               } ReductionType;
-
-/*MC
-     REDUCTION_NORM_1 - corresponds to the NORM_1 NormType
-
-   Level: beginner
-
-.seealso:  ReductionType, NormType, MatGetColumnReductions(), MatGetColumnNorms(),
-           NORM_1, REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS, REDUCTION_NORM_INFINITY,
-           REDUCTION_NORM_1_AND_2, REDUCTION_SUM, REDUCTION_MEAN
-
-M*/
-
-/*MC
-     REDUCTION_NORM_2 - corresponds to the NORM_2 NormType
-
-   Level: beginner
-
-.seealso:  ReductionType, NormType, MatGetColumnReductions(), MatGetColumnNorms(),
-           NORM_2, REDUCTION_NORM_1, REDUCTION_NORM_FROBENIUS, REDUCTION_NORM_INFINITY,
-           REDUCTION_NORM_1_AND_2, REDUCTION_SUM, REDUCTION_MEAN
-
-M*/
-
-/*MC
-     REDUCTION_NORM_FROBENIUS - corresponds to the NORM_FROBENIUS NormType
-
-   Level: beginner
-
-.seealso:  ReductionType, NormType, MatGetColumnReductions(), MatGetColumnNorms(),
-           NORM_FROBENIUS, REDUCTION_NORM_1, REDUCTION_NORM_2, REDUCTION_NORM_INFINITY,
-           REDUCTION_NORM_1_AND_2, REDUCTION_SUM, REDUCTION_MEAN
-
-M*/
-
-/*MC
-     REDUCTION_NORM_INFINITY - corresponds to the NORM_INFINITY NormType
-
-   Level: beginner
-
-.seealso:  ReductionType, NormType, MatGetColumnReductions(), MatGetColumnNorms(),
-           NORM_INFINITY, REDUCTION_NORM_1, REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS,
-           REDUCTION_NORM_1_AND_2, REDUCTION_SUM, REDUCTION_MEAN
-
-M*/
-
-/*MC
-     REDUCTION_NORM_1_AND_2 - corresponds to the NORM_1_AND_2 NormType
-
-   Level: beginner
-
-.seealso:  ReductionType, NormType, MatGetColumnReductions(), MatGetColumnNorms(),
-           NORM_1_AND_2, REDUCTION_NORM_1, REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS,
-           REDUCTION_NORM_INFINITY, REDUCTION_SUM, REDUCTION_MEAN
-
-M*/
-
-/*MC
-     REDUCTION_NORM_MAX - see REDUCTION_NORM_INFINITY
-
-   Level: beginner
-
-.seealso:  REDUCTION_NORM_INFINITY
-
-M*/
 
 /*MC
      REDUCTION_SUM - matrix column sum
