@@ -1,5 +1,6 @@
 #include <petsc/private/petscimpl.h>
 #include <petscgraph.hpp>
+#include <petscvec.h>
 
 using namespace Petsc;
 
@@ -57,6 +58,8 @@ int main(int argc, char *argv[])
 
   PetscInt  x = 123456;
   UserCtx   ctx(3);
+  Vec       v;
+  CallNode  VecCreateNode(VecCreate,comm,&v);
   CallGraph graph2("small graph");
   CallNode  node,node2 = CallNode();
 

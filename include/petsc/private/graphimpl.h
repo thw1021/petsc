@@ -65,7 +65,6 @@ struct _p_PetscCallGraph {
   PetscCallNode begin;
   PetscCallNode end;
   PetscHMapI    idMap;
-  PetscBool     setup;
   PetscBool     assembled;
   void          *userctx;
   void          *data;

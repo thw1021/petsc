@@ -31,7 +31,7 @@ PetscErrorCode PetscGraphOperatorExecute(PetscGraphOperator operator, PetscExecu
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = (operator->ops->execute)(operator,exec);CHKERRQ(ierr);
+  ierr = (*operator->ops->execute)(operator,exec);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -222,8 +222,8 @@ PetscErrorCode PetscCallGraphDestroy(PetscCallGraph *graph)
   if (!*graph) PetscFunctionReturn(0);
   PetscValidHeaderSpecific(*graph,PETSCCALLGRAPH_CLASSID,1);
   if ((*graph)->ops->destroy) {ierr = (*(*graph)->ops->destroy)(*graph);CHKERRQ(ierr);}
-  ierr = PetscFree((*graph)->nodes);CHKERRQ(ierr);
   ierr = PetscFree((*graph)->exec);CHKERRQ(ierr);
+  ierr = PetscFree((*graph)->nodes);CHKERRQ(ierr);
   ierr = PetscCallNodeDestroy(&(*graph)->begin);CHKERRQ(ierr);
   ierr = PetscCallNodeDestroy(&(*graph)->end);CHKERRQ(ierr);
   ierr = PetscHMapIDestroy(&(*graph)->idMap);CHKERRQ(ierr);
@@ -245,18 +245,6 @@ PetscErrorCode PetscCallGraphAddNode(PetscCallGraph graph, PetscCallNode node)
   PetscValidHeaderSpecific(graph,PETSCCALLGRAPH_CLASSID,1);
   PetscValidHeaderSpecific(graph,PETSCCALLNODE_CLASSID,2);
   ierr = PetscCallGraphPushBackNode_Private(graph,node);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscCallGraphSetUp(PetscCallGraph graph)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (graph->setup) PetscFunctionReturn(0);
-  ierr = PetscCallNodeCreate(PetscObjectComm((PetscObject)graph),&graph->begin);CHKERRQ(ierr);
-  ierr = PetscCallNodeCreate(PetscObjectComm((PetscObject)graph),&graph->end);CHKERRQ(ierr);
-  graph->setup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -333,6 +321,12 @@ static PetscErrorCode PetscCallGraphResetClosure_Private(PetscCallGraph graph)
     ierr = PetscFree(graph->exec);CHKERRQ(ierr);
     ierr = PetscMalloc1(graph->execCapacity,&graph->exec);CHKERRQ(ierr);
   }
+  if (!graph->begin) {
+    ierr = PetscCallNodeCreate(PetscObjectComm((PetscObject)graph),&graph->begin);CHKERRQ(ierr);
+  }
+  if (!graph->end) {
+    ierr = PetscCallNodeCreate(PetscObjectComm((PetscObject)graph),&graph->end);CHKERRQ(ierr);
+  }
   /* install the closures */
   graph->exec[0]             = graph->begin;
   graph->exec[graph->size+1] = graph->end;
@@ -344,8 +338,7 @@ static PetscErrorCode PetscCallGraphResetClosure_Private(PetscCallGraph graph)
 
   /* search for and destroy the INEDGES connected to graph->begin */
   for (PetscInt i = 0; i < graph->begin->sizeOut; ++i) {
-    const PetscGraphEdge edge   = graph->begin->outedges[i];
-    const PetscInt       edgeId = edge->id;
+    const PetscGraphEdge edge = graph->begin->outedges[i];
     PetscInt             id;
 
     ierr = PetscHMapIGet(graph->idMap,edge->end->id,&id);CHKERRQ(ierr);
@@ -355,7 +348,7 @@ static PetscErrorCode PetscCallGraphResetClosure_Private(PetscCallGraph graph)
       PetscGraphEdge      *nodeInedges = node->inedges;
 
       for (PetscInt j = 0; j < node->sizeIn; ++j) {
-        if (nodeInedges[j]->id == edgeId) {
+        if (nodeInedges[j]->id == edge->id) {
           /* employ destroy-and-swap, whereby we destroy the matching inedge, and just overwrite it with the final
            entry */
           ierr = PetscGraphEdgeDestroy(nodeInedges+j);CHKERRQ(ierr);
@@ -367,8 +360,7 @@ static PetscErrorCode PetscCallGraphResetClosure_Private(PetscCallGraph graph)
 
     /* search for and destroy the OUTEDGES connected to graph->end */
     for (PetscInt i = 0; i < graph->end->sizeIn; ++i) {
-      const PetscGraphEdge edge   = graph->end->inedges[i];
-      const PetscInt       edgeId = edge->id;
+      const PetscGraphEdge edge = graph->end->inedges[i];
       PetscInt             id;
 
       ierr = PetscHMapIGet(graph->idMap,edge->begin->id,&id);CHKERRQ(ierr);
@@ -378,7 +370,7 @@ static PetscErrorCode PetscCallGraphResetClosure_Private(PetscCallGraph graph)
         PetscGraphEdge      *nodeOutedges = node->outedges;
 
         for (PetscInt j = 0; j < node->sizeOut; ++j) {
-          if (nodeOutedges[j]->id == edgeId) {
+          if (nodeOutedges[j]->id == edge->id) {
             ierr = PetscGraphEdgeDestroy(nodeOutedges+j);CHKERRQ(ierr);
             nodeOutedges[j] = nodeOutedges[--node->sizeOut];
             break;
@@ -390,14 +382,15 @@ static PetscErrorCode PetscCallGraphResetClosure_Private(PetscCallGraph graph)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscCallGraphFinalize_Private(PetscCallGraph graph)
+PetscErrorCode PetscCallGraphAssemble(PetscCallGraph graph)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(graph,PETSCCALLGRAPH_CLASSID,1);
   if (!graph->assembled) {
-    PetscErrorCode ierr;
     PetscInt       execIdx = 1; /* idx to push back into for graph->exec, note that
-                                   graph->exec[0] is always graph->begin */
+                                 graph->exec[0] is always graph->begin */
     PetscBool      *visited;
+    PetscErrorCode ierr;
 
     ierr = PetscCallGraphResetClosure_Private(graph);CHKERRQ(ierr);
     ierr = PetscCalloc1(graph->size,&visited);CHKERRQ(ierr);
@@ -412,6 +405,7 @@ static PetscErrorCode PetscCallGraphFinalize_Private(PetscCallGraph graph)
     }
     ierr = PetscFree(visited);CHKERRQ(ierr);
     if (graph->ops->assemble) {ierr = (*graph->ops->assemble)(graph);CHKERRQ(ierr);}
+    graph->assembled = PETSC_TRUE;
   }
   PetscFunctionReturn(0);
 }
@@ -423,6 +417,7 @@ PetscErrorCode PetscCallGraphExecute(PetscCallGraph graph, PetscDeviceContext ct
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(graph,PETSCCALLGRAPH_CLASSID,1);
+  if (PetscUnlikelyDebug(!graph->assembled)) SETERRQ(PetscObjectComm((PetscObject)graph),PETSC_ERR_ARG_WRONGSTATE,"Graph is not assembled");
   if (enclosed) {
     PetscValidDeviceContext(ctx,2);
   } else {
@@ -430,7 +425,6 @@ PetscErrorCode PetscCallGraphExecute(PetscCallGraph graph, PetscDeviceContext ct
     ierr = PetscDeviceContextSetStreamType(ctx,PETSC_STREAM_DEFAULT_BLOCKING);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetUp(ctx);CHKERRQ(ierr);
   }
-  ierr = PetscCallGraphFinalize_Private(graph);CHKERRQ(ierr);
   {
     /* allocate this on the stack using the private stack type */
     _s_PetscExecutionContext exec = {
@@ -439,7 +433,7 @@ PetscErrorCode PetscCallGraphExecute(PetscCallGraph graph, PetscDeviceContext ct
       .enclosed = enclosed
     };
 
-    for (PetscInt i = 0; i < graph->size; ++i) {
+    for (PetscInt i = 0; i < graph->size+2; ++i) {
       ierr = PetscCallGraphJoinAncestors_Private(graph->exec[i],&exec);CHKERRQ(ierr);
       ierr = PetscCallNodeExecute(graph->exec[i],&exec);CHKERRQ(ierr);
       ierr = PetscCallGraphForkDescendants_Private(graph->exec[i],&exec);CHKERRQ(ierr);
