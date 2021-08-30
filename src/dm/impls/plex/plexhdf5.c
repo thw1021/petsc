@@ -1380,8 +1380,8 @@ struct _n_PlexLayer {
   IS              pointsIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
   PetscLayout     vertexLayout;
-  PetscSF         pointSF, vertexSF; //TODO maybe confusing names
-  PetscInt        offset, conesOffset;
+  PetscSF         pointSF, vertexSF; //TODO maybe confusing names (in DMPlex in general - maybe pointSF -> overlapSF)
+  PetscInt        offset, conesOffset, leafOffset;
 };
 typedef struct _n_PlexLayer* PlexLayer;
 
@@ -1411,6 +1411,7 @@ static PetscErrorCode PlexLayerCreate_Private(PlexLayer *layer)
   (*layer)->d = -1;
   (*layer)->offset = -1;
   (*layer)->conesOffset = -1;
+  (*layer)->leafOffset = -1;
   PetscFunctionReturn(0);
 }
 
@@ -1868,6 +1869,103 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
   }
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
+
+  {
+    PetscSF       pointsf_new;
+    PetscInt      i, nLeaves;
+    PetscInt     *ilocal_new;
+    PetscSFNode  *iremote_new;
+    PetscMPIInt   rank;
+
+    ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+    /* Count leaves and layer offsets */
+    {
+      PetscInt leafOffset = 0;
+
+      for (d = 1; d <= depth; d++) {
+        const PlexLayer l   = layers[d];
+        PetscInt        nl  = 0;
+
+        ierr = PetscSFGetGraph(l->pointSF, NULL, &nl, NULL, NULL);CHKERRQ(ierr);
+        l->leafOffset   = leafOffset;
+        leafOffset     += nl;
+      }
+      nLeaves = leafOffset;
+    }
+    if (dbgv) {
+      ierr = PetscViewerASCIIPrintf(dbgv, "DMPlexBuildFromLayers_Private create pointSF\n");CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
+    }
+    /* Renumber and concatenate local leaves */
+    ierr = PetscMalloc1(nLeaves, &ilocal_new);CHKERRQ(ierr);
+    for (i = 0; i < nLeaves; i++) ilocal_new[i] = -1;
+    for (d = 1; d <= depth; d++) {
+      const PlexLayer   l = layers[d];
+      const PetscInt   *ilocal;
+      PetscInt         *ilocal_l = &ilocal_new[l->leafOffset];
+      PetscInt          i, nleaves_l;
+
+      ierr = PetscSFGetGraph(l->pointSF, NULL, &nleaves_l, &ilocal, NULL);CHKERRQ(ierr);
+      for (i=0; i<nleaves_l; i++) ilocal_l[i] = ilocal[i] + layers[d-1]->offset; /* cone points of current layer are points of previous layer */
+    }
+    /* Renumber and concatenate remote roots */
+    ierr = PetscMalloc1(nLeaves, &iremote_new);CHKERRQ(ierr);
+    for (i = 0; i < nLeaves; i++) {
+      iremote_new[i].rank   = -1;
+      iremote_new[i].index  = -1;
+    }
+    for (d = 1; d <= depth; d++) {
+      const PlexLayer     l = layers[d];
+      PetscInt            i, nl, nroots;
+      PetscSF             sfTemp;
+      const PetscSFNode  *iremote;
+      PetscSFNode        *rootdata;
+      PetscSFNode        *leafdata = &iremote_new[l->leafOffset];
+
+      ierr = PetscSFGetGraph(l->pointSF, &nroots, &nl, NULL, &iremote);CHKERRQ(ierr);
+      ierr = PetscSFCreate(comm, &sfTemp);CHKERRQ(ierr);
+      /* create SF with contiguous leaves */
+      ierr = PetscSFSetGraph(sfTemp, nroots, nl, NULL, PETSC_USE_POINTER, iremote, PETSC_USE_POINTER);CHKERRQ(ierr);
+      ierr = PetscSFSetUp(sfTemp);CHKERRQ(ierr);
+      ierr = PetscMalloc1(nroots, &rootdata);CHKERRQ(ierr);
+      for (i = 0; i < nroots; i++) {
+        rootdata[i].index = i + layers[d-1]->offset; /* cone points of current layer are points of previous layer */
+        rootdata[i].rank  = (PetscInt) rank;
+      }
+      if (dbgv) {
+        ierr = PetscViewerASCIIPrintf(dbgv, "depth %D\n", d);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
+        ierr = PetscSFView(l->pointSF, dbgv);CHKERRQ(ierr);
+        ierr = PetscSFView(sfTemp, dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(dbgv, "old leafdata:\n");CHKERRQ(ierr);
+        ierr = PetscIntView(2*nl, (PetscInt*) leafdata, dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(dbgv, "rootdata:\n");CHKERRQ(ierr);
+        ierr = PetscIntView(2*nroots, (PetscInt*) rootdata, dbgv);CHKERRQ(ierr);
+      }
+      ierr = PetscSFBcastBegin(sfTemp, MPIU_2INT, rootdata, leafdata, MPI_REPLACE);CHKERRQ(ierr);
+      ierr = PetscSFBcastEnd(  sfTemp, MPIU_2INT, rootdata, leafdata, MPI_REPLACE);CHKERRQ(ierr);
+      if (dbgv) {
+        ierr = PetscViewerASCIIPrintf(dbgv, "new leafdata:\n");CHKERRQ(ierr);
+        ierr = PetscIntView(2*nl, (PetscInt*) leafdata, dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
+      }
+      ierr = PetscSFDestroy(&sfTemp);CHKERRQ(ierr);
+      ierr = PetscFree(rootdata);CHKERRQ(ierr);
+    }
+    if (dbgv) {
+      ierr = PetscViewerASCIIPrintf(dbgv, "ilocal_new:\n");CHKERRQ(ierr);
+      ierr = PetscIntView(nLeaves, ilocal_new, dbgv);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(dbgv, "iremote_ind:\n");CHKERRQ(ierr);
+      ierr = PetscIntView(2*nLeaves, (PetscInt*) iremote_new, dbgv);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
+    }
+    /* Build the new pointSF */
+    ierr = PetscSFCreate(comm, &pointsf_new);CHKERRQ(ierr);
+    ierr = PetscSFSetGraph(pointsf_new, nPoints, nLeaves, ilocal_new, PETSC_OWN_POINTER, iremote_new, PETSC_OWN_POINTER);CHKERRQ(ierr);
+    ierr = PetscSFSetUp(pointsf_new);CHKERRQ(ierr);
+    ierr = DMSetPointSF(dm, pointsf_new);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&pointsf_new);CHKERRQ(ierr);
+  }
 
   if (dbgv) {
     ierr = DMView(dm, dbgv);CHKERRQ(ierr);
