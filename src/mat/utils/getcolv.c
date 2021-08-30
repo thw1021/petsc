@@ -90,30 +90,17 @@ PetscErrorCode  MatGetColumnVector(Mat A,Vec yy,PetscInt col)
 @*/
 PetscErrorCode MatGetColumnNorms(Mat A,NormType type,PetscReal norms[])
 {
+  /* NOTE: MatGetColumnNorms() could simply be a macro that calls MatGetColumnReductions().
+   * I've kept this as a function because it allows slightly more in the way of error checking,
+   * erroring out if MatGetColumnNorms() is not called with a valid NormType. */
   PetscErrorCode ierr;
-  ReductionType reductiontype;
 
   PetscFunctionBegin;
-  switch(type) {
-    case NORM_2:
-      reductiontype = REDUCTION_NORM_2;
-      break;
-    case NORM_1:
-      reductiontype = REDUCTION_NORM_1;
-      break;
-    case NORM_FROBENIUS:
-      reductiontype = REDUCTION_NORM_FROBENIUS;
-      break;
-    case NORM_INFINITY:
-      reductiontype = REDUCTION_NORM_INFINITY;
-      break;
-    case NORM_1_AND_2:
-      reductiontype = REDUCTION_NORM_1_AND_2;
-      break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Unknown NormType");
+  if (type == NORM_2 || type == NORM_1 || type == NORM_FROBENIUS || type == NORM_INFINITY || type == NORM_1_AND_2) {
+    ierr = MatGetColumnReductions(A,(PetscInt)type,norms);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Unknown NormType");
   }
-  ierr = MatGetColumnReductions(A,reductiontype,norms);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -122,24 +109,25 @@ PetscErrorCode MatGetColumnNorms(Mat A,NormType type,PetscReal norms[])
 
   Input Parameter:
 +  A - the matrix
--  type - NORM_2, NORM_1, NORM_INFINITY, SUM, MEAN
+-  type - A constant defined in NormType or ReductionType: NORM_2, NORM_1, NORM_INFINITY, REDUCTION_SUM, REDUCTION_MEAN
 
   Output Parameter:
 .  reductions - an array as large as the TOTAL number of columns in the matrix
 
-   Level: intermediate
+   Level: developer
 
    Notes:
     Each process has ALL the column reductions after the call. Because of the way this is computed each process gets all the values,
     if each process wants only some of the values it should extract the ones it wants from the array.
 
   Developer Note:
+    This routine is primarily intended as a back-end.
     MatGetColumnNorms() is now implemented using this routine.
 
-.seealso: NormType, MatGetColumnNorms()
+.seealso: ReductionType, NormType, MatGetColumnNorms()
 
 @*/
-PetscErrorCode MatGetColumnReductions(Mat A,ReductionType type,PetscReal reductions[])
+PetscErrorCode MatGetColumnReductions(Mat A,PetscInt type,PetscReal reductions[])
 {
   PetscErrorCode ierr;
 
