@@ -16,10 +16,10 @@
 #define snesgetoptionsprefix_            SNESGETOPTIONSPREFIX
 #define snesgettype_                     SNESGETTYPE
 #define snessetfunction_                 SNESSETFUNCTION
-#define snessetngs_                       SNESSETNGS
-#define snessetupdate_                    SNESSETUPDATE
+#define snessetngs_                      SNESSETNGS
+#define snessetupdate_                   SNESSETUPDATE
 #define snesgetfunction_                 SNESGETFUNCTION
-#define snesgetngs_                       SNESGETNGS
+#define snesgetngs_                      SNESGETNGS
 #define snessetconvergencetest_          SNESSETCONVERGENCETEST
 #define snesconvergeddefault_            SNESCONVERGEDDEFAULT
 #define snesconvergedskip_               SNESCONVERGEDSKIP
@@ -33,9 +33,11 @@
 #define snesmonitorsolution_             SNESMONITORSOLUTION
 #define snesmonitorsolutionupdate_       SNESMONITORSOLUTIONUPDATE
 #define snesmonitorset_                  SNESMONITORSET
-#define snesnewtontrgetrhoflag_          SNESNEWTONTRGETRHOFLAG
 #define snesnewtontrsetprecheck_         SNESNEWTONTRSETPRECHECK
 #define snesnewtontrsetpostcheck_        SNESNEWTONTRSETPOSTCHECK
+#define snesnewtontrdcgetrhoflag_        SNESNEWTONTRDCGETRHOFLAG
+#define snesnewtontrdcsetprecheck_       SNESNEWTONTRDCSETPRECHECK
+#define snesnewtontrdcsetpostcheck_      SNESNEWTONTRDCSETPOSTCHECK
 #define snesviewfromoptions_             SNESVIEWFROMOPTIONS
 #define snesgetconvergedreasonstring_    SNESGETCONVERGEDREASONSTRING
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
@@ -68,9 +70,11 @@
 #define snesmonitorsolution_             snesmonitorsolution
 #define snesmonitorsolutionupdate_       snesmonitorsolutionupdate
 #define snesmonitorset_                  snesmonitorset
-#define snesnewtontrgetrhoflag_          snesnewtontrgetrhoflag
 #define snesnewtontrsetprecheck_         snesnewtontrsetprecheck
 #define snesnewtontrsetpostcheck_        snesnewtontrsetpostcheck
+#define snesnewtontrdcgetrhoflag_        snesnewtontrdcgetrhoflag
+#define snesnewtontrdcsetprecheck_       snesnewtontrdcsetprecheck
+#define snesnewtontrdcsetpostcheck_      snesnewtontrdcsetpostcheck
 #define snesviewfromoptions_             snesviewfromoptions
 #define snesgetconvergedreasonstring_    snesgetconvergedreasonstring
 #endif
@@ -93,8 +97,8 @@ static struct {
 #endif
 } _cb;
 
-PETSC_EXTERN void  snesnewtontrgetrhoflag_(SNES *snes,PetscBool *rho_flag, int *__ierr){
-  *__ierr = SNESNewtonTRGetRhoFlag(
+PETSC_EXTERN void  snesnewtontrdcgetrhoflag_(SNES *snes,PetscBool *rho_flag, int *__ierr){
+  *__ierr = SNESNewtonTRDCGetRhoFlag(
      *snes,rho_flag);
 }
 
@@ -116,6 +120,15 @@ PETSC_EXTERN void snesnewtontrsetprecheck_(SNES *snes, void (*func)(SNES,Vec,Vec
   SNESNewtonTRSetPreCheck(*snes,ourtrprecheckfunction,NULL);
 }
 
+PETSC_EXTERN void snesnewtontrdcsetprecheck_(SNES *snes, void (*func)(SNES,Vec,Vec,PetscBool*,void*),void *ctx,PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
+{
+  *ierr = PetscObjectSetFortranCallback((PetscObject)*snes,PETSC_FORTRAN_CALLBACK_CLASS,&_cb.trprecheck,(PetscVoidFunction)func,ctx);if (*ierr) return;
+#if defined(PETSC_HAVE_F90_2PTR_ARG)
+  *ierr = PetscObjectSetFortranCallback((PetscObject)*snes,PETSC_FORTRAN_CALLBACK_CLASS,&_cb.trprecheck_pgiptr,NULL,ptr);if (*ierr) return;
+#endif
+  SNESNewtonTRDCSetPreCheck(*snes,ourtrprecheckfunction,NULL);
+}
+
 static PetscErrorCode ourtrpostcheckfunction(SNES snes,Vec x,Vec y,Vec w,PetscBool *changed_y,PetscBool *changed_w,void *ctx)
 {
 #if defined(PETSC_HAVE_F90_2PTR_ARG)
@@ -132,6 +145,15 @@ PETSC_EXTERN void snesnewtontrsetpostcheck_(SNES *snes, void (*func)(SNES,Vec,Ve
   *ierr = PetscObjectSetFortranCallback((PetscObject)*snes,PETSC_FORTRAN_CALLBACK_CLASS,&_cb.trpostcheck_pgiptr,NULL,ptr);if (*ierr) return;
 #endif
   SNESNewtonTRSetPostCheck(*snes,ourtrpostcheckfunction,NULL);
+}
+
+PETSC_EXTERN void snesnewtontrdcsetpostcheck_(SNES *snes, void (*func)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void *ctx,PetscErrorCode *ierr PETSC_F90_2PTR_PROTO(ptr))
+{
+  *ierr = PetscObjectSetFortranCallback((PetscObject)*snes,PETSC_FORTRAN_CALLBACK_CLASS,&_cb.trpostcheck,(PetscVoidFunction)func,ctx);if (*ierr) return;
+#if defined(PETSC_HAVE_F90_2PTR_ARG)
+  *ierr = PetscObjectSetFortranCallback((PetscObject)*snes,PETSC_FORTRAN_CALLBACK_CLASS,&_cb.trpostcheck_pgiptr,NULL,ptr);if (*ierr) return;
+#endif
+  SNESNewtonTRDCSetPostCheck(*snes,ourtrpostcheckfunction,NULL);
 }
 
 static PetscErrorCode oursnesfunction(SNES snes,Vec x,Vec f,void *ctx)

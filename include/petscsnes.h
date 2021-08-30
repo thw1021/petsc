@@ -27,6 +27,7 @@ J*/
 typedef const char* SNESType;
 #define SNESNEWTONLS         "newtonls"
 #define SNESNEWTONTR         "newtontr"
+#define SNESNEWTONTRDC       "newtontrdc"
 #define SNESPYTHON           "python"
 #define SNESNRICHARDSON      "nrichardson"
 #define SNESKSPONLY          "ksponly"
@@ -138,11 +139,16 @@ PETSC_EXTERN PetscErrorCode SNESSetForceIteration(SNES,PetscBool);
 PETSC_EXTERN PetscErrorCode SNESGetIterationNumber(SNES,PetscInt*);
 PETSC_EXTERN PetscErrorCode SNESSetIterationNumber(SNES,PetscInt);
 
-PETSC_EXTERN PetscErrorCode SNESNewtonTRGetRhoFlag(SNES, PetscBool*);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPreCheck(SNES, PetscErrorCode (*)(SNES,Vec,Vec,PetscBool*,void*),void *ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRGetPreCheck(SNES, PetscErrorCode (**)(SNES,Vec,Vec,PetscBool*,void*),void **ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPostCheck(SNES, PetscErrorCode (*)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void *ctx);
 PETSC_EXTERN PetscErrorCode SNESNewtonTRGetPostCheck(SNES, PetscErrorCode (**)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void **ctx);
+
+PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetRhoFlag(SNES, PetscBool*);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRDCSetPreCheck(SNES, PetscErrorCode (*)(SNES,Vec,Vec,PetscBool*,void*),void *ctx);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetPreCheck(SNES, PetscErrorCode (**)(SNES,Vec,Vec,PetscBool*,void*),void **ctx);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRDCSetPostCheck(SNES, PetscErrorCode (*)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void *ctx);
+PETSC_EXTERN PetscErrorCode SNESNewtonTRDCGetPostCheck(SNES, PetscErrorCode (**)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void **ctx);
 
 PETSC_EXTERN PetscErrorCode SNESGetNonlinearStepFailures(SNES,PetscInt*);
 PETSC_EXTERN PetscErrorCode SNESSetMaxNonlinearStepFailures(SNES,PetscInt);
