@@ -1792,20 +1792,20 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
         ierr = PetscMalloc1(lConesSize, &lCones);CHKERRQ(ierr);
         ierr = ISGetIndices(l->conesIS, &gCones);CHKERRQ(ierr);
         ierr = ISLocalToGlobalMappingCreateSF(vertexSF, vertexLayout->rstart, &l2g);CHKERRQ(ierr);
-        if (dbgv) {ierr = ISLocalToGlobalMappingView(l2g, dbgv);CHKERRQ(ierr);}
         ierr = ISGlobalToLocalMappingApply(l2g, IS_GTOLM_MASK, lConesSize, gCones, &lConesSize0, lCones);CHKERRQ(ierr);
         if (lConesSize0 != lConesSize) SETERRQ2(comm, PETSC_ERR_PLIB, "global to local does not cover all indices (%D of %D)", lConesSize0, lConesSize);
-        ierr = ISLocalToGlobalMappingDestroy(&l2g);CHKERRQ(ierr);
-        ierr = ISRestoreIndices(l->conesIS, &gCones);CHKERRQ(ierr);
-
         if (dbgv) {
           ierr = PetscViewerASCIIPrintf(dbgv, "DMPlexBuildFromLayers_Private depth %D\n", d);CHKERRQ(ierr);
           ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
+          ierr = PetscObjectSetName((PetscObject)l2g, "l2g");CHKERRQ(ierr);
+          ierr = ISLocalToGlobalMappingView(l2g, dbgv);CHKERRQ(ierr);
           ierr = PetscViewerASCIIPrintf(dbgv, "gCones\n");CHKERRQ(ierr);
           ierr = PetscIntView(lConesSize, gCones, dbgv);CHKERRQ(ierr);
           ierr = PetscViewerASCIIPrintf(dbgv, "lCones\n");CHKERRQ(ierr);
           ierr = PetscIntView(lConesSize, lCones, dbgv);CHKERRQ(ierr);
         }
+        ierr = ISLocalToGlobalMappingDestroy(&l2g);CHKERRQ(ierr);
+        ierr = ISRestoreIndices(l->conesIS, &gCones);CHKERRQ(ierr);
       }
       ierr = ISGetIndices(l->orientationsIS, &lOrnts);CHKERRQ(ierr);
       /* Set cones, need to add stratum offset */
@@ -1816,12 +1816,15 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       if (dbgv) {
         PetscMPIInt rank;
         ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+        ierr = PetscViewerASCIIPrintf(dbgv, "point offset of previous layer, cones offset:\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushSynchronized(dbgv);CHKERRQ(ierr);
-        ierr = PetscViewerASCIISynchronizedPrintf(dbgv, "[%d] stratum offset %D cones offset %D\n", rank, l->offset, l->conesOffset);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(dbgv, "pCones\n");CHKERRQ(ierr);
-        ierr = PetscIntView(lConesSize, pCones, dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(dbgv, "[%d] %2D, %2D\n", rank, layers[d-1]->offset, l->conesOffset);CHKERRQ(ierr);
         ierr = PetscViewerFlush(dbgv);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPopSynchronized(dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(dbgv, "pCones\n");CHKERRQ(ierr);
+        ierr = PetscIntView(lConesSize, pCones, dbgv);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(dbgv, "pOrnts\n");CHKERRQ(ierr);
+        ierr = PetscIntView(lConesSize, pOrnts, dbgv);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
       }
       ierr = PetscFree(lCones);CHKERRQ(ierr);
