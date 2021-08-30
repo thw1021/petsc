@@ -1536,9 +1536,8 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer)
+static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF vertexSF)
 {
-  PetscSF         vertexSF = layer->vertexSF;
   IS              newPointsIS, newConesIS, newOrientationsIS;
   PetscSection    newConeSizesSection;
   PetscBool       debug = PETSC_FALSE;
@@ -1769,7 +1768,6 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
     ierr = DMPlexGetCones(dm, &cones);CHKERRQ(ierr);
     ierr = DMPlexGetConeOrientations(dm, &ornts);CHKERRQ(ierr);
     for (d = 1; d <= depth; d++) {
-      const PlexLayer  k = layers[d-1];
       const PlexLayer  l = layers[d];
       PetscInt         i, lConesSize;
       PetscInt        *lCones;
@@ -1782,7 +1780,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       {
         ISLocalToGlobalMapping  l2g;
         PetscLayout             vertexLayout = l->vertexLayout;
-        PetscSF                 vertexSF = k->vertexSF;
+        PetscSF                 vertexSF = l->vertexSF;
         const PetscInt         *gCones;
         PetscInt                lConesSize0;
 
@@ -1812,7 +1810,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       ierr = ISGetIndices(l->orientationsIS, &lOrnts);CHKERRQ(ierr);
       /* Set cones, need to add stratum offset */
       for (i = 0; i < lConesSize; i++) {
-        pCones[i] = lCones[i] + k->offset;
+        pCones[i] = lCones[i] + layers[d-1]->offset; /* cone points of current layer are points of previous layer */
         pOrnts[i] = lOrnts[i];
       }
       if (dbgv) {
@@ -1926,11 +1924,11 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     pointsLayout = layers[d]->vertexLayout;
   }
   for (d = depth; d >= 0; d--) {
-    if (layers[d]->vertexSF) {
-      ierr = PlexLayerDistribute_Private(layers[d]);CHKERRQ(ierr);
+    if (d < depth) {
+      ierr = PlexLayerDistribute_Private(layers[d], layers[d+1]->vertexSF);CHKERRQ(ierr);
     }
-    if (d) {
-      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->pointSF, &layers[d-1]->vertexSF);CHKERRQ(ierr);
+    if (d > 0) {
+      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d]->pointSF, &layers[d]->vertexSF);CHKERRQ(ierr);
     }
   }
 
