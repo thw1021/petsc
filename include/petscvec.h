@@ -236,24 +236,45 @@ typedef enum {REDUCTION_SUM_REALPART=10,
               } ReductionType;
 
 /*MC
-     REDUCTION_SUM - matrix column sum
+     REDUCTION_SUM_REALPART - sum of real part of matrix column
 
    Level: beginner
 
-.seealso:  ReductionType, MatGetColumnReductions(), REDUCTION_MEAN, REDUCTION_NORM_1,
+.seealso:  ReductionType, MatGetColumnReductions(), REDUCTION_SUM_IMAGINARYPART, REDUCTION_MEAN_REALPART, REDUCTION_NORM_1,
            REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS, REDUCTION_NORM_INFINITY
 
 M*/
 
 /*MC
-     REDUCTION_MEAN - matrix column mean (arithmetic)
+     REDUCTION_SUM_IMAGINARYPART - sum of imaginary part of matrix column
 
    Level: beginner
 
-.seealso:  ReductionType, MatGetColumnReductions(), REDUCTION_SUM, REDUCTION_NORM_1,
+.seealso:  ReductionType, MatGetColumnReductions(), REDUCTION_SUM_REALPART, REDUCTION_MEAN_IMAGINARYPART, REDUCTION_NORM_1,
            REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS, REDUCTION_NORM_INFINITY
 
 M*/
+
+/*MC
+     REDUCTION_MEAN_REALPART - arithmetic mean of real part of matrix column
+
+   Level: beginner
+
+.seealso:  ReductionType, MatGetColumnReductions(), REDUCTION_MEAN_IMAGINARYPART, REDUCTION_SUM_REALPART, REDUCTION_NORM_1,
+           REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS, REDUCTION_NORM_INFINITY
+
+M*/
+
+/*MC
+     REDUCTION_MEAN_IMAGINARYPART - arithmetic mean of imaginary part of matrix column
+
+   Level: beginner
+
+.seealso:  ReductionType, MatGetColumnReductions(), REDUCTION_MEAN_REALPART, REDUCTION_SUM_IMAGINARYPART, REDUCTION_NORM_1,
+           REDUCTION_NORM_2, REDUCTION_NORM_FROBENIUS, REDUCTION_NORM_INFINITY
+
+M*/
+
 
 PETSC_EXTERN PetscErrorCode VecNorm(Vec,NormType,PetscReal *);
 PETSC_EXTERN PetscErrorCode VecNormAvailable(Vec,NormType,PetscBool *,PetscReal *);
