@@ -1698,7 +1698,7 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexBuildFromLayers_Private(DM dm, PetscInt depth, PlexLayer *layers, IS strataPermutation)
+static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt depth, PlexLayer *layers, IS strataPermutation)
 {
   const PetscInt *permArr;
   PetscInt        d, nPoints;
@@ -1934,7 +1934,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     }
   }
 
-  ierr = DMPlexBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
+  ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
   for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
