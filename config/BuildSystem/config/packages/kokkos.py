@@ -124,7 +124,7 @@ class Configure(config.package.CMakePackage):
         if not deviceArchName:
           raise RuntimeError('Could not find an arch name for CUDA gen number '+ self.cuda.gencodearch)
       else:
-        raise RuntimeError('You must set -with-cuda-gencodearch=60, 70, 75, 80 etc.')
+        raise RuntimeError('You must set --with-cuda-gencodearch=60, 70, 75, 80 etc.')
       args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
       args.append('-DKokkos_ENABLE_CUDA_LAMBDA:BOOL=ON')
       #  Kokkos nvcc_wrapper REQUIRES nvcc be visible in the PATH!
@@ -148,7 +148,7 @@ class Configure(config.package.CMakePackage):
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
       if not 'with-kokkos-hip-arch' in self.framework.clArgDB:
-        raise RuntimeError('You must set -with-kokkos-hip-arch=VEGA900, VEGA906, VEGA908 etc.')
+        raise RuntimeError('You must set --with-kokkos-hip-arch=VEGA900, VEGA906, VEGA908 etc.')
       args.append('-DKokkos_ARCH_'+self.argDB['with-kokkos-hip-arch']+'=ON')
       args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
     else:
