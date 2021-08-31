@@ -2017,6 +2017,11 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
 
   ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
+  *vertexSF = NULL;
+  if (depth > 1) {
+    *vertexSF = layers[1]->vertexSF;
+    ierr = PetscObjectReference((PetscObject) *vertexSF);CHKERRQ(ierr);
+  }
   for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
   }
@@ -2093,12 +2098,14 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscSF vertexSF, Pets
 */
 PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
+  PetscSF         vertexSF;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = DMPlexTopologyLoad_HDF5_Internal(dm, viewer, NULL);CHKERRQ(ierr);
-  ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, NULL, viewer);CHKERRQ(ierr);
+  ierr = DMPlexTopologyLoad_HDF5_Internal(dm, viewer, &vertexSF);CHKERRQ(ierr);
+  ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, vertexSF, viewer);CHKERRQ(ierr);
   ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&vertexSF);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
