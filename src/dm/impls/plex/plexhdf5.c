@@ -2044,12 +2044,13 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer)
+PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscSF vertexSF, PetscViewer viewer)
 {
-  PetscSection    coordSection;
+  PetscLayout     vertexLayout;
   Vec             coordinates;
   PetscReal       lengthScale;
-  PetscInt        spatialDim, N, numVertices, vStart, vEnd, v;
+  PetscInt        spatialDim, N, vStart, vEnd;
+  PetscInt        nVertices, nVerticesAdj;
   PetscMPIInt     rank;
   PetscErrorCode  ierr;
 
@@ -2059,33 +2060,31 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   ierr = PetscViewerHDF5PushGroup(viewer, "/geometry");CHKERRQ(ierr);
   ierr = VecCreate(PetscObjectComm((PetscObject) dm), &coordinates);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) coordinates, "vertices");CHKERRQ(ierr);
-  {
-    /* Force serial load */
-    ierr = PetscViewerHDF5ReadSizes(viewer, "vertices", &spatialDim, &N);CHKERRQ(ierr);
-    ierr = VecSetSizes(coordinates, !rank ? N : 0, N);CHKERRQ(ierr);
-    ierr = VecSetBlockSize(coordinates, spatialDim);CHKERRQ(ierr);
+  ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5ReadSizes(viewer, ((PetscObject)coordinates)->name, &spatialDim, &N);CHKERRQ(ierr);
+  if (vertexSF) {
+    ierr = PetscSFGetGraph(vertexSF, &nVertices, &nVerticesAdj, NULL, NULL);CHKERRQ(ierr);
+    /* Correspondance between vertexSF and DMPlex topology is checked in DMPlexGeometryBuild() */
+  } else {
+    nVertices = nVerticesAdj = vEnd - vStart;
   }
+  ierr = PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject) dm), nVertices * spatialDim, PETSC_DECIDE, spatialDim, &vertexLayout);CHKERRQ(ierr);
+  {
+    PetscInt lN;
+    ierr = PetscLayoutGetSize(vertexLayout, &lN);CHKERRQ(ierr);
+    if (N != lN) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Number of vertices in coordinate dataset %D does not match global number of topological vertices %D", N/spatialDim, lN/spatialDim);
+  }
+  ierr = VecSetLayout(coordinates, vertexLayout);CHKERRQ(ierr);
   ierr = VecLoad(coordinates, viewer);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+
+  //TODO should be in DMPlexGeometryBuild?
   ierr = DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale);CHKERRQ(ierr);
   ierr = VecScale(coordinates, 1.0/lengthScale);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(coordinates, &numVertices);CHKERRQ(ierr);
-  ierr = VecGetBlockSize(coordinates, &spatialDim);CHKERRQ(ierr);
-  numVertices /= spatialDim;
-  /* Create coordinates */
-  ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
-  if (numVertices != vEnd - vStart) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of coordinates loaded %d does not match number of vertices %d", numVertices, vEnd - vStart);
-  ierr = DMGetCoordinateSection(dm, &coordSection);CHKERRQ(ierr);
-  ierr = PetscSectionSetNumFields(coordSection, 1);CHKERRQ(ierr);
-  ierr = PetscSectionSetFieldComponents(coordSection, 0, spatialDim);CHKERRQ(ierr);
-  ierr = PetscSectionSetChart(coordSection, vStart, vEnd);CHKERRQ(ierr);
-  for (v = vStart; v < vEnd; ++v) {
-    ierr = PetscSectionSetDof(coordSection, v, spatialDim);CHKERRQ(ierr);
-    ierr = PetscSectionSetFieldDof(coordSection, v, 0, spatialDim);CHKERRQ(ierr);
-  }
-  ierr = PetscSectionSetUp(coordSection);CHKERRQ(ierr);
-  ierr = DMSetCoordinates(dm, coordinates);CHKERRQ(ierr);
+
+  ierr = DMPlexGeometryBuild(dm, coordinates, vertexSF);CHKERRQ(ierr);
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2098,7 +2097,7 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = DMPlexTopologyLoad_HDF5_Internal(dm, viewer, NULL);CHKERRQ(ierr);
-  ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+  ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, NULL, viewer);CHKERRQ(ierr);
   ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

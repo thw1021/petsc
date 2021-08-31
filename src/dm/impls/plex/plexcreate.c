@@ -3572,7 +3572,7 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
   Input Parameters:
 + dm - The DM
 . vertexCoords - The vector of coordinates for each vertex
-- sfVert - SF describing complete vertex ownership
+- sfVert - SF describing complete vertex ownership, or NULL meaning no partitioning (typical for serial case)
 
   Level: advanced
 
@@ -3588,16 +3588,15 @@ PetscErrorCode DMPlexBuildCoordinatesFromCellListParallel(DM dm, PetscInt spaceD
 PetscErrorCode DMPlexGeometryBuild(DM dm, Vec vertexCoords, PetscSF sfVert)
 {
   PetscSection   coordSection;
-  Vec            vertexCoordsAdj;
   PetscInt       spaceDim, numVertices, numVerticesAdj, v, vStart, vEnd;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(vertexCoords,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(sfVert,PETSCSF_CLASSID,3);
+  if (sfVert) PetscValidHeaderSpecific(sfVert,PETSCSF_CLASSID,3);
   PetscCheckSameComm(dm,1,vertexCoords,2);
-  PetscCheckSameComm(dm,1,sfVert,3);
+  if (sfVert) PetscCheckSameComm(dm,1,sfVert,3);
   ierr = VecGetBlockSize(vertexCoords, &spaceDim);CHKERRQ(ierr);
   ierr = VecGetLocalSize(vertexCoords, &numVertices);CHKERRQ(ierr);
   numVertices /= spaceDim;
@@ -3605,12 +3604,14 @@ PetscErrorCode DMPlexGeometryBuild(DM dm, Vec vertexCoords, PetscSF sfVert)
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
   if (vStart < 0 || vEnd < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "DM is not set up properly. DMPlexTopologyBuild() should be called first.");
   ierr = DMSetCoordinateDim(dm, spaceDim);CHKERRQ(ierr);
-  {
+  if (sfVert) {
     PetscInt numVertices0;
 
     ierr = PetscSFGetGraph(sfVert, &numVertices0, &numVerticesAdj, NULL, NULL);CHKERRQ(ierr);
     if (numVertices0 != numVertices) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Supplied sfVert has wrong number of roots = %D != %D = local size of vertexCoords",numVertices0,numVertices);
     if (vEnd - vStart != numVerticesAdj) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Supplied sfVert has wrong number of leaves = %D != %D = vEnd - vStart",numVerticesAdj,vEnd - vStart);
+  } else {
+    numVerticesAdj = numVertices;
   }
 
   ierr = DMGetCoordinateSection(dm, &coordSection);CHKERRQ(ierr);
@@ -3629,30 +3630,36 @@ PetscErrorCode DMPlexGeometryBuild(DM dm, Vec vertexCoords, PetscSF sfVert)
     if (coordSectionSize != numVerticesAdj * spaceDim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Coordinate section storage size %D expected %D",coordSectionSize,numVerticesAdj * spaceDim);
   }
 
-  ierr = VecCreate(PetscObjectComm((PetscObject)dm), &vertexCoordsAdj);CHKERRQ(ierr);
-  ierr = VecSetBlockSize(vertexCoordsAdj, spaceDim);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) vertexCoordsAdj, "coordinates");CHKERRQ(ierr);
-  ierr = VecSetSizes(vertexCoordsAdj, numVerticesAdj * spaceDim, PETSC_DETERMINE);CHKERRQ(ierr);
-  ierr = VecSetType(vertexCoordsAdj,VECSTANDARD);CHKERRQ(ierr);
+  if (sfVert) {
+    Vec vertexCoordsAdj;
 
-  /* This is like VecScatterBegin/End except the SF is on vertices but the two vectors have spaceDim coordinates for each vertex */
-  {
-    const PetscScalar *coords;
-    PetscScalar       *coordsAdj;
-    MPI_Datatype      coordtype;
+    ierr = VecCreate(PetscObjectComm((PetscObject)dm), &vertexCoordsAdj);CHKERRQ(ierr);
+    ierr = VecSetBlockSize(vertexCoordsAdj, spaceDim);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) vertexCoordsAdj, "coordinates");CHKERRQ(ierr);
+    ierr = VecSetSizes(vertexCoordsAdj, numVerticesAdj * spaceDim, PETSC_DETERMINE);CHKERRQ(ierr);
+    ierr = VecSetType(vertexCoordsAdj,VECSTANDARD);CHKERRQ(ierr);
 
-    ierr = VecGetArrayRead(vertexCoords, &coords);CHKERRQ(ierr);
-    ierr = VecGetArray(vertexCoordsAdj, &coordsAdj);CHKERRQ(ierr);
-    ierr = MPI_Type_contiguous(spaceDim, MPIU_SCALAR, &coordtype);CHKERRMPI(ierr);
-    ierr = MPI_Type_commit(&coordtype);CHKERRMPI(ierr);
-    ierr = PetscSFBcastBegin(sfVert, coordtype, coords, coordsAdj, MPI_REPLACE);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(sfVert, coordtype, coords, coordsAdj, MPI_REPLACE);CHKERRQ(ierr);
-    ierr = MPI_Type_free(&coordtype);CHKERRMPI(ierr);
-    ierr = VecRestoreArrayRead(vertexCoords, &coords);CHKERRQ(ierr);
-    ierr = VecRestoreArray(vertexCoordsAdj, &coordsAdj);CHKERRQ(ierr);
+    /* This is like VecScatterBegin/End except the SF is on vertices but the two vectors have spaceDim coordinates for each vertex */
+    {
+      const PetscScalar *coords;
+      PetscScalar       *coordsAdj;
+      MPI_Datatype      coordtype;
+
+      ierr = VecGetArrayRead(vertexCoords, &coords);CHKERRQ(ierr);
+      ierr = VecGetArray(vertexCoordsAdj, &coordsAdj);CHKERRQ(ierr);
+      ierr = MPI_Type_contiguous(spaceDim, MPIU_SCALAR, &coordtype);CHKERRMPI(ierr);
+      ierr = MPI_Type_commit(&coordtype);CHKERRMPI(ierr);
+      ierr = PetscSFBcastBegin(sfVert, coordtype, coords, coordsAdj, MPI_REPLACE);CHKERRQ(ierr);
+      ierr = PetscSFBcastEnd(sfVert, coordtype, coords, coordsAdj, MPI_REPLACE);CHKERRQ(ierr);
+      ierr = MPI_Type_free(&coordtype);CHKERRMPI(ierr);
+      ierr = VecRestoreArrayRead(vertexCoords, &coords);CHKERRQ(ierr);
+      ierr = VecRestoreArray(vertexCoordsAdj, &coordsAdj);CHKERRQ(ierr);
+    }
+    ierr = DMSetCoordinatesLocal(dm, vertexCoordsAdj);CHKERRQ(ierr);
+    ierr = VecDestroy(&vertexCoordsAdj);CHKERRQ(ierr);
+  } else {
+    ierr = DMSetCoordinates(dm, vertexCoords);CHKERRQ(ierr);
   }
-  ierr = DMSetCoordinatesLocal(dm, vertexCoordsAdj);CHKERRQ(ierr);
-  ierr = VecDestroy(&vertexCoordsAdj);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(DMPLEX_GeometryBuild,dm,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

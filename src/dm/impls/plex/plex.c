@@ -1819,6 +1819,7 @@ PetscErrorCode DMPlexTopologyLoad(DM dm, PetscViewer viewer, PetscSF *vertexSF)
 
 .seealso: DMLoad(), DMPlexTopologyLoad(), DMPlexLabelsLoad(), DMView(), PetscViewerHDF5Open(), PetscViewerPushFormat()
 @*/
+//TODO need to add PetscSF vertexSF inarg?
 PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer)
 {
   PetscBool      ishdf5;
@@ -1833,7 +1834,7 @@ PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer)
     PetscViewerFormat format;
     ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
     if (format == PETSC_VIEWER_HDF5_PETSC || format == PETSC_VIEWER_DEFAULT || format == PETSC_VIEWER_NATIVE) {
-      ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+      ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, NULL, viewer);CHKERRQ(ierr);
     } else SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscViewerFormat %s not supported for HDF5 input.", PetscViewerFormats[format]);
 #else
     SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
