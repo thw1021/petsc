@@ -349,9 +349,9 @@ PetscErrorCode VecLoad_Plex_HDF5_Native_Internal(Vec v, PetscViewer viewer)
 
 static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbers, PetscViewer viewer, PetscInt pStart, PetscInt pEnd, const char pointsName[], const char coneSizesName[], const char conesName[], const char orientationsName[])
 {
-  IS              pointsIS, coneSizesIS, conesIS, orientationsIS;
+  IS              coneSizesIS, conesIS, orientationsIS;
   const PetscInt *gpoint;
-  PetscInt       *points, *coneSizes, *cones, *orientations;
+  PetscInt       *coneSizes, *cones, *orientations;
   PetscInt        nPoints = 0, conesSize = 0;
   PetscInt        p, c, s;
   MPI_Comm        comm;
@@ -369,7 +369,6 @@ static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbe
       conesSize += coneSize;
     }
   }
-  ierr = PetscMalloc1(nPoints, &points);CHKERRQ(ierr);
   ierr = PetscMalloc1(nPoints, &coneSizes);CHKERRQ(ierr);
   ierr = PetscMalloc1(conesSize, &cones);CHKERRQ(ierr);
   ierr = PetscMalloc1(conesSize, &orientations);CHKERRQ(ierr);
@@ -382,7 +381,6 @@ static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbe
       ierr = DMPlexGetConeSize(dm, p, &coneSize);CHKERRQ(ierr);
       ierr = DMPlexGetCone(dm, p, &cone);CHKERRQ(ierr);
       ierr = DMPlexGetConeOrientation(dm, p, &ornt);CHKERRQ(ierr);
-      points[s]    = gpoint[p];
       coneSizes[s] = coneSize;
       for (cp = 0; cp < coneSize; ++cp, ++c) {
         cones[c] = gpoint[cone[cp]] < 0 ? -(gpoint[cone[cp]]+1) : gpoint[cone[cp]];
@@ -393,22 +391,34 @@ static PetscErrorCode DMPlexTopologyView_HDF5_Private(DM dm, IS globalPointNumbe
   }
   if (s != nPoints) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_LIB, "Total number of points %d != %d", s, nPoints);
   if (c != conesSize) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_LIB, "Total number of cone points %d != %d", c, conesSize);
-  ierr = ISCreateGeneral(comm, nPoints, points, PETSC_OWN_POINTER, &pointsIS);CHKERRQ(ierr);
   ierr = ISCreateGeneral(comm, nPoints, coneSizes, PETSC_OWN_POINTER, &coneSizesIS);CHKERRQ(ierr);
   ierr = ISCreateGeneral(comm, conesSize, cones, PETSC_OWN_POINTER, &conesIS);CHKERRQ(ierr);
   ierr = ISCreateGeneral(comm, conesSize, orientations, PETSC_OWN_POINTER, &orientationsIS);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) conesIS, conesName);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) orientationsIS, orientationsName);CHKERRQ(ierr);
-  ierr = ISView(pointsIS, viewer);CHKERRQ(ierr);
   ierr = ISView(coneSizesIS, viewer);CHKERRQ(ierr);
   ierr = ISView(conesIS, viewer);CHKERRQ(ierr);
   ierr = ISView(orientationsIS, viewer);CHKERRQ(ierr);
-  ierr = ISDestroy(&pointsIS);CHKERRQ(ierr);
   ierr = ISDestroy(&coneSizesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&orientationsIS);CHKERRQ(ierr);
+  if (pointsName) {
+    IS        pointsIS;
+    PetscInt  *points;
+
+    ierr = PetscMalloc1(nPoints, &points);CHKERRQ(ierr);
+    for (p = pStart, c = 0, s = 0; p < pEnd; ++p) {
+      if (gpoint[p] >= 0) {
+        points[s] = gpoint[p];
+        ++s;
+      }
+    }
+    ierr = ISCreateGeneral(comm, nPoints, points, PETSC_OWN_POINTER, &pointsIS);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
+    ierr = ISView(pointsIS, viewer);CHKERRQ(ierr);
+    ierr = ISDestroy(&pointsIS);CHKERRQ(ierr);
+  }
   ierr = ISRestoreIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -494,18 +504,16 @@ static PetscErrorCode RenumberGlobalPointNumbersPerStratum_Private(DM dm, IS glo
   PetscFunctionReturn(0);
 }
 
-//TODO no need to store points - we will use just implicit numbering of cone_sizes
 static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, PetscViewer viewer)
 {
   IS              globalPointNumbers0, strataPermutation;
-  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
+  const char     *coneSizesName, *conesName, *orientationsName;
   PetscInt        depth, d;
   PetscBool       debug = PETSC_FALSE;
   MPI_Comm        comm;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  pointsName        = "points";
   coneSizesName     = "cone_sizes";
   conesName         = "cones";
   orientationsName  = "orientations";
@@ -562,7 +570,7 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
     ierr = PetscSNPrintf(group, sizeof(group), "%D", d);CHKERRQ(ierr);
     ierr = PetscViewerHDF5PushGroup(viewer, group);CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(dm, d, &pStart, &pEnd);CHKERRQ(ierr);
-    ierr = DMPlexTopologyView_HDF5_Private(dm, globalPointNumbers0, viewer, pStart, pEnd, pointsName, coneSizesName, conesName, orientationsName);CHKERRQ(ierr);
+    ierr = DMPlexTopologyView_HDF5_Private(dm, globalPointNumbers0, viewer, pStart, pEnd, NULL, coneSizesName, conesName, orientationsName);CHKERRQ(ierr);
     ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr); /* strata */
@@ -1359,7 +1367,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v1(DM dm, PetscViewer viewer)
 /* Representation of two DMPlex strata in 0-based global numbering */
 struct _n_PlexLayer {
   PetscInt        d;
-  IS              pointsIS, conesIS, orientationsIS;
+  IS              conesIS, orientationsIS;
   PetscSection    coneSizesSection;
   PetscLayout     vertexLayout;
   PetscSF         pointSF, vertexSF; //TODO maybe confusing names (in DMPlex in general - maybe pointSF -> overlapSF)
@@ -1373,7 +1381,6 @@ static PetscErrorCode PlexLayerDestroy(PlexLayer *layer)
 
   PetscFunctionBegin;
   if (!*layer) PetscFunctionReturn(0);
-  ierr = ISDestroy(&(*layer)->pointsIS);CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&(*layer)->coneSizesSection);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->orientationsIS);CHKERRQ(ierr);
@@ -1397,13 +1404,12 @@ static PetscErrorCode PlexLayerCreate_Private(PlexLayer *layer)
   PetscFunctionReturn(0);
 }
 
-//TODO pointsIS should appear to be redundant
 static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer, PetscInt d, PetscLayout pointsLayout)
 {
   char            path[128];
   MPI_Comm        comm;
-  const char     *pointsName, *coneSizesName, *conesName, *orientationsName;
-  IS              pointsIS, conesIS, orientationsIS;
+  const char     *coneSizesName, *conesName, *orientationsName;
+  IS              coneSizesIS, conesIS, orientationsIS;
   PetscSection    coneSizesSection;
   PetscLayout     vertexLayout = NULL;
   PetscInt        s;
@@ -1411,7 +1417,6 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  pointsName        = "points";
   coneSizesName     = "cone_sizes";
   conesName         = "cones";
   orientationsName  = "orientations";
@@ -1432,26 +1437,19 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
   ierr = PetscSNPrintf(path, sizeof(path), "%D", d);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, path);CHKERRQ(ierr);
 
-  /* points and coneSizes have length of nPoints and loaded using the default layout */
-  ierr = ISCreate(comm, &pointsIS);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) pointsIS, pointsName);CHKERRQ(ierr);
-  if (pointsLayout) {
-    ierr = ISSetLayout(pointsIS, pointsLayout);CHKERRQ(ierr);
-  }
-  ierr = ISLoad(pointsIS, viewer);CHKERRQ(ierr);
-  if (!pointsLayout) {
-    ierr = ISGetLayout(pointsIS, &pointsLayout);CHKERRQ(ierr);
-  }
-
   /* create coneSizesSection from stored IS coneSizes */
   {
-    IS              coneSizesIS;
     const PetscInt *coneSizes;
 
     ierr = ISCreate(comm, &coneSizesIS);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) coneSizesIS, coneSizesName);CHKERRQ(ierr);
-    ierr = ISSetLayout(coneSizesIS, pointsLayout);CHKERRQ(ierr);
+    if (pointsLayout) {
+      ierr = ISSetLayout(coneSizesIS, pointsLayout);CHKERRQ(ierr);
+    }
     ierr = ISLoad(coneSizesIS, viewer);CHKERRQ(ierr);
+    if (!pointsLayout) {
+      ierr = ISGetLayout(coneSizesIS, &pointsLayout);CHKERRQ(ierr);
+    }
     ierr = ISGetIndices(coneSizesIS, &coneSizes);CHKERRQ(ierr);
     ierr = PetscSectionCreate(comm, &coneSizesSection);CHKERRQ(ierr);
     //TODO different start ?
@@ -1461,6 +1459,11 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
     }
     ierr = PetscSectionSetUp(coneSizesSection);CHKERRQ(ierr);
     ierr = ISRestoreIndices(coneSizesIS, &coneSizes);CHKERRQ(ierr);
+    {
+      PetscLayout tmp=NULL;
+      /* We need to keep the layout until the end of function */
+      ierr = PetscLayoutReference((PetscLayout)pointsLayout, &tmp);CHKERRQ(ierr);
+    }
     ierr = ISDestroy(&coneSizesIS);CHKERRQ(ierr);
   }
 
@@ -1497,11 +1500,9 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
     ierr = PetscViewerASCIIPrintf(v, "group %s\n", group);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
     ierr = PetscLayoutView_ASCII(pointsLayout, "pointsLayout", v);CHKERRQ(ierr);
-    ierr = ISView(pointsIS, v);CHKERRQ(ierr);
     ierr = PetscSectionView(coneSizesSection, v);CHKERRQ(ierr);
     ierr = ISView(conesIS, v);CHKERRQ(ierr);
     ierr = ISView(orientationsIS, v);CHKERRQ(ierr);
-    ierr = PetscLayoutView_ASCII(pointsLayout, "pointsLayout", v);CHKERRQ(ierr);
     if (vertexLayout) {
       ierr = PetscLayoutView_ASCII(vertexLayout, "vertexLayout", v);CHKERRQ(ierr);
     }
@@ -1509,19 +1510,19 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
   }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&pointsLayout);CHKERRQ(ierr);
 
   layer->d                = d;
   layer->conesIS          = conesIS;
   layer->coneSizesSection = coneSizesSection;
   layer->orientationsIS   = orientationsIS;
-  layer->pointsIS         = pointsIS;
   layer->vertexLayout     = vertexLayout;
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF vertexSF)
 {
-  IS              newPointsIS, newConesIS, newOrientationsIS;
+  IS              newConesIS, newOrientationsIS;
   PetscSection    newConeSizesSection;
   PetscBool       debug = PETSC_FALSE;
   MPI_Comm        comm;
@@ -1530,25 +1531,8 @@ static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF verte
   PetscFunctionBegin;
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject)vertexSF, &comm);CHKERRQ(ierr);
-  //TODO this should be ISDistribute() [see below] with NULL PetscSection
-  {
-    IS originalIS = layer->pointsIS;
-    IS newIS;
-    const PetscInt *originalValues;
-    PetscInt *newValues;
-    PetscInt n, nLeaves;
-    ierr = ISGetLocalSize(originalIS, &n);CHKERRQ(ierr);
-    ierr = PetscMalloc1(n, &newValues);CHKERRQ(ierr);
-    ierr = ISGetIndices(originalIS, &originalValues);CHKERRQ(ierr);
-    ierr = PetscSFGetGraph(vertexSF, NULL, &nLeaves, NULL, NULL);CHKERRQ(ierr);
-    ierr = PetscSFBcastBegin(vertexSF, MPIU_INT, (PetscInt *) originalValues, newValues, MPI_REPLACE);CHKERRQ(ierr);
-    ierr = PetscSFBcastEnd(vertexSF, MPIU_INT, (PetscInt *) originalValues, newValues, MPI_REPLACE);CHKERRQ(ierr);
-    ierr = ISRestoreIndices(originalIS, &originalValues);CHKERRQ(ierr);
-    ierr = ISCreateGeneral(comm, nLeaves, newValues, PETSC_OWN_POINTER, &newIS);CHKERRQ(ierr);
-    newPointsIS = newIS;
-  }
   ierr = PetscSectionCreate(comm, &newConeSizesSection);CHKERRQ(ierr);
-  //TODO rename to something like ISDistribute(), allow multiple ISs at once
+  //TODO rename to something like ISDistribute() with optional PetscSection argument, allow multiple ISs at once
   ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->conesIS, newConeSizesSection, &newConesIS);CHKERRQ(ierr);
   ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->orientationsIS, newConeSizesSection, &newOrientationsIS);CHKERRQ(ierr);
 
@@ -1557,26 +1541,21 @@ static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF verte
 
     ierr = PetscViewerASCIIPrintf(v, "PlexLayerDistribute_Private depth %D:\n", layer->d);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject) newPointsIS, "newPointsIS");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newConeSizesSection, "newConeSizesSection");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newConesIS, "newConesIS");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) newOrientationsIS, "newOrientationsIS");CHKERRQ(ierr);
-    ierr = ISView(newPointsIS, v);CHKERRQ(ierr);
     ierr = PetscSectionView(newConeSizesSection, v);CHKERRQ(ierr);
     ierr = ISView(newConesIS, v);CHKERRQ(ierr);
     ierr = ISView(newOrientationsIS, v);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   }
 
-  ierr = PetscObjectSetName((PetscObject) newPointsIS, ((PetscObject)layer->pointsIS)->name);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) newConeSizesSection, ((PetscObject)layer->coneSizesSection)->name);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) newConesIS, ((PetscObject)layer->conesIS)->name);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) newOrientationsIS, ((PetscObject)layer->orientationsIS)->name);CHKERRQ(ierr);
-  ierr = ISDestroy(&layer->pointsIS);CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&layer->coneSizesSection);CHKERRQ(ierr);
   ierr = ISDestroy(&layer->conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&layer->orientationsIS);CHKERRQ(ierr);
-  layer->pointsIS         = newPointsIS;
   layer->coneSizesSection = newConeSizesSection;
   layer->conesIS          = newConesIS;
   layer->orientationsIS   = newOrientationsIS;
