@@ -1,5 +1,5 @@
 /*
-    Simple example demonstrating that creating a one sub-network DMNetwork in parallel does not work.
+    Simple example demonstrating that creating a one sub-network DMNetwork in parallel.
 */
 
 #include <petscdmnetwork.h>
@@ -20,7 +20,6 @@ int main(int argc,char ** argv)
   PetscInt          nodeOffset,k = 2,nedge;
 
   ierr = PetscInitialize(&argc,&argv,NULL,NULL);if (ierr) return ierr;
-  /* Work around bug that assumes DMNetwork edges must have DOF */
   ierr = PetscOptionsSetValue(NULL,"-petscpartitioner_use_vertex_weights","No");CHKERRQ(ierr);
   comm = PETSC_COMM_WORLD;
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
@@ -59,7 +58,6 @@ int main(int argc,char ** argv)
 
   ierr = DMSetUp(network);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Network after DMSetUp:\n");CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Note the offsets on rank 1 are completely wrong\n");
   ierr = DMView(network,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = DMNetworkGetPlex(network,&plex);CHKERRQ(ierr);
   ierr = DMView(plex,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
@@ -70,7 +68,6 @@ int main(int argc,char ** argv)
 
   ierr = DMNetworkDistribute(&network,0);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Network after DMNetworkDistribute:\n");CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Note the offsets on rank 1 are completely wrong\n");
   ierr = DMView(network,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = DMNetworkGetPlex(network,&plex);CHKERRQ(ierr);
   ierr = DMView(plex,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
@@ -81,3 +78,13 @@ int main(int argc,char ** argv)
   ierr = PetscFinalize();
   return ierr;
 }
+
+/*TEST
+
+   build:
+      requires: !complex double
+
+   test:
+      nsize: 2
+
+TEST*/
