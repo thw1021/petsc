@@ -98,7 +98,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   const PetscScalar *xdata=NULL;
   //PetscLogDouble    flops;
   PetscContainer    container;
-  P4estVertexMaps   (*maps)[LANDAU_MAX_GRIDS];
+  P4estVertexMaps   (*maps)[LANDAU_MAX_GRIDS] = NULL;
   PetscSection      section[LANDAU_MAX_GRIDS],globsection[LANDAU_MAX_GRIDS];
   PetscDS           prob;
 
@@ -1603,7 +1603,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       ierr = PetscPrintf(ctx->comm, "%10.3e ", ctx->v_0[ctx->species_grid_offset[grid]]);CHKERRQ(ierr);
     }
     ierr = PetscPrintf(ctx->comm,"\n");
-    ierr = PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. electron v_e_0=%10.3e n_0=%10.3e t_0=%10.3e domain=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1], (ctx->num_species>2) ? ctx->thermal_temps[2] : 0, ctx->v_0[0], ctx->n_0, ctx->t_0, ctx->radius);CHKERRQ(ierr);
+    ierr = PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e imp=%10.3e. electron v_e_0=%10.3e n_0=%10.3e t_0=%10.3e\n",ctx->thermal_temps[0],ctx->thermal_temps[1], (ctx->num_species>2) ? ctx->thermal_temps[2] : 0, ctx->v_0[0], ctx->n_0, ctx->t_0);CHKERRQ(ierr);
   }
   ierr = DMDestroy(&dummy);CHKERRQ(ierr);
   {
