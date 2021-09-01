@@ -7,7 +7,7 @@
 PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
 PETSC_EXTERN PetscErrorCode LandauDestroyVelocitySpace(DM*);
-PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
+PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], PetscInt, void *);
 PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
 PETSC_EXTERN PetscErrorCode LandauIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
 PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
@@ -22,7 +22,7 @@ PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,
 #define LANDAU_MAX_SPECIES 8
 #define LANDAU_MAX_GRIDS 3
 #else
-#define LANDAU_MAX_SPECIES 2
+#define LANDAU_MAX_SPECIES 3
 #define LANDAU_MAX_GRIDS 2
 #endif
 #endif
@@ -136,7 +136,7 @@ typedef struct {
   PetscInt       numConcurrency; /* number of SMs in Cuda to use */
   DM             pack;
   DM             plex[LANDAU_MAX_GRIDS];
-  LandauGeomData *SData_d[LANDAU_MAX_GRIDS]; /* static geometric data on device, but this pointer is a host pointer */
+  LandauGeomData *SData_d; /* static geometric data on device, this pointer is a host pointer in CPU runs */
   /* diagnostics */
   PetscInt       verbose;
   PetscLogEvent  events[20];
@@ -158,6 +158,7 @@ typedef struct _lP4estVertexMaps {
   pointInterpolationP4est (*c_maps)[LANDAU_MAX_Q_FACE];
   struct _lP4estVertexMaps*data;
   void                    *vp1,*vp2,*vp3;
+  PetscInt                numgrids;
 } P4estVertexMaps;
 
 PETSC_EXTERN PetscErrorCode LandauCreateColoring(Mat, DM, PetscContainer *);
