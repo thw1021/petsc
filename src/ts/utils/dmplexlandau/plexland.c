@@ -153,8 +153,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     ierr = PetscInfo(ctx->plex[0], "Initialize static data\n");CHKERRQ(ierr);
     /* collect f data, first time is for Jacobian, but make mass now */
     if (ctx->verbose > 0) {
-      ierr = PetscPrintf(ctx->comm,"%D) %s: %D IPs, %D cells, totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D shift=%g\n",
-                         0,"FormLandau",nip,numCells, totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, ctx->num_species, Tf[0]->Np, Tf[0]->cdim, N, shift);CHKERRQ(ierr);
+      ierr = PetscPrintf(ctx->comm,"%D) %s: %D IPs, %D cells[0], totDim=%D, Nb=%D, Nq=%D, elemMatSize=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D\n",
+                         0,"FormLandau",nip,numCells[0], totDim, Nb, Nq, elemMatSize, dim, Tf[0]->Nb, ctx->num_species, Tf[0]->Np, Tf[0]->cdim, N);CHKERRQ(ierr);
     }
     ierr = PetscMalloc5(nip,&mass_w,nip,&ww,nip,&xx,nip,&yy,nip*dim*dim,&invJ_a);CHKERRQ(ierr);
     if (dim==3) {
