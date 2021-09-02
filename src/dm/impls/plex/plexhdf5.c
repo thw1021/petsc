@@ -1898,7 +1898,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
 {
   PlexLayer      *layers;
   IS              strataPermutation;
-  PetscLayout     pointsLayout = NULL;
+  PetscLayout     pointsLayout;
   PetscInt        depth;
   PetscInt        d;
   MPI_Comm        comm;
@@ -1936,16 +1936,19 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
     ierr = ISView(strataPermutation, PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
   }
 
+  /* Create layers, load raw data for each layer */
   ierr = PetscMalloc1(depth+1, &layers);CHKERRQ(ierr);
-  for (d = depth; d >= 0; d--) {
+  for (d = depth, pointsLayout = NULL; d >= 0; pointsLayout = layers[d]->vertexLayout, d--) {
     ierr = PlexLayerCreate_Private(&layers[d]);CHKERRQ(ierr);
     ierr = PlexLayerLoad_Private(layers[d], viewer, d, pointsLayout);CHKERRQ(ierr);
-    pointsLayout = layers[d]->vertexLayout;
   }
+
   for (d = depth; d >= 0; d--) {
+    /* Redistribute cells and vertices for each applicable layer */
     if (d < depth) {
       ierr = PlexLayerDistribute_Private(layers[d], layers[d]->l2gSF);CHKERRQ(ierr);
     }
+    /* Create vertex overlap SF and vertex localToGlobal SF for each applicable layer */
     if (d > 0) {
       ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->overlapSF, &layers[d-1]->l2gSF);CHKERRQ(ierr);
     }
@@ -1953,6 +1956,7 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   /* Build trivial SFs for the cell layer as well */
   ierr = PlexLayerCreateCellSFs_Private(layers[depth], &layers[depth]->overlapSF, &layers[depth]->l2gSF);CHKERRQ(ierr);
 
+  /* Build DMPlex topology from the layers */
   ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
   /* Build overall point SF alias overlap SF */
