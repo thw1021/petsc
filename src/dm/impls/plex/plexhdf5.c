@@ -1862,108 +1862,34 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
   ierr = DMPlexSymmetrize(dm);CHKERRQ(ierr);
   ierr = DMPlexStratify(dm);CHKERRQ(ierr);
 
-  {
-    PetscSF       pointsf_new;
-    PetscInt      i, nLeaves;
-    PetscInt     *ilocal_new;
-    PetscSFNode  *iremote_new;
-    PetscMPIInt   rank;
-
-    ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-    /* Count leaves and layer offsets */
-    {
-      PetscInt leafOffset = 0;
-
-      for (d = 0; d < depth; d++) {
-        const PlexLayer l   = layers[d];
-        PetscInt        nl  = 0;
-
-        ierr = PetscSFGetGraph(l->overlapSF, NULL, &nl, NULL, NULL);CHKERRQ(ierr);
-        l->leafOffset   = leafOffset;
-        leafOffset     += nl;
-      }
-      nLeaves = leafOffset;
-    }
-    if (dbgv) {
-      ierr = PetscViewerASCIIPrintf(dbgv, "DMPlexBuildFromLayers_Private create pointSF\n");CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
-    }
-    /* Renumber and concatenate local leaves */
-    ierr = PetscMalloc1(nLeaves, &ilocal_new);CHKERRQ(ierr);
-    for (i = 0; i < nLeaves; i++) ilocal_new[i] = -1;
-    for (d = 0; d < depth; d++) {
-      const PlexLayer   l = layers[d];
-      const PetscInt   *ilocal;
-      PetscInt         *ilocal_l = &ilocal_new[l->leafOffset];
-      PetscInt          i, nleaves_l;
-
-      ierr = PetscSFGetGraph(l->overlapSF, NULL, &nleaves_l, &ilocal, NULL);CHKERRQ(ierr);
-      for (i=0; i<nleaves_l; i++) ilocal_l[i] = ilocal[i] + layers[d]->offset;
-    }
-    /* Renumber and concatenate remote roots */
-    ierr = PetscMalloc1(nLeaves, &iremote_new);CHKERRQ(ierr);
-    for (i = 0; i < nLeaves; i++) {
-      iremote_new[i].rank   = -1;
-      iremote_new[i].index  = -1;
-    }
-    for (d = 0; d < depth; d++) {
-      const PlexLayer     l = layers[d];
-      PetscInt            nl, nroots;
-      PetscSF             sfTemp;
-      const PetscSFNode  *iremote;
-      PetscSFNode        *rootdata;
-      PetscSFNode        *leafdata = &iremote_new[l->leafOffset];
-
-      ierr = PetscSFGetGraph(l->overlapSF, &nroots, &nl, NULL, &iremote);CHKERRQ(ierr);
-      ierr = PetscSFCreate(comm, &sfTemp);CHKERRQ(ierr);
-      /* create SF with contiguous leaves */
-      ierr = PetscSFSetGraph(sfTemp, nroots, nl, NULL, PETSC_USE_POINTER, iremote, PETSC_USE_POINTER);CHKERRQ(ierr);
-      ierr = PetscSFSetUp(sfTemp);CHKERRQ(ierr);
-      ierr = PetscMalloc1(nroots, &rootdata);CHKERRQ(ierr);
-      for (i = 0; i < nroots; i++) {
-        rootdata[i].index = i + layers[d]->offset;
-        rootdata[i].rank  = (PetscInt) rank;
-      }
-      if (dbgv) {
-        ierr = PetscViewerASCIIPrintf(dbgv, "depth %D\n", d);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
-        ierr = PetscSFView(l->overlapSF, dbgv);CHKERRQ(ierr);
-        ierr = PetscSFView(sfTemp, dbgv);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(dbgv, "old leafdata:\n");CHKERRQ(ierr);
-        ierr = PetscIntView(2*nl, (PetscInt*) leafdata, dbgv);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(dbgv, "rootdata:\n");CHKERRQ(ierr);
-        ierr = PetscIntView(2*nroots, (PetscInt*) rootdata, dbgv);CHKERRQ(ierr);
-      }
-      ierr = PetscSFBcastBegin(sfTemp, MPIU_2INT, rootdata, leafdata, MPI_REPLACE);CHKERRQ(ierr);
-      ierr = PetscSFBcastEnd(  sfTemp, MPIU_2INT, rootdata, leafdata, MPI_REPLACE);CHKERRQ(ierr);
-      if (dbgv) {
-        ierr = PetscViewerASCIIPrintf(dbgv, "new leafdata:\n");CHKERRQ(ierr);
-        ierr = PetscIntView(2*nl, (PetscInt*) leafdata, dbgv);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
-      }
-      ierr = PetscSFDestroy(&sfTemp);CHKERRQ(ierr);
-      ierr = PetscFree(rootdata);CHKERRQ(ierr);
-    }
-    if (dbgv) {
-      ierr = PetscViewerASCIIPrintf(dbgv, "ilocal_new:\n");CHKERRQ(ierr);
-      ierr = PetscIntView(nLeaves, ilocal_new, dbgv);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(dbgv, "iremote_ind:\n");CHKERRQ(ierr);
-      ierr = PetscIntView(2*nLeaves, (PetscInt*) iremote_new, dbgv);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
-    }
-    /* Build the new pointSF */
-    ierr = PetscSFCreate(comm, &pointsf_new);CHKERRQ(ierr);
-    ierr = PetscSFSetGraph(pointsf_new, nPoints, nLeaves, ilocal_new, PETSC_OWN_POINTER, iremote_new, PETSC_OWN_POINTER);CHKERRQ(ierr);
-    ierr = PetscSFSetUp(pointsf_new);CHKERRQ(ierr);
-    ierr = DMSetPointSF(dm, pointsf_new);CHKERRQ(ierr);
-    ierr = PetscSFDestroy(&pointsf_new);CHKERRQ(ierr);
-  }
-
   if (dbgv) {
     ierr = DMView(dm, dbgv);CHKERRQ(ierr);
     ierr = PetscViewerPopFormat(dbgv);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&dbgv);CHKERRQ(ierr);
   }
+  ierr = ISRestoreIndices(strataPermutation, &permArr);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PlexLayerConcatenateOverlapSFs_Private(MPI_Comm comm, PetscInt depth, PlexLayer layers[], IS strataPermutation, PetscSF *overlapSF)
+{
+  PetscInt        d;
+  PetscSF        *sfs;
+  PetscInt       *leafOffsets;
+  const PetscInt *permArr;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = ISGetIndices(strataPermutation, &permArr);CHKERRQ(ierr);
+  ierr = PetscCalloc2(depth+1, &sfs, depth+1, &leafOffsets);CHKERRQ(ierr);
+  for (d = 0; d <= depth; d++) {
+    const PetscInt e = permArr[d];
+
+    sfs[d] = layers[e]->overlapSF;
+    leafOffsets[d] = layers[e]->offset;
+  }
+  ierr = PetscSFConcatenate(comm, depth+1, sfs, PETSC_FALSE, leafOffsets, overlapSF);CHKERRQ(ierr);
+  ierr = PetscFree2(sfs, leafOffsets);CHKERRQ(ierr);
   ierr = ISRestoreIndices(strataPermutation, &permArr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2028,6 +1954,15 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   ierr = PlexLayerCreateCellSFs_Private(layers[depth], &layers[depth]->overlapSF, &layers[depth]->l2gSF);CHKERRQ(ierr);
 
   ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
+
+  /* Build overall point SF alias overlap SF */
+  {
+    PetscSF overlapSF;
+
+    ierr = PlexLayerConcatenateOverlapSFs_Private(comm, depth, layers, strataPermutation, &overlapSF);CHKERRQ(ierr);
+    ierr = DMSetPointSF(dm, overlapSF);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&overlapSF);CHKERRQ(ierr);
+  }
 
   *vertexLocalToGlobalSF = layers[0]->l2gSF;
   ierr = PetscObjectReference((PetscObject) *vertexLocalToGlobalSF);CHKERRQ(ierr);
