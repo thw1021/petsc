@@ -1659,6 +1659,37 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *verte
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PlexLayerCreateCellSFs_Private(PlexLayer layer, PetscSF *cellOverlapSF, PetscSF *cellLocalToGlobalSF)
+{
+  PetscSection    coneSection = layer->coneSizesSection;
+  PetscInt        nCells;
+  MPI_Comm        comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)coneSection, &comm);CHKERRQ(ierr);
+  {
+    PetscInt cStart;
+
+    ierr = PetscSectionGetChart(coneSection, &cStart, &nCells);CHKERRQ(ierr);
+    if (cStart) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "coneSection does not start with 0");
+  }
+  /* Create overlapSF as empty SF with the right number of roots */
+  ierr = PetscSFCreate(comm, cellOverlapSF);CHKERRQ(ierr);
+  ierr = PetscSFSetGraph(*cellOverlapSF, nCells, 0, NULL, PETSC_USE_POINTER, NULL, PETSC_USE_POINTER);CHKERRQ(ierr);
+  ierr = PetscSFSetUp(*cellOverlapSF);CHKERRQ(ierr);
+  /* Create localToGlobalSF as identity mapping */
+  {
+    PetscLayout map;
+
+    ierr = PetscLayoutCreateFromSizes(comm, nCells, PETSC_DECIDE, 1, &map);CHKERRQ(ierr);
+    ierr = PetscSFCreateFromLayouts(map, map, cellLocalToGlobalSF);CHKERRQ(ierr);
+    ierr = PetscSFSetUp(*cellLocalToGlobalSF);CHKERRQ(ierr);
+    ierr = PetscLayoutDestroy(&map);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt depth, PlexLayer *layers, IS strataPermutation)
 {
   const PetscInt *permArr;
@@ -1993,6 +2024,8 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
       ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->overlapSF, &layers[d-1]->l2gSF);CHKERRQ(ierr);
     }
   }
+  /* Build trivial SFs for the cell layer as well */
+  ierr = PlexLayerCreateCellSFs_Private(layers[depth], &layers[depth]->overlapSF, &layers[depth]->l2gSF);CHKERRQ(ierr);
 
   ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
