@@ -1253,7 +1253,8 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *name, const H5L_info_
 
   ierr = DMCreateLabel(dm, name); if (ierr) return (herr_t) ierr;
   ierr = DMGetLabel(dm, name, &((LabelCtx *) op_data)->label); if (ierr) return (herr_t) ierr;
-  PetscStackCall("H5Literate_by_name",err = H5Literate_by_name(g_id, name, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelStratumHDF5_Static, op_data, 0));
+  /* Iterate over the label strata */
+  PetscStackCallHDF5Return(err, H5Literate_by_name, (g_id, name, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelStratumHDF5_Static, op_data, 0));
   return err;
 }
 
@@ -1270,6 +1271,7 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   ctx.viewer = viewer;
   ierr = PetscViewerHDF5PushGroup(viewer, "/labels");CHKERRQ(ierr);
   ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
+  /* Iterate over labels stored in the group */
   PetscStackCallHDF5(H5Literate,(groupId, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelHDF5_Static, &ctx));
   PetscStackCallHDF5(H5Gclose,(groupId));
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
