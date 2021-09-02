@@ -102,7 +102,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_Memo
     }
     break;
   case 1: /* write */
-    if (hmem ==  HYPRE_MEMORY_HOST) {
+    if (hmem == HYPRE_MEMORY_HOST) {
       ierr = VecGetArrayWrite(v,ptr);CHKERRQ(ierr);
       *res = VecRestoreArrayWrite;
     } else if (usehip) {
@@ -114,7 +114,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_Memo
     }
     break;
   case 2: /* read/write */
-    if (hmem ==  HYPRE_MEMORY_HOST) {
+    if (hmem == HYPRE_MEMORY_HOST) {
       ierr = VecGetArray(v,ptr);CHKERRQ(ierr);
       *res = VecRestoreArray;
     } else if (usehip) {
