@@ -1370,7 +1370,7 @@ struct _n_PlexLayer {
   IS              conesIS, orientationsIS;
   PetscSection    coneSizesSection;
   PetscLayout     vertexLayout;
-  PetscSF         pointSF, vertexSF; //TODO maybe confusing names (in DMPlex in general - maybe pointSF -> overlapSF)
+  PetscSF         overlapSF, l2gSF; //TODO maybe confusing names (in DMPlex in general pointSF -> overlapSF, vertexSF -> localToGlobalSF)
   PetscInt        offset, conesOffset, leafOffset;
 };
 typedef struct _n_PlexLayer* PlexLayer;
@@ -1384,8 +1384,8 @@ static PetscErrorCode PlexLayerDestroy(PlexLayer *layer)
   ierr = PetscSectionDestroy(&(*layer)->coneSizesSection);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->conesIS);CHKERRQ(ierr);
   ierr = ISDestroy(&(*layer)->orientationsIS);CHKERRQ(ierr);
-  ierr = PetscSFDestroy(&(*layer)->pointSF);CHKERRQ(ierr);
-  ierr = PetscSFDestroy(&(*layer)->vertexSF);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&(*layer)->overlapSF);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&(*layer)->l2gSF);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&(*layer)->vertexLayout);CHKERRQ(ierr);
   ierr = PetscFree(*layer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1520,7 +1520,7 @@ static PetscErrorCode PlexLayerLoad_Private(PlexLayer layer, PetscViewer viewer,
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF vertexSF)
+static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF cellLocalToGlobalSF)
 {
   IS              newConesIS, newOrientationsIS;
   PetscSection    newConeSizesSection;
@@ -1530,11 +1530,11 @@ static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF verte
 
   PetscFunctionBegin;
   ierr = PetscOptionsGetBool(NULL, NULL, "-dm_plex_topology_load_debug", &debug, NULL);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)vertexSF, &comm);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm((PetscObject)cellLocalToGlobalSF, &comm);CHKERRQ(ierr);
   ierr = PetscSectionCreate(comm, &newConeSizesSection);CHKERRQ(ierr);
   //TODO rename to something like ISDistribute() with optional PetscSection argument, allow multiple ISs at once
-  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->conesIS, newConeSizesSection, &newConesIS);CHKERRQ(ierr);
-  ierr = DMPlexDistributeFieldIS(NULL, vertexSF, layer->coneSizesSection, layer->orientationsIS, newConeSizesSection, &newOrientationsIS);CHKERRQ(ierr);
+  ierr = DMPlexDistributeFieldIS(NULL, cellLocalToGlobalSF, layer->coneSizesSection, layer->conesIS, newConeSizesSection, &newConesIS);CHKERRQ(ierr);
+  ierr = DMPlexDistributeFieldIS(NULL, cellLocalToGlobalSF, layer->coneSizesSection, layer->orientationsIS, newConeSizesSection, &newOrientationsIS);CHKERRQ(ierr);
 
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
@@ -1564,13 +1564,13 @@ static PetscErrorCode PlexLayerDistribute_Private(PlexLayer layer, PetscSF verte
 
 //TODO share code with DMPlexTopologyBuildTwoStrata
 #include <petsc/private/hashseti.h>
-static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *pointSF_, PetscSF *vertexSF_)
+static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *vertexOverlapSF, PetscSF *vertexLocalToGlobalSF)
 {
   PetscLayout     vertexLayout = layer->vertexLayout;
   PetscSection    coneSection = layer->coneSizesSection;
   IS              cellVertexData = layer->conesIS;
   IS              coneOrientations = layer->orientationsIS;
-  PetscSF         vertexSF, pointSF;
+  PetscSF         vl2gSF, vOverlapSF;
   PetscInt        *verticesAdj;
   PetscInt        i, n, numVerticesAdj;
   const PetscInt  *cvd, *co = NULL;
@@ -1633,10 +1633,10 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
   }
 
   //TODO maybe this could play with ISLocalToGlobalMapping() somehow
-  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, NULL, 0, numVerticesAdj, verticesAdj, NULL, 0, &vertexSF, &pointSF);CHKERRQ(ierr);
+  ierr = PetscSFCreateByMatchingIndices(vertexLayout, numVerticesAdj, verticesAdj, NULL, 0, numVerticesAdj, verticesAdj, NULL, 0, &vl2gSF, &vOverlapSF);CHKERRQ(ierr);
 
-  ierr = PetscObjectSetName((PetscObject) pointSF, "point SF");CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) vertexSF, "vertex SF");CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) vOverlapSF, "overlapSF");CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) vl2gSF, "localToGlobalSF");CHKERRQ(ierr);
 
   if (debug) {
     PetscViewer v = PETSC_VIEWER_STDOUT_(comm);
@@ -1646,16 +1646,16 @@ static PetscErrorCode PlexLayerCreateSFs_Private(PlexLayer layer, PetscSF *point
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "verticesAdj:\n");CHKERRQ(ierr);
     ierr = PetscIntView(numVerticesAdj, verticesAdj, v);CHKERRQ(ierr);
-    ierr = PetscSFView(pointSF, v);CHKERRQ(ierr);
-    ierr = PetscSFView(vertexSF, v);CHKERRQ(ierr);
-    ierr = ISLocalToGlobalMappingCreateSF(vertexSF, vertexLayout->rstart, &l2g);CHKERRQ(ierr);
+    ierr = PetscSFView(vOverlapSF, v);CHKERRQ(ierr);
+    ierr = PetscSFView(vl2gSF, v);CHKERRQ(ierr);
+    ierr = ISLocalToGlobalMappingCreateSF(vl2gSF, vertexLayout->rstart, &l2g);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingView(l2g, v);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingDestroy(&l2g);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   }
   ierr = PetscFree(verticesAdj);CHKERRQ(ierr);
-  *pointSF_   = pointSF;
-  *vertexSF_  = vertexSF;
+  *vertexOverlapSF        = vOverlapSF;
+  *vertexLocalToGlobalSF  = vl2gSF;
   PetscFunctionReturn(0);
 }
 
@@ -1742,7 +1742,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       {
         ISLocalToGlobalMapping  l2g;
         PetscLayout             vertexLayout = l->vertexLayout;
-        PetscSF                 vertexSF = l->vertexSF;
+        PetscSF                 vertexSF = l->l2gSF;
         const PetscInt         *gCones;
         PetscInt                lConesSize0;
 
@@ -1847,7 +1847,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
         const PlexLayer l   = layers[d];
         PetscInt        nl  = 0;
 
-        ierr = PetscSFGetGraph(l->pointSF, NULL, &nl, NULL, NULL);CHKERRQ(ierr);
+        ierr = PetscSFGetGraph(l->overlapSF, NULL, &nl, NULL, NULL);CHKERRQ(ierr);
         l->leafOffset   = leafOffset;
         leafOffset     += nl;
       }
@@ -1866,7 +1866,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       PetscInt         *ilocal_l = &ilocal_new[l->leafOffset];
       PetscInt          i, nleaves_l;
 
-      ierr = PetscSFGetGraph(l->pointSF, NULL, &nleaves_l, &ilocal, NULL);CHKERRQ(ierr);
+      ierr = PetscSFGetGraph(l->overlapSF, NULL, &nleaves_l, &ilocal, NULL);CHKERRQ(ierr);
       for (i=0; i<nleaves_l; i++) ilocal_l[i] = ilocal[i] + layers[d-1]->offset; /* cone points of current layer are points of previous layer */
     }
     /* Renumber and concatenate remote roots */
@@ -1877,13 +1877,13 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
     }
     for (d = 1; d <= depth; d++) {
       const PlexLayer     l = layers[d];
-      PetscInt            i, nl, nroots;
+      PetscInt            nl, nroots;
       PetscSF             sfTemp;
       const PetscSFNode  *iremote;
       PetscSFNode        *rootdata;
       PetscSFNode        *leafdata = &iremote_new[l->leafOffset];
 
-      ierr = PetscSFGetGraph(l->pointSF, &nroots, &nl, NULL, &iremote);CHKERRQ(ierr);
+      ierr = PetscSFGetGraph(l->overlapSF, &nroots, &nl, NULL, &iremote);CHKERRQ(ierr);
       ierr = PetscSFCreate(comm, &sfTemp);CHKERRQ(ierr);
       /* create SF with contiguous leaves */
       ierr = PetscSFSetGraph(sfTemp, nroots, nl, NULL, PETSC_USE_POINTER, iremote, PETSC_USE_POINTER);CHKERRQ(ierr);
@@ -1896,7 +1896,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       if (dbgv) {
         ierr = PetscViewerASCIIPrintf(dbgv, "depth %D\n", d);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
-        ierr = PetscSFView(l->pointSF, dbgv);CHKERRQ(ierr);
+        ierr = PetscSFView(l->overlapSF, dbgv);CHKERRQ(ierr);
         ierr = PetscSFView(sfTemp, dbgv);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPrintf(dbgv, "old leafdata:\n");CHKERRQ(ierr);
         ierr = PetscIntView(2*nl, (PetscInt*) leafdata, dbgv);CHKERRQ(ierr);
@@ -1937,7 +1937,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *vertexSF)
+static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, PetscSF *vertexLocalToGlobalSF)
 {
   PlexLayer      *layers;
   IS              strataPermutation;
@@ -1987,19 +1987,19 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   }
   for (d = depth; d >= 0; d--) {
     if (d < depth) {
-      ierr = PlexLayerDistribute_Private(layers[d], layers[d+1]->vertexSF);CHKERRQ(ierr);
+      ierr = PlexLayerDistribute_Private(layers[d], layers[d+1]->l2gSF);CHKERRQ(ierr);
     }
     if (d > 0) {
-      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d]->pointSF, &layers[d]->vertexSF);CHKERRQ(ierr);
+      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d]->overlapSF, &layers[d]->l2gSF);CHKERRQ(ierr);
     }
   }
 
   ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
-  *vertexSF = NULL;
+  *vertexLocalToGlobalSF = NULL;
   if (depth > 1) {
-    *vertexSF = layers[1]->vertexSF;
-    ierr = PetscObjectReference((PetscObject) *vertexSF);CHKERRQ(ierr);
+    *vertexLocalToGlobalSF = layers[1]->l2gSF;
+    ierr = PetscObjectReference((PetscObject) *vertexLocalToGlobalSF);CHKERRQ(ierr);
   }
   for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
@@ -2012,23 +2012,23 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *vertexSF)
+PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF *vertexLocalToGlobalSF)
 {
   PetscInt        version = 1;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   ierr = PetscViewerHDF5ReadAttribute(viewer, "topology", "version", PETSC_INT, &version, &version);CHKERRQ(ierr);
-  if (vertexSF) *vertexSF = NULL;
+  if (vertexLocalToGlobalSF) *vertexLocalToGlobalSF = NULL;
   switch (version) {
     case 1: ierr = DMPlexTopologyLoad_HDF5_v1(dm, viewer);CHKERRQ(ierr); break;
-    case 2: ierr = DMPlexTopologyLoad_HDF5_v2(dm, viewer, vertexSF);CHKERRQ(ierr); break;
+    case 2: ierr = DMPlexTopologyLoad_HDF5_v2(dm, viewer, vertexLocalToGlobalSF);CHKERRQ(ierr); break;
     default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyLoad() for topology version %D not implemented yet", version);
   }
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscSF vertexSF, PetscViewer viewer)
+PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscSF vertexLocalToGlobalSF, PetscViewer viewer)
 {
   PetscLayout     vertexLayout;
   Vec             coordinates;
@@ -2046,9 +2046,9 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscSF vertexSF, Pets
   ierr = PetscObjectSetName((PetscObject) coordinates, "vertices");CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
   ierr = PetscViewerHDF5ReadSizes(viewer, ((PetscObject)coordinates)->name, &spatialDim, &N);CHKERRQ(ierr);
-  if (vertexSF) {
-    ierr = PetscSFGetGraph(vertexSF, &nVertices, &nVerticesAdj, NULL, NULL);CHKERRQ(ierr);
-    /* Correspondance between vertexSF and DMPlex topology is checked in DMPlexGeometryBuild() */
+  if (vertexLocalToGlobalSF) {
+    ierr = PetscSFGetGraph(vertexLocalToGlobalSF, &nVertices, &nVerticesAdj, NULL, NULL);CHKERRQ(ierr);
+    /* Correspondance between vertexLocalToGlobalSF and DMPlex topology is checked in DMPlexGeometryBuild() */
   } else {
     nVertices = nVerticesAdj = vEnd - vStart;
   }
@@ -2066,7 +2066,7 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscSF vertexSF, Pets
   ierr = DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale);CHKERRQ(ierr);
   ierr = VecScale(coordinates, 1.0/lengthScale);CHKERRQ(ierr);
 
-  ierr = DMPlexGeometryBuild(dm, coordinates, vertexSF);CHKERRQ(ierr);
+  ierr = DMPlexGeometryBuild(dm, coordinates, vertexLocalToGlobalSF);CHKERRQ(ierr);
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
   ierr = PetscLayoutDestroy(&vertexLayout);CHKERRQ(ierr);
   PetscFunctionReturn(0);
