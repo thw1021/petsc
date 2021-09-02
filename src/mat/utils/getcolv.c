@@ -70,13 +70,13 @@ PetscErrorCode  MatGetColumnVector(Mat A,Vec yy,PetscInt col)
 }
 
 /*@
-    MatGetColumnNorms - Gets the norms of each column of a sparse or dense matrix.
+   MatGetColumnNorms - Gets the norms of each column of a sparse or dense matrix.
 
-  Input Parameter:
+   Input Parameter:
 +  A - the matrix
 -  type - NORM_2, NORM_1 or NORM_INFINITY
 
-  Output Parameter:
+   Output Parameter:
 .  norms - an array as large as the TOTAL number of columns in the matrix
 
    Level: intermediate
@@ -90,13 +90,105 @@ PetscErrorCode  MatGetColumnVector(Mat A,Vec yy,PetscInt col)
 @*/
 PetscErrorCode MatGetColumnNorms(Mat A,NormType type,PetscReal norms[])
 {
+  /* NOTE: MatGetColumnNorms() could simply be a macro that calls MatGetColumnReductions().
+   * I've kept this as a function because it allows slightly more in the way of error checking,
+   * erroring out if MatGetColumnNorms() is not called with a valid NormType. */
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (type == NORM_2 || type == NORM_1 || type == NORM_FROBENIUS || type == NORM_INFINITY || type == NORM_1_AND_2) {
+    ierr = MatGetColumnReductions(A,type,norms);CHKERRQ(ierr);
+  } else {
+    SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Unknown NormType");
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
+   MatGetColumnSums - Gets the sums of each column of a sparse or dense matrix.
+
+   Input Parameter:
+.  A - the matrix
+
+   Output Parameter:
+.  sums - an array as large as the TOTAL number of columns in the matrix
+
+   Level: intermediate
+
+   Notes:
+    Each process has ALL the column sums after the call. Because of the way this is computed each process gets all the values,
+    if each process wants only some of the values it should extract the ones it wants from the array.
+
+.seealso: VecSum(), MatGetColumnMeans(), MatGetColumnNorms(), MatGetColumnReductions()
+
+@*/
+PetscErrorCode MatGetColumnSums(Mat A,PetscReal sums[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatGetColumnReductions(A,REDUCTION_SUM,sums);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+   MatGetColumnMeans - Gets the arithmetic means of each column of a sparse or dense matrix.
+
+   Input Parameter:
+.  A - the matrix
+
+   Output Parameter:
+.  means - an array as large as the TOTAL number of columns in the matrix
+
+   Level: intermediate
+
+   Notes:
+    Each process has ALL the column means after the call. Because of the way this is computed each process gets all the values,
+    if each process wants only some of the values it should extract the ones it wants from the array.
+
+.seealso: VecSum(), MatGetColumnSums(), MatGetColumnNorms(), MatGetColumnReductions()
+
+@*/
+PetscErrorCode MatGetColumnMeans(Mat A,PetscReal means[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MatGetColumnReductions(A,REDUCTION_MEAN,means);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+    MatGetColumnReductions - Gets the reductions of each column of a sparse or dense matrix.
+
+  Input Parameter:
++  A - the matrix
+-  type - A constant defined in NormType or ReductionType: NORM_2, NORM_1, NORM_INFINITY, REDUCTION_SUM, REDUCTION_MEAN
+
+  Output Parameter:
+.  reductions - an array as large as the TOTAL number of columns in the matrix
+
+   Level: developer
+
+   Notes:
+    Each process has ALL the column reductions after the call. Because of the way this is computed each process gets all the values,
+    if each process wants only some of the values it should extract the ones it wants from the array.
+
+  Developer Note:
+    This routine is primarily intended as a back-end.
+    MatGetColumnNorms(), MatGetColumnSums(), and MatGetColumnMeans() are implemented using this routine.
+
+.seealso: ReductionType, NormType, MatGetColumnNorms(), MatGetColumnSums(), MatGetColumnMeans()
+
+@*/
+PetscErrorCode MatGetColumnReductions(Mat A,PetscInt type,PetscReal reductions[])
+{
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  if (A->ops->getcolumnnorms) {
-    ierr = (*A->ops->getcolumnnorms)(A,type,norms);CHKERRQ(ierr);
+  if (A->ops->getcolumnreductions) {
+    ierr = (*A->ops->getcolumnreductions)(A,type,reductions);CHKERRQ(ierr);
   } else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not coded for this matrix type");
   PetscFunctionReturn(0);
 }
-
