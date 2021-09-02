@@ -65,6 +65,7 @@ class Configure(config.package.Package):
         return incDirs.extend([nvhpcCudaIncDir,nvhpcMathIncDir])
       else:
         return [incDirs,nvhpcCudaIncDir,nvhpcMathIncDir]
+    return incDirs
 
   def generateLibList(self, directory):
     '''NVHPC separated the libraries into a different math_libs directory and the directory with the basic CUDA library'''
