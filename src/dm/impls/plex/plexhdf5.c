@@ -1742,7 +1742,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       {
         ISLocalToGlobalMapping  l2g;
         PetscLayout             vertexLayout = l->vertexLayout;
-        PetscSF                 vertexSF = l->l2gSF;
+        PetscSF                 vertexSF = layers[d-1]->l2gSF; /* vertices of this layer are cells of previous layer */
         const PetscInt         *gCones;
         PetscInt                lConesSize0;
 
@@ -1843,7 +1843,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
     {
       PetscInt leafOffset = 0;
 
-      for (d = 1; d <= depth; d++) {
+      for (d = 0; d < depth; d++) {
         const PlexLayer l   = layers[d];
         PetscInt        nl  = 0;
 
@@ -1860,14 +1860,14 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
     /* Renumber and concatenate local leaves */
     ierr = PetscMalloc1(nLeaves, &ilocal_new);CHKERRQ(ierr);
     for (i = 0; i < nLeaves; i++) ilocal_new[i] = -1;
-    for (d = 1; d <= depth; d++) {
+    for (d = 0; d < depth; d++) {
       const PlexLayer   l = layers[d];
       const PetscInt   *ilocal;
       PetscInt         *ilocal_l = &ilocal_new[l->leafOffset];
       PetscInt          i, nleaves_l;
 
       ierr = PetscSFGetGraph(l->overlapSF, NULL, &nleaves_l, &ilocal, NULL);CHKERRQ(ierr);
-      for (i=0; i<nleaves_l; i++) ilocal_l[i] = ilocal[i] + layers[d-1]->offset; /* cone points of current layer are points of previous layer */
+      for (i=0; i<nleaves_l; i++) ilocal_l[i] = ilocal[i] + layers[d]->offset;
     }
     /* Renumber and concatenate remote roots */
     ierr = PetscMalloc1(nLeaves, &iremote_new);CHKERRQ(ierr);
@@ -1875,7 +1875,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       iremote_new[i].rank   = -1;
       iremote_new[i].index  = -1;
     }
-    for (d = 1; d <= depth; d++) {
+    for (d = 0; d < depth; d++) {
       const PlexLayer     l = layers[d];
       PetscInt            nl, nroots;
       PetscSF             sfTemp;
@@ -1890,7 +1890,7 @@ static PetscErrorCode DMPlexTopologyBuildFromLayers_Private(DM dm, PetscInt dept
       ierr = PetscSFSetUp(sfTemp);CHKERRQ(ierr);
       ierr = PetscMalloc1(nroots, &rootdata);CHKERRQ(ierr);
       for (i = 0; i < nroots; i++) {
-        rootdata[i].index = i + layers[d-1]->offset; /* cone points of current layer are points of previous layer */
+        rootdata[i].index = i + layers[d]->offset;
         rootdata[i].rank  = (PetscInt) rank;
       }
       if (dbgv) {
@@ -1987,20 +1987,17 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_v2(DM dm, PetscViewer viewer, Pets
   }
   for (d = depth; d >= 0; d--) {
     if (d < depth) {
-      ierr = PlexLayerDistribute_Private(layers[d], layers[d+1]->l2gSF);CHKERRQ(ierr);
+      ierr = PlexLayerDistribute_Private(layers[d], layers[d]->l2gSF);CHKERRQ(ierr);
     }
     if (d > 0) {
-      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d]->overlapSF, &layers[d]->l2gSF);CHKERRQ(ierr);
+      ierr = PlexLayerCreateSFs_Private(layers[d], &layers[d-1]->overlapSF, &layers[d-1]->l2gSF);CHKERRQ(ierr);
     }
   }
 
   ierr = DMPlexTopologyBuildFromLayers_Private(dm, depth, layers, strataPermutation);CHKERRQ(ierr);
 
-  *vertexLocalToGlobalSF = NULL;
-  if (depth > 1) {
-    *vertexLocalToGlobalSF = layers[1]->l2gSF;
-    ierr = PetscObjectReference((PetscObject) *vertexLocalToGlobalSF);CHKERRQ(ierr);
-  }
+  *vertexLocalToGlobalSF = layers[0]->l2gSF;
+  ierr = PetscObjectReference((PetscObject) *vertexLocalToGlobalSF);CHKERRQ(ierr);
   for (d = depth; d >= 0; d--) {
     ierr = PlexLayerDestroy(&layers[d]);CHKERRQ(ierr);
   }
