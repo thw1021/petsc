@@ -17,18 +17,21 @@ PetscErrorCode startFunc(ExecutionContext *exec)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = exec->getUserContext((void**)&ctx);CHKERRQ(ierr);
-  std::cout<<"start node, value = "<<ctx->value<<'\n';
+  ierr = exec->getUserContext(&ctx);CHKERRQ(ierr);
+  CXXPRINT("start node, value = "<<ctx->value<<'\n');
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode joinNodeFunction(ExecutionContext *ctx, PetscInt x)
 {
+  UserCtx        *context;
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
-  auto context = ctx->userCtx;
+  ierr = ctx->getUserContext((void**)&context);CHKERRQ(ierr);
   (void)(context);
-  std::cout<<"join node, value = "<<x<<'\n';
+  CXXPRINT("join node, value = "<<x<<'\n');
   PetscFunctionReturn(0);
 }
 
@@ -36,14 +39,14 @@ PetscErrorCode testFuncOtherGraph(ExecutionContext *ctx)
 {
   PetscFunctionBegin;
   PetscValidPointer(ctx,1);
-  std::cout<<"other graph\n";
+  CXXPRINT("other graph\n");
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode nativeFunction(PetscInt *x)
 {
   PetscFunctionBegin;
-  std::cout<<"native function "<<*x<<'\n';
+  CXXPRINT("native function "<<*x<<'\n');
   *x = 5;
   PetscFunctionReturn(0);
 }
@@ -67,27 +70,23 @@ int main(int argc, char *argv[])
   ierr = graph2.setUserContext(&ctx);CHKERRQ(ierr);
   auto smallGraphLeft    = graph2.emplaceFunctionOperator(testFuncOtherGraph);
   ierr = smallGraphLeft->setName("small graph left");CHKERRQ(ierr);
-  auto smallGraphLeftDep = graph2.emplaceFunctionOperator([](ExecutionContext*)
-  {
-    CHKERRCXX(std::cout<<"running left dep\n");
-    return 0;
-  });
+  auto smallGraphLeftDep = graph2.emplaceFunctionOperator([](ExecutionContext*) { CXXPRINT("running left dep\n"); return 0; });
   ierr = smallGraphLeftDep->setName("small graph left dependency");CHKERRQ(ierr);
   ierr = smallGraphLeftDep->after(smallGraphLeft);CHKERRQ(ierr);
   auto smallGraphRight   = graph2.emplaceDirectFunctionOperator(nativeFunction,&x);
   ierr = smallGraphRight->setName("small graph right");CHKERRQ(ierr);
 
-  auto branchNode = graph2.emplaceBranchOperator([](ExecutionContext *exec, const std::vector<CallNode*> &branches, PetscInt &idx)
-  {
-    PetscFunctionBegin;
-    std::cout<<"choice of branches: ";
-    for (const auto branch : branches) {
-      std::cout<<branch->id()<<' ';
+  auto branchNode = graph2.emplaceBranchOperator(
+    [](ExecutionContext *exec, const std::vector<CallNode*> &branches, PetscInt &idx)
+    {
+      PetscFunctionBegin;
+      CXXPRINT("choice of branches: ");
+      for (const auto branch : branches) CXXPRINT(branch->id()<<' ');
+      idx = 0;
+      CXXPRINT("\nchose branch #"<<idx<<" (id "<<branches[idx]->id()<<")\n");
+      PetscFunctionReturn(0);
     }
-    idx = 0;
-    std::cout<<"\nchose branch #"<<idx<<" (id "<<branches[idx]->id()<<")\n";
-    PetscFunctionReturn(0);
-  });
+  );
   ierr = branchNode->setName("branch node");CHKERRQ(ierr);
   ierr = branchNode->before(smallGraphLeft);CHKERRQ(ierr);
   ierr = branchNode->before(smallGraphRight);CHKERRQ(ierr);
@@ -104,24 +103,16 @@ int main(int argc, char *argv[])
     ierr = nodeStart->setName("node start");CHKERRQ(ierr);
     auto nodeJoin  = graph.emplaceDirectFunctionOperator(joinNodeFunction,n);
     ierr = nodeJoin->setName("join node");CHKERRQ(ierr);
-    auto midNodes  = graph.emplaceFunctionOperator([](ExecutionContext *ctx)
-    {
-      std::cout<<"mid node left\n";
-      return 0;
-    }, [](ExecutionContext *ctx) {
-      std::cout<<"mid node right\n";
-      return 0;
-    });
+    auto midNodes  = graph.emplaceFunctionOperator(
+      [](ExecutionContext *ctx) { CXXPRINT("mid node left\n");  return 0; },
+      [](ExecutionContext *ctx) { CXXPRINT("mid node right\n"); return 0; }
+    );
     ierr = midNodes[0]->setName("mid node left");CHKERRQ(ierr);
     ierr = midNodes[1]->setName("mid node right");CHKERRQ(ierr);
-    auto forkNodes = graph.emplaceFunctionOperator([](ExecutionContext *ctx)
-    {
-      std::cout<<"fork node left\n";
-      return 0;
-    },[](ExecutionContext *ctx) {
-      std::cout<<"fork node right\n";
-      return 0;
-    });
+    auto forkNodes = graph.emplaceFunctionOperator(
+      [](ExecutionContext *ctx) { CXXPRINT("fork node left\n");  return 0; },
+      [](ExecutionContext *ctx) { CXXPRINT("fork node right\n"); return 0; }
+    );
     ierr = forkNodes[0]->setName("fork node left");CHKERRQ(ierr);
     ierr = forkNodes[1]->setName("fork node right");CHKERRQ(ierr);
     ierr = nodeStart->before(std::get<0>(midNodes));CHKERRQ(ierr);

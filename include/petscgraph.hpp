@@ -4,6 +4,7 @@
 #include <petscsys.h>
 #include <petscgraphtypes.h>
 #include <petsc/private/deviceimpl.h>
+#include <petsc/private/traithelpers.hpp>
 
 PETSC_EXTERN PetscErrorCode PetscCallNodeCreate(MPI_Comm,PetscCallNode*);
 PETSC_EXTERN PetscErrorCode PetscCallNodeDestroy(PetscCallNode*);
@@ -28,178 +29,15 @@ PETSC_EXTERN PetscErrorCode PetscCallGraphAddNode(PetscCallGraph,PetscCallNode);
 
 namespace Petsc {
 
-#if __cplusplus >= 201402L // (c++14)
-using std::enable_if_t;
-using std::decay_t;
-using std::remove_pointer_t;
-using std::remove_reference_t;
-using std::conditional_t;
-using std::tuple_element_t;
-using std::index_sequence;
-using std::make_index_sequence;
+#if 1
+#  define CXXPRINT(message) CHKERRCXX(std::cout<<message)
 #else
-template <bool B, typename T = void>
-using enable_if_t        = typename std::enable_if<B,T>::type;
-template <class T>
-using decay_t            = typename std::decay<T>::type;
-template <class T>
-using remove_pointer_t   = typename std::remove_pointer<T>::type;
-template <class T>
-using remove_reference_t = typename std::remove_reference<T>::type;
-template< bool B, class T, class F >
-using conditional_t      = typename std::conditional<B,T,F>::type;
-template <std::size_t I, class T>
-using tuple_element_t    = typename std::tuple_element<I,T>::type;
+#  define CXXPRINT(message)
+#endif
 
-// forward declare
-template <std::size_t... Idx> struct index_sequence;
+PETSC_CXX_ENUM_WRAPPER_DECLARE(OperatorKind,int,EMPTY,CALLABLE,COMPOSITION,CONDITIONAL);
 
-namespace detail {
-
-template <class LeftSequence, class RightSequence> struct merge_sequences;
-
-template <std::size_t... I1, std::size_t... I2>
-struct merge_sequences<index_sequence<I1...>, index_sequence<I2...>>
-  : index_sequence<I1...,(sizeof...(I1)+I2)...>
-{ };
-
-} // namespace detail
-
-template <std::size_t N>
-struct make_index_sequence
-  : detail::merge_sequences<typename make_index_sequence<N/2>::type,
-                            typename make_index_sequence<N-N/2>::type>
-{ };
-
-template <std::size_t... Idx>
-struct index_sequence
-{
-  using type       = index_sequence;
-  using value_type = std::size_t;
-
-  static constexpr std::size_t size() noexcept { return sizeof...(Idx); }
-};
-
-template <> struct make_index_sequence<0> : index_sequence<>  { };
-template <> struct make_index_sequence<1> : index_sequence<0> { };
-#endif // __cplusplus >= 201402L (c++14)
-
-namespace detail {
-
-template <typename T>
-struct strip_function
-{
-  typedef remove_pointer_t<decay_t<T>> type;
-};
-
-template <typename T>
-struct is_callable_function : std::is_function<typename strip_function<T>::type>
-{ };
-
-template <typename T>
-struct is_callable_class
-{
-  typedef char yay;
-  typedef long nay;
-
-  template <typename C> static yay test(decltype(&remove_reference_t<C>::operator()));
-  template <typename C> static nay test(...);
-
-public:
-  static constexpr bool value = sizeof(test<T>(0)) == sizeof(yay);
-  //enum { value = sizeof(test<T>(0)) == sizeof(yay) };
-};
-
-template <bool... bs>
-struct all_true
-{
-  template<bool...> struct bool_pack;
-
-  //if any are false, they'll be shifted in the second version, so types won't match
-  static constexpr bool value = std::is_same<bool_pack<bs...,true>,bool_pack<true,bs...>>::value;
-};
-
-template <typename... Ts>
-using all_true_exp = all_true<Ts::value...>;
-
-} // namespace detail
-
-template <typename T, typename... Args>
-struct is_invocable
-{
-  template <typename U>
-  static auto test(U *p) -> decltype((*p)(std::declval<Args>()...),void(),std::true_type());
-
-  template <typename U>
-  static auto test(...) -> decltype(std::false_type());
-
-  static constexpr bool value = decltype(test<decay_t<T>>(0))::value;
-};
-
-template <typename T, typename... Ts>
-using all_same = detail::all_true<std::is_same<T,Ts>::value...>;
-
-template <typename T>
-struct is_callable : conditional_t<
-  std::is_class<T>::value,
-  detail::is_callable_class<T>,
-  detail::is_callable_function<T>
-  >
-{ };
-
-// lambda
-template <typename T>
-struct function_traits : function_traits<decltype(&remove_reference_t<T>::operator())>
-{ };
-
-// function reference
-template <typename R, typename... Args>
-struct function_traits<R(&)(Args...)> : function_traits<R(Args...)>
-{ };
-
-// function pointer
-template <typename R, typename... Args>
-struct function_traits<R(*)(Args...)> : function_traits<R(Args...)>
-{ };
-
-// member function pointer
-template <typename C, typename R, typename... Args>
-struct function_traits<R(C::*)(Args...)> : function_traits<R(Args...)>
-{ };
-
-// const member function pointer
-template <typename C, typename R, typename... Args>
-struct function_traits<R(C::*)(Args...) const> : function_traits<R(Args...)>
-{ };
-
-// member object pointer
-template <typename C, typename R>
-struct function_traits<R(C::*)> : function_traits<R()>
-{ };
-
-// std::function
-template <typename T>
-struct function_traits<std::function<T>> : function_traits<T>
-{ };
-
-// generic function form
-template <typename R, typename... Args>
-struct function_traits<R(Args...)>
-{
-  using return_type = R;
-
-  // arity is the number of arguments.
-  static constexpr std::size_t arity = sizeof...(Args);
-
-  // template <std::size_t N, enable_if_t<(N<arity)&&(N>=0)>* = nullptr>
-  // using argument = tuple_element_t<N,std::tuple<Args...,void>>;
-  template <std::size_t N>
-  struct argument
-  {
-    static_assert((N < arity) && (N >= 0), "error: invalid parameter index.");
-    using type = tuple_element_t<N,std::tuple<Args...,void>>;
-  };
-};
+PETSC_CXX_ENUM_WRAPPER_DECLARE(NodeState,int,DISABLED,ENABLED,PLACEHOLDER);
 
 struct ExecutionContext;
 struct Edge;
@@ -207,27 +45,21 @@ class  Operator;
 class  CallNode;
 class  CallGraph;
 
-#if 1
-#  define CXXPRINT(message) CHKERRCXX(std::cout<<message)
-#else
-#  define CXXPRINT(message)
-#endif
-
 struct ExecutionContext
 {
-  void *const        userCtx;
-  PetscDeviceContext dctx;
-  const PetscBool    enclosed;
+  void *const        _userCtx;
+  PetscDeviceContext _dctx;
+  const PetscBool    _enclosed;
 
   constexpr ExecutionContext(void *ctx, PetscDeviceContext strm, PetscBool enclosed) noexcept
-    : userCtx(ctx), dctx(strm), enclosed(enclosed)
+    : _userCtx(ctx), _dctx(strm), _enclosed(enclosed)
   { }
 
-  PETSC_NODISCARD PetscErrorCode getUserContext(void **ctx) const
+  PETSC_NODISCARD PetscErrorCode getUserContext(void *ctx) const
   {
     PetscFunctionBegin;
     PetscValidPointer(ctx,1);
-    *ctx = userCtx;
+    *static_cast<void**>(ctx) = _userCtx;
     PetscFunctionReturn(0);
   }
 };
@@ -238,69 +70,10 @@ struct Edge
   CallNode *const    _end;
   PetscDeviceContext _dctx;
 
-
   constexpr Edge(CallNode *begin, CallNode *end, PetscDeviceContext ctx = nullptr) noexcept
     : _begin(begin), _end(end), _dctx(ctx)
   { }
 };
-
-struct OperatorKindWrapper
-{
-  enum class OperatorKind : int {
-    EMPTY,
-    CALLABLE,
-    COMPOSITION,
-    CONDITIONAL
-  };
-
-  PETSC_NODISCARD static const char* OperatorKindToString(OperatorKind kind)
-  {
-    // default omitted, as compiler will warn for missing case
-    switch (kind) {
-    case OperatorKind::EMPTY:       return "OPERATOR_KIND_EMPTY";
-    case OperatorKind::CALLABLE:    return "OPERATOR_KIND_CALLABLE";
-    case OperatorKind::COMPOSITION: return "OPERATOR_KIND_COMPOSITION";
-    case OperatorKind::CONDITIONAL: return "OPERATOR_KIND_CONDITIONAL";
-    }
-  }
-
-private:
-  // hidden friend removes this overload from ADL
-  friend std::ostream& operator<<(std::ostream &strm, OperatorKind kind)
-  {
-    return strm<<OperatorKindToString(kind);
-  }
-};
-#define OperatorKindToString OperatorKindWrapper::OperatorKindToString
-using OperatorKind = OperatorKindWrapper::OperatorKind;
-
-struct NodeStateWrapper
-{
-  enum class NodeState : int {
-    DISABLED,
-    ENABLED,
-    PLACEHOLDER
-  };
-
-  PETSC_NODISCARD static const char* NodeStateToString(NodeState state)
-  {
-    // default omitted, as compiler will warn for missing case
-    switch (state) {
-    case NodeState::ENABLED:     return "NODE_STATE_ENABLED";
-    case NodeState::DISABLED:    return "NODE_STATE_DISABLED";
-    case NodeState::PLACEHOLDER: return "NODE_STATE_PLACEHOLDER";
-    }
-  }
-
-private:
-  // hidden friend removes this overload from ADL
-  friend std::ostream& operator<<(std::ostream &strm, NodeState state)
-  {
-    return strm<<NodeStateToString(state);
-  }
-};
-#define NodeStateToString NodeStateWrapper::NodeStateToString
-using NodeState = NodeStateWrapper::NodeState;
 
 class Operator
 {
@@ -431,11 +204,12 @@ class CallNode
 {
 public:
   // Default constructor
-  CallNode() = default;
+  CallNode() noexcept = default;
 
   // Named constructor
-  CallNode(std::string &&name) : _name(std::move(name)) { }
-  explicit CallNode(const char name[]) : CallNode(std::string(name)) { }
+  template <typename T,
+            enable_if_t<std::is_convertible<remove_cvref_t<T>,std::string>::value>* = nullptr>
+  CallNode(T&& name) : _name(std::forward<T>(name)) { }
 
   // Copy constructor
   CallNode(const CallNode &other)
@@ -466,10 +240,7 @@ public:
   CallNode(T &&f, Args&&... args) : CallNode(std::forward<T>(f),std::forward_as_tuple(args...)) { }
 
   // Destructor
-  ~CallNode()
-  {
-    std::cout<<"node "<<_id<<" dtor ("<<_name<<")\n";
-  }
+  ~CallNode() { std::cout<<"node "<<_id<<" dtor ("<<_name<<std::endl; }
 
   // Private member getters
   PETSC_NODISCARD constexpr PetscInt id() const { return _id; }
@@ -480,6 +251,7 @@ public:
   PETSC_NODISCARD PetscErrorCode setName(const std::string &name)
   {
     PetscFunctionBegin;
+    CXXPRINT("node "<<_id<<" ("<<_name<<") new name set: "<<name<<'\n');
     _name = name;
     PetscFunctionReturn(0);
   }
@@ -488,7 +260,7 @@ public:
   {
     PetscFunctionBegin;
     _state = state;
-    CXXPRINT("node "<<_id<<" ("<<_name<<") state set: "<<state<<'\n');
+    CXXPRINT("node "<<_id<<" ("<<_name<<") new state set: "<<state<<'\n');
     PetscFunctionReturn(0);
   }
 
@@ -497,7 +269,7 @@ public:
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    ierr = setState(_operator ? _operator->defaultNodeState() : NodeState::DISABLED);CHKERRQ(ierr);
+    ierr = this->setState(_operator ? _operator->defaultNodeState() : NodeState::DISABLED);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 
@@ -520,9 +292,9 @@ public:
 private:
   friend class CallGraph;
 
-  using edge_t = std::shared_ptr<Edge>;
-  std::vector<edge_t> _inedges;
-  std::vector<edge_t> _outedges;
+  using edge_type = std::shared_ptr<Edge>;
+  std::vector<edge_type> _inedges;
+  std::vector<edge_type> _outedges;
 
   using operator_type = Operator::pointer_type;
   operator_type  _operator = nullptr;
@@ -543,13 +315,16 @@ class CallGraph
 {
 public:
   // Default constructor
-  CallGraph(std::string &&name = "anonymous graph")
-    : _name(name),_begin(name+" closure begin"),_end(name+" closure end")
+  CallGraph() : CallGraph(std::string()) { }
+
+  // Named constructor
+  template <typename T,
+            enable_if_t<std::is_convertible<remove_cvref_t<T>,std::string>::value>* = nullptr>
+  CallGraph(T &&name)
+    : _name(std::forward<T>(name)),_begin(_name+" closure begin"), _end(_name+" closure end")
   {
     _begin._state = _end._state = NodeState::PLACEHOLDER;
   }
-
-  explicit CallGraph(const char name[]) : CallGraph(std::string(name)) { }
 
   // Destructor
   ~CallGraph()
@@ -706,12 +481,12 @@ private:
         // we have ancestors, meaning we must pick one of their streams and join all others
         // on that stream.
         if (i) {
-          ierr = PetscDeviceContextWaitForContext(exec->dctx,edge->_dctx);CHKERRQ(ierr);
+          ierr = PetscDeviceContextWaitForContext(exec->_dctx,edge->_dctx);CHKERRQ(ierr);
           ierr = PetscDeviceContextDestroy(&edge->_dctx);CHKERRQ(ierr);
         } else {
           // we enforce strict primogeniture for the base stream inheritance, this is to ensure
           // that when the streams are joined the correct parent stream is always selected
-          exec->dctx = edge->_dctx;
+          exec->_dctx = edge->_dctx;
         }
         numCancelled += (edge->_begin->_state == NodeState::DISABLED);
       }
@@ -736,10 +511,10 @@ private:
         PetscErrorCode ierr;
 
         // everyone else gets duped and waits on donor stream
-        ierr = PetscDeviceContextDuplicate(exec->dctx,&edge->_dctx);CHKERRQ(ierr);
-        ierr = PetscDeviceContextWaitForContext(edge->_dctx,exec->dctx);CHKERRQ(ierr);
+        ierr = PetscDeviceContextDuplicate(exec->_dctx,&edge->_dctx);CHKERRQ(ierr);
+        ierr = PetscDeviceContextWaitForContext(edge->_dctx,exec->_dctx);CHKERRQ(ierr);
       } else {
-        edge->_dctx = exec->dctx;
+        edge->_dctx = exec->_dctx;
       }
     }
     PetscFunctionReturn(0);
@@ -763,7 +538,7 @@ inline PetscErrorCode BranchOperator::operator()(ExecutionContext *exec) const
 }
 
 inline CallNode::CallNode(CallGraph &graph)
-  : CallNode([&](ExecutionContext *ctx) { return graph.run(ctx->dctx); })
+  : CallNode([&](ExecutionContext *ctx) { return graph.run(ctx->_dctx); })
 { }
 
 template <std::size_t N>
@@ -772,7 +547,7 @@ inline PetscErrorCode CallNode::before(const std::array<CallNode*,N> &others)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  for (const auto &other : others) {ierr = before(other);CHKERRQ(ierr);}
+  for (const auto &other : others) {ierr = this->before(other);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -782,7 +557,7 @@ inline PetscErrorCode CallNode::after(const std::array<CallNode*,N> &others)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  for (const auto &other : others) {ierr = after(other);CHKERRQ(ierr);}
+  for (const auto &other : others) {ierr = this->after(other);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -798,7 +573,7 @@ inline PetscErrorCode CallNode::before(CallNode *other)
 inline PetscErrorCode CallNode::after(CallNode *other)
 {
   PetscFunctionBegin;
-  CXXPRINT(_id<<" ("<<_name<<") after "<<other->_id<<" ("<<other->_name<<")\n");
+  CXXPRINT("node "<<_id<<" ("<<_name<<") after "<<other->_id<<" ("<<other->_name<<")\n");
   CHKERRCXX(_inedges.push_back(std::make_shared<Edge>(other,this)));
   CHKERRCXX(other->_outedges.push_back(_inedges.back()));
   if (other->_operator) {
@@ -837,7 +612,7 @@ inline PetscErrorCode CallNode::run(ExecutionContext *ctx) const
   if (_state == NodeState::ENABLED) {
     PetscErrorCode ierr;
 
-    CXXPRINT("- running on stream "<<ctx->dctx->id<<":\n");
+    CXXPRINT("- running on stream "<<ctx->_dctx->id<<":\n");
     ierr = (*_operator)(ctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -856,7 +631,7 @@ inline CallNode& CallNode::operator=(const CallNode &other)
     //    graph tries to linearize the DAG but now the node you copy assigned to has
     //    dependencies in a completely separate graph! What do?
     if (PetscUnlikelyDebug(_operator && (_operator->kind() != OperatorKind::EMPTY))) SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot copy assign to a node which already has a valid OperatorKind");
-    if (other._operator) _operator = other._operator->clone();
+    _operator = other._operator ? other._operator->clone() : nullptr;
     _inedges  = other._inedges;
     _outedges = other._outedges;
     _name     = other._name;
