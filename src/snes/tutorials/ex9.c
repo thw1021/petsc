@@ -256,6 +256,12 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au, Mat A, M
       args: -da_refine 1 -snes_monitor_short -snes_type vinewtonrsls
 
    test:
+      suffix: 10
+      requires: !single
+      nsize: 1
+      args: -da_refine 1 -snes_monitor_short -snes_type newtontrdc
+
+   test:
       suffix: 2
       requires: !single
       nsize: 2

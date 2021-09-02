@@ -1,0 +1,21 @@
+  0 SNES Function norm 4. 
+    0 KSP Residual norm 4. 
+    1 KSP Residual norm 0.960769 
+DL evaluated. delta: 1.0000e-01, ynnorm: 1.0769e+00, ycnorm: 1.0000e-01
+  1 SNES Function norm 3.6423 
+    0 KSP Residual norm 3.6423 
+    1 KSP Residual norm 0.927161 
+DL evaluated. delta: 2.0000e-01, ynnorm: 9.9310e-01, ycnorm: 2.0000e-01
+  2 SNES Function norm 2.9488 
+    0 KSP Residual norm 2.9488 
+    1 KSP Residual norm 0.848667 
+DL evaluated. delta: 4.0000e-01, ynnorm: 8.3611e-01, ycnorm: 4.0000e-01
+  3 SNES Function norm 1.74068 
+    0 KSP Residual norm 1.74068 
+    1 KSP Residual norm 0.562137 
+DL evaluated. tau: 2.4345e+00, ynnorm: 6.3569e-01, ycnorm: 4.3083e-01
+  4 SNES Function norm 0.463806 
+    0 KSP Residual norm 0.463806 
+    1 KSP Residual norm 0.152121 
+    2 KSP Residual norm < 1.e-11
+  5 SNES Function norm < 1.e-11

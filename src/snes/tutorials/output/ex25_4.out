@@ -1,0 +1,13 @@
+DL evaluated. tau: 3.7938e-02, ynnorm: 3.9166e+00, ycnorm: 1.0000e-01
+DL evaluated. delta: 2.0000e-01, ynnorm: 3.6365e+00, ycnorm: 2.0000e-01
+DL evaluated. delta: 4.0000e-01, ynnorm: 3.2156e+00, ycnorm: 4.0000e-01
+DL evaluated. delta: 5.0000e-01, ynnorm: 2.5717e+00, ycnorm: 5.0000e-01
+DL evaluated. tau: 2.5479e-01, ynnorm: 2.1611e+00, ycnorm: 8.4152e-02
+DL evaluated. tau: 2.9895e-01, ynnorm: 1.7868e+00, ycnorm: 6.1624e-02
+DL evaluated. tau: 3.6512e-01, ynnorm: 1.4376e+00, ycnorm: 4.7731e-02
+DL evaluated. tau: 4.6614e-01, ynnorm: 1.1003e+00, ycnorm: 2.9741e-02
+DL evaluated. tau: 6.6748e-01, ynnorm: 7.6183e-01, ycnorm: 2.0975e-02
+DL evaluated. tau: 9.8609e-01, ynnorm: 5.0888e-01, ycnorm: 7.7667e-03
+Number of SNES iterations = 12
+Number of Linear iterations = 24
+Average Linear its / SNES = 2.000000e+00
