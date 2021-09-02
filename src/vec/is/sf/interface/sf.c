@@ -2229,3 +2229,162 @@ PetscErrorCode PetscSFBcastToZero_Private(PetscSF sf,MPI_Datatype unit,const voi
   PetscFunctionReturn(0);
 }
 
+//TODO manpage
+/* You might want to use non-NULL offsets to distinguish the roots/leaves from originating from different input SFs. */
+PetscErrorCode PetscSFConcatenate(MPI_Comm comm, PetscInt nsfs, PetscSF sfs[], PetscBool shareRoots, PetscInt leafLocalOffsets[], PetscSF *newsf)
+{
+  PetscInt            i, s, nLeaves, nRoots;
+  PetscInt           *leafArrayOffsets;
+  PetscInt           *ilocal_new;
+  PetscSFNode        *iremote_new;
+  PetscInt           *rootLocalOffsets;
+  PetscBool           all_ilocal_null = PETSC_FALSE;
+  PetscMPIInt         rank;
+  PetscViewer         dbgv = NULL;
+  PetscErrorCode      ierr;
+
+  PetscFunctionBegin;
+  {
+    PetscSF dummy; /* just to have a PetscObject on comm for input validation */
+
+    ierr = PetscSFCreate(comm,&dummy);CHKERRQ(ierr);
+    PetscValidLogicalCollectiveInt(dummy,nsfs,2);
+    PetscValidPointer(sfs,3);
+    for (i=0; i<nsfs; i++) {
+      PetscValidHeaderSpecific(sfs[i],PETSCSF_CLASSID,3);
+      PetscCheckSameComm(dummy,1,sfs[i],3);
+    }
+    PetscValidLogicalCollectiveBool(dummy,shareRoots,4);
+    if (leafLocalOffsets) PetscValidIntPointer(leafLocalOffsets,5);
+    PetscValidPointer(newsf,6);
+    ierr = PetscSFDestroy(&dummy);CHKERRQ(ierr);
+  }
+  *newsf = NULL;
+  if (!nsfs) PetscFunctionReturn(0);
+
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  ierr = PetscOptionsGetViewer(comm, NULL, NULL, "-petscsf_concatenate_debug", &dbgv, NULL, NULL);CHKERRQ(ierr);
+
+  if (dbgv) {
+    ierr = PetscViewerASCIIPrintf(dbgv, "PetscSFConcatenate:\n");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPushTab(dbgv);CHKERRQ(ierr);
+    for (s=0; s<nsfs; s++) {
+      ierr = PetscViewerASCIIPrintf(dbgv, "sfs[%D]:\n", s);CHKERRQ(ierr);
+      ierr = PetscSFView(sfs[s], dbgv);CHKERRQ(ierr);
+    }
+  }
+
+  ierr = PetscCalloc1(nsfs+1, &rootLocalOffsets);CHKERRQ(ierr);
+  if (shareRoots) {
+    ierr = PetscSFGetGraph(sfs[0], &nRoots, NULL, NULL, NULL);CHKERRQ(ierr);
+    if (PetscDefined(USE_DEBUG)) {
+      for (s=1; s<nsfs; s++) {
+        PetscInt nr;
+
+        ierr = PetscSFGetGraph(sfs[s], &nr, NULL, NULL, NULL);CHKERRQ(ierr);
+        if (nr != nRoots) SETERRQ3(comm, PETSC_ERR_ARG_SIZ, "shareRoots = PETSC_TRUE but sfs[%D] has a different number of roots (%D) than sfs[0] (%D)", s, nr, nRoots);
+      }
+    }
+  } else {
+    for (s=0; s<nsfs; s++) {
+      PetscInt nr;
+
+      ierr = PetscSFGetGraph(sfs[s], &nr, NULL, NULL, NULL);CHKERRQ(ierr);
+      rootLocalOffsets[s+1] = rootLocalOffsets[s] + nr;
+    }
+    nRoots = rootLocalOffsets[nsfs];
+  }
+
+  /* Calculate leaf array offsets and automatic root offsets */
+  ierr = PetscMalloc1(nsfs+1,&leafArrayOffsets);CHKERRQ(ierr);
+  leafArrayOffsets[0] = 0;
+  for (s=0; s<nsfs; s++) {
+    PetscInt        nl;
+
+    ierr = PetscSFGetGraph(sfs[s], NULL, &nl, NULL, NULL);CHKERRQ(ierr);
+    leafArrayOffsets[s+1] = leafArrayOffsets[s] + nl;
+  }
+  nLeaves = leafArrayOffsets[nsfs];
+
+  if (!leafLocalOffsets) {
+    all_ilocal_null       = PETSC_TRUE;
+    for (s=0; s<nsfs; s++) {
+      const PetscInt *ilocal;
+
+      ierr = PetscSFGetGraph(sfs[s], NULL, NULL, &ilocal, NULL);CHKERRQ(ierr);
+      if (ilocal) {
+        all_ilocal_null = PETSC_FALSE;
+        break;
+      }
+    }
+
+    if (!all_ilocal_null) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "leafLocalOffsets can be passed as NULL only if all SFs have ilocal = NULL");
+  }
+
+  if (dbgv) {
+    ierr = PetscViewerASCIIPrintf(dbgv, "leafArrayOffsets:\n");CHKERRQ(ierr);
+    ierr = PetscIntView(nsfs, leafArrayOffsets, dbgv);CHKERRQ(ierr);
+  }
+
+  /* Renumber and concatenate local leaves */
+  ilocal_new = NULL;
+  if (!all_ilocal_null) {
+    ierr = PetscMalloc1(nLeaves, &ilocal_new);CHKERRQ(ierr);
+    for (i = 0; i<nLeaves; i++) ilocal_new[i] = -1;
+    for (s = 0; s<nsfs; s++) {
+      const PetscInt   *ilocal;
+      PetscInt         *ilocal_l = &ilocal_new[leafArrayOffsets[s]];
+      PetscInt          i, nleaves_l;
+
+      ierr = PetscSFGetGraph(sfs[s], NULL, &nleaves_l, &ilocal, NULL);CHKERRQ(ierr);
+      for (i=0; i<nleaves_l; i++) ilocal_l[i] = (ilocal ? ilocal[i] : i) + leafLocalOffsets[s];
+    }
+  }
+  if (dbgv) {
+    PetscInt n = ilocal_new ? nLeaves : 0;
+    ierr = PetscViewerASCIIPrintf(dbgv, "ilocal_new:\n");CHKERRQ(ierr);
+    ierr = PetscIntView(n, ilocal_new, dbgv);CHKERRQ(ierr);
+  }
+
+  /* Renumber and concatenate remote roots */
+  ierr = PetscMalloc1(nLeaves, &iremote_new);CHKERRQ(ierr);
+  for (i = 0; i < nLeaves; i++) {
+    iremote_new[i].rank   = -1;
+    iremote_new[i].index  = -1;
+  }
+  for (s = 0; s<nsfs; s++) {
+    PetscInt            i, nl, nr;
+    PetscSF             tmp_sf;
+    const PetscSFNode  *iremote;
+    PetscSFNode        *tmp_rootdata;
+    PetscSFNode        *tmp_leafdata = &iremote_new[leafArrayOffsets[s]];
+
+    ierr = PetscSFGetGraph(sfs[s], &nr, &nl, NULL, &iremote);CHKERRQ(ierr);
+    ierr = PetscSFCreate(comm, &tmp_sf);CHKERRQ(ierr);
+    /* create helper SF with contiguous leaves */
+    ierr = PetscSFSetGraph(tmp_sf, nr, nl, NULL, PETSC_USE_POINTER, iremote, PETSC_USE_POINTER);CHKERRQ(ierr);
+    ierr = PetscSFSetUp(tmp_sf);CHKERRQ(ierr);
+    ierr = PetscMalloc1(nr, &tmp_rootdata);CHKERRQ(ierr);
+    for (i = 0; i < nr; i++) {
+      tmp_rootdata[i].index = i + rootLocalOffsets[s];
+      tmp_rootdata[i].rank  = (PetscInt) rank;
+    }
+    ierr = PetscSFBcastBegin(tmp_sf, MPIU_2INT, tmp_rootdata, tmp_leafdata, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(  tmp_sf, MPIU_2INT, tmp_rootdata, tmp_leafdata, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&tmp_sf);CHKERRQ(ierr);
+    ierr = PetscFree(tmp_rootdata);CHKERRQ(ierr);
+  }
+  if (dbgv) {
+    ierr = PetscViewerASCIIPrintf(dbgv, "iremote_new:\n");CHKERRQ(ierr);
+    ierr = PetscIntView(2*nLeaves, (PetscInt*) iremote_new, dbgv);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPopTab(dbgv);CHKERRQ(ierr);
+  }
+
+  /* Build the new SF */
+  ierr = PetscSFCreate(comm, newsf);CHKERRQ(ierr);
+  ierr = PetscSFSetGraph(*newsf, nRoots, nLeaves, ilocal_new, PETSC_OWN_POINTER, iremote_new, PETSC_OWN_POINTER);CHKERRQ(ierr);
+  ierr = PetscSFSetUp(*newsf);CHKERRQ(ierr);
+  ierr = PetscFree(rootLocalOffsets);CHKERRQ(ierr);
+  ierr = PetscFree(leafArrayOffsets);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
