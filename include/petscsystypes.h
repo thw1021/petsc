@@ -228,25 +228,23 @@ M*/
 M*/
 #if !defined(PETSC_SKIP_COMPLEX)
 #  if defined(PETSC_CLANGUAGE_CXX)
-#    if !defined(PETSC_USE_REAL___FP16) && !defined(PETSC_USE_REAL___FLOAT128)
-#      if defined(__cplusplus) && defined(PETSC_HAVE_CXX_COMPLEX)  /* enable complex for library code */
-#        define PETSC_HAVE_COMPLEX 1
-#      elif !defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX)  /* User code only - conditional on libary code complex support */
+#    if (defined(__cplusplus) && defined(PETSC_HAVE_CXX_COMPLEX) /* library code */) || (!defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX) /* user code */)
+#      define PETSC_HAVE_COMPLEX_TYPES 1
+#      if !defined(PETSC_USE_REAL___FP16) && !defined(PETSC_USE_REAL___FLOAT128)
 #        define PETSC_HAVE_COMPLEX 1
 #      endif
 #    endif
 #  else /* !PETSC_CLANGUAGE_CXX */
-#    if !defined(PETSC_USE_REAL___FP16)
-#      if !defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) /* enable complex for library code */
-#        define PETSC_HAVE_COMPLEX 1
-#      elif defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX)  /* User code only - conditional on libary code complex support */
+#    if (!defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) /* library code */) || (defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX) /* user code */)
+#      define PETSC_HAVE_COMPLEX_TYPES 1
+#      if !defined(PETSC_USE_REAL___FP16)
 #        define PETSC_HAVE_COMPLEX 1
 #      endif
 #    endif
 #  endif /* PETSC_CLANGUAGE_CXX */
 #endif /* !PETSC_SKIP_COMPLEX */
 
-#if defined(PETSC_HAVE_COMPLEX)
+#if defined(PETSC_HAVE_COMPLEX_TYPES)
   #if defined(__cplusplus)  /* C++ complex support */
     /* Locate a C++ complex template library */
     #if defined(PETSC_DESIRE_KOKKOS_COMPLEX) /* Defined in petscvec_kokkos.hpp for *.kokkos.cxx files */
@@ -261,13 +259,18 @@ M*/
     #endif
 
     /* Define PetscComplex based on the precision */
-    #if defined(PETSC_USE_REAL_SINGLE)
-      typedef petsccomplexlib::complex<float> PetscComplex;
-    #elif defined(PETSC_USE_REAL_DOUBLE)
-      typedef petsccomplexlib::complex<double> PetscComplex;
-    #elif defined(PETSC_USE_REAL___FLOAT128)
-      typedef petsccomplexlib::complex<__float128> PetscComplex; /* Notstandard and not expected to work, use __complex128 */
+    typedef petsccomplexlib::complex<float> PetscComplex_single;
+    typedef petsccomplexlib::complex<double> PetscComplex_double;
+    #if defined(PETSC_HAVE_REAL___FLOAT128)
+      typedef petsccomplexlib::complex<__float128> PetscComplex___float128; /* Notstandard and not expected to work, use __complex128 */
     #endif
+    #if defined(PETSC_USE_REAL_SINGLE)
+      typedef PetscComplex_single PetscComplex;
+    #elif defined(PETSC_USE_REAL_DOUBLE)
+      typedef PetscComplex_double PetscComplex;
+    #elif defined(PETSC_USE_REAL___FLOAT128)
+      typedef PetscComplex___float128 PetscComplex;
+    #endif  /* PETSC_USE_REAL_ */
 
     /* Include a PETSc C++ complex 'fix'. Check PetscComplex manual page for details */
     #if defined(PETSC_HAVE_CXX_COMPLEX_FIX) && !defined(PETSC_SKIP_CXX_COMPLEX_FIX)
@@ -275,12 +278,18 @@ M*/
     #endif
   #else /* c99 complex support */
     #include <complex.h>
+    typedef float _Complex PetscComplex_single;
+    typedef double _Complex PetscComplex_double;
+    #if defined(PETSC_HAVE_REAL___FLOAT128)
+      typedef __complex128 PetscComplex___float128;
+      #define PETSC_HAVE_COMPLEX___FLOAT128 1
+    #endif
     #if defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL___FP16)
-      typedef float _Complex PetscComplex;
+      typedef PetscComplex_single PetscComplex;
     #elif defined(PETSC_USE_REAL_DOUBLE)
-      typedef double _Complex PetscComplex;
+      typedef PetscComplex_double PetscComplex;
     #elif defined(PETSC_USE_REAL___FLOAT128)
-      typedef __complex128 PetscComplex;
+      typedef PetscComplex___float128 PetscComplex;
     #endif /* PETSC_USE_REAL_* */
   #endif /* !__cplusplus */
 #endif /* PETSC_HAVE_COMPLEX */
@@ -382,21 +391,32 @@ typedef double PetscLogDouble;
 
 E*/
 typedef enum {PETSC_DATATYPE_UNKNOWN = 0,
-              PETSC_DOUBLE = 1, PETSC_COMPLEX = 2, PETSC_LONG = 3, PETSC_SHORT = 4, PETSC_FLOAT = 5,
-              PETSC_CHAR = 6, PETSC_BIT_LOGICAL = 7, PETSC_ENUM = 8, PETSC_BOOL = 9, PETSC___FLOAT128 = 10,
+              PETSC_DOUBLE = 1, DEPRECATED_PETSC_COMPLEX = 2, PETSC_LONG = 3, PETSC_SHORT = 4, PETSC_FLOAT = 5,
+              PETSC_CHAR = 6, PETSC_BIT_LOGICAL = 7, DEPRECATED_PETSC_ENUM = 8, PETSC_BOOL = 9, PETSC___FLOAT128 = 10,
               PETSC_OBJECT = 11, PETSC_FUNCTION = 12, PETSC_STRING = 13, PETSC___FP16 = 14, PETSC_STRUCT = 15,
-              PETSC_INT = 16, PETSC_INT64 = 17} PetscDataType;
+              DEPRECATED_PETSC_INT = 16, PETSC_INT64 = 17, PETSC_INT32 = 18, PETSC_FLOAT_COMPLEX = 19, PETSC_DOUBLE_COMPLEX = 20, PETSC___FLOAT128_COMPLEX = 21} PetscDataType;
+
+#if defined(PETSC_USE_64BIT_INDICES)
+#  define PETSC_INT PETSC_INT64
+#else
+#  define PETSC_INT PETSC_INT32
+#endif
 
 #if defined(PETSC_USE_REAL_SINGLE)
 #  define PETSC_REAL PETSC_FLOAT
+#  define PETSC_COMPLEX PETSC_FLOAT_COMPLEX
 #elif defined(PETSC_USE_REAL_DOUBLE)
 #  define PETSC_REAL PETSC_DOUBLE
+#  define PETSC_COMPLEX PETSC_DOUBLE_COMPLEX
 #elif defined(PETSC_USE_REAL___FLOAT128)
 #  define PETSC_REAL PETSC___FLOAT128
+#  define PETSC_COMPLEX PETSC___FLOAT128_COMPLEX
 #elif defined(PETSC_USE_REAL___FP16)
 #  define PETSC_REAL PETSC___FP16
+#  define PETSC_COMPLEX DEPRECATED_PETSC_COMPLEX
 #else
 #  define PETSC_REAL PETSC_DOUBLE
+#  define PETSC_COMPLEX PETSC_DOUBLE_COMPLEX
 #endif
 
 #if defined(PETSC_USE_COMPLEX)
