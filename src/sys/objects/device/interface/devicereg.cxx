@@ -11,8 +11,8 @@ static PetscBool PetscDevicePackageInitialized = PETSC_FALSE;
   It is called from PetscFinalize().
 
   Developer Notes:
-  This function is automatically registered to be called during PetscFinalize() by PetscDeviceInitializePackage() so
-  there should be no need to call it yourself.
+  This function is automatically registered to be called during PetscFinalize() by
+  PetscDeviceInitializePackage() so there should be no need to call it yourself.
 
   Level: developer
 
@@ -26,9 +26,9 @@ PetscErrorCode PetscDeviceFinalizePackage(void)
 }
 
 /*@C
-  PetscDeviceInitializePackage - This function initializes everything in the PetscDevice package. It is called from
-  PetscDLLibraryRegister_petscsys() when using dynamic libraries, and on the first call to PetscDeviceContextCreate()
-  when using shared or static libraries.
+  PetscDeviceInitializePackage - This function initializes everything in the PetscDevice
+  package. It is called on the first call to PetscDeviceContextCreate() when using shared or
+  static libraries.
 
   Level: developer
 

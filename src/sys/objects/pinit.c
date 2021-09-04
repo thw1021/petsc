@@ -1174,9 +1174,17 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 #endif
 #endif
 
+  /*
+   Initialize PetscDeviceContext and PetscDevice
+
+   Note to any future devs thinking of moving this, proper initialization requires:
+   1. MPI initialized
+   2. Options DB initialized
+   3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
+      the push/pop interface.
+  */
 #if (defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)) && defined(PETSC_EXPERIMENTAL)
-  ierr = PetscDeviceInitializeDefaultDevices_Internal();CHKERRQ(ierr);
-  ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD,NULL);CHKERRQ(ierr);
+  ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
 #endif
 
   /*
