@@ -9,7 +9,8 @@
 #error CUPMInterface requires c++11
 #endif // PetscDefined(HAVE_CXX_DIALECT_CXX11)
 
-namespace Petsc {
+namespace Petsc
+{
 
 // enum describing available cupm devices, this is used as the template parameter to any
 // class subclassing the CUPMInterface or using it as a member variable
@@ -22,18 +23,18 @@ static constexpr const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDevice
 
 #if defined(CHKERRCUPM)
 #error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
-#endif // CHKERRCUPM
+#endif // defined(CHKERRCUPM)
 
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
-#define CHKERRCUPM(cerr)                                                \
-  do {                                                                  \
-    if (PetscUnlikely(cerr)) {                                          \
-      const char *name    = cupmGetErrorName(cerr);                     \
-      const char *descr   = cupmGetErrorString(cerr);                   \
+#define CHKERRCUPM(cerr) do {                                           \
+    cupmError_t _cerr__ = cerr;                                         \
+    if (PetscUnlikely(_cerr__)) {                                       \
+      const char *name    = cupmGetErrorName(_cerr__);                  \
+      const char *desc    = cupmGetErrorString(_cerr__);                \
       const char *backend = cupmName();                                 \
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
-               backend,static_cast<int>(cerr),name,descr);              \
+               backend,static_cast<PetscErrorCode>(_cerr__),name,desc); \
     }                                                                   \
   } while (0)
 
@@ -48,8 +49,8 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
 {
   static constexpr CUPMDeviceKind kind = CUPMDeviceKind::CUDA;
 
-  PETSC_NODISCARD static constexpr const char* cupmName(void) noexcept
-  { return CUPMDeviceKinds[static_cast<int>(kind)];}
+  PETSC_NODISCARD static constexpr const char* cupmName() noexcept
+  { return CUPMDeviceKinds[static_cast<int>(kind)]; }
 
   // typedefs
   using cupmError_t        = cudaError_t;
@@ -61,29 +62,45 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   using cupmSolverError_t  = cusolverStatus_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
 
-  // error functions
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorName,cudaGetErrorName);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorString,cudaGetErrorString);
-
   // values
   static const auto cupmSuccess                 = cudaSuccess;
   static const auto cupmErrorNotReady           = cudaErrorNotReady;
   static const auto cupmStreamNonBlocking       = cudaStreamNonBlocking;
   static const auto cupmErrorDeviceAlreadyInUse = cudaErrorDeviceAlreadyInUse;
+  static const auto cupmDeviceMapHost           = cudaDeviceMapHost;
+  static const auto cupmMemcpyHostToDevice      = cudaMemcpyHostToDevice;
 
-  // regular functions
+  // error functions
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorName,cudaGetErrorName);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorString,cudaGetErrorString);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetLastError,cudaGetLastError);
+
+  // device management
   PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceCount,cudaGetDeviceCount);
   PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceProperties,cudaGetDeviceProperties);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDevice,cudaGetDevice);
   PETSC_ALIAS_FUNCTION(static constexpr cupmSetDevice,cudaSetDevice);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceFlags,cudaGetDeviceFlags);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmSetDeviceFlags,cudaSetDeviceFlags);
+
+  // stream management
   PETSC_ALIAS_FUNCTION(static constexpr cupmEventCreate,cudaEventCreate);
   PETSC_ALIAS_FUNCTION(static constexpr cupmEventDestroy,cudaEventDestroy);
   PETSC_ALIAS_FUNCTION(static constexpr cupmEventRecord,cudaEventRecord);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmEventSynchronize,cudaEventSynchronize);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmEventElapsedTime,cudaEventElapsedTime);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreate,cudaStreamCreate);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreateWithFlags,cudaStreamCreateWithFlags);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamDestroy,cudaStreamDestroy);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamWaitEvent,cudaStreamWaitEvent);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamQuery,cudaStreamQuery);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamSynchronize,cudaStreamSynchronize);
+
+  // general purpose
+  PETSC_ALIAS_FUNCTION(static constexpr cupmFree,cudaFree);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmMalloc,cudaMalloc);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmMemcpy,cudaMemcpy);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmDeviceSynchronize,cudaDeviceSynchronize);
 
   // There isn't a good way to auto-template this stuff between the cublas handle and
   // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
@@ -185,7 +202,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
 {
   static constexpr CUPMDeviceKind kind = CUPMDeviceKind::HIP;
 
-  PETSC_NODISCARD static constexpr const char* cupmName(void) noexcept
+  PETSC_NODISCARD static constexpr const char* cupmName() noexcept
   { return CUPMDeviceKinds[static_cast<int>(kind)];}
 
   // typedefs
@@ -198,30 +215,46 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using cupmSolverError_t  = hipsolverStatus_t;
   using cupmDeviceProp_t   = hipDeviceProp_t;
 
-  // error functions
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorName,hipGetErrorName);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorString,hipGetErrorString);
-
   // values
   static const auto cupmSuccess                 = hipSuccess;
   static const auto cupmErrorNotReady           = hipErrorNotReady;
   static const auto cupmStreamNonBlocking       = hipStreamNonBlocking;
   // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
   static const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
+  static const auto cupmDeviceMapHost           = hipDeviceMapHost;
+  static const auto cupmMemcpyHostToDevice      = hipMemcpyHostToDevice;
 
-  // regular functions
+  // error functions
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorName,hipGetErrorName);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorString,hipGetErrorString);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetLastError,hipGetLastError);
+
+  // device management
   PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceCount,hipGetDeviceCount);
   PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceProperties,hipGetDeviceProperties);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDevice,hipGetDevice);
   PETSC_ALIAS_FUNCTION(static constexpr cupmSetDevice,hipSetDevice);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceFlags,hipGetDeviceFlags);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmSetDeviceFlags,hipSetDeviceFlags);
+
+  // stream management
   PETSC_ALIAS_FUNCTION(static constexpr cupmEventCreate,hipEventCreate);
   PETSC_ALIAS_FUNCTION(static constexpr cupmEventDestroy,hipEventDestroy);
   PETSC_ALIAS_FUNCTION(static constexpr cupmEventRecord,hipEventRecord);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmEventSynchronize,hipEventSynchronize);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmEventElapsedTime,hipEventElapsedTime);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreate,hipStreamCreate);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreateWithFlags,hipStreamCreateWithFlags);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamDestroy,hipStreamDestroy);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamWaitEvent,hipStreamWaitEvent);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamQuery,hipStreamQuery);
   PETSC_ALIAS_FUNCTION(static constexpr cupmStreamSynchronize,hipStreamSynchronize);
+
+  // general purpose
+  PETSC_ALIAS_FUNCTION(static constexpr cupmFree,hipFree);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmMalloc,hipMalloc);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmMemcpy,hipMemcpy);
+  PETSC_ALIAS_FUNCTION(static constexpr cupmDeviceSynchronize,hipDeviceSynchronize);
 
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) noexcept
   {
@@ -297,8 +330,8 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
 
 } // namespace Petsc
 
-// shorthand for bringing all of the typedefs from the base CUPMTypeTraits class into your
-// own, it's annoying that c++ doesn't have a way to do this automatically
+// shorthand for bringing all of the typedefs from the base CUPMInterface class into your own,
+// it's annoying that c++ doesn't have a way to do this automatically
 
 #define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
   using base_name_ = CUPMInterface<Tp_>;                                \
@@ -318,22 +351,34 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using base_name_::cupmErrorNotReady;                                  \
   using base_name_::cupmStreamNonBlocking;                              \
   using base_name_::cupmErrorDeviceAlreadyInUse;                        \
+  using base_name_::cupmDeviceMapHost;                                  \
+  using base_name_::cupmMemcpyHostToDevice;                             \
   /* functions */                                                       \
   using base_name_::cupmName;                                           \
   using base_name_::cupmGetErrorName;                                   \
   using base_name_::cupmGetErrorString;                                 \
+  using base_name_::cupmGetLastError;                                   \
   using base_name_::cupmGetDeviceCount;                                 \
   using base_name_::cupmGetDeviceProperties;                            \
+  using base_name_::cupmGetDevice;                                      \
   using base_name_::cupmSetDevice;                                      \
+  using base_name_::cupmGetDeviceFlags;                                 \
+  using base_name_::cupmSetDeviceFlags;                                 \
   using base_name_::cupmEventCreate;                                    \
   using base_name_::cupmEventDestroy;                                   \
   using base_name_::cupmEventRecord;                                    \
+  using base_name_::cupmEventSynchronize;                               \
+  using base_name_::cupmEventElapsedTime;                               \
   using base_name_::cupmStreamCreate;                                   \
   using base_name_::cupmStreamCreateWithFlags;                          \
   using base_name_::cupmStreamDestroy;                                  \
   using base_name_::cupmStreamWaitEvent;                                \
   using base_name_::cupmStreamQuery;                                    \
-  using base_name_::cupmStreamSynchronize;
+  using base_name_::cupmStreamSynchronize;                              \
+  using base_name_::cupmFree;                                           \
+  using base_name_::cupmMalloc;                                         \
+  using base_name_::cupmMemcpy;                                         \
+  using base_name_::cupmDeviceSynchronize;
 
 #endif /* __cplusplus */
 

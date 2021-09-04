@@ -11,8 +11,8 @@ static PetscBool PetscDevicePackageInitialized = PETSC_FALSE;
   It is called from PetscFinalize().
 
   Developer Notes:
-  This function is automatically registered to be called during PetscFinalize() by PetscDeviceInitializePackage() so
-  there should be no need to call it yourself.
+  This function is automatically registered to be called during PetscFinalize() by
+  PetscDeviceInitializePackage() so there should be no need to call it yourself.
 
   Level: developer
 
@@ -26,9 +26,9 @@ PetscErrorCode PetscDeviceFinalizePackage(void)
 }
 
 /*@C
-  PetscDeviceInitializePackage - This function initializes everything in the PetscDevice package. It is called from
-  PetscDLLibraryRegister_petscsys() when using dynamic libraries, and on the first call to PetscDeviceContextCreate()
-  when using shared or static libraries.
+  PetscDeviceInitializePackage - This function initializes everything in the PetscDevice
+  package. It is called on the first call to PetscDeviceContextCreate() when using shared or
+  static libraries.
 
   Level: developer
 
@@ -39,8 +39,8 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PETSC_DEVICE_DEFAULT == PETSC_DEVICE_INVALID) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"No suitable PetscDeviceKind found, must configure PETSc with a device backend enabled");
-  if (PetscDevicePackageInitialized) PetscFunctionReturn(0);
+  if (PetscLikely(PetscDevicePackageInitialized)) PetscFunctionReturn(0);
+  if (PetscUnlikely(!PetscDeviceConfiguredFor(PETSC_DEVICE_DEFAULT))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with device support (PETSC_DEVICE_DEFAULT = '%s')",PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);
   PetscDevicePackageInitialized = PETSC_TRUE;
   ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);

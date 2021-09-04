@@ -3,10 +3,19 @@
 
 #include <petsc/private/deviceimpl.h> /* I "petscdevice.h" */
 #include <petsc/private/cupminterface.hpp>
-#include <vector>
+#include <petscviewer.h>
+#include <array>
 #include <memory>
+#include <limits>
 
-namespace Petsc {
+namespace Petsc
+{
+
+#if defined(PETSC_CUPM_DEVICE_NONE)
+#error "redefition of PETSC_CUPM_DEVICE_NONE"
+#endif
+
+#define PETSC_CUPM_DEVICE_NONE -3
 
 template <CUPMDeviceKind T>
 class CUPMDevice : CUPMInterface<T>
@@ -16,7 +25,7 @@ public:
   PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T)
 
   // default constructor
-  explicit CUPMDevice(createContextFunc_t func) : _create{func} {}
+  explicit CUPMDevice(createContextFunc_t func) noexcept : _create(func) { }
 
   // copy constructor
   CUPMDevice(const CUPMDevice &other) noexcept = default;
@@ -33,34 +42,43 @@ public:
   // move assignment operator
   CUPMDevice& operator=(CUPMDevice &&other) noexcept = default;
 
-  PETSC_NODISCARD PetscErrorCode getDevice(PetscDevice&) noexcept;
+  PETSC_NODISCARD static PetscErrorCode initialize(MPI_Comm,PetscInt*,PetscDeviceInitKind*) noexcept;
 
-  PETSC_NODISCARD PetscErrorCode configureDevice(PetscDevice&) noexcept;
+  PETSC_NODISCARD PetscErrorCode getDevice(PetscDevice,PetscInt) const noexcept;
+
+  PETSC_NODISCARD static PetscErrorCode configureDevice(PetscDevice) noexcept;
+
+  PETSC_NODISCARD static PetscErrorCode viewDevice(PetscDevice,PetscViewer) noexcept;
 
 private:
   // opaque class representing a single device
-  class PetscDeviceInternal;
+  class CUPMDeviceInternal;
 
   // all known devices
-  static std::vector<std::unique_ptr<PetscDeviceInternal>> _devices;
+  static std::array<std::unique_ptr<CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> _devices;
+
+  // this ranks default device, if < 0  then devices are specifically disabled
+  static int _defaultDevice;
 
   // function to create a PetscDeviceContext (the (*create) function pointer usually set
   // via XXXSetType() for other PETSc objects)
   createContextFunc_t _create;
 
   // have we tried looking for devices
-  static PetscBool _initialized;
+  static bool _initialized;
 
-  // look for devices
-  PETSC_NODISCARD static PetscErrorCode __initialize() noexcept;
+  // clean-up
+  PETSC_NODISCARD static PetscErrorCode __finalize() noexcept;
 };
 
 // define static variables
-template <CUPMDeviceKind T_>
-PetscBool CUPMDevice<T_>::_initialized = PETSC_FALSE;
+template <CUPMDeviceKind T> bool CUPMDevice<T>::_initialized = false;
 
-template <CUPMDeviceKind T_>
-std::vector<std::unique_ptr<typename CUPMDevice<T_>::PetscDeviceInternal>> CUPMDevice<T_>::_devices;
+template <CUPMDeviceKind T>
+std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> CUPMDevice<T>::_devices = { };
+
+template <CUPMDeviceKind T>
+int CUPMDevice<T>::_defaultDevice = PETSC_CUPM_DEVICE_NONE;
 
 } // namespace Petsc
 
