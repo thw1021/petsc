@@ -262,90 +262,11 @@ PetscErrorCode  PetscSetHelpVersionFunctions(PetscErrorCode (*help)(MPI_Comm),Pe
 PETSC_INTERN PetscBool   PetscObjectsLog;
 #endif
 
-/* CUPM stands for 'CUDA Programming Model', which is implemented in either CUDA or HIP.
-   Use the following macros to define CUDA/HIP initialization related vars/routines.
- */
-#if defined(PETSC_HAVE_CUDA)
-  typedef cudaError_t                             cupmError_t;
-  typedef struct cudaDeviceProp                   cupmDeviceProp;
-  typedef cudaStream_t                            cupmStream_t;
-  typedef cudaEvent_t                             cupmEvent_t;
-  #define cupmGetDeviceCount(x)                   cudaGetDeviceCount(x)
-  #define cupmGetDevice(x)                        cudaGetDevice(x)
-  #define cupmSetDevice(x)                        cudaSetDevice(x)
-  #define cupmSetDeviceFlags(x)                   cudaSetDeviceFlags(x)
-  #define cupmGetDeviceProperties(x,y)            cudaGetDeviceProperties(x,y)
-  #define cupmStreamCreate(x)                     cudaStreamCreate(x)
-  #define cupmGetLastError()                      cudaGetLastError()
-  #define cupmDeviceMapHost                       cudaDeviceMapHost
-  #define cupmSuccess                             cudaSuccess
-  #define cupmErrorMemoryAllocation               cudaErrorMemoryAllocation
-  #define cupmErrorLaunchOutOfResources           cudaErrorLaunchOutOfResources
-  #define cupmErrorSetOnActiveProcess             cudaErrorSetOnActiveProcess
-  #define CHKERRCUPM(x)                           CHKERRCUDA(x)
-  #define PetscCUPMBLASInitializeHandle()         PetscCUBLASInitializeHandle()
-  #define PetscCUPMSOLVERDnInitializeHandle()     PetscCUSOLVERDnInitializeHandle()
-  #define PetscCUPMInitialize                     PetscCUDAInitialize
-  #define PetscCUPMInitialized                    PetscCUDAInitialized
-  #define PetscCUPMInitializeCheck                PetscCUDAInitializeCheck
-  #define PetscCUPMInitializeAndView              PetscCUDAInitializeAndView
-  #define PetscCUPMSynchronize                    PetscCUDASynchronize
-  #define PetscNotUseCUPM                         PetscNotUseCUDA
-  #define cupmOptionsStr                          "CUDA options"
-  #define cupmSetDeviceStr                        "-cuda_device"
-  #define cupmViewStr                             "-cuda_view"
-  #define cupmSynchronizeStr                      "-cuda_synchronize"
-  #define PetscCUPMInitializeStr                  "PetscCUDAInitialize"
-  #define PetscOptionsCheckCUPM                   PetscOptionsCheckCUDA
-  #define PetscMPICUPMAwarenessCheck              PetscMPICUDAAwarenessCheck
-  #define PetscDefaultCupmStream                  PetscDefaultCudaStream
-  #define cupmEventCreate(x)                      cudaEventCreate(x)
-  #include "cupminit.inc"
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  typedef hipError_t                              cupmError_t;
-  typedef hipDeviceProp_t                         cupmDeviceProp;
-  typedef hipStream_t                             cupmStream_t;
-  typedef hipEvent_t                              cupmEvent_t;
-  #define cupmGetDeviceCount(x)                   hipGetDeviceCount(x)
-  #define cupmGetDevice(x)                        hipGetDevice(x)
-  #define cupmSetDevice(x)                        hipSetDevice(x)
-  #define cupmSetDeviceFlags(x)                   hipSetDeviceFlags(x)
-  #define cupmGetDeviceProperties(x,y)            hipGetDeviceProperties(x,y)
-  #define cupmStreamCreate(x)                     hipStreamCreate(x)
-  #define cupmEventCreate(x)                      hipEventCreate(x);
-  #define cupmGetLastError()                      hipGetLastError()
-  #define cupmDeviceMapHost                       hipDeviceMapHost
-  #define cupmSuccess                             hipSuccess
-  #define cupmErrorMemoryAllocation               hipErrorMemoryAllocation
-  #define cupmErrorLaunchOutOfResources           hipErrorLaunchOutOfResources
-  #define cupmErrorSetOnActiveProcess             hipErrorSetOnActiveProcess
-  #define CHKERRCUPM(x)                           CHKERRQ((x)==hipSuccess? 0:PETSC_ERR_LIB)
-  #define PetscCUPMBLASInitializeHandle()         0
-  #define PetscCUPMSOLVERDnInitializeHandle()     0
-  #define PetscCUPMInitialize                     PetscHIPInitialize
-  #define PetscCUPMInitialized                    PetscHIPInitialized
-  #define PetscCUPMInitializeCheck                PetscHIPInitializeCheck
-  #define PetscCUPMInitializeAndView              PetscHIPInitializeAndView
-  #define PetscCUPMSynchronize                    PetscHIPSynchronize
-  #define PetscNotUseCUPM                         PetscNotUseHIP
-  #define cupmOptionsStr                          "HIP options"
-  #define cupmSetDeviceStr                        "-hip_device"
-  #define cupmViewStr                             "-hip_view"
-  #define cupmSynchronizeStr                      "-hip_synchronize"
-  #define PetscCUPMInitializeStr                  "PetscHIPInitialize"
-  #define PetscOptionsCheckCUPM                   PetscOptionsCheckHIP
-  #define PetscMPICUPMAwarenessCheck              PetscMPIHIPAwarenessCheck
-  #define PetscDefaultCupmStream                  PetscDefaultHipStream
-  #include "cupminit.inc"
-#endif
-
 PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
 {
   char              string[64];
   MPI_Comm          comm = PETSC_COMM_WORLD;
-  PetscBool         flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,flg3 = PETSC_FALSE,flag,hasHelp,logView;
+  PetscBool         flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,flg3 = PETSC_FALSE,flag,hasHelp;
   PetscErrorCode    ierr;
   PetscReal         si;
   PetscInt          intensity;
@@ -673,20 +594,6 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
 
   ierr = PetscOptionsGetBool(NULL,NULL,"-saws_options",&PetscOptionsPublish,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-use_gpu_aware_mpi",&use_gpu_aware_mpi,NULL);CHKERRQ(ierr);
-  /*
-    If collecting logging information, by default, wait for device to complete its operations
-    before returning to the CPU in order to get accurate timings of each event
-  */
-  ierr = PetscOptionsHasName(NULL,NULL,"-log_summary",&logView);CHKERRQ(ierr);
-  if (!logView) {ierr = PetscOptionsHasName(NULL,NULL,"-log_view",&logView);CHKERRQ(ierr);}
-
-#if defined(PETSC_HAVE_CUDA)
-  ierr = PetscOptionsCheckCUDA(logView);CHKERRQ(ierr);
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  ierr = PetscOptionsCheckHIP(logView);CHKERRQ(ierr);
-#endif
 
   /*
        Print basic help message
@@ -773,7 +680,7 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   /*
      Creates the logging data structures; this is enabled even if logging is not turned on
      This is the last thing we do before returning to the user code to prevent having the
-     logging numbers contaminated by any startup time associated with MPI and the GPUs
+     logging numbers contaminated by any startup time associated with MPI
   */
 #if defined(PETSC_USE_LOG)
   ierr = PetscLogInitialize();CHKERRQ(ierr);
