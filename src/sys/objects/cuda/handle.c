@@ -1,10 +1,9 @@
 /*
  Management of CUBLAS and CUSOLVER handles
  */
-
 #include <petscsys.h>
 #include <petsc/private/petscimpl.h>
-#include <petscdevice.h>
+#include <petsc/private/deviceimpl.h>
 
 static cublasHandle_t     cublasv2handle   = NULL;
 static cusolverDnHandle_t cusolverdnhandle = NULL;
@@ -53,12 +52,13 @@ PetscErrorCode PetscCUBLASInitializeHandle(void)
 
 PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t *handle)
 {
-  PetscErrorCode ierr;
+  PetscDeviceContext dctx;
+  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
-  if (!cublasv2handle) {ierr = PetscCUBLASInitializeHandle();CHKERRQ(ierr);}
-  *handle = cublasv2handle;
+  ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetBLASHandle_Internal(dctx,handle);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -97,11 +97,12 @@ PetscErrorCode PetscCUSOLVERDnInitializeHandle(void)
 
 PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t *handle)
 {
-  PetscErrorCode ierr;
+  PetscDeviceContext dctx;
+  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
-  if (!cusolverdnhandle) {ierr = PetscCUSOLVERDnInitializeHandle();CHKERRQ(ierr);}
-  *handle = cusolverdnhandle;
+  ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
