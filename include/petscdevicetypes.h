@@ -43,6 +43,13 @@ typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=0x01, PETSC_MEMTYPE_CUD
 E*/
 typedef enum {PETSC_OFFLOAD_UNALLOCATED=0x0,PETSC_OFFLOAD_CPU=0x1,PETSC_OFFLOAD_GPU=0x2,PETSC_OFFLOAD_BOTH=0x3,PETSC_OFFLOAD_VECKOKKOS=0x100} PetscOffloadMask;
 
+typedef enum {
+  PETSC_DEVICE_INIT_NONE,
+  PETSC_DEVICE_INIT_LAZY,
+  PETSC_DEVICE_INIT_GREEDY
+} PetscDeviceInitKind;
+PETSC_EXTERN const char *const PetscDeviceInitKinds[];
+
 /*E
   PetscDeviceKind - Kind of accelerator device backend
 
