@@ -3,12 +3,12 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self,framework):
     config.package.Package.__init__(self,framework)
-    self.gitcommit              = 'd841b533dc66034f10583de32418cd4ca2ed5a53' # main apr-26-2021
+    self.gitcommit              = '9c004f24326c454eb34df5d155f145c7f902d573' # main aug-03-2021
     self.download               = ['git://https://github.com/htool-ddm/htool','https://github.com/htool-ddm/htool/archive/'+self.gitcommit+'.tar.gz']
     self.minversion             = '0.5.0'
     self.versionname            = 'HTOOL_VERSION'
     self.versioninclude         = 'htool/misc/define.hpp'
-    self.requirescxx11          = 1
+    self.minCxxVersion          = 'c++11'
     self.cxx                    = 1
     self.functions              = []
     self.includes               = ['htool/htool.hpp']

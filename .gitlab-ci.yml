@@ -16,7 +16,7 @@ stages:
 variables:
   GIT_STRATEGY: fetch
   GIT_CLEAN_FLAGS: -ffdxq
-  PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump
+  PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -checkstack
   TIMEOUT: 450
 
 #
@@ -86,7 +86,7 @@ check-ci-settings:
     when: always
     paths:
     - arch-*/lib/petsc/conf/*.log
-    - arch-*/lib/pkgconfig/PETSc.pc
+    - arch-*/lib/pkgconfig/petsc.pc
     - arch-*/tests/testresults.xml
     - arch-*/tests/test_*_tap.log
     - arch-*/tests/test_*_err.log
@@ -169,7 +169,7 @@ checksource:
     - make check_petsc4py_rst
 
 pause-for-approval:
-  extends: .test-basic
+  extends: .test
   stage: .pre
   tags:
     - stage1
@@ -220,7 +220,7 @@ check-py-vermin:
     when: always
     paths:
     - ${TEST_ARCH}/lib/petsc/conf/*.log
-    - ${TEST_ARCH}/lib/pkgconfig/PETSc.pc
+    - ${TEST_ARCH}/lib/pkgconfig/petsc.pc
     - ${TEST_ARCH}/tests/testresults.xml
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_tap.log
     - ${TEST_ARCH}/tests/test_${TEST_ARCH}_err.log
@@ -380,6 +380,7 @@ linux-gcc-complex-opt-32bit:
   variables:
     TEST_ARCH: arch-ci-linux-gcc-complex-opt-32bit
 
+#do not run checkstack on MSWIN-UNI
 mswin-uni:
   extends:
     - .stage-2
@@ -387,6 +388,7 @@ mswin-uni:
   tags:
     - win-stage2
   variables:
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump
     TEST_ARCH: arch-ci-mswin-uni
 
 mswin-gnu:
@@ -467,7 +469,7 @@ linux-c-exodus-dbg:
   tags:
     - gpu:nvidia, os:linux, name:frog
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0 -checkstack
     TEST_ARCH: arch-ci-linux-c-exodus-dbg
     RUN_GCOV: 1
     TEST_OPTS: -j1 query=requires queryval=cuda
@@ -479,7 +481,7 @@ linux-cuda11-double:
   tags:
     - gpu:nvidia, os:linux, name:frog
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0 -checkstack
     TEST_ARCH: arch-ci-linux-cuda11-double
     TEST_OPTS: -j1 query=requires queryval=cuda
 
@@ -490,7 +492,7 @@ linux-cuda11-complex:
   tags:
     - gpu:nvidia, os:linux, name:frog
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0 -checkstack
     TEST_ARCH: arch-ci-linux-cuda11-complex
     TEST_OPTS: -j1 query=requires queryval=cuda
 
@@ -511,7 +513,7 @@ linux-cuda-single-cxx:
   tags:
     - gpu:nvidia, os:linux
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -use_gpu_aware_mpi 0 -checkstack
     TEST_ARCH: arch-ci-linux-cuda-single-cxx
     TEST_OPTS: -j1 query=requires queryval=cuda
 
@@ -619,7 +621,7 @@ linux-pkgs-cxx-mlib:
   tags:
     - gce-nfs
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -saws_port_auto_select -saws_port_auto_select_silent
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -saws_port_auto_select -saws_port_auto_select_silent -checkstack
     TEST_ARCH: arch-ci-linux-pkgs-cxx-mlib
 
 linux-pkgs-valgrind:
@@ -639,7 +641,7 @@ linux-pkgs-opt:
   tags:
     - gce-nfs, linux-fast
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -saws_port_auto_select -saws_port_auto_select_silent
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -saws_port_auto_select -saws_port_auto_select_silent -checkstack
     TEST_ARCH: arch-ci-linux-pkgs-opt
     LOAD_MODULES: gcc/10.1.0-5hiqhdh
 
@@ -660,7 +662,7 @@ linux-cmplx-gcov:
   tags:
     - gce-nfs, linux-gcov
   variables:
-    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -vecscatter_mpi1 false -options_left false
+    PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump -vecscatter_mpi1 false -options_left false -checkstack
     TEST_ARCH: arch-ci-linux-cmplx-gcov
     LOAD_MODULES: gcc/8.3.0-fjpc5ys
     RUN_GCOV: 1
@@ -768,7 +770,7 @@ linux-opt-misc:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-nfs, linux-fast
   variables:
     TEST_ARCH: arch-ci-linux-opt-misc
     LOAD_MODULES: gcc/6.5.0-57usejd
@@ -976,6 +978,7 @@ docs-review:
     - .test-basic
   script:
     - sphinx-build -T -E -b html -D language=en -j auto . ../public
+    - make latexpdf && cp _build/latex/manual.pdf ../public/docs/manual/
   environment:
     name: review/$CI_COMMIT_REF_NAME
     url: https://$CI_PROJECT_NAMESPACE.gitlab.io/-/$CI_PROJECT_NAME/-/jobs/$CI_JOB_ID/artifacts/public/index.html
@@ -993,10 +996,11 @@ pages:  # this job name has special meaning to GitLab
   extends: .docs
   interruptible: true
   script:
+    - mkdir -p ../public/ && cp public/* ../public/
     - git fetch --unshallow --no-tags origin +release:remotes/origin/release +main:remotes/origin/main
-    - git checkout origin/main && make website-deploy BUILDDIR="../public/main"
+    - git checkout origin/main && make website-deploy BUILDDIR="../public/main" && make latexpdf && cp _build/latex/manual.pdf ../public/main/docs/manual/
     - make clean BUILDDIR="../public/release"
-    - git checkout origin/release && make website-deploy BUILDDIR="../public/release"
+    - git checkout origin/release && make website-deploy BUILDDIR="../public/release" && make latexpdf && cp _build/latex/manual.pdf ../public/release/docs/manual/
   only:
     variables:
       - $PETSC_CI_SCHEDULED == "yes"

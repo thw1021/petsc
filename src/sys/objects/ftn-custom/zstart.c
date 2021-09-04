@@ -254,6 +254,7 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   PetscMPIInt    size;
   char           *t1,name[256],hostname[64];
   PetscMPIInt    f_petsc_comm_world;
+  PetscBool      checkstack = PETSC_FALSE;
 
   *ierr = PetscMemzero(name,sizeof(name)); if (*ierr) return;
   if (PetscInitializeCalled) {*ierr = 0; return;}
@@ -441,6 +442,14 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   *ierr = MPI_Type_commit(&MPIU_2INT);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
 #endif
+  *ierr = MPI_Type_contiguous(4,MPI_INT,&MPI_4INT);
+  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+  *ierr = MPI_Type_commit(&MPI_4INT);
+  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+  *ierr = MPI_Type_contiguous(4,MPIU_INT,&MPIU_4INT);
+  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
+  *ierr = MPI_Type_commit(&MPIU_4INT);
+  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI types\n");return;}
   *ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN,Petsc_Counter_Attr_Delete_Fn,&Petsc_Counter_keyval,(void*)0);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:Creating MPI keyvals\n");return;}
   *ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN,Petsc_InnerComm_Attr_Delete_Fn,&Petsc_InnerComm_keyval,(void*)0);
@@ -495,8 +504,10 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   *ierr = PetscInfo1(0,"Running on machine: %s\n",hostname);
   if (*ierr) { (*PetscErrorPrintf)("PetscInitialize:Calling PetscInfo()\n");return;}
 
+  *ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&checkstack,NULL);
+  if (*ierr) { (*PetscErrorPrintf)("PetscInitialize:Calling PetscOptionsGetBool()\n");return;}
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
-  *ierr = PetscStackCreate();
+  *ierr = PetscStackCreate(checkstack);
   if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:PetscStackCreate()\n");return;}
 #endif
 
@@ -537,4 +548,3 @@ PETSC_EXTERN void petscend_(PetscErrorCode *ierr)
 
   *ierr = PetscEnd();
 }
-

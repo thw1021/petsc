@@ -31,8 +31,8 @@ PETSC_EXTERN void dmplexcreatefromfile_(MPI_Fint *comm, char* name, PetscBool *i
   FREECHAR(name, filename);
 }
 
-PETSC_EXTERN void dmplexextrude_(DM *idm, PetscInt *layers, PetscReal *height, PetscBool *orderHeight, PetscReal extNormal[], PetscBool *interpolate, DM *dm, int *ierr)
+PETSC_EXTERN void dmplexextrude_(DM *idm, PetscInt *layers, PetscReal *height, PetscBool *orderHeight, PetscBool *symmetric, PetscReal extNormal[], PetscBool *interpolate, DM *dm, int *ierr)
 {
   CHKFORTRANNULLREAL(extNormal);
-  *ierr = DMPlexExtrude(*idm,*layers,*height,*orderHeight,extNormal,*interpolate,dm);
+  *ierr = DMPlexExtrude(*idm,*layers,*height,*orderHeight,*symmetric,extNormal,*interpolate,dm);
 }

@@ -1386,8 +1386,8 @@ PetscErrorCode ISEqual_private(IS isrow,IS iscol_local,PetscBool  *flg)
 
   nmatch=0;
   k     = 0;
-  for (i=0; i<sz1; i++){
-    for (j=k; j<sz2; j++){
+  for (i=0; i<sz1; i++) {
+    for (j=k; j<sz2; j++) {
       if (a1[i] == a2[j]) {
         k = j; nmatch++;
         break;
@@ -2238,7 +2238,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
 
   Level: beginner
 
-.seealso: MatCreateMPISBAIJ, MATSEQSBAIJ, MATMPISBAIJ
+.seealso: MatCreateSBAIJ, MATSEQSBAIJ, MATMPISBAIJ
 M*/
 
 /*@C
@@ -2907,7 +2907,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPISBAIJ(MPI_Comm comm,Mat inmat
     ierr = MatGetBlockSizes(inmat,&bs,&cbs);CHKERRQ(ierr);
     mbs = m/bs; Nbs = N/cbs;
     if (n == PETSC_DECIDE) {
-      ierr = PetscSplitOwnershipBlock(comm,cbs,&n,&N);
+      ierr = PetscSplitOwnershipBlock(comm,cbs,&n,&N);CHKERRQ(ierr);
     }
     nbs = n/cbs;
 

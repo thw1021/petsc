@@ -220,8 +220,8 @@ PetscErrorCode InitializeUserData(AppCtx *user)
 
   /*
   Matrix Vector read and write refer to:
-  https://www.mcs.anl.gov/petsc/petsc-current/src/mat/tutorials/ex10.c
-  https://www.mcs.anl.gov/petsc/petsc-current/src/mat/tutorials/ex12.c
+  https://petsc.org/release/src/mat/tutorials/ex10.c
+  https://petsc.org/release/src/mat/tutorials/ex12.c
  */
   /* Load the A matrix, b vector, and xGT vector from a binary file. */
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,dataFile,FILE_MODE_READ,&fd);CHKERRQ(ierr);
@@ -291,7 +291,7 @@ PetscErrorCode InitializeUserData(AppCtx *user)
 /*TEST
 
    build:
-      requires: !complex !single !__float128 !define(PETSC_USE_64BIT_INDICES)
+      requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
    test:
       localrunfiles: tomographyData_A_b_xGT

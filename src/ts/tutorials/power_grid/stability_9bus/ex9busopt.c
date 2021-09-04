@@ -322,6 +322,7 @@ PetscErrorCode DICDPFiniteDifference(Vec X,Vec *DICDP, Userctx *user)
   PetscErrorCode ierr;
   PetscInt       i,j;
 
+  PetscFunctionBegin;
   eps = 1.e-7;
   ierr = VecDuplicate(X,&Y);CHKERRQ(ierr);
 
@@ -1385,7 +1386,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec P,PetscReal *f,Vec G,void *ctx0)
 /*TEST
 
    build:
-      requires: double !complex !define(PETSC_USE_64BIT_INDICES)
+      requires: double !complex !defined(PETSC_USE_64BIT_INDICES)
 
    test:
       args: -viewer_binary_skip_info -tao_monitor -tao_gttol .2

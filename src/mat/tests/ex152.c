@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
 #if defined(PETSC_USE_64BIT_INDICES)
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"This example only works with 32 bit indices\n");
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"This example only works with 32 bit indices\n");CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 #endif
@@ -116,13 +116,13 @@ int main(int argc, char *argv[])
 
    test:
       nsize: 2
-      requires: parmetis datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: parmetis datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -prefix ${DATAFILESPATH}/parmetis-test/testnp2
 
    test:
       suffix: 2
       nsize: 4
-      requires: parmetis datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: parmetis datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -prefix ${DATAFILESPATH}/parmetis-test/testnp4
 
 TEST*/

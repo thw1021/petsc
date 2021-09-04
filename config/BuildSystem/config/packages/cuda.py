@@ -21,6 +21,7 @@ class Configure(config.package.Package):
     self.hastests          = 0
     self.hastestsdatafiles = 0
     self.functionsDefine   = ['cusolverDnDpotri']
+    self.isnvhpc           = False
     return
 
   def setupHelp(self, help):
@@ -37,6 +38,8 @@ class Configure(config.package.Package):
       output += '  CUDA underlying compiler: CUDA_CXX ' + self.setCompilers.CUDA_CXX + '\n'
     if hasattr(self.setCompilers,'CUDA_CXXFLAGS'):
       output += '  CUDA underlying compiler flags: CUDA_CXXFLAGS ' + self.setCompilers.CUDA_CXXFLAGS + '\n'
+    if hasattr(self.setCompilers,'CUDA_CXXLIBS'):
+      output += '  CUDA underlying linker libraries: CUDA_CXXLIBS ' + self.setCompilers.CUDA_CXXLIBS + '\n'
     return output
 
   def setupDependencies(self, framework):
@@ -51,6 +54,18 @@ class Configure(config.package.Package):
     for i in config.package.Package.getSearchDirectories(self): yield i
     yield self.cudaDir
     return
+
+  def getIncludeDirs(self, prefix, includeDir):
+    incDirs = config.package.Package.getIncludeDirs(self, prefix, includeDir)
+    nvhpcDir        = os.path.dirname(prefix) # /path/Linux_x86_64/21.5
+    nvhpcCudaIncDir = os.path.join(nvhpcDir,'cuda','include')
+    nvhpcMathIncDir = os.path.join(nvhpcDir,'math_libs','include')
+    if os.path.isdir(nvhpcCudaIncDir) and os.path.isdir(nvhpcMathIncDir):
+      if isinstance(incDirs, list):
+        return incDirs.extend([nvhpcCudaIncDir,nvhpcMathIncDir])
+      else:
+        return [incDirs,nvhpcCudaIncDir,nvhpcMathIncDir]
+    return incDirs
 
   def generateLibList(self, directory):
     '''NVHPC separated the libraries into a different math_libs directory and the directory with the basic CUDA library'''
@@ -78,6 +93,20 @@ class Configure(config.package.Package):
       mathsubliblist = config.package.Package.generateLibList(self, newdirectory)
       liblist = [liblist[0],liblist[1],mathsubliblist[0] + subliblist[0]]
 
+    # When 'directory' is in format like /path/Linux_x86_64/21.5/compilers/lib, NVHPC directory structure is like
+    # /path/Linux_x86_64/21.5/compilers/bin/{nvcc,nvc,nvc++}
+    #                       +/comm_libs/mpi/bin/{mpicc,mpicxx,mpifort}
+    #                       +/cuda/{include,lib64}
+    #                       +/math_libs/{include,lib64}
+    nvhpcDir        = os.path.dirname(os.path.dirname(directory)) # /path/Linux_x86_64/21.5
+    nvhpcCudaLibDir = os.path.join(nvhpcDir,'cuda','lib64')
+    nvhpcMathLibDir = os.path.join(nvhpcDir,'math_libs','lib64')
+    if os.path.isdir(nvhpcCudaLibDir) and os.path.isdir(nvhpcMathLibDir):
+      self.liblist    = [self.basicliblist[0]]
+      subliblist      = config.package.Package.generateLibList(self, nvhpcCudaLibDir)
+      self.liblist    = [self.mathliblist[0]]
+      mathsubliblist  = config.package.Package.generateLibList(self, nvhpcMathLibDir)
+      liblist = [liblist[0],liblist[1],mathsubliblist[0] + subliblist[0]]
     return liblist
 
   def checkSizeofVoidP(self):
@@ -132,15 +161,24 @@ class Configure(config.package.Package):
     self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
     if hasattr(self,'systemNvcc'):
       self.nvccDir = os.path.dirname(self.systemNvcc)
-      self.cudaDir = os.path.split(self.nvccDir)[0]
+      d = os.path.split(self.nvccDir)[0]
+      if os.path.exists(os.path.join(d,'include','cuda.h')):
+        self.cudaDir = d
+      elif os.path.exists(os.path.join(d,'..','cuda','include','cuda.h')):
+        self.cudaDir = os.path.join(d,'..','cuda')
+        self.isnvhpc = True
     else:
       raise RuntimeError('CUDA compiler not found!')
+    if not hasattr(self,'cudaDir'):
+      raise RuntimeError('CUDA directory not found!')
+
 
   def configureLibrary(self):
     self.setCudaDir()
     if not hasattr(self.compilers, 'CXX'):
       raise RuntimeError('Using CUDA requires PETSc to be configure with a C++ compiler')
-    config.package.Package.configureLibrary(self)
+    # skip this because it does not properly set self.lib and self.include if they have already been set
+    if not self.found: config.package.Package.configureLibrary(self)
     self.checkNVCCDoubleAlign()
     self.configureTypes()
     # includes from --download-thrust should override the prepackaged version in cuda - so list thrust.include before cuda.include on the compile command.
@@ -162,42 +200,43 @@ class Configure(config.package.Package):
         try:
           (out, err, ret) = Configure.executeShellCommand(self.deviceQuery + ' | grep "CUDA Capability"',timeout = 60, log = self.log, threads = 1)
         except Exception as e:
-          self.log.write('deviceQuery failed '+str(e)+'\n')
+          self.log.write('NVIDIA utility deviceQuery failed '+str(e)+'\n')
         else:
           try:
             out = out.split('\n')[0]
             sm = out[-3:]
             self.gencodearch = str(int(10*float(sm)))
           except:
-            self.log.write('Unable to parse CUDA capability from NVIDIA deviceQuery() demo\n')
+            self.log.write('Unable to parse the CUDA Capability output from the NVIDIA utility deviceQuery\n')
 
     if not hasattr(self,'gencodearch') and not self.argDB['with-batch']:
-        includes = '#include <stdio.h>\n\
-                    #include <cuda_runtime.h>\n\
-                    #include <cuda_runtime_api.h>\n\
-                    #include <cuda_device_runtime_api.h>'
-        body = 'int cerr;\
-                cudaDeviceProp dp;\
-                cerr = cudaGetDeviceProperties(&dp, 0);\
-                if (cerr) printf("Error calling cudaGetDeviceProperties\\n");\
-                else printf("%d\\n",10*dp.major+dp.minor);\
-                return(0);'
+        includes = '''#include <stdio.h>
+                    #include <cuda_runtime.h>
+                    #include <cuda_runtime_api.h>
+                    #include <cuda_device_runtime_api.h>'''
+        body = '''int cerr;
+                cudaDeviceProp dp;
+                cerr = cudaGetDeviceProperties(&dp, 0);
+                if (cerr) printf("Error calling cudaGetDeviceProperties\\n");
+                else printf("%d\\n",10*dp.major+dp.minor);
+                return(cerr);'''
         self.pushLanguage('CUDA')
         try:
           (output,status) = self.outputRun(includes, body)
         except Exception as e:
-          self.log.write('outputRun failed for CUDA generation '+str(e)+'\n')
+          self.log.write('petsc-supplied CUDA device query test failed: '+str(e)+'\n')
           self.popLanguage()
         else:
           self.popLanguage()
-          self.log.write('outputRun output with CUDA generation '+output+' status '+str(status)+'\n')
-          try:
-            gen = int(output)
-          except:
-            pass
-          else:
-            self.log.write('outputRun produced valid CUDA generation '+str(gen)+'\n')
-            self.gencodearch = str(gen)
+          self.log.write('petsc-supplied CUDA device query test output: '+output+', status: '+str(status)+'\n')
+          if not status:
+            try:
+              gen = int(output)
+            except:
+              pass
+            else:
+              self.log.write('petsc-supplied CUDA device query test found the CUDA Capability is '+str(gen)+'\n')
+              self.gencodearch = str(gen)
 
     if not hasattr(self,'gencodearch'):
       for gen in reversed(genArches):
@@ -244,17 +283,21 @@ to set the right generation for your hardware.')
     # determine the compiler used by nvcc
     (out, err, ret) = Configure.executeShellCommand(petscNvcc + ' ' + self.setCompilers.CUDAFLAGS + ' --dryrun dummy.cu 2>&1 | grep D__CUDACC__ | head -1 | cut -f2 -d" "')
     if out:
+      # MPI.py adds its include paths and libraries to these lists and saves them again
       self.setCompilers.CUDA_CXX = out
       self.setCompilers.CUDA_CXXFLAGS = ''
+      self.setCompilers.CUDA_CXXLIBS = ''
       self.logPrint('Determined the compiler nvcc uses is ' + out);
       self.logPrint('PETSc C compiler '+self.compilers.CC)
       self.logPrint('PETSc C++ compiler '+self.compilers.CXX)
 
       # TODO: How to handle MPI compiler wrapper as opposed to its underlying compiler
       if out == self.compilers.CC or out == self.compilers.CXX:
-        # nvcc will say it is using gcc as its compiler, it pass a flag when using to treat it as a C++ compiler
-        self.setCompilers.CUDA_CXXFLAGS = self.setCompilers.CPPFLAGS+' '+self.setCompilers.CFLAGS
-        self.setCompilers.CUDA_CXXFLAGS += self.setCompilers.CXXPPFLAGS+' '+self.setCompilers.CXXFLAGS
+        # nvcc will say it is using gcc as its compiler, it pass a flag when using to
+        # treat it as a C++ compiler
+        newFlags = self.setCompilers.CPPFLAGS.split()+self.setCompilers.CFLAGS.split()+self.setCompilers.CXXPPFLAGS.split()+self.setCompilers.CXXFLAGS.split()
+        # need to remove the std flag from the list, nvcc will already have its own flag set
+        self.setCompilers.CUDA_CXXFLAGS = ' '.join([flg for flg in newFlags if not flg.startswith(('-std=c++','-std=gnu++'))])
       else:
         # only add any -I arguments since compiler arguments may not work
         flags = self.setCompilers.CPPFLAGS.split(' ')+self.setCompilers.CFLAGS.split(' ')+self.setCompilers.CXXFLAGS.split(' ')

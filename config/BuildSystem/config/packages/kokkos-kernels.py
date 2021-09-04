@@ -7,8 +7,9 @@ class Configure(config.package.CMakePackage):
     self.gitcommit        = '54e4213ca028163a76639d23b1204b213203bc79' # develop of 2021-04-28
     self.versionname      = 'KOKKOS_KERNELS_VERSION'  # It looks kokkos-kernels does not yet have a macro for version number
     self.download         = ['git://https://github.com/kokkos/kokkos-kernels.git']
-    # cannot test includes with standard approaches since that requires Kokkos nvcc_wapper that we do not handle in configure
-    #self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
+    # See also kokkos.py. Cannot test includes with standard approaches since that requires Kokkos nvcc_wapper that we do not handle in configure
+    self.doNotCheckIncludes = 1
+    self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
     self.liblist          = [['libkokkoskernels.a']]
     self.functions        = ['']
     # I don't know how to make it work since all KK routines are templated and always need Kokkos::View. So I cheat here and use functionCxx from Kokkos.
@@ -69,6 +70,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
       args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
     if self.cuda.found:
+      lang = 'cuda'
       self.system = 'CUDA'
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
       args.append('-DCMAKE_CXX_COMPILER='+os.path.join(KokkosRoot,'bin','nvcc_wrapper'))
@@ -77,10 +79,11 @@ class Configure(config.package.CMakePackage):
         args.append('-DKokkosKernels_ENABLE_TPL_CUBLAS=OFF')
         args.append('-DKokkosKernels_ENABLE_TPL_CUSPARSE=OFF')
     elif self.hip.found:
+      lang = 'hip'
       self.system = 'HIP'
       with self.Language('HIP'):
         petscHipc = self.getCompiler()
-        hipFlags = self.updatePackageCFlags(self.getCompilerFlags())
+        hipFlags = self.updatePackageCxxFlags(self.getCompilerFlags())
       self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
       if not hasattr(self,'systemHipc'):
         raise RuntimeError('HIP error: could not find path of hipc')
@@ -88,4 +91,13 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
+    else:
+      lang = 'cxx'
+
+    # set -DCMAKE_CXX_STANDARD=
+    if not hasattr(self.compilers,lang+'dialect'):
+      raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' Compiler')
+    langdialect = getattr(self.compilers,lang+'dialect')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+    args.append('-DCMAKE_CXX_STANDARD='+langdialect.split("C++",1)[1]) # e.g., extract 14 from C++14
     return args

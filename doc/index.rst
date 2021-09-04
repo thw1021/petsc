@@ -1,12 +1,22 @@
-=============================
-PETSc |version| Documentation
-=============================
+===============
+PETSc |version|
+===============
+PETSc, the Portable, Extensible Toolkit for Scientific Computation,
+pronounced PET-see (`/ˈpɛt-siː/ <https://en.wikipedia.org/wiki/Help:IPA/English#Key>`__), is a suite of
+data structures and routines for the scalable (parallel) solution of scientific
+applications modeled by partial differential equations. It supports MPI, and GPUs through
+CUDA or OpenCL, as well as hybrid MPI-GPU parallelism. PETSc (sometimes called PETSc/TAO)
+also contains the TAO, the Toolkit for Advanced Optimization, software library.
 
+PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
+
+News
+====
 .. admonition:: News: New Book on PETSc
 
   **PETSc for Partial Differential Equations: Numerical Solutions in C and Python**, by Ed Bueler, is available.
 
-    - `Physical book from SIAM Press <https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137>`__
+    - `Book from SIAM Press <https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137>`__
     - `Google Play E-book <https://play.google.com/store/books/details/Ed_Bueler_PETSc_for_Partial_Differential_Equations?id=tgMHEAAAQBAJ>`__
 
 .. admonition:: News: New paper on PETSc communication System
@@ -21,15 +31,7 @@ PETSc |version| Documentation
 
   Source code for `petsc4py <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/>`__, developed by Lisandro Dalcin, is now distributed with the PETSc source and supported by the PETSc team and mailing lists.
 
-PETSc, pronounced PET-see (`/ˈpɛt-siː/ <https://en.wikipedia.org/wiki/Help:IPA/English#Key>`__), is a suite of
-data structures and routines for the scalable (parallel) solution of scientific
-applications modeled by partial differential equations. It supports MPI, and GPUs through
-CUDA or OpenCL, as well as hybrid MPI-GPU parallelism. PETSc (sometimes called PETSc/TAO)
-also contains the TAO optimization software library.
 
-PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
-
-===========
 Main Topics
 ===========
 
@@ -37,15 +39,15 @@ Main Topics
    :maxdepth: 1
 
    Overview <overview/index>
-   Installing <install/index>
+   Download <download/index>
+   Installation <install/index>
    FAQ <faq/index>
-   Documentation <documentation/index>
+   Documentation <docs/index>
    Tutorials <tutorials/guide_to_examples>
    Community <community/index>
    Developers <developers/index>
    Misc. <miscellaneous/index>
 
-==========================================
 Related toolkits/libraries that use PETSc
 ==========================================
 
@@ -113,7 +115,6 @@ Related toolkits/libraries that use PETSc
 
 .. _doc_index_citing_petsc:
 
-============
 Citing PETSc
 ============
 
@@ -128,7 +129,7 @@ When citing PETSc in a publication please cite the following:
       and Lois Curfman McInnes and Richard Tran Mills and Todd Munson and Karl Rupp
       and Patrick Sanan and Barry~F. Smith and Stefano Zampini and Hong Zhang and Hong Zhang",
       Title  = "{PETS}c {W}eb page",
-      Note   = "https://www.mcs.anl.gov/petsc",
+      Note   = "https://petsc.org/",
       Year   = "2021"}
 
    @TechReport{petsc-user-ref,

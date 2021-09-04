@@ -357,6 +357,8 @@ PETSC_EXTERN PetscErrorCode MatCreateTranspose(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatTransposeGetMat(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateHermitianTranspose(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatHermitianTransposeGetMat(Mat,Mat*);
+PETSC_EXTERN PetscErrorCode MatNormalGetMat(Mat,Mat*);
+PETSC_EXTERN PetscErrorCode MatNormalHermitianGetMat(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateSubMatrixVirtual(Mat,IS,IS,Mat*);
 PETSC_EXTERN PetscErrorCode MatSubMatrixVirtualUpdate(Mat,Mat,IS,IS);
 PETSC_EXTERN PetscErrorCode MatCreateLocalRef(Mat,IS,IS,Mat*);
@@ -487,6 +489,7 @@ PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArrayRead(Mat,const PetscScalar *[])
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetMaxRowNonzeros(Mat,PetscInt*);
 PETSC_EXTERN PetscErrorCode MatSeqAIJSetValuesLocalFast(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 PETSC_EXTERN PetscErrorCode MatSeqAIJSetType(Mat,MatType);
+PETSC_EXTERN PetscErrorCode MatSeqAIJKron(Mat,Mat,MatReuse,Mat*);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRegister(const char[],PetscErrorCode (*)(Mat,MatType,MatReuse,Mat *));
 PETSC_EXTERN PetscFunctionList MatSeqAIJList;
 PETSC_EXTERN PetscErrorCode MatSeqBAIJGetArray(Mat,PetscScalar *[]);
@@ -1711,7 +1714,7 @@ PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use the MatConvert() interface (since ve
 
 /*S
      MatNullSpace - Object that removes a null space from a vector, i.e.
-         orthogonalizes the vector to a subsapce
+         orthogonalizes the vector to a subspace
 
    Level: advanced
 
@@ -1827,9 +1830,12 @@ PETSC_EXTERN PetscErrorCode MatHaraSetSamplingMat(Mat,Mat,PetscInt,PetscReal);
 #endif
 
 #ifdef PETSC_HAVE_HTOOL
-PETSC_EXTERN_TYPEDEF typedef PetscScalar (*MatHtoolKernel)(PetscInt,PetscInt,PetscInt,void*);
+PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*MatHtoolKernel)(PetscInt,PetscInt,PetscInt,const PetscInt*,const PetscInt*,PetscScalar*,void*);
 PETSC_EXTERN PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscReal[],const PetscReal[],MatHtoolKernel,void*,Mat*);
 PETSC_EXTERN PetscErrorCode MatHtoolSetKernel(Mat,MatHtoolKernel,void*);
+PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationSource(Mat,IS*);
+PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationTarget(Mat,IS*);
+PETSC_EXTERN PetscErrorCode MatHtoolUsePermutation(Mat,PetscBool);
 /*E
      MatHtoolCompressorType - Indicates the type of compressor used by a MATHTOOL
 
@@ -1840,9 +1846,25 @@ PETSC_EXTERN PetscErrorCode MatHtoolSetKernel(Mat,MatHtoolKernel,void*);
 .   MAT_HTOOL_COMPRESSOR_FULL_ACA - full adaptive cross approximation
 -   MAT_HTOOL_COMPRESSOR_SVD - singular value decomposition
 
-.seealso: MatCreateHtoolFromKernel(), MATHTOOL
+.seealso: MatCreateHtoolFromKernel(), MATHTOOL, MatHtoolClusteringType
 E*/
 typedef enum { MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA, MAT_HTOOL_COMPRESSOR_FULL_ACA, MAT_HTOOL_COMPRESSOR_SVD } MatHtoolCompressorType;
+/*E
+     MatHtoolClusteringType - Indicates the type of clustering used by a MATHTOOL
+
+   Level: beginner
+
+    Values:
++   MAT_HTOOL_CLUSTERING_PCA_REGULAR (default) - axis computed via principle component analysis, split uniformly
+.   MAT_HTOOL_CLUSTERING_PCA_GEOMETRIC - axis computed via principle component analysis, split barycentrically
+.   MAT_HTOOL_CLUSTERING_BOUNDING_BOX_1_REGULAR - axis along the largest extent of the bounding box, split uniformly
+-   MAT_HTOOL_CLUSTERING_BOUNDING_BOX_1_GEOMETRIC - axis along the largest extent of the bounding box, split barycentrically
+
+    Notes: higher-dimensional clustering is not yet supported in Htool, but once it is, one should add BOUNDING_BOX_{2,3} types
+
+.seealso: MatCreateHtoolFromKernel(), MATHTOOL, MatHtoolCompressorType
+E*/
+typedef enum { MAT_HTOOL_CLUSTERING_PCA_REGULAR, MAT_HTOOL_CLUSTERING_PCA_GEOMETRIC, MAT_HTOOL_CLUSTERING_BOUNDING_BOX_1_REGULAR, MAT_HTOOL_CLUSTERING_BOUNDING_BOX_1_GEOMETRIC } MatHtoolClusteringType;
 #endif
 
 /*
@@ -1919,12 +1941,13 @@ PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatBindToCPU(Mat,PetscBool);
 PETSC_DEPRECATED_FUNCTION("Use MatBindToCPU (since v3.13)") PETSC_STATIC_INLINE PetscErrorCode MatPinToCPU(Mat A,PetscBool flg) {return MatBindToCPU(A,flg);}
 
-typedef struct _p_SplitCSRMat PetscSplitCSRDataStructure;
+typedef struct _n_SplitCSRMat *PetscSplitCSRDataStructure;
+PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure*);
 
 #ifdef PETSC_HAVE_KOKKOS_KERNELS
-PETSC_EXTERN PetscErrorCode MatKokkosGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
-PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat, PetscSplitCSRDataStructure *);
-PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat, PetscSplitCSRDataStructure **);
+PETSC_EXTERN PetscErrorCode MatKokkosGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure*);
+PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat,PetscSplitCSRDataStructure);
+PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat,PetscSplitCSRDataStructure*);
 #endif
 
 #ifdef PETSC_HAVE_CUDA
@@ -1972,8 +1995,6 @@ PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,Pets
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
 typedef struct Mat_SeqAIJCUSPARSETriFactors* Mat_SeqAIJCUSPARSETriFactors_p;
 PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFactors_p*);
-
-PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure**);
 
 PETSC_EXTERN PetscErrorCode MatCreateDenseCUDA(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscScalar[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateSeqDenseCUDA(MPI_Comm,PetscInt,PetscInt,PetscScalar[],Mat*);

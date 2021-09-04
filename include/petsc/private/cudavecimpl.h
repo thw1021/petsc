@@ -2,7 +2,7 @@
 #define __CUDAVECIMPL
 
 #include <petscvec.h>
-#include <petsccublas.h>
+#include <petscdevice.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
@@ -58,6 +58,8 @@ PETSC_INTERN PetscErrorCode VecResetArray_SeqCUDA_Private(Vec);
 PETSC_INTERN PetscErrorCode VecMax_SeqCUDA(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecMin_SeqCUDA(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecReciprocal_SeqCUDA(Vec);
+PETSC_INTERN PetscErrorCode VecSum_SeqCUDA(Vec,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecShift_SeqCUDA(Vec,PetscScalar);
 
 #if defined(PETSC_HAVE_NVSHMEM)
 PETSC_EXTERN PetscErrorCode PetscNvshmemInitializeCheck(void);

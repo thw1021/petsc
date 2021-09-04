@@ -2,6 +2,7 @@ from __future__ import generators
 import config.base
 import config
 import os
+import contextlib
 from functools import reduce
 
 # not sure how to handle this with 'self' so its outside the class
@@ -224,6 +225,18 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isNVCC(compiler, log):
+    '''Returns true if the compiler is a NVCC compiler'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
+      output = output + error
+      if 'Cuda compiler driver' in output:
+        if log: log.write('Detected NVCC compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isGcc110plus(compiler, log):
     '''returns true if the compiler is gcc-11.0.x or later'''
     try:
@@ -396,6 +409,25 @@ class Configure(config.base.Configure):
       output = output + error
       if output.find('Cray Standard C') >= 0 or output.find('Cray C++') >= 0 or output.find('Cray Fortran') >= 0:
         if log: log.write('Detected Cray compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
+  def isCrayPEWrapper(compiler, log):
+    '''Returns true if the compiler is a Cray Programming Environment (PE) wrapper compiler'''
+    # Note with Cray module PrgEnv-gnu, cc is a Cray PE wrapper around gcc, but not a Cray compiler on its own.
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --help', log = log)
+      output = output + error
+      # On OLCF Spock, with PrgEnv-cray
+      #     $ cc --help |& grep "\-craype\-"
+      #     Use --craype-help for CrayPE specific options.
+      # with PrgEnv-gnu, the output is
+      #     -craype-verbose    Print the command which is forwarded
+      #     ...
+      if output.find('-craype-') >= 0:
+        if log: log.write('Detected Cray PE wrapper compiler\n')
         return 1
     except RuntimeError:
       pass
@@ -591,7 +623,7 @@ class Configure(config.base.Configure):
       if not self.checkRun(linkLanguage=linkLanguage):
         msg = 'Cannot run executables created with '+language+'. If this machine uses a batch system \nto submit jobs you will need to configure using ./configure with the additional option  --with-batch.\n Otherwise there is problem with the compilers. Can you compile and run code with your compiler \''+ self.getCompiler()+'\'?\n'
         if self.isIntel(self.getCompiler(), self.log):
-          msg = msg + 'See https://www.mcs.anl.gov/petsc/documentation/faq.html#libimf'
+          msg = msg + 'See https://petsc.org/release/faq/#error-libimf'
         self.popLanguage()
         raise OSError(msg)
     self.popLanguage()
@@ -674,7 +706,7 @@ class Configure(config.base.Configure):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'hcc')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpcc_r')
       self.usedMPICompilers = 0
-      raise RuntimeError('MPI compiler wrappers in '+self.argDB['with-mpi-dir']+'/bin cannot be found or do not work. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
+      raise RuntimeError('MPI compiler wrappers in '+self.argDB['with-mpi-dir']+'/bin cannot be found or do not work. See https://petsc.org/release/faq/#invalid-mpi-compilers')
     else:
       if self.useMPICompilers() and 'with-mpi-dir' in self.argDB:
       # if it gets here these means that self.argDB['with-mpi-dir']/bin does not exist so we should not search for MPI compilers
@@ -1001,7 +1033,7 @@ class Configure(config.base.Configure):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpic++')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiCC')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpCC_r')
-      raise RuntimeError('bin/<mpiCC,mpicxx,hcp,mpCC_r> you provided with -with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
+      raise RuntimeError('bin/<mpiCC,mpicxx,hcp,mpCC_r> you provided with -with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work. See https://petsc.org/release/faq/#invalid-mpi-compilers')
     else:
       if self.usedMPICompilers:
         # TODO: Should only look for the MPI CXX compiler related to the found MPI C compiler
@@ -1142,7 +1174,7 @@ class Configure(config.base.Configure):
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf90_r')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpxlf_r')
       if os.path.isfile(os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpif90')):
-        raise RuntimeError('bin/mpif90 you provided with --with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work.\nRun with --with-fc=0 if you wish to use this MPI and disable Fortran. See https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-compilers')
+        raise RuntimeError('bin/mpif90 you provided with --with-mpi-dir='+self.argDB['with-mpi-dir']+' cannot be found or does not work.\nRun with --with-fc=0 if you wish to use this MPI and disable Fortran. See https://petsc.org/release/faq/#invalid-mpi-compilers')
     else:
       if self.usedMPICompilers:
         # TODO: Should only look for the MPI Fortran compiler related to the found MPI C compiler
@@ -1260,23 +1292,17 @@ class Configure(config.base.Configure):
 
   def containsInvalidFlag(self, output):
     '''If the output contains evidence that an invalid flag was used, return True'''
-    if (output.find('Unrecognized command line option') >= 0 or output.find('Unrecognised command line option') >= 0 or
-        output.find('unrecognized command line option') >= 0 or output.find('unrecognized option') >= 0 or output.find('unrecognised option') >= 0 or
-        output.find('not recognized') >= 0 or output.find('not recognised') >= 0 or
-        output.find('unknown option') >= 0 or output.find('unknown flag') >= 0 or output.find('Unknown switch') >= 0 or
-        output.find('ignoring option') >= 0 or output.find('ignored') >= 0 or
-        output.find('argument unused') >= 0 or output.find('not supported') >= 0 or
-        # When checking for the existence of 'attribute'
-        output.find('is unsupported and will be skipped') >= 0 or
-        output.find('illegal option') >= 0 or output.find('Invalid option') >= 0 or
-        (output.find('bad ') >= 0 and output.find(' option') >= 0) or
-        output.find('linker input file unused because linking not done') >= 0 or
-        output.find('PETSc Error') >= 0 or
-        output.find('Unbekannte Option') >= 0 or
-        output.find('warning: // comments are not allowed in this language') >= 0 or
-        output.find('no se reconoce la opci') >= 0) or output.find('non reconnue') >= 0:
-      return 1
-    return 0
+    substrings = ('unrecognized command line option','unrecognised command line option',
+                  'unrecognized option','unrecognised option','not recognized',
+                  'not recognised','unknown option','unknown warning option',
+                  'unknown flag','unknown switch','ignoring option','ignored','argument unused',
+                  'not supported','is unsupported and will be skipped','illegal option',
+                  'invalid option','invalid suboption','bad ',' option','petsc error',
+                  'unbekannte option','linker input file unused because linking not done',
+                  'warning: // comments are not allowed in this language',
+                  'no se reconoce la opci','non reconnue')
+    outlo = output.lower()
+    return any(sub.lower() in outlo for sub in substrings)
 
   def checkCompilerFlag(self, flag, includes = '', body = '', compilerOnly = 0):
     '''Determine whether the compiler accepts the given flag'''
@@ -1286,19 +1312,15 @@ class Configure(config.base.Configure):
     (output, error, status) = self.outputCompile(includes, body)
     output += error
     self.logPrint('Output from compiling with '+oldFlags+' '+flag+'\n'+output)
-    valid   = 1
     setattr(self, flagsArg, oldFlags)
     # Please comment each entry and provide an example line
     if status:
-      valid = 0
       self.logPrint('Rejecting compiler flag '+flag+' due to nonzero status from link')
-    # Lahaye F95
-    if output.find('Invalid suboption') >= 0:
-      valid = 0
-    if self.containsInvalidFlag(output):
-      valid = 0
+      return False
+    elif self.containsInvalidFlag(output):
       self.logPrint('Rejecting compiler flag '+flag+' due to \n'+output)
-    return valid
+      return False
+    return True
 
   def insertCompilerFlag(self, flag, compilerOnly):
     '''DANGEROUS: Put in the compiler flag without checking'''
@@ -1314,6 +1336,42 @@ class Configure(config.base.Configure):
       self.insertCompilerFlag(flag, compilerOnly)
       return
     raise RuntimeError('Bad compiler flag: '+flag)
+
+  @contextlib.contextmanager
+  def extraCompilerFlags(self, extraFlags, lang = None):
+    assert isinstance(extraFlags,(list,tuple)), "extraFlags must be either a list or tuple"
+    if lang:
+      self.pushLanguage(lang)
+    flagsArg  = self.getCompilerFlagsArg()
+    oldCompilerFlags = getattr(self,flagsArg)
+    skipFlags = []
+    try:
+      for i,flag in enumerate(extraFlags):
+        try:
+          self.addCompilerFlag(flag)
+        except RuntimeError:
+          skipFlags.append((i,flag))
+      yield skipFlags
+    finally:
+      # This last finally is a bit of deep magic, it makes it so that if the code in the
+      # resulting yield throws some unrelated exception which is meant to be caught
+      # outside this ctx manager then the flags and languages are still reset
+      if lang:
+        oldLang = self.popLanguage()
+      setattr(self,flagsArg,oldCompilerFlags)
+
+  def checkPragma(self):
+    '''Check for all available applicable languages whether they complain (including warnings!) about potentially unknown pragmas'''
+    usePragma = {'C':False}
+    if hasattr(self,'Cxx'):
+      usePragma['Cxx'] = False
+    for language in usePragma.keys():
+      with self.Language(language):
+        with self.extraCompilerFlags(['-Wunknown-pragmas']) as skipFlags:
+          if not skipFlags:
+            usePragma[language] = self.checkCompile('#pragma GCC poison TEST')
+    if all(usePragma.values()): self.framework.enablepoison = True
+    return
 
   def generatePICGuesses(self):
     if self.language[-1] == 'CUDA':
@@ -1716,6 +1774,7 @@ class Configure(config.base.Configure):
 
   def checkLinkerMac(self):
     '''Tests some Apple Mac specific linker flags'''
+    self.addDefine('PETSC_USING_DARWIN', 1)
     langMap = {'C':'CC','FC':'FC','Cxx':'CXX','CUDA':'CUDAC','HIP':'HIPC','SYCL':'SYCLCXX'}
     languages = ['C']
     if hasattr(self, 'CXX'):
@@ -2075,6 +2134,7 @@ if (dlclose(handle)) {
     self.executeTest(self.checkSharedLinkerPaths)
     self.executeTest(self.checkLibC)
     self.executeTest(self.checkDynamicLinker)
+    self.executeTest(self.checkPragma)
     self.executeTest(self.output)
     return
 

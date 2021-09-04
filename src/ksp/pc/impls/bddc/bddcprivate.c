@@ -2226,7 +2226,6 @@ PetscErrorCode PCBDDCDetectDisconnectedComponents(PC pc, PetscBool filter, Petsc
     PetscSF        sfPoint;
     PetscErrorCode ierr;
 
-    PetscFunctionBegin;
     ierr = DMPlexGetHeightStratum(dm, 0, &pStart, &pEnd);CHKERRQ(ierr);
     ierr = DMGetPointSF(dm, &sfPoint);CHKERRQ(ierr);
     ierr = PetscSFGetGraph(sfPoint, &nroots, NULL, NULL, NULL);CHKERRQ(ierr);
@@ -7999,7 +7998,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
     ierr = VecScale(lvec,-1.0);CHKERRQ(ierr);
     ierr = MatMultAdd(*mat_n,rvec,lvec,lvec);CHKERRQ(ierr);
     ierr = VecNorm(lvec,NORM_INFINITY,&infty_error);CHKERRQ(ierr);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)mat),"Infinity error subassembling %1.6e\n",infty_error);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)mat),"Infinity error subassembling %1.6e\n",infty_error);CHKERRQ(ierr);
     ierr = VecDestroy(&rvec);CHKERRQ(ierr);
     ierr = VecDestroy(&lvec);CHKERRQ(ierr);
   }

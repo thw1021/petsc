@@ -213,7 +213,7 @@ class Configure(config.base.Configure):
 
 proc ModulesHelp { } {
     puts stderr "This module sets the path and environment variables for petsc-%s"
-    puts stderr "     see https://www.mcs.anl.gov/petsc/ for more information      "
+    puts stderr "     see https://petsc.org/ for more information      "
     puts stderr ""
 }
 module-whatis "PETSc - Portable, Extensible Toolkit for Scientific Computation"
@@ -390,11 +390,7 @@ prepend-path PATH "%s"
     self.logPrintDivider()
     self.framework.packages.reverse()
     petscincludes = [os.path.join(self.petscdir.dir,'include'),os.path.join(self.petscdir.dir,self.arch.arch,'include')]
-    if self.framework.argDB['prefix']:
-      petscincludes_install = [os.path.join(self.installdir.dir, 'include')]
-      petscincludes.extend(petscincludes_install) # add the prefix include dir to petscincludes
-    else:
-      petscincludes_install = petscincludes
+    petscincludes_install = [os.path.join(self.installdir.dir, 'include')] if self.framework.argDB['prefix'] else petscincludes
     includes = []
     self.packagelibs = []
     for i in self.framework.packages:
@@ -947,6 +943,7 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       raise RuntimeError('Incorrect option --prefix='+self.framework.argDB['prefix']+' specified. It cannot be same as PETSC_DIR/PETSC_ARCH!')
     self.framework.header          = os.path.join(self.arch.arch,'include','petscconf.h')
     self.framework.cHeader         = os.path.join(self.arch.arch,'include','petscfix.h')
+    self.framework.poisonheader    = os.path.join(self.arch.arch,'include','petscconf_poison.h')
     self.framework.pkgheader       = os.path.join(self.arch.arch,'include','petscpkg_version.h')
     self.framework.makeMacroHeader = os.path.join(self.arch.arch,'lib','petsc','conf','petscvariables')
     self.framework.makeRuleHeader  = os.path.join(self.arch.arch,'lib','petsc','conf','petscrules')

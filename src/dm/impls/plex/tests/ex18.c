@@ -311,7 +311,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     options->interpolate  = CREATE;
     options->distribute   = PETSC_FALSE;
   }
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -566,15 +566,13 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, PetscBool interpolate, App
   default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %D", testNum);
   }
   if (user->testOrientIF) {
-    PetscInt start;
-    PetscBool reverse;
     PetscInt ifp[] = {8, 6};
 
     ierr = PetscObjectSetName((PetscObject) *dm, "Mesh before orientation");CHKERRQ(ierr);
     ierr = DMViewFromOptions(*dm, NULL, "-before_orientation_dm_view");CHKERRQ(ierr);
     /* rotate interface face ifp[rank] by given orientation ornt[rank] */
-    ierr = DMPlexFixFaceOrientations_Translate_Private(user->ornt[rank], &start, &reverse);CHKERRQ(ierr);
-    ierr = DMPlexOrientCell_Internal(*dm, ifp[rank], start, reverse);CHKERRQ(ierr);
+    ierr = DMPlexOrientPoint(*dm, ifp[rank], user->ornt[rank]);CHKERRQ(ierr);
+    ierr = DMViewFromOptions(*dm, NULL, "-before_orientation_dm_view");CHKERRQ(ierr);
     ierr = DMPlexCheckFaces(*dm, 0);CHKERRQ(ierr);
     ierr = DMPlexOrientInterface_Internal(*dm);CHKERRQ(ierr);
     ierr = PetscPrintf(comm, "Orientation test PASSED\n");CHKERRQ(ierr);
@@ -1083,7 +1081,7 @@ static PetscErrorCode VecToPetscReal_Private(Vec vec, PetscReal *rvals[])
     for (i=0; i<n; i++) (*rvals)[i] = PetscRealPart(svals[i]);
   }
 #else
-  ierr = PetscMemcpy(*rvals, svals, n*sizeof(PetscReal));
+  ierr = PetscMemcpy(*rvals, svals, n*sizeof(PetscReal));CHKERRQ(ierr);
 #endif
   ierr = VecRestoreArrayRead(vec, &svals);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1433,7 +1431,7 @@ static PetscErrorCode ViewPointsWithType(DM dm, IS points, PetscViewer v)
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)v, PETSCVIEWERASCII, &flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Only for ASCII viewer");CHKERRQ(ierr);
+  if (!flg) SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Only for ASCII viewer");
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)v), &rank);CHKERRMPI(ierr);
   ierr = PetscViewerASCIIPushSynchronized(v);CHKERRQ(ierr);
   ierr = ISGetLocalSize(points, &npoints);CHKERRQ(ierr);

@@ -72,7 +72,7 @@ PetscErrorCode PetscStackSAWsViewOff(void)
 
 #  endif
 
-PetscErrorCode PetscStackCreate(void)
+PetscErrorCode PetscStackCreate(PetscBool check)
 {
   PetscStack *petscstack_in;
   PetscInt   i;
@@ -82,6 +82,7 @@ PetscErrorCode PetscStackCreate(void)
   petscstack_in              = (PetscStack*)malloc(sizeof(PetscStack));
   petscstack_in->currentsize = 0;
   petscstack_in->hotdepth    = 0;
+  petscstack_in->check       = check;
   for (i=0; i<PETSCSTACKSIZE; i++) {
     petscstack_in->function[i] = NULL;
     petscstack_in->file[i]     = NULL;
@@ -157,7 +158,7 @@ PetscErrorCode  PetscStackPrint(PetscStack *sint,FILE *fp)
   int i;
 
   if (!sint) return(0);
-  for (i=sint->currentsize-2; i>=0; i--) fprintf(fp,"      [%d]  %s() line %d in %s\n",PetscGlobalRank,sint->function[i],sint->line[i],sint->file[i]);
+  for (i=sint->currentsize-2; i>=0; i--) fprintf(fp,"      [%d]  %s() at %s:%d\n",PetscGlobalRank,sint->function[i],sint->file[i],sint->line[i]);
   return 0;
 }
 

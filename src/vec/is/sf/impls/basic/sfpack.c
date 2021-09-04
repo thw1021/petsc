@@ -4,14 +4,6 @@
 
 /* This is a C file that contains packing facilities, with dispatches to device if enabled. */
 
-#if defined(PETSC_HAVE_CUDA)
-#include <cuda_runtime.h>
-#include <petsccublas.h>
-#endif
-#if defined(PETSC_HAVE_HIP)
-#include <hip/hip_runtime.h>
-#include <petschipblas.h>
-#endif
 /*
  * MPI_Reduce_local is not really useful because it can't handle sparse data and it vectorizes "in the wrong direction",
  * therefore we pack data types manually. This file defines packing routines for the standard data types.
@@ -1166,7 +1158,7 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
-  if (sf->leafbuflen[scope]) {ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);}
+  if (sf->leafbuflen[scope]) {ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);CHKERRQ(ierr);}
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (scope == PETSCSF_REMOTE) {
     if (link->PostUnpack) {ierr = (*link->PostUnpack)(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}  /* Used by SF nvshmem */
@@ -1212,6 +1204,7 @@ PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirect
   char                 *srcbuf = NULL,*dstbuf = NULL;
   PetscBool            dstdups;
 
+  PetscFunctionBegin;
   if (!buflen) PetscFunctionReturn(0);
   if (rootmtype != leafmtype) { /* The cross memory space local scatter is done by pack, copy and unpack */
     if (direction == PETSCSF_ROOT2LEAF) {

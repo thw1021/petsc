@@ -9,17 +9,19 @@ class Configure(config.package.CMakePackage):
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
     self.downloaddirnames = ['kokkos']
     self.excludedDirs     = ['kokkos-kernels'] # Do not wrongly think kokkos-kernels as kokkos-vernum
-    #TODO: We should use CUDAC (instead of CXX) to validate the headers. Using CXX does not work with newer Kokkos.
-    #self.includes         = ['Kokkos_Macros.hpp']
+    # TODO: Currently the BuildSystem checks C++ headers blindly using CXX. However, when Kokkos is compiled by CUDAC for example, using
+    # CXX to compile a Kokkos code raises an error. As a workaround, we set this field to skip checking headers in includes.
+    self.doNotCheckIncludes = 1
+    self.includes         = ['Kokkos_Macros.hpp']
     self.liblist          = [['libkokkoscontainers.a','libkokkoscore.a']]
     self.functions        = ['']
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
     self.cxx              = 1
+    self.minCxxxVersion   = 'c++14'
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['single','double']
-    self.kokkos_cxxdialect = 'C++14' # requirement for which compiler is used to compile Kokkos
     return
 
   def __str__(self):
@@ -75,7 +77,6 @@ class Configure(config.package.CMakePackage):
     if self.checkSharedLibrariesEnabled():
       args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
       args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
-    args.append('-DCMAKE_CXX_STANDARD=' + self.compilers.cxxdialect[-2:])
 
     if self.mpi.found:
       args.append('-DKokkos_ENABLE_MPI=ON')
@@ -137,7 +138,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DKokkos_ENABLE_HIP=ON')
       with self.Language('HIP'):
         petscHipc = self.getCompiler()
-        hipFlags = self.updatePackageCFlags(self.getCompilerFlags())
+        hipFlags = self.updatePackageCxxFlags(self.getCompilerFlags())
       args.append('-DKOKKOS_HIP_OPTIONS="'+hipFlags.replace(' ',';')+'"')
       self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
       if not hasattr(self,'systemHipc'):
@@ -155,15 +156,10 @@ class Configure(config.package.CMakePackage):
 
     # set -DCMAKE_CXX_STANDARD=
     if not hasattr(self.compilers,lang+'dialect'):
-      raise RuntimeError('Could not determine C++ dialect for the '+lang.upper()+' Compiler')
-    else:
-      langdialect = getattr(self.compilers,lang+'dialect')
-      if langdialect < self.kokkos_cxxdialect:
-        raise RuntimeError('Kokkos requires '+self.kokkos_cxxdialect+' but the '+lang.upper()+ 'compiler only supports '+langdialect)
-      else:
-        args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
-        args.append('-DCMAKE_CXX_STANDARD="' + langdialect.split("C++",1)[1] + '"') # e.g., extract 14 from C++14
-
+      raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' Compiler')
+    langdialect = getattr(self.compilers,lang+'dialect')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+    args.append('-DCMAKE_CXX_STANDARD='+langdialect.split("C++",1)[1]) # e.g., extract 14 from C++14
     return args
 
   def configureLibrary(self):

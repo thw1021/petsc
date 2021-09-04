@@ -1,8 +1,9 @@
-#if !defined(__CUSPARSEMATIMPL)
-#define __CUSPARSEMATIMPL
+#if !defined(CUSPARSEMATIMPL)
+#define CUSPARSEMATIMPL
 
 #include <petscpkg_version.h>
 #include <petsc/private/cudavecimpl.h>
+#include <petscaijdevice.h>
 
 #include <cusparse_v2.h>
 
@@ -260,9 +261,9 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMMAlg_t            spmmAlg;
  #endif
   THRUSTINTARRAY               *csr2csc_i;
-  PetscSplitCSRDataStructure   *deviceMat;       /* Matrix on device for, eg, assembly */
-  THRUSTINTARRAY               *cooPerm;
-  THRUSTINTARRAY               *cooPerm_a;
+  PetscSplitCSRDataStructure   deviceMat;       /* Matrix on device for, eg, assembly */
+  THRUSTINTARRAY               *cooPerm;        /* permutation array that sorts the input coo entris by row and col */
+  THRUSTINTARRAY               *cooPerm_a;      /* ordered array that indicate i-th nonzero (after sorting) is the j-th unique nonzero */
 };
 
 PETSC_INTERN PetscErrorCode MatCUSPARSECopyToGPU(Mat);

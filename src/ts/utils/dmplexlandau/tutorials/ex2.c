@@ -121,7 +121,7 @@ static PetscReal CalculateE(PetscReal Tev, PetscReal n, PetscReal lnLambda, Pets
   PetscReal c,e,m;
 
   PetscFunctionBegin;
-  c = 299792458;
+  c = 299792458.0;
   e = 1.602176e-19;
   m = 9.10938e-31;
   if (1) {
@@ -440,7 +440,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if (time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
-    if ((reason || stepi==0 || rectx->plotIdx%10==0) && ctx->verbose > 0){
+    if ((reason || stepi==0 || rectx->plotIdx%10==0) && ctx->verbose > 0) {
       /* print norms */
       ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
     }
@@ -672,6 +672,8 @@ int main(int argc, char **argv)
   ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm,NULL,"-dm_view_sources");CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm,NULL,"-dm_view_diff");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view_0");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(X,NULL,"-vec_view_0");CHKERRQ(ierr); // inital condition (monitor plots after step)
   /* Create timestepping solver context */
   ierr = TSCreate(PETSC_COMM_SELF,&ts);CHKERRQ(ierr);
   ierr = TSSetDM(ts,dm);CHKERRQ(ierr);
@@ -692,12 +694,12 @@ int main(int argc, char **argv)
     ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
     ierr = VecDuplicate(X,&vec);CHKERRQ(ierr);
     ierr = VecCopy(X,vec);CHKERRQ(ierr);
-    ierr = TSGetMaxSteps(ts,&nsteps);
+    ierr = TSGetMaxSteps(ts,&nsteps);CHKERRQ(ierr);
     ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
-    ierr = TSSetMaxSteps(ts,1);
+    ierr = TSSetMaxSteps(ts,1);CHKERRQ(ierr);
     ierr = TSSetSolution(ts,vec);CHKERRQ(ierr);
     ierr = TSSolve(ts,vec);CHKERRQ(ierr);
-    ierr = TSSetMaxSteps(ts,nsteps);
+    ierr = TSSetMaxSteps(ts,nsteps);CHKERRQ(ierr);
     ierr = TSSetStepNumber(ts,0);CHKERRQ(ierr);
     ierr = TSSetTime(ts,0);CHKERRQ(ierr);
     ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
@@ -735,12 +737,12 @@ int main(int argc, char **argv)
 
   test:
     suffix: kokkos
-    requires: p4est !complex double kokkos_kernels !define(PETSC_USE_CTABLE)
-    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 1 -dm_preallocate_only -dm_landau_device_type kokkos -dm_landau_gpu_assembly true -dm_mat_type aijkokkos -dm_vec_type kokkos
+    requires: p4est !complex double kokkos_kernels
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 1 -dm_preallocate_only -dm_landau_device_type kokkos -dm_landau_gpu_assembly true -dm_mat_type aijkokkos -dm_vec_type kokkos
 
   test:
     suffix: cuda
-    requires: p4est !complex double cuda !define(PETSC_USE_CTABLE)
-    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :dm,tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 1 -dm_preallocate_only -dm_landau_device_type cuda -dm_landau_gpu_assembly true -dm_mat_type aijcusparse -dm_vec_type cuda
+    requires: p4est !complex double cuda
+    args: -dm_landau_Ez 0 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p4est -info :tsadapt -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -pc_type lu -ksp_type preonly -dm_landau_amr_levels_max 9 -dm_landau_domain_radius -.75 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 1 -dm_preallocate_only -dm_landau_device_type cuda -dm_landau_gpu_assembly true -dm_mat_type aijcusparse -dm_vec_type cuda
 
 TEST*/

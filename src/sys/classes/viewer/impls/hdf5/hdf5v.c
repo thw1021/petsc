@@ -455,6 +455,14 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_HDF5(PetscViewer v)
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+#if !defined(H5_HAVE_PARALLEL)
+  {
+    PetscMPIInt size;
+    ierr = MPI_Comm_size(PetscObjectComm((PetscObject)v), &size);CHKERRMPI(ierr);
+    if (size > 1) SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Cannot use parallel HDF5 viewer since the given HDF5 does not support parallel I/O (H5_HAVE_PARALLEL is unset)");
+  }
+#endif
+
   ierr = PetscNewLog(v,&hdf5);CHKERRQ(ierr);
 
   v->data                = (void*) hdf5;
@@ -1468,10 +1476,10 @@ PetscMPIInt Petsc_Viewer_HDF5_keyval = MPI_KEYVAL_INVALID;
   Level: intermediate
 
   Options Database Keys:
-. -viewer_hdf5_filename <name>
+. -viewer_hdf5_filename <name> - name of the HDF5 file
 
   Environmental variables:
-. PETSC_VIEWER_HDF5_FILENAME
+. PETSC_VIEWER_HDF5_FILENAME - name of the HDF5 file
 
   Notes:
   Unlike almost all other PETSc routines, PETSC_VIEWER_HDF5_ does not return

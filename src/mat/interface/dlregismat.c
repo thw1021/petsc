@@ -103,7 +103,7 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_ScaLAPACK(void);
 #if defined(PETSC_HAVE_MATLAB_ENGINE)
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Matlab(void);
 #endif
-#if defined(PETSC_HAVE_PETSC_HAVE_ESSL)
+#if defined(PETSC_HAVE_ESSL)
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Essl(void);
 #endif
 #if defined(PETSC_HAVE_SUPERLU)
@@ -199,6 +199,9 @@ PetscErrorCode  MatInitializePackage(void)
   ierr = PetscLogEventRegister("MatLUFactor",      MAT_CLASSID,&MAT_LUFactor);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatLUFactorSym",   MAT_CLASSID,&MAT_LUFactorSymbolic);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatLUFactorNum",   MAT_CLASSID,&MAT_LUFactorNumeric);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatQRFactor",      MAT_CLASSID,&MAT_QRFactor);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatQRFactorSym",   MAT_CLASSID,&MAT_QRFactorSymbolic);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("MatQRFactorNum",   MAT_CLASSID,&MAT_QRFactorNumeric);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatCholeskyFctr",  MAT_CLASSID,&MAT_CholeskyFactor);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatCholFctrSym",   MAT_CLASSID,&MAT_CholeskyFactorSymbolic);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("MatCholFctrNum",   MAT_CLASSID,&MAT_CholeskyFactorNumeric);CHKERRQ(ierr);
@@ -406,7 +409,7 @@ PetscErrorCode  MatInitializePackage(void)
 #if defined(PETSC_HAVE_MATLAB_ENGINE)
   ierr = MatSolverTypeRegister_Matlab();CHKERRQ(ierr);
 #endif
-#if defined(PETSC_HAVE_PETSC_HAVE_ESSL)
+#if defined(PETSC_HAVE_ESSL)
   ierr = MatSolverTypeRegister_Essl();CHKERRQ(ierr);
 #endif
 #if defined(PETSC_HAVE_SUPERLU)

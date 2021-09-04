@@ -854,6 +854,7 @@ PetscErrorCode  DMSetUp(DM dm)
 . -dm_extrude_layers <l>            - The number of layers to extrude
 . -dm_extrude_thickness <t>         - The thickness of the layer to be extruded
 . -dm_extrude_column_first <bool>   - Order the cells in a vertical column first
+. -dm_extrude_symmetric <bool>      - Extrude layers symmetrically about the surface
 . -dm_plex_create_fv_ghost_cells    - Flag to create finite volume ghost cells on the boundary
 . -dm_plex_fv_ghost_cells_label <name> - Label name for ghost cells boundary
 . -dm_distribute <bool>             - Flag to redistribute a mesh among processes
@@ -1381,6 +1382,9 @@ PetscErrorCode  DMCreateColoring(DM dm,ISColoringType ctype,ISColoring *coloring
 
     Level: beginner
 
+    Options Database Keys:
+. -dm_preallocate_only - Only preallocate the matrix for DMCreateMatrix(), but do not fill it with zeros
+
     Notes:
     This properly preallocates the number of nonzeros in the sparse matrix so you
        do not need to do it yourself.
@@ -1451,6 +1455,10 @@ PetscErrorCode  DMCreateMatrix(DM dm,Mat *mat)
 - only - PETSC_TRUE if only want preallocation
 
   Level: developer
+
+  Options Database Keys:
+. -dm_preallocate_only - Only preallocate the matrix for DMCreateMatrix(), but do not fill it with zeros
+
 .seealso DMCreateMatrix(), DMSetMatrixStructureOnly()
 @*/
 PetscErrorCode DMSetMatrixPreallocateOnly(DM dm, PetscBool only)
@@ -2093,7 +2101,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters(DM dm,PetscInt n,DM *subdms,V
   Output Parameter:
 . dmf - the refined DM, or NULL
 
-  Options Dtabase Keys:
+  Options Database Keys:
 . -dm_plex_cell_refiner <strategy> - chooses the refinement strategy, e.g. regular, tohex
 
   Note: If no refinement was done, the return value is NULL
@@ -5807,6 +5815,7 @@ PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, PetscDS ds
   PetscDS        dsNew;
   DSBoundary     b;
   PetscInt       cdim, Nf, f;
+  PetscBool      isHybrid;
   void          *ctx;
   PetscErrorCode ierr;
 
@@ -5831,6 +5840,8 @@ PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, PetscDS ds
     /* Do not check if label exists here, since p4est calls this for the reference tree which does not have the labels */
     //if (!b->label) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Label %s missing in new DM", name);
   }
+  ierr = PetscDSGetHybrid(ds, &isHybrid);CHKERRQ(ierr);
+  ierr = PetscDSSetHybrid(dsNew, isHybrid);CHKERRQ(ierr);
 
   ierr = DMSetRegionDS(dm, label, fields, dsNew);CHKERRQ(ierr);
   ierr = PetscDSDestroy(&dsNew);CHKERRQ(ierr);
@@ -5868,16 +5879,19 @@ PetscErrorCode DMCopyDS(DM dm, DM newdm)
     PetscInt Nbd, bd;
 
     ierr = DMGetRegionNumDS(dm, s, &label, &fields, &ds);CHKERRQ(ierr);
+    /* TODO: We need to change all keys from labels in the old DM to labels in the new DM */
     ierr = DMTransferDS_Internal(newdm, label, fields, ds);CHKERRQ(ierr);
     /* Commplete new labels in the new DS */
     ierr = DMGetRegionDS(newdm, label, NULL, &newds);CHKERRQ(ierr);
     ierr = PetscDSGetNumBoundary(newds, &Nbd);CHKERRQ(ierr);
     for (bd = 0; bd < Nbd; ++bd) {
-      DMLabel  label;
-      PetscInt field;
+      PetscWeakForm wf;
+      DMLabel       label;
+      PetscInt      field;
 
-      ierr = PetscDSGetBoundary(newds, bd, NULL, NULL, NULL, &label, NULL, NULL, &field, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
+      ierr = PetscDSGetBoundary(newds, bd, &wf, NULL, NULL, &label, NULL, NULL, &field, NULL, NULL, NULL, NULL, NULL);CHKERRQ(ierr);
       ierr = DMCompleteBoundaryLabel_Internal(newdm, newds, field, bd, label);CHKERRQ(ierr);
+      ierr = PetscWeakFormReplaceLabel(wf, label);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -6867,7 +6881,7 @@ PetscErrorCode DMGetCoordinatesLocalizedLocal(DM dm,PetscBool *areLocalized)
 {
   DM             cdm;
   PetscSection   coordSection;
-  PetscInt       cStart, cEnd, sStart, sEnd, c, dof;
+  PetscInt       depth, cStart, cEnd, sStart, sEnd, c, dof;
   PetscBool      isPlex, alreadyLocalized;
   PetscErrorCode ierr;
 
@@ -6880,6 +6894,8 @@ PetscErrorCode DMGetCoordinatesLocalizedLocal(DM dm,PetscBool *areLocalized)
   ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject) cdm, DMPLEX, &isPlex);CHKERRQ(ierr);
   if (!isPlex) PetscFunctionReturn(0);
+  ierr = DMPlexGetDepth(cdm, &depth);CHKERRQ(ierr);
+  if (!depth) PetscFunctionReturn(0);
 
   ierr = DMGetCoordinateSection(dm, &coordSection);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(cdm, 0, &cStart, &cEnd);CHKERRQ(ierr);
@@ -8191,6 +8207,20 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all)
   }
   PetscFunctionReturn(0);
 }
+
+PetscErrorCode DMSetLabelValue_Fast(DM dm, DMLabel *label, const char name[], PetscInt point, PetscInt value)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidPointer(label,2);
+  if (!*label) {
+    ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
+    ierr = DMGetLabel(dm, name, label);CHKERRQ(ierr);
+  }
+  ierr = DMLabelSetValue(*label, point, value);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*
   Many mesh programs, such as Triangle and TetGen, allow only a single label for each mesh point. Therefore, we would
   like to encode all label IDs using a single, universal label. We can do this by assigning an integer to every
@@ -9587,7 +9617,7 @@ PetscErrorCode DMComputeError(DM dm, Vec sol, PetscReal errors[], Vec *errorVec)
     }
     ierr = DMCreateDS(edm);CHKERRQ(ierr);
 
-    ierr = DMCreateGlobalVector(edm, errorVec);
+    ierr = DMCreateGlobalVector(edm, errorVec);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) *errorVec, "Error");CHKERRQ(ierr);
     ierr = DMPlexComputeL2DiffVec(dm, time, exactSol, ctxs, sol, *errorVec);CHKERRQ(ierr);
     ierr = DMDestroy(&edm);CHKERRQ(ierr);
@@ -9750,5 +9780,180 @@ PetscErrorCode DMCopyAuxiliaryVec(DM dm, DM dmNew)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   ierr = PetscHMapAuxDestroy(&dmNew->auxData);CHKERRQ(ierr);
   ierr = PetscHMapAuxDuplicate(dm->auxData, &dmNew->auxData);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  DMPolytopeMatchOrientation - Determine an orientation that takes the source face arrangement to the target face arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceCone - The source arrangement of faces
+- targetCone - The target arrangement of faces
+
+  Output Parameters:
++ ornt  - The orientation which will take the source arrangement to the target arrangement
+- found - Flag indicating that a suitable orientation was found
+
+  Level: advanced
+
+.seealso: DMPolytopeGetOrientation(), DMPolytopeMatchVertexOrientation()
+@*/
+PetscErrorCode DMPolytopeMatchOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt, PetscBool *found)
+{
+  const PetscInt cS = DMPolytopeTypeGetConeSize(ct);
+  const PetscInt nO = DMPolytopeTypeGetNumArrangments(ct)/2;
+  PetscInt       o, c;
+
+  PetscFunctionBegin;
+  if (!nO) {*ornt = 0; *found = PETSC_TRUE; PetscFunctionReturn(0);}
+  for (o = -nO; o < nO; ++o) {
+    const PetscInt *arr = DMPolytopeTypeGetArrangment(ct, o);
+
+    for (c = 0; c < cS; ++c) if (sourceCone[arr[c*2]] != targetCone[c]) break;
+    if (c == cS) {*ornt = o; break;}
+  }
+  *found = o == nO ? PETSC_FALSE : PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  DMPolytopeGetOrientation - Determine an orientation that takes the source face arrangement to the target face arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceCone - The source arrangement of faces
+- targetCone - The target arrangement of faces
+
+  Output Parameters:
+. ornt  - The orientation which will take the source arrangement to the target arrangement
+
+  Note: This function will fail if no suitable orientation can be found.
+
+  Level: advanced
+
+.seealso: DMPolytopeMatchOrientation(), DMPolytopeGetVertexOrientation()
+@*/
+PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt)
+{
+  PetscBool      found;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMPolytopeMatchOrientation(ct, sourceCone, targetCone, ornt, &found);CHKERRQ(ierr);
+  if (!found) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find orientation for %s", DMPolytopeTypes[ct]);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  DMPolytopeMatchVertexOrientation - Determine an orientation that takes the source vertex arrangement to the target vertex arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceVert - The source arrangement of vertices
+- targetVert - The target arrangement of vertices
+
+  Output Parameters:
++ ornt  - The orientation which will take the source arrangement to the target arrangement
+- found - Flag indicating that a suitable orientation was found
+
+  Level: advanced
+
+.seealso: DMPolytopeGetOrientation(), DMPolytopeMatchOrientation()
+@*/
+PetscErrorCode DMPolytopeMatchVertexOrientation(DMPolytopeType ct, const PetscInt sourceVert[], const PetscInt targetVert[], PetscInt *ornt, PetscBool *found)
+{
+  const PetscInt cS = DMPolytopeTypeGetNumVertices(ct);
+  const PetscInt nO = DMPolytopeTypeGetNumArrangments(ct)/2;
+  PetscInt       o, c;
+
+  PetscFunctionBegin;
+  if (!nO) {*ornt = 0; *found = PETSC_TRUE; PetscFunctionReturn(0);}
+  for (o = -nO; o < nO; ++o) {
+    const PetscInt *arr = DMPolytopeTypeGetVertexArrangment(ct, o);
+
+    for (c = 0; c < cS; ++c) if (sourceVert[arr[c]] != targetVert[c]) break;
+    if (c == cS) {*ornt = o; break;}
+  }
+  *found = o == nO ? PETSC_FALSE : PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  DMPolytopeGetVertexOrientation - Determine an orientation that takes the source vertex arrangement to the target vertex arrangement
+
+  Not collective
+
+  Input Parameters:
++ ct         - The DMPolytopeType
+. sourceCone - The source arrangement of vertices
+- targetCone - The target arrangement of vertices
+
+  Output Parameters:
+. ornt  - The orientation which will take the source arrangement to the target arrangement
+
+  Note: This function will fail if no suitable orientation can be found.
+
+  Level: advanced
+
+.seealso: DMPolytopeMatchVertexOrientation(), DMPolytopeGetOrientation()
+@*/
+PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType ct, const PetscInt sourceCone[], const PetscInt targetCone[], PetscInt *ornt)
+{
+  PetscBool      found;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMPolytopeMatchVertexOrientation(ct, sourceCone, targetCone, ornt, &found);CHKERRQ(ierr);
+  if (!found) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find orientation for %s", DMPolytopeTypes[ct]);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  DMPolytopeInCellTest - Check whether a point lies inside the reference cell of given type
+
+  Not collective
+
+  Input Parameters:
++ ct    - The DMPolytopeType
+- point - Coordinates of the point
+
+  Output Parameters:
+. inside  - Flag indicating whether the point is inside the reference cell of given type
+
+  Level: advanced
+
+.seealso: DMLocatePoints()
+@*/
+PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], PetscBool *inside)
+{
+  PetscReal sum = 0.0;
+  PetscInt  d;
+
+  PetscFunctionBegin;
+  *inside = PETSC_TRUE;
+  switch (ct) {
+  case DM_POLYTOPE_TRIANGLE:
+  case DM_POLYTOPE_TETRAHEDRON:
+    for (d = 0; d < DMPolytopeTypeGetDim(ct); ++d) {
+      if (point[d] < -1.0) {*inside = PETSC_FALSE; break;}
+      sum += point[d];
+    }
+    if (sum > PETSC_SMALL) {*inside = PETSC_FALSE; break;}
+    break;
+  case DM_POLYTOPE_QUADRILATERAL:
+  case DM_POLYTOPE_HEXAHEDRON:
+    for (d = 0; d < DMPolytopeTypeGetDim(ct); ++d)
+      if (PetscAbsReal(point[d]) > 1.+PETSC_SMALL) {*inside = PETSC_FALSE; break;}
+    break;
+  default:
+    SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unsupported polytope type %s", DMPolytopeTypes[ct]);
+  }
   PetscFunctionReturn(0);
 }

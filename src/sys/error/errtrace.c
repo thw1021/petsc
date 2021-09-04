@@ -175,7 +175,6 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
   PetscBool      flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,flg3 = PETSC_FALSE;
   PetscMPIInt    rank = 0;
 
-  PetscFunctionBegin;
   if (comm != PETSC_COMM_SELF) MPI_Comm_rank(comm,&rank);
 
   if (!rank) {
@@ -207,7 +206,7 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
         if (text) (*PetscErrorPrintf)("%s\n",text);
       }
       if (mess) (*PetscErrorPrintf)("%s\n",mess);
-      (*PetscErrorPrintf)("See https://www.mcs.anl.gov/petsc/documentation/faq.html for trouble shooting.\n");
+      (*PetscErrorPrintf)("See https://petsc.org/release/faq/ for trouble shooting.\n");
       (*PetscErrorPrintf)("%s\n",version);
       if (PetscErrorPrintfInitializeCalled) (*PetscErrorPrintf)("%s on a %s named %s by %s %s\n",pname,arch,hostname,username,date);
       (*PetscErrorPrintf)("Configure options %s\n",petscconfigureoptions);
@@ -229,6 +228,5 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
     PetscSleep(10.0);
     exit(0);
   }
-  PetscFunctionReturn(n);
+  return n;
 }
-

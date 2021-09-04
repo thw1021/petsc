@@ -340,7 +340,7 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
   if (!pc->setupcalled) {
         /* use a hierarchical partitioning */
-    if (osm->hierarchicalpartitioning){
+    if (osm->hierarchicalpartitioning) {
       ierr = PCGASMSetHierarchicalPartitioning(pc);CHKERRQ(ierr);
     }
     if (osm->n == PETSC_DETERMINE) {
@@ -441,7 +441,7 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
     }
     ierr = ISCreateGeneral(((PetscObject)(pc))->comm,on,oidx,PETSC_OWN_POINTER,&gois);CHKERRQ(ierr);
     nTotalInnerIndices = 0;
-    for (i=0; i<osm->n; i++){
+    for (i=0; i<osm->n; i++) {
       ierr = ISGetLocalSize(osm->iis[i],&nInnerIndices);CHKERRQ(ierr);
       nTotalInnerIndices += nInnerIndices;
     }
@@ -482,7 +482,7 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
       in   = 0;
       for (i=0; i<osm->n; i++) {
         ierr   = ISGetLocalSize(osm->iis[i],&ini);CHKERRQ(ierr);
-        for (k = 0; k < ini; ++k){
+        for (k = 0; k < ini; ++k) {
           array[in+k] = numbering[i];
         }
         in += ini;
@@ -567,7 +567,7 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
       ierr  = MatDestroyMatrices(osm->n,&osm->pmat);CHKERRQ(ierr);
       scall = MAT_INITIAL_MATRIX;
     }
-    if (osm->permutationIS){
+    if (osm->permutationIS) {
       ierr = MatCreateSubMatrix(pc->pmat,osm->permutationIS,osm->permutationIS,scall,&osm->permutationP);CHKERRQ(ierr);
       ierr = PetscObjectReference((PetscObject)osm->permutationP);CHKERRQ(ierr);
       osm->pcmat = pc->pmat;
@@ -606,7 +606,7 @@ static PetscErrorCode PCSetUp_GASM(PC pc)
       ierr = KSPSetFromOptions(osm->ksp[i]);CHKERRQ(ierr);
     }
   }
-  if (osm->pcmat){
+  if (osm->pcmat) {
     ierr = MatDestroy(&pc->pmat);CHKERRQ(ierr);
     pc->pmat   = osm->pcmat;
     osm->pcmat = NULL;
@@ -700,12 +700,12 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
     ierr = VecGetSize(osm->pcx,&M);CHKERRQ(ierr);
     ierr = MatCreateDense(PetscObjectComm((PetscObject)osm->ois[0]),m,PETSC_DECIDE,M,N,NULL,&O);CHKERRQ(ierr);
     for (i = 0; i < N; ++i) {
-      ierr = MatDenseGetColumnVecRead(Xin,i,&x);
-      ierr = MatDenseGetColumnVecWrite(O,i,&y);
+      ierr = MatDenseGetColumnVecRead(Xin,i,&x);CHKERRQ(ierr);
+      ierr = MatDenseGetColumnVecWrite(O,i,&y);CHKERRQ(ierr);
       ierr = VecScatterBegin(osm->pctoouter,x,y,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->pctoouter,x,y,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecWrite(O,i,&y);
-      ierr = MatDenseRestoreColumnVecRead(Xin,i,&x);
+      ierr = MatDenseRestoreColumnVecWrite(O,i,&y);CHKERRQ(ierr);
+      ierr = MatDenseRestoreColumnVecRead(Xin,i,&x);CHKERRQ(ierr);
     }
     X = Y = O;
   } else {
@@ -720,8 +720,8 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
   ierr = VecGetSize(osm->x[0],&M);CHKERRQ(ierr);
   ierr = MatCreateDense(PetscObjectComm((PetscObject)osm->ois[0]),m,PETSC_DECIDE,M,N,NULL,&Z);CHKERRQ(ierr);
   for (i = 0; i < N; ++i) {
-    ierr = MatDenseGetColumnVecRead(X,i,&x);
-    ierr = MatDenseGetColumnVecWrite(Z,i,&y);
+    ierr = MatDenseGetColumnVecRead(X,i,&x);CHKERRQ(ierr);
+    ierr = MatDenseGetColumnVecWrite(Z,i,&y);CHKERRQ(ierr);
     if (!(osm->type & PC_GASM_RESTRICT)) {
       /* have to zero the work RHS since scatter may leave some slots empty */
       ierr = VecZeroEntries(y);CHKERRQ(ierr);
@@ -731,8 +731,8 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
       ierr = VecScatterBegin(osm->gorestriction,x,y,INSERT_VALUES,forward);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->gorestriction,x,y,INSERT_VALUES,forward);CHKERRQ(ierr);
     }
-    ierr = MatDenseRestoreColumnVecWrite(Z,i,&y);
-    ierr = MatDenseRestoreColumnVecRead(X,i,&x);
+    ierr = MatDenseRestoreColumnVecWrite(Z,i,&y);CHKERRQ(ierr);
+    ierr = MatDenseRestoreColumnVecRead(X,i,&x);CHKERRQ(ierr);
   }
   ierr = MatCreateDense(PetscObjectComm((PetscObject)osm->ois[0]),m,PETSC_DECIDE,M,N,NULL,&W);CHKERRQ(ierr);
   ierr = MatSetOption(Z,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
@@ -745,8 +745,8 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
   /* do we need to zero y? */
   ierr = MatZeroEntries(Y);CHKERRQ(ierr);
   for (i = 0; i < N; ++i) {
-    ierr = MatDenseGetColumnVecWrite(Y,i,&y);
-    ierr = MatDenseGetColumnVecRead(W,i,&x);
+    ierr = MatDenseGetColumnVecWrite(Y,i,&y);CHKERRQ(ierr);
+    ierr = MatDenseGetColumnVecRead(W,i,&x);CHKERRQ(ierr);
     if (!(osm->type & PC_GASM_INTERPOLATE)) {
       ierr = VecScatterBegin(osm->girestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->girestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
@@ -754,14 +754,14 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
       ierr = VecScatterBegin(osm->gorestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->gorestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
     }
-    ierr = MatDenseRestoreColumnVecRead(W,i,&x);
+    ierr = MatDenseRestoreColumnVecRead(W,i,&x);CHKERRQ(ierr);
     if (osm->pctoouter) {
-      ierr = MatDenseGetColumnVecWrite(Yout,i,&x);
+      ierr = MatDenseGetColumnVecWrite(Yout,i,&x);CHKERRQ(ierr);
       ierr = VecScatterBegin(osm->pctoouter,y,x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->pctoouter,y,x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecRead(Yout,i,&x);
+      ierr = MatDenseRestoreColumnVecRead(Yout,i,&x);CHKERRQ(ierr);
     }
-    ierr = MatDenseRestoreColumnVecWrite(Y,i,&y);
+    ierr = MatDenseRestoreColumnVecWrite(Y,i,&y);CHKERRQ(ierr);
   }
   ierr = MatDestroy(&W);CHKERRQ(ierr);
   ierr = MatDestroy(&O);CHKERRQ(ierr);
@@ -777,7 +777,7 @@ static PetscErrorCode PCApplyTranspose_GASM(PC pc,Vec xin,Vec yout)
   ScatterMode    forward = SCATTER_FORWARD,reverse = SCATTER_REVERSE;
 
   PetscFunctionBegin;
-  if (osm->pctoouter){
+  if (osm->pctoouter) {
    ierr = VecScatterBegin(osm->pctoouter,xin,osm->pcx,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
    ierr = VecScatterEnd(osm->pctoouter,xin,osm->pcx,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
    x = osm->pcx;
@@ -819,7 +819,7 @@ static PetscErrorCode PCApplyTranspose_GASM(PC pc,Vec xin,Vec yout)
     ierr = VecScatterBegin(osm->gorestriction,osm->gy,y,ADD_VALUES,reverse);CHKERRQ(ierr);
     ierr = VecScatterEnd(osm->gorestriction,osm->gy,y,ADD_VALUES,reverse);CHKERRQ(ierr);
   }
-  if (osm->pctoouter){
+  if (osm->pctoouter) {
    ierr = VecScatterBegin(osm->pctoouter,y,yout,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
    ierr = VecScatterEnd(osm->pctoouter,y,yout,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   }
@@ -866,22 +866,22 @@ static PetscErrorCode PCReset_GASM(PC pc)
     osm->N    = PETSC_DETERMINE;
     osm->nmax = PETSC_DETERMINE;
   }
-  if (osm->pctoouter){
+  if (osm->pctoouter) {
         ierr = VecScatterDestroy(&(osm->pctoouter));CHKERRQ(ierr);
   }
-  if (osm->permutationIS){
+  if (osm->permutationIS) {
         ierr = ISDestroy(&(osm->permutationIS));CHKERRQ(ierr);
   }
-  if (osm->pcx){
+  if (osm->pcx) {
         ierr = VecDestroy(&(osm->pcx));CHKERRQ(ierr);
   }
-  if (osm->pcy){
+  if (osm->pcy) {
         ierr = VecDestroy(&(osm->pcy));CHKERRQ(ierr);
   }
-  if (osm->permutationP){
+  if (osm->permutationP) {
     ierr = MatDestroy(&(osm->permutationP));CHKERRQ(ierr);
   }
-  if (osm->pcmat){
+  if (osm->pcmat) {
         ierr = MatDestroy(&osm->pcmat);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

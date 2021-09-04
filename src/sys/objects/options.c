@@ -166,6 +166,7 @@ PetscErrorCode PetscOptionsDestroy(PetscOptions *options)
 {
   PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   if (!*options) return 0;
   if ((*options)->previous) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"You are destroying an option that has been used with PetscOptionsPush() but does not have a corresponding PetscOptionsPop()");
   ierr = PetscOptionsClear(*options);if (ierr) return ierr;
@@ -407,8 +408,8 @@ static PetscErrorCode PetscOptionsFilename(MPI_Comm comm,const char file[],char 
   char           fname[PETSC_MAX_PATH_LEN+8],path[PETSC_MAX_PATH_LEN+8],*tail;
   PetscErrorCode ierr;
 
-  *yaml = PETSC_FALSE;
   PetscFunctionBegin;
+  *yaml = PETSC_FALSE;
   ierr = PetscStrreplace(comm,file,fname,sizeof(fname));CHKERRQ(ierr);
   ierr = PetscFixFilename(fname,path);CHKERRQ(ierr);
   ierr = PetscStrendswith(path,":yaml",yaml);CHKERRQ(ierr);
@@ -456,7 +457,6 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm,PetscOptions opt
   PetscBool      isdir,alias=PETSC_FALSE,valid;
 
   PetscFunctionBegin;
-
   ierr = PetscMemzero(tokens,sizeof(tokens));CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (!rank) {
@@ -567,7 +567,7 @@ destroy:
   counts[0] = acnt;
   counts[1] = cnt;
   err = MPI_Bcast(counts,2,MPI_INT,0,comm);
-  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in first MPI collective call, could be caused by using an incorrect mpiexec or a network problem, it can be caused by having VPN running: see https://www.mcs.anl.gov/petsc/documentation/faq.html");
+  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in first MPI collective call, could be caused by using an incorrect mpiexec or a network problem, it can be caused by having VPN running: see https://petsc.org/release/faq/");
   acnt = counts[0];
   cnt = counts[1];
   if (rank) {
@@ -1630,8 +1630,8 @@ PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions options,PetscBool 
 }
 
 /*@C
-   PetscOptionsHasName - Determines whether a certain option is given in the database. This returns true whether the option is a number, string or boolean, even
-                      its value is set to false.
+   PetscOptionsHasName - Determines whether a certain option is given in the database. This returns true whether the option is a number, string or Boolean, even
+                      if its value is set to false.
 
    Not Collective
 

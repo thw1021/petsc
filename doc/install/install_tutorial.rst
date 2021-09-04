@@ -8,7 +8,7 @@ QQTW (Quickest Quick-start in The West)
 =======================================
 
 On systems where MPI and `BLAS/LAPACK <https://www.netlib.org/lapack/lug/node11.html>`__
-are installed:
+are installed, :ref:`download <doc_download>` PETSc and build with:
 
 .. code-block:: console
 
@@ -99,7 +99,7 @@ and in your ``$PATH``). To test the compilers, run the following commands:
 
    .. code-block:: console
 
-      > printf '#include<iostream>\nint main(){std::cout<<"c++ OK!"<<std::endl;}' > t.cpp && cc++ t.cpp && ./a.out && rm -f t.cpp a.out
+      > printf '#include<iostream>\nint main(){std::cout<<"c++ OK!"<<std::endl;}' > t.cpp && c++ t.cpp && ./a.out && rm -f t.cpp a.out
       > printf 'program t\nprint"(a)","gfortran OK!"\nend program' > t.f90 && gfortran t.f90 && ./a.out && rm -f t.f90 a.out
 
 If compilers are working, each command should print out ``<compiler_name> OK!`` on the command

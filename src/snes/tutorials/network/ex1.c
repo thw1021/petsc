@@ -516,23 +516,23 @@ int main(int argc,char **argv)
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
     for (i=0; i<Nsubnet; i++) {
       ierr = DMNetworkGetSubnetwork(networkdm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%d] ne %d, nv %d\n",rank,i,ne,nv);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%d] ne %d, nv %d\n",rank,i,ne,nv);CHKERRQ(ierr);
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
       for (v=0; v<nv; v++) {
         ierr = DMNetworkIsGhostVertex(networkdm,vtx[v],&ghost);CHKERRQ(ierr);
         ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d] v %d %d; ghost %d\n",rank,i,vtx[v],gidx,ghost);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d] v %d %d; ghost %d\n",rank,i,vtx[v],gidx,ghost);CHKERRQ(ierr);
       }
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
     ierr = DMNetworkGetSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of shared vertices nsv = %d\n",rank,nv);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of shared vertices nsv = %d\n",rank,nv);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] sv %d, gidx=%d\n",rank,vtx[v],gidx);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] sv %d, gidx=%d\n",rank,vtx[v],gidx);CHKERRQ(ierr);
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
   }
@@ -671,7 +671,7 @@ int main(int argc,char **argv)
 /*TEST
 
    build:
-     requires: !complex double define(PETSC_HAVE_ATTRIBUTEALIGNED)
+     requires: !complex double defined(PETSC_HAVE_ATTRIBUTEALIGNED)
      depends: power/PFReadData.c power/pffunctions.c water/waterreaddata.c water/waterfunctions.c
 
    test:

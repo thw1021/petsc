@@ -270,10 +270,10 @@ PetscErrorCode EXOGetVarIndex_Internal(int exoid, ex_entity_type obj_type, const
   PetscStackCallStandard(ex_get_variable_param,(exoid, obj_type, &num_vars));
   for (i = 0; i < num_vars; ++i) {
     PetscStackCallStandard(ex_get_variable_name,(exoid, obj_type, i+1, var_name));
-    for (j = 0; j < num_suffix; ++j){
+    for (j = 0; j < num_suffix; ++j) {
       ierr = PetscStrncpy(ext_name, name, MAX_STR_LENGTH);CHKERRQ(ierr);
       ierr = PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH);CHKERRQ(ierr);
-      ierr = PetscStrcasecmp(ext_name, var_name, &flg);
+      ierr = PetscStrcasecmp(ext_name, var_name, &flg);CHKERRQ(ierr);
       if (flg) {
         *varIndex = i+1;
       }
@@ -521,10 +521,10 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
             connect[i+off] = closure[(i-verticesInClosure+facesInClosure+1)*2] + 1;
             if (nodes[cs][2] == 0) connect[i+off] -= numFaces;
             connect[i+off] -= cellsNotInConnectivity;
-          } else if (i < nodes[cs][0]+nodes[cs][1]+nodes[cs][3]){ /* Cells */
+          } else if (i < nodes[cs][0]+nodes[cs][1]+nodes[cs][3]) { /* Cells */
             connect[i+off] = closure[0] + 1;
             connect[i+off] -= skipCells;
-          } else if (i < nodes[cs][0]+nodes[cs][1]+nodes[cs][3]+nodes[cs][2]){ /* Faces */
+          } else if (i < nodes[cs][0]+nodes[cs][1]+nodes[cs][3]+nodes[cs][2]) { /* Faces */
             connect[i+off] = closure[(i-edgesInClosure-verticesInClosure)*2] + 1;
             connect[i+off] -= cellsNotInConnectivity;
           } else {
@@ -609,7 +609,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       ierr = DMGetCoordinatesLocalNoncollective(dm, &coord);CHKERRQ(ierr);
       ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
       for (p = pStart; p < pEnd; ++p) {
-        ierr = PetscSectionGetDof(coordSection, p, &hasDof);
+        ierr = PetscSectionGetDof(coordSection, p, &hasDof);CHKERRQ(ierr);
         if (hasDof) {
           PetscInt closureSize = 24, j;
 
@@ -642,7 +642,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         ierr = DMLabelGetStratumIS(vsLabel, vsIdx[vs], &stratumIS);CHKERRQ(ierr);
         ierr = ISGetIndices(stratumIS, &vertices);CHKERRQ(ierr);
         ierr = ISGetSize(stratumIS, &vsSize);CHKERRQ(ierr);
-        ierr = PetscMalloc1(vsSize, &nodeList);
+        ierr = PetscMalloc1(vsSize, &nodeList);CHKERRQ(ierr);
         for (i=0; i<vsSize; ++i) {
           nodeList[i] = vertices[i] - skipCells + 1;
         }
@@ -1414,6 +1414,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
 {
 #if defined(PETSC_HAVE_EXODUSII)
   PetscMPIInt    num_proc, rank;
+  DMLabel        cellSets = NULL, faceSets = NULL, vertSets = NULL;
   PetscSection   coordSection;
   Vec            coordinates;
   PetscScalar    *coords;
@@ -1514,7 +1515,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
         ierr = DMPlexGetCellType(*dm, c, &ct);CHKERRQ(ierr);
         ierr = DMPlexInvertCell(ct, cone);CHKERRQ(ierr);
         ierr = DMPlexSetCone(*dm, c, cone);CHKERRQ(ierr);
-        ierr = DMSetLabelValue(*dm, "Cell Sets", c, cs_id[cs]);CHKERRQ(ierr);
+        ierr = DMSetLabelValue_Fast(*dm, &cellSets, "Cell Sets", c, cs_id[cs]);CHKERRQ(ierr);
       }
       ierr = PetscFree2(cs_connect,cone);CHKERRQ(ierr);
     }
@@ -1557,7 +1558,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
       ierr = PetscMalloc1(num_vertex_in_set, &vs_vertex_list);CHKERRQ(ierr);
       PetscStackCallStandard(ex_get_set,(exoid, EX_NODE_SET, vs_id[vs], vs_vertex_list, NULL));
       for (v = 0; v < num_vertex_in_set; ++v) {
-        ierr = DMSetLabelValue(*dm, "Vertex Sets", vs_vertex_list[v]+numCells-1, vs_id[vs]);CHKERRQ(ierr);
+        ierr = DMSetLabelValue_Fast(*dm, &vertSets, "Vertex Sets", vs_vertex_list[v]+numCells-1, vs_id[vs]);CHKERRQ(ierr);
       }
       ierr = PetscFree(vs_vertex_list);CHKERRQ(ierr);
     }
@@ -1632,7 +1633,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
         }
         ierr = DMPlexGetFullJoin(*dm, faceSize, faceVertices, &numFaces, &faces);CHKERRQ(ierr);
         if (numFaces != 1) SETERRQ3(comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %d faces", f, fs, numFaces);
-        ierr = DMSetLabelValue(*dm, "Face Sets", faces[0], fs_id[fs]);CHKERRQ(ierr);
+        ierr = DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", faces[0], fs_id[fs]);CHKERRQ(ierr);
         /* Only add the label if one has been detected for this side set. */
         if (!fs_name_err) {
           ierr = DMSetLabelValue(*dm, fs_name, faces[0], fs_id[fs]);CHKERRQ(ierr);
@@ -1642,6 +1643,19 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
       ierr = PetscFree2(fs_vertex_count_list,fs_vertex_list);CHKERRQ(ierr);
     }
     ierr = PetscFree(fs_id);CHKERRQ(ierr);
+  }
+
+  { /* Create Cell/Face/Vertex Sets labels at all processes */
+    enum {n = 3};
+    PetscBool flag[n];
+
+    flag[0] = cellSets ? PETSC_TRUE : PETSC_FALSE;
+    flag[1] = faceSets ? PETSC_TRUE : PETSC_FALSE;
+    flag[2] = vertSets ? PETSC_TRUE : PETSC_FALSE;
+    ierr = MPI_Bcast(flag, n, MPIU_BOOL, 0, comm);CHKERRMPI(ierr);
+    if (flag[0]) {ierr = DMCreateLabel(*dm, "Cell Sets");CHKERRQ(ierr);}
+    if (flag[1]) {ierr = DMCreateLabel(*dm, "Face Sets");CHKERRQ(ierr);}
+    if (flag[2]) {ierr = DMCreateLabel(*dm, "Vertex Sets");CHKERRQ(ierr);}
   }
   PetscFunctionReturn(0);
 #else

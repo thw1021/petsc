@@ -2033,13 +2033,13 @@ PetscErrorCode PetscDSSetUpdate(PetscDS ds, PetscInt f,
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, void **ctx)
+PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   if ((f < 0) || (f >= ds->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, ds->Nf);
   PetscValidPointer(ctx, 3);
-  *ctx = ds->ctx[f];
+  *(void**)ctx = ds->ctx[f];
   PetscFunctionReturn(0);
 }
 
@@ -2958,10 +2958,13 @@ PetscErrorCode PetscDSGetComponents(PetscDS prob, PetscInt *components[])
 @*/
 PetscErrorCode PetscDSGetComponentOffset(PetscDS prob, PetscInt f, PetscInt *off)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidPointer(off, 3);
   if ((f < 0) || (f >= prob->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, prob->Nf);
+  ierr = PetscDSSetUp(prob);CHKERRQ(ierr);
   *off = prob->off[f];
   PetscFunctionReturn(0);
 }
@@ -2983,9 +2986,12 @@ PetscErrorCode PetscDSGetComponentOffset(PetscDS prob, PetscInt f, PetscInt *off
 @*/
 PetscErrorCode PetscDSGetComponentOffsets(PetscDS prob, PetscInt *offsets[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidPointer(offsets, 2);
+  ierr = PetscDSSetUp(prob);CHKERRQ(ierr);
   *offsets = prob->off;
   PetscFunctionReturn(0);
 }
@@ -3007,9 +3013,12 @@ PetscErrorCode PetscDSGetComponentOffsets(PetscDS prob, PetscInt *offsets[])
 @*/
 PetscErrorCode PetscDSGetComponentDerivativeOffsets(PetscDS prob, PetscInt *offsets[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidPointer(offsets, 2);
+  ierr = PetscDSSetUp(prob);CHKERRQ(ierr);
   *offsets = prob->offDer;
   PetscFunctionReturn(0);
 }
@@ -3751,6 +3760,7 @@ PetscErrorCode PetscDSSelectEquations(PetscDS prob, PetscInt numFields, const Pe
 @*/
 PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
 {
+  PetscWeakForm  wf, newwf;
   PetscInt       Nf, Ng;
   PetscErrorCode ierr;
 
@@ -3760,7 +3770,9 @@ PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(newprob, &Ng);CHKERRQ(ierr);
   if (Nf != Ng) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields must match %D != %D", Nf, Ng);
-  ierr = PetscDSSelectEquations(prob, Nf, NULL, newprob);CHKERRQ(ierr);
+  ierr = PetscDSGetWeakForm(prob, &wf);CHKERRQ(ierr);
+  ierr = PetscDSGetWeakForm(newprob, &newwf);CHKERRQ(ierr);
+  ierr = PetscWeakFormCopy(wf, newwf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

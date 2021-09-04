@@ -114,6 +114,7 @@ cdef extern from * nogil:
     PetscMatSolverType MATSOLVERBAS
     PetscMatSolverType MATSOLVERCUSPARSE
     PetscMatSolverType MATSOLVERCUDA
+    PetscMatSolverType MATSOLVERSPQR
 
     ctypedef enum PetscMatReuse "MatReuse":
         MAT_INITIAL_MATRIX
@@ -254,6 +255,7 @@ cdef extern from * nogil:
     int MatDuplicate(PetscMat,PetscMatDuplicateOption,PetscMat*)
     int MatCopy(PetscMat,PetscMat,PetscMatStructure)
     int MatTranspose(PetscMat,PetscMatReuse,PetscMat*)
+    int MatHermitianTranspose(PetscMat,PetscMatReuse,PetscMat*)
     int MatConvert(PetscMat,PetscMatType,PetscMatReuse,PetscMat*)
 
     int MatIsSymmetric(PetscMat,PetscReal,PetscBool*)
@@ -308,6 +310,7 @@ cdef extern from * nogil:
     int MatTransposeMatMult(PetscMat,PetscMat,PetscMatReuse,PetscReal,PetscMat*)
 
     int MatPtAP(PetscMat,PetscMat,PetscMatReuse,PetscReal,PetscMat*)
+    int MatSeqAIJKron(PetscMat,PetscMat,PetscMatReuse,PetscMat*)
 
     int MatInterpolate(PetscMat,PetscVec,PetscVec)
     int MatInterpolateAdd(PetscMat,PetscVec,PetscVec,PetscVec)
@@ -333,6 +336,7 @@ cdef extern from * nogil:
     int MatZeroRowsLocal(PetscMat,PetscInt,PetscInt[],PetscScalar,PetscVec,PetscVec)
     int MatZeroRowsIS(PetscMat,PetscIS,PetscScalar,PetscVec,PetscVec)
     int MatZeroRowsLocalIS(PetscMat,PetscIS,PetscScalar,PetscVec,PetscVec)
+    int MatFindZeroRows(PetscMat,PetscIS*)
 
     int MatZeroRowsColumns(PetscMat,PetscInt,PetscInt[],PetscScalar,PetscVec,PetscVec)
     int MatZeroRowsColumnsLocal(PetscMat,PetscInt,PetscInt[],PetscScalar,PetscVec,PetscVec)

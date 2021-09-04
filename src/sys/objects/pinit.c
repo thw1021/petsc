@@ -3,17 +3,20 @@
    This file defines the initialization of PETSc, including PetscInitialize()
 */
 #include <petsc/private/petscimpl.h>        /*I  "petscsys.h"   I*/
-#include <petscvalgrind.h>
 #include <petscviewer.h>
 
+#if !defined(PETSC_HAVE_WINDOWS_COMPILERS)
+#include <petsc/private/valgrind/valgrind.h>
+#endif
+
 #if defined(PETSC_HAVE_CUDA)
-#include <petsccublas.h>
+#include <petsc/private/deviceimpl.h>
 PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
 PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-#include <petschipblas.h>
+#include <petsc/private/deviceimpl.h>
 PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
 PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 #endif
@@ -71,6 +74,8 @@ PetscBool PetscPreLoadingUsed = PETSC_FALSE;
 PetscBool PetscPreLoadingOn   = PETSC_FALSE;
 
 PetscInt PetscHotRegionDepth;
+
+PetscBool PETSC_RUNNING_ON_VALGRIND = PETSC_FALSE;
 
 #if defined(PETSC_HAVE_THREADSAFETY)
 PetscSpinlock PetscViewerASCIISpinLockOpen;
@@ -607,7 +612,7 @@ PETSC_INTERN PetscErrorCode PetscInitializeSAWs(const char help[])
     ierr = PetscFree(options);CHKERRQ(ierr);
     ierr = PetscGetVersion(version,sizeof(version));CHKERRQ(ierr);
     ierr = PetscSNPrintf(intro,introlen,"<body>\n"
-                                    "<center><h2> <a href=\"https://www.mcs.anl.gov/petsc\">PETSc</a> Application Web server powered by <a href=\"https://bitbucket.org/saws/saws\">SAWs</a> </h2></center>\n"
+                                    "<center><h2> <a href=\"https://petsc.org/\">PETSc</a> Application Web server powered by <a href=\"https://bitbucket.org/saws/saws\">SAWs</a> </h2></center>\n"
                                     "<center>This is the default PETSc application dashboard, from it you can access any published PETSc objects or logging data</center><br><center>%s configured with %s</center><br>\n"
                                     "%s",version,petscconfigureoptions,appline);CHKERRQ(ierr);
     PetscStackCallSAWs(SAWs_Push_Body,("index.html",0,intro));
@@ -800,8 +805,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   PetscBool      flg = PETSC_TRUE;
   char           hostname[256];
 
-  PetscFunctionBegin;
-  if (PetscInitializeCalled) PetscFunctionReturn(0);
+  if (PetscInitializeCalled) return 0;
   /*
       The checking over compatible runtime libraries is complicated by the MPI ABI initiative
       https://wiki.mpich.org/mpich/index.php/ABI_Compatibility_Initiative which started with
@@ -882,7 +886,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     PetscInt cnt = 0;
     /* These symbols are currently in the OpenMPI and MPICH libraries; they may not always be, in that case the test will simply not detect the problem */
     if (dlsym(RTLD_DEFAULT,"ompi_mpi_init")) cnt++;
-    if (dlsym(RTLD_DEFAULT,"MPL_exit")) cnt++;
+    if (dlsym(RTLD_DEFAULT,"MPID_Abort")) cnt++;
     if (cnt > 1) {
       fprintf(stderr,"PETSc Error --- Application was linked against both OpenMPI and MPICH based MPI libraries and will not run correctly\n");
       return PETSC_ERR_MPI_LIB_INCOMP;
@@ -1038,6 +1042,10 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   ierr = MPI_Type_contiguous(2,MPIU_INT,&MPIU_2INT);CHKERRMPI(ierr);
   ierr = MPI_Type_commit(&MPIU_2INT);CHKERRMPI(ierr);
 #endif
+  ierr = MPI_Type_contiguous(4,MPI_INT,&MPI_4INT);CHKERRMPI(ierr);
+  ierr = MPI_Type_commit(&MPI_4INT);CHKERRMPI(ierr);
+  ierr = MPI_Type_contiguous(4,MPIU_INT,&MPIU_4INT);CHKERRMPI(ierr);
+  ierr = MPI_Type_commit(&MPIU_4INT);CHKERRMPI(ierr);
 
   /*
      Attributes to be set on PETSc communicators
@@ -1125,8 +1133,10 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   /*
       Setup building of stack frames for all function calls
   */
+  flg  = PETSC_FALSE;
+  ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg,NULL);CHKERRQ(ierr);
 #if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
-  ierr = PetscStackCreate();CHKERRQ(ierr);
+  ierr = PetscStackCreate(flg);CHKERRQ(ierr);
 #endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
@@ -1155,6 +1165,20 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   ierr = adios_read_init_method(ADIOS_READ_METHOD_BP,PETSC_COMM_WORLD,"");CHKERRQ(ierr);
 #endif
 
+#if defined(__VALGRIND_H)
+  PETSC_RUNNING_ON_VALGRIND = RUNNING_ON_VALGRIND? PETSC_TRUE: PETSC_FALSE;
+#if defined(PETSC_USING_DARWIN) && defined(PETSC_BLASLAPACK_SDOT_RETURNS_DOUBLE)
+  if (PETSC_RUNNING_ON_VALGRIND) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"WARNING: Running valgrind with the MacOS native BLAS and LAPACK can fail. If it fails suggest configuring with --download-fblaslapack or --download-f2cblaslapack");CHKERRQ(ierr);
+    }
+#endif
+#endif
+
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  ierr = PetscDeviceInitializeDefaultDevices_Internal();CHKERRQ(ierr);
+  ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD,NULL);CHKERRQ(ierr);
+#endif
+
   /*
       Set flag that we are completely initialized
   */
@@ -1162,7 +1186,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 
   ierr = PetscOptionsHasName(NULL,NULL,"-python",&flg);CHKERRQ(ierr);
   if (flg) {ierr = PetscPythonInitialize(NULL,NULL);CHKERRQ(ierr);}
-  PetscFunctionReturn(0);
+  return 0;
 }
 
 #if defined(PETSC_USE_LOG)
@@ -1203,6 +1227,8 @@ PetscErrorCode  PetscFreeMPIResources(void)
 #if defined(PETSC_USE_64BIT_INDICES)
   ierr = MPI_Type_free(&MPIU_2INT);CHKERRMPI(ierr);
 #endif
+  ierr = MPI_Type_free(&MPI_4INT);CHKERRMPI(ierr);
+  ierr = MPI_Type_free(&MPIU_4INT);CHKERRMPI(ierr);
   ierr = MPI_Op_free(&MPIU_MAXSUM_OP);CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
