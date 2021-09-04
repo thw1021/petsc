@@ -207,6 +207,7 @@ Changes: Development
 - Remove ``DMPlexReverseCell()`` and ``DMPlexOrientCell()`` in favor of ``DMPlexOrientPoint()``
 - Remove ``DMPlexCompareOrientations()`` in favor of ``DMPolytopeMatchOrientation()``
 - Add ``DMPlexGetCompressedClosure()`` and ``DMPlexRestoreCompressedClosure()``
+- Change ``DMPlexExtrude()`` to take a flag for symmetric extrusion
 
 .. rubric:: FE/FV:
 

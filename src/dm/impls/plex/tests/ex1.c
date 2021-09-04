@@ -341,6 +341,20 @@ int main(int argc, char **argv)
     nsize: {{2 8}separate output}
     args: -dm_coord_space 0 -ref_dm_refine 1 -dist_dm_distribute -petscpartitioner_type simple -overlap {{0 1 2}separate output} -dm_view ascii::ascii_info
 
+  # Parallel extrusion tests
+  test:
+    suffix: spheresurface_extruded
+    nsize : 4
+    args: -dm_coord_space 0 -dm_plex_shape sphere -dm_extrude_layers 3 -dist_dm_distribute -petscpartitioner_type simple \
+          -dm_plex_check_all -dm_view ::ascii_info_detail -dm_plex_view_coord_system spherical
+
+  test:
+    suffix: spheresurface_extruded_symmetric
+    nsize : 4
+    args: -dm_coord_space 0 -dm_plex_shape sphere -dm_extrude_layers 3 -dm_extrude_symmetric -dist_dm_distribute -petscpartitioner_type simple \
+          -dm_plex_check_all -dm_view ::ascii_info_detail -dm_plex_view_coord_system spherical
+
+
   # Parallel simple partitioner tests
   test:
     suffix: part_simple_0
