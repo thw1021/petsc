@@ -249,7 +249,7 @@ static PetscErrorCode PetscCUPMInitializeAndView(PetscBool initDevice,PetscInt d
   PetscFunctionBegin;
   PetscCUPMSynchronize = logView;
   if (initDevice) {ierr = PetscCUPMInitialize(PETSC_COMM_WORLD,device);CHKERRQ(ierr);}
-  else if (logView || devView) { /* With -log_view, we want to do costly gpu runtime initialization early so that not to distort the timing later. */
+  else if (logView || devView) { /* With -{log,cuda,hip}_view, we want to do costly gpu runtime initialization early so that not to distort the timing later. */
     devCount = 0;
     cerr = cupmGetDeviceCount(&devCount);
     cupmGetLastError(); /* Reset the last error */
