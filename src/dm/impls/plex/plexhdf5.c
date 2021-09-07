@@ -523,11 +523,10 @@ static PetscErrorCode DMPlexTopologyView_HDF5_v2(DM dm, IS globalPointNumbers, P
 
   ierr = PetscViewerHDF5PushGroup(viewer, "topology");CHKERRQ(ierr);
   {
-    PetscInt ver = 2, dim;
+    PetscInt dim;
     ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
     ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "cell_dim", PETSC_INT, &dim);CHKERRQ(ierr);
     ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "depth", PETSC_INT, &depth);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5WriteAttribute(viewer, NULL, "version", PETSC_INT, &ver);CHKERRQ(ierr);
   }
 
   ierr = PetscViewerHDF5PushGroup(viewer, "strata");CHKERRQ(ierr);
@@ -586,14 +585,15 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)dm),((PetscObject)dm)->prefix,"DMPlex HDF5 Loader Options","PetscViewer");CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-dm_plex_hdf5_topology_version","version of DMPlex HDF5 topology serialization",NULL,version,&version,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)dm),((PetscObject)dm)->prefix,"DMPlex HDF5 Viewer Options","PetscViewer");CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_plex_view_hdf5_storage_version","DMPlex HDF5 viewer version",NULL,version,&version,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   switch (version) {
     case 1: ierr = DMPlexTopologyView_HDF5_v1(dm, globalPointNumbers, viewer);CHKERRQ(ierr); break;
     case 2: ierr = DMPlexTopologyView_HDF5_v2(dm, globalPointNumbers, viewer);CHKERRQ(ierr); break;
-    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyView() for topology version %D not implemented yet", version);
+    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyView() for storage version %D not implemented yet", version);
   }
+  ierr = PetscViewerHDF5WriteAttribute(viewer, "/", "petsc_dmplex_storage_version", PETSC_INT, &version);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1991,12 +1991,12 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerHDF5ReadAttribute(viewer, "topology", "version", PETSC_INT, &version, &version);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5ReadAttribute(viewer, "/", "petsc_dmplex_storage_version", PETSC_INT, &version, &version);CHKERRQ(ierr);
   if (vertexLocalToGlobalSF) *vertexLocalToGlobalSF = NULL;
   switch (version) {
     case 1: ierr = DMPlexTopologyLoad_HDF5_v1(dm, viewer);CHKERRQ(ierr); break;
     case 2: ierr = DMPlexTopologyLoad_HDF5_v2(dm, viewer, vertexLocalToGlobalSF);CHKERRQ(ierr); break;
-    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyLoad() for topology version %D not implemented yet", version);
+    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexTopologyLoad() for storage version %D not implemented yet", version);
   }
   PetscFunctionReturn(0);
 }
