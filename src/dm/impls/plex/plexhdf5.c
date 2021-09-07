@@ -921,15 +921,10 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
 {
   const PetscInt   *gpoint;
   PetscInt          numLabels, l;
-  hid_t             fileId, groupId;
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
-  ierr = PetscViewerHDF5PushGroup(viewer, "/labels");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
-  if (groupId != fileId) PetscStackCallHDF5(H5Gclose,(groupId));
-  ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   ierr = DMGetNumLabels(dm, &numLabels);CHKERRQ(ierr);
   for (l = 0; l < numLabels; ++l) {
     DMLabel         label;
@@ -940,16 +935,11 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
     PetscBool       isDepth, output;
     char            group[PETSC_MAX_PATH_LEN];
 
-    ierr = DMGetLabelName(dm, l, &name);CHKERRQ(ierr);
+    ierr = DMGetLabelByNum(dm, l, &label);CHKERRQ(ierr);
+    ierr = PetscObjectGetName((PetscObject)label, &name);CHKERRQ(ierr);
     ierr = DMGetLabelOutput(dm, name, &output);CHKERRQ(ierr);
     ierr = PetscStrncmp(name, "depth", 10, &isDepth);CHKERRQ(ierr);
     if (isDepth || !output) continue;
-    ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(group, PETSC_MAX_PATH_LEN, "/labels/%s", name);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5PushGroup(viewer, group);CHKERRQ(ierr);
-    ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
-    if (groupId != fileId) PetscStackCallHDF5(H5Gclose,(groupId));
-    ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
     ierr = DMLabelGetValueIS(label, &valueIS);CHKERRQ(ierr);
     /* Must copy to a new IS on the global comm */
     ierr = ISGetLocalSize(valueIS, &numValues);CHKERRQ(ierr);
