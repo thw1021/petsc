@@ -1380,54 +1380,6 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
-#if 0
-  MPI_Comm                 comm;
-  PetscMPIInt              size,rank;
-  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  //------------- new
-  if (size > 1) { /* Sync nvar at shared vertices for all processes */
-    PetscSF        sf = network->plex->sf;
-    const PetscInt *degree;
-    PetscInt       i,nleaves_total,*indata,*outdata,nroots,nleaves,nsv,p,ncomp;
-    const PetscInt *svtx;
-    PetscBool      ghost;
-
-    ierr = PetscSFGetGraph(sf,&nroots,&nleaves,NULL,NULL);CHKERRQ(ierr);
-    ierr = PetscSFComputeDegreeBegin(sf,&degree);CHKERRQ(ierr);
-    ierr = PetscSFComputeDegreeEnd(sf,&degree);CHKERRQ(ierr);
-    nleaves_total=0;
-    for (i=0; i<nroots; i++) nleaves_total += degree[i];
-    printf("[%d] nleaves_total %d\n",rank,nleaves_total);
-    MPI_Barrier(comm);
-
-    ierr = PetscCalloc2(nleaves_total,&indata,nleaves,&outdata);CHKERRQ(ierr);
-
-    /* Leaves copy user's ncomp to outdata */
-    ierr = DMNetworkGetSharedVertices(dm,&nsv,&svtx);CHKERRQ(ierr);
-    for (i=0; i<nsv; i++) {
-      p = svtx[i];
-      ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
-      if (!ghost) continue;
-
-      header = &network->header[p];
-      ncomp = header->ndata;
-      printf("[%d] leaf has ncomp %d\n",rank,ncomp);
-      outdata[p] = ncomp;
-    }
-
-    /* Roots gather ncomp from leaves */
-    ierr = PetscSFGatherBegin(sf,MPIU_INT,outdata,indata);CHKERRQ(ierr);
-    ierr = PetscSFGatherEnd(sf,MPIU_INT,outdata,indata);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"## Gathered data at multi-roots from leaves\n");CHKERRQ(ierr);
-    ierr = PetscIntView(nleaves_total,indata,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-
-    ierr = PetscFree2(indata,outdata);CHKERRQ(ierr);
-  }
-  //----------------------
-#endif
-
   ierr = PetscSectionSetUp(network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(network->DataSection,&arr_size);CHKERRQ(ierr);
   /* arr_size+1 fixes pipeline test of opensolaris-misc for src/dm/tests/ex10.c -- Do not know why */
