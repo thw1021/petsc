@@ -112,22 +112,17 @@ extern "C"  {
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[], PetscReal a_mass_w[],
+  PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt nip, PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[], PetscReal a_mass_w[],
                                            PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauGeomData *SData_d)
   {
     PetscReal       *BB,*DD;
     PetscErrorCode  ierr;
     PetscTabulation *Tf;
-    LandauCtx       *ctx;
-    PetscInt        *Nbf,dim,Nf,Nb,nip,cStart,cEnd;
+    PetscInt        *Nbf,dim,Nf,Nb;
     PetscDS         prob;
 
     PetscFunctionBegin;
-    ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
-    if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
     ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
-    nip = (cEnd - cStart)*Nq;
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
     ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
@@ -135,6 +130,7 @@ extern "C"  {
     if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
     ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
     BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
+
     ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
     {
       const Kokkos::View<PetscReal*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > h_alpha (nu_alpha, Nf);
@@ -227,9 +223,10 @@ extern "C"  {
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode LandauKokkosJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[], PetscScalar a_IPf[],  const PetscInt N, const PetscScalar a_xarray[], LandauGeomData *SData_d,
-                                      const PetscInt num_sub_blocks, PetscReal shift, const PetscLogEvent events[], Mat JacP)
-  {
+PetscErrorCode LandauKokkosJacobian( DM plex[], const PetscInt Nq, const PetscInt num_grids, const PetscInt numCells[], const PetscInt Nf[], PetscReal a_Eq_m[], PetscScalar a_IPf[],
+                                     const PetscInt N, const PetscScalar a_xarray[], LandauGeomData *SData_d, const PetscInt num_sub_blocks, PetscReal shift, const PetscLogEvent events[],
+                                     Mat JacPArray[], Mat subJ[], Mat JacP)
+{
     using scr_mem_t = Kokkos::DefaultExecutionSpace::scratch_memory_space;
     using fieldMats_scr_t = Kokkos::View<PetscScalar**, Kokkos::LayoutRight, scr_mem_t>;
     using idx_scr_t = Kokkos::View<PetscInt**, Kokkos::LayoutRight, scr_mem_t>;
@@ -237,7 +234,7 @@ extern "C"  {
     using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
     using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
     PetscErrorCode    ierr;
-    PetscInt          *Nbf,Nb,cStart,cEnd,Nf,dim,numCells,totDim,global_elem_mat_sz,nip,nfaces=0;
+    PetscInt          *Nbf,Nb,Nf,dim,numCells,totDim,global_elem_mat_sz,nip,nfaces=0;
     PetscDS           prob;
     LandauCtx         *ctx;
     PetscReal         *d_Eq_m=NULL;
@@ -274,14 +271,12 @@ extern "C"  {
     ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
     if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
     ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
-    numCells = cEnd - cStart;
-    nip = numCells*Nq;
+    if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
     ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
     ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
     ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
     if (Nq != Nb) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nq != Nb. %D  %D",Nq,Nb);
-    if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
+    
     ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
     if (ctx->gpu_assembly) {
       PetscContainer container;
@@ -647,16 +642,18 @@ extern "C"  {
     Kokkos::fence();
 
     if (global_elem_mat_sz) {
-      PetscSection      section, globalSection;
+      PetscSection                                                 section, globalSection;
+      PetscInt                                                     cStart,cEnd;
       Kokkos::View<PetscScalar**, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
+
       ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
+      ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
       ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
       ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
       Kokkos::deep_copy (h_elem_mats, d_elem_mats);
       ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
-      PetscInt ej;
-      for (ej = cStart ; ej < cEnd; ++ej) {
+      for (PetscInt ej = cStart ; ej < cEnd; ++ej) {
         const PetscScalar *elMat = &h_elem_mats(ej-cStart,0);
         ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
         if (ej==-1) {
