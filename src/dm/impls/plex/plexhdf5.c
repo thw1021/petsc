@@ -1201,6 +1201,8 @@ struct _n_LoadLabelsCtx {
   DM          dm;
   PetscViewer viewer;
   DMLabel     label;
+  IS          globalNumbering;
+  PetscLayout uniqueGlobalIndicesLayout;
 };
 typedef struct _n_LoadLabelsCtx *LoadLabelsCtx;
 
@@ -1225,6 +1227,8 @@ static PetscErrorCode LoadLabelsCtxDestroy(LoadLabelsCtx *ctx)
   if (!*ctx) PetscFunctionReturn(0);
   ierr = DMDestroy(&(*ctx)->dm);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&(*ctx)->viewer);CHKERRQ(ierr);
+  ierr = ISDestroy(&(*ctx)->globalNumbering);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&(*ctx)->uniqueGlobalIndicesLayout);CHKERRQ(ierr);
   ierr = PetscFree(*ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1256,7 +1260,6 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   IS              stratumIS;
   const PetscInt *ind;
   PetscInt        value, N, i;
-  PetscBool       distributed;
   PetscViewer     dbgv = NULL;
   MPI_Comm        comm = ctx->comm;
   PetscErrorCode  ierr;
@@ -1267,8 +1270,7 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   ierr = PetscObjectSetName((PetscObject) stratumIS, "indices");CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, vname);CHKERRQ(ierr); /* labels/<lname>/<vname> */
 
-  ierr = DMPlexIsDistributed(dm, &distributed);CHKERRQ(ierr);
-  if (!distributed) {
+  if (!ctx->globalNumbering) {
     /* Force serial load */
     ierr = PetscViewerHDF5ReadSizes(viewer, "indices", NULL, &N);CHKERRQ(ierr);
     ierr = PetscLayoutSetLocalSize(stratumIS->map, !ctx->rank ? N : 0);CHKERRQ(ierr);
@@ -1276,37 +1278,17 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   }
   ierr = ISLoad(stratumIS, viewer);CHKERRQ(ierr);
 
-  if (distributed) {
-    IS          globalNumbering;
-    PetscInt    nUniqueGlobalPoints = 0;
-    PetscLayout layout;
+  if (ctx->globalNumbering) {
     PetscSF     s2gSF;
     IS          newStratumIS;
 
-    //TODO do this once
-    ierr = DMPlexCreatePointNumbering(dm, &globalNumbering);CHKERRQ(ierr);
-    {
-      PetscInt *idx;
-      PetscInt i, n;
-      ierr = ISGetLocalSize(globalNumbering, &n);CHKERRQ(ierr);
-      ierr = ISGetIndices(globalNumbering, (const PetscInt **)&idx);CHKERRQ(ierr);
-      for (i=0; i<n; i++) {
-        if (idx[i] < 0) idx[i] = -idx[i] - 1;
-        else            nUniqueGlobalPoints++;
-      }
-      ierr = ISRestoreIndices(globalNumbering, (const PetscInt **)&idx);CHKERRQ(ierr);
-    }
-    ierr = PetscLayoutCreateFromSizes(comm, nUniqueGlobalPoints, PETSC_DECIDE, 1, &layout);CHKERRQ(ierr);
-
-    ierr = PetscSFCreateByMatchingIndicesIS(layout, globalNumbering, stratumIS, NULL, &s2gSF);CHKERRQ(ierr);
+    ierr = PetscSFCreateByMatchingIndicesIS(ctx->uniqueGlobalIndicesLayout, ctx->globalNumbering, stratumIS, NULL, &s2gSF);CHKERRQ(ierr);
     if (dbgv) {
       const char *group;
 
       ierr = PetscViewerHDF5GetGroup(viewer, &group);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(dbgv, "ReadLabelStratumHDF5_Static: group %s\n", group);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject) globalNumbering, "globalNumbering");CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) s2gSF, "s2gSF");CHKERRQ(ierr);
-      ierr = ISView(globalNumbering, dbgv);CHKERRQ(ierr);
       ierr = ISView(stratumIS, dbgv);CHKERRQ(ierr);
       ierr = PetscSFView(s2gSF, dbgv);CHKERRQ(ierr);
     }
@@ -1386,15 +1368,57 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *lname, const H5L_info
   return err;
 }
 
+static PetscErrorCode DMPlexLabelsLoad_HDF5_SetUpParallel_Private(DM dm, LoadLabelsCtx ctx)
+{
+  IS              globalNumbering;
+  PetscInt        nUniqueGlobalPoints = 0;
+  PetscLayout     layout;
+  PetscViewer     dbgv = NULL;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscOptionsGetViewer(ctx->comm, NULL, NULL, "-dm_plex_labels_load_debug", &dbgv, NULL, NULL);CHKERRQ(ierr);
+  ierr = DMPlexCreatePointNumbering(dm, &globalNumbering);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) globalNumbering, "globalNumbering");CHKERRQ(ierr);
+  /* Convert negative indices (ghosts) to nonnegative */
+  //TODO ask DMPlexCreatePointNumbering() to do that right away
+  {
+    PetscInt *idx;
+    PetscInt i, n;
+
+    ierr = ISGetLocalSize(globalNumbering, &n);CHKERRQ(ierr);
+    ierr = ISGetIndices(globalNumbering, (const PetscInt **)&idx);CHKERRQ(ierr);
+    for (i=0; i<n; i++) {
+      if (idx[i] < 0) idx[i] = -idx[i] - 1;
+      else            nUniqueGlobalPoints++;
+    }
+    ierr = ISRestoreIndices(globalNumbering, (const PetscInt **)&idx);CHKERRQ(ierr);
+  }
+  ierr = PetscLayoutCreateFromSizes(ctx->comm, nUniqueGlobalPoints, PETSC_DECIDE, 1, &layout);CHKERRQ(ierr);
+  ctx->globalNumbering            = globalNumbering;
+  ctx->uniqueGlobalIndicesLayout  = layout;
+  if (dbgv) {
+      ierr = PetscViewerASCIIPrintf(dbgv, "DMPlexLabelsLoad_HDF5_SetUpParallel_Private:\n");CHKERRQ(ierr);
+      ierr = ISView(globalNumbering, dbgv);CHKERRQ(ierr);
+      ierr = PetscLayoutView_ASCII(layout, "uniqueGlobalIndicesLayout", dbgv);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   LoadLabelsCtx   ctx;
   hid_t           fileId, groupId;
   hsize_t         idx = 0;
+  PetscBool       distributed;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   ierr = LoadLabelsCtxCreate(dm, viewer, &ctx);CHKERRQ(ierr);
+  ierr = DMPlexIsDistributed(dm, &distributed);CHKERRQ(ierr);
+  if (distributed) {
+    ierr = DMPlexLabelsLoad_HDF5_SetUpParallel_Private(dm, ctx);CHKERRQ(ierr);
+  }
   ierr = PetscViewerHDF5PushGroup(viewer, "labels");CHKERRQ(ierr);
   ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
   /* Iterate over labels stored in the group */
