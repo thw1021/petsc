@@ -92,7 +92,6 @@ PetscErrorCode  SNESNewtonTRDCGetRhoFlag(SNES snes,PetscBool *rho_flag)
   PetscFunctionReturn(0);
 }
 
-
 /*@C
    SNESNewtonTRSetPreCheck - Sets a user function that is called before the search step has been determined.
        Allows the user a chance to change or override the decision of the line search routine.
@@ -149,7 +148,7 @@ PetscErrorCode  SNESNewtonTRDCGetPreCheck(SNES snes, PetscErrorCode (**func)(SNE
 }
 
 /*@C
-   SNESNewtonTRSetPostCheck - Sets a user function that is called after the search step has been determined but before the next 
+   SNESNewtonTRSetPostCheck - Sets a user function that is called after the search step has been determined but before the next
        function evaluation. Allows the user a chance to change or override the decision of the line search routine
 
    Logically Collective on snes
@@ -205,7 +204,7 @@ PetscErrorCode  SNESNewtonTRDCGetPostCheck(SNES snes,PetscErrorCode (**func)(SNE
 }
 
 /*@C
-   SNESNewtonTRPreCheck - Called before the step has been determined in SNESNEWTONTR 
+   SNESNewtonTRPreCheck - Called before the step has been determined in SNESNEWTONTR
 
    Logically Collective on snes
 

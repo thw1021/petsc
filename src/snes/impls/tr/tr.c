@@ -1,4 +1,3 @@
-
 #include <../src/snes/impls/tr/trimpl.h>                /*I   "petscsnes.h"   I*/
 
 typedef struct {
@@ -331,8 +330,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     ierr  = VecNorm(Ytmp,NORM_2,&nrm);CHKERRQ(ierr);
     norm1 = nrm;
 
-
-
     while (1) {
       PetscBool changed_y;
       PetscBool changed_w;
@@ -372,7 +369,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       else                     delta *= neP->delta3;
       ierr = PetscInfo3(snes,"fnorm=%g, gnorm=%g, ynorm=%g\n",(double)fnorm,(double)gnorm,(double)ynorm);CHKERRQ(ierr);
       ierr = PetscInfo3(snes,"gpred=%g, rho=%g, delta=%g\n",(double)gpnorm,(double)rho,(double)delta);CHKERRQ(ierr);
-
 
       neP->delta = delta;
       if (rho > neP->sigma) break;
