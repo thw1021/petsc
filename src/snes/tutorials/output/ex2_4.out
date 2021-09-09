@@ -1,13 +1,10 @@
 atol=1e-50, rtol=1e-08, stol=1e-08, maxit=50, maxf=10000
   0 SNES Function norm 5.41468 
-DL evaluated. tau: 9.2042e-02, ynnorm: 9.5591e-01, ycnorm: 8.7244e-02
-  1 SNES Function norm 3.94739 
-DL evaluated. tau: 2.7017e-01, ynnorm: 8.4785e-01, ycnorm: 4.3222e-02
-  2 SNES Function norm 2.5059 
-DL evaluated. tau: 7.5575e-01, ynnorm: 6.0568e-01, ycnorm: 3.3733e-02
-  3 SNES Function norm 0.494997 
-  4 SNES Function norm 0.00563116 
-  5 SNES Function norm 1.44668e-07 
+  1 SNES Function norm 3.95851 
+  2 SNES Function norm 2.56984 
+  3 SNES Function norm 1.59392 
+  4 SNES Function norm 0.00931023 
+  5 SNES Function norm 5.02911e-07 
   6 SNES Function norm < 1.e-11
 SNES Object: 1 MPI processes
   type: newtontrdc
@@ -50,4 +47,4 @@ SNES Object: 1 MPI processes
         not using I-node routines
 number of SNES iterations = 6
 
-Norm of error 1.0108e-13, Iterations 6
+Norm of error 1.01199e-13, Iterations 6

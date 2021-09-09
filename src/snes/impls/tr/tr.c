@@ -1,4 +1,3 @@
-
 #include <../src/snes/impls/tr/trimpl.h>                /*I   "petscsnes.h"   I*/
 
 typedef struct {
@@ -327,11 +326,9 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     ierr = KSPGetIterationNumber(snes->ksp,&lits);CHKERRQ(ierr);
     snes->linear_its += lits;
 
-    ierr  = PetscInfo2(snes,"iter=%D, linear solve iterations=%D\n",snes->iter,lits);CHKERRQ(ierr);
+    ierr  = PetscInfo2(snes,"iter=%" PetscInt_FMT ", linear solve iterations=%" PetscInt_FMT "\n",snes->iter,lits);CHKERRQ(ierr);
     ierr  = VecNorm(Ytmp,NORM_2,&nrm);CHKERRQ(ierr);
     norm1 = nrm;
-
-
 
     while (1) {
 
@@ -374,7 +371,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       ierr = PetscInfo3(snes,"fnorm=%g, gnorm=%g, ynorm=%g\n",(double)fnorm,(double)gnorm,(double)ynorm);CHKERRQ(ierr);
       ierr = PetscInfo3(snes,"gpred=%g, rho=%g, delta=%g\n",(double)gpnorm,(double)rho,(double)delta);CHKERRQ(ierr);
 
-
       neP->delta = delta;
       if (rho > neP->sigma) break;
       ierr = PetscInfo(snes,"Trying again in smaller region\n");CHKERRQ(ierr);
@@ -415,7 +411,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   }
 
   if (i == maxits) {
-    ierr = PetscInfo1(snes,"Maximum number of iterations has been reached: %D\n",maxits);CHKERRQ(ierr);
+    ierr = PetscInfo1(snes,"Maximum number of iterations has been reached: %" PetscInt_FMT "\n",maxits);CHKERRQ(ierr);
     if (!reason) reason = SNES_DIVERGED_MAX_IT;
   }
   ierr         = PetscObjectSAWsTakeAccess((PetscObject)snes);CHKERRQ(ierr);

@@ -1,7 +1,6 @@
   0 SNES Function norm 4.47214 
     0 KSP Residual norm 0.00533659 
     1 KSP Residual norm 0.000854417 
-DL evaluated. delta: 1.0000e-01, ynnorm: 1.0990e-01, ycnorm: 1.0000e-01
   1 SNES Function norm 0.532405 
     0 KSP Residual norm 0.000635317 
     1 KSP Residual norm 0.000101718 

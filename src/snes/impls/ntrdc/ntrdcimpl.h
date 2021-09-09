@@ -24,6 +24,9 @@ typedef struct {
   PetscReal      t1;             /* Heeho's new TR-dogleg */
   PetscReal      t2;             /* Heeho's new TR-dogleg */
   PetscReal      deltaM;         /* Heeho's new TR-dogleg */
+  /* currently using fixed array for the block size because of memory leak */
+  /* PetscReal      *inorms;         Heeho's new TR-dogleg, stores largest inf norm */
+  /* PetscInt       bs;              Heeho's new TR-dogleg, solution vector block size */
 
   PetscReal      sigma;          /* used to detemine termination */
   PetscBool      itflag;         /* flag for convergence testing */
