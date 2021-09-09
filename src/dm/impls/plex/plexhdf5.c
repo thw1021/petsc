@@ -1195,16 +1195,43 @@ PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM
   PetscFunctionReturn(0);
 }
 
-typedef struct {
+struct _n_LoadLabelsCtx {
+  MPI_Comm    comm;
   PetscMPIInt rank;
   DM          dm;
   PetscViewer viewer;
   DMLabel     label;
-} LabelCtx;
+};
+typedef struct _n_LoadLabelsCtx *LoadLabelsCtx;
+
+static PetscErrorCode LoadLabelsCtxCreate(DM dm, PetscViewer viewer, LoadLabelsCtx *ctx)
+{
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscNew(ctx);CHKERRQ(ierr);
+  ierr = PetscObjectReference((PetscObject) ((*ctx)->dm = dm));
+  ierr = PetscObjectReference((PetscObject) ((*ctx)->viewer = viewer));
+  ierr = PetscObjectGetComm((PetscObject)dm, &(*ctx)->comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank((*ctx)->comm, &(*ctx)->rank);CHKERRMPI(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode LoadLabelsCtxDestroy(LoadLabelsCtx *ctx)
+{
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  if (!*ctx) PetscFunctionReturn(0);
+  ierr = DMDestroy(&(*ctx)->dm);CHKERRQ(ierr);
+  ierr = PetscViewerDestroy(&(*ctx)->viewer);CHKERRQ(ierr);
+  ierr = PetscFree(*ctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
 static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H5L_info_t *info, void *op_data)
 {
-  LabelCtx       *ctx    = (LabelCtx *) op_data;
+  LoadLabelsCtx   ctx    = (LoadLabelsCtx) op_data;
   PetscViewer     viewer = ctx->viewer;
   DMLabel         label  = ctx->label;
   IS              stratumIS;
@@ -1213,7 +1240,7 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   PetscErrorCode  ierr;
 
   ierr = PetscOptionsStringToInt(vname, &value);CHKERRQ(ierr);
-  ierr = ISCreate(PetscObjectComm((PetscObject) viewer), &stratumIS);CHKERRQ(ierr);
+  ierr = ISCreate(ctx->comm, &stratumIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) stratumIS, "indices");CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, vname);CHKERRQ(ierr); /* labels/<lname>/<vname> */
   {
@@ -1234,7 +1261,7 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
 
 static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *lname, const H5L_info_t *info, void *op_data)
 {
-  LabelCtx      *ctx = (LabelCtx *) op_data;
+  LoadLabelsCtx  ctx = (LoadLabelsCtx) op_data;
   DM             dm  = ctx->dm;
   hsize_t        idx = 0;
   PetscErrorCode ierr;
@@ -1251,21 +1278,20 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *lname, const H5L_info
 
 PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
-  LabelCtx        ctx;
+  LoadLabelsCtx   ctx;
   hid_t           fileId, groupId;
   hsize_t         idx = 0;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &ctx.rank);CHKERRMPI(ierr);
-  ctx.dm     = dm;
-  ctx.viewer = viewer;
+  ierr = LoadLabelsCtxCreate(dm, viewer, &ctx);CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, "labels");CHKERRQ(ierr);
   ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
   /* Iterate over labels stored in the group */
-  PetscStackCallHDF5(H5Literate,(groupId, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelHDF5_Static, &ctx));
+  PetscStackCallHDF5(H5Literate,(groupId, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelHDF5_Static, ctx));
   PetscStackCallHDF5(H5Gclose,(groupId));
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
+  ierr = LoadLabelsCtxDestroy(&ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
