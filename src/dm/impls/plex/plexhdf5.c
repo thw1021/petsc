@@ -1251,20 +1251,87 @@ static PetscErrorCode PetscSFCreateByMatchingIndicesIS(PetscLayout layout, IS ro
   PetscFunctionReturn(0);
 }
 
+static herr_t ReadLabelStratumHDF5_Distribute_Private(IS stratumIS, LoadLabelsCtx ctx, IS *newStratumIS)
+{
+  PetscSF         s2gSF;
+  DM              dm      = ctx->dm;
+  PetscViewer     viewer  = ctx->viewer;
+  PetscViewer     dbgv    = NULL;
+  MPI_Comm        comm    = ctx->comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscOptionsGetViewer(comm, NULL, NULL, "-dm_plex_labels_load_debug", &dbgv, NULL, NULL);CHKERRQ(ierr);
+  ierr = PetscSFCreateByMatchingIndicesIS(ctx->uniqueGlobalIndicesLayout, ctx->globalNumbering, stratumIS, NULL, &s2gSF);CHKERRQ(ierr);
+  if (dbgv) {
+    const char *group;
+
+    ierr = PetscViewerHDF5GetGroup(viewer, &group);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(dbgv, "ReadLabelStratumHDF5_Distribute_Private: group %s\n", group);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) s2gSF, "s2gSF");CHKERRQ(ierr);
+    ierr = ISView(stratumIS, dbgv);CHKERRQ(ierr);
+    ierr = PetscSFView(s2gSF, dbgv);CHKERRQ(ierr);
+  }
+  {
+    PetscSF         pointSF;
+    PetscInt        nleaves, nroots;
+    PetscInt        i, j;
+    PetscInt       *leafData, *rootData;
+    const PetscInt *ilocal;
+    PetscInt       *newStratumISArr;
+
+    ierr = PetscSFGetGraph(s2gSF, &nroots, &nleaves, &ilocal, NULL);CHKERRQ(ierr);
+    if (nleaves && ilocal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected s2gSF ilocal != NULL");
+    ierr = PetscMalloc3(nroots, &rootData, nleaves, &leafData, nroots, &newStratumISArr);CHKERRQ(ierr);
+    ierr = PetscArrayzero(rootData, nroots);CHKERRQ(ierr);
+    for (i=0; i<nleaves; i++) leafData[i] = 1;
+
+    ierr = PetscSFReduceBegin(s2gSF, MPIU_INT, leafData, rootData, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFReduceEnd(  s2gSF, MPIU_INT, leafData, rootData, MPI_REPLACE);CHKERRQ(ierr);
+    if (dbgv) {
+      ierr = PetscIntView(nleaves, leafData, dbgv);CHKERRQ(ierr);
+      ierr = PetscIntView(nroots, rootData, dbgv);CHKERRQ(ierr);
+    }
+
+    ierr = DMGetPointSF(dm, &pointSF);CHKERRQ(ierr);
+    {
+      PetscInt nroots0, nleaves0;
+
+      ierr = PetscSFGetGraph(pointSF, &nroots0, &nleaves0, &ilocal, NULL);CHKERRQ(ierr);
+      if (nleaves0 && !ilocal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected pointSF ilocal = NULL");
+      if (nroots0 != nroots) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "s2gSF and pointSF have incompatible root layout");
+    }
+    ierr = PetscSFBcastBegin(pointSF, MPIU_INT, rootData, rootData, MPI_LOR);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(  pointSF, MPIU_INT, rootData, rootData, MPI_LOR);CHKERRQ(ierr);
+    if (dbgv) {
+      ierr = PetscIntView(nroots, rootData, dbgv);CHKERRQ(ierr);
+    }
+
+    for (i=0, j=0; i<nroots; i++) {
+      if (rootData[i]) newStratumISArr[j++] = i;
+    }
+    ierr = ISCreateGeneral(comm, j, newStratumISArr, PETSC_COPY_VALUES, newStratumIS);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) *newStratumIS, ((PetscObject) stratumIS)->name);CHKERRQ(ierr);
+    if (dbgv) {
+      ierr = ISView(*newStratumIS, dbgv);CHKERRQ(ierr);
+    }
+    ierr = PetscFree3(rootData, leafData, newStratumISArr);CHKERRQ(ierr);
+  }
+  ierr = PetscSFDestroy(&s2gSF);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H5L_info_t *info, void *op_data)
 {
   LoadLabelsCtx   ctx    = (LoadLabelsCtx) op_data;
-  DM              dm     = ctx->dm;
   PetscViewer     viewer = ctx->viewer;
   DMLabel         label  = ctx->label;
+  MPI_Comm        comm   = ctx->comm;
   IS              stratumIS;
   const PetscInt *ind;
   PetscInt        value, N, i;
-  PetscViewer     dbgv = NULL;
-  MPI_Comm        comm = ctx->comm;
   PetscErrorCode  ierr;
 
-  ierr = PetscOptionsGetViewer(comm, NULL, NULL, "-dm_plex_labels_load_debug", &dbgv, NULL, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsStringToInt(vname, &value);CHKERRQ(ierr);
   ierr = ISCreate(comm, &stratumIS);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) stratumIS, "indices");CHKERRQ(ierr);
@@ -1279,69 +1346,13 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   ierr = ISLoad(stratumIS, viewer);CHKERRQ(ierr);
 
   if (ctx->globalNumbering) {
-    PetscSF     s2gSF;
-    IS          newStratumIS;
+    IS newStratumIS;
 
-    ierr = PetscSFCreateByMatchingIndicesIS(ctx->uniqueGlobalIndicesLayout, ctx->globalNumbering, stratumIS, NULL, &s2gSF);CHKERRQ(ierr);
-    if (dbgv) {
-      const char *group;
-
-      ierr = PetscViewerHDF5GetGroup(viewer, &group);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(dbgv, "ReadLabelStratumHDF5_Static: group %s\n", group);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject) s2gSF, "s2gSF");CHKERRQ(ierr);
-      ierr = ISView(stratumIS, dbgv);CHKERRQ(ierr);
-      ierr = PetscSFView(s2gSF, dbgv);CHKERRQ(ierr);
-    }
-    {
-      PetscSF         pointSF;
-      PetscInt        nleaves, nroots;
-      PetscInt        i, j;
-      PetscInt       *leafData, *rootData;
-      const PetscInt *ilocal;
-      PetscInt       *newStratumISArr;
-
-      ierr = PetscSFGetGraph(s2gSF, &nroots, &nleaves, &ilocal, NULL);CHKERRQ(ierr);
-      if (nleaves && ilocal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected s2gSF ilocal != NULL");
-      ierr = PetscMalloc3(nroots, &rootData, nleaves, &leafData, nroots, &newStratumISArr);CHKERRQ(ierr);
-      ierr = PetscArrayzero(rootData, nroots);CHKERRQ(ierr);
-      for (i=0; i<nleaves; i++) leafData[i] = 1;
-
-      ierr = PetscSFReduceBegin(s2gSF, MPIU_INT, leafData, rootData, MPI_REPLACE);CHKERRQ(ierr);
-      ierr = PetscSFReduceEnd(  s2gSF, MPIU_INT, leafData, rootData, MPI_REPLACE);CHKERRQ(ierr);
-      if (dbgv) {
-        ierr = PetscIntView(nleaves, leafData, dbgv);CHKERRQ(ierr);
-        ierr = PetscIntView(nroots, rootData, dbgv);CHKERRQ(ierr);
-      }
-
-      ierr = DMGetPointSF(dm, &pointSF);CHKERRQ(ierr);
-      {
-        PetscInt nroots0, nleaves0;
-
-        ierr = PetscSFGetGraph(pointSF, &nroots0, &nleaves0, &ilocal, NULL);CHKERRQ(ierr);
-        if (nleaves0 && !ilocal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected pointSF ilocal = NULL");
-        if (nroots0 != nroots) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "s2gSF and pointSF have incompatible root layout");
-      }
-      ierr = PetscSFBcastBegin(pointSF, MPIU_INT, rootData, rootData, MPI_LOR);CHKERRQ(ierr);
-      ierr = PetscSFBcastEnd(  pointSF, MPIU_INT, rootData, rootData, MPI_LOR);CHKERRQ(ierr);
-      if (dbgv) {
-        ierr = PetscIntView(nroots, rootData, dbgv);CHKERRQ(ierr);
-      }
-
-      for (i=0, j=0; i<nroots; i++) {
-        if (rootData[i]) newStratumISArr[j++] = i;
-      }
-      ierr = ISCreateGeneral(comm, j, newStratumISArr, PETSC_COPY_VALUES, &newStratumIS);CHKERRQ(ierr);
-      ierr = PetscObjectSetName((PetscObject) newStratumIS, ((PetscObject) stratumIS)->name);CHKERRQ(ierr);
-      if (dbgv) {
-        ierr = ISView(newStratumIS, dbgv);CHKERRQ(ierr);
-      }
-
-      ierr = ISDestroy(&stratumIS);CHKERRQ(ierr);
-      stratumIS = newStratumIS;
-      ierr = PetscFree3(rootData, leafData, newStratumISArr);CHKERRQ(ierr);
-    }
-    ierr = PetscSFDestroy(&s2gSF);CHKERRQ(ierr);
+    ierr = ReadLabelStratumHDF5_Distribute_Private(stratumIS, ctx, &newStratumIS);CHKERRQ(ierr);
+    ierr = ISDestroy(&stratumIS);CHKERRQ(ierr);
+    stratumIS = newStratumIS;
   }
+
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   ierr = ISGetLocalSize(stratumIS, &N);CHKERRQ(ierr);
   ierr = ISGetIndices(stratumIS, &ind);CHKERRQ(ierr);
