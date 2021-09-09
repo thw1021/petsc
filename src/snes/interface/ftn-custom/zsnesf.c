@@ -97,7 +97,8 @@ static struct {
 #endif
 } _cb;
 
-PETSC_EXTERN void  snesnewtontrdcgetrhoflag_(SNES *snes,PetscBool *rho_flag, int *__ierr){
+PETSC_EXTERN void  snesnewtontrdcgetrhoflag_(SNES *snes,PetscBool *rho_flag, int *__ierr)
+{
   *__ierr = SNESNewtonTRDCGetRhoFlag(
      *snes,rho_flag);
 }
