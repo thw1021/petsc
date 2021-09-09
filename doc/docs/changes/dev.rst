@@ -19,6 +19,7 @@ Changes: Development
 -  Remove --with-kokkos-cuda-arch. One can use -with-cuda-gencodearch to specify the cuda arch for Kokkos. Usually not needed since PETSc auto detects that
 -  For --download-hdf5, disable --download-hdf5-fortran-bindings by default
 -  Add OpenCascade package to PETSc and allow --download-opencascade
+-  Add support for hypre in device mode for both NVIDIA and AMD GPUs
 
 .. rubric:: Sys:
 -  Add ``PetscDevice`` class to manage discovered GPU devices
@@ -97,6 +98,9 @@ Changes: Development
 -  Add ``MatNormalGetMat()`` to retrieve the underlying ``Mat`` of a ``MATNORMAL``
 -  Add ``MatNormalHermitianGetMat()`` to retrieve the underlying ``Mat`` of a ``MATNORMALHERMITIAN``
 -  Add ``VecCreateMPICUDA()`` and ``VecCreateMPIHIP()`` to create MPI device vectors
+-  Add support for ``MATHYPRE`` matrices on NVIDIA and AMD GPUs
+-  Add accessors routines for device index data of ``MATSEQAIJCUSPARSE`` matrices ``MatSEQAIJCUSPARSE{Get|Restore}IJ``
+-  Add accessors routines for device data of ``MATSEQAIJCUSPARSE`` matrices ``MatSEQAIJCUSPARSE{Get|Restore}Array``, ``MatSEQAIJCUSPARSEG{Get|Restore}ArrayWrite`` and ``MatSEQAIJCUSPARSEG{Get|Restore}ArrayRead``
 -  ``MatPreallocatorPreallocate`` performance `significantly improved <https://gitlab.com/petsc/petsc/-/merge_requests/4273>`_
 
 .. rubric:: PC:
@@ -104,6 +108,7 @@ Changes: Development
 -  Add ``PCQR`` - interface to SuiteSparse QR factorization for ``MatSeqAIJ``,
    ``MATNORMAL``, and ``MATNORMALHERMITIAN``
 -  Add support for ``MATNORMAL`` in ``PCASM`` and ``PCHPDDM``
+-  Add support for BoomerAMG from ``PCHYPRE`` to run on NVIDIA and AMD GPUs
 -  ``PCShellGetContext()`` now takes ``void*`` as return argument
 
 .. rubric:: KSP:
