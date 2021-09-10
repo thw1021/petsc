@@ -7,7 +7,7 @@
 PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
 PETSC_EXTERN PetscErrorCode LandauDestroyVelocitySpace(DM*);
-PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], void *);
+PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], PetscInt, void *);
 PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
 PETSC_EXTERN PetscErrorCode LandauIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
 PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
@@ -19,9 +19,11 @@ PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,
 
 #if !defined(LANDAU_MAX_SPECIES)
 #if LANDAU_DIM==2
-#define LANDAU_MAX_SPECIES 10
+#define LANDAU_MAX_SPECIES 8
+#define LANDAU_MAX_GRIDS 3
 #else
 #define LANDAU_MAX_SPECIES 3
+#define LANDAU_MAX_GRIDS 2
 #endif
 #endif
 
@@ -71,34 +73,36 @@ typedef struct {
   void  *dfdx; // nip*Nf - dynamic (IP)
   void  *dfdy; // nip*Nf - dynamic (IP)
   void  *dfdz; // nip*Nf - dynamic (IP)
-  void  *IPf;  // Ncells*Nb*Nf - dynamic (vertex in cells)
   int   dim_,ns_,nip_,nq_,nb_;
 } LandauGeomData;
 
 typedef struct {
   PetscBool      interpolate;                  /* Generate intermediate mesh elements */
   PetscBool      gpu_assembly;
+  MPI_Comm       comm; /* global communicator to use for errors and diagnostics */
+  double         times[1];
+  PetscBool      initialized;
+  PetscBool      use_matrix_mass;
+  /* FE */
   PetscFE        fe[LANDAU_MAX_SPECIES];
   /* geometry  */
-  PetscReal      i_radius;
-  PetscReal      e_radius;
-  PetscInt       num_sections;
-  PetscReal      radius;
-  PetscReal      re_radius;           /* radius of refinement along v_perp=0, z>0 */
-  PetscReal      vperp0_radius1;      /* radius of refinement along v_perp=0 */
-  PetscReal      vperp0_radius2;      /* radius of refinement along v_perp=0 after origin AMR refinement */
-  PetscBool      sphere;
-  PetscBool      inflate;
-  PetscInt       numRERefine;       /* refinement along v_perp=0, z > 0 */
-  PetscInt       nZRefine1;          /* origin refinement after v_perp=0 refinement */
-  PetscInt       nZRefine2;          /* origin refinement after origin AMR refinement */
-  PetscInt       maxRefIts;         /* normal AMR - refine from origin */
-  PetscInt       postAMRRefine;     /* uniform refinement of AMR */
-  PetscInt       preAMRRefine;     /* uniform refinement of AMR */
-  /* discretization - AMR */
-  PetscErrorCode (*errorIndicator)(PetscInt, PetscReal, PetscReal [], PetscInt, const PetscInt[], const PetscScalar[], const PetscScalar[], PetscReal *, void *);
-  PetscReal      refineTol[LANDAU_MAX_SPECIES];
-  PetscReal      coarsenTol[LANDAU_MAX_SPECIES];
+  PetscReal      radius[LANDAU_MAX_GRIDS];
+  PetscReal      re_radius;           /* RE: radius of refinement along v_perp=0, z>0 */
+  PetscReal      vperp0_radius1;      /* RE: radius of refinement along v_perp=0 */
+  PetscReal      vperp0_radius2;      /* RE: radius of refinement along v_perp=0 after origin AMR refinement */
+  PetscBool      sphere; // not used
+  PetscBool      inflate; // not used
+  PetscReal      i_radius[LANDAU_MAX_GRIDS]; // not used
+  PetscReal      e_radius; // not used
+  PetscInt       num_sections; // not used
+  /* AMR */
+  PetscBool      use_p4est;
+  PetscInt       numRERefine;        /* RE: refinement along v_perp=0, z > 0 */
+  PetscInt       nZRefine1;          /* RE: origin refinement after v_perp=0 refinement */
+  PetscInt       nZRefine2;          /* RE: origin refinement after origin AMR refinement */
+  PetscInt       numAMRRefine[LANDAU_MAX_GRIDS];  /* normal AMR - refine from origin */
+  PetscInt       postAMRRefine[LANDAU_MAX_GRIDS]; /* uniform refinement of AMR */
+  /* relativistic */
   PetscBool      use_energy_tensor_trick;
   PetscBool      use_relativistic_corrections;
   /* physics */
@@ -114,8 +118,11 @@ typedef struct {
   PetscReal      epsilon0;
   PetscReal      k;
   PetscReal      lnLam;
-  PetscReal      electronShift; /* for tests */
+  PetscReal      electronShift;
   PetscInt       num_species;
+  PetscInt       num_grids;
+  PetscInt       species_grid_offset[LANDAU_MAX_GRIDS+1];
+  PetscInt       grid_mat_offsets[LANDAU_MAX_GRIDS+1];
   /* cache */
   Mat            J;
   Mat            M;
@@ -127,13 +134,9 @@ typedef struct {
   LandauDeviceType deviceType;
   PetscInt       subThreadBlockSize;
   PetscInt       numConcurrency; /* number of SMs in Cuda to use */
-  MPI_Comm       comm; /* global communicator to use for errors and diagnostics */
-  LandauGeomData *SData_d; /* static geometric data on device, but this pointer is a host pointer */
-  double         times[1];
-  PetscBool      init;
-  PetscBool      use_matrix_mass;
-  DM             dmv;
-  DM             plex;
+  DM             pack;
+  DM             plex[LANDAU_MAX_GRIDS];
+  LandauGeomData SData_d; /* static geometric data on device, this holds host pointers */
   /* diagnostics */
   PetscInt       verbose;
   PetscLogEvent  events[20];
@@ -155,21 +158,26 @@ typedef struct _lP4estVertexMaps {
   pointInterpolationP4est (*c_maps)[LANDAU_MAX_Q_FACE];
   struct _lP4estVertexMaps*data;
   void                    *vp1,*vp2,*vp3;
+  PetscInt                numgrids;
 } P4estVertexMaps;
 
 PETSC_EXTERN PetscErrorCode LandauCreateColoring(Mat, DM, PetscContainer *);
 #if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM, const PetscInt, PetscReal[], PetscScalar[], const PetscInt, const PetscScalar[], LandauGeomData *, const PetscInt, PetscReal, const PetscLogEvent[], Mat);
-PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *);
-PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataSet(DM, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauGeomData *);
+PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM[], const PetscInt, const PetscInt, const PetscInt[], const PetscInt[], PetscReal[], const[], const PetscInt, const PetscScalar[],
+                                               const LandauGeomData *, const PetscInt, const PetscReal, const PetscLogEvent[], Mat[], Mat);
+PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataSet(DM, const PetscInt, const PetscInt, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
+                                                    PetscReal[], LandauGeomData *);
 PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *);
 #endif
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM, const PetscInt, PetscReal[], PetscScalar[],  const PetscInt, const PetscScalar[], LandauGeomData *, const PetscInt, PetscReal, const PetscLogEvent[], Mat);
-PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *);
-PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], LandauGeomData *);
+PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM[], const PetscInt, const PetscInt, const PetscInt[], const PetscInt[], PetscReal[], PetscScalar[],  const PetscInt, const PetscScalar[],
+                                                 const LandauGeomData *, const PetscInt, const PetscReal, const PetscLogEvent[], const PetscInt[], const PetscInt[], Mat[], Mat);
+PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *, PetscInt);
+PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, const PetscInt, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
+                                                      PetscReal[], LandauGeomData *);
 PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataClear(LandauGeomData *);
 #endif
 
