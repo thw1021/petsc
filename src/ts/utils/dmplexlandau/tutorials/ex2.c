@@ -633,7 +633,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
 int main(int argc, char **argv)
 {
   DM             pack;
-  Vec            X,XsubArray[LANDAU_MAX_GRIDS];;
+  Vec            X,XsubArray[LANDAU_MAX_GRIDS];
   PetscErrorCode ierr;
   PetscInt       dim = 2;
   TS             ts;

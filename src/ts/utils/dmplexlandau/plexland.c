@@ -29,11 +29,11 @@ static PetscErrorCode LandauGPUMapsDestroy(void *ptr)
   if (maps[0].deviceType != LANDAU_CPU) {
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
     if (maps[0].deviceType == LANDAU_KOKKOS) {
-      ierr = LandauKokkosDestroyMatMaps(maps);CHKERRQ(ierr); // imples Kokkos does
+      ierr = LandauKokkosDestroyMatMaps(maps,  maps[0].numgrids);CHKERRQ(ierr); // imples Kokkos does
     } // else could be CUDA
 #elif defined(PETSC_HAVE_CUDA)
     if (maps[0].deviceType == LANDAU_CUDA) {
-      ierr = LandauCUDADestroyMatMaps(maps);CHKERRQ(ierr);
+      ierr = LandauCUDADestroyMatMaps(maps, maps[0].numgrids);CHKERRQ(ierr);
     } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->deviceType %D ?????",maps->deviceType);
 #endif
   }
@@ -271,7 +271,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS)
       PetscReal invMass[LANDAU_MAX_SPECIES],nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
       for (PetscInt grid = 0; grid < ctx->num_grids ; grid++) {
-        for (ii=ctx->species_grid_offset[grid];ii<ctx->species_grid_offset[grid+1];ii++) {
+        for (PetscInt ii=ctx->species_grid_offset[grid];ii<ctx->species_grid_offset[grid+1];ii++) {
           invMass[ii] = m_0/ctx->masses[ii];
           nu_alpha[ii] = PetscSqr(ctx->charges[ii]/m_0)*m_0/ctx->masses[ii];
           nu_beta[ii] = PetscSqr(ctx->charges[ii]/ctx->epsilon0)*ctx->lnLam / (8*PETSC_PI) * ctx->t_0*ctx->n_0/PetscPowReal(ctx->v_0,3);
@@ -279,13 +279,13 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       }
       if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
-        ierr = LandauCUDAStaticDataSet(ctx->plex,Nq,nip_glb,nu_alpha,nu_beta,invMass,invJ_a,mass_w,xx,yy,zz,ww,&ctx->SData_d);CHKERRQ(ierr);
+        ierr = LandauCUDAStaticDataSet(ctx->plex[0], Nq, ctx->num_species, nip_glb, nu_alpha, nu_beta, invMass, invJ_a, mass_w, xx, yy, zz, ww, &ctx->SData_d);CHKERRQ(ierr);
 #else
         SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
       } else if (ctx->deviceType == LANDAU_KOKKOS) {
 #if defined(PETSC_HAVE_KOKKOS)
-        ierr = LandauKokkosStaticDataSet(ctx->plex,Nq,nip_glb,nu_alpha,nu_beta,invMass,invJ_a,mass_w,xx,yy,zz,ww,&ctx->SData_d);CHKERRQ(ierr);
+        ierr = LandauKokkosStaticDataSet(ctx->plex[0], Nq,ctx->num_species, nip_glb, nu_alpha, nu_beta, invMass,invJ_a,mass_w,xx,yy,zz,ww,&ctx->SData_d);CHKERRQ(ierr);
 #else
         SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
@@ -367,13 +367,13 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   if (ctx->deviceType == LANDAU_CUDA || ctx->deviceType == LANDAU_KOKKOS) {
     if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
-      ierr = LandauCUDAJacobian(ctx->plex,Nq,ctx->num_grids,numCells,Nf,Eq_m,cellClosure,N,xdata,ctx->SData_d,ctx->subThreadBlockSize,shift,ctx->events,subJ,JacP);CHKERRQ(ierr);
+      ierr = LandauCUDAJacobian(ctx->plex,Nq,ctx->num_grids,numCells,Nf,Eq_m,cellClosure,N,xdata,&ctx->SData_d,ctx->subThreadBlockSize,shift,ctx->events,ctx->grid_mat_offsets, ctx->species_grid_offset, subJ, JacP);CHKERRQ(ierr);
 #else
       SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
     } else if (ctx->deviceType == LANDAU_KOKKOS) {
 #if defined(PETSC_HAVE_KOKKOS)
-      ierr = LandauKokkosJacobian(ctx->plex,Nq,ctx->num_grids,numCells,Nf,Eq_m,cellClosure,N,xdata,ctx->SData_d,ctx->subThreadBlockSize,shift,ctx->events,subJ,JacP);CHKERRQ(ierr);
+      ierr = LandauKokkosJacobian(ctx->plex,Nq,ctx->num_grids,numCells,Nf,Eq_m,cellClosure,N,xdata,&ctx->SData_d,ctx->subThreadBlockSize,shift,ctx->events,ctx->grid_mat_offsets, ctx->species_grid_offset,subJ,JacP);CHKERRQ(ierr);
 #else
       SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
@@ -683,7 +683,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ierr = PetscFree(elemMat);CHKERRQ(ierr);
 
       if (!container) {   // move nest matrix to global JacP
-        PetscInt          moffset = ctx->grid_mat_offsets[grid], nloc, nzl, colbuf[256], row;;
+        PetscInt          moffset = ctx->grid_mat_offsets[grid], nloc, nzl, colbuf[256], row;
         const PetscInt    *cols;
         const PetscScalar *vals;
         Mat               B = subJ[grid];
@@ -804,12 +804,12 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
     } /* grids */
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
     if (ctx->deviceType == LANDAU_KOKKOS) {
-      ierr = LandauKokkosCreateMatMaps(maps, Nf, Nq);CHKERRQ(ierr); // imples Kokkos does
+      ierr = LandauKokkosCreateMatMaps(maps, pointMaps, Nf, Nq, ctx->num_grids);CHKERRQ(ierr); // imples Kokkos does
     } // else could be CUDA
 #endif
 #if defined(PETSC_HAVE_CUDA)
     if (ctx->deviceType == LANDAU_CUDA) {
-      ierr = LandauCUDACreateMatMaps(maps, Nf, Nq);CHKERRQ(ierr);
+      ierr = LandauCUDACreateMatMaps(maps, pointMaps, Nf, Nq, ctx->num_grids);CHKERRQ(ierr);
     }
 #endif
     ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
@@ -945,7 +945,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
         PetscInt       cells[] = {2,2,2};
         PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
         DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-        if (dim==2) { lo[0] = 0; cells[0] = 1; }
+        if (dim==2) { lo[0] = lo[1] = 0; cells[0] = cells[1] = 1; }
         ierr = DMPlexCreateBoxMesh(comm_self, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, &ctx->plex[grid]);CHKERRQ(ierr); // todo: make composite and create dm[grid] here
         ierr = DMLocalizeCoordinates(ctx->plex[grid]);CHKERRQ(ierr); /* needed for periodic */
         if (dim==3) {ierr = PetscObjectSetName((PetscObject) ctx->plex[grid], "cube");CHKERRQ(ierr);}
@@ -1094,6 +1094,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
               ctx->plex[grid] = dmforest; // Forest for adaptivity
             } else SETERRQ(ctx->comm, PETSC_ERR_USER, "Converted to non Forest?");
           } else SETERRQ(ctx->comm, PETSC_ERR_USER, "Convert failed?");
+          ierr = DMSetApplicationContext(ctx->plex[grid], ctx);CHKERRQ(ierr);
         }
       } else ctx->use_p4est = PETSC_FALSE; /* flag for Forest */
     }
