@@ -10,7 +10,7 @@ class Configure(config.package.GNUPackage):
     self.versioninclude  = 'HYPRE_config.h'
     self.requiresversion = 1
     # self.gitcommit       = 'v'+self.version
-    self.gitcommit       = 'eaff5505ed08e66a9c138cae6b0bc0a390232f83' # GPU support with PETSc bugfixes
+    self.gitcommit       = 'eaff5505ed08e66a9c138cae6b0bc0a390232f83' # master Sep 9, 2021 GPU support with PETSc bugfixes
     self.download        = ['git://https://github.com/hypre-space/hypre','https://github.com/hypre-space/hypre/archive/'+self.gitcommit+'.tar.gz']
     self.functions       = ['HYPRE_IJMatrixCreate']
     self.includes        = ['HYPRE.h']
