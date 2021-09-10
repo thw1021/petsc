@@ -459,6 +459,18 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isNEC(compiler, log):
+    '''Returns true if the compiler is a NEC compiler'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version',checkCommand = noCheck, log = log)
+      output = output + error
+      if output.find('NEC Corporation') >= 0:
+        if log: log.write('Detected NEC compiler\n')
+        return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isSolarisAR(ar, log):
     '''Returns true AR is solaris'''
     try:
@@ -610,15 +622,20 @@ class Configure(config.base.Configure):
       self.popLanguage()
       raise RuntimeError(msg)
     oldlibs = self.LIBS
-    self.LIBS += ' -lpetsc-ufod4vtr9mqHvKIQiVAm'
-    if self.checkLink(linkLanguage=linkLanguage):
-      msg = language + ' compiler ' + self.getCompiler()+ ''' is broken! It is returning a zero error when the linking failed! Either
+    if linkLanguage: llang = linkLanguage
+    else: llang = language
+    compiler = self.framework.getCompilerObject(llang)
+    if not hasattr(compiler,'linkerrorcodecheck'):
+      self.LIBS += ' -lpetsc-ufod4vtr9mqHvKIQiVAm'
+      if self.checkLink(linkLanguage=linkLanguage):
+        msg = language + ' compiler ' + self.getCompiler()+ ''' is broken! It is returning a zero error when the linking failed! Either
  1) switch to another compiler suite or
  2) report this entire error message to your compiler/linker suite vendor and ask for fix for this issue.'''
-      self.popLanguage()
+        self.popLanguage()
+        self.LIBS = oldlibs
+        raise RuntimeError(msg)
       self.LIBS = oldlibs
-      raise RuntimeError(msg)
-    self.LIBS = oldlibs
+      compiler.linkerrorcodecheck = 1
     if not self.argDB['with-batch']:
       if not self.checkRun(linkLanguage=linkLanguage):
         msg = 'Cannot run executables created with '+language+'. If this machine uses a batch system \nto submit jobs you will need to configure using ./configure with the additional option  --with-batch.\n Otherwise there is problem with the compilers. Can you compile and run code with your compiler \''+ self.getCompiler()+'\'?\n'
@@ -735,6 +752,7 @@ class Configure(config.base.Configure):
         yield 'mpxlc'
         yield 'hcc'
         self.usedMPICompilers = 0
+      yield 'ncc'
       yield 'gcc'
       yield 'clang'
       yield 'icc'
@@ -1066,6 +1084,8 @@ class Configure(config.base.Configure):
           yield 'icpc'
         elif self.CC == 'xlc':
           yield 'xlC'
+        elif self.CC == 'ncc':
+          yield 'nc++'
         yield 'g++'
         yield 'clang++'
         yield 'c++'
@@ -1202,6 +1222,8 @@ class Configure(config.base.Configure):
         elif self.CC == 'xlc':
           yield 'xlf90'
           yield 'xlf'
+        elif self.CC == 'ncc':
+          yield 'nfort'
         elif self.CC.find('win32fe cl') >= 0:
           yield 'win32fe f90'
           yield 'win32fe ifc'
