@@ -234,8 +234,6 @@ shared libraries and run with --known-mpi-shared-libraries=1')
     self.getExecutable(self.mpiexecExecutable, getFullPath=1, resultName='mpiexecExecutable')
 
     if not 'with-mpiexec' in self.argDB and hasattr(self,'isNecMPI') and hasattr(self,'mpiexecExecutable'):
-      self.logPrint('MPIEXEC ' + self.mpiexecExecutable + '\n')
-      self.logPrint('DIR ' + os.path.dirname(self.mpiexecExecutable) + '\n')
       self.getExecutable('venumainfo', getFullPath=1, path = os.path.dirname(self.mpiexecExecutable))
       if hasattr(self,'venumainfo'):
         try:
