@@ -1047,7 +1047,7 @@ class Configure(config.base.Configure):
         yield self.argDB['CXX']
       raise RuntimeError('C++ compiler you provided with -CXX='+self.argDB['CXX']+' cannot be found or does not work.'+'\n'+self.mesg)
     elif self.usedMPICompilers and 'with-mpi-dir' in self.argDB and os.path.isdir(os.path.join(self.argDB['with-mpi-dir'], 'bin')):
-      yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpincc')
+      yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpinc++')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpiicpc')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'mpicxx')
       yield os.path.join(self.argDB['with-mpi-dir'], 'bin', 'hcp')
