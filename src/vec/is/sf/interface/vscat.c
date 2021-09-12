@@ -35,14 +35,15 @@ static PetscErrorCode VecScatterBegin_Internal(VecScatter sf,Vec x,Vec y,InsertM
 
   PetscFunctionBegin;
   if (x != y) {ierr = VecLockReadPush(x);CHKERRQ(ierr);}
-  if (sf->use_gpu_aware_mpi || sf->vscat.packongpu) {
+  /* If x's latest value is on device OR SF's instructed to do the packing on GPU, we sync the device and get data there. Same for y. */
+  if (sf->use_gpu_aware_mpi && PetscMemTypeDevice(x->offloadmask) || sf->vscat.packongpu) {
     ierr = VecGetArrayReadAndMemType(x,&sf->vscat.xdata,&xmtype);CHKERRQ(ierr);
   } else {
     ierr = VecGetArrayRead(x,&sf->vscat.xdata);CHKERRQ(ierr);
   }
 
   if (x != y) {
-    if (sf->use_gpu_aware_mpi || sf->vscat.packongpu) {ierr = VecGetArrayAndMemType(y,&sf->vscat.ydata,&ymtype);CHKERRQ(ierr);}
+    if (sf->use_gpu_aware_mpi && PetscMemTypeDevice(y->offloadmask) || sf->vscat.packongpu) {ierr = VecGetArrayAndMemType(y,&sf->vscat.ydata,&ymtype);CHKERRQ(ierr);}
     else {ierr = VecGetArray(y,&sf->vscat.ydata);CHKERRQ(ierr);}
   } else {
     sf->vscat.ydata = (PetscScalar *)sf->vscat.xdata;

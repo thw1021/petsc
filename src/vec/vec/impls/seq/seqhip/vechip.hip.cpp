@@ -378,26 +378,16 @@ PetscErrorCode VecGetArrayAndMemType_SeqHIP(Vec v,PetscScalar** a,PetscMemType *
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (v->offloadmask & PETSC_OFFLOAD_GPU) { /* Prefer working on GPU when offloadmask is PETSC_OFFLOAD_BOTH */
-    *a = ((Vec_HIP*)v->spptr)->GPUarray;
-    v->offloadmask    = PETSC_OFFLOAD_GPU; /* Change the mask once GPU gets write access, don't wait until restore array */
-    if (mtype) *mtype = PETSC_MEMTYPE_HIP;
-  } else {
-    ierr = VecHIPAllocateCheckHost(v);CHKERRQ(ierr);
-    *a = *((PetscScalar**)v->data);
-    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
-  }
+  if (!(v->offloadmask & PETSC_OFFLOAD_GPU)) {ierr = VecCUDACopyToGPU(v);CHKERRQ(ierr);}
+  *a = ((Vec_HIP*)v->spptr)->GPUarray;
+  if (mtype) *mtype = PETSC_MEMTYPE_HIP;
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecRestoreArrayAndMemType_SeqHIP(Vec v,PetscScalar** a)
 {
   PetscFunctionBegin;
-  if (v->offloadmask & PETSC_OFFLOAD_GPU) {
-    v->offloadmask = PETSC_OFFLOAD_GPU;
-  } else {
-    v->offloadmask = PETSC_OFFLOAD_CPU;
-  }
+  v->offloadmask = PETSC_OFFLOAD_GPU;
   PetscFunctionReturn(0);
 }
 

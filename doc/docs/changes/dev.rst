@@ -74,7 +74,7 @@ Changes: Development
 .. rubric:: PF:
 
 .. rubric:: Vec:
-
+-  ``VecGetArrayAndMemType()`` now always returns a device pointer if the vector is a device vector. Previously, it did so only when the device has the latest data.
 .. rubric:: PetscSection:
 
 -  Extend ``PetscSectionView()`` for section saving to HDF5
