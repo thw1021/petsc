@@ -371,7 +371,7 @@ class Configure(config.package.Package):
       yield ('User specified installation root BLIS/LAPACK', os.path.join(dir, 'libblis.a'), os.path.join(dir, 'liblapack.a'), 'unknown', 'unknown')
       yield ('User specified installation root BLIS/LAPACK', os.path.join(dir,'lib','libblis.a'), os.path.join(dir,'lib','liblapack.a'), 'unknown', 'unknown')
       # NEC
-      yield ('User specified NEC lib dir', os.path.join(dir, 'libblas_sequential.a'), os.path.join(dir, 'liblapack.a'), 'unknown', 'unknown')
+      yield ('User specified NEC lib dir', os.path.join(dir, 'lib', 'libblas_sequential.a'), os.path.join(dir, 'lib', 'liblapack.a'), 'unknown', 'unknown')
       # Search for OpenBLAS
       for libdir in ['lib','']:
         if os.path.exists(os.path.join(dir,libdir)):
