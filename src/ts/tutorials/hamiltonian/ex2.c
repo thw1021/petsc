@@ -29,7 +29,6 @@ typedef struct {
   DMBoundaryType boundary[3];                      /* The domain boundary type, e.g. periodic */
   PetscInt       particlesPerCell;                 /* The number of partices per cell */
   PetscReal      particleRelDx;                    /* Relative particle position perturbation compared to average cell diameter h */
-  PetscReal      meshRelDx;                        /* Relative vertex position perturbation compared to average cell diameter h */
   PetscInt       k;                                /* Mode number for test function */
   PetscReal      momentTol;                        /* Tolerance for checking moment conservation */
   SNES           snes;                             /* SNES object */
@@ -265,7 +264,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->particlesPerCell = 1;
   options->k                = 1;
   options->particleRelDx    = 1.e-20;
-  options->meshRelDx        = 0.0;
   options->momentTol        = 100.*PETSC_MACHINE_EPSILON;
   options->sigma            = 1.;
   options->timeScale        = 1.0e-6;
@@ -298,7 +296,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsReal("-stepSize","parameter","<1e-2>",options->stepSize,&options->stepSize,PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-timeScale","parameter","<1>",options->timeScale,&options->timeScale,PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-particle_perturbation", "Relative perturbation of particles (0,1)", "ex2.c", options->particleRelDx, &options->particleRelDx, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-mesh_perturbation", "Relative perturbation of mesh points (0,1)", "ex2.c", options->meshRelDx, &options->meshRelDx, NULL);CHKERRQ(ierr);
   ii = options->dim;
   ierr = PetscOptionsRealArray("-domain_hi", "Domain size", "ex2.c", options->domain_hi, &ii, NULL);CHKERRQ(ierr);
   ii = options->dim;
@@ -331,69 +328,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PerturbVertices(DM dm, AppCtx *user)
-{
-  PetscRandom    rnd;
-  PetscReal      interval = user->meshRelDx;
-  Vec            coordinates;
-  PetscScalar   *coords;
-  PetscReal      hh[3];
-  PetscInt       d, cdim, N, p, bs;
-  PetscErrorCode ierr;
-
-  PetscFunctionBeginUser;
-  for (d = 0; d < user->dim; ++d) hh[d] = (user->domain_hi[d] - user->domain_lo[d])/user->faces;
-  ierr = PetscRandomCreate(PetscObjectComm((PetscObject) dm), &rnd);CHKERRQ(ierr);
-  ierr = PetscRandomSetInterval(rnd, -interval, interval);CHKERRQ(ierr);
-  ierr = PetscRandomSetFromOptions(rnd);CHKERRQ(ierr);
-  ierr = DMGetCoordinatesLocal(dm, &coordinates);CHKERRQ(ierr);
-  ierr = DMGetCoordinateDim(dm, &cdim);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(coordinates, &N);CHKERRQ(ierr);
-  ierr = VecGetBlockSize(coordinates, &bs);CHKERRQ(ierr);
-  if (bs != cdim) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Coordinate vector has wrong block size %D != %D", bs, cdim);
-  ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
-  for (p = 0; p < N; p += cdim) {
-    PetscScalar *coord = &coords[p], value;
-
-    for (d = 0; d < cdim; ++d) {
-      ierr = PetscRandomGetValue(rnd, &value);CHKERRQ(ierr);
-      coord[d] = PetscMax(user->domain_lo[d], PetscMin(user->domain_hi[d], coord[d] + value*hh[d]));
-    }
-  }
-  ierr = VecRestoreArray(coordinates, &coords);CHKERRQ(ierr);
-  ierr = PetscRandomDestroy(&rnd);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscBool      flg;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = PetscStrcmp(user->meshFilename, "", &flg);CHKERRQ(ierr);
-  if (flg) {
-    PetscInt faces[3];
-
-    faces[0] = user->faces; faces[1] = 1; faces[2] = 1;
-    ierr = DMPlexCreateBoxMesh(comm, user->dim, user->simplex, faces, user->domain_lo, user->domain_hi, user->boundary, PETSC_TRUE, dm);CHKERRQ(ierr);
-  } else {
-    ierr = DMPlexCreateFromFile(comm, user->meshFilename, PETSC_TRUE, dm);CHKERRQ(ierr);
-    ierr = DMGetDimension(*dm, &user->dim);CHKERRQ(ierr);
-  }
-  {
-    DM distributedMesh = NULL;
-
-    ierr = DMPlexDistribute(*dm, 0, NULL, &distributedMesh);CHKERRQ(ierr);
-    if (distributedMesh) {
-      ierr = DMDestroy(dm);CHKERRQ(ierr);
-      *dm  = distributedMesh;
-    }
-  }
-  ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr); /* needed for periodic */
+  ierr = DMCreate(comm, dm);CHKERRQ(ierr);
+  ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) *dm, "Mesh");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -465,7 +407,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
       ierr = DMLabelCreate(PetscObjectComm((PetscObject)prob), "marker", &label);CHKERRQ(ierr);
       ierr = PetscDSSetResidual(prob, 1, f0_linear_u, NULL);CHKERRQ(ierr);
       ierr = PetscDSSetBdResidual(prob, 0, f0_bd_linear_q, NULL);CHKERRQ(ierr);
-      ierr = PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "Neumann Bd Integral", label, 0, 0, NULL, (void (*)(void)) NULL, 1, &id, user);CHKERRQ(ierr);
+      ierr = PetscDSAddBoundary(prob, DM_BC_ESSENTIAL, "Neumann Bd Integral", label, 1, &id, 0, 0, NULL, (void (*)(void)) NULL, NULL, (void*)user, NULL);CHKERRQ(ierr);
       ierr = PetscDSSetExactSolution(prob, 0, linear_q, user);CHKERRQ(ierr);
       ierr = PetscDSSetExactSolution(prob, 1, linear_u, user);CHKERRQ(ierr);
       break;
@@ -473,7 +415,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
       ierr = DMLabelCreate(PetscObjectComm((PetscObject)prob), "marker", &label);CHKERRQ(ierr);
       ierr = PetscDSSetResidual(prob, 1, f0_quadratic_u, NULL);CHKERRQ(ierr);
       ierr = PetscDSSetBdResidual(prob, 0, f0_bd_quadratic_q, NULL);CHKERRQ(ierr);
-      ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL, "Dirichlet Bd Integral", label, 0, 0, NULL, (void (*)(void)) NULL, 1, &id, user);CHKERRQ(ierr);
+      ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL, "Dirichlet Bd Integral", label, 1, &id, 0, 0,NULL, (void (*)(void)) NULL, NULL, (void*)user, NULL);CHKERRQ(ierr);
       ierr = PetscDSSetExactSolution(prob, 0, quadratic_q, user);CHKERRQ(ierr);
       ierr = PetscDSSetExactSolution(prob, 1, quadratic_u, user);CHKERRQ(ierr);
       break;
@@ -516,7 +458,14 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   ierr = PetscFEDestroy(&feu);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
+/*
+  Creates the particles with initial distribution. The kinematics vector will need to be changed.
+  More recent implementations including collision operator implementations utilize a velocity vector,
+  particularly the W.I.P. quiet start library implementation will require a velocity field. Use with 
+  split operator time steppings schemes will require the creation of a particle vector which combines
+  the "velocity" vector with the coordinates vector. An IS Stride will then be used for the particle indexing
+  for teh split RHS functions.
+*/
 static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscRandom    rnd, rndp;
@@ -556,14 +505,9 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = PetscMalloc5(dim, &centroid, dim, &xi0, dim, &v0, dim*dim, &J, dim*dim, &invJ);CHKERRQ(ierr);
   
   /* 
-    
-    Simplices would need different handling, but two stream would not work without tensor cells. It also breaks with perturbed meshes
-    because this example relies on a symmetrical geometry in the mesh.
-
-    Begin by placing particles at centroid of each cell, which will be in a contiguous block linearly along x
-    Then have them moved evenly across the x axis using the cell width, introducing minor perturbations in particle positioning w.r.t.
-    each other. Assign initial drift velocities of 1.
-
+    pseudorandom implementation of particle spacing. Eventually, quiet start will be pulled into this example. For now,
+    particle velocities are binary, namely -1 or 1. Every other particle is assigned a different initial velocity based on 
+    an arbitrary particle beginning the sequence.
   */
   
   for (c = cStart; c < Ncell; c++) {
@@ -589,7 +533,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
         else{
           for (d = 0; d < dim; ++d) {ierr = PetscRandomGetValue(rnd, &value);CHKERRQ(ierr); refcoords[d] = d == 0 ? PetscRealPart(value) : 0. ;}
         }
-        vals[n] = 0.0;
         CoordinatesRefToReal(dim, dim, xi0, v0, J, refcoords, &coords[n*dim]);
         /* constant particle weights */
         for (d = 0; d < dim; ++d) vals[n] = user->sigma/Np;
@@ -679,6 +622,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
   ierr = VecGetArray(Vres,&vres);CHKERRQ(ierr);
   
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm, NULL, "-rhs2_view");
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = SNESGetDM(user->snes, &plex);CHKERRQ(ierr);
   ierr = DMGetCoordinateDim(plex, &cdim);CHKERRQ(ierr);
@@ -770,7 +714,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     PetscReal   *pcoord   = PETSC_NULL;
     PetscReal   *refcoord = PETSC_NULL;
     PetscInt    *points   = PETSC_NULL, Ncp, cp;
-    PetscTabulation *tab;
+    PetscTabulation tab;
     PetscScalar  gradPhi[3];
 
     ierr = DMPlexComputeCellGeometryFEM(plex, cell, NULL, v, J, invJ, &detJ);CHKERRQ(ierr);
@@ -792,7 +736,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     
     //ierr = PetscFEGetTabulation(fe, Ncp, refcoord, NULL, &D, NULL);CHKERRQ(ierr);
     // Check updated tabulation handling. 
-    ierr = PetscFECreateTabulation(fe, 0, Ncp, refcoord, 1, tab);CHKERRQ(ierr);
+    ierr = PetscFECreateTabulation(fe, 0, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
     /* Get coefficients from phi for closure of cell */
     ierr = DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
 
@@ -812,7 +756,8 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
 
       /* C0 elements */
       else{
-        ierr = PetscFEFreeInterpolateGradient_Static(fe, tab[1], ph, cdim, invJ, NULL, cp, gradPhi);CHKERRQ(ierr);
+        const PetscReal* basisdir = tab->T[1];
+        ierr = PetscFEFreeInterpolateGradient_Static(fe, basisdir, ph, cdim, invJ, NULL, cp, gradPhi);CHKERRQ(ierr);
       }
 
       for (d = 0; d < cdim; ++d) {
@@ -822,7 +767,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     }
     ierr = DMPlexVecRestoreClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
     //ierr = PetscFERestoreTabulation(fe, Ncp, pcoord, NULL, &D, NULL);CHKERRQ(ierr);
-    ierr = PetscTabulationDestroy(tab);CHKERRQ(ierr);
+    ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &pcoord);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &refcoord);CHKERRQ(ierr);
     ierr = PetscFree(points);CHKERRQ(ierr);
@@ -1070,14 +1015,14 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q2
-     args: -dim 2 -faces 4 -simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 2 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 2 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
    test:
      suffix: bsi2q2
-     args: -dim 2 -faces 4 -simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     args: --dm_plex_dim -faces 4 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
    test:
     suffix: 2d_bdm1_p0_2
     requires: triangle
-    args: -sol_type quartic -dim 2 -faces 4 -simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase \
+    args: -sol_type quartic -dm_plex_dim -faces 4 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase \
           -field_petscspace_degree 1 -field_petscdualspace_type bdm -dm_refine 0 -convest_num_refine 1 -snes_convergence_estimate \
           -snes_error_if_not_converged \
           -ksp_rtol 1e-10 -ksp_error_if_not_converged \
