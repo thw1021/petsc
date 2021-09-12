@@ -6491,7 +6491,6 @@ PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat C)
   MatCheckProduct(C,1);
   if (product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data not empty");
   ptype = product->type;
-  if (product->A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
   switch (ptype) {
   case MATPRODUCT_AB:
     A = product->A;

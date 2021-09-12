@@ -2288,8 +2288,6 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   ierr = MatSeqAIJCUSPARSECopyToGPU(B);CHKERRQ(ierr);
 
   ptype = product->type;
-  if (A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
-  if (B->symmetric && ptype == MATPRODUCT_ABt) ptype = MATPRODUCT_AB;
   switch (ptype) {
   case MATPRODUCT_AB:
     Amat = Acusp->mat;
@@ -2407,8 +2405,6 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   if (Bcusp->format != MAT_CUSPARSE_CSR) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
 
   ptype = product->type;
-  if (A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
-  if (B->symmetric && ptype == MATPRODUCT_ABt) ptype = MATPRODUCT_AB;
   biscompressed = PETSC_FALSE;
   ciscompressed = PETSC_FALSE;
   switch (ptype) {
