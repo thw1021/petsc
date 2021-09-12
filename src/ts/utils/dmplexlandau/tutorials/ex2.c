@@ -167,7 +167,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   Vec               XsubArray[LANDAU_MAX_GRIDS];
 
   PetscFunctionBeginUser;
-  if (ctx->num_species!=2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D < 2",ctx->num_species);
+  if (ctx->num_species!=2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D != 2",ctx->num_species);
   ierr = VecGetDM(X, &pack);CHKERRQ(ierr);
   if (!pack) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no DM");
   ierr = DMCompositeGetAccessArray(pack, X, ctx->num_grids, NULL, XsubArray);CHKERRQ(ierr); // read only

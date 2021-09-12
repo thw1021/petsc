@@ -19,12 +19,14 @@ PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,
 
 #if !defined(LANDAU_MAX_SPECIES)
 #if LANDAU_DIM==2
-#define LANDAU_MAX_SPECIES 8
+#define LANDAU_MAX_SPECIES 10
 #define LANDAU_MAX_GRIDS 3
 #else
 #define LANDAU_MAX_SPECIES 3
 #define LANDAU_MAX_GRIDS 2
 #endif
+#else
+#define LANDAU_MAX_GRIDS 3
 #endif
 
 #if !defined(LANDAU_MAX_Q)
