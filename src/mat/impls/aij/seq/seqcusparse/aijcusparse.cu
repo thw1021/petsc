@@ -1216,7 +1216,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEFormExplicitTransposeForMult(Mat A)
   PetscErrorCode               ierr;
 
   PetscFunctionBegin;
-  if (!A->form_explicit_transpose || !A->rmap->n || !A->cmap->n) PetscFunctionReturn(0);
+  A->form_explicit_transpose = PETSC_TRUE; /* since caller asked for it */
   ierr = MatSeqAIJCUSPARSECopyToGPU(A);CHKERRQ(ierr);
   matstruct = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->mat;
   if (!matstruct) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing mat struct");
