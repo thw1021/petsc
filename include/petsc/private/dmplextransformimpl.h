@@ -10,9 +10,10 @@ struct _p_DMPlexTransformOps {
   PetscErrorCode (*setfromoptions)(PetscOptionItems *, DMPlexTransform);
   PetscErrorCode (*setup)(DMPlexTransform);
   PetscErrorCode (*destroy)(DMPlexTransform);
+  PetscErrorCode (*setdimensions)(DMPlexTransform,DM,DM);
   PetscErrorCode (*celltransform)(DMPlexTransform,DMPolytopeType,PetscInt,PetscInt*,PetscInt*,DMPolytopeType*[],PetscInt*[],PetscInt*[],PetscInt*[]);
   PetscErrorCode (*getsubcellorientation)(DMPlexTransform,DMPolytopeType,PetscInt,PetscInt,DMPolytopeType,PetscInt,PetscInt,PetscInt*,PetscInt*);
-  PetscErrorCode (*mapcoordinates)(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
+  PetscErrorCode (*mapcoordinates)(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
 };
 
 struct _p_DMPlexTransform {
@@ -38,6 +39,27 @@ struct _p_DMPlexTransform {
 typedef struct {
   DMLabel label; /* This marks the points to be deleted/ignored */
 } DMPlexTransform_Filter;
+
+typedef struct {
+  /* Inputs */
+  PetscInt   cdim;          /* The coordinate dimension of the surface */
+  PetscInt   cdimEx;        /* The coordinate dimension of the extruded volume */
+  PetscInt   layers;        /* The number of extruded layers */
+  PetscReal  thickness;     /* The total thickness of the extruded layers */
+  PetscInt   Nth;           /* The number of specified thicknesses */
+  PetscReal *thicknesses;   /* The input layer thicknesses */
+  PetscBool  useTensor;     /* Flag to create tensor cells */
+  PetscBool  useNormal;     /* Use input normal instead of calculating it */
+  PetscReal  normal[3];     /* Surface normal from input */
+  PetscBool  symmetric;     /* Extrude layers symmetrically about the surface */
+  /* Calculated quantities */
+  PetscReal      *layerPos; /* The position of each layer relative to the original surface, along the local normal direction */
+  PetscInt       *Nt;       /* The array of the number of target types */
+  DMPolytopeType **target;  /* The array of target types */
+  PetscInt       **size;    /* The array of the number of each target type */
+  PetscInt       **cone;    /* The array of cones for each target cell */
+  PetscInt       **ornt;    /* The array of orientation for each target cell */
+} DMPlexTransform_Extrude;
 
 typedef struct {
   PetscInt dummy;
@@ -69,7 +91,7 @@ typedef struct {
   PetscInt       **ornt;    /* The array of orientation for each target cell */
 } DMPlexRefine_BL;
 
-PetscErrorCode DMPlexTransformMapCoordinatesBarycenter_Internal(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
+PetscErrorCode DMPlexTransformMapCoordinatesBarycenter_Internal(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
 PetscErrorCode DMPlexTransformGetSubcellOrientation_Regular(DMPlexTransform, DMPolytopeType, PetscInt, PetscInt, DMPolytopeType, PetscInt, PetscInt, PetscInt *, PetscInt *);
 PetscErrorCode DMPlexTransformCellRefine_Regular(DMPlexTransform, DMPolytopeType, PetscInt, PetscInt *, PetscInt *, DMPolytopeType *[], PetscInt *[], PetscInt *[], PetscInt *[]);
 

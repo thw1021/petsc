@@ -199,11 +199,11 @@ int main(int argc, char **argv)
     suffix: 2
     requires: triangle
     nsize: 5
-    args: -init_dm_plex_dim 2 -srf_dm_refine 3 -petscpartitioner_type simple -dm_distribute -dm_plex_extrude_layers 3 -dm_view
+    args: -init_dm_plex_dim 2 -srf_dm_refine 3 -petscpartitioner_type simple -dm_distribute -dm_extrude 3 -dm_view
 
   test: # adaptively refine the surface before extrusion
     suffix: 3
     requires: triangle
-    args: -init_dm_plex_dim 2 -init_dm_plex_box_faces 5,5 -adapt -volume_constraint_1 0.01 -volume_constraint_2 0.000625 -dm_plex_extrude_layers 10
+    args: -init_dm_plex_dim 2 -init_dm_plex_box_faces 5,5 -adapt -volume_constraint_1 0.01 -volume_constraint_2 0.000625 -dm_extrude 10
 
 TEST*/

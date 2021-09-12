@@ -2355,6 +2355,41 @@ PetscErrorCode  DMSetRefineLevel(DM dm,PetscInt level)
   PetscFunctionReturn(0);
 }
 
+/*@
+  DMExtrude - Extrude a DM object from a surface
+
+  Collective on dm
+
+  Input Parameter:
++ dm     - the DM object
+- layers - the number of extruded cell layers
+
+  Output Parameter:
+. dme - the extruded DM, or NULL
+
+  Note: If no extrusion was done, the return value is NULL
+
+  Level: developer
+
+.seealso DMRefine(), DMCoarsen(), DMDestroy(), DMView(), DMCreateGlobalVector()
+@*/
+PetscErrorCode DMExtrude(DM dm, PetscInt layers, DM *dme)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (!dm->ops->extrude) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "DM type %s does not implement DMExtrude", ((PetscObject) dm)->type_name);
+  ierr = (*dm->ops->extrude)(dm, layers, dme);CHKERRQ(ierr);
+  if (*dme) {
+    (*dme)->ops->creatematrix = dm->ops->creatematrix;
+    ierr = PetscObjectCopyFortranFunctionPointers((PetscObject) dm, (PetscObject) *dme);CHKERRQ(ierr);
+    (*dme)->ctx = dm->ctx;
+    ierr = DMSetMatType(*dme, dm->mattype);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMGetBasisTransformDM_Internal(DM dm, DM *tdm)
 {
   PetscFunctionBegin;

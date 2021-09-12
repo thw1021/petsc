@@ -2962,6 +2962,16 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
   }
   ierr = DMPlexSetRefinementUniform(dm, uniformOrig);CHKERRQ(ierr);
   /* Handle DMPlex extrusion before distribution */
+  ierr = PetscOptionsBoundedInt("-dm_extrude", "The number of layers to extrude", "", extLayers, &extLayers, NULL, 0);CHKERRQ(ierr);
+  if (extLayers) {
+    DM edm;
+
+    ierr = DMExtrude(dm, extLayers, &edm);CHKERRQ(ierr);
+    ierr = DMPlexReplace_Static(dm, &edm);CHKERRQ(ierr);
+    ierr = DMSetFromOptions_NonRefinement_Plex(PetscOptionsObject, dm);CHKERRQ(ierr);
+    extLayers = 0;
+  }
+  /* TODO Old-style extrusion which can be removed */
   ierr = PetscOptionsBool("-dm_plex_interpolate", "Flag to create edges and faces automatically", "", interpolate, &interpolate, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-dm_extrude_layers", "The number of layers to extrude", "", extLayers, &extLayers, NULL, 0);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dm_extrude_thickness", "The thickness of the layer to be extruded", "", extThickness, &extThickness, NULL);CHKERRQ(ierr);
@@ -3220,6 +3230,7 @@ static PetscErrorCode DMInitialize_Plex(DM dm)
   dm->ops->coarsenhierarchy                = DMCoarsenHierarchy_Plex;
   dm->ops->adaptlabel                      = DMAdaptLabel_Plex;
   dm->ops->adaptmetric                     = DMAdaptMetric_Plex;
+  dm->ops->extrude                         = DMExtrude_Plex;
   dm->ops->globaltolocalbegin              = NULL;
   dm->ops->globaltolocalend                = NULL;
   dm->ops->localtoglobalbegin              = NULL;
