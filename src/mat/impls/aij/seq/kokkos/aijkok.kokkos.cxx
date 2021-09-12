@@ -24,7 +24,11 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
 
   PetscFunctionBegin;
   ierr = MatAssemblyEnd_SeqAIJ(A,mode);CHKERRQ(ierr);
-  A->offloadmask = PETSC_OFFLOAD_CPU;
+  if (aijkok) {
+    if (aijkok->a_dual.need_sync_host())        A->offloadmask = PETSC_OFFLOAD_GPU;
+    else if (aijkok->a_dual.need_sync_device()) A->offloadmask = PETSC_OFFLOAD_CPU;
+    else                                        A->offloadmask = PETSC_OFFLOAD_BOTH;
+  }
   if (aijkok && aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
@@ -520,8 +524,9 @@ PetscErrorCode MatSeqAIJKokkosMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
       PetscInt base = ci(i)+ai(i+1)-ai(i);
       for (PetscInt k=0; k<bi(i+1)-bi(i); k++) ca(base+k) = ba(bi(i)+k);
     });
+    ckok->a_dual.modify_device();
+    (*C)->offloadmask = PETSC_OFFLOAD_GPU; /* Device has the latest data */
   }
-  (*C)->offloadmask = PETSC_OFFLOAD_GPU; /* Device has the latest data */
   PetscFunctionReturn(0);
 }
 
@@ -537,7 +542,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   PetscErrorCode                 ierr;
   Mat_Product                    *product = C->product;
   Mat                            A,B,At,Bt;
-  bool                           transA = false,transB = false;
+  bool                           transA,transB; /* use bool, since KK needs this type */
   Mat_SeqAIJKokkos               *akok,*bkok,*ckok;
   Mat_SeqAIJ                     *c;
   MatProductData_SeqAIJKokkos    *pdata;
@@ -552,6 +557,14 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
     PetscFunctionReturn(0);
   }
 
+  switch (product->type) {
+    case MATPRODUCT_AB:  transA = false; transB = false; break;
+    case MATPRODUCT_AtB: transA = true;  transB = false; break;
+    case MATPRODUCT_ABt: transA = false; transB = true;  break;
+    default:
+      SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
+  }
+
   A     = product->A;
   B     = product->B;
   ierr  = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr);
@@ -561,7 +574,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   ckok  = static_cast<Mat_SeqAIJKokkos*>(C->spptr);
 
   /* TODO: Once KK spgemm implements transpose, we can get rid of the explicit transpose here */
-  if (pdata->transA) {
+  if (transA) {
     A->form_explicit_transpose = PETSC_TRUE;
     ierr   = MatSeqAIJKokkosGenerateTranspose(A);CHKERRQ(ierr);
     At     = static_cast<Mat_SeqAIJKokkos*>(A->spptr)->At;
@@ -569,7 +582,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
     transA = false;
   }
 
-  if (pdata->transB) {
+  if (transB) {
     B->form_explicit_transpose = PETSC_TRUE;
     ierr   = MatSeqAIJKokkosGenerateTranspose(B);CHKERRQ(ierr);
     Bt     = static_cast<Mat_SeqAIJKokkos*>(B->spptr)->At;
@@ -624,7 +637,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
       SETERRQ1(comm,PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
   }
 
-  product->data = pdata = new MatProductData_SeqAIJKokkos(transA,transB);
+  product->data = pdata = new MatProductData_SeqAIJKokkos();
   pdata->kh.set_team_work_size(16);
   pdata->kh.set_dynamic_scheduling(true);
   pdata->reusesym = product->api_user;
@@ -917,14 +930,6 @@ PETSC_INTERN PetscErrorCode  MatSetSeqAIJKokkosWithCSRMatrix(Mat A,Mat_SeqAIJKok
   */
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
-
-  if (akok->a_dual.need_sync_host()) {
-    A->offloadmask = PETSC_OFFLOAD_GPU;
-  } else if (akok->a_dual.need_sync_device()) {
-    A->offloadmask = PETSC_OFFLOAD_CPU;
-  } else {
-    A->offloadmask = PETSC_OFFLOAD_BOTH;
-  }
   akok->nonzerostate = A->nonzerostate; /* Device and host have the same i,j data */
   A->spptr           = akok;
   PetscFunctionReturn(0);
@@ -1553,10 +1558,13 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_KOKKOS(void)
 /* Utility to print out a KokkosCsrMatrix for debugging */
 PETSC_INTERN PetscErrorCode PrintCsrMatrix(const KokkosCsrMatrix& csrmat)
 {
-  PetscErrorCode ierr;
-  const PetscInt    *i = csrmat.graph.row_map.data();
-  const PetscInt    *j = csrmat.graph.entries.data();
-  const PetscScalar *a = csrmat.values.data();
+  PetscErrorCode    ierr;
+  const auto&       iv = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),csrmat.graph.row_map);
+  const auto&       jv = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),csrmat.graph.entries);
+  const auto&       av = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),csrmat.values);
+  const PetscInt    *i = iv.data();
+  const PetscInt    *j = jv.data();
+  const PetscScalar *a = av.data();
   PetscInt          m = csrmat.numRows(),n = csrmat.numCols(),nnz = csrmat.nnz();
 
   PetscFunctionBegin;

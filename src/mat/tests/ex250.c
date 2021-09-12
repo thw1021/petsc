@@ -3,7 +3,7 @@ static char help[] = "Test Mat products \n\n";
 #include <petscmat.h>
 int main(int argc,char **args)
 {
-  Mat             A,B,C,D,E;
+  Mat             A=NULL,B=NULL,C=NULL,D=NULL,E=NULL;
   PetscErrorCode  ierr;
   PetscInt        k;
   const PetscInt  M = 18,N = 18;
@@ -94,7 +94,7 @@ int main(int argc,char **args)
       suffix: cuda
       requires: cuda
       nsize: {{1 3 4}}
-      args: -mat_type aijcusparse -matmatmult_via backend -matptap_via backend -mattransposematmult_via backend
+      args: -mat_type aijcusparse
 
     test:
       suffix: kok

@@ -175,9 +175,8 @@ struct Mat_SeqAIJKokkos {
 
 struct MatProductData_SeqAIJKokkos {
   KernelHandle kh;
-  bool         transA,transB;
   PetscBool    reusesym;
-  MatProductData_SeqAIJKokkos(bool transA_,bool transB_) : transA(transA_),transB(transB_),reusesym(PETSC_FALSE){}
+  MatProductData_SeqAIJKokkos() : reusesym(PETSC_FALSE){}
 };
 
 PETSC_INTERN PetscErrorCode MatSetSeqAIJKokkosWithCSRMatrix(Mat,Mat_SeqAIJKokkos*);

@@ -272,10 +272,15 @@ static PetscErrorCode MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Mat mat,Ma
   mpiaij->A = A;
   mpiaij->B = B;
 
-  mat->preallocated = PETSC_TRUE;
+  mat->preallocated     = PETSC_TRUE;
+  mat->nooffprocentries = PETSC_TRUE; /* See MatAssemblyBegin_MPIAIJ. In effect, making MatAssemblyBegin a nop */
+
   ierr = MatSetOption(mat,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr); /* mpiaij->B is compacted, with its col ids and size reduced in this call */
+  /* MatAssemblyEnd is critical here. It sets mat->offloadmask according to A and B's, and
+    also gets mpiaij->B compacted, with its col ids and size reduced
+  */
+  ierr = MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatSetOption(mat,MAT_NO_OFF_PROC_ENTRIES,PETSC_FALSE);CHKERRQ(ierr);
   ierr = MatSetOption(mat,MAT_NEW_NONZERO_LOCATION_ERR,PETSC_TRUE);CHKERRQ(ierr);
 
@@ -703,6 +708,9 @@ static PetscErrorCode MatSetMPIAIJKokkosWithGlobalCSRMatrix(Mat C,MatReuse reuse
         p++;
       }
     });
+    akok->a_dual.modify_device();
+    bkok->a_dual.modify_device();
+    C->offloadmask = mpiaij->A->offloadmask = mpiaij->B->offloadmask = PETSC_OFFLOAD_GPU;
   } else if (reuse == MAT_INITIAL_MATRIX) {
     Mat                         Cd,Co;
     const MatColIdxKokkosView&  Cj = csrmat.graph.entries;
@@ -796,8 +804,11 @@ static PetscErrorCode MatSetMPIAIJKokkosWithGlobalCSRMatrix(Mat C,MatReuse reuse
         p++;
       }
     });
-
-    /* With a, i, j for Cd and Co, finally build Cd, Co and then C */
+    Cdj_dual.modify_device();
+    Cda_dual.modify_device();
+    Coj_dual.modify_device();
+    Coa_dual.modify_device();
+    /* With a, i, j for Cd and Co, finally build Cd, Co and then C. Their offloadmask will be set in each's MatAssemblyEnd */
     auto cdkok = new Mat_SeqAIJKokkos(m,n,Cd_nnz,Cdi_dual,Cdj_dual,Cda_dual);
     auto cokok = new Mat_SeqAIJKokkos(m,N,Co_nnz,Coi_dual,Coj_dual,Coa_dual);
     ierr = MatCreateSeqAIJKokkosWithCSRMatrix(PETSC_COMM_SELF,cdkok,&Cd);CHKERRQ(ierr);
