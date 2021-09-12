@@ -158,7 +158,7 @@ typedef struct _lP4estVertexMaps {
   PetscInt                 Nf;
   PetscInt                 Nq;
   pointInterpolationP4est (*c_maps)[LANDAU_MAX_Q_FACE];
-  struct _lP4estVertexMaps*data;
+  struct _lP4estVertexMaps*d_self;
   void                    *vp1,*vp2,*vp3;
   PetscInt                numgrids;
 } P4estVertexMaps;

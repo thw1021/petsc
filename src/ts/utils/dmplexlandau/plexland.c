@@ -26,6 +26,7 @@ static PetscErrorCode LandauGPUMapsDestroy(void *ptr)
   P4estVertexMaps *maps = (P4estVertexMaps*)ptr;
   PetscErrorCode  ierr;
   PetscFunctionBegin;
+  // free device data
   if (maps[0].deviceType != LANDAU_CPU) {
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
     if (maps[0].deviceType == LANDAU_KOKKOS) {
@@ -37,6 +38,7 @@ static PetscErrorCode LandauGPUMapsDestroy(void *ptr)
     } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->deviceType %D ?????",maps->deviceType);
 #endif
   }
+  // free host data
   for (PetscInt grid=0 ; grid < maps[0].numgrids ; grid++) {
     ierr = PetscFree(maps[grid].c_maps);CHKERRQ(ierr);
     ierr = PetscFree(maps[grid].gIdx);CHKERRQ(ierr);
@@ -623,6 +625,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           /* assemble - from the diagonal (I,I) in this format for DMPlexMatSetClosure */
           for (fieldA = 0; fieldA < Nfloc_j ; fieldA++) {
             LandauIdx *const Idxs = &maps[grid].gIdx[ei][fieldA][0];
+            //printf("\t\t%d) field %d, moffset=%d\n",ei,fieldA,moffset);
             for (f = 0; f < Nb ; f++) {
               idx = Idxs[f];
               if (idx >= 0) {
@@ -655,10 +658,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
                 const PetscInt    j = fieldA*Nb + g; /* Element matrix column */
                 const PetscScalar Aij = elemMat[i*totDim + j];
                 for (q = 0; q < nr; q++) rows[q] = rows0[q] + moffset;
-                for (q = 0; q < nc; q++) cols[q] = cols0[q] + moffset;
+                for (d = 0; d < nc; d++) cols[d] = cols0[d] + moffset;
                 for (q = 0; q < nr; q++) {
                   for (d = 0; d < nc; d++) {
                     vals[q*nc + d] = row_scale[q]*col_scale[d]*Aij;
+                    //printf("\t\t\t%d) field %d, q=(%d.%d) A(%d.%d) = %g\n",ei,fieldA,f,g,rows[q],cols[d],vals[q*nc + d]);
                   }
                 }
                 ierr = MatSetValues(JacP,nr,rows,nc,cols,vals,ADD_VALUES);CHKERRQ(ierr);
@@ -725,7 +729,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       PetscInt cStart, cEnd, ej, Nfloc = Nf[grid], totDim = Nfloc*Nq;
       ierr = DMPlexGetHeightStratum(ctx->plex[grid], 0, &cStart, &cEnd);CHKERRQ(ierr);
       // make maps
-      maps[grid].data = NULL;
+      maps[grid].d_self = NULL;
       maps[grid].num_elements = numCells[grid];
       maps[grid].num_face = (PetscInt)(pow(Nq,1./((double)dim))+.001); // Q
       maps[grid].num_face = (PetscInt)(pow(maps[grid].num_face,(double)(dim-1))+.001); // Q^2
@@ -791,7 +795,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           }
         }
       }
-      // allocate and copy point datamaps[grid].gIdx[eidx][field][q] -- for CPU version of this code, for debugging
+      // allocate and copy point datamaps[grid].gIdx[eidx][field][q]
       ierr = PetscMalloc(maps[grid].num_reduced * sizeof(*maps[grid].c_maps), &maps[grid].c_maps);CHKERRQ(ierr);
       for (ej = 0; ej < maps[grid].num_reduced; ++ej) {
         for (q = 0; q < maps[grid].num_face; ++q) {
@@ -799,17 +803,17 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           maps[grid].c_maps[ej][q].gid   = pointMaps[ej][q].gid;
         }
       }
-    } /* grids */
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-    if (ctx->deviceType == LANDAU_KOKKOS) {
-      ierr = LandauKokkosCreateMatMaps(maps, pointMaps, Nf, Nq, ctx->num_grids);CHKERRQ(ierr); // imples Kokkos does
-    } // else could be CUDA
+      if (ctx->deviceType == LANDAU_KOKKOS) {
+        ierr = LandauKokkosCreateMatMaps(maps, pointMaps, Nf, Nq, grid);CHKERRQ(ierr); // imples Kokkos does
+      } // else could be CUDA
 #endif
 #if defined(PETSC_HAVE_CUDA)
-    if (ctx->deviceType == LANDAU_CUDA) {
-      ierr = LandauCUDACreateMatMaps(maps, pointMaps, Nf, Nq, ctx->num_grids);CHKERRQ(ierr);
-    }
+      if (ctx->deviceType == LANDAU_CUDA) {
+        ierr = LandauCUDACreateMatMaps(maps, pointMaps, Nf, Nq, grid);CHKERRQ(ierr);
+      }
 #endif
+    } /* grids */
     ierr = PetscLogEventEnd(ctx->events[2],0,0,0,0);CHKERRQ(ierr);
   } /* first pass with GPU assembly */
   /* clean up */
@@ -943,7 +947,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
         PetscInt       cells[] = {2,2,2};
         PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
         DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-        if (dim==2) { lo[0] = lo[1] =0; cells[0] = cells[1] = 1; }
+        if (dim==2) { lo[0] =0; cells[0] = 1; }
         ierr = DMPlexCreateBoxMesh(comm_self, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, &ctx->plex[grid]);CHKERRQ(ierr); // todo: make composite and create dm[grid] here
         ierr = DMLocalizeCoordinates(ctx->plex[grid]);CHKERRQ(ierr); /* needed for periodic */
         if (dim==3) {ierr = PetscObjectSetName((PetscObject) ctx->plex[grid], "cube");CHKERRQ(ierr);}
