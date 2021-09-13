@@ -9,7 +9,8 @@
 #error CUPMInterface requires c++11
 #endif // PetscDefined(HAVE_CXX_DIALECT_CXX11)
 
-namespace Petsc {
+namespace Petsc
+{
 
 // enum describing available cupm devices, this is used as the template parameter to any
 // class subclassing the CUPMInterface or using it as a member variable
