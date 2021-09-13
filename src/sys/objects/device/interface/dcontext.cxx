@@ -717,8 +717,10 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm)
     }
   }
   ierr = PetscRegisterFinalize(PetscDeviceContextFinalizeGlobalContext_Private);CHKERRQ(ierr);
-  ierr = PetscOptionsHasName(NULL,NULL,"-log_view",&flg);CHKERRQ(ierr);
-  if (!flg) {ierr = PetscOptionsHasName(NULL,NULL,"-log_summary",&flg);CHKERRQ(ierr);}
+  ierr = PetscOptionsHasName(PETSC_NULLPTR,PETSC_NULLPTR,"-log_view",&flg);CHKERRQ(ierr);
+  if (!flg) {
+    ierr = PetscOptionsHasName(PETSC_NULLPTR,PETSC_NULLPTR,"-log_summary",&flg);CHKERRQ(ierr);
+  }
   if (flg) defaultInitKind = PETSC_DEVICE_INIT_GREEDY;
   {
     //ierr = PetscOptionsBool("-cupm_synchronize","Wait for the device to complete operations before returning to the CPU (on by default with -log_summary or -log_view)",NULL,devSynchronize,&devSynchronize,NULL);CHKERRQ(ierr);
@@ -727,7 +729,7 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm)
   ierr = PetscDeviceInitializeAllDefaultDevices_Internal(comm,defaultInitKind);CHKERRQ(ierr);
   ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetFromOptions(comm,NULL,globalContext);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetFromOptions(comm,PETSC_NULLPTR,globalContext);CHKERRQ(ierr);
   if (defaultInitKind == PETSC_DEVICE_INIT_GREEDY) {
     ierr = PetscDeviceContextSetupGlobalContext_Private();CHKERRQ(ierr);
   }
@@ -792,7 +794,7 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
   PetscValidDeviceContext(dctx,1);
   if (PetscUnlikelyDebug(!dctx->setup)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext %D must be set up before being set as global context",dctx->id);
   globalContext = dctx;
-  ierr = PetscInfo1(NULL,"Set global device context id %D\n",dctx->id);CHKERRQ(ierr);
+  ierr = PetscInfo1(PETSC_NULLPTR,"Set global device context id %D\n",dctx->id);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

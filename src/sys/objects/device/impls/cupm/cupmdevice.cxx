@@ -150,7 +150,6 @@ template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::finalize() noexcept
 {
   PetscFunctionBegin;
-  if (!_initialized) PetscFunctionReturn(0);
   _initialized = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
