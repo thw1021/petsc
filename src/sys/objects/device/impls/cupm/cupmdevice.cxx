@@ -262,10 +262,10 @@ CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(CUDA,cuda);
 CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(HIP,hip);
 
 template <CUPMDeviceKind T>
-PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscDeviceInitKind *initKind) noexcept
+PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscDeviceInitKind *defaultInitKind, PetscInt *defaultDeviceId) noexcept
 {
   int            ndev;
-  PetscInt       initKindCUPM = *initKind, id = PETSC_DECIDE;
+  PetscInt       initKindCUPM = *defaultInitKind, id = *defaultDeviceId;
   PetscBool      view = PETSC_FALSE,flg;
   cupmError_t    cerr;
   PetscErrorCode ierr;
@@ -312,7 +312,8 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscDeviceInitKind *ini
       ierr = _devices[_defaultDevice]->view(vwr);CHKERRQ(ierr);
     }
   }
-  *initKind    = static_cast<PetscDeviceInitKind>(initKindCUPM);
+  *defaultInitKind = static_cast<PetscDeviceInitKind>(initKindCUPM);
+  *defaultDeviceId = id;
   _initialized = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
