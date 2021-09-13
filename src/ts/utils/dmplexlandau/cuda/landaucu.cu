@@ -26,7 +26,7 @@ do {                                                                            
   }                                                                                      \
  } while (0)
 
-PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, pointInterpolationP4est (*points)[LANDAU_MAX_Q_FACE], PetscInt Nf, PetscInt Nq)
+PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, pointInterpolationP4est (*points)[LANDAU_MAX_Q_FACE], PetscInt nc[], PetscInt Nf, PetscInt Nq)
 {
   P4estVertexMaps h_maps;
   cudaError_t     cerr;
@@ -41,14 +41,14 @@ PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, point
   cerr = cudaMemcpy(          h_maps.c_maps, maps->c_maps, maps->num_reduced  * sizeof *points, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   cerr = cudaMalloc((void **)&h_maps.gIdx,                 maps->num_elements * sizeof *maps->gIdx);CHKERRCUDA(cerr);
   cerr = cudaMemcpy(          h_maps.gIdx, maps->gIdx,     maps->num_elements * sizeof *maps->gIdx, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-  cerr = cudaMalloc((void **)&maps->data, sizeof(P4estVertexMaps));CHKERRCUDA(cerr);
-  cerr = cudaMemcpy(          maps->data,   &h_maps, sizeof(P4estVertexMaps), cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  cerr = cudaMalloc((void **)&maps->d_self, sizeof(P4estVertexMaps));CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(          maps->d_self,   &h_maps, sizeof(P4estVertexMaps), cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *pMaps)
+PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *pMaps, PetscInt ng)
 {
-  P4estVertexMaps *d_maps = pMaps->data, h_maps;
+  P4estVertexMaps *d_maps = pMaps->d_self, h_maps;
   cudaError_t     cerr;
   PetscFunctionBegin;
   cerr = cudaMemcpy(&h_maps, d_maps, sizeof(P4estVertexMaps), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
@@ -118,7 +118,6 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_
 #if LANDAU_DIM==3
     cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs);CHKERRCUDA(cerr);     // kernel input
 #endif
-    cerr = cudaMalloc((void **)&SData_d->IPf,    nip*Nf*szs);CHKERRCUDA(cerr); // Nq==Nb
   }
   PetscFunctionReturn(0);
 }
@@ -150,9 +149,6 @@ PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *SData_d)
 #if LANDAU_DIM==3
     cerr = cudaFree(SData_d->dfdz);CHKERRCUDA(cerr);
 #endif
-    if (SData_d->IPf) {
-      cerr = cudaFree(SData_d->IPf);CHKERRCUDA(cerr);
-    }
   }
   PetscFunctionReturn(0);
 }
@@ -661,8 +657,8 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
     if (container) { // not here first call
       ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
-      if (h_maps->data) {
-        d_maps = h_maps->data;
+      if (h_maps->d_self) {
+        d_maps = h_maps->d_self;
         if (!d_maps) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata");
       } else {
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
@@ -685,8 +681,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     ierr = PetscLogEventBegin(events[1],0,0,0,0);CHKERRQ(ierr);
     cerr = cudaMemcpy(SData_d->Eq_m, a_Eq_m,   Nf*szf, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     if (a_IPf) {
-      cerr = cudaMemcpy(SData_d->IPf, a_IPf, nip*Nf*szf, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-      d_IPf  = (PetscScalar*)SData_d->IPf;
+      
     } else {
       d_IPf = (PetscScalar*)a_xarray;
     }
@@ -780,8 +775,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
     if (ctx->gpu_assembly) {
       // transition to use of maps for VecGetClosure
-      cerr = cudaFree(SData_d->IPf);CHKERRCUDA(cerr);
-      SData_d->IPf = NULL;
       if (!(a_IPf || a_xarray)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "transition without Jacobian");
     }
   }

@@ -165,8 +165,8 @@ typedef struct _lP4estVertexMaps {
 
 PETSC_EXTERN PetscErrorCode LandauCreateColoring(Mat, DM, PetscContainer *);
 #if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM[], const PetscInt, const PetscInt, const PetscInt[], const PetscInt[], PetscReal[], const[], const PetscInt, const PetscScalar[],
-                                               const LandauGeomData *, const PetscInt, const PetscReal, const PetscLogEvent[], Mat[], Mat);
+PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM[], const PetscInt, const PetscInt, const PetscInt[], const PetscInt[], PetscReal[], PetscScalar[], const PetscInt, const PetscScalar[],
+                                               const LandauGeomData *, const PetscInt, const PetscReal, const PetscLogEvent[],const PetscInt[], const PetscInt[], Mat[], Mat);
 PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataSet(DM, const PetscInt, const PetscInt, const PetscInt, PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
