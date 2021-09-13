@@ -415,7 +415,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
       ierr = DMLabelCreate(PetscObjectComm((PetscObject)prob), "marker", &label);CHKERRQ(ierr);
       ierr = PetscDSSetResidual(prob, 1, f0_quadratic_u, NULL);CHKERRQ(ierr);
       ierr = PetscDSSetBdResidual(prob, 0, f0_bd_quadratic_q, NULL);CHKERRQ(ierr);
-      ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL, "Dirichlet Bd Integral", label, 1, &id, 0, 0,NULL, (void (*)(void)) NULL, NULL, (void*)user, NULL);CHKERRQ(ierr);
+      ierr = PetscDSAddBoundary(prob, DM_BC_NATURAL, "Dirichlet Bd Integral", label, 1, &id, 0, 0, NULL, (void (*)(void)) NULL, NULL, (void*)user, NULL);CHKERRQ(ierr);
       ierr = PetscDSSetExactSolution(prob, 0, quadratic_q, user);CHKERRQ(ierr);
       ierr = PetscDSSetExactSolution(prob, 1, quadratic_u, user);CHKERRQ(ierr);
       break;
@@ -739,14 +739,14 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     ierr = PetscFECreateTabulation(fe, 0, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
     /* Get coefficients from phi for closure of cell */
     ierr = DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
-
+    //ierr = PetscFEGetCellTabulation(fe, 1, &tab);
     /* Interpolate gradient of field */
     for (cp = 0; cp < Ncp; ++cp) {
       const PetscInt p = points[cp];
       gradPhi[0] = 0.0;
       gradPhi[1] = 0.0;
       gradPhi[2] = 0.0;
-
+      PetscPrintf(PETSC_COMM_WORLD, "cp: %i\n", cp);
       /* For use with mixed form poisson */
       if(user->bdm){
         ierr = PetscFEGetQuadrature(fe, &q);
