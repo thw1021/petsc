@@ -767,11 +767,12 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     }
     ierr = DMPlexVecRestoreClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
     //ierr = PetscFERestoreTabulation(fe, Ncp, pcoord, NULL, &D, NULL);CHKERRQ(ierr);
-    ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
+    //ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &pcoord);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &refcoord);CHKERRQ(ierr);
     ierr = PetscFree(points);CHKERRQ(ierr);
   }
+  PetscPrintf(PETSC_COMM_WORLD, "step completed\n");
   ierr = DMSwarmRestoreField(dm, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
   ierr = DMSwarmSortRestoreAccess(dm);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(plex, &locPhi);CHKERRQ(ierr);
@@ -1015,7 +1016,7 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q2
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 2 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
    test:
      suffix: bsi2q2
      args: --dm_plex_dim -faces 4 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
