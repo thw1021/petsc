@@ -942,12 +942,14 @@ class Configure(config.base.Configure):
               self.logPrint('Skipping CRAY LIBSCI library: '+arg, 4, 'compilers')
               continue
             elif arg in self.clibs:
-              self.logPrint('Library already in C list so skipping in C++')
+              self.logPrint('Library already in C list so skipping in C++', 4, 'compilers')
               continue
             else:
               lflags.append(arg)
             self.logPrint('Found library: '+arg, 4, 'compilers')
             cxxlibs.append(arg)
+          else:
+            self.logPrint('Already in flags: '+arg, 4, 'compilers')
           continue
         m = re.match(r'^-L.*$', arg)
         if m:
@@ -1361,15 +1363,16 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
             elif arg == '-lfrtbegin' and not config.setCompilers.Configure.isCygwin(self.log):
               fmainlibs.append(arg)
               continue
+            elif arg == '-lLTO' and self.setCompilers.isDarwin(self.log):
+              self.logPrint('Skipping -lTO')
             elif iscray and (arg == '-lsci_cray_mpi' or arg == '-lsci_cray' or arg == '-lsci_cray_mp'):
               self.logPrint('Skipping CRAY LIBSCI library: '+arg, 4, 'compilers')
               continue
             elif arg in self.clibs:
-              self.logPrint('Library already in C list so skipping in Fortran')
+              self.logPrint('Library already in C list so skipping in Fortran', 4, 'compilers')
               continue
-            elif not arg == '-lLTO' or not config.setCompilers.Configure.isDarwin(self.log):
+            else:
               lflags.append(arg)
-              continue
             self.logPrint('Found library: '+arg, 4, 'compilers')
             flibs.append(arg)
           else:
