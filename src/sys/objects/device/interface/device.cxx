@@ -227,15 +227,15 @@ static PetscErrorCode PetscDeviceSetupDefaultDevice_Private(MPI_Comm comm, Petsc
   if (PetscDeviceEnabledFor(kind)) {
     /* on the off chance that someone fumbles calling this with INVALID or MAX */
     PetscValidDeviceKind(kind,2);
-    ierr = PetscInfo1(NULL,"PetscDeviceKind %s supported, initializing\n",PetscDeviceKinds[kind]);CHKERRQ(ierr);
+    ierr = PetscInfo1(PETSC_NULLPTR,"PetscDeviceKind %s supported, initializing\n",PetscDeviceKinds[kind]);CHKERRQ(ierr);
     ierr = PetscDeviceInitializeKind_Private(comm,kind,&initKind);CHKERRQ(ierr);
     /* initKind now represents what the individual TYPES have decided to initialize as */
     if (initKind == PETSC_DEVICE_INIT_GREEDY) {
       ierr = PetscDeviceConstructDefaultDevice_Internal(kind);CHKERRQ(ierr);
-      if (globalView) {ierr = PetscDeviceView(defaultDevices[kind],NULL);CHKERRQ(ierr);}
+      if (globalView) {ierr = PetscDeviceView(defaultDevices[kind],PETSC_NULLPTR);CHKERRQ(ierr);}
     }
   } else {
-    ierr = PetscInfo1(NULL,"PetscDeviceKind %s not supported\n",PetscDeviceKinds[kind]);CHKERRQ(ierr);
+    ierr = PetscInfo1(PETSC_NULLPTR,"PetscDeviceKind %s not supported\n",PetscDeviceKinds[kind]);CHKERRQ(ierr);
     defaultDevices[kind] = PETSC_NULLPTR;
   }
   PetscFunctionReturn(0);
@@ -253,9 +253,9 @@ PetscErrorCode PetscDeviceInitializeAllDefaultDevices_Internal(MPI_Comm comm, Pe
     PetscInt  initIdx = defaultInitKind;
     PetscBool flg;
 
-    ierr = PetscOptionsBegin(comm,NULL,"PetscDevice Options","Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList("-device_enable","How (or whether to) initialize PetscDevices","PetscDeviceInitializeAllDevices_Internal()",PetscDeviceInitKinds,sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds),PetscDeviceInitKinds[initIdx],&initIdx,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-device_view","Display device information and assignments (note this implies greedy initialization, but is overridden by disabling devices)",NULL,view,&view,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(comm,PETSC_NULLPTR,"PetscDevice Options","Sys");CHKERRQ(ierr);
+    ierr = PetscOptionsEList("-device_enable","How (or whether to) initialize PetscDevices","PetscDeviceInitializeAllDevices_Internal()",PetscDeviceInitKinds,sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds),PetscDeviceInitKinds[initIdx],&initIdx,PETSC_NULLPTR);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-device_view","Display device information and assignments (note this implies greedy initialization, but is overridden by disabling devices)",PETSC_NULLPTR,view,&view,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
     if (initIdx == PETSC_DEVICE_INIT_NONE) {
       view = PETSC_FALSE; /* disable viewing if devices are globally disabled (although
