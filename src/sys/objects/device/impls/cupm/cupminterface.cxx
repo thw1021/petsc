@@ -11,6 +11,8 @@ const decltype(cudaSuccess)                 CUPMInterface<CUPMDeviceKind::CUDA>:
 const decltype(cudaErrorNotReady)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorNotReady;
 const decltype(cudaStreamNonBlocking)       CUPMInterface<CUPMDeviceKind::CUDA>::cupmStreamNonBlocking;
 const decltype(cudaErrorDeviceAlreadyInUse) CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorDeviceAlreadyInUse;
+const decltype(cudaDeviceMapHost)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmDeviceMapHost;
+const decltype(cudaMemcpyHostToDevice)      CUPMInterface<CUPMDeviceKind::CUDA>::cupmMemcpyHostToDevice;
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
@@ -18,6 +20,8 @@ const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmSu
 const decltype(hipErrorNotReady)      CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorNotReady;
 const decltype(hipStreamNonBlocking)  CUPMInterface<CUPMDeviceKind::HIP>::cupmStreamNonBlocking;
 const decltype(hipSuccess)            CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;
+const decltype(hipDeviceMapHost)      CUPMInterface<CUPMDeviceKind::HIP>::cupmDeviceMapHost;
+const decltype(hipMemcpyHostToDevice) CUPMInterface<CUPMDeviceKind::HIP>::cupmMemcpyHostToDevice;
 #endif // PetscDefined(HAVE_HIP)
 
 } // namespace Petsc

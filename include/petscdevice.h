@@ -12,9 +12,6 @@
 #include <cusolverSp.h>
 #include <cufft.h>
 
-PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
-PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
-
 /* cuBLAS does not have cublasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRCUBLAS macro */
 PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t);
@@ -67,8 +64,6 @@ PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
   } while (0)
 
 PETSC_EXTERN cudaStream_t   PetscDefaultCudaStream; /* The default stream used by PETSc */
-PETSC_INTERN PetscErrorCode PetscCUBLASInitializeHandle(void);
-PETSC_INTERN PetscErrorCode PetscCUSOLVERDnInitializeHandle(void);
 
 PETSC_EXTERN PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
@@ -84,9 +79,6 @@ PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 #endif /* __HIP_PLATFORM_NVCC__ */
 
 #define WaitForHIP() PetscHIPSynchronize ? hipDeviceSynchronize() : hipSuccess;
-
-PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
-PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 
 /* hipBLAS does not have hipblasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRHIPBLAS macro */
@@ -177,8 +169,6 @@ PETSC_STATIC_INLINE hipsolverStatus_t hipsolverSetStream(hipsolverHandle_t handl
 }
 #endif /* __HIP_PLATFORM_NVCC__ */
 PETSC_EXTERN hipStream_t    PetscDefaultHipStream; /* The default stream used by PETSc */
-PETSC_INTERN PetscErrorCode PetscHIPBLASInitializeHandle(void);
-PETSC_INTERN PetscErrorCode PetscHIPSOLVERInitializeHandle(void);
 
 PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
@@ -190,8 +180,9 @@ PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
 
 /* PetscDevice */
-PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceKind,PetscDevice*);
+PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceKind,PetscInt,PetscDevice*);
 PETSC_EXTERN PetscErrorCode PetscDeviceConfigure(PetscDevice);
+PETSC_EXTERN PetscErrorCode PetscDeviceView(PetscDevice,PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscDeviceDestroy(PetscDevice*);
 
 /* PetscDeviceContext */
