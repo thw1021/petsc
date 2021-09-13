@@ -9,18 +9,6 @@
 #include <petsc/private/valgrind/valgrind.h>
 #endif
 
-#if defined(PETSC_HAVE_CUDA)
-#include <petsc/private/deviceimpl.h>
-PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
-PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-#include <petsc/private/deviceimpl.h>
-PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
-PETSC_EXTERN hipEvent_t petsc_gputimer_end;
-#endif
-
 #if defined(PETSC_USE_GCOV)
 EXTERN_C_BEGIN
 void  __gcov_flush(void);
@@ -667,7 +655,9 @@ int64_t Petsc_adios_group;
 #include <omp.h>
 PetscInt PetscNumOMPThreads;
 #endif
-
+#if defined(PETSC_HAVE_DEVICE)
+#include <petsc/private/deviceimpl.h>
+#endif
 #if defined(PETSC_HAVE_DLFCN_H)
 #include <dlfcn.h>
 #endif
@@ -1627,22 +1617,10 @@ PetscErrorCode  PetscFinalize(void)
 
 #if defined(PETSC_HAVE_CUDA)
   if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
-  if (petsc_gputimer_begin) {
-    cudaError_t cerr = cudaEventDestroy(petsc_gputimer_begin);CHKERRCUDA(cerr);
-  }
-  if (petsc_gputimer_end) {
-    cudaError_t cerr = cudaEventDestroy(petsc_gputimer_end);CHKERRCUDA(cerr);
-  }
 #endif
 
 #if defined(PETSC_HAVE_HIP)
   if (PetscDefaultHipStream)  {hipError_t cerr  = hipStreamDestroy(PetscDefaultHipStream);CHKERRHIP(cerr);}
-  if (petsc_gputimer_begin) {
-    hipError_t cerr = hipEventDestroy(petsc_gputimer_begin);CHKERRHIP(cerr);
-  }
-  if (petsc_gputimer_end) {
-    hipError_t cerr = hipEventDestroy(petsc_gputimer_end);CHKERRHIP(cerr);
-  }
 #endif
 
   ierr = PetscFreeMPIResources();CHKERRQ(ierr);
