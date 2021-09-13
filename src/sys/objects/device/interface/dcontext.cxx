@@ -278,7 +278,7 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   if (!dctx->device) {
-    ierr = PetscInfo2(NULL,"PetscDeviceContext %D did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
+    ierr = PetscInfo2(PETSC_NULLPTR,"PetscDeviceContext %D did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetDefaultDevice_Internal(dctx);CHKERRQ(ierr);
   }
   if (dctx->setup) PetscFunctionReturn(0);
@@ -482,7 +482,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
     ++i;
   }
 #if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
-  ierr = PetscInfo3(NULL,"Forked %D children from parent %D with IDs: %s\n",nBefore,dctx->id,idList.c_str());CHKERRQ(ierr);
+  ierr = PetscInfo3(PETSC_NULLPTR,"Forked %D children from parent %D with IDs: %s\n",nBefore,dctx->id,idList.c_str());CHKERRQ(ierr);
   /* resets the size but doesn't deallocate the memory */
   idList.clear();
 #endif
@@ -611,7 +611,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
   }
 
 #if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
-  ierr = PetscInfo4(NULL,"Joined %D ctxs to ctx %D, mode %s with IDs: %s\n",n,dctx->id,PetscDeviceContextJoinModes[joinMode],idList.c_str());CHKERRQ(ierr);
+  ierr = PetscInfo4(PETSC_NULLPTR,"Joined %D ctxs to ctx %D, mode %s with IDs: %s\n",n,dctx->id,PetscDeviceContextJoinModes[joinMode],idList.c_str());CHKERRQ(ierr);
   idList.clear();
 #endif
   PetscFunctionReturn(0);
@@ -668,7 +668,7 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
   if (PetscLikely(globalContextSetup)) PetscFunctionReturn(0);
   globalContextSetup = PETSC_TRUE;
   if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
-  ierr = PetscInfo1(NULL,"Initializing root PetscDeviceContext with PetscDeviceKind %s\n",PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
+  ierr = PetscInfo1(PETSC_NULLPTR,"Initializing root PetscDeviceContext with PetscDeviceKind %s\n",PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetDefaultDevice_Internal(globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -722,10 +722,6 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm)
     ierr = PetscOptionsHasName(PETSC_NULLPTR,PETSC_NULLPTR,"-log_summary",&flg);CHKERRQ(ierr);
   }
   if (flg) defaultInitKind = PETSC_DEVICE_INIT_GREEDY;
-  {
-    //ierr = PetscOptionsBool("-cupm_synchronize","Wait for the device to complete operations before returning to the CPU (on by default with -log_summary or -log_view)",NULL,devSynchronize,&devSynchronize,NULL);CHKERRQ(ierr);
-    SETERRQ(comm,PETSC_ERR_PLIB,"TODO Synchronize");
-  }
   ierr = PetscDeviceInitializeAllDefaultDevices_Internal(comm,defaultInitKind);CHKERRQ(ierr);
   ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
