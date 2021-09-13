@@ -1,7 +1,7 @@
 #include "../../interface/cupmdevice.hpp"
 
 #include <algorithm>
-#include <csignal> // SIGSEV
+#include <csignal> // SIGSEGV
 #include <csetjmp> // for cuda mpi awareness
 
 namespace Petsc
@@ -34,7 +34,7 @@ private:
   // private, although technically useless since the enclosing CUPMDevice can access all of
   // these at will
   const int        _id;
-  PetscBool        _initialized   = PETSC_FALSE;
+  PetscBool        _initialized = PETSC_FALSE;
   cupmDeviceProp_t _dprop; // cudaDeviceProp appears to be an actual struct, i.e. you can't
                            // initialize it with nullptr or NULL (i've tried)
 
@@ -100,7 +100,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
     cerr = cupmGetDeviceProperties(&_dprop,_id);CHKERRCUPM(cerr);
     if (PetscDefined(USE_INFO)) {
       PetscErrorCode ierr;
-      ierr = PetscInfo1(NULL,"configured device %d\n",_id);CHKERRQ(ierr);
+      ierr = PetscInfo1(nullptr,"configured device %d\n",_id);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -208,8 +208,7 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!_initialized) PetscFunctionReturn(0);
-  if (PetscDefined(USE_DEBUG) && (_defaultDevice != PETSC_CUPM_DEVICE_NONE)) {
+  if (PetscDefined(USE_DEBUG) && (_defaultDevice != PETSC_CUPM_DEVICE_NONE) && _initialized) {
     int         ndev;
     cupmError_t cerr;
 
@@ -248,7 +247,7 @@ template <CUPMDeviceKind T> static constexpr const std::array<const char*,4> cup
 #define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_1(KIND,kind)              \
   template <>                                                           \
   constexpr const std::array<const char*,4>                             \
-  cupmOptions<CUPMDeviceKind::KIND>()                                   \
+  cupmOptions<CUPMDeviceKind::KIND>() noexcept                          \
   {                                                                     \
     return {                                                            \
       STR(KIND) "Options",                                              \
@@ -278,11 +277,11 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscDeviceInitKind *def
   {
     constexpr const auto options = cupmOptions<T>();
 
-    ierr = PetscOptionsBegin(comm,NULL,options[0],"Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList(options[1],"How (or whether to) initialize a device, note that 'none' overrides any following options","PetscDeviceInitializeDeviceKind_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initKindCUPM],&initKindCUPM,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(comm,nullptr,options[0],"Sys");CHKERRQ(ierr);
+    ierr = PetscOptionsEList(options[1],"How (or whether to) initialize a device, note that 'none' overrides any following options","PetscDeviceInitializeDeviceKind_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initKindCUPM],&initKindCUPM,nullptr);CHKERRQ(ierr);
     static_assert(PETSC_DECIDE == -1,"");
-    ierr = PetscOptionsRangeInt(options[2],"Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device (note the latter implies greedy initialization).","PetscDeviceCreate",id,&id,NULL,PETSC_DECIDE,ndev);CHKERRQ(ierr);
-    ierr = PetscOptionsBool(options[3],"Display device information and assignments (note this implies greedy initialization)",NULL,view,&view,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt(options[2],"Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device (note the latter implies greedy initialization).","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,ndev);CHKERRQ(ierr);
+    ierr = PetscOptionsBool(options[3],"Display device information and assignments (note this implies greedy initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
   if (initKindCUPM == PETSC_DEVICE_INIT_NONE) {
