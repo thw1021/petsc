@@ -41,7 +41,7 @@ public:
   // move assignment operator
   CUPMDevice& operator=(CUPMDevice &&other) noexcept = default;
 
-  PETSC_NODISCARD static PetscErrorCode initialize(MPI_Comm,PetscDeviceInitKind*) noexcept;
+  PETSC_NODISCARD static PetscErrorCode initialize(MPI_Comm,PetscDeviceInitKind*,PetscInt*) noexcept;
 
   PETSC_NODISCARD PetscErrorCode getDevice(PetscDevice,PetscInt) const noexcept;
 
