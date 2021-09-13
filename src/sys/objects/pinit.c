@@ -657,6 +657,14 @@ PetscInt PetscNumOMPThreads;
 #endif
 #if defined(PETSC_HAVE_DEVICE)
 #include <petsc/private/deviceimpl.h>
+#if PetscDefined(HAVE_CUDA)
+// REMOVE ME
+hipStream_t PetscDefaultCudaStream;
+#endif
+#if PetscDefined(HAVE_CUDA)
+// REMOVE ME
+hipStream_t PetscDefaultHipStream;
+#endif
 #endif
 #if defined(PETSC_HAVE_DLFCN_H)
 #include <dlfcn.h>
@@ -1175,6 +1183,14 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   */
 #if (defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)) && defined(PETSC_EXPERIMENTAL)
   ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
+# if PetscDefined(HAVE_CUDA)
+  // REMOVE ME
+  cudaError_t cerr = cudaStreamCreate(&PetscDefaultCudaStream);CHKERRCUDA(cerr);
+#endif
+# if PetscDefined(HAVE_HIP)
+  // REMOVE ME
+  hipError_t herr = hipStreamCreate(&PetscDefaultHipStream);CHKERRHIP(herr);
+#endif
 #endif
 
   /*
@@ -1616,10 +1632,12 @@ PetscErrorCode  PetscFinalize(void)
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
+  // REMOVE ME
   if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
 #endif
 
 #if defined(PETSC_HAVE_HIP)
+  // REMOVE ME
   if (PetscDefaultHipStream)  {hipError_t cerr  = hipStreamDestroy(PetscDefaultHipStream);CHKERRHIP(cerr);}
 #endif
 

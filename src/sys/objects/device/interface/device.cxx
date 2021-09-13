@@ -256,7 +256,7 @@ static PetscErrorCode PetscDeviceSetupDefaultDevice_Private(MPI_Comm comm, Petsc
 /* called from PetscDeviceContextInitializeRootContext_Internal() do not call yourself! */
 PetscErrorCode PetscDeviceInitializeAllDefaultDevices_Internal(MPI_Comm comm, PetscDeviceInitKind defaultInitKind)
 {
-  PetscBool      defaultView = PETSC_FALSE;
+  PetscBool      defaultView   = PETSC_FALSE;
   PetscInt       defaultDevice = PETSC_DECIDE;
   PetscErrorCode ierr;
 
@@ -268,12 +268,13 @@ PetscErrorCode PetscDeviceInitializeAllDefaultDevices_Internal(MPI_Comm comm, Pe
 
     ierr = PetscOptionsBegin(comm,PETSC_NULLPTR,"PetscDevice Options","Sys");CHKERRQ(ierr);
     ierr = PetscOptionsEList("-device_enable","How (or whether to) initialize PetscDevices","PetscDeviceInitializeAllDevices_Internal()",PetscDeviceInitKinds,sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds),PetscDeviceInitKinds[initIdx],&initIdx,PETSC_NULLPTR);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device (note the latter implies greedy initialization).","PetscDeviceCreate",defaultDevice,&defaultDevice,NULL,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",defaultDevice,&defaultDevice,PETSC_NULLPTR,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
     ierr = PetscOptionsBool("-device_view","Display device information and assignments (note this implies greedy initialization, but is overridden by disabling devices)",PETSC_NULLPTR,defaultView,&defaultView,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
     if (initIdx == PETSC_DEVICE_INIT_NONE) {
-      defaultView = PETSC_FALSE; /* disable viewing if devices are globally disabled (although
-                                  * individual types may still do view */
+      /* disabled all device initialization if devices are globally disabled */
+      if (PetscUnlikelyDebug(defaultDevice != PETSC_DECIDE)) SETERRQ(comm,PETSC_ERR_USER_INPUT,"You have disabled devices but also specified a particular device to use, these options are mutually  exlusive");
+      defaultView = PETSC_FALSE;
     } else {
       defaultView = static_cast<PetscBool>(defaultView && flg);
       if (defaultView) initIdx = PETSC_DEVICE_INIT_GREEDY;
