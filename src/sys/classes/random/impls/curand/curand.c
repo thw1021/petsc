@@ -103,7 +103,7 @@ PETSC_EXTERN PetscErrorCode PetscRandomCreate_CURAND(PetscRandom r)
   PetscRandom_CURAND *curand;
 
   PetscFunctionBegin;
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   ierr = PetscNewLog(r,&curand);CHKERRQ(ierr);
   cerr = curandCreateGenerator(&curand->gen,CURAND_RNG_PSEUDO_DEFAULT);CHKERRCURAND(cerr);
   /* https://docs.nvidia.com/cuda/curand/host-api-overview.html#performance-notes2 */
