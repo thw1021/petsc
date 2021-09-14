@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '54e4213ca028163a76639d23b1204b213203bc79' # develop of 2021-04-28
+    self.gitcommit        = 'a2fff48e4bd62734045af6a8c34a89d2236807ae' # develop of 2021-10-14
     self.versionname      = 'KOKKOS_KERNELS_VERSION'  # It looks kokkos-kernels does not yet have a macro for version number
     self.download         = ['git://https://github.com/kokkos/kokkos-kernels.git']
     # See also kokkos.py. Cannot test includes with standard approaches since that requires Kokkos nvcc_wapper that we do not handle in configure
