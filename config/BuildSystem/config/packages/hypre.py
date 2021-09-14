@@ -82,13 +82,16 @@ class Configure(config.package.GNUPackage):
     devflags = ''
     hipbuild = False
     cudabuild = False
-    hasharch = 'with-gpu-arch' in  args
+    hasharch = 'with-gpu-arch' in args
     if self.hip.found:
       hipbuild = True
       args.append('--with-hip')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
-          args.append('--with-gpu-arch=gfx908') # default
+          if hasattr(self.hip,'target'):
+            args.append('--with-gpu-arch=' + self.hip.target)
+          else:
+            args.append('--with-gpu-arch=gfx908') # defaults to MI100
         else:
           args.append('--with-gpu-arch='+self.argDB['with-hypre-gpu-arch'])
       self.pushLanguage('HIP')

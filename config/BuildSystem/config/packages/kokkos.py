@@ -140,6 +140,8 @@ class Configure(config.package.CMakePackage):
       with self.Language('HIP'):
         petscHipc = self.getCompiler()
         hipFlags = self.updatePackageCxxFlags(self.getCompilerFlags())
+        # kokkos uses clang and offload flag
+        hipFlags = ' '.join([i for i in hipFlags.split() if '--amdgpu-target' not in i])
       args.append('-DKOKKOS_HIP_OPTIONS="'+hipFlags.replace(' ',';')+'"')
       self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
       if not hasattr(self,'systemHipc'):
@@ -148,9 +150,20 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
-      if not 'with-kokkos-hip-arch' in self.framework.clArgDB:
-        raise RuntimeError('You must set --with-kokkos-hip-arch=VEGA900, VEGA906, VEGA908 etc.')
-      args.append('-DKokkos_ARCH_'+self.argDB['with-kokkos-hip-arch']+'=ON')
+      if 'with-kokkos-hip-arch' in self.framework.clArgDB:
+        deviceArchName = self.argDB['with-kokkos-hip-arch']
+      else:
+        genToName = {'gfx': 'VEGA'}
+        if hasattr(self.hip,'target'):
+          generation = self.hip.target[0:3]
+          try:
+            # Kokkos uses names like VEGA908
+            deviceArchName = genToName[generation] + self.hip.target[3:]
+          except KeyError:
+            raise RuntimeError('Could not find an arch name for HIP gen number '+ self.hip.target)
+        else:
+          raise RuntimeError('You must set --with-kokkos-hip-arch=VEGA900, VEGA906, VEGA908 etc.')
+      args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
       args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
 
     # set -DCMAKE_CXX_STANDARD=
