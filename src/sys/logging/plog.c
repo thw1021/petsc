@@ -2243,18 +2243,7 @@ M*/
 M*/
 
 #if defined(PETSC_HAVE_DEVICE)
-
-#if defined(PETSC_HAVE_CUDA)
-#include <petscdevice.h>
-PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
-PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-#include <petscdevice.h>
-PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
-PETSC_EXTERN hipEvent_t petsc_gputimer_end;
-#endif
+#include <petsc/private/deviceimpl.h>
 
 /*-------------------------------------------- GPU event Functions ----------------------------------------------*/
 /*@C
@@ -2278,26 +2267,18 @@ PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 @*/
 PetscErrorCode PetscLogGpuTimeBegin(void)
 {
-#if defined(PETSC_HAVE_CUDA)
-  cudaError_t    cerr;
-#elif defined(PETSC_HAVE_HIP)
-  hipError_t     cerr;
-#else
   PetscErrorCode ierr;
-#endif
+
   PetscFunctionBegin;
-#if defined(PETSC_USE_DEBUG)
-  if (petsc_gtime_inuse) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
-  petsc_gtime_inuse = PETSC_TRUE;
-#endif
   if (!PetscLogPLB) PetscFunctionReturn(0);
-#if defined(PETSC_HAVE_CUDA)
-  cerr = cudaEventRecord(petsc_gputimer_begin,PetscDefaultCudaStream);CHKERRCUDA(cerr);
-#elif defined(PETSC_HAVE_HIP)
-  cerr = hipEventRecord(petsc_gputimer_begin,PetscDefaultHipStream);CHKERRHIP(cerr);
-#else
-  ierr = PetscTimeSubtract(&petsc_gtime);CHKERRQ(ierr);
-#endif
+  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
+    PetscDeviceContext dctx;
+
+    ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextBeginTimer_Internal(dctx);CHKERRQ(ierr);
+  } else {
+    ierr = PetscTimeSubtract(&petsc_gtime);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -2310,34 +2291,20 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
 @*/
 PetscErrorCode PetscLogGpuTimeEnd(void)
 {
-#if defined(PETSC_HAVE_CUDA)
-  float          gtime;
-  cudaError_t    cerr;
-#elif defined(PETSC_HAVE_HIP)
-  float          gtime;
-  hipError_t     cerr;
-#else
   PetscErrorCode ierr;
-#endif
+
   PetscFunctionBegin;
-#if defined(PETSC_USE_DEBUG)
-  if (!petsc_gtime_inuse) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeBegin()?");
-  petsc_gtime_inuse = PETSC_FALSE;
-#endif
   if (!PetscLogPLE) PetscFunctionReturn(0);
-#if defined(PETSC_HAVE_CUDA)
-  cerr = cudaEventRecord(petsc_gputimer_end,PetscDefaultCudaStream);CHKERRCUDA(cerr);
-  cerr = cudaEventSynchronize(petsc_gputimer_end);CHKERRCUDA(cerr);
-  cerr = cudaEventElapsedTime(&gtime,petsc_gputimer_begin,petsc_gputimer_end);CHKERRCUDA(cerr);
-  petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
-#elif defined(PETSC_HAVE_HIP)
-  cerr = hipEventRecord(petsc_gputimer_end,PetscDefaultHipStream);CHKERRHIP(cerr);
-  cerr = hipEventSynchronize(petsc_gputimer_end);CHKERRHIP(cerr);
-  cerr = hipEventElapsedTime(&gtime,petsc_gputimer_begin,petsc_gputimer_end);CHKERRHIP(cerr);
-  petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
-#else
-  ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
-#endif
+  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
+    PetscDeviceContext dctx;
+    PetscLogDouble     elapsed;
+
+    ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextEndTimer_Internal(dctx,&elapsed);CHKERRQ(ierr);
+    petsc_gtime += (elapsed/1000.0);
+  } else {
+    ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 #endif /* end of PETSC_HAVE_DEVICE */
