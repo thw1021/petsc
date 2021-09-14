@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = 'd4ed86ffb1b156faaa0f936ce839cfd6d3282478' # develop of 2021-04-28
+    self.gitcommit        = 'f5c5b1d7fb58336c86b7fb3b408a09ff93cd57b1' # develop of 2021-10-29
     self.versionname      = 'KOKKOS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
     self.downloaddirnames = ['kokkos']
