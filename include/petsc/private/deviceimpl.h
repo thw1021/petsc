@@ -6,15 +6,11 @@
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 void PetscValidDeviceKind(int,int);
-template <typename T>
-void PetscValidDevice(T,int);
-template <typename T>
-void PetscCheckCompatibleDevices(T,int,T,int);
+template <typename T> void PetscValidDevice(T,int);
+template <typename T> void PetscCheckCompatibleDevices(T,int,T,int);
 void PetscValidStreamType(int,int);
-template <typename T>
-void PetscValidDeviceContext(T,int);
-template <typename T>
-void PetscCheckCompatibleDeviceContexts(T,int,T,int);
+template <typename T> void PetscValidDeviceContext(T,int);
+template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #else /* PETSC_CLANG_STATIC_ANALYZER */
 #if PetscDefined(USE_DEBUG)
 #define PetscValidDeviceKind(_p_dev_kind__,_p_arg__)                    \
@@ -29,6 +25,12 @@ void PetscCheckCompatibleDeviceContexts(T,int,T,int);
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,                    \
                "Invalid PetscDeviceKind '%s': Argument #%d",            \
                PetscDeviceKinds[_p_dev_kind__],(_p_arg__));             \
+    } else if (PetscUnlikely(!PetscDeviceConfiguredFor(_p_dev_kind__))) { \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,                           \
+               "Not configured for PetscDeviceKind '%s': Argument #%d " \
+               "run configure --help %s for available options",         \
+               PetscDeviceKinds[_p_dev_kind__],(_p_arg__),              \
+               PetscDeviceKinds[_p_dev_kind__]);                        \
     }                                                                   \
   } while (0)
 
@@ -142,8 +144,12 @@ struct _n_PetscDeviceContext {
 };
 
 /* PetscDevice Internal Functions */
-PETSC_INTERN PetscErrorCode PetscDeviceInitializeAllDefaultDevices_Internal(MPI_Comm,PetscDeviceInitKind);
+PETSC_INTERN PetscErrorCode PetscDeviceInitializeAllDefaultDevicesFromOptions_Internal(MPI_Comm,PetscDeviceInitKind);
+PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind,PetscInt);
 PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
+
+#define PetscDeviceInitialize_Internal(kind) PetscDeviceInitializeDefaultDevice_Internal(kind,PETSC_DECIDE)
+
 /* More general form of PetscDeviceDefaultKind_Internal(), as it calls the former using
    the automatically selected default PetscDeviceKind */
 #define PetscDeviceGetDefault_Internal(device) PetscDeviceGetDefaultForKind_Internal(PETSC_DEVICE_DEFAULT,device)
@@ -198,6 +204,17 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetDefaultDeviceForKind_Int
 }
 
 #define PetscDeviceContextSetDefaultDevice_Internal(dctx) PetscDeviceContextSetDefaultDeviceForKind_Internal(dctx,PETSC_DEVICE_DEFAULT)
+
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCurrentContextAssertKind_Internal(PetscDeviceContext *dctx, PetscDeviceKind kind)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidDeviceKind(kind,2);
+  ierr = PetscDeviceContextGetCurrentContext(dctx);CHKERRQ(ierr);
+  if (PetscUnlikely((*dctx)->device->kind != kind)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected current global PetscDeviceContext (id %D) to have PetscDeviceKind '%s' but has '%s' instead",PetscDeviceKinds[kind],(*dctx)->id,PetscDeviceKinds[(*dctx)->device->kind]);
+  PetscFunctionReturn(0);
+}
 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetBLASHandle_Internal(PetscDeviceContext dctx, void *handle)
 {
