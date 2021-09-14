@@ -659,9 +659,9 @@ PetscInt PetscNumOMPThreads;
 #include <petsc/private/deviceimpl.h>
 #if PetscDefined(HAVE_CUDA)
 // REMOVE ME
-hipStream_t PetscDefaultCudaStream;
+cudaStream_t PetscDefaultCudaStream;
 #endif
-#if PetscDefined(HAVE_CUDA)
+#if PetscDefined(HAVE_HIP)
 // REMOVE ME
 hipStream_t PetscDefaultHipStream;
 #endif
