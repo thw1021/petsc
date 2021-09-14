@@ -722,7 +722,7 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm)
     ierr = PetscOptionsHasName(PETSC_NULLPTR,PETSC_NULLPTR,"-log_summary",&flg);CHKERRQ(ierr);
   }
   if (flg) defaultInitKind = PETSC_DEVICE_INIT_GREEDY;
-  ierr = PetscDeviceInitializeAllDefaultDevices_Internal(comm,defaultInitKind);CHKERRQ(ierr);
+  ierr = PetscDeviceInitializeAllDefaultDevicesFromOptions_Internal(comm,defaultInitKind);CHKERRQ(ierr);
   ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetFromOptions(comm,PETSC_NULLPTR,globalContext);CHKERRQ(ierr);

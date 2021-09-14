@@ -17,49 +17,81 @@ PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t); /* PETSC_EXTER
 PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t);
 PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
 
-#define WaitForCUDA() PetscCUDASynchronize ? cudaDeviceSynchronize() : cudaSuccess;
+// REMOVE ME
+#define WaitForCUDA() cudaDeviceSynchronize()
 
 /* CUDART_VERSION = 1000 x major + 10 x minor version */
 
 /* Could not find exactly which CUDART_VERSION introduced cudaGetErrorName. At least it was in CUDA 8.0 (Sep. 2016) */
 #if (CUDART_VERSION >= 8000) /* CUDA 8.0 */
-#define CHKERRCUDA(cerr)                                                \
-  do {                                                                  \
+#define CHKERRCUDA(cerr) do {                                           \
     if (PetscUnlikely(cerr)) {                                          \
       const char *name  = cudaGetErrorName(cerr);                       \
       const char *descr = cudaGetErrorString(cerr);                     \
       SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d (%s) : %s", \
-               (int)cerr,name,descr);                                   \
+               (PetscErrorCode)cerr,name,descr);                        \
     }                                                                   \
   } while (0)
 #else
-#define CHKERRCUDA(cerr) do {if (PetscUnlikely(cerr)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d",(int)cerr);} while (0)
+#define CHKERRCUDA(cerr) do {                                           \
+    if (PetscUnlikely(cerr)) {                                          \
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,                           \
+               "cuda error %d",(PetscErrorCode)cerr);                   \
+    }                                                                   \
+  } while (0)
 #endif /* CUDART_VERSION >= 8000 */
 
-#define CHKERRCUBLAS(stat)                                              \
-  do {                                                                  \
+#define CHKERRCUBLAS(stat)   do {                                       \
     if (PetscUnlikely(stat)) {                                          \
       const char *name = PetscCUBLASGetErrorName(stat);                 \
-      if (((stat == CUBLAS_STATUS_NOT_INITIALIZED) || (stat == CUBLAS_STATUS_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuBLAS error %d (%s). Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name); \
-      else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuBLAS error %d (%s)",(int)stat,name); \
+      if (((stat == CUBLAS_STATUS_NOT_INITIALIZED) ||                   \
+           (stat == CUBLAS_STATUS_ALLOC_FAILED))   &&                   \
+          PetscDeviceInitializedFor(PETSC_DEVICE_CUDA)) {               \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,                \
+                 "cuBLAS error %d (%s). "                               \
+                 "Reports not initialized or alloc failed; "            \
+                 "this indicates the GPU may have run out resources",   \
+                 (PetscErrorCode)stat,name);                            \
+      } else {                                                          \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuBLAS error %d (%s)",  \
+                 (PetscErrorCode)stat,name);                            \
+      }                                                                 \
     }                                                                   \
   } while (0)
 
-#define CHKERRCUSOLVER(stat)                                            \
-  do {                                                                  \
+#define CHKERRCUSOLVER(stat) do {                                       \
     if (PetscUnlikely(stat)) {                                          \
       const char *name = PetscCUSolverGetErrorName(stat);               \
-      if ((stat == CUSOLVER_STATUS_NOT_INITIALIZED) || (stat == CUSOLVER_STATUS_ALLOC_FAILED) || (stat == CUSOLVER_STATUS_INTERNAL_ERROR)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSolver error %d (%s). This indicates the GPU has run out resources",(int)stat,name); \
-      else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSolver error %d (%s)",(int)stat,name); \
+      if (((stat == CUSOLVER_STATUS_NOT_INITIALIZED) ||                 \
+           (stat == CUSOLVER_STATUS_ALLOC_FAILED)    ||                 \
+           (stat == CUSOLVER_STATUS_INTERNAL_ERROR)) &&                 \
+          PetscDeviceInitializedFor(PETSC_DEVICE_CUDA)) {               \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,                \
+                 "cuSolver error %d (%s). "                             \
+                 "This indicates the GPU may have run out resources",   \
+                 (PetscErrorCode)stat,name);                            \
+      } else {                                                          \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,                         \
+                 "cuSolver error %d (%s)",(PetscErrorCode)stat,name);   \
+      }                                                                 \
     }                                                                   \
   } while (0)
 
-#define CHKERRCUFFT(res)                                                \
-  do {                                                                  \
+#define CHKERRCUFFT(res)     do {                                       \
     if (PetscUnlikely(res)) {                                           \
       const char *name = PetscCUFFTGetErrorName(res);                   \
-      if (((res == CUFFT_SETUP_FAILED) || (res == CUFFT_ALLOC_FAILED)) && PetscCUDAInitialized) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuFFT error %d (%s). Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)res,name); \
-      else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuFFT error %d (%s)",(int)res,name); \
+      if (((res == CUFFT_SETUP_FAILED)  ||                              \
+           (res == CUFFT_ALLOC_FAILED)) &&                              \
+          PetscDeviceInitializedFor(PETSC_DEVICE_CUDA)) {               \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,                \
+                 "cuFFT error %d (%s). "                                \
+                 "Reports not initialized or alloc failed; "            \
+                 "this indicates the GPU has run out resources",        \
+                 (PetscErrorCode)res,name);                             \
+      } else {                                                          \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_GPU,                         \
+                 "cuFFT error %d (%s)",(PetscErrorCode)res,name);       \
+      }                                                                 \
     }                                                                   \
   } while (0)
 
@@ -78,7 +110,8 @@ PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 #include <rocsolver.h>
 #endif /* __HIP_PLATFORM_NVCC__ */
 
-#define WaitForHIP() PetscHIPSynchronize ? hipDeviceSynchronize() : hipSuccess;
+// REMOVE ME
+#define WaitForHIP() hipDeviceSynchronize()
 
 /* hipBLAS does not have hipblasGetErrorName(). We create one on our own. */
 PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t); /* PETSC_EXTERN since it is exposed by the CHKERRHIPBLAS macro */
@@ -178,6 +211,20 @@ PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
+PETSC_EXTERN PetscBool      PetscDeviceInitializedFor(PetscDeviceKind);
+PETSC_STATIC_INLINE PETSC_CONSTEXPR PetscBool PetscDeviceConfiguredFor(PetscDeviceKind kind)
+{
+  PetscBool configured = PETSC_FALSE;
+
+  switch(kind) {
+  case PETSC_DEVICE_INVALID: break;
+  case PETSC_DEVICE_CUDA:    {configured = (PetscBool)PetscDefined(HAVE_CUDA); break;}
+  case PETSC_DEVICE_HIP:     {configured = (PetscBool)PetscDefined(HAVE_HIP);  break;}
+  case PETSC_DEVICE_MAX:     break;
+    /* Do not add default case! Will make compiler warn on new additions to PetscDeviceKind! */
+  }
+  return configured;
+}
 
 /* PetscDevice */
 PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceKind,PetscInt,PetscDevice*);
