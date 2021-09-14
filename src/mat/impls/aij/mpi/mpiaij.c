@@ -697,7 +697,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJ(Mat mat,MatAssemblyType mode)
     ierr = MatStashScatterEnd_Private(&mat->stash);CHKERRQ(ierr);
   }
 #if defined(PETSC_HAVE_DEVICE)
-  if (mat->offloadmask == PETSC_OFFLOAD_CPU) aij->A->offloadmask = PETSC_OFFLOAD_CPU;
   /* We call MatBindToCPU() on aij->A and aij->B here, because if MatBindToCPU_MPIAIJ() is called before assembly, it cannot bind these. */
   if (mat->boundtocpu) {
     ierr = MatBindToCPU(aij->A,PETSC_TRUE);CHKERRQ(ierr);
@@ -726,9 +725,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJ(Mat mat,MatAssemblyType mode)
     ierr = MatSetUpMultiply_MPIAIJ(mat);CHKERRQ(ierr);
   }
   ierr = MatSetOption(aij->B,MAT_USE_INODES,PETSC_FALSE);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_DEVICE)
-  if (mat->offloadmask == PETSC_OFFLOAD_CPU && aij->B->offloadmask != PETSC_OFFLOAD_UNALLOCATED) aij->B->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
   ierr = MatAssemblyBegin(aij->B,mode);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(aij->B,mode);CHKERRQ(ierr);
 
@@ -743,8 +739,14 @@ PetscErrorCode MatAssemblyEnd_MPIAIJ(Mat mat,MatAssemblyType mode)
     PetscObjectState state = aij->A->nonzerostate + aij->B->nonzerostate;
     ierr = MPIU_Allreduce(&state,&mat->nonzerostate,1,MPIU_INT64,MPI_SUM,PetscObjectComm((PetscObject)mat));CHKERRQ(ierr);
   }
-#if defined(PETSC_HAVE_DEVICE)
-  mat->offloadmask = PETSC_OFFLOAD_BOTH;
+#if defined(PETSC_HAVE_DEVICE) /* (A, B)'s offloadmasks determine mat's, but not vice versa */
+  if (aij->A->offloadmask == PETSC_OFFLOAD_UNALLOCATED) mat->offloadmask = aij->B->offloadmask;
+  else if (aij->B->offloadmask == PETSC_OFFLOAD_UNALLOCATED) mat->offloadmask = aij->A->offloadmask;
+  else {
+    PetscOffloadMask mask = (PetscOffloadMask)(aij->A->offloadmask & aij->B->offloadmask); /* Bitmask AND. One can be PETSC_OFFLOAD_BOTH */
+    if (mask != PETSC_OFFLOAD_UNALLOCATED) mat->offloadmask = mask;
+    else SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"matrix diag's and offdiag's offloadmasks do not conform");
+  }
 #endif
   PetscFunctionReturn(0);
 }
@@ -6502,7 +6504,10 @@ PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat C)
   MatCheckProduct(C,1);
   if (product->data) SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Product data not empty");
   ptype = product->type;
-  if (product->A->symmetric && ptype == MATPRODUCT_AtB) ptype = MATPRODUCT_AB;
+  if (product->A->symmetric && ptype == MATPRODUCT_AtB) {
+    ptype = MATPRODUCT_AB;
+    product->symbolic_used_the_fact_A_is_symmetric = PETSC_TRUE;
+  }
   switch (ptype) {
   case MATPRODUCT_AB:
     A = product->A;
