@@ -1181,7 +1181,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
    3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
       the push/pop interface.
   */
-#if (defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)) && defined(PETSC_EXPERIMENTAL)
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
 # if PetscDefined(HAVE_CUDA)
   // REMOVE ME
