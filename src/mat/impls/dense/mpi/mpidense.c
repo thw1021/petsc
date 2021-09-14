@@ -2010,6 +2010,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIDense(Mat mat)
 
 M*/
 #if defined(PETSC_HAVE_CUDA)
+#include <petsc/private/deviceimpl.h>
 PETSC_EXTERN PetscErrorCode MatCreate_MPIDenseCUDA(Mat B)
 {
   PetscErrorCode ierr;
