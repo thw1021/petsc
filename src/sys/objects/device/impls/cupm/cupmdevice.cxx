@@ -38,7 +38,7 @@ private:
   cupmDeviceProp_t _dprop; // cudaDeviceProp appears to be an actual struct, i.e. you can't
                            // initialize it with nullptr or NULL (i've tried)
 
-  PETSC_NODISCARD static PetscBool __checkMPIAware();
+  PETSC_NODISCARD static bool __checkMPIAware();
 };
 
 // the goal here is simply to get the cupm backend to create its context, not to do any kind of
@@ -164,19 +164,20 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
   if (cupmMPIAwareJumpBufferSet) (void)cupmMPIAwareJumpBuffer;
 }
 
-#define CHKCUPMAWARE(expr) do {                               \
-    if (expr != cupmSuccess) { return PETSC_FALSE; }          \
+#define CHKCUPMAWARE(expr) do {                 \
+    if (expr != cupmSuccess) return false;      \
   } while (0)
 
 template <CUPMDeviceKind T>
-PetscBool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
+bool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
 {
   constexpr int  bufSize = 2;
-  int            hbuf[bufSize] = {1,0},*dbuf = nullptr;
-  PetscBool      awareness = PETSC_FALSE;
+  constexpr int  hbuf[bufSize] = {1,0};
+  int            *dbuf = nullptr;
+  bool           awareness = false;
   cupmError_t    cerr;
   PetscErrorCode ierr;
-  const auto     cupmSignalHandler = [](int signal, void *ptr) {
+  const auto     cupmSignalHandler = [](int signal, void *ptr) -> PetscErrorCode {
     if ((signal == SIGSEGV) && cupmMPIAwareJumpBufferSet) std::longjmp(cupmMPIAwareJumpBuffer,1);
     return PetscSignalHandlerDefault(signal,ptr);
   };
@@ -189,10 +190,10 @@ PetscBool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
   if (setjmp(cupmMPIAwareJumpBuffer)) {
     // if a segv was triggered in the MPI_Allreduce below, it is very likely due to MPI not
     // being GPU-aware
-    awareness = PETSC_FALSE;
+    awareness = false;
   } else {
     ierr = MPI_Allreduce(dbuf,dbuf+1,1,MPI_INT,MPI_SUM,PETSC_COMM_SELF);
-    if (!ierr) awareness = PETSC_TRUE;
+    if (!ierr) awareness = true;
   }
   cupmMPIAwareJumpBufferSet = PETSC_FALSE;
   ierr = PetscPopSignalHandler();CHKERRABORT(PETSC_COMM_SELF,ierr);
@@ -224,7 +225,8 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceKind T> static constexpr const std::array<const char*,4> cupmOptions();
+template <CUPMDeviceKind T>
+static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
 
 #define STR_(s) #s
 #define STR(s)  STR_(s)
@@ -246,7 +248,7 @@ template <CUPMDeviceKind T> static constexpr const std::array<const char*,4> cup
 // PetscDefined(HAVE_KIND) = 1 -> expands to the function
 #define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_1(KIND,kind)              \
   template <>                                                           \
-  constexpr const std::array<const char*,4>                             \
+  constexpr const std::array<const char*const,4>                        \
   cupmOptions<CUPMDeviceKind::KIND>() noexcept                          \
   {                                                                     \
     return {                                                            \
