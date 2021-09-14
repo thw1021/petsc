@@ -1,4 +1,4 @@
-#include <petscdevice.h>
+#include <petsc/private/deviceimpl.h>
 #include <petsc/private/randomimpl.h>
 #include <curand.h>
 
