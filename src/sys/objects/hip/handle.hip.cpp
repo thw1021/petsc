@@ -56,7 +56,7 @@ PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t *handle)
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
-  ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetCurrentContextAssertKind_Internal(&dctx,PETSC_DEVICE_HIP);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetBLASHandle_Internal(dctx,handle);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -94,7 +94,7 @@ PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t *handle)
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
-  ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetCurrentContextAssertKind_Internal(&dctx,PETSC_DEVICE_HIP);CHKERRQ(ierr);
   ierr = PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
