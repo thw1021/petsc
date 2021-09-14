@@ -2218,7 +2218,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_HIP);CHKERRQ(ierr);
 #endif
 #if defined(HYPRE_USING_CUDA)
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
 #endif
 #endif
   PetscFunctionReturn(0);

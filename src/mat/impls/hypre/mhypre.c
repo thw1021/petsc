@@ -2291,7 +2291,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   ierr = MatSetVecType(B,VECHIP);CHKERRQ(ierr);
 #endif
 #if defined(HYPRE_USING_CUDA)
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   ierr = MatSetVecType(B,VECCUDA);CHKERRQ(ierr);
 #endif
 #endif

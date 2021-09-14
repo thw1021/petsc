@@ -1,22 +1,6 @@
+#include <petscdevice.h>
 #include <petsc/private/randomimpl.h>
 #include <curand.h>
-
-#define CHKERRCURAND(stat) do {                                         \
-    if (PetscUnlikely(stat != CURAND_STATUS_SUCCESS)) {                 \
-      if (((stat == CURAND_STATUS_INITIALIZATION_FAILED) ||             \
-           (stat == CURAND_STATUS_ALLOCATION_FAILED))    &&             \
-          PetscDeviceInitializedFor(PETSC_DEVICE_CUDA)) {               \
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,                \
-                 "cuRAND error %d. "                                    \
-                 "Reports not initialized or alloc failed; "            \
-                 "this indicates the GPU has run out resources",        \
-                 (PetscErrorCode)stat);                                 \
-      } else {                                                          \
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,                         \
-                 "cuRand error %d",(PetscErrorCode)stat);               \
-      }                                                                 \
-    }                                                                   \
-  } while (0)
 
 typedef struct {
   curandGenerator_t gen;
