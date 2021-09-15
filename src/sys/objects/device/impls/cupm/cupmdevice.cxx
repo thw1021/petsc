@@ -1,6 +1,7 @@
 #include "../../interface/cupmdevice.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <csignal> // SIGSEGV
 #include <csetjmp> // for cuda mpi awareness
 
@@ -210,6 +211,7 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG) && (_defaultDevice != PETSC_CUPM_DEVICE_NONE) && _initialized) {
+    const auto  validDev = _devices.size()-std::count(_devices.cbegin(),_devices.cend(),nullptr);
     int         ndev;
     cupmError_t cerr;
 
@@ -217,9 +219,12 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
     // if _devices::size_type != std::size_t then the %zu format specifier isn't guaranteed to
     // work. what esoteric systems might this occur on? good question!
     static_assert(std::is_same<typename decltype(_devices)::size_type,std::size_t>::value,"");
-    if (PetscUnlikely(static_cast<std::size_t>(ndev) != _devices.size())) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",_devices.size(),ndev);
+    if (PetscUnlikely(static_cast<std::size_t>(ndev) != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
   }
-  for (const auto &device : _devices) {if (device) {ierr = device->finalize();CHKERRQ(ierr);}}
+  for (auto &device : _devices) {
+    if (device) {ierr = device->finalize();CHKERRQ(ierr);}
+    device.reset(nullptr);
+  }
   _defaultDevice = PETSC_CUPM_DEVICE_NONE;  // disabled by default
   _initialized   = PETSC_FALSE;
   PetscFunctionReturn(0);

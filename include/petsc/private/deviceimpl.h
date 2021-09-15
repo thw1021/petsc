@@ -183,11 +183,12 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(Petsc
 {
   PetscFunctionBeginHot;
   if (PetscDefined(USE_DEBUG)) {
-    PetscBool      idle;
-    PetscErrorCode ierr;
+    const PetscBool idleBefore = dctx->idle;
+    PetscBool       idle;
+    PetscErrorCode  ierr;
 
     ierr = (*dctx->ops->query)(dctx,&idle);CHKERRQ(ierr);
-    if (PetscUnlikely(dctx->idle && !idle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, context %D thought it was idle when it still had work",dctx->id);
+    if (PetscUnlikely(idleBefore && !idle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, context %D thought it was idle when it still had work",dctx->id);
   }
   PetscFunctionReturn(0);
 }
