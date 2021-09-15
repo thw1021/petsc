@@ -179,8 +179,12 @@ bool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
   cupmError_t    cerr;
   PetscErrorCode ierr;
   const auto     cupmSignalHandler = [](int signal, void *ptr) -> PetscErrorCode {
+    PetscErrorCode ierr;
+
+    PetscFunctionBegin;
     if ((signal == SIGSEGV) && cupmMPIAwareJumpBufferSet) std::longjmp(cupmMPIAwareJumpBuffer,1);
-    return PetscSignalHandlerDefault(signal,ptr);
+    ierr = PetscSignalHandlerDefault(signal,ptr);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
   };
 
   PetscFunctionBegin;
