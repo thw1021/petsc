@@ -7,8 +7,6 @@
 #include <../src/vec/vec/impls/dvecimpl.h>
 #include <../src/vec/vec/impls/seq/seqviennacl/viennaclvecimpl.h>
 
-#include <vector>
-
 #include "viennacl/linalg/inner_prod.hpp"
 #include "viennacl/linalg/norm_1.hpp"
 #include "viennacl/linalg/norm_2.hpp"
@@ -118,7 +116,7 @@ PETSC_EXTERN PetscErrorCode PetscViennaCLInit()
   }
 
 #if defined(PETSC_HAVE_CUDA)
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr); /* For CUDA event timers */
+  ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_CUDA);CHKERRQ(ierr); /* For CUDA event timers */
 #endif
 
 #if defined(PETSC_HAVE_OPENCL)
