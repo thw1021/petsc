@@ -643,7 +643,7 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
 
 static PetscDeviceContext globalContext      = PETSC_NULLPTR;
 static PetscDeviceKind    defaultDeviceKind  = PETSC_DEVICE_DEFAULT;
-static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
+static PetscStreamType    defaultStreamType  = PETSC_STREAM_GLOBAL_BLOCKING; // REMOVE ME (change)
 static PetscBool          globalContextSetup = PETSC_FALSE;
 
 /* automatically registered to PetscFinalize() when first context is instantiated, do not
