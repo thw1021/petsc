@@ -424,6 +424,7 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
           tau     = PetscMax(tau_pos, tau_neg);  /* can tau_neg > tau_pos? I don't think so, but just in case. */
           ierr    = PetscPrintf(PETSC_COMM_WORLD,"DL evaluated. tau: %8.4e, ynnorm: %8.4e, ycnorm: %8.4e\n",(double)tau,(double)ynnorm,(double)ycnorm);CHKERRQ(ierr);
           ierr    = VecWAXPY(W,tau,YNtmp,YCtmp);CHKERRQ(ierr);
+          ierr    = VecAXPY(W,-tau,YCtmp);CHKERRQ(ierr);
           ierr    = VecCopy(W, Y);CHKERRQ(ierr); /* this could be improved */
         }
       } else {
