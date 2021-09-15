@@ -579,7 +579,7 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
   PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
-  PetscPrintf(PETSC_COMM_WORLD, "f1 call\n");
+  //PetscPrintf(PETSC_COMM_WORLD, "f1 call\n");
   ierr = VecGetLocalSize(Posres, &Np);CHKERRQ(ierr);
   ierr = VecGetArray(Posres,&posres);CHKERRQ(ierr);
   ierr = VecGetArrayRead(V,&v);CHKERRQ(ierr);
@@ -714,11 +714,11 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
       for (d = 0; d < cdim; ++d) {
         // TODO put in electrostatic force using gradPhi[p*cdim]
         vres[p*cdim+d] = d == 0 ? gradPhi[d] : 0.;
-        PetscPrintf(MPI_COMM_WORLD, "gradphi indexing: %i\n", d);
-        PetscPrintf(MPI_COMM_WORLD, "gradphi[%i]: %f\n", d, gradPhi[d]);
-        PetscPrintf(MPI_COMM_WORLD, "cell: %i\n", cell);
+        //PetscPrintf(MPI_COMM_WORLD, "gradphi indexing: %i\n", d);
+        //PetscPrintf(MPI_COMM_WORLD, "gradphi[%i]: %f\n", d, gradPhi[d]);
+        //PetscPrintf(MPI_COMM_WORLD, "cell: %i\n", cell);
 
-        ierr = PetscPrintf(PETSC_COMM_SELF, "vres for particle %d, dim %d: %g\n", cp, d, vres[p*dim+d]);CHKERRQ(ierr);
+        //ierr = PetscPrintf(PETSC_COMM_SELF, "vres for particle %d, dim %d: %g\n", cp, d, vres[p*dim+d]);CHKERRQ(ierr);
       }
     }
     ierr = DMPlexVecRestoreClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
@@ -834,6 +834,8 @@ int main(int argc,char **argv)
     ierr = PetscMalloc1(2*locSize, &probArr);CHKERRQ(ierr);
     Np = locSize/dim;
 
+    ierr = PetscPrintf(comm, "Np at step: %i, %i\n", Np, step);
+
     ierr = VecGetArrayRead(kinVec, &kinArr);CHKERRQ(ierr);
     ierr = VecGetArrayRead(coorVec, &coorArr);CHKERRQ(ierr);
     for (p=0; p<Np; ++p){
@@ -939,7 +941,7 @@ int main(int argc,char **argv)
       ierr = DMSwarmRestoreField(sw, "kinematics", NULL, NULL, (void **) &kin);CHKERRQ(ierr);
 
     }
-    ierr = DMSwarmMigrate(sw, PETSC_FALSE);CHKERRQ(ierr);
+    //ierr = DMSwarmMigrate(sw, PETSC_TRUE);CHKERRQ(ierr);
     ierr = TSReset(ts);CHKERRQ(ierr);
     ierr = PetscFree(idx1);CHKERRQ(ierr);
     ierr = PetscFree(idx2);CHKERRQ(ierr);
@@ -955,6 +957,7 @@ int main(int argc,char **argv)
     kin[p]
   }
   */
+  ierr = DMSwarmRestoreField(sw, "kinematics", NULL, NULL, (void **) &kin);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = SNESDestroy(&user.snes);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
@@ -969,9 +972,9 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q2
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_bd periodic,none -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarmno -dm_plex_box_bd periodic,none
    test:
      suffix: bsi2q2
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_bd periodic,none -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarmno -dm_plex_box_bd periodic,none
 
 TEST*/
