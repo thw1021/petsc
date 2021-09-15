@@ -365,7 +365,7 @@ static void laplacian(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   PetscInt d;
   for (d = 0; d < dim; ++d) {g3[d*dim+d] = 1.0;}
 }
-
+#if 0
 static PetscErrorCode CreateFEM(DM dm, AppCtx *user)
 {
   PetscFE        fe;
@@ -384,6 +384,33 @@ static PetscErrorCode CreateFEM(DM dm, AppCtx *user)
   ierr = PetscDSSetJacobian(prob, 0, 0, NULL, NULL, NULL, laplacian);CHKERRQ(ierr);
 
   ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+#endif 
+static PetscErrorCode CreateFEM(DM dm, AppCtx *user)
+{
+  PetscFE        fe;
+  PetscDS        ds;
+  DMPolytopeType ct;
+  PetscBool      simplex;
+  PetscInt       dim, cStart;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  ierr = DMPlexGetHeightStratum(dm, 0, &cStart, NULL);CHKERRQ(ierr);
+  ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
+  simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct)+1 ? PETSC_TRUE : PETSC_FALSE;
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, 1, simplex, NULL, -1, &fe);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) fe, "potential");CHKERRQ(ierr);
+  ierr = DMSetField(dm, 0, NULL, (PetscObject) fe);CHKERRQ(ierr);
+  ierr = DMCreateDS(dm);CHKERRQ(ierr);
+  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+  /* Setup to form mass matrix */
+  ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
+  ierr = PetscDSSetResidual(ds, 0, NULL, laplacian_f1);CHKERRQ(ierr);
+  ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, laplacian);CHKERRQ(ierr);
+
   PetscFunctionReturn(0);
 }
 
@@ -573,6 +600,7 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
   PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
+  PetscPrintf(PETSC_COMM_WORLD, "f1 call\n");
   ierr = VecGetLocalSize(Posres, &Np);CHKERRQ(ierr);
   ierr = VecGetArray(Posres,&posres);CHKERRQ(ierr);
   ierr = VecGetArrayRead(V,&v);CHKERRQ(ierr);
@@ -736,7 +764,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     
     //ierr = PetscFEGetTabulation(fe, Ncp, refcoord, NULL, &D, NULL);CHKERRQ(ierr);
     // Check updated tabulation handling. 
-    ierr = PetscFECreateTabulation(fe, 0, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
+    ierr = PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
     /* Get coefficients from phi for closure of cell */
     ierr = DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
     //ierr = PetscFEGetCellTabulation(fe, 1, &tab);
@@ -819,7 +847,7 @@ int main(int argc,char **argv)
 {
   PetscInt          i, par;
   TSConvergedReason reason;
-  PetscInt          locSize, p, d, dim, Np, steps, step, *idx1, *idx2;
+  PetscInt          locSize, p, d, dim, Np, steps, step;
   TS                ts;
   DM                dm, sw;
   AppCtx            user;
@@ -827,8 +855,8 @@ int main(int argc,char **argv)
   PetscErrorCode    ierr;
   Vec               coorVec, kinVec, probVec, solution, position, momentum;
   const PetscScalar *coorArr, *kinArr;
-  PetscReal         ftime   = 10., *probArr, *probVecArr;
-  IS                is1,is2;
+  PetscReal         ftime   = 10., *probVecArr;
+  //IS                is1,is2;
   PetscReal         *coor, *kin, *pos, *mom;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);CHKERRQ(ierr);
@@ -864,14 +892,19 @@ int main(int argc,char **argv)
   }
 
   /* Place TSSolve in a loop to handle resetting the TS at every manual call of TSStep() */
+
+  for(step = 0; step < user.steps ; ++step){
+    IS is1, is2;
+    PetscInt *idx1, *idx2;
+    PetscScalar *probArr;
+
   ierr = TSCreate(comm, &ts);CHKERRQ(ierr);
   ierr = TSSetMaxTime(ts,ftime);CHKERRQ(ierr);
   ierr = TSSetTimeStep(ts,user.stepSize);CHKERRQ(ierr);
   ierr = TSSetMaxSteps(ts,100000);CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);CHKERRQ(ierr);
 
-  for(step = 0; step < user.steps ; ++step){
-    
+
     ierr = DMSwarmCreateGlobalVectorFromField(sw, "kinematics", &kinVec);CHKERRQ(ierr);
     ierr = DMSwarmCreateGlobalVectorFromField(sw, DMSwarmPICField_coor, &coorVec);CHKERRQ(ierr);
     ierr = VecViewFromOptions(kinVec, NULL, "-ic_vec_view");
@@ -907,6 +940,7 @@ int main(int argc,char **argv)
     /* DM needs to be set before splits so it propogates to sub TSs */
     
     ierr = TSSetDM(ts, sw);CHKERRQ(ierr);
+
     ierr = TSSetType(ts,TSBASICSYMPLECTIC);CHKERRQ(ierr);
     
     ierr = TSRHSSplitSetIS(ts,"position",is1);CHKERRQ(ierr);
@@ -916,7 +950,7 @@ int main(int argc,char **argv)
     ierr = TSRHSSplitSetRHSFunction(ts,"momentum",NULL,RHSFunction2,&user);CHKERRQ(ierr);
 
     ierr = TSSetRHSFunction(ts,NULL,RHSFunctionParticles,&user);CHKERRQ(ierr);
-
+    
     ierr = TSSetTime(ts, step*user.stepSize);CHKERRQ(ierr);
     if (step == 0){
       ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
