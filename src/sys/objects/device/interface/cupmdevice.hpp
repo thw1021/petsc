@@ -6,6 +6,7 @@
 #include <petscviewer.h>
 #include <array>
 #include <memory>
+#include <limits>
 
 namespace Petsc
 {
