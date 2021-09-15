@@ -642,8 +642,9 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
 }
 
 static PetscDeviceContext globalContext      = PETSC_NULLPTR;
-static PetscBool          globalContextSetup = PETSC_FALSE;
+static PetscDeviceKind    defaultDeviceKind  = PETSC_DEVICE_DEFAULT;
 static PetscStreamType    defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
+static PetscBool          globalContextSetup = PETSC_FALSE;
 
 /* automatically registered to PetscFinalize() when first context is instantiated, do not
    call */
@@ -652,24 +653,26 @@ static PetscErrorCode PetscDeviceContextFinalizeGlobalContext_Private(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscDeviceContextSynchronize(globalContext);CHKERRQ(ierr);
+  PetscValidDeviceContext(globalContext,0);
+  if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
   ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
   /* reset everything to defaults */
+  defaultDeviceKind  = PETSC_DEVICE_DEFAULT;
   defaultStreamType  = PETSC_STREAM_DEFAULT_BLOCKING;
   globalContextSetup = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
+static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(MPI_Comm comm = PETSC_COMM_SELF)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscLikely(globalContextSetup)) PetscFunctionReturn(0);
   globalContextSetup = PETSC_TRUE;
-  if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
-  ierr = PetscInfo1(PETSC_NULLPTR,"Initializing root PetscDeviceContext with PetscDeviceKind %s\n",PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetDefaultDevice_Internal(globalContext);CHKERRQ(ierr);
+  if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(comm,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
+  ierr = PetscInfo1(PETSC_NULLPTR,"Initializing root PetscDeviceContext with PetscDeviceKind %s\n",PetscDeviceKinds[defaultDeviceKind]);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetDefaultDeviceForKind_Internal(globalContext,defaultDeviceKind);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -709,8 +712,8 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm)
     /* in order to accurately assign ranks to gpus we need to get the MPI_Comm_rank of the
        global space */
     if (PetscUnlikely(result != MPI_IDENT)) {
-      char             *name = PETSC_NULLPTR;
-      PETSC_UNUSED int len;
+      char name[MPI_MAX_OBJECT_NAME] = {};
+      int  len; /* unused */
 
       ierr = MPI_Comm_get_name(comm,name,&len);CHKERRMPI(ierr);
       SETERRQ1(comm,PETSC_ERR_MPI,"Default devices being initialized on MPI_Comm '%s' not PETSC_COMM_WORLD",name);
@@ -727,7 +730,7 @@ PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm comm)
   ierr = PetscDeviceContextSetStreamType(globalContext,defaultStreamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetFromOptions(comm,PETSC_NULLPTR,globalContext);CHKERRQ(ierr);
   if (defaultInitKind == PETSC_DEVICE_INIT_GREEDY) {
-    ierr = PetscDeviceContextSetupGlobalContext_Private();CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetupGlobalContext_Private(comm);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
