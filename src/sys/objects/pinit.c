@@ -9,18 +9,6 @@
 #include <petsc/private/valgrind/valgrind.h>
 #endif
 
-#if defined(PETSC_HAVE_CUDA)
-#include <petsc/private/deviceimpl.h>
-PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
-PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-#include <petsc/private/deviceimpl.h>
-PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
-PETSC_EXTERN hipEvent_t petsc_gputimer_end;
-#endif
-
 #if defined(PETSC_USE_GCOV)
 EXTERN_C_BEGIN
 void  __gcov_flush(void);
@@ -667,7 +655,17 @@ int64_t Petsc_adios_group;
 #include <omp.h>
 PetscInt PetscNumOMPThreads;
 #endif
-
+#if defined(PETSC_HAVE_DEVICE)
+#include <petsc/private/deviceimpl.h>
+#if PetscDefined(HAVE_CUDA)
+// REMOVE ME
+cudaStream_t PetscDefaultCudaStream;
+#endif
+#if PetscDefined(HAVE_HIP)
+// REMOVE ME
+hipStream_t PetscDefaultHipStream;
+#endif
+#endif
 #if defined(PETSC_HAVE_DLFCN_H)
 #include <dlfcn.h>
 #endif
@@ -1174,9 +1172,25 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 #endif
 #endif
 
-#if (defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)) && defined(PETSC_EXPERIMENTAL)
-  ierr = PetscDeviceInitializeDefaultDevices_Internal();CHKERRQ(ierr);
-  ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD,NULL);CHKERRQ(ierr);
+  /*
+   Initialize PetscDeviceContext and PetscDevice
+
+   Note to any future devs thinking of moving this, proper initialization requires:
+   1. MPI initialized
+   2. Options DB initialized
+   3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
+      the push/pop interface.
+  */
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
+# if PetscDefined(HAVE_CUDA)
+  // REMOVE ME
+  cudaError_t cerr = cudaStreamCreate(&PetscDefaultCudaStream);CHKERRCUDA(cerr);
+#endif
+# if PetscDefined(HAVE_HIP)
+  // REMOVE ME
+  hipError_t herr = hipStreamCreate(&PetscDefaultHipStream);CHKERRHIP(herr);
+#endif
 #endif
 
   /*
@@ -1618,23 +1632,13 @@ PetscErrorCode  PetscFinalize(void)
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
+  // REMOVE ME
   if (PetscDefaultCudaStream) {cudaError_t cerr = cudaStreamDestroy(PetscDefaultCudaStream);CHKERRCUDA(cerr);}
-  if (petsc_gputimer_begin) {
-    cudaError_t cerr = cudaEventDestroy(petsc_gputimer_begin);CHKERRCUDA(cerr);
-  }
-  if (petsc_gputimer_end) {
-    cudaError_t cerr = cudaEventDestroy(petsc_gputimer_end);CHKERRCUDA(cerr);
-  }
 #endif
 
 #if defined(PETSC_HAVE_HIP)
+  // REMOVE ME
   if (PetscDefaultHipStream)  {hipError_t cerr  = hipStreamDestroy(PetscDefaultHipStream);CHKERRHIP(cerr);}
-  if (petsc_gputimer_begin) {
-    hipError_t cerr = hipEventDestroy(petsc_gputimer_begin);CHKERRHIP(cerr);
-  }
-  if (petsc_gputimer_end) {
-    hipError_t cerr = hipEventDestroy(petsc_gputimer_end);CHKERRHIP(cerr);
-  }
 #endif
 
   ierr = PetscFreeMPIResources();CHKERRQ(ierr);

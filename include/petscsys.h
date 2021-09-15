@@ -17,7 +17,7 @@
 #include <petscfix.h>
 
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP) || defined(PETSC_HAVE_KOKKOS)
-   #define PETSC_HAVE_DEVICE
+#  define PETSC_HAVE_DEVICE
 #endif
 
 #if defined(PETSC_DESIRE_FEATURE_TEST_MACROS)
@@ -553,18 +553,6 @@ PETSC_EXTERN PetscBool PetscViennaCLSynchronize;
 PETSC_EXTERN PetscErrorCode PetscSetHelpVersionFunctions(PetscErrorCode (*)(MPI_Comm),PetscErrorCode (*)(MPI_Comm));
 PETSC_EXTERN PetscErrorCode PetscCommDuplicate(MPI_Comm,MPI_Comm*,int*);
 PETSC_EXTERN PetscErrorCode PetscCommDestroy(MPI_Comm*);
-
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscBool      PetscCUDASynchronize;
-PETSC_EXTERN PetscErrorCode PetscCUDAInitialize(MPI_Comm,PetscInt);
-PETSC_EXTERN PetscErrorCode PetscCUDAInitializeCheck(void);
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-PETSC_EXTERN PetscBool      PetscHIPSynchronize;
-PETSC_EXTERN PetscErrorCode PetscHIPInitialize(MPI_Comm,PetscInt);
-PETSC_EXTERN PetscErrorCode PetscHIPInitializeCheck(void);
-#endif
 
 #if defined(PETSC_HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
