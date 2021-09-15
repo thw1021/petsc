@@ -21,25 +21,19 @@ PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
 /* Initialize Kokkos if not yet */
 PetscErrorCode PetscKokkosInitializeCheck(void)
 {
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
-  PetscErrorCode        ierr;
-#endif
   Kokkos::InitArguments args;
   int                   devId = -1;
 
   PetscFunctionBegin;
   if (!Kokkos::is_initialized()) {
-   #if defined(KOKKOS_ENABLE_CUDA)
-    cudaError_t cerr;
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+    /* Kokkos does not support CUDA and HIP at the same time (but we do :)) */
+    PetscDeviceContext dctx;
+    PetscErrorCode     ierr;
 
-    ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
-    cerr = cudaGetDevice(&devId);CHKERRCUDA(cerr);
-   #elif defined(KOKKOS_ENABLE_HIP) /* Kokkos does not support CUDA and HIP at the same time */
-    hipError_t herr;
-
-    ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
-    herr = hipGetDevice(&devId);CHKERRHIP(herr);
-   #endif
+    ierr = PetscDeviceContextGetGlobalContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscMPIIntCast(dctx->device->deviceId,&devId);CHKERRQ(ierr);
+#endif
     args.device_id   = devId;
     Kokkos::initialize(args);
     PetscBeganKokkos = PETSC_TRUE;
