@@ -13,8 +13,7 @@ template <typename T> void PetscValidDeviceContext(T,int);
 template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #else /* PETSC_CLANG_STATIC_ANALYZER */
 #if PetscDefined(USE_DEBUG)
-#define PetscValidDeviceKind(_p_dev_kind__,_p_arg__)                    \
-  do {                                                                  \
+#define PetscValidDeviceKind(_p_dev_kind__,_p_arg__) do {               \
     if (PetscUnlikely(((_p_dev_kind__) < PETSC_DEVICE_INVALID) ||       \
                       ((_p_dev_kind__) > PETSC_DEVICE_MAX))) {          \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,              \
@@ -34,8 +33,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                   \
   } while (0)
 
-#define PetscValidDevice(_p_dev__,_p_arg__)                             \
-  do {                                                                  \
+#define PetscValidDevice(_p_dev__,_p_arg__) do {                        \
     PetscValidPointer(_p_dev__,_p_arg__);                               \
     PetscValidDeviceKind((_p_dev__)->kind,_p_arg__);                    \
   } while (0)
@@ -53,8 +51,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                   \
  } while (0)
 
-#define PetscValidStreamType(_p_strm_type__,_p_arg__)                   \
-  do {                                                                  \
+#define PetscValidStreamType(_p_strm_type__,_p_arg__) do {              \
     if (PetscUnlikely(((_p_strm_type__) < 0) ||                         \
                       ((_p_strm_type__) > PETSC_STREAM_MAX))) {         \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,              \
@@ -67,8 +64,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                   \
   } while (0)
 
-#define PetscValidDeviceContext(_p_dev_ctx__,_p_arg__)              \
-  do {                                                              \
+#define PetscValidDeviceContext(_p_dev_ctx__,_p_arg__) do {         \
     PetscValidPointer(_p_dev_ctx__,_p_arg__);                       \
     if ((_p_dev_ctx__)->device) {                                   \
       PetscValidDevice((_p_dev_ctx__)->device,_p_arg__);            \
