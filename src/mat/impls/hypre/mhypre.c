@@ -7,6 +7,7 @@
 #include <petsc/private/petschypre.h>
 #include <petscmathypre.h>
 #include <petsc/private/matimpl.h>
+#include <petsc/private/deviceimpl.h>
 #include <../src/mat/impls/hypre/mhypre.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/vec/vec/impls/hypre/vhyp.h>
