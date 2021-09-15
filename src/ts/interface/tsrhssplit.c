@@ -144,7 +144,7 @@ PetscErrorCode TSRHSSplitSetRHSFunction(TS ts,const char splitname[],Vec r,TSRHS
   if(ts->dm){
     ierr = DMClone(ts->dm, &dmc);CHKERRQ(ierr);
     ierr = TSSetDM(isplit->ts, dmc);CHKERRQ(ierr);
-    ierr = DMDestroy(&dmc);CHKERRQ(ierr);
+    //ierr = DMDestroy(&dmc);CHKERRQ(ierr);
   }
 
   ierr = TSSetRHSFunction(isplit->ts,r,rhsfunc,ctx);CHKERRQ(ierr);
