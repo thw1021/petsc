@@ -972,9 +972,9 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q2
-     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarmno -dm_plex_box_bd periodic,none
+     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -dm_plex_box_bd periodic,none
    test:
      suffix: bsi2q2
-     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarmno -dm_plex_box_bd periodic,none
+     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -dm_plex_box_bd periodic,none
 
 TEST*/
