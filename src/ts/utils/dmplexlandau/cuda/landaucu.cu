@@ -26,66 +26,77 @@ do {                                                                            
   }                                                                                      \
  } while (0)
 
-PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *maps, pointInterpolationP4est (*points)[LANDAU_MAX_Q_FACE], PetscInt nc[], PetscInt Nf, PetscInt Nq)
+PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps maps[], pointInterpolationP4est (*pointMaps)[LANDAU_MAX_Q_FACE],
+                                                    PetscInt Nf[], PetscInt Nq, PetscInt grid)
 {
   P4estVertexMaps h_maps;
   cudaError_t     cerr;
   PetscFunctionBegin;
-  h_maps.num_elements =maps->num_elements;
-  h_maps.num_face = maps->num_face;
-  h_maps.num_reduced = maps->num_reduced;
-  h_maps.deviceType = maps->deviceType;
-  h_maps.Nf = Nf;
+  h_maps.num_elements = maps[grid].num_elements;
+  h_maps.num_face = maps[grid].num_face;
+  h_maps.num_reduced = maps[grid].num_reduced;
+  h_maps.deviceType = maps[grid].deviceType;
+  h_maps.Nf = Nf[grid];
   h_maps.Nq = Nq;
-  cerr = cudaMalloc((void **)&h_maps.c_maps,               maps->num_reduced  * sizeof *points);CHKERRCUDA(cerr);
-  cerr = cudaMemcpy(          h_maps.c_maps, maps->c_maps, maps->num_reduced  * sizeof *points, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-  cerr = cudaMalloc((void **)&h_maps.gIdx,                 maps->num_elements * sizeof *maps->gIdx);CHKERRCUDA(cerr);
-  cerr = cudaMemcpy(          h_maps.gIdx, maps->gIdx,     maps->num_elements * sizeof *maps->gIdx, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-  cerr = cudaMalloc((void **)&maps->d_self, sizeof(P4estVertexMaps));CHKERRCUDA(cerr);
-  cerr = cudaMemcpy(          maps->d_self,   &h_maps, sizeof(P4estVertexMaps), cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  h_maps.numgrids = maps[grid].numgrids;
+  cerr = cudaMalloc((void **)&h_maps.c_maps,                    maps[grid].num_reduced  * sizeof *pointMaps);CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(          h_maps.c_maps, maps[grid].c_maps, maps[grid].num_reduced  * sizeof *pointMaps, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  cerr = cudaMalloc((void **)&h_maps.gIdx,                 maps[grid].num_elements * sizeof *maps[grid].gIdx);CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(          h_maps.gIdx, maps[grid].gIdx,maps[grid].num_elements * sizeof *maps[grid].gIdx, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  cerr = cudaMalloc((void **)&maps[grid].d_self,            sizeof(P4estVertexMaps));CHKERRCUDA(cerr);
+  cerr = cudaMemcpy(          maps[grid].d_self,   &h_maps, sizeof(P4estVertexMaps), cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *pMaps, PetscInt ng)
+PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps maps[], PetscInt num_grids)
 {
-  P4estVertexMaps *d_maps = pMaps->d_self, h_maps;
   cudaError_t     cerr;
   PetscFunctionBegin;
-  cerr = cudaMemcpy(&h_maps, d_maps, sizeof(P4estVertexMaps), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
-  cerr = cudaFree(h_maps.c_maps);CHKERRCUDA(cerr);
-  cerr = cudaFree(h_maps.gIdx);CHKERRCUDA(cerr);
-  cerr = cudaFree(d_maps);CHKERRCUDA(cerr);
+  for (PetscInt grid=0;grid<num_grids;grid++) {
+    P4estVertexMaps *d_maps = maps[grid].d_self, h_maps;
+    cerr = cudaMemcpy(&h_maps, d_maps, sizeof(P4estVertexMaps), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
+    cerr = cudaFree(h_maps.c_maps);CHKERRCUDA(cerr);
+    cerr = cudaFree(h_maps.gIdx);CHKERRCUDA(cerr);
+    cerr = cudaFree(d_maps);CHKERRCUDA(cerr);
+  }
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[], PetscReal a_mass_w[],
+PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscInt num_grids, PetscInt h_numCells[], PetscInt h_species_offset[], PetscInt h_mat_offset[],
+                                       PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[], PetscReal a_mass_w[],
                                        PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauGeomData *SData_d)
 {
   PetscErrorCode  ierr;
   PetscTabulation *Tf;
-  LandauCtx       *ctx;
-  PetscInt        *Nbf,dim,Nf,Nb,nip,cStart,cEnd,szf=sizeof(PetscReal),szs=sizeof(PetscScalar);
+  PetscReal       *BB,*DD;
+  PetscInt        dim,Nb=Nq,szf=sizeof(PetscReal),szs=sizeof(PetscScalar),szi=sizeof(PetscInt);
+  PetscInt        h_ip_offset[LANDAU_MAX_GRIDS+1],h_ipf_offset[LANDAU_MAX_GRIDS+1],nip,IPfdf_sz,Nf;
   PetscDS         prob;
   cudaError_t     cerr;
 
   PetscFunctionBegin;
-  ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
-  if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
-  ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
-  nip = (cEnd - cStart)*Nq;
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-  ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
-  ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
-  if (Nq != Nb) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nq != Nb. %D  %D",Nq,Nb);
   if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
+  BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
+  Nf = h_ip_offset[0] = h_ipf_offset[0] = 0;
+  nip = 0;
+  IPfdf_sz = 0;
+  for (PetscInt grid=0 ; grid<num_grids ; grid++) {
+    PetscInt nfloc = h_species_offset[grid+1] - h_species_offset[grid];
+    nip += h_numCells[grid]*Nq;
+    h_ip_offset[grid+1] = nip;
+    IPfdf_sz += Nq*nfloc*h_numCells[grid];
+    h_ipf_offset[grid+1] = IPfdf_sz;
+  }
+  Nf = h_species_offset[num_grids];
   {
-    cerr = cudaMalloc((void **)&SData_d->B,              Nq*Nb*szf);CHKERRCUDA(cerr);     // kernel input
-    cerr = cudaMemcpy(          SData_d->B, Tf[0]->T[0], Nq*Nb*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **)&SData_d->D,              Nq*Nb*dim*szf);CHKERRCUDA(cerr); // kernel input
-    cerr = cudaMemcpy(          SData_d->D, Tf[0]->T[1], Nq*Nb*dim*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **)&SData_d->mass_w,        nip*szf);CHKERRCUDA(cerr); // kernel input
+    cerr = cudaMalloc((void **)&SData_d->B,      Nq*Nb*szf);CHKERRCUDA(cerr);     // kernel input
+    cerr = cudaMemcpy(          SData_d->B, BB,  Nq*Nb*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->D,      Nq*Nb*dim*szf);CHKERRCUDA(cerr); // kernel input
+    cerr = cudaMemcpy(          SData_d->D, DD,  Nq*Nb*dim*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->mass_w, nip*szf);CHKERRCUDA(cerr); // kernel input
     cerr = cudaMemcpy(          SData_d->mass_w, a_mass_w,nip*szf,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
 
     cerr = cudaMalloc((void **)&SData_d->alpha, Nf*szf);CHKERRCUDA(cerr); // kernel input
@@ -118,6 +129,16 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, PetscReal nu_
 #if LANDAU_DIM==3
     cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs);CHKERRCUDA(cerr);     // kernel input
 #endif
+    cerr = cudaMalloc((void **)&SData_d->NCells,              num_grids*szi);CHKERRCUDA(cerr);
+    cerr = cudaMemcpy(          SData_d->NCells, h_numCells,  num_grids*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->species_offset,                   (num_grids+1)*szi);CHKERRCUDA(cerr);
+    cerr = cudaMemcpy(          SData_d->species_offset, h_species_offset, (num_grids+1)*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->mat_offset,                      (num_grids+1)*szi);CHKERRCUDA(cerr);
+    cerr = cudaMemcpy(          SData_d->mat_offset, h_mat_offset,       (num_grids+1)*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->ip_offset,                       (num_grids+1)*szi);CHKERRCUDA(cerr);
+    cerr = cudaMemcpy(          SData_d->ip_offset, h_ip_offset,          (num_grids+1)*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->ipf_offset,                     (num_grids+1)*szi);CHKERRCUDA(cerr);
+    cerr = cudaMemcpy(          SData_d->ipf_offset, h_ipf_offset,     (num_grids+1)*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
   }
   PetscFunctionReturn(0);
 }
@@ -129,6 +150,7 @@ PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *SData_d)
   PetscFunctionBegin;
   if (SData_d->alpha) {
     cerr = cudaFree(SData_d->alpha);CHKERRCUDA(cerr);
+    SData_d->alpha = NULL;
     cerr = cudaFree(SData_d->beta);CHKERRCUDA(cerr);
     cerr = cudaFree(SData_d->invMass);CHKERRCUDA(cerr);
     cerr = cudaFree(SData_d->B);CHKERRCUDA(cerr);
@@ -149,6 +171,11 @@ PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *SData_d)
 #if LANDAU_DIM==3
     cerr = cudaFree(SData_d->dfdz);CHKERRCUDA(cerr);
 #endif
+    cerr = cudaFree(SData_d->NCells);CHKERRCUDA(cerr);
+    cerr = cudaFree(SData_d->species_offset);CHKERRCUDA(cerr);
+    cerr = cudaFree(SData_d->mat_offset);CHKERRCUDA(cerr);
+    cerr = cudaFree(SData_d->ip_offset);CHKERRCUDA(cerr);
+    cerr = cudaFree(SData_d->ipf_offset);CHKERRCUDA(cerr);
   }
   PetscFunctionReturn(0);
 }
@@ -222,7 +249,7 @@ void landau_form_fdf(const PetscInt nip, const PetscInt dim, const PetscInt Nf, 
 }
 
 __device__ void
-landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip, const PetscInt Nq, const PetscInt Nf, const PetscInt Nb,
+landau_inner_integral(const PetscInt myQi, const PetscInt jpidx, PetscInt nip, const PetscInt Nq, const PetscInt Nf, const PetscInt Nb,
                          const PetscInt dim,  const PetscReal xx[], const PetscReal yy[], const PetscReal ww[],
                          const PetscReal invJj[], const PetscReal nu_alpha[],
                          const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
@@ -458,7 +485,7 @@ landau_inner_integral_v2(const PetscInt myQi, const PetscInt jpidx, PetscInt nip
 // The CUDA Landau kernel
 //
 __global__
-void __launch_bounds__(256,4) landau_kernel_v2(const PetscInt nip, const PetscInt dim, const PetscInt totDim, const PetscInt Nf, const PetscInt Nb, const PetscReal invJj[],
+void __launch_bounds__(256,4) landau_kernel(const PetscInt nip, const PetscInt dim, const PetscInt totDim, const PetscInt Nf, const PetscInt Nb, const PetscReal invJj[],
                                                const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
                                                const PetscReal * const BB, const PetscReal * const DD, const PetscReal xx[], const PetscReal yy[], const PetscReal ww[],
                                                PetscScalar elemMats_out[], P4estVertexMaps *d_maps, PetscSplitCSRDataStructure d_mat, PetscReal d_f[], PetscReal d_dfdx[], PetscReal d_dfdy[],
@@ -520,7 +547,7 @@ void __launch_bounds__(256,4) landau_kernel_v2(const PetscInt nip, const PetscIn
   const PetscReal *invJ = invJj ? &invJj[jpidx*dim*dim] : NULL;
   if (elemMat) for (int i = tid; i < totDim*totDim; i += blockDim.x*blockDim.y) elemMat[i] = 0;
   __syncthreads();
-  landau_inner_integral_v2(myQi, jpidx, nip, Nq, Nf, Nb, dim, xx, yy, ww,
+  landau_inner_integral(myQi, jpidx, nip, Nq, Nf, Nb, dim, xx, yy, ww,
                            invJ, nu_alpha, nu_beta, invMass, Eq_m, BB, DD,
                            elemMat, d_maps, d_mat,
                            *s_fieldMats, *s_scale, *s_idx,
@@ -612,80 +639,79 @@ void __launch_bounds__(256,4) mass_kernel(const PetscInt nip, const PetscInt dim
   }
 }
 
-PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[], PetscScalar a_IPf[], const PetscInt N, const PetscScalar a_xarray[], LandauGeomData *SData_d, const PetscInt num_sub_blocks,
-                                  PetscReal shift, const PetscLogEvent events[], Mat JacP)
+PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt num_grids, const PetscInt numCells[], PetscReal a_Eq_m[], PetscScalar a_IPf[],
+                                  const PetscInt N, const PetscScalar a_xarray[], const LandauGeomData *SData_d, const PetscInt num_sub_blocks, const PetscReal shift,
+                                  const PetscLogEvent events[], const PetscInt mat_offset[], const PetscInt species_offset[], Mat subJ[], Mat JacP)
 {
   PetscErrorCode    ierr;
   cudaError_t       cerr;
-  PetscInt          ii,ej,*Nbf,Nb,cStart,cEnd,Nf,dim,numGCells,totDim,nip,szf=sizeof(PetscReal),szs=sizeof(PetscScalar);
+  PetscInt          Nb=Nq,dim,global_elem_mat_sz,nip_global,ip_offset[LANDAU_MAX_GRIDS+1],ipf_offset[LANDAU_MAX_GRIDS+1],IPfdf_sz,IP_idx,IPfdf_idx,grid=0; //remove grid
+  PetscInt          szf=sizeof(PetscReal),szs=sizeof(PetscScalar),Nftot=species_offset[num_grids];
+  int               nfaces=0;
   PetscReal         *d_BB=NULL,*d_DD=NULL,*d_invJj=NULL,*d_nu_alpha=NULL,*d_nu_beta=NULL,*d_invMass=NULL,*d_Eq_m=NULL,*d_mass_w=NULL,*d_x=NULL,*d_y=NULL,*d_w=NULL;
   PetscScalar       *d_elemMats=NULL,*d_IPf=NULL;
   PetscReal         *d_f=NULL,*d_dfdx=NULL,*d_dfdy=NULL;
 #if LANDAU_DIM==3
   PetscReal         *d_dfdz=NULL, *d_z = NULL;
 #endif
-  PetscTabulation   *Tf;
-  PetscDS           prob;
   PetscSection      section, globalSection;
   LandauCtx         *ctx;
   PetscSplitCSRDataStructure d_mat=NULL;
-  P4estVertexMaps   *h_maps, *d_maps=NULL;
+  P4estVertexMaps   *d_maps[LANDAU_MAX_GRIDS];
   int               nnn = 256/Nq; // machine dependent
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
   while (nnn & nnn - 1) nnn = nnn & nnn - 1;
   if (nnn>16) nnn = 16;
-  ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
-  if (dim!=LANDAU_DIM) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LANDAU_DIM %D != dim %d",LANDAU_DIM,dim);
-  ierr = DMPlexGetHeightStratum(plex,0,&cStart,&cEnd);CHKERRQ(ierr);
-  numGCells = cEnd - cStart;
-  nip  = numGCells*Nq; /* length of inner global iteration */
-  ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-  ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
-  ierr = PetscDSGetDimensions(prob, &Nbf);CHKERRQ(ierr); Nb = Nbf[0];
-  if (Nq != Nb) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Nq != Nb. %D  %D",Nq,Nb);
-  ierr = PetscDSGetTotalDimension(prob, &totDim);CHKERRQ(ierr);
-  ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
-  ierr = DMGetLocalSection(plex, &section);CHKERRQ(ierr);
-  ierr = DMGetGlobalSection(plex, &globalSection);CHKERRQ(ierr);
-  ierr = DMGetApplicationContext(plex, &ctx);CHKERRQ(ierr);
+  ierr = DMGetApplicationContext(plex[0], &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
-
+  ierr = DMGetDimension(plex[0], &dim);CHKERRQ(ierr);
+  if (dim!=LANDAU_DIM) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "LANDAU_DIM %D != dim %d",LANDAU_DIM,dim);
   if (ctx->gpu_assembly) {
     PetscContainer container;
     ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
     if (container) { // not here first call
+      P4estVertexMaps   *h_maps=NULL;
       ierr = PetscContainerGetPointer(container, (void **) &h_maps);CHKERRQ(ierr);
-      if (h_maps->d_self) {
-        d_maps = h_maps->d_self;
-        if (!d_maps) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata");
-      } else {
-        SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
+      for (PetscInt grid=0 ; grid<num_grids ; grid++) {
+        if (h_maps[grid].d_self) {
+          d_maps[grid] = h_maps[grid].d_self;
+          nfaces = h_maps[grid].num_face; // same on all grids
+        } else {
+          SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
+        }
       }
       // this does the setup the first time called
       ierr = MatCUSPARSEGetDeviceMatWrite(JacP,&d_mat);CHKERRQ(ierr);
     } else {
-      cerr = cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*szs);CHKERRCUDA(cerr); // kernel output - first call is on CPU
+      //cerr = cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*szs);CHKERRCUDA(cerr); // kernel output - first call is on CPU
+      for (PetscInt grid=0 ; grid<num_grids ; grid++) d_maps[grid] = NULL;
     }
   } else {
-    cerr = cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*szs);CHKERRCUDA(cerr); // kernel output - no GPU assembly
+    //cerr = cudaMalloc((void **)&d_elemMats, totDim*totDim*numGCells*szs);CHKERRCUDA(cerr); // kernel output - no GPU assembly
+    for (PetscInt grid=0 ; grid<num_grids ; grid++) d_maps[grid] = NULL;
   }
   ierr = PetscLogEventEnd(events[3],0,0,0,0);CHKERRQ(ierr);
-
+  ip_offset[0] = 0;
+  ipf_offset[0] = 0;
+  nip_global = 0;
+  IPfdf_sz = 0;
+  if (a_IPf || a_xarray) { // Jacobian, create f & df
+    for (PetscInt grid=0 ; grid<num_grids ; grid++) {
+      PetscInt nfloc = species_offset[grid+1] - species_offset[grid];
+      nip_global += numCells[grid]*Nq;
+      ip_offset[grid+1] = nip_global;
+      IPfdf_sz += Nq*nfloc*numCells[grid];
+      ipf_offset[grid+1] = IPfdf_sz;
+    }
+  }
   // create data
   d_BB = (PetscReal*)SData_d->B;
   d_DD = (PetscReal*)SData_d->D;
   if (a_IPf || a_xarray) {  // form f and df
-    dim3 dimBlock(nnn>Nf ? Nf : nnn, Nq);
     ierr = PetscLogEventBegin(events[1],0,0,0,0);CHKERRQ(ierr);
-    cerr = cudaMemcpy(SData_d->Eq_m, a_Eq_m,   Nf*szf, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    if (a_IPf) {
-      
-    } else {
-      d_IPf = (PetscScalar*)a_xarray;
-    }
-    ierr = PetscLogEventEnd(events[1],0,0,0,0);CHKERRQ(ierr);
+    cerr = cudaMemcpy(SData_d->Eq_m, a_Eq_m,   Nftot*szf, cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     d_invJj = (PetscReal*)SData_d->invJ;
     d_nu_alpha = (PetscReal*)SData_d->alpha;
     d_nu_beta = (PetscReal*)SData_d->beta;
@@ -701,66 +727,103 @@ PetscErrorCode LandauCUDAJacobian(DM plex, const PetscInt Nq, PetscReal a_Eq_m[]
     d_z = (PetscReal*)SData_d->z;
 #endif
     d_f    = (PetscReal*)SData_d->f;
+    if (a_IPf) {
+      cerr = cudaMalloc((void **)&d_IPf, IPfdf_sz * sizeof(PetscScalar));CHKERRCUDA(cerr);
+    } else {
+      d_IPf = (PetscScalar*)a_xarray;
+    }
+    ierr = PetscLogEventEnd(events[1],0,0,0,0);CHKERRQ(ierr);
+  } else {
+    d_mass_w = (PetscReal*)SData_d->mass_w; // flag for mass (need to remove)
+  }
+
+  if (a_IPf || a_xarray) { // Jacobian, create f & df
+    dim3 dimBlockFDF(nnn>Nftot ? Nftot : nnn, Nq), dimBlock(nnn,Nq);
     ierr = PetscLogEventBegin(events[8],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    landau_form_fdf<<<numGCells,dimBlock>>>( nip, dim, Nf, Nb, d_invJj, d_BB, d_DD, d_IPf, d_maps, d_f, d_dfdx, d_dfdy
+    // loop over all grids and assemble
+    IPfdf_idx = IP_idx = 0;
+    for (PetscInt grid = 0 ; grid < ctx->num_grids ; grid++) { // IPfdf_idx += nip_loc*Nfloc, IP_idx += nip_loc
+      const PetscInt moffset = ctx->mat_offset[grid], nip_loc = numCells[grid]*Nq, Nfloc = species_offset[grid+1] - species_offset[grid];
+      landau_form_fdf<<<numCells[grid],dimBlockFDF>>>(nip_loc, dim, Nfloc, Nb, d_invJj, d_BB, d_DD, d_IPf, d_maps[grid], d_f, d_dfdx, d_dfdy
 #if LANDAU_DIM==3
-                                             , d_dfdz
+                                                   , d_dfdz
 #endif
-);
-    CHECK_LAUNCH_ERROR();
+                                                   );
+      CHECK_LAUNCH_ERROR();
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-    ierr = PetscLogGpuFlops(nip*(PetscLogDouble)(2*Nb*(1+dim)));CHKERRQ(ierr);
+      ierr = PetscLogGpuFlops(nip_loc*(PetscLogDouble)(2*Nb*(1+dim)));CHKERRQ(ierr);
 #else
-    ierr = PetscLogFlops(nip*(PetscLogDouble)(2*Nb*(1+dim)));CHKERRQ(ierr);
+      ierr = PetscLogFlops(nip_loc*(PetscLogDouble)(2*Nb*(1+dim)));CHKERRQ(ierr);
 #endif
+ 
+      IPfdf_idx += nip_loc*Nfloc;
+      IP_idx += nip_loc;
+    } // grids
+    if (a_IPf) {
+      ierr = PetscFree(d_IPf);CHKERRQ(ierr);
+    }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogEventEnd(events[8],0,0,0,0);CHKERRQ(ierr);
-  } else {
-    d_mass_w = (PetscReal*)SData_d->mass_w;
-  }
-  // kernel
-  {
-    dim3 dimBlock(nnn,Nq);
+    // Jacobian
     ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    ierr = PetscLogGpuFlops(nip*(PetscLogDouble)(a_IPf ? (nip*(11*Nf+ 4*dim*dim) + 6*Nf*dim*dim*dim + 10*Nf*dim*dim + 4*Nf*dim + Nb*Nf*Nb*Nq*dim*dim*5) : Nb*Nf*Nb*Nq*4));CHKERRQ(ierr);
-    if (!d_mass_w) {
-      ii = 2*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM*(1+LANDAU_DIM) + 3*LANDAU_MAX_SPECIES + (1+LANDAU_DIM)*dimBlock.x*LANDAU_MAX_SPECIES + LANDAU_MAX_NQ*LANDAU_MAX_NQ + 2*LANDAU_MAX_NQ*LANDAU_MAX_Q_FACE;
+    // loop over all grids and assemble
+    IPfdf_idx = IP_idx = 0;
+    for (PetscInt grid = 0 ; grid < ctx->num_grids ; grid++) { // IPfdf_idx += nip_loc*Nfloc, IP_idx += nip_loc
+      const PetscInt moffset = ctx->mat_offset[grid], nip_loc = numCells[grid]*Nq, Nfloc = species_offset[grid+1] - species_offset[grid],totDim=0;
+      //ierr = PetscLogGpuFlops(nip*(PetscLogDouble)(a_IPf ? (nip*(11*Nftot+ 4*dim*dim) + 6*Nftot*dim*dim*dim + 10*Nftot*dim*dim + 4*Nftot*dim + Nb*Nftot*Nb*Nq*dim*dim*5) : Nb*Nftot*Nb*Nq*4));CHKERRQ(ierr);
+      PetscInt ii = 2*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM*(1+LANDAU_DIM) + 3*LANDAU_MAX_SPECIES + (1+LANDAU_DIM)*dimBlock.x*LANDAU_MAX_SPECIES + LANDAU_MAX_NQ*LANDAU_MAX_NQ + 2*LANDAU_MAX_NQ*LANDAU_MAX_Q_FACE;
       if (ii*szf >= 49152) {
-        cerr = cudaFuncSetAttribute(landau_kernel_v2,
+        cerr = cudaFuncSetAttribute(landau_kernel,
                                     cudaFuncAttributeMaxDynamicSharedMemorySize,
                                     98304);CHKERRCUDA(cerr);
       }
       ierr = PetscInfo1(plex, "Jacobian shared memory size: %D bytes\n",ii);CHKERRQ(ierr);
-      landau_kernel_v2<<<numGCells,dimBlock,ii*szf>>>(nip,dim,totDim,Nf,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
-                                                      d_BB, d_DD, d_x, d_y, d_w,
-                                                      d_elemMats, d_maps, d_mat, d_f, d_dfdx, d_dfdy,
+      landau_kernel<<<numCells[grid],dimBlock,ii*szf>>>(nip_loc,dim,totDim,Nfloc,Nb,d_invJj,d_nu_alpha,d_nu_beta,d_invMass,d_Eq_m,
+                                                        d_BB, d_DD, d_x, d_y, d_w,
+                                                        d_elemMats, d_maps[grid], d_mat, d_f, d_dfdx, d_dfdy,
 #if LANDAU_DIM==3
-                                                      d_z, d_dfdz,
+                                                        d_z, d_dfdz,
 #endif
-                                                      d_mass_w, shift);
-    } else {
-      ierr = PetscInfo1(plex, "Mass no dynamic shared memory. d_maps = %p\n",d_maps);CHKERRQ(ierr);
-      mass_kernel<<<numGCells,dimBlock>>>(nip, dim, totDim, Nf, Nb, d_BB, d_DD, d_elemMats,
-                                          d_maps, d_mat, d_mass_w, shift);
-    }
-    CHECK_LAUNCH_ERROR(); // has sync
+                                                        d_mass_w, shift);
+      CHECK_LAUNCH_ERROR(); // has sync
+      IPfdf_idx += nip_loc*Nfloc;
+      IP_idx += nip_loc;
+    } // grids
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
+  } else { // mass
+    ierr = PetscInfo1(plex, "Mass no dynamic shared memory. d_maps = %p\n",d_maps);CHKERRQ(ierr);
+    // loop over all grids and assemble
+    IPfdf_idx = IP_idx = 0;
+    for (PetscInt grid = 0 ; grid < ctx->num_grids ; grid++) { // IPfdf_idx += nip_loc*Nfloc, IP_idx += nip_loc
+      const PetscInt moffset = ctx->mat_offset[grid], nip_loc = numCells[grid]*Nq, Nfloc = species_offset[grid+1] - species_offset[grid],totDim=0;
+      dim3           dimBlock(nnn,Nq);
+      mass_kernel<<<numCells[grid],dimBlock>>>(nip_loc, dim, totDim, Nfloc, Nb, d_BB, d_DD, d_elemMats,
+                                               d_maps[grid], d_mat, d_mass_w, shift);
+      CHECK_LAUNCH_ERROR(); // has sync
+      IPfdf_idx += nip_loc*Nfloc;
+      IP_idx += nip_loc;
+    } // grids
   }
 
   // First time assembly with or without GPU assembly
   if (d_elemMats) {
-    PetscScalar *elemMats=NULL,*elMat;
+    PetscScalar   *elemMats=NULL,*elMat;
+    PetscSection  section, globalSection;
+    PetscInt      cStart,cEnd,totDim,ej;
     ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
-    ierr = PetscMalloc1(totDim*totDim*numGCells,&elemMats);CHKERRQ(ierr);
-    cerr = cudaMemcpy(elemMats, d_elemMats, totDim*totDim*numGCells*sizeof(PetscScalar), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
+    ierr = DMPlexGetHeightStratum(plex[grid],0,&cStart,&cEnd);CHKERRQ(ierr);
+    ierr = DMGetLocalSection(plex[grid], &section);CHKERRQ(ierr);
+    ierr = DMGetGlobalSection(plex[grid], &globalSection);CHKERRQ(ierr);
+    ierr = PetscMalloc1(totDim*totDim*numCells[grid],&elemMats);CHKERRQ(ierr);
+    cerr = cudaMemcpy(elemMats, d_elemMats, totDim*totDim*numCells[grid]*sizeof(PetscScalar), cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
     cerr = cudaFree(d_elemMats);CHKERRCUDA(cerr);
     ierr = PetscLogEventEnd(events[5],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(events[6],0,0,0,0);CHKERRQ(ierr);
     for (ej = cStart, elMat = elemMats ; ej < cEnd; ++ej, elMat += totDim*totDim) {
-      ierr = DMPlexMatSetClosure(plex, section, globalSection, JacP, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
+      ierr = DMPlexMatSetClosure(plex[grid], section, globalSection, subJ[grid], ej, elMat, ADD_VALUES);CHKERRQ(ierr);
       if (ej==-1) {
         int d,f;
         PetscPrintf(PETSC_COMM_SELF,"GPU Element matrix\n");
