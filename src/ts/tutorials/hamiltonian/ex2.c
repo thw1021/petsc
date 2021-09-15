@@ -969,18 +969,9 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q2
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_bd periodic,none -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
    test:
      suffix: bsi2q2
-     args: --dm_plex_dim -faces 4 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
-   test:
-    suffix: 2d_bdm1_p0_2
-    requires: triangle
-    args: -sol_type quartic -dm_plex_dim -faces 4 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -field_petscspace_degree 1 -field_petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase \
-          -field_petscspace_degree 1 -field_petscdualspace_type bdm -dm_refine 0 -convest_num_refine 1 -snes_convergence_estimate \
-          -snes_error_if_not_converged \
-          -ksp_rtol 1e-10 -ksp_error_if_not_converged \
-          -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_factorization_type full -pc_fieldsplit_schur_precondition full \
-            -fieldsplit_field_pc_type lu \
-            -fieldsplit_potential_ksp_rtol 1e-10 -fieldsplit_potential_pc_type lu
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_box_bd periodic,none -dm_plex_box_lower -1,-1 -dm_plex_box_upper 1,1 -dm_plex_simplex 0 -particlesPerCell 2000 -dm_view -sw_view -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+
 TEST*/
