@@ -23,7 +23,7 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('HIP', '-with-hip-target', nargs.ArgString(None, None, 'AMD GPU target for code generation, for example gfx908, (this may be used by external packages)'))
+    help.addArgument('HIP', '-with-hip-arch', nargs.ArgString(None, None, 'AMD GPU architecture for code generation, for example gfx908, (this may be used by external packages)'))
     return
 
   def setupDependencies(self, framework):
@@ -34,8 +34,8 @@ class Configure(config.package.Package):
 
   def __str__(self):
     output  = config.package.Package.__str__(self)
-    if hasattr(self,'target'):
-      output += '  HIP target: '+ self.target +'\n'
+    if hasattr(self,'hipArch'):
+      output += '  HIP arch: '+ self.hipArch +'\n'
     return output
 
   def getSearchDirectories(self):
@@ -116,8 +116,8 @@ class Configure(config.package.Package):
       self.addDefine('HAVE_HIPROCM',1)
       self.framework.addDefine('__HIP_PLATFORM_HCC__',1) # deprecated from 4.3.0
       self.framework.addDefine('__HIP_PLATFORM_AMD__',1)
-      if 'with-hip-target' in self.framework.clArgDB:
-        self.target = self.argDB['with-hip-target']
+      if 'with-hip-arch' in self.framework.clArgDB:
+        self.hipArch = self.argDB['with-hip-arch']
       else:
         self.getExecutable('rocminfo',getFullPath=1)
         if hasattr(self,'rocminfo'):
@@ -128,11 +128,11 @@ class Configure(config.package.Package):
           else:
             try:
               s = set([i for i in out.split() if 'gfx' in i])
-              self.target = list(s)[0]
+              self.hipArch = list(s)[0]
             except:
               self.log.write('Unable to parse the ROCM utility ' + self.rocminfo + '\n')
-        if hasattr(self,'target'):
-          self.setCompilers.HIPFLAGS += ' --amdgpu-target=' + self.target +' '
+        if hasattr(self,'hipArch'):
+          self.setCompilers.HIPFLAGS += ' --amdgpu-target=' + self.hipArch +' '
 
     config.package.Package.configureLibrary(self)
     #self.checkHIPDoubleAlign()

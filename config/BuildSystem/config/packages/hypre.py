@@ -88,8 +88,8 @@ class Configure(config.package.GNUPackage):
       args.append('--with-hip')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
-          if hasattr(self.hip,'target'):
-            args.append('--with-gpu-arch=' + self.hip.target)
+          if hasattr(self.hip,'hipArch'):
+            args.append('--with-gpu-arch=' + self.hip.hipArch)
           else:
             args.append('--with-gpu-arch=gfx908') # defaults to MI100
         else:
@@ -106,8 +106,8 @@ class Configure(config.package.GNUPackage):
       args.append('--with-cuda')
       if not hasharch:
         if not 'with-hypre-gpu-arch' in self.framework.clArgDB:
-          if hasattr(self.cuda,'gencodearch'):
-            args.append('--with-gpu-arch=' + self.cuda.gencodearch)
+          if hasattr(self.cuda,'cudaArch'):
+            args.append('--with-gpu-arch=' + self.cuda.cudaArch)
           else:
             args.append('--with-gpu-arch=70') # default
         else:

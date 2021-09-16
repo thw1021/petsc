@@ -142,10 +142,10 @@ class Configure(config.package.Package):
       gputarget = ''
       if self.argDB['with-magma-gputarget']:
         gputarget = self.argDB['with-magma-gputarget']
-      elif self.cuda.found and hasattr(self.cuda,'gencodearch') and self.cuda.gencodearch:
-        gputarget = 'sm_'+self.cuda.gencodearch
-      elif self.hip.found and hasattr(self.hip,'target') and self.hip.target:
-        gputarget = self.hip.target
+      elif self.cuda.found and hasattr(self.cuda,'cudaArch') and self.cuda.cudaArch:
+        gputarget = 'sm_'+self.cuda.cudaArch
+      elif self.hip.found and hasattr(self.hip,'hipArch') and self.hip.hipArch:
+        gputarget = self.hip.hipArch
       g.write('CC = '+cc+'\n')
       g.write('CFLAGS = '+cflags+'\n')
       g.write('CXX = '+cxx+'\n')
@@ -166,8 +166,8 @@ class Configure(config.package.Package):
         g.write('F90LAGS = '+fcflags+'\n')
       if gputarget:
         g.write('GPU_TARGET = '+gputarget+'\n')
-      if self.cuda.found and hasattr(self.cuda,'gencodearch') and self.cuda.gencodearch:
-        g.write('MIN_ARCH = '+self.cuda.gencodearch+'0\n')
+      if self.cuda.found and hasattr(self.cuda,'cudaArch') and self.cuda.cudaArch:
+        g.write('MIN_ARCH = '+self.cuda.cudaArch+'0\n')
 
       g.write('ARCH = '+self.setCompilers.AR+'\n')
       g.write('ARCHFLAGS = '+self.setCompilers.AR_FLAGS+'\n')
