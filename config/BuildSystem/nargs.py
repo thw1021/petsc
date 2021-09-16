@@ -143,8 +143,9 @@ tests will cause ValueError.
   def checkKey(self):
     if self.deprecated:
       if isinstance(self.deprecated, str):
-        raise KeyError('Deprecated option '+self.key+' should be '+self.deprecated)
-      raise KeyError('Deprecated option '+self.key)
+        print('***** WARNING: --{0} is deprecated. You should use {1} instead. *****'.format(self.key, self.deprecated))
+      else:
+        print('***** WARNING: '+ self.key +' is deprecated! *****')
     return
 
   def setValue(self, value):
