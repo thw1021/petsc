@@ -581,12 +581,13 @@ class SourceFix(object):
                 yield "+"+line
 
 class PetscLinter(object):
-  def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,lock=None):
+  def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,lock=None,warnAll=False):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
     self.prefix     = prefix
     self.verbose    = verbose
     self.lock       = lock
+    self.warnAll    = warnAll
     self.errPrefix  = " ".join([prefix,85*"-"])
     self.warnPrefix = " ".join([prefix,85*"%"])
     self.errors     = []
@@ -909,8 +910,14 @@ class PetscLinter(object):
     return
 
   def getAllWarnings(self):
-    if self.warnings:
-      return "\n".join([self.warnPrefix,"\n".join(self.warnings)[1:],self.warnPrefix])
+    if self.warnAll:
+      warnings = self.warnings
+    else:
+      knownWarnings = {"Encountered unparsable PetscKernel_XXX for cursor",
+                       "Encountered unparsable PETSC_HASH_MAP for cursor"}
+      warnings = [warn for warn in self.warnings if not any(x in warn for x in knownWarnings)]
+    if warnings:
+      return "\n".join([self.warnPrefix,"\n".join(warnings)[1:],self.warnPrefix])
     return
 
   def coalescePatches(self):
@@ -1274,10 +1281,16 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     # we just tried those and they didn't work, also more importantly weeds out the
     # instantiation line if this is an intermediate cursor in a recursive call to this
     # function
-    refsAll = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
-    assert len(refsAll), "Could not determine the origin of cursor {}".format(obj)
+    argRefs = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
+    if not len(argRefs):
+      # it's not traceable to a function argument, so maybe its a global static variable
+      if len([r for r in refsAll if r.storage_class in {clx.StorageClass.STATIC}]):
+        # a global variable is not a function argumment, so this is unhandleable
+        raise ParsingError("PETSC_CLANG_STATIC_ANALYZER_IGNORE")
+
+    assert len(argRefs), "Could not determine the origin of cursor {}".format(obj)
     # take the first, as this is the earliest
-    firstRef  = refsAll[0]
+    firstRef  = argRefs[0]
     tu,loc    = firstRef.translation_unit,firstRef.location
     srcLen    = len(firstRef.getRawSource())
     # why the following song and dance? Because you cannot walk the AST backwards, and
@@ -1335,7 +1348,7 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
   Is the Arg # correct w.r.t. the function arguments
   """
   if idx.canonical.kind not in mathCursors:
-    # sometimes it is impossible to tell if the index is correct so this is a warnning not
+    # sometimes it is impossible to tell if the index is correct so this is a warning not
     # an error. For example in the case of a loop:
     # for (i = 0; i < n; ++i) PetscValidIntPointer(arr+i,i);
     linter.addWarningFromCursor(idx,"Index value is of unexpected type '{}'".format(idx.canonical.kind))
@@ -1351,12 +1364,21 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
   except ValueError:
     try:
       matchLoc = checkTraceableToParentArgs(obj,parentArgNames)
-    except ParsingError:
+    except ParsingError as pe:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
       # anything here but emit a warning
-      parentFunc = PetscCursor(parentArgs[0].semantic_parent)
-      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}()' seemingly does not contain the object:\n\n{}".format(parentFunc.name,parentFunc.getFormattedSource()))
+      if "PETSC_CLANG_STATIC_ANALYZER_IGNORE" in pe.args:
+        return
+      if len(parentArgs):
+        parentFunc = PetscCursor(parentArgs[0].semantic_parent)
+        parentFuncName = parentFunc.name+"()"
+        parentFuncSrc  = parentFunc.getFormattedSource()
+      else:
+        # parent function has no arguments (very likely that "obj" is a global variable)
+        parentFuncName = "UNKNOWN FUNCTION"
+        parentFuncSrc  = "  <could not determine parent function signature from arguments>"
+      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n\n{}".format(parentFuncName,parentFuncSrc))
       return
   if idxNum != parentArgs[matchLoc].argidx:
     errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n\n{}".format(obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].getFormattedSource())
