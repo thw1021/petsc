@@ -27,7 +27,7 @@ void  __gcov_flush(void);
 EXTERN_C_END
 #endif
 
-#if defined(PETSC_USE_LOG)
+#if PetscDefined(USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogFinalize(void);
 #endif
 
@@ -36,7 +36,7 @@ PETSC_INTERN PetscFPT PetscFPTData;
 PetscFPT PetscFPTData = 0;
 #endif
 
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
 #include <petscviewersaws.h>
 #endif
 
@@ -53,7 +53,7 @@ PETSC_INTERN PetscErrorCode PetscCloseHistoryFile(FILE**);
 
 /* user may set these BEFORE calling PetscInitialize() */
 MPI_Comm PETSC_COMM_WORLD = MPI_COMM_NULL;
-#if defined(PETSC_HAVE_MPI_INIT_THREAD)
+#if PetscDefined(HAVE_MPI_INIT_THREAD)
 PetscMPIInt PETSC_MPI_THREAD_REQUIRED = MPI_THREAD_FUNNELED;
 #else
 PetscMPIInt PETSC_MPI_THREAD_REQUIRED = 0;
@@ -110,7 +110,7 @@ PetscErrorCode  PetscInitializeNoPointers(int argc,char **args,const char *filen
   ierr = PetscInitialize(&myargc,&myargs,filename,help);if (ierr) return ierr;
   ierr = PetscPopSignalHandler();CHKERRQ(ierr);
   PetscBeganMPI = PETSC_FALSE;
-  PetscFunctionReturn(ierr);
+  PetscFunctionReturn(0);
 }
 
 /*
@@ -153,8 +153,9 @@ PetscErrorCode  PetscInitializeNoArguments(void)
 @*/
 PetscErrorCode PetscInitialized(PetscBool *isInitialized)
 {
+  PetscFunctionBegin;
   *isInitialized = PetscInitializeCalled;
-  return 0;
+  PetscFunctionReturn(0);
 }
 
 /*@
@@ -166,8 +167,9 @@ PetscErrorCode PetscInitialized(PetscBool *isInitialized)
 @*/
 PetscErrorCode  PetscFinalized(PetscBool  *isFinalized)
 {
+  PetscFunctionBegin;
   *isFinalized = PetscFinalizeCalled;
-  return 0;
+  PetscFunctionReturn(0);
 }
 
 PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char []);
@@ -465,7 +467,7 @@ PetscErrorCode  PetscGetProgramName(char name[],size_t len)
 PetscErrorCode  PetscGetArgs(int *argc,char ***args)
 {
   PetscFunctionBegin;
-  if (!PetscInitializeCalled && PetscFinalizeCalled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
+  if (PetscUnlikely(!PetscInitializeCalled && PetscFinalizeCalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
   *argc = PetscGlobalArgc;
   *args = PetscGlobalArgs;
   PetscFunctionReturn(0);
@@ -494,7 +496,7 @@ PetscErrorCode  PetscGetArguments(char ***args)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!PetscInitializeCalled && PetscFinalizeCalled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
+  if (PetscUnlikely(!PetscInitializeCalled && PetscFinalizeCalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
   if (!argc) {*args = NULL; PetscFunctionReturn(0);}
   ierr = PetscMalloc1(argc,args);CHKERRQ(ierr);
   for (i=0; i<argc-1; i++) {
@@ -532,11 +534,12 @@ PetscErrorCode  PetscFreeArguments(char **args)
   PetscFunctionReturn(0);
 }
 
-#if defined(PETSC_HAVE_SAWS)
+#if PetscDefined(HAVE_SAWS)
 #include <petscconfiginfo.h>
 
 PETSC_INTERN PetscErrorCode PetscInitializeSAWs(const char help[])
 {
+  PetscFunctionBegin;
   if (!PetscGlobalRank) {
     char           cert[PETSC_MAX_PATH_LEN],root[PETSC_MAX_PATH_LEN],*intro,programname[64],*appline,*options,version[64];
     int            port;
@@ -668,7 +671,7 @@ int64_t Petsc_adios_group;
 PetscInt PetscNumOMPThreads;
 #endif
 
-#if defined(PETSC_HAVE_DLFCN_H)
+#if PetscDefined(HAVE_DLFCN_H)
 #include <dlfcn.h>
 #endif
 
@@ -805,7 +808,8 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   PetscBool      flg = PETSC_TRUE;
   char           hostname[256];
 
-  if (PetscInitializeCalled) return 0;
+  PetscFunctionBegin;
+  if (PetscInitializeCalled) PetscFunctionReturn(0);
   /*
       The checking over compatible runtime libraries is complicated by the MPI ABI initiative
       https://wiki.mpich.org/mpich/index.php/ABI_Compatibility_Initiative which started with
@@ -882,15 +886,11 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 #endif
 
 #if defined(PETSC_HAVE_DLSYM)
-  {
-    PetscInt cnt = 0;
-    /* These symbols are currently in the OpenMPI and MPICH libraries; they may not always be, in that case the test will simply not detect the problem */
-    if (dlsym(RTLD_DEFAULT,"ompi_mpi_init")) cnt++;
-    if (dlsym(RTLD_DEFAULT,"MPID_Abort")) cnt++;
-    if (cnt > 1) {
-      fprintf(stderr,"PETSc Error --- Application was linked against both OpenMPI and MPICH based MPI libraries and will not run correctly\n");
-      return PETSC_ERR_MPI_LIB_INCOMP;
-    }
+  /* These symbols are currently in the OpenMPI and MPICH libraries; they may not always be, in that case the test will simply not detect the problem */
+  if (PetscUnlikely(dlsym(RTLD_DEFAULT,"ompi_mpi_init") && dlsym(RTLD_DEFAULT,"MPID_Abort"))) {
+    fprintf(stderr,"PETSc Error --- Application was linked against both OpenMPI and MPICH based MPI libraries and will not run correctly\n");
+    ierr = PetscStackView(stderr);CHKERRQ(ierr);
+    return PETSC_ERR_MPI_LIB_INCOMP;
   }
 #endif
 
@@ -920,7 +920,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 
   ierr = MPI_Initialized(&flag);CHKERRMPI(ierr);
   if (!flag) {
-    if (PETSC_COMM_WORLD != MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"You cannot set PETSC_COMM_WORLD if you have not initialized MPI first");
+    if (PetscUnlikely(PETSC_COMM_WORLD != MPI_COMM_NULL)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"You cannot set PETSC_COMM_WORLD if you have not initialized MPI first");
     ierr = PetscPreMPIInit_Private();CHKERRQ(ierr);
 #if defined(PETSC_HAVE_MPI_INIT_THREAD)
     {
@@ -1072,6 +1072,9 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 
 #if defined(PETSC_HAVE_SAWS)
   ierr = PetscInitializeSAWs(help);CHKERRQ(ierr);
+  flg = PETSC_FALSE;
+  ierr = PetscOptionsHasName(NULL,NULL,"-stack_view",&flg);CHKERRQ(ierr);
+  if (flg) PetscStackViewSAWs();
 #endif
 
   /*
@@ -1130,15 +1133,6 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   }
 #endif
 
-  /*
-      Setup building of stack frames for all function calls
-  */
-  flg  = PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg,NULL);CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
-  ierr = PetscStackCreate(flg);CHKERRQ(ierr);
-#endif
-
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
   ierr = PetscFPTCreate(10000);CHKERRQ(ierr);
 #endif
@@ -1186,7 +1180,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 
   ierr = PetscOptionsHasName(NULL,NULL,"-python",&flg);CHKERRQ(ierr);
   if (flg) {ierr = PetscPythonInitialize(NULL,NULL);CHKERRQ(ierr);}
-  return 0;
+  PetscFunctionReturn(0);
 }
 
 #if defined(PETSC_USE_LOG)
@@ -1267,11 +1261,12 @@ PetscErrorCode  PetscFinalize(void)
   char           mname[PETSC_MAX_PATH_LEN];
 #endif
 
-  if (!PetscInitializeCalled) {
-    printf("PetscInitialize() must be called before PetscFinalize()\n");
-    return(PETSC_ERR_ARG_WRONGSTATE);
-  }
   PetscFunctionBegin;
+  if (PetscUnlikely(!PetscInitializeCalled)) {
+    fprintf(stderr,"PetscInitialize() must be called before PetscFinalize()\n");
+    ierr = PetscStackView(stderr);CHKERRQ(ierr);
+    return PETSC_ERR_ARG_WRONGSTATE;
+  }
   ierr = PetscInfo(NULL,"PetscFinalize() called\n");CHKERRQ(ierr);
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -1308,7 +1303,7 @@ PetscErrorCode  PetscFinalize(void)
     ierr = PetscMalloc1(2,&buffs);CHKERRQ(ierr);
     ierr = PetscOptionsGetStringArray(NULL,NULL,"-textbelt",buffs,&nmax,&flg1);CHKERRQ(ierr);
     if (flg1) {
-      if (!nmax) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"-textbelt requires either the phone number or number,\"message\"");
+      if (PetscUnlikely(!nmax)) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"-textbelt requires either the phone number or number,\"message\"");
       if (nmax == 1) {
         ierr = PetscMalloc1(128,&buffs[1]);CHKERRQ(ierr);
         ierr = PetscGetProgramName(buffs[1],32);CHKERRQ(ierr);
@@ -1430,8 +1425,6 @@ PetscErrorCode  PetscFinalize(void)
   ierr = PetscOptionsGetString(NULL,NULL,"-log",mname,sizeof(mname),&flg2);CHKERRQ(ierr);
   if (flg1 || flg2) {ierr = PetscLogDump(mname);CHKERRQ(ierr);}
 #endif
-
-  ierr = PetscStackDestroy();CHKERRQ(ierr);
 
   flg1 = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL,"-no_signal_handler",&flg1,NULL);CHKERRQ(ierr);
@@ -1655,7 +1648,7 @@ PetscErrorCode  PetscFinalize(void)
     if (flg) {
       icomm = ucomm.comm;
       ierr = MPI_Comm_get_attr(icomm,Petsc_Counter_keyval,&counter,&flg);CHKERRMPI(ierr);
-      if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
+      if (PetscUnlikely(!flg)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
 
       ierr = MPI_Comm_delete_attr(PETSC_COMM_SELF,Petsc_InnerComm_keyval);CHKERRMPI(ierr);
       ierr = MPI_Comm_delete_attr(icomm,Petsc_Counter_keyval);CHKERRMPI(ierr);
@@ -1665,7 +1658,7 @@ PetscErrorCode  PetscFinalize(void)
     if (flg) {
       icomm = ucomm.comm;
       ierr = MPI_Comm_get_attr(icomm,Petsc_Counter_keyval,&counter,&flg);CHKERRMPI(ierr);
-      if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
+      if (PetscUnlikely(!flg)) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
 
       ierr = MPI_Comm_delete_attr(PETSC_COMM_WORLD,Petsc_InnerComm_keyval);CHKERRMPI(ierr);
       ierr = MPI_Comm_delete_attr(icomm,Petsc_Counter_keyval);CHKERRMPI(ierr);
@@ -1687,7 +1680,7 @@ PetscErrorCode  PetscFinalize(void)
 #if defined(PETSC_HAVE_MPI_FINALIZED)
     PetscMPIInt flag;
     ierr = MPI_Finalized(&flag);CHKERRMPI(ierr);
-    if (flag) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI_Finalize() has already been called, even though MPI_Init() was called by PetscInitialize()");
+    if (PetscUnlikely(flag)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI_Finalize() has already been called, even though MPI_Init() was called by PetscInitialize()");
 #endif
     ierr = MPI_Finalize();CHKERRMPI(ierr);
   }
@@ -1703,6 +1696,7 @@ PetscErrorCode  PetscFinalize(void)
 
 */
   ierr = PetscMallocClear();CHKERRQ(ierr);
+  ierr = PetscStackReset();CHKERRQ(ierr);
 
   PetscErrorHandlingInitialized = PETSC_FALSE;
   PetscInitializeCalled = PETSC_FALSE;
@@ -1714,7 +1708,7 @@ PetscErrorCode  PetscFinalize(void)
    */
   __gcov_flush();
 #endif
-  PetscFunctionReturn(0);
+  return 0;
 }
 
 #if defined(PETSC_MISSING_LAPACK_lsame_)
