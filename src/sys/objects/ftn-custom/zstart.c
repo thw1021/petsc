@@ -254,7 +254,6 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   PetscMPIInt    size;
   char           *t1,name[256],hostname[64];
   PetscMPIInt    f_petsc_comm_world;
-  PetscBool      checkstack = PETSC_FALSE;
 
   *ierr = PetscMemzero(name,sizeof(name)); if (*ierr) return;
   if (PetscInitializeCalled) {*ierr = 0; return;}
@@ -503,13 +502,6 @@ PETSC_EXTERN void petscinitializef_(char* filename,char* help,PetscBool *readarg
   if (*ierr) { (*PetscErrorPrintf)("PetscInitialize:Getting hostname\n");return;}
   *ierr = PetscInfo1(0,"Running on machine: %s\n",hostname);
   if (*ierr) { (*PetscErrorPrintf)("PetscInitialize:Calling PetscInfo()\n");return;}
-
-  *ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&checkstack,NULL);
-  if (*ierr) { (*PetscErrorPrintf)("PetscInitialize:Calling PetscOptionsGetBool()\n");return;}
-#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
-  *ierr = PetscStackCreate(checkstack);
-  if (*ierr) {(*PetscErrorPrintf)("PetscInitialize:PetscStackCreate()\n");return;}
-#endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
   *ierr = PetscFPTCreate(10000);
