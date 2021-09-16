@@ -1937,7 +1937,23 @@ PetscErrorCode VecBoundToCPU(Vec v,PetscBool *flg)
 }
 
 /*@
-   VecSetBindingPropagates - TODO: Finish this manpage!
+   VecSetBindingPropagates - Sets whether the state of being bound to the CPU for a GPU vector type propagates to child and some other associated objects
+
+   Input Parameters:
++  v - the vector
+-  flg - flag indicating whether the boundtocpu flag should be propagated
+
+   Level: developer
+
+   Notes:
+   If the value of flg is set to true, then VecDuplicate() and VecDuplicateVecs() will bind created vectors to GPU if the input vector is bound to the CPU.
+   The created vectors will also have their bindingpropagates flag set to true.
+
+   Developer Notes:
+   If a DMDA has the -dm_bind_below option set to true, then vectors created by DMCreateGlobalVector() will have VecSetBindingPropagates() called on them to
+   set their bindingpropagates flag to true.
+
+.seealso: MatSetBindingPropagates(), VecGetBindingPropagates()
 @*/
 PetscErrorCode VecSetBindingPropagates(Vec v,PetscBool flg)
 {
@@ -1950,7 +1966,17 @@ PetscErrorCode VecSetBindingPropagates(Vec v,PetscBool flg)
 }
 
 /*@
-   VecGetBindingPropagates - TODO: Finish this manpage!
+   VecGetBindingPropagates - Gets whether the state of being bound to the CPU for a GPU vector type propagates to child and some other associated objects
+
+   Input Parameter:
+.  v - the vector
+
+   Output Parameter:
+.  flg - flag indicating whether the boundtocpu flag will be propagated
+
+   Level: developer
+
+.seealso: VecSetBindingPropagates()
 @*/
 PetscErrorCode VecGetBindingPropagates(Vec v,PetscBool *flg)
 {
