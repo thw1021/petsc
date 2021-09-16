@@ -193,6 +193,7 @@ class Configure(config.base.Configure):
                                          ]])
               and not any([s in output for s in ['Intel(R)',
                                                  'Unrecognised option --help passed to ld', # NAG f95 compiler
+                                                 'IBM XL', # XL compiler
                                                  ]]))
       if found:
         if log: log.write('Detected GNU compiler\n')
