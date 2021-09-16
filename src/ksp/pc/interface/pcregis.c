@@ -11,6 +11,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_LU(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_QR(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_SOR(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Shell(PC);
+PETSC_EXTERN PetscErrorCode PCCreate_AMGx(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_MG(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_ICC(PC);
@@ -94,6 +95,7 @@ PetscErrorCode  PCRegisterAll(void)
   PetscCall(PCRegister(PCLU           ,PCCreate_LU));
   PetscCall(PCRegister(PCQR           ,PCCreate_QR));
   PetscCall(PCRegister(PCSHELL        ,PCCreate_Shell));
+  PetscCall(PCRegister(PCAMGX         ,PCCreate_AMGx));
   PetscCall(PCRegister(PCMG           ,PCCreate_MG));
   PetscCall(PCRegister(PCEISENSTAT    ,PCCreate_Eisenstat));
   PetscCall(PCRegister(PCILU          ,PCCreate_ILU));
