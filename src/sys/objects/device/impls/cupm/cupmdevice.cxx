@@ -271,7 +271,7 @@ CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(CUDA,cuda);
 CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(HIP,hip);
 
 template <CUPMDeviceKind T>
-PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscDeviceInitKind *defaultInitKind, PetscInt *defaultDeviceId) noexcept
+PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitKind *defaultInitKind) noexcept
 {
   int            ndev;
   PetscInt       initKindCUPM = *defaultInitKind, id = *defaultDeviceId;

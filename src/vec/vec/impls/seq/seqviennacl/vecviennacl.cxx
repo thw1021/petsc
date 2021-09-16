@@ -116,6 +116,7 @@ PETSC_EXTERN PetscErrorCode PetscViennaCLInit()
   }
 
 #if defined(PETSC_HAVE_CUDA)
+  SETERRQ(PETSC_COMM_SELF,PETSC_SUP,"TODO");
   ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_CUDA);CHKERRQ(ierr); /* For CUDA event timers */
 #endif
 
