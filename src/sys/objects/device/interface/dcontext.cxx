@@ -653,7 +653,7 @@ static PetscErrorCode PetscDeviceContextFinalizeGlobalContext_Private(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidDeviceContext(globalContext,0);
+  PetscValidDeviceContext(globalContext,1);
   if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
   ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
   /* reset everything to defaults */
