@@ -156,13 +156,20 @@ PetscErrorCode PetscDeviceView(PetscDevice device, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-static std::array<PetscBool,PETSC_DEVICE_MAX>   initializedDevice;
-static std::array<PetscDevice,PETSC_DEVICE_MAX> defaultDevices;
+enum class InitState : int {
+  NONE,    /* no initialization whatsoever */
+  PARTIAL, /* PetscDeviceContextInitializeRootContext_Internal has been called */
+  FULL     /* PetscDeviceInitializeDefaultDevice_Internal has been called */
+};
+
+static std::array<InitState,PETSC_DEVICE_MAX>   initializedDevice = {};
+static std::array<PetscDevice,PETSC_DEVICE_MAX> defaultDevices    = {};
 static_assert(initializedDevice.size() == defaultDevices.size(),"");
 
 PetscBool PetscDeviceInitializedFor(PetscDeviceKind kind)
 {
-  return PetscDeviceConfiguredFor(kind) ? initializedDevice[kind] : PETSC_FALSE;
+  if (!PetscDeviceConfiguredFor(kind)) return PETSC_FALSE;
+  return static_cast<PetscBool>(initializedDevice[kind] == InitState::FULL);
 }
 
 PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind kind, PetscInt defaultDeviceId)
@@ -170,7 +177,11 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind kind,
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscLikely(defaultDevices[kind])) PetscFunctionReturn(0);
+  if (PetscLikely(PetscDeviceInitializedFor(kind))) PetscFunctionReturn(0);
+  if (initializedDevice[kind] == InitState::NONE) {
+    /* pray that we do this collectively */
+    ierr = PetscDeviceContextInitializeRootContext_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
+  }
   ierr = PetscDeviceCreate(kind,defaultDeviceId,&defaultDevices[kind]);CHKERRQ(ierr);
   ierr = PetscDeviceConfigure(defaultDevices[kind]);CHKERRQ(ierr);
   /* the default devices are all automatically "referenced" at least once, otherwise the
@@ -181,7 +192,7 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind kind,
      for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
    */
   defaultDevices[kind] = PetscDeviceReference(defaultDevices[kind]);
-  initializedDevice[kind] = PETSC_TRUE;
+  initializedDevice[kind] = InitState::FULL;
   PetscFunctionReturn(0);
 }
 
@@ -228,7 +239,7 @@ static PetscErrorCode PetscDeviceFinalizeDefaultDevices_Private(void)
     ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);
     if (PetscUnlikelyDebug(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not fully destroyed during PetscFinalize()",device->kind,device->refcnt);
   }
-  CHKERRCXX(initializedDevice.fill(PETSC_FALSE));
+  CHKERRCXX(initializedDevice.fill(InitState::NONE));
   PetscFunctionReturn(0);
 }
 
