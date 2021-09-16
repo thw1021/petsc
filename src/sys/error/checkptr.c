@@ -86,7 +86,7 @@ PetscBool PetscCheckPointer(const void *ptr,PetscDataType dtype)
   if (petsc_checkpointer_intensity < 1) return PETSC_TRUE;
 
   /* Skip the verbose check if we are inside a hot function. */
-  if (petscstack && petscstack->hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
+  if (petscstack.hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
 
   PetscSegvJumpBuf_set = PETSC_TRUE;
 
