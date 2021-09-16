@@ -1425,8 +1425,6 @@ PetscErrorCode  PetscFinalize(void)
   if (flg1 || flg2) {ierr = PetscLogDump(mname);CHKERRQ(ierr);}
 #endif
 
-  ierr = PetscStackDestroy();CHKERRQ(ierr);
-
   flg1 = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL,"-no_signal_handler",&flg1,NULL);CHKERRQ(ierr);
   if (!flg1) { ierr = PetscPopSignalHandler();CHKERRQ(ierr);}
@@ -1697,6 +1695,7 @@ PetscErrorCode  PetscFinalize(void)
 
 */
   ierr = PetscMallocClear();CHKERRQ(ierr);
+  ierr = PetscStackDestroy();CHKERRQ(ierr);
 
   PetscErrorHandlingInitialized = PETSC_FALSE;
   PetscInitializeCalled = PETSC_FALSE;
