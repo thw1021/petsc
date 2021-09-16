@@ -229,7 +229,7 @@ PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
 PETSC_EXTERN PetscBool      PetscDeviceInitializedFor(PetscDeviceKind);
-PETSC_STATIC_INLINE PETSC_CONSTEXPR PetscBool PetscDeviceConfiguredFor(PetscDeviceKind kind)
+PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor(PetscDeviceKind kind)
 {
   PetscBool configured = PETSC_FALSE;
 
