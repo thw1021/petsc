@@ -140,8 +140,8 @@ struct _n_PetscDeviceContext {
 };
 
 /* PetscDevice Internal Functions */
-PETSC_INTERN PetscErrorCode PetscDeviceInitializeAllDefaultDevicesFromOptions_Internal(MPI_Comm,PetscDeviceInitKind);
-PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind,PetscInt);
+PETSC_INTERN PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
+PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm);
 PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
 
 #define PetscDeviceInitialize_Internal(kind) PetscDeviceInitializeDefaultDevice_Internal(kind,PETSC_DECIDE)
@@ -157,17 +157,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscDevice PetscDeviceReference(PetscDevice device)
+PETSC_STATIC_INLINE PetscDevice PetscDeviceReference_Internal(PetscDevice device)
 {
   PetscFunctionBeginHot;
   ++(device->refcnt);
   PetscFunctionReturn(device);
 }
 
-PETSC_STATIC_INLINE PetscDevice PetscDeviceDereference(PetscDevice device)
+PETSC_STATIC_INLINE PetscDevice PetscDeviceDereference_Internal(PetscDevice device)
 {
   PetscFunctionBeginHot;
   --(device->refcnt);
+  if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice has negative reference counter after dereference");
   PetscFunctionReturn(device);
 }
 
