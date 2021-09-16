@@ -147,7 +147,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   ierr = VecGetSize(a_X,&N);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(ctx->events[10],0,0,0,0);CHKERRQ(ierr);
   if (!ctx->initialized) { /* create static point data, Jacobian called first */
-    PetscReal       *invJ,*ww,*xx,*yy,*zz=NULL,*mass_w,*invJ_a;
+    PetscReal       *invJ,*ww,*xx,*yy,*zz=NULL,*invJ_a;
     PetscInt        outer_ipidx, outer_ej,grid;
     PetscFE         fe;
 
@@ -158,7 +158,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       ierr = PetscPrintf(ctx->comm,"%D) %s: %D IPs, %D cells[0], Nb=%D, Nq=%D, dim=%D, Tab: Nb=%D Nf=%D Np=%D cdim=%D N=%D\n",
                          0,"FormLandau",nip_glb,numCells[0], Nb, Nq, dim, Tf[0]->Nb, ctx->num_species, Tf[0]->Np, Tf[0]->cdim, N);CHKERRQ(ierr);
     }
-    ierr = PetscMalloc5(nip_glb,&mass_w,nip_glb,&ww,nip_glb,&xx,nip_glb,&yy,nip_glb*dim*dim,&invJ_a);CHKERRQ(ierr);
+    ierr = PetscMalloc4(nip_glb,&ww,nip_glb,&xx,nip_glb,&yy,nip_glb*dim*dim,&invJ_a);CHKERRQ(ierr);
     if (dim==3) {
       ierr = PetscMalloc1(nip_glb,&zz);CHKERRQ(ierr);
     }
@@ -209,9 +209,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
         /* create static point data */
         for (qj = 0; qj < Nq; qj++, outer_ipidx++) {
           const PetscInt gidx = outer_ipidx;
-          mass_w[gidx] = detJj[qj] * quadWeights[qj];
           ww    [gidx] = detJj[qj] * quadWeights[qj];
-          if (dim==2) mass_w[gidx] *=  2.*PETSC_PI*vj[qj * dim + 0]; /* cylindrical coordinate, w/o 2pi -- just use 2pi*ww !!!!!!! */
           if (dim==2) ww    [gidx] *=              vj[qj * dim + 0];  /* cylindrical coordinate, w/o 2pi */
           // get xx, yy, zz
           if (ctx->use_energy_tensor_trick) {
@@ -281,26 +279,25 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
       }
       if (ctx->deviceType == LANDAU_CUDA) {
 #if defined(PETSC_HAVE_CUDA)
-        ierr = LandauCUDAStaticDataSet(ctx->plex[0], Nq, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass, invJ_a, mass_w, xx, yy, zz, ww, &ctx->SData_d);CHKERRQ(ierr);
+        ierr = LandauCUDAStaticDataSet(ctx->plex[0], Nq, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass, invJ_a, xx, yy, zz, ww, &ctx->SData_d);CHKERRQ(ierr);
 #else
         SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","cuda");
 #endif
       } else if (ctx->deviceType == LANDAU_KOKKOS) {
 #if defined(PETSC_HAVE_KOKKOS)
-        ierr = LandauKokkosStaticDataSet(ctx->plex[0], Nq, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass,invJ_a,mass_w,xx,yy,zz,ww,&ctx->SData_d);CHKERRQ(ierr);
+        ierr = LandauKokkosStaticDataSet(ctx->plex[0], Nq, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass,invJ_a,xx,yy,zz,ww,&ctx->SData_d);CHKERRQ(ierr);
 #else
         SETERRQ1(ctx->comm,PETSC_ERR_ARG_WRONG,"-landau_device_type %s not built","kokkos");
 #endif
       }
 #endif
       /* free */
-      ierr = PetscFree5(mass_w,ww,xx,yy,invJ_a);CHKERRQ(ierr);
+      ierr = PetscFree4(ww,xx,yy,invJ_a);CHKERRQ(ierr);
       if (dim==3) {
         ierr = PetscFree(zz);CHKERRQ(ierr);
       }
     } else { /* CPU version, just copy in, only use part */
       ctx->SData_d.w = (void*)ww;
-      ctx->SData_d.mass_w = (void*)mass_w;
       ctx->SData_d.x = (void*)xx;
       ctx->SData_d.y = (void*)yy;
       ctx->SData_d.z = (void*)zz;
@@ -383,7 +380,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   } else {   /* CPU version */
     PetscInt        IPf_sz = 0;
     PetscScalar     coef_buff[LANDAU_MAX_SPECIES*LANDAU_MAX_NQ], *cellClosure_it;
-    PetscReal       *ff, *dudx, *dudy, *dudz, *invJ, *invJ_a = (PetscReal*)ctx->SData_d.invJ, *xx = (PetscReal*)ctx->SData_d.x, *yy = (PetscReal*)ctx->SData_d.y, *zz = (PetscReal*)ctx->SData_d.z, *ww = (PetscReal*)ctx->SData_d.w, *mass_w = (PetscReal*)ctx->SData_d.mass_w;
+    PetscReal       *ff, *dudx, *dudy, *dudz, *invJ, *invJ_a = (PetscReal*)ctx->SData_d.invJ, *xx = (PetscReal*)ctx->SData_d.x, *yy = (PetscReal*)ctx->SData_d.y, *zz = (PetscReal*)ctx->SData_d.z, *ww = (PetscReal*)ctx->SData_d.w;
     const PetscReal *const BB = Tf[0]->T[0], * const DD = Tf[0]->T[1];
     PetscReal       Eq_m[LANDAU_MAX_SPECIES], invMass[LANDAU_MAX_SPECIES], nu_alpha[LANDAU_MAX_SPECIES], nu_beta[LANDAU_MAX_SPECIES];
     if (shift==0.0) { /* compute dynamic data f and df and init data for Jacobian */
@@ -582,9 +579,14 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
               }
             }
           } else { // mass
+            PetscReal wj = ww[jpidx];
             /* Jacobian transform - g0 */
             for (fieldA = 0; fieldA < Nfloc_j ; ++fieldA) {
-              g0[fieldA] = mass_w[jpidx] * shift; // move this to below and remove g0
+              if (dim==2) {
+                g0[fieldA] = wj * shift * 2. * PETSC_PI; // move this to below and remove g0
+              } else {
+                g0[fieldA] = wj * shift; // move this to below and remove g0
+              }
             }
           }
           /* FE matrix construction */
@@ -1474,7 +1476,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->use_relativistic_corrections = PETSC_FALSE;
   ctx->use_energy_tensor_trick = PETSC_FALSE; /* Use Eero's trick for energy conservation v --> grad(v^2/2) */
   ctx->SData_d.w = NULL;
-  ctx->SData_d.mass_w = NULL;
   ctx->SData_d.x = NULL;
   ctx->SData_d.y = NULL;
   ctx->SData_d.z = NULL;
@@ -1823,8 +1824,8 @@ PetscErrorCode LandauDestroyVelocitySpace(DM *dm)
 #endif
   } else {
     if (ctx->SData_d.x) { /* in a CPU run */
-      PetscReal *invJ = (PetscReal*)ctx->SData_d.invJ, *xx = (PetscReal*)ctx->SData_d.x, *yy = (PetscReal*)ctx->SData_d.y, *zz = (PetscReal*)ctx->SData_d.z, *ww = (PetscReal*)ctx->SData_d.w, *mass_w = (PetscReal*)ctx->SData_d.mass_w;
-      ierr = PetscFree5(mass_w,ww,xx,yy,invJ);CHKERRQ(ierr);
+      PetscReal *invJ = (PetscReal*)ctx->SData_d.invJ, *xx = (PetscReal*)ctx->SData_d.x, *yy = (PetscReal*)ctx->SData_d.y, *zz = (PetscReal*)ctx->SData_d.z, *ww = (PetscReal*)ctx->SData_d.w;
+      ierr = PetscFree4(ww,xx,yy,invJ);CHKERRQ(ierr);
       if (zz) {
         ierr = PetscFree(zz);CHKERRQ(ierr);
       }

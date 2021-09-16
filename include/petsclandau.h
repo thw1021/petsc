@@ -60,7 +60,6 @@ typedef struct {
   void  *alpha; // ns
   void  *beta;  // ns
   void  *invMass; // ns
-  void  *mass_w;  // nip
   void  *w; // nip
   void  *x; // nip
   void  *y; // nip
@@ -171,7 +170,7 @@ PETSC_EXTERN PetscErrorCode LandauCUDAJacobian(DM[], const PetscInt, const Petsc
                                                const LandauGeomData *, const PetscInt, const PetscReal, const PetscLogEvent[],const PetscInt[], const PetscInt[], Mat[], Mat);
 PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps *, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataSet(DM, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
+PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataSet(DM, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
                                                     PetscReal[], LandauGeomData *);
 PETSC_EXTERN PetscErrorCode LandauCUDAStaticDataClear(LandauGeomData *);
 #endif
@@ -180,7 +179,7 @@ PETSC_EXTERN PetscErrorCode LandauKokkosJacobian(DM[], const PetscInt, const Pet
                                                  const LandauGeomData *, const PetscInt, const PetscReal, const PetscLogEvent[], const PetscInt[], const PetscInt[], Mat[], Mat);
 PETSC_EXTERN PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps *, pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE], PetscInt[], PetscInt, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps *, PetscInt);
-PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
+PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataSet(DM, const PetscInt, const PetscInt, PetscInt[], PetscInt[], PetscInt[], PetscReal [], PetscReal [], PetscReal[], PetscReal[], PetscReal[], PetscReal[], PetscReal[],
                                                       PetscReal[], LandauGeomData *);
 PETSC_EXTERN PetscErrorCode LandauKokkosStaticDataClear(LandauGeomData *);
 #endif
