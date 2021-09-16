@@ -17,7 +17,7 @@
 #include <petscfix.h>
 
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP) || defined(PETSC_HAVE_KOKKOS)
-   #define PETSC_HAVE_DEVICE
+#  define PETSC_HAVE_DEVICE
 #endif
 
 #if defined(PETSC_DESIRE_FEATURE_TEST_MACROS)
@@ -120,9 +120,22 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_NOEXCEPT            noexcept
 #  define PETSC_NOEXCEPT_ARG(cond_) noexcept(cond_)
 #  define PETSC_CXX_DEFAULT(func_)  func_ = default
+#  if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
+#    define PETSC_CONSTEXPR_14      PETSC_CONSTEXPR
+#    if defined(PETSC_HAVE_CXX_DIALECT_CXX17)
+#      define PETSC_CONSTEXPR_17    PETSC_CONSTEXPR
+#    else
+#      define PETSC_CONSTEXPR_17
+#    endif /* PETSC_HAVE_CXX_DIALECT_CXX17 */
+#  else
+#    define PETSC_CONSTEXPR_14
+#    define PETSC_CONSTEXPR_17
+#  endif /* PETSC_HAVE_CXX_DIALECT_CXX14 */
 #else
 #  define PETSC_NULLPTR             NULL
 #  define PETSC_CONSTEXPR
+#  define PETSC_CONSTEXPR_14
+#  define PETSC_CONSTEXPR_17
 #  define PETSC_NOEXCEPT
 #  define PETSC_NOEXCEPT_ARG(cond_)
 #  define PETSC_CXX_DEFAULT(func_)
@@ -553,18 +566,6 @@ PETSC_EXTERN PetscBool PetscViennaCLSynchronize;
 PETSC_EXTERN PetscErrorCode PetscSetHelpVersionFunctions(PetscErrorCode (*)(MPI_Comm),PetscErrorCode (*)(MPI_Comm));
 PETSC_EXTERN PetscErrorCode PetscCommDuplicate(MPI_Comm,MPI_Comm*,int*);
 PETSC_EXTERN PetscErrorCode PetscCommDestroy(MPI_Comm*);
-
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscBool      PetscCUDASynchronize;
-PETSC_EXTERN PetscErrorCode PetscCUDAInitialize(MPI_Comm,PetscInt);
-PETSC_EXTERN PetscErrorCode PetscCUDAInitializeCheck(void);
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-PETSC_EXTERN PetscBool      PetscHIPSynchronize;
-PETSC_EXTERN PetscErrorCode PetscHIPInitialize(MPI_Comm,PetscInt);
-PETSC_EXTERN PetscErrorCode PetscHIPInitializeCheck(void);
-#endif
 
 #if defined(PETSC_HAVE_KOKKOS)
 PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
