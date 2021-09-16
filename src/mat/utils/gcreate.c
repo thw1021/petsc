@@ -654,7 +654,26 @@ PetscErrorCode MatIsBoundToCPU(Mat A,PetscBool *isbound)
 }
 
 /*@
-   MatSetBindingPropagates - TODO: Finish this manpage!
+   MatSetBindingPropagates - Sets whether the state of being bound to the CPU for a GPU matrix type propagates to child and some other associated objects
+
+   Input Parameters:
++  A - the matrix
+-  flg - flag indicating whether the boundtocpu flag should be propagated
+
+   Level: developer
+
+   Notes:
+   If the value of flg is set to true, the following will occur:
+
+   MatCreateSubMatrices() and MatCreateRedundantMatrix() will bind created matrices to CPU if the input matrix is bound to the CPU.
+   MatCreateVecs() will bind created vectors to CPU if the input matrix is bound to the CPU.
+   The bindingpropagates flag itself is also propagated by the above routines.
+
+   Developer Notes:
+   If the fine-scale DMDA has the -dm_bind_below option set to true, then DMCreateInterpolationScale() calls MatSetBindingPropagates()
+   on the restriction/interpolation operator to set the bindingpropagates flag to true.
+
+.seealso: VecSetBindingPropagates(), MatGetBindingPropagates()
 @*/
 PetscErrorCode MatSetBindingPropagates(Mat A,PetscBool flg)
 {
