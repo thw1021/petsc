@@ -74,6 +74,7 @@ typedef struct {
   void  *NCells;
   void  *species_offset;
   void  *mat_offset;
+  void  *elem_offset;
   void  *ip_offset;
   void  *ipf_offset;
   void  *ipfdf_data;
