@@ -266,5 +266,6 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextSetInitialDeviceKind(PetscDeviceKind);
 #endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
 #endif /* PETSCDEVICE_H */
