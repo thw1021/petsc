@@ -7,6 +7,12 @@
 #define PETSCIMPL_H
 #include <petscsys.h>
 
+PETSC_INTERN PetscErrorCode PetscStackCreate(PetscBool);
+PETSC_INTERN PetscErrorCode PetscStackView(FILE*);
+PETSC_INTERN PetscErrorCode PetscStackDestroy(void);
+PETSC_INTERN PetscErrorCode PetscStackCopy(PetscStack*,PetscStack*);
+PETSC_INTERN PetscErrorCode PetscStackPrint(PetscStack *,FILE*);
+
 /* These are used internally by PETSc ASCII IO routines*/
 #include <stdarg.h>
 PETSC_EXTERN PetscErrorCode PetscVFPrintfDefault(FILE*,const char[],va_list);

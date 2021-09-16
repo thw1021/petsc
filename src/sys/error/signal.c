@@ -147,13 +147,11 @@ PetscErrorCode  PetscSignalHandlerDefault(int sig,void *ptr)
   (*PetscErrorPrintf)("or try https://docs.nvidia.com/cuda/cuda-memcheck/index.html on NVIDIA CUDA systems  to find memory corruption errors\n");
 #endif
   if (PetscDefined(USE_DEBUG)) {
-    if (PetscStackActive()) {
-      PetscStackPop;  /* remove stack frames for error handlers */
-      PetscStackPop;
-      (*PetscErrorPrintf)("likely location of problem given in stack below\n");
-      (*PetscErrorPrintf)("---------------------  Stack Frames ------------------------------------\n");
-      PetscStackView(PETSC_STDOUT);
-    }
+    PetscStackPop;  /* remove stack frames for error handlers */
+    PetscStackPop;
+    (*PetscErrorPrintf)("likely location of problem given in stack below\n");
+    (*PetscErrorPrintf)("---------------------  Stack Frames ------------------------------------\n");
+    PetscStackView(PETSC_STDOUT);
   } else {
     (*PetscErrorPrintf)("configure using --with-debugging=yes, recompile, link, and run \n");
     (*PetscErrorPrintf)("to get more information on the crash.\n");

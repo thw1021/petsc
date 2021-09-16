@@ -361,6 +361,14 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
+  /*
+     Setup building of stack frames for all function calls
+  */
+#if PetscDefined(USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
+  ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg1,NULL);CHKERRQ(ierr);
+  ierr = PetscStackCreate(flg1);CHKERRQ(ierr);
+#endif
+
 #if !defined(PETSC_HAVE_THREADSAFETY)
   if (!(PETSC_RUNNING_ON_VALGRIND)) {
     /*
