@@ -33,7 +33,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                   \
   } while (0)
 
-#define PetscValidDevice(_p_dev__,_p_arg__) do {                        \
+#define PetscValidDevice(_p_dev__,_p_arg__)          do {               \
     PetscValidPointer(_p_dev__,_p_arg__);                               \
     PetscValidDeviceKind((_p_dev__)->kind,_p_arg__);                    \
   } while (0)
@@ -51,7 +51,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                   \
  } while (0)
 
-#define PetscValidStreamType(_p_strm_type__,_p_arg__) do {              \
+#define PetscValidStreamType(_p_strm_type__,_p_arg__)  do {             \
     if (PetscUnlikely(((_p_strm_type__) < 0) ||                         \
                       ((_p_strm_type__) > PETSC_STREAM_MAX))) {         \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,              \
