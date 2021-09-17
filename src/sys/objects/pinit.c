@@ -15,10 +15,6 @@ void  __gcov_flush(void);
 EXTERN_C_END
 #endif
 
-#if defined(PETSC_USE_LOG)
-PETSC_INTERN PetscErrorCode PetscLogFinalize(void);
-#endif
-
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
 PETSC_INTERN PetscFPT PetscFPTData;
 PetscFPT PetscFPTData = 0;
@@ -646,29 +642,37 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private(void)
   PetscFunctionReturn(0);
 }
 
-#if defined(PETSC_HAVE_ADIOS)
+#if PetscDefined(HAVE_ADIOS)
 #include <adios.h>
 #include <adios_read.h>
 int64_t Petsc_adios_group;
 #endif
-#if defined(PETSC_HAVE_OPENMP)
+#if PetscDefined(HAVE_OPENMP)
 #include <omp.h>
 PetscInt PetscNumOMPThreads;
 #endif
-#if defined(PETSC_HAVE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
 #include <petsc/private/deviceimpl.h>
-#if PetscDefined(HAVE_CUDA)
+#  if PetscDefined(HAVE_CUDA)
 // REMOVE ME
 cudaStream_t PetscDefaultCudaStream = NULL;
-#endif
-#if PetscDefined(HAVE_HIP)
+#  endif
+#  if PetscDefined(HAVE_HIP)
 // REMOVE ME
 hipStream_t PetscDefaultHipStream = NULL;
+#  endif
 #endif
-#endif
-#if defined(PETSC_HAVE_DLFCN_H)
+#if PetscDefined(HAVE_DLFCN_H)
 #include <dlfcn.h>
 #endif
+#if PetscDefined(USE_LOG)
+PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
+#endif
+#if PetscDefined(HAVE_VIENNACL)
+PETSC_EXTERN PetscErrorCode PetscViennaCLInit();
+PetscBool PetscViennaCLSynchronize = PETSC_FALSE;
+#endif
+
 
 /*@C
    PetscInitialize - Initializes the PETSc database and MPI.
@@ -1066,6 +1070,36 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   */
   ierr = PetscOptionsCheckInitial_Private(help);CHKERRQ(ierr);
 
+  /*
+   Initialize PetscDevice and PetscDeviceContext
+
+   Note to any future devs thinking of moving this, proper initialization requires:
+   1. MPI initialized
+   2. Options DB initialized
+   3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
+      the push/pop interface.
+  */
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+  ierr = PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
+#endif
+
+#if PetscDefined(HAVE_VIENNACL)
+  ierr = PetscOptionsHasName(NULL,NULL,"-log_summary",&flg3);CHKERRQ(ierr);
+  if (!flg3) {ierr = PetscOptionsHasName(NULL,NULL,"-log_view",&flg3);CHKERRQ(ierr);}
+  ierr = PetscOptionsGetBool(NULL,NULL,"-viennacl_synchronize",&flg3,NULL);CHKERRQ(ierr);
+  PetscViennaCLSynchronize = flg3;
+  ierr = PetscViennaCLInit();CHKERRQ(ierr);
+#endif
+
+  /*
+     Creates the logging data structures; this is enabled even if logging is not turned on
+     This is the last thing we do before returning to the user code to prevent having the
+     logging numbers contaminated by any startup time associated with MPI
+  */
+#if defined(PETSC_USE_LOG)
+  ierr = PetscLogInitialize();CHKERRQ(ierr);
+#endif
+
   ierr = PetscCitationsInitialize();CHKERRQ(ierr);
 
 #if defined(PETSC_HAVE_SAWS)
@@ -1171,20 +1205,6 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     }
 #endif
 #endif
-
-  /*
-   Initialize PetscDevice and PetscDeviceContext
-
-   Note to any future devs thinking of moving this, proper initialization requires:
-   1. MPI initialized
-   2. Options DB initialized
-   3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
-      the push/pop interface.
-  */
-  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
-    ierr = PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
-  }
-
   /*
       Set flag that we are completely initialized
   */
@@ -1195,7 +1215,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   return 0;
 }
 
-#if defined(PETSC_USE_LOG)
+#if PetscDefined(USE_LOG)
 PETSC_INTERN PetscObject *PetscObjects;
 PETSC_INTERN PetscInt    PetscObjectsCounts;
 PETSC_INTERN PetscInt    PetscObjectsMaxCounts;
@@ -1238,6 +1258,10 @@ PetscErrorCode  PetscFreeMPIResources(void)
   ierr = MPI_Op_free(&MPIU_MAXSUM_OP);CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
+
+#if PetscDefined(USE_LOG)
+PETSC_INTERN PetscErrorCode PetscLogFinalize(void);
+#endif
 
 /*@C
    PetscFinalize - Checks for options to be called at the conclusion
