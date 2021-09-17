@@ -767,7 +767,7 @@ typedef struct  {
 PETSC_EXTERN PetscStack petscstack;
 #else
 typedef struct {
-  const char Silence_empty_struct_has_size_0_in_C_size_1_in_Cpp;
+  const char Silence_empty_struct_has_size_0_in_C_size_1_in_Cpp = 0;
 } PetscStack;
 #endif
 
