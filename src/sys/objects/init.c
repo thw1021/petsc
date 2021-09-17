@@ -9,9 +9,6 @@
 #include <petscsys.h>        /*I  "petscsys.h"   I*/
 #include <petsc/private/petscimpl.h>
 #include <petscviewer.h>
-#if defined(PETSC_USE_LOG)
-PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
-#endif
 
 #if defined(PETSC_HAVE_SYS_SYSINFO_H)
 #include <sys/sysinfo.h>
@@ -22,16 +19,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
 #  include <petscdevice.h>
-#endif
-
-#if defined(PETSC_HAVE_DEVICE)
-  #if defined(PETSC_HAVE_OMPI_MAJOR_VERSION)
-    #include "mpi-ext.h" /* Needed for OpenMPI CUDA-aware check */
-  #endif
-#endif
-
-#if defined(PETSC_HAVE_VIENNACL)
-PETSC_EXTERN PetscErrorCode PetscViennaCLInit();
 #endif
 
 /* ------------------------Nasty global variables -------------------------------*/
@@ -666,25 +653,5 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   if (flg1) {
     ierr = PetscSleep(si);CHKERRQ(ierr);
   }
-
-#if defined(PETSC_HAVE_VIENNACL)
-  ierr = PetscOptionsHasName(NULL,NULL,"-log_summary",&flg3);CHKERRQ(ierr);
-  if (!flg3) {
-    ierr = PetscOptionsHasName(NULL,NULL,"-log_view",&flg3);CHKERRQ(ierr);
-  }
-  ierr = PetscOptionsGetBool(NULL,NULL,"-viennacl_synchronize",&flg3,NULL);CHKERRQ(ierr);
-  PetscViennaCLSynchronize = flg3;
-  ierr = PetscViennaCLInit();CHKERRQ(ierr);
-#endif
-
-  /*
-     Creates the logging data structures; this is enabled even if logging is not turned on
-     This is the last thing we do before returning to the user code to prevent having the
-     logging numbers contaminated by any startup time associated with MPI
-  */
-#if defined(PETSC_USE_LOG)
-  ierr = PetscLogInitialize();CHKERRQ(ierr);
-#endif
-
   PetscFunctionReturn(0);
 }
