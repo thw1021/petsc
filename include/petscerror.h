@@ -753,8 +753,8 @@ PETSC_EXTERN PetscErrorCode PetscDetermineInitialFPTrap(void);
       Allows the code to build a stack frame as it runs
 */
 
+#if PetscDefined(USE_DEBUG)
 #define PETSCSTACKSIZE 64
-
 typedef struct  {
   const char *function[PETSCSTACKSIZE];
   const char *file[PETSCSTACKSIZE];
@@ -764,8 +764,12 @@ typedef struct  {
         int  hotdepth;
   PetscBool  check; /* runtime option to check for correct Push/Pop semantics at runtime */
 } PetscStack;
-
 PETSC_EXTERN PetscStack petscstack;
+#else
+typedef struct {
+  const char Silence_empty_struct_has_size_0_in_C_size_1_in_Cpp;
+} PetscStack;
+#endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
 #include <petsc/private/petscfptimpl.h>
