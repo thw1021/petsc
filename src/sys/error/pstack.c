@@ -71,13 +71,14 @@ PetscErrorCode PetscStackSAWsViewOff(void)
 }
 #endif /* PETSC_HAVE_SAWS */
 
-PetscErrorCode PetscStackCreate(PetscBool check)
+#if PetscDefined(USE_DEBUG)
+PetscErrorCode PetscStackSetCheck(PetscBool check)
 {
   petscstack.check = check;
   return 0;
 }
 
-PetscErrorCode PetscStackDestroy(void)
+PetscErrorCode PetscStackReset(void)
 {
   memset(&petscstack,0,sizeof(petscstack));
   return 0;
@@ -96,7 +97,7 @@ PetscErrorCode  PetscStackView(FILE *file)
     if (file == PETSC_STDOUT) {
       (*PetscErrorPrintf)("The EXACT line numbers in the error traceback are not available.\n");
       (*PetscErrorPrintf)("instead the line number of the start of the function is given.\n");
-      for (int i=petscstack.currentsize-1,j=1; i>=0; --i,++j) {
+      for (int i = petscstack.currentsize-1, j = 1; i >= 0; --i, ++j) {
         (*PetscErrorPrintf)("#%d %s() at %s:%d\n",j,petscstack.function[i],petscstack.file[i],petscstack.line[i]);
       }
     } else {
@@ -137,3 +138,4 @@ PetscErrorCode  PetscStackPrint(PetscStack *sint,FILE *fp)
   }
   return 0;
 }
+#endif /* PetscDefined(USE_DEBUG) */

@@ -7,11 +7,19 @@
 #define PETSCIMPL_H
 #include <petscsys.h>
 
-PETSC_INTERN PetscErrorCode PetscStackCreate(PetscBool);
+#if PetscDefined(USE_DEBUG)
+PETSC_INTERN PetscErrorCode PetscStackSetCheck(PetscBool);
 PETSC_INTERN PetscErrorCode PetscStackView(FILE*);
-PETSC_INTERN PetscErrorCode PetscStackDestroy(void);
+PETSC_INTERN PetscErrorCode PetscStackReset(void);
 PETSC_INTERN PetscErrorCode PetscStackCopy(PetscStack*,PetscStack*);
 PETSC_INTERN PetscErrorCode PetscStackPrint(PetscStack *,FILE*);
+#else
+#define PetscStackSetCheck(check)        ((void)(check),0)
+#define PetscStackView(file)             ((void)(file),0)
+#define PetscStackReset()                0
+#define PetscStackCopy(stackin,stackout) ((void)(stackin),(void)(stackout),0)
+#define PetscStackPrint(stack,file)      ((void)(stack),(void)(file),0)
+#endif /* PetscDefined(USE_DEBUG) */
 
 /* These are used internally by PETSc ASCII IO routines*/
 #include <stdarg.h>
