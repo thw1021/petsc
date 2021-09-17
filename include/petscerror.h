@@ -808,9 +808,10 @@ PETSC_EXTERN PetscStack petscstack;
 #define PetscStackPopNoCheck(funct)                                     \
   do {                                                                  \
     PetscStackSAWsTakeAccess();                                         \
-    if ((petscstack.currentsize <= 0) && petscstack.check) {            \
+    if ((petscstack.currentsize < 0) && petscstack.check) {             \
       printf("Invalid stack size %d, pop %s\n",                         \
              petscstack.currentsize,funct);                             \
+      MPI_Abort(MPI_COMM_WORLD,1);                                       \
     } else {                                                            \
       if (--petscstack.currentsize < PETSCSTACKSIZE) {                  \
         if (petscstack.check                                &&          \
