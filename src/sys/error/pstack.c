@@ -1,7 +1,9 @@
 
 #include <petsc/private/petscimpl.h>        /*I  "petscsys.h"   I*/
 
+#if PetscDefined(USE_DEBUG)
 PetscStack petscstack;
+#endif
 
 #if defined(PETSC_HAVE_SAWS)
 #include <petscviewersaws.h>
@@ -55,8 +57,10 @@ PetscErrorCode PetscStackViewSAWs(void)
 
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   if (rank) return 0;
+#if PetscDefined(USE_DEBUG)
   PetscStackCallSAWs(SAWs_Register,("/PETSc/Stack/functions",petscstack.function,20,SAWs_READ,SAWs_STRING));
   PetscStackCallSAWs(SAWs_Register,("/PETSc/Stack/__current_size",&petscstack.currentsize,1,SAWs_READ,SAWs_INT));
+#endif
   amsmemstack = PETSC_TRUE;
   return 0;
 }
