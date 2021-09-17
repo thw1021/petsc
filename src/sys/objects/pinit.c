@@ -673,7 +673,6 @@ PETSC_EXTERN PetscErrorCode PetscViennaCLInit();
 PetscBool PetscViennaCLSynchronize = PETSC_FALSE;
 #endif
 
-
 /*@C
    PetscInitialize - Initializes the PETSc database and MPI.
    PetscInitialize() calls MPI_Init() if that has yet to be called,
