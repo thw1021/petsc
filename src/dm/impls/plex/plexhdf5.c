@@ -1421,7 +1421,7 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   LoadLabelsCtx   ctx;
   hid_t           fileId, groupId;
   hsize_t         idx = 0;
-  PetscBool       distributed;
+  PetscBool       distributed, hasGroup;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -1431,10 +1431,13 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
     ierr = DMPlexLabelsLoad_HDF5_SetUpParallel_Private(dm, ctx);CHKERRQ(ierr);
   }
   ierr = PetscViewerHDF5PushGroup(viewer, "labels");CHKERRQ(ierr);
-  ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
-  /* Iterate over labels stored in the group */
-  PetscStackCallHDF5(H5Literate,(groupId, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelHDF5_Static, ctx));
-  PetscStackCallHDF5(H5Gclose,(groupId));
+  ierr = PetscViewerHDF5HasGroup(viewer, NULL, &hasGroup);CHKERRQ(ierr);
+  if (hasGroup) {
+    ierr = PetscViewerHDF5OpenGroup(viewer, &fileId, &groupId);CHKERRQ(ierr);
+    /* Iterate over labels stored in the group */
+    PetscStackCallHDF5(H5Literate,(groupId, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, ReadLabelHDF5_Static, ctx));
+    PetscStackCallHDF5(H5Gclose,(groupId));
+  }
   ierr = PetscViewerHDF5PopGroup(viewer);CHKERRQ(ierr);
   ierr = LoadLabelsCtxDestroy(&ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
