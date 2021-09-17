@@ -331,11 +331,13 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
   PetscErrorCode ierr;
-
+  PetscInt faces[3] = {4, 1, 1};
   PetscFunctionBeginUser;
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateBoxMesh(PetscObjectComm((PetscObject) *dm), 2, PETSC_FALSE, faces, user->domain_lo, user->domain_hi, user->boundary, PETSC_TRUE, dm);
+  //ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
+  ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -698,8 +700,8 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     // Tabulate basis at particle coordinates
     // Need to tabulate basis for particle coordinates in the reference cell
     ierr = DMPlexCoordinatesToReference(plex, cell, Ncp, pcoord, refcoord);CHKERRQ(ierr);
-    //ierr = PetscFEGetTabulation(fe, Ncp, refcoord, NULL, &D, NULL);CHKERRQ(ierr);
-    PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
+    ierr = PetscFEGetCellTabulation(fe, 1, &tab);CHKERRQ(ierr);
+    //PetscFECreateTabulation(fe, 1, Ncp*cdim, refcoord, 1, &tab);CHKERRQ(ierr);
     // Get coefficients from phi for closure of cell
     ierr = DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
     // Interpolate gradient
@@ -722,7 +724,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
       }
     }
     ierr = DMPlexVecRestoreClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
-    ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
+    //ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &pcoord);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &refcoord);CHKERRQ(ierr);
     ierr = PetscFree(points);CHKERRQ(ierr);
@@ -972,9 +974,9 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q2
-     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 1 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -dm_plex_box_bd periodic,none
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 1 -pc_type svd -steps 10000 -uniform -sigma 1.0e-7 -timeScale 2.0e-15 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
    test:
      suffix: bsi2q2
-     args: ./ex2 -dm_plex_dim 2 -dm_plex_box_faces 3,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 6.28318530718,1 -dm_plex_simplex 0 -particlesPerCell 10 -petscspace_degree 2 -petscfe_default_quadrature_order 2 -ts_basicsymplectic_type 2 -pc_type svd -steps 100 -uniform -sigma 1.0e-7 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -dm_plex_box_bd periodic,none
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 2 -pc_type svd -steps 10000 -uniform -sigma 1.0e-7 -timeScale 2.0e-15 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
 
 TEST*/
