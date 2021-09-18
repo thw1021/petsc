@@ -235,6 +235,21 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
   PetscFunctionReturn(0);
 }
 
+/* begins the init proceeedings for the entire PetscDevice stack. there are 3 stages of
+ * initialization kinds:
+ 1. defaultInitKind - how does PetscDevice as a whole expect to initialize?
+ 2. subTypeDefaultInitKind - how does each PetscDevice implementation expect to initialize?
+    e.g. you may want to blanket disable PetscDevice init (and disable say Kokkos init), but
+    have all CUDA devices still initialize.
+
+ All told the following happens:
+ 0. defaultInitKind -> LAZY
+ 1. Check for log_view/log_summary, if yes defaultInitKind -> GREEDY
+ 2. PetscDevice initializes each sub type with deviceDefaultInitKind.
+ 2.1 Each enabled PetscDevice sub-type then does the above disable or view check in addition
+     to checking for specific device init. if view or specific device init
+     subTypeDefaultInitKind -> GREEDY. disabled once again overrides all.
+ */
 PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 {
   PetscBool           flg,defaultView = PETSC_FALSE,initializeDeviceContextGreedily = PETSC_FALSE;

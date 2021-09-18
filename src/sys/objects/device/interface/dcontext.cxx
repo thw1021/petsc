@@ -682,41 +682,6 @@ static PetscErrorCode PetscDeviceContextFinalizeGlobalContext_Private(void)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (PetscLikely(globalContextSetup)) PetscFunctionReturn(0);
-  globalContextSetup = PETSC_TRUE;
-  if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
-  ierr = PetscInfo1(PETSC_NULLPTR,"Initializing root PetscDeviceContext with PetscDeviceKind %s\n",PetscDeviceKinds[globalDeviceKind]);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetDefaultDeviceForKind_Internal(globalContext,globalDeviceKind);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/* begins the init proceeedings for the entire PetscDevice stack. there are 3 stages of
- * initialization kinds:
- 1. defaultInitKind - how does PetscDeviceContext expect to initialize?
- 2. deviceDefaultInitKind - how does PetscDevice expect to initialize (a "default" for all
-    types)?
- 3. subTypeDefaultInitKind - how does each PetscDevice implementation expect to initialize?
-    e.g. you may want to blanket disable PetscDevice init (and disable say Kokkos init), but
-    have all CUDA devices still initialize.
-
- All told the following happens:
- 0. defaultInitKind -> LAZY
- 1. Check for log_view/log_summary, if yes defaultInitKind -> GREEDY
- 2. Init PetscDevice with defaultInitKind
- 2.1 PetscDevice checks if it is explicitly disabled, or if view. if disabled
-     deviceDefaultInitKind -> NONE, if view deviceDefaultInitKind -> GREEDY. disabled overrides
-     view.
- 2.2 PetscDevice initializes each sub type with deviceDefaultInitKind.
- 2.1.1 Each enabled PetscDevice sub-type then does the above disable or view check in addition
-       to checking for specific device init. if view or specific device init
-       subTypeDefaultInitKind -> GREEDY. disabled once again overrides all.
- */
 PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm comm)
 {
   PetscErrorCode ierr;
@@ -727,6 +692,22 @@ PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm comm)
   ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,globalStreamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetFromOptions(comm,PETSC_NULLPTR,globalContext);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscLikely(globalContextSetup)) PetscFunctionReturn(0);
+  /* this exists purely as a valid device check. */
+  ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
+  if (PetscUnlikelyDebug(globalContext->id != PETSC_DEVICE_CONTEXT_ROOT_ID)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"The root PetscDeviceContext should have id = %d, however it has id = %D",PETSC_DEVICE_CONTEXT_ROOT_ID,globalContext->id);
+  ierr = PetscInfo1(PETSC_NULLPTR,"Initializing root PetscDeviceContext with PetscDeviceKind %s\n",PetscDeviceKinds[globalDeviceKind]);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetDefaultDeviceForKind_Internal(globalContext,globalDeviceKind);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetUp(globalContext);CHKERRQ(ierr);
+  globalContextSetup = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -757,6 +738,8 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 
   PetscFunctionBegin;
   PetscValidPointer(dctx,1);
+  /* while the static analyzer can handle global variables, it will throw a spurious warning */
+  PetscValidDeviceContext(globalContext,-1);
   ierr = PetscDeviceContextSetupGlobalContext_Private();CHKERRQ(ierr);
   *dctx = globalContext;
   PetscFunctionReturn(0);
