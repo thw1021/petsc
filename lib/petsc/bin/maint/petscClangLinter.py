@@ -385,8 +385,10 @@ class PetscCursor(object):
   @staticmethod
   def findCursorReferencesFromCursor(cursor):
     __doc__="""
-    Brute force find and collect all references in a file that pertain to a particular cursor. Essentially refers to finding every cursor that contains the symbol
-    that the cursor represents, so this function is only useful for first-class symbols (i.e. variables, functions)
+    Brute force find and collect all references in a file that pertain to a particular
+    cursor. Essentially refers to finding every reference to the symbol that the cursor
+    represents, so this function is only useful for first-class symbols (i.e. variables,
+    functions)
     """
     import ctypes
 
@@ -418,6 +420,11 @@ class PetscCursor(object):
           foundCursors.append(cursor)
         except ParsingError:
           pass
+        except RuntimeError as re:
+          string = "Full error full error message below:"
+          print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
+          print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",re,sep="")
+          print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
         return 1 # continue
 
     if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
@@ -974,14 +981,17 @@ class WorkerPool(mp.queues.JoinableQueue):
       self.linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=self.prefix,verbose=self.verbose)
     return
 
-  def walk(self,srcDir,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
-    for root,dirs,files in os.walk(srcDir):
-      if self.verbose: print(self.prefix,"Processing directory",root)
-      dirs[:] = [d for d in dirs if d not in excludeDirs]
-      dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
-      files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
-      for filename in files:
-        self.put(filename)
+  def walk(self,srcLoc,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
+    if os.path.isfile(srcLoc):
+      self.put(srcLoc)
+    else:
+      for root,dirs,files in os.walk(srcLoc):
+        if self.verbose: print(self.prefix,"Processing directory",root)
+        dirs[:] = [d for d in dirs if d not in excludeDirs]
+        dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
+        files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
+        for filename in files:
+          self.put(filename)
     return
 
   def put(self,filename,*args):
