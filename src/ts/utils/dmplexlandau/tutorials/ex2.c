@@ -196,7 +196,7 @@ PetscPrintf(ctx->comm, "testSpitzer J = %10.3e\n",J);
   /* Z */
   Z = -ctx->charges[1]/ctx->charges[0];
   /* remove drift */
-  if (1) {
+  if (0) {
     user[0] = 0; // electrons
     ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 1, user);CHKERRQ(ierr);
@@ -213,7 +213,7 @@ PetscPrintf(ctx->comm, "testSpitzer J = %10.3e\n",J);
   v2 = PetscSqr(v);                                    /* use real space: m^2 / s^2 */
   Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul;    /* temperature in kev */
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],Z,ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
-  if (1) {
+  if (0) {
     ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 1, q);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
