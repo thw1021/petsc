@@ -1,5 +1,5 @@
-#if !defined(PETSC_DEVICEIMPL_H)
-#define PETSC_DEVICEIMPL_H
+#ifndef PETSCDEVICEIMPL_H
+#define PETSCDEVICEIMPL_H
 
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
@@ -19,23 +19,39 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,              \
                "Unknown PetscDeviceKind '%d': Argument #%d",            \
                (_p_dev_kind__),(_p_arg__));                             \
-    } else if (PetscUnlikely(((_p_dev_kind__) == PETSC_DEVICE_INVALID) || \
-                             ((_p_dev_kind__) == PETSC_DEVICE_MAX))) {  \
-      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,                    \
-               "Invalid PetscDeviceKind '%s': Argument #%d",            \
-               PetscDeviceKinds[_p_dev_kind__],(_p_arg__));             \
     } else if (PetscUnlikely(!PetscDeviceConfiguredFor(_p_dev_kind__))) { \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,                           \
-               "Not configured for PetscDeviceKind '%s': Argument #%d " \
-               "run configure --help %s for available options",         \
-               PetscDeviceKinds[_p_dev_kind__],(_p_arg__),              \
-               PetscDeviceKinds[_p_dev_kind__]);                        \
+      if ((_p_dev_kind__) == PETSC_DEVICE_MAX) {                        \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,                  \
+                 "Invalid PetscDeviceKind '%s': Argument #%d",          \
+                 PetscDeviceKinds[_p_dev_kind__],(_p_arg__));           \
+      } else if ((_p_dev_kind__) == PETSC_DEVICE_INVALID) {             \
+        SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,                         \
+                 "Invalid PetscDeviceKind '%s': Argument #%d;"          \
+                 " PETSc is not configured with device support",        \
+                 PetscDeviceKinds[_p_dev_kind__],(_p_arg__));           \
+      } else {                                                          \
+        SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,                         \
+                 "Not configured for PetscDeviceKind '%s': Argument #%d;" \
+                 " run configure --help %s for available options",      \
+                 PetscDeviceKinds[_p_dev_kind__],(_p_arg__),            \
+                 PetscDeviceKinds[_p_dev_kind__]);                      \
+      }                                                                 \
     }                                                                   \
   } while (0)
 
-#define PetscValidDevice(_p_dev__,_p_arg__)          do {               \
-    PetscValidPointer(_p_dev__,_p_arg__);                               \
-    PetscValidDeviceKind((_p_dev__)->kind,_p_arg__);                    \
+#define PetscValidDevice(_p_dev__,_p_arg__)          do {       \
+    PetscValidPointer(_p_dev__,_p_arg__);                       \
+    PetscValidDeviceKind((_p_dev__)->kind,_p_arg__);            \
+    if (PetscUnlikely((_p_dev__)->id < 0)) {                    \
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,        \
+               "Invalid PetscDevice: Argument #%d; id %D < 0",  \
+               (_p_arg__),(_p_dev__)->id);                      \
+    } else if (PetscUnlikely((_p_dev__)->refcnt < 0)) {         \
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,        \
+               "Invalid PetscDevice: Argument #%d; "            \
+               "negative reference count %D",                   \
+               (_p_arg__),(_p_dev__)->refcnt);                  \
+    }                                                           \
   } while (0)
 
 /* for now just checks strict equality, but this can be changed as some devices
@@ -64,12 +80,29 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                   \
   } while (0)
 
-#define PetscValidDeviceContext(_p_dev_ctx__,_p_arg__) do {         \
-    PetscValidPointer(_p_dev_ctx__,_p_arg__);                       \
-    if ((_p_dev_ctx__)->device) {                                   \
-      PetscValidDevice((_p_dev_ctx__)->device,_p_arg__);            \
-    }                                                               \
-    PetscValidStreamType((_p_dev_ctx__)->streamType,_p_arg__);      \
+#define PetscValidDeviceContext(_p_dev_ctx__,_p_arg__) do {             \
+    PetscValidPointer(_p_dev_ctx__,_p_arg__);                           \
+    if ((_p_dev_ctx__)->device) {                                       \
+      PetscValidDevice((_p_dev_ctx__)->device,_p_arg__);                \
+    } else if (PetscUnlikely((_p_dev_ctx__)->setup)) {                  \
+      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,                   \
+               "Invalid PetscDeviceContext: Argument #%d; "             \
+               "PetscDeviceContext is setup but has no PetscDevice",    \
+               (_p_arg__));                                             \
+    }                                                                   \
+    if (PetscUnlikely((_p_dev_ctx__)->id < 0)) {                        \
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,                \
+               "Invalid PetscDeviceContext: Argument #%d; id %D < 0",   \
+               (_p_arg__),(_p_dev_ctx__)->id);                          \
+    } else if (PetscUnlikely((_p_dev_ctx__)->numChildren      >         \
+                             (_p_dev_ctx__)->maxNumChildren)) {         \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,                   \
+               "Invalid PetscDeviceContext: Argument #%d; "             \
+               "number of children %D > max number of children %D",     \
+               (_p_arg__),(_p_dev_ctx__)->numChildren,                  \
+               (_p_dev_ctx__)->maxNumChildren);                         \
+    }                                                                   \
+    PetscValidStreamType((_p_dev_ctx__)->streamType,_p_arg__);          \
   } while (0)
 
 #define PetscCheckCompatibleDeviceContexts(_p_dev_ctx1__,_p_arg1__,_p_dev_ctx2__,_p_arg2__) \
@@ -141,7 +174,6 @@ struct _n_PetscDeviceContext {
 
 /* PetscDevice Internal Functions */
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
-PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm);
 PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
 
 #define PetscDeviceInitialize_Internal(kind) PetscDeviceInitializeDefaultDevice_Internal(kind,PETSC_DECIDE)
@@ -168,12 +200,12 @@ PETSC_STATIC_INLINE PetscDevice PetscDeviceDereference_Internal(PetscDevice devi
 {
   PetscFunctionBeginHot;
   --(device->refcnt);
-  if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice has negative reference counter after dereference");
   PetscFunctionReturn(device);
 }
 
 /* PetscDeviceContext Internal Functions */
-PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeRootContext_Internal(MPI_Comm);
+PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm);
+
 /* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
    no-op when debugging is disabled */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(PetscDeviceContext dctx)
@@ -184,6 +216,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(Petsc
     PetscBool       idle;
     PetscErrorCode  ierr;
 
+    PetscValidDeviceContext(dctx,1);
     ierr = (*dctx->ops->query)(dctx,&idle);CHKERRQ(ierr);
     if (PetscUnlikely(idleBefore && !idle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, context %D thought it was idle when it still had work",dctx->id);
   }
@@ -219,6 +252,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetBLASHandle_Internal(Pets
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  /* we do error checking here as this routine is an entry-point */
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(handle,2);
   ierr = (*dctx->ops->getblashandle)(dctx,handle);CHKERRQ(ierr);
@@ -230,6 +264,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetSOLVERHandle_Internal(Pe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  /* we do error checking here as this routine is an entry-point */
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(handle,2);
   ierr = (*dctx->ops->getsolverhandle)(dctx,handle);CHKERRQ(ierr);
@@ -241,6 +276,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextBeginTimer_Internal(PetscDe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  /* we do error checking here as this routine is an entry-point */
   PetscValidDeviceContext(dctx,1);
   ierr = (*dctx->ops->begintimer)(dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -251,6 +287,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  /* we do error checking here as this routine is an entry-point */
   PetscValidDeviceContext(dctx,1);
   PetscValidRealPointer(elapsed,2);
   ierr = (*dctx->ops->endtimer)(dctx,elapsed);CHKERRQ(ierr);
@@ -264,4 +301,4 @@ PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
 #endif
 
-#endif /* PETSC_DEVICEIMPL_H */
+#endif /* PETSCDEVICEIMPL_H */

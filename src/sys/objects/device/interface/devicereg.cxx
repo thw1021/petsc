@@ -39,8 +39,8 @@ PetscErrorCode PetscDeviceInitializePackage(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PETSC_DEVICE_DEFAULT == PETSC_DEVICE_INVALID) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"No suitable PetscDeviceKind found, must configure PETSc with a device backend enabled");
   if (PetscDevicePackageInitialized) PetscFunctionReturn(0);
+  if (PetscUnlikely(!PetscDeviceConfiguredFor(PETSC_DEVICE_DEFAULT))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"PETSc is not configured with device support (PETSC_DEVICE_DEFAULT = '%s')",PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);
   PetscDevicePackageInitialized = PETSC_TRUE;
   ierr = PetscRegisterFinalize(PetscDeviceFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
