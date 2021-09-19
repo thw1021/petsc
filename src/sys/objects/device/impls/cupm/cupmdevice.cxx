@@ -42,7 +42,7 @@ private:
   cupmDeviceProp_t _dprop; // cudaDeviceProp appears to be an actual struct, i.e. you can't
                            // initialize it with nullptr or NULL (i've tried)
 
-  PETSC_NODISCARD static bool __checkMPIAware();
+  PETSC_NODISCARD static bool __MPICUPMAware() noexcept;
 };
 
 // the goal here is simply to get the cupm backend to create its context, not to do any kind of
@@ -69,7 +69,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
     // Spectrum MPI (e.g., 10.3.1) on Summit meet above conditions, but one has to use jsrun
     // --smpiargs=-gpu to really enable GPU-aware MPI. So we do the check at runtime with a
     // code that works only with GPU-aware MPI.
-    if (PetscUnlikely(!__checkMPIAware())) {
+    if (PetscUnlikely(!__MPICUPMAware())) {
       (*PetscErrorPrintf)("PETSc is configured with GPU support, but your MPI is not GPU-aware. For better performance, please use a GPU-aware MPI.\n");
       (*PetscErrorPrintf)("If you do not care, add option -use_gpu_aware_mpi 0. To not see the message again, add the option to your .petscrc, OR add it to the env var PETSC_OPTIONS.\n");
       (*PetscErrorPrintf)("If you do care, for IBM Spectrum MPI on OLCF Summit, you may need jsrun --smpiargs=-gpu.\n");
@@ -168,12 +168,10 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
   if (cupmMPIAwareJumpBufferSet) (void)cupmMPIAwareJumpBuffer;
 }
 
-#define CHKCUPMAWARE(expr) do {                 \
-    if (expr != cupmSuccess) return false;      \
-  } while (0)
+#define CHKCUPMAWARE(expr) if (PetscUnlikely(expr != cupmSuccess)) return false;
 
 template <CUPMDeviceKind T>
-bool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
+bool CUPMDevice<T>::CUPMDeviceInternal::__MPICUPMAware() noexcept
 {
   constexpr int  bufSize = 2;
   constexpr int  hbuf[bufSize] = {1,0};
@@ -182,10 +180,7 @@ bool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
   cupmError_t    cerr;
   PetscErrorCode ierr;
   const auto     cupmSignalHandler = [](int signal, void *ptr) -> PetscErrorCode {
-    if ((signal == SIGSEGV) && cupmMPIAwareJumpBufferSet) {
-      PetscStackPop; // PetscSignalHandler_Private
-      std::longjmp(cupmMPIAwareJumpBuffer,1);
-    }
+    if ((signal == SIGSEGV) && cupmMPIAwareJumpBufferSet) std::longjmp(cupmMPIAwareJumpBuffer,1);
     return PetscSignalHandlerDefault(signal,ptr);
   };
 
@@ -198,16 +193,30 @@ bool CUPMDevice<T>::CUPMDeviceInternal::__checkMPIAware()
     // if a segv was triggered in the MPI_Allreduce below, it is very likely due to MPI not
     // being GPU-aware
     awareness = false;
-  } else {
-    ierr = MPI_Allreduce(dbuf,dbuf+1,1,MPI_INT,MPI_SUM,PETSC_COMM_SELF);
-    if (!ierr) awareness = true;
-  }
+    // control flow up until this point:
+    // 1. CUPMDevice<T>::CUPMDeviceInternal::__MPICUPMAware()
+    // 2. MPI_Allreduce
+    // 3. SIGSEGV
+    // 4. PetscSignalHandler_Private
+    // 5. cupmSignalHandler (lambda function)
+    // 6. here
+    // PetscSignalHandler_Private starts with PetscFunctionBegin and is pushed onto the stack
+    // so we must undo this. This would be most naturally done in cupmSignalHandler, however
+    // the C/C++ standard dictates:
+    //
+    // After invoking longjmp(), non-volatile-qualified local objects should not be accessed if
+    // their values could have changed since the invocation of setjmp(). Their value in this
+    // case is considered indeterminate, and accessing them is undefined behavior.
+    //
+    // so for safety (since we don't know what PetscStackPop may try to read/declare) we do it
+    // outside of the longjmp control flow
+    PetscStackPop;
+  } else if (!MPI_Allreduce(dbuf,dbuf+1,1,MPI_INT,MPI_SUM,PETSC_COMM_SELF)) awareness = true;
   cupmMPIAwareJumpBufferSet = PETSC_FALSE;
   ierr = PetscPopSignalHandler();CHKERRABORT(PETSC_COMM_SELF,ierr);
   cerr = cupmFree(dbuf);CHKCUPMAWARE(cerr);
   PetscFunctionReturn(awareness);
 }
-
 #undef CHKCUPMAWARE
 
 template <CUPMDeviceKind T>
@@ -225,7 +234,7 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
     // if _devices::size_type != std::size_t then the %zu format specifier isn't guaranteed to
     // work. what esoteric systems might this occur on? good question!
     static_assert(std::is_same<typename decltype(_devices)::size_type,std::size_t>::value,"");
-    if (PetscUnlikely(static_cast<std::size_t>(ndev) != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
+    if (PetscUnlikely(ndev != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
   }
   for (auto &device : _devices) {
     if (device) {ierr = device->finalize();CHKERRQ(ierr);}
