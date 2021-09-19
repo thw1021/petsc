@@ -230,7 +230,6 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
     ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);
     if (PetscUnlikelyDebug(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not fully destroyed during PetscFinalize()",device->kind,device->refcnt);
   }
-  CHKERRCXX(defaultDevices.fill(PETSC_NULLPTR));
   CHKERRCXX(initializedDevice.fill(PETSC_FALSE));
   PetscFunctionReturn(0);
 }
