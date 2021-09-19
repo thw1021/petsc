@@ -174,6 +174,7 @@ struct _n_PetscDeviceContext {
 
 /* PetscDevice Internal Functions */
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
+PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind,PetscInt);
 PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
 
 #define PetscDeviceInitialize_Internal(kind) PetscDeviceInitializeDefaultDevice_Internal(kind,PETSC_DECIDE)
