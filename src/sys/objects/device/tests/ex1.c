@@ -59,10 +59,16 @@ int main(int argc, char *argv[])
 
 /*TEST
 
- test:
+ testset:
    requires: !device
-   suffix: no_device
    filter: Error: grep -A 1 "No support for this operation for this object type"
+   suffix: no_device
+   test:
+     requires: debug
+     suffix:   debug
+   test:
+     requires: !debug
+     suffix:   opt
 
  testset:
    output_file: ./output/ExitSuccess.out

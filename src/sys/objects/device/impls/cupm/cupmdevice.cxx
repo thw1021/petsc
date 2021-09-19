@@ -234,7 +234,7 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
     // if _devices::size_type != std::size_t then the %zu format specifier isn't guaranteed to
     // work. what esoteric systems might this occur on? good question!
     static_assert(std::is_same<typename decltype(_devices)::size_type,std::size_t>::value,"");
-    if (PetscUnlikely(ndev != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
+    if (PetscUnlikely(static_cast<decltype(validDev)>(ndev) != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
   }
   for (auto &device : _devices) {
     if (device) {ierr = device->finalize();CHKERRQ(ierr);}
@@ -299,11 +299,11 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
   {
     constexpr const auto options = cupmOptions<T>();
 
-    ierr = PetscOptionsBegin(comm,nullptr,options[0],"Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList(options[1],"How (or whether to) initialize a device, note that 'none' overrides any following options","PetscDeviceInitializeDeviceKind_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initKindCUPM],&initKindCUPM,nullptr);CHKERRQ(ierr);
+    ierr = PetscOptionsBegin(comm,nullptr,std::get<0>(options),"Sys");CHKERRQ(ierr);
+    ierr = PetscOptionsEList(std::get<1>(options),"How (or whether to) initialize a device, note that 'none' overrides any following options","PetscDeviceInitializeDeviceKind_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initKindCUPM],&initKindCUPM,nullptr);CHKERRQ(ierr);
     static_assert(PETSC_DECIDE == -1,"");
-    ierr = PetscOptionsRangeInt(options[2],"Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device (note the latter implies greedy initialization).","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,ndev);CHKERRQ(ierr);
-    ierr = PetscOptionsBool(options[3],"Display device information and assignments (note this implies greedy initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt(std::get<2>(options),"Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device (note the latter implies greedy initialization).","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,ndev);CHKERRQ(ierr);
+    ierr = PetscOptionsBool(std::get<3>(options),"Display device information and assignments (note this implies greedy initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
   if (initKindCUPM == PETSC_DEVICE_INIT_NONE) {
