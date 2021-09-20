@@ -212,22 +212,21 @@ class Configure(config.package.Package):
       else:
         raise RuntimeError('You set a value for --with-blas-lib=<lib> and --with-lapack-lib=<lib>, but '+str(self.argDB['with-blas-lib'])+' and '+str(self.argDB['with-lapack-lib'])+' cannot be used\n')
 
-    blislib = 'libblis.a'
-    blislibmt = 'libblis.a'
+    blislib = ['libblis.a']
     if self.openmp.found:
-      blislibmt = 'libblis-mt.a'
+      blislib.insert(0,'libblis-mt.a')
 
     if not 'with-blaslapack-dir' in self.argDB:
       mkl = os.getenv('MKLROOT')
       if mkl:
         # Since user did not select MKL specifically first try compiler defaults and only if they fail use the MKL
         yield ('Default compiler libraries', '', '','unknown','unknown')
-        yield ('AOCL default compiler locations', blislibmt, 'libflame.a','unknown','unknown')
-        yield ('AOCL default compiler locations', blislib, 'libflame.a','unknown','unknown')
-        yield ('BLIS default compiler locations', blislibmt, 'liblapack.a','unknown','unknown')
-        yield ('BLIS default compiler locations', blislib, 'liblapack.a','unknown','unknown')
-        yield ('BLIS default compiler locations /usr/local/lib', os.path.join('/usr','local','lib',  blislibmt), os.path.join('/usr','local','lib','liblapack.a'),'unknown','unknown')
-        yield ('BLIS default compiler locations /usr/local/lib', os.path.join('/usr','local','lib',  blislib), os.path.join('/usr','local','lib','liblapack.a'),'unknown','unknown')
+        for lib in blislib:
+          yield ('AOCL default compiler locations', lib, 'libflame.a','unknown','unknown')
+        for lib in blislib:
+          yield ('BLIS default compiler locations', lib, 'liblapack.a','unknown','unknown')
+        for lib in blislib:
+          yield ('BLIS default compiler locations /usr/local/lib', os.path.join('/usr','local','lib', lib), os.path.join('/usr','local','lib','liblapack.a'),'unknown','unknown')
         yield ('OpenBLAS default compiler locations', None, 'libopenblas.a','unknown','unknown')
         yield ('OpenBLAS default compiler locations /usr/local/lib', None, os.path.join('/usr','local','lib','libopenblas.a'),'unknown','unknown')
         yield ('Default compiler locations', 'libblas.a', 'liblapack.a','unknown','unknown')
@@ -377,15 +376,13 @@ class Configure(config.package.Package):
       yield ('User specified AMD ACML lib dir', None, os.path.join(dir,'lib','libacml_mp.a'),'32','unknown')
       yield ('User specified AMD ACML lib dir', None, [os.path.join(dir,'lib','libacml_mp.a'), os.path.join(dir,'lib','libacml_mv.a')],'32','unknown')
       # Check AMD AOCL libraries
-      yield ('User specified installation root AMD AOCL', os.path.join(dir, blislibmt), os.path.join(dir, 'libflame.a'), 'unknown', 'unknown')
-      yield ('User specified installation root AMD AOCL', os.path.join(dir,'lib',blislibmt), os.path.join(dir,'lib','libflame.a'), 'unknown', 'unknown')
-      yield ('User specified installation root AMD AOCL', os.path.join(dir, blislib), os.path.join(dir, 'libflame.a'), 'unknown', 'unknown')
-      yield ('User specified installation root AMD AOCL', os.path.join(dir,'lib',blislib), os.path.join(dir,'lib','libflame.a'), 'unknown', 'unknown')
+      for lib in blislib:
+        yield ('User specified installation root AMD AOCL', os.path.join(dir,lib), os.path.join(dir, 'libflame.a'), 'unknown', 'unknown')
+        yield ('User specified installation root AMD AOCL', os.path.join(dir,'lib',lib), os.path.join(dir,'lib','libflame.a'), 'unknown', 'unknown')
       # BLIS
-      yield ('User specified installation root BLIS/LAPACK', os.path.join(dir, blislibmt), os.path.join(dir, 'liblapack.a'), 'unknown', 'unknown')
-      yield ('User specified installation root BLIS/LAPACK', os.path.join(dir,'lib',blislibmt), os.path.join(dir,'lib','liblapack.a'), 'unknown', 'unknown')
-      yield ('User specified installation root BLIS/LAPACK', os.path.join(dir, blislib), os.path.join(dir, 'liblapack.a'), 'unknown', 'unknown')
-      yield ('User specified installation root BLIS/LAPACK', os.path.join(dir,'lib',blislib), os.path.join(dir,'lib','liblapack.a'), 'unknown', 'unknown')
+      for lib in blislib:
+        yield ('User specified installation root BLIS/LAPACK', os.path.join(dir,lib), os.path.join(dir, 'liblapack.a'), 'unknown', 'unknown')
+        yield ('User specified installation root BLIS/LAPACK', os.path.join(dir,'lib',lib), os.path.join(dir,'lib','liblapack.a'), 'unknown', 'unknown')
       # NEC
       yield ('User specified NEC lib dir', os.path.join(dir, 'lib', 'libblas_sequential.a'), os.path.join(dir, 'lib', 'liblapack.a'), 'unknown', 'unknown')
       # Search for OpenBLAS
@@ -416,10 +413,10 @@ class Configure(config.package.Package):
     # Try compiler defaults
     yield ('Default compiler libraries', '', '','unknown','unknown')
     yield ('Default NEC', 'libblas_sequential.a', 'liblapack.a','unknown','unknown')
-    yield ('Default AOCL', blislibmt, 'libflame.a','unknown','unknown')
-    yield ('Default AOCL', blislib, 'libflame.a','unknown','unknown')
-    yield ('Default BLIS', blislibmt, 'liblapack.a','unknown','unknown')
-    yield ('Default BLIS', blislib, 'liblapack.a','unknown','unknown')
+    for lib in blislib:
+      yield ('Default AOCL', lib, 'libflame.a','unknown','unknown')
+    for lib in blislib:
+      yield ('Default BLIS', lib, 'liblapack.a','unknown','unknown')
     yield ('Default compiler locations', 'libblas.a', 'liblapack.a','unknown','unknown')
     yield ('Default OpenBLAS', None, 'libopenblas.a','unknown','unknown')
     # Intel on Mac
