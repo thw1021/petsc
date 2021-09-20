@@ -91,7 +91,12 @@ PetscErrorCode PetscStackReset(void)
 PetscErrorCode  PetscStackView(FILE *file)
 {
   if (!file) file = PETSC_STDOUT;
-  if (petscstack.currentsize <= 1) {
+  if (petscstack.currentsize < 0) {
+    /* < 0 is absolutely a corrupted stack, but this function is usually called in an error
+     * handler, which are not capable of recovering from errors so best we can do is print
+     * this warning */
+    fprintf(file,"PetscStack is definitely corrupted with stack size %d\n",petscstack.currentsize);
+  } else if (petscstack.currentsize == 0) {
     if (file == PETSC_STDOUT) {
       (*PetscErrorPrintf)("No error traceback is available, the problem could be in the main program. \n");
     } else {
