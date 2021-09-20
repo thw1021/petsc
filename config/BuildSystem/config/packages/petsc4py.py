@@ -10,7 +10,6 @@ class Configure(config.package.Package):
     self.useddirectly           = 0
     self.linkedbypetsc          = 0
     self.builtafterpetsc        = 1
-    self.publicInstall          = 0
     return
 
   def setupHelp(self,help):
