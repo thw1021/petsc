@@ -158,6 +158,8 @@ Changes: Development
 -  Add ``DMDAVecGetArrayDOFWrite()`` and ``DMDAVecRestoreArrayDOFWrite()``
 -  ``DMShellGetContext()`` now takes ``void*`` as return argument
 -  Add ``DMLabelGetNonEmptyStratumValuesIS()``, similar to ``DMLabelGetValueIS()`` but counts only nonempty strata
+-  Add ``DMLabelCompare()`` for ``DMLabel`` comparison
+-  Add ``DMCompareLabels()`` comparing ``DMLabel``s of two ``DM``s
 
 .. rubric:: DMSwarm:
 
