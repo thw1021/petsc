@@ -1413,6 +1413,8 @@ class Configure(config.base.Configure):
       return
     if config.setCompilers.Configure.isGNU(self.getCompiler(), self.log):
       PICFlags = ['-fPIC']
+    elif config.setCompilers.Configure.isIBM(self.getCompiler(), self.log):
+      PICFlags = ['-qPIC']
     else:
       PICFlags = ['-PIC','-qPIC','-KPIC','-fPIC','-fpic']
     try:
