@@ -522,6 +522,30 @@ class Configure(config.base.Configure):
     lang = language.lower()
     LANG = language.upper()
     self.logPrint('checkCxxDialect: checking C++ dialect version for language "{lang}" using compiler "{compiler}"'.format(lang=LANG,compiler=self.getCompiler(lang=language)))
+    with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+')
+    if with_lang_dialect in {'','0','NONE'}:
+      self.logPrint('checkCxxxDialect: user has requested NO cxx dialect')
+      return
+
+    minDialect = 1
+    explicit   = True
+    if with_lang_dialect == 'AUTO':
+      maxDialect = 4
+      explicit   = False
+    elif with_lang_dialect == 'C++17':
+      # this sets the same value as auto, but we need to differentiate between explicitly
+      # asking for the highest dialect since this may be out of the question due to a
+      # package restriction
+      maxDialect = 4
+    elif with_lang_dialect == 'C++14':
+      maxDialect = 3
+    elif with_lang_dialect == 'C++11':
+      maxDialect = 2
+    elif with_lang_dialect == 'C++03':
+      maxDialect = 1
+    else:
+      raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
+
     includes03 = """
     // C++03 includes
     #include <iostream>
@@ -624,58 +648,6 @@ class Configure(config.base.Configure):
       # 4 = c++17
       {'num': 'c++17', 'includes': includes17, 'body': body17},
     )
-
-    try:
-      # see if we've done this before for this language.
-      # - If we DON'T have the attribute -- we haven't done this before (for example we
-      #   dont have self.cudadialect) -- then getattr raises AttributeError, we catch and
-      #   this routine continues as planned.
-      # - If we DO have the attribute:
-      #   - It's empty, no error is raised and we continue.
-      #   - It's not empty, and we return.
-      if getattr(self,lang+'dialect'):
-        try:
-          prevLang = getattr(self,lang+'dialect')
-          self.logPrint('checkCxxDialect: reusing previous result {res} for language {lang}'.format(res=prevLang,compiler=self.getCompiler(lang=language),lang=LANG))
-          dialectIndex = [i for i,dict in enumerate(dialects) if dict['num'] == prevLang.lower()]
-          if len(dialectIndex) != 1:
-            raise RuntimeError('Tried reusing previously cached {lang} dialect {prev} but could not find its location in the dialect map'.format(lang=LANG,prev=prevLang))
-          for dlct in dialects[:dialectIndex[0]+1]:
-            self.addDefine('HAVE_{lng}_DIALECT_CXX{ver}'.format(lng=LANG,ver=dlct['num'][3:]),1)
-        except AttributeError:
-          # if this looks stupid it's because it is. the AttributeError we intend to catch
-          # below should be thrown only by getattr, so if we somehow throw an
-          # AttributeError in the following code we should convert it to something we
-          # aren't catching
-          raise RuntimeError
-        return
-    except AttributeError:
-      # we have not
-      pass
-    # configure value
-    with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+')
-    if with_lang_dialect in {'','0','NONE'}:
-      self.logPrint('checkCxxxDialect: user has requested NO cxx dialect')
-      return
-
-    minDialect = 1
-    explicit   = True
-    if with_lang_dialect == 'AUTO':
-      maxDialect = 4
-      explicit   = False
-    elif with_lang_dialect == 'C++17':
-      # this sets the same value as auto, but we need to differentiate between explicitly
-      # asking for the highest dialect since this may be out of the question due to a
-      # package restriction
-      maxDialect = 4
-    elif with_lang_dialect == 'C++14':
-      maxDialect = 3
-    elif with_lang_dialect == 'C++11':
-      maxDialect = 2
-    elif with_lang_dialect == 'C++03':
-      maxDialect = 1
-    else:
-      raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
     startDialect = dialects[maxDialect-1]['num']
     self.logPrint('checkCxxDialect: user has {expl} selected {lang} dialect {dlct}'.format(expl='explicitly' if explicit else 'NOT explicitly',lang=LANG,dlct=startDialect))

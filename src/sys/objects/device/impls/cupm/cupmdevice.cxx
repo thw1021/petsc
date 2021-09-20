@@ -24,6 +24,7 @@ public:
   PETSC_NODISCARD PetscErrorCode initialize() noexcept;
   PETSC_NODISCARD PetscErrorCode configure() noexcept;
   PETSC_NODISCARD PetscErrorCode view(PetscViewer) const noexcept;
+  PETSC_NODISCARD PetscErrorCode finalize() noexcept;
 
   PETSC_NODISCARD int id() const { return _id; }
 
@@ -98,13 +99,12 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
   cerr = cupmGetDeviceFlags(&flags);CHKERRCUPM(cerr);
   if (flags != defaultFlags) {
+    PetscErrorCode ierr;
+
     cerr = cupmSetDeviceFlags(defaultFlags);CHKERRCUPM(cerr);
-     // need to update the device properties
+    // need to update the device properties
     cerr = cupmGetDeviceProperties(&_dprop,_id);CHKERRCUPM(cerr);
-    if (PetscDefined(USE_INFO)) {
-      PetscErrorCode ierr;
-      ierr = PetscInfo1(nullptr,"configured device %d\n",_id);CHKERRQ(ierr);
-    }
+    ierr = PetscInfo1(nullptr,"configured device %d\n",_id);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -160,7 +160,6 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
 }
 
 #define CHKCUPMAWARE(expr) if (PetscUnlikely(expr != cupmSuccess)) return false;
-
 template <CUPMDeviceKind T>
 bool CUPMDevice<T>::CUPMDeviceInternal::__MPICUPMAware() noexcept
 {
@@ -211,6 +210,14 @@ bool CUPMDevice<T>::CUPMDeviceInternal::__MPICUPMAware() noexcept
 #undef CHKCUPMAWARE
 
 template <CUPMDeviceKind T>
+PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::finalize() noexcept
+{
+  PetscFunctionBegin;
+  _deviceInitialized = false;
+  PetscFunctionReturn(0);
+}
+
+template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::__finalize() noexcept
 {
   PetscFunctionBegin;
@@ -225,7 +232,7 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
     static_assert(std::is_same<typename decltype(_devices)::size_type,std::size_t>::value,"");
     if (PetscUnlikely(static_cast<decltype(validDev)>(ndev) != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
   }
-  CHKERRCXX(_devices.fill(nullptr)); // this destroys all devices
+  for (auto &device : _devices) device.reset();
   _defaultDevice = PETSC_CUPM_DEVICE_NONE;  // disabled by default
   _initialized   = false;
   PetscFunctionReturn(0);

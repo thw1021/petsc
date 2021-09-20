@@ -59,6 +59,9 @@ int main(int argc, char *argv[])
 
 /*TEST
 
+ build:
+   requires: defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+
  testset:
    requires: !device
    filter: Error: grep -A 1 "No support for this operation for this object type"
