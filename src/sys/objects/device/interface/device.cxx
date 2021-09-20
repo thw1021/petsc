@@ -296,8 +296,8 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
   }
   static_assert((PETSC_DEVICE_INVALID == 0) && (PETSC_DEVICE_MAX < std::numeric_limits<int>::max()),"");
   for (int i = 1; i < PETSC_DEVICE_MAX; ++i) {
-    auto initKind         = defaultInitKind;
     const auto deviceKind = static_cast<PetscDeviceKind>(i);
+    auto initKind         = defaultInitKind;
 
     ierr = PetscDeviceInitializeKindFromOptions_Private(comm,deviceKind,defaultDevice,defaultView,&initKind);CHKERRQ(ierr);
     if (initKind == PETSC_DEVICE_INIT_GREEDY) {

@@ -23,19 +23,18 @@ static constexpr const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDevice
 
 #if defined(CHKERRCUPM)
 #error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
-#endif // CHKERRCUPM
+#endif // defined(CHKERRCUPM)
 
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
-#define CHKERRCUPM(cerr)                                                \
-  do {                                                                  \
+#define CHKERRCUPM(cerr) do {                                           \
     cupmError_t _cerr__ = cerr;                                         \
     if (PetscUnlikely(_cerr__)) {                                       \
       const char *name    = cupmGetErrorName(_cerr__);                  \
-      const char *descr   = cupmGetErrorString(_cerr__);                \
+      const char *desc    = cupmGetErrorString(_cerr__);                \
       const char *backend = cupmName();                                 \
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
-               backend,static_cast<int>(_cerr__),name,descr);           \
+               backend,static_cast<PetscErrorCode>(_cerr__),name,desc); \
     }                                                                   \
   } while (0)
 
