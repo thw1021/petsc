@@ -1703,12 +1703,13 @@ class Configure(config.base.Configure):
         yield (self.CXX, ['-dynamiclib -single_module', '-undefined dynamic_lookup', '-multiply_defined suppress', '-no_compact_unwind'], 'dylib')
       yield (self.CC, ['-dynamiclib -single_module', '-undefined dynamic_lookup', '-multiply_defined suppress', '-no_compact_unwind'], 'dylib')
     if hasattr(self, 'CXX') and self.mainLanguage == 'Cxx':
-      yield (self.CXX, ['-qmkshrobj'], 'so')
       # C++ compiler default
+      yield (self.CXX, ['-qmkshrobj'], 'so')
       yield (self.CXX, ['-shared'], 'so')
       yield (self.CXX, ['-dynamic'], 'so')
-    yield (self.CC, ['-qmkshrobj'], 'so')
+      yield (self.CC, ['-shared'], 'dll')
     # C compiler default
+    yield (self.CC, ['-qmkshrobj'], 'so')
     yield (self.CC, ['-shared'], 'so')
     yield (self.CC, ['-dynamic'], 'so')
     yield (self.CC, ['-shared'], 'dll')
