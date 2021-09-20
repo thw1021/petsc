@@ -65,15 +65,14 @@ private:
   createContextFunc_t _create;
 
   // have we tried looking for devices
-  static PetscBool _initialized;
+  static bool _initialized;
 
   // clean-up
   PETSC_NODISCARD static PetscErrorCode __finalize() noexcept;
 };
 
 // define static variables
-template <CUPMDeviceKind T>
-PetscBool CUPMDevice<T>::_initialized = PETSC_FALSE;
+template <CUPMDeviceKind T> bool CUPMDevice<T>::_initialized = false;
 
 template <CUPMDeviceKind T>
 std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> CUPMDevice<T>::_devices = { };
