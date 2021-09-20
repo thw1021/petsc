@@ -127,6 +127,13 @@ static PetscErrorCode quartic_q(PetscInt dim, PetscReal time, const PetscReal x[
   return 0;
 }
 
+static PetscErrorCode zero_func(PetscInt dim,PetscReal time,const PetscReal x[],PetscInt Nc,PetscScalar *u,void *ctx)
+{
+  PetscInt c;
+  for (c = 0; c < Nc; ++c) u[c] = 0;
+  return 0;
+}
+
 /* <v, -\nabla\cdot q> + <v, f> */
 static void f0_linear_u(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                         const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
@@ -239,7 +246,6 @@ static void g1_uq(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   for (d = 0; d < dim; ++d) g1[d*dim+d] = -1.0;
 }
 
-
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       ii, bd;
@@ -258,7 +264,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->domain_hi[0]     = 2*PETSC_PI;
   options->domain_hi[1]     = 1.0;
   options->domain_hi[2]     = 1.0;
-  options->boundary[0]      = DM_BOUNDARY_PERIODIC;
+  options->boundary[0]      = DM_BOUNDARY_PERIODIC;/* periodicity not the issue for hdiv closure */
   options->boundary[1]      = DM_BOUNDARY_NONE;
   options->boundary[2]      = DM_BOUNDARY_NONE;
   options->particlesPerCell = 1;
@@ -409,6 +415,8 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   ierr = PetscDSSetJacobian(prob, 0, 0, g0_qq, NULL, NULL, NULL);CHKERRQ(ierr);
   ierr = PetscDSSetJacobian(prob, 0, 1, NULL, NULL, g2_qu, NULL);CHKERRQ(ierr);
   ierr = PetscDSSetJacobian(prob, 1, 0, NULL, g1_uq, NULL, NULL);CHKERRQ(ierr);
+
+  //ierr = PetscDSSetExactSolution(prob,2,zero_func,NULL);CHKERRQ(ierr);
   switch (user->solType)
   {
     case SOL_LINEAR:
@@ -436,11 +444,12 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   }
   PetscFunctionReturn(0);
 }
+
 /* Setup function for mixed form poisson: Currently incomplete */
 static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, AppCtx *), AppCtx *user)
 {
   DM              cdm = dm;
-  PetscFE         feq, feu;
+  PetscFE         feq, feu, fedivErr;
   PetscQuadrature q;
   const PetscInt  dim = user->dim;
   PetscErrorCode  ierr;
@@ -451,11 +460,16 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   ierr = PetscObjectSetName((PetscObject) feq, "field");CHKERRQ(ierr);
   ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, 1,   user->simplex, "potential_", -1, &feu);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) feu, "potential");CHKERRQ(ierr);
+  //ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, 1, user->simplex, "divErr_",-1, &fedivErr);CHKERRQ(ierr);
+  //ierr = PetscObjectSetName((PetscObject) fedivErr,"divErr");CHKERRQ(ierr);
   ierr = PetscFEGetQuadrature(feq, &q);CHKERRQ(ierr);
   ierr = PetscFESetQuadrature(feu,  q);CHKERRQ(ierr);
+  //ierr = PetscFESetQuadrature(fedivErr, q);CHKERRQ(ierr);
   /* Set discretization and boundary conditions for each mesh */
   ierr = DMSetField(dm, 0, NULL, (PetscObject) feq);CHKERRQ(ierr);
   ierr = DMSetField(dm, 1, NULL, (PetscObject) feu);CHKERRQ(ierr);
+  //ierr = DMSetField(dm, 2, NULL, (PetscObject) fedivErr);CHKERRQ(ierr);
+  
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   ierr = (*setup)(dm, user);CHKERRQ(ierr);
   while (cdm) {
@@ -464,8 +478,57 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   }
   ierr = PetscFEDestroy(&feq);CHKERRQ(ierr);
   ierr = PetscFEDestroy(&feu);CHKERRQ(ierr);
+  //ierr = PetscFEDestroy(&fedivErr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+#if 0
+static PetscErrorCode SetupDiscretization(DM mesh,PetscErrorCode (*setup)(DM,UserCtx*),UserCtx *user)
+{
+  DM             cdm = mesh;
+  PetscFE        fevel,fepres,fedivErr;
+  PetscInt       dim;
+  PetscBool      simplex;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetDimension(mesh, &dim);CHKERRQ(ierr);
+  ierr = DMPlexIsSimplex(mesh, &simplex);CHKERRQ(ierr);
+  /* Create FE objects and give them names so that options can be set from
+   * command line */
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,dim,simplex,"velocity_",-1,&fevel);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) fevel,"velocity");CHKERRQ(ierr);
+
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,1,simplex,"pressure_",-1,&fepres);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) fepres,"pressure");CHKERRQ(ierr);
+
+  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject)
+                                              mesh),dim,1,simplex,"divErr_",-1,&fedivErr);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) fedivErr,"divErr");CHKERRQ(ierr);
+
+  ierr = PetscFECopyQuadrature(fevel,fepres);CHKERRQ(ierr);
+  ierr = PetscFECopyQuadrature(fevel,fedivErr);CHKERRQ(ierr);
+
+  /* Associate the FE objects with the mesh and setup the system */
+  ierr = DMSetField(mesh,0,NULL,(PetscObject) fevel);CHKERRQ(ierr);
+  ierr = DMSetField(mesh,1,NULL,(PetscObject) fepres);CHKERRQ(ierr);
+  ierr = DMSetField(mesh,2,NULL,(PetscObject) fedivErr);CHKERRQ(ierr);
+  ierr = DMCreateDS(mesh);CHKERRQ(ierr);
+  ierr = (*setup)(mesh,user);CHKERRQ(ierr);
+
+  while (cdm) {
+    ierr = DMCopyDisc(mesh,cdm);CHKERRQ(ierr);
+    ierr = DMGetCoarseDM(cdm,&cdm);CHKERRQ(ierr);
+  }
+
+  /* The Mesh now owns the fields, so we can destroy the FEs created in this
+   * function */
+  ierr = PetscFEDestroy(&fevel);CHKERRQ(ierr);
+  ierr = PetscFEDestroy(&fepres);CHKERRQ(ierr);
+  ierr = PetscFEDestroy(&fedivErr);CHKERRQ(ierr);
+  ierr = DMDestroy(&cdm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+#endif 
 /*
   Creates the particles with initial distribution. The kinematics vector will need to be changed.
   More recent implementations including collision operator implementations utilize a velocity vector,
@@ -608,12 +671,15 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
  */
 static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
 {
- AppCtx            *user = (AppCtx *) ctx;
-  DM                 dm, plex;
+  AppCtx            *user = (AppCtx *) ctx;
+  DM                 dm, plex, potential_dm;
   PetscDS            prob;
   PetscFE            fe;
   Mat                M_p;
-  Vec                phi, locPhi, rho, f;
+  Vec                phi, locPhi, rho, f, temp_rho, subrho;
+  IS                 potential_IS;
+  PetscQuadrature    q;
+  PetscFEGeom        feGeometry;
   const PetscScalar *x;
   PetscScalar       *vres;
   PetscReal         *coords, *rhoArr, rhoSum, rhoAvg, phi_0;
@@ -636,16 +702,43 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
   ierr = DMGetGlobalVector(plex, &phi);CHKERRQ(ierr);
   ierr = DMGetLocalVector(plex, &locPhi);CHKERRQ(ierr);
   /* Get charge vector */
-  ierr = DMCreateMassMatrix(dm, plex, &M_p);CHKERRQ(ierr);
-  ierr = MatViewFromOptions(M_p, NULL, "-mp_view");
-  ierr = DMGetGlobalVector(plex, &rho);CHKERRQ(ierr);
-  ierr = DMSwarmCreateGlobalVectorFromField(dm, "w_q", &f);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) f, "weights vector");
-  ierr = VecViewFromOptions(f, NULL, "-weights_view");
-  ierr = MatMultTranspose(M_p, f, rho);CHKERRQ(ierr);
-  ierr = DMSwarmDestroyGlobalVectorFromField(dm, "w_q", &f);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) rho, "rho");CHKERRQ(ierr);
-  ierr = VecViewFromOptions(rho, NULL, "-poisson_rho_view");CHKERRQ(ierr);
+  if(user->bdm){
+
+    PetscInt fields = 1;
+    ierr = DMGetGlobalVector(plex, &rho);CHKERRQ(ierr);  
+    ierr = DMCreateSubDM(plex, 1, &fields, &potential_IS, &potential_dm);CHKERRQ(ierr);
+    ierr = DMCreateMassMatrix(dm, potential_dm, &M_p);CHKERRQ(ierr);
+    //ierr = VecGetSubVector(rho, potential_IS, &subrho);CHKERRQ(ierr);
+    ierr = DMGetGlobalVector(potential_dm, &temp_rho);CHKERRQ(ierr);
+    //ierr = VecZeroEntries(rho);CHKERRQ(ierr);
+   
+    ierr = MatViewFromOptions(M_p, NULL, "-mp_view");
+    ierr = DMSwarmCreateGlobalVectorFromField(dm, "w_q", &f);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) f, "weights vector");
+    ierr = VecViewFromOptions(f, NULL, "-weights_view");
+   
+    ierr = MatMultTranspose(M_p, f, temp_rho);CHKERRQ(ierr);
+    ierr = DMSwarmDestroyGlobalVectorFromField(dm, "w_q", &f);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) rho, "rho");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(rho, NULL, "-poisson_rho_view");CHKERRQ(ierr);
+
+    ierr = VecISCopy(rho, potential_IS, SCATTER_FORWARD, temp_rho);CHKERRQ(ierr);
+   
+    ierr = DMRestoreGlobalVector(potential_dm, &temp_rho);
+    ierr = DMDestroy(&potential_dm);CHKERRQ(ierr);
+    
+  } else{
+    ierr = DMCreateMassMatrix(dm, plex, &M_p);CHKERRQ(ierr);
+    ierr = MatViewFromOptions(M_p, NULL, "-mp_view");
+    ierr = DMGetGlobalVector(plex, &rho);CHKERRQ(ierr);
+    ierr = DMSwarmCreateGlobalVectorFromField(dm, "w_q", &f);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) f, "weights vector");
+    ierr = VecViewFromOptions(f, NULL, "-weights_view");
+    ierr = MatMultTranspose(M_p, f, rho);CHKERRQ(ierr);
+    ierr = DMSwarmDestroyGlobalVectorFromField(dm, "w_q", &f);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) rho, "rho");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(rho, NULL, "-poisson_rho_view");CHKERRQ(ierr);
+  }
   /* Take nullspace out of rhs */
   {
     PetscScalar sum;
@@ -662,7 +755,6 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     ierr = VecScale(rho, phi_0);CHKERRQ(ierr);
   }
   /* Solve Poisson */
-
   ierr = VecSet(phi, 0.0);CHKERRQ(ierr);
   ierr = SNESSolve(user->snes, rho, phi);CHKERRQ(ierr);
   ierr = VecViewFromOptions(phi, NULL, "-phi_view");CHKERRQ(ierr);
@@ -711,7 +803,14 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
       gradPhi[1] = 0.0;
       gradPhi[2] = 0.0;
       const PetscReal *basisDer = tab->T[1];
-      ierr = PetscFEFreeInterpolateGradient_Static(fe, basisDer, ph, cdim, invJ, NULL, cp, gradPhi);CHKERRQ(ierr);
+
+      if(user->bdm){
+        ierr = PetscFEGetQuadrature(fe, &q);
+        ierr = PetscFECreateCellGeometry(fe, q, &feGeometry);
+        ierr = PetscFEInterpolate_Static(fe, ph, &feGeometry, cp, gradPhi);
+      } else {
+        ierr = PetscFEFreeInterpolateGradient_Static(fe, basisDer, ph, cdim, invJ, NULL, cp, gradPhi);CHKERRQ(ierr);
+      }
       // Compute particle residual
       for (d = 0; d < cdim; ++d) {
         // TODO put in electrostatic force using gradPhi[p*cdim]
@@ -795,9 +894,17 @@ int main(int argc,char **argv)
 
   ierr = ProcessOptions(comm, &user);CHKERRQ(ierr);
 
-  /* Create dm and particles */
+  /* Create mesh */
   ierr = CreateMesh(comm, &dm, &user);CHKERRQ(ierr);
-  ierr = CreateFEM(dm, &user);CHKERRQ(ierr);
+
+  /* Setup discretization for either C0 or HDiv elements */
+  if (user.bdm) {
+    ierr = SetupDiscretization(dm, SetupPrimalProblem, &user);CHKERRQ(ierr);
+  }
+  else{
+    ierr = CreateFEM(dm, &user);CHKERRQ(ierr);
+  }
+
   ierr = CreateParticles(dm, &sw, &user);CHKERRQ(ierr);
   
 
@@ -805,7 +912,7 @@ int main(int argc,char **argv)
   ierr = SNESSetDM(user.snes, dm);CHKERRQ(ierr);
   ierr = DMPlexSetSNESLocalFEM(dm,&user,&user,&user);CHKERRQ(ierr);
   ierr = SNESSetFromOptions(user.snes);CHKERRQ(ierr);
-  {
+  if (1) {
     Mat          J;
     MatNullSpace nullSpace;
 
@@ -975,9 +1082,47 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q3
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 1 -pc_type svd -steps 10000 -uniform -sigma 1.0e-8 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -steps 100
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1\
+       -dm_plex_simplex 0 -particlesPerCell 2000\
+       -petscspace_degree 2 -petscfe_default_quadrature_order 3\
+       -ts_basicsymplectic_type 1 -pc_type svd\
+       -steps 10000 -uniform -sigma 1.0e-8\
+       -timeScale 2.0e-14 -stepSize 1.0e-2\
+       -ts_monitor_sp_swarm_phase -steps 100
    test:
      suffix: bsi2q3
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 2 -pc_type svd -steps 10000 -uniform -sigma 1.0e-8 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -steps 100
-
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1\
+       -dm_plex_simplex 0 -particlesPerCell 2000\
+       -petscspace_degree 2 -petscfe_default_quadrature_order 3\
+       -ts_basicsymplectic_type 2 -pc_type svd\
+       -steps 10000 -uniform -sigma 1.0e-8\
+       -timeScale 2.0e-14 -stepSize 1.0e-2\
+       -ts_monitor_sp_swarm_phase -steps 100
+   test:
+     suffix: bsi1_bdm_linear
+     args: -dm_plex_dim 2 \
+       -dm_plex_simplex 0 -particlesPerCell 2000 \
+       -simplex 0 -ts_basicsymplectic_type 1\
+       -field_petscspace_degree 1\
+       -field_petscdualspace_type bdm\
+       -field_petscdualspace_lagrange_tensor 1\
+       -snes_error_if_not_converged\
+       -pc_type fieldsplit\
+       -pc_fieldsplit_detect_saddle_point\
+       -pc_fieldsplit_type schur\
+       -pc_fieldsplit_schur_precondition full\
+       -pc_fieldsplit_schur_fact_type full\
+       -fieldsplit_0_pc_type lu\
+       -fieldsplit_1_pc_type lu\
+       -steps 1\
+       -bdm\
+       -solType linear\
+       -snes_monitor\
+       -ksp_monitor\
+       -ksp_rtol 1e-10\
+       -uniform\
+       -sigma 1.0e-8\
+       -timeScale 2.0e-14\
+       -stepSize 1.0e-2\
+       -snes_linesearch_monitor
 TEST*/
