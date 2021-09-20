@@ -77,7 +77,11 @@ class Configure(config.package.GNUPackage):
     args.append('--with-lapack-lib=" "')
     args.append('--with-blas=no')
     args.append('--with-lapack=no')
+    if self.blasLapack.include:
+      args = self.addArgStartsWith(args,'CFLAGS',self.headers.toString(self.blasLapack.include))
+      args = self.addArgStartsWith(args,'CXXFLAGS',self.headers.toString(self.blasLapack.include))
 
+    # device configuration
     cucc = ''
     devflags = ''
     hipbuild = False
