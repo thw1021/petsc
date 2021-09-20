@@ -38,9 +38,9 @@ class Configure(config.package.Package):
       libdir = os.path.join(self.installDir, 'lib')
       includedir = os.path.join(self.installDir, 'lib')
       output2,err2,ret2  = config.package.Package.executeShellCommandSeq([
-        'mkdir', '-p', libdir, includedir,
-        'cp', '-f', os.path.join('src', 'libadblaslapack.a'), libdir,
-        'cp', '-f', os.path.join('include', 'adblaslapack.hpp'), includedir,
+        ['mkdir', '-p', libdir, includedir],
+        ['cp', '-f', os.path.join('src', 'libadblaslapack.a'), libdir],
+        ['cp', '-f', os.path.join('include', 'adblaslapack.hpp'), includedir],
         ], cwd=self.packageDir, timeout=60, log = self.log)
       self.postInstall(output1+err1+output2+err2,'Makefile.inc')
     return self.installDir

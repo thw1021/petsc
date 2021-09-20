@@ -91,8 +91,8 @@ lapack_qlib:\n\
     try:
       self.logPrintBox('Installing F2CBLASLAPACK')
       output2,err2,ret  = config.package.Package.executeShellCommandSeq([
-        'mkdir', '-p', libdir,
-        'cp', '-f', 'libf2clapack.' + self.setCompilers.AR_LIB_SUFFIX, 'libf2cblas.' + self.setCompilers.AR_LIB_SUFFIX, libdir,
+        ['mkdir', '-p', libdir],
+        ['cp', '-f', 'libf2clapack.' + self.setCompilers.AR_LIB_SUFFIX, 'libf2cblas.' + self.setCompilers.AR_LIB_SUFFIX, libdir],
         ], cwd=self.packageDir, timeout=60, log = self.log)
     except RuntimeError as e:
       self.logPrint('Error moving '+self.packageDir+' libraries: '+str(e))
