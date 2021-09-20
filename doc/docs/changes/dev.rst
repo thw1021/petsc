@@ -157,6 +157,7 @@ Changes: Development
    ``PetscDSGetBoundary()``, ``PetscDSUpdateBoundary()``
 -  Add ``DMDAVecGetArrayDOFWrite()`` and ``DMDAVecRestoreArrayDOFWrite()``
 -  ``DMShellGetContext()`` now takes ``void*`` as return argument
+-  Add ``DMLabelGetNonEmptyStratumValuesIS()``, similar to ``DMLabelGetValueIS()`` but counts only nonempty strata
 
 .. rubric:: DMSwarm:
 
