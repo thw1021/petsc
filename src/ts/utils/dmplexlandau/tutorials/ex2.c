@@ -29,6 +29,7 @@ typedef struct REctx_struct {
   PetscReal     plotDt;
   PetscBool     plotting;
   PetscBool     use_spitzer_eta;
+  PetscInt      print_period;
 } REctx;
 
 static const PetscReal kev_joul = 6.241506479963235e+15; /* 1/1000e */
@@ -441,7 +442,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   /* view */
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if (time/rectx->plotDt >= (PetscReal)rectx->plotIdx || reason) {
-    if ((reason || stepi==0 || rectx->plotIdx%10==0) && ctx->verbose > 0) {
+    if ((reason || stepi==0 || rectx->plotIdx%rectx->print_period==0) && ctx->verbose > 0) {
       /* print norms */
       ierr = LandauPrintNorms(X, stepi);CHKERRQ(ierr);
     }
@@ -579,6 +580,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   rectx->plotting = PETSC_FALSE;
   rectx->use_spitzer_eta = PETSC_FALSE;
   rectx->idx = 0;
+  rectx->print_period = 10;
   /* Register the available impurity sources */
   ierr = PetscFunctionListAdd(&plist,"step",&stepSrc);CHKERRQ(ierr);
   ierr = PetscFunctionListAdd(&plist,"none",&zeroSrc);CHKERRQ(ierr);
@@ -597,6 +599,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   ierr = PetscOptionsReal("-ex2_plot_dt", "Plotting interval", "xgc_dmplex.c", rectx->plotDt, &rectx->plotDt, NULL);CHKERRQ(ierr);
   if (rectx->plotDt < 0) rectx->plotDt = 1e30;
   if (rectx->plotDt == 0) rectx->plotDt = 1e-30;
+  ierr = PetscOptionsInt("-ex2_print_period", "Plotting interval", "xgc_dmplex.c", rectx->print_period, &rectx->print_period, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-ex2_impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsFList("-ex2_test_type","Name of test to run","",testlist,testname,testname,sizeof(testname),NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-ex2_impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL);CHKERRQ(ierr);
