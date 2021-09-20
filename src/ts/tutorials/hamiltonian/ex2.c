@@ -700,8 +700,8 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     // Tabulate basis at particle coordinates
     // Need to tabulate basis for particle coordinates in the reference cell
     ierr = DMPlexCoordinatesToReference(plex, cell, Ncp, pcoord, refcoord);CHKERRQ(ierr);
-    ierr = PetscFEGetCellTabulation(fe, 1, &tab);CHKERRQ(ierr);
-    //PetscFECreateTabulation(fe, 1, Ncp*cdim, refcoord, 1, &tab);CHKERRQ(ierr);
+    //ierr = PetscFEGetCellTabulation(fe, 1, &tab);CHKERRQ(ierr);
+    PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
     // Get coefficients from phi for closure of cell
     ierr = DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
     // Interpolate gradient
@@ -724,7 +724,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
       }
     }
     ierr = DMPlexVecRestoreClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
-    //ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
+    ierr = PetscTabulationDestroy(&tab);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &pcoord);CHKERRQ(ierr);
     ierr = DMRestoreWorkArray(dm, Ncp*cdim, MPIU_REAL, &refcoord);CHKERRQ(ierr);
     ierr = PetscFree(points);CHKERRQ(ierr);
@@ -836,7 +836,7 @@ int main(int argc,char **argv)
     ierr = PetscMalloc1(2*locSize, &probArr);CHKERRQ(ierr);
     Np = locSize/dim;
 
-    ierr = PetscPrintf(comm, "Np at step: %i, %i\n", Np, step);
+//    ierr = PetscPrintf(comm, "Np at step: %i, %i\n", Np, step);
 
     ierr = VecGetArrayRead(kinVec, &kinArr);CHKERRQ(ierr);
     ierr = VecGetArrayRead(coorVec, &coorArr);CHKERRQ(ierr);
@@ -943,7 +943,8 @@ int main(int argc,char **argv)
       ierr = DMSwarmRestoreField(sw, "kinematics", NULL, NULL, (void **) &kin);CHKERRQ(ierr);
 
     }
-    //ierr = DMSwarmMigrate(sw, PETSC_TRUE);CHKERRQ(ierr);
+    ierr = DMSwarmMigrate(sw, PETSC_TRUE);CHKERRQ(ierr);
+    ierr = DMLocalizeCoordinates(sw);CHKERRQ(ierr);
     ierr = TSReset(ts);CHKERRQ(ierr);
     ierr = PetscFree(idx1);CHKERRQ(ierr);
     ierr = PetscFree(idx2);CHKERRQ(ierr);
@@ -973,10 +974,10 @@ int main(int argc,char **argv)
    build:
      requires: triangle !single !complex
    test:
-     suffix: bsi1q2
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 1 -pc_type svd -steps 10000 -uniform -sigma 1.0e-7 -timeScale 2.0e-15 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     suffix: bsi1q3
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 1 -pc_type svd -steps 10000 -uniform -sigma 1.0e-8 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -steps 100
    test:
-     suffix: bsi2q2
-     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 2 -pc_type svd -steps 10000 -uniform -sigma 1.0e-7 -timeScale 2.0e-15 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase
+     suffix: bsi2q3
+     args: -dm_plex_dim 2 -dm_plex_box_faces 4,1 -dm_plex_simplex 0 -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 2 -pc_type svd -steps 10000 -uniform -sigma 1.0e-8 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -steps 100
 
 TEST*/
