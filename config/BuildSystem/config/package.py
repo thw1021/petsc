@@ -389,6 +389,15 @@ class Package(config.base.Configure):
       self.installDir = self.defaultInstallDir
     else:
       self.installDir = self.confDir
+    if self.publicInstall and not 'package-prefix-hash' in self.argDB and self.installDirProvider.installSudo:
+      if self.installDirProvider.dir in ['/usr','/usr/local']: prefixdir = os.path.join(self.installDirProvider.dir,'petsc')
+      else: prefixdir = self.installDirProvider.dir
+      msg='''\
+Specified prefix-dir: %s is read-only! "%s" cannot install at this location! Suggest:
+      sudo mkdir %s
+      sudo chown $USER %s
+Now rerun configure''' % (prefixdir, '--download-'+self.package, prefixdir, prefixdir)
+      raise RuntimeError(msg)
     self.includeDir = os.path.join(self.installDir, 'include')
     self.libDir     = os.path.join(self.installDir, 'lib')
     installDir = self.Install()
