@@ -130,8 +130,8 @@ protected:
   PetscBool  _registered = PETSC_FALSE;
 
 private:
-  PETSC_NODISCARD static PetscErrorCode __staticFinalizer(void*) PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode __finalizer() PETSC_NOEXCEPT;
+  PETSC_NODISCARD static PetscErrorCode __staticFinalizer(void*) PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode __registerFinalize() PETSC_NOEXCEPT;
 
 public:
@@ -139,6 +139,12 @@ public:
   constexpr ObjectPool() PETSC_NOEXCEPT(std::is_nothrow_default_constructible<allocator_type>::value)
     : _stack()
   { }
+
+  // destructor
+  ~ObjectPool() PETSC_NOEXCEPT
+  {
+    PetscErrorCode ierr = __finalizer();CHKERRABORT(PETSC_COMM_SELF,ierr);
+  }
 
   // copy constructor
   ObjectPool(ObjectPool &other) PETSC_NOEXCEPT(std::is_nothrow_copy_constructible<stack_type>::value)
@@ -156,18 +162,18 @@ public:
   { }
 
   // copy constructor with allocator
-  explicit ObjectPool(const allocator_type &alloc) : base_type(alloc),_registered(PETSC_FALSE) { }
+  explicit ObjectPool(const allocator_type &alloc) : base_type(alloc) { }
 
   // move constructor with allocator
   explicit ObjectPool(allocator_type &&alloc) PETSC_NOEXCEPT(std::is_nothrow_move_constructible<allocator_type>::value)
-    : base_type(std::move(alloc)),_registered(PETSC_FALSE)
+    : base_type(std::move(alloc))
   { }
 
   // Retrieve an object from the pool, if the pool is empty a new object is created instead
   PETSC_NODISCARD PetscErrorCode get(value_type&)      PETSC_NOEXCEPT;
   // Return an object to the pool, the object need not necessarily have been created by
-  // the pool
-  PETSC_NODISCARD PetscErrorCode reclaim(value_type&)  PETSC_NOEXCEPT;
+  // the pool, note this only accepts r-value references. The pool takes ownership of all
+  // managed objects.
   PETSC_NODISCARD PetscErrorCode reclaim(value_type&&) PETSC_NOEXCEPT;
 
   // operators
@@ -215,16 +221,6 @@ inline PetscBool operator<=(const ObjectPool<T,_Allocator> &l, const ObjectPool<
 }
 
 template <typename T, class _Allocator>
-PetscErrorCode ObjectPool<T,_Allocator>::__staticFinalizer(void *obj) PETSC_NOEXCEPT
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = static_cast<ObjectPool<T,_Allocator>*>(obj)->__finalizer();CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-template <typename T, class _Allocator>
 inline PetscErrorCode ObjectPool<T,_Allocator>::__finalizer() PETSC_NOEXCEPT
 {
   PetscErrorCode ierr;
@@ -238,6 +234,16 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::__finalizer() PETSC_NOEXCEPT
   }
   ierr = base_type::__getAllocator().finalize();CHKERRQ(ierr);
   _registered = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+template <typename T, class _Allocator>
+PetscErrorCode ObjectPool<T,_Allocator>::__staticFinalizer(void *obj) PETSC_NOEXCEPT
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = static_cast<ObjectPool<T,_Allocator>*>(obj)->__finalizer();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -278,24 +284,6 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::get(value_type &obj) PETSC_NOEXC
 }
 
 template <typename T, class _Allocator>
-inline PetscErrorCode ObjectPool<T,_Allocator>::reclaim(value_type &obj) PETSC_NOEXCEPT
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (PetscLikely(_registered)) {
-    ierr = base_type::__getAllocator().reset(obj);CHKERRQ(ierr);
-    CHKERRCXX(_stack.push(std::move(obj)));
-  } else {
-    // this is necessary if an object is "reclaimed" within another PetscFinalize() registered
-    // cleanup after this object pool has returned from it's finalizer. In this case, instead
-    // of pushing onto the stack we just destroy the object directly
-    ierr = base_type::__getAllocator().destroy(obj);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-template <typename T, class _Allocator>
 inline PetscErrorCode ObjectPool<T,_Allocator>::reclaim(value_type &&obj) PETSC_NOEXCEPT
 {
   PetscErrorCode ierr;
@@ -306,7 +294,9 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::reclaim(value_type &&obj) PETSC_
     ierr = base_type::__getAllocator().reset(obj);CHKERRQ(ierr);
     CHKERRCXX(_stack.push(std::move(obj)));
   } else {
-    // see the other reclaim for why this is necessary
+    // this is necessary if an object is "reclaimed" within another PetscFinalize() registered
+    // cleanup after this object pool has returned from it's finalizer. In this case, instead
+    // of pushing onto the stack we just destroy the object directly
     ierr = base_type::__getAllocator().destroy(obj);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
