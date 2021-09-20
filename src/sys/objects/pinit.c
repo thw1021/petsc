@@ -1068,6 +1068,14 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
      Check system options and print help
   */
   ierr = PetscOptionsCheckInitial_Private(help);CHKERRQ(ierr);
+  /*
+      Setup building of stack frames for all function calls
+  */
+  flg  = PETSC_FALSE;
+  ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg,NULL);CHKERRQ(ierr);
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
+  ierr = PetscStackCreate(flg);CHKERRQ(ierr);
+#endif
 
   /*
    Initialize PetscDevice and PetscDeviceContext
@@ -1078,7 +1086,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
    3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
       the push/pop interface.
   */
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+#if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP))
   ierr = PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD);CHKERRQ(ierr);
 #endif
 
@@ -1160,15 +1168,6 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   if (!PetscBinaryBigEndian()) {
     ierr = MPI_Register_datarep((char*)"petsc",PetscDataRep_read_conv_fn,PetscDataRep_write_conv_fn,PetscDataRep_extent_fn,NULL);CHKERRMPI(ierr);
   }
-#endif
-
-  /*
-      Setup building of stack frames for all function calls
-  */
-  flg  = PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg,NULL);CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_THREADSAFETY)
-  ierr = PetscStackCreate(flg);CHKERRQ(ierr);
 #endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
