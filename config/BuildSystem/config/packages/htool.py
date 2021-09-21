@@ -36,7 +36,7 @@ class Configure(config.package.Package):
     if not hasattr(self.framework,'packages'):
       self.framework.packages = []
     self.framework.packages.append(self)
-    cpstr = ' mkdir -p '+incDir+' &&  cp -r '+os.path.join(self.packageDir,'include','*')+' '+incDir
+    cpstr = 'mkdir -p '+incDir+' && cp -r '+os.path.join(self.packageDir,'include','*')+' '+incDir
     self.logPrintBox('Copying Htool; this may take several seconds')
     output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
     self.log.write(output+err)
