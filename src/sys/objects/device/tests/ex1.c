@@ -48,9 +48,6 @@ int main(int argc, char *argv[])
     ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);
     ierr = AssertDeviceExists(device);CHKERRQ(ierr);
   }
-  ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);
-  /* default device should still exist */
-  ierr = AssertDeviceExists(device);CHKERRQ(ierr);
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"EXIT_SUCCESS\n");CHKERRQ(ierr);
   ierr = PetscFinalize();

@@ -127,7 +127,7 @@ public:
 
 protected:
   stack_type _stack;
-  PetscBool  _registered = PETSC_FALSE;
+  bool       _registered = false;
 
 private:
   PETSC_NODISCARD PetscErrorCode __finalizer() PETSC_NOEXCEPT;
@@ -233,7 +233,7 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::__finalizer() PETSC_NOEXCEPT
     CHKERRCXX(_stack.pop());
   }
   ierr = base_type::__getAllocator().finalize();CHKERRQ(ierr);
-  _registered = PETSC_FALSE;
+  _registered = false;
   PetscFunctionReturn(0);
 }
 
@@ -263,7 +263,7 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::__registerFinalize() PETSC_NOEXC
   ierr = PetscContainerSetPointer(contain,this);CHKERRQ(ierr);
   ierr = PetscContainerSetUserDestroy(contain,__staticFinalizer);CHKERRQ(ierr);
   ierr = PetscObjectRegisterDestroy((PetscObject)contain);CHKERRQ(ierr);
-  _registered = PETSC_TRUE;
+  _registered = true;
   PetscFunctionReturn(0);
 }
 
