@@ -51,19 +51,17 @@ class Configure(config.package.Package):
       prefix     = os.path.join(self.petscdir.dir,self.arch)
     incDir = os.path.join(prefix,'include')
     libDir = os.path.join(prefix,'lib')
-    if self.installSudo:
-      newuser = self.installSudo+' -u $${SUDO_USER} '
-    else:
-      newuser = ''
     self.addMakeMacro('HPDDM','yes')
     self.include = [incDir]
     if not hasattr(self.framework,'packages'):
       self.framework.packages = []
     self.framework.packages.append(self)
-    cpstr = newuser+' mkdir -p '+incDir+' && '+newuser+' cp '+os.path.join(self.packageDir,'include','*')+' '+incDir
-    self.logPrintBox('Copying HPDDM; this may take several seconds')
-    output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
-    self.log.write(output+err)
+    try:
+      self.logPrintBox('Copying HPDDM; this may take several seconds')
+      output,err,ret = config.package.Package.executeShellCommand(['cp','-r',os.path.join(self.packageDir,'include'),prefix],timeout=100,log=self.log) # cannot use shutil.copytree since target directory likely exists
+      self.log.write(output+err)
+    except RuntimeError as e:
+      raise RuntimeError('Error copying HPDDM: '+str(e))
     # SLEPc dependency
     if self.mpi.found:
       if self.slepc.found:
@@ -90,7 +88,7 @@ class Configure(config.package.Package):
           self.addMakeRule('hpddmbuild',slepcbuilddep,\
                              ['@echo "*** Building and installing HPDDM ***"',\
                               '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                              '@'+newuser+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
+                              '@'+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
                    (echo "**************************ERROR*************************************" && \\\n\
                    echo "Error building HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
                    echo "********************************************************************" && \\\n\
