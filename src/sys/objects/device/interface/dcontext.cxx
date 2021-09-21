@@ -22,7 +22,7 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode destroy(PetscDeviceContext &dctx) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode destroy(PetscDeviceContext dctx) PETSC_NOEXCEPT
   {
     PetscErrorCode ierr;
 
@@ -35,7 +35,7 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode reset(PetscDeviceContext &dctx) PETSC_NOEXCEPT
+  PETSC_NODISCARD static PetscErrorCode reset(PetscDeviceContext dctx) PETSC_NOEXCEPT
   {
     PetscErrorCode ierr;
 

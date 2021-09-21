@@ -223,7 +223,7 @@ static PetscErrorCode PetscDeviceInitializeKindFromOptions_Private(MPI_Comm comm
 static PetscErrorCode PetscDeviceCheckAllDestroyedAfterFinalize_Private(void)
 {
   PetscFunctionBegin;
-  for (const auto &device : defaultDevices) {
+  for (const auto device : defaultDevices) {
     if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not fully destroyed during PetscFinalize()",PetscDeviceKinds[device->kind],device->refcnt);
   }
   PetscFunctionReturn(0);
@@ -254,7 +254,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
      */
     ierr = PetscRegisterFinalize(PetscDeviceCheckAllDestroyedAfterFinalize_Private);CHKERRQ(ierr);
   }
-  for (auto &device : defaultDevices) {ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);}
+  for (auto device : defaultDevices) {ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);}
   CHKERRCXX(initializedDevice.fill(PETSC_FALSE));
   PetscFunctionReturn(0);
 }
