@@ -67,10 +67,11 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceKind kind, PetscInt devid, PetscDevi
   PetscValidPointer(device,3);
   ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   ierr = PetscNew(&dev);CHKERRQ(ierr);
-  dev->id   = PetscDeviceCounter++;
-  dev->kind = kind;
+  dev->id     = PetscDeviceCounter++;
+  dev->kind   = kind;
+  dev->refcnt = 1;
   /* if you are adding a device, you also need to add it's initialization in
-     PetscDeviceInitializeKind_Internal below */
+     PetscDeviceInitializeKindFromOptions_Private() below */
   switch (kind) {
     PETSC_DEVICE_CASE_IF_PETSC_DEFINED(CUDA,getDevice,dev,devid);
     PETSC_DEVICE_CASE_IF_PETSC_DEFINED(HIP,getDevice,dev,devid);
@@ -96,15 +97,15 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceKind kind, PetscInt devid, PetscDevi
 @*/
 PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   if (!*device) PetscFunctionReturn(0);
-  if (!--(*device)->refcnt) {
-    PetscErrorCode ierr;
-
-    if (PetscUnlikelyDebug((*device)->refcnt < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %D reference count %D < 0",(*device)->id,(*device)->refcnt);
-    ierr = PetscFree((*device)->data);CHKERRQ(ierr);
-    ierr = PetscFree(*device);CHKERRQ(ierr);
-  }
+  PetscValidDevice(*device,1);
+  ierr = PetscDeviceDereference_Internal(*device);CHKERRQ(ierr);
+  if ((*device)->refcnt) PetscFunctionReturn(0);
+  ierr = PetscFree((*device)->data);CHKERRQ(ierr);
+  ierr = PetscFree(*device);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -182,7 +183,7 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind kind,
 
    for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
    */
-  defaultDevices[kind]    = PetscDeviceReference_Internal(defaultDevices[kind]);
+  ierr = PetscDeviceReference_Internal(defaultDevices[kind]);CHKERRQ(ierr);
   initializedDevice[kind] = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
