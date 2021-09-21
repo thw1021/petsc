@@ -220,16 +220,41 @@ static PetscErrorCode PetscDeviceInitializeKindFromOptions_Private(MPI_Comm comm
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PetscDeviceCheckAllDestroyedAfterFinalize_Private(void)
+{
+  PetscFunctionBegin;
+  for (const auto &device : defaultDevices) {
+    if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not fully destroyed during PetscFinalize()",PetscDeviceKinds[device->kind],device->refcnt);
+  }
+  PetscFunctionReturn(0);
+}
+
 /* called from PetscFinalize() do not call yourself! */
 static PetscErrorCode PetscDeviceFinalize_Private(void)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  for (auto &device : defaultDevices) {
-    ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);
-    if (PetscUnlikelyDebug(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not fully destroyed during PetscFinalize()",PetscDeviceKinds[device->kind],device->refcnt);
+  if (PetscDefined(USE_DEBUG)) {
+    /* you might be thinking, why on earth are you registered yet another finalizer in a
+     * function already called during PetscRegisterFinalizeAll()? If this seems stupid it's
+     * because it is.
+     *
+     * The crux of the problem is that the initializer (and therefore the ~finalizer~) of
+     * PetscDeviceContext is guaranteed to run after this finalizer. So If the global context
+     * had a default PetscDevice attached it will hold a reference this routine won't destroy
+     * it. So we need to check that all devices have been destroyed after the global context is
+     * destroyed. In summary:
+     *
+     * 1. This finalizer runs and destroys all devices, except it may not because the global
+     *    context may still hold a reference!
+     * 2. The global context finalizer runs and in turn actually destroys the referenced
+     *    device.
+     * 3. Our newly added finalizer runs and checks that all is well.
+     */
+    ierr = PetscRegisterFinalize(PetscDeviceCheckAllDestroyedAfterFinalize_Private);CHKERRQ(ierr);
   }
+  for (auto &device : defaultDevices) {ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);}
   CHKERRCXX(initializedDevice.fill(PETSC_FALSE));
   PetscFunctionReturn(0);
 }
