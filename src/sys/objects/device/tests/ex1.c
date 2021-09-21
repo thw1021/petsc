@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
   device = NULL;
   ierr = PetscDeviceCreate(PETSC_DEVICE_DEFAULT,PETSC_DECIDE,&device);CHKERRQ(ierr);
   ierr = AssertDeviceExists(device);CHKERRQ(ierr);
-  for (int i = 0; i < 10; ++i) device = PetscDeviceReference_Internal(device);
+  for (int i = 0; i < 10; ++i) {ierr = PetscDeviceReference_Internal(device);CHKERRQ(ierr);}
   ierr = AssertDeviceExists(device);CHKERRQ(ierr);
   for (int i = 0; i < 10; ++i) {
     ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
   }
   ierr = AssertDeviceExists(device);CHKERRQ(ierr);
   /* test reference counting for default device */
-  for (int i = 0; i < 10; ++i) device = PetscDeviceReference_Internal(device);
+  for (int i = 0; i < 10; ++i) {ierr = PetscDeviceReference_Internal(device);CHKERRQ(ierr);}
   ierr = AssertDeviceExists(device);CHKERRQ(ierr);
   for (int i = 0; i < 10; ++i) {
     ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);

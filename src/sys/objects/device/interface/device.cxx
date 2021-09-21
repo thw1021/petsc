@@ -9,7 +9,7 @@ static CUPMDevice<CUPMDeviceKind::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA
 static CUPMDevice<CUPMDeviceKind::HIP>  HIPDevice(PetscDeviceContextCreate_HIP);
 #endif
 
-const char *const PetscDeviceKinds[] = {"invalid","cuda","hip","default","max","PetscDeviceKind","PETSC_DEVICE_",PETSC_NULLPTR};
+const char *const PetscDeviceKinds[] = {"invalid","cuda","hip","max","PetscDeviceKind","PETSC_DEVICE_",PETSC_NULLPTR};
 
 const char *const PetscDeviceInitKinds[] = {"none","lazy","greedy","PetscDeviceInitKind","PETSC_DEVICE_INIT_",PETSC_NULLPTR};
 static_assert(sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds) == 6,"Must change CUPMDevice<T>::initialize number of enum values in -device_enable_cupm to match!");
@@ -183,7 +183,6 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind kind,
 
    for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
    */
-  ierr = PetscDeviceReference_Internal(defaultDevices[kind]);CHKERRQ(ierr);
   initializedDevice[kind] = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
