@@ -224,7 +224,8 @@ PetscErrorCode PetscDeviceContextSetDevice(PetscDeviceContext dctx, PetscDevice 
   if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
   ierr = PetscMemzero(dctx->ops,sizeof(*dctx->ops));CHKERRQ(ierr);
   ierr = (*device->ops->createcontext)(dctx);CHKERRQ(ierr);
-  dctx->device = PetscDeviceReference_Internal(device);
+  ierr = PetscDeviceReference_Internal(device);CHKERRQ(ierr);
+  dctx->device = device;
   dctx->setup  = PETSC_FALSE;
   PetscFunctionReturn(0);
 }

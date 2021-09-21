@@ -194,18 +194,19 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscDevice PetscDeviceReference_Internal(PetscDevice device)
+PETSC_STATIC_INLINE PetscErrorCode  PetscDeviceReference_Internal(PetscDevice device)
 {
-  PetscFunctionBeginHot;
+  PetscFunctionBegin;
   ++(device->refcnt);
-  PetscFunctionReturn(device);
+  PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscDevice PetscDeviceDereference_Internal(PetscDevice device)
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice device)
 {
-  PetscFunctionBeginHot;
+  PetscFunctionBegin;
   --(device->refcnt);
-  PetscFunctionReturn(device);
+  if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"PetscDevice has negative reference count %D",device->refcnt);
+  PetscFunctionReturn(0);
 }
 
 /* PetscDeviceContext Internal Functions */
