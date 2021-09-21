@@ -132,7 +132,7 @@ PETSC_STATIC_INLINE PetscErrorCode AssertDeviceDoesNotExist(PetscDevice device)
 {
   PetscFunctionBegin;
   if (device) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice was not destroyed for kind %s",device->kind);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice was not destroyed for kind %s",PetscDeviceKinds[device->kind]);
   }
   PetscFunctionReturn(0);
 }
