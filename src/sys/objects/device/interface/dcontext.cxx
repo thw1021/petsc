@@ -831,7 +831,7 @@ PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix
   if (flag) {
     ierr = PetscDeviceContextSetDefaultDeviceForKind_Internal(dctx,static_cast<PetscDeviceKind>(dkind+1));CHKERRQ(ierr);
   }
-  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,3,PetscStreamTypes[dctx->streamType],&stype,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,PETSC_STREAM_MAX,PetscStreamTypes[dctx->streamType],&stype,&flag);CHKERRQ(ierr);
   if (flag) {
     ierr = PetscDeviceContextSetStreamType(dctx,static_cast<PetscStreamType>(stype));CHKERRQ(ierr);
   }

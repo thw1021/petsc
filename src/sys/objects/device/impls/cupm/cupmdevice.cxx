@@ -265,7 +265,7 @@ static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
   cupmOptions<CUPMDeviceKind::KIND>() noexcept                          \
   {                                                                     \
     return {                                                            \
-      STR(KIND) "Options",                                              \
+      "PetscDevice " STR(KIND) " Options",                              \
       "-device_enable_" STR(kind),                                      \
       "-device_select_" STR(kind),                                      \
       "-device_view_" STR(kind)                                         \
