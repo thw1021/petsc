@@ -22,38 +22,8 @@ Thus,                                                               \n\
    --  = Ju;  J = (a/h^2) tridiagonal(1,-2,1)_n                     \n\
    dt                                                               \n\
                                                                     \n\
-Implicit Runge-Kutta method:                                        \n\
-                                                                    \n\
-  U^(k)   = u^n + dt \\sum_i a_{ki} JU^{i}                          \n\
-  u^{n+1} = u^n + dt \\sum_i b_i JU^{i}                             \n\
-                                                                    \n\
-  i = 1,...,s (s -> number of stages)                               \n\
-                                                                    \n\
-At each time step, we solve                                         \n\
-                                                                    \n\
- [  1                                  ]     1                      \n\
- [ -- I \\otimes A^{-1} - J \\otimes I ] U = -- u^n \\otimes A^{-1} \n\
- [ dt                                  ]     dt                     \n\
-                                                                    \n\
-  where A is the Butcher tableau of the implicit                    \n\
-  Runge-Kutta method,                                               \n\
-                                                                    \n\
-with MATKAIJ and KSP.                                               \n\
-                                                                    \n\
-Available IRK Methods:                                              \n\
-  gauss       n-stage Gauss method                                  \n\
-                                                                    \n";
+This example is a TS version of the KSP ex74.c tutorial.            \n";
 
-/*
-  Include "petscksp.h" so that we can use KSP solvers.  Note that this file
-  automatically includes:
-  petscsys.h      - base PETSc routines
-  petscvec.h      - vectors
-  petscmat.h      - matrices
-  petscis.h       - index sets
-  petscviewer.h   - viewers
-  petscpc.h       - preconditioners
-*/
 #include <petscts.h>
 
 typedef enum {
@@ -235,4 +205,12 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *c
     requires: hpddm double
     suffix: 3
     args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3 -ksp_view_final_residual -ksp_hpddm_type bgcrodr -ksp_type hpddm
+
+  test:
+    requires: double
+    suffix: 4
+    nsize: 2
+    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 2
+    output_file: output/ex74_1.out
+
 TEST*/

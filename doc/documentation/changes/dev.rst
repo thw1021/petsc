@@ -94,6 +94,7 @@ Changes: Development
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
+-  Add ``-ts_type irk`` - fully implicit Runge-Kutta solvers
 
 .. rubric:: TAO:
 
