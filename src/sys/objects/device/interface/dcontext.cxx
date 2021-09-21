@@ -27,7 +27,7 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    if (PetscUnlikelyDebug(dctx->numChildren)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %D un-restored children, must call PetscDeviceContextRestore() on all children before destroying",dctx->numChildren);
+    if (PetscUnlikelyDebug(dctx->numChildren)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %D un-joined children, must call PetscDeviceContextJoin() with all children before destroying",dctx->numChildren);
     if (dctx->ops->destroy) {ierr = (*dctx->ops->destroy)(dctx);CHKERRQ(ierr);}
     ierr = PetscDeviceDestroy(&dctx->device);CHKERRQ(ierr);
     ierr = PetscFree(dctx->childIDs);CHKERRQ(ierr);
@@ -656,12 +656,27 @@ PetscErrorCode PetscDeviceContextSetInitialDeviceKind(PetscDeviceKind kind)
   PetscErrorCode ierr;
 
   ierr = PetscInitialized(&petscInit);
-  if (ierr) return ierr;
-  else if (petscInit) {
+  if (PetscUnlikely(ierr)) return ierr;
+  else if (PetscUnlikely(petscInit)) {
     PetscFunctionBegin; /* so the stack knows where we are */
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must set initial device kind before PetscInitialize()");
   }
   globalDeviceKind = kind;
+  return 0;
+}
+
+PetscErrorCode PetscDeviceContextSetInitialStreamType(PetscStreamType type)
+{
+  PetscBool      petscInit;
+  PetscErrorCode ierr;
+
+  ierr = PetscInitialized(&petscInit);
+  if (PetscUnlikely(ierr)) return ierr;
+  else if (PetscUnlikely(petscInit)) {
+    PetscFunctionBegin; /* so the stack knows where we are */
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must set initial device kind before PetscInitialize()");
+  }
+  globalStreamType = type;
   return 0;
 }
 
@@ -694,7 +709,6 @@ PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm comm)
    * __before__ logging is initialized, so the logging function PETSCABORT's */
   ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   ierr = PetscDeviceContextAllocator::create(&globalContext);CHKERRQ(ierr);
-  ierr = PetscDeviceContextCreate(&globalContext);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetStreamType(globalContext,globalStreamType);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetFromOptions(comm,PETSC_NULLPTR,globalContext);CHKERRQ(ierr);
   PetscFunctionReturn(0);
