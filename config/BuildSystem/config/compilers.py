@@ -522,25 +522,30 @@ class Configure(config.base.Configure):
     lang = language.lower()
     LANG = language.upper()
     self.logPrint('checkCxxDialect: checking C++ dialect version for language "{lang}" using compiler "{compiler}"'.format(lang=LANG,compiler=self.getCompiler(lang=language)))
-    try:
-      # see if we've done this before for this language.
-      # - If we DON'T have the attribute -- we haven't done this before (for example we
-      #   dont have self.cudadialect) -- then getattr raises AttributeError, we catch and
-      #   this routine continues as planned.
-      # - If we DO have the attribute:
-      #   - It's empty, no error is raised and we continue.
-      #   - It's not empty, and we return.
-      if getattr(self,lang+'dialect'):
-        self.logPrint('checkCxxDialect: reusing previous result {res} for language {lang}'.format(res=getattr(self,lang+'dialect'),compiler=self.getCompiler(lang=language),lang=LANG))
-        return
-    except AttributeError:
-      # we have not
-      pass
-    # configure value
     with_lang_dialect = self.argDB.get('with-'+lang+'-dialect','').upper().replace('X','+')
     if with_lang_dialect in {'','0','NONE'}:
       self.logPrint('checkCxxxDialect: user has requested NO cxx dialect')
       return
+
+    minDialect = 1
+    explicit   = True
+    if with_lang_dialect == 'AUTO':
+      maxDialect = 4
+      explicit   = False
+    elif with_lang_dialect == 'C++17':
+      # this sets the same value as auto, but we need to differentiate between explicitly
+      # asking for the highest dialect since this may be out of the question due to a
+      # package restriction
+      maxDialect = 4
+    elif with_lang_dialect == 'C++14':
+      maxDialect = 3
+    elif with_lang_dialect == 'C++11':
+      maxDialect = 2
+    elif with_lang_dialect == 'C++03':
+      maxDialect = 1
+    else:
+      raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
+
     includes03 = """
     // C++03 includes
     #include <iostream>
@@ -643,25 +648,6 @@ class Configure(config.base.Configure):
       # 4 = c++17
       {'num': 'c++17', 'includes': includes17, 'body': body17},
     )
-
-    minDialect = 1
-    explicit   = True
-    if with_lang_dialect == 'AUTO':
-      maxDialect = 4
-      explicit   = False
-    elif with_lang_dialect == 'C++17':
-      # this sets the same value as auto, but we need to differentiate between explicitly
-      # asking for the highest dialect since this may be out of the question due to a
-      # package restriction
-      maxDialect = 4
-    elif with_lang_dialect == 'C++14':
-      maxDialect = 3
-    elif with_lang_dialect == 'C++11':
-      maxDialect = 2
-    elif with_lang_dialect == 'C++03':
-      maxDialect = 1
-    else:
-      raise RuntimeError('Unknown C++ dialect: with-'+lang+'-dialect=%s' % (self.argDB['with-'+lang+'-dialect']))
 
     startDialect = dialects[maxDialect-1]['num']
     self.logPrint('checkCxxDialect: user has {expl} selected {lang} dialect {dlct}'.format(expl='explicitly' if explicit else 'NOT explicitly',lang=LANG,dlct=startDialect))
