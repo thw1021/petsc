@@ -12,7 +12,7 @@ class Configure(config.package.Package):
     self.gitcommit        = 'v'+version
     self.download         = ['git://https://github.com/NVlabs/cub','https://github.com/NVlabs/cub/archive/'+self.gitcommit+'.tar.gz']
     self.functions        = []
-    self.includes         = ['cub/cub.cuh']
+    self.includes         = ['cub/host/mutex.cuh']
     self.precisions       = ['single','double']
     self.cxx              = 1
     return
