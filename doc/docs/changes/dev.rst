@@ -78,6 +78,8 @@ Changes: Development
 
 .. rubric:: Vec:
 
+-  Add ``VecBoundToCPU()`` to query information set with ``VecBindToCPU()``
+
 .. rubric:: PetscSection:
 
 -  Extend ``PetscSectionView()`` for section saving to HDF5
@@ -111,6 +113,7 @@ Changes: Development
 -  Add ``MatGetColumnReductions()`` developer routine to calculate reductions over columns of a matrix
 -  Add ``MatGetColumnSums()``, ``MatGetColumnSumsRealPart()``, ``MatGetColumnSumsImaginaryPart()`` to compute sums over matrix columns
 -  Add ``MatGetColumnMeans()``, ``MatGetColumnMeansRealPart()``, ``MatGetColumnMeansImaginaryPart()`` to compute arithmetic means over matrix columns
+-  Add ``MatBoundToCPU()`` to query information set with ``MatBindToCPU()``
 
 .. rubric:: PC:
 
