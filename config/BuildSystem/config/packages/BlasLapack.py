@@ -16,7 +16,6 @@ class Configure(config.package.Package):
     self.required            = 1
     self.alternativedownload = 'f2cblaslapack'
     self.missingRoutines     = []
-    self.has_cheaders        = 0
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
@@ -119,41 +118,45 @@ class Configure(config.package.Package):
     if not isinstance(blasLibrary,   list): blasLibrary   = [blasLibrary]
     foundBlas   = 0
     foundLapack = 0
-    self.f2c    = 0
+    self.f2c = not hasattr(self.compilers, 'FC')
     # allow a user-specified suffix to be appended to BLAS/LAPACK symbols
     self.suffix = self.argDB.get('with-blaslapack-suffix', '')
-    mangleFunc = self.compilers.fortranMangling
+    if hasattr(self,'mangling'):
+      mangleFunc = self.mangling
+    else:
+      mangleFunc = self.compilers.fortranMangling
+      self.mangling = 'unknown'
     self.logPrint('Checking for Fortran name mangling '+mangleFunc+' on BLAS/LAPACK')
     foundBlas = self.checkBlas(blasLibrary, self.getOtherLibs(foundBlas, blasLibrary), mangleFunc,'dot')
     if foundBlas:
       foundLapack = self.checkLapack(lapackLibrary, self.getOtherLibs(foundBlas, blasLibrary), mangleFunc)
       if foundLapack:
-        self.mangling = self.compilers.fortranMangling
-        self.logPrint('Found Fortran mangling on BLAS/LAPACK which is '+self.compilers.fortranMangling)
+        self.mangling = mangleFunc
+        self.logPrint('Found Fortran mangling on BLAS/LAPACK which is '+self.mangling)
         return (foundBlas, foundLapack)
-    if not self.compilers.fortranMangling == 'unchanged':
+    if not mangleFunc == 'unchanged':
       self.logPrint('Checking for no name mangling on BLAS/LAPACK')
-      self.mangling = 'unchanged'
       foundBlas = self.checkBlas(blasLibrary, self.getOtherLibs(foundBlas, blasLibrary), 0, 'dot')
       if foundBlas:
         foundLapack = self.checkLapack(lapackLibrary, self.getOtherLibs(foundBlas, blasLibrary), 0, ['getrs','geev'])
         if foundLapack:
+          self.mangling = 'unchanged'
           self.logPrint('Found no name mangling on BLAS/LAPACK')
           return (foundBlas, foundLapack)
-    if not self.compilers.fortranMangling == 'underscore':
+    if not mangleFunc == 'underscore':
       save_f2c = self.f2c
       self.f2c = 1 # so that mangleBlas will do its job
       self.logPrint('Checking for underscore name mangling on BLAS/LAPACK')
-      self.mangling = 'underscore'
-      foundBlas = self.checkBlas(blasLibrary, self.getOtherLibs(foundBlas, blasLibrary), 0, 'dot')
+      mangleFunc == 'underscore'
+      foundBlas = self.checkBlas(blasLibrary, self.getOtherLibs(foundBlas, blasLibrary), mangleFunc, 'dot')
       if foundBlas:
-        foundLapack = self.checkLapack(lapackLibrary, self.getOtherLibs(foundBlas, blasLibrary), 0, ['getrs','geev'])
+        foundLapack = self.checkLapack(lapackLibrary, self.getOtherLibs(foundBlas, blasLibrary), mangleFunc, ['getrs','geev'])
         if foundLapack:
+          self.mangling = 'underscore'
           self.logPrint('Found underscore name mangling on BLAS/LAPACK')
           return (foundBlas, foundLapack)
       self.f2c = save_f2c
     self.logPrint('Unknown name mangling in BLAS/LAPACK')
-    self.mangling = 'unknown'
     return (foundBlas, foundLapack)
 
   def generateGuesses(self):
@@ -481,6 +484,11 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     if hasattr(self.compilers, 'FC'):
       self.alternativedownload = 'fblaslapack'
+
+    #  allow user to dictate which blas/lapack mangling to use (some blas/lapack libraries, like on Apple, provide several)
+    if 'known-blaslapack-mangling' in self.argDB:
+      self.mangling = self.argDB['known-blaslapack-mangling']
+
     for (name, self.blasLibrary, self.lapackLibrary, self.known64, self.usesopenmp) in self.generateGuesses():
       self.foundBlas   = 0
       self.foundLapack = 0
@@ -516,10 +524,6 @@ class Configure(config.package.Package):
       else: pkg = 'f2cblaslapack'
       raise RuntimeError('Could not find a functional LAPACK. Run with --with-lapack-lib=<lib> to indicate the library containing LAPACK.\n Or --download-'+pkg+'=1 to have one automatically downloaded and installed\n')
 
-    #  allow user to dictate which blas/lapack mangling to use (some blas/lapack libraries, like on Apple, provide several)
-    if 'known-blaslapack-mangling' in self.argDB:
-      self.mangling = self.argDB['known-blaslapack-mangling']
-
     if self.mangling == 'underscore':
       self.addDefine('BLASLAPACK_UNDERSCORE', 1)
     elif self.mangling == 'caps':
@@ -550,37 +554,11 @@ class Configure(config.package.Package):
     if self.argDB['with-64-bit-blas-indices'] and not self.has64bitindices:
       raise RuntimeError('You requested 64 bit integer BLAS/LAPACK using --with-64-bit-blas-indices but they are not available given your other BLAS/LAPACK options')
 
-    # check for the presence of the C interface (may be needed by external packages)
-    self.executeTest(self.checkCHeaders)
-
-  def checkCHeaders(self):
-    '''Check for cblas.h and lapacke.h'''
-    if self.has_cheaders: return
-    if self.checkInclude(self.include, ['cblas.h','lapacke.h']):
-      self.has_cheaders = 1
-      return
-
-    incl = []
-    if 'with-blaslapack-include' in self.argDB:
-      incl = self.argDB['with-blaslapack-include']
-      if not isinstance(incl, list): incl = [incl]
-    elif 'with-blaslapack-dir' in self.argDB:
-      incl = [os.path.join(self.argDB['with-blaslapack-dir'],'include')]
-    else:
-      return
-
-    linc = self.include + incl
-    if self.checkInclude(linc, ['cblas.h','lapacke.h']):
-      self.include = linc
-      self.has_cheaders = 1
-      return
-
   def checkMKL(self):
     '''Check for Intel MKL library'''
     self.libraries.saveLog()
     if self.libraries.check(self.dlib, 'mkl_set_num_threads'):
       self.mkl = 1
-      self.has_cheaders = 1
       self.addDefine('HAVE_MKL',1)
       '''Set include directory for mkl.h and friends'''
       '''(the include directory is in CPATH if mklvars.sh has been sourced.'''
@@ -624,12 +602,19 @@ class Configure(config.package.Package):
     '''Check for the IBM ESSL library'''
     self.libraries.saveLog()
     if self.libraries.check(self.dlib, 'iessl'):
+      self.essl = 1
+      self.addDefine('HAVE_ESSL',1)
+
       if 'with-blaslapack-include' in self.argDB:
         incl = self.argDB['with-blaslapack-include']
         if not isinstance(incl, list): incl = [incl]
-        self.include = incl
-      self.has_cheaders = 1
-      self.addDefine('HAVE_ESSL',1)
+      elif 'with-blaslapack-dir' in self.argDB:
+        incl = [os.path.join(self.argDB['with-blaslapack-dir'],'include')]
+      else:
+        return
+      linc = self.include + incl
+      if self.checkInclude(linc, ['essl.h']):
+        self.include = linc
     self.logWrite(self.libraries.restoreLog())
     return
 
@@ -660,13 +645,10 @@ class Configure(config.package.Package):
 
   def checkMissing(self):
     '''Check for missing LAPACK routines'''
-    if self.foundLapack:
-      mangleFunc = hasattr(self.compilers, 'FC') and not self.f2c
     routines = ['gelss','gerfs','gges','hgeqz','hseqr','orgqr','ormqr','stebz',
                 'stegr','stein','steqr','sytri','tgsen','trsen','trtrs','geqp3']
-    self.libraries.saveLog()
     oldLibs = self.compilers.LIBS
-    found, missing = self.libraries.checkClassify(self.lapackLibrary, map(self.mangleBlas,routines), otherLibs = self.getOtherLibs(), fortranMangle = mangleFunc)
+    found, missing = self.libraries.checkClassify(self.lapackLibrary, map(self.mangleBlas,routines), otherLibs = self.getOtherLibs(), fortranMangle = 0)
     for baseName in routines:
       if self.mangleBlas(baseName) in missing:
         self.missingRoutines.append(baseName)
