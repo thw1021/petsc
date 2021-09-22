@@ -194,6 +194,7 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *c
   test:
     requires: double
     suffix: 1
+    nsize: {{1 2}}
     args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 2
 
   test:
@@ -205,12 +206,4 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *c
     requires: hpddm double
     suffix: 3
     args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 3 -ksp_view_final_residual -ksp_hpddm_type bgcrodr -ksp_type hpddm
-
-  test:
-    requires: double
-    suffix: 4
-    nsize: 2
-    args: -ts_max_steps 5 -ts_monitor -ksp_monitor_short -pc_type pbjacobi -ksp_atol 1e-6 -ts_type irk -ts_irk_nstages 2
-    output_file: output/ex74_1.out
-
 TEST*/
