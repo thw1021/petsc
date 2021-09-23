@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd">
+
+<Xdmf Version="2.0">
+  <Domain>
+    <Grid Name="Two Quads">
+      <Topology Type="Quadrilateral" NumberOfElements="2" >
+        <DataItem Name="topo" Dimensions="2 4" NumberType="Int" Format="XML">
+          0 1 4 3
+          1 2 5 4
+        </DataItem>
+      </Topology>
+      <Geometry GeometryType="XY">
+        <DataItem Name="geom" Dimensions="6 2" NumberType="Float" Format="XML">
+          -1.0   -0.5
+           0.0   -0.5
+           1.0   -0.5
+          -1.0    0.5
+           0.0    0.5
+           1.0    0.5
+        </DataItem>
+      </Geometry>
+      <Set SetType="Cell" Name="marker">
+        <DataItem Name="marker" Dimensions="1" NumberType="Int" Format="XML">
+          1
+        </DataItem>
+      </Set>
+    </Grid>
+  </Domain>
+</Xdmf>
