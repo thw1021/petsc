@@ -1,0 +1,99 @@
+HDF5 "two_quads.v1.h5" {
+GROUP "/" {
+   ATTRIBUTE "petsc_dmplex_storage_version" {
+      DATATYPE  H5T_STD_I32LE
+      DATASPACE  SCALAR
+   }
+   ATTRIBUTE "petsc_version_git" {
+      DATATYPE  H5T_STRING {
+         STRSIZE 24;
+         STRPAD H5T_STR_NULLTERM;
+         CSET H5T_CSET_ASCII;
+         CTYPE H5T_C_S1;
+      }
+      DATASPACE  SCALAR
+   }
+   GROUP "geometry" {
+      DATASET "vertices" {
+         DATATYPE  H5T_IEEE_F64LE
+         DATASPACE  SIMPLE { ( 6, 2 ) / ( 6, 2 ) }
+         ATTRIBUTE "timestepping" {
+            DATATYPE  H5T_STD_I32LE
+            DATASPACE  SCALAR
+         }
+      }
+   }
+   GROUP "labels" {
+      GROUP "celltype" {
+         GROUP "0" {
+            DATASET "indices" {
+               DATATYPE  H5T_STD_I32LE
+               DATASPACE  SIMPLE { ( 6, 1 ) / ( 6, 1 ) }
+               ATTRIBUTE "timestepping" {
+                  DATATYPE  H5T_STD_I32LE
+                  DATASPACE  SCALAR
+               }
+            }
+         }
+         GROUP "1" {
+            DATASET "indices" {
+               DATATYPE  H5T_STD_I32LE
+               DATASPACE  SIMPLE { ( 7, 1 ) / ( 7, 1 ) }
+               ATTRIBUTE "timestepping" {
+                  DATATYPE  H5T_STD_I32LE
+                  DATASPACE  SCALAR
+               }
+            }
+         }
+         GROUP "4" {
+            DATASET "indices" {
+               DATATYPE  H5T_STD_I32LE
+               DATASPACE  SIMPLE { ( 2, 1 ) / ( 2, 1 ) }
+               ATTRIBUTE "timestepping" {
+                  DATATYPE  H5T_STD_I32LE
+                  DATASPACE  SCALAR
+               }
+            }
+         }
+      }
+   }
+   GROUP "topology" {
+      DATASET "cells" {
+         DATATYPE  H5T_STD_I32LE
+         DATASPACE  SIMPLE { ( 22, 1 ) / ( 22, 1 ) }
+         ATTRIBUTE "cell_dim" {
+            DATATYPE  H5T_STD_I32LE
+            DATASPACE  SCALAR
+         }
+         ATTRIBUTE "timestepping" {
+            DATATYPE  H5T_STD_I32LE
+            DATASPACE  SCALAR
+         }
+      }
+      DATASET "cones" {
+         DATATYPE  H5T_STD_I32LE
+         DATASPACE  SIMPLE { ( 15, 1 ) / ( 15, 1 ) }
+         ATTRIBUTE "timestepping" {
+            DATATYPE  H5T_STD_I32LE
+            DATASPACE  SCALAR
+         }
+      }
+      DATASET "order" {
+         DATATYPE  H5T_STD_I32LE
+         DATASPACE  SIMPLE { ( 15, 1 ) / ( 15, 1 ) }
+         ATTRIBUTE "timestepping" {
+            DATATYPE  H5T_STD_I32LE
+            DATASPACE  SCALAR
+         }
+      }
+      DATASET "orientation" {
+         DATATYPE  H5T_STD_I32LE
+         DATASPACE  SIMPLE { ( 22, 1 ) / ( 22, 1 ) }
+         ATTRIBUTE "timestepping" {
+            DATATYPE  H5T_STD_I32LE
+            DATASPACE  SCALAR
+         }
+      }
+   }
+}
+}
