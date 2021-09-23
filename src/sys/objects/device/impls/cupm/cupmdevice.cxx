@@ -2,11 +2,11 @@
 #if PetscDefined(HAVE_OMPI_MAJOR_VERSION)
 #include "mpi-ext.h" /* Needed for OpenMPI CUDA-aware check */
 #endif
-#include <type_traits>
 #include <algorithm>
-#include <iterator>
-#include <csignal> // SIGSEGV
 #include <csetjmp> // for cuda mpi awareness
+#include <csignal> // SIGSEGV
+#include <iterator>
+#include <type_traits>
 
 namespace Petsc
 {
@@ -15,6 +15,13 @@ namespace Petsc
 template <CUPMDeviceKind T>
 class CUPMDevice<T>::CUPMDeviceInternal
 {
+  const int        _id;
+  bool             _devInitialized = false;
+  cupmDeviceProp_t _dprop; // cudaDeviceProp appears to be an actual struct, i.e. you can't
+                           // initialize it with nullptr or NULL (i've tried)
+
+  PETSC_NODISCARD static bool __MPICUPMAware() noexcept;
+
 public:
   // default constructor
   explicit constexpr CUPMDeviceInternal(int dev) noexcept : _id(dev) { }
@@ -26,23 +33,15 @@ public:
   PETSC_NODISCARD PetscErrorCode view(PetscViewer) const noexcept;
   PETSC_NODISCARD PetscErrorCode finalize() noexcept;
 
-  PETSC_NODISCARD int id() const { return _id; }
+  PETSC_NODISCARD auto id() const -> decltype(_id) { return _id; }
+  PETSC_NODISCARD auto initialized() const -> decltype(_devInitialized) { return _devInitialized; }
+  PETSC_NODISCARD auto prop() const -> const decltype(_dprop)& { return _dprop; }
 
   // factory
   static constexpr std::unique_ptr<CUPMDeviceInternal> makeDevice(int i) noexcept
   {
     return std::unique_ptr<CUPMDeviceInternal>(new CUPMDeviceInternal(i));
   }
-
-private:
-  // private, although technically useless since the enclosing CUPMDevice can access all of
-  // these at will
-  const int        _id;
-  bool             _deviceInitialized = false;
-  cupmDeviceProp_t _dprop; // cudaDeviceProp appears to be an actual struct, i.e. you can't
-                           // initialize it with nullptr or NULL (i've tried)
-
-  PETSC_NODISCARD static bool __MPICUPMAware() noexcept;
 };
 
 // the goal here is simply to get the cupm backend to create its context, not to do any kind of
@@ -54,8 +53,8 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
   cupmError_t cerr;
 
   PetscFunctionBegin;
-  if (_deviceInitialized) PetscFunctionReturn(0);
-  _deviceInitialized = true;
+  if (_devInitialized) PetscFunctionReturn(0);
+  _devInitialized = true;
   // cuda 5.0+ will create a context when cupmSetDevice is called
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
   // forces cuda < 5.0 to initialize a context
@@ -92,7 +91,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
   cupmError_t    cerr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!_deviceInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",_id);
+  if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",_id);
   // why on EARTH nvidia insists on making otherwise informational states into
   // fully-fledged error codes is beyond me. Why couldn't a pointer to bool argument have
   // sufficed?!?!?!
@@ -118,9 +117,9 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::view(PetscViewer viewer) const
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!_deviceInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",_id);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)viewer,&comm);CHKERRQ(ierr);
+  if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",_id);
+  ierr = PetscObjectTypeCompare(reinterpret_cast<PetscObject>(viewer),PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  ierr = PetscObjectGetComm(reinterpret_cast<PetscObject>(viewer),&comm);CHKERRQ(ierr);
   if (PetscUnlikely(!iascii)) SETERRQ(comm,PETSC_ERR_SUP,"Only PetscViewer of type PETSCVIEWERASCII is supported");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
@@ -152,14 +151,14 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::view(PetscViewer viewer) const
 static std::jmp_buf cupmMPIAwareJumpBuffer;
 static bool         cupmMPIAwareJumpBufferSet;
 
+// godspeed to anyone that attempts to call this function
 void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeverBeCalled()
 {
-  // godspeed to anyone that attempts to call this function
   PETSCABORT(MPI_COMM_NULL,INT_MAX);
   if (cupmMPIAwareJumpBufferSet) (void)cupmMPIAwareJumpBuffer;
 }
 
-#define CHKCUPMAWARE(expr) if (PetscUnlikely(expr != cupmSuccess)) return false;
+#define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false;
 template <CUPMDeviceKind T>
 bool CUPMDevice<T>::CUPMDeviceInternal::__MPICUPMAware() noexcept
 {
@@ -175,7 +174,7 @@ bool CUPMDevice<T>::CUPMDeviceInternal::__MPICUPMAware() noexcept
   };
 
   PetscFunctionBegin;
-  cerr = cupmMalloc((void**)&dbuf,sizeof(*dbuf)*bufSize);CHKCUPMAWARE(cerr);
+  cerr = cupmMalloc(reinterpret_cast<void**>(&dbuf),sizeof(*dbuf)*bufSize);CHKCUPMAWARE(cerr);
   cerr = cupmMemcpy(dbuf,hbuf,sizeof(*dbuf)*bufSize,cupmMemcpyHostToDevice);CHKCUPMAWARE(cerr);
   ierr = PetscPushSignalHandler(cupmSignalHandler,nullptr);CHKERRABORT(PETSC_COMM_SELF,ierr);
   cupmMPIAwareJumpBufferSet = true;
@@ -213,7 +212,7 @@ template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::finalize() noexcept
 {
   PetscFunctionBegin;
-  _deviceInitialized = false;
+  _devInitialized = false;
   PetscFunctionReturn(0);
 }
 
@@ -279,7 +278,7 @@ template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitKind *defaultInitKind) noexcept
 {
   int            ndev;
-  PetscInt       initKindCUPM = *defaultInitKind, id = *defaultDeviceId;
+  PetscInt       initKindCUPM = *defaultInitKind,id = *defaultDeviceId;
   PetscBool      view = PETSC_FALSE,flg;
   cupmError_t    cerr;
   PetscErrorCode ierr;
@@ -339,12 +338,11 @@ PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice device, PetscInt id) const n
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(_defaultDevice == PETSC_CUPM_DEVICE_NONE)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a %s PetscDevice when it has been disabled",cupmName());
-  if (id == PETSC_DECIDE) id = _defaultDevice;
-  // do the CHKERRQ outside CHKERRCXX since CHKERRQ might throw in c++
-  if (PetscDefined(USE_DEBUG)) {CHKERRCXX(ierr = _devices.at(id)->initialize());CHKERRQ(ierr);}
-  else {ierr = _devices[id]->initialize();CHKERRQ(ierr);}
+  if (PetscUnlikelyDebug(id >= _devices.size())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %D",_devices.size(),id);
+  else if (id == PETSC_DECIDE) id = _defaultDevice;
   if (PetscUnlikelyDebug(id != _devices[id]->id())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Entry %D contains device with mismatching id %D",id,_devices[id]->id());
-  device->deviceId           = _devices[id]->id(); // techincally id = _devices[id]->_id here
+  ierr = _devices[id]->initialize();CHKERRQ(ierr);
+  device->deviceId           = _devices[id]->id(); // technically id = _devices[id]->_id here
   device->ops->createcontext = _create;
   device->ops->configure     = this->configureDevice;
   device->ops->view          = this->viewDevice;

@@ -21,7 +21,7 @@ template <CUPMDeviceKind T>
 class CUPMDevice : CUPMInterface<T>
 {
 public:
-  typedef PetscErrorCode (*createContextFunc_t)(PetscDeviceContext);
+  using createContextFunc_t = PetscErrorCode (*)(PetscDeviceContext);
   PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T)
 
   // default constructor
@@ -75,10 +75,9 @@ private:
 template <CUPMDeviceKind T> bool CUPMDevice<T>::_initialized = false;
 
 template <CUPMDeviceKind T>
-std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> CUPMDevice<T>::_devices = { };
+std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> CUPMDevice<T>::_devices = {};
 
-template <CUPMDeviceKind T>
-int CUPMDevice<T>::_defaultDevice = PETSC_CUPM_DEVICE_NONE;
+template <CUPMDeviceKind T> int CUPMDevice<T>::_defaultDevice = PETSC_CUPM_DEVICE_NONE;
 
 } // namespace Petsc
 

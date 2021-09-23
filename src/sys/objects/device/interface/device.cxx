@@ -223,15 +223,6 @@ static PetscErrorCode PetscDeviceInitializeKindFromOptions_Private(MPI_Comm comm
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscDeviceCheckAllDestroyedAfterFinalize_Private(void)
-{
-  PetscFunctionBegin;
-  for (const auto &device : defaultDevices) {
-    if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not fully destroyed during PetscFinalize()",PetscDeviceKinds[device->kind],device->refcnt);
-  }
-  PetscFunctionReturn(0);
-}
-
 /* called from PetscFinalize() do not call yourself! */
 static PetscErrorCode PetscDeviceFinalize_Private(void)
 {
@@ -239,6 +230,13 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
+    const auto PetscDeviceCheckAllDestroyedAfterFinalize = [](){
+      PetscFunctionBegin;
+      for (const auto &device : defaultDevices) {
+        if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of kind '%s' had reference count %D and was not type name(args) const;ully destroyed during PetscFinalize()",PetscDeviceKinds[device->kind],device->refcnt);
+      }
+      PetscFunctionReturn(0);
+    };
     /* you might be thinking, why on earth are you registered yet another finalizer in a
      * function already called during PetscRegisterFinalizeAll()? If this seems stupid it's
      * because it is.
@@ -255,7 +253,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
      *    device.
      * 3. Our newly added finalizer runs and checks that all is well.
      */
-    ierr = PetscRegisterFinalize(PetscDeviceCheckAllDestroyedAfterFinalize_Private);CHKERRQ(ierr);
+    ierr = PetscRegisterFinalize(PetscDeviceCheckAllDestroyedAfterFinalize);CHKERRQ(ierr);
   }
   for (auto &&device : defaultDevices) {ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);}
   CHKERRCXX(initializedDevice.fill(PETSC_FALSE));
@@ -282,6 +280,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
   PetscBool           flg,defaultView = PETSC_FALSE,initializeDeviceContextGreedily = PETSC_FALSE;
   PetscInt            defaultDevice   = PETSC_DECIDE;
   PetscDeviceInitKind defaultInitKind;
+  PetscDeviceKind     deviceContextInitDevice = PETSC_DEVICE_DEFAULT;
   PetscErrorCode      ierr;
 
   PetscFunctionBegin;
@@ -329,16 +328,19 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 
     ierr = PetscDeviceInitializeKindFromOptions_Private(comm,deviceKind,defaultDevice,defaultView,&initKind);CHKERRQ(ierr);
     if (initKind == PETSC_DEVICE_INIT_GREEDY) {
-      ierr = PetscDeviceContextSetInitialDeviceKind(deviceKind);CHKERRQ(ierr);
+      deviceContextInitDevice = deviceKind;
       initializeDeviceContextGreedily = PETSC_TRUE;
     }
   }
-  ierr = PetscDeviceContextInitializeFromOptions_Internal(comm);CHKERRQ(ierr);
   if (initializeDeviceContextGreedily) {
     PetscDeviceContext dctx;
 
-    /* calls PetscDeviceContextSetup() */
+    /* somewhat inefficient here as the device context is potentially fully set up twice (once
+     * when retrieved then the second time if setfromoptions makes changes) */
+    ierr = PetscDeviceContextSetRootDeviceKind_Internal(deviceContextInitDevice);CHKERRQ(ierr);
     ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetFromOptions(comm,"root",dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

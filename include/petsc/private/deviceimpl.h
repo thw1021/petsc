@@ -210,7 +210,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice d
 }
 
 /* PetscDeviceContext Internal Functions */
-PETSC_INTERN PetscErrorCode PetscDeviceContextInitializeFromOptions_Internal(MPI_Comm);
+PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootDeviceKind_Internal(PetscDeviceKind);
 
 /* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
    no-op when debugging is disabled */

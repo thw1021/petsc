@@ -112,7 +112,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     if (!handle) {
       cupmBlasError_t cberr;
 
-      for (int i=0; i<3; ++i) {
+      for (int i = 0; i < 3; ++i) {
         PetscErrorCode ierr;
 
         cberr = cublasCreate(&handle);
@@ -131,7 +131,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
     if (!handle) {
       cupmSolverError_t cerr;
 
-      for (int i=0; i<3; i++) {
+      for (int i = 0; i < 3; ++i) {
         PetscErrorCode ierr;
 
         cerr = cusolverDnCreate(&handle);
@@ -259,20 +259,14 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) noexcept
   {
     PetscFunctionBegin;
-    if (!handle) {
-      cupmBlasError_t cberr;
-      cberr = hipblasCreate(&handle);CHKERRHIPBLAS(cberr);
-    }
+    if (!handle) {cupmBlasError_t cberr = hipblasCreate(&handle);CHKERRHIPBLAS(cberr);}
     PetscFunctionReturn(0);
   }
 
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) noexcept
   {
     PetscFunctionBegin;
-    if (!handle) {
-      cupmSolverError_t cerr;
-      cerr = hipsolverCreate(&handle);CHKERRHIPSOLVER(cerr);
-    }
+    if (!handle) {cupmSolverError_t cerr = hipsolverCreate(&handle);CHKERRHIPSOLVER(cerr);}
     PetscFunctionReturn(0);
   }
 
@@ -283,9 +277,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
 
     PetscFunctionBegin;
     cberr = hipblasGetStream(handle,&cupmStream);CHKERRHIPBLAS(cberr);
-    if (cupmStream != stream) {
-      cberr = hipblasSetStream(handle,stream);CHKERRHIPBLAS(cberr);
-    }
+    if (cupmStream != stream) {cberr = hipblasSetStream(handle,stream);CHKERRHIPBLAS(cberr);}
     PetscFunctionReturn(0);
   }
 
@@ -296,9 +288,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
 
     PetscFunctionBegin;
     cerr = hipsolverGetStream(handle,&cupmStream);CHKERRHIPSOLVER(cerr);
-    if (cupmStream != stream) {
-      cerr = hipsolverSetStream(handle,stream);CHKERRHIPSOLVER(cerr);
-    }
+    if (cupmStream != stream) {cerr = hipsolverSetStream(handle,stream);CHKERRHIPSOLVER(cerr);}
     PetscFunctionReturn(0);
   }
 
