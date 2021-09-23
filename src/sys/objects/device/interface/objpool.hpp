@@ -24,13 +24,12 @@ public:
   PETSC_NODISCARD PetscErrorCode create(value_type*)  PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode destroy(value_type&) PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode reset(value_type&)   PETSC_NOEXCEPT;
-  PETSC_NODISCARD PetscErrorCode finalize(void)       PETSC_NOEXCEPT;
+  PETSC_NODISCARD PetscErrorCode finalize()           PETSC_NOEXCEPT;
 
 protected:
   // make the constructor protected, this forces this class to be derived from to ever be
   // instantiated
-  Allocator()  { }
-  ~Allocator() { }
+  Allocator() = default;
 };
 
 // Default allocator that performs the bare minimum of petsc object creation and
@@ -102,10 +101,7 @@ protected:
     : _alloc(std::move(alloc))
   { }
 
-  ~ObjectPoolBase()
-  {
-    static_assert(std::is_base_of<Allocator<value_type>,_Allocator>::value,"Allocator type must be subclass of Petsc::Allocator");
-  }
+  static_assert(std::is_base_of<Allocator<value_type>,_Allocator>::value,"Allocator type must be subclass of Petsc::Allocator");
 };
 
 // default implementation, use the petsc c allocator
@@ -125,11 +121,10 @@ public:
   using value_type     = typename base_type::value_type;
   using stack_type     = std::stack<value_type>;
 
-protected:
+private:
   stack_type _stack;
   bool       _registered = false;
 
-private:
   PETSC_NODISCARD PetscErrorCode __finalizer() PETSC_NOEXCEPT;
   PETSC_NODISCARD static PetscErrorCode __staticFinalizer(void*) PETSC_NOEXCEPT;
   PETSC_NODISCARD PetscErrorCode __registerFinalize() PETSC_NOEXCEPT;
@@ -262,7 +257,7 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::__registerFinalize() PETSC_NOEXC
   ierr = PetscContainerCreate(PETSC_COMM_SELF,&contain);CHKERRQ(ierr);
   ierr = PetscContainerSetPointer(contain,this);CHKERRQ(ierr);
   ierr = PetscContainerSetUserDestroy(contain,__staticFinalizer);CHKERRQ(ierr);
-  ierr = PetscObjectRegisterDestroy((PetscObject)contain);CHKERRQ(ierr);
+  ierr = PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain));CHKERRQ(ierr);
   _registered = true;
   PetscFunctionReturn(0);
 }
