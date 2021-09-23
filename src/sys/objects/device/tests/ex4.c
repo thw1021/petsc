@@ -3,21 +3,23 @@ static const char help[] = "Tests PetscDeviceContextFork/Join.\n\n";
 #include <petsc/private/deviceimpl.h>
 #include "petscdevicetestcommon.h"
 
-static PetscErrorCode TestNestedPetscDeviceContextForkJoin(PetscDeviceContext *sub)
+static PetscErrorCode TestNestedPetscDeviceContextForkJoin(PetscDeviceContext parCtx, PetscDeviceContext *sub)
 {
   const PetscInt      nsub = 4;
   PetscDeviceContext *subsub;
-  PetscDeviceContext  parCtx;
   PetscErrorCode      ierr;
 
   PetscFunctionBegin;
-  PetscValidPointer(sub,1);
-  ierr = PetscDeviceContextGetCurrentContext(&parCtx);CHKERRQ(ierr);
+  PetscValidDeviceContext(parCtx,1);
+  PetscValidPointer(sub,2);
   ierr = AssertPetscDeviceContextsValidAndEqual(parCtx,sub[0],"Current global context does not match expected global context");CHKERRQ(ierr);
-  ierr = PetscDeviceContextFork(parCtx,nsub,&subsub);CHKERRQ(ierr);
-  /* join on a different sub */
-  ierr = PetscDeviceContextJoin(sub[1],nsub-2,PETSC_DEVICE_CONTEXT_JOIN_SYNC,&subsub);CHKERRQ(ierr);
-  ierr = PetscDeviceContextJoin(parCtx,nsub,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subsub);CHKERRQ(ierr);
+  /* create some children from an active child */
+  ierr = PetscDeviceContextFork(sub[1],nsub,&subsub);CHKERRQ(ierr);
+  /* join on a sibling to the parent */
+  ierr = PetscDeviceContextJoin(sub[2],nsub-2,PETSC_DEVICE_CONTEXT_JOIN_SYNC,&subsub);CHKERRQ(ierr);
+  /* join on the grandparent */
+  ierr = PetscDeviceContextJoin(parCtx,nsub-2,PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC,&subsub);CHKERRQ(ierr);
+  ierr = PetscDeviceContextJoin(sub[1],nsub,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subsub);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -39,13 +41,8 @@ static PetscErrorCode TestPetscDeviceContextForkJoin(PetscDeviceContext dctx)
 
   /* create some children */
   ierr = PetscDeviceContextFork(dctx,n+1,&sub);CHKERRQ(ierr);
-
-  /* make the first child the new current context, and test forking within nested function */
-  ierr = PetscDeviceContextSetCurrentContext(sub[0]);CHKERRQ(ierr);
-  ierr = TestNestedPetscDeviceContextForkJoin(sub);CHKERRQ(ierr);
-  /* should always reset global context when finished */
-  ierr = PetscDeviceContextSetCurrentContext(dctx);CHKERRQ(ierr);
-
+  /* test forking within nested function */
+  ierr = TestNestedPetscDeviceContextForkJoin(sub[0],sub);CHKERRQ(ierr);
   /* join a subset */
   ierr = PetscDeviceContextJoin(dctx,n-1,PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC,&sub);CHKERRQ(ierr);
   /* back to the ether from whence they came */
