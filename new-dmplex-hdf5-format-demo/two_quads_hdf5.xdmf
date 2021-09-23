@@ -1,0 +1,26 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" [
+<!ENTITY HeavyData "two_quads.xdmf.h5">
+]>
+
+<Xdmf Version="2.0">
+  <Domain>
+    <Grid Name="Two Quads">
+      <Topology Type="Quadrilateral" NumberOfElements="2" >
+        <DataItem Name="topo" Dimensions="2 4" NumberType="Int" Format="HDF5">
+          &HeavyData;:/topo
+        </DataItem>
+      </Topology>
+      <Geometry GeometryType="XY">
+        <DataItem Name="geom" Dimensions="6 2" NumberType="Float" Format="HDF5">
+          &HeavyData;:/geom
+        </DataItem>
+      </Geometry>
+      <Set SetType="Cell" Name="marker">
+        <DataItem Name="marker" Dimensions="1" NumberType="Int" Format="HDF5">
+          &HeavyData;:/sets/marker
+        </DataItem>
+      </Set>
+    </Grid>
+  </Domain>
+</Xdmf>

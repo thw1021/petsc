@@ -1,0 +1,4 @@
+#TODO create an actual running script from this
+
+$PETSC_DIR/src/dm/impls/plex/tests % make -C $PETSC_DIR > /dev/null && make ex55 && mpiexec -n 3 ./ex55 -filename $DATAFILESPATH/meshes/xdmf/two_quads.xdmf.h5 -dm_plex_create_from_hdf5_xdmf -dm_plex_hdf5_topology_path /topo -dm_plex_hdf5_geometry_path /geom  -format hdf5_petsc -interpolate 1 -distribute 0 -dm_plex_view_hdf5_storage_version 1 > output.txt && mv dmdist.h5 two_quads.v1.h5 && h5dump two_quads.v1.h5 > two_quads.v1.h5.dump
+$PETSC_DIR/src/dm/impls/plex/tests % make -C $PETSC_DIR > /dev/null && make ex55 && mpiexec -n 3 ./ex55 -filename $DATAFILESPATH/meshes/xdmf/two_quads.xdmf.h5 -dm_plex_create_from_hdf5_xdmf -dm_plex_hdf5_topology_path /topo -dm_plex_hdf5_geometry_path /geom  -format hdf5_petsc -interpolate 1 -distribute 0 -dm_plex_view_hdf5_storage_version 2 > output.txt && mv dmdist.h5 two_quads.v2.h5 && h5dump two_quads.v2.h5 > two_quads.v2.h5.dump
