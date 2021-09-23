@@ -14,6 +14,8 @@ class Configure(config.package.Package):
                               ['cudart.lib']]
     self.mathliblist       = [['libcufft.a', 'libcublas.a','libcusparse.a','libcusolver.a','libcurand.a'],
                               ['cufft.lib','cublas.lib','cusparse.lib','cusolver.lib','curand.lib']]
+    self.stubliblist       = [['libcuda.a'],
+                              ['cuda.lib']]
     self.liblist           = 'dummy' # existence of self.liblist is used by package.py to determine if --with-cuda-lib must be provided
     self.precisions        = ['single','double']
     self.cxx               = 0
@@ -79,34 +81,32 @@ class Configure(config.package.Package):
       self.includedir = [os.path.join(mdir,'include'), 'include']
 
     # first try the standard list with all libraries in one directory
-    self.liblist = [self.basicliblist[0]+self.mathliblist[0]]+[self.basicliblist[1]+self.mathliblist[1]]
-    liblist = config.package.Package.generateLibList(self, directory)
+    self.liblist = [self.basicliblist[0]+self.mathliblist[0]+self.stubliblist[0]] + [self.basicliblist[1]+self.mathliblist[1]+self.stubliblist[1]]
+    liblist      = config.package.Package.generateLibList(self, directory)
+    # Check the stub
+    stubLibDir   = os.path.join(directory,'stubs')
+    if os.path.isdir(stubLibDir):
+      self.liblist = self.stubliblist
+      stubliblist  = config.package.Package.generateLibList(self,stubLibDir)
+      liblist      = [liblist[0]+stubliblist[0],liblist[1]+stubliblist[1]]
 
-    # create list with math libraries separate
-    lib = os.path.basename(directory)
-    ver = os.path.basename(os.path.dirname(directory))
-    newdirectory = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(directory))),'math_libs',ver,lib)
-    if os.path.isdir(newdirectory):
-      self.liblist = [self.basicliblist[0]]
-      subliblist = config.package.Package.generateLibList(self, directory)
-      self.liblist = [self.mathliblist[0]]
-      mathsubliblist = config.package.Package.generateLibList(self, newdirectory)
-      liblist = [liblist[0],liblist[1],mathsubliblist[0] + subliblist[0]]
-
-    # When 'directory' is in format like /path/Linux_x86_64/21.5/compilers/lib, NVHPC directory structure is like
+    # When 'directory' is in a format like /path/Linux_x86_64/21.5/compilers/lib64, NVHPC directory structure is like
     # /path/Linux_x86_64/21.5/compilers/bin/{nvcc,nvc,nvc++}
     #                       +/comm_libs/mpi/bin/{mpicc,mpicxx,mpifort}
-    #                       +/cuda/{include,lib64}
-    #                       +/math_libs/{include,lib64}
-    nvhpcDir        = os.path.dirname(os.path.dirname(directory)) # /path/Linux_x86_64/21.5
+    #                       +/cuda/{include,lib64,lib64/stubs}
+    #                       +/math_libs/{include,lib64,lib64/stubs}
+    nvhpcDir        = os.path.normpath(os.path.dirname(os.path.dirname(directory))) # /path/Linux_x86_64/21.5
     nvhpcCudaLibDir = os.path.join(nvhpcDir,'cuda','lib64')
     nvhpcMathLibDir = os.path.join(nvhpcDir,'math_libs','lib64')
-    if os.path.isdir(nvhpcCudaLibDir) and os.path.isdir(nvhpcMathLibDir):
-      self.liblist    = [self.basicliblist[0]]
-      subliblist      = config.package.Package.generateLibList(self, nvhpcCudaLibDir)
-      self.liblist    = [self.mathliblist[0]]
-      mathsubliblist  = config.package.Package.generateLibList(self, nvhpcMathLibDir)
-      liblist = [liblist[0],liblist[1],mathsubliblist[0] + subliblist[0]]
+    nvhpcStubLibDir = os.path.join(nvhpcDir,'cuda','lib64','stubs')
+    if os.path.isdir(nvhpcCudaLibDir) and os.path.isdir(nvhpcMathLibDir) and os.path.isdir(nvhpcStubLibDir):
+      self.liblist = self.basicliblist
+      cudaliblist  = config.package.Package.generateLibList(self, nvhpcCudaLibDir)
+      self.liblist = self.mathliblist
+      mathliblist  = config.package.Package.generateLibList(self, nvhpcMathLibDir)
+      self.liblist = self.stubliblist
+      stubliblist  = config.package.Package.generateLibList(self, nvhpcStubLibDir)
+      liblist      = [liblist[0], liblist[1], mathliblist[0]+cudaliblist[0]+stubliblist[0], mathliblist[1]+cudaliblist[1]+stubliblist[1]]
     return liblist
 
   def checkSizeofVoidP(self):
@@ -160,12 +160,12 @@ class Configure(config.package.Package):
     self.popLanguage()
     self.getExecutable(petscNvcc,getFullPath=1,resultName='systemNvcc')
     if hasattr(self,'systemNvcc'):
-      self.nvccDir = os.path.dirname(self.systemNvcc)
-      d = os.path.split(self.nvccDir)[0]
-      if os.path.exists(os.path.join(d,'include','cuda.h')):
+      self.nvccDir = os.path.dirname(self.systemNvcc) # /path/bin
+      d = os.path.split(self.nvccDir)[0] # /path
+      if os.path.exists(os.path.join(d,'include','cuda.h')): # CUDAToolkit with a stucture /path/{bin/nvcc, include/cuda.h}
         self.cudaDir = d
-      elif os.path.exists(os.path.join(d,'..','cuda','include','cuda.h')):
-        self.cudaDir = os.path.join(d,'..','cuda')
+      elif os.path.exists(os.path.normpath(os.path.join(d,'..','cuda','include','cuda.h'))): # NVHPC, see above
+        self.cudaDir = os.path.normpath(os.path.join(d,'..','cuda')) # get rid of .. in path, getting /path/Linux_x86_64/21.5/cuda
         self.isnvhpc = True
     else:
       raise RuntimeError('CUDA compiler not found!')
