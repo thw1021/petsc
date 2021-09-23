@@ -2,23 +2,6 @@
 #include <../src/tao/bound/impls/bncg/bncg.h> /*I "petsctao.h" I*/
 #include <petscksp.h>
 
-#define CG_GradientDescent      0
-#define CG_HestenesStiefel      1
-#define CG_FletcherReeves       2
-#define CG_PolakRibierePolyak   3
-#define CG_PolakRibierePlus     4
-#define CG_DaiYuan              5
-#define CG_HagerZhang           6
-#define CG_DaiKou               7
-#define CG_KouDai               8
-#define CG_SSML_BFGS            9
-#define CG_SSML_DFP             10
-#define CG_SSML_BROYDEN         11
-#define CG_PCGradientDescent    12
-#define CGTypes                 13
-
-static const char *CG_Table[64] = {"gd", "hs", "fr", "pr", "prp", "dy", "hz", "dk", "kd", "ssml_bfgs", "ssml_dfp", "ssml_brdn", "pcgd"};
-
 #define CG_AS_NONE       0
 #define CG_AS_BERTSEKAS  1
 #define CG_AS_SIZE       2
@@ -232,12 +215,12 @@ static PetscErrorCode TaoSetFromOptions_BNCG(PetscOptionItems *PetscOptionsObjec
     PetscFunctionBegin;
     ierr = TaoLineSearchSetFromOptions(tao->linesearch);CHKERRQ(ierr);
     ierr = PetscOptionsHead(PetscOptionsObject,"Nonlinear Conjugate Gradient method for unconstrained optimization");CHKERRQ(ierr);
-    ierr = PetscOptionsEList("-tao_bncg_type","cg formula", "", CG_Table, CGTypes, CG_Table[cg->cg_type], &cg->cg_type,NULL);CHKERRQ(ierr);
-    if (cg->cg_type != CG_SSML_BFGS){
+    ierr = PetscOptionsEnum("-tao_bncg_type","CG update formula","TaoBNCGType",TaoBNCGTypes,(PetscEnum)cg->cg_type,(PetscEnum*)&cg->cg_type,NULL);CHKERRQ(ierr);
+    if (cg->cg_type != TAO_BNCG_SSML_BFGS){
       cg->alpha = -1.0; /* Setting defaults for non-BFGS methods. User can change it below. */
     }
-    if (CG_GradientDescent == cg->cg_type){
-      cg->cg_type = CG_PCGradientDescent;
+    if (TAO_BNCG_GD == cg->cg_type){
+      cg->cg_type = TAO_BNCG_PCGD;
       /* Set scaling equal to none or, at best, scalar scaling. */
       cg->unscaled_restart = PETSC_TRUE;
       cg->diag_scaling = PETSC_FALSE;
@@ -265,7 +248,7 @@ static PetscErrorCode TaoSetFromOptions_BNCG(PetscOptionItems *PetscOptionsObjec
       cg->diag_scaling = PETSC_FALSE;
       cg->alpha = -1.0;
     }
-    if (cg->alpha == -1.0 && cg->cg_type == CG_KouDai && !cg->diag_scaling){ /* Some more default options that appear to be good. */
+    if (cg->alpha == -1.0 && cg->cg_type == TAO_BNCG_KD && !cg->diag_scaling){ /* Some more default options that appear to be good. */
       cg->neg_xi = PETSC_TRUE;
     }
     ierr = PetscOptionsBool("-tao_bncg_neg_xi","(developer) Use negative xi when it might be a smaller descent direction than necessary","",cg->neg_xi,&cg->neg_xi,NULL);CHKERRQ(ierr);
@@ -289,7 +272,7 @@ static PetscErrorCode TaoView_BNCG(Tao tao, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii);CHKERRQ(ierr);
   if (isascii) {
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "CG Type: %s\n", CG_Table[cg->cg_type]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "CG Type: %s\n", TaoBNCGTypes[cg->cg_type]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "Skipped Stepdirection Updates: %i\n", cg->skipped_updates);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %i\n", cg->resets);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "Pure gradient steps: %i\n", cg->pure_gd_steps);CHKERRQ(ierr);
@@ -449,7 +432,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BNCG(Tao tao)
   cg->as_tol = 0.001;
   cg->eps_23 = PetscPowReal(PETSC_MACHINE_EPSILON, 2.0/3.0); /* Just a little tighter*/
   cg->as_type = CG_AS_BERTSEKAS;
-  cg->cg_type = CG_SSML_BFGS;
+  cg->cg_type = TAO_BNCG_SSML_BFGS;
   cg->alpha = 1.0;
   cg->diag_scaling = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -567,7 +550,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
     ierr = VecAXPBY(tao->stepdirection, -1.0, 0.0, cg->g_work);CHKERRQ(ierr);
   } else if (ynorm2 > PETSC_MACHINE_EPSILON) {
     switch (cg->cg_type) {
-    case CG_PCGradientDescent:
+    case TAO_BNCG_PCGD:
       if (!cg->diag_scaling){
         if (!cg->no_scaling){
         cg->sts = step*step*dnorm*dnorm;
@@ -583,7 +566,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_HestenesStiefel:
+    case TAO_BNCG_HS:
       /* Classic Hestenes-Stiefel method, modified with scalar and diagonal preconditioning. */
       if (!cg->diag_scaling){
         cg->sts = step*step*dnorm*dnorm;
@@ -599,7 +582,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_FletcherReeves:
+    case TAO_BNCG_FR:
       ierr = VecDot(cg->G_old, cg->G_old, &gnorm2_old);CHKERRQ(ierr);
       ierr = VecWAXPY(cg->yk, -1.0, cg->G_old, tao->gradient);CHKERRQ(ierr);
       ierr = VecNorm(cg->yk, NORM_2, &ynorm);CHKERRQ(ierr);
@@ -618,7 +601,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_PolakRibierePolyak:
+    case TAO_BNCG_PRP:
       snorm = step*dnorm;
       if (!cg->diag_scaling){
         ierr = VecDot(cg->G_old, cg->G_old, &gnorm2_old);CHKERRQ(ierr);
@@ -635,7 +618,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_PolakRibierePlus:
+    case TAO_BNCG_PRP_PLUS:
       ierr = VecWAXPY(cg->yk, -1.0, cg->G_old, tao->gradient);CHKERRQ(ierr);
       ierr = VecNorm(cg->yk, NORM_2, &ynorm);CHKERRQ(ierr);
       ynorm2 = ynorm*ynorm;
@@ -656,7 +639,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_DaiYuan:
+    case TAO_BNCG_DY:
       /* Dai, Yu-Hong, and Yaxiang Yuan. "A nonlinear conjugate gradient method with a strong global convergence property."
          SIAM Journal on optimization 10, no. 1 (1999): 177-182. */
       if (!cg->diag_scaling){
@@ -678,7 +661,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_HagerZhang:
+    case TAO_BNCG_HZ:
       /* Hager, William W., and Hongchao Zhang. "Algorithm 851: CG_DESCENT, a conjugate gradient method with guaranteed descent."
          ACM Transactions on Mathematical Software (TOMS) 32, no. 1 (2006): 113-137. */
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
@@ -728,7 +711,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_DaiKou:
+    case TAO_BNCG_DK:
       /* Dai, Yu-Hong, and Cai-Xia Kou. "A nonlinear conjugate gradient algorithm with an optimal property and an improved Wolfe line search."
          SIAM Journal on Optimization 23, no. 1 (2013): 296-320. */
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
@@ -770,7 +753,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_KouDai:
+    case TAO_BNCG_KD:
       /* Kou, Cai-Xia, and Yu-Hong Dai. "A modified self-scaling memoryless Broyden-Fletcher-Goldfarb-Shanno method for unconstrained optimization."
          Journal of Optimization Theory and Applications 165, no. 1 (2015): 209-224. */
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
@@ -844,7 +827,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_SSML_BFGS:
+    case TAO_BNCG_SSML_BFGS:
       /* Perry, J. M. "A class of conjugate gradient algorithms with a two-step variable-metric memory."
          Discussion Papers 269 (1977). */
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
@@ -875,7 +858,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_SSML_DFP:
+    case TAO_BNCG_SSML_DFP:
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
       ierr = VecWAXPY(cg->sk, -1.0, cg->X_old, tao->solution);CHKERRQ(ierr);
       snorm = step*dnorm;
@@ -906,7 +889,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
       }
       break;
 
-    case CG_SSML_BROYDEN:
+    case TAO_BNCG_SSML_BRDN:
       ierr = VecDot(tao->gradient, tao->stepdirection, &gd);CHKERRQ(ierr);
       ierr = VecWAXPY(cg->sk, -1.0, cg->X_old, tao->solution);CHKERRQ(ierr);
       snorm = step*dnorm;
@@ -978,7 +961,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
     /*  Check linesearch failure */
     if (ls_status != TAOLINESEARCH_SUCCESS && ls_status != TAOLINESEARCH_SUCCESS_USER) {
       ++cg->ls_fails;
-      if (cg->cg_type == CG_GradientDescent){
+      if (cg->cg_type == TAO_BNCG_GD){
         /* Nothing left to do but fail out of the optimization */
         step = 0.0;
         tao->reason = TAO_DIVERGED_LS_FAILURE;
@@ -992,7 +975,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
         cg->f = f_old;
 
         /* Fall back on preconditioned CG (so long as you're not already using it) */
-        if (cg->cg_type != CG_PCGradientDescent && cg->diag_scaling){
+        if (cg->cg_type != TAO_BNCG_PCGD && cg->diag_scaling){
           pcgd_fallback = PETSC_TRUE;
           ierr = TaoBNCGStepDirectionUpdate(tao, gnorm2, step, f_old, gnorm2_old, dnorm, pcgd_fallback);CHKERRQ(ierr);
 
@@ -1060,7 +1043,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
   ++tao->niter;
   ierr = TaoBNCGBoundStep(tao, cg->as_type, tao->stepdirection);CHKERRQ(ierr);
 
-  if (cg->cg_type != CG_GradientDescent) {
+  if (cg->cg_type != TAO_BNCG_GD) {
     /* Figure out which previously active variables became inactive this iteration */
     ierr = ISDestroy(&cg->new_inactives);CHKERRQ(ierr);
     if (cg->inactive_idx && cg->inactive_old) {
@@ -1097,5 +1080,23 @@ PetscErrorCode TaoBNCGSetH0(Tao tao, Mat H0)
   PetscFunctionBegin;
   ierr = PetscObjectReference((PetscObject)H0);CHKERRQ(ierr);
   cg->pc = H0;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode TaoBNCGGetType(Tao tao, TaoBNCGType* type)
+{
+  TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
+
+  PetscFunctionBegin;
+  *type = cg->cg_type;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode TAOBNCGSetType(Tao tao, TaoBNCGType type)
+{
+  TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
+  
+  PetscFunctionBegin;
+  cg->cg_type = type;
   PetscFunctionReturn(0);
 }

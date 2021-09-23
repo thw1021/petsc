@@ -1,5 +1,5 @@
 import torch
-from petsc4py import PETSc, PETSC_COMM_WORLD
+from . import PETSc
 
 class TAOtorch(torch.optim.Optimizer):
     r"""PyTorch.Optimizer() wrapper for TAO solvers.
@@ -29,47 +29,16 @@ class TAOtorch(torch.optim.Optimizer):
             raise ValueError("Invalid zero safeguard: {}".format(eps))
         if adaptive not in ['rmsgrad', 'amsgrad', 'norm', None]:
             raise ValueError("Invalid adaptive LR method: {}".format(adaptive))
-
-        if tao is None:
-            tao = PETSc.TAO().create(self.comm)
-            opts = PETSc.Options().create()
-            opts.setValue('-tao_type', 'bncg')
-            opts.setValue('-tao_bncg_type', 'gd')
-            opts.setValue('-tao_bncg_no_scaling','')
-            opts.setValue('-tao_ls_type', 'unit')
-            tao.setFromOptions()
-            opts.destroy()
-
-        paramvec = PETSc.Vec().createWithDLPack(torch.utils.dlpack.to_dlpack(self._getParams()))
-        tao.setInitial(paramvec)
-        tao.setObjectiveGradient(self._evalObjGrad)
-        tao.setMaximumIterations(1)
-        tao.setTolerances(gatol=0.0, gttol=0.0, grtol=0.0)
-        
         defaults = dict(
-            paramvec=paramvec,
-            tao=tao,
+            paramvec=None,
+            tao=None,
             rho=rho,
             eps=eps,
             adaptive=adaptive,
             dir_sq_avg=None,
             dir_sq_avg_max=None)
         super(TAOtorch, self).__init__(params, defaults)
-
-    def getTao(self):
-        return self.defaults['tao']
-
-    def setTao(self, tao):
-        tao.setInitial(self.defaults['paramvec'])
-        tao.setObjectiveGradient(self._evalObjGrad)
-        tao.setMaximumIterations(1)
-        tao.setTolerances(gatol=0.0, gttol=0.0, grtol=0.0)
-        opts = PETSc.Options().create()
-        opts.setValue('-tao_ls_type', 'unit')
-        tao.setFromOptions()
-        opts.destroy()
-        self.defaults['tao'].destroy()
-        self.defaults['tao'] = tao
+        self.defaults['tao'] = self._getTAO()
 
     def _getParams(self, zero=False, grad=False):
         flatpar = []
@@ -134,6 +103,34 @@ class TAOtorch(torch.optim.Optimizer):
         # scale the gradient with RMSgrad/AMSGrad adaptive learning rate
         lr = self._computeAdaptiveLR(flatgrad)
         flatgrad.mul_(lr)
+        return flatgrad.norm(2)
+
+    def _configureTAO(self, tao):
+        if self.defaults['paramvec'] is not None:
+            tao.setInitial(self.defaults['paramvec'])
+        else:
+            self.defaults['paramvec'] = PETSc.Vec().createWithDLPack(torch.utils.dlpack.to_dlpack(self._getParams()))
+            tao.setInitial(self.defaults['paramvec'])
+        tao.setObjectiveGradient(self._evalObjGrad)
+        tao.setMaximumIterations(1)
+        tao.setTolerances(gatol=0.0, gttol=0.0, grtol=0.0)
+        ls = tao.getLineSearch()
+        ls.setType('unit')
+        return tao
+
+    def getTAO(self):
+        if self.defaults['tao'] is None:
+            tao = PETSc.TAO().create(prefix='torch_')
+            tao.setType('bncg')
+            tao.setBNCGType('gd')
+            tao = self._configureTAO(tao)
+            self.defaults['tao'] = tao
+        return self.defaults['tao']
+
+    def setTAO(self, tao):
+        tao = self._configureTAO(tao)
+        self.defaults['tao'].destroy()
+        self.defaults['tao'] = tao
 
     def step(self, closure=None):
         # first create a flattened parameter tensor that shares memory with the TAO solution

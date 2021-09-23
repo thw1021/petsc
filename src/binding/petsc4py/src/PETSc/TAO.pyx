@@ -58,7 +58,7 @@ class TAOConvergedReason:
     DIVERGED_LS_FAILURE   = TAO_DIVERGED_LS_FAILURE   #
     DIVERGED_TR_REDUCTION = TAO_DIVERGED_TR_REDUCTION #
     DIVERGED_USER         = TAO_DIVERGED_USER         # user defined
-
+    
 # --------------------------------------------------------------------
 
 cdef class TAO(Object):
@@ -499,6 +499,20 @@ cdef class TAO(Object):
         PetscINCREF(ksp.obj)
         return ksp
 
+    def setBNCGType(self, cg_type):
+        """
+        """
+        cdef PetscTAOCGType ctype = NULL
+        cg_type = str2bytes(cg_type, &ctype)
+        CHKERR( TaoBNCGSetType(self.tao, ctype) )
+
+    def getBNCGType(self):
+        """
+        """
+        cdef PetscTAOBNCGType ctype = NULL
+        CHKERR( TaoBNCGGetType(self.taols, &ctype) )
+        return bytes2str(ctype)
+
     def getVariableBounds(self):
         """
         """
@@ -559,6 +573,14 @@ cdef class TAO(Object):
         CHKERR( TaoGetKSP(self.tao, &ksp.ksp) )
         PetscINCREF(ksp.obj)
         return ksp
+
+    def getLineSearch(self):
+        """
+        """
+        cdef TAOLineSearch ls = TAOLineSearch()
+        CHKERR( TaoGetLineSearch(self.tao, &ls.taols) )
+        PetscINCREF(ls.obj)
+        return ls
 
     # --- application context ---
 
@@ -663,3 +685,153 @@ del TAOType
 del TAOConvergedReason
 
 # --------------------------------------------------------------------
+
+class TAOLSType:
+    """
+    TAO Line Search Types
+    """
+    UNIT        = S_(TAOLINESEARCHUNIT)
+    ARMIJO      = S_(TAOLINESEARCHARMIJO)
+    MORETHUENTE = S_(TAOLINESEARCHMT)
+    IPM         = S_(TAOLINESEARCHIPM)
+    OWARMIJO    = S_(TAOLINESEARCHOWARMIJO)
+    GPCG        = S_(TAOLINESEARCHGPCG)
+
+class TAOLSConvergedReason:
+    """
+    TAO Line Search Termination Reasons
+    """
+    # iterating
+    CONTINUE_SEARCH       = TAOLINESEARCH_CONTINUE_ITERATING
+    # failed
+    FAILED_INFORNAN       = TAOLINESEARCH_FAILED_INFORNAN      # inf or NaN in user function
+    FAILED_BADPARAMETER   = TAOLINESEARCH_FAILED_BADPARAMETER  # negative value set as parameter
+    FAILED_ASCENT         = TAOLINESEARCH_FAILED_ASCENT        # search direction is not a descent direction
+    # succeeded
+    SUCCESS               = TAOLINESEARCH_SUCCESS              # found step length
+    SUCCESS_USER          = TAOLINESEARCH_SUCCESS_USER         # user-defined success criteria reached
+    # halted
+    HALTED_OTHER          = TAOLINESEARCH_HALTED_OTHER         # stopped search with unknown reason
+    HALTED_MAXFCN         = TAOLINESEARCH_HALTED_MAXFCN        # maximum function evaluations reached
+    HALTED_UPPERBOUND     = TAOLINESEARCH_HALTED_UPPERBOUND    # stopped at upper bound
+    HALTED_LOWERBOUND     = TAOLINESEARCH_HALTED_LOWERBOUND    # stopped at lower bound
+    HALTED_RTOL           = TAOLINESEARCH_HALTED_RTOL          # range of uncertainty is below tolerance
+    HALTED_USER           = TAOLINESEARCH_HALTED_USER          # user-defined halt criteria reached
+
+# --------------------------------------------------------------------
+
+cdef class TAOLineSearch(Object):
+
+    """
+    TAO Line Search
+    """
+
+    Type   = TAOLSType
+    Reason = TAOLSConvergedReason
+
+    def __cinit__(self):
+         self.obj = <PetscObject*> &self.taols
+         self.taols = NULL
+
+    def view(self, Viewer viewer=None):
+        """
+        """
+        cdef PetscViewer vwr = NULL
+        if viewer is not None: vwr = viewer.vwr
+        CHKERR( TaoLineSearchView(self.taols, vwr) )
+
+    def destroy(self):
+        """
+        """
+        CHKERRQ( TaoLineSearchDestroy(&self.taols) )
+        return self
+
+    def create(self, comm=None):
+        """
+        """
+        cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+        cdef PetscTAOLineSearch newtaols = NULL
+        CHKERR( TaoLineSearchCreate(ccomm, &newtao) )
+        PetscClear(self.obj); self.taols = newtao
+        return self
+
+    def setType(self, ls_type):
+        """
+        """
+        cdef PetscTAOLineSearchType ctype = NULL
+        ls_type = str2bytes(ls_type, &ctype)
+        CHKERR( TaoLineSearchSetType(self.taols, ctype) )
+
+    def getType(self):
+        """
+        """
+        cdef PetscTAOLineSearchType ctype = NULL
+        CHKERR( TaoLineSearchGetType(self.taols, &ctype) )
+        return bytes2str(ctype)
+
+    def setFromOptions(self):
+        """
+        """
+        CHKERR( TaoLineSearchSetFromOptions(self.taols) )
+
+    def setUp(self):
+        """
+        """
+        CHKERR( TaoLineSearchSetUp(self.tao) )
+
+    def setOptionsPrefix(self, prefix):
+        """
+        """
+        cdef const char *cprefix = NULL
+        prefix = str2bytes(prefix, &cprefix)
+        CHKERR( TaoLineSearchSetOptionsPrefix(self.taols, cprefix) )
+
+    def getOptionsPrefix(self):
+        """
+        """
+        cdef const char *prefix = NULL
+        CHKERR( TaoLineSearchGetOptionsPrefix(self.tao, &prefix) )
+        return bytes2str(prefix)
+
+    def setObjective(self, objective, args=None, kargs=None):
+        """
+        """
+        CHKERR( TaoLineSearchSetObjectiveRoutine(self.taols, TAOLS_Objective, NULL) )
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        self.set_attr("__objective__", (objective, args, kargs))
+
+    def setGradient(self, gradient, args=None, kargs=None):
+        """
+        """
+        CHKERR( TaoLineSearchSetGradientRoutine(self.tao, TAOLS_Gradient, NULL) )
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        self.set_attr("__gradient__", (gradient, args, kargs))
+
+    def setObjectiveGradient(self, objgrad, args=None, kargs=None):
+        """
+        """
+        CHKERR( TaoLineSearchSetObjectiveAndGradientRoutine(self.tao, TAOLS_ObjGrad, NULL) )
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        self.set_attr("__objgrad__", (objgrad, args, kargs))
+
+    def useTAORoutines(self, tao):
+        """
+        """
+        CHKERR( TaoLineSearchUseTaoRoutines(self.taols, tao.tao) )
+
+    def apply(self, x, g, s):
+        """
+        """
+        cdef PetscReal f = 0
+        cdef PetscReal steplen = 0
+        cdef PetscTAOLineSearchConvergedReason reason = CONTINUE_SEARCH
+        CHKERR( TaoLineSearchApply(self.taols,x.vec,&f,g.vec,s.vec,&steplen,&reason))
+        return toReal(f), toReal(steplen), reason
+
+# --------------------------------------------------------------------
+
+del TAOLineSearchType
+del TAOLineSearchConvergedReason
