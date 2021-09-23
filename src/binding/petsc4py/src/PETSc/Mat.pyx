@@ -80,7 +80,7 @@ class MatType(object):
     LMVMSYMBADBROYDEN = S_(MATLMVMSYMBADBROYDEN)
     LMVMDIAGBBROYDEN = S_(MATLMVMDIAGBROYDEN)
     CONSTANTDIAGONAL = S_(MATCONSTANTDIAGONAL)
-    HARA             = S_(MATHARA)
+    H2OPUS           = S_(MATH2OPUS)
 
 class MatOption(object):
     OPTION_MIN                  = MAT_OPTION_MIN
