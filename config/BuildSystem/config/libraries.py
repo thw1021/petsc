@@ -47,7 +47,7 @@ class Configure(config.base.Configure):
         dirname   = os.path.dirname(library).replace('\\ ',' ').replace(' ', '\\ ').replace('\\(','(').replace('(', '\\(').replace('\\)',')').replace(')', '\\)')
         if dirname in ['/usr/lib','/lib','/usr/lib64','/lib64']:
           return [library]
-        if with_rpath:
+        if with_rpath and not library.endswith('stubs/libcuda.a'): # We do not want to add the fake stubs directory to RPATH. See more at cuda.py. Better also check PACKAGE is CUDA, but has no way to do that now.
           if hasattr(self.setCompilers, flagName) and not getattr(self.setCompilers, flagName) is None:
             return [getattr(self.setCompilers, flagName)+dirname,'-L'+dirname,'-l'+name]
           if flagSubst in self.argDB:
