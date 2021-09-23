@@ -120,7 +120,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **t,PetscScalar
    test:
       suffix: 3
       nsize: 2
-      args: -pc_type mg -da_refine 1 -ksp_type fgmres -snes_type newtontrdc -snes_tr_use_cauchy false
+      args: -pc_type mg -da_refine 1 -ksp_type fgmres -snes_type newtontrdc -snes_trdc_use_cauchy false
 
    test:
       suffix: 4

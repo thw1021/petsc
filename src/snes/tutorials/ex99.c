@@ -206,6 +206,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
       args: -snes_type newtontrdc
    test:
       suffix: 5
-      args: -snes_type newtontrdc -snes_tr_use_cauchy false
+      args: -snes_type newtontrdc -snes_trdc_use_cauchy false
 
 TEST*/

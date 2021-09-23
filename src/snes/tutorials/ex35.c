@@ -359,6 +359,6 @@ PetscErrorCode NonlinearGS(SNES snes,Vec X)
 
    test:
       suffix: 10
-      args: -snes_monitor_short -ksp_type gmres -ksp_monitor_short -pc_type none -snes_type newtontrdc -snes_tr_use_cauchy false
+      args: -snes_monitor_short -ksp_type gmres -ksp_monitor_short -pc_type none -snes_type newtontrdc -snes_trdc_use_cauchy false
 
 TEST*/
