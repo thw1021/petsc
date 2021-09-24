@@ -1267,6 +1267,25 @@ static PetscErrorCode MatBindToCPU_H2OPUS(Mat A, PetscBool flg)
 }
 #endif
 
+/*MC
+     MATH2OPUS = "h2opus" - A matrix type for hierarchical matrices using the H2Opus package.
+
+   Options Database Keys:
+.     -mat_type h2opus - matrix type to "h2opus" during a call to MatSetFromOptions()
+
+   Notes:
+     H2Opus implements hierarchical matrices in the H^2 flavour.
+     It supports CPU or NVIDIA GPUs.
+     For CPU only builds, use ./configure --download-h2opus --download-thrust to install PETSc to use H2Opus.
+     In order to run on NVIDIA GPUs, use ./configure --download-h2opus --download-magma --download-kblas.
+     For details and additional references, see
+       "H2Opus: A distributed-memory multi-GPU software package for non-local operators",
+     available at https://arxiv.org/abs/2109.05451.
+
+   Level: beginner
+
+.seealso: MATHTOOL, MATDENSE, MatCreateH2OpusFromKernel(), MatCreateH2OpusFromMat() 
+M*/
 PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
 {
   Mat_H2OPUS     *a;
@@ -1324,6 +1343,16 @@ PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
   PetscFunctionReturn(0);
 }
 
+/*@C
+     MatH2OpusOrthogonalize - Orthogonalize the basis tree of a hierarchical matrix.
+
+   Input Parameter:
+.     A - the matrix
+
+   Level: intermediate
+
+.seealso:  MatCreate(), MATH2OPUS, MatCreateH2OpusFromMat(), MatCreateH2OpusFromKernel(), MatH2OpusCompress()
+*/
 PetscErrorCode MatH2OpusOrthogonalize(Mat A)
 {
   PetscErrorCode ierr;
@@ -1398,7 +1427,17 @@ PetscErrorCode MatH2OpusOrthogonalize(Mat A)
   PetscFunctionReturn(0);
 }
 
-/* Interface functions */
+/*@C
+     MatH2OpusCompress - Compress a hierarchical matrix.
+
+   Input Parameters:
++     A - the matrix
+-     tol - the absolute truncation threshold
+
+   Level: intermediate
+
+.seealso:  MatCreate(), MATH2OPUS, MatCreateH2OpusFromMat(), MatCreateH2OpusFromKernel(), MatH2OpusOrthogonalize()
+*/
 PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
 {
   PetscErrorCode ierr;
@@ -1472,6 +1511,21 @@ PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
   PetscFunctionReturn(0);
 }
 
+/*@C
+     MatH2OpusSetSamplingMat - Set a matrix to be sampled from matrix vector product to construct a hierarchical matrix.
+
+   Input Parameters:
++     A - the hierarchical matrix
+.     B - the matrix to be sampled
+.     bs - maximum number of samples to be taken concurrently
+-     tol - relative tolerance for construction
+
+   Notes: Need to call MatAssemblyBegin/End() to update the hierarchical matrix.
+
+   Level: intermediate
+
+.seealso:  MatCreate(), MATH2OPUS, MatCreateH2OpusFromMat(), MatCreateH2OpusFromKernel(), MatH2OpusCompress(), MatH2OpusOrthogonalize()
+*/
 PetscErrorCode MatH2OpusSetSamplingMat(Mat A, Mat B, PetscInt bs, PetscReal tol)
 {
   PetscBool      ish2opus;
