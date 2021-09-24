@@ -1,5 +1,4 @@
-#include <petscdevice.h>
-#include <petsc/private/petscimpl.h>
+#include <petsc/private/deviceimpl.h>
 #include <Kokkos_Core.hpp>
 
 PetscBool PetscKokkosInitialized = PETSC_FALSE;
@@ -18,28 +17,24 @@ PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
   PetscFunctionReturn(0);
 }
 
+#define PETSC_AND_KOKKOS_HAVE(CUPM) (defined(KOKKOS_ENABLE_##CUPM) && PetscDefined(HAVE_##CUPM))
+
 /* Initialize Kokkos if not yet */
 PetscErrorCode PetscKokkosInitializeCheck(void)
 {
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
-  PetscErrorCode        ierr;
-#endif
   Kokkos::InitArguments args;
   int                   devId = -1;
 
   PetscFunctionBegin;
   if (!Kokkos::is_initialized()) {
-   #if defined(KOKKOS_ENABLE_CUDA)
-    cudaError_t cerr;
+#if PETSC_AND_KOKKOS_HAVE(CUDA) || PETSC_AND_KOKKOS_HAVE(HIP)
+    /* Kokkos does not support CUDA and HIP at the same time (but we do :)) */
+    PetscDeviceContext dctx;
+    PetscErrorCode     ierr;
 
-    ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
-    cerr = cudaGetDevice(&devId);CHKERRCUDA(cerr);
-   #elif defined(KOKKOS_ENABLE_HIP) /* Kokkos does not support CUDA and HIP at the same time */
-    hipError_t herr;
-
-    ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
-    herr = hipGetDevice(&devId);CHKERRHIP(herr);
-   #endif
+    ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscMPIIntCast(dctx->device->deviceId,&devId);CHKERRQ(ierr);
+#endif
     args.device_id   = devId;
     Kokkos::initialize(args);
     PetscBeganKokkos = PETSC_TRUE;
