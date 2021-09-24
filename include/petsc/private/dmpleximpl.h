@@ -455,47 +455,51 @@ PETSC_STATIC_INLINE void DMPlex_MultTranspose3DReal_Internal(const PetscReal A[]
 
 PETSC_STATIC_INLINE void DMPlex_MatMult2D_Internal(const PetscScalar A[], PetscInt n, PetscInt ldb, const PetscScalar B[], PetscScalar C[])
 {
-  const int   dim = 2;
-  PetscScalar z[dim];
+#define PLEX_DIM__ 2
+  PetscScalar z[PLEX_DIM__];
   for (PetscInt j = 0; j < n; ++j) {
-    for (int d = 0; d < dim; ++d) z[d] = B[d*ldb+j];
+    for (int d = 0; d < PLEX_DIM__; ++d) z[d] = B[d*ldb+j];
     DMPlex_Mult2D_Internal(A, 1, z, z);
-    for (int d = 0; d < dim; ++d) C[d*ldb+j] = z[d];
+    for (int d = 0; d < PLEX_DIM__; ++d) C[d*ldb+j] = z[d];
   }
   (void)PetscLogFlops(8.0*n);
+#undef PLEX_DIM__
 }
 PETSC_STATIC_INLINE void DMPlex_MatMult3D_Internal(const PetscScalar A[], PetscInt n, PetscInt ldb, const PetscScalar B[], PetscScalar C[])
 {
-  const int   dim = 3;
-  PetscScalar z[dim];
+#define PLEX_DIM__ 3
+  PetscScalar z[PLEX_DIM__];
   for (PetscInt j = 0; j < n; ++j) {
-    for (int d = 0; d < dim; ++d) z[d] = B[d*ldb+j];
+    for (int d = 0; d < PLEX_DIM__; ++d) z[d] = B[d*ldb+j];
     DMPlex_Mult3D_Internal(A, 1, z, z);
-    for (int d = 0; d < dim; ++d) C[d*ldb+j] = z[d];
+    for (int d = 0; d < PLEX_DIM__; ++d) C[d*ldb+j] = z[d];
   }
   (void)PetscLogFlops(8.0*n);
+#undef PLEX_DIM__
 }
 PETSC_STATIC_INLINE void DMPlex_MatMultTranspose2D_Internal(const PetscScalar A[], PetscInt n, PetscInt ldb, const PetscScalar B[], PetscScalar C[])
 {
-  const int   dim = 2;
-  PetscScalar z[dim];
+#define PLEX_DIM__ 2
+  PetscScalar z[PLEX_DIM__];
   for (PetscInt j = 0; j < n; ++j) {
-    for (int d = 0; d < dim; ++d) z[d] = B[d*ldb+j];
+    for (int d = 0; d < PLEX_DIM__; ++d) z[d] = B[d*ldb+j];
     DMPlex_MultTranspose2D_Internal(A, 1, z, z);
-    for (int d = 0; d < dim; ++d) C[d*ldb+j] = z[d];
+    for (int d = 0; d < PLEX_DIM__; ++d) C[d*ldb+j] = z[d];
   }
   (void)PetscLogFlops(8.0*n);
+#undef PLEX_DIM__
 }
 PETSC_STATIC_INLINE void DMPlex_MatMultTranspose3D_Internal(const PetscScalar A[], PetscInt n, PetscInt ldb, const PetscScalar B[], PetscScalar C[])
 {
-  const int   dim = 3;
-  PetscScalar z[dim];
+#define PLEX_DIM__ 3
+  PetscScalar z[PLEX_DIM__];
   for (PetscInt j = 0; j < n; ++j) {
-    for (int d = 0; d < dim; ++d) z[d] = B[d*ldb+j];
+    for (int d = 0; d < PLEX_DIM__; ++d) z[d] = B[d*ldb+j];
     DMPlex_MultTranspose3D_Internal(A, 1, z, z);
-    for (int d = 0; d < dim; ++d) C[d*ldb+j] = z[d];
+    for (int d = 0; d < PLEX_DIM__; ++d) C[d*ldb+j] = z[d];
   }
   (void)PetscLogFlops(8.0*n);
+#undef PLEX_DIM__
 }
 
 PETSC_STATIC_INLINE void DMPlex_MatMultLeft2D_Internal(const PetscScalar A[], PetscInt m, PetscInt ldb, const PetscScalar B[], PetscScalar C[])
