@@ -67,6 +67,7 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   static const auto cupmErrorNotReady           = cudaErrorNotReady;
   static const auto cupmStreamNonBlocking       = cudaStreamNonBlocking;
   static const auto cupmErrorDeviceAlreadyInUse = cudaErrorDeviceAlreadyInUse;
+  static const auto cupmErrorSetOnActiveProcess = cudaErrorSetOnActiveProcess;
   static const auto cupmDeviceMapHost           = cudaDeviceMapHost;
   static const auto cupmMemcpyHostToDevice      = cudaMemcpyHostToDevice;
 
@@ -219,6 +220,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   static const auto cupmStreamNonBlocking       = hipStreamNonBlocking;
   // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
   static const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
+  static const auto cupmErrorSetOnActiveProcess = hipErrorSetOnActiveProcess;
   static const auto cupmDeviceMapHost           = hipDeviceMapHost;
   static const auto cupmMemcpyHostToDevice      = hipMemcpyHostToDevice;
 
@@ -339,6 +341,7 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using base_name_::cupmErrorNotReady;                                  \
   using base_name_::cupmStreamNonBlocking;                              \
   using base_name_::cupmErrorDeviceAlreadyInUse;                        \
+  using base_name_::cupmErrorSetOnActiveProcess;                        \
   using base_name_::cupmDeviceMapHost;                                  \
   using base_name_::cupmMemcpyHostToDevice;                             \
   /* functions */                                                       \
