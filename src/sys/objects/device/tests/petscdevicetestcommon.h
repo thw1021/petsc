@@ -96,9 +96,9 @@
                "PetscDeviceContext is setup but has no PetscDevice",    \
                (_p_arg__));                                             \
     }                                                                   \
-    if (PetscUnlikely((_p_dev_ctx__)->id < 0)) {                        \
+    if (PetscUnlikely((_p_dev_ctx__)->id < 1)) {                        \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,                          \
-               "Invalid PetscDeviceContext: Argument #%d; id %D < 0",   \
+               "Invalid PetscDeviceContext: Argument #%d; id %D < 1",   \
                (_p_arg__),(_p_dev_ctx__)->id);                          \
     } else if (PetscUnlikely((_p_dev_ctx__)->numChildren      >         \
                              (_p_dev_ctx__)->maxNumChildren)) {         \
