@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 
   /* basic creation and destruction */
   ierr = PetscDeviceContextCreate(&dctx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetFromOptions(PETSC_COMM_WORLD,"local",dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetFromOptions(PETSC_COMM_WORLD,"local_",dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
   ierr = TestPetscDeviceContextDuplicate(dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextDestroy(&dctx);CHKERRQ(ierr);
