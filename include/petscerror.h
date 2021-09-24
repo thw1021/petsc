@@ -506,6 +506,16 @@ M*/
 #define CHKERRCONTINUE(ierr)
 #endif
 
+#if defined(PETSC_BUILTIN_UNREACHABLE)
+#  if defined(PETSC_USE_DEBUG)
+#    define PetscUnreachable() SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Explicitly marked unreachable execution flow has been reached, this is undefined behaviour!")
+#  else
+#    define PetscUnreachable() PETSC_BUILTIN_UNREACHABLE
+#  endif
+#else
+#  define PetscUnreachable()
+#endif
+
 PETSC_EXTERN PetscErrorCode PetscAbortFindSourceFile_Private(const char*,PetscInt*);
 PETSC_EXTERN PetscBool petscwaitonerrorflg;
 PETSC_EXTERN PetscBool petscindebugger;
@@ -546,6 +556,7 @@ M*/
       if (petscwaitonerrorflg) PetscSleep(1000);                      \
       if (petscindebugger) abort();                                   \
       else MPI_Abort(comm,errcode);                                   \
+      PetscUnreachable();                                             \
    } while (0)
 
 /*MC
