@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
 
   ierr = PetscDeviceContextCreate(&dctx);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetFromOptions(PETSC_COMM_WORLD,"local",dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetFromOptions(PETSC_COMM_WORLD,"local_",dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
   ierr = TestPetscDeviceContextForkJoin(dctx);CHKERRQ(ierr);
   ierr = PetscDeviceContextDestroy(&dctx);CHKERRQ(ierr);

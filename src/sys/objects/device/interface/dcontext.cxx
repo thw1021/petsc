@@ -49,7 +49,8 @@ struct PetscDeviceContextAllocator : Petsc::Allocator<PetscDeviceContext>
 
   PETSC_NODISCARD static constexpr PetscErrorCode finalize() PETSC_NOEXCEPT { return 0; }
 };
-PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 0;
+/* an ID = 0 is invalid */
+PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 1;
 
 static Petsc::ObjectPool<PetscDeviceContext,PetscDeviceContextAllocator> contextPool;
 
@@ -675,6 +676,7 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
   };
 
   PetscFunctionBegin;
+  if (globalContext) PetscFunctionReturn(0);
   /* this exists purely as a valid device check. */
   ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   ierr = PetscRegisterFinalize(PetscDeviceContextFinalizer);CHKERRQ(ierr);
@@ -713,16 +715,13 @@ PetscDeviceContextJoin(), PetscDeviceContextCreate()
 @*/
 PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidPointer(dctx,1);
-  if (globalContext) {
-    /* while the static analyzer can handle global variables, it will throw a spurious warning */
-    PetscValidDeviceContext(globalContext,-1);
-  } else {
-    PetscErrorCode ierr;
-
-    ierr = PetscDeviceContextSetupGlobalContext_Private();CHKERRQ(ierr);
-  }
+  ierr = PetscDeviceContextSetupGlobalContext_Private();CHKERRQ(ierr);
+  /* while the static analyzer can handle global variables, it will throw a spurious warning */
+  PetscValidDeviceContext(globalContext,-1);
   *dctx = globalContext;
   PetscFunctionReturn(0);
 }
