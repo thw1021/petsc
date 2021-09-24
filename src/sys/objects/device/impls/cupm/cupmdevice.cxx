@@ -8,6 +8,12 @@
 #include <iterator>
 #include <type_traits>
 
+#if PetscDefined(USE_LOG)
+PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
+#else
+static constexpr PetscErrorCode PetscLogInitialize() { return 0; }
+#endif
+
 namespace Petsc
 {
 
@@ -55,6 +61,9 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
   PetscFunctionBegin;
   if (_devInitialized) PetscFunctionReturn(0);
   _devInitialized = true;
+  // need to do this BEFORE device has been set, although if the user
+  // has already done this then we just ignore it
+  if (cupmSetDeviceFlags(cupmDeviceMapHost) != cupmErrorSetOnActiveProcess) CHKERRCUPM(cupmGetLastError());
   // cuda 5.0+ will create a context when cupmSetDevice is called
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
   // forces cuda < 5.0 to initialize a context
@@ -85,10 +94,8 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
 template <CUPMDeviceKind T>
 PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
 {
-  // make this a constexpr variable in case we want change it later
-  constexpr auto defaultFlags = cupmDeviceMapHost;
-  unsigned int   flags;
   cupmError_t    cerr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",_id);
@@ -96,15 +103,9 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
   // fully-fledged error codes is beyond me. Why couldn't a pointer to bool argument have
   // sufficed?!?!?!
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
-  cerr = cupmGetDeviceFlags(&flags);CHKERRCUPM(cerr);
-  if (flags != defaultFlags) {
-    PetscErrorCode ierr;
-
-    cerr = cupmSetDeviceFlags(defaultFlags);CHKERRCUPM(cerr);
-    // need to update the device properties
-    cerr = cupmGetDeviceProperties(&_dprop,_id);CHKERRCUPM(cerr);
-    ierr = PetscInfo1(nullptr,"configured device %d\n",_id);CHKERRQ(ierr);
-  }
+  // need to update the device properties
+  cerr = cupmGetDeviceProperties(&_dprop,_id);CHKERRCUPM(cerr);
+  ierr = PetscInfo1(nullptr,"Configured device %d\n",_id);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -123,7 +124,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::view(PetscViewer viewer) const
   if (PetscUnlikely(!iascii)) SETERRQ(comm,PETSC_ERR_SUP,"Only PetscViewer of type PETSCVIEWERASCII is supported");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] device %D: %s\n",rank,_dprop.name);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] device %D: %s\n",rank,_id,_dprop.name ? _dprop.name : "unnamed");CHKERRQ(ierr);
   // flush the assignment information
   ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
@@ -322,6 +323,7 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
     if (view) {
       PetscViewer vwr;
 
+      ierr = PetscLogInitialize();CHKERRQ(ierr);
       ierr = PetscViewerASCIIGetStdout(comm,&vwr);CHKERRQ(ierr);
       ierr = _devices[_defaultDevice]->view(vwr);CHKERRQ(ierr);
     }

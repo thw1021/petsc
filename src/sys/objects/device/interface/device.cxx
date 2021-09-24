@@ -212,6 +212,7 @@ static PetscErrorCode PetscDeviceInitializeKindFromOptions_Private(MPI_Comm comm
   /* defaultInitKind and defaultDeviceId now represent what the individual TYPES have decided
    * to initialize as */
   if (*defaultInitKind == PETSC_DEVICE_INIT_GREEDY) {
+    ierr = PetscInfo1(PETSC_NULLPTR,"Greedily initializing %s PetscDevice\n",PetscDeviceKinds[kind]);CHKERRQ(ierr);
     ierr = PetscDeviceInitializeDefaultDevice_Internal(kind,defaultDeviceId);CHKERRQ(ierr);
     if (defaultView) {
       PetscViewer vwr;
@@ -327,7 +328,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     auto initKind         = defaultInitKind;
 
     ierr = PetscDeviceInitializeKindFromOptions_Private(comm,deviceKind,defaultDevice,defaultView,&initKind);CHKERRQ(ierr);
-    if (initKind == PETSC_DEVICE_INIT_GREEDY) {
+    if (initKind == PETSC_DEVICE_INIT_GREEDY && PetscDeviceConfiguredFor(deviceKind)) {
       deviceContextInitDevice = deviceKind;
       initializeDeviceContextGreedily = PETSC_TRUE;
     }
@@ -337,9 +338,10 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 
     /* somewhat inefficient here as the device context is potentially fully set up twice (once
      * when retrieved then the second time if setfromoptions makes changes) */
+    ierr = PetscInfo1(PETSC_NULLPTR,"Greedily initializing PetscDeviceContext with %s device\n",PetscDeviceKinds[deviceContextInitDevice]);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetRootDeviceKind_Internal(deviceContextInitDevice);CHKERRQ(ierr);
     ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetFromOptions(comm,"root",dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetFromOptions(comm,"root_",dctx);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

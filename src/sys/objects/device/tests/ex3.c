@@ -80,13 +80,13 @@ int main(int argc, char *argv[])
 
  testset:
    output_file: ./output/ExitSuccess.out
-   nsize: {{1 4 20}}
+   nsize: {{1 4 10}}
    args: -local_device_context_stream_type {{global_blocking default_blocking global_nonblocking}}
    test:
      requires: cuda
-     suffix: test_harness_doesnt_respect_bare_requires_unless_you_add_a_suffix
+     suffix: cuda
    test:
      requires: hip
-     suffix: test_harness_doesnt_respect_bare_requires_unless_you_add_a_suffix_2
+     suffix: hip
 
 TEST*/

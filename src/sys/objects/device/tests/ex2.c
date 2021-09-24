@@ -59,9 +59,9 @@ int main(int argc, char *argv[])
    nsize: {{1 2 4}}
    test:
      requires: cuda
-     suffix: test_harness_doesnt_respect_bare_requires_unless_you_add_a_suffix
+     suffix: cuda
    test:
      requires: hip
-     suffix: test_harness_doesnt_respect_bare_requires_unless_you_add_a_suffix_2
+     suffix: hip
 
 TEST*/
