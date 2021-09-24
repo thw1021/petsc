@@ -22,6 +22,7 @@ class Configure(config.package.Package):
     self.hastestsdatafiles = 0
     self.functionsDefine   = ['cusolverDnDpotri']
     self.isnvhpc           = False
+    self.devicePackage     = True
     return
 
   def setupHelp(self, help):
