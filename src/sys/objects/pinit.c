@@ -1073,7 +1073,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
 #if defined(PETSC_HAVE_SAWS)
   ierr = PetscInitializeSAWs(help);CHKERRQ(ierr);
   flg = PETSC_FALSE;
-  PetscOptionsHasName(NULL,NULL,"-stack_view",&flg);
+  ierr = PetscOptionsHasName(NULL,NULL,"-stack_view",&flg);CHKERRQ(ierr);
   if (flg) PetscStackViewSAWs();
 #endif
 
