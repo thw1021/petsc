@@ -1,0 +1,124 @@
+import config.package
+import os
+
+class Configure(config.package.CMakePackage):
+  def __init__(self, framework):
+    config.package.CMakePackage.__init__(self, framework)
+    self.gitcommit        = 'v0.14.0'
+    self.versionname      = 'RAJA_VERSION_MAJOR.RAJA_VERSION_MINOR.RAJA_VERSION_PATCHLEVEL'
+    self.download         = ['git://https://github.com/LLNL/RAJA.git']
+    self.downloaddirnames = ['raja']
+    # TODO: Currently the BuildSystem checks C++ headers blindly using CXX. However, when Kokkos is compiled by CUDAC for example, using
+    # CXX to compile a Kokkos code raises an error. As a workaround, we set this field to skip checking headers in includes.
+    self.doNotCheckIncludes = 1
+    self.includes         = ['RAJA/RAJA.hpp']
+    self.liblist          = [['libRAJA.a']]
+    self.cxx              = 1
+    self.minCxxVersion    = 'c++14'
+    self.downloadonWindows= 0
+    self.hastests         = 1
+    self.requiresrpath    = 1
+    self.precisions       = ['single','double']
+    return
+
+  def __str__(self):
+    output  = config.package.CMakePackage.__str__(self)
+    if hasattr(self,'system'): output += '  Backend: '+self.system+'\n'
+    return output
+
+  def setupDependencies(self, framework):
+    config.package.CMakePackage.setupDependencies(self, framework)
+    self.externalpackagesdir = framework.require('PETSc.options.externalpackagesdir',self)
+    self.compilerFlags   = framework.require('config.compilerFlags', self)
+    self.blasLapack      = framework.require('config.packages.BlasLapack',self)
+    self.mpi             = framework.require('config.packages.MPI',self)
+    self.flibs           = framework.require('config.packages.flibs',self)
+    self.cxxlibs         = framework.require('config.packages.cxxlibs',self)
+    self.mathlib         = framework.require('config.packages.mathlib',self)
+    self.deps            = [self.blasLapack,self.flibs,self.cxxlibs,self.mathlib]
+    self.openmp          = framework.require('config.packages.openmp',self)
+    self.pthread         = framework.require('config.packages.pthread',self)
+    self.cuda            = framework.require('config.packages.cuda',self)
+    self.hip             = framework.require('config.packages.hip',self)
+    self.hwloc           = framework.require('config.packages.hwloc',self)
+    self.mpi             = framework.require('config.packages.MPI',self)
+    self.odeps           = [self.mpi,self.openmp,self.hwloc,self.cuda,self.hip,self.pthread]
+    return
+
+  # duplicate from Trilinos.py
+  def toString(self,string):
+    string    = self.libraries.toString(string)
+    if self.requiresrpath: return string
+    newstring = ''
+    for i in string.split(' '):
+      if i.find('-rpath') == -1:
+        newstring = newstring+' '+i
+    return newstring.strip()
+
+  def formCMakeConfigureArgs(self):
+    args = config.package.CMakePackage.formCMakeConfigureArgs(self)
+    args.append('-DUSE_XSDK_DEFAULTS=YES')
+    if not self.compilerFlags.debugging:
+      args.append('-DXSDK_ENABLE_DEBUG=NO')
+
+    if self.checkSharedLibrariesEnabled():
+      args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
+      args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
+
+    if self.openmp.found:
+      args.append('-DENABLE_OPENMP:BOOL=ON')
+    else:
+      args.append('-DENABLE_OPENMP:BOOL=OFF')
+
+    if self.mpi.found:
+      args.append('-DENABLE_MPI=ON')
+
+    lang = 'cxx'
+    if self.cuda.found:
+      args.append('-DENABLE_CUDA=ON')
+      self.system = 'CUDA'
+
+      petscNvcc = self.getCompiler()
+      cudaFlags = self.getCompilerFlags()
+      self.popLanguage()
+      if hasattr(self.cuda,'gencodearch'):
+        generation = 'sm_'+self.cuda.gencodearch
+      else:
+        raise RuntimeError('You must set --with-cuda-gencodearch=60, 70, 75, 80 etc.')
+      args.append('-DCUDA_ARCH='+generation)
+    elif self.hip.found:
+      lang = 'hip'
+      self.system = 'HIP'
+      args.append('-DENABLE_HIP=ON')
+      with self.Language('HIP'):
+        petscHipc = self.getCompiler()
+        hipFlags = self.updatePackageCxxFlags(self.getCompilerFlags())
+      args.append('-DKOKKOS_HIP_OPTIONS="'+hipFlags.replace(' ',';')+'"')
+      self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
+      if not hasattr(self,'systemHipc'):
+        raise RuntimeError('HIP error: could not find path of hipcc')
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
+      args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
+      args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
+      args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
+      if not 'with-kokkos-hip-arch' in self.framework.clArgDB:
+        raise RuntimeError('You must set --with-kokkos-hip-arch=VEGA900, VEGA906, VEGA908 etc.')
+      args.append('-DKokkos_ARCH_'+self.argDB['with-kokkos-hip-arch']+'=ON')
+      args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
+
+    langdialect = getattr(self.compilers,lang+'dialect',None)
+    if langdialect:
+      # langdialect is only set as an attribute if the user specifically chose a dialect
+      # (see config/compilers.py::checkCxxDialect())
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+      args.append('-DCMAKE_CXX_STANDARD='+langdialect[-2:]) # e.g., extract 14 from C++14
+    return args
+
+  def configureLibrary(self):
+    import os
+    config.package.CMakePackage.configureLibrary(self)
+    if self.cuda.found:
+      self.addMakeMacro('RAJA_USE_CUDA_COMPILER',1)
+    elif self.hip.found:
+      self.addMakeMacro('RAJA_USE_HIP_COMPILER',1)
+
