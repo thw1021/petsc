@@ -1003,5 +1003,9 @@ PETSC_EXTERN PetscBool      PetscHIPInitialized;
 PETSC_EXTERN PetscBool      PetscMPIHIPAwarenessCheck(void);
 #endif
 
+#if defined(PETSC_HAVE_OPENMP)
+extern PetscInt PetscNumOMPThreads;
+#endif
+
 PETSC_EXTERN PetscBool      PetscCreatedGpuObjects;
 #endif /* PETSCIMPL_H */
