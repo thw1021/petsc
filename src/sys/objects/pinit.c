@@ -957,11 +957,11 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
 #endif
 
 #if PetscDefined(HAVE_VIENNACL)
-  flg3 = PETSC_FALSE;
-  ierr = PetscOptionsHasName(NULL,NULL,"-log_summary",&flg3);CHKERRQ(ierr);
-  if (!flg3) {ierr = PetscOptionsHasName(NULL,NULL,"-log_view",&flg3);CHKERRQ(ierr);}
-  ierr = PetscOptionsGetBool(NULL,NULL,"-viennacl_synchronize",&flg3,NULL);CHKERRQ(ierr);
-  PetscViennaCLSynchronize = flg3;
+  flg = PETSC_FALSE;
+  ierr = PetscOptionsHasName(NULL,NULL,"-log_summary",&flg);CHKERRQ(ierr);
+  if (!flg) {ierr = PetscOptionsHasName(NULL,NULL,"-log_view",&flg);CHKERRQ(ierr);}
+  if (!flg) {ierr = PetscOptionsGetBool(NULL,NULL,"-viennacl_synchronize",&flg,NULL);CHKERRQ(ierr);}
+  PetscViennaCLSynchronize = flg;
   ierr = PetscViennaCLInit();CHKERRQ(ierr);
 #endif
 
