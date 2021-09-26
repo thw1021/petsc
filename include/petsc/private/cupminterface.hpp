@@ -43,6 +43,10 @@ static constexpr const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDevice
 // import them into classes.
 template <CUPMDeviceKind T> struct CUPMInterface;
 
+#define PETSC_ALIAS_CUPM_INTEGRAL_VALUE(prefix,stem) static const auto cupm##stem = prefix##stem
+#define PETSC_ALIAS_CUPM_FUNCTION(prefix,stem)                          \
+  PETSC_ALIAS_FUNCTION(static constexpr cupm##stem, prefix##stem)
+
 #if PetscDefined(HAVE_CUDA)
 template <>
 struct CUPMInterface<CUPMDeviceKind::CUDA>
@@ -63,45 +67,45 @@ struct CUPMInterface<CUPMDeviceKind::CUDA>
   using cupmDeviceProp_t   = cudaDeviceProp;
 
   // values
-  static const auto cupmSuccess                 = cudaSuccess;
-  static const auto cupmErrorNotReady           = cudaErrorNotReady;
-  static const auto cupmStreamNonBlocking       = cudaStreamNonBlocking;
-  static const auto cupmErrorDeviceAlreadyInUse = cudaErrorDeviceAlreadyInUse;
-  static const auto cupmErrorSetOnActiveProcess = cudaErrorSetOnActiveProcess;
-  static const auto cupmDeviceMapHost           = cudaDeviceMapHost;
-  static const auto cupmMemcpyHostToDevice      = cudaMemcpyHostToDevice;
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,Success);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,ErrorNotReady);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,StreamNonBlocking);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,ErrorDeviceAlreadyInUse);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,ErrorSetOnActiveProcess);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,DeviceMapHost);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(cuda,MemcpyHostToDevice);
 
   // error functions
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorName,cudaGetErrorName);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorString,cudaGetErrorString);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetLastError,cudaGetLastError);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetErrorName);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetErrorString);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetLastError);
 
   // device management
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceCount,cudaGetDeviceCount);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceProperties,cudaGetDeviceProperties);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDevice,cudaGetDevice);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmSetDevice,cudaSetDevice);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceFlags,cudaGetDeviceFlags);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmSetDeviceFlags,cudaSetDeviceFlags);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetDeviceCount);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetDeviceProperties);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetDevice);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,SetDevice);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,GetDeviceFlags);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,SetDeviceFlags);
 
   // stream management
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventCreate,cudaEventCreate);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventDestroy,cudaEventDestroy);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventRecord,cudaEventRecord);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventSynchronize,cudaEventSynchronize);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventElapsedTime,cudaEventElapsedTime);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreate,cudaStreamCreate);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreateWithFlags,cudaStreamCreateWithFlags);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamDestroy,cudaStreamDestroy);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamWaitEvent,cudaStreamWaitEvent);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamQuery,cudaStreamQuery);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamSynchronize,cudaStreamSynchronize);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,EventCreate);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,EventDestroy);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,EventRecord);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,EventSynchronize);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,EventElapsedTime);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,StreamCreate);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,StreamCreateWithFlags);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,StreamDestroy);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,StreamWaitEvent);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,StreamQuery);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,StreamSynchronize);
 
   // general purpose
-  PETSC_ALIAS_FUNCTION(static constexpr cupmFree,cudaFree);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmMalloc,cudaMalloc);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmMemcpy,cudaMemcpy);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmDeviceSynchronize,cudaDeviceSynchronize);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,Free);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,Malloc);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,Memcpy);
+  PETSC_ALIAS_CUPM_FUNCTION(cuda,DeviceSynchronize);
 
   // There isn't a good way to auto-template this stuff between the cublas handle and
   // cusolver handle, not in the least because CHKERRCUBLAS and CHKERRCUSOLVER (not to
@@ -215,46 +219,46 @@ struct CUPMInterface<CUPMDeviceKind::HIP>
   using cupmDeviceProp_t   = hipDeviceProp_t;
 
   // values
-  static const auto cupmSuccess                 = hipSuccess;
-  static const auto cupmErrorNotReady           = hipErrorNotReady;
-  static const auto cupmStreamNonBlocking       = hipStreamNonBlocking;
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(hip,Success);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(hip,ErrorNotReady);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(hip,StreamNonBlocking);
   // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
   static const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
-  static const auto cupmErrorSetOnActiveProcess = hipErrorSetOnActiveProcess;
-  static const auto cupmDeviceMapHost           = hipDeviceMapHost;
-  static const auto cupmMemcpyHostToDevice      = hipMemcpyHostToDevice;
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(hip,ErrorSetOnActiveProcess);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(hip,DeviceMapHost);
+  PETSC_ALIAS_CUPM_INTEGRAL_VALUE(hip,MemcpyHostToDevice);
 
   // error functions
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorName,hipGetErrorName);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetErrorString,hipGetErrorString);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetLastError,hipGetLastError);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetErrorName);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetErrorString);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetLastError);
 
   // device management
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceCount,hipGetDeviceCount);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceProperties,hipGetDeviceProperties);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDevice,hipGetDevice);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmSetDevice,hipSetDevice);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmGetDeviceFlags,hipGetDeviceFlags);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmSetDeviceFlags,hipSetDeviceFlags);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetDeviceCount);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetDeviceProperties);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetDevice);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,SetDevice);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,GetDeviceFlags);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,SetDeviceFlags);
 
   // stream management
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventCreate,hipEventCreate);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventDestroy,hipEventDestroy);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventRecord,hipEventRecord);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventSynchronize,hipEventSynchronize);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmEventElapsedTime,hipEventElapsedTime);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreate,hipStreamCreate);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamCreateWithFlags,hipStreamCreateWithFlags);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamDestroy,hipStreamDestroy);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamWaitEvent,hipStreamWaitEvent);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamQuery,hipStreamQuery);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmStreamSynchronize,hipStreamSynchronize);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,EventCreate);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,EventDestroy);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,EventRecord);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,EventSynchronize);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,EventElapsedTime);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,StreamCreate);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,StreamCreateWithFlags);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,StreamDestroy);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,StreamWaitEvent);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,StreamQuery);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,StreamSynchronize);
 
   // general purpose
-  PETSC_ALIAS_FUNCTION(static constexpr cupmFree,hipFree);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmMalloc,hipMalloc);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmMemcpy,hipMemcpy);
-  PETSC_ALIAS_FUNCTION(static constexpr cupmDeviceSynchronize,hipDeviceSynchronize);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,Free);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,Malloc);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,Memcpy);
+  PETSC_ALIAS_CUPM_FUNCTION(hip,DeviceSynchronize);
 
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmBlasHandle_t &handle) noexcept
   {
