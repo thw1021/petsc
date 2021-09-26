@@ -4,11 +4,11 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version          = '4.8.0'
+    self.version          = '4.8.1'
     self.versionname      = 'NC_VERSION_MAJOR.NC_VERSION_MINOR.NC_VERSION_PATCH'
     self.versioninclude   = 'netcdf_meta.h'
-    self.download         = ['https://github.com/Unidata/netcdf-c/archive/v%s.tar.gz' % self.version,
-                             'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/netcdf-%s.tar.gz' % self.version,]
+    self.gitcommit        = 'a85c600549b23da05b8c791019953bae51e1bd44' # fix-freebsd-v481 on September 26, 2021
+    self.download         = ['git://https://github.com/petsc/netcdf-c','https://github.com/petsc/netcdf-c/archive/'+self.gitcommit+'.tar.gz']
     self.functions        = ['nccreate']
     self.includes         = ['netcdf.h']
     self.liblist          = [['libnetcdf.a']]
