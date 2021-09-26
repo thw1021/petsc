@@ -84,8 +84,8 @@ PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
   } while (0)
 
 #define CHKERRCUFFT(res)     do {                                       \
-    const cufftResult_t = _p_cufft_stat__ = res;                        \
-    if (PetscUnlikely(_p_cufft_stat__ !=  CUFFT_SUCCESS)) {             \
+    const cufftResult_t _p_cufft_stat__ = res;                          \
+    if (PetscUnlikely(_p_cufft_stat__ != CUFFT_SUCCESS)) {              \
       const char *name = PetscCUFFTGetErrorName(_p_cufft_stat__);       \
       if (((_p_cufft_stat__ == CUFFT_SETUP_FAILED)  ||                  \
            (_p_cufft_stat__ == CUFFT_ALLOC_FAILED)) &&                  \
@@ -164,7 +164,7 @@ PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t); /* PETSC_EXT
 /* TODO: SEK:  Need to figure out the hipsolver issues */
 #define CHKERRHIPSOLVER(stat) do {                                      \
     const hipsolverStatus_t _p_hipsolver_stat__ = stat;                 \
-    if (PetscUnlikely(_p_hipsolver_stat__ != HIPSOLVER_STATUS_SUCCESS)) { \
+    if (PetscUnlikely(_p_hipsolver_stat__ /* != HIPSOLVER_STATUS_SUCCESS */)) { \
       SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"HIPSOLVER error %d",      \
                (PetscErrorCode)_p_hipsolver_stat__);                    \
     }                                                                   \
@@ -241,6 +241,9 @@ PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
 PETSC_EXTERN PetscBool      PetscDeviceInitializedFor(PetscDeviceKind);
 PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor(PetscDeviceKind kind)
 {
+#if defined(PetscUnreachable)
+#error "PetscUnreachable merged"
+#endif
   switch(kind) {
   case PETSC_DEVICE_INVALID: return PETSC_FALSE;
     /* casts are needed in C++ */
@@ -249,7 +252,9 @@ PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor(PetscD
   case PETSC_DEVICE_MAX:     return PETSC_FALSE;
     /* Do not add default case! Will make compiler warn on new additions to PetscDeviceKind! */
   }
+#if !PetscDefined(HAVE_WINDOWS_COMPILERS)
   __builtin_unreachable();
+#endif
   return PETSC_FALSE;
 }
 
