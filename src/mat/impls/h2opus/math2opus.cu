@@ -54,9 +54,16 @@ template <class T> class PetscPointCloud : public H2OpusDataSet<T>
       this->num_points = num_pts;
 
       pts.resize(num_pts*dim);
-      for (size_t n = 0; n < num_points; n++)
-        for (int i = 0; i < dim; i++)
-          pts[n*dim + i] = coords[n*dim + i];
+      if (coords) {
+        for (size_t n = 0; n < num_points; n++)
+          for (int i = 0; i < dim; i++)
+            pts[n*dim + i] = coords[n*dim + i];
+      } else {
+        PetscReal h = 1./(num_points - 1);
+        for (size_t n = 0; n < num_points; n++)
+          for (int i = 0; i < dim; i++)
+            pts[n*dim + i] = i*h;
+      }
     }
 
     PetscPointCloud(const PetscPointCloud<T>& other)
@@ -1284,7 +1291,7 @@ static PetscErrorCode MatBindToCPU_H2OPUS(Mat A, PetscBool flg)
 
    Level: beginner
 
-.seealso: MATHTOOL, MATDENSE, MatCreateH2OpusFromKernel(), MatCreateH2OpusFromMat() 
+.seealso: MATHTOOL, MATDENSE, MatCreateH2OpusFromKernel(), MatCreateH2OpusFromMat()
 M*/
 PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
 {
