@@ -533,17 +533,25 @@ cdef class Mat(Object):
         PetscCLEAR(self.obj); self.mat = newmat
         return self
 
-    def createH2OpusFromMat(self, Mat A, coordinates=None, dist=False, eta=PETSC_DECIDE, leafsize=PETSC_DECIDE, maxrank=PETSC_DECIDE, bs=PETSC_DECIDE, rtol=PETSC_DECIDE):
+    def createH2OpusFromMat(self, Mat A, coordinates=None, dist=None, eta=None, leafsize=None, maxrank=None, bs=None, rtol=None):
         cdef PetscInt cdim = 1
         cdef PetscReal *coords = NULL
-        cdef PetscBool cdist = dist
-        cdef PetscReal peta = asReal(eta)
-        cdef PetscInt lsize = asInt(leafsize)
-        cdef PetscInt maxr = asInt(maxrank)
-        cdef PetscInt pbs = asInt(bs)
-        cdef PetscReal tol = asReal(rtol)
+        cdef PetscBool cdist = PETSC_FALSE
+        cdef PetscReal peta = PETSC_DECIDE
+        cdef PetscInt lsize = PETSC_DECIDE
+        cdef PetscInt maxr = PETSC_DECIDE
+        cdef PetscInt pbs = PETSC_DECIDE
+        cdef PetscReal tol = PETSC_DECIDE
         cdef ndarray xyz
         cdef PetscInt nvtx
+        cdef PetscInt rl = 0, cl = 0
+        if dist is not None: cdist = asBool(dist)
+        if eta is not None: peta = asReal(eta)
+        if leafsize is not None: lsize = asInt(leafsize)
+        if maxrank is not None: maxr = asInt(maxrank)
+        if bs is not None: pbs = asInt(bs)
+        if rtol is not None: tol = asReal(rtol)
+
         if coordinates is not None:
             xyz = iarray(coordinates, NPY_PETSC_REAL)
             if PyArray_ISFORTRAN(xyz): xyz = PyArray_Copy(xyz)
@@ -551,7 +559,7 @@ cdef class Mat(Object):
                 ("coordinates must have two dimensions: "
                  "coordinates.ndim=%d") % (PyArray_NDIM(xyz)) )
             nvtx = <PetscInt> PyArray_DIM(xyz, 0)
-            rl, cl = A.getSize()
+            CHKERR( MatGetLocalSize(A.mat, &rl, &cl) )
             if cl != rl: raise ValueError("Not for rectangular matrices")
             if nvtx < rl: raise ValueError(
                 ("coordinates size must be at least %d" % rl ))
