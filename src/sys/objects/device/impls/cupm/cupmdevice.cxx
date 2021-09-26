@@ -11,7 +11,7 @@
 #if PetscDefined(USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 #else
-static constexpr PetscErrorCode PetscLogInitialize() { return 0; }
+PETSC_STATIC_INLINE constexpr PetscErrorCode PetscLogInitialize() { return 0; }
 #endif
 
 namespace Petsc
@@ -124,7 +124,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::view(PetscViewer viewer) const
   if (PetscUnlikely(!iascii)) SETERRQ(comm,PETSC_ERR_SUP,"Only PetscViewer of type PETSCVIEWERASCII is supported");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] device %D: %s\n",rank,_id,_dprop.name ? _dprop.name : "unnamed");CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] device %d: %s\n",rank,_id,_dprop.name);CHKERRQ(ierr);
   // flush the assignment information
   ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
