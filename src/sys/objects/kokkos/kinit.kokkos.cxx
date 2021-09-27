@@ -35,10 +35,10 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     args.ndevices    = -1;
     args.skip_device = -1;
 
-#if defined(PETSC_HAVE_KOKKOS_INIT_DISABLE_WARNINGS)
-    args.disable_warnings = true;
-#else
+#if defined(PETSC_HAVE_KOKKOS_INIT_WARNINGS)
     args.disable_warnings = false;
+#else
+    args.disable_warnings = true;
 #endif
 
    #if defined(KOKKOS_ENABLE_CUDA)
