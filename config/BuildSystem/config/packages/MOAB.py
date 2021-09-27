@@ -73,6 +73,8 @@ class Configure(config.package.GNUPackage):
       args.append('--without-hdf5')
     if self.netcdf.found:
       args.append('--with-netcdf="'+self.netcdf.directory+'"')
+    # always disable this because PETSc does not provide it and it may be in the system directories and be incompatable with the netcdf that PETSc provides
+    args.append('--without-netcdf-cxx')
     else:
       args.append('--without-netcdf')
     if self.eigen.found:
