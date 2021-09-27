@@ -191,7 +191,7 @@ PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKin
 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt count)
 {
-  PetscFunctionBeginHot;
+  PetscFunctionBegin;
   if (PetscUnlikelyDebug(count >= PETSC_DEVICE_MAX_DEVICES)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Detected %D devices, which is larger than maximum supported number of devices %d",count,PETSC_DEVICE_MAX_DEVICES);
   PetscFunctionReturn(0);
 }
@@ -218,7 +218,7 @@ PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootDeviceKind_Internal(PetscDe
    no-op when debugging is disabled */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(PetscDeviceContext dctx)
 {
-  PetscFunctionBeginHot;
+  PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
     const PetscBool idleBefore = dctx->idle;
     PetscBool       idle;
@@ -244,14 +244,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetDefaultDeviceForKind_Int
 
 #define PetscDeviceContextSetDefaultDevice_Internal(dctx) PetscDeviceContextSetDefaultDeviceForKind_Internal(dctx,PETSC_DEVICE_DEFAULT)
 
+/* note, only does assertion checking in debug mode */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCurrentContextAssertKind_Internal(PetscDeviceContext *dctx, PetscDeviceKind kind)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  PetscValidPointer(dctx,1);
   PetscValidDeviceKind(kind,2);
   ierr = PetscDeviceContextGetCurrentContext(dctx);CHKERRQ(ierr);
-  if (PetscUnlikely((*dctx)->device->kind != kind)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected current global PetscDeviceContext (id %D) to have PetscDeviceKind '%s' but has '%s' instead",PetscDeviceKinds[kind],(*dctx)->id,PetscDeviceKinds[(*dctx)->device->kind]);
+  if (PetscUnlikelyDebug((*dctx)->device->kind != kind)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected current global PetscDeviceContext (id %D) to have PetscDeviceKind '%s' but has '%s' instead",(*dctx)->id,PetscDeviceKinds[kind],PetscDeviceKinds[(*dctx)->device->kind]);
   PetscFunctionReturn(0);
 }
 
