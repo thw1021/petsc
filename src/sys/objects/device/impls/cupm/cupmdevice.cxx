@@ -11,7 +11,7 @@
 #if PetscDefined(USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 #else
-PETSC_STATIC_INLINE constexpr PetscErrorCode PetscLogInitialize() { return 0; }
+#define PetscLogInitialize() 0
 #endif
 
 namespace Petsc
