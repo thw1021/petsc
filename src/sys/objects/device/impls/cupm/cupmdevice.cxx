@@ -241,9 +241,6 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
 template <CUPMDeviceKind T>
 static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
 
-#define STR_(s) #s
-#define STR(s)  STR_(s)
-
 #define CAT_(a,...) a ## __VA_ARGS__
 #define CAT(a,...)  CAT_(a,__VA_ARGS__)
 
@@ -251,10 +248,7 @@ static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
 // because for all the lovely compile time features c++ provides, the one thing it can't do is
 // compile time string concatenation.
 #define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(KIND,kind)                \
-  CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_(KIND,kind,CAT(HAVE_,KIND))
-
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_(KIND,kind,pdef)          \
-  CAT(CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_,PetscDefined(pdef))(KIND,kind)
+  CAT(CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_,PetscDefined(CAT(HAVE_,KIND)))(KIND,kind)
 
 // PetscDefined(HAVE_KIND) = 0 -> expands to nothing
 #define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_0(KIND,kind)
@@ -265,10 +259,10 @@ static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
   cupmOptions<CUPMDeviceKind::KIND>() noexcept                          \
   {                                                                     \
     return {                                                            \
-      "PetscDevice " STR(KIND) " Options",                              \
-      "-device_enable_" STR(kind),                                      \
-      "-device_select_" STR(kind),                                      \
-      "-device_view_" STR(kind)                                         \
+      "PetscDevice " PetscStringize(KIND) " Options",                   \
+      "-device_enable_" PetscStringize(kind),                           \
+      "-device_select_" PetscStringize(kind),                           \
+      "-device_view_" PetscStringize(kind)                              \
     };                                                                  \
   }
 
