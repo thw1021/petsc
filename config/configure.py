@@ -97,7 +97,7 @@ def chkenable():
 
     if name.find(en_dash)  >= 0:
       sys.argv[l] = name.replace(en_dash,'-')
-    if name.startswith('enable-cxx'):
+    if name.lstrip('-').name.startswith('enable-cxx'):
       if name.find('=') == -1:
         sys.argv[l] = name.replace('enable-cxx','with-clanguage=C++',1)
       else:
@@ -107,7 +107,7 @@ def chkenable():
         else:
           sys.argv[l] = head.replace('enable-cxx','with-clanguage=C++',1)
       continue
-    if name.startswith('disable-cxx'):
+    if name.lstrip('-').name.startswith('disable-cxx'):
       if name.find('=') == -1:
         sys.argv[l] = name.replace('disable-cxx','with-clanguage=C',1)
       else:
@@ -119,20 +119,20 @@ def chkenable():
       continue
 
 
-    if name.startswith('enable-'):
+    if name.lstrip('-').name.startswith('enable-'):
       if name.find('=') == -1:
         sys.argv[l] = name.replace('enable-','with-',1)+'=1'
       else:
         head, tail = name.split('=', 1)
         sys.argv[l] = head.replace('enable-','with-',1)+'='+tail
-    if name.startswith('disable-'):
+    if name.lstrip('-').name.startswith('disable-'):
       if name.find('=') == -1:
         sys.argv[l] = name.replace('disable-','with-',1)+'=0'
       else:
         head, tail = name.split('=', 1)
         if tail == '1': tail = '0'
         sys.argv[l] = head.replace('disable-','with-',1)+'='+tail
-    if name.startswith('without-'):
+    if name.lstrip('-').name.startswith('without-'):
       if name.find('=') == -1:
         sys.argv[l] = name.replace('without-','with-',1)+'=0'
       else:
