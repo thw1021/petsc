@@ -2191,9 +2191,8 @@ PetscErrorCode VecRestoreArrayReadAndMemType(Vec x,const PetscScalar **a)
 }
 
 /*@
-   VecPlaceArray - Allows one to replace the array in a vector with an
-   array provided by the user. This is useful to avoid copying an array
-   into a vector.
+   VecPlaceArray - Allows one to temporarily replace the array in a vector with an
+   array provided by the user. This is useful to avoid copying an array into a vector.
 
    Not Collective
 
@@ -2225,9 +2224,8 @@ PetscErrorCode  VecPlaceArray(Vec vec,const PetscScalar array[])
 }
 
 /*@C
-   VecReplaceArray - Allows one to replace the array in a vector with an
-   array provided by the user. This is useful to avoid copying an array
-   into a vector.
+   VecReplaceArray - Allows one to permanently replace the array in a vector with an
+   array provided by the user. This is useful to avoid copying an array into a vector.
 
    Not Collective
 
