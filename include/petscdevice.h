@@ -234,11 +234,6 @@ PETSC_EXTERN PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PetscDefined(HAVE_HIP) */
 
-/* Cannot use the device context api without C++11 */
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
-PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
-PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
-PETSC_EXTERN PetscBool      PetscDeviceInitializedFor(PetscDeviceKind);
 PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor(PetscDeviceKind kind)
 {
 #if defined(PetscUnreachable)
@@ -257,6 +252,12 @@ PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor(PetscD
 #endif
   return PETSC_FALSE;
 }
+
+/* Cannot use the device context api without C++11 */
+#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
+PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
+PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
+PETSC_EXTERN PetscBool      PetscDeviceInitializedFor(PetscDeviceKind);
 
 /* PetscDevice */
 PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceKind,PetscInt,PetscDevice*);
