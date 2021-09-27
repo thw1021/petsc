@@ -1008,4 +1008,9 @@ extern PetscInt PetscNumOMPThreads;
 #endif
 
 PETSC_EXTERN PetscBool      PetscCreatedGpuObjects;
+
+/* Rank and size in MPI_COMM_WORLD (not necessarily PETSC_COMM_WORLD), for convenience in debugging. */
+PETSC_EXTERN PetscMPIInt PetscGlobalRank;
+PETSC_EXTERN PetscMPIInt PetscGlobalSize;
+
 #endif /* PETSCIMPL_H */
