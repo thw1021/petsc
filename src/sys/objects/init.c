@@ -5,20 +5,13 @@
   This file uses regular malloc and free because it cannot be known
   what malloc is being used until it has already processed the input.
 */
-
-#include <petscsys.h>        /*I  "petscsys.h"   I*/
-#include <petsc/private/petscimpl.h>
-#include <petscviewer.h>
+#include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
 
 #if defined(PETSC_HAVE_SYS_SYSINFO_H)
 #include <sys/sysinfo.h>
 #endif
 #if defined(PETSC_HAVE_UNISTD_H)
 #include <unistd.h>
-#endif
-
-#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-#  include <petscdevice.h>
 #endif
 
 /* ------------------------Nasty global variables -------------------------------*/
@@ -43,8 +36,7 @@ PetscBool   PetscBeganNvshmem             = PETSC_FALSE;
 PetscBool   PetscNvshmemInitialized       = PETSC_FALSE;
 #endif
 
-PetscBool   use_gpu_aware_mpi             = PETSC_TRUE;
-PetscBool   PetscCreatedGpuObjects        = PETSC_FALSE;
+PetscBool   use_gpu_aware_mpi             = !PetscDefined(HAVE_MPIUNI);
 
 #if defined(PETSC_HAVE_COMPLEX)
 #if defined(PETSC_COMPLEX_INSTANTIATE)
@@ -220,6 +212,10 @@ static       char           emacsmachinename[256];
 
 PetscErrorCode (*PetscExternalVersionFunction)(MPI_Comm) = NULL;
 PetscErrorCode (*PetscExternalHelpFunction)(MPI_Comm)    = NULL;
+
+#if PetscDefined(USE_LOG)
+#include <petscviewer.h>
+#endif
 
 /*@C
    PetscSetHelpVersionFunctions - Sets functions that print help and version information

@@ -5,25 +5,28 @@
 // need this declaration...
 
 namespace Petsc {
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE(PREFIX,prefix,stem)   \
+  const decltype(prefix##stem) CUPMInterface<CUPMDeviceKind::##PREFIX>::cupm##stem
 
 #if PetscDefined(HAVE_CUDA)
-const decltype(cudaSuccess)                 CUPMInterface<CUPMDeviceKind::CUDA>::cupmSuccess;
-const decltype(cudaErrorNotReady)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorNotReady;
-const decltype(cudaStreamNonBlocking)       CUPMInterface<CUPMDeviceKind::CUDA>::cupmStreamNonBlocking;
-const decltype(cudaErrorDeviceAlreadyInUse) CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorDeviceAlreadyInUse;
-const decltype(cudaErrorSetOnActiveProcess) CUPMInterface<CUPMDeviceKind::CUDA>::cupmErrorSetOnActiveProcess;
-const decltype(cudaDeviceMapHost)           CUPMInterface<CUPMDeviceKind::CUDA>::cupmDeviceMapHost;
-const decltype(cudaMemcpyHostToDevice)      CUPMInterface<CUPMDeviceKind::CUDA>::cupmMemcpyHostToDevice;
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,Success);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,ErrorNotReady);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,StreamNonBlocking);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,ErrorDeviceAlreadyInUse);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,ErrorSetOnActiveProcess);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,DeviceMapHost);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(CUDA,cuda,MemcpyHostToDevice);
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
-const decltype(hipSuccess)                 CUPMInterface<CUPMDeviceKind::HIP>::cupmSuccess;
-const decltype(hipErrorNotReady)           CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorNotReady;
-const decltype(hipStreamNonBlocking)       CUPMInterface<CUPMDeviceKind::HIP>::cupmStreamNonBlocking;
-const decltype(hipSuccess)                 CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;
-const decltype(hipErrorSetOnActiveProcess) CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorSetOnActiveProcess;
-const decltype(hipDeviceMapHost)           CUPMInterface<CUPMDeviceKind::HIP>::cupmDeviceMapHost;
-const decltype(hipMemcpyHostToDevice)      CUPMInterface<CUPMDeviceKind::HIP>::cupmMemcpyHostToDevice;
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(HIP,hip,Success);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(HIP,hip,ErrorNotReady);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(HIP,hip,StreamNonBlocking);
+// not conforming, see declaration in cupminterface.hpp
+const decltype(hipSuccess) CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(HIP,hip,ErrorSetOnActiveProcess);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(HIP,hip,DeviceMapHost);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE(HIP,hip,MemcpyHostToDevice);
 #endif // PetscDefined(HAVE_HIP)
 
 } // namespace Petsc
