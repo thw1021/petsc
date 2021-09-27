@@ -206,6 +206,26 @@ PetscErrorCode PETScParseFortranArgs_Private(int *argc,char ***argv)
 
 PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
 
+PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool readarguments,const char *filename,PetscInt len)
+{
+  PetscErrorCode ierr;
+  char           *tmp = NULL;
+
+  PetscFunctionBegin;
+  ierr = PetscInitializeFortran();CHKERRQ(ierr);
+  if (readarguments) {
+    ierr = PETScParseFortranArgs_Private(&PetscGlobalArgc,&PetscGlobalArgs);CHKERRQ(ierr);
+    if (filename != PETSC_NULL_CHARACTER_Fortran) {  /* FIXCHAR */
+      while ((len > 0) && (filename[len-1] == ' ')) len--;
+      ierr = PetscMalloc1(len+1,&tmp);CHKERRQ(ierr);
+      ierr = PetscStrncpy(tmp,filename,len+1);CHKERRQ(ierr);
+    }
+    ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,tmp);CHKERRQ(ierr);
+    ierr = PetscFree(tmp);CHKERRQ(ierr); /* FREECHAR */
+  }
+  PetscFunctionReturn(0);
+}
+
 /*
     petscinitialize - Version called from Fortran.
 

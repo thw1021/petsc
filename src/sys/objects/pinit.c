@@ -680,12 +680,12 @@ PetscInt PetscNumOMPThreads;
   PetscInitialize_Common  - shared code between C and Fortran initialization
 
   prog:     program name
-  file:     optional PETSc database file name
+  file:     optional PETSc database file name. Might be in Fortran string format when 'fortran' is true
   help:     program help message
   fortran:  is it called from Fortran initilization (petscinitializef_)?
-  readarguments, len: used when fortran is true
+  readarguments,len: used when fortran is true
 */
-PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,char* file,const char *help,PetscBool fortran,PetscBool readarguments,PetscInt len)
+PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* file,const char *help,PetscBool fortran,PetscBool readarguments,PetscInt len)
 {
   PetscErrorCode ierr;
   PetscMPIInt    size;
@@ -915,26 +915,10 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,char* file,c
   ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN,Petsc_ShmComm_Attr_Delete_Fn,&Petsc_ShmComm_keyval,(void*)0);CHKERRMPI(ierr);
 
 #if defined(PETSC_HAVE_FORTRAN)
-  if (fortran) {
-    char *tmp;
-    ierr = PetscInitializeFortran();CHKERRQ(ierr);
-    if (readarguments) {
-      ierr = PETScParseFortranArgs_Private(&PetscGlobalArgc,&PetscGlobalArgs);CHKERRQ(ierr);
-      if (file == PETSC_NULL_CHARACTER_Fortran) {  /* FIXCHAR */
-        tmp = file = NULL;
-      } else {
-        while ((len > 0) && (file[len-1] == ' ')) len--;
-        ierr = PetscMalloc1(len+1,&tmp);CHKERRQ(ierr);
-        ierr = PetscStrncpy(tmp,file,len+1);CHKERRQ(ierr);
-      }
-      ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,tmp);CHKERRQ(ierr);
-      if (file != tmp) {ierr = PetscFree(tmp);CHKERRQ(ierr);} /* FREECHAR */
-    }
-  } else
+  if (fortran) {ierr = PetscInitFortran_Private(readarguments,file,len);CHKERRQ(ierr);}
+  else
 #endif
-  {
-    ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,file);CHKERRQ(ierr);
-  }
+  {ierr = PetscOptionsInsert(NULL,&PetscGlobalArgc,&PetscGlobalArgs,file);CHKERRQ(ierr);}
 
   /* call a second time so it can look in the options database */
   ierr = PetscErrorPrintfInitialize();CHKERRQ(ierr);
@@ -1213,7 +1197,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
     PetscGlobalArgc = *argc;
     PetscGlobalArgs = *args;
   }
-  ierr = PetscInitialize_Common(prog,(char*)file,help,PETSC_FALSE/*C*/,PETSC_FALSE,0);CHKERRQ(ierr);
+  ierr = PetscInitialize_Common(prog,file,help,PETSC_FALSE/*C*/,PETSC_FALSE,0);CHKERRQ(ierr);
   return 0;
 }
 

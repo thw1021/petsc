@@ -19,6 +19,9 @@ PETSC_EXTERN void    *PETSC_NULL_REAL_Fortran;
 PETSC_EXTERN void    *PETSC_NULL_BOOL_Fortran;
 PETSC_EXTERN void   (*PETSC_NULL_FUNCTION_Fortran)(void);
 PETSC_EXTERN void    *PETSC_NULL_MPI_COMM_Fortran;
+
+PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool,const char*,PetscInt);
+
 /*  ----------------------------------------------------------------------*/
 /*
    PETSc object C pointers are stored directly as
