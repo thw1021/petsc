@@ -720,8 +720,9 @@ PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext *dctx)
   PetscFunctionBegin;
   PetscValidPointer(dctx,1);
   ierr = PetscDeviceContextSetupGlobalContext_Private();CHKERRQ(ierr);
-  /* while the static analyzer can handle global variables, it will throw a spurious warning */
-  PetscValidDeviceContext(globalContext,-1);
+  /* while the static analyzer can find global variables, it will throw a warning about not
+   * being able to connect this back to the function arguments */
+  PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidDeviceContext(globalContext,-1));
   *dctx = globalContext;
   PetscFunctionReturn(0);
 }

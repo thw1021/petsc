@@ -2,6 +2,8 @@
 
 using namespace Petsc;
 
+// note to anyone adding more classes, the name must be ALL_CAPS_SHORT_NAME + Device exactly to
+// be picked up by the switch-case macros below.
 #if PetscDefined(HAVE_CUDA)
 static CUPMDevice<CUPMDeviceKind::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA);
 #endif
@@ -14,15 +16,13 @@ const char *const PetscDeviceKinds[] = {"invalid","cuda","hip","max","PetscDevic
 const char *const PetscDeviceInitKinds[] = {"none","lazy","greedy","PetscDeviceInitKind","PETSC_DEVICE_INIT_",PETSC_NULLPTR};
 static_assert(sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds) == 6,"Must change CUPMDevice<T>::initialize number of enum values in -device_enable_cupm to match!");
 
+#define PETSC_DEVICE_DEFAULT_CASE(comm,kind) SETERRQ1(comm,PETSC_ERR_PLIB,"PETSc was seeminly configured for PetscDeviceKind %s but we've fallen through all cases in a switch",PetscDeviceKinds[kind])
+
 #define CAT_(a,...) a ## __VA_ARGS__
 #define CAT(a,...)  CAT_(a,__VA_ARGS__)
 
-/* Need to do the ugly ## directly here rather than use macro since I guess PetscDefined
- * doesn't have an initial indirection layer? */
-#define PETSC_DEVICE_DEFAULT_CASE(comm,kind) SETERRQ1(comm,PETSC_ERR_PLIB,"PETSc was seeminly configured for PetscDeviceKind %s but we've fallen through all cases in a switch",PetscDeviceKinds[kind])
-
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED(IMPLS,...)                   \
-  CAT(PETSC_DEVICE_CASE_IF_PETSC_DEFINED_,PetscDefined(HAVE_##IMPLS))(IMPLS,__VA_ARGS__)
+  CAT(PETSC_DEVICE_CASE_IF_PETSC_DEFINED_,PetscDefined(CAT(HAVE_,IMPLS)))(IMPLS,__VA_ARGS__)
 
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED_0(IMPLS,func,...)
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED_1(IMPLS,func,...)            \
@@ -32,6 +32,8 @@ static_assert(sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds) == 6,"M
     ierr = CAT(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr);           \
     break;                                                              \
   }
+
+#define PETSC_DEVICE_UNUSED_IF_NO_DEVICE(var) (void)(var);
 
 /*@C
   PetscDeviceCreate - Get a new handle for a particular device kind
@@ -65,6 +67,7 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceKind kind, PetscInt devid, PetscDevi
   PetscFunctionBegin;
   PetscValidDeviceKind(kind,1);
   PetscValidPointer(device,3);
+  PETSC_DEVICE_UNUSED_IF_NO_DEVICE(devid);
   ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   ierr = PetscNew(&dev);CHKERRQ(ierr);
   dev->id     = PetscDeviceCounter++;
@@ -328,9 +331,9 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     auto initKind         = defaultInitKind;
 
     ierr = PetscDeviceInitializeKindFromOptions_Private(comm,deviceKind,defaultDevice,defaultView,&initKind);CHKERRQ(ierr);
-    if (initKind == PETSC_DEVICE_INIT_GREEDY && PetscDeviceConfiguredFor(deviceKind)) {
-      deviceContextInitDevice = deviceKind;
+    if (PetscDeviceConfiguredFor(deviceKind) && (initKind == PETSC_DEVICE_INIT_GREEDY)) {
       initializeDeviceContextGreedily = PETSC_TRUE;
+      deviceContextInitDevice         = deviceKind;
     }
   }
   if (initializeDeviceContextGreedily) {
