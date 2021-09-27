@@ -851,10 +851,12 @@ PetscErrorCode  DMSetUp(DM dm)
 . -dm_refine_uniform_pre <bool>     - Flag for uniform refinement before distribution
 . -dm_refine_volume_limit_pre <v>   - The maximum cell volume after refinement before distribution
 . -dm_refine <n>                    - The number of refinements after distribution
-. -dm_extrude_layers <l>            - The number of layers to extrude
-. -dm_extrude_thickness <t>         - The thickness of the layer to be extruded
-. -dm_extrude_column_first <bool>   - Order the cells in a vertical column first
-. -dm_extrude_symmetric <bool>      - Extrude layers symmetrically about the surface
+. -dm_extrude <l>                   - Acticate extrusion and apecify the number of layers to extrude
+. -dm_plex_transform_extrude_thickness <t>           - The total thickness of extruded layers
+. -dm_plex_transform_extrude_use_tensor <bool>       - Use tensor cells when extruding
+. -dm_plex_transform_extrude_symmetric <bool>        - Extrude layers symmetrically about the surface
+. -dm_plex_transform_extrude_normal <n0,...,nd>      - Specify the extrusion direction
+. -dm_plex_transform_extrude_thicknesses <t0,...,tl> - Specify thickness of each layer
 . -dm_plex_create_fv_ghost_cells    - Flag to create finite volume ghost cells on the boundary
 . -dm_plex_fv_ghost_cells_label <name> - Label name for ghost cells boundary
 . -dm_distribute <bool>             - Flag to redistribute a mesh among processes

@@ -20,20 +20,22 @@ struct _p_DMPlexTransform {
   PETSCHEADER(struct _p_DMPlexTransformOps);
   void *data;
 
-  DM            dm;          /* This is the DM for which the transform has been computed */
-  DMLabel       active;      /* If not NULL, indicates points that are participating in the transform */
-  DMLabel       trType;      /* If not NULL, this holds the transformation type for each point */
-  PetscInt      setupcalled; /* Flag to indicate the setup stage */
-  PetscInt     *ctOrder;     /* [i] = ct: An array with cell types in depth order */
-  PetscInt     *ctOrderInv;  /* [ct] = i: An array with the ordinal numbers for each cell type */
-  PetscInt     *ctStart;     /* [ct]: The number for the first cell of each polytope type in the original mesh */
-  PetscInt     *ctStartNew;  /* [ctNew]: The number for the first cell of each polytope type in the new mesh */
-  PetscInt     *offset;      /* [ct/rt][ctNew]: The offset from ctStartNew[ctNew] in the new point numbering of a point of type ctNew produced from an old point of type ct or refine type rt */
-  PetscInt     *trNv;        /* The number of transformed vertices in the closure of a cell of each type */
-  PetscScalar **trVerts;     /* The transformed vertex coordinates in the closure of a cell of each type */
-  PetscInt  ****trSubVerts;  /* The indices for vertices of subcell (rct, r) in a cell of each type */
-  PetscFE      *coordFE;     /* Finite element for each cell type, used for localized coordinate interpolation */
-  PetscFEGeom **refGeom;     /* Geometry of the reference cell for each cell type */
+  DM            dm;            /* This is the DM for which the transform has been computed */
+  DMLabel       active;        /* If not NULL, indicates points that are participating in the transform */
+  DMLabel       trType;        /* If not NULL, this holds the transformation type for each point */
+  PetscInt      setupcalled;   /* Flag to indicate the setup stage */
+  PetscInt     *ctOrderOld;    /* [i] = ct: An array with original cell types in depth order */
+  PetscInt     *ctOrderInvOld; /* [ct] = i: An array with the ordinal numbers for each original cell type */
+  PetscInt     *ctStart;       /* [ct]: The number for the first cell of each polytope type in the original mesh */
+  PetscInt     *ctOrderNew;    /* [i] = ct: An array with produced cell types in depth order */
+  PetscInt     *ctOrderInvNew; /* [ct] = i: An array with the ordinal numbers for each produced cell type */
+  PetscInt     *ctStartNew;    /* [ctNew]: The number for the first cell of each polytope type in the new mesh */
+  PetscInt     *offset;        /* [ct/rt][ctNew]: The offset from ctStartNew[ctNew] in the new point numbering of a point of type ctNew produced from an old point of type ct or refine type rt */
+  PetscInt     *trNv;          /* The number of transformed vertices in the closure of a cell of each type */
+  PetscScalar **trVerts;       /* The transformed vertex coordinates in the closure of a cell of each type */
+  PetscInt  ****trSubVerts;    /* The indices for vertices of subcell (rct, r) in a cell of each type */
+  PetscFE      *coordFE;       /* Finite element for each cell type, used for localized coordinate interpolation */
+  PetscFEGeom **refGeom;       /* Geometry of the reference cell for each cell type */
 };
 
 typedef struct {

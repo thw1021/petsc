@@ -36,7 +36,7 @@ static PetscErrorCode DMPlexTransformSetFromOptions_Extrude(PetscOptionItems *Pe
   ierr = PetscOptionsHead(PetscOptionsObject, "DMPlexTransform Extrusion Options");CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-dm_plex_transform_extrude_layers", "Number of layers to extrude", "", ex->layers, &nl, &flg, 1);CHKERRQ(ierr);
   if (flg) {ierr = DMPlexTransformExtrudeSetLayers(tr, nl);CHKERRQ(ierr);}
-  ierr = PetscOptionsReal("-dm_plex_transform_extrude_thickness", "Thickness of each extruded layer", "", ex->thickness, &th, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-dm_plex_transform_extrude_thickness", "Total thickness of extruded layers", "", ex->thickness, &th, &flg);CHKERRQ(ierr);
   if (flg) {ierr = DMPlexTransformExtrudeSetThickness(tr, th);CHKERRQ(ierr);}
   ierr = PetscOptionsBool("-dm_plex_transform_extrude_use_tensor", "Create tensor cells", "", ex->useTensor, &tensor, &flg);CHKERRQ(ierr);
   if (flg) {ierr = DMPlexTransformExtrudeSetTensor(tr, tensor);CHKERRQ(ierr);}
@@ -407,8 +407,8 @@ static PetscErrorCode DMPlexTransformMapCoordinates_Extrude(DMPlexTransform tr, 
 {
   DMPlexTransform_Extrude *ex = (DMPlexTransform_Extrude *) tr->data;
   DM                       dm;
-  PetscReal                ones2[2] = { 0., 1.}, ones3[3] = { 0., 0., 1.};
-  PetscReal                normal[3], norm;
+  PetscReal                ones2[2]  = {0., 1.}, ones3[3] = { 0., 0., 1.};
+  PetscReal                normal[3] = {0., 0., 0.}, norm;
   PetscBool                computeNormal;
   PetscInt                 dim, dEx = ex->cdimEx, cStart, cEnd, d;
   PetscErrorCode           ierr;
@@ -428,7 +428,7 @@ static PetscErrorCode DMPlexTransformMapCoordinates_Extrude(DMPlexTransform tr, 
 
     ierr = DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
     ierr = DMPlexGetTransitiveClosure(dm, p, PETSC_FALSE, &closureSize, &closure);CHKERRQ(ierr);
-    for (cl = 0; cl < closureSize; cl += 2) {
+    for (cl = 0; cl < closureSize*2; cl += 2) {
       if ((closure[cl] >= cStart) && (closure[cl] < cEnd)) {
         PetscReal cnormal[3] = {0, 0, 0};
 
