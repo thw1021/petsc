@@ -36,7 +36,7 @@ PetscBool   PetscBeganNvshmem             = PETSC_FALSE;
 PetscBool   PetscNvshmemInitialized       = PETSC_FALSE;
 #endif
 
-PetscBool   use_gpu_aware_mpi             = !PetscDefined(HAVE_MPIUNI);
+PetscBool   use_gpu_aware_mpi             = PetscDefined(HAVE_MPIUNI) ? PETSC_FALSE : PETSC_TRUE;
 
 #if defined(PETSC_HAVE_COMPLEX)
 #if defined(PETSC_COMPLEX_INSTANTIATE)

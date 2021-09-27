@@ -119,14 +119,14 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
                                 (_p_dev_ctx2__)->device,_p_arg2__);     \
   } while (0)
 
-#else /* PETSC_USE_DEBUG */
+#else /* PetscDefined(USE_DEBUG) */
 #define PetscValidDeviceKind(_p_dev_kind__,_p_arg__)
 #define PetscValidDevice(_p_dev__,_p_arg__)
 #define PetscCheckCompatibleDevices(_p_dev1__,_p_arg1__,_p_dev2__,_p_arg2__)
 #define PetscValidStreamType(_p_strm_type__,_p_arg__)
 #define PetscValidDeviceContext(_p_dev_ctx__,_p_arg__)
 #define PetscCheckCompatibleDeviceContexts(_p_dev_ctx1__,_p_arg1__,_p_dev_ctx2__,_p_arg2__)
-#endif /* PETSC_USE_DEBUG */
+#endif /* PetscDefined(USE_DEBUG) */
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 /* if someone is ready to rock with more than 128 GPUs on hand then we're in real trouble */
@@ -179,6 +179,7 @@ struct _n_PetscDeviceContext {
 };
 
 /* PetscDevice Internal Functions */
+#if PetscDefined(HAVE_DEVICE)
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind,PetscInt);
 PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
@@ -210,8 +211,19 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice d
   if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"PetscDevice has negative reference count %D",device->refcnt);
   PetscFunctionReturn(0);
 }
+#else /* PetscDefined(HAVE_DEVICE) */
+#define PetscDeviceInitializeFromOptions_Internal(comm)      0
+#define PetscDeviceInitializeDefaultDevice_Internal(kind,id) 0
+#define PetscDeviceGetDefaultForKind_Internal(kind,device)   0
+#define PetscDeviceInitialize_Internal(kind)                 0
+#define PetscDeviceGetDefault_Internal(device)               0
+#define PetscDeviceCheckDeviceCount_Internal(count)          0
+#define PetscDeviceReference_Internal(device)                0
+#define PetscDeviceDereference_Internal(device)              0
+#endif /* PetscDefined(HAVE_DEVICE) */
 
 /* PetscDeviceContext Internal Functions */
+#if PetscDefined(HAVE_DEVICE)
 PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootDeviceKind_Internal(PetscDeviceKind);
 
 /* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
@@ -303,6 +315,17 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
   ierr = (*dctx->ops->endtimer)(dctx,elapsed);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+#else /* PetscDefined(HAVE_DEVICE) */
+#define PetscDeviceContextSetRootDeviceKind_Internal(kind)                0
+#define PetscDeviceContextValidateIdle_Internal(dctx)                     0
+#define PetscDeviceContextSetDefaultDeviceForKind_Internal(dctx,kind)     0
+#define PetscDeviceContextSetDefaultDevice_Internal(dctx)                 0
+#define PetscDeviceContextGetCurrentContextAssertKind_Internal(dctx,kind) 0
+#define PetscDeviceContextGetBLASHandle_Internal(dctx,handle)             0
+#define PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle)           0
+#define PetscDeviceContextBeginTimer_Internal(dctx)                       0
+#define PetscDeviceContextEndTimer_Internal(dctx,elapsed)                 0
+#endif /* PetscDefined(HAVE_DEVICE) */
 
 #if PetscDefined(HAVE_CUDA)
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
