@@ -595,7 +595,6 @@ class PetscLinter(object):
     self.verbose    = verbose
     self.werror     = werror
     self.lock       = lock
-    self.warnAll    = warnAll
     self.errPrefix  = " ".join([prefix,85*"-"])
     self.warnPrefix = " ".join([prefix,85*"%"])
     self.errors     = []
@@ -934,7 +933,7 @@ class PetscLinter(object):
         warnings = ""
     else:
       warnings = self.warnings
-    return warning
+    return warnings
 
   def coalescePatches(self):
     combinedPatches = []
@@ -1957,7 +1956,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
     lockPrint(printPrefix,15*"=","Performing setup",15*"=")
     initializeLibclang(clangLib=clangLib)
     linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,werror=werror,lock=lock)
-    lockPrint(printPrefix,15*"=","Entering queue",15*"=")
+    lockPrint(printPrefix,15*"=","Entering queue  ",15*"=")
     while True:
       filename = fileQueue.get()
       if filename == QueueSignal.EXIT_QUEUE:
@@ -1971,7 +1970,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
       returnQueue.put((QueueSignal.WARNING     ,linter.getAllWarnings()))
       linter.clear()
       fileQueue.task_done()
-    lockPrint(printPrefix,15*"=","Exiting queue",15*"=")
+    lockPrint(printPrefix,15*"=","Exiting queue   ",15*"=")
   except:
     try:
       # attempt to send the traceback back to parent
