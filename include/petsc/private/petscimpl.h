@@ -188,7 +188,7 @@ PETSC_INTERN PetscErrorCode PetscFreeMPIResources(void);
 PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions,PetscBool*);
 
 /* Code shared between C and Fortran */
-PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char*,char*,const char*,PetscBool,PetscBool,PetscInt);
+PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char*,const char*,const char*,PetscBool,PetscBool,PetscInt);
 
 PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
