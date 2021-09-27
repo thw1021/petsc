@@ -1715,8 +1715,6 @@ PETSC_EXTERN PetscErrorCode PetscContainerUserDestroyDefault(void*);
 /*
    For use in debuggers
 */
-PETSC_EXTERN PetscMPIInt PetscGlobalRank;
-PETSC_EXTERN PetscMPIInt PetscGlobalSize;
 PETSC_EXTERN PetscErrorCode PetscIntView(PetscInt,const PetscInt[],PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscRealView(PetscInt,const PetscReal[],PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt,const PetscScalar[],PetscViewer);

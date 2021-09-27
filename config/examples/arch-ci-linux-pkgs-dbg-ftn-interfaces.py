@@ -34,6 +34,7 @@ configure_options = [
   '--download-parms=1',
   '--download-kokkos=1',
   '--download-kokkos-kernels=1',
+  '--with-kokkos-init-disable-warnings=1', # we want to avoid this in test output, "Kokkos::OpenMP::initialize WARNING: You are likely oversubscribing your CPU cores"
   '--download-chaco=1'
   ]
 
