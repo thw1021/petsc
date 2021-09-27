@@ -187,6 +187,9 @@ PETSC_INTERN PetscErrorCode PetscCitationsInitialize(void);
 PETSC_INTERN PetscErrorCode PetscFreeMPIResources(void);
 PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions,PetscBool*);
 
+/* Code shared between C and Fortran */
+PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char*,const char*,const char*,PetscBool,PetscBool,PetscInt);
+
 PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 /*
@@ -1000,5 +1003,14 @@ PETSC_EXTERN PetscBool      PetscHIPInitialized;
 PETSC_EXTERN PetscBool      PetscMPIHIPAwarenessCheck(void);
 #endif
 
+#if defined(PETSC_HAVE_OPENMP)
+extern PetscInt PetscNumOMPThreads;
+#endif
+
 PETSC_EXTERN PetscBool      PetscCreatedGpuObjects;
+
+/* Rank and size in MPI_COMM_WORLD (not necessarily PETSC_COMM_WORLD), for convenience in debugging. */
+PETSC_EXTERN PetscMPIInt PetscGlobalRank;
+PETSC_EXTERN PetscMPIInt PetscGlobalSize;
+
 #endif /* PETSCIMPL_H */
