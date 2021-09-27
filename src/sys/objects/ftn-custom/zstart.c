@@ -128,25 +128,8 @@ PETSC_EXTERN void PXFGETARG(int*,_fcd,int*,int*);
 #endif
 #endif
 
-#if defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
-PETSC_EXTERN void MPIAPI PetscSum_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
-PETSC_EXTERN void MPIAPI PetscMax_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
-PETSC_EXTERN void MPIAPI PetscMin_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
-#endif
-
-PETSC_INTERN void MPIAPI MPIU_MaxSum_Local(void*,void*,PetscMPIInt*,MPI_Datatype*);
-PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Counter_Attr_Delete_Fn(MPI_Comm,PetscMPIInt,void*,void*);
-PETSC_EXTERN PetscMPIInt MPIAPI Petsc_InnerComm_Attr_Delete_Fn(MPI_Comm,PetscMPIInt,void*,void*);
-PETSC_EXTERN PetscMPIInt MPIAPI Petsc_OuterComm_Attr_Delete_Fn(MPI_Comm,PetscMPIInt,void*,void*);
-
-PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char[]);
-PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void);
-#if defined(PETSC_USE_LOG)
-PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
-#endif
 PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t,PetscBool,int,const char[],const char[],void**);
 PETSC_EXTERN PetscErrorCode PetscFreeAlign(void*,int,const char[],const char[]);
-PETSC_INTERN int  PetscGlobalArgc;
 PETSC_INTERN char **PetscGlobalArgs;
 
 /*
@@ -219,22 +202,8 @@ PetscErrorCode PETScParseFortranArgs_Private(int *argc,char ***argv)
   return 0;
 }
 
-#if defined(PETSC_SERIALIZE_FUNCTIONS)
-PETSC_INTERN PetscFPT PetscFPTData;
-#endif
-
-#if defined(PETSC_HAVE_ADIOS)
-#include <adios.h>
-#include <adios_read.h>
-#endif
 /* -----------------------------------------------------------------------------------------------*/
 
-#if defined(PETSC_HAVE_SAWS)
-#include <petscviewersaws.h>
-PETSC_INTERN PetscErrorCode  PetscInitializeSAWs(const char[]);
-#endif
-
-PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm,PetscMPIInt,void *,void *);
 PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
 
 /*
