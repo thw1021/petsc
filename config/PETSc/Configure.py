@@ -661,6 +661,16 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       self.addDefine('HAVE_BUILTIN_EXPECT', 1)
     self.popLanguage()
 
+  def configureUnreachable(self):
+    """Checks if the compiler has __builtin_unreachable() or equivalent"""
+    with self.Language(self.languages.clanguage):
+      for snippet in ('__builtin_unreachable()','__assume(0)'):
+        code = 'if (0) '+snippet+';'
+        if self.checkCompile('',code) and self.checkLink('',code):
+          self.addDefine('BUILTIN_UNREACHABLE',snippet)
+          break
+    return
+
   def configureFunctionName(self):
     '''Sees if the compiler supports __func__ or a variant.'''
     def getFunctionName(lang):
@@ -951,6 +961,7 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.executeTest(self.configureDeprecated)
     self.executeTest(self.configureIsatty)
     self.executeTest(self.configureExpect)
+    self.executeTest(self.configureUnreachable)
     self.executeTest(self.configureAlign)
     self.executeTest(self.configureFunctionName)
     self.executeTest(self.configureIntptrt)
