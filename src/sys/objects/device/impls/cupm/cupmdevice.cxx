@@ -63,7 +63,10 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
   _devInitialized = true;
   // need to do this BEFORE device has been set, although if the user
   // has already done this then we just ignore it
-  if (cupmSetDeviceFlags(cupmDeviceMapHost) != cupmErrorSetOnActiveProcess) CHKERRCUPM(cupmGetLastError());
+  if (cupmSetDeviceFlags(cupmDeviceMapHost) == cupmErrorSetOnActiveProcess) {
+    // reset the error if it was cupmErrorSetOnActiveProcess
+    const auto PETSC_UNUSED unused = cupmGetLastError();
+  } else {CHKERRCUPM(cupmGetLastError());}
   // cuda 5.0+ will create a context when cupmSetDevice is called
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
   // forces cuda < 5.0 to initialize a context
