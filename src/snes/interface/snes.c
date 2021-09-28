@@ -3002,7 +3002,7 @@ PetscErrorCode  SNESComputeJacobian(SNES snes,Vec X,Mat A,Mat B)
                 ierr = PetscViewerASCIIPrintf(vstdout," (%D,%g:%g)",bj[j],(double)PetscRealPart(ba[j]),(double)PetscRealPart(ca[j]));CHKERRQ(ierr);
               }
             }
-            ierr = PetscViewerASCIIPrintf(vstdout,"\n",i,maxentry,maxdiff,maxrdiff);CHKERRQ(ierr);
+            ierr = PetscViewerASCIIPrintf(vstdout,"\n");CHKERRQ(ierr);
           }
           ierr = MatRestoreRow(B,i,&bn,&bj,&ba);CHKERRQ(ierr);
           ierr = MatRestoreRow(Bfd,i,&cn,&cj,&ca);CHKERRQ(ierr);
