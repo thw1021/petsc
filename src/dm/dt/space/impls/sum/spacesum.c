@@ -197,7 +197,7 @@ static PetscErrorCode PetscSpaceSumGetSubspace_Sum(PetscSpace space,PetscInt s,P
 
   PetscFunctionBegin;
   if (Ns < 0) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSpaceSumSetNumSubspaces() first\n");
-  if (s<0 || s>=Ns) SETERRQ1 (PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",subspace);
+  if (s<0 || s>=Ns) SETERRQ1 (PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",s);
 
   *subspace = sum->sumspaces[s];
   PetscFunctionReturn(0);
@@ -212,7 +212,7 @@ static PetscErrorCode PetscSpaceSumSetSubspace_Sum(PetscSpace space,PetscInt s,P
   PetscFunctionBegin;
   if (sum->setupCalled) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change subspace after setup called\n");
   if (Ns < 0) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSpaceSumSetNumSubspaces() first\n");
-  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",subspace);
+  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",s);
 
   ierr              = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);
   ierr              = PetscSpaceDestroy(&sum->sumspaces[s]);CHKERRQ(ierr);
