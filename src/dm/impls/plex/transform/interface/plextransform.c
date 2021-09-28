@@ -254,14 +254,14 @@ static PetscErrorCode DMPlexTransformView_Ascii(DMPlexTransform tr, PetscViewer 
     PetscInt        Nrt = 8, f, g;
 
     ierr = PetscViewerASCIIPrintf(v, "Source Starts\n");CHKERRQ(ierr);
-    for (g = 0; g <= cols; ++g) {ierr = PetscViewerASCIIPrintf(v, " % 14s", DMPolytopeTypes[g]);CHKERRQ(ierr);}
+    for (g = 0; g <= cols; ++g) {ierr = PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
-    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " % 14d", tr->ctStart[f]);CHKERRQ(ierr);}
+    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " %14d", tr->ctStart[f]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "Target Starts\n");CHKERRQ(ierr);
-    for (g = 0; g <= cols; ++g) {ierr = PetscViewerASCIIPrintf(v, " % 14s", DMPolytopeTypes[g]);CHKERRQ(ierr);}
+    for (g = 0; g <= cols; ++g) {ierr = PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
-    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " % 14d", tr->ctStartNew[f]);CHKERRQ(ierr);}
+    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " %14d", tr->ctStartNew[f]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
 
     if (tr->trType) {
@@ -272,11 +272,11 @@ static PetscErrorCode DMPlexTransformView_Ascii(DMPlexTransform tr, PetscViewer 
     ierr = PetscViewerASCIIPrintf(v, "Offsets\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "     ");CHKERRQ(ierr);
     for (g = 0; g < cols; ++g) {
-      ierr = PetscViewerASCIIPrintf(v, " % 14s", DMPolytopeTypes[g]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
     for (f = 0; f < Nrt; ++f) {
-      ierr = PetscViewerASCIIPrintf(v, "%2d  |", trTypes ? trTypes[f] : f);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(v, "%2D  |", trTypes ? trTypes[f] : f);CHKERRQ(ierr);
       for (g = 0; g < cols; ++g) {
         ierr = PetscViewerASCIIPrintf(v, " % 14D", tr->offset[f*DM_NUM_POLYTOPES+g]);CHKERRQ(ierr);
       }
@@ -1343,7 +1343,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
       ierr = DMPlexTransformCellTransform(reftr, ct, 0, NULL, &Nct, &rct, &rsize, &rcone, &rornt);CHKERRQ(ierr);
       for (n = 0; n < Nct; ++n) {
         if (rct[n] == DM_POLYTOPE_POINT) continue;
-        ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %s subvertices\n", DMPolytopeTypes[ct], DMPolytopeTypes[rct[n]], tr->trNv[ct]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %s subvertices %D\n", DMPolytopeTypes[ct], DMPolytopeTypes[rct[n]], tr->trNv[ct]);CHKERRQ(ierr);
         for (r = 0; r < rsize[n]; ++r) {
           ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);
           for (v = 0; v < DMPolytopeTypeGetNumVertices(rct[n]); ++v) {

@@ -105,7 +105,7 @@ static PetscErrorCode PCASMPrintSubdomains(PC pc)
       ierr = PetscMalloc1(len,&s);CHKERRQ(ierr);
       ierr = PetscViewerStringOpen(PETSC_COMM_SELF, s, len, &sviewer);CHKERRQ(ierr);
 #undef len
-      ierr = PetscViewerStringSPrintf(sviewer, "[%D:%D] Subdomain %D with overlap:\n", rank, size, i);CHKERRQ(ierr);
+      ierr = PetscViewerStringSPrintf(sviewer, "[%d:%d] Subdomain %D with overlap:\n", rank, size, i);CHKERRQ(ierr);
       for (j=0; j<nidx; j++) {
         ierr = PetscViewerStringSPrintf(sviewer,"%D ",idx[j]);CHKERRQ(ierr);
       }
@@ -113,7 +113,7 @@ static PetscErrorCode PCASMPrintSubdomains(PC pc)
       ierr = PetscViewerStringSPrintf(sviewer,"\n");CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&sviewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer, s);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s",s);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
       ierr = PetscFree(s);CHKERRQ(ierr);
@@ -133,7 +133,7 @@ static PetscErrorCode PCASMPrintSubdomains(PC pc)
         ierr = PetscViewerStringSPrintf(sviewer,"\n");CHKERRQ(ierr);
         ierr = PetscViewerDestroy(&sviewer);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, s);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s",s);CHKERRQ(ierr);
         ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
         ierr = PetscFree(s);CHKERRQ(ierr);

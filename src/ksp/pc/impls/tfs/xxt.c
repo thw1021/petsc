@@ -518,7 +518,7 @@ static PetscErrorCode check_handle(xxt_ADT xxt_handle)
   PetscInt vals[2], work[2], op[] = {NON_UNIFORM,GL_MIN,GL_MAX};
 
   PetscFunctionBegin;
-  if (!xxt_handle) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"check_handle() :: bad handle :: NULL %D\n",xxt_handle);
+  if (!xxt_handle) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"check_handle() :: bad handle :: NULL %p\n",xxt_handle);
 
   vals[0]=vals[1]=xxt_handle->id;
   PCTFS_giop(vals,work,sizeof(op)/sizeof(op[0])-1,op);
