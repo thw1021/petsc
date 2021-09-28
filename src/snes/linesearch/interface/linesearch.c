@@ -887,13 +887,13 @@ PetscErrorCode SNESLineSearchView(SNESLineSearch linesearch, PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"  maximum iterations=%D\n", linesearch->max_its);CHKERRQ(ierr);
     if (linesearch->ops->precheck) {
       if (linesearch->ops->precheck == SNESLineSearchPreCheckPicard) {
-        ierr = PetscViewerASCIIPrintf(viewer,"  using precheck step to speed up Picard convergence\n", linesearch->max_its);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"  using precheck step to speed up Picard convergence\n");CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"  using user-defined precheck step\n", linesearch->max_its);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"  using user-defined precheck step\n");CHKERRQ(ierr);
       }
     }
     if (linesearch->ops->postcheck) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  using user-defined postcheck step\n", linesearch->max_its);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  using user-defined postcheck step\n");CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
