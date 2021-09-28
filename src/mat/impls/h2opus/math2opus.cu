@@ -1301,7 +1301,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
 
   PetscFunctionBegin;
 #if defined(PETSC_H2OPUS_USE_GPU)
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize_Internal(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
 #endif
   ierr = PetscNewLog(A,&a);CHKERRQ(ierr);
   A->data = (void*)a;
