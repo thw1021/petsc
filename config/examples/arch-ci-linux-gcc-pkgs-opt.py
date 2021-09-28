@@ -27,6 +27,7 @@ configure_options = [
   '--download-cmake',
   '--download-amrex',
   '--download-hypre',
+  '--download-tchem',
 ]
 
 if __name__ == '__main__':
