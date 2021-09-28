@@ -500,7 +500,7 @@ PetscErrorCode  PetscBinaryOpen(const char name[],PetscFileMode mode,int *fd)
   case FILE_MODE_APPEND: *fd = open(name,O_BINARY|O_WRONLY|O_APPEND,0); break;
   default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[mode]);
   }
-  if (*fd == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open file %s for %s: %s",name,PetscFileModes[mode]);
+  if (*fd == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open file %s for %s",name,PetscFileModes[mode]);
   PetscFunctionReturn(0);
 }
 
