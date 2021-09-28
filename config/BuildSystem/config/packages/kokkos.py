@@ -182,5 +182,5 @@ class Configure(config.package.CMakePackage):
     elif self.hip.found:
       self.addMakeMacro('KOKKOS_USE_HIP_COMPILER',1)  # use the HIP compiler to compile PETSc Kokkos code
 
-    if self.argDB['with-kokkos-init-warnings']: # usualy one wants to enable warnings
+    if self.argDB['with-kokkos-init-warnings']: # usually one wants to enable warnings
       self.addDefine('HAVE_KOKKOS_INIT_WARNINGS', 1)
