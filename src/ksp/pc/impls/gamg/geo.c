@@ -681,7 +681,7 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
   ierr = MatGetOwnershipRange(Amat, &Istart, &Iend);CHKERRQ(ierr);
   ierr = MatGetBlockSize(Amat, &bs);CHKERRQ(ierr);
   nloc = (Iend-Istart)/bs; my0 = Istart/bs;
-  if ((Iend-Istart) % bs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"(Iend %D - Istart %D) % bs %D",Iend,Istart,bs);
+  if ((Iend-Istart) % bs) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"(Iend %D - Istart %D) %% bs %D",Iend,Istart,bs);
 
   /* get 'nLocalSelected' */
   ierr = PetscCDGetMIS(agg_lists, &selected_1);CHKERRQ(ierr);

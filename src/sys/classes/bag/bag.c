@@ -706,7 +706,7 @@ PetscErrorCode  PetscBagView(PetscBag bag,PetscViewer view)
         for (i=0; i<nitem->msize; i++) {
           if (((int) value[i]) == -1) value[i] = PETSC_TRUE;
           /* the checks here with != PETSC_FALSE and PETSC_TRUE is a special case; here we truly demand that the value be 0 or 1 */
-          if (value[i] != PETSC_FALSE && value[i] != PETSC_TRUE) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Boolean value for %s %s is corrupt; integer value %d",nitem->name,nitem->help,value);
+          if (value[i] != PETSC_FALSE && value[i] != PETSC_TRUE) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Boolean value for %s %s is corrupt; integer value %d",nitem->name,nitem->help,value[i]);
           ierr = PetscViewerASCIIPrintf(view," %s",PetscBools[value[i]]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(view,"; %s\n",nitem->help);CHKERRQ(ierr);

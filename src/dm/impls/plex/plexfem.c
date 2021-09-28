@@ -56,7 +56,7 @@ static PetscErrorCode DMPlexGetFEGeom(DMField coordField, IS pointIS, PetscQuadr
 
   PetscFunctionBegin;
   ierr = PetscObjectGetId((PetscObject)quad,&id);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(composeStr, 32, "DMPlexGetFEGeom_%x\n", id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(composeStr, 32, "DMPlexGetFEGeom_%" PetscInt64_FMT "\n", id);CHKERRQ(ierr);
   ierr = PetscObjectQuery((PetscObject) pointIS, composeStr, (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
     ierr = PetscContainerGetPointer(container, (void **) geom);CHKERRQ(ierr);
@@ -184,7 +184,7 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMGetCoordinateDim(dm, &dimEmbed);CHKERRQ(ierr);
   ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
-  if (Nf && (field < 0 || field >= Nf)) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Field %D is not in [0, Nf)", field, Nf);
+  if (Nf && (field < 0 || field >= Nf)) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Field %D is not in [0, %D) (Number of Fields)", field, Nf);
   if (dim == 1 && Nf < 2) {
     ierr = MatNullSpaceCreate(comm, PETSC_TRUE, 0, NULL, sp);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -3753,7 +3753,7 @@ PetscErrorCode DMSNESGetFEGeom(DMField coordField, IS pointIS, PetscQuadrature q
 
   PetscFunctionBegin;
   ierr = PetscObjectGetId((PetscObject)quad,&id);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(composeStr, 32, "DMSNESGetFEGeom_%x\n", id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(composeStr, 32, "DMSNESGetFEGeom_%" PetscInt64_FMT "\n", id);CHKERRQ(ierr);
   ierr = PetscObjectQuery((PetscObject) pointIS, composeStr, (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
     ierr = PetscContainerGetPointer(container, (void **) geom);CHKERRQ(ierr);
