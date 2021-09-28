@@ -365,7 +365,7 @@ static PCTFS_gs_id *gsi_check_args(PetscInt *in_elms, PetscInt nel, PetscInt lev
   gs->gl_max  = vals[4];
   gs->negl    = vals[4]-vals[3]+1;
 
-  if (gs->negl<=0) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"gsi_check_args() :: system empty or neg :: %d\n");
+  if (gs->negl<=0) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"gsi_check_args() :: system empty or neg ::\n");
 
   /* LATER :: add level == -1 -> program selects level */
   if (vals[5]<0) vals[5]=0;
