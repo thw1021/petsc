@@ -556,7 +556,7 @@ PetscErrorCode SNESSolve_Multiblock(SNES snes)
           blocks = blocks->next;
         }
       }
-    } else SETERRQ1(PetscObjectComm((PetscObject)snes), PETSC_ERR_SUP, "Unsupported or unknown composition", (int) mb->type);
+    } else SETERRQ1(PetscObjectComm((PetscObject)snes), PETSC_ERR_SUP, "Unsupported or unknown composition '%s'", PCCompositeTypes[mb->type]);
     /* Compute F(X^{new}) */
     ierr = SNESComputeFunction(snes, X, F);CHKERRQ(ierr);
     ierr = VecNorm(F, NORM_2, &fnorm);CHKERRQ(ierr);
@@ -609,7 +609,7 @@ PetscErrorCode SNESMultiblockSetFields_Default(SNES snes, const char name[], Pet
     PetscInt len = floor(log10(mb->numBlocks))+1;
 
     ierr = PetscMalloc1(len+1, &newblock->name);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(newblock->name, len, "%s", mb->numBlocks);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(newblock->name, len, "%D", mb->numBlocks);CHKERRQ(ierr);
   }
   newblock->nfields = n;
 
@@ -658,7 +658,7 @@ PetscErrorCode SNESMultiblockSetIS_Default(SNES snes, const char name[], IS is)
     PetscInt len = floor(log10(mb->numBlocks))+1;
 
     ierr = PetscMalloc1(len+1, &newblock->name);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(newblock->name, len, "%s", mb->numBlocks);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(newblock->name, len, "%D", mb->numBlocks);CHKERRQ(ierr);
   }
   newblock->is = is;
 

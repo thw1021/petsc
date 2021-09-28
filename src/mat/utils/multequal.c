@@ -113,7 +113,7 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,Petsc
   ierr = MatGetLocalSize(C,&cm,&cn);CHKERRQ(ierr);
   if (At) { PetscInt tt = an; an = am; am = tt; };
   if (Bt) { PetscInt tt = bn; bn = bm; bm = tt; };
-  if (an != bm || am != cm || bn != cn) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat A, B, C local dim %D %D %D %D",am,an,bm,bn,cm,cn);
+  if (an != bm || am != cm || bn != cn) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat A, B, C local dim %D %D %D %D %D %D",am,an,bm,bn,cm,cn);
 
   sop  = sops[(At ? 1 : 0) + 2 * (Bt ? 1 : 0)];
   ierr = PetscRandomCreate(PetscObjectComm((PetscObject)C),&rctx);CHKERRQ(ierr);

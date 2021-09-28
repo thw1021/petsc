@@ -348,7 +348,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
         }
         ierr = VecDestroy(&locX2);CHKERRQ(ierr);
       }
-      if (cellClosure_it-cellClosure != cellClosure_sz) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %D != cellClosure_sz = %D",cellClosure_it-cellClosure,cellClosure_sz);
+      if (cellClosure_it-cellClosure != cellClosure_sz) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %td != cellClosure_sz = %D",cellClosure_it-cellClosure,cellClosure_sz);
       ierr = DMCompositeRestoreLocalAccessArray(pack, a_X, ctx->num_grids, NULL, locXarray);CHKERRQ(ierr);
       ierr = DMCompositeRestoreAccessArray(pack, a_X, ctx->num_grids, NULL, globXarray);CHKERRQ(ierr);
       xdata = NULL;
@@ -460,7 +460,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
         } // ei elem
         IPf_idx += nip_loc*Nfloc;
       } // grid
-      if (cellClosure && ((cellClosure_it-cellClosure) != IPf_sz)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %D != nip_loc*Nf = %D",cellClosure_it-cellClosure,IPf_sz);
+      if (cellClosure && ((cellClosure_it-cellClosure) != IPf_sz)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %td != nip_loc*Nf = %D",cellClosure_it-cellClosure,IPf_sz);
       if (IPf_idx != IPf_sz) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "IPf_idx != IPf_sz %D %D",IPf_idx,IPf_sz);
       ierr = PetscLogEventEnd(ctx->events[8],0,0,0,0);CHKERRQ(ierr);
     } // Jacobian setup
