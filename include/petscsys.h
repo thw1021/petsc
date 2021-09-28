@@ -110,6 +110,12 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_INTERN extern PETSC_VISIBILITY_INTERNAL
 #endif
 
+#if defined(PETSC_USE_SINGLE_LIBRARY)
+#  define PETSC_SINGLE_LIBRARY_INTERN PETSC_INTERN
+#else
+#  define PETSC_SINGLE_LIBRARY_INTERN PETSC_EXTERN
+#endif
+
 /* C++11 features */
 #if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
 #  define PETSC_NULLPTR             nullptr
@@ -124,7 +130,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #endif /* __cplusplus && PETSC_HAVE_CXX_DIALECT_CXX11 */
 
 /* C++14 features */
-#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX14)
+#if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
 #  define PETSC_CONSTEXPR_14 PETSC_CONSTEXPR
 #else
 #  define PETSC_CONSTEXPR_14

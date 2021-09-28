@@ -5,10 +5,10 @@
 #include <petscdevice.h>
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-void PetscValidDeviceKind(int,int);
+template <typename T> void PetscValidDeviceKind(T,int);
 template <typename T> void PetscValidDevice(T,int);
 template <typename T> void PetscCheckCompatibleDevices(T,int,T,int);
-void PetscValidStreamType(int,int);
+template <typename T> void PetscValidStreamType(T,int);
 template <typename T> void PetscValidDeviceContext(T,int);
 template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #else /* PETSC_CLANG_STATIC_ANALYZER */
@@ -181,8 +181,8 @@ struct _n_PetscDeviceContext {
 /* PetscDevice Internal Functions */
 #if PetscDefined(HAVE_CXX_DIALECT_CXX11)
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
-PETSC_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind,PetscInt);
-PETSC_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind,PetscInt);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForKind_Internal(PetscDeviceKind,PetscDevice*);
 
 #define PetscDeviceInitialize_Internal(kind) PetscDeviceInitializeDefaultDevice_Internal(kind,PETSC_DECIDE)
 
