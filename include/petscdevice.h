@@ -247,7 +247,7 @@ PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor(PetscD
   case PETSC_DEVICE_MAX:     return PETSC_FALSE;
     /* Do not add default case! Will make compiler warn on new additions to PetscDeviceKind! */
   }
-#if !PetscDefined(HAVE_WINDOWS_COMPILERS)
+#if !(PetscDefined(HAVE_WINDOWS_COMPILERS) || PetscDefined(HAVE_SUN_CXX))
   __builtin_unreachable();
 #endif
   return PETSC_FALSE;
