@@ -58,6 +58,7 @@ configure_options = [
   '--download-kokkos=1',
   '--download-kokkos-kernels=1',
   '--download-htool=1',
+  '--download-tchem',
   ]
 
 if __name__ == '__main__':
