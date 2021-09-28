@@ -410,7 +410,7 @@ PetscErrorCode ISIntersect_Caching_Internal(IS is1, IS is2, IS *isect)
     PetscObjectId  is2id;
 
     ierr = PetscObjectGetId((PetscObject)is2,&is2id);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(composeStr,32,"ISIntersect_Caching_%x",is2id);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(composeStr,32,"ISIntersect_Caching_%" PetscInt64_FMT,is2id);CHKERRQ(ierr);
     ierr = PetscObjectQuery((PetscObject) is1, composeStr, (PetscObject *) isect);CHKERRQ(ierr);
     if (*isect == NULL) {
       ierr = ISIntersect(is1, is2, isect);CHKERRQ(ierr);
