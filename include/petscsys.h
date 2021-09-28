@@ -2841,10 +2841,10 @@ PETSC_STATIC_INLINE unsigned int PetscStrHash(const char *str)
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_SUCCESS; do {		\
-  PetscErrorCode _4_ierr;						\
-  PetscMPIInt    a_b1[6],a_b2[6];					\
-  int            _mpiu_allreduce_c_int = (int)c;			\
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_SUCCESS; do {               \
+  PetscErrorCode _4_ierr;                                               \
+  PetscMPIInt    a_b1[6],a_b2[6];                                       \
+  int            _mpiu_allreduce_c_int = (int)c;                        \
   a_b1[0] = -(PetscMPIInt)__LINE__;                          a_b1[1] = -a_b1[0];\
   a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); a_b1[3] = -a_b1[2];\
   a_b1[4] = -(PetscMPIInt)(c);                               a_b1[5] = -a_b1[4];\
