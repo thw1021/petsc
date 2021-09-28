@@ -353,10 +353,10 @@ static PetscErrorCode PCView_Telescope(PC pc,PetscViewer viewer)
         ierr = PetscViewerASCIIPrintf(viewer,"petsc subcomm: parent_size = %d , subcomm_size = %d\n",(int)comm_size,(int)subcomm_size);CHKERRQ(ierr);
         switch (sred->subcommtype) {
         case PETSC_SUBCOMM_INTERLACED :
-          ierr = PetscViewerASCIIPrintf(viewer,"petsc subcomm: type = interlaced\n",sred->subcommtype);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer,"petsc subcomm type '%s'\n",PetscSubcommTypes[sred->subcommtype]);CHKERRQ(ierr);
           break;
         case PETSC_SUBCOMM_CONTIGUOUS :
-          ierr = PetscViewerASCIIPrintf(viewer,"petsc subcomm type = contiguous\n",sred->subcommtype);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer,"petsc subcomm type '%s'\n",PetscSubcommTypes[sred->subcommtype]);CHKERRQ(ierr);
           break;
         default :
           SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"General subcomm type not supported by PCTelescope");

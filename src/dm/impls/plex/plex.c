@@ -716,7 +716,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     if (name) {ierr = PetscViewerASCIIPrintf(viewer, "%s in %D dimension%s:\n", name, dim, dim == 1 ? "" : "s");CHKERRQ(ierr);}
     else      {ierr = PetscViewerASCIIPrintf(viewer, "Mesh in %D dimension%s:\n", dim, dim == 1 ? "" : "s");CHKERRQ(ierr);}
     if (cellHeight) {ierr = PetscViewerASCIIPrintf(viewer, "  Cells are at height %D\n", cellHeight);CHKERRQ(ierr);}
-    ierr = PetscViewerASCIIPrintf(viewer, "Supports:\n", name);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Supports:\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Max support size: %D\n", rank, maxSupportSize);CHKERRQ(ierr);
     for (p = pStart; p < pEnd; ++p) {
@@ -729,7 +729,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       }
     }
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Cones:\n", name);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Cones:\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d] Max cone size: %D\n", rank, maxConeSize);CHKERRQ(ierr);
     for (p = pStart; p < pEnd; ++p) {
       PetscInt dof, off, c;
@@ -892,9 +892,9 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer, "%s for process ", name);CHKERRQ(ierr);
       for (p = 0; p < size; ++p) {
         if (p > 0 && p == size-1) {
-          ierr = PetscViewerASCIIPrintf(viewer, ", and ", colors[p%numColors], p);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, ", and %s %D", colors[p%numColors], p);CHKERRQ(ierr);
         } else if (p > 0) {
-          ierr = PetscViewerASCIIPrintf(viewer, ", ", colors[p%numColors], p);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, ", %s %D ", colors[p%numColors], p);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(viewer, "{\\textcolor{%s}%D}", colors[p%numColors], p);CHKERRQ(ierr);
       }
@@ -1151,7 +1151,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "\\end{tikzpicture}\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "\\end{document}\n", name);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "\\end{document}\n");CHKERRQ(ierr);
     for (l = 0; l < numLabels;  ++l) {ierr = PetscFree(names[l]);CHKERRQ(ierr);}
     for (c = 0; c < numColors;  ++c) {ierr = PetscFree(colors[c]);CHKERRQ(ierr);}
     for (c = 0; c < numLColors; ++c) {ierr = PetscFree(lcolors[c]);CHKERRQ(ierr);}
