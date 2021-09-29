@@ -6397,6 +6397,9 @@ PetscErrorCode MatDestroy_MatMatMPIAIJBACKEND(void *data)
   PetscFunctionReturn(0);
 }
 
+/* Copy selected n entries with indices in idx[] of A to v[].
+   If idx is NULL, copy the whole data array of A to v[]
+ */
 static PetscErrorCode MatSeqAIJCopySubArray(Mat A, PetscInt n, const PetscInt idx[], PetscScalar v[])
 {
   PetscErrorCode (*f)(Mat,PetscInt,const PetscInt[],PetscScalar[]);
@@ -6795,8 +6798,9 @@ PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat C)
   ierr = PetscObjectTypeCompareAny((PetscObject)C,&iscuda,MATSEQAIJCUSPARSE,MATMPIAIJCUSPARSE,"");CHKERRQ(ierr);
   ierr = PetscObjectTypeCompareAny((PetscObject)C,&iskokk,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,"");CHKERRQ(ierr);
   if (iscuda) mmdata->mtype = PETSC_MEMTYPE_CUDA;
-  // enable the line below MatSeqAIJCopySubArray_SeqAIJKokkos is implemented
-  //else if (iskokk) mmdata->mtype = PETSC_MEMTYPE_DEVICE;
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+  else if (iskokk) mmdata->mtype = PETSC_MEMTYPE_DEVICE;
+#endif
 
   /* prepare coo coordinates for values insertion */
 
