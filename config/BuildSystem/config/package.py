@@ -437,7 +437,7 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
         libs.append(os.path.join(directory, libSet[0]))
       for library in libSet[1:]:
         # if the library name doesn't start with lib - then add the fullpath
-        if library.startswith('-l') or library.startswith('lib'):
+        if not library.endswith('.stub') and (library.startswith('-l') or library.startswith('lib')):
           libs.append(library)
         else:
           libs.append(os.path.join(directory, library))

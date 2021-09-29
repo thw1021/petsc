@@ -31,7 +31,7 @@ class Configure(config.package.Package):
     # library in a lib list.
     #
     # see more at https://stackoverflow.com/a/52784819
-    self.stubliblist       = [['libcuda.a'],
+    self.stubliblist       = [['libcuda.so.stub'],
                               ['cuda.lib']]
     self.liblist           = 'dummy' # existence of self.liblist is used by package.py to determine if --with-cuda-lib must be provided
     self.precisions        = ['single','double']
@@ -98,7 +98,7 @@ class Configure(config.package.Package):
       self.includedir = [os.path.join(mdir,'include'), 'include']
 
     # first try the standard list with all libraries in one directory
-    self.liblist = [self.basicliblist[0]+self.mathliblist[0]+self.stubliblist[0]] + [self.basicliblist[1]+self.mathliblist[1]+self.stubliblist[1]]
+    self.liblist = [self.basicliblist[0]+self.mathliblist[0]] + [self.basicliblist[1]+self.mathliblist[1]]
     liblist      = config.package.Package.generateLibList(self, directory)
     # Check the stub
     stubLibDir   = os.path.join(directory,'stubs')

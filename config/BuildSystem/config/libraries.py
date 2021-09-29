@@ -39,6 +39,8 @@ class Configure(config.base.Configure):
       return [library]
     if len(library) > 3 and library[-4:] == '.lib':
       return [library.replace('\\ ',' ').replace(' ', '\\ ').replace('\\(','(').replace('(', '\\(').replace('\\)',')').replace(')', '\\)')]
+    if os.path.isabs(library) and library.endswith('.stub'):
+      return [library[:-5]]
     if os.path.basename(library).startswith('lib'):
       name = self.getLibName(library)
       if ((len(library) > 2 and library[1] == ':') or os.path.isabs(library)):
@@ -47,7 +49,7 @@ class Configure(config.base.Configure):
         dirname   = os.path.dirname(library).replace('\\ ',' ').replace(' ', '\\ ').replace('\\(','(').replace('(', '\\(').replace('\\)',')').replace(')', '\\)')
         if dirname in ['/usr/lib','/lib','/usr/lib64','/lib64']:
           return [library]
-        if with_rpath and not library.endswith('stubs/libcuda.a'): # We do not want to add the fake stubs directory to RPATH. See more at cuda.py. Better also check PACKAGE is CUDA, but has no way to do that now.
+        if with_rpath: # We do not want to add the fake stubs directory to RPATH. See more at cuda.py. Better also check PACKAGE is CUDA, but has no way to do that now.
           if hasattr(self.setCompilers, flagName) and not getattr(self.setCompilers, flagName) is None:
             return [getattr(self.setCompilers, flagName)+dirname,'-L'+dirname,'-l'+name]
           if flagSubst in self.argDB:
