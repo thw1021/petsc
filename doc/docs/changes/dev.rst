@@ -223,6 +223,8 @@ Changes: Development
 - Add ``DMPlexMetricIntersection`` to intersect an arbitrary number of metrics.
 - Add ``DMPlexMetricIntersection2`` to intersect two metrics.
 - Add ``DMPlexMetricIntersection3`` to intersect three metrics.
+- Add ``DMExtrude()`` which now the default extrusion
+- Change ``DMPlexExtrude()`` to use DMPlexTransform underneath
 
 .. rubric:: FE/FV:
 
