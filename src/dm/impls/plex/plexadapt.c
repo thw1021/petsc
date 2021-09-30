@@ -1,4 +1,5 @@
 #include <petsc/private/dmpleximpl.h>   /*I      "petscdmplex.h"   I*/
+
 #if defined(PETSC_HAVE_PRAGMATIC)
 #include <pragmatic/cpragmatic.h>
 #endif
@@ -546,7 +547,6 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
   const char        *bdName = "_boundary_";
   DM                 udm, cdm;
   DMLabel            bdLabelFull;
-  DMPlexMetricCtx   *ctx;
   const char        *bdLabelName;
   IS                 bdIS;
   PetscSection       coordSection;
@@ -562,6 +562,7 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
   PetscInt           dim, cStart, cEnd, numCells, c, coff, vStart, vEnd, numVertices, v;
   PetscInt           off, maxConeSize, numBdFaces, f, bdSize, fStart, fEnd, i, j, k, Neq;
   PetscInt           numCellsNew, numVerticesNew, numCornersNew, numFacesNew;
+  PetscInt           verbosity;
   PetscBool          flg;
   DMLabel            bdLabelNew;
   MMG5_pMesh         mmg_mesh = NULL;
@@ -569,7 +570,6 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = DMGetApplicationContext(dm, (void**)&ctx);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
   if (bdLabel) {
     ierr = PetscObjectGetName((PetscObject) bdLabel, &bdLabelName);CHKERRQ(ierr);
@@ -657,11 +657,12 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
   ierr = VecRestoreArrayRead(vertexMetric, &met);CHKERRQ(ierr);
 
   /* Send mesh to Mmg and remesh */
+  ierr = DMPlexMetricGetVerbosity(dm, &verbosity);CHKERRQ(ierr);
   ierr = PetscCalloc2(numVertices, &verTags ,numCells, &cellTags);CHKERRQ(ierr);
   switch (dim) {
   case 2:
     ierr = MMG2D_Init_mesh(MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
-    ierr = MMG2D_Set_iparameter(mmg_mesh, mmg_metric, MMG2D_IPARAM_verbose, ctx->verbosity);
+    ierr = MMG2D_Set_iparameter(mmg_mesh, mmg_metric, MMG2D_IPARAM_verbose, verbosity);
     ierr = MMG2D_Set_meshSize(mmg_mesh, numVertices, numCells, 0, numBdFaces);
     ierr = MMG2D_Set_vertices(mmg_mesh, vertices, verTags);
     ierr = MMG2D_Set_triangles(mmg_mesh, cells, cellTags);
@@ -672,7 +673,7 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
     break;
   case 3:
     ierr = MMG3D_Init_mesh(MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
-    ierr = MMG3D_Set_iparameter(mmg_mesh, mmg_metric, MMG2D_IPARAM_verbose, ctx->verbosity);
+    ierr = MMG3D_Set_iparameter(mmg_mesh, mmg_metric, MMG2D_IPARAM_verbose, verbosity);
     ierr = MMG3D_Set_meshSize(mmg_mesh, numVertices, numCells, 0, numBdFaces, 0, 0);
     ierr = MMG3D_Set_vertices(mmg_mesh, vertices, verTags);
     ierr = MMG3D_Set_tetrahedra(mmg_mesh, cells, cellTags);
@@ -765,7 +766,6 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   const char        *bdName = "_boundary_";
   DM                 udm, cdm;
   DMLabel            bdLabelFull;
-  DMPlexMetricCtx   *ctx;
   const char        *bdLabelName;
   IS                 bdIS, globalVertexNum;
   PetscSection       coordSection;
@@ -790,13 +790,13 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   PetscInt          *gv_new, *owners, *verticesNewSorted;
   PetscInt           numCellsNew, numVerticesNew, numCornersNew, numFacesNew, numVerticesNewLoc;
   PetscInt           i, j, k, p, r, n, v, c, f, off, lv, gv;
+  PetscInt           verbosity;
   const PetscMPIInt *iranks, *rranks;
   PetscMPIInt        numProcs, rank;
   PMMG_pParMesh      parmesh = NULL;
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = DMGetApplicationContext(dm, (void**)&ctx);CHKERRQ(ierr);
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &numProcs);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
@@ -975,11 +975,12 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   ierr = DMDestroy(&udm);CHKERRQ(ierr);
 
   /* Send the data to ParMmg and remesh */
+  ierr = DMPlexMetricGetVerbosity(dm, &verbosity);CHKERRQ(ierr);
   ierr = PetscCalloc2(numVertices, &verTags, numCells, &cellTags);CHKERRQ(ierr);
   ierr = PMMG_Init_parMesh(PMMG_ARG_start, PMMG_ARG_ppParMesh, &parmesh, PMMG_ARG_pMesh, PMMG_ARG_pMet, PMMG_ARG_dim, 3, PMMG_ARG_MPIComm, comm, PMMG_ARG_end);
   ierr = PMMG_Set_meshSize(parmesh, numVertices, numCells, 0, numBdFaces, 0, 0);
   ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_APImode, PMMG_APIDISTRIB_nodes);
-  ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_verbose, ctx->verbosity);
+  ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_verbose, verbosity);
   ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_globalNum, 1);
   ierr = PMMG_Set_vertices(parmesh, vertices, verTags);
   for (i=0; i<numCells; i++) ierr = PMMG_Set_tetrahedron(parmesh, cells[4*i+0], cells[4*i+1], cells[4*i+2], cells[4*i+3], 0, i+1);
@@ -1094,18 +1095,27 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
 */
 PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
 {
-  PetscInt remesher = 2;
+  MPI_Comm         comm;
+  PetscErrorCode   ierr;
+  PetscInt         remesher;
+  PetscMPIInt      numProcs;
 
   PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
+  ierr = DMPlexMetricGetRemesher(dm, &remesher);CHKERRQ(ierr);
+
   switch (remesher) {
   case 0:
-    DMAdaptMetricPragmatic_Plex(dm, vertexMetric, bdLabel, dmNew);
-    break;
+    SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Choose a remesher from {1: Pragmatic, 2: Mmg/ParMmg}");
   case 1:
-    DMAdaptMetricMMG_Plex(dm, vertexMetric, bdLabel, dmNew);
+    /* Pragmatic */
+    ierr = DMAdaptMetric_Pragmatic_Plex(dm, vertexMetric, bdLabel, dmNew);CHKERRQ(ierr);
     break;
   case 2:
-    DMAdaptMetricParMMG_Plex(dm, vertexMetric, bdLabel, dmNew);
+    /* Mmg/ParMmg */
+    ierr = MPI_Comm_size(comm, &numProcs);CHKERRMPI(ierr);
+    if (numProcs == 1) { ierr = DMAdaptMetric_Mmg_Plex(dm, vertexMetric, bdLabel, dmNew);CHKERRQ(ierr); }
+    else { ierr = DMAdaptMetric_ParMmg_Plex(dm, vertexMetric, bdLabel, dmNew);CHKERRQ(ierr); }
     break;
   }
   PetscFunctionReturn(0);
