@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """ Configure PETSc and build and place still-required classic docs"""
 
 import os
