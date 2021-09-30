@@ -278,7 +278,7 @@ M*/
    This allows the compiler to detect cases where the MPI datatype argument passed to a MPI routine
    does not match the actual type of the argument being passed in
 */
-#if defined(__has_attribute) && defined(works_with_const_which_is_not_true)
+#if defined(__has_attribute)
 #  if __has_attribute(argument_with_type_tag) && __has_attribute(pointer_with_type_tag) && __has_attribute(type_tag_for_datatype)
 #    define PetscAttrMPIPointerWithType(bufno,typeno) __attribute__((pointer_with_type_tag(MPI,bufno,typeno)))
 #    define PetscAttrMPITypeTag(type)                 __attribute__((type_tag_for_datatype(MPI,type)))
