@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   comm = PETSC_COMM_WORLD;
   ierr = PetscOptionsBegin(comm, "", "Mesh adaptation options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsRangeInt("-dim", "The topological mesh dimension", "ex60.c", dim, &dim, NULL, 2, 3);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-num_edges", "Number of edges on each boundary of the initial mesh", "ex60.c", numEdges, &numEdges, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBoundedInt("-num_edges", "Number of edges on each boundary of the initial mesh", "ex60.c", numEdges, &numEdges, NULL, 0);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-uniform", "Should the metric be assumed uniform?", "ex60.c", uniform, &uniform, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-isotropic", "Should the metric be assumed isotropic, or computed as a recovered Hessian?", "ex60.c", isotropic, &isotropic, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();
@@ -219,26 +219,68 @@ int main(int argc, char **argv) {
 
 /*TEST
 
-  build:
+  test:
+    suffix: uniform_2d_pragmatic
     requires: pragmatic
-
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 1 -uniform -isotropic
   test:
-    suffix: uniform_2d
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -uniform -isotropic
+    suffix: uniform_3d_pragmatic
+    requires: pragmatic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 1 -uniform -isotropic
   test:
-    suffix: uniform_3d
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -uniform -isotropic
+    suffix: iso_2d_pragmatic
+    requires: pragmatic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 1 -isotropic
   test:
-    suffix: iso_2d
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -isotropic
+    suffix: iso_3d_pragmatic
+    requires: pragmatic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 1 -isotropic
   test:
-    suffix: iso_3d
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -isotropic
+    suffix: hessian_2d_pragmatic
+    requires: pragmatic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 1
   test:
-    suffix: hessian_2d
-    args: -dm_plex_metric_target_complexity 100 -dim 2
+    suffix: hessian_3d_pragmatic
+    requires: pragmatic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 1
   test:
-    suffix: hessian_3d
-    args: -dm_plex_metric_target_complexity 100 -dim 3
+    suffix: uniform_2d_mmg
+    requires: mmg
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 2 -uniform -isotropic
+  test:
+    suffix: uniform_3d_mmg
+    requires: mmg
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -uniform -isotropic
+  test:
+    suffix: iso_2d_mmg
+    requires: mmg
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 2 -isotropic
+  test:
+    suffix: iso_3d_mmg
+    requires: mmg
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -isotropic
+  test:
+    suffix: hessian_2d_mmg
+    requires: mmg
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 2
+  test:
+    suffix: hessian_3d_mmg
+    requires: mmg
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2
+  test:
+    suffix: uniform_3d_parmmg
+    requires: parmmg
+    nsize: 2
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -uniform -isotropic
+  test:
+    suffix: iso_3d_parmmg
+    requires: parmmg
+    nsize: 2
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -isotropic
+  test:
+    suffix: hessian_3d_parmmg
+    requires: parmmg
+    nsize: 2
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2
 
 TEST*/
