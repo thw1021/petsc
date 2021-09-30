@@ -1,5 +1,6 @@
 import config.package
 import os
+import sys
 
 class Configure(config.package.Package):
   def __init__(self, framework):
@@ -33,8 +34,8 @@ class Configure(config.package.Package):
     return os.path.join('src','binding','petsc4py')
 
   def Install(self):
-    import os
-    installLibPath = os.path.join(self.installDir, 'lib')
+    plib = 'python%d.%d' % (sys.version_info.major,sys.version_info.minor)
+    installLibPath = os.path.join(self.installDir, 'lib', plib, 'site-packages')
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -65,7 +66,7 @@ class Configure(config.package.Package):
       newdir += 'NUMPY_INCLUDE="'+numpy_include+'" '
 
     self.addDefine('HAVE_PETSC4PY',1)
-    self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
+    self.addDefine('PETSC4PY_INSTALL_PATH','"'+installLibPath+'"')
     self.addMakeMacro('PETSC4PY','yes')
     self.addMakeRule('petsc4pybuild','', \
                        ['@echo "*** Building petsc4py ***"',\
