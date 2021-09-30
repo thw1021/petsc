@@ -10,28 +10,24 @@ namespace Petsc
 // things defined. If you for example implement something on the HIP side but forget to
 // implement it on the CUDA side you'll get an error.
 
-#if PetscDefined(HAVE_CUDA)
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_CUDA(stem)            \
-  const decltype(cuda##stem) CUPMInterface<CUPMDeviceKind::CUDA>::cupm##stem
-#else
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_CUDA(stem)
-#endif
+#define CAT_(x,...) x ## __VA_ARGS__
+#define CAT(x,...) CAT_(x,__VA_ARGS__)
 
-#if PetscDefined(HAVE_HIP)
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_HIP(stem)             \
-  const decltype(hip##stem) CUPMInterface<CUPMDeviceKind::HIP>::cupm##stem
-#else
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_HIP(stem)
-#endif
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_0(PREFIX,prefix,stem)
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_1(PREFIX,prefix,stem) \
+  const decltype(prefix##stem) CUPMInterface<CUPMDeviceKind::PREFIX>::cupm##stem
+
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(PREFIX,prefix,stem)   \
+  CAT(PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_,PetscDefined(CAT(HAVE_,PREFIX)))(PREFIX,prefix,stem)
 
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE(stem)                         \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_CUDA(stem);                 \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_HIP(stem)
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,stem);            \
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(HIP,hip,stem)
 
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(Success);
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(ErrorNotReady);
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(StreamNonBlocking);
-PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_CUDA(ErrorDeviceAlreadyInUse);
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,ErrorDeviceAlreadyInUse);
 #if PetscDefined(HAVE_HIP)
 // not conforming, see declaration in cupminterface.hpp
 const decltype(hipSuccess) CUPMInterface<CUPMDeviceKind::HIP>::cupmErrorDeviceAlreadyInUse;

@@ -15,8 +15,8 @@ namespace Petsc
 // enum describing available cupm devices, this is used as the template parameter to any
 // class subclassing the CUPMInterface or using it as a member variable
 enum class CUPMDeviceKind : int {
-  CUDA,
-  HIP
+  CUDA = 0,
+  HIP  = 1
 };
 
 static constexpr const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDeviceKind","CUPMDeviceKind::",nullptr};
@@ -29,10 +29,10 @@ static constexpr const char *const CUPMDeviceKinds[] = {"cuda","hip","CUPMDevice
 // functions of a class inheriting from CUPMInterface
 #define CHKERRCUPM(cerr) do {                                           \
     cupmError_t _cerr__ = cerr;                                         \
-    if (PetscUnlikely(_cerr__)) {                                       \
-      const char *name    = cupmGetErrorName(_cerr__);                  \
-      const char *desc    = cupmGetErrorString(_cerr__);                \
-      const char *backend = cupmName();                                 \
+    if (PetscUnlikely(_cerr__ != cupmSuccess)) {                        \
+      const auto name    = cupmGetErrorName(_cerr__);                   \
+      const auto desc    = cupmGetErrorString(_cerr__);                 \
+      const auto backend = cupmName();                                  \
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
                backend,static_cast<PetscErrorCode>(_cerr__),name,desc); \
     }                                                                   \
