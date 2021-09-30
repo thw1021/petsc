@@ -184,7 +184,7 @@ def writeRst(fname,fallbackFname,devs):
     print("Wrote fallback table to",fallbackFname)
   return
 
-def main(writeDirPath,token=None,builderName=None,overwriteDirPath=htmlDir):
+def main(writeDirPath,token=None,builderName="dirhtml",overwriteDirPath=htmlDir):
   __doc__ = """Main entry point for the file.
 
   Arguments:
@@ -194,16 +194,22 @@ def main(writeDirPath,token=None,builderName=None,overwriteDirPath=htmlDir):
   token        -- GitLab private token, if none is given tries $PETSC_GITLAB_PRIVATE_TOKEN, if this also fails prints a diagnostic but exits returns cleanly. (default: None)
   builderName  -- type of sphinx builder, this may be required as any paths to images in the rst need to be relative to the writeDirPath otherwise they wont render, so we need to alter imRelDir. (default: None)
   """
-  print(os.path.basename(__file__),"located at",curFile)
-  currentFile  = os.path.join(writeDirPath,"petsc-team-table.inc")
-  emeritusFile = os.path.join(writeDirPath,"petsc-emeritus-table.inc")
-  # the regular version when built with "html" builder
-  currentFileFallback  = os.path.join(overwriteDirPath,"petsc-team-table-html.inc")
-  emeritusFileFallback = os.path.join(overwriteDirPath,"petsc-emeritus-table-html.inc")
-  assert os.path.isfile(currentFileFallback),"Fallback current dev HTML table at {} missing or moved".format(currentFileFallback)
-  assert os.path.isfile(emeritusFileFallback),"Fallback emeritus dev HTML table at {} missing or moved".format(emeritusFileFallback)
+  def checkPathsAreSane(builder,overwriteDirPath):
+    current  = os.path.join(writeDirPath,"petsc-team-table.inc")
+    emeritus = os.path.join(writeDirPath,"petsc-emeritus-table.inc")
+    checkRstIncludes(current,emeritus)
+    currentFallbackName  = "petsc-team-table-{}.inc".format(builder)
+    emeritusFallbackName = "petsc-emeritus-table-{}.inc".format(builder)
+    currentFallback  = os.path.join(overwriteDirPath,currentFallbackName)
+    emeritusFallback = os.path.join(overwriteDirPath,emeritusFallbackName)
+    assert os.path.isfile(currentFallback),"Fallback current dev {} table at {} missing or moved".format(builder.upper(),currentFallback)
+    assert os.path.isfile(emeritusFallback),"Fallback emeritus dev {} table at {} missing or moved".format(builder.upper(),emeritusFallback)
+    imRelDir = os.path.join(os.path.pardir,os.path.relpath(imDir,petscTeamRstDir))
+    return current,emeritus,currentFallback,emeritusFallback,imRelDir
 
-  checkRstIncludes(currentFile,emeritusFile)
+  builderName = builderName.lower()
+  assert builderName == "dirhtml", "Must use dirhtml Sphinx builder!"
+  print(os.path.basename(__file__),"located at",curFile)
   try:
     os.mkdir(writeDirPath)
     print("Generate directory created at",writeDirPath)
@@ -211,17 +217,8 @@ def main(writeDirPath,token=None,builderName=None,overwriteDirPath=htmlDir):
     import errno
     if e.errno != errno.EEXIST:
       raise
-  imRelDir = os.path.relpath(imDir,petscTeamRstDir)
-  if builderName:
-    # dirhtml makes it so every rst file is built as __file__/index.html, so we must
-    # prepend ".." so image paths are correct
-    print("Using builder",builderName)
-    if builderName == "dirhtml":
-      imRelDir = os.path.join(os.path.pardir,imRelDir)
-      currentFileFallback  = os.path.join(overwriteDirPath,"petsc-team-table-dirhtml.inc")
-      emeritusFileFallback = os.path.join(overwriteDirPath,"petsc-emeritus-table-dirhtml.inc")
-      assert os.path.isfile(currentFileFallback),"Fallback current dev DIRHTML table at {} missing or moved".format(currentFileFallback)
-      assert os.path.isfile(emeritusFileFallback),"Fallback emeritus dev DIRHTML table at {} missing or moved".format(emeritusFileFallback)
+
+  current,emeritus,currentFallback,emeritusFallback,imRelDir = checkPathsAreSane(builderName,overwriteDirPath)
   if token is None:
     try:
       token = os.environ["PETSC_GITLAB_PRIVATE_TOKEN"]
@@ -231,19 +228,20 @@ def main(writeDirPath,token=None,builderName=None,overwriteDirPath=htmlDir):
       import shutil
 
       print("Did not pass a valid token and $PETSC_GITLAB_PRIVATE_TOKEN was not defined in your environment. Falling back to committed (possibly outdated!) PETSc team tables.")
-      shutil.copy(currentFileFallback,currentFile)
-      shutil.copy(emeritusFileFallback,emeritusFile)
-      print("\nCopied {} to {}\nCopied {} to {}".format(currentFileFallback,currentFile,emeritusFileFallback,emeritusFile))
+      shutil.copy(currentFallback,current)
+      shutil.copy(emeritusFallback,emeritus)
+      print("\nCopied {} to {}\nCopied {} to {}".format(currentFallback,current,emeritusFallback,emeritus))
       print("\nPlease generate a GitLab private token and export it to your environment. See https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html for more information.")
       return
+
   print("Image directory relative to",petscTeamRstFile,"at",imDir)
-  devJson        = getJson(devURL,token)
-  ownerJson      = getJson(ownerURL,token)
+  devJson   = getJson(devURL,token)
+  ownerJson = getJson(ownerURL,token)
   integratorJson = getJson(integratorURL,token)
-  emeritus,core  = generateDevDicts(imRelDir)
-  core           = updateCoreDevs(core,devJson+ownerJson+integratorJson)
-  writeRst(currentFile,currentFileFallback,core)
-  writeRst(emeritusFile,emeritusFileFallback,emeritus)
+  emeritusDict,coreDict = generateDevDicts(imRelDir)
+  coreDict              = updateCoreDevs(coreDict,devJson+ownerJson+integratorJson)
+  writeRst(current,currentFallback,coreDict)
+  writeRst(emeritus,emeritusFallback,emeritusDict)
   return
 
 if __name__ == "__main__":

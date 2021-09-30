@@ -35,6 +35,10 @@ images:
 website-deploy: images
 	$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) -T -E -j auto
 
+html:
+	@echo "HTML Sphinx builder is disabled! Please use dirhtml target instead"
+	@exit 1
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.
 %: Makefile images
