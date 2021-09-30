@@ -12,6 +12,7 @@
 #include <h2opus/util/boxentrygen.h>
 #include <petsc/private/matimpl.h>
 #include <petsc/private/vecimpl.h>
+#include <petsc/private/deviceimpl.h>
 #include <petscsf.h>
 
 /* math2opusutils */
