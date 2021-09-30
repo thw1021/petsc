@@ -9,8 +9,6 @@
 #include <parmmg/libparmmg.h>
 #endif
 
-#include <assert.h>
-
 
 static PetscErrorCode DMPlexLabelToVolumeConstraint(DM dm, DMLabel adaptLabel, PetscInt cStart, PetscInt cEnd, PetscReal refRatio, PetscReal maxVolumes[])
 {
@@ -908,10 +906,10 @@ PetscErrorCode DMAdaptMetricParMMG_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel
         // add the right slice of irootloc at the right place
         sliceSize = ioffset[i+1]-ioffset[i];
         for (j = 0, count = 0; j < sliceSize; ++j) {
-          assert(ioffset[i]+j < ioffset[niranks]);
+          if (ioffset[i]+j >= ioffset[niranks]) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Offset out of range");
           v = irootloc[ioffset[i]+j];
           if (v >= vStart && v < vEnd) {
-            assert(intOffset[p+1]+count < numVerNgbRanksTotal);
+            if (intOffset[p+1]+count >= numVerNgbRanksTotal) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Offset out of range");
             interfaces_lv[intOffset[p+1]+count] = v-vStart;
             count++;
           }
@@ -923,10 +921,10 @@ PetscErrorCode DMAdaptMetricParMMG_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel
         // add the right slice of rmine at the right place
         sliceSize = roffset[r+1]-roffset[r];
         for (j = 0, count = 0; j < sliceSize; ++j) {
-          assert(roffset[r]+j < roffset[nrranks]);
+          if (roffset[r]+j >= roffset[nrranks]) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Offset out of range");
           v = rmine[roffset[r]+j];
           if (v >= vStart && v < vEnd) {
-            assert(intOffset[p+1]+count < numVerNgbRanksTotal);
+            if (intOffset[p+1]+count >= numVerNgbRanksTotal) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Offset out of range");
             interfaces_lv[intOffset[p+1]+count] = v-vStart;
             count++;
           }
@@ -934,7 +932,7 @@ PetscErrorCode DMAdaptMetricParMMG_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel
         intOffset[p+1] += count;
         r++;
       }
-      assert(intOffset[p+1] == intOffset[p] + verNgbRank[p]);
+      if (intOffset[p+1] != intOffset[p] + verNgbRank[p]) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Unequal offsets");
     }
     ierr = DMPlexGetVertexNumbering(udm, &globalVertexNum);CHKERRQ(ierr);
     ierr = ISGetIndices(globalVertexNum, &gV);CHKERRQ(ierr);
