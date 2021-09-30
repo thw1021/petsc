@@ -20,6 +20,18 @@
    #define PETSC_HAVE_DEVICE
 #endif
 
+#if defined(__has_attribute)
+#  define PETSC_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+#  define PETSC_HAS_ATTRIBUTE(x) 0
+#endif
+
+#if PETSC_HAS_ATTRIBUTE(noderef)
+#  define PETSC_ATTRIBUTE_NODEREF __attribute__((noderef))
+#else
+#  define PETSC_ATTRIBUTE_NODEREF
+#endif
+
 #if defined(PETSC_DESIRE_FEATURE_TEST_MACROS)
 /*
    Feature test macros must be included before headers defined by IEEE Std 1003.1-2001
