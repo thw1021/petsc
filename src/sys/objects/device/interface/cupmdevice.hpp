@@ -12,7 +12,7 @@ namespace Petsc
 {
 
 #if defined(PETSC_CUPM_DEVICE_NONE)
-#error "redefition of PETSC_CUPM_DEVICE_NONE"
+#error "redefinition of PETSC_CUPM_DEVICE_NONE"
 #endif
 
 #define PETSC_CUPM_DEVICE_NONE -3
