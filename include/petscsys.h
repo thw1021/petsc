@@ -23,9 +23,9 @@
 #endif
 
 #if PETSC_HAS_ATTRIBUTE(format)
-#  define PETSC_ATTRIBUTE_PRINTF(strIdx,vaArgIdx) PETSC_ATTRIBUTE_FORMAT(printf,strIdx,vaArgIdx)
+#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx) __attribute__((format(printf,strIdx,vaArgIdx)))
 #else
-#  define PETSC_ATTRIBUTE_PRINTF(strIdx,vaArgIdx)
+#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
 #endif
 
 #if defined(PETSC_DESIRE_FEATURE_TEST_MACROS)
@@ -1677,7 +1677,7 @@ $    PetscHelpPrintf = mypetschelpprintf;
 
 .seealso: PetscFPrintf(), PetscSynchronizedPrintf(), PetscErrorPrintf()
 M*/
-PETSC_EXTERN PetscErrorCode (*PetscHelpPrintf)(MPI_Comm,const char[],...) PETSC_ATTRIBUTE_PRINTF(2,3);
+PETSC_EXTERN PetscErrorCode (*PetscHelpPrintf)(MPI_Comm,const char[],...) PETSC_ATTRIBUTE_FORMAT(2,3);
 
 /*
      Defines PETSc profiling.
@@ -1690,15 +1690,15 @@ PETSC_EXTERN PetscErrorCode (*PetscHelpPrintf)(MPI_Comm,const char[],...) PETSC_
 PETSC_EXTERN PetscErrorCode PetscFixFilename(const char[],char[]);
 PETSC_EXTERN PetscErrorCode PetscFOpen(MPI_Comm,const char[],const char[],FILE**);
 PETSC_EXTERN PetscErrorCode PetscFClose(MPI_Comm,FILE*);
-PETSC_EXTERN PetscErrorCode PetscFPrintf(MPI_Comm,FILE*,const char[],...) PETSC_ATTRIBUTE_PRINTF(3,4);
-PETSC_EXTERN PetscErrorCode PetscPrintf(MPI_Comm,const char[],...) PETSC_ATTRIBUTE_PRINTF(2,3);
-PETSC_EXTERN PetscErrorCode PetscSNPrintf(char*,size_t,const char [],...) PETSC_ATTRIBUTE_PRINTF(3,4);
-PETSC_EXTERN PetscErrorCode PetscSNPrintfCount(char*,size_t,const char [],size_t*,...) PETSC_ATTRIBUTE_PRINTF(3,5);
+PETSC_EXTERN PetscErrorCode PetscFPrintf(MPI_Comm,FILE*,const char[],...) PETSC_ATTRIBUTE_FORMAT(3,4);
+PETSC_EXTERN PetscErrorCode PetscPrintf(MPI_Comm,const char[],...) PETSC_ATTRIBUTE_FORMAT(2,3);
+PETSC_EXTERN PetscErrorCode PetscSNPrintf(char*,size_t,const char [],...) PETSC_ATTRIBUTE_FORMAT(3,4);
+PETSC_EXTERN PetscErrorCode PetscSNPrintfCount(char*,size_t,const char [],size_t*,...) PETSC_ATTRIBUTE_FORMAT(3,5);
 PETSC_EXTERN PetscErrorCode PetscFormatRealArray(char[],size_t,const char*,PetscInt,const PetscReal[]);
 
-PETSC_EXTERN PetscErrorCode PetscErrorPrintfDefault(const char [],...) PETSC_ATTRIBUTE_PRINTF(1,2);
-PETSC_EXTERN PetscErrorCode PetscErrorPrintfNone(const char [],...) PETSC_ATTRIBUTE_PRINTF(1,2);
-PETSC_EXTERN PetscErrorCode PetscHelpPrintfDefault(MPI_Comm,const char [],...) PETSC_ATTRIBUTE_PRINTF(2,3);
+PETSC_EXTERN PetscErrorCode PetscErrorPrintfDefault(const char [],...) PETSC_ATTRIBUTE_FORMAT(1,2);
+PETSC_EXTERN PetscErrorCode PetscErrorPrintfNone(const char [],...) PETSC_ATTRIBUTE_FORMAT(1,2);
+PETSC_EXTERN PetscErrorCode PetscHelpPrintfDefault(MPI_Comm,const char [],...) PETSC_ATTRIBUTE_FORMAT(2,3);
 
 PETSC_EXTERN PetscErrorCode PetscFormatConvertGetSize(const char*,size_t*);
 PETSC_EXTERN PetscErrorCode PetscFormatConvert(const char*,char *);
