@@ -134,7 +134,7 @@ PetscErrorCode DMPlexGetFieldType_Internal(DM dm, PetscSection section, PetscInt
       ierr = PetscSectionGetFieldName(section, field, &fieldname);CHKERRQ(ierr);
       ierr = PetscInfo2((PetscObject) dm, "Could not classify VTK output type of section field %D \"%s\"\n", field, fieldname);CHKERRQ(ierr);
     } else {
-      ierr = PetscInfo((PetscObject) dm, "Could not classify VTK output type of section\"%s\"\n");CHKERRQ(ierr);
+      ierr = PetscInfo((PetscObject) dm, "Could not classify VTK output type of section\n");CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
