@@ -1,11 +1,10 @@
-
 #if !defined(PETSCRANDOMIMPL_H)
 #define PETSCRANDOMIMPL_H
 
 #include <petsc/private/petscimpl.h>
 
-PETSC_EXTERN PetscBool PetscRandomRegisterAllCalled;
-PETSC_EXTERN PetscErrorCode PetscRandomRegisterAll(void);
+PETSC_INTERN PetscFunctionList PetscRandomList;
+PETSC_INTERN PetscBool         PetscRandomRegisterAllCalled;
 
 typedef struct _PetscRandomOps *PetscRandomOps;
 struct _PetscRandomOps {
@@ -29,5 +28,4 @@ struct _p_PetscRandom {
   /* array for shuffling ??? */
 };
 
-#endif
-
+#endif /* PETSCRANDOMIMPL_H */
