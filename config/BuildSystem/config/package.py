@@ -436,8 +436,8 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
       if len(libSet) > 0:
         libs.append(os.path.join(directory, libSet[0]))
       for library in libSet[1:]:
-        # if the library name doesn't start with lib - then add the fullpath
-        if library.startswith('-l') or library.startswith('lib'):
+        # if 'directory' is not a rpath skip dir and the library name doesn't start with lib - then add the fullpath
+        if not directory in self.libraries.rpathSkipDirs and (library.startswith('-l') or library.startswith('lib')):
           libs.append(library)
         else:
           libs.append(os.path.join(directory, library))
