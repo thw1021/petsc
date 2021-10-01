@@ -185,12 +185,16 @@ static PetscErrorCode PCPreSolveChangeRHS_Shell(PC pc,PetscBool* change)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp,Vec b,Vec x)
+static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
   PetscErrorCode ierr;
+  Vec            b,x;
 
   PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
+
   if (!shell->presolve) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
   PetscStackCall("PCSHELL user function presolve()",ierr = (*shell->presolve)(pc,ksp,b,x);CHKERRQ(ierr));
   PetscFunctionReturn(0);
@@ -369,10 +373,10 @@ static PetscErrorCode  PCShellSetPreSolve_Shell(PC pc,PetscErrorCode (*presolve)
   PetscFunctionBegin;
   shell->presolve = presolve;
   if (presolve) {
-    pc->ops->presolve = PCPreSolve_Shell;
+    pc->presolve = PCPreSolve_Shell;
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCPreSolveChangeRHS_C",PCPreSolveChangeRHS_Shell);CHKERRQ(ierr);
   } else {
-    pc->ops->presolve = NULL;
+    pc->presolve = NULL;
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCPreSolveChangeRHS_C",NULL);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -969,7 +973,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_Shell(PC pc)
   pc->ops->applytranspose  = NULL;
   pc->ops->applyrichardson = NULL;
   pc->ops->setup           = NULL;
-  pc->ops->presolve        = NULL;
   pc->ops->postsolve       = NULL;
 
   shell->apply          = NULL;
