@@ -186,7 +186,7 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
       PetscFunctionReturn(0);
     }
     if (stag->boundaryType[i] != stag2->boundaryType[i]) {
-      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different boundary types in dimension %d: %s != %s\n",i,stag->boundaryType[i],stag2->boundaryType[i]);CHKERRQ(ierr);
+      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different boundary types in dimension %D: %s != %s\n",i,DMBoundaryTypes[stag->boundaryType[i]],DMBoundaryTypes[stag2->boundaryType[i]]);CHKERRQ(ierr);
       *set = PETSC_TRUE;
       *compatible = PETSC_FALSE;
       PetscFunctionReturn(0);
