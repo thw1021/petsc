@@ -7,7 +7,7 @@
 
    Logically collective on da
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 -  vec - the vector, either a vector the same size as one obtained with DMCreateGlobalVector() or DMCreateLocalVector()
 
@@ -78,7 +78,7 @@ PetscErrorCode  DMDAVecGetArray(DM da,Vec vec,void *array)
 
    Logically collective on da
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 .  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -133,7 +133,7 @@ PetscErrorCode  DMDAVecRestoreArray(DM da,Vec vec,void *array)
 
    Logically collective on Vec
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 -  vec - the vector, either a vector the same size as one obtained with DMCreateGlobalVector() or DMCreateLocalVector()
 
@@ -209,7 +209,7 @@ PetscErrorCode  DMDAVecGetArrayWrite(DM da,Vec vec,void *array)
 
    Logically collective on Vec
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 .  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -267,7 +267,7 @@ PetscErrorCode  DMDAVecRestoreArrayWrite(DM da,Vec vec,void *array)
 
    Logically collective
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 -  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -324,7 +324,7 @@ PetscErrorCode  DMDAVecGetArrayDOF(DM da,Vec vec,void *array)
 
    Logically collective
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 .  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -372,7 +372,7 @@ PetscErrorCode  DMDAVecRestoreArrayDOF(DM da,Vec vec,void *array)
 
    Not collective
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 -  vec - the vector, either a vector the same size as one obtained with DMCreateGlobalVector() or DMCreateLocalVector()
 
@@ -443,7 +443,7 @@ PetscErrorCode  DMDAVecGetArrayRead(DM da,Vec vec,void *array)
 
    Not collective
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 .  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -498,7 +498,7 @@ PetscErrorCode  DMDAVecRestoreArrayRead(DM da,Vec vec,void *array)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 -  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -555,7 +555,7 @@ PetscErrorCode  DMDAVecGetArrayDOFRead(DM da,Vec vec,void *array)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  da - the distributed array
 .  vec - the vector, either a vector the same size as one obtained with
          DMCreateGlobalVector() or DMCreateLocalVector()
@@ -593,6 +593,113 @@ PetscErrorCode  DMDAVecRestoreArrayDOFRead(DM da,Vec vec,void *array)
     ierr = VecRestoreArray3dRead(vec,gym,gxm,dof,gys,gxs,0,(PetscScalar****)array);CHKERRQ(ierr);
   } else if (dim == 3) {
     ierr = VecRestoreArray4dRead(vec,gzm,gym,gxm,dof,gzs,gys,gxs,0,(PetscScalar*****)array);CHKERRQ(ierr);
+  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %D\n",dim);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   DMDAVecGetArrayDOFWrite - Returns a multiple dimension array that shares data with
+      the underlying vector and is indexed using the global dimensions.
+
+   Not Collective
+
+   Input Parameters:
++  da - the distributed array
+-  vec - the vector, either a vector the same size as one obtained with
+         DMCreateGlobalVector() or DMCreateLocalVector()
+
+   Output Parameter:
+.  array - the array
+
+   Notes:
+    Call DMDAVecRestoreArrayDOFWrite() once you have finished accessing the vector entries.
+
+    In C, the indexing is "backwards" from what expects: array[k][j][i][DOF] NOT array[i][j][k][DOF]!
+
+    In Fortran 90 you do not need a version of DMDAVecRestoreArrayDOF() just use  DMDAVecRestoreArrayWriteF90() and declare your array with one higher dimension,
+    see src/dm/tutorials/ex11f90.F
+
+  Level: intermediate
+
+.seealso: DMDAGetGhostCorners(), DMDAGetCorners(), VecGetArray(), VecRestoreArray(), DMDAVecRestoreArray(), DMDAVecGetArray(), DMDAVecGetArrayDOF(),
+          DMDAVecGetArrayWrite(), DMDAVecRestoreArrayWrite(), DMDAVecGetArrayWrite(), DMDAVecRestoreArrayWrite(), DMStagVecGetArrayDOFWrite(),
+          DMStagVecRestoreArrayDOFRead(), DMStagVecRestoreArrayDOFRead()
+@*/
+PetscErrorCode  DMDAVecGetArrayDOFWrite(DM da,Vec vec,void *array)
+{
+  PetscErrorCode ierr;
+  PetscInt       xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
+
+  PetscFunctionBegin;
+  ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
+  ierr = DMDAGetGhostCorners(da,&gxs,&gys,&gzs,&gxm,&gym,&gzm);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,&dim,NULL,NULL,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+
+  /* Handle case where user passes in global vector as opposed to local */
+  ierr = VecGetLocalSize(vec,&N);CHKERRQ(ierr);
+  if (N == xm*ym*zm*dof) {
+    gxm = xm;
+    gym = ym;
+    gzm = zm;
+    gxs = xs;
+    gys = ys;
+    gzs = zs;
+  } else if (N != gxm*gym*gzm*dof) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMDA local sizes %D %D\n",N,xm*ym*zm*dof,gxm*gym*gzm*dof);
+
+  if (dim == 1) {
+    ierr = VecGetArray2dWrite(vec,gxm,dof,gxs,0,(PetscScalar***)array);CHKERRQ(ierr);
+  } else if (dim == 2) {
+    ierr = VecGetArray3dWrite(vec,gym,gxm,dof,gys,gxs,0,(PetscScalar****)array);CHKERRQ(ierr);
+  } else if (dim == 3) {
+    ierr = VecGetArray4dWrite(vec,gzm,gym,gxm,dof,gzs,gys,gxs,0,(PetscScalar*****)array);CHKERRQ(ierr);
+  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %D\n",dim);
+  PetscFunctionReturn(0);
+}
+
+/*@
+   DMDAVecRestoreArrayDOFWrite - Restores a multiple dimension array obtained with DMDAVecGetArrayDOFWrite()
+
+   Not Collective
+
+   Input Parameters:
++  da - the distributed array
+.  vec - the vector, either a vector the same size as one obtained with
+         DMCreateGlobalVector() or DMCreateLocalVector()
+-  array - the array
+
+  Level: intermediate
+
+.seealso: DMDAGetGhostCorners(), DMDAGetCorners(), VecGetArray(), VecRestoreArray(), DMDAVecGetArray(), DMDAVecGetArrayDOF(), DMDAVecRestoreArrayDOF(),
+          DMDAVecGetArrayWrite(), DMDAVecRestoreArrayWrite(), DMDAVecGetArrayWrite(), DMDAVecRestoreArrayWrite(), DMStagVecRestoreArrayDOFWrite(),
+          DMStagVecRestoreArrayDOFRead(), DMStagVecRestoreArrayDOFRead()
+@*/
+PetscErrorCode  DMDAVecRestoreArrayDOFWrite(DM da,Vec vec,void *array)
+{
+  PetscErrorCode ierr;
+  PetscInt       xs,ys,zs,xm,ym,zm,gxs,gys,gzs,gxm,gym,gzm,N,dim,dof;
+
+  PetscFunctionBegin;
+  ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
+  ierr = DMDAGetGhostCorners(da,&gxs,&gys,&gzs,&gxm,&gym,&gzm);CHKERRQ(ierr);
+  ierr = DMDAGetInfo(da,&dim,NULL,NULL,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+
+  /* Handle case where user passes in global vector as opposed to local */
+  ierr = VecGetLocalSize(vec,&N);CHKERRQ(ierr);
+  if (N == xm*ym*zm*dof) {
+    gxm = xm;
+    gym = ym;
+    gzm = zm;
+    gxs = xs;
+    gys = ys;
+    gzs = zs;
+  }
+
+  if (dim == 1) {
+    ierr = VecRestoreArray2dWrite(vec,gxm,dof,gxs,0,(PetscScalar***)array);CHKERRQ(ierr);
+  } else if (dim == 2) {
+    ierr = VecRestoreArray3dWrite(vec,gym,gxm,dof,gys,gxs,0,(PetscScalar****)array);CHKERRQ(ierr);
+  } else if (dim == 3) {
+    ierr = VecRestoreArray4dWrite(vec,gzm,gym,gxm,dof,gzs,gys,gxs,0,(PetscScalar*****)array);CHKERRQ(ierr);
   } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %D\n",dim);
   PetscFunctionReturn(0);
 }

@@ -143,7 +143,7 @@ static PetscErrorCode VecScatterRemap_Internal(VecScatter sf,const PetscInt *tom
   ierr = PetscSFGetType(sf,&type);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)sf,PETSCSFBASIC,&isbasic);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)sf,PETSCSFNEIGHBOR,&isneighbor);CHKERRQ(ierr);
-  if (!isbasic && !isneighbor) SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"VecScatterRemap on SF type %s is not supported",type);CHKERRQ(ierr);
+  if (!isbasic && !isneighbor) SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"VecScatterRemap on SF type %s is not supported",type);
 
   ierr = PetscSFSetUp(sf);CHKERRQ(ierr); /* to bulid sf->irootloc if SetUp is not yet called */
 
@@ -787,7 +787,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
 
     ierr = MPI_Comm_rank(xcomm,&rank);CHKERRMPI(ierr);
     ierr = VecGetLayout(x,&map);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       if (ixid == IS_STRIDE && iyid == IS_STRIDE && ixsize == xlen && ixfirst == 0 && ixstep == 1 && iyfirst == 0 && iystep == 1) {
         /* Rank 0 scatters the whole mpi x to seq y, so it is either a ToAll or a ToZero candidate in its view */
         pattern[0] = pattern[1] = 1;
@@ -1131,7 +1131,7 @@ functionend:
   Input Parameter:
 .  vin  - input MPIVEC
 
-  Output Parameter:
+  Output Parameters:
 +  ctx - scatter context
 -  vout - output SEQVEC that is large enough to scatter into
 
@@ -1200,7 +1200,7 @@ PetscErrorCode  VecScatterCreateToAll(Vec vin,VecScatter *ctx,Vec *vout)
   Input Parameter:
 .  vin  - input MPIVEC
 
-  Output Parameter:
+  Output Parameters:
 +  ctx - scatter context
 -  vout - output SEQVEC that is large enough to scatter into on processor 0 and
           of length zero on all other processors

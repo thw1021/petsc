@@ -259,7 +259,7 @@ PetscErrorCode  MatSetFromOptions(Mat B)
 
    Collective on Mat
 
-   Input Arguments:
+   Input Parameters:
 +  A - matrix being preallocated
 .  bs - block size
 .  dnnz - number of nonzero column blocks per block row of diagonal part of parallel matrix
@@ -436,32 +436,56 @@ PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
 /*@
      MatBindToCPU - marks a matrix to temporarily stay on the CPU and perform computations on the CPU
 
+   Logically collective on Mat
+
    Input Parameters:
 +   A - the matrix
 -   flg - bind to the CPU if value of PETSC_TRUE
 
    Level: intermediate
+
+.seealso: MatBoundToCPU()
 @*/
 PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
 {
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidLogicalCollectiveBool(A,flg,2);
+#if defined(PETSC_HAVE_DEVICE)
   if (A->boundtocpu == flg) PetscFunctionReturn(0);
   A->boundtocpu = flg;
   if (A->ops->bindtocpu) {
+    PetscErrorCode ierr;
     ierr = (*A->ops->bindtocpu)(A,flg);CHKERRQ(ierr);
   }
+#endif
   PetscFunctionReturn(0);
-#else
+}
+
+/*@
+     MatBoundToCPU - query if a matrix is bound to the CPU
+
+   Input Parameter:
+.   A - the matrix
+
+   Output Parameter:
+.   flg - the logical flag
+
+   Level: intermediate
+
+.seealso: MatBindToCPU()
+@*/
+PetscErrorCode MatBoundToCPU(Mat A,PetscBool *flg)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveBool(A,flg,2);
-  PetscFunctionReturn(0);
+  PetscValidPointer(flg,2);
+#if defined(PETSC_HAVE_DEVICE)
+  *flg = A->boundtocpu;
+#else
+  *flg = PETSC_TRUE;
 #endif
+  PetscFunctionReturn(0);
 }
 
 PetscErrorCode MatSetValuesCOO_Basic(Mat A,const PetscScalar coo_v[],InsertMode imode)
@@ -527,12 +551,12 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscInt ncoo,const PetscInt c
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
    MatSetPreallocationCOO - set preallocation for matrices using a coordinate format of the entries
 
    Collective on Mat
 
-   Input Arguments:
+   Input Parameters:
 +  A - matrix being preallocated
 .  ncoo - number of entries in the locally owned part of the parallel matrix
 .  coo_i - row indices
@@ -574,12 +598,12 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscInt ncoo,const PetscInt coo_i[]
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
    MatSetValuesCOO - set values at once in a matrix preallocated using MatSetPreallocationCOO()
 
    Collective on Mat
 
-   Input Arguments:
+   Input Parameters:
 +  A - matrix being preallocated
 .  coo_v - the matrix values (can be NULL)
 -  imode - the insert mode

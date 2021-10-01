@@ -91,7 +91,7 @@ int main(int argc,char **argv)
   reason = TAO_CONTINUE_ITERATING;
   flg = PETSC_FALSE;
   ierr = TaoGetRecycleHistory(tao, &flg);CHKERRQ(ierr);
-  if (flg) ierr = PetscPrintf(PETSC_COMM_SELF, "Recycle: enabled\n");CHKERRQ(ierr);
+  if (flg) {ierr = PetscPrintf(PETSC_COMM_SELF, "Recycle: enabled\n");CHKERRQ(ierr);}
   while (reason != TAO_CONVERGED_GATOL) {
     ierr = TaoSolve(tao);CHKERRQ(ierr);
     ierr = TaoGetConvergedReason(tao, &reason);CHKERRQ(ierr);
@@ -105,7 +105,7 @@ int main(int argc,char **argv)
   ierr = TaoSetRecycleHistory(tao, PETSC_FALSE);CHKERRQ(ierr);
   ierr = VecSet(x, zero);CHKERRQ(ierr);
   ierr = TaoGetRecycleHistory(tao, &flg);CHKERRQ(ierr);
-  if (!flg) ierr = PetscPrintf(PETSC_COMM_SELF, "Recycle: disabled\n");CHKERRQ(ierr);
+  if (!flg) {ierr = PetscPrintf(PETSC_COMM_SELF, "Recycle: disabled\n");CHKERRQ(ierr);}
   ierr = TaoSolve(tao);CHKERRQ(ierr);
   ierr = TaoGetConvergedReason(tao, &reason);CHKERRQ(ierr);
   if (reason != TAO_CONVERGED_GATOL) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "Solution failed to converge!");
@@ -164,7 +164,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
       g[i+1] = 2*alpha*t1;
     }
   } else {
-    for (i=0; i<nn; i++){
+    for (i=0; i<nn; i++) {
       t1 = x[2*i+1]-x[2*i]*x[2*i]; t2= 1-x[2*i];
       ff += alpha*t1*t1 + t2*t2;
       g[2*i] = -4*alpha*t1*x[2*i]-2.0*t2;
@@ -209,7 +209,7 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
   PetscFunctionBeginUser;
   /* Zero existing matrix entries */
   ierr = MatAssembled(H,&assembled);CHKERRQ(ierr);
-  if (assembled || user->chained){ierr = MatZeroEntries(H);CHKERRQ(ierr);}
+  if (assembled || user->chained) {ierr = MatZeroEntries(H);CHKERRQ(ierr);}
 
   /* Get a pointer to vector data */
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
@@ -226,7 +226,7 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
       ierr = MatSetValues(H,2,ind,2,ind,v[0],ADD_VALUES);CHKERRQ(ierr);
     }
   } else {
-    for (i=0; i<user->n/2; i++){
+    for (i=0; i<user->n/2; i++) {
       v[1][1] = 2*alpha;
       v[0][0] = -4*alpha*(x[2*i+1]-3*x[2*i]*x[2*i]) + 2;
       v[1][0] = v[0][1] = -4.0*alpha*x[2*i];

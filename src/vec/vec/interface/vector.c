@@ -766,7 +766,7 @@ PetscErrorCode  VecGetOwnershipRanges(Vec x,const PetscInt *ranges[])
 
    Collective on Vec
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  op - the option
 -  flag - turn the option on or off
@@ -1112,7 +1112,7 @@ PetscErrorCode  VecConjugate(Vec x)
 
 .seealso: VecPointwiseDivide(), VecPointwiseMax(), VecPointwiseMin(), VecPointwiseMaxAbs(), VecMaxPointwiseDivide()
 @*/
-PetscErrorCode  VecPointwiseMult(Vec w, Vec x,Vec y)
+PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 {
   PetscErrorCode ierr;
 
@@ -1327,7 +1327,7 @@ PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
 
    Logically Collective on Vec
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  bs - the blocksize
 
@@ -1388,7 +1388,7 @@ PetscErrorCode  VecGetBlockSize(Vec v,PetscInt *bs)
 
    Logically Collective on Vec
 
-   Input Parameter:
+   Input Parameters:
 +  v - the Vec context
 -  prefix - the prefix to prepend to all option names
 
@@ -1788,10 +1788,10 @@ PetscErrorCode PetscOptionsGetVec(PetscOptions options,const char prefix[],const
 
    Not Collective
 
-   Input Arguments:
+   Input Parameter:
 .  x - the vector
 
-   Output Arguments:
+   Output Parameter:
 .  map - the layout
 
    Level: developer
@@ -1800,9 +1800,9 @@ PetscErrorCode PetscOptionsGetVec(PetscOptions options,const char prefix[],const
 @*/
 PetscErrorCode VecGetLayout(Vec x,PetscLayout *map)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidPointer(map,2);
   *map = x->map;
   PetscFunctionReturn(0);
 }
@@ -1812,7 +1812,7 @@ PetscErrorCode VecGetLayout(Vec x,PetscLayout *map)
 
    Not Collective
 
-   Input Arguments:
+   Input Parameters:
 +  x - the vector
 -  map - the layout
 
@@ -1841,14 +1841,20 @@ PetscErrorCode VecSetInf(Vec xin)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayWrite(xin,&xx);CHKERRQ(ierr);
-  for (i=0; i<n; i++) xx[i] = inf;
-  ierr = VecRestoreArrayWrite(xin,&xx);CHKERRQ(ierr);
+  if (xin->ops->set) { /* can be called by a subset of processes, do not use collective routines */
+    ierr = (*xin->ops->set)(xin,inf);CHKERRQ(ierr);
+  } else {
+    ierr = VecGetArrayWrite(xin,&xx);CHKERRQ(ierr);
+    for (i=0; i<n; i++) xx[i] = inf;
+    ierr = VecRestoreArrayWrite(xin,&xx);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
 /*@
      VecBindToCPU - marks a vector to temporarily stay on the CPU and perform computations on the CPU
+
+  Logically collective on Vec
 
    Input Parameters:
 +   v - the vector
@@ -1858,19 +1864,46 @@ PetscErrorCode VecSetInf(Vec xin)
 @*/
 PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
 {
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveBool(v,flg,2);
+#if defined(PETSC_HAVE_DEVICE)
   if (v->boundtocpu == flg) PetscFunctionReturn(0);
   v->boundtocpu = flg;
   if (v->ops->bindtocpu) {
+    PetscErrorCode ierr;
     ierr = (*v->ops->bindtocpu)(v,flg);CHKERRQ(ierr);
   }
-  PetscFunctionReturn(0);
-#else
-  return 0;
 #endif
+  PetscFunctionReturn(0);
+}
+
+/*@
+     VecBoundToCPU - query if a vector is bound to the CPU
+
+  Not collective
+
+   Input Parameter:
+.   v - the vector
+
+   Output Parameter:
+.   flg - the logical flag
+
+   Level: intermediate
+
+.seealso: VecBindToCPU()
+@*/
+PetscErrorCode VecBoundToCPU(Vec v,PetscBool *flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidPointer(flg,2);
+#if defined(PETSC_HAVE_DEVICE)
+  *flg = v->boundtocpu;
+#else
+  *flg = PETSC_TRUE;
+#endif
+  PetscFunctionReturn(0);
 }
 
 /*@C

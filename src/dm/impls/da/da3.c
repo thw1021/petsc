@@ -94,7 +94,7 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
 
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* first processor draw all node lines */
-    if (!rank) {
+    if (rank == 0) {
       for (k=0; k<dd->P; k++) {
         ymin = 0.0; ymax = (PetscReal)(dd->N - 1);
         for (xmin=(PetscReal)(k*(dd->M+1)); xmin<(PetscReal)(dd->M+(k*(dd->M+1))); xmin++) {
@@ -474,7 +474,7 @@ PetscErrorCode  DMSetUp_DA_3D(DM da)
     bottom = ys - Ys; top = bottom + y;
     down   = zs - Zs;   up  = down + z;
     count  = 0;
-    /* the bottom chunck */
+    /* the bottom chunk */
     for (i=(IZs-Zs); i<down; i++) {
       for (j=bottom; j<top; j++) {
         for (k=left; k<right; k++) idx[count++] = (i*(Ye-Ys) + j)*(Xe-Xs) + k;

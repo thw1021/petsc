@@ -133,7 +133,7 @@ class Configure(config.base.Configure):
       # remove duplicate -L, -Wl,-rpath options - and only consecutive -l options
       if j in newldflags and any([j.startswith(flg) for flg in dupflags]): continue
       if newlibs and j == newlibs[-1]: continue
-      if j.startswith('-l') or j.endswith('.lib') or j.endswith('.a') or j.endswith('.o') or j == '-Wl,-Bstatic' or j == '-Wl,-Bdynamic' or j == '-Wl,--start-group' or j == '-Wl,--end-group':
+      if list(filter(j.startswith,['-l'])) or list(filter(j.endswith,['.lib','.a','.so','.o'])) or j in ['-Wl,-Bstatic','-Wl,-Bdynamic','-Wl,--start-group','-Wl,--end-group']:
         newlibs.append(j)
       else:
         newldflags.append(j)
@@ -501,7 +501,7 @@ int checkInit(void) {
       if executor and str(e).find('Runaway process exceeded time limit') > -1:
         raise RuntimeError('Timeout: Unable to run MPI program with '+executor+'\n\
     (1) make sure this is the correct program to run MPI jobs\n\
-    (2) your network may be misconfigured; see https://www.mcs.anl.gov/petsc/documentation/faq.html#mpi-network-misconfigure\n\
+    (2) your network may be misconfigured; see https://petsc.org/release/faq/#mpi-network-misconfigure\n\
     (3) you may have VPN running whose network settings may not play nice with MPI\n')
 
     self.setCompilers.LIBS = oldLibs

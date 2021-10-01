@@ -253,7 +253,7 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
 
     /* local solvers */
     ierr = PetscViewerGetSubViewer(viewer,PetscObjectComm((PetscObject)pcbddc->ksp_D),&subviewer);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscViewerASCIIPrintf(subviewer,"--- Interior solver (rank 0)\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(subviewer);CHKERRQ(ierr);
       ierr = KSPView(pcbddc->ksp_D,subviewer);CHKERRQ(ierr);
@@ -748,7 +748,7 @@ static PetscErrorCode PCBDDCSetDirichletBoundaries_BDDC(PC pc,IS DirichletBounda
   if (pcbddc->DirichletBoundaries) {
     ierr = ISEqual(DirichletBoundaries,pcbddc->DirichletBoundaries,&isequal);CHKERRQ(ierr);
   }
-  /* last user setting takes precendence -> destroy any other customization */
+  /* last user setting takes precedence -> destroy any other customization */
   ierr = ISDestroy(&pcbddc->DirichletBoundariesLocal);CHKERRQ(ierr);
   ierr = ISDestroy(&pcbddc->DirichletBoundaries);CHKERRQ(ierr);
   pcbddc->DirichletBoundaries = DirichletBoundaries;
@@ -795,7 +795,7 @@ static PetscErrorCode PCBDDCSetDirichletBoundariesLocal_BDDC(PC pc,IS DirichletB
   if (pcbddc->DirichletBoundariesLocal) {
     ierr = ISEqual(DirichletBoundaries,pcbddc->DirichletBoundariesLocal,&isequal);CHKERRQ(ierr);
   }
-  /* last user setting takes precendence -> destroy any other customization */
+  /* last user setting takes precedence -> destroy any other customization */
   ierr = ISDestroy(&pcbddc->DirichletBoundariesLocal);CHKERRQ(ierr);
   ierr = ISDestroy(&pcbddc->DirichletBoundaries);CHKERRQ(ierr);
   pcbddc->DirichletBoundariesLocal = DirichletBoundaries;
@@ -841,7 +841,7 @@ static PetscErrorCode PCBDDCSetNeumannBoundaries_BDDC(PC pc,IS NeumannBoundaries
   if (pcbddc->NeumannBoundaries) {
     ierr = ISEqual(NeumannBoundaries,pcbddc->NeumannBoundaries,&isequal);CHKERRQ(ierr);
   }
-  /* last user setting takes precendence -> destroy any other customization */
+  /* last user setting takes precedence -> destroy any other customization */
   ierr = ISDestroy(&pcbddc->NeumannBoundariesLocal);CHKERRQ(ierr);
   ierr = ISDestroy(&pcbddc->NeumannBoundaries);CHKERRQ(ierr);
   pcbddc->NeumannBoundaries = NeumannBoundaries;
@@ -888,7 +888,7 @@ static PetscErrorCode PCBDDCSetNeumannBoundariesLocal_BDDC(PC pc,IS NeumannBound
   if (pcbddc->NeumannBoundariesLocal) {
     ierr = ISEqual(NeumannBoundaries,pcbddc->NeumannBoundariesLocal,&isequal);CHKERRQ(ierr);
   }
-  /* last user setting takes precendence -> destroy any other customization */
+  /* last user setting takes precedence -> destroy any other customization */
   ierr = ISDestroy(&pcbddc->NeumannBoundariesLocal);CHKERRQ(ierr);
   ierr = ISDestroy(&pcbddc->NeumannBoundaries);CHKERRQ(ierr);
   pcbddc->NeumannBoundariesLocal = NeumannBoundaries;
@@ -1186,7 +1186,7 @@ static PetscErrorCode PCBDDCSetDofsSplittingLocal_BDDC(PC pc,PetscInt n_is, IS I
     ierr = ISDestroy(&pcbddc->ISForDofsLocal[i]);CHKERRQ(ierr);
   }
   ierr = PetscFree(pcbddc->ISForDofsLocal);CHKERRQ(ierr);
-  /* last user setting takes precendence -> destroy any other customization */
+  /* last user setting takes precedence -> destroy any other customization */
   for (i=0;i<pcbddc->n_ISForDofs;i++) {
     ierr = ISDestroy(&pcbddc->ISForDofs[i]);CHKERRQ(ierr);
   }
@@ -1262,7 +1262,7 @@ static PetscErrorCode PCBDDCSetDofsSplitting_BDDC(PC pc,PetscInt n_is, IS ISForD
     ierr = ISDestroy(&pcbddc->ISForDofs[i]);CHKERRQ(ierr);
   }
   ierr = PetscFree(pcbddc->ISForDofs);CHKERRQ(ierr);
-  /* last user setting takes precendence -> destroy any other customization */
+  /* last user setting takes precedence -> destroy any other customization */
   for (i=0;i<pcbddc->n_ISForDofsLocal;i++) {
     ierr = ISDestroy(&pcbddc->ISForDofsLocal[i]);CHKERRQ(ierr);
   }
@@ -2540,7 +2540,7 @@ static PetscErrorCode PCView_BDDCIPC(PC pc, PetscViewer viewer)
   PetscBool      isascii;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc,(void **)&bddcipc_ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc,&bddcipc_ctx);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
     ierr = PetscViewerASCIIPrintf(viewer,"BDDC interface preconditioner\n");CHKERRQ(ierr);
@@ -2561,7 +2561,7 @@ static PetscErrorCode PCSetUp_BDDCIPC(PC pc)
   PC_IS          *pcis;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc,(void **)&bddcipc_ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc,&bddcipc_ctx);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)bddcipc_ctx->bddc,PCBDDC,&isbddc);CHKERRQ(ierr);
   if (!isbddc) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid type %s. Must be of type bddc",((PetscObject)bddcipc_ctx->bddc)->type_name);
   ierr = PCSetUp(bddcipc_ctx->bddc);CHKERRQ(ierr);
@@ -2585,7 +2585,7 @@ static PetscErrorCode PCApply_BDDCIPC(PC pc, Vec r, Vec x)
   VecScatter     tmps;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc,(void **)&bddcipc_ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc,&bddcipc_ctx);CHKERRQ(ierr);
   pcis = (PC_IS*)(bddcipc_ctx->bddc->data);
   tmps = pcis->global_to_B;
   pcis->global_to_B = bddcipc_ctx->g2l;
@@ -2604,7 +2604,7 @@ static PetscErrorCode PCApplyTranspose_BDDCIPC(PC pc, Vec r, Vec x)
   VecScatter     tmps;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc,(void **)&bddcipc_ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc,&bddcipc_ctx);CHKERRQ(ierr);
   pcis = (PC_IS*)(bddcipc_ctx->bddc->data);
   tmps = pcis->global_to_B;
   pcis->global_to_B = bddcipc_ctx->g2l;
@@ -2621,7 +2621,7 @@ static PetscErrorCode PCDestroy_BDDCIPC(PC pc)
   BDDCIPC_ctx    bddcipc_ctx;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc,(void **)&bddcipc_ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc,&bddcipc_ctx);CHKERRQ(ierr);
   ierr = PCDestroy(&bddcipc_ctx->bddc);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&bddcipc_ctx->g2l);CHKERRQ(ierr);
   ierr = PetscFree(bddcipc_ctx);CHKERRQ(ierr);
@@ -3020,7 +3020,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
 
   PetscFunctionBegin;
   ierr     = PetscNewLog(pc,&pcbddc);CHKERRQ(ierr);
-  pc->data = (void*)pcbddc;
+  pc->data = pcbddc;
 
   /* create PCIS data structure */
   ierr = PCISCreate(pc);CHKERRQ(ierr);

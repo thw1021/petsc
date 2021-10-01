@@ -45,7 +45,7 @@ static PetscErrorCode TaoShellSolve_SoftThreshold(Tao tao)
   ierr = TaoGetADMMParentTao(tao,&admm_tao);CHKERRQ(ierr);
   ierr = TaoADMMGetMisfitSubsolver(admm_tao, &misfit);CHKERRQ(ierr);
   ierr = TaoADMMGetSpectralPenalty(admm_tao,&mu);CHKERRQ(ierr);
-  ierr = TaoShellGetContext(tao, (void**) &user);CHKERRQ(ierr);
+  ierr = TaoShellGetContext(tao,&user);CHKERRQ(ierr);
 
   lambda = user->lambda;
   work   = user->workN;
@@ -119,7 +119,7 @@ PetscErrorCode RegularizerObjectiveAndGradient2(Tao tao,Vec X,PetscReal *f_reg,V
   ierr   = VecDot(X,X,&temp);CHKERRQ(ierr);
   *f_reg = 0.5*user->lambda*temp;
   /* compute regularizer gradient = lambda*z */
-  ierr = VecCopy(X,G_reg);
+  ierr = VecCopy(X,G_reg);CHKERRQ(ierr);
   ierr = VecScale(G_reg,user->lambda);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -390,7 +390,7 @@ int main(int argc,char **argv)
 /*TEST
 
    build:
-      requires: !complex !single !__float128 !define(PETSC_USE_64BIT_INDICES)
+      requires: !complex !single !__float128 !defined(PETSC_USE_64BIT_INDICES)
 
    test:
       suffix: 1

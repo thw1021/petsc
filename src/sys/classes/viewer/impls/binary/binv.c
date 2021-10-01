@@ -51,7 +51,7 @@ static PetscErrorCode PetscViewerGetSubViewer_Binary(PetscViewer viewer,MPI_Comm
 
   /* Return subviewer in process zero */
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscMPIInt flg;
 
     ierr = MPI_Comm_compare(PETSC_COMM_SELF,comm,&flg);CHKERRMPI(ierr);
@@ -280,7 +280,7 @@ static PetscErrorCode PetscViewerBinarySetUseMPIIO_Binary(PetscViewer viewer,Pet
 .   viewer - PetscViewer context, obtained from PetscViewerBinaryOpen()
 
     Output Parameter:
--   use - PETSC_TRUE if MPI-IO is being used
+.   use - PETSC_TRUE if MPI-IO is being used
 
     Options Database:
     -viewer_binary_mpiio : Flag for using MPI-IO
@@ -323,7 +323,7 @@ static PetscErrorCode PetscViewerBinaryGetUseMPIIO_Binary(PetscViewer viewer,Pet
 
     Not Collective
 
-    Input Parameter:
+    Input Parameters:
 +   viewer - PetscViewer context, obtained from PetscViewerBinaryOpen()
 -   fc - the number of messages, defaults to 256 if this function was not called
 
@@ -440,7 +440,7 @@ PetscErrorCode PetscViewerBinaryGetDescriptor(PetscViewer viewer,int *fdes)
 .   viewer - PetscViewer context, obtained from PetscViewerCreate()
 
     Options Database Key:
-.   -viewer_binary_skip_info
+.   -viewer_binary_skip_info - true indicates do not generate .info file
 
     Level: advanced
 
@@ -469,12 +469,12 @@ PetscErrorCode PetscViewerBinarySkipInfo(PetscViewer viewer)
 
     Not Collective
 
-    Input Parameter:
+    Input Parameters:
 +   viewer - PetscViewer context, obtained from PetscViewerCreate()
 -   skip - PETSC_TRUE implies the .info file will not be generated
 
     Options Database Key:
-.   -viewer_binary_skip_info
+.   -viewer_binary_skip_info - true indicates do not generate .info file
 
     Level: advanced
 
@@ -547,10 +547,10 @@ static PetscErrorCode PetscViewerBinaryGetSkipInfo_Binary(PetscViewer viewer,Pet
 
     Input Parameters:
 +   viewer - PetscViewer context, obtained from PetscViewerBinaryOpen()
--   skip - PETSC_TRUE means do not use
+-   skip - PETSC_TRUE means do not use the options from the options database
 
     Options Database Key:
-.   -viewer_binary_skip_options
+.   -viewer_binary_skip_options - true means do not use the options from the options database
 
     Level: advanced
 
@@ -629,14 +629,14 @@ static PetscErrorCode PetscViewerBinaryGetSkipOptions_Binary(PetscViewer viewer,
 -   skip - PETSC_TRUE means do not write header
 
     Options Database Key:
-.   -viewer_binary_skip_header
+.   -viewer_binary_skip_header - PETSC_TRUE means do not write header
 
     Level: advanced
 
     Notes:
-    This must be called after PetscViewerSetType()
+      This must be called after PetscViewerSetType()
 
-           Can ONLY be called on a binary viewer
+      Is ignored on anything but a binary viewer
 
 .seealso: PetscViewerBinaryOpen(), PetscViewerBinaryGetDescriptor(), PetscViewerBinarySkipInfo(),
           PetscViewerBinaryGetSkipHeader()
@@ -939,11 +939,11 @@ static PetscErrorCode PetscViewerBinaryWriteReadMPIIO(PetscViewer viewer,void *d
   ierr = PetscMPIIntCast(num,&cnt);CHKERRQ(ierr);
   ierr = PetscDataTypeToMPIDataType(dtype,&mdtype);CHKERRQ(ierr);
   if (write) {
-    if (!rank) {
+    if (rank == 0) {
       ierr = MPIU_File_write_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRQ(ierr);
     }
   } else {
-    if (!rank) {
+    if (rank == 0) {
       ierr = MPIU_File_read_at(mfdes,vbinary->moff,data,cnt,mdtype,&status);CHKERRQ(ierr);
       if (cnt > 0) {ierr = MPI_Get_count(&status,mdtype,&cnt);CHKERRMPI(ierr);}
     }
@@ -1092,7 +1092,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
   {
     int         fdes;
     char        *workbuf = NULL;
-    PetscInt    tcount = !rank ? 0 : count,maxcount=0,message_count,flowcontrolcount;
+    PetscInt    tcount = rank == 0 ? 0 : count,maxcount=0,message_count,flowcontrolcount;
     PetscMPIInt tag,cnt,maxcnt,scnt=0,rcnt=0,j;
     MPI_Status  status;
 
@@ -1103,7 +1103,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer,PetscBool
 
     ierr = PetscViewerBinaryGetDescriptor(viewer,&fdes);CHKERRQ(ierr);
     ierr = PetscViewerFlowControlStart(viewer,&message_count,&flowcontrolcount);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscMalloc(maxcnt*dsize,&workbuf);CHKERRQ(ierr);
       if (write) {
         ierr = PetscBinaryWrite(fdes,data,cnt,dtype);CHKERRQ(ierr);
@@ -1441,7 +1441,7 @@ static PetscErrorCode PetscViewerFileSetUp_BinarySTDIO(PetscViewer viewer)
   }
 
   vbinary->fdes = -1;
-  if (!rank) { /* only first processor opens file*/
+  if (rank == 0) { /* only first processor opens file*/
     PetscFileMode mode = vbinary->filemode;
     if (mode == FILE_MODE_APPEND) {
       /* check if asked to append to a non-existing file */
@@ -1463,7 +1463,7 @@ static PetscErrorCode PetscViewerFileSetUp_BinaryInfo(PetscViewer viewer)
   PetscFunctionBegin;
   vbinary->fdes_info = NULL;
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
-  if (!vbinary->skipinfo && (vbinary->filemode == FILE_MODE_READ || !rank)) {
+  if (!vbinary->skipinfo && (vbinary->filemode == FILE_MODE_READ || rank == 0)) {
     char infoname[PETSC_MAX_PATH_LEN],iname[PETSC_MAX_PATH_LEN],*gz;
 
     ierr = PetscStrncpy(infoname,vbinary->filename,sizeof(infoname));CHKERRQ(ierr);
@@ -1476,7 +1476,7 @@ static PetscErrorCode PetscViewerFileSetUp_BinaryInfo(PetscViewer viewer)
       ierr = PetscFixFilename(infoname,iname);CHKERRQ(ierr);
       ierr = PetscFileRetrieve(PetscObjectComm((PetscObject)viewer),iname,infoname,PETSC_MAX_PATH_LEN,&found);CHKERRQ(ierr);
       if (found) {ierr = PetscOptionsInsertFile(PetscObjectComm((PetscObject)viewer),((PetscObject)viewer)->options,infoname,PETSC_FALSE);CHKERRQ(ierr);}
-    } else if (!rank) { /* write or append */
+    } else if (rank == 0) { /* write or append */
       const char *omode = (vbinary->filemode == FILE_MODE_APPEND) ? "a" : "w";
       vbinary->fdes_info = fopen(infoname,omode);
       if (!vbinary->fdes_info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open .info file %s for writing",infoname);
@@ -1639,14 +1639,14 @@ PetscMPIInt Petsc_Viewer_Binary_keyval = MPI_KEYVAL_INVALID;
      Level: intermediate
 
    Options Database Keys:
-+    -viewer_binary_filename <name>
-.    -viewer_binary_skip_info
-.    -viewer_binary_skip_options
-.    -viewer_binary_skip_header
--    -viewer_binary_mpiio
++    -viewer_binary_filename <name> - filename in which to store the binary data, defaults to binaryoutput
+.    -viewer_binary_skip_info - true means do not create .info file for this viewer
+.    -viewer_binary_skip_options - true means do not use the options database for this viewer
+.    -viewer_binary_skip_header - true means do not store the usual header information in the binary file
+-    -viewer_binary_mpiio - true means use the file via MPI-IO, maybe faster for large files and many MPI ranks
 
    Environmental variables:
--   PETSC_VIEWER_BINARY_FILENAME
+-   PETSC_VIEWER_BINARY_FILENAME - filename in which to store the binary data, defaults to binaryoutput
 
      Notes:
      Unlike almost all other PETSc routines, PETSC_VIEWER_BINARY_ does not return

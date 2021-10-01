@@ -104,7 +104,7 @@ PetscErrorCode  PetscDrawHGCreate(PetscDraw draw,int bins,PetscDrawHG *hist)
 
    Logically Collective on PetscDrawHG
 
-   Input Parameter:
+   Input Parameters:
 +  hist - The histogram context.
 -  bins  - The number of bins.
 
@@ -319,7 +319,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
     }
     ierr = PetscDrawAxisDraw(hist->axis);CHKERRQ(ierr);
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-    if (!rank) { /* Draw bins */
+    if (rank == 0) { /* Draw bins */
       binLeft  = xmin;
       binRight = xmax;
       ierr = PetscDrawRectangle(draw,binLeft,ymin,binRight,bins[0],bcolor,bcolor,bcolor,bcolor);CHKERRQ(ierr);
@@ -372,7 +372,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
     }
     ierr = PetscDrawAxisDraw(hist->axis);CHKERRQ(ierr);
     ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-    if (!rank) { /* Draw bins */
+    if (rank == 0) { /* Draw bins */
       for (i = 0; i < numBins; i++) {
         binLeft  = xmin + binSize*i;
         binRight = xmin + binSize*(i+1);
@@ -440,7 +440,7 @@ PetscErrorCode  PetscDrawHGView(PetscDrawHG hist,PetscViewer viewer)
   if ((hist->xmin > hist->xmax) || (hist->ymin >= hist->ymax)) PetscFunctionReturn(0);
   if (hist->numValues < 1) PetscFunctionReturn(0);
 
-  if (!viewer){
+  if (!viewer) {
     ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)hist),&viewer);CHKERRQ(ierr);
   }
   ierr = PetscObjectPrintClassNamePrefixType((PetscObject)hist,viewer);CHKERRQ(ierr);

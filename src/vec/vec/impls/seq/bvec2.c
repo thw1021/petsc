@@ -414,7 +414,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
     }
   } else if (format == PETSC_VIEWER_ASCII_GLVIS) {
-    /* GLVis ASCII visualization/dump: this function mimicks mfem::GridFunction::Save() */
+    /* GLVis ASCII visualization/dump: this function mimics mfem::GridFunction::Save() */
     const PetscScalar       *array;
     PetscInt                i,n,vdim, ordering = 1; /* mfem::FiniteElementSpace::Ordering::byVDIM */
     PetscContainer          glvis_container;
@@ -846,7 +846,7 @@ PetscErrorCode VecCreate_Seq_Private(Vec v,const PetscScalar array[])
 
    Collective
 
-   Input Parameter:
+   Input Parameters:
 +  comm - the communicator, should be PETSC_COMM_SELF
 .  bs - the block size
 .  n - the vector length

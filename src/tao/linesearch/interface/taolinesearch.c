@@ -298,18 +298,18 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 
   Input Parameters:
 + ls - the Tao context
-. x - The current solution (on output x contains the new solution determined by the line search)
-. f - objective function value at current solution (on output contains the objective function value at new solution)
-. g - gradient evaluated at x (on output contains the gradient at new solution)
 - s - search direction
 
+  Input/Output Parameters:
++ x - The current solution (on output x contains the new solution determined by the line search)
+. f - objective function value at current solution (on output contains the objective function value at new solution)
+- g - gradient evaluated at x (on output contains the gradient at new solution)
+
   Output Parameters:
-+ x - new solution
-. f - objective function value at x
-. g - gradient vector at x
-. steplength - scalar multiplier of s used ( x = x0 + steplength * x)
++ steplength - scalar multiplier of s used ( x = x0 + steplength * x)
 - reason - reason why the line-search stopped
 
+  Notes:
   reason will be set to one of:
 
 + TAOLINESEARCH_FAILED_ASCENT - initial line search step * g is not descent direction
@@ -323,11 +323,9 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 . TAOLINESEARCH_HALTED_OTHER - any other reason
 - TAOLINESEARCH_SUCCESS - successful line search
 
-  Note:
   The algorithm developer must set up the TaoLineSearch with calls to
   TaoLineSearchSetObjectiveRoutine() and TaoLineSearchSetGradientRoutine(), TaoLineSearchSetObjectiveAndGradientRoutine(), or TaoLineSearchUseTaoRoutines()
 
-  Note:
   You may or may not need to follow this with a call to
   TaoAddLineSearchCounts(), depending on whether you want these
   evaluations to count toward the total function/gradient evaluations.
@@ -525,7 +523,7 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
 
   Collective on TaoLineSearch
 
-  Input Paremeter:
+  Input Parameter:
 . ls - the TaoLineSearch context
 
   Options Database Keys:
@@ -664,7 +662,7 @@ PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 
   Logically Collective on TaoLineSearch
 
-  Input Parameter:
+  Input Parameters:
 + ls - the TaoLineSearch context
 . func - the objective function evaluation routine
 - ctx - the (optional) user-defined context for private data
@@ -707,7 +705,7 @@ PetscErrorCode TaoLineSearchSetObjectiveRoutine(TaoLineSearch ls, PetscErrorCode
 
   Logically Collective on TaoLineSearch
 
-  Input Parameter:
+  Input Parameters:
 + ls - the TaoLineSearch context
 . func - the gradient evaluation routine
 - ctx - the (optional) user-defined context for private data
@@ -749,7 +747,7 @@ PetscErrorCode TaoLineSearchSetGradientRoutine(TaoLineSearch ls, PetscErrorCode(
 
   Logically Collective on TaoLineSearch
 
-  Input Parameter:
+  Input Parameters:
 + ls - the TaoLineSearch context
 . func - the objective and gradient evaluation routine
 - ctx - the (optional) user-defined context for private data
@@ -795,7 +793,7 @@ PetscErrorCode TaoLineSearchSetObjectiveAndGradientRoutine(TaoLineSearch ls, Pet
 
   Logically Collective on TaoLineSearch
 
-  Input Parameter:
+  Input Parameters:
 + ls - the TaoLineSearch context
 . func - the objective and gradient evaluation routine
 - ctx - the (optional) user-defined context for private data
@@ -843,7 +841,7 @@ PetscErrorCode TaoLineSearchSetObjectiveAndGTSRoutine(TaoLineSearch ls, PetscErr
 
   Logically Collective on TaoLineSearch
 
-  Input Parameter:
+  Input Parameters:
 + ls - the TaoLineSearch context
 - ts - the Tao context with defined objective/gradient evaluation routines
 
@@ -923,7 +921,7 @@ PetscErrorCode TaoLineSearchComputeObjective(TaoLineSearch ls, Vec x, PetscReal 
 + ls - the TaoLineSearch context
 - x - input vector
 
-  Output Parameter:
+  Output Parameters:
 + f - Objective value at X
 - g - Gradient vector at X
 
@@ -947,19 +945,23 @@ PetscErrorCode TaoLineSearchComputeObjectiveAndGradient(TaoLineSearch ls, Vec x,
   PetscCheckSameComm(ls,1,x,2);
   PetscCheckSameComm(ls,1,g,4);
   if (ls->usetaoroutines) {
-      ierr = TaoComputeObjectiveAndGradient(ls->tao,x,f,g);CHKERRQ(ierr);
+    ierr = TaoComputeObjectiveAndGradient(ls->tao,x,f,g);CHKERRQ(ierr);
   } else {
     if (!ls->ops->computeobjective && !ls->ops->computeobjectiveandgradient) SETERRQ(PetscObjectComm((PetscObject)ls),PETSC_ERR_ARG_WRONGSTATE,"Line Search does not have objective function set");
     if (!ls->ops->computegradient  && !ls->ops->computeobjectiveandgradient) SETERRQ(PetscObjectComm((PetscObject)ls),PETSC_ERR_ARG_WRONGSTATE,"Line Search does not have gradient function set");
     ierr = PetscLogEventBegin(TAOLINESEARCH_Eval,ls,0,0,0);CHKERRQ(ierr);
-    PetscStackPush("TaoLineSearch user objective/gradient routine");
     if (ls->ops->computeobjectiveandgradient) {
+      PetscStackPush("TaoLineSearch user objective/gradient routine");
       ierr = (*ls->ops->computeobjectiveandgradient)(ls,x,f,g,ls->userctx_funcgrad);CHKERRQ(ierr);
+      PetscStackPop;
     } else {
+      PetscStackPush("TaoLineSearch user objective routine");
       ierr = (*ls->ops->computeobjective)(ls,x,f,ls->userctx_func);CHKERRQ(ierr);
+      PetscStackPop;
+      PetscStackPush("TaoLineSearch user gradient routine");
       ierr = (*ls->ops->computegradient)(ls,x,g,ls->userctx_grad);CHKERRQ(ierr);
+      PetscStackPop;
     }
-    PetscStackPop;
     ierr = PetscLogEventEnd(TAOLINESEARCH_Eval,ls,0,0,0);CHKERRQ(ierr);
     ierr = PetscInfo1(ls,"TaoLineSearch Function evaluation: %14.12e\n",(double)(*f));CHKERRQ(ierr);
   }
@@ -1025,7 +1027,7 @@ PetscErrorCode TaoLineSearchComputeGradient(TaoLineSearch ls, Vec x, Vec g)
 + ls - the TaoLineSearch context
 - x - input vector
 
-  Output Parameter:
+  Output Parameters:
 + f - Objective value at X
 - gts - inner product of gradient and step direction at X
 
@@ -1065,7 +1067,7 @@ PetscErrorCode TaoLineSearchComputeObjectiveAndGTS(TaoLineSearch ls, Vec x, Pets
   Input Parameter:
 . ls - the TaoLineSearch context
 
-  Output Parameter:
+  Output Parameters:
 + x - the new solution
 . f - the objective function value at x
 . g - the gradient at x

@@ -2352,7 +2352,7 @@ PetscErrorCode PCFieldSplitSchurPrecondition(PC pc,PCFieldSplitSchurPreType ptyp
 
     Logically Collective on PC
 
-    Input Parameters:
+    Input Parameter:
 .   pc      - the preconditioner context
 
     Output Parameters:
@@ -2792,7 +2792,7 @@ static PetscErrorCode  PCFieldSplitSetType_FieldSplit(PC pc,PCCompositeType type
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitGetSchurPre_C",PCFieldSplitGetSchurPre_FieldSplit);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSetSchurFactType_C",PCFieldSplitSetSchurFactType_FieldSplit);CHKERRQ(ierr);
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSetSchurScale_C",PCFieldSplitSetSchurScale_FieldSplit);CHKERRQ(ierr);
-  } else if (type == PC_COMPOSITE_GKB){
+  } else if (type == PC_COMPOSITE_GKB) {
     pc->ops->apply = PCApply_FieldSplit_GKB;
     pc->ops->view  = PCView_FieldSplit_GKB;
 
@@ -2826,7 +2826,7 @@ static PetscErrorCode  PCFieldSplitSetBlockSize_FieldSplit(PC pc,PetscInt bs)
 
    Collective on PC
 
-   Input Parameter:
+   Input Parameters:
 +  pc - the preconditioner context
 -  type - PC_COMPOSITE_ADDITIVE, PC_COMPOSITE_MULTIPLICATIVE (default), PC_COMPOSITE_SYMMETRIC_MULTIPLICATIVE, PC_COMPOSITE_SPECIAL, PC_COMPOSITE_SCHUR
 

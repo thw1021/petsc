@@ -799,8 +799,8 @@ static PetscErrorCode PCPatchCompleteCellPatch(PC pc, PetscHSetI ht, PetscHSetI 
         /* Facet integrals couple dofs across facets, so in that case for each of
          * the facets we need to add all dofs on the other side of the facet to
          * the seen dofs. */
-        if (patch->usercomputeopintfacet){
-          if (fBegin <= seenpoint && seenpoint < fEnd){
+        if (patch->usercomputeopintfacet) {
+          if (fBegin <= seenpoint && seenpoint < fEnd) {
             ierr = DMPlexGetTransitiveClosure(dm, seenpoint, PETSC_FALSE, &fStarSize, &fStar);CHKERRQ(ierr);
             for (fsi = 0; fsi < fStarSize*2; fsi += 2) {
               ierr = DMPlexGetTransitiveClosure(dm, fStar[fsi], PETSC_TRUE, &fClosureSize, &fClosure);CHKERRQ(ierr);
@@ -1783,7 +1783,7 @@ static PetscErrorCode PCPatchCreateMatrix_Private(PC pc, PetscInt point, Mat *ma
     }
     ierr = PetscSectionGetChart(patch->cellCounts, &pStart, &pEnd);CHKERRQ(ierr);
     point += pStart;
-    if (point >= pEnd) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Operator point %D not in [%D, %D)\n", point, pStart, pEnd);CHKERRQ(ierr);
+    if (point >= pEnd) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Operator point %D not in [%D, %D)\n", point, pStart, pEnd);
     ierr = PetscSectionGetDof(patch->cellCounts, point, &ncell);CHKERRQ(ierr);
     ierr = PetscSectionGetOffset(patch->cellCounts, point, &offset);CHKERRQ(ierr);
     ierr = PetscLogEventBegin(PC_Patch_Prealloc, pc, 0, 0, 0);CHKERRQ(ierr);
@@ -1993,7 +1993,7 @@ PetscErrorCode PCPatchComputeFunction_Internal(PC pc, Vec x, Vec F, PetscInt poi
   ierr = PetscSectionGetChart(patch->cellCounts, &pStart, &pEnd);CHKERRQ(ierr);
 
   point += pStart;
-  if (point >= pEnd) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Operator point %D not in [%D, %D)\n", point, pStart, pEnd);CHKERRQ(ierr);
+  if (point >= pEnd) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Operator point %D not in [%D, %D)\n", point, pStart, pEnd);
 
   ierr = PetscSectionGetDof(patch->cellCounts, point, &ncell);CHKERRQ(ierr);
   ierr = PetscSectionGetOffset(patch->cellCounts, point, &offset);CHKERRQ(ierr);
@@ -2090,7 +2090,7 @@ PetscErrorCode PCPatchComputeOperator_Internal(PC pc, Vec x, Mat mat, PetscInt p
   ierr = PetscSectionGetChart(patch->cellCounts, &pStart, &pEnd);CHKERRQ(ierr);
 
   point += pStart;
-  if (point >= pEnd) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Operator point %D not in [%D, %D)\n", point, pStart, pEnd);CHKERRQ(ierr);
+  if (point >= pEnd) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Operator point %D not in [%D, %D)\n", point, pStart, pEnd);
 
   ierr = PetscSectionGetDof(patch->cellCounts, point, &ncell);CHKERRQ(ierr);
   ierr = PetscSectionGetOffset(patch->cellCounts, point, &offset);CHKERRQ(ierr);
@@ -3261,7 +3261,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
     }
     if (patch->solver) {
       ierr = PetscViewerGetSubViewer(viewer, PETSC_COMM_SELF, &sviewer);CHKERRQ(ierr);
-      if (!rank) {
+      if (rank == 0) {
         ierr = PetscViewerASCIIPushTab(sviewer);CHKERRQ(ierr);
         ierr = PetscObjectView(patch->solver[0], sviewer);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPopTab(sviewer);CHKERRQ(ierr);

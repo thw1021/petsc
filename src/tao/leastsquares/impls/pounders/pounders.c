@@ -392,7 +392,7 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
         reject =1;
       }
     }
-    if (reject){
+    if (reject) {
       point--;
       continue;
     }
@@ -450,7 +450,7 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
       for (i=0;i<mfqP->npmax* mfqP->npmax;i++) {
         mfqP->Q[i] = mfqP->Q_tmp[i];
       }
-      for (i=0;i<mfqP->npmax;i++){
+      for (i=0;i<mfqP->npmax;i++) {
         mfqP->tau[i] = mfqP->tau_tmp[i];
       }
       mfqP->nmodelpoints++;
@@ -535,6 +535,7 @@ static PetscErrorCode modelimprove(Tao tao, TAO_POUNDERS *mfqP, PetscInt addallp
   PetscBLASInt   blasn=mfqP->n,  blasnpmax = mfqP->npmax, blask,info;
   PetscBLASInt   blas1=1,blasnmax = mfqP->nmax;
 
+  PetscFunctionBegin;
   blask = mfqP->nmodelpoints;
   /* Qtmp = I(n x n) */
   for (i=0;i<mfqP->n;i++) {

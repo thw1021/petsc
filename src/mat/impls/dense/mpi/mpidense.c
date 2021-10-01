@@ -681,7 +681,7 @@ static PetscErrorCode MatView_MPIDense_ASCIIorDraworSocket(Mat mat,PetscViewer v
     PetscScalar *vals;
 
     ierr = MatCreate(PetscObjectComm((PetscObject)mat),&A);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatSetSizes(A,M,N,M,N);CHKERRQ(ierr);
     } else {
       ierr = MatSetSizes(A,0,0,M,N);CHKERRQ(ierr);
@@ -707,7 +707,7 @@ static PetscErrorCode MatView_MPIDense_ASCIIorDraworSocket(Mat mat,PetscViewer v
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscObjectSetName((PetscObject)((Mat_MPIDense*)(A->data))->A,((PetscObject)mat)->name);CHKERRQ(ierr);
       ierr = MatView_SeqDense(((Mat_MPIDense*)(A->data))->A,sviewer);CHKERRQ(ierr);
     }
@@ -1022,30 +1022,38 @@ static PetscErrorCode MatGetColumnVector_MPIDense(Mat A,Vec v,PetscInt col)
   PetscFunctionReturn(0);
 }
 
-PETSC_INTERN PetscErrorCode MatGetColumnNorms_SeqDense(Mat,NormType,PetscReal*);
+PETSC_INTERN PetscErrorCode MatGetColumnReductions_SeqDense(Mat,PetscInt,PetscReal*);
 
-PetscErrorCode MatGetColumnNorms_MPIDense(Mat A,NormType type,PetscReal *norms)
+PetscErrorCode MatGetColumnReductions_MPIDense(Mat A,PetscInt type,PetscReal *reductions)
 {
   PetscErrorCode ierr;
-  PetscInt       i,n;
+  PetscInt       i,m,n;
   Mat_MPIDense   *a = (Mat_MPIDense*) A->data;
   PetscReal      *work;
 
   PetscFunctionBegin;
-  ierr = MatGetSize(A,NULL,&n);CHKERRQ(ierr);
+  ierr = MatGetSize(A,&m,&n);CHKERRQ(ierr);
   ierr = PetscMalloc1(n,&work);CHKERRQ(ierr);
-  ierr = MatGetColumnNorms_SeqDense(a->A,type,work);CHKERRQ(ierr);
+  if (type == REDUCTION_MEAN_REALPART) {
+    ierr = MatGetColumnReductions_SeqDense(a->A,(PetscInt)REDUCTION_SUM_REALPART,work);CHKERRQ(ierr);
+  } else if (type == REDUCTION_MEAN_IMAGINARYPART) {
+    ierr = MatGetColumnReductions_SeqDense(a->A,(PetscInt)REDUCTION_SUM_IMAGINARYPART,work);CHKERRQ(ierr);
+  } else {
+    ierr = MatGetColumnReductions_SeqDense(a->A,type,work);CHKERRQ(ierr);
+  }
   if (type == NORM_2) {
     for (i=0; i<n; i++) work[i] *= work[i];
   }
   if (type == NORM_INFINITY) {
-    ierr = MPIU_Allreduce(work,norms,n,MPIU_REAL,MPIU_MAX,A->hdr.comm);CHKERRMPI(ierr);
+    ierr = MPIU_Allreduce(work,reductions,n,MPIU_REAL,MPIU_MAX,A->hdr.comm);CHKERRMPI(ierr);
   } else {
-    ierr = MPIU_Allreduce(work,norms,n,MPIU_REAL,MPIU_SUM,A->hdr.comm);CHKERRMPI(ierr);
+    ierr = MPIU_Allreduce(work,reductions,n,MPIU_REAL,MPIU_SUM,A->hdr.comm);CHKERRMPI(ierr);
   }
   ierr = PetscFree(work);CHKERRQ(ierr);
   if (type == NORM_2) {
-    for (i=0; i<n; i++) norms[i] = PetscSqrtReal(norms[i]);
+    for (i=0; i<n; i++) reductions[i] = PetscSqrtReal(reductions[i]);
+  } else if (type == REDUCTION_MEAN_REALPART || type == REDUCTION_MEAN_IMAGINARYPART) {
+    for (i=0; i<n; i++) reductions[i] /= m;
   }
   PetscFunctionReturn(0);
 }
@@ -1482,7 +1490,7 @@ static struct _MatOps MatOps_Values = { MatSetValues_MPIDense,
                                         NULL,
                                         NULL,
                                 /*124*/ NULL,
-                                        MatGetColumnNorms_MPIDense,
+                                        MatGetColumnReductions_MPIDense,
                                         NULL,
                                         NULL,
                                         NULL,
@@ -1734,7 +1742,7 @@ PetscErrorCode MatConvert_MPIDense_MPIDenseCUDA(Mat M,MatType type,MatReuse reus
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatDenseCUDAPlaceArray_C",                              MatDenseCUDAPlaceArray_MPIDenseCUDA);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatDenseCUDAResetArray_C",                              MatDenseCUDAResetArray_MPIDenseCUDA);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatDenseCUDAReplaceArray_C",                            MatDenseCUDAReplaceArray_MPIDenseCUDA);CHKERRQ(ierr);
-  m    = (Mat_MPIDense*)(B)->data;
+  m    = (Mat_MPIDense*)(B->data);
   if (m->A) {
     ierr = MatConvert(m->A,MATSEQDENSECUDA,MAT_INPLACE_MATRIX,&m->A);CHKERRQ(ierr);
     ierr = MatSetUpMultiply_MPIDense(B);CHKERRQ(ierr);

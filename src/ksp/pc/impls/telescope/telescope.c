@@ -198,7 +198,7 @@ PetscErrorCode PCTelescopeMatCreate_default(PC pc,PC_Telescope sred,MatReuse reu
   PetscErrorCode ierr;
   MPI_Comm       comm,subcomm;
   Mat            Bred,B;
-  PetscInt       nr,nc;
+  PetscInt       nr,nc,bs;
   IS             isrow,iscol;
   Mat            Blocal,*_Blocal;
 
@@ -211,6 +211,8 @@ PetscErrorCode PCTelescopeMatCreate_default(PC pc,PC_Telescope sred,MatReuse reu
   isrow = sred->isin;
   ierr = ISCreateStride(PETSC_COMM_SELF,nc,0,1,&iscol);CHKERRQ(ierr);
   ierr = ISSetIdentity(iscol);CHKERRQ(ierr);
+  ierr = MatGetBlockSizes(B,NULL,&bs);CHKERRQ(ierr);
+  ierr = ISSetBlockSize(iscol,bs);CHKERRQ(ierr);
   ierr = MatSetOption(B,MAT_SUBMAT_SINGLEIS,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatCreateSubMatrices(B,1,&isrow,&iscol,MAT_INITIAL_MATRIX,&_Blocal);CHKERRQ(ierr);
   Blocal = *_Blocal;
@@ -586,7 +588,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
   /* common - no construction */
   if (PCTelescope_isActiveRank(sred)) {
     ierr = KSPSetOperators(sred->ksp,sred->Bred,sred->Bred);CHKERRQ(ierr);
-    if (pc->setfromoptionscalled && !pc->setupcalled){
+    if (pc->setfromoptionscalled && !pc->setupcalled) {
       ierr = KSPSetFromOptions(sred->ksp);CHKERRQ(ierr);
     }
   }
@@ -689,7 +691,7 @@ static PetscErrorCode PCApplyRichardson_Telescope(PC pc,Vec x,Vec y,Vec w,PetscR
 
   if (PCTelescope_isActiveRank(sred)) {
     ierr = KSPGetInitialGuessNonzero(sred->ksp,&default_init_guess_value);CHKERRQ(ierr);
-    if (!zeroguess) ierr = KSPSetInitialGuessNonzero(sred->ksp,PETSC_TRUE);CHKERRQ(ierr);
+    if (!zeroguess) {ierr = KSPSetInitialGuessNonzero(sred->ksp,PETSC_TRUE);CHKERRQ(ierr);}
   }
 
   ierr = PCApply_Telescope(pc,x,y);CHKERRQ(ierr);
@@ -708,6 +710,7 @@ static PetscErrorCode PCReset_Telescope(PC pc)
   PC_Telescope   sred = (PC_Telescope)pc->data;
   PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   ierr = ISDestroy(&sred->isin);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&sred->scatter);CHKERRQ(ierr);
   ierr = VecDestroy(&sred->xred);CHKERRQ(ierr);
@@ -1190,7 +1193,7 @@ PetscErrorCode PCTelescopeGetDM(PC pc,DM *subdm)
 
  Logically Collective
 
- Input Parameter:
+ Input Parameters:
 +  pc - the preconditioner context
 -  subcommtype - the subcommunicator type (see PetscSubcommType)
 
@@ -1258,7 +1261,7 @@ PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
 
    [1] Default setup
    The sub-communicator c' is created via PetscSubcommCreate().
-   Explicitly defined nullspace and near nullspace vectors will be propogated from B to B'.
+   Explicitly defined nullspace and near nullspace vectors will be propagated from B to B'.
    Currently there is no support define nullspaces via a user supplied method (e.g. as passed to MatNullSpaceSetFunction()).
    No support is provided for KSPSetComputeOperators().
    Currently there is no support for the flag -pc_use_amat.
@@ -1286,7 +1289,7 @@ PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
    Currently there is no support define nullspaces via a user supplied method (e.g. as passed to MatNullSpaceSetFunction()).
    There is no general method to permute field orderings, hence only KSPSetComputeOperators() is supported.
    The user must use PetscObjectComposeFunction() with dmfine to define the method to scatter fields from dmfine to dmcoarse.
-   Propogation of the user context for KSPSetComputeOperators() on the sub KSP is attempted by querying the DM contexts associated with dmfine and dmcoarse. Alternatively, the user may use PetscObjectComposeFunction() with dmcoarse to define a method which will return the appropriate user context for KSPSetComputeOperators().
+   Propagation of the user context for KSPSetComputeOperators() on the sub KSP is attempted by querying the DM contexts associated with dmfine and dmcoarse. Alternatively, the user may use PetscObjectComposeFunction() with dmcoarse to define a method which will return the appropriate user context for KSPSetComputeOperators().
    Currently there is no support for the flag -pc_use_amat.
    This setup can be invoked by the option -pc_telescope_use_coarse_dm or by calling PCTelescopeSetUseCoarseDM(pc,PETSC_TRUE);
    Further information about the user-provided methods required by this setup type are described here PCTelescopeSetUseCoarseDM().

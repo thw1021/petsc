@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = '01f1cf83a9b036ee6abb7bb788205e4b967dfe5f' # main may-06-2021
+    self.gitcommit              = '640a0173a78e37b4a918a0206531f0cb5ee9db0d' # main sep-29-2021 (pre-3.16.0)
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -31,13 +31,6 @@ class Configure(config.package.Package):
 
   def Install(self):
     import os
-
-    #  if installing as Superuser than want to return to regular user for clean and build
-    if self.installSudo:
-       newuser = self.installSudo+' -u $${SUDO_USER} '
-    else:
-       newuser = ''
-
     # if installing prefix location then need to set new value for PETSC_DIR/PETSC_ARCH
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
        iarch = 'installed-'+self.parch.nativeArch.replace('linux-','linux2-')
@@ -74,7 +67,7 @@ class Configure(config.package.Package):
     self.addMakeRule('slepcinstall','', \
                        ['@echo "*** Installing SLEPc ***"',\
                           '@(cd '+self.packageDir+' && \\\n\
-           '+newuser+barg+'${OMAKE} install '+barg+')  || \\\n\
+           '+barg+'${OMAKE} install '+barg+')  || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
              echo "Error building SLEPc." && \\\n\
              echo "********************************************************************" && \\\n\

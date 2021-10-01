@@ -16,6 +16,9 @@ from sphinx.application import Sphinx
 if not hasattr(re,'Pattern'): re.Pattern = re._pattern_type
 
 
+PETSC_DOC_OUT_ROOT_PLACEHOLDER = 'PETSC_DOC_OUT_ROOT_PLACEHOLDER'
+
+
 def setup(app: Sphinx) -> None:
     _check_version(app)
 
@@ -83,7 +86,7 @@ class PETScHTMLTranslatorMixin:
             if not os.path.isfile(htmlmap_filename):
                 raise Exception("Expected file %s not found. Run script to build classic docs subset." %  htmlmap_filename)
             manpage_map_raw = htmlmap_to_dict(htmlmap_filename)
-            manpage_prefix_base = self._get_manpage_prefix_base()
+            manpage_prefix_base = PETSC_DOC_OUT_ROOT_PLACEHOLDER
             manpage_prefix = os.path.join(manpage_prefix_base, 'docs', '')
             self._manpage_map = dict_complete_links(manpage_map_raw, manpage_prefix)
         return self._manpage_map
@@ -98,23 +101,6 @@ class PETScHTMLTranslatorMixin:
         if not self._manpage_pattern:
             self._manpage_pattern = get_multiple_replace_pattern(self._get_manpage_map())
         return self._manpage_pattern
-
-    def _get_manpage_prefix_base(self) -> str:
-        """ Return the base location for the install. This varies by platform. """
-        if 'GITLAB_CI' in os.environ:
-            ci_environment_url = os.getenv('CI_ENVIRONMENT_URL')
-            if ci_environment_url is not None:
-                manpage_prefix_base = ci_environment_url.rstrip('/index.html')
-            else:
-                # This is a brittle stopgap measure
-                ci_commit_ref_name = os.getenv('CI_COMMIT_REF_NAME')
-                if not ci_commit_ref_name:
-                    raise Exception('Could not determine version name from GitLab CI environment variables')
-                version_name = ci_commit_ref_name.replace('release-', '')
-                manpage_prefix_base = 'https://petsc.org/' + version_name
-        else:
-            manpage_prefix_base = self.builder.outdir
-        return manpage_prefix_base
 
     def _add_manpage_links(self, string: str) -> str:
         """ Add plain HTML link tags to a string """

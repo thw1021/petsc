@@ -331,7 +331,7 @@ PetscErrorCode TSSetUp_Sundials(TS ts)
   }
 
   /* Call CVodeInit to initialize the integrator memory and specify the
-   * user's right hand side function in u'=f(t,u), the inital time T0, and
+   * user's right hand side function in u'=f(t,u), the initial time T0, and
    * the initial dependent variable vector cvode->y */
   flag = CVodeInit(mem,TSFunction_Sundials,ts->ptime,cvode->y);
   if (flag) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"CVodeInit() fails, flag %d",flag);
@@ -581,7 +581,7 @@ PetscErrorCode  TSSundialsMonitorInternalSteps_Sundials(TS ts,PetscBool s)
 
    Not Collective
 
-   Input parameters:
+   Input Parameter:
 .    ts     - the time-step context
 
    Output Parameters:
@@ -810,7 +810,7 @@ PetscErrorCode  TSSundialsGetPC(TS ts,PC *pc)
 /*@
    TSSundialsSetMinTimeStep - Smallest time step to be chosen by the adaptive controller.
 
-   Input Parameter:
+   Input Parameters:
 +   ts - the time-step context
 -   mindt - lowest time step if positive, negative to deactivate
 
@@ -834,7 +834,7 @@ PetscErrorCode  TSSundialsSetMinTimeStep(TS ts,PetscReal mindt)
 /*@
    TSSundialsSetMaxTimeStep - Largest time step to be chosen by the adaptive controller.
 
-   Input Parameter:
+   Input Parameters:
 +   ts - the time-step context
 -   maxdt - lowest time step if positive, negative to deactivate
 
@@ -854,7 +854,7 @@ PetscErrorCode  TSSundialsSetMaxTimeStep(TS ts,PetscReal maxdt)
 /*@
    TSSundialsMonitorInternalSteps - Monitor Sundials internal steps (Defaults to false).
 
-   Input Parameter:
+   Input Parameters:
 +   ts - the time-step context
 -   ft - PETSC_TRUE if monitor, else PETSC_FALSE
 

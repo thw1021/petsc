@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Example configure script for the IBM POWER9 and NVIDIA Volta GV100 "Summit" system at OLCF/ORNL.
 # This may also be useful for the related Sierra system at LLNL, or other, similar systems that may appear.
-# A compiler module and the 'cmake' and 'cuda' modules should be loaded on Summit.
+# A compiler module and the 'cmake' and 'cuda' modules (in addition to a Python module!) should be loaded on Summit.
 # See inline comments below on other modules that might need to be loaded. 
 
 if __name__ == '__main__':
@@ -15,6 +15,8 @@ if __name__ == '__main__':
     '--with-cc=mpicc',
     '--with-cxx=mpiCC',
     '--with-fc=mpifort',
+
+    '--with-make-np=8', # Must limit size of parallel build on Summit login nodes to be within resource quota imposed by OLCF.
 
     '--with-shared-libraries=1',
 
@@ -52,14 +54,13 @@ if __name__ == '__main__':
     # Specify BLAS and LAPACK.
     ############################################################
 
-    # With GCC and PGI compilers, can download and build:
-    '--download-fblaslapack=1',
-
-    # Download and build does not work with the XL compilers.
-    # For this case, use ESSL. (ESSL does *not* work for builds with GCC and PGI.)
-    # Note that ESSL does not provide some of the LAPACK functions required by PETSc!
+    # Note: ESSL does not provide all functions used by PETSc, so we link netlib LAPACK as well.
     # On ORNL's Summit, one must 'module load' both the essl AND netlib-lapack modules:
-    #'--with-blaslapack-lib=-L' + os.environ['OLCF_ESSL_ROOT'] + '/lib64 -lessl -llapack',
+    '--with-blaslapack-lib=-L' + os.environ['OLCF_ESSL_ROOT'] + '/lib64 -lessl -llapack -lessl',
+
+    # An alternative in case of difficulty with ESSL is to download/build a portable implementation such as:
+    #'--download-fblaslapack=1',
+    #'--download-f2cblaslapack', '--download-blis',
 
     ############################################################
     # Enable GPU support through CUDA/CUSPARSE and ViennaCL.

@@ -207,7 +207,7 @@ PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **
    }
 
    /* read generator data */
-   for (i = 0; i<nc; i++){
+   for (i = 0; i<nc; i++) {
      for (j = 0; j < NGEN; j++) {
        gen[i*3+j].id   = i*3+j;
        gen[i*3+j].PG   = PG[j];
@@ -240,7 +240,7 @@ PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **
    }
 
    /* read load data */
-   for (i = 0; i<nc; i++){
+   for (i = 0; i<nc; i++) {
      for (j = 0; j < NLOAD; j++) {
        load[i*3+j].id        = i*3+j;
        load[i*3+j].PD0       = PD0[j];
@@ -268,7 +268,7 @@ PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **
    ierr = PetscCalloc1(2*NBRANCH*nc+2*(nc-1),&edgelist);CHKERRQ(ierr);
 
    /* read edgelist */
-   for (i = 0; i<nc; i++){
+   for (i = 0; i<nc; i++) {
      for (j = 0; j < NBRANCH; j++) {
        switch (j) {
        case 0:
@@ -314,7 +314,7 @@ PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **
    }
 
    /* for connecting last bus of previous network(9*i-1) to first bus of next network(9*i), the branch admittance=-0.0301407+j17.3611 */
-    for (i = 1; i<nc; i++){
+    for (i = 1; i<nc; i++) {
         edgelist[18*nc+2*(i-1)]   = 8+(i-1)*9;
         edgelist[18*nc+2*(i-1)+1] = 9*i;
 
@@ -332,7 +332,7 @@ PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **
     }
 
     /* read branch data */
-    for (i = 0; i<nc; i++){
+    for (i = 0; i<nc; i++) {
       for (j = 0; j < NBRANCH; j++) {
         branch[i*9+j].id  = i*9+j;
 
@@ -553,7 +553,7 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *use
           Yffr = bus->yff[1];
           Yffi = bus->yff[0];
 
-          if (user->alg_flg){
+          if (user->alg_flg) {
             Yffr += user->ybusfault[bus->id*2+1];
             Yffi += user->ybusfault[bus->id*2];
           }
@@ -603,7 +603,7 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *use
             farr[offsetto+1] += Yftr*Vfr - Yfti*Vfi;
           }
         }
-      } else if (key == 2){
+      } else if (key == 2) {
         if (!ghostvtex) {
           PetscScalar    Eqp,Edp,delta,w; /* Generator variables */
           PetscScalar    Efd; /* Exciter field voltage */
@@ -694,7 +694,7 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *use
           farr[offsetexc+2] = (VR - KA*RF + KA*KF*Efd/TF - KA*(Vref - Vm))/TA + xdotarr[offsetexc+2];
 
         }
-      } else if (key ==4){
+      } else if (key ==4) {
         if (!ghostvtex) {
           PetscInt    k;
           PetscInt    ld_nsegsp;
@@ -806,7 +806,7 @@ PetscErrorCode AlgFunction (SNES snes, Vec X, Vec F, void *ctx)
 
           Yffr = bus->yff[1];
           Yffi = bus->yff[0];
-          if (user->alg_flg){
+          if (user->alg_flg) {
             Yffr += user->ybusfault[bus->id*2+1];
             Yffi += user->ybusfault[bus->id*2];
           }
@@ -851,7 +851,7 @@ PetscErrorCode AlgFunction (SNES snes, Vec X, Vec F, void *ctx)
             farr[offsetto+1] += Yftr*Vfr - Yfti*Vfi;
           }
         }
-      } else if (key == 2){
+      } else if (key == 2) {
         if (!ghostvtex) {
           PetscScalar    Eqp,Edp,delta;   /* Generator variables */
           PetscScalar    Id,Iq;           /* Generator dq axis currents */
@@ -911,7 +911,7 @@ PetscErrorCode AlgFunction (SNES snes, Vec X, Vec F, void *ctx)
           farr[offsetexc+1] = 0;
           farr[offsetexc+2] = 0;
         }
-      } else if (key == 4){
+      } else if (key == 4) {
         if (!ghostvtex) {
           PetscInt    k,ld_nsegsp,ld_nsegsq;
           PetscScalar *ld_alphap,*ld_betap,*ld_alphaq,*ld_betaq,PD0,QD0,IDr,IDi;
@@ -979,7 +979,7 @@ int main(int argc,char ** argv)
   Userctx        user;
   KSP            ksp;
   PC             pc;
-  PetscInt       numEdges = 0,numVertices = 0;
+  PetscInt       numEdges = 0;
 
   ierr = PetscInitialize(&argc,&argv,"ex9busnetworkops",help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL,"-nc",&nc,NULL);CHKERRQ(ierr);
@@ -987,7 +987,7 @@ int main(int argc,char ** argv)
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* Read initial voltage vector and Ybus */
-  if (!rank) {
+  if (rank == 0) {
     ierr = read_data(nc,&gen,&exc,&load,&bus,&branch,&edgelist);CHKERRQ(ierr);
   }
 
@@ -1001,22 +1001,20 @@ int main(int argc,char ** argv)
   ierr = PetscLogStageRegister("Create network",&stage1);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage1);CHKERRQ(ierr);
 
-  /* Set local number of nodes and edges and edge connectivity */
-  if (!rank){
-    numVertices = NBUS*nc; numEdges = NBRANCH*nc+(nc-1);
-  }
+  /* Set local number of edges and edge connectivity */
+  if (rank == 0) numEdges = NBRANCH*nc+(nc-1);
   ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,NULL,numVertices,numEdges,edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,NULL,numEdges,edgelist,NULL);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscFree(edgelist);CHKERRQ(ierr);
   }
 
    /* Add network components (physical parameters of nodes and branches) and number of variables */
-  if (!rank) {
+  if (rank == 0) {
      ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
      genj=0; loadj=0; excj=0;
      for (i = eStart; i < eEnd; i++) {
@@ -1045,7 +1043,7 @@ int main(int argc,char ** argv)
 
   ierr = DMSetUp(networkdm);CHKERRQ(ierr);
 
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscFree5(bus,gen,load,branch,exc);CHKERRQ(ierr);
   }
 
@@ -1102,7 +1100,7 @@ int main(int argc,char ** argv)
   user.alg_flg = PETSC_FALSE;
 
   /* Prefault period */
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"... (1) Prefault period ... \n");CHKERRQ(ierr);
   }
 
@@ -1125,7 +1123,7 @@ int main(int argc,char ** argv)
   user.alg_flg = PETSC_TRUE;
 
   /* Solve the algebraic equations */
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (2) Apply disturbance, solve algebraic equations ... \n");CHKERRQ(ierr);
   }
   ierr = SNESSolve(snes_alg,NULL,X);CHKERRQ(ierr);
@@ -1137,7 +1135,7 @@ int main(int argc,char ** argv)
   ierr = TSSetIFunction(ts,NULL,(TSIFunction) FormIFunction,&user);CHKERRQ(ierr);
 
   user.alg_flg = PETSC_TRUE;
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (3) Disturbance period ... \n");CHKERRQ(ierr);
   }
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
@@ -1147,7 +1145,7 @@ int main(int argc,char ** argv)
 
   user.alg_flg = PETSC_FALSE;
   /* Solve the algebraic equations */
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (4) Remove fault, solve algebraic equations ... \n");CHKERRQ(ierr);
   }
   ierr = SNESSolve(snes_alg,NULL,X);CHKERRQ(ierr);
@@ -1160,7 +1158,7 @@ int main(int argc,char ** argv)
   ierr = TSSetIFunction(ts,NULL,(TSIFunction) FormIFunction,&user);CHKERRQ(ierr);
 
   user.alg_flg = PETSC_FALSE;
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (5) Post-disturbance period ... \n");CHKERRQ(ierr);
   }
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
@@ -1177,7 +1175,7 @@ int main(int argc,char ** argv)
 /*TEST
 
    build:
-      requires: double !complex !define(PETSC_USE_64BIT_INDICES)
+      requires: double !complex !defined(PETSC_USE_64BIT_INDICES)
 
    test:
       args: -ts_monitor -snes_converged_reason -alg_snes_converged_reason

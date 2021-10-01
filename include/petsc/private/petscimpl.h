@@ -7,6 +7,27 @@
 #define PETSCIMPL_H
 #include <petscsys.h>
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#define PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(expr)
+#else
+#define PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(expr) \
+  expr
+#endif
+
+#if PetscDefined(USE_DEBUG)
+PETSC_INTERN PetscErrorCode PetscStackSetCheck(PetscBool);
+PETSC_INTERN PetscErrorCode PetscStackView(FILE*);
+PETSC_INTERN PetscErrorCode PetscStackReset(void);
+PETSC_INTERN PetscErrorCode PetscStackCopy(PetscStack*,PetscStack*);
+PETSC_INTERN PetscErrorCode PetscStackPrint(PetscStack *,FILE*);
+#else
+#define PetscStackSetCheck(check)        0
+#define PetscStackView(file)             0
+#define PetscStackReset()                0
+#define PetscStackCopy(stackin,stackout) 0
+#define PetscStackPrint(stack,file)      0
+#endif /* PetscDefined(USE_DEBUG) */
+
 /* These are used internally by PETSc ASCII IO routines*/
 #include <stdarg.h>
 PETSC_EXTERN PetscErrorCode PetscVFPrintfDefault(FILE*,const char[],va_list);
@@ -179,6 +200,9 @@ PETSC_EXTERN PetscErrorCode PetscObjectGetFortranCallback(PetscObject,PetscFortr
 PETSC_INTERN PetscErrorCode PetscCitationsInitialize(void);
 PETSC_INTERN PetscErrorCode PetscFreeMPIResources(void);
 PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions,PetscBool*);
+
+/* Code shared between C and Fortran */
+PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char*,const char*,const char*,PetscBool,PetscBool,PetscInt);
 
 PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
@@ -991,6 +1015,10 @@ PETSC_EXTERN PetscBool      PetscMPICUDAAwarenessCheck(void);
 #if defined(PETSC_HAVE_HIP)
 PETSC_EXTERN PetscBool      PetscHIPInitialized;
 PETSC_EXTERN PetscBool      PetscMPIHIPAwarenessCheck(void);
+#endif
+
+#if defined(PETSC_HAVE_OPENMP)
+PETSC_EXTERN PetscInt PetscNumOMPThreads;
 #endif
 
 PETSC_EXTERN PetscBool      PetscCreatedGpuObjects;

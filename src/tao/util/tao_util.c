@@ -23,7 +23,7 @@ PETSC_STATIC_INLINE PetscReal Fischer(PetscReal a, PetscReal b)
 .  L - lower bounds
 -  U - upper bounds
 
-   Output Parameters:
+   Output Parameter:
 .  FB - The Fischer-Burmeister function vector
 
    Notes:
@@ -123,7 +123,7 @@ PETSC_STATIC_INLINE PetscReal SFischer(PetscReal a, PetscReal b, PetscReal c)
 .  U - upper bounds
 -  mu - smoothing parameter
 
-   Output Parameters:
+   Output Parameter:
 .  FB - The Smoothed Fischer-Burmeister function vector
 
    Notes:
@@ -374,7 +374,7 @@ PetscErrorCode MatDFischer(Mat jac, Vec X, Vec Con, Vec XL, Vec XU, Vec T1, Vec 
 .  T1 - work vector
 -  T2 - work vector
 
-   Output Parameter:
+   Output Parameters:
 +  Da - diagonal perturbation component of the result
 .  Db - row scaling component of the result
 -  Dm - derivative with respect to scaling parameter
@@ -488,7 +488,7 @@ PETSC_STATIC_INLINE PetscReal ST_InternalPP(PetscScalar in, PetscReal lb, PetscR
 .  lb - lower bound
 -  ub - upper bound
 
-   Output Parameters:
+   Output Parameter:
 .  out - Soft thresholded output vector
 
    Notes:
@@ -518,9 +518,9 @@ PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
   if (lb == ub) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Lower bound and upper bound need to be different.");
   if (lb > ub) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Lower bound needs to be lower than upper bound.");
 
-  if (ub >= 0 && lb < 0){
+  if (ub >= 0 && lb < 0) {
     for (i=0; i<nlocal; i++) outarray[i] = ST_InternalPN(inarray[i], lb, ub);
-  } else if (ub < 0 && lb < 0){
+  } else if (ub < 0 && lb < 0) {
     for (i=0; i<nlocal; i++) outarray[i] = ST_InternalNN(inarray[i], lb, ub);
   } else {
     for (i=0; i<nlocal; i++) outarray[i] = ST_InternalPP(inarray[i], lb, ub);

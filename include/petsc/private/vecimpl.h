@@ -10,7 +10,6 @@
 
 #include <petscvec.h>
 #include <petsc/private/petscimpl.h>
-#include <petscviewer.h>
 
 PETSC_EXTERN PetscBool VecRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecRegisterAll(void);
@@ -103,6 +102,7 @@ struct _VecOps {
   PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
   PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
+  PetscErrorCode (*sum)(Vec,PetscScalar*);
 };
 
 /*

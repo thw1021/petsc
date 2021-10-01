@@ -21,7 +21,7 @@ M*/
 
    Collective
 
-   Input Arguments:
+   Input Parameters:
 + viewer - VTK viewer
 . dm - DM on which Vec lives
 . PetscViewerVTKWriteFunction - function to write this Vec
@@ -54,7 +54,7 @@ PetscErrorCode PetscViewerVTKAddField(PetscViewer viewer,PetscObject dm,PetscErr
 
    Collective
 
-   Input Arguments:
+   Input Parameters:
 + viewer - VTK viewer
 - dm - DM associated with the viewer (as PetscObject)
 
@@ -312,7 +312,7 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data
   if (n < 0) SETERRQ1(PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %D",n);
   if (!n) PetscFunctionReturn(0);
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     size_t      count;
     PetscMPIInt dsize;
     PetscVTKInt bytes;

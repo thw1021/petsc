@@ -382,7 +382,7 @@ PetscErrorCode DMForestGetBaseCoordinateMapping(DM dm, PetscErrorCode (**func) (
 
   Logically collective on dm
 
-  Input Parameter:
+  Input Parameters:
 + dm - the new forest, which will be constructed from adapt
 - adapt - the old forest
 
@@ -800,7 +800,7 @@ PetscErrorCode DMForestSetInitialRefinement(DM dm, PetscInt initRefinement)
   Input Parameter:
 . dm - the forest
 
-  Output Paramater:
+  Output Parameter:
 . initRefinement - default PETSC_DEFAULT (interpreted by the subtype of DMForest)
 
   Level: intermediate

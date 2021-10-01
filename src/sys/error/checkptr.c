@@ -1,5 +1,4 @@
 #include <petsc/private/petscimpl.h>
-#include <petscvalgrind.h>
 
 #if defined(PETSC_HAVE_CUDA)
   #include <cuda_runtime.h>
@@ -18,7 +17,7 @@ static PetscInt petsc_checkpointer_intensity = 1;
 
    Not Collective
 
-   Input Arguments:
+   Input Parameter:
 .  intensity - how much to check pointers for validity
 
    Options Database:
@@ -61,7 +60,8 @@ static PetscBool PetscSegvJumpBuf_set;
 
 .seealso: PetscPushSignalHandler()
 @*/
-void PetscSignalSegvCheckPointerOrMpi(void) {
+void PetscSignalSegvCheckPointerOrMpi(void)
+{
   if (PetscSegvJumpBuf_set) longjmp(PetscSegvJumpBuf,1);
 }
 
@@ -85,8 +85,10 @@ PetscBool PetscCheckPointer(const void *ptr,PetscDataType dtype)
   if (!ptr) return PETSC_FALSE;
   if (petsc_checkpointer_intensity < 1) return PETSC_TRUE;
 
+#if PetscDefined(USE_DEBUG)
   /* Skip the verbose check if we are inside a hot function. */
-  if (petscstack && petscstack->hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
+  if (petscstack.hotdepth > 0 && petsc_checkpointer_intensity < 2) return PETSC_TRUE;
+#endif
 
   PetscSegvJumpBuf_set = PETSC_TRUE;
 
@@ -182,7 +184,8 @@ PetscBool PetscMPICUPMAwarenessCheck(void)  \
 #endif
 
 #else
-void PetscSignalSegvCheckPointerOrMpi(void) {
+void PetscSignalSegvCheckPointerOrMpi(void)
+{
   return;
 }
 

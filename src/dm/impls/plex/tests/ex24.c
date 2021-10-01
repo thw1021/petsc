@@ -40,12 +40,13 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     options->repartitioning[0] = '\0';
   }
   ierr = PetscOptionsBool("-tpweight", "Use target partition weights", FILENAME, options->tpw, &options->tpw, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode ScotchResetRandomSeed()
 {
+  PetscFunctionBegin;
 #if defined(PETSC_HAVE_PTSCOTCH)
   SCOTCH_randomReset();
 #endif

@@ -125,7 +125,7 @@ int main(int argc,char **args)
         ierr = PetscPrintf(PETSC_COMM_WORLD," \n[%d] test conversion between %s and %s\n",rank,type[i],type[j]);CHKERRQ(ierr);
       }
 
-      if (!rank && verbose) printf("Convert %s A to %s B\n",type[i],type[j]);
+      if (rank == 0 && verbose) printf("Convert %s A to %s B\n",type[i],type[j]);
       ierr = MatConvert(A,type[j],MAT_INITIAL_MATRIX,&B);CHKERRQ(ierr);
       /*
       if (j == 2) {
@@ -139,7 +139,7 @@ int main(int argc,char **args)
       if (!equal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"Error in conversion from %s to %s",type[i],type[j]);
 
       if (size == 1 || j != 2) { /* Matconvert from mpisbaij mat to other formats are not supported */
-        if (!rank && verbose) printf("Convert %s B to %s D\n",type[j],type[i]);
+        if (rank == 0 && verbose) printf("Convert %s B to %s D\n",type[j],type[i]);
         ierr = MatConvert(B,type[i],MAT_INITIAL_MATRIX,&D);CHKERRQ(ierr);
         ierr = MatMultEqual(B,D,10,&equal);CHKERRQ(ierr);
         if (!equal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"Error in conversion from %s to %s",type[j],type[i]);
@@ -240,12 +240,12 @@ int main(int argc,char **args)
         suffix: matis_aij_parmetis_nd
         args: -testseqaij
       test:
-        requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+        requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
         suffix: matis_poisson1_parmetis_nd
         args: -f ${DATAFILESPATH}/matrices/poisson1
 
    testset:
-      requires: ptscotch define(PETSC_HAVE_SCOTCH_PARMETIS_V3_NODEND)
+      requires: ptscotch defined(PETSC_HAVE_SCOTCH_PARMETIS_V3_NODEND)
       output_file: output/ex55_1.out
       nsize: 4
       args: -mat_is_disassemble_l2g_type nd -mat_partitioning_type ptscotch
@@ -255,7 +255,7 @@ int main(int argc,char **args)
         suffix: matis_aij_ptscotch_nd
         args: -testseqaij
       test:
-        requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+        requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
         suffix: matis_poisson1_ptscotch_nd
         args: -f ${DATAFILESPATH}/matrices/poisson1
 

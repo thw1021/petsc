@@ -402,12 +402,12 @@ PetscErrorCode  MatAYPX(Mat Y,PetscScalar a,Mat X,MatStructure str)
 
     Collective on Mat
 
-    Input Parameter:
+    Input Parameters:
 +   inmat - the matrix
 -   mattype - the matrix type for the explicit operator
 
     Output Parameter:
-.   mat - the explict  operator
+.   mat - the explicit  operator
 
     Notes:
     This computation is done by applying the operators to columns of the identity matrix.
@@ -434,11 +434,12 @@ PetscErrorCode  MatComputeOperator(Mat inmat,MatType mattype,Mat *mat)
 
     Collective on Mat
 
-    Input Parameter:
-.   inmat - the matrix
+    Input Parameters:
++   inmat - the matrix
+-   mattype - the matrix type for the explicit operator
 
     Output Parameter:
-.   mat - the explict  operator transposed
+.   mat - the explicit  operator transposed
 
     Notes:
     This computation is done by applying the transpose of the operator to columns of the identity matrix.

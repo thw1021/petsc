@@ -29,6 +29,7 @@ class BaseTestPlex(object):
         self.plex = None
 
     def testTopology(self):
+        rank = self.COMM.rank
         dim = self.plex.getDimension()
         pStart, pEnd = self.plex.getChart()
         cStart, cEnd = self.plex.getHeightStratum(0)
@@ -38,9 +39,9 @@ class BaseTestPlex(object):
         coords = np.reshape(coords_raw, (vEnd - vStart, dim))
         self.assertEqual(dim, self.DIM)
         self.assertEqual(numDepths, self.DIM+1)
-        if self.CELLS is not None:
+        if rank == 0 and self.CELLS is not None:
             self.assertEqual(cEnd-cStart, len(self.CELLS))
-        if self.COORDS is not None:
+        if rank == 0 and self.COORDS is not None:
             self.assertEqual(vEnd-vStart, len(self.COORDS))
             self.assertTrue((coords == self.COORDS).all())
 
@@ -338,6 +339,10 @@ class BaseTestPlexHDF5(object):
                 mycolor = (grank > self.NTIMES - i)
             else:
                 mycolor = 0
+            try:
+                import mpi4py
+            except ImportError:
+                self.skipTest('mpi4py') # throws special exception to signal test skip
             mpicomm = PETSc.COMM_WORLD.tompi4py()
             comm = PETSc.Comm(comm=mpicomm.Split(color=mycolor, key=grank))
             if mycolor == 0:

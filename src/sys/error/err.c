@@ -33,7 +33,9 @@ PetscErrorCode PetscAbortFindSourceFile_Private(const char* filepath, PetscInt *
   char            subpath[256];
 
   PetscFunctionBegin;
+  PetscValidCharPointer(filepath,1);
   PetscValidIntPointer(idx,2);
+  ierr = PetscStackView(stderr);CHKERRQ(ierr);
   *idx = 1;
   for (i=2; i<n; i++) {
     ierr = PetscFixFilename(PetscAbortSourceFiles[i],subpath);CHKERRQ(ierr);
@@ -54,12 +56,12 @@ static EH eh = NULL;
 
 /*@C
    PetscEmacsClientErrorHandler - Error handler that uses the emacsclient program to
-    load the file where the error occured. Then calls the "previous" error handler.
+    load the file where the error occurred. Then calls the "previous" error handler.
 
    Not Collective
 
    Input Parameters:
-+  comm - communicator over which error occured
++  comm - communicator over which error occurred
 .  line - the line number of the error (indicated by __LINE__)
 .  file - the file in which the error was detected (indicated by __FILE__)
 .  mess - an error text string, usually just printed to the screen
@@ -68,20 +70,12 @@ static EH eh = NULL;
 -  ctx - error handler context
 
    Options Database Key:
-.   -on_error_emacs <machinename>
+.   -on_error_emacs <machinename> - will contact machinename to open the Emacs client there
 
    Level: developer
 
    Notes:
    You must put (server-start) in your .emacs file for the emacsclient software to work
-
-   Most users need not directly employ this routine and the other error
-   handlers, but can instead use the simplified interface SETERRQ, which has
-   the calling sequence
-$     SETERRQ(PETSC_COMM_SELF,number,p,mess)
-
-   Notes for experienced users:
-   Use PetscPushErrorHandler() to set the desired error handler.
 
    Developer Note:
    Since this is an error handler it cannot call CHKERRQ(); thus we just return if an error is detected.
@@ -127,7 +121,7 @@ PetscErrorCode  PetscEmacsClientErrorHandler(MPI_Comm comm,int line,const char *
    Calling sequence of handler:
 $    int handler(MPI_Comm comm,int line,char *func,char *file,PetscErrorCode n,int p,char *mess,void *ctx);
 
-+  comm - communicator over which error occured
++  comm - communicator over which error occurred
 .  line - the line number of the error (indicated by __LINE__)
 .  file - the file in which the error was detected (indicated by __FILE__)
 .  n - the generic error number (see list defined in include/petscerror.h)
@@ -136,8 +130,8 @@ $    int handler(MPI_Comm comm,int line,char *func,char *file,PetscErrorCode n,i
 -  ctx - the error handler context
 
    Options Database Keys:
-+   -on_error_attach_debugger <noxterm,gdb or dbx>
--   -on_error_abort
++   -on_error_attach_debugger <noxterm,gdb or dbx> - starts up the debugger if an error occurs
+-   -on_error_abort - aborts the program if an error occurs
 
    Level: intermediate
 
@@ -220,8 +214,7 @@ $     SETERRQ(comm,number,mess)
  @*/
 PetscErrorCode  PetscReturnErrorHandler(MPI_Comm comm,int line,const char *fun,const char *file,PetscErrorCode n,PetscErrorType p,const char *mess,void *ctx)
 {
-  PetscFunctionBegin;
-  PetscFunctionReturn(n);
+  return n;
 }
 
 static char PetscErrorBaseMessage[1024];
@@ -239,35 +232,35 @@ static const char *PetscErrorStrings[] = {
           "Argument aliasing not permitted",
           "Invalid argument",
   /*63 */ "Argument out of range",
-          "Corrupt argument: https://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind",
+          "Corrupt argument: https://petsc.org/release/faq/#valgrind",
           "Unable to open file",
           "Read from file failed",
           "Write to file failed",
           "Invalid pointer",
   /*69 */ "Arguments must have same type",
   /*70 */ "Attempt to use a pointer that does not point to a valid accessible location",
-  /*71 */ "Zero pivot in LU factorization: https://www.mcs.anl.gov/petsc/documentation/faq.html#zeropivot",
+  /*71 */ "Zero pivot in LU factorization: https://petsc.org/release/faq/#zeropivot",
   /*72 */ "Floating point exception",
   /*73 */ "Object is in wrong state",
           "Corrupted Petsc object",
           "Arguments are incompatible",
           "Error in external library",
   /*77 */ "Petsc has generated inconsistent data",
-          "Memory corruption: https://www.mcs.anl.gov/petsc/documentation/installation.html#valgrind",
+          "Memory corruption: https://petsc.org/release/faq/#valgrind",
           "Unexpected data in file",
   /*80 */ "Arguments must have same communicators",
-  /*81 */ "Zero pivot in Cholesky factorization: https://www.mcs.anl.gov/petsc/documentation/faq.html#zeropivot",
+  /*81 */ "Zero pivot in Cholesky factorization: https://petsc.org/release/faq/#zeropivot",
           "  ",
           "  ",
-          "Overflow in integer operation: https://www.mcs.anl.gov/petsc/documentation/faq.html#64-bit-indices",
+          "Overflow in integer operation: https://petsc.org/release/faq/#64-bit-indices",
   /*85 */ "Null argument, when expecting valid pointer",
-  /*86 */ "Unknown type. Check for miss-spelling or missing package: https://www.mcs.anl.gov/petsc/documentation/installation.html#external",
+  /*86 */ "Unknown type. Check for miss-spelling or missing package: https://petsc.org/release/install/install/#external-packages",
   /*87 */ "MPI library at runtime is not compatible with MPI used at compile time",
   /*88 */ "Error in system call",
-  /*89 */ "Object Type not set: https://www.mcs.anl.gov/petsc/documentation/faq.html#objecttypenotset",
+  /*89 */ "Object Type not set: https://petsc.org/release/faq/#object-type-not-set",
   /*90 */ "  ",
   /*   */ "  ",
-  /*92 */ "See https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html for possible LU and Cholesky solvers",
+  /*92 */ "See https://petsc.org/release/overview/linear_solve_table/ for possible LU and Cholesky solvers",
   /*93 */ "You cannot overwrite this option since that will conflict with other previously set options",
   /*94 */ "Example/application run with number of MPI ranks it does not support",
   /*95 */ "Missing or incorrect user input ",
@@ -284,7 +277,7 @@ static const char *PetscErrorStrings[] = {
    Input Parameter:
 .   errnum - the error code
 
-   Output Parameter:
+   Output Parameters:
 +  text - the error message (NULL if not desired)
 -  specific - the specific error message that was set with SETERRxxx() or PetscError().  (NULL if not desired)
 
@@ -318,7 +311,8 @@ PetscErrorCode  PetscErrorMessage(int errnum,const char *text[],char **specific)
  */
 #include <sstream>
 #include <stdexcept>
-static void PetscCxxErrorThrow() {
+static void PetscCxxErrorThrow()
+{
   const char *str;
   if (eh && eh->ctx) {
     std::ostringstream *msg;
@@ -385,7 +379,6 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
   PetscBool      ismain;
   PetscErrorCode ierr;
 
-  PetscFunctionBegin;
   if (!func) func = "User provided function";
   if (!file) file = "User file";
   if (comm == MPI_COMM_NULL) comm = PETSC_COMM_SELF;
@@ -402,7 +395,8 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
   if (p == PETSC_ERROR_INITIAL && n != PETSC_ERR_MEMC) PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);
 
   if (!eh) ierr = PetscTraceBackErrorHandler(comm,line,func,file,n,p,lbuf,NULL);
-  else     ierr = (*eh->handler)(comm,line,func,file,n,p,lbuf,eh->ctx);
+  else ierr = (*eh->handler)(comm,line,func,file,n,p,lbuf,eh->ctx);
+  PetscStackClearTop;
 
   /*
       If this is called from the main() routine we call MPI_Abort() instead of
@@ -414,7 +408,7 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
   if (ismain) {
     PetscMPIInt errcode;
     errcode = (PetscMPIInt)(0 + 0*line*1000 + ierr);
-    if (petscwaitonerrorflg) {PetscSleep(1000);}
+    if (petscwaitonerrorflg) { PetscSleep(1000); }
     MPI_Abort(MPI_COMM_WORLD,errcode);
   }
 
@@ -423,7 +417,7 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
     PetscCxxErrorThrow();
   }
 #endif
-  PetscFunctionReturn(ierr);
+  return ierr;
 }
 
 /* -------------------------------------------------------------------------*/
@@ -738,7 +732,7 @@ PetscErrorCode  PetscScalarView(PetscInt N,const PetscScalar idx[],PetscViewer v
 }
 
 #if defined(PETSC_HAVE_CUDA)
-#include <petsccublas.h>
+#include <petscdevice.h>
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t status)
 {
   switch(status) {
@@ -766,14 +760,46 @@ PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t status)
     case CUSOLVER_STATUS_INVALID_VALUE:    return "CUSOLVER_STATUS_INVALID_VALUE";
     case CUSOLVER_STATUS_ARCH_MISMATCH:    return "CUSOLVER_STATUS_ARCH_MISMATCH";
     case CUSOLVER_STATUS_INTERNAL_ERROR:   return "CUSOLVER_STATUS_INTERNAL_ERROR";
+#if (CUDART_VERSION >= 9000) /* CUDA 9.0 had these defined on June 2021 */
+    case CUSOLVER_STATUS_ALLOC_FAILED:     return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_MAPPING_ERROR:    return "CUSOLVER_STATUS_MAPPING_ERROR";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED: return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    case CUSOLVER_STATUS_NOT_SUPPORTED :  return "CUSOLVER_STATUS_NOT_SUPPORTED ";
+    case CUSOLVER_STATUS_ZERO_PIVOT:      return "CUSOLVER_STATUS_ZERO_PIVOT";
+    case CUSOLVER_STATUS_INVALID_LICENSE: return "CUSOLVER_STATUS_INVALID_LICENSE";
+#endif
 #endif
     default:                             return "unknown error";
   }
 }
+PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult result)
+{
+ switch (result) {
+ case CUFFT_SUCCESS:                   return "CUFFT_SUCCESS";
+ case CUFFT_INVALID_PLAN:              return "CUFFT_INVALID_PLAN";
+ case CUFFT_ALLOC_FAILED:              return "CUFFT_ALLOC_FAILED";
+ case CUFFT_INVALID_TYPE:              return "CUFFT_INVALID_TYPE";
+ case CUFFT_INVALID_VALUE:             return "CUFFT_INVALID_VALUE";
+ case CUFFT_INTERNAL_ERROR:            return "CUFFT_INTERNAL_ERROR";
+ case CUFFT_EXEC_FAILED:               return "CUFFT_EXEC_FAILED";
+ case CUFFT_SETUP_FAILED:              return "CUFFT_SETUP_FAILED";
+ case CUFFT_INVALID_SIZE:              return "CUFFT_INVALID_SIZE";
+ case CUFFT_UNALIGNED_DATA:            return "CUFFT_UNALIGNED_DATA";
+ case CUFFT_INCOMPLETE_PARAMETER_LIST: return "CUFFT_INCOMPLETE_PARAMETER_LIST";
+ case CUFFT_INVALID_DEVICE:            return "CUFFT_INVALID_DEVICE";
+ case CUFFT_PARSE_ERROR:               return "CUFFT_PARSE_ERROR";
+ case CUFFT_NO_WORKSPACE:              return "CUFFT_NO_WORKSPACE";
+ case CUFFT_NOT_IMPLEMENTED:           return "CUFFT_NOT_IMPLEMENTED";
+ case CUFFT_LICENSE_ERROR:             return "CUFFT_LICENSE_ERROR";
+ case CUFFT_NOT_SUPPORTED:             return "CUFFT_NOT_SUPPORTED";
+ default:                              return "unknown error";
+ }
+}
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-#include <petschipblas.h>
+#include <petscdevice.h>
 PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t status)
 {
   switch(status) {

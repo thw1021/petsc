@@ -14,7 +14,6 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
-    self.valgrind = framework.require('config.packages.valgrind',self)
     return
 
   def configureLibrary(self):
@@ -23,12 +22,6 @@ class Configure(config.package.Package):
     if hasattr(self.argDB,'known-64-bit-blas-indices') and self.argDB['known-64-bit-blas-indices']:
       raise RuntimeError('fblaslapack does not support -known-64-bit-blas-indices')
     config.package.Package.configureLibrary(self)
-
-  def alternateConfigureLibrary(self):
-    '''The Apple Accelerate library uses threads that valgrind cannot handle'''
-    if self.valgrind.found and config.setCompilers.Configure.isDarwin(self.log):
-      if not self.argDB['download-f2cblaslapack']:
-        self.logPrintBox('WARNING: If you plan to use valgrind you must use --download-fblaslapack or --download-f2cblaslapack')
 
   def Install(self):
     import os
@@ -100,8 +93,7 @@ class Configure(config.package.Package):
       self.logPrint('Error running make on '+blasDir+': '+str(e))
       raise RuntimeError('Error running make on '+blasDir)
     try:
-      self.installDirProvider.printSudoPasswordMessage()
-      output2,err2,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && '+self.installSudo+'mkdir -p '+libdir+' && '+self.installSudo+'cp -f libfblas.'+self.setCompilers.AR_LIB_SUFFIX+' libflapack.'+self.setCompilers.AR_LIB_SUFFIX+' '+ libdir, timeout=300, log = self.log)
+      output2,err2,ret  = config.package.Package.executeShellCommand('cd '+blasDir+' && mkdir -p '+libdir+' && cp -f libfblas.'+self.setCompilers.AR_LIB_SUFFIX+' libflapack.'+self.setCompilers.AR_LIB_SUFFIX+' '+ libdir, timeout=300, log = self.log)
     except RuntimeError as e:
       self.logPrint('Error moving '+blasDir+' libraries: '+str(e))
       raise RuntimeError('Error moving '+blasDir+' libraries')

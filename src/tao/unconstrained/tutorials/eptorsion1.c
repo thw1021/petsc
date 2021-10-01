@@ -21,7 +21,7 @@
   file automatically includes files for lower-level support, such as those
   provided by the PETSc library:
      petsc.h       - base PETSc routines   petscvec.h - vectors
-     petscsys.h    - sysem routines        petscmat.h - matrices
+     petscsys.h    - system routines        petscmat.h - matrices
      petscis.h     - index sets            petscksp.h - Krylov subspace methods
      petscviewer.h - viewers               petscpc.h  - preconditioners
 */
@@ -484,9 +484,10 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H,Mat Hpre, void *ptr)
 */
 PetscErrorCode MatrixFreeHessian(Tao tao,Vec X,Mat H,Mat PrecH, void *ptr)
 {
-  AppCtx     *user = (AppCtx *) ptr;
+  AppCtx *user = (AppCtx *) ptr;
 
   /* Sets location of vector for use in computing matrix-vector products  of the form H(X)*y  */
+  PetscFunctionBeginUser;
   user->xvec = X;
   PetscFunctionReturn(0);
 }
