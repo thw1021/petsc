@@ -10,6 +10,7 @@ class Configure(config.base.Configure):
     self.substPrefix   = ''
     self.libraries     = libraries
     self.rpathSkipDirs = [] # do not generate RPATH for dirs in this list; usefull for fake stub dirs used only at link time. See examples in cuda.py.
+    self.sysDirs       = ['/usr/lib','/lib','/usr/lib64','/lib64'] # one use is to skip converting the full library path to link line argument format for libraries in these dirs
     return
 
   def setupDependencies(self, framework):
@@ -46,7 +47,7 @@ class Configure(config.base.Configure):
         flagName  = self.language[-1]+'SharedLinkerFlag'
         flagSubst = self.language[-1].upper()+'_LINKER_SLFLAG'
         dirname   = os.path.dirname(library).replace('\\ ',' ').replace(' ', '\\ ').replace('\\(','(').replace('(', '\\(').replace('\\)',')').replace(')', '\\)')
-        if dirname in ['/usr/lib','/lib','/usr/lib64','/lib64']:
+        if dirname in self.sysDirs:
           return [library]
         if with_rpath and not dirname in self.rpathSkipDirs:
           if hasattr(self.setCompilers, flagName) and not getattr(self.setCompilers, flagName) is None:
@@ -69,6 +70,10 @@ class Configure(config.base.Configure):
   def addRpathSkipDir(self, dirname):
     '''Do not generate RPATH for this dir in getLibArgumentList.'''
     if dirname not in self.rpathSkipDirs: self.rpathSkipDirs.append(dirname)
+
+  def addSysDir(self, dirname):
+    '''Add the dir to sysDirs[]'''
+    if dirname not in self.sysDirs: self.sysDirs.append(dirname)
 
   def getLibName(library):
     if os.path.basename(library).startswith('lib'):
