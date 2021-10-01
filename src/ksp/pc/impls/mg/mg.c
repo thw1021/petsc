@@ -812,7 +812,7 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
     }
     for (i=0; i<levels; i++) {
       if (!i) {
-        ierr = PetscViewerASCIIPrintf(viewer,"Coarse grid solver -- level -------------------------------\n",i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Coarse grid solver -- level %D -------------------------------\n",i);CHKERRQ(ierr);
       } else {
         ierr = PetscViewerASCIIPrintf(viewer,"Down solver (pre-smoother) on level %D -------------------------------\n",i);CHKERRQ(ierr);
       }

@@ -1030,7 +1030,7 @@ PetscErrorCode PetscOptionsPrefixPush(PetscOptions options,const char prefix[])
   if (!valid) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Given prefix \"%s\" not valid (the first character must be a letter%s, do not include leading '-')",prefix,options->prefixind?" or digit":"");
   start = options->prefixind ? options->prefixstack[options->prefixind-1] : 0;
   ierr = PetscStrlen(prefix,&n);CHKERRQ(ierr);
-  if (n+1 > sizeof(options->prefix)-start) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum prefix length %d exceeded",sizeof(options->prefix));
+  if (n+1 > sizeof(options->prefix)-start) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum prefix length %zu exceeded",sizeof(options->prefix));
   ierr = PetscArraycpy(options->prefix+start,prefix,n+1);CHKERRQ(ierr);
   options->prefixstack[options->prefixind++] = start+n;
   PetscFunctionReturn(0);
@@ -1956,7 +1956,7 @@ PetscErrorCode PetscOptionsMonitorDefault(const char name[],const char value[],v
   if (ctx) {
     PetscViewer viewer = (PetscViewer)ctx;
     if (!value) {
-      ierr = PetscViewerASCIIPrintf(viewer,"Removing option: %s\n",name,value);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Removing option: %s\n",name);CHKERRQ(ierr);
     } else if (!value[0]) {
       ierr = PetscViewerASCIIPrintf(viewer,"Setting option: %s (no value)\n",name);CHKERRQ(ierr);
     } else {
@@ -1965,7 +1965,7 @@ PetscErrorCode PetscOptionsMonitorDefault(const char name[],const char value[],v
   } else {
     MPI_Comm comm = PETSC_COMM_WORLD;
     if (!value) {
-      ierr = PetscPrintf(comm,"Removing option: %s\n",name,value);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"Removing option: %s\n",name);CHKERRQ(ierr);
     } else if (!value[0]) {
       ierr = PetscPrintf(comm,"Setting option: %s (no value)\n",name);CHKERRQ(ierr);
     } else {
@@ -3124,7 +3124,7 @@ PetscErrorCode PetscOptionsDeprecated_Private(PetscOptionItems *PetscOptionsObje
       ierr = PetscStrcat(msg," (Silence this warning with ");CHKERRQ(ierr);
       ierr = PetscStrcat(msg,quietopt);CHKERRQ(ierr);
       ierr = PetscStrcat(msg,")\n");CHKERRQ(ierr);
-      ierr = PetscPrintf(comm,msg);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"%s",msg);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
