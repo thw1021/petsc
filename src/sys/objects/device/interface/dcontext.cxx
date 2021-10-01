@@ -655,13 +655,15 @@ PetscErrorCode PetscDeviceContextSetRootDeviceKind_Internal(PetscDeviceKind kind
   PetscFunctionReturn(0);
 }
 
-// currently unused
-// PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type)
-// {
-//   PetscFunctionBegin;
-//   rootStreamType = type;
-//   PetscFunctionReturn(0);
-// }
+/* currently unused
+PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type)
+{
+  PetscFunctionBegin;
+  PetscValidStreamType(type,1);
+  rootStreamType = type;
+  PetscFunctionReturn(0);
+}
+*/
 
 static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
 {

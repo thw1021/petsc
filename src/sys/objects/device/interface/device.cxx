@@ -2,8 +2,8 @@
 
 using namespace Petsc;
 
-// note to anyone adding more classes, the name must be ALL_CAPS_SHORT_NAME + Device exactly to
-// be picked up by the switch-case macros below.
+/* note to anyone adding more classes, the name must be ALL_CAPS_SHORT_NAME + Device exactly to
+ * be picked up by the switch-case macros below. */
 #if PetscDefined(HAVE_CUDA)
 static CUPMDevice<CUPMDeviceKind::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA);
 #endif
@@ -11,12 +11,28 @@ static CUPMDevice<CUPMDeviceKind::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA
 static CUPMDevice<CUPMDeviceKind::HIP>  HIPDevice(PetscDeviceContextCreate_HIP);
 #endif
 
-const char *const PetscDeviceKinds[] = {"invalid","cuda","hip","max","PetscDeviceKind","PETSC_DEVICE_",PETSC_NULLPTR};
+const char *const PetscDeviceKinds[] = {
+  "invalid",
+  "cuda",
+  "hip",
+  "max",
+  "PetscDeviceKind",
+  "PETSC_DEVICE_",
+  PETSC_NULLPTR
+};
 
-const char *const PetscDeviceInitKinds[] = {"none","lazy","greedy","PetscDeviceInitKind","PETSC_DEVICE_INIT_",PETSC_NULLPTR};
+const char *const PetscDeviceInitKinds[] = {
+  "none",
+  "lazy",
+  "eager",
+  "PetscDeviceInitKind",
+  "PETSC_DEVICE_INIT_",
+  PETSC_NULLPTR
+};
 static_assert(sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds) == 6,"Must change CUPMDevice<T>::initialize number of enum values in -device_enable_cupm to match!");
 
-#define PETSC_DEVICE_DEFAULT_CASE(comm,kind) SETERRQ1(comm,PETSC_ERR_PLIB,"PETSc was seeminly configured for PetscDeviceKind %s but we've fallen through all cases in a switch",PetscDeviceKinds[kind])
+#define PETSC_DEVICE_DEFAULT_CASE(comm,kind)                            \
+  SETERRQ1(comm,PETSC_ERR_PLIB,"PETSc was seeminly configured for PetscDeviceKind %s but we've fallen through all cases in a switch",PetscDeviceKinds[kind])
 
 #define CAT_(a,...) a ## __VA_ARGS__
 #define CAT(a,...)  CAT_(a,__VA_ARGS__)
@@ -28,8 +44,7 @@ static_assert(sizeof(PetscDeviceInitKinds)/sizeof(*PetscDeviceInitKinds) == 6,"M
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED_1(IMPLS,func,...)            \
   case CAT(PETSC_DEVICE_,IMPLS):                                        \
   {                                                                     \
-    PetscErrorCode ierr;                                                \
-    ierr = CAT(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr);           \
+    auto ierr = CAT(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr);      \
     break;                                                              \
   }
 
@@ -163,7 +178,7 @@ PetscErrorCode PetscDeviceView(PetscDevice device, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-static std::array<PetscBool,PETSC_DEVICE_MAX>   initializedDevice = {};
+static std::array<bool,PETSC_DEVICE_MAX>        initializedDevice = {};
 static std::array<PetscDevice,PETSC_DEVICE_MAX> defaultDevices    = {};
 static_assert(initializedDevice.size() == defaultDevices.size(),"");
 
@@ -179,17 +194,17 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceKind kind,
   PetscFunctionBegin;
   PetscValidDeviceKind(kind,1);
   if (PetscLikely(PetscDeviceInitializedFor(kind))) PetscFunctionReturn(0);
+  if (PetscUnlikelyDebug(defaultDevices[kind])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of kind %s",PetscDeviceKinds[kind]);
   ierr = PetscDeviceCreate(kind,defaultDeviceId,&defaultDevices[kind]);CHKERRQ(ierr);
   ierr = PetscDeviceConfigure(defaultDevices[kind]);CHKERRQ(ierr);
-  /*
-   the default devices are all automatically "referenced" at least once, otherwise the
-   reference counting is off for them. We could alternatively increase the reference
-   count when they are retrieved but that is a lot more brittle; what's to stop someone
-   from doing the following?
+  /* the default devices are all automatically "referenced" at least once, otherwise the
+   * reference counting is off for them. We could alternatively increase the reference count
+   * when they are retrieved but that is a lot more brittle; what's to stop someone from doing
+   * the following?
 
    for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
    */
-  initializedDevice[kind] = PETSC_TRUE;
+  initializedDevice[kind] = true;
   PetscFunctionReturn(0);
 }
 
@@ -214,7 +229,7 @@ static PetscErrorCode PetscDeviceInitializeKindFromOptions_Private(MPI_Comm comm
   }
   /* defaultInitKind and defaultDeviceId now represent what the individual TYPES have decided
    * to initialize as */
-  if (*defaultInitKind == PETSC_DEVICE_INIT_GREEDY) {
+  if (*defaultInitKind == PETSC_DEVICE_INIT_EAGER) {
     ierr = PetscInfo1(PETSC_NULLPTR,"Greedily initializing %s PetscDevice\n",PetscDeviceKinds[kind]);CHKERRQ(ierr);
     ierr = PetscDeviceInitializeDefaultDevice_Internal(kind,defaultDeviceId);CHKERRQ(ierr);
     if (defaultView) {
@@ -246,7 +261,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
      * because it is.
      *
      * The crux of the problem is that the initializer (and therefore the ~finalizer~) of
-     * PetscDeviceContext is guaranteed to run after this finalizer. So If the global context
+     * PetscDeviceContext is guaranteed to run after this finalizer. So if the global context
      * had a default PetscDevice attached it will hold a reference this routine won't destroy
      * it. So we need to check that all devices have been destroyed after the global context is
      * destroyed. In summary:
@@ -260,7 +275,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
     ierr = PetscRegisterFinalize(PetscDeviceCheckAllDestroyedAfterFinalize);CHKERRQ(ierr);
   }
   for (auto &&device : defaultDevices) {ierr = PetscDeviceDestroy(&device);CHKERRQ(ierr);}
-  CHKERRCXX(initializedDevice.fill(PETSC_FALSE));
+  CHKERRCXX(initializedDevice.fill(false));
   PetscFunctionReturn(0);
 }
 
@@ -273,18 +288,18 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
 
  All told the following happens:
  0. defaultInitKind -> LAZY
- 1. Check for log_view/log_summary, if yes defaultInitKind -> GREEDY
+ 1. Check for log_view/log_summary, if yes defaultInitKind -> EAGER
  2. PetscDevice initializes each sub type with deviceDefaultInitKind.
  2.1 Each enabled PetscDevice sub-type then does the above disable or view check in addition
      to checking for specific device init. if view or specific device init
-     subTypeDefaultInitKind -> GREEDY. disabled once again overrides all.
+     subTypeDefaultInitKind -> EAGER. disabled once again overrides all.
  */
 PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 {
-  PetscBool           flg,defaultView = PETSC_FALSE,initializeDeviceContextGreedily = PETSC_FALSE;
+  PetscBool           flg,defaultView = PETSC_FALSE,initializeDeviceContextEagerly = PETSC_FALSE;
   PetscInt            defaultDevice   = PETSC_DECIDE;
-  PetscDeviceInitKind defaultInitKind;
   PetscDeviceKind     deviceContextInitDevice = PETSC_DEVICE_DEFAULT;
+  PetscDeviceInitKind defaultInitKind;
   PetscErrorCode      ierr;
 
   PetscFunctionBegin;
@@ -293,7 +308,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 
     ierr = MPI_Comm_compare(comm,PETSC_COMM_WORLD,&result);CHKERRMPI(ierr);
     /* in order to accurately assign ranks to gpus we need to get the MPI_Comm_rank of the
-       global space */
+     * global space */
     if (PetscUnlikely(result != MPI_IDENT)) {
       char name[MPI_MAX_OBJECT_NAME] = {};
       int  len; /* unused */
@@ -308,20 +323,20 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     ierr = PetscOptionsHasName(PETSC_NULLPTR,PETSC_NULLPTR,"-log_summary",&flg);CHKERRQ(ierr);
   }
   {
-    PetscInt initIdx = flg ? PETSC_DEVICE_INIT_GREEDY : PETSC_DEVICE_INIT_LAZY;
+    PetscInt initIdx = flg ? PETSC_DEVICE_INIT_EAGER : PETSC_DEVICE_INIT_LAZY;
 
     ierr = PetscOptionsBegin(comm,PETSC_NULLPTR,"PetscDevice Options","Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList("-device_enable","How (or whether to) initialize PetscDevices","PetscDeviceInitializeAllDevices_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initIdx],&initIdx,PETSC_NULLPTR);CHKERRQ(ierr);
+    ierr = PetscOptionsEList("-device_enable","How (or whether) to initialize PetscDevices","PetscDeviceInitializeAllDevices_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initIdx],&initIdx,PETSC_NULLPTR);CHKERRQ(ierr);
     ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",defaultDevice,&defaultDevice,PETSC_NULLPTR,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-device_view","Display device information and assignments (note this implies greedy initialization, but is overridden by disabling devices)",PETSC_NULLPTR,defaultView,&defaultView,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-device_view","Display device information and assignments (forces eager initialization)",PETSC_NULLPTR,defaultView,&defaultView,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
     if (initIdx == PETSC_DEVICE_INIT_NONE) {
       /* disabled all device initialization if devices are globally disabled */
-      if (PetscUnlikelyDebug(defaultDevice != PETSC_DECIDE)) SETERRQ(comm,PETSC_ERR_USER_INPUT,"You have disabled devices but also specified a particular device to use, these options are mutually  exlusive");
+      if (PetscUnlikely(defaultDevice != PETSC_DECIDE)) SETERRQ(comm,PETSC_ERR_USER_INPUT,"You have disabled devices but also specified a particular device to use, these options are mutually exlusive");
       defaultView = PETSC_FALSE;
     } else {
       defaultView = static_cast<PetscBool>(defaultView && flg);
-      if (defaultView) initIdx = PETSC_DEVICE_INIT_GREEDY;
+      if (defaultView) initIdx = PETSC_DEVICE_INIT_EAGER;
     }
     defaultInitKind = static_cast<PetscDeviceInitKind>(initIdx);
   }
@@ -331,12 +346,12 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     auto initKind         = defaultInitKind;
 
     ierr = PetscDeviceInitializeKindFromOptions_Private(comm,deviceKind,defaultDevice,defaultView,&initKind);CHKERRQ(ierr);
-    if (PetscDeviceConfiguredFor(deviceKind) && (initKind == PETSC_DEVICE_INIT_GREEDY)) {
-      initializeDeviceContextGreedily = PETSC_TRUE;
+    if (PetscDeviceConfiguredFor(deviceKind) && (initKind == PETSC_DEVICE_INIT_EAGER)) {
+      initializeDeviceContextEagerly = PETSC_TRUE;
       deviceContextInitDevice         = deviceKind;
     }
   }
-  if (initializeDeviceContextGreedily) {
+  if (initializeDeviceContextEagerly) {
     PetscDeviceContext dctx;
 
     /* somewhat inefficient here as the device context is potentially fully set up twice (once

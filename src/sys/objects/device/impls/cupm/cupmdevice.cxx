@@ -288,16 +288,16 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
     constexpr const auto options = cupmOptions<T>();
 
     ierr = PetscOptionsBegin(comm,nullptr,std::get<0>(options),"Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList(std::get<1>(options),"How (or whether to) initialize a device, note that 'none' overrides any following options","PetscDeviceInitializeDeviceKind_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initKindCUPM],&initKindCUPM,nullptr);CHKERRQ(ierr);
+    ierr = PetscOptionsEList(std::get<1>(options),"How (or whether) to initialize a device","PetscDeviceInitializeDeviceKind_Internal()",PetscDeviceInitKinds,3,PetscDeviceInitKinds[initKindCUPM],&initKindCUPM,nullptr);CHKERRQ(ierr);
     static_assert(PETSC_DECIDE == -1,"");
-    ierr = PetscOptionsRangeInt(std::get<2>(options),"Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device (note the latter implies greedy initialization).","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,ndev);CHKERRQ(ierr);
-    ierr = PetscOptionsBool(std::get<3>(options),"Display device information and assignments (note this implies greedy initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt(std::get<2>(options),"Which device to use. Pass -1 to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,ndev);CHKERRQ(ierr);
+    ierr = PetscOptionsBool(std::get<3>(options),"Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
   if (initKindCUPM == PETSC_DEVICE_INIT_NONE) {
     id = PETSC_CUPM_DEVICE_NONE;
   } else {
-    // we need to do some kind of initialization, either lazy or greedy
+    // we need to do some kind of initialization, either lazy or eager
     for (int i = 0; i < ndev; ++i) _devices[i] = CUPMDeviceInternal::makeDevice(i);
     if (id == PETSC_DECIDE) {
       PetscMPIInt rank;
@@ -306,12 +306,12 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
       id   = rank % ndev;
     }
     view = static_cast<PetscBool>(view && flg);
-    if (view) initKindCUPM = PETSC_DEVICE_INIT_GREEDY;
+    if (view) initKindCUPM = PETSC_DEVICE_INIT_EAGER;
   }
   // id is PetscInt, _defaultDevice is int
   static_assert(std::is_same<PetscMPIInt,decltype(_defaultDevice)>::value,"");
   ierr = PetscMPIIntCast(id,&_defaultDevice);CHKERRQ(ierr);
-  if (initKindCUPM == PETSC_DEVICE_INIT_GREEDY) {
+  if (initKindCUPM == PETSC_DEVICE_INIT_EAGER) {
     ierr = _devices[_defaultDevice]->initialize();CHKERRQ(ierr);
     ierr = _devices[_defaultDevice]->configure();CHKERRQ(ierr);
     if (view) {

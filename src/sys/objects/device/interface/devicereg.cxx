@@ -1,8 +1,23 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 
-const char *const PetscStreamTypes[] = {"global_blocking","default_blocking","global_nonblocking","max","PetscStreamType","PETSC_STREAM_",PETSC_NULLPTR};
+const char *const PetscStreamTypes[] = {
+  "global_blocking",
+  "default_blocking",
+  "global_nonblocking",
+  "max",
+  "PetscStreamType",
+  "PETSC_STREAM_",
+  PETSC_NULLPTR
+};
 
-const char *const PetscDeviceContextJoinModes[] = {"destroy","sync","no_sync","PetscDeviceContextJoinMode","PETSC_DEVICE_CONTEXT_JOIN_",PETSC_NULLPTR};
+const char *const PetscDeviceContextJoinModes[] = {
+  "destroy",
+  "sync",
+  "no_sync",
+  "PetscDeviceContextJoinMode",
+  "PETSC_DEVICE_CONTEXT_JOIN_",
+  PETSC_NULLPTR
+};
 
 static PetscBool PetscDevicePackageInitialized = PETSC_FALSE;
 

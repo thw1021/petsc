@@ -1,7 +1,7 @@
 #if !defined(PETSCDEVICECONTEXTCUPM_HPP)
 #define PETSCDEVICECONTEXTCUPM_HPP
 
-#include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
+#include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupminterface.hpp>
 
 #if !defined(PETSC_HAVE_CXX_DIALECT_CXX11)
@@ -13,8 +13,13 @@
 namespace Petsc
 {
 
+namespace detail
+{
+
 // for tag-based dispatch of handle retrieval
 template <typename HT> struct HandleTag { };
+
+} // namespace detail
 
 // Forward declare
 template <CUPMDeviceKind T> class CUPMContext;
@@ -22,6 +27,9 @@ template <CUPMDeviceKind T> class CUPMContext;
 template <CUPMDeviceKind T>
 class CUPMContext : CUPMInterface<T>
 {
+  template <typename H>
+  using HandleTag = typename detail::HandleTag<H>;
+
 public:
   PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T)
 
@@ -46,7 +54,7 @@ public:
   };
 
 private:
-  static PetscBool _initialized;
+  static bool _initialized;
   static std::array<cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   _blashandles;
   static std::array<cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> _solverhandles;
 
@@ -60,13 +68,13 @@ private:
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    for (auto &handle : _blashandles) {
+    for (auto&& handle : _blashandles) {
       if (handle) {ierr = cupmInterface_t::DestroyHandle(handle);CHKERRQ(ierr);}
     }
-    for (auto &handle : _solverhandles) {
+    for (auto&& handle : _solverhandles) {
       if (handle) {ierr = cupmInterface_t::DestroyHandle(handle);CHKERRQ(ierr);}
     }
-    _initialized = PETSC_FALSE;
+    _initialized = false;
     PetscFunctionReturn(0);
   }
 
@@ -77,8 +85,8 @@ private:
     PetscFunctionBegin;
     ierr = PetscDeviceCheckDeviceCount_Internal(id);CHKERRQ(ierr);
     if (!_initialized) {
+      _initialized = true;
       ierr = PetscRegisterFinalize(__finalize);CHKERRQ(ierr);
-      _initialized = PETSC_TRUE;
     }
     // use the blashandle as a barometer
     if (!_blashandles[id]) {
@@ -202,13 +210,11 @@ inline PetscErrorCode CUPMContext<T>::query(PetscDeviceContext dctx, PetscBool *
 
   PetscFunctionBegin;
   cerr = cupmStreamQuery(__impls_cast(dctx)->stream);
-  if (cerr == cupmSuccess)
-    *idle = PETSC_TRUE;
-  else if (cerr == cupmErrorNotReady) {
-    *idle = PETSC_FALSE;
-  } else {
+  if (cerr == cupmSuccess) *idle = PETSC_TRUE;
+  else {
     // somethings gone wrong
-    CHKERRCUPM(cerr);
+    if (PetscUnlikely(cerr != cupmErrorNotReady)) CHKERRCUPM(cerr);
+    *idle = PETSC_FALSE;
   }
   PetscFunctionReturn(0);
 }
@@ -240,7 +246,7 @@ inline PetscErrorCode CUPMContext<T>::synchronize(PetscDeviceContext dctx) noexc
 
 template <CUPMDeviceKind T>
 template <typename Handle_T>
-inline  PetscErrorCode CUPMContext<T>::getHandle(PetscDeviceContext dctx, void *handle) noexcept
+inline PetscErrorCode CUPMContext<T>::getHandle(PetscDeviceContext dctx, void *handle) noexcept
 {
   PetscFunctionBegin;
   *static_cast<Handle_T*>(handle) = __impls_cast(dctx)->handle(HandleTag<Handle_T>());
@@ -282,7 +288,7 @@ inline PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext dctx, PetscLog
 }
 
 // initialize the static member variables
-template <CUPMDeviceKind T> PetscBool CUPMContext<T>::_initialized = PETSC_FALSE;
+template <CUPMDeviceKind T> bool CUPMContext<T>::_initialized = false;
 
 template <CUPMDeviceKind T>
 std::array<typename CUPMContext<T>::cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   CUPMContext<T>::_blashandles = {};
@@ -297,9 +303,9 @@ using CUPMContextHip  = CUPMContext<CUPMDeviceKind::HIP>;
 } // namespace Petsc
 
 // shorthand for what is an EXTREMELY long name
-#define PetscDeviceContext_(impls) Petsc::CUPMContext<Petsc::CUPMDeviceKind::impls>::PetscDeviceContext_IMPLS
+#define PetscDeviceContext_(IMPLS) Petsc::CUPMContext<Petsc::CUPMDeviceKind::IMPLS>::PetscDeviceContext_IMPLS
 
 // shorthand for casting dctx->data to the appropriate object to access the handles
-#define PDC_IMPLS_STATIC_CAST(impls,object) static_cast<PetscDeviceContext_(impls) *>((object)->data)
+#define PDC_IMPLS_STATIC_CAST(IMPLS,obj) static_cast<PetscDeviceContext_(IMPLS) *>((obj)->data)
 
-#endif /* PETSCDEVICECONTEXTCUDA_HPP */
+#endif // PETSCDEVICECONTEXTCUDA_HPP
