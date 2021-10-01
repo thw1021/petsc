@@ -669,7 +669,7 @@ PetscErrorCode DMLabelCompare(DMLabel l0, DMLabel l1, PetscBool *same, char **me
   }
   if (same) *same = PETSC_TRUE;
 finish:
-  if (msg[0] && !same && !message) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, msg);
+  if (msg[0] && !same && !message) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "%s", msg);
   if (same) *same = (PetscBool) !msg[0];
   if (message) {
     *message = NULL;
