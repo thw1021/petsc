@@ -9,7 +9,7 @@ class Configure(config.base.Configure):
     self.headerPrefix  = ''
     self.substPrefix   = ''
     self.libraries     = libraries
-    self.rpathSkipDirs = [] # do not generate RPATH for dirs in this list; usefull for fake stub dirs used only at link time. See examples in cuda.py.
+    self.rpathSkipDirs = [] # do not generate RPATH for dirs in this list; useful when compiling with stub libraries (.so) that do not have corresponding runtime library (.so.1) at this location. Check cuda.py for usage.
     self.sysDirs       = ['/usr/lib','/lib','/usr/lib64','/lib64'] # one use is to skip converting the full library path to link line argument format for libraries in these dirs
     return
 
