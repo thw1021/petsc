@@ -247,7 +247,7 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
     /* check breakdown of eta = (s,s) */
     if (*eta < 0.) {
       pipegcr->norm_breakdown = PETSC_TRUE;
-      ierr = PetscInfo1(ksp,"Restart due to square root breakdown at it = \n",ksp->its);CHKERRQ(ierr);
+      ierr = PetscInfo1(ksp,"Restart due to square root breakdown at it = %D\n",ksp->its);CHKERRQ(ierr);
       break;
     } else {
       alpha= gamma/(*eta);                                  /* alpha = gamma/etai */

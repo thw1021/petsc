@@ -8327,7 +8327,7 @@ PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *same, char **message)
     if (msg[0]) goto finish;
   }
 finish:
-  if (msg[0] && !same && !message) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, msg);
+  if (msg[0] && !same && !message) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "%s", msg);
   if (same) *same = (PetscBool) !msg[0];
   if (message) {
     *message = NULL;
