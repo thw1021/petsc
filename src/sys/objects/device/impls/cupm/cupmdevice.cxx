@@ -1,7 +1,4 @@
 #include "../../interface/cupmdevice.hpp"
-#if PetscDefined(HAVE_OMPI_MAJOR_VERSION)
-#include "mpi-ext.h" /* Needed for OpenMPI CUDA-aware check */
-#endif
 #include <algorithm>
 #include <csetjmp> // for cuda mpi awareness
 #include <csignal> // SIGSEGV
