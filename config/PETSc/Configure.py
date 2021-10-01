@@ -664,21 +664,6 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       self.addDefine('HAVE_BUILTIN_EXPECT', 1)
     self.popLanguage()
 
-  def configureFormat(self):
-    """Detects if __attibute__((format)) is available"""
-    includes = """
-    extern void my_printf(const char*,...) __attribute__((format(printf, 1, 2)));
-    """
-    code = """
-    int   a = 5;
-    float b = 9.099999f;
-    my_printf("Compiler should warn about these 'integers': %d , %d",a,b);
-    """
-    with self.Language(self.languages.clanguage):
-      if self.checkCompile(includes=includes,body=code):
-        self.addDefine('ATTRIBUTE_FORMAT(func,strBegin,vaArgBegin)','__attribute__((format(func,strBegin,vaArgBegin)))')
-    return
-
   def configureFunctionName(self):
     '''Sees if the compiler supports __func__ or a variant.'''
     def getFunctionName(lang):
@@ -970,7 +955,6 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.executeTest(self.configureIsatty)
     self.executeTest(self.configureExpect)
     self.executeTest(self.configureAlign)
-    self.executeTest(self.configureFormat)
     self.executeTest(self.configureFunctionName)
     self.executeTest(self.configureIntptrt)
     self.executeTest(self.configureSolaris)
