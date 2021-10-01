@@ -114,6 +114,12 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_INTERN extern PETSC_VISIBILITY_INTERNAL
 #endif
 
+#if defined(PETSC_USE_SINGLE_LIBRARY)
+#  define PETSC_SINGLE_LIBRARY_INTERN PETSC_INTERN
+#else
+#  define PETSC_SINGLE_LIBRARY_INTERN PETSC_EXTERN
+#endif
+
 #if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
 #  define PETSC_NULLPTR             nullptr
 #  define PETSC_CONSTEXPR           constexpr
@@ -564,10 +570,6 @@ PETSC_EXTERN PetscErrorCode PetscCUDAInitializeCheck(void);
 PETSC_EXTERN PetscBool      PetscHIPSynchronize;
 PETSC_EXTERN PetscErrorCode PetscHIPInitialize(MPI_Comm,PetscInt);
 PETSC_EXTERN PetscErrorCode PetscHIPInitializeCheck(void);
-#endif
-
-#if defined(PETSC_HAVE_KOKKOS)
-PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
 #endif
 
 #if defined(PETSC_HAVE_NVSHMEM)
@@ -1613,6 +1615,8 @@ PETSC_EXTERN PetscErrorCode PetscBarrier(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscMPIDump(FILE*);
 PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm,PetscInt[2],PetscInt[2]);
 PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm,PetscReal[2],PetscReal[2]);
+PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject,PetscObjectState*);
+PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject,PetscObjectState);
 
 /*MC
     PetscNot - negates a logical type value and returns result as a PetscBool
