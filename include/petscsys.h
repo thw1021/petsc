@@ -20,7 +20,13 @@
    #define PETSC_HAVE_DEVICE
 #endif
 
-#if defined(PETSC_ATTRIBUTE_FORMAT)
+#if defined(__has_attribute)
+#  define PETSC_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+#  define PETSC_HAS_ATTRIBUTE(x) 0
+#endif
+
+#if PETSC_HAS_ATTRIBUTE(format)
 #  define PETSC_ATTRIBUTE_PRINTF(strIdx,vaArgIdx) PETSC_ATTRIBUTE_FORMAT(printf,strIdx,vaArgIdx)
 #else
 #  define PETSC_ATTRIBUTE_PRINTF(strIdx,vaArgIdx)
