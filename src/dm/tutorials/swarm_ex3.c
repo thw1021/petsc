@@ -18,13 +18,14 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
   PetscErrorCode ierr;
   PetscMPIInt    rank;
 
+  PetscFunctionBegin;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = VecGetLocalSize(pos,&n);CHKERRQ(ierr);
   ierr = VecGetBlockSize(pos,&bs);CHKERRQ(ierr);
   npoints = n/bs;
 
   ierr = PetscMalloc1(npoints,&cellidx);CHKERRQ(ierr);
-  ierr = DMGetApplicationContext(dm,(void**)&dmregular);CHKERRQ(ierr);
+  ierr = DMGetApplicationContext(dm,&dmregular);CHKERRQ(ierr);
   ierr = DMDAGetCorners(dmregular,&si,&sj,NULL,&milocal,&mjlocal,NULL);CHKERRQ(ierr);
   ierr = DMDAGetInfo(dmregular,NULL,&mx,&my,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
 
@@ -67,6 +68,7 @@ PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltyp
   const PetscInt *boxCells;
   PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   ierr = _DMLocatePoints_DMDARegular_IS(dm,pos,&iscell);CHKERRQ(ierr);
   ierr = VecGetLocalSize(pos,&npoints);CHKERRQ(ierr);
   ierr = VecGetBlockSize(pos,&bs);CHKERRQ(ierr);
@@ -93,7 +95,8 @@ PetscErrorCode DMGetNeighbors_DMDARegular(DM dm,PetscInt *nneighbors,const Petsc
   DM             dmregular;
   PetscErrorCode ierr;
 
-  ierr = DMGetApplicationContext(dm,(void**)&dmregular);CHKERRQ(ierr);
+  PetscFunctionBegin;
+  ierr = DMGetApplicationContext(dm,&dmregular);CHKERRQ(ierr);
   ierr = DMGetNeighbors(dmregular,nneighbors,neighbors);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -108,6 +111,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
   PetscMPIInt    rank;
   PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
   ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"%s-rank%d.gp",prefix,rank);CHKERRQ(ierr);
   fp = fopen(name,"w");
@@ -139,6 +143,7 @@ PetscErrorCode ex3_1(void)
   PetscRandom    rand;
   PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* Create a regularly spaced DMDA */
@@ -153,7 +158,7 @@ PetscErrorCode ex3_1(void)
 
   /* Create a DMShell for point location purposes */
   ierr = DMShellCreate(PETSC_COMM_WORLD,&dmcell);CHKERRQ(ierr);
-  ierr = DMSetApplicationContext(dmcell,(void*)dmregular);CHKERRQ(ierr);
+  ierr = DMSetApplicationContext(dmcell,dmregular);CHKERRQ(ierr);
   dmcell->ops->locatepoints = DMLocatePoints_DMDARegular;
   dmcell->ops->getneighbors = DMGetNeighbors_DMDARegular;
 

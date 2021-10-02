@@ -120,7 +120,7 @@ static PetscErrorCode DMPlexVTKWriteCells_ASCII(DM dm, FILE *fp, PetscInt *total
   ierr     = ISGetIndices(globalVertexNumbers, &gvertex);CHKERRQ(ierr);
   ierr     = PetscMalloc1(maxCells, &corners);CHKERRQ(ierr);
   ierr     = PetscFPrintf(comm, fp, "CELLS %D %D\n", totCells, totCorners+totCells);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscInt *remoteVertices, *vertices;
 
     ierr = PetscMalloc1(maxCorners, &vertices);CHKERRQ(ierr);
@@ -203,7 +203,7 @@ static PetscErrorCode DMPlexVTKWriteCells_ASCII(DM dm, FILE *fp, PetscInt *total
   }
   ierr = ISRestoreIndices(globalVertexNumbers, &gvertex);CHKERRQ(ierr);
   ierr = PetscFPrintf(comm, fp, "CELL_TYPES %D\n", totCells);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscInt cellType;
 
     for (c = 0; c < numCells; ++c) {
@@ -256,7 +256,7 @@ static PetscErrorCode DMPlexVTKWritePartition_ASCII(DM dm, FILE *fp)
     }
     ++numCells;
   }
-  if (!rank) {
+  if (rank == 0) {
     for (c = 0; c < numCells; ++c) {ierr = PetscFPrintf(comm, fp, "%d\n", rank);CHKERRQ(ierr);}
     for (proc = 1; proc < size; ++proc) {
       MPI_Status status;
@@ -325,7 +325,7 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
   ierr = MPIU_Allreduce(&numDof, &maxDof, 1, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
   enforceDof = PetscMax(enforceDof, maxDof);
   ierr = VecGetArray(v, &array);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscVTKReal dval;
     PetscScalar  val;
     char formatString[8];
@@ -472,6 +472,7 @@ static PetscErrorCode DMPlexVTKWriteAll_ASCII(DM dm, PetscViewer viewer)
   PetscReal                lengthScale;
   PetscInt                 totVertices, totCells = 0, loops_per_scalar, l;
   PetscBool                hasPoint = PETSC_FALSE, hasCell = PETSC_FALSE, writePartition = PETSC_FALSE, localized, writeComplex;
+  const char               *dmname;
   PetscErrorCode           ierr;
 
   PetscFunctionBegin;
@@ -486,8 +487,9 @@ static PetscErrorCode DMPlexVTKWriteAll_ASCII(DM dm, PetscViewer viewer)
   if (localized) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"VTK output with localized coordinates not yet supported");
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = PetscFOpen(comm, vtk->filename, "wb", &fp);CHKERRQ(ierr);
+  ierr = PetscObjectGetName((PetscObject)dm, &dmname);CHKERRQ(ierr);
   ierr = PetscFPrintf(comm, fp, "# vtk DataFile Version 2.0\n");CHKERRQ(ierr);
-  ierr = PetscFPrintf(comm, fp, "Simplicial Mesh Example\n");CHKERRQ(ierr);
+  ierr = PetscFPrintf(comm, fp, "%s\n", dmname);CHKERRQ(ierr);
   ierr = PetscFPrintf(comm, fp, "ASCII\n");CHKERRQ(ierr);
   ierr = PetscFPrintf(comm, fp, "DATASET UNSTRUCTURED_GRID\n");CHKERRQ(ierr);
   /* Vertices */
@@ -654,7 +656,7 @@ static PetscErrorCode DMPlexVTKWriteAll_ASCII(DM dm, PetscViewer viewer)
 
   Collective
 
-  Input Arguments:
+  Input Parameters:
 + odm - The DMPlex specifying the mesh, passed as a PetscObject
 - viewer - viewer of type VTK
 

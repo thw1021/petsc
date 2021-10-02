@@ -44,6 +44,7 @@
 #define PCJACOBI 'jacobi'
 #define PCSOR 'sor'
 #define PCLU 'lu'
+#define PCQR 'qr'
 #define PCSHELL 'shell'
 #define PCBJACOBI 'bjacobi'
 #define PCMG 'mg'
@@ -88,7 +89,7 @@
 #define PCHMG 'hmg'
 #define PCDEFLATION 'deflation'
 #define PCHPDDM 'hpddm'
-#define PCHARA 'hara'
+#define PCH2OPUS 'h2opus'
 
 #define PCMGType PetscEnum
 #define PCMGCycleType PetscEnum

@@ -598,7 +598,7 @@ PetscErrorCode MatView_MPISELL_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
     PetscBool   isnonzero;
 
     ierr = MatCreate(PetscObjectComm((PetscObject)mat),&A);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatSetSizes(A,M,N,M,N);CHKERRQ(ierr);
     } else {
       ierr = MatSetSizes(A,0,0,M,N);CHKERRQ(ierr);
@@ -646,7 +646,7 @@ PetscErrorCode MatView_MPISELL_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
        synchronized across all processors that share the PetscDraw object
     */
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscObjectSetName((PetscObject)((Mat_MPISELL*)(A->data))->A,((PetscObject)mat)->name);CHKERRQ(ierr);
       ierr = MatView_SeqSELL(((Mat_MPISELL*)(A->data))->A,sviewer);CHKERRQ(ierr);
     }
@@ -1379,7 +1379,7 @@ PetscErrorCode MatDuplicate_MPISELL(Mat matin,MatDuplicateOption cpvalues,Mat *n
    34 values.
 
    When d_nnz, o_nnz parameters are specified, the storage is specified
-   for every row, coresponding to both DIAGONAL and OFF-DIAGONAL submatrices.
+   for every row, corresponding to both DIAGONAL and OFF-DIAGONAL submatrices.
    In the above case the values for d_nnz,o_nnz are:
 .vb
      proc0: d_nnz = [2,2,2] and o_nnz = [2,2,2]
@@ -1549,7 +1549,7 @@ PetscErrorCode MatMPISELLSetPreallocation(Mat B,PetscInt d_nz,const PetscInt d_n
    34 values.
 
    When d_rlen, o_rlen parameters are specified, the storage is specified
-   for every row, coresponding to both DIAGONAL and OFF-DIAGONAL submatrices.
+   for every row, corresponding to both DIAGONAL and OFF-DIAGONAL submatrices.
    In the above case the values for d_nnz,o_nnz are:
 .vb
      proc0: d_nnz = [2,2,2] and o_nnz = [2,2,2]

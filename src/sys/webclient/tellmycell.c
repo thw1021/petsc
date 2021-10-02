@@ -15,9 +15,9 @@
 .   flg - PETSC_TRUE if the text was sent
 
    Options Database:
-+   -tellmycell <number[,message]>
-.   -tellmycell_user <Username> set when registering at tellmycell.com
--   -tellmycell_password <Password> set when registering at tellmycell.com
++   -tellmycell <number[,message]> - send a message to the give number when the program ends
+.   -tellmycell_user <Username> - this value is created when registering at tellmycell.com
+-   -tellmycell_password <Password> - this value is created when registering at tellmycell.com
 
    Level: intermediate
 
@@ -46,7 +46,7 @@ PetscErrorCode PetscTellMyCell(MPI_Comm comm,const char number[],const char mess
   ierr = PetscStrlen(message,&mlen);CHKERRQ(ierr);
   if (mlen > 100) SETERRQ1(comm,PETSC_ERR_ARG_WRONG,"Message  %s is too long",message);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     int       sock;
     char      buff[1000],*body;
     PetscInt  i;

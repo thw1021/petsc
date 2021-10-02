@@ -24,7 +24,7 @@ PetscClassId PETSC_RANDOM_CLASSID;
 
    Collective on PetscRandom
 
-   Intput Parameter:
+   Input Parameter:
 .  r  - the random number generator context
 
    Level: intermediate
@@ -287,7 +287,7 @@ PetscErrorCode  PetscRandomView(PetscRandom rnd,PetscViewer viewer)
 
     ierr = PetscObjectGetName((PetscObject)rnd,&name);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-    if (!((PetscObject)rnd)->amsmem && !rank) {
+    if (!((PetscObject)rnd)->amsmem && rank == 0) {
       char       dir[1024];
 
       ierr = PetscObjectViewSAWs((PetscObject)rnd,viewer);CHKERRQ(ierr);

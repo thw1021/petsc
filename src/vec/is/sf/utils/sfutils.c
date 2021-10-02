@@ -6,13 +6,13 @@
 
    Collective
 
-   Input Arguments:
+   Input Parameters:
 +  sf - star forest
-.  layout - PetscLayout defining the global space
+.  layout - PetscLayout defining the global space for roots
 .  nleaves - number of leaf vertices on the current process, each of these references a root on any process
 .  ilocal - locations of leaves in leafdata buffers, pass NULL for contiguous storage
 .  localmode - copy mode for ilocal
--  iremote - remote locations of root vertices for each leaf on the current process
+-  iremote - remote locations (in global indices) of root vertices for each leaf on the current process
 
    Level: intermediate
 
@@ -431,11 +431,11 @@ PetscErrorCode PetscSFCreateSectionSF(PetscSF sf, PetscSection rootSection, Pets
 
    Collective
 
-   Input Arguments:
+   Input Parameters:
 +  rmap - PetscLayout defining the global root space
 -  lmap - PetscLayout defining the global leaf space
 
-   Output Arguments:
+   Output Parameter:
 .  sf - The parallel star forest
 
    Level: intermediate
@@ -552,7 +552,7 @@ PetscErrorCode PetscLayoutMapLocal(PetscLayout map,PetscInt N,const PetscInt idx
 . leafLocalIndices - leaf local index permutation (NULL if no permutation)
 - leafLocalOffset - offset to be added to leaf local indices
 
-  Output Parameter:
+  Output Parameters:
 + sfA - star forest representing the communication pattern from the layout space to the leaf space (NULL if not needed)
 - sf - star forest representing the communication pattern from the root space to the leaf space
 

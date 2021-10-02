@@ -116,7 +116,7 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF_Gather(VecTagger tagger,Vec vec,
   ierr = VecScatterEnd(vScat,vec,gVec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterDestroy(&vScat);CHKERRQ(ierr);
   ierr = MPI_Comm_rank (PetscObjectComm((PetscObject)vec),&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     ierr = VecTaggerComputeBoxes_CDF_Serial(tagger,gVec,bs,boxes);CHKERRQ(ierr);
   }
   ierr = MPI_Bcast((PetscScalar *)boxes,2*bs,MPIU_SCALAR,0,PetscObjectComm((PetscObject)vec));CHKERRMPI(ierr);
@@ -520,7 +520,7 @@ PetscErrorCode VecTaggerCDFIterativeSetTolerances(VecTagger tagger, PetscInt max
 
   Logically Collective on VecTagger
 
-  Input Parameters:
+  Input Parameter:
 . tagger - the VecTagger context
 
   Output Parameters:
@@ -549,7 +549,7 @@ PetscErrorCode VecTaggerCDFIterativeGetTolerances(VecTagger tagger, PetscInt *ma
 
   Logically Collective
 
-  Input Arguments:
+  Input Parameters:
 + tagger - the VecTagger context
 - boxes - a blocksize array of VecTaggerBox boxes
 
@@ -571,10 +571,10 @@ PetscErrorCode VecTaggerCDFSetBox(VecTagger tagger,VecTaggerBox *box)
 
   Logically Collective
 
-  Input Arguments:
+  Input Parameter:
 . tagger - the VecTagger context
 
-  Output Arguments:
+  Output Parameter:
 . boxes - a blocksize array of VecTaggerBox boxes
 
   Level: advanced

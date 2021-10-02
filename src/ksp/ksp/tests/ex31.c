@@ -91,7 +91,7 @@ int main(int argc,char **args)
 
     ierr = ISPartitioningCount(mis,size,count);CHKERRQ(ierr);
     ierr = ISDestroy(&mis);CHKERRQ(ierr);
-    if (displayIS && !rank) {
+    if (displayIS && rank == 0) {
       PetscInt i;
       ierr = PetscPrintf(PETSC_COMM_SELF,"[ %d ] count:\n",rank);CHKERRQ(ierr);
       for (i=0; i<size; i++) {ierr = PetscPrintf(PETSC_COMM_WORLD," %d",count[i]);CHKERRQ(ierr);}
@@ -157,7 +157,7 @@ int main(int argc,char **args)
 
     test:
       args: -f ${DATAFILESPATH}/matrices/small -partition -mat_partitioning_type parmetis
-      requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES) parmetis
+      requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES) parmetis
       output_file: output/ex31.out
       nsize: 3
 

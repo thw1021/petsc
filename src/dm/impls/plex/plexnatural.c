@@ -257,7 +257,7 @@ PetscErrorCode DMPlexGlobalToNaturalBegin(DM dm, Vec gv, Vec nv)
 + dm - The distributed DMPlex
 - gv - The global Vec
 
-  Output Parameters:
+  Output Parameter:
 . nv - The natural Vec
 
   Note: The user must call DMSetUseNatural(dm, PETSC_TRUE) before DMPlexDistribute().
@@ -318,7 +318,7 @@ PetscErrorCode DMPlexNaturalToGlobalBegin(DM dm, Vec nv, Vec gv)
   ierr = PetscLogEventBegin(DMPLEX_NaturalToGlobalBegin,dm,0,0,0);CHKERRQ(ierr);
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject) dm), &size);CHKERRMPI(ierr);
   if (dm->sfNatural) {
-    /* We only have acces to the SF that goes from Global to Natural.
+    /* We only have access to the SF that goes from Global to Natural.
        Instead of inverting dm->sfNatural, we can call PetscSFReduceBegin/End with MPI_Op MPI_SUM.
        Here the SUM really does nothing since sfNatural is one to one, as long as gV is set to zero first. */
     ierr = VecZeroEntries(gv);CHKERRQ(ierr);

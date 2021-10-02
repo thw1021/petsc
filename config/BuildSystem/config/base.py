@@ -54,7 +54,7 @@ Output
   The object may define a headerPrefix member, which will be appended, followed
 by an underscore, to every define which is output from it. Similarly, a substPrefix
 can be defined which applies to every substitution from the object. Typedefs and
-function prototypes are placed in a separate header in order to accomodate languges
+function prototypes are placed in a separate header in order to accommodate languges
 such as Fortran whose preprocessor can sometimes fail at these statements.
 '''
 import script
@@ -462,6 +462,7 @@ class Configure(script.Script):
         codeStr += codeBegin+body+codeEnd
     else:
       raise RuntimeError('Cannot determine code body for language: '+language)
+    codeStr += '\n'
     return codeStr
 
   def preprocess(self, codeStr, timeout = 600.0):
@@ -532,9 +533,8 @@ class Configure(script.Script):
     command = self.getCompilerCmd()
     if self.compilerDefines: self.framework.outputHeader(self.compilerDefines)
     self.framework.outputCHeader(self.compilerFixes)
-    f = open(self.compilerSource, 'w')
-    f.write(self.getCode(includes, body, codeBegin, codeEnd))
-    f.close()
+    with open(self.compilerSource, 'w') as f:
+      f.write(self.getCode(includes, body, codeBegin, codeEnd))
     (out, err, ret) = Configure.executeShellCommand(command, checkCommand = report, log = self.log)
     if not os.path.isfile(self.compilerObj):
       err += '\nPETSc Error: No output file produced'

@@ -48,7 +48,7 @@ static PetscErrorCode PetscViewerFlush_Draw(PetscViewer v)
 +   viewer - the PetscViewer (created with PetscViewerDrawOpen())
 -   windownumber - indicates which subwindow (usually 0)
 
-    Ouput Parameter:
+    Output Parameter:
 .   draw - the draw object
 
     Level: intermediate
@@ -176,11 +176,11 @@ PetscErrorCode  PetscViewerDrawBaseSet(PetscViewer viewer,PetscInt windownumber)
 
     Collective on PetscViewer
 
-    Input Parameter:
+    Input Parameters:
 +   PetscViewer - the PetscViewer (created with PetscViewerDrawOpen())
 -   windownumber - indicates which subwindow (usually 0)
 
-    Ouput Parameter:
+    Output Parameter:
 .   draw - the draw line graph object
 
     Level: intermediate
@@ -221,11 +221,11 @@ PetscErrorCode  PetscViewerDrawGetDrawLG(PetscViewer viewer,PetscInt windownumbe
 
     Collective on PetscViewer
 
-    Input Parameter:
+    Input Parameters:
 +   viewer - the PetscViewer (created with PetscViewerDrawOpen()
 -   windownumber - indicates which subwindow (usually 0)
 
-    Ouput Parameter:
+    Output Parameter:
 .   drawaxis - the draw axis object
 
     Level: advanced
@@ -375,7 +375,7 @@ PetscErrorCode PetscViewerDrawGetTitle(PetscViewer v,const char *title[])
 -  w, h - window width and height in pixels, or may use PETSC_DECIDE or PETSC_DRAW_FULL_SIZE, PETSC_DRAW_HALF_SIZE,
           PETSC_DRAW_THIRD_SIZE, PETSC_DRAW_QUARTER_SIZE
 
-   Output Parameters:
+   Output Parameter:
 . viewer - the PetscViewer
 
    Format Options:
@@ -383,9 +383,7 @@ PetscErrorCode PetscViewerDrawGetTitle(PetscViewer v,const char *title[])
 -  PETSC_VIEWER_DRAW_LG    - displays using a line graph
 
    Options Database Keys:
-   PetscViewerDrawOpen() calls PetscDrawCreate(), so see the manual page for
-   PetscDrawCreate() for runtime options, including
-+  -draw_type x or null
++  -draw_type - use x or null
 .  -nox - Disables all x-windows output
 .  -display <name> - Specifies name of machine for the X display
 .  -geometry <x,y,w,h> - allows setting the window location and size
@@ -394,6 +392,9 @@ PetscErrorCode PetscViewerDrawGetTitle(PetscViewer v,const char *title[])
      (0 is default, -1 implies until user input).
 
    Level: beginner
+
+   Notes:
+     PetscViewerDrawOpen() calls PetscDrawCreate(), so see the manual pages for PetscDrawCreate()
 
    Note for Fortran Programmers:
    Whenever indicating null character data in a Fortran code,
@@ -429,7 +430,7 @@ PetscErrorCode PetscViewerGetSubViewer_Draw(PetscViewer viewer,MPI_Comm comm,Pet
   /* only processor zero can use the PetscViewer draw singleton */
   if (sviewer) *sviewer = NULL;
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscMPIInt flg;
     PetscDraw   draw,sdraw;
 
@@ -471,7 +472,7 @@ PetscErrorCode PetscViewerRestoreSubViewer_Draw(PetscViewer viewer,MPI_Comm comm
   PetscFunctionBegin;
   if (!vdraw->singleton_made) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"Trying to restore a singleton that was not gotten");
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscDraw draw,sdraw;
 
     ierr = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
@@ -810,7 +811,7 @@ PetscViewer  PETSC_VIEWER_DRAW_(MPI_Comm comm)
 -   bounds - the actual bounds, the size of this is 2*nbounds, the values are stored in the order min F_0, max F_0, min F_1, max F_1, .....
 
     Options Database:
-.   -draw_bounds  minF0,maxF0,minF1,maxF1
+.   -draw_bounds  minF0,maxF0,minF1,maxF1 - the lower left and upper right bounds
 
     Level: intermediate
 

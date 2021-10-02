@@ -1,6 +1,6 @@
 
 #include <petscviewer.h>
-#include <../src/sys/classes/draw/utils/lgimpl.h>  /*I   "petscdraw.h"  I*/
+#include <petsc/private/drawimpl.h>  /*I   "petscdraw.h"  I*/
 PetscClassId PETSC_DRAWLG_CLASSID = 0;
 
 /*@
@@ -97,7 +97,7 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
   ierr = PetscDrawAxisDraw(lg->axis);CHKERRQ(ierr);
 
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     int i,j,dim,nopts;
     dim   = lg->dim;
     nopts = lg->nopts;
@@ -172,10 +172,10 @@ PetscErrorCode  PetscDrawLGCreate(PetscDraw draw,PetscInt dim,PetscDrawLG *outlg
   lg->xmax    = -1.e20;
   lg->ymax    = -1.e20;
 
-  ierr = PetscMalloc2(dim*CHUNCKSIZE,&lg->x,dim*CHUNCKSIZE,&lg->y);CHKERRQ(ierr);
-  ierr = PetscLogObjectMemory((PetscObject)lg,2*dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
+  ierr = PetscMalloc2(dim*PETSC_DRAW_LG_CHUNK_SIZE,&lg->x,dim*PETSC_DRAW_LG_CHUNK_SIZE,&lg->y);CHKERRQ(ierr);
+  ierr = PetscLogObjectMemory((PetscObject)lg,2*dim*PETSC_DRAW_LG_CHUNK_SIZE*sizeof(PetscReal));CHKERRQ(ierr);
 
-  lg->len         = dim*CHUNCKSIZE;
+  lg->len         = dim*PETSC_DRAW_LG_CHUNK_SIZE;
   lg->loc         = 0;
   lg->use_markers = PETSC_FALSE;
 
@@ -191,7 +191,7 @@ PetscErrorCode  PetscDrawLGCreate(PetscDraw draw,PetscInt dim,PetscDrawLG *outlg
 
    Logically Collective on PetscDrawLG
 
-   Input Parameter:
+   Input Parameters:
 +  lg - the line graph context.
 -  colors - the colors
 
@@ -219,7 +219,7 @@ PetscErrorCode  PetscDrawLGSetColors(PetscDrawLG lg,const int colors[])
 
    Logically Collective on PetscDrawLG
 
-   Input Parameter:
+   Input Parameters:
 +  lg - the line graph context.
 -  names - the names for each curve
 
@@ -285,7 +285,7 @@ PetscErrorCode  PetscDrawLGGetDimension(PetscDrawLG lg,PetscInt *dim)
 
    Logically Collective on PetscDrawLG
 
-   Input Parameter:
+   Input Parameters:
 +  lg - the line graph context.
 -  dim - the number of curves.
 
@@ -312,9 +312,9 @@ PetscErrorCode  PetscDrawLGSetDimension(PetscDrawLG lg,PetscInt dim)
   }
   ierr    = PetscFree(lg->colors);CHKERRQ(ierr);
   lg->dim = dim;
-  ierr    = PetscMalloc2(dim*CHUNCKSIZE,&lg->x,dim*CHUNCKSIZE,&lg->y);CHKERRQ(ierr);
-  ierr    = PetscLogObjectMemory((PetscObject)lg,2*dim*CHUNCKSIZE*sizeof(PetscReal));CHKERRQ(ierr);
-  lg->len = dim*CHUNCKSIZE;
+  ierr    = PetscMalloc2(dim*PETSC_DRAW_LG_CHUNK_SIZE,&lg->x,dim*PETSC_DRAW_LG_CHUNK_SIZE,&lg->y);CHKERRQ(ierr);
+  ierr    = PetscLogObjectMemory((PetscObject)lg,2*dim*PETSC_DRAW_LG_CHUNK_SIZE*sizeof(PetscReal));CHKERRQ(ierr);
+  lg->len = dim*PETSC_DRAW_LG_CHUNK_SIZE;
   PetscFunctionReturn(0);
 }
 
@@ -357,7 +357,6 @@ PetscErrorCode  PetscDrawLGSetLimits(PetscDrawLG lg,PetscReal x_min,PetscReal x_
    Level: intermediate
 
 .seealso: PetscDrawLGCreate()
-
 @*/
 PetscErrorCode  PetscDrawLGReset(PetscDrawLG lg)
 {
@@ -417,12 +416,11 @@ PetscErrorCode  PetscDrawLGDestroy(PetscDrawLG *lg)
 -  flg - should mark each data point
 
    Options Database:
-.  -lg_use_markers  <true,false>
+.  -lg_use_markers  <true,false> - true means the graphPetscDrawLG draws a marker for each point
 
    Level: intermediate
 
 .seealso: PetscDrawLGCreate()
-
 @*/
 PetscErrorCode  PetscDrawLGSetUseMarkers(PetscDrawLG lg,PetscBool flg)
 {
@@ -444,7 +442,6 @@ PetscErrorCode  PetscDrawLGSetUseMarkers(PetscDrawLG lg,PetscBool flg)
    Level: intermediate
 
 .seealso: PetscDrawSPDraw(), PetscDrawLGSPDraw(), PetscDrawLGReset()
-
 @*/
 PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
 {
@@ -469,7 +466,7 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
   ierr = PetscDrawAxisDraw(lg->axis);CHKERRQ(ierr);
 
   ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     int i,j,dim=lg->dim,nopts=lg->nopts,cl;
     for (i=0; i<dim; i++) {
       for (j=1; j<nopts; j++) {
@@ -479,7 +476,7 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
       }
     }
   }
-  if (!rank && lg->legend) {
+  if (rank == 0 && lg->legend) {
     int       i,dim=lg->dim,cl;
     PetscReal xl,yl,xr,yr,tw,th;
     size_t    slen,len=0;
@@ -555,7 +552,7 @@ PetscErrorCode  PetscDrawLGView(PetscDrawLG lg,PetscViewer viewer)
   if (nopts < 1)                  PetscFunctionReturn(0);
   if (xmin > xmax || ymin > ymax) PetscFunctionReturn(0);
 
-  if (!viewer){
+  if (!viewer) {
     ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)lg),&viewer);CHKERRQ(ierr);
   }
   ierr = PetscObjectPrintClassNamePrefixType((PetscObject)lg,viewer);CHKERRQ(ierr);
@@ -574,7 +571,7 @@ PetscErrorCode  PetscDrawLGView(PetscDrawLG lg,PetscViewer viewer)
 
    Logically Collective on PetscDrawLG
 
-   Input Parameter:
+   Input Parameters:
 +  lg - the line graph context
 -  prefix - the prefix to prepend to all option names
 

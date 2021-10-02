@@ -205,7 +205,7 @@ static PetscErrorCode Petsc1DNodeFamilyComputeSimplexNodes(Petsc1DNodeFamily f, 
   /* map from unit simplex to biunit simplex */
   for (k = 0; k < npoints * dim; k++) points[k] = points[k] * 2. - 1.;
   ierr = PetscFree2(nodework, tupwork);CHKERRQ(ierr);
-  ierr = PetscFree(tup);
+  ierr = PetscFree(tup);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -878,7 +878,7 @@ static PetscErrorCode PetscLagNodeIndicesGetPermutation(PetscLagNodeIndices ni, 
     ierr = PetscMalloc1(m, &prm);CHKERRQ(ierr);
     for (i = 0; i < m; i++) prm[i] = sorter[(nodeIdxDim + 2) * i + 1];
     ni->perm = prm;
-    ierr = PetscFree(sorter);
+    ierr = PetscFree(sorter);CHKERRQ(ierr);
   }
   *perm = ni->perm;
   PetscFunctionReturn(0);
@@ -1478,7 +1478,7 @@ static PetscErrorCode PetscDualSpaceLagrangeCreateSimplexNodeMat(Petsc1DNodeFami
 }
 
 /* once the nodeIndices have been created for the interior of the reference cell, and for all of the boundary cells,
- * push forward the boudary dofs and concatenate them into the full node indices for the dual space */
+ * push forward the boundary dofs and concatenate them into the full node indices for the dual space */
 static PetscErrorCode PetscDualSpaceLagrangeCreateAllNodeIdx(PetscDualSpace sp)
 {
   DM             dm;
@@ -2781,7 +2781,12 @@ static PetscErrorCode PetscDualSpaceGetSymmetries_Lagrange(PetscDualSpace sp, co
 
     ierr = DMPlexGetChart(sp->dm, &pStart, &pEnd);CHKERRQ(ierr);
     numPoints = pEnd - pStart;
-    ierr = DMPlexGetConeSize(sp->dm, 0, &numFaces);CHKERRQ(ierr);
+    {
+      DMPolytopeType ct;
+      /* The number of arrangements is no longer based on the number of faces */
+      ierr = DMPlexGetCellType(sp->dm, 0, &ct);CHKERRQ(ierr);
+      numFaces = DMPolytopeTypeGetNumArrangments(ct) / 2;
+    }
     ierr = PetscCalloc1(numPoints,&symperms);CHKERRQ(ierr);
     ierr = PetscCalloc1(numPoints,&symflips);CHKERRQ(ierr);
     spintdim = sp->spintdim;

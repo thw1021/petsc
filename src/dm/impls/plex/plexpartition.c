@@ -379,7 +379,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
 + dm      - The mesh DM dm
 - height  - Height of the strata from which to construct the graph
 
-  Output Parameter:
+  Output Parameters:
 + numVertices     - Number of vertices in the graph
 . offsets         - Point offsets in the graph
 . adjacency       - Point connectivity in the graph
@@ -412,11 +412,11 @@ PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *nu
 
   Collective on DM
 
-  Input Arguments:
+  Input Parameters:
 + dm - The DMPlex
 - cellHeight - The height of mesh points to treat as cells (default should be 0)
 
-  Output Arguments:
+  Output Parameters:
 + numVertices - The number of local vertices in the graph, or cells in the mesh.
 . offsets     - The offset to the adjacency list for each cell
 - adjacency   - The adjacency list for all cells
@@ -942,7 +942,7 @@ PetscErrorCode DMPlexClosurePoints_Private(DM dm, PetscInt numPoints, const Pets
   DM_Plex         *mesh = (DM_Plex *)dm->data;
   const PetscBool hasTree = (mesh->parentSection || mesh->childSection) ? PETSC_TRUE : PETSC_FALSE;
   PetscInt        nelems, *elems, off = 0, p;
-  PetscHSetI      ht;
+  PetscHSetI      ht = NULL;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -983,7 +983,7 @@ PetscErrorCode DMPlexClosurePoints_Private(DM dm, PetscInt numPoints, const Pets
 
   Input Parameters:
 + dm     - The DM
-- label  - DMLabel assinging ranks to remote roots
+- label  - DMLabel assigning ranks to remote roots
 
   Level: developer
 
@@ -1021,7 +1021,7 @@ PetscErrorCode DMPlexPartitionLabelClosure(DM dm, DMLabel label)
 
   Input Parameters:
 + dm     - The DM
-- label  - DMLabel assinging ranks to remote roots
+- label  - DMLabel assigning ranks to remote roots
 
   Level: developer
 
@@ -1064,7 +1064,7 @@ PetscErrorCode DMPlexPartitionLabelAdjacency(DM dm, DMLabel label)
 
   Input Parameters:
 + dm     - The DM
-- label  - DMLabel assinging ranks to remote roots
+- label  - DMLabel assigning ranks to remote roots
 
   Level: developer
 
@@ -1126,11 +1126,11 @@ PetscErrorCode DMPlexPartitionLabelPropagate(DM dm, DMLabel label)
 
   Input Parameters:
 + dm        - The DM
-. rootLabel - DMLabel assinging ranks to local roots
+. rootLabel - DMLabel assigning ranks to local roots
 - processSF - A star forest mapping into the local index on each remote rank
 
   Output Parameter:
-. leafLabel - DMLabel assinging ranks to remote roots
+. leafLabel - DMLabel assigning ranks to remote roots
 
   Note: The rootLabel defines a send pattern by mapping local points to remote target ranks. The
   resulting leafLabel is a receiver mapping of remote roots to their parent rank.
@@ -1262,7 +1262,7 @@ PetscErrorCode DMPlexPartitionLabelInvert(DM dm, DMLabel rootLabel, PetscSF proc
 
   Input Parameters:
 + dm    - The DM
-- label - DMLabel assinging ranks to remote roots
+- label - DMLabel assigning ranks to remote roots
 
   Output Parameter:
 . sf    - The star forest communication context encapsulating the defined mapping
@@ -1795,7 +1795,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
 
     ierr = MatGetSize(As, &numRows, NULL);CHKERRQ(ierr);
     ierr = PetscMalloc1(numRows, &partGlobal);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       PetscInt *adjncy_g, *xadj_g, *vtxwgt_g;
       lenadjncy = 0;
 
@@ -1820,7 +1820,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
         ierr = MatRestoreRow(As, i, &temp, &cols, NULL);CHKERRQ(ierr);
       }
       ierr = PetscMalloc1(2*numRows, &vtxwgt_g);CHKERRQ(ierr);
-      for (i=0; i<size; i++){
+      for (i=0; i<size; i++) {
         vtxwgt_g[ncon*cumSumVertices[i]] = numExclusivelyOwnedAll[i];
         if (ncon>1) vtxwgt_g[ncon*cumSumVertices[i]+1] = 1;
         for (j=cumSumVertices[i]+1; j<cumSumVertices[i+1]; j++) {

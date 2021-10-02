@@ -1025,7 +1025,7 @@ PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer viewer, PetscViewerForm
 
    Notes:
    This may be useful for a flexibly preconditioner Krylov method to
-   control the accuracy of the inner solves needed to gaurantee the
+   control the accuracy of the inner solves needed to guarantee the
    convergence of the outer iterations.
 
    Level: advanced
@@ -1162,7 +1162,7 @@ PetscErrorCode  KSPConvergedDefaultCreate(void **ctx)
 
 /*@
    KSPConvergedDefaultSetUIRNorm - makes the default convergence test use || B*(b - A*(initial guess))||
-      instead of || B*b ||. In the case of right preconditioner or if KSPSetNormType(ksp,KSP_NORM_UNPRECONDIITONED)
+      instead of || B*b ||. In the case of right preconditioner or if KSPSetNormType(ksp,KSP_NORM_UNPRECONDITIONED)
       is used there is no B in the above formula. UIRNorm is short for Use Initial Residual Norm.
 
    Collective on ksp
@@ -1201,7 +1201,7 @@ PetscErrorCode  KSPConvergedDefaultSetUIRNorm(KSP ksp)
 
 /*@
    KSPConvergedDefaultSetUMIRNorm - makes the default convergence test use min(|| B*(b - A*(initial guess))||,|| B*b ||)
-      In the case of right preconditioner or if KSPSetNormType(ksp,KSP_NORM_UNPRECONDIITONED)
+      In the case of right preconditioner or if KSPSetNormType(ksp,KSP_NORM_UNPRECONDITIONED)
       is used there is no B in the above formula. UMIRNorm is short for Use Minimum Initial Residual Norm.
 
    Collective on ksp
@@ -1278,9 +1278,8 @@ PetscErrorCode  KSPConvergedDefaultSetConvergedMaxits(KSP ksp, PetscBool flg)
 -  ctx - convergence context which must be created by KSPConvergedDefaultCreate()
 
    Output Parameter:
-+   positive - if the iteration has converged
-.   negative - if the iteration has diverged
--   KSP_CONVERGED_ITERATING - otherwise.
+.  reason - the convergence reason; it is positive if the iteration has converged,
+            negative if the iteration has diverged, and KSP_CONVERGED_ITERATING otherwise
 
    Notes:
    KSPConvergedDefault() reaches convergence when   rnorm < MAX (rtol * rnorm_0, abstol);
@@ -1525,7 +1524,7 @@ PetscErrorCode KSPBuildResidualDefault(KSP ksp,Vec t,Vec v,Vec *V)
 . rightn  - number of right work vectors
 - leftn   - number of left work vectors to allocate
 
-  Output Parameter:
+  Output Parameters:
 +  right - the array of vectors created
 -  left - the array of left vectors
 
@@ -1909,7 +1908,7 @@ PetscErrorCode  KSPGetApplicationContext(KSP ksp,void *usrP)
 
    Collective on ksp
 
-   Input Parameter:
+   Input Parameters:
 +  ksp - the linear solver (KSP) context.
 .  pc - the preconditioner context
 -  vec - a vector that will be initialized with Inf to indicate lack of convergence

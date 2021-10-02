@@ -16,7 +16,6 @@ class Configure(config.package.Package):
     self.required            = 1
     self.alternativedownload = 'f2cblaslapack'
     self.missingRoutines     = []
-    self.has_cheaders        = 0
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
@@ -212,13 +211,22 @@ class Configure(config.package.Package):
       else:
         raise RuntimeError('You set a value for --with-blas-lib=<lib> and --with-lapack-lib=<lib>, but '+str(self.argDB['with-blas-lib'])+' and '+str(self.argDB['with-lapack-lib'])+' cannot be used\n')
 
+    blislib = ['libblis.a']
+    if self.openmp.found:
+      blislib.insert(0,'libblis-mt.a')
+
     if not 'with-blaslapack-dir' in self.argDB:
       mkl = os.getenv('MKLROOT')
       if mkl:
         # Since user did not select MKL specifically first try compiler defaults and only if they fail use the MKL
         yield ('Default compiler libraries', '', '','unknown','unknown')
-        yield ('BLIS default compiler locations', 'libblis.a', 'liblapack.a','unknown','unknown')
-        yield ('BLIS default compiler locations /usr/local/lib', os.path.join('/usr','local','lib','libblis.a'), os.path.join('/usr','local','lib','liblapack.a'),'unknown','unknown')
+        for lib in blislib:
+          for lapack in ['libflame.a','liblapack.a']:
+            for libdir in ['',os.path.join('/usr','local','lib')]:
+              if libdir:
+                lib = os.path.join(libdir,lib)
+                lapack = os.path.join(libdir,lapack)
+            yield ('BLIS/AMD-AOCL default compiler locations '+libdir,lib,lapack,'unknown','unknown')
         yield ('OpenBLAS default compiler locations', None, 'libopenblas.a','unknown','unknown')
         yield ('OpenBLAS default compiler locations /usr/local/lib', None, os.path.join('/usr','local','lib','libopenblas.a'),'unknown','unknown')
         yield ('Default compiler locations', 'libblas.a', 'liblapack.a','unknown','unknown')
@@ -226,6 +234,7 @@ class Configure(config.package.Package):
         yield ('Default compiler locations with gfortran', None, ['liblapack.a', 'libblas.a','libgfortran.a'],'unknown','unknown')
         self.logWrite('Did not detect default BLAS and LAPACK locations so using the value of MKLROOT to search as --with-blas-lapack-dir='+mkl)
         self.argDB['with-blaslapack-dir'] = mkl
+        self.checkingMKLROOTautomatically = 1
 
     if self.argDB['with-64-bit-blas-indices']:
       ILP64 = '_ilp64'
@@ -366,30 +375,46 @@ class Configure(config.package.Package):
       yield ('User specified AMD ACML lib dir', None, [os.path.join(dir,'lib','libacml.a'), os.path.join(dir,'lib','libacml_mv.a')],'32','unknown')
       yield ('User specified AMD ACML lib dir', None, os.path.join(dir,'lib','libacml_mp.a'),'32','unknown')
       yield ('User specified AMD ACML lib dir', None, [os.path.join(dir,'lib','libacml_mp.a'), os.path.join(dir,'lib','libacml_mv.a')],'32','unknown')
-      # BLIS
-      yield ('User specified installation root BLIS/LAPACK', os.path.join(dir, 'libblis.a'), os.path.join(dir, 'liblapack.a'), 'unknown', 'unknown')
+      # Check BLIS/AMD-AOCL libraries
+      for lib in blislib:
+        for lapack in ['libflame.a','liblapack.a']:
+          for libdir in [dir,os.path.join(dir,'lib')]:
+            yield ('User specified installation root BLIS/AMD-AOCL', os.path.join(libdir,lib), os.path.join(libdir,lapack), 'unknown', 'unknown')
+      # NEC
+      yield ('User specified NEC lib dir', os.path.join(dir, 'lib', 'libblas_sequential.a'), os.path.join(dir, 'lib', 'liblapack.a'), 'unknown', 'unknown')
       # Search for OpenBLAS
-      yield ('User specified OpenBLAS', None, os.path.join(dir, 'libopenblas.a'),'unknown','unknown')
+      for libdir in ['lib','']:
+        if os.path.exists(os.path.join(dir,libdir)):
+          yield ('User specified OpenBLAS',None,os.path.join(dir,libdir,'libopenblas.a'),'unknown','unknown')
       # Search for atlas
       yield ('User specified ATLAS Linux installation root', [os.path.join(dir, 'libcblas.a'),os.path.join(dir, 'libf77blas.a'), os.path.join(dir, 'libatlas.a')],  [os.path.join(dir, 'liblapack.a')],'32','no')
       yield ('User specified ATLAS Linux installation root', [os.path.join(dir, 'libf77blas.a'), os.path.join(dir, 'libatlas.a')],  [os.path.join(dir, 'liblapack.a')],'32','no')
 
       yield ('User specified installation root (HPUX)', os.path.join(dir, 'libveclib.a'),  os.path.join(dir, 'liblapack.a'),'32','unknown')
-      yield ('User specified installation root (F2CBLASLAPACK)', os.path.join(dir,'libf2cblas.a'), os.path.join(dir, 'libf2clapack.a'),'32','no')
+      for libdir in ['lib64','lib','']:
+        if os.path.exists(os.path.join(dir,libdir)):
+          yield ('User specified installation root (F2CBLASLAPACK)', os.path.join(dir,libdir,'libf2cblas.a'), os.path.join(dir,libdir,'libf2clapack.a'),'32','no')
       yield ('User specified installation root(FBLASLAPACK)', os.path.join(dir, 'libfblas.a'),   os.path.join(dir, 'libflapack.a'),'32','no')
       for lib in ['','lib64']:
         yield ('User specified installation root IBM ESSL', None, os.path.join(dir, lib, 'libessl.a'),'32','unknown')
       # Search for liblapack.a and libblas.a after the implementations with more specific name to avoid
       # finding these in /usr/lib despite using -L<blaslapack-dir> while attempting to get a different library.
-      yield ('User specified installation root BLAS/LAPACK', os.path.join(dir, 'libblas.a'),    os.path.join(dir, 'liblapack.a'),'unknown','unknown')
-      raise RuntimeError('You set a value for --with-blaslapack-dir=<dir>, but '+self.argDB['with-blaslapack-dir']+' cannot be used\n')
+      for libdir in ['lib64','lib','']:
+        if os.path.exists(os.path.join(dir,libdir)):
+          yield ('User specified installation root BLAS/LAPACK',os.path.join(dir,libdir,'libblas.a'),os.path.join(dir,libdir,'liblapack.a'),'unknown','unknown')
+      if hasattr(self,'checkingMKROOTautomatically'):
+        raise RuntimeError('Unable to locate working BLAS/LAPACK libraries, even tried libraries in MKLROOT '+self.argDB['with-blaslapack-dir']+'\n')
+      else:
+        raise RuntimeError('You set a value for --with-blaslapack-dir=<dir>, but '+self.argDB['with-blaslapack-dir']+' cannot be used\n')
     if self.defaultPrecision == '__float128':
       raise RuntimeError('__float128 precision requires f2c libraries; suggest --download-f2cblaslapack\n')
 
-
     # Try compiler defaults
     yield ('Default compiler libraries', '', '','unknown','unknown')
-    yield ('Default BLIS', 'libblis.a', 'liblapack.a','unknown','unknown')
+    yield ('Default NEC', 'libblas_sequential.a', 'liblapack.a','unknown','unknown')
+    for lib in blislib:
+      for lapack in ['libflame.a','liblapack.a']:
+        yield ('Default BLIS/AMD-AOCL', lib, lapack,'unknown','unknown')
     yield ('Default compiler locations', 'libblas.a', 'liblapack.a','unknown','unknown')
     yield ('Default OpenBLAS', None, 'libopenblas.a','unknown','unknown')
     # Intel on Mac
@@ -495,12 +520,12 @@ class Configure(config.package.Package):
       self.mangling = self.argDB['known-blaslapack-mangling']
 
     if self.mangling == 'underscore':
-        self.addDefine('BLASLAPACK_UNDERSCORE', 1)
+      self.addDefine('BLASLAPACK_UNDERSCORE', 1)
     elif self.mangling == 'caps':
-        self.addDefine('BLASLAPACK_CAPS', 1)
+      self.addDefine('BLASLAPACK_CAPS', 1)
 
     if self.suffix != '':
-        self.addDefine('BLASLAPACK_SUFFIX', self.suffix)
+      self.addDefine('BLASLAPACK_SUFFIX', self.suffix)
 
     self.found = 1
     if not self.f2cblaslapack.found and not self.fblaslapack.found:
@@ -523,31 +548,6 @@ class Configure(config.package.Package):
       self.addDefine('HAVE_MKL_INTEL_ILP64',1)
     if self.argDB['with-64-bit-blas-indices'] and not self.has64bitindices:
       raise RuntimeError('You requested 64 bit integer BLAS/LAPACK using --with-64-bit-blas-indices but they are not available given your other BLAS/LAPACK options')
-
-    # check for the presence of the C interface (may be needed by external packages)
-    self.executeTest(self.checkCHeaders)
-
-  def checkCHeaders(self):
-    '''Check for cblas.h and lapacke.h'''
-    if self.has_cheaders: return
-    if self.checkInclude(self.include, ['cblas.h','lapacke.h']):
-      self.has_cheaders = 1
-      return
-
-    incl = []
-    if 'with-blaslapack-include' in self.argDB:
-      incl = self.argDB['with-blaslapack-include']
-      if not isinstance(incl, list): incl = [incl]
-    elif 'with-blaslapack-dir' in self.argDB:
-      incl = [os.path.join(self.argDB['with-blaslapack-dir'],'include')]
-    else:
-      return
-
-    linc = self.include + incl
-    if self.checkInclude(linc, ['cblas.h','lapacke.h']):
-      self.include = linc
-      self.has_cheaders = 1
-      return
 
   def checkMKL(self):
     '''Check for Intel MKL library'''
@@ -593,12 +593,23 @@ class Configure(config.package.Package):
     self.logWrite(self.libraries.restoreLog())
     return
 
-
   def checkESSL(self):
     '''Check for the IBM ESSL library'''
     self.libraries.saveLog()
     if self.libraries.check(self.dlib, 'iessl'):
+      self.essl = 1
       self.addDefine('HAVE_ESSL',1)
+
+      if 'with-blaslapack-include' in self.argDB:
+        incl = self.argDB['with-blaslapack-include']
+        if not isinstance(incl, list): incl = [incl]
+      elif 'with-blaslapack-dir' in self.argDB:
+        incl = [os.path.join(self.argDB['with-blaslapack-dir'],'include')]
+      else:
+        return
+      linc = self.include + incl
+      if self.checkInclude(linc, ['essl.h']):
+        self.include = linc
     self.logWrite(self.libraries.restoreLog())
     return
 
@@ -756,7 +767,6 @@ this warning message *****')
         self.addDefine('HAVE_64BIT_BLAS_INDICES', 1)
         self.has64bitindices = 1
         self.log.write('Checking for 64 bit blas indices: program did not return therefore assuming 64 bit blas indices\n')
-    if not self.defaultPrecision == 'single': return
     self.log.write('Checking if sdot() returns a float or a double\n')
     if 'known-sdot-returns-double' in self.argDB:
       if self.argDB['known-sdot-returns-double']:

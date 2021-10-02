@@ -114,8 +114,28 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_INTERN extern PETSC_VISIBILITY_INTERNAL
 #endif
 
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#  define PETSC_NULLPTR             nullptr
+#  define PETSC_CONSTEXPR           constexpr
+#  define PETSC_NOEXCEPT            noexcept
+#  define PETSC_NOEXCEPT_ARG(cond_) noexcept(cond_)
+#  define PETSC_CXX_DEFAULT(func_)  func_ = default
+#else
+#  define PETSC_NULLPTR             NULL
+#  define PETSC_CONSTEXPR
+#  define PETSC_NOEXCEPT
+#  define PETSC_NOEXCEPT_ARG(cond_)
+#  define PETSC_CXX_DEFAULT(func_)
+#endif
+
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX17)
+#  define PETSC_NODISCARD [[nodiscard]]
+#else
+#  define PETSC_NODISCARD
+#endif
+
 #include <petscversion.h>
-#define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://www.mcs.anl.gov/petsc/\n"
+#define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://petsc.org/\n"
 
 /* ========================================================================== */
 
@@ -386,7 +406,9 @@ M*/
 
 /* PetscPragmaSIMD - from CeedPragmaSIMD */
 
-#if defined(__INTEL_COMPILER) && !defined(_WIN32)
+#if defined(__NEC__)
+#  define PetscPragmaSIMD _Pragma("_NEC ivdep")
+#elif defined(__INTEL_COMPILER) && !defined(_WIN32)
 #  define PetscPragmaSIMD _Pragma("vector")
 #elif defined(__GNUC__) && __GNUC__ >= 5 && !defined(__PGI)
 #  define PetscPragmaSIMD _Pragma("GCC ivdep")
@@ -406,6 +428,7 @@ M*/
 
 PETSC_EXTERN const char *const PetscBools[];
 
+PETSC_EXTERN PetscBool PETSC_RUNNING_ON_VALGRIND;
 /*
     Defines elementary mathematics functions and constants.
 */
@@ -725,11 +748,11 @@ M*/
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  m1 - number of elements to allocate in 1st chunk  (may be zero)
 -  m2 - number of elements to allocate in 2nd chunk  (may be zero)
 
-   Output Parameter:
+   Output Parameters:
 +  r1 - memory allocated in first chunk
 -  r2 - memory allocated in second chunk
 
@@ -749,11 +772,11 @@ M*/
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  m1 - number of elements to allocate in 1st chunk  (may be zero)
 -  m2 - number of elements to allocate in 2nd chunk  (may be zero)
 
-   Output Parameter:
+   Output Parameters:
 +  r1 - memory allocated in first chunk
 -  r2 - memory allocated in second chunk
 
@@ -773,12 +796,12 @@ M*/
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  m1 - number of elements to allocate in 1st chunk  (may be zero)
 .  m2 - number of elements to allocate in 2nd chunk  (may be zero)
 -  m3 - number of elements to allocate in 3rd chunk  (may be zero)
 
-   Output Parameter:
+   Output Parameters:
 +  r1 - memory allocated in first chunk
 .  r2 - memory allocated in second chunk
 -  r3 - memory allocated in third chunk
@@ -799,12 +822,12 @@ M*/
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  m1 - number of elements to allocate in 1st chunk  (may be zero)
 .  m2 - number of elements to allocate in 2nd chunk  (may be zero)
 -  m3 - number of elements to allocate in 3rd chunk  (may be zero)
 
-   Output Parameter:
+   Output Parameters:
 +  r1 - memory allocated in first chunk
 .  r2 - memory allocated in second chunk
 -  r3 - memory allocated in third chunk
@@ -825,13 +848,13 @@ M*/
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  m1 - number of elements to allocate in 1st chunk  (may be zero)
 .  m2 - number of elements to allocate in 2nd chunk  (may be zero)
 .  m3 - number of elements to allocate in 3rd chunk  (may be zero)
 -  m4 - number of elements to allocate in 4th chunk  (may be zero)
 
-   Output Parameter:
+   Output Parameters:
 +  r1 - memory allocated in first chunk
 .  r2 - memory allocated in second chunk
 .  r3 - memory allocated in third chunk
@@ -2155,9 +2178,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntCast(PetscInt64 a,PetscInt *b)
 {
   PetscFunctionBegin;
 #if !defined(PETSC_USE_64BIT_INDICES)
-  if ((a) > PETSC_MAX_INT) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Integer too long for PetscInt, you may need to ./configure using --with-64-bit-indices");
+  if (a > PETSC_MAX_INT) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%D is too big for PetscInt, you may need to ./configure using --with-64-bit-indices",a); }
 #endif
-  *b =  (PetscInt)(a);
+  *b = (PetscInt)(a);
   PetscFunctionReturn(0);
 }
 
@@ -2185,11 +2208,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscBLASIntCast(PetscInt a,PetscBLASInt *b)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES) && !defined(PETSC_HAVE_64BIT_BLAS_INDICES)
-  *b = 0;
-  if ((a) > PETSC_BLAS_INT_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Array is too long for BLAS/LAPACK, which is restricted to 32 bit integers.  Either you have an invalidly large integer error in your code or you must ./configure PETSc with -with-64-bit-blas-indices for the case you are running");
+  if (a > PETSC_BLAS_INT_MAX) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%D is too big for BLAS/LAPACK, which is restricted to 32 bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with -with-64-bit-blas-indices for the case you are running",a); }
 #endif
-  if (a < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to BLAS/LAPACK routine");
-  *b =  (PetscBLASInt)(a);
+  if (a < 0) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to BLAS/LAPACK routine"); }
+  *b = (PetscBLASInt)(a);
   PetscFunctionReturn(0);
 }
 
@@ -2215,11 +2237,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCuBLASIntCast(PetscInt a,PetscBLASInt *b
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
-  *b = 0;
-  if ((a) > PETSC_CUBLAS_INT_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Array is too long for cuBLAS, which is restricted to 32 bit integers.");
+  if (a > PETSC_CUBLAS_INT_MAX) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%D is too big for cuBLAS, which is restricted to 32 bit integers.",a); }
 #endif
-  if (a < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to cuBLAS routine");
-  *b =  (PetscCuBLASInt)(a);
+  if (a < 0) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to cuBLAS routine"); }
+  *b = (PetscCuBLASInt)(a);
   PetscFunctionReturn(0);
 }
 
@@ -2245,10 +2266,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscMPIIntCast(PetscInt a,PetscMPIInt *b)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
-  *b = 0;
-  if ((a) > PETSC_MPI_INT_MAX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Array too long for MPI, which is restricted to 32 bit integers");
+  if (a > PETSC_MPI_INT_MAX) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%D is too big for MPI buffer length. We currently only support 32 bit integers",a); }
 #endif
-  *b =  (PetscMPIInt)(a);
+  *b = (PetscMPIInt)(a);
   PetscFunctionReturn(0);
 }
 
@@ -2260,7 +2280,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscMPIIntCast(PetscInt a,PetscMPIInt *b)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +     a - the PetscReal value
 -     b - the second value
 
@@ -2297,7 +2317,7 @@ PETSC_STATIC_INLINE PetscInt PetscRealIntMultTruncate(PetscReal a,PetscInt b)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +     a - the PetscInt value
 -     b - the second value
 
@@ -2333,7 +2353,7 @@ PETSC_STATIC_INLINE PetscInt PetscIntMultTruncate(PetscInt a,PetscInt b)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +     a - the PetscInt value
 -     b - the second value
 
@@ -2367,11 +2387,11 @@ PETSC_STATIC_INLINE PetscInt PetscIntSumTruncate(PetscInt a,PetscInt b)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +     a - the PetscInt value
 -     b - the second value
 
-   Output Parameter:ma
+   Output Parameter:
 .     result - the result as a PetscInt value, or NULL if you do not want the result, you just want to check if it overflows
 
    Use PetscInt64Mult() to compute the product of two 32 bit PetscInt and store in a PetscInt64
@@ -2404,11 +2424,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntMultError(PetscInt a,PetscInt b,Petsc
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +     a - the PetscInt value
 -     b - the second value
 
-   Output Parameter:ma
+   Output Parameter:
 .     c - the result as a PetscInt value,  or NULL if you do not want the result, you just want to check if it overflows
 
    Use PetscInt64Mult() to compute the product of two 32 bit PetscInt and store in a PetscInt64
@@ -2830,6 +2850,11 @@ M*/
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
 PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_Info,MPI_Comm,void*,MPI_Win*);
 PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win,PetscMPIInt,MPI_Aint*,PetscMPIInt*,void*);
+#endif
+
+/* this is a vile hack */
+#if defined(PETSC_HAVE_NECMPI)
+#define MPI_Type_free(a) (*(a) = MPI_DATATYPE_NULL,0);
 #endif
 
 /*

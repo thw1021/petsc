@@ -434,6 +434,13 @@ cdef class DMPlex(DM):
         CHKERR( DMGetLabel(self.dm, cval, &clbl) )
         CHKERR( DMPlexMarkBoundaryFaces(self.dm, ival, clbl) )
 
+    def labelComplete(self, DMLabel label):
+        CHKERR( DMPlexLabelComplete(self.dm, label.dmlabel) )
+
+    def labelCohesiveComplete(self, DMLabel label, DMLabel bdlabel, flip, DMPlex subdm):
+        cdef PetscBool flg = flip
+        CHKERR( DMPlexLabelCohesiveComplete(self.dm, label.dmlabel, bdlabel.dmlabel, flg, subdm.dm) )
+
     def setAdjacencyUseAnchors(self, useAnchors=True):
         cdef PetscBool flag = useAnchors
         CHKERR( DMPlexSetAdjacencyUseAnchors(self.dm, flag) )
@@ -653,6 +660,26 @@ cdef class DMPlex(DM):
         PetscCLEAR(self.obj); self.dm = dmGhosted
         return toInt(numGhostCells)
 
+    # View
+
+    def topologyView(self, Viewer viewer):
+        CHKERR( DMPlexTopologyView(self.dm, viewer.vwr))
+
+    def coordinatesView(self, Viewer viewer):
+        CHKERR( DMPlexCoordinatesView(self.dm, viewer.vwr))
+
+    def labelsView(self, Viewer viewer):
+        CHKERR( DMPlexLabelsView(self.dm, viewer.vwr))
+
+    def sectionView(self, Viewer viewer, DM sectiondm):
+        CHKERR( DMPlexSectionView(self.dm, viewer.vwr, sectiondm.dm))
+
+    def globalVectorView(self, Viewer viewer, DM sectiondm, Vec vec):
+        CHKERR( DMPlexGlobalVectorView(self.dm, viewer.vwr, sectiondm.dm, vec.vec))
+
+    def localVectorView(self, Viewer viewer, DM sectiondm, Vec vec):
+        CHKERR( DMPlexLocalVectorView(self.dm, viewer.vwr, sectiondm.dm, vec.vec))
+
     # Load
 
     def topologyLoad(self, Viewer viewer):
@@ -665,3 +692,15 @@ cdef class DMPlex(DM):
 
     def labelsLoad(self, Viewer viewer):
         CHKERR( DMPlexLabelsLoad(self.dm, viewer.vwr))
+
+    def sectionLoad(self, Viewer viewer, DM sectiondm, SF sfxc):
+        cdef SF gsf = SF()
+        cdef SF lsf = SF()
+        CHKERR( DMPlexSectionLoad(self.dm, viewer.vwr, sectiondm.dm, sfxc.sf, &gsf.sf, &lsf.sf))
+        return gsf, lsf
+
+    def globalVectorLoad(self, Viewer viewer, DM sectiondm, SF sf, Vec vec):
+        CHKERR( DMPlexGlobalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
+
+    def localVectorLoad(self, Viewer viewer, DM sectiondm, SF sf, Vec vec):
+        CHKERR( DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))

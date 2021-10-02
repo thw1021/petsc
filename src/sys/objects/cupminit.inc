@@ -17,15 +17,11 @@ static PetscErrorCode PetscCUPMValidate(void)
 
   PetscFunctionBegin;
   if (use_gpu_aware_mpi) {
-#if defined(PETSC_HAVE_OMPI_MAJOR_VERSION) && defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-    /* Trust OpenMPI's compile time gpu query interface */
-    mpi_gpu_awareness = PETSC_TRUE;
-#else
-    /* For other MPI implementations without gpu query API, we do a GPU MPI call to see if it segfaults.
-      Note that Spectrum MPI sets OMPI_MAJOR_VERSION and is CUDA-aware, but does not have MPIX_CUDA_AWARE_SUPPORT.
+    /* For OpenMPI, we could do a compile time check with "defined(PETSC_HAVE_OMPI_MAJOR_VERSION) && defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT"
+       to see if it is CUDA-aware. However, recent versions of IBM Spectrum MPI (e.g., 10.3.1) on Summit meet above conditions, but one has to use
+       jsrun --smpiargs=-gpu to really enable GPU-aware MPI. So we do the check at runtime with a code that works only with GPU-aware MPI.
     */
     mpi_gpu_awareness = PetscMPICUPMAwarenessCheck();
-#endif
     if (!mpi_gpu_awareness) {
       (*PetscErrorPrintf)("PETSc is configured with GPU support, but your MPI is not GPU-aware. For better performance, please use a GPU-aware MPI.\n");
       (*PetscErrorPrintf)("If you do not care, add option -use_gpu_aware_mpi 0. To not see the message again, add the option to your .petscrc, OR add it to the env var PETSC_OPTIONS.\n");
@@ -134,7 +130,7 @@ PetscErrorCode PetscCUPMInitializeCheck(void)
 
      Logically collective
 
-  Input Parameter:
+  Input Parameters:
 + comm   - the MPI communicator that will utilize the devices
 - device - the device assigned to current MPI process. Special values like PETSC_DECIDE or PETSC_DEFAULT have special meanings (see details below)
 
@@ -253,7 +249,7 @@ static PetscErrorCode PetscCUPMInitializeAndView(PetscBool initDevice,PetscInt d
   PetscFunctionBegin;
   PetscCUPMSynchronize = logView;
   if (initDevice) {ierr = PetscCUPMInitialize(PETSC_COMM_WORLD,device);CHKERRQ(ierr);}
-  else if (logView) { /* With -log_view, we want to do costly gpu runtime initialization early so that not to distort the timing later. */
+  else if (logView || devView) { /* With -{log,cuda,hip}_view, we want to do costly gpu runtime initialization early so that not to distort the timing later. */
     devCount = 0;
     cerr = cupmGetDeviceCount(&devCount);
     cupmGetLastError(); /* Reset the last error */
@@ -273,8 +269,9 @@ static PetscErrorCode PetscCUPMInitializeAndView(PetscBool initDevice,PetscInt d
       }
       ierr = PetscCUPMInitialize(PETSC_COMM_WORLD,(PetscInt)devId);CHKERRQ(ierr);
      #if defined(PETSC_HAVE_KOKKOS)
-      /* With -log_view, we always do eager init */
-      ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
+      if (logView) { /* With -log_view, we always do eager init */
+        ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
+      }
      #endif
     }
   }
@@ -282,9 +279,11 @@ static PetscErrorCode PetscCUPMInitializeAndView(PetscBool initDevice,PetscInt d
   if (devView) {
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
     cerr = cupmGetDeviceCount(&devCount);CHKERRCUPM(cerr);
-    for (devId = 0; devId < devCount; ++devId) {
-      cerr = cupmGetDeviceProperties(&prop,devId);CHKERRCUPM(cerr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "device %d: %s\n", devId, prop.name);CHKERRQ(ierr);
+    if (rank == 0) {
+      for (devId = 0; devId < devCount; ++devId) {
+        cerr = cupmGetDeviceProperties(&prop,devId);CHKERRCUPM(cerr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD, "device %d: %s\n", devId, prop.name);CHKERRQ(ierr);
+      }
     }
     cerr = cupmGetDevice(&devId);CHKERRCUPM(cerr);
     ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] Using device %d.\n",rank,devId);CHKERRQ(ierr);

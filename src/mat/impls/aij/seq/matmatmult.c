@@ -1227,7 +1227,7 @@ PetscErrorCode MatMatTransposeMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal f
   ierr = MatProductSetAlgorithm(C,alg);CHKERRQ(ierr); /* resume original algorithm for ABt product */
   ierr = PetscFree(alg);CHKERRQ(ierr);
 
-  /* create a supporting struct for reuse intermidiate dense matrices with matcoloring */
+  /* create a supporting struct for reuse intermediate dense matrices with matcoloring */
   ierr = PetscNew(&abt);CHKERRQ(ierr);
 
   product->data    = abt;
@@ -2101,11 +2101,11 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJ_PtAP(Mat C)
   PetscBool      flg = PETSC_FALSE;
   PetscInt       alg = 0; /* default algorithm -- alg=1 should be default!!! */
 #if !defined(PETSC_HAVE_HYPRE)
-  const char      *algTypes[2] = {"scalable","rap"};
-  PetscInt        nalg = 2;
+  const char     *algTypes[2] = {"scalable","rap"};
+  PetscInt       nalg = 2;
 #else
-  const char      *algTypes[3] = {"scalable","rap","hypre"};
-  PetscInt        nalg = 3;
+  const char     *algTypes[3] = {"scalable","rap","hypre"};
+  PetscInt       nalg = 3;
 #endif
 
   PetscFunctionBegin;

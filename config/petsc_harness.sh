@@ -191,7 +191,8 @@ function petsc_testrun() {
   cmd_res=$?
   #  If it is a lack of GPU resources or MPI failure (Intel) then try once more
   #  See: src/sys/error/err.c
-  if [ $cmd_res -eq 96 -o $cmd_res -eq 97 -o $cmd_res -eq 98 ]; then
+  #  Error #134 added to handle problems with the Radeon card for hip testing
+  if [ $cmd_res -eq 96 -o $cmd_res -eq 97 -o $cmd_res -eq 98 -o $cmd_res -eq 134 ]; then
     printf "# retrying ${tlabel}\n" | tee -a ${testlogerrfile}
     sleep 3
     eval "{ time -p $cmd ; } 2>> timing.out"
@@ -294,7 +295,7 @@ function petsc_mpiexec_valgrind() {
   npopt=$1;shift
   np=$1;shift
 
-  valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --suppressions=$petsc_bindir/maint/petsc-val.supp --error-exitcode=10"
+  valgrind="valgrind -q --tool=memcheck --leak-check=yes --num-callers=20 --track-origins=yes --keep-debuginfo=yes --suppressions=$PETSC_DIR/share/petsc/valgrind/petsc-val.supp --error-exitcode=10"
 
   if $printcmd; then
      echo $_mpiexec $npopt $np $valgrind "$@"

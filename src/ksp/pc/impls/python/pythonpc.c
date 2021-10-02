@@ -1,11 +1,11 @@
 #include <petsc/private/pcimpl.h>          /*I "petscpc.h" I*/
 
 /*@C
-   PCPythonSetType - Initalize a PC object implemented in Python.
+   PCPythonSetType - Initialize a PC object implemented in Python.
 
    Collective on PC
 
-   Input Parameter:
+   Input Parameters:
 +  pc - the preconditioner (PC) context.
 -  pyname - full dotted Python name [package].module[.{class|function}]
 

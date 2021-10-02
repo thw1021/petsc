@@ -881,7 +881,7 @@ static PetscErrorCode MatNorm_ScaLAPACK(Mat A,NormType type,PetscReal *nrm)
   PetscScalar    *work=NULL,dummy;
 
   PetscFunctionBegin;
-  switch (type){
+  switch (type) {
     case NORM_1:
       ntype = "1";
       lwork = PetscMax(a->locr,a->locc);
@@ -1643,7 +1643,7 @@ static PetscErrorCode MatScaLAPACKSetBlockSizes_ScaLAPACK(Mat A,PetscInt mb,Pets
 
    Logically Collective on A
 
-   Input Parameter:
+   Input Parameters:
 +  A  - a MATSCALAPACK matrix
 .  mb - the row block size
 -  nb - the column block size

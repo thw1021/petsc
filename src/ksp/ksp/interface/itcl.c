@@ -284,7 +284,7 @@ PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char na
 
    Collective on ksp
 
-   Input Parameters:
+   Input Parameter:
 .  ksp - the Krylov space context
 
    Options Database Keys:
@@ -514,8 +514,8 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
   flg = PETSC_FALSE;
   if (ksp->pc) {
     ierr = PetscObjectTypeCompare((PetscObject)ksp->pc,PCKSP,&flg);CHKERRQ(ierr);
-    if (!flg) ierr = PetscObjectTypeCompare((PetscObject)ksp->pc,PCBJACOBI,&flg);CHKERRQ(ierr);
-    if (!flg) ierr = PetscObjectTypeCompare((PetscObject)ksp->pc,PCDEFLATION,&flg);CHKERRQ(ierr);
+    if (!flg) {ierr = PetscObjectTypeCompare((PetscObject)ksp->pc,PCBJACOBI,&flg);CHKERRQ(ierr);}
+    if (!flg) {ierr = PetscObjectTypeCompare((PetscObject)ksp->pc,PCDEFLATION,&flg);CHKERRQ(ierr);}
   }
 
   if (flg) {

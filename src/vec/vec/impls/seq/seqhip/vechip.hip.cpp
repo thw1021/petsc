@@ -249,7 +249,7 @@ PetscErrorCode VecCreate_SeqHIP(Vec V)
 
    Collective
 
-   Input Parameter:
+   Input Parameters:
 +  comm - the communicator, should be PETSC_COMM_SELF
 .  bs - the block size
 .  n - the vector length
@@ -293,7 +293,7 @@ PetscErrorCode  VecCreateSeqHIPWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,co
 
    Collective
 
-   Input Parameter:
+   Input Parameters:
 +  comm - the communicator, should be PETSC_COMM_SELF
 .  bs - the block size
 .  n - the vector length
@@ -447,6 +447,8 @@ PetscErrorCode VecBindToCPU_SeqHIP(Vec V,PetscBool pin)
     V->ops->max                    = VecMax_Seq;
     V->ops->min                    = VecMin_Seq;
     V->ops->reciprocal             = VecReciprocal_Default;
+    V->ops->sum                    = NULL;
+    V->ops->shift                  = NULL;
   } else {
     V->ops->dot                    = VecDot_SeqHIP;
     V->ops->norm                   = VecNorm_SeqHIP;
@@ -478,8 +480,8 @@ PetscErrorCode VecBindToCPU_SeqHIP(Vec V,PetscBool pin)
     V->ops->conjugate              = VecConjugate_SeqHIP;
     V->ops->getlocalvector         = VecGetLocalVector_SeqHIP;
     V->ops->restorelocalvector     = VecRestoreLocalVector_SeqHIP;
-    V->ops->getlocalvectorread     = VecGetLocalVector_SeqHIP;
-    V->ops->restorelocalvectorread = VecRestoreLocalVector_SeqHIP;
+    V->ops->getlocalvectorread     = VecGetLocalVectorRead_SeqHIP;
+    V->ops->restorelocalvectorread = VecRestoreLocalVectorRead_SeqHIP;
     V->ops->getarraywrite          = VecGetArrayWrite_SeqHIP;
     V->ops->getarray               = VecGetArray_SeqHIP;
     V->ops->restorearray           = VecRestoreArray_SeqHIP;
@@ -488,6 +490,8 @@ PetscErrorCode VecBindToCPU_SeqHIP(Vec V,PetscBool pin)
     V->ops->max                    = VecMax_SeqHIP;
     V->ops->min                    = VecMin_SeqHIP;
     V->ops->reciprocal             = VecReciprocal_SeqHIP;
+    V->ops->sum                    = VecSum_SeqHIP;
+    V->ops->shift                  = VecShift_SeqHIP;
   }
   PetscFunctionReturn(0);
 }

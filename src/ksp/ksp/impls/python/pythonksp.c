@@ -1,11 +1,11 @@
 #include <petsc/private/kspimpl.h>          /*I "petscksp.h" I*/
 
 /*@C
-   KSPPythonSetType - Initalize a KSP object implemented in Python.
+   KSPPythonSetType - Initialize a KSP object implemented in Python.
 
    Collective on ksp
 
-   Input Parameter:
+   Input Parameters:
 +  ksp - the linear solver (KSP) context.
 -  pyname - full dotted Python name [package].module[.{class|function}]
 

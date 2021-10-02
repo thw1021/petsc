@@ -116,7 +116,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
       ierr = DMPlexRestoreTransitiveClosure(boundary, f, PETSC_TRUE, &numPoints, &points);CHKERRQ(ierr);
     }
   }
-  if (!rank) {
+  if (rank == 0) {
     TetGenOpts t;
 
     ierr        = TetGenOptsInitialize(&t);CHKERRQ(ierr);
@@ -257,8 +257,8 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_CTetgen(DM boundary, PetscBool interp
 
             ierr = DMLabelSetValue(bodyLabel, c, cval);CHKERRQ(ierr);
             ierr = DMPlexGetTransitiveClosure(*dm, c, PETSC_TRUE, &Ncl, &closure);CHKERRQ(ierr);
-            for (cl = 0; cl < Ncl; cl += 2) {
-              const PetscInt p = closure[cl];
+            for (cl = 0; cl < Ncl; ++cl) {
+              const PetscInt p = closure[cl*2];
 
               if (p >= eStart && p < eEnd) {
                 ierr = DMLabelGetValue(bodyLabel, p, &eVal);CHKERRQ(ierr);
@@ -399,7 +399,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_CTetgen(DM dm, PetscReal *maxVolumes, D
     }
   }
 
-  if (!rank) {
+  if (rank == 0) {
     TetGenOpts t;
 
     ierr = TetGenOptsInitialize(&t);CHKERRQ(ierr);

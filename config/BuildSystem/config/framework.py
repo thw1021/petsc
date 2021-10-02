@@ -51,7 +51,7 @@ import os
 import re
 import sys
 import platform
-# workarround for python2.2 which does not have pathsep
+# workaround for python2.2 which does not have pathsep
 if not hasattr(os.path,'pathsep'): os.path.pathsep=':'
 
 import pickle
@@ -84,6 +84,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.makeMacroHeader = ''
     self.makeRuleHeader  = ''
     self.cHeader         = 'matt_fix.h'
+    self.enablepoison    = False
+    self.poisonheader    = 'matt_poison.h'
     self.headerPrefix    = ''
     self.substPrefix     = ''
     self.pkgheader       = ''
@@ -517,6 +519,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = output.splitlines()
       if self.argDB['ignoreWarnings']:
         lines = [s for s in lines if not self.warningRE.search(s)]
+      #Intel
+      lines = [s for s in lines if s.find(": command line warning #10121: overriding") < 0]
       # PGI: Ignore warning about temporary license
       lines = [s for s in lines if s.find('license.dat') < 0]
       # Cray XT3
@@ -543,12 +547,15 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('Creating library ') < 0]
       lines = [s for s in lines if s.find('performing full link') < 0]
       lines = [s for s in lines if s.find('linking object as if no debug info') < 0]
+      lines = [s for s in lines if s.find('skipping incompatible') < 0]
       # Multiple gfortran libraries present
       lines = [s for s in lines if s.find('may conflict with libgfortran') < 0]
       # MacOS libraries built for different MacOS versions
       lines = [s for s in lines if s.find(' was built for newer macOS version') < 0]
       lines = [s for s in lines if s.find(' was built for newer OSX version') < 0]
       lines = [s for s in lines if s.find(' stack subq instruction is too different from dwarf stack size') < 0]
+      # Nvidia linker
+      lines = [s for s in lines if s.find('nvhpc.ld contains output sections') < 0]
       if lines: output = '\n'.join(lines)
       else: output = ''
       self.log.write("Linker output after filtering:\n"+output+":\n")
@@ -706,9 +713,9 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
   def outputPoison(self, f, name):
     '''Outputs a poison version of name to prevent accidental usage, see outputHeader'''
-    if (name.startswith('PETSC_HAVE_LIB') and not name in ['PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED']) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
-    if name.startswith('PETSC_USE_') or name.startswith('PETSC_HAVE_') or name.startswith('PETSC_SKIP_'): 
-        f.write('#pragma GCC poison PETSC_%s\n' % name)
+    if (name.startswith('PETSC_HAVE_LIB') and not name in {'PETSC_HAVE_LIBPNG','PETSC_HAVE_LIBJPEG','PETSC_HAVE_LIBCEED'}) or (name.startswith('PETSC_HAVE_') and name.endswith('LIB')): return
+    if name.startswith(('PETSC_USE_','PETSC_HAVE_','PETSC_SKIP_')):
+      f.write('#pragma GCC poison PETSC_%s\n' % name)
 
   def outputMakeMacro(self, f, name, value):
     f.write(name+' = '+str(value)+'\n')
@@ -902,20 +909,19 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if dir and not os.path.exists(dir):
         os.makedirs(dir)
       if self.file_create_pause: time.sleep(1)
-      f2 = open(name[0:-2]+'_poison.h', 'w')
-      self.pushLanguage('C')
-      if self.checkCompile('#pragma GCC poison TEST'):
-        self.popLanguage()
-        if hasattr(self.compilers, 'CXX'):
-          self.pushLanguage('C++')
-          if self.checkCompile('#pragma GCC poison TEST'):
-            self.outputPoisons(defineDict, f2)
-          self.popLanguage()
+      with open(self.poisonheader,'w') as fpoison:
+        if self.file_create_pause: time.sleep(1)
+        if self.enablepoison:
+          # it is safe to write the poison file
+          self.outputPoisons(defineDict,fpoison)
         else:
-          self.outputPoisons(defineDict, f2)
-      else:
-        self.popLanguage()
-      f2.close()
+          # at least 1 of the languages/compilers didn't like poison
+          poisonFileName = os.path.basename(self.poisonheader,)
+          poisonGuard = 'INCLUDED_'+poisonFileName.upper().replace('.', '_')
+          lines = [''.join(['#if !defined(',poisonGuard,')\n']),
+                   ''.join(['#define ',poisonGuard,'\n']),
+                   '#endif\n']
+          fpoison.writelines(lines)
     self.outputDefines(defineDict, f,petscconf)
     if hasattr(self, 'headerBottom'):
       f.write(str(self.headerBottom)+'\n')
@@ -1257,9 +1263,21 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     import graph
 
     ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
+    foundSetCompilers = False
+    foundCompilers    = False
     for child in ndepGraph:
-      if hasattr(child,'setCompilers'): setCompilers = child.setCompilers
+      if hasattr(child,'setCompilers') and not foundSetCompilers:
+        setCompilers = child.setCompilers
+        foundSetCompilers = True
+      elif hasattr(child,'compilers') and not foundCompilers:
+        compilers      = child.compilers
+        foundCompilers = True
+      if foundCompilers and foundSetCompilers: break
 
+    minCxx,maxCxx = compilers.cxxDialectRange
+    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange))
+    minCxxVersionBlameList = {}
+    maxCxxVersionBlameList = {}
     ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
     for child in ndepGraph:
       if (self.argDB['with-batch'] and
@@ -1285,7 +1303,22 @@ class Framework(config.base.Configure, script.LanguageProcessor):
           if 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]: found = 1
           if 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']: found = 1
           if 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']: found = 1
-          if not found:
+          if found:
+            if child.minCxxVersion > minCxx:
+              minCxx = child.minCxxVersion
+              self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
+              try:
+                minCxxVersionBlameList[minCxx].add([child.name])
+              except KeyError:
+                minCxxVersionBlameList[minCxx] = set([child.name])
+            if child.maxCxxVersion < maxCxx:
+              maxCxx = child.maxCxxVersion
+              self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
+              try:
+                maxCxxVersionBlameList[maxCxx].add([child.name])
+              except KeyError:
+                maxCxxVersionBlameList[maxCxx] = set([child.name])
+          else:
             if dep.download: emsg = '--download-'+dep.package+' or '
             else: emsg = ''
             msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
@@ -1293,6 +1326,14 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         if child.cxx and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
         if child.fc and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
 
+    if maxCxx < minCxx:
+      # low water mark
+      loPack = ', '.join(minCxxVersionBlameList[minCxx])
+      # high water mark
+      hiPack = ', '.join(maxCxxVersionBlameList[maxCxx])
+      raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPacks} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
+    compilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
+    self.logPrint('serialEvaluation: new cxxDialectRanges {rng}'.format(rng=(minCxx,maxCxx)))
     depGraph = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()

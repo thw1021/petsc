@@ -1,12 +1,22 @@
-=============================
-PETSc |version| Documentation
-=============================
+===============
+PETSc |version|
+===============
+PETSc, the Portable, Extensible Toolkit for Scientific Computation,
+pronounced PET-see (`/ˈpɛt-siː/ <https://en.wikipedia.org/wiki/Help:IPA/English#Key>`__), is a suite of
+data structures and routines for the scalable (parallel) solution of scientific
+applications modeled by partial differential equations. It supports MPI, and GPUs through
+CUDA, HIP or OpenCL, as well as hybrid MPI-GPU parallelism; it also supports the NEC-SX Tsubasa Vector Engine. PETSc (sometimes called PETSc/TAO)
+also contains the TAO, the Toolkit for Advanced Optimization, software library.
 
+PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
+
+News
+====
 .. admonition:: News: New Book on PETSc
 
   **PETSc for Partial Differential Equations: Numerical Solutions in C and Python**, by Ed Bueler, is available.
 
-    - `Physical book from SIAM Press <https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137>`__
+    - `Book from SIAM Press <https://my.siam.org/Store/Product/viewproduct/?ProductId=32850137>`__
     - `Google Play E-book <https://play.google.com/store/books/details/Ed_Bueler_PETSc_for_Partial_Differential_Equations?id=tgMHEAAAQBAJ>`__
 
 .. admonition:: News: New paper on PETSc communication System
@@ -21,15 +31,7 @@ PETSc |version| Documentation
 
   Source code for `petsc4py <https://www.mcs.anl.gov/petsc/petsc4py-current/docs/>`__, developed by Lisandro Dalcin, is now distributed with the PETSc source and supported by the PETSc team and mailing lists.
 
-PETSc, pronounced PET-see (`/ˈpɛt-siː/ <https://en.wikipedia.org/wiki/Help:IPA/English#Key>`__), is a suite of
-data structures and routines for the scalable (parallel) solution of scientific
-applications modeled by partial differential equations. It supports MPI, and GPUs through
-CUDA or OpenCL, as well as hybrid MPI-GPU parallelism. PETSc (sometimes called PETSc/TAO)
-also contains the TAO optimization software library.
 
-PETSc is developed as :ref:`open-source <doc_license>`, requests and contributions are welcome.
-
-===========
 Main Topics
 ===========
 
@@ -37,15 +39,15 @@ Main Topics
    :maxdepth: 1
 
    Overview <overview/index>
-   Installing <install/index>
+   Download <download/index>
+   Installation <install/index>
    FAQ <faq/index>
-   Documentation <documentation/index>
+   Documentation <docs/index>
    Tutorials <tutorials/guide_to_examples>
    Community <community/index>
    Developers <developers/index>
    Misc. <miscellaneous/index>
 
-==========================================
 Related toolkits/libraries that use PETSc
 ==========================================
 
@@ -113,7 +115,6 @@ Related toolkits/libraries that use PETSc
 
 .. _doc_index_citing_petsc:
 
-============
 Citing PETSc
 ============
 
@@ -122,28 +123,32 @@ When citing PETSc in a publication please cite the following:
 .. code-block:: none
 
    @Misc{petsc-web-page,
-      Author = "Satish Balay and Shrirang Abhyankar and Mark~F. Adams and Jed Brown
-      and Peter Brune and Kris Buschelman and Lisandro Dalcin and Alp Dener and Victor Eijkhout
-      and William~D. Gropp and Dinesh Kaushik and Matthew~G. Knepley and Dave~A. May
-      and Lois Curfman McInnes and Richard Tran Mills and Todd Munson and Karl Rupp
-      and Patrick Sanan and Barry~F. Smith and Stefano Zampini and Hong Zhang and Hong Zhang",
+      Author = "Satish Balay and Shrirang Abhyankar and Mark~F. Adams and Steven Benson and Jed Brown
+        and Peter Brune and Kris Buschelman and Emil~M. Constantinescu and Lisandro Dalcin and Alp Dener 
+        and Victor Eijkhout and William~D. Gropp and V\'{a}clav Hapla and Tobin Isaac and Pierre Jolivet 
+        and Dmitry Karpeev and Dinesh Kaushik and Matthew~G. Knepley and Fande Kong and Scott Kruger 
+        and Dave~A. May and Lois Curfman McInnes and Richard Tran Mills and Lawrence Mitchell and Todd Munson 
+        and Jose~E. Roman and Karl Rupp and Patrick Sanan and Jason Sarich and Barry~F. Smith 
+        and Stefano Zampini and Hong Zhang and Hong Zhang and Junchao Zhang",
       Title  = "{PETS}c {W}eb page",
-      Note   = "https://www.mcs.anl.gov/petsc",
+      Note   = "https://petsc.org/",
       Year   = "2021"}
 
    @TechReport{petsc-user-ref,
-      Author = "Satish Balay and Shrirang Abhyankar and Mark~F. Adams and Jed Brown
-      and Peter Brune and Kris Buschelman and Lisandro Dalcin and Alp Dener and Victor Eijkhout
-      and William~D. Gropp and Dinesh Kaushik and Matthew~G. Knepley and Dave~A. May
-      and Lois Curfman McInnes and Richard Tran Mills and Todd Munson and Karl Rupp
-      and Patrick Sanan and Barry~F. Smith and Stefano Zampini and Hong Zhang and Hong Zhang",
-      Title       = "{PETS}c Users Manual",
-      Number      = "ANL-95/11 - Revision 3.15",
+      Author = "Satish Balay and Shrirang Abhyankar and Mark~F. Adams and Steven Benson and Jed Brown
+        and Peter Brune and Kris Buschelman and Emil Constantinescu and Lisandro Dalcin and Alp Dener 
+        and Victor Eijkhout and William~D. Gropp and V\'{a}clav Hapla and Tobin Isaac and Pierre Jolivet 
+        and Dmitry Karpeev and Dinesh Kaushik and Matthew~G. Knepley and Fande Kong and Scott Kruger 
+        and Dave~A. May and Lois Curfman McInnes and Richard Tran Mills and Lawrence Mitchell and Todd Munson 
+        and Jose~E. Roman and Karl Rupp and Patrick Sanan and Jason Sarich and Barry~F. Smith 
+        and Stefano Zampini and Hong Zhang and Hong Zhang and Junchao Zhang",
+      Title       = "{PETSc/TAO} Users Manual",
+      Number      = "ANL-21/39 - Revision 3.16",
       Institution = "Argonne National Laboratory",
       Year        = "2021"}
 
    @InProceedings{petsc-efficient,
-      Author    = "Satish Balay and William D. Gropp and Lois C. McInnes and Barry F. Smith",
+      Author    = "Satish Balay and William D. Gropp and Lois Curfman McInnes and Barry F. Smith",
       Title     = "Efficient Management of Parallelism in Object Oriented
                    Numerical Software Libraries",
       Booktitle = "Modern Software Tools in Scientific Computing",
@@ -158,7 +163,7 @@ If you use the TS component of PETSc please cite the following:
 
    @article{abhyankar2018petsc,
      title={PETSc/TS: A Modern Scalable ODE/DAE Solver Library},
-     author={Abhyankar, Shrirang and Brown, Jed and Constantinescu, Emil M and Ghosh, Debojyoti and Smith, Barry F and Zhang, Hong},
+     author={Abhyankar, Shrirang and Brown, Jed and Constantinescu, Emil M. and Ghosh, Debojyoti and Smith, Barry F. and Zhang, Hong},
      journal={arXiv preprint arXiv:1806.01437},
      year={2018}
    }

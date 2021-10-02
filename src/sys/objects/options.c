@@ -166,6 +166,7 @@ PetscErrorCode PetscOptionsDestroy(PetscOptions *options)
 {
   PetscErrorCode ierr;
 
+  PetscFunctionBegin;
   if (!*options) return 0;
   if ((*options)->previous) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"You are destroying an option that has been used with PetscOptionsPush() but does not have a corresponding PetscOptionsPop()");
   ierr = PetscOptionsClear(*options);if (ierr) return ierr;
@@ -302,7 +303,7 @@ PetscErrorCode PetscOptionsValidKey(const char key[],PetscBool *valid)
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  options - options object
 -  in_str - string that contains options separated by blanks
 
@@ -407,8 +408,8 @@ static PetscErrorCode PetscOptionsFilename(MPI_Comm comm,const char file[],char 
   char           fname[PETSC_MAX_PATH_LEN+8],path[PETSC_MAX_PATH_LEN+8],*tail;
   PetscErrorCode ierr;
 
-  *yaml = PETSC_FALSE;
   PetscFunctionBegin;
+  *yaml = PETSC_FALSE;
   ierr = PetscStrreplace(comm,file,fname,sizeof(fname));CHKERRQ(ierr);
   ierr = PetscFixFilename(fname,path);CHKERRQ(ierr);
   ierr = PetscStrendswith(path,":yaml",yaml);CHKERRQ(ierr);
@@ -424,7 +425,7 @@ static PetscErrorCode PetscOptionsFilename(MPI_Comm comm,const char file[],char 
   if (!*yaml) { /* check file contents */
     PetscMPIInt rank;
     ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       FILE *fh = fopen(filename,"r");
       if (fh) {
         char buf[6] = "";
@@ -456,10 +457,9 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm,PetscOptions opt
   PetscBool      isdir,alias=PETSC_FALSE,valid;
 
   PetscFunctionBegin;
-
   ierr = PetscMemzero(tokens,sizeof(tokens));CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     char fpath[PETSC_MAX_PATH_LEN];
     char fname[PETSC_MAX_PATH_LEN];
 
@@ -567,7 +567,7 @@ destroy:
   counts[0] = acnt;
   counts[1] = cnt;
   err = MPI_Bcast(counts,2,MPI_INT,0,comm);
-  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in first MPI collective call, could be caused by using an incorrect mpiexec or a network problem, it can be caused by having VPN running: see https://www.mcs.anl.gov/petsc/documentation/faq.html");
+  if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in first MPI collective call, could be caused by using an incorrect mpiexec or a network problem, it can be caused by having VPN running: see https://petsc.org/release/faq/");
   acnt = counts[0];
   cnt = counts[1];
   if (rank) {
@@ -602,7 +602,7 @@ destroy:
 
      Collective
 
-  Input Parameter:
+  Input Parameters:
 +   comm - the processes that will share the options (usually PETSC_COMM_WORLD)
 .   options - options database, use NULL for default global database
 .   file - name of file,
@@ -651,7 +651,7 @@ PetscErrorCode PetscOptionsInsertFile(MPI_Comm comm,PetscOptions options,const c
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  options - options object
 .  argc - the array lenght
 -  args - the string array
@@ -743,7 +743,7 @@ static PetscErrorCode PetscOptionsProcessPrecedentFlags(PetscOptions options,int
     ierr = PetscOptionsFindPair(options,NULL,opt[o],&val[o],&set[o]);CHKERRQ(ierr);
   }
 
-  /* Loop through all args to collect last occuring value of each option */
+  /* Loop through all args to collect last occurring value of each option */
   for (a=1; a<argc; a++) {
     PetscBool valid, eq;
 
@@ -870,7 +870,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options,int *argc,char ***args,co
   {
     char   *eoptions = NULL;
     size_t len       = 0;
-    if (!rank) {
+    if (rank == 0) {
       eoptions = (char*)getenv("PETSC_OPTIONS");
       ierr = PetscStrlen(eoptions,&len);CHKERRQ(ierr);
     }
@@ -888,7 +888,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options,int *argc,char ***args,co
   {
     char   *eoptions = NULL;
     size_t len       = 0;
-    if (!rank) {
+    if (rank == 0) {
       eoptions = (char*)getenv("PETSC_OPTIONS_YAML");
       ierr = PetscStrlen(eoptions,&len);CHKERRQ(ierr);
     }
@@ -913,7 +913,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options,int *argc,char ***args,co
 
    Logically Collective on PetscViewer
 
-   Input Parameter:
+   Input Parameters:
 +  options - options database, use NULL for default global database
 -  viewer - must be an PETSCVIEWERASCII viewer
 
@@ -987,7 +987,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsViewError(void)
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  options - options database, or NULL for the default global database
 -  prefix - The string to append to the existing prefix
 
@@ -1292,7 +1292,7 @@ setvalue:
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  options - options database, use NULL for the default global database
 -  name - name of option, this SHOULD have the - prepended
 
@@ -1630,8 +1630,8 @@ PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions options,PetscBool 
 }
 
 /*@C
-   PetscOptionsHasName - Determines whether a certain option is given in the database. This returns true whether the option is a number, string or boolean, even
-                      its value is set to false.
+   PetscOptionsHasName - Determines whether a certain option is given in the database. This returns true whether the option is a number, string or Boolean, even
+                      if its value is set to false.
 
    Not Collective
 
@@ -1725,7 +1725,7 @@ PetscErrorCode PetscOptionsGetAll(PetscOptions options,char *copts[])
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  options - options database, use NULL for default global database
 -  name - string name of option
 
@@ -1854,7 +1854,7 @@ PetscErrorCode PetscOptionsLeft(PetscOptions options)
    Input Parameter:
 .  options - options database, use NULL for default global database
 
-   Output Parameter:
+   Output Parameters:
 +  N - count of options not used
 .  names - names of options not used
 -  values - values of options not used
@@ -1906,7 +1906,7 @@ PetscErrorCode PetscOptionsLeftGet(PetscOptions options,PetscInt *N,char **names
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  options - options database, use NULL for default global database
 .  names - names of options not used
 -  values - values of options not used
@@ -2225,7 +2225,7 @@ PetscErrorCode PetscOptionsStringToScalar(const char name[],PetscScalar *a)
 .  pre - the string to prepend to the name or NULL
 -  name - the option one is seeking
 
-   Output Parameter:
+   Output Parameters:
 +  ivalue - the logical value to return
 -  set - PETSC_TRUE  if found, else PETSC_FALSE
 
@@ -2280,7 +2280,7 @@ PetscErrorCode PetscOptionsGetBool(PetscOptions options,const char pre[],const c
 .  list - the possible choices (one of these must be selected, anything else is invalid)
 -  ntext - number of choices
 
-   Output Parameter:
+   Output Parameters:
 +  value - the index of the value to return (defaults to zero if the option name is given but no choice is listed)
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
@@ -2349,10 +2349,9 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options,const char pre[],const 
 +  options - options database, use NULL for default global database
 .  pre - option prefix or NULL
 .  opt - option name
-.  list - array containing the list of choices, followed by the enum name, followed by the enum prefix, followed by a null
--  defaultv - the default (current) value
+-  list - array containing the list of choices, followed by the enum name, followed by the enum prefix, followed by a null
 
-   Output Parameter:
+   Output Parameters:
 +  value - the  value to return
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
@@ -2402,7 +2401,7 @@ PetscErrorCode PetscOptionsGetEnum(PetscOptions options,const char pre[],const c
 .  pre - the string to prepend to the name or NULL
 -  name - the option one is seeking
 
-   Output Parameter:
+   Output Parameters:
 +  ivalue - the integer value to return
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
@@ -2454,7 +2453,7 @@ PetscErrorCode PetscOptionsGetInt(PetscOptions options,const char pre[],const ch
 .  pre - string to prepend to each name or NULL
 -  name - the option one is seeking
 
-   Output Parameter:
+   Output Parameters:
 +  dvalue - the double value to return
 -  set - PETSC_TRUE if found, PETSC_FALSE if not found
 
@@ -2505,7 +2504,7 @@ PetscErrorCode PetscOptionsGetReal(PetscOptions options,const char pre[],const c
 .  pre - string to prepend to each name or NULL
 -  name - the option one is seeking
 
-   Output Parameter:
+   Output Parameters:
 +  dvalue - the double value to return
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
@@ -2641,12 +2640,13 @@ char *PetscOptionsGetStringMatlab(PetscOptions options,const char pre[],const ch
    Input Parameters:
 +  options - options database, use NULL for default global database
 .  pre - string to prepend to each name or NULL
-.  name - the option one is seeking
--  nmax - maximum number of values to retrieve
+-  name - the option one is seeking
 
-   Output Parameter:
+   Input/Output Parameter:
+.  nmax - maximum number of values to retrieve, on output the actual number of values retrieved
+
+   Output Parameters:
 +  dvalue - the integer values to return
-.  nmax - actual number of values retreived
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
    Level: beginner
@@ -2701,12 +2701,13 @@ PetscErrorCode PetscOptionsGetBoolArray(PetscOptions options,const char pre[],co
 +  options - options database, use NULL for default global database
 .  pre - option prefix or NULL
 .  name - option name
-.  list - array containing the list of choices, followed by the enum name, followed by the enum prefix, followed by a null
--  nmax - maximum number of values to retrieve
+-  list - array containing the list of choices, followed by the enum name, followed by the enum prefix, followed by a null
+
+   Input/Output Parameter:
+.  nmax - maximum number of values to retrieve, on output the actual number of values retrieved
 
    Output Parameters:
 +  ivalue - the  enum values to return
-.  nmax - actual number of values retreived
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
    Level: beginner
@@ -2766,12 +2767,13 @@ PetscErrorCode PetscOptionsGetEnumArray(PetscOptions options,const char pre[],co
    Input Parameters:
 +  options - options database, use NULL for default global database
 .  pre - string to prepend to each name or NULL
-.  name - the option one is seeking
--  nmax - maximum number of values to retrieve
+-  name - the option one is seeking
 
-   Output Parameter:
+   Input/Output Parameter:
+.  nmax - maximum number of values to retrieve, on output the actual number of values retrieved
+
+   Output Parameters:
 +  ivalue - the integer values to return
-.  nmax - actual number of values retreived
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
    Level: beginner
@@ -2868,12 +2870,13 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options,const char pre[],con
    Input Parameters:
 +  options - options database, use NULL for default global database
 .  pre - string to prepend to each name or NULL
-.  name - the option one is seeking
--  nmax - maximum number of values to retrieve
+-  name - the option one is seeking
+
+   Input/Output Parameter:
+.  nmax - maximum number of values to retrieve, on output the actual number of values retrieved
 
    Output Parameters:
 +  dvalue - the double values to return
-.  nmax - actual number of values retreived
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
    Level: beginner
@@ -2924,12 +2927,13 @@ PetscErrorCode PetscOptionsGetRealArray(PetscOptions options,const char pre[],co
    Input Parameters:
 +  options - options database, use NULL for default global database
 .  pre - string to prepend to each name or NULL
-.  name - the option one is seeking
--  nmax - maximum number of values to retrieve
+-  name - the option one is seeking
+
+   Input/Output Parameter:
+.  nmax - maximum number of values to retrieve, on output the actual number of values retrieved
 
    Output Parameters:
 +  dvalue - the scalar values to return
-.  nmax - actual number of values retreived
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
    Level: beginner
@@ -2980,12 +2984,13 @@ PetscErrorCode PetscOptionsGetScalarArray(PetscOptions options,const char pre[],
    Input Parameters:
 +  options - options database, use NULL for default global database
 .  pre - string to prepend to name or NULL
-.  name - the option one is seeking
--  nmax - maximum number of strings
+-  name - the option one is seeking
+
+   Input/Output Parameter:
+.  nmax - maximum number of strings, on output the actual number of strings found
 
    Output Parameters:
 +  strings - location to copy strings
-.  nmax - the number of strings found
 -  set - PETSC_TRUE if found, else PETSC_FALSE
 
    Level: beginner

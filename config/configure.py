@@ -55,8 +55,6 @@ def check_for_option_changed(opts):
             ('matlabengine','matlab-engine'),
             ('sundials','sundials2'),
             ('f-blas-lapack','fblaslapack'),
-            ('with-cuda-arch',
-             'CUDAFLAGS=-arch'),
             ('with-packages-dir','with-packages-download-dir'),
             ('with-external-packages-dir','with-packages-build-dir'),
             ('package-dirs','with-packages-search-path'),
@@ -65,7 +63,7 @@ def check_for_option_changed(opts):
   for opt in opts[1:]:
     optname = opt.split('=')[0].strip('-')
     for oldname,newname in optMap:
-      if optname.find(oldname) >=0 and not optname.find(newname):
+      if optname.find(oldname) >=0 and not optname.find(newname) >=0:
         raise ValueError('The option '+opt+' should probably be '+opt.replace(oldname,newname))
   return
 
@@ -99,48 +97,48 @@ def chkenable():
 
     if name.find(en_dash)  >= 0:
       sys.argv[l] = name.replace(en_dash,'-')
-    if name.find('enable-cxx') >= 0:
+    if name.lstrip('-').startswith('enable-cxx'):
       if name.find('=') == -1:
-        sys.argv[l] = name.replace('enable-cxx','with-clanguage=C++')
+        sys.argv[l] = name.replace('enable-cxx','with-clanguage=C++',1)
       else:
         head, tail = name.split('=', 1)
         if tail=='0':
-          sys.argv[l] = head.replace('enable-cxx','with-clanguage=C')
+          sys.argv[l] = head.replace('enable-cxx','with-clanguage=C',1)
         else:
-          sys.argv[l] = head.replace('enable-cxx','with-clanguage=C++')
+          sys.argv[l] = head.replace('enable-cxx','with-clanguage=C++',1)
       continue
-    if name.find('disable-cxx') >= 0:
+    if name.lstrip('-').startswith('disable-cxx'):
       if name.find('=') == -1:
-        sys.argv[l] = name.replace('disable-cxx','with-clanguage=C')
+        sys.argv[l] = name.replace('disable-cxx','with-clanguage=C',1)
       else:
         head, tail = name.split('=', 1)
         if tail == '0':
-          sys.argv[l] = head.replace('disable-cxx','with-clanguage=C++')
+          sys.argv[l] = head.replace('disable-cxx','with-clanguage=C++',1)
         else:
-          sys.argv[l] = head.replace('disable-cxx','with-clanguage=C')
+          sys.argv[l] = head.replace('disable-cxx','with-clanguage=C',1)
       continue
 
 
-    if name.find('enable-') >= 0:
+    if name.lstrip('-').startswith('enable-'):
       if name.find('=') == -1:
-        sys.argv[l] = name.replace('enable-','with-')+'=1'
+        sys.argv[l] = name.replace('enable-','with-',1)+'=1'
       else:
         head, tail = name.split('=', 1)
-        sys.argv[l] = head.replace('enable-','with-')+'='+tail
-    if name.find('disable-') >= 0:
+        sys.argv[l] = head.replace('enable-','with-',1)+'='+tail
+    if name.lstrip('-').startswith('disable-'):
       if name.find('=') == -1:
-        sys.argv[l] = name.replace('disable-','with-')+'=0'
-      else:
-        head, tail = name.split('=', 1)
-        if tail == '1': tail = '0'
-        sys.argv[l] = head.replace('disable-','with-')+'='+tail
-    if name.find('without-') >= 0:
-      if name.find('=') == -1:
-        sys.argv[l] = name.replace('without-','with-')+'=0'
+        sys.argv[l] = name.replace('disable-','with-',1)+'=0'
       else:
         head, tail = name.split('=', 1)
         if tail == '1': tail = '0'
-        sys.argv[l] = head.replace('without-','with-')+'='+tail
+        sys.argv[l] = head.replace('disable-','with-',1)+'='+tail
+    if name.lstrip('-').startswith('without-'):
+      if name.find('=') == -1:
+        sys.argv[l] = name.replace('without-','with-',1)+'=0'
+      else:
+        head, tail = name.split('=', 1)
+        if tail == '1': tail = '0'
+        sys.argv[l] = head.replace('without-','with-',1)+'='+tail
 
 def chksynonyms():
   #replace common configure options with ones that PETSc BuildSystem recognizes
@@ -152,6 +150,7 @@ def chksynonyms():
     name = name.replace('with-openmpi','with-mpi')
     name = name.replace('with-mpich','with-mpi')
     name = name.replace('with-blas-lapack','with-blaslapack')
+    name = name.replace('with-cuda-gencodearch','with-cuda-arch')
 
     if name.find('with-debug=') >= 0 or name.endswith('with-debug'):
       if name.find('=') == -1:
@@ -211,7 +210,7 @@ def chkcygwinlink():
       if '--ignore-cygwin-link' in sys.argv: return 0
       print('===============================================================================')
       print(' *** Cygwin /usr/bin/link detected! Compiles with Intel icl/ifort can break!  **')
-      print(' *** To workarround do: "mv /usr/bin/link.exe /usr/bin/link-cygwin.exe"     **')
+      print(' *** To workaround do: "mv /usr/bin/link.exe /usr/bin/link-cygwin.exe"     **')
       print(' *** Or to ignore this check, use configure option: --ignore-cygwin-link. But compiles can fail. **')
       print('===============================================================================')
       sys.exit(3)
@@ -318,7 +317,7 @@ def check_cray_modules():
    print('*       module load intel ; module load PrgEnv-intel')
    print('*   or  module load PrgEnv-cray')
    print('*   or  module load PrgEnv-gnu')
-   print('* See https://www.mcs.anl.gov/petsc/documentation/installation.html#doemachines')
+   print('* See https://petsc.org/release/install/install/#installing-on-large-scale-doe-systems')
    print('************************************************************************')
    sys.exit(4)
 
@@ -379,6 +378,9 @@ def petsc_configure(configure_options):
     petscdir = os.environ['PETSC_DIR']
     if petscdir.find(' ') > -1:
       raise RuntimeError('Your PETSC_DIR '+petscdir+' has spaces in it; this is not allowed.\n Change the directory with PETSc to not have spaces in it')
+    if not os.path.isabs(petscdir):
+      raise RuntimeError('PETSC_DIR ("'+petscdir+'") is set as a relative path. It must be set as an absolute path.')
+
     try:
       sys.path.append(os.path.join(petscdir,'lib','petsc','bin'))
       import petscnagupgrade
@@ -387,9 +389,9 @@ def petsc_configure(configure_options):
         petscnagupgrade.currentversion(petscdir)
     except:
       pass
-  print('===============================================================================')
-  print('             Configuring PETSc to compile on your system                       ')
-  print('===============================================================================')
+  print('=============================================================================================')
+  print('                      Configuring PETSc to compile on your system                            ')
+  print('=============================================================================================')
 
   try:
     # Command line arguments take precedence (but don't destroy argv[0])
@@ -557,4 +559,3 @@ def petsc_configure(configure_options):
 
 if __name__ == '__main__':
   petsc_configure([])
-

@@ -3,12 +3,12 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self,framework):
     config.package.Package.__init__(self,framework)
-    self.gitcommit              = '01bd3df5a5dcb657a257ee118af98ef15a78b816' # main may-20-2021
+    self.gitcommit              = '7113b9a6b77fceee3f52490cb27941a87b96542f' # main sep-23-2021
     self.download               = ['git://https://github.com/hpddm/hpddm','https://github.com/hpddm/hpddm/archive/'+self.gitcommit+'.tar.gz']
     self.minversion             = '2.0.8'
     self.versionname            = 'HPDDM_VERSION'
     self.versioninclude         = 'HPDDM_define.hpp'
-    self.requirescxx11          = 1
+    self.minCxxVersion          = 'c++11'
     self.cxx                    = 1
     self.functions              = []
     self.includes               = ['HPDDM.hpp']
@@ -51,19 +51,17 @@ class Configure(config.package.Package):
       prefix     = os.path.join(self.petscdir.dir,self.arch)
     incDir = os.path.join(prefix,'include')
     libDir = os.path.join(prefix,'lib')
-    if self.installSudo:
-      newuser = self.installSudo+' -u $${SUDO_USER} '
-    else:
-      newuser = ''
     self.addMakeMacro('HPDDM','yes')
     self.include = [incDir]
     if not hasattr(self.framework,'packages'):
       self.framework.packages = []
     self.framework.packages.append(self)
-    cpstr = newuser+' mkdir -p '+incDir+' && '+newuser+' cp '+os.path.join(self.packageDir,'include','*')+' '+incDir
-    self.logPrintBox('Copying HPDDM; this may take several seconds')
-    output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
-    self.log.write(output+err)
+    try:
+      self.logPrintBox('Copying HPDDM; this may take several seconds')
+      output,err,ret = config.package.Package.executeShellCommand(['cp','-rf',os.path.join(self.packageDir,'include'),prefix],timeout=100,log=self.log) # cannot use shutil.copytree since target directory likely exists
+      self.log.write(output+err)
+    except RuntimeError as e:
+      raise RuntimeError('Error copying HPDDM: '+str(e))
     # SLEPc dependency
     if self.mpi.found:
       if self.slepc.found:
@@ -90,7 +88,7 @@ class Configure(config.package.Package):
           self.addMakeRule('hpddmbuild',slepcbuilddep,\
                              ['@echo "*** Building and installing HPDDM ***"',\
                               '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                              '@'+newuser+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
+                              '@'+cxx+' '+cxxflags+' '+self.packageDir+'/interface/hpddm_petsc.cpp '+ldflags+' -o '+libDir+os.path.join('/libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
                    (echo "**************************ERROR*************************************" && \\\n\
                    echo "Error building HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
                    echo "********************************************************************" && \\\n\

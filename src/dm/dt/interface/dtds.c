@@ -267,7 +267,7 @@ PetscErrorCode  PetscDSViewFromOptions(PetscDS A,PetscObject obj,const char name
 
   Collective on prob
 
-  Input Parameter:
+  Input Parameters:
 + prob - the PetscDS object to view
 - v  - the viewer
 
@@ -1843,11 +1843,11 @@ PetscErrorCode PetscDSSetDynamicJacobian(PetscDS ds, PetscInt f, PetscInt g,
 
   Not collective
 
-  Input Arguments:
+  Input Parameters:
 + ds - The PetscDS object
 - f  - The field number
 
-  Output Argument:
+  Output Parameter:
 . r    - Riemann solver
 
   Calling sequence for r:
@@ -1890,7 +1890,7 @@ PetscErrorCode PetscDSGetRiemannSolver(PetscDS ds, PetscInt f,
 
   Not collective
 
-  Input Arguments:
+  Input Parameters:
 + ds - The PetscDS object
 . f  - The field number
 - r  - Riemann solver
@@ -1936,7 +1936,7 @@ PetscErrorCode PetscDSSetRiemannSolver(PetscDS ds, PetscInt f,
 + ds - The PetscDS
 - f  - The field number
 
-  Output Parameters:
+  Output Parameter:
 . update - update function
 
   Note: The calling sequence for the callback update is given by:
@@ -2033,13 +2033,13 @@ PetscErrorCode PetscDSSetUpdate(PetscDS ds, PetscInt f,
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, void **ctx)
+PetscErrorCode PetscDSGetContext(PetscDS ds, PetscInt f, void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   if ((f < 0) || (f >= ds->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, ds->Nf);
   PetscValidPointer(ctx, 3);
-  *ctx = ds->ctx[f];
+  *(void**)ctx = ds->ctx[f];
   PetscFunctionReturn(0);
 }
 
@@ -2588,7 +2588,7 @@ PetscErrorCode PetscDSSetBdJacobianPreconditioner(PetscDS ds, PetscInt f, PetscI
 + prob - The PetscDS
 - f    - The test field number
 
-  Output Parameter:
+  Output Parameters:
 + exactSol - exact solution for the test field
 - exactCtx - exact solution context
 
@@ -2665,7 +2665,7 @@ PetscErrorCode PetscDSSetExactSolution(PetscDS prob, PetscInt f, PetscErrorCode 
 + prob - The PetscDS
 - f    - The test field number
 
-  Output Parameter:
+  Output Parameters:
 + exactSol - time derivative of the exact solution for the test field
 - exactCtx - time derivative of the exact solution context
 
@@ -2958,10 +2958,13 @@ PetscErrorCode PetscDSGetComponents(PetscDS prob, PetscInt *components[])
 @*/
 PetscErrorCode PetscDSGetComponentOffset(PetscDS prob, PetscInt f, PetscInt *off)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidPointer(off, 3);
   if ((f < 0) || (f >= prob->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, prob->Nf);
+  ierr = PetscDSSetUp(prob);CHKERRQ(ierr);
   *off = prob->off[f];
   PetscFunctionReturn(0);
 }
@@ -2983,9 +2986,12 @@ PetscErrorCode PetscDSGetComponentOffset(PetscDS prob, PetscInt f, PetscInt *off
 @*/
 PetscErrorCode PetscDSGetComponentOffsets(PetscDS prob, PetscInt *offsets[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidPointer(offsets, 2);
+  ierr = PetscDSSetUp(prob);CHKERRQ(ierr);
   *offsets = prob->off;
   PetscFunctionReturn(0);
 }
@@ -3007,9 +3013,12 @@ PetscErrorCode PetscDSGetComponentOffsets(PetscDS prob, PetscInt *offsets[])
 @*/
 PetscErrorCode PetscDSGetComponentDerivativeOffsets(PetscDS prob, PetscInt *offsets[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidPointer(offsets, 2);
+  ierr = PetscDSSetUp(prob);CHKERRQ(ierr);
   *offsets = prob->offDer;
   PetscFunctionReturn(0);
 }
@@ -3050,7 +3059,7 @@ PetscErrorCode PetscDSGetTabulation(PetscDS prob, PetscTabulation *T[])
 . prob - The PetscDS object
 
   Output Parameter:
-. Tf - The basis function and derviative tabulation on each local face at quadrature points for each and field
+. Tf - The basis function and derivative tabulation on each local face at quadrature points for each and field
 
   Level: intermediate
 
@@ -3128,7 +3137,7 @@ PetscErrorCode PetscDSGetWorkspace(PetscDS prob, PetscReal **x, PetscScalar **ba
 . Nc       - The number of constrained field components (0 will constrain all fields)
 . comps    - An array of constrained component numbers
 . bcFunc   - A pointwise function giving boundary values
-. bcFunc_t - A pointwise function giving the time derviative of the boundary values, or NULL
+. bcFunc_t - A pointwise function giving the time derivative of the boundary values, or NULL
 - ctx      - An optional user context for bcFunc
 
   Output Parameters:
@@ -3246,7 +3255,7 @@ PetscErrorCode PetscDSAddBoundary(PetscDS ds, DMBoundaryConditionType type, cons
 . Nc       - The number of constrained field components (0 will constrain all fields)
 . comps    - An array of constrained component numbers
 . bcFunc   - A pointwise function giving boundary values
-. bcFunc_t - A pointwise function giving the time derviative of the boundary values, or NULL
+. bcFunc_t - A pointwise function giving the time derivative of the boundary values, or NULL
 - ctx      - An optional user context for bcFunc
 
   Output Parameters:
@@ -3353,7 +3362,7 @@ PetscErrorCode PetscDSAddBoundaryByName(PetscDS ds, DMBoundaryConditionType type
 . Nc       - The number of constrained field components
 . comps    - An array of constrained component numbers
 . bcFunc   - A pointwise function giving boundary values
-. bcFunc_t - A pointwise function giving the time derviative of the boundary values, or NULL
+. bcFunc_t - A pointwise function giving the time derivative of the boundary values, or NULL
 - ctx      - An optional user context for bcFunc
 
   Note:
@@ -3452,7 +3461,7 @@ PetscErrorCode PetscDSGetNumBoundary(PetscDS ds, PetscInt *numBd)
 . Nc       - The number of constrained field components
 . comps    - An array of constrained component numbers
 . bcFunc   - A pointwise function giving boundary values
-. bcFunc_t - A pointwise function giving the time derviative of the boundary values
+. bcFunc_t - A pointwise function giving the time derivative of the boundary values
 - ctx      - An optional user context for bcFunc
 
   Options Database Keys:
@@ -3636,7 +3645,7 @@ PetscErrorCode PetscDSDestroyBoundary(PetscDS ds)
 
   Not collective
 
-  Input Parameter:
+  Input Parameters:
 + prob - The PetscDS object
 . numFields - Number of new fields
 - fields - Old field number for each new field
@@ -3676,7 +3685,7 @@ PetscErrorCode PetscDSSelectDiscretizations(PetscDS prob, PetscInt numFields, co
 
   Not collective
 
-  Input Parameter:
+  Input Parameters:
 + prob - The PetscDS object
 . numFields - Number of new fields
 - fields - Old field number for each new field
@@ -3751,6 +3760,7 @@ PetscErrorCode PetscDSSelectEquations(PetscDS prob, PetscInt numFields, const Pe
 @*/
 PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
 {
+  PetscWeakForm  wf, newwf;
   PetscInt       Nf, Ng;
   PetscErrorCode ierr;
 
@@ -3760,7 +3770,9 @@ PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(newprob, &Ng);CHKERRQ(ierr);
   if (Nf != Ng) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields must match %D != %D", Nf, Ng);
-  ierr = PetscDSSelectEquations(prob, Nf, NULL, newprob);CHKERRQ(ierr);
+  ierr = PetscDSGetWeakForm(prob, &wf);CHKERRQ(ierr);
+  ierr = PetscDSGetWeakForm(newprob, &newwf);CHKERRQ(ierr);
+  ierr = PetscWeakFormCopy(wf, newwf);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

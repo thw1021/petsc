@@ -1,6 +1,4 @@
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
-#include <hip/hip_runtime.h>
-#include <petschipblas.h> /* For CHKERRHIP */
 
 /* compilation issues on SPOCK */
 #undef PETSC_HAVE_COMPLEX
@@ -613,7 +611,8 @@ static void PackInit_RealType(PetscSFLink link)
 /* Have this templated class to specialize for char integers */
 template<typename Type,PetscInt BS,PetscInt EQ,PetscInt size/*sizeof(Type)*/>
 struct PackInit_IntegerType_Atomic {
-  static void Init(PetscSFLink link) {
+  static void Init(PetscSFLink link)
+  {
     link->da_UnpackAndInsert  = UnpackAndOp<Type,AtomicInsert<Type>,BS,EQ>;
     link->da_UnpackAndAdd     = UnpackAndOp<Type,AtomicAdd<Type>   ,BS,EQ>;
     link->da_UnpackAndMult    = UnpackAndOp<Type,AtomicMult<Type>  ,BS,EQ>;

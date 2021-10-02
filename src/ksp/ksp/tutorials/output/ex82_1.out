@@ -35,10 +35,12 @@ PC Object: 4 MPI processes
         minimum target depth: 0
         minimum source depth: 0
         compressor: sympartialACA
-        compression: 0.080675
-        (minimum, mean, maximum) dense block sizes: (144, 290.308, 2500)
-        (minimum, mean, maximum) low rank block sizes: (144, 164.423, 625)
-        (minimum, mean, maximum) ranks: (2, 4.89417, 7)
+        clustering: PCARegular
+        compression ratio: 1.08851
+        space saving: 0.0813156
+        (minimum, mean, maximum) dense block sizes: (144, 288.562, 2500)
+        (minimum, mean, maximum) low rank block sizes: (144, 164.113, 625)
+        (minimum, mean, maximum) ranks: (2, 4.8792, 7)
   PC Object: (pc_hpddm_levels_1_) 4 MPI processes
     type: asm
       total subdomain blocks = 4, user-defined overlap
@@ -81,10 +83,12 @@ PC Object: 4 MPI processes
         minimum target depth: 0
         minimum source depth: 0
         compressor: sympartialACA
-        compression: 0.080675
-        (minimum, mean, maximum) dense block sizes: (144, 290.308, 2500)
-        (minimum, mean, maximum) low rank block sizes: (144, 164.423, 625)
-        (minimum, mean, maximum) ranks: (2, 4.89417, 7)
+        clustering: PCARegular
+        compression ratio: 1.08851
+        space saving: 0.0813156
+        (minimum, mean, maximum) dense block sizes: (144, 288.562, 2500)
+        (minimum, mean, maximum) low rank block sizes: (144, 164.113, 625)
+        (minimum, mean, maximum) ranks: (2, 4.8792, 7)
     KSP Object: (pc_hpddm_coarse_) 1 MPI processes
       type: gmres
         restart=30, using Classical (unmodified) Gram-Schmidt Orthogonalization with no iterative refinement
@@ -123,7 +127,9 @@ PC Object: 4 MPI processes
       minimum target depth: 0
       minimum source depth: 0
       compressor: sympartialACA
-      compression: 0.080675
-      (minimum, mean, maximum) dense block sizes: (144, 290.308, 2500)
-      (minimum, mean, maximum) low rank block sizes: (144, 164.423, 625)
-      (minimum, mean, maximum) ranks: (2, 4.89417, 7)
+      clustering: PCARegular
+      compression ratio: 1.08851
+      space saving: 0.0813156
+      (minimum, mean, maximum) dense block sizes: (144, 288.562, 2500)
+      (minimum, mean, maximum) low rank block sizes: (144, 164.113, 625)
+      (minimum, mean, maximum) ranks: (2, 4.8792, 7)

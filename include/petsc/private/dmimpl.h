@@ -56,6 +56,7 @@ struct _DMOps {
   PetscErrorCode (*coarsenhierarchy)(DM,PetscInt,DM*);
   PetscErrorCode (*adaptlabel)(DM,DMLabel,DM*);
   PetscErrorCode (*adaptmetric)(DM,Vec,DMLabel,DM*);
+  PetscErrorCode (*extrude)(DM,PetscInt,DM*);
 
   PetscErrorCode (*globaltolocalbegin)(DM,Vec,InsertMode,Vec);
   PetscErrorCode (*globaltolocalend)(DM,Vec,InsertMode,Vec);
@@ -500,6 +501,8 @@ PETSC_INTERN PetscErrorCode DMConstructBasisTransform_Internal(DM);
 
 PETSC_INTERN PetscErrorCode DMGetLocalBoundingIndices_DMDA(DM, PetscReal[], PetscReal[]);
 PETSC_INTERN PetscErrorCode DMSetField_Internal(DM, PetscInt, DMLabel, PetscObject);
+
+PETSC_INTERN PetscErrorCode DMSetLabelValue_Fast(DM, DMLabel*, const char[], PetscInt, PetscInt);
 
 PETSC_EXTERN PetscErrorCode DMUniversalLabelCreate(DM, DMUniversalLabel *);
 PETSC_EXTERN PetscErrorCode DMUniversalLabelDestroy(DMUniversalLabel *);

@@ -40,6 +40,7 @@ PetscLogEvent MAT_DenseCopyToGPU, MAT_DenseCopyFromGPU;
 PetscLogEvent MAT_Merge,MAT_Residual,MAT_SetRandom;
 PetscLogEvent MAT_FactorFactS,MAT_FactorInvS;
 PetscLogEvent MATCOLORING_Apply,MATCOLORING_Comm,MATCOLORING_Local,MATCOLORING_ISCreate,MATCOLORING_SetUp,MATCOLORING_Weights;
+PetscLogEvent MAT_H2Opus_Build,MAT_H2Opus_Compress,MAT_H2Opus_Orthog;
 
 const char *const MatFactorTypes[] = {"NONE","LU","CHOLESKY","ILU","ICC","ILUDT","QR","MatFactorType","MAT_FACTOR_",NULL};
 
@@ -103,10 +104,10 @@ PetscErrorCode MatSetRandom(Mat x,PetscRandom rctx)
 
    Logically Collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the factored matrix
 
-   Output Parameter:
+   Output Parameters:
 +  pivot - the pivot value computed
 -  row - the row that the zero pivot occurred. Note that this row must be interpreted carefully due to row reorderings and which processes
          the share the matrix
@@ -279,12 +280,13 @@ PetscErrorCode MatFindNonzeroRows(Mat mat,IS *keptrows)
 PetscErrorCode MatFindZeroRows(Mat mat,IS *zerorows)
 {
   PetscErrorCode ierr;
-  IS keptrows;
-  PetscInt m, n;
+  IS             keptrows;
+  PetscInt       m, n;
 
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-
+  PetscValidPointer(zerorows,2);
   ierr = MatFindNonzeroRows(mat, &keptrows);CHKERRQ(ierr);
   /* MatFindNonzeroRows sets keptrows to NULL if there are no zero rows.
      In keeping with this convention, we set zerorows to NULL if there are no zero
@@ -713,7 +715,7 @@ PetscErrorCode MatRestoreRowUpperTriangular(Mat mat)
 
    Logically Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  A - the Mat context
 -  prefix - the prefix to prepend to all option names
 
@@ -1040,7 +1042,7 @@ PetscErrorCode MatView(Mat mat,PetscViewer viewer)
 
     ierr = PetscObjectName((PetscObject)mat);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-    if (!((PetscObject)mat)->amsmem && !rank) {
+    if (!((PetscObject)mat)->amsmem && rank == 0) {
       ierr = PetscObjectViewSAWs((PetscObject)mat,viewer);CHKERRQ(ierr);
     }
 #endif
@@ -1238,7 +1240,7 @@ static PetscErrorCode MatDestroy_Redundant(Mat_Redundant **redundant)
   PetscInt       i;
 
   PetscFunctionBegin;
-  if (redund){
+  if (redund) {
     if (redund->matseq) { /* via MatCreateSubMatrices()  */
       ierr = ISDestroy(&redund->isrow);CHKERRQ(ierr);
       ierr = ISDestroy(&redund->iscol);CHKERRQ(ierr);
@@ -2095,7 +2097,7 @@ PetscErrorCode MatSetLocalToGlobalMapping(Mat x,ISLocalToGlobalMapping rmapping,
 
    Not Collective
 
-   Input Parameters:
+   Input Parameter:
 .  A - the matrix
 
    Output Parameters:
@@ -2149,7 +2151,7 @@ PetscErrorCode MatSetLayouts(Mat A,PetscLayout rmap,PetscLayout cmap)
 
    Not Collective
 
-   Input Parameters:
+   Input Parameter:
 .  A - the matrix
 
    Output Parameters:
@@ -2423,11 +2425,10 @@ PetscErrorCode MatMult(Mat mat,Vec x,Vec y)
   if (!mat->assembled) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   if (mat->factortype) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
-#if !defined(PETSC_HAVE_CONSTRAINTS)
-  if (mat->cmap->N != x->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %D %D",mat->cmap->N,x->map->N);
-  if (mat->rmap->N != y->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %D %D",mat->rmap->N,y->map->N);
+  if (mat->cmap->N != x->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %D %D",mat->cmap->N,x->map->N);
+  if (mat->rmap->N != y->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %D %D",mat->rmap->N,y->map->N);
+  if (mat->cmap->n != x->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: local dim %D %D",mat->cmap->n,x->map->n);
   if (mat->rmap->n != y->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: local dim %D %D",mat->rmap->n,y->map->n);
-#endif
   ierr = VecSetErrorIfLocked(y,3);CHKERRQ(ierr);
   if (mat->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
   MatCheckPreallocated(mat,1);
@@ -2478,10 +2479,10 @@ PetscErrorCode MatMultTranspose(Mat mat,Vec x,Vec y)
   if (!mat->assembled) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   if (mat->factortype) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
-#if !defined(PETSC_HAVE_CONSTRAINTS)
-  if (mat->rmap->N != x->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %D %D",mat->rmap->N,x->map->N);
-  if (mat->cmap->N != y->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %D %D",mat->cmap->N,y->map->N);
-#endif
+  if (mat->cmap->N != y->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %D %D",mat->cmap->N,y->map->N);
+  if (mat->rmap->N != x->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %D %D",mat->rmap->N,x->map->N);
+  if (mat->cmap->n != y->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: local dim %D %D",mat->cmap->n,y->map->n);
+  if (mat->rmap->n != x->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: local dim %D %D",mat->rmap->n,x->map->n);
   if (mat->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
   MatCheckPreallocated(mat,1);
 
@@ -2536,10 +2537,10 @@ PetscErrorCode MatMultHermitianTranspose(Mat mat,Vec x,Vec y)
   if (!mat->assembled) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   if (mat->factortype) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
-#if !defined(PETSC_HAVE_CONSTRAINTS)
-  if (mat->rmap->N != x->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %D %D",mat->rmap->N,x->map->N);
-  if (mat->cmap->N != y->map->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %D %D",mat->cmap->N,y->map->N);
-#endif
+  if (mat->cmap->N != y->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %D %D",mat->cmap->N,y->map->N);
+  if (mat->rmap->N != x->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %D %D",mat->rmap->N,x->map->N);
+  if (mat->cmap->n != y->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: local dim %D %D",mat->cmap->n,y->map->n);
+  if (mat->rmap->n != x->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: local dim %D %D",mat->rmap->n,x->map->n);
   MatCheckPreallocated(mat,1);
 
   ierr = PetscLogEventBegin(MAT_MultHermitianTranspose,mat,x,y,0);CHKERRQ(ierr);
@@ -2875,7 +2876,7 @@ PetscErrorCode MatSetFactorType(Mat mat, MatFactorType t)
 
    Collective on Mat if MAT_GLOBAL_MAX or MAT_GLOBAL_SUM is used as the flag
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
    Output Parameters:
@@ -2925,7 +2926,7 @@ $       -info -mat_view ::ascii_info
     Level: intermediate
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatInfo]
+    interface definition cannot be generated correctly [due to MatInfo]
 
 .seealso: MatStashGetInfo()
 
@@ -2987,7 +2988,7 @@ $                   Run with the option -info to determine an optimal value to u
           MatGetOrdering(), MatSetUnfactored(), MatFactorInfo, MatGetFactor()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatLUFactor(Mat mat,IS row,IS col,const MatFactorInfo *info)
@@ -3045,7 +3046,7 @@ $      1 or 0 - indicating force fill on diagonal (improves robustness for matri
 .seealso: MatILUFactorSymbolic(), MatLUFactorNumeric(), MatCholeskyFactor(), MatFactorInfo
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatILUFactor(Mat mat,IS row,IS col,const MatFactorInfo *info)
@@ -3098,7 +3099,7 @@ $                   Run with the option -info to determine an optimal value to u
 .seealso: MatLUFactor(), MatLUFactorNumeric(), MatCholeskyFactor(), MatFactorInfo, MatFactorInfoInitialize()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatLUFactorSymbolic(Mat fact,Mat mat,IS row,IS col,const MatFactorInfo *info)
@@ -3157,7 +3158,7 @@ PetscErrorCode MatLUFactorSymbolic(Mat fact,Mat mat,IS row,IS col,const MatFacto
 .seealso: MatLUFactorSymbolic(), MatLUFactor(), MatCholeskyFactor()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatLUFactorNumeric(Mat fact,Mat mat,const MatFactorInfo *info)
@@ -3215,7 +3216,7 @@ PetscErrorCode MatLUFactorNumeric(Mat fact,Mat mat,const MatFactorInfo *info)
           MatGetOrdering()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatCholeskyFactor(Mat mat,IS perm,const MatFactorInfo *info)
@@ -3274,7 +3275,7 @@ $                   Run with the option -info to determine an optimal value to u
           MatGetOrdering()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatCholeskyFactorSymbolic(Mat fact,Mat mat,IS perm,const MatFactorInfo *info)
@@ -3332,7 +3333,7 @@ PetscErrorCode MatCholeskyFactorSymbolic(Mat fact,Mat mat,IS perm,const MatFacto
 .seealso: MatCholeskyFactorSymbolic(), MatCholeskyFactor(), MatLUFactorNumeric()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatCholeskyFactorNumeric(Mat fact,Mat mat,const MatFactorInfo *info)
@@ -3364,7 +3365,7 @@ PetscErrorCode MatCholeskyFactorNumeric(Mat fact,Mat mat,const MatFactorInfo *in
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
    MatQRFactor - Performs in-place QR factorization of matrix.
 
    Collective on Mat
@@ -3391,7 +3392,7 @@ $                   Run with the option -info to determine an optimal value to u
           MatSetUnfactored(), MatFactorInfo, MatGetFactor()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatQRFactor(Mat mat, IS col, const MatFactorInfo *info)
@@ -3413,7 +3414,7 @@ PetscErrorCode MatQRFactor(Mat mat, IS col, const MatFactorInfo *info)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
    MatQRFactorSymbolic - Performs symbolic QR factorization of matrix.
    Call this routine before calling MatQRFactorNumeric().
 
@@ -3437,7 +3438,7 @@ $                   Run with the option -info to determine an optimal value to u
 .seealso: MatQRFactor(), MatQRFactorNumeric(), MatLUFactor(), MatFactorInfo, MatFactorInfoInitialize()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatQRFactorSymbolic(Mat fact,Mat mat,IS col,const MatFactorInfo *info)
@@ -3466,7 +3467,7 @@ PetscErrorCode MatQRFactorSymbolic(Mat fact,Mat mat,IS col,const MatFactorInfo *
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
    MatQRFactorNumeric - Performs numeric QR factorization of a matrix.
    Call this routine after first calling MatQRFactorSymbolic().
 
@@ -3489,7 +3490,7 @@ PetscErrorCode MatQRFactorSymbolic(Mat fact,Mat mat,IS col,const MatFactorInfo *
 .seealso: MatQRFactorSymbolic(), MatLUFactor()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatQRFactorNumeric(Mat fact,Mat mat,const MatFactorInfo *info)
@@ -4082,7 +4083,7 @@ PetscErrorCode MatSolveTransposeAdd(Mat mat,Vec b,Vec y,Vec x)
   if (mat->factorerrortype) {
     ierr = PetscInfo1(mat,"MatFactorError %D\n",mat->factorerrortype);CHKERRQ(ierr);
     ierr = VecSetInf(x);CHKERRQ(ierr);
-  } else if (mat->ops->solvetransposeadd){
+  } else if (mat->ops->solvetransposeadd) {
     ierr = (*mat->ops->solvetransposeadd)(mat,b,y,x);CHKERRQ(ierr);
   } else {
     /* do the solve then the add manually */
@@ -4118,7 +4119,7 @@ PetscErrorCode MatSolveTransposeAdd(Mat mat,Vec b,Vec y,Vec x)
 .  its - the number of iterations
 -  lits - the number of local iterations
 
-   Output Parameters:
+   Output Parameter:
 .  x - the solution (can contain an initial guess, use option SOR_ZERO_INITIAL_GUESS to indicate no guess)
 
    SOR Flags:
@@ -4938,10 +4939,10 @@ PetscErrorCode MatGetDiagonal(Mat mat,Vec v)
 
    Logically Collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
-   Output Parameter:
+   Output Parameters:
 +  v - the vector for storing the maximums
 -  idx - the indices of the column found for each row (optional)
 
@@ -4987,10 +4988,10 @@ PetscErrorCode MatGetRowMin(Mat mat,Vec v,PetscInt idx[])
 
    Logically Collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
-   Output Parameter:
+   Output Parameters:
 +  v - the vector for storing the minimums
 -  idx - the indices of the column found for each row (or NULL if not needed)
 
@@ -5037,10 +5038,10 @@ PetscErrorCode MatGetRowMinAbs(Mat mat,Vec v,PetscInt idx[])
 
    Logically Collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
-   Output Parameter:
+   Output Parameters:
 +  v - the vector for storing the maximums
 -  idx - the indices of the column found for each row (optional)
 
@@ -5085,10 +5086,10 @@ PetscErrorCode MatGetRowMax(Mat mat,Vec v,PetscInt idx[])
 
    Logically Collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
-   Output Parameter:
+   Output Parameters:
 +  v - the vector for storing the maximums
 -  idx - the indices of the column found for each row (or NULL if not needed)
 
@@ -5214,7 +5215,7 @@ PetscErrorCode MatTranspose(Mat mat,MatReuse reuse,Mat *B)
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  A - the matrix to test
 -  B - the matrix to test against, this can equal the first parameter
 
@@ -5290,7 +5291,7 @@ PetscErrorCode MatHermitianTranspose(Mat mat,MatReuse reuse,Mat *B)
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  A - the matrix to test
 -  B - the matrix to test against, this can equal the first parameter
 
@@ -5507,7 +5508,7 @@ PetscErrorCode MatScale(Mat mat,PetscScalar a)
 +  mat - the matrix
 -  type - the type of norm, NORM_1, NORM_FROBENIUS, NORM_INFINITY
 
-   Output Parameters:
+   Output Parameter:
 .  nrm - the resulting norm
 
    Level: intermediate
@@ -6177,7 +6178,7 @@ PetscErrorCode MatZeroRows(Mat mat,PetscInt numRows,const PetscInt rows[],PetscS
 
    Input Parameters:
 +  mat - the matrix
-.  is - index set of rows to remove
+.  is - index set of rows to remove (if NULL then no row is removed)
 .  diag - value put in all diagonals of eliminated rows
 .  x - optional vector of solutions for zeroed rows (other entries in vector are not used)
 -  b - optional vector of right hand side, that will be adjusted by provided solution
@@ -6213,18 +6214,22 @@ PetscErrorCode MatZeroRows(Mat mat,PetscInt numRows,const PetscInt rows[],PetscS
 @*/
 PetscErrorCode MatZeroRowsIS(Mat mat,IS is,PetscScalar diag,Vec x,Vec b)
 {
-  PetscInt       numRows;
-  const PetscInt *rows;
+  PetscInt       numRows = 0;
+  const PetscInt *rows = NULL;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  ierr = ISGetLocalSize(is,&numRows);CHKERRQ(ierr);
-  ierr = ISGetIndices(is,&rows);CHKERRQ(ierr);
+  if (is) {
+    PetscValidHeaderSpecific(is,IS_CLASSID,2);
+    ierr = ISGetLocalSize(is,&numRows);CHKERRQ(ierr);
+    ierr = ISGetIndices(is,&rows);CHKERRQ(ierr);
+  }
   ierr = MatZeroRows(mat,numRows,rows,diag,x,b);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(is,&rows);CHKERRQ(ierr);
+  if (is) {
+    ierr = ISRestoreIndices(is,&rows);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -6435,7 +6440,7 @@ PetscErrorCode MatZeroRowsColumnsStencil(Mat mat,PetscInt numRows,const MatStenc
    Input Parameters:
 +  mat - the matrix
 .  numRows - the number of rows to remove
-.  rows - the global row indices
+.  rows - the local row indices
 .  diag - value put in all diagonals of eliminated rows
 .  x - optional vector of solutions for zeroed rows (other entries in vector are not used)
 -  b - optional vector of right hand side, that will be adjusted by provided solution
@@ -6686,7 +6691,7 @@ PetscErrorCode MatGetSize(Mat mat,PetscInt *m,PetscInt *n)
 
    Not Collective
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
    Output Parameters:
@@ -6716,7 +6721,7 @@ PetscErrorCode MatGetLocalSize(Mat mat,PetscInt *m,PetscInt *n)
 
    Not Collective, unless matrix has not been allocated, then collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
    Output Parameters:
@@ -6752,7 +6757,7 @@ PetscErrorCode MatGetOwnershipRangeColumn(Mat mat,PetscInt *m,PetscInt *n)
 
    Not Collective
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
    Output Parameters:
@@ -6845,10 +6850,10 @@ PetscErrorCode MatGetOwnershipRangesColumn(Mat mat,const PetscInt **ranges)
 
    Not Collective
 
-   Input Arguments:
+   Input Parameter:
 .  A - matrix of type Elemental or ScaLAPACK
 
-   Output Arguments:
+   Output Parameters:
 +  rows - rows in which this process owns elements
 -  cols - columns in which this process owns elements
 
@@ -6907,7 +6912,7 @@ $      1 or 0 - indicating force fill on diagonal (improves robustness for matri
     Note: this uses the definition of level of fill as in Y. Saad, 2003
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
    References:
      Y. Saad, Iterative methods for sparse linear systems Philadelphia: Society for Industrial and Applied Mathematics, 2003
@@ -6969,7 +6974,7 @@ $      expected fill - as ratio of original fill.
     Note: this uses the definition of level of fill as in Y. Saad, 2003
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
    References:
      Y. Saad, Iterative methods for sparse linear systems Philadelphia: Society for Industrial and Applied Mathematics, 2003
@@ -7364,7 +7369,7 @@ PetscErrorCode MatIncreaseOverlapSplit(Mat mat,PetscInt n,IS is[],PetscInt ov)
   MatCheckPreallocated(mat,1);
   if (!ov) PetscFunctionReturn(0);
   ierr = PetscLogEventBegin(MAT_IncreaseOverlap,mat,0,0,0);CHKERRQ(ierr);
-  for (i=0; i<n; i++){
+  for (i=0; i<n; i++) {
         ierr =  MatIncreaseOverlapSplit_Single(mat,&is[i],ov);CHKERRQ(ierr);
   }
   ierr = PetscLogEventEnd(MAT_IncreaseOverlap,mat,0,0,0);CHKERRQ(ierr);
@@ -7408,7 +7413,7 @@ PetscErrorCode MatGetBlockSize(Mat mat,PetscInt *bs)
    Input Parameter:
 .  mat - the matrix
 
-   Output Parameter:
+   Output Parameters:
 +  rbs - row block size
 -  cbs - column block size
 
@@ -7504,7 +7509,7 @@ PetscErrorCode MatSetVariableBlockSizes(Mat mat,PetscInt nblocks,PetscInt *bsize
 
    Logically Collective on Mat
 
-   Input Parameters:
+   Input Parameter:
 .  mat - the matrix
 
    Output Parameters:
@@ -7827,7 +7832,7 @@ PetscErrorCode MatRestoreRowIJ(Mat mat,PetscInt shift,PetscBool symmetric,PetscB
     Input Parameters:
 +   mat - the matrix
 .   shift - 1 or zero indicating we want the indices starting at 0 or 1
--   symmetric - PETSC_TRUE or PETSC_FALSE indicating the matrix data structure should be
+.   symmetric - PETSC_TRUE or PETSC_FALSE indicating the matrix data structure should be
                 symmetrized
 -   inodecompressed - PETSC_TRUE or PETSC_FALSE indicating if the nonzero structure of the
                  inodes or the nonzero elements is wanted. For BAIJ matrices the compressed version is
@@ -8798,7 +8803,7 @@ PetscErrorCode MatGetNearNullSpace(Mat mat,MatNullSpace *nullsp)
 .seealso: MatICCFactorSymbolic(), MatLUFactorNumeric(), MatCholeskyFactor()
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 PetscErrorCode MatICCFactor(Mat mat,IS row,const MatFactorInfo *info)
@@ -8948,7 +8953,7 @@ PetscErrorCode MatSolves(Mat mat,Vecs b,Vecs x)
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  A - the matrix to test
 -  tol - difference between value and its transpose less than this amount counts as equal (use 0.0 for exact transpose)
 
@@ -9000,7 +9005,7 @@ PetscErrorCode MatIsSymmetric(Mat A,PetscReal tol,PetscBool  *flg)
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  A - the matrix to test
 -  tol - difference between value and its transpose less than this amount counts as equal (use 0.0 for exact Hermitian)
 
@@ -9182,7 +9187,7 @@ PetscErrorCode MatStashGetInfo(Mat mat,PetscInt *nstash,PetscInt *reallocs,Petsc
    Input Parameter:
 .  mat - the matrix
 
-   Output Parameter:
+   Output Parameters:
 +   right - (optional) vector that the matrix can be multiplied against
 -   left - (optional) vector that the matrix vector product can be stored in
 
@@ -9246,7 +9251,7 @@ PetscErrorCode MatCreateVecs(Mat mat,Vec *right,Vec *left)
 .seealso: MatFactorInfo
 
     Developer Note: fortran interface is not autogenerated as the f90
-    interface defintion cannot be generated correctly [due to MatFactorInfo]
+    interface definition cannot be generated correctly [due to MatFactorInfo]
 
 @*/
 
@@ -9592,7 +9597,7 @@ PetscErrorCode MatFactorFactorizeSchurComplement(Mat F)
 .  P - the projection matrix
 .  scall - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
 -  fill - expected fill as ratio of nnz(C)/(nnz(A) + nnz(P)), use PETSC_DEFAULT if you do not have a good estimate
-          if the result is a dense matrix this is irrelevent
+          if the result is a dense matrix this is irrelevant
 
    Output Parameters:
 .  C - the product matrix
@@ -9645,7 +9650,7 @@ PetscErrorCode MatPtAP(Mat A,Mat P,MatReuse scall,PetscReal fill,Mat *C)
 .  R - the projection matrix
 .  scall - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
 -  fill - expected fill as ratio of nnz(C)/nnz(A), use PETSC_DEFAULT if you do not have a good estimate
-          if the result is a dense matrix this is irrelevent
+          if the result is a dense matrix this is irrelevant
 
    Output Parameters:
 .  C - the product matrix
@@ -9749,7 +9754,7 @@ static PetscErrorCode MatProduct_Private(Mat A,Mat B,MatReuse scall,PetscReal fi
 .  B - the right matrix
 .  scall - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
 -  fill - expected fill as ratio of nnz(C)/(nnz(A) + nnz(B)), use PETSC_DEFAULT if you do not have a good estimate
-          if the result is a dense matrix this is irrelevent
+          if the result is a dense matrix this is irrelevant
 
    Output Parameters:
 .  C - the product matrix
@@ -9762,13 +9767,25 @@ static PetscErrorCode MatProduct_Private(Mat A,Mat B,MatReuse scall,PetscReal fi
 
    To determine the correct fill value, run with -info and search for the string "Fill ratio" to see the value actually needed.
 
-   If you have many matrices with the same non-zero structure to multiply, you should use MatProductCreate()/MatProductSymbolic(C)/ReplaceMats(), and call MatProductNumeric() repeatedly.
+   If you have many matrices with the same non-zero structure to multiply, you should use MatProductCreate()/MatProductSymbolic()/MatProductReplaceMats(), and call MatProductNumeric() repeatedly.
 
    In the special case where matrix B (and hence C) are dense you can create the correctly sized matrix C yourself and then call this routine with MAT_REUSE_MATRIX, rather than first having MatMatMult() create it for you. You can NEVER do this if the matrix C is sparse.
 
+   Example of Usage:
+.vb
+     MatProductCreate(A,B,NULL,&C);
+     MatProductSetType(C,MATPRODUCT_AB);
+     MatProductSymbolic(C);
+     MatProductNumeric(C); // compute C=A * B
+     MatProductReplaceMats(A1,B1,NULL,C); // compute C=A1 * B1
+     MatProductNumeric(C);
+     MatProductReplaceMats(A2,NULL,NULL,C); // compute C=A2 * B1
+     MatProductNumeric(C);
+.ve
+
    Level: intermediate
 
-.seealso: MatTransposeMatMult(), MatMatTransposeMult(), MatPtAP()
+.seealso: MatTransposeMatMult(), MatMatTransposeMult(), MatPtAP(), MatProductCreate(), MatProductSymbolic(), MatProductReplaceMats(), MatProductNumeric()
 @*/
 PetscErrorCode MatMatMult(Mat A,Mat B,MatReuse scall,PetscReal fill,Mat *C)
 {
@@ -9871,7 +9888,7 @@ PetscErrorCode MatTransposeMatMult(Mat A,Mat B,MatReuse scall,PetscReal fill,Mat
 .  C - the right matrix
 .  scall - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
 -  fill - expected fill as ratio of nnz(D)/(nnz(A) + nnz(B)+nnz(C)), use PETSC_DEFAULT if you do not have a good estimate
-          if the result is a dense matrix this is irrelevent
+          if the result is a dense matrix this is irrelevant
 
    Output Parameters:
 .  D - the product matrix
@@ -10092,12 +10109,12 @@ PetscErrorCode   MatGetMultiProcBlock(Mat mat, MPI_Comm subComm, MatReuse scall,
 
    Not Collective
 
-   Input Arguments:
+   Input Parameters:
 +  mat - matrix to extract local submatrix from
 .  isrow - local row indices for submatrix
 -  iscol - local column indices for submatrix
 
-   Output Arguments:
+   Output Parameter:
 .  submat - the submatrix
 
    Level: intermediate
@@ -10141,11 +10158,11 @@ PetscErrorCode MatGetLocalSubMatrix(Mat mat,IS isrow,IS iscol,Mat *submat)
 
    Not Collective
 
-   Input Arguments:
-   mat - matrix to extract local submatrix from
-   isrow - local row indices for submatrix
-   iscol - local column indices for submatrix
-   submat - the submatrix
+   Input Parameters:
++  mat - matrix to extract local submatrix from
+.  isrow - local row indices for submatrix
+.  iscol - local column indices for submatrix
+-  submat - the submatrix
 
    Level: intermediate
 

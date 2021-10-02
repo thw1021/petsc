@@ -4,10 +4,7 @@
 #include <petscpkg_version.h>
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
-#include <petsccublas.h>
-
-/* cublas definitions are here */
-#include <petsc/private/cudavecimpl.h>
+#include <petsc/private/cudavecimpl.h> /* cublas definitions are here */
 
 #if defined(PETSC_USE_COMPLEX)
 #if defined(PETSC_USE_REAL_SINGLE)
@@ -1307,8 +1304,6 @@ PetscErrorCode MatDuplicate_SeqDenseCUDA(Mat A,MatDuplicateOption cpvalues,Mat *
   PetscFunctionReturn(0);
 }
 
-#include <petsc/private/vecimpl.h>
-
 static PetscErrorCode MatGetColumnVector_SeqDenseCUDA(Mat A,Vec v,PetscInt col)
 {
   Mat_SeqDense     *a = (Mat_SeqDense*)A->data;
@@ -1330,9 +1325,9 @@ static PetscErrorCode MatGetColumnVector_SeqDenseCUDA(Mat A,Vec v,PetscInt col)
     ierr = VecCUDARestoreArrayWrite(v,&x);CHKERRQ(ierr);
   } else { /* update host data */
     ierr = VecGetArrayWrite(v,&x);CHKERRQ(ierr);
-    if (A->offloadmask & PETSC_OFFLOAD_CPU) {
+    if (A->offloadmask == PETSC_OFFLOAD_UNALLOCATED || A->offloadmask & PETSC_OFFLOAD_CPU) {
       ierr = PetscArraycpy(x,a->v+col*a->lda,A->rmap->n);CHKERRQ(ierr);
-    } else {
+    } else if (A->offloadmask & PETSC_OFFLOAD_GPU) {
       cerr = cudaMemcpy(x,dA->d_v + col*a->lda,A->rmap->n*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
     }
     ierr = VecRestoreArrayWrite(v,&x);CHKERRQ(ierr);

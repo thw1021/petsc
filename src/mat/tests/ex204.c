@@ -13,7 +13,7 @@ int main(int argc,char **args)
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
 
   /* Construct a sequential ViennaCL matrix and vector */
-  if (!rank) {
+  if (rank == 0) {
     Mat A_vcl;
     Vec v_vcl,r_vcl;
     PetscInt n = 17, m = 31,nz = 5,i,cnt,j;
@@ -22,7 +22,7 @@ int main(int argc,char **args)
     ierr = MatCreateSeqAIJViennaCL(PETSC_COMM_SELF,m,n,nz,NULL,&A_vcl);CHKERRQ(ierr);
 
     /* Add nz arbitrary entries per row in arbitrary columns */
-    for (i=0;i<m;++i){
+    for (i=0;i<m;++i) {
       for (cnt = 0; cnt<nz; ++cnt) {
         j = (19 * cnt + (7*i + 3)) % n;
         ierr = MatSetValue(A_vcl,i,j,(PetscScalar)(0.3 * i + j),INSERT_VALUES);CHKERRQ(ierr);
@@ -43,7 +43,7 @@ int main(int argc,char **args)
   }
 
   /* Create a sequential AIJ matrix on rank 0 convert it to a new ViennaCL matrix, and apply it to a ViennaCL vector */
-  if (!rank) {
+  if (rank == 0) {
     Mat               A,A_vcl;
     Vec               v,r,v_vcl,r_vcl,d_vcl;
     PetscInt          n=17,m=31,nz=5,i,cnt,j;
@@ -54,8 +54,8 @@ int main(int argc,char **args)
     ierr = MatCreateSeqAIJ(PETSC_COMM_SELF,m,n,nz,NULL,&A);CHKERRQ(ierr);
 
     /* Add nz arbitrary entries per row in arbitrary columns */
-    for (i=0;i<m;++i){
-      for (cnt = 0; cnt<nz; ++cnt){
+    for (i=0;i<m;++i) {
+      for (cnt = 0; cnt<nz; ++cnt) {
         j = (19 * cnt + (7*i + 3)) % n;
         ierr = MatSetValue(A,i,j,(PetscScalar) (0.3 * i + j),INSERT_VALUES);CHKERRQ(ierr);
       }
@@ -82,7 +82,7 @@ int main(int argc,char **args)
 
     ierr = VecDuplicate(r_vcl,&d_vcl);CHKERRQ(ierr);
     ierr = VecCopy(r_vcl,d_vcl);CHKERRQ(ierr);
-    ierr = VecAXPY(d_vcl,-1.0,r_vcl);
+    ierr = VecAXPY(d_vcl,-1.0,r_vcl);CHKERRQ(ierr);
     ierr = VecNorm(d_vcl,NORM_INFINITY,&dnorm);CHKERRQ(ierr);
     if (dnorm > tol) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"Sequential CPU and MPI ViennaCL vector results incompatible with inf norm greater than tolerance of %g",tol);
 
@@ -96,7 +96,7 @@ int main(int argc,char **args)
   }
 
   /* Create a sequential AIJ matrix on rank 0 convert it inplace to a new ViennaCL matrix, and apply it to a ViennaCL vector */
-  if (!rank) {
+  if (rank == 0) {
     Mat               A;
     Vec               v,r,v_vcl,r_vcl,d_vcl;
     PetscInt          n=17,m=31,nz=5,i,cnt,j;
@@ -108,7 +108,7 @@ int main(int argc,char **args)
 
     /* Add nz arbitrary entries per row in arbitrary columns */
     for (i=0;i<m;++i) {
-      for (cnt = 0; cnt<nz; ++cnt){
+      for (cnt = 0; cnt<nz; ++cnt) {
         j = (19 * cnt + (7*i + 3)) % n;
         ierr = MatSetValue(A,i,j,(PetscScalar)(0.3 * i + j),INSERT_VALUES);CHKERRQ(ierr);
       }
@@ -135,7 +135,7 @@ int main(int argc,char **args)
 
     ierr = VecDuplicate(r_vcl,&d_vcl);CHKERRQ(ierr);
     ierr = VecCopy(r_vcl,d_vcl);CHKERRQ(ierr);
-    ierr = VecAXPY(d_vcl,-1.0,r_vcl);
+    ierr = VecAXPY(d_vcl,-1.0,r_vcl);CHKERRQ(ierr);
     ierr = VecNorm(d_vcl,NORM_INFINITY,&dnorm);CHKERRQ(ierr);
     if (dnorm > tol) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"MPI CPU and MPI ViennaCL Vector results incompatible with inf norm greater than tolerance of %g",tol);
 
@@ -160,10 +160,10 @@ int main(int argc,char **args)
 
     /* Add nz arbitrary entries per row in arbitrary columns */
     ierr = MatGetOwnershipRange(A,&rlow,&rhigh);CHKERRQ(ierr);
-    for (i=rlow;i<rhigh;++i){
+    for (i=rlow;i<rhigh;++i) {
       for (cnt = 0; cnt<nz; ++cnt) {
         j = (19 * cnt + (7*i + 3)) % N;
-        ierr = MatSetValue(A,i,j,(PetscScalar)(0.3 * i + j),INSERT_VALUES);
+        ierr = MatSetValue(A,i,j,(PetscScalar)(0.3 * i + j),INSERT_VALUES);CHKERRQ(ierr);
       }
     }
     ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -186,7 +186,7 @@ int main(int argc,char **args)
 
     ierr = VecDuplicate(r_vcl,&d_vcl);CHKERRQ(ierr);
     ierr = VecCopy(r_vcl,d_vcl);CHKERRQ(ierr);
-    ierr = VecAXPY(d_vcl,-1.0,r_vcl);
+    ierr = VecAXPY(d_vcl,-1.0,r_vcl);CHKERRQ(ierr);
     ierr = VecNorm(d_vcl,NORM_INFINITY,&dnorm);CHKERRQ(ierr);
     if (dnorm > tol) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"MPI CPU and MPI ViennaCL Vector results incompatible with inf norm greater than tolerance of %g",tol);
 
@@ -212,7 +212,7 @@ int main(int argc,char **args)
 
     /* Add nz arbitrary entries per row in arbitrary columns */
     ierr = MatGetOwnershipRange(A,&rlow,&rhigh);CHKERRQ(ierr);
-    for (i=rlow;i<rhigh;++i){
+    for (i=rlow;i<rhigh;++i) {
       for (cnt = 0; cnt<nz; ++cnt) {
         j = (19 * cnt + (7*i + 3)) % N;
         ierr = MatSetValue(A,i,j,(PetscScalar)(0.3 * i + j),INSERT_VALUES);CHKERRQ(ierr);

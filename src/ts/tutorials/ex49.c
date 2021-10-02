@@ -98,7 +98,7 @@ int main(int argc,char **argv)
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   user.next_output = 0.0;
   user.mu          = 1.0e6;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Physical parameters",NULL);
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Physical parameters",NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-mu","Stiffness parameter","<1.0e6>",user.mu,&user.mu,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -160,7 +160,7 @@ int main(int argc,char **argv)
 /*TEST
 
     build:
-      requires: double !complex !define(PETSC_USE_64BIT_INDICES) radau5
+      requires: double !complex !defined(PETSC_USE_64BIT_INDICES) radau5
 
     test:
       args: -ts_monitor_solution -ts_type radau5

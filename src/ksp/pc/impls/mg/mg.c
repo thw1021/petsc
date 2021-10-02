@@ -291,7 +291,7 @@ static PetscErrorCode CRSetup_Private(PC pc)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = PCShellGetContext(pc, (void **) &ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   ierr = PCMGGetInjection(ctx->mg, ctx->l, &It);CHKERRQ(ierr);
   if (!It) SETERRQ(PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_WRONGSTATE, "CR requires that injection be defined for this PCMG");
   ierr = MatCreateTranspose(It, &ctx->Inj);CHKERRQ(ierr);
@@ -307,7 +307,7 @@ static PetscErrorCode CRApply_Private(PC pc, Vec x, Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = PCShellGetContext(pc, (void **) &ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   ierr = MatMult(ctx->S, x, y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -318,7 +318,7 @@ static PetscErrorCode CRDestroy_Private(PC pc)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = PCShellGetContext(pc, (void **) &ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   ierr = MatDestroy(&ctx->Inj);CHKERRQ(ierr);
   ierr = MatDestroy(&ctx->S);CHKERRQ(ierr);
   ierr = PetscFree(ctx);CHKERRQ(ierr);
@@ -807,7 +807,7 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
     } else {
       ierr = PetscViewerASCIIPrintf(viewer,"    Not using Galerkin computed coarse grid matrices\n");CHKERRQ(ierr);
     }
-    if (mg->view){
+    if (mg->view) {
       ierr = (*mg->view)(pc,viewer);CHKERRQ(ierr);
     }
     for (i=0; i<levels; i++) {
@@ -1020,13 +1020,13 @@ PetscErrorCode PCSetUp_MG(PC pc)
         ierr = MatDestroy(&p);CHKERRQ(ierr);
       }
       ierr = DMHasCreateRestriction(dms[i],&dmhasrestrict);CHKERRQ(ierr);
-      if (dmhasrestrict && !mglevels[i+1]->restrct){
+      if (dmhasrestrict && !mglevels[i+1]->restrct) {
         ierr = DMCreateRestriction(dms[i],dms[i+1],&p);CHKERRQ(ierr);
         ierr = PCMGSetRestriction(pc,i+1,p);CHKERRQ(ierr);
         ierr = MatDestroy(&p);CHKERRQ(ierr);
       }
       ierr = DMHasCreateInjection(dms[i],&dmhasinject);CHKERRQ(ierr);
-      if (dmhasinject && !mglevels[i+1]->inject){
+      if (dmhasinject && !mglevels[i+1]->inject) {
         ierr = DMCreateInjection(dms[i],dms[i+1],&p);CHKERRQ(ierr);
         ierr = PCMGSetInjection(pc,i+1,p);CHKERRQ(ierr);
         ierr = MatDestroy(&p);CHKERRQ(ierr);
@@ -1191,7 +1191,7 @@ PetscErrorCode PCSetUp_MG(PC pc)
   }
 
   for (i=1; i<n; i++) {
-    if (mglevels[i]->smoothu == mglevels[i]->smoothd || mg->am == PC_MG_FULL || mg->am == PC_MG_KASKADE || mg->cyclesperpcapply > 1){
+    if (mglevels[i]->smoothu == mglevels[i]->smoothd || mg->am == PC_MG_FULL || mg->am == PC_MG_KASKADE || mg->cyclesperpcapply > 1) {
       /* if doing only down then initial guess is zero */
       ierr = KSPSetInitialGuessNonzero(mglevels[i]->smoothd,PETSC_TRUE);CHKERRQ(ierr);
     }
@@ -1903,7 +1903,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_MG(PC pc)
 
   PetscFunctionBegin;
   ierr         = PetscNewLog(pc,&mg);CHKERRQ(ierr);
-  pc->data     = (void*)mg;
+  pc->data     = mg;
   mg->nlevels  = -1;
   mg->am       = PC_MG_MULTIPLICATIVE;
   mg->galerkin = PC_MG_GALERKIN_NONE;

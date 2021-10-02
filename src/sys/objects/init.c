@@ -8,7 +8,6 @@
 
 #include <petscsys.h>        /*I  "petscsys.h"   I*/
 #include <petsc/private/petscimpl.h>
-#include <petscvalgrind.h>
 #include <petscviewer.h>
 #if defined(PETSC_USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
@@ -21,15 +20,8 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 #include <unistd.h>
 #endif
 
-#if defined(PETSC_HAVE_CUDA)
-  #include <cuda_runtime.h>
-  #include <cuda_runtime_api.h>
-  #include <cuda_device_runtime_api.h>
-  #include <petsccublas.h>
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  #include <hip/hip_runtime.h>
+#if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
+#  include <petscdevice.h>
 #endif
 
 #if defined(PETSC_HAVE_DEVICE)
@@ -100,6 +92,8 @@ MPI_Datatype MPIU_SCALAR_INT = 0;
 #if defined(PETSC_USE_64BIT_INDICES)
 MPI_Datatype MPIU_2INT = 0;
 #endif
+MPI_Datatype MPI_4INT = 0;
+MPI_Datatype MPIU_4INT = 0;
 MPI_Datatype MPIU_BOOL;
 MPI_Datatype MPIU_ENUM;
 MPI_Datatype MPIU_FORTRANADDR;
@@ -132,7 +126,7 @@ PetscErrorCode  PetscOpenHistoryFile(const char filename[],FILE **fd)
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     char        arch[10];
     int         err;
 
@@ -172,7 +166,7 @@ PETSC_INTERN PetscErrorCode PetscCloseHistoryFile(FILE **fd)
 
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscGetDate(date,64);CHKERRQ(ierr);
     ierr = PetscFPrintf(PETSC_COMM_SELF,*fd,"----------------------------------------\n");CHKERRQ(ierr);
     ierr = PetscFPrintf(PETSC_COMM_SELF,*fd,"Finished at %s\n",date);CHKERRQ(ierr);
@@ -249,7 +243,7 @@ PetscErrorCode (*PetscExternalHelpFunction)(MPI_Comm)    = NULL;
    before the PETSc help and version information is printed. Must call BEFORE PetscInitialize().
    This routine enables a "higher-level" package that uses PETSc to print its messages first.
 
-   Input Parameter:
+   Input Parameters:
 +  help - the help function (may be NULL)
 -  version - the version function (may be NULL)
 
@@ -367,12 +361,20 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
+  /*
+     Setup building of stack frames for all function calls
+  */
+  if (PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY)) {
+    ierr = PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg1,NULL);CHKERRQ(ierr);
+    ierr = PetscStackSetCheck(flg1);CHKERRQ(ierr);
+  }
+
 #if !defined(PETSC_HAVE_THREADSAFETY)
   if (!(PETSC_RUNNING_ON_VALGRIND)) {
     /*
       Setup the memory management; support for tracing malloc() usage
     */
-    PetscBool         mdebug = PETSC_FALSE, eachcall = PETSC_FALSE, initializenan = PETSC_FALSE, mlog = PETSC_FALSE;
+    PetscBool mdebug = PETSC_FALSE, eachcall = PETSC_FALSE, initializenan = PETSC_FALSE, mlog = PETSC_FALSE;
 
     if (PetscDefined(USE_DEBUG)) {
       mdebug        = PETSC_TRUE;
@@ -608,7 +610,7 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   }
 
   ierr = PetscOptionsGetString(NULL,NULL,"-on_error_emacs",emacsmachinename,sizeof(emacsmachinename),&flg1);CHKERRQ(ierr);
-  if (flg1 && !rank) {ierr = PetscPushErrorHandler(PetscEmacsClientErrorHandler,emacsmachinename);CHKERRQ(ierr);}
+  if (flg1 && rank == 0) {ierr = PetscPushErrorHandler(PetscEmacsClientErrorHandler,emacsmachinename);CHKERRQ(ierr);}
 
   /*
         Setup profiling and logging

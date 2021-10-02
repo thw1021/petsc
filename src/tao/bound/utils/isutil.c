@@ -12,7 +12,7 @@
 . reduced_type - the method TAO is using for subsetting (TAO_SUBSET_SUBVEC, TAO_SUBSET_MASK,  TAO_SUBSET_MATRIXFREE)
 - maskvalue - the value to set the unused vector elements to (for TAO_SUBSET_MASK or TAO_SUBSET_MATRIXFREE)
 
-  Output Parameters:
+  Output Parameter:
 . vreduced - the subvector
 
   Notes:
@@ -102,7 +102,7 @@ PetscErrorCode TaoVecGetSubVec(Vec vfull, IS is, TaoSubsetType reduced_type, Pet
 . v1 - work vector of dimension n, needed for TAO_SUBSET_MASK option
 - subset_type <TAO_SUBSET_SUBVEC,TAO_SUBSET_MASK,TAO_SUBSET_MATRIXFREE> - the method TAO is using for subsetting
 
-  Output Parameters:
+  Output Parameter:
 . Msub - the submatrix
 
   Level: developer
@@ -236,7 +236,7 @@ PetscErrorCode TaoEstimateActiveBounds(Vec X, Vec XL, Vec XU, Vec G, Vec S, Vec 
 
   ierr = VecGetOwnershipRange(X, &low, &high);CHKERRQ(ierr);
   ierr = VecGetLocalSize(X, &n);CHKERRQ(ierr);
-  if (n>0){
+  if (n>0) {
     ierr = VecGetArrayRead(X, &x);CHKERRQ(ierr);
     ierr = VecGetArrayRead(XL, &xl);CHKERRQ(ierr);
     ierr = VecGetArrayRead(XU, &xu);CHKERRQ(ierr);
@@ -335,7 +335,7 @@ PetscErrorCode TaoEstimateActiveBounds(Vec X, Vec XL, Vec XU, Vec G, Vec S, Vec 
 . active_fixed - index set for fixed active variables
 - scale - amplification factor for the step that needs to be taken on actively bounded variables
 
-  Output Parameters:
+  Output Parameter:
 . S - step direction to be modified
 
   Level: developer
@@ -432,13 +432,13 @@ PetscErrorCode TaoBoundSolution(Vec X, Vec XL, Vec XU, PetscReal bound_tol, Pets
 
   ierr = VecGetOwnershipRange(X,&low,&high);CHKERRQ(ierr);
   ierr = VecGetLocalSize(X,&n);CHKERRQ(ierr);
-  if (n>0){
+  if (n>0) {
     ierr = VecGetArrayRead(X, &x);CHKERRQ(ierr);
     ierr = VecGetArrayRead(XL, &xl);CHKERRQ(ierr);
     ierr = VecGetArrayRead(XU, &xu);CHKERRQ(ierr);
     ierr = VecGetArray(Xout, &xout);CHKERRQ(ierr);
 
-    for (i=0;i<n;++i){
+    for (i=0;i<n;++i) {
       if ((xl[i] > PETSC_NINFINITY) && (x[i] <= xl[i] + bound_tol)) {
         xout[i] = xl[i]; ++nDiff_loc;
       } else if ((xu[i] < PETSC_INFINITY) && (x[i] >= xu[i] - bound_tol)) {

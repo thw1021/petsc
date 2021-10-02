@@ -45,9 +45,11 @@ PetscErrorCode  PetscDrawSetCoordinates(PetscDraw draw,PetscReal xl,PetscReal yl
 
    Level: advanced
 
-   Ouput Parameters:
-.  xl,yl,xr,yr - the coordinates of the lower left corner and upper
-                 right corner of the drawing region.
+   Output Parameters:
++  xl - the horizontal coordinate of the lower left corner of the drawing region.
+.  yl - the vertical coordinate of the lower left corner of the drawing region.
+.  xr - the horizontal coordinate of the upper right corner of the drawing region.
+-  yr - the vertical coordinate of the upper right corner of the drawing region.
 
 .seealso: PetscDrawSetCoordinates()
 

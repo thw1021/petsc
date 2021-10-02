@@ -3,12 +3,12 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self,framework):
     config.package.Package.__init__(self,framework)
-    self.gitcommit              = 'd841b533dc66034f10583de32418cd4ca2ed5a53' # main apr-26-2021
+    self.gitcommit              = 'f0a1542a8c408e1da02478a9843bb12815a680ae' # main sep-21-2021
     self.download               = ['git://https://github.com/htool-ddm/htool','https://github.com/htool-ddm/htool/archive/'+self.gitcommit+'.tar.gz']
-    self.minversion             = '0.5.0'
+    self.minversion             = '0.7.0'
     self.versionname            = 'HTOOL_VERSION'
     self.versioninclude         = 'htool/misc/define.hpp'
-    self.requirescxx11          = 1
+    self.minCxxVersion          = 'c++11'
     self.cxx                    = 1
     self.functions              = []
     self.includes               = ['htool/htool.hpp']
@@ -30,18 +30,19 @@ class Configure(config.package.Package):
     return
 
   def Install(self):
+    import shutil
     import os
     incDir = os.path.join(self.installDir,self.includedir)
-    if self.installSudo:
-      newuser = self.installSudo+' -u $${SUDO_USER} '
-    else:
-      newuser = ''
     self.include = [incDir]
     if not hasattr(self.framework,'packages'):
       self.framework.packages = []
     self.framework.packages.append(self)
-    cpstr = newuser+' mkdir -p '+incDir+' && '+newuser+' cp -r '+os.path.join(self.packageDir,'include','*')+' '+incDir
-    self.logPrintBox('Copying Htool; this may take several seconds')
-    output,err,ret = config.package.Package.executeShellCommand(cpstr,timeout=100,log=self.log)
-    self.log.write(output+err)
+    srcdir = os.path.join(self.packageDir,'include','htool')
+    destdir = os.path.join(incDir,'htool')
+    try:
+      self.logPrintBox('Copying Htool; this may take several seconds')
+      if os.path.isdir(destdir): shutil.rmtree(destdir)
+      shutil.copytree(srcdir,destdir)
+    except RuntimeError as e:
+      raise RuntimeError('Error copying Htool: '+str(e))
     return self.installDir

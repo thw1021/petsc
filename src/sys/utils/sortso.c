@@ -33,14 +33,14 @@ PETSC_STATIC_INLINE void COPYSWAPPY(char *a, char *b, char *t, size_t size)
   return;
 }
 
-PETSC_STATIC_INLINE void COPYSWAPPY2(char *aa, char *ab, size_t asize, char *ba, char *bb, size_t bsize, char *t)
+PETSC_STATIC_INLINE void COPYSWAPPY2(char *al, char *ar, size_t asize, char *bl, char *br, size_t bsize, char *t)
 {
-  __builtin_memcpy(t, ab, asize);
-  __builtin_memmove(ab, aa, asize);
-  __builtin_memcpy(aa, t, asize);
-  __builtin_memcpy(t, bb, bsize);
-  __builtin_memmove(bb, ba, bsize);
-  __builtin_memcpy(ba, t, bsize);
+  __builtin_memcpy(t, ar, asize);
+  __builtin_memmove(ar, al, asize);
+  __builtin_memcpy(al, t, asize);
+  __builtin_memcpy(t, br, bsize);
+  __builtin_memmove(br, bl, bsize);
+  __builtin_memcpy(bl, t, bsize);
   return;
 }
 
@@ -53,7 +53,7 @@ PETSC_STATIC_INLINE void Petsc_memcpy(char *dest, const char *src, size_t size)
 PETSC_STATIC_INLINE void Petsc_memcpy2(char *adest, const char *asrc, size_t asize, char *bdest, const char *bsrc, size_t bsize)
 {
   __builtin_memcpy(adest, asrc, asize);
-  __builtin_memcpy(bdest, asrc, bsize);
+  __builtin_memcpy(bdest, bsrc, bsize);
   return;
 }
 
@@ -80,16 +80,16 @@ PETSC_STATIC_INLINE void COPYSWAPPY(char *a, char *b, char *t, size_t size)
   PetscFunctionReturnVoid();
 }
 
-PETSC_STATIC_INLINE void COPYSWAPPY2(char *aa, char *ab, size_t asize, char *ba, char *bb, size_t bsize, char *t)
+PETSC_STATIC_INLINE void COPYSWAPPY2(char *al, char *ar, size_t asize, char *bl, char *br, size_t bsize, char *t)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscMemcpy(t, ab, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  ierr = PetscMemmove(ab, aa, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  ierr = PetscMemcpy(aa, t, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  ierr = PetscMemcpy(t, bb, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  ierr = PetscMemmove(bb, ba, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  ierr = PetscMemcpy(ba, t, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemcpy(t, ar, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemmove(ar, al, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemcpy(al, t, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemcpy(t, br, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemmove(br, bl, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemcpy(bl, t, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
   PetscFunctionReturnVoid();
 }
 
@@ -106,7 +106,7 @@ PETSC_STATIC_INLINE void Petsc_memcpy2(char *adest, const char *asrc, size_t asi
   PetscErrorCode ierr;
   PetscFunctionBegin;
   ierr = PetscMemcpy(adest, asrc, asize);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  ierr = PetscMemcpy(bdest, asrc, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = PetscMemcpy(bdest, bsrc, bsize);CHKERRABORT(PETSC_COMM_SELF,ierr);
   PetscFunctionReturnVoid();
 }
 
@@ -539,7 +539,11 @@ PETSC_STATIC_INLINE PetscErrorCode PetscBinaryInsertionSortWithArray_Private(cha
 typedef struct {
   PetscInt size;
   PetscInt start;
+#if defined(__CRAY_AARCH64) /* segfaults with Cray compilers for aarch64 on a64FX */
+} PetscTimSortStack;
+#else
 } PetscTimSortStack PETSC_ATTRIBUTEALIGNED(2*sizeof(PetscInt));
+#endif
 
 typedef struct {
   char   *ptr PETSC_ATTRIBUTEALIGNED(PETSC_MEMALIGN);
@@ -1030,16 +1034,14 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
 
   Input Parameters:
 + n     - number of values
-. arr   - array to be sorted
 . asize - size in bytes of the datatype held in arr
-. barr  - array to be reordered
-. asize - size in bytes of the datatype held in barr
+. bsize - size in bytes of the datatype held in barr
 . cmp   - function pointer to comparison function
 - ctx   - optional context to be passed to comparison function, NULL if not needed
 
-  Output Parameters:
-+ arr  - sorted array
-- barr - reordered array
+  Input/Output Parameters:
++ arr  - array to be sorted, on output it is sorted
+- barr - array to be reordered, on output it is reordered
 
   Notes:
   The arrays need not be of the same type, however barr MUST contain at least as many elements as arr and the two CANNOT
@@ -1128,9 +1130,7 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
   }
   if (PetscDefined(USE_DEBUG)) {
     ierr = PetscInfo1(NULL, "minrun = %D\n", minrun);CHKERRQ(ierr);
-    if (n < 64) {
-      ierr = PetscInfo1(NULL, "n %D < 64, consider using PetscSortInt() instead\n", n);CHKERRQ(ierr);
-    } else if ((minrun < 32) || (minrun > 65)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %D not in range (32,65)",minrun);
+    if ((n >= 64) && ((minrun < 32) || (minrun > 65))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %D not in range (32,65)",minrun);
   }
   ierr = PetscMalloc1((size_t) minrun*asize, &abuff.ptr);CHKERRQ(ierr);
   abuff.size = (size_t) minrun*asize;
@@ -1174,7 +1174,7 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
 
    This function serves as an alternative to PetscSortInt(). While this function works for any array of integers it is
    significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
-   recomended that the user benchmark their code to see which routine is fastest.
+   recommended that the user benchmark their code to see which routine is fastest.
 
    Level: intermediate
 
@@ -1200,23 +1200,19 @@ PetscErrorCode PetscIntSortSemiOrdered(PetscInt n, PetscInt arr[])
 
    Not Collective
 
-   Input Parameters:
-+  n   - number of values
-.  arr1 - array of integers to be sorted
--  arr2 - array of integers to be reordered
+   Input Parameter:
+.  n   - number of values
 
-   Output Parameters:
-+  arr1 - sorted array of integers
--  arr2 - reordered array of integers
+   Input/Output Parameters:
++  arr1 - array of integers to be sorted, modified on output
+-  arr2 - array of integers to be reordered, modified on output
 
    Notes:
    The arrays CANNOT overlap.
 
-   If the array to be sorted is less than 64 entries long PetscSortIntWithArray() is automatically used.
-
    This function serves as an alternative to PetscSortIntWithArray(). While this function works for any array of integers it is
    significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
-   recomended that the user benchmark their code to see which routine is fastest.
+   recommended that the user benchmark their code to see which routine is fastest.
 
    Level: intermediate
 
@@ -1226,14 +1222,11 @@ PetscErrorCode PetscIntSortSemiOrderedWithArray(PetscInt n, PetscInt arr1[], Pet
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
+  if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr1,2);
   PetscValidIntPointer(arr2,3);
-  if (n == 1) PetscFunctionReturn(0);
-  if (n < 64) {
-    ierr = PetscSortIntWithArray(n, arr1, arr2);CHKERRQ(ierr);
-  } else {
-    ierr = PetscTimSortWithArray(n, arr1, sizeof(PetscInt), arr2, sizeof(PetscInt), Compare_PetscInt_Private, NULL);CHKERRQ(ierr);
-  }
+  /* cannot export out to PetscIntSortWithArray here since it isn't stable */
+  ierr = PetscTimSortWithArray(n, arr1, sizeof(PetscInt), arr2, sizeof(PetscInt), Compare_PetscInt_Private, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1254,7 +1247,7 @@ PetscErrorCode PetscIntSortSemiOrderedWithArray(PetscInt n, PetscInt arr1[], Pet
 
    This function serves as an alternative to PetscSortMPIInt(). While this function works for any array of PetscMPIInts it is
    significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
-   recomended that the user benchmark their code to see which routine is fastest.
+   recommended that the user benchmark their code to see which routine is fastest.
 
    Level: intermediate
 
@@ -1265,8 +1258,8 @@ PetscErrorCode PetscMPIIntSortSemiOrdered(PetscInt n, PetscMPIInt arr[])
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
+  if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr,2);
-  if (n == 1) PetscFunctionReturn(0);
   if (n < 64) {
     ierr = PetscSortMPIInt(n, arr);CHKERRQ(ierr);
   } else {
@@ -1281,23 +1274,19 @@ PetscErrorCode PetscMPIIntSortSemiOrdered(PetscInt n, PetscMPIInt arr[])
 
    Not Collective
 
-   Input Parameters:
-+  n   - number of values
-.  arr1 - array of integers to be sorted
--  arr2 - array of integers to be reordered
+   Input Parameter:
+.  n   - number of values
 
-   Output Parameters:
-+  arr1 - sorted array of integers
--  arr2 - reordered array of integers
+   Input/Output Parameters:
+.  arr1 - array of integers to be sorted, modified on output
+-  arr2 - array of integers to be reordered, modified on output
 
    Notes:
    The arrays CANNOT overlap.
 
-   If the array to be sorted is less than 64 entries long PetscSortMPIIntWithArray() is automatically used.
-
    This function serves as an alternative to PetscSortMPIIntWithArray(). While this function works for any array of integers it is
    significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
-   recomended that the user benchmark their code to see which routine is fastest.
+   recommended that the user benchmark their code to see which routine is fastest.
 
    Level: intermediate
 
@@ -1310,11 +1299,8 @@ PetscErrorCode PetscMPIIntSortSemiOrderedWithArray(PetscInt n, PetscMPIInt arr1[
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr1,2);
   PetscValidIntPointer(arr2,3);
-  if (n < 64) {
-    ierr = PetscSortMPIIntWithArray(n, arr1, arr2);CHKERRQ(ierr);
-  } else {
-    ierr = PetscTimSortWithArray(n, arr1, sizeof(PetscMPIInt), arr2, sizeof(PetscMPIInt), Compare_PetscMPIInt_Private, NULL);CHKERRQ(ierr);
-  }
+  /* cannot export out to PetscMPIIntSortWithArray here since it isn't stable */
+  ierr = PetscTimSortWithArray(n, arr1, sizeof(PetscMPIInt), arr2, sizeof(PetscMPIInt), Compare_PetscMPIInt_Private, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1335,7 +1321,7 @@ PetscErrorCode PetscMPIIntSortSemiOrderedWithArray(PetscInt n, PetscMPIInt arr1[
 
    This function serves as an alternative to PetscSortReal(). While this function works for any array of PetscReals it is
    significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
-   recomended that the user benchmark their code to see which routine is fastest.
+   recommended that the user benchmark their code to see which routine is fastest.
 
    Level: intermediate
 
@@ -1362,21 +1348,17 @@ PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
 
    Not Collective
 
-   Input Parameters:
-+  n   - number of values
-.  arr1 - array of PetscReals to be sorted
--  arr2 - array of PetscReals to be reordered
+   Input Parameter:
+.  n   - number of values
 
-   Output Parameters:
-+  arr1 - sorted array of PetscReals
--  arr2 - reordered array of PetscInts
+   Input/Output Parameters:
+.  arr1 - array of PetscReals to be sorted, modified on output
+-  arr2 - array of PetscReals to be reordered, modified on output
 
    Notes:
-   If the array to be sorted is less than 64 entries long PetscSortRealWithArrayInt() is automatically used.
-
    This function serves as an alternative to PetscSortRealWithArray(). While this function works for any array of PetscReals it is
    significantly faster if the array is not totally random. There are exceptions to this and so it is __highly__
-   recomended that the user benchmark their code to see which routine is fastest.
+   recommended that the user benchmark their code to see which routine is fastest.
 
    Level: intermediate
 
@@ -1389,10 +1371,7 @@ PetscErrorCode PetscRealSortSemiOrderedWithArrayInt(PetscInt n, PetscReal arr1[]
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidRealPointer(arr1,2);
   PetscValidIntPointer(arr2,3);
-  if (n < 64) {
-    ierr = PetscSortRealWithArrayInt(n, arr1, arr2);CHKERRQ(ierr);
-  } else {
-    ierr = PetscTimSortWithArray(n, arr1, sizeof(PetscReal), arr2, sizeof(PetscInt), Compare_PetscReal_Private, NULL);CHKERRQ(ierr);
-  }
+  /* cannot export out to PetscRealSortWithArrayInt here since it isn't stable */
+  ierr = PetscTimSortWithArray(n, arr1, sizeof(PetscReal), arr2, sizeof(PetscInt), Compare_PetscReal_Private, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
