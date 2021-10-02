@@ -52,9 +52,9 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-with-fortranlib-autodetect=<bool>',     nargs.ArgBool(None, 1, 'Autodetect Fortran compiler libraries'))
     help.addArgument('Compilers', '-with-cxxlib-autodetect=<bool>',         nargs.ArgBool(None, 1, 'Autodetect C++ compiler libraries'))
     help.addArgument('Compilers', '-with-dependencies=<bool>',              nargs.ArgBool(None, 1, 'Compile with -MMD or equivalent flag if possible'))
-    help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources, pass just the number auto-detects gnu extensions (auto,[[c|gnu][xx|++]]17,[[c|gnu][xx|++]]14,[[c|gnu][xx|++]]11,[[c|gnu][xx|++]]03,0)'))
-    help.addArgument('Compilers', '-with-hip-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile HIP sources (auto,[c[xx|++]]17,[c[xx|++]]14,[c[xx|++]]11,0)'))
-    help.addArgument('Compilers', '-with-cuda-dialect=<dialect>',           nargs.Arg(None, 'auto', 'Dialect under which to compile CUDA sources (auto,[c[xx|++]]17,[c[xx|++]]14,[c[xx|++]]11,0)'))
+    help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources. Pass \'c++17\' to use \'-std=c++17\', \'gnu++17\' to use \'-std=gnu++17\' or pass just the numer (e.g. \'17\') to have PETSc auto-detect gnu extensions. Pass \'auto\' to let PETSc auto-detect everything or \'0\' to use the compiler\'s default. Available: (03, 11, 14, 17, auto, 0)'))
+    help.addArgument('Compilers', '-with-hip-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile HIP sources. If set should probably be equivalent to c++ dialect (see --with-cxx-dialect)'))
+    help.addArgument('Compilers', '-with-cuda-dialect=<dialect>',           nargs.Arg(None, 'auto', 'Dialect under which to compile CUDA sources. If set should probably be equivalent to c++ dialect (see --with-cxx-dialect)'))
     return
 
   def getDispatchNames(self):
