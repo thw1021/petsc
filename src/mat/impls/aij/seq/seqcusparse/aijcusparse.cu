@@ -187,7 +187,6 @@ PETSC_INTERN PetscErrorCode MatCUSPARSESetFormat_SeqAIJCUSPARSE(Mat A,MatCUSPARS
   Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
 
   PetscFunctionBegin;
-
   switch (op) {
   case MAT_CUSPARSE_MULT:
     cusparsestruct->format = format;
