@@ -260,7 +260,7 @@ void landau_form_fdf(const PetscInt dim, const PetscInt Nb, const PetscReal d_in
 
 __device__ void
 jac_kernel(const PetscInt myQi, const PetscInt jpidx, PetscInt nip_global, const PetscInt Nq, const PetscInt grid,
-           const PetscInt dim,  const PetscReal xx[], const PetscReal yy[], const PetscReal ww[], const PetscReal invJj[],
+           const PetscReal xx[], const PetscReal yy[], const PetscReal ww[], const PetscReal invJj[],
            const PetscInt Nftot, const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
            const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, P4estVertexMaps *d_maps[], PetscSplitCSRDataStructure d_mat, // output
            PetscScalar s_fieldMats[][LANDAU_MAX_NQ], // all these arrays are in shared memory
@@ -286,8 +286,10 @@ jac_kernel(const PetscInt myQi, const PetscInt jpidx, PetscInt nip_global, const
   PetscReal       gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
 #if LANDAU_DIM==2
   const PetscReal vj[3] = {xx[jpidx], yy[jpidx]};
+  constexpr int dim = 2;
 #else
   const PetscReal vj[3] = {xx[jpidx], yy[jpidx], zz[jpidx]};
+  constexpr int dim = 3;
 #endif
   const PetscInt  moffset = d_mat_offset[grid], Nfloc = d_species_offset[grid+1]-d_species_offset[grid], g_cell = blockIdx.x, elem = g_cell - d_elem_offset[grid];
   const PetscInt  f_off = d_species_offset[grid], Nb=Nq;
@@ -503,7 +505,7 @@ jac_kernel(const PetscInt myQi, const PetscInt jpidx, PetscInt nip_global, const
 // The CUDA Landau kernel
 //
 __global__
-void __launch_bounds__(256,4)
+void __launch_bounds__(256,2)
   landau_jacobian(const PetscInt nip_global, const PetscInt dim, const PetscInt Nb, const PetscReal invJj[],
                   const PetscInt Nftot, const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
                   const PetscReal * const BB, const PetscReal * const DD, const PetscReal xx[], const PetscReal yy[], const PetscReal ww[],
@@ -578,7 +580,7 @@ void __launch_bounds__(256,4)
       s_fieldMats = NULL;
     }
     __syncthreads();
-    jac_kernel(myQi, jpidx, nip_global, Nq, grid, dim, xx, yy, ww,
+    jac_kernel(myQi, jpidx, nip_global, Nq, grid, xx, yy, ww,
                invJ, Nftot, nu_alpha, nu_beta, invMass, Eq_m, BB, DD,
                elemMat, d_maps, d_mat,
                *s_fieldMats, *s_scale, *s_idx,
@@ -601,9 +603,9 @@ void __launch_bounds__(256,4) landau_mass(const PetscInt dim, const PetscInt Nb,
   __shared__ PetscScalar s_fieldMats[LANDAU_MAX_NQ][LANDAU_MAX_NQ];
   __shared__ PetscInt    s_idx[LANDAU_MAX_NQ][LANDAU_MAX_Q_FACE];
   __shared__ PetscReal   s_scale[LANDAU_MAX_NQ][LANDAU_MAX_Q_FACE];
-  int                    tid = threadIdx.x + threadIdx.y*blockDim.x;
+  PetscInt               tid = threadIdx.x + threadIdx.y*blockDim.x;
   PetscScalar            *elemMat = NULL; /* my output */
-  int                    fieldA,d,qj,q,idx,f,g, grid = 0;
+  PetscInt                fieldA,d,qj,q,idx,f,g, grid = 0;
 
   while (g_cell >= d_elem_offset[grid+1]) grid++; // yuck search for grid
   {
@@ -711,7 +713,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt n
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
   while (nnn & nnn - 1) nnn = nnn & nnn - 1;
-  if (nnn>4) nnn = 4; // 16 debug
+  if (nnn>16) nnn = 16;
   ierr = DMGetApplicationContext(plex[0], &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(plex[0], &dim);CHKERRQ(ierr);
