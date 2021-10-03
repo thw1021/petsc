@@ -41,8 +41,6 @@ class Configure(config.package.CMakePackage):
     else:
       args.append('-DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE')
     if self.cuda.found:
-      if not self.openmp.found:
-        raise RuntimeError('SuperLU_DIST GPU code currently requires OpenMP. Use --with-openmp=1')
       # SuperLU_DIST CMake doesn't know about GPU builds
       for place,item in enumerate(args):
         if item.find('CMAKE_C_FLAGS') >= 0:
