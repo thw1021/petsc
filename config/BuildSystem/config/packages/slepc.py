@@ -44,16 +44,19 @@ class Configure(config.package.Package):
        barg = ' SLEPC_DIR='+self.packageDir+' '
        prefix = os.path.join(self.petscdir.dir,self.arch)
 
+    depbuild = ''
     if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments']:
       configargs = self.argDB['download-slepc-configure-arguments']
       if '--with-slepc4py' in self.argDB['download-slepc-configure-arguments']:
-        carg += ' PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH}'
+        carg += ' PYTHONPATH='+os.path.join(self.installDir,'lib',self.python.pythondir)+':${PYTHONPATH} '
+        if self.argDB['with-petsc4py']:
+          depbuild = 'petsc4pyinstall'
     else:
       configargs = ''
 
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
-    self.addMakeRule('slepcbuild','', \
+    self.addMakeRule('slepcbuild',depbuild, \
                        ['@echo "*** Building SLEPc ***"',\
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\

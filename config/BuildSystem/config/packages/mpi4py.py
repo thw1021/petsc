@@ -22,7 +22,7 @@ class Configure(config.package.Package):
     return
 
   def Install(self):
-    installLibPath = os.path.join(self.installDir, 'lib')
+    installLibPath = os.path.join(self.installDir, 'lib', self.python.pythondir)
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -58,31 +58,26 @@ class Configure(config.package.Package):
     self.checkDownload()
     if not self.sharedLibraries.useShared:
         raise RuntimeError('mpi4py requires PETSc be built with shared libraries; rerun with --with-shared-libraries')
-    if not getattr(self.python,'numpy'):
+    if not hasattr(self.python,'numpy'):
         raise RuntimeError('mpi4py, in the context of PETSc,requires Python with numpy module installed.\n'
                            'Please install using package managers - for ex: "apt" or "dnf" (on linux),\n'
                            'or  using: %s -m pip install %s' % (self.python.pyexe, 'numpy'))
-    if self.argDB.get('with-mpi4py-dir'):
+
+    if self.argDB.get('with-mpi4py') and not self.argDB.get('with-mpi4py-dir'):
+      if not hasattr(self.python,'mpi4py'):
+        raise RuntimeError('mpi4py not found in default Python PATH! Suggest using --download-mpi4py or --with-mpi4py-dir!')
+    elif self.argDB.get('with-mpi4py-dir'):
       self.directory = self.argDB['with-mpi4py-dir']
     elif self.argDB.get('download-mpi4py'):
-      self.directory = os.path.join(self.installDir)
-    elif self.argDB.get('with-mpi4py'):
-      if not getattr(self.python,'mpi4py'):
-        raise RuntimeError('mpi4py not found in default Python PATH! Suggest using --download-mpi4py!')
+      self.directory = os.path.join(self.installDir, 'lib', self.python.pythondir)
     else:
-        raise RuntimeError('mpi4py unreconginzed mode of building mpi4py! Suggest using --download-mpi4py!')
+      raise RuntimeError('mpi4py unrecognized mode of building mpi4py! Suggest using --download-mpi4py or --with-mpi4py-dir!')
 
     if self.directory:
-      installLibPath = os.path.join(self.directory, 'lib')
-      if not os.path.isfile(os.path.join(installLibPath,'mpi4py','__init__.py')):
-        raise RuntimeError('mpi4py not found at %s' % installLibPath)
-      self.addMakeMacro('PETSC_MPI4PY_PYTHONPATH',installLibPath)
-      if 'PYTHONPATH' in os.environ:
-        self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH=${PYTHONPATH}'+os.pathsep+installLibPath,rmDir = 0)
-        os.environ['PYTHONPATH'] = os.environ['PYTHONPATH']+os.pathsep+installLibPath
-      else:
-        self.logPrintBox('To use mpi4py, do\nexport PYTHONPATH='+installLibPath,rmDir = 0)
-        os.environ['PYTHONPATH'] = installLibPath
+      if not os.path.isfile(os.path.join(self.directory,'mpi4py','__init__.py')):
+        raise RuntimeError('mpi4py not found at %s' % self.directory)
+      self.addMakeMacro('PETSC_MPI4PY_PYTHONPATH',self.directory)
+      self.logPrintBox('To use mpi4py, add '+self.directory+' to PYTHONPATH')
 
     self.addMakeMacro('MPI4PY',"yes")
     self.found = 1

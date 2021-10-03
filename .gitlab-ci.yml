@@ -143,6 +143,7 @@ petsc4py-install:
     - linux-stage2
   variables:
     PYTHON: python3
+    T_PY_DIR: python3.7/site-packages
     T_PREFIX: petsc-install
     T_DESTDIR: petsc-destdir
     T_PETSC4PY: src/binding/petsc4py
@@ -158,22 +159,22 @@ petsc4py-install:
     - test "$(find ${PWD}/${T_PREFIX} -mindepth 1 | wc -l)" -eq 0
     - test "$(find ${PWD}/${T_DESTDIR} -mindepth 1 | wc -l)" -gt 0
     - (cd "${PWD}/${T_DESTDIR}" && find * -exec install -v -D "{}" "/{}" \; )
-    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
+    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" PY_DIR="${T_PY_DIR}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
     - rm -r "${PWD}/${T_PREFIX}" "${PWD}/${T_DESTDIR}" && mkdir "${PWD}/${T_PREFIX}"
     - printf "====== Test B. Install directly into prefix directory =====\n"
     - make install
     - test "$(find ${PWD}/${T_PREFIX} -mindepth 1 | wc -l)" -gt 0
-    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
-    - rm -r "${PWD}/${T_PREFIX}"/*/petsc4py*
+    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" PY_DIR="${T_PY_DIR}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
+    - rm -r "${PWD}/${T_PREFIX}"/lib/${T_PY_DIR}/petsc4py*
     - printf "====== Test C. Install manually with setuptools =====\n"
     - export PETSC_DIR="${PWD}/${T_PREFIX}" && (cd "${T_PETSC4PY}" && ${PYTHON} setup.py build)
-    - export PETSC_DIR="${PWD}/${T_PREFIX}" P="${PWD}" && (cd "${T_PETSC4PY}" && ${PYTHON} setup.py install --install-lib="${P}/${T_PREFIX}/lib")
-    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
-    - rm -r "${PWD}/${T_PREFIX}"/*/petsc4py*
+    - export PETSC_DIR="${PWD}/${T_PREFIX}" P="${PWD}" && (cd "${T_PETSC4PY}" && ${PYTHON} setup.py install --install-lib="${P}/${T_PREFIX}/lib/${T_PY_DIR}")
+    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" PY_DIR="${T_PY_DIR}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
+    - rm -r "${PWD}/${T_PREFIX}"/lib/${T_PY_DIR}/petsc4py*
     - printf "====== Test D. Install manually with setuptools with staging =====\n"
-    - export PETSC_DIR="${PWD}/${T_PREFIX}" P="${PWD}" && (cd "${T_PETSC4PY}" && ${PYTHON} setup.py install --root="${P}/${T_DESTDIR}" --install-lib="${P}/${T_PREFIX}/lib")
+    - export PETSC_DIR="${PWD}/${T_PREFIX}" P="${PWD}" && (cd "${T_PETSC4PY}" && ${PYTHON} setup.py install --root="${P}/${T_DESTDIR}" --install-lib="${P}/${T_PREFIX}/lib/${T_PY_DIR}")
     - (cd "${PWD}/${T_DESTDIR}" && find * -exec install -v -D "{}" "/{}" \; )
-    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
+    - mv arch-* hide/ && PETSC_DIR="${PWD}/${T_PREFIX}" PY_DIR="${T_PY_DIR}" ${T_VALIDATE_CMD} && mv hide/arch-* ./
 
 checksource:
   extends: .test-basic

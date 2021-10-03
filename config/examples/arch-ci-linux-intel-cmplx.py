@@ -33,6 +33,7 @@ if __name__ == '__main__':
     '--with-petsc4py',
     '--download-slepc',
     '--download-slepc-configure-arguments="--with-slepc4py"',
+    '--download-slepc-commit=2343548a5b',
     '--download-scalapack',
     '--download-strumpack',
     '--download-suitesparse',

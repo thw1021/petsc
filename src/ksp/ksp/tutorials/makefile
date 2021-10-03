@@ -16,6 +16,7 @@ EXAMPLESF        = ex1f.F90 ex2f.F90 ex6f.F90 ex11f.F90 ex13f90.F90 ex14f.F90 ex
                    ex5f.F90 ex52f.F90 ex54f.F90 ex61f.F90 ex7f.F90 ex100f.F90 ex75f.F90 ex76f.F90 ex77f.F90
 MANSEC           = KSP
 CLEANFILES       = rhs.vtk solution.vtk
+CLEANDIRS        = __pycache__
 NP               = 1
 DIRS             = network amrex
 

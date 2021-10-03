@@ -54,6 +54,7 @@ foo:
 
 # Removes garbage files
 clean-legacy:
+	@-${RM} -rf ${CLEANDIRS} *.dSYM AD_cache SunWS_cache
 	@-${RM} ${CLEANFILES} ${TESTS} *.o *.lo *~ \
                ex[0-9] ex[0-9][0-9] ex[0-9][0-9][0-9] \
                ex[0-9]f ex[0-9][0-9]f ex[0-9][0-9][0-9]f \
@@ -70,7 +71,6 @@ clean-legacy:
                *.cp_ *.cp__ *.c*.c \
                *.dep *.proj ctoatmp PETScArena* *.L *.anl *.mod .mpi* *.d \
               *.class *.ouit *.ad.* g_* silly.cmp *.tmp.* *.ilk *.pdb *.inst.c *.rej *.gcda *.gcno
-	@-${RM} -rf ${CLEANDIRS} *.dSYM AD_cache SunWS_cache
 
 clean:: clean-legacy
 
