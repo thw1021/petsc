@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = '369a4fd56f2d55562eec99e8f1c0fc492679f2c3' # release oct-1-2021
+    self.gitcommit              = 'f25fb3adb031964aea5fa9b06e418680bb99dcaf' # main oct-01-2021
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
@@ -44,16 +44,19 @@ class Configure(config.package.Package):
        barg = ' SLEPC_DIR='+self.packageDir+' '
        prefix = os.path.join(self.petscdir.dir,self.arch)
 
+    depbuild = ''
     if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments']:
       configargs = self.argDB['download-slepc-configure-arguments']
       if '--with-slepc4py' in self.argDB['download-slepc-configure-arguments']:
-        carg += ' PYTHONPATH='+os.path.join(self.installDir,'lib')+':${PYTHONPATH}'
+        carg += ' PYTHONPATH='+os.path.join(self.installDir,'lib',self.python.pythondir)+':${PYTHONPATH} '
+        if self.argDB['with-petsc4py']:
+          depbuild = 'petsc4pyinstall'
     else:
       configargs = ''
 
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
-    self.addMakeRule('slepcbuild','', \
+    self.addMakeRule('slepcbuild',depbuild, \
                        ['@echo "*** Building SLEPc ***"',\
                           '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/slepc.errorflg',\
                           '@(cd '+self.packageDir+' && \\\n\

@@ -1,10 +1,12 @@
 import config.package
+import os
 
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
     self.cython = 0
     self.numpy = 0
+    self.pythondir = ''
     self.skippackagewithoptions = 1
     return
 
@@ -39,4 +41,13 @@ class Configure(config.package.Package):
         output1,err1,ret1  = config.package.Package.executeShellCommand(self.pyexe + ' -c "import numpy"',timeout=60, log = self.log)
         self.numpy = 1
       except: pass
+
+    try:
+      pyscr = ' -c "import sys; s = \'%d.%d\'%(sys.version_info.major,sys.version_info.minor); print(s)"'
+      output1,err1,ret1 = config.package.Package.executeShellCommand(self.pyexe + pyscr,timeout=60, log = self.log)
+      self.pythondir = os.path.join('python' + output1, 'site-packages')
+    except: pass
+
+    self.addMakeMacro('PETSC_PYTHONDIR',self.pythondir)
+
     return

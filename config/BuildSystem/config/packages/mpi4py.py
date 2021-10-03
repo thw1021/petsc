@@ -22,7 +22,7 @@ class Configure(config.package.Package):
     return
 
   def Install(self):
-    installLibPath = os.path.join(self.installDir, 'lib')
+    installLibPath = os.path.join(self.installDir, 'lib', self.python.pythondir)
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -73,7 +73,7 @@ class Configure(config.package.Package):
         raise RuntimeError('mpi4py unreconginzed mode of building mpi4py! Suggest using --download-mpi4py!')
 
     if self.directory:
-      installLibPath = os.path.join(self.directory, 'lib')
+      installLibPath = os.path.join(self.installDir, 'lib', self.python.pythondir)
       if not os.path.isfile(os.path.join(installLibPath,'mpi4py','__init__.py')):
         raise RuntimeError('mpi4py not found at %s' % installLibPath)
       self.addMakeMacro('PETSC_MPI4PY_PYTHONPATH',installLibPath)

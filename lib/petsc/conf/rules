@@ -54,7 +54,7 @@ foo:
 
 # Removes garbage files
 clean-legacy:
-	@-${RM} ${CLEANFILES} ${TESTS} *.o *.lo *~ \
+	@-${RM} -f ${CLEANFILES} ${TESTS} *.o *.lo *~ \
                ex[0-9] ex[0-9][0-9] ex[0-9][0-9][0-9] \
                ex[0-9]f ex[0-9][0-9]f ex[0-9][0-9][0-9]f \
                ex[0-9]k ex[0-9][0-9]k ex[0-9][0-9][0-9]k \

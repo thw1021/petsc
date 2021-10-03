@@ -1,5 +1,6 @@
 import config.package
 import os
+import sys
 
 class Configure(config.package.Package):
   def __init__(self, framework):
@@ -33,8 +34,7 @@ class Configure(config.package.Package):
     return os.path.join('src','binding','petsc4py')
 
   def Install(self):
-    import os
-    installLibPath = os.path.join(self.installDir, 'lib')
+    installLibPath = os.path.join(self.installDir, 'lib', self.python.pythondir)
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -65,7 +65,8 @@ class Configure(config.package.Package):
       newdir += 'NUMPY_INCLUDE="'+numpy_include+'" '
 
     self.addDefine('HAVE_PETSC4PY',1)
-    self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
+    self.addDefine('PETSC4PY_INSTALL_PATH','"'+installLibPath+'"')
+    self.addMakeMacro('PETSC_PETSC4PY_PYTHONPATH',installLibPath)
     self.addMakeMacro('PETSC4PY','yes')
     self.addMakeRule('petsc4pybuild','', \
                        ['@echo "*** Building petsc4py ***"',\
@@ -100,8 +101,8 @@ class Configure(config.package.Package):
     self.addMakeMacro('PETSC4PY_NP',np)
     self.addMakeRule('petsc4pytest', '',
         ['@echo "*** Testing petsc4py on ${PETSC4PY_NP} processes ***"',
-         '@PYTHONPATH=%s:${PETSC_MPI4PY_PYTHONPATH}:${PYTHONPATH} ${MPIEXEC} -n ${PETSC4PY_NP} %s %s --verbose' % \
-             (installLibPath, self.python.pyexe, os.path.join(self.packageDir, 'test', 'runtests.py')),
+         '@PYTHONPATH=${PETSC_PETSC4PY_PYTHONPATH}:${PETSC_MPI4PY_PYTHONPATH}:${PYTHONPATH} ${MPIEXEC} -n ${PETSC4PY_NP} %s %s --verbose' % \
+             (self.python.pyexe, os.path.join(self.packageDir, 'test', 'runtests.py')),
          '@echo "====================================="'])
 
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
