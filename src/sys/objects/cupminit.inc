@@ -310,8 +310,7 @@ static PetscErrorCode PetscOptionsCheckCUPM(PetscBool logView)
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_KOKKOS)
-  ierr = PetscKokkosIsInitialized_Private(&kinited);CHKERRQ(ierr);
-  if (kinited) { /* Check if Petsc device options conform with Kokkos' device if Kokkos is init'ed before PetscInitialize() */
+  if (PetscKokkosInitialized) { /* Check if Petsc device options conform with Kokkos' device if Kokkos is init'ed before PetscInitialize() */
     ierr = PetscOptionsGetString(NULL,NULL,cupmSetDeviceStr,devStr,sizeof(devStr),&set);CHKERRQ(ierr);
     if (set) { /* If users have initialized Kokkos themselves, but also had e.g., -cuda_device XXX, for simplicity, make sure XXX is DEFAULT */
       ierr = PetscStrcasecmp("DEFAULT",devStr,&devDefault);CHKERRQ(ierr);

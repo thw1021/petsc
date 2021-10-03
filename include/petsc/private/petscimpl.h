@@ -178,7 +178,8 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*PetscObjectViewFunction)(PetscObje
    PetscLogObjectMemory((PetscObject)(h),sizeof(*(h))))
 
 PETSC_INTERN PetscErrorCode PetscComposedQuantitiesDestroy(PetscObject obj);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscHeaderCreate_Private(PetscObject,PetscClassId,const char[],const char[],const char[],MPI_Comm,PetscObjectDestroyFunction,PetscObjectViewFunction);
+/* externed for SLEPc */
+PETSC_EXTERN PetscErrorCode PetscHeaderCreate_Private(PetscObject,PetscClassId,const char[],const char[],const char[],MPI_Comm,PetscObjectDestroyFunction,PetscObjectViewFunction);
 
 /*@C
     PetscHeaderDestroy - Final step in destroying a PetscObject
@@ -192,7 +193,8 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscHeaderCreate_Private(PetscObject
 @*/
 #define PetscHeaderDestroy(h) (PetscHeaderDestroy_Private((PetscObject)(*(h))) || PetscFree(*(h)))
 
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscHeaderDestroy_Private(PetscObject);
+/* externed for SLEPc */
+PETSC_EXTERN PetscErrorCode PetscHeaderDestroy_Private(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject,PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectSetFortranCallback(PetscObject,PetscFortranCallbackType,PetscFortranCallbackId*,void(*)(void),void *ctx);
 PETSC_EXTERN PetscErrorCode PetscObjectGetFortranCallback(PetscObject,PetscFortranCallbackType,PetscFortranCallbackId,void(**)(void),void **ctx);
@@ -553,7 +555,7 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject,PetscObjectState*);
 PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject,PetscObjectState);
-PETSC_EXTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt*);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt*);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseInt(PetscObject);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseIntstar(PetscObject);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseReal(PetscObject);
@@ -561,6 +563,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseRealst
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseScalar(PetscObject);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseScalarstar(PetscObject);
 PETSC_SINGLE_LIBRARY_INTERN PetscInt PetscObjectComposedDataMax;
+
 /*MC
    PetscObjectComposedDataSetInt - attach integer data to a PetscObject
 
@@ -912,9 +915,10 @@ typedef struct {
   PetscInt       numopsend;    /* number of requests that have been gotten by user */
 } PetscSplitReduction;
 
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSplitReductionGet(MPI_Comm,PetscSplitReduction**);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSplitReductionEnd(PetscSplitReduction*);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscSplitReductionExtend(PetscSplitReduction*);
+/* externed for SLEPc */
+PETSC_EXTERN PetscErrorCode PetscSplitReductionGet(MPI_Comm,PetscSplitReduction**);
+PETSC_EXTERN PetscErrorCode PetscSplitReductionEnd(PetscSplitReduction*);
+PETSC_EXTERN PetscErrorCode PetscSplitReductionExtend(PetscSplitReduction*);
 
 #if !defined(PETSC_SKIP_SPINLOCK)
 #if defined(PETSC_HAVE_THREADSAFETY)
@@ -997,13 +1001,12 @@ PETSC_INTERN PetscLogEvent PETSC_BuildTwoSidedF;
 PETSC_SINGLE_LIBRARY_INTERN PetscBool     use_gpu_aware_mpi;
 
 #if defined(PETSC_HAVE_ADIOS)
-PETSC_EXTERN int64_t Petsc_adios_group;
+PETSC_SINGLE_LIBRARY_INTERN int64_t Petsc_adios_group;
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_INTERN PetscBool      PetscBeganKokkos;
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
 PETSC_SINGLE_LIBRARY_INTERN PetscBool PetscKokkosInitialized;
-PETSC_INTERN PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool*);
 PETSC_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
 #endif
 
