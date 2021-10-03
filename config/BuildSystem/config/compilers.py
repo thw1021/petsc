@@ -528,7 +528,10 @@ class Configure(config.base.Configure):
     with self.Language(language):
       allFlags = tuple(self.getCompilerFlags().strip().split())
     langDialectFromFlags = tuple(f for f in allFlags for flag in baseFlags if f.startswith(flag))
-    langDialectFromFlags = langDialectFromFlags[-1].lower().replace('-std=','') if langDialectFromFlags else None
+    if len(langDialectFromFlags):
+      langDialectFromFlags = langDialectFromFlags[-1].lower().replace('-std=','')
+    else:
+      langDialectFromFlags = None
 
     # configure value
     configureArg = lang.join(['with-','-dialect'])
@@ -543,11 +546,20 @@ class Configure(config.base.Configure):
       isGNUish        = True
       userSetGNUish   = True
       withLangDialect = withLangDialect.replace('GNU','C')
-    if not withLangDialect != 'AUTO' and withLangDialect.startswith('C++'):
-      withLangDialect = 'C++'+withLangDialect
+    else:
+      from sys import version_info
+      if version_info < (3,):
+        # python 2 doesn't have the strictly superior str.isdecimal
+        containsOnlyNumeric = str.isdigit
+      else: # novermin
+        # vermin still reports this as incompatible even though we explicitly check
+        # version
+        containsOnlyNumeric = str.isdecimal
+      if containsOnlyNumeric(withLangDialect):
+        withLangDialect = 'C++'+withLangDialect
     if langDialectFromFlags is not None:
       # the user had set the standard flag previously
-      isGNUish = 'gnu' in langDialectFromFlags
+      isGNUish      = 'gnu' in langDialectFromFlags
       userSetGNUish = True
       formattedLangDialectFromFlags = langDialectFromFlags.upper().replace('GNU','C')
       if withLangDialect != 'AUTO' != formattedLangDialectFromFlags:
@@ -607,15 +619,18 @@ class Configure(config.base.Configure):
     """
     includes14 = includes11+"""
     // C++14 includes
+    #include <memory>
     template<class T>
     constexpr T pi = T(3.1415926535897932385L);  // variable template
     """
     body14 = body11+"""
     // C++14 body
+    auto ptr = std::make_unique<int>();
+    *ptr = 1;
     std::cout<<pi<double><<std::endl;
-    constexpr std::complex<double> I(0.0,1.0);
+    constexpr std::complex<double> const_i(0.0,1.0);
     auto lambda = [](auto x, auto y) { return x + y; };
-    std::cout<<lambda(3,4) + (int)std::real(I)<<std::endl;
+    std::cout<<lambda(3,4)<<std::real(const_i)<<std::endl;
     """
     includes17 = includes14+"""
     // C++17 includes
@@ -738,7 +753,7 @@ class Configure(config.base.Configure):
       breakAll = False
       for dlct in reversed(dialects[minDialect:maxDialect]):
         dialectNum = dlct['num'][3:] # extract '17' from c++17
-        for base in reversed(baseFlags[:isGNUish+1]):
+        for base in reversed(baseFlags[:int(isGNUish)+1]):
           flag = dlct['num'].replace('c++',base)
           self.setCompilers.saveLog()
           self.logPrint(' '.join(['checkCxxDialect: checking CXX',dialectNum,'for',language,'with flag:',flag]))
