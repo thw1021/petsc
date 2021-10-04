@@ -439,7 +439,7 @@ PetscErrorCode  ISLocalToGlobalMappingCreateIS(IS is,ISLocalToGlobalMapping *map
     Level: advanced
 
     Notes:
-    If one processor calls this with N of PETSC_DECIDE then all processors must, otherwise the program will hang.
+    If any processor calls this with start = PETSC_DECIDE then all processors must, otherwise the program will hang.
 
 .seealso: ISLocalToGlobalMappingDestroy(), ISLocalToGlobalMappingCreate(), ISLocalToGlobalMappingCreateIS(), ISLocalToGlobalMappingSetFromOptions()
 @*/
