@@ -737,6 +737,10 @@ checkbadSource:
          fi
 	@test ! -s badSourceChar.out
 
+vermin:
+# any changes here should be mirrored in .gitlab-ci.yml check-py-vermin target!
+	@vermin -vvv -t=2.7- -t=3.4- ${VERMIN_OPTIONS} config
+
 lint:
 	${PYTHON3} ${PETSC_DIR}/lib/petsc/bin/maint/petscClangLinter.py --verbose=${V} $(LINTER_OPTIONS)
 
@@ -860,4 +864,3 @@ updatedatafiles:
             cd "${HOME}/datafiles" && git pull -q; fi
 
 include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
-
