@@ -1274,6 +1274,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         foundCompilers = True
       if foundCompilers and foundSetCompilers: break
 
+    if not (foundCompilers or foundSetCompilers):
+      raise RuntimeError('Did not find setCompilers and compilers modules in children')
     minCxx,maxCxx = compilers.cxxDialectRange
     self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange))
     minCxxVersionBlameList = {}
