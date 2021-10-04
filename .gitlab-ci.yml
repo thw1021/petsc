@@ -210,7 +210,9 @@ check-py-vermin:
   tags:
     - stage1
   script:
-    - vermin -vv  -t=2.7- -t=3.4- config
+    - printf "PYTHONPATH:$PYTHONPATH\n"
+    - VERMIN_OPTIONS="--version" make vermin
+    - make vermin
 #
 # This provides the basic order of operations and options template for stage-2,3 tests.
 # Not all stage-2,3 need to follow this template, but most will.
