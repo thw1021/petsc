@@ -416,7 +416,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   ierr = PetscDSSetJacobian(prob, 0, 1, NULL, NULL, g2_qu, NULL);CHKERRQ(ierr);
   ierr = PetscDSSetJacobian(prob, 1, 0, NULL, g1_uq, NULL, NULL);CHKERRQ(ierr);
 
-  //ierr = PetscDSSetExactSolution(prob,2,zero_func,NULL);CHKERRQ(ierr);
   switch (user->solType)
   {
     case SOL_LINEAR:
@@ -464,11 +463,9 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   //ierr = PetscObjectSetName((PetscObject) fedivErr,"divErr");CHKERRQ(ierr);
   ierr = PetscFEGetQuadrature(feq, &q);CHKERRQ(ierr);
   ierr = PetscFESetQuadrature(feu,  q);CHKERRQ(ierr);
-  //ierr = PetscFESetQuadrature(fedivErr, q);CHKERRQ(ierr);
   /* Set discretization and boundary conditions for each mesh */
   ierr = DMSetField(dm, 0, NULL, (PetscObject) feq);CHKERRQ(ierr);
   ierr = DMSetField(dm, 1, NULL, (PetscObject) feu);CHKERRQ(ierr);
-  //ierr = DMSetField(dm, 2, NULL, (PetscObject) fedivErr);CHKERRQ(ierr);
   
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   ierr = (*setup)(dm, user);CHKERRQ(ierr);
@@ -1101,28 +1098,69 @@ int main(int argc,char **argv)
    test:
      suffix: bsi1_bdm_linear
      args: -dm_plex_dim 2 \
-       -dm_plex_simplex 0 -particlesPerCell 2000 \
-       -simplex 0 -ts_basicsymplectic_type 1\
-       -field_petscspace_degree 1\
-       -field_petscdualspace_type bdm\
-       -field_petscdualspace_lagrange_tensor 1\
-       -snes_error_if_not_converged\
-       -pc_type fieldsplit\
-       -pc_fieldsplit_detect_saddle_point\
-       -pc_fieldsplit_type schur\
-       -pc_fieldsplit_schur_precondition full\
-       -pc_fieldsplit_schur_fact_type full\
-       -fieldsplit_0_pc_type lu\
-       -fieldsplit_1_pc_type lu\
-       -steps 1\
-       -bdm\
-       -solType linear\
-       -snes_monitor\
-       -ksp_monitor\
-       -ksp_rtol 1e-10\
-       -uniform\
-       -sigma 1.0e-8\
-       -timeScale 2.0e-14\
-       -stepSize 1.0e-2\
-       -snes_linesearch_monitor
+           -dm_plex_simplex 0 -particlesPerCell 2000 \
+           -simplex 0 -ts_basicsymplectic_type 1\
+           -field_petscspace_degree 1\
+           -field_petscdualspace_type bdm\
+           -field_petscdualspace_lagrange_tensor 1\
+           -snes_error_if_not_converged\
+           -pc_type fieldsplit\
+           -pc_fieldsplit_detect_saddle_point\
+           -pc_fieldsplit_type schur\
+           -pc_fieldsplit_schur_precondition full\
+           -pc_fieldsplit_schur_fact_type full\
+           -fieldsplit_0_pc_type lu\
+           -fieldsplit_1_pc_type lu\
+           -steps 1\
+           -bdm\
+           -solType linear\
+           -snes_monitor\
+           -ksp_monitor\
+           -ksp_rtol 1e-10\
+           -uniform\
+           -sigma 1.0e-8\
+           -timeScale 2.0e-14\
+           -stepSize 1.0e-2\
+           -snes_linesearch_monitor
+   test:
+     suffix: bsi1_rt
+     args: -dm_plex_dim 2 \
+           -dm_plex_simplex 0 -particlesPerCell 2000 \
+           -simplex 0 -ts_basicsymplectic_type 1\
+           -snes_monitor\
+           -ksp_monitor\
+           -ksp_rtol 1e-10\
+           -uniform\
+           -sigma 1.0e-8\
+           -timeScale 2.0e-14\
+           -stepSize 1.0e-2\
+           -snes_linesearch_monitor\
+           -snes_error_if_not_converged \
+           -ksp_rtol 1e-10 \
+           -ksp_error_if_not_converged \
+           -pc_type fieldsplit\
+           -pc_fieldsplit_detect_saddle_point\
+           -pc_fieldsplit_type schur\
+           -pc_fieldsplit_schur_precondition full \
+           -field_petscfe_default_quadrature_order 1 \
+           -field_petscspace_type sum \
+           -field_petscspace_variables 2 \
+           -field_petscspace_components 2 \
+           -field_petscspace_sum_spaces 2 \
+           -field_petscspace_sum_concatenate true \
+           -field_subspace0_petscspace_variables 2 \
+           -field_subspace0_petscspace_type tensor \
+           -field_subspace0_petscspace_tensor_spaces 2 \
+           -field_subspace0_petscspace_tensor_uniform false \
+           -field_subspace0_subspace_0_petscspace_degree 1 \
+           -field_subspace0_subspace_1_petscspace_degree 0 \
+           -field_subspace1_petscspace_variables 2 \
+           -field_subspace1_petscspace_type tensor \
+           -field_subspace1_petscspace_tensor_spaces 2 \
+           -field_subspace1_petscspace_tensor_uniform false \
+           -field_subspace1_subspace_0_petscspace_degree 0 \
+           -field_subspace1_subspace_1_petscspace_degree 1 \
+           -field_petscdualspace_form_degree -1 \
+           -field_petscdualspace_order 1 \
+           -field_petscdualspace_lagrange_trimmed true
 TEST*/
