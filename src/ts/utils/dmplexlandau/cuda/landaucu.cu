@@ -62,7 +62,8 @@ PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps maps[], Pet
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscInt num_grids, PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[],
+PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscInt num_grids, const PetscInt num_batches,
+                                       PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[],
                                        PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[],
                                        PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
 {
@@ -135,11 +136,11 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscIn
     cerr = cudaMalloc((void**)&SData_d->maps, num_grids*sizeof(P4estVertexMaps*));CHKERRCUDA(cerr);
     // allocate space for dynamic data once
     cerr = cudaMalloc((void **)&SData_d->Eq_m,                          Nf*szf);CHKERRCUDA(cerr); // this could be for each vertex (todo?)
-    cerr = cudaMalloc((void **)&SData_d->f,      nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr); // for each vertex in batch
-    cerr = cudaMalloc((void **)&SData_d->dfdx,   nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **)&SData_d->dfdy,   nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->f,      nip*Nf*szs*num_batches);CHKERRCUDA(cerr); // for each vertex in batch
+    cerr = cudaMalloc((void **)&SData_d->dfdx,   nip*Nf*szs*num_batches);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->dfdy,   nip*Nf*szs*num_batches);CHKERRCUDA(cerr);
 #if LANDAU_DIM==3
-    cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs*num_batches);CHKERRCUDA(cerr);
 #endif
   }
   PetscFunctionReturn(0);
