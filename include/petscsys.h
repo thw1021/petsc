@@ -1615,6 +1615,8 @@ PETSC_EXTERN PetscErrorCode PetscBarrier(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscMPIDump(FILE*);
 PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm,PetscInt[2],PetscInt[2]);
 PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm,PetscReal[2],PetscReal[2]);
+PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject,PetscObjectState*);
+PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject,PetscObjectState);
 
 /*MC
     PetscNot - negates a logical type value and returns result as a PetscBool

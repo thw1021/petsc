@@ -305,7 +305,7 @@ static PetscErrorCode PetscOptionsCheckCUPM(PetscBool logView)
   PetscInt       device = 0;
   char           devStr[32]={0};
 #if defined(PETSC_HAVE_KOKKOS)
-  PetscBool      set,kinited,devDefault;
+  PetscBool      set,devDefault;
 #endif
 
   PetscFunctionBegin;

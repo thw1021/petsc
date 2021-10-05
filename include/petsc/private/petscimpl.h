@@ -553,16 +553,47 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 M*/
 #define PetscObjectStateIncrease(obj) ((obj)->state++,0)
 
-PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject,PetscObjectState*);
-PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject,PetscObjectState);
+/* externed for BAMG */
+PETSC_EXTERN PetscInt       PetscObjectComposedDataMax;
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt*);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseInt(PetscObject);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseIntstar(PetscObject);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseReal(PetscObject);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseRealstar(PetscObject);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseScalar(PetscObject);
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataIncreaseScalarstar(PetscObject);
-PETSC_SINGLE_LIBRARY_INTERN PetscInt PetscObjectComposedDataMax;
+
+#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type,type,PetscType) \
+  PETSC_STATIC_INLINE                                                   \
+  PetscErrorCode PetscObjectComposedDataIncrease##Type(PetscObject obj) \
+  {                                                                     \
+    const PetscInt   new_n   = PetscObjectComposedDataMax;              \
+    const PetscInt   n       = obj->type##_idmax;                       \
+    PetscType        *ar     = obj->type##composeddata;                 \
+    PetscType        *new_ar = NULL;                                    \
+    PetscObjectState *ir     = obj->type##composedstate;                \
+    PetscObjectState *new_ir = NULL;                                    \
+    PetscErrorCode   ierr;                                              \
+                                                                        \
+    PetscFunctionBegin;                                                 \
+    ierr = PetscCalloc2(new_n,&new_ar,new_n,&new_ir);CHKERRQ(ierr);     \
+    ierr = PetscMemcpy(new_ar,ar,n*sizeof(*new_ar));CHKERRQ(ierr);      \
+    ierr = PetscMemcpy(new_ir,ir,n*sizeof(*new_ir));CHKERRQ(ierr);      \
+    ierr = PetscFree2(ar,ir);CHKERRQ(ierr);                             \
+    obj->type##_idmax        = new_n;                                   \
+    obj->type##composeddata  = new_ar;                                  \
+    obj->type##composedstate = new_ir;                                  \
+    PetscFunctionReturn(0);                                             \
+  }
+
+#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_(Type,type)            \
+  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type,type,Petsc##Type)     \
+  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type##star,type##star,Petsc##Type*)
+
+#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Type,type)             \
+  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_(Type,type)
+
+PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Int,int)
+PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Real,real)
+PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Scalar,scalar)
+
+#undef PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE
+#undef PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_
+#undef PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__
 
 /*MC
    PetscObjectComposedDataSetInt - attach integer data to a PetscObject
