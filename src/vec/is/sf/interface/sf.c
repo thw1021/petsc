@@ -27,7 +27,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGetMemType(const void *data,PetscMemType
   PetscValidPointer(type,2);
   *type = PETSC_MEMTYPE_HOST;
 #if defined(PETSC_HAVE_CUDA)
-  if (PetscCUDAInitialized && data) {
+  if (PetscDeviceInitializedFor(PETSC_DEVICE_CUDA) && data) {
     cudaError_t                  cerr;
     struct cudaPointerAttributes attr;
     enum cudaMemoryType          mtype;
@@ -43,7 +43,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGetMemType(const void *data,PetscMemType
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-  if (PetscHIPInitialized && data) {
+  if (PetscDeviceInitializedFor(PETSC_DEVICE_HIP) && data) {
     hipError_t                   cerr;
     struct hipPointerAttribute_t attr;
     enum hipMemoryType           mtype;
