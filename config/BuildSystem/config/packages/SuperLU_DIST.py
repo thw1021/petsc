@@ -41,10 +41,9 @@ class Configure(config.package.CMakePackage):
     else:
       args.append('-DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE')
     if self.cuda.found:
-      # SuperLU_DIST CMake doesn't know about GPU builds
-      for place,item in enumerate(args):
-        if item.find('CMAKE_C_FLAGS') >= 0:
-          args[place]=item[:-1]+' -DGPU_ACC '+self.headers.toString(self.cuda.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"'
+      args.append('-DTPL_ENABLE_CUDALIB=TRUE')
+      args.append('-DTPL_CUDA_LIBRARIES="'+self.libraries.toString(self.cuda.dlib)+'"')
+      args.append('-DCUDA_ARCH_FLAGS="'+self.headers.toString(self.cuda.include)+' -arch=sm_'+self.cuda.cudaArch+' -DDEBUGlevel=0 -DPRNTlevel=0"')
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
     args.append('-DTPL_LAPACK_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
