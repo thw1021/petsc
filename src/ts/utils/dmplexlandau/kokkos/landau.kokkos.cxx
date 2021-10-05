@@ -115,7 +115,8 @@ PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_g
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt num_grids, PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[],
+PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt num_grids, const PetscInt num_batches,
+                                         PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[],
                                          PetscReal a_nu_alpha[], PetscReal a_nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[],
                                          PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
 {
