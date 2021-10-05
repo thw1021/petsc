@@ -179,20 +179,21 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetConstants(prob, 2, &q[0]);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
-  ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ctx->batch_view_idx*ctx->num_grids],tt,NULL);CHKERRQ(ierr);
+  //ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ctx->batch_view_idx*ctx->num_grids],tt,NULL);CHKERRQ(ierr);
+  ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ LAND_PACK_IDX(ctx->batch_view_idx,0) ],tt,NULL);CHKERRQ(ierr);
   J = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
   if (plexi) { // add first (only) ion
     ierr = DMGetDS(plexi, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 1, &q[1]);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_jz_sum);CHKERRQ(ierr);
-    ierr = DMPlexComputeIntegralFEM(plexi,XsubArray[ctx->batch_view_idx*ctx->num_grids + 1],tt,NULL);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plexi,XsubArray[LAND_PACK_IDX(ctx->batch_view_idx,1)],tt,NULL);CHKERRQ(ierr);
     J += -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
   }
   /* get N_e */
   ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetConstants(prob, 1, user);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_n);CHKERRQ(ierr);
-  ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ctx->batch_view_idx*ctx->num_grids],tt,NULL);CHKERRQ(ierr);
+  ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[LAND_PACK_IDX(ctx->batch_view_idx,0)],tt,NULL);CHKERRQ(ierr);
   n_e = PetscRealPart(tt[0])*ctx->n_0;
   /* Z */
   Z = -ctx->charges[1]/ctx->charges[0];
@@ -202,14 +203,14 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
     ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 1, user);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_vz);CHKERRQ(ierr);
-    ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ctx->batch_view_idx*ctx->num_grids],tt,NULL);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[LAND_PACK_IDX(ctx->batch_view_idx,0)],tt,NULL);CHKERRQ(ierr);
     vz = ctx->n_0*PetscRealPart(tt[0])/n_e; /* non-dimensional */
   } else vz = 0;
   /* thermal velocity */
   ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetConstants(prob, 1, &vz);CHKERRQ(ierr);
   ierr = PetscDSSetObjective(prob, 0, &f0_ve_shift);CHKERRQ(ierr);
-  ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ctx->batch_view_idx*ctx->num_grids],tt,NULL);CHKERRQ(ierr);
+  ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[LAND_PACK_IDX(ctx->batch_view_idx,0)],tt,NULL);CHKERRQ(ierr);
   v = ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/n_e;   /* remove number density to get velocity */
   v2 = PetscSqr(v);                                    /* use real space: m^2 / s^2 */
   Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul;    /* temperature in kev */
@@ -219,7 +220,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
     ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
     ierr = PetscDSSetConstants(prob, 1, q);CHKERRQ(ierr);
     ierr = PetscDSSetObjective(prob, 0, &f0_j_re);CHKERRQ(ierr);
-    ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[ctx->batch_view_idx*ctx->num_grids],tt,NULL);CHKERRQ(ierr);
+    ierr = DMPlexComputeIntegralFEM(plexe,XsubArray[LAND_PACK_IDX(ctx->batch_view_idx,0)],tt,NULL);CHKERRQ(ierr);
   } else tt[0] = 0;
   J_re = -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
   ierr = DMCompositeRestoreAccessArray(pack, X, ctx->num_grids*ctx->batch_sz, NULL, XsubArray);CHKERRQ(ierr); // read only
@@ -414,8 +415,8 @@ static PetscErrorCode FormSource(TS ts, PetscReal ftime, Vec X_dummmy, Vec F, vo
       ierr = DMCompositeGetAccessArray(pack, F, ctx->num_grids*ctx->batch_sz, NULL, globFarray);CHKERRQ(ierr);
       for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) {
         /* add it */
-        ierr = LandauAddMaxwellians(ctx->plex[grid],globFarray[grid],ftime,temps,tilda_ns,grid,0,ctx);CHKERRQ(ierr);
-        ierr = VecViewFromOptions(globFarray[grid],NULL,"-vec_view_sources");CHKERRQ(ierr);
+        ierr = LandauAddMaxwellians(ctx->plex[grid],globFarray[ LAND_PACK_IDX(0,grid) ],ftime,temps,tilda_ns,grid,0,ctx);CHKERRQ(ierr);
+        ierr = VecViewFromOptions(globFarray[ LAND_PACK_IDX(0,grid) ],NULL,"-vec_view_sources");CHKERRQ(ierr);
       }
       // Does DMCompositeRestoreAccessArray copy the data back? (no)
       ierr = DMCompositeRestoreAccessArray(pack, F, ctx->num_grids*ctx->batch_sz, NULL, globFarray);CHKERRQ(ierr);
@@ -456,10 +457,10 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
       PetscPrintf(PETSC_COMM_WORLD, "\t\t ERROR SKIP test spit ------\n");
       rectx->plotting = PETSC_TRUE;
     }
-    ierr = PetscObjectSetName((PetscObject) globXArray[ctx->batch_view_idx*ctx->num_grids + rectx->grid_view_idx], rectx->grid_view_idx==0 ? "ue" : "ui");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) globXArray[ LAND_PACK_IDX(ctx->batch_view_idx,rectx->grid_view_idx) ], rectx->grid_view_idx==0 ? "ue" : "ui");CHKERRQ(ierr);
     /* view, overwrite step when back tracked */
     ierr = DMSetOutputSequenceNumber(pack, rectx->plotIdx, time*ctx->t_0);CHKERRQ(ierr);
-    ierr = VecViewFromOptions(globXArray[ctx->batch_view_idx*ctx->num_grids + rectx->grid_view_idx],NULL,"-vec_view");CHKERRQ(ierr);
+    ierr = VecViewFromOptions(globXArray[ LAND_PACK_IDX(ctx->batch_view_idx, rectx->grid_view_idx) ],NULL,"-vec_view");CHKERRQ(ierr);
 
     rectx->plotStep = stepi;
   } else {
@@ -682,10 +683,10 @@ int main(int argc, char **argv)
   ierr = ProcessREOptions(rectx,ctx,pack,"");CHKERRQ(ierr);
   ierr = DMGetDS(pack, &prob);CHKERRQ(ierr);
   ierr = DMCompositeGetAccessArray(pack, X, ctx->num_grids*ctx->batch_sz, NULL, XsubArray);CHKERRQ(ierr); // read only
-  ierr = PetscObjectSetName((PetscObject) XsubArray[ctx->batch_view_idx*ctx->num_grids + rectx->grid_view_idx], rectx->grid_view_idx==0 ? "ue" : "ui");CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) XsubArray[ LAND_PACK_IDX(ctx->batch_view_idx, rectx->grid_view_idx) ], rectx->grid_view_idx==0 ? "ue" : "ui");CHKERRQ(ierr);
   ierr = DMViewFromOptions(ctx->plex[rectx->grid_view_idx],NULL,"-dm_view");CHKERRQ(ierr);
   ierr = DMViewFromOptions(ctx->plex[rectx->grid_view_idx], NULL,"-dm_view_0");CHKERRQ(ierr);
-  ierr = VecViewFromOptions(XsubArray[ctx->batch_view_idx*ctx->num_grids + rectx->grid_view_idx], NULL,"-vec_view_0");CHKERRQ(ierr); // initial condition (monitor plots after step)
+  ierr = VecViewFromOptions(XsubArray[ LAND_PACK_IDX(ctx->batch_view_idx,rectx->grid_view_idx) ], NULL,"-vec_view_0");CHKERRQ(ierr); // initial condition (monitor plots after step)
   ierr = DMCompositeRestoreAccessArray(pack, X, ctx->num_grids*ctx->batch_sz, NULL, XsubArray);CHKERRQ(ierr); // read only
   ierr = VecViewFromOptions(X, NULL,"-vec_view_global");CHKERRQ(ierr); // initial condition (monitor plots after step)
   ierr = DMSetOutputSequenceNumber(pack, 0, 0.0);CHKERRQ(ierr);

@@ -153,6 +153,13 @@ typedef struct {
   PetscInt         batch_view_idx;
 } LandauCtx;
 
+//#define LANDAU_SPECIES_MAJOR
+#if !defined(LANDAU_SPECIES_MAJOR)
+#define LAND_PACK_IDX(_b,_g) (_b*ctx->num_grids + _g)
+#else
+#define LAND_PACK_IDX(_b,_g) (_g*ctx->batch_sz + _b)
+#endif
+
 typedef int LandauIdx;
 typedef struct {
   PetscReal scale;
