@@ -132,15 +132,15 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscIn
     cerr = cudaMemcpy(          SData_d->ipf_offset, h_ipf_offset,     (num_grids+1)*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
     cerr = cudaMalloc((void **)&SData_d->elem_offset,                     (num_grids+1)*szi);CHKERRCUDA(cerr);
     cerr = cudaMemcpy(          SData_d->elem_offset, h_elem_offset,     (num_grids+1)*szi,   cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
-    // allocate space for dynamic data once
-    cerr = cudaMalloc((void **)&SData_d->Eq_m,       Nf*szf);CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **)&SData_d->f,      nip*Nf*szs);CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **)&SData_d->dfdx,   nip*Nf*szs);CHKERRCUDA(cerr);
-    cerr = cudaMalloc((void **)&SData_d->dfdy,   nip*Nf*szs);CHKERRCUDA(cerr);
-#if LANDAU_DIM==3
-    cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs);CHKERRCUDA(cerr);     // kernel input
-#endif
     cerr = cudaMalloc((void**)&SData_d->maps, num_grids*sizeof(P4estVertexMaps*));CHKERRCUDA(cerr);
+    // allocate space for dynamic data once
+    cerr = cudaMalloc((void **)&SData_d->Eq_m,                          Nf*szf);CHKERRCUDA(cerr); // this could be for each vertex (todo?)
+    cerr = cudaMalloc((void **)&SData_d->f,      nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr); // for each vertex in batch
+    cerr = cudaMalloc((void **)&SData_d->dfdx,   nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr);
+    cerr = cudaMalloc((void **)&SData_d->dfdy,   nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr);
+#if LANDAU_DIM==3
+    cerr = cudaMalloc((void **)&SData_d->dfdz,   nip*Nf*szs*PetscNumOMPThreads);CHKERRCUDA(cerr);
+#endif
   }
   PetscFunctionReturn(0);
 }

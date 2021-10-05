@@ -7,7 +7,7 @@
 PETSC_EXTERN PetscErrorCode LandauPrintNorms(Vec, PetscInt);
 PETSC_EXTERN PetscErrorCode LandauCreateVelocitySpace(MPI_Comm,PetscInt,const char[],Vec*,Mat*,DM*);
 PETSC_EXTERN PetscErrorCode LandauDestroyVelocitySpace(DM*);
-PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], PetscInt, void *);
+PETSC_EXTERN PetscErrorCode LandauAddMaxwellians(DM, Vec, PetscReal, PetscReal[], PetscReal[], PetscInt, PetscInt, void *);
 PETSC_EXTERN PetscErrorCode LandauCreateMassMatrix(DM dm, Mat *Amat);
 PETSC_EXTERN PetscErrorCode LandauIFunction(TS, PetscReal,Vec,Vec,Vec,void *);
 PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,Mat,void *);
@@ -28,6 +28,8 @@ PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,
 #else
 #define LANDAU_MAX_GRIDS 3
 #endif
+
+#define LANDAU_MAX_BATCH_SZ 32
 
 #if !defined(LANDAU_MAX_Q)
 #if defined(LANDAU_MAX_NQ)
@@ -52,7 +54,7 @@ PETSC_EXTERN PetscErrorCode LandauIJacobian(TS, PetscReal,Vec,Vec,PetscReal,Mat,
 
 typedef enum {LANDAU_CUDA, LANDAU_KOKKOS, LANDAU_CPU} LandauDeviceType;
 
-// static data
+// static data - will be "device" data
 typedef struct {
   void  *invJ;  // nip*dim*dim
   void  *D;     // nq*nb*dim
@@ -70,21 +72,23 @@ typedef struct {
   void  *dfdy; // nip*Nf - dynamic (IP)
   void  *dfdz; // nip*Nf - dynamic (IP)
   int   dim_,ns_,nip_,nq_,nb_;
-  void  *NCells;
-  void  *species_offset;
-  void  *mat_offset;
-  void  *elem_offset;
-  void  *ip_offset;
-  void  *ipf_offset;
-  void  *ipfdf_data;
-  void  *maps;
+  void  *NCells; // remove and ise elem_offset - TODO
+  void  *species_offset; // for each grid, but same for all batched vertices
+  void  *mat_offset; // for each grid, but same for all batched vertices
+  void  *elem_offset; // for each grid, but same for all batched vertices
+  void  *ip_offset; // for each grid, but same for all batched vertices
+  void  *ipf_offset; // for each grid, but same for all batched vertices
+  void  *ipfdf_data; // for each grid, but same for all batched vertices
+  void  *maps; // for each grid, but same for all batched vertices
 } LandauStaticData;
+
+typedef enum {LANDAU_EX2_TSSOLVE, LANDAU_MATRIX_TOTAL, LANDAU_OPERATOR, LANDAU_JACOBIAN_COUNT, LANDAU_JACOBIAN, LANDAU_MASS, LANDAU_F_DF, LANDAU_KERNEL, KSP_FACTOR, KSP_SOLVE, LANDAU_NUM_TIMERS} LandauOMPTimers;
 
 typedef struct {
   PetscBool      interpolate;                  /* Generate intermediate mesh elements */
   PetscBool      gpu_assembly;
   MPI_Comm       comm; /* global communicator to use for errors and diagnostics */
-  double         times[1];
+  double         times[LANDAU_NUM_TIMERS];
   PetscBool      initialized;
   PetscBool      use_matrix_mass;
   /* FE */
@@ -125,26 +129,28 @@ typedef struct {
   PetscReal      electronShift;
   PetscInt       num_species;
   PetscInt       num_grids;
-  PetscInt       species_offset[LANDAU_MAX_GRIDS+1];
-  PetscInt       mat_offset[LANDAU_MAX_GRIDS+1];
+  PetscInt       species_offset[LANDAU_MAX_GRIDS+1]; // for each grid, but same for all batched vertices
+  PetscInt       mat_offset[LANDAU_MAX_GRIDS+1]; // for each grid, but same for all batched vertices
   /* cache */
-  Mat            J;
-  Mat            M;
-  Vec            X;
+  Mat              J;
+  Mat              M;
+  Vec              X;
   /* derived type */
-  void          *data;
-  PetscBool      aux_bool;  /* helper */
+  void             *data;
   /* computing */
   LandauDeviceType deviceType;
-  PetscInt       subThreadBlockSize;
-  PetscInt       numConcurrency; /* number of SMs in Cuda to use */
-  DM             pack;
-  DM             plex[LANDAU_MAX_GRIDS];
-  LandauStaticData SData_d; /* static geometric data on device, this holds host pointers */
+  PetscInt         subThreadBlockSize;
+  PetscInt         numConcurrency; /* number of SMs in Cuda to use */
+  DM               pack;
+  DM               plex[LANDAU_MAX_GRIDS];
+  LandauStaticData SData_d; /* static geometric data on device */
   /* diagnostics */
-  PetscInt       verbose;
-  PetscLogEvent  events[20];
-  PetscLogStage  stage;
+  PetscInt         verbose;
+  PetscLogEvent    events[20];
+  PetscLogStage    stage;
+  PetscBool        aux_bool;  /* helper */
+  PetscInt         batch_sz;
+  PetscInt         batch_view_idx;
 } LandauCtx;
 
 typedef int LandauIdx;
