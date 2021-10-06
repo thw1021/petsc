@@ -45,13 +45,17 @@ static PetscErrorCode PCApply_Eisenstat(PC pc,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
+static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
   PetscBool      nonzero;
   PetscErrorCode ierr;
+  Vec            x,b;
 
   PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
+
   if (pc->presolvedone < 2) {
     if (pc->mat != pc->pmat) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot have different mat and pmat");
     /* swap shell matrix and true matrix */
@@ -400,7 +404,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
   ierr = PetscNewLog(pc,&eis);CHKERRQ(ierr);
 
   pc->ops->apply           = PCApply_Eisenstat;
-  pc->ops->presolve        = PCPreSolve_Eisenstat;
   pc->ops->postsolve       = PCPostSolve_Eisenstat;
   pc->ops->applyrichardson = NULL;
   pc->ops->setfromoptions  = PCSetFromOptions_Eisenstat;
@@ -408,6 +411,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
   pc->ops->reset           = PCReset_Eisenstat;
   pc->ops->view            = PCView_Eisenstat;
   pc->ops->setup           = PCSetUp_Eisenstat;
+  pc->presolve             = PCPreSolve_Eisenstat;
 
   pc->data     = eis;
   eis->omega   = 1.0;
