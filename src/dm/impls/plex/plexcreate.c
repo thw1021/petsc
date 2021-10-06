@@ -2373,7 +2373,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
   DMLabel label;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if ((layers != 0) ^ (thickness != 0.)) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Layers %D must be nonzero when thickness %g is nonzero", layers, (double)thickness);
   switch (tpstype) {
   case DMPLEX_TPS_SCHWARZ_P:
@@ -2497,49 +2497,47 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
     break;
   case DMPLEX_TPS_GYROID:
     if (!rank) {
-      /* This is a coarse mesh approximation of the gyroid shifted to being the zero of the level set
-
-           sin(pi*x)*cos(pi*(y+1/2)) + sin(pi*(y+1/2))*cos(pi*(z+1/4)) + sin(pi*(z+1/4))*cos(x)
-
-       on the cell [0,2]^3.
-
-       Think about dividing that cell into four columns, and focus on the column [0,1]x[0,1]x[0,2].
-       If you looked at the gyroid in that column at different slices of z you would see that it kind of spins
-       like a boomerang:
-
-           z = 0          z = 1/4        z = 1/2        z = 3/4
-           -----          -------        -------        -------
-
-           +       +      +       +      +       +      +   \   +
-            \                                   /            \
-             \            `-_   _-'            /              )
-              *-_            `-'            _-'              /
-           +     `-+      +       +      +-'     +      +   /   +
-
-
-
-           z = 1          z = 5/4        z = 3/2        z = 7/4
-           -----          -------        -------        -------
-
-           +-_     +      +       +      +     _-+      +   /   +
-              `-_            _-_            _-`            /
-                 \        _-'   `-_        /              (
-                  \                       /                \
-           +       +      +       +      +       +      +   \   +
-
-
-       This course mesh approximates each of these slices by two line segments,
-       and then connects the segments in consecutive layers with quadrilateral faces.
-       All of the end points of the segments are multiples of 1/4 except for the
-       point * in the picture for z = 0 above and the similar points in other layers.
-       That point is at (gamma, gamma, 0), where gamma is calculated below.
-
-       The column  [1,2]x[1,2]x[0,2] looks the same as this column;
-       The columns [1,2]x[0,1]x[0,2] and [0,1]x[1,2]x[0,2] are mirror images.
-
-       As for how this method turned into the names given to the vertices:
-       that was not systematic, it was just the way it worked out in my handwritten notes.
-      */
+      // This is a coarse mesh approximation of the gyroid shifted to being the zero of the level set
+      //
+      //     sin(pi*x)*cos(pi*(y+1/2)) + sin(pi*(y+1/2))*cos(pi*(z+1/4)) + sin(pi*(z+1/4))*cos(x)
+      //
+      // on the cell [0,2]^3.
+      //
+      // Think about dividing that cell into four columns, and focus on the column [0,1]x[0,1]x[0,2].
+      // If you looked at the gyroid in that column at different slices of z you would see that it kind of spins
+      // like a boomerang:
+      //
+      //     z = 0          z = 1/4        z = 1/2        z = 3/4     //
+      //     -----          -------        -------        -------     //
+      //                                                              //
+      //     +       +      +       +      +       +      +   \   +   //
+      //      \                                   /            \      //
+      //       \            `-_   _-'            /              )     //
+      //        *-_            `-'            _-'              /      //
+      //     +     `-+      +       +      +-'     +      +   /   +   //
+      //                                                              //
+      //                                                              //
+      //     z = 1          z = 5/4        z = 3/2        z = 7/4     //
+      //     -----          -------        -------        -------     //
+      //                                                              //
+      //     +-_     +      +       +      +     _-+      +   /   +   //
+      //        `-_            _-_            _-`            /        //
+      //           \        _-'   `-_        /              (         //
+      //            \                       /                \        //
+      //     +       +      +       +      +       +      +   \   +   //
+      //
+      //
+      // This course mesh approximates each of these slices by two line segments,
+      // and then connects the segments in consecutive layers with quadrilateral faces.
+      // All of the end points of the segments are multiples of 1/4 except for the
+      // point * in the picture for z = 0 above and the similar points in other layers.
+      // That point is at (gamma, gamma, 0), where gamma is calculated below.
+      //
+      // The column  [1,2]x[1,2]x[0,2] looks the same as this column;
+      // The columns [1,2]x[0,1]x[0,2] and [0,1]x[1,2]x[0,2] are mirror images.
+      //
+      // As for how this method turned into the names given to the vertices:
+      // that was not systematic, it was just the way it worked out in my handwritten notes.
 
       PetscInt facesPerBlock = 64;
       PetscInt vertsPerBlock = 56;
