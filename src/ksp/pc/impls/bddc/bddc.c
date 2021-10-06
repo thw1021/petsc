@@ -1527,7 +1527,7 @@ static PetscErrorCode PCPreSolve_BDDC_private(PC pc, KSP ksp, Vec rhs, Vec x)
   }
   PetscFunctionReturn(0);
 }
-#if 0
+
 static PetscErrorCode PCPreSolve_BDDC(PC pc,KSP ksp)
 {
   PetscErrorCode ierr;
@@ -1539,7 +1539,7 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc,KSP ksp)
   ierr = PCPreSolve_BDDC_private(pc,ksp,rhs,x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-#endif
+
 /*
    PCPostSolve_BDDC - Changes the computed solution if a transformation of basis
                      approach has been selected. Also, restores rhs to its original state.
@@ -2281,6 +2281,7 @@ PetscErrorCode PCReset_BDDC(PC pc)
   pcbddc->ksp_D                     = kspD;
   pcbddc->ksp_R                     = kspR;
   pcbddc->coarse_ksp                = kspC;
+  pc->presolve                      = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -3072,8 +3073,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   pc->ops->applysymmetricright = NULL;
   pc->ops->postsolve           = PCPostSolve_BDDC;
   pc->ops->reset               = PCReset_BDDC;
-  pc->ops->presolve            = PCPreSolve_BDDC_private;
-  /* pc->presolve                 = PCPreSolve_BDDC; */
+  pc->presolve                 = PCPreSolve_BDDC;
 
   /* composing function */
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCBDDCSetDiscreteGradient_C",PCBDDCSetDiscreteGradient_BDDC);CHKERRQ(ierr);
