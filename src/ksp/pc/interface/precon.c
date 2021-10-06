@@ -1543,19 +1543,14 @@ PETSC_INTERN PetscErrorCode  PCPreSolveChangeRHS(PC pc,PetscBool *change)
 PetscErrorCode PCPreSolve(PC pc,KSP ksp)
 {
   PetscErrorCode ierr;
-  Vec            x,rhs;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,2);
   pc->presolvedone++;
   if (pc->presolvedone > 2) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot embed PCPreSolve() more than twice");
-  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
-  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
-
-  if (pc->ops->presolve) {
-    ierr = (*pc->ops->presolve)(pc,ksp,rhs,x);CHKERRQ(ierr);
-  } else if (pc->presolve) {
+  
+  if (pc->presolve) {
     ierr = (pc->presolve)(pc,ksp);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
