@@ -583,7 +583,7 @@ class Configure(config.base.Configure):
     self.logPrint('checkCxxDialect: starting from C++ dialect {dialect} found in {where} for language "{lang}"'.format(dialect=withLangDialect,where='compiler flags' if len(langDialectFromFlags) else 'configure arguments',lang=LANG))
 
     includes03 = """
-    // C++03 includes
+    // c++03 includes
     #include <iostream>
     template<class T> void ignore(const T&) {} // silence unused variable warnings
     class valClass
@@ -596,14 +596,14 @@ class Configure(config.base.Configure):
     # this really just tests whether we have a working c++ compiler, c++03 only introduced
     # value initialization
     body03 = """
-    // C++03 body
+    // c++03 body
     valClass cls = valClass(); // value initialization
     int i = cls.i;             // i is not declared const
     const int& rci = i;        // but rci is
     const_cast<int&>(rci) = 4;
     """
     includes11 = includes03+"""
-    // C++11 includes
+    // c++11 includes
     #include <random>
     #include <complex>
     template<typename T> constexpr T Cubed( T x ) { return x*x*x; }
@@ -613,7 +613,7 @@ class Configure(config.base.Configure):
     using PetscErrorCode = int;
     """
     body11 = body03+"""
-    // C++11 body
+    // c++11 body
     constexpr int big_value = 1234;
     decltype(big_value) ierr = big_value;
     auto ret = trailing(ierr);
@@ -627,13 +627,13 @@ class Configure(config.base.Configure):
     std::cout << x << ret << std::endl;
     """
     includes14 = includes11+"""
-    // C++14 includes
+    // c++14 includes
     #include <memory>
     template<class T>
     constexpr T pi = T(3.1415926535897932385L);  // variable template
     """
     body14 = body11+"""
-    // C++14 body
+    // c++14 body
     auto ptr = std::make_unique<int>();
     *ptr = 1;
     std::cout<<pi<double><<std::endl;
@@ -642,7 +642,7 @@ class Configure(config.base.Configure):
     std::cout<<lambda(3,4)<<std::real(const_i)<<std::endl;
     """
     includes17 = includes14+"""
-    // C++17 includes
+    // c++17 includes
     #include <string_view>
     #include <any>
     #include <optional>
@@ -657,14 +657,14 @@ class Configure(config.base.Configure):
     };
     void S2::f(int i)
     {
-      // until C++17: Error: invalid syntax
-      // since C++17: OK: captures the enclosing S2 by copy
+      // until c++17: Error: invalid syntax
+      // since c++17: OK: captures the enclosing S2 by copy
       auto lmbd = [=, *this] { std::cout<<i<<" "<<this->var<<std::endl; };
       lmbd();
     }
     """
     body17 = body14+"""
-    // C++17 body
+    // c++17 body
     std::variant<int,float> v,w;
     v = 42;               // v contains int
     int ivar = std::get<int>(v);
@@ -693,7 +693,7 @@ class Configure(config.base.Configure):
 
     minDialect = 0
     if (withLangDialect == 'AUTO') or (withLangDialect == 'NONE'):
-      # auto defaults to C++17
+      # auto defaults to c++17
       maxDialect = len(dialects)-2
       explicit   = withLangDialect == 'NONE' # AUTO is not explicit while NONE is
     else:
@@ -704,12 +704,12 @@ class Configure(config.base.Configure):
         if dialect['num'] == withLangDialect[-2:]:
           maxDialect = i
           if withLangDialect == 'c++20':
-            self.logPrintBox(' ***** WARNING: C++20 is not yet fully supported, PETSc only tests up to C++17.\nRemove -std=[...] from compiler flags and omit --{opt}=[...] from configure\nto have PETSc automatically detect the most appropriate flag for you'.format(opt=configureArg))
+            self.logPrintBox(' ***** WARNING: c++20 is not yet fully supported, PETSc only tests up to c++17.\nRemove -std=[...] from compiler flags and omit --{opt}=[...] from configure\nto have PETSc automatically detect the most appropriate flag for you'.format(opt=configureArg))
           break
       if maxDialect == -1:
         if withLangDialect.endswith('98'):
-          raise RuntimeError('PETSc requires at least C++03, how old is your compiler?')
-        raise RuntimeError('Unknown C++ dialect: {val}'.format(val=withLangDialect))
+          raise RuntimeError('PETSc requires at least c++03, how old is your compiler?')
+        raise RuntimeError('Unknown c++ dialect: {val}'.format(val=withLangDialect))
     self.logPrint('checkCxxDialect: user has {expl} selected dialect {dlct} for {lang}'.format(expl='EXPLICITLY' if explicit else 'NOT explicitly',dlct=withLangDialect,lang=LANG))
 
     # Check that we have a sane upper bound on the dialect
@@ -745,14 +745,20 @@ class Configure(config.base.Configure):
           minDialect += 1
           assert minDialect < len(dialects)
 
+    if not withLangDialect.startswith(('NONE','AUTO')):
+      # use startswith simply because it's cleaner, but I do mean strict equality here
+      assert withLangDialect not in {'NONE','AUTO'}
+      # if the user asks for a particular version we should pin that version
+      minDialect = maxDialect
     with self.Language(language):
       success = False
+      flag    = []
       for dlct in reversed(dialects[minDialect:maxDialect+1]):
         dialectNum = dlct['num']
         for base in allowedBaseFlags: # -std=c++ or -std=gnu++
-          flag = base+dialectNum if useFlag else 'NO FLAG'
+          flag.append(base+dialectNum if useFlag else 'NO FLAG')
           self.setCompilers.saveLog()
-          self.logPrint(' '.join(['checkCxxDialect: checking CXX',dialectNum,'for',language,'with',flag]))
+          self.logPrint(' '.join(['checkCxxDialect: checking CXX',dialectNum,'for',language,'with',flag[-1]]))
           self.logWrite(self.setCompilers.restoreLog())
           # test with flag
           with self.setCompilers.Language(language):
@@ -762,7 +768,7 @@ class Configure(config.base.Configure):
               # (it doesn't make any sense, and someone might inadvertently pass those to
               # a package)
               if useFlag:
-                self.setCompilers.addCompilerFlag(flag,includes=dlct['includes'],body=dlct['body'],compilerOnly=True)
+                self.setCompilers.addCompilerFlag(flag[-1],includes=dlct['includes'],body=dlct['body'],compilerOnly=True)
               elif not self.setCompilers.checkCompile(includes=dlct['includes'],body=dlct['body']):
                 raise RuntimeError # to mimmick addCompilerFlag
             except RuntimeError:
@@ -774,7 +780,7 @@ class Configure(config.base.Configure):
               self.cxxDialectRange = (self.cxxDialectRange[0],'c++'+dlct['num'])
               success = True
               if not useFlag:
-                assert flag not in self.getCompilerFlags(), "We said we wouldn't add the flag yet the flag has been mysteriously added!!"
+                assert flag[-1] not in self.getCompilerFlags(), "We said we wouldn't add the flag yet the flag has been mysteriously added!!"
               break # break from allowed flags loop
 
         if success: break # break from dialects loop
@@ -782,14 +788,24 @@ class Configure(config.base.Configure):
         if maxDialect < minDialect:
           # we were not successful, compiler does not support the minimum required
           # c++ dialect
+          flagList = '\n'.join('- '+flg for flg in flag)+'\n'
           if maxDialect < 0:
-            raise RuntimeError('{lang} compiler ({compiler}) does not seem to appear to be compliant with C++03 or accept -std=c++03'.format(lang=language,compiler=self.getCompiler(lang=language)))
-          packageBlame = '\n'.join('- '+s for s in self.cxxDialectPackageRanges[0][minPackDialect])
-          raise RuntimeError('Using {lang} dialect {dlct} as lower bound due to package(s):\n{packs}\nBut {lang} compiler ({compiler}) does not appear to be compliant with {dlct}. Last attempted flag was {flag}'.format(lang=LANG,compiler=self.getCompiler(lang=language),dlct=minPackDialect,packs=packageBlame,flag=flag))
+            # it's the compilers fault we can't try the next dialect
+            raise RuntimeError('{lang} compiler ({compiler}) does not seem to appear to be compliant with c++03 or did not accept:\n{flaglist}'.format(lang=language,compiler=self.getCompiler(lang=language),flaglist=flagList))
+          if withLangDialect.startswith(('NONE','AUTO')):
+            # it's a packages fault we can't try the next dialect
+            packageBlame = '\n'.join('- '+s for s in self.cxxDialectPackageRanges[0][minPackDialect])
+            raise RuntimeError('Using {lang} dialect {dlct} as lower bound due to package(s):\n{packs}\nBut {lang} compiler ({compiler}) does not appear to be compliant with {dlct} or did not accept:\n{flaglist}'.format(lang=LANG,compiler=self.getCompiler(lang=language),dlct=minPackDialect,packs=packageBlame,flaglist=flagList))
+          # if nothing else then user it's becuase the user requests a particular version
+          raise RuntimeError('{lang} compiler ({compiler}) does not appear to be compliant with c++{ver} or does not accept:\n{flaglist}'.format(lang=language.replace('x','+'),compiler=self.getCompiler(lang=language),ver=dialectNum,flaglist=flagList))
+
 
     for dlct in dialects[:maxDialect+1]:
       self.addDefine('HAVE_{lang}_DIALECT_CXX{ver}'.format(lang=LANG,ver=dlct['num']),1)
-    setattr(self,lang+'dialect','c++'+dialects[maxDialect]['num']) # record the result
+    if not useFlag:
+      # if we don't use the flag we shouldn't set this attr because its existence implies
+      # a particular dialect is *chosen*
+      setattr(self,lang+'dialect','c++'+dialects[maxDialect]['num']) # record the result
     return
 
   def checkCxxComplexFix(self):
