@@ -652,7 +652,7 @@ static PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscForm
       if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "  quad point %d\n", q);CHKERRQ(ierr);}
       /* TODO Is this cell or face quadrature, meaning should we use 'q' or 'face*Nq+q' */
       ierr = PetscFEEvaluateFieldJets_Hybrid_Internal(ds, Nf, 0, q, Tf, &fegeom, &coefficients[cOffset], &coefficients_t[cOffset], u, u_x, u_t);CHKERRQ(ierr);
-      if (dsAux) {ierr = PetscFEEvaluateFieldJets_Hybrid_Internal(dsAux, NfAux, 0, auxOnBd ? q : face*Nq+q, TfAux, &fegeom, &coefficientsAux[cOffsetAux], NULL, a, a_x, NULL);CHKERRQ(ierr);}
+      if (dsAux) {ierr = PetscFEEvaluateFieldJets_Internal(dsAux, NfAux, 0, auxOnBd ? q : face*Nq+q, TfAux, &fegeom, &coefficientsAux[cOffsetAux], NULL, a, a_x, NULL);CHKERRQ(ierr);}
       for (i = 0; i < n0; ++i) f0_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, fegeom.v, fegeom.n, numConstants, constants, &f0[q*NcS]);
       for (c = 0; c < NcS; ++c) f0[q*NcS+c] *= w;
       for (i = 0; i < n1; ++i) f1_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, fegeom.v, fegeom.n, numConstants, constants, &f1[q*NcS*dim]);
@@ -1085,7 +1085,7 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscFEJacobianT
       }
       if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "  quad point %d\n", q);CHKERRQ(ierr);}
       if (coefficients) {ierr = PetscFEEvaluateFieldJets_Hybrid_Internal(ds, Nf, 0, q, T, &fegeom, &coefficients[cOffset], &coefficients_t[cOffset], u, u_x, u_t);CHKERRQ(ierr);}
-      if (dsAux) {ierr = PetscFEEvaluateFieldJets_Hybrid_Internal(dsAux, NfAux, 0, auxOnBd ? q : face*Nq+q, TAux, &fegeom, &coefficientsAux[cOffsetAux], NULL, a, a_x, NULL);CHKERRQ(ierr);}
+      if (dsAux) {ierr = PetscFEEvaluateFieldJets_Internal(dsAux, NfAux, 0, auxOnBd ? q : face*Nq+q, TAux, &fegeom, &coefficientsAux[cOffsetAux], NULL, a, a_x, NULL);CHKERRQ(ierr);}
       if (n0) {
         ierr = PetscArrayzero(g0, NcS*NcT);CHKERRQ(ierr);
         for (i = 0; i < n0; ++i) g0_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, u_tshift, fegeom.v, fegeom.n, numConstants, constants, g0);
