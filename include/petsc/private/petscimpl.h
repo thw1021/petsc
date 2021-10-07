@@ -177,7 +177,8 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*PetscObjectViewFunction)(PetscObje
    PetscLogObjectCreate(h) || \
    PetscLogObjectMemory((PetscObject)(h),sizeof(*(h))))
 
-PETSC_EXTERN PetscErrorCode PetscComposedQuantitiesDestroy(PetscObject obj);
+PETSC_INTERN PetscErrorCode PetscComposedQuantitiesDestroy(PetscObject obj);
+/* externed for SLEPc */
 PETSC_EXTERN PetscErrorCode PetscHeaderCreate_Private(PetscObject,PetscClassId,const char[],const char[],const char[],MPI_Comm,PetscObjectDestroyFunction,PetscObjectViewFunction);
 
 /*@C
@@ -192,6 +193,7 @@ PETSC_EXTERN PetscErrorCode PetscHeaderCreate_Private(PetscObject,PetscClassId,c
 @*/
 #define PetscHeaderDestroy(h) (PetscHeaderDestroy_Private((PetscObject)(*(h))) || PetscFree(*(h)))
 
+/* externed for SLEPc */
 PETSC_EXTERN PetscErrorCode PetscHeaderDestroy_Private(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject,PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectSetFortranCallback(PetscObject,PetscFortranCallbackType,PetscFortranCallbackId*,void(*)(void),void *ctx);
@@ -551,8 +553,8 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 M*/
 #define PetscObjectStateIncrease(obj) ((obj)->state++,0)
 
-PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject,PetscObjectState*);
-PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject,PetscObjectState);
+/* externed for BAMG and SLEPc */
+PETSC_EXTERN PetscInt       PetscObjectComposedDataMax;
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseInt(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseIntstar(PetscObject);
@@ -560,7 +562,7 @@ PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseReal(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseRealstar(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseScalar(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseScalarstar(PetscObject);
-PETSC_EXTERN PetscInt       PetscObjectComposedDataMax;
+
 /*MC
    PetscObjectComposedDataSetInt - attach integer data to a PetscObject
 
@@ -875,11 +877,27 @@ M*/
         PetscObjectComposedDataGetRealstar(obj,id,data,flag)
 #endif
 
-PETSC_EXTERN PetscMPIInt Petsc_Counter_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_InnerComm_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_OuterComm_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_Seq_keyval;
-PETSC_EXTERN PetscMPIInt Petsc_ShmComm_keyval;
+PETSC_INTERN PetscMPIInt Petsc_Counter_keyval;
+PETSC_INTERN PetscMPIInt Petsc_InnerComm_keyval;
+PETSC_INTERN PetscMPIInt Petsc_OuterComm_keyval;
+PETSC_INTERN PetscMPIInt Petsc_Seq_keyval;
+PETSC_INTERN PetscMPIInt Petsc_ShmComm_keyval;
+
+struct _n_PetscSubcomm {
+  MPI_Comm         parent;           /* parent communicator */
+  MPI_Comm         dupparent;        /* duplicate parent communicator, under which the processors of this subcomm have contiguous rank */
+  MPI_Comm         child;            /* the sub-communicator */
+  PetscMPIInt      n;                /* num of subcommunicators under the parent communicator */
+  PetscMPIInt      color;            /* color of processors belong to this communicator */
+  PetscMPIInt      *subsize;         /* size of subcommunicator[color] */
+  PetscSubcommType type;
+  char             *subcommprefix;
+};
+
+/* convenience functions for PetscSubcomm */
+#define PetscSubcommParent(scomm)           ((scomm)->parent)
+#define PetscSubcommChild(scomm)            ((scomm)->child)
+#define PetscSubcommContiguousParent(scomm) ((scomm)->dupparent)
 
 /*
   PETSc communicators have this attribute, see
@@ -892,9 +910,17 @@ typedef struct {
   PetscMPIInt *iflags;          /* length of comm size, shared by all calls to PetscCommBuildTwoSided_Allreduce/RedScatter on this comm */
 } PetscCommCounter;
 
-typedef enum {STATE_BEGIN, STATE_PENDING, STATE_END} SRState;
+typedef enum {
+  STATE_BEGIN,
+  STATE_PENDING,
+  STATE_END
+} SRState;
 
-typedef enum {PETSC_SR_REDUCE_SUM=0,PETSC_SR_REDUCE_MAX=1,PETSC_SR_REDUCE_MIN=2} PetscSRReductionType;
+typedef enum {
+  PETSC_SR_REDUCE_SUM,
+  PETSC_SR_REDUCE_MAX,
+  PETSC_SR_REDUCE_MIN
+} PetscSRReductionType;
 
 typedef struct {
   MPI_Comm       comm;
@@ -912,6 +938,7 @@ typedef struct {
   PetscInt       numopsend;    /* number of requests that have been gotten by user */
 } PetscSplitReduction;
 
+/* externed for SLEPc */
 PETSC_EXTERN PetscErrorCode PetscSplitReductionGet(MPI_Comm,PetscSplitReduction**);
 PETSC_EXTERN PetscErrorCode PetscSplitReductionEnd(PetscSplitReduction*);
 PETSC_EXTERN PetscErrorCode PetscSplitReductionExtend(PetscSplitReduction*);
@@ -991,23 +1018,23 @@ PETSC_INTERN PetscSpinlock PetscCommSpinLock;
 #endif
 #endif
 
-PETSC_EXTERN PetscLogEvent PETSC_Barrier;
-PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSided;
-PETSC_EXTERN PetscLogEvent PETSC_BuildTwoSidedF;
-PETSC_EXTERN PetscBool     use_gpu_aware_mpi;
+PETSC_INTERN PetscLogEvent PETSC_Barrier;
+PETSC_INTERN PetscLogEvent PETSC_BuildTwoSided;
+PETSC_INTERN PetscLogEvent PETSC_BuildTwoSidedF;
+PETSC_SINGLE_LIBRARY_INTERN PetscBool     use_gpu_aware_mpi;
 
 #if defined(PETSC_HAVE_ADIOS)
-PETSC_EXTERN int64_t Petsc_adios_group;
+PETSC_SINGLE_LIBRARY_INTERN int64_t Petsc_adios_group;
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
-PETSC_EXTERN PetscBool      PetscKokkosInitialized;
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
+PETSC_SINGLE_LIBRARY_INTERN PetscBool PetscKokkosInitialized;
 PETSC_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
 #endif
 
 #if defined(PETSC_HAVE_OPENMP)
-PETSC_EXTERN PetscInt PetscNumOMPThreads;
+PETSC_INTERN PetscInt PetscNumOMPThreads;
 #endif
 
 #endif /* PETSCIMPL_H */
