@@ -1,19 +1,15 @@
 #include <petsc/private/deviceimpl.h>
 #include <Kokkos_Core.hpp>
 
-PetscBool PetscKokkosInitialized = PETSC_FALSE;
+static PetscBool PetscBeganKokkos = PETSC_FALSE;
+PetscBool PetscKokkosInitialized  = PETSC_FALSE;
 
 PetscErrorCode PetscKokkosFinalize_Private(void)
 {
   PetscFunctionBegin;
-  Kokkos::finalize();
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
-{
-  PetscFunctionBegin;
-  *isInitialized = Kokkos::is_initialized() ? PETSC_TRUE : PETSC_FALSE;
+  if (PetscBeganKokkos) Kokkos::finalize();
+  PetscKokkosInitialized = PETSC_FALSE;
+  PetscBeganKokkos       = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 

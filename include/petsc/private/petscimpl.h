@@ -1001,9 +1001,8 @@ PETSC_EXTERN int64_t Petsc_adios_group;
 #endif
 
 #if defined(PETSC_HAVE_KOKKOS)
-PETSC_INTERN PetscBool      PetscBeganKokkos;
+PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
 PETSC_EXTERN PetscBool      PetscKokkosInitialized;
-PETSC_INTERN PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool*);
 PETSC_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
 #endif
 

@@ -27,10 +27,6 @@ PetscBool   PetscFinalizeCalled           = PETSC_FALSE;
 PetscMPIInt PetscGlobalRank               = -1;
 PetscMPIInt PetscGlobalSize               = -1;
 
-#if defined(PETSC_HAVE_KOKKOS)
-PetscBool   PetscBeganKokkos              = PETSC_FALSE;
-#endif
-
 #if defined(PETSC_HAVE_NVSHMEM)
 PetscBool   PetscBeganNvshmem             = PETSC_FALSE;
 PetscBool   PetscNvshmemInitialized       = PETSC_FALSE;
