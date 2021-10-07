@@ -6,11 +6,16 @@ and eventually adaptivity.\n\n\n";
 
 /*
   https://en.wikipedia.org/wiki/Linear_elasticity
+
+  Converting elastic constants:
+    lambda = E nu / ((1 + nu) (1 - 2 nu))
+    mu     = E / (2 (1 + nu))
 */
 
 #include <petscdmplex.h>
 #include <petscsnes.h>
 #include <petscds.h>
+#include <petscbag.h>
 #include <petscconvest.h>
 
 typedef enum {SOL_VLAP_QUADRATIC, SOL_ELAS_QUADRATIC, SOL_VLAP_TRIG, SOL_ELAS_TRIG, SOL_ELAS_AXIAL_DISP, SOL_ELAS_UNIFORM_STRAIN, SOL_ELAS_GE, SOL_MASS_QUADRATIC, NUM_SOLUTION_TYPES} SolutionType;
@@ -20,11 +25,17 @@ typedef enum {DEFORM_NONE, DEFORM_SHEAR, DEFORM_STEP, NUM_DEFORM_TYPES} DeformTy
 const char *deformTypes[NUM_DEFORM_TYPES+1] = {"none", "shear", "step", "unknown"};
 
 typedef struct {
+  PetscScalar mu;     /* shear modulus */
+  PetscScalar lambda; /* Lame's first parameter */
+} Parameter;
+
+typedef struct {
   /* Domain and mesh definition */
   char         dmType[256]; /* DM type for the solve */
   DeformType   deform;      /* Domain deformation type */
   /* Problem definition */
   SolutionType solType;     /* Type of exact solution */
+  PetscBag     bag;         /* Problem parameters */
   /* Solver definition */
   PetscBool    useNearNullspace; /* Use the rigid body modes as a near nullspace for AMG */
 } AppCtx;
@@ -373,6 +384,37 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
+{
+  PetscBag       bag;
+  Parameter     *p;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  /* setup PETSc parameter bag */
+  ierr = PetscBagGetData(ctx->bag,(void**)&p);CHKERRQ(ierr);
+  ierr = PetscBagSetName(ctx->bag,"par","Elastic Parameters");CHKERRQ(ierr);
+  bag  = ctx->bag;
+  ierr = PetscBagRegisterScalar(bag, &p->mu,     1.0, "mu",     "Shear Modulus, Pa");CHKERRQ(ierr);
+  ierr = PetscBagRegisterScalar(bag, &p->lambda, 1.0, "lambda", "Lame's first parameter, Pa");CHKERRQ(ierr);
+  ierr = PetscBagSetFromOptions(bag);CHKERRQ(ierr);
+  {
+    PetscViewer       viewer;
+    PetscViewerFormat format;
+    PetscBool         flg;
+
+    ierr = PetscOptionsGetViewer(comm, NULL, NULL, "-param_view", &viewer, &format, &flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = PetscViewerPushFormat(viewer, format);CHKERRQ(ierr);
+      ierr = PetscBagView(bag, viewer);CHKERRQ(ierr);
+      ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
+      ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+      ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode DMPlexDistortGeometry(DM dm)
 {
   DM             cdm;
@@ -427,17 +469,19 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
 {
   PetscErrorCode (*exact)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *);
-  PetscDS        ds;
-  PetscWeakForm  wf;
-  DMLabel        label;
-  PetscInt       id, bd;
-  PetscInt       dim;
-  PetscErrorCode ierr;
+  Parameter       *param;
+  PetscDS          ds;
+  PetscWeakForm    wf;
+  DMLabel          label;
+  PetscInt         id, bd;
+  PetscInt         dim;
+  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
   ierr = PetscDSGetWeakForm(ds, &wf);CHKERRQ(ierr);
   ierr = PetscDSGetSpatialDimension(ds, &dim);CHKERRQ(ierr);
+  ierr = PetscBagGetData(user->bag, (void **) &param);CHKERRQ(ierr);
   switch (user->solType) {
   case SOL_MASS_QUADRATIC:
     ierr = PetscDSSetResidual(ds, 0, f0_mass_u, NULL);CHKERRQ(ierr);
@@ -535,6 +579,14 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     id = 1;
     ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) exact, NULL, user, NULL);CHKERRQ(ierr);
   }
+  /* Setup constants */
+  {
+    PetscScalar constants[2];
+
+    constants[0] = param->mu;     /* shear modulus, Pa */
+    constants[1] = param->lambda; /* Lame's first parameter, Pa */
+    ierr = PetscDSSetConstants(ds, 2, constants);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -591,6 +643,8 @@ int main(int argc, char **argv)
 
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = ProcessOptions(PETSC_COMM_WORLD, &user);CHKERRQ(ierr);
+  ierr = PetscBagCreate(PETSC_COMM_SELF, sizeof(Parameter), &user.bag);CHKERRQ(ierr);
+  ierr = SetupParameters(PETSC_COMM_WORLD, &user);CHKERRQ(ierr);
   /* Primal system */
   ierr = SNESCreate(PETSC_COMM_WORLD, &snes);CHKERRQ(ierr);
   ierr = CreateMesh(PETSC_COMM_WORLD, &user, &dm);CHKERRQ(ierr);
@@ -609,6 +663,7 @@ int main(int argc, char **argv)
   ierr = VecDestroy(&u);CHKERRQ(ierr);
   ierr = SNESDestroy(&snes);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
+  ierr = PetscBagDestroy(&user.bag);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
