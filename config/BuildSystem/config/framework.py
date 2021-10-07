@@ -1274,6 +1274,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         foundCompilers = True
       if foundCompilers and foundSetCompilers: break
 
+    if not (foundCompilers or foundSetCompilers):
+      raise RuntimeError('Did not find setCompilers and compilers modules in children')
     minCxx,maxCxx = compilers.cxxDialectRange
     self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange))
     minCxxVersionBlameList = {}
@@ -1290,38 +1292,42 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       if hasattr(child,'deps'):
         found = 0
         if child.required or child.lookforbydefault: found = 1
-        if 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
-        if 'with-'+child.package in self.framework.clArgDB and self.argDB['with-'+child.package]: found = 1
-        if 'with-'+child.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+child.package+'-lib']: found = 1
-        if 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
+        elif 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
+        elif 'with-'+child.package in self.framework.clArgDB and self.argDB['with-'+child.package]: found = 1
+        elif 'with-'+child.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+child.package+'-lib']: found = 1
+        elif 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
         if not found: continue
         msg = ''
+        if child.minCxxVersion > minCxx:
+          minCxx = child.minCxxVersion
+          self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
+          try:
+            minCxxVersionBlameList[minCxx].add([child.name])
+          except KeyError:
+            minCxxVersionBlameList[minCxx] = set([child.name])
+        if child.maxCxxVersion < maxCxx:
+          maxCxx = child.maxCxxVersion
+          self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
+          try:
+            maxCxxVersionBlameList[maxCxx].add([child.name])
+          except KeyError:
+            maxCxxVersionBlameList[maxCxx] = set([child.name])
         for dep in child.deps:
-          found = 0
-          if dep.required or dep.lookforbydefault: found = 1
-          if 'download-'+dep.package in self.framework.clArgDB and self.argDB['download-'+dep.package]: found = 1
-          if 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]: found = 1
-          if 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']: found = 1
-          if 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']: found = 1
-          if found:
-            if child.minCxxVersion > minCxx:
-              minCxx = child.minCxxVersion
-              self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
-              try:
-                minCxxVersionBlameList[minCxx].add([child.name])
-              except KeyError:
-                minCxxVersionBlameList[minCxx] = set([child.name])
-            if child.maxCxxVersion < maxCxx:
-              maxCxx = child.maxCxxVersion
-              self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
-              try:
-                maxCxxVersionBlameList[maxCxx].add([child.name])
-              except KeyError:
-                maxCxxVersionBlameList[maxCxx] = set([child.name])
+          if dep.required or dep.lookforbydefault:
+            continue
+          elif 'download-'+dep.package in self.framework.clArgDB and self.argDB['download-'+dep.package]:
+            continue
+          elif 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]:
+            continue
+          elif 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']:
+            continue
+          elif 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']:
+            continue
+          elif dep.download:
+            emsg = '--download-'+dep.package+' or '
           else:
-            if dep.download: emsg = '--download-'+dep.package+' or '
-            else: emsg = ''
-            msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
+            emsg = ''
+          msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
         if msg: raise RuntimeError(msg)
         if child.cxx and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
         if child.fc and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
