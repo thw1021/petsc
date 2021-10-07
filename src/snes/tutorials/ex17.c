@@ -13,8 +13,8 @@ and eventually adaptivity.\n\n\n";
 #include <petscds.h>
 #include <petscconvest.h>
 
-typedef enum {SOL_VLAP_QUADRATIC, SOL_ELAS_QUADRATIC, SOL_VLAP_TRIG, SOL_ELAS_TRIG, SOL_ELAS_AXIAL_DISP, SOL_ELAS_UNIFORM_STRAIN, SOL_MASS_QUADRATIC, NUM_SOLUTION_TYPES} SolutionType;
-const char *solutionTypes[NUM_SOLUTION_TYPES+1] = {"vlap_quad", "elas_quad", "vlap_trig", "elas_trig", "elas_axial_disp", "elas_uniform_strain", "mass_quad", "unknown"};
+typedef enum {SOL_VLAP_QUADRATIC, SOL_ELAS_QUADRATIC, SOL_VLAP_TRIG, SOL_ELAS_TRIG, SOL_ELAS_AXIAL_DISP, SOL_ELAS_UNIFORM_STRAIN, SOL_ELAS_GE, SOL_MASS_QUADRATIC, NUM_SOLUTION_TYPES} SolutionType;
+const char *solutionTypes[NUM_SOLUTION_TYPES+1] = {"vlap_quad", "elas_quad", "vlap_trig", "elas_trig", "elas_axial_disp", "elas_uniform_strain", "elas_ge", "mass_quad", "unknown"};
 
 typedef enum {DEFORM_NONE, DEFORM_SHEAR, DEFORM_STEP, NUM_DEFORM_TYPES} DeformType;
 const char *deformTypes[NUM_DEFORM_TYPES+1] = {"none", "shear", "step", "unknown"};
@@ -33,6 +33,14 @@ static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], Pe
 {
   PetscInt d;
   for (d = 0; d < dim; ++d) u[d] = 0.0;
+  return 0;
+}
+
+static PetscErrorCode ge_shift(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
+{
+  PetscInt d;
+  u[0] = 0.1;
+  for (d = 1; d < dim; ++d) u[d] = 0.0;
   return 0;
 }
 
@@ -492,6 +500,11 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, g3_elas_uu);CHKERRQ(ierr);
     exact = uniform_strain_u;
     break;
+  case SOL_ELAS_GE:
+    ierr = PetscDSSetResidual(ds, 0, NULL, f1_elas_u);CHKERRQ(ierr);
+    ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, g3_elas_uu);CHKERRQ(ierr);
+    exact = zero; /* No exact solution available */
+    break;
   default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%D)", solutionTypes[PetscMin(user->solType, NUM_SOLUTION_TYPES)], user->solType);
   }
   ierr = PetscDSSetExactSolution(ds, 0, exact, user);CHKERRQ(ierr);
@@ -510,6 +523,14 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
       id   = 3;
       ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "front",  label, 1, &id, 0, 1, &cmp, (void (*)(void)) zero, NULL, user, NULL);CHKERRQ(ierr);
     }
+  } else if (user->solType == SOL_ELAS_GE) {
+    PetscInt cmp;
+
+    id   = dim == 3 ? 6 : 4;
+    ierr = DMAddBoundary(dm,   DM_BC_ESSENTIAL, "left",   label, 1, &id, 0, 0, NULL, (void (*)(void)) zero, NULL, user, NULL);CHKERRQ(ierr);
+    id   = dim == 3 ? 5 : 2;
+    cmp  = 0;
+    ierr = DMAddBoundary(dm,   DM_BC_ESSENTIAL, "right",  label, 1, &id, 0, 1, &cmp, (void (*)(void)) ge_shift, NULL, user, NULL);CHKERRQ(ierr);
   } else {
     id = 1;
     ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) exact, NULL, user, NULL);CHKERRQ(ierr);
@@ -857,5 +878,20 @@ int main(int argc, char **argv)
     test:
       suffix: 2d_q1_quad_mass_step
       args: -sol_type mass_quad
+
+  testset:
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_lower -5,-5,-0.25 -dm_plex_box_upper 5,5,0.25 \
+          -dm_plex_box_faces 20,20,2 -dm_plex_separate_marker -dm_refine 0 -petscpartitioner_type simple \
+          -sol_type elas_ge \
+          -snes_max_it 2 -snes_rtol 1.e-10 \
+          -ksp_type cg -ksp_rtol 1.e-10 -ksp_max_it 100 -ksp_norm_type unpreconditioned \
+          -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 \
+            -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true \
+            -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 \
+            -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.1 -mg_levels_pc_type jacobi \
+            -matptap_via scalable
+    test:
+      suffix: ge_q1_0
+      args: -displacement_petscspace_degree 1
 
 TEST*/
