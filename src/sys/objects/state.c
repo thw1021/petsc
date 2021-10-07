@@ -71,6 +71,39 @@ PetscErrorCode PetscObjectStateSet(PetscObject obj,PetscObjectState state)
 
 PetscInt PetscObjectComposedDataMax = 10;
 
+#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type,type,PetscType) \
+  PetscErrorCode PetscObjectComposedDataIncrease##Type(PetscObject obj) \
+  {                                                                     \
+    const PetscInt   new_n   = PetscObjectComposedDataMax;              \
+    const PetscInt   n       = obj->type##_idmax;                       \
+    PetscType        *ar     = obj->type##composeddata;                 \
+    PetscType        *new_ar = PETSC_NULLPTR;                           \
+    PetscObjectState *ir     = obj->type##composedstate;                \
+    PetscObjectState *new_ir = PETSC_NULLPTR;                           \
+    PetscErrorCode   ierr;                                              \
+                                                                        \
+    PetscFunctionBegin;                                                 \
+    ierr = PetscCalloc2(new_n,&new_ar,new_n,&new_ir);CHKERRQ(ierr);     \
+    ierr = PetscMemcpy(new_ar,ar,n*sizeof(*new_ar));CHKERRQ(ierr);      \
+    ierr = PetscMemcpy(new_ir,ir,n*sizeof(*new_ir));CHKERRQ(ierr);      \
+    ierr = PetscFree2(ar,ir);CHKERRQ(ierr);                             \
+    obj->type##_idmax        = new_n;                                   \
+    obj->type##composeddata  = new_ar;                                  \
+    obj->type##composedstate = new_ir;                                  \
+    PetscFunctionReturn(0);                                             \
+  }
+
+#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_(Type,type)            \
+  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type,type,Petsc##Type)     \
+  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type##star,type##star,Petsc##Type*)
+
+#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Type,type)             \
+  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_(Type,type)
+
+PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Int,int)
+PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Real,real)
+PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Scalar,scalar)
+
 /*@C
    PetscObjectComposedDataRegister - Get an available id for composed data
 

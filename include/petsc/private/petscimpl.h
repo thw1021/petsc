@@ -553,47 +553,15 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 M*/
 #define PetscObjectStateIncrease(obj) ((obj)->state++,0)
 
-/* externed for BAMG */
+/* externed for BAMG and SLEPc */
 PETSC_EXTERN PetscInt       PetscObjectComposedDataMax;
-PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt*);
-
-#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type,type,PetscType) \
-  PETSC_STATIC_INLINE                                                   \
-  PetscErrorCode PetscObjectComposedDataIncrease##Type(PetscObject obj) \
-  {                                                                     \
-    const PetscInt   new_n   = PetscObjectComposedDataMax;              \
-    const PetscInt   n       = obj->type##_idmax;                       \
-    PetscType        *ar     = obj->type##composeddata;                 \
-    PetscType        *new_ar = NULL;                                    \
-    PetscObjectState *ir     = obj->type##composedstate;                \
-    PetscObjectState *new_ir = NULL;                                    \
-    PetscErrorCode   ierr;                                              \
-                                                                        \
-    PetscFunctionBegin;                                                 \
-    ierr = PetscCalloc2(new_n,&new_ar,new_n,&new_ir);CHKERRQ(ierr);     \
-    ierr = PetscMemcpy(new_ar,ar,n*sizeof(*new_ar));CHKERRQ(ierr);      \
-    ierr = PetscMemcpy(new_ir,ir,n*sizeof(*new_ir));CHKERRQ(ierr);      \
-    ierr = PetscFree2(ar,ir);CHKERRQ(ierr);                             \
-    obj->type##_idmax        = new_n;                                   \
-    obj->type##composeddata  = new_ar;                                  \
-    obj->type##composedstate = new_ir;                                  \
-    PetscFunctionReturn(0);                                             \
-  }
-
-#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_(Type,type)            \
-  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type,type,Petsc##Type)     \
-  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__(Type##star,type##star,Petsc##Type*)
-
-#define PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Type,type)             \
-  PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_(Type,type)
-
-PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Int,int)
-PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Real,real)
-PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE(Scalar,scalar)
-
-#undef PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE
-#undef PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE_
-#undef PETSC_OBJECT_COMPOSED_DATA_INCREASE_TYPE__
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataRegister(PetscInt*);
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseInt(PetscObject);
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseIntstar(PetscObject);
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseReal(PetscObject);
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseRealstar(PetscObject);
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseScalar(PetscObject);
+PETSC_EXTERN PetscErrorCode PetscObjectComposedDataIncreaseScalarstar(PetscObject);
 
 /*MC
    PetscObjectComposedDataSetInt - attach integer data to a PetscObject
@@ -915,6 +883,17 @@ PETSC_INTERN PetscMPIInt Petsc_OuterComm_keyval;
 PETSC_INTERN PetscMPIInt Petsc_Seq_keyval;
 PETSC_INTERN PetscMPIInt Petsc_ShmComm_keyval;
 
+struct _n_PetscSubcomm {
+  MPI_Comm         parent;           /* parent communicator */
+  MPI_Comm         dupparent;        /* duplicate parent communicator, under which the processors of this subcomm have contiguous rank */
+  MPI_Comm         child;            /* the sub-communicator */
+  PetscMPIInt      n;                /* num of subcommunicators under the parent communicator */
+  PetscMPIInt      color;            /* color of processors belong to this communicator */
+  PetscMPIInt      *subsize;         /* size of subcommunicator[color] */
+  PetscSubcommType type;
+  char             *subcommprefix;
+};
+
 /*
   PETSc communicators have this attribute, see
   PetscCommDuplicate(), PetscCommDestroy(), PetscCommGetNewTag(), PetscObjectGetName()
@@ -926,9 +905,17 @@ typedef struct {
   PetscMPIInt *iflags;          /* length of comm size, shared by all calls to PetscCommBuildTwoSided_Allreduce/RedScatter on this comm */
 } PetscCommCounter;
 
-typedef enum {STATE_BEGIN, STATE_PENDING, STATE_END} SRState;
+typedef enum {
+  STATE_BEGIN,
+  STATE_PENDING,
+  STATE_END
+} SRState;
 
-typedef enum {PETSC_SR_REDUCE_SUM=0,PETSC_SR_REDUCE_MAX=1,PETSC_SR_REDUCE_MIN=2} PetscSRReductionType;
+typedef enum {
+  PETSC_SR_REDUCE_SUM,
+  PETSC_SR_REDUCE_MAX,
+  PETSC_SR_REDUCE_MIN
+} PetscSRReductionType;
 
 typedef struct {
   MPI_Comm       comm;
@@ -1042,12 +1029,13 @@ PETSC_INTERN PetscErrorCode PetscKokkosFinalize_Private(void);
 #endif
 
 #if defined(PETSC_HAVE_CUDA)
-PETSC_SINGLE_LIBRARY_INTERN PetscBool      PetscCUDAInitialized;  /* Is CUDA initialized? One can use this flag to guard CUDA calls. */
-PETSC_INTERN PetscBool      PetscMPICUDAAwarenessCheck(void);
+/* externed for SLEPc */
+PETSC_EXTERN PetscBool PetscCUDAInitialized;  /* Is CUDA initialized? One can use this flag to guard CUDA calls. */
+PETSC_INTERN PetscBool PetscMPICUDAAwarenessCheck(void);
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-PETSC_SINGLE_LIBRARY_INTERN PetscBool      PetscHIPInitialized;
+PETSC_SINGLE_LIBRARY_INTERN PetscBool PetscHIPInitialized;
 PETSC_INTERN PetscBool      PetscMPIHIPAwarenessCheck(void);
 #endif
 
@@ -1055,5 +1043,5 @@ PETSC_INTERN PetscBool      PetscMPIHIPAwarenessCheck(void);
 PETSC_INTERN PetscInt PetscNumOMPThreads;
 #endif
 
-PETSC_INTERN PetscBool      PetscCreatedGpuObjects;
+PETSC_INTERN PetscBool PetscCreatedGpuObjects;
 #endif /* PETSCIMPL_H */
