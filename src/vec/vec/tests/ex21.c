@@ -43,11 +43,12 @@ int main(int argc,char **argv)
 
    testset:
       diff_args: -j
-      filter: grep -v type
+      filter: grep -v type | grep -v Process
       output_file: output/ex21_1.out
 
       test:
          suffix: 1
+         args: -vec_type {{seq mpi}}
 
       test:
          requires: cuda

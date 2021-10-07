@@ -208,10 +208,8 @@ PetscErrorCode  VecStrideMax(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidRealPointer(nrm,4);
-
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
-
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
   if (start < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %D",start);
   else if (start >= bs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Start of stride subvector (%D) is too large for stride\n Have you set the vector blocksize (%D) correctly with VecSetBlockSize()?",start,bs);
@@ -227,7 +225,10 @@ PetscErrorCode  VecStrideMax(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
     }
   }
   ierr = VecRestoreArrayRead(v,&x);CHKERRQ(ierr);
-
+#if defined(PETSC_HAVE_MPIUNI)
+  *nrm = max;
+  if (idex) *idex = id;
+#else
   if (!idex) {
     ierr = MPIU_Allreduce(&max,nrm,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)v));CHKERRMPI(ierr);
   } else {
@@ -241,6 +242,7 @@ PetscErrorCode  VecStrideMax(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
     *nrm  = out.v;
     *idex = out.i;
   }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -279,16 +281,12 @@ PetscErrorCode  VecStrideMin(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
   PetscInt          i,n,bs,id;
   const PetscScalar *x;
   PetscReal         min,tmp;
-  MPI_Comm          comm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidRealPointer(nrm,4);
-
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)v,&comm);CHKERRQ(ierr);
-
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
   if (start < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %D",start);
   else if (start >= bs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Start of stride subvector (%D) is too large for stride\nHave you set the vector blocksize (%D) correctly with VecSetBlockSize()?",start,bs);
@@ -304,9 +302,12 @@ PetscErrorCode  VecStrideMin(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
     }
   }
   ierr = VecRestoreArrayRead(v,&x);CHKERRQ(ierr);
-
+#if defined(PETSC_HAVE_MPIUNI)
+  *nrm = min;
+  if (idex) *idex = id;
+#else
   if (!idex) {
-    ierr = MPIU_Allreduce(&min,nrm,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
+    ierr = MPIU_Allreduce(&min,nrm,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)v));CHKERRMPI(ierr);
   } else {
     struct { PetscReal v; PetscInt i; } in,out;
     PetscInt rstart;
@@ -318,6 +319,7 @@ PetscErrorCode  VecStrideMin(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
     *nrm  = out.v;
     *idex = out.i;
   }
+#endif
   PetscFunctionReturn(0);
 }
 
