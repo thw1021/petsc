@@ -1879,10 +1879,10 @@ PetscErrorCode PCBDDCConsistencyCheckIS(PC pc, MPI_Op mop, IS *is)
     if (-1 < idxs[i] && idxs[i] < n)
       matis->sf_leafdata[idxs[i]] = 1;
   ierr = ISRestoreIndices(*is,&idxs);CHKERRQ(ierr);
-  ierr = PetscSFReduceBegin(matis->sf,MPIU_INT,matis->sf_leafdata,matis->sf_rootdata,mop);CHKERRQ(ierr);
-  ierr = PetscSFReduceEnd(matis->sf,MPIU_INT,matis->sf_leafdata,matis->sf_rootdata,mop);CHKERRQ(ierr);
-  ierr = PetscSFBcastBegin(matis->sf,MPIU_INT,matis->sf_rootdata,matis->sf_leafdata,MPI_REPLACE);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(matis->sf,MPIU_INT,matis->sf_rootdata,matis->sf_leafdata,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFReduceBegin(matis->sf,MPIU_BOOL,matis->sf_leafdata,matis->sf_rootdata,mop);CHKERRQ(ierr);
+  ierr = PetscSFReduceEnd(matis->sf,MPIU_BOOL,matis->sf_leafdata,matis->sf_rootdata,mop);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(matis->sf,MPIU_BOOL,matis->sf_rootdata,matis->sf_leafdata,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(matis->sf,MPIU_BOOL,matis->sf_rootdata,matis->sf_leafdata,MPI_REPLACE);CHKERRQ(ierr);
   if (mop == MPI_LAND) {
     ierr = PetscMalloc1(nd,&nidxs);CHKERRQ(ierr);
   } else {
