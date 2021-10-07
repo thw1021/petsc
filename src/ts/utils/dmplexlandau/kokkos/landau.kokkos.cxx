@@ -736,6 +736,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     ierr = PetscLogEventEnd(events[4],0,0,0,0);CHKERRQ(ierr);
   }
   Kokkos::fence();
+  CHKMEMQ;
   if (elem_mat_num_cells_max_grid) { // CPU assembly
     Kokkos::View<PetscScalar****, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
     Kokkos::deep_copy (h_elem_mats, d_elem_mats);
@@ -748,6 +749,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         PetscInt          moffset = LAND_MOFFSET(b_id,grid,batch_sz,num_grids,a_mat_offset), nloc, nzl, colbuf[1024], row;
         const PetscInt    *cols;
         const PetscScalar *vals;
+        PetscPrintf(PETSC_COMM_SELF,"LandauKokkosJacobian delete %p subJ[ %D ]\n",B,LAND_PACK_IDX(b_id,grid));
         ierr = PetscLogEventBegin(events[5],0,0,0,0);CHKERRQ(ierr);
         ierr = DMPlexGetHeightStratum(plex[grid],0,&cStart,&cEnd);CHKERRQ(ierr);
         ierr = DMGetLocalSection(plex[grid], &section);CHKERRQ(ierr);
@@ -782,7 +784,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
           ierr = MatSetValues(JacP,1,&row,nzl,colbuf,vals,ADD_VALUES);CHKERRQ(ierr);
           ierr = MatRestoreRow(B,i,&nzl,&cols,&vals);CHKERRQ(ierr);
         }
-        ierr = MatDestroy(&B);CHKERRQ(ierr);
+        ierr = MatDestroy(&subJ[ LAND_PACK_IDX(b_id,grid) ]);CHKERRQ(ierr);
         ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
       } // grids
     }
