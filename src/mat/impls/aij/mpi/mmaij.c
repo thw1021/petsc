@@ -5,6 +5,7 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/isimpl.h>    /* needed because accesses data structure of ISLocalToGlobalMapping directly */
+#include <petscsf.h>
 
 PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
 {
@@ -119,6 +120,7 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
   /* generate the scatter context */
   ierr = VecScatterDestroy(&aij->Mvctx);CHKERRQ(ierr);
   ierr = VecScatterCreate(gvec,from,aij->lvec,to,&aij->Mvctx);CHKERRQ(ierr);
+  ierr = VecScatterViewFromOptions(aij->Mvctx,(PetscObject)mat,"-matmult_vecscatter_view");CHKERRQ(ierr);
   ierr = PetscLogObjectParent((PetscObject)mat,(PetscObject)aij->Mvctx);CHKERRQ(ierr);
   ierr = PetscLogObjectParent((PetscObject)mat,(PetscObject)aij->lvec);CHKERRQ(ierr);
   ierr = PetscLogObjectMemory((PetscObject)mat,ec*sizeof(PetscInt));CHKERRQ(ierr);
