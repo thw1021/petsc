@@ -153,7 +153,7 @@ typedef struct {
   PetscInt         batch_view_idx;
 } LandauCtx;
 
-//#define LANDAU_SPECIES_MAJOR
+#define LANDAU_SPECIES_MAJOR
 #if !defined(LANDAU_SPECIES_MAJOR)
 #define LAND_PACK_IDX(_b,_g) (_b*ctx->num_grids + _g)
 #define LAND_MOFFSET(_b,_g,_nbch,_ngrid,_mat_off) (_b*_mat_off[_ngrid] + _mat_off[_g])

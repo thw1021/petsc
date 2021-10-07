@@ -115,7 +115,7 @@ PetscErrorCode LandauKokkosDestroyMatMaps(P4estVertexMaps maps[], PetscInt num_g
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt num_grids, const PetscInt num_batches,
+PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const PetscInt batch_sz, const PetscInt num_grids,
                                          PetscInt a_numCells[], PetscInt a_species_offset[], PetscInt a_mat_offset[],
                                          PetscReal a_nu_alpha[], PetscReal a_nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[],
                                          PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
@@ -222,11 +222,10 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
     auto ipfoff = new Kokkos::View<PetscInt*, Kokkos::LayoutLeft> ("ipf_offset",num_grids+1);
     SData_d->ipf_offset = static_cast<void*>(ipfoff);
     Kokkos::deep_copy (*ipfoff,  h_ipf_offset);
-
 #if defined(LANDAU_LAYOUT_LEFT) // preallocate dynamic data, no copy
-    auto ipfdf_data =  new Kokkos::View<PetscReal***, Kokkos::LayoutLeft > ("fdf", num_batches, dim+1, IPf_sz);
+    auto ipfdf_data =  new Kokkos::View<PetscReal***, Kokkos::LayoutLeft > ("fdf", batch_sz, dim+1, IPf_sz);
 #else
-    auto ipfdf_data =  new Kokkos::View<PetscReal***, Kokkos::LayoutRight > ("fdf",num_batches,  dim+1, IPf_sz);
+    auto ipfdf_data =  new Kokkos::View<PetscReal***, Kokkos::LayoutRight > ("fdf",batch_sz,  dim+1, IPf_sz);
 #endif
     SData_d->ipfdf_data = static_cast<void*>(ipfdf_data);
     auto Eq_m = new Kokkos::View<PetscReal*, Kokkos::LayoutLeft> ("Eq_m",Nftot); // allocate but do not set, same for whole batch
@@ -397,6 +396,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   Kokkos::View<PetscReal***, Kokkos::LayoutRight > d_fdf_k = *static_cast<Kokkos::View<PetscReal***, Kokkos::LayoutRight >*>(SData_d->ipfdf_data);
 #endif
   auto              d_Eq_m_k = static_cast<Kokkos::View<PetscReal*, Kokkos::LayoutLeft>*>(SData_d->Eq_m); // static storage, dynamci data - E(t), copy later, single vertex
+
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(plex[0], &ctx);CHKERRQ(ierr);
@@ -513,7 +513,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
                     d_fdf_k(b_id,0,idx) += Bq[cidx]*PetscRealPart(coef[f*Nb+cidx]);
                     for (d = 0; d < dim; ++d) refSpaceDer[d] += Dq[cidx*dim+d]*PetscRealPart(coef[f*Nb+cidx]);
                   }
-                  //printf("\t\t%d.%d.%d.%d) d_fdf_k(b_id,0,%d) = %g\n",b_id,grid,loc_elem,myQi,idx,d_fdf_k(b_id,0,idx));
+                  //printf("\t\t%d.%d.%d.%d.%d) d_fdf_k(b_id,0,%d) = %g\n",b_id,grid,loc_elem,myQi,f,idx,d_fdf_k(b_id,0,idx));
                   for (d = 0; d < dim; ++d) {
                     for (e = 0, d_fdf_k(b_id,d+1,idx) = 0.0; e < dim; ++e) {
                       d_fdf_k(b_id,d+1,idx) += invJ[e*dim+d]*refSpaceDer[e];
@@ -544,7 +544,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     const int scr_bytes = 2*(g2_scr_t::shmem_size(dim,Nf_max,Nq) + g3_scr_t::shmem_size(dim,dim,Nf_max,Nq))+fieldMats_scr_t::shmem_size(Nb,Nb)+idx_scr_t::shmem_size(Nb,nfaces)+scale_scr_t::shmem_size(Nb,nfaces);
     ierr = PetscInfo6(plex[0], "Jacobian shared memory size: %d bytes in level %d num cells total=%D team size=%D #face=%D Nf_max=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,num_cells_batch*batch_sz,team_size,nfaces,Nf_max);CHKERRQ(ierr);
     Kokkos::parallel_for("Jacobian", Kokkos::TeamPolicy<>(num_cells_batch*batch_sz, team_size, /* Kokkos::AUTO */ 16).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
-        const PetscInt b_Nelem = d_elem_offset[num_grids], b_elem_idx = team.league_rank()%b_Nelem, b_id = team.league_rank()/b_Nelem, IPf_sz_glb = d_ipf_offset[num_grids];;
+        const PetscInt b_Nelem = d_elem_offset[num_grids], b_elem_idx = team.league_rank()%b_Nelem, b_id = team.league_rank()/b_Nelem, IPf_sz_glb = d_ipf_offset[num_grids];
         // find my grid
         PetscInt grid = 0;
         while (b_elem_idx >= d_elem_offset[grid+1]) grid++;
@@ -769,7 +769,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
             exit(14);
           }
         }
-        printf("\t\t\t%d.%d: a_mat_offset = %d %d. moffset=%d B=%p\n",b_id,grid,a_mat_offset[0],a_mat_offset[1],moffset, B);
+        //printf("\t\t\t%d.%d: a_mat_offset = %d %d. moffset=%d B=%p\n",b_id,grid,a_mat_offset[0],a_mat_offset[1],moffset, B);
         // move nest matrix to global JacP
         ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
         ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -786,7 +786,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         ierr = PetscLogEventEnd(events[6],0,0,0,0);CHKERRQ(ierr);
       } // grids
     }
-    printf("\t\t\tDONE\n");
   }
   PetscFunctionReturn(0);
 }
