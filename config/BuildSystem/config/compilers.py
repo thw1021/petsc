@@ -778,7 +778,7 @@ class Configure(config.base.Configure):
             pass
           else:
             # success, record our new range
-            self.cxxDialectRange[language] = (self.cxxDialectRange[0],'c++'+dlct['num'])
+            self.cxxDialectRange = (dialects[minDialect]['num'],'c++'+dlct['num'])
             if not useFlag:
               compilerFlags = self.getCompilerFlags().strip()
               if compilerFlags.count(flag) > 1:
