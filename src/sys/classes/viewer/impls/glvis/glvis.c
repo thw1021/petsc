@@ -814,14 +814,14 @@ static PetscErrorCode PetscViewerASCIISocketOpen(MPI_Comm comm,const char* hostn
     char     err[1024];
 
     ierr    = PetscSNPrintf(err,1024,"Cannot connect to socket on %s:%D. Socket visualization is disabled\n",hostname,port);CHKERRQ(ierr);
-    ierr    = PetscInfo(NULL,err);CHKERRQ(ierr);
+    ierr    = PetscInfo1(NULL,"%s",err);CHKERRQ(ierr);
     *viewer = NULL;
     PetscFunctionReturn(sierr);
   } else {
     char msg[1024];
 
     ierr = PetscSNPrintf(msg,1024,"Successfully connect to socket on %s:%D. Socket visualization is enabled\n",hostname,port);CHKERRQ(ierr);
-    ierr = PetscInfo(NULL,msg);CHKERRQ(ierr);
+    ierr = PetscInfo1(NULL,"%s",msg);CHKERRQ(ierr);
   }
   stream = fdopen(fd,"w"); /* Not possible on Windows */
   if (!stream) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SYS,"Cannot open stream from socket %s:%d",hostname,port);
