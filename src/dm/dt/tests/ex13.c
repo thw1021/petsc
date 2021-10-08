@@ -1,0 +1,300 @@
+const char help[] = "Tests PetscDTPTrimmedEvalJet()";
+
+#include <petscdt.h>
+#include <petscblaslapack.h>
+#include <petscmat.h>
+
+static PetscErrorCode constructTabulationAndMass(PetscInt dim, PetscInt deg, PetscInt form, PetscInt jetDegree, PetscInt npoints,
+                                                 const PetscReal *points, const PetscReal *weights,
+                                                 PetscInt *_Nb, PetscInt *_Nf, PetscInt *_Nk,
+                                                 PetscReal **B, PetscReal **M)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscInt Nf; // Number of form components
+  ierr = PetscDTBinomialInt(dim, PetscAbsInt(form), &Nf);CHKERRQ(ierr);
+
+  PetscInt Nbpt; // number of trimmed polynomials
+  ierr = PetscDTPTrimmedSize(dim, deg, form, &Nbpt);CHKERRQ(ierr);
+
+  PetscInt Nk; // jet size
+  ierr = PetscDTBinomialInt(dim + jetDegree, dim, &Nk);CHKERRQ(ierr);
+
+  PetscReal *p_trimmed;
+  ierr = PetscMalloc1(Nbpt * Nf * Nk * npoints, &p_trimmed);CHKERRQ(ierr);
+
+  ierr = PetscDTPTrimmedEvalJet(dim, npoints, points, deg, form, jetDegree, p_trimmed);CHKERRQ(ierr);
+
+  // compute the direct mass matrix
+  PetscScalar *M_trimmed;
+  ierr = PetscCalloc1(Nbpt * Nbpt, &M_trimmed);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < Nbpt; i++) {
+    for (PetscInt j = 0; j < Nbpt; j++) {
+      PetscReal v = 0.;
+      for (PetscInt f = 0; f < Nf; f++) {
+        const PetscReal *p_i = &p_trimmed[(i * Nf + f) * Nk * npoints];
+        const PetscReal *p_j = &p_trimmed[(j * Nf + f) * Nk * npoints];
+        for (PetscInt pt = 0; pt < npoints; pt++) {
+          v += p_i[pt] * p_j[pt] * weights[pt];
+        }
+      }
+      M_trimmed[i * Nbpt + j] += v;
+    }
+  }
+  *_Nb = Nbpt;
+  *_Nf = Nf;
+  *_Nk = Nk;
+  *B = p_trimmed;
+  *M = M_trimmed;
+
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode test(PetscInt dim, PetscInt deg, PetscInt form, PetscInt jetDegree, PetscBool cond)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  // Construct an appropriate quadrature
+  PetscQuadrature q;
+  ierr = PetscDTStroudConicalQuadrature(dim, 1, deg + 2, -1., 1., &q);CHKERRQ(ierr);
+
+  PetscInt npoints;
+  const PetscReal *points;
+  const PetscReal *weights;
+  ierr = PetscQuadratureGetData(q, NULL, NULL, &npoints, &points, &weights);CHKERRQ(ierr);
+
+
+  PetscInt Nf; // Number of form components
+  PetscInt Nk; // jet size
+  PetscInt Nbpt; // number of trimmed polynomials
+  PetscReal *p_trimmed;
+  PetscScalar *M_trimmed;
+  ierr = constructTabulationAndMass(dim, deg, form, jetDegree, npoints, points, weights, &Nbpt, &Nf, &Nk, &p_trimmed, &M_trimmed);CHKERRQ(ierr);
+
+  PetscReal *p_scalar;
+  PetscInt Nbp; // number of scalar polynomials
+  ierr = PetscDTBinomialInt(dim + deg, dim, &Nbp);CHKERRQ(ierr);
+  ierr = PetscMalloc1(Nbp * Nk * npoints, &p_scalar);CHKERRQ(ierr);
+  ierr = PetscDTPKDEvalJet(dim, npoints, points, deg, jetDegree, p_scalar);CHKERRQ(ierr);
+
+  PetscScalar *Mcopy;
+  ierr = PetscMalloc1(Nbpt * Nbpt, &Mcopy);CHKERRQ(ierr);
+  // Print the condition numbers (useful for testing out different bases internally in PetscDTPTrimmedEvalJet())
+  if (cond) {
+    PetscReal *S;
+    PetscScalar *work;
+
+    ierr = PetscMalloc1(Nbpt, &S);CHKERRQ(ierr);
+    ierr = PetscMalloc1(5*Nbpt, &work);CHKERRQ(ierr);
+    ierr = PetscArraycpy(Mcopy, M_trimmed, Nbpt * Nbpt);CHKERRQ(ierr);
+    PetscBLASInt n = Nbpt;
+    PetscBLASInt lwork = 5 * Nbpt;
+    PetscBLASInt lierr;
+
+    PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("N","N",&n,&n,Mcopy,&n,S,NULL,&n,NULL,&n,work,&lwork,&lierr));
+    PetscReal cond = S[0] / S[Nbpt - 1];
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "dimension %D, degree %D, form %D: condition number %g\n", dim, deg, form, (double) cond);
+    ierr = PetscFree(work);CHKERRQ(ierr);
+    ierr = PetscFree(S);CHKERRQ(ierr);
+  }
+
+  // compute the moments with the orthonormal polynomials
+  PetscScalar *M_moments;
+  ierr = PetscCalloc1(Nbpt * Nbp * Nf, &M_moments);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < Nbp; i++) {
+    for (PetscInt j = 0; j < Nbpt; j++) {
+      for (PetscInt f = 0; f < Nf; f++) {
+        PetscReal v = 0.;
+        const PetscReal *p_i = &p_scalar[i * Nk * npoints];
+        const PetscReal *p_j = &p_trimmed[(j * Nf + f) * Nk * npoints];
+        for (PetscInt pt = 0; pt < npoints; pt++) {
+          v += p_i[pt] * p_j[pt] * weights[pt];
+        }
+        M_moments[(i * Nf + f) * Nbpt + j] += v;
+      }
+    }
+  }
+
+  // subtract M_moments^T * M_moments from M_trimmed: because the trimmed polynomials should be contained in
+  // the full polynomials, the result should be zero
+  ierr = PetscArraycpy(Mcopy, M_trimmed, Nbpt * Nbpt);CHKERRQ(ierr);
+  PetscBLASInt m = Nbpt;
+  PetscBLASInt n = Nbpt;
+  PetscBLASInt k = Nbp * Nf;
+  PetscScalar mone = -1.;
+  PetscScalar one = 1.;
+  PetscStackCallBLAS("BLASgemm",BLASgemm_("N","T",&m,&n,&k,&mone,M_moments,&m,M_moments,&m,&one,Mcopy,&m));
+
+  PetscScalar frob_err = 0.;
+  for (PetscInt i = 0; i < Nbpt * Nbpt; i++) frob_err += Mcopy[i] * Mcopy[i];
+  frob_err = PetscSqrtScalar(frob_err);
+
+  if (frob_err > PETSC_SMALL) {
+    SETERRQ4(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, form %D: trimmed projection error %g\n", dim, deg, form, (double) frob_err);
+  }
+
+  // P trimmed is also supposed to contain the polynomials of one degree less: construction M_moment[0:sub,:] * M_trimmed^{-1} * M_moments[0:sub,:]^T should be the identity matrix
+  Mat mat_trimmed;
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, Nbpt, Nbpt, M_trimmed, &mat_trimmed);CHKERRQ(ierr);
+  Mat mat_moments_T;
+  Mat AinvB;
+  PetscInt Nbm1;
+  ierr = PetscDTBinomialInt(dim + deg - 1, dim, &Nbm1);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, Nbpt, Nbm1 * Nf, M_moments, &mat_moments_T);CHKERRQ(ierr);
+  ierr = MatDuplicate(mat_moments_T, MAT_DO_NOT_COPY_VALUES, &AinvB);CHKERRQ(ierr);
+  ierr = MatLUFactor(mat_trimmed, NULL, NULL, NULL);CHKERRQ(ierr);
+  ierr = MatMatSolve(mat_trimmed, mat_moments_T, AinvB);CHKERRQ(ierr);
+  Mat Mm1;
+  ierr = MatTransposeMatMult(mat_moments_T, AinvB, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Mm1);CHKERRQ(ierr);
+  ierr = MatShift(Mm1, -1.);CHKERRQ(ierr);
+  ierr = MatNorm(Mm1, NORM_FROBENIUS, &frob_err);CHKERRQ(ierr);
+  if (frob_err > PETSC_SMALL) {
+    SETERRQ4(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, form %D: trimmed reverse projection error %g\n", dim, deg, form, (double) frob_err);
+  }
+  ierr = MatDestroy(&Mm1);CHKERRQ(ierr);
+  ierr = MatDestroy(&AinvB);CHKERRQ(ierr);
+  ierr = MatDestroy(&mat_moments_T);CHKERRQ(ierr);
+
+  // The Koszul differential applied to P trimmed (Lambda k+1) should be contained in P trimmed (Lambda k)
+  if (PetscAbsInt(form) < dim) {
+    PetscInt Nf1, Nbpt1, Nk1;
+    PetscReal *p_trimmed1, *M_trimmed1;
+
+    ierr = constructTabulationAndMass(dim, deg, form < 0 ? form - 1 : form + 1, 0, npoints, points, weights, &Nbpt1, &Nf1, &Nk1,
+                                      &p_trimmed1, &M_trimmed1);CHKERRQ(ierr);
+
+    PetscInt (*pattern)[3];
+    ierr = PetscMalloc1(Nf1 * (PetscAbsInt(form) + 1), &pattern);CHKERRQ(ierr);
+    ierr = PetscDTAltVInteriorPattern(dim, PetscAbsInt(form) + 1, pattern);CHKERRQ(ierr);
+
+    // apply the Koszul operator
+    PetscReal *p_koszul;
+    ierr = PetscCalloc1(Nbpt1 * Nf * npoints, &p_koszul);CHKERRQ(ierr);
+    for (PetscInt b = 0; b < Nbpt1; b++) {
+      for (PetscInt a = 0; a < Nf1 * (PetscAbsInt(form) + 1); a++) {
+        PetscInt i = pattern[a][0];
+        if (form < 0) {
+          i = Nf-1-i;
+        }
+        PetscInt j = pattern[a][1];
+        if (form < 0) {
+          j = Nf1-1-j;
+        }
+        PetscInt k = pattern[a][2] < 0 ? -(pattern[a][2] + 1) : pattern[a][2];
+        PetscReal sign = pattern[a][2] < 0 ? -1 : 1;
+        if (form < 0 && (i & 1) ^ (j & 1)) {
+          sign = -sign;
+        }
+
+        PetscReal *p_i = &p_koszul[(b * Nf + i) * npoints];
+        const PetscReal *p_j = &p_trimmed1[(b * Nf1 + j) * npoints];
+        for (PetscInt pt = 0; pt < npoints; pt++) {
+          p_i[pt] += p_j[pt] * points[pt * dim + k] * sign;
+        }
+      }
+    }
+
+    // mass matrix of the result
+    PetscScalar *M_koszul;
+    ierr = PetscMalloc1(Nbpt1 * Nbpt1, &M_koszul);CHKERRQ(ierr);
+    for (PetscInt i = 0; i < Nbpt1; i++) {
+      for (PetscInt j = 0; j < Nbpt1; j++) {
+        PetscReal val = 0.;
+        for (PetscInt v = 0; v < Nf; v++) {
+          const PetscReal *p_i = &p_koszul[(i * Nf + v) * npoints];
+          const PetscReal *p_j = &p_koszul[(j * Nf + v) * npoints];
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            val += p_i[pt] * p_j[pt] * weights[pt];
+          }
+        }
+        M_koszul[i * Nbpt1 + j] = val;
+      }
+    }
+
+    // moment matrix between the result and P trimmed
+    PetscScalar *M_k_moment;
+    ierr = PetscMalloc1(Nbpt * Nbpt1, &M_k_moment);CHKERRQ(ierr);
+    for (PetscInt i = 0; i < Nbpt1; i++) {
+      for (PetscInt j = 0; j < Nbpt; j++) {
+        PetscReal val = 0.;
+        for (PetscInt v = 0; v < Nf; v++) {
+          const PetscReal *p_i = &p_koszul[(i * Nf + v) * npoints];
+          const PetscReal *p_j = &p_trimmed[(j * Nf + v) * Nk * npoints];
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            val += p_i[pt] * p_j[pt] * weights[pt];
+          }
+        }
+        M_k_moment[i * Nbpt + j] = val;
+      }
+    }
+
+    // M_k_moment M_trimmed^{-1} M_k_moment^T == M_koszul
+    Mat mat_koszul;
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, Nbpt1, Nbpt1, M_koszul, &mat_koszul);CHKERRQ(ierr);
+    Mat mat_k_moment_T;
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, Nbpt, Nbpt1, M_k_moment, &mat_k_moment_T);CHKERRQ(ierr);
+    Mat AinvB;
+    ierr = MatDuplicate(mat_k_moment_T, MAT_DO_NOT_COPY_VALUES, &AinvB);CHKERRQ(ierr);
+    ierr = MatMatSolve(mat_trimmed, mat_k_moment_T, AinvB);CHKERRQ(ierr);
+    Mat prod;
+    ierr = MatTransposeMatMult(mat_k_moment_T, AinvB, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &prod);CHKERRQ(ierr);
+    ierr = MatAXPY(prod, -1., mat_koszul, SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+    ierr = MatNorm(prod, NORM_FROBENIUS, &frob_err);CHKERRQ(ierr);
+    if (frob_err > PETSC_SMALL) {
+      SETERRQ5(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, forms (%D, %D): koszul projection error %g\n", dim, deg, form, form < 0 ? (form-1):(form+1), (double) frob_err);
+    }
+
+    ierr = MatDestroy(&prod);CHKERRQ(ierr);
+    ierr = MatDestroy(&AinvB);CHKERRQ(ierr);
+    ierr = MatDestroy(&mat_k_moment_T);CHKERRQ(ierr);
+    ierr = MatDestroy(&mat_koszul);CHKERRQ(ierr);
+    ierr = PetscFree(M_k_moment);CHKERRQ(ierr);
+    ierr = PetscFree(M_koszul);CHKERRQ(ierr);
+    ierr = PetscFree(p_koszul);CHKERRQ(ierr);
+    ierr = PetscFree(pattern);CHKERRQ(ierr);
+    ierr = PetscFree(p_trimmed1);CHKERRQ(ierr);
+    ierr = PetscFree(M_trimmed1);CHKERRQ(ierr);
+  }
+
+  ierr = MatDestroy(&mat_trimmed);CHKERRQ(ierr);
+  ierr = PetscFree(Mcopy);CHKERRQ(ierr);
+  ierr = PetscFree(M_moments);CHKERRQ(ierr);
+  ierr = PetscFree(M_trimmed);CHKERRQ(ierr);
+  ierr = PetscFree(p_trimmed);CHKERRQ(ierr);
+  ierr = PetscFree(p_scalar);CHKERRQ(ierr);
+  ierr = PetscQuadratureDestroy(&q);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+int main(int argc, char **argv)
+{
+  PetscErrorCode ierr = PetscInitialize(&argc, &argv, NULL, help); if (ierr) return ierr;
+  PetscInt max_dim = 3;
+  PetscInt max_deg = 4;
+  PetscInt k = 3;
+  PetscBool cond = PETSC_FALSE;
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PetscDTPTrimmedEvalJet() tests","none");CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dim", "Maximum dimension of the simplex",__FILE__,max_dim,&max_dim,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-degree", "Maximum degree of the trimmed polynomial space",__FILE__,max_deg,&max_deg,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-k", "The number of derivatives to test",__FILE__,k,&k,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-cond", "Compute the condition numbers of the mass matrices of the bases",__FILE__,cond,&cond,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  for (PetscInt dim = 2; dim <= max_dim; dim++) {
+    for (PetscInt deg = 1; deg <= max_deg; deg++) {
+      for (PetscInt form = -dim+1; form <= dim; form++) {
+        ierr = test(dim, deg, form, PetscMax(1, k), cond);CHKERRQ(ierr);
+      }
+    }
+  }
+  ierr = PetscFinalize();
+  return ierr;
+}
+
+/*TEST
+
+  test:
+    args:
+
+TEST*/
