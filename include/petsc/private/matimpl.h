@@ -19,9 +19,6 @@ PETSC_EXTERN PetscErrorCode MatPartitioningRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatCoarsenRegisterAll(void);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRegisterAll(void);
 
-/* Gets the root type of the input matrix's type (e.g., MATAIJ for MATSEQAIJ) */
-PETSC_INTERN PetscErrorCode MatGetRootType_Private(Mat, MatType*);
-
 /*
   This file defines the parts of the matrix data structure that are
   shared by all matrix types.
@@ -267,7 +264,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %d \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
+    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %" PetscInt_FMT " \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
   } while (0)
 #else
 #  define MatCheckPreallocated(A,arg) do {} while (0)
@@ -275,7 +272,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckProduct(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %d \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
+    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %" PetscInt_FMT " \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
   } while (0)
 #else
 #  define MatCheckProduct(A,arg) do {} while (0)
@@ -424,9 +421,6 @@ typedef struct { /* used by MatProduct() */
   MatProductType type;
   char           *alg;
   Mat            A,B,C,Dwork;
-  PetscBool      symbolic_used_the_fact_A_is_symmetric; /* Symbolic phase took advantage of the fact that A is symmetric, and optimized e.g. AtB as AB. Then, .. */
-  PetscBool      symbolic_used_the_fact_B_is_symmetric; /* .. in the numeric phase, if a new A is not symmetric (but has the same sparsity as the old A therefore .. */
-  PetscBool      symbolic_used_the_fact_C_is_symmetric; /* MatMatMult(A,B,MAT_REUSE_MATRIX,..&C) is still legitimate), we need to redo symbolic! */
   PetscReal      fill;
   PetscBool      api_user; /* used to distinguish command line options and to indicate the matrix values are ready to be consumed at symbolic phase if needed */
 
