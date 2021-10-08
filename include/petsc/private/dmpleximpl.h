@@ -86,6 +86,8 @@ typedef struct {
   PetscReal a_max;                        /* Maximum tolerated anisotropy */
   PetscReal targetComplexity;             /* Target metric complexity */
   PetscReal p;                            /* Degree for L-p normalization methods */
+  PetscInt  remesher;                     /* 1 = Pragmatic, 2 = Mmg/ParMmg */
+  PetscInt  verbosity;                    /* Level of verbosity for remesher (-1 = no output, 10 = maximum) */
 } DMPlexMetricCtx;
 
 /* Point Numbering in Plex:
