@@ -174,19 +174,19 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
   }
   for (i=0; i<dim; ++i) {
     if (stag->N[i] != stag2->N[i]) {
-      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different global numbers of elements in dimension %D: %D != %D\n",i,stag->n[i],stag2->n[i]);CHKERRQ(ierr);
+      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different global numbers of elements in dimension %" PetscInt_FMT ": %" PetscInt_FMT " != %" PetscInt_FMT "\n",i,stag->n[i],stag2->n[i]);CHKERRQ(ierr);
       *set = PETSC_TRUE;
       *compatible = PETSC_FALSE;
       PetscFunctionReturn(0);
     }
     if (stag->n[i] != stag2->n[i]) {
-      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different local numbers of elements in dimension %D: %D != %D\n",i,stag->n[i],stag2->n[i]);CHKERRQ(ierr);
+      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different local numbers of elements in dimension %" PetscInt_FMT ": %" PetscInt_FMT " != %" PetscInt_FMT "\n",i,stag->n[i],stag2->n[i]);CHKERRQ(ierr);
       *set = PETSC_TRUE;
       *compatible = PETSC_FALSE;
       PetscFunctionReturn(0);
     }
     if (stag->boundaryType[i] != stag2->boundaryType[i]) {
-      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different boundary types in dimension %D: %s != %s\n",i,DMBoundaryTypes[stag->boundaryType[i]],DMBoundaryTypes[stag2->boundaryType[i]]);CHKERRQ(ierr);
+      ierr = PetscInfo3((PetscObject)dm,"DMStag objects have different boundary types in dimension %" PetscInt_FMT ": %s != %s\n",i,DMBoundaryTypes[stag->boundaryType[i]],DMBoundaryTypes[stag2->boundaryType[i]]);CHKERRQ(ierr);
       *set = PETSC_TRUE;
       *compatible = PETSC_FALSE;
       PetscFunctionReturn(0);
@@ -203,7 +203,7 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
     PetscFunctionReturn(0);
   }
   if (stag->stencilWidth != stag2->stencilWidth) {
-    ierr = PetscInfo2((PetscObject)dm,"DMStag objects have different ghost stencil widths: %D != %D\n",stag->stencilWidth,stag->stencilWidth);CHKERRQ(ierr);
+    ierr = PetscInfo2((PetscObject)dm,"DMStag objects have different ghost stencil widths: %" PetscInt_FMT " != %" PetscInt_FMT "\n",stag->stencilWidth,stag->stencilWidth);CHKERRQ(ierr);
     *set = PETSC_TRUE;
     *compatible = PETSC_FALSE;
     PetscFunctionReturn(0);
@@ -323,7 +323,7 @@ static PetscErrorCode DMGetNeighbors_Stag(DM dm,PetscInt *nRanks,const PetscMPII
     case 1: *nRanks = 3; break;
     case 2: *nRanks = 9; break;
     case 3: *nRanks = 27; break;
-    default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Get neighbors not implemented for dim = %D",dim);
+    default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Get neighbors not implemented for dim = %" PetscInt_FMT "",dim);
   }
   *ranks = stag->neighbors;
   PetscFunctionReturn(0);
@@ -343,30 +343,30 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"Dimension: %D\n",dim);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Dimension: %" PetscInt_FMT "\n",dim);CHKERRQ(ierr);
     switch (dim) {
       case 1:
-        ierr = PetscViewerASCIIPrintf(viewer,"Global size: %D\n",stag->N[0]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Global size: %" PetscInt_FMT "\n",stag->N[0]);CHKERRQ(ierr);
         break;
       case 2:
-        ierr = PetscViewerASCIIPrintf(viewer,"Global sizes: %D x %D\n",stag->N[0],stag->N[1]);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(viewer,"Parallel decomposition: %D x %D ranks\n",stag->nRanks[0],stag->nRanks[1]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Global sizes: %" PetscInt_FMT " x %" PetscInt_FMT "\n",stag->N[0],stag->N[1]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Parallel decomposition: %" PetscInt_FMT " x %" PetscInt_FMT " ranks\n",stag->nRanks[0],stag->nRanks[1]);CHKERRQ(ierr);
         break;
       case 3:
-        ierr = PetscViewerASCIIPrintf(viewer,"Global sizes: %D x %D x %D\n",stag->N[0],stag->N[1],stag->N[2]);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(viewer,"Parallel decomposition: %D x %D x %D ranks\n",stag->nRanks[0],stag->nRanks[1],stag->nRanks[2]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Global sizes: %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT "\n",stag->N[0],stag->N[1],stag->N[2]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Parallel decomposition: %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " ranks\n",stag->nRanks[0],stag->nRanks[1],stag->nRanks[2]);CHKERRQ(ierr);
         break;
-      default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"not implemented for dim==%D",dim);
+      default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"not implemented for dim==%" PetscInt_FMT "",dim);
     }
     ierr = PetscViewerASCIIPrintf(viewer,"Boundary ghosting:");CHKERRQ(ierr);
     for (i=0; i<dim; ++i) {
       ierr = PetscViewerASCIIPrintf(viewer," %s",DMBoundaryTypes[stag->boundaryType[i]]);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Elementwise ghost stencil: %s, width %D\n",DMStagStencilTypes[stag->stencilType],stag->stencilWidth);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Elementwise ghost stencil: %s, width %" PetscInt_FMT "\n",DMStagStencilTypes[stag->stencilType],stag->stencilWidth);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"Stratum dof:");CHKERRQ(ierr);
     for (i=0; i<dim+1; ++i) {
-      ierr = PetscViewerASCIIPrintf(viewer," %D:%D",i,stag->dof[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT ":%" PetscInt_FMT "",i,stag->dof[i]);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
     if (dm->coordinateDM) {
@@ -378,24 +378,24 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
       switch (dim) {
         case 1:
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local elements : %D (%D with ghosts)\n",rank,stag->n[0],stag->nGhost[0]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local elements : %" PetscInt_FMT " (%" PetscInt_FMT " with ghosts)\n",rank,stag->n[0],stag->nGhost[0]);CHKERRQ(ierr);
           break;
         case 2:
           ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Rank coordinates (%d,%d)\n",rank,stag->rank[0],stag->rank[1]);CHKERRQ(ierr);
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local elements : %D x %D (%D x %D with ghosts)\n",rank,stag->n[0],stag->n[1],stag->nGhost[0],stag->nGhost[1]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local elements : %" PetscInt_FMT " x %" PetscInt_FMT " (%" PetscInt_FMT " x %" PetscInt_FMT " with ghosts)\n",rank,stag->n[0],stag->n[1],stag->nGhost[0],stag->nGhost[1]);CHKERRQ(ierr);
           break;
         case 3:
           ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Rank coordinates (%d,%d,%d)\n",rank,stag->rank[0],stag->rank[1],stag->rank[2]);CHKERRQ(ierr);
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local elements : %D x %D x %D (%D x %D x %D with ghosts)\n",rank,stag->n[0],stag->n[1],stag->n[2],stag->nGhost[0],stag->nGhost[1],stag->nGhost[2]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local elements : %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " (%" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " with ghosts)\n",rank,stag->n[0],stag->n[1],stag->n[2],stag->nGhost[0],stag->nGhost[1],stag->nGhost[2]);CHKERRQ(ierr);
           break;
-        default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"not implemented for dim==%D",dim);
+        default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"not implemented for dim==%" PetscInt_FMT "",dim);
       }
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local native entries: %d\n",rank,stag->entries);CHKERRQ(ierr);
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local entries total : %d\n",rank,stag->entriesGhost);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"(Per-rank information omitted since >%D ranks used)\n",maxRanksToView);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"(Per-rank information omitted since >%" PetscInt_FMT " ranks used)\n",maxRanksToView);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

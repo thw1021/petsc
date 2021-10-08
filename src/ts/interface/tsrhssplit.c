@@ -46,7 +46,7 @@ PetscErrorCode TSRHSSplitSetIS(TS ts,const char splitname[],IS is)
     ierr = PetscStrallocpy(splitname,&newsplit->splitname);CHKERRQ(ierr);
   } else {
     ierr = PetscMalloc1(8,&newsplit->splitname);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(newsplit->splitname,7,"%D",ts->num_rhs_splits);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(newsplit->splitname,7,"%" PetscInt_FMT "",ts->num_rhs_splits);CHKERRQ(ierr);
   }
   ierr = PetscObjectReference((PetscObject)is);CHKERRQ(ierr);
   newsplit->is = is;

@@ -126,7 +126,7 @@ int main(int argc,char **args)
   ierr = KSPSetUp(ksp);CHKERRQ(ierr);
   ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
   ierr = MatGetInertia(F,&in,NULL,NULL);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"INERTIA=%D\n",in);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"INERTIA=%" PetscInt_FMT "\n",in);CHKERRQ(ierr);
   if (solve) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Solving the intermediate KSP\n");CHKERRQ(ierr);
     ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
@@ -148,7 +148,7 @@ int main(int argc,char **args)
   ierr = KSPSetUp(ksp);CHKERRQ(ierr);
   ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
   ierr = MatGetInertia(F,&in,NULL,NULL);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"INERTIA=%D\n",in);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"INERTIA=%" PetscInt_FMT "\n",in);CHKERRQ(ierr);
   ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);
   ierr = MatDestroy(&B);CHKERRQ(ierr);
 

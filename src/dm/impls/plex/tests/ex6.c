@@ -56,7 +56,7 @@ PetscErrorCode TestSetup(DMLabel label, AppCtx *user)
   }
   ierr = PetscRandomDestroy(&r);CHKERRQ(ierr);
   ierr = DMLabelCreateIndex(label, user->pStart, user->pEnd);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF, "Created label with chart [%D, %D) and set %D values\n", user->pStart, user->pEnd, user->size);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "Created label with chart [%" PetscInt_FMT ", %" PetscInt_FMT ") and set %" PetscInt_FMT " values\n", user->pStart, user->pEnd, user->size);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -74,10 +74,10 @@ PetscErrorCode TestLookup(DMLabel label, AppCtx *user)
 
     ierr = DMLabelGetValue(label, p, &val);CHKERRQ(ierr);
     ierr = DMLabelHasPoint(label, p, &has);CHKERRQ(ierr);
-    if (((val >= 0) && !has) || ((val < 0) && has)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Label value %D does not match contains check %D for point %D", val, (PetscInt) has, p);
+    if (((val >= 0) && !has) || ((val < 0) && has)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Label value %" PetscInt_FMT " does not match contains check %" PetscInt_FMT " for point %" PetscInt_FMT "", val, (PetscInt) has, p);
     if (has) ++n;
   }
-  if (n != user->size) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of label points detected %D does not match number set %D", n, user->size);
+  if (n != user->size) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of label points detected %" PetscInt_FMT " does not match number set %" PetscInt_FMT "", n, user->size);
   /* Also put in timing code */
   PetscFunctionReturn(0);
 }
@@ -100,8 +100,8 @@ PetscErrorCode TestClear(DMLabel label, AppCtx *user)
     }
     ierr = DMLabelGetValue(label,p,&val);CHKERRQ(ierr);
     ierr = DMLabelHasPoint(label,p,&hasPoint);CHKERRQ(ierr);
-    if (val != defaultValue) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected default value %D after clearing point %D, got %D",defaultValue,p,val);
-    if (hasPoint) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Label contains %D after clearing",p);
+    if (val != defaultValue) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected default value %" PetscInt_FMT " after clearing point %" PetscInt_FMT ", got %" PetscInt_FMT "",defaultValue,p,val);
+    if (hasPoint) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Label contains %" PetscInt_FMT " after clearing",p);
   }
   PetscFunctionReturn(0);
 }

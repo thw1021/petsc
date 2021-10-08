@@ -252,7 +252,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextValidateIdle_Internal(Petsc
 
     PetscValidDeviceContext(dctx,1);
     ierr = (*dctx->ops->query)(dctx,&idle);CHKERRQ(ierr);
-    if (PetscUnlikely(idleBefore && !idle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, context %D thought it was idle when it still had work",dctx->id);
+    if (PetscUnlikely(idleBefore && !idle)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext cache corrupted, context %" PetscInt_FMT " thought it was idle when it still had work",dctx->id);
   }
   PetscFunctionReturn(0);
 }

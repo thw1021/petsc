@@ -168,7 +168,7 @@ PetscErrorCode PetscSpaceView(PetscSpace sp, PetscViewer v)
   ierr = PetscObjectPrintClassNamePrefixType((PetscObject)sp,v);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject) v, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscViewerASCIIPrintf(v, "Space in %D variables with %D components, size %D\n", sp->Nv, sp->Nc, pdim);CHKERRQ(ierr);}
+  if (iascii) {ierr = PetscViewerASCIIPrintf(v, "Space in %" PetscInt_FMT " variables with %" PetscInt_FMT " components, size %" PetscInt_FMT "\n", sp->Nv, sp->Nc, pdim);CHKERRQ(ierr);}
   if (sp->ops->view) {ierr = (*sp->ops->view)(sp, v);CHKERRQ(ierr);}
   ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);

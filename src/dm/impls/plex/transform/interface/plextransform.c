@@ -38,7 +38,7 @@ static PetscErrorCode DMPlexCreateCellTypeOrder_Internal(PetscInt dim, PetscInt 
     if (DMPolytopeTypeGetDim((DMPolytopeType) c) >= 0) continue;
     ctO[off++] = c;
   }
-  if (off != DM_NUM_POLYTOPES+1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid offset %D for cell type order", off);
+  if (off != DM_NUM_POLYTOPES+1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid offset %" PetscInt_FMT " for cell type order", off);
   for (c = 0; c <= DM_NUM_POLYTOPES; ++c) {
     ctOInv[ctO[c]] = c;
   }
@@ -276,9 +276,9 @@ static PetscErrorCode DMPlexTransformView_Ascii(DMPlexTransform tr, PetscViewer 
     }
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
     for (f = 0; f < Nrt; ++f) {
-      ierr = PetscViewerASCIIPrintf(v, "%2D  |", trTypes ? trTypes[f] : f);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(v, "%2" PetscInt_FMT "  |", trTypes ? trTypes[f] : f);CHKERRQ(ierr);
       for (g = 0; g < cols; ++g) {
-        ierr = PetscViewerASCIIPrintf(v, " % 14D", tr->offset[f*DM_NUM_POLYTOPES+g]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(v, " % 14" PetscInt_FMT "", tr->offset[f*DM_NUM_POLYTOPES+g]);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(v, " |\n");CHKERRQ(ierr);
     }
@@ -468,7 +468,7 @@ static PetscErrorCode DMPlexTransformCreateOffset_Internal(DMPlexTransform tr, P
           ierr = ISDestroy(&rtIS);CHKERRQ(ierr);
           ierr = DMPlexGetCellType(dm, q, &sct);CHKERRQ(ierr);
           ierr = DMPlexTransformCellTransform(tr, sct, q, &qrt, &Nct, &rct, &rsize, &cone, &ornt);CHKERRQ(ierr);
-          if (st != qrt) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Refine type %D of point %D does not match predicted type %D", qrt, q, st);
+          if (st != qrt) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Refine type %" PetscInt_FMT " of point %" PetscInt_FMT " does not match predicted type %" PetscInt_FMT "", qrt, q, st);
           if (st == rt) {
             for (n = 0; n < Nct; ++n) if (rct[n] == ctNew) break;
             if (n == Nct) off[r*DM_NUM_POLYTOPES+ctNew] = -1;
@@ -553,7 +553,7 @@ PetscErrorCode DMPlexTransformSetUp(DMPlexTransform tr)
     PetscInt        Nct, n;
 
     ierr = DMPlexGetCellType(dm, p, &ct);CHKERRQ(ierr);
-    if (ct == DM_POLYTOPE_UNKNOWN) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell type for point %D", p);
+    if (ct == DM_POLYTOPE_UNKNOWN) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell type for point %" PetscInt_FMT "", p);
     ierr = DMPlexTransformCellTransform(tr, ct, p, NULL, &Nct, &rct, &rsize, &cone, &ornt);CHKERRQ(ierr);
     for (n = 0; n < Nct; ++n) celldim = PetscMax(celldim, DMPolytopeTypeGetDim(rct[n]));
   }
@@ -571,7 +571,7 @@ PetscErrorCode DMPlexTransformSetUp(DMPlexTransform tr)
       PetscInt        Nct, n;
 
       ierr = DMPlexGetCellType(dm, p, &ct);CHKERRQ(ierr);
-      if (ct == DM_POLYTOPE_UNKNOWN) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell type for point %D", p);
+      if (ct == DM_POLYTOPE_UNKNOWN) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell type for point %" PetscInt_FMT "", p);
       ++ctC[ct];
       ierr = DMPlexTransformCellTransform(tr, ct, p, NULL, &Nct, &rct, &rsize, &cone, &ornt);CHKERRQ(ierr);
       for (n = 0; n < Nct; ++n) ctCN[rct[n]] += rsize[n];
@@ -750,29 +750,29 @@ PetscErrorCode DMPlexTransformGetTargetPoint(DMPlexTransform tr, DMPolytopeType 
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
-  if ((p < ctS) || (p >= ctE)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %D is not a %s [%D, %D)", p, DMPolytopeTypes[ct], ctS, ctE);
+  if ((p < ctS) || (p >= ctE)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %" PetscInt_FMT " is not a %s [%" PetscInt_FMT ", %" PetscInt_FMT ")", p, DMPolytopeTypes[ct], ctS, ctE);
   ierr = DMPlexTransformCellTransform(tr, ct, p, &rt, &Nct, &rct, &rsize, &cone, &ornt);CHKERRQ(ierr);
   if (trType) {
     ierr = DMLabelGetValueIndex(trType, rt, &cind);CHKERRQ(ierr);
     ierr = DMLabelGetStratumPointIndex(trType, rt, p, &rp);CHKERRQ(ierr);
-    if (rp < 0) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell type %s point %D does not have refine type %D", DMPolytopeTypes[ct], p, rt);
+    if (rp < 0) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell type %s point %" PetscInt_FMT " does not have refine type %" PetscInt_FMT "", DMPolytopeTypes[ct], p, rt);
   } else {
     cind = ct;
     rp   = p - ctS;
   }
   off = tr->offset[cind*DM_NUM_POLYTOPES + ctNew];
-  if (off < 0) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell type %s (%D) of point %D does not produce type %s for transform %s", DMPolytopeTypes[ct], rt, p, DMPolytopeTypes[ctNew], tr->hdr.type_name);
+  if (off < 0) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell type %s (%" PetscInt_FMT ") of point %" PetscInt_FMT " does not produce type %s for transform %s", DMPolytopeTypes[ct], rt, p, DMPolytopeTypes[ctNew], tr->hdr.type_name);
   newp += off;
   for (n = 0; n < Nct; ++n) {
     if (rct[n] == ctNew) {
       if (rsize[n] && r >= rsize[n])
-        SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %D should be in [0, %D) for subcell type %s in cell type %s", r, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
+        SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ") for subcell type %s in cell type %s", r, rsize[n], DMPolytopeTypes[rct[n]], DMPolytopeTypes[ct]);
       newp += rp * rsize[n] + r;
       break;
     }
   }
 
-  if ((newp < ctSN) || (newp >= ctEN)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "New point %D is not a %s [%D, %D)", newp, DMPolytopeTypes[ctNew], ctSN, ctEN);
+  if ((newp < ctSN) || (newp >= ctEN)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "New point %" PetscInt_FMT " is not a %s [%" PetscInt_FMT ", %" PetscInt_FMT ")", newp, DMPolytopeTypes[ctNew], ctSN, ctEN);
   *pNew = newp;
   PetscFunctionReturn(0);
 }
@@ -792,7 +792,7 @@ PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform tr, PetscInt pNew, 
 
     if ((pNew >= ctSN) && (pNew < ctEN)) break;
   }
-  if (ctN == DM_NUM_POLYTOPES) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cell type for target point %D could be not found", pNew);
+  if (ctN == DM_NUM_POLYTOPES) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cell type for target point %" PetscInt_FMT " could be not found", pNew);
   if (trType) {
     DM              dm;
     IS              rtIS;
@@ -813,16 +813,16 @@ PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform tr, PetscInt pNew, 
     }
     ierr = ISRestoreIndices(rtIS, &reftypes);CHKERRQ(ierr);
     ierr = ISDestroy(&rtIS);CHKERRQ(ierr);
-    if (offset < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Source cell type for target point %D could be not found", pNew);
+    if (offset < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Source cell type for target point %" PetscInt_FMT " could be not found", pNew);
     /* TODO Map refinement types to cell types */
     ierr = DMLabelGetStratumBounds(trType, rt, &rtStart, NULL);CHKERRQ(ierr);
-    if (rtStart < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Refinement type %D has no source points", rt);
+    if (rtStart < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Refinement type %" PetscInt_FMT " has no source points", rt);
     for (ctO = 0; ctO < DM_NUM_POLYTOPES; ++ctO) {
       PetscInt ctS = tr->ctStart[ctO], ctE = tr->ctStart[tr->ctOrderOld[tr->ctOrderInvOld[ctO]+1]];
 
       if ((rtStart >= ctS) && (rtStart < ctE)) break;
     }
-    if (ctO == DM_NUM_POLYTOPES) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not determine a cell type for refinement type %D", rt);
+    if (ctO == DM_NUM_POLYTOPES) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not determine a cell type for refinement type %" PetscInt_FMT "", rt);
   } else {
     for (ctTmp = 0; ctTmp < DM_NUM_POLYTOPES; ++ctTmp) {
       const PetscInt off = tr->offset[ctTmp*DM_NUM_POLYTOPES + ctN];
@@ -832,7 +832,7 @@ PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform tr, PetscInt pNew, 
       /* TODO Actually keep track of the number produced here instead */
       if (off > offset) {ctO = ctTmp; offset = off;}
     }
-    if (offset < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Source cell type for target point %D could be not found", pNew);
+    if (offset < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Source cell type for target point %" PetscInt_FMT " could be not found", pNew);
   }
   ctS = tr->ctStart[ctO];
   ctE = tr->ctStart[tr->ctOrderOld[tr->ctOrderInvOld[ctO]+1]];
@@ -846,9 +846,9 @@ PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform tr, PetscInt pNew, 
       break;
     }
   }
-  if (n == Nct) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number for target point %D could be not found", pNew);
+  if (n == Nct) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Replica number for target point %" PetscInt_FMT " could be not found", pNew);
   pO = rp + ctS;
-  if ((pO < ctS) || (pO >= ctE)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Source point %D is not a %s [%D, %D)", pO, DMPolytopeTypes[ctO], ctS, ctE);
+  if ((pO < ctS) || (pO >= ctE)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Source point %" PetscInt_FMT " is not a %s [%" PetscInt_FMT ", %" PetscInt_FMT ")", pO, DMPolytopeTypes[ctO], ctS, ctE);
   if (ct)    *ct    = (DMPolytopeType) ctO;
   if (ctNew) *ctNew = (DMPolytopeType) ctN;
   if (p)     *p     = pO;
@@ -1066,7 +1066,7 @@ static PetscErrorCode DMPlexTransformGetConeSize(DMPlexTransform tr, PetscInt q,
 
     if (q >= ctSN && q < ctEN) break;
   }
-  if (ctNew >= DM_NUM_POLYTOPES) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point %D cannot be located in the transformed mesh", q);
+  if (ctNew >= DM_NUM_POLYTOPES) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point %" PetscInt_FMT " cannot be located in the transformed mesh", q);
   *coneSize = DMPolytopeTypeGetConeSize((DMPolytopeType) ctNew);
   PetscFunctionReturn(0);
 }
@@ -1299,7 +1299,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
     tr->trNv[ct] = vEnd - vStart;
     ierr = DMGetCoordinatesLocal(trdm, &coordinates);CHKERRQ(ierr);
     ierr = VecGetLocalSize(coordinates, &Nc);CHKERRQ(ierr);
-    if (tr->trNv[ct] * DMPolytopeTypeGetDim(ct) != Nc) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cell type %s, transformed coordinate size %D != %D size of coordinate storage", DMPolytopeTypes[ct], tr->trNv[ct] * DMPolytopeTypeGetDim(ct), Nc);
+    if (tr->trNv[ct] * DMPolytopeTypeGetDim(ct) != Nc) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cell type %s, transformed coordinate size %" PetscInt_FMT " != %" PetscInt_FMT " size of coordinate storage", DMPolytopeTypes[ct], tr->trNv[ct] * DMPolytopeTypeGetDim(ct), Nc);
     ierr = PetscCalloc1(Nc, &tr->trVerts[ct]);CHKERRQ(ierr);
     ierr = VecGetArrayRead(coordinates, &coords);CHKERRQ(ierr);
     ierr = PetscArraycpy(tr->trVerts[ct], coords, Nc);CHKERRQ(ierr);
@@ -1325,7 +1325,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
           if ((sv >= vStart) && (sv < vEnd)) tr->trSubVerts[ct][rct[n]][r][Nv++] = sv - vStart;
         }
         ierr = DMPlexRestoreTransitiveClosure(trdm, pNew, PETSC_TRUE, &clSize, &closure);CHKERRQ(ierr);
-        if (Nv != DMPolytopeTypeGetNumVertices(rct[n])) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of vertices %D != %D for %s subcell %D from cell %s", Nv, DMPolytopeTypeGetNumVertices(rct[n]), DMPolytopeTypes[rct[n]], r, DMPolytopeTypes[ct]);
+        if (Nv != DMPolytopeTypeGetNumVertices(rct[n])) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of vertices %" PetscInt_FMT " != %" PetscInt_FMT " for %s subcell %" PetscInt_FMT " from cell %s", Nv, DMPolytopeTypeGetNumVertices(rct[n]), DMPolytopeTypes[rct[n]], r, DMPolytopeTypes[ct]);
       }
     }
     if (debug) {
@@ -1333,7 +1333,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
       PetscInt       *rsize, *rcone, *rornt;
       PetscInt        v, dE = DMPolytopeTypeGetDim(ct), d, off = 0;
 
-      ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %D vertices\n", DMPolytopeTypes[ct], tr->trNv[ct]);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %" PetscInt_FMT " vertices\n", DMPolytopeTypes[ct], tr->trNv[ct]);CHKERRQ(ierr);
       for (v = 0; v < tr->trNv[ct]; ++v) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);
         for (d = 0; d < dE; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "%g ", tr->trVerts[ct][off++]);CHKERRQ(ierr);}
@@ -1343,11 +1343,11 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
       ierr = DMPlexTransformCellTransform(reftr, ct, 0, NULL, &Nct, &rct, &rsize, &rcone, &rornt);CHKERRQ(ierr);
       for (n = 0; n < Nct; ++n) {
         if (rct[n] == DM_POLYTOPE_POINT) continue;
-        ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %s subvertices %D\n", DMPolytopeTypes[ct], DMPolytopeTypes[rct[n]], tr->trNv[ct]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %s subvertices %" PetscInt_FMT "\n", DMPolytopeTypes[ct], DMPolytopeTypes[rct[n]], tr->trNv[ct]);CHKERRQ(ierr);
         for (r = 0; r < rsize[n]; ++r) {
           ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);
           for (v = 0; v < DMPolytopeTypeGetNumVertices(rct[n]); ++v) {
-            ierr = PetscPrintf(PETSC_COMM_SELF, "%D ", tr->trSubVerts[ct][rct[n]][r][v]);CHKERRQ(ierr);
+            ierr = PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT " ", tr->trSubVerts[ct][rct[n]][r][v]);CHKERRQ(ierr);
           }
           ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
         }
@@ -1686,7 +1686,7 @@ static PetscErrorCode DMPlexTransformCreateSF(DMPlexTransform tr, DM rdm)
     ierr = PetscMalloc1(numLeavesNew, &lp);CHKERRQ(ierr);
     ierr = PetscMalloc1(numLeavesNew, &rp);CHKERRQ(ierr);
     for (i = 0; i < numLeavesNew; ++i) {
-      if ((localPointsNew[i] < pStartNew) || (localPointsNew[i] >= pEndNew)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Local SF point %D (%D) not in [%D, %D)", localPointsNew[i], i, pStartNew, pEndNew);
+      if ((localPointsNew[i] < pStartNew) || (localPointsNew[i] >= pEndNew)) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Local SF point %" PetscInt_FMT " (%" PetscInt_FMT ") not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", localPointsNew[i], i, pStartNew, pEndNew);
       idx[i] = i;
     }
     ierr = PetscSortIntWithPermutation(numLeavesNew, localPointsNew, idx);CHKERRQ(ierr);

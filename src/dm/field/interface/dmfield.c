@@ -82,7 +82,7 @@ PetscErrorCode DMFieldView(DMField field,PetscViewer viewer)
   if (iascii) {
     ierr = PetscObjectPrintClassNamePrefixType((PetscObject)field,viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%D components\n",field->numComponents);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT " components\n",field->numComponents);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%s continuity\n",DMFieldContinuities[field->continuity]);CHKERRQ(ierr);
     ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_DEFAULT);CHKERRQ(ierr);
     ierr = DMView(field->dm,viewer);CHKERRQ(ierr);

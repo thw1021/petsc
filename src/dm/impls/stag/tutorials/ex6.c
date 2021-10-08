@@ -97,7 +97,7 @@ int main(int argc,char *argv[])
         dof0 = 0; dof1 = 0; dof2 = 1; dof3 = 0; /* 1 dof per cell boundary */
         ierr = DMStagCreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,30,30,30,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof0,dof1,dof2,dof3,DMSTAG_STENCIL_BOX,stencilWidth,NULL,NULL,NULL,&ctx.dm_velocity);CHKERRQ(ierr);
         break;
-      default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %D",ctx.dim);
+      default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %" PetscInt_FMT "",ctx.dim);
     }
   }
   ierr = DMSetFromOptions(ctx.dm_velocity);CHKERRQ(ierr); /* Options control velocity DM */
@@ -114,7 +114,7 @@ int main(int argc,char *argv[])
       /* One shear stress component on element edges, three shear stress components on elements */
       ierr = DMStagCreateCompatibleDMStag(ctx.dm_velocity,0,1,0,3,&ctx.dm_stress);CHKERRQ(ierr);
       break;
-    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %D",ctx.dim);
+    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %" PetscInt_FMT "",ctx.dim);
   }
   ierr = DMSetUp(ctx.dm_stress);CHKERRQ(ierr);
   ierr = DMStagSetUniformCoordinatesProduct(ctx.dm_stress,ctx.xmin,ctx.xmax,ctx.ymin,ctx.ymax,ctx.zmin,ctx.zmax);CHKERRQ(ierr);
@@ -129,7 +129,7 @@ int main(int argc,char *argv[])
       /* buoyancy on element boundaries (faces) */
       ierr = DMStagCreateCompatibleDMStag(ctx.dm_velocity,0,0,1,0,&ctx.dm_buoyancy);CHKERRQ(ierr);
       break;
-    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %D",ctx.dim);
+    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %" PetscInt_FMT "",ctx.dim);
   }
   ierr = DMSetUp(ctx.dm_buoyancy);CHKERRQ(ierr);
 
@@ -142,7 +142,7 @@ int main(int argc,char *argv[])
       /* mu and lambda + 2*mu on element centers, mu on edges */
       ierr = DMStagCreateCompatibleDMStag(ctx.dm_velocity,0,1,0,2,&ctx.dm_lame);CHKERRQ(ierr);
       break;
-    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %D",ctx.dim);
+    default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Not Implemented for dimension %" PetscInt_FMT "",ctx.dim);
   }
   ierr = DMSetUp(ctx.dm_lame);CHKERRQ(ierr);
 
@@ -155,9 +155,9 @@ int main(int argc,char *argv[])
     dx = (ctx.xmax - ctx.xmin)/N[0];
     Vp = PetscSqrtScalar((ctx.lambda + 2 * ctx.mu) / ctx.rho);
     if (ctx.dim == 2) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Using a %D x %D mesh\n",N[0],N[1]);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Using a %" PetscInt_FMT " x %" PetscInt_FMT " mesh\n",N[0],N[1]);CHKERRQ(ierr);
     } else if (ctx.dim == 3) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Using a %D x %D x %D mesh\n",N[0],N[1],N[2]);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Using a %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " mesh\n",N[0],N[1],N[2]);CHKERRQ(ierr);
     }
     ierr = PetscPrintf(PETSC_COMM_WORLD,"dx: %g\n",dx);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"dt: %g\n",ctx.dt);CHKERRQ(ierr);
@@ -782,7 +782,7 @@ static PetscErrorCode DumpStress(const Ctx *ctx,Vec stress,PetscInt timestep)
       PetscViewer viewer;
       char        filename[PETSC_MAX_PATH_LEN];
 
-      ierr = PetscSNPrintf(filename,sizeof(filename),"ex6_stress_normal_%.4D.vtr",timestep);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(filename,sizeof(filename),"ex6_stress_normal_%.4" PetscInt_FMT ".vtr",timestep);CHKERRQ(ierr);
       ierr = PetscViewerVTKOpen(PetscObjectComm((PetscObject)da_normal),filename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
       ierr = VecView(vec_normal,viewer);CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
@@ -798,7 +798,7 @@ static PetscErrorCode DumpStress(const Ctx *ctx,Vec stress,PetscInt timestep)
       PetscViewer viewer;
       char        filename[PETSC_MAX_PATH_LEN];
 
-      ierr = PetscSNPrintf(filename,sizeof(filename),"ex6_stress_shear_%.4D.vtr",timestep);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(filename,sizeof(filename),"ex6_stress_shear_%.4" PetscInt_FMT ".vtr",timestep);CHKERRQ(ierr);
       ierr = PetscViewerVTKOpen(PetscObjectComm((PetscObject)da_normal),filename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
       ierr = VecView(vec_shear,viewer);CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
@@ -887,7 +887,7 @@ static PetscErrorCode DumpVelocity(const Ctx *ctx,Vec velocity,PetscInt timestep
     PetscViewer viewer;
     char        filename[PETSC_MAX_PATH_LEN];
 
-    ierr = PetscSNPrintf(filename,sizeof(filename),"ex6_velavg_%.4D.vtr",timestep);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(filename,sizeof(filename),"ex6_velavg_%.4" PetscInt_FMT ".vtr",timestep);CHKERRQ(ierr);
     ierr = PetscViewerVTKOpen(PetscObjectComm((PetscObject)daVelAvg),filename,FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
     ierr = VecView(vecVelAvg,viewer);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);

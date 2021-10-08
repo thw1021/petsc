@@ -129,7 +129,7 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
   PetscFunctionBegin;
   ierr = DMGetDimension(plex, &dim);CHKERRQ(ierr);
   ierr = DMGetDS(plex, &prob);CHKERRQ(ierr);
-  if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
+  if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %" PetscInt_FMT " != LANDAU_DIM %d",dim,LANDAU_DIM);
   ierr = PetscDSGetTabulation(prob, &Tf);CHKERRQ(ierr);
   BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
   ip_offset[0] = ipf_offset[0] = elem_offset[0] = 0;
@@ -402,7 +402,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   ierr = DMGetApplicationContext(plex[0], &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(plex[0], &dim);CHKERRQ(ierr);
-  if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
+  if (LANDAU_DIM != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %" PetscInt_FMT " != LANDAU_DIM %d",dim,LANDAU_DIM);
   if (ctx->gpu_assembly) {
     ierr = PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container);CHKERRQ(ierr);
     if (container) { // not here first call
@@ -537,7 +537,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     //           ierr = PetscLogFlops(nip_loc*(PetscLogDouble)((nip_loc*(11*Nfloc+ 4*dim*dim) + 6*Nfloc*dim*dim*dim + 10*Nfloc*dim*dim + 4*Nfloc*dim + Nb*Nfloc*Nb*Nq*dim*dim*5)));CHKERRQ(ierr);
     // #endif
     const int scr_bytes = 2*(g2_scr_t::shmem_size(dim,Nf_max,Nq) + g3_scr_t::shmem_size(dim,dim,Nf_max,Nq))+fieldMats_scr_t::shmem_size(Nb,Nb)+idx_scr_t::shmem_size(Nb,nfaces)+scale_scr_t::shmem_size(Nb,nfaces);
-    ierr = PetscInfo6(plex[0], "Jacobian shared memory size: %d bytes in level %d num_cells_tot=%D team size=%D #face=%D Nf_max=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,num_cells_tot,team_size,nfaces,Nf_max);CHKERRQ(ierr);
+    ierr = PetscInfo6(plex[0], "Jacobian shared memory size: %d bytes in level %d num_cells_tot=%" PetscInt_FMT " team size=%" PetscInt_FMT " #face=%" PetscInt_FMT " Nf_max=%" PetscInt_FMT "\n",scr_bytes,KOKKOS_SHARED_LEVEL,num_cells_tot,team_size,nfaces,Nf_max);CHKERRQ(ierr);
     Kokkos::parallel_for("Jacobian", Kokkos::TeamPolicy<>(num_cells_tot, team_size, /* Kokkos::AUTO */ 16).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         // find my grid
         PetscInt grid = 0, g_cell = team.league_rank();
@@ -687,7 +687,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     //           ierr = PetscLogFlops(nip_loc*(PetscLogDouble)(Nb*Nfloc*Nb*Nq*4));CHKERRQ(ierr);
     // #endif
     int scr_bytes = fieldMats_scr_t::shmem_size(Nq,Nq) + idx_scr_t::shmem_size(Nb,nfaces) + scale_scr_t::shmem_size(Nb,nfaces);
-    ierr = PetscInfo6(plex[0], "Mass shared memory size: %d bytes in level %d conc=%D team size=%D #face=%D Nb=%D\n",scr_bytes,KOKKOS_SHARED_LEVEL,conc,team_size,nfaces,Nb);CHKERRQ(ierr);
+    ierr = PetscInfo6(plex[0], "Mass shared memory size: %d bytes in level %d conc=%" PetscInt_FMT " team size=%" PetscInt_FMT " #face=%" PetscInt_FMT " Nb=%" PetscInt_FMT "\n",scr_bytes,KOKKOS_SHARED_LEVEL,conc,team_size,nfaces,Nb);CHKERRQ(ierr);
     Kokkos::parallel_for("Mass", Kokkos::TeamPolicy<>(num_cells_tot, team_size, /* Kokkos::AUTO */ 16).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         fieldMats_scr_t s_fieldMats(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,Nb);
         idx_scr_t       s_idx(team.team_scratch(KOKKOS_SHARED_LEVEL),Nb,nfaces);
@@ -766,10 +766,10 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
         ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
         ierr = MatGetSize(B, &nloc, NULL);CHKERRQ(ierr);
-        if (nloc != a_mat_offset[grid+1] - moffset) SETERRQ2(PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "nloc %D != mat_offset[grid+1] - moffset = %D",nloc, a_mat_offset[grid+1] - moffset);
+        if (nloc != a_mat_offset[grid+1] - moffset) SETERRQ2(PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "nloc %" PetscInt_FMT " != mat_offset[grid+1] - moffset = %" PetscInt_FMT "",nloc, a_mat_offset[grid+1] - moffset);
         for (int i=0 ; i<nloc ; i++) {
           ierr = MatGetRow(B,i,&nzl,&cols,&vals);CHKERRQ(ierr);
-          if (nzl>1024) SETERRQ1(PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "Row too big: %D",nzl);
+          if (nzl>1024) SETERRQ1(PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "Row too big: %" PetscInt_FMT "",nzl);
           for (int j=0; j<nzl; j++) colbuf[j] = cols[j] + moffset;
           row = i + moffset;
           ierr = MatSetValues(JacP,1,&row,nzl,colbuf,vals,ADD_VALUES);CHKERRQ(ierr);
