@@ -42,7 +42,7 @@ PetscErrorCode RunTest(void)
 
   if (test) {
     ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %D\n", its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %" PetscInt_FMT "\n", its);CHKERRQ(ierr);
   } else {
     ierr = VecDuplicate(b,&r);CHKERRQ(ierr);
     ierr = MatMult(A,x,r);CHKERRQ(ierr);

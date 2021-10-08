@@ -48,14 +48,14 @@ static PetscErrorCode PetscSpaceSetFromOptions_Tensor(PetscOptionItems *PetscOpt
   ierr = PetscOptionsBoundedInt("-petscspace_tensor_spaces", "The number of subspaces", "PetscSpaceTensorSetNumSubspaces", Ns, &Ns, NULL,0);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-petscspace_tensor_uniform", "Subspaces are identical", "PetscSpaceTensorSetFromOptions", uniform, &uniform, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
-  if (Ns < 0 || (Nv > 0 && Ns == 0)) SETERRQ1(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space made up of %D spaces\n",Ns);
-  if (Nv > 0 && Ns > Nv) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space with %D subspaces over %D variables\n", Ns, Nv);
+  if (Ns < 0 || (Nv > 0 && Ns == 0)) SETERRQ1(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space made up of %" PetscInt_FMT " spaces\n",Ns);
+  if (Nv > 0 && Ns > Nv) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space with %" PetscInt_FMT " subspaces over %" PetscInt_FMT " variables\n", Ns, Nv);
   if (Ns != tens->numTensSpaces) {ierr = PetscSpaceTensorSetNumSubspaces(sp, Ns);CHKERRQ(ierr);}
   if (uniform) {
     PetscInt   Nvs = Nv / Ns;
     PetscSpace subspace;
 
-    if (Nv % Ns) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_WRONG,"Cannot use %D uniform subspaces for %D variable space\n", Ns, Nv);
+    if (Nv % Ns) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_WRONG,"Cannot use %" PetscInt_FMT " uniform subspaces for %" PetscInt_FMT " variable space\n", Ns, Nv);
     ierr = PetscSpaceTensorGetSubspace(sp, 0, &subspace);CHKERRQ(ierr);
     if (!subspace) {ierr = PetscSpaceTensorCreateSubspace(sp, Nvs, &subspace);CHKERRQ(ierr);}
     else           {ierr = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);}
@@ -95,8 +95,8 @@ static PetscErrorCode PetscSpaceTensorView_Ascii(PetscSpace sp, PetscViewer v)
   for (i = 1; i < Ns; i++) {
     if (tens->tensspaces[i] != tens->tensspaces[0]) {uniform = PETSC_FALSE; break;}
   }
-  if (uniform) {ierr = PetscViewerASCIIPrintf(v, "Tensor space of %D subspaces (all identical)\n", Ns);CHKERRQ(ierr);}
-  else         {ierr = PetscViewerASCIIPrintf(v, "Tensor space of %D subspaces\n", Ns);CHKERRQ(ierr);}
+  if (uniform) {ierr = PetscViewerASCIIPrintf(v, "Tensor space of %" PetscInt_FMT " subspaces (all identical)\n", Ns);CHKERRQ(ierr);}
+  else         {ierr = PetscViewerASCIIPrintf(v, "Tensor space of %" PetscInt_FMT " subspaces\n", Ns);CHKERRQ(ierr);}
   n = uniform ? 1 : Ns;
   for (i = 0; i < n; i++) {
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
@@ -138,7 +138,7 @@ static PetscErrorCode PetscSpaceSetUp_Tensor(PetscSpace sp)
   } else {
     PetscSpace s0;
 
-    if (Nv > 0 && Ns > Nv) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space with %D subspaces over %D variables\n", Ns, Nv);
+    if (Nv > 0 && Ns > Nv) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have a tensor space with %" PetscInt_FMT " subspaces over %" PetscInt_FMT " variables\n", Ns, Nv);
     ierr = PetscSpaceTensorGetSubspace(sp, 0, &s0);CHKERRQ(ierr);
     for (i = 1; i < Ns; i++) {
       PetscSpace si;
@@ -149,7 +149,7 @@ static PetscErrorCode PetscSpaceSetUp_Tensor(PetscSpace sp)
     if (uniform) {
       PetscInt   Nvs = Nv / Ns;
 
-      if (Nv % Ns) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_WRONG,"Cannot use %D uniform subspaces for %D variable space\n", Ns, Nv);
+      if (Nv % Ns) SETERRQ2(PetscObjectComm((PetscObject)sp),PETSC_ERR_ARG_WRONG,"Cannot use %" PetscInt_FMT " uniform subspaces for %" PetscInt_FMT " variable space\n", Ns, Nv);
       if (!s0) {ierr = PetscSpaceTensorCreateSubspace(sp, Nvs, &s0);CHKERRQ(ierr);}
       else     {ierr = PetscObjectReference((PetscObject) s0);CHKERRQ(ierr);}
       ierr = PetscSpaceSetUp(s0);CHKERRQ(ierr);
@@ -282,7 +282,7 @@ static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints,
 
     ierr = PetscSpaceGetNumVariables(tens->tensspaces[s], &sNv);CHKERRQ(ierr);
     ierr = PetscSpaceGetDimension(tens->tensspaces[s], &spdim);CHKERRQ(ierr);
-    if ((pdim % step) || (pdim % spdim))  SETERRQ6(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad tensor loop: Nv %d, Ns %D, pdim %D, s %D, step %D, spdim %D", Nv, Ns, pdim, s, step, spdim);
+    if ((pdim % step) || (pdim % spdim))  SETERRQ6(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad tensor loop: Nv %d, Ns %" PetscInt_FMT ", pdim %" PetscInt_FMT ", s %" PetscInt_FMT ", step %" PetscInt_FMT ", spdim %" PetscInt_FMT "", Nv, Ns, pdim, s, step, spdim);
     skip = pdim / (step * spdim);
     for (p = 0; p < npoints; ++p) {
       for (i = 0; i < sNv; i++) {
@@ -523,7 +523,7 @@ static PetscErrorCode PetscSpaceTensorSetSubspace_Tensor(PetscSpace space, Petsc
   if (tens->setupCalled) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change subspace after setup called\n");
   Ns = tens->numTensSpaces;
   if (Ns < 0) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSpaceTensorSetNumSubspaces() first\n");
-  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",s);
+  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %" PetscInt_FMT "\n",s);
   ierr = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);
   ierr = PetscSpaceDestroy(&tens->tensspaces[s]);CHKERRQ(ierr);
   tens->tensspaces[s] = subspace;
@@ -542,7 +542,7 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Tensor(PetscSpace sp, PetscInt
   ierr = PetscSpaceGetNumComponents(sp, &Nc);CHKERRQ(ierr);
   ierr = PetscSpaceGetNumVariables(sp, &dim);CHKERRQ(ierr);
   ierr = PetscSpaceGetDegree(sp, &order, NULL);CHKERRQ(ierr);
-  if (height > dim || height < 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %D for dimension %D space", height, dim);
+  if (height > dim || height < 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %" PetscInt_FMT " for dimension %" PetscInt_FMT " space", height, dim);
   if (!tens->heightsubspaces) {ierr = PetscCalloc1(dim, &tens->heightsubspaces);CHKERRQ(ierr);}
   if (height <= dim) {
     if (!tens->heightsubspaces[height-1]) {
@@ -579,7 +579,7 @@ static PetscErrorCode PetscSpaceTensorGetSubspace_Tensor(PetscSpace space, Petsc
   PetscFunctionBegin;
   Ns = tens->numTensSpaces;
   if (Ns < 0) SETERRQ(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSpaceTensorSetNumSubspaces() first\n");
-  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %D\n",s);
+  if (s < 0 || s >= Ns) SETERRQ1(PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_OUTOFRANGE,"Invalid subspace number %" PetscInt_FMT "\n",s);
   *subspace = tens->tensspaces[s];
   PetscFunctionReturn(0);
 }

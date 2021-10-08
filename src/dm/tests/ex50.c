@@ -128,7 +128,7 @@ static PetscErrorCode test_3d(PetscInt cells[], PetscBool plex, PetscBool ho)
       ierr = DMDAVecRestoreArray(cdm,cv,&_coords);CHKERRQ(ierr);
     }
     ierr = VecRestoreArray(v,&c);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(name,sizeof(name),"FiniteElementCollection: L2_T1_3D_P%D",dof-1);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name,sizeof(name),"FiniteElementCollection: L2_T1_3D_P%" PetscInt_FMT "",dof-1);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)v,name);CHKERRQ(ierr);
     ierr = PetscObjectCompose((PetscObject)dm,"_glvis_mesh_coords",(PetscObject)v);CHKERRQ(ierr);
     ierr = VecDestroy(&v);CHKERRQ(ierr);

@@ -132,7 +132,7 @@ static PetscErrorCode DMStagDMDAGetExtraPoints(DM dm,DMStagStencilLocation locCa
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (dim > DMSTAG_MAX_DIM) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not implemented for %D dimensions",dim);
+  if (dim > DMSTAG_MAX_DIM) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not implemented for %" PetscInt_FMT " dimensions",dim);
   ierr = DMStagGetCorners(dm,NULL,NULL,NULL,NULL,NULL,NULL,&nExtra[0],&nExtra[1],&nExtra[2]);CHKERRQ(ierr);
   for (d=0; d<dim; ++d) extraPoint[d] = 0;
   switch (locCanonical) {
@@ -175,7 +175,7 @@ static PetscErrorCode DMStagMigrateVecDMDA(DM dm,Vec vec,DMStagStencilLocation l
   PetscValidHeaderSpecific(vecTo,VEC_CLASSID,6);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = DMDAGetDof(dmTo,&dofToMax);CHKERRQ(ierr);
-  if (-c > dofToMax) SETERRQ1(PetscObjectComm((PetscObject)dmTo),PETSC_ERR_ARG_OUTOFRANGE,"Invalid negative component value. Must be >= -%D",dofToMax);
+  if (-c > dofToMax) SETERRQ1(PetscObjectComm((PetscObject)dmTo),PETSC_ERR_ARG_OUTOFRANGE,"Invalid negative component value. Must be >= -%" PetscInt_FMT "",dofToMax);
   ierr = DMStagGetCorners(dm,&start[0],&start[1],&start[2],&n[0],&n[1],&n[2],NULL,NULL,NULL);CHKERRQ(ierr);
   ierr = DMStagDMDAGetExtraPoints(dm,loc,extraPoint);CHKERRQ(ierr);
   ierr = DMStagGetLocationDOF(dm,loc,&dof);CHKERRQ(ierr);
@@ -486,7 +486,7 @@ PetscErrorCode DMStagVecSplitToDMDA(DM dm,Vec vec,DMStagStencilLocation loc,Pets
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = DMStagGetLocationDOF(dm,loc,&locdof);CHKERRQ(ierr);
-  if (c >= locdof) SETERRQ3(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Location %s has %D dof, but component %D requested\n",DMStagStencilLocations[loc],locdof,c);
+  if (c >= locdof) SETERRQ3(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Location %s has %" PetscInt_FMT " dof, but component %" PetscInt_FMT " requested\n",DMStagStencilLocations[loc],locdof,c);
   ierr = DMStagStencilLocationCanonicalize(loc,&locCanonical);CHKERRQ(ierr);
   ierr = DMStagCreateCompatibleDMDA(dm,locCanonical,c,pda);CHKERRQ(ierr);
   da = *pda;

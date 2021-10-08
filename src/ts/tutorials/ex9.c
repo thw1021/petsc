@@ -848,7 +848,7 @@ static PetscErrorCode PhysicsRiemann_IsoGas_Exact(void *vctx,PetscInt m,const Pe
       else rho = tmp;
       if (!((rho > 0) && PetscIsNormalScalar(rho))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FP,"non-normal iterate rho=%g",(double)PetscRealPart(rho));
     }
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"Newton iteration for star.rho diverged after %D iterations",i);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"Newton iteration for star.rho diverged after %" PetscInt_FMT " iterations",i);
   }
 converged:
   if (L.u-c < 0 && 0 < star.u-c) { /* 1-wave is sonic rarefaction */
@@ -1003,7 +1003,7 @@ static PetscErrorCode PhysicsRiemann_Shallow_Exact(void *vctx,PetscInt m,const P
       else h = tmp;
       if (!((h > 0) && PetscIsNormalScalar(h))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FP,"non-normal iterate h=%g",(double)h);
     }
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"Newton iteration for star.h diverged after %D iterations",i);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"Newton iteration for star.h diverged after %" PetscInt_FMT " iterations",i);
   }
 converged:
   cstar = PetscSqrtScalar(g*star.h);
@@ -1318,7 +1318,7 @@ static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
     ierr = VecMin(X,&imin,&xmin);CHKERRQ(ierr);
     ierr = VecMax(X,&imax,&xmax);CHKERRQ(ierr);
     ierr = VecSum(X,&sum);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Solution range [%8.5f,%8.5f] with extrema at %D and %D, mean %8.5f, ||x||_TV %8.5f\n",(double)xmin,(double)xmax,imin,imax,(double)(sum/Mx),(double)(tvgsum/Mx));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Solution range [%8.5f,%8.5f] with extrema at %" PetscInt_FMT " and %" PetscInt_FMT ", mean %8.5f, ||x||_TV %8.5f\n",(double)xmin,(double)xmax,imin,imax,(double)(sum/Mx),(double)(tvgsum/Mx));CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Viewer type not supported");
   PetscFunctionReturn(0);
 }
@@ -1467,7 +1467,7 @@ int main(int argc,char *argv[])
     ierr = TSGetSolveTime(ts,&ptime);CHKERRQ(ierr);
     ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
 
-    ierr = PetscPrintf(comm,"Final time %8.5f, steps %D\n",(double)ptime,steps);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Final time %8.5f, steps %" PetscInt_FMT "\n",(double)ptime,steps);CHKERRQ(ierr);
     if (ctx.exact) {
       ierr = SolutionErrorNorms(&ctx,da,ptime,X,&nrm1,&nrmsup);CHKERRQ(ierr);
       ierr = PetscPrintf(comm,"Error ||x-x_e||_1 %8.4e  ||x-x_e||_sup %8.4e\n",(double)nrm1,(double)nrmsup);CHKERRQ(ierr);

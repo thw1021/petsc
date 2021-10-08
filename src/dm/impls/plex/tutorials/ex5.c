@@ -83,7 +83,7 @@ int main(int argc, char **argv)
       PetscPartitioner  part;
       PetscViewer       v;
 
-      ierr = PetscPrintf(comm, "Begin cycle %D\n",i);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "Begin cycle %" PetscInt_FMT "\n",i);CHKERRQ(ierr);
 
       /* Load data from XDMF into dm in parallel */
       /* We could also use
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
       ierr = PetscViewerDestroy(&v);CHKERRQ(ierr);
       ierr = DMDestroy(&dm);CHKERRQ(ierr);
 
-      ierr = PetscPrintf(comm, "End   cycle %D\n--------\n",i);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "End   cycle %" PetscInt_FMT "\n--------\n",i);CHKERRQ(ierr);
     }
     ierr = MPI_Comm_free(&comm);CHKERRMPI(ierr);
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);

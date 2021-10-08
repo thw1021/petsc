@@ -239,7 +239,7 @@ int main(int argc, char **argv)
   ierr = VecNorm(uex,NORM_2,&err);CHKERRQ(ierr);
   err  = PetscSqrtReal(err*err/((PetscReal)ctxt.imax));
   ierr = PetscPrintf(PETSC_COMM_WORLD,"L2 norm of the numerical error = %g (time=%g)\n",(double)err,(double)time);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of time steps: %D (%D Krylov iterations)\n",ctxt.niter,total_its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of time steps: %" PetscInt_FMT " (%" PetscInt_FMT " Krylov iterations)\n",ctxt.niter,total_its);CHKERRQ(ierr);
 
   /* Free up memory */
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);

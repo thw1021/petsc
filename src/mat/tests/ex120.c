@@ -132,7 +132,7 @@ int main(int argc,char **args)
   ierr = MatDenseGetArray(A_dense,&arrayA);CHKERRQ(ierr);
 
   if (TestZHEEV) { /* test zheev() */
-    ierr = PetscPrintf(PETSC_COMM_WORLD," LAPACKsyev: compute all %D eigensolutions...\n",m);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD," LAPACKsyev: compute all %" PetscInt_FMT " eigensolutions...\n",m);CHKERRQ(ierr);
     ierr = PetscMalloc1(3*n-2,&rwork);CHKERRQ(ierr);
     LAPACKsyev_("V","U",&bn,arrayA,&bn,evals,work,&lwork,rwork,&lierr);
     ierr = PetscFree(rwork);CHKERRQ(ierr);
@@ -159,7 +159,7 @@ int main(int argc,char **args)
     ierr = PetscFree(rwork);CHKERRQ(ierr);
   }
   if (TestZHEGV) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD," LAPACKsygv: compute all %D eigensolutions...\n",m);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD," LAPACKsygv: compute all %" PetscInt_FMT " eigensolutions...\n",m);CHKERRQ(ierr);
     ierr = PetscMalloc1(3*n+1,&rwork);CHKERRQ(ierr);
     ierr = MatDenseGetArray(B,&arrayB);CHKERRQ(ierr);
     LAPACKsygv_(&one,"V","U",&bn,arrayA,&bn,arrayB,&bn,evals,work,&lwork,rwork,&lierr);
@@ -192,7 +192,7 @@ int main(int argc,char **args)
   ierr = PetscOptionsHasName(NULL,NULL, "-eig_view", &flg);CHKERRQ(ierr);
   if (flg) {
     ierr = PetscPrintf(PETSC_COMM_WORLD," %d evals: \n",nevs);CHKERRQ(ierr);
-    for (i=0; i<nevs; i++) {ierr = PetscPrintf(PETSC_COMM_WORLD,"%D  %g\n",i+il,(double)evals[i]);CHKERRQ(ierr);}
+    for (i=0; i<nevs; i++) {ierr = PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT "  %g\n",i+il,(double)evals[i]);CHKERRQ(ierr);}
   }
 
   /* Check residuals and orthogonality */

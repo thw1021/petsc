@@ -568,7 +568,7 @@ static PetscErrorCode TSEvaluateStep_GLEE(TS ts,PetscInt order,Vec X,PetscBool *
     PetscFunctionReturn(0);
   }
   if (done) *done = PETSC_FALSE;
-  else SETERRQ3(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"GLEE '%s' of order %D cannot evaluate step at order %D",tab->name,tab->order,order);
+  else SETERRQ3(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"GLEE '%s' of order %" PetscInt_FMT " cannot evaluate step at order %" PetscInt_FMT "",tab->name,tab->order,order);
   PetscFunctionReturn(0);
 }
 
@@ -1103,7 +1103,7 @@ PetscErrorCode TSSetTimeError_GLEE(TS ts,Vec X)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  if (r != 2) SETERRQ2(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSSetTimeError_GLEE not supported for '%s' with r=%D.",tab->name,tab->r);
+  if (r != 2) SETERRQ2(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSSetTimeError_GLEE not supported for '%s' with r=%" PetscInt_FMT ".",tab->name,tab->r);
   for (i=1; i<r; i++) {
     ierr = VecCopy(ts->vec_sol,Y[i]);CHKERRQ(ierr);
     ierr = VecAXPBY(Y[i],S[0],S[1],X);CHKERRQ(ierr);

@@ -61,7 +61,7 @@ int main(int argc,char **argv)
   if (flg) fine_ctx.mx = mx;
   ierr = PetscOptionsGetInt(NULL,NULL,"-my",&my,&flg);CHKERRQ(ierr);
   if (flg) fine_ctx.my = my;
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Fine grid size %D by %D\n",fine_ctx.mx,fine_ctx.my);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Fine grid size %" PetscInt_FMT " by %" PetscInt_FMT "\n",fine_ctx.mx,fine_ctx.my);CHKERRQ(ierr);
   n    = fine_ctx.mx*fine_ctx.my;
 
   MPI_Comm_size(PETSC_COMM_WORLD,&size);
@@ -101,7 +101,7 @@ int main(int argc,char **argv)
     ierr = KSPSolve(ksp,fine_ctx.b,fine_ctx.x);CHKERRQ(ierr);
     ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
     if (its > 6) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Warning: Number of iterations = %D greater than expected\n",its);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Warning: Number of iterations = %" PetscInt_FMT " greater than expected\n",its);CHKERRQ(ierr);
     }
   }
 

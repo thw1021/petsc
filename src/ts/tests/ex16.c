@@ -110,7 +110,7 @@ PetscErrorCode PostEvent(TS ts,PetscInt nevents,PetscInt event_list[],PetscReal 
   PetscFunctionBegin;
   ierr = TSGetStepNumber(ts,&i);CHKERRQ(ierr);
   ierr = VecGetArrayRead(x,&a);CHKERRQ(ierr);
-  ierr = PetscPrintf(PetscObjectComm((PetscObject)ts),"%-10s-> step %D time %g value %g\n",PETSC_FUNCTION_NAME,i,(double)t,(double)PetscRealPart(a[0]));CHKERRQ(ierr);
+  ierr = PetscPrintf(PetscObjectComm((PetscObject)ts),"%-10s-> step %" PetscInt_FMT " time %g value %g\n",PETSC_FUNCTION_NAME,i,(double)t,(double)PetscRealPart(a[0]));CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(x,&a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

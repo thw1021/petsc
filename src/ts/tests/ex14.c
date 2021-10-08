@@ -99,7 +99,7 @@ static PetscErrorCode TestExplicitTS(TS ts,PetscInt order,const char subtype[])
   ierr = TSSetErrorIfStepFails(ts,PETSC_TRUE);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&step);CHKERRQ(ierr);
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  if (step != 2) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bad step number %D, %s '%s'",step,type,subtype);
+  if (step != 2) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bad step number %" PetscInt_FMT ", %s '%s'",step,type,subtype);
   if (reason != TS_DIVERGED_STEP_REJECTED) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Bad reason %s, %s '%s'",TSConvergedReasons[reason],type,subtype);
   PetscFunctionReturn(0);
 }

@@ -142,9 +142,9 @@ PetscErrorCode private_DMSwarmView_XDMF(DM dm,PetscViewer viewer)
 
   /* write topology header */
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"<Topology Dimensions=\"%D\" TopologyType=\"Mixed\">\n",ng);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"<Topology Dimensions=\"%" PetscInt_FMT "\" TopologyType=\"Mixed\">\n",ng);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Dimensions=\"%D\" Seek=\"%lD\">\n",ng*3,bytes[0]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%lD\">\n",ng*3,bytes[0]);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -178,7 +178,7 @@ PetscErrorCode private_DMSwarmView_XDMF(DM dm,PetscViewer viewer)
       break;
   }
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%D %D\" Seek=\"%lD\">\n",ng,dim,bytes[0]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%lD\">\n",ng,dim,bytes[0]);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -235,7 +235,7 @@ PetscErrorCode private_VecView_Swarm_XDMF(Vec x,PetscViewer viewer)
   N = N/bs;
   ierr = PetscObjectGetName((PetscObject)x,&vecname);CHKERRQ(ierr);
   if (!vecname) {
-    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%D",((PetscObject)x)->tag);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%" PetscInt_FMT "",((PetscObject)x)->tag);CHKERRQ(ierr);
   } else {
     ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"%s",vecname);CHKERRQ(ierr);
   }
@@ -245,9 +245,9 @@ PetscErrorCode private_VecView_Swarm_XDMF(Vec x,PetscViewer viewer)
   ierr = PetscViewerASCIIPrintf(viewer,"<Attribute Center=\"Node\" Name=\"%s\" Type=\"None\">\n",fieldname);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   if (bs == 1) {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%D\" Seek=\"%lD\">\n",N,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bytes[0]);CHKERRQ(ierr);
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%D %D\" Seek=\"%lD\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
@@ -303,7 +303,7 @@ PetscErrorCode private_ISView_Swarm_XDMF(IS is,PetscViewer viewer)
   N = N/bs;
   ierr = PetscObjectGetName((PetscObject)is,&vecname);CHKERRQ(ierr);
   if (!vecname) {
-    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%D",((PetscObject)is)->tag);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%" PetscInt_FMT "",((PetscObject)is)->tag);CHKERRQ(ierr);
   } else {
     ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"%s",vecname);CHKERRQ(ierr);
   }
@@ -313,9 +313,9 @@ PetscErrorCode private_ISView_Swarm_XDMF(IS is,PetscViewer viewer)
   ierr = PetscViewerASCIIPrintf(viewer,"<Attribute Center=\"Node\" Name=\"%s\" Type=\"None\">\n",fieldname);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   if (bs == 1) {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%D\" Seek=\"%lD\">\n",N,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bytes[0]);CHKERRQ(ierr);
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%D %D\" Seek=\"%lD\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);

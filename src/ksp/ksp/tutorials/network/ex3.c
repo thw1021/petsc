@@ -160,7 +160,7 @@ int main(int argc,char ** argv)
     /* only one process holds a non-ghost vertex */
     ierr = DMNetworkGetComponent(dmnetwork,vtx[v],ALL_COMPONENTS,NULL,NULL,&nvar);CHKERRQ(ierr);
     ierr = DMNetworkGetNumComponents(dmnetwork,vtx[v],&ncomp);CHKERRQ(ierr);
-    /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] shared v %D: nvar %D, ncomp %D\n",rank,vtx[v],nvar,ncomp);CHKERRQ(ierr); */
+    /* ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] shared v %" PetscInt_FMT ": nvar %" PetscInt_FMT ", ncomp %" PetscInt_FMT "\n",rank,vtx[v],nvar,ncomp);CHKERRQ(ierr); */
     for (j=0; j<ncomp; j++) {
       ierr = DMNetworkGetComponent(dmnetwork,vtx[v],j,&compkey,NULL,&nvar);CHKERRQ(ierr);
       ierr = DMNetworkGetGlobalVecOffset(dmnetwork,vtx[v],j,&goffset);CHKERRQ(ierr);
@@ -181,7 +181,7 @@ int main(int argc,char ** argv)
     net = 0;
     ierr = PetscOptionsGetInt(NULL,NULL,"-subnet",&net,NULL);CHKERRQ(ierr);
     ierr = DMNetworkGetSubnetwork(dmnetwork,net,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] subnet %D: nv %D, ne %D\n",rank,net,nv,ne);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] subnet %" PetscInt_FMT ": nv %" PetscInt_FMT ", ne %" PetscInt_FMT "\n",rank,net,nv,ne);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
@@ -191,7 +191,7 @@ int main(int argc,char ** argv)
 
       ierr = DMNetworkGetNumComponents(dmnetwork,vtx[i],&ncomp);CHKERRQ(ierr);
       if (sharedv || ghost) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D is shared %d, is ghost %d, ncomp %D\n",rank,vtx[i],sharedv,ghost,ncomp);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %" PetscInt_FMT " is shared %d, is ghost %d, ncomp %" PetscInt_FMT "\n",rank,vtx[i],sharedv,ghost,ncomp);CHKERRQ(ierr);
       }
 
       for (j=0; j<ncomp; j++) {
@@ -200,11 +200,11 @@ int main(int argc,char ** argv)
         if (compkey == 0) {
           Comp0  *mycomp0;
           mycomp0 = (Comp0*)component;
-          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp0->id %D\n",rank,vtx[i],compkey,mycomp0->id);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %" PetscInt_FMT " compkey %" PetscInt_FMT ", mycomp0->id %" PetscInt_FMT "\n",rank,vtx[i],compkey,mycomp0->id);CHKERRQ(ierr);
         } else if (compkey == 1) {
           Comp1  *mycomp1;
           mycomp1 = (Comp1*)component;
-          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %D compkey %D, mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %" PetscInt_FMT " compkey %" PetscInt_FMT ", mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
         }
       }
     }

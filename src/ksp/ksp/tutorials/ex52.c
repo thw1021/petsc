@@ -344,7 +344,7 @@ int main(int argc,char **args)
       ierr = MatMumpsGetRinfog(F,12,&rinfo12);CHKERRQ(ierr);
       ierr = MatMumpsGetRinfog(F,13,&rinfo13);CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps row pivot threshold = %g\n",cntl);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps determinant = (%g, %g) * 2^%D \n",(double)rinfo12,(double)rinfo13,infog34);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps determinant = (%g, %g) * 2^%" PetscInt_FMT " \n",(double)rinfo12,(double)rinfo13,infog34);CHKERRQ(ierr);
     }
   }
 #endif
@@ -367,9 +367,9 @@ int main(int argc,char **args)
      An alternative is PetscFPrintf(), which prints to a file.
   */
   if (norm < 1.e-12) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error < 1.e-12 iterations %D\n",its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error < 1.e-12 iterations %" PetscInt_FMT "\n",its);CHKERRQ(ierr);
   } else {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %" PetscInt_FMT "\n",(double)norm,its);CHKERRQ(ierr);
  }
 
   /*
