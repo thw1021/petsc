@@ -893,6 +893,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
 
   /* Build ParMMG communicators: the list of vertices between two partitions  */
   niranks = nrranks = 0;
+  numNgbRanks = 0;
   if (numProcs > 1) {
     ierr = DMGetPointSF(dm, &sf);CHKERRQ(ierr);
     ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
@@ -913,7 +914,6 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
       }
       numVerInterfaces[rranks[r]] += count;
     }
-    numNgbRanks = 0;
     for (p = 0; p < numProcs; ++p) {
       if (numVerInterfaces[p]) { numNgbRanks++; }
     }
@@ -977,7 +977,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
     }
     ierr = ISRestoreIndices(globalVertexNum, &gV);CHKERRQ(ierr);
     ierr = PetscFree(numVerInterfaces);CHKERRQ(ierr);
-  }
+  } else SETERRQ(comm, PETSC_ERR_ARG_WRONG, "ParMmg only works in parallel.\n");
   ierr = DMDestroy(&udm);CHKERRQ(ierr);
 
   /* Send the data to ParMmg and remesh */
