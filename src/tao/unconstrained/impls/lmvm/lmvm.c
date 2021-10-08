@@ -219,11 +219,11 @@ static PetscErrorCode TaoView_LMVM(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(viewer, "  Gradient steps: %D\n", lm->grad);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  Gradient steps: %" PetscInt_FMT "\n", lm->grad);CHKERRQ(ierr);
     if (lm->recycle) {
       ierr = PetscViewerASCIIPrintf(viewer, "  Recycle: on\n");CHKERRQ(ierr);
       recycled_its = lm->bfgs + lm->grad;
-      ierr = PetscViewerASCIIPrintf(viewer, "  Total recycled iterations: %D\n", recycled_its);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "  Total recycled iterations: %" PetscInt_FMT "\n", recycled_its);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

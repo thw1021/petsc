@@ -114,7 +114,7 @@ static PetscErrorCode CheckPoint(DM dm, Vec u, PetscInt point, AppCtx *user)
   ierr = VecGetArrayRead(u, &array);CHKERRQ(ierr);
   ierr = DMPlexPointLocalRead(dm, point, array, &a);CHKERRQ(ierr);
   ierr = PetscSectionGetDof(s, point, &dof);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF, "Point %D: ", point);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "Point %" PetscInt_FMT ": ", point);CHKERRQ(ierr);
   for (d = 0; d < dof; ++d) {
     if (d > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, ", ");CHKERRQ(ierr);}
     ierr = PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double) PetscRealPart(a[d]));CHKERRQ(ierr);
@@ -136,9 +136,9 @@ static PetscErrorCode ReadData2D(DM dm, Vec u, AppCtx *user)
     PetscInt     closureSize, ki, kj, f, c, foff = 0;
 
     ierr = DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell);CHKERRQ(ierr);
     for (f = 0; f < user->Nf; ++f) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f);CHKERRQ(ierr);
       for (kj = user->k[f]; kj >= 0; --kj) {
         for (ki = 0; ki <= user->k[f]; ++ki) {
           if (ki > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);}
@@ -170,9 +170,9 @@ static PetscErrorCode ReadData3D(DM dm, Vec u, AppCtx *user)
     PetscInt     closureSize, ki, kj, kk, f, c, foff = 0;
 
     ierr = DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell);CHKERRQ(ierr);
     for (f = 0; f < user->Nf; ++f) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f);CHKERRQ(ierr);
       for (kk = user->k[f]; kk >= 0; --kk) {
         for (kj = user->k[f]; kj >= 0; --kj) {
           for (ki = 0; ki <= user->k[f]; ++ki) {

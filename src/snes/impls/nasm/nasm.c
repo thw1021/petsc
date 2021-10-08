@@ -223,7 +223,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPIU_Allreduce(&nasm->n,&N,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer, "  total subdomain blocks = %D\n",N);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  total subdomain blocks = %" PetscInt_FMT "\n",N);CHKERRQ(ierr);
     ierr = PetscViewerGetFormat(viewer,&format);CHKERRQ(ierr);
     if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
       if (nasm->subsnes) {
@@ -243,7 +243,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
     } else {
       /* print the solver on each block */
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %D\n",(int)rank,nasm->n);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %" PetscInt_FMT "\n",(int)rank,nasm->n);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following SNES objects:\n");CHKERRQ(ierr);
@@ -252,7 +252,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
       ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
       for (i=0; i<nasm->n; i++) {
         ierr = VecGetLocalSize(nasm->x[i],&bsz);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(sviewer,"[%d] local block number %D, size = %D\n",(int)rank,i,bsz);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(sviewer,"[%d] local block number %" PetscInt_FMT ", size = %" PetscInt_FMT "\n",(int)rank,i,bsz);CHKERRQ(ierr);
         ierr = SNESView(nasm->subsnes[i],sviewer);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPrintf(sviewer,"- - - - - - - - - - - - - - - - - -\n");CHKERRQ(ierr);
       }
@@ -261,7 +261,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer," blocks=%D,type=%s",N,SNESNASMTypes[nasm->type]);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer," blocks=%" PetscInt_FMT ",type=%s",N,SNESNASMTypes[nasm->type]);CHKERRQ(ierr);
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     if (nasm->subsnes && rank == 0) {ierr = SNESView(nasm->subsnes[0],sviewer);CHKERRQ(ierr);}
     ierr = PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -827,7 +827,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   }
   if (normschedule == SNES_NORM_ALWAYS) {
     if (i == snes->max_its) {
-      ierr = PetscInfo1(snes,"Maximum number of iterations has been reached: %D\n",snes->max_its);CHKERRQ(ierr);
+      ierr = PetscInfo1(snes,"Maximum number of iterations has been reached: %" PetscInt_FMT "\n",snes->max_its);CHKERRQ(ierr);
       if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
     }
   } else if (!snes->reason) snes->reason = SNES_CONVERGED_ITS; /* NASM is meant to be used as a preconditioner */

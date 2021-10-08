@@ -392,7 +392,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal crtime,Vec u,void *ctx)
 
   ierr = TSGetTimeStep(ts,&dt);CHKERRQ(ierr);
   if (norm_2 > 1.e-2) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Timestep %D: step size = %g, time = %g, 2-norm error = %g, max norm error = %g\n",step,(double)dt,(double)crtime,(double)norm_2,(double)norm_max);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"Timestep %" PetscInt_FMT ": step size = %g, time = %g, 2-norm error = %g, max norm error = %g\n",step,(double)dt,(double)crtime,(double)norm_2,(double)norm_max);CHKERRQ(ierr);
   }
   appctx->norm_2   += norm_2;
   appctx->norm_max += norm_max;

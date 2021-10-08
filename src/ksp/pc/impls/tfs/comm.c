@@ -82,7 +82,7 @@ PetscErrorCode PCTFS_giop(PetscInt *vals, PetscInt *work, PetscInt n, PetscInt *
   if ((PCTFS_num_nodes<2)||(!n)) PetscFunctionReturn(0);
 
   /* a negative number if items to send ==> fatal */
-  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: n=%D<0?",n);
+  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: n=%" PetscInt_FMT "<0?",n);
 
   /* advance to list of n operations for custom */
   if ((type=oprs[0])==NON_UNIFORM) oprs++;
@@ -160,7 +160,7 @@ PetscErrorCode PCTFS_grop(PetscScalar *vals, PetscScalar *work, PetscInt n, Pets
   if ((PCTFS_num_nodes<2)||(!n)) PetscFunctionReturn(0);
 
   /* a negative number of items to send ==> fatal */
-  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"gdop() :: n=%D<0?",n);
+  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"gdop() :: n=%" PetscInt_FMT "<0?",n);
 
   /* advance to list of n operations for custom */
   if ((type=oprs[0])==NON_UNIFORM) oprs++;
@@ -240,7 +240,7 @@ PetscErrorCode PCTFS_grop_hc(PetscScalar *vals, PetscScalar *work, PetscInt n, P
   if (modfl_num_nodes) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: PCTFS_num_nodes not a power of 2!?!");
 
   /* a negative number of items to send ==> fatal */
-  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: n=%D<0?",n);
+  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: n=%" PetscInt_FMT "<0?",n);
 
   /* can't do more dimensions then exist */
   dim = PetscMin(dim,PCTFS_i_log2_num_nodes);
@@ -351,7 +351,7 @@ PetscErrorCode PCTFS_giop_hc(PetscInt *vals, PetscInt *work, PetscInt n, PetscIn
   if (modfl_num_nodes) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: PCTFS_num_nodes not a power of 2!?!");
 
   /* a negative number of items to send ==> fatal */
-  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: n=%D<0?",n);
+  if (n<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: n=%" PetscInt_FMT "<0?",n);
 
   /* can't do more dimensions then exist */
   dim = PetscMin(dim,PCTFS_i_log2_num_nodes);

@@ -106,14 +106,14 @@ PetscErrorCode CommHierarchyCreate(MPI_Comm comm,PetscInt n,PetscInt number[],Pe
     PetscMPIInt size;
 
     ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
-    ierr = PetscPrintf(comm,"level[%D] size %d\n",n,(int)size);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"level[%" PetscInt_FMT "] size %d\n",n,(int)size);CHKERRQ(ierr);
     for (k=n-1; k>=0; k--) {
       if (pscommlist[k]) {
         MPI_Comm comm_k = PetscSubcommChild(pscommlist[k]);
 
         if (pscommlist[k]->color == 0) {
           ierr = MPI_Comm_size(comm_k,&size);CHKERRMPI(ierr);
-          ierr = PetscPrintf(comm_k,"level[%D] size %d\n",k,(int)size);CHKERRQ(ierr);
+          ierr = PetscPrintf(comm_k,"level[%" PetscInt_FMT "] size %d\n",k,(int)size);CHKERRQ(ierr);
         }
       }
     }
@@ -139,7 +139,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJ_2d(PetscInt i,PetscInt j,Pe
         break;
       }
     }
-    if (pi == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pi cannot be determined : range %D, val %D",Mp,i);
+    if (pi == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pi cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT "",Mp,i);
     *_pi = (PetscMPIInt)pi;
   }
 
@@ -150,7 +150,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJ_2d(PetscInt i,PetscInt j,Pe
         break;
       }
     }
-    if (pj == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pj cannot be determined : range %D, val %D",Np,j);
+    if (pj == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pj cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT "",Np,j);
     *_pj = (PetscMPIInt)pj;
   }
 
@@ -368,21 +368,21 @@ PetscErrorCode DMCreateMatrix_ShellDA(DM dm,Mat *A)
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = DMCreateMatrix(da,A);CHKERRQ(ierr);
   ierr = MatGetSize(*A,&M,&N);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA (%D x %D)\n",(PetscInt)size,M,N);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA (%" PetscInt_FMT " x %" PetscInt_FMT ")\n",(PetscInt)size,M,N);CHKERRQ(ierr);
 
   ierr = DMGetApplicationContext(dm,&ctx);CHKERRQ(ierr);
   if (ctx->bcType == NEUMANN) {
     MatNullSpace nullspace = NULL;
-    ierr = PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA: using neumann bcs\n",(PetscInt)size);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA: using neumann bcs\n",(PetscInt)size);CHKERRQ(ierr);
 
     ierr = MatGetNullSpace(*A,&nullspace);CHKERRQ(ierr);
     if (!nullspace) {
-      ierr = PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA: operator does not have nullspace - attaching\n",(PetscInt)size);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA: operator does not have nullspace - attaching\n",(PetscInt)size);CHKERRQ(ierr);
       ierr = MatNullSpaceCreate(comm,PETSC_TRUE,0,0,&nullspace);CHKERRQ(ierr);
       ierr = MatSetNullSpace(*A,nullspace);CHKERRQ(ierr);
       ierr = MatNullSpaceDestroy(&nullspace);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA: operator already has a nullspace\n",(PetscInt)size);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA: operator already has a nullspace\n",(PetscInt)size);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -688,7 +688,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
   set = PETSC_FALSE;
   ierr = PetscOptionsGetIntArray(NULL,NULL,"-level_comm_red_factor",number,&found,&set);CHKERRQ(ierr);
   if (set) {
-    if (found != ncoarsen) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_USER,"Expected %D values for -level_comm_red_factor. Found %D",ncoarsen,found);
+    if (found != ncoarsen) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_USER,"Expected %" PetscInt_FMT " values for -level_comm_red_factor. Found %" PetscInt_FMT "",ncoarsen,found);
   }
 
   ierr = PetscMalloc1(ncoarsen+1,&pscommlist);CHKERRQ(ierr);
@@ -735,7 +735,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
       ierr = DMSetUp(dmroot);CHKERRQ(ierr);
       ierr = DMDASetUniformCoordinates(dmroot,0,1,0,1,0,0);CHKERRQ(ierr);
       ierr = DMDASetFieldName(dmroot,0,"Pressure");CHKERRQ(ierr);
-      ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"root-decomp-%D",d);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"root-decomp-%" PetscInt_FMT "",d);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject)dmroot,name);CHKERRQ(ierr);
       /*ierr = DMView(dmroot,PETSC_VIEWER_STDOUT_(commlist[d]));CHKERRQ(ierr);*/
     }
@@ -746,7 +746,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
 
       if (commlist[d] != MPI_COMM_NULL) {
         ierr = DMRefine(dalist[d*levelrefs + (k-1)],MPI_COMM_NULL,&dmref);CHKERRQ(ierr);
-        ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"ref%D-decomp-%D",k,d);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"ref%" PetscInt_FMT "-decomp-%" PetscInt_FMT "",k,d);CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)dmref,name);CHKERRQ(ierr);
         ierr = DMDAGetInfo(dmref,NULL,&nx,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
         /*ierr = DMView(dmref,PETSC_VIEWER_STDOUT_(commlist[d]));CHKERRQ(ierr);*/
@@ -766,7 +766,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
       for (k=0; k<levelrefs; k++) {
         ierr = DMShellCreate_ShellDA(dalist[d*levelrefs + k],&dmlist[d*levelrefs + k]);CHKERRQ(ierr);
         ierr = DMSetApplicationContext(dmlist[d*levelrefs + k],ctx);CHKERRQ(ierr);
-        ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"level%D-decomp-%D",k,d);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"level%" PetscInt_FMT "-decomp-%" PetscInt_FMT "",k,d);CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)dmlist[d*levelrefs + k],name);CHKERRQ(ierr);
       }
     }

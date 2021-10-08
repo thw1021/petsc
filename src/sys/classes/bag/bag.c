@@ -113,7 +113,7 @@ PetscErrorCode PetscBagRegisterIntArray(PetscBag bag,void *addr,PetscInt msize, 
   if (printhelp) {
     ierr = (*PetscHelpPrintf)(bag->bagcomm,"  -%s%s <",bag->bagprefix ? bag->bagprefix : "",name);CHKERRQ(ierr);
     for (i=0; i<msize; i++) {
-      ierr = (*PetscHelpPrintf)(bag->bagcomm,"%D ",*((PetscInt*)addr)+i);CHKERRQ(ierr);
+      ierr = (*PetscHelpPrintf)(bag->bagcomm,"%" PetscInt_FMT " ",*((PetscInt*)addr)+i);CHKERRQ(ierr);
     }
     ierr = (*PetscHelpPrintf)(bag->bagcomm,">: %s \n",help);CHKERRQ(ierr);
   }
@@ -312,7 +312,7 @@ PetscErrorCode PetscBagRegisterBoolArray(PetscBag bag,void *addr,PetscInt msize,
   if (printhelp) {
     ierr = (*PetscHelpPrintf)(bag->bagcomm,"  -%s%s <",bag->bagprefix?bag->bagprefix:"",name);CHKERRQ(ierr);
     for (i=0; i<msize; i++) {
-      ierr = (*PetscHelpPrintf)(bag->bagcomm,"%D ",*((PetscInt*)addr)+i);CHKERRQ(ierr);
+      ierr = (*PetscHelpPrintf)(bag->bagcomm,"%" PetscInt_FMT " ",*((PetscInt*)addr)+i);CHKERRQ(ierr);
     }
     ierr = (*PetscHelpPrintf)(bag->bagcomm,">: %s \n",help);CHKERRQ(ierr);
   }
@@ -695,7 +695,7 @@ PetscErrorCode  PetscBagView(PetscBag bag,PetscViewer view)
         PetscInt i,*value = (PetscInt*)(((char*)bag) + nitem->offset);
         ierr = PetscViewerASCIIPrintf(view,"  %s = ",nitem->name);CHKERRQ(ierr);
         for (i=0; i<nitem->msize; i++) {
-          ierr = PetscViewerASCIIPrintf(view,"%D ",value[i]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(view,"%" PetscInt_FMT " ",value[i]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(view,"; %s\n",nitem->help);CHKERRQ(ierr);
       } else if (nitem->dtype == PETSC_BOOL) {

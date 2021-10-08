@@ -65,7 +65,7 @@ int main(int argc,char **args)
   ierr = VecAXPY(x,neg1,u);CHKERRQ(ierr);
   ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of residual %g Number of iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of residual %g Number of iterations %" PetscInt_FMT "\n",(double)norm,its);CHKERRQ(ierr);
 
   /* Free work space */
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);
@@ -93,7 +93,7 @@ PetscErrorCode GetElasticityMatrix(PetscInt m,Mat *newmat)
 
   m   /= 2; /* This is done just to be consistent with the old example */
   N    = 3*(2*m+1)*(2*m+1)*(2*m+1);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"m = %D, N=%D\n",m,N);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"m = %" PetscInt_FMT ", N=%" PetscInt_FMT "\n",m,N);CHKERRQ(ierr);
   ierr = MatCreateSeqAIJ(PETSC_COMM_SELF,N,N,80,NULL,&mat);CHKERRQ(ierr);
 
   /* Form stiffness for element */

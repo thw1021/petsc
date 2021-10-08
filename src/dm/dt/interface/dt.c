@@ -303,9 +303,9 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
 
     ierr = PetscArraycpy(Jinvs, Js, m * m);CHKERRQ(ierr);
     PetscStackCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, Jinvs, &bm, pivots, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %D",(PetscInt)info);
+    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %" PetscInt_FMT "",(PetscInt)info);
     PetscStackCallBLAS("LAPACKgetri", LAPACKgetri_(&bm, Jinvs, &bm, pivots, W, &bm, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %D",(PetscInt)info);
+    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %" PetscInt_FMT "",(PetscInt)info);
     ierr = PetscFree2(pivots, W);CHKERRQ(ierr);
   } else if (m < n) {
     PetscScalar *JJT;
@@ -324,9 +324,9 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
     }
 
     PetscStackCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bm, &bm, JJT, &bm, pivots, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %D",(PetscInt)info);
+    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %" PetscInt_FMT "",(PetscInt)info);
     PetscStackCallBLAS("LAPACKgetri", LAPACKgetri_(&bm, JJT, &bm, pivots, W, &bm, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %D",(PetscInt)info);
+    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %" PetscInt_FMT "",(PetscInt)info);
     for (i = 0; i < n; i++) {
       for (j = 0; j < m; j++) {
         PetscScalar val = 0.;
@@ -354,9 +354,9 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
     }
 
     PetscStackCallBLAS("LAPACKgetrf", LAPACKgetrf_(&bn, &bn, JTJ, &bn, pivots, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %D",(PetscInt)info);
+    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetrf %" PetscInt_FMT "",(PetscInt)info);
     PetscStackCallBLAS("LAPACKgetri", LAPACKgetri_(&bn, JTJ, &bn, pivots, W, &bn, &info));
-    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %D",(PetscInt)info);
+    if (info) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error returned from LAPACKgetri %" PetscInt_FMT "",(PetscInt)info);
     for (i = 0; i < n; i++) {
       for (j = 0; j < m; j++) {
         PetscScalar val = 0.;
@@ -409,10 +409,10 @@ PetscErrorCode PetscQuadraturePushForward(PetscQuadrature q, PetscInt imageDim, 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(q, PETSCQUADRATURE_CLASSID, 1);
-  if (imageDim < PetscAbsInt(formDegree)) SETERRQ2(PetscObjectComm((PetscObject)q), PETSC_ERR_ARG_INCOMP, "Cannot represent a %D-form in %D dimensions", PetscAbsInt(formDegree), imageDim);
+  if (imageDim < PetscAbsInt(formDegree)) SETERRQ2(PetscObjectComm((PetscObject)q), PETSC_ERR_ARG_INCOMP, "Cannot represent a %" PetscInt_FMT "-form in %" PetscInt_FMT " dimensions", PetscAbsInt(formDegree), imageDim);
   ierr = PetscQuadratureGetData(q, &dim, &Nc, &Npoints, &points, &weights);CHKERRQ(ierr);
   ierr = PetscDTBinomialInt(dim, PetscAbsInt(formDegree), &formSize);CHKERRQ(ierr);
-  if (Nc % formSize) SETERRQ2(PetscObjectComm((PetscObject)q), PETSC_ERR_ARG_INCOMP, "Number of components %D is not a multiple of formSize %D\n", Nc, formSize);
+  if (Nc % formSize) SETERRQ2(PetscObjectComm((PetscObject)q), PETSC_ERR_ARG_INCOMP, "Number of components %" PetscInt_FMT " is not a multiple of formSize %" PetscInt_FMT "\n", Nc, formSize);
   Ncopies = Nc / formSize;
   ierr = PetscDTBinomialInt(imageDim, PetscAbsInt(formDegree), &imageFormSize);CHKERRQ(ierr);
   imageNc = Ncopies * imageFormSize;
@@ -493,19 +493,19 @@ static PetscErrorCode PetscQuadratureView_Ascii(PetscQuadrature quad, PetscViewe
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  if (quad->Nc > 1) {ierr = PetscViewerASCIIPrintf(v, "Quadrature of order %D on %D points (dim %D) with %D components\n", quad->order, quad->numPoints, quad->dim, quad->Nc);CHKERRQ(ierr);}
-  else              {ierr = PetscViewerASCIIPrintf(v, "Quadrature of order %D on %D points (dim %D)\n", quad->order, quad->numPoints, quad->dim);CHKERRQ(ierr);}
+  if (quad->Nc > 1) {ierr = PetscViewerASCIIPrintf(v, "Quadrature of order %" PetscInt_FMT " on %" PetscInt_FMT " points (dim %" PetscInt_FMT ") with %" PetscInt_FMT " components\n", quad->order, quad->numPoints, quad->dim, quad->Nc);CHKERRQ(ierr);}
+  else              {ierr = PetscViewerASCIIPrintf(v, "Quadrature of order %" PetscInt_FMT " on %" PetscInt_FMT " points (dim %" PetscInt_FMT ")\n", quad->order, quad->numPoints, quad->dim);CHKERRQ(ierr);}
   ierr = PetscViewerGetFormat(v, &format);CHKERRQ(ierr);
   if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) PetscFunctionReturn(0);
   for (q = 0; q < quad->numPoints; ++q) {
-    ierr = PetscViewerASCIIPrintf(v, "p%D (", q);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "p%" PetscInt_FMT " (", q);CHKERRQ(ierr);
     ierr = PetscViewerASCIIUseTabs(v, PETSC_FALSE);CHKERRQ(ierr);
     for (d = 0; d < quad->dim; ++d) {
       if (d) {ierr = PetscViewerASCIIPrintf(v, ", ");CHKERRQ(ierr);}
       ierr = PetscViewerASCIIPrintf(v, "%+g", (double)quad->points[q*quad->dim+d]);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(v, ") ");CHKERRQ(ierr);
-    if (quad->Nc > 1) {ierr = PetscViewerASCIIPrintf(v, "w%D (", q);CHKERRQ(ierr);}
+    if (quad->Nc > 1) {ierr = PetscViewerASCIIPrintf(v, "w%" PetscInt_FMT " (", q);CHKERRQ(ierr);}
     for (c = 0; c < quad->Nc; ++c) {
       if (c) {ierr = PetscViewerASCIIPrintf(v, ", ");CHKERRQ(ierr);}
       ierr = PetscViewerASCIIPrintf(v, "%+g", (double)quad->weights[q*quad->Nc+c]);CHKERRQ(ierr);
@@ -653,7 +653,7 @@ PetscErrorCode PetscDTJacobiNorm(PetscReal alpha, PetscReal beta, PetscInt n, Pe
   PetscFunctionBegin;
   if (alpha <= -1.) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Exponent alpha %g <= -1. invalid\n", (double) alpha);
   if (beta <= -1.) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Exponent beta %g <= -1. invalid\n", (double) beta);
-  if (n < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "n %D < 0 invalid\n", n);
+  if (n < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "n %" PetscInt_FMT " < 0 invalid\n", n);
   twoab1 = PetscPowReal(2., alpha + beta + 1.);
 #if defined(PETSC_HAVE_LGAMMA)
   if (!n) {
@@ -2054,7 +2054,7 @@ PetscErrorCode PetscDTTanhSinhIntegrate(void (*func)(PetscReal, PetscReal *), Pe
     PetscInt  k = 1;
 
     ++l;
-    /* PetscPrintf(PETSC_COMM_SELF, "LEVEL %D sum: %15.15f\n", l, sum); */
+    /* PetscPrintf(PETSC_COMM_SELF, "LEVEL %" PetscInt_FMT " sum: %15.15f\n", l, sum); */
     /* At each level of refinement, h --> h/2 and sum --> sum/2 */
     psum = osum;
     osum = sum;
@@ -2132,7 +2132,7 @@ PetscErrorCode PetscDTTanhSinhIntegrateMPFR(void (*func)(PetscReal, PetscReal *)
 
     ++l;
     mpfr_set_d(maxTerm, 0.0, MPFR_RNDN);
-    /* PetscPrintf(PETSC_COMM_SELF, "LEVEL %D sum: %15.15f\n", l, sum); */
+    /* PetscPrintf(PETSC_COMM_SELF, "LEVEL %" PetscInt_FMT " sum: %15.15f\n", l, sum); */
     /* At each level of refinement, h --> h/2 and sum --> sum/2 */
     mpfr_set(psum, osum, MPFR_RNDN);
     mpfr_set(osum,  sum, MPFR_RNDN);
@@ -2324,13 +2324,13 @@ PetscErrorCode PetscDTReconstructPoly(PetscInt degree,PetscInt nsource,const Pet
   PetscValidRealPointer(sourcex,3);
   PetscValidRealPointer(targetx,5);
   PetscValidRealPointer(R,6);
-  if (degree >= nsource) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Reconstruction degree %D must be less than number of source intervals %D",degree,nsource);
+  if (degree >= nsource) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Reconstruction degree %" PetscInt_FMT " must be less than number of source intervals %" PetscInt_FMT "",degree,nsource);
   if (PetscDefined(USE_DEBUG)) {
     for (i=0; i<nsource; i++) {
-      if (sourcex[i] >= sourcex[i+1]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Source interval %D has negative orientation (%g,%g)",i,(double)sourcex[i],(double)sourcex[i+1]);
+      if (sourcex[i] >= sourcex[i+1]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Source interval %" PetscInt_FMT " has negative orientation (%g,%g)",i,(double)sourcex[i],(double)sourcex[i+1]);
     }
     for (i=0; i<ntarget; i++) {
-      if (targetx[i] >= targetx[i+1]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Target interval %D has negative orientation (%g,%g)",i,(double)targetx[i],(double)targetx[i+1]);
+      if (targetx[i] >= targetx[i+1]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Target interval %" PetscInt_FMT " has negative orientation (%g,%g)",i,(double)targetx[i],(double)targetx[i+1]);
     }
   }
   xmin = PetscMin(sourcex[0],targetx[0]);

@@ -292,7 +292,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   dim = 3;
   ierr = PetscOptionsIntArray("-faces", "Number of faces per dimension", "ex18.c", options->faces, &dim, &flg2);CHKERRQ(ierr);
   if (flg2) {
-    if (flg1 && dim != options->dim) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "specified -dim %D is not equal to length %D of -faces (note that -dim can be omitted)", options->dim, dim);
+    if (flg1 && dim != options->dim) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "specified -dim %" PetscInt_FMT " is not equal to length %" PetscInt_FMT " of -faces (note that -dim can be omitted)", options->dim, dim);
     options->dim = dim;
   }
   ierr = PetscOptionsString("-filename", "The mesh file", "ex18.c", options->filename, options->filename, sizeof(options->filename), NULL);CHKERRQ(ierr);
@@ -520,7 +520,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
       default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh for rank %d", rank);
     }
     break;
-  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %D", testNum);
+  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT "", testNum);
   }
   PetscFunctionReturn(0);
 }
@@ -563,7 +563,7 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, PetscBool interpolate, App
       default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh for rank %d", rank);
     }
     break;
-  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %D", testNum);
+  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT "", testNum);
   }
   if (user->testOrientIF) {
     PetscInt ifp[] = {8, 6};
@@ -618,7 +618,7 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscBool interpolate, AppCtx
       default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh for rank %d", rank);
     }
     break;
-  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %D", testNum);
+  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT "", testNum);
   }
   PetscFunctionReturn(0);
 }
@@ -661,7 +661,7 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscBool interpolate, AppCtx 
     default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh for rank %d", rank);
     }
   break;
-  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %D", testNum);
+  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT "", testNum);
   }
   PetscFunctionReturn(0);
 }
@@ -750,11 +750,11 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       }
       break;
     default:
-      SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot make meshes for dimension %D", user->dim);
+      SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot make meshes for dimension %" PetscInt_FMT "", user->dim);
     }
     ierr = PetscLogStagePop();CHKERRQ(ierr);
   }
-  if (user->ncoords % user->dim) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "length of coordinates array %D must be divisable by spatial dimension %D", user->ncoords, user->dim);
+  if (user->ncoords % user->dim) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "length of coordinates array %" PetscInt_FMT " must be divisable by spatial dimension %" PetscInt_FMT "", user->ncoords, user->dim);
   ierr = PetscObjectSetName((PetscObject) *dm, "Original Mesh");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-orig_dm_view");CHKERRQ(ierr);
 
@@ -885,7 +885,7 @@ static PetscErrorCode ViewVerticesFromCoords(DM dm, PetscInt npoints, PetscReal 
   for (i=0; i < npoints; i++) {
     ierr = coord2str(coordstr, sizeof(coordstr), dim, &coords[i*dim], tol);CHKERRQ(ierr);
     if (rank == 0 && i) {ierr = PetscViewerASCIISynchronizedPrintf(viewer, "-----\n");CHKERRQ(ierr);}
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d] %s --> points[%D] = %D\n", rank, coordstr, i, points[i]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d] %s --> points[%" PetscInt_FMT "] = %" PetscInt_FMT "\n", rank, coordstr, i, points[i]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
@@ -917,7 +917,7 @@ static PetscErrorCode TestExpandPoints(DM dm, AppCtx *user)
     IS          checkIS;
     PetscBool   flg;
 
-    ierr = PetscViewerASCIIPrintf(sviewer, "depth %D ---------------\n",d);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(sviewer, "depth %" PetscInt_FMT " ---------------\n",d);CHKERRQ(ierr);
     ierr = PetscSectionView(sects[d], sviewer);CHKERRQ(ierr);
     ierr = ISView(iss[d], sviewer);CHKERRQ(ierr);
     /* check reverse operation */
@@ -947,7 +947,7 @@ static PetscErrorCode DMPlexExpandedConesToFaces_Private(DM dm, IS is, PetscSect
   ierr = ISGetLocalSize(is, &n);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(section, &n1);CHKERRQ(ierr);
   ierr = PetscSectionGetChart(section, &start, &end);CHKERRQ(ierr);
-  if (n != n1) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "IS size = %D != %D = section storage size\n", n, n1);
+  if (n != n1) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "IS size = %" PetscInt_FMT " != %" PetscInt_FMT " = section storage size\n", n, n1);
   ierr = ISGetIndices(is, &arr);CHKERRQ(ierr);
   ierr = PetscMalloc1(end-start, &newarr);CHKERRQ(ierr);
   for (q=start; q<end; q++) {
@@ -963,7 +963,7 @@ static PetscErrorCode DMPlexExpandedConesToFaces_Private(DM dm, IS is, PetscSect
       for (i=0; i<ncone; i++) if (cone[i] < 0) {p = -1; break;}
       if (p >= 0) {
         ierr = DMPlexGetJoin(dm, ncone, cone, &numCoveredPoints, &coveredPoints);CHKERRQ(ierr);
-        if (numCoveredPoints > 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "more than one covered points for section point %D",q);
+        if (numCoveredPoints > 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "more than one covered points for section point %" PetscInt_FMT "",q);
         if (numCoveredPoints) p = coveredPoints[0];
         else                  p = -2;
         ierr = DMPlexRestoreJoin(dm, ncone, cone, &numCoveredPoints, &coveredPoints);CHKERRQ(ierr);
@@ -1390,7 +1390,7 @@ static PetscErrorCode ViewPointsWithType_Internal(DM dm, IS pointsIS, PetscViewe
       ierr = PetscSectionGetOffset(coordsSection, p, &o);CHKERRQ(ierr);
       for (c=0; c<n; c++) coords[c] = PetscRealPart(coordsScalar[o+c]);
       ierr = coord2str(coordstr, sizeof(coordstr), n, coords, 1.0);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(v, "vertex %D w/ coordinates %s\n", p, coordstr);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(v, "vertex %" PetscInt_FMT " w/ coordinates %s\n", p, coordstr);CHKERRQ(ierr);
     } else {
       char            entityType[16];
 
@@ -1403,7 +1403,7 @@ static PetscErrorCode ViewPointsWithType_Internal(DM dm, IS pointsIS, PetscViewe
       if (depth == dim && dim < 3) {
         ierr = PetscStrlcat(entityType, " (cell)", sizeof(entityType));CHKERRQ(ierr);
       }
-      ierr = PetscViewerASCIISynchronizedPrintf(v, "%s %D\n", entityType, p);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(v, "%s %" PetscInt_FMT "\n", entityType, p);CHKERRQ(ierr);
     }
     ierr = DMPlexGetConeSize(dm, p, &coneSize);CHKERRQ(ierr);
     if (coneSize) {

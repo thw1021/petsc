@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     }
     g /= sqrt(PETSC_PI);
     /* results confirmed with https://en.wikipedia.org/wiki/Normal_distribution#Moments sigma^p * (p-1)!!*/
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Moment %D %g \n",moment,(double)g);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Moment %" PetscInt_FMT " %g \n",moment,(double)g);CHKERRQ(ierr);
 
   }
   ierr = PetscFree(zeros);CHKERRQ(ierr);

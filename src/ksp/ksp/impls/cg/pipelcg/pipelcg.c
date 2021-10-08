@@ -129,11 +129,11 @@ static PetscErrorCode KSPView_PIPELCG(KSP ksp,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Pipeline depth: %D\n", plcg->l);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax);CHKERRQ(ierr);
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer,"  Pipeline depth: %D\n", plcg->l);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l);CHKERRQ(ierr);
     ierr = PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin);CHKERRQ(ierr);
     ierr = PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax);CHKERRQ(ierr);
   }
@@ -244,7 +244,7 @@ static PetscErrorCode KSPSolve_InnerLoop_PIPELCG(KSP ksp)
       /* Breakdown check */
       if (tmp < 0) {
         if (plcg->show_rstrt) {
-          ierr = PetscPrintf(comm,"Sqrt breakdown in iteration %D: sqrt argument is %e. Iteration was restarted.\n",ksp->its+1,(double)tmp);CHKERRQ(ierr);
+          ierr = PetscPrintf(comm,"Sqrt breakdown in iteration %" PetscInt_FMT ": sqrt argument is %e. Iteration was restarted.\n",ksp->its+1,(double)tmp);CHKERRQ(ierr);
         }
         /* End hanging dot-products in the pipeline before exiting for-loop */
         start = it-l+2;

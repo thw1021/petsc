@@ -669,7 +669,7 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
         break;
       }
       break;
-    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %D not supported", dim);
+    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
   }
   exactFuncs[0] = user->initialGuess[0];
   exactFuncs[1] = user->initialGuess[1];
@@ -699,7 +699,7 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
         default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d", dim);
       }
       break;
-    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %D not supported", dim);
+    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
   }
   {
     PetscBool isImplicit = PETSC_FALSE;
@@ -1042,7 +1042,7 @@ static PetscErrorCode MonitorFunctionals(TS ts, PetscInt stepnum, PetscReal time
     }
     ierr = PetscFree4(fmin, fmax, fint, ftmp);CHKERRQ(ierr);
     ierr = PetscFree3(fdm, fv, fx);CHKERRQ(ierr);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), "% 3D  time %8.4g  |x| (", stepnum, (double) time);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), "% 3" PetscInt_FMT "  time %8.4g  |x| (", stepnum, (double) time);CHKERRQ(ierr);
     for (f = 0; f < Nf; ++f) {
       if (f > 0) {ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), ", ");CHKERRQ(ierr);}
       ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), "%8.4g", (double) xnorms[f*2+0]);CHKERRQ(ierr);
@@ -1125,7 +1125,7 @@ int main(int argc, char **argv)
     ierr = TSGetSolveTime(ts, &ftime);CHKERRQ(ierr);
     ierr = TSGetStepNumber(ts, &nsteps);CHKERRQ(ierr);
     ierr = TSGetConvergedReason(ts, &reason);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "%s at time %g after %D steps\n", TSConvergedReasons[reason], (double) ftime, nsteps);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "%s at time %g after %" PetscInt_FMT " steps\n", TSConvergedReasons[reason], (double) ftime, nsteps);CHKERRQ(ierr);
   }
 
   ierr = VecDestroy(&u);CHKERRQ(ierr);

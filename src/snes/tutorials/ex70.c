@@ -131,7 +131,7 @@ PetscErrorCode StokesWriteSolution(Stokes *s)
   PetscFunctionBeginUser;
   /* write data (*warning* only works sequential) */
   ierr = MPI_Comm_size(MPI_COMM_WORLD,&size);CHKERRMPI(ierr);
-  /*ierr = PetscPrintf(PETSC_COMM_WORLD," number of processors = %D\n",size);CHKERRQ(ierr);*/
+  /*ierr = PetscPrintf(PETSC_COMM_WORLD," number of processors = %" PetscInt_FMT "\n",size);CHKERRQ(ierr);*/
   if (size == 1) {
     PetscViewer viewer;
     ierr = VecGetArrayRead(s->x, &array);CHKERRQ(ierr);

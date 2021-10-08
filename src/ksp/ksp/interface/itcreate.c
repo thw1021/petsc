@@ -143,9 +143,9 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
     if (ksp->guess_zero) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  maximum iterations=%D, initial guess is zero\n",ksp->max_it);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  maximum iterations=%" PetscInt_FMT ", initial guess is zero\n",ksp->max_it);CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"  maximum iterations=%D, nonzero initial guess\n", ksp->max_it);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  maximum iterations=%" PetscInt_FMT ", nonzero initial guess\n", ksp->max_it);CHKERRQ(ierr);
     }
     if (ksp->guess_knoll) {ierr = PetscViewerASCIIPrintf(viewer,"  using preconditioner applied to right hand side for initial guess\n");CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(viewer,"  tolerances:  relative=%g, absolute=%g, divergence=%g\n",(double)ksp->rtol,(double)ksp->abstol,(double)ksp->divtol);CHKERRQ(ierr);

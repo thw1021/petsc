@@ -256,7 +256,7 @@ PetscErrorCode UpdateSolution(SNES snes, AppCtx *user, PetscInt *nits)
       ierr   = SNESGetConvergedReason(snes,&reason);CHKERRQ(ierr);
       ierr   = SNESGetIterationNumber(snes,&its);CHKERRQ(ierr);
       *nits += its;
-      if (!q) {ierr = PetscPrintf(PETSC_COMM_WORLD," SNES iterations: %D, Cumulative: %D\n", its, *nits);CHKERRQ(ierr);}
+      if (!q) {ierr = PetscPrintf(PETSC_COMM_WORLD," SNES iterations: %" PetscInt_FMT ", Cumulative: %" PetscInt_FMT "\n", its, *nits);CHKERRQ(ierr);}
       if (param->stop_solve) goto done;
 
       if (reason<0) {
@@ -919,8 +919,8 @@ PetscErrorCode ReportParams(Parameter *param, GridInfo *grid)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  Lid depth = %5.2f km,   Fault depth = %5.2f km\n",(double)(param->lid_depth*param->L),(double)(param->fault_depth*param->L));CHKERRQ(ierr);
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\nGrid: \n");CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  [ni,nj] = %D, %D       [dx,dz] = %g, %g km\n",grid->ni,grid->nj,(double)(grid->dx*param->L),(double)(grid->dz*param->L));CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  jlid = %3D              jfault = %3D \n",grid->jlid,grid->jfault);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  [ni,nj] = %" PetscInt_FMT ", %" PetscInt_FMT "       [dx,dz] = %g, %g km\n",grid->ni,grid->nj,(double)(grid->dx*param->L),(double)(grid->dz*param->L));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  jlid = %3" PetscInt_FMT "              jfault = %3" PetscInt_FMT " \n",grid->jlid,grid->jfault);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  Pe = %g\n",(double)param->peclet);CHKERRQ(ierr);
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\nRheology:");CHKERRQ(ierr);
@@ -963,7 +963,7 @@ PetscErrorCode ReportParams(Parameter *param, GridInfo *grid)
 #endif
     }
     if (param->output_ivisc != param->ivisc) {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"                          Output viscosity: -ivisc %D\n",param->output_ivisc);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"                          Output viscosity: -ivisc %" PetscInt_FMT "\n",param->output_ivisc);CHKERRQ(ierr);
     }
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"---------------------END ex30 PARAM REPORT---------------------\n");CHKERRQ(ierr);

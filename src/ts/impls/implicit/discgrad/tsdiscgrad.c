@@ -249,7 +249,7 @@ static PetscErrorCode TSStep_DiscGrad(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ts->max_reject >= 0 && ++rejections > ts->max_reject) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      ierr = PetscInfo2(ts, "Step=%D, step rejections %D greater than current TS allowed, stopping solve\n", ts->steps, rejections);CHKERRQ(ierr);
+      ierr = PetscInfo2(ts, "Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n", ts->steps, rejections);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

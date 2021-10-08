@@ -82,7 +82,7 @@ int main(int argc,char **args)
   ierr = DMGetGlobalVector(da, &zz);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) zz, "FFTW reconstructed vector");CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_SELF, "%3-D: USFFT on vector of ");CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "%3-" PetscInt_FMT ": USFFT on vector of ");CHKERRQ(ierr);
   for (i = 0, N = 1; i < 3; i++) {
     ierr = PetscPrintf(PETSC_COMM_SELF, "dim[%d] = %d ",i,dim[i]);CHKERRQ(ierr);
     N   *= dim[i];
