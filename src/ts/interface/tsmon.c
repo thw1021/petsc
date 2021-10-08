@@ -192,9 +192,9 @@ PetscErrorCode TSMonitorDefault(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
   if (iascii) {
     ierr = PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel);CHKERRQ(ierr);
     if (step == -1) { /* this indicates it is an interpolated solution */
-      ierr = PetscViewerASCIIPrintf(viewer,"Interpolated solution at time %g between steps %D and %D\n",(double)ptime,ts->steps-1,ts->steps);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Interpolated solution at time %g between steps %" PetscInt_FMT " and %" PetscInt_FMT "\n",(double)ptime,ts->steps-1,ts->steps);CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"%D TS dt %g time %g%s",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)\n" : "\n");CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT " TS dt %g time %g%s",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)\n" : "\n");CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel);CHKERRQ(ierr);
   } else if (ibinary) {
@@ -239,7 +239,7 @@ PetscErrorCode TSMonitorExtreme(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
     ierr = VecMax(v,NULL,&max);CHKERRQ(ierr);
     ierr = VecMin(v,NULL,&min);CHKERRQ(ierr);
     ierr = PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%D TS dt %g time %g%s max %g min %g\n",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)" : "",(double)max,(double)min);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT " TS dt %g time %g%s max %g min %g\n",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)" : "",(double)max,(double)min);CHKERRQ(ierr);
     ierr = PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel);CHKERRQ(ierr);
   }
   ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
@@ -693,7 +693,7 @@ PetscErrorCode  TSMonitorSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,Pets
 .  step - current time-step
 .  ptime - current time
 .  u - current state
--  filenametemplate - string containing a format specifier for the integer time step (e.g. %03D)
+-  filenametemplate - string containing a format specifier for the integer time step (e.g. %03" PetscInt_FMT ")
 
    Level: intermediate
 
@@ -726,7 +726,7 @@ PetscErrorCode TSMonitorSolutionVTK(TS ts,PetscInt step,PetscReal ptime,Vec u,vo
    Collective on TS
 
    Input Parameters:
-.  filenametemplate - string containing a format specifier for the integer time step (e.g. %03D)
+.  filenametemplate - string containing a format specifier for the integer time step (e.g. %03" PetscInt_FMT ")
 
    Level: intermediate
 
@@ -795,7 +795,7 @@ PetscErrorCode  TSMonitorLGSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,vo
         ierr = PetscMalloc1(n+1,&names);CHKERRQ(ierr);
         for (i=0; i<n; i++) {
           ierr = PetscMalloc1(5,&names[i]);CHKERRQ(ierr);
-          ierr = PetscSNPrintf(names[i],5,"%D",i);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(names[i],5,"%" PetscInt_FMT "",i);CHKERRQ(ierr);
         }
         names[n] = NULL;
         ctx->names = names;
@@ -1475,7 +1475,7 @@ PetscErrorCode TSDMSwarmMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U,
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
   for (d = 0; d < dim; ++d) totMom[d] *= m;
   totE *= 0.5*m;
-  ierr = PetscPrintf(comm, "Step %4D Total Energy: %10.8lf", step, (double) totE);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm, "Step %4" PetscInt_FMT " Total Energy: %10.8lf", step, (double) totE);CHKERRQ(ierr);
   for (d = 0; d < dim; ++d) {ierr = PetscPrintf(comm, "    Total Momentum %c: %10.8lf", 'x'+d, (double) totMom[d]);CHKERRQ(ierr);}
   ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
   PetscFunctionReturn(0);

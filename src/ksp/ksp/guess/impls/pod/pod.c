@@ -317,7 +317,7 @@ complete_request:
       for (i=0;i<pod->n;i++) pod->swork[3*pod->n + i] = pod->dots_iallreduce[i];
       break;
     default:
-      SETERRQ1(PetscObjectComm((PetscObject)guess),PETSC_ERR_PLIB,"Invalid number of outstanding dots operations: %D",pod->ndots_iallreduce);
+      SETERRQ1(PetscObjectComm((PetscObject)guess),PETSC_ERR_PLIB,"Invalid number of outstanding dots operations: %" PetscInt_FMT "",pod->ndots_iallreduce);
     }
   }
   pod->ndots_iallreduce = 0;
@@ -386,7 +386,7 @@ complete_request:
   }
 
   if (pod->monitor) {
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"  KSPGuessPOD: basis %D, energy fractions = ",pod->nen);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"  KSPGuessPOD: basis %" PetscInt_FMT ", energy fractions = ",pod->nen);CHKERRQ(ierr);
     for (i=pod->n-1;i>=0;i--) {
       ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"%1.6e (%d) ",pod->eigs[i]/toten,i >= pod->st ? 1 : 0);CHKERRQ(ierr);
     }
@@ -406,7 +406,7 @@ complete_request:
         ierr = VecMAXPY(v,pod->n,pod->swork,pod->xsnap);CHKERRQ(ierr);
         ierr = VecDot(v,v,pod->swork);CHKERRQ(ierr);
         ierr = MPIU_Allreduce(pod->swork,pod->swork + 1,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)guess));CHKERRMPI(ierr);
-        ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"  Error projection %D: %g (expected lower than %g)\n",i,(double)PetscRealPart(pod->swork[1]),(double)(toten-parten));CHKERRQ(ierr);
+        ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"  Error projection %" PetscInt_FMT ": %g (expected lower than %g)\n",i,(double)PetscRealPart(pod->swork[1]),(double)(toten-parten));CHKERRQ(ierr);
         ierr = VecDestroy(&v);CHKERRQ(ierr);
       }
     }
@@ -440,7 +440,7 @@ static PetscErrorCode KSPGuessView_POD(KSPGuess guess,PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"Max size %D, tolerance %g, Ainner %d\n",pod->maxn,pod->tol,pod->Aspd);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Max size %" PetscInt_FMT ", tolerance %g, Ainner %d\n",pod->maxn,pod->tol,pod->Aspd);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

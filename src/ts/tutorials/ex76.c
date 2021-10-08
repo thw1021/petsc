@@ -1489,7 +1489,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 
         ierr = UniformBoundaryConditions(dm, label, exactFuncs, exactFuncs_t, user);CHKERRQ(ierr);
         break;
-       default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+       default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%" PetscInt_FMT ")", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
       }
       break;
     case MOD_CONDUCTING:
@@ -1582,10 +1582,10 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
         ierr = PetscDSAddBoundary(ds, DM_BC_ESSENTIAL, "bottom wall velocity",    label, 1, &id, VEL,  0, NULL, (void (*)(void)) exactFuncs[VEL], (void (*)(void)) exactFuncs_t[VEL], ctx, NULL);CHKERRQ(ierr);
         ierr = PetscDSAddBoundary(ds, DM_BC_ESSENTIAL, "bottom wall temperature", label, 1, &id, TEMP, 0, NULL, (void (*)(void)) exactFuncs[TEMP], (void (*)(void)) exactFuncs_t[TEMP], ctx, NULL);CHKERRQ(ierr);
         break;
-       default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+       default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%" PetscInt_FMT ")", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
       }
       break;
-    default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported model type: %s (%D)", solTypes[PetscMin(user->modType, NUM_MOD_TYPES)], user->modType);
+    default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported model type: %s (%" PetscInt_FMT ")", solTypes[PetscMin(user->modType, NUM_MOD_TYPES)], user->modType);
   }
   /* Setup constants */
   {
@@ -1721,7 +1721,7 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt ofield, PetscInt n
   PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
-  if (ofield != PRES) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index %D, not %D", PRES, ofield);
+  if (ofield != PRES) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index %" PetscInt_FMT ", not %" PetscInt_FMT "", PRES, ofield);
   funcs[nfield] = constant;
   ierr = DMCreateGlobalVector(dm, &vec);CHKERRQ(ierr);
   ierr = DMProjectFunction(dm, 0.0, funcs, NULL, INSERT_ALL_VALUES, vec);CHKERRQ(ierr);

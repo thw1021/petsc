@@ -61,7 +61,7 @@ PetscErrorCode SNESMatrixFreeView2_Private(Mat J,PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"    err=%g (relative error in function evaluation)\n",(double)ctx->error_rel);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    umin=%g (minimum iterate parameter)\n",(double)ctx->umin);CHKERRQ(ierr);
     if (ctx->compute_err) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    freq_err=%D (frequency for computing err)\n",ctx->compute_err_freq);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    freq_err=%" PetscInt_FMT " (frequency for computing err)\n",ctx->compute_err_freq);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

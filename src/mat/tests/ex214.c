@@ -72,7 +72,7 @@ int main(int argc,char **args)
   ierr = MatDuplicate(C,MAT_DO_NOT_COPY_VALUES,&X);CHKERRQ(ierr);
 
   ierr = PetscStrcpy(solver,MATSOLVERMUMPS);CHKERRQ(ierr);
-  if (rank == 0 && displ) {ierr = PetscPrintf(PETSC_COMM_SELF,"Solving with %s: nrhs %D, size mat %D x %D\n",solver,nrhs,M,N);CHKERRQ(ierr);}
+  if (rank == 0 && displ) {ierr = PetscPrintf(PETSC_COMM_SELF,"Solving with %s: nrhs %" PetscInt_FMT ", size mat %" PetscInt_FMT " x %" PetscInt_FMT "\n",solver,nrhs,M,N);CHKERRQ(ierr);}
 
   for (test=0; test<2; test++) {
     if (test == 0) {
@@ -126,7 +126,7 @@ int main(int argc,char **args)
 
     ierr = MatMatSolve(F,RHS,X);CHKERRQ(ierr);
     if (displ) {
-      if (rank == 0) {ierr = PetscPrintf(PETSC_COMM_SELF," \n(2) first %D columns of inv(A) with dense RHS:\n",nrhs);CHKERRQ(ierr);}
+      if (rank == 0) {ierr = PetscPrintf(PETSC_COMM_SELF," \n(2) first %" PetscInt_FMT " columns of inv(A) with dense RHS:\n",nrhs);CHKERRQ(ierr);}
       ierr = MatView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     }
 
@@ -166,7 +166,7 @@ int main(int argc,char **args)
     ierr = MatMatTransposeSolve(F,spRHST,X);CHKERRQ(ierr);
 
     if (displ) {
-      if (rank == 0) {ierr = PetscPrintf(PETSC_COMM_SELF," \n(3) first %D columns of inv(A) with sparse RHS:\n",nrhs);CHKERRQ(ierr);}
+      if (rank == 0) {ierr = PetscPrintf(PETSC_COMM_SELF," \n(3) first %" PetscInt_FMT " columns of inv(A) with sparse RHS:\n",nrhs);CHKERRQ(ierr);}
       ierr = MatView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     }
 

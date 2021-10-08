@@ -812,17 +812,17 @@ static PetscErrorCode TaoView_NLS(Tao tao, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Newton steps: %D\n", nlsP->newt);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "BFGS steps: %D\n", nlsP->bfgs);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", nlsP->grad);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Newton steps: %" PetscInt_FMT "\n", nlsP->newt);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", nlsP->bfgs);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", nlsP->grad);CHKERRQ(ierr);
 
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp atol: %D\n", nlsP->ksp_atol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp rtol: %D\n", nlsP->ksp_rtol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp ctol: %D\n", nlsP->ksp_ctol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp negc: %D\n", nlsP->ksp_negc);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp dtol: %D\n", nlsP->ksp_dtol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp iter: %D\n", nlsP->ksp_iter);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp othr: %D\n", nlsP->ksp_othr);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp atol: %" PetscInt_FMT "\n", nlsP->ksp_atol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp rtol: %" PetscInt_FMT "\n", nlsP->ksp_rtol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp ctol: %" PetscInt_FMT "\n", nlsP->ksp_ctol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp negc: %" PetscInt_FMT "\n", nlsP->ksp_negc);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp dtol: %" PetscInt_FMT "\n", nlsP->ksp_dtol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp iter: %" PetscInt_FMT "\n", nlsP->ksp_iter);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "nls ksp othr: %" PetscInt_FMT "\n", nlsP->ksp_othr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

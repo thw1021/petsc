@@ -162,7 +162,7 @@ PetscErrorCode pic_advect(PetscInt ppcell,PetscInt meshtype)
     PetscReal *s_coor;
     PetscInt npoints,p;
 
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[step %D]\n",tk);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[step %" PetscInt_FMT "]\n",tk);CHKERRQ(ierr);
     /* advect with analytic prescribed (constant) velocity field */
     ierr = DMSwarmGetLocalSize(swarm,&npoints);CHKERRQ(ierr);
     ierr = DMSwarmGetField(swarm,DMSwarmPICField_coor,NULL,NULL,(void**)&s_coor);CHKERRQ(ierr);
@@ -206,7 +206,7 @@ PetscErrorCode pic_advect(PetscInt ppcell,PetscInt meshtype)
       char fname[PETSC_MAX_PATH_LEN];
 
       /* View swarm fields */
-      ierr = PetscSNPrintf(fname,PETSC_MAX_PATH_LEN-1,"step%.4D_dms.xmf",tk);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(fname,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_dms.xmf",tk);CHKERRQ(ierr);
       ierr = DMSwarmViewXDMF(swarm,fname);CHKERRQ(ierr);
 
       /* View projected field */
@@ -215,12 +215,12 @@ PetscErrorCode pic_advect(PetscInt ppcell,PetscInt meshtype)
       ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
 
       if (meshtype == 0) { /* DA */
-        ierr = PetscSNPrintf(fname,PETSC_MAX_PATH_LEN-1,"step%.4D_dmda.vts",tk);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(fname,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_dmda.vts",tk);CHKERRQ(ierr);
         ierr = PetscViewerFileSetName(viewer,fname);CHKERRQ(ierr);
         ierr = VecView(pfields[0],viewer);CHKERRQ(ierr);
       }
       if (meshtype == 1) { /* PLEX */
-        ierr = PetscSNPrintf(fname,PETSC_MAX_PATH_LEN-1,"step%.4D_dmplex.vtk",tk);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(fname,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_dmplex.vtk",tk);CHKERRQ(ierr);
         ierr = PetscViewerFileSetName(viewer,fname);CHKERRQ(ierr);
         ierr = DMView(celldm,viewer);CHKERRQ(ierr);
         ierr = VecView(pfields[0],viewer);CHKERRQ(ierr);

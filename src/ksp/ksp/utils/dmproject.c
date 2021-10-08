@@ -282,16 +282,16 @@ PetscErrorCode DMAdaptInterpolator(DM dmc, DM dmf, Mat In, KSP smoother, PetscIn
     ierr = MatRestoreRow(In, r, &ncols, &cols, &vals);CHKERRQ(ierr);
   }
   #endif
-  if (Nc < maxcols) PetscPrintf(PETSC_COMM_SELF, "The number of input vectors %D < %D the maximum number of column entries\n", Nc, maxcols);
+  if (Nc < maxcols) PetscPrintf(PETSC_COMM_SELF, "The number of input vectors %" PetscInt_FMT " < %" PetscInt_FMT " the maximum number of column entries\n", Nc, maxcols);
   for (k = 0; k < Nc; ++k) {
     char        name[PETSC_MAX_PATH_LEN];
     const char *prefix;
 
     ierr = PetscObjectGetOptionsPrefix((PetscObject) smoother, &prefix);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "%sCoarse Vector %D", prefix ? prefix : NULL, k);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "%sCoarse Vector %" PetscInt_FMT "", prefix ? prefix : NULL, k);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) vc[k], name);CHKERRQ(ierr);
     ierr = VecViewFromOptions(vc[k], NULL, "-dm_adapt_interp_view_coarse");CHKERRQ(ierr);
-    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "%sFine Vector %D", prefix ? prefix : NULL, k);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "%sFine Vector %" PetscInt_FMT "", prefix ? prefix : NULL, k);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) vf[k], name);CHKERRQ(ierr);
     ierr = VecViewFromOptions(vf[k], NULL, "-dm_adapt_interp_view_fine");CHKERRQ(ierr);
   }
@@ -436,7 +436,7 @@ PetscErrorCode DMCheckInterpolator(DM dmf, Mat In, PetscInt Nc, Vec vc[], Vec vf
     ierr = VecNorm(tmp, NORM_2, &norm2);CHKERRQ(ierr);
     maxnorminf = PetscMax(maxnorminf, norminf);
     maxnorm2   = PetscMax(maxnorm2,   norm2);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject) dmf), "Coarse vec %D ||vf - P vc||_\\infty %g, ||vf - P vc||_2 %g\n", k, norminf, norm2);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject) dmf), "Coarse vec %" PetscInt_FMT " ||vf - P vc||_\\infty %g, ||vf - P vc||_2 %g\n", k, norminf, norm2);CHKERRQ(ierr);
   }
   ierr = DMRestoreGlobalVector(dmf, &tmp);CHKERRQ(ierr);
   if (maxnorm2 > tol) SETERRQ2(PetscObjectComm((PetscObject) dmf), PETSC_ERR_ARG_WRONG, "max_k ||vf_k - P vc_k||_2 %g > tol %g", maxnorm2, tol);

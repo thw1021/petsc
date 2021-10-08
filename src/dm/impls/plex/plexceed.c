@@ -41,13 +41,13 @@ PetscErrorCode DMPlexGetCeedRestriction(DM dm, CeedElemRestriction *ERestrict)
       ierr = DMPlexGetClosureIndices(dm, s, s, cell, PETSC_TRUE, &Ni, &ind, NULL, NULL);CHKERRQ(ierr);
       for (i = 0; i < Ni; i += Nc[0]) {
         for (c = 0; c < Nc[0]; ++c) {
-          if (ind[i+c] != ind[i] + c) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cell %D closure indices not interlaced", cell);
+          if (ind[i+c] != ind[i] + c) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cell %" PetscInt_FMT " closure indices not interlaced", cell);
         }
         erestrict[eoffset++] = ind[i];
       }
       ierr = DMPlexRestoreClosureIndices(dm, s, s, cell, PETSC_TRUE, &Ni, &ind, NULL, NULL);CHKERRQ(ierr);
     }
-    if (eoffset != Ncell*P*P) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Size of array %D != %D restricted dofs", Ncell*P*P, eoffset);
+    if (eoffset != Ncell*P*P) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Size of array %" PetscInt_FMT " != %" PetscInt_FMT " restricted dofs", Ncell*P*P, eoffset);
 
     ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
     ierr = PetscSectionGetStorageSize(s, &lsize);CHKERRQ(ierr);

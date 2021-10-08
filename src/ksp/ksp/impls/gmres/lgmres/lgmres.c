@@ -438,7 +438,7 @@ static PetscErrorCode KSPLGMRESBuildSoln(PetscScalar *nrs,Vec vguess,Vec vdest,K
 
   /* solve the upper triangular system - GRS is the right side and HH is
      the upper triangular matrix  - put soln in nrs */
-  if (*HH(it,it) == 0.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"HH(it,it) is identically zero; it = %D GRS(it) = %g",it,(double)PetscAbsScalar(*GRS(it)));
+  if (*HH(it,it) == 0.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"HH(it,it) is identically zero; it = %" PetscInt_FMT " GRS(it) = %g",it,(double)PetscAbsScalar(*GRS(it)));
   if (*HH(it,it) != 0.0) {
     nrs[it] = *GRS(it) / *HH(it,it);
   } else {
@@ -662,11 +662,11 @@ PetscErrorCode KSPView_LGMRES(KSP ksp,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
     /*LGMRES_MOD */
-    ierr = PetscViewerASCIIPrintf(viewer,"  aug. dimension=%D\n",lgmres->aug_dim);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  aug. dimension=%" PetscInt_FMT "\n",lgmres->aug_dim);CHKERRQ(ierr);
     if (lgmres->approx_constant) {
       ierr = PetscViewerASCIIPrintf(viewer,"  approx. space size was kept constant.\n");CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer,"  number of matvecs=%D\n",lgmres->matvecs);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  number of matvecs=%" PetscInt_FMT "\n",lgmres->matvecs);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

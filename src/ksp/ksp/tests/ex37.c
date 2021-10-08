@@ -63,7 +63,7 @@ int main(int argc,char **args)
     PetscMPIInt color,subrank,duprank,subsize;
     duprank = size-1 - rank;
     subsize = size/nsubcomm;
-    if (subsize*nsubcomm != size) SETERRQ2(comm,PETSC_ERR_SUP,"This example requires nsubcomm %D divides size %D",nsubcomm,size);
+    if (subsize*nsubcomm != size) SETERRQ2(comm,PETSC_ERR_SUP,"This example requires nsubcomm %" PetscInt_FMT " divides size %" PetscInt_FMT "",nsubcomm,size);
     color   = duprank/subsize;
     subrank = duprank - color*subsize;
     ierr    = PetscSubcommSetTypeGeneral(psubcomm,color,subrank);CHKERRQ(ierr);
@@ -71,7 +71,7 @@ int main(int argc,char **args)
     ierr = PetscSubcommSetType(psubcomm,PETSC_SUBCOMM_CONTIGUOUS);CHKERRQ(ierr);
   } else if (type == PETSC_SUBCOMM_INTERLACED) {
     ierr = PetscSubcommSetType(psubcomm,PETSC_SUBCOMM_INTERLACED);CHKERRQ(ierr);
-  } else SETERRQ1(psubcomm->parent,PETSC_ERR_SUP,"PetscSubcommType %D is not supported yet",type);
+  } else SETERRQ1(psubcomm->parent,PETSC_ERR_SUP,"PetscSubcommType %" PetscInt_FMT " is not supported yet",type);
   ierr = PetscSubcommSetFromOptions(psubcomm);CHKERRQ(ierr);
   subcomm = PetscSubcommChild(psubcomm);
 
@@ -142,7 +142,7 @@ int main(int argc,char **args)
   ierr = VecAXPY(subu,-1.0,subb);CHKERRQ(ierr);
   ierr = VecNorm(u,NORM_2,&norm);CHKERRQ(ierr);
   if (norm > 1.e-4 && rank == 0) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D]  Number of iterations = %3D\n",rank,its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%" PetscInt_FMT "]  Number of iterations = %3" PetscInt_FMT "\n",rank,its);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Error: Residual norm of each block |subb - subA*subx |= %g\n",(double)norm);CHKERRQ(ierr);
   }
   ierr = VecResetArray(subb);CHKERRQ(ierr);
@@ -151,11 +151,11 @@ int main(int argc,char **args)
 
   ierr = PetscOptionsGetInt(NULL,NULL,"-subvec_view",&id,&flg);CHKERRQ(ierr);
   if (flg && rank == id) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%D] subb:\n", rank);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%" PetscInt_FMT "] subb:\n", rank);CHKERRQ(ierr);
     ierr = VecGetArray(subb,&array);CHKERRQ(ierr);
     for (i=0; i<m; i++) {ierr = PetscPrintf(PETSC_COMM_SELF,"%g\n",(double)PetscRealPart(array[i]));CHKERRQ(ierr);}
     ierr = VecRestoreArray(subb,&array);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%D] subx:\n", rank);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%" PetscInt_FMT "] subx:\n", rank);CHKERRQ(ierr);
     ierr = VecGetArray(subx,&array);CHKERRQ(ierr);
     for (i=0; i<m; i++) {ierr = PetscPrintf(PETSC_COMM_SELF,"%g\n",(double)PetscRealPart(array[i]));CHKERRQ(ierr);}
     ierr = VecRestoreArray(subx,&array);CHKERRQ(ierr);

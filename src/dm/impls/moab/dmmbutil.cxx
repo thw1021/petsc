@@ -361,7 +361,7 @@ PetscErrorCode DMMBUtil_InitializeOptions(DMMoabMeshGeneratorCtx& genCtx, PetscI
     if (rank < genCtx.remainder)    /* This process gets "fraction+1" elements */
       genCtx.fraction++;
 
-    PetscInfo3(NULL, "Fraction = %D, Remainder = %D, Cumulative fraction = %D\n", genCtx.fraction, genCtx.remainder, genCtx.cumfraction);
+    PetscInfo3(NULL, "Fraction = %" PetscInt_FMT ", Remainder = %" PetscInt_FMT ", Cumulative fraction = %" PetscInt_FMT "\n", genCtx.fraction, genCtx.remainder, genCtx.cumfraction);
     switch (genCtx.dim) {
     case 1:
       genCtx.blockSizeElementXYZ[0] = genCtx.fraction;
@@ -588,7 +588,7 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
 
   ierr = DMMBUtil_InitializeOptions(genCtx, dim, useSimplex, global_rank, global_size, bounds, nele);CHKERRQ(ierr);
 
-  //if (nele<nprocs) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"The dimensional discretization size should be greater or equal to number of processors: %D < %D",nele,nprocs);
+  //if (nele<nprocs) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"The dimensional discretization size should be greater or equal to number of processors: %" PetscInt_FMT " < %" PetscInt_FMT "",nele,nprocs);
 
   if (genCtx.adjEnts) genCtx.keep_skins = true; /* do not delete anything - consumes more memory */
 
@@ -881,7 +881,7 @@ PetscErrorCode DMMoabLoadFromFile(MPI_Comm comm, PetscInt dim, PetscInt nghost, 
   merr = pcomm->collective_sync_partition();MBERR("Collective sync failed", merr);
 #endif
 
-  PetscInfo3(*dm, "MOAB file '%s' was successfully loaded. Found %D vertices and %D elements.\n", filename, verts.size(), elems.size());
+  PetscInfo3(*dm, "MOAB file '%s' was successfully loaded. Found %" PetscInt_FMT " vertices and %" PetscInt_FMT " elements.\n", filename, verts.size(), elems.size());
   ierr = PetscFree(readopts);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

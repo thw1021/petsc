@@ -98,14 +98,14 @@ int main(int argc,char **args)
   }
   ierr = MatGetInfo(A,MAT_LOCAL,&info);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"Process  %2d: %D %D %D %D %D\n",PetscGlobalRank,(PetscInt)info.nz_used,
+  ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"Process  %2d: %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",PetscGlobalRank,(PetscInt)info.nz_used,
                                             (PetscInt)info.nz_allocated,(PetscInt)info.nz_unneeded,(PetscInt)info.assemblies,(PetscInt)info.mallocs);CHKERRQ(ierr);
   ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = MatGetInfo(A,MAT_GLOBAL_MAX,&info);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"GlobalMax  : %D %D %D %D %D\n",(PetscInt)info.nz_used,
+  ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"GlobalMax  : %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",(PetscInt)info.nz_used,
                                 (PetscInt)info.nz_allocated,(PetscInt)info.nz_unneeded,(PetscInt)info.assemblies,(PetscInt)info.mallocs);CHKERRQ(ierr);
   ierr = MatGetInfo(A,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"GlobalSum  : %D %D %D %D %D\n",(PetscInt)info.nz_used,
+  ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"GlobalSum  : %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",(PetscInt)info.nz_used,
                                 (PetscInt)info.nz_allocated,(PetscInt)info.nz_unneeded,(PetscInt)info.assemblies,(PetscInt)info.mallocs);CHKERRQ(ierr);
 
   /* test MatView */
@@ -191,7 +191,7 @@ int main(int argc,char **args)
             Mat  T,lT,T2;
             char testname[256];
 
-            ierr = PetscSNPrintf(testname,sizeof(testname),"MatConvert_IS_XAIJ special case (%D %D, bs %D %D)",ri,ci,rb,cb);CHKERRQ(ierr);
+            ierr = PetscSNPrintf(testname,sizeof(testname),"MatConvert_IS_XAIJ special case (%" PetscInt_FMT " %" PetscInt_FMT ", bs %" PetscInt_FMT " %" PetscInt_FMT ")",ri,ci,rb,cb);CHKERRQ(ierr);
             ierr = PetscPrintf(PETSC_COMM_WORLD,"Test %s\n",testname);CHKERRQ(ierr);
 
             ierr = ISCreateBlock(PETSC_COMM_SELF,cb,4,c,PETSC_COPY_VALUES,&is);CHKERRQ(ierr);
@@ -551,7 +551,7 @@ int main(int argc,char **args)
     for (diff = 0; diff < 3; diff++) {
       for (perm = 0; perm < 3; perm++) {
         for (bs = 1; bs < 4; bs++) {
-          ierr = PetscPrintf(PETSC_COMM_WORLD,"Test MatInvertBlockDiagonal blockdiag %D %D %D %D\n",n,diff,perm,bs);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_WORLD,"Test MatInvertBlockDiagonal blockdiag %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",n,diff,perm,bs);CHKERRQ(ierr);
           ierr = PetscMalloc1(bs*bs,&vals);CHKERRQ(ierr);
           ierr = MatGetOwnershipRanges(A,&sts);CHKERRQ(ierr);
           switch (diff) {
@@ -786,7 +786,7 @@ PetscErrorCode TestMatZeroRows(Mat A, Mat Afull, PetscBool squaretest, IS is, Pe
   ierr = MatMissingDiagonal(B,&miss,&d);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(B,&rst,&ren);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD, "[%d] [%D,%D) Missing %d, row %D (diag %s)\n",rank,rst,ren,(int)miss,d,diagstr);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD, "[%d] [%" PetscInt_FMT ",%" PetscInt_FMT ") Missing %d, row %" PetscInt_FMT " (diag %s)\n",rank,rst,ren,(int)miss,d,diagstr);CHKERRQ(ierr);
   ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 

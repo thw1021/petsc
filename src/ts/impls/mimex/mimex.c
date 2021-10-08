@@ -312,7 +312,7 @@ static PetscErrorCode TSView_Mimex(TS ts,PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer, "  Version = %D\n", mimex->version);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  Version = %" PetscInt_FMT "\n", mimex->version);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

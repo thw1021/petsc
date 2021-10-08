@@ -25,7 +25,7 @@ PetscErrorCode PrintVecWithGhosts(DM da, Vec v)
   com = PetscObjectComm((PetscObject)da);
   ierr = MPI_Comm_rank(com, &rank);CHKERRMPI(ierr);
   ierr = DMDAGetLocalInfo(da, &info);CHKERRQ(ierr);
-  ierr = PetscSynchronizedPrintf(com, "begin rank %d portion (with ghosts, %D x %D)\n",rank, info.gxm, info.gym);CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(com, "begin rank %d portion (with ghosts, %" PetscInt_FMT " x %" PetscInt_FMT ")\n",rank, info.gxm, info.gym);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(da, v, &p);CHKERRQ(ierr);
   for (i = info.gxs; i < info.gxs + info.gxm; i++) {
     for (j = info.gys; j < info.gys + info.gym; j++) {
