@@ -970,7 +970,7 @@ const char       PKDCitation[] = "@article{Kirby2010,\n"
                                  "  publisher={ACM New York, NY, USA}\n}\n";
 
 /*@
-  PetscDTPKDEvalJet - Evaluate the jet (function and derivatives) of the Prioriol-Koornwinder-Dubiner (PKD) basis for
+  PetscDTPKDEvalJet - Evaluate the jet (function and derivatives) of the Proriol-Koornwinder-Dubiner (PKD) basis for
   the space of polynomials up to a given degree.  The PKD basis is L2-orthonormal on the biunit simplex (which is used
   as the reference element for finite elements in PETSc), which makes it a stable basis to use for evaluating
   polynomials in that domain.
@@ -993,7 +993,7 @@ const char       PKDCitation[] = "@article{Kirby2010,\n"
 
   Note: The ordering of the basis functions, and the ordering of the derivatives in the jet, both follow the graded
   ordering of PetscDTIndexToGradedOrder() and PetscDTGradedOrderToIndex().  For example, in 3D, the polynomial with
-  leading monomial x^3,y^1,z^2, which as degree tuple (2,0,1), which by PetscDTGradedOrderToIndex() has index 12 (it is the 13th basis function in the space);
+  leading monomial x^2,y^0,z^1, which as degree tuple (2,0,1), which by PetscDTGradedOrderToIndex() has index 12 (it is the 13th basis function in the space);
   the partial derivative $\partial_x \partial_z$ has order tuple (1,0,1), appears at index 6 in the jet (it is the 7th partial derivative in the jet).
 
   The implementation uses Kirby's singularity-free evaluation algorithm, https://doi.org/10.1145/1644001.1644006.
@@ -1135,6 +1135,308 @@ PetscErrorCode PetscDTPKDEvalJet(PetscInt dim, PetscInt npoints, const PetscReal
   }
   ierr = PetscFree(scales);CHKERRQ(ierr);
   ierr = PetscFree2(degtup, ktup);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  PetscDTPTrimmedSize - The size of the trimmed polynomial space of k-forms with a given degree and form degree,
+  which can be evaluated in PetscDTPTrimmedEvalJet().
+
+  Input Parameters:
++ dim - the number of variables in the multivariate polynomials
+. degree - the degree (sum of degrees on the variables in a monomial) of the trimmed polynomial space.
+- formDegree - the degree of the form
+
+  Output Argments:
+- size - The number ((dim + degree) choose (dim + formDegree)) x ((degree + formDegree - 1) choose (formDegree))
+
+  Level: advanced
+
+.seealso: PetscDTPTrimmedEvalJet()
+@*/
+PetscErrorCode PetscDTPTrimmedSize(PetscInt dim, PetscInt degree, PetscInt formDegree, PetscInt *size)
+{
+  PetscInt       Nrk, Nbpt; // number of trimmed polynomials
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  formDegree = PetscAbsInt(formDegree);
+  ierr = PetscDTBinomialInt(degree + dim, degree + formDegree, &Nbpt);CHKERRQ(ierr);
+  ierr = PetscDTBinomialInt(degree + formDegree - 1, formDegree, &Nrk);CHKERRQ(ierr);
+  Nbpt *= Nrk;
+  *size = Nbpt;
+  PetscFunctionReturn(0);
+}
+
+static PetscBool PTrimmedCite = PETSC_FALSE;
+const char       PTrimmedCitation[] = "@article{ArnoldFalkWinther06,\n"
+                                      "  title={Finite element exterior calculus, homological techniques, and applications},\n"
+                                      "  author={Arnold, Douglas N. and Falk, Richard S. and Winther, Ragnar},\n"
+                                      "  journal={Acta Numerica},\n"
+                                      "  volume={15},\n"
+                                      "  pages={1--155},\n"
+                                      "  year={2006},\n"
+                                      "  publisher={Cambridge University Press}\n}\n";
+
+/*@
+  PetscDTPTrimmedEvalJet - Evaluate the jet (function and derivatives) of a basis of the trimmed polynomial k-forms up to
+  a given degree.
+
+  Input Parameters:
++ dim - the number of variables in the multivariate polynomials
+. npoints - the number of points to evaluate the polynomials at
+. points - [npoints x dim] array of point coordinates
+. degree - the degree (sum of degrees on the variables in a monomial) of the trimmed polynomial space to evaluate.
+           There are ((dim + degree) choose (dim + formDegree)) x ((degree + formDegree - 1) choose (formDegree)) polynomials in this space.
+           (You can use PetscDTPTrimmedSize() to compute this size.)
+. formDegree - the degree of the form
+- jetDegree - the maximum order partial derivative to evaluate in the jet.  There are ((dim + jetDegree) choose dim) partial derivatives
+              in the jet.  Choosing jetDegree = 0 means to evaluate just the function and no derivatives
+
+  Output Argments:
+- p - an array containing the evaluations of the PKD polynomials' jets on the points.  The size is
+      PetscDTPTrimmedSize() x ((dim + formDegree) choose dim) x ((dim + k) choose dim) x npoints,
+      which also describes the order of the dimensions of this
+      four-dimensional array:
+        the first (slowest varying) dimension is basis function index;
+        the second dimension is component of the form;
+        the third dimension is jet index;
+        the fourth (fastest varying) dimension is the index of the evaluation point.
+
+  Level: advanced
+
+  Note: The ordering of the basis functions is not graded, so the basis functions are not nested by degree like PetscDTPKDEvalJet().
+        The basis functions are not an L2-orthonormal basis on any particular domain.
+
+  The implementation is as described in Section 4.4 of "Finite element exterior calculus, homological techniques, and applications",
+  by Arnold, Falk, and Winther, https://doi.org/10.1017/S0962492906210018.
+
+.seealso: PetscDTPKDEvalJet(), PetscDTPTrimmedSize()
+@*/
+PetscErrorCode PetscDTPTrimmedEvalJet(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt degree, PetscInt formDegree, PetscInt jetDegree, PetscReal p[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (formDegree == 0) {
+    ierr = PetscDTPKDEvalJet(dim, npoints, points, degree, jetDegree, p);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+  if (PetscAbsInt(formDegree) == dim) {
+    ierr = PetscDTPKDEvalJet(dim, npoints, points, degree - 1, jetDegree, p);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+  ierr = PetscCitationsRegister(PTrimmedCitation, &PTrimmedCite);CHKERRQ(ierr);
+  PetscInt formDegreeOrig = formDegree;
+  formDegree = PetscAbsInt(formDegreeOrig);
+  PetscBool formNegative = formDegreeOrig < 0;
+  PetscReal *bary = NULL; // barycentric-like mapping to the biunit simplex one dimension higher
+  PetscReal *work_bary = NULL; // selected barycentric coordinates
+  ierr = PetscMalloc2(npoints * (dim + 1), &bary, npoints * (dim + 1), &work_bary);CHKERRQ(ierr);
+  for (PetscInt pt = 0; pt < npoints; pt++) {
+    PetscReal sum = 0.;
+    for (PetscInt d = 0; d < dim; d++) {
+      bary[pt * (dim + 1) + d + 1] = points[pt * dim + d]; // shift by indexing by one
+      sum += points[pt * dim + d];
+    }
+    bary[pt * (dim + 1)] = 1. - dim - sum; // the 0th lambda coordinate corresponds to the "origin" vertex
+  }
+
+  PetscInt Nbmax; // maximum number of basis vectors used in work
+  ierr = PetscDTBinomialInt(dim + degree, dim + 1, &Nbmax);CHKERRQ(ierr); // number of scalar polynomials in dimension dim + 1 up to degree - 1
+
+  PetscInt Nkmax; // maximum jet size used in work
+  PetscInt Nk; // final jet size
+  ierr = PetscDTBinomialInt(dim + 1 + jetDegree, dim + 1, &Nkmax);CHKERRQ(ierr);
+  ierr = PetscDTBinomialInt(dim + jetDegree, dim, &Nk);CHKERRQ(ierr);
+
+  PetscReal *p_work; // workspace for evaluating scalar polynomials that we combine into the trimmed polynomials
+  PetscInt *vertices; // the vertices that surround an f-simplex (subsets of P trimmed are associated with f-simplices)
+  PetscInt *sub_vertices; // subset of the vertices used in figuring out which form component goes where
+  ierr = PetscMalloc3(Nbmax * Nkmax * npoints, &p_work, formDegree + 1, &vertices, formDegree, &sub_vertices);CHKERRQ(ierr);
+  PetscInt Nform; // number of formDegree-forms
+  PetscInt Nfm1 = 0;  // number of (formDegree - 1)-form
+  ierr = PetscDTBinomialInt(dim, formDegree, &Nform);CHKERRQ(ierr);
+  if (formDegree > 0) {
+    ierr = PetscDTBinomialInt(dim, formDegree-1, &Nfm1);CHKERRQ(ierr);
+  }
+
+  PetscInt Nf; // number of formDegree simplices around the boundary of the simplex
+  ierr = PetscDTBinomialInt(dim + 1, formDegree + 1, &Nf);CHKERRQ(ierr);
+
+  PetscReal *phi_jet; // workspace to store the jet of phi_f (the Whitney form associated with f)
+  ierr = PetscMalloc1(npoints * Nform * (1 + dim), &phi_jet);CHKERRQ(ierr);
+  PetscReal *dlambda_0, *drem, *dv;
+  ierr = PetscMalloc3(dim, &dlambda_0, Nfm1, &drem, Nform, &dv);CHKERRQ(ierr);
+  for (PetscInt d = 0; d < dim; d++) {
+    dlambda_0[d] = -1./2.; // d lambda_0 is the derivative of the 0th barycentric coordinate
+  }
+
+  PetscReal scale = 1.;
+  for (PetscInt d = 0; d < formDegree; d++) scale *= 0.5; // product of the scales of formDegree d(lambda) coordinate functions
+
+  PetscInt *derivs, *work_derivs;
+  ierr = PetscMalloc2(dim, &derivs, dim + 1, &work_derivs);CHKERRQ(ierr);
+
+  PetscInt total = 0; // basis functions computed so far
+  for (PetscInt f = 0; f < Nf; f++) {
+    ierr = PetscDTEnumSubset(dim + 1, formDegree + 1, f, vertices);CHKERRQ(ierr);
+
+    // step 1: compute the phi_f (Whitney form) component
+    for (PetscInt i = 0; i < npoints * Nform * (1 + dim); i++) {
+      phi_jet[i] = 0.;
+    }
+    for (PetscInt v = 0; v < formDegree + 1; v++) {
+      PetscReal sign = (v & 1) ? -1.: 1.;
+
+      // select out all vertices but the vth
+      PetscInt count = 0;
+      for (PetscInt v2 = 0; v2 < formDegree + 1; v2++) {
+        if (v2 != v) {
+          sub_vertices[count++] = vertices[v2]-1; // subtract one: the "origin" vertex doesn't count in the coordinate system
+        }
+      }
+      if (vertices[0] != 0 || v == 0) { // the origin vertex is not among sub_vertices
+        PetscInt vindex; // form index described by sub_vertices
+        ierr = PetscDTSubsetIndex(dim, formDegree, sub_vertices, &vindex);CHKERRQ(ierr);
+        // insert derivatives at that index
+        if (vertices[v] == 0) {
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            PetscReal lambda_0 = (bary[pt * (dim + 1)] + 1.) / 2.; // transform to a true barycentric coordinate that is 1 at the vertex and 0
+            // at the opposite facet
+            phi_jet[(vindex * (1+dim)) * npoints + pt] += sign * scale * lambda_0;
+            for (PetscInt d = 0; d < dim; d++) {
+              phi_jet[(vindex * (1+dim) + 1 + d) * npoints + pt] += sign * scale * dlambda_0[d];
+            }
+          }
+        } else {
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            PetscReal lambda_v = (bary[pt * (dim + 1) + vertices[v]] + 1.) / 2.;
+            PetscReal dlambda_v = 1./2.;
+            phi_jet[(vindex * (1+dim)) * npoints + pt] += sign * scale * lambda_v;
+            // the lambda_v function depends only on the vertices[v] - 1 coordinate, only update that derivative component
+            phi_jet[((vindex * (1+dim)) + 1 + (vertices[v] - 1)) * npoints + pt] += sign * scale * dlambda_v;
+          }
+        }
+      } else { // the origin vertex is the first sub_vertex
+        PetscInt vindexm1; // form index described by sub_vertices, excluding the origin vertex
+        ierr = PetscDTSubsetIndex(dim, formDegree-1, &sub_vertices[1], &vindexm1);CHKERRQ(ierr);
+        // set drem to indicate the basis form associated with vindexm1
+        for (PetscInt i = 0; i < Nfm1; i++) {
+          drem[i] = 0.;
+        }
+        drem[vindexm1] = 2. * scale; // 2 * scale: scale for the wedge product of dlambda's formDegree times, each with a factor of 0.5: this is one time less
+        // wedge that with dlambda_0 to get the form assocated with this vertex
+        ierr = PetscDTAltVWedge(dim, 1, formDegree-1, dlambda_0, drem, dv);CHKERRQ(ierr);
+        // for each component of the form, update phi_jet
+        for (PetscInt pt = 0; pt < npoints; pt++) {
+          PetscReal lambda_v = (bary[pt * (dim + 1) + vertices[v]] + 1.) / 2.;
+          PetscReal dlambda_v = 1./2.;
+          for (PetscInt i = 0; i < Nform; i++) {
+            phi_jet[(i * (1+dim)) * npoints + pt] += sign * dv[i] * lambda_v;
+            // the lambda_v function depends only on the vertices[v] - 1 coordinate, only update that derivative component
+            phi_jet[((i * (1+dim)) + 1 + (vertices[v] - 1)) * npoints + pt] += sign * dv[i] * dlambda_v;
+          }
+        }
+      }
+    }
+
+    // step 2: compute the H_{r-1} component
+    PetscInt workdim = dim + 1 - vertices[0];
+    for (PetscInt pt = 0; pt < npoints; pt++) { // copy the selected coordinates (could have avoided this if the coordinates were stored SoA instead of AoS)
+      for (PetscInt d = 0; d < workdim; d++) {
+        work_bary[pt * workdim + d] = bary[pt * (dim + 1) + vertices[0] + d];
+      }
+    }
+    PetscInt Nbf; // number of basis functions associated with f
+    ierr = PetscDTBinomialInt(workdim - 1 + degree - 1, workdim - 1, &Nbf);CHKERRQ(ierr);
+    PetscInt Nbfp1; // number of basis functions computed in p_work
+    ierr = PetscDTBinomialInt(workdim + degree - 1, workdim, &Nbfp1);CHKERRQ(ierr);
+    PetscInt Nkf; // number of jet elements in this dimension
+    ierr = PetscDTBinomialInt(workdim + jetDegree, workdim, &Nkf);CHKERRQ(ierr);
+
+    ierr = PetscDTPKDEvalJet(workdim, npoints, work_bary, degree - 1, jetDegree, p_work);CHKERRQ(ierr);
+
+    // grab the "homogeneous" polynomials of maximum degree ouf of the work (not really homogeneous, but the leading
+    // monomials form a basis of the homogeneous polynomials)
+    PetscReal *f_work = &p_work[(Nbfp1 - Nbf) * Nkf * npoints];
+    PetscReal *p_f = &p[total * Nform * Nk * npoints];
+
+    for (PetscInt i = 0; i < Nbf * Nform * Nk * npoints; i++) {
+      p_f[i] = 0.;
+    }
+
+    for (PetscInt wk = 0; wk < Nkf; wk++) {
+      for (PetscInt d = 0; d < vertices[0]; d++) {
+        work_derivs[d] = 0;
+      }
+      ierr = PetscDTIndexToGradedOrder(workdim, wk, &work_derivs[vertices[0]]);CHKERRQ(ierr);
+
+      PetscInt dd = work_derivs[0];
+      PetscInt limit; // how many ways can you distribute the dd derivatives wrt the 0th barycentric coordinate over dim other coordinates?
+      ierr = PetscDTBinomialInt(dim-1+ dd, dim-1, &limit);CHKERRQ(ierr);
+      for (PetscInt l = 0; l < limit; l++) {
+        ierr = PetscDTIndexToGradedOrder(dim-1, l, derivs);CHKERRQ(ierr);
+        PetscInt sum = 0;
+        for (PetscInt d = 0; d < dim - 1; d++) {
+          sum += derivs[d];
+        }
+        derivs[dim-1] = dd - sum;
+
+        // compute the multinomial coefficient from binomial coefficients
+        PetscReal multinom = 1.;
+        for (PetscInt d = 0; d < dim; d++) {
+          PetscInt binom;
+
+          ierr = PetscDTBinomialInt(derivs[d] + work_derivs[d+1], work_derivs[d+1], &binom);CHKERRQ(ierr);
+          multinom *= binom;
+        }
+        // dlambda_0^dd = (-dx[0]-dx[1]-...-dx[d-1])^dd, so there is a (-1)^dd factor
+        multinom *= (dd & 1) ? -1. : 1.;
+
+        // add in the derivatives from the other barycentric coordinates
+        for (PetscInt d = 0; d < dim; d++) {
+          derivs[d] += work_derivs[d+1];
+        }
+
+        // loop over the jet components of phi_f
+        for (PetscInt phik = 0; phik <= dim; phik++) {
+          PetscInt outk; // component of the jet we will add into
+          PetscReal mult = 1.;
+          if (phik > 0) { // add in the derivatives of phi
+            derivs[phik-1]++;
+            mult = derivs[phik-1]; // Leibniz rule
+          }
+          // determine the jet component
+          ierr = PetscDTGradedOrderToIndex(dim, derivs, &outk);CHKERRQ(ierr);
+          if (phik > 0) { // reset the derivatives
+            derivs[phik-1]--;
+          }
+          // if this is not a requested derivative, skip
+          if (outk >= Nk) {
+            continue;
+          }
+          for (PetscInt b = 0; b < Nbf; b++) {
+            const PetscReal *f_b = &f_work[(b * Nkf + wk) * npoints];
+            for (PetscInt i = 0; i < Nform; i++) {
+              PetscReal *p_i = &p_f[((b * Nform + (formNegative ? (Nform-1-i) : i)) * Nk + outk) * npoints];
+              PetscReal *phi_i = &phi_jet[(i * (dim + 1) + phik) * npoints];
+              PetscReal sign = (formNegative && (i & 1)) ? -1. : 1.;
+              for (PetscInt pt = 0; pt < npoints; pt++) {
+                p_i[pt] += multinom * sign * mult * f_b[pt] * phi_i[pt];
+              }
+            }
+          }
+        }
+      }
+    }
+    total += Nbf;
+  }
+  ierr = PetscFree2(derivs, work_derivs);CHKERRQ(ierr);
+  ierr = PetscFree3(dlambda_0, drem, dv);CHKERRQ(ierr);
+  ierr = PetscFree(phi_jet);CHKERRQ(ierr);
+  ierr = PetscFree3(p_work, vertices, sub_vertices);CHKERRQ(ierr);
+  ierr = PetscFree2(bary, work_bary);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
