@@ -322,7 +322,7 @@ PetscErrorCode DMAdaptLabel_Plex(DM dm, DMLabel adaptLabel, DM *dmAdapted)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMAdaptMetricPragmatic_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
+PetscErrorCode DMAdaptMetric_Pragmatic_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
 {
 #if defined(PETSC_HAVE_PRAGMATIC)
   MPI_Comm           comm;
