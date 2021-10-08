@@ -280,7 +280,7 @@ M*/
 */
 #if (PETSC_HAS_ATTRIBUTE(argument_with_type_tag) && \
      PETSC_HAS_ATTRIBUTE(pointer_with_type_tag)  && \
-     PETSC_HAS_ATTRIBUTE(type_tag_for_datatype))  && defined(works_with_const_which_is_not_true)
+     PETSC_HAS_ATTRIBUTE(type_tag_for_datatype))
 #  define PetscAttrMPIPointerWithType(bufno,typeno) __attribute__((pointer_with_type_tag(MPI,bufno,typeno)))
 #  define PetscAttrMPITypeTag(type)                 __attribute__((type_tag_for_datatype(MPI,type)))
 #  define PetscAttrMPITypeTagLayoutCompatible(type) __attribute__((type_tag_for_datatype(MPI,type,layout_compatible)))
