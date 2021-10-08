@@ -223,7 +223,6 @@ static PetscErrorCode PCPostSolve_Shell(PC pc,KSP ksp)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode PCApplyTranspose_Shell(PC pc,Vec x,Vec y)
 {
   PC_Shell         *shell = (PC_Shell*)pc->data;
