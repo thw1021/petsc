@@ -166,14 +166,10 @@ class BaseTestPlex(object):
         assert np.allclose(metric.array, metric1.array)
 
     def testAdapt(self):
-        dim = self.plex.getDimension()
-        if dim == 1: return
-        vStart, vEnd = self.plex.getDepthStratum(0)
-        numVertices = vEnd-vStart
-        metric_array = np.zeros([numVertices,dim,dim],dtype=PETSc.ScalarType)
-        for met in metric_array:
-            met[:,:] = np.diag([9]*dim)
-        metric = PETSc.Vec().createWithArray(metric_array)
+        if self.DIM == 1: return
+        if self.CELLS is None and not self.plex.isSimplex(): return
+        if sum(self.DOFS) > 1: return
+        metric = self.plex.metricCreateUniform(9.0)
         try:
             newplex = self.plex.adaptMetric(metric,"")
         except PETSc.Error as exc:
