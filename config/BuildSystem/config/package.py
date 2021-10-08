@@ -1791,7 +1791,11 @@ class CMakePackage(Package):
       args.append('-DCMAKE_CXX_FLAGS:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
-      args.append('-DCMAKE_CXX_STANDARD={stdver}'.format(stdver=self.compilers.cxxDialectRange[lang][1][-2:])) # extract '17' from c++17
+      langdialect = getattr(self.compilers,lang+'dialect',None)
+      if langdialect:
+        # langdialect is only set as an attribute if the user specifically chose a dialect
+        # (see config/compilers.py::checkCxxDialect())
+        args.append('-DCMAKE_CXX_STANDARD={stdver}'.format(stdver=langdialect[-2:])) # extract '17' from c++17
       self.framework.popLanguage()
 
     if hasattr(self.compilers, 'FC'):
