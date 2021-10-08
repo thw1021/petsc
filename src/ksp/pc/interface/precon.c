@@ -1613,16 +1613,13 @@ PetscErrorCode PCSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP))
 PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
 {
   PetscErrorCode ierr;
-  Vec            x,rhs;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,2);
   pc->presolvedone--;
-  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
-  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
-  if (pc->ops->postsolve) {
-    ierr =  (*pc->ops->postsolve)(pc,ksp,rhs,x);CHKERRQ(ierr);
+  if (pc->postsolve) {
+    ierr =  (pc->postsolve)(pc,ksp);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

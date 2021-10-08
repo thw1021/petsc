@@ -1541,7 +1541,7 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc,KSP ksp)
 }
 
 /*
-   PCPostSolve_BDDC - Changes the computed solution if a transformation of basis
+   PCPostSolve_BDDC_private - Changes the computed solution if a transformation of basis
                      approach has been selected. Also, restores rhs to its original state.
 
    Input Parameter:
@@ -1553,7 +1553,7 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc,KSP ksp)
      The interface routine PCPostSolve() is not usually called directly by
      the user, but instead is called by KSPSolve().
 */
-static PetscErrorCode PCPostSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
+static PetscErrorCode PCPostSolve_BDDC_private(PC pc, KSP ksp, Vec rhs, Vec x)
 {
   PetscErrorCode ierr;
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
@@ -1581,6 +1581,18 @@ static PetscErrorCode PCPostSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
     /* reset flag for exact dirichlet trick */
     pcbddc->exact_dirichlet_trick_app = PETSC_FALSE;
   }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCPostSolve_BDDC(PC pc,KSP ksp)
+{
+  PetscErrorCode ierr;
+  Vec            rhs,x;
+
+  PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
+  ierr = PCPostSolve_BDDC_private(pc,ksp,rhs,x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2282,6 +2294,7 @@ PetscErrorCode PCReset_BDDC(PC pc)
   pcbddc->ksp_R                     = kspR;
   pcbddc->coarse_ksp                = kspC;
   pc->presolve                      = NULL;
+  pc->postsolve                     = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -2538,7 +2551,7 @@ static PetscErrorCode PCBDDCMatFETIDPGetSolution_BDDC(Mat fetidp_mat, Vec fetidp
   if (pcbddc->ChangeOfBasisMatrix) {
     ierr = MatMult(pcbddc->ChangeOfBasisMatrix,work,standard_sol);CHKERRQ(ierr);
   }
-  ierr = PCPostSolve_BDDC(mat_ctx->pc,NULL,NULL,standard_sol);CHKERRQ(ierr);
+  ierr = PCPostSolve_BDDC_private(mat_ctx->pc,NULL,NULL,standard_sol);CHKERRQ(ierr);
   if (mat_ctx->g2g_p) {
     ierr = VecScatterBegin(mat_ctx->g2g_p,fetidp_flux_sol,standard_sol,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
     ierr = VecScatterEnd(mat_ctx->g2g_p,fetidp_flux_sol,standard_sol,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
@@ -3071,9 +3084,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   pc->ops->applyrichardson     = NULL;
   pc->ops->applysymmetricleft  = NULL;
   pc->ops->applysymmetricright = NULL;
-  pc->ops->postsolve           = PCPostSolve_BDDC;
   pc->ops->reset               = PCReset_BDDC;
   pc->presolve                 = PCPreSolve_BDDC;
+  pc->postsolve                = PCPostSolve_BDDC;
 
   /* composing function */
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCBDDCSetDiscreteGradient_C",PCBDDCSetDiscreteGradient_BDDC);CHKERRQ(ierr);

@@ -83,12 +83,16 @@ static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PCPostSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
+static PetscErrorCode PCPostSolve_Eisenstat(PC pc,KSP ksp)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
   PetscErrorCode ierr;
+  Vec            b,x;
 
   PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
+
   /* get back true b */
   ierr = VecCopy(eis->b[pc->presolvedone],b);CHKERRQ(ierr);
 
@@ -109,6 +113,8 @@ static PetscErrorCode PCReset_Eisenstat(PC pc)
   ierr = VecDestroy(&eis->b[1]);CHKERRQ(ierr);
   ierr = MatDestroy(&eis->shell);CHKERRQ(ierr);
   ierr = VecDestroy(&eis->diag);CHKERRQ(ierr);
+  pc->presolve  = NULL;
+  pc->postsolve = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -404,7 +410,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
   ierr = PetscNewLog(pc,&eis);CHKERRQ(ierr);
 
   pc->ops->apply           = PCApply_Eisenstat;
-  pc->ops->postsolve       = PCPostSolve_Eisenstat;
   pc->ops->applyrichardson = NULL;
   pc->ops->setfromoptions  = PCSetFromOptions_Eisenstat;
   pc->ops->destroy         = PCDestroy_Eisenstat;
@@ -412,6 +417,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
   pc->ops->view            = PCView_Eisenstat;
   pc->ops->setup           = PCSetUp_Eisenstat;
   pc->presolve             = PCPreSolve_Eisenstat;
+  pc->postsolve            = PCPostSolve_Eisenstat;
 
   pc->data     = eis;
   eis->omega   = 1.0;
