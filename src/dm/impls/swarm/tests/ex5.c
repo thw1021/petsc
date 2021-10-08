@@ -288,7 +288,7 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
       e[(p*2+0)*dim+d] = x[d] - xe[d];
       e[(p*2+1)*dim+d] = v[d] - ve[d];
     }
-    if (user->error) {ierr = PetscPrintf(comm, "t %.4g: p%D error [%.2g %.2g] sol [(%.6lf %.6lf) (%.6lf %.6lf)] exact [(%.6lf %.6lf) (%.6lf %.6lf)] energy/exact energy %g / %g\n", t, p, (double) DMPlex_NormD_Internal(dim, &e[(p*2+0)*dim]), (double) DMPlex_NormD_Internal(dim, &e[(p*2+1)*dim]), (double) x[0], (double) x[1], (double) v[0], (double) v[1], (double) xe[0], (double) xe[1], (double) ve[0], (double) ve[1], 0.5*DMPlex_NormD_Internal(dim, v), (double) (0.5*(1000./(p+1))));}
+    if (user->error) {ierr = PetscPrintf(comm, "t %.4g: p%" PetscInt_FMT " error [%.2g %.2g] sol [(%.6lf %.6lf) (%.6lf %.6lf)] exact [(%.6lf %.6lf) (%.6lf %.6lf)] energy/exact energy %g / %g\n", t, p, (double) DMPlex_NormD_Internal(dim, &e[(p*2+0)*dim]), (double) DMPlex_NormD_Internal(dim, &e[(p*2+1)*dim]), (double) x[0], (double) x[1], (double) v[0], (double) v[1], (double) xe[0], (double) xe[1], (double) ve[0], (double) ve[1], 0.5*DMPlex_NormD_Internal(dim, v), (double) (0.5*(1000./(p+1))));}
   }
   ierr = DMSwarmRestoreField(sdm, DMSwarmPICField_coor, NULL, NULL, (void **) &coords);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
@@ -359,12 +359,12 @@ int main(int argc, char **argv)
   ierr = TSGetSolveTime(ts, &ftime);CHKERRQ(ierr);
   ierr = TSGetConvergedReason(ts, &reason);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts, &steps);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"%s at time %g after %D steps\n", TSConvergedReasons[reason], (double) ftime, steps);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"%s at time %g after %" PetscInt_FMT " steps\n", TSConvergedReasons[reason], (double) ftime, steps);CHKERRQ(ierr);
 
   ierr = VecGetArrayRead(u, &endVals);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
     const PetscReal norm = DMPlex_NormD_Internal(dim, &endVals[(p*2 + 1)*dim]);
-    ierr = PetscPrintf(comm, "Particle %D initial Energy: %g  Final Energy: %g\n", p, (double) (0.5*(1000./(p+1))), (double) 0.5*PetscSqr(norm));CHKERRQ(ierr);
+    ierr = PetscPrintf(comm, "Particle %" PetscInt_FMT " initial Energy: %g  Final Energy: %g\n", p, (double) (0.5*(1000./(p+1))), (double) 0.5*PetscSqr(norm));CHKERRQ(ierr);
   }
   ierr = VecRestoreArrayRead(u, &endVals);CHKERRQ(ierr);
   ierr = DMSwarmDestroyGlobalVectorFromField(sw, "kinematics", &u);CHKERRQ(ierr);

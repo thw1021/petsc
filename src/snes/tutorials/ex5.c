@@ -193,7 +193,7 @@ int main(int argc,char **argv)
   ierr = SNESGetLinearSolveIterations(snes,&slits);CHKERRQ(ierr);
   ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
   ierr = KSPGetTotalIterations(ksp,&lits);CHKERRQ(ierr);
-  if (lits != slits) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Number of total linear iterations reported by SNES %D does not match reported by KSP %D",slits,lits);
+  if (lits != slits) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Number of total linear iterations reported by SNES %" PetscInt_FMT " does not match reported by KSP %" PetscInt_FMT "",slits,lits);
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -214,7 +214,7 @@ int main(int argc,char **argv)
     ierr = VecNorm(e, NORM_2, &errorl2);CHKERRQ(ierr);
     ierr = VecNorm(e, NORM_INFINITY, &errorinf);CHKERRQ(ierr);
     ierr = VecGetSize(e, &N);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %D error L2 %g inf %g\n", N, (double) errorl2/PetscSqrtReal(N), (double) errorinf);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double) errorl2/PetscSqrtReal(N), (double) errorinf);CHKERRQ(ierr);
     ierr = VecDestroy(&e);CHKERRQ(ierr);
     ierr = PetscLogEventSetDof(SNES_Solve, 0, N);CHKERRQ(ierr);
     ierr = PetscLogEventSetError(SNES_Solve, 0, errorl2/PetscSqrtReal(N));CHKERRQ(ierr);

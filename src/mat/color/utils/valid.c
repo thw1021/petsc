@@ -141,7 +141,7 @@ PETSC_EXTERN PetscErrorCode MatISColoringTest(Mat A,ISColoring iscoloring)
       for (i=0; i<nnz; i++) {
         row = cja[cia[col]+i];
         if (PetscBTLookupSet(table,row)) {
-          SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"color %D, col %D: row %D already in this color",c,col,row);
+          SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"color %" PetscInt_FMT ", col %" PetscInt_FMT ": row %" PetscInt_FMT " already in this color",c,col,row);
         }
       }
     }

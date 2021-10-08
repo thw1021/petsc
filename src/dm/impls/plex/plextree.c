@@ -1298,7 +1298,7 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_Direct(DM dm, PetscSection 
 
       ierr = PetscDualSpaceGetFunctional(dspace,i,&quad);CHKERRQ(ierr);
       ierr = PetscQuadratureGetData(quad,NULL,&thisNc,&qPoints,NULL,NULL);CHKERRQ(ierr);
-      if (thisNc != Nc) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Functional dim %D does not much basis dim %D\n",thisNc,Nc);
+      if (thisNc != Nc) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Functional dim %" PetscInt_FMT " does not much basis dim %" PetscInt_FMT "\n",thisNc,Nc);
       nPoints += qPoints;
     }
     ierr = PetscMalloc7(fSize,&sizes,nPoints*Nc,&weights,spdim*nPoints,&pointsRef,spdim*nPoints,&pointsReal,nPoints*fSize*Nc,&work,maxDof,&workIndRow,maxDof,&workIndCol);CHKERRQ(ierr);
@@ -1766,7 +1766,7 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_FromReference(DM dm, PetscS
         if (PetscDefined(USE_DEBUG)) {
           for (r = 0; r < cDof; r++) {
             if (cDof > 1 && r) {
-              if ((ia[cOff+r+1]-ia[cOff+r]) != (ia[cOff+r]-ia[cOff+r-1])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Two point rows have different nnz: %D vs. %D", (ia[cOff+r+1]-ia[cOff+r]), (ia[cOff+r]-ia[cOff+r-1]));
+              if ((ia[cOff+r+1]-ia[cOff+r]) != (ia[cOff+r]-ia[cOff+r-1])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Two point rows have different nnz: %" PetscInt_FMT " vs. %" PetscInt_FMT "", (ia[cOff+r+1]-ia[cOff+r]), (ia[cOff+r]-ia[cOff+r-1]));
             }
           }
         }
@@ -3240,7 +3240,7 @@ PetscErrorCode DMPlexComputeInjectorReferenceTree(DM refTree, Mat *inj)
 
           ierr = PetscDualSpaceGetFunctional(dsp,parentCellShapeDof,&q);CHKERRQ(ierr);
           ierr = PetscQuadratureGetData(q,&dim,&thisNc,&numPoints,&points,&weights);CHKERRQ(ierr);
-          if (thisNc != Nc) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Functional dim %D does not much basis dim %D\n",thisNc,Nc);
+          if (thisNc != Nc) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Functional dim %" PetscInt_FMT " does not much basis dim %" PetscInt_FMT "\n",thisNc,Nc);
           ierr = PetscFECreateTabulation(fe,1,numPoints,points,0,&Tparent);CHKERRQ(ierr); /* I'm expecting a nodal basis: weights[:]' * Bparent[:,cellShapeDof] = 1. */
           for (j = 0; j < numPoints; j++) {
             PetscInt          childCell = -1;
@@ -4270,7 +4270,7 @@ static PetscErrorCode DMPlexTransferVecTree_Interpolate(DM coarse, Vec vecCoarse
           PetscInt i, j;
 
 #if 0
-          ierr = PetscInfo5(coarse,"childId %D, numRows %D, numCols %D, refPointFieldN %D maxDof %D\n",childId,numRows,numCols,refPointFieldN[childId - pRefStart][f], maxDof);CHKERRQ(ierr);
+          ierr = PetscInfo5(coarse,"childId %" PetscInt_FMT ", numRows %" PetscInt_FMT ", numCols %" PetscInt_FMT ", refPointFieldN %" PetscInt_FMT " maxDof %" PetscInt_FMT "\n",childId,numRows,numCols,refPointFieldN[childId - pRefStart][f], maxDof);CHKERRQ(ierr);
 #endif
           for (i = 0; i < numRows; i++) {
             PetscScalar val = 0.;

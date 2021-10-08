@@ -598,9 +598,9 @@ static PetscErrorCode THISetUpDM(THI thi,DM dm)
   {
     PetscReal Lx = thi->Lx / thi->units->meter,Ly = thi->Ly / thi->units->meter,Lz = thi->Lz / thi->units->meter;
     if (dim == 2) {
-      ierr = PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %D domain size (m) %8.2g x %8.2g, num elements %D x %D (%D), size (m) %g x %g\n",level,(double)Lx,(double)Ly,Mx,My,Mx*My,(double)(Lx/Mx),(double)(Ly/My));CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %" PetscInt_FMT " domain size (m) %8.2g x %8.2g, num elements %" PetscInt_FMT " x %" PetscInt_FMT " (%" PetscInt_FMT "), size (m) %g x %g\n",level,(double)Lx,(double)Ly,Mx,My,Mx*My,(double)(Lx/Mx),(double)(Ly/My));CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %D domain size (m) %8.2g x %8.2g x %8.2g, num elements %D x %D x %D (%D), size (m) %g x %g x %g\n",level,(double)Lx,(double)Ly,(double)Lz,Mx,My,Mz,Mx*My*Mz,(double)(Lx/Mx),(double)(Ly/My),(double)(1000./(Mz-1)));CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %" PetscInt_FMT " domain size (m) %8.2g x %8.2g x %8.2g, num elements %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " (%" PetscInt_FMT "), size (m) %g x %g x %g\n",level,(double)Lx,(double)Ly,(double)Lz,Mx,My,Mz,Mx*My*Mz,(double)(Lx/Mx),(double)(Ly/My),(double)(1000./(Mz-1)));CHKERRQ(ierr);
     }
   }
   ierr = THIInitializePrm(thi,da2prm,X);CHKERRQ(ierr);
@@ -873,7 +873,7 @@ static PetscErrorCode THIMatrixStatistics(THI thi,Mat B,PetscViewer viewer)
     PetscScalar val0,val2;
     ierr = MatGetValue(B,0,0,&val0);CHKERRQ(ierr);
     ierr = MatGetValue(B,2,2,&val2);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Matrix dim %D norm %8.2e (0,0) %8.2e  (2,2) %8.2e %8.2e <= eta <= %8.2e %8.2e <= beta2 <= %8.2e\n",m,(double)nrm,(double)PetscRealPart(val0),(double)PetscRealPart(val2),(double)thi->eta.cmin,(double)thi->eta.cmax,(double)thi->beta2.cmin,(double)thi->beta2.cmax);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Matrix dim %" PetscInt_FMT " norm %8.2e (0,0) %8.2e  (2,2) %8.2e %8.2e <= eta <= %8.2e %8.2e <= beta2 <= %8.2e\n",m,(double)nrm,(double)PetscRealPart(val0),(double)PetscRealPart(val2),(double)thi->eta.cmin,(double)thi->eta.cmax,(double)thi->beta2.cmin,(double)thi->beta2.cmax);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -925,7 +925,7 @@ static PetscErrorCode THISolveStatistics(THI thi,SNES snes,PetscInt coarsened,co
     ierr = SNESGetIterationNumber(snes,&its);CHKERRQ(ierr);
     ierr = SNESGetConvergedReason(snes,&reason);CHKERRQ(ierr);
     ierr = SNESGetLinearSolveIterations(snes,&lits);CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,"%s: Number of SNES iterations = %D, total linear iterations = %D\n",SNESConvergedReasons[reason],its,lits);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"%s: Number of SNES iterations = %" PetscInt_FMT ", total linear iterations = %" PetscInt_FMT "\n",SNESConvergedReasons[reason],its,lits);CHKERRQ(ierr);
   }
   {
     PetscReal         nrm2,tmin[3]={1e100,1e100,1e100},tmax[3]={-1e100,-1e100,-1e100},min[3],max[3];
@@ -1391,7 +1391,7 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM da,Vec X,const char filena
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = PetscViewerASCIIOpen(comm,filename,&viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"<VTKFile type=\"StructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"  <StructuredGrid WholeExtent=\"%d %D %d %D %d %D\">\n",0,mz-1,0,my-1,0,mx-1);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"  <StructuredGrid WholeExtent=\"%d %" PetscInt_FMT " %d %" PetscInt_FMT " %d %" PetscInt_FMT "\">\n",0,mz-1,0,my-1,0,mx-1);CHKERRQ(ierr);
 
   ierr = DMDAGetCorners(da,range,range+1,range+2,range+3,range+4,range+5);CHKERRQ(ierr);
   ierr = PetscMPIIntCast(range[3]*range[4]*range[5]*dof,&nn);CHKERRQ(ierr);
@@ -1416,7 +1416,7 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM da,Vec X,const char filena
         if (nn != xm*ym*zm*dof) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"should not happen");
         ptr = array;
       } else ptr = x;
-      ierr = PetscViewerASCIIPrintf(viewer,"    <Piece Extent=\"%D %D %D %D %D %D\">\n",zs,zs+zm-1,ys,ys+ym-1,xs,xs+xm-1);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    <Piece Extent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",zs,zs+zm-1,ys,ys+ym-1,xs,xs+xm-1);CHKERRQ(ierr);
 
       ierr = PetscViewerASCIIPrintf(viewer,"      <Points>\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n");CHKERRQ(ierr);
@@ -1443,7 +1443,7 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM da,Vec X,const char filena
 
       ierr = PetscViewerASCIIPrintf(viewer,"        <DataArray type=\"Int32\" Name=\"rank\" NumberOfComponents=\"1\" format=\"ascii\">\n");CHKERRQ(ierr);
       for (i=0; i<nn; i+=dof) {
-        ierr = PetscViewerASCIIPrintf(viewer,"%D\n",r);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",r);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer,"        </DataArray>\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"      </PointData>\n");CHKERRQ(ierr);

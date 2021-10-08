@@ -147,7 +147,7 @@ static PetscErrorCode CreateSpectralPlanes(DM dm, PetscInt numPlanes, const Pets
     DMLabel label;
     char    name[PETSC_MAX_PATH_LEN];
 
-    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "spectral_plane_%D", p);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "spectral_plane_%" PetscInt_FMT "", p);CHKERRQ(ierr);
     ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
     ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
     ierr = DMLabelAddStratum(label, 1);CHKERRQ(ierr);
@@ -298,7 +298,7 @@ static PetscErrorCode ComputeSpectral(DM dm, Vec u, PetscInt numPlanes, const Pe
     PetscInt        n, N, i, j, off, offu;
     const PetscInt *points;
 
-    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "spectral_plane_%D", p);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(name, PETSC_MAX_PATH_LEN, "spectral_plane_%" PetscInt_FMT "", p);CHKERRQ(ierr);
     ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
     ierr = DMLabelGetStratumIS(label, 1, &stratum);CHKERRQ(ierr);
     ierr = ISGetLocalSize(stratum, &n);CHKERRQ(ierr);
@@ -494,7 +494,7 @@ int main(int argc, char **argv)
       ierr = VecPointwiseDivide(errorEst, errorEst, errorL2);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) errorEst, "Error ratio");CHKERRQ(ierr);
       ierr = VecViewFromOptions(errorEst, NULL, "-error_ratio_view");CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %D L2 error: %g Error Ratio: %g/%g = %g\n", N, (double) errorL2Norm, (double) errorEstTot, (double) PetscSqrtReal(errorL2Tot), (double) errorEstTot/PetscSqrtReal(errorL2Tot));CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " L2 error: %g Error Ratio: %g/%g = %g\n", N, (double) errorL2Norm, (double) errorEstTot, (double) PetscSqrtReal(errorL2Tot), (double) errorEstTot/PetscSqrtReal(errorL2Tot));CHKERRQ(ierr);
       ierr = DMRestoreGlobalVector(dmErr, &errorEst);CHKERRQ(ierr);
       ierr = DMRestoreGlobalVector(dmErr, &errorL2);CHKERRQ(ierr);
       ierr = DMDestroy(&dmErr);CHKERRQ(ierr);

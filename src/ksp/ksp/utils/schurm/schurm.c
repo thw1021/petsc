@@ -240,15 +240,15 @@ PetscErrorCode  MatSchurComplementSetSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A01,
   PetscCheckSameComm(A00,2,Ap00,3);
   PetscCheckSameComm(A00,2,A01,4);
   PetscCheckSameComm(A00,2,A10,5);
-  if (A00->rmap->n != A00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local columns %D",A00->rmap->n,A00->cmap->n);
-  if (A00->rmap->n != Ap00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local rows of Ap00 %D",A00->rmap->n,Ap00->rmap->n);
-  if (Ap00->rmap->n != Ap00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %D do not equal local columns %D",Ap00->rmap->n,Ap00->cmap->n);
-  if (A00->cmap->n != A01->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %D do not equal local rows of A01 %D",A00->cmap->n,A01->rmap->n);
-  if (A10->cmap->n != A00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %D do not equal local rows of A00 %D",A10->cmap->n,A00->rmap->n);
+  if (A00->rmap->n != A00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT "",A00->rmap->n,A00->cmap->n);
+  if (A00->rmap->n != Ap00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local rows of Ap00 %" PetscInt_FMT "",A00->rmap->n,Ap00->rmap->n);
+  if (Ap00->rmap->n != Ap00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT "",Ap00->rmap->n,Ap00->cmap->n);
+  if (A00->cmap->n != A01->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %" PetscInt_FMT " do not equal local rows of A01 %" PetscInt_FMT "",A00->cmap->n,A01->rmap->n);
+  if (A10->cmap->n != A00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %" PetscInt_FMT " do not equal local rows of A00 %" PetscInt_FMT "",A10->cmap->n,A00->rmap->n);
   if (A11) {
     PetscValidHeaderSpecific(A11,MAT_CLASSID,6);
     PetscCheckSameComm(A00,2,A11,6);
-    if (A10->rmap->n != A11->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %D do not equal local rows A11 %D",A10->rmap->n,A11->rmap->n);
+    if (A10->rmap->n != A11->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %" PetscInt_FMT " do not equal local rows A11 %" PetscInt_FMT "",A10->rmap->n,A11->rmap->n);
   }
 
   ierr   = MatSetSizes(S,A10->rmap->n,A01->cmap->n,A10->rmap->N,A01->cmap->N);CHKERRQ(ierr);
@@ -381,15 +381,15 @@ PetscErrorCode  MatSchurComplementUpdateSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A
   PetscCheckSameComm(A00,2,Ap00,3);
   PetscCheckSameComm(A00,2,A01,4);
   PetscCheckSameComm(A00,2,A10,5);
-  if (A00->rmap->n != A00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local columns %D",A00->rmap->n,A00->cmap->n);
-  if (A00->rmap->n != Ap00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local rows of Ap00 %D",A00->rmap->n,Ap00->rmap->n);
-  if (Ap00->rmap->n != Ap00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %D do not equal local columns %D",Ap00->rmap->n,Ap00->cmap->n);
-  if (A00->cmap->n != A01->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %D do not equal local rows of A01 %D",A00->cmap->n,A01->rmap->n);
-  if (A10->cmap->n != A00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %D do not equal local rows of A00 %D",A10->cmap->n,A00->rmap->n);
+  if (A00->rmap->n != A00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT "",A00->rmap->n,A00->cmap->n);
+  if (A00->rmap->n != Ap00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local rows of Ap00 %" PetscInt_FMT "",A00->rmap->n,Ap00->rmap->n);
+  if (Ap00->rmap->n != Ap00->cmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT "",Ap00->rmap->n,Ap00->cmap->n);
+  if (A00->cmap->n != A01->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %" PetscInt_FMT " do not equal local rows of A01 %" PetscInt_FMT "",A00->cmap->n,A01->rmap->n);
+  if (A10->cmap->n != A00->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %" PetscInt_FMT " do not equal local rows of A00 %" PetscInt_FMT "",A10->cmap->n,A00->rmap->n);
   if (A11) {
     PetscValidHeaderSpecific(A11,MAT_CLASSID,6);
     PetscCheckSameComm(A00,2,A11,6);
-    if (A10->rmap->n != A11->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %D do not equal local rows A11 %D",A10->rmap->n,A11->rmap->n);
+    if (A10->rmap->n != A11->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %" PetscInt_FMT " do not equal local rows A11 %" PetscInt_FMT "",A10->rmap->n,A11->rmap->n);
   }
 
   ierr = PetscObjectReference((PetscObject)A00);CHKERRQ(ierr);
@@ -787,7 +787,7 @@ PetscErrorCode  MatCreateSchurComplementPmat(Mat A00,Mat A01,Mat A10,Mat A11,Mat
       ierr = MatInvertBlockDiagonalMat(A00,A00_inv);CHKERRQ(ierr);
       ierr = MatMatMult(A00_inv,A01,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&AdB);CHKERRQ(ierr);
       ierr = MatDestroy(&A00_inv);CHKERRQ(ierr);
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown MatSchurComplementAinvType: %D", ainvtype);
+    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown MatSchurComplementAinvType: %" PetscInt_FMT "", ainvtype);
     /* Cannot really reuse Spmat in MatMatMult() because of MatAYPX() -->
          MatAXPY() --> MatHeaderReplace() --> MatDestroy_XXX_MatMatMult()  */
     ierr     = MatDestroy(Spmat);CHKERRQ(ierr);

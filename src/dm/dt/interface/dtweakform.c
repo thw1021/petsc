@@ -183,7 +183,7 @@ PetscErrorCode PetscWeakFormGetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   ierr = PetscHMapFormGet(ht, key, &chunk);CHKERRQ(ierr);
   if (chunk.size < 0) {*func = NULL;}
   else {
-    if (ind >= chunk.size) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %D not in [0, %D)", ind, chunk.size);
+    if (ind >= chunk.size) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " not in [0, %" PetscInt_FMT ")", ind, chunk.size);
     *func = ((void (**)()) &wf->funcs->array[chunk.start])[ind];
   }
   PetscFunctionReturn(0);
@@ -1498,12 +1498,12 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
     for (k = 0; k < Nk; ++k) {
       if (keys[k].label) {
         ierr = PetscObjectGetName((PetscObject) keys[k].label, &name);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(viewer, "(%s:%p, %D) ", name, keys[k].label, keys[k].value);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "(%s:%p, %" PetscInt_FMT ") ", name, keys[k].label, keys[k].value);CHKERRQ(ierr);
       } else {ierr = PetscViewerASCIIPrintf(viewer, "");CHKERRQ(ierr);}
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
-      if (splitField) {ierr = PetscViewerASCIIPrintf(viewer, "(%D, %D) ", keys[k].field/Nf, keys[k].field%Nf);CHKERRQ(ierr);}
-      else            {ierr = PetscViewerASCIIPrintf(viewer, "(%D) ", keys[k].field);CHKERRQ(ierr);}
-      if (showPart)   {ierr = PetscViewerASCIIPrintf(viewer, "(%D) ", keys[k].part);CHKERRQ(ierr);}
+      if (splitField) {ierr = PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ", %" PetscInt_FMT ") ", keys[k].field/Nf, keys[k].field%Nf);CHKERRQ(ierr);}
+      else            {ierr = PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ") ", keys[k].field);CHKERRQ(ierr);}
+      if (showPart)   {ierr = PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ") ", keys[k].part);CHKERRQ(ierr);}
       ierr = PetscWeakFormGetFunction_Private(wf, map, keys[k].label, keys[k].value, keys[k].field, keys[k].part, &n, &funcs);CHKERRQ(ierr);
       for (i = 0; i < n; ++i) {
         char *fname;

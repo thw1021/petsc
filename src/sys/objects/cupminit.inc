@@ -210,7 +210,7 @@ PetscErrorCode PetscCUPMInitialize(MPI_Comm comm,PetscInt device)
       /* Do nothing, i.e., use whatever device set by user before PetscInitialize() */
     } else if (device == PETSC_NONE) {
       PetscNotUseCUPM = PETSC_TRUE; /* Assert the code won't use devices even there are */
-    } else SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Wrong device (%D) passed to -device_set <dev>. Must be NONE(-3),PETSC_DEFAULT(-2),PETSC_DECIDE(-1) or a non-negative integer.",device);
+    } else SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Wrong device (%" PetscInt_FMT ") passed to -device_set <dev>. Must be NONE(-3),PETSC_DEFAULT(-2),PETSC_DECIDE(-1) or a non-negative integer.",device);
 
     if (devCount > 0 && device != PETSC_NONE) {
       /* Do costly device handles initialization here to not to distort petsc logging later */

@@ -123,7 +123,7 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
   ierr = TSGetMaxTime(ts,&tfinal);CHKERRQ(ierr);
   ierr = TSGetPrevTime(ts,&tprev);CHKERRQ(ierr);
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %D TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",(double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(x[0]),(double)PetscRealPart(x[1]));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",(double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(x[0]),(double)PetscRealPart(x[1]));CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"t %.6f (tprev = %.6f) \n",(double)t,(double)tprev);CHKERRQ(ierr);
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -203,7 +203,7 @@ int main(int argc,char **argv)
   }
 
   ierr = TSSetTime(ts,0.0);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"mu %g, steps %D, ftime %g\n",(double)user.mu,user.steps,(double)(user.ftime));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"mu %g, steps %" PetscInt_FMT ", ftime %g\n",(double)user.mu,user.steps,(double)(user.ftime));CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Save trajectory of solution so that TSAdjointSolve() may be used
@@ -221,7 +221,7 @@ int main(int argc,char **argv)
   ierr = TSSolve(ts,user.x);CHKERRQ(ierr);
   ierr = TSGetSolveTime(ts,&(user.ftime));CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&user.steps);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"mu %g, steps %D, ftime %g\n",(double)user.mu,user.steps,(double)user.ftime);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"mu %g, steps %" PetscInt_FMT ", ftime %g\n",(double)user.mu,user.steps,(double)user.ftime);CHKERRQ(ierr);
 
   ierr = VecGetArray(user.x,&x_ptr);CHKERRQ(ierr);
   user.x_ob[0] = x_ptr[0];
@@ -331,7 +331,7 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec IC,PetscReal *f,Vec G,void *ctx)
   ierr = TSSolve(ts,user->x);CHKERRQ(ierr);
   ierr = TSGetSolveTime(ts,&user->ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&user->steps);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"mu %.6f, steps %D, ftime %g\n",(double)user->mu,user->steps,(double)user->ftime);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"mu %.6f, steps %" PetscInt_FMT ", ftime %g\n",(double)user->mu,user->steps,(double)user->ftime);CHKERRQ(ierr);
 
   ierr = VecGetArray(user->x,&x_ptr);CHKERRQ(ierr);
   *f   = (x_ptr[0]-user->x_ob[0])*(x_ptr[0]-user->x_ob[0])+(x_ptr[1]-user->x_ob[1])*(x_ptr[1]-user->x_ob[1]);

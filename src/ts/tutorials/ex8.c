@@ -311,7 +311,7 @@ static PetscErrorCode MonitorError(TS ts,PetscInt step,PetscReal t,Vec x,void *c
   if (step < 0) {
     ierr = PetscPrintf(mon->comm,"Interpolated final solution ");CHKERRQ(ierr);
   }
-  ierr = PetscPrintf(mon->comm,"step %4D t=%12.8e h=% 8.2e  |x|=%9.2e  |x_e|=%9.2e  |x-x_e|=%9.2e\n",step,(double)t,(double)h,(double)nrm_x,(double)nrm_exact,(double)nrm_diff);CHKERRQ(ierr);
+  ierr = PetscPrintf(mon->comm,"step %4" PetscInt_FMT " t=%12.8e h=% 8.2e  |x|=%9.2e  |x_e|=%9.2e  |x-x_e|=%9.2e\n",step,(double)t,(double)h,(double)nrm_x,(double)nrm_exact,(double)nrm_diff);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -421,7 +421,7 @@ int main(int argc,char **argv)
   ierr = TSGetSNESIterations(ts,&nonlinits);CHKERRQ(ierr);
   ierr = TSGetKSPIterations(ts,&linits);CHKERRQ(ierr);
   if (use_result) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"steps %" PetscInt_FMT " (%" PetscInt_FMT " rejected, %" PetscInt_FMT " SNES fails), ftime %g, nonlinits %" PetscInt_FMT ", linits %" PetscInt_FMT "\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits);CHKERRQ(ierr);
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -123,7 +123,7 @@ int main(int argc,char **args)
   ierr = VecAXPY(x,-1.0,u);CHKERRQ(ierr);
   ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its);CHKERRQ(ierr);
 
   /* change lambda and reassemble */
   ierr = VecSet(x,(scale-1.)*fctx.lambda);CHKERRQ(ierr);
@@ -151,7 +151,7 @@ int main(int argc,char **args)
   ierr = VecAXPY(u,-1.0,b);CHKERRQ(ierr);
   ierr = VecNorm(u,NORM_2,&norm);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its);CHKERRQ(ierr);
 
   ierr = PetscFree(coords);CHKERRQ(ierr);
   ierr = PetscFree(fctx.l);CHKERRQ(ierr);

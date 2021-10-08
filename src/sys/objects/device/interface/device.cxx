@@ -120,7 +120,7 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
   if (!--(*device)->refcnt) {
     PetscErrorCode ierr;
 
-    if (PetscUnlikelyDebug((*device)->refcnt < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %D reference count %D < 0",(*device)->id,(*device)->refcnt);
+    if (PetscUnlikelyDebug((*device)->refcnt < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice %" PetscInt_FMT " reference count %" PetscInt_FMT " < 0",(*device)->id,(*device)->refcnt);
     ierr = PetscFree(*device);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

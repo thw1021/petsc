@@ -156,9 +156,9 @@ PETSC_STATIC_INLINE PetscErrorCode compare(PetscDataType dt, void *ptr0, void *p
       *flg = (PetscBool)(*(PetscInt*)ptr0 == *(PetscInt*)ptr1);
       if (verbose) {
         if (*flg) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "%D", *(PetscInt*)ptr0);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT "", *(PetscInt*)ptr0);CHKERRQ(ierr);
         } else {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "%D != %D\n", *(PetscInt*)ptr0, *(PetscInt*)ptr1);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF, "%" PetscInt_FMT " != %" PetscInt_FMT "\n", *(PetscInt*)ptr0, *(PetscInt*)ptr1);CHKERRQ(ierr);
         }
       }
       break;
@@ -275,7 +275,7 @@ static PetscErrorCode CapsuleCreate(Capsule old, Capsule *newcapsule)
     c->sizes[t] = sizes[t];
     c->types[t] = types[t];
     ierr = PetscStrcpy(c->typeNames[t], tNames[t]);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(c->names[t], SLEN, "attr_%D_%s", c->id, tNames[t]);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(c->names[t], SLEN, "attr_%" PetscInt_FMT "_%s", c->id, tNames[t]);CHKERRQ(ierr);
     ierr = PetscMalloc(sizes[t], &c->vals[t]);CHKERRQ(ierr);
     ierr = PetscMemcpy(c->vals[t], vals[t], sizes[t]);CHKERRQ(ierr);
   }
@@ -575,7 +575,7 @@ static PetscErrorCode testAttributesAbsolutePath(PetscViewer viewer, const char 
 
     ierr = CapsuleCreate(old, &c);CHKERRQ(ierr);
     ierr = CapsuleWriteAttributes(c, viewer, buf);CHKERRQ(ierr);
-    if (capsules[paths2apaths[p]][s]) SETERRQ3(comm, PETSC_ERR_PLIB, "capsules[%D][%D] gets overwritten for %s", paths2apaths[p], s, buf);
+    if (capsules[paths2apaths[p]][s]) SETERRQ3(comm, PETSC_ERR_PLIB, "capsules[%" PetscInt_FMT "][%" PetscInt_FMT "] gets overwritten for %s", paths2apaths[p], s, buf);
     capsules[paths2apaths[p]][s] = c;
     old = c;
   }
@@ -661,7 +661,7 @@ static PetscErrorCode testAttributesPushedPath(PetscViewer viewer)
       if (verbose) {ierr = PetscPrintf(comm, "Write attributes to %s/%s\n", apaths[paths2apaths[p]], datasets[s]);CHKERRQ(ierr);}
       ierr = CapsuleCreate(old, &c);CHKERRQ(ierr);
       ierr = CapsuleWriteAttributes(c, viewer, datasets[s]);CHKERRQ(ierr);
-      if (capsules[paths2apaths[p]][s]) SETERRQ4(comm, PETSC_ERR_PLIB, "capsules[%D][%D] gets overwritten for %s/%s", paths2apaths[p], s, paths[p], datasets[s]);
+      if (capsules[paths2apaths[p]][s]) SETERRQ4(comm, PETSC_ERR_PLIB, "capsules[%" PetscInt_FMT "][%" PetscInt_FMT "] gets overwritten for %s/%s", paths2apaths[p], s, paths[p], datasets[s]);
       capsules[paths2apaths[p]][s] = c;
       old = c;
     }
@@ -747,7 +747,7 @@ static PetscErrorCode testObjectAttributes(PetscViewer viewer)
         if (verbose) {ierr = PetscPrintf(comm, "Write attributes to %s/%s\n", apaths[paths2apaths[p]], name);CHKERRQ(ierr);}
         ierr = CapsuleCreate(old, &c);CHKERRQ(ierr);
         ierr = CapsuleWriteAttributes(c, viewer, name);CHKERRQ(ierr);
-        if (capsules[paths2apaths[p]][s]) SETERRQ4(comm, PETSC_ERR_PLIB, "capsules[%D][%D] gets overwritten for %s/%s", paths2apaths[p], s, paths[p], name);
+        if (capsules[paths2apaths[p]][s]) SETERRQ4(comm, PETSC_ERR_PLIB, "capsules[%" PetscInt_FMT "][%" PetscInt_FMT "] gets overwritten for %s/%s", paths2apaths[p], s, paths[p], name);
         capsules[paths2apaths[p]][s] = c;
         old = c;
       }
@@ -829,8 +829,8 @@ static PetscErrorCode testAttributesDefaultValue(PetscViewer viewer)
   ints[1] = ints[0] * -333;
   ierr = PetscViewerHDF5ReadAttribute(viewer, "/", "attr_0_int", PETSC_INT, &ints[1], &ints[2]);CHKERRQ(ierr);
   ierr = PetscViewerHDF5ReadAttribute(viewer, "/", "attr_nonExisting_int", PETSC_INT, &ints[1], &ints[3]);CHKERRQ(ierr);
-  if (ints[2] != ints[0]) SETERRQ2(comm, PETSC_ERR_PLIB, "%D = ints[2] != ints[0] = %D", ints[2], ints[0]);
-  if (ints[3] != ints[1]) SETERRQ2(comm, PETSC_ERR_PLIB, "%D = ints[3] != ints[1] = %D", ints[3], ints[1]);
+  if (ints[2] != ints[0]) SETERRQ2(comm, PETSC_ERR_PLIB, "%" PetscInt_FMT " = ints[2] != ints[0] = %" PetscInt_FMT "", ints[2], ints[0]);
+  if (ints[3] != ints[1]) SETERRQ2(comm, PETSC_ERR_PLIB, "%" PetscInt_FMT " = ints[3] != ints[1] = %" PetscInt_FMT "", ints[3], ints[1]);
   if (verbose) {
     ierr = PetscIntView(nv, ints, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
@@ -881,7 +881,7 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL, "-n", &n, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL, "-verbose", &verbose, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetString(NULL,NULL, "-filename", filename, sizeof(filename), NULL);CHKERRQ(ierr);
-  if (verbose) {ierr = PetscPrintf(comm, "np ns %D %D\n", np, ns);CHKERRQ(ierr);}
+  if (verbose) {ierr = PetscPrintf(comm, "np ns %" PetscInt_FMT " %" PetscInt_FMT "\n", np, ns);CHKERRQ(ierr);}
 
   ierr = PetscViewerHDF5Open(comm, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
   ierr = testGroupsDatasets(viewer);CHKERRQ(ierr);
