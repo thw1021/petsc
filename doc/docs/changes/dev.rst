@@ -83,6 +83,10 @@ Changes: Development
 - Change ``DMAdaptor`` so that its ``-adaptor_refinement_h_min/h_max/a_max/p`` command line arguments become ``-dm_plex_metric_h_min/h_max/a_max/p``
 - Change ``DMPlexBuildFromCellListParallel()`` to have another argument, for the connectivity
 - Change ``DMPlexCreateFromCellListParallelPetsc()`` to have another argument, for the connectivity
+- Add ``DMPlexMetricSetRemesher()`` for setting the metric-based mesh adaptation package
+- Add ``DMPlexMetricGetRemesher()`` for getting the metric-based mesh adaptation package
+- Add ``DMPlexMetricSetVerbosity()`` for setting the verbosity of the metric-based mesh adaptation package
+- Add ``DMPlexMetricGetVerbosity()`` for getting the verbosity of the metric-based mesh adaptation package
 
 .. rubric:: FE/FV:
 
