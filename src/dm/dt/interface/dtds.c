@@ -143,7 +143,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS prob, PetscViewer viewer)
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer, "Discrete System with %d fields\n", prob->Nf);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "  cell total dim %D total comp %D\n", prob->totDim, prob->totComp);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "  cell total dim %" PetscInt_FMT " total comp %" PetscInt_FMT "\n", prob->totDim, prob->totComp);CHKERRQ(ierr);
   if (prob->isHybrid) {ierr = PetscViewerASCIIPrintf(viewer, "  hybrid cell\n");CHKERRQ(ierr);}
   for (f = 0; f < prob->Nf; ++f) {
     DSBoundary      b;
@@ -167,16 +167,16 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS prob, PetscViewer viewer)
       ierr = PetscFVGetQuadrature((PetscFV) obj, &q);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer, " FVM");CHKERRQ(ierr);
     }
-    else SETERRQ1(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %D", f);
-    if (Nc > 1) {ierr = PetscViewerASCIIPrintf(viewer, " %D components", Nc);CHKERRQ(ierr);}
-    else        {ierr = PetscViewerASCIIPrintf(viewer, " %D component ", Nc);CHKERRQ(ierr);}
+    else SETERRQ1(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT "", f);
+    if (Nc > 1) {ierr = PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT " components", Nc);CHKERRQ(ierr);}
+    else        {ierr = PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT " component ", Nc);CHKERRQ(ierr);}
     if (prob->implicit[f]) {ierr = PetscViewerASCIIPrintf(viewer, " (implicit)");CHKERRQ(ierr);}
     else                   {ierr = PetscViewerASCIIPrintf(viewer, " (explicit)");CHKERRQ(ierr);}
     if (q) {
       ierr = PetscQuadratureGetData(q, NULL, &Nqc, &Nq, NULL, NULL);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, " (Nq %D Nqc %D)", Nq, Nqc);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, " (Nq %" PetscInt_FMT " Nqc %" PetscInt_FMT ")", Nq, Nqc);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer, " %D-jet", prob->jetDegree[f]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT "-jet", prob->jetDegree[f]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
@@ -198,7 +198,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS prob, PetscViewer viewer)
         ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
         for (c = 0; c < b->Nc; ++c) {
           if (c > 0) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
-          ierr = PetscViewerASCIIPrintf(viewer, "%D", b->comps[c]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT "", b->comps[c]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
@@ -207,7 +207,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS prob, PetscViewer viewer)
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
       for (i = 0; i < b->Nv; ++i) {
         if (i > 0) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
-        ierr = PetscViewerASCIIPrintf(viewer, "%D", b->values[i]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT "", b->values[i]);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
@@ -229,7 +229,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS prob, PetscViewer viewer)
   }
   ierr = PetscDSGetConstants(prob, &numConstants, &constants);CHKERRQ(ierr);
   if (numConstants) {
-    ierr = PetscViewerASCIIPrintf(viewer, "%D constants\n", numConstants);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " constants\n", numConstants);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     for (f = 0; f < numConstants; ++f) {ierr = PetscViewerASCIIPrintf(viewer, "%g\n", (double) PetscRealPart(constants[f]));CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -706,7 +706,7 @@ PetscErrorCode PetscDSSetCoordinateDimension(PetscDS prob, PetscInt dimEmbed)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
-  if (dimEmbed < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension must be non-negative, not %D", dimEmbed);
+  if (dimEmbed < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension must be non-negative, not %" PetscInt_FMT "", dimEmbed);
   prob->dimEmbed = dimEmbed;
   PetscFunctionReturn(0);
 }
@@ -3201,9 +3201,9 @@ PetscErrorCode PetscDSAddBoundary(PetscDS ds, DMBoundaryConditionType type, cons
     PetscInt  c;
 
     ierr = PetscDSGetComponents(ds, &fcomps);CHKERRQ(ierr);
-    if (Nc > fcomps[field]) SETERRQ3(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Number of constrained components %D > %D components for field %D", Nc, fcomps[field], field);
+    if (Nc > fcomps[field]) SETERRQ3(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Number of constrained components %" PetscInt_FMT " > %" PetscInt_FMT " components for field %" PetscInt_FMT "", Nc, fcomps[field], field);
     for (c = 0; c < Nc; ++c) {
-      if (comps[c] < 0 || comps[c] >= fcomps[field]) SETERRQ4(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Constrained component[%D] %D not in [0, %D) components for field %D", c, comps[c], fcomps[field], field);
+      if (comps[c] < 0 || comps[c] >= fcomps[field]) SETERRQ4(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Constrained component[%" PetscInt_FMT "] %" PetscInt_FMT " not in [0, %" PetscInt_FMT ") components for field %" PetscInt_FMT "", c, comps[c], fcomps[field], field);
     }
   }
   ierr = PetscNew(&b);CHKERRQ(ierr);
@@ -3708,7 +3708,7 @@ PetscErrorCode PetscDSSelectEquations(PetscDS prob, PetscInt numFields, const Pe
   PetscValidHeaderSpecific(newprob, PETSCDS_CLASSID, 4);
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(newprob, &Nfn);CHKERRQ(ierr);
-  if (numFields > Nfn) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields %D to transfer must not be greater then the total number of fields %D", numFields, Nfn);
+  if (numFields > Nfn) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields %" PetscInt_FMT " to transfer must not be greater then the total number of fields %" PetscInt_FMT "", numFields, Nfn);
   for (fn = 0; fn < numFields; ++fn) {
     const PetscInt   f = fields ? fields[fn] : fn;
     PetscPointFunc   obj;
@@ -3769,7 +3769,7 @@ PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
   PetscValidHeaderSpecific(newprob, PETSCDS_CLASSID, 2);
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetNumFields(newprob, &Ng);CHKERRQ(ierr);
-  if (Nf != Ng) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields must match %D != %D", Nf, Ng);
+  if (Nf != Ng) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields must match %" PetscInt_FMT " != %" PetscInt_FMT "", Nf, Ng);
   ierr = PetscDSGetWeakForm(prob, &wf);CHKERRQ(ierr);
   ierr = PetscDSGetWeakForm(newprob, &newwf);CHKERRQ(ierr);
   ierr = PetscWeakFormCopy(wf, newwf);CHKERRQ(ierr);
@@ -3851,7 +3851,7 @@ PetscErrorCode PetscDSGetHeightSubspace(PetscDS prob, PetscInt height, PetscDS *
   if (height == 0) {*subprob = prob; PetscFunctionReturn(0);}
   ierr = PetscDSGetNumFields(prob, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetSpatialDimension(prob, &dim);CHKERRQ(ierr);
-  if (height > dim) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_OUTOFRANGE, "DS can only handle height in [0, %D], not %D", dim, height);
+  if (height > dim) SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_OUTOFRANGE, "DS can only handle height in [0, %" PetscInt_FMT "], not %" PetscInt_FMT "", dim, height);
   if (!prob->subprobs) {ierr = PetscCalloc1(dim, &prob->subprobs);CHKERRQ(ierr);}
   if (!prob->subprobs[height-1]) {
     PetscInt cdim;
@@ -3887,7 +3887,7 @@ PetscErrorCode PetscDSGetDiscType_Internal(PetscDS ds, PetscInt f, PetscDiscType
   PetscValidPointer(disctype, 3);
   *disctype = PETSC_DISC_NONE;
   ierr = PetscDSGetNumFields(ds, &Nf);CHKERRQ(ierr);
-  if (f >= Nf) SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_SIZ, "Field %D must be in [0, %D)", f, Nf);
+  if (f >= Nf) SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_SIZ, "Field %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", f, Nf);
   ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
   if (obj) {
     ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);

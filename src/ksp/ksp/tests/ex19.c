@@ -70,8 +70,8 @@ int main(int argc,char **argv)
 
   user.fine.mx = user.ratio*(user.coarse.mx-1)+1; user.fine.my = user.ratio*(user.coarse.my-1)+1;
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Coarse grid size %D by %D\n",user.coarse.mx,user.coarse.my);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Fine grid size %D by %D\n",user.fine.mx,user.fine.my);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Coarse grid size %" PetscInt_FMT " by %" PetscInt_FMT "\n",user.coarse.mx,user.coarse.my);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Fine grid size %" PetscInt_FMT " by %" PetscInt_FMT "\n",user.fine.mx,user.fine.my);CHKERRQ(ierr);
 
   n = user.fine.mx*user.fine.my; N = user.coarse.mx*user.coarse.my;
 
@@ -143,7 +143,7 @@ int main(int argc,char **argv)
 
   ierr = KSPSolve(ksp,user.fine.b,user.fine.x);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %D\n",its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %" PetscInt_FMT "\n",its);CHKERRQ(ierr);
 
   /* Free data structures */
   ierr = MatDestroy(&user.fine.J);CHKERRQ(ierr);

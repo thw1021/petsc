@@ -35,8 +35,8 @@ int main(int argc,char **argv)
   ierr = AOPetscToApplication(ao,4,getapp);CHKERRQ(ierr);
   ierr = AOApplicationToPetsc(ao,3,getpetsc);CHKERRQ(ierr);
 
-  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 2,1,9,7 PetscToApplication %D %D %D %D\n",rank,getapp[0],getapp[1],getapp[2],getapp[3]);CHKERRQ(ierr);
-  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 0,3,4 ApplicationToPetsc %D %D %D\n",rank,getpetsc[0],getpetsc[1],getpetsc[2]);CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 2,1,9,7 PetscToApplication %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",rank,getapp[0],getapp[1],getapp[2],getapp[3]);CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 0,3,4 ApplicationToPetsc %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",rank,getpetsc[0],getpetsc[1],getpetsc[2]);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
   ierr = AODestroy(&ao);CHKERRQ(ierr);
 
@@ -110,8 +110,8 @@ int main(int argc,char **argv)
   ierr = AOPetscToApplication(ao,4,getapp3);CHKERRQ(ierr);
   ierr = AOApplicationToPetsc(ao,3,getpetsc3);CHKERRQ(ierr);
 
-  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 2,1,9,7 PetscToApplication %D %D %D %D\n",rank,getapp3[0],getapp3[1],getapp3[2],getapp3[3]);CHKERRQ(ierr);
-  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 0,3,4 ApplicationToPetsc %D %D %D\n",rank,getpetsc3[0],getpetsc3[1],getpetsc3[2]);CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 2,1,9,7 PetscToApplication %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",rank,getapp3[0],getapp3[1],getapp3[2],getapp3[3]);CHKERRQ(ierr);
+  ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD,"[%d] 0,3,4 ApplicationToPetsc %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",rank,getpetsc3[0],getpetsc3[1],getpetsc3[2]);CHKERRQ(ierr);
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD,PETSC_STDOUT);CHKERRQ(ierr);
 
   /* Check accuracy */;

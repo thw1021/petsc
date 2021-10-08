@@ -399,9 +399,9 @@ PetscErrorCode KSPLSQRMonitorResidual_LSQR(KSP ksp, PetscInt n, PetscReal rnorm,
   ierr = PetscViewerASCIIAddTab(viewer, tablevel);CHKERRQ(ierr);
   if (n == 0 && prefix) {ierr = PetscViewerASCIIPrintf(viewer, "  Residual norm, norm of normal equations, and matrix norm for %s solve.\n", prefix);CHKERRQ(ierr);}
   if (!n) {
-    ierr = PetscViewerASCIIPrintf(viewer,"%3D KSP resid norm %14.12e\n",n,(double)rnorm);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"%3" PetscInt_FMT " KSP resid norm %14.12e\n",n,(double)rnorm);CHKERRQ(ierr);
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"%3D KSP resid norm %14.12e normal eq resid norm %14.12e matrix norm %14.12e\n",n,(double)rnorm,(double)lsqr->arnorm,(double)lsqr->anorm);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"%3" PetscInt_FMT " KSP resid norm %14.12e normal eq resid norm %14.12e matrix norm %14.12e\n",n,(double)rnorm,(double)lsqr->arnorm,(double)lsqr->anorm);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIISubtractTab(viewer, tablevel);CHKERRQ(ierr);
   ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
@@ -607,10 +607,10 @@ PetscErrorCode  KSPLSQRConvergedDefault(KSP ksp,PetscInt n,PetscReal rnorm,KSPCo
 
   /* check for convergence in min{|b-A*x|} */
   if (lsqr->arnorm < ksp->abstol) {
-    ierr = PetscInfo3(ksp,"LSQR solver has converged. Normal equation residual %14.12e is less than absolute tolerance %14.12e at iteration %D\n",(double)lsqr->arnorm,(double)ksp->abstol,n);CHKERRQ(ierr);
+    ierr = PetscInfo3(ksp,"LSQR solver has converged. Normal equation residual %14.12e is less than absolute tolerance %14.12e at iteration %" PetscInt_FMT "\n",(double)lsqr->arnorm,(double)ksp->abstol,n);CHKERRQ(ierr);
     *reason = KSP_CONVERGED_ATOL_NORMAL;
   } else if (lsqr->arnorm < ksp->rtol * lsqr->anorm * rnorm) {
-    ierr = PetscInfo6(ksp,"LSQR solver has converged. Normal equation residual %14.12e is less than rel. tol. %14.12e times %s Frobenius norm of matrix %14.12e times residual %14.12e at iteration %D\n",(double)lsqr->arnorm,(double)ksp->rtol,lsqr->exact_norm?"exact":"approx.",(double)lsqr->anorm,(double)rnorm,n);CHKERRQ(ierr);
+    ierr = PetscInfo6(ksp,"LSQR solver has converged. Normal equation residual %14.12e is less than rel. tol. %14.12e times %s Frobenius norm of matrix %14.12e times residual %14.12e at iteration %" PetscInt_FMT "\n",(double)lsqr->arnorm,(double)ksp->rtol,lsqr->exact_norm?"exact":"approx.",(double)lsqr->anorm,(double)rnorm,n);CHKERRQ(ierr);
     *reason = KSP_CONVERGED_RTOL_NORMAL;
   }
   PetscFunctionReturn(0);

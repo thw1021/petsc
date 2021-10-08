@@ -85,7 +85,7 @@ static PetscErrorCode TaoLineSearchView_OWArmijo(TaoLineSearch ls, PetscViewer p
     }
     ierr = PetscViewerASCIIPrintf(pv,": alpha=%g beta=%g ",(double)armP->alpha,(double)armP->beta);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(pv,"sigma=%g ",(double)armP->sigma);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(pv,"memsize=%D\n",armP->memorySize);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(pv,"memsize=%" PetscInt_FMT "\n",armP->memorySize);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -164,7 +164,7 @@ static PetscErrorCode TaoLineSearchApply_OWArmijo(TaoLineSearch ls, Vec x, Petsc
     ierr = PetscInfo1(ls,"OWArmijo line search error: sigma (%g) invalid\n", (double)armP->sigma);CHKERRQ(ierr);
     ls->reason=TAOLINESEARCH_FAILED_BADPARAMETER;
   } else if (armP->memorySize < 1) {
-    ierr = PetscInfo1(ls,"OWArmijo line search error: memory_size (%D) < 1\n", armP->memorySize);CHKERRQ(ierr);
+    ierr = PetscInfo1(ls,"OWArmijo line search error: memory_size (%" PetscInt_FMT ") < 1\n", armP->memorySize);CHKERRQ(ierr);
     ls->reason=TAOLINESEARCH_FAILED_BADPARAMETER;
   }  else if ((armP->referencePolicy != REFERENCE_MAX) && (armP->referencePolicy != REFERENCE_AVE) && (armP->referencePolicy != REFERENCE_MEAN)) {
     ierr = PetscInfo(ls,"OWArmijo line search error: reference_policy invalid\n");CHKERRQ(ierr);
@@ -276,7 +276,7 @@ static PetscErrorCode TaoLineSearchApply_OWArmijo(TaoLineSearch ls, Vec x, Petsc
     ierr = PetscInfo(ls, "Step length is below tolerance.\n");CHKERRQ(ierr);
     ls->reason = TAOLINESEARCH_HALTED_RTOL;
   } else if (ls->nfeval >= ls->max_funcs) {
-    ierr = PetscInfo2(ls, "Number of line search function evals (%D) > maximum allowed (%D)\n",ls->nfeval, ls->max_funcs);CHKERRQ(ierr);
+    ierr = PetscInfo2(ls, "Number of line search function evals (%" PetscInt_FMT ") > maximum allowed (%" PetscInt_FMT ")\n",ls->nfeval, ls->max_funcs);CHKERRQ(ierr);
     ls->reason = TAOLINESEARCH_HALTED_MAXFCN;
   }
   if (ls->reason) PetscFunctionReturn(0);
@@ -299,7 +299,7 @@ static PetscErrorCode TaoLineSearchApply_OWArmijo(TaoLineSearch ls, Vec x, Petsc
   if (!g_computed) {
     ierr = TaoLineSearchComputeGradient(ls, x, g);CHKERRQ(ierr);
   }
-  ierr = PetscInfo2(ls, "%D function evals in line search, step = %10.4f\n",ls->nfeval, (double)ls->step);CHKERRQ(ierr);
+  ierr = PetscInfo2(ls, "%" PetscInt_FMT " function evals in line search, step = %10.4f\n",ls->nfeval, (double)ls->step);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

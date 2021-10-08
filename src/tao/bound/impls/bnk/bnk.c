@@ -1233,23 +1233,23 @@ PetscErrorCode TaoView_BNK(Tao tao, PetscViewer viewer)
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     if (bnk->M) {
       ierr = MatLMVMGetRejectCount(bnk->M,&nrejects);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "Rejected BFGS updates: %D\n",nrejects);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "Rejected BFGS updates: %" PetscInt_FMT "\n",nrejects);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer, "CG steps: %D\n", bnk->tot_cg_its);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Newton steps: %D\n", bnk->newt);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "CG steps: %" PetscInt_FMT "\n", bnk->tot_cg_its);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Newton steps: %" PetscInt_FMT "\n", bnk->newt);CHKERRQ(ierr);
     if (bnk->M) {
-      ierr = PetscViewerASCIIPrintf(viewer, "BFGS steps: %D\n", bnk->bfgs);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", bnk->bfgs);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %D\n", bnk->sgrad);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", bnk->grad);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %" PetscInt_FMT "\n", bnk->sgrad);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", bnk->grad);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "KSP termination reasons:\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  atol: %D\n", bnk->ksp_atol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  rtol: %D\n", bnk->ksp_rtol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  ctol: %D\n", bnk->ksp_ctol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  negc: %D\n", bnk->ksp_negc);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  dtol: %D\n", bnk->ksp_dtol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  iter: %D\n", bnk->ksp_iter);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  othr: %D\n", bnk->ksp_othr);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  atol: %" PetscInt_FMT "\n", bnk->ksp_atol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  rtol: %" PetscInt_FMT "\n", bnk->ksp_rtol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  ctol: %" PetscInt_FMT "\n", bnk->ksp_ctol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  negc: %" PetscInt_FMT "\n", bnk->ksp_negc);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  dtol: %" PetscInt_FMT "\n", bnk->ksp_dtol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  iter: %" PetscInt_FMT "\n", bnk->ksp_iter);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  othr: %" PetscInt_FMT "\n", bnk->ksp_othr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

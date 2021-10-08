@@ -161,7 +161,7 @@ int main(int argc,char **argv)
   ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],ftime,steps);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],ftime,steps);CHKERRQ(ierr);
 
   if (user->io) {
     /* Print the numerical solution to screen and then dump to file */

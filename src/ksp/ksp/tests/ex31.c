@@ -45,7 +45,7 @@ int main(int argc,char **args)
   ierr = MatLoad(A,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
-  if (m != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%D, %D)", m, n);
+  if (m != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%" PetscInt_FMT ", %" PetscInt_FMT ")", m, n);
 
   /* Create rhs vector of all ones */
   ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
@@ -134,14 +134,14 @@ int main(int argc,char **args)
   ierr = MatMult(A,x,u);CHKERRQ(ierr);
   ierr = VecAXPY(u,-1.0,b);CHKERRQ(ierr);
   ierr = VecNorm(u,NORM_2,&norm);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3D\n",its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm %g\n",(double)norm);CHKERRQ(ierr);
   flg  = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL, "-ksp_reason", &flg,NULL);CHKERRQ(ierr);
   if (flg) {
     KSPConvergedReason reason;
     ierr = KSPGetConvergedReason(ksp,&reason);CHKERRQ(ierr);
-    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason);
   }
 
   /* Free work space.*/

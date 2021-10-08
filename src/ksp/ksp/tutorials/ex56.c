@@ -35,7 +35,7 @@ int main(int argc,char **args)
   ierr = PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");CHKERRQ(ierr);
   {
     char nestring[256];
-    ierr = PetscSNPrintf(nestring,sizeof nestring,"number of elements in each direction, ne+1 must be a multiple of %D (sizes^{1/3})",(PetscInt)(PetscPowReal((PetscReal)npe,1./3.) + .5));CHKERRQ(ierr);
+    ierr = PetscSNPrintf(nestring,sizeof nestring,"number of elements in each direction, ne+1 must be a multiple of %" PetscInt_FMT " (sizes^{1/3})",(PetscInt)(PetscPowReal((PetscReal)npe,1./3.) + .5));CHKERRQ(ierr);
     ierr = PetscOptionsInt("-ne",nestring,"",ne,&ne,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-log_stages","Log stages of solve separately","",log_stages,&log_stages,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-alpha","material coefficient inside circle","",soft_alpha,&soft_alpha,NULL);CHKERRQ(ierr);
@@ -102,7 +102,7 @@ int main(int argc,char **args)
         }
       }
     }
-    if (ic != m) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ic %D does not equal m %D",ic,m);
+    if (ic != m) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"ic %" PetscInt_FMT " does not equal m %" PetscInt_FMT "",ic,m);
 
     /* create stiffness matrix */
     ierr = MatCreate(comm,&Amat);CHKERRQ(ierr);
@@ -122,7 +122,7 @@ int main(int argc,char **args)
 
     ierr = MatGetOwnershipRange(Amat,&Istart,&Iend);CHKERRQ(ierr);
 
-    if (m != Iend - Istart) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"m %D does not equal Iend %D - Istart %D",m,Iend,Istart);
+    if (m != Iend - Istart) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"m %" PetscInt_FMT " does not equal Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT "",m,Iend,Istart);
     /* generate element matrices */
     {
       PetscBool hasData = PETSC_TRUE;

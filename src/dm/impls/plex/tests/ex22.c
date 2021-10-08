@@ -42,7 +42,7 @@ static PetscErrorCode testIdentity(DM dm, PetscBool dmIsSimplicial, PetscInt cel
       max = PetscMax(max,PetscAbsReal(preimage[i * dimR + j] - inverted[i * dimR + j]));
     }
     if (max > tol) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"Bad inversion for cell %D with error %g (tol %g): (",cell,(double)max,(double)tol);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"Bad inversion for cell %" PetscInt_FMT " with error %g (tol %g): (",cell,(double)max,(double)tol);CHKERRQ(ierr);
       for (j = 0; j < dimR; j++) {
         ierr = PetscPrintf(PETSC_COMM_SELF,"%+f",(double) preimage[i * dimR + j]);CHKERRQ(ierr);
         if (j < dimR - 1) {
@@ -68,7 +68,7 @@ static PetscErrorCode testIdentity(DM dm, PetscBool dmIsSimplicial, PetscInt cel
       char   strBuf[BUFSIZ] = {'\0'};
       size_t offset = 0, count;
 
-      ierr = PetscSNPrintfCount(strBuf + offset,BUFSIZ-offset,"Good inversion for cell %D: (",&count,cell);CHKERRQ(ierr);
+      ierr = PetscSNPrintfCount(strBuf + offset,BUFSIZ-offset,"Good inversion for cell %" PetscInt_FMT ": (",&count,cell);CHKERRQ(ierr);
       offset += count;
       for (j = 0; j < dimR; j++) {
         ierr = PetscSNPrintfCount(strBuf + offset,BUFSIZ-offset,"%+f",&count,(double) preimage[i * dimR + j]);CHKERRQ(ierr);
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
             ierr = DMSetCoordinatesLocal(dm,localCoords);CHKERRQ(ierr);
             ierr = VecDestroy(&localCoords);CHKERRQ(ierr);
           }
-          ierr = PetscInfo4(dm,"Testing %s%D %DD mesh embedded in %DD\n",isSimplex ? "P" : "Q" , order, dim, dimC);CHKERRQ(ierr);
+          ierr = PetscInfo4(dm,"Testing %s%" PetscInt_FMT " %" PetscInt_FMT "D mesh embedded in %" PetscInt_FMT "D\n",isSimplex ? "P" : "Q" , order, dim, dimC);CHKERRQ(ierr);
           ierr = DMGetCoordinatesLocal(dm,&coords);CHKERRQ(ierr);
           ierr = VecGetLocalSize(coords,&n);CHKERRQ(ierr);
           if (dimC > dim) { /* reembed in higher dimension */
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
               PetscInt nDof;
 
               ierr = PetscSectionGetDof(sec,p,&nDof);CHKERRQ(ierr);
-              if (nDof % dim) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Coordinate section point %D has %D dofs != 0 mod %D",p,nDof,dim);
+              if (nDof % dim) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Coordinate section point %" PetscInt_FMT " has %" PetscInt_FMT " dofs != 0 mod %" PetscInt_FMT "",p,nDof,dim);
               ierr = PetscSectionSetDof(newSec,p,(nDof/dim)*dimC);CHKERRQ(ierr);
               ierr = PetscSectionSetFieldDof(newSec,p,0,(nDof/dim)*dimC);CHKERRQ(ierr);
             }

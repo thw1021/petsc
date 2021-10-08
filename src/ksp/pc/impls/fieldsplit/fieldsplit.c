@@ -100,9 +100,9 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
   if (iascii) {
     if (jac->bs > 0) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D, blocksize = %D\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT ", blocksize = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs);CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D\n",PCCompositeTypes[jac->type],jac->nsplits);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits);CHKERRQ(ierr);
     }
     if (pc->useAmat) {
       ierr = PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for blocks\n");CHKERRQ(ierr);
@@ -116,18 +116,18 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"  Solver info for each split is in the following KSP objects:\n");CHKERRQ(ierr);
     for (i=0; i<jac->nsplits; i++) {
       if (ilink->fields) {
-        ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Fields ",i);CHKERRQ(ierr);
         ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
         for (j=0; j<ilink->nfields; j++) {
           if (j > 0) {
             ierr = PetscViewerASCIIPrintf(viewer,",");CHKERRQ(ierr);
           }
-          ierr = PetscViewerASCIIPrintf(viewer," %D",ilink->fields[j]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT "",ilink->fields[j]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Defined by IS\n",i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Defined by IS\n",i);CHKERRQ(ierr);
       }
       ierr  = KSPView(ilink->ksp,viewer);CHKERRQ(ierr);
       ilink = ilink->next;
@@ -168,7 +168,7 @@ static PetscErrorCode PCView_FieldSplit_Schur(PC pc,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
   if (iascii) {
     if (jac->bs > 0) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with Schur preconditioner, blocksize = %D, factorization %s\n",jac->bs,PCFieldSplitSchurFactTypes[jac->schurfactorization]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with Schur preconditioner, blocksize = %" PetscInt_FMT ", factorization %s\n",jac->bs,PCFieldSplitSchurFactTypes[jac->schurfactorization]);CHKERRQ(ierr);
     } else {
       ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with Schur preconditioner, factorization %s\n",PCFieldSplitSchurFactTypes[jac->schurfactorization]);CHKERRQ(ierr);
     }
@@ -202,18 +202,18 @@ static PetscErrorCode PCView_FieldSplit_Schur(PC pc,PetscViewer viewer)
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     for (i=0; i<jac->nsplits; i++) {
       if (ilink->fields) {
-        ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Fields ",i);CHKERRQ(ierr);
         ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
         for (j=0; j<ilink->nfields; j++) {
           if (j > 0) {
             ierr = PetscViewerASCIIPrintf(viewer,",");CHKERRQ(ierr);
           }
-          ierr = PetscViewerASCIIPrintf(viewer," %D",ilink->fields[j]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT "",ilink->fields[j]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Defined by IS\n",i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Defined by IS\n",i);CHKERRQ(ierr);
       }
       ilink = ilink->next;
     }
@@ -293,9 +293,9 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
   if (iascii) {
     if (jac->bs > 0) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D, blocksize = %D\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT ", blocksize = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs);CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D\n",PCCompositeTypes[jac->type],jac->nsplits);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits);CHKERRQ(ierr);
     }
     if (pc->useAmat) {
       ierr = PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for blocks\n");CHKERRQ(ierr);
@@ -307,23 +307,23 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for off-diagonal blocks\n");CHKERRQ(ierr);
     }
 
-    ierr = PetscViewerASCIIPrintf(viewer,"  Stopping tolerance=%.1e, delay in error estimate=%D, maximum iterations=%D\n",jac->gkbtol,jac->gkbdelay,jac->gkbmaxit);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Stopping tolerance=%.1e, delay in error estimate=%" PetscInt_FMT ", maximum iterations=%" PetscInt_FMT "\n",jac->gkbtol,jac->gkbdelay,jac->gkbmaxit);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Solver info for H = A00 + nu*A01*A01' matrix:\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
 
     if (ilink->fields) {
-      ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",0);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Fields ",0);CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
       for (j=0; j<ilink->nfields; j++) {
         if (j > 0) {
           ierr = PetscViewerASCIIPrintf(viewer,",");CHKERRQ(ierr);
         }
-        ierr = PetscViewerASCIIPrintf(viewer," %D",ilink->fields[j]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT "",ilink->fields[j]);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
     } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"Split number %D Defined by IS\n",0);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Defined by IS\n",0);CHKERRQ(ierr);
     }
     ierr  = KSPView(ilink->ksp,viewer);CHKERRQ(ierr);
 
@@ -363,9 +363,9 @@ static PetscErrorCode PCFieldSplitSetRuntimeSplits_Private(PC pc)
   ierr = PetscMalloc1(jac->bs,&ifields);CHKERRQ(ierr);
   ierr = PetscMalloc1(jac->bs,&ifields_col);CHKERRQ(ierr);
   for (i=0,flg=PETSC_TRUE;; i++) {
-    ierr        = PetscSNPrintf(splitname,sizeof(splitname),"%D",i);CHKERRQ(ierr);
-    ierr        = PetscSNPrintf(optionname,sizeof(optionname),"-pc_fieldsplit_%D_fields",i);CHKERRQ(ierr);
-    ierr        = PetscSNPrintf(optionname_col,sizeof(optionname_col),"-pc_fieldsplit_%D_fields_col",i);CHKERRQ(ierr);
+    ierr        = PetscSNPrintf(splitname,sizeof(splitname),"%" PetscInt_FMT "",i);CHKERRQ(ierr);
+    ierr        = PetscSNPrintf(optionname,sizeof(optionname),"-pc_fieldsplit_%" PetscInt_FMT "_fields",i);CHKERRQ(ierr);
+    ierr        = PetscSNPrintf(optionname_col,sizeof(optionname_col),"-pc_fieldsplit_%" PetscInt_FMT "_fields_col",i);CHKERRQ(ierr);
     nfields     = jac->bs;
     nfields_col = jac->bs;
     ierr        = PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix,optionname,ifields,&nfields,&flg);CHKERRQ(ierr);
@@ -422,7 +422,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
         char     optionname[128], splitname[8];
         PetscInt nfields = numFields;
 
-        ierr = PetscSNPrintf(optionname, sizeof(optionname), "-pc_fieldsplit_%D_fields", i);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(optionname, sizeof(optionname), "-pc_fieldsplit_%" PetscInt_FMT "_fields", i);CHKERRQ(ierr);
         ierr = PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix, optionname, ifields, &nfields, &flg);CHKERRQ(ierr);
         if (!flg) break;
         if (numFields > 128) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %d > 128 fields", numFields);
@@ -430,7 +430,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
         if (nfields == 1) {
           ierr = PCFieldSplitSetIS(pc, fieldNames[ifields[0]], compField);CHKERRQ(ierr);
         } else {
-          ierr = PetscSNPrintf(splitname, sizeof(splitname), "%D", i);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(splitname, sizeof(splitname), "%" PetscInt_FMT "", i);CHKERRQ(ierr);
           ierr = PCFieldSplitSetIS(pc, splitname, compField);CHKERRQ(ierr);
         }
         ierr = ISDestroy(&compField);CHKERRQ(ierr);
@@ -546,7 +546,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
           } else {
             for (i=0; i<jac->bs; i++) {
               char splitname[8];
-              ierr = PetscSNPrintf(splitname,sizeof(splitname),"%D",i);CHKERRQ(ierr);
+              ierr = PetscSNPrintf(splitname,sizeof(splitname),"%" PetscInt_FMT "",i);CHKERRQ(ierr);
               ierr = PCFieldSplitSetFields(pc,splitname,1,&i,&i);CHKERRQ(ierr);
             }
             jac->defaultsplit = PETSC_TRUE;
@@ -1232,9 +1232,9 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
   if (jac->type == PC_COMPOSITE_ADDITIVE) {
     if (jac->defaultsplit) {
       ierr = VecGetBlockSize(x,&bs);CHKERRQ(ierr);
-      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT "",bs,jac->bs);
       ierr = VecGetBlockSize(y,&bs);CHKERRQ(ierr);
-      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT "",bs,jac->bs);
       ierr = VecStrideGatherAll(x,jac->x,INSERT_VALUES);CHKERRQ(ierr);
       while (ilink) {
         ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
@@ -1393,7 +1393,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
 
   iterGKB = 1; lowbnd = 2*jac->gkbtol;
   if (jac->gkbmonitor) {
-      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3D GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd);CHKERRQ(ierr);
   }
 
   while (iterGKB < jac->gkbmaxit && lowbnd > jac->gkbtol) {
@@ -1440,7 +1440,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
       vecz[jac->gkbdelay-j-1] = vecz[jac->gkbdelay-j-2];
     }
     if (jac->gkbmonitor) {
-      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3D GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd);CHKERRQ(ierr);
     }
   }
 
@@ -1473,9 +1473,9 @@ static PetscErrorCode PCApplyTranspose_FieldSplit(PC pc,Vec x,Vec y)
   if (jac->type == PC_COMPOSITE_ADDITIVE) {
     if (jac->defaultsplit) {
       ierr = VecGetBlockSize(x,&bs);CHKERRQ(ierr);
-      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT "",bs,jac->bs);
       ierr = VecGetBlockSize(y,&bs);CHKERRQ(ierr);
-      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      if (jac->bs > 0 && bs != jac->bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT "",bs,jac->bs);
       ierr = VecStrideGatherAll(x,jac->x,INSERT_VALUES);CHKERRQ(ierr);
       while (ilink) {
         ierr = PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL);CHKERRQ(ierr);
@@ -1666,15 +1666,15 @@ static PetscErrorCode  PCFieldSplitSetFields_FieldSplit(PC pc,const char splitna
     PetscFunctionReturn(0);
   }
   for (i=0; i<n; i++) {
-    if (fields[i] >= jac->bs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %D requested but only %D exist",fields[i],jac->bs);
-    if (fields[i] < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %D requested",fields[i]);
+    if (fields[i] >= jac->bs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %" PetscInt_FMT " requested but only %" PetscInt_FMT " exist",fields[i],jac->bs);
+    if (fields[i] < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %" PetscInt_FMT " requested",fields[i]);
   }
   ierr = PetscNew(&ilink);CHKERRQ(ierr);
   if (splitname) {
     ierr = PetscStrallocpy(splitname,&ilink->splitname);CHKERRQ(ierr);
   } else {
     ierr = PetscMalloc1(3,&ilink->splitname);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(ilink->splitname,2,"%D",jac->nsplits);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ilink->splitname,2,"%" PetscInt_FMT "",jac->nsplits);CHKERRQ(ierr);
   }
   ilink->event = jac->nsplits < 5 ? KSP_Solve_FS_0 + jac->nsplits : KSP_Solve_FS_0 + 4; /* Any split great than 4 gets logged in the 4th split */
   ierr = PetscMalloc1(n,&ilink->fields);CHKERRQ(ierr);
@@ -1719,7 +1719,7 @@ static PetscErrorCode  PCFieldSplitSchurGetSubKSP_FieldSplit(PC pc,PetscInt *n,K
     PetscInt nn;
 
     if (!jac->schur) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must call KSPSetUp() or PCSetUp() before calling PCFieldSplitSchurGetSubKSP()");
-    if (jac->nsplits != 2) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unexpected number of splits %D != 2",jac->nsplits);
+    if (jac->nsplits != 2) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unexpected number of splits %" PetscInt_FMT " != 2",jac->nsplits);
     nn   = jac->nsplits + (jac->kspupper != jac->head->ksp ? 1 : 0);
     ierr = PetscMalloc1(nn,subksp);CHKERRQ(ierr);
     (*subksp)[0] = jac->head->ksp;
@@ -1758,7 +1758,7 @@ static PetscErrorCode  PCFieldSplitGetSubKSP_FieldSplit(PC pc,PetscInt *n,KSP **
     (*subksp)[cnt++] = ilink->ksp;
     ilink            = ilink->next;
   }
-  if (cnt != jac->nsplits) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupt PCFIELDSPLIT object: number of splits in linked list %D does not match number in object %D",cnt,jac->nsplits);
+  if (cnt != jac->nsplits) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupt PCFIELDSPLIT object: number of splits in linked list %" PetscInt_FMT " does not match number in object %" PetscInt_FMT "",cnt,jac->nsplits);
   if (n) *n = jac->nsplits;
   PetscFunctionReturn(0);
 }
@@ -1862,7 +1862,7 @@ static PetscErrorCode  PCFieldSplitSetIS_FieldSplit(PC pc,const char splitname[]
     ierr = PetscStrallocpy(splitname,&ilink->splitname);CHKERRQ(ierr);
   } else {
     ierr = PetscMalloc1(8,&ilink->splitname);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(ilink->splitname,7,"%D",jac->nsplits);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ilink->splitname,7,"%" PetscInt_FMT "",jac->nsplits);CHKERRQ(ierr);
   }
   ilink->event  = jac->nsplits < 5 ? KSP_Solve_FS_0 + jac->nsplits : KSP_Solve_FS_0 + 4; /* Any split great than 4 gets logged in the 4th split */
   ierr          = PetscObjectReference((PetscObject)is);CHKERRQ(ierr);
@@ -1933,7 +1933,7 @@ PetscErrorCode  PCFieldSplitSetFields(PC pc,const char splitname[],PetscInt n,co
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidCharPointer(splitname,2);
-  if (n < 1) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %D in split \"%s\" not positive",n,splitname);
+  if (n < 1) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %" PetscInt_FMT " in split \"%s\" not positive",n,splitname);
   PetscValidIntPointer(fields,4);
   ierr = PetscTryMethod(pc,"PCFieldSplitSetFields_C",(PC,const char[],PetscInt,const PetscInt*,const PetscInt*),(pc,splitname,n,fields,fields_col));CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -2161,14 +2161,14 @@ PetscErrorCode PCFieldSplitGetISByIndex(PC pc,PetscInt index,IS *is)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (index < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %D requested",index);
+  if (index < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %" PetscInt_FMT " requested",index);
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(is,3);
   {
     PC_FieldSplit     *jac  = (PC_FieldSplit*) pc->data;
     PC_FieldSplitLink ilink = jac->head;
     PetscInt          i     = 0;
-    if (index >= jac->nsplits) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %D requested but only %D exist",index,jac->nsplits);
+    if (index >= jac->nsplits) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %" PetscInt_FMT " requested but only %" PetscInt_FMT " exist",index,jac->nsplits);
 
     while (i < index) {
       ilink = ilink->next;
@@ -2406,7 +2406,7 @@ PetscErrorCode  PCFieldSplitSchurGetS(PC pc,Mat *S)
   ierr = PetscStrcmp(t,PCFIELDSPLIT,&isfs);CHKERRQ(ierr);
   if (!isfs) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
+  if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %" PetscInt_FMT " instead",jac->type);
   if (S) *S = jac->schur;
   PetscFunctionReturn(0);
 }
@@ -2438,7 +2438,7 @@ PetscErrorCode  PCFieldSplitSchurRestoreS(PC pc,Mat *S)
   ierr = PetscStrcmp(t,PCFIELDSPLIT,&isfs);CHKERRQ(ierr);
   if (!isfs) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
+  if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %" PetscInt_FMT " instead",jac->type);
   if (!S || *S != jac->schur) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatSchurComplement restored is not the same as gotten");
   PetscFunctionReturn(0);
 }
@@ -2815,8 +2815,8 @@ static PetscErrorCode  PCFieldSplitSetBlockSize_FieldSplit(PC pc,PetscInt bs)
   PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
 
   PetscFunctionBegin;
-  if (bs < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Blocksize must be positive, you gave %D",bs);
-  if (jac->bs > 0 && jac->bs != bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Cannot change fieldsplit blocksize from %D to %D after it has been set",jac->bs,bs);
+  if (bs < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Blocksize must be positive, you gave %" PetscInt_FMT "",bs);
+  if (jac->bs > 0 && jac->bs != bs) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Cannot change fieldsplit blocksize from %" PetscInt_FMT " to %" PetscInt_FMT " after it has been set",jac->bs,bs);
   jac->bs = bs;
   PetscFunctionReturn(0);
 }

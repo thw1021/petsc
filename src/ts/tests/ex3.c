@@ -164,7 +164,7 @@ int main(int argc,char **argv)
   stepsz[0] = 1.0/(2.0*(nz-1)*(nz-1)); /* (mesh_size)^2/2.0 */
   ftime     = 0.0;
   for (k=0; k<nphase; k++) {
-    if (nphase > 1) {ierr = PetscPrintf(PETSC_COMM_WORLD,"Phase %D initial time %g, stepsz %g, duration: %g\n",k,(double)ftime,(double)stepsz[k],(double)((k+1)*T));CHKERRQ(ierr);}
+    if (nphase > 1) {ierr = PetscPrintf(PETSC_COMM_WORLD,"Phase %" PetscInt_FMT " initial time %g, stepsz %g, duration: %g\n",k,(double)ftime,(double)stepsz[k],(double)((k+1)*T));CHKERRQ(ierr);}
     ierr = TSSetTime(ts,ftime);CHKERRQ(ierr);
     ierr = TSSetTimeStep(ts,stepsz[k]);CHKERRQ(ierr);
     ierr = TSSetMaxSteps(ts,max_steps);CHKERRQ(ierr);
@@ -250,7 +250,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 
   norm_2 = PetscSqrtReal(h)*norm_2;
   ierr   = VecNorm(appctx->solution,NORM_MAX,&norm_max);CHKERRQ(ierr);
-  ierr   = PetscPrintf(PETSC_COMM_SELF,"Timestep %D: time = %g, 2-norm error = %6.4f, max norm error = %6.4f\n",step,(double)time,(double)norm_2,(double)norm_max);CHKERRQ(ierr);
+  ierr   = PetscPrintf(PETSC_COMM_SELF,"Timestep %" PetscInt_FMT ": time = %g, 2-norm error = %6.4f, max norm error = %6.4f\n",step,(double)time,(double)norm_2,(double)norm_max);CHKERRQ(ierr);
 
   /*
      Print debugging information if desired

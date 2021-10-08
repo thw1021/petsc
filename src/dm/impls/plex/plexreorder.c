@@ -108,19 +108,19 @@ PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS
       if (v < numValues-1) voff[v+2] += vsize[v] + voff[v+1];
       numPoints += vsize[v];
     }
-    if (numPoints != numCells) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label only covers %D cells < %D total", numPoints, numCells);
+    if (numPoints != numCells) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label only covers %" PetscInt_FMT " cells < %" PetscInt_FMT " total", numPoints, numCells);
     for (c = 0; c < numCells; ++c) {
       const PetscInt oldc = cperm[c];
       PetscInt       val, vloc;
 
       ierr = DMLabelGetValue(label, oldc, &val);CHKERRQ(ierr);
-      if (val == -1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cell %D not present in label", oldc);
+      if (val == -1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cell %" PetscInt_FMT " not present in label", oldc);
       ierr = PetscFindInt(val, numValues, values, &vloc);CHKERRQ(ierr);
-      if (vloc < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Value %D not present label", val);
+      if (vloc < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Value %" PetscInt_FMT " not present label", val);
       sperm[voff[vloc+1]++] = oldc;
     }
     for (v = 0; v < numValues; ++v) {
-      if (voff[v+1] - voff[v] != vsize[v]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of %D values found is %D != %D", values[v], voff[v+1] - voff[v], vsize[v]);
+      if (voff[v+1] - voff[v] != vsize[v]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of %" PetscInt_FMT " values found is %" PetscInt_FMT " != %" PetscInt_FMT "", values[v], voff[v+1] - voff[v], vsize[v]);
     }
     ierr = ISRestoreIndices(valueIS, &values);CHKERRQ(ierr);
     ierr = ISDestroy(&valueIS);CHKERRQ(ierr);

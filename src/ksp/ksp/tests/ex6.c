@@ -17,7 +17,7 @@ static PetscErrorCode KSPTestResidualMonitor(KSP ksp, PetscInt i, PetscReal r, v
   ierr = KSPBuildResidual(ksp,t[1],v[1],&v[1]);CHKERRQ(ierr);
   ierr = VecAXPY(v[1],-1.0,v[0]);CHKERRQ(ierr);
   ierr = VecNorm(v[1],NORM_INFINITY,&err);CHKERRQ(ierr);
-  if (err > PETSC_SMALL) SETERRQ3(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Inconsistent residual computed at step %D: %g (KSP %g)\n",i,(double)err,(double)r);
+  if (err > PETSC_SMALL) SETERRQ3(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Inconsistent residual computed at step %" PetscInt_FMT ": %g (KSP %g)\n",i,(double)err,(double)r);
   ierr = VecDestroyVecs(2,&t);CHKERRQ(ierr);
   ierr = VecDestroyVecs(2,&v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -120,10 +120,10 @@ int main(int argc,char **args)
     ierr = PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer);CHKERRQ(ierr);
     ierr = KSPView(ksp,viewer);CHKERRQ(ierr);
     ierr = PetscStrrchr(file,'/',&matrixname);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3D %2.0e %s \n",matrixname,its,norm,kspinfo);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n",matrixname,its,norm,kspinfo);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
   } else {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3D\n",its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm = %g\n",(double)norm);CHKERRQ(ierr);
   }
 

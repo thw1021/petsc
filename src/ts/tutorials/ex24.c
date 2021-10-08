@@ -79,7 +79,7 @@ int main(int argc,char **argv)
   ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
   ierr = TSGetSNESIterations(ts,&nits);CHKERRQ(ierr);
   ierr = TSGetKSPIterations(ts,&lits);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Time integrator took (%D,%D,%D) iterations to reach final time %g\n",steps,nits,lits,(double)ftime);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Time integrator took (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ") iterations to reach final time %g\n",steps,nits,lits,(double)ftime);CHKERRQ(ierr);
   if (view_final) {
     ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
@@ -129,8 +129,8 @@ static PetscErrorCode MonitorObjective(TS ts,PetscInt step,PetscReal t,Vec X,voi
   ierr = SNESGetLinearSolveIterations(snes,&linit);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,
                      (ctx->monitor_short
-                      ? "%3D t=%10.1e  dt=%10.1e  f=%10.1e  df=%10.1e  it=(%2D,%3D)\n"
-                      : "%3D t=%10.4e  dt=%10.4e  f=%10.4e  df=%10.4e  it=(%2D,%3D)\n"),
+                      ? "%3" PetscInt_FMT " t=%10.1e  dt=%10.1e  f=%10.1e  df=%10.1e  it=(%2" PetscInt_FMT ",%3" PetscInt_FMT ")\n"
+                      : "%3" PetscInt_FMT " t=%10.4e  dt=%10.4e  f=%10.4e  df=%10.4e  it=(%2" PetscInt_FMT ",%3" PetscInt_FMT ")\n"),
                      step,(double)t,(double)dt,(double)PetscRealPart(f),(double)gnorm,snesit,linit);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

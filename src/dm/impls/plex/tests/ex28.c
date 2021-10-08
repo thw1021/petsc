@@ -48,7 +48,7 @@ int main(int argc, char **args)
   ierr = PetscPrintf(comm, "ranges: ");CHKERRQ(ierr);
   for (p = 0; p <= size; ++p) {
     if (p > 0) {ierr = PetscPrintf(comm, ", ");CHKERRQ(ierr);}
-    ierr = PetscPrintf(comm, "%D", ranges[p]);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm, "%" PetscInt_FMT "", ranges[p]);CHKERRQ(ierr);
   }
   ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
   ierr = PetscPrintf(comm, "max:%.0lf min:%.0lf balance:%.11lf\n", (double) max,(double) min,(double) balance);CHKERRQ(ierr);

@@ -238,15 +238,15 @@ int main(int argc,char **args)
     }
     ierr = VecView(max, PETSC_VIEWER_DRAW_WORLD);CHKERRQ(ierr);
     ierr = VecMax(max, &idx, &val);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Largest max row element %g at row %D\n", (double)val, idx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Largest max row element %g at row %" PetscInt_FMT "\n", (double)val, idx);CHKERRQ(ierr);
     ierr = VecView(min, PETSC_VIEWER_DRAW_WORLD);CHKERRQ(ierr);
     ierr = VecMin(min, &idx, &val);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Smallest min row element %g at row %D\n", (double)val, idx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Smallest min row element %g at row %" PetscInt_FMT "\n", (double)val, idx);CHKERRQ(ierr);
     ierr = VecMin(max, &idx, &val);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Smallest max row element %g at row %D\n", (double)val, idx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Smallest max row element %g at row %" PetscInt_FMT "\n", (double)val, idx);CHKERRQ(ierr);
     ierr = VecPointwiseDivide(max, max, min);CHKERRQ(ierr);
     ierr = VecMax(max, &idx, &val);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Largest row ratio %g at row %D\n", (double)val, idx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Largest row ratio %g at row %" PetscInt_FMT "\n", (double)val, idx);CHKERRQ(ierr);
     ierr = VecView(max, PETSC_VIEWER_DRAW_WORLD);CHKERRQ(ierr);
     ierr = VecDestroy(&max);CHKERRQ(ierr);
     ierr = VecDestroy(&min);CHKERRQ(ierr);
@@ -336,7 +336,7 @@ int main(int argc,char **args)
         }
         ierr = VecAXPY(u,-1.0,b);CHKERRQ(ierr);
         ierr = VecNorm(u,NORM_2,&norm);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"  Number of iterations = %3D\n",its);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"  Number of iterations = %3" PetscInt_FMT "\n",its);CHKERRQ(ierr);
         if (!PetscIsNanScalar(norm)) {
           if (norm < 1.e-12) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,"  Residual norm < 1.e-12\n");CHKERRQ(ierr);
@@ -376,14 +376,14 @@ int main(int argc,char **args)
       ierr = PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer);CHKERRQ(ierr);
       ierr = KSPView(ksp,viewer);CHKERRQ(ierr);
       ierr = PetscStrrchr(file[PetscPreLoadIt],'/',&matrixname);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3D %2.0e %s \n",matrixname,its,norm,kspinfo);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n",matrixname,its,norm,kspinfo);CHKERRQ(ierr);
 
       /*
         Destroy the viewer
       */
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3D\n",its);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its);CHKERRQ(ierr);
       if (!PetscIsNanScalar(norm)) {
         if (norm < 1.e-12 && !PetscIsNanScalar((PetscScalar)norm)) {
           ierr = PetscPrintf(PETSC_COMM_WORLD,"  Residual norm < 1.e-12\n");CHKERRQ(ierr);
@@ -417,7 +417,7 @@ int main(int argc,char **args)
     if (flg) {
       KSPConvergedReason reason;
       ierr = KSPGetConvergedReason(ksp,&reason);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason);CHKERRQ(ierr);
     }
 
   }   /* while (num_numfac--) */

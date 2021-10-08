@@ -50,7 +50,7 @@ static PetscErrorCode TaoView_TRON(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"Total PG its: %D,",tron->total_gp_its);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Total PG its: %" PetscInt_FMT ",",tron->total_gp_its);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"PG tolerance: %g \n",(double)tron->pg_ftol);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

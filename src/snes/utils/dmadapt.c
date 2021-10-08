@@ -147,7 +147,7 @@ PetscErrorCode DMAdaptorView(DMAdaptor adaptor, PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectPrintClassNamePrefixType((PetscObject) adaptor, viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer, "DM Adaptor\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "  sequence length: %D\n", adaptor->numSeq);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "  sequence length: %" PetscInt_FMT "\n", adaptor->numSeq);CHKERRQ(ierr);
   ierr = VecTaggerView(adaptor->refineTag,  viewer);CHKERRQ(ierr);
   ierr = VecTaggerView(adaptor->coarsenTag, viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -378,7 +378,7 @@ PetscErrorCode DMAdaptorTransferSolution(DMAdaptor adaptor, DM dm, Vec x, DM adm
       ierr = DMInterpolate(dm, interp, adm);CHKERRQ(ierr);
       ierr = MatDestroy(&interp);CHKERRQ(ierr);
       break;
-    default: SETERRQ1(PetscObjectComm((PetscObject) adaptor), PETSC_ERR_SUP, "No built-in projection for this adaptation criterion: %D", adaptor->adaptCriterion);
+    default: SETERRQ1(PetscObjectComm((PetscObject) adaptor), PETSC_ERR_SUP, "No built-in projection for this adaptation criterion: %" PetscInt_FMT "", adaptor->adaptCriterion);
     }
   }
   PetscFunctionReturn(0);
@@ -609,7 +609,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       ierr = VecTaggerComputeIS(adaptor->coarsenTag, errVec, &coarsenIS,NULL);CHKERRQ(ierr);
       ierr = ISGetSize(refineIS, &nRefine);CHKERRQ(ierr);
       ierr = ISGetSize(coarsenIS, &nCoarsen);CHKERRQ(ierr);
-      ierr = PetscInfo2(adaptor, "DMAdaptor: numRefine %D, numCoarsen %D\n", nRefine, nCoarsen);CHKERRQ(ierr);
+      ierr = PetscInfo2(adaptor, "DMAdaptor: numRefine %" PetscInt_FMT ", numCoarsen %" PetscInt_FMT "\n", nRefine, nCoarsen);CHKERRQ(ierr);
       if (nRefine)  {ierr = DMLabelSetStratumIS(adaptLabel, DM_ADAPT_REFINE,  refineIS);CHKERRQ(ierr);}
       if (nCoarsen) {ierr = DMLabelSetStratumIS(adaptLabel, DM_ADAPT_COARSEN, coarsenIS);CHKERRQ(ierr);}
       ierr = ISDestroy(&coarsenIS);CHKERRQ(ierr);
@@ -673,7 +673,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       /*     Set target metric complexity */
       ierr = DMClone(dm, &dmMetric);CHKERRQ(ierr);
       N    = adaptor->Nadapt >= 0 ? adaptor->Nadapt : PetscPowRealInt(adaptor->refinementFactor, dim)*((PetscReal) (vEnd - vStart));
-      if (adaptor->monitor) {ierr = PetscPrintf(PETSC_COMM_SELF, "N_orig: %D N_adapt: %g\n", vEnd - vStart, N);CHKERRQ(ierr);}
+      if (adaptor->monitor) {ierr = PetscPrintf(PETSC_COMM_SELF, "N_orig: %" PetscInt_FMT " N_adapt: %g\n", vEnd - vStart, N);CHKERRQ(ierr);}
       ierr = DMPlexMetricSetTargetComplexity(dmMetric, (PetscReal) N);CHKERRQ(ierr);
       /*     Compute L-p normalized metric */
       ierr = DMPlexMetricNormalize(dmMetric, xHess, PETSC_TRUE, PETSC_TRUE, &metric);CHKERRQ(ierr);
@@ -688,7 +688,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       ierr = DMDestroy(&dmMetric);CHKERRQ(ierr);
     }
     break;
-    default: SETERRQ1(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %D", adaptor->adaptCriterion);
+    default: SETERRQ1(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %" PetscInt_FMT "", adaptor->adaptCriterion);
     }
     ierr = DMAdaptorPostAdapt(adaptor);CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);

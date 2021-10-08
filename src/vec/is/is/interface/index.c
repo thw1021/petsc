@@ -1888,7 +1888,7 @@ PetscErrorCode  ISSetBlockSize(IS is,PetscInt bs)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidLogicalCollectiveInt(is,bs,2);
-  if (bs < 1) SETERRQ1(PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %D, must be positive",bs);
+  if (bs < 1) SETERRQ1(PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %" PetscInt_FMT ", must be positive",bs);
   ierr = (*is->ops->setblocksize)(is,bs);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

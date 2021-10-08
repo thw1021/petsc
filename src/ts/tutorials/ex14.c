@@ -1446,8 +1446,8 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM pack,Vec X,const char file
         y3 = (Node*)x;
         y2 = (PetscScalar(*)[PRMNODE_SIZE])x2;
       }
-      ierr = PetscViewerASCIIPrintf(viewer3,"    <Piece Extent=\"%D %D %D %D %D %D\">\n",zs,zs+zm-1,ys,ys+ym-1,xs,xs+xm-1);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer2,"    <Piece Extent=\"%d %d %D %D %D %D\">\n",0,0,ys,ys+ym-1,xs,xs+xm-1);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer3,"    <Piece Extent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",zs,zs+zm-1,ys,ys+ym-1,xs,xs+xm-1);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer2,"    <Piece Extent=\"%d %d %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",0,0,ys,ys+ym-1,xs,xs+xm-1);CHKERRQ(ierr);
 
       ierr = PetscViewerASCIIPrintf(viewer3,"      <Points>\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer2,"      <Points>\n");CHKERRQ(ierr);
@@ -1482,7 +1482,7 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM pack,Vec X,const char file
 
         ierr = PetscViewerASCIIPrintf(viewer3,"        <DataArray type=\"Int32\" Name=\"rank\" NumberOfComponents=\"1\" format=\"ascii\">\n");CHKERRQ(ierr);
         for (i=0; i<nn; i+=dof) {
-          ierr = PetscViewerASCIIPrintf(viewer3,"%D\n",r);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer3,"%" PetscInt_FMT "\n",r);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(viewer3,"        </DataArray>\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIPrintf(viewer3,"      </PointData>\n");CHKERRQ(ierr);
@@ -1533,7 +1533,7 @@ static PetscErrorCode THITSMonitor(TS ts,PetscInt step,PetscReal t,Vec X,void *c
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(0); /* negative one is used to indicate an interpolated solution */
-  ierr = PetscPrintf(PetscObjectComm((PetscObject)ts),"%3D: t=%g\n",step,(double)t);CHKERRQ(ierr);
+  ierr = PetscPrintf(PetscObjectComm((PetscObject)ts),"%3" PetscInt_FMT ": t=%g\n",step,(double)t);CHKERRQ(ierr);
   if (thi->monitor_interval && step % thi->monitor_interval) PetscFunctionReturn(0);
   ierr = TSGetDM(ts,&pack);CHKERRQ(ierr);
   ierr = PetscSNPrintf(filename3,sizeof(filename3),"%s-3d-%03d.vts",thi->monitor_basename,step);CHKERRQ(ierr);
@@ -1617,7 +1617,7 @@ int main(int argc,char *argv[])
     PetscInt  Mx,My,Mz;
     ierr = DMCompositeGetEntries(pack,&da3,&da2);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da3,0, &Mz,&My,&Mx, 0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %D domain size (m) %8.2g x %8.2g x %8.2g, num elements %3d x %3d x %3d (%8d), size (m) %g x %g x %g\n",i,Lx,Ly,Lz,Mx,My,Mz,Mx*My*Mz,Lx/Mx,Ly/My,1000./(Mz-1));CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %" PetscInt_FMT " domain size (m) %8.2g x %8.2g x %8.2g, num elements %3d x %3d x %3d (%8d), size (m) %g x %g x %g\n",i,Lx,Ly,Lz,Mx,My,Mz,Mx*My*Mz,Lx/Mx,Ly/My,1000./(Mz-1));CHKERRQ(ierr);
   }
 
   ierr = DMCreateGlobalVector(pack,&X);CHKERRQ(ierr);
@@ -1639,7 +1639,7 @@ int main(int argc,char *argv[])
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
   ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Steps %D  final time %g\n",steps,(double)ftime);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Steps %" PetscInt_FMT "  final time %g\n",steps,(double)ftime);CHKERRQ(ierr);
 
   if (0) {ierr = THISolveStatistics(thi,ts,0,"Full");CHKERRQ(ierr);}
 

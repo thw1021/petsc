@@ -202,7 +202,7 @@ int main(int argc, char **argv)
   ierr = PetscObjectSetName((PetscObject)x,"Error");CHKERRQ(ierr);
   ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its);CHKERRQ(ierr);
 
   /* Destroy objects and finalize */
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);

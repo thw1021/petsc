@@ -40,7 +40,7 @@ PetscErrorCode DMPlexOrientPoint(DM dm, PetscInt p, PetscInt o)
     nO   = DMPolytopeTypeGetNumArrangments(ft)/2;
     newcone[c] = cone[arr[c*2+0]];
     newornt[c] = DMPolytopeTypeComposeOrientation(ft, arr[c*2+1], ornt[arr[c*2+0]]);
-    if (newornt[c] && (newornt[c] >= nO || newornt[c] < -nO)) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %D not in [%D,%D) for %s %D", newornt[c], -nO, nO, DMPolytopeTypes[ft], cone[c]);
+    if (newornt[c] && (newornt[c] >= nO || newornt[c] < -nO)) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %" PetscInt_FMT " not in [%" PetscInt_FMT ",%" PetscInt_FMT ") for %s %" PetscInt_FMT "", newornt[c], -nO, nO, DMPolytopeTypes[ft], cone[c]);
   }
   ierr = DMPlexSetCone(dm, p, newcone);CHKERRQ(ierr);
   ierr = DMPlexSetConeOrientation(dm, p, newornt);CHKERRQ(ierr);
@@ -313,7 +313,7 @@ PetscErrorCode DMPlexOrient(DM dm)
 
           ierr = DMPlexGetSupportSize(dm, face, &supportSize);CHKERRQ(ierr);
           if (supportSize != 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Boundary faces should see one cell, not %d", supportSize);
-          if (flg) {ierr = PetscViewerASCIIPrintf(selfviewer, "[%d]: component %d, Found representative leaf %D (face %D) connecting to face %D on (%D, %D) with orientation %D\n", rank, comp, l, face, rpoints[l].index, rrank, rcomp, lorntComp[face].rank);CHKERRQ(ierr);}
+          if (flg) {ierr = PetscViewerASCIIPrintf(selfviewer, "[%d]: component %d, Found representative leaf %" PetscInt_FMT " (face %" PetscInt_FMT ") connecting to face %" PetscInt_FMT " on (%" PetscInt_FMT ", %" PetscInt_FMT ") with orientation %" PetscInt_FMT "\n", rank, comp, l, face, rpoints[l].index, rrank, rcomp, lorntComp[face].rank);CHKERRQ(ierr);}
           neighbors[comp][numNeighbors[comp]++] = l;
         }
       }
@@ -333,7 +333,7 @@ PetscErrorCode DMPlexOrient(DM dm)
 
       if      (o < 0) match[off] = PETSC_TRUE;
       else if (o > 0) match[off] = PETSC_FALSE;
-      else SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid face %D (%D, %D) neighbor: %D comp: %D", face, rorntComp[face].rank, lorntComp[face].rank, neighbors[comp][n], comp);
+      else SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid face %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ") neighbor: %" PetscInt_FMT " comp: %" PetscInt_FMT "", face, rorntComp[face].rank, lorntComp[face].rank, neighbors[comp][n], comp);
       nrankComp[off].rank  = rpoints[neighbors[comp][n]].rank;
       nrankComp[off].index = lorntComp[lpoints[neighbors[comp][n]]].index;
     }

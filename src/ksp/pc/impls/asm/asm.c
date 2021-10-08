@@ -28,8 +28,8 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
   if (iascii) {
     char overlaps[256] = "user-defined overlap",blocks[256] = "total subdomain blocks not yet set";
-    if (osm->overlap >= 0) {ierr = PetscSNPrintf(overlaps,sizeof(overlaps),"amount of overlap = %D",osm->overlap);CHKERRQ(ierr);}
-    if (osm->n > 0) {ierr = PetscSNPrintf(blocks,sizeof(blocks),"total subdomain blocks = %D",osm->n);CHKERRQ(ierr);}
+    if (osm->overlap >= 0) {ierr = PetscSNPrintf(overlaps,sizeof(overlaps),"amount of overlap = %" PetscInt_FMT "",osm->overlap);CHKERRQ(ierr);}
+    if (osm->n > 0) {ierr = PetscSNPrintf(blocks,sizeof(blocks),"total subdomain blocks = %" PetscInt_FMT "",osm->n);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(viewer,"  %s, %s\n",blocks,overlaps);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  restriction/interpolation type - %s\n",PCASMTypes[osm->type]);CHKERRQ(ierr);
     if (osm->dm_subdomains) {ierr = PetscViewerASCIIPrintf(viewer,"  Additive Schwarz: using DM to define subdomains\n");CHKERRQ(ierr);}
@@ -51,7 +51,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
       }
     } else {
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %D\n",(int)rank,osm->n_local_true);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %" PetscInt_FMT "\n",(int)rank,osm->n_local_true);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following KSP and PC objects:\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
@@ -59,7 +59,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
       ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
       for (i=0; i<osm->n_local_true; i++) {
         ierr = ISGetLocalSize(osm->is[i],&bsz);CHKERRQ(ierr);
-        ierr = PetscViewerASCIISynchronizedPrintf(sviewer,"[%d] local block number %D, size = %D\n",(int)rank,i,bsz);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(sviewer,"[%d] local block number %" PetscInt_FMT ", size = %" PetscInt_FMT "\n",(int)rank,i,bsz);CHKERRQ(ierr);
         ierr = KSPView(osm->ksp[i],sviewer);CHKERRQ(ierr);
         ierr = PetscViewerASCIISynchronizedPrintf(sviewer,"- - - - - - - - - - - - - - - - - -\n");CHKERRQ(ierr);
       }
@@ -69,7 +69,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     }
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer," blocks=%D, overlap=%D, type=%s",osm->n,osm->overlap,PCASMTypes[osm->type]);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer," blocks=%" PetscInt_FMT ", overlap=%" PetscInt_FMT ", type=%s",osm->n,osm->overlap,PCASMTypes[osm->type]);CHKERRQ(ierr);
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     if (osm->ksp) {ierr = KSPView(osm->ksp[0],sviewer);CHKERRQ(ierr);}
     ierr = PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -105,9 +105,9 @@ static PetscErrorCode PCASMPrintSubdomains(PC pc)
       ierr = PetscMalloc1(len,&s);CHKERRQ(ierr);
       ierr = PetscViewerStringOpen(PETSC_COMM_SELF, s, len, &sviewer);CHKERRQ(ierr);
 #undef len
-      ierr = PetscViewerStringSPrintf(sviewer, "[%d:%d] Subdomain %D with overlap:\n", rank, size, i);CHKERRQ(ierr);
+      ierr = PetscViewerStringSPrintf(sviewer, "[%d:%d] Subdomain %" PetscInt_FMT " with overlap:\n", rank, size, i);CHKERRQ(ierr);
       for (j=0; j<nidx; j++) {
-        ierr = PetscViewerStringSPrintf(sviewer,"%D ",idx[j]);CHKERRQ(ierr);
+        ierr = PetscViewerStringSPrintf(sviewer,"%" PetscInt_FMT " ",idx[j]);CHKERRQ(ierr);
       }
       ierr = ISRestoreIndices(osm->is[i],&idx);CHKERRQ(ierr);
       ierr = PetscViewerStringSPrintf(sviewer,"\n");CHKERRQ(ierr);
@@ -123,11 +123,11 @@ static PetscErrorCode PCASMPrintSubdomains(PC pc)
         ierr = PetscMalloc1(len, &s);CHKERRQ(ierr);
         ierr = PetscViewerStringOpen(PETSC_COMM_SELF, s, len, &sviewer);CHKERRQ(ierr);
 #undef len
-        ierr = PetscViewerStringSPrintf(sviewer, "[%D:%D] Subdomain %D without overlap:\n", rank, size, i);CHKERRQ(ierr);
+        ierr = PetscViewerStringSPrintf(sviewer, "[%" PetscInt_FMT ":%" PetscInt_FMT "] Subdomain %" PetscInt_FMT " without overlap:\n", rank, size, i);CHKERRQ(ierr);
         ierr = ISGetLocalSize(osm->is_local[i],&nidx);CHKERRQ(ierr);
         ierr = ISGetIndices(osm->is_local[i],&idx);CHKERRQ(ierr);
         for (j=0; j<nidx; j++) {
-          ierr = PetscViewerStringSPrintf(sviewer,"%D ",idx[j]);CHKERRQ(ierr);
+          ierr = PetscViewerStringSPrintf(sviewer,"%" PetscInt_FMT " ",idx[j]);CHKERRQ(ierr);
         }
         ierr = ISRestoreIndices(osm->is_local[i],&idx);CHKERRQ(ierr);
         ierr = PetscViewerStringSPrintf(sviewer,"\n");CHKERRQ(ierr);
@@ -788,7 +788,7 @@ static PetscErrorCode  PCASMSetLocalSubdomains_ASM(PC pc,PetscInt n,IS is[],IS i
   PetscInt       i;
 
   PetscFunctionBegin;
-  if (n < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Each process must have 1 or more blocks, n = %D",n);
+  if (n < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Each process must have 1 or more blocks, n = %" PetscInt_FMT "",n);
   if (pc->setupcalled && (n != osm->n_local_true || is)) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"PCASMSetLocalSubdomains() should be called before calling PCSetUp().");
 
   if (!pc->setupcalled) {
@@ -837,7 +837,7 @@ static PetscErrorCode  PCASMSetTotalSubdomains_ASM(PC pc,PetscInt N,IS *is,IS *i
   PetscInt       n;
 
   PetscFunctionBegin;
-  if (N < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of total blocks must be > 0, N = %D",N);
+  if (N < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of total blocks must be > 0, N = %" PetscInt_FMT "",N);
   if (is || is_local) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Use PCASMSetLocalSubdomains() to set specific index sets\n\they cannot be set globally yet.");
 
   /*
@@ -846,7 +846,7 @@ static PetscErrorCode  PCASMSetTotalSubdomains_ASM(PC pc,PetscInt N,IS *is,IS *i
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRMPI(ierr);
   n    = N/size + ((N % size) > rank);
-  if (!n) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Process %d must have at least one block: total processors %d total blocks %D",(int)rank,(int)size,N);
+  if (!n) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Process %d must have at least one block: total processors %d total blocks %" PetscInt_FMT "",(int)rank,(int)size,N);
   if (pc->setupcalled && n != osm->n_local_true) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PCASMSetTotalSubdomains() should be called before PCSetUp().");
   if (!pc->setupcalled) {
     ierr = PCASMDestroySubdomains(osm->n_local_true,osm->is,osm->is_local);CHKERRQ(ierr);
@@ -1432,13 +1432,13 @@ PetscErrorCode  PCASMCreateSubdomains(Mat A, PetscInt n, IS* outis[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidPointer(outis,3);
-  if (n < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of local blocks must be > 0, n = %D",n);
+  if (n < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of local blocks must be > 0, n = %" PetscInt_FMT "",n);
 
   /* Get prefix, row distribution, and block size */
   ierr = MatGetOptionsPrefix(A,&prefix);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&rstart,&rend);CHKERRQ(ierr);
   ierr = MatGetBlockSize(A,&bs);CHKERRQ(ierr);
-  if (rstart/bs*bs != rstart || rend/bs*bs != rend) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"bad row distribution [%D,%D) for matrix block size %D",rstart,rend,bs);
+  if (rstart/bs*bs != rstart || rend/bs*bs != rend) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"bad row distribution [%" PetscInt_FMT ",%" PetscInt_FMT ") for matrix block size %" PetscInt_FMT "",rstart,rend,bs);
 
   /* Get diagonal block from matrix if possible */
   ierr = MatHasOperation(A,MATOP_GET_DIAGONAL_BLOCK,&hasop);CHKERRQ(ierr);

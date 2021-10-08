@@ -283,7 +283,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
             SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
         }
         break;
-      default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported boundary type in dimension %D",d);
+      default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported boundary type in dimension %" PetscInt_FMT "",d);
     }
   }
   stag->entriesGhost = stag->nGhost[0]*stag->nGhost[1]*stag->entriesPerElement;
@@ -319,7 +319,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
      */
 
   if (stag->n[0] < stag->stencilWidth || stag->n[1] < stag->stencilWidth) {
-    SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"DMStag 2d setup does not support local sizes (%D x %D) smaller than the elementwise stencil width (%D)",stag->n[0],stag->n[1],stag->stencilWidth);
+    SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"DMStag 2d setup does not support local sizes (%" PetscInt_FMT " x %" PetscInt_FMT ") smaller than the elementwise stencil width (%" PetscInt_FMT ")",stag->n[0],stag->n[1],stag->stencilWidth);
   }
 
   /* Check stencil type */
@@ -1035,12 +1035,12 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_2d(DM dm)
   m = stag->nRanks[0];
   n = stag->nRanks[1];
   if (m != PETSC_DECIDE) {
-    if (m < 1) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of ranks in X direction: %D",m);
-    else if (m > size) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Too many ranks in X direction: %D %d",m,size);
+    if (m < 1) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of ranks in X direction: %" PetscInt_FMT "",m);
+    else if (m > size) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Too many ranks in X direction: %" PetscInt_FMT " %d",m,size);
   }
   if (n != PETSC_DECIDE) {
-    if (n < 1) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of ranks in Y direction: %D",n);
-    else if (n > size) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Too many ranks in Y direction: %D %d",n,size);
+    if (n < 1) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of ranks in Y direction: %" PetscInt_FMT "",n);
+    else if (n > size) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Too many ranks in Y direction: %" PetscInt_FMT " %d",n,size);
   }
   if (m == PETSC_DECIDE || n == PETSC_DECIDE) {
     if (n != PETSC_DECIDE) {
@@ -1059,9 +1059,9 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_2d(DM dm)
       if (M > N && m < n) {PetscInt _m = m; m = n; n = _m;}
     }
     if (m*n != size) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Unable to create partition, check the size of the communicator and input m and n ");
-  } else if (m*n != size) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Given Bad partition. Product of sizes (%D) does not equal communicator size (%d)",m*n,size);
-  if (M < m) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in x direction is too fine! %D %D",M,m);
-  if (N < n) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in y direction is too fine! %D %D",N,n);
+  } else if (m*n != size) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Given Bad partition. Product of sizes (%" PetscInt_FMT ") does not equal communicator size (%d)",m*n,size);
+  if (M < m) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in x direction is too fine! %" PetscInt_FMT " %" PetscInt_FMT "",M,m);
+  if (N < n) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in y direction is too fine! %" PetscInt_FMT " %" PetscInt_FMT "",N,n);
   stag->nRanks[0] = m;
   stag->nRanks[1] = n;
   PetscFunctionReturn(0);

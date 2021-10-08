@@ -37,7 +37,7 @@ static PetscErrorCode DMPlexLabelToVolumeConstraint(DM dm, DMLabel adaptLabel, P
       case DM_ADAPT_DETERMINE:
         break;
       default:
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP, "DMPlex does not support refinement flag %D\n", refFlag);
+        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP, "DMPlex does not support refinement flag %" PetscInt_FMT "\n", refFlag);
       }
       if (anyRefine) break;
     }
@@ -210,7 +210,7 @@ PetscErrorCode DMPlexRefine_Internal(DM dm, DMLabel adaptLabel, DM *dmRefined)
       }
       fl = fl->next;
     }
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid refiner of dimension %D registered",dim);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid refiner of dimension %" PetscInt_FMT " registered",dim);
   }
 
   gotit:
@@ -237,7 +237,7 @@ PetscErrorCode DMPlexRefine_Internal(DM dm, DMLabel adaptLabel, DM *dmRefined)
         ierr = PetscFree(maxVolumes);CHKERRQ(ierr);
       }
       break;
-    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Mesh refinement in dimension %D is not supported.", dim);
+    default: SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Mesh refinement in dimension %" PetscInt_FMT " is not supported.", dim);
   }
   ierr = DMCopyDisc(dm, *dmRefined);CHKERRQ(ierr);
   if (localized) {ierr = DMLocalizeCoordinates(*dmRefined);CHKERRQ(ierr);}
@@ -307,7 +307,7 @@ PetscErrorCode DMAdaptLabel_Plex(DM dm, DMLabel adaptLabel, DM *dmAdapted)
     case DM_ADAPT_COARSEN:
       ierr = DMCoarsen(dm, MPI_COMM_NULL, dmAdapted);CHKERRQ(ierr);break;
     default:
-      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP,"DMPlex does not support refinement flag %D\n", minFlag);
+      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP,"DMPlex does not support refinement flag %" PetscInt_FMT "\n", minFlag);
     }
   } else {
     ierr = DMPlexSetRefinementUniform(dm, PETSC_FALSE);CHKERRQ(ierr);
@@ -469,7 +469,7 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
     pragmatic_2d_mpi_init(&numVertices, &numCells, cells, x, y, l2gv, numLocVertices, comm);break;
   case 3:
     pragmatic_3d_mpi_init(&numVertices, &numCells, cells, x, y, z, l2gv, numLocVertices, comm);break;
-  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %D", dim);
+  default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %" PetscInt_FMT "", dim);
   }
   pragmatic_set_boundary(&numBdFaces, bdFaces, bdFaceIds);
   pragmatic_set_metric(metric);
@@ -490,7 +490,7 @@ PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *
     pragmatic_get_coords_3d_mpi(xNew[0], xNew[1], xNew[2]);
     break;
   default:
-    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %D", dim);
+    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Pragmatic adaptation defined for dimension %" PetscInt_FMT "", dim);
   }
   for (v = 0; v < numVerticesNew; ++v) {for (d = 0; d < dim; ++d) coordsNew[v*dim+d] = xNew[d][v];}
   ierr = PetscMalloc1(numCellsNew*(dim+1), &cellsNew);CHKERRQ(ierr);

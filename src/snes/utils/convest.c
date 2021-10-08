@@ -85,7 +85,7 @@ PetscErrorCode PetscConvEstView(PetscConvEst ce, PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = PetscObjectPrintClassNamePrefixType((PetscObject) ce, viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "ConvEst with %D levels\n", ce->Nr+1);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "ConvEst with %" PetscInt_FMT " levels\n", ce->Nr+1);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -181,7 +181,7 @@ PetscErrorCode PetscConvEstSetUp(PetscConvEst ce)
     if (fieldIS) {ierr = ISRestoreIndices(fieldIS, &fields);CHKERRQ(ierr);}
   }
   for (f = 0; f < Nf; ++f) {
-    if (!ce->exactSol[f]) SETERRQ1(PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to estimate convergence, missing for field %D", f);
+    if (!ce->exactSol[f]) SETERRQ1(PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to estimate convergence, missing for field %" PetscInt_FMT "", f);
   }
   PetscFunctionReturn(0);
 }
@@ -243,7 +243,7 @@ PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst ce, PetscInt r)
     if (ce->Nf > 1) {ierr = PetscPrintf(comm, "[");CHKERRQ(ierr);}
     for (f = 0; f < ce->Nf; ++f) {
       if (f > 0) {ierr = PetscPrintf(comm, ", ");CHKERRQ(ierr);}
-      ierr = PetscPrintf(comm, "%7D", dofs[f]);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "%7" PetscInt_FMT "", dofs[f]);CHKERRQ(ierr);
     }
     if (ce->Nf > 1) {ierr = PetscPrintf(comm, "]");CHKERRQ(ierr);}
     ierr = PetscPrintf(comm, "  ");CHKERRQ(ierr);
@@ -344,7 +344,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
     char          stageName[PETSC_MAX_PATH_LEN];
     const char   *dmname, *uname;
 
-    ierr = PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN-1, "ConvEst Refinement Level %D", r);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN-1, "ConvEst Refinement Level %" PetscInt_FMT "", r);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogStageGetId(stageName, &stage);CHKERRQ(ierr);
     if (stage < 0) {ierr = PetscLogStageRegister(stageName, &stage);CHKERRQ(ierr);}

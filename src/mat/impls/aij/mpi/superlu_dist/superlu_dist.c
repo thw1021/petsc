@@ -389,21 +389,21 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
 #endif
 
   if (sinfo > 0) {
-    if (A->erroriffailure) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %D",sinfo);
+    if (A->erroriffailure) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %" PetscInt_FMT "",sinfo);
     else {
       if (sinfo <= lu->A_sup.ncol) {
         F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
-        ierr = PetscInfo1(F,"U(i,i) is exactly zero, i= %D\n",sinfo);CHKERRQ(ierr);
+        ierr = PetscInfo1(F,"U(i,i) is exactly zero, i= %" PetscInt_FMT "\n",sinfo);CHKERRQ(ierr);
       } else if (sinfo > lu->A_sup.ncol) {
         /*
          number of bytes allocated when memory allocation
          failure occurred, plus A->ncol.
          */
         F->factorerrortype = MAT_FACTOR_OUTMEMORY;
-        ierr = PetscInfo1(F,"Number of bytes allocated when memory allocation fails %D\n",sinfo);CHKERRQ(ierr);
+        ierr = PetscInfo1(F,"Number of bytes allocated when memory allocation fails %" PetscInt_FMT "\n",sinfo);CHKERRQ(ierr);
       }
     }
-  } else if (sinfo < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %D, argument in p*gssvx() had an illegal value", sinfo);
+  } else if (sinfo < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %" PetscInt_FMT ", argument in p*gssvx() had an illegal value", sinfo);
 
   if (lu->options.PrintStat) {
     PetscStackCall("SuperLU_DIST:PStatPrint",PStatPrint(&lu->options, &stat, &lu->grid));  /* Print the statistics. */
@@ -464,7 +464,7 @@ static PetscErrorCode MatView_Info_SuperLU_DIST(Mat A,PetscViewer viewer)
 
   options = lu->options;
   ierr    = PetscViewerASCIIPrintf(viewer,"SuperLU_DIST run parameters:\n");CHKERRQ(ierr);
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Process grid nprow %D x npcol %D \n",lu->nprow,lu->npcol);CHKERRQ(ierr);
+  ierr    = PetscViewerASCIIPrintf(viewer,"  Process grid nprow %" PetscInt_FMT " x npcol %" PetscInt_FMT " \n",lu->nprow,lu->npcol);CHKERRQ(ierr);
   ierr    = PetscViewerASCIIPrintf(viewer,"  Equilibrate matrix %s \n",PetscBools[options.Equil != NO]);CHKERRQ(ierr);
   ierr    = PetscViewerASCIIPrintf(viewer,"  Replace tiny pivots %s \n",PetscBools[options.ReplaceTinyPivot != NO]);CHKERRQ(ierr);
   ierr    = PetscViewerASCIIPrintf(viewer,"  Use iterative refinement %s \n",PetscBools[options.IterRefine == SLU_DOUBLE]);CHKERRQ(ierr);
