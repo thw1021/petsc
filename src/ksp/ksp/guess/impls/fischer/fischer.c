@@ -237,7 +237,7 @@ static PetscErrorCode KSPGuessView_Fischer(KSPGuess guess,PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"Model %D, size %D\n",itg->method,itg->maxl);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Model %" PetscInt_FMT ", size %" PetscInt_FMT "\n",itg->method,itg->maxl);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

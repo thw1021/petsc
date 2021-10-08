@@ -73,7 +73,7 @@ static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
 
   if (PetscLikely(v >= 0 && v < label->numStrata) && label->validIS[v]) return 0;
   PetscFunctionBegin;
-  if (v < 0 || v >= label->numStrata) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Trying to access invalid stratum %D in DMLabelMakeValid_Private\n", v);
+  if (v < 0 || v >= label->numStrata) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Trying to access invalid stratum %" PetscInt_FMT " in DMLabelMakeValid_Private\n", v);
   ierr = PetscHSetIGetSize(label->ht[v], &label->stratumSizes[v]);CHKERRQ(ierr);
   ierr = PetscMalloc1(label->stratumSizes[v], &pointArray);CHKERRQ(ierr);
   ierr = PetscHSetIGetElems(label->ht[v], &off, pointArray);CHKERRQ(ierr);
@@ -82,7 +82,7 @@ static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
   if (label->bt) {
     for (p = 0; p < label->stratumSizes[v]; ++p) {
       const PetscInt point = pointArray[p];
-      if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [%D, %D)", point, label->pStart, label->pEnd);
+      if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
       ierr = PetscBTSet(label->bt, point - label->pStart);CHKERRQ(ierr);
     }
   }
@@ -150,7 +150,7 @@ static PetscErrorCode DMLabelMakeInvalid_Private(DMLabel label, PetscInt v)
 
   if (PetscLikely(v >= 0 && v < label->numStrata) && !label->validIS[v]) return 0;
   PetscFunctionBegin;
-  if (v < 0 || v >= label->numStrata) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Trying to access invalid stratum %D in DMLabelMakeInvalid_Private\n", v);
+  if (v < 0 || v >= label->numStrata) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Trying to access invalid stratum %" PetscInt_FMT " in DMLabelMakeInvalid_Private\n", v);
   if (label->points[v]) {
     ierr = ISGetIndices(label->points[v], &points);CHKERRQ(ierr);
     for (p = 0; p < label->stratumSizes[v]; ++p) {
@@ -406,7 +406,7 @@ static PetscErrorCode DMLabelView_Ascii(DMLabel label, PetscViewer viewer)
 
     ierr = PetscObjectGetName((PetscObject) label, &name);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "Label '%s':\n", name);CHKERRQ(ierr);
-    if (label->bt) {ierr = PetscViewerASCIIPrintf(viewer, "  Index has been calculated in [%D, %D)\n", label->pStart, label->pEnd);CHKERRQ(ierr);}
+    if (label->bt) {ierr = PetscViewerASCIIPrintf(viewer, "  Index has been calculated in [%" PetscInt_FMT ", %" PetscInt_FMT ")\n", label->pStart, label->pEnd);CHKERRQ(ierr);}
     for (v = 0; v < label->numStrata; ++v) {
       const PetscInt value = label->stratumValues[v];
       const PetscInt *points;
@@ -414,7 +414,7 @@ static PetscErrorCode DMLabelView_Ascii(DMLabel label, PetscViewer viewer)
 
       ierr = ISGetIndices(label->points[v], &points);CHKERRQ(ierr);
       for (p = 0; p < label->stratumSizes[v]; ++p) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d]: %D (%D)\n", rank, points[p], value);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "[%d]: %" PetscInt_FMT " (%" PetscInt_FMT ")\n", rank, points[p], value);CHKERRQ(ierr);
       }
       ierr = ISRestoreIndices(label->points[v],&points);CHKERRQ(ierr);
     }
@@ -626,7 +626,7 @@ PetscErrorCode DMLabelCompare(DMLabel l0, DMLabel l1, PetscBool *same, char **me
     ierr = DMLabelGetDefaultValue(l0, &v0);CHKERRQ(ierr);
     ierr = DMLabelGetDefaultValue(l1, &v1);CHKERRQ(ierr);
     if (v0 != v1) {
-      ierr = PetscSNPrintf(msg, sizeof(msg), "Default value of DMLabel l0 \"%s\" = %D != %D = Default value of DMLabel l1 \"%s\"", name0, v0, v1, name1);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(msg, sizeof(msg), "Default value of DMLabel l0 \"%s\" = %" PetscInt_FMT " != %" PetscInt_FMT " = Default value of DMLabel l1 \"%s\"", name0, v0, v1, name1);CHKERRQ(ierr);
       goto finish;
     }
   }
@@ -662,7 +662,7 @@ PetscErrorCode DMLabelCompare(DMLabel l0, DMLabel l1, PetscBool *same, char **me
       ierr = ISDestroy(&is0);CHKERRQ(ierr);
       ierr = ISDestroy(&is1);CHKERRQ(ierr);
       if (!flg) {
-        ierr = PetscSNPrintf(msg, sizeof(msg), "Stratum #%D with value %D contains different points in DMLabel l0 \"%s\" and DMLabel l1 \"%s\"", i, v, name0, name1);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(msg, sizeof(msg), "Stratum #%" PetscInt_FMT " with value %" PetscInt_FMT " contains different points in DMLabel l0 \"%s\" and DMLabel l1 \"%s\"", i, v, name0, name1);CHKERRQ(ierr);
         goto finish;
       }
     }
@@ -754,7 +754,7 @@ PetscErrorCode DMLabelCreateIndex(DMLabel label, PetscInt pStart, PetscInt pEnd)
     for (i = 0; i < label->stratumSizes[v]; ++i) {
       const PetscInt point = points[i];
 
-      if ((point < pStart) || (point >= pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [%D, %D)", point, pStart, pEnd);
+      if ((point < pStart) || (point >= pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, pStart, pEnd);
       ierr = PetscBTSet(label->bt, point - pStart);CHKERRQ(ierr);
     }
     ierr = ISRestoreIndices(label->points[v], &points);CHKERRQ(ierr);
@@ -879,7 +879,7 @@ PetscErrorCode DMLabelHasPoint(DMLabel label, PetscInt point, PetscBool *contain
   ierr = DMLabelMakeAllValid_Private(label);CHKERRQ(ierr);
   if (PetscDefined(USE_DEBUG)) {
     if (!label->bt) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call DMLabelCreateIndex() before DMLabelHasPoint()");
-    if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [%D, %D)", point, label->pStart, label->pEnd);
+    if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
   }
   *contains = PetscBTLookup(label->bt, point - label->pStart) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -1079,7 +1079,7 @@ PetscErrorCode DMLabelClearValue(DMLabel label, PetscInt point, PetscInt value)
   if (v < 0) PetscFunctionReturn(0);
 
   if (label->bt) {
-    if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [%D, %D)", point, label->pStart, label->pEnd);
+    if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
     ierr = PetscBTClear(label->bt, point - label->pStart);CHKERRQ(ierr);
   }
 
@@ -1423,7 +1423,7 @@ PetscErrorCode DMLabelSetStratumIS(DMLabel label, PetscInt value, IS is)
     for (p = 0; p < label->stratumSizes[v]; ++p) {
       const PetscInt point = points[p];
 
-      if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [%D, %D)", point, label->pStart, label->pEnd);
+      if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
       ierr = PetscBTSet(label->bt, point - label->pStart);CHKERRQ(ierr);
     }
   }
@@ -1461,7 +1461,7 @@ PetscErrorCode DMLabelClearStratum(DMLabel label, PetscInt value)
       for (i = 0; i < label->stratumSizes[v]; ++i) {
         const PetscInt point = points[i];
 
-        if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [%D, %D)", point, label->pStart, label->pEnd);
+        if ((point < label->pStart) || (point >= label->pEnd)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
         ierr = PetscBTClear(label->bt, point - label->pStart);CHKERRQ(ierr);
       }
       ierr = ISRestoreIndices(label->points[v], &points);CHKERRQ(ierr);
@@ -1612,7 +1612,7 @@ PetscErrorCode DMLabelPermute(DMLabel label, IS permutation, DMLabel *labelNew)
     for (q = 0; q < size; ++q) {
       const PetscInt point = points[q];
 
-      if ((point < 0) || (point >= numPoints)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %D is not in [0, %D) for the remapping", point, numPoints);
+      if ((point < 0) || (point >= numPoints)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ") for the remapping", point, numPoints);
       pointsNew[q] = perm[point];
     }
     ierr = ISRestoreIndices((*labelNew)->points[v],&points);CHKERRQ(ierr);
@@ -2144,26 +2144,26 @@ static PetscErrorCode PetscSectionSymView_Label(PetscSectionSym sym, PetscViewer
       PetscInt value = i < sl->numStrata ? label->stratumValues[i] : label->defaultValue;
 
       if (!(sl->perms[i] || sl->rots[i])) {
-        ierr = PetscViewerASCIIPrintf(viewer, "Symmetry for stratum value %D (%D dofs per point): no symmetries\n", value, sl->sizes[i]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "Symmetry for stratum value %" PetscInt_FMT " (%" PetscInt_FMT " dofs per point): no symmetries\n", value, sl->sizes[i]);CHKERRQ(ierr);
       } else {
-      ierr = PetscViewerASCIIPrintf(viewer, "Symmetry for stratum value %D (%D dofs per point):\n", value, sl->sizes[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "Symmetry for stratum value %" PetscInt_FMT " (%" PetscInt_FMT " dofs per point):\n", value, sl->sizes[i]);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(viewer, "Orientation range: [%D, %D)\n", sl->minMaxOrients[i][0], sl->minMaxOrients[i][1]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "Orientation range: [%" PetscInt_FMT ", %" PetscInt_FMT ")\n", sl->minMaxOrients[i][0], sl->minMaxOrients[i][1]);CHKERRQ(ierr);
         if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
           ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
           for (j = sl->minMaxOrients[i][0]; j < sl->minMaxOrients[i][1]; j++) {
             if (!((sl->perms[i] && sl->perms[i][j]) || (sl->rots[i] && sl->rots[i][j]))) {
-              ierr = PetscViewerASCIIPrintf(viewer, "Orientation %D: identity\n",j);CHKERRQ(ierr);
+              ierr = PetscViewerASCIIPrintf(viewer, "Orientation %" PetscInt_FMT ": identity\n",j);CHKERRQ(ierr);
             } else {
               PetscInt tab;
 
-              ierr = PetscViewerASCIIPrintf(viewer, "Orientation %D:\n",j);CHKERRQ(ierr);
+              ierr = PetscViewerASCIIPrintf(viewer, "Orientation %" PetscInt_FMT ":\n",j);CHKERRQ(ierr);
               ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
               ierr = PetscViewerASCIIGetTab(viewer,&tab);CHKERRQ(ierr);
               if (sl->perms[i] && sl->perms[i][j]) {
                 ierr = PetscViewerASCIIPrintf(viewer,"Permutation:");CHKERRQ(ierr);
                 ierr = PetscViewerASCIISetTab(viewer,0);CHKERRQ(ierr);
-                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %D",sl->perms[i][j][k]);CHKERRQ(ierr);}
+                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT "",sl->perms[i][j][k]);CHKERRQ(ierr);}
                 ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
                 ierr = PetscViewerASCIISetTab(viewer,tab);CHKERRQ(ierr);
               }
@@ -2263,7 +2263,7 @@ PetscErrorCode PetscSectionSymLabelSetStratum(PetscSectionSym sym, PetscInt stra
     if (stratum == value) break;
   }
   ierr = PetscObjectGetName((PetscObject) sl->label, &name);CHKERRQ(ierr);
-  if (i > sl->numStrata) SETERRQ2(PetscObjectComm((PetscObject)sym),PETSC_ERR_ARG_OUTOFRANGE,"Stratum %D not found in label %s\n",stratum,name);
+  if (i > sl->numStrata) SETERRQ2(PetscObjectComm((PetscObject)sym),PETSC_ERR_ARG_OUTOFRANGE,"Stratum %" PetscInt_FMT " not found in label %s\n",stratum,name);
   sl->sizes[i] = size;
   sl->modes[i] = mode;
   sl->minMaxOrients[i][0] = minOrient;
@@ -2328,7 +2328,7 @@ static PetscErrorCode PetscSectionSymGetPoints_Label(PetscSectionSym sym, PetscS
         if (has) break;
       }
     }
-    if ((sl->minMaxOrients[j][1] > sl->minMaxOrients[j][0]) && (ornt < sl->minMaxOrients[j][0] || ornt >= sl->minMaxOrients[j][1])) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"point %D orientation %D not in range [%D, %D) for stratum %D",point,ornt,sl->minMaxOrients[j][0],sl->minMaxOrients[j][1],j < numStrata ? label->stratumValues[j] : label->defaultValue);
+    if ((sl->minMaxOrients[j][1] > sl->minMaxOrients[j][0]) && (ornt < sl->minMaxOrients[j][0] || ornt >= sl->minMaxOrients[j][1])) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"point %" PetscInt_FMT " orientation %" PetscInt_FMT " not in range [%" PetscInt_FMT ", %" PetscInt_FMT ") for stratum %" PetscInt_FMT "",point,ornt,sl->minMaxOrients[j][0],sl->minMaxOrients[j][1],j < numStrata ? label->stratumValues[j] : label->defaultValue);
     if (perms) {perms[i] = sl->perms[j] ? sl->perms[j][ornt] : NULL;}
     if (rots) {rots[i]  = sl->rots[j] ? sl->rots[j][ornt] : NULL;}
   }

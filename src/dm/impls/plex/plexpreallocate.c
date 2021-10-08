@@ -558,7 +558,7 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
       for (q = 0; q < anDof; q++, i++) {
         cols[aoff+i] = anchorAdj[anOff + q];
       }
-      if (i != adof) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of entries %D != %D for dof %D (point %D)", i, adof, d, p);
+      if (i != adof) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of entries %" PetscInt_FMT " != %" PetscInt_FMT " for dof %" PetscInt_FMT " (point %" PetscInt_FMT ")", i, adof, d, p);
     }
   }
   ierr = PetscSectionDestroy(&anchorSectionAdj);CHKERRQ(ierr);

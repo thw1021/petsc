@@ -604,7 +604,7 @@ static PetscErrorCode PCView_HYPRE_Euclid(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"    default factorization levels \n");CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer,"    drop tolerance %g\n",(double)jac->eu_droptolerance);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    use Block-Jacobi? %D\n",jac->eu_bj);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    use Block-Jacobi? %" PetscInt_FMT "\n",jac->eu_bj);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1012,23 +1012,23 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc,PetscViewer viewer)
   if (iascii) {
     ierr = PetscViewerASCIIPrintf(viewer,"  HYPRE BoomerAMG preconditioning\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Cycle type %s\n",HYPREBoomerAMGCycleType[jac->cycletype]);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Maximum number of levels %D\n",jac->maxlevels);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Maximum number of iterations PER hypre call %D\n",jac->maxiter);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Maximum number of levels %" PetscInt_FMT "\n",jac->maxlevels);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Maximum number of iterations PER hypre call %" PetscInt_FMT "\n",jac->maxiter);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Convergence tolerance PER hypre call %g\n",(double)jac->tol);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Threshold for strong coupling %g\n",(double)jac->strongthreshold);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Interpolation truncation factor %g\n",(double)jac->truncfactor);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Interpolation: max elements per row %D\n",jac->pmax);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Interpolation: max elements per row %" PetscInt_FMT "\n",jac->pmax);CHKERRQ(ierr);
     if (jac->interp_refine) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    Interpolation: number of steps of weighted refinement %D\n",jac->interp_refine);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Interpolation: number of steps of weighted refinement %" PetscInt_FMT "\n",jac->interp_refine);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer,"    Number of levels of aggressive coarsening %D\n",jac->agg_nl);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Number of paths for aggressive coarsening %D\n",jac->agg_num_paths);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Number of levels of aggressive coarsening %" PetscInt_FMT "\n",jac->agg_nl);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Number of paths for aggressive coarsening %" PetscInt_FMT "\n",jac->agg_num_paths);CHKERRQ(ierr);
 
     ierr = PetscViewerASCIIPrintf(viewer,"    Maximum row sums %g\n",(double)jac->maxrowsum);CHKERRQ(ierr);
 
-    ierr = PetscViewerASCIIPrintf(viewer,"    Sweeps down         %D\n",jac->gridsweeps[0]);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Sweeps up           %D\n",jac->gridsweeps[1]);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Sweeps on coarse    %D\n",jac->gridsweeps[2]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Sweeps down         %" PetscInt_FMT "\n",jac->gridsweeps[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Sweeps up           %" PetscInt_FMT "\n",jac->gridsweeps[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Sweeps on coarse    %" PetscInt_FMT "\n",jac->gridsweeps[2]);CHKERRQ(ierr);
 
     ierr = PetscViewerASCIIPrintf(viewer,"    Relax down          %s\n",HYPREBoomerAMGRelaxType[jac->relaxtype[0]]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Relax up            %s\n",HYPREBoomerAMGRelaxType[jac->relaxtype[1]]);CHKERRQ(ierr);
@@ -1044,37 +1044,37 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc,PetscViewer viewer)
     }
     if (jac->smoothtype!=-1) {
       ierr = PetscViewerASCIIPrintf(viewer,"    Smooth type          %s\n",HYPREBoomerAMGSmoothType[jac->smoothtype]);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"    Smooth num levels    %D\n",jac->smoothnumlevels);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Smooth num levels    %" PetscInt_FMT "\n",jac->smoothnumlevels);CHKERRQ(ierr);
     } else {
       ierr = PetscViewerASCIIPrintf(viewer,"    Not using more complex smoothers.\n");CHKERRQ(ierr);
     }
     if (jac->smoothtype==3) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    Euclid ILU(k) levels %D\n",jac->eu_level);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Euclid ILU(k) levels %" PetscInt_FMT "\n",jac->eu_level);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"    Euclid ILU(k) drop tolerance %g\n",(double)jac->eu_droptolerance);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"    Euclid ILU use Block-Jacobi? %D\n",jac->eu_bj);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Euclid ILU use Block-Jacobi? %" PetscInt_FMT "\n",jac->eu_bj);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer,"    Measure type        %s\n",HYPREBoomerAMGMeasureType[jac->measuretype]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Coarsen type        %s\n",HYPREBoomerAMGCoarsenType[jac->coarsentype]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"    Interpolation type  %s\n",jac->interptype != 100 ? HYPREBoomerAMGInterpType[jac->interptype] : "1pt");CHKERRQ(ierr);
     if (jac->nodal_coarsening) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    Using nodal coarsening with HYPRE_BOOMERAMGSetNodal() %D\n",jac->nodal_coarsening);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Using nodal coarsening with HYPRE_BOOMERAMGSetNodal() %" PetscInt_FMT "\n",jac->nodal_coarsening);CHKERRQ(ierr);
     }
     if (jac->vec_interp_variant) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    HYPRE_BoomerAMGSetInterpVecVariant() %D\n",jac->vec_interp_variant);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"    HYPRE_BoomerAMGSetInterpVecQMax() %D\n",jac->vec_interp_qmax);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    HYPRE_BoomerAMGSetInterpVecVariant() %" PetscInt_FMT "\n",jac->vec_interp_variant);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    HYPRE_BoomerAMGSetInterpVecQMax() %" PetscInt_FMT "\n",jac->vec_interp_qmax);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"    HYPRE_BoomerAMGSetSmoothInterpVectors() %d\n",jac->vec_interp_smooth);CHKERRQ(ierr);
     }
     if (jac->nodal_relax) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    Using nodal relaxation via Schwarz smoothing on levels %D\n",jac->nodal_relax_levels);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Using nodal relaxation via Schwarz smoothing on levels %" PetscInt_FMT "\n",jac->nodal_relax_levels);CHKERRQ(ierr);
     }
 
     /* AIR */
     if (jac->Rtype) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    Using approximate ideal restriction type %D\n",jac->Rtype);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Using approximate ideal restriction type %" PetscInt_FMT "\n",jac->Rtype);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"      Threshold for R %g\n",(double)jac->Rstrongthreshold);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"      Filter for R %g\n",(double)jac->Rfilterthreshold);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"      A drop tolerance %g\n",(double)jac->Adroptol);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"      A drop type %D\n",jac->Adroptype);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"      A drop type %" PetscInt_FMT "\n",jac->Adroptype);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

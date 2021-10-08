@@ -13,9 +13,9 @@ PetscErrorCode CharacteristicView_DA(Characteristic c, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERSTRING, &isstring);CHKERRQ(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  DMDA: dummy=%D\n", da->dummy);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  DMDA: dummy=%" PetscInt_FMT "\n", da->dummy);CHKERRQ(ierr);
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer,"dummy %D", da->dummy);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"dummy %" PetscInt_FMT "", da->dummy);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

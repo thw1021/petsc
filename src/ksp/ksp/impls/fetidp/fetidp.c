@@ -439,7 +439,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   ierr = VecNorm(pcis->vec1_B,NORM_INFINITY,&val);CHKERRQ(ierr);
   ierr = VecDestroy(&test_vec);CHKERRQ(ierr);
   ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"%D: CHECK infty norm of E_D + P_D - I: % 1.14e\n",PetscGlobalRank,val);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT ": CHECK infty norm of E_D + P_D - I: % 1.14e\n",PetscGlobalRank,val);CHKERRQ(ierr);
 
   /******************************************************************/
   /* TEST E: It should hold R_D^TP_Dw=0 w\in\widetilde{W}           */
@@ -663,7 +663,7 @@ static PetscErrorCode KSPFETIDPSetUpOperators(KSP ksp)
         if (pcbddc->n_ISForDofsLocal) {
           PetscInt np;
 
-          if (fid < 0 || fid >= pcbddc->n_ISForDofsLocal) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Invalid field id for pressure %D, max %D",fid,pcbddc->n_ISForDofsLocal);
+          if (fid < 0 || fid >= pcbddc->n_ISForDofsLocal) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Invalid field id for pressure %" PetscInt_FMT ", max %" PetscInt_FMT "",fid,pcbddc->n_ISForDofsLocal);
           /* need a sequential IS */
           ierr = ISGetLocalSize(pcbddc->ISForDofsLocal[fid],&np);CHKERRQ(ierr);
           ierr = ISGetIndices(pcbddc->ISForDofsLocal[fid],&idxs);CHKERRQ(ierr);
@@ -671,7 +671,7 @@ static PetscErrorCode KSPFETIDPSetUpOperators(KSP ksp)
           ierr = ISRestoreIndices(pcbddc->ISForDofsLocal[fid],&idxs);CHKERRQ(ierr);
           ploc = PETSC_TRUE;
         } else if (pcbddc->n_ISForDofs) {
-          if (fid < 0 || fid >= pcbddc->n_ISForDofs) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Invalid field id for pressure %D, max %D",fid,pcbddc->n_ISForDofs);
+          if (fid < 0 || fid >= pcbddc->n_ISForDofs) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Invalid field id for pressure %" PetscInt_FMT ", max %" PetscInt_FMT "",fid,pcbddc->n_ISForDofs);
           ierr = PetscObjectReference((PetscObject)pcbddc->ISForDofs[fid]);CHKERRQ(ierr);
           Pall = pcbddc->ISForDofs[fid];
         } else SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Cannot detect pressure field! Use KSPFETIDPGetInnerBDDC() + PCBDDCSetDofsSplitting or PCBDDCSetDofsSplittingLocal");
@@ -800,7 +800,7 @@ static PetscErrorCode KSPFETIDPSetUpOperators(KSP ksp)
         ierr = ISGlobalToLocalMappingApplyIS(l2g_t,IS_GTOLM_DROP,is2,&is1);CHKERRQ(ierr);
         ierr = ISGetLocalSize(is1,&i);CHKERRQ(ierr);
         ierr = ISGetLocalSize(is2,&j);CHKERRQ(ierr);
-        if (i != j) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent local sizes %D and %D for iV",i,j);
+        if (i != j) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent local sizes %" PetscInt_FMT " and %" PetscInt_FMT " for iV",i,j);
         ierr = PetscObjectCompose((PetscObject)fetidp->innerbddc,"__KSPFETIDP_iV",(PetscObject)is1);CHKERRQ(ierr);
         ierr = ISLocalToGlobalMappingDestroy(&l2g_t);CHKERRQ(ierr);
         ierr = ISDestroy(&is1);CHKERRQ(ierr);
@@ -1055,10 +1055,10 @@ static PetscErrorCode KSPFETIDPSetUpOperators(KSP ksp)
         ierr = MatGetLocalSize(A,&am,&an);CHKERRQ(ierr);
         ierr = ISGetLocalSize(Pall,&pIl);CHKERRQ(ierr);
         ierr = ISGetLocalSize(fetidp->pP,&pl);CHKERRQ(ierr);
-        if (PAM != PAN) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Pressure matrix must be square, unsupported %D x %D",PAM,PAN);
-        if (pam != pan) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Local sizes of pressure matrix must be equal, unsupported %D x %D",pam,pan);
-        if (pam != am && pam != pl && pam != pIl) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_USER,"Invalid number of local rows %D for pressure matrix! Supported are %D, %D or %D",pam,am,pl,pIl);
-        if (pan != an && pan != pl && pan != pIl) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_USER,"Invalid number of local columns %D for pressure matrix! Supported are %D, %D or %D",pan,an,pl,pIl);
+        if (PAM != PAN) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Pressure matrix must be square, unsupported %" PetscInt_FMT " x %" PetscInt_FMT "",PAM,PAN);
+        if (pam != pan) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_USER,"Local sizes of pressure matrix must be equal, unsupported %" PetscInt_FMT " x %" PetscInt_FMT "",pam,pan);
+        if (pam != am && pam != pl && pam != pIl) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_USER,"Invalid number of local rows %" PetscInt_FMT " for pressure matrix! Supported are %" PetscInt_FMT ", %" PetscInt_FMT " or %" PetscInt_FMT "",pam,am,pl,pIl);
+        if (pan != an && pan != pl && pan != pIl) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_USER,"Invalid number of local columns %" PetscInt_FMT " for pressure matrix! Supported are %" PetscInt_FMT ", %" PetscInt_FMT " or %" PetscInt_FMT "",pan,an,pl,pIl);
         if (PAM == AM) { /* monolithic ordering, restrict to pressure */
           if (schp) {
             ierr = MatCreateSubMatrix(PPmat,Pall,Pall,MAT_INITIAL_MATRIX,&C);CHKERRQ(ierr);
@@ -1193,7 +1193,7 @@ static PetscErrorCode KSPSolve_FETIDP(KSP ksp)
     ierr = KSPGetIterationNumber(fetidp->innerksp,&its);CHKERRQ(ierr);
     ksp->reason = KSP_DIVERGED_PC_FAILED;
     ierr = VecSetInf(Xl);CHKERRQ(ierr);
-    ierr = PetscInfo3(ksp,"Inner KSP solve failed: %s %s at iteration %D",KSPConvergedReasons[reason],PCFailedReasons[pcreason],its);CHKERRQ(ierr);
+    ierr = PetscInfo3(ksp,"Inner KSP solve failed: %s %s at iteration %" PetscInt_FMT "",KSPConvergedReasons[reason],PCFailedReasons[pcreason],its);CHKERRQ(ierr);
   }
   ierr = PCBDDCMatFETIDPGetSolution(F,Xl,X);CHKERRQ(ierr);
   ierr = MatGetNullSpace(A,&nsp);CHKERRQ(ierr);

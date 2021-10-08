@@ -25,9 +25,9 @@ static PetscErrorCode PCHMGExtractSubMatrix_Private(Mat pmat,Mat *submat,MatReus
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)pmat,&comm);CHKERRQ(ierr);
-  if (component>=blocksize) SETERRQ2(comm,PETSC_ERR_ARG_INCOMP,"Component %D should be less than block size %D \n",component,blocksize);
+  if (component>=blocksize) SETERRQ2(comm,PETSC_ERR_ARG_INCOMP,"Component %" PetscInt_FMT " should be less than block size %" PetscInt_FMT " \n",component,blocksize);
   ierr = MatGetOwnershipRange(pmat,&rstart,&rend);CHKERRQ(ierr);
-  if ((rend-rstart)%blocksize != 0) SETERRQ3(comm,PETSC_ERR_ARG_INCOMP,"Block size %D is inconsistent for [%D, %D) \n",blocksize,rstart,rend);
+  if ((rend-rstart)%blocksize != 0) SETERRQ3(comm,PETSC_ERR_ARG_INCOMP,"Block size %" PetscInt_FMT " is inconsistent for [%" PetscInt_FMT ", %" PetscInt_FMT ") \n",blocksize,rstart,rend);
   ierr = ISCreateStride(comm,(rend-rstart)/blocksize,rstart+component,blocksize,&isrow);CHKERRQ(ierr);
   ierr = MatCreateSubMatrix(pmat,isrow,isrow,reuse,submat);CHKERRQ(ierr);
   ierr = ISDestroy(&isrow);CHKERRQ(ierr);
@@ -252,7 +252,7 @@ PetscErrorCode PCView_HMG(PC pc,PetscViewer viewer)
   if (iascii) {
     ierr = PetscViewerASCIIPrintf(viewer," Reuse interpolation: %s\n",hmg->reuseinterp? "true":"false");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer," Use subspace coarsening: %s\n",hmg->subcoarsening? "true":"false");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer," Coarsening component: %D \n",hmg->component);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer," Coarsening component: %" PetscInt_FMT " \n",hmg->component);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer," Use MatMAIJ: %s \n",hmg->usematmaij? "true":"false");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer," Inner PC type: %s \n",hmg->innerpctype);CHKERRQ(ierr);
   }

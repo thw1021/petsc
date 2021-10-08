@@ -1864,7 +1864,7 @@ PetscErrorCode DMPlexLabelCohesiveComplete(DM dm, DMLabel label, DMLabel blabel,
         for (s = 0; s < supportSize; ++s) {
           ierr = DMPlexGetCone(dm, support[s], &cone);CHKERRQ(ierr);
           ierr = DMPlexGetConeSize(dm, support[s], &coneSize);CHKERRQ(ierr);
-          if (coneSize != 2) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Edge %D has %D vertices != 2", support[s], coneSize);
+          if (coneSize != 2) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Edge %" PetscInt_FMT " has %" PetscInt_FMT " vertices != 2", support[s], coneSize);
           ierr = DMLabelGetValue(blabel, cone[0], &valA);CHKERRQ(ierr);
           ierr = DMLabelGetValue(blabel, cone[1], &valB);CHKERRQ(ierr);
           ierr = DMLabelGetValue(blabel, support[s], &valE);CHKERRQ(ierr);
@@ -2071,7 +2071,7 @@ PetscErrorCode DMPlexCheckValidSubmesh_Private(DM dm, DMLabel label, DM subdm)
       ierr = ISRestoreIndices(subpointIS, &dmpoints);CHKERRQ(ierr);
       ierr = ISDestroy(&subpointIS);CHKERRQ(ierr);
       ierr = DMDestroy(&subdm);CHKERRQ(ierr);
-      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Ambiguous submesh. Cell %D has all of its vertices on the submesh.", dmpoints[c]);
+      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Ambiguous submesh. Cell %" PetscInt_FMT " has all of its vertices on the submesh.", dmpoints[c]);
     }
   }
   ierr = ISRestoreIndices(subpointIS, &dmpoints);CHKERRQ(ierr);

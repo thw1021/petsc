@@ -54,7 +54,7 @@ static PetscErrorCode PetscPartitionerSetFromOptions_Simple(PetscOptionItems *Pe
   if (flg) {
     p->useGrid = PETSC_TRUE;
     if (p->gridDim < 0) p->gridDim = num;
-    else if (p->gridDim != num) SETERRQ2(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_INCOMP, "Process grid dimension %D != %D node grid dimension", num, p->gridDim);
+    else if (p->gridDim != num) SETERRQ2(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_INCOMP, "Process grid dimension %" PetscInt_FMT " != %" PetscInt_FMT " node grid dimension", num, p->gridDim);
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -78,9 +78,9 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   /* Check grid */
   for (i = 0; i < 3; ++i) Np *= nodes[i]*procs[i];
-  if (nparts != Np)   SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D grid size", nparts, Np);
-  if (nparts != size) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D processes", nparts, size);
-  if (numVertices % nparts) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of cells %D is not divisible by number of partitions %D", numVertices, nparts);
+  if (nparts != Np)   SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %" PetscInt_FMT " != %" PetscInt_FMT " grid size", nparts, Np);
+  if (nparts != size) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %" PetscInt_FMT " != %" PetscInt_FMT " processes", nparts, size);
+  if (numVertices % nparts) SETERRQ2(comm, PETSC_ERR_ARG_INCOMP, "Number of cells %" PetscInt_FMT " is not divisible by number of partitions %" PetscInt_FMT "", numVertices, nparts);
   for (i = 0; i < p->gridDim; ++i) cells[i] = nodes[i]*procs[i];
   Nr = numVertices / nparts;
   while (Nr > 1) {
@@ -89,9 +89,9 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
       Nr       /= 2;
     }
   }
-  if (numVertices && Nr != 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Odd number of cells %D. Must be nprocs*2^k", numVertices);
+  if (numVertices && Nr != 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Odd number of cells %" PetscInt_FMT ". Must be nprocs*2^k", numVertices);
   for (i = 0; i < p->gridDim; ++i) {
-    if (cells[i] %  (nodes[i]*procs[i])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "dir %D. Number of cells (%D) mod number of processors %D", i, cells[i], nodes[i]*procs[i]);
+    if (cells[i] %  (nodes[i]*procs[i])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "dir %" PetscInt_FMT ". Number of cells (%" PetscInt_FMT ") mod number of processors %" PetscInt_FMT "", i, cells[i], nodes[i]*procs[i]);
     pcells[i] = cells[i] / (nodes[i]*procs[i]); Nlc *= pcells[i];
   }
   /* Compute sizes */
@@ -128,7 +128,7 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
       }
     }
   }
-  for (np = 1; np < nparts; ++np) if (offsets[np] - offsets[np-1] != numVertices/nparts) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Offset %D != %D partition size", offsets[np], numVertices/nparts);
+  for (np = 1; np < nparts; ++np) if (offsets[np] - offsets[np-1] != numVertices/nparts) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Offset %" PetscInt_FMT " != %" PetscInt_FMT " partition size", offsets[np], numVertices/nparts);
   ierr = PetscFree(offsets);CHKERRQ(ierr);
   ierr = ISCreateGeneral(PETSC_COMM_SELF, numVertices, cellproc, PETSC_OWN_POINTER, partition);CHKERRQ(ierr);
   PetscFunctionReturn(0);

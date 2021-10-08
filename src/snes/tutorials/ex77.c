@@ -511,7 +511,7 @@ int main(int argc, char **argv)
   if (user.runType == RUN_FULL) {
     ierr = SNESSolve(snes, NULL, u);CHKERRQ(ierr);
     ierr = SNESGetIterationNumber(snes, &its);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "Number of SNES iterations = %D\n", its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "Number of SNES iterations = %" PetscInt_FMT "\n", its);CHKERRQ(ierr);
   } else {
     PetscReal res = 0.0;
 

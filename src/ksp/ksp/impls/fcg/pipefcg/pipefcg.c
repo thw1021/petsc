@@ -252,7 +252,7 @@ static PetscErrorCode KSPSolve_PIPEFCG_cycle(KSP ksp)
     *eta += delta;                                          /* etai    = delta -betaik^2 * etak */
     if (*eta < 0.) {
       pipefcg->norm_breakdown = PETSC_TRUE;
-      ierr = PetscInfo1(ksp,"Restart due to square root breakdown at it = %D\n",ksp->its);CHKERRQ(ierr);
+      ierr = PetscInfo1(ksp,"Restart due to square root breakdown at it = %" PetscInt_FMT "\n",ksp->its);CHKERRQ(ierr);
       break;
     } else {
       alpha= gamma/(*eta);                                  /* alpha = gamma/etai */
@@ -395,13 +395,13 @@ static PetscErrorCode KSPView_PIPEFCG(KSP ksp,PetscViewer viewer)
   }
 
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  max previous directions = %D\n",pipefcg->mmax);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  preallocated %D directions\n",PetscMin(pipefcg->nprealloc,pipefcg->mmax+1));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  max previous directions = %" PetscInt_FMT "\n",pipefcg->mmax);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  preallocated %" PetscInt_FMT " directions\n",PetscMin(pipefcg->nprealloc,pipefcg->mmax+1));CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  %s\n",truncstr);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  restarts performed = %D \n", pipefcg->n_restarts);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  restarts performed = %" PetscInt_FMT " \n", pipefcg->n_restarts);CHKERRQ(ierr);
   } else if (isstring) {
     ierr = PetscViewerStringSPrintf(viewer,
-      "max previous directions = %D, preallocated %D directions, %s truncation strategy",
+      "max previous directions = %" PetscInt_FMT ", preallocated %" PetscInt_FMT " directions, %s truncation strategy",
       pipefcg->mmax,pipefcg->nprealloc,truncstr);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

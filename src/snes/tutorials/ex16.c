@@ -170,7 +170,7 @@ int main(int argc,char **argv)
   ierr = SNESSolve(snes,b,x);CHKERRQ(ierr);
 
   ierr = SNESGetIterationNumber(snes,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(comm,"Number of SNES iterations = %D\n", its);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"Number of SNES iterations = %" PetscInt_FMT "\n", its);CHKERRQ(ierr);
   ierr = SNESGetSolution(snes,&X);CHKERRQ(ierr);
   /* show a cross-section of the final state */
   if (viewline) {
@@ -1037,7 +1037,7 @@ PetscErrorCode DisplayLine(SNES snes,Vec X)
     if (rank == r) {
       if (j >= ys && j < ys+ym && k >= zs && k < zs+zm) {
         for (i=xs; i<xs+xm; i++) {
-          ierr = PetscPrintf(PETSC_COMM_SELF,"%D %d %d: %f %f %f\n",i,0,0,(double)PetscRealPart(c[k][j][i][0] + x[k][j][i][0]),(double)PetscRealPart(c[k][j][i][1] + x[k][j][i][1]),(double)PetscRealPart(c[k][j][i][2] + x[k][j][i][2]));CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"%" PetscInt_FMT " %d %d: %f %f %f\n",i,0,0,(double)PetscRealPart(c[k][j][i][0] + x[k][j][i][0]),(double)PetscRealPart(c[k][j][i][1] + x[k][j][i][1]),(double)PetscRealPart(c[k][j][i][2] + x[k][j][i][2]));CHKERRQ(ierr);
         }
       }
     }

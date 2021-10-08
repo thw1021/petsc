@@ -468,7 +468,7 @@ PetscErrorCode WashNetworkCreate(MPI_Comm comm,PetscInt pipesCase,Wash *wash_ptr
   edgelist    = NULL;
 
   /* proc[0] creates a sequential wash and edgelist */
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Setup pipesCase %D\n",pipesCase);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Setup pipesCase %" PetscInt_FMT "\n",pipesCase);CHKERRQ(ierr);
 
   /* Set global number of pipes, edges, and junctions */
   /*-------------------------------------------------*/
@@ -812,7 +812,7 @@ int main(int argc,char ** argv)
   ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,steps);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,steps);CHKERRQ(ierr);
   if (viewX) {
     ierr = VecView(X,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }

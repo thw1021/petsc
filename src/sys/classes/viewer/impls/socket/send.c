@@ -447,12 +447,12 @@ PetscErrorCode  PetscViewerSocketSetConnection(PetscViewer v,const char machine[
     ierr = PetscStrcmp(mach,"server",&tflg);CHKERRQ(ierr);
     if (tflg) {
       int listenport;
-      ierr = PetscInfo1(v,"Waiting for connection from socket process on port %D\n",port);CHKERRQ(ierr);
+      ierr = PetscInfo1(v,"Waiting for connection from socket process on port %" PetscInt_FMT "\n",port);CHKERRQ(ierr);
       ierr = PetscSocketEstablish(port,&listenport);CHKERRQ(ierr);
       ierr = PetscSocketListen(listenport,&vmatlab->port);CHKERRQ(ierr);
       close(listenport);
     } else {
-      ierr = PetscInfo2(v,"Connecting to socket process on port %D machine %s\n",port,mach);CHKERRQ(ierr);
+      ierr = PetscInfo2(v,"Connecting to socket process on port %" PetscInt_FMT " machine %s\n",port,mach);CHKERRQ(ierr);
       ierr = PetscOpenSocket(mach,port,&vmatlab->port);CHKERRQ(ierr);
     }
   }

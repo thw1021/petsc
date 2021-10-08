@@ -15,7 +15,7 @@ static PetscErrorCode linear(PetscInt dim, PetscReal time, const PetscReal x[], 
 {
   PetscInt d, c;
 
-  if (Nc != 3) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Something is wrong: %D", Nc);
+  if (Nc != 3) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Something is wrong: %" PetscInt_FMT "", Nc);
   for (c = 0; c < Nc; ++c) {
     u[c] = 0.0;
     for (d = 0; d < dim; ++d) u[c] += x[d];
@@ -76,7 +76,7 @@ static PetscErrorCode CreatePoints_Centroid(DM dm, PetscInt *Np, PetscReal **pco
     for (n = 0; n < num; ++n) {
       for (d = 0; d < spaceDim; ++d) (*pcoords)[p*spaceDim+d] += PetscRealPart(coords[n*spaceDim+d]) / num;
     }
-    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %D (", rank, p);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %" PetscInt_FMT " (", rank, p);CHKERRQ(ierr);
     for (d = 0; d < spaceDim; ++d) {
       ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%g", (double)(*pcoords)[p*spaceDim+d]);CHKERRQ(ierr);
       if (d < spaceDim-1) {ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, ", ");CHKERRQ(ierr);}
@@ -123,7 +123,7 @@ static PetscErrorCode CreatePoints_Grid(DM dm, PetscInt *Np, PetscReal **pcoords
         ind[0] = i;
 
         for (d = 0; d < spaceDim; ++d) (*pcoords)[n*spaceDim+d] = ind[d]*h[d];
-        ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %D (", rank, n);CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %" PetscInt_FMT " (", rank, n);CHKERRQ(ierr);
         for (d = 0; d < spaceDim; ++d) {
           ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%g", (double)(*pcoords)[n*spaceDim+d]);CHKERRQ(ierr);
           if (d < spaceDim-1) {ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, ", ");CHKERRQ(ierr);}
@@ -164,7 +164,7 @@ static PetscErrorCode CreatePoints_GridReplicated(DM dm, PetscInt *Np, PetscReal
         ind[0] = i;
 
         for (d = 0; d < spaceDim; ++d) (*pcoords)[n*spaceDim+d] = ind[d]*h[d];
-        ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %D (", rank, n);CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %" PetscInt_FMT " (", rank, n);CHKERRQ(ierr);
         for (d = 0; d < spaceDim; ++d) {
           ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "%g", (double)(*pcoords)[n*spaceDim+d]);CHKERRQ(ierr);
           if (d < spaceDim-1) {ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, ", ");CHKERRQ(ierr);}
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
   ierr = DMInterpolationSetUp(interpolator, dm, pointsAllProcs, PETSC_FALSE);CHKERRQ(ierr);
   /* Check locations */
   for (c = 0; c < interpolator->n; ++c) {
-    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %D is in Cell %D\n", rank, c, interpolator->cells[c]);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "[%d]Point %" PetscInt_FMT " is in Cell %" PetscInt_FMT "\n", rank, c, interpolator->cells[c]);CHKERRQ(ierr);
   }
   ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD, NULL);CHKERRQ(ierr);
   ierr = VecView(interpolator->coords, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
 #endif
       (*funcs[c])(dim, 0.0, vcoordsReal, Nc, vals, NULL);
       if (PetscAbsScalar(ivals[p*Nc+c] - vals[c]) > PETSC_SQRT_MACHINE_EPSILON)
-        SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid interpolated value %g != %g (%D, %D)", (double) PetscRealPart(ivals[p*Nc+c]), (double) PetscRealPart(vals[c]), p, c);
+        SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid interpolated value %g != %g (%" PetscInt_FMT ", %" PetscInt_FMT ")", (double) PetscRealPart(ivals[p*Nc+c]), (double) PetscRealPart(vals[c]), p, c);
     }
   }
   ierr = VecRestoreArrayRead(interpolator->coords, &vcoords);CHKERRQ(ierr);

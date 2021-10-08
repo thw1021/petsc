@@ -20,7 +20,7 @@ int main(int argc,char **argv)
       ierr = DMStagCreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,elx,ely,elz,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof[0],dof[1],dof[2],dof[3],DMSTAG_STENCIL_BOX,1,NULL,NULL,NULL,&dmstag);CHKERRQ(ierr);
       break;
     default:
-      SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"No support for dimension %D",dim);
+      SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"No support for dimension %" PetscInt_FMT "",dim);
   }
   ierr = DMSetFromOptions(dmstag);CHKERRQ(ierr);
   ierr = DMSetUp(dmstag);CHKERRQ(ierr);
@@ -923,7 +923,7 @@ static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
       if (arrLocal[i] != arrLocalExpected[i]) {
         ++nerr;
           if (nerr <= maxErrPerRank) {
-            ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Entry %D has value %g instead of the expected %g\n",rank,i,(double)PetscRealPart(arrLocal[i]),(double)PetscRealPart(arrLocalExpected[i]));CHKERRQ(ierr);
+            ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Entry %" PetscInt_FMT " has value %g instead of the expected %g\n",rank,i,(double)PetscRealPart(arrLocal[i]),(double)PetscRealPart(arrLocalExpected[i]));CHKERRQ(ierr);
             if (nerr == maxErrPerRank + 1) {
               ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Skipping additional errors on this rank\n",rank);CHKERRQ(ierr);
             }
@@ -931,7 +931,7 @@ static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
       }
     }
     if (nerr > 0) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] %D incorrect values on this rank\n",rank,nerr);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] %" PetscInt_FMT " incorrect values on this rank\n",rank,nerr);CHKERRQ(ierr);
     }
     ierr = VecRestoreArrayRead(vecLocal,&arrLocal);CHKERRQ(ierr);
     ierr = PetscFree(arrLocalExpected);CHKERRQ(ierr);

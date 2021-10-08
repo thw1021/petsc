@@ -727,7 +727,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* (Column oriented for blas calls) */
   ii=0;
 
-  ierr = PetscInfo1(tao,"Build matrix: %D\n",(PetscInt)mfqP->size);CHKERRQ(ierr);
+  ierr = PetscInfo1(tao,"Build matrix: %" PetscInt_FMT "\n",(PetscInt)mfqP->size);CHKERRQ(ierr);
   if (1 == mfqP->size) {
     ierr = VecGetArrayRead(mfqP->Xhist[mfqP->minindex],&xmint);CHKERRQ(ierr);
     for (i=0;i<mfqP->n;i++) mfqP->xmin[i] = xmint[i];
@@ -798,7 +798,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* D (nxn) Fdiff (nxm)  => G (nxm) */
   blasncopy = blasn;
   PetscStackCallBLAS("LAPACKgesv",LAPACKgesv_(&blasn,&blasm,mfqP->Disp,&blasnpmax,mfqP->iwork,mfqP->Fdiff,&blasncopy,&info));
-  ierr = PetscInfo1(tao,"Linear solve return: %D\n",(PetscInt)info);CHKERRQ(ierr);
+  ierr = PetscInfo1(tao,"Linear solve return: %" PetscInt_FMT "\n",(PetscInt)info);CHKERRQ(ierr);
 
   cres = minnorm;
   ierr = pounders_update_res(tao);CHKERRQ(ierr);
@@ -951,7 +951,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
     }
 
     /* Update the quadratic model */
-    ierr = PetscInfo2(tao,"Get Quad, size: %D, points: %D\n",mfqP->n,mfqP->nmodelpoints);CHKERRQ(ierr);
+    ierr = PetscInfo2(tao,"Get Quad, size: %" PetscInt_FMT ", points: %" PetscInt_FMT "\n",mfqP->n,mfqP->nmodelpoints);CHKERRQ(ierr);
     ierr = getquadpounders(mfqP);CHKERRQ(ierr);
     ierr = VecGetArrayRead(mfqP->Fhist[mfqP->minindex],&fmin);CHKERRQ(ierr);
     PetscStackCallBLAS("BLAScopy",BLAScopy_(&blasm,fmin,&ione,mfqP->C,&ione));
@@ -1234,7 +1234,7 @@ static PetscErrorCode TaoView_POUNDERS(Tao tao, PetscViewer viewer)
   if (isascii) {
     ierr = PetscViewerASCIIPrintf(viewer, "initial delta: %g\n",(double)mfqP->delta0);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "final delta: %g\n",(double)mfqP->delta);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "model points: %D\n",mfqP->nmodelpoints);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "model points: %" PetscInt_FMT "\n",mfqP->nmodelpoints);CHKERRQ(ierr);
     if (mfqP->usegqt) {
       ierr = PetscViewerASCIIPrintf(viewer, "subproblem solver: gqt\n");CHKERRQ(ierr);
     } else {

@@ -111,26 +111,26 @@ static PetscErrorCode IdentifyBadPoints (DM dm, Vec vec, PetscReal tol)
       if (absDiff > tol) {bad = PETSC_TRUE; break;}
     }
     if (!bad) continue;
-    ierr = PetscPrintf(PETSC_COMM_SELF, "Bad point %D\n", p);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "Bad point %" PetscInt_FMT "\n", p);CHKERRQ(ierr);
     ierr = DMLabelGetValue(depthLabel, p, &s);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF, "  Depth %D\n", s);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF, "  Depth %" PetscInt_FMT "\n", s);CHKERRQ(ierr);
     ierr = DMPlexGetTransitiveClosure(dmplex, p, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
     for (cl = 0; cl < closureSize; cl++) {
       PetscInt cp = closure[2 * cl];
       ierr = DMPlexGetTreeParent(dmplex, cp, &parent, &childID);CHKERRQ(ierr);
       if (parent != cp) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  Closure point %D (%D) child of %D (ID %D)\n", cl, cp, parent, childID);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  Closure point %" PetscInt_FMT " (%" PetscInt_FMT ") child of %" PetscInt_FMT " (ID %" PetscInt_FMT ")\n", cl, cp, parent, childID);CHKERRQ(ierr);
       }
       ierr = DMPlexGetTreeChildren(dmplex, cp, &numChildren, NULL);CHKERRQ(ierr);
       if (numChildren) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  Closure point %D (%D) is parent\n", cl, cp);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  Closure point %" PetscInt_FMT " (%" PetscInt_FMT ") is parent\n", cl, cp);CHKERRQ(ierr);
       }
     }
     ierr = DMPlexRestoreTransitiveClosure(dmplex, p, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
     for (c = 0; c < cSize; c++) {
       PetscReal absDiff = PetscAbsScalar(values[c]);
       if (absDiff > tol) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  Bad dof %D\n", c);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  Bad dof %" PetscInt_FMT "\n", c);CHKERRQ(ierr);
       }
     }
   }
