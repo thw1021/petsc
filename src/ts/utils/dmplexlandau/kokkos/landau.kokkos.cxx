@@ -337,7 +337,7 @@ PetscErrorCode landau_mat_assemble(PetscSplitCSRDataStructure d_mat, const team_
   return 0;
 }
 
-PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt num_grids, const PetscInt batch_sz, const PetscInt a_numCells[], PetscReal a_Eq_m[], PetscScalar a_elem_closure[],
+PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt batch_sz, const PetscInt num_grids, const PetscInt a_numCells[], PetscReal a_Eq_m[], PetscScalar a_elem_closure[],
                                     const PetscInt N, const PetscScalar a_xarray[], const LandauStaticData *SData_d, const PetscInt num_sub_blocks, const PetscReal shift,
                                     const PetscLogEvent events[], const PetscInt a_mat_offset[], const PetscInt a_species_offset[], Mat subJ[], Mat JacP)
 {
@@ -757,7 +757,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         for (PetscInt ej = cStart ; ej < cEnd; ++ej) {
           const PetscScalar *elMat = &h_elem_mats(b_id,grid,ej-cStart,0);
           ierr = DMPlexMatSetClosure(plex[grid], section, globalSection, B, ej, elMat, ADD_VALUES);CHKERRQ(ierr);
-          //printf("\t\t%d.%d.%d) DMPlexMatSetClosure elem mat [0] = %g\n",b_id,grid,ej,elMat[0]);
           if (grid==0 && ej==-1) {
             const PetscInt  loc_Nf = a_species_offset[grid+1]-a_species_offset[grid], totDim = loc_Nf*Nq;
             int d,f;

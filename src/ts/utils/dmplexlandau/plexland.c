@@ -472,6 +472,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
                   u_x[d] += invJ[e*dim+d]*refSpaceDer[e];
                 }
                 //printf("\t\t\t%d.%d.%d.%d) dudx(%d,%d) = %g\n",b_id,grid,loc_elem,qi,idx,d,u_x[d]);
+                //printf("%d.%d.%d.%d %d) u_x[%d]=%g\n",b_id,grid,loc_elem,qi,idx,d,u_x[d]);
               }
               dudx[idx] = u_x[0];
               dudy[idx] = u_x[1];
@@ -531,6 +532,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
 #if LANDAU_DIM==2
                   PetscReal       Ud[2][2], Uk[2][2], mask = (PetscAbs(vj[0]-x) < 100*PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[1]-y) < 100*PETSC_SQRT_MACHINE_EPSILON) ? 0. : 1.;
                   LandauTensor2D(vj, x, y, Ud, Uk, mask);
+                  //printf("U %d.%d.%d) %d) %e %e %e %e %e\n",b_id,grid,loc_elem,ipidx,wi,x,y,vj[0],Ud[0][0]);
 #else
                   PetscReal U[3][3], z = zz[ipidx], mask = (PetscAbs(vj[0]-x) < 100*PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[1]-y) < 100*PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[2]-z) < 100*PETSC_SQRT_MACHINE_EPSILON) ? 0. : 1.;
                   if (ctx->use_relativistic_corrections) {
@@ -548,6 +550,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
                     temp1[2] += dudz[idx]*nu_beta[f+f_off]*invMass[f+f_off];
 #endif
                     temp2    += ff[idx]*nu_beta[f+f_off];
+                    //printf("\t\t\t temp2 %d.%d.%d * %d * %d: ipidx %d temp2=%e\n",b_id,grid,loc_elem,qj,f, ipidx, temp2);
                   }
                   temp1[0] *= wi;
                   temp1[1] *= wi;
@@ -583,6 +586,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             for (PetscInt fieldA = 0, f_off = ctx->species_offset[grid]; fieldA < loc_Nf; ++fieldA) {
               for (d2 = 0; d2 < dim; d2++) {
                 gg2[fieldA][d2] = gg2_temp[d2]*nu_alpha[fieldA+f_off];
+                //printf("s_gg2 %d.%d.%d) s_gg2[%d][%d][%d]=%g\n",b_id,grid,loc_elem,d2,qj,fieldA,gg2[fieldA][d2]);
                 for (d3 = 0; d3 < dim; d3++) {
                   gg3[fieldA][d2][d3] = -gg3_temp[d2][d3]*nu_alpha[fieldA+f_off]*invMass[fieldA+f_off];
                 }
@@ -987,7 +991,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
         PetscInt       cells[] = {2,2,2};
         PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
         DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
-        if (dim==2) { lo[0] = 0; cells[0] /* = cells[1] */ = 1; }
+        if (dim==2) { lo[0] = 0; cells[0] = /* cells[1] = */ 1; }
         //printf("---------- cells[0] = cells[1] = 1\n");
         ierr = DMPlexCreateBoxMesh(comm_self, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, &ctx->plex[grid]);CHKERRQ(ierr); // todo: make composite and create dm[grid] here
         ierr = DMLocalizeCoordinates(ctx->plex[grid]);CHKERRQ(ierr); /* needed for periodic */
@@ -1254,7 +1258,7 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
     mctxs[i0] = &data[i0];
     data[i0].v_0 = ctx->v_0; // v_0 same for all grids
     data[i0].kT_m = ctx->k*temps[ii]/ctx->masses[ii]; /* kT/m */
-    data[i0].n = ns[ii] * (1+b_id); // make solves a little different to mimic application, n[0] use for Conner-Hastie
+    data[i0].n = ns[ii] * (1+(double)b_id/10.0); // make solves a little different to mimic application, n[0] use for Conner-Hastie
     //printf(">>>>>>>> %d.%d) ctx->n[%d]=%g ctx->electronShift=%e\n",b_id,grid,ii,data[i0].n,ctx->electronShift);
     initu[i0] = maxwellian;
     data[i0].shift = 0;

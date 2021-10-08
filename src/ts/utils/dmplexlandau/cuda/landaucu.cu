@@ -196,15 +196,14 @@ void landau_form_fdf(const PetscInt dim, const PetscInt Nb, const PetscInt num_g
                      const PetscInt d_numCells[], const PetscInt d_species_offset[], const PetscInt d_mat_offset[], const PetscInt d_ip_offset[], const PetscInt d_ipf_offset[], const PetscInt d_elem_offset[]) // output
 {
   const PetscInt    Nq = blockDim.y, myQi = threadIdx.y;
-  const PetscInt    b_elem_idx = blockIdx.y, b_id = blockIdx.x, batch_sz = gridDim.x, num_elem_batch = gridDim.y, IPf_sz_glb = d_ipf_offset[num_grids];
+  const PetscInt    b_elem_idx = blockIdx.y, b_id = blockIdx.x, IPf_sz_glb = d_ipf_offset[num_grids];
   const PetscReal   *Bq = &BB[myQi*Nb], *Dq = &DD[myQi*Nb*dim];
   PetscInt          grid = 0, f,d,b,e,q;
-printf("num_elem_batch=%d Nq=%d myQi=%d b_elem_idx=%d b_id=%d batch_sz=%d\n",num_elem_batch,Nq,myQi,b_elem_idx,b_id,batch_sz);
   while (b_elem_idx >= d_elem_offset[grid+1]) grid++;
   {
     const PetscInt     loc_nip = d_numCells[grid]*Nq, loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
-    const PetscInt     moffset = LAND_MOFFSET(b_id,grid,batch_sz,num_grids,d_mat_offset);
-    const PetscScalar  *coef, *invJe = &d_invJ[(d_ip_offset[grid] + loc_elem*Nq)*dim*dim];
+    const PetscInt     moffset = LAND_MOFFSET(b_id,grid,gridDim.x,num_grids,d_mat_offset);
+    const PetscScalar  *coef, *invJ = &d_invJ[(d_ip_offset[grid] + loc_elem*Nq + myQi)*dim*dim];
     PetscReal          u_x[LANDAU_DIM];
     PetscScalar        coef_buff[LANDAU_MAX_SPECIES*LANDAU_MAX_NQ];
     if (!d_maps) {
@@ -243,8 +242,9 @@ printf("num_elem_batch=%d Nq=%d myQi=%d b_elem_idx=%d b_id=%d batch_sz=%d\n",num
       }
       for (d = 0; d < dim; ++d) {
         for (e = 0, u_x[d] = 0.0; e < dim; ++e) {
-          u_x[d] += invJe[myQi*dim*dim + e*dim+d]*refSpaceDer[e];
+          u_x[d] += invJ[e*dim+d]*refSpaceDer[e];
         }
+        //printf("%d.%d.%d.%d %d) u_x[%d]=%g\n",b_id,grid,loc_elem,myQi,idx,d,u_x[d]);
       }
       d_dfdx[idx] = u_x[0];
       d_dfdy[idx] = u_x[1];
@@ -256,7 +256,7 @@ printf("num_elem_batch=%d Nq=%d myQi=%d b_elem_idx=%d b_id=%d batch_sz=%d\n",num
 }
 
 __device__ void
-jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, PetscInt nip_global, const PetscInt Nq, const PetscInt grid,
+jac_kernel(const PetscInt num_grids, const PetscInt jpidx, PetscInt nip_global, const PetscInt grid,
            const PetscReal xx[], const PetscReal yy[], const PetscReal ww[], const PetscReal invJj[],
            const PetscInt Nftot, const PetscReal nu_alpha[], const PetscReal nu_beta[], const PetscReal invMass[], const PetscReal Eq_m[],
            const PetscReal * const BB, const PetscReal * const DD, PetscScalar *elemMat, P4estVertexMaps *d_maps[], PetscSplitCSRDataStructure d_mat, // output
@@ -279,8 +279,10 @@ jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, 
 #endif
            const PetscInt d_numCells[], const PetscInt d_species_offset[], const PetscInt d_mat_offset[], const PetscInt d_ip_offset[], const PetscInt d_ipf_offset[], const PetscInt d_elem_offset[])
 {
-  //const PetscInt  Nq = blockDim.y, myQi = threadIdx.y;
-  const PetscInt  b_elem_idx=blockIdx.y, b_id=blockIdx.x, batch_sz=gridDim.x, num_elem_batch=gridDim.y, IPf_sz_glb=d_ipf_offset[num_grids];
+  const PetscInt  Nq = blockDim.y, myQi = threadIdx.y;
+  const PetscInt  b_elem_idx=blockIdx.y, b_id=blockIdx.x, IPf_sz_glb=d_ipf_offset[num_grids];
+  const PetscInt  loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
+  const PetscInt  moffset = LAND_MOFFSET(b_id,grid,gridDim.x,num_grids,d_mat_offset);
   int             delta,d,f,g,d2,dp,d3,fieldA,ipidx_b;
   PetscReal       gg2_temp[LANDAU_DIM], gg3_temp[LANDAU_DIM][LANDAU_DIM];
 #if LANDAU_DIM==2
@@ -290,9 +292,8 @@ jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, 
   const PetscReal vj[3] = {xx[jpidx], yy[jpidx], zz[jpidx]};
   constexpr int dim = 3;
 #endif
-  const PetscInt  moffset = LAND_MOFFSET(b_id,grid,batch_sz,num_grids,d_mat_offset), loc_Nf = d_species_offset[grid+1]-d_species_offset[grid], g_cell = blockIdx.x, elem = g_cell - d_elem_offset[grid];
   const PetscInt  f_off = d_species_offset[grid], Nb=Nq;
-
+  //if (threadIdx.x==0) printf("jac_kernel %d.%d.%d.%d IPf_sz_glb=%d. myQi=%d == threadIdx.y=%d/(%d==%d) nip_global=%d, %d threads\n",b_id,grid,loc_elem,myQi,IPf_sz_glb,myQi,threadIdx.y,Nq,blockDim.y,nip_global,blockDim.x);
   // create g2 & g3
   for (f=threadIdx.x; f<loc_Nf; f+=blockDim.x) {
     for (d=0;d<dim;d++) { // clear accumulation data D & K
@@ -318,7 +319,7 @@ jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, 
   // inner integral, collect gg2/3
   for (ipidx_b = 0; ipidx_b < nip_global; ipidx_b += blockDim.x) {
     const PetscInt ipidx = ipidx_b + threadIdx.x;
-    PetscInt       f_off_r,grid_r,loc_Nf_r,nip_loc_r,ipidx_g,fieldB,IPf_idx_r;
+    PetscInt f_off_r,grid_r,loc_Nf_r,nip_loc_r,ipidx_g,fieldB,IPf_idx_r;
     __syncthreads();
     if (ipidx < nip_global) {
       grid_r = 0;
@@ -327,10 +328,11 @@ jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, 
       ipidx_g = ipidx - d_ip_offset[grid_r];
       nip_loc_r = d_numCells[grid_r]*Nq;
       loc_Nf_r = d_species_offset[grid_r+1] - d_species_offset[grid_r];
-      IPf_idx_r = b_id*IPf_sz_glb + d_ipf_offset[grid_r];
+      IPf_idx_r = b_id*IPf_sz_glb + d_ipf_offset[grid_r] + ipidx_g;
       for (fieldB = threadIdx.y; fieldB < loc_Nf_r ; fieldB += blockDim.y) {
-        const PetscInt idx = IPf_idx_r + (fieldB+f_off_r)*nip_loc_r + ipidx_g;
-        s_f  [fieldB*blockDim.x + threadIdx.x] =    d_f[idx]; // all vector threads get copy of data (Peng: why?)
+        const PetscInt idx = IPf_idx_r + fieldB*nip_loc_r;
+        s_f  [fieldB*blockDim.x + threadIdx.x] =    d_f[idx]; // all vector threads get copy of data
+        //printf("\t\td_f %d.%d.%d.%d.%d) %d) d_f[%d]=%e == s_f[%d]\n",b_id,grid,loc_elem,myQi,fieldB,ipidx,idx,d_f[idx],fieldB*blockDim.x + threadIdx.x);
         s_dfx[fieldB*blockDim.x + threadIdx.x] = d_dfdx[idx];
         s_dfy[fieldB*blockDim.x + threadIdx.x] = d_dfdy[idx];
 #if LANDAU_DIM==3
@@ -356,6 +358,7 @@ jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, 
         temp1[2] += s_dfz[fieldB*blockDim.x + threadIdx.x]*s_nu_beta[fieldB + f_off_r]*s_invMass[fieldB + f_off_r];
 #endif
         temp2    += s_f  [fieldB*blockDim.x + threadIdx.x]*s_nu_beta[fieldB + f_off_r];
+        //printf("\t\t\t temp2 %d.%d.%d * %d * %d: ipidx %d temp2=%e\n",b_id,grid,loc_elem,myQi,fieldB, ipidx, temp2);
       }
       temp1[0] *= wi;
       temp1[1] *= wi;
@@ -454,7 +457,7 @@ jac_kernel(const PetscInt num_grids, const PetscInt myQi, const PetscInt jpidx, 
       if (s_fieldMats) {
         PetscScalar vals[LANDAU_MAX_Q_FACE*LANDAU_MAX_Q_FACE];
         PetscInt    nr,nc;
-        const LandauIdx *const Idxs = &d_maps[grid]->gIdx[elem][fieldA][0];
+        const LandauIdx *const Idxs = &d_maps[grid]->gIdx[loc_elem][fieldA][0];
         __syncthreads();
         if (threadIdx.y == 0) {
           for (f = threadIdx.x; f < Nb ; f += blockDim.x) {
@@ -547,17 +550,18 @@ void __launch_bounds__(256,2)
   PetscScalar (*s_fieldMats)[LANDAU_MAX_NQ][LANDAU_MAX_NQ];
   PetscReal   (*s_scale)[LANDAU_MAX_NQ][LANDAU_MAX_Q_FACE];
   PetscInt    (*s_idx)[LANDAU_MAX_NQ][LANDAU_MAX_Q_FACE];
-  const PetscInt b_elem_idx = blockIdx.y, b_id = blockIdx.x, batch_sz = gridDim.x, num_elem_batch = gridDim.y;
-  PetscInt       Nq = blockDim.y, g_cell = blockIdx.x, grid = 0; // Nq == Nb
+  const PetscInt b_elem_idx = blockIdx.y, b_id = blockIdx.x;
+  PetscInt       Nq = blockDim.y, grid = 0; // Nq == Nb
   PetscScalar    *elemMat = NULL; /* my output */
 
   while (b_elem_idx >= d_elem_offset[grid+1]) grid++;
   {
-    const PetscInt   loc_nip = d_numCells[grid]*Nq, loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
+    const PetscInt   loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
     const PetscInt   myQi = threadIdx.y;
-    const PetscInt   jpidx = d_ip_offset[grid] + myQi + elem * Nq;
+    const PetscInt   jpidx = d_ip_offset[grid] + myQi + loc_elem * Nq;
     const PetscReal  *invJ = &invJj[jpidx*dim*dim];
     if (d_elem_mats) {
+      PetscInt totDim = loc_Nf*Nb;
       elemMat = d_elem_mats; // start a beginning and get to my element matrix
       for (PetscInt b_id2=0 ; b_id2<b_id ; b_id2++) {
         for (PetscInt grid2=0 ; grid2<num_grids ; grid2++) {
@@ -571,7 +575,7 @@ void __launch_bounds__(256,2)
       }
       elemMat += loc_elem*totDim*totDim; // index into local matrix & zero out
       for (int i = threadIdx.x + threadIdx.y*blockDim.x; i < totDim*totDim; i += blockDim.x*blockDim.y) elemMat[i] = 0;
-      printf("landau_jacobian elem mat idx = %d\n",elemMat-d_elem_mats);
+      //if (threadIdx.x) printf("\t %d.%d.%d landau_jacobian elem mat idx = %d\n",b_id,grid,loc_elem,(int)(elemMat-d_elem_mats));
     }
     __syncthreads();
     if (d_maps) {
@@ -586,7 +590,7 @@ void __launch_bounds__(256,2)
       s_fieldMats = NULL;
     }
     __syncthreads();
-    jac_kernel(num_grids, myQi, jpidx, nip_global, Nq, grid, xx, yy, ww,
+    jac_kernel(num_grids, jpidx, nip_global, grid, xx, yy, ww,
                invJ, Nftot, nu_alpha, nu_beta, invMass, Eq_m, BB, DD,
                elemMat, d_maps, d_mat,
                *s_fieldMats, *s_scale, *s_idx,
@@ -603,10 +607,9 @@ void __launch_bounds__(256,2)
 __global__
 void __launch_bounds__(256,4) landau_mass(const PetscInt dim, const PetscInt Nb, const PetscInt num_grids, const PetscReal d_w[], const PetscReal * const BB, const PetscReal * const DD,
                                           PetscScalar d_elem_mats[], P4estVertexMaps *d_maps[], PetscSplitCSRDataStructure d_mat, PetscReal shift,
-                                          const PetscInt d_numCells[], const PetscInt d_species_offset[], const PetscInt d_mat_offset[], const PetscInt d_ip_offset[], const PetscInt d_ipf_offset[], const PetscInt d_elem_offset[])
+                                          const PetscInt d_numCells[], const PetscInt d_species_offset[], const PetscInt d_mat_offset[], const PetscInt d_ip_offset[], const PetscInt d_elem_offset[])
 {
-  const PetscInt         Nq = blockDim.y, g_cell = blockIdx.x;
-  const PetscInt         b_elem_idx = blockIdx.y, b_id = blockIdx.x, batch_sz = gridDim.x, num_elem_batch = gridDim.y;
+  const PetscInt         Nq = blockDim.y, b_elem_idx = blockIdx.y, b_id = blockIdx.x;
   __shared__ PetscScalar s_fieldMats[LANDAU_MAX_NQ][LANDAU_MAX_NQ];
   __shared__ PetscInt    s_idx[LANDAU_MAX_NQ][LANDAU_MAX_Q_FACE];
   __shared__ PetscReal   s_scale[LANDAU_MAX_NQ][LANDAU_MAX_Q_FACE];
@@ -615,8 +618,8 @@ void __launch_bounds__(256,4) landau_mass(const PetscInt dim, const PetscInt Nb,
 
   while (b_elem_idx >= d_elem_offset[grid+1]) grid++;
   {
-    const PetscInt loc_nip = d_numCells[grid]*Nq, loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
-    const PetscInt moffset = LAND_MOFFSET(b_id,grid,batch_sz,num_grids,d_mat_offset), totDim = loc_Nf*Nq;
+    const PetscInt loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
+    const PetscInt moffset = LAND_MOFFSET(b_id,grid,gridDim.x,num_grids,d_mat_offset), totDim = loc_Nf*Nq;
     if (d_elem_mats) {
       elemMat = d_elem_mats; // start a beginning
       for (PetscInt b_id2=0 ; b_id2<b_id ; b_id2++) {
@@ -642,7 +645,7 @@ void __launch_bounds__(256,4) landau_mass(const PetscInt dim, const PetscInt Nb,
           PetscScalar t = 0;
           for (qj = 0 ; qj < Nq ; qj++) {
             const PetscReal *BJq = &BB[qj*Nb];
-            const PetscInt jpidx = d_ip_offset[grid] + qj + elem * Nq;
+            const PetscInt jpidx = d_ip_offset[grid] + qj + loc_elem * Nq;
             if (dim==2) {
               t += BJq[f] * d_w[jpidx]*shift * BJq[g] * 2. * PETSC_PI;
             } else {
@@ -656,7 +659,7 @@ void __launch_bounds__(256,4) landau_mass(const PetscInt dim, const PetscInt Nb,
         }
       }
       if (!elemMat) {
-        const LandauIdx *const Idxs = &d_maps[grid]->gIdx[elem][fieldA][0];
+        const LandauIdx *const Idxs = &d_maps[grid]->gIdx[loc_elem][fieldA][0];
         __syncthreads();
         if (threadIdx.y == 0) {
           for (f = threadIdx.x; f < Nb ; f += blockDim.x) {
@@ -726,7 +729,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(events[3],0,0,0,0);CHKERRQ(ierr);
   while (nnn & nnn - 1) nnn = nnn & nnn - 1;
-  if (nnn>16) nnn = 16;
+  if (nnn>16) nnn = 16; // printf("DEBUG\n");
   ierr = DMGetApplicationContext(plex[0], &ctx);CHKERRQ(ierr);
   if (!ctx) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   ierr = DMGetDimension(plex[0], &dim);CHKERRQ(ierr);
@@ -829,7 +832,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
 #endif
                                              d_numCells, d_species_offset, d_mat_offset, d_ip_offset, d_ipf_offset, d_elem_offset);
     CHECK_LAUNCH_ERROR();
-    ierr = PetscLogGpuFlops(nip_global*(PetscLogDouble)(2*Nb*(1+dim)));CHKERRQ(ierr);
+    ierr = PetscLogGpuFlops(batch_sz*nip_global*(PetscLogDouble)(2*Nb*(1+dim)));CHKERRQ(ierr);
     if (a_elem_closure) {
       cerr = cudaFree(d_vertex_f);CHKERRCUDA(cerr);
       d_vertex_f = NULL;
@@ -839,7 +842,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
     // Jacobian
     ierr = PetscLogEventBegin(events[4],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    ierr = PetscLogGpuFlops(nip_global*(PetscLogDouble)(a_elem_closure ? (nip_global*(11*Nftot+ 4*dim*dim) + 6*Nftot*dim*dim*dim + 10*Nftot*dim*dim + 4*Nftot*dim + Nb*Nftot*Nb*Nq*dim*dim*5) : Nb*Nftot*Nb*Nq*4));CHKERRQ(ierr);
+    ierr = PetscLogGpuFlops(batch_sz*nip_global*(PetscLogDouble)(a_elem_closure ? (nip_global*(11*Nftot+ 4*dim*dim) + 6*Nftot*dim*dim*dim + 10*Nftot*dim*dim + 4*Nftot*dim + Nb*Nftot*Nb*Nq*dim*dim*5) : Nb*Nftot*Nb*Nq*4));CHKERRQ(ierr);
     PetscInt ii = 2*LANDAU_MAX_NQ*LANDAU_MAX_SPECIES*LANDAU_DIM*(1+LANDAU_DIM) + 3*LANDAU_MAX_SPECIES + (1+LANDAU_DIM)*dimBlock.x*LANDAU_MAX_SPECIES + LANDAU_MAX_NQ*LANDAU_MAX_NQ + 2*LANDAU_MAX_NQ*LANDAU_MAX_Q_FACE;
     if (ii*szf >= 49152) {
       cerr = cudaFuncSetAttribute(landau_jacobian,
@@ -870,7 +873,8 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
   }
   // First time assembly with or without GPU assembly
   if (d_elem_mats) {
-    for (PetscInt b_id = 0, elem_mats_idx = 0 ; b_id < batch_sz ; b_id++) { // OpenMP (once)
+    PetscInt elem_mats_idx = 0;
+    for (PetscInt b_id = 0 ; b_id < batch_sz ; b_id++) { // OpenMP (once)
       for (PetscInt grid=0 ; grid<num_grids ; grid++) {  // elem_mats_idx += totDim*totDim*a_numCells[grid];
         const PetscInt    Nfloc = a_species_offset[grid+1]-a_species_offset[grid], totDim = Nfloc*Nq;
         PetscScalar       *elemMats = NULL, *elMat;
@@ -904,7 +908,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
         ierr = MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
         ierr = MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
         // move nest matrix to global JacP
-        printf("\t\t\t%d.%d: a_mat_offset = %d %d. moffset=%d B=%p\n",b_id,grid,a_mat_offset[0],a_mat_offset[1], moffset, B);
         ierr = MatGetSize(B, &nloc, NULL);CHKERRQ(ierr);
         for (int i=0 ; i<nloc ; i++) {
           ierr = MatGetRow(B,i,&nzl,&cols,&vals);CHKERRQ(ierr);
@@ -919,6 +922,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
         elem_mats_idx += totDim*totDim*a_numCells[grid]; // this can be a stored offset?
       } // grids
     }
+    if (elem_mats_idx != batch_sz*elem_mat_size_tot) SETERRQ2(PetscObjectComm((PetscObject) JacP), PETSC_ERR_PLIB, "elem_mats_idx != batch_sz*elem_mat_size_tot: %D %D",elem_mats_idx,batch_sz*elem_mat_size_tot);
     cerr = cudaFree(d_elem_mats);CHKERRCUDA(cerr);
   }
 
