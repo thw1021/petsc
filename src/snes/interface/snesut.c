@@ -339,7 +339,7 @@ PetscErrorCode  SNESMonitorScaling(SNES snes,PetscInt its,PetscReal fgnorm,Petsc
   ierr = MatGetRowMaxAbs(J,v,NULL);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(viewer,vf->format);CHKERRQ(ierr);
   ierr = PetscViewerASCIIAddTab(viewer,((PetscObject)snes)->tablevel);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"%3D SNES Jacobian maximum row entries \n");CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"SNES Jacobian maximum row entries \n");CHKERRQ(ierr);
   ierr = VecView(v,viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIISubtractTab(viewer,((PetscObject)snes)->tablevel);CHKERRQ(ierr);
   ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);

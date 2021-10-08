@@ -6100,7 +6100,7 @@ PetscErrorCode DMGetDimPoints(DM dm, PetscInt dim, PetscInt *pStart, PetscInt *p
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   ierr = DMGetDimension(dm, &d);CHKERRQ(ierr);
-  if ((dim < 0) || (dim > d)) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d 1", dim, d);
+  if ((dim < 0) || (dim > d)) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %D", dim);
   if (!dm->ops->getdimpoints) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DM type %s does not implement DMGetDimPoints",((PetscObject)dm)->type_name);
   ierr = (*dm->ops->getdimpoints)(dm, dim, pStart, pEnd);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -8327,7 +8327,7 @@ PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *same, char **message)
     if (msg[0]) goto finish;
   }
 finish:
-  if (msg[0] && !same && !message) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, msg);
+  if (msg[0] && !same && !message) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "%s", msg);
   if (same) *same = (PetscBool) !msg[0];
   if (message) {
     *message = NULL;
