@@ -435,6 +435,7 @@ PETSC_EXTERN PetscErrorCode DMPlexNaturalToGlobalEnd(DM, Vec, Vec);
 /* mesh adaptation */
 PETSC_EXTERN PetscErrorCode DMPlexAdapt(DM, Vec, const char [], DM *);
 PETSC_EXTERN PetscErrorCode DMPlexSnapToGeomModel(DM, PetscInt, PetscInt, const PetscScalar[], PetscScalar[]);
+PETSC_EXTERN PetscErrorCode DMPlexMetricSetFromOptions(DM);
 PETSC_EXTERN PetscErrorCode DMPlexMetricSetIsotropic(DM, PetscBool);
 PETSC_EXTERN PetscErrorCode DMPlexMetricIsIsotropic(DM, PetscBool *);
 PETSC_EXTERN PetscErrorCode DMPlexMetricSetRestrictAnisotropyFirst(DM, PetscBool);
