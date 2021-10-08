@@ -736,7 +736,7 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
         f = j;
       }
     }
-    if (numFaces != 1) {SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "%d vertices cannot define more than 1 facet (%d)", dim, numFaces);}
+    if (numFaces != 1) SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "%d vertices cannot define more than 1 facet (%d)", dim, numFaces);
     ierr = DMLabelSetValue(bdLabelNew, coveredPoints[f], faceTagsNew[i]);CHKERRQ(ierr);
     ierr = DMPlexRestoreJoin(*dmNew, dim, facePoints, &numCoveredPoints, &coveredPoints);CHKERRQ(ierr);
   }
@@ -783,7 +783,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   DMLabel            bdLabelNew;
   PetscReal         *verticesNewLoc;
   PetscInt          *verTagsNew, *cellsNew, *cellTagsNew, *corners;
-  PetscInt          *requiredCells, *requiredVer, *facesNew, *faceTagsNew, *ridges, *requiredeFaces;
+  PetscInt          *requiredCells, *requiredVer, *facesNew, *faceTagsNew, *ridges, *requiredFaces;
   PetscInt          *gv_new, *owners, *verticesNewSorted;
   PetscInt           numCellsNew, numVerticesNew, numCornersNew, numFacesNew, numVerticesNewLoc;
   PetscInt           i, j, k, p, r, n, v, c, f, off, lv, gv;
@@ -794,8 +794,8 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &numProcs);CHKERRQ(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(comm, &numProcs);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   if (bdLabel) {
     ierr = PetscObjectGetName((PetscObject) bdLabel, &bdLabelName);CHKERRQ(ierr);
     ierr = PetscStrcmp(bdLabelName, bdName, &flg);CHKERRQ(ierr);
@@ -886,8 +886,8 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   if (numProcs > 1) {
     ierr = DMGetPointSF(dm, &sf);CHKERRQ(ierr);
     ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
-    ierr = PetscSFGetLeafRanks(sf, &niranks, &iranks, &ioffset, &irootloc); CHKERRQ(ierr);
-    ierr = PetscSFGetRootRanks(sf, &nrranks, &rranks, &roffset, &rmine, &rremote); CHKERRQ(ierr);
+    ierr = PetscSFGetLeafRanks(sf, &niranks, &iranks, &ioffset, &irootloc);CHKERRQ(ierr);
+    ierr = PetscSFGetRootRanks(sf, &nrranks, &rranks, &roffset, &rmine, &rremote);CHKERRQ(ierr);
     ierr = PetscCalloc1(numProcs, &numVerInterfaces);CHKERRQ(ierr);
 
     /* Counting */
@@ -985,7 +985,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
     PMMG_Set_tensorMet(parmesh, metric[6*i], metric[6*i+1], metric[6*i+2], metric[6*i+3], metric[6*i+4], metric[6*i+5], i+1);
   }
   ierr = PMMG_Set_numberOfNodeCommunicators(parmesh, numNgbRanks);
-  for(c = 0; c < numNgbRanks; ++c) {
+  for (c = 0; c < numNgbRanks; ++c) {
     ierr = PMMG_Set_ithNodeCommunicatorSize(parmesh, c, ngbRanks[c], intOffset[c+1]-intOffset[c]);
     ierr = PMMG_Set_ithNodeCommunicator_nodes(parmesh, c, &interfaces_lv[intOffset[c]], &interfaces_gv[intOffset[c]], 1);
   }
@@ -1005,23 +1005,25 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   ierr = PMMG_Get_meshSize(parmesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew, 0, 0);
   ierr = PetscMalloc4(dim*numVerticesNew, &verticesNew, numVerticesNew, &verTagsNew, numVerticesNew, &corners, numVerticesNew, &requiredVer);CHKERRQ(ierr);
   ierr = PetscMalloc3((dim+1)*numCellsNew, &cellsNew, numCellsNew, &cellTagsNew, numCellsNew, &requiredCells);CHKERRQ(ierr);
-  ierr = PetscMalloc4(dim*numFacesNew, &facesNew, numFacesNew, &faceTagsNew, numFacesNew, &ridges, numFacesNew, &requiredeFaces);CHKERRQ(ierr);
+  ierr = PetscMalloc4(dim*numFacesNew, &facesNew, numFacesNew, &faceTagsNew, numFacesNew, &ridges, numFacesNew, &requiredFaces);CHKERRQ(ierr);
   ierr = PMMG_Get_vertices(parmesh, verticesNew, verTagsNew, corners, requiredVer);
   ierr = PMMG_Get_tetrahedra(parmesh, cellsNew, cellTagsNew, requiredCells);
-  ierr = PMMG_Get_triangles(parmesh, facesNew, faceTagsNew, requiredeFaces);
+  ierr = PMMG_Get_triangles(parmesh, facesNew, faceTagsNew, requiredFaces);
   ierr = PetscMalloc2(numVerticesNew, &gv_new, numVerticesNew, &owners);
   ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_globalNum, 1);
   ierr = PMMG_Get_verticesGloNum(parmesh, gv_new, owners);
   for (i = 0; i < dim*numFacesNew; ++i) { facesNew[i] -= 1; }
-  for (i = 0; i < (dim+1)*numCellsNew; ++i) { cellsNew[i] = gv_new[cellsNew[i]-1]-1; }
+  for (i = 0; i < (dim+1)*numCellsNew; ++i) {
+    cellsNew[i] = gv_new[cellsNew[i]-1]-1;
+  }
   numVerticesNewLoc = 0;
   for (i = 0; i < numVerticesNew; ++i) {
     if (owners[i] == rank) { numVerticesNewLoc++; }
   }
-  ierr = PetscMalloc2(numVerticesNewLoc*dim, &verticesNewLoc, numVerticesNew, &verticesNewSorted); CHKERRQ(ierr);
+  ierr = PetscMalloc2(numVerticesNewLoc*dim, &verticesNewLoc, numVerticesNew, &verticesNewSorted);CHKERRQ(ierr);
 
   for (i = 0, c = 0; i < numVerticesNew; i++) {
-    if (owners[i] == rank) { 
+    if (owners[i] == rank) {
       for (j=0; j<dim; ++j) { verticesNewLoc[dim*c+j] = verticesNew[dim*i+j]; }
         c++;
     }
@@ -1035,7 +1037,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   ierr = DMPlexGetDepthStratum(*dmNew, 0, &vStart, &vEnd);CHKERRQ(ierr);
   ierr = DMCreateLabel(*dmNew, bdLabel ? bdLabelName : bdName);CHKERRQ(ierr);
   ierr = DMGetLabel(*dmNew, bdLabel ? bdLabelName : bdName, &bdLabelNew);CHKERRQ(ierr);
-  for(i = 0; i < numFacesNew; i++) {
+  for (i = 0; i < numFacesNew; i++) {
     PetscInt        numCoveredPoints, numFaces = 0, facePoints[3];
     const PetscInt *coveredPoints = NULL;
 
@@ -1060,8 +1062,8 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   /* Clean up */
   ierr = PetscFree4(verticesNew, verTagsNew, corners, requiredVer);CHKERRQ(ierr);
   ierr = PetscFree3(cellsNew, cellTagsNew, requiredCells);CHKERRQ(ierr);
-  ierr = PetscFree4(facesNew, faceTagsNew, ridges, requiredeFaces);CHKERRQ(ierr);
-  ierr = PetscFree2(owners, gv_new); CHKERRQ(ierr);
+  ierr = PetscFree4(facesNew, faceTagsNew, ridges, requiredFaces);CHKERRQ(ierr);
+  ierr = PetscFree2(owners, gv_new);CHKERRQ(ierr);
   ierr = PetscFree2(verticesNewLoc, verticesNewSorted);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 #else
