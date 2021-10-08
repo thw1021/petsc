@@ -474,8 +474,9 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         {
           const PetscInt     loc_nip = d_numCells[grid]*Nq, loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
           const PetscInt     moffset = LAND_MOFFSET(b_id,grid,batch_sz,num_grids,d_mat_offset);
-          const PetscScalar  *coef, *invJe = &d_invJ_k( (d_ip_offset[grid] + loc_elem*Nq)*dim*dim);
+          const PetscScalar  *coef;
           PetscScalar        coef_buff[LANDAU_MAX_SPECIES*LANDAU_MAX_NQ];
+          const PetscReal    *invJe = &d_invJ_k( (d_ip_offset[grid] + loc_elem*Nq)*dim*dim);
           // un pack IPData
           if (!maps[grid]) {
             coef = &d_vertex_f[b_id*IPf_sz_glb + d_ipf_offset[grid] + loc_elem*Nb*loc_Nf]; // closure and IP indexing are the same
@@ -560,7 +561,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
           Kokkos::parallel_for(Kokkos::TeamThreadRange(team,0,Nq), [=] (int myQi) {
               using Kokkos::parallel_reduce;
               const PetscInt  jpidx_glb = d_ip_offset[grid] + loc_elem * Nq + myQi;
-              PetscScalar     *invJ = &d_invJ_k( jpidx_glb*dim*dim);
+              const PetscReal *invJ = &d_invJ_k( jpidx_glb*dim*dim);
               const PetscReal vj[3] = {d_x[jpidx_glb], d_y[jpidx_glb], d_z ? d_z[jpidx_glb] : 0}, wj = d_w[jpidx_glb];
               landau_inner_red::TensorValueType gg_temp; // reduce on part of gg2 and g33 for IP jpidx_g
               Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, (int)d_ip_offset[num_grids]), [=] (const int& ipidx, landau_inner_red::TensorValueType & ggg) {

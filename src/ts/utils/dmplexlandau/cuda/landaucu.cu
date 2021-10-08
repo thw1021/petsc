@@ -203,8 +203,8 @@ void landau_form_fdf(const PetscInt dim, const PetscInt Nb, const PetscInt num_g
   {
     const PetscInt     loc_nip = d_numCells[grid]*Nq, loc_Nf = d_species_offset[grid+1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid];
     const PetscInt     moffset = LAND_MOFFSET(b_id,grid,gridDim.x,num_grids,d_mat_offset);
-    const PetscScalar  *coef, *invJ = &d_invJ[(d_ip_offset[grid] + loc_elem*Nq + myQi)*dim*dim];
-    PetscReal          u_x[LANDAU_DIM];
+    const PetscScalar  *coef;
+    PetscReal          u_x[LANDAU_DIM], *invJ = &d_invJ[(d_ip_offset[grid] + loc_elem*Nq + myQi)*dim*dim];
     PetscScalar        coef_buff[LANDAU_MAX_SPECIES*LANDAU_MAX_NQ];
     if (!d_maps) {
       coef = &d_vertex_f[b_id*IPf_sz_glb + d_ipf_offset[grid] + loc_elem*Nb*loc_Nf]; // closure and IP indexing are the same
