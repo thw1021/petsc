@@ -1276,8 +1276,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
     if not (foundCompilers or foundSetCompilers):
       raise RuntimeError('Did not find setCompilers and compilers modules in children')
-    minCxx,maxCxx = compilers.cxxDialectRange
-    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange))
+    minCxx,maxCxx = compilers.cxxDialectRange['Cxx']
+    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange['Cxx']))
     minCxxVersionBlameList = {}
     maxCxxVersionBlameList = {}
     ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
@@ -1340,7 +1340,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPacks} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
     compilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
     self.logPrint('serialEvaluation: new cxxDialectRanges {rng}'.format(rng=(minCxx,maxCxx)))
-    depGraph = graph.DirectedGraph.topologicalSort(depGraph)
+    depGraph  = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()
     for child in depGraph:

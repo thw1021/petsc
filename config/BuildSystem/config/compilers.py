@@ -4,6 +4,7 @@ import re
 import os
 import shutil
 from collections import namedtuple
+from collections import defaultdict
 
 def remove_xcode_verbose(buf):
   retbuf =[]
@@ -14,8 +15,31 @@ def remove_xcode_verbose(buf):
 class MissingProcessor(AttributeError):
   pass
 
+class CaseInsensitiveDefaultDict(defaultdict):
+  __slots__ = ()
+
+  def update(self,*args):
+    for x in args:
+      for key,val in x.items():
+        self[key] = val
+
+  def __setitem__(self,key,val):
+    if not isinstance(key,str):
+      raise RuntimeError('must use strings as keys for {cls}'.format(cls=self.__class__))
+    # super() without args is python3 only
+    super(defaultdict,self).__setitem__(key.lower(),val)
+
+  def __missing__(self,key):
+    if not isinstance(key,str):
+      raise RuntimeError('must use strings as keys for {cls}'.format(cls=self.__class__))
+    key = key.lower()
+    if key not in self.keys():
+      self[key] = self.default_factory()
+    return self[key]
+
 class Configure(config.base.Configure):
-  _cxxDialectRange = ('c++03','c++17') # min and max version range
+  # min and max version range
+  _cxxDialectRange         = CaseInsensitiveDefaultDict(lambda:('c++14','c++17'))
   _cxxDialectPackageRanges = ({},{})
 
   @property
@@ -778,7 +802,7 @@ class Configure(config.base.Configure):
             pass
           else:
             # success, record our new range
-            self.cxxDialectRange = (dialects[minDialect]['num'],'c++'+dlct['num'])
+            self.cxxDialectRange[language] = ('c++'+dialects[minDialect]['num'],'c++'+dlct['num'])
             if not useFlag:
               compilerFlags = self.getCompilerFlags().strip()
               if compilerFlags.count(flag) > 1:
