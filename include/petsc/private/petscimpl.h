@@ -898,6 +898,7 @@ struct _n_PetscSubcomm {
 #define PetscSubcommParent(scomm)           ((scomm)->parent)
 #define PetscSubcommChild(scomm)            ((scomm)->child)
 #define PetscSubcommContiguousParent(scomm) ((scomm)->dupparent)
+#define PetscSubcommColor(scomm)            ((scomm)->color)
 
 /*
   PETSc communicators have this attribute, see
