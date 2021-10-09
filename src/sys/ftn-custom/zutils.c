@@ -62,7 +62,7 @@ size_t PetscIntAddressToFortran(const PetscInt *base,const PetscInt *addr)
   if (base + itmp2 != addr) {
     (*PetscErrorPrintf)("PetscIntAddressToFortran:C and Fortran arrays are\n");
     (*PetscErrorPrintf)("not commonly aligned or are too far apart to be indexed \n");
-    (*PetscErrorPrintf)("by an integer. Locations: C %uld Fortran %uld\n",tmp1,tmp3);
+    (*PetscErrorPrintf)("by an integer. Locations: C %zu Fortran %zu\n",tmp1,tmp3);
     PETSCABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB);
   }
   return itmp2;
