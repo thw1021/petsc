@@ -268,7 +268,7 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   if (!dctx->device) {
-    ierr = PetscInfo2(NULL,"PetscDeviceContext %d did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
+    ierr = PetscInfo2(NULL,"PetscDeviceContext %" PetscInt_FMT " did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceKinds[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetDevice(dctx,PetscDeviceDefault_Internal());CHKERRQ(ierr);
   }
   if (dctx->setup) PetscFunctionReturn(0);

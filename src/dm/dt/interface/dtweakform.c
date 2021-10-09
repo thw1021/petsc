@@ -1499,7 +1499,7 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
       if (keys[k].label) {
         ierr = PetscObjectGetName((PetscObject) keys[k].label, &name);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPrintf(viewer, "(%s:%p, %" PetscInt_FMT ") ", name, keys[k].label, keys[k].value);CHKERRQ(ierr);
-      } else {ierr = PetscViewerASCIIPrintf(viewer, "");CHKERRQ(ierr);}
+      }
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
       if (splitField) {ierr = PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ", %" PetscInt_FMT ") ", keys[k].field/Nf, keys[k].field%Nf);CHKERRQ(ierr);}
       else            {ierr = PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ") ", keys[k].field);CHKERRQ(ierr);}
