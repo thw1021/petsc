@@ -617,7 +617,7 @@ static PetscErrorCode THISetUpDM(THI thi,DM dm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMCoarsenHook_THI(DM dmf,DM dmc,void *ctx)
+static PetscErrorCode DMCoarsenHook_THI(PETSC_UNUSED DM dmf,DM dmc,void *ctx)
 {
   THI            thi = (THI)ctx;
   PetscErrorCode ierr;
@@ -632,7 +632,7 @@ static PetscErrorCode DMCoarsenHook_THI(DM dmf,DM dmc,void *ctx)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMRefineHook_THI(DM dmc,DM dmf,void *ctx)
+static PetscErrorCode DMRefineHook_THI(PETSC_UNUSED DM dmc,DM dmf,void *ctx)
 {
   THI            thi = (THI)ctx;
   PetscErrorCode ierr;
@@ -676,7 +676,7 @@ static PetscErrorCode THIDARestorePrm(DM da,PrmNode ***prm)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode THIInitial(SNES snes,Vec X,void *ctx)
+static PetscErrorCode THIInitial(SNES snes,Vec X,PETSC_UNUSED void *ctx)
 {
   THI            thi;
   PetscInt       i,j,k,xs,xm,ys,ym,zs,zm,mx,my;
@@ -907,7 +907,7 @@ static PetscErrorCode THISurfaceStatistics(DM da,Vec X,PetscReal *min,PetscReal 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode THISolveStatistics(THI thi,SNES snes,PetscInt coarsened,const char name[])
+static PetscErrorCode THISolveStatistics(THI thi,SNES snes,PETSC_UNUSED PetscInt coarsened,const char name[])
 {
   MPI_Comm       comm;
   Vec            X;
@@ -969,7 +969,7 @@ static PetscErrorCode THISolveStatistics(THI thi,SNES snes,PetscInt coarsened,co
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode THIJacobianLocal_2D(DMDALocalInfo *info,Node **x,Mat J,Mat B,THI thi)
+static PetscErrorCode THIJacobianLocal_2D(DMDALocalInfo *info,Node **x,PETSC_UNUSED Mat J,Mat B,THI thi)
 {
   PetscInt       xs,ys,xm,ym,i,j,q,l,ll;
   PetscReal      hx,hy;
@@ -1241,7 +1241,7 @@ static PetscErrorCode THIJacobianLocal_3D(DMDALocalInfo *info,Node ***x,Mat B,TH
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode THIJacobianLocal_3D_Full(DMDALocalInfo *info,Node ***x,Mat A,Mat B,THI thi)
+static PetscErrorCode THIJacobianLocal_3D_Full(DMDALocalInfo *info,Node ***x,PETSC_UNUSED Mat A,Mat B,THI thi)
 {
   PetscErrorCode ierr;
 
@@ -1250,7 +1250,7 @@ static PetscErrorCode THIJacobianLocal_3D_Full(DMDALocalInfo *info,Node ***x,Mat
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode THIJacobianLocal_3D_Tridiagonal(DMDALocalInfo *info,Node ***x,Mat A,Mat B,THI thi)
+static PetscErrorCode THIJacobianLocal_3D_Tridiagonal(DMDALocalInfo *info,Node ***x,PETSC_UNUSED Mat A,Mat B,THI thi)
 {
   PetscErrorCode ierr;
 
