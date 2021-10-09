@@ -19,7 +19,7 @@ int main(int argc, char **argv)
   PetscFE         fe;
   KSP             ksp;
   PC              pc;
-  Mat             M_p, M, PM_p=NULL;
+  Mat             M_p, PM_p=NULL;
   Vec             f, rho, rhs;
   PetscInt        dim, Nc = 1, timestep = 0, i, faces[3];
   PetscInt        Np = 10, p, field = 0, zero = 0, bs;
@@ -94,13 +94,9 @@ int main(int argc, char **argv)
 
   /* Project field to particles */
   /*   This gives f_p = M_p^+ M f */
-  ierr = DMCreateMassMatrix(dm, dm, &M);CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(dm, &rhs);CHKERRQ(ierr);
-  if (0) {
-    ierr = MatMult(M, rho, rhs);CHKERRQ(ierr);  /* this is what you would do for an FE solve */
-  } else {
-    ierr = VecCopy(rho, rhs);CHKERRQ(ierr); /* Identity: M^1 M rho */
-  }
+  ierr = VecCopy(rho, rhs);CHKERRQ(ierr); /* Identity: M^1 M rho */
+
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
   ierr = KSPSetOptionsPrefix(ksp, "ftop_");CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
@@ -130,9 +126,8 @@ int main(int argc, char **argv)
   }
   ierr = DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords);CHKERRQ(ierr);
   ierr = DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void**)&wq);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number density = %20.12e. energy = %20.12e error = %20.12e\n", norm, energy_0, (energy_1-energy_0)/energy_0);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number = %20.12e. energy = %20.12e error = %20.12e\n", norm, energy_0, (energy_1-energy_0)/energy_0);CHKERRQ(ierr);
   /* Cleanup */
-  ierr = MatDestroy(&M);CHKERRQ(ierr);
   ierr = MatDestroy(&M_p);CHKERRQ(ierr);
   ierr = MatDestroy(&PM_p);CHKERRQ(ierr);
   ierr = VecDestroy(&rho);CHKERRQ(ierr);
@@ -150,7 +145,13 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: double
-    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -ftop_ksp_type lsqr -ftop_pc_type none -dm_view
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -np 50 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -ftop_ksp_type lsqr -ftop_pc_type none -dm_view -swarm_view -weights_view
+    filter: grep -v DM_ | grep -v atomic
+
+  test:
+    suffix: bjacobi
+    requires: double
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -np 50 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -dm_plex_hash_location -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero -dm_view -swarm_view -weights_view
     filter: grep -v DM_ | grep -v atomic
 
 TEST*/
