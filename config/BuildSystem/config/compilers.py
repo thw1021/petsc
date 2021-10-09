@@ -585,7 +585,7 @@ class Configure(config.base.Configure):
     elif withLangDialect.startswith('C++'):
       allowedBaseFlags = [BaseFlags.standard]
     elif withLangDialect == 'NONE':
-      allowedBaseFlags = ['dummy base']
+      allowedBaseFlags = ['(NO FLAG)']
     else:
       # if we are here withLangDialect is either AUTO or e.g. 14
       allowedBaseFlags = [BaseFlags.standard]
@@ -777,7 +777,7 @@ class Configure(config.base.Configure):
       # if the user asks for a particular version we should pin that version
       minDialect = maxDialect
 
-    flagPool = tuple((''.join((b,d['num'])),d) for d in reversed(dialects[minDialect:maxDialect+1]) for b in allowedBaseFlags)
+    flagPool = [(''.join((b,d['num'])),d) for d in reversed(dialects[minDialect:maxDialect+1]) for b in allowedBaseFlags]
 
     self.logPrint('checkCxxDialect: Have potential flag pool:\n{flags}'.format(flags='\n'.join('\t   - '+f for f,_ in flagPool)))
     with self.Language(language):
@@ -806,7 +806,8 @@ class Configure(config.base.Configure):
             if not useFlag:
               compilerFlags = self.getCompilerFlags().strip()
               if compilerFlags.count(flag) > 1:
-                raise RuntimeError("We said we wouldn't add the flag yet the flag has been mysteriously added!!:\n{flags}".format(flags=compilerFlags))
+                raise RuntimeError('We said we wouldn\'t add the flag yet the flag has been mysteriously added!!:\n{flags}'.format(flags=compilerFlags))
+            self.logPrint('checkCxxDialect: success using {flag} for {lang} dialect c++{ver}, set new cxxDialectRange: {drange}'.format(flag=flag,lang=language,ver=dlct['num'],drange=self.cxxDialectRange[language]))
             break # break from allowed flags loop
         if index == len(flagPool)-1:
           # we were not successful, compiler does not support the minimum required
