@@ -144,7 +144,7 @@ PetscErrorCode private_DMSwarmView_XDMF(DM dm,PetscViewer viewer)
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"<Topology Dimensions=\"%" PetscInt_FMT "\" TopologyType=\"Mixed\">\n",ng);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%lD\">\n",ng*3,bytes[0]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%ld\">\n",ng*3,bytes[0]);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -178,7 +178,7 @@ PetscErrorCode private_DMSwarmView_XDMF(DM dm,PetscViewer viewer)
       break;
   }
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%lD\">\n",ng,dim,bytes[0]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%ld\">\n",ng,dim,bytes[0]);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -245,9 +245,9 @@ PetscErrorCode private_VecView_Swarm_XDMF(Vec x,PetscViewer viewer)
   ierr = PetscViewerASCIIPrintf(viewer,"<Attribute Center=\"Node\" Name=\"%s\" Type=\"None\">\n",fieldname);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   if (bs == 1) {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%ld\">\n",N,bytes[0]);CHKERRQ(ierr);
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Float\" Precision=\"8\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%ld\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
@@ -313,9 +313,9 @@ PetscErrorCode private_ISView_Swarm_XDMF(IS is,PetscViewer viewer)
   ierr = PetscViewerASCIIPrintf(viewer,"<Attribute Center=\"Node\" Name=\"%s\" Type=\"None\">\n",fieldname);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   if (bs == 1) {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%" PetscInt_FMT "\" Seek=\"%ld\">\n",N,bytes[0]);CHKERRQ(ierr);
   } else {
-    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%lD\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"<DataItem Format=\"Binary\" Endian=\"Big\" DataType=\"Int\" Precision=\"4\" Dimensions=\"%" PetscInt_FMT " %" PetscInt_FMT "\" Seek=\"%ld\">\n",N,bs,bytes[0]);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"%s\n",datafilename);CHKERRQ(ierr);
