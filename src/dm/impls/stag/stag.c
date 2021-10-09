@@ -160,7 +160,7 @@ static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_compare(comm,PetscObjectComm((PetscObject)dm2),&sameComm);CHKERRMPI(ierr);
   if (sameComm != MPI_IDENT) {
-    ierr = PetscInfo2((PetscObject)dm,"DMStag objects have different communicators: %d != %d\n",comm,PetscObjectComm((PetscObject)dm2));CHKERRQ(ierr);
+    ierr = PetscInfo2((PetscObject)dm,"DMStag objects have different communicators: %" PETSC_MPI_COMM_FMT " != %" PETSC_MPI_COMM_FMT "\n",comm,PetscObjectComm((PetscObject)dm2));CHKERRQ(ierr);
     *set = PETSC_FALSE;
     PetscFunctionReturn(0);
   }
