@@ -444,10 +444,9 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
         ierr = PetscPrintf(PETSC_COMM_SELF, "  quad point %" PetscInt_FMT " wt %g\n", q, quadWeights[q]);CHKERRQ(ierr);
         if (debug > 2) {
           ierr = PetscPrintf(PETSC_COMM_SELF, "  field %" PetscInt_FMT ":", field);CHKERRQ(ierr);
-          for (c = 0; c < T[field]->Nc; ++c) {ierr = PetscPrintf(PETSC_COMM_SELF, " %g", u[uOff[field]+c]);CHKERRQ(ierr);}
-          ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
-          ierr = PetscPrintf(PETSC_COMM_SELF, "  resid %" PetscInt_FMT ":", field);CHKERRQ(ierr);
-          for (c = 0; c < T[field]->Nc; ++c) {ierr = PetscPrintf(PETSC_COMM_SELF, " %g", f0[q*T[field]->Nc+c]);CHKERRQ(ierr);}
+          for (c = 0; c < T[field]->Nc; ++c) {ierr = PetscPrintf(PETSC_COMM_SELF, " %g", (double)(u[uOff[field]+c]));CHKERRQ(ierr);}
+          ierr = PetscPrintf(PETSC_COMM_SELF, "\n  resid %" PetscInt_FMT ":", field);CHKERRQ(ierr);
+          for (c = 0; c < T[field]->Nc; ++c) {ierr = PetscPrintf(PETSC_COMM_SELF, " %g", (double)(f0[q*T[field]->Nc+c]));CHKERRQ(ierr);}
           ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
         }
       }
@@ -546,9 +545,9 @@ PetscErrorCode PetscFEIntegrateBdResidual_Basic(PetscDS ds, PetscWeakForm wf, Pe
       if (debug) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "  elem %" PetscInt_FMT " quad point %" PetscInt_FMT "\n", e, q);CHKERRQ(ierr);
         for (c = 0; c < NcI; ++c) {
-          if (n0) {ierr = PetscPrintf(PETSC_COMM_SELF, "  f0[%" PetscInt_FMT "] %g\n", c, f0[q*NcI+c]);CHKERRQ(ierr);}
+          if (n0) {ierr = PetscPrintf(PETSC_COMM_SELF, "  f0[%" PetscInt_FMT "] %g\n", c, (double)(f0[q*NcI+c]));CHKERRQ(ierr);}
           if (n1) {
-            for (d = 0; d < dim; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "  f1[%" PetscInt_FMT ",%" PetscInt_FMT "] %g", c, d, f1[(q*NcI + c)*dim + d]);CHKERRQ(ierr);}
+            for (d = 0; d < dim; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "  f1[%" PetscInt_FMT ",%" PetscInt_FMT "] %g", c, d, (double)(f1[(q*NcI + c)*dim + d]));CHKERRQ(ierr);}
             ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
           }
         }

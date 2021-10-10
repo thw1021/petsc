@@ -838,7 +838,7 @@ PetscErrorCode DMPlexTransformGetSourcePoint(DMPlexTransform tr, PetscInt pNew, 
   ctE = tr->ctStart[tr->ctOrderOld[tr->ctOrderInvOld[ctO]+1]];
   ierr = DMPlexTransformCellTransform(tr, (DMPolytopeType) ctO, ctS, &rt, &Nct, &rct, &rsize, &cone, &ornt);CHKERRQ(ierr);
   for (n = 0; n < Nct; ++n) {
-    if (rct[n] == ctN) {
+    if (rct[n] == (DMPolytopeType)ctN) {
       PetscInt tmp = pNew - tr->ctStartNew[ctN] - offset;
 
       rp = tmp / rsize[n];
@@ -1336,7 +1336,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
       ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %" PetscInt_FMT " vertices\n", DMPolytopeTypes[ct], tr->trNv[ct]);CHKERRQ(ierr);
       for (v = 0; v < tr->trNv[ct]; ++v) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);
-        for (d = 0; d < dE; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "%g ", tr->trVerts[ct][off++]);CHKERRQ(ierr);}
+        for (d = 0; d < dE; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "%g ", (double)(tr->trVerts[ct][off++]));CHKERRQ(ierr);}
         ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
       }
 
