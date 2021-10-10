@@ -1782,7 +1782,7 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
   ierr = DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
   for (v = vStart; v < vEnd; ++v) {
     PetscScalar volsum = 0.0;
-    PetscInt   *star = NULL;
+    PetscInt   *star   = NULL;
     PetscInt    starSize, st, d, fc;
 
     ierr = PetscArrayzero(gradsum, coordDim*numComponents);CHKERRQ(ierr);
@@ -1842,7 +1842,7 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
       }
       volsum += vol;
       if (debug) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D gradient: [", cell);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "Vertex %D Cell %D gradient: [", v, cell);CHKERRQ(ierr);
         for (fc = 0; fc < numComponents; ++fc) {
           for (d = 0; d < coordDim; ++d) {
             if (fc || d > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, ", ");CHKERRQ(ierr);}
@@ -3257,9 +3257,11 @@ PetscErrorCode DMPlexComputeInjectorFEM(DM dmc, DM dmf, VecScatter *sc, void *us
     ierr = DMPlexMatGetClosureIndicesRefined(dmf, fsection, fglobalSection, dmc, csection, cglobalSection, c, cellCIndices, cellFIndices);CHKERRQ(ierr);
     for (d = 0; d < cTotDim; ++d) {
       if ((cellCIndices[d] < startC) || (cellCIndices[d] >= endC)) continue;
-      if ((findices[cellCIndices[d]-startC] >= 0) && (findices[cellCIndices[d]-startC] != cellFIndices[cmap[d]])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Coarse dof %D maps to both %D and %D", cindices[cellCIndices[d]-startC], findices[cellCIndices[d]-startC], cellFIndices[cmap[d]]);
+      // TODO swtich to forming a matrix rather than a scatter
+      //if ((findices[cellCIndices[d]-startC] >= 0) && (findices[cellCIndices[d]-startC] != cellFIndices[cmap[d]])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Coarse dof %D maps to both %D and %D", cindices[cellCIndices[d]-startC], findices[cellCIndices[d]-startC], cellFIndices[cmap[d]]);
+      // Just pick the first one right now
       cindices[cellCIndices[d]-startC] = cellCIndices[d];
-      findices[cellCIndices[d]-startC] = cellFIndices[cmap[d]];
+      if (findices[cellCIndices[d]-startC] < 0) {findices[cellCIndices[d]-startC] = cellFIndices[cmap[d]];}
     }
   }
   ierr = PetscFree(cmap);CHKERRQ(ierr);
