@@ -1895,7 +1895,7 @@ PetscErrorCode PetscDTGaussTensorQuadrature(PetscInt dim, PetscInt Nc, PetscInt 
     ierr = PetscFree2(xw,ww);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot construct quadrature rule for dimension %d", dim);
+    SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot construct quadrature rule for dimension %" PetscInt_FMT, dim);
   }
   ierr = PetscQuadratureCreate(PETSC_COMM_SELF, q);CHKERRQ(ierr);
   ierr = PetscQuadratureSetOrder(*q, 2*npoints-1);CHKERRQ(ierr);
@@ -2001,8 +2001,8 @@ PetscErrorCode PetscDTTanhSinhTensorQuadrature(PetscInt dim, PetscInt level, Pet
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  if (dim > 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Dimension %d not yet implemented", dim);
-  if (!level) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must give a number of significant digits");
+  if (PetscUnlikely(dim > 1)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not yet implemented", dim);
+  if (PetscUnlikely(!level)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must give a number of significant digits");
   /* Find K such that the weights are < 32 digits of precision */
   for (K = 1; PetscAbsReal(PetscLog10Real(wk)) < 2*p; ++K) {
     wk = 0.5*h*PETSC_PI*PetscCoshReal(K*h)/PetscSqr(PetscCoshReal(0.5*PETSC_PI*PetscSinhReal(K*h)));

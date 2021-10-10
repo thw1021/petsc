@@ -691,7 +691,7 @@ PetscErrorCode PetscDualSpaceGetFunctional(PetscDualSpace sp, PetscInt i, PetscQ
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(functional, 3);
   ierr = PetscDualSpaceGetDimension(sp, &dim);CHKERRQ(ierr);
-  if ((i < 0) || (i >= dim)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Functional index %d must be in [0, %d)", i, dim);
+  if (PetscUnlikely((i < 0) || (i >= dim))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Functional index %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", i, dim);
   *functional = sp->functional[i];
   PetscFunctionReturn(0);
 }

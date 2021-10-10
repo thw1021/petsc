@@ -103,7 +103,7 @@ static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
           case 3 :
             nNeighbors = 6*stencilWidth + 5;
             break;
-          default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %d",dim);
+          default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %" PetscInt_FMT,dim);
         }
         break;
       case DMSTAG_STENCIL_BOX:
@@ -117,7 +117,7 @@ static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
           case 3 :
             nNeighbors = (2*stencilWidth + 1) * (2*stencilWidth + 1) * (2*stencilWidth + 1);
             break;
-          default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %d",dim);
+          default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %" PetscInt_FMT,dim);
         }
         break;
       default : SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported stencil");
@@ -390,8 +390,8 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
           break;
         default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"not implemented for dim==%" PetscInt_FMT "",dim);
       }
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local native entries: %d\n",rank,stag->entries);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local entries total : %d\n",rank,stag->entriesGhost);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local native entries: %" PetscInt_FMT "\n",rank,stag->entries);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local entries total : %" PetscInt_FMT "\n",rank,stag->entriesGhost);CHKERRQ(ierr);
       ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     } else {
@@ -480,7 +480,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM dm)
     case 1: dm->ops->setup     = DMSetUp_Stag_1d; break;
     case 2: dm->ops->setup     = DMSetUp_Stag_2d; break;
     case 3: dm->ops->setup     = DMSetUp_Stag_3d; break;
-    default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %d",dim);
+    default : SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %" PetscInt_FMT,dim);
   }
   dm->ops->clone               = DMClone_Stag;
   dm->ops->view                = DMView_Stag;

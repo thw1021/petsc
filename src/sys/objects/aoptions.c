@@ -201,7 +201,7 @@ PetscErrorCode PetscOptionsGetFromTextInput(PetscOptionItems *PetscOptionsObject
       ierr = PetscPrintf(PETSC_COMM_WORLD,"-%s%s <",PetscOptionsObject->prefix ? PetscOptionsObject->prefix : "",next->option+1);CHKERRQ(ierr);
       vald = (PetscInt*) next->data;
       for (i=0; i<next->arraylength; i++) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"%d",vald[i]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT,vald[i]);CHKERRQ(ierr);
         if (i < next->arraylength-1) {
           ierr = PetscPrintf(PETSC_COMM_WORLD,",");CHKERRQ(ierr);
         }
@@ -1708,9 +1708,9 @@ PetscErrorCode  PetscOptionsIntArray_Private(PetscOptionItems *PetscOptionsObjec
   }
   ierr = PetscOptionsGetIntArray(PetscOptionsObject->options,PetscOptionsObject->prefix,opt,value,n,set);CHKERRQ(ierr);
   if (PetscOptionsObject->printhelp && PetscOptionsObject->count == 1 && !PetscOptionsObject->alreadyprinted) {
-    ierr = (*PetscHelpPrintf)(PetscOptionsObject->comm,"  -%s%s <%d",PetscOptionsObject->prefix ? PetscOptionsObject->prefix : "",opt+1,value[0]);CHKERRQ(ierr);
+    ierr = (*PetscHelpPrintf)(PetscOptionsObject->comm,"  -%s%s <%" PetscInt_FMT,PetscOptionsObject->prefix ? PetscOptionsObject->prefix : "",opt+1,value[0]);CHKERRQ(ierr);
     for (i=1; i<*n; i++) {
-      ierr = (*PetscHelpPrintf)(PetscOptionsObject->comm,",%d",value[i]);CHKERRQ(ierr);
+      ierr = (*PetscHelpPrintf)(PetscOptionsObject->comm,",%" PetscInt_FMT,value[i]);CHKERRQ(ierr);
     }
     ierr = (*PetscHelpPrintf)(PetscOptionsObject->comm,">: %s (%s)\n",text,ManSection(man));CHKERRQ(ierr);
   }

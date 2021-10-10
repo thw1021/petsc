@@ -613,7 +613,7 @@ static PetscErrorCode MatMPIXAIJComputeLocalToGlobalMapping_Private(Mat A, ISLoc
     ierr = ISDestroy(&is);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(comm,PETSC_ERR_ARG_WRONG,"Unsupported l2g disassembling type %" PetscInt_FMT "",mode);
+    SETERRQ1(comm,PETSC_ERR_ARG_WRONG,"Unsupported l2g disassembling type %d",mode);
   }
   PetscFunctionReturn(0);
 }
@@ -1318,7 +1318,7 @@ static PetscErrorCode MatSetValuesLocal_SubMat_IS(Mat A,PetscInt m,const PetscIn
   PetscInt       rows_l[MATIS_MAX_ENTRIES_INSERTION],cols_l[MATIS_MAX_ENTRIES_INSERTION];
 
   PetscFunctionBegin;
-  if (PetscUnlikely(m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column indices must be <= %" PetscInt_FMT ": they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
+  if (PetscUnlikely(m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column indices must be <= %d: they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
   ierr = ISLocalToGlobalMappingApply(A->rmap->mapping,m,rows,rows_l);CHKERRQ(ierr);
   ierr = ISLocalToGlobalMappingApply(A->cmap->mapping,n,cols,cols_l);CHKERRQ(ierr);
   ierr = MatSetValuesLocal_IS(A,m,rows_l,n,cols_l,values,addv);CHKERRQ(ierr);
@@ -1331,7 +1331,7 @@ static PetscErrorCode MatSetValuesBlockedLocal_SubMat_IS(Mat A,PetscInt m,const 
   PetscInt       rows_l[MATIS_MAX_ENTRIES_INSERTION],cols_l[MATIS_MAX_ENTRIES_INSERTION];
 
   PetscFunctionBegin;
-  if (PetscUnlikely(m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column block indices must be <= %" PetscInt_FMT ": they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
+  if (PetscUnlikely(m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column block indices must be <= %d: they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
   ierr = ISLocalToGlobalMappingApplyBlock(A->rmap->mapping,m,rows,rows_l);CHKERRQ(ierr);
   ierr = ISLocalToGlobalMappingApplyBlock(A->cmap->mapping,n,cols,cols_l);CHKERRQ(ierr);
   ierr = MatSetValuesBlockedLocal_IS(A,m,rows_l,n,cols_l,values,addv);CHKERRQ(ierr);
@@ -2010,12 +2010,12 @@ general_assembly:
     ierr = MatGetBlockSizes(MT,&mrbs,&mcbs);CHKERRQ(ierr);
     ierr = MatGetSize(MT,&mrows,&mcols);CHKERRQ(ierr);
     ierr = MatGetLocalSize(MT,&mlrows,&mlcols);CHKERRQ(ierr);
-    if (mrows != rows) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of rows (%d != %d)",rows,mrows);
-    if (mcols != cols) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of cols (%d != %d)",cols,mcols);
-    if (mlrows != lrows) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local rows (%d != %d)",lrows,mlrows);
-    if (mlcols != lcols) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local cols (%d != %d)",lcols,mlcols);
-    if (mrbs != rbs) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong row block size (%d != %d)",rbs,mrbs);
-    if (mcbs != cbs) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong col block size (%d != %d)",cbs,mcbs);
+    if (PetscUnlikely(mrows != rows)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of rows (%" PetscInt_FMT " != %" PetscInt_FMT ")",rows,mrows);
+    if (PetscUnlikely(mcols != cols)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of cols (%" PetscInt_FMT " != %" PetscInt_FMT ")",cols,mcols);
+    if (PetscUnlikely(mlrows != lrows)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local rows (%" PetscInt_FMT " != %" PetscInt_FMT ")",lrows,mlrows);
+    if (PetscUnlikely(mlcols != lcols)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local cols (%" PetscInt_FMT " != %" PetscInt_FMT ")",lcols,mlcols);
+    if (PetscUnlikely(mrbs != rbs)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong row block size (%" PetscInt_FMT " != %" PetscInt_FMT ")",rbs,mrbs);
+    if (PetscUnlikely(mcbs != cbs)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong col block size (%" PetscInt_FMT " != %" PetscInt_FMT ")",cbs,mcbs);
     ierr = MatZeroEntries(MT);CHKERRQ(ierr);
   }
 
@@ -2513,7 +2513,7 @@ static PetscErrorCode MatSetValues_IS(Mat mat, PetscInt m,const PetscInt *rows, 
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
-    if (m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column indices must be <= %" PetscInt_FMT ": they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
+    if (m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column indices must be <= %d: they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
     /* count negative indices */
     for (i=0,zm=0;i<m;i++) if (rows[i] < 0) zm++;
     for (i=0,zn=0;i<n;i++) if (cols[i] < 0) zn++;
@@ -2540,7 +2540,7 @@ static PetscErrorCode MatSetValuesBlocked_IS(Mat mat, PetscInt m,const PetscInt 
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
-    if (m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column block indices must be <= %" PetscInt_FMT ": they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
+    if (m > MATIS_MAX_ENTRIES_INSERTION || n > MATIS_MAX_ENTRIES_INSERTION) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of row/column block indices must be <= %d: they are %" PetscInt_FMT " %" PetscInt_FMT "",MATIS_MAX_ENTRIES_INSERTION,m,n);
     /* count negative indices */
     for (i=0,zm=0;i<m;i++) if (rows[i] < 0) zm++;
     for (i=0,zn=0;i<n;i++) if (cols[i] < 0) zn++;

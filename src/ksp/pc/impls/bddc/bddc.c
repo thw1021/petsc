@@ -233,7 +233,7 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
       ratio1 = pc->pmat->rmap->N/(1.*pcbddc->coarse_size);
       ratio2 = PetscRealPart(interface_size)/pcbddc->coarse_size;
     }
-    ierr = PetscViewerASCIIPrintf(viewer,"********************************** STATISTICS AT LEVEL %d **********************************\n",pcbddc->current_level);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"********************************** STATISTICS AT LEVEL %" PetscInt_FMT " **********************************\n",pcbddc->current_level);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Global dofs sizes: all %" PetscInt_FMT " interface %" PetscInt_FMT " coarse %" PetscInt_FMT "\n",pc->pmat->rmap->N,(PetscInt)PetscRealPart(interface_size),pcbddc->coarse_size);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Coarsening ratios: all/coarse %" PetscInt_FMT " interface/coarse %" PetscInt_FMT "\n",(PetscInt)ratio1,(PetscInt)ratio2);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Active processes : %" PetscInt_FMT "\n",(PetscInt)gsum[0]);CHKERRQ(ierr);
@@ -1116,7 +1116,7 @@ static PetscErrorCode PCBDDCSetLocalAdjacencyGraph_BDDC(PC pc, PetscInt nvtxs,co
       mat_graph->xadj    = (PetscInt*)xadj;
       mat_graph->adjncy  = (PetscInt*)adjncy;
       mat_graph->freecsr = PETSC_FALSE;
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported copy mode %" PetscInt_FMT "",copymode);
+    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported copy mode %d",copymode);
     mat_graph->nvtxs_csr = nvtxs;
     pcbddc->recompute_topography = PETSC_TRUE;
   }

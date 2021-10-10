@@ -343,7 +343,7 @@ static PetscErrorCode TSGLLESchemeView(TSGLLEScheme sc,PetscBool view_details,Pe
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"GL scheme p,q,r,s = %d,%d,%d,%d\n",sc->p,sc->q,sc->r,sc->s);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"GL scheme p,q,r,s = %" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "8~3~,%" PetscInt_FMT "\n",sc->p,sc->q,sc->r,sc->s);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"Stiffly accurate: %s,  FSAL: %s\n",sc->stiffly_accurate ? "yes" : "no",sc->fsal ? "yes" : "no");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"Leading error constants: %10.3e  %10.3e  %10.3e\n",
@@ -804,7 +804,7 @@ static PetscErrorCode TSGLLEChooseNextScheme(TS ts,PetscReal h,const PetscReal h
   if (cur < 0 || gl->nschemes <= cur) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Current scheme not found in scheme list");
   ierr = TSGLLEAdaptChoose(gl->adapt,n,orders,errors,costs,cur,h,tleft,&next_sc,next_h,finish);CHKERRQ(ierr);
   *next_scheme = candidates[next_sc];
-  ierr = PetscInfo7(ts,"Adapt chose scheme %d (%d,%d,%d,%d) with step size %6.2e, finish=%d\n",*next_scheme,gl->schemes[*next_scheme]->p,gl->schemes[*next_scheme]->q,gl->schemes[*next_scheme]->r,gl->schemes[*next_scheme]->s,*next_h,*finish);CHKERRQ(ierr);
+  ierr = PetscInfo7(ts,"Adapt chose scheme %" PetscInt_FMT " (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ") with step size %6.2e, finish=%" PetscInt_FMT "\n",*next_scheme,gl->schemes[*next_scheme]->p,gl->schemes[*next_scheme]->q,gl->schemes[*next_scheme]->r,gl->schemes[*next_scheme]->s,*next_h,(PetscInt)(*finish));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1109,7 +1109,7 @@ static PetscErrorCode TSSetUp_GLLE(TS ts)
     PetscInt i;
     for (i=0;; i++) {
       if (gl->schemes[i]->p == gl->start_order) break;
-      if (i+1 == gl->nschemes) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No schemes available with requested start order %d",i);
+      if (PetscUnlikely(i+1 == gl->nschemes)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No schemes available with requested start order %" PetscInt_FMT,i);
     }
     gl->current_scheme = i;
   }
@@ -1186,7 +1186,7 @@ static PetscErrorCode TSView_GLLE(TS ts,PetscViewer viewer)
     ierr    = TSGLLEAdaptView(gl->adapt,viewer);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPrintf(viewer,"  type: %s\n",gl->type_name[0] ? gl->type_name : "(not yet set)");CHKERRQ(ierr);
-    ierr    = PetscViewerASCIIPrintf(viewer,"Schemes within family (%d):\n",gl->nschemes);CHKERRQ(ierr);
+    ierr    = PetscViewerASCIIPrintf(viewer,"Schemes within family (%" PetscInt_FMT "):\n",gl->nschemes);CHKERRQ(ierr);
     details = PETSC_FALSE;
     ierr    = PetscOptionsGetBool(((PetscObject)ts)->options,((PetscObject)ts)->prefix,"-ts_gl_view_detailed",&details,NULL);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);

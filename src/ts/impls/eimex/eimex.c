@@ -501,9 +501,9 @@ static PetscErrorCode TSEIMEXSetRowCol_EIMEX(TS ts,PetscInt row,PetscInt col)
   TS_EIMEX *ext = (TS_EIMEX*)ts->data;
 
   PetscFunctionBegin;
-  if (row < 1 || col < 1) SETERRQ2(((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %d,%d) should not be less than 1 \n",row,col);
-  if (row > ext->max_rows || col > ext->max_rows) SETERRQ3(((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %d,%d) exceeds the maximum number of rows %d\n",row,col,ext->max_rows);
-  if (col > row) SETERRQ2(((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The column index (%d) exceeds the row index (%d)\n",col,row);
+  if (row < 1 || col < 1) SETERRQ2(((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %" PetscInt_FMT ",%" PetscInt_FMT ") should not be less than 1",row,col);
+  if (row > ext->max_rows || col > ext->max_rows) SETERRQ3(((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %" PetscInt_FMT ",%" PetscInt_FMT ") exceeds the maximum number of rows %" PetscInt_FMT,row,col,ext->max_rows);
+  if (col > row) SETERRQ2(((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The column index (%" PetscInt_FMT ") exceeds the row index (%" PetscInt_FMT ")",col,row);
 
   ext->row_ind = row - 1;
   ext->col_ind = col - 1; /* Array index in C starts from 0 */

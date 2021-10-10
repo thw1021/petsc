@@ -439,7 +439,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   ierr = VecNorm(pcis->vec1_B,NORM_INFINITY,&val);CHKERRQ(ierr);
   ierr = VecDestroy(&test_vec);CHKERRQ(ierr);
   ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT ": CHECK infty norm of E_D + P_D - I: % 1.14e\n",PetscGlobalRank,val);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"%d: CHECK infty norm of E_D + P_D - I: % 1.14e\n",PetscGlobalRank,val);CHKERRQ(ierr);
 
   /******************************************************************/
   /* TEST E: It should hold R_D^TP_Dw=0 w\in\widetilde{W}           */

@@ -1380,7 +1380,7 @@ PetscErrorCode MatSetValues(Mat mat,PetscInt m,const PetscInt idxm[],PetscInt n,
       for (j=0; j<n; j++) {
         if (mat->erroriffailure && PetscIsInfOrNanScalar(v[i*n+j]))
 #if defined(PETSC_USE_COMPLEX)
-          SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_FP,"Inserting %g+ig at matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ")",(double)PetscRealPart(v[i*n+j]),(double)PetscImaginaryPart(v[i*n+j]),idxm[i],idxn[j]);
+          SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_FP,"Inserting %g+i%g at matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ")",(double)PetscRealPart(v[i*n+j]),(double)PetscImaginaryPart(v[i*n+j]),idxm[i],idxn[j]);
 #else
           SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_FP,"Inserting %g at matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ")",(double)v[i*n+j],idxm[i],idxn[j]);
 #endif
@@ -3559,19 +3559,19 @@ PetscErrorCode MatSolve(Mat mat,Vec b,Vec x)
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,x,3);
-  if (x == b) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
-  if (mat->cmap->N != x->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT "",mat->cmap->N,x->map->N);
-  if (mat->rmap->N != b->map->N) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT "",mat->rmap->N,b->map->N);
-  if (mat->rmap->n != b->map->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: local dim %" PetscInt_FMT " %" PetscInt_FMT "",mat->rmap->n,b->map->n);
+  if (PetscUnlikely(x == b)) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  if (PetscUnlikely(mat->cmap->N != x->map->N)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT "",mat->cmap->N,x->map->N);
+  if (PetscUnlikely(mat->rmap->N != b->map->N)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT "",mat->rmap->N,b->map->N);
+  if (PetscUnlikely(mat->rmap->n != b->map->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: local dim %" PetscInt_FMT " %" PetscInt_FMT "",mat->rmap->n,b->map->n);
   if (!mat->rmap->N && !mat->cmap->N) PetscFunctionReturn(0);
   MatCheckPreallocated(mat,1);
 
   ierr = PetscLogEventBegin(MAT_Solve,mat,b,x,0);CHKERRQ(ierr);
   if (mat->factorerrortype) {
-    ierr = PetscInfo1(mat,"MatFactorError %" PetscInt_FMT "\n",mat->factorerrortype);CHKERRQ(ierr);
+    ierr = PetscInfo1(mat,"MatFactorError %d\n",mat->factorerrortype);CHKERRQ(ierr);
     ierr = VecSetInf(x);CHKERRQ(ierr);
   } else {
-    if (!mat->ops->solve) SETERRQ1(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
+    if (PetscUnlikely(!mat->ops->solve)) SETERRQ1(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
     ierr = (*mat->ops->solve)(mat,b,x);CHKERRQ(ierr);
   }
   ierr = PetscLogEventEnd(MAT_Solve,mat,b,x,0);CHKERRQ(ierr);
@@ -3589,12 +3589,12 @@ static PetscErrorCode MatMatSolve_Basic(Mat A,Mat B,Mat X,PetscBool trans)
 
   PetscFunctionBegin;
   if (A->factorerrortype) {
-    ierr = PetscInfo1(A,"MatFactorError %" PetscInt_FMT "\n",A->factorerrortype);CHKERRQ(ierr);
+    ierr = PetscInfo1(A,"MatFactorError %d\n",A->factorerrortype);CHKERRQ(ierr);
     ierr = MatSetInf(X);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
   f = trans ? A->ops->solvetranspose : A->ops->solve;
-  if (!f) SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Mat type %s",((PetscObject)A)->type_name);
+  if (PetscUnlikely(!f)) SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Mat type %s",((PetscObject)A)->type_name);
 
   ierr = MatDenseGetArrayRead(B,(const PetscScalar**)&bb);CHKERRQ(ierr);
   ierr = MatDenseGetArray(X,&xx);CHKERRQ(ierr);
@@ -3954,7 +3954,8 @@ PetscErrorCode MatSolveAdd(Mat mat,Vec b,Vec y,Vec x)
 
   ierr = PetscLogEventBegin(MAT_SolveAdd,mat,b,x,y);CHKERRQ(ierr);
   if (mat->factorerrortype) {
-    ierr = PetscInfo1(mat,"MatFactorError %" PetscInt_FMT "\n",mat->factorerrortype);CHKERRQ(ierr);
+
+    ierr = PetscInfo1(mat,"MatFactorError %d\n",mat->factorerrortype);CHKERRQ(ierr);
     ierr = VecSetInf(x);CHKERRQ(ierr);
   } else if (mat->ops->solveadd) {
     ierr = (*mat->ops->solveadd)(mat,b,y,x);CHKERRQ(ierr);
@@ -4019,7 +4020,7 @@ PetscErrorCode MatSolveTranspose(Mat mat,Vec b,Vec x)
   MatCheckPreallocated(mat,1);
   ierr = PetscLogEventBegin(MAT_SolveTranspose,mat,b,x,0);CHKERRQ(ierr);
   if (mat->factorerrortype) {
-    ierr = PetscInfo1(mat,"MatFactorError %" PetscInt_FMT "\n",mat->factorerrortype);CHKERRQ(ierr);
+    ierr = PetscInfo1(mat,"MatFactorError %d\n",mat->factorerrortype);CHKERRQ(ierr);
     ierr = VecSetInf(x);CHKERRQ(ierr);
   } else {
     if (!mat->ops->solvetranspose) SETERRQ1(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Matrix type %s",((PetscObject)mat)->type_name);
@@ -4081,7 +4082,7 @@ PetscErrorCode MatSolveTransposeAdd(Mat mat,Vec b,Vec y,Vec x)
 
   ierr = PetscLogEventBegin(MAT_SolveTransposeAdd,mat,b,x,y);CHKERRQ(ierr);
   if (mat->factorerrortype) {
-    ierr = PetscInfo1(mat,"MatFactorError %" PetscInt_FMT "\n",mat->factorerrortype);CHKERRQ(ierr);
+    ierr = PetscInfo1(mat,"MatFactorError %d\n",mat->factorerrortype);CHKERRQ(ierr);
     ierr = VecSetInf(x);CHKERRQ(ierr);
   } else if (mat->ops->solvetransposeadd) {
     ierr = (*mat->ops->solvetransposeadd)(mat,b,y,x);CHKERRQ(ierr);
@@ -9471,7 +9472,7 @@ PetscErrorCode MatFactorSolveSchurComplementTranspose(Mat F, Vec rhs, Vec sol)
     ierr = MatMultTranspose(F->schur,rhs,sol);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject)F),PETSC_ERR_SUP,"Unhandled MatFactorSchurStatus %" PetscInt_FMT "",F->schur_status);
+    SETERRQ1(PetscObjectComm((PetscObject)F),PETSC_ERR_SUP,"Unhandled MatFactorSchurStatus %d",F->schur_status);
   }
   PetscFunctionReturn(0);
 }
@@ -9519,7 +9520,7 @@ PetscErrorCode MatFactorSolveSchurComplement(Mat F, Vec rhs, Vec sol)
     ierr = MatMult(F->schur,rhs,sol);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject)F),PETSC_ERR_SUP,"Unhandled MatFactorSchurStatus %" PetscInt_FMT "",F->schur_status);
+    SETERRQ1(PetscObjectComm((PetscObject)F),PETSC_ERR_SUP,"Unhandled MatFactorSchurStatus %d",F->schur_status);
   }
   PetscFunctionReturn(0);
 }
@@ -9998,7 +9999,7 @@ PetscErrorCode MatCreateRedundantMatrix(Mat mat,PetscInt nsubcomm,MPI_Comm subco
     /* create psubcomm, then get subcomm */
     ierr = PetscObjectGetComm((PetscObject)mat,&comm);CHKERRQ(ierr);
     ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
-    if (nsubcomm < 1 || nsubcomm > size) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"nsubcomm must between 1 and %" PetscInt_FMT "",size);
+    if (PetscUnlikely(nsubcomm < 1 || nsubcomm > size)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"nsubcomm must between 1 and %d",size);
 
     ierr = PetscSubcommCreate(comm,&psubcomm);CHKERRQ(ierr);
     ierr = PetscSubcommSetNumber(psubcomm,nsubcomm);CHKERRQ(ierr);
@@ -10095,9 +10096,9 @@ PetscErrorCode   MatGetMultiProcBlock(Mat mat, MPI_Comm subComm, MatReuse scall,
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)mat),&commsize);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(subComm,&subCommSize);CHKERRMPI(ierr);
-  if (subCommSize > commsize) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"CommSize %" PetscInt_FMT " < SubCommZize %" PetscInt_FMT "",commsize,subCommSize);
+  if (PetscUnlikely(subCommSize > commsize)) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"CommSize %d < SubCommZize %d",commsize,subCommSize);
 
-  if (scall == MAT_REUSE_MATRIX && *subMat == mat) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MAT_REUSE_MATRIX means reuse the matrix passed in as the final argument, not the original matrix");
+  if (PetscUnlikely(scall == MAT_REUSE_MATRIX && *subMat == mat)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MAT_REUSE_MATRIX means reuse the matrix passed in as the final argument, not the original matrix");
   ierr = PetscLogEventBegin(MAT_GetMultiProcBlock,mat,0,0,0);CHKERRQ(ierr);
   ierr = (*mat->ops->getmultiprocblock)(mat,subComm,scall,subMat);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(MAT_GetMultiProcBlock,mat,0,0,0);CHKERRQ(ierr);
@@ -10621,7 +10622,7 @@ PetscErrorCode MatSubdomainsCreateCoalesce(Mat A,PetscInt N,PetscInt *n,IS *iss[
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  if (N < 1 || N >= (PetscInt)size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subdomains must be > 0 and < %" PetscInt_FMT ", got N = %" PetscInt_FMT "",size,N);
+  if (PetscUnlikely(N < 1 || N >= (PetscInt)size)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subdomains must be > 0 and < %d, got N = %" PetscInt_FMT "",size,N);
   *n = 1;
   k = ((PetscInt)size)/N + ((PetscInt)size%N>0); /* There are up to k ranks to a color */
   color = rank/k;

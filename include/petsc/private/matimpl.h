@@ -264,7 +264,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %" PetscInt_FMT " \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
+    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %d \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
   } while (0)
 #else
 #  define MatCheckPreallocated(A,arg) do {} while (0)
@@ -272,7 +272,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckProduct(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %" PetscInt_FMT " \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
+    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %d \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
   } while (0)
 #else
 #  define MatCheckProduct(A,arg) do {} while (0)
