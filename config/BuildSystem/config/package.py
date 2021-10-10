@@ -71,8 +71,8 @@ class Package(config.base.Configure):
     self.license                = None # optional license text
     self.excludedDirs           = []   # list of directory names that could be false positives, SuperLU_DIST when looking for SuperLU
     self.downloadonWindows      = 0  # 1 means the --download-package works on Microsoft Windows
-    self.minCxxVersion          = self.framework.compilers.cxxDialectRange['Cxx'][0] # minimum c++ standard version required by the package, e.g. 'c++11'
-    self.maxCxxVersion          = self.framework.compilers.cxxDialectRange['Cxx'][1] # maximum c++ standard version allowed by the package, e.g. 'c++14', must be greater than self.minCxxVersion
+    self.minCxxVersion          = framework.compilers.cxxDialectRange['Cxx'][0] # minimum c++ standard version required by the package, e.g. 'c++11'
+    self.maxCxxVersion          = framework.compilers.cxxDialectRange['Cxx'][1] # maximum c++ standard version allowed by the package, e.g. 'c++14', must be greater than self.minCxxVersion
     self.publicInstall          = 1  # Installs the package in the --prefix directory if it was given. Packages that are only used
                                      # during the configuration/installation process such as sowing, make etc should be marked as 0
     self.parallelMake           = 1  # 1 indicates the package supports make -j np option
