@@ -719,7 +719,7 @@ PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
   ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A,&m,NULL);CHKERRQ(ierr);
   nz   = adj->nz;
-  if (adj->i[m] != nz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"nz %" PetscInt_FMT " not correct i[m] %d",nz,adj->i[m]);
+  if (PetscUnlikely(adj->i[m] != nz)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"nz %" PetscInt_FMT " not correct i[m] %" PetscInt_FMT,nz,adj->i[m]);
   ierr = MPI_Allreduce(&nz,&NZ,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
 
   ierr = PetscMPIIntCast(nz,&mnz);CHKERRQ(ierr);

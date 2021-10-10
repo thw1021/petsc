@@ -128,7 +128,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"should not be here");
 #endif
   } else if (pc_gamg->level_reduction_factors[pc_gamg->current_level] > 0) {
-    if (nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %" PetscInt_FMT " wrt reduction factor %" PetscInt_FMT "",nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
+    if (PetscUnlikely(nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %d wrt reduction factor %" PetscInt_FMT "",nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
     new_size = nactive/pc_gamg->level_reduction_factors[pc_gamg->current_level];
     ierr = PetscInfo3(pc,"Manually setting reduction to %d active processes (%d/%" PetscInt_FMT ")\n",new_size,nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);CHKERRQ(ierr);
   } else if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) {
@@ -467,7 +467,7 @@ PetscErrorCode PCGAMGSquareGraph_GAMG(PC a_pc, Mat Gmat1, Mat* Gmat2)
   ierr = PetscInfo1(a_pc,"Square Graph on level %" PetscInt_FMT "\n",pc_gamg->current_level+1);CHKERRQ(ierr);
   ierr = MatProductCreate(Gmat1,Gmat1,NULL,Gmat2);CHKERRQ(ierr);
   ierr = MatSetOptionsPrefix(*Gmat2,prefix);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(addp,sizeof(addp),"pc_gamg_square_%d_",pc_gamg->current_level);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(addp,sizeof(addp),"pc_gamg_square_%" PetscInt_FMT "_",pc_gamg->current_level);CHKERRQ(ierr);
   ierr = MatAppendOptionsPrefix(*Gmat2,addp);CHKERRQ(ierr);
   if ((*Gmat2)->structurally_symmetric) {
     ierr = MatProductSetType(*Gmat2,MATPRODUCT_AB);CHKERRQ(ierr);
@@ -593,7 +593,7 @@ PetscErrorCode PCSetUp_GAMG(PC pc)
   ierr = MatGetInfo(Pmat,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr); /* global reduction */
   nnz0   = info.nz_used;
   nnztot = info.nz_used;
-  ierr = PetscInfo6(pc,"level %" PetscInt_FMT ") N=%" PetscInt_FMT ", n data rows=%" PetscInt_FMT ", n data cols=%" PetscInt_FMT ", nnz/row (ave)=%d, np=%" PetscInt_FMT "\n",0,M,pc_gamg->data_cell_rows,pc_gamg->data_cell_cols,(int)(nnz0/(PetscReal)M+0.5),size);CHKERRQ(ierr);
+  ierr = PetscInfo5(pc,"level 0) N=%" PetscInt_FMT ", n data rows=%" PetscInt_FMT ", n data cols=%" PetscInt_FMT ", nnz/row (ave)=%d, np=%d\n",M,pc_gamg->data_cell_rows,pc_gamg->data_cell_cols,(int)(nnz0/(PetscReal)M+0.5),size);CHKERRQ(ierr);
 
   /* Get A_i and R_i */
   for (level=0, Aarr[0]=Pmat, nactivepe = size; level < (pc_gamg->Nlevels-1) && (!level || M>pc_gamg->coarse_eq_limit); level++) {
@@ -666,7 +666,7 @@ PetscErrorCode PCSetUp_GAMG(PC pc)
     ierr = MatGetSize(Aarr[level1], &M, &N);CHKERRQ(ierr); /* M is loop test variables */
     ierr = MatGetInfo(Aarr[level1], MAT_GLOBAL_SUM, &info);CHKERRQ(ierr);
     nnztot += info.nz_used;
-    ierr = PetscInfo5(pc,"%" PetscInt_FMT ") N=%" PetscInt_FMT ", n data cols=%" PetscInt_FMT ", nnz/row (ave)=%d, %" PetscInt_FMT " active pes\n",level1,M,pc_gamg->data_cell_cols,(int)(info.nz_used/(PetscReal)M),nactivepe);CHKERRQ(ierr);
+    ierr = PetscInfo5(pc,"%" PetscInt_FMT ") N=%" PetscInt_FMT ", n data cols=%" PetscInt_FMT ", nnz/row (ave)=%d, %d active pes\n",level1,M,pc_gamg->data_cell_cols,(int)(info.nz_used/(PetscReal)M),nactivepe);CHKERRQ(ierr);
 
 #if defined(GAMG_STAGES)
     ierr = PetscLogStagePop();CHKERRQ(ierr);
@@ -1875,11 +1875,11 @@ PetscErrorCode PCGAMGInitializePackage(void)
   for (l=0;l<PETSC_MG_MAXLEVELS;l++) {
     char ename[32];
 
-    ierr = PetscSNPrintf(ename,sizeof(ename),"PCGAMG Squ l%02d",l);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ename,sizeof(ename),"PCGAMG Squ l%02" PetscInt_FMT,l);CHKERRQ(ierr);
     ierr = PetscLogEventRegister(ename, PC_CLASSID, &petsc_gamg_setup_matmat_events[l][0]);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(ename,sizeof(ename),"PCGAMG Gal l%02d",l);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ename,sizeof(ename),"PCGAMG Gal l%02" PetscInt_FMT,l);CHKERRQ(ierr);
     ierr = PetscLogEventRegister(ename, PC_CLASSID, &petsc_gamg_setup_matmat_events[l][1]);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(ename,sizeof(ename),"PCGAMG Opt l%02d",l);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ename,sizeof(ename),"PCGAMG Opt l%02" PetscInt_FMT,l);CHKERRQ(ierr);
     ierr = PetscLogEventRegister(ename, PC_CLASSID, &petsc_gamg_setup_matmat_events[l][2]);CHKERRQ(ierr);
   }
   /* PetscLogEventRegister(" PL move data", PC_CLASSID, &petsc_gamg_setup_events[SET13]); */

@@ -90,7 +90,7 @@ PetscErrorCode  PetscViewerDrawGetDraw(PetscViewer viewer,PetscInt windownumber,
   if (!vdraw->draw[windownumber]) {
     char *title = vdraw->title, tmp_str[128];
     if (windownumber) {
-      ierr = PetscSNPrintf(tmp_str,sizeof(tmp_str),"%s:%d",vdraw->title?vdraw->title:"",windownumber);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(tmp_str,sizeof(tmp_str),"%s:%" PetscInt_FMT,vdraw->title?vdraw->title:"",windownumber);CHKERRQ(ierr);
       title = tmp_str;
     }
     ierr = PetscDrawCreate(PetscObjectComm((PetscObject)viewer),vdraw->display,title,PETSC_DECIDE,PETSC_DECIDE,vdraw->w,vdraw->h,&vdraw->draw[windownumber]);CHKERRQ(ierr);

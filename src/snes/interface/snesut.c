@@ -385,9 +385,9 @@ PetscErrorCode SNESMonitorJacUpdateSpectrum(SNES snes,PetscInt it,PetscReal fnor
     PetscStackCallBLAS("LAPACKgeev",LAPACKgeev_("N","N",&nb,a,&nb,eigr,eigi,NULL,&nb,NULL,&nb,work,&lwork,&lierr));
     if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"geev() error %d",lierr);
     ierr = PetscFPTrapPop();CHKERRQ(ierr);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)snes),"Eigenvalues of J_%d - J_%d:\n",it,it-1);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)snes),"Eigenvalues of J_%" PetscInt_FMT " - J_%" PetscInt_FMT ":\n",it,it-1);CHKERRQ(ierr);
     for (i=0;i<n;i++) {
-      ierr = PetscPrintf(PetscObjectComm((PetscObject)snes),"%5d: %20.5g + %20.5gi\n",i,(double)eigr[i],(double)eigi[i]);CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject)snes),"%5" PetscInt_FMT ": %20.5g + %20.5gi\n",i,(double)eigr[i],(double)eigi[i]);CHKERRQ(ierr);
     }
   }
   ierr = MatDenseRestoreArray(dJdense,&a);CHKERRQ(ierr);
@@ -606,7 +606,7 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
     ierr = DMGetGlobalSection(dm, &gs);CHKERRQ(ierr);
     if (!s || !gs) {ierr = SNESMonitorDefault(snes, its, fgnorm, vf);CHKERRQ(ierr);}
     ierr = PetscSectionGetNumFields(s, &Nf);CHKERRQ(ierr);
-    if (Nf > 256) SETERRQ1(PetscObjectComm((PetscObject) snes), PETSC_ERR_SUP, "Do not support %d fields > 256", Nf);
+    if (PetscUnlikely(Nf > 256)) SETERRQ1(PetscObjectComm((PetscObject) snes), PETSC_ERR_SUP, "Do not support %" PetscInt_FMT " fields > 256", Nf);
     ierr = PetscSectionVecNorm(s, gs, r, NORM_2, res);CHKERRQ(ierr);
     ierr = PetscObjectGetTabLevel((PetscObject) snes, &tablevel);CHKERRQ(ierr);
     ierr = PetscViewerPushFormat(viewer,vf->format);CHKERRQ(ierr);

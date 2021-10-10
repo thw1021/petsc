@@ -256,12 +256,12 @@ static PetscErrorCode DMPlexTransformView_Ascii(DMPlexTransform tr, PetscViewer 
     ierr = PetscViewerASCIIPrintf(v, "Source Starts\n");CHKERRQ(ierr);
     for (g = 0; g <= cols; ++g) {ierr = PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
-    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " %14d", tr->ctStart[f]);CHKERRQ(ierr);}
+    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " %14" PetscInt_FMT, tr->ctStart[f]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "Target Starts\n");CHKERRQ(ierr);
     for (g = 0; g <= cols; ++g) {ierr = PetscViewerASCIIPrintf(v, " %14s", DMPolytopeTypes[g]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
-    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " %14d", tr->ctStartNew[f]);CHKERRQ(ierr);}
+    for (f = 0; f <= cols; ++f) {ierr = PetscViewerASCIIPrintf(v, " %14" PetscInt_FMT, tr->ctStartNew[f]);CHKERRQ(ierr);}
     ierr = PetscViewerASCIIPrintf(v, "\n");CHKERRQ(ierr);
 
     if (tr->trType) {

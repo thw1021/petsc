@@ -1048,7 +1048,7 @@ PetscErrorCode TSGetSolutionComponents_GLEE(TS ts,PetscInt *n,Vec *Y)
   else {
     if ((*n >= 0) && (*n < tab->r)) {
       ierr = VecCopy(glee->Y[*n],*Y);CHKERRQ(ierr);
-    } else SETERRQ3(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Second argument (%d) out of range[%d,%d].",*n,0,tab->r-1);
+    } else SETERRQ2(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Second argument (%" PetscInt_FMT ") out of range[0,%" PetscInt_FMT "].",*n,tab->r-1);
   }
   PetscFunctionReturn(0);
 }

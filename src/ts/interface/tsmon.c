@@ -1476,7 +1476,7 @@ PetscErrorCode TSDMSwarmMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U,
   for (d = 0; d < dim; ++d) totMom[d] *= m;
   totE *= 0.5*m;
   ierr = PetscPrintf(comm, "Step %4" PetscInt_FMT " Total Energy: %10.8lf", step, (double) totE);CHKERRQ(ierr);
-  for (d = 0; d < dim; ++d) {ierr = PetscPrintf(comm, "    Total Momentum %c: %10.8lf", 'x'+d, (double) totMom[d]);CHKERRQ(ierr);}
+  for (d = 0; d < dim; ++d) {ierr = PetscPrintf(comm, "    Total Momentum %c: %10.8lf", 'x'+(char)d, (double) totMom[d]);CHKERRQ(ierr);}
   ierr = PetscPrintf(comm, "\n");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

@@ -1935,7 +1935,7 @@ PetscErrorCode MatTransposeColoringCreate_SeqAIJ(Mat mat,ISColoring iscoloring,M
   ierr = MatRestoreColumnIJ_SeqAIJ_Color(mat,0,PETSC_FALSE,PETSC_FALSE,&ncols,&ci,&cj,&spidx,NULL);CHKERRQ(ierr);
   ierr = PetscFree(rowhit);CHKERRQ(ierr);
   ierr = ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&isa);CHKERRQ(ierr);
-  if (csp->nz != colorforrow[nis]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"csp->nz %d != colorforrow[nis] %d",csp->nz,colorforrow[nis]);
+  if (PetscUnlikely(csp->nz != colorforrow[nis])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"csp->nz %" PetscInt_FMT " != colorforrow[nis] %" PetscInt_FMT,csp->nz,colorforrow[nis]);
 
   c->colorforrow = colorforrow;
   c->rows        = rows;

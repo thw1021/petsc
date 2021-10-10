@@ -11,13 +11,17 @@
   #include <hip/hip_runtime.h>
 #endif
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+void PetscSFCheckGraphSet(PetscSF,int);
+#else
 #if defined(PETSC_USE_DEBUG)
 #  define PetscSFCheckGraphSet(sf,arg) do {                          \
     if (PetscUnlikely(!(sf)->graphset))                              \
-      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSFSetGraph() or PetscSFSetGraphWithPattern() on argument %" PetscInt_FMT " \"%s\" before %s()",(arg),#sf,PETSC_FUNCTION_NAME); \
+      SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSFSetGraph() or PetscSFSetGraphWithPattern() on argument %d \"%s\" before %s()",(arg),#sf,PETSC_FUNCTION_NAME); \
   } while (0)
 #else
 #  define PetscSFCheckGraphSet(sf,arg) do {} while (0)
+#endif
 #endif
 
 const char *const PetscSFDuplicateOptions[] = {"CONFONLY","RANKS","GRAPH","PetscSFDuplicateOption","PETSCSF_DUPLICATE_",NULL};
@@ -583,8 +587,10 @@ PetscErrorCode PetscSFSetGraphWithPattern(PetscSF sf,PetscLayout map,PetscSFPatt
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  PetscValidPointer(map,2);
   ierr = PetscObjectGetComm((PetscObject)sf, &comm);CHKERRQ(ierr);
-  if (pattern < PETSCSF_PATTERN_ALLGATHER || pattern > PETSCSF_PATTERN_ALLTOALL) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Unsupported PetscSFPattern %" PetscInt_FMT "\n",pattern);
+  if (PetscUnlikely((pattern < PETSCSF_PATTERN_ALLGATHER) || (pattern > PETSCSF_PATTERN_ALLTOALL))) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Unsupported PetscSFPattern %d\n",pattern);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 

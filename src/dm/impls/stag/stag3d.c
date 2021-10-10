@@ -70,7 +70,7 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_3d(DM dm,PetscRe
   ierr = DMGetCoordinateDM(dm,&dmCoord);CHKERRQ(ierr);
   stagCoord = (DM_Stag*) dmCoord->data;
   for (s=0; s<4; ++s) {
-    if (stagCoord->dof[s] !=0 && stagCoord->dof[s] != 3) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 3 dimensions must have 0 or 3 dof on each stratum, but stratum %d has %d dof",s,stagCoord->dof[s]);
+    if (PetscUnlikely(stagCoord->dof[s] !=0 && stagCoord->dof[s] != 3)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 3 dimensions must have 0 or 3 dof on each stratum, but stratum %" PetscInt_FMT " has %" PetscInt_FMT " dof",s,stagCoord->dof[s]);
   }
   ierr = DMCreateLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
   ierr = DMStagVecGetArray(dmCoord,coordLocal,&arr);CHKERRQ(ierr);
@@ -210,7 +210,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_3d(DM dm)
       PetscInt Ncheck,j;
       Ncheck = 0;
       for (j=0; j<stag->nRanks[i]; ++j) Ncheck += stag->l[i][j];
-      if (Ncheck != stag->N[i]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local sizes in dimension %d don't add up. %d != %d\n",i,Ncheck,stag->N[i]);
+      if (PetscUnlikely(Ncheck != stag->N[i])) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local sizes in dimension %" PetscInt_FMT " don't add up. %" PetscInt_FMT " != %" PetscInt_FMT "\n",i,Ncheck,stag->N[i]);
     }
   }
 
@@ -1529,7 +1529,7 @@ static PetscErrorCode DMStagSetUpBuildScatter_3d(DM dm,const PetscInt *globalOff
     ierr = DMStagSetUpBuildScatterPopulateIdx_3d(stag,&count,idxLocal,idxGlobal,entriesPerEdge,entriesPerFace,eprNeighbor,eplNeighbor,eprGhost,eplGhost,epFaceRow,globalOffsets[stag->neighbors[neighbor]],start0,start1,start2,startGhost0,startGhost1,startGhost2,endGhost0,endGhost1,endGhost2,extra0,extra1,extra2);CHKERRQ(ierr);
   }
 
-  if (count != entriesToTransferTotal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of entries computed in gtol (%d) is not as expected (%d)",count,entriesToTransferTotal);
+  if (PetscUnlikely(count != entriesToTransferTotal)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of entries computed in gtol (%" PetscInt_FMT ") is not as expected (%" PetscInt_FMT ")",count,entriesToTransferTotal);
 
   /* Create stag->gtol. The order is computed as PETSc ordering, and doesn't include dummy entries */
   {

@@ -150,7 +150,7 @@ PetscErrorCode PCMGComputeCoarseSpace_Internal(PC pc, PetscInt l, PCMGCoarseSpac
     if (l > 0) {ierr = PCMGGetCoarseSpaceConstructor("BAMG_MGEV", &coarseConstructor);CHKERRQ(ierr);}
     else       {ierr = PCMGGetCoarseSpaceConstructor("BAMG_GEV", &coarseConstructor);CHKERRQ(ierr);}
     break;
-  default: SETERRQ1(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle coarse space type %" PetscInt_FMT "", cstype);
+  default: SETERRQ1(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle coarse space type %d", cstype);
   }
   ierr = PCMGGetSmoother(pc, l, &smooth);CHKERRQ(ierr);
   ierr = KSPGetDM(smooth, &dm);CHKERRQ(ierr);

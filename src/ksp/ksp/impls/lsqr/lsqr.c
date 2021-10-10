@@ -553,7 +553,7 @@ PetscErrorCode KSPView_LSQR(KSP ksp,PetscViewer viewer)
     if (lsqr->se) {
       PetscReal rnorm;
       ierr = VecNorm(lsqr->se,NORM_2,&rnorm);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"  norm of standard error %g, iterations %d\n",(double)rnorm,ksp->its);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  norm of standard error %g, iterations %" PetscInt_FMT "\n",(double)rnorm,ksp->its);CHKERRQ(ierr);
     } else {
       ierr = PetscViewerASCIIPrintf(viewer,"  standard error not computed\n");CHKERRQ(ierr);
     }

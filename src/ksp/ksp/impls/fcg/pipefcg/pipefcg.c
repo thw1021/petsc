@@ -82,7 +82,7 @@ static PetscErrorCode KSPSetUp_PIPEFCG(KSP ksp)
 
   /* If the requested number of preallocated vectors is greater than mmax reduce nprealloc */
   if (pipefcg->nprealloc > pipefcg->mmax+1) {
-    ierr = PetscInfo2(NULL,"Requested nprealloc=%d is greater than m_max+1=%d. Resetting nprealloc = m_max+1.\n",pipefcg->nprealloc, pipefcg->mmax+1);CHKERRQ(ierr);
+    ierr = PetscInfo2(NULL,"Requested nprealloc=%" PetscInt_FMT " is greater than m_max+1=%" PetscInt_FMT ". Resetting nprealloc = m_max+1.\n",pipefcg->nprealloc, pipefcg->mmax+1);CHKERRQ(ierr);
   }
 
   /* Preallocate additional work vectors */

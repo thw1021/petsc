@@ -193,7 +193,7 @@ PetscErrorCode AOMap_MemoryScalable_private(AO ao,PetscInt n,PetscInt *ia,const 
       count++;
     }
   }
-  if (nsends != count) SETERRQ2(comm,PETSC_ERR_SUP,"nsends %d != count %d",nsends,count);
+  if (PetscUnlikely(nsends != count)) SETERRQ2(comm,PETSC_ERR_SUP,"nsends %" PetscInt_FMT " != count %" PetscInt_FMT,nsends,count);
 
   /* wait on 1st sends */
   if (nsends) {
@@ -364,7 +364,7 @@ PetscErrorCode  AOCreateMemoryScalable_private(MPI_Comm comm,PetscInt napp,const
       count++;
     }
   }
-  if (nsends != count) SETERRQ2(comm,PETSC_ERR_SUP,"nsends %d != count %d",nsends,count);
+  if (PetscUnlikely(nsends != count)) SETERRQ2(comm,PETSC_ERR_SUP,"nsends %" PetscInt_FMT " != count %" PetscInt_FMT,nsends,count);
 
   /* wait on sends */
   if (nsends) {
