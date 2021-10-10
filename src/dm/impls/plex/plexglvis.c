@@ -558,11 +558,11 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"\ndimension\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",dim);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nelements\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nboundary\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nvertices\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",sdim);CHKERRQ(ierr);
     ierr = PetscBTDestroy(&pown);CHKERRQ(ierr);
     ierr = VecDestroy(&hovec);CHKERRQ(ierr);
@@ -701,7 +701,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   /* boundary */
   ierr = PetscViewerASCIIPrintf(viewer,"\nboundary\n");CHKERRQ(ierr);
   if (!enable_boundary) {
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
   } else {
     DMLabel  perLabel;
     PetscBT  bfaces;
@@ -927,7 +927,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
           for (i=0;i<cl;i++) st += faceSizes[i];
           ierr = DMPlexInvertCell(faceTypes[cl],faces + st);CHKERRQ(ierr);
           for (i=0;i<faceSizes[cl];i++) {
-            ierr = PetscViewerASCIIPrintf(viewer," %d",faces[st+i]);CHKERRQ(ierr);
+            ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT,faces[st+i]);CHKERRQ(ierr);
           }
           ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
           ierr = DMPlexRestoreRawFaces_Internal(dm,cellType,vids,NULL,&faceTypes,&faceSizes,(const PetscInt**)&faces);CHKERRQ(ierr);
@@ -935,7 +935,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
         }
       }
     }
-    if (bf) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Remaining boundary faces %" PetscInt_FMT "",bf);
+    if (PetscUnlikely(bf)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Remaining boundary faces %" PetscInt_FMT,bf);
     ierr = PetscBTDestroy(&bfaces);CHKERRQ(ierr);
     ierr = PetscFree(fcells);CHKERRQ(ierr);
   }

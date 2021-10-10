@@ -359,11 +359,10 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
     ierr = PetscSFGatherBegin(sfAdj, MPIU_INT, adj, remoteadj);CHKERRQ(ierr);
     ierr = PetscSFGatherEnd(sfAdj, MPIU_INT, adj, remoteadj);CHKERRQ(ierr);
     for (p = 0, l = 0, r = 0; p < adjSize; ++p, l = PetscMax(p, l + indegree[p-1])) {
-      PetscInt s;
-      for (s = 0; s < indegree[p]; ++s, ++r) rootAdj[l+s] = remoteadj[r];
+      for (PetscInt s = 0; s < indegree[p]; ++s, ++r) rootAdj[l+s] = remoteadj[r];
     }
-    if (r != radjsize) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistency in communication %d != %d", r, radjsize);
-    if (l != adjSize)  SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistency in communication %d != %d", l, adjSize);
+    if (PetscUnlikely(r != radjsize)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistency in communication %" PetscInt_FMT " != %" PetscInt_FMT, r, radjsize);
+    if (PetscUnlikely(l != adjSize))  SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistency in communication %" PetscInt_FMT " != %" PetscInt_FMT, l, adjSize);
     ierr = PetscFree(remoteadj);CHKERRQ(ierr);
   }
   ierr = PetscSFDestroy(&sfAdj);CHKERRQ(ierr);
@@ -590,7 +589,7 @@ static PetscErrorCode DMPlexUpdateAllocation_Static(DM dm, PetscLayout rLayout, 
   PetscFunctionBegin;
   /* This loop needs to change to a loop over points, then field dofs, which means we need to look both sections */
   ierr = PetscLayoutGetRange(rLayout, &rStart, &rEnd);CHKERRQ(ierr);
-  if (rStart%bs || rEnd%bs) SETERRQ3(PetscObjectComm((PetscObject) rLayout), PETSC_ERR_ARG_WRONG, "Invalid layout [%d, %d) for matrix, must be divisible by block size %d", rStart, rEnd, bs);
+  if (PetscUnlikely(rStart%bs || rEnd%bs)) SETERRQ3(PetscObjectComm((PetscObject) rLayout), PETSC_ERR_ARG_WRONG, "Invalid layout [%" PetscInt_FMT ", %" PetscInt_FMT ") for matrix, must be divisible by block size %" PetscInt_FMT, rStart, rEnd, bs);
   if (f >= 0 && bs == 1) {
     ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
     ierr = PetscSectionGetChart(section, &pStart, &pEnd);CHKERRQ(ierr);

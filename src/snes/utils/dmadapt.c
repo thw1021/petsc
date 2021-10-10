@@ -378,7 +378,7 @@ PetscErrorCode DMAdaptorTransferSolution(DMAdaptor adaptor, DM dm, Vec x, DM adm
       ierr = DMInterpolate(dm, interp, adm);CHKERRQ(ierr);
       ierr = MatDestroy(&interp);CHKERRQ(ierr);
       break;
-    default: SETERRQ1(PetscObjectComm((PetscObject) adaptor), PETSC_ERR_SUP, "No built-in projection for this adaptation criterion: %" PetscInt_FMT "", adaptor->adaptCriterion);
+    default: SETERRQ1(PetscObjectComm((PetscObject) adaptor), PETSC_ERR_SUP, "No built-in projection for this adaptation criterion: %d", adaptor->adaptCriterion);
     }
   }
   PetscFunctionReturn(0);
@@ -688,7 +688,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       ierr = DMDestroy(&dmMetric);CHKERRQ(ierr);
     }
     break;
-    default: SETERRQ1(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %" PetscInt_FMT "", adaptor->adaptCriterion);
+    default: SETERRQ1(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %d", adaptor->adaptCriterion);
     }
     ierr = DMAdaptorPostAdapt(adaptor);CHKERRQ(ierr);
     ierr = DMRestoreLocalVector(dm, &locX);CHKERRQ(ierr);

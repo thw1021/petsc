@@ -1410,7 +1410,7 @@ PetscErrorCode DMPlexCopyCoordinates(DM dmA, DM dmB)
   ierr = DMSetCoordinateDim(dmB, cdim);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dmA, 0, &vStartA, &vEndA);CHKERRQ(ierr);
   ierr = DMPlexGetDepthStratum(dmB, 0, &vStartB, &vEndB);CHKERRQ(ierr);
-  if ((vEndA-vStartA) != (vEndB-vStartB)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "The number of vertices in first DM %d != %d in the second DM", vEndA-vStartA, vEndB-vStartB);
+  if (PetscUnlikely((vEndA-vStartA) != (vEndB-vStartB))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "The number of vertices in first DM %" PetscInt_FMT " != %" PetscInt_FMT " in the second DM", vEndA-vStartA, vEndB-vStartB);
   /* Copy over discretization if it exists */
   {
     DM                 cdmA, cdmB;
@@ -1628,7 +1628,7 @@ PetscErrorCode DMPlexUninterpolate(DM dm, DM *dmUnint)
           ++n;
         }
       }
-      if (n != numLeavesUn) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistent number of leaves %d != %d", n, numLeavesUn);
+      if (PetscUnlikely(n != numLeavesUn)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistent number of leaves %" PetscInt_FMT " != %" PetscInt_FMT, n, numLeavesUn);
       ierr = PetscSFSetGraph(sfPointUn, vEnd, numLeavesUn, localPointsUn, PETSC_OWN_POINTER, remotePointsUn, PETSC_OWN_POINTER);CHKERRQ(ierr);
     }
   }

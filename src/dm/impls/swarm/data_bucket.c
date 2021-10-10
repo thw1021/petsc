@@ -610,7 +610,7 @@ PetscErrorCode DMSwarmDataBucketView_stdout(MPI_Comm comm,DMSwarmDataBucket db)
     ierr = PetscPrintf(comm,"                            blocksize        = %" PetscInt_FMT " \n", db->field[f]->bs);CHKERRQ(ierr);
     if (db->field[f]->bs != 1) {
       ierr = PetscPrintf(comm,"                            atomic size      = %zu [full block, bs=%" PetscInt_FMT "]\n", db->field[f]->atomic_size,db->field[f]->bs);CHKERRQ(ierr);
-      ierr = PetscPrintf(comm,"                            atomic size/item = %zu \n", db->field[f]->atomic_size/db->field[f]->bs);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"                            atomic size/item = %zu \n", (size_t)(db->field[f]->atomic_size/db->field[f]->bs));CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(comm,"                            atomic size      = %zu \n", db->field[f]->atomic_size);CHKERRQ(ierr);
     }

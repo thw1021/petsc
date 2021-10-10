@@ -4,6 +4,7 @@
 */
 #if !defined(PETSCSYS_H)
 #define PETSCSYS_H
+
 /* ========================================================================== */
 /*
    petscconf.h is contained in ${PETSC_ARCH}/include/petscconf.h it is
