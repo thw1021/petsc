@@ -124,7 +124,7 @@ int main(int argc,char **args)
       ierr = ISCreateGeneral(PETSC_COMM_SELF,sz*bs,idx,PETSC_COPY_VALUES,is1+i);CHKERRQ(ierr);
       ierr = ISCreateGeneral(PETSC_COMM_SELF,sz*bs,idx,PETSC_COPY_VALUES,is2+i);CHKERRQ(ierr);
       if (rank == vid) {
-        ierr = PetscPrintf(PETSC_COMM_SELF," [%d] IS sz[%D]: %D\n",rank,i,sz);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF," [%d] IS sz[%" PetscInt_FMT "]: %" PetscInt_FMT "\n",rank,i,sz);CHKERRQ(ierr);
         ierr = ISView(is2[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
       }
     } else { /* Test all rows and columns */

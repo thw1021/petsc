@@ -1116,7 +1116,7 @@ int main(int argc,char **args)
     ierr = PetscPrintf(dd.gcomm,"Number of degrees of freedom               : %8" PetscInt_FMT "\n",ndofs);CHKERRQ(ierr);
     if (reason < 0) {
       ierr = PetscPrintf(dd.gcomm,"Number of iterations                       : %8" PetscInt_FMT "\n",its);CHKERRQ(ierr);
-      ierr = PetscPrintf(dd.gcomm,"Converged reason                           : %" PetscInt_FMT "\n",reason);CHKERRQ(ierr);
+      ierr = PetscPrintf(dd.gcomm,"Converged reason                           : %s\n",KSPConvergedReasons[reason]);CHKERRQ(ierr);
     }
     if (0.95 <= mineig && mineig <= 1.05) mineig = 1.0;
     ierr = PetscPrintf(dd.gcomm,"Eigenvalues preconditioned operator        : %1.1e %1.1e\n",(double)PetscFloorReal(100.*mineig)/100.,(double)PetscCeilReal(100.*maxeig)/100.);CHKERRQ(ierr);

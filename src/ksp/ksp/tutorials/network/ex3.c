@@ -204,7 +204,7 @@ int main(int argc,char ** argv)
         } else if (compkey == 1) {
           Comp1  *mycomp1;
           mycomp1 = (Comp1*)component;
-          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %" PetscInt_FMT " compkey %" PetscInt_FMT ", mycomp1->val %g\n",rank,vtx[i],compkey,mycomp1->val);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"  [%d] v %" PetscInt_FMT " compkey %" PetscInt_FMT ", mycomp1->val %g\n",rank,vtx[i],compkey,(double)PetscRealPart(mycomp1->val));CHKERRQ(ierr);
         }
       }
     }

@@ -126,7 +126,7 @@ PetscErrorCode CellRangeGetFEGeom(IS cellIS, DMField coordField, PetscQuadrature
 
   PetscFunctionBegin;
   ierr = PetscObjectGetId((PetscObject) quad, &id);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%x\n", id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%lld\n", id);CHKERRQ(ierr);
   ierr = PetscObjectQuery((PetscObject) cellIS, composeStr, (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
     ierr = PetscContainerGetPointer(container, (void **) geom);CHKERRQ(ierr);
@@ -310,7 +310,7 @@ static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
     N        = (cEnd - cStart)*Nf*eventInfo.count;
     flopRate = eventInfo.time != 0.0 ? eventInfo.flops/eventInfo.time : 0.0;
     cellRate = eventInfo.time != 0.0 ? N/eventInfo.time : 0.0;
-    ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %" PetscInt_FMT " integrals %" PetscInt_FMT " reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, eventInfo.count, (double)cellRate, (double)(flopRate/1.e6));CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, eventInfo.count, (double)cellRate, (double)(flopRate/1.e6));CHKERRQ(ierr);
   }
 #endif
   PetscFunctionReturn(0);

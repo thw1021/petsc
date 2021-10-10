@@ -466,7 +466,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     }
     rectx->plotStep = stepi;
   } else {
-    if (rectx->plotting) PetscPrintf(PETSC_COMM_WORLD," ERROR rectx->plotting=%" PetscInt_FMT " step %" PetscInt_FMT "\n",rectx->plotting,stepi);
+    if (rectx->plotting) PetscPrintf(PETSC_COMM_WORLD," ERROR rectx->plotting=%" PetscInt_FMT " step %" PetscInt_FMT "\n",(PetscInt)rectx->plotting,stepi);
     /* diagnostics + change E field with Sptizer (not just a monitor) - can we lag this? */
     ierr = rectx->test(ts,X,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx, rectx);CHKERRQ(ierr);
   }
@@ -480,9 +480,9 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     ierr = VecNorm(X,NORM_2,&val);CHKERRQ(ierr);
     ierr = MPIU_Allreduce(&val,&rval,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     if (rval != val) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, " ***** [%" PetscInt_FMT "] ERROR max |x| = %22.15e, my |x| = %22.15e diff=%e\n",rank,rval,val,rval-val);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, " ***** [%d] ERROR max |x| = %22.15e, my |x| = %22.15e diff=%e\n",rank,rval,val,rval-val);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "[%" PetscInt_FMT "] parallel consistency check OK\n",rank);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "[%d] parallel consistency check OK\n",rank);CHKERRQ(ierr);
     }
   }
   rectx->idx = 0;
