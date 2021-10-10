@@ -180,7 +180,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
     in.pointlist[sid+1] = coords[data_stride + lid];
     if (lid>=nFineLoc) nPlotPts++;
   }
-  if (sid != 2*nselected_2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sid %" PetscInt_FMT " != 2*nselected_2 %" PetscInt_FMT "",sid,nselected_2);
+  if (PetscUnlikely(sid != 2*nselected_2)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sid %d != 2*nselected_2 %" PetscInt_FMT,sid,nselected_2);
 
   in.numberofsegments      = 0;
   in.numberofedges         = 0;
@@ -275,7 +275,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
         if (sel) fprintf(file, "%d %e %e\n",sid++,coords[jj],coords[data_stride + jj]);
       }
       fclose(file);
-      if (sid != nPlotPts) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sid %" PetscInt_FMT " != nPlotPts %" PetscInt_FMT "",sid,nPlotPts);
+      if (PetscUnlikely(sid != nPlotPts)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sid %d != nPlotPts %d",sid,nPlotPts);
       level++;
     }
   }

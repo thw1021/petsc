@@ -927,7 +927,7 @@ static PetscErrorCode RDCreate(MPI_Comm comm,RD *inrd)
       rd->unit.second   = 1.e9;
       rd->unit.Kelvin   = 1.;
       break;
-    default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unknown initial condition %d",rd->initial);
+    default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unknown initial condition %" PetscInt_FMT,rd->initial);
     }
     /* Fundamental units */
     ierr = PetscOptionsReal("-rd_unit_meter","Length of 1 meter in nondimensional units","",rd->unit.meter,&rd->unit.meter,0);CHKERRQ(ierr);

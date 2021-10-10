@@ -3053,7 +3053,7 @@ static PetscErrorCode SetUpParameters(AppCtx *user)
     ierr = PetscBagRegisterReal(bag, &p->xc,   0.5, "xc",   "x-coordinate of the viscosity jump");CHKERRQ(ierr);
     break;
   default:
-    SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", (PetscInt) user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
+    SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
   }
   ierr = PetscBagSetFromOptions(bag);CHKERRQ(ierr);
   ierr = PetscBagViewFromOptions(bag, NULL, "-param_view");CHKERRQ(ierr);
@@ -3134,7 +3134,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     ierr = PetscDSSetJacobianPreconditioner(prob, 1, 1, stokes_identity_J_cx, NULL, NULL, NULL);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", (PetscInt) user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
+    SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
   }
   ierr = PetscBagGetData(user->bag, &data);CHKERRQ(ierr);
   switch (dim) {
@@ -3149,7 +3149,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
       ierr = PetscDSSetExactSolution(prob, 1, SolCxSolutionPressure, data);CHKERRQ(ierr);
       break;
     default:
-      SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", (PetscInt) user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
+      SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid solution type %d (%s)", user->solType, solTypes[PetscMin(user->solType, NUM_SOL_TYPES)]);
     }
     break;
   default:

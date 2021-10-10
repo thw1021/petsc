@@ -2,7 +2,8 @@
 
 static char help[] = "Solves a linear system with a MatNest and nested fields.\n\n";
 
-#define Q 5 /* everything is hardwired for a 5x5 MatNest for now */
+/* everything is hardwired for a 5x5 MatNest for now */
+#define Q 5
 
 int main(int argc,char **args)
 {
@@ -26,7 +27,7 @@ int main(int argc,char **args)
     if (found == 1) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Must supply more than one field");
     j = 0;
     for (i=0; i<found; ++i) j += outer[i];
-    if (j != Q) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_USER,"Sum of outer fieldsplit sizes (%" PetscInt_FMT ") greater than number of blocks in MatNest (%" PetscInt_FMT ")",j,Q);
+    if (j != Q) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_USER,"Sum of outer fieldsplit sizes (%" PetscInt_FMT ") greater than number of blocks in MatNest (" PetscStringizeArg(Q) ")",j);
   }
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   size = PetscMax(3,size);

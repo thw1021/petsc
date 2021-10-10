@@ -281,15 +281,15 @@ static PetscErrorCode MatGetInertia_SuperLU_DIST(Mat F,PetscInt *nneg,PetscInt *
   PetscReal        r;
 
   PetscFunctionBegin;
-  if (!F->assembled) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Matrix factor F is not assembled");
-  if (lu->options.RowPerm != NOROWPERM) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must set NOROWPERM");
+  if (PetscUnlikely(!F->assembled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Matrix factor F is not assembled");
+  if (PetscUnlikely(lu->options.RowPerm != NOROWPERM)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must set NOROWPERM");
   ierr = MatGetSize(F,&M,NULL);CHKERRQ(ierr);
   ierr = PetscMalloc1(M,&diagU);CHKERRQ(ierr);
   ierr = MatSuperluDistGetDiagU(F,diagU);CHKERRQ(ierr);
   for (i=0; i<M; i++) {
 #if defined(PETSC_USE_COMPLEX)
     r = PetscImaginaryPart(diagU[i])/10.0;
-    if (r< -PETSC_MACHINE_EPSILON || r>PETSC_MACHINE_EPSILON) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"diagU[%d]=%g + i %g is non-real",i,PetscRealPart(diagU[i]),r*10.0);
+    if (PetscUnlikely(r< -PETSC_MACHINE_EPSILON || r>PETSC_MACHINE_EPSILON)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"diagU[%" PetscInt_FMT "]=%g + i %g is non-real",i,(double)PetscRealPart(diagU[i]),(double)(r*10.0));
     r = PetscRealPart(diagU[i]);
 #else
     r = diagU[i];
@@ -389,21 +389,21 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
 #endif
 
   if (sinfo > 0) {
-    if (A->erroriffailure) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %" PetscInt_FMT "",sinfo);
+    if (PetscUnlikely(A->erroriffailure)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %d",sinfo);
     else {
       if (sinfo <= lu->A_sup.ncol) {
         F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
-        ierr = PetscInfo1(F,"U(i,i) is exactly zero, i= %" PetscInt_FMT "\n",sinfo);CHKERRQ(ierr);
+        ierr = PetscInfo1(F,"U(i,i) is exactly zero, i= %d\n",sinfo);CHKERRQ(ierr);
       } else if (sinfo > lu->A_sup.ncol) {
         /*
          number of bytes allocated when memory allocation
          failure occurred, plus A->ncol.
          */
         F->factorerrortype = MAT_FACTOR_OUTMEMORY;
-        ierr = PetscInfo1(F,"Number of bytes allocated when memory allocation fails %" PetscInt_FMT "\n",sinfo);CHKERRQ(ierr);
+        ierr = PetscInfo1(F,"Number of bytes allocated when memory allocation fails %d\n",sinfo);CHKERRQ(ierr);
       }
     }
-  } else if (sinfo < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %" PetscInt_FMT ", argument in p*gssvx() had an illegal value", sinfo);
+  } else if (PetscUnlikely(sinfo < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %d, argument in p*gssvx() had an illegal value", sinfo);
 
   if (lu->options.PrintStat) {
     PetscStackCall("SuperLU_DIST:PStatPrint",PStatPrint(&lu->options, &stat, &lu->grid));  /* Print the statistics. */
@@ -464,7 +464,28 @@ static PetscErrorCode MatView_Info_SuperLU_DIST(Mat A,PetscViewer viewer)
 
   options = lu->options;
   ierr    = PetscViewerASCIIPrintf(viewer,"SuperLU_DIST run parameters:\n");CHKERRQ(ierr);
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Process grid nprow %" PetscInt_FMT " x npcol %" PetscInt_FMT " \n",lu->nprow,lu->npcol);CHKERRQ(ierr);
+  /* macro IFMT defined in superlu_defs.h as the following, Oct 2021
+
+   #ifdef _CRAY
+     typedef short int_t;
+     // #undef int   Revert back to int of default size.
+     #define mpi_int_t   MPI_SHORT
+   #elif defined (_LONGINT)
+     typedef int64_t int_t;
+     #define mpi_int_t   MPI_LONG_LONG_INT
+     #define IFMT "%lld"
+   #else // default
+     typedef int int_t;
+     #define mpi_int_t   MPI_INT
+     #define IFMT "%8d"
+   #endif
+
+   Note in the above they don't define a format string for int on Cray for whatever reason, so
+   we do it here */
+#if !defined(IFMT)
+#  define IFMT "%d"
+#endif
+  ierr    = PetscViewerASCIIPrintf(viewer,"  Process grid nprow " IFMT " x npcol " IFMT " \n",lu->nprow,lu->npcol);CHKERRQ(ierr);
   ierr    = PetscViewerASCIIPrintf(viewer,"  Equilibrate matrix %s \n",PetscBools[options.Equil != NO]);CHKERRQ(ierr);
   ierr    = PetscViewerASCIIPrintf(viewer,"  Replace tiny pivots %s \n",PetscBools[options.ReplaceTinyPivot != NO]);CHKERRQ(ierr);
   ierr    = PetscViewerASCIIPrintf(viewer,"  Use iterative refinement %s \n",PetscBools[options.IterRefine == SLU_DOUBLE]);CHKERRQ(ierr);
