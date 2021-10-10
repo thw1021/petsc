@@ -1842,7 +1842,7 @@ PetscErrorCode DMPlexComputeGradientClementInterpolant(DM dm, Vec locX, Vec locC
       }
       volsum += vol;
       if (debug) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "Vertex %D Cell %D gradient: [", v, cell);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "Vertex %" PetscInt_FMT " Cell %" PetscInt_FMT " gradient: [", v, cell);CHKERRQ(ierr);
         for (fc = 0; fc < numComponents; ++fc) {
           for (d = 0; d < coordDim; ++d) {
             if (fc || d > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, ", ");CHKERRQ(ierr);}
