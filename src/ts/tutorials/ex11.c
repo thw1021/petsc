@@ -1555,7 +1555,7 @@ int main(int argc, char **argv)
         for (j = 0; j < newDof; j++) {
           char     compName[256]  = "Unknown";
 
-          ierr = PetscSNPrintf(compName,sizeof(compName),"%s_%d",phys->field_desc[f].name,j);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(compName,sizeof(compName),"%s_%" PetscInt_FMT,phys->field_desc[f].name,j);CHKERRQ(ierr);
           ierr = PetscFVSetComponentName(fvm,dof+j,compName);CHKERRQ(ierr);
         }
       }
@@ -1626,9 +1626,9 @@ int main(int argc, char **argv)
         ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5);CHKERRQ(ierr);
         ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK);CHKERRQ(ierr);
         if (isHDF5) {
-          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%d.h5", adaptIter);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".h5", adaptIter);CHKERRQ(ierr);
         } else if (isVTK) {
-          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%d.vtu", adaptIter);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".vtu", adaptIter);CHKERRQ(ierr);
           ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU);CHKERRQ(ierr);
         }
         ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
