@@ -584,7 +584,7 @@ static PetscErrorCode MatStashScatterBegin_Ref(Mat mat,MatStash *stash,PetscInt 
   ierr = PetscInfo1(NULL,"No of messages: %" PetscInt_FMT " \n",nsends);CHKERRQ(ierr);
   for (i=0; i<size; i++) {
     if (sizes[i]) {
-      ierr = PetscInfo2(NULL,"Mesg_to: %" PetscInt_FMT ": size: %zu bytes\n",i,nlengths[i]*(bs2*sizeof(PetscScalar)+2*sizeof(PetscInt)));CHKERRQ(ierr);
+      ierr = PetscInfo2(NULL,"Mesg_to: %" PetscInt_FMT ": size: %zu bytes\n",i,(size_t)(nlengths[i]*(bs2*sizeof(PetscScalar)+2*sizeof(PetscInt))));CHKERRQ(ierr);
     }
   }
 #endif
@@ -911,7 +911,7 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat,MatStash *stash,PetscInt 
       sendno++;
       rowstart = i;
     }
-    if (sendno != stash->nsendranks) SETERRQ2(stash->comm,PETSC_ERR_PLIB,"BTS counted %" PetscInt_FMT " sendranks, but %" PetscInt_FMT " sends",stash->nsendranks,sendno);
+    if (PetscUnlikely(sendno != stash->nsendranks)) SETERRQ2(stash->comm,PETSC_ERR_PLIB,"BTS counted %d sendranks, but %" PetscInt_FMT " sends",stash->nsendranks,sendno);
   }
 
   /* Encode insertmode on the outgoing messages. If we want to support more than two options, we would need a new

@@ -1026,15 +1026,15 @@ static PetscErrorCode  PCGASMSetSubdomains_GASM(PC pc,PetscInt n,IS iis[],IS ois
       ierr = ISGetIndices(osm->iis[i],&indices);CHKERRQ(ierr);
       ierr = ISGetLocalSize(osm->iis[i],&lsize);CHKERRQ(ierr);
       for (j=0; j<lsize; j++) {
-        if (indices[j]<rstart || indices[j]>=rend) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"inner subdomains can not own an index %d from other processors", indices[j]);
-        else if (covered[indices[j]-rstart]==1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"inner subdomains can not have an overlapping index %d ",indices[j]);
+        if (PetscUnlikely(indices[j]<rstart || indices[j]>=rend)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"inner subdomains can not own an index %" PetscInt_FMT " from other processors", indices[j]);
+        else if (PetscUnlikely(covered[indices[j]-rstart]==1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"inner subdomains can not have an overlapping index %" PetscInt_FMT,indices[j]);
         else covered[indices[j]-rstart] = 1;
       }
     ierr = ISRestoreIndices(osm->iis[i],&indices);CHKERRQ(ierr);
     }
     /* check if we miss any indices */
     for (i=rstart; i<rend; i++) {
-      if (!covered[i-rstart]) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"local entity %d was not covered by inner subdomains",i);
+      if (PetscUnlikely(!covered[i-rstart])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"local entity %" PetscInt_FMT " was not covered by inner subdomains",i);
     }
     ierr = PetscFree(covered);CHKERRQ(ierr);
   }

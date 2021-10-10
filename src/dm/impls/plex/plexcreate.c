@@ -3792,7 +3792,7 @@ PetscErrorCode DMPlexCreateFromDAG(DM dm, PetscInt depth, const PetscInt numPoin
   PetscFunctionBegin;
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMGetCoordinateDim(dm, &dimEmbed);CHKERRQ(ierr);
-  if (dimEmbed < dim) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Embedding dimension %" PetscInt_FMT " cannot be less than intrinsic dimension %d",dimEmbed,dim);
+  if (PetscUnlikely(dimEmbed < dim)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Embedding dimension %" PetscInt_FMT " cannot be less than intrinsic dimension %" PetscInt_FMT,dimEmbed,dim);
   for (d = 0; d <= depth; ++d) pEnd += numPoints[d];
   ierr = DMPlexSetChart(dm, pStart, pEnd);CHKERRQ(ierr);
   for (p = pStart; p < pEnd; ++p) {
@@ -3911,7 +3911,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
         case 4: snum = sscanf(line, format, &vbuf[0], &vbuf[1], &vbuf[2], &vbuf[3]);break;
         case 6: snum = sscanf(line, format, &vbuf[0], &vbuf[1], &vbuf[2], &vbuf[3], &vbuf[4], &vbuf[5]);break;
         case 8: snum = sscanf(line, format, &vbuf[0], &vbuf[1], &vbuf[2], &vbuf[3], &vbuf[4], &vbuf[5], &vbuf[6], &vbuf[7]);break;
-        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell shape with %" PetscInt_FMT " vertices", Ncn);
+        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell shape with %d vertices", Ncn);
       }
       if (snum != Ncn) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
       for (v = 0; v < Ncn; ++v) cone[v] = vbuf[v] + Nc;
@@ -3963,7 +3963,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
         case 1: snum = sscanf(line, format, &val[0]);break;
         case 2: snum = sscanf(line, format, &val[0], &val[1]);break;
         case 3: snum = sscanf(line, format, &val[0], &val[1], &val[2]);break;
-        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Request support for %" PetscInt_FMT " labels", Nl);
+        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Request support for %d labels", Nl);
       }
       if (snum != Nl) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
       for (d = 0; d < cdim; ++d) coords[v*cdim+d] = x[d];

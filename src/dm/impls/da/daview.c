@@ -91,8 +91,8 @@ PetscErrorCode DMView_DA_VTK(DM da, PetscViewer viewer)
   ierr = PetscViewerASCIIPrintf(viewer,"Structured Mesh Example\n");CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"ASCII\n");CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer,"DATASET STRUCTURED_GRID\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"DIMENSIONS %d %d %d\n", M, N, P);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"POINTS %d double\n", M*N*P);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"DIMENSIONS %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n", M, N, P);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"POINTS %" PetscInt_FMT " double\n", M*N*P);CHKERRQ(ierr);
   if (da->coordinates) {
     DM  dac;
     Vec natural;

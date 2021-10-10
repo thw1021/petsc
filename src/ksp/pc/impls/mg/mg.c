@@ -794,7 +794,7 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
     const char *cyclename = levels ? (mglevels[0]->cycles == PC_MG_CYCLE_V ? "v" : "w") : "unknown";
     ierr = PetscViewerASCIIPrintf(viewer,"  type is %s, levels=%" PetscInt_FMT " cycles=%s\n", PCMGTypes[mg->am],levels,cyclename);CHKERRQ(ierr);
     if (mg->am == PC_MG_MULTIPLICATIVE) {
-      ierr = PetscViewerASCIIPrintf(viewer,"    Cycles per PCApply=%d\n",mg->cyclesperpcapply);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"    Cycles per PCApply=%" PetscInt_FMT "\n",mg->cyclesperpcapply);CHKERRQ(ierr);
     }
     if (mg->galerkin == PC_MG_GALERKIN_BOTH) {
       ierr = PetscViewerASCIIPrintf(viewer,"    Using Galerkin computed coarse grid matrices\n");CHKERRQ(ierr);

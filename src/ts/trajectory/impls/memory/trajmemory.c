@@ -388,7 +388,7 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Dump stack id %" PetscInt_FMT " to file\n",id);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(tj->monitor);CHKERRQ(ierr);
   }
-  ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06" PetscInt_FMT ".bin",tj->dirname,id);CHKERRQ(ierr);
   ierr = PetscViewerFileSetName(tjsch->viewer,filename);CHKERRQ(ierr);
   ierr = PetscViewerSetUp(tjsch->viewer);CHKERRQ(ierr);
   ndumped = stack->top+1;
@@ -427,7 +427,7 @@ static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Load stack from file\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
   }
-  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06" PetscInt_FMT ".bin",tj->dirname,id);CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
   ierr = PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);
@@ -521,7 +521,7 @@ static PetscErrorCode DumpSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
     ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
   }
   ierr = TSGetStepNumber(ts,&stepnum);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06" PetscInt_FMT ".bin",tj->dirname,id);CHKERRQ(ierr);
   ierr = PetscViewerFileSetName(tjsch->viewer,filename);CHKERRQ(ierr);
   ierr = PetscViewerSetUp(tjsch->viewer);CHKERRQ(ierr);
 
@@ -546,7 +546,7 @@ static PetscErrorCode LoadSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Load a single point from file\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel);CHKERRQ(ierr);
   }
-  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06d.bin",tj->dirname,id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06" PetscInt_FMT ".bin",tj->dirname,id);CHKERRQ(ierr);
   ierr = PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
   ierr = PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE);CHKERRQ(ierr);

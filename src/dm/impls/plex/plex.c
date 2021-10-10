@@ -8505,7 +8505,7 @@ PetscErrorCode DMPlexCheckFaces(DM dm, PetscInt cellHeight)
             ierr = PetscPrintf(PETSC_COMM_SELF, "\ncell face:");CHKERRQ(ierr);
             for (v1 = 0; v1 < fnumCorners; ++v1) {ierr = PetscPrintf(PETSC_COMM_SELF, " %" PetscInt_FMT "", faces[fOff+v1]);CHKERRQ(ierr);}
             ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
-            SETERRQ9(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %" PetscInt_FMT " of type %s (cone idx %d, ornt %" PetscInt_FMT ") of cell %" PetscInt_FMT " of type %s vertex %" PetscInt_FMT ", %" PetscInt_FMT " != %" PetscInt_FMT "", cone[f], DMPolytopeTypes[fct], f, ornt[f], c, DMPolytopeTypes[ct], v, fclosure[v], faces[fOff+v]);
+            SETERRQ9(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %" PetscInt_FMT " of type %s (cone idx %" PetscInt_FMT ", ornt %" PetscInt_FMT ") of cell %" PetscInt_FMT " of type %s vertex %" PetscInt_FMT ", %" PetscInt_FMT " != %" PetscInt_FMT "", cone[f], DMPolytopeTypes[fct], f, ornt[f], c, DMPolytopeTypes[ct], v, fclosure[v], faces[fOff+v]);
           }
         }
         ierr = DMPlexRestoreTransitiveClosure(dm, cone[f], PETSC_TRUE, &fclosureSize, &fclosure);CHKERRQ(ierr);
@@ -9726,7 +9726,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
   N        = (cEnd - cStart)*Nf*eventInfo.count;
   flopRate = eventInfo.flops/eventInfo.time;
   cellRate = N/eventInfo.time;
-  ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "DM (%s) FE Residual Integration: %" PetscInt_FMT " integrals %" PetscInt_FMT " reps\n  Cell rate: %.2g/s flop rate: %.2g MF/s\n", name ? name : "unknown", N, eventInfo.count, (double) cellRate, (double) (flopRate/1.e6));CHKERRQ(ierr);
+  ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "DM (%s) FE Residual Integration: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2g/s flop rate: %.2g MF/s\n", name ? name : "unknown", N, eventInfo.count, (double) cellRate, (double) (flopRate/1.e6));CHKERRQ(ierr);
 #else
   SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Plex Throughput Monitor is not supported if logging is turned off. Reconfigure using --with-log.");
 #endif

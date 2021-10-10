@@ -76,8 +76,8 @@ static PetscErrorCode DMPlexReferenceTreeGetChildSymmetry_Default(DM dm, PetscIn
       break;
     }
   }
-  if (dim > 2) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot perform child symmetry for %d-cells",dim);
-  if (!dim) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A vertex has no children");
+  if (PetscUnlikely(dim > 2)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot perform child symmetry for %" PetscInt_FMT "-cells",dim);
+  if (PetscUnlikely(!dim)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A vertex has no children");
   if (childA < dStart || childA >= dEnd) {
     /* this is a lower-dimensional child: bootstrap */
     PetscInt size, i, sA = -1, sB, sOrientB, sConeSize;
@@ -97,7 +97,7 @@ static PetscErrorCode DMPlexReferenceTreeGetChildSymmetry_Default(DM dm, PetscIn
         break;
       }
     }
-    if (i == size) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"could not find support in children");
+    if (PetscUnlikely(i == size)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"could not find support in children");
     /* find out which point sB is in an equivalent position to sA under
      * parentOrientB */
     ierr = DMPlexReferenceTreeGetChildSymmetry_Default(dm,parent,parentOrientA,0,sA,parentOrientB,&sOrientB,&sB);CHKERRQ(ierr);
@@ -119,7 +119,7 @@ static PetscErrorCode DMPlexReferenceTreeGetChildSymmetry_Default(DM dm, PetscIn
 
           ierr          = DMPlexGetConeSize(dm,childA,&coneSize);CHKERRQ(ierr);
           /* compose sOrientB and oB[j] */
-          if (coneSize != 0 && coneSize != 2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected a vertex or an edge");
+          if (PetscUnlikely(coneSize != 0 && coneSize != 2)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected a vertex or an edge");
           ct = coneSize ? DM_POLYTOPE_SEGMENT : DM_POLYTOPE_POINT;
           /* we may have to flip an edge */
           oBtrue        = (sOrientB >= 0) ? oB[j] : DMPolytopeTypeComposeOrientation(ct, -1, oB[j]);
@@ -130,7 +130,7 @@ static PetscErrorCode DMPlexReferenceTreeGetChildSymmetry_Default(DM dm, PetscIn
         break;
       }
     }
-    if (i == sConeSize) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"support cone mismatch");
+    if (PetscUnlikely(i == sConeSize)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"support cone mismatch");
     PetscFunctionReturn(0);
   }
   /* get the cone size and symmetry swap */
@@ -1019,7 +1019,7 @@ static PetscErrorCode DMPlexSetTree_Internal(DM dm, PetscSection parentSection, 
 
         ierr = DMPlexGetTreeChildren(dm,p,&numChildren,&children);CHKERRQ(ierr);
         if (numChildren) {
-          if (numChildren != cNumChildren) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"All parent points in a stratum should have the same number of children: %d != %d", numChildren, cNumChildren);
+          if (PetscUnlikely(numChildren != cNumChildren)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"All parent points in a stratum should have the same number of children: %" PetscInt_FMT " != %" PetscInt_FMT, numChildren, cNumChildren);
           ierr = DMSetLabelValue(dm,"canonical",p,canon);CHKERRQ(ierr);
           for (i = 0; i < numChildren; i++) {
             ierr = DMSetLabelValue(dm,"canonical",children[i],cChildren[i]);CHKERRQ(ierr);
@@ -1828,7 +1828,7 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_FromReference(DM dm, PetscS
                   break;
                 }
               }
-              if (k == numFillCols) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"No nonzero space for (%d, %d)", cOff, col);
+              if (PetscUnlikely(k == numFillCols)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"No nonzero space for (%" PetscInt_FMT ", %" PetscInt_FMT ")", cOff, col);
               for (r = 0; r < cDof; r++) {
                 vals[matOffset + numFillCols * r + k] = pointWork[r * aNumFillCols + j];
               }
@@ -1841,7 +1841,7 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_FromReference(DM dm, PetscS
                 break;
               }
             }
-            if (k == numFillCols) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"No nonzero space for (%d, %d)", cOff, aOff);
+            if (PetscUnlikely(k == numFillCols)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"No nonzero space for (%" PetscInt_FMT ", %" PetscInt_FMT ")", cOff, aOff);
             for (r = 0; r < cDof; r++) {
               for (j = 0; j < aDof; j++) {
                 PetscInt col = perm ? perm[j] : j;
@@ -1931,7 +1931,7 @@ PetscErrorCode DMPlexTreeRefineCell (DM dm, PetscInt cell, DM *ncdm)
       offset = pNewEnd[d];
 
     }
-    if (cell < pOldStart[0] || cell >= pOldEnd[0]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%d not in cell range [%d, %d)", cell, pOldStart[0], pOldEnd[0]);
+    if (PetscUnlikely(cell < pOldStart[0] || cell >= pOldEnd[0])) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " not in cell range [%" PetscInt_FMT ", %" PetscInt_FMT ")", cell, pOldStart[0], pOldEnd[0]);
     /* get the current closure of the cell that we are removing */
     ierr = DMPlexGetTransitiveClosure(dm,cell,PETSC_TRUE,&nc,&cellClosure);CHKERRQ(ierr);
 
@@ -2100,7 +2100,7 @@ PetscErrorCode DMPlexTreeRefineCell (DM dm, PetscInt cell, DM *ncdm)
         ierr = DMPlexGetHeightStratum(K,0,&kStart,&kEnd);CHKERRQ(ierr);
         for (k = kStart; k < kEnd; k++) {
           ierr = DMPlexComputeCellGeometryFEM(K, k, NULL, v0, J, NULL, &detJ);CHKERRQ(ierr);
-          if (detJ <= 0.) SETERRQ1 (PETSC_COMM_SELF,PETSC_ERR_PLIB,"reference tree cell %d has bad determinant",k);
+          if (PetscUnlikely(detJ <= 0.)) SETERRQ1 (PETSC_COMM_SELF,PETSC_ERR_PLIB,"reference tree cell %" PetscInt_FMT " has bad determinant",k);
         }
       }
       ierr = DMPlexComputeCellGeometryFEM(dm, cell, NULL, v0, J, NULL, &detJ);CHKERRQ(ierr);

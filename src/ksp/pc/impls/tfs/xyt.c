@@ -90,7 +90,7 @@ PetscErrorCode XYT_factor(xyt_ADT xyt_handle,     /* prev. allocated xyt  handle
   check_handle(xyt_handle);
 
   /* only 2^k for now and all nodes participating */
-  if ((1<<(xyt_handle->level=PCTFS_i_log2_num_nodes))!=PCTFS_num_nodes) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"only 2^k for now and MPI_COMM_WORLD!!! %" PetscInt_FMT " != %" PetscInt_FMT "\n",1<<PCTFS_i_log2_num_nodes,PCTFS_num_nodes);
+  if (PetscUnlikely((1<<(xyt_handle->level=PCTFS_i_log2_num_nodes))!=PCTFS_num_nodes)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"only 2^k for now and MPI_COMM_WORLD!!! %d != %d\n",1<<PCTFS_i_log2_num_nodes,PCTFS_num_nodes);
 
   /* space for X info */
   xyt_handle->info = (xyt_info*)malloc(sizeof(xyt_info));
@@ -178,22 +178,22 @@ PetscErrorCode XYT_stats(xyt_ADT xyt_handle)
   PCTFS_grop(fvals,fwork,sizeof(fop)/sizeof(fop[0])-1,fop);
 
   if (!PCTFS_my_id) {
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: min   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[0]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: max   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[1]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: avg   xyt_nnz=%g\n",PCTFS_my_id,1.0*vals[2]/PCTFS_num_nodes);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: tot   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[2]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: xyt   C(2d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.5)));
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: xyt   C(3d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.6667)));
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: min   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[3]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: max   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[4]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: avg   xyt_n  =%g\n",PCTFS_my_id,1.0*vals[5]/PCTFS_num_nodes);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: tot   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[5]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: min   xyt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[6]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: max   xyt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[7]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: avg   xyt_buf=%g\n",PCTFS_my_id,1.0*vals[8]/PCTFS_num_nodes);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: min   xyt_slv=%g\n",PCTFS_my_id,fvals[0]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: max   xyt_slv=%g\n",PCTFS_my_id,fvals[1]);
-    PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " :: avg   xyt_slv=%g\n",PCTFS_my_id,fvals[2]/PCTFS_num_nodes);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[0]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[1]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_nnz=%g\n",PCTFS_my_id,1.0*vals[2]/PCTFS_num_nodes);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: tot   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[2]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: xyt   C(2d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.5)));
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: xyt   C(3d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.6667)));
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[3]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[4]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_n  =%g\n",PCTFS_my_id,1.0*vals[5]/PCTFS_num_nodes);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: tot   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[5]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[6]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[7]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_buf=%g\n",PCTFS_my_id,1.0*vals[8]/PCTFS_num_nodes);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_slv=%g\n",PCTFS_my_id,fvals[0]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_slv=%g\n",PCTFS_my_id,fvals[1]);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_slv=%g\n",PCTFS_my_id,fvals[2]/PCTFS_num_nodes);
   }
 
   return(0);

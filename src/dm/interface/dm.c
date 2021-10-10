@@ -1606,7 +1606,7 @@ PetscErrorCode DMSetNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCode (
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   dm->nullspaceConstructors[field] = nullsp;
   PetscFunctionReturn(0);
 }
@@ -1640,7 +1640,7 @@ PetscErrorCode DMGetNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCode (
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(nullsp, 3);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   *nullsp = dm->nullspaceConstructors[field];
   PetscFunctionReturn(0);
 }
@@ -1671,7 +1671,7 @@ PetscErrorCode DMSetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   dm->nearnullspaceConstructors[field] = nullsp;
   PetscFunctionReturn(0);
 }
@@ -1705,7 +1705,7 @@ PetscErrorCode DMGetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(nullsp, 3);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   *nullsp = dm->nearnullspaceConstructors[field];
   PetscFunctionReturn(0);
 }
@@ -2647,7 +2647,7 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
     PetscScalar       *lArray;
     PetscMemType      lmtype,gmtype;
 
-    if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %" PetscInt_FMT "", mode);
+    if (PetscUnlikely(mode == ADD_VALUES)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
     ierr = VecGetArrayAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
     ierr = VecGetArrayReadAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
     ierr = PetscSFBcastWithMemTypeBegin(sf, MPIU_SCALAR, gmtype, gArray, lmtype, lArray, MPI_REPLACE);CHKERRQ(ierr);
@@ -2691,7 +2691,7 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
   ierr = DMGetSectionSF(dm, &sf);CHKERRQ(ierr);
   ierr = DMHasBasisTransform(dm, &transform);CHKERRQ(ierr);
   if (sf) {
-    if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %" PetscInt_FMT "", mode);
+    if (PetscUnlikely(mode == ADD_VALUES)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
 
     ierr = VecGetArrayAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
     ierr = VecGetArrayReadAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
@@ -2883,7 +2883,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
   case ADD_BC_VALUES:
     isInsert = PETSC_FALSE; break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %" PetscInt_FMT "", mode);
+    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
   }
   if ((sf && !isInsert) || (s && isInsert)) {
     ierr = DMHasBasisTransform(dm, &transform);CHKERRQ(ierr);
@@ -2923,7 +2923,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
         ierr = PetscSectionGetOffset(gs, p, &goff);CHKERRQ(ierr);
         /* Ignore off-process data and points with no global data */
         if (!gdof || goff < 0) continue;
-        if (dof != gdof) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %d dof: %d gdof: %d cdof: %d gcdof: %d", p, dof, gdof, cdof, gcdof);
+        if (PetscUnlikely(dof != gdof)) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %" PetscInt_FMT " dof: %" PetscInt_FMT " gdof: %" PetscInt_FMT " cdof: %" PetscInt_FMT " gcdof: %" PetscInt_FMT, p, dof, gdof, cdof, gcdof);
         /* If no constraints are enforced in the global vector */
         if (!gcdof) {
           for (d = 0; d < dof; ++d) gArray[goff-gStart+d] = lArray[off+d];
@@ -2937,7 +2937,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
             if ((cind < cdof) && (d == cdofs[cind])) {++cind; continue;}
             gArray[goff-gStart+e++] = lArray[off+d];
           }
-        } else SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %d dof: %d gdof: %d cdof: %d gcdof: %d", p, dof, gdof, cdof, gcdof);
+        } else SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %" PetscInt_FMT " dof: %" PetscInt_FMT " gdof: %" PetscInt_FMT " cdof: %" PetscInt_FMT " gcdof: %" PetscInt_FMT, p, dof, gdof, cdof, gcdof);
       }
     }
     if (g_inplace) {
@@ -2996,7 +2996,7 @@ PetscErrorCode  DMLocalToGlobalEnd(DM dm,Vec l,InsertMode mode,Vec g)
   case ADD_ALL_VALUES:
     isInsert = PETSC_FALSE; break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %" PetscInt_FMT "", mode);
+    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
   }
   if (sf && !isInsert) {
     const PetscScalar *lArray;
@@ -4461,8 +4461,8 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
     ierr = PetscSectionGetConstraintDof(globalSection, p, &gcdof);CHKERRQ(ierr);
     ierr = PetscSectionGetOffset(globalSection, p, &goff);CHKERRQ(ierr);
     if (!gdof) continue; /* Censored point */
-    if ((gdof < 0 ? -(gdof+1) : gdof) != dof) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global dof %d for point %d not equal to local dof %d\n", rank, gdof, p, dof);CHKERRQ(ierr); valid = PETSC_FALSE;}
-    if (gcdof && (gcdof != cdof)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global constraints %d for point %d not equal to local constraints %d\n", rank, gcdof, p, cdof);CHKERRQ(ierr); valid = PETSC_FALSE;}
+    if ((gdof < 0 ? -(gdof+1) : gdof) != dof) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global dof %" PetscInt_FMT " for point %" PetscInt_FMT " not equal to local dof %" PetscInt_FMT "\n", rank, gdof, p, dof);CHKERRQ(ierr); valid = PETSC_FALSE;}
+    if (gcdof && (gcdof != cdof)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global constraints %" PetscInt_FMT " for point %" PetscInt_FMT " not equal to local constraints %" PetscInt_FMT "\n", rank, gcdof, p, cdof);CHKERRQ(ierr); valid = PETSC_FALSE;}
     if (gdof < 0) {
       gsize = gdof < 0 ? -(gdof+1)-gcdof : gdof-gcdof;
       for (d = 0; d < gsize; ++d) {
@@ -4470,7 +4470,7 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 
         ierr = PetscFindInt(offset,size+1,ranges,&r);CHKERRQ(ierr);
         if (r < 0) r = -(r+2);
-        if ((r < 0) || (r >= size)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Point %d mapped to invalid process %d (%d, %d)\n", rank, p, r, gdof, goff);CHKERRQ(ierr); valid = PETSC_FALSE;break;}
+        if ((r < 0) || (r >= size)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Point %" PetscInt_FMT " mapped to invalid process %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ")\n", rank, p, r, gdof, goff);CHKERRQ(ierr); valid = PETSC_FALSE;break;}
       }
     }
   }
@@ -4888,7 +4888,7 @@ PetscErrorCode DMGetField(DM dm, PetscInt f, DMLabel *label, PetscObject *field)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(field, 4);
-  if ((f < 0) || (f >= dm->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, dm->Nf);
+  PetscDTDSCheckValidField(f, dm->Nf);
   if (label) *label = dm->fields[f].label;
   if (field) *field = dm->fields[f].disc;
   PetscFunctionReturn(0);
@@ -4933,7 +4933,7 @@ PetscErrorCode DMSetField(DM dm, PetscInt f, DMLabel label, PetscObject field)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 3);
   PetscValidHeader(field, 4);
-  if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
+  PetscDTDSCheckPositiveField(f);
   ierr = DMSetField_Internal(dm, f, label, field);CHKERRQ(ierr);
   ierr = DMSetDefaultAdjacency_Private(dm, f, field);CHKERRQ(ierr);
   ierr = DMClearDS(dm);CHKERRQ(ierr);
@@ -5093,7 +5093,7 @@ PetscErrorCode DMGetAdjacency(DM dm, PetscInt f, PetscBool *useCone, PetscBool *
     PetscErrorCode ierr;
 
     ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
-    if (f >= Nf) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, Nf);
+    PetscDTDSCheckValidField(f, Nf);
     if (useCone)    *useCone    = dm->fields[f].adjacency[0];
     if (useClosure) *useClosure = dm->fields[f].adjacency[1];
   }
@@ -5133,7 +5133,7 @@ PetscErrorCode DMSetAdjacency(DM dm, PetscInt f, PetscBool useCone, PetscBool us
     PetscErrorCode ierr;
 
     ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
-    if (f >= Nf) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, Nf);
+    PetscDTDSCheckValidField(f, Nf);
     dm->fields[f].adjacency[0] = useCone;
     dm->fields[f].adjacency[1] = useClosure;
   }

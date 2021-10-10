@@ -897,7 +897,7 @@ PetscErrorCode DMCreateMatrix_DA_IS(DM dm,Mat J)
     ierr = PetscObjectComposeFunction((PetscObject)J,"MatMPIAIJSetPreallocation_C",NULL);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unhandled dimension %d",dim);
+    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unhandled dimension %" PetscInt_FMT,dim);
   }
   dm->prealloc_only = flg;
   PetscFunctionReturn(0);

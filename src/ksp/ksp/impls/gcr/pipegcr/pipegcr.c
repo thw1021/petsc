@@ -369,7 +369,7 @@ static PetscErrorCode KSPView_PIPEGCR(KSP ksp, PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"  max previous directions = %" PetscInt_FMT "\n",pipegcr->mmax);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  preallocated %" PetscInt_FMT " directions\n",PetscMin(pipegcr->nprealloc,pipegcr->mmax+1));CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  %s\n",truncstr);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  w unrolling = %" PetscInt_FMT " \n", pipegcr->unroll_w);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  w unrolling = %" PetscInt_FMT " \n", (PetscInt)(pipegcr->unroll_w));CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  restarts performed = %" PetscInt_FMT " \n", pipegcr->n_restarts);CHKERRQ(ierr);
   } else if (isstring) {
     ierr = PetscViewerStringSPrintf(viewer, "max previous directions = %" PetscInt_FMT ", preallocated %" PetscInt_FMT " directions, %s truncation strategy", pipegcr->mmax,pipegcr->nprealloc,truncstr);CHKERRQ(ierr);
@@ -404,7 +404,7 @@ static PetscErrorCode KSPSetUp_PIPEGCR(KSP ksp)
   ierr = PetscMalloc3(pipegcr->mmax+2,&(pipegcr->dots),pipegcr->mmax+1,&(pipegcr->etas),pipegcr->mmax+2,&(pipegcr->redux));CHKERRQ(ierr);
   /* If the requested number of preallocated vectors is greater than mmax reduce nprealloc */
   if (pipegcr->nprealloc > pipegcr->mmax+1) {
-    ierr = PetscInfo2(NULL,"Requested nprealloc=%d is greater than m_max+1=%d. Resetting nprealloc = m_max+1.\n",pipegcr->nprealloc, pipegcr->mmax+1);CHKERRQ(ierr);
+    ierr = PetscInfo2(NULL,"Requested nprealloc=%" PetscInt_FMT " is greater than m_max+1=%" PetscInt_FMT ". Resetting nprealloc = m_max+1.\n",pipegcr->nprealloc, pipegcr->mmax+1);CHKERRQ(ierr);
   }
 
   /* Preallocate additional work vectors */

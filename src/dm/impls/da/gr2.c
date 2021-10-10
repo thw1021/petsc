@@ -750,9 +750,9 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
       ierr = DMDAGetInfo(da,&dim,&ni,&nj,&nk,&pi,&pj,&pk,&dof,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
       ierr = PetscFPrintf(comm,info,"#--- begin code written by PetscViewerBinary for MATLAB format ---#\n");CHKERRQ(ierr);
       ierr = PetscFPrintf(comm,info,"#$$ tmp = PetscBinaryRead(fd); \n");CHKERRQ(ierr);
-      if (dim == 1) { ierr = PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%d,%d);\n",dof,ni);CHKERRQ(ierr); }
-      if (dim == 2) { ierr = PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%d,%d,%d);\n",dof,ni,nj);CHKERRQ(ierr); }
-      if (dim == 3) { ierr = PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%d,%d,%d,%d);\n",dof,ni,nj,nk);CHKERRQ(ierr); }
+      if (dim == 1) { ierr = PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%" PetscInt_FMT ",%" PetscInt_FMT ");\n",dof,ni);CHKERRQ(ierr); }
+      if (dim == 2) { ierr = PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ");\n",dof,ni,nj);CHKERRQ(ierr); }
+      if (dim == 3) { ierr = PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ");\n",dof,ni,nj,nk);CHKERRQ(ierr); }
 
       for (n=0; n<dof; n++) {
         ierr = DMDAGetFieldName(da,n,&fieldname);CHKERRQ(ierr);
@@ -760,9 +760,9 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
           ierr = PetscSNPrintf(fieldbuf,sizeof fieldbuf,"field%" PetscInt_FMT "",n);CHKERRQ(ierr);
           fieldname = fieldbuf;
         }
-        if (dim == 1) { ierr = PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%d,:))';\n",name,fieldname,n+1);CHKERRQ(ierr); }
-        if (dim == 2) { ierr = PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%d,:,:))';\n",name,fieldname,n+1);CHKERRQ(ierr); }
-        if (dim == 3) { ierr = PetscFPrintf(comm,info,"#$$ Set.%s.%s = permute(squeeze(tmp(%d,:,:,:)),[2 1 3]);\n",name,fieldname,n+1);CHKERRQ(ierr);}
+        if (dim == 1) { ierr = PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%" PetscInt_FMT ",:))';\n",name,fieldname,n+1);CHKERRQ(ierr); }
+        if (dim == 2) { ierr = PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%" PetscInt_FMT ",:,:))';\n",name,fieldname,n+1);CHKERRQ(ierr); }
+        if (dim == 3) { ierr = PetscFPrintf(comm,info,"#$$ Set.%s.%s = permute(squeeze(tmp(%" PetscInt_FMT ",:,:,:)),[2 1 3]);\n",name,fieldname,n+1);CHKERRQ(ierr);}
       }
       ierr = PetscFPrintf(comm,info,"#$$ clear tmp; \n");CHKERRQ(ierr);
       ierr = PetscFPrintf(comm,info,"#--- end code written by PetscViewerBinary for MATLAB format ---#\n\n");CHKERRQ(ierr);

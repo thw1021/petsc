@@ -3379,7 +3379,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ(Mat mat,IS isrow,IS iscol,MatReuse call
         ierr = ISGetSeqIS_Private(mat,iscol,&iscol_local);CHKERRQ(ierr);
         ierr = ISGetLocalSize(iscol_local,&n);CHKERRQ(ierr); /* local size of iscol_local = global columns of newmat */
         ierr = ISGetSize(iscol,&i);CHKERRQ(ierr);
-        if (n != i) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"n %d != size of iscol %d",n,i);
+        if (PetscUnlikely(n != i)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"n %" PetscInt_FMT " != size of iscol %" PetscInt_FMT,n,i);
 
         ierr = ISSorted(iscol_local,&sorted);CHKERRQ(ierr);
         if (sorted) {
@@ -3401,7 +3401,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ(Mat mat,IS isrow,IS iscol,MatReuse call
   /* General case: iscol -> iscol_local which has global size of iscol */
   if (call == MAT_REUSE_MATRIX) {
     ierr = PetscObjectQuery((PetscObject)*newmat,"ISAllGather",(PetscObject*)&iscol_local);CHKERRQ(ierr);
-    if (!iscol_local) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Submatrix passed in was not used before, cannot reuse");
+    if (PetscUnlikely(!iscol_local)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Submatrix passed in was not used before, cannot reuse");
   } else {
     if (!iscol_local) {
       ierr = ISGetSeqIS_Private(mat,iscol,&iscol_local);CHKERRQ(ierr);
@@ -3488,7 +3488,7 @@ PetscErrorCode MatCreateMPIAIJWithSeqAIJ(MPI_Comm comm,Mat A,Mat B,const PetscIn
   bnew->maxnz = b->maxnz; /* allocated nonzeros of B */
   maij->B     = Bnew;
 
-  if (B->rmap->N != Bnew->rmap->N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"BN %d != BnewN %d",B->rmap->N,Bnew->rmap->N);
+  if (PetscUnlikely(B->rmap->N != Bnew->rmap->N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"BN %" PetscInt_FMT " != BnewN %" PetscInt_FMT,B->rmap->N,Bnew->rmap->N);
 
   b->singlemalloc = PETSC_FALSE; /* B arrays are shared by Bnew */
   b->free_a       = PETSC_FALSE;
@@ -4854,9 +4854,9 @@ PetscErrorCode  MatCreateMPIAIJSumSeqAIJSymbolic(MPI_Comm comm,Mat seqmat,PetscI
   if (merge->nrecv) {ierr = MPI_Waitall(merge->nrecv,ri_waits,status);CHKERRMPI(ierr);}
   if (merge->nsend) {ierr = MPI_Waitall(merge->nsend,si_waits,status);CHKERRMPI(ierr);}
 
-  ierr = PetscInfo2(seqmat,"nsend: %" PetscInt_FMT ", nrecv: %" PetscInt_FMT "\n",merge->nsend,merge->nrecv);CHKERRQ(ierr);
+  ierr = PetscInfo2(seqmat,"nsend: %d, nrecv: %d\n",merge->nsend,merge->nrecv);CHKERRQ(ierr);
   for (i=0; i<merge->nrecv; i++) {
-    ierr = PetscInfo3(seqmat,"recv len_ri=%" PetscInt_FMT ", len_rj=%" PetscInt_FMT " from [%" PetscInt_FMT "]\n",len_ri[i],merge->len_r[i],merge->id_r[i]);CHKERRQ(ierr);
+    ierr = PetscInfo3(seqmat,"recv len_ri=%d, len_rj=%d from [%d]\n",len_ri[i],merge->len_r[i],merge->id_r[i]);CHKERRQ(ierr);
   }
 
   ierr = PetscFree(len_si);CHKERRQ(ierr);
@@ -5707,8 +5707,8 @@ PetscErrorCode MatGetBrowsOfAoCols_MPIAIJ(Mat A,Mat B,MatReuse scall,PetscInt **
   ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
-  if (A->cmap->rstart != B->rmap->rstart || A->cmap->rend != B->rmap->rend) {
-    SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, (%d, %d) != (%d,%d)",A->cmap->rstart,A->cmap->rend,B->rmap->rstart,B->rmap->rend);
+  if (PetscUnlikely(A->cmap->rstart != B->rmap->rstart || A->cmap->rend != B->rmap->rend)) {
+    SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, (%" PetscInt_FMT ", %" PetscInt_FMT ") != (%" PetscInt_FMT ",%" PetscInt_FMT ")",A->cmap->rstart,A->cmap->rend,B->rmap->rstart,B->rmap->rend);
   }
   ierr = PetscLogEventBegin(MAT_GetBrowsOfAocols,A,B,0,0);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
@@ -5992,7 +5992,7 @@ static PetscErrorCode MatMatMultSymbolic_MPIDense_MPIAIJ(Mat A,Mat B,PetscReal f
   PetscBool      cisdense;
 
   PetscFunctionBegin;
-  if (A->cmap->n != B->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"A->cmap->n %d != B->rmap->n %d\n",A->cmap->n,B->rmap->n);
+  if (PetscUnlikely(A->cmap->n != B->rmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"A->cmap->n %" PetscInt_FMT " != B->rmap->n %" PetscInt_FMT "\n",A->cmap->n,B->rmap->n);
   ierr = MatSetSizes(C,A->rmap->n,B->cmap->n,A->rmap->N,B->cmap->N);CHKERRQ(ierr);
   ierr = MatSetBlockSizesFromMats(C,A,B);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompareAny((PetscObject)C,&cisdense,MATMPIDENSE,MATMPIDENSECUDA,"");CHKERRQ(ierr);

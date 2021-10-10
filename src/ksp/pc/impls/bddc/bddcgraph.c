@@ -70,35 +70,35 @@ PetscErrorCode PCBDDCGraphASCIIView(PCBDDCGraph graph, PetscInt verbosity_level,
   ierr = PetscViewerASCIIPrintf(viewer,"--------------------------------------------------\n");CHKERRQ(ierr);
   ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
   ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Local BDDC graph for subdomain %04d\n",PetscGlobalRank);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Number of vertices %d\n",graph->nvtxs);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Custom minimal size %d\n",graph->custom_minimal_size);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Number of vertices %" PetscInt_FMT "\n",graph->nvtxs);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Custom minimal size %" PetscInt_FMT "\n",graph->custom_minimal_size);CHKERRQ(ierr);
   if (graph->maxcount != PETSC_MAX_INT) {
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Max count %d\n",graph->maxcount);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Max count %" PetscInt_FMT "\n",graph->maxcount);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Topological two dim? %d (set %d)\n",graph->twodim,graph->twodimset);CHKERRQ(ierr);
   if (verbosity_level > 2) {
     for (i=0;i<graph->nvtxs;i++) {
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%d:\n",i);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   which_dof: %d\n",graph->which_dof[i]);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   special_dof: %d\n",graph->special_dof[i]);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   neighbours: %d\n",graph->count[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT ":\n",i);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   which_dof: %" PetscInt_FMT "\n",graph->which_dof[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   special_dof: %" PetscInt_FMT "\n",graph->special_dof[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   neighbours: %" PetscInt_FMT "\n",graph->count[i]);CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
       if (graph->count[i]) {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"     set of neighbours:");CHKERRQ(ierr);
         for (j=0;j<graph->count[i];j++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer," %d",graph->neighbours_set[i][j]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT "",graph->neighbours_set[i][j]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIISetTab(viewer,tabs);CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
       if (graph->mirrors) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   mirrors: %d\n",graph->mirrors[i]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   mirrors: %" PetscInt_FMT "\n",graph->mirrors[i]);CHKERRQ(ierr);
         if (graph->mirrors[i]) {
           ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
           ierr = PetscViewerASCIISynchronizedPrintf(viewer,"     set of mirrors:");CHKERRQ(ierr);
           for (j=0;j<graph->mirrors[i];j++) {
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer," %d",graph->mirrors_set[i][j]);CHKERRQ(ierr);
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT "",graph->mirrors_set[i][j]);CHKERRQ(ierr);
           }
           ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
           ierr = PetscViewerASCIISetTab(viewer,tabs);CHKERRQ(ierr);
@@ -110,7 +110,7 @@ PetscErrorCode PCBDDCGraphASCIIView(PCBDDCGraph graph, PetscInt verbosity_level,
           ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   local adj list:");CHKERRQ(ierr);
           ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
           for (j=graph->xadj[i];j<graph->xadj[i+1];j++) {
-            ierr = PetscViewerASCIISynchronizedPrintf(viewer," %d",graph->adjncy[j]);CHKERRQ(ierr);
+            ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT "",graph->adjncy[j]);CHKERRQ(ierr);
           }
           ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
           ierr = PetscViewerASCIISetTab(viewer,tabs);CHKERRQ(ierr);
@@ -120,24 +120,24 @@ PetscErrorCode PCBDDCGraphASCIIView(PCBDDCGraph graph, PetscInt verbosity_level,
         }
       }
       if (graph->n_local_subs) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   local sub id: %d\n",graph->local_subs[i]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   local sub id: %" PetscInt_FMT "\n",graph->local_subs[i]);CHKERRQ(ierr);
       }
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   interface subset id: %d\n",graph->subset[i]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   interface subset id: %" PetscInt_FMT "\n",graph->subset[i]);CHKERRQ(ierr);
       if (graph->subset[i] && graph->subset_ncc) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   ncc for subset: %d\n",graph->subset_ncc[graph->subset[i]-1]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"   ncc for subset: %" PetscInt_FMT "\n",graph->subset_ncc[graph->subset[i]-1]);CHKERRQ(ierr);
       }
     }
   }
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Total number of connected components %d\n",graph->ncc);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Total number of connected components %" PetscInt_FMT "\n",graph->ncc);CHKERRQ(ierr);
   ierr = PetscMalloc1(graph->cptr[graph->ncc],&queue_in_global_numbering);CHKERRQ(ierr);
   ierr = ISLocalToGlobalMappingApply(graph->l2gmap,graph->cptr[graph->ncc],graph->queue,queue_in_global_numbering);CHKERRQ(ierr);
   for (i=0;i<graph->ncc;i++) {
     PetscInt node_num=graph->queue[graph->cptr[i]];
     PetscBool printcc = PETSC_FALSE;
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  cc %d (size %d, fid %d, neighs:",i,graph->cptr[i+1]-graph->cptr[i],graph->which_dof[node_num]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"  cc %" PetscInt_FMT " (size %" PetscInt_FMT ", fid %" PetscInt_FMT ", neighs:",i,graph->cptr[i+1]-graph->cptr[i],graph->which_dof[node_num]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
     for (j=0;j<graph->count[node_num];j++) {
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer," %d",graph->neighbours_set[node_num][j]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT,graph->neighbours_set[node_num][j]);CHKERRQ(ierr);
     }
     if (verbosity_level > 1) {
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"):");CHKERRQ(ierr);
@@ -146,7 +146,7 @@ PetscErrorCode PCBDDCGraphASCIIView(PCBDDCGraph graph, PetscInt verbosity_level,
       }
       if (printcc) {
         for (j=graph->cptr[i];j<graph->cptr[i+1];j++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer," %d (%d)",graph->queue[j],queue_in_global_numbering[j]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT " (%" PetscInt_FMT ")",graph->queue[j],queue_in_global_numbering[j]);CHKERRQ(ierr);
         }
       }
     } else {

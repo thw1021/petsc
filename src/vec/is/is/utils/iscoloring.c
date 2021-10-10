@@ -168,7 +168,7 @@ PetscErrorCode  ISColoringView(ISColoring iscoloring,PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"ISColoring Object: %d MPI processes\n",size);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"ISColoringType: %s\n",ISColoringTypes[iscoloring->ctype]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Number of colors %d\n",rank,iscoloring->n);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Number of colors %" PetscInt_FMT "\n",rank,iscoloring->n);CHKERRQ(ierr);
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
   }
@@ -427,14 +427,13 @@ PetscErrorCode  ISBuildTwoSided(IS ito,IS toindx, IS *rows)
    ierr = PetscObjectGetComm((PetscObject)ito,&comm);CHKERRQ(ierr);
    ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
    ierr = ISGetLocalSize(ito,&ito_ln);CHKERRQ(ierr);
-   /* why we do not have ISGetLayout? */
-   isrmap = ito->map;
+   ierr = ISGetLayout(ito,&isrmap);CHKERRQ(ierr);
    ierr = PetscLayoutGetRange(isrmap,&rstart,NULL);CHKERRQ(ierr);
    ierr = ISGetIndices(ito,&ito_indices);CHKERRQ(ierr);
    ierr = PetscCalloc2(size,&tosizes_tmp,size+1,&tooffsets_tmp);CHKERRQ(ierr);
    for (i=0; i<ito_ln; i++) {
      if (ito_indices[i]<0) continue;
-     if (ito_indices[i]>=size) SETERRQ2(comm,PETSC_ERR_ARG_OUTOFRANGE,"target rank %d is larger than communicator size %d ",ito_indices[i],size);
+     else if (PetscUnlikely(ito_indices[i]>=size)) SETERRQ2(comm,PETSC_ERR_ARG_OUTOFRANGE,"target rank %" PetscInt_FMT " is larger than communicator size %d ",ito_indices[i],size);
      tosizes_tmp[ito_indices[i]]++;
    }
    nto = 0;

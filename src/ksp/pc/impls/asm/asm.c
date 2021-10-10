@@ -123,7 +123,7 @@ static PetscErrorCode PCASMPrintSubdomains(PC pc)
         ierr = PetscMalloc1(len, &s);CHKERRQ(ierr);
         ierr = PetscViewerStringOpen(PETSC_COMM_SELF, s, len, &sviewer);CHKERRQ(ierr);
 #undef len
-        ierr = PetscViewerStringSPrintf(sviewer, "[%" PetscInt_FMT ":%" PetscInt_FMT "] Subdomain %" PetscInt_FMT " without overlap:\n", rank, size, i);CHKERRQ(ierr);
+        ierr = PetscViewerStringSPrintf(sviewer, "[%d:%d] Subdomain %" PetscInt_FMT " without overlap:\n", rank, size, i);CHKERRQ(ierr);
         ierr = ISGetLocalSize(osm->is_local[i],&nidx);CHKERRQ(ierr);
         ierr = ISGetIndices(osm->is_local[i],&idx);CHKERRQ(ierr);
         for (j=0; j<nidx; j++) {

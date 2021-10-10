@@ -312,7 +312,7 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
 
     if (ilink->fields) {
-      ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Fields ",0);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Split number 0 Fields ");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
       for (j=0; j<ilink->nfields; j++) {
         if (j > 0) {
@@ -323,7 +323,7 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
     } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Defined by IS\n",0);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"Split number 0 Defined by IS\n");CHKERRQ(ierr);
     }
     ierr  = KSPView(ilink->ksp,viewer);CHKERRQ(ierr);
 
@@ -425,7 +425,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
         ierr = PetscSNPrintf(optionname, sizeof(optionname), "-pc_fieldsplit_%" PetscInt_FMT "_fields", i);CHKERRQ(ierr);
         ierr = PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix, optionname, ifields, &nfields, &flg);CHKERRQ(ierr);
         if (!flg) break;
-        if (numFields > 128) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %d > 128 fields", numFields);
+        if (PetscUnlikely(numFields > 128)) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %" PetscInt_FMT " > 128 fields", numFields);
         ierr = DMCreateSubDM(pc->dm, nfields, ifields, &compField, &subdm[i]);CHKERRQ(ierr);
         if (nfields == 1) {
           ierr = PCFieldSplitSetIS(pc, fieldNames[ifields[0]], compField);CHKERRQ(ierr);
@@ -566,7 +566,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
     } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Must provide at least two sets of fields to PCFieldSplit()");
   }
 
-  if (jac->nsplits < 2) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unhandled case, must have at least two fields, not %d", jac->nsplits);
+  if (PetscUnlikely(jac->nsplits < 2)) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unhandled case, must have at least two fields, not %" PetscInt_FMT, jac->nsplits);
   PetscFunctionReturn(0);
 }
 
@@ -2406,7 +2406,7 @@ PetscErrorCode  PCFieldSplitSchurGetS(PC pc,Mat *S)
   ierr = PetscStrcmp(t,PCFIELDSPLIT,&isfs);CHKERRQ(ierr);
   if (!isfs) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %" PetscInt_FMT " instead",jac->type);
+  if (PetscUnlikely(jac->type != PC_COMPOSITE_SCHUR)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %s instead",PCCompositeTypes[jac->type]);
   if (S) *S = jac->schur;
   PetscFunctionReturn(0);
 }
@@ -2438,8 +2438,8 @@ PetscErrorCode  PCFieldSplitSchurRestoreS(PC pc,Mat *S)
   ierr = PetscStrcmp(t,PCFIELDSPLIT,&isfs);CHKERRQ(ierr);
   if (!isfs) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  if (jac->type != PC_COMPOSITE_SCHUR) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %" PetscInt_FMT " instead",jac->type);
-  if (!S || *S != jac->schur) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatSchurComplement restored is not the same as gotten");
+  if (PetscUnlikely(jac->type != PC_COMPOSITE_SCHUR)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %s instead",PCCompositeTypes[jac->type]);
+  if (PetscUnlikely(!S || *S != jac->schur)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatSchurComplement restored is not the same as gotten");
   PetscFunctionReturn(0);
 }
 

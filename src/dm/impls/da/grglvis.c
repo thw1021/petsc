@@ -377,11 +377,11 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
 
   if (!enabled) {
     ierr = PetscViewerASCIIPrintf(viewer,"\nelements\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nboundary\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"\nvertices\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",sdim);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
@@ -438,7 +438,7 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
     SETERRQ1(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT "",dim);
   }
   ierr = PetscViewerASCIIPrintf(viewer,"\nboundary\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n",0);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"0\n");CHKERRQ(ierr);
 
   /* vertex coordinates */
   ierr = PetscObjectQuery((PetscObject)da,"GLVisGraphicsCoordsGhosted",(PetscObject*)&xcoorl);CHKERRQ(ierr);

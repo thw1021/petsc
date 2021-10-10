@@ -235,7 +235,7 @@ PetscErrorCode DMPatchSolve(DM dm)
         if ((gridRank.k/commSize.k == p/(l/commSize.i * m/commSize.j) % n/commSize.k) &&
             (gridRank.j/commSize.j == p/(l/commSize.i)                % m/commSize.j) &&
             (gridRank.i/commSize.i == p                               % l/commSize.i)) {
-          if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Rank %d is accepting Patch %d\n", rank, p);CHKERRQ(ierr);}
+          if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Rank %d is accepting Patch %" PetscInt_FMT "\n", rank, p);CHKERRQ(ierr);}
           commp = commz;
         }
         /* Zoom to coarse patch */
@@ -244,7 +244,7 @@ PetscErrorCode DMPatchSolve(DM dm)
         ierr    = DMPatchZoom(dmc, lower, upper, commp, &dmz, &sfz, &sfzr);CHKERRQ(ierr);
         lower.c = 0; /* initialize member, otherwise compiler issues warnings */
         upper.c = 0; /* initialize member, otherwise compiler issues warnings */
-        if (debug) {ierr = PetscPrintf(comm, "Patch %d: (%d, %d, %d)--(%d, %d, %d)\n", p, lower.i, lower.j, lower.k, upper.i, upper.j, upper.k);CHKERRQ(ierr);}
+        if (debug) {ierr = PetscPrintf(comm, "Patch %" PetscInt_FMT ": (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT ")--(%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT ")\n", p, lower.i, lower.j, lower.k, upper.i, upper.j, upper.k);CHKERRQ(ierr);}
         if (dmz) {ierr = DMView(dmz, PETSC_VIEWER_STDOUT_(commz));CHKERRQ(ierr);}
         ierr = PetscSFView(sfz,  PETSC_VIEWER_STDOUT_(comm));CHKERRQ(ierr);
         ierr = PetscSFView(sfzr, PETSC_VIEWER_STDOUT_(comm));CHKERRQ(ierr);
