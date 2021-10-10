@@ -344,7 +344,7 @@ static PetscErrorCode CapsuleReadAndCompareAttributes(Capsule c, PetscViewer v, 
         ptr0 = &buffer;
       }
       ierr = compare(c->types[t], ptr0, c->vals[t], &flg);CHKERRQ(ierr);
-      if (!flg) SETERRQ3(comm, PETSC_ERR_PLIB, "Value of attribute %s/%s/%s in %s is not equal to the original value", group, parent, attribute);
+      if (!flg) SETERRQ3(comm, PETSC_ERR_PLIB, "Value of attribute %s/%s/%s is not equal to the original value", group, parent, attribute);
       if (verbose) {ierr = PetscPrintf(comm, " (=)");CHKERRQ(ierr);}
       if (c->types[t] == PETSC_STRING) {
         ierr = PetscFree(str);CHKERRQ(ierr);
@@ -419,7 +419,7 @@ static PetscErrorCode testGroupsDatasets(MPI_Comm comm, const char filename[], P
         PetscReal min,max;
         ierr = VecMin(v, NULL, &min);CHKERRQ(ierr);
         ierr = VecMax(v, NULL, &max);CHKERRQ(ierr);
-        ierr = PetscPrintf(comm, "  Create dataset %s/%s, keep in memory in vecs[%d][%d], min %.3e max %.3e\n", apaths[paths2apaths[p]], datasets[s], paths2apaths[p], s, min, max);CHKERRQ(ierr);
+        ierr = PetscPrintf(comm, "  Create dataset %s/%s, keep in memory in vecs[%" PetscInt_FMT "][%" PetscInt_FMT "], min %.3e max %.3e\n", apaths[paths2apaths[p]], datasets[s], paths2apaths[p], s, min, max);CHKERRQ(ierr);
       }
 
       ierr = VecView(v, viewer);CHKERRQ(ierr);
@@ -882,7 +882,7 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL, "-n", &n, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL, "-verbose", &verbose, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetString(NULL,NULL, "-filename", filename, sizeof(filename), NULL);CHKERRQ(ierr);
-  if (verbose) {ierr = PetscPrintf(comm, "np ns %" PetscInt_FMT " %" PetscInt_FMT "\n", np, ns);CHKERRQ(ierr);}
+  if (verbose) {ierr = PetscPrintf(comm, "np ns " PetscStringizeArg(np) " " PetscStringizeArg(ns) "\n");CHKERRQ(ierr);}
 
   ierr = testGroupsDatasets(comm, filename, PETSC_TRUE);CHKERRQ(ierr);
   ierr = testAttributesAbsolutePath(comm, filename, NULL, PETSC_FALSE);CHKERRQ(ierr);

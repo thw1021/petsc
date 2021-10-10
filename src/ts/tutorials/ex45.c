@@ -201,7 +201,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
       ierr = PetscDSSetExactSolutionTimeDerivative(ds, 0, mms_trig_lin_t, ctx);CHKERRQ(ierr);
       ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) mms_trig_lin, (void (*)(void)) mms_trig_lin_t, ctx, NULL);CHKERRQ(ierr);
       break;
-    default: SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%" PetscInt_FMT ")", solutionTypes[PetscMin(ctx->solType, NUM_SOLUTION_TYPES)], ctx->solType);
+    default: SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%d)", solutionTypes[PetscMin(ctx->solType, NUM_SOLUTION_TYPES)], ctx->solType);
   }
   PetscFunctionReturn(0);
 }

@@ -159,10 +159,10 @@ int main(int argc,char *argv[])
     } else if (ctx.dim == 3) {
       ierr = PetscPrintf(PETSC_COMM_WORLD,"Using a %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " mesh\n",N[0],N[1],N[2]);CHKERRQ(ierr);
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"dx: %g\n",dx);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"dt: %g\n",ctx.dt);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"P-wave velocity: %g\n",PetscSqrtScalar((ctx.lambda + 2 * ctx.mu) / ctx.rho));CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"V_p dt / dx: %g\n",Vp * ctx.dt / dx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"dx: %g\n",(double)PetscRealPart(dx));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"dt: %g\n",(double)ctx.dt);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"P-wave velocity: %g\n",(double)PetscRealPart(PetscSqrtScalar((ctx.lambda + 2 * ctx.mu) / ctx.rho)));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"V_p dt / dx: %g\n",(double)PetscRealPart(Vp * ctx.dt / dx));CHKERRQ(ierr);
   }
 
   /* Populate the coefficient arrays */
@@ -190,7 +190,7 @@ int main(int argc,char *argv[])
     ierr = UpdateVelocity(&ctx,velocity,stress,ctx.buoyancy);CHKERRQ(ierr);
     ierr = UpdateStress(&ctx,velocity,stress,ctx.lame);CHKERRQ(ierr);
     ierr = ForceStress(&ctx,stress,t);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %d, t = %g\n",timestep,(double)t);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT ", t = %g\n",timestep,(double)t);CHKERRQ(ierr);
     if (ctx.dump_output) {
       ierr = DumpVelocity(&ctx,velocity,timestep);CHKERRQ(ierr);
       ierr = DumpStress(&ctx,stress,timestep);CHKERRQ(ierr);
@@ -275,7 +275,7 @@ static PetscErrorCode CreateLame(Ctx *ctx)
         }
       }
     }
-  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %d",ctx->dim);
+  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %" PetscInt_FMT,ctx->dim);
   ierr = VecAssemblyBegin(ctx->lame);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(ctx->lame);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -524,7 +524,7 @@ static PetscErrorCode UpdateVelocity(const Ctx *ctx,Vec velocity,Vec stress, Vec
     ierr = UpdateVelocity_2d(ctx,velocity,stress,buoyancy);CHKERRQ(ierr);
   } else if (ctx->dim == 3) {
     ierr = UpdateVelocity_3d(ctx,velocity,stress,buoyancy);CHKERRQ(ierr);
-  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %d",ctx->dim);
+  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %" PetscInt_FMT,ctx->dim);
   PetscFunctionReturn(0);
 }
 
@@ -830,7 +830,7 @@ static PetscErrorCode DumpVelocity(const Ctx *ctx,Vec velocity,PetscInt timestep
     ierr = DMStagCreateCompatibleDMStag(ctx->dm_velocity,0,0,2,0,&dmVelAvg);CHKERRQ(ierr); /* 2 dof per element */
   } else if (ctx->dim == 3) {
     ierr = DMStagCreateCompatibleDMStag(ctx->dm_velocity,0,0,0,3,&dmVelAvg);CHKERRQ(ierr); /* 3 dof per element */
-  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %d",ctx->dim);
+  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %" PetscInt_FMT,ctx->dim);
   ierr = DMSetUp(dmVelAvg);CHKERRQ(ierr);
   ierr = DMStagSetUniformCoordinatesProduct(dmVelAvg,ctx->xmin,ctx->xmax,ctx->ymin,ctx->ymax,ctx->zmin,ctx->zmax);CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(dmVelAvg,&velAvg);CHKERRQ(ierr);
@@ -874,7 +874,7 @@ static PetscErrorCode DumpVelocity(const Ctx *ctx,Vec velocity,PetscInt timestep
         }
       }
     }
-  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %d",ctx->dim);
+  } else SETERRQ1(PetscObjectComm((PetscObject)ctx->dm_velocity),PETSC_ERR_SUP,"Unsupported dim %" PetscInt_FMT,ctx->dim);
   ierr = VecAssemblyBegin(velAvg);CHKERRQ(ierr);
   ierr = VecAssemblyEnd(velAvg);CHKERRQ(ierr);
   ierr = DMRestoreLocalVector(ctx->dm_velocity,&velocity_local);CHKERRQ(ierr);

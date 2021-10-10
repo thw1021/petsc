@@ -62,7 +62,7 @@ int main(int argc,char **argv)
   ierr = PetscSynchronizedPrintf(MPI_COMM_WORLD,"[%d] Compressed matrix \n",rank);CHKERRQ(ierr);
   for (i=0; i<nrow; i++) {
     for (j=0; j<nc; j++) {
-      ierr = PetscSynchronizedPrintf(MPI_COMM_WORLD,"%12.4e  ",cm[i+nrow*j]);CHKERRQ(ierr);
+      ierr = PetscSynchronizedPrintf(MPI_COMM_WORLD,"%12.4e  ",(double)PetscAbsScalar(cm[i+nrow*j]));CHKERRQ(ierr);
     }
     ierr = PetscSynchronizedPrintf(MPI_COMM_WORLD,"\n");CHKERRQ(ierr);
   }

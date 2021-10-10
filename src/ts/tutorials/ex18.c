@@ -93,7 +93,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsReal("-inflow_state", "The inflow state", "ex18.c", options->inflowState, &options->inflowState, NULL);CHKERRQ(ierr);
   d    = 2;
   ierr = PetscOptionsRealArray("-source_loc", "The source location", "ex18.c", options->source, &d, &flg);CHKERRQ(ierr);
-  if (flg && d != 2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Must give dim coordinates for the source location, not %d", d);
+  if (flg && d != 2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Must give dim coordinates for the source location, not %" PetscInt_FMT, d);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
@@ -696,7 +696,7 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
           break;
         case VEL_SHEAR:
           exactFuncs[0] = shear_bc; break;
-        default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d", dim);
+        default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT, dim);
       }
       break;
     default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);

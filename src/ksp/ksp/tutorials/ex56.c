@@ -83,7 +83,7 @@ int main(int argc,char **args)
     PetscInt       *d_nnz, *o_nnz,osz[4]={0,9,15,19},nbc;
     PetscScalar    vv[24], v2[24];
     if (npe!=NP*NP*NP) SETERRQ1(comm,PETSC_ERR_ARG_WRONG, "npe=%d: npe^{1/3} must be integer",npe);
-    if (nn!=NP*(nn/NP)) SETERRQ1(comm,PETSC_ERR_ARG_WRONG, "-ne %d: (ne+1)%(npe^{1/3}) must equal zero",ne);
+    if (nn!=NP*(nn/NP)) SETERRQ1(comm,PETSC_ERR_ARG_WRONG, "-ne %" PetscInt_FMT ": (ne+1)%%(npe^{1/3}) must equal zero",ne);
 
     /* count nnz */
     ierr = PetscMalloc1(m+1, &d_nnz);CHKERRQ(ierr);

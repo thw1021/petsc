@@ -621,7 +621,7 @@ int main(int argc,char **args)
               for (b2=0;b2<bs;b2++) {
                 if (PetscAbsScalar(isbd[i*bs*bs+b1*bs + b2]-aijbd[i*bs*bs+b1*bs + b2]) > PETSC_SMALL) ok = PETSC_FALSE;
                 if (!ok) {
-                  ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] ERROR block %d, entry %d %d: %g %g\n",rank,i,b1,b2,isbd[i*bs*bs+b1*bs + b2],aijbd[i*bs*bs+b1*bs + b2]);CHKERRQ(ierr);
+                  ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] ERROR block %" PetscInt_FMT ", entry %" PetscInt_FMT " %" PetscInt_FMT ": %g %g\n",rank,i,b1,b2,(double)PetscAbsScalar(isbd[i*bs*bs+b1*bs + b2]),(double)PetscAbsScalar(aijbd[i*bs*bs+b1*bs + b2]));CHKERRQ(ierr);
                   break;
                 }
               }

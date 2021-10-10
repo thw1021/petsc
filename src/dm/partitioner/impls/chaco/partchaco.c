@@ -167,7 +167,7 @@ static PetscErrorCode PetscPartitionerPartition_Chaco(PetscPartitioner part, Pet
       if (assignment[v] == p) points[i++] = v;
     }
   }
-  if (i != nvtxs) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of points %" PetscInt_FMT " should be %" PetscInt_FMT "", i, nvtxs);
+  if (PetscUnlikely(i != nvtxs)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of points %d should be %d", i, nvtxs);
   ierr = ISCreateGeneral(comm, nvtxs, points, PETSC_OWN_POINTER, partition);CHKERRQ(ierr);
   if (global_method == INERTIAL_METHOD) {
     /* manager.destroyCellCoordinates(nvtxs, &x, &y, &z); */

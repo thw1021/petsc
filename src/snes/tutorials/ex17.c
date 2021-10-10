@@ -409,7 +409,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     case DEFORM_NONE:  break;
     case DEFORM_SHEAR: ierr = DMPlexShearGeometry(*dm, DM_X, NULL);CHKERRQ(ierr);break;
     case DEFORM_STEP:  ierr = DMPlexDistortGeometry(*dm);CHKERRQ(ierr);break;
-    default: SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid deformation type: %s (%" PetscInt_FMT ")", deformTypes[PetscMin(user->deform, NUM_DEFORM_TYPES)], user->deform);
+    default: SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid deformation type: %s (%d)", deformTypes[PetscMin(user->deform, NUM_DEFORM_TYPES)], user->deform);
   }
   ierr = DMSetApplicationContext(*dm, user);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
@@ -492,7 +492,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, g3_elas_uu);CHKERRQ(ierr);
     exact = uniform_strain_u;
     break;
-  default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%" PetscInt_FMT ")", solutionTypes[PetscMin(user->solType, NUM_SOLUTION_TYPES)], user->solType);
+  default: SETERRQ2(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%d)", solutionTypes[PetscMin(user->solType, NUM_SOLUTION_TYPES)], user->solType);
   }
   ierr = PetscDSSetExactSolution(ds, 0, exact, user);CHKERRQ(ierr);
   ierr = DMGetLabel(dm, "marker", &label);CHKERRQ(ierr);
