@@ -94,7 +94,7 @@ int main(int argc,char **args)
     if (displayIS && rank == 0) {
       PetscInt i;
       ierr = PetscPrintf(PETSC_COMM_SELF,"[ %d ] count:\n",rank);CHKERRQ(ierr);
-      for (i=0; i<size; i++) {ierr = PetscPrintf(PETSC_COMM_WORLD," %d",count[i]);CHKERRQ(ierr);}
+      for (i=0; i<size; i++) {ierr = PetscPrintf(PETSC_COMM_WORLD," %"PetscInt_FMT,count[i]);CHKERRQ(ierr);}
       ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
     }
 
@@ -141,7 +141,7 @@ int main(int argc,char **args)
   if (flg) {
     KSPConvergedReason reason;
     ierr = KSPGetConvergedReason(ksp,&reason);CHKERRQ(ierr);
-    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason);
+    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %s\n", KSPConvergedReasons[reason]);
   }
 
   /* Free work space.*/

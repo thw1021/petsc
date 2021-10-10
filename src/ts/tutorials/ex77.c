@@ -413,7 +413,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     exactFuncs_t[1] = NULL;
     exactFuncs_t[2] = trig_trig_T_t;
     break;
-   default: SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%" PetscInt_FMT ")", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+   default: SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
   }
 
   ierr = PetscDSSetResidual(prob, 1, f0_q, NULL);CHKERRQ(ierr);
@@ -995,7 +995,7 @@ int main(int argc, char **argv)
   ierr = DMSwarmDestroyGlobalVectorFromField(sdm, DMSwarmPICField_coor, &xtmp);CHKERRQ(ierr);
   switch(user.solType) {
     case SOL_TRIG_TRIG: adv.exact = trig_trig_x;break;
-    default: SETERRQ2(PetscObjectComm((PetscObject) sdm), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%" PetscInt_FMT ")", solTypes[PetscMin(user.solType, NUM_SOL_TYPES)], user.solType);
+    default: SETERRQ2(PetscObjectComm((PetscObject) sdm), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", solTypes[PetscMin(user.solType, NUM_SOL_TYPES)], user.solType);
   }
   adv.ctx = &user;
 

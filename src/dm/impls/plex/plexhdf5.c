@@ -1207,7 +1207,7 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   numVertices /= spatialDim;
   /* Create coordinates */
   ierr = DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd);CHKERRQ(ierr);
-  if (numVertices != vEnd - vStart) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of coordinates loaded %d does not match number of vertices %d", numVertices, vEnd - vStart);
+  if (PetscUnlikely(numVertices != vEnd - vStart)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of coordinates loaded %" PetscInt_FMT " does not match number of vertices %" PetscInt_FMT, numVertices, vEnd - vStart);
   ierr = DMGetCoordinateSection(dm, &coordSection);CHKERRQ(ierr);
   ierr = PetscSectionSetNumFields(coordSection, 1);CHKERRQ(ierr);
   ierr = PetscSectionSetFieldComponents(coordSection, 0, spatialDim);CHKERRQ(ierr);
@@ -1488,7 +1488,7 @@ PetscErrorCode DMPlexVecLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM section
 
     ierr = DMGetPointSF(dm, &pointsf);CHKERRQ(ierr);
     ierr = DMGetPointSF(sectiondm, &pointsf1);CHKERRQ(ierr);
-    if (pointsf1 != pointsf) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatching point SFs for dm and sectiondm");
+    if (PetscUnlikely(pointsf1 != pointsf)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatching point SFs for dm and sectiondm");
 #if defined(PETSC_USE_DEBUG)
     {
       PetscInt  MA, MA1;
@@ -1499,10 +1499,10 @@ PetscErrorCode DMPlexVecLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM section
     }
 #endif
     ierr = VecGetLocalSize(vec, &m1);CHKERRQ(ierr);
-    if (m1 < m) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Target vector size (%" PetscInt_FMT ") < SF leaf size (%" PetscInt_FMT ")", m1, m);
+    if (PetscUnlikely(m1 < m)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Target vector size (%" PetscInt_FMT ") < SF leaf size (%" PetscInt_FMT ")", m1, m);
     for (i = 0; i < m; ++i) {
       j = ilocal ? ilocal[i] : i;
-      if (j < 0 || j >= m1) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Leaf's %" PetscInt_FMT "-th index, %" PetscInt_FMT ", not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", i, j, 0, m1);
+      if (PetscUnlikely(j < 0 || j >= m1)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Leaf's %" PetscInt_FMT "-th index, %" PetscInt_FMT ", not in [0, %" PetscInt_FMT ")", i, j, m1);
     }
   }
   ierr = VecSetSizes(vecA, mA, PETSC_DECIDE);CHKERRQ(ierr);

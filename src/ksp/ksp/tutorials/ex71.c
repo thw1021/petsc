@@ -161,7 +161,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT "",options->dim);
     }
     break;
-  default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported PDE %" PetscInt_FMT "",options->pde);
+  default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported PDE %d",options->pde);
   }
   PetscFunctionReturn(0);
 }

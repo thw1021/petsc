@@ -325,7 +325,7 @@ static PetscErrorCode SetupEqn(DM dm, AppCtx *user)
       exactFuncs[0] = trig_u;
       exactFuncs[1] = trig_p;
       break;
-    default: SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%" PetscInt_FMT ")", SolTypes[PetscMin(user->sol, SOL_UNKNOWN)], user->sol);
+    default: SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", SolTypes[PetscMin(user->sol, SOL_UNKNOWN)], user->sol);
   }
   ierr = PetscDSSetResidual(ds, 1, f0_p, NULL);CHKERRQ(ierr);
   ierr = PetscDSSetJacobian(ds, 0, 0, NULL, NULL,  NULL,  g3_uu);CHKERRQ(ierr);

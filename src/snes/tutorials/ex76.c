@@ -426,7 +426,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     exactFuncs[1] = quadratic_p;
     exactFuncs[2] = quadratic_T;
     break;
-   default: SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%" PetscInt_FMT ")", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+   default: SETERRQ2(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
   }
 
   ierr = PetscDSSetResidual(prob, 1, f0_q, NULL);CHKERRQ(ierr);
