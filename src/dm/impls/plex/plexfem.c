@@ -3257,9 +3257,11 @@ PetscErrorCode DMPlexComputeInjectorFEM(DM dmc, DM dmf, VecScatter *sc, void *us
     ierr = DMPlexMatGetClosureIndicesRefined(dmf, fsection, fglobalSection, dmc, csection, cglobalSection, c, cellCIndices, cellFIndices);CHKERRQ(ierr);
     for (d = 0; d < cTotDim; ++d) {
       if ((cellCIndices[d] < startC) || (cellCIndices[d] >= endC)) continue;
-      if ((findices[cellCIndices[d]-startC] >= 0) && (findices[cellCIndices[d]-startC] != cellFIndices[cmap[d]])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Coarse dof %D maps to both %D and %D", cindices[cellCIndices[d]-startC], findices[cellCIndices[d]-startC], cellFIndices[cmap[d]]);
+      // TODO swtich to forming a matrix rather than a scatter
+      //if ((findices[cellCIndices[d]-startC] >= 0) && (findices[cellCIndices[d]-startC] != cellFIndices[cmap[d]])) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Coarse dof %D maps to both %D and %D", cindices[cellCIndices[d]-startC], findices[cellCIndices[d]-startC], cellFIndices[cmap[d]]);
+      // Just pick the first one right now
       cindices[cellCIndices[d]-startC] = cellCIndices[d];
-      findices[cellCIndices[d]-startC] = cellFIndices[cmap[d]];
+      if (findices[cellCIndices[d]-startC] < 0) {findices[cellCIndices[d]-startC] = cellFIndices[cmap[d]];}
     }
   }
   ierr = PetscFree(cmap);CHKERRQ(ierr);
