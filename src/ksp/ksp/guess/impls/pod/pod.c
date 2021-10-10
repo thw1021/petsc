@@ -386,7 +386,7 @@ complete_request:
   }
 
   if (pod->monitor) {
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"  KSPGuessPOD: basis %" PetscInt_FMT ", energy fractions = ",pod->nen);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"  KSPGuessPOD: basis %d, energy fractions = ",pod->nen);CHKERRQ(ierr);
     for (i=pod->n-1;i>=0;i--) {
       ierr = PetscPrintf(PetscObjectComm((PetscObject)guess),"%1.6e (%d) ",pod->eigs[i]/toten,i >= pod->st ? 1 : 0);CHKERRQ(ierr);
     }

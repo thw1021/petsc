@@ -132,7 +132,7 @@ PetscErrorCode SNESView_NGMRES(SNES snes,PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject) viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Number of stored past updates: %d\n", ngmres->msize);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Number of stored past updates: %" PetscInt_FMT "\n", ngmres->msize);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Residual selection: gammaA=%1.0e, gammaC=%1.0e\n",ngmres->gammaA,ngmres->gammaC);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Difference restart: epsilonB=%1.0e, deltaB=%1.0e\n",ngmres->epsilonB,ngmres->deltaB);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Restart on F_M residual increase: %s\n",ngmres->restart_fm_rise?"TRUE":"FALSE");CHKERRQ(ierr);
@@ -292,7 +292,7 @@ PetscErrorCode SNESSolve_NGMRES(SNES snes)
     /* restart after restart conditions have persisted for a fixed number of iterations */
     if (restart_count >= ngmres->restart_it) {
       if (ngmres->monitor) {
-        ierr = PetscViewerASCIIPrintf(ngmres->monitor,"Restarted at iteration %d\n",k_restart);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(ngmres->monitor,"Restarted at iteration %" PetscInt_FMT "\n",k_restart);CHKERRQ(ierr);
       }
       restart_count = 0;
       k_restart     = 1;

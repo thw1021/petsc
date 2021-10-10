@@ -212,7 +212,7 @@ PetscErrorCode PetscBagRegisterInt(PetscBag bag,void *addr,PetscInt mdefault,con
   ierr     = PetscStrlcat(nname,name,PETSC_BAG_NAME_LENGTH);CHKERRQ(ierr);
   ierr     = PetscOptionsHasHelp(NULL,&printhelp);CHKERRQ(ierr);
   if (printhelp) {
-    ierr = (*PetscHelpPrintf)(bag->bagcomm,"  -%s%s <%d>: %s \n",bag->bagprefix ? bag->bagprefix : "",name,mdefault,help);CHKERRQ(ierr);
+    ierr = (*PetscHelpPrintf)(bag->bagcomm,"  -%s%s <%" PetscInt_FMT ">: %s \n",bag->bagprefix ? bag->bagprefix : "",name,mdefault,help);CHKERRQ(ierr);
   }
   ierr = PetscOptionsGetInt(NULL,bag->bagprefix,nname,&mdefault,NULL);CHKERRQ(ierr);
 
@@ -261,7 +261,7 @@ PetscErrorCode PetscBagRegisterInt64(PetscBag bag,void *addr,PetscInt64 mdefault
   ierr     = PetscStrlcat(nname,name,PETSC_BAG_NAME_LENGTH);CHKERRQ(ierr);
   ierr     = PetscOptionsHasHelp(NULL,&printhelp);CHKERRQ(ierr);
   if (printhelp) {
-    ierr = (*PetscHelpPrintf)(bag->bagcomm,"  -%s%s <%d>: %s \n",bag->bagprefix ? bag->bagprefix : "",name,odefault,help);CHKERRQ(ierr);
+    ierr = (*PetscHelpPrintf)(bag->bagcomm,"  -%s%s <%" PetscInt_FMT ">: %s \n",bag->bagprefix ? bag->bagprefix : "",name,odefault,help);CHKERRQ(ierr);
   }
   ierr = PetscOptionsGetInt(NULL,bag->bagprefix,nname,&odefault,&flg);CHKERRQ(ierr);
   if (flg) mdefault = (PetscInt64)odefault;
@@ -269,7 +269,7 @@ PetscErrorCode PetscBagRegisterInt64(PetscBag bag,void *addr,PetscInt64 mdefault
   ierr         = PetscNew(&item);CHKERRQ(ierr);
   item->dtype  = PETSC_INT;
   item->offset = ((char*)addr) - ((char*)bag);
-  if (item->offset > bag->bagsize) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Registered item %s %s is not in bag memory space",name,help);
+  if (PetscUnlikely(item->offset > bag->bagsize)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Registered item %s %s is not in bag memory space",name,help);
   item->next       = NULL;
   item->msize      = 1;
   *(PetscInt64*)addr = mdefault;
@@ -706,7 +706,7 @@ PetscErrorCode  PetscBagView(PetscBag bag,PetscViewer view)
         for (i=0; i<nitem->msize; i++) {
           if (((int) value[i]) == -1) value[i] = PETSC_TRUE;
           /* the checks here with != PETSC_FALSE and PETSC_TRUE is a special case; here we truly demand that the value be 0 or 1 */
-          if (value[i] != PETSC_FALSE && value[i] != PETSC_TRUE) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Boolean value for %s %s is corrupt; integer value %d",nitem->name,nitem->help,value[i]);
+          if (value[i] != PETSC_FALSE && value[i] != PETSC_TRUE) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Boolean value for %s %s is corrupt; integer value %" PetscInt_FMT,nitem->name,nitem->help,(PetscInt)(value[i]));
           ierr = PetscViewerASCIIPrintf(view," %s",PetscBools[value[i]]);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(view,"; %s\n",nitem->help);CHKERRQ(ierr);

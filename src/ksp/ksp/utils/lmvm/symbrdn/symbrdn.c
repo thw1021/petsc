@@ -513,7 +513,7 @@ PetscErrorCode MatView_LMVMSymBrdn(Mat B, PetscViewer pv)
   ierr = PetscObjectTypeCompare((PetscObject)pv,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
     ierr = PetscViewerASCIIPrintf(pv,"Scale type: %s\n",MatLMVMSymBroydenScaleTypes[lsb->scale_type]);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(pv,"Scale history: %d\n",lsb->sigma_hist);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(pv,"Scale history: %" PetscInt_FMT "\n",lsb->sigma_hist);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(pv,"Scale params: alpha=%g, beta=%g, rho=%g\n",(double)lsb->alpha, (double)lsb->beta, (double)lsb->rho);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(pv,"Convex factors: phi=%g, theta=%g\n",(double)lsb->phi, (double)lsb->theta);CHKERRQ(ierr);
   }

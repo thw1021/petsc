@@ -166,7 +166,7 @@ static PetscErrorCode VecView_Network_MPI(DM networkdm,Vec X,PetscViewer viewer)
   if (rank == 0) {
     /* proc[0] receives and prints messages */
     for (j=1; j<size; j++) {
-      ierr = PetscViewerASCIIPrintf(viewer,"Process [%d]\n",j);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Process [%" PetscInt_FMT "]\n",j);CHKERRQ(ierr);
 
       ierr = MPI_Recv(values,(PetscMPIInt)len,MPIU_SCALAR,j,tag,comm,&status);CHKERRMPI(ierr);
 

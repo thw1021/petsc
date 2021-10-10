@@ -381,7 +381,7 @@ static PetscErrorCode MatView_DiagBrdn(Mat B, PetscViewer pv)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)pv,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(pv,"Scale history: %d\n",ldb->sigma_hist);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(pv,"Scale history: %" PetscInt_FMT "\n",ldb->sigma_hist);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(pv,"Scale params: alpha=%g, beta=%g, rho=%g\n",(double)ldb->alpha, (double)ldb->beta, (double)ldb->rho);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(pv,"Convex factor: theta=%g\n", (double)ldb->theta);CHKERRQ(ierr);
   }

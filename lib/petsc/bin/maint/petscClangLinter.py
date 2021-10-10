@@ -1613,6 +1613,7 @@ checkFunctionMap = {
   "PetscCheckCompatibleDevices"        : checkObjIdxGenericN,
   "PetscValidDeviceContext"            : checkObjIdxGenericN,
   "PetscCheckCompatibleDeviceContexts" : checkObjIdxGenericN,
+  "PetscSFCheckGraphSet"               : checkObjIdxGenericN,
 }
 
 """Utility and pre-check setup"""

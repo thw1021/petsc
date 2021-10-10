@@ -621,7 +621,7 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
 
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer, " restart=%d using %s\n", agmres->max_k, cstr);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " restart=%" PetscInt_FMT " using %s\n", agmres->max_k, cstr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, " %s\n", Nstr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, " Number of matvecs : %" PetscInt_FMT "\n", agmres->matvecs);CHKERRQ(ierr);
     if (agmres->force) {ierr = PetscViewerASCIIPrintf (viewer, " Adaptive strategy is used: FALSE\n");CHKERRQ(ierr);}
@@ -635,7 +635,7 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
       if (agmres->ritz) sprintf(ritzvec, "Ritz vectors");
       else sprintf(ritzvec, "Harmonic Ritz vectors");
       ierr = PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: AUGMENT\n");CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer," augmented vectors  %d at frequency %d with %s\n", agmres->r, agmres->neig, ritzvec);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer," augmented vectors  %" PetscInt_FMT " at frequency %" PetscInt_FMT " with %s\n", agmres->r, agmres->neig, ritzvec);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", agmres->smv);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", agmres->bgv);CHKERRQ(ierr);

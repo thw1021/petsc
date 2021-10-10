@@ -161,7 +161,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
         else if (outputState == 4) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
 
         if (doOutput) {
-          ierr = PetscViewerASCIIPrintf(viewer, "POINT_DATA %d\n", xin->map->N/bs);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, "POINT_DATA %" PetscInt_FMT "\n", xin->map->N/bs);CHKERRQ(ierr);
         }
       } else {
         if (outputState == 0) {
@@ -175,7 +175,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
         else if (outputState == 4) doOutput = 0;
 
         if (doOutput) {
-          ierr = PetscViewerASCIIPrintf(viewer, "CELL_DATA %d\n", xin->map->N/bs);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, "CELL_DATA %" PetscInt_FMT "\n", xin->map->N/bs);CHKERRQ(ierr);
         }
       }
       ierr = PetscObjectComposedDataSetInt((PetscObject) viewer, stateId, outputState);CHKERRQ(ierr);
@@ -183,10 +183,10 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
         if (bs == 3) {
           ierr = PetscViewerASCIIPrintf(viewer, "VECTORS %s double\n", name);CHKERRQ(ierr);
         } else {
-          ierr = PetscViewerASCIIPrintf(viewer, "SCALARS %s double %d\n", name, bs);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, "SCALARS %s double %" PetscInt_FMT "\n", name, bs);CHKERRQ(ierr);
         }
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer, "SCALARS scalars double %d\n", bs);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "SCALARS scalars double %" PetscInt_FMT "\n", bs);CHKERRQ(ierr);
       }
       if (bs != 3) {
         ierr = PetscViewerASCIIPrintf(viewer, "LOOKUP_TABLE default\n");CHKERRQ(ierr);
@@ -219,7 +219,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
       ierr = PetscMPIIntCast(nLen,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
-      if ((bs < 1) || (bs > 3)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %d", bs);
+      if (PetscUnlikely((bs < 1) || (bs > 3))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
 
       for (i=0; i<n/bs; i++) {
         for (b=0; b<bs; b++) {
@@ -255,7 +255,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
       ierr = VecGetLocalSize(xin, &nLen);CHKERRQ(ierr);
       ierr = PetscMPIIntCast(nLen,&n);CHKERRQ(ierr);
       ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
-      if ((bs < 1) || (bs > 3)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "PCICE can only handle up to 3D objects, but vector dimension is %d", bs);
+      if (PetscUnlikely((bs < 1) || (bs > 3))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "PCICE can only handle up to 3D objects, but vector dimension is %" PetscInt_FMT, bs);
 
       ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n", xin->map->N/bs);CHKERRQ(ierr);
       for (i=0; i<n/bs; i++) {
@@ -302,8 +302,8 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
       if (!glvis_container) SETERRQ(PetscObjectComm((PetscObject)xin),PETSC_ERR_PLIB,"Missing GLVis container");
       ierr = PetscContainerGetPointer(glvis_container,(void**)&glvis_vec_info);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"%s\n",glvis_vec_info->fec_type);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"VDim: %d\n",vdim);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"Ordering: %d\n",ordering);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"VDim: %" PetscInt_FMT "\n",vdim);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Ordering: %" PetscInt_FMT "\n",ordering);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
       /* mfem::Vector::Print() */
       ierr = PetscObjectQuery((PetscObject)viewer,"_glvis_info_container",(PetscObject*)&glvis_container);CHKERRQ(ierr);

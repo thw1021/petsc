@@ -85,11 +85,11 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_6(MatScalar *a,PetscRea
   }
   ipvt[5] = 6;
   if (a[42] == 0.0) {
-    if (allowzeropivot) {
+    if (PetscLikely(allowzeropivot)) {
       PetscErrorCode ierr;
-      ierr = PetscInfo1(NULL,"Zero pivot, row %" PetscInt_FMT "\n",5);CHKERRQ(ierr);
+      ierr = PetscInfo(NULL,"Zero pivot, row 5\n");CHKERRQ(ierr);
       if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %" PetscInt_FMT "",5);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row 5");
   }
 
   /* Now form the inverse */

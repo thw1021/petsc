@@ -158,7 +158,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDTFactorialInt(PetscInt n, PetscInt *fac
 
   PetscFunctionBegin;
   *factorial = -1;
-  if (n < 0 || n > PETSC_FACTORIAL_MAX) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of elements %" PetscInt_FMT " is not in supported range [0,%" PetscInt_FMT "]\n",n,PETSC_FACTORIAL_MAX);
+  if (PetscUnlikely(n < 0 || n > PETSC_FACTORIAL_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of elements %" PetscInt_FMT " is not in supported range [0,%d]\n",n,PETSC_FACTORIAL_MAX);
   if (n <= 12) {
     *factorial = facLookup[n];
   } else {
@@ -187,7 +187,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDTBinomial(PetscInt n, PetscInt k, Petsc
 {
   PetscFunctionBeginHot;
   *binomial = -1.0;
-  if (n < 0 || k < 0 || k > n) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Binomial arguments (%" PetscInt_FMT " %" PetscInt_FMT ") must be non-negative, k <= n\n", n, k);
+  if (PetscUnlikely(n < 0 || k < 0 || k > n)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Binomial arguments (%" PetscInt_FMT " %" PetscInt_FMT ") must be non-negative, k <= n\n", n, k);
   if (n <= 3) {
     PetscInt binomLookup[4][4] = {{1, 0, 0, 0}, {1, 1, 0, 0}, {1, 2, 1, 0}, {1, 3, 3, 1}};
 
@@ -223,8 +223,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDTBinomialInt(PetscInt n, PetscInt k, Pe
 
   PetscFunctionBegin;
   *binomial = -1;
-  if (n < 0 || k < 0 || k > n) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Binomial arguments (%" PetscInt_FMT " %" PetscInt_FMT ") must be non-negative, k <= n\n", n, k);
-  if (n > PETSC_BINOMIAL_MAX) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Binomial elements %" PetscInt_FMT " is larger than max for PetscInt, %" PetscInt_FMT "\n", n, PETSC_BINOMIAL_MAX);
+  if (PetscUnlikely(n < 0 || k < 0 || k > n)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Binomial arguments (%" PetscInt_FMT " %" PetscInt_FMT ") must be non-negative, k <= n\n", n, k);
+  if (PetscUnlikely(n > PETSC_BINOMIAL_MAX)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Binomial elements %" PetscInt_FMT " is larger than max for PetscInt, %d\n", n, PETSC_BINOMIAL_MAX);
   if (n <= 3) {
     PetscInt binomLookup[4][4] = {{1, 0, 0, 0}, {1, 1, 0, 0}, {1, 2, 1, 0}, {1, 3, 3, 1}};
 
@@ -271,7 +271,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDTEnumPerm(PetscInt n, PetscInt k, Petsc
 
   PetscFunctionBegin;
   if (isOdd) *isOdd = PETSC_FALSE;
-  if (n < 0 || n > PETSC_FACTORIAL_MAX) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of elements %" PetscInt_FMT " is not in supported range [0,%" PetscInt_FMT "]\n",n,PETSC_FACTORIAL_MAX);
+  if (PetscUnlikely(n < 0 || n > PETSC_FACTORIAL_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of elements %" PetscInt_FMT " is not in supported range [0,%d]\n",n,PETSC_FACTORIAL_MAX);
   w = &work[n - 2];
   for (i = 2; i <= n; i++) {
     *(w--) = k % i;
@@ -315,7 +315,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDTPermIndex(PetscInt n, const PetscInt *
   PetscFunctionBeginHot;
   *k = -1;
   if (isOdd) *isOdd = PETSC_FALSE;
-  if (n < 0 || n > PETSC_FACTORIAL_MAX) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of elements %" PetscInt_FMT " is not in supported range [0,%" PetscInt_FMT "]\n",n,PETSC_FACTORIAL_MAX);
+  if (PetscUnlikely(n < 0 || n > PETSC_FACTORIAL_MAX)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of elements %" PetscInt_FMT " is not in supported range [0,%d]\n",n,PETSC_FACTORIAL_MAX);
   for (i = 0; i < n; i++) work[i] = i;  /* partial permutation */
   for (i = 0; i < n; i++) iwork[i] = i; /* partial permutation inverse */
   for (idx = 0, i = 0; i < n - 1; i++) {

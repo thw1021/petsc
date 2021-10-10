@@ -1603,15 +1603,15 @@ PetscErrorCode MatDiagonalScale_MPISBAIJ(Mat mat,Vec ll,Vec rr)
   PetscFunctionBegin;
   if (ll != rr) {
     ierr = VecEqual(ll,rr,&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"For symmetric format, left and right scaling vectors must be same\n");
+    if (PetscUnlikely(!flg)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"For symmetric format, left and right scaling vectors must be same");
   }
   if (!ll) PetscFunctionReturn(0);
 
   ierr = MatGetLocalSize(mat,&m,&n);CHKERRQ(ierr);
-  if (m != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"For symmetric format, local size %d %d must be same",m,n);
+  if (PetscUnlikely(m != n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"For symmetric format, local size %" PetscInt_FMT " %" PetscInt_FMT " must be same",m,n);
 
   ierr = VecGetLocalSize(rr,&nv);CHKERRQ(ierr);
-  if (nv!=n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left and right vector non-conforming local size");
+  if (PetscUnlikely(nv!=n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left and right vector non-conforming local size");
 
   ierr = VecScatterBegin(baij->Mvctx,rr,baij->lvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
 
