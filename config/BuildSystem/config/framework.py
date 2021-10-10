@@ -1262,31 +1262,32 @@ class Framework(config.base.Configure, script.LanguageProcessor):
   def serialEvaluation(self, depGraph):
     import graph
 
-    ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
-    foundSetCompilers = False
-    foundCompilers    = False
-    for child in ndepGraph:
-      if hasattr(child,'setCompilers') and not foundSetCompilers:
-        setCompilers = child.setCompilers
-        foundSetCompilers = True
-      elif hasattr(child,'compilers') and not foundCompilers:
-        compilers      = child.compilers
-        foundCompilers = True
-      if foundCompilers and foundSetCompilers: break
+    def findModule(dependencyGraph,moduleType):
+      moduleList = [c for c in dependencyGraph if isinstance(c,moduleType)]
+      if len(moduleList) != 1:
+        if len(moduleList) < 1:
+          errorMessage = 'Did not find module {} in graph'.format(moduleType)
+        else:
+          errorMessage = 'Found multiple instances of module {} in graph'.format(moduleType)
+        raise RuntimeError(errorMessage)
+      return moduleList[0]
 
-    if not (foundCompilers or foundSetCompilers):
-      raise RuntimeError('Did not find setCompilers and compilers modules in children')
+
+    ndepGraph     = list(graph.DirectedGraph.topologicalSort(depGraph))
+    setCompilers  = findModule(ndepGraph,config.setCompilers.Configure)
+    compilers     = findModule(ndepGraph,config.compilers.Configure)
     minCxx,maxCxx = compilers.cxxDialectRange['Cxx']
     self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange['Cxx']))
     minCxxVersionBlameList = {}
     maxCxxVersionBlameList = {}
-    ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
     for child in ndepGraph:
       if (self.argDB['with-batch'] and
           hasattr(child,'package') and
           'download-'+child.package in self.framework.clArgDB and
           self.argDB['download-'+child.package] and not
-          (hasattr(setCompilers,'cross_cc') or child.installwithbatch)): raise RuntimeError('--download-'+child.package+' cannot be used on this batch systems\n')
+          (hasattr(setCompilers,'cross_cc') or child.installwithbatch)):
+        errorMessage = '--download-'+child.package+' cannot be used on this batch systems'
+        raise RuntimeError(errorMessage)
 
       # note, only classes derived from package.py have this attribute
       if hasattr(child,'deps'):
