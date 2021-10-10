@@ -35,7 +35,7 @@ static PetscErrorCode MakeDatatype(MPI_Datatype *dtype)
   {
     MPI_Aint lb,extent;
     ierr = MPI_Type_get_extent(*dtype,&lb,&extent);CHKERRMPI(ierr);
-    if (extent != sizeof(Unit)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_LIB,"New type has extent %d != sizeof(Unit) %d",extent,(int)sizeof(Unit));
+    if (extent != sizeof(Unit)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_LIB,"New type has extent %d != sizeof(Unit) %d",(int)extent,(int)sizeof(Unit));
   }
   PetscFunctionReturn(0);
 }

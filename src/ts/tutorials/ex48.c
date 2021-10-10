@@ -392,9 +392,9 @@ static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
     ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5);CHKERRQ(ierr);
     ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK);CHKERRQ(ierr);
     if (isHDF5) {
-      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%dD.h5", dim);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.h5", dim);CHKERRQ(ierr);
     } else if (isVTK) {
-      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%dD.vtu", dim);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.vtu", dim);CHKERRQ(ierr);
       ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU);CHKERRQ(ierr);
     }
     ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);

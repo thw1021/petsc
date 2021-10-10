@@ -679,7 +679,7 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
           PetscScalar    cpoint[3];
           PetscInt       cell, edge, ii, jj, kk;
 
-          if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Box %" PetscInt_FMT ": (%.2g, %.2g, %.2g) -- (%.2g, %.2g, %.2g)\n", box, (double)(point[0]), (double)(point[1]), (double)(point[2]), (double)(point[0] + h[0]), (double)(point[1] + h[1]), (double)(point[2] + h[2]));CHKERRQ(ierr);}
+          if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Box %" PetscInt_FMT ": (%.2g, %.2g, %.2g) -- (%.2g, %.2g, %.2g)\n", box, (double)PetscRealPart(point[0]), (double)PetscRealPart(point[1]), (double)PetscRealPart(point[2]), (double)PetscRealPart(point[0] + h[0]), (double)PetscRealPart(point[1] + h[1]), (double)PetscRealPart(point[2] + h[2]));CHKERRQ(ierr);}
           /* Check whether cell contains any vertex of this subbox TODO vectorize this */
           for (kk = 0, cpoint[2] = point[2]; kk < (dim > 2 ? 2 : 1); ++kk, cpoint[2] += h[2]) {
             for (jj = 0, cpoint[1] = point[1]; jj < (dim > 1 ? 2 : 1); ++jj, cpoint[1] += h[1]) {
@@ -687,7 +687,7 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
 
                 ierr = DMPlexLocatePoint_Internal(dm, dim, cpoint, c, &cell);CHKERRQ(ierr);
                 if (cell >= 0) {
-                  if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " contains vertex (%.2g, %.2g, %.2g) of box %" PetscInt_FMT "\n", c, (double)(cpoint[0]), (double)(cpoint[1]), (double)(cpoint[2]), box);CHKERRQ(ierr);}
+                  if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " contains vertex (%.2g, %.2g, %.2g) of box %" PetscInt_FMT "\n", c, (double)PetscRealPart(cpoint[0]), (double)PetscRealPart(cpoint[1]), (double)PetscRealPart(cpoint[2]), box);CHKERRQ(ierr);}
                   ierr = DMLabelSetValue(lbox->cellsSparse, c, box);CHKERRQ(ierr);
                   jj = kk = 2;
                   break;
@@ -863,7 +863,7 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
     if (hash) {
       PetscBool found_box;
 
-      if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Checking point %" PetscInt_FMT " (%.2g, %.2g, %.2g)\n", p, (double)(point[0]), (double)(point[1]), (double)(point[2]));CHKERRQ(ierr);}
+      if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "Checking point %" PetscInt_FMT " (%.2g, %.2g, %.2g)\n", p, (double)PetscRealPart(point[0]), (double)PetscRealPart(point[1]), (double)PetscRealPart(point[2]));CHKERRQ(ierr);}
       /* allow for case that point is outside box - abort early */
       ierr = PetscGridHashGetEnclosingBoxQuery(mesh->lbox, 1, point, dbin, &bin,&found_box);CHKERRQ(ierr);
       if (found_box) {

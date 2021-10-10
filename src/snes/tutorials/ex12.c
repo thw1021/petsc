@@ -635,7 +635,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     }
     break;
   default:
-    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d", dim);
+    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT, dim);
   }
   /* Setup constants */
   switch (user->variableCoefficient) {
