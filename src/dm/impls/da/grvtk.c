@@ -70,7 +70,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
   ierr = PetscFOpen(comm,vtk->filename,"wb",&fp);CHKERRQ(ierr);
   ierr = PetscFPrintf(comm,fp,"<?xml version=\"1.0\"?>\n");CHKERRQ(ierr);
   ierr = PetscFPrintf(comm,fp,"<VTKFile type=\"StructuredGrid\" version=\"0.1\" byte_order=\"%s\">\n",byte_order);CHKERRQ(ierr);
-  ierr = PetscFPrintf(comm,fp,"  <StructuredGrid WholeExtent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",0,mx-1,0,my-1,0,mz-1);CHKERRQ(ierr);
+  ierr = PetscFPrintf(comm,fp,"  <StructuredGrid WholeExtent=\"0 %" PetscInt_FMT " 0 %" PetscInt_FMT " 0 %" PetscInt_FMT "\">\n",mx-1,my-1,mz-1);CHKERRQ(ierr);
 
   if (rank == 0) {ierr = PetscMalloc1(size*6,&grloc);CHKERRQ(ierr);}
   rloc[0] = info.xs;
@@ -289,7 +289,7 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
   ierr = PetscFOpen(comm,vtk->filename,"wb",&fp);CHKERRQ(ierr);
   ierr = PetscFPrintf(comm,fp,"<?xml version=\"1.0\"?>\n");CHKERRQ(ierr);
   ierr = PetscFPrintf(comm,fp,"<VTKFile type=\"RectilinearGrid\" version=\"0.1\" byte_order=\"%s\">\n",byte_order);CHKERRQ(ierr);
-  ierr = PetscFPrintf(comm,fp,"  <RectilinearGrid WholeExtent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",0,mx-1,0,my-1,0,mz-1);CHKERRQ(ierr);
+  ierr = PetscFPrintf(comm,fp,"  <RectilinearGrid WholeExtent=\"0 %" PetscInt_FMT " 0 %" PetscInt_FMT " 0 %" PetscInt_FMT "\">\n",mx-1,my-1,mz-1);CHKERRQ(ierr);
 
   if (rank == 0) {ierr = PetscMalloc1(size*6,&grloc);CHKERRQ(ierr);}
   rloc[0] = info.xs;

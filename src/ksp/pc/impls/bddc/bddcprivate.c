@@ -565,7 +565,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
       }
     }
     if (!sneighs || test >= 3*ord || bdir) { /* splitpoints */
-      if (print) PetscPrintf(PETSC_COMM_SELF,"SPLITPOINT %" PetscInt_FMT " (%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT ")\n",i,!sneighs,test >= 3*ord,bdir);
+      if (print) PetscPrintf(PETSC_COMM_SELF,"SPLITPOINT %" PetscInt_FMT " (%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT ")\n",i,(PetscInt)(!sneighs),(PetscInt)(test >= 3)*ord,(PetscInt)(bdir));
       ierr = PetscBTSet(btv,i);CHKERRQ(ierr);
     } else if (test == ord) {
       if (order == 1 || (!order && ii[i+1]-ii[i] == 1)) {
@@ -851,7 +851,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
           PetscInt  k2;
           PetscBool corner = PETSC_FALSE;
           for (k2 = iit[jj[k]];k2 < iit[jj[k]+1];k2++) {
-            if (print) PetscPrintf(PETSC_COMM_SELF,"        INSPECTING %" PetscInt_FMT ": mark %" PetscInt_FMT " (ref mark %" PetscInt_FMT "), boundary %" PetscInt_FMT "\n",jjt[k2],marks[jjt[k2]],mark,!!PetscBTLookup(btb,jjt[k2]));
+            if (print) PetscPrintf(PETSC_COMM_SELF,"        INSPECTING %" PetscInt_FMT ": mark %" PetscInt_FMT " (ref mark %" PetscInt_FMT "), boundary %" PetscInt_FMT "\n",jjt[k2],marks[jjt[k2]],mark,(PetscInt)(!!PetscBTLookup(btb,jjt[k2])));
             /* it's a corner if either is connected with an edge dof belonging to a different cc or
                if the edge dof lie on the natural part of the boundary */
             if ((marks[jjt[k2]] && marks[jjt[k2]] != mark) || (!marks[jjt[k2]] && PetscBTLookup(btb,jjt[k2]))) {
@@ -941,7 +941,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
     ierr = PetscArraycpy(newprimals,idxs,cum);CHKERRQ(ierr);
     ierr = ISRestoreIndices(primals,&idxs);CHKERRQ(ierr);
     ierr = MatGetRowIJ(lGt,0,PETSC_FALSE,PETSC_FALSE,&i,&iit,&jjt,&done);CHKERRQ(ierr);
-    if (print) PetscPrintf(PETSC_COMM_SELF,"DOING SECOND PASS (eerr %" PetscInt_FMT ")\n",eerr);
+    if (print) PetscPrintf(PETSC_COMM_SELF,"DOING SECOND PASS (eerr %" PetscInt_FMT ")\n",(PetscInt)(eerr));
     for (i=0;i<nee;i++) {
       PetscBool has_candidates = PETSC_FALSE;
       if (PetscBTLookup(bter,i)) {
@@ -3640,7 +3640,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
       if (pcbddc->dbg_flag > 2) {
         PetscInt ii;
         for (ii=0;ii<B_neigs;ii++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector (old basis) %d/%d (%d)\n",ii,B_neigs,B_N);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector (old basis) %" PetscInt_FMT "/%d (%d)\n",ii,B_neigs,B_N);CHKERRQ(ierr);
           for (j=0;j<B_N;j++) {
 #if defined(PETSC_USE_COMPLEX)
             PetscReal r = PetscRealPart(eigv[(ii+eigs_start)*subset_size+j]);
@@ -3667,7 +3667,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
       if (pcbddc->dbg_flag > 1) {
         PetscInt ii;
         for (ii=0;ii<B_neigs;ii++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector %d/%d (%d)\n",ii,B_neigs,B_N);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector %" PetscInt_FMT "/%d (%d)\n",ii,B_neigs,B_N);CHKERRQ(ierr);
           for (j=0;j<B_N;j++) {
 #if defined(PETSC_USE_COMPLEX)
             PetscReal r = PetscRealPart(pcbddc->adaptive_constraints_data[ii*subset_size+j+pcbddc->adaptive_constraints_data_ptr[cum]]);
@@ -6122,9 +6122,9 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
       ierr = ISGetSize(ISForVertices,&nv);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushSynchronized(pcbddc->dbg_viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"--------------------------------------------------------------\n");CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02d local candidate vertices (%" PetscInt_FMT ")\n",PetscGlobalRank,nv,pcbddc->use_vertices);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02d local candidate edges    (%" PetscInt_FMT ")\n",PetscGlobalRank,n_ISForEdges,pcbddc->use_edges);CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02d local candidate faces    (%" PetscInt_FMT ")\n",PetscGlobalRank,n_ISForFaces,pcbddc->use_faces);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02" PetscInt_FMT " local candidate vertices (%" PetscInt_FMT ")\n",PetscGlobalRank,nv,(PetscInt)(pcbddc->use_vertices));CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02" PetscInt_FMT " local candidate edges    (%" PetscInt_FMT ")\n",PetscGlobalRank,n_ISForEdges,(PetscInt)(pcbddc->use_edges));CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02" PetscInt_FMT " local candidate faces    (%" PetscInt_FMT ")\n",PetscGlobalRank,n_ISForFaces,(PetscInt)(pcbddc->use_faces));CHKERRQ(ierr);
       ierr = PetscViewerFlush(pcbddc->dbg_viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopSynchronized(pcbddc->dbg_viewer);CHKERRQ(ierr);
     }
@@ -8870,7 +8870,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc,PetscScalar* coarse_submat_vals)
           ierr = KSPGetIterationNumber(check_ksp,&its);CHKERRQ(ierr);
           ierr = KSPGetConvergedReason(check_ksp,&reason);CHKERRQ(ierr);
           ierr = KSPComputeExtremeSingularValues(check_ksp,&lambda_max_s,&lambda_min_s);CHKERRQ(ierr);
-          ierr = PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem eigenvalues (estimated with %d iterations of %s, conv reason %d): %1.6e %1.6e (%1.6e %1.6e)\n",its,check_ksp_type,reason,lambda_min,lambda_max,lambda_min_s,lambda_max_s);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem eigenvalues (estimated with %" PetscInt_FMT " iterations of %s, conv reason %d): %1.6e %1.6e (%1.6e %1.6e)\n",its,check_ksp_type,reason,lambda_min,lambda_max,lambda_min_s,lambda_max_s);CHKERRQ(ierr);
           for (i=0;i<neigs;i++) {
             ierr = PetscViewerASCIIPrintf(dbg_viewer,"%1.6e %1.6ei\n",eigs_r[i],eigs_c[i]);CHKERRQ(ierr);
           }
@@ -9243,9 +9243,9 @@ PetscErrorCode PCBDDCInitSubSchurs(PC pc)
     ierr = ISGetSize(vertices,&nv);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(pcbddc->dbg_viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"--------------------------------------------------------------\n");CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02d local candidate vertices (%" PetscInt_FMT ")\n",PetscGlobalRank,(int)nv,pcbddc->use_vertices);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02d local candidate edges    (%" PetscInt_FMT ")\n",PetscGlobalRank,(int)nedges,pcbddc->use_edges);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02d local candidate faces    (%" PetscInt_FMT ")\n",PetscGlobalRank,(int)nfaces,pcbddc->use_faces);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02" PetscInt_FMT " local candidate vertices (%" PetscInt_FMT ")\n",PetscGlobalRank,nv,(PetscInt)(pcbddc->use_vertices));CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02" PetscInt_FMT " local candidate edges    (%" PetscInt_FMT ")\n",PetscGlobalRank,nedges,(PetscInt)(pcbddc->use_edges));CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d got %02" PetscInt_FMT " local candidate faces    (%" PetscInt_FMT ")\n",PetscGlobalRank,nfaces,(PetscInt)(pcbddc->use_faces));CHKERRQ(ierr);
     ierr = PetscViewerFlush(pcbddc->dbg_viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(pcbddc->dbg_viewer);CHKERRQ(ierr);
     ierr = PCBDDCGraphRestoreCandidatesIS(graph,&nfaces,NULL,&nedges,NULL,&vertices);CHKERRQ(ierr);

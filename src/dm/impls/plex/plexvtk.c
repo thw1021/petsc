@@ -330,7 +330,7 @@ static PetscErrorCode DMPlexVTKWriteSection_ASCII(DM dm, PetscSection section, P
     PetscScalar  val;
     char formatString[8];
 
-    ierr = PetscSNPrintf(formatString, 8, "%%.%de", precision);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(formatString, 8, "%%.%" PetscInt_FMT "e", precision);CHKERRQ(ierr);
     for (p = pStart; p < pEnd; ++p) {
       /* Here we lose a way to filter points by keeping them out of the Numbering */
       PetscInt dof, off, goff, d;

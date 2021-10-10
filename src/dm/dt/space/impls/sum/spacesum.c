@@ -257,7 +257,7 @@ static PetscErrorCode PetscSpaceSetFromOptions_Sum(PetscOptionItems *PetscOption
 
       ierr = PetscSpaceCreate(PetscObjectComm((PetscObject)sp),&subspace);CHKERRQ(ierr);
       ierr = PetscObjectSetOptionsPrefix((PetscObject)subspace,prefix);CHKERRQ(ierr);
-      ierr = PetscSNPrintf(subspacePrefix,256,"subspace%d_",i);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(subspacePrefix,256,"subspace%" PetscInt_FMT "_",i);CHKERRQ(ierr);
       ierr = PetscObjectAppendOptionsPrefix((PetscObject)subspace,subspacePrefix);CHKERRQ(ierr);
     } else {
       ierr = PetscObjectReference((PetscObject)subspace);CHKERRQ(ierr);
