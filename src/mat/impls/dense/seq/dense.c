@@ -1436,7 +1436,7 @@ PetscErrorCode MatLoad_Dense_Binary(Mat mat,PetscViewer viewer)
   ierr = MatSetUp(mat);CHKERRQ(ierr);
   /* check if global sizes are correct */
   ierr = MatGetSize(mat,&rows,&cols);CHKERRQ(ierr);
-  if (M != rows || N != cols) SETERRQ4(PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED, "Matrix in file of different sizes (%d, %d) than the input matrix (%d, %d)",M,N,rows,cols);
+  if (PetscUnlikely(M != rows || N != cols)) SETERRQ4(PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED, "Matrix in file of different sizes (%" PetscInt_FMT ", %" PetscInt_FMT ") than the input matrix (%" PetscInt_FMT ", %" PetscInt_FMT ")",M,N,rows,cols);
 
   ierr = MatGetSize(mat,NULL,&N);CHKERRQ(ierr);
   ierr = MatGetLocalSize(mat,&m,NULL);CHKERRQ(ierr);

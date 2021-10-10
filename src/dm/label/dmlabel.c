@@ -2006,7 +2006,7 @@ PetscErrorCode PetscSectionCreateGlobalSectionLabel(PetscSection s, PetscSF sf, 
   ierr = PetscSectionSetChart(*gsection, pStart, pEnd);CHKERRQ(ierr);
   ierr = PetscSFGetGraph(sf, &nroots, NULL, NULL, NULL);CHKERRQ(ierr);
   if (nroots >= 0) {
-    if (nroots < pEnd-pStart) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PetscSF nroots %d < %d section size", nroots, pEnd-pStart);
+    if (PetscUnlikely(nroots < pEnd-pStart)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "PetscSF nroots %" PetscInt_FMT " < %" PetscInt_FMT " section size", nroots, pEnd-pStart);
     ierr = PetscCalloc1(nroots, &neg);CHKERRQ(ierr);
     if (nroots > pEnd-pStart) {
       ierr = PetscCalloc1(nroots, &tmpOff);CHKERRQ(ierr);

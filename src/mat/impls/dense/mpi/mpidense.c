@@ -849,7 +849,7 @@ PetscErrorCode MatDiagonalScale_MPIDense(Mat A,Vec ll,Vec rr)
     const PetscScalar *ar;
 
     ierr = VecGetLocalSize(rr,&s3a);CHKERRQ(ierr);
-    if (s3a != s3) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vec non-conforming local size, %d != %d.", s3a, s3);
+    if (PetscUnlikely(s3a != s3)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vec non-conforming local size, %" PetscInt_FMT " != %" PetscInt_FMT ".", s3a, s3);
     ierr = VecGetArrayRead(rr,&ar);CHKERRQ(ierr);
     ierr = VecGetArray(mdn->lvec,&r);CHKERRQ(ierr);
     ierr = PetscSFBcastBegin(mdn->Mvctx,MPIU_SCALAR,ar,r,MPI_REPLACE);CHKERRQ(ierr);

@@ -1346,17 +1346,17 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
       MPI_Comm      comm = PetscObjectComm((PetscObject)pc);
 
       ierr = PetscHSetICreate(&globalbcdofs);CHKERRQ(ierr);
-      ierr = PetscSynchronizedPrintf(comm, "Patch %d: owned dofs:\n", v);CHKERRQ(ierr);
+      ierr = PetscSynchronizedPrintf(comm, "Patch %" PetscInt_FMT ": owned dofs:\n", v);CHKERRQ(ierr);
       PetscHashIterBegin(owneddofs, hi);
       while (!PetscHashIterAtEnd(owneddofs, hi)) {
         PetscInt globalDof;
 
         PetscHashIterGetKey(owneddofs, hi, globalDof);
         PetscHashIterNext(owneddofs, hi);
-        ierr = PetscSynchronizedPrintf(comm, "%d ", globalDof);CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm, "%" PetscInt_FMT " ", globalDof);CHKERRQ(ierr);
       }
       ierr = PetscSynchronizedPrintf(comm, "\n");CHKERRQ(ierr);
-      ierr = PetscSynchronizedPrintf(comm, "Patch %d: seen dofs:\n", v);CHKERRQ(ierr);
+      ierr = PetscSynchronizedPrintf(comm, "Patch %" PetscInt_FMT ": seen dofs:\n", v);CHKERRQ(ierr);
       PetscHashIterBegin(seendofs, hi);
       while (!PetscHashIterAtEnd(seendofs, hi)) {
         PetscInt globalDof;
@@ -1364,13 +1364,13 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
 
         PetscHashIterGetKey(seendofs, hi, globalDof);
         PetscHashIterNext(seendofs, hi);
-        ierr = PetscSynchronizedPrintf(comm, "%d ", globalDof);CHKERRQ(ierr);
+        ierr = PetscSynchronizedPrintf(comm, "%" PetscInt_FMT " ", globalDof);CHKERRQ(ierr);
 
         ierr = PetscHSetIHas(globalBcs, globalDof, &flg);CHKERRQ(ierr);
         if (flg) {ierr = PetscHSetIAdd(globalbcdofs, globalDof);CHKERRQ(ierr);}
       }
       ierr = PetscSynchronizedPrintf(comm, "\n");CHKERRQ(ierr);
-      ierr = PetscSynchronizedPrintf(comm, "Patch %d: global BCs:\n", v);CHKERRQ(ierr);
+      ierr = PetscSynchronizedPrintf(comm, "Patch %" PetscInt_FMT ": global BCs:\n", v);CHKERRQ(ierr);
       ierr = PetscHSetIGetSize(globalbcdofs, &numBcs);CHKERRQ(ierr);
       if (numBcs > 0) {
         PetscHashIterBegin(globalbcdofs, hi);
@@ -1378,11 +1378,11 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
           PetscInt globalDof;
           PetscHashIterGetKey(globalbcdofs, hi, globalDof);
           PetscHashIterNext(globalbcdofs, hi);
-          ierr = PetscSynchronizedPrintf(comm, "%d ", globalDof);CHKERRQ(ierr);
+          ierr = PetscSynchronizedPrintf(comm, "%" PetscInt_FMT " ", globalDof);CHKERRQ(ierr);
         }
       }
       ierr = PetscSynchronizedPrintf(comm, "\n");CHKERRQ(ierr);
-      ierr = PetscSynchronizedPrintf(comm, "Patch %d: artificial BCs:\n", v);CHKERRQ(ierr);
+      ierr = PetscSynchronizedPrintf(comm, "Patch %" PetscInt_FMT ": artificial BCs:\n", v);CHKERRQ(ierr);
       ierr = PetscHSetIGetSize(artificialbcs, &numBcs);CHKERRQ(ierr);
       if (numBcs > 0) {
         PetscHashIterBegin(artificialbcs, hi);
@@ -1390,7 +1390,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
           PetscInt globalDof;
           PetscHashIterGetKey(artificialbcs, hi, globalDof);
           PetscHashIterNext(artificialbcs, hi);
-          ierr = PetscSynchronizedPrintf(comm, "%d ", globalDof);CHKERRQ(ierr);
+          ierr = PetscSynchronizedPrintf(comm, "%" PetscInt_FMT " ", globalDof);CHKERRQ(ierr);
         }
       }
       ierr = PetscSynchronizedPrintf(comm, "\n\n");CHKERRQ(ierr);
@@ -1486,7 +1486,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   }
 
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  if (globalIndex != numDofs) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Expected number of dofs (%d) doesn't match found number (%d)", numDofs, globalIndex);
+  if (globalIndex != numDofs) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Expected number of dofs (%" PetscInt_FMT ") doesn't match found number (%" PetscInt_FMT ")", numDofs, globalIndex);
   ierr = PetscSectionSetUp(gtolCounts);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(gtolCounts, &numGlobalDofs);CHKERRQ(ierr);
   ierr = PetscMalloc1(numGlobalDofs, &globalDofsArray);CHKERRQ(ierr);
@@ -3232,7 +3232,7 @@ static PetscErrorCode PCView_PATCH(PC pc, PetscViewer viewer)
   if (!isascii) PetscFunctionReturn(0);
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject) pc), &rank);CHKERRMPI(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Subspace Correction preconditioner with %d patches\n", patch->npatch);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "Subspace Correction preconditioner with %" PetscInt_FMT " patches\n", patch->npatch);CHKERRQ(ierr);
   if (patch->local_composition_type == PC_COMPOSITE_MULTIPLICATIVE) {
     ierr = PetscViewerASCIIPrintf(viewer, "Schwarz type: multiplicative\n");CHKERRQ(ierr);
   } else {

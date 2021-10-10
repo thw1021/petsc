@@ -777,7 +777,7 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
     ierr = DMPlexPointLocalRef(dm, v, met, &Mp);CHKERRQ(ierr);
     if      (dim == 2) DMPlex_Det2D_Scalar_Internal(&detM, Mp);
     else if (dim == 3) DMPlex_Det3D_Scalar_Internal(&detM, Mp);
-    else SETERRQ1(comm, PETSC_ERR_SUP, "Dimension %d not supported", dim);
+    else SETERRQ1(comm, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
     fact = factGlob * PetscPowReal(PetscAbsReal(detM), -1.0/(2*p+dim));
     for (i = 0; i < Nd; ++i) Mp[i] *= fact;
     if (restrictSizes) { ierr = DMPlexMetricModify_Private(dim, h_min, h_max, a_max, Mp);CHKERRQ(ierr); }
@@ -816,7 +816,7 @@ PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights
   PetscReal      sum = 0.0, tol = 1.0e-10;
 
   PetscFunctionBegin;
-  if (numMetrics < 1) { SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot average %d < 1 metrics", numMetrics); }
+  if (PetscUnlikely(numMetrics < 1)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot average %" PetscInt_FMT " < 1 metrics", numMetrics);
   ierr = DMPlexMetricCreate(dm, 0, metricAvg);CHKERRQ(ierr);
   ierr = VecSet(*metricAvg, 0.0);CHKERRQ(ierr);
 
@@ -927,7 +927,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
 #else
       PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals1, work, &lwork, &lierr));
 #endif
-      if (lierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int) lierr);
+      if (PetscUnlikely(lierr)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int) lierr);
       ierr = PetscFPTrapPop();
 
       /* Compute square root and reciprocal */
@@ -1021,7 +1021,7 @@ PetscErrorCode DMPlexMetricIntersection(DM dm, PetscInt numMetrics, Vec metrics[
   PetscScalar   *met, *meti, *M, *Mi;
 
   PetscFunctionBegin;
-  if (numMetrics < 1) { SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot intersect %d < 1 metrics", numMetrics); }
+  if (PetscUnlikely(numMetrics < 1)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot intersect %" PetscInt_FMT " < 1 metrics", numMetrics);
 
   /* Extract metadata from dm */
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);

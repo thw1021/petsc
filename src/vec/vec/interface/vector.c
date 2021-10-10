@@ -625,7 +625,7 @@ PETSC_UNUSED static int TV_display_type(const struct _p_Vec *v)
   TV_add_row("Global rows", "int", &v->map->N);
   TV_add_row("Typename", TV_ascii_string_type, ((PetscObject)v)->type_name);
   ierr = VecGetArrayRead((Vec)v,&values);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(type,32,"double[%d]",v->map->n);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(type,32,"double[%" PetscInt_FMT "]",v->map->n);CHKERRQ(ierr);
   TV_add_row("values",type, values);
   ierr = VecRestoreArrayRead((Vec)v,&values);CHKERRQ(ierr);
   return TV_format_OK;

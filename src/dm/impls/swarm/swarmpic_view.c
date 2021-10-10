@@ -235,7 +235,7 @@ PetscErrorCode private_VecView_Swarm_XDMF(Vec x,PetscViewer viewer)
   N = N/bs;
   ierr = PetscObjectGetName((PetscObject)x,&vecname);CHKERRQ(ierr);
   if (!vecname) {
-    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%" PetscInt_FMT "",((PetscObject)x)->tag);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%d",((PetscObject)x)->tag);CHKERRQ(ierr);
   } else {
     ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"%s",vecname);CHKERRQ(ierr);
   }
@@ -303,7 +303,7 @@ PetscErrorCode private_ISView_Swarm_XDMF(IS is,PetscViewer viewer)
   N = N/bs;
   ierr = PetscObjectGetName((PetscObject)is,&vecname);CHKERRQ(ierr);
   if (!vecname) {
-    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%" PetscInt_FMT "",((PetscObject)is)->tag);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"swarmfield_%d",((PetscObject)is)->tag);CHKERRQ(ierr);
   } else {
     ierr = PetscSNPrintf(fieldname,PETSC_MAX_PATH_LEN-1,"%s",vecname);CHKERRQ(ierr);
   }

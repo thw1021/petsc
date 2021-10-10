@@ -66,7 +66,7 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_2d(DM dm,PetscRe
   ierr = DMGetCoordinateDM(dm, &dmCoord);CHKERRQ(ierr);
   stagCoord = (DM_Stag*) dmCoord->data;
   for (s=0; s<3; ++s) {
-    if (stagCoord->dof[s] !=0 && stagCoord->dof[s] != 2) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 2 dimensions must have 0 or 2 dof on each stratum, but stratum %d has %d dof",s,stagCoord->dof[s]);
+    if (PetscUnlikely(stagCoord->dof[s] !=0 && stagCoord->dof[s] != 2)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 2 dimensions must have 0 or 2 dof on each stratum, but stratum %" PetscInt_FMT " has %" PetscInt_FMT " dof",s,stagCoord->dof[s]);
   }
   ierr = DMCreateLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
 
@@ -179,7 +179,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
       PetscInt Ncheck,j;
       Ncheck = 0;
       for (j=0; j<stag->nRanks[i]; ++j) Ncheck += stag->l[i][j];
-      if (Ncheck != stag->N[i]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local sizes in dimension %d don't add up. %d != %d\n",i,Ncheck,stag->N[i]);
+      if (PetscUnlikely(Ncheck != stag->N[i])) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local sizes in dimension %" PetscInt_FMT " don't add up. %" PetscInt_FMT " != %" PetscInt_FMT "\n",i,Ncheck,stag->N[i]);
     }
   }
 
@@ -222,7 +222,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
      communication.  */
   ierr = DMStagSetUpBuildGlobalOffsets_2d(dm,&globalOffsets);CHKERRQ(ierr);
 
-  for (d=0; d<dim; ++d) if (stag->boundaryType[d] != DM_BOUNDARY_NONE && stag->boundaryType[d] != DM_BOUNDARY_PERIODIC && stag->boundaryType[d] != DM_BOUNDARY_GHOSTED) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported boundary type");
+  for (d=0; d<dim; ++d) if (PetscUnlikely(stag->boundaryType[d] != DM_BOUNDARY_NONE && stag->boundaryType[d] != DM_BOUNDARY_PERIODIC && stag->boundaryType[d] != DM_BOUNDARY_GHOSTED)) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported boundary type");
 
   /* Define ghosted/local sizes */
   for (d=0; d<dim; ++d) {
@@ -323,8 +323,8 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
   }
 
   /* Check stencil type */
-  if (stag->stencilType != DMSTAG_STENCIL_NONE && stag->stencilType != DMSTAG_STENCIL_BOX && stag->stencilType != DMSTAG_STENCIL_STAR) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported stencil type %s",DMStagStencilTypes[stag->stencilType]);
-  if (stag->stencilType == DMSTAG_STENCIL_NONE && stag->stencilWidth != 0) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMStag 2d setup requires stencil width 0 with stencil type none");
+  if (PetscUnlikely(stag->stencilType != DMSTAG_STENCIL_NONE && stag->stencilType != DMSTAG_STENCIL_BOX && stag->stencilType != DMSTAG_STENCIL_STAR)) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported stencil type %s",DMStagStencilTypes[stag->stencilType]);
+  if (PetscUnlikely(stag->stencilType == DMSTAG_STENCIL_NONE && stag->stencilWidth != 0)) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMStag 2d setup requires stencil width 0 with stencil type none");
   star = (PetscBool)(stag->stencilType == DMSTAG_STENCIL_STAR);
 
   {
@@ -630,7 +630,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
       }
     }
 
-    if (count != entriesToTransferTotal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of entries computed in gtol (%d) is not as expected (%d)",count,entriesToTransferTotal);
+    if (PetscUnlikely(count != entriesToTransferTotal)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of entries computed in gtol (%" PetscInt_FMT ") is not as expected (%" PetscInt_FMT ")",count,entriesToTransferTotal);
 
     /* Create Local and Global ISs (transferring pointer ownership) */
     ierr = ISCreateGeneral(PetscObjectComm((PetscObject)dm),entriesToTransferTotal,idxLocal,PETSC_OWN_POINTER,&isLocal);CHKERRQ(ierr);
