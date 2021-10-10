@@ -155,7 +155,7 @@ int main(int argc,char **argv)
   case 2: user.mms_solution = MMSSolution2; user.mms_forcing = MMSForcing2; break;
   case 3: user.mms_solution = MMSSolution3; user.mms_forcing = MMSForcing3; break;
   case 4: user.mms_solution = MMSSolution4; user.mms_forcing = MMSForcing4; break;
-  default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_USER,"Unknown MMS type %d",MMS);
+  default: SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_USER,"Unknown MMS type %" PetscInt_FMT,MMS);
   }
   ierr = DMDASNESSetFunctionLocal(da,INSERT_VALUES,(DMDASNESFunction)FormFunctionLocal,&user);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL,"-fd",&flg,NULL);CHKERRQ(ierr);

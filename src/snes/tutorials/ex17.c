@@ -459,7 +459,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     case DEFORM_NONE:  break;
     case DEFORM_SHEAR: ierr = DMPlexShearGeometry(*dm, DM_X, NULL);CHKERRQ(ierr);break;
     case DEFORM_STEP:  ierr = DMPlexDistortGeometry(*dm);CHKERRQ(ierr);break;
-    default: SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid deformation type: %s (%" PetscInt_FMT ")", deformTypes[PetscMin(user->deform, NUM_DEFORM_TYPES)], user->deform);
+    default: SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid deformation type: %s (%d)", deformTypes[PetscMin(user->deform, NUM_DEFORM_TYPES)], user->deform);
   }
   ierr = DMSetApplicationContext(*dm, user);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);

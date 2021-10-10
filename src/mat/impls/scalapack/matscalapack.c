@@ -1588,10 +1588,10 @@ static PetscErrorCode MatStashScatterBegin_ScaLAPACK(Mat mat,MatStash *stash,Pet
     }
   }
 #if defined(PETSC_USE_INFO)
-  ierr = PetscInfo1(NULL,"No of messages: %d \n",nsends);CHKERRQ(ierr);
+  ierr = PetscInfo1(NULL,"No of messages: %" PetscInt_FMT "\n",nsends);CHKERRQ(ierr);
   for (i=0; i<size; i++) {
     if (sizes[i]) {
-      ierr = PetscInfo2(NULL,"Mesg_to: %d: size: %d bytes\n",i,nlengths[i]*(bs2*sizeof(PetscScalar)+2*sizeof(PetscInt)));CHKERRQ(ierr);
+      ierr = PetscInfo2(NULL,"Mesg_to: %" PetscInt_FMT ": size: %zu bytes\n",i,(size_t)(nlengths[i]*(bs2*sizeof(PetscScalar)+2*sizeof(PetscInt))));CHKERRQ(ierr);
     }
   }
 #endif
@@ -1762,7 +1762,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
     ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"ScaLAPACK Grid Options","Mat");CHKERRQ(ierr);
     ierr = PetscOptionsInt("-mat_scalapack_grid_height","Grid Height","None",grid->nprow,&optv1,&flg1);CHKERRQ(ierr);
     if (flg1) {
-      if (size % optv1) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Grid Height %" PetscInt_FMT " must evenly divide CommSize %" PetscInt_FMT "",optv1,size);
+      if (PetscUnlikely(size % optv1)) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Grid Height %" PetscInt_FMT " must evenly divide CommSize %d",optv1,size);
       grid->nprow = optv1;
     }
     ierr = PetscOptionsEnd();CHKERRQ(ierr);

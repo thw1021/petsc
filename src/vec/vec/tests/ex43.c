@@ -13,8 +13,7 @@ int main(int argc, char **argv)
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL,"-k",&k,NULL);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Test with %" PetscInt_FMT " random vectors of length %" PetscInt_FMT "",k,n);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n",k,n);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Test with %" PetscInt_FMT " random vectors of length %" PetscInt_FMT "\n",k,n);CHKERRQ(ierr);
   ierr = PetscRandomCreate(PETSC_COMM_WORLD,&rctx);CHKERRQ(ierr);
   ierr = PetscRandomSetFromOptions(rctx);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)
@@ -54,7 +53,7 @@ int main(int argc, char **argv)
       }
     }
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Test completed successfully!\n",k,n);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Test completed successfully!\n");CHKERRQ(ierr);
   ierr = PetscFree(val_dot);CHKERRQ(ierr);
   ierr = PetscFree(val_mdot);CHKERRQ(ierr);
   ierr = PetscFree(tval_dot);CHKERRQ(ierr);
