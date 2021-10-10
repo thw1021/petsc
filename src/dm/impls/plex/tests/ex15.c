@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
     ierr = VecGetSize(v, &size);CHKERRQ(ierr);
     ierr = VecGetBlockSize(v, &bs);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "==== original V in global ordering. size==%d\tblock size=%d\n", size, bs);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "==== original V in global ordering. size==%" PetscInt_FMT "\tblock size=%" PetscInt_FMT "\n", size, bs);CHKERRQ(ierr);
     ierr = VecView(v, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
     ierr = VecGetSize(nv, &size);CHKERRQ(ierr);
     ierr = VecGetBlockSize(nv, &bs);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "====  V in natural ordering. size==%d\tblock size=%d\n", size, bs);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "====  V in natural ordering. size==%" PetscInt_FMT "\tblock size=%" PetscInt_FMT "\n", size, bs);CHKERRQ(ierr);
     ierr = VecView(nv, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
 
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 
       ierr = VecGetSize(rv, &size);CHKERRQ(ierr);
       ierr = VecGetBlockSize(rv, &bs);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "==== Vector from file. size==%d\tblock size=%d\n", size, bs);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "==== Vector from file. size==%" PetscInt_FMT "\tblock size=%" PetscInt_FMT "\n", size, bs);CHKERRQ(ierr);
       ierr = VecView(rv, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     }
     ierr = VecEqual(rv, v, &flg);CHKERRQ(ierr);
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 
       ierr = VecGetSize(rv, &size);CHKERRQ(ierr);
       ierr = VecGetBlockSize(rv, &bs);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "==== Vector from file. size==%d\tblock size=%d\n", size, bs);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "==== Vector from file. size==%" PetscInt_FMT "\tblock size=%" PetscInt_FMT "\n", size, bs);CHKERRQ(ierr);
       ierr = VecView(rv, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     }
     ierr = VecEqual(rv, nv, &flg);CHKERRQ(ierr);

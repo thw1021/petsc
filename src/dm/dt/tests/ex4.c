@@ -104,7 +104,7 @@ static PetscErrorCode CheckSymmetry(PetscInt dim, PetscInt order, PetscBool tens
       for (k = 0; k < nFunc; k++) {
         if (idsCopy2[k] != ids[k]) SETERRQ8(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Symmetry failure: %" PetscInt_FMT "D, %s, point %" PetscInt_FMT ", symmetry %" PetscInt_FMT ", order %" PetscInt_FMT ", functional %" PetscInt_FMT ": (%" PetscInt_FMT " != %" PetscInt_FMT ")",dim, tensor ? "Tensor" : "Simplex",point,j,order,k,ids[k],k);
         for (l = 0; l < dim; l++) {
-          if (valsCopy2[dim * k + l] != vals[dim * k + l]) SETERRQ7(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Symmetry failure: %" PetscInt_FMT "D, %s, point %" PetscInt_FMT ", symmetry %" PetscInt_FMT ", order %" PetscInt_FMT ", functional %" PetscInt_FMT ", component %" PetscInt_FMT ": (%" PetscInt_FMT " != %" PetscInt_FMT ")",dim, tensor ? "Tensor" : "Simplex",point,j,order,k,l);
+          if (valsCopy2[dim * k + l] != vals[dim * k + l]) SETERRQ9(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Symmetry failure: %" PetscInt_FMT "D, %s, point %" PetscInt_FMT ", symmetry %" PetscInt_FMT ", order %" PetscInt_FMT ", functional %" PetscInt_FMT ", component %" PetscInt_FMT ": (%g != %g)",dim, tensor ? "Tensor" : "Simplex",point,j,order,k,l,(double)PetscAbsScalar(valsCopy2[dim * k + l]),(double)PetscAbsScalar(vals[dim * k + l]));
         }
       }
     }

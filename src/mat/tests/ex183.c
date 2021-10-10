@@ -40,8 +40,8 @@ int main(int argc, char **args)
   ierr = PetscOptionsInt("-rep","Number of times to carry out submatrix extractions; currently only 1 & 2 are supported",NULL,rep,&rep,&flg);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
-  if (total_subdomains > size) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Number of subdomains %" PetscInt_FMT " must not exceed comm size %" PetscInt_FMT "",total_subdomains,size);
-  if (total_subdomains < 1 || total_subdomains > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subdomains must be > 0 and <= %" PetscInt_FMT " (comm size), got total_subdomains = %" PetscInt_FMT "",size,total_subdomains);
+  if (total_subdomains > size) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Number of subdomains %" PetscInt_FMT " must not exceed comm size %d",total_subdomains,size);
+  if (total_subdomains < 1 || total_subdomains > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subdomains must be > 0 and <= %d (comm size), got total_subdomains = %" PetscInt_FMT,size,total_subdomains);
   if (rep != 1 && rep != 2) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid number of test repetitions: %" PetscInt_FMT "; must be 1 or 2",rep);
 
   viewer = PETSC_VIEWER_STDOUT_WORLD;
