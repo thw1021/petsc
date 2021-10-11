@@ -5,12 +5,15 @@ Created on Mon Mar 22 17:05:39 2021
 
 @author: jacobfaibussowitsch
 """
-import os,sys,enum
+import os
+import sys
+import enum
+import itertools
 import multiprocessing as mp
 import multiprocessing.queues
+import petscClangLinterUtil
 try:
   import clang.cindex as clx
-  import petscClangLinterUtil
 except ModuleNotFoundError as mnfe:
   if mnfe.name == "clang":
     raise RuntimeError("Must run e.g. 'python -m pip install clang' to use linter") from mnfe
@@ -182,6 +185,7 @@ class QueueSignal(enum.IntEnum):
   ERRORS_FIXED = enum.auto()
   EXIT_QUEUE   = enum.auto()
 
+
 class ParsingError(Exception):
   __doc__="""
   Mostly to just have a custom "something went wrong when trying to perform a check" to except
@@ -192,6 +196,7 @@ class ParsingError(Exception):
   """
   pass
 
+
 class PetscCursor(object):
   __doc__="""
   A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties (such as demangled names) from a cursor easier.
@@ -200,6 +205,9 @@ class PetscCursor(object):
 
   See __getattr__ below for more info.
   """
+  registered_clang_findReferencesInFile   = False
+  registered_clang_Cursor_getCommentRange = False
+
   @staticmethod
   def errorViewFromCursor(cursor):
     __doc__="""
@@ -420,9 +428,11 @@ class PetscCursor(object):
           pass
         return 1 # continue
 
-    if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
+    if not PetscCursor.registered_clang_findReferencesInFile:
+      # have to do the bookkeeping ourselves since it may not be properly hooked up
       item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
       clx.register_function(clx.conf.lib,item,False)
+      PetscCursor.registered_clang_findReferencesInFile = True
 
     pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
     callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
@@ -432,6 +442,21 @@ class PetscCursor(object):
 
   def findCursorReferences(self):
     return PetscCursor.findCursorReferencesFromCursor(self)
+
+  @staticmethod
+  def getCommentAndRangeFromCursor(cursor):
+    if not PetscCursor.registered_clang_Cursor_getCommentRange:
+      # have to do the bookkeeping ourselves since it may not be properly hooked up
+      item = ("clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange)
+      clx.register_function(clx.conf.lib,item,False)
+      PetscCursor.registered_clang_Cursor_getCommentRange = True
+
+    comment = cursor.raw_comment
+    range   = clx.conf.lib.clang_Cursor_getCommentRange(cursor)
+    return comment,range
+
+  def getCommentAndRange(self):
+    return PetscCursor.getCommentAndRangeFromCursor(self)
 
   def __init__(self,cursor,idx=-12345):
     assert isinstance(cursor,(clx.Cursor,PetscCursor))
@@ -463,6 +488,7 @@ class PetscCursor(object):
     srcStr = self.getFormattedSource(nboth=2)
     return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
 
+
 class SourceFix(object):
   def __init__(self,filename,src,startline,begin,end,value):
     self.filename  = filename
@@ -480,6 +506,14 @@ class SourceFix(object):
     self.fixed     = None
     self.fixDepth  = 0
     return
+
+  @classmethod
+  def fromSourceRange(cls,srcLocation,value):
+    fname     = srcLocation.start.file.name
+    startline = srcLocation.start.line
+    begin,end = srcLocation.start.column-1,srcLocation.end.column-1
+    src       = petscClangLinterUtil.getRawSourceFromLocation(fname,startline)
+    return cls(fname,src,startline,begin,end,value)
 
   @classmethod
   def fromCursor(cls,cursor,value):
@@ -526,7 +560,7 @@ class SourceFix(object):
     __doc__="""
     Optimized version of difflib.unified_diff. difflib.SequenceMatcher is unbelievably slow but we can aggresively cut corners since we know the general location of all of the differences. This function only really serves to format the changes into the unified diff format.
     """
-    import difflib,itertools
+    import difflib
     def formatRangeUnified(pre,start,stop):
       __doc__="""
       Convert range to the 'ed' format
@@ -579,6 +613,7 @@ class SourceFix(object):
           if tag in inserts:
             for line in groupB[j1:j2]:
                 yield "+"+line
+
 
 class PetscLinter(object):
   def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,werror=False,lock=None):
@@ -787,6 +822,7 @@ class PetscLinter(object):
           yield from walkScope(child,scope)
 
     cursor,filename = tu.cursor,tu.cursor.spelling
+    previous = None
     for possibleParent in cursor.get_children():
       # getting filename is for some reason stupidly expensive, so we do this check first
       if possibleParent.kind not in funcCallCursors: continue
@@ -795,49 +831,50 @@ class PetscLinter(object):
       except AttributeError:
         # possibleParent.location.file is None
         continue
-      # if we've gotten this far we have found a function definition
+      # if we've gotten this far we have found a function definition, so first yield the
+      # parent
+      yield possibleParent
+      # then yield any children matching our function calls
       yield from walkScope(possibleParent)
 
   def clear(self):
+    __doc__="""
+    Resets the linter error, warning and patch buffers. Should be called before processing a new file
+    """
     self.errors   = []
     self.warnings = []
     self.patches  = {}
     return
 
   def parse(self,filename):
+    __doc__="""
+    parse a file for errors
+    """
     if self.verbose:
       self.__print(self.prefix,"Processing file     ",filename)
     tu = self.index.parse(filename,args=self.flags,options=self.clangOpts)
     if tu.diagnostics and self.verbose:
       diags = {" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}
       self.__print("\n".join(diags))
-    self.processRemoveDuplicates(filename,tu)
+    self.process(tu)
     return
 
-  def getArgumentCursors(self,funcCursor):
-    return tuple(PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments()))
-
-  def process(self,filename,tu):
-    for func,parent,_ in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
+  def process(self,tu):
+    __doc__="""Process a translation unit for errors"""
+    import collections
+    processedFuncs = collections.defaultdict(list)
+    for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
+      if isinstance(results,clx.Cursor):
+        self.checkDocString(results)
+        continue
+      func,parent,scope = results
       try:
         checkFunctionMap[func.spelling](self,func,parent)
       except ParsingError as pe:
-        self.addWarning(filename,str(pe))
-    return
-
-  def processRemoveDuplicates(self,filename,tu):
-    processedFuncs = {}
-    for func,parent,scope in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
-      try:
-        checkFunctionMap[func.spelling](self,func,parent)
-      except ParsingError as pe:
-        self.addWarning(filename,str(pe))
+        self.addWarning(tu.cursor.spelling,str(pe))
       func  = PetscCursor(func)
       pname = PetscCursor.getNameFromCursor(parent)
-      try:
-        processedFuncs[pname].append((func,scope))
-      except KeyError:
-        processedFuncs[pname] = [(func,scope)]
+      processedFuncs[pname].append((func,scope))
     for pname,functionList in processedFuncs.items():
       seen = {}
       for func,scope in functionList:
@@ -857,7 +894,17 @@ class PetscLinter(object):
           self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
     return
 
+  @staticmethod
+  def getArgumentCursors(funcCursor):
+    __doc__="""
+    Given a cursor representing a Function, return a tuple of PetscCursor's of its arguments
+    """
+    return tuple(PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments()))
+
   def addErrorFromCursor(self,cursor,errorMessage,patch=None):
+    __doc__="""
+    given a cursor attach a diagnostic error message to it, and optionally a fix
+    """
     errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
     self.errors.append((errMess,patch != None))
     try:
@@ -880,6 +927,9 @@ class PetscLinter(object):
     return
 
   def getAllErrors(self):
+    __doc__="""
+    return all errors collected so far in a tuple
+    """
     errLeftStr,errFixedStr = "",""
     errLeft,errFixed       = [],[]
     for err,fixed in self.errors:
@@ -894,6 +944,9 @@ class PetscLinter(object):
     return errLeftStr,errFixedStr
 
   def addWarning(self,filename,warnMsg):
+    __doc__="""
+    add a generic warning given a filename
+    """
     if self.werror:
       self.addErrorFromCursor(filename,warnMsg)
     else:
@@ -908,17 +961,22 @@ class PetscLinter(object):
       self.warnings.append((filename,warnStr))
     return
 
-  def addWarningFromCursor(self,locCursor,warnMsg):
+  def addWarningFromCursor(self,cursor,warnMsg):
+    __doc__="""
+    given a cursor attach a diagnostic warning message to it
+    """
     if self.werror:
-      self.addErrorFromCursor(locCursor,warnMsg)
+      self.addErrorFromCursor(cursor,warnMsg)
     else:
-      warnPrefix = str(locCursor)
-      warnFile   = locCursor.location.file.name
-      warnStr    = "".join(["\nWARNING {}: ".format(len(self.warnings)),warnPrefix,"\n",warnMsg])
+      warnFile = cursor.location.file.name
+      warnStr  = "".join(["\nWARNING {}: ".format(len(self.warnings)),str(cursor),"\n",warnMsg])
       self.warnings.append((warnFile,warnStr))
     return
 
   def getAllWarnings(self,joinToString=False):
+    __doc__="""
+    return all warnings collected so far, and optionally join them all as one string
+    """
     if joinToString:
       if len(self.warnings):
         warnings = "\n".join([self.warnPrefix,"\n".join(s for _,s in self.warnings)[1:],self.warnPrefix])
@@ -929,6 +987,9 @@ class PetscLinter(object):
     return warnings
 
   def coalescePatches(self):
+    __doc__="""
+    given a set of patches, collapse all patches and return the minimal set of diffs required
+    """
     combinedPatches = []
     for filename,patches in self.patches.items():
       for p in patches:
@@ -938,6 +999,110 @@ class PetscLinter(object):
       unified   = "".join(SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename))
       combinedPatches.append((filename,unified))
     return combinedPatches
+
+  def checkDocString(self,function):
+    def splitHeadings(tu,location,raw):
+      preambleHeading = "preamble"
+      paramHeading    = "params"
+      noteHeading     = "notes"
+      optionsHeading  = "options"
+      seealsoHeading  = "seealso"
+      levelHeading    = "level"
+      headings        = {
+        preambleHeading : {"all" : []},
+        paramHeading    : {"all" : []},
+        optionsHeading  : {"all" : []},
+        noteHeading     : {"all" : []},
+        seealsoHeading  : {"all" : []},
+        levelHeading    : {"all" : []},
+      }
+      heading   = preambleHeading
+      for offset,line in enumerate(s for s in raw.split("\n")):
+        lstrip = line.strip()
+        if (not lstrip) or lstrip.startswith("/*") or lstrip.endswith("*/"):
+          continue
+        if ":" in lstrip:
+          lsplit  = [s.strip() for s in lstrip.split(":") if s]
+          heading = lsplit[0].lower()
+          if "synopsis" in heading:
+            heading = preambleHeading
+          elif "parameter" in heading:
+            heading = paramHeading
+          elif "note" in heading:
+            heading = noteHeading
+          elif "option" in heading:
+            heading = optionsHeading
+          elif "seealso" in heading:
+            heading = seealsoHeading
+          if len(lsplit) > 1:
+            headings[heading]["all"].extend([(offset,l) for l in lsplit[1:]])
+        else:
+          headings[heading]["all"].append((offset,line))
+
+      def postProcessHeading(subheading,testItem,countMax=-1):
+        nameList = []
+        count    = 0
+        for lineOffset,item in subheading["all"]:
+          if testItem(item):
+            name      = item[1:].split("-")[0].strip()
+            strOffset = item.index(name)+1
+            startLine = location.start.line+lineOffset
+            begin     = clx.SourceLocation.from_position(tu,file,startLine,strOffset)
+            end       = clx.SourceLocation.from_position(tu,file,startLine,strOffset+len(name))
+            nameList.append((clx.SourceRange.from_locations(begin,end),name))
+            count += 1
+          if count == countMax:
+            break
+        subheading["names"] = nameList
+        return subheading
+
+      file = location.start.file
+      postProcessHeading(headings[preambleHeading],lambda x : "-" in x,countMax=1)
+      postProcessHeading(headings[paramHeading],lambda x : x.startswith(("+",".","-")))
+      postProcessHeading(headings[optionsHeading],lambda x : x.startswith(("+",".","-")))
+      headings[seealsoHeading]["names"] = [name.strip() for _,sa in headings[seealsoHeading]["all"] for name in sa.split(",")]
+      return headings
+
+
+    rawDocString,location = PetscCursor.getCommentAndRangeFromCursor(function)
+    if not rawDocString:
+      print(PetscCursor.getFormattedSourceFromCursor(function,nbefore=15))
+      return
+    elif not rawDocString.startswith(("/*@","/*M","/*E")):
+      print(PetscCursor.getFormattedSourceFromCursor(function,nbefore=15))
+      return
+    headings = splitHeadings(function.translation_unit,location,rawDocString)
+    fnargs   = self.getArgumentCursors(function)
+    for i,(arg,docname) in enumerate(itertools.zip_longest(fnargs,headings["params"]["names"])):
+      errorMessage = None
+      if not arg:
+        src = petscClangLinterUtil.getFormattedSourceFromLocation(
+          docname[0].start.file.name,
+          docname[0].start.line,
+          docname[0].start.column-1,
+          docname[0].end.column-1,
+          numContext=3
+        )
+        errorMessage = "Extra parameter '{}' not found in function:\n\n{}".format(docname[-1],src)
+        errorCursor  = PetscCursor(function)
+      elif not docname:
+        errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(arg.name,rawDocString)
+        errorCursor  = PetscCursor(arg)
+      elif arg.name != docname[-1]:
+        src = petscClangLinterUtil.getFormattedSourceFromLocation(
+          docname[0].start.file.name,
+          docname[0].start.line,
+          docname[0].start.column-1,
+          docname[0].end.column-1,
+          numContext=3
+        )
+        errorMessage = "Mismatched parameter name. Expected '{}' for parameter #{}, found '{}' instead:\n\n{}".format(arg.name,i+1,docname[-1],src)
+        errorCursor  = PetscCursor(arg)
+      if errorMessage:
+        self.addErrorFromCursor(errorCursor,errorMessage)
+    #checkMatchingArguments(set(headings["params"]["names"]),fnargs,function)
+    return
+
 
 class WorkerPool(mp.queues.JoinableQueue):
   def __init__(self,numWorkers=-1,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
@@ -982,14 +1147,17 @@ class WorkerPool(mp.queues.JoinableQueue):
       self.linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=self.prefix,verbose=self.verbose,werror=werror)
     return
 
-  def walk(self,srcDir,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
-    for root,dirs,files in os.walk(srcDir):
-      if self.verbose: print(self.prefix,"Processing directory",root)
-      dirs[:] = [d for d in dirs if d not in excludeDirs]
-      dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
-      files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
-      for filename in files:
-        self.put(filename)
+  def walk(self,srcPath,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
+    if os.path.isfile(srcPath):
+      self.put(srcPath)
+    else:
+      for root,dirs,files in os.walk(srcPath):
+        if self.verbose: print(self.prefix,"Processing directory",root)
+        dirs[:] = [d for d in dirs if d not in excludeDirs]
+        dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
+        files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
+        for filename in files:
+          self.put(filename)
     return
 
   def put(self,filename,*args):
@@ -1306,8 +1474,6 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
     funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
     if funcProto:
-      import itertools
-
       assert len(funcProto) == 1, "Could not determine unique function prototype from {} for provenance of {}".format("".join([t.spelling for t in tGroup]),obj)
       idx        = funcProto[0]
       lambdaExpr = lambda t: (t.spelling != ")") and t.kind in varTokens
@@ -1640,7 +1806,8 @@ def subprocessRun(*args,**kwargs):
   __doc__="""
   lightweight wrapper to hoist the ugly version check out of the regular code
   """
-  import subprocess,sys
+  import sys
+  import subprocess
 
   if sys.version_info >= (3,7):
     output = subprocess.run(*args,**kwargs)
@@ -1762,7 +1929,7 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   __doc__="""
   build the baseline set of compiler flags, these are passed to all translation unit parse attempts
   """
-  miscFlags        = ["-D","PETSC_CLANG_STATIC_ANALYZER","-x","c++","-Wno-nullability-completeness"]
+  miscFlags        = ["-D","PETSC_CLANG_STATIC_ANALYZER","-x","c++","-Wno-nullability-completeness","-fparse-all-comments"]
   sysincludes      = getClangSysIncludes()
   petscIncludes    = getPetscExtraIncludes(petscDir,petscArch)
   compilerFlags    = sysincludes+miscFlags+petscIncludes+extraCompilerFlags
@@ -1852,7 +2019,8 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
 
 """Main functions for root and queue processes"""
 def testMain(petscDir,srcDir,outputDir,patches,replace=False,verbose=False):
-  import glob,itertools,difflib
+  import glob
+  import difflib
 
   class TestException(Exception):
     pass
