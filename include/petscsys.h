@@ -2066,6 +2066,9 @@ M*/
 M*/
 #define  PetscArrayzero(str1,cnt) PetscMemzero(str1,(size_t)(cnt)*sizeof(*(str1)))
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#  define PetscPrefetchBlock(a,b,c,d)
+#else
 /*MC
    PetscPrefetchBlock - Prefetches a block of memory
 
@@ -2101,7 +2104,7 @@ M*/
     const char *_p = (const char*)(a),*_end = (const char*)((a)+(n));   \
     for (; _p < _end; _p += PETSC_LEVEL1_DCACHE_LINESIZE) PETSC_Prefetch(_p,(rw),(t)); \
   } while (0)
-
+#endif
 /*
       Determine if some of the kernel computation routines use
    Fortran (rather than C) for the numerical calculations. On some machines
@@ -2855,7 +2858,9 @@ PETSC_EXTERN PetscErrorCode PetscTellMyCell(MPI_Comm,const char[],const char[],P
 PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[],const char[],char[],size_t,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],size_t);
 
-#if defined(PETSC_USE_DEBUG)
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#  define MPIU_Allreduce(a,b,c,d,e,f)
+#elif defined(PETSC_USE_DEBUG)
 PETSC_STATIC_INLINE unsigned int PetscStrHash(const char *str)
 {
   unsigned int c,hash = 5381;
@@ -2909,9 +2914,9 @@ M*/
   if (-a_b2[4] != a_b2[5]) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",_mpiu_allreduce_c_int); \
   _4_ierr = MPI_Allreduce((a),(b),(c),d,e,(fcomm));CHKERRMPI(_4_ierr);\
   } while (0)
-#else
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce((a),(b),(c),d,e,(fcomm))
-#endif
+#else /* PETSC_USE_DEBUG */
+#  define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce((a),(b),(c),d,e,(fcomm))
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
 PETSC_EXTERN PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint,PetscMPIInt,MPI_Info,MPI_Comm,void*,MPI_Win*);
@@ -2942,4 +2947,4 @@ PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
 #define PetscPragmaOMP(...)
 #endif
 
-#endif
+#endif /* PETSCSYS_H */
