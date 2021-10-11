@@ -1550,8 +1550,8 @@ PetscErrorCode PCPreSolve(PC pc,KSP ksp)
   pc->presolvedone++;
   if (pc->presolvedone > 2) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot embed PCPreSolve() more than twice");
 
-  if (pc->presolve) {
-    ierr = (pc->presolve)(pc,ksp);CHKERRQ(ierr);
+  if (pc->ops->presolve) {
+    ierr = (pc->ops->presolve)(pc,ksp);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1581,7 +1581,7 @@ PetscErrorCode PCSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  pc->presolve = presolve;
+  pc->ops->presolve = presolve;
   PetscFunctionReturn(0);
 }
 

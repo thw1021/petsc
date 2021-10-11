@@ -192,10 +192,10 @@ static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp)
   Vec            b,x;
 
   PetscFunctionBegin;
+  if (!shell->presolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
+
   ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
   ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
-
-  if (!shell->presolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
   PetscStackCall("PCSHELL user function presolve()",ierr = (*shell->presolve_private)(pc,ksp,b,x);CHKERRQ(ierr));
   PetscFunctionReturn(0);
 }
@@ -385,10 +385,10 @@ static PetscErrorCode  PCShellSetPreSolve_Shell(PC pc,PetscErrorCode (*presolve_
   PetscFunctionBegin;
   shell->presolve_private = presolve_private;
   if (presolve_private) {
-    pc->presolve = PCPreSolve_Shell;
+    pc->ops->presolve = PCPreSolve_Shell;
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCPreSolveChangeRHS_C",PCPreSolveChangeRHS_Shell);CHKERRQ(ierr);
   } else {
-    pc->presolve = NULL;
+    pc->ops->presolve = NULL;
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCPreSolveChangeRHS_C",NULL);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -985,19 +985,19 @@ PETSC_EXTERN PetscErrorCode PCCreate_Shell(PC pc)
   pc->ops->applytranspose  = NULL;
   pc->ops->applyrichardson = NULL;
   pc->ops->setup           = NULL;
-  pc->presolve             = NULL;
-  pc->postsolve            = NULL;
+  pc->ops->presolve        = NULL;
+  pc->ops->postsolve       = NULL;
 
-  shell->apply          = NULL;
-  shell->applytranspose = NULL;
-  shell->name           = NULL;
-  shell->applyrich      = NULL;
+  shell->apply             = NULL;
+  shell->applytranspose    = NULL;
+  shell->name              = NULL;
+  shell->applyrich         = NULL;
   shell->presolve_private  = NULL;
   shell->postsolve_private = NULL;
-  shell->ctx            = NULL;
-  shell->setup          = NULL;
-  shell->view           = NULL;
-  shell->destroy        = NULL;
+  shell->ctx               = NULL;
+  shell->setup             = NULL;
+  shell->view              = NULL;
+  shell->destroy           = NULL;
   shell->applysymmetricleft  = NULL;
   shell->applysymmetricright = NULL;
 

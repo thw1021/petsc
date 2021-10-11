@@ -19,6 +19,8 @@ struct _PCOps {
   PetscErrorCode (*applytranspose)(PC,Vec,Vec);
   PetscErrorCode (*applyBAtranspose)(PC,PetscInt,Vec,Vec,Vec);
   PetscErrorCode (*setfromoptions)(PetscOptionItems*,PC);
+  PetscErrorCode (*presolve)(PC,KSP);
+  PetscErrorCode (*postsolve)(PC,KSP);
   PetscErrorCode (*getfactoredmatrix)(PC,Mat*);
   PetscErrorCode (*applysymmetricleft)(PC,Vec,Vec);
   PetscErrorCode (*applysymmetricright)(PC,Vec,Vec);
@@ -54,7 +56,6 @@ struct _p_PC {
   PCFailedReason   failedreason;      /* after VecNorm or VecDot contains maximum of all rank failed reasons */
   PCFailedReason   failedreasonrank;  /* failed reason on this rank */
 
-  PetscErrorCode   (*presolve)(PC,KSP);
   PetscErrorCode   (*postsolve)(PC,KSP);
 };
 

@@ -2293,7 +2293,8 @@ PetscErrorCode PCReset_BDDC(PC pc)
   pcbddc->ksp_D                     = kspD;
   pcbddc->ksp_R                     = kspR;
   pcbddc->coarse_ksp                = kspC;
-  pc->presolve                      = NULL;
+  pc->ops->presolve                 = NULL;
+  pc->ops->postsolve                = NULL;
   pc->postsolve                     = NULL;
   PetscFunctionReturn(0);
 }
@@ -3085,7 +3086,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   pc->ops->applysymmetricleft  = NULL;
   pc->ops->applysymmetricright = NULL;
   pc->ops->reset               = PCReset_BDDC;
-  pc->presolve                 = PCPreSolve_BDDC;
+  pc->ops->presolve            = PCPreSolve_BDDC;
+  pc->ops->postsolve           = PCPostSolve_BDDC;
   pc->postsolve                = PCPostSolve_BDDC;
 
   /* composing function */

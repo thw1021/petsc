@@ -924,7 +924,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Deflation(PC pc)
   pc->ops->destroy        = PCDestroy_Deflation;
   pc->ops->setfromoptions = PCSetFromOptions_Deflation;
   pc->ops->view           = PCView_Deflation;
-  pc->presolve            = PCPreSolve_Deflation;
+  pc->ops->presolve       = PCPreSolve_Deflation;
 
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCDeflationSetInitOnly_C",PCDeflationSetInitOnly_Deflation);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCDeflationSetLevels_C",PCDeflationSetLevels_Deflation);CHKERRQ(ierr);

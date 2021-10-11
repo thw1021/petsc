@@ -113,8 +113,8 @@ static PetscErrorCode PCReset_Eisenstat(PC pc)
   ierr = VecDestroy(&eis->b[1]);CHKERRQ(ierr);
   ierr = MatDestroy(&eis->shell);CHKERRQ(ierr);
   ierr = VecDestroy(&eis->diag);CHKERRQ(ierr);
-  pc->presolve  = NULL;
-  pc->postsolve = NULL;
+  pc->ops->presolve  = NULL;
+  pc->ops->postsolve = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -416,7 +416,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
   pc->ops->reset           = PCReset_Eisenstat;
   pc->ops->view            = PCView_Eisenstat;
   pc->ops->setup           = PCSetUp_Eisenstat;
-  pc->presolve             = PCPreSolve_Eisenstat;
+  pc->ops->presolve        = PCPreSolve_Eisenstat;
   pc->postsolve            = PCPostSolve_Eisenstat;
 
   pc->data     = eis;
