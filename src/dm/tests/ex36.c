@@ -379,7 +379,7 @@ PetscErrorCode da_test_RefineCoords1D(PetscInt mx)
     ierr = VecAXPY(afexact,-1.0,af);CHKERRQ(ierr); /* af <= af - afinterp */
     ierr = VecNorm(afexact,NORM_2,&nrm);CHKERRQ(ierr);
     ierr = VecGetSize(afexact,&N);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%D=>%D, interp err = %1.4e\n",mx,Mx,(double)(nrm/PetscSqrtReal((PetscReal)N)));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT "=>%" PetscInt_FMT ", interp err = %1.4e\n",mx,Mx,(double)(nrm/PetscSqrtReal((PetscReal)N)));CHKERRQ(ierr);
     ierr = VecDestroy(&afexact);CHKERRQ(ierr);
   }
 
@@ -467,7 +467,7 @@ PetscErrorCode da_test_RefineCoords2D(PetscInt mx,PetscInt my)
     ierr = VecAXPY(afexact,-1.0,af);CHKERRQ(ierr); /* af <= af - afinterp */
     ierr = VecNorm(afexact,NORM_2,&nrm);CHKERRQ(ierr);
     ierr = VecGetSize(afexact,&N);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D x %D]=>[%D x %D], interp err = %1.4e\n",mx,my,Mx,My,(double)(nrm/PetscSqrtReal((PetscReal)N)));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%" PetscInt_FMT " x %" PetscInt_FMT "]=>[%" PetscInt_FMT " x %" PetscInt_FMT "], interp err = %1.4e\n",mx,my,Mx,My,(double)(nrm/PetscSqrtReal((PetscReal)N)));CHKERRQ(ierr);
     ierr = VecDestroy(&afexact);CHKERRQ(ierr);
   }
 
@@ -561,7 +561,7 @@ PetscErrorCode da_test_RefineCoords3D(PetscInt mx,PetscInt my,PetscInt mz)
     ierr = VecAXPY(afexact,-1.0,af);CHKERRQ(ierr); /* af <= af - afinterp */
     ierr = VecNorm(afexact,NORM_2,&nrm);CHKERRQ(ierr);
     ierr = VecGetSize(afexact,&N);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%D x %D x %D]=>[%D x %D x %D], interp err = %1.4e\n",mx,my,mz,Mx,My,Mz,(double)(nrm/PetscSqrtReal((PetscReal)N)));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT "]=>[%" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT "], interp err = %1.4e\n",mx,my,mz,Mx,My,Mz,(double)(nrm/PetscSqrtReal((PetscReal)N)));CHKERRQ(ierr);
     ierr = VecDestroy(&afexact);CHKERRQ(ierr);
   }
 

@@ -1237,7 +1237,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     }
     ierr = PetscFree4(fmin,fmax,fintegral,ftmp);CHKERRQ(ierr);
 
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3D  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : "");CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3" PetscInt_FMT "  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : "");CHKERRQ(ierr);
     ierr = PetscFree(ftable);CHKERRQ(ierr);
   }
   if (user->vtkInterval < 1) PetscFunctionReturn(0);
@@ -1245,7 +1245,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     if (stepnum == -1) {        /* Final time is not multiple of normal time interval, write it anyway */
       ierr = TSGetStepNumber(ts,&stepnum);CHKERRQ(ierr);
     }
-    ierr = PetscSNPrintf(filename,sizeof filename,"%s-%03D.vtu",user->outputBasename,stepnum);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(filename,sizeof filename,"%s-%03" PetscInt_FMT ".vtu",user->outputBasename,stepnum);CHKERRQ(ierr);
     ierr = OutputVTK(dm,filename,&viewer);CHKERRQ(ierr);
     ierr = VecView(X,viewer);CHKERRQ(ierr);
     ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
@@ -1359,7 +1359,7 @@ static PetscErrorCode adaptToleranceFVM(PetscFV fvm, TS ts, Vec sol, VecTagger r
   }
   ierr = DMLabelDestroy(&adaptLabel);CHKERRQ(ierr);
   if (adaptedDM) {
-    ierr = PetscInfo2(ts, "Adapted mesh, marking %D cells for refinement, and %D cells for coarsening\n", nRefine, nCoarsen);CHKERRQ(ierr);
+    ierr = PetscInfo2(ts, "Adapted mesh, marking %" PetscInt_FMT " cells for refinement, and %" PetscInt_FMT " cells for coarsening\n", nRefine, nCoarsen);CHKERRQ(ierr);
     if (tsNew) {ierr = initializeTS(adaptedDM, user, tsNew);CHKERRQ(ierr);}
     if (solNew) {
       ierr = DMCreateGlobalVector(adaptedDM, solNew);CHKERRQ(ierr);
@@ -1555,7 +1555,7 @@ int main(int argc, char **argv)
         for (j = 0; j < newDof; j++) {
           char     compName[256]  = "Unknown";
 
-          ierr = PetscSNPrintf(compName,sizeof(compName),"%s_%d",phys->field_desc[f].name,j);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(compName,sizeof(compName),"%s_%" PetscInt_FMT,phys->field_desc[f].name,j);CHKERRQ(ierr);
           ierr = PetscFVSetComponentName(fvm,dof+j,compName);CHKERRQ(ierr);
         }
       }
@@ -1610,7 +1610,7 @@ int main(int argc, char **argv)
       TS             tsNew = NULL;
 
       ierr = PetscMemoryGetCurrentUsage(&bytes);CHKERRQ(ierr);
-      ierr = PetscInfo2(ts, "refinement loop %D: memory used %g\n", adaptIter, bytes);CHKERRQ(ierr);
+      ierr = PetscInfo2(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes);CHKERRQ(ierr);
       ierr = DMViewFromOptions(dm, NULL, "-initial_dm_view");CHKERRQ(ierr);
       ierr = VecViewFromOptions(X, NULL, "-initial_vec_view");CHKERRQ(ierr);
 #if 0
@@ -1626,9 +1626,9 @@ int main(int argc, char **argv)
         ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5);CHKERRQ(ierr);
         ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK);CHKERRQ(ierr);
         if (isHDF5) {
-          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%d.h5", adaptIter);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".h5", adaptIter);CHKERRQ(ierr);
         } else if (isVTK) {
-          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%d.vtu", adaptIter);CHKERRQ(ierr);
+          ierr = PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".vtu", adaptIter);CHKERRQ(ierr);
           ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU);CHKERRQ(ierr);
         }
         ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
@@ -1704,7 +1704,7 @@ int main(int argc, char **argv)
       PetscLogDouble bytes;
 
       ierr = PetscMemoryGetCurrentUsage(&bytes);CHKERRQ(ierr);
-      ierr = PetscInfo2(ts, "AMR time step loop %D: memory used %g\n", adaptIter, bytes);CHKERRQ(ierr);
+      ierr = PetscInfo2(ts, "AMR time step loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes);CHKERRQ(ierr);
       ierr = PetscFVSetLimiter(fvm,noneLimiter);CHKERRQ(ierr);
       ierr = adaptToleranceFVM(fvm,ts,X,refineTag,coarsenTag,user,&tsNew,&solNew);CHKERRQ(ierr);
       ierr = PetscFVSetLimiter(fvm,limiter);CHKERRQ(ierr);
@@ -1738,7 +1738,7 @@ int main(int argc, char **argv)
     }
   }
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,nsteps);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,nsteps);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
 
   ierr = VecTaggerDestroy(&refineTag);CHKERRQ(ierr);

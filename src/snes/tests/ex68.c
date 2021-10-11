@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     ierr = ConstructProblem2(A, b);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %d", problem);
+    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %" PetscInt_FMT, problem);
   }
 
   ierr = SNESCreate(PETSC_COMM_WORLD, &snes);CHKERRQ(ierr);
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     ierr = CheckProblem2(A, b, u);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %d", problem);
+    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %" PetscInt_FMT, problem);
   }
 
   if (A != J) {

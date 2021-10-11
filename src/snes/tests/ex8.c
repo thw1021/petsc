@@ -401,7 +401,7 @@ static PetscErrorCode SetupFunctions(DM dm, PetscBool usePoly, PetscInt order, P
       break;
     default:
       ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-      SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Could not determine functions to test for dimension %d order %d", dim, order);
+      SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Could not determine functions to test for dimension %" PetscInt_FMT " order %" PetscInt_FMT, dim, order);
     }
   } else {
     user->m          = order;
@@ -451,10 +451,10 @@ static PetscErrorCode CheckFunctions(DM dm, PetscInt order, AppCtx *user)
   ierr = SetupFunctions(dm, PETSC_TRUE, order, 0, exactFuncs, exactFuncDers, user);CHKERRQ(ierr);
   ierr = ComputeError(dm, exactFuncs, exactFuncDers, exactCtxs, &error, &errorDer, user);CHKERRQ(ierr);
   /* Report result */
-  if (error > tol)    {ierr = PetscPrintf(comm, "Function tests FAIL for order %D at tolerance %g error %g\n", order, (double)tol,(double) error);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "Function tests pass for order %D at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
-  if (errorDer > tol) {ierr = PetscPrintf(comm, "Function tests FAIL for order %D derivatives at tolerance %g error %g\n", order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "Function tests pass for order %D derivatives at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
+  if (error > tol)    {ierr = PetscPrintf(comm, "Function tests FAIL for order %" PetscInt_FMT " at tolerance %g error %g\n", order, (double)tol,(double) error);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "Function tests pass for order %" PetscInt_FMT " at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
+  if (errorDer > tol) {ierr = PetscPrintf(comm, "Function tests FAIL for order %" PetscInt_FMT " derivatives at tolerance %g error %g\n", order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "Function tests pass for order %" PetscInt_FMT " derivatives at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -481,10 +481,10 @@ static PetscErrorCode CheckTransferError(DM fdm, PetscBool usePoly, PetscInt ord
   ierr = DMComputeL2Diff(fdm, 0.0, exactFuncs, exactCtxs, fu, &error);CHKERRQ(ierr);
   ierr = DMComputeL2GradientDiff(fdm, 0.0, exactFuncDers, exactCtxs, fu, n, &errorDer);CHKERRQ(ierr);
   /* Report result */
-  if (error > tol)    {ierr = PetscPrintf(comm, "%s tests FAIL for order %D at tolerance %g error %g\n", testname, order, (double)tol, (double)error);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "%s tests pass for order %D at tolerance %g\n", testname, order, (double)tol);CHKERRQ(ierr);}
-  if (errorDer > tol) {ierr = PetscPrintf(comm, "%s tests FAIL for order %D derivatives at tolerance %g error %g\n", testname, order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "%s tests pass for order %D derivatives at tolerance %g\n", testname, order, (double)tol);CHKERRQ(ierr);}
+  if (error > tol)    {ierr = PetscPrintf(comm, "%s tests FAIL for order %" PetscInt_FMT " at tolerance %g error %g\n", testname, order, (double)tol, (double)error);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "%s tests pass for order %" PetscInt_FMT " at tolerance %g\n", testname, order, (double)tol);CHKERRQ(ierr);}
+  if (errorDer > tol) {ierr = PetscPrintf(comm, "%s tests FAIL for order %" PetscInt_FMT " derivatives at tolerance %g error %g\n", testname, order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "%s tests pass for order %" PetscInt_FMT " derivatives at tolerance %g\n", testname, order, (double)tol);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -581,7 +581,7 @@ static PetscErrorCode CheckTransfer(DM dm, InterpType inType, PetscInt order, Ap
     ierr = CheckTransferError(fdm, PETSC_TRUE, order, 0, checkname, fu, user);CHKERRQ(ierr);
     for (k = 0; k < user->K; ++k) {
       for (d = 0; d < dim; ++d) {
-        ierr = PetscSNPrintf(checkname, PETSC_MAX_PATH_LEN, "  %s trig (%D, %D)", testname, k, d);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(checkname, PETSC_MAX_PATH_LEN, "  %s trig (%" PetscInt_FMT ", %" PetscInt_FMT ")", testname, k, d);CHKERRQ(ierr);
         ierr = MatInterpolate(InterpAdapt, iV[k*dim+d], fV[k*dim+d]);CHKERRQ(ierr);
         ierr = CheckTransferError(fdm, PETSC_FALSE, k+1, d, checkname, fV[k*dim+d], user);CHKERRQ(ierr);
       }

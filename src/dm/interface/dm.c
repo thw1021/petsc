@@ -1605,7 +1605,7 @@ PetscErrorCode DMSetNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCode (
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   dm->nullspaceConstructors[field] = nullsp;
   PetscFunctionReturn(0);
 }
@@ -1639,7 +1639,7 @@ PetscErrorCode DMGetNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCode (
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(nullsp, 3);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   *nullsp = dm->nullspaceConstructors[field];
   PetscFunctionReturn(0);
 }
@@ -1670,7 +1670,7 @@ PetscErrorCode DMSetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   dm->nearnullspaceConstructors[field] = nullsp;
   PetscFunctionReturn(0);
 }
@@ -1704,7 +1704,7 @@ PetscErrorCode DMGetNearNullSpaceConstructor(DM dm, PetscInt field, PetscErrorCo
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(nullsp, 3);
-  if (field >= 10) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %d >= 10 fields", field);
+  if (PetscUnlikely(field >= 10)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle %" PetscInt_FMT " >= 10 fields", field);
   *nullsp = dm->nearnullspaceConstructors[field];
   PetscFunctionReturn(0);
 }
@@ -1982,7 +1982,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt len, IS **is, DM *superdm)
   for (i = 0; i < len; ++i) {PetscValidHeaderSpecific(dms[i],DM_CLASSID,1);}
   if (is) PetscValidPointer(is,3);
   PetscValidPointer(superdm,4);
-  if (len < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of DMs must be nonnegative: %D", len);
+  if (len < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of DMs must be nonnegative: %" PetscInt_FMT "", len);
   if (len) {
     DM dm = dms[0];
     if (!dm->ops->createsuperdm) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateSuperDM",((PetscObject)dm)->type_name);
@@ -2646,7 +2646,7 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
     PetscScalar       *lArray;
     PetscMemType      lmtype,gmtype;
 
-    if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
+    if (PetscUnlikely(mode == ADD_VALUES)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
     ierr = VecGetArrayAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
     ierr = VecGetArrayReadAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
     ierr = PetscSFBcastWithMemTypeBegin(sf, MPIU_SCALAR, gmtype, gArray, lmtype, lArray, MPI_REPLACE);CHKERRQ(ierr);
@@ -2690,7 +2690,7 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
   ierr = DMGetSectionSF(dm, &sf);CHKERRQ(ierr);
   ierr = DMHasBasisTransform(dm, &transform);CHKERRQ(ierr);
   if (sf) {
-    if (mode == ADD_VALUES) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
+    if (PetscUnlikely(mode == ADD_VALUES)) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
 
     ierr = VecGetArrayAndMemType(l, &lArray, &lmtype);CHKERRQ(ierr);
     ierr = VecGetArrayReadAndMemType(g, &gArray, &gmtype);CHKERRQ(ierr);
@@ -2882,7 +2882,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
   case ADD_BC_VALUES:
     isInsert = PETSC_FALSE; break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
+    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
   }
   if ((sf && !isInsert) || (s && isInsert)) {
     ierr = DMHasBasisTransform(dm, &transform);CHKERRQ(ierr);
@@ -2922,7 +2922,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
         ierr = PetscSectionGetOffset(gs, p, &goff);CHKERRQ(ierr);
         /* Ignore off-process data and points with no global data */
         if (!gdof || goff < 0) continue;
-        if (dof != gdof) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %d dof: %d gdof: %d cdof: %d gcdof: %d", p, dof, gdof, cdof, gcdof);
+        if (PetscUnlikely(dof != gdof)) SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %" PetscInt_FMT " dof: %" PetscInt_FMT " gdof: %" PetscInt_FMT " cdof: %" PetscInt_FMT " gcdof: %" PetscInt_FMT, p, dof, gdof, cdof, gcdof);
         /* If no constraints are enforced in the global vector */
         if (!gcdof) {
           for (d = 0; d < dof; ++d) gArray[goff-gStart+d] = lArray[off+d];
@@ -2936,7 +2936,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
             if ((cind < cdof) && (d == cdofs[cind])) {++cind; continue;}
             gArray[goff-gStart+e++] = lArray[off+d];
           }
-        } else SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %d dof: %d gdof: %d cdof: %d gcdof: %d", p, dof, gdof, cdof, gcdof);
+        } else SETERRQ5(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Inconsistent sizes, p: %" PetscInt_FMT " dof: %" PetscInt_FMT " gdof: %" PetscInt_FMT " cdof: %" PetscInt_FMT " gcdof: %" PetscInt_FMT, p, dof, gdof, cdof, gcdof);
       }
     }
     if (g_inplace) {
@@ -2995,7 +2995,7 @@ PetscErrorCode  DMLocalToGlobalEnd(DM dm,Vec l,InsertMode mode,Vec g)
   case ADD_ALL_VALUES:
     isInsert = PETSC_FALSE; break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %D", mode);
+    SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insertion mode %d", mode);
   }
   if (sf && !isInsert) {
     const PetscScalar *lArray;
@@ -4134,7 +4134,7 @@ PetscErrorCode DMPrintCellVector(PetscInt c, const char name[], PetscInt len, co
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D Element %s\n", c, name);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT " Element %s\n", c, name);CHKERRQ(ierr);
   for (f = 0; f < len; ++f) {
     ierr = PetscPrintf(PETSC_COMM_SELF, "  | %g |\n", (double)PetscRealPart(x[f]));CHKERRQ(ierr);
   }
@@ -4147,7 +4147,7 @@ PetscErrorCode DMPrintCellMatrix(PetscInt c, const char name[], PetscInt rows, P
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %D Element %s\n", c, name);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT " Element %s\n", c, name);CHKERRQ(ierr);
   for (f = 0; f < rows; ++f) {
     ierr = PetscPrintf(PETSC_COMM_SELF, "  |");CHKERRQ(ierr);
     for (g = 0; g < cols; ++g) {
@@ -4460,8 +4460,8 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
     ierr = PetscSectionGetConstraintDof(globalSection, p, &gcdof);CHKERRQ(ierr);
     ierr = PetscSectionGetOffset(globalSection, p, &goff);CHKERRQ(ierr);
     if (!gdof) continue; /* Censored point */
-    if ((gdof < 0 ? -(gdof+1) : gdof) != dof) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global dof %d for point %d not equal to local dof %d\n", rank, gdof, p, dof);CHKERRQ(ierr); valid = PETSC_FALSE;}
-    if (gcdof && (gcdof != cdof)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global constraints %d for point %d not equal to local constraints %d\n", rank, gcdof, p, cdof);CHKERRQ(ierr); valid = PETSC_FALSE;}
+    if ((gdof < 0 ? -(gdof+1) : gdof) != dof) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global dof %" PetscInt_FMT " for point %" PetscInt_FMT " not equal to local dof %" PetscInt_FMT "\n", rank, gdof, p, dof);CHKERRQ(ierr); valid = PETSC_FALSE;}
+    if (gcdof && (gcdof != cdof)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Global constraints %" PetscInt_FMT " for point %" PetscInt_FMT " not equal to local constraints %" PetscInt_FMT "\n", rank, gcdof, p, cdof);CHKERRQ(ierr); valid = PETSC_FALSE;}
     if (gdof < 0) {
       gsize = gdof < 0 ? -(gdof+1)-gcdof : gdof-gcdof;
       for (d = 0; d < gsize; ++d) {
@@ -4469,7 +4469,7 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 
         ierr = PetscFindInt(offset,size+1,ranges,&r);CHKERRQ(ierr);
         if (r < 0) r = -(r+2);
-        if ((r < 0) || (r >= size)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Point %d mapped to invalid process %d (%d, %d)\n", rank, p, r, gdof, goff);CHKERRQ(ierr); valid = PETSC_FALSE;break;}
+        if ((r < 0) || (r >= size)) {ierr = PetscSynchronizedPrintf(comm, "[%d]Point %" PetscInt_FMT " mapped to invalid process %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ")\n", rank, p, r, gdof, goff);CHKERRQ(ierr); valid = PETSC_FALSE;break;}
       }
     }
   }
@@ -4839,7 +4839,7 @@ PetscErrorCode DMGetField(DM dm, PetscInt f, DMLabel *label, PetscObject *field)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(field, 4);
-  if ((f < 0) || (f >= dm->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, dm->Nf);
+  PetscDTDSCheckValidField(f, dm->Nf);
   if (label) *label = dm->fields[f].label;
   if (field) *field = dm->fields[f].disc;
   PetscFunctionReturn(0);
@@ -4884,7 +4884,7 @@ PetscErrorCode DMSetField(DM dm, PetscInt f, DMLabel label, PetscObject field)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (label) PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 3);
   PetscValidHeader(field, 4);
-  if (f < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be non-negative", f);
+  PetscDTDSCheckPositiveField(f);
   ierr = DMSetField_Internal(dm, f, label, field);CHKERRQ(ierr);
   ierr = DMSetDefaultAdjacency_Private(dm, f, field);CHKERRQ(ierr);
   ierr = DMClearDS(dm);CHKERRQ(ierr);
@@ -4941,7 +4941,7 @@ PetscErrorCode DMAddField(DM dm, DMLabel label, PetscObject field)
 PetscErrorCode DMSetFieldAvoidTensor(DM dm, PetscInt f, PetscBool avoidTensor)
 {
   PetscFunctionBegin;
-  if ((f < 0) || (f >= dm->Nf)) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Field %D is not in [0, %D)", f, dm->Nf);
+  if ((f < 0) || (f >= dm->Nf)) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Field %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", f, dm->Nf);
   dm->fields[f].avoidTensor = avoidTensor;
   PetscFunctionReturn(0);
 }
@@ -4965,7 +4965,7 @@ PetscErrorCode DMSetFieldAvoidTensor(DM dm, PetscInt f, PetscBool avoidTensor)
 PetscErrorCode DMGetFieldAvoidTensor(DM dm, PetscInt f, PetscBool *avoidTensor)
 {
   PetscFunctionBegin;
-  if ((f < 0) || (f >= dm->Nf)) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Field %D is not in [0, %D)", f, dm->Nf);
+  if ((f < 0) || (f >= dm->Nf)) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Field %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", f, dm->Nf);
   *avoidTensor = dm->fields[f].avoidTensor;
   PetscFunctionReturn(0);
 }
@@ -5044,7 +5044,7 @@ PetscErrorCode DMGetAdjacency(DM dm, PetscInt f, PetscBool *useCone, PetscBool *
     PetscErrorCode ierr;
 
     ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
-    if (f >= Nf) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, Nf);
+    PetscDTDSCheckValidField(f, Nf);
     if (useCone)    *useCone    = dm->fields[f].adjacency[0];
     if (useClosure) *useClosure = dm->fields[f].adjacency[1];
   }
@@ -5084,7 +5084,7 @@ PetscErrorCode DMSetAdjacency(DM dm, PetscInt f, PetscBool useCone, PetscBool us
     PetscErrorCode ierr;
 
     ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
-    if (f >= Nf) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, Nf);
+    PetscDTDSCheckValidField(f, Nf);
     dm->fields[f].adjacency[0] = useCone;
     dm->fields[f].adjacency[1] = useClosure;
   }
@@ -5329,7 +5329,7 @@ PetscErrorCode DMGetCellDS(DM dm, PetscInt point, PetscDS *prob)
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(prob, 3);
-  if (point < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Mesh point cannot be negative: %D", point);
+  if (point < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Mesh point cannot be negative: %" PetscInt_FMT "", point);
   *prob = NULL;
   for (s = 0; s < dm->Nds; ++s) {
     PetscInt val;
@@ -5457,7 +5457,7 @@ PetscErrorCode DMGetRegionNumDS(DM dm, PetscInt num, DMLabel *label, IS *fields,
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
-  if ((num < 0) || (num >= Nds)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Region number %D is not in [0, %D)", num, Nds);
+  if ((num < 0) || (num >= Nds)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Region number %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", num, Nds);
   if (label) {
     PetscValidPointer(label, 3);
     *label = dm->probs[num].label;
@@ -5498,7 +5498,7 @@ PetscErrorCode DMSetRegionNumDS(DM dm, PetscInt num, DMLabel label, IS fields, P
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (label) {PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 3);}
   ierr = DMGetNumDS(dm, &Nds);CHKERRQ(ierr);
-  if ((num < 0) || (num >= Nds)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Region number %D is not in [0, %D)", num, Nds);
+  if ((num < 0) || (num >= Nds)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Region number %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ")", num, Nds);
   ierr = PetscObjectReference((PetscObject) label);CHKERRQ(ierr);
   ierr = DMLabelDestroy(&dm->probs[num].label);CHKERRQ(ierr);
   dm->probs[num].label = label;
@@ -6100,7 +6100,7 @@ PetscErrorCode DMGetDimPoints(DM dm, PetscInt dim, PetscInt *pStart, PetscInt *p
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   ierr = DMGetDimension(dm, &d);CHKERRQ(ierr);
-  if ((dim < 0) || (dim > d)) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d 1", dim, d);
+  if ((dim < 0) || (dim > d)) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT "", dim);
   if (!dm->ops->getdimpoints) SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DM type %s does not implement DMGetDimPoints",((PetscObject)dm)->type_name);
   ierr = (*dm->ops->getdimpoints)(dm, dim, pStart, pEnd);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -6889,7 +6889,7 @@ PetscErrorCode DMLocalizeAddCoordinate_Internal(DM dm, PetscInt dim, const Petsc
         const PetscScalar newCoord = PetscRealPart(anchor[d]) > PetscRealPart(in[d]) ? dm->L[d] + in[d] : in[d] - dm->L[d];
 
         if (PetscAbsScalar(newCoord - anchor[d]) > maxC)
-          SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%D-Coordinate %g more than %g away from anchor %g", d, (double) PetscRealPart(in[d]), (double) maxC, (double) PetscRealPart(anchor[d]));
+          SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT "-Coordinate %g more than %g away from anchor %g", d, (double) PetscRealPart(in[d]), (double) maxC, (double) PetscRealPart(anchor[d]));
         out[d] += newCoord;
       } else {
         out[d] += in[d];
@@ -7434,7 +7434,7 @@ PetscErrorCode DMCreateLabelAtIndex(DM dm, PetscInt l, const char name[])
     ierr = DMLabelDestroy(&label);CHKERRQ(ierr);
   }
   ierr = DMGetNumLabels(dm, &Nl);CHKERRQ(ierr);
-  if (l >= Nl) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label index %D must be in [0, %D)", l, Nl);
+  if (l >= Nl) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label index %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", l, Nl);
   for (m = 0, orig = dm->labels; m < Nl; ++m, prev = orig, orig = orig->next) {
     ierr = PetscObjectGetName((PetscObject) orig->label, &lname);CHKERRQ(ierr);
     ierr = PetscStrcmp(name, lname, &match);CHKERRQ(ierr);
@@ -7805,7 +7805,7 @@ PetscErrorCode DMGetLabelName(DM dm, PetscInt n, const char **name)
     ++l;
     next = next->next;
   }
-  SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %D does not exist in this DM", n);
+  SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %" PetscInt_FMT " does not exist in this DM", n);
 }
 
 /*@C
@@ -7924,7 +7924,7 @@ PetscErrorCode DMGetLabelByNum(DM dm, PetscInt n, DMLabel *label)
     ++l;
     next = next->next;
   }
-  SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %D does not exist in this DM", n);
+  SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %" PetscInt_FMT " does not exist in this DM", n);
 }
 
 /*@C
@@ -8305,7 +8305,7 @@ PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *same, char **message)
   ierr = DMGetNumLabels(dm0, &n0);CHKERRQ(ierr);
   ierr = DMGetNumLabels(dm1, &n1);CHKERRQ(ierr);
   if (n0 != n1) {
-    ierr = PetscSNPrintf(msg, sizeof(msg), "Number of labels in dm0 = %D != %D = Number of labels in dm1", n0, n1);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(msg, sizeof(msg), "Number of labels in dm0 = %" PetscInt_FMT " != %" PetscInt_FMT " = Number of labels in dm1", n0, n1);CHKERRQ(ierr);
     goto finish;
   }
   for (i=0; i<n0; i++) {
@@ -8318,7 +8318,7 @@ PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *same, char **message)
     ierr = PetscObjectGetName((PetscObject)l0, &name);CHKERRQ(ierr);
     ierr = DMGetLabel(dm1, name, &l1);CHKERRQ(ierr);
     if (!l1) {
-      ierr = PetscSNPrintf(msg, sizeof(msg), "Label \"%s\" (#%D in dm0) not found in dm1", name, i);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(msg, sizeof(msg), "Label \"%s\" (#%" PetscInt_FMT " in dm0) not found in dm1", name, i);CHKERRQ(ierr);
       goto finish;
     }
     ierr = DMLabelCompare(l0, l1, NULL, &msgInner);CHKERRQ(ierr);
@@ -8327,7 +8327,7 @@ PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *same, char **message)
     if (msg[0]) goto finish;
   }
 finish:
-  if (msg[0] && !same && !message) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, msg);
+  if (msg[0] && !same && !message) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "%s", msg);
   if (same) *same = (PetscBool) !msg[0];
   if (message) {
     *message = NULL;
@@ -8448,7 +8448,7 @@ PetscErrorCode DMUniversalLabelCreate(DM dm, DMUniversalLabel *universal)
       nv = ul->offsets[m+1]-ul->offsets[m];
       marked = PETSC_TRUE;
       ierr = PetscFindInt(val, nv, &ul->values[ul->offsets[m]], &loc);CHKERRQ(ierr);
-      if (loc < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Label value %D not found in compression array", val);
+      if (loc < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Label value %" PetscInt_FMT " not found in compression array", val);
       uval += (loc+1) << ul->bits[m];
       ++m;
     }
@@ -8500,7 +8500,7 @@ PetscErrorCode DMUniversalLabelCreateLabels(DMUniversalLabel ul, PetscBool prese
 
       ierr = DMGetLabelName(dm, ul->indices[l], &name);CHKERRQ(ierr);
       ierr = PetscStrcmp(name, ul->names[l], &match);CHKERRQ(ierr);
-      if (!match) SETERRQ3(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Label %D name %s does not match new name %s", l, name, ul->names[l]);
+      if (!match) SETERRQ3(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Label %" PetscInt_FMT " name %s does not match new name %s", l, name, ul->names[l]);
     }
   }
   PetscFunctionReturn(0);
@@ -9717,7 +9717,7 @@ PetscErrorCode DMComputeError(DM dm, Vec sol, PetscReal errors[], Vec *errorVec)
     if (fieldIS) {ierr = ISRestoreIndices(fieldIS, &fields);CHKERRQ(ierr);}
   }
   for (f = 0; f < Nf; ++f) {
-    if (!exactSol[f]) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to calculate error, missing for field %D", f);
+    if (!exactSol[f]) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to calculate error, missing for field %" PetscInt_FMT "", f);
   }
   ierr = DMGetOutputSequenceNumber(dm, NULL, &time);CHKERRQ(ierr);
   if (errors) {ierr = DMComputeL2FieldDiff(dm, time, exactSol, ctxs, sol, errors);CHKERRQ(ierr);}

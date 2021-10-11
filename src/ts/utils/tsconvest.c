@@ -140,7 +140,7 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
     char          stageName[PETSC_MAX_PATH_LEN];
     const char   *dmname, *uname;
 
-    ierr = PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN-1, "ConvEst Refinement Level %D", r);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN-1, "ConvEst Refinement Level %" PetscInt_FMT "", r);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
     ierr = PetscLogStageGetId(stageName, &stage);CHKERRQ(ierr);
     if (stage < 0) {ierr = PetscLogStageRegister(stageName, &stage);CHKERRQ(ierr);}

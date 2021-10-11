@@ -11,7 +11,7 @@ int main(int argc,char **argv)
   PetscErrorCode ierr;
   size_t         sz,fullLength;
   char           *newformatstr,buffer[128],longstr[256],superlongstr[10000];
-  const char     *formatstr = "Greetings %D %3.2f %g\n";
+  const char     *formatstr = "Greetings %" PetscInt_FMT " %3.2f %g\n";
   PetscInt       i,twentytwo = 22;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;

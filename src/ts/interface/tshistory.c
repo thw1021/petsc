@@ -101,7 +101,7 @@ PetscErrorCode TSHistoryGetTime(TSHistory tsh, PetscBool backward, PetscInt step
     ierr = PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id);CHKERRQ(ierr);
     tsh->sorted = PETSC_TRUE;
   }
-  if (step < 0 || step >= tsh->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %D does not match any in history [0,%D]",step,tsh->n);
+  if (step < 0 || step >= tsh->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %" PetscInt_FMT " does not match any in history [0,%" PetscInt_FMT "]",step,tsh->n);
   if (!backward) *t = tsh->hist[step];
   else           *t = tsh->hist[tsh->n-step-1];
   PetscFunctionReturn(0);
@@ -120,7 +120,7 @@ PetscErrorCode TSHistoryGetTimeStep(TSHistory tsh, PetscBool backward, PetscInt 
     ierr = PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id);CHKERRQ(ierr);
     tsh->sorted = PETSC_TRUE;
   }
-  if (step < 0 || step > tsh->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %D does not match any in history [0,%D]",step,tsh->n);
+  if (step < 0 || step > tsh->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %" PetscInt_FMT " does not match any in history [0,%" PetscInt_FMT "]",step,tsh->n);
   if (!backward) *dt = tsh->hist[PetscMin(step+1,tsh->n-1)] - tsh->hist[PetscMin(step,tsh->n-1)];
   else           *dt = tsh->hist[PetscMax(tsh->n-step-1,0)] - tsh->hist[PetscMax(tsh->n-step-2,0)];
   PetscFunctionReturn(0);

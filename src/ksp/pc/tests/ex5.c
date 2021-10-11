@@ -94,7 +94,7 @@ int main(int Argc,char **Args)
     ierr = PCSetType(pc,PCSHELL);CHKERRQ(ierr);
     ierr = PCShellSetName(pc,"user_precond");CHKERRQ(ierr);
     ierr = PCShellGetName(pc,&shellname);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"level=%D, PCShell name is %s\n",i,shellname);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"level=%" PetscInt_FMT ", PCShell name is %s\n",i,shellname);CHKERRQ(ierr);
 
     /* this is not used unless different options are passed to the solver */
     ierr = MatCreateShell(PETSC_COMM_WORLD,N[i],N[i],N[i],N[i],NULL,&dummy);CHKERRQ(ierr);
@@ -157,7 +157,7 @@ int main(int Argc,char **Args)
   ierr = KSPGetIterationNumber(kspmg,&its);CHKERRQ(ierr);
   ierr = residual((Mat)0,B[levels-1],X[levels-1],R[levels-1]);CHKERRQ(ierr);
   ierr = CalculateError(solution,X[levels-1],R[levels-1],e);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"its %D l_2 error %g max error %g resi %g\n",its,(double)e[0],(double)e[1],(double)e[2]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"its %" PetscInt_FMT " l_2 error %g max error %g resi %g\n",its,(double)e[0],(double)e[1],(double)e[2]);CHKERRQ(ierr);
 
   ierr = PetscFree(N);CHKERRQ(ierr);
   ierr = VecDestroy(&solution);CHKERRQ(ierr);

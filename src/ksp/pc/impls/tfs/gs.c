@@ -365,7 +365,7 @@ static PCTFS_gs_id *gsi_check_args(PetscInt *in_elms, PetscInt nel, PetscInt lev
   gs->gl_max  = vals[4];
   gs->negl    = vals[4]-vals[3]+1;
 
-  if (gs->negl<=0) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"gsi_check_args() :: system empty or neg :: %d\n");
+  if (gs->negl<=0) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"gsi_check_args() :: system empty or neg ::\n");
 
   /* LATER :: add level == -1 -> program selects level */
   if (vals[5]<0) vals[5]=0;
@@ -527,7 +527,8 @@ static PetscErrorCode get_ngh_buf(PCTFS_gs_id *gs)
   buf_size = PetscMin(msg_buf,i);
 
   /* can we do it? */
-  if (p_mask_size>buf_size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"get_ngh_buf() :: buf<pms :: %d>%d\n",p_mask_size,buf_size);
+
+  if (PetscUnlikely(p_mask_size>buf_size)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"get_ngh_buf() :: buf<pms :: %" PetscInt_FMT ">%" PetscInt_FMT "\n",p_mask_size,buf_size);
 
   /* get PCTFS_giop buf space ... make *only* one malloc */
   buf1 = (PetscInt*) malloc(buf_size<<1);

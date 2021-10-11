@@ -264,7 +264,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %D \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
+    if (PetscUnlikely(!(A)->preallocated)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %d \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
   } while (0)
 #else
 #  define MatCheckPreallocated(A,arg) do {} while (0)
@@ -272,7 +272,7 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckProduct(A,arg) do {                              \
-    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %D \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
+    if (PetscUnlikely(!(A)->product)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Argument %d \"%s\" is not a matrix obtained from MatProductCreate()",(arg),#A); \
   } while (0)
 #else
 #  define MatCheckProduct(A,arg) do {} while (0)
@@ -794,11 +794,11 @@ PETSC_STATIC_INLINE PetscErrorCode MatPivotCheck_none(Mat fact,Mat mat,const Mat
   sctx->newshift = PETSC_FALSE;
   if (PetscAbsScalar(sctx->pv) <= _zero && !PetscIsNanScalar(sctx->pv)) {
     if (!mat->erroriffailure) {
-      ierr = PetscInfo3(mat,"Detected zero pivot in factorization in row %D value %g tolerance %g\n",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);CHKERRQ(ierr);
+      ierr = PetscInfo3(mat,"Detected zero pivot in factorization in row %" PetscInt_FMT " value %g tolerance %g\n",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);CHKERRQ(ierr);
       fact->factorerrortype             = MAT_FACTOR_NUMERIC_ZEROPIVOT;
       fact->factorerror_zeropivot_value = PetscAbsScalar(sctx->pv);
       fact->factorerror_zeropivot_row   = row;
-    } else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot row %D value %g tolerance %g\n",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);
+    } else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot row %" PetscInt_FMT " value %g tolerance %g\n",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);
   }
   PetscFunctionReturn(0);
 }
@@ -1340,9 +1340,9 @@ do {\
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #define MatCheckSameLocalSize(A,ar1,B,ar2) do { \
   PetscCheckSameComm(A,ar1,B,ar2); \
-  if ((A->rmap->n != B->rmap->n) || (A->cmap->n != B->cmap->n)) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible matrix local sizes: parameter # %d (%D x %D) != parameter # %d (%D x %D)",ar1,A->rmap->n,A->cmap->n,ar2,B->rmap->n,B->cmap->n);} while (0)
+  if ((A->rmap->n != B->rmap->n) || (A->cmap->n != B->cmap->n)) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible matrix local sizes: parameter # %d (%" PetscInt_FMT " x %" PetscInt_FMT ") != parameter # %d (%" PetscInt_FMT " x %" PetscInt_FMT ")",ar1,A->rmap->n,A->cmap->n,ar2,B->rmap->n,B->cmap->n);} while (0)
 #define MatCheckSameSize(A,ar1,B,ar2) do { \
-  if ((A->rmap->N != B->rmap->N) || (A->cmap->N != B->cmap->N)) SETERRQ6(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Incompatible matrix global sizes: parameter # %d (%D x %D) != parameter # %d (%D x %D)",ar1,A->rmap->N,A->cmap->N,ar2,B->rmap->N,B->cmap->N);\
+  if ((A->rmap->N != B->rmap->N) || (A->cmap->N != B->cmap->N)) SETERRQ6(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Incompatible matrix global sizes: parameter # %d (%" PetscInt_FMT " x %" PetscInt_FMT ") != parameter # %d (%" PetscInt_FMT " x %" PetscInt_FMT ")",ar1,A->rmap->N,A->cmap->N,ar2,B->rmap->N,B->cmap->N);\
   MatCheckSameLocalSize(A,ar1,B,ar2);} while (0)
 #else
 template <typename Tm>
@@ -1352,8 +1352,8 @@ void MatCheckSameSize(Tm,int,Tm,int);
 #endif
 
 #define VecCheckMatCompatible(M,x,ar1,b,ar2) do { \
-  if (M->cmap->N != x->map->N) SETERRQ3(PetscObjectComm((PetscObject)M),PETSC_ERR_ARG_SIZ,"Vector global length incompatible with matrix: parameter # %d global size %D != matrix column global size %D",ar1,x->map->N,M->cmap->N); \
-  if (M->rmap->N != b->map->N) SETERRQ3(PetscObjectComm((PetscObject)M),PETSC_ERR_ARG_SIZ,"Vector global length incompatible with matrix: parameter # %d global size %D != matrix row global size %D",ar2,b->map->N,M->rmap->N);} while (0)
+  if (M->cmap->N != x->map->N) SETERRQ3(PetscObjectComm((PetscObject)M),PETSC_ERR_ARG_SIZ,"Vector global length incompatible with matrix: parameter # %d global size %" PetscInt_FMT " != matrix column global size %" PetscInt_FMT "",ar1,x->map->N,M->cmap->N); \
+  if (M->rmap->N != b->map->N) SETERRQ3(PetscObjectComm((PetscObject)M),PETSC_ERR_ARG_SIZ,"Vector global length incompatible with matrix: parameter # %d global size %" PetscInt_FMT " != matrix row global size %" PetscInt_FMT "",ar2,b->map->N,M->rmap->N);} while (0)
 
 /* -------------------------------------------------------------------------------------------------------*/
 #include <petscbt.h>
@@ -1474,9 +1474,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLLCondensedView(PetscInt *lnk)
   PetscInt       k;
 
   PetscFunctionBegin;
-  ierr = PetscPrintf(PETSC_COMM_SELF,"LLCondensed of size %D, (val,  next)\n",lnk[0]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"LLCondensed of size %" PetscInt_FMT ", (val,  next)\n",lnk[0]);CHKERRQ(ierr);
   for (k=2; k< lnk[0]+2; k++) {
-    ierr = PetscPrintf(PETSC_COMM_SELF," %D: (%D, %D)\n",2*k,lnk[2*k],lnk[2*k+1]);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF," %" PetscInt_FMT ": (%" PetscInt_FMT ", %" PetscInt_FMT ")\n",2*k,lnk[2*k],lnk[2*k+1]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

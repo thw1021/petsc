@@ -94,7 +94,7 @@ int main(int argc,char **argv)
             for (dd=0;dd<3;++dd) expected *= (bnd[dd] ? stencilWidth + 1 + extra[dd] : 2*stencilWidth + 1);
             for (d=0; d<dof0; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -103,7 +103,7 @@ int main(int argc,char **argv)
             for (dd=1;dd<3;++dd) expected *= (bnd[dd] ? stencilWidth + 1 + extra[dd] : 2*stencilWidth + 1);
             for (d=dof0; d<dof0+dof1; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -112,7 +112,7 @@ int main(int argc,char **argv)
             for (dd=0;dd<3;dd+=2) expected *= (bnd[dd] ? stencilWidth + 1 + extra[dd] : 2*stencilWidth + 1);
             for (d=dof0+dof1; d<dof0+2*dof1; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -121,7 +121,7 @@ int main(int argc,char **argv)
             for (dd=0;dd<2;++dd) expected *= ((bnd[dd] ? 1 : 2) * stencilWidth + 1);
             for (d=dof0+2*dof1; d<dof0+2*dof1+dof2; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -130,7 +130,7 @@ int main(int argc,char **argv)
             for (dd=0;dd<2;++dd) expected *= (bnd[dd] ? stencilWidth + 1 + extra[dd] : 2*stencilWidth + 1);
             for (d=dof0+2*dof1+dof2; d<dof0+3*dof1+dof2; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -139,7 +139,7 @@ int main(int argc,char **argv)
             for (dd=0;dd<3;dd+=2) expected *= ((bnd[dd] ? 1 : 2) * stencilWidth + 1);
             for (d=dof0+3*dof1+dof2; d<dof0+3*dof1+2*dof2; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -148,7 +148,7 @@ int main(int argc,char **argv)
             for (dd=1;dd<3;++dd) expected *= ((bnd[dd] ? 1 : 2) * stencilWidth + 1);
             for (d=dof0+3*dof1+2*dof2; d<dof0+3*dof1+3*dof2; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }
@@ -157,7 +157,7 @@ int main(int argc,char **argv)
             for (dd=0;dd<3;++dd) expected *= ((bnd[dd] ? 1 : 2) * stencilWidth + 1);
             for (d=dofTotal-dof3; d<dofTotal; ++d) {
               if (a2[k][j][i][d] != expected) {
-                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%D,%D,%D)[%D] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
+                ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Element (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ")[%" PetscInt_FMT "] Unexpected value %g (expecting %g)\n",rank,i,j,k,d,(double)PetscRealPart(a2[k][j][i][d]),(double)PetscRealPart(expected));CHKERRQ(ierr);
               }
             }
           }

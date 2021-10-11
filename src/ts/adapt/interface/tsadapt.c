@@ -818,7 +818,7 @@ PetscErrorCode TSAdaptCandidateAdd(TSAdapt adapt,const char name[],PetscInt orde
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
-  if (order < 1) SETERRQ1(PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Classical order %D must be a positive integer",order);
+  if (order < 1) SETERRQ1(PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Classical order %" PetscInt_FMT " must be a positive integer",order);
   if (inuse) {
     if (adapt->candidates.inuse_set) SETERRQ(PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_WRONGSTATE,"Cannot set the inuse method twice, maybe forgot to call TSAdaptCandidatesClear()");
     adapt->candidates.inuse_set = PETSC_TRUE;
@@ -917,7 +917,7 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,P
   }
 
   ierr = (*adapt->ops->choose)(adapt,ts,h,&scheme,next_h,accept,&wlte,&wltea,&wlter);CHKERRQ(ierr);
-  if (scheme < 0 || (ncandidates > 0 && scheme >= ncandidates)) SETERRQ2(PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Chosen scheme %D not in valid range 0..%D",scheme,ncandidates-1);
+  if (scheme < 0 || (ncandidates > 0 && scheme >= ncandidates)) SETERRQ2(PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Chosen scheme %" PetscInt_FMT " not in valid range 0..%" PetscInt_FMT "",scheme,ncandidates-1);
   if (*next_h < 0) SETERRQ1(PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Computed step size %g must be positive",(double)*next_h);
   if (next_sc) *next_sc = scheme;
 
@@ -936,9 +936,9 @@ PetscErrorCode TSAdaptChoose(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,P
     const char *sc_name = (scheme < ncandidates) ? adapt->candidates.name[scheme] : "";
     ierr = PetscViewerASCIIAddTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
     if (wlte < 0) {
-      ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s %s %D:%s step %3D %s t=%-11g+%10.3e dt=%-10.3e\n",((PetscObject)adapt)->type_name,((PetscObject)ts)->type_name,scheme,sc_name,ts->steps,*accept ? "accepted" : "rejected",(double)ts->ptime,(double)h,(double)*next_h);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s %s %" PetscInt_FMT ":%s step %3" PetscInt_FMT " %s t=%-11g+%10.3e dt=%-10.3e\n",((PetscObject)adapt)->type_name,((PetscObject)ts)->type_name,scheme,sc_name,ts->steps,*accept ? "accepted" : "rejected",(double)ts->ptime,(double)h,(double)*next_h);CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s %s %D:%s step %3D %s t=%-11g+%10.3e dt=%-10.3e wlte=%5.3g  wltea=%5.3g wlter=%5.3g\n",((PetscObject)adapt)->type_name,((PetscObject)ts)->type_name,scheme,sc_name,ts->steps,*accept ? "accepted" : "rejected",(double)ts->ptime,(double)h,(double)*next_h,(double)wlte,(double)wltea,(double)wlter);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s %s %" PetscInt_FMT ":%s step %3" PetscInt_FMT " %s t=%-11g+%10.3e dt=%-10.3e wlte=%5.3g  wltea=%5.3g wlter=%5.3g\n",((PetscObject)adapt)->type_name,((PetscObject)ts)->type_name,scheme,sc_name,ts->steps,*accept ? "accepted" : "rejected",(double)ts->ptime,(double)h,(double)*next_h,(double)wlte,(double)wltea,(double)wlter);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIISubtractTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
   }
@@ -1007,10 +1007,10 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec Y,PetscBool
     *accept = PETSC_FALSE;
     if (++ts->num_snes_failures >= ts->max_snes_failures && ts->max_snes_failures > 0) {
       ts->reason = TS_DIVERGED_NONLINEAR_SOLVE;
-      ierr = PetscInfo2(ts,"Step=%D, nonlinear solve failures %D greater than current TS allowed, stopping solve\n",ts->steps,ts->num_snes_failures);CHKERRQ(ierr);
+      ierr = PetscInfo2(ts,"Step=%" PetscInt_FMT ", nonlinear solve failures %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,ts->num_snes_failures);CHKERRQ(ierr);
       if (adapt->monitor) {
         ierr = PetscViewerASCIIAddTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s step %3D stage rejected t=%-11g+%10.3e, nonlinear solve failures %D greater than current TS allowed\n",((PetscObject)adapt)->type_name,ts->steps,(double)ts->ptime,(double)ts->time_step,ts->num_snes_failures);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s step %3" PetscInt_FMT " stage rejected t=%-11g+%10.3e, nonlinear solve failures %" PetscInt_FMT " greater than current TS allowed\n",((PetscObject)adapt)->type_name,ts->steps,(double)ts->ptime,(double)ts->time_step,ts->num_snes_failures);CHKERRQ(ierr);
         ierr = PetscViewerASCIISubtractTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
       }
     }
@@ -1020,10 +1020,10 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec Y,PetscBool
     if (*accept && adapt->checkstage) {
       ierr = (*adapt->checkstage)(adapt,ts,t,Y,accept);CHKERRQ(ierr);
       if (!*accept) {
-        ierr = PetscInfo1(ts,"Step=%D, solution rejected by user function provided by TSSetFunctionDomainError()\n",ts->steps);CHKERRQ(ierr);
+        ierr = PetscInfo1(ts,"Step=%" PetscInt_FMT ", solution rejected by user function provided by TSSetFunctionDomainError()\n",ts->steps);CHKERRQ(ierr);
         if (adapt->monitor) {
           ierr = PetscViewerASCIIAddTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
-          ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s step %3D stage rejected by user function provided by TSSetFunctionDomainError()\n",((PetscObject)adapt)->type_name,ts->steps);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s step %3" PetscInt_FMT " stage rejected by user function provided by TSSetFunctionDomainError()\n",((PetscObject)adapt)->type_name,ts->steps);CHKERRQ(ierr);
           ierr = PetscViewerASCIISubtractTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
         }
       }
@@ -1038,7 +1038,7 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec Y,PetscBool
     adapt->timestepjustdecreased += adapt->timestepjustdecreased_delay;
     if (adapt->monitor) {
       ierr = PetscViewerASCIIAddTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s step %3D stage rejected (%s) t=%-11g+%10.3e retrying with dt=%-10.3e\n",((PetscObject)adapt)->type_name,ts->steps,SNESConvergedReasons[snesreason],(double)ts->ptime,(double)dt,(double)new_dt);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(adapt->monitor,"    TSAdapt %s step %3" PetscInt_FMT " stage rejected (%s) t=%-11g+%10.3e retrying with dt=%-10.3e\n",((PetscObject)adapt)->type_name,ts->steps,SNESConvergedReasons[snesreason],(double)ts->ptime,(double)dt,(double)new_dt);CHKERRQ(ierr);
       ierr = PetscViewerASCIISubtractTab(adapt->monitor,((PetscObject)adapt)->tablevel);CHKERRQ(ierr);
     }
   }

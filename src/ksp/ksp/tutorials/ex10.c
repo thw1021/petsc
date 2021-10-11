@@ -170,7 +170,7 @@ int main(int argc,char **args)
   else       {ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);}
 
   ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %" PetscInt_FMT "\n",its);CHKERRQ(ierr);
 
   ierr = KSPGetResidualNorm(ksp,&norm);CHKERRQ(ierr);
   if (norm < 1.e-12) {
@@ -256,7 +256,7 @@ int main(int argc,char **args)
   else       {ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);}
 
   ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %" PetscInt_FMT "\n",its);CHKERRQ(ierr);
 
   ierr = KSPGetResidualNorm(ksp,&norm);CHKERRQ(ierr);
   if (norm < 1.e-12) {

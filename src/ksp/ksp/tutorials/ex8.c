@@ -154,15 +154,15 @@ int main(int argc,char **args)
     flg  = PETSC_FALSE;
     ierr = PetscOptionsGetBool(NULL,NULL,"-subdomain_view",&flg,NULL);CHKERRQ(ierr);
     if (flg) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"Nmesh points: %D x %D; subdomain partition: %D x %D; overlap: %D; Nsub: %D\n",m,n,M,N,overlap,Nsub);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"Nmesh points: %" PetscInt_FMT " x %" PetscInt_FMT "; subdomain partition: %" PetscInt_FMT " x %" PetscInt_FMT "; overlap: %" PetscInt_FMT "; Nsub: %" PetscInt_FMT "\n",m,n,M,N,overlap,Nsub);CHKERRQ(ierr);
       ierr = PetscPrintf(PETSC_COMM_SELF,"IS:\n");CHKERRQ(ierr);
       for (i=0; i<Nsub; i++) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  IS[%D]\n",i);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"  IS[%" PetscInt_FMT "]\n",i);CHKERRQ(ierr);
         ierr = ISView(is[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
       }
       ierr = PetscPrintf(PETSC_COMM_SELF,"IS_local:\n");CHKERRQ(ierr);
       for (i=0; i<Nsub; i++) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"  IS_local[%D]\n",i);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"  IS_local[%" PetscInt_FMT "]\n",i);CHKERRQ(ierr);
         ierr = ISView(is_local[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
       }
     }

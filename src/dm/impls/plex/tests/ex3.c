@@ -235,7 +235,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       ierr = DMDASetVertexCoordinates(*dm, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0);CHKERRQ(ierr);
       break;
     default:
-      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot create structured mesh of dimension %d", dim);
+      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot create structured mesh of dimension %" PetscInt_FMT, dim);
     }
     ierr = PetscObjectSetName((PetscObject) *dm, "Hexahedral Mesh");CHKERRQ(ierr);
   } else {
@@ -403,7 +403,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
         ierr = PetscSectionGetDof(aSec,c,&cDof);CHKERRQ(ierr);
         if (cDof) {
           PetscInt cOff, a, aDof, aOff, j;
-          if (cDof != 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Found %d anchor points: should be just one",cDof);
+          if (cDof != 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Found %" PetscInt_FMT " anchor points: should be just one",cDof);
 
           /* find the anchor point */
           ierr = PetscSectionGetOffset(aSec,c,&cOff);CHKERRQ(ierr);
@@ -417,8 +417,8 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
           ierr = PetscSectionGetDof(section,a,&aDof);CHKERRQ(ierr);
           ierr = PetscSectionGetOffset(section,a,&aOff);CHKERRQ(ierr);
 
-          if (cDof != aDof) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point and anchor have different number of dofs: %d, %d\n",cDof,aDof);
-          if (cDof % numComp) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point dofs not divisible by field components: %d, %d\n",cDof,numComp);
+          if (cDof != aDof) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point and anchor have different number of dofs: %" PetscInt_FMT ", %" PetscInt_FMT "\n",cDof,aDof);
+          if (cDof % numComp) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point dofs not divisible by field components: %" PetscInt_FMT ", %" PetscInt_FMT "\n",cDof,numComp);
 
           /* put in a simple equality constraint */
           for (j = 0; j < cDof; j++) {
@@ -465,7 +465,7 @@ static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
     PetscDS      ds;
 
     ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    if (user->numComponents != dim) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "The number of components %d must be equal to the dimension %d for this test", user->numComponents, dim);
+    if (user->numComponents != dim) SETERRQ2(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "The number of components %" PetscInt_FMT " must be equal to the dimension %" PetscInt_FMT " for this test", user->numComponents, dim);
     ierr = DMGetDS(dm,&ds);CHKERRQ(ierr);
     ierr = PetscDSSetJacobian(ds,0,0,NULL,NULL,NULL,symmetric_gradient_inner_product);CHKERRQ(ierr);
     ierr = DMCreateMatrix(dm,&E);CHKERRQ(ierr);
@@ -490,7 +490,7 @@ static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
       ierr = DMLocalToGlobalEnd(dm,localRes,ADD_VALUES,res);CHKERRQ(ierr);
       ierr = VecNorm(res,NORM_2,&resNorm);CHKERRQ(ierr);
       if (resNorm > PETSC_SMALL) {
-        ierr = PetscPrintf(PetscObjectComm((PetscObject)dm),"Symmetric gradient action null space vector %D residual: %E\n",i,resNorm);CHKERRQ(ierr);
+        ierr = PetscPrintf(PetscObjectComm((PetscObject)dm),"Symmetric gradient action null space vector %" PetscInt_FMT " residual: %E\n",i,resNorm);CHKERRQ(ierr);
       }
     }
     ierr = VecDestroy(&localRes);CHKERRQ(ierr);
@@ -704,14 +704,14 @@ static PetscErrorCode CheckFunctions(DM dm, PetscInt order, AppCtx *user)
     exactFuncDers[0] = cubicDer;
     break;
   default:
-    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Could not determine functions to test for order %d", order);
+    SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Could not determine functions to test for order %" PetscInt_FMT, order);
   }
   ierr = ComputeError(dm, exactFuncs, exactFuncDers, exactCtxs, &error, &errorDer, user);CHKERRQ(ierr);
   /* Report result */
-  if (error > tol)    {ierr = PetscPrintf(comm, "Function tests FAIL for order %D at tolerance %g error %g\n", order, (double)tol,(double) error);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "Function tests pass for order %D at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
-  if (errorDer > tol) {ierr = PetscPrintf(comm, "Function tests FAIL for order %D derivatives at tolerance %g error %g\n", order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "Function tests pass for order %D derivatives at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
+  if (error > tol)    {ierr = PetscPrintf(comm, "Function tests FAIL for order %" PetscInt_FMT " at tolerance %g error %g\n", order, (double)tol,(double) error);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "Function tests pass for order %" PetscInt_FMT " at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
+  if (errorDer > tol) {ierr = PetscPrintf(comm, "Function tests FAIL for order %" PetscInt_FMT " derivatives at tolerance %g error %g\n", order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "Function tests pass for order %" PetscInt_FMT " derivatives at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -764,7 +764,7 @@ static PetscErrorCode CheckInterpolation(DM dm, PetscBool checkRestrict, PetscIn
     exactFuncDers[0] = cubicDer;
     break;
   default:
-    SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Could not determine functions to test for dimension %D order %D", dim, order);
+    SETERRQ2(comm, PETSC_ERR_ARG_OUTOFRANGE, "Could not determine functions to test for dimension %" PetscInt_FMT " order %" PetscInt_FMT "", dim, order);
   }
   idm  = checkRestrict ? rdm :  dm;
   fdm  = checkRestrict ?  dm : rdm;
@@ -782,10 +782,10 @@ static PetscErrorCode CheckInterpolation(DM dm, PetscBool checkRestrict, PetscIn
   ierr = DMComputeL2Diff(fdm, 0.0, exactFuncs, exactCtxs, fu, &error);CHKERRQ(ierr);
   ierr = DMComputeL2GradientDiff(fdm, 0.0, exactFuncDers, exactCtxs, fu, n, &errorDer);CHKERRQ(ierr);
   /* Report result */
-  if (error > tol)    {ierr = PetscPrintf(comm, "Interpolation tests FAIL for order %D at tolerance %g error %g\n", order, (double)tol, (double)error);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "Interpolation tests pass for order %D at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
-  if (errorDer > tol) {ierr = PetscPrintf(comm, "Interpolation tests FAIL for order %D derivatives at tolerance %g error %g\n", order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
-  else                {ierr = PetscPrintf(comm, "Interpolation tests pass for order %D derivatives at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
+  if (error > tol)    {ierr = PetscPrintf(comm, "Interpolation tests FAIL for order %" PetscInt_FMT " at tolerance %g error %g\n", order, (double)tol, (double)error);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "Interpolation tests pass for order %" PetscInt_FMT " at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
+  if (errorDer > tol) {ierr = PetscPrintf(comm, "Interpolation tests FAIL for order %" PetscInt_FMT " derivatives at tolerance %g error %g\n", order, (double)tol, (double)errorDer);CHKERRQ(ierr);}
+  else                {ierr = PetscPrintf(comm, "Interpolation tests pass for order %" PetscInt_FMT " derivatives at tolerance %g\n", order, (double)tol);CHKERRQ(ierr);}
   ierr = DMRestoreGlobalVector(idm, &iu);CHKERRQ(ierr);
   ierr = DMRestoreGlobalVector(fdm, &fu);CHKERRQ(ierr);
   ierr = MatDestroy(&Interp);CHKERRQ(ierr);
@@ -827,9 +827,9 @@ static PetscErrorCode CheckConvergence(DM dm, PetscInt Nr, AppCtx *user)
       ierr = SetupSection(rdm, user);CHKERRQ(ierr);
       ierr = ComputeError(rdm, exactFuncs, exactFuncDers, exactCtxs, &error, &errorDer, user);CHKERRQ(ierr);
       p    = PetscLog2Real(errorOld/error);
-      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Function   convergence rate at refinement %D: %.2f\n", r, (double)p);CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Function   convergence rate at refinement %" PetscInt_FMT ": %.2f\n", r, (double)p);CHKERRQ(ierr);
       p    = PetscLog2Real(errorDerOld/errorDer);
-      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Derivative convergence rate at refinement %D: %.2f\n", r, (double)p);CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Derivative convergence rate at refinement %" PetscInt_FMT ": %.2f\n", r, (double)p);CHKERRQ(ierr);
       ierr = DMDestroy(&odm);CHKERRQ(ierr);
       odm         = rdm;
       errorOld    = error;
@@ -849,10 +849,10 @@ static PetscErrorCode CheckConvergence(DM dm, PetscInt Nr, AppCtx *user)
       len  = cEnd - cStart;
       rel  = error/errorOld;
       p    = PetscLogReal(rel) / PetscLogReal(lenOld / len);
-      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Function   convergence rate at coarsening %D: %.2f\n", c, (double)p);CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Function   convergence rate at coarsening %" PetscInt_FMT ": %.2f\n", c, (double)p);CHKERRQ(ierr);
       rel  = errorDer/errorDerOld;
       p    = PetscLogReal(rel) / PetscLogReal(lenOld / len);
-      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Derivative convergence rate at coarsening %D: %.2f\n", c, (double)p);CHKERRQ(ierr);
+      ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Derivative convergence rate at coarsening %" PetscInt_FMT ": %.2f\n", c, (double)p);CHKERRQ(ierr);
       ierr = DMDestroy(&odm);CHKERRQ(ierr);
       odm         = cdm;
       errorOld    = error;

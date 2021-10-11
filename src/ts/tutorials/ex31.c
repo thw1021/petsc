@@ -1125,7 +1125,7 @@ PetscErrorCode Initialize(Vec Y, void* s)
     IJacobian   = IJacobian_Hull1972C34;
   }
   ierr = PetscOptionsGetScalarArray(NULL,NULL,"-yinit",y,&N,&flg);CHKERRQ(ierr);
-  if ((N != GetSize((const char*)s)) && flg) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"Number of initial values %D does not match problem size %D.\n",N,GetSize((const char*)s));
+  if ((N != GetSize((const char*)s)) && flg) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"Number of initial values %" PetscInt_FMT " does not match problem size %" PetscInt_FMT ".\n",N,GetSize((const char*)s));
   ierr = VecRestoreArray(Y,&y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1246,7 +1246,7 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
 
   /* Exact solution */
   ierr = VecDuplicate(Y,&Yex);CHKERRQ(ierr);
-  if (PetscAbsScalar(final_time-tfinal)>2.*PETSC_MACHINE_EPSILON) {
+  if (PetscAbsReal(final_time-tfinal)>2.*PETSC_MACHINE_EPSILON) {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Note: There is a difference between the prescribed final time %g and the actual final time, %g.\n",(double)tfinal,(double)final_time);CHKERRQ(ierr);
   }
   ierr = ExactSolution(Yex,&ptype[0],final_time,exact_flag);CHKERRQ(ierr);
@@ -1300,7 +1300,7 @@ int main(int argc, char **argv)
     error[r] = 0;
     if (r > 0) dt /= refine_fac;
 
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Solving ODE \"%s\" with dt %f, final time %f and system size %D.\n",ptype,(double)dt,(double)tfinal,GetSize(&ptype[0]));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Solving ODE \"%s\" with dt %f, final time %f and system size %" PetscInt_FMT ".\n",ptype,(double)dt,(double)tfinal,GetSize(&ptype[0]));CHKERRQ(ierr);
     ierr = SolveODE(&ptype[0],dt,tfinal,maxiter,&error[r],&flag);CHKERRQ(ierr);
     if (flag) {
       /* If exact solution available for the specified ODE */
