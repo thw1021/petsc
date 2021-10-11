@@ -99,6 +99,10 @@ PETSC_EXTERN PetscErrorCode DMExtrude(DM,PetscInt,DM*);
 PETSC_EXTERN PetscErrorCode DMSetFromOptions(DM);
 PETSC_EXTERN PetscErrorCode DMViewFromOptions(DM,PetscObject,const char[]);
 
+PETSC_EXTERN PetscErrorCode DMGenerate(DM, const char [], PetscBool , DM *);
+PETSC_EXTERN PetscErrorCode DMGenerateRegister(const char[],PetscErrorCode (*)(DM,PetscBool,DM*),PetscErrorCode (*)(DM,PetscReal*,DM*),PetscErrorCode (*)(DM,Vec,DMLabel,DM*),PetscInt);
+PETSC_EXTERN PetscErrorCode DMGenerateRegisterAll(void);
+PETSC_EXTERN PetscErrorCode DMGenerateRegisterDestroy(void);
 PETSC_EXTERN PetscErrorCode DMAdaptLabel(DM,DMLabel,DM*);
 PETSC_EXTERN PetscErrorCode DMAdaptMetric(DM, Vec, DMLabel, DM *);
 
