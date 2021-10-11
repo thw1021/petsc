@@ -55,8 +55,6 @@ struct _p_PC {
   void             *user;             /* optional user-defined context */
   PCFailedReason   failedreason;      /* after VecNorm or VecDot contains maximum of all rank failed reasons */
   PCFailedReason   failedreasonrank;  /* failed reason on this rank */
-
-  PetscErrorCode   (*postsolve)(PC,KSP);
 };
 
 PETSC_EXTERN PetscLogEvent PC_SetUp;

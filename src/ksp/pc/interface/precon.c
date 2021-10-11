@@ -1618,8 +1618,8 @@ PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,2);
   pc->presolvedone--;
-  if (pc->postsolve) {
-    ierr =  (pc->postsolve)(pc,ksp);CHKERRQ(ierr);
+  if (pc->ops->postsolve) {
+    ierr = (pc->ops->postsolve)(pc,ksp);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

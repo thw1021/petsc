@@ -417,7 +417,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
   pc->ops->view            = PCView_Eisenstat;
   pc->ops->setup           = PCSetUp_Eisenstat;
   pc->ops->presolve        = PCPreSolve_Eisenstat;
-  pc->postsolve            = PCPostSolve_Eisenstat;
+  pc->ops->postsolve       = PCPostSolve_Eisenstat;
 
   pc->data     = eis;
   eis->omega   = 1.0;

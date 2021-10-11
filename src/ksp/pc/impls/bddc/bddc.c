@@ -2295,7 +2295,6 @@ PetscErrorCode PCReset_BDDC(PC pc)
   pcbddc->coarse_ksp                = kspC;
   pc->ops->presolve                 = NULL;
   pc->ops->postsolve                = NULL;
-  pc->postsolve                     = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -3088,7 +3087,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   pc->ops->reset               = PCReset_BDDC;
   pc->ops->presolve            = PCPreSolve_BDDC;
   pc->ops->postsolve           = PCPostSolve_BDDC;
-  pc->postsolve                = PCPostSolve_BDDC;
 
   /* composing function */
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCBDDCSetDiscreteGradient_C",PCBDDCSetDiscreteGradient_BDDC);CHKERRQ(ierr);

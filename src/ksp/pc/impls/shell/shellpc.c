@@ -400,8 +400,8 @@ static PetscErrorCode  PCShellSetPostSolve_Shell(PC pc,PetscErrorCode (*postsolv
 
   PetscFunctionBegin;
   shell->postsolve_private = postsolve_private;
-  if (postsolve_private) pc->postsolve = PCPostSolve_Shell;
-  else                   pc->postsolve = NULL;
+  if (postsolve_private) pc->ops->postsolve = PCPostSolve_Shell;
+  else                   pc->ops->postsolve = NULL;
   PetscFunctionReturn(0);
 }
 
