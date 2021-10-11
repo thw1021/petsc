@@ -1987,7 +1987,7 @@ PetscErrorCode DMPlexTransformApply(DMPlexTransform tr, DM dm, DM *tdm)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMPlexTransformAdaptLabel(DM dm, DMLabel adaptLabel, DM *rdm)
+PetscErrorCode DMPlexTransformAdaptLabel(DM dm, PETSC_UNUSED Vec metric, DMLabel adaptLabel, DM *rdm)
 {
   DMPlexTransform tr;
   DM              cdm, rcdm;
