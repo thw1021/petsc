@@ -1022,7 +1022,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   ierr = PMMG_Get_vertices(parmesh, verticesNew, verTagsNew, corners, requiredVer);
   ierr = PMMG_Get_tetrahedra(parmesh, cellsNew, cellTagsNew, requiredCells);
   ierr = PMMG_Get_triangles(parmesh, facesNew, faceTagsNew, requiredFaces);
-  ierr = PetscMalloc2(numVerticesNew, &gv_new, numVerticesNew, &owners);
+  ierr = PetscMalloc2(numVerticesNew, &owners, numVerticesNew, &gv_new);
   ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_globalNum, 1);
   ierr = PMMG_Get_verticesGloNum(parmesh, gv_new, owners);
   for (i = 0; i < dim*numFacesNew; ++i) { facesNew[i] -= 1; }
