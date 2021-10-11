@@ -1,0 +1,94 @@
+<--- FIXED --->
+[ROOT] -------------------------------------------------------------------------------------
+ERROR 0: ./src/sys/tests/linter/testTypes.c:6:20
+'-1' of derived type 'int', canonical type 'int'
+  4: {
+  5:   /* incorrect */
+> 6:   PetscValidType(r,-1);
+                        ^^
+  7:   PetscCheckSameType(r,-1,v,-1);
+  8:   PetscCheckSameComm(o,-2,f,-2);
+
+Argument number doesn't match for 'r'. Found '-1' expected '1' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                              ^^^^^^^^^^^^^
+
+ERROR 1: ./src/sys/tests/linter/testTypes.c:7:24
+'-1' of derived type 'int', canonical type 'int'
+  5: /* incorrect */
+  6: PetscValidType(r,-1);
+> 7: PetscCheckSameType(r,-1,v,-1);
+                          ^^
+  8: PetscCheckSameComm(o,-2,f,-2);
+  9: PetscCheckSameTypeAndComm(r,-3,f,-3);
+
+Argument number doesn't match for 'r'. Found '-1' expected '1' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                              ^^^^^^^^^^^^^
+
+ERROR 2: ./src/sys/tests/linter/testTypes.c:7:29
+'-1' of derived type 'int', canonical type 'int'
+  5: /* incorrect */
+  6: PetscValidType(r,-1);
+> 7: PetscCheckSameType(r,-1,v,-1);
+                               ^^
+  8: PetscCheckSameComm(o,-2,f,-2);
+  9: PetscCheckSameTypeAndComm(r,-3,f,-3);
+
+Argument number doesn't match for 'v'. Found '-1' expected '2' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                             ^^^^^^^^^^^^^
+
+ERROR 3: ./src/sys/tests/linter/testTypes.c:8:24
+'-2' of derived type 'int', canonical type 'int'
+  6 : PetscValidType(r,-1);
+  7 : PetscCheckSameType(r,-1,v,-1);
+> 8 : PetscCheckSameComm(o,-2,f,-2);
+                           ^^
+  9 : PetscCheckSameTypeAndComm(r,-3,f,-3);
+  10: 
+
+Argument number doesn't match for 'o'. Found '-2' expected '3' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                                            ^^^^^^^^^^^^^
+
+ERROR 4: ./src/sys/tests/linter/testTypes.c:8:29
+'-2' of derived type 'int', canonical type 'int'
+  6 : PetscValidType(r,-1);
+  7 : PetscCheckSameType(r,-1,v,-1);
+> 8 : PetscCheckSameComm(o,-2,f,-2);
+                                ^^
+  9 : PetscCheckSameTypeAndComm(r,-3,f,-3);
+  10: 
+
+Argument number doesn't match for 'f'. Found '-2' expected '4' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                                                           ^^^^^^^^^^^^^^^^^^^
+
+ERROR 5: ./src/sys/tests/linter/testTypes.c:9:31
+'-3' of derived type 'int', canonical type 'int'
+  7 : PetscCheckSameType(r,-1,v,-1);
+  8 : PetscCheckSameComm(o,-2,f,-2);
+> 9 : PetscCheckSameTypeAndComm(r,-3,f,-3);
+                                  ^^
+  10: 
+  11: /* correct */
+
+Argument number doesn't match for 'r'. Found '-3' expected '1' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                              ^^^^^^^^^^^^^
+
+ERROR 6: ./src/sys/tests/linter/testTypes.c:9:36
+'-3' of derived type 'int', canonical type 'int'
+  7 : PetscCheckSameType(r,-1,v,-1);
+  8 : PetscCheckSameComm(o,-2,f,-2);
+> 9 : PetscCheckSameTypeAndComm(r,-3,f,-3);
+                                       ^^
+  10: 
+  11: /* correct */
+
+Argument number doesn't match for 'f'. Found '-3' expected '4' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                                                           ^^^^^^^^^^^^^^^^^^^
+[ROOT] -------------------------------------------------------------------------------------
+<--- LEFT --->
