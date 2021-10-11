@@ -1788,6 +1788,9 @@ M*/
 M*/
 #define  PetscArrayzero(str1,cnt) PetscMemzero(str1,(size_t)(cnt)*sizeof(*(str1)))
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#  define PetscPrefetchBlock(a,b,c,d)
+#else
 /*MC
    PetscPrefetchBlock - Prefetches a block of memory
 
@@ -1823,7 +1826,7 @@ M*/
     const char *_p = (const char*)(a),*_end = (const char*)((a)+(n));   \
     for (; _p < _end; _p += PETSC_LEVEL1_DCACHE_LINESIZE) PETSC_Prefetch(_p,(rw),(t)); \
   } while (0)
-
+#endif
 /*
       Determine if some of the kernel computation routines use
    Fortran (rather than C) for the numerical calculations. On some machines
@@ -2604,7 +2607,9 @@ PETSC_EXTERN PetscErrorCode PetscTellMyCell(MPI_Comm,const char[],const char[],P
 PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[],const char[],char[],size_t,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],size_t);
 
-#if defined(PETSC_USE_DEBUG)
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#  define MPIU_Allreduce(a,b,c,d,e,f) 0
+#elif defined(PETSC_USE_DEBUG)
 static inline unsigned int PetscStrHash(const char *str)
 {
   unsigned int c,hash = 5381;
@@ -2645,17 +2650,17 @@ static inline unsigned int PetscStrHash(const char *str)
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) PetscMacroReturnStandard(                           \
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) PetscMacroReturnStandard(                              \
     PetscMPIInt a_b1[6],a_b2[6];                                                               \
     int         _mpiu_allreduce_c_int = (int)c;                                                \
     a_b1[0] = -(PetscMPIInt)__LINE__;                          a_b1[1] = -a_b1[0];             \
     a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); a_b1[3] = -a_b1[2];             \
     a_b1[4] = -(PetscMPIInt)(c);                               a_b1[5] = -a_b1[4];             \
-    PetscCallMPI(MPI_Allreduce(a_b1,a_b2,6,MPI_INT,MPI_MAX,fcomm));                               \
+    PetscCallMPI(MPI_Allreduce(a_b1,a_b2,6,MPI_INT,MPI_MAX,fcomm));                            \
     PetscCheck(-a_b2[0] == a_b2[1],PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (code lines) on different processors"); \
     PetscCheck(-a_b2[2] == a_b2[3],PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (functions) on different processors"); \
     PetscCheck(-a_b2[4] == a_b2[5],PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",_mpiu_allreduce_c_int); \
-    PetscCallMPI(MPI_Allreduce((a),(b),(c),d,e,(fcomm)));                                         \
+    PetscCallMPI(MPI_Allreduce((a),(b),(c),d,e,(fcomm)));                                      \
   )
 #else
 #define MPIU_Allreduce(a,b,c,d,e,fcomm) PetscMacroReturnStandard(PetscCallMPI(MPI_Allreduce((a),(b),(c),d,e,(fcomm))))
@@ -2690,4 +2695,4 @@ PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
 #define PetscPragmaOMP(...)
 #endif
 
-#endif
+#endif /* PETSCSYS_H */
