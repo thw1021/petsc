@@ -134,6 +134,7 @@ class BaseTestPlex(object):
     def testAdapt(self):
         dim = self.plex.getDimension()
         if dim == 1: return
+        if not self.plex.isSimplex(): return
         vStart, vEnd = self.plex.getDepthStratum(0)
         numVertices = vEnd-vStart
         metric_array = np.zeros([numVertices,dim,dim])
