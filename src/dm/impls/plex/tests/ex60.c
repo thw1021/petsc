@@ -188,65 +188,65 @@ int main(int argc, char **argv) {
   test:
     suffix: uniform_2d_pragmatic
     requires: pragmatic
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 1 -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor pragmatic -uniform -isotropic
   test:
     suffix: uniform_3d_pragmatic
     requires: pragmatic
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 1 -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor pragmatic -uniform -isotropic
   test:
     suffix: iso_2d_pragmatic
     requires: pragmatic
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 1 -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor pragmatic -isotropic
   test:
     suffix: iso_3d_pragmatic
     requires: pragmatic
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 1 -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor pragmatic -isotropic
   test:
     suffix: hessian_2d_pragmatic
     requires: pragmatic
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 1
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor pragmatic
   test:
     suffix: hessian_3d_pragmatic
     requires: pragmatic
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 1
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor pragmatic
   test:
     suffix: uniform_2d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 2 -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor parmmg -uniform -isotropic
   test:
     suffix: uniform_3d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg -uniform -isotropic
   test:
     suffix: iso_2d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 2 -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor parmmg -isotropic
   test:
     suffix: iso_3d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg -isotropic
   test:
     suffix: hessian_2d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_plex_metric_remesher 2
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor parmmg
   test:
     suffix: hessian_3d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg
   test:
     suffix: uniform_3d_parmmg
     requires: parmmg
     nsize: 2
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg -uniform -isotropic
   test:
     suffix: iso_3d_parmmg
     requires: parmmg
     nsize: 2
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2 -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg -isotropic
   test:
     suffix: hessian_3d_parmmg
     requires: parmmg
     nsize: 2
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_plex_metric_remesher 2
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg
 
 TEST*/

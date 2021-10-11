@@ -1390,25 +1390,25 @@ int main(int argc, char **argv)
     suffix: fas_newton_coarse_0
     requires: pragmatic triangle
     TODO: broken
-    args: -dm_plex_metric_remesher 1 -run_type full -dm_refine 2 -dm_plex_hash_location -variable_coefficient nonlinear -petscspace_degree 1 -snes_type fas -snes_fas_levels 2 -pc_type svd -ksp_rtol 1.0e-10 -fas_coarse_pc_type svd -fas_coarse_ksp_rtol 1.0e-10 -fas_coarse_snes_monitor_short -snes_monitor_short -fas_coarse_snes_linesearch_type basic -snes_converged_reason ::ascii_info_detail -dm_coarsen_hierarchy 1 -snes_view -fas_levels_1_snes_type newtonls -fas_levels_1_pc_type svd -fas_levels_1_ksp_rtol 1.0e-10 -fas_levels_1_snes_monitor_short
+    args: -dm_adaptor pragmatic -run_type full -dm_refine 2 -dm_plex_hash_location -variable_coefficient nonlinear -petscspace_degree 1 -snes_type fas -snes_fas_levels 2 -pc_type svd -ksp_rtol 1.0e-10 -fas_coarse_pc_type svd -fas_coarse_ksp_rtol 1.0e-10 -fas_coarse_snes_monitor_short -snes_monitor_short -fas_coarse_snes_linesearch_type basic -snes_converged_reason ::ascii_info_detail -dm_coarsen_hierarchy 1 -snes_view -fas_levels_1_snes_type newtonls -fas_levels_1_pc_type svd -fas_levels_1_ksp_rtol 1.0e-10 -fas_levels_1_snes_monitor_short
 
   test:
     suffix: mg_newton_coarse_0
     requires: triangle pragmatic
     TODO: broken
-    args: -dm_plex_metric_remesher 1 -run_type full -dm_refine 3 -petscspace_degree 1 -snes_monitor_short -ksp_monitor_true_residual -snes_converged_reason ::ascii_info_detail -dm_coarsen_hierarchy 3 -dm_plex_hash_location -snes_view -dm_view -ksp_type richardson -pc_type mg  -pc_mg_levels 4 -snes_atol 1.0e-8 -ksp_atol 1.0e-8 -snes_rtol 0.0 -ksp_rtol 0.0 -ksp_norm_type unpreconditioned -mg_levels_ksp_type gmres -mg_levels_pc_type ilu -mg_levels_ksp_max_it 10
+    args: -dm_adaptor pragmatic -run_type full -dm_refine 3 -petscspace_degree 1 -snes_monitor_short -ksp_monitor_true_residual -snes_converged_reason ::ascii_info_detail -dm_coarsen_hierarchy 3 -dm_plex_hash_location -snes_view -dm_view -ksp_type richardson -pc_type mg  -pc_mg_levels 4 -snes_atol 1.0e-8 -ksp_atol 1.0e-8 -snes_rtol 0.0 -ksp_rtol 0.0 -ksp_norm_type unpreconditioned -mg_levels_ksp_type gmres -mg_levels_pc_type ilu -mg_levels_ksp_max_it 10
 
   test:
     suffix: mg_newton_coarse_1
     requires: triangle pragmatic
     TODO: broken
-    args: -dm_plex_metric_remesher 1 -run_type full -dm_refine 5 -petscspace_degree 1 -dm_coarsen_hierarchy 5 -dm_plex_hash_location -dm_plex_separate_marker -dm_plex_coarsen_bd_label marker -dm_plex_remesh_bd -ksp_type richardson -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_levels 3 -mg_levels_ksp_max_it 2 -snes_converged_reason ::ascii_info_detail -snes_monitor -ksp_monitor_true_residual -mg_levels_ksp_monitor_true_residual -dm_view -ksp_view
+    args: -dm_adaptor pragmatic -run_type full -dm_refine 5 -petscspace_degree 1 -dm_coarsen_hierarchy 5 -dm_plex_hash_location -dm_plex_separate_marker -dm_plex_coarsen_bd_label marker -dm_plex_remesh_bd -ksp_type richardson -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_levels 3 -mg_levels_ksp_max_it 2 -snes_converged_reason ::ascii_info_detail -snes_monitor -ksp_monitor_true_residual -mg_levels_ksp_monitor_true_residual -dm_view -ksp_view
 
   test:
     suffix: mg_newton_coarse_2
     requires: triangle pragmatic
     TODO: broken
-    args: -dm_plex_metric_remesher 1 -run_type full -dm_refine 5 -petscspace_degree 1 -dm_coarsen_hierarchy 5 -dm_plex_hash_location -dm_plex_separate_marker -dm_plex_remesh_bd -ksp_type richardson -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_levels 3 -mg_levels_ksp_max_it 2 -snes_converged_reason ::ascii_info_detail -snes_monitor -ksp_monitor_true_residual -mg_levels_ksp_monitor_true_residual -dm_view -ksp_view
+    args: -dm_adaptor pragmatic -run_type full -dm_refine 5 -petscspace_degree 1 -dm_coarsen_hierarchy 5 -dm_plex_hash_location -dm_plex_separate_marker -dm_plex_remesh_bd -ksp_type richardson -ksp_rtol 1.0e-12 -pc_type mg -pc_mg_levels 3 -mg_levels_ksp_max_it 2 -snes_converged_reason ::ascii_info_detail -snes_monitor -ksp_monitor_true_residual -mg_levels_ksp_monitor_true_residual -dm_view -ksp_view
 
   # Full solve tensor
   test:
@@ -1547,17 +1547,17 @@ int main(int argc, char **argv)
   test:
     suffix: tri_p1_adapt_0
     requires: pragmatic
-    args: -dm_plex_metric_remesher 1 -run_type exact -dm_refine 5 -bc_type dirichlet -petscspace_degree 1 -variable_coefficient circle -snes_converged_reason ::ascii_info_detail -pc_type lu -dm_view -dm_adapt_view -snes_adapt_initial 1 -adaptor_target_num 4000 -dm_plex_metric_h_min 0.0001 -dm_plex_metric_h_max 0.05
+    args: -dm_adaptor pragmatic -run_type exact -dm_refine 5 -bc_type dirichlet -petscspace_degree 1 -variable_coefficient circle -snes_converged_reason ::ascii_info_detail -pc_type lu -dm_view -dm_adapt_view -snes_adapt_initial 1 -adaptor_target_num 4000 -dm_plex_metric_h_min 0.0001 -dm_plex_metric_h_max 0.05
 
   test:
     suffix: tri_p1_adapt_1
     requires: pragmatic
-    args: -dm_plex_metric_remesher 1 -run_type exact -dm_refine 5 -bc_type dirichlet -petscspace_degree 1 -variable_coefficient circle -snes_converged_reason ::ascii_info_detail -pc_type lu -dm_view -dm_adapt_iter_view -dm_adapt_view -snes_adapt_sequence 2 -adaptor_target_num 4000 -dm_plex_metric_h_min 0.0001 -dm_plex_metric_h_max 0.05
+    args: -dm_adaptor pragmatic -run_type exact -dm_refine 5 -bc_type dirichlet -petscspace_degree 1 -variable_coefficient circle -snes_converged_reason ::ascii_info_detail -pc_type lu -dm_view -dm_adapt_iter_view -dm_adapt_view -snes_adapt_sequence 2 -adaptor_target_num 4000 -dm_plex_metric_h_min 0.0001 -dm_plex_metric_h_max 0.05
 
   test:
     suffix: tri_p1_adapt_analytic_0
     requires: pragmatic
-    args: -dm_plex_metric_remesher 1 -run_type exact -dm_refine 3 -bc_type dirichlet -petscspace_degree 1 -variable_coefficient cross -snes_adapt_initial 4 -adaptor_target_num 500 -adaptor_monitor -dm_view -dm_adapt_iter_view -dm_plex_metric_h_min 0.0001 -dm_plex_metric_h_max 0.05
+    args: -dm_adaptor pragmatic -run_type exact -dm_refine 3 -bc_type dirichlet -petscspace_degree 1 -variable_coefficient cross -snes_adapt_initial 4 -adaptor_target_num 500 -adaptor_monitor -dm_view -dm_adapt_iter_view -dm_plex_metric_h_min 0.0001 -dm_plex_metric_h_max 0.05
 
   # Full solve tensor AMR
   test:

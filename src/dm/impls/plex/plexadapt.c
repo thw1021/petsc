@@ -267,7 +267,7 @@ PetscErrorCode DMPlexCoarsen_Internal(DM dm, PETSC_UNUSED Vec metric, DMLabel ad
   ierr = DMPlexLabelToMetricConstraint(dm, adaptLabel, cStart, cEnd, vStart, vEnd, PETSC_DEFAULT, &metricVec);CHKERRQ(ierr);
   ierr = PetscOptionsGetString(NULL, dm->hdr.prefix, "-dm_plex_coarsen_bd_label", bdLabelName, sizeof(bdLabelName), &flg);CHKERRQ(ierr);
   if (flg) {ierr = DMGetLabel(dm, bdLabelName, &bdLabel);CHKERRQ(ierr);}
-  ierr = DMAdaptMetric_Plex(dm, metricVec, bdLabel, dmCoarsened);CHKERRQ(ierr);
+  ierr = DMAdaptMetric(dm, metricVec, bdLabel, dmCoarsened);CHKERRQ(ierr);
   ierr = VecDestroy(&metricVec);CHKERRQ(ierr);
   if (localized) {ierr = DMLocalizeCoordinates(*dmCoarsened);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
@@ -1078,47 +1078,4 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
   SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Remeshing needs external package support.\nPlease reconfigure with --download-parmmg.");
   PetscFunctionReturn(0);
 #endif
-}
-
-/*
-  DMAdaptMetric_Plex - Generates a new mesh conforming to a metric field.
-
-  Input Parameters:
-+ dm - The DM object
-. vertexMetric - The metric to which the mesh is adapted, defined vertex-wise in a LOCAL vector
-- bdLabel - Label for boundary tags which are preserved in dmNew, or NULL. Should not be named "_boundary_".
-
-  Output Parameter:
-. dmNew  - the new DM
-
-  Level: advanced
-
-.seealso: DMCoarsen(), DMRefine()
-*/
-PetscErrorCode DMAdaptMetric_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
-{
-  MPI_Comm         comm;
-  PetscErrorCode   ierr;
-  PetscInt         remesher;
-  PetscMPIInt      numProcs;
-
-  PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetRemesher(dm, &remesher);CHKERRQ(ierr);
-
-  switch (remesher) {
-  case 0:
-    SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Choose a remesher from {1: Pragmatic, 2: Mmg/ParMmg}");
-  case 1:
-    /* Pragmatic */
-    ierr = DMAdaptMetric_Pragmatic_Plex(dm, vertexMetric, bdLabel, dmNew);CHKERRQ(ierr);
-    break;
-  case 2:
-    /* Mmg/ParMmg */
-    ierr = MPI_Comm_size(comm, &numProcs);CHKERRMPI(ierr);
-    if (numProcs == 1) { ierr = DMAdaptMetric_Mmg_Plex(dm, vertexMetric, bdLabel, dmNew);CHKERRQ(ierr); }
-    else { ierr = DMAdaptMetric_ParMmg_Plex(dm, vertexMetric, bdLabel, dmNew);CHKERRQ(ierr); }
-    break;
-  }
-  PetscFunctionReturn(0);
 }
