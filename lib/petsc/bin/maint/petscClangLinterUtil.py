@@ -70,8 +70,10 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
   return retList
 
 def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
+  return getRawSourceFromLocation(cursor.location.file.name,cursor.location.line,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
+
+def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
   lineList = []
-  filename,lineno = cursor.location.file.name,cursor.location.line
   with open(filename,"r") as fd:
     numBeforeContext = numBeforeContext if numBeforeContext else numContext
     numAfterContext  = numAfterContext if numAfterContext else numContext
@@ -92,8 +94,10 @@ def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContex
   return srcStr
 
 def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
+  return getFormattedSourceFromLocation(cursor.location.file.name,cursor.location.line,cursor.extent.start.column-1,cursor.extent.end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
+
+def getFormattedSourceFromLocation(filename,lineno,symbolBegin,symbolEnd,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
   lineList = []
-  filename,lineno  = cursor.location.file.name,cursor.location.line
   with open(filename,"r") as fd:
     numBeforeContext = numBeforeContext if numBeforeContext else numContext
     numAfterContext  = numAfterContext if numAfterContext else numContext
@@ -105,7 +109,7 @@ def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,num
         prefix = "{indicator} {lineFile: <{width}}: ".format(indicator=">" if lineFile == lineno else " ",lineFile=lineFile,width=maxWidth)
         lineList.append((prefix,line))
         if lineFile == lineno:
-          begin,end    = max(cursor.extent.start.column-1,0),max(cursor.extent.end.column-1,1)
+          begin,end    = max(symbolBegin,0),max(symbolEnd,1)
           lenUnderline = max(abs(end-begin),1)
           underline    = begin*" "+lenUnderline*"^"
           lineList.append((" "*len(prefix),underline))
