@@ -658,7 +658,7 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
 
   /* Send mesh to Mmg and remesh */
   ierr = DMPlexMetricGetVerbosity(dm, &verbosity);CHKERRQ(ierr);
-  ierr = PetscCalloc2(numVertices, &verTags ,numCells, &cellTags);CHKERRQ(ierr);
+  ierr = PetscCalloc2(numVertices, &verTags, numCells, &cellTags);CHKERRQ(ierr);
   switch (dim) {
   case 2:
     ierr = MMG2D_Init_mesh(MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
@@ -745,8 +745,10 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
   }
 
   /* Clean up */
-  ierr = PetscFree3(cells, metric, vertices);CHKERRQ(ierr);
-  ierr = PetscFree4(bdFaces, bdFaceIds, verTags, cellTags);CHKERRQ(ierr);
+  ierr = PetscFree(cells);CHKERRQ(ierr);
+  ierr = PetscFree2(metric, vertices);CHKERRQ(ierr);
+  ierr = PetscFree2(bdFaces, bdFaceIds);CHKERRQ(ierr);
+  ierr = PetscFree2(verTags, cellTags);CHKERRQ(ierr);
   ierr = PetscFree4(verticesNew, verTagsNew, corners, requiredVer);CHKERRQ(ierr);
   ierr = PetscFree3(cellsNew, cellTagsNew, requiredCells);CHKERRQ(ierr);
   ierr = PetscFree4(facesNew, faceTagsNew, ridges, requiredFaces);CHKERRQ(ierr);
