@@ -109,8 +109,6 @@ Changes: Development
 - Add ``DMGetNaturalSF()`` and ``DMSetNaturalSF()``
 - Change ``DMPlexBuildFromCellListParallel()`` to have another argument, for the connectivity
 - Change ``DMPlexCreateFromCellListParallelPetsc()`` to have another argument, for the connectivity
-- Add ``DMPlexMetricSetRemesher()`` for setting the metric-based mesh adaptation package
-- Add ``DMPlexMetricGetRemesher()`` for getting the metric-based mesh adaptation package
 - Add ``DMPlexMetricSetVerbosity()`` for setting the verbosity of the metric-based mesh adaptation package
 - Add ``DMPlexMetricGetVerbosity()`` for getting the verbosity of the metric-based mesh adaptation package
 

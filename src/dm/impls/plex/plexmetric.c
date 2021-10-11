@@ -6,7 +6,7 @@ PetscErrorCode DMPlexMetricSetFromOptions(DM dm)
   MPI_Comm       comm;
   PetscBool      isotropic = PETSC_FALSE, restrictAnisotropyFirst = PETSC_FALSE;
   PetscErrorCode ierr;
-  PetscInt       remesher = 2, verbosity = -1;
+  PetscInt       verbosity = -1;
   PetscReal      h_min = 1.0e-30, h_max = 1.0e+30, a_max = 1.0e+05, p = 1.0, target = 1000.0;
 
   PetscFunctionBegin;
@@ -16,8 +16,6 @@ PetscErrorCode DMPlexMetricSetFromOptions(DM dm)
   ierr = DMPlexMetricSetIsotropic(dm, isotropic);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_plex_metric_restrict_anisotropy_first", "Should anisotropy be restricted before normalization?", "DMPlexNormalize", restrictAnisotropyFirst, &restrictAnisotropyFirst, NULL);CHKERRQ(ierr);
   ierr = DMPlexMetricSetRestrictAnisotropyFirst(dm, restrictAnisotropyFirst);CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-dm_plex_metric_remesher", "Metric-based mesh adaptation package (1 = Pragmatic, 2 = Mmg/ParMmg)", "DMAdapt_Plex", remesher, &remesher, NULL, 1, 2);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetRemesher(dm, remesher);CHKERRQ(ierr);
   ierr = PetscOptionsRangeInt("-dm_plex_metric_verbosity", "Verbosity of metric-based mesh adaptation package (-1 = silent, 10 = maximum)", "DMAdapt_Plex", verbosity, &verbosity, NULL, -1, 10);CHKERRQ(ierr);
   ierr = DMPlexMetricSetVerbosity(dm, verbosity);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-dm_plex_metric_h_min", "Minimum tolerated metric magnitude", "DMPlexMetricEnforceSPD", h_min, &h_min, NULL);CHKERRQ(ierr);
@@ -406,61 +404,13 @@ PetscErrorCode DMPlexMetricGetNormalizationOrder(DM dm, PetscReal *p)
 }
 
 /*
-  DMPlexMetricSetRemesher - Set the remesher for metric-based mesh adaptation
-
-  Input parameters:
-+ dm       - The DM
-- remesher - The remesher (1 = Pragmatic, 2 = Mmg/ParMmg)
-
-.seealso: DMPlexMetricGetRemesher(), DMPlexMetricSetVerbosity()
-*/
-PetscErrorCode DMPlexMetricSetRemesher(DM dm, PetscInt remesher)
-{
-  DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!plex->metricCtx) {
-    ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
-    ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
-  }
-  plex->metricCtx->remesher = remesher;
-  PetscFunctionReturn(0);
-}
-
-/*
-  DMPlexMetricGetRemesher - Get the remesher for metric-based mesh adaptation
-
-  Input parameters:
-. dm       - The DM
-
-  Output parameters:
-. remesher - The remesher (1 = Pragmatic, 2 = Mmg/ParMmg)
-
-.seealso: DMPlexMetricSetRemesher(), DMPlexMetricGetVerbosity()
-*/
-PetscErrorCode DMPlexMetricGetRemesher(DM dm, PetscInt *remesher)
-{
-  DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (!plex->metricCtx) {
-    ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
-    ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
-  }
-  *remesher = plex->metricCtx->remesher;
-  PetscFunctionReturn(0);
-}
-
-/*
   DMPlexMetricSetVerbosity - Set the verbosity of the mesh adaptation package
 
   Input parameters:
 + dm        - The DM
 - verbosity - The verbosity, where -1 is silent and 10 is maximum
 
-.seealso: DMPlexMetricGetVerbosity(), DMPlexMetricSetRemesher()
+.seealso: DMPlexMetricGetVerbosity()
 */
 PetscErrorCode DMPlexMetricSetVerbosity(DM dm, PetscInt verbosity)
 {
@@ -485,7 +435,7 @@ PetscErrorCode DMPlexMetricSetVerbosity(DM dm, PetscInt verbosity)
   Output parameters:
 . verbosity - The verbosity, where -1 is silent and 10 is maximum
 
-.seealso: DMPlexMetricSetVerbosity(), DMPlexMetricGetRemesher()
+.seealso: DMPlexMetricSetVerbosity()
 */
 PetscErrorCode DMPlexMetricGetVerbosity(DM dm, PetscInt *verbosity)
 {

@@ -76,7 +76,6 @@ typedef struct {
   PetscReal a_max;                        /* Maximum tolerated anisotropy */
   PetscReal targetComplexity;             /* Target metric complexity */
   PetscReal p;                            /* Degree for L-p normalization methods */
-  PetscInt  remesher;                     /* 1 = Pragmatic, 2 = Mmg/ParMmg */
   PetscInt  verbosity;                    /* Level of verbosity for remesher (-1 = no output, 10 = maximum) */
 } DMPlexMetricCtx;
 
@@ -234,7 +233,6 @@ PETSC_INTERN PetscErrorCode DMCoarsenHierarchy_Plex(DM, PetscInt, DM []);
 PETSC_INTERN PetscErrorCode DMRefine_Plex(DM, MPI_Comm, DM *);
 PETSC_INTERN PetscErrorCode DMRefineHierarchy_Plex(DM, PetscInt, DM []);
 PETSC_INTERN PetscErrorCode DMAdaptLabel_Plex(DM, Vec, DMLabel, DM *);
-PETSC_INTERN PetscErrorCode DMAdaptMetric_Plex(DM, Vec, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMExtrude_Plex(DM, PetscInt, DM *);
 PETSC_INTERN PetscErrorCode DMPlexInsertBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode DMPlexInsertTimeDerivativeBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
