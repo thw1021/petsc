@@ -45,12 +45,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode DMPlexWriteAndReadHDF5(DM dm, const char filename[], const char prefix[], AppCtx user, DM *dm_new)
 {
   DM             dmnew;
+  const char     exampleDMPlexName[] = "DMPlex Object";
   PetscViewer    v;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   ierr = PetscViewerHDF5Open(PetscObjectComm((PetscObject) dm), filename, FILE_MODE_WRITE, &v);CHKERRQ(ierr);
   ierr = PetscViewerPushFormat(v, user.format);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) dm, exampleDMPlexName);CHKERRQ(ierr);
   if (user.use_low_level_functions) {
     ierr = DMPlexTopologyView(dm, v);CHKERRQ(ierr);
     ierr = DMPlexCoordinatesView(dm, v);CHKERRQ(ierr);
@@ -62,10 +64,14 @@ static PetscErrorCode DMPlexWriteAndReadHDF5(DM dm, const char filename[], const
   ierr = PetscViewerFileSetMode(v, FILE_MODE_READ);CHKERRQ(ierr);
   ierr = DMCreate(PETSC_COMM_WORLD, &dmnew);CHKERRQ(ierr);
   ierr = DMSetType(dmnew, DMPLEX);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) dmnew, exampleDMPlexName);CHKERRQ(ierr);
   ierr = DMSetOptionsPrefix(dmnew, prefix);CHKERRQ(ierr);
   if (user.use_low_level_functions) {
-    ierr = DMPlexTopologyLoad(dmnew, v, NULL);CHKERRQ(ierr);
-    ierr = DMPlexCoordinatesLoad(dmnew, v);CHKERRQ(ierr);
+    PetscSF  sfXC;
+
+    ierr = DMPlexTopologyLoad(dmnew, v, &sfXC);CHKERRQ(ierr);
+    ierr = DMPlexCoordinatesLoad(dmnew, v, sfXC);CHKERRQ(ierr);
+    ierr = PetscSFDestroy(&sfXC);CHKERRQ(ierr);
     ierr = DMPlexLabelsLoad(dmnew, v);CHKERRQ(ierr);
   } else {
     ierr = DMLoad(dmnew, v);CHKERRQ(ierr);
@@ -88,7 +94,7 @@ int main(int argc, char **argv)
 
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = ProcessOptions(PETSC_COMM_WORLD, &user);CHKERRQ(ierr);
-  ierr = DMPlexCreateFromFile(PETSC_COMM_WORLD, user.filename, user.interpolate, &dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromFile(PETSC_COMM_WORLD, user.filename, "ex55_plex", user.interpolate, &dm);CHKERRQ(ierr);
   ierr = DMSetOptionsPrefix(dm,"orig_");CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
 
