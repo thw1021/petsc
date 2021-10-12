@@ -134,9 +134,9 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
     ierr = DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords);CHKERRQ(ierr);
     moments[0] = moments[1] = moments[2] = 0;
     for (int p=0;p<Np;p++) {
-      moments[0] += coords[p*2+1] * wq[p];
-      moments[1] += coords[p*2+1] * wq[p] * coords[p*2+0]; // x-momentum
-      moments[2] += coords[p*2+1] * wq[p] * (PetscSqr(coords[p*2+0])+PetscSqr(coords[p*2+1]));
+      moments[0] += wq[p];
+      moments[1] += wq[p] * coords[p*2+0]; // x-momentum
+      moments[2] += wq[p] * (PetscSqr(coords[p*2+0])+PetscSqr(coords[p*2+1]));
     }
     ierr = DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords);CHKERRQ(ierr);
     ierr = DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void**)&wq);CHKERRQ(ierr);
@@ -198,7 +198,7 @@ static PetscErrorCode maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt
   /* compute the exponents, v^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   /* evaluate the Maxwellian */
-  u[0] = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
+  u[0] = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta)) * 2.*PETSC_PI*x[1]; // radial term for 2D axi-sym.
   PetscFunctionReturn(0);
 }
 PetscErrorCode go()
@@ -280,9 +280,9 @@ PetscErrorCode go()
         }
         if (tid==target) { //energy_0 += wp_t[tid][pp]*(PetscSqr(xx_t[tid][pp])+PetscSqr(yy_t[tid][pp]));
 
-          moments_0[0] += wp_t[tid][pp] * yy_t[tid][pp];
-          moments_0[1] += wp_t[tid][pp] * yy_t[tid][pp] * xx_t[tid][pp]; // x-momentum
-          moments_0[2] += wp_t[tid][pp] * yy_t[tid][pp] * (PetscSqr(xx_t[tid][pp]) + PetscSqr(yy_t[tid][pp]));
+          moments_0[0] += wp_t[tid][pp];
+          moments_0[1] += wp_t[tid][pp] * xx_t[tid][pp]; // x-momentum
+          moments_0[2] += wp_t[tid][pp] * (PetscSqr(xx_t[tid][pp]) + PetscSqr(yy_t[tid][pp]));
         }
       }
     }
