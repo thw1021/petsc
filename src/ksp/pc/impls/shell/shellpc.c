@@ -185,6 +185,17 @@ static PetscErrorCode PCPreSolveChangeRHS_Shell(PC pc,PetscBool* change)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PCPreSolve_Shell_private(PC pc,KSP ksp,Vec b,Vec x)
+{
+  PC_Shell       *shell = (PC_Shell*)pc->data;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!shell->presolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
+  PetscStackCall("PCSHELL user function presolve()",ierr = (*shell->presolve_private)(pc,ksp,b,x);CHKERRQ(ierr));
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
@@ -192,8 +203,6 @@ static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp)
   Vec            b,x;
 
   PetscFunctionBegin;
-  if (!shell->presolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
-  printf(" PCPreSolve_Shell...\n");
   ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
   ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
   PetscStackCall("PCSHELL user function presolve()",ierr = (*shell->presolve_private)(pc,ksp,b,x);CHKERRQ(ierr));
@@ -213,13 +222,10 @@ static PetscErrorCode PCPostSolve_Shell_private(PC pc,KSP ksp,Vec b,Vec x)
 
 static PetscErrorCode PCPostSolve_Shell(PC pc,KSP ksp)
 {
-  PC_Shell       *shell = (PC_Shell*)pc->data;
   PetscErrorCode ierr;
   Vec            x,b;
 
   PetscFunctionBegin;
-  if (!shell->postsolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No postsolve() routine provided to Shell PC");
-  printf(" PCPostSolve_Shell...\n");
   ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
   ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
   ierr = PCPostSolve_Shell_private(pc,ksp,b,x);CHKERRQ(ierr);
@@ -388,7 +394,7 @@ static PetscErrorCode  PCShellSetPreSolve_Shell(PC pc,PetscErrorCode (*presolve_
   PetscFunctionBegin;
   shell->presolve_private = presolve_private;
   if (presolve_private) {
-    pc->ops->presolve = PCPreSolve_Shell;
+    pc->ops->presolve = PCPreSolve_Shell_private;
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCPreSolveChangeRHS_C",PCPreSolveChangeRHS_Shell);CHKERRQ(ierr);
   } else {
     pc->ops->presolve = NULL;
@@ -403,7 +409,7 @@ static PetscErrorCode  PCShellSetPostSolve_Shell(PC pc,PetscErrorCode (*postsolv
 
   PetscFunctionBegin;
   shell->postsolve_private = postsolve_private;
-  if (postsolve_private) pc->ops->postsolve = PCPostSolve_Shell;
+  if (postsolve_private) pc->ops->postsolve = PCPostSolve_Shell_private;
   else                   pc->ops->postsolve = NULL;
   PetscFunctionReturn(0);
 }
