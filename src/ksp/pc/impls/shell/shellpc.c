@@ -198,14 +198,13 @@ static PetscErrorCode PCPreSolve_Shell_private(PC pc,KSP ksp,Vec b,Vec x)
 
 static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp)
 {
-  PC_Shell       *shell = (PC_Shell*)pc->data;
   PetscErrorCode ierr;
   Vec            b,x;
 
   PetscFunctionBegin;
   ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
   ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
-  PetscStackCall("PCSHELL user function presolve()",ierr = (*shell->presolve_private)(pc,ksp,b,x);CHKERRQ(ierr));
+  ierr = PCPreSolve_Shell_private(pc,ksp,b,x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
