@@ -253,10 +253,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_LMVM(PC pc)
   pc->ops->setfromoptions  = PCSetFromOptions_LMVM;
   pc->ops->applysymmetricleft  = NULL;
   pc->ops->applysymmetricright = NULL;
-  pc->ops->applytranspose  = NULL;
-  pc->ops->applyrichardson = NULL;
-  pc->ops->presolve        = NULL;
-  pc->ops->postsolve       = NULL;
+  pc->ops->applytranspose      = NULL;
+  pc->ops->applyrichardson     = NULL;
 
   ierr = PCSetReusePreconditioner(pc, PETSC_TRUE);CHKERRQ(ierr);
 
