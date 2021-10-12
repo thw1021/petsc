@@ -294,6 +294,196 @@ PetscErrorCode PetscDTAltVWedgeMatrix(PetscInt N, PetscInt j, PetscInt k, const 
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscDTAltVWedgePattern(PetscInt N, PetscInt j, PetscInt k, PetscInt (*pattern)[3])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (N < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimension");
+  if (j < 0 || k < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "negative form degree");
+  if (j + k > N) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Wedge greater than dimension");
+  if (N <= 3) {
+    PetscInt Njk;
+
+    ierr = PetscDTBinomialInt(N, j+k, &Njk);CHKERRQ(ierr);
+    if (!j) {
+      for (PetscInt i = 0; i < Njk; i++) {
+        pattern[i][0] = 0;
+        pattern[i][1] = i;
+        pattern[i][2] = i;
+      }
+    } else if (!k) {
+      for (PetscInt i = 0; i < Njk; i++) {
+        pattern[i][0] = i;
+        pattern[i][1] = 0;
+        pattern[i][2] = i;
+      }
+    } else {
+      if (N == 2) {
+        pattern[0][0] = 1;
+        pattern[0][1] = 0;
+        pattern[0][2] = -1;
+
+        pattern[1][0] = 0;
+        pattern[1][1] = 1;
+        pattern[1][2] = 1;
+      } else {
+        if (j+k == 2) {
+          pattern[0][0] = 1;
+          pattern[0][1] = 0;
+          pattern[0][2] = -1;
+
+          pattern[1][0] = 0;
+          pattern[1][1] = 1;
+          pattern[1][2] = 0;
+
+          pattern[2][0] = 2;
+          pattern[2][1] = 0;
+          pattern[2][2] = -2;
+
+          pattern[3][0] = 0;
+          pattern[3][1] = 2;
+          pattern[3][2] = 1;
+
+          pattern[4][0] = 2;
+          pattern[4][1] = 1;
+          pattern[4][2] = -3;
+
+          pattern[5][0] = 1;
+          pattern[5][1] = 2;
+          pattern[5][2] = 2;
+        } else {
+          pattern[0][0] = 2;
+          pattern[0][1] = 0;
+          pattern[0][2] = 0;
+
+          pattern[1][0] = 1;
+          pattern[1][1] = 1;
+          pattern[1][2] = -1;
+
+          pattern[2][0] = 0;
+          pattern[2][1] = 2;
+          pattern[2][2] = 0;
+        }
+      }
+    }
+  } else {
+    PetscInt  Njk;
+    PetscInt  Nk;
+    PetscInt  JKj;
+    PetscInt *subset, *subsetjk, *subsetj, *subsetk;
+
+    ierr = PetscDTBinomialInt(N,   k,   &Nk);CHKERRQ(ierr);
+    ierr = PetscDTBinomialInt(N,   j+k, &Njk);CHKERRQ(ierr);
+    ierr = PetscDTBinomialInt(j+k, j,   &JKj);CHKERRQ(ierr);
+    ierr = PetscMalloc4(j+k, &subset, j+k, &subsetjk, j, &subsetj, k, &subsetk);CHKERRQ(ierr);
+    for (PetscInt i = 0; i < Njk; i++) {
+
+      ierr = PetscDTEnumSubset(N, j+k, i, subset);CHKERRQ(ierr);
+      for (PetscInt l = 0; l < JKj; l++) {
+        PetscBool jkOdd;
+        PetscInt  jInd, kInd;
+
+        ierr = PetscDTEnumSplit(j+k, j, l, subsetjk, &jkOdd);CHKERRQ(ierr);
+        for (PetscInt m = 0; m < j; m++) {
+          subsetj[m] = subset[subsetjk[m]];
+        }
+        for (PetscInt m = 0; m < k; m++) {
+          subsetk[m] = subset[subsetjk[j+m]];
+        }
+        ierr = PetscDTSubsetIndex(N, j, subsetj, &jInd);CHKERRQ(ierr);
+        ierr = PetscDTSubsetIndex(N, k, subsetk, &kInd);CHKERRQ(ierr);
+        pattern[i * JKj + l][0] = jInd;
+        pattern[i * JKj + l][1] = kInd;
+        pattern[i * JKj + l][2] = jkOdd ? -(i+1) : i;
+      }
+    }
+    ierr = PetscFree4(subset, subsetjk, subsetj, subsetk);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDTAltVDifferentialPatttern(PetscInt N, PetscInt j, PetscInt k, PetscInt (*pattern)[3])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (N < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimension");
+  if (PetscAbs(j) + 1 != PetscAbs(k)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Require |j| + 1 == |k|");
+  if (PetscAbs(k) > N) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No differential for this form degree");
+  if (j == 0 && k == 1) { // grad
+    for (PetscInt i = 0; i < N; i++) {
+      pattern[i][0] = i;
+      pattern[i][1] = 0;
+      pattern[i][2] = i;
+    }
+  } else if (j == 1 - N) { // div
+    for (PetscInt i = 0; i < N; i++) {
+      pattern[i][0] = i;
+      pattern[i][1] = i;
+      pattern[i][2] = 0;
+    }
+  } else {
+    ierr = PetscDTAltVWedgePattern(N, 1, PetscAbsInt(j), pattern);CHKERRQ(ierr);
+    if (j < 0) {
+      PetscInt Nj, Nk;
+      PetscInt ak = PetscAbsInt(k);
+
+      ierr = PetscDTBinomialInt(N, PetscAbsInt(k), &Nk);CHKERRQ(ierr);
+      ierr = PetscDTBinomialInt(N, PetscAbsInt(j), &Nj);CHKERRQ(ierr);
+      for (PetscInt i = 0; i < Nk; i++) {
+        for (PetscInt l = 0; l < ak / 2; l++) {
+          PetscInt swap0 = pattern[i * ak + l][0];
+          PetscInt swap1 = pattern[i * ak + l][1];
+          PetscInt swap2 = pattern[i * ak + l][2];
+          pattern[i * ak + l][0] = pattern[i * ak + (ak - 1 - l)][0];
+          pattern[i * ak + l][1] = Nj - 1 - pattern[i * ak + (ak - 1 - l)][1];
+          pattern[i * ak + l][2] = pattern[i * ak + (ak - 1 - l)][2];
+          pattern[i * ak + (ak - 1 - l)][0] = swap0;
+          pattern[i * ak + (ak - 1 - l)][1] = Nj - 1 - swap1;
+          pattern[i * ak + (ak - 1 - l)][2] = swap2;
+        }
+        for (PetscInt l = 0; l < ak; l++) {
+          if (l & 1) {
+            PetscInt s = pattern[i * ak + l][2];
+            pattern[i * ak + l][2] = -(s+1);
+          }
+        }
+      }
+    }
+    if (k < 0) {
+      PetscInt Nj, Nk;
+      PetscInt ak = PetscAbsInt(k);
+
+      ierr = PetscDTBinomialInt(N, PetscAbsInt(k), &Nk);CHKERRQ(ierr);
+      ierr = PetscDTBinomialInt(N, PetscAbsInt(j), &Nj);CHKERRQ(ierr);
+      for (PetscInt l = 0; l < ak; l++) {
+        for (PetscInt i = 0; i < Nk / 2; i++) {
+          PetscInt s0 = pattern[i * ak + l][0];
+          PetscInt s1 = pattern[i * ak + l][1];
+          PetscInt s2 = pattern[i * ak + l][2];
+          PetscInt t0 = pattern[(Nk - 1 - i) * ak + l][0];
+          PetscInt t1 = pattern[(Nk - 1 - i) * ak + l][1];
+          PetscInt t2 = pattern[(Nk - 1 - i) * ak + l][2];
+          pattern[i * ak + l][0] = t0;
+          pattern[i * ak + l][1] = t1;
+          pattern[i * ak + l][2] = t2 < 0 ? -(Nk + t2 + 1) : (Nk - 1 - t2);
+          pattern[(Nk - 1 - i) * ak + l][0] = s0;
+          pattern[(Nk - 1 - i) * ak + l][1] = s1;
+          pattern[(Nk - 1 - i) * ak + l][2] = s2 < 0 ? -(Nk + t2 + 1) : (Nk - 1 - t2);
+        }
+        for (PetscInt i = 0; i < Nk; i++) {
+          if (i & 1) {
+            PetscInt s = pattern[i * ak + l][2];
+            pattern[i * ak + l][2] = -(s+1);
+          }
+        }
+      }
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@
    PetscDTAltVPullback - Compute the pullback of a k-form under a linear transformation of the coordinate space
 
