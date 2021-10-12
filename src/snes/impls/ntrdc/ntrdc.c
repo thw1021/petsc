@@ -71,7 +71,7 @@ static PetscErrorCode SNESTRDC_Converged_Private(SNES snes,PetscInt it,PetscReal
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*@
   SNESNewtonTRDCGetRhoFlag - let's a user know whether the solution update is within the trust-region.
 
   Return Values:
@@ -80,7 +80,7 @@ static PetscErrorCode SNESTRDC_Converged_Private(SNES snes,PetscInt it,PetscReal
 
   Level: developer
 
-*/
+@*/
 PetscErrorCode  SNESNewtonTRDCGetRhoFlag(SNES snes,PetscBool *rho_flag)
 {
   SNES_NEWTONTRDC  *tr = (SNES_NEWTONTRDC*)snes->data;
@@ -280,14 +280,13 @@ static PetscErrorCode SNESNewtonTRDCPostCheck(SNES snes,Vec X,Vec Y,Vec W,PetscB
 static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
 {
   SNES_NEWTONTRDC          *neP = (SNES_NEWTONTRDC*)snes->data;
-  Vec                      X,F,Y,G,Ytmp,W,GradF,YNtmp;
-  Vec                      Diag;
+  Vec                      X,F,Y,G,W,GradF,YNtmp;
   Vec                      YCtmp;
   Mat                      jac;
   PetscErrorCode           ierr;
   PetscInt                 maxits,i,j,lits,bs,inner_count;
   PetscReal                rho,fnorm,gnorm,xnorm=0,delta,ynorm,temp_xnorm,temp_ynorm;  /* TRDC inner iteration */
-  PetscReal                deltaM,ynnorm,f0,mp,gTy,g,yTHy,nscale;  /* rho calculation */
+  PetscReal                deltaM,ynnorm,f0,mp,gTy,g,yTHy;  /* rho calculation */
   PetscReal                auk,gfnorm,ycnorm,c0,c1,c2,tau,tau_pos,tau_neg,gTBg;  /* Cauchy Point */
   KSP                      ksp;
   SNESConvergedReason      reason = SNES_CONVERGED_ITERATING;
