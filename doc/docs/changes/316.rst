@@ -25,6 +25,7 @@ Changes: 3.16
 -  For --download-hdf5, disable --download-hdf5-fortran-bindings by default
 -  Add OpenCascade package to PETSc and allow --download-opencascade
 -  Add support for hypre in device mode for both NVIDIA and AMD GPUs
+-  Extend detection of C++ dialect to C++17. Configure now also takes minimum and maximum required C++ dialect of packages into account when choosing the C++ dialect
 
 .. rubric:: Sys:
 
