@@ -38,12 +38,12 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE(ErrorSetOnActiveProcess);
 #  if PETSC_PKG_CUDA_VERSION_GE(11,1,0)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,ErrorStubLibrary);
 #  else
-PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,ErrorNoDevice);
+const decltype(cudaErrorInsufficientDriver) CUPMInterface<CUPMDeviceType::CUDA>::cupmErrorStubLibrary;
 #  endif // PETSC_PKG_CUDA_VERSION_GE
 #endif // PetscDefined(HAVE_CUDA)
 #if PetscDefined(HAVE_HIP)
 // not conforming, see declaration in cupminterface.hpp
-const decltype(hipErrorNoDevice) CUPMInterface<CUPMDeviceType::HIP>::cupmErrorStubLibrary;
+const decltype(hipErrorInsufficientDriver) CUPMInterface<CUPMDeviceType::HIP>::cupmErrorStubLibrary;
 #endif
 
 // enums

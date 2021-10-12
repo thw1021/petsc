@@ -46,8 +46,12 @@ static constexpr const char *const CUPMDeviceTypes[] = {
 // import them into classes.
 template <CUPMDeviceType T> struct CUPMInterface;
 
-#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE(prefix,stem)    \
-  static const auto cupm ## stem = prefix ## stem
+#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(prefix,original,mapped) \
+  static const auto cupm ## mapped = prefix ## original
+
+#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE(prefix,common)            \
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(prefix,common,common)
+
 #define PETSC_CUPM_ALIAS_FUNCTION(prefix,stem)                          \
   PETSC_ALIAS_FUNCTION(static constexpr cupm ## stem, prefix ## stem)
 
@@ -78,7 +82,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA>
 #if PETSC_PKG_CUDA_VERSION_GE(11,1,0)
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,ErrorStubLibrary);
 #else
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,ErrorNoDevice);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cuda,ErrorInsufficientDriver,ErrorStubLibrary);
 #endif
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,StreamNonBlocking);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,DeviceMapHost);
@@ -231,10 +235,10 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,Success);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,ErrorNotReady);
   // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
-  static const auto cupmErrorDeviceAlreadyInUse = hipSuccess;
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(hip,Success,ErrorDeviceAlreadyInUse);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,ErrorSetOnActiveProcess);
   // as of HIP v4.2 cudaErrorStubLibrary has no HIP equivalent
-  static const auto cupmErrorStubLibrary = hipErrorNoDevice;
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(hip,ErrorInsufficientDriver,ErrorStubLibrary);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,StreamNonBlocking);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,DeviceMapHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,MemcpyHostToDevice);

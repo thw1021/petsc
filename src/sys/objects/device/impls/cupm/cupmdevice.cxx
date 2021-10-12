@@ -47,7 +47,7 @@ public:
   }
 };
 
-// the goal here is simply to get the cupm backend to create its context, not to do any kind of
+// the goal here is simply to get the cupm backend to create its context, not to do any type of
 // modification of it, or create objects (since these may be affected by subsequent
 // configuration changes)
 template <CUPMDeviceType T>
@@ -247,22 +247,22 @@ static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
 // expands to either the cupmOptions function or nothing, we have to do this with macros
 // because for all the lovely compile time features c++ provides, the one thing it can't do is
 // compile time string concatenation.
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(KIND,kind)                \
-  CAT(CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_,PetscDefined(CAT(HAVE_,KIND)))(KIND,kind)
+#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(TYPE,type)                \
+  CAT(CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_,PetscDefined(CAT(HAVE_,TYPE)))(TYPE,type)
 
-// PetscDefined(HAVE_KIND) = 0 -> expands to nothing
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_0(KIND,kind)
-// PetscDefined(HAVE_KIND) = 1 -> expands to the function
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_1(KIND,kind)              \
+// PetscDefined(HAVE_TYPE) = 0 -> expands to nothing
+#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_0(TYPE,type)
+// PetscDefined(HAVE_TYPE) = 1 -> expands to the function
+#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_1(TYPE,type)              \
   template <>                                                           \
   constexpr const std::array<const char*const,4>                        \
-  cupmOptions<CUPMDeviceType::KIND>() noexcept                          \
+  cupmOptions<CUPMDeviceType::TYPE>() noexcept                          \
   {                                                                     \
     return {                                                            \
-      "PetscDevice " PetscStringize(KIND) " Options",                   \
-      "-device_enable_" PetscStringize(kind),                           \
-      "-device_select_" PetscStringize(kind),                           \
-      "-device_view_" PetscStringize(kind)                              \
+      "PetscDevice " PetscStringize(TYPE) " Options",                   \
+      "-device_enable_" PetscStringize(type),                           \
+      "-device_select_" PetscStringize(type),                           \
+      "-device_view_" PetscStringize(type)                              \
     };                                                                  \
   }
 

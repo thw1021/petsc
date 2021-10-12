@@ -7,38 +7,38 @@
 /* all of the error checking macros are undefined and redefined verbatim so that they are also
  * defined for optimized builds.
  */
-#undef PetscValidDeviceKind
+#undef PetscValidDeviceType
 #undef PetscValidDevice
 #undef PetscCheckCompatibleDevices
 #undef PetscValidStreamType
 #undef PetscValidDeviceContext
 #undef PetscCheckCompatibleDeviceContexts
 
-#define PetscValidDeviceKind(_p_dev_kind__,_p_arg__) do {               \
-    if (PetscUnlikely(((_p_dev_kind__) < PETSC_DEVICE_INVALID) ||       \
-                      ((_p_dev_kind__) > PETSC_DEVICE_MAX))) {          \
+#define PetscValidDeviceType(_p_dev_type__,_p_arg__) do {               \
+    if (PetscUnlikely(((_p_dev_type__) < PETSC_DEVICE_INVALID) ||       \
+                      ((_p_dev_type__) > PETSC_DEVICE_MAX))) {          \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,              \
-               "Unknown PetscDeviceKind '%d': Argument #%d",            \
-               (_p_dev_kind__),(_p_arg__));                             \
-    } else if (PetscUnlikely(!PetscDeviceConfiguredFor_Internal(_p_dev_kind__))) { \
-      switch(_p_dev_kind__) {                                           \
+               "Unknown PetscDeviceType '%d': Argument #%d",            \
+               (_p_dev_type__),(_p_arg__));                             \
+    } else if (PetscUnlikely(!PetscDeviceConfiguredFor_Internal(_p_dev_type__))) { \
+      switch(_p_dev_type__) {                                           \
       case PETSC_DEVICE_INVALID:                                        \
         SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,                         \
-                 "Invalid PetscDeviceKind '%s': Argument #%d;"          \
+                 "Invalid PetscDeviceType '%s': Argument #%d;"          \
                  " PETSc is not configured with device support",        \
-                 PetscDeviceKinds[_p_dev_kind__],(_p_arg__));           \
+                 PetscDeviceTypes[_p_dev_type__],(_p_arg__));           \
         break;                                                          \
       case PETSC_DEVICE_MAX:                                            \
         SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,                  \
-                 "Invalid PetscDeviceKind '%s': Argument #%d",          \
-                 PetscDeviceKinds[_p_dev_kind__],(_p_arg__));           \
+                 "Invalid PetscDeviceType '%s': Argument #%d",          \
+                 PetscDeviceTypes[_p_dev_type__],(_p_arg__));           \
         break;                                                          \
       default:                                                          \
         SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,                         \
-                 "Not configured for PetscDeviceKind '%s': Argument #%d;" \
+                 "Not configured for PetscDeviceType '%s': Argument #%d;" \
                  " run configure --help %s for available options",      \
-                 PetscDeviceKinds[_p_dev_kind__],(_p_arg__),            \
-                 PetscDeviceKinds[_p_dev_kind__]);                      \
+                 PetscDeviceTypes[_p_dev_type__],(_p_arg__),            \
+                 PetscDeviceTypes[_p_dev_type__]);                      \
         break;                                                          \
       }                                                                 \
     }                                                                   \
@@ -46,7 +46,7 @@
 
 #define PetscValidDevice(_p_dev__,_p_arg__)          do {       \
     PetscValidPointer(_p_dev__,_p_arg__);                       \
-    PetscValidDeviceKind((_p_dev__)->kind,_p_arg__);            \
+    PetscValidDeviceType((_p_dev__)->type,_p_arg__);            \
     if (PetscUnlikely((_p_dev__)->id < 0)) {                    \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,                  \
                "Invalid PetscDevice: Argument #%d; id %D < 0",  \
@@ -65,7 +65,7 @@
   do {                                                                  \
     PetscValidDevice(_p_dev1__,_p_arg1__);                              \
     PetscValidDevice(_p_dev2__,_p_arg2__);                              \
-    if (PetscUnlikely((_p_dev1__)->kind != (_p_dev2__)->kind)) {        \
+    if (PetscUnlikely((_p_dev1__)->type != (_p_dev2__)->type)) {        \
       SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,                    \
                "PetscDevices are incompatible: Arguments #%d and #%d",  \
                (_p_arg1__),(_p_arg2__));                                \
@@ -132,7 +132,7 @@ PETSC_STATIC_INLINE PetscErrorCode AssertDeviceDoesNotExist(PetscDevice device)
 {
   PetscFunctionBegin;
   if (device) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice was not destroyed for kind %s",PetscDeviceKinds[device->kind]);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDevice was not destroyed for type %s",PetscDeviceTypes[device->type]);
   }
   PetscFunctionReturn(0);
 }
