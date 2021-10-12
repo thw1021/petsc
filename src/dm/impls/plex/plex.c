@@ -892,7 +892,7 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer, "%s for process ", name);CHKERRQ(ierr);
       for (p = 0; p < size; ++p) {
         if (p > 0 && p == size-1) {
-          ierr = PetscViewerASCIIPrintf(viewer, ", and %s %" PetscInt_FMT "", colors[p%numColors], p);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer, ", and %s %" PetscInt_FMT, colors[p%numColors], p);CHKERRQ(ierr);
         } else if (p > 0) {
           ierr = PetscViewerASCIIPrintf(viewer, ", %s %" PetscInt_FMT " ", colors[p%numColors], p);CHKERRQ(ierr);
         }
