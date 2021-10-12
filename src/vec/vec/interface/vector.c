@@ -1733,9 +1733,9 @@ PetscErrorCode  VecStashView(Vec v,PetscViewer viewer)
     for (j=0; j<s->bs; j++) {
       val = s->array[i*s->bs+j];
 #if defined(PETSC_USE_COMPLEX)
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"(%18.16e %18.16e) ",PetscRealPart(val),PetscImaginaryPart(val));CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"(%18.16e %18.16e) ",(double)PetscRealPart(val),(double)PetscImaginaryPart(val));CHKERRQ(ierr);
 #else
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%18.16e ",val);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%18.16e ",(double)val);CHKERRQ(ierr);
 #endif
     }
     ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
@@ -1749,9 +1749,9 @@ PetscErrorCode  VecStashView(Vec v,PetscViewer viewer)
   for (i=0; i<s->n; i++) {
     val = s->array[i];
 #if defined(PETSC_USE_COMPLEX)
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " (%18.16e %18.16e) ",rank,s->idx[i],PetscRealPart(val),PetscImaginaryPart(val));CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " (%18.16e %18.16e) ",rank,s->idx[i],(double)PetscRealPart(val),(double)PetscImaginaryPart(val));CHKERRQ(ierr);
 #else
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " %18.16e\n",rank,s->idx[i],val);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " %18.16e\n",rank,s->idx[i],(double)val);CHKERRQ(ierr);
 #endif
   }
   ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
