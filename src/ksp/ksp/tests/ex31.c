@@ -92,9 +92,10 @@ int main(int argc,char **args)
     ierr = ISPartitioningCount(mis,size,count);CHKERRQ(ierr);
     ierr = ISDestroy(&mis);CHKERRQ(ierr);
     if (displayIS && rank == 0) {
-      PetscInt i;
       ierr = PetscPrintf(PETSC_COMM_SELF,"[ %d ] count:\n",rank);CHKERRQ(ierr);
-      for (i=0; i<size; i++) {ierr = PetscPrintf(PETSC_COMM_WORLD," %"PetscInt_FMT,count[i]);CHKERRQ(ierr);}
+      for (PetscInt i=0; i<size; i++) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD," %" PetscInt_FMT,count[i]);CHKERRQ(ierr);
+      }
       ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
     }
 
