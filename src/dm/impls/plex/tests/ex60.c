@@ -212,27 +212,27 @@ int main(int argc, char **argv) {
   test:
     suffix: uniform_2d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor parmmg -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor mmg -uniform -isotropic
   test:
     suffix: uniform_3d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg -uniform -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor mmg -uniform -isotropic
   test:
     suffix: iso_2d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor parmmg -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor mmg -isotropic
   test:
     suffix: iso_3d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg -isotropic
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor mmg -isotropic
   test:
     suffix: hessian_2d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor parmmg
+    args: -dm_plex_metric_target_complexity 100 -dim 2 -dm_adaptor mmg
   test:
     suffix: hessian_3d_mmg
     requires: mmg
-    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor parmmg
+    args: -dm_plex_metric_target_complexity 100 -dim 3 -dm_adaptor mmg
   test:
     suffix: uniform_3d_parmmg
     requires: parmmg
