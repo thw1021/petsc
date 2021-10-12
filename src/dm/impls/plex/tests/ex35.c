@@ -23,7 +23,7 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
   /* Coordinates: 3 Nv reals + 2*Nv + 2*Nv ints */
   rmem += cdim*Nd[0];
   imem += 2*Nd[0] + 2*Nd[0];
-  ierr = PetscPrintf(PETSC_COMM_SELF, "  Coordinate mem:  %" PetscInt_FMT " %" PetscInt_FMT "\n", cdim*Nd[0]*sizeof(PetscReal), 4*Nd[0]*sizeof(PetscInt));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "  Coordinate mem:  %zu %zu\n", (size_t)(cdim*Nd[0]*sizeof(PetscReal)), (size_t)(4*Nd[0]*sizeof(PetscInt)));CHKERRQ(ierr);
   /* Depth:       Nc+Nf+Ne+Nv ints */
   for (d = 0; d <= depth; ++d) labelMem += Nd[d];
   /* Cell Type:   Nc+Nf+Ne+Nv ints */
@@ -32,7 +32,7 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
   ierr = DMGetLabel(dm, "marker", &marker);CHKERRQ(ierr);
   if (marker) {ierr = DMLabelGetStratumSize(marker, 1, &lsize);CHKERRQ(ierr);}
   labelMem += lsize;
-  ierr = PetscPrintf(PETSC_COMM_SELF, "  Label mem:       %" PetscInt_FMT "\n", labelMem*sizeof(PetscInt));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "  Label mem:       %zu\n", (size_t)(labelMem*sizeof(PetscInt)));CHKERRQ(ierr);
   //imem += labelMem;
   /* Cones and Orientations:       4 Nc + 3 Nf + 2 Ne ints + (Nc+Nf+Ne) ints no separate orientation section */
   for (d = 0; d <= depth; ++d) coneSecMem += 2*Nd[d];
@@ -42,7 +42,7 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
     ierr = DMPlexGetConeSize(dm, p, &csize);CHKERRQ(ierr);
     coneMem += csize;
   }
-  ierr = PetscPrintf(PETSC_COMM_SELF, "  Cone mem:        %" PetscInt_FMT " %" PetscInt_FMT " (%" PetscInt_FMT ")\n", coneMem*sizeof(PetscInt), coneSecMem*sizeof(PetscInt), coneMem*sizeof(PetscInt));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "  Cone mem:        %zu %zu (%zu)\n", (size_t)(coneMem*sizeof(PetscInt)), (size_t)(coneSecMem*sizeof(PetscInt)), (size_t)(coneMem*sizeof(PetscInt)));CHKERRQ(ierr);
   imem += 2*coneMem + coneSecMem;
   /* Supports:       4 Nc + 3 Nf + 2 Ne ints + Nc+Nf+Ne ints */
   for (d = 0; d <= depth; ++d) supportSecMem += 2*Nd[d];
@@ -52,7 +52,7 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
     ierr = DMPlexGetSupportSize(dm, p, &ssize);CHKERRQ(ierr);
     supportMem += ssize;
   }
-  ierr = PetscPrintf(PETSC_COMM_SELF, "  Support mem:     %" PetscInt_FMT " %" PetscInt_FMT "\n", supportMem*sizeof(PetscInt), supportSecMem*sizeof(PetscInt));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF, "  Support mem:     %zu %zu\n", (size_t)(supportMem*sizeof(PetscInt)), (size_t)(supportSecMem*sizeof(PetscInt)));CHKERRQ(ierr);
   imem += supportMem + supportSecMem;
   *est = ((PetscLogDouble) imem)*sizeof(PetscInt) + ((PetscLogDouble) rmem)*sizeof(PetscReal);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "  Estimated memory %" PetscInt_FMT "\n", (PetscInt) *est);CHKERRQ(ierr);
