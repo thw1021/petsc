@@ -1336,7 +1336,7 @@ static PetscErrorCode DMPlexTransformCreateCellVertices_Internal(DMPlexTransform
       ierr = PetscPrintf(PETSC_COMM_SELF, "%s: %" PetscInt_FMT " vertices\n", DMPolytopeTypes[ct], tr->trNv[ct]);CHKERRQ(ierr);
       for (v = 0; v < tr->trNv[ct]; ++v) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "  ");CHKERRQ(ierr);
-        for (d = 0; d < dE; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "%g ", (double)(tr->trVerts[ct][off++]));CHKERRQ(ierr);}
+        for (d = 0; d < dE; ++d) {ierr = PetscPrintf(PETSC_COMM_SELF, "%g ", (double)PetscRealPart(tr->trVerts[ct][off++]));CHKERRQ(ierr);}
         ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
       }
 
