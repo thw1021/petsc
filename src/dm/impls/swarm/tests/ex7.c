@@ -16,7 +16,6 @@ typedef struct {
   Vec uu;
 } MatShellCtx;
 
-
 PetscErrorCode MatMultMtM_SeqAIJ(Mat MtM,Vec xx,Vec yy)
 {
   MatShellCtx    *matshellctx;
@@ -55,7 +54,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
   PetscDataType  dtype;
   MatShellCtx    *matshellctx;
 
-  ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
+  ierr = KSPCreate(PETSC_COMM_SELF, &ksp);CHKERRQ(ierr);
   ierr = KSPSetOptionsPrefix(ksp, "ftop_");CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)ksp,KSPLSQR,&is_lsqr);
@@ -134,9 +133,9 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
     ierr = DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords);CHKERRQ(ierr);
     moments[0] = moments[1] = moments[2] = 0;
     for (int p=0;p<Np;p++) {
-      moments[0] += coords[p*2+1] * wq[p];
-      moments[1] += coords[p*2+1] * wq[p] * coords[p*2+0]; // x-momentum
-      moments[2] += coords[p*2+1] * wq[p] * (PetscSqr(coords[p*2+0])+PetscSqr(coords[p*2+1]));
+      moments[0] += wq[p];
+      moments[1] += wq[p] * coords[p*2+0]; // x-momentum
+      moments[2] += wq[p] * (PetscSqr(coords[p*2+0])+PetscSqr(coords[p*2+1]));
     }
     ierr = DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords);CHKERRQ(ierr);
     ierr = DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void**)&wq);CHKERRQ(ierr);
@@ -198,58 +197,51 @@ static PetscErrorCode maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt
   /* compute the exponents, v^2 */
   for (i = 0; i < dim; ++i) v2 += x[i]*x[i];
   /* evaluate the Maxwellian */
-  u[0] = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta));
+  u[0] = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta)) * 2.*PETSC_PI*x[1]; // radial term for 2D axi-sym.
   PetscFunctionReturn(0);
 }
 PetscErrorCode go()
 {
-  DM              dm0, dm_t[16], sw_t[16];
+  DM              dm_t[16], sw_t[16];
   PetscFE         fe;
-  PetscInt        dim, Nc = 1, timestep = 0, i, faces[3];
+  PetscInt        dim = 2, Nc = 1, timestep = 0, i, faces[3];
   PetscInt        Np[2] = {10,10}, Np2[2], field = 0, target = 0, Np_t[16];
   PetscReal       time = 0.0, moments_0[3], moments_1[3], vol;
-  PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], hp[3], *xx_t[16], *yy_t[16], *wp_t[16];
+  PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], hp[3], *xx_t[16], *yy_t[16], *wp_t[16], solve_time = 0;
   Vec             rho_t[16], rhs_t[16];
   Mat             M_p_t[16];
   PetscErrorCode  ierr;
 #if defined PETSC_USE_LOG
   PetscLogStage   stage;
+  PetscLogEvent   swarm_create_event;
 #endif
 #if defined(PETSC_HAVE_OPENMP)
   PetscInt        numthreads = PetscNumOMPThreads;
+  double          starttime, endtime;
 #else
   PetscInt        numthreads = 1;
 #endif
-  PetscBool       use_my_solver = PETSC_FALSE;
 
   PetscFunctionBeginUser;
 #if defined(PETSC_HAVE_OPENMP)
   if (numthreads>16) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %d > 16", numthreads);
   if (numthreads<=0) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "No threads %d > 16", numthreads);
-  PetscPrintf (PETSC_COMM_SELF,"Have %D threads\n",numthreads);
 #endif
   if (target >= numthreads) target = numthreads-1;
-  /* Create a mesh 0 */
-  ierr = DMCreate(PETSC_COMM_SELF, &dm0);CHKERRQ(ierr);
-  ierr = DMSetType(dm0, DMPLEX);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(dm0);CHKERRQ(ierr);
-  ierr = DMGetDimension(dm0, &dim);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL, NULL, "-use_new_solver", &use_my_solver, NULL);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("Create Swarm", DM_CLASSID, &swarm_create_event);CHKERRQ(ierr);
+  ierr = PetscLogStageRegister("Solve", &stage);CHKERRQ(ierr);
   i    = dim;
   ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces", faces, &i, NULL);CHKERRQ(ierr);
   i    = dim;
   ierr = PetscOptionsGetIntArray(NULL, NULL, "-np", Np,  &i, NULL);CHKERRQ(ierr);
-  ierr = DMGetBoundingBox(dm0, lo, hi);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm0, NULL, "-dm_view");CHKERRQ(ierr);
-  for (i=0,vol=1;i<dim;i++) {
-    h[i] = (hi[i] - lo[i])/faces[i];
-    hp[i] = (hi[i] - lo[i])/Np[i];
-    vol *= (hi[i] - lo[i]);
-    ierr = PetscPrintf(PETSC_COMM_SELF," lo = %g hi = %g n = %D h = %g hp = %g\n",lo[i],hi[i],faces[i],h[i],hp[i]);CHKERRQ(ierr);
-  }
   /* Create thread meshes */
   for (int tid=0; tid<numthreads; tid++) {
-    ierr = DMClone(dm0,&dm_t[tid]);CHKERRQ(ierr);
+    ierr = DMCreate(PETSC_COMM_SELF, &dm_t[tid]);CHKERRQ(ierr);
+    ierr = DMSetType(dm_t[tid], DMPLEX);CHKERRQ(ierr);
+    ierr = DMSetFromOptions(dm_t[tid]);CHKERRQ(ierr);
+    //ierr = DMGetDimension(dm_t[tid], &dim);CHKERRQ(ierr);
+    ierr = DMGetBoundingBox(dm_t[tid], lo, hi);CHKERRQ(ierr);
+    if (tid==target) {ierr = DMViewFromOptions(dm_t[tid], NULL, "-dm_view");CHKERRQ(ierr);}
     ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, Nc, PETSC_FALSE, "", PETSC_DECIDE, &fe);CHKERRQ(ierr);
     ierr = PetscFESetFromOptions(fe);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)fe, "fe");CHKERRQ(ierr);
@@ -257,15 +249,24 @@ PetscErrorCode go()
     ierr = DMCreateDS(dm_t[tid]);CHKERRQ(ierr);
     ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
     ierr = DMSetOutputSequenceNumber(dm_t[tid], timestep, time);CHKERRQ(ierr);
+    if (tid==target) {
+      for (i=0,vol=1;i<dim;i++) {
+        h[i] = (hi[i] - lo[i])/faces[i];
+        hp[i] = (hi[i] - lo[i])/Np[i];
+        vol *= (hi[i] - lo[i]);
+        ierr = PetscInfo5(dm_t[tid]," lo = %g hi = %g n = %D h = %g hp = %g\n",lo[i],hi[i],faces[i],h[i],hp[i]);CHKERRQ(ierr);
+      }
+    }
   }
   // prepare particle data for problems
+  ierr = PetscLogEventBegin(swarm_create_event,0,0,0,0);CHKERRQ(ierr);
   Np2[0] = Np[0]; Np2[1] = Np[1];
   for (int tid=0; tid<numthreads; tid++) { // change size of particle list a little
     ierr = DMCreateGlobalVector(dm_t[tid], &rho_t[tid]);CHKERRQ(ierr);
     ierr = DMCreateGlobalVector(dm_t[tid], &rhs_t[tid]);CHKERRQ(ierr);
     Np_t[tid] = Np2[0]*Np2[1];
     ierr = PetscMalloc3(Np_t[tid],&xx_t[tid],Np_t[tid],&yy_t[tid],Np_t[tid],&wp_t[tid]);CHKERRQ(ierr);
-    moments_0[0] = moments_0[1] = moments_0[2] = 0;
+    if (tid==target) {moments_0[0] = moments_0[1] = moments_0[2] = 0;}
     for (int pi=0, pp=0;pi<Np2[0];pi++) {
       for (int pj=0;pj<Np2[1];pj++,pp++) {
         xx_t[tid][pp] = lo[0] + hp[0]/2. + pi*hp[0];
@@ -275,10 +276,9 @@ PetscErrorCode go()
           ierr = maxwellian(2, x, 1.0, vol/(PetscReal)Np_t[tid], &wp_t[tid][pp]);
         }
         if (tid==target) { //energy_0 += wp_t[tid][pp]*(PetscSqr(xx_t[tid][pp])+PetscSqr(yy_t[tid][pp]));
-
-          moments_0[0] += wp_t[tid][pp] * yy_t[tid][pp];
-          moments_0[1] += wp_t[tid][pp] * yy_t[tid][pp] * xx_t[tid][pp]; // x-momentum
-          moments_0[2] += wp_t[tid][pp] * yy_t[tid][pp] * (PetscSqr(xx_t[tid][pp]) + PetscSqr(yy_t[tid][pp]));
+          moments_0[0] += wp_t[tid][pp];
+          moments_0[1] += wp_t[tid][pp] * xx_t[tid][pp]; // x-momentum
+          moments_0[2] += wp_t[tid][pp] * (PetscSqr(xx_t[tid][pp]) + PetscSqr(yy_t[tid][pp]));
         }
       }
     }
@@ -292,6 +292,7 @@ PetscErrorCode go()
     ierr = DMSetFromOptions(sw_t[tid]);CHKERRQ(ierr);
     Np2[0]++; Np2[1]++;
   }
+  ierr = PetscLogEventEnd(swarm_create_event,0,0,0,0);CHKERRQ(ierr);
   /* Create particle swarm */
 #pragma omp parallel for
   for (int tid=0; tid<numthreads; tid++) {
@@ -320,12 +321,26 @@ PetscErrorCode go()
   ierr = PetscOptionsClearValue(NULL,"-ftop_ksp_converged_reason");CHKERRQ(ierr);
   ierr = PetscOptionsClearValue(NULL,"-ftop_ksp_monitor");CHKERRQ(ierr);
   ierr = PetscOptionsClearValue(NULL,"-ftop_ksp_view");CHKERRQ(ierr);
-  ierr = PetscOptionsClearValue(NULL,"-ftop2_ksp_converged_reason");CHKERRQ(ierr);
-  ierr = PetscOptionsClearValue(NULL,"-ftop2_ksp_monitor");CHKERRQ(ierr);
-  ierr = PetscOptionsClearValue(NULL,"-ftop2_ksp_view");CHKERRQ(ierr);
-  ierr = PetscLogStageRegister("gTop", &stage);CHKERRQ(ierr);
+  ierr = PetscOptionsClearValue(NULL,"-info");CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  starttime = MPI_Wtime();
+#endif
   for (int d=0; d<100; d++) {
+#pragma omp parallel for
+    for (int tid=0; tid<numthreads; tid++) {
+      PetscErrorCode  ierr_t;
+      ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
+      if (ierr_t) ierr = ierr_t;
+    }
+    CHKERRQ(ierr);
+#pragma omp parallel for private(ierr)
+    for (int tid=0; tid<numthreads; tid++) {
+      PetscErrorCode  ierr_t;
+      ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
+      if (ierr_t) ierr = ierr_t;
+    }
+    CHKERRQ(ierr);
 #pragma omp parallel for
     for (int tid=0; tid<numthreads; tid++) {
       PetscErrorCode  ierr_t;
@@ -334,11 +349,14 @@ PetscErrorCode go()
     }
     CHKERRQ(ierr);
   }
+#if defined(PETSC_HAVE_THREADSAFETY)
+  endtime = MPI_Wtime();
+  solve_time += (endtime - starttime);
+#endif
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   //
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number density: %g (%g); x-momentum = %g (%g); energy = %g error = %e, %D particles. Use %s solver\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2], (moments_1[2]-moments_0[2])/moments_0[2],Np[0]*Np[1], use_my_solver ? "PETSc" : "custom");CHKERRQ(ierr);
+  ierr = PetscInfo9(rho_t[0],"Total number density: %20.12e (%20.12e); x-momentum = %g (%g); energy = %g error = %e, %D particles. Use %D threads, Solve time: %g\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2], (moments_1[2]-moments_0[2])/moments_0[2],Np[0]*Np[1],numthreads,solve_time);CHKERRQ(ierr);
   /* Cleanup */
-  ierr = DMDestroy(&dm0);CHKERRQ(ierr);
   for (int tid=0; tid<numthreads; tid++) {
     ierr = VecDestroy(&rho_t[tid]);CHKERRQ(ierr);
     ierr = VecDestroy(&rhs_t[tid]);CHKERRQ(ierr);
@@ -369,7 +387,19 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: double
-    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -ftop_ksp_type lsqr -ftop_pc_type none -dm_view
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -ftop_ksp_type lsqr -ftop_pc_type none -dm_view -ftop_ksp_converged_reason
+    filter: grep -v DM_ | grep -v atomic
+
+  test:
+    suffix: 1
+    requires: double
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -dm_plex_hash_location -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero  -block_diag_prec -dm_view -ftop_ksp_converged_reason
+    filter: grep -v DM_ | grep -v atomic
+
+  test:
+    suffix: 2
+    requires: double
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -dm_plex_hash_location -ftop_ksp_type cg -ftop_pc_type jacobi -dm_view -ftop_ksp_converged_reason
     filter: grep -v DM_ | grep -v atomic
 
 TEST*/
