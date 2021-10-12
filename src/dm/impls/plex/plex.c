@@ -891,17 +891,15 @@ static PetscErrorCode DMPlexView_Ascii(DM dm, PetscViewer viewer)
     if (size > 1) {
       ierr = PetscViewerASCIIPrintf(viewer, "%s for process ", name);CHKERRQ(ierr);
       for (p = 0; p < size; ++p) {
-        if (p > 0 && p == size-1) {
-          ierr = PetscViewerASCIIPrintf(viewer, ", and %s %" PetscInt_FMT, colors[p%numColors], p);CHKERRQ(ierr);
-        } else if (p > 0) {
-          ierr = PetscViewerASCIIPrintf(viewer, ", %s %" PetscInt_FMT " ", colors[p%numColors], p);CHKERRQ(ierr);
+        if (p) {
+          ierr = PetscViewerASCIIPrintf(viewer, (p == size-1) ? ", and " :  ", ");CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIPrintf(viewer, "{\\textcolor{%s}%" PetscInt_FMT "}", colors[p%numColors], p);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer, ".\n\n\n");CHKERRQ(ierr);
     }
     if (drawHasse) {
-      PetscInt maxStratum = PetscMax(vEnd-vStart, PetscMax(eEnd-eStart, cEnd-cStart));
+      const PetscInt maxStratum = PetscMax(vEnd-vStart, PetscMax(eEnd-eStart, cEnd-cStart));
 
       ierr = PetscViewerASCIIPrintf(viewer, "\\newcommand{\\vStart}{%" PetscInt_FMT "}\n", vStart);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer, "\\newcommand{\\vEnd}{%" PetscInt_FMT "}\n", vEnd-1);CHKERRQ(ierr);
