@@ -55,7 +55,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
   PetscDataType  dtype;
   MatShellCtx    *matshellctx;
 
-  ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
+  ierr = KSPCreate(PETSC_COMM_SELF, &ksp);CHKERRQ(ierr);
   ierr = KSPSetOptionsPrefix(ksp, "ftop_");CHKERRQ(ierr);
   ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)ksp,KSPLSQR,&is_lsqr);
@@ -322,9 +322,7 @@ PetscErrorCode go()
   ierr = PetscOptionsClearValue(NULL,"-ftop_ksp_converged_reason");CHKERRQ(ierr);
   ierr = PetscOptionsClearValue(NULL,"-ftop_ksp_monitor");CHKERRQ(ierr);
   ierr = PetscOptionsClearValue(NULL,"-ftop_ksp_view");CHKERRQ(ierr);
-  ierr = PetscOptionsClearValue(NULL,"-ftop2_ksp_converged_reason");CHKERRQ(ierr);
-  ierr = PetscOptionsClearValue(NULL,"-ftop2_ksp_monitor");CHKERRQ(ierr);
-  ierr = PetscOptionsClearValue(NULL,"-ftop2_ksp_view");CHKERRQ(ierr);
+  ierr = PetscOptionsClearValue(NULL,"-info");CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_THREADSAFETY)
   starttime = MPI_Wtime();
@@ -333,7 +331,7 @@ PetscErrorCode go()
 #pragma omp parallel for
     for (int tid=0; tid<numthreads; tid++) {
       PetscErrorCode  ierr_t;
-      ierr_t = gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]);
+      ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
       if (ierr_t) ierr = ierr_t;
     }
     CHKERRQ(ierr);
@@ -358,7 +356,7 @@ PetscErrorCode go()
 #endif
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   //
-  ierr = PetscInfo9(dm_t[0],"Total number density: %20.12e (%20.12e); x-momentum = %g (%g); energy = %g error = %e, %D particles. Use %D threads, Solve time: %g\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2], (moments_1[2]-moments_0[2])/moments_0[2],Np[0]*Np[1],numthreads,solve_time);CHKERRQ(ierr);
+  ierr = PetscInfo9(rho_t[0],"Total number density: %20.12e (%20.12e); x-momentum = %g (%g); energy = %g error = %e, %D particles. Use %D threads, Solve time: %g\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2], (moments_1[2]-moments_0[2])/moments_0[2],Np[0]*Np[1],numthreads,solve_time);CHKERRQ(ierr);
   /* Cleanup */
   for (int tid=0; tid<numthreads; tid++) {
     ierr = VecDestroy(&rho_t[tid]);CHKERRQ(ierr);
