@@ -405,7 +405,7 @@ PetscErrorCode PetscSectionGetFieldName(PetscSection s, PetscInt field, const ch
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidPointer(fieldName, 3);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   *fieldName = s->fieldNames[field];
   PetscFunctionReturn(0);
 }
@@ -431,7 +431,7 @@ PetscErrorCode PetscSectionSetFieldName(PetscSection s, PetscInt field, const ch
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   if (fieldName) PetscValidCharPointer(fieldName, 3);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscFree(s->fieldNames[field]);CHKERRQ(ierr);
   ierr = PetscStrallocpy(fieldName, (char**) &s->fieldNames[field]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -457,8 +457,8 @@ PetscErrorCode PetscSectionGetComponentName(PetscSection s, PetscInt field, Pets
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidPointer(compName, 4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
-  if (PetscUnlikely((comp < 0) || (comp >= s->numFieldComponents[field]))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field component %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", comp, s->numFieldComponents[field]);
+  PetscSectionCheckValidField(field,s->numFields);
+  PetscSectionCheckValidFieldComponent(comp,s->numFieldComponents[field]);
   *compName = s->compNames[field][comp];
   PetscFunctionReturn(0);
 }
@@ -485,8 +485,8 @@ PetscErrorCode PetscSectionSetComponentName(PetscSection s, PetscInt field, Pets
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   if (compName) PetscValidCharPointer(compName, 4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
-  if (PetscUnlikely((comp < 0) || (comp >= s->numFieldComponents[field]))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field component %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", comp, s->numFieldComponents[field]);
+  PetscSectionCheckValidField(field,s->numFields);
+  PetscSectionCheckValidFieldComponent(comp,s->numFieldComponents[field]);
   ierr = PetscFree(s->compNames[field][comp]);CHKERRQ(ierr);
   ierr = PetscStrallocpy(compName, (char**) &s->compNames[field][comp]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -513,7 +513,7 @@ PetscErrorCode PetscSectionGetFieldComponents(PetscSection s, PetscInt field, Pe
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidIntPointer(numComp, 3);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   *numComp = s->numFieldComponents[field];
   PetscFunctionReturn(0);
 }
@@ -540,7 +540,7 @@ PetscErrorCode PetscSectionSetFieldComponents(PetscSection s, PetscInt field, Pe
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   if (s->compNames) {
     for (c = 0; c < s->numFieldComponents[field]; ++c) {
       ierr = PetscFree(s->compNames[field][c]);CHKERRQ(ierr);
@@ -884,7 +884,7 @@ PetscErrorCode PetscSectionGetFieldDof(PetscSection s, PetscInt point, PetscInt 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidIntPointer(numDof,4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionGetDof(s->field[field], point, numDof);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -910,7 +910,7 @@ PetscErrorCode PetscSectionSetFieldDof(PetscSection s, PetscInt point, PetscInt 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionSetDof(s->field[field], point, numDof);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -936,7 +936,7 @@ PetscErrorCode PetscSectionAddFieldDof(PetscSection s, PetscInt point, PetscInt 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionAddDof(s->field[field], point, numDof);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1048,7 +1048,7 @@ PetscErrorCode PetscSectionGetFieldConstraintDof(PetscSection s, PetscInt point,
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidIntPointer(numDof, 4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionGetConstraintDof(s->field[field], point, numDof);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1074,7 +1074,7 @@ PetscErrorCode PetscSectionSetFieldConstraintDof(PetscSection s, PetscInt point,
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionSetConstraintDof(s->field[field], point, numDof);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1100,7 +1100,7 @@ PetscErrorCode PetscSectionAddFieldConstraintDof(PetscSection s, PetscInt point,
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionAddConstraintDof(s->field[field], point, numDof);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1664,7 +1664,7 @@ PetscErrorCode PetscSectionGetFieldOffset(PetscSection s, PetscInt point, PetscI
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidIntPointer(offset, 4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionGetOffset(s->field[field], point, offset);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1692,7 +1692,7 @@ PetscErrorCode PetscSectionSetFieldOffset(PetscSection s, PetscInt point, PetscI
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionSetOffset(s->field[field], point, offset);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1725,7 +1725,7 @@ PetscErrorCode PetscSectionGetFieldPointOffset(PetscSection s, PetscInt point, P
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidIntPointer(offset, 4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionGetOffset(s, point, &off);CHKERRQ(ierr);
   ierr = PetscSectionGetOffset(s->field[field], point, &foff);CHKERRQ(ierr);
   *offset = foff - off;
@@ -2539,7 +2539,7 @@ PetscErrorCode PetscSectionGetFieldConstraintIndices(PetscSection s, PetscInt po
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
   PetscValidIntPointer(indices,4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionGetConstraintIndices(s->field[field], point, indices);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2563,12 +2563,14 @@ PetscErrorCode PetscSectionGetFieldConstraintIndices(PetscSection s, PetscInt po
 @*/
 PetscErrorCode PetscSectionSetFieldConstraintIndices(PetscSection s, PetscInt point, PetscInt field, const PetscInt indices[])
 {
+  PetscInt       ndof;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  PetscValidIntPointer(indices,4);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  ierr = PetscSectionGetConstraintDof(s,point,&ndof);CHKERRQ(ierr);
+  if (ndof) PetscValidIntPointer(indices,4);
+  PetscSectionCheckValidField(field,s->numFields);
   ierr = PetscSectionSetConstraintIndices(s->field[field], point, indices);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2914,7 +2916,7 @@ PetscErrorCode PetscSectionGetField(PetscSection s, PetscInt field, PetscSection
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s,PETSC_SECTION_CLASSID,1);
   PetscValidPointer(subs,3);
-  if (PetscUnlikely((field < 0) || (field >= s->numFields))) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Section field %" PetscInt_FMT " should be in [0, %" PetscInt_FMT ")", field, s->numFields);
+  PetscSectionCheckValidField(field,s->numFields);
   *subs = s->field[field];
   PetscFunctionReturn(0);
 }
@@ -3171,7 +3173,7 @@ PetscErrorCode PetscSectionSetFieldSym(PetscSection section, PetscInt field, Pet
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(section,PETSC_SECTION_CLASSID,1);
-  if (field < 0 || field >= section->numFields) SETERRQ2(PetscObjectComm((PetscObject)section),PETSC_ERR_ARG_OUTOFRANGE,"Invalid field number %" PetscInt_FMT " (not in [0,%" PetscInt_FMT ")", field, section->numFields);
+  PetscSectionCheckValidField(field,section->numFields);
   ierr = PetscSectionSetSym(section->field[field],sym);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -3196,7 +3198,7 @@ PetscErrorCode PetscSectionGetFieldSym(PetscSection section, PetscInt field, Pet
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(section,PETSC_SECTION_CLASSID,1);
-  if (field < 0 || field >= section->numFields) SETERRQ2(PetscObjectComm((PetscObject)section),PETSC_ERR_ARG_OUTOFRANGE,"Invalid field number %" PetscInt_FMT " (not in [0,%" PetscInt_FMT ")", field, section->numFields);
+  PetscSectionCheckValidField(field,section->numFields);
   *sym = section->field[field]->sym;
   PetscFunctionReturn(0);
 }

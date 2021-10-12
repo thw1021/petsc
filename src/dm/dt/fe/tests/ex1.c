@@ -126,7 +126,7 @@ PetscErrorCode CellRangeGetFEGeom(IS cellIS, DMField coordField, PetscQuadrature
 
   PetscFunctionBegin;
   ierr = PetscObjectGetId((PetscObject) quad, &id);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%lld\n", id);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%" PetscInt64_FMT "\n", id);CHKERRQ(ierr);
   ierr = PetscObjectQuery((PetscObject) cellIS, composeStr, (PetscObject *) &container);CHKERRQ(ierr);
   if (container) {
     ierr = PetscContainerGetPointer(container, (void **) geom);CHKERRQ(ierr);
