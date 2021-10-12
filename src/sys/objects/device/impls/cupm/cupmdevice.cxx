@@ -294,7 +294,7 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
   }
 
   // post-process the options and lay the groundwork for initialization if needs be
-  cerr = cupmGetDeviceCount(&ndev);
+  cerr = cupmGetDeviceCount(&ndev);CHKERRCUPM(cerr);
   if (PetscUnlikely(cerr == cupmErrorStubLibrary)) {
     if (PetscUnlikely((initTypeCUPM == PETSC_DEVICE_INIT_EAGER) || (view && flg))) {
       const auto name    = cupmGetErrorName(cerr);
