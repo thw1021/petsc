@@ -107,7 +107,7 @@ PetscErrorCode main(int argc,char **argv)
   ierr = PetscOptionsGetBool(NULL,NULL,"-test_lmvm",&test_lmvm,&flg);CHKERRQ(ierr);
 
   ierr = PetscPrintf(PETSC_COMM_SELF,"\n---- Elastic-Plastic Torsion Problem -----\n");CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"mx: %D     my: %D   \n\n",mx,my);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"mx: %" PetscInt_FMT "     my: %" PetscInt_FMT "   \n\n",mx,my);CHKERRQ(ierr);
   user.ndim = mx * my; user.mx = mx; user.my = my;
   user.hx = one/(mx+1); user.hy = one/(my+1);
 

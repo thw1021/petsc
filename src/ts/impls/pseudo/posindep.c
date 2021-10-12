@@ -153,7 +153,7 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (reject >= ts->max_reject) {
     ts->reason = TS_DIVERGED_STEP_REJECTED;
-    ierr = PetscInfo2(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,reject);CHKERRQ(ierr);
+    ierr = PetscInfo2(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,reject);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
 
@@ -168,12 +168,12 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (pseudo->fnorm < pseudo->fatol) {
     ts->reason = TS_CONVERGED_PSEUDO_FATOL;
-    ierr = PetscInfo3(ts,"Step=%D, converged since fnorm %g < fatol %g\n",ts->steps,pseudo->fnorm,pseudo->frtol);CHKERRQ(ierr);
+    ierr = PetscInfo3(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n",ts->steps,pseudo->fnorm,pseudo->frtol);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
   if (pseudo->fnorm/pseudo->fnorm_initial < pseudo->frtol) {
     ts->reason = TS_CONVERGED_PSEUDO_FRTOL;
-    ierr = PetscInfo4(ts,"Step=%D, converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,pseudo->fnorm,pseudo->fnorm_initial,pseudo->fatol);CHKERRQ(ierr);
+    ierr = PetscInfo4(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,pseudo->fnorm,pseudo->fnorm_initial,pseudo->fatol);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
   PetscFunctionReturn(0);
@@ -308,7 +308,7 @@ static PetscErrorCode TSPseudoMonitorDefault(TS ts,PetscInt step,PetscReal ptime
     ierr = VecNorm(pseudo->func,NORM_2,&pseudo->fnorm);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"TS %D dt %g time %g fnorm %g\n",step,(double)ts->time_step,(double)ptime,(double)pseudo->fnorm);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"TS %" PetscInt_FMT " dt %g time %g fnorm %g\n",step,(double)ts->time_step,(double)ptime,(double)pseudo->fnorm);CHKERRQ(ierr);
   ierr = PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

@@ -115,7 +115,7 @@ int main(int argc,char **argv)
   ierr = VecNorm(u,NORM_1,&error1);CHKERRQ(ierr);
   error1 /= (PetscReal)info.mx * (PetscReal)info.my; /* average error */
   ierr = VecNorm(u,NORM_INFINITY,&errorinf);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"errors on %D x %D grid:  av |u-uexact|  = %.3e,  |u-uexact|_inf = %.3e\n",info.mx,info.my,(double)error1,(double)errorinf);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"errors on %" PetscInt_FMT " x %" PetscInt_FMT " grid:  av |u-uexact|  = %.3e,  |u-uexact|_inf = %.3e\n",info.mx,info.my,(double)error1,(double)errorinf);CHKERRQ(ierr);
   ierr = VecDestroy(&u_exact);CHKERRQ(ierr);
   ierr = SNESDestroy(&snes);CHKERRQ(ierr);
   ierr = DMDestroy(&da);CHKERRQ(ierr);

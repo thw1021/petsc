@@ -188,7 +188,7 @@ int main(int argc,char **argv)
   ierr = TSGetSolveTime(ts,&ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&steps);CHKERRQ(ierr);
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,steps);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,steps);CHKERRQ(ierr);
 
   /* {
     Vec                max;
@@ -297,7 +297,7 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
   ierr = PetscOptionsGetStringArray(NULL,NULL,"-initial_species",names,&smax,&flg);CHKERRQ(ierr);
   if (smax < 2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Must provide at least two initial species");
   ierr = PetscOptionsGetRealArray(NULL,NULL,"-initial_mole",molefracs,&mmax,&flg);CHKERRQ(ierr);
-  if (smax != mmax) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Must provide same number of initial species %D as initial moles %D",smax,mmax);
+  if (smax != mmax) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Must provide same number of initial species %" PetscInt_FMT " as initial moles %" PetscInt_FMT "",smax,mmax);
   sum = 0;
   for (i=0; i<smax; i++) sum += molefracs[i];
   for (i=0; i<smax; i++) molefracs[i] = molefracs[i]/sum;
@@ -378,7 +378,7 @@ PetscErrorCode MonitorMassConservation(TS ts,PetscInt step,PetscReal time,Vec x,
   ierr = VecGetArrayRead(x,&T);CHKERRQ(ierr);
   mass -= PetscAbsScalar(T[0]);
   ierr = VecRestoreArrayRead(x,&T);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %D time %g percent mass lost or gained %g\n",step,(double)time,(double)100.*(1.0 - mass));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT " time %g percent mass lost or gained %g\n",step,(double)time,(double)100.*(1.0 - mass));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -390,7 +390,7 @@ PetscErrorCode MonitorTempature(TS ts,PetscInt step,PetscReal time,Vec x,void* c
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(x,&T);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %D time %g temperature %g\n",step,(double)time,(double)T[0]*user->Tini);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT " time %g temperature %g\n",step,(double)time,(double)T[0]*user->Tini);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(x,&T);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

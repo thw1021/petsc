@@ -51,7 +51,7 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
   if (exo->filename) {ierr = PetscViewerASCIIPrintf(viewer, "Filename:    %s\n", exo->filename);CHKERRQ(ierr);}
   if (exo->exoid)    {ierr = PetscViewerASCIIPrintf(viewer, "exoid:       %d\n", exo->exoid)   ;CHKERRQ(ierr);}
   if (exo->btype)    {ierr = PetscViewerASCIIPrintf(viewer, "IO Mode:     %d\n", exo->btype)   ;CHKERRQ(ierr);}
-  if (exo->order)    {ierr = PetscViewerASCIIPrintf(viewer, "Mesh order:  %d\n", exo->order)   ;CHKERRQ(ierr);}
+  if (exo->order)    {ierr = PetscViewerASCIIPrintf(viewer, "Mesh order:  %" PetscInt_FMT "\n", exo->order)   ;CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -427,14 +427,14 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         case 2:
           if      (closureSize == 3*dim) {type[cs] = TRI;}
           else if (closureSize == 4*dim) {type[cs] = QUAD;}
-          else SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %D in dimension %D has no ExodusII type", closureSize/dim, dim);
+          else SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize/dim, dim);
           break;
         case 3:
           if      (closureSize == 4*dim) {type[cs] = TET;}
           else if (closureSize == 8*dim) {type[cs] = HEX;}
-          else SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %D in dimension %D has no ExodusII type", closureSize/dim, dim);
+          else SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize/dim, dim);
           break;
-        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %D not handled by ExodusII viewer", dim);
+        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %" PetscInt_FMT " not handled by ExodusII viewer", dim);
       }
       if ((degree == 2) && (type[cs] == QUAD)) {numNodes += csSize;}
       if ((degree == 2) && (type[cs] == HEX))  {numNodes += csSize; numNodes += numFaces;}
@@ -1627,12 +1627,12 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
         PetscInt       faceSize = fs_vertex_count_list[f], numFaces;
         PetscInt       faceVertices[4], v;
 
-        if (faceSize > 4) SETERRQ1(comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %d > 4 vertices", faceSize);
+        if (PetscUnlikely(faceSize > 4)) SETERRQ1(comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %" PetscInt_FMT " > 4 vertices", faceSize);
         for (v = 0; v < faceSize; ++v, ++voff) {
           faceVertices[v] = fs_vertex_list[voff]+numCells-1;
         }
         ierr = DMPlexGetFullJoin(*dm, faceSize, faceVertices, &numFaces, &faces);CHKERRQ(ierr);
-        if (numFaces != 1) SETERRQ3(comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %d faces", f, fs, numFaces);
+        if (PetscUnlikely(numFaces != 1)) SETERRQ3(comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %" PetscInt_FMT " faces", f, fs, numFaces);
         ierr = DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", faces[0], fs_id[fs]);CHKERRQ(ierr);
         /* Only add the label if one has been detected for this side set. */
         if (!fs_name_err) {

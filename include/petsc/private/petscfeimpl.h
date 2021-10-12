@@ -301,7 +301,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscFEInterpolateGradient_Static(PetscFE fe,
     const PetscInt   Nc       = T->Nc;
     const PetscInt   cdim     = T->cdim;
 
-    if (cdim != fegeom->dimEmbed) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Geometry dim %D must match tabulation dim %D", fegeom->dimEmbed, cdim);
+    if (cdim != fegeom->dimEmbed) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Geometry dim %" PetscInt_FMT " must match tabulation dim %" PetscInt_FMT "", fegeom->dimEmbed, cdim);
     for (fc = 0; fc < Nc; ++fc) {
       for (d = 0; d < cdim; ++d) interpolant[fc*cdim+d] = 0.0;
       for (f = 0; f < Nb; ++f) {
@@ -341,7 +341,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscFEInterpolateFieldAndGradient_Static(Pet
     const PetscInt   Nc       = T->Nc;
     const PetscInt   cdim     = T->cdim;
 
-    if (cdim != fegeom->dimEmbed) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Geometry dim %D must match tabulation dim %D", fegeom->dimEmbed, cdim);
+    if (cdim != fegeom->dimEmbed) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Geometry dim %" PetscInt_FMT " must match tabulation dim %" PetscInt_FMT "", fegeom->dimEmbed, cdim);
     for (fc = 0; fc < Nc; ++fc) {
       interpolant[fc] = 0.0;
       for (d = 0; d < cdim; ++d) interpolantGrad[fc*cdim+d] = 0.0;

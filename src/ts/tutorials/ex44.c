@@ -61,7 +61,7 @@ static PetscErrorCode PostEvent(TS ts,PetscInt nevents,PetscInt event_list[],Pet
     ierr = VecRestoreArray(V,&v);CHKERRQ(ierr);
     app->bounces++;
   } else if (event_list[0] == 1) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Processor [%d]: Ball bounced %D times\n",rank,app->bounces);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"Processor [%d]: Ball bounced %" PetscInt_FMT " times\n",rank,app->bounces);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

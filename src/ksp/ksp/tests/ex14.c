@@ -231,7 +231,7 @@ int main(int argc,char **argv)
     ierr = VecCopy(Y,X);CHKERRQ(ierr);                   /* X <- Y          */
     ierr = VecNorm(X,NORM_2,&xnorm);CHKERRQ(ierr);       /* xnorm = || X || */
     if (!no_output) {
-      ierr = PetscPrintf(comm,"   linear solve iterations = %D, xnorm=%g, ynorm=%g\n",lin_its,(double)xnorm,(double)ynorm);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"   linear solve iterations = %" PetscInt_FMT ", xnorm=%g, ynorm=%g\n",lin_its,(double)xnorm,(double)ynorm);CHKERRQ(ierr);
     }
 
     /*
@@ -240,7 +240,7 @@ int main(int argc,char **argv)
     ierr = ComputeFunction(&user,X,F);CHKERRQ(ierr);     /* Compute F(X)    */
     ierr = VecNorm(F,NORM_2,&fnorm);CHKERRQ(ierr);       /* fnorm = || F || */
     if (!no_output) {
-      ierr = PetscPrintf(comm,"Iteration %D, function norm = %g\n",i+1,(double)fnorm);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm,"Iteration %" PetscInt_FMT ", function norm = %g\n",i+1,(double)fnorm);CHKERRQ(ierr);
     }
 
     /*
@@ -260,12 +260,12 @@ int main(int argc,char **argv)
     }
     if (i > max_functions) {
       if (!no_output) {
-        ierr = PetscPrintf(comm,"Exceeded maximum number of function evaluations: %D > %D\n",i,max_functions);CHKERRQ(ierr);
+        ierr = PetscPrintf(comm,"Exceeded maximum number of function evaluations: %" PetscInt_FMT " > %" PetscInt_FMT "\n",i,max_functions);CHKERRQ(ierr);
       }
       break;
     }
   }
-  ierr = PetscPrintf(comm,"Number of nonlinear iterations = %D\n",i);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"Number of nonlinear iterations = %" PetscInt_FMT "\n",i);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they

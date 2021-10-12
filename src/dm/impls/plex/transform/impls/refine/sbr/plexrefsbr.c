@@ -27,7 +27,7 @@ static PetscErrorCode PointQueueCreate(PetscInt size, PointQueue *queue)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (size < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Queue size %D must be non-negative", size);
+  if (size < 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Queue size %" PetscInt_FMT " must be non-negative", size);
   ierr = PetscCalloc1(1, &q);CHKERRQ(ierr);
   q->size = size;
   ierr = PetscMalloc1(q->size, &q->points);CHKERRQ(ierr);
@@ -128,7 +128,7 @@ static PetscErrorCode SBRGetEdgeLen_Private(DMPlexTransform tr, PetscInt edge, P
     ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
     ierr = DMPlexGetCone(dm, edge, &cone);CHKERRQ(ierr);
     ierr = DMPlexGetConeSize(dm, edge, &coneSize);CHKERRQ(ierr);
-    if (coneSize != 2) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Edge %D cone size must be 2, not %D", edge, coneSize);
+    if (coneSize != 2) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Edge %" PetscInt_FMT " cone size must be 2, not %" PetscInt_FMT "", edge, coneSize);
     ierr = DMGetCoordinateDim(dm, &cdim);CHKERRQ(ierr);
     ierr = DMGetCoordinatesLocal(dm, &coordsLocal);CHKERRQ(ierr);
     ierr = VecGetArrayRead(coordsLocal, &coords);CHKERRQ(ierr);
@@ -423,7 +423,7 @@ static PetscErrorCode DMPlexTransformSetUp_SBR(DMPlexTransform tr)
           else if (vals[0])                  {ierr = DMLabelSetValue(trType, p, RT_TRIANGLE_SPLIT_0);CHKERRQ(ierr);}
           else if (vals[1])                  {ierr = DMLabelSetValue(trType, p, RT_TRIANGLE_SPLIT_1);CHKERRQ(ierr);}
           else if (vals[2])                  {ierr = DMLabelSetValue(trType, p, RT_TRIANGLE_SPLIT_2);CHKERRQ(ierr);}
-          else SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cell %D does not fit any refinement type (%D, %D, %D)", p, vals[0], vals[1], vals[2]);
+          else SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Cell %" PetscInt_FMT " does not fit any refinement type (%" PetscInt_FMT ", %" PetscInt_FMT ", %" PetscInt_FMT ")", p, vals[0], vals[1], vals[2]);
         } else {ierr = DMLabelSetValue(trType, p, RT_TRIANGLE);CHKERRQ(ierr);}
         break;
       default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot handle points of type %s", DMPolytopeTypes[ct]);

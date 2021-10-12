@@ -177,13 +177,13 @@ int main(int argc, char **argv)
   ierr = PetscLogStagePush(user.stages[1]);CHKERRQ(ierr);
   for (i=0; i<ntests; i++) {
     ierr = TaoSolve(tao);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"KSP Iterations = %D\n",user.ksp_its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"KSP Iterations = %" PetscInt_FMT "\n",user.ksp_its);CHKERRQ(ierr);
     ierr = VecCopy(x0,user.x);CHKERRQ(ierr);
   }
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   ierr = PetscBarrier((PetscObject)user.x);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"KSP iterations within initialization: ");CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%D\n",user.ksp_its_initial);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT "\n",user.ksp_its_initial);CHKERRQ(ierr);
 
   ierr = TaoDestroy(&tao);CHKERRQ(ierr);
   ierr = VecDestroy(&x0);CHKERRQ(ierr);

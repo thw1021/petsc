@@ -96,7 +96,7 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObje
     data->cntl[0] = HPDDM_KRYLOV_METHOD_NONE;
     data->scntl[1] = 1;
   }
-  if (ksp->nmax > std::numeric_limits<int>::max() || ksp->nmax < std::numeric_limits<int>::min()) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() block size %D not representable by an integer, which is not handled by KSPHPDDM", ksp->nmax);
+  if (ksp->nmax > std::numeric_limits<int>::max() || ksp->nmax < std::numeric_limits<int>::min()) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() block size %" PetscInt_FMT " not representable by an integer, which is not handled by KSPHPDDM", ksp->nmax);
   else data->icntl[1] = static_cast<int>(ksp->nmax);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -126,7 +126,7 @@ static PetscErrorCode KSPView_HPDDM(KSP ksp, PetscViewer viewer)
       if (!PetscDefined(HAVE_SLEPC) || !PetscDefined(USE_SHARED_LIBRARIES) || data->cntl[0] == HPDDM_KRYLOV_METHOD_GCRODR) {
         ierr = PetscViewerASCIIPrintf(viewer, "deflation target: %s\n", HPDDMRecycleTarget[static_cast<PetscInt>(data->cntl[3])]);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer, "redistribution size: %D\n", static_cast<PetscInt>(data->cntl[3]));CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "redistribution size: %" PetscInt_FMT "\n", static_cast<PetscInt>(data->cntl[3]));CHKERRQ(ierr);
       }
     }
     if (data->icntl[1] != static_cast<int>(PETSC_DECIDE)) {
@@ -186,7 +186,7 @@ static PetscErrorCode KSPSetUp_HPDDM(KSP ksp)
       }
     } else data->scntl[1] = 1;
   }
-  if (ksp->nmax > std::numeric_limits<int>::max() || ksp->nmax < std::numeric_limits<int>::min()) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() block size %D not representable by an integer, which is not handled by KSPHPDDM", ksp->nmax);
+  if (ksp->nmax > std::numeric_limits<int>::max() || ksp->nmax < std::numeric_limits<int>::min()) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() block size %" PetscInt_FMT " not representable by an integer, which is not handled by KSPHPDDM", ksp->nmax);
   else data->icntl[1] = static_cast<int>(ksp->nmax);
   PetscFunctionReturn(0);
 }
@@ -386,7 +386,7 @@ static PetscErrorCode KSPHPDDMSetDeflationSpace_HPDDM(KSP ksp, Mat U)
   ierr = MatGetLocalSize(U, &m2, &n2);CHKERRQ(ierr);
   ierr = MatGetSize(A, &M1, NULL);CHKERRQ(ierr);
   ierr = MatGetSize(U, &M2, &N2);CHKERRQ(ierr);
-  if (m1 != m2 || M1 != M2) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot use a deflation space with (m2,M2) = (%D,%D) for a linear system with (m1,M1) = (%D,%D)", m2, M2, m1, M1);
+  if (m1 != m2 || M1 != M2) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot use a deflation space with (m2,M2) = (%" PetscInt_FMT ",%" PetscInt_FMT ") for a linear system with (m1,M1) = (%" PetscInt_FMT ",%" PetscInt_FMT ")", m2, M2, m1, M1);
   ierr = PetscObjectTypeCompareAny((PetscObject)U, &match, MATSEQDENSE, MATMPIDENSE, "");CHKERRQ(ierr);
   if (!match) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Provided deflation space not stored in a dense Mat");
   ierr = MatDenseGetArrayRead(U, &array);CHKERRQ(ierr);
@@ -447,10 +447,10 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
   ierr = KSPGetOperators(ksp, &A, NULL);CHKERRQ(ierr);
   ierr = MatGetLocalSize(B, &n, NULL);CHKERRQ(ierr);
   ierr = MatDenseGetLDA(B, &lda);CHKERRQ(ierr);
-  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %D with n = %D", lda, n);
+  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %" PetscInt_FMT " with n = %" PetscInt_FMT "", lda, n);
   ierr = MatGetLocalSize(A, &n, NULL);CHKERRQ(ierr);
   ierr = MatDenseGetLDA(X, &lda);CHKERRQ(ierr);
-  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %D with n = %D", lda, n);
+  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %" PetscInt_FMT " with n = %" PetscInt_FMT "", lda, n);
   ierr = MatDenseGetArrayRead(B, &b);CHKERRQ(ierr);
   ierr = MatDenseGetArrayWrite(X, &x);CHKERRQ(ierr);
   ierr = MatGetSize(X, NULL, &n);CHKERRQ(ierr);

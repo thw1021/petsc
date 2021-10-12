@@ -201,7 +201,7 @@ int main(int argc,char **args)
     ierr = PetscGaussLobattoLegendreIntegrate(gll.n,gll.nodes,gll.weights,f,&norm);CHKERRQ(ierr);
     ierr = VecRestoreArray(x,&f);CHKERRQ(ierr);
     norm = PetscSqrtReal(norm);
-    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"L^2 norm of the error %D %g\n",n,(double)norm);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"L^2 norm of the error %" PetscInt_FMT " %g\n",n,(double)norm);CHKERRQ(ierr);
     if (n > 10 && norm > 1.e-8) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Slower convergence than expected");
     xc   = (PetscReal)n;
     yc   = PetscLog10Real(norm);

@@ -241,7 +241,7 @@ int main(int argc,char **args)
     Lx = 1.; /* or ne for rod */
     max_conv_its = 3;
     ierr = PetscOptionsInt("-max_conv_its","Number of iterations in convergence study","",max_conv_its,&max_conv_its,NULL);CHKERRQ(ierr);
-    if (max_conv_its<=0 || max_conv_its>7) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_USER, "Bad number of iterations for convergence test (%D)",max_conv_its);
+    if (max_conv_its<=0 || max_conv_its>7) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_USER, "Bad number of iterations for convergence test (%" PetscInt_FMT ")",max_conv_its);
     ierr = PetscOptionsReal("-lx","Length of domain","",Lx,&Lx,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-alpha","material coefficient inside circle","",s_soft_alpha,&s_soft_alpha,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-test_nonzero_cols","nonzero test","",test_nonzero_cols,&test_nonzero_cols,NULL);CHKERRQ(ierr);
@@ -318,7 +318,7 @@ int main(int argc,char **args)
     }
     ierr = DMGetCoordinatesLocal(dm,&coordinates);CHKERRQ(ierr);
     ierr = DMGetCoordinateDim(dm,&dimEmbed);CHKERRQ(ierr);
-    if (dimEmbed != dim) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"dimEmbed != dim %D",dimEmbed);
+    if (dimEmbed != dim) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"dimEmbed != dim %" PetscInt_FMT "",dimEmbed);
     ierr = VecGetLocalSize(coordinates,&nCoords);CHKERRQ(ierr);
     if (nCoords % dimEmbed) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Coordinate vector the wrong size");
     ierr = VecGetArray(coordinates,&coords);CHKERRQ(ierr);
@@ -443,7 +443,7 @@ int main(int argc,char **args)
     ierr = MatSetOption(Amat,MAT_SPD,PETSC_TRUE);CHKERRQ(ierr);
     ierr = VecGetSize(bb,&N);CHKERRQ(ierr);
     local_sizes[iter] = N;
-    ierr = PetscInfo2(snes,"%D global equations, %D vertices\n",N,N/dim);CHKERRQ(ierr);
+    ierr = PetscInfo2(snes,"%" PetscInt_FMT " global equations, %" PetscInt_FMT " vertices\n",N,N/dim);CHKERRQ(ierr);
     if ((use_nearnullspace || attach_nearnullspace) && N/dim > 1) {
       /* Set up the near null space (a.k.a. rigid body modes) that will be used by the multigrid preconditioner */
       DM           subdm;
@@ -481,7 +481,7 @@ int main(int argc,char **args)
     ierr = VecZeroEntries(bb);CHKERRQ(ierr);
     ierr = VecGetSize(bb,&i);CHKERRQ(ierr);
     local_sizes[iter] = i;
-    ierr = PetscInfo2(snes,"%D equations in vector, %D vertices\n",i,i/dim);CHKERRQ(ierr);
+    ierr = PetscInfo2(snes,"%" PetscInt_FMT " equations in vector, %" PetscInt_FMT " vertices\n",i,i/dim);CHKERRQ(ierr);
     ierr = PetscLogStagePop();CHKERRQ(ierr);
     /* solve */
     ierr = PetscLogStagePush(stage[iter]);CHKERRQ(ierr);
@@ -514,7 +514,7 @@ int main(int argc,char **args)
   for (iter=1 ; iter<max_conv_its ; iter++) {
     if (run_type==1) err[iter] = 59.975208 - mdisp[iter];
     else             err[iter] = 171.038 - mdisp[iter];
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%d] %D) N=%12D, max displ=%9.7e, disp diff=%9.2e, error=%4.3e, rate=%3.2g\n",rank,iter,local_sizes[iter],(double)mdisp[iter],
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%d] %" PetscInt_FMT ") N=%12" PetscInt_FMT ", max displ=%9.7e, disp diff=%9.2e, error=%4.3e, rate=%3.2g\n",rank,iter,local_sizes[iter],(double)mdisp[iter],
                        (double)(mdisp[iter]-mdisp[iter-1]),(double)err[iter],(double)(PetscLogReal(err[iter-1]/err[iter])/PetscLogReal(2.)));CHKERRQ(ierr);
   }
 

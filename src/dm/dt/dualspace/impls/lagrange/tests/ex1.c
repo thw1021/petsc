@@ -196,7 +196,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   ierr = PetscDualSpaceLagrangeSetContinuity(sp, continuous);CHKERRQ(ierr);
   ierr = PetscDualSpaceLagrangeSetTensor(sp, (PetscBool) tensor);CHKERRQ(ierr);
   ierr = PetscDualSpaceLagrangeSetTrimmed(sp, trimmed);CHKERRQ(ierr);
-  ierr = PetscInfo7(NULL, "Input: dim %D, order %D, trimmed %D, tensor %D, continuous %D, formDegree %D, nCopies %D\n", dim, order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree, nCopies);CHKERRQ(ierr);
+  ierr = PetscInfo7(NULL, "Input: dim %" PetscInt_FMT ", order %" PetscInt_FMT ", trimmed %" PetscInt_FMT ", tensor %" PetscInt_FMT ", continuous %" PetscInt_FMT ", formDegree %" PetscInt_FMT ", nCopies %" PetscInt_FMT "\n", dim, order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree, nCopies);CHKERRQ(ierr);
   ierr = ExpectedNumDofs_Total(dim, order, formDegree, trimmed, tensor, nCopies, &exspdim);CHKERRQ(ierr);
   if (continuous && dim > 0 && order > 0) {
     ierr = ExpectedNumDofs_Interior(dim, order, formDegree, trimmed, tensor, nCopies, &exspintdim);CHKERRQ(ierr);
@@ -206,8 +206,8 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   ierr = PetscDualSpaceSetUp(sp);CHKERRQ(ierr);
   ierr = PetscDualSpaceGetDimension(sp, &spdim);CHKERRQ(ierr);
   ierr = PetscDualSpaceGetInteriorDimension(sp, &spintdim);CHKERRQ(ierr);
-  if (spdim != exspdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %D, got %D\n", exspdim, spdim);
-  if (spintdim != exspintdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %D, got %D\n", exspintdim, spintdim);
+  if (spdim != exspdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %" PetscInt_FMT ", got %" PetscInt_FMT "\n", exspdim, spdim);
+  if (spintdim != exspintdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %" PetscInt_FMT ", got %" PetscInt_FMT "\n", exspintdim, spintdim);
   key.dim = dim;
   key.formDegree = formDegree;
   ierr = PetscDualSpaceGetOrder(sp, &key.order);CHKERRQ(ierr);
@@ -221,13 +221,13 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
     key.tensor = bTensor;
   }
   ierr = PetscDualSpaceLagrangeGetTrimmed(sp, &key.trimmed);CHKERRQ(ierr);
-  ierr = PetscInfo4(NULL, "After setup:  order %D, trimmed %D, tensor %D, continuous %D\n", key.order, (PetscInt) key.trimmed, key.tensor, (PetscInt) key.continuous);CHKERRQ(ierr);
+  ierr = PetscInfo4(NULL, "After setup:  order %" PetscInt_FMT ", trimmed %" PetscInt_FMT ", tensor %" PetscInt_FMT ", continuous %" PetscInt_FMT "\n", key.order, (PetscInt) key.trimmed, key.tensor, (PetscInt) key.continuous);CHKERRQ(ierr);
   ierr = PetscHashLagPut(lagTable, key, &iter, &missing);CHKERRQ(ierr);
   if (missing) {
     DMPolytopeType type;
 
     ierr = DMPlexGetCellType(K, 0, &type);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "New space: %s, order %D, trimmed %D, tensor %D, continuous %D, form degree %D\n", DMPolytopeTypes[type], order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "New space: %s, order %" PetscInt_FMT ", trimmed %" PetscInt_FMT ", tensor %" PetscInt_FMT ", continuous %" PetscInt_FMT ", form degree %" PetscInt_FMT "\n", DMPolytopeTypes[type], order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
     {
       PetscQuadrature intNodes, allNodes;
@@ -253,7 +253,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       for (i = 0; i < spdim; i++) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "(");CHKERRQ(ierr);
         for (j = 0; j < nodeIdxDim; j++) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, " %D,", nodeIdx[i * nodeIdxDim + j]);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF, " %" PetscInt_FMT ",", nodeIdx[i * nodeIdxDim + j]);CHKERRQ(ierr);
         }
         ierr = PetscPrintf(PETSC_COMM_SELF, "): [");CHKERRQ(ierr);
         for (j = 0; j < nodeVecDim; j++) {
@@ -263,7 +263,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       }
 
       ierr = MatGetInfo(allMat, MAT_LOCAL, &info);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "All matrix: %D nonzeros\n", (PetscInt) info.nz_used);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "All matrix: %" PetscInt_FMT " nonzeros\n", (PetscInt) info.nz_used);CHKERRQ(ierr);
 
       ierr = PetscDualSpaceGetInteriorData(sp, &intNodes, &intMat);CHKERRQ(ierr);
       if (intMat && intMat != allMat) {
@@ -278,7 +278,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
         ierr = PetscViewerASCIIPopTab(PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
 
         ierr = MatGetInfo(intMat, MAT_LOCAL, &info);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior matrix: %D nonzeros\n", (PetscInt) info.nz_used);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior matrix: %" PetscInt_FMT " nonzeros\n", (PetscInt) info.nz_used);CHKERRQ(ierr);
         ierr = PetscLagNodeIndicesGetData_Internal(lag->intNodeIndices, &intNodeIdxDim, &intNodeVecDim, &intNnodes, &intNodeIdx, &intNodeVec);CHKERRQ(ierr);
         if (intNodeIdxDim != nodeIdxDim || intNodeVecDim != nodeVecDim) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices not the same shale as all node indices");
         if (intNnodes != spintdim) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect interior nNodes");
@@ -305,7 +305,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
         Mat symMat;
 
         ierr = PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(sp, o, &symMat);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior node symmetry matrix for orientation %D:\n", o);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior node symmetry matrix for orientation %" PetscInt_FMT ":\n", o);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
         ierr = MatView(symMat, PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPopTab(PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
