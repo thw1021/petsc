@@ -63,7 +63,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
   if (cupmSetDeviceFlags(cupmDeviceMapHost) == cupmErrorSetOnActiveProcess) {
     // reset the error if it was cupmErrorSetOnActiveProcess
     const auto PETSC_UNUSED unused = cupmGetLastError();
-  } else CHKERRCUPM(cupmGetLastError());
+  } else {CHKERRCUPM(cupmGetLastError());}
   // cuda 5.0+ will create a context when cupmSetDevice is called
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
   // forces cuda < 5.0 to initialize a context
@@ -232,7 +232,9 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
     static_assert(std::is_same<typename decltype(_devices)::size_type,std::size_t>::value,"");
     if (PetscUnlikely(static_cast<decltype(validDev)>(ndev) != validDev)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"A different number of devices detected from when PETSc was initialized. Expected %zu found %d",validDev,ndev);
   }
-  for (auto &device : _devices) device.reset();
+  // we technically need to call device.finalize() here, but there is nothing ~to~ finalize so
+  // instead we just delete them...
+  for (auto&& device : _devices) device.reset();
   _defaultDevice = PETSC_CUPM_DEVICE_NONE;  // disabled by default
   _initialized   = false;
   PetscFunctionReturn(0);
@@ -304,7 +306,8 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
     }
     cerr = cupmGetLastError(); // reset error
     initTypeCUPM = PETSC_DEVICE_INIT_NONE;
-  } else CHKERRCUPM(cerr);
+  } else {CHKERRCUPM(cerr);}
+
   if (initTypeCUPM == PETSC_DEVICE_INIT_NONE) {
     id = PETSC_CUPM_DEVICE_NONE;
   } else {

@@ -6,45 +6,53 @@
 
 namespace Petsc
 {
+
 // do all of this with macros to enforce that both CUDA and HIP implementations both have
 // things defined. If you for example implement something on the HIP side but forget to
 // implement it on the CUDA side you'll get an error.
 
 // need these for the indirection when building the if_0 and if_1 variants of the macro
-#define CAT_(x,...) x ## __VA_ARGS__
-#define CAT(x,...) CAT_(x,__VA_ARGS__)
+#define CAT_(x,y) x ## y
+#define CAT(x,y) CAT_(x,y)
 
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_0(PREFIX,prefix,stem)
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_1(PREFIX,prefix,stem) \
-  const decltype(prefix ## stem) CUPMInterface<CUPMDeviceType::PREFIX>::cupm ## stem
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_0(PREFIX,original,mapped)
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_1(PREFIX,original,mapped) \
+  const decltype(original) CUPMInterface<CUPMDeviceType::PREFIX>::mapped
 
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(PREFIX,prefix,stem)   \
-  CAT(PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_,PetscDefined(HAVE_ ## PREFIX))(PREFIX,prefix,stem)
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT(HAVE,PREFIX,orginal,mapped) \
+  CAT(PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_,HAVE)(PREFIX,orginal,mapped)
 
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE(stem)                         \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,stem);            \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(HIP,hip,stem)
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(PREFIX,orginal,mapped) \
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT(PetscDefined(HAVE_ ## PREFIX),PREFIX,orginal,mapped)
+
+// in case either one or the other don't agree on a name, you can specify all three here
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cuoriginal,hiporiginal,mapped) \
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(CUDA,CAT(cuda,cuoriginal),CAT(cupm,mapped)); \
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(HIP,CAT(hip,hiporiginal),CAT(cupm,mapped))
+
+// if both cuda and hip agree on the same name
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE(stem)                 \
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(stem,stem,stem)
 
 // error codes
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(Success);
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(ErrorNotReady);
-PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,ErrorDeviceAlreadyInUse);
-#if PetscDefined(HAVE_HIP)
-// not conforming, see declaration in cupminterface.hpp
-const decltype(hipSuccess) CUPMInterface<CUPMDeviceType::HIP>::cupmErrorDeviceAlreadyInUse;
-#endif
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(ErrorSetOnActiveProcess);
+
+// hip not conforming, see declaration in cupminterface.hpp
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(ErrorDeviceAlreadyInUse,ErrorContextAlreadyInUse,ErrorDeviceAlreadyInUse);
+
+// hip not conforming, and cuda faffs around with versions see declaration in cupminterface.hpp
 #if PetscDefined(HAVE_CUDA)
 #  if PETSC_PKG_CUDA_VERSION_GE(11,1,0)
-PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE(CUDA,cuda,ErrorStubLibrary);
-#  else
-const decltype(cudaErrorInsufficientDriver) CUPMInterface<CUPMDeviceType::CUDA>::cupmErrorStubLibrary;
-#  endif // PETSC_PKG_CUDA_VERSION_GE
-#endif // PetscDefined(HAVE_CUDA)
-#if PetscDefined(HAVE_HIP)
-// not conforming, see declaration in cupminterface.hpp
-const decltype(hipErrorInsufficientDriver) CUPMInterface<CUPMDeviceType::HIP>::cupmErrorStubLibrary;
+#    define PetscCudaErrorStubLibrary ErrorStubLibrary
+#  endif
 #endif
+
+#if !defined(petscCudaErrStubLib)
+#  define PetscCudaErrorStubLibrary ErrorInsufficientDriver
+#endif
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(PetscCudaErrorStubLibrary,ErrorInsufficientDriver,ErrorStubLibrary);
 
 // enums
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(StreamNonBlocking);

@@ -234,8 +234,8 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,Success);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,ErrorNotReady);
-  // as of HIP v4.2 cudaErrorDeviceAlreadyInUse has no HIP equivalent
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(hip,Success,ErrorDeviceAlreadyInUse);
+  // see https://github.com/ROCm-Developer-Tools/HIP/blob/develop/bin/hipify-perl
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(hip,ErrorContextAlreadyInUse,ErrorDeviceAlreadyInUse);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,ErrorSetOnActiveProcess);
   // as of HIP v4.2 cudaErrorStubLibrary has no HIP equivalent
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(hip,ErrorInsufficientDriver,ErrorStubLibrary);
@@ -344,7 +344,7 @@ struct CUPMInterface<CUPMDeviceType::HIP>
 
 // shorthand for bringing all of the typedefs from the base CUPMInterface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
-#define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
+#define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING_(base_name_,Tp_)    \
   using base_name_ = CUPMInterface<Tp_>;                                \
   /* introspective typedefs */                                          \
   using base_name_::type;                                               \
@@ -392,6 +392,10 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   using base_name_::cupmMalloc;                                         \
   using base_name_::cupmMemcpy;                                         \
   using base_name_::cupmDeviceSynchronize;
+
+// allow any macros to expand in case someone needs it
+#define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
+  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING_(base_name_,Tp_)
 
 #endif /* __cplusplus */
 
