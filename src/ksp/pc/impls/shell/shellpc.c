@@ -394,7 +394,7 @@ static PetscErrorCode  PCShellSetPreSolve_Shell(PC pc,PetscErrorCode (*presolve_
   PetscFunctionBegin;
   shell->presolve_private = presolve_private;
   if (presolve_private) {
-    pc->ops->presolve = PCPreSolve_Shell_private;
+    pc->ops->presolve = PCPreSolve_Shell;
     ierr = PetscObjectComposeFunction((PetscObject)pc,"PCPreSolveChangeRHS_C",PCPreSolveChangeRHS_Shell);CHKERRQ(ierr);
   } else {
     pc->ops->presolve = NULL;
@@ -409,7 +409,7 @@ static PetscErrorCode  PCShellSetPostSolve_Shell(PC pc,PetscErrorCode (*postsolv
 
   PetscFunctionBegin;
   shell->postsolve_private = postsolve_private;
-  if (postsolve_private) pc->ops->postsolve = PCPostSolve_Shell_private;
+  if (postsolve_private) pc->ops->postsolve = PCPostSolve_Shell;
   else                   pc->ops->postsolve = NULL;
   PetscFunctionReturn(0);
 }
