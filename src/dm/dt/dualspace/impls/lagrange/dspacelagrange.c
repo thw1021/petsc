@@ -1001,7 +1001,7 @@ static PetscErrorCode PetscDualSpaceSetFromOptions_Lagrange(PetscOptionItems *Pe
 
 static PetscErrorCode PetscDualSpaceDuplicate_Lagrange(PetscDualSpace sp, PetscDualSpace spNew)
 {
-  PetscBool           cont, tensor, trimmed, boundary;
+  PetscBool           cont, tensor, trimmed, boundary, moments;
   PetscDTNodeType     nodeType;
   PetscReal           exponent;
   PetscDualSpace_Lag *lag    = (PetscDualSpace_Lag *) sp->data;
@@ -1014,6 +1014,14 @@ static PetscErrorCode PetscDualSpaceDuplicate_Lagrange(PetscDualSpace sp, PetscD
   ierr = PetscDualSpaceLagrangeSetTensor(spNew, tensor);CHKERRQ(ierr);
   ierr = PetscDualSpaceLagrangeGetTrimmed(sp, &trimmed);CHKERRQ(ierr);
   ierr = PetscDualSpaceLagrangeSetTrimmed(spNew, trimmed);CHKERRQ(ierr);
+  ierr = PetscDualSpaceLagrangeGetUseMoments(sp, &moments);CHKERRQ(ierr);
+  ierr = PetscDualSpaceLagrangeSetUseMoments(spNew, moments);CHKERRQ(ierr);
+  if (moments) {
+    PetscInt nm;
+
+    ierr = PetscDualSpaceLagrangeGetMomentOrder(sp, &nm);CHKERRQ(ierr);
+    ierr = PetscDualSpaceLagrangeSetMomentOrder(spNew, nm);CHKERRQ(ierr);
+  }
   ierr = PetscDualSpaceLagrangeGetNodeType(sp, &nodeType, &boundary, &exponent);CHKERRQ(ierr);
   ierr = PetscDualSpaceLagrangeSetNodeType(spNew, nodeType, boundary, exponent);CHKERRQ(ierr);
   if (lag->nodeFamily) {
@@ -1091,6 +1099,7 @@ static PetscErrorCode MatTensorAltV(Mat trace, Mat fiber, PetscInt dimTrace, Pet
   PetscReal *wedgeMat;
   PetscReal sign;
   PetscScalar *workS;
+  PetscBool traceDense, fiberDense;
   Mat prod;
   /* this produces dof groups that look like the identity */
   PetscErrorCode ierr;
@@ -1118,7 +1127,13 @@ static PetscErrorCode MatTensorAltV(Mat trace, Mat fiber, PetscInt dimTrace, Pet
   ierr = PetscMalloc1(m, &nnz);CHKERRQ(ierr);
   for (l = 0, j = 0; j < mFiber; j++) for (i = 0; i < mTrace; i++, l++) nnz[l] = (nnzTrace[i] / NkTrace) * (nnzFiber[j] / NkFiber) * Nk;
   n = (nTrace / NkTrace) * (nFiber / NkFiber) * Nk;
-  ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, 0, nnz, &prod);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)trace, MATSEQDENSE, &traceDense);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)fiber, MATSEQDENSE, &fiberDense);CHKERRQ(ierr);
+  if (traceDense || fiberDense) {
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, m, n, NULL, &prod);CHKERRQ(ierr);
+  } else {
+    ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, 0, nnz, &prod);CHKERRQ(ierr);
+  }
   ierr = PetscFree(nnz);CHKERRQ(ierr);
   ierr = PetscFree2(nnzTrace,nnzFiber);CHKERRQ(ierr);
   /* reasoning about which points each dof needs depends on having zeros computed at points preserved */
@@ -1276,6 +1291,7 @@ static PetscErrorCode MatricesMerge(Mat matA, Mat matB, PetscInt dim, PetscInt k
   PetscInt *nnz;
   PetscInt maxnnz;
   PetscInt *work;
+  PetscBool aDense, bDense;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -1298,7 +1314,13 @@ static PetscErrorCode MatricesMerge(Mat matA, Mat matB, PetscInt dim, PetscInt k
     if (nnz[i+mA] % Nk) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "nonzeros in matB are not in k-form size blocks");
     maxnnz = PetscMax(maxnnz, nnz[i+mA]);
   }
-  ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, 0, nnz, &M);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)matA, MATSEQDENSE, &aDense);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)matB, MATSEQDENSE, &bDense);CHKERRQ(ierr);
+  if (aDense || bDense) {
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, m, n, NULL, &M);CHKERRQ(ierr);
+  } else {
+    ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, m, n, 0, nnz, &M);CHKERRQ(ierr);
+  }
   ierr = PetscFree(nnz);CHKERRQ(ierr);
   /* reasoning about which points each dof needs depends on having zeros computed at points preserved */
   ierr = MatSetOption(M, MAT_IGNORE_ZERO_ENTRIES, PETSC_FALSE);CHKERRQ(ierr);
@@ -1547,6 +1569,7 @@ static PetscErrorCode PetscDualSpaceCreateAllDataFromInteriorData(PetscDualSpace
   PetscReal        *L, *J, *Jinv, *v0, *pv0;
   PetscInt         *iwork;
   PetscReal        *nodes;
+  PetscBool        anyDense;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
@@ -1558,6 +1581,7 @@ static PetscErrorCode PetscDualSpaceCreateAllDataFromInteriorData(PetscDualSpace
   ierr = PetscDualSpaceGetFormDegree(sp, &k);CHKERRQ(ierr);
   ierr = PetscDualSpaceGetNumComponents(sp, &Nc);CHKERRQ(ierr);
   ierr = PetscDTBinomialInt(dim, PetscAbsInt(k), &Nk);CHKERRQ(ierr);
+  anyDense = PETSC_FALSE;
   for (p = pStart, nNodes = 0, maxNzforms = 0; p < pEnd; p++) {
     PetscDualSpace  psp;
     DM              pdm;
@@ -1579,16 +1603,28 @@ static PetscErrorCode PetscDualSpaceCreateAllDataFromInteriorData(PetscDualSpace
       nNodes += nNodesp;
     }
     if (intMat) {
+      PetscBool thisDense;
       PetscInt maxNzsp;
       PetscInt maxNzformsp;
 
-      ierr = MatSeqAIJGetMaxRowNonzeros(intMat, &maxNzsp);CHKERRQ(ierr);
+      ierr = PetscObjectTypeCompare((PetscObject)intMat, MATSEQDENSE, &thisDense);CHKERRQ(ierr);
+      anyDense = thisDense ? PETSC_TRUE : anyDense;
+
+      if (!thisDense) {
+        ierr = MatSeqAIJGetMaxRowNonzeros(intMat, &maxNzsp);CHKERRQ(ierr);
+      } else {
+        ierr = MatGetSize(intMat, NULL, &maxNzsp);CHKERRQ(ierr);
+      }
       if (maxNzsp % pNk) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "interior matrix is not laid out as blocks of k-forms");
       maxNzformsp = maxNzsp / pNk;
       maxNzforms = PetscMax(maxNzforms, maxNzformsp);
     }
   }
-  ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, nDofs, nNodes * Nc, maxNzforms * Nk, NULL, &allMat);CHKERRQ(ierr);
+  if (anyDense) {
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, nDofs, nNodes * Nc, NULL, &allMat);CHKERRQ(ierr);
+  } else {
+    ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, nDofs, nNodes * Nc, maxNzforms * Nk, NULL, &allMat);CHKERRQ(ierr);
+  }
   ierr = MatSetOption(allMat,MAT_IGNORE_ZERO_ENTRIES,PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscMalloc7(dim, &v0, dim, &pv0, dim * dim, &J, dim * dim, &Jinv, Nk * Nk, &L, maxNzforms * Nk, &work, maxNzforms * Nk, &iwork);CHKERRQ(ierr);
   for (j = 0; j < dim; j++) pv0[j] = -1.;
@@ -1708,7 +1744,6 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
   PetscInt        nNodes, spdim;
   const PetscReal *nodes = NULL;
   PetscSection    section;
-  PetscBool       useMoments;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
@@ -1727,34 +1762,6 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
   ierr = PetscSectionGetStorageSize(section, &spdim);CHKERRQ(ierr);
   if (spdim != nDofs) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "incompatible all matrix size");
   ierr = PetscMalloc1(nDofs, &(sp->functional));CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeGetUseMoments(sp, &useMoments);CHKERRQ(ierr);
-  if (useMoments) {
-    Mat              allMat;
-    PetscInt         momentOrder, i;
-    PetscBool        tensor;
-    const PetscReal *weights;
-    PetscScalar     *array;
-
-    if (nDofs != 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "We do not yet support moments beyond P0, nDofs == %D", nDofs);
-    ierr = PetscDualSpaceLagrangeGetMomentOrder(sp, &momentOrder);CHKERRQ(ierr);
-    ierr = PetscDualSpaceLagrangeGetTensor(sp, &tensor);CHKERRQ(ierr);
-    if (!tensor) {ierr = PetscDTStroudConicalQuadrature(dim, Nc, PetscMax(momentOrder + 1,1), -1.0, 1.0, &(sp->functional[0]));CHKERRQ(ierr);}
-    else         {ierr = PetscDTGaussTensorQuadrature(dim, Nc, PetscMax(momentOrder + 1,1), -1.0, 1.0, &(sp->functional[0]));CHKERRQ(ierr);}
-    /* Need to replace allNodes and allMat */
-    ierr = PetscObjectReference((PetscObject) sp->functional[0]);CHKERRQ(ierr);
-    ierr = PetscQuadratureDestroy(&(sp->allNodes));CHKERRQ(ierr);
-    sp->allNodes = sp->functional[0];
-    ierr = PetscQuadratureGetData(sp->allNodes, NULL, NULL, &nNodes, NULL, &weights);CHKERRQ(ierr);
-    ierr = MatCreateSeqDense(PETSC_COMM_SELF, nDofs, nNodes * Nc, NULL, &allMat);CHKERRQ(ierr);
-    ierr = MatDenseGetArrayWrite(allMat, &array);CHKERRQ(ierr);
-    for (i = 0; i < nNodes * Nc; ++i) array[i] = weights[i];
-    ierr = MatDenseRestoreArrayWrite(allMat, &array);CHKERRQ(ierr);
-    ierr = MatAssemblyBegin(allMat, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatAssemblyEnd(allMat, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-    ierr = MatDestroy(&(sp->allMat));CHKERRQ(ierr);
-    sp->allMat = allMat;
-    PetscFunctionReturn(0);
-  }
   for (f = 0; f < nDofs; f++) {
     PetscInt ncols, c;
     const PetscInt *cols;
@@ -1795,45 +1802,72 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
 /* take a matrix meant for k-forms and expand it to one for Ncopies */
 static PetscErrorCode PetscDualSpaceLagrangeMatrixCreateCopies(Mat A, PetscInt Nk, PetscInt Ncopies, Mat *Abs)
 {
-  PetscInt       m, n, i, j, k;
-  PetscInt       maxnnz, *nnz, *iwork;
-  Mat            Ac;
+  PetscInt       m, n;
+  PetscBool      isDense;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = MatGetSize(A, &m, &n);CHKERRQ(ierr);
   if (n % Nk) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of columns in A %D is not a multiple of Nk %D", n, Nk);
-  ierr = PetscMalloc1(m * Ncopies, &nnz);CHKERRQ(ierr);
-  for (i = 0, maxnnz = 0; i < m; i++) {
-    PetscInt innz;
-    ierr = MatGetRow(A, i, &innz, NULL, NULL);CHKERRQ(ierr);
-    if (innz % Nk) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "A row %D nnzs is not a multiple of Nk %D", innz, Nk);
-    for (j = 0; j < Ncopies; j++) nnz[i * Ncopies + j] = innz;
-    maxnnz = PetscMax(maxnnz, innz);
-  }
-  ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, m * Ncopies, n * Ncopies, 0, nnz, &Ac);CHKERRQ(ierr);
-  ierr = MatSetOption(Ac, MAT_IGNORE_ZERO_ENTRIES, PETSC_FALSE);CHKERRQ(ierr);
-  ierr = PetscFree(nnz);CHKERRQ(ierr);
-  ierr = PetscMalloc1(maxnnz, &iwork);CHKERRQ(ierr);
-  for (i = 0; i < m; i++) {
-    PetscInt innz;
-    const PetscInt    *cols;
-    const PetscScalar *vals;
+  ierr = PetscObjectTypeCompare((PetscObject)A, MATSEQDENSE, &isDense);CHKERRQ(ierr);
+  if (isDense) {
+    Mat Ac;
+    PetscScalar *arrayc;
+    const PetscScalar *array;
 
-    ierr = MatGetRow(A, i, &innz, &cols, &vals);CHKERRQ(ierr);
-    for (j = 0; j < innz; j++) iwork[j] = (cols[j] / Nk) * (Nk * Ncopies) + (cols[j] % Nk);
-    for (j = 0; j < Ncopies; j++) {
-      PetscInt row = i * Ncopies + j;
-
-      ierr = MatSetValues(Ac, 1, &row, innz, iwork, vals, INSERT_VALUES);CHKERRQ(ierr);
-      for (k = 0; k < innz; k++) iwork[k] += Nk;
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, m * Ncopies, n * Ncopies, NULL, &Ac);CHKERRQ(ierr);
+    ierr = MatDenseGetArrayWrite(Ac,&arrayc);CHKERRQ(ierr);
+    ierr = MatDenseGetArrayRead(A,&array);CHKERRQ(ierr);
+    ierr = PetscArrayzero(arrayc,m*n*Ncopies*Ncopies);CHKERRQ(ierr);
+    for (PetscInt j = 0; j < n / Nk; j++) {
+      for (PetscInt i = 0; i < m; i++) {
+        for (PetscInt c = 0; c < Ncopies; c++) {
+          for (PetscInt f = 0; f < Nk; f++) {
+            arrayc[((j*Ncopies + c)*Nk + f)*Ncopies*m + i*Ncopies + c] = array[(j * Nk + f)*m + i];
+          }
+        }
+      }
     }
-    ierr = MatRestoreRow(A, i, &innz, &cols, &vals);CHKERRQ(ierr);
+    ierr = MatDenseRestoreArrayRead(A,&array);CHKERRQ(ierr);
+    ierr = MatDenseRestoreArrayWrite(Ac,&arrayc);CHKERRQ(ierr);
+    *Abs = Ac;
+  } else {
+    PetscInt       i, j, k;
+    PetscInt       maxnnz, *nnz, *iwork;
+    Mat            Ac;
+
+    ierr = PetscMalloc1(m * Ncopies, &nnz);CHKERRQ(ierr);
+    for (i = 0, maxnnz = 0; i < m; i++) {
+      PetscInt innz;
+      ierr = MatGetRow(A, i, &innz, NULL, NULL);CHKERRQ(ierr);
+      if (innz % Nk) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "A row %D nnzs is not a multiple of Nk %D", innz, Nk);
+      for (j = 0; j < Ncopies; j++) nnz[i * Ncopies + j] = innz;
+      maxnnz = PetscMax(maxnnz, innz);
+    }
+    ierr = MatCreateSeqAIJ(PETSC_COMM_SELF, m * Ncopies, n * Ncopies, 0, nnz, &Ac);CHKERRQ(ierr);
+    ierr = MatSetOption(Ac, MAT_IGNORE_ZERO_ENTRIES, PETSC_FALSE);CHKERRQ(ierr);
+    ierr = PetscFree(nnz);CHKERRQ(ierr);
+    ierr = PetscMalloc1(maxnnz, &iwork);CHKERRQ(ierr);
+    for (i = 0; i < m; i++) {
+      PetscInt innz;
+      const PetscInt    *cols;
+      const PetscScalar *vals;
+
+      ierr = MatGetRow(A, i, &innz, &cols, &vals);CHKERRQ(ierr);
+      for (j = 0; j < innz; j++) iwork[j] = (cols[j] / Nk) * (Nk * Ncopies) + (cols[j] % Nk);
+      for (j = 0; j < Ncopies; j++) {
+        PetscInt row = i * Ncopies + j;
+
+        ierr = MatSetValues(Ac, 1, &row, innz, iwork, vals, INSERT_VALUES);CHKERRQ(ierr);
+        for (k = 0; k < innz; k++) iwork[k] += Nk;
+      }
+      ierr = MatRestoreRow(A, i, &innz, &cols, &vals);CHKERRQ(ierr);
+    }
+    ierr = PetscFree(iwork);CHKERRQ(ierr);
+    ierr = MatAssemblyBegin(Ac, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(Ac, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    *Abs = Ac;
   }
-  ierr = PetscFree(iwork);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(Ac, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(Ac, MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  *Abs = Ac;
   PetscFunctionReturn(0);
 }
 
@@ -2078,6 +2112,155 @@ static PetscErrorCode MatPermuteByNodeIdx(Mat A, PetscLagNodeIndices ni, Mat *Ap
   PetscFunctionReturn(0);
 }
 
+/* Take nodal dofs and convert them into moment-with-polynomial dofs.
+ *
+ * We still want the dofs to have the appropriate symmetry, so
+ * use the nodes to compute shape functions for the polynomials,
+ * then evaluate them at an appropriate quadrature to compute moments
+ *
+ * (assumes intMat is the identity)
+ */
+static PetscErrorCode PetscDualSpacePolynomialMoments(PetscInt dim, PetscInt deg, PetscInt momentOrder, PetscInt Nk, PetscQuadrature *intNodes, Mat *intMat)
+{
+  PetscInt         Ns, npoints, mpoints;
+  const PetscReal *points;
+  const PetscReal *qpoints;
+  PetscReal       *qpoints_copy;
+  const PetscReal *weights;
+  Mat              V, Vm, P;
+  PetscScalar     *V_array, *Vm_array;
+  PetscQuadrature  mQ, newIntNodes;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDTBinomialInt(dim + deg, dim, &Ns);CHKERRQ(ierr);
+
+  ierr = PetscQuadratureGetData(*intNodes, NULL, NULL, &npoints, &points, NULL);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, npoints, Ns, NULL, &V);CHKERRQ(ierr);
+
+  // scalar Vandermonde matrix
+  ierr = MatDenseGetArrayWrite(V, &V_array);CHKERRQ(ierr);
+  ierr = PetscDTPKDEvalJet(dim, npoints, points, deg, 0, V_array);CHKERRQ(ierr);
+  ierr = MatDenseRestoreArrayWrite(V, &V_array);CHKERRQ(ierr);
+  ierr = MatTranspose(V, MAT_INPLACE_MATRIX, &V);CHKERRQ(ierr);
+  ierr = MatLUFactor(V, NULL, NULL, NULL);CHKERRQ(ierr);
+
+  ierr = PetscDTStroudConicalQuadrature(dim, 1, momentOrder + 1, -1., 1., &mQ);CHKERRQ(ierr);
+  ierr = PetscQuadratureGetData(mQ, NULL, NULL, &mpoints, &qpoints, &weights);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, mpoints, Ns, NULL, &Vm);CHKERRQ(ierr);
+  ierr = MatDenseGetArrayWrite(Vm, &Vm_array);CHKERRQ(ierr);
+  ierr = PetscDTPKDEvalJet(dim, mpoints, qpoints, deg, 0, Vm_array);CHKERRQ(ierr);
+  for (PetscInt pt = 0; pt < mpoints; pt++) {
+    PetscReal w = weights[pt];
+
+    for (PetscInt i = 0; i < Ns; i++) {
+      Vm_array[i * npoints + pt] *= w;
+    }
+  }
+  ierr = MatDenseRestoreArrayWrite(Vm, &Vm_array);CHKERRQ(ierr);
+  ierr = MatTranspose(Vm, MAT_INPLACE_MATRIX, &Vm);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, Ns, mpoints, NULL, &P);CHKERRQ(ierr);
+  // P maps values at the quadrature points to moments against a nodal basis of the polynomials
+  ierr = MatMatSolve(V, Vm, P);CHKERRQ(ierr);
+  if (Nk > 1) {
+    Mat Pv;
+
+    ierr = PetscDualSpaceLagrangeMatrixCreateCopies(P, 1, Nk, &Pv);CHKERRQ(ierr);
+    ierr = MatDestroy(&P);CHKERRQ(ierr);
+    P = Pv;
+  }
+  ierr = MatDestroy(intMat);CHKERRQ(ierr);
+  *intMat = P;
+  ierr = PetscMalloc1(mpoints * dim, &qpoints_copy);CHKERRQ(ierr);
+  ierr = PetscArraycpy(qpoints_copy, qpoints, mpoints * dim);CHKERRQ(ierr);
+  ierr = PetscQuadratureCreate(PETSC_COMM_SELF, &newIntNodes);CHKERRQ(ierr);
+  ierr = PetscQuadratureSetData(newIntNodes, dim, 0, mpoints, qpoints_copy, NULL);CHKERRQ(ierr);
+  ierr = PetscQuadratureSetOrder(newIntNodes, momentOrder);CHKERRQ(ierr);
+  ierr = PetscQuadratureDestroy(intNodes);CHKERRQ(ierr);
+  *intNodes = newIntNodes;
+  ierr = PetscQuadratureDestroy(&mQ);CHKERRQ(ierr);
+  ierr = MatDestroy(&Vm);CHKERRQ(ierr);
+  ierr = MatDestroy(&V);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscDualSpaceTrimmedMoments(PetscInt dim, PetscInt deg, PetscInt form, PetscInt momentOrder, PetscQuadrature *intNodes, Mat *intMat)
+{
+  PetscInt         Ns, Nk,npoints, mpoints;
+  const PetscReal *points;
+  const PetscReal *qpoints;
+  PetscReal       *qpoints_copy;
+  const PetscReal *weights;
+  Mat              V, VI, Vm, P;
+  PetscScalar     *V_array, *V_array_T, *Vm_array, *Vm_array_T; PetscQuadrature  mQ, newIntNodes;
+  PetscErrorCode   ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDTPTrimmedSize(dim, deg, form, &Ns);CHKERRQ(ierr);
+  ierr = PetscDTBinomialInt(dim, PetscAbsInt(form), &Nk);CHKERRQ(ierr);
+
+  ierr = PetscQuadratureGetData(*intNodes, NULL, NULL, &npoints, &points, NULL);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, Nk * npoints, Ns, NULL, &V);CHKERRQ(ierr);
+
+  // scalar Vandermonde matrix
+  ierr = MatDenseGetArrayWrite(V, &V_array);CHKERRQ(ierr);
+  ierr = PetscMalloc1(Ns * Nk * npoints, &V_array_T);CHKERRQ(ierr);
+  ierr = PetscDTPTrimmedEvalJet(dim, npoints, points, deg, form, 0, V_array_T);CHKERRQ(ierr);
+  for (PetscInt b = 0; b < Ns; b++) {
+    for (PetscInt pt = 0; pt < npoints; pt++) {
+      for (PetscInt f = 0; f < Nk; f++) {
+        V_array[(b * npoints + pt) * Nk + f] = V_array_T[(b * Nk + f) * npoints + pt];
+      }
+    }
+  }
+  ierr = PetscFree(V_array_T);CHKERRQ(ierr);
+  ierr = MatDenseRestoreArrayWrite(V, &V_array);CHKERRQ(ierr);
+  ierr = MatMatMult(*intMat, V, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &VI);CHKERRQ(ierr);
+  ierr = MatTranspose(VI, MAT_INPLACE_MATRIX, &VI);CHKERRQ(ierr);
+  ierr = MatLUFactor(VI, NULL, NULL, NULL);CHKERRQ(ierr);
+
+  ierr = PetscDTStroudConicalQuadrature(dim, 1, momentOrder + 1, -1., 1., &mQ);CHKERRQ(ierr);
+  ierr = PetscQuadratureGetData(mQ, NULL, NULL, &mpoints, &qpoints, &weights);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, Nk * mpoints, Ns, NULL, &Vm);CHKERRQ(ierr);
+  ierr = MatDenseGetArrayWrite(Vm, &Vm_array);CHKERRQ(ierr);
+  ierr = PetscMalloc1(Ns * Nk * mpoints, &Vm_array_T);CHKERRQ(ierr);
+  ierr = PetscDTPTrimmedEvalJet(dim, mpoints, qpoints, deg, form, 0, Vm_array_T);CHKERRQ(ierr);
+  for (PetscInt pt = 0; pt < mpoints; pt++) {
+    PetscReal w = weights[pt];
+
+    for (PetscInt i = 0; i < Ns * Nk; i++) {
+      Vm_array_T[i * npoints + pt] *= w;
+    }
+  }
+  for (PetscInt b = 0; b < Ns; b++) {
+    for (PetscInt pt = 0; pt < mpoints; pt++) {
+      for (PetscInt f = 0; f < Nk; f++) {
+        Vm_array[(b * npoints + pt) * Nk + f] = Vm_array_T[(b * Nk + f) * npoints + pt];
+      }
+    }
+  }
+  ierr = PetscFree(Vm_array_T);CHKERRQ(ierr);
+  ierr = MatDenseRestoreArrayWrite(Vm, &Vm_array);CHKERRQ(ierr);
+  ierr = MatTranspose(Vm, MAT_INPLACE_MATRIX, &Vm);CHKERRQ(ierr);
+  ierr = MatCreateSeqDense(PETSC_COMM_SELF, Ns, Nk * mpoints, NULL, &P);CHKERRQ(ierr);
+  // P maps values at the quadrature points to moments against a nodal basis of the polynomials
+  ierr = MatMatSolve(VI, Vm, P);CHKERRQ(ierr);
+  ierr = MatDestroy(intMat);CHKERRQ(ierr);
+  *intMat = P;
+  ierr = PetscMalloc1(mpoints * dim, &qpoints_copy);CHKERRQ(ierr);
+  ierr = PetscArraycpy(qpoints_copy, qpoints, mpoints * dim);CHKERRQ(ierr);
+  ierr = PetscQuadratureCreate(PETSC_COMM_SELF, &newIntNodes);CHKERRQ(ierr);
+  ierr = PetscQuadratureSetData(newIntNodes, dim, 0, mpoints, qpoints_copy, NULL);CHKERRQ(ierr);
+  ierr = PetscQuadratureSetOrder(newIntNodes, momentOrder);CHKERRQ(ierr);
+  ierr = PetscQuadratureDestroy(intNodes);CHKERRQ(ierr);
+  *intNodes = newIntNodes;
+  ierr = PetscQuadratureDestroy(&mQ);CHKERRQ(ierr);
+  ierr = MatDestroy(&Vm);CHKERRQ(ierr);
+  ierr = MatDestroy(&VI);CHKERRQ(ierr);
+  ierr = MatDestroy(&V);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
 {
   PetscDualSpace_Lag *lag   = (PetscDualSpace_Lag *) sp->data;
@@ -2097,6 +2280,8 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
   PetscInt            numNodeSkip;
   DMPlexInterpolatedFlag interpolated;
   PetscBool           isbdm;
+  PetscBool           useMoments;
+  PetscInt            momentOrder;
   PetscErrorCode      ierr;
 
   PetscFunctionBegin;
@@ -2164,6 +2349,9 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
   }
   nodeFamily = lag->nodeFamily;
   if (interpolated != DMPLEX_INTERPOLATED_FULL && continuous && (PetscAbsInt(formDegree) > 0 || order > 1)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Reference element won't support all boundary nodes");
+  ierr = PetscDualSpaceLagrangeGetUseMoments(sp, &useMoments);CHKERRQ(ierr);
+  if (useMoments) lag->momentOrder = PetscMax(lag->momentOrder, order);
+  momentOrder = lag->momentOrder;
 
   /* step 2: construct the boundary spaces */
   ierr = PetscMalloc2(depth+1,&pStratStart,depth+1,&pStratEnd);CHKERRQ(ierr);
@@ -2324,13 +2512,16 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
     if (!tensorCell) {ierr = PetscLagNodeIndicesCreateSimplexVertices(dm, &(lag->vertIndices));CHKERRQ(ierr);}
 
     if (trimmed) {
-      /* there is one dof in the interior of the a trimmed element for each full polynomial of with degree at most
+      /* there is one dof in the interior of a trimmed element for each full polynomial of with degree at most
        * order + k - dim - 1 */
       if (order + PetscAbsInt(formDegree) > dim) {
         PetscInt sum = order + PetscAbsInt(formDegree) - dim - 1;
         PetscInt nDofs;
 
         ierr = PetscDualSpaceLagrangeCreateSimplexNodeMat(nodeFamily, dim, sum, Nk, numNodeSkip, &sp->intNodes, &sp->intMat, &(lag->intNodeIndices));CHKERRQ(ierr);
+        if (useMoments) {
+          ierr = PetscDualSpacePolynomialMoments(dim, sum, momentOrder, Nk, &(sp->intNodes), &(sp->intMat));CHKERRQ(ierr);
+        }
         ierr = MatGetSize(sp->intMat, &nDofs, NULL);CHKERRQ(ierr);
         ierr = PetscSectionSetDof(section, 0, nDofs);CHKERRQ(ierr);
       }
@@ -2345,6 +2536,9 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
         PetscInt nDofs;
 
         ierr = PetscDualSpaceLagrangeCreateSimplexNodeMat(nodeFamily, dim, sum, Nk, numNodeSkip, &sp->intNodes, &sp->intMat, &(lag->intNodeIndices));CHKERRQ(ierr);
+        if (useMoments) {
+          ierr = PetscDualSpacePolynomialMoments(dim, sum, momentOrder, Nk, &(sp->intNodes), &(sp->intMat));CHKERRQ(ierr);
+        }
         ierr = MatGetSize(sp->intMat, &nDofs, NULL);CHKERRQ(ierr);
         ierr = PetscSectionSetDof(section, 0, nDofs);CHKERRQ(ierr);
         ierr = PetscDualSpaceSectionSetUp_Internal(sp, section);CHKERRQ(ierr);
@@ -2369,6 +2563,7 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
           ierr = PetscDualSpaceLagrangeSetTrimmed(trimmedsp, PETSC_TRUE);CHKERRQ(ierr);
           ierr = PetscDualSpaceSetOrder(trimmedsp, order + PetscAbsInt(formDegree) - dim);CHKERRQ(ierr);
           ierr = PetscDualSpaceSetFormDegree(trimmedsp, trFormDegree);CHKERRQ(ierr);
+          ierr = PetscDualSpaceLagrangeSetUseMoments(trimmedsp, PETSC_FALSE);CHKERRQ(ierr);
           trimmedlag = (PetscDualSpace_Lag *) trimmedsp->data;
           trimmedlag->numNodeSkip = numNodeSkip + 1;
           ierr = PetscDualSpaceSetUp(trimmedsp);CHKERRQ(ierr);
@@ -2378,6 +2573,9 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
           ierr = PetscLagNodeIndicesReference(trimmedlag->allNodeIndices);CHKERRQ(ierr);
           lag->intNodeIndices = trimmedlag->allNodeIndices;
           ierr = PetscObjectReference((PetscObject)intMat);CHKERRQ(ierr);
+          if (useMoments) {
+            ierr = PetscDualSpaceTrimmedMoments(dim, order + PetscAbsInt(formDegree) - dim, trFormDegree, momentOrder, &(sp->intNodes), &intMat);CHKERRQ(ierr);
+          }
           if (PetscAbsInt(formDegree) > 0 && PetscAbsInt(formDegree) < dim) {
             PetscReal *T;
             PetscScalar *work;
