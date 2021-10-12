@@ -234,7 +234,7 @@ static PetscErrorCode Petsc1DNodeFamilyComputeSimplexNodes(Petsc1DNodeFamily f, 
  *   mesh point
  * - The permutation of the vertices, and the nodeIdx values assigned to them, tells what permutation in index space
  *   is associated with the orientation
- * - I uses that permutation to get xi' = phi(xi(A)), the integer coordinate of the transformed dof
+ * - I use that permutation to get xi' = phi(xi(A)), the integer coordinate of the transformed dof
  * - I can without numerical issues compute A' = idx(xi')
  *
  * Here are some examples of how the process works
@@ -672,7 +672,7 @@ static PetscErrorCode PetscLagNodeIndicesPushForward(DM dm, PetscLagNodeIndices 
   PetscFunctionReturn(0);
 }
 
-/* given to sets of nodes, take the tensor product, where the product of the dof indices is concatenation and the
+/* given a sets of nodes, take the tensor product, where the product of the dof indices is concatenation and the
  * product of the dof vectors is the wedge product */
 static PetscErrorCode PetscLagNodeIndicesTensor(PetscLagNodeIndices tracei, PetscInt dimT, PetscInt kT, PetscLagNodeIndices fiberi, PetscInt dimF, PetscInt kF, PetscLagNodeIndices *nodeIndices)
 {
@@ -1025,7 +1025,7 @@ static PetscErrorCode PetscDualSpaceDuplicate_Lagrange(PetscDualSpace sp, PetscD
   PetscFunctionReturn(0);
 }
 
-/* for making tensor product spaces: take a dual space and product a segment space that has all the same
+/* for making tensor product spaces: take a dual space and produce a segment space that has all the same
  * specifications (trimmed, continuous, order, node set), except for the form degree */
 static PetscErrorCode PetscDualSpaceCreateEdgeSubspace_Lagrange(PetscDualSpace sp, PetscInt order, PetscInt k, PetscInt Nc, PetscBool interiorOnly, PetscDualSpace *bdsp)
 {
@@ -1336,7 +1336,7 @@ static PetscErrorCode MatricesMerge(Mat matA, Mat matB, PetscInt dim, PetscInt k
   PetscFunctionReturn(0);
 }
 
-/* Take a dual space and product a segment space that has all the same specifications (trimmed, continuous, order,
+/* Take a dual space and produce a facet space that has all the same specifications (trimmed, continuous, order,
  * node set), except for the form degree.  For computing boundary dofs and for making tensor product spaces */
 static PetscErrorCode PetscDualSpaceCreateFacetSubspace_Lagrange(PetscDualSpace sp, DM K, PetscInt f, PetscInt k, PetscInt Ncopies, PetscBool interiorOnly, PetscDualSpace *bdsp)
 {
@@ -1529,7 +1529,7 @@ static PetscErrorCode PetscDualSpaceLagrangeCreateAllNodeIdx(PetscDualSpace sp)
 }
 
 /* once the (quadrature, Matrix) forms of the dofs have been created for the interior of the
- * reference cell and for the boundary cells, jk
+ * reference cell and for the boundary cells,
  * push forward the boundary data and concatenate them into the full (quadrature, matrix) data
  * for the dual space */
 static PetscErrorCode PetscDualSpaceCreateAllDataFromInteriorData(PetscDualSpace sp)
