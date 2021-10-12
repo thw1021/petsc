@@ -193,7 +193,7 @@ static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp)
 
   PetscFunctionBegin;
   if (!shell->presolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
-
+  printf(" PCPreSolve_Shell...\n");
   ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
   ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
   PetscStackCall("PCSHELL user function presolve()",ierr = (*shell->presolve_private)(pc,ksp,b,x);CHKERRQ(ierr));
@@ -213,10 +213,13 @@ static PetscErrorCode PCPostSolve_Shell_private(PC pc,KSP ksp,Vec b,Vec x)
 
 static PetscErrorCode PCPostSolve_Shell(PC pc,KSP ksp)
 {
+  PC_Shell       *shell = (PC_Shell*)pc->data;
   PetscErrorCode ierr;
   Vec            x,b;
 
   PetscFunctionBegin;
+  if (!shell->postsolve_private) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No postsolve() routine provided to Shell PC");
+  printf(" PCPostSolve_Shell...\n");
   ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
   ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
   ierr = PCPostSolve_Shell_private(pc,ksp,b,x);CHKERRQ(ierr);
