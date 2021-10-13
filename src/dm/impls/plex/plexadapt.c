@@ -979,7 +979,7 @@ PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabe
     }
     ierr = ISRestoreIndices(globalVertexNum, &gV);CHKERRQ(ierr);
     ierr = PetscFree(numVerInterfaces);CHKERRQ(ierr);
-  } else SETERRQ(comm, PETSC_ERR_ARG_WRONG, "ParMmg only works in parallel.\n");
+  }
   ierr = DMDestroy(&udm);CHKERRQ(ierr);
 
   /* Send the data to ParMmg and remesh */
