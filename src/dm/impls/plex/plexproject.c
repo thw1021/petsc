@@ -781,7 +781,7 @@ static PetscErrorCode DMProjectLocal_Generic_Plex(DM dm, PetscReal time, Vec loc
         PetscBool cohesive;
 
         if (!spIn[f]) continue;
-        ierr = PetscDSGetCohesive(ds, f, &cohesive);CHKERRQ(ierr);
+        ierr = PetscDSGetCohesive(dsIn, f, &cohesive);CHKERRQ(ierr);
         ierr = PetscDualSpaceGetDimension(spIn[f], &spDim);CHKERRQ(ierr);
         totDimIn += spDim;
         if (isCohesive && !cohesive) totDimIn += spDim;
