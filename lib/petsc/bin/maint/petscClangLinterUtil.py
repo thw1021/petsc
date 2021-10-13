@@ -69,8 +69,12 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
       retList.extend(viewAstFromCursor(c,pred=pred,level=level+1,**kwargs))
   return retList
 
+
 def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  return getRawSourceFromLocation(cursor.location.file.name,cursor.location.line,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
+  return getRawSourceFromSourceRange(cursor.location,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
+
+def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
+  return geRawSourceFromLocation(sourceRange.start.file.name,sourceRange.start.line,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
 
 def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
   lineList = []
@@ -93,8 +97,12 @@ def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=
   srcStr = "\n".join(lineList)
   return srcStr
 
+
 def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
   return getFormattedSourceFromLocation(cursor.location.file.name,cursor.location.line,cursor.extent.start.column-1,cursor.extent.end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
+
+def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
+  return getFormattedSourceFromLocation(sourceRange.start.file.name,sourceRange.start.line,sourceRange.start.column-1,sourceRange.end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
 
 def getFormattedSourceFromLocation(filename,lineno,symbolBegin,symbolEnd,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
   lineList = []
@@ -124,6 +132,7 @@ def getFormattedSourceFromLocation(filename,lineno,symbolBegin,symbolEnd,numBefo
   if view:
     return print(srcStr)
   return srcStr
+
 
 def viewCursorFull(cursor):
   print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
