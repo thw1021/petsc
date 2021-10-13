@@ -512,7 +512,7 @@ PetscErrorCode PetscSetMKL_CPARDISOFromOptions(Mat F, Mat A)
 
   PetscFunctionBegin;
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"MKL_CPARDISO Options","Mat");CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-mat_mkl_cpardiso_65","Number of threads to use","None",threads,&threads,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-mat_mkl_cpardiso_65","Suggested number of threads to use within MKL_CPARDISO","None",threads,&threads,&flg);CHKERRQ(ierr);
   if (flg) mkl_set_num_threads((int)threads);
 
   ierr = PetscOptionsInt("-mat_mkl_cpardiso_66","Maximum number of factors with identical sparsity structure that must be kept in memory at the same time","None",mat_mkl_cpardiso->maxfct,&icntl,&flg);CHKERRQ(ierr);
