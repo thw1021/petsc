@@ -94,7 +94,7 @@ class Configure(config.package.Package):
     return incDirs
 
   def generateLibList(self, directory):
-    ''' Generate cuda liblist. The difficulty comes from NVIDIA provides two different directory structures through CUDAToolkit and NVHPC'''
+    ''' Generate cuda liblist. The difficulty comes from NVIDIA providing two different directory structures through CUDAToolkit and NVHPC'''
 
     # NVIDIA provides
     # 1) CUDAToolkit, with a directory structure like
