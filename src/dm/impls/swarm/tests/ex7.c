@@ -58,7 +58,7 @@ PetscErrorCode createSwarm(const DM dm, DM *sw)
   ierr = DMSetFromOptions(*sw);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
- 
+
 PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, Mat M_p)
 {
   PetscBool      is_lsqr;
