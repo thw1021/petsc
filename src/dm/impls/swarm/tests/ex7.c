@@ -220,16 +220,17 @@ static PetscErrorCode maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt
   PetscFunctionReturn(0);
 }
 #define NUM_SOLVE_LOOPS 100
+#define MAX_NUM_THRDS 12
 PetscErrorCode go()
 {
-  DM              dm_t[16], sw_t[16];
+  DM              dm_t[MAX_NUM_THRDS], sw_t[MAX_NUM_THRDS];
   PetscFE         fe;
   PetscInt        dim = 2, Nc = 1, timestep = 0, i, faces[3];
-  PetscInt        Np[2] = {10,10}, Np2[2], field = 0, target = 0, Np_t[16];
+  PetscInt        Np[2] = {10,10}, Np2[2], field = 0, target = 0, Np_t[MAX_NUM_THRDS];
   PetscReal       time = 0.0, moments_0[3], moments_1[3], vol;
-  PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], hp[3], *xx_t[16], *yy_t[16], *wp_t[16], solve_time = 0;
-  Vec             rho_t[16], rhs_t[16];
-  Mat             M_p_t[16];
+  PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], hp[3], *xx_t[MAX_NUM_THRDS], *yy_t[MAX_NUM_THRDS], *wp_t[MAX_NUM_THRDS], solve_time = 0;
+  Vec             rho_t[MAX_NUM_THRDS], rhs_t[MAX_NUM_THRDS];
+  Mat             M_p_t[MAX_NUM_THRDS];
   PetscErrorCode  ierr;
 #if defined PETSC_USE_LOG
   PetscLogStage   stage;
@@ -244,8 +245,8 @@ PetscErrorCode go()
 
   PetscFunctionBeginUser;
 #if defined(PETSC_HAVE_OPENMP)
-  if (numthreads>16) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %d > 16", numthreads);
-  if (numthreads<=0) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "No threads %d > 16", numthreads);
+  if (numthreads>MAX_NUM_THRDS) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %D > %D", numthreads, MAX_NUM_THRDS);
+  if (numthreads<=0) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "No threads %D > %D ", numthreads,  MAX_NUM_THRDS);
 #endif
   if (target >= numthreads) target = numthreads-1;
   ierr = PetscLogEventRegister("Create Swarm", DM_CLASSID, &swarm_create_ev);CHKERRQ(ierr);
