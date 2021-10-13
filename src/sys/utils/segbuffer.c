@@ -92,11 +92,18 @@ PetscErrorCode PetscSegBufferGet(PetscSegBuffer seg,size_t count,void *buf)
   struct _PetscSegBufferLink *s;
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_OPENMP_SUPPORT)
+#pragma omp critical
+  {
+#endif
   s = seg->head;
   if (PetscUnlikely(s->used + count > s->alloc)) {ierr = PetscSegBufferAlloc_Private(seg,count);CHKERRQ(ierr);}
   s = seg->head;
   *(char**)buf = &s->u.array[s->used*seg->unitbytes];
   s->used += count;
+#if defined(PETSC_HAVE_OPENMP_SUPPORT)
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -277,8 +284,15 @@ PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer seg,size_t unused)
   struct _PetscSegBufferLink *head;
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_OPENMP_SUPPORT)
+#pragma omp critical
+  {
+#endif
   head = seg->head;
   if (PetscUnlikely(head->used < unused)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%D) than previously gotten (%D)",unused,head->used);
   head->used -= unused;
+#if defined(PETSC_HAVE_OPENMP_SUPPORT)
+  }
+#endif
   PetscFunctionReturn(0);
 }
