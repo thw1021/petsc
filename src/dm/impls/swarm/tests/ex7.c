@@ -84,7 +84,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
       is_lsqr = PETSC_TRUE;
       ierr = KSPSetType(ksp,KSPLSQR);CHKERRQ(ierr);
       ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-      ierr = PCSetType(pc,PCNONE);CHKERRQ(ierr); // could put in better solver -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero  -block_diag_prec
+      ierr = PCSetType(pc,PCNONE);CHKERRQ(ierr); // could put in better solver -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero
     } else {
       ierr = PetscNew(&matshellctx);CHKERRQ(ierr);
       ierr = MatCreateShell(PetscObjectComm((PetscObject)dm),N,N,PETSC_DECIDE,PETSC_DECIDE,matshellctx,&MtM);CHKERRQ(ierr);
@@ -437,7 +437,7 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     requires: double
-    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -dm_plex_hash_location -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero  -block_diag_prec -dm_view -ftop_ksp_converged_reason
+    args: -dm_plex_simplex 0 -dm_plex_box_faces 4,2 -dm_plex_box_lower -2.0,0.0 -dm_plex_box_upper 2.0,2.0 -petscspace_degree 2 -dm_plex_hash_location -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero -dm_view -ftop_ksp_converged_reason
     filter: grep -v DM_ | grep -v atomic
 
   test:
