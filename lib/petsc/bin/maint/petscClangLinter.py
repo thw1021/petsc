@@ -9,6 +9,7 @@ import os
 import sys
 import enum
 import itertools
+import collections
 import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil
@@ -19,6 +20,7 @@ except ModuleNotFoundError as mnfe:
     raise RuntimeError("Must run e.g. 'python -m pip install clang' to use linter") from mnfe
   elif mnfe.name == "petscClangLinterUtil":
     raise RuntimeError("Must run the linter from ${PETSC_DIR}/lib/petsc/bin/maint/") from mnfe
+  raise # whatever it is they should know about it
 
 """
 clang.cindex.TranslationUnit does not have all latest flags, but we prefix
@@ -481,6 +483,14 @@ class PetscCursor(object):
       self.argidx          = idx
     return
 
+  @staticmethod
+  def asPetscCursor(cursor):
+    __doc__="""like numpy.asanyarray but for PetscCursors"""
+    assert isinstance(cursor,(clx.Cursor,PetscCursor))
+    if isinstance(cursor,clx.Cursor):
+      cursor = PetscCursor(cursor)
+    return cursor
+
   def __getattr__(self,attr):
     __doc__="""
     Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
@@ -622,7 +632,109 @@ class SourceFix(object):
                 yield "+"+line
 
 
+class Scope(object):
+  __doc__="""
+  Scope encompasses both the logical and lexical reach of a callsite, and is used to
+  determine if two function calls may be occur in chronological order. Scopes may be
+  approximated by incrementing or decrementing a counter every time a pair of '{}' are
+  encountered however it is not that simple. In practice they behave almost identically
+  to sets. Every relation between scopes may be formed by the following axioms.
+
+  - Scope A is said to be greater than scope B if one is able to get to scope B from scope A
+  e.g.:
+  { // scope A
+    { // scope B < scope A
+      ...
+    }
+  }
+  - Scope A is said to be equivalent to scope B if and only if they are the same object.
+  e.g.:
+  { // scope A and scope B
+    ...
+  }
+
+  One notable exception are switch-case statements. Here every 'case' label acts as its
+  own scope, regardless of whether a "break" is inserted i.e.:
+
+  switch (cond) { // scope A
+  case 1: // scope B begin
+    ...
+    break; // scope B end
+  case 2: // scope C begin
+    ...
+  case 2:// scope C end, scope D begin
+    ...
+    break; // scope D end
+  }
+
+  Semantics here are weird, as:
+  - scope B, C, D < scope A
+  - scope B != scope C != scope D
+  """
+  __slots__ = ("gen","super","children")
+
+  def __init__(self,superScope=None):
+    if superScope:
+      assert isinstance(superScope,Scope)
+      self.gen    = superScope.gen+1
+    else:
+      self.gen    = 0
+    self.super    = superScope
+    self.children = []
+    return
+
+  def __str__(self):
+    return "gen {} id {}".format(self.gen,id(self))
+
+  def __lt__(self,other):
+    assert isinstance(other,Scope)
+    return not (self >= other)
+
+  def __gt__(self,other):
+    assert isinstance(other,Scope)
+    return self.isChildOf(other)
+
+  def __le__(self,other):
+    assert isinstance(other,Scope)
+    return not (self > other)
+
+  def __ge__(self,other):
+    assert isinstance(other,Scope)
+    return (self > other) or (self == other)
+
+  def __eq__(self,other):
+    if other is not None:
+      assert isinstance(other,Scope)
+      return id(self) == id(other)
+    return False
+
+  def __ne__(self,other):
+    return not (self == other)
+
+  def sub(self):
+    __doc__="""spawn sub-scope"""
+    child = Scope(self)
+    self.children.append(child)
+    return child
+
+  def isParentOf(self,other):
+    __doc__="""self is parent of other"""
+    if self == other:
+      return False
+    for child in self.children:
+      if (other == child) or child.isParentOf(other):
+        return True
+    return False
+
+  def isChildOf(self,other):
+    __doc__="""self is child of other, or other is parent of self"""
+    return other.isParentOf(self)
+
+
 class PetscLinter(object):
+  __doc__="""
+  Object to manage the collection and processing of errors during a lint run.
+  """
   def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,werror=False,lock=None):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
@@ -687,104 +799,6 @@ class PetscLinter(object):
     function definitions in the AST, making it impossible to map a macro invocation to
     its 'parent' function.
     """
-    class Scope(object):
-      __doc__="""
-      Scope encompasses both the logical and lexical reach of a callsite, and is used to
-      determine if two function calls may be occur in chronological order. Scopes may be
-      approximated by incrementing or decrementing a counter every time a pair of '{}' are
-      encountered however it is not that simple. In practice they behave almost identically
-      to sets. Every relation between scopes may be formed by the following axioms.
-
-      - Scope A is said to be greater than scope B if one is able to get to scope B from scope A
-      e.g.:
-      { // scope A
-        { // scope B < scope A
-          ...
-        }
-      }
-      - Scope A is said to be equivalent to scope B if and only if they are the same object.
-      e.g.:
-      { // scope A and scope B
-        ...
-      }
-
-      One notable exception are switch-case statements. Here every 'case' label acts as its
-      own scope, regardless of whether a "break" is inserted i.e.:
-
-      switch (cond) { // scope A
-      case 1: // scope B begin
-        ...
-        break; // scope B end
-      case 2: // scope C begin
-        ...
-      case 2:// scope C end, scope D begin
-        ...
-        break; // scope D end
-      }
-
-      Semantics here are weird, as:
-      - scope B, C, D < scope A
-      - scope B != scope C != scope D
-      """
-      __slots__ = ("gen","super","children")
-
-      def __init__(self,superScope=None):
-        if superScope:
-          assert isinstance(superScope,Scope)
-          self.gen      = superScope.gen+1
-        else:
-          self.gen      = 0
-        self.super      = superScope
-        self.children   = []
-        return
-
-      def __str__(self):
-        return "gen {} id {}".format(self.gen,id(self))
-
-      def __lt__(self,other):
-        assert isinstance(other,Scope)
-        return not (self >= other)
-
-      def __gt__(self,other):
-        assert isinstance(other,Scope)
-        return self.isChildOf(other)
-
-      def __le__(self,other):
-        assert isinstance(other,Scope)
-        return not (self > other)
-
-      def __ge__(self,other):
-        assert isinstance(other,Scope)
-        return (self > other) or (self == other)
-
-      def __eq__(self,other):
-        if other is not None:
-          assert isinstance(other,Scope)
-          return id(self) == id(other)
-        return False
-
-      def __ne__(self,other):
-        return not (self == other)
-
-      def sub(self):
-        __doc__="""spawn sub-scope"""
-        child = Scope(self)
-        self.children.append(child)
-        return child
-
-      def isParentOf(self,other):
-        __doc__="""self is parent of other"""
-        if self == other:
-          return False
-        for child in self.children:
-          if (other == child) or child.isParentOf(other):
-            return True
-        return False
-
-      def isChildOf(self,other):
-        __doc__="""self is child of other, or other is parent of self"""
-        return other.isParentOf(self)
-
     def walkScopeSwitch(parent,scope):
       __doc__="""
       special treatment for switch-case since the AST setup for it is mind-boggingly stupid.
@@ -799,7 +813,7 @@ class PetscLinter(object):
           # and purposes the 'scope' going forward. We don't overwrite the original scope
           # since we still need each case scope to be the previous scopes sibling
           caseScope = scope.sub()
-          yield from walkScope(child,caseScope)
+          yield from walkScope(child,scope=caseScope)
         elif child.kind == clx.CursorKind.CALL_EXPR:
           if child.spelling in functionNames:
             yield (child,possibleParent,caseScope)
@@ -822,11 +836,11 @@ class PetscLinter(object):
           if child.spelling in functionNames:
             yield (child,possibleParent,scope)
         elif child.kind in scopeCursors:
-          # scope has descreased
-          yield from walkScope(child,scope.sub())
+          # scope has decreased
+          yield from walkScope(child,scope=scope.sub())
         else:
           # same scope
-          yield from walkScope(child,scope)
+          yield from walkScope(child,scope=scope)
 
     cursor,filename = tu.cursor,tu.cursor.spelling
     previous = None
@@ -868,18 +882,17 @@ class PetscLinter(object):
 
   def process(self,tu):
     __doc__="""Process a translation unit for errors"""
-    import collections
     processedFuncs = collections.defaultdict(list)
     for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       if isinstance(results,clx.Cursor):
-        self.checkDocString(results)
+        checkDocMap[results.kind](self,results)
         continue
       func,parent,scope = results
       try:
         checkFunctionMap[func.spelling](self,func,parent)
       except ParsingError as pe:
         self.addWarning(tu.cursor.spelling,str(pe))
-      func  = PetscCursor(func)
+      func  = PetscCursor.asPetscCursor(func)
       pname = PetscCursor.getNameFromCursor(parent)
       processedFuncs[pname].append((func,scope))
     for pname,functionList in processedFuncs.items():
@@ -912,6 +925,7 @@ class PetscLinter(object):
     __doc__="""
     given a cursor attach a diagnostic error message to it, and optionally a fix
     """
+    cursor  = PetscCursor.asPetscCursor(cursor)
     errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
     self.errors.append((errMess,patch != None))
     try:
@@ -1006,109 +1020,6 @@ class PetscLinter(object):
       unified   = "".join(SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename))
       combinedPatches.append((filename,unified))
     return combinedPatches
-
-  def checkDocString(self,function):
-    def splitHeadings(tu,location,raw):
-      preambleHeading = "preamble"
-      paramHeading    = "params"
-      noteHeading     = "notes"
-      optionsHeading  = "options"
-      seealsoHeading  = "seealso"
-      levelHeading    = "level"
-      headings        = {
-        preambleHeading : {"all" : []},
-        paramHeading    : {"all" : []},
-        optionsHeading  : {"all" : []},
-        noteHeading     : {"all" : []},
-        seealsoHeading  : {"all" : []},
-        levelHeading    : {"all" : []},
-      }
-      heading   = preambleHeading
-      for offset,line in enumerate(s for s in raw.split("\n")):
-        lstrip = line.strip()
-        if (not lstrip) or lstrip.startswith("/*") or lstrip.endswith("*/"):
-          continue
-        if ":" in lstrip:
-          lsplit  = [s.strip() for s in lstrip.split(":") if s]
-          heading = lsplit[0].lower()
-          if "synopsis" in heading:
-            heading = preambleHeading
-          elif "parameter" in heading:
-            heading = paramHeading
-          elif "note" in heading:
-            heading = noteHeading
-          elif "option" in heading:
-            heading = optionsHeading
-          elif "seealso" in heading:
-            heading = seealsoHeading
-          if len(lsplit) > 1:
-            headings[heading]["all"].extend([(offset,l) for l in lsplit[1:]])
-        else:
-          headings[heading]["all"].append((offset,line))
-
-      def postProcessHeading(subheading,testItem,countMax=-1):
-        nameList = []
-        count    = 0
-        for lineOffset,item in subheading["all"]:
-          if testItem(item):
-            name      = item[1:].split("-")[0].strip()
-            strOffset = item.index(name)+1
-            startLine = location.start.line+lineOffset
-            begin     = clx.SourceLocation.from_position(tu,file,startLine,strOffset)
-            end       = clx.SourceLocation.from_position(tu,file,startLine,strOffset+len(name))
-            nameList.append((clx.SourceRange.from_locations(begin,end),name))
-            count += 1
-          if count == countMax:
-            break
-        subheading["names"] = nameList
-        return subheading
-
-      file = location.start.file
-      postProcessHeading(headings[preambleHeading],lambda x : "-" in x,countMax=1)
-      postProcessHeading(headings[paramHeading],lambda x : x.startswith(("+",".","-")))
-      postProcessHeading(headings[optionsHeading],lambda x : x.startswith(("+",".","-")))
-      headings[seealsoHeading]["names"] = [name.strip() for _,sa in headings[seealsoHeading]["all"] for name in sa.split(",")]
-      return headings
-
-
-    rawDocString,location = PetscCursor.getCommentAndRangeFromCursor(function)
-    if not rawDocString:
-      print(PetscCursor.getFormattedSourceFromCursor(function,nbefore=15))
-      return
-    elif not rawDocString.startswith(("/*@","/*M","/*E")):
-      print(PetscCursor.getFormattedSourceFromCursor(function,nbefore=15))
-      return
-    headings = splitHeadings(function.translation_unit,location,rawDocString)
-    fnargs   = self.getArgumentCursors(function)
-    for i,(arg,docname) in enumerate(itertools.zip_longest(fnargs,headings["params"]["names"])):
-      errorMessage = None
-      if not arg:
-        src = petscClangLinterUtil.getFormattedSourceFromLocation(
-          docname[0].start.file.name,
-          docname[0].start.line,
-          docname[0].start.column-1,
-          docname[0].end.column-1,
-          numContext=3
-        )
-        errorMessage = "Extra parameter '{}' not found in function:\n\n{}".format(docname[-1],src)
-        errorCursor  = PetscCursor(function)
-      elif not docname:
-        errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(arg.name,rawDocString)
-        errorCursor  = PetscCursor(arg)
-      elif arg.name != docname[-1]:
-        src = petscClangLinterUtil.getFormattedSourceFromLocation(
-          docname[0].start.file.name,
-          docname[0].start.line,
-          docname[0].start.column-1,
-          docname[0].end.column-1,
-          numContext=3
-        )
-        errorMessage = "Mismatched parameter name. Expected '{}' for parameter #{}, found '{}' instead:\n\n{}".format(arg.name,i+1,docname[-1],src)
-        errorCursor  = PetscCursor(arg)
-      if errorMessage:
-        self.addErrorFromCursor(errorCursor,errorMessage)
-    #checkMatchingArguments(set(headings["params"]["names"]),fnargs,function)
-    return
 
 
 class WorkerPool(mp.queues.JoinableQueue):
@@ -1246,7 +1157,128 @@ class WorkerPool(mp.queues.JoinableQueue):
     return self.warnings,self.errorsLeft,self.errorsFixed,self.patches
 
 
-"""Generic test and utility functions"""
+"""utilities for checking doc-strings"""
+def parseDocString(cursor):
+  __doc__="""
+  parse and extract all relevant headings from a sowing docstring. Each section will have an
+  'all' entry containing the raw text and a 'names' entry containing a list of extracted symbols or names.
+  """
+  def postProcessHeading(subheading,testItem,countMax=-1):
+    nameList = []
+    count    = 0
+    for lineOffset,item in subheading["all"]:
+      if testItem(item):
+        tu,file   = cursor.translation_unit,cursor.location.file
+        name      = item[1:].split("-")[0].strip()
+        colBegin  = item.index(name)+1
+        lineBegin = location.start.line+lineOffset
+        begin     = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin)
+        end       = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin+len(name))
+        nameList.append((clx.SourceRange.from_locations(begin,end),name))
+        count += 1
+      if count == countMax:
+        break
+    subheading["names"] = nameList
+    return subheading
+
+
+  raw,location = PetscCursor.getCommentAndRangeFromCursor(cursor)
+  if (not raw) or (not raw.startswith(("/*@","/*M","/*E"))):
+    return None
+
+  preambleHeading = "preamble"
+  paramHeading    = "params"
+  noteHeading     = "notes"
+  optionsHeading  = "options"
+  seealsoHeading  = "seealso"
+  levelHeading    = "level"
+  headings        = {
+    "raw"           : raw,
+    preambleHeading : {"all" : []},
+    paramHeading    : {"all" : []},
+    optionsHeading  : {"all" : []},
+    noteHeading     : {"all" : []},
+    seealsoHeading  : {"all" : []},
+    levelHeading    : {"all" : []},
+  }
+  heading = preambleHeading
+  for offset,line in enumerate(s for s in raw.split("\n")):
+    lstrip = line.strip()
+    if (not lstrip) or lstrip.startswith("/*") or lstrip.endswith("*/"):
+      continue
+    if ":" in lstrip:
+      lsplit  = [s.strip() for s in lstrip.split(":") if s]
+      heading = lsplit[0].lower()
+      if "synopsis" in heading:
+        heading = preambleHeading
+      elif "parameter" in heading:
+        heading = paramHeading
+      elif "note" in heading:
+        heading = noteHeading
+      elif "option" in heading:
+        heading = optionsHeading
+      elif "seealso" in heading:
+        heading = seealsoHeading
+      if len(lsplit) > 1:
+        headings[heading]["all"].extend([(offset,l) for l in lsplit[1:]])
+    else:
+      headings[heading]["all"].append((offset,line))
+
+  postProcessHeading(headings[preambleHeading],lambda x : "-" in x,countMax=1)
+  postProcessHeading(headings[paramHeading],lambda x : x.startswith(("+",".","-")))
+  postProcessHeading(headings[optionsHeading],lambda x : x.startswith(("+",".","-")))
+  headings[seealsoHeading]["names"] = [name.strip() for _,sa in headings[seealsoHeading]["all"] for name in sa.split(",")]
+  return headings
+
+def checkDocumentationAndFunctionArgumentsMatch(linter,cursor,fnargs,parsed):
+  docStringArgs = parsed["params"]["names"]
+  allParamNames = tuple(zip(*docStringArgs))[1]
+  allParamLeft  = set(allParamNames)
+  errorMessage  = None
+  for i,arg in enumerate(fnargs):
+    argname = arg.name
+    try:
+      idx = allParamNames.index(argname)
+    except ValueError:
+      # function argument isn't in the docstring
+      errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(argname,parsed["raw"])
+    else:
+      # argument is in the docstring, lets see if its in the right place
+      if i != idx:
+        # it's not, but it should still be in the docstring somewhere
+        assert argname in allParamLeft
+        src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numBeforeContext=idx+1,numAfterContext=2)
+        errorMessage = "Docstring parameter out of order. Expected '{}' for as paramater #{}, found in position {} instead:\n\n{}".format(argname,i+1,idx+1,src)
+      allParamLeft.remove(argname)
+    finally:
+      if errorMessage is not None:
+        linter.addErrorFromCursor(arg,errorMessage)
+        errorMessage = None
+
+  for p in allParamLeft:
+    idx = allParamNames.index(p)
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numContext=2)
+    errorMessage = "Extra docstring parameter '{}' not found in function arguments:\n\n{}".format(docStringArgs[idx][-1],src)
+    linter.addErrorFromCursor(cursor,errorMessage)
+  return
+
+
+
+def checkPetscFunctionDocString(linter,function):
+  parsed = parseDocString(function)
+  if not parsed:
+    return
+
+  fnargs = linter.getArgumentCursors(function)
+  checkDocumentationAndFunctionArgumentsMatch(linter,function,fnargs,parsed)
+  return
+
+
+checkDocMap = {
+  clx.CursorKind.FUNCTION_DECL : checkPetscFunctionDocString,
+}
+
+"""utilities for checking functions"""
 def alwaysTrue(*args,**kwargs):
   return True
 
@@ -1382,7 +1414,7 @@ def checkIsPetscObject(linter,obj):
   else:
     validObject = False
   if not validObject:
-    objDecl = PetscCursor(pObjType.get_declaration())
+    objDecl = PetscCursor.asPetscCursor(pObjType.get_declaration())
     if len(objFields) == 0:
       linter.addWarningFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
     else:
@@ -1619,7 +1651,7 @@ def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNot
   return
 
 
-"""Specific 'driver' function to test a particular macro archetype"""
+"""Specific 'driver' function to test a particular function archetype"""
 def checkObjIdxGenericN(linter,func,parent):
   __doc__="""
   For generic checks where the form is func(obj1,idx1,...,objN,idxN)
@@ -1664,13 +1696,15 @@ def checkPetscValidPointerAndType(linter,func,parent,expectedTypes,unexpectedNot
   parentArgs = linter.getArgumentCursors(parent)
 
   obj,idx = funcArgs
-  checkMatchingSpecificType(linter,obj,expectedTypes,True,
-                            unexpectedNotPointerFunction=unexpectedNotPointerFunction,
-                            unexpectedPointerFunction=unexpectedPointerFunction,
-                            successFunction=successFunction,
-                            failureFunction=failureFunction,
-                            funcCursor=func,
-                            **kwargs)
+  checkMatchingSpecificType(
+    linter,obj,expectedTypes,True,
+    unexpectedNotPointerFunction=unexpectedNotPointerFunction,
+    unexpectedPointerFunction=unexpectedPointerFunction,
+    successFunction=successFunction,
+    failureFunction=failureFunction,
+    funcCursor=func,
+    **kwargs
+  )
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
@@ -1718,13 +1752,15 @@ def checkPetscValidLogicalCollective(linter,func,parent,expectedTypes,unexpected
 
   # dont need the petsc object, nothing to check there
   _,obj,idx = funcArgs
-  checkMatchingSpecificType(linter,obj,expectedTypes,False,
-                            unexpectedNotPointerFunction=unexpectedNotPointerFunction,
-                            unexpectedPointerFunction=unexpectedPointerFunction,
-                            successFunction=successFunction,
-                            failureFunction=failureFunction,
-                            funcCursor=func,
-                            **kwargs)
+  checkMatchingSpecificType(
+    linter,obj,expectedTypes,False,
+    unexpectedNotPointerFunction=unexpectedNotPointerFunction,
+    unexpectedPointerFunction=unexpectedPointerFunction,
+    successFunction=successFunction,
+    failureFunction=failureFunction,
+    funcCursor=func,
+    **kwargs
+  )
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
