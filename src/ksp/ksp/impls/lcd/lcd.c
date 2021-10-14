@@ -165,7 +165,7 @@ PetscErrorCode KSPView_LCD(KSP ksp,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
     ierr = PetscViewerASCIIPrintf(viewer,"  restart=%" PetscInt_FMT "\n",lcd->restart);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  happy breakdown tolerance %g\n",lcd->haptol);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  happy breakdown tolerance %g\n",(double)(lcd->haptol));CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

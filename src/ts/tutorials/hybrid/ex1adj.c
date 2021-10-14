@@ -318,7 +318,7 @@ int main(int argc,char **argv)
   ierr = VecGetArray(mu[0],&u);CHKERRQ(ierr);
   ierr = VecGetArray(mu[1],&v);CHKERRQ(ierr);
   f = fopen("adj_mu.out", "a");
-  ierr = PetscFPrintf(PETSC_COMM_WORLD,f,"%20.15lf %20.15lf %20.15lf\n",tend,u[0],v[0]);CHKERRQ(ierr);
+  ierr = PetscFPrintf(PETSC_COMM_WORLD,f,"%20.15g %20.15g %20.15g\n",(double)tend,(double)PetscRealPart(u[0]),(double)PetscRealPart(v[0]));CHKERRQ(ierr);
   ierr = VecRestoreArray(mu[0],&u);CHKERRQ(ierr);
   ierr = VecRestoreArray(mu[1],&v);CHKERRQ(ierr);
   fclose(f);

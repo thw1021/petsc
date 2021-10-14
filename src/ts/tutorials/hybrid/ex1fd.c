@@ -285,7 +285,7 @@ int main(int argc,char **argv)
   ierr = VecGetArray(U,&u);CHKERRQ(ierr);
   sensi[0] = (u[0]-tmp[0])/delta;
   sensi[1] = (u[1]-tmp[1])/delta;
-  ierr = PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x1(t0) = %f d x2(tf) / d x1(t0) = %f \n",sensi[0],sensi[1]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x1(t0) = %f d x2(tf) / d x1(t0) = %f \n",(double)sensi[0],(double)sensi[1]);CHKERRQ(ierr);
   u[0] = 0;
   u[1] = 1+delta;
   ierr = VecRestoreArray(U,&u);CHKERRQ(ierr);
@@ -295,7 +295,7 @@ int main(int argc,char **argv)
   ierr = VecGetArray(U,&u);CHKERRQ(ierr);
   sensi[0] = (u[0]-tmp[0])/delta;
   sensi[1] = (u[1]-tmp[1])/delta;
-  ierr = PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x2(t0) = %f d x2(tf) / d x2(t0) = %f \n",sensi[0],sensi[1]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x2(t0) = %f d x2(tf) / d x2(t0) = %f \n",(double)sensi[0],(double)sensi[1]);CHKERRQ(ierr);
   u[0] = 0;
   u[1] = 1;
   app.lambda1 = app.lambda1+delta;
@@ -306,7 +306,7 @@ int main(int argc,char **argv)
   ierr = VecGetArray(U,&u);CHKERRQ(ierr);
   sensi[0] = (u[0]-tmp[0])/delta;
   sensi[1] = (u[1]-tmp[1])/delta;
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Final gradients: d x1(tf) /d p = %f d x2(tf) / d p = %f \n",sensi[0],sensi[1]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"Final gradients: d x1(tf) /d p = %f d x2(tf) / d p = %f \n",(double)sensi[0],(double)sensi[1]);CHKERRQ(ierr);
   ierr = VecRestoreArray(U,&u);CHKERRQ(ierr);
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

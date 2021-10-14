@@ -19,7 +19,7 @@ int main(int argc,char **argv)
   if (n) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"Real rarray of length %" PetscInt_FMT "\n",n);CHKERRQ(ierr);
     for (i=0; i<n; i++) {
-      ierr = PetscPrintf(PETSC_COMM_SELF," %g,\n",rarray[i]);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF," %g,\n",(double)rarray[i]);CHKERRQ(ierr);
     }
   }
 

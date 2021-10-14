@@ -494,7 +494,7 @@ int main(int argc, char **argv)
       ierr = VecPointwiseDivide(errorEst, errorEst, errorL2);CHKERRQ(ierr);
       ierr = PetscObjectSetName((PetscObject) errorEst, "Error ratio");CHKERRQ(ierr);
       ierr = VecViewFromOptions(errorEst, NULL, "-error_ratio_view");CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " L2 error: %g Error Ratio: %g/%g = %g\n", N, (double) errorL2Norm, (double) errorEstTot, (double) PetscSqrtReal(errorL2Tot), (double) errorEstTot/PetscSqrtReal(errorL2Tot));CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " L2 error: %g Error Ratio: %g/%g = %g\n", N, (double) errorL2Norm, (double) errorEstTot, (double) PetscSqrtReal(errorL2Tot), (double) (errorEstTot/PetscSqrtReal(errorL2Tot)));CHKERRQ(ierr);
       ierr = DMRestoreGlobalVector(dmErr, &errorEst);CHKERRQ(ierr);
       ierr = DMRestoreGlobalVector(dmErr, &errorL2);CHKERRQ(ierr);
       ierr = DMDestroy(&dmErr);CHKERRQ(ierr);

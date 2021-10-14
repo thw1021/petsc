@@ -427,7 +427,7 @@ PetscErrorCode MyKSPMonitor(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
   */
   ierr = PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " solution vector:\n",n);CHKERRQ(ierr);
   ierr = VecView(x,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " KSP Residual norm %14.12e \n",n,rnorm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " KSP Residual norm %14.12e \n",n,(double)rnorm);CHKERRQ(ierr);
   return 0;
 }
 

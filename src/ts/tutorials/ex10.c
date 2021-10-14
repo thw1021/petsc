@@ -186,8 +186,8 @@ static PetscErrorCode RDStateView(RD rd,Vec X,Vec Xdot,Vec F)
   ierr = DMDAVecGetArrayRead(rd->da,Xdot,(void*)&xdot);CHKERRQ(ierr);
   ierr = DMDAVecGetArrayRead(rd->da,F,(void*)&f);CHKERRQ(ierr);
   for (i=info.xs; i<info.xs+info.xm; i++) {
-    ierr = PetscSynchronizedPrintf(comm,"x[%" PetscInt_FMT "] (%10.2G,%10.2G) (%10.2G,%10.2G) (%10.2G,%10.2G)\n",i,PetscRealPart(x[i].E),PetscRealPart(x[i].T),
-                                   PetscRealPart(xdot[i].E),PetscRealPart(xdot[i].T), PetscRealPart(f[i].E),PetscRealPart(f[i].T));CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(comm,"x[%" PetscInt_FMT "] (%10.2G,%10.2G) (%10.2G,%10.2G) (%10.2G,%10.2G)\n",i,(double)PetscRealPart(x[i].E),(double)PetscRealPart(x[i].T),
+                                   (double)PetscRealPart(xdot[i].E),(double)PetscRealPart(xdot[i].T), (double)PetscRealPart(f[i].E),(double)PetscRealPart(f[i].T));CHKERRQ(ierr);
   }
   ierr = DMDAVecRestoreArrayRead(rd->da,X,(void*)&x);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArrayRead(rd->da,Xdot,(void*)&xdot);CHKERRQ(ierr);

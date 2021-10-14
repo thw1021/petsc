@@ -48,7 +48,7 @@ PetscErrorCode RunTest(void)
     ierr = MatMult(A,x,r);CHKERRQ(ierr);
     ierr = VecAYPX(r,-1,b);CHKERRQ(ierr);
     ierr = VecNorm(r,NORM_2,&rnorm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",rnorm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",(double)rnorm);CHKERRQ(ierr);
     ierr = VecDestroy(&r);CHKERRQ(ierr);
   }
 

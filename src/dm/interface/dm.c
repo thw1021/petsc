@@ -4152,7 +4152,7 @@ PetscErrorCode DMPrintCellMatrix(PetscInt c, const char name[], PetscInt rows, P
   for (f = 0; f < rows; ++f) {
     ierr = PetscPrintf(PETSC_COMM_SELF, "  |");CHKERRQ(ierr);
     for (g = 0; g < cols; ++g) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, " % 9.5g", PetscRealPart(A[f*cols+g]));CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, " % 9.5g", (double)PetscRealPart(A[f*cols+g]));CHKERRQ(ierr);
     }
     ierr = PetscPrintf(PETSC_COMM_SELF, " |\n");CHKERRQ(ierr);
   }
@@ -9602,7 +9602,7 @@ PetscErrorCode DMMonitorSet(DM dm, PetscErrorCode (*f)(DM, void *), void *mctx, 
     ierr = PetscMonitorCompare((PetscErrorCode (*)(void)) f, mctx, monitordestroy, (PetscErrorCode (*)(void)) dm->monitor[m], dm->monitorcontext[m], dm->monitordestroy[m], &identical);CHKERRQ(ierr);
     if (identical) PetscFunctionReturn(0);
   }
-  if (dm->numbermonitors >= MAXDMMONITORS) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
+  if (PetscUnlikely(dm->numbermonitors >= MAXDMMONITORS)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Too many monitors set");
   dm->monitor[dm->numbermonitors]          = f;
   dm->monitordestroy[dm->numbermonitors]   = monitordestroy;
   dm->monitorcontext[dm->numbermonitors++] = (void *) mctx;

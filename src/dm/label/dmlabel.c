@@ -2163,7 +2163,7 @@ static PetscErrorCode PetscSectionSymView_Label(PetscSectionSym sym, PetscViewer
               if (sl->perms[i] && sl->perms[i][j]) {
                 ierr = PetscViewerASCIIPrintf(viewer,"Permutation:");CHKERRQ(ierr);
                 ierr = PetscViewerASCIISetTab(viewer,0);CHKERRQ(ierr);
-                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT "",sl->perms[i][j][k]);CHKERRQ(ierr);}
+                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT,sl->perms[i][j][k]);CHKERRQ(ierr);}
                 ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
                 ierr = PetscViewerASCIISetTab(viewer,tab);CHKERRQ(ierr);
               }
@@ -2171,9 +2171,9 @@ static PetscErrorCode PetscSectionSymView_Label(PetscSectionSym sym, PetscViewer
                 ierr = PetscViewerASCIIPrintf(viewer,"Rotations:  ");CHKERRQ(ierr);
                 ierr = PetscViewerASCIISetTab(viewer,0);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)
-                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %+f+i*%+f",PetscRealPart(sl->rots[i][j][k]),PetscImaginaryPart(sl->rots[i][j][k]));CHKERRQ(ierr);}
+                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %+g+i*%+g",(double)PetscRealPart(sl->rots[i][j][k]),(double)PetscImaginaryPart(sl->rots[i][j][k]));CHKERRQ(ierr);}
 #else
-                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %+f",sl->rots[i][j][k]);CHKERRQ(ierr);}
+                for (k = 0; k < sl->sizes[i]; k++) {ierr = PetscViewerASCIIPrintf(viewer," %+g",(double)(sl->rots[i][j][k]));CHKERRQ(ierr);}
 #endif
                 ierr = PetscViewerASCIIPrintf(viewer,"\n");CHKERRQ(ierr);
                 ierr = PetscViewerASCIISetTab(viewer,tab);CHKERRQ(ierr);

@@ -118,9 +118,7 @@ int main(int argc,char **args)
 #endif
 
   ierr = PetscOptionsGetReal(NULL,NULL,"-schur_ratio",&sratio,NULL);CHKERRQ(ierr);
-  if (sratio < 0. || sratio > 1.) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "Invalid ratio for schur degrees of freedom %f", sratio);
-  }
+  if (sratio < 0. || sratio > 1.) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "Invalid ratio for schur degrees of freedom %g", (double)sratio);
   size_schur = (PetscInt)(sratio*m);
 
   ierr = PetscPrintf(PETSC_COMM_SELF,"Solving with %s: nrhs %" PetscInt_FMT ", sym %d, herm %d, size schur %" PetscInt_FMT ", size mat %" PetscInt_FMT "\n",solver,nrhs,symm,herm,size_schur,m);CHKERRQ(ierr);
@@ -213,9 +211,9 @@ int main(int argc,char **args)
         ierr = VecAXPY(u,-1.0,b);CHKERRQ(ierr);  /* u <- (-1.0)b + u */
         ierr = VecNorm(u,NORM_2,&resi);CHKERRQ(ierr);
         if (nsolve) {
-          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatSolve error: Norm of error %g, residual %f\n",nfact,nsolve,norm,resi);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatSolve error: Norm of error %g, residual %g\n",nfact,nsolve,(double)norm,(double)resi);CHKERRQ(ierr);
         } else {
-          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatSolveTranspose error: Norm of error %g, residual %f\n",nfact,nsolve,norm,resi);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatSolveTranspose error: Norm of error %g, residual %f\n",nfact,nsolve,(double)norm,(double)resi);CHKERRQ(ierr);
         }
       }
       ierr = VecSetRandom(xschur,rand);CHKERRQ(ierr);
@@ -240,9 +238,9 @@ int main(int argc,char **args)
         ierr = VecAXPY(uschur,-1.0,bschur);CHKERRQ(ierr);  /* u <- (-1.0)b + u */
         ierr = VecNorm(uschur,NORM_2,&resi);CHKERRQ(ierr);
         if (nsolve) {
-          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatFactorSolveSchurComplement error: Norm of error %g, residual %f\n",nfact,nsolve,norm,resi);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatFactorSolveSchurComplement error: Norm of error %g, residual %g\n",nfact,nsolve,(double)norm,(double)resi);CHKERRQ(ierr);
         } else {
-          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatFactorSolveSchurComplementTranspose error: Norm of error %g, residual %f\n",nfact,nsolve,norm,resi);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatFactorSolveSchurComplementTranspose error: Norm of error %g, residual %f\n",nfact,nsolve,(double)norm,(double)resi);CHKERRQ(ierr);
         }
       }
     }
@@ -260,7 +258,7 @@ int main(int argc,char **args)
       ierr = MatAXPY(X,-1.0,C,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
       ierr = MatNorm(X,NORM_FROBENIUS,&norm);CHKERRQ(ierr);
       if (norm > tol) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatMatSolve: Norm of error %g\n",nfact,nsolve,norm);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") MatMatSolve: Norm of error %g\n",nfact,nsolve,(double)norm);CHKERRQ(ierr);
       }
     }
     if (isolver == 0) {
@@ -276,7 +274,7 @@ int main(int argc,char **args)
         ierr = MatAXPY(X,-1.0,C,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
         ierr = MatNorm(X,NORM_FROBENIUS,&norm);CHKERRQ(ierr);
         if (norm > tol) {
-          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") sparse MatMatSolve: Norm of error %g\n",nfact,nsolve,norm);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF,"(f %" PetscInt_FMT ", s %" PetscInt_FMT ") sparse MatMatSolve: Norm of error %g\n",nfact,nsolve,(double)norm);CHKERRQ(ierr);
         }
       }
       ierr = MatDestroy(&spRHST);CHKERRQ(ierr);
