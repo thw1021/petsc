@@ -470,7 +470,7 @@ PetscErrorCode KSPView_BCGSL(KSP ksp, PetscViewer viewer)
 
   if (isascii) {
     ierr = PetscViewerASCIIPrintf(viewer, "  Ell = %" PetscInt_FMT "\n", bcgsl->ell);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "  Delta = %lg\n", bcgsl->delta);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "  Delta = %lg\n", (double)bcgsl->delta);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

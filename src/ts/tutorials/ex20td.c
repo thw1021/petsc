@@ -207,7 +207,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec U,void *ctx)
   PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Solution at time %e is \n", t);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n Solution at time %e is \n", (double)t);CHKERRQ(ierr);
   ierr = VecView(U,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

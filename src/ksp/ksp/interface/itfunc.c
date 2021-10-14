@@ -652,16 +652,16 @@ PetscErrorCode KSPConvergedRateView(KSP ksp, PetscViewer viewer)
       if (prefix) {ierr = PetscViewerASCIIPrintf(viewer, "Linear %s solve converged due to %s iterations %" PetscInt_FMT "", prefix, reason, its);CHKERRQ(ierr);}
       else        {ierr = PetscViewerASCIIPrintf(viewer, "Linear solve converged due to %s iterations %" PetscInt_FMT "", reason, its);CHKERRQ(ierr);}
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
-      if (rRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " res rate %g R^2 %g", rrate, rRsq);CHKERRQ(ierr);}
-      if (eRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " error rate %g R^2 %g", erate, eRsq);CHKERRQ(ierr);}
+      if (rRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " res rate %g R^2 %g", (double)rrate, (double)rRsq);CHKERRQ(ierr);}
+      if (eRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " error rate %g R^2 %g", (double)erate, (double)eRsq);CHKERRQ(ierr);}
       ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
     } else if (ksp->reason <= 0) {
-      if (prefix) {ierr = PetscViewerASCIIPrintf(viewer, "Linear %s solve did not converge due to %s iterations %" PetscInt_FMT "", prefix, reason, its);CHKERRQ(ierr);}
-      else        {ierr = PetscViewerASCIIPrintf(viewer, "Linear solve did not converge due to %s iterations %" PetscInt_FMT "", reason, its);CHKERRQ(ierr);}
+      if (prefix) {ierr = PetscViewerASCIIPrintf(viewer, "Linear %s solve did not converge due to %s iterations %" PetscInt_FMT, prefix, reason, its);CHKERRQ(ierr);}
+      else        {ierr = PetscViewerASCIIPrintf(viewer, "Linear solve did not converge due to %s iterations %" PetscInt_FMT, reason, its);CHKERRQ(ierr);}
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
-      if (rRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " res rate %g R^2 %g", rrate, rRsq);CHKERRQ(ierr);}
-      if (eRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " error rate %g R^2 %g", erate, eRsq);CHKERRQ(ierr);}
+      if (rRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " res rate %g R^2 %g", (double)rrate, (double)rRsq);CHKERRQ(ierr);}
+      if (eRsq >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, " error rate %g R^2 %g", (double)erate, (double)eRsq);CHKERRQ(ierr);}
       ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
       if (ksp->reason == KSP_DIVERGED_PC_FAILED) {

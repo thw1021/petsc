@@ -508,7 +508,7 @@ PetscErrorCode CharacteristicSolve(Characteristic c, PetscReal dt, Vec solution)
     if (1) { /* hacked bounds test...let's do better */
       PetscScalar im = interpIndices[0]; PetscScalar jm = interpIndices[1];
 
-      if ((im < (PetscScalar) is - 1.) || (im > (PetscScalar) ie) || (jm < (PetscScalar)  js - 1.) || (jm > (PetscScalar) je)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB, "Nonlocal point: (%g,%g)", im, jm);
+      if (PetscUnlikely((im < (PetscScalar) is - 1.) || (im > (PetscScalar) ie) || (jm < (PetscScalar)  js - 1.) || (jm > (PetscScalar) je))) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB, "Nonlocal point: (%g,%g)", (double)PetscRealPart(im), (double)PetscRealPart(jm));
     }
 
     if (c->fieldInterpLocal) {ierr = c->fieldInterpLocal(fieldArray, interpIndices, c->numFieldComp, c->fieldComp, fieldValues, c->fieldCtx);CHKERRQ(ierr);}

@@ -130,12 +130,12 @@ static PetscErrorCode KSPView_PIPELCG(KSP ksp,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
   if (iascii) {
     ierr = PetscViewerASCIIPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",(double)plcg->lmin);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",(double)plcg->lmax);CHKERRQ(ierr);
   } else if (isstring) {
     ierr = PetscViewerStringSPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l);CHKERRQ(ierr);
-    ierr = PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin);CHKERRQ(ierr);
-    ierr = PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",(double)plcg->lmin);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",(double)plcg->lmax);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

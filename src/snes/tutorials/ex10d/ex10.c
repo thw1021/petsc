@@ -449,7 +449,7 @@ int main(int argc,char **argv)
   */
   ierr = VecGetArray(x,&xx);CHKERRQ(ierr);
   for (inode = 0; inode < user.Nvlocal; inode++) {
-    ierr = PetscFPrintf(PETSC_COMM_SELF,fptr1,"Initial Solution at node %" PetscInt_FMT " is %f \n",inode,xx[inode]);CHKERRQ(ierr);
+    ierr = PetscFPrintf(PETSC_COMM_SELF,fptr1,"Initial Solution at node %" PetscInt_FMT " is %g \n",inode,(double)PetscRealPart(xx[inode]));CHKERRQ(ierr);
   }
   ierr = VecRestoreArray(x,&xx);CHKERRQ(ierr);
 
@@ -469,7 +469,7 @@ int main(int argc,char **argv)
 
   ierr = VecGetArray(x,&xx);CHKERRQ(ierr);
   for (inode = 0; inode < user.Nvlocal; inode++) {
-    ierr = PetscFPrintf(PETSC_COMM_SELF,fptr1,"Solution at node %" PetscInt_FMT " is %f \n",inode,xx[inode]);CHKERRQ(ierr);
+    ierr = PetscFPrintf(PETSC_COMM_SELF,fptr1,"Solution at node %" PetscInt_FMT " is %g \n",inode,(double)PetscRealPart(xx[inode]));CHKERRQ(ierr);
   }
   ierr = VecRestoreArray(x,&xx);CHKERRQ(ierr);
   fclose(fptr1);

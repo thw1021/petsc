@@ -2216,7 +2216,7 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_AB(Mat C)
       if (alg_scalable) {
         alg  = 0; /* scalable algorithm would 50% slower than nonscalable algorithm */
         ierr = MatProductSetAlgorithm(C,(MatProductAlgorithm)algTypes[alg]);CHKERRQ(ierr);
-        ierr = PetscInfo2(B,"Use scalable algorithm, BN %" PetscInt_FMT ", fill*nz_allocated %g\n",B->cmap->N,product->fill*nz_local);CHKERRQ(ierr);
+        ierr = PetscInfo2(B,"Use scalable algorithm, BN %" PetscInt_FMT ", fill*nz_allocated %g\n",B->cmap->N,(double)(product->fill*nz_local));CHKERRQ(ierr);
       }
     }
   }
@@ -2278,7 +2278,7 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_AtB(Mat C)
     if (alg_scalable) {
       alg  = 0; /* scalable algorithm would 50% slower than nonscalable algorithm */
       ierr = MatProductSetAlgorithm(C,(MatProductAlgorithm)algTypes[alg]);CHKERRQ(ierr);
-      ierr = PetscInfo2(B,"Use scalable algorithm, BN %" PetscInt_FMT ", fill*nz_allocated %g\n",B->cmap->N,product->fill*nz_local);CHKERRQ(ierr);
+      ierr = PetscInfo2(B,"Use scalable algorithm, BN %" PetscInt_FMT ", fill*nz_allocated %g\n",B->cmap->N,(double)(product->fill*nz_local));CHKERRQ(ierr);
     }
   }
 

@@ -1195,7 +1195,7 @@ static PetscErrorCode DMDAIntegrateErrors3D(DM stokes_da,Vec X,Vec X_analytic)
   ierr = MPI_Allreduce(&tint_p_ms,&int_p_ms,1,MPIU_SCALAR,MPIU_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   ierr = MPI_Allreduce(&tint_p,&int_p,1,MPIU_SCALAR,MPIU_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\\int P dv %1.4e (h)  %1.4e (ms)\n",PetscRealPart(int_p),PetscRealPart(int_p_ms));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\\int P dv %1.4e (h)  %1.4e (ms)\n",(double)PetscRealPart(int_p),(double)PetscRealPart(int_p_ms));CHKERRQ(ierr);
 
   /* remove mine and add manufacture one */
   ierr = DMDAVecRestoreArray(stokes_da,X_analytic_local,&stokes_analytic);CHKERRQ(ierr);
@@ -1273,7 +1273,7 @@ static PetscErrorCode DMDAIntegrateErrors3D(DM stokes_da,Vec X,Vec X_analytic)
   u_L2 = PetscSqrtScalar(u_L2);
   u_H1 = PetscSqrtScalar(u_H1);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%1.4e   %1.4e   %1.4e   %1.4e \n",PetscRealPart(h),PetscRealPart(p_L2),PetscRealPart(u_L2),PetscRealPart(u_H1));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%1.4e   %1.4e   %1.4e   %1.4e \n",(double)PetscRealPart(h),(double)PetscRealPart(p_L2),(double)PetscRealPart(u_L2),(double)PetscRealPart(u_H1));CHKERRQ(ierr);
 
   ierr = DMDAVecRestoreArray(cda,coords,&_coords);CHKERRQ(ierr);
 
@@ -1597,7 +1597,7 @@ PetscErrorCode KSPMonitorStokesBlocks(KSP ksp,PetscInt n,PetscReal rnorm,void *d
   ierr = VecDestroy(&v);CHKERRQ(ierr);
   ierr = VecDestroy(&w);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " KSP Component U,V,W,P residual norm [ %1.12e, %1.12e, %1.12e, %1.12e ]\n",n,norms[0],norms[1],norms[2],norms[3]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " KSP Component U,V,W,P residual norm [ %1.12e, %1.12e, %1.12e, %1.12e ]\n",n,(double)norms[0],(double)norms[1],(double)norms[2],(double)norms[3]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

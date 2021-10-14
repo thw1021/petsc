@@ -617,16 +617,16 @@ PetscErrorCode KSPView_PIPEFGMRES(KSP ksp,PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"  restart=%" PetscInt_FMT "\n",pipefgmres->max_k);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  happy breakdown tolerance %g\n",(double)pipefgmres->haptol);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)
-    ierr = PetscViewerASCIIPrintf(viewer,"  shift=%g+%gi\n",PetscRealPart(pipefgmres->shift),PetscImaginaryPart(pipefgmres->shift));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  shift=%g+%gi\n",(double)PetscRealPart(pipefgmres->shift),(double)PetscImaginaryPart(pipefgmres->shift));CHKERRQ(ierr);
 #else
-    ierr = PetscViewerASCIIPrintf(viewer,"  shift=%g\n",pipefgmres->shift);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  shift=%g\n",(double)(pipefgmres->shift));CHKERRQ(ierr);
 #endif
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer,"restart %" PetscInt_FMT "",pipefgmres->max_k);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"restart %" PetscInt_FMT,pipefgmres->max_k);CHKERRQ(ierr);
 #if defined(PETSC_USE_COMPLEX)
-    ierr = PetscViewerStringSPrintf(viewer,"   shift=%g+%gi\n",PetscRealPart(pipefgmres->shift),PetscImaginaryPart(pipefgmres->shift));CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"   shift=%g+%gi\n",(double)PetscRealPart(pipefgmres->shift),(double)PetscImaginaryPart(pipefgmres->shift));CHKERRQ(ierr);
 #else
-    ierr = PetscViewerStringSPrintf(viewer,"   shift=%g\n",pipefgmres->shift);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"   shift=%g\n",(double)(pipefgmres->shift));CHKERRQ(ierr);
 #endif
   }
   PetscFunctionReturn(0);

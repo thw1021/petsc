@@ -182,18 +182,18 @@ PetscErrorCode XYT_stats(xyt_ADT xyt_handle)
     PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[1]);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_nnz=%g\n",PCTFS_my_id,1.0*vals[2]/PCTFS_num_nodes);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: tot   xyt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[2]);
-    PetscPrintf(PETSC_COMM_WORLD,"%d :: xyt   C(2d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.5)));
-    PetscPrintf(PETSC_COMM_WORLD,"%d :: xyt   C(3d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.6667)));
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: xyt   C(2d)  =%g\n",PCTFS_my_id,(double)(((PetscReal)vals[2])/(PetscPowReal(1.0*vals[5],1.5))));
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: xyt   C(3d)  =%g\n",PCTFS_my_id,(double)(((PetscReal)vals[2])/(PetscPowReal(1.0*vals[5],1.6667))));
     PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[3]);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[4]);
-    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_n  =%g\n",PCTFS_my_id,1.0*vals[5]/PCTFS_num_nodes);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_n  =%g\n",PCTFS_my_id,(double)vals[5]/PCTFS_num_nodes);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: tot   xyt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[5]);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[6]);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[7]);
     PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_buf=%g\n",PCTFS_my_id,1.0*vals[8]/PCTFS_num_nodes);
-    PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_slv=%g\n",PCTFS_my_id,fvals[0]);
-    PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_slv=%g\n",PCTFS_my_id,fvals[1]);
-    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_slv=%g\n",PCTFS_my_id,fvals[2]/PCTFS_num_nodes);
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xyt_slv=%g\n",PCTFS_my_id,(double)PetscRealPart(fvals[0]));
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xyt_slv=%g\n",PCTFS_my_id,(double)PetscRealPart(fvals[1]));
+    PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xyt_slv=%g\n",PCTFS_my_id,(double)PetscRealPart(fvals[2]/((PetscScalar)PCTFS_num_nodes)));
   }
 
   return(0);
@@ -408,7 +408,7 @@ static PetscErrorCode xyt_generate(xyt_ADT xyt_handle)
 
     /* check for small alpha                             */
     /* LATER use this to detect and determine null space */
-    if (PetscAbsScalar(alpha)<1.0e-14) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"bad alpha! %g\n",alpha);
+    if (PetscAbsScalar(alpha)<1.0e-14) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"bad alpha! %g\n",(double)PetscAbsScalar(alpha));
 
     /* compute v_l = v_l/sqrt(alpha) */
     PCTFS_rvec_scale(v,1.0/alpha,n);

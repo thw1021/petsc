@@ -168,12 +168,12 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (pseudo->fnorm < pseudo->fatol) {
     ts->reason = TS_CONVERGED_PSEUDO_FATOL;
-    ierr = PetscInfo3(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n",ts->steps,pseudo->fnorm,pseudo->frtol);CHKERRQ(ierr);
+    ierr = PetscInfo3(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n",ts->steps,(double)pseudo->fnorm,(double)pseudo->frtol);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
   if (pseudo->fnorm/pseudo->fnorm_initial < pseudo->frtol) {
     ts->reason = TS_CONVERGED_PSEUDO_FRTOL;
-    ierr = PetscInfo4(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,pseudo->fnorm,pseudo->fnorm_initial,pseudo->fatol);CHKERRQ(ierr);
+    ierr = PetscInfo4(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,(double)pseudo->fnorm,(double)pseudo->fnorm_initial,(double)pseudo->fatol);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
   PetscFunctionReturn(0);

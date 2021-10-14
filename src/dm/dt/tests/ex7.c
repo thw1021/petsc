@@ -78,7 +78,7 @@ static PetscErrorCode CheckPullback(PetscInt N, PetscInt M, const PetscReal *L, 
   }
   ierr = PetscDTAltVApply(M, k, ww, Lx, &wLx);CHKERRQ(ierr);
   diff = PetscAbsReal(wLx - Lstarwx);
-  if (diff > 10. * PETSC_SMALL * (PetscAbsReal(wLx) + PetscAbsReal(Lstarwx))) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "pullback check: pullback does not commute with application: w(Lx)(%g) != (L* w)(x)(%g)", wLx, Lstarwx);
+  if (diff > 10. * PETSC_SMALL * (PetscAbsReal(wLx) + PetscAbsReal(Lstarwx))) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "pullback check: pullback does not commute with application: w(Lx)(%g) != (L* w)(x)(%g)", (double)wLx, (double)Lstarwx);
   if (diffMat > PETSC_SMALL * normMat) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "pullback check: pullback matrix does match matrix free result");
   ierr = PetscFree2(Lstar, Lstarwcheck);CHKERRQ(ierr);
   ierr = PetscFree2(Lstarw, Lx);CHKERRQ(ierr);

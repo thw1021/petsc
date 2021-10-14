@@ -1639,7 +1639,7 @@ static PetscErrorCode PCView_GAMG(PC pc,PetscViewer viewer)
     ierr = (*pc_gamg->ops->view)(pc,viewer);CHKERRQ(ierr);
   }
   ierr = PCMGGetGridComplexity(pc,&gc);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"      Complexity:    grid = %g\n",gc);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"      Complexity:    grid = %g\n",(double)gc);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

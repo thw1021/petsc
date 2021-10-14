@@ -307,7 +307,7 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for off-diagonal blocks\n");CHKERRQ(ierr);
     }
 
-    ierr = PetscViewerASCIIPrintf(viewer,"  Stopping tolerance=%.1e, delay in error estimate=%" PetscInt_FMT ", maximum iterations=%" PetscInt_FMT "\n",jac->gkbtol,jac->gkbdelay,jac->gkbmaxit);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Stopping tolerance=%.1e, delay in error estimate=%" PetscInt_FMT ", maximum iterations=%" PetscInt_FMT "\n",(double)(jac->gkbtol),jac->gkbdelay,jac->gkbmaxit);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Solver info for H = A00 + nu*A01*A01' matrix:\n");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
 
@@ -1393,7 +1393,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
 
   iterGKB = 1; lowbnd = 2*jac->gkbtol;
   if (jac->gkbmonitor) {
-      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,(double)lowbnd);CHKERRQ(ierr);
   }
 
   while (iterGKB < jac->gkbmaxit && lowbnd > jac->gkbtol) {
@@ -1440,7 +1440,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
       vecz[jac->gkbdelay-j-1] = vecz[jac->gkbdelay-j-2];
     }
     if (jac->gkbmonitor) {
-      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,(double)lowbnd);CHKERRQ(ierr);
     }
   }
 
@@ -1642,7 +1642,7 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
     ierr = PetscOptionsReal("-pc_fieldsplit_gkb_tol","The tolerance for the lower bound stopping criterion","PCFieldSplitGKBTol",jac->gkbtol,&jac->gkbtol,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsInt("-pc_fieldsplit_gkb_delay","The delay value for lower bound criterion","PCFieldSplitGKBDelay",jac->gkbdelay,&jac->gkbdelay,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-pc_fieldsplit_gkb_nu","Parameter in augmented Lagrangian approach","PCFieldSplitGKBNu",jac->gkbnu,&jac->gkbnu,NULL);CHKERRQ(ierr);
-    if (jac->gkbnu < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %f",jac->gkbnu);
+    if (PetscUnlikely(jac->gkbnu < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %g",(double)jac->gkbnu);
     ierr = PetscOptionsInt("-pc_fieldsplit_gkb_maxit","Maximum allowed number of iterations","PCFieldSplitGKBMaxit",jac->gkbmaxit,&jac->gkbmaxit,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsBool("-pc_fieldsplit_gkb_monitor","Prints number of GKB iterations and error","PCFieldSplitGKB",jac->gkbmonitor,&jac->gkbmonitor,NULL);CHKERRQ(ierr);
   }

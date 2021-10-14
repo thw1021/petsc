@@ -75,7 +75,7 @@ PetscErrorCode PCSetCoordinates_GEO(PC pc, PetscInt ndm, PetscInt a_nloc, PetscR
       }
     }
   }
-  if (pc_gamg->data[arrsz] != -99.) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"pc_gamg->data[arrsz %" PetscInt_FMT "] %g != -99.",arrsz,pc_gamg->data[arrsz]);
+  if (PetscUnlikely(pc_gamg->data[arrsz] != -99.)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"pc_gamg->data[arrsz %" PetscInt_FMT "] %g != -99.",arrsz,(double)(pc_gamg->data[arrsz]));
   pc_gamg->data_sz = arrsz;
   PetscFunctionReturn(0);
 }

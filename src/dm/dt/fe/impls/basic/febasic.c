@@ -238,7 +238,7 @@ static PetscErrorCode PetscFEIntegrate_Basic(PetscDS ds, PetscInt field, PetscIn
       }
       w = fegeom.detJ[0]*quadWeights[q];
       if (debug > 1 && q < Np) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", fegeom.detJ[0]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", (double)(fegeom.detJ[0]));CHKERRQ(ierr);
 #if !defined(PETSC_USE_COMPLEX)
         ierr = DMPrintCellMatrix(e, "invJ", dim, dim, fegeom.invJ);CHKERRQ(ierr);
 #endif
@@ -347,7 +347,7 @@ static PetscErrorCode PetscFEIntegrateBd_Basic(PetscDS ds, PetscInt field,
       }
       w = fegeom.detJ[0]*quadWeights[q];
       if (debug > 1 && q < Np) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", fegeom.detJ[0]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", (double)(fegeom.detJ[0]));CHKERRQ(ierr);
 #ifndef PETSC_USE_COMPLEX
         ierr = DMPrintCellMatrix(e, "invJ", dim, dim, fegeom.invJ);CHKERRQ(ierr);
 #endif
@@ -429,7 +429,7 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
       ierr = PetscFEGeomGetPoint(cgeom, e, q, &quadPoints[q*cgeom->dim], &fegeom);CHKERRQ(ierr);
       w = fegeom.detJ[0]*quadWeights[q];
       if (debug > 1 && q < cgeom->numPoints) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", fegeom.detJ[0]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", (double)(fegeom.detJ[0]));CHKERRQ(ierr);
 #if !defined(PETSC_USE_COMPLEX)
         ierr = DMPrintCellMatrix(e, "invJ", dim, dim, fegeom.invJ);CHKERRQ(ierr);
 #endif
@@ -441,7 +441,7 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
       for (i = 0; i < n1; ++i) f1_func[i](dim, Nf, NfAux, uOff, uOff_x, u, u_t, u_x, aOff, aOff_x, a, NULL, a_x, t, fegeom.v, numConstants, constants, &f1[q*T[field]->Nc*dim]);
       for (c = 0; c < T[field]->Nc; ++c) for (d = 0; d < dim; ++d) f1[(q*T[field]->Nc+c)*dim+d] *= w;
       if (debug) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  quad point %" PetscInt_FMT " wt %g\n", q, quadWeights[q]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  quad point %" PetscInt_FMT " wt %g\n", q, (double)(quadWeights[q]));CHKERRQ(ierr);
         if (debug > 2) {
           ierr = PetscPrintf(PETSC_COMM_SELF, "  field %" PetscInt_FMT ":", field);CHKERRQ(ierr);
           for (c = 0; c < T[field]->Nc; ++c) {ierr = PetscPrintf(PETSC_COMM_SELF, " %g", (double)PetscRealPart(u[uOff[field]+c]));CHKERRQ(ierr);}
@@ -529,7 +529,7 @@ PetscErrorCode PetscFEIntegrateBdResidual_Basic(PetscDS ds, PetscWeakForm wf, Pe
       w = fegeom.detJ[0]*quadWeights[q];
       if (debug > 1) {
         if ((fgeom->isAffine && q == 0) || (!fgeom->isAffine)) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", fegeom.detJ[0]);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", (double)(fegeom.detJ[0]));CHKERRQ(ierr);
 #if !defined(PETSC_USE_COMPLEX)
           ierr = DMPrintCellMatrix(e, "invJ", dim, dim, fegeom.invJ);CHKERRQ(ierr);
           ierr = DMPrintCellVector(e, "n", dim, fegeom.n);CHKERRQ(ierr);
@@ -643,7 +643,7 @@ static PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscForm
       ierr = PetscFEGeomGetPoint(fgeom, e, q, &quadPoints[q*fgeom->dim], &fegeom);CHKERRQ(ierr);
       w = fegeom.detJ[0]*quadWeights[q];
       if (debug > 1 && q < fgeom->numPoints) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", fegeom.detJ[0]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", (double)(fegeom.detJ[0]));CHKERRQ(ierr);
 #if !defined(PETSC_USE_COMPLEX)
         ierr = DMPrintCellMatrix(e, "invJ", dim, dE, fegeom.invJ);CHKERRQ(ierr);
 #endif
@@ -799,7 +799,7 @@ PetscErrorCode PetscFEIntegrateJacobian_Basic(PetscDS ds, PetscFEJacobianType jt
           for (gc = 0; gc < T[fieldJ]->Nc; ++gc) {
             for (g = 0; g < T[fieldJ]->Nb; ++g) {
               const PetscInt j = offsetJ + g*T[fieldJ]->Nc+gc;
-              ierr = PetscPrintf(PETSC_COMM_SELF, "    elemMat[%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "]: %g\n", f, fc, g, gc, PetscRealPart(elemMat[eOffset+i*totDim+j]));CHKERRQ(ierr);
+              ierr = PetscPrintf(PETSC_COMM_SELF, "    elemMat[%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "]: %g\n", f, fc, g, gc, (double)PetscRealPart(elemMat[eOffset+i*totDim+j]));CHKERRQ(ierr);
             }
           }
           ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
@@ -954,7 +954,7 @@ static PetscErrorCode PetscFEIntegrateBdJacobian_Basic(PetscDS ds, PetscWeakForm
           for (gc = 0; gc < T[fieldJ]->Nc; ++gc) {
             for (g = 0; g < T[fieldJ]->Nb; ++g) {
               const PetscInt j = offsetJ + g*T[fieldJ]->Nc+gc;
-              ierr = PetscPrintf(PETSC_COMM_SELF, "    elemMat[%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "]: %g\n", f, fc, g, gc, PetscRealPart(elemMat[eOffset+i*totDim+j]));CHKERRQ(ierr);
+              ierr = PetscPrintf(PETSC_COMM_SELF, "    elemMat[%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "]: %g\n", f, fc, g, gc, (double)PetscRealPart(elemMat[eOffset+i*totDim+j]));CHKERRQ(ierr);
             }
           }
           ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);
@@ -1077,7 +1077,7 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscFEJacobianT
       }
       w = fegeom.detJ[0]*quadWeights[q];
       if (debug > 1 && q < Np) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", fegeom.detJ[0]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "  detJ: %g\n", (double)(fegeom.detJ[0]));CHKERRQ(ierr);
 #if !defined(PETSC_USE_COMPLEX)
         ierr = DMPrintCellMatrix(e, "invJ", dim, dim, fegeom.invJ);CHKERRQ(ierr);
 #endif
@@ -1122,7 +1122,7 @@ PetscErrorCode PetscFEIntegrateHybridJacobian_Basic(PetscDS ds, PetscFEJacobianT
           for (gc = 0; gc < NcJ; ++gc) {
             for (g = 0; g < T[fieldJ]->Nb; ++g) {
               const PetscInt j = offsetJ + g*NcJ+gc;
-              ierr = PetscPrintf(PETSC_COMM_SELF, "    elemMat[%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "]: %g\n", f, fc, g, gc, PetscRealPart(elemMat[eOffset+i*totDim+j]));CHKERRQ(ierr);
+              ierr = PetscPrintf(PETSC_COMM_SELF, "    elemMat[%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "]: %g\n", f, fc, g, gc, (double)PetscRealPart(elemMat[eOffset+i*totDim+j]));CHKERRQ(ierr);
             }
           }
           ierr = PetscPrintf(PETSC_COMM_SELF, "\n");CHKERRQ(ierr);

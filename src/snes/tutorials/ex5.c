@@ -113,7 +113,7 @@ int main(int argc,char **argv)
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   user.param = 6.0;
   ierr       = PetscOptionsGetReal(NULL,NULL,"-par",&user.param,NULL);CHKERRQ(ierr);
-  if (user.param > bratu_lambda_max || user.param < bratu_lambda_min) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Lambda, %g, is out of range, [%g, %g]", user.param, bratu_lambda_min, bratu_lambda_max);
+  if (user.param > bratu_lambda_max || user.param < bratu_lambda_min) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Lambda, %g, is out of range, [%g, %g]", (double)user.param, (double)bratu_lambda_min, (double)bratu_lambda_max);
   ierr       = PetscOptionsGetInt(NULL,NULL,"-mms",&MMS,NULL);CHKERRQ(ierr);
   if (MMS == 3) {
     PetscInt mPar = 2, nPar = 1;
@@ -214,7 +214,7 @@ int main(int argc,char **argv)
     ierr = VecNorm(e, NORM_2, &errorl2);CHKERRQ(ierr);
     ierr = VecNorm(e, NORM_INFINITY, &errorinf);CHKERRQ(ierr);
     ierr = VecGetSize(e, &N);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double) errorl2/PetscSqrtReal(N), (double) errorinf);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double) (errorl2/PetscSqrtReal(N)), (double) errorinf);CHKERRQ(ierr);
     ierr = VecDestroy(&e);CHKERRQ(ierr);
     ierr = PetscLogEventSetDof(SNES_Solve, 0, N);CHKERRQ(ierr);
     ierr = PetscLogEventSetError(SNES_Solve, 0, errorl2/PetscSqrtReal(N));CHKERRQ(ierr);
