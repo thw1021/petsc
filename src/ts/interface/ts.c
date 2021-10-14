@@ -286,17 +286,16 @@ PetscErrorCode  TSSetFromOptions(TS ts)
     ierr = TSMonitorSet(ts,TSMonitorDrawSolutionFunction,ctx,(PetscErrorCode (*)(void**))TSMonitorDrawCtxDestroy);CHKERRQ(ierr);
   }
 
-  opt  = PETSC_FALSE;
-  ierr = PetscOptionsString("-ts_monitor_solution_vtk","Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts","TSMonitorSolutionVTK",NULL,monfilename,sizeof(monfilename),&flg);CHKERRQ(ierr);
-  if (flg) {
-    const char *ptr,*ptr2;
-    char       *filetemplate;
+  ierr = PetscOptionsString("-ts_monitor_solution_vtk","Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts","TSMonitorSolutionVTK",NULL,monfilename,sizeof(monfilename),&opt);CHKERRQ(ierr);
+  if (opt) {
+    char *ptr,*ptr2,*filetemplate;
+
     if (PetscUnlikely(!monfilename[0])) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03" PetscInt_FMT ".vts");
     /* Do some cursory validation of the input. */
-    ierr = PetscStrstr(monfilename,"%",(char**)&ptr);CHKERRQ(ierr);
+    ierr = PetscStrstr(monfilename,"%",&ptr);CHKERRQ(ierr);
     if (PetscUnlikely(!ptr)) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts",monfilename);
     for (ptr++; ptr && *ptr; ptr++) {
-      ierr = PetscStrchr(PetscInt_FMT "DdiouxX",*ptr,(char**)&ptr2);CHKERRQ(ierr);
+      ierr = PetscStrchr(PetscInt_FMT "DdiouxX",*ptr,&ptr2);CHKERRQ(ierr);
       if (PetscUnlikely(!ptr2 && ((*ptr < '0') || ('9' < *ptr)))) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts",monfilename);
       if (ptr2) break;
     }
@@ -351,6 +350,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
     ierr = TSMonitorSet(ts, TSMonitorLGDMDARay, rayctx, TSMonitorDMDARayDestroy);CHKERRQ(ierr);
   }
 
+  opt  = PETSC_FALSE;
   ierr = PetscOptionsName("-ts_monitor_envelope","Monitor maximum and minimum value of each component of the solution","TSMonitorEnvelope",&opt);CHKERRQ(ierr);
   if (opt) {
     TSMonitorEnvelopeCtx ctx;
