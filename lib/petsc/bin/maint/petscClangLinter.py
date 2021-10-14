@@ -375,7 +375,14 @@ class PetscCursor(object):
 
   @staticmethod
   def getFormattedSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,view=False):
-    return petscClangLinterUtil.getFormattedSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
+    if cursor.kind == clx.CursorKind.FUNCTION_DECL:
+      begin  = cursor.extent.start
+      # -1 gives you EOL
+      fnline = clx.SourceLocation.from_position(cursor.translation_unit,begin.file,begin.line,-1)
+      extent = clx.SourceRange.from_locations(cursor.extent.start,fnline)
+    else:
+      extent = cursor.extent
+    return petscClangLinterUtil.getFormattedSourceFromSourceRange(extent,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
 
   def getFormattedSource(self,nbefore=0,nafter=0,nboth=0,view=False):
     return self.getFormattedSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,view=view)
@@ -522,11 +529,12 @@ class SourceFix(object):
 
   @classmethod
   def fromSourceRange(cls,srcLocation,value):
-    fname     = srcLocation.start.file.name
-    startline = srcLocation.start.line
-    begin,end = srcLocation.start.column-1,srcLocation.end.column-1
-    src       = petscClangLinterUtil.getRawSourceFromLocation(fname,startline)
-    return cls(fname,src,startline,begin,end,value)
+    src = petscClangLinterUtil.getRawSourceFromSourceRange(srcLocation)
+    start = srcLocation.start
+    line  = start.line
+    begin = start.column-1
+    end   = srcLocation.end.column-1
+    return cls(fname,src,line,begin,end,value)
 
   @classmethod
   def fromCursor(cls,cursor,value):
@@ -839,8 +847,10 @@ class PetscLinter(object):
           yield from walkScope(child,scope=scope)
 
     cursor,filename = tu.cursor,tu.cursor.spelling
-    previous = None
+    import ipdb; ipdb.set_trace()
     for possibleParent in cursor.get_children():
+      if possibleParent.spelling == "PETSC_WELL_FORMED_MACRO":
+        import ipdb; ipdb.set_trace()
       # getting filename is for some reason stupidly expensive, so we do this check first
       if possibleParent.kind not in funcCallCursors: continue
       try:
@@ -1209,12 +1219,12 @@ def parseDocString(cursor):
   def postProcessHeading(subheading,testItem,countMax=-1):
     nameList = []
     count    = 0
-    for i,(lineOffset,item) in enumerate(subheading["all"]):
-      valid,item = testItem(i,item)
+    for i,(lineOffset,origitem) in enumerate(subheading["all"]):
+      valid,item = testItem(i,origitem)
       if valid:
         tu,file   = cursor.translation_unit,cursor.location.file
         name      = item.split("-")[0].strip()
-        colBegin  = item.index(name)+1
+        colBegin  = origitem.index(name)+1
         lineBegin = location.start.line+lineOffset
         begin     = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin)
         end       = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin+len(name))
@@ -1251,13 +1261,7 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
     # if both fnargs and docStringArgs are empty then the function has no arguments and
     # we have nothing to do here
     return
-  try:
-    allParamNames = tuple(zip(*docStringArgs))[1]
-  except IndexError:
-    # its ok if the allParamNames is empty, as the "undocumented parameter" check will
-    # fire
-    allParamNames = tuple()
-    pass
+  allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
   errorMessage  = None
   for i,arg in enumerate(fnargs):
@@ -1266,11 +1270,15 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
       idx = allParamNames.index(argname)
     except ValueError:
       # function argument isn't in the docstring
-      src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[0][0],numBeforeContext=1,numAfterContext=len(parsed["params"]["all"])-1,highlight=False)
+      begin,end = docStringArgs[0][0],docStringArgs[-1][0]
+      extent    = clx.SourceRange.from_locations(begin.start,end.start)
+      src = petscClangLinterUtil.getFormattedSourceFromSourceRange(extent,numContext=2,highlight=False)
       errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(argname,src)
     else:
       # argument is in the docstring, lets see if its in the right place
-      if i != idx:
+      if i != idx and 0:
+        # TODO, figure out a way to make this work with in-out parameters
+        import ipdb; ipdb.set_trace()
         # it's not, but it should still be in the docstring somewhere
         assert argname in allParamLeft
         src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numBeforeContext=idx+1,numAfterContext=2)
@@ -1301,19 +1309,43 @@ def checkDocValidHeader(linter,cursor,parsed):
     linter.addErrorFromCursor(cursor,errorMessage)
   if "-" not in headerRaw:
     src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(header["all"])-1)
-    errorMessage = "Docstring missing summary text. Expected '{} - very useful description here', found nothing instead:\n\n{}".format(cursorName,src)
+    errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
 
 def checkDocValidLevel(linter,cursor,parsed):
-  header        = parsed["level"]
-  allLevelNames = header["names"]
-  if not len(allLevelNames):
+  header     = parsed["level"]
+  levelNames = header["names"]
+  if len(levelNames):
+    allLevels   = tuple(l for _,l in levelNames)
+    validLevels = ("beginner","intermediate","advanced","developer")
+    for level in levelNames:
+      levelName = level[1]
+      if levelName.lower() not in validLevels:
+        src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
+        errorMessage = "Invalid Level subheading '{}', expected one of:\n{}\n\n{}".format(levelName,"\n".join("- '"+v+"'" for v in validLevels),src)
+        linter.addErrorFromCursor(cursor,errorMessage)
+    if len(levelNames) > 1:
+      srcList = []
+      nbefore,nafter = 2,0
+      prevLineBegin  = levelNames[0][0].start.line
+      for i,level in enumerate(levelNames):
+        if i:
+          nbefore = level[0].start.line-prevLineBegin-1
+          if i == len(levelNames)-1:
+            nafter = 2
+        srcList.append(petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
+        prevLineBegin = level[0].start.line
+      src = "\n".join(srcList)
+      errorMessage = "Multiple Level subheadings. Much like Highlanders, there can only be one:\n\n{}".format(src)
+      linter.addErrorFromCursor(cursor,errorMessage)
+  else:
     _,range = PetscCursor.getCommentAndRangeFromCursor(cursor)
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(range,highlight=False)
-    errorMessage = "Missing Level subheading. Expected 'Level: [level value here or on next line]' found nothing instead:\n\n{}".format(src)
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(range,numContext=2,highlight=False)
+    errorMessage = "Missing Level subheading. Expected 'Level: [level value here or on next line]':\n\n{}".format(src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
+
 
 """Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,function):
