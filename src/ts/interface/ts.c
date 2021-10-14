@@ -291,13 +291,13 @@ PetscErrorCode  TSSetFromOptions(TS ts)
   if (flg) {
     const char *ptr,*ptr2;
     char       *filetemplate;
-    if (!monfilename[0]) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03" PetscInt_FMT ".vts");
+    if (PetscUnlikely(!monfilename[0])) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03" PetscInt_FMT ".vts");
     /* Do some cursory validation of the input. */
     ierr = PetscStrstr(monfilename,"%",(char**)&ptr);CHKERRQ(ierr);
-    if (!ptr) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03" PetscInt_FMT ".vts");
+    if (PetscUnlikely(!ptr)) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts",monfilename);
     for (ptr++; ptr && *ptr; ptr++) {
-      ierr = PetscStrchr("DdiouxX",*ptr,(char**)&ptr2);CHKERRQ(ierr);
-      if (!ptr2 && (*ptr < '0' || '9' < *ptr)) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts");
+      ierr = PetscStrchr(PetscInt_FMT "DdiouxX",*ptr,(char**)&ptr2);CHKERRQ(ierr);
+      if (PetscUnlikely(!ptr2 && ((*ptr < '0') || ('9' < *ptr)))) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts",monfilename);
       if (ptr2) break;
     }
     ierr = PetscStrallocpy(monfilename,&filetemplate);CHKERRQ(ierr);
