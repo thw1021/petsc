@@ -614,7 +614,7 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
     ierr = PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double) fgnorm);CHKERRQ(ierr);
     for (f = 0; f < Nf; ++f) {
       if (f) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
-      ierr = PetscViewerASCIIPrintf(viewer, "%14.12e", res[f]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "%14.12e", (double)(res[f]));CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPrintf(viewer, "] \n");CHKERRQ(ierr);
     ierr = PetscViewerASCIISubtractTab(viewer, tablevel);CHKERRQ(ierr);

@@ -177,18 +177,18 @@ PetscErrorCode XXT_stats(xxt_ADT xxt_handle)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xxt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[1]);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_nnz=%g\n",PCTFS_my_id,1.0*vals[2]/PCTFS_num_nodes);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: tot   xxt_nnz=%" PetscInt_FMT "\n",PCTFS_my_id,vals[2]);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: xxt   C(2d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.5)));CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: xxt   C(3d)  =%g\n",PCTFS_my_id,vals[2]/(PetscPowReal(1.0*vals[5],1.6667)));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: xxt   C(2d)  =%g\n",PCTFS_my_id,(double)((PetscReal)vals[2]/(PetscPowReal(1.0*vals[5],1.5))));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: xxt   C(3d)  =%g\n",PCTFS_my_id,(double)((PetscReal)vals[2]/(PetscPowReal(1.0*vals[5],1.6667))));CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xxt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[3]);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xxt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[4]);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_n  =%g\n",PCTFS_my_id,1.0*vals[5]/PCTFS_num_nodes);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_n  =%g\n",PCTFS_my_id,(double)((PetscReal)vals[5]/((PetscReal)PCTFS_num_nodes)));CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: tot   xxt_n  =%" PetscInt_FMT "\n",PCTFS_my_id,vals[5]);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xxt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[6]);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xxt_buf=%" PetscInt_FMT "\n",PCTFS_my_id,vals[7]);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_buf=%g\n",PCTFS_my_id,1.0*vals[8]/PCTFS_num_nodes);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xxt_slv=%g\n",PCTFS_my_id,fvals[0]);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xxt_slv=%g\n",PCTFS_my_id,fvals[1]);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_slv=%g\n",PCTFS_my_id,fvals[2]/PCTFS_num_nodes);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_buf=%g\n",PCTFS_my_id,(double)((PetscReal)vals[8]/(PetscReal)PCTFS_num_nodes));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: min   xxt_slv=%g\n",PCTFS_my_id,(double)PetscRealPart(fvals[0]));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: max   xxt_slv=%g\n",PCTFS_my_id,(double)PetscRealPart(fvals[1]));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%d :: avg   xxt_slv=%g\n",PCTFS_my_id,(double)PetscRealPart(fvals[2]/((PetscScalar)PCTFS_num_nodes)));CHKERRQ(ierr);
   }
 
   return(0);
@@ -384,7 +384,7 @@ static PetscErrorCode xxt_generate(xxt_ADT xxt_handle)
 
     /* check for small alpha                             */
     /* LATER use this to detect and determine null space */
-    if (PetscAbsScalar(alpha)<1.0e-14) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"bad alpha! %g\n",alpha);
+    if (PetscAbsScalar(alpha)<1.0e-14) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"bad alpha! %g\n",(double)PetscAbsScalar(alpha));
 
     /* compute v_l = v_l/sqrt(alpha) */
     PCTFS_rvec_scale(v,1.0/alpha,n);

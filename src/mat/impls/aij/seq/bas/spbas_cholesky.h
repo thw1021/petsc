@@ -105,7 +105,7 @@ PetscErrorCode spbas_cholesky_garbage_collect(spbas_matrix *result,         /* I
   } else if (n_alloc_max < n_alloc_est * (1+xtra_perc/100.0)) {
     ierr = PetscInfo(NULL,"the maximum estimate\n");CHKERRQ(ierr);
   } else {
-    ierr = PetscInfo1(NULL,"%6.2f %% more than the estimate\n",xtra_perc);CHKERRQ(ierr);
+    ierr = PetscInfo1(NULL,"%6.2f %% more than the estimate\n",(double)xtra_perc);CHKERRQ(ierr);
   }
 
   /**********************************************************

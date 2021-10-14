@@ -328,13 +328,13 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   ierr = VecNorm(test_vec,NORM_INFINITY,&val);CHKERRQ(ierr);
   ierr = VecDestroy(&test_vec);CHKERRQ(ierr);
   ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"A: CHECK glob to loc: % 1.14e\n",rval);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"A: CHECK glob to loc: % 1.14e\n",(double)rval);CHKERRQ(ierr);
 
   if (fetidpmat_ctx->l2g_p) {
     ierr = VecAXPY(test_vec_p,-1.0,fetidpmat_ctx->vP);CHKERRQ(ierr);
     ierr = VecNorm(test_vec_p,NORM_INFINITY,&val);CHKERRQ(ierr);
     ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"A: CHECK glob to loc (p): % 1.14e\n",rval);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"A: CHECK glob to loc (p): % 1.14e\n",(double)rval);CHKERRQ(ierr);
   }
 
   if (fetidp->fully_redundant) {
@@ -345,7 +345,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
     ierr = VecSum(fetidp_global,&sval);CHKERRQ(ierr);
     val  = PetscRealPart(sval)-fetidpmat_ctx->n_lambda;
     ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"B: CHECK loc to glob: % 1.14e\n",rval);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"B: CHECK loc to glob: % 1.14e\n",(double)rval);CHKERRQ(ierr);
   }
 
   if (fetidpmat_ctx->l2g_p) {
@@ -365,7 +365,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
     ierr = VecSum(fetidp_global,&sval);CHKERRQ(ierr);
     val  = PetscRealPart(sval);
     ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"B: CHECK loc to glob (p): % 1.14e\n",rval);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"B: CHECK loc to glob (p): % 1.14e\n",(double)rval);CHKERRQ(ierr);
   }
 
   /******************************************************************/
@@ -387,7 +387,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   ierr = VecScatterBegin(fetidpmat_ctx->l2g_lambda,fetidpmat_ctx->lambda_local,fetidp_global,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(fetidpmat_ctx->l2g_lambda,fetidpmat_ctx->lambda_local,fetidp_global,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecNorm(fetidp_global,NORM_INFINITY,&val);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"C: CHECK infty norm of B_delta*w (w continuous): % 1.14e\n",val);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"C: CHECK infty norm of B_delta*w (w continuous): % 1.14e\n",(double)val);CHKERRQ(ierr);
 
   /******************************************************************/
   /* TEST D: It should hold E_Dw = w - P_Dw w\in\widetilde{W}       */
@@ -439,7 +439,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   ierr = VecNorm(pcis->vec1_B,NORM_INFINITY,&val);CHKERRQ(ierr);
   ierr = VecDestroy(&test_vec);CHKERRQ(ierr);
   ierr = MPI_Reduce(&val,&rval,1,MPIU_REAL,MPI_MAX,0,comm);CHKERRMPI(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"%d: CHECK infty norm of E_D + P_D - I: % 1.14e\n",PetscGlobalRank,val);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"%d: CHECK infty norm of E_D + P_D - I: % 1.14e\n",PetscGlobalRank,(double)val);CHKERRQ(ierr);
 
   /******************************************************************/
   /* TEST E: It should hold R_D^TP_Dw=0 w\in\widetilde{W}           */
@@ -477,7 +477,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   /* scaling */
   ierr = PCBDDCScalingExtension(fetidpmat_ctx->pc,pcis->vec1_B,pcis->vec1_global);CHKERRQ(ierr);
   ierr = VecNorm(pcis->vec1_global,NORM_INFINITY,&val);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"E: CHECK infty norm of R^T_D P_D: % 1.14e\n",val);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"E: CHECK infty norm of R^T_D P_D: % 1.14e\n",(double)val);CHKERRQ(ierr);
 
   if (!fetidp->fully_redundant) {
     /******************************************************************/
@@ -502,7 +502,7 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
     ierr = VecScatterEnd(fetidpmat_ctx->l2g_lambda,fetidpmat_ctx->lambda_local,test_vec,ADD_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecAXPY(fetidp_global,-1.,test_vec);CHKERRQ(ierr);
     ierr = VecNorm(fetidp_global,NORM_INFINITY,&val);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"E: CHECK infty norm of P^T_D - I: % 1.14e\n",val);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"E: CHECK infty norm of P^T_D - I: % 1.14e\n",(double)val);CHKERRQ(ierr);
     ierr = VecDestroy(&test_vec);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPrintf(viewer,"-------------------------------------\n");CHKERRQ(ierr);

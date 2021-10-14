@@ -209,8 +209,8 @@ static PetscErrorCode VecView_Plex_Local_Draw(Vec v, PetscViewer viewer)
       PetscInt nmax = 2;
 
       ierr = PetscViewerDrawGetDraw(viewer, w, &draw);CHKERRQ(ierr);
-      if (Nc > 1) {ierr = PetscSNPrintf(title, sizeof(title), "%s:%s_%" PetscInt_FMT " Step: %" PetscInt_FMT " Time: %.4g", name, fname, comp, step, time);CHKERRQ(ierr);}
-      else        {ierr = PetscSNPrintf(title, sizeof(title), "%s:%s Step: %" PetscInt_FMT " Time: %.4g", name, fname, step, time);CHKERRQ(ierr);}
+      if (Nc > 1) {ierr = PetscSNPrintf(title, sizeof(title), "%s:%s_%" PetscInt_FMT " Step: %" PetscInt_FMT " Time: %.4g", name, fname, comp, step, (double)time);CHKERRQ(ierr);}
+      else        {ierr = PetscSNPrintf(title, sizeof(title), "%s:%s Step: %" PetscInt_FMT " Time: %.4g", name, fname, step, (double)time);CHKERRQ(ierr);}
       ierr = PetscDrawSetTitle(draw, title);CHKERRQ(ierr);
 
       /* TODO Get max and min only for this component */
@@ -8574,11 +8574,11 @@ PetscErrorCode DMPlexCheckGeometry(DM dm)
     ierr = DMPlexCellUnsplitVertices_Private(dm, c, ct, &unsplit);CHKERRQ(ierr);
     if (unsplit) continue;
     ierr = DMPlexComputeCellGeometryFEM(dm, c, NULL, NULL, J, NULL, &detJ);CHKERRQ(ierr);
-    if (detJ < -PETSC_SMALL || (detJ <= 0.0 && !ignoreZeroVol)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh cell %" PetscInt_FMT " of type %s is inverted, |J| = %g", c, DMPolytopeTypes[ct], (double) detJ);
-    ierr = PetscInfo2(dm, "Cell %" PetscInt_FMT " FEM Volume %g\n", c, (double) detJ*refVol);CHKERRQ(ierr);
+    if (PetscUnlikely(detJ < -PETSC_SMALL || (detJ <= 0.0 && !ignoreZeroVol))) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh cell %" PetscInt_FMT " of type %s is inverted, |J| = %g", c, DMPolytopeTypes[ct], (double) detJ);
+    ierr = PetscInfo2(dm, "Cell %" PetscInt_FMT " FEM Volume %g\n", c, (double)(detJ*refVol));CHKERRQ(ierr);
     if (depth > 1 && !periodic) {
       ierr = DMPlexComputeCellGeometryFVM(dm, c, &vol, NULL, NULL);CHKERRQ(ierr);
-      if (vol < -PETSC_SMALL || (vol <= 0.0 && !ignoreZeroVol)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh cell %" PetscInt_FMT " of type %s is inverted, vol = %g", c, DMPolytopeTypes[ct], (double) vol);
+      if (PetscUnlikely(vol < -PETSC_SMALL || (vol <= 0.0 && !ignoreZeroVol))) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh cell %" PetscInt_FMT " of type %s is inverted, vol = %g", c, DMPolytopeTypes[ct], (double) vol);
       ierr = PetscInfo2(dm, "Cell %" PetscInt_FMT " FVM Volume %g\n", c, (double) vol);CHKERRQ(ierr);
     }
   }

@@ -1286,7 +1286,7 @@ static PetscErrorCode cryer_3d_eps(PetscInt dim, PetscReal time, const PetscReal
                   + 5.0 * (1.0 - nu)*(1.0 - 2.0*nu)*PetscPowRealInt(R_star, 2)*x_n*PetscSinReal(PetscSqrtReal(x_n))) * PetscExpReal(-x_n * tstar));
       }
     }
-    if (PetscAbsReal(divA_n) > 1e3) PetscPrintf(PETSC_COMM_SELF, "(%g, %g, %g) divA_n: %g\n", x[0], x[1], x[2], divA_n);
+    if (PetscAbsReal(divA_n) > 1e3) PetscPrintf(PETSC_COMM_SELF, "(%g, %g, %g) divA_n: %g\n", (double)x[0], (double)x[1], (double)x[2], (double)divA_n);
     u[0] = PetscRealPart(u_inf)/R_0 * (3.0 - divA_n);
   }
   return 0;
@@ -1753,7 +1753,7 @@ static PetscErrorCode cryerZeros(MPI_Comm comm, AppCtx *ctx, Parameter *param)
     for (j = 0; j < 50000; ++j) {
       y1 = CryerFunction(nu_u, nu, a1);
       y2 = CryerFunction(nu_u, nu, a2);
-      if (y1*y2 > 0) SETERRQ5(comm, PETSC_ERR_PLIB, "Invalid root finding initialization for root %" PetscInt_FMT ", (%g, %g)--(%g, %g)", n, a1, y1, a2, y2);
+      if (y1*y2 > 0) SETERRQ5(comm, PETSC_ERR_PLIB, "Invalid root finding initialization for root %" PetscInt_FMT ", (%g, %g)--(%g, %g)", n, (double)a1, (double)y1, (double)a2, (double)y2);
       am = (a1 + a2) / 2.0;
       ym = CryerFunction(nu_u, nu, am);
       if ((ym * y1) < 0) a2 = am;
@@ -1843,7 +1843,7 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
       ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
       ierr = PetscPrintf(comm, "  Max displacement: %g %g\n", (double)PetscRealPart(p->P_0*(ctx->xmax[1] - ctx->xmin[1])*(1. - 2.*nu_u)/(2.*p->mu*(1. - nu_u))), (double)PetscRealPart(p->P_0*(ctx->xmax[1] - ctx->xmin[1])*(1. - 2.*nu)/(2.*p->mu*(1. - nu))));CHKERRQ(ierr);
-      ierr = PetscPrintf(comm, "  Relaxation time: %g\n", ctx->t_r);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "  Relaxation time: %g\n", (double)ctx->t_r);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -2203,7 +2203,7 @@ static PetscErrorCode SolutionMonitor(TS ts, PetscInt steps, PetscReal time, Vec
       }
     }
     ierr = DMComputeL2FieldDiff(dm, time, exacts, ectxs, u, err);CHKERRQ(ierr);
-    ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), "Time: %g L_2 Error: [", time);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), "Time: %g L_2 Error: [", (double)time);CHKERRQ(ierr);
     for (f = 0; f < Nf; ++f) {
       if (f) {ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), ", ");CHKERRQ(ierr);}
       ierr = PetscPrintf(PetscObjectComm((PetscObject) ts), "%g", (double) err[f]);CHKERRQ(ierr);

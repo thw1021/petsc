@@ -1242,7 +1242,7 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
   ierr = TSGetTimeError(ts,0,&Yerr);CHKERRQ(ierr);
   ierr = VecNorm(Yerr,NORM_2,&err_norm);CHKERRQ(ierr);
   ierr = VecDestroy(&Yerr);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Estimated Error = %E.\n",err_norm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Estimated Error = %E.\n",(double)err_norm);CHKERRQ(ierr);
 
   /* Exact solution */
   ierr = VecDuplicate(Y,&Yex);CHKERRQ(ierr);
@@ -1308,7 +1308,7 @@ int main(int argc, char **argv)
         PetscReal conv_rate = (PetscLogReal(error[r]) - PetscLogReal(error[r-1])) / (-PetscLogReal(refine_fac));
         ierr = PetscPrintf(PETSC_COMM_WORLD,"Error           = %E,\tConvergence rate = %f.\n",(double)error[r],(double)conv_rate);CHKERRQ(ierr);
       } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"Error           = %E.\n",error[r]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"Error           = %E.\n",(double)error[r]);CHKERRQ(ierr);
       }
     }
   }

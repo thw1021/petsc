@@ -745,7 +745,9 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
                   ierr = DMPlexGetLinePlaneIntersection_3D_Internal(segA, segB, segC, NULL, &intersects);CHKERRQ(ierr);
                 }
                 if (intersects) {
-                  if (debug) {ierr = PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " edge %" PetscInt_FMT " (%.2g, %.2g, %.2g)--(%.2g, %.2g, %.2g) intersects box %" PetscInt_FMT ", face (%.2g, %.2g, %.2g)--(%.2g, %.2g, %.2g) (%.2g, %.2g, %.2g)--(%.2g, %.2g, %.2g)\n", c, edge, segA[0], segA[1], segA[2], segA[3], segA[4], segA[5], box, segB[0], segB[1], segB[2], segB[3], segB[4], segB[5], segC[0], segC[1], segC[2], segC[3], segC[4], segC[5]);CHKERRQ(ierr);}
+                  if (debug) {
+                    ierr = PetscPrintf(PETSC_COMM_SELF, "  Cell %" PetscInt_FMT " edge %" PetscInt_FMT " (%.2g, %.2g, %.2g)--(%.2g, %.2g, %.2g) intersects box %" PetscInt_FMT ", face (%.2g, %.2g, %.2g)--(%.2g, %.2g, %.2g) (%.2g, %.2g, %.2g)--(%.2g, %.2g, %.2g)\n", c, edge, (double)segA[0], (double)segA[1], (double)segA[2], (double)segA[3], (double)segA[4], (double)segA[5], box, (double)segB[0], (double)segB[1], (double)segB[2], (double)segB[3], (double)segB[4], (double)segB[5], (double)segC[0], (double)segC[1], (double)segC[2], (double)segC[3], (double)segC[4], (double)segC[5]);CHKERRQ(ierr);
+                  }
                   ierr = DMLabelSetValue(lbox->cellsSparse, c, box);CHKERRQ(ierr); edge = Ne; break;
                 }
               }

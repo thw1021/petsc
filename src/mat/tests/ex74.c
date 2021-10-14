@@ -170,19 +170,19 @@ int main(int argc,char **args)
   ierr  = MatNorm(sB,NORM_FROBENIUS,&norm2);CHKERRQ(ierr);
   rnorm = PetscAbsReal(norm1-norm2)/norm2;
   if (rnorm > tol) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Error: MatNorm_FROBENIUS, NormA=%16.14e NormsB=%16.14e\n",norm1,norm2);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"Error: MatNorm_FROBENIUS, NormA=%16.14e NormsB=%16.14e\n",(double)norm1,(double)norm2);CHKERRQ(ierr);
   }
   ierr  = MatNorm(A,NORM_INFINITY,&norm1);CHKERRQ(ierr);
   ierr  = MatNorm(sB,NORM_INFINITY,&norm2);CHKERRQ(ierr);
   rnorm = PetscAbsReal(norm1-norm2)/norm2;
   if (rnorm > tol) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Error: MatNorm_INFINITY(), NormA=%16.14e NormsB=%16.14e\n",norm1,norm2);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"Error: MatNorm_INFINITY(), NormA=%16.14e NormsB=%16.14e\n",(double)norm1,(double)norm2);CHKERRQ(ierr);
   }
   ierr  = MatNorm(A,NORM_1,&norm1);CHKERRQ(ierr);
   ierr  = MatNorm(sB,NORM_1,&norm2);CHKERRQ(ierr);
   rnorm = PetscAbsReal(norm1-norm2)/norm2;
   if (rnorm > tol) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Error: MatNorm_INFINITY(), NormA=%16.14e NormsB=%16.14e\n",norm1,norm2);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"Error: MatNorm_INFINITY(), NormA=%16.14e NormsB=%16.14e\n",(double)norm1,(double)norm2);CHKERRQ(ierr);
   }
 
   /* Test MatGetInfo(), MatGetSize(), MatGetBlockSize() */

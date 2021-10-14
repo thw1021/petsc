@@ -44,7 +44,7 @@ int main(int argc, char **argv)
   ierr = DMGetBoundingBox(dm, lo, hi);CHKERRQ(ierr);
   for (i=0;i<dim;i++) {
     h[i] = (hi[i] - lo[i])/faces[i];
-    ierr = PetscPrintf(PETSC_COMM_SELF," lo = %g hi = %g n = %" PetscInt_FMT " h = %g\n",lo[i],hi[i],faces[i],h[i]);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF," lo = %g hi = %g n = %" PetscInt_FMT " h = %g\n",(double)lo[i],(double)hi[i],faces[i],(double)h[i]);CHKERRQ(ierr);
   }
 
   ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, Nc, PETSC_FALSE, "", PETSC_DECIDE, &fe);CHKERRQ(ierr);
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
   ierr = VecGetLocalSize(rho,&N);CHKERRQ(ierr);
   for (p=0;p<N;p++) {
     for (i=0;i<dim;i++) idx[i] = (PetscInt)((xx[p*dim+i] - lo[i])/h[i] + 1.e-8);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"(%" PetscInt_FMT ",%" PetscInt_FMT ") = %g\n",idx[0],idx[1],vv[p]);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"(%" PetscInt_FMT ",%" PetscInt_FMT ") = %g\n",idx[0],idx[1],(double)vv[p]);CHKERRQ(ierr);
     /* access grid data here */
   }
   ierr = VecRestoreArrayRead(crd_vec,&xx);CHKERRQ(ierr);
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
   ierr = DMSetOutputSequenceNumber(sw, timestep, time);CHKERRQ(ierr);
   ierr = VecViewFromOptions(f, NULL, "-weights_view");CHKERRQ(ierr);
   ierr = VecNorm(f,NORM_1,&norm);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number density = %g\n", norm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number density = %g\n", (double)norm);CHKERRQ(ierr);
   /* Cleanup */
   ierr = DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &f);CHKERRQ(ierr);
   ierr = MatDestroy(&M);CHKERRQ(ierr);
