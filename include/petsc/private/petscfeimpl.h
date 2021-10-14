@@ -46,7 +46,6 @@ struct _p_PetscSpace {
 };
 
 typedef struct {
-  PetscBool                symmetric;   /* Use only symmetric polynomials */
   PetscBool                tensor;      /* Flag for tensor product */
   PetscInt                *degrees;     /* Degrees of single variable which we need to compute */
   PetscSpacePolynomialType ptype;       /* Allows us to make the Hdiv and Hcurl spaces */
