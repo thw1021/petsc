@@ -9,7 +9,6 @@ static PetscErrorCode PetscSpaceSetFromOptions_Polynomial(PetscOptionItems *Pets
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"PetscSpace polynomial options");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-petscspace_poly_sym", "Use only symmetric polynomials", "PetscSpacePolynomialSetSymmetric", poly->symmetric, &poly->symmetric, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-petscspace_poly_tensor", "Use the tensor product polynomials", "PetscSpacePolynomialSetTensor", poly->tensor, &poly->tensor, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-petscspace_poly_type", "Type of polynomial space", "PetscSpacePolynomialSetType", PetscSpacePolynomialTypes, (PetscEnum)poly->ptype, (PetscEnum*)&poly->ptype, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsTail();CHKERRQ(ierr);
@@ -597,7 +596,6 @@ PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Polynomial(PetscSpace sp)
   ierr     = PetscNewLog(sp,&poly);CHKERRQ(ierr);
   sp->data = poly;
 
-  poly->symmetric    = PETSC_FALSE;
   poly->tensor       = PETSC_FALSE;
   poly->degrees      = NULL;
   poly->subspaces    = NULL;
@@ -606,50 +604,3 @@ PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Polynomial(PetscSpace sp)
   PetscFunctionReturn(0);
 }
 
-/*@
-  PetscSpacePolynomialSetSymmetric - Set whether a function space is a space of symmetric polynomials
-
-  Input Parameters:
-+ sp  - the function space object
-- sym - flag for symmetric polynomials
-
-  Options Database:
-. -petscspace_poly_sym <bool> - Whether to use symmetric polynomials
-
-  Level: intermediate
-
-.seealso: PetscSpacePolynomialGetSymmetric(), PetscSpacePolynomialGetTensor(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
-@*/
-PetscErrorCode PetscSpacePolynomialSetSymmetric(PetscSpace sp, PetscBool sym)
-{
-  PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
-  poly->symmetric = sym;
-  PetscFunctionReturn(0);
-}
-
-/*@
-  PetscSpacePolynomialGetSymmetric - Get whether a function space is a space of symmetric polynomials
-
-  Input Parameter:
-. sp  - the function space object
-
-  Output Parameter:
-. sym - flag for symmetric polynomials
-
-  Level: intermediate
-
-.seealso: PetscSpacePolynomialSetSymmetric(), PetscSpacePolynomialGetTensor(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
-@*/
-PetscErrorCode PetscSpacePolynomialGetSymmetric(PetscSpace sp, PetscBool *sym)
-{
-  PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
-  PetscValidPointer(sym, 2);
-  *sym = poly->symmetric;
-  PetscFunctionReturn(0);
-}
