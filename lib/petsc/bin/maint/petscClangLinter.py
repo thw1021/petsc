@@ -46,15 +46,19 @@ P_CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles     = 0x4000
 P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
 
 # clang options used for parsing files
-baseClangOptions = (P_CXTranslationUnit_PrecompiledPreamble |
-                    P_CXTranslationUnit_SkipFunctionBodies |
-                    P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
+baseClangOptions = (
+  P_CXTranslationUnit_PrecompiledPreamble |
+  P_CXTranslationUnit_SkipFunctionBodies |
+  P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble
+)
 
 # clang options for creating the precompiled megaheader
-basePCHClangOptions  = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
-                        P_CXTranslationUnit_Incomplete |
-                        P_CXTranslationUnit_ForSerialization |
-                        P_CXTranslationUnit_KeepGoing)
+basePCHClangOptions = (
+  P_CXTranslationUnit_CreatePreambleOnFirstParse |
+  P_CXTranslationUnit_Incomplete |
+  P_CXTranslationUnit_ForSerialization |
+  P_CXTranslationUnit_KeepGoing
+)
 
 # Cursors that may be attached to function-like usage
 funcCallCursors = {clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR}
@@ -367,14 +371,14 @@ class PetscCursor(object):
     return petscClangLinterUtil.getRawSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
 
   def getRawSource(self,nbefore=0,nafter=0,nboth=0,trim=False):
-    return petscClangLinterUtil.getRawSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
+    return self.getRawSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,trim=trim)
 
   @staticmethod
   def getFormattedSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,view=False):
     return petscClangLinterUtil.getFormattedSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
 
   def getFormattedSource(self,nbefore=0,nafter=0,nboth=0,view=False):
-    return petscClangLinterUtil.getFormattedSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
+    return self.getFormattedSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,view=view)
 
   @staticmethod
   def getFormattedLocationStringFromCursor(cursor):
@@ -382,8 +386,7 @@ class PetscCursor(object):
     return ":".join([loc.file.name,str(loc.column),str(loc.line)])
 
   def getFormattedLocationString(self):
-    loc = self.location
-    return ":".join([loc.file.name,str(loc.column),str(loc.line)])
+    return self.getFormattedLocationStringFromCursor(self)
 
   @staticmethod
   def viewAstFromCursor(cursor):
@@ -443,7 +446,7 @@ class PetscCursor(object):
     return foundCursors
 
   def findCursorReferences(self):
-    return PetscCursor.findCursorReferencesFromCursor(self)
+    return self.findCursorReferencesFromCursor(self)
 
   @staticmethod
   def getCommentAndRangeFromCursor(cursor):
@@ -458,7 +461,7 @@ class PetscCursor(object):
     return comment,range
 
   def getCommentAndRange(self):
-    return PetscCursor.getCommentAndRangeFromCursor(self)
+    return self.getCommentAndRangeFromCursor(self)
 
   def __init__(self,cursor,idx=-12345):
     assert isinstance(cursor,(clx.Cursor,PetscCursor))
@@ -1150,54 +1153,37 @@ class WorkerPool(mp.queues.JoinableQueue):
     return self.warnings,self.errorsLeft,self.errorsFixed,self.patches
 
 
-"""utilities for checking doc-strings"""
+"""utilities for checking docstrings"""
 def parseDocString(cursor):
   __doc__="""
   parse and extract all relevant headings from a sowing docstring. Each section will have an
   'all' entry containing the raw text and a 'names' entry containing a list of extracted symbols or names.
   """
-  def postProcessHeading(subheading,testItem,countMax=-1):
-    nameList = []
-    count    = 0
-    for lineOffset,item in subheading["all"]:
-      if testItem(item):
-        tu,file   = cursor.translation_unit,cursor.location.file
-        name      = item[1:].split("-")[0].strip()
-        colBegin  = item.index(name)+1
-        lineBegin = location.start.line+lineOffset
-        begin     = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin)
-        end       = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin+len(name))
-        nameList.append((clx.SourceRange.from_locations(begin,end),name))
-        count += 1
-      if count == countMax:
-        break
-    subheading["names"] = nameList
-    return subheading
-
-
   raw,location = PetscCursor.getCommentAndRangeFromCursor(cursor)
   if (not raw) or (not raw.startswith(("/*@","/*M","/*E"))):
     return None
 
-  preambleHeading = "preamble"
-  paramHeading    = "params"
-  noteHeading     = "notes"
-  optionsHeading  = "options"
-  seealsoHeading  = "seealso"
-  levelHeading    = "level"
-  headings        = {
-    "raw"           : raw,
-    preambleHeading : {"all" : []},
-    paramHeading    : {"all" : []},
-    optionsHeading  : {"all" : []},
-    noteHeading     : {"all" : []},
-    seealsoHeading  : {"all" : []},
-    levelHeading    : {"all" : []},
+  preambleHeading  = "preamble"
+  paramHeading     = "params"
+  noteHeading      = "notes"
+  optionsHeading   = "options"
+  seealsoHeading   = "seealso"
+  levelHeading     = "level"
+  referenceHeading = "references"
+  headings         = {
+    "raw"            : raw,
+    preambleHeading  : {"all" : []},
+    paramHeading     : {"all" : []},
+    optionsHeading   : {"all" : []},
+    noteHeading      : {"all" : []},
+    seealsoHeading   : {"all" : []},
+    levelHeading     : {"all" : []},
+    referenceHeading : {"all" : []},
   }
   heading = preambleHeading
   for offset,line in enumerate(s for s in raw.split("\n")):
     lstrip = line.strip()
-    if (not lstrip) or lstrip.startswith("/*") or lstrip.endswith("*/"):
+    if lstrip.startswith("/*") or lstrip.endswith("*/"):
       continue
     if ":" in lstrip:
       lsplit  = [s.strip() for s in lstrip.split(":") if s]
@@ -1212,20 +1198,66 @@ def parseDocString(cursor):
         heading = optionsHeading
       elif "seealso" in heading:
         heading = seealsoHeading
-      if len(lsplit) > 1:
-        headings[heading]["all"].extend([(offset,l) for l in lsplit[1:]])
-    else:
-      headings[heading]["all"].append((offset,line))
+      elif "level" in heading:
+        heading = levelHeading
+      elif "reference" in heading:
+        heading = referenceHeading
+      else:
+        raise RuntimeError(heading)
+    headings[heading]["all"].append((offset,line))
 
-  postProcessHeading(headings[preambleHeading],lambda x : "-" in x,countMax=1)
-  postProcessHeading(headings[paramHeading],lambda x : x.startswith(("+",".","-")))
-  postProcessHeading(headings[optionsHeading],lambda x : x.startswith(("+",".","-")))
+  def postProcessHeading(subheading,testItem,countMax=-1):
+    nameList = []
+    count    = 0
+    for i,(lineOffset,item) in enumerate(subheading["all"]):
+      valid,item = testItem(i,item)
+      if valid:
+        tu,file   = cursor.translation_unit,cursor.location.file
+        name      = item.split("-")[0].strip()
+        colBegin  = item.index(name)+1
+        lineBegin = location.start.line+lineOffset
+        begin     = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin)
+        end       = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin+len(name))
+        nameList.append((clx.SourceRange.from_locations(begin,end),name))
+        count += 1
+      if count == countMax:
+        break
+    subheading["names"] = nameList
+    return subheading
+
+  def validParams(i,x):
+    xstrip = x.lstrip()
+    if xstrip.startswith(("+",".","-")):
+      return True, xstrip[1:]
+    return False, x
+
+  def validLevel(i,x):
+    xstrip = x.lstrip()
+    if ":" not in xstrip:
+      return xstrip,xstrip
+    xsplit = xstrip.split(":")[1]
+    return xsplit,xsplit
+
+  postProcessHeading(headings[preambleHeading], lambda i,x : (("-" in x) or (i == 0),x),countMax=1)
+  postProcessHeading(headings[paramHeading],validParams)
+  postProcessHeading(headings[optionsHeading],validParams)
+  postProcessHeading(headings[levelHeading],validLevel)
   headings[seealsoHeading]["names"] = [name.strip() for _,sa in headings[seealsoHeading]["all"] for name in sa.split(",")]
   return headings
 
-def checkDocumentationAndFunctionArgumentsMatch(linter,cursor,fnargs,parsed):
+def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
   docStringArgs = parsed["params"]["names"]
-  allParamNames = tuple(zip(*docStringArgs))[1]
+  if len(docStringArgs) == len(fnargs) == 0:
+    # if both fnargs and docStringArgs are empty then the function has no arguments and
+    # we have nothing to do here
+    return
+  try:
+    allParamNames = tuple(zip(*docStringArgs))[1]
+  except IndexError:
+    # its ok if the allParamNames is empty, as the "undocumented parameter" check will
+    # fire
+    allParamNames = tuple()
+    pass
   allParamLeft  = set(allParamNames)
   errorMessage  = None
   for i,arg in enumerate(fnargs):
@@ -1234,7 +1266,8 @@ def checkDocumentationAndFunctionArgumentsMatch(linter,cursor,fnargs,parsed):
       idx = allParamNames.index(argname)
     except ValueError:
       # function argument isn't in the docstring
-      errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(argname,parsed["raw"])
+      src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[0][0],numBeforeContext=1,numAfterContext=len(parsed["params"]["all"])-1,highlight=False)
+      errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(argname,src)
     else:
       # argument is in the docstring, lets see if its in the right place
       if i != idx:
@@ -1255,15 +1288,43 @@ def checkDocumentationAndFunctionArgumentsMatch(linter,cursor,fnargs,parsed):
     linter.addErrorFromCursor(cursor,errorMessage)
   return
 
+def checkDocValidHeader(linter,cursor,parsed):
+  header         = parsed["preamble"]
+  allSymbolNames = header["names"]
+  assert len(allSymbolNames)
+  headerRaw    = "\n".join(s for _,s in header["all"])
+  symbolName   = allSymbolNames[0]
+  cursorName   = PetscCursor.getNameFromCursor(cursor)
+  if symbolName[-1] != cursorName:
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numContext=2)
+    errorMessage = "Docstring name does not match symbol name. Expected '{}' found '{}' instead:\n\n{}".format(cursorName,symbolName[-1],src)
+    linter.addErrorFromCursor(cursor,errorMessage)
+  if "-" not in headerRaw:
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(header["all"])-1)
+    errorMessage = "Docstring missing summary text. Expected '{} - very useful description here', found nothing instead:\n\n{}".format(cursorName,src)
+    linter.addErrorFromCursor(cursor,errorMessage)
+  return
 
+def checkDocValidLevel(linter,cursor,parsed):
+  header        = parsed["level"]
+  allLevelNames = header["names"]
+  if not len(allLevelNames):
+    _,range = PetscCursor.getCommentAndRangeFromCursor(cursor)
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(range,highlight=False)
+    errorMessage = "Missing Level subheading. Expected 'Level: [level value here or on next line]' found nothing instead:\n\n{}".format(src)
+    linter.addErrorFromCursor(cursor,errorMessage)
+  return
 
+"""Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,function):
   parsed = parseDocString(function)
   if not parsed:
     return
 
   fnargs = linter.getArgumentCursors(function)
-  checkDocumentationAndFunctionArgumentsMatch(linter,function,fnargs,parsed)
+  checkDocValidHeader(linter,function,parsed)
+  checkDocFunctionArgumentsMatch(linter,function,parsed,fnargs)
+  checkDocValidLevel(linter,function,parsed)
   return
 
 
