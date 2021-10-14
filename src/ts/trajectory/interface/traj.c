@@ -772,9 +772,7 @@ PetscErrorCode TSTrajectorySetDirname(TSTrajectory tj,const char dirname[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
   ierr = PetscStrcmp(tj->dirname,dirname,&flg);CHKERRQ(ierr);
-  if (!flg && tj->dirfiletemplate) {
-    SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot set directoryname after TSTrajectory has been setup");
-  }
+  if (PetscUnlikely(!flg && tj->dirfiletemplate)) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot set directoryname after TSTrajectory has been setup");
   ierr = PetscFree(tj->dirname);CHKERRQ(ierr);
   ierr = PetscStrallocpy(dirname,&tj->dirname);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -793,9 +791,9 @@ PetscErrorCode TSTrajectorySetDirname(TSTrajectory tj,const char dirname[])
 .  -ts_trajectory_file_template - set the file name template
 
    Notes:
-    The name template should be of the form, for example filename-%06" PetscInt_FMT ".bin It should not begin with a leading /
+    The name template should be of the form, for example "filename-%06" PetscInt_FMT ".bin" It should not begin with a leading /
 
-   The final location of the files is determined by dirname/filetemplate where dirname was provided by TSTrajectorySetDirname(). The %06" PetscInt_FMT " is replaced by the
+   The final location of the files is determined by dirname/filetemplate where dirname was provided by TSTrajectorySetDirname(). The "%06" PetscInt_FMT is replaced by the
    timestep counter
 
    Level: developer
@@ -809,15 +807,16 @@ PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory tj,const char filetempla
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
-  if (tj->dirfiletemplate) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot set filetemplate after TSTrajectory has been setup");
+  PetscValidCharPointer(filetemplate,2);
+  if (PetscUnlikely(tj->dirfiletemplate)) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot set filetemplate after TSTrajectory has been setup");
 
-  if (!filetemplate[0]) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
+  if (PetscUnlikely(!filetemplate[0])) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
   /* Do some cursory validation of the input. */
   ierr = PetscStrstr(filetemplate,"%",(char**)&ptr);CHKERRQ(ierr);
-  if (!ptr) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
+  if (PetscUnlikely(!ptr)) SETERRQ1(PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_trajectory_file_template, should look like filename-%%06" PetscInt_FMT ".bin",filetemplate);
   for (ptr++; ptr && *ptr; ptr++) {
-    ierr = PetscStrchr("DdiouxX",*ptr,(char**)&ptr2);CHKERRQ(ierr);
-    if (!ptr2 && (*ptr < '0' || '9' < *ptr)) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"Invalid file template argument to -ts_trajectory_file_template, should look like filename-%%06" PetscInt_FMT ".bin");
+    ierr = PetscStrchr(PetscInt_FMT "DdiouxX",*ptr,(char**)&ptr2);CHKERRQ(ierr);
+    if (PetscUnlikely(!ptr2 && ((*ptr < '0') || ('9' < *ptr)))) SETERRQ1(PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_trajectory_file_template, should look like filename-%%06" PetscInt_FMT ".bin",filetemplate);
     if (ptr2) break;
   }
   ierr = PetscFree(tj->filetemplate);CHKERRQ(ierr);
