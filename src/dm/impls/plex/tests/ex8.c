@@ -689,9 +689,9 @@ int main(int argc, char **argv)
       ierr = PetscPrintf(PETSC_COMM_SELF, "Cell %4" PetscInt_FMT ": Centroid (", c);CHKERRQ(ierr);
       for (d = 0; d < dim; ++d) {
         if (d > 0) {ierr = PetscPrintf(PETSC_COMM_SELF, ", ");CHKERRQ(ierr);}
-        ierr = PetscPrintf(PETSC_COMM_SELF, "%12.2g", cg->centroid[d]);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF, "%12.2g", (double)cg->centroid[d]);CHKERRQ(ierr);
       }
-      ierr = PetscPrintf(PETSC_COMM_SELF, ") Vol %12.2g\n", cg->volume);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, ") Vol %12.2g\n", (double)cg->volume);CHKERRQ(ierr);
     }
     ierr = VecRestoreArrayRead(cellgeom, &cgeom);CHKERRQ(ierr);
     ierr = VecDestroy(&cellgeom);CHKERRQ(ierr);

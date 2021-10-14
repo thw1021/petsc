@@ -4505,7 +4505,7 @@ PetscErrorCode  SNESConvergedReasonView(SNES snes,PetscViewer viewer)
       ierr = DMComputeL2Diff(dm, 0.0, exactSol, exactCtx, u, &error);CHKERRQ(ierr);
       ierr = PetscFree2(exactSol, exactCtx);CHKERRQ(ierr);
       if (error < 1.0e-11) {ierr = PetscViewerASCIIPrintf(viewer, "L_2 Error: < 1.0e-11\n");CHKERRQ(ierr);}
-      else                 {ierr = PetscViewerASCIIPrintf(viewer, "L_2 Error: %g\n", error);CHKERRQ(ierr);}
+      else                 {ierr = PetscViewerASCIIPrintf(viewer, "L_2 Error: %g\n", (double)error);CHKERRQ(ierr);}
     }
     if (snes->reason > 0 && format != PETSC_VIEWER_FAILED) {
       if (((PetscObject) snes)->prefix) {
@@ -5227,7 +5227,7 @@ PetscErrorCode  SNESTestLocalMin(SNES snes)
       ierr  = VecSetValue(uh,i,value,ADD_VALUES);CHKERRQ(ierr);
       ierr  = SNESComputeFunction(snes,uh,fh);CHKERRQ(ierr);
       ierr  = VecNorm(fh,NORM_2,&norm);CHKERRQ(ierr);
-      ierr  = PetscPrintf(PetscObjectComm((PetscObject)snes),"       j norm %" PetscInt_FMT " %18.16e\n",j,norm);CHKERRQ(ierr);
+      ierr  = PetscPrintf(PetscObjectComm((PetscObject)snes),"       j norm %" PetscInt_FMT " %18.16e\n",j,(double)norm);CHKERRQ(ierr);
       value = -value;
       ierr  = VecSetValue(uh,i,value,ADD_VALUES);CHKERRQ(ierr);
     }

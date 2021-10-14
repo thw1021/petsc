@@ -187,7 +187,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
     ierr = DMPlexComputeIntegralFEM(plexi,XsubArray[1],tt,NULL);CHKERRQ(ierr);
     J += -ctx->n_0*ctx->v_0*PetscRealPart(tt[0]);
   }
-PetscPrintf(ctx->comm, "testSpitzer J = %10.3e\n",J);
+  ierr = PetscPrintf(ctx->comm, "testSpitzer J = %10.3e\n",(double)J);CHKERRQ(ierr);
   /* get N_e */
   ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
   ierr = PetscDSSetConstants(prob, 1, user);CHKERRQ(ierr);
@@ -241,8 +241,8 @@ PetscPrintf(ctx->comm, "testSpitzer J = %10.3e\n",J);
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   ierr = TSGetConvergedReason(ts,&reason);CHKERRQ(ierr);
   if ((rectx->plotting) || stepi == 0 || reason || rectx->pulse_start == time + 0.98*dt) {
-    ierr = PetscPrintf(ctx->comm, "testSpitzer: %4" PetscInt_FMT ") time=%11.4e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g%% Te_kev= %10.3e Z_eff=%g E/J to eta ratio= %g (diff=%g) %s %s\n",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J, Te_kev,Z,ratio,old_ratio-ratio, rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E",rectx->pulse_start != time + 0.98*dt ? "normal" : "transition");CHKERRQ(ierr);
-    if (rectx->pulse_start == time + 0.98*dt) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Spitzer complet ratio=%g",ratio);
+    ierr = PetscPrintf(ctx->comm, "testSpitzer: %4" PetscInt_FMT ") time=%11.4e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g%% Te_kev= %10.3e Z_eff=%g E/J to eta ratio= %g (diff=%g) %s %s\n",stepi,(double)time,(double)(n_e/ctx->n_0),(double)ctx->Ez,(double)J,(double)J_re,(double)(100*J_re/J),(double)Te_kev,(double)Z,(double)ratio,(double)(old_ratio-ratio),rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E",rectx->pulse_start != time + 0.98*dt ? "normal" : "transition");CHKERRQ(ierr);
+    if (rectx->pulse_start == time + 0.98*dt) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Spitzer complet ratio=%g",(double)ratio);
   }
   old_ratio = ratio;
   PetscFunctionReturn(0);
@@ -318,7 +318,7 @@ static PetscErrorCode testStable(TS ts, Vec X, PetscInt stepi, PetscReal time, P
     ierr = DMPlexComputeIntegralFEM(plex,X2,tt,NULL);CHKERRQ(ierr);
     lpm1 = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %" PetscInt_FMT ") time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "%s %" PetscInt_FMT ") time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,(double)time,(int)ppp,(double)(ediff/lpm0),(double)(idiff/lpm1));CHKERRQ(ierr);
   /* view */
   ierr = VecCopy(X2,X);CHKERRQ(ierr);
   ierr = VecDestroy(&X2);CHKERRQ(ierr);
@@ -409,7 +409,7 @@ static PetscErrorCode FormSource(TS ts, PetscReal ftime, Vec X_dummmy, Vec F, vo
       dne_dt = new_imp_rate*rectx->Ne_ion /* *ctx->t_0 */;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
-      ierr = PetscInfo4(ctx->plex[0], "\tHave new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt);CHKERRQ(ierr);
+      ierr = PetscInfo4(ctx->plex[0], "\tHave new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",(double)new_imp_rate,(double)ftime,(double)dne_dt,(double)dni_dt);CHKERRQ(ierr);
       ierr = DMCompositeGetAccessArray(pack, F, ctx->num_grids, NULL, globFarray);CHKERRQ(ierr);
       for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) {
         /* add it */
@@ -480,7 +480,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     ierr = VecNorm(X,NORM_2,&val);CHKERRQ(ierr);
     ierr = MPIU_Allreduce(&val,&rval,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
     if (rval != val) {
-      ierr = PetscPrintf(PETSC_COMM_SELF, " ***** [%d] ERROR max |x| = %22.15e, my |x| = %22.15e diff=%e\n",rank,rval,val,rval-val);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF, " ***** [%d] ERROR max |x| = %22.15e, my |x| = %22.15e diff=%e\n",rank,(double)rval,(double)val,(double)(rval-val));CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(PETSC_COMM_WORLD, "[%d] parallel consistency check OK\n",rank);CHKERRQ(ierr);
     }
@@ -614,7 +614,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   ierr = PetscOptionsReal("-ex2_ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-ex2_inductance","Inductance E feild","none",rectx->L,&rectx->L, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-ex2_connor_e_field_units","Scale Ex but Connor-Hastie E_c","none",Connor_E,&Connor_E, NULL);CHKERRQ(ierr);
-  ierr = PetscInfo5(dm_dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",rectx->Ne_ion,rectx->T_cold,rectx->ion_potential,ctx->Ez,ctx->v_0);CHKERRQ(ierr);
+  ierr = PetscInfo5(dm_dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",(double)rectx->Ne_ion,(double)rectx->T_cold,(double)rectx->ion_potential,(double)ctx->Ez,(double)ctx->v_0);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   /* get impurity source rate function */
   ierr = PetscFunctionListFind(plist,pname,&rectx->impuritySrcRate);CHKERRQ(ierr);

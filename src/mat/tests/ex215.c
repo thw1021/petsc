@@ -154,9 +154,9 @@ int main(int argc,char **args)
       ierr = VecAXPY(u,-1.0,b);CHKERRQ(ierr);  /* u <- (-1.0)b + u */
       ierr = VecNorm(u,NORM_2,&resi);CHKERRQ(ierr);
       if (nsolve) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"MatSolve error: Norm of error %g, residual %f\n",norm,resi);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"MatSolve error: Norm of error %g, residual %g\n",(double)norm,(double)resi);CHKERRQ(ierr);
       } else {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"MatSolveTranspose error: Norm of error %g, residual %f\n",norm,resi);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"MatSolveTranspose error: Norm of error %g, residual %g\n",(double)norm,(double)resi);CHKERRQ(ierr);
       }
     }
   }
@@ -167,7 +167,7 @@ int main(int argc,char **args)
   ierr = MatAXPY(X,-1.0,C,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   ierr = MatNorm(X,NORM_FROBENIUS,&norm);CHKERRQ(ierr);
   if (norm > tol) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"MatMatSolve: Norm of error %g\n",norm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"MatMatSolve: Norm of error %g\n",(double)norm);CHKERRQ(ierr);
   }
 
   /* Free data structures */

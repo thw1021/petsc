@@ -324,11 +324,11 @@ PetscErrorCode PCBDDCScalingSetUp(PC pc)
         ierr = VecNorm(B0_Bv,NORM_INFINITY,&errorl);CHKERRQ(ierr);
       }
       ierr = MPI_Allreduce(&errorl,&error,1,MPIU_REAL,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"Error benign extension %1.14e\n",error);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"Error benign extension %1.14e\n",(double)error);CHKERRQ(ierr);
     }
     ierr = VecAXPY(pcis->vec1_global,-1.0,vec2_global);CHKERRQ(ierr);
     ierr = VecNorm(pcis->vec1_global,NORM_INFINITY,&error);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Error scaling extension %1.14e\n",error);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Error scaling extension %1.14e\n",(double)error);CHKERRQ(ierr);
     ierr = VecDestroy(&vec2_global);CHKERRQ(ierr);
 
     /* restriction -> from parallel to local */
@@ -341,7 +341,7 @@ PetscErrorCode PCBDDCScalingSetUp(PC pc)
     ierr = VecScatterBegin(pcis->global_to_B,pcis->vec1_B,pcis->vec1_global,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
     ierr = VecScatterEnd(pcis->global_to_B,pcis->vec1_B,pcis->vec1_global,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
     ierr = VecNorm(pcis->vec1_global,NORM_INFINITY,&error);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Error scaling restriction %1.14e\n",error);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Error scaling restriction %1.14e\n",(double)error);CHKERRQ(ierr);
     ierr = MatDestroy(&B0_B);CHKERRQ(ierr);
     ierr = VecDestroy(&B0_Bv);CHKERRQ(ierr);
     ierr = VecDestroy(&B0_Bv2);CHKERRQ(ierr);

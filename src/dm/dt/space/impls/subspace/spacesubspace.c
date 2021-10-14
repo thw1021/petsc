@@ -76,7 +76,7 @@ static PetscErrorCode PetscSpaceView_Subspace(PetscSpace sp, PetscViewer viewer)
     if (subsp->u) {
       ierr = PetscViewerASCIIPrintf(viewer,"Space-to-subspace range shift:\n\n");CHKERRQ(ierr);
       for (o = 0; o < origNc; o++) {
-        ierr = PetscViewerASCIIPrintf(viewer," %g\n", subsp->u[o]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer," %g\n", (double)(subsp->u[o]));CHKERRQ(ierr);
       }
     }
     if (subsp->Ju) {
@@ -84,7 +84,7 @@ static PetscErrorCode PetscSpaceView_Subspace(PetscSpace sp, PetscViewer viewer)
       for (o = 0; o < origNc; o++) {
         ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
         for (s = 0; s < subNc; s++) {
-          ierr = PetscViewerASCIIPrintf(viewer," %g", subsp->Ju[o * subNc + s]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIIPrintf(viewer," %g", (double)(subsp->Ju[o * subNc + s]));CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
       }
