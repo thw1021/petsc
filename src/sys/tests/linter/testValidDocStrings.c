@@ -1,0 +1,67 @@
+#include <petscsys.h>
+
+typedef int testType;
+
+/*@C
+  testWellFormedFunctionDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+  incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+  deserunt mollit anim id est laborum.
+
+  Not Collective, Synchronous
+
+  Input Parameters:
++ viewer - a PetscViewer
+- x      - an int
+
+  Output Parameter:
+. y - a pointer
+
+  Level:
+  beginner
+
+  References:
+  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+.seealso: testIllFormedFunctionDocString(), testType
+@*/
+PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+{
+  return 0;
+}
+
+/*@C
+  someOtherFunctionName
+
+  Not Collective, Synchronous
+
+  Input Parameters:
++ viewer - a PetscViewer
+
+  Output Parameter:
++ y - a pointer
+- z - a nonexistent parameter
+
+  Level: Lorem ipsum dolor sit amet
+
+  References:
+  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+.seealso: testNonExistentFunction(), testNonExistentType
+@*/
+PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+{
+  return 0;
+}
+
+/*@C
+  Not Collective, Synchronous
+
+  References:
+  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+.seealso: testNonExistentFunction(), testNonExistentType
+@*/
+PetscErrorCode testIllFormedMinimalDocString(void)
+{
+  return 0;
+}
