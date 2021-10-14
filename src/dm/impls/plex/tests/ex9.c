@@ -269,9 +269,9 @@ static PetscErrorCode TestCone(DM dm, AppCtx *user)
     ierr = PetscSynchronizedPrintf(comm, "[%d] Cones: %" PetscInt_FMT " Total time: %.3es Average time per cone: %.3es\n", rank, numRuns, eventInfo.time, eventInfo.time/numRuns);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(comm, PETSC_STDOUT);CHKERRQ(ierr);
   } else if (eventInfo.time > maxTimePerRun * numRuns) {
-    ierr = PetscSynchronizedPrintf(comm, "[%d] Cones: %" PetscInt_FMT " Average time per cone: %gs standard: %gs\n", rank, numRuns, eventInfo.time/numRuns, maxTimePerRun);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(comm, "[%d] Cones: %" PetscInt_FMT " Average time per cone: %gs standard: %gs\n", rank, numRuns, eventInfo.time/(double)numRuns, (double)maxTimePerRun);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(comm, PETSC_STDOUT);CHKERRQ(ierr);
-    if (user->errors) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for cone %g > standard %g", eventInfo.time/numRuns, maxTimePerRun);
+    if (user->errors) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for cone %g > standard %g", eventInfo.time/(double)numRuns, (double)maxTimePerRun);
   }
   PetscFunctionReturn(0);
 }
@@ -315,9 +315,9 @@ static PetscErrorCode TestTransitiveClosure(DM dm, AppCtx *user)
     ierr = PetscSynchronizedPrintf(comm, "[%d] Closures: %" PetscInt_FMT " Total time: %.3es Average time per cone: %.3es\n", rank, numRuns, eventInfo.time, eventInfo.time/numRuns);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(comm, PETSC_STDOUT);CHKERRQ(ierr);
   } else if (eventInfo.time > maxTimePerRun * numRuns) {
-    ierr = PetscSynchronizedPrintf(comm, "[%d] Closures: %" PetscInt_FMT " Average time per cone: %gs standard: %gs\n", rank, numRuns, eventInfo.time/numRuns, maxTimePerRun);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(comm, "[%d] Closures: %" PetscInt_FMT " Average time per cone: %gs standard: %gs\n", rank, numRuns, eventInfo.time/(double)numRuns, (double)maxTimePerRun);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(comm, PETSC_STDOUT);CHKERRQ(ierr);
-    if (user->errors) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for closure %g > standard %g", eventInfo.time/numRuns, maxTimePerRun);
+    if (user->errors) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for closure %g > standard %g", eventInfo.time/numRuns, (double)maxTimePerRun);
   }
   PetscFunctionReturn(0);
 }
@@ -394,9 +394,9 @@ static PetscErrorCode TestVecClosure(DM dm, PetscBool useIndex, PetscBool useSpe
       ierr = PetscSynchronizedPrintf(comm, "[%d] %s: %" PetscInt_FMT " Total time: %.3es Average time per vector closure: %.3es\n", rank, useIndex ? (useSpectral ? titleSpecIndex : titleIndex) : (useSpectral ? titleSpec : title), numRuns, eventInfo.time, eventInfo.time/numRuns);CHKERRQ(ierr);
       ierr = PetscSynchronizedFlush(comm, PETSC_STDOUT);CHKERRQ(ierr);
     } else {
-      ierr = PetscSynchronizedPrintf(comm, "[%d] %s: %" PetscInt_FMT " Average time per vector closure: %gs standard: %gs\n", rank, useIndex ? (useSpectral ? titleSpecIndex : titleIndex) : (useSpectral ? titleSpec : title), numRuns, eventInfo.time/numRuns, maxTimePerRun);CHKERRQ(ierr);
+      ierr = PetscSynchronizedPrintf(comm, "[%d] %s: %" PetscInt_FMT " Average time per vector closure: %gs standard: %gs\n", rank, useIndex ? (useSpectral ? titleSpecIndex : titleIndex) : (useSpectral ? titleSpec : title), numRuns, eventInfo.time/numRuns, (double)maxTimePerRun);CHKERRQ(ierr);
       ierr = PetscSynchronizedFlush(comm, PETSC_STDOUT);CHKERRQ(ierr);
-      if (user->errors) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for vector closure %g > standard %g", eventInfo.time/numRuns, maxTimePerRun);
+      if (user->errors) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Average time for vector closure %g > standard %g", eventInfo.time/numRuns, (double)maxTimePerRun);
     }
   }
   PetscFunctionReturn(0);

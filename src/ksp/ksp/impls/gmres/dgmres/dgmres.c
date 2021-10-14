@@ -523,7 +523,7 @@ PetscErrorCode KSPView_DGMRES(KSP ksp,PetscViewer viewer)
     }
     ierr = PetscViewerASCIIPrintf(viewer, "   Total number of extracted eigenvalues = %" PetscInt_FMT "\n", dgmres->r);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "   Maximum number of eigenvalues set to be extracted = %" PetscInt_FMT "\n", dgmres->max_neig);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "   relaxation parameter for the adaptive strategy(smv)  = %g\n", dgmres->smv);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "   relaxation parameter for the adaptive strategy(smv)  = %g\n", (double)(dgmres->smv));CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "   Number of matvecs : %" PetscInt_FMT "\n", dgmres->matvecs);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

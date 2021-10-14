@@ -116,7 +116,7 @@ PetscErrorCode PetscPartitionerView(PetscPartitioner part, PetscViewer v)
     ierr = PetscViewerASCIIPrintf(v, "Graph Partitioner: %d MPI Process%s\n", size, size > 1 ? "es" : "");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "  type: %s\n", ((PetscObject)part)->type_name);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "  edge cut: %" PetscInt_FMT "\n", part->edgeCut);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v, "  balance: %.2g\n", part->balance);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v, "  balance: %.2g\n", (double)(part->balance));CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(v, "  use vertex weights: %d\n", part->usevwgt);CHKERRQ(ierr);
   }
   if (part->ops->view) {ierr = (*part->ops->view)(part, v);CHKERRQ(ierr);}

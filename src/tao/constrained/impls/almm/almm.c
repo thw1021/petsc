@@ -62,13 +62,13 @@ static PetscErrorCode TaoSolve_ALMM(Tao tao)
       break;
   }
   auglag->gtol = auglag->gtol0;
-  ierr = PetscInfo1(tao,"Initial penalty: %.2f\n",auglag->mu);CHKERRQ(ierr);
+  ierr = PetscInfo1(tao,"Initial penalty: %.2g\n",(double)auglag->mu);CHKERRQ(ierr);
 
   /* start aug-lag outer loop */
   while (tao->reason == TAO_CONTINUE_ITERATING) {
     ++tao->niter;
     /* update subsolver tolerance */
-    ierr = PetscInfo1(tao,"Subsolver tolerance: ||G|| <= %e\n",auglag->gtol);CHKERRQ(ierr);
+    ierr = PetscInfo1(tao,"Subsolver tolerance: ||G|| <= %e\n",(double)auglag->gtol);CHKERRQ(ierr);
     ierr = TaoSetTolerances(auglag->subsolver, auglag->gtol, 0.0, 0.0);CHKERRQ(ierr);
     /* solve the bound-constrained or unconstrained subproblem */
     ierr = TaoSolve(auglag->subsolver);CHKERRQ(ierr);
@@ -83,7 +83,7 @@ static PetscErrorCode TaoSolve_ALMM(Tao tao)
     /* decide whether to update multipliers or not */
     updated = 0.0;
     if (auglag->cnorm <= auglag->ytol) {
-      ierr = PetscInfo1(tao,"Multipliers updated: ||C|| <= %e\n",auglag->ytol);CHKERRQ(ierr);
+      ierr = PetscInfo1(tao,"Multipliers updated: ||C|| <= %e\n",(double)auglag->ytol);CHKERRQ(ierr);
       /* constraints are good, update multipliers and convergence tolerances */
       if (tao->eq_constrained) {
         ierr = VecAXPY(auglag->Ye, auglag->mu, auglag->Ce);CHKERRQ(ierr);
@@ -113,7 +113,7 @@ static PetscErrorCode TaoSolve_ALMM(Tao tao)
         auglag->ytol = PetscMax(tao->catol, 0.1/PetscPowReal(auglag->mu, auglag->mu_pow_bad));
         auglag->gtol = PetscMax(tao->gatol, 1.0/auglag->mu);
       }
-      ierr = PetscInfo1(tao,"Penalty increased: mu = %.2f\n",auglag->mu);CHKERRQ(ierr);
+      ierr = PetscInfo1(tao,"Penalty increased: mu = %.2g\n",(double)auglag->mu);CHKERRQ(ierr);
     }
     ierr = TaoLogConvergenceHistory(tao, auglag->fval, auglag->gnorm, auglag->cnorm, tao->ksp_its);CHKERRQ(ierr);
     ierr = TaoMonitor(tao, tao->niter, auglag->fval, auglag->gnorm, auglag->cnorm, updated);CHKERRQ(ierr);

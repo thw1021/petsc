@@ -330,7 +330,7 @@ int main(int argc,char **args)
       ierr = PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer);CHKERRQ(ierr);
       ierr = KSPView(ksp,viewer);CHKERRQ(ierr);
       ierr = PetscStrrchr(file[PetscPreLoadIt],'/',&matrixname);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n", matrixname,its,rnorm,kspinfo);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n", matrixname,its,(double)rnorm,kspinfo);CHKERRQ(ierr);
 
       /*
         Destroy the viewer

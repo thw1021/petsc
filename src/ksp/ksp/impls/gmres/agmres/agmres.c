@@ -637,10 +637,10 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: AUGMENT\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer," augmented vectors  %" PetscInt_FMT " at frequency %" PetscInt_FMT " with %s\n", agmres->r, agmres->neig, ritzvec);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", agmres->smv);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", agmres->bgv);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", (double)(agmres->smv));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", (double)(agmres->bgv));CHKERRQ(ierr);
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer,"%s restart %" PetscInt_FMT "",cstr,agmres->max_k);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"%s restart %" PetscInt_FMT,cstr,agmres->max_k);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

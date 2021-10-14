@@ -97,7 +97,7 @@ int main(int argc,char **argv)
     ierr = MatMult(A,x,b1);CHKERRQ(ierr);
     ierr = VecAXPY(b1,-1.0,b);CHKERRQ(ierr);
     ierr = VecNorm(b1,NORM_2,&norm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Final residual %g\n",norm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Final residual %g\n",(double)norm);CHKERRQ(ierr);
     ierr = VecDestroy(&b1);CHKERRQ(ierr);
   }
 

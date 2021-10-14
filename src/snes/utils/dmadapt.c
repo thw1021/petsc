@@ -603,7 +603,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       ierr = VecRestoreArrayRead(locX, &pointSols);CHKERRQ(ierr);
       ierr = VecRestoreArray(errVec, &errArray);CHKERRQ(ierr);
       ierr = PetscGlobalMinMaxReal(PetscObjectComm((PetscObject) adaptor), minMaxInd, minMaxIndGlobal);CHKERRQ(ierr);
-      ierr = PetscInfo2(adaptor, "DMAdaptor: error indicator range (%E, %E)\n", minMaxIndGlobal[0], minMaxIndGlobal[1]);CHKERRQ(ierr);
+      ierr = PetscInfo2(adaptor, "DMAdaptor: error indicator range (%E, %E)\n", (double)(minMaxIndGlobal[0]), (double)(minMaxIndGlobal[1]));CHKERRQ(ierr);
       /*     Compute IS from VecTagger */
       ierr = VecTaggerComputeIS(adaptor->refineTag, errVec, &refineIS,NULL);CHKERRQ(ierr);
       ierr = VecTaggerComputeIS(adaptor->coarsenTag, errVec, &coarsenIS,NULL);CHKERRQ(ierr);
@@ -673,7 +673,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       /*     Set target metric complexity */
       ierr = DMClone(dm, &dmMetric);CHKERRQ(ierr);
       N    = adaptor->Nadapt >= 0 ? adaptor->Nadapt : PetscPowRealInt(adaptor->refinementFactor, dim)*((PetscReal) (vEnd - vStart));
-      if (adaptor->monitor) {ierr = PetscPrintf(PETSC_COMM_SELF, "N_orig: %" PetscInt_FMT " N_adapt: %g\n", vEnd - vStart, N);CHKERRQ(ierr);}
+      if (adaptor->monitor) {ierr = PetscPrintf(PETSC_COMM_SELF, "N_orig: %" PetscInt_FMT " N_adapt: %g\n", vEnd - vStart, (double)N);CHKERRQ(ierr);}
       ierr = DMPlexMetricSetTargetComplexity(dmMetric, (PetscReal) N);CHKERRQ(ierr);
       /*     Compute L-p normalized metric */
       ierr = DMPlexMetricNormalize(dmMetric, xHess, PETSC_TRUE, PETSC_TRUE, &metric);CHKERRQ(ierr);

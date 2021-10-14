@@ -14,7 +14,7 @@ static PetscErrorCode CompareGhostedCoords(Vec gc1,Vec gc2)
   ierr = VecWAXPY(tmp,-1.0,gc1,gc2);CHKERRQ(ierr);
   ierr = VecNorm(tmp,NORM_INFINITY,&nrm);CHKERRQ(ierr);
   ierr = MPI_Allreduce(&nrm,&gnrm,1,MPIU_REAL,MPIU_MAX,PETSC_COMM_WORLD);CHKERRMPI(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"norm of difference of ghosted coordinates %8.2e\n",gnrm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"norm of difference of ghosted coordinates %8.2e\n",(double)gnrm);CHKERRQ(ierr);
   ierr = VecDestroy(&tmp);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
