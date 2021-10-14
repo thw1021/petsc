@@ -6,6 +6,7 @@ Created on Tue Mar 23 17:56:06 2021
 @author: jacobfaibussowitsch
 """
 import clang.cindex as clx
+import petscClangLinter
 
 def verbosePrint(*args,**kwargs):
     '''filter predicate for show_ast: show all'''
@@ -74,13 +75,11 @@ def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContex
   return getRawSourceFromSourceRange(cursor.location,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
 
 def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  return getRawSourceFromLocation(sourceRange.start.file.name,sourceRange.start.line,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
-
-def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  lineList = []
-  with open(filename,"r") as fd:
-    numBeforeContext = numBeforeContext if numBeforeContext else numContext
-    numAfterContext  = numAfterContext if numAfterContext else numContext
+  numBeforeContext = numBeforeContext if numBeforeContext else numContext
+  numAfterContext  = numAfterContext if numAfterContext else numContext
+  with open(sourceRange.start.file.name,"r") as fd:
+    lineno   = sourceRange.start.line
+    lineList = []
     line     = fd.readline()
     lineFile = 1
     while line:
@@ -94,35 +93,30 @@ def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=
   if trim:
     minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList if s.replace("\n","")])
     lineList  = [s[minSpaces:].rstrip() for s in lineList]
-  srcStr = "\n".join(lineList)
-  return srcStr
+  return "\n".join(lineList)
 
 
-def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True):
-  return getFormattedSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view,highlight=highlight)
+def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True,trim=True):
+  return getFormattedSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view,highlight=highlight,trim=trim)
 
-def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True):
-  begin,end = sourceRange.start,sourceRange.end
-  return getFormattedSourceFromLocation(begin.file.name,begin.line,end.line,begin.column-1,end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view,highlight=highlight)
-
-def getFormattedSourceFromLocation(filename,lineBegin,lineEnd,symbolBegin,symbolEnd,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True):
-  lineList = []
-  numBeforeContext = numBeforeContext if numBeforeContext else numContext
-  numAfterContext  = numAfterContext if numAfterContext else numContext
+def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True,trim=True):
+  numBeforeContext  = numBeforeContext if numBeforeContext else numContext
+  numAfterContext   = numAfterContext if numAfterContext else numContext
+  begin,end         = sourceRange.start,sourceRange.end
+  lineBegin,lineEnd = begin.line,end.line
   loBound  = max(1,lineBegin-numBeforeContext)
   hiBound  = lineEnd+numAfterContext
   maxWidth = len(str(hiBound))
   if highlight:
+    symbolBegin  = begin.column-1
+    symbolEnd    = end.column-1
     beginOffset  = max(symbolBegin,0)
     lenUnderline = max(abs(max(symbolEnd,1)-beginOffset),1)
     underline    = beginOffset*" "+lenUnderline*"^"
-    if (lineBegin != lineEnd):
-      import ipdb; ipdb.set_trace()
-      # need to figure out how to differentiate the source ranges from the cursors here!!!
-      raise NotImplementedError("cannot highlight a multiline symbol range yet")
-  with open(filename,"r") as fd:
-    line     = fd.readline()
+  with open(begin.file.name,"r") as fd:
+    lineList = []
     lineFile = 1
+    line     = fd.readline()
     while line:
       if loBound <= lineFile <= hiBound:
         indicator = ">" if (lineBegin <= lineFile <= lineEnd) else " "
@@ -134,24 +128,30 @@ def getFormattedSourceFromLocation(filename,lineBegin,lineEnd,symbolBegin,symbol
       lineFile += 1
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
-  # across the screeen
-  minSpaces = min([len(s)-len(s.lstrip(" ")) for _,s in lineList if s.replace("\n","")])
-  lineList  = [p+s[minSpaces:].rstrip() for p,s in lineList]
-  srcStr    = "\n".join(lineList)
+  # across the screen
+  if trim:
+    minSpaces = min([len(s)-len(s.lstrip(" ")) for _,s in lineList if s.replace("\n","")])
+  else:
+    minSpaces = 0
+  lineList = [p+s[minSpaces:].rstrip() for p,s in lineList]
+  srcStr   = "\n".join(lineList)
   if view:
     print(srcStr)
   return srcStr
 
 
 def viewCursorFull(cursor):
-  print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
+  try:
+    print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
+  except AttributeError:
+    pass
   try:
     print("Semantic Parent:",cursor.semantic_parent.displayname)
-  except ValueError:
+  except AttributeError:
     pass
   try:
     print("Lexical Parent:",cursor.lexical_parent.displayname)
-  except ValueError:
+  except AttributeError:
     pass
   print("Children:"," ".join([c.spelling for c in cursor.get_children()]))
   print("AST View")
