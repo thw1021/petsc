@@ -74,7 +74,7 @@ def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContex
   return getRawSourceFromSourceRange(cursor.location,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
 
 def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  return geRawSourceFromLocation(sourceRange.start.file.name,sourceRange.start.line,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
+  return getRawSourceFromLocation(sourceRange.start.file.name,sourceRange.start.line,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
 
 def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
   lineList = []
@@ -98,45 +98,61 @@ def getRawSourceFromLocation(filename,lineno,numBeforeContext=0,numAfterContext=
   return srcStr
 
 
-def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
-  return getFormattedSourceFromLocation(cursor.location.file.name,cursor.location.line,cursor.extent.start.column-1,cursor.extent.end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
+def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True):
+  return getFormattedSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view,highlight=highlight)
 
-def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
-  return getFormattedSourceFromLocation(sourceRange.start.file.name,sourceRange.start.line,sourceRange.start.column-1,sourceRange.end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view)
+def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True):
+  begin,end = sourceRange.start,sourceRange.end
+  return getFormattedSourceFromLocation(begin.file.name,begin.line,end.line,begin.column-1,end.column-1,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view,highlight=highlight)
 
-def getFormattedSourceFromLocation(filename,lineno,symbolBegin,symbolEnd,numBeforeContext=0,numAfterContext=0,numContext=0,view=False):
+def getFormattedSourceFromLocation(filename,lineBegin,lineEnd,symbolBegin,symbolEnd,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True):
   lineList = []
+  numBeforeContext = numBeforeContext if numBeforeContext else numContext
+  numAfterContext  = numAfterContext if numAfterContext else numContext
+  loBound  = max(1,lineBegin-numBeforeContext)
+  hiBound  = lineEnd+numAfterContext
+  maxWidth = len(str(hiBound))
+  if highlight:
+    beginOffset  = max(symbolBegin,0)
+    lenUnderline = max(abs(max(symbolEnd,1)-beginOffset),1)
+    underline    = beginOffset*" "+lenUnderline*"^"
+    if (lineBegin != lineEnd):
+      import ipdb; ipdb.set_trace()
+      # need to figure out how to differentiate the source ranges from the cursors here!!!
+      raise NotImplementedError("cannot highlight a multiline symbol range yet")
   with open(filename,"r") as fd:
-    numBeforeContext = numBeforeContext if numBeforeContext else numContext
-    numAfterContext  = numAfterContext if numAfterContext else numContext
-    maxWidth = len(str(lineno+numAfterContext))
     line     = fd.readline()
     lineFile = 1
     while line:
-      if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
-        prefix = "{indicator} {lineFile: <{width}}: ".format(indicator=">" if lineFile == lineno else " ",lineFile=lineFile,width=maxWidth)
+      if loBound <= lineFile <= hiBound:
+        indicator = ">" if (lineBegin <= lineFile <= lineEnd) else " "
+        prefix    = "{indicator} {lineFile: <{width}}: ".format(indicator=indicator,lineFile=lineFile,width=maxWidth)
         lineList.append((prefix,line))
-        if lineFile == lineno:
-          begin,end    = max(symbolBegin,0),max(symbolEnd,1)
-          lenUnderline = max(abs(end-begin),1)
-          underline    = begin*" "+lenUnderline*"^"
+        if highlight and (lineFile == lineBegin):
           lineList.append((" "*len(prefix),underline))
       line      = fd.readline()
       lineFile += 1
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
-  minSpaces = min([len(s)-len(s.lstrip(' ')) for _,s in lineList if s.replace("\n","")])
+  minSpaces = min([len(s)-len(s.lstrip(" ")) for _,s in lineList if s.replace("\n","")])
   lineList  = [p+s[minSpaces:].rstrip() for p,s in lineList]
   srcStr    = "\n".join(lineList)
   if view:
-    return print(srcStr)
+    print(srcStr)
   return srcStr
 
 
 def viewCursorFull(cursor):
   print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
-  print("Parent:",cursor.semantic_parent.displayname)
+  try:
+    print("Semantic Parent:",cursor.semantic_parent.displayname)
+  except ValueError:
+    pass
+  try:
+    print("Lexical Parent:",cursor.lexical_parent.displayname)
+  except ValueError:
+    pass
   print("Children:"," ".join([c.spelling for c in cursor.get_children()]))
   print("AST View")
   print("\n".join(viewAstFromCursor(cursor)))
