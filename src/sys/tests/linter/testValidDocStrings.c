@@ -14,7 +14,8 @@ typedef int testType;
 - x      - an int
 
   Output Parameter:
-. y - a pointer
++ viewer - a PetscViewer
+- y      - a pointer
 
   Level:
   beginner
@@ -42,6 +43,9 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
 - z - a nonexistent parameter
 
   Level: Lorem ipsum dolor sit amet
+
+  Level:
+  beginner
 
   References:
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
