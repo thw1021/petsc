@@ -82,6 +82,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.logName         = 'configure.log'
     self.header          = 'matt_config.h'
     self.makeMacroHeader = ''
+    self.makeMacroLines  = [] # Buffer to store make macros
     self.makeRuleHeader  = ''
     self.cHeader         = 'matt_fix.h'
     self.enablepoison    = False
@@ -717,8 +718,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     if name.startswith(('PETSC_USE_','PETSC_HAVE_','PETSC_SKIP_')):
       f.write('#pragma GCC poison PETSC_%s\n' % name)
 
-  def outputMakeMacro(self, f, name, value):
-    f.write(name+' = '+str(value)+'\n')
+  def outputMakeMacro(self, macroLines, name, value):
+    macroLines.append(name+' = '+str(value))
     return
 
   def outputMakeRule(self, f, name, dependencies,rule):
@@ -741,16 +742,16 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.outputMakeRule(f, pair[0], pair[1][0],pair[1][1])
     return
 
-  def outputMakeMacros(self, f, child, prefix = None):
+  def outputMakeMacros(self, macroLines, child, prefix = None):
     '''If the child contains a dictionary named "makemacros", the entries are output in the makefile config header.
     - No prefix is used
     '''
     if not hasattr(child, 'makeMacros') or not isinstance(child.makeMacros, dict): return
     for pair in child.makeMacros.items():
       if not pair[1]:
-        self.outputMakeMacro(f, pair[0], '')
+        self.outputMakeMacro(macroLines, pair[0], '')
       else:
-        self.outputMakeMacro(f, pair[0], pair[1])
+        self.outputMakeMacro(macroLines, pair[0], pair[1])
     return
 
   def getFullDefineName(self, child, name, prefix = None):
@@ -842,17 +843,25 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     '''Write the make configuration header (bmake file)'''
     if hasattr(name, 'close'):
       f = name
-      filename = 'Unknown'
     else:
       dir = os.path.dirname(name)
       if dir and not os.path.exists(dir):
         os.makedirs(dir)
       if self.file_create_pause: time.sleep(1)
       f = open(name, 'w')
-      filename = os.path.basename(name)
-    self.outputMakeMacros(f, self)
-    for child in self.childGraph.vertices:
-      self.outputMakeMacros(f, child)
+
+    # Put make macros in a buffer and sort them before writing, for easier read by human being.
+    # We only have "var = value" (vs var := value) lines. Order of the macros does not matter,
+    # since use-before-definition of macros is not a problem in makefile, where expansion
+    # doesn't happen until it appears in a rule.
+    if (not self.makeMacroLines): # if empty, it means we are writing them for the first time; otherwise, directly use the cached result
+      self.outputMakeMacros(self.makeMacroLines, self)
+      for child in self.childGraph.vertices:
+        self.outputMakeMacros(self.makeMacroLines, child)
+      self.makeMacroLines.sort()
+
+    for item in self.makeMacroLines:
+      f.write("%s\n" % item)
     if not hasattr(name, 'close'):
       f.close()
     return
