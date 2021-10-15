@@ -248,7 +248,11 @@ static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints,
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  if (!tens->setupCalled) {ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);}
+  if (!tens->setupCalled) {
+    ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);
+    ierr = PetscSpaceEvaluate(sp, npoints, points, B, D, H);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   Ns = tens->numTensSpaces;
   ierr = PetscSpaceGetDimension(sp,&pdim);CHKERRQ(ierr);
   pdim /= Nc;
@@ -538,9 +542,9 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Tensor(PetscSpace sp, PetscInt
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!tens->uniform) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Can only get a generic height subspace of a uniform tensor space: this tensor space is not uniform.\n");
-  ierr = PetscSpaceGetNumComponents(sp, &Nc);CHKERRQ(ierr);
   ierr = PetscSpaceGetNumVariables(sp, &dim);CHKERRQ(ierr);
+  if (!tens->uniform || tens->numTensSpaces != dim) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Can only get a generic height subspace of a uniform tensor space of 1d spaces.\n");
+  ierr = PetscSpaceGetNumComponents(sp, &Nc);CHKERRQ(ierr);
   ierr = PetscSpaceGetDegree(sp, &order, NULL);CHKERRQ(ierr);
   if (height > dim || height < 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %D for dimension %D space", height, dim);
   if (!tens->heightsubspaces) {ierr = PetscCalloc1(dim, &tens->heightsubspaces);CHKERRQ(ierr);}
