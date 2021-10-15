@@ -295,7 +295,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
     ierr = PetscStrstr(monfilename,"%",&ptr);CHKERRQ(ierr);
     if (PetscUnlikely(!ptr)) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts",monfilename);
     for (ptr++; ptr && *ptr; ptr++) {
-      ierr = PetscStrchr(PetscInt_FMT "DdiouxX",*ptr,&ptr2);CHKERRQ(ierr);
+      ierr = PetscStrchr("DdiouxX",*ptr,&ptr2);CHKERRQ(ierr);
       if (PetscUnlikely(!ptr2 && ((*ptr < '0') || ('9' < *ptr)))) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument '%s' to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts",monfilename);
       if (ptr2) break;
     }
