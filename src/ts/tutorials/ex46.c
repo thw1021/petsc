@@ -293,10 +293,10 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
       ierr = PetscDSSetExactSolution(ds, 1, mms2_p_2d, ctx);CHKERRQ(ierr);
       ierr = DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) mms2_u_2d, NULL, ctx, NULL);CHKERRQ(ierr);
       break;
-    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid MMS %" PetscInt_FMT "", ctx->mms);
+    default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid MMS %" PetscInt_FMT, ctx->mms);
     }
     break;
-  default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT "", dim);
+  default: SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT, dim);
   }
   PetscFunctionReturn(0);
 }
@@ -356,7 +356,7 @@ static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u
   ierr = PetscDSGetExactSolution(ds, 0, &funcs[0], &ctxs[0]);CHKERRQ(ierr);
   ierr = PetscDSGetExactSolution(ds, 1, &funcs[1], &ctxs[1]);CHKERRQ(ierr);
   ierr = DMComputeL2FieldDiff(dm, crtime, funcs, ctxs, u, ferrors);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Timestep: %04d time = %-8.4g \t L_2 Error: [%2.3g, %2.3g]\n", (int) step, (double) crtime, (double) ferrors[0], (double) ferrors[1]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Timestep: %04" PetscInt_FMT " time = %-8.4g \t L_2 Error: [%2.3g, %2.3g]\n", step, (double) crtime, (double) ferrors[0], (double) ferrors[1]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
