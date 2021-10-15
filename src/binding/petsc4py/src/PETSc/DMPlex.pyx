@@ -728,7 +728,7 @@ cdef class DMPlex(DM):
         CHKERR( DMPlexMetricCreate(self.dm, field, &metric.vec) )
         return metric
 
-    def metricCreateUniform(self, PetscScalar alpha, field=0):
+    def metricCreateUniform(self, PetscReal alpha, field=0):
         cdef Vec metric = Vec()
         CHKERR( DMPlexMetricCreateUniform(self.dm, field, alpha, &metric.vec) )
         return metric
