@@ -704,7 +704,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_P_max","Max elements per row for interpolation operator (0=unlimited)","None",jac->pmax,&jac->pmax,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->pmax < 0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"P_max %D must be greater than or equal to zero",jac->pmax);
+    if (jac->pmax < 0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"P_max %" PetscInt_FMT " must be greater than or equal to zero",jac->pmax);
     PetscStackCallStandard(HYPRE_BoomerAMGSetPMaxElmts,(jac->hsolver,jac->pmax));
   }
 
@@ -713,7 +713,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_agg_num_paths","Number of paths for aggressive coarsening","None",jac->agg_num_paths,&jac->agg_num_paths,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->agg_num_paths < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of paths %D must be greater than or equal to 1",jac->agg_num_paths);
+    if (jac->agg_num_paths < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of paths %" PetscInt_FMT " must be greater than or equal to 1",jac->agg_num_paths);
     PetscStackCallStandard(HYPRE_BoomerAMGSetNumPaths,(jac->hsolver,jac->agg_num_paths));
   }
 
@@ -926,7 +926,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 #endif
 
 #if PETSC_PKG_HYPRE_VERSION_LE(9,9,9)
-  if (jac->Rtype && jac->agg_nl) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"-pc_hypre_boomeramg_restriction_type (%D) and -pc_hypre_boomeramg_agg_nl (%D)",jac->Rtype,jac->agg_nl);
+  if (jac->Rtype && jac->agg_nl) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"-pc_hypre_boomeramg_restriction_type (%" PetscInt_FMT ") and -pc_hypre_boomeramg_agg_nl (%" PetscInt_FMT ")",jac->Rtype,jac->agg_nl);
 #endif
 
   /* new 3/07 */
