@@ -138,23 +138,43 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
   ierr = DMGetWorkArray(dm, Nb * Nf * Njet * npoints, MPIU_REAL, &eval);CHKERRQ(ierr);
   ierr = PetscDTPTrimmedEvalJet(dim, npoints, points, degree, f, jet, eval);CHKERRQ(ierr);
   if (B) {
+    PetscInt p_strl = Nb*Ncopies*Nc;
+    PetscInt b_strl = Nb*Nc;
+    PetscInt c_strl = Nc + Nf;
+    PetscInt v_strl = 1;
+
+    PetscInt b_strr = Nf*Njet*npoints;
+    PetscInt v_strr = Njet*npoints;
+    PetscInt p_strr = 1;
+
     for (PetscInt c = 0; c < Ncopies; c++) {
       for (PetscInt v = 0; v < Nf; v++) {
         for (PetscInt b = 0; b < Nb; b++) {
           for (PetscInt p = 0; p < npoints; p++) {
-            B[p*Nb*Nc + b*Nc + c*Nf + v] = eval[b*Nf*Njet*npoints + v*Njet*npoints + p];
+            B[p*p_strl + b*b_strl + c*c_strl + v*v_strl] = eval[b*b_strr + v*v_strr + p*p_strr];
           }
         }
       }
     }
   }
   if (D) {
+    PetscInt p_strl = dim*Nb*Ncopies*Nc;
+    PetscInt b_strl = dim*Nb*Nc;
+    PetscInt c_strl = dim*(Nc + Nf);
+    PetscInt v_strl = dim;
+    PetscInt d_strl = 1;
+
+    PetscInt b_strr = Nf*Njet*npoints;
+    PetscInt v_strr = Njet*npoints;
+    PetscInt d_strr = npoints;
+    PetscInt p_strr = 1;
+
     for (PetscInt c = 0; c < Ncopies; c++) {
       for (PetscInt v = 0; v < Nf; v++) {
         for (PetscInt d = 0; d < dim; d++) {
           for (PetscInt b = 0; b < Nb; b++) {
             for (PetscInt p = 0; p < npoints; p++) {
-              D[p*Nb*Nc*dim + b*Nc*dim + c*Nf*dim + v*dim + d] = eval[b*Nf*Njet*npoints + v*Njet*npoints + (1+d)*npoints + p];
+              D[p*p_strl + b*b_strl + c*c_strl + v*v_strl + d*d_strl] = eval[b*b_strr + v*v_strr + (1+d)*d_strr + p*p_strr];
             }
           }
         }
@@ -162,6 +182,18 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
     }
   }
   if (H) {
+    PetscInt p_strl  = dim*dim*Nb*Ncopies*Nc;
+    PetscInt b_strl  = dim*dim*Nb*Nc;
+    PetscInt c_strl  = dim*dim*(Nc + Nf);
+    PetscInt v_strl  = dim*dim*1;
+    PetscInt d1_strl = dim;
+    PetscInt d2_strl = 1;
+
+    PetscInt b_strr = Nf*Njet*npoints;
+    PetscInt v_strr = Njet*npoints;
+    PetscInt j_strr = npoints;
+    PetscInt p_strr = 1;
+
     PetscInt *derivs;
     ierr = PetscCalloc1(dim, &derivs);CHKERRQ(ierr);
     for (PetscInt d1 = 0; d1 < dim; d1++) {
@@ -176,13 +208,14 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
           for (PetscInt v = 0; v < Nf; v++) {
             for (PetscInt b = 0; b < Nb; b++) {
               for (PetscInt p = 0; p < npoints; p++) {
-                H[p*Nb*Nc*dim*dim + b*Nc*dim*dim + c*Nf*dim*dim + v*dim*dim + d1*dim + d2] = eval[b*Nf*Njet*npoints + v*Njet*npoints + j*npoints + p];
+                H[p*p_strl + b*b_strl + c*c_strl + v*v_strl + d1*d1_strl + d2*d2_strl] = eval[b*b_strr + v*v_strr + j*j_strr + p*p_strr];
               }
             }
           }
         }
       }
     }
+    ierr = PetscFree(derivs);CHKERRQ(ierr);
   }
   ierr = DMRestoreWorkArray(dm, Nb * Nf * Njet * npoints, MPIU_REAL, &eval);CHKERRQ(ierr);
   PetscFunctionReturn(0);
