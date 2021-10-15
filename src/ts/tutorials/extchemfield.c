@@ -408,7 +408,7 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
     for (j=0; j<sizeof(initial)/sizeof(initial[0]); j++) {
       int ispec = TC_getSpos(initial[j].name, strlen(initial[j].name));
       if (ispec < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_USER,"Could not find species %s",initial[j].name);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"Species %d: %s %g\n",j,initial[j].name,initial[j].massfrac);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"Species %" PetscInt_FMT ": %s %g\n",j,initial[j].name,(double)(initial[j].massfrac));CHKERRQ(ierr);
       x[i][1+ispec] = initial[j].massfrac;
     }
   }
@@ -478,7 +478,7 @@ static PetscErrorCode MonitorCell(TS ts,User user,PetscInt cell)
   temp = 1.0 + .05*PetscSinScalar(2.*PETSC_PI*xc[cell]);  /* Non-dimensionalized by user->Tini */
   ierr = DMDARestoreCoordinateArray(user->dm,&xc);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-  ierr = PetscSNPrintf(label,sizeof(label),"Initial Temperature %g Cell %d Rank %d",(double)user->Tini*temp,(int)cell,rank);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(label,sizeof(label),"Initial Temperature %g Cell %" PetscInt_FMT " Rank %d",(double)(user->Tini*temp),cell,rank);CHKERRQ(ierr);
   ierr = TSMonitorLGCtxCreate(PETSC_COMM_SELF,NULL,label,PETSC_DECIDE,PETSC_DECIDE,600,400,1,&ctx);CHKERRQ(ierr);
   ierr = DMDAGetFieldNames(user->dm,(const char * const **)&snames);CHKERRQ(ierr);
   ierr = TSMonitorLGCtxSetVariableNames(ctx,(const char * const *)snames);CHKERRQ(ierr);
