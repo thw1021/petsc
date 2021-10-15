@@ -65,7 +65,7 @@ static PetscErrorCode PetscSpaceSetUp_Polynomial(PetscSpace sp)
 
   PetscFunctionBegin;
   if (poly->setupCalled) PetscFunctionReturn(0);
-  if (sp->Nv <=  1) {
+  if (sp->Nv <= 1) {
     poly->tensor = PETSC_FALSE;
   }
   if (poly->tensor) {
