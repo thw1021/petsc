@@ -46,12 +46,17 @@ struct _p_PetscSpace {
 };
 
 typedef struct {
-  PetscBool                tensor;      /* Flag for tensor product */
-  PetscInt                *degrees;     /* Degrees of single variable which we need to compute */
-  PetscSpacePolynomialType ptype;       /* Allows us to make the Hdiv and Hcurl spaces */
-  PetscBool                setupCalled;
-  PetscSpace              *subspaces;   /* Subspaces for each dimension */
+  PetscBool   tensor;      /* Flag for tensor product */
+  PetscInt   *degrees;     /* Degrees of single variable which we need to compute */
+  PetscBool   setupCalled;
+  PetscSpace *subspaces;   /* Subspaces for each dimension */
 } PetscSpace_Poly;
+
+typedef struct {
+  PetscInt    formDegree;
+  PetscBool   setupCalled;
+  PetscSpace *subspaces;
+} PetscSpace_Ptrimmed;
 
 typedef struct {
   PetscSpace *tensspaces;
