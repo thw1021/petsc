@@ -50,7 +50,7 @@ static PetscErrorCode PCView_Redundant(PC pc,PetscViewer viewer)
     if (!red->psubcomm) {
       ierr = PetscViewerASCIIPrintf(viewer,"  Not yet setup\n");CHKERRQ(ierr);
     } else {
-      ierr = PetscViewerASCIIPrintf(viewer,"  First (color=0) of %D PCs follows\n",red->nsubcomm);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  First (color=0) of %" PetscInt_FMT " PCs follows\n",red->nsubcomm);CHKERRQ(ierr);
       ierr = PetscViewerGetSubViewer(viewer,((PetscObject)red->pc)->comm,&subviewer);CHKERRQ(ierr);
       if (!red->psubcomm->color) { /* only view first redundant pc */
         ierr = PetscViewerASCIIPushTab(subviewer);CHKERRQ(ierr);
@@ -335,7 +335,7 @@ PetscErrorCode PCRedundantSetNumber(PC pc,PetscInt nredundant)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  if (nredundant <= 0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "num of redundant pc %D must be positive",nredundant);
+  if (nredundant <= 0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "num of redundant pc %" PetscInt_FMT " must be positive",nredundant);
   ierr = PetscTryMethod(pc,"PCRedundantSetNumber_C",(PC,PetscInt),(pc,nredundant));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

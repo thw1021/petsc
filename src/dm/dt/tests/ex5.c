@@ -108,9 +108,7 @@ int main(int argc, char **argv)
         err += PetscRealPart(PetscConj(diff) * diff);
       }
       err = PetscSqrtReal(err);
-      if (err > PETSC_SMALL) {
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Trace FE error %g\n",err);
-      }
+      if (err > PETSC_SMALL) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Trace FE error %g\n",(double)err);
       ierr = VecRestoreArray(vecFull,&arrayFull);CHKERRQ(ierr);
       ierr = PetscTabulationDestroy(&Tfull);CHKERRQ(ierr);
       ierr = PetscTabulationDestroy(&Tsub);CHKERRQ(ierr);

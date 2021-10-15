@@ -239,7 +239,7 @@ int main(int argc, char **argv)
   ierr = PetscOptionsReal("-D_h", "Diffusion rate of the inhibitor", "ex42.c",user.D_h, &user.D_h,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "nb_cells: %D\n", user.nb_cells);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "nb_cells: %" PetscInt_FMT "\n", user.nb_cells);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "alpha: %5.5g\n", (double)user.alpha);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "beta:  %5.5g\n", (double)user.beta);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD, "rho_a: %5.5g\n", (double)user.rho_a);CHKERRQ(ierr);
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
   ierr = TSSolve(ts, x);CHKERRQ(ierr);
   ierr = TSGetSolveTime(ts, &ftime);CHKERRQ(ierr);
   ierr = TSGetStepNumber(ts,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Number of time steps = %D, final time: %4.2e\nResult:\n\n", its, (double)ftime);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Number of time steps = %" PetscInt_FMT ", final time: %4.2e\nResult:\n\n", its, (double)ftime);CHKERRQ(ierr);
   ierr = PrintSolution(x, &user);CHKERRQ(ierr);
 
   /*

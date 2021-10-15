@@ -189,7 +189,7 @@ PetscErrorCode DMPlexGenerate(DM boundary, const char name[], PetscBool interpol
     suggestions = "";
     if (boundary->dim+1 == 2) suggestions = " You may need to add --download-triangle to your ./configure options";
     else if (boundary->dim+1 == 3) suggestions = " You may need to add --download-ctetgen or --download-tetgen in your ./configure options";
-    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid generator of dimension %D registered%s",boundary->dim+1,suggestions);
+    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid generator of dimension %" PetscInt_FMT " registered%s",boundary->dim+1,suggestions);
   }
 }
 

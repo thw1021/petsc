@@ -13,7 +13,7 @@ PetscErrorCode NameFields(DM da,PetscInt dof)
   PetscFunctionBeginUser;
   for (c=0; c<dof; ++c) {
     char fieldname[256];
-    ierr = PetscSNPrintf(fieldname,sizeof(fieldname),"field_%D",c);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(fieldname,sizeof(fieldname),"field_%" PetscInt_FMT "",c);CHKERRQ(ierr);
     ierr = DMDASetFieldName(da,c,fieldname);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
