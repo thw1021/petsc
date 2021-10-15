@@ -1812,7 +1812,7 @@ static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u
   ierr = DMProjectField(dmCell, crtime, u, diagnostics, INSERT_VALUES, divu);CHKERRQ(ierr);
   ierr = VecViewFromOptions(divu, NULL, "-divu_vec_view");CHKERRQ(ierr);
   ierr = VecNorm(divu, NORM_2, &massFlux);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Timestep: %04d time = %-8.4g \t L_2 Error: [%2.3g, %2.3g, %2.3g] ||div u||: %2.3g\n", (int) step, (double) crtime, (double) ferrors[0], (double) ferrors[1], (double) ferrors[2], (double) massFlux);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Timestep: %04" PetscInt_FMT " time = %-8.4g \t L_2 Error: [%2.3g, %2.3g, %2.3g] ||div u||: %2.3g\n", step, (double) crtime, (double) ferrors[0], (double) ferrors[1], (double) ferrors[2], (double) massFlux);CHKERRQ(ierr);
 
   ierr = VecViewFromOptions(u, NULL, "-sol_vec_view");CHKERRQ(ierr);
 

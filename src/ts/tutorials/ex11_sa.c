@@ -671,7 +671,7 @@ PetscErrorCode ConstructCellBoundary(DM dm, User user)
     const PetscInt *faces;
     PetscInt       numFaces, f;
 
-    if ((cell < cStart) || (cell >= cEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %d which is not a cell", cell);
+    if ((cell < cStart) || (cell >= cEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %" PetscInt_FMT " which is not a cell", cell);
     ierr = DMPlexGetConeSize(dm, cell, &numFaces);CHKERRQ(ierr);
     ierr = DMPlexGetCone(dm, cell, &faces);CHKERRQ(ierr);
     for (f = 0; f < numFaces; ++f) {
@@ -679,17 +679,17 @@ PetscErrorCode ConstructCellBoundary(DM dm, User user)
       const PetscInt *neighbors;
       PetscInt       nC, regionA, regionB;
 
-      if ((face < fStart) || (face >= fEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %d which is not a face", face);
+      if ((face < fStart) || (face >= fEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %" PetscInt_FMT " which is not a face", face);
       ierr = DMPlexGetSupportSize(dm, face, &nC);CHKERRQ(ierr);
       if (nC != 2) continue;
       ierr = DMPlexGetSupport(dm, face, &neighbors);CHKERRQ(ierr);
       if ((neighbors[0] >= cEndInterior) || (neighbors[1] >= cEndInterior)) continue;
-      if ((neighbors[0] < cStart) || (neighbors[0] >= cEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %d which is not a cell", neighbors[0]);
-      if ((neighbors[1] < cStart) || (neighbors[1] >= cEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %d which is not a cell", neighbors[1]);
+      if ((neighbors[0] < cStart) || (neighbors[0] >= cEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %" PetscInt_FMT " which is not a cell", neighbors[0]);
+      if ((neighbors[1] < cStart) || (neighbors[1] >= cEnd)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Got invalid point %" PetscInt_FMT " which is not a cell", neighbors[1]);
       ierr = DMGetLabelValue(dm, name, neighbors[0], &regionA);CHKERRQ(ierr);
       ierr = DMGetLabelValue(dm, name, neighbors[1], &regionB);CHKERRQ(ierr);
-      if (regionA < 0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Invalid label %s: Cell %d has no value", name, neighbors[0]);
-      if (regionB < 0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Invalid label %s: Cell %d has no value", name, neighbors[1]);
+      if (regionA < 0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Invalid label %s: Cell %" PetscInt_FMT " has no value", name, neighbors[0]);
+      if (regionB < 0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Invalid label %s: Cell %" PetscInt_FMT " has no value", name, neighbors[1]);
       if (regionA != regionB) {
         ierr = DMSetLabelValue(dm, bdname, faces[f], 1);CHKERRQ(ierr);
       }
@@ -1398,7 +1398,7 @@ static PetscErrorCode MonitorBIN(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
 
   PetscFunctionBeginUser;
   ierr = VecGetDM(X,&dm);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(filename,sizeof filename,"ex11-SA-%06d.bin",stepnum);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(filename,sizeof filename,"ex11-SA-%06" PetscInt_FMT ".bin",stepnum);CHKERRQ(ierr);
   ierr = OutputBIN(dm,filename,&viewer);CHKERRQ(ierr);
   ierr = VecView(X,viewer);CHKERRQ(ierr);
   ierr = PetscRealView(1,&time,viewer);CHKERRQ(ierr);
