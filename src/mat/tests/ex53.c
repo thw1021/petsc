@@ -136,7 +136,7 @@ int main(int argc,char **args)
 
     for (j=0; j<4; j++) {
       if (vals1[j] != vals2[j]) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d]: Error: MatGetValues rstart = %2d  row = %2d col = %2d val1 = %e val2 = %e bs = %" PetscInt_FMT "\n",rank,rstart,rows[j/2],cols[j%2],(double)PetscRealPart(vals1[j]),(double)PetscRealPart(vals2[j]),bs);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d]: Error: MatGetValues rstart = %2" PetscInt_FMT "  row = %2" PetscInt_FMT " col = %2" PetscInt_FMT " val1 = %e val2 = %e bs = %" PetscInt_FMT "\n",rank,rstart,rows[j/2],cols[j%2],(double)PetscRealPart(vals1[j]),(double)PetscRealPart(vals2[j]),bs);CHKERRQ(ierr);
       }
     }
   }
@@ -144,7 +144,7 @@ int main(int argc,char **args)
   /* Test MatGetRow()/ MatRestoreRow() */
   for (ct=0; ct<100; ct++) {
     ierr = PetscRandomGetValue(rand,&v);CHKERRQ(ierr);
-    row  = rstart + (int)(PetscRealPart(v)*m);
+    row  = rstart + (PetscInt)(PetscRealPart(v)*m);
     ierr = MatGetRow(A,row,&ncols1,&cols1,&v1);CHKERRQ(ierr);
     ierr = MatGetRow(B,row,&ncols2,&cols2,&v2);CHKERRQ(ierr);
 
