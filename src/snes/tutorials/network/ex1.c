@@ -516,23 +516,23 @@ int main(int argc,char **argv)
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
     for (i=0; i<Nsubnet; i++) {
       ierr = DMNetworkGetSubnetwork(networkdm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%d] ne %d, nv %d\n",rank,i,ne,nv);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, subnet[%" PetscInt_FMT "] ne %" PetscInt_FMT ", nv %" PetscInt_FMT "\n",rank,i,ne,nv);CHKERRQ(ierr);
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
       for (v=0; v<nv; v++) {
         ierr = DMNetworkIsGhostVertex(networkdm,vtx[v],&ghost);CHKERRQ(ierr);
         ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%d] v %d %d; ghost %d\n",rank,i,vtx[v],gidx,ghost);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] subnet[%" PetscInt_FMT "] v %" PetscInt_FMT " %" PetscInt_FMT "; ghost %d\n",rank,i,vtx[v],gidx,ghost);CHKERRQ(ierr);
       }
       ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
     ierr = DMNetworkGetSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of shared vertices nsv = %d\n",rank,nv);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] After distribute, num of shared vertices nsv = %" PetscInt_FMT "\n",rank,nv);CHKERRQ(ierr);
     for (v=0; v<nv; v++) {
       ierr = DMNetworkGetGlobalVertexIndex(networkdm,vtx[v],&gidx);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] sv %d, gidx=%d\n",rank,vtx[v],gidx);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] sv %" PetscInt_FMT ", gidx=%" PetscInt_FMT "\n",rank,vtx[v],gidx);CHKERRQ(ierr);
     }
     ierr = MPI_Barrier(PETSC_COMM_WORLD);CHKERRMPI(ierr);
   }

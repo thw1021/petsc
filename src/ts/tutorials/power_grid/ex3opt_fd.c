@@ -37,7 +37,7 @@ PetscErrorCode monitor(Tao tao,AppCtx *ctx)
   ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecGetArrayRead(G,&g);CHKERRQ(ierr);
   fp = fopen("ex3opt_fd_conv.out","a");
-  ierr = PetscFPrintf(PETSC_COMM_WORLD,fp,"%d %g %.12g %.12g\n",iterate,(double)gnorm,(double)PetscRealPart(x[0]),(double)PetscRealPart(g[0]));CHKERRQ(ierr);
+  ierr = PetscFPrintf(PETSC_COMM_WORLD,fp,"%" PetscInt_FMT " %g %.12g %.12g\n",iterate,(double)gnorm,(double)PetscRealPart(x[0]),(double)PetscRealPart(g[0]));CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(G,&g);CHKERRQ(ierr);
   fclose(fp);
