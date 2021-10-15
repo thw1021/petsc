@@ -131,17 +131,6 @@ class BaseTestPlex(object):
         self.assertEqual(numBoundary + numInterior, pEnd - pStart)
 
 
-    def testAdapt(self):
-        dim = self.plex.getDimension()
-        if dim == 1: return
-        if not self.plex.isSimplex(): return
-        metric = self.plex.metricCreateUniform(9.0)
-        try:
-            newplex = self.plex.adaptMetric(metric,"")
-        except PETSc.Error as exc:
-            if exc.ierr != ERR_SUP: raise
-
-
 # --------------------------------------------------------------------
 
 class BaseTestPlex_2D(BaseTestPlex):
