@@ -937,7 +937,7 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   PetscDS          probh;
   DMLabel          fault, material;
   IS               cohesiveCells;
-  PetscFormKey keys[3];
+  PetscFormKey     keys[3];
   PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
   PetscInt         dim, Nf, cMax, cEnd, id;
   PetscErrorCode   ierr;
@@ -981,12 +981,15 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   keys[0].label = material;
   keys[0].value = 1;
   keys[0].field = 0;
+  keys[0].part  = 0;
   keys[1].label = material;
   keys[1].value = 2;
   keys[1].field = 0;
+  keys[1].part  = 0;
   keys[2].label = fault;
   keys[2].value = 1;
   keys[2].field = 0;
+  keys[2].part  = 0;
   ierr = VecSet(locF, 0.);CHKERRQ(ierr);
   ierr = DMPlexComputeResidual_Hybrid_Internal(dm, keys, cohesiveCells, 0.0, locX, NULL, 0.0, locF, user);CHKERRQ(ierr);
   ierr = VecViewFromOptions(locF, NULL, "-local_residual_view");CHKERRQ(ierr);
