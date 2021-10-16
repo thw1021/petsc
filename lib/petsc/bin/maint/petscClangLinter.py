@@ -175,11 +175,11 @@ classIdMap = {
 }
 
 # directory names to exclude from processing, case sensitive
-excludeDirNames     = {"tests","tutorials","f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","benchmarks","docs"}
+excludeDirNames     = {"tests","tutorials","output","input","python","fsrc","f90-mod","f90-src","f90-custom","ftn-auto","ftn-custom","f2003-src","ftn-kernels","benchmarks","docs","binding","contrib"}
 # directory suffixes to exclude from processing, case sensitive
-excludeDirSuffixes  = (".dSYM",)
+excludeDirSuffixes  = (".dSYM",".DS_Store")
 # file extensions to process, case sensitve
-allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc")
+allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc",".h",".hpp")
 
 class QueueSignal(enum.IntEnum):
   __doc__="""
@@ -660,8 +660,7 @@ class PetscCursor(object):
         # have all we need to remake the python object from scratch
         cursor = clx.Cursor.from_location(origCursor.translation_unit,srcRange.start)
         try:
-          cursor = PetscCursor(cursor)
-          foundCursors.append(cursor)
+          foundCursors.append(PetscCursor(cursor))
         except ParsingError:
           pass
         except RuntimeError as re:
@@ -671,7 +670,7 @@ class PetscCursor(object):
           print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
         return 1 # continue
 
-    if not PetscCursor.registered_clang_findReferencesInFile:
+    if not PetscCursor.registered_clang_findReferencesInFile and 0:
       # have to do the bookkeeping ourselves since it may not be properly hooked up
       item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
       clx.register_function(clx.conf.lib,item,False)
@@ -1086,7 +1085,7 @@ class PetscLinter(object):
     processedFuncs = collections.defaultdict(list)
     for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       if isinstance(results,clx.Cursor):
-        checkDocMap[results.kind](self,results)
+        #checkDocMap[results.kind](self,results)
         continue
       func,parent,scope = results
       try:
@@ -2143,15 +2142,13 @@ def getPetscExtraIncludes(petscDir,petscArch):
     mpiinc = re.compile("^MPI_INCLUDE\s*=")
     shoinc = re.compile("^MPICC_SHOW\s*=")
     cxxflg = re.compile("^CXX_FLAGS\s*=")
-    line   = pv.readline()
-    while line:
+    for line in pv:
       if ccinc.search(line):
         petscIncludes.append(line.split("=",1)[1])
       elif mpiinc.search(line) or shoinc.search(line):
         mpiIncludes.append(line.split("=",1)[1])
       elif cxxflg.search(line):
         cxxflags.append(line.split("=",1)[1])
-      line = pv.readline()
   cxxflags      = [l.strip().split(" ") for l in cxxflags if l]
   cxxflags      = [flag for flags in cxxflags for flag in flags if flag.startswith("-std=")]
   cxxflags      = [cxxflags[-1]] if cxxflags else [] # take only the last one
@@ -2179,7 +2176,15 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   __doc__="""
   build the baseline set of compiler flags, these are passed to all translation unit parse attempts
   """
-  miscFlags        = ["-D","PETSC_CLANG_STATIC_ANALYZER","-x","c++","-Wno-nullability-completeness","-fparse-all-comments"]
+  miscFlags        = [
+    "-D","PETSC_CLANG_STATIC_ANALYZER",
+    "-x","c++",
+    "-Wno-empty-body",
+    "-Wno-writable-strings",
+    "-Wno-array-bounds",
+    "-Wno-nullability-completeness",
+    "-fparse-all-comments",
+  ]
   sysincludes      = getClangSysIncludes()
   petscIncludes    = getPetscExtraIncludes(petscDir,petscArch)
   compilerFlags    = sysincludes+miscFlags+petscIncludes+extraCompilerFlags
