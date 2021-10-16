@@ -72,21 +72,20 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
 
 
 def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  return getRawSourceFromSourceRange(cursor.location,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
+  return getRawSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
 
 def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
   numBeforeContext = numBeforeContext if numBeforeContext else numContext
-  numAfterContext  = numAfterContext if numAfterContext else numContext
+  numAfterContext  = numAfterContext  if numAfterContext  else numContext
+  lineno  = sourceRange.start.line
+  lobound = max(1,lineno-numBeforeContext)
+  hibound = lineno+numAfterContext
   with open(sourceRange.start.file.name,"r") as fd:
-    lineno   = sourceRange.start.line
-    lineList = []
-    line     = fd.readline()
-    lineFile = 1
-    while line:
-      if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
-        lineList.append(line)
-      line      = fd.readline()
-      lineFile += 1
+    lineList = [l for i,l in enumerate(fd,start=1) if (lobound <= i <= hibound)]
+  # with open(sourceRange.start.file.name,"r") as fd:
+  #   for lineFile,line in enumerate(fd,start=1):
+  #     if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
+  #       lineList.append(line)
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
@@ -101,7 +100,7 @@ def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,num
 
 def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True,trim=True):
   numBeforeContext  = numBeforeContext if numBeforeContext else numContext
-  numAfterContext   = numAfterContext if numAfterContext else numContext
+  numAfterContext   = numAfterContext  if numAfterContext  else numContext
   begin,end         = sourceRange.start,sourceRange.end
   lineBegin,lineEnd = begin.line,end.line
   loBound  = max(1,lineBegin-numBeforeContext)
@@ -115,17 +114,13 @@ def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterCon
     underline    = beginOffset*" "+lenUnderline*"^"
   with open(begin.file.name,"r") as fd:
     lineList = []
-    lineFile = 1
-    line     = fd.readline()
-    while line:
+    for lineFile,line in enumerate(fd,start=1):
       if loBound <= lineFile <= hiBound:
         indicator = ">" if (lineBegin <= lineFile <= lineEnd) else " "
         prefix    = "{indicator} {lineFile: <{width}}: ".format(indicator=indicator,lineFile=lineFile,width=maxWidth)
         lineList.append((prefix,line))
         if highlight and (lineFile == lineBegin):
           lineList.append((" "*len(prefix),underline))
-      line      = fd.readline()
-      lineFile += 1
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screen
