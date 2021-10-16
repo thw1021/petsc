@@ -57,7 +57,6 @@ static PetscErrorCode PetscSpaceDestroy_Ptrimmed(PetscSpace sp)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode PetscSpaceSetUp_Ptrimmed(PetscSpace sp)
 {
   PetscSpace_Ptrimmed *pt = (PetscSpace_Ptrimmed *) sp->data;
