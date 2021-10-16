@@ -43,7 +43,6 @@ static PetscErrorCode PetscSpaceDestroy_Polynomial(PetscSpace sp)
   PetscFunctionBegin;
   ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpacePolynomialGetTensor_C", NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject) sp, "PetscSpacePolynomialSetTensor_C", NULL);CHKERRQ(ierr);
-  ierr = PetscFree(poly->degrees);CHKERRQ(ierr);
   if (poly->subspaces) {
     PetscInt d;
 
@@ -59,8 +58,6 @@ static PetscErrorCode PetscSpaceDestroy_Polynomial(PetscSpace sp)
 static PetscErrorCode PetscSpaceSetUp_Polynomial(PetscSpace sp)
 {
   PetscSpace_Poly *poly    = (PetscSpace_Poly *) sp->data;
-  PetscInt         ndegree = sp->degree+1;
-  PetscInt         deg;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
@@ -68,19 +65,37 @@ static PetscErrorCode PetscSpaceSetUp_Polynomial(PetscSpace sp)
   if (sp->Nv <= 1) {
     poly->tensor = PETSC_FALSE;
   }
+  if (sp->Nc != 1) {
+    PetscInt  Nc = sp->Nc;
+    PetscBool tensor = poly->tensor;
+    PetscInt  Nv = sp->Nv;
+    PetscInt  degree = sp->degree;
+    PetscSpace subsp;
+
+    ierr = PetscSpaceSetType(sp, PETSCSPACESUM);CHKERRQ(ierr);
+    ierr = PetscSpaceSumSetNumSubspaces(sp, Nc);CHKERRQ(ierr);
+    ierr = PetscSpaceCreate(PetscObjectComm((PetscObject)sp), &subsp);CHKERRQ(ierr);
+    ierr = PetscSpaceSetType(subsp, PETSCSPACEPOLYNOMIAL);CHKERRQ(ierr);
+    ierr = PetscSpaceSetDegree(subsp, degree, PETSC_DETERMINE);CHKERRQ(ierr);
+    ierr = PetscSpaceSetNumComponents(subsp, 1);CHKERRQ(ierr);
+    ierr = PetscSpaceSetNumVariables(subsp, Nv);CHKERRQ(ierr);
+    ierr = PetscSpacePolynomialSetTensor(subsp, tensor);CHKERRQ(ierr);
+    ierr = PetscSpaceSetUp(subsp);CHKERRQ(ierr);
+    for (PetscInt i = 0; i < Nc; i++) {
+      ierr = PetscSpaceSumSetSubspace(sp, i, subsp);CHKERRQ(ierr);
+    }
+    ierr = PetscSpaceDestroy(&subsp);CHKERRQ(ierr);
+    ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   if (poly->tensor) {
     sp->maxDegree = PETSC_DETERMINE;
     ierr = PetscSpaceSetType(sp, PETSCSPACETENSOR);CHKERRQ(ierr);
     ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
-  ierr = PetscMalloc1(ndegree, &poly->degrees);CHKERRQ(ierr);
-  for (deg = 0; deg < ndegree; ++deg) poly->degrees[deg] = deg;
-  if (poly->tensor) {
-    sp->maxDegree = sp->degree + PetscMax(sp->Nv - 1,0);
-  } else {
-    sp->maxDegree = sp->degree;
-  }
+  if (sp->degree < 0) SETERRQ1(PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Negative degree %D invalid\n", sp->degree);
+  sp->maxDegree = sp->degree;
   poly->setupCalled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -107,7 +122,6 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
 {
   PetscSpace_Poly *poly    = (PetscSpace_Poly *) sp->data;
   DM               dm      = sp->dm;
-  PetscInt         Nc      = sp->Nc;
   PetscInt         dim     = sp->Nv;
   PetscInt         Nb, jet, Njet;
   PetscReal       *pScalar;
@@ -119,6 +133,7 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
     ierr = PetscSpaceEvaluate(sp, npoints, points, B, D, H);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
+  if (poly->tensor || sp->Nc != 1) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "tensor and multicomponent spaces should have been converted");
   ierr = PetscDTBinomialInt(dim + sp->degree, dim, &Nb);CHKERRQ(ierr);
   if (H) {
     jet = 2;
@@ -131,47 +146,40 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
   ierr = DMGetWorkArray(dm, Nb * Njet * npoints, MPIU_REAL, &pScalar);CHKERRQ(ierr);
   ierr = PetscDTPKDEvalJet(dim, npoints, points, sp->degree, jet, pScalar);CHKERRQ(ierr);
   if (B) {
-    PetscInt p_strl = Nb*Nc*Nc;
-    PetscInt b_strl = Nc*Nc;
-    PetscInt c_strl = Nc+1;
+    PetscInt p_strl = Nb;
+    PetscInt b_strl = 1;
 
     PetscInt b_strr = Njet*npoints;
     PetscInt p_strr = 1;
 
-    ierr = PetscArrayzero(B, npoints * Nb * Nc * Nc);CHKERRQ(ierr);
-    for (PetscInt c = 0; c < Nc; c++) {
-      for (PetscInt b = 0; b < Nb; b++) {
-        for (PetscInt p = 0; p < npoints; p++) {
-          B[p*p_strl + b*b_strl + c*c_strl] = pScalar[b*b_strr + p*p_strr];
-        }
+    ierr = PetscArrayzero(B, npoints * Nb);CHKERRQ(ierr);
+    for (PetscInt b = 0; b < Nb; b++) {
+      for (PetscInt p = 0; p < npoints; p++) {
+        B[p*p_strl + b*b_strl] = pScalar[b*b_strr + p*p_strr];
       }
     }
   }
   if (D) {
-    PetscInt p_strl = dim*Nb*Nc*Nc;
-    PetscInt b_strl = dim*Nc*Nc;
-    PetscInt c_strl = dim*(Nc+1);
+    PetscInt p_strl = dim*Nb;
+    PetscInt b_strl = dim;
     PetscInt d_strl = 1;
 
     PetscInt b_strr = Njet*npoints;
     PetscInt d_strr = npoints;
     PetscInt p_strr = 1;
 
-    ierr = PetscArrayzero(D, npoints * Nb * Nc * Nc * dim);CHKERRQ(ierr);
-    for (PetscInt c = 0; c < Nc; c++) {
-      for (PetscInt d = 0; d < dim; d++) {
-        for (PetscInt b = 0; b < Nb; b++) {
-          for (PetscInt p = 0; p < npoints; p++) {
-            D[p*p_strl + b*b_strl + c*c_strl + d*d_strl] = pScalar[b*b_strr + (1+d)*d_strr + p*p_strr];
-          }
+    ierr = PetscArrayzero(D, npoints * Nb * dim);CHKERRQ(ierr);
+    for (PetscInt d = 0; d < dim; d++) {
+      for (PetscInt b = 0; b < Nb; b++) {
+        for (PetscInt p = 0; p < npoints; p++) {
+          D[p*p_strl + b*b_strl + d*d_strl] = pScalar[b*b_strr + (1+d)*d_strr + p*p_strr];
         }
       }
     }
   }
   if (H) {
-    PetscInt p_strl  = dim*dim*Nb*Nc*Nc;
-    PetscInt b_strl  = dim*dim*Nc*Nc;
-    PetscInt c_strl  = dim*dim*(Nc+1);
+    PetscInt p_strl  = dim*dim*Nb;
+    PetscInt b_strl  = dim*dim;
     PetscInt d1_strl = dim;
     PetscInt d2_strl = 1;
 
@@ -181,7 +189,7 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
 
     PetscInt *derivs;
     ierr = PetscCalloc1(dim, &derivs);CHKERRQ(ierr);
-    ierr = PetscArrayzero(H, npoints * Nb * Nc * Nc * dim * dim);CHKERRQ(ierr);
+    ierr = PetscArrayzero(H, npoints * Nb * dim * dim);CHKERRQ(ierr);
     for (PetscInt d1 = 0; d1 < dim; d1++) {
       for (PetscInt d2 = 0; d2 < dim; d2++) {
         PetscInt j;
@@ -190,11 +198,9 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
         ierr = PetscDTGradedOrderToIndex(dim, derivs, &j);CHKERRQ(ierr);
         derivs[d1]--;
         derivs[d2]--;
-        for (PetscInt c = 0; c < Nc; c++) {
-          for (PetscInt b = 0; b < Nb; b++) {
-            for (PetscInt p = 0; p < npoints; p++) {
-              H[p*p_strl + b*b_strl + c*c_strl + d1*d1_strl + d2*d2_strl] = pScalar[b*b_strr + j*j_strr + p*p_strr];
-            }
+        for (PetscInt b = 0; b < Nb; b++) {
+          for (PetscInt p = 0; p < npoints; p++) {
+            H[p*p_strl + b*b_strl + d1*d1_strl + d2*d2_strl] = pScalar[b*b_strr + j*j_strr + p*p_strr];
           }
         }
       }
