@@ -1408,9 +1408,11 @@ class Configure(config.base.Configure):
 
   def checkPragma(self):
     '''Check for all available applicable languages whether they complain (including warnings!) about potentially unknown pragmas'''
-    usePragma = {'C':False}
-    if hasattr(self,'Cxx'):
-      usePragma['Cxx'] = False
+    usePragma = {}
+    lang2Compiler = {'C':'CC','Cxx':'CXX','CUDA':'CUDAC','HIP':'HIPC','SYCL':'SYCLCXX'}
+    for lang in lang2Compiler:
+      if hasattr(self,lang2Compiler(lang)):
+        usePragma[lang] = False
     for language in usePragma.keys():
       with self.Language(language):
         with self.extraCompilerFlags(['-Wunknown-pragmas']) as skipFlags:
