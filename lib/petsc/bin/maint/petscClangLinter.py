@@ -203,6 +203,191 @@ class ParsingError(Exception):
   pass
 
 
+class PetscDocString(object):
+  __doc__="""Container to encapsulate a sowing docstring and retrieve various objects for it. Essentially a PetscCursor for comments"""
+
+  class Section(collections.namedtuple("Section",["lines","names"])):
+    __doc__ = """Container for a single section of the docstring, has members:
+    'lines' - a tuple of each line of text in the section
+    'names' - a tuple of extracted tokens of interest, e.g. the title, options parameters, function parameters, etc.
+    """
+    __slots__ = ()
+
+    @classmethod
+    def create(cls,data):
+      lines = tuple(s for _,s in data["all"])
+      names = data["names"] if "names" in data else tuple()
+      return cls(lines=lines,names=names)
+
+  preambleHeading  = "preamble"
+  paramHeading     = "params"
+  noteHeading      = "notes"
+  optionsHeading   = "options"
+  seealsoHeading   = "seealso"
+  levelHeading     = "level"
+  referenceHeading = "references"
+  allHeadings      = (
+    preambleHeading,
+    paramHeading,
+    optionsHeading,
+    noteHeading,
+    levelHeading,
+    referenceHeading,
+    seealsoHeading,
+  )
+  __slots__ = "cursor","tu","file","raw","extent",*allHeadings
+
+  @classmethod
+  def fromCursor(cls,cursor):
+    return cls(cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
+
+  def __init__(self,cursor,raw,crange):
+    if (not raw) or (not raw.startswith(("/*@","/*M","/*E"))):
+      raise ParsingError
+    self.cursor = cursor
+    self.tu     = cursor.translation_unit
+    self.file   = cursor.location.file
+    self.raw    = raw
+    self.extent = crange
+    return
+
+  def parse(self,linter):
+    def makeSourceRange(token,string,line):
+      colBegin = string.index(token)+1
+      colEnd   = colBegin+len(token)
+      begin    = clx.SourceLocation.from_position(self.tu,self.file,line,colBegin)
+      end      = clx.SourceLocation.from_position(self.tu,self.file,line,colEnd)
+      return clx.SourceRange.from_locations(begin,end),token.strip()
+
+    def addErrorFromCursor(errstr,token,raw,lineno,cursor=self.cursor,formatargs=(),**kwargs):
+      crange,_ = makeSourceRange(token,raw,lineno)
+      ncontext = kwargs.pop("numContext",2)
+      src      = petscClangLinterUtil.getFormattedSourceFromSourceRange(crange,numContext=ncontext,**kwargs)
+      error    = errstr.format(*formatargs,src)
+      linter.addErrorFromCursor(cursor,error)
+      return
+
+    def postProcessHeading(headings,subname,testItem,countMax=-1):
+      nameList    = []
+      count,seen  = 0,set()
+      multiHeader = False
+      subheading  = headings[subname]
+      for i,(line,origitem) in enumerate(subheading["all"]):
+        if ":" in origitem:
+          # check that header is correctly title-cased
+          header = origitem.split(":")[0].strip()
+          if not header.istitle():
+            addErrorFromCursor(
+              "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
+              header,origitem,line,
+              formatargs=(header.title(),header)
+            )
+          headerlo = header.lower()
+          if headerlo in seen:
+            multiHeader = True
+          else:
+            seen.add(headerlo)
+        # let each subheading type determine if this line is useful
+        valid,item = testItem(i,origitem)
+        if valid and (count != countMax):
+          nameList.append(makeSourceRange(item,origitem,line))
+          count += 1
+      if multiHeader:
+        # check that a particular subsection does not appear twice
+        srclist        = []
+        nbefore,nafter = 2,0
+        prevLineBegin  = nameList[0][0].start.line
+        for i,name in enumerate(nameList):
+          if i:
+            nbefore = name[0].start.line-prevLineBegin-1
+            if i == len(nameList)-1:
+              nafter = 2
+          srclist.append(petscClangLinterUtil.getFormattedSourceFromSourceRange(name[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
+          prevLineBegin = name[0].start.line
+        error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n\n{}".format(header,"\n".join(srclist))
+        linter.addErrorFromCursor(self.cursor,error)
+      subheading["names"] = tuple(nameList)
+      return
+
+    def validHeading(i,x):
+      xsplit = x.split("-")[0].strip()
+      return xsplit or i == 0,xsplit
+
+    def validParams(i,x):
+      xstrip = x.lstrip()
+      if xstrip.startswith(("+",".","-")):
+        return True, xstrip[1:].split("-")[0].strip()
+      return False, x
+
+    def validLevel(i,x):
+      xstrip = x.lstrip()
+      if ":" in xstrip:
+        rest = xstrip.split(":")[1].strip()
+        return rest,rest
+      return xstrip,xstrip
+
+
+    if self.extent.end.line != self.cursor.extent.start.line-1:
+      # there is at least 1 (probably empty) line between the comment end and whatever it
+      # is describing
+      addErrorFromCursor(
+        "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
+        "","",self.extent.end.line+1,
+        highlight=False,
+      )
+    headings  = collections.OrderedDict([(head,{"all" : []}) for head in self.allHeadings])
+    heading   = self.preambleHeading
+    startLine = self.extent.start.line
+    for offset,line in enumerate(self.raw.split("\n")):
+      lstrip = line.lstrip()
+      if lstrip.startswith("/*") or lstrip.endswith("*/"):
+        # check that nothing else is on the comment begin line
+        lsplit = lstrip.split()
+        if len(lsplit) != 1:
+          addErrorFromCursor(
+            "Invalid comment begin line, must only contain '/*' and docstring identifier:\n\n{}",
+            " ".join(lsplit[1:]),line,offset+startLine
+          )
+        continue
+      # if the line is regular (not empty, or a parameter list), check that line is
+      # indented correctly
+      if len(lstrip) and not lstrip.startswith((".","+","-")) and (len(line)-len(lstrip) != 2):
+        indent = len(line)-len(lstrip)
+        addErrorFromCursor(
+          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to 2 columns:\n\n{}",
+          " "*indent,line,offset+startLine,
+          formatargs=(indent,)
+        )
+      if ":" in lstrip:
+        heading = [s for s in lstrip.split(":") if s][0].strip().lower()
+        if "synopsis" in heading:
+          heading = self.preambleHeading
+        elif "parameter" in heading:
+          heading = self.paramHeading
+        elif "note" in heading:
+          heading = self.noteHeading
+        elif "option" in heading:
+          heading = self.optionsHeading
+        elif "seealso" in heading:
+          heading = self.seealsoHeading
+        elif "level" in heading:
+          heading = self.levelHeading
+        elif "reference" in heading:
+          heading = self.referenceHeading
+        else:
+          raise RuntimeError(heading)
+      headings[heading]["all"].append((offset+startLine,line))
+
+    postProcessHeading(headings,self.preambleHeading,validHeading,countMax=1)
+    postProcessHeading(headings,self.paramHeading,validParams)
+    postProcessHeading(headings,self.optionsHeading,validParams)
+    postProcessHeading(headings,self.levelHeading,validLevel)
+    headings[self.seealsoHeading]["names"] = tuple([name.strip() for _,sa in headings[self.seealsoHeading]["all"] for name in sa.split(",")])
+    for head,data in headings.items():
+      setattr(self,head,self.Section.create(data))
+    return self
+
+
 class PetscCursor(object):
   __doc__="""
   A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties (such as demangled names) from a cursor easier.
@@ -213,6 +398,45 @@ class PetscCursor(object):
   """
   registered_clang_findReferencesInFile   = False
   registered_clang_Cursor_getCommentRange = False
+  __slots__ = "__cursor","name","typename","derivedtypename","argidx"
+
+  def __init__(self,cursor,idx=-12345):
+    assert isinstance(cursor,(clx.Cursor,PetscCursor))
+    if isinstance(cursor,PetscCursor):
+      self.__cursor        = cursor._PetscCursor__cursor
+      self.name            = cursor.name
+      self.typename        = cursor.typename
+      self.derivedtypename = cursor.derivedtypename
+      self.argidx          = cursor.argidx if idx == -12345 else idx
+    else:
+      self.__cursor        = cursor
+      self.name            = self.getNameFromCursor(cursor)
+      self.typename        = self.getTypenameFromCursor(cursor)
+      self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
+      self.argidx          = idx
+    return
+
+  @staticmethod
+  def asPetscCursor(cursor):
+    __doc__="""like numpy.asanyarray but for PetscCursors"""
+    assert isinstance(cursor,(clx.Cursor,PetscCursor))
+    if isinstance(cursor,clx.Cursor):
+      cursor = PetscCursor(cursor)
+    return cursor
+
+  def __getattr__(self,attr):
+    __doc__="""
+    Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
+    (i.e. the value wasn't found in self), then we try the cursor. So we can do things
+    like self.translation_unit, but keep all of our variables out of the cursors
+    namespace
+    """
+    return getattr(self.__cursor,attr)
+
+  def __str__(self):
+    locStr = self.getFormattedLocationString()
+    srcStr = self.getFormattedSource(nboth=2)
+    return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
 
   @staticmethod
   def errorViewFromCursor(cursor):
@@ -470,46 +694,9 @@ class PetscCursor(object):
   def getCommentAndRange(self):
     return self.getCommentAndRangeFromCursor(self)
 
-  def __init__(self,cursor,idx=-12345):
-    assert isinstance(cursor,(clx.Cursor,PetscCursor))
-    if isinstance(cursor,PetscCursor):
-      self.__cursor        = cursor._PetscCursor__cursor
-      self.name            = cursor.name
-      self.typename        = cursor.typename
-      self.derivedtypename = cursor.derivedtypename
-      self.argidx          = cursor.argidx if idx == -12345 else idx
-    else:
-      self.__cursor        = cursor
-      self.name            = self.getNameFromCursor(cursor)
-      self.typename        = self.getTypenameFromCursor(cursor)
-      self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
-      self.argidx          = idx
-    return
-
-  @staticmethod
-  def asPetscCursor(cursor):
-    __doc__="""like numpy.asanyarray but for PetscCursors"""
-    assert isinstance(cursor,(clx.Cursor,PetscCursor))
-    if isinstance(cursor,clx.Cursor):
-      cursor = PetscCursor(cursor)
-    return cursor
-
-  def __getattr__(self,attr):
-    __doc__="""
-    Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
-    (i.e. the value wasn't found in self), then we try the cursor. So we can do things
-    like self.translation_unit, but keep all of our variables out of the cursors
-    namespace
-    """
-    return getattr(self.__cursor,attr)
-
-  def __str__(self):
-    locStr = self.getFormattedLocationString()
-    srcStr = self.getFormattedSource(nboth=2)
-    return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
-
 
 class SourceFix(object):
+  __slots__ = "filename","src","startLine","begins","ends","replace","deltas","fixed","fixDepth"
   def __init__(self,filename,src,startline,begin,end,value):
     self.filename  = filename
     self.src       = src
@@ -529,7 +716,7 @@ class SourceFix(object):
 
   @classmethod
   def fromSourceRange(cls,srcLocation,value):
-    src = petscClangLinterUtil.getRawSourceFromSourceRange(srcLocation)
+    src   = petscClangLinterUtil.getRawSourceFromSourceRange(srcLocation)
     start = srcLocation.start
     line  = start.line
     begin = start.column-1
@@ -587,14 +774,14 @@ class SourceFix(object):
       Convert range to the 'ed' format
       """
       start += pre
-      stop += pre
+      stop  += pre
       # Per the diff spec at http://www.unix.org/single_unix_specification/
-      beginning = max(start,1)# lines start numbering with one
-      length = stop-start
+      beginning = max(start,1) # lines start numbering with one
+      length    = stop-start
       if length == 1:
         return "{}".format(beginning)
       if not length:
-        beginning -= 1        # empty ranges begin at line just before the range
+        beginning -= 1 # empty ranges begin at line just before the range
       return "{},{}".format(beginning,length)
 
     if not fromfiledate or not tofiledate:
@@ -739,6 +926,8 @@ class PetscLinter(object):
   __doc__="""
   Object to manage the collection and processing of errors during a lint run.
   """
+  __slots__ = "flags","clangOpts","prefix","verbose","werror","lock","errPrefix","warnPrefix","errors","warnings","patches","index"
+
   def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,werror=False,lock=None):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
@@ -760,7 +949,7 @@ class PetscLinter(object):
     prefixStr = "Prefix:        '{}'".format(self.prefix)
     flagStr   = "Compiler Flags: {}".format(self.flags)
     clangStr  = "Clang Options:  {}".format(self.clangOpts)
-    lockStr   = "Lock:           {}".format(self.lock!=None)
+    lockStr   = "Lock:           {}".format(self.lock is not None)
     showStr   = "Verbose:        {}".format(self.verbose)
     printList = [prefixStr,flagStr,clangStr,lockStr,showStr]
     errorStr  = self.getAllErrors()
@@ -780,7 +969,7 @@ class PetscLinter(object):
     return
 
   def __print(self,*args,**kwargs):
-    args = tuple(a for a in args if a)
+    args = tuple([a for a in args if a])
     if not args and not kwargs:
       return
     if self.lock:
@@ -847,10 +1036,7 @@ class PetscLinter(object):
           yield from walkScope(child,scope=scope)
 
     cursor,filename = tu.cursor,tu.cursor.spelling
-    import ipdb; ipdb.set_trace()
     for possibleParent in cursor.get_children():
-      if possibleParent.spelling == "PETSC_WELL_FORMED_MACRO":
-        import ipdb; ipdb.set_trace()
       # getting filename is for some reason stupidly expensive, so we do this check first
       if possibleParent.kind not in funcCallCursors: continue
       try:
@@ -866,7 +1052,7 @@ class PetscLinter(object):
 
   def clear(self):
     __doc__="""
-    Resets the linter error, warning and patch buffers. Should be called before processing a new file
+    resets the linter error, warning and patch buffers. Should be called before processing a new file
     """
     self.errors   = []
     self.warnings = []
@@ -887,7 +1073,9 @@ class PetscLinter(object):
     return
 
   def process(self,tu):
-    __doc__="""Process a translation unit for errors"""
+    __doc__="""
+    process a translation unit for errors
+    """
     processedFuncs = collections.defaultdict(list)
     for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       if isinstance(results,clx.Cursor):
@@ -923,9 +1111,9 @@ class PetscLinter(object):
   @staticmethod
   def getArgumentCursors(funcCursor):
     __doc__="""
-    Given a cursor representing a Function, return a tuple of PetscCursor's of its arguments
+    given a cursor representing a function, return a tuple of PetscCursor's of its arguments
     """
-    return tuple(PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments()))
+    return tuple([PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments())])
 
   def addErrorFromCursor(self,cursor,errorMessage,patch=None):
     __doc__="""
@@ -933,7 +1121,7 @@ class PetscLinter(object):
     """
     cursor  = PetscCursor.asPetscCursor(cursor)
     errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
-    self.errors.append((errMess,patch != None))
+    self.errors.append((errMess,patch is not None))
     try:
       self.patches[patch.filename].append(patch)
     except KeyError:
@@ -1006,12 +1194,9 @@ class PetscLinter(object):
     """
     if joinToString:
       if len(self.warnings):
-        warnings = "\n".join([self.warnPrefix,"\n".join(s for _,s in self.warnings)[1:],self.warnPrefix])
-      else:
-        warnings = ""
-    else:
-      warnings = self.warnings
-    return warnings
+        return "\n".join([self.warnPrefix,"\n".join(s for _,s in self.warnings)[1:],self.warnPrefix])
+      return ""
+    return self.warnings
 
   def coalescePatches(self):
     __doc__="""
@@ -1023,12 +1208,14 @@ class PetscLinter(object):
         p.collapse()
       srcList   = [(p.src,p.startLine) for p in patches]
       fixedList = [(p.fixed,p.startLine) for p in patches]
-      unified   = "".join(SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename))
-      combinedPatches.append((filename,unified))
+      diff      = SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename)
+      combinedPatches.append((filename,"".join(diff)))
     return combinedPatches
 
 
 class WorkerPool(mp.queues.JoinableQueue):
+  __slots__ = "parallel","errorQueue","returnQueue","lock","workers","numWorkers","timeout","verbose","prefix","warnings","errorsLeft","errorsFixed","patches","linter"
+
   def __init__(self,numWorkers=-1,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
     if numWorkers < 0:
       numWorkers = max(mp.cpu_count()-1,1)
@@ -1164,99 +1351,8 @@ class WorkerPool(mp.queues.JoinableQueue):
 
 
 """utilities for checking docstrings"""
-def parseDocString(cursor):
-  __doc__="""
-  parse and extract all relevant headings from a sowing docstring. Each section will have an
-  'all' entry containing the raw text and a 'names' entry containing a list of extracted symbols or names.
-  """
-  raw,location = PetscCursor.getCommentAndRangeFromCursor(cursor)
-  if (not raw) or (not raw.startswith(("/*@","/*M","/*E"))):
-    return None
-
-  preambleHeading  = "preamble"
-  paramHeading     = "params"
-  noteHeading      = "notes"
-  optionsHeading   = "options"
-  seealsoHeading   = "seealso"
-  levelHeading     = "level"
-  referenceHeading = "references"
-  headings         = {
-    "raw"            : raw,
-    preambleHeading  : {"all" : []},
-    paramHeading     : {"all" : []},
-    optionsHeading   : {"all" : []},
-    noteHeading      : {"all" : []},
-    seealsoHeading   : {"all" : []},
-    levelHeading     : {"all" : []},
-    referenceHeading : {"all" : []},
-  }
-  heading = preambleHeading
-  for offset,line in enumerate(s for s in raw.split("\n")):
-    lstrip = line.strip()
-    if lstrip.startswith("/*") or lstrip.endswith("*/"):
-      continue
-    if ":" in lstrip:
-      lsplit  = [s.strip() for s in lstrip.split(":") if s]
-      heading = lsplit[0].lower()
-      if "synopsis" in heading:
-        heading = preambleHeading
-      elif "parameter" in heading:
-        heading = paramHeading
-      elif "note" in heading:
-        heading = noteHeading
-      elif "option" in heading:
-        heading = optionsHeading
-      elif "seealso" in heading:
-        heading = seealsoHeading
-      elif "level" in heading:
-        heading = levelHeading
-      elif "reference" in heading:
-        heading = referenceHeading
-      else:
-        raise RuntimeError(heading)
-    headings[heading]["all"].append((offset,line))
-
-  def postProcessHeading(subheading,testItem,countMax=-1):
-    nameList = []
-    count    = 0
-    for i,(lineOffset,origitem) in enumerate(subheading["all"]):
-      valid,item = testItem(i,origitem)
-      if valid:
-        tu,file   = cursor.translation_unit,cursor.location.file
-        name      = item.split("-")[0].strip()
-        colBegin  = origitem.index(name)+1
-        lineBegin = location.start.line+lineOffset
-        begin     = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin)
-        end       = clx.SourceLocation.from_position(tu,file,lineBegin,colBegin+len(name))
-        nameList.append((clx.SourceRange.from_locations(begin,end),name))
-        count += 1
-      if count == countMax:
-        break
-    subheading["names"] = nameList
-    return subheading
-
-  def validParams(i,x):
-    xstrip = x.lstrip()
-    if xstrip.startswith(("+",".","-")):
-      return True, xstrip[1:]
-    return False, x
-
-  def validLevel(i,x):
-    xstrip = x.lstrip()
-    if ":" not in xstrip:
-      return xstrip,xstrip
-    xsplit = xstrip.split(":")[1]
-    return xsplit,xsplit
-
-  postProcessHeading(headings[preambleHeading], lambda i,x : (("-" in x) or (i == 0),x),countMax=1)
-  postProcessHeading(headings[paramHeading],validParams)
-  postProcessHeading(headings[optionsHeading],validParams)
-  postProcessHeading(headings[levelHeading],validLevel)
-  headings[seealsoHeading]["names"] = [name.strip() for _,sa in headings[seealsoHeading]["all"] for name in sa.split(",")]
-  return headings
-
 def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
-  docStringArgs = parsed["params"]["names"]
+  docStringArgs = parsed.params.names
   if len(docStringArgs) == len(fnargs) == 0:
     # if both fnargs and docStringArgs are empty then the function has no arguments and
     # we have nothing to do here
@@ -1297,63 +1393,65 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
   return
 
 def checkDocValidHeader(linter,cursor,parsed):
-  header         = parsed["preamble"]
-  allSymbolNames = header["names"]
+  header         = parsed.preamble
+  allSymbolNames = header.names
   assert len(allSymbolNames)
-  headerRaw    = "\n".join(s for _,s in header["all"])
-  symbolName   = allSymbolNames[0]
-  cursorName   = PetscCursor.getNameFromCursor(cursor)
-  if symbolName[-1] != cursorName:
+  headerRaw  = "\n".join(header.lines)
+  symbolName = allSymbolNames[0]
+  cursorName = PetscCursor.getNameFromCursor(cursor)
+  if symbolName[1] != cursorName:
     src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numContext=2)
     errorMessage = "Docstring name does not match symbol name. Expected '{}' found '{}' instead:\n\n{}".format(cursorName,symbolName[-1],src)
     linter.addErrorFromCursor(cursor,errorMessage)
   if "-" not in headerRaw:
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(header["all"])-1)
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(header.lines)-1)
     errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
 
 def checkDocValidLevel(linter,cursor,parsed):
-  header     = parsed["level"]
-  levelNames = header["names"]
+  levelNames  = parsed.level.names
+  validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   if len(levelNames):
-    allLevels   = tuple(l for _,l in levelNames)
-    validLevels = ("beginner","intermediate","advanced","developer")
+    allLevels = tuple([l for _,l in levelNames])
     for level in levelNames:
       levelName = level[1]
-      if levelName.lower() not in validLevels:
+      if levelName not in validLevels:
         src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
-        errorMessage = "Invalid Level subheading '{}', expected one of:\n{}\n\n{}".format(levelName,"\n".join("- '"+v+"'" for v in validLevels),src)
+        if levelName.lower() in validLevels:
+          errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(levelName.lower(),levelName,src)
+        else:
+          errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,", ".join(validLevels),src)
         linter.addErrorFromCursor(cursor,errorMessage)
-    if len(levelNames) > 1:
-      srcList = []
-      nbefore,nafter = 2,0
-      prevLineBegin  = levelNames[0][0].start.line
-      for i,level in enumerate(levelNames):
-        if i:
-          nbefore = level[0].start.line-prevLineBegin-1
-          if i == len(levelNames)-1:
-            nafter = 2
-        srcList.append(petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
-        prevLineBegin = level[0].start.line
-      src = "\n".join(srcList)
-      errorMessage = "Multiple Level subheadings. Much like Highlanders, there can only be one:\n\n{}".format(src)
-      linter.addErrorFromCursor(cursor,errorMessage)
+      for line in parsed.level.lines:
+        if (levelName in line) and (":" not in line):
+          src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
+          errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(src)
+          linter.addErrorFromCursor(cursor,errorMessage)
   else:
-    _,range = PetscCursor.getCommentAndRangeFromCursor(cursor)
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(range,numContext=2,highlight=False)
-    errorMessage = "Missing Level subheading. Expected 'Level: [level value here or on next line]':\n\n{}".format(src)
+    _,srcrange = PetscCursor.getCommentAndRangeFromCursor(cursor)
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(srcrange,numContext=2,highlight=False)
+    errorMessage = "Missing Level subheading. Expected 'Level: (one of) {}':\n\n{}".format(", ".join(validLevels),src)
     linter.addErrorFromCursor(cursor,errorMessage)
+  return
+
+def checkDocValidSeealso(linter,cursor,parsed):
+  import ipdb; ipdb.set_trace()
+  seealsoNames = parsed.seealso.names
+  allSeealsos  = tuple([s for _,s in sealsoNames])
+  for other in seealsoNames:
+    otherName = other[1]
   return
 
 
 """Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,function):
-  parsed = parseDocString(function)
-  if not parsed:
-    return
-
+  try:
+    parsed = PetscDocString.fromCursor(function).parse(linter)
+  except ParsingError:
+    return # error already logged with linter
   fnargs = linter.getArgumentCursors(function)
+
   checkDocValidHeader(linter,function,parsed)
   checkDocFunctionArgumentsMatch(linter,function,parsed,fnargs)
   checkDocValidLevel(linter,function,parsed)

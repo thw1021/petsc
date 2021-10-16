@@ -17,8 +17,7 @@ typedef int testType;
 + viewer - a PetscViewer
 - y      - a pointer
 
-  Level:
-  beginner
+  Level: beginner
 
   References:
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
@@ -30,28 +29,31 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
   return 0;
 }
 
-/*@C
-  someOtherFunctionName
+/*@C Lorem ipsum dolor sit amet
+  someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
+  non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
   Not Collective, Synchronous
 
-  Input Parameters:
+   Input Parameters:
 + viewer - a PetscViewer
 
   Output Parameter:
 + y - a pointer
 - z - a nonexistent parameter
 
-  Level: Lorem ipsum dolor sit amet
+  level: Lorem ipsum dolor sit amet
 
   Level:
-  beginner
+  Beginner
 
   References:
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 .seealso: testNonExistentFunction(), testNonExistentType
 @*/
+
 PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 {
   return 0;
