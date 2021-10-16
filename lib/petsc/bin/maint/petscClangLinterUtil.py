@@ -72,7 +72,7 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
 
 
 def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  return getRawSourceFromSourceRange(cursor.location,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
+  return getRawSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
 
 def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
   numBeforeContext = numBeforeContext if numBeforeContext else numContext
