@@ -2861,7 +2861,7 @@ PETSC_EXTERN PetscErrorCode PetscPullJSONValue(const char[],const char[],char[],
 PETSC_EXTERN PetscErrorCode PetscPushJSONValue(char[],const char[],const char[],size_t);
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-#  define MPIU_Allreduce(a,b,c,d,e,f)
+#  define MPIU_Allreduce(a,b,c,d,e,f) 0
 #elif defined(PETSC_USE_DEBUG)
 PETSC_STATIC_INLINE unsigned int PetscStrHash(const char *str)
 {
