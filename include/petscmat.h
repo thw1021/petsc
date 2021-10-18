@@ -475,6 +475,7 @@ PETSC_EXTERN PetscErrorCode MatSetOption(Mat,MatOption,PetscBool);
 PETSC_EXTERN PetscErrorCode MatGetOption(Mat,MatOption,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatPropagateSymmetryOptions(Mat,Mat);
 PETSC_EXTERN PetscErrorCode MatGetType(Mat,MatType*);
+PETSC_EXTERN PetscErrorCode MatGetRootType(Mat, MatType*);
 
 PETSC_EXTERN PetscErrorCode MatGetValues(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatGetRow(Mat,PetscInt,PetscInt *,const PetscInt *[],const PetscScalar*[]);
