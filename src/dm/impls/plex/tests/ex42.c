@@ -381,7 +381,7 @@ int main(int argc, char **argv)
     if (error > tol) {
       ierr = PetscPrintf(comm, "Area error                 : % .14g\n", (double) error);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(comm, "Area verifies!\n", (double) error);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "Area verifies!\n");CHKERRQ(ierr);
     }
   }
 

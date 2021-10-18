@@ -135,7 +135,7 @@ int main(int argc,char **args)
       if (rank == vid) {
         PetscBool colflag;
         ierr = ISIdentity(is2[i],&colflag);CHKERRQ(ierr);
-        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] is2[%D], colflag %D\n",rank,i,colflag);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] is2[%" PetscInt_FMT "], colflag %d\n",rank,i,colflag);CHKERRQ(ierr);
         ierr = ISView(is2[i],PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
       }
     }

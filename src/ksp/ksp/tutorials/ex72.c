@@ -417,7 +417,7 @@ int main(int argc,char **args)
     if (flg) {
       KSPConvergedReason reason;
       ierr = KSPGetConvergedReason(ksp,&reason);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %s\n",KSPConvergedReasons[reason]);CHKERRQ(ierr);
     }
 
   }   /* while (num_numfac--) */
