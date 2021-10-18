@@ -79,6 +79,15 @@ struct _PetscGridHash {
   DMLabel      cellsSparse; /* Sparse storage for cell map */
 };
 
+typedef struct {
+  PetscBool isotropic;                    /* Is the metric isotropic? */
+  PetscBool restrictAnisotropyFirst;      /* Should anisotropy or normalization come first? */
+  PetscReal h_min, h_max;                 /* Minimum/maximum tolerated metric magnitudes */
+  PetscReal a_max;                        /* Maximum tolerated anisotropy */
+  PetscReal targetComplexity;             /* Target metric complexity */
+  PetscReal p;                            /* Degree for L-p normalization methods */
+} DMPlexMetricCtx;
+
 /* Point Numbering in Plex:
 
    Points are numbered contiguously by stratum. Strate are organized as follows:
@@ -176,6 +185,9 @@ typedef struct {
   /* Neighbors */
   PetscMPIInt*         neighbors;
 
+  /* Metric */
+  DMPlexMetricCtx     *metricCtx;
+
   /* Debugging */
   PetscBool            printSetValues;
   PetscInt             printFEM;
@@ -231,6 +243,7 @@ PETSC_INTERN PetscErrorCode DMRefine_Plex(DM, MPI_Comm, DM *);
 PETSC_INTERN PetscErrorCode DMRefineHierarchy_Plex(DM, PetscInt, DM []);
 PETSC_INTERN PetscErrorCode DMAdaptLabel_Plex(DM, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMAdaptMetric_Plex(DM, Vec, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMExtrude_Plex(DM, PetscInt, DM *);
 PETSC_INTERN PetscErrorCode DMPlexInsertBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode DMPlexInsertTimeDerivativeBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode DMProjectFunctionLocal_Plex(DM,PetscReal,PetscErrorCode(**)(PetscInt,PetscReal,const PetscReal[],PetscInt,PetscScalar *,void *),void **,InsertMode,Vec);
@@ -258,7 +271,6 @@ PETSC_INTERN PetscErrorCode DMPlexGetAdjacency_Internal(DM,PetscInt,PetscBool,Pe
 PETSC_INTERN PetscErrorCode DMPlexGetRawFaces_Internal(DM,DMPolytopeType,const PetscInt[],PetscInt*,const DMPolytopeType*[],const PetscInt*[],const PetscInt*[]);
 PETSC_INTERN PetscErrorCode DMPlexRestoreRawFaces_Internal(DM,DMPolytopeType,const PetscInt[],PetscInt*,const DMPolytopeType*[],const PetscInt*[],const PetscInt*[]);
 PETSC_INTERN PetscErrorCode DMPlexComputeCellType_Internal(DM, PetscInt, PetscInt, DMPolytopeType *);
-PETSC_INTERN PetscErrorCode DMPlexCreateCellTypeOrder_Internal(DMPolytopeType, PetscInt *[], PetscInt *[]);
 PETSC_INTERN PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM, PetscSection, Vec, PetscBool[], PetscInt, PetscInt, const PetscInt[], DMLabel, PetscInt, const PetscScalar[], InsertMode);
 PETSC_INTERN PetscErrorCode DMPlexProjectConstraints_Internal(DM, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMPlexCreateReferenceTree_SetTree(DM, PetscSection, PetscInt[], PetscInt[]);
