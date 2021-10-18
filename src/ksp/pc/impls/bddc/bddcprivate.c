@@ -3560,12 +3560,12 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
         if (B_ierr) {
           if (B_ierr < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: illegal value for argument %d",-(int)B_ierr);
           else if (B_ierr <= B_N) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: %d eigenvalues failed to converge",(int)B_ierr);
-          else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)B_ierr-B_N-1);
+          else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)(B_ierr-B_N-1));
         }
 
         if (B_neigs > nmax) {
           if (pcbddc->dbg_flag) {
-            ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   found %d eigs, more than maximum required %" PetscInt_FMT ".\n",B_neigs,nmax);CHKERRQ(ierr);
+            ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   found %" PetscBLASInt_FMT " eigs, more than maximum required %" PetscInt_FMT ".\n",B_neigs,nmax);CHKERRQ(ierr);
           }
           if (pcbddc->use_deluxe_scaling) eigs_start = scal ? 0 : B_neigs-nmax;
           B_neigs = nmax;
@@ -3588,7 +3588,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
             B_IU = nmin_s;
           }
           if (pcbddc->dbg_flag) {
-            ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   found %d eigs, less than minimum required %" PetscInt_FMT ". Asking for %d to %d incl (fortran like)\n",B_neigs,nmin,B_IL,B_IU);CHKERRQ(ierr);
+            ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   found %" PetscBLASInt_FMT " eigs, less than minimum required %" PetscInt_FMT ". Asking for %" PetscBLASInt_FMT " to %" PetscBLASInt_FMT " incl (fortran like)\n",B_neigs,nmin,B_IL,B_IU);CHKERRQ(ierr);
           }
           if (sub_schurs->is_symmetric) {
             PetscInt j,k;
@@ -3615,10 +3615,10 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
         if (B_ierr) {
           if (B_ierr < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: illegal value for argument %d",-(int)B_ierr);
           else if (B_ierr <= B_N) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: %d eigenvalues failed to converge",(int)B_ierr);
-          else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)B_ierr-B_N-1);
+          else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)(B_ierr-B_N-1));
         }
         if (pcbddc->dbg_flag) {
-          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Got %d eigs\n",B_neigs);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Got %" PetscBLASInt_FMT " eigs\n",B_neigs);CHKERRQ(ierr);
           for (j=0;j<B_neigs;j++) {
             if (eigs[j] == 0.0) {
               ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"     Inf\n");CHKERRQ(ierr);
@@ -3640,7 +3640,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
       if (pcbddc->dbg_flag > 2) {
         PetscInt ii;
         for (ii=0;ii<B_neigs;ii++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector (old basis) %" PetscInt_FMT "/%d (%d)\n",ii,B_neigs,B_N);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector (old basis) %" PetscInt_FMT "/%" PetscBLASInt_FMT " (%" PetscBLASInt_FMT ")\n",ii,B_neigs,B_N);CHKERRQ(ierr);
           for (j=0;j<B_N;j++) {
 #if defined(PETSC_USE_COMPLEX)
             PetscReal r = PetscRealPart(eigv[(ii+eigs_start)*subset_size+j]);
@@ -3667,7 +3667,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
       if (pcbddc->dbg_flag > 1) {
         PetscInt ii;
         for (ii=0;ii<B_neigs;ii++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector %" PetscInt_FMT "/%d (%d)\n",ii,B_neigs,B_N);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Eigenvector %" PetscInt_FMT "/%" PetscBLASInt_FMT " (%" PetscBLASInt_FMT ")\n",ii,B_neigs,B_N);CHKERRQ(ierr);
           for (j=0;j<B_N;j++) {
 #if defined(PETSC_USE_COMPLEX)
             PetscReal r = PetscRealPart(pcbddc->adaptive_constraints_data[ii*subset_size+j+pcbddc->adaptive_constraints_data_ptr[cum]]);

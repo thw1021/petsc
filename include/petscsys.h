@@ -23,7 +23,16 @@
 #  define PETSC_HAS_ATTRIBUTE(x) 0
 #endif
 
-#if PETSC_HAS_ATTRIBUTE(format)
+/* CYTHON_ABI defined by cython in petsc4py build. The cythonized auto-generated interfaces to
+ * the printf functions produce many spurious errors with this attribute e.g:
+ *
+ * src/petsc4py.PETSc.c:68656:3: error: format not a string literal and no format arguments [-Werror=format-security]
+ * 68656 |   __pyx_t_3 = __pyx_f_8petsc4py_5PETSc_CHKERR(PetscPrintf(__pyx_v_ccomm, __pyx_v_m)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(27, 82, __pyx_L1_error)
+ *       |   ^~~~~~~~~
+ *
+ * so it is easier to just disable the attribute entirely
+ */
+#if PETSC_HAS_ATTRIBUTE(format) && !defined(CYTHON_ABI)
 #  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx) __attribute__((format(printf,strIdx,vaArgIdx)))
 #else
 #  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
@@ -328,19 +337,6 @@ PETSC_EXTERN MPI_Datatype MPIU_BOOL PetscAttrMPITypeTag(PetscBool);
 
 .seealso: PetscReal, PetscScalar, PetscComplex, PetscInt, MPIU_REAL, MPIU_SCALAR, MPIU_COMPLEX
 M*/
-
-#if defined(PETSC_HAVE_STDINT_H) && defined(PETSC_HAVE_INTTYPES_H) && defined(PETSC_HAVE_MPI_INT64_T) /* MPI_INT64_T is not guaranteed to be a macro */
-#  define MPIU_INT64 MPI_INT64_T
-#  define PetscInt64_FMT PRId64
-#elif (PETSC_SIZEOF_LONG_LONG == 8)
-#  define MPIU_INT64 MPI_LONG_LONG_INT
-#  define PetscInt64_FMT "lld"
-#elif defined(PETSC_HAVE___INT64)
-#  define MPIU_INT64 MPI_INT64_T
-#  define PetscInt64_FMT "ld"
-#else
-#  error "cannot determine PetscInt64 type"
-#endif
 
 PETSC_EXTERN MPI_Datatype MPIU_FORTRANADDR;
 

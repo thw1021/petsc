@@ -176,7 +176,7 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
 "  __local %s        detJ[%d]; //[N_t];           // $|J(x_q)|$, Jacobian determinant at $x_q$\n"
 "  __local %s        invJ[%d];//[N_t*dim*dim];   // $J^{-1}(x_q)$, Jacobian inverse at $x_q$\n",
                             &count, numeric_str, numeric_str, N_b*N_c*N_q, numeric_str, dim, N_b*N_c*N_q, numeric_str, N_t,
-                            numeric_str, N_t*dim*dim, numeric_str, N_t*N_b*N_c);CHKERRSTR(ierr);
+                            numeric_str, N_t*dim*dim);CHKERRSTR(ierr);
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
 "  /* FEM data */\n"
 "  __local %s        u_i[%d]; //[N_t*N_bt];       // Coefficients $u_i$ of the field $u|_{\\mathcal{T}} = \\sum_i u_i \\phi_i$\n",
@@ -571,7 +571,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   N_bt  = N_b*N_comp;
   N_bst = N_bt*N_q;
   N_t   = N_bst*N_bl;
-  if (N_bc*N_comp != N_t) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of threads %d should be %d * %d", N_t, N_bc, N_comp);
+  if (PetscUnlikely(N_bc*N_comp != N_t)) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of threads %" PetscInt_FMT " should be %" PetscInt_FMT " * %" PetscInt_FMT, N_t, N_bc, N_comp);
   /* Calculate layout */
   if (Ne % (N_cb*N_bc)) { /* Remainder cells */
     ierr = PetscFEIntegrateResidual_Basic(prob, key, Ne, cgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec);CHKERRQ(ierr);
@@ -584,8 +584,8 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   global_work_size[0] = x * local_work_size[0];
   global_work_size[1] = y * local_work_size[1];
   global_work_size[2] = z * local_work_size[2];
-  ierr = PetscInfo7(fem, "GPU layout grid(%d,%d,%d) block(%d,%d,%d) with %d batches\n", x, y, z, local_work_size[0], local_work_size[1], local_work_size[2], N_cb);CHKERRQ(ierr);
-  ierr = PetscInfo2(fem, " N_t: %d, N_cb: %d\n", N_t, N_cb);CHKERRQ(ierr);
+  ierr = PetscInfo7(fem, "GPU layout grid(%zu,%zu,%zu) block(%zu,%zu,%zu) with %" PetscInt_FMT " batches\n", x, y, z, local_work_size[0], local_work_size[1], local_work_size[2], N_cb);CHKERRQ(ierr);
+  ierr = PetscInfo2(fem, " N_t: %" PetscInt_FMT ", N_cb: %" PetscInt_FMT "\n", N_t, N_cb);CHKERRQ(ierr);
   /* Generate code */
   if (probAux) {
     PetscSpace P;
@@ -598,13 +598,13 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
       ierr = PetscDSGetDiscretization(probAux, f, (PetscObject *) &feAux);CHKERRQ(ierr);
       ierr = PetscFEGetBasisSpace(feAux, &P);CHKERRQ(ierr);
       ierr = PetscSpaceGetDegree(P, &order, NULL);CHKERRQ(ierr);
-      if (order > 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Can only handle P0 coefficient fields");
+      if (PetscUnlikely(order > 0)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Can only handle P0 coefficient fields");
     }
   }
   ierr = PetscFEOpenCLGetIntegrationKernel(fem, useAux, &ocl_prog, &ocl_kernel);CHKERRQ(ierr);
   /* Create buffers on the device and send data over */
   ierr = PetscDataTypeGetSize(ocl->realType, &realSize);CHKERRQ(ierr);
-  if (cgeom->numPoints > 1) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Only support affine geometry for OpenCL integration right now");
+  if (PetscUnlikely(cgeom->numPoints > 1)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Only support affine geometry for OpenCL integration right now");
   if (sizeof(PetscReal) != realSize) {
     switch (ocl->realType) {
     case PETSC_FLOAT:
