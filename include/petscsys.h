@@ -20,6 +20,18 @@
    #define PETSC_HAVE_DEVICE
 #endif
 
+#if defined(__has_attribute)
+#  define PETSC_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+#  define PETSC_HAS_ATTRIBUTE(x) 0
+#endif
+
+#if PETSC_HAS_ATTRIBUTE(noderef)
+#  define PETSC_ATTRIBUTE_NODEREF __attribute__((noderef))
+#else
+#  define PETSC_ATTRIBUTE_NODEREF
+#endif
+
 #if defined(PETSC_DESIRE_FEATURE_TEST_MACROS)
 /*
    Feature test macros must be included before headers defined by IEEE Std 1003.1-2001
@@ -266,14 +278,13 @@ M*/
    This allows the compiler to detect cases where the MPI datatype argument passed to a MPI routine
    does not match the actual type of the argument being passed in
 */
-#if defined(__has_attribute) && defined(works_with_const_which_is_not_true)
-#  if __has_attribute(argument_with_type_tag) && __has_attribute(pointer_with_type_tag) && __has_attribute(type_tag_for_datatype)
-#    define PetscAttrMPIPointerWithType(bufno,typeno) __attribute__((pointer_with_type_tag(MPI,bufno,typeno)))
-#    define PetscAttrMPITypeTag(type)                 __attribute__((type_tag_for_datatype(MPI,type)))
-#    define PetscAttrMPITypeTagLayoutCompatible(type) __attribute__((type_tag_for_datatype(MPI,type,layout_compatible)))
-#  endif
-#endif
-#if !defined(PetscAttrMPIPointerWithType)
+#if (PETSC_HAS_ATTRIBUTE(argument_with_type_tag) && \
+     PETSC_HAS_ATTRIBUTE(pointer_with_type_tag)  && \
+     PETSC_HAS_ATTRIBUTE(type_tag_for_datatype))
+#  define PetscAttrMPIPointerWithType(bufno,typeno) __attribute__((pointer_with_type_tag(MPI,bufno,typeno)))
+#  define PetscAttrMPITypeTag(type)                 __attribute__((type_tag_for_datatype(MPI,type)))
+#  define PetscAttrMPITypeTagLayoutCompatible(type) __attribute__((type_tag_for_datatype(MPI,type,layout_compatible)))
+#else
 #  define PetscAttrMPIPointerWithType(bufno,typeno)
 #  define PetscAttrMPITypeTag(type)
 #  define PetscAttrMPITypeTagLayoutCompatible(type)
