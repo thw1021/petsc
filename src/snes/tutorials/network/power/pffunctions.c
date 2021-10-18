@@ -17,7 +17,7 @@ PetscErrorCode GetListofEdges_Power(PFDATA *pfdata,PetscInt *edgelist)
     edgelist[2*i]   = fbus;
     edgelist[2*i+1] = tbus;
     if (netview) {
-      ierr = PetscPrintf(PETSC_COMM_SELF,"branch %d, bus[%d] -> bus[%d]\n",i,fbus,tbus);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"branch %" PetscInt_FMT ", bus[%" PetscInt_FMT "] -> bus[%" PetscInt_FMT "]\n",i,fbus,tbus);CHKERRQ(ierr);
     }
   }
   if (netview) {

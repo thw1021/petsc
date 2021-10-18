@@ -116,7 +116,7 @@ static PetscErrorCode KSPView_HPDDM(KSP ksp, PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer, "HPDDM type: %s\n", KSPHPDDMTypes[std::min(static_cast<PetscInt>(data->cntl[0]), static_cast<PetscInt>(ALEN(KSPHPDDMTypes) - 1))]);CHKERRQ(ierr);
     if (data->cntl[0] == HPDDM_KRYLOV_METHOD_BGMRES || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BFBCG) {
       if (std::abs(data->rcntl[0] - static_cast<PetscReal>(PETSC_DECIDE)) < PETSC_SMALL) {
-        ierr = PetscViewerASCIIPrintf(viewer, "no deflation at restarts\n", PetscBools[array ? PETSC_TRUE : PETSC_FALSE]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "no deflation at restarts\n");CHKERRQ(ierr);
       } else {
         ierr = PetscViewerASCIIPrintf(viewer, "deflation tolerance: %g\n", data->rcntl[0]);CHKERRQ(ierr);
       }
@@ -523,7 +523,7 @@ static PetscErrorCode KSPHPDDMSetType_HPDDM(KSP ksp, KSPHPDDMType type)
     ierr = PetscStrcmp(KSPHPDDMTypes[type], KSPHPDDMTypes[i], &flg);CHKERRQ(ierr);
     if (flg) break;
   }
-  if (i == ALEN(KSPHPDDMTypes)) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown KSPHPDDMType %s", type);
+  if (i == ALEN(KSPHPDDMTypes)) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown KSPHPDDMType %s", KSPHPDDMTypes[type]);
   if (data->cntl[0] != static_cast<char>(PETSC_DECIDE) && data->cntl[0] != i) {
     ierr = KSPHPDDMReset_Private(ksp);CHKERRQ(ierr);
   }

@@ -881,7 +881,9 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL, "-n", &n, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,NULL, "-verbose", &verbose, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetString(NULL,NULL, "-filename", filename, sizeof(filename), NULL);CHKERRQ(ierr);
-  if (verbose) {ierr = PetscPrintf(comm, "np ns " PetscStringizeArg(np) " " PetscStringizeArg(ns) "\n");CHKERRQ(ierr);}
+  if (verbose) {
+    ierr = PetscPrintf(comm, "np ns " PetscStringize(np) " " PetscStringize(ns) "\n");CHKERRQ(ierr);
+  }
 
   ierr = PetscViewerHDF5Open(comm, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
   ierr = testGroupsDatasets(viewer);CHKERRQ(ierr);

@@ -464,32 +464,13 @@ static PetscErrorCode MatView_Info_SuperLU_DIST(Mat A,PetscViewer viewer)
 
   options = lu->options;
   ierr    = PetscViewerASCIIPrintf(viewer,"SuperLU_DIST run parameters:\n");CHKERRQ(ierr);
-  /* macro IFMT defined in superlu_defs.h as the following, Oct 2021
-
-   #ifdef _CRAY
-     typedef short int_t;
-     // #undef int   Revert back to int of default size.
-     #define mpi_int_t   MPI_SHORT
-   #elif defined (_LONGINT)
-     typedef int64_t int_t;
-     #define mpi_int_t   MPI_LONG_LONG_INT
-     #define IFMT "%lld"
-   #else // default
-     typedef int int_t;
-     #define mpi_int_t   MPI_INT
-     #define IFMT "%8d"
-   #endif
-
-   Note in the above they don't define a format string for int on Cray for whatever reason, so
-   we do it here */
-#if !defined(IFMT)
-#  define IFMT "%d"
-#endif
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Process grid nprow " IFMT " x npcol " IFMT " \n",lu->nprow,lu->npcol);CHKERRQ(ierr);
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Equilibrate matrix %s \n",PetscBools[options.Equil != NO]);CHKERRQ(ierr);
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Replace tiny pivots %s \n",PetscBools[options.ReplaceTinyPivot != NO]);CHKERRQ(ierr);
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Use iterative refinement %s \n",PetscBools[options.IterRefine == SLU_DOUBLE]);CHKERRQ(ierr);
-  ierr    = PetscViewerASCIIPrintf(viewer,"  Processors in row %d col partition %d \n",lu->nprow,lu->npcol);CHKERRQ(ierr);
+  /* would love to use superlu 'IFMT' macro but it looks like it's inconsistently applied, the
+   * format spec for int64_t is set to %d for whatever reason */
+  ierr = PetscViewerASCIIPrintf(viewer,"  Process grid nprow %lld x npcol %lld \n",(long long)lu->nprow,(long long)lu->npcol);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"  Equilibrate matrix %s \n",PetscBools[options.Equil != NO]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"  Replace tiny pivots %s \n",PetscBools[options.ReplaceTinyPivot != NO]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"  Use iterative refinement %s \n",PetscBools[options.IterRefine == SLU_DOUBLE]);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer,"  Processors in row %lld col partition %lld \n",(long long)lu->nprow,(long long)lu->npcol);CHKERRQ(ierr);
 
   switch (options.RowPerm) {
   case NOROWPERM:
@@ -651,17 +632,17 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A,MatFactorType ftype,Ma
       ierr = PetscOptionsInt("-mat_superlu_dist_r","Number rows in processor partition","None",lu->nprow,(PetscInt*)&lu->nprow,NULL);CHKERRQ(ierr);
       ierr = PetscOptionsInt("-mat_superlu_dist_c","Number columns in processor partition","None",lu->npcol,(PetscInt*)&lu->npcol,NULL);CHKERRQ(ierr);
       ierr = PetscOptionsEnd();CHKERRQ(ierr);
-      if (size != lu->nprow * lu->npcol) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of processes %d must equal to nprow %d * npcol %d",size,lu->nprow,lu->npcol);
+      if (PetscUnlikely(size != lu->nprow * lu->npcol)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of processes %d must equal to nprow %lld * npcol %lld",size,(long long)lu->nprow,(long long)lu->npcol);
       PetscStackCall("SuperLU_DIST:superlu_gridinit",superlu_gridinit(context ? context->comm : lu->comm_superlu, lu->nprow, lu->npcol, &lu->grid));
       if (context) context->grid = lu->grid;
-      ierr = PetscInfo(NULL,"Duplicating a communicator for SuperLU_DIST and calling superlu_gridinit()\n");
-      if (!flg) {
-        ierr = PetscInfo(NULL,"Storing communicator and SuperLU_DIST grid in communicator attribute\n");
+      ierr = PetscInfo(NULL,"Duplicating a communicator for SuperLU_DIST and calling superlu_gridinit()\n");CHKERRQ(ierr);
+      if (flg) {
+        ierr = PetscInfo(NULL,"Communicator attribute already in use so not saving communicator and SuperLU_DIST grid in communicator attribute \n");CHKERRQ(ierr);
       } else {
-        ierr = PetscInfo(NULL,"Communicator attribute already in use so not saving communicator and SuperLU_DIST grid in communicator attribute \n");
+        ierr = PetscInfo(NULL,"Storing communicator and SuperLU_DIST grid in communicator attribute\n");CHKERRQ(ierr);
       }
     } else {
-      ierr = PetscInfo(NULL,"Reusing communicator and superlu_gridinit() for SuperLU_DIST from communicator attribute.");
+      ierr = PetscInfo(NULL,"Reusing communicator and superlu_gridinit() for SuperLU_DIST from communicator attribute.");CHKERRQ(ierr);
       context->busy = PETSC_TRUE;
       lu->grid      = context->grid;
     }

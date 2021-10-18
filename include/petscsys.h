@@ -330,19 +330,6 @@ PETSC_EXTERN MPI_Datatype MPIU_BOOL PetscAttrMPITypeTag(PetscBool);
 .seealso: PetscReal, PetscScalar, PetscComplex, PetscInt, MPIU_REAL, MPIU_SCALAR, MPIU_COMPLEX
 M*/
 
-#if defined(PETSC_HAVE_STDINT_H) && defined(PETSC_HAVE_INTTYPES_H) && defined(PETSC_HAVE_MPI_INT64_T) /* MPI_INT64_T is not guaranteed to be a macro */
-#  define MPIU_INT64 MPI_INT64_T
-#  define PetscInt64_FMT PRId64
-#elif (PETSC_SIZEOF_LONG_LONG == 8)
-#  define MPIU_INT64 MPI_LONG_LONG_INT
-#  define PetscInt64_FMT "lld"
-#elif defined(PETSC_HAVE___INT64)
-#  define MPIU_INT64 MPI_INT64_T
-#  define PetscInt64_FMT "ld"
-#else
-#  error "cannot determine PetscInt64 type"
-#endif
-
 PETSC_EXTERN MPI_Datatype MPIU_FORTRANADDR;
 
 #if defined(PETSC_USE_64BIT_INDICES)

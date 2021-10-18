@@ -881,7 +881,7 @@ PetscErrorCode DMMoabLoadFromFile(MPI_Comm comm, PetscInt dim, PetscInt nghost, 
   merr = pcomm->collective_sync_partition();MBERR("Collective sync failed", merr);
 #endif
 
-  PetscInfo3(*dm, "MOAB file '%s' was successfully loaded. Found %" PetscInt_FMT " vertices and %" PetscInt_FMT " elements.\n", filename, verts.size(), elems.size());
+  PetscInfo3(*dm, "MOAB file '%s' was successfully loaded. Found %zu vertices and %zu elements.\n", filename, verts.size(), elems.size());
   ierr = PetscFree(readopts);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
