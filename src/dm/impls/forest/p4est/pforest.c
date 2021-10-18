@@ -305,9 +305,9 @@ static PetscErrorCode DMFTopologyCreate_pforest(DM dm, DMForestTopology topology
       ierr = PetscOptionsGetIntArray(((PetscObject)dm)->options,prefix,"-dm_p4est_brick_periodicity",P,&nretP,&flgP);CHKERRQ(ierr);
       ierr = PetscOptionsGetRealArray(((PetscObject)dm)->options,prefix,"-dm_p4est_brick_bounds",B,&nretB,&flgB);CHKERRQ(ierr);
       ierr = PetscOptionsGetBool(((PetscObject)dm)->options,prefix,"-dm_p4est_brick_use_morton_curve",&useMorton,&flgM);CHKERRQ(ierr);
-      if (flgN && nretN != P4EST_DIM) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d sizes in -dm_p4est_brick_size, gave %d",P4EST_DIM,nretN);
-      if (flgP && nretP != P4EST_DIM) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d periodicities in -dm_p4est_brick_periodicity, gave %d",P4EST_DIM,nretP);
-      if (flgB && nretB != 2 * P4EST_DIM) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d bounds in -dm_p4est_brick_bounds, gave %d",P4EST_DIM,nretP);
+      if (PetscUnlikely(flgN && nretN != P4EST_DIM)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d sizes in -dm_p4est_brick_size, gave %" PetscInt_FMT,P4EST_DIM,nretN);
+      if (PetscUnlikely(flgP && nretP != P4EST_DIM)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d periodicities in -dm_p4est_brick_periodicity, gave %" PetscInt_FMT,P4EST_DIM,nretP);
+      if (PetscUnlikely(flgB && nretB != 2 * P4EST_DIM)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d bounds in -dm_p4est_brick_bounds, gave %" PetscInt_FMT,P4EST_DIM,nretP);
     }
     for (i = 0; i < P4EST_DIM; i++) {
       P[i]  = (P[i] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE);
@@ -367,7 +367,7 @@ static PetscErrorCode DMConvert_plex_pforest(DM dm, DMType newtype, DM *pforest)
   ierr = PetscObjectTypeCompare((PetscObject)dm,DMPLEX,&isPlex);CHKERRQ(ierr);
   if (!isPlex) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM type %s, got %s",DMPLEX,((PetscObject)dm)->type_name);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (dim != P4EST_DIM) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %d",P4EST_DIM,dim);
+  if (PetscUnlikely(dim != P4EST_DIM)) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %" PetscInt_FMT,P4EST_DIM,dim);
   ierr = DMCreate(comm,pforest);CHKERRQ(ierr);
   ierr = DMSetType(*pforest,DMPFOREST);CHKERRQ(ierr);
   ierr = DMForestSetBaseDM(*pforest,dm);CHKERRQ(ierr);
@@ -1567,7 +1567,7 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
         /* we want to count every time cell p references v, so we see how many times it comes up in the closure.  This
          * only protects against periodicity problems */
         ierr = DMPlexGetTransitiveClosure(dm,p,PETSC_TRUE,&closureSize,&closure);CHKERRQ(ierr);
-        if (closureSize != P4EST_INSUL) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cell %" PetscInt_FMT " with wrong closure size %" PetscInt_FMT " != %" PetscInt_FMT "", p, closureSize, P4EST_INSUL);
+        if (PetscUnlikely(closureSize != P4EST_INSUL)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cell %" PetscInt_FMT " with wrong closure size %" PetscInt_FMT " != %d", p, closureSize, P4EST_INSUL);
         for (c = 0; c < P4EST_CHILDREN; c++) {
           PetscInt cellVert = closure[2 * (c + vertOff)];
 
@@ -1810,7 +1810,7 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
       PetscScalar *cellCoords = NULL;
 
       ierr = DMPlexVecGetClosure(dm, coordSec, coordVec, c, &dof, &cellCoords);CHKERRQ(ierr);
-      if (!localized && dof != P4EST_CHILDREN * coordDim) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Need coordinates at the corners: (dof) %" PetscInt_FMT " != %" PetscInt_FMT " * %" PetscInt_FMT " (sdim)", dof, P4EST_CHILDREN, coordDim);
+      if (PetscUnlikely(!localized && dof != P4EST_CHILDREN * coordDim)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Need coordinates at the corners: (dof) %" PetscInt_FMT " != %d * %" PetscInt_FMT " (sdim)", dof, P4EST_CHILDREN, coordDim);
       for (v = 0; v < P4EST_CHILDREN; v++) {
         PetscInt i, lim = PetscMin(3, coordDim);
         PetscInt p4estVert = PetscVertToP4estVert[v];
@@ -1978,8 +1978,8 @@ static PetscErrorCode DMReferenceTreeGetChildSymmetry_pforest(DM dm, PetscInt pa
     ierr = DMPlexGetDepthStratum(dm,dim,&dStart,&dEnd);CHKERRQ(ierr);
     if (parent >= dStart && parent <= dEnd) break;
   }
-  if (dim > 2) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot perform child symmetry for %d-cells",dim);
-  if (!dim) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A vertex has no children");
+  if (PetscUnlikely(dim > 2)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot perform child symmetry for %" PetscInt_FMT "-cells",dim);
+  if (PetscUnlikely(!dim)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A vertex has no children");
   if (childA < dStart || childA >= dEnd) { /* a 1-cell in a 2-cell */
     /* this is a lower-dimensional child: bootstrap */
     PetscInt       size, i, sA = -1, sB, sOrientB, sConeSize;
@@ -4273,9 +4273,9 @@ static PetscErrorCode DMConvert_pforest_plex(DM dm, DMType newtype, DM *plex)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   comm = PetscObjectComm((PetscObject)dm);
   ierr = PetscObjectTypeCompare((PetscObject)dm,DMPFOREST,&isPforest);CHKERRQ(ierr);
-  if (!isPforest) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM type %s, got %s",DMPFOREST,((PetscObject)dm)->type_name);
+  if (PetscUnlikely(!isPforest)) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM type %s, got %s",DMPFOREST,((PetscObject)dm)->type_name);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (dim != P4EST_DIM) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %d",P4EST_DIM,dim);
+  if (PetscUnlikely(dim != P4EST_DIM)) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %" PetscInt_FMT,P4EST_DIM,dim);
   forest  = (DM_Forest*) dm->data;
   pforest = (DM_Forest_pforest*) forest->data;
   ierr    = DMForestGetBaseDM(dm,&base);CHKERRQ(ierr);
@@ -4303,9 +4303,9 @@ static PetscErrorCode DMConvert_pforest_plex(DM dm, DMType newtype, DM *plex)
       ctype = P8EST_CONNECT_EDGE;
 #endif
     } else {
-      SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Invalid adjacency dimension %d",adjDim);
+      SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Invalid adjacency dimension %" PetscInt_FMT,adjDim);
     }
-    if (ctype != P4EST_CONNECT_FULL) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Adjacency dimension %" PetscInt_FMT " / codimension %" PetscInt_FMT " not supported yet",adjDim,adjCodim);
+    if (PetscUnlikely(ctype != P4EST_CONNECT_FULL)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Adjacency dimension %" PetscInt_FMT " / codimension %" PetscInt_FMT " not supported yet",adjDim,adjCodim);
     ierr = DMForestGetPartitionOverlap(dm,&overlap);CHKERRQ(ierr);
     ((DM_Plex *) newPlex->data)->overlap = overlap;
 

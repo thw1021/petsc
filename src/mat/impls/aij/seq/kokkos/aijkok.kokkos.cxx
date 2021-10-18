@@ -934,7 +934,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOSDEVICE(Mat B,Mat A,const Ma
     nv = (*pNf)/1000;
     if (nv>0) nVec = nv;
   } else Nf = 1;
-  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %" PetscInt_FMT " %" PetscInt_FMT "",n,Nf);
+  if (PetscUnlikely(n%Nf)) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n %% Nf != 0 %" PetscInt_FMT " %" PetscInt_FMT,n,Nf);
   ierr = ISGetIndices(isrow,&r_h);CHKERRQ(ierr);
   ierr = ISGetIndices(isicol,&ic_h);CHKERRQ(ierr);
   ierr = ISGetSize(isicol,&nc);CHKERRQ(ierr);

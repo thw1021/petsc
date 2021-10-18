@@ -242,7 +242,7 @@ PetscErrorCode ex3_1(void)
     /* migrate points */
     ierr = DMSwarmMigrate(dms,PETSC_TRUE);CHKERRQ(ierr);
     /* view points */
-    ierr = PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step%d",tk);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step%" PetscInt_FMT,tk);CHKERRQ(ierr);
     /* should use the regular SwarmView() api, not one for a particular type */
     ierr = SwarmViewGP(dms,prefix);CHKERRQ(ierr);
   }

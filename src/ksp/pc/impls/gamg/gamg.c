@@ -99,7 +99,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     ncrs = ncrs_eq/bs;
   }
   /* get number of PEs to make active 'new_size', reduce, can be any integer 1-P */
-  if (pc_gamg->level_reduction_factors[pc_gamg->current_level] == 0 && PetscDefined(HAVE_CUDA) && pc_gamg->current_level==0) { /* 0 turns reducing to 1 process/device on; do for HIP, etc. */
+  if (PetscDefined(HAVE_CUDA) && pc_gamg->level_reduction_factors[pc_gamg->current_level] == 0 && pc_gamg->current_level==0) { /* 0 turns reducing to 1 process/device on; do for HIP, etc. */
 #if defined(PETSC_HAVE_CUDA)
     PetscShmComm pshmcomm;
     PetscMPIInt  locrank;
@@ -112,7 +112,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     ierr = MPI_Comm_rank(loccomm, &locrank);CHKERRMPI(ierr);
     s_nnodes = !locrank;
     ierr = MPI_Allreduce(&s_nnodes,&r_nnodes,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
-    if (size%r_nnodes) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of nodes np=%" PetscInt_FMT " nnodes%" PetscInt_FMT "",size,r_nnodes);
+    if (PetscUnlikely(size%r_nnodes)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of nodes np=%d nnodes%" PetscInt_FMT,size,r_nnodes);
     devCount = 0;
     cerr = cudaGetDeviceCount(&devCount);
     cudaGetLastError(); /* Reset the last error */
@@ -128,7 +128,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"should not be here");
 #endif
   } else if (pc_gamg->level_reduction_factors[pc_gamg->current_level] > 0) {
-    if (PetscUnlikely(nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %d wrt reduction factor %" PetscInt_FMT "",nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
+    if (PetscUnlikely(nactive%pc_gamg->level_reduction_factors[pc_gamg->current_level])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of active process %d wrt reduction factor %" PetscInt_FMT,nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);
     new_size = nactive/pc_gamg->level_reduction_factors[pc_gamg->current_level];
     ierr = PetscInfo3(pc,"Manually setting reduction to %d active processes (%d/%" PetscInt_FMT ")\n",new_size,nactive,pc_gamg->level_reduction_factors[pc_gamg->current_level]);CHKERRQ(ierr);
   } else if (is_last && !pc_gamg->use_parallel_coarse_grid_solver) {

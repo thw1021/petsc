@@ -1633,11 +1633,11 @@ PetscErrorCode PCHPDDMInitializePackage(void)
   ierr = PetscLogEventRegister("PCHPDDMNext", PC_CLASSID, &PC_HPDDM_Next);CHKERRQ(ierr);
   static_assert(PETSC_HPDDM_MAXLEVELS <= 9, "PETSC_HPDDM_MAXLEVELS value is too high");
   for (i = 1; i < PETSC_HPDDM_MAXLEVELS; ++i) {
-    ierr = PetscSNPrintf(ename, sizeof(ename), "PCHPDDMSetUp L%1d", i);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ename, sizeof(ename), "PCHPDDMSetUp L%1" PetscInt_FMT, i);CHKERRQ(ierr);
     /* events during a PCSetUp() at level #i _except_ the assembly */
     /* of the Galerkin operator of the coarser level #(i + 1)      */
     ierr = PetscLogEventRegister(ename, PC_CLASSID, &PC_HPDDM_SetUp[i - 1]);CHKERRQ(ierr);
-    ierr = PetscSNPrintf(ename, sizeof(ename), "PCHPDDMSolve L%1d", i);CHKERRQ(ierr);
+    ierr = PetscSNPrintf(ename, sizeof(ename), "PCHPDDMSolve L%1" PetscInt_FMT, i);CHKERRQ(ierr);
     /* events during a PCApply() at level #i _except_              */
     /* the KSPSolve() of the coarser level #(i + 1)                */
     ierr = PetscLogEventRegister(ename, PC_CLASSID, &PC_HPDDM_Solve[i - 1]);CHKERRQ(ierr);

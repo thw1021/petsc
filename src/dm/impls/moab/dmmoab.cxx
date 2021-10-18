@@ -1002,7 +1002,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
 
 #ifdef MOAB_HAVE_MPI
     ierr = MPIU_Allreduce(&dmmoab->nloc, &dmmoab->n, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
-    PetscInfo4(NULL, "Filset ID: %u, Vertices: local - %" PetscInt_FMT ", owned - %" PetscInt_FMT ", ghosted - %" PetscInt_FMT ".\n", dmmoab->fileset, dmmoab->vlocal->size(), dmmoab->nloc, dmmoab->nghost);
+    PetscInfo4(NULL, "Filset ID: %lu, Vertices: local - %zu, owned - %" PetscInt_FMT ", ghosted - %" PetscInt_FMT ".\n", (unsigned long)dmmoab->fileset, dmmoab->vlocal->size(), dmmoab->nloc, dmmoab->nghost);
 #else
     dmmoab->n = dmmoab->nloc;
 #endif
@@ -1199,7 +1199,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
 #endif
 
   }
-  PetscInfo3(NULL, "Found %" PetscInt_FMT " boundary vertices, %" PetscInt_FMT " boundary faces and %" PetscInt_FMT " boundary elements.\n", dmmoab->bndyvtx->size(), dmmoab->bndyfaces->size(), dmmoab->bndyelems->size());
+  PetscInfo3(NULL, "Found %zu boundary vertices, %zu boundary faces and %zu boundary elements.\n", dmmoab->bndyvtx->size(), dmmoab->bndyfaces->size(), dmmoab->bndyelems->size());
 
   /* Get the material sets and populate the data for all locally owned elements */
   {
@@ -1378,10 +1378,10 @@ PETSC_EXTERN PetscErrorCode DMMoabView_Ascii(DM dm, PetscViewer viewer)
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "Sizes: cells=%" PetscInt_FMT ", vertices=%" PetscInt_FMT ", blocks=%" PetscInt_FMT "\n", dmmoab->nele, dmmoab->n, dmmoab->bs);CHKERRQ(ierr);
     /* print boundary data */
-    ierr = PetscViewerASCIIPrintf(viewer, "Boundary trace:\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size());CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Boundary trace:\n");CHKERRQ(ierr);
     {
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "cells=%" PetscInt_FMT ", faces=%" PetscInt_FMT ", vertices=%" PetscInt_FMT "\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size());CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "cells=%zu, faces=%zu, vertices=%zu\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size());CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
     /* print field data */
@@ -1389,7 +1389,7 @@ PETSC_EXTERN PetscErrorCode DMMoabView_Ascii(DM dm, PetscViewer viewer)
     {
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
       for (int i = 0; i < dmmoab->numFields; ++i) {
-        ierr = PetscViewerASCIIPrintf(viewer, "[%" PetscInt_FMT "] - %s\n", i, dmmoab->fieldNames[i]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, "[%d] - %s\n", i, dmmoab->fieldNames[i]);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
