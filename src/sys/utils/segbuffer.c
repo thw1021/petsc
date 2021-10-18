@@ -92,11 +92,24 @@ PetscErrorCode PetscSegBufferGet(PetscSegBuffer seg,size_t count,void *buf)
   struct _PetscSegBufferLink *s;
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+#pragma omp critical
+  {
+  PetscErrorCode ierr_t;
+#define CHKERRQ_T(_i) ierr_t = _i
+#else
+#define CHKERRQ_T(_i) CHKERRQ(_i)
+#endif
   s = seg->head;
-  if (PetscUnlikely(s->used + count > s->alloc)) {ierr = PetscSegBufferAlloc_Private(seg,count);CHKERRQ(ierr);}
+  if (PetscUnlikely(s->used + count > s->alloc)) {ierr = PetscSegBufferAlloc_Private(seg,count);CHKERRQ_T(ierr);}
   s = seg->head;
   *(char**)buf = &s->u.array[s->used*seg->unitbytes];
   s->used += count;
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+  if (ierr_t) ierr = ierr_t;
+  }
+  CHKERRQ(ierr);
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -277,8 +290,22 @@ PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer seg,size_t unused)
   struct _PetscSegBufferLink *head;
 
   PetscFunctionBegin;
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+  PetscErrorCode ierr = 0;
+#pragma omp critical
+  {
+  PetscErrorCode ierr_t = 0;
+#define SETERRQ2_T(_i,_j,_k,_m,_n) ierr_t=1
+#else
+#define SETERRQ2_T(_i,_j,_k,_m,_n) SETERRQ2(_i,_j,_k,_m,_n)
+#endif
   head = seg->head;
-  if (PetscUnlikely(head->used < unused)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%D) than previously gotten (%D)",unused,head->used);
+  if (PetscUnlikely(head->used < unused)) SETERRQ2_T(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%D) than previously gotten (%D)",unused,head->used);
   head->used -= unused;
+#if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
+  if (ierr_t) ierr = ierr_t;
+  }
+  if (ierr) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"In OMP thread: Attempt to return more unused entries (%D) than previously gotten (%D)",unused,head->used);
+#endif
   PetscFunctionReturn(0);
 }
