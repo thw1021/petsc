@@ -5356,14 +5356,13 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
 {
   Mat_MPIAIJ               *p=(Mat_MPIAIJ*)P->data;
   Mat_SeqAIJ               *pd=(Mat_SeqAIJ*)(p->A)->data,*po=(Mat_SeqAIJ*)(p->B)->data,*p_oth;
-  PetscInt                 plocalsize,nrows,*ilocal,*oilocal,i,lidx,*nrcols,*nlcols,ncol;
-  PetscMPIInt              owner;
+  PetscInt                 plocalsize,nrows,*ilocal,*oilocal,*nrcols,*nlcols,ncol=0;
   PetscSFNode              *iremote,*oiremote;
   const PetscInt           *lrowindices;
   PetscErrorCode           ierr;
   PetscSF                  sf,osf;
-  PetscInt                 pcstart,*roffsets,*loffsets,*pnnz,j;
-  PetscInt                 ontotalcols,dntotalcols,ntotalcols,nout;
+  PetscInt                 pcstart,*roffsets,*loffsets,*pnnz;
+  PetscInt                 ontotalcols=0,dntotalcols=0,ntotalcols=0,nout;
   MPI_Comm                 comm;
   ISLocalToGlobalMapping   mapping;
 
@@ -5376,15 +5375,13 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
   ierr = ISGetLocalSize(rows,&nrows);CHKERRQ(ierr);
   ierr = PetscCalloc1(nrows,&iremote);CHKERRQ(ierr);
   ierr = ISGetIndices(rows,&lrowindices);CHKERRQ(ierr);
-  for (i=0;i<nrows;i++) {
+  for (PetscInt i = 0; i < nrows; ++i) {
+    PetscMPIInt owner;
     /* Find a remote index and an owner for a row
      * The row could be local or remote
      * */
-    owner = 0;
-    lidx  = 0;
-    ierr = PetscLayoutFindOwnerIndex(P->rmap,lrowindices[i],&owner,&lidx);CHKERRQ(ierr);
-    iremote[i].index = lidx;
-    iremote[i].rank  = owner;
+    ierr = PetscLayoutFindOwnerIndex(P->rmap,lrowindices[i],&owner,&(iremote[i].index));CHKERRQ(ierr);
+    iremote[i].rank = owner;
   }
   /* Create SF to communicate how many nonzero columns for each row */
   ierr = PetscSFCreate(comm,&sf);CHKERRQ(ierr);
@@ -5395,12 +5392,10 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
   ierr = PetscSFSetFromOptions(sf);CHKERRQ(ierr);
   ierr = PetscSFSetUp(sf);CHKERRQ(ierr);
 
-  ierr = PetscCalloc1(2*(plocalsize+1),&roffsets);CHKERRQ(ierr);
-  ierr = PetscCalloc1(2*plocalsize,&nrcols);CHKERRQ(ierr);
-  ierr = PetscCalloc1(nrows,&pnnz);CHKERRQ(ierr);
+  ierr = PetscCalloc5(2*(plocalsize+1),&roffsets,2*plocalsize,&nrcols,nrows,&pnnz,2*nrows,&nlcols,2*nrows,&loffsets);CHKERRQ(ierr);
   roffsets[0] = 0;
   roffsets[1] = 0;
-  for (i=0;i<plocalsize;i++) {
+  for (PetscInt i = 0; i < plocalsize; ++i) {
     /* diag */
     nrcols[i*2+0] = pd->i[i+1] - pd->i[i];
     /* off diag */
@@ -5409,20 +5404,13 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
     roffsets[(i+1)*2+0] = roffsets[i*2+0] + nrcols[i*2+0];
     roffsets[(i+1)*2+1] = roffsets[i*2+1] + nrcols[i*2+1];
   }
-  ierr = PetscCalloc1(2*nrows,&nlcols);CHKERRQ(ierr);
-  ierr = PetscCalloc1(2*nrows,&loffsets);CHKERRQ(ierr);
   /* 'r' means root, and 'l' means leaf */
-  ierr = PetscSFBcastBegin(sf,MPIU_2INT,nrcols,nlcols,MPI_REPLACE);CHKERRQ(ierr);
-  ierr = PetscSFBcastBegin(sf,MPIU_2INT,roffsets,loffsets,MPI_REPLACE);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_2INT,nrcols,nlcols,MPI_REPLACE);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(sf,MPIU_2INT,roffsets,loffsets,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,nrcols,nlcols,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastBegin(sf,MPIU_INT,roffsets,loffsets,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,nrcols,nlcols,MPI_REPLACE);CHKERRQ(ierr);
+  ierr = PetscSFBcastEnd(sf,MPIU_INT,roffsets,loffsets,MPI_REPLACE);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
-  ierr = PetscFree(roffsets);CHKERRQ(ierr);
-  ierr = PetscFree(nrcols);CHKERRQ(ierr);
-  dntotalcols = 0;
-  ontotalcols = 0;
-  ncol = 0;
-  for (i=0;i<nrows;i++) {
+  for (PetscInt i = 0; i < nrows; ++i) {
     pnnz[i] = nlcols[i*2+0] + nlcols[i*2+1];
     ncol = PetscMax(pnnz[i],ncol);
     /* diag */
@@ -5435,7 +5423,6 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
    * */
   ierr = MatCreateSeqAIJ(PETSC_COMM_SELF,nrows,ncol,0,pnnz,P_oth);CHKERRQ(ierr);
   ierr = MatSetUp(*P_oth);CHKERRQ(ierr);
-  ierr = PetscFree(pnnz);CHKERRQ(ierr);
   p_oth = (Mat_SeqAIJ*) (*P_oth)->data;
   /* diag */
   ierr = PetscCalloc1(dntotalcols,&iremote);CHKERRQ(ierr);
@@ -5447,27 +5434,26 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
   ierr = PetscCalloc1(ontotalcols,&oilocal);CHKERRQ(ierr);
   dntotalcols = 0;
   ontotalcols = 0;
-  ntotalcols  = 0;
-  for (i=0;i<nrows;i++) {
-    owner = 0;
+  for (PetscInt i = 0; i < nrows; ++i) {
+    PetscMPIInt owner = 0;
+
     ierr = PetscLayoutFindOwnerIndex(P->rmap,lrowindices[i],&owner,NULL);CHKERRQ(ierr);
     /* Set iremote for diag matrix */
-    for (j=0;j<nlcols[i*2+0];j++) {
-      iremote[dntotalcols].index   = loffsets[i*2+0] + j;
-      iremote[dntotalcols].rank    = owner;
+    for (PetscInt j = 0; j < nlcols[i*2+0]; ++j) {
+      iremote[dntotalcols].index = loffsets[i*2+0] + j;
+      iremote[dntotalcols].rank  = owner;
       /* P_oth is seqAIJ so that ilocal need to point to the first part of memory */
-      ilocal[dntotalcols++]        = ntotalcols++;
+      ilocal[dntotalcols++]      = ntotalcols++;
     }
     /* off diag */
-    for (j=0;j<nlcols[i*2+1];j++) {
-      oiremote[ontotalcols].index   = loffsets[i*2+1] + j;
-      oiremote[ontotalcols].rank    = owner;
-      oilocal[ontotalcols++]        = ntotalcols++;
+    for (PetscInt j = 0; j < nlcols[i*2+1]; ++j) {
+      oiremote[ontotalcols].index = loffsets[i*2+1] + j;
+      oiremote[ontotalcols].rank  = owner;
+      oilocal[ontotalcols++]      = ntotalcols++;
     }
   }
   ierr = ISRestoreIndices(rows,&lrowindices);CHKERRQ(ierr);
-  ierr = PetscFree(loffsets);CHKERRQ(ierr);
-  ierr = PetscFree(nlcols);CHKERRQ(ierr);
+  ierr = PetscFree5(roffsets,nrcols,pnnz,nlcols,loffsets);CHKERRQ(ierr);
   ierr = PetscSFCreate(comm,&sf);CHKERRQ(ierr);
   /* P serves as roots and P_oth is leaves
    * Diag matrix
@@ -5486,7 +5472,7 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
   ierr = PetscSFBcastBegin(osf,MPIU_SCALAR,po->a,p_oth->a,MPI_REPLACE);CHKERRQ(ierr);
   ierr = MatGetOwnershipRangeColumn(P,&pcstart,NULL);CHKERRQ(ierr);
   /* Convert to global indices for diag matrix */
-  for (i=0;i<pd->i[plocalsize];i++) pd->j[i] += pcstart;
+  for (PetscInt i = 0; i < pd->i[plocalsize]; ++i) pd->j[i] += pcstart;
   ierr = PetscSFBcastBegin(sf,MPIU_INT,pd->j,p_oth->j,MPI_REPLACE);CHKERRQ(ierr);
   /* We want P_oth store global indices */
   ierr = ISLocalToGlobalMappingCreate(comm,1,p->B->cmap->n,p->garray,PETSC_COPY_VALUES,&mapping);CHKERRQ(ierr);
@@ -5496,17 +5482,17 @@ PetscErrorCode MatCreateSeqSubMatrixWithRows_Private(Mat P,IS rows,Mat *P_oth)
   ierr = PetscSFBcastBegin(osf,MPIU_INT,po->j,p_oth->j,MPI_REPLACE);CHKERRQ(ierr);
   ierr = PetscSFBcastEnd(sf,MPIU_INT,pd->j,p_oth->j,MPI_REPLACE);CHKERRQ(ierr);
   /* Convert back to local indices */
-  for (i=0;i<pd->i[plocalsize];i++) pd->j[i] -= pcstart;
+  for (PetscInt i = 0; i < pd->i[plocalsize]; ++i) pd->j[i] -= pcstart;
   ierr = PetscSFBcastEnd(osf,MPIU_INT,po->j,p_oth->j,MPI_REPLACE);CHKERRQ(ierr);
   nout = 0;
   ierr = ISGlobalToLocalMappingApply(mapping,IS_GTOLM_DROP,po->i[plocalsize],po->j,&nout,po->j);CHKERRQ(ierr);
-  if (nout != po->i[plocalsize]) SETERRQ2(comm,PETSC_ERR_ARG_INCOMP,"n %D does not equal to nout %D \n",po->i[plocalsize],nout);
+  if (PetscUnlikely(nout != po->i[plocalsize])) SETERRQ2(comm,PETSC_ERR_ARG_INCOMP,"n %D does not equal to nout %D \n",po->i[plocalsize],nout);
   ierr = ISLocalToGlobalMappingDestroy(&mapping);CHKERRQ(ierr);
   /* Exchange values */
   ierr = PetscSFBcastEnd(sf,MPIU_SCALAR,pd->a,p_oth->a,MPI_REPLACE);CHKERRQ(ierr);
   ierr = PetscSFBcastEnd(osf,MPIU_SCALAR,po->a,p_oth->a,MPI_REPLACE);CHKERRQ(ierr);
   /* Stop PETSc from shrinking memory */
-  for (i=0;i<nrows;i++) p_oth->ilen[i] = p_oth->imax[i];
+  ierr = PetscArraycpy(p_oth->imax,p_oth->ilen,nrows);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(*P_oth,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(*P_oth,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   /* Attach PetscSF objects to P_oth so that we can reuse it later */
