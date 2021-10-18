@@ -81,7 +81,7 @@ int main(int argc,char **args)
     il   = 1;
     ierr = PetscBLASIntCast(0.2*m,&iu);CHKERRQ(ierr);
     ierr = PetscBLASIntCast(n,&in);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF," LAPACKsyevx: compute %d to %d-th eigensolutions...\n",il,iu);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF," LAPACKsyevx: compute %" PetscBLASInt_FMT " to %" PetscBLASInt_FMT "-th eigensolutions...\n",il,iu);CHKERRQ(ierr);
     ierr  = PetscMalloc1(m*n+1,&evecs_array);CHKERRQ(ierr);
     ierr  = PetscMalloc1(6*n+1,&iwork);CHKERRQ(ierr);
     ifail = iwork + 5*n;
@@ -92,13 +92,13 @@ int main(int argc,char **args)
     ierr = PetscFree(iwork);CHKERRQ(ierr);
   }
   ierr = MatDenseRestoreArray(A_dense,&arrayA);CHKERRQ(ierr);
-  if (nevs <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED, "nev=%d, no eigensolution has found", nevs);
+  if (PetscUnlikely(nevs <= 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED, "nev=%" PetscBLASInt_FMT ", no eigensolution has found", nevs);
 
   /* View eigenvalues */
   ierr = PetscOptionsHasName(NULL,NULL, "-eig_view", &flg);CHKERRQ(ierr);
   if (flg) {
-    ierr = PetscPrintf(PETSC_COMM_SELF," %d evals: \n",nevs);CHKERRQ(ierr);
-    for (i=0; i<nevs; i++) {ierr = PetscPrintf(PETSC_COMM_SELF,"%" PetscInt_FMT "  %g\n",i+il,(double)evals[i]);CHKERRQ(ierr);}
+    ierr = PetscPrintf(PETSC_COMM_SELF," %" PetscBLASInt_FMT " evals: \n",nevs);CHKERRQ(ierr);
+    for (i=0; i<nevs; i++) {ierr = PetscPrintf(PETSC_COMM_SELF,"%" PetscInt_FMT "  %g\n",(PetscInt)(i+il),(double)evals[i]);CHKERRQ(ierr);}
   }
 
   /* Check residuals and orthogonality */
@@ -154,7 +154,7 @@ int main(int argc,char **args)
     LAPACKgesvd_("S","S",&im,&in,arrayA,&im,evals,arrayU,&minMN,arrayVT,&minMN,work,&lwork,&lierr);
     ierr = MatDenseRestoreArray(A_dense,&arrayA);CHKERRQ(ierr);
     if (!lierr) {
-      ierr = PetscPrintf(PETSC_COMM_SELF," 1st 10 of %d singular values: \n",minMN);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF," 1st 10 of %" PetscBLASInt_FMT " singular values: \n",minMN);CHKERRQ(ierr);
       for (i=0; i<10; i++) {ierr = PetscPrintf(PETSC_COMM_SELF,"%" PetscInt_FMT "  %g\n",i,(double)evals[i]);CHKERRQ(ierr);}
     } else {
       ierr = PetscPrintf(PETSC_COMM_SELF,"LAPACKgesvd_ fails!");CHKERRQ(ierr);

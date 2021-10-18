@@ -144,7 +144,7 @@ PetscErrorCode TSStep_Sundials(TS ts)
         PetscReal tcur;
         ierr = CVodeGetNumSteps(mem,&nsteps);CHKERRQ(ierr);
         ierr = CVodeGetCurrentTime(mem,&tcur);CHKERRQ(ierr);
-        SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_LIB,"CVode() fails, CV_TOO_MUCH_WORK. At t=%g, nsteps %" PetscInt_FMT " exceeds maxstep %" PetscInt_FMT ". Increase '-ts_max_steps <>' or modify TSSetMaxSteps()",(double)tcur,nsteps,ts->max_steps);
+        SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_LIB,"CVode() fails, CV_TOO_MUCH_WORK. At t=%g, nsteps %ld exceeds maxstep %" PetscInt_FMT ". Increase '-ts_max_steps <>' or modify TSSetMaxSteps()",(double)tcur,nsteps,ts->max_steps);
       } break;
       case CV_TOO_MUCH_ACC:
         SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"CVode() fails, CV_TOO_MUCH_ACC");
@@ -450,31 +450,31 @@ PetscErrorCode TSView_Sundials(TS ts,PetscViewer viewer)
     ierr = CVodeGetIntegratorStats(cvode->mem,&nsteps,&nfevals,
                                    &nlinsetups,&nfails,&qlast,&qcur,
                                    &hinused,&hlast,&hcur,&tcur);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials cumulative number of internal steps %" PetscInt_FMT "\n",nsteps);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of calls to rhs function %" PetscInt_FMT "\n",nfevals);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of calls to linear solver setup function %" PetscInt_FMT "\n",nlinsetups);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of error test failures %" PetscInt_FMT "\n",nfails);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials cumulative number of internal steps %ld\n",nsteps);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of calls to rhs function %ld\n",nfevals);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of calls to linear solver setup function %ld\n",nlinsetups);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of error test failures %ld\n",nfails);CHKERRQ(ierr);
 
     ierr = CVodeGetNonlinSolvStats(cvode->mem,&its,&nfails);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of nonlinear solver iterations %" PetscInt_FMT "\n",its);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of nonlinear convergence failure %" PetscInt_FMT "\n",nfails);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of nonlinear solver iterations %ld\n",its);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of nonlinear convergence failure %ld\n",nfails);CHKERRQ(ierr);
 
     ierr = CVSpilsGetNumLinIters(cvode->mem, &its);CHKERRQ(ierr); /* its = no. of calls to TSPrecond_Sundials() */
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of linear iterations %" PetscInt_FMT "\n",its);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of linear iterations %ld\n",its);CHKERRQ(ierr);
     ierr = CVSpilsGetNumConvFails(cvode->mem,&itmp);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of linear convergence failures %" PetscInt_FMT "\n",itmp);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of linear convergence failures %ld\n",itmp);CHKERRQ(ierr);
 
     ierr = TSSundialsGetPC(ts,&pc);CHKERRQ(ierr);
     ierr = PCView(pc,viewer);CHKERRQ(ierr);
     ierr = CVSpilsGetNumPrecEvals(cvode->mem,&itmp);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of preconditioner evaluations %" PetscInt_FMT "\n",itmp);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of preconditioner evaluations %ld\n",itmp);CHKERRQ(ierr);
     ierr = CVSpilsGetNumPrecSolves(cvode->mem,&itmp);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of preconditioner solves %" PetscInt_FMT "\n",itmp);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of preconditioner solves %ld\n",itmp);CHKERRQ(ierr);
 
     ierr = CVSpilsGetNumJtimesEvals(cvode->mem,&itmp);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of Jacobian-vector product evaluations %" PetscInt_FMT "\n",itmp);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of Jacobian-vector product evaluations %ld\n",itmp);CHKERRQ(ierr);
     ierr = CVSpilsGetNumRhsEvals(cvode->mem,&itmp);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of rhs calls for finite diff. Jacobian-vector evals %" PetscInt_FMT "\n",itmp);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Sundials no. of rhs calls for finite diff. Jacobian-vector evals %ld\n",itmp);CHKERRQ(ierr);
   } else if (isstring) {
     ierr = PetscViewerStringSPrintf(viewer,"Sundials type %s",type);CHKERRQ(ierr);
   }

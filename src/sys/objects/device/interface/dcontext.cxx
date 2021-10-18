@@ -265,7 +265,7 @@ PetscErrorCode PetscDeviceContextGetDevice(PetscDeviceContext dctx, PetscDevice 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(device,2);
-  if (PetscUnlikelyDebug(!dctx->device)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext %D has no attached PetscDevice to get",dctx->id);
+  if (PetscUnlikelyDebug(!dctx->device)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext %" PetscInt_FMT " has no attached PetscDevice to get",dctx->id);
   *device = dctx->device;
   PetscFunctionReturn(0);
 }
@@ -412,6 +412,10 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
   PetscFunctionReturn(0);
 }
 
+#define PETSC_USE_DEBUG_AND_INFO (PetscDefined(USE_DEBUG) && PetscDefined(USE_INFO))
+#if PETSC_USE_DEBUG_AND_INFO
+#include <string>
+#endif
 /*@C
   PetscDeviceContextFork - Create a set of dependent child contexts from a parent context
 
@@ -448,7 +452,7 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 @*/
 PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, PetscDeviceContext **dsub)
 {
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
   const PetscInt      nBefore = n;
   static std::string  idList;
 #endif
@@ -460,7 +464,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(dsub,3);
   if (PetscUnlikelyDebug(n < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts requested %" PetscInt_FMT " < 0",n);
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
   /* reserve 4 chars per id, 2 for number and 2 for ', ' separator */
   idList.reserve(4*n);
 #endif
@@ -490,7 +494,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
       ierr = PetscDeviceContextWaitForContext(dsubTmp[i],dctx);CHKERRQ(ierr);
       /* register the child with its parent */
       dctx->childIDs[i] = dsubTmp[i]->id;
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
       idList += std::to_string(dsubTmp[i]->id);
       if (n != 1) idList += ", ";
 #endif
@@ -498,8 +502,8 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
     }
     ++i;
   }
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
-  ierr = PetscInfo3(PETSC_NULLPTR,"Forked %D children from parent %" PetscInt_FMT " with IDs: %s\n",nBefore,dctx->id,idList.c_str());CHKERRQ(ierr);
+#if PETSC_USE_DEBUG_AND_INFO
+  ierr = PetscInfo3(PETSC_NULLPTR,"Forked %" PetscInt_FMT " children from parent %" PetscInt_FMT " with IDs: %s\n",nBefore,dctx->id,idList.c_str());CHKERRQ(ierr);
   /* resets the size but doesn't deallocate the memory */
   idList.clear();
 #endif
@@ -781,7 +785,7 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
-  if (PetscUnlikelyDebug(!dctx->setup)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext %D must be set up before being set as global context",dctx->id);
+  if (PetscUnlikelyDebug(!dctx->setup)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"PetscDeviceContext %" PetscInt_FMT " must be set up before being set as global context",dctx->id);
   globalContext = dctx;
   ierr = PetscInfo1(PETSC_NULLPTR,"Set global PetscDeviceContext id %" PetscInt_FMT "\n",dctx->id);CHKERRQ(ierr);
   PetscFunctionReturn(0);
