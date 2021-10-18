@@ -88,15 +88,19 @@ PetscErrorCode PetscSegBufferCreate(size_t unitbytes,size_t expected,PetscSegBuf
 @*/
 PetscErrorCode PetscSegBufferGet(PetscSegBuffer seg,size_t count,void *buf)
 {
-  PetscErrorCode ierr;
+  PetscErrorCode ierr = 0;
   struct _PetscSegBufferLink *s;
 
   PetscFunctionBegin;
-  s = seg->head;
-  if (PetscUnlikely(s->used + count > s->alloc)) {ierr = PetscSegBufferAlloc_Private(seg,count);CHKERRQ(ierr);}
-  s = seg->head;
-  *(char**)buf = &s->u.array[s->used*seg->unitbytes];
-  s->used += count;
+  //PetscPragmaOMP("critical (PetscSegBufferGet), omp_sync_hint_uncontended") {
+  PetscPragmaOMP(critical) {
+    s = seg->head;
+    if (PetscUnlikely(s->used + count > s->alloc)) ierr = PetscSegBufferAlloc_Private(seg,count);
+    s = seg->head;
+    *(char**)buf = &s->u.array[s->used*seg->unitbytes];
+    s->used += count;
+  }
+  CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -274,11 +278,16 @@ PetscErrorCode PetscSegBufferGetSize(PetscSegBuffer seg,size_t *usedsize)
 @*/
 PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer seg,size_t unused)
 {
+  PetscErrorCode ierr = 0;
   struct _PetscSegBufferLink *head;
 
   PetscFunctionBegin;
-  head = seg->head;
-  if (PetscUnlikely(head->used < unused)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%D) than previously gotten (%D)",unused,head->used);
-  head->used -= unused;
+  //  PetscPragmaOMP(critical (PetscSegBufferUnuse), omp_sync_hint_uncontended) {
+  PetscPragmaOMP(critical) {
+    head = seg->head;
+    if (PetscUnlikely(head->used < unused)) ierr = 1;
+    head->used -= unused;
+  }
+  if (ierr) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%D) than previously gotten (%D)",unused,head->used);
   PetscFunctionReturn(0);
 }
