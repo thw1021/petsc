@@ -72,6 +72,9 @@ PETSC_EXTERN PetscErrorCode PetscSpaceGetHeightSubspace(PetscSpace, PetscInt, Pe
 PETSC_EXTERN PetscErrorCode PetscSpacePolynomialSetTensor(PetscSpace, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscSpacePolynomialGetTensor(PetscSpace, PetscBool *);
 
+PETSC_EXTERN PetscErrorCode PetscSpacePTrimmedSetFormDegree(PetscSpace, PetscInt);
+PETSC_EXTERN PetscErrorCode PetscSpacePTrimmedGetFormDegree(PetscSpace, PetscInt *);
+
 PETSC_EXTERN PetscErrorCode PetscSpaceTensorSetNumSubspaces(PetscSpace, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscSpaceTensorGetNumSubspaces(PetscSpace, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscSpaceTensorSetSubspace(PetscSpace, PetscInt, PetscSpace);
