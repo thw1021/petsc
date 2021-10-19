@@ -20,6 +20,8 @@ Changes: Development
 
 .. rubric:: Sys:
 
+- Add ``MPI_Comm_[get|set]_name()`` and to MPIUNI
+
 .. rubric:: PetscViewer:
 
 .. rubric:: PetscDraw:
