@@ -1155,7 +1155,7 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
    test:
       suffix: amgx
       nsize: 1
-      requires: amgx !single !complex
+      requires: !single !complex
       args: -da_refine 2 -ksp_monitor -snes_monitor -snes_view -pc_type amgx
 
 TEST*/
