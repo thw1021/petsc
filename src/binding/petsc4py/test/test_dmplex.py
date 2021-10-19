@@ -130,21 +130,16 @@ class BaseTestPlex(object):
         self.assertNotEqual(numInterior, pEnd - pStart)
         self.assertEqual(numBoundary + numInterior, pEnd - pStart)
 
-
-    def testAdapt(self):
+    def testMetric(self):
         dim = self.plex.getDimension()
         if dim == 1: return
-        vStart, vEnd = self.plex.getDepthStratum(0)
-        numVertices = vEnd-vStart
-        metric_array = np.zeros([numVertices,dim,dim],dtype=PETSc.ScalarType)
-        for met in metric_array:
-            met[:,:] = np.diag([9]*dim)
-        metric = PETSc.Vec().createWithArray(metric_array)
-        try:
-            newplex = self.plex.adaptMetric(metric,"")
-        except PETSc.Error as exc:
-            if exc.ierr != ERR_SUP: raise
-
+        if not self.plex.isSimplex(): return
+        metric1 = self.plex.metricCreateUniform(0.625)
+        metric2 = self.plex.metricCreateUniform(2.5)
+        metric = self.plex.metricIntersection2(metric1, metric2)
+        assert np.allclose(metric.array, metric1.array)
+        self.plex.metricEnforceSPD(metric)
+        assert np.allclose(metric.array, metric1.array)
 
 # --------------------------------------------------------------------
 
