@@ -47,18 +47,18 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceKind kind, PetscDevice *device)
 #if PetscDefined(HAVE_CUDA)
   case PETSC_DEVICE_CUDA:
     ierr = cudaDevice.getDevice(dev);CHKERRQ(ierr);
-    break;
+    *device = dev;
+    PetscFunctionReturn(0);
 #endif
 #if PetscDefined(HAVE_HIP)
   case PETSC_DEVICE_HIP:
     ierr = hipDevice.getDevice(dev);CHKERRQ(ierr);
-    break;
+    *device = dev;
+    PetscFunctionReturn(0);
 #endif
   default:
     SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"Must have configured PETSc with %s support to use PetscDeviceKind %d",PetscDeviceKinds[kind],kind);
   }
-  *device = dev;
-  PetscFunctionReturn(0);
 }
 
 /*@C
@@ -88,17 +88,16 @@ PetscErrorCode PetscDeviceConfigure(PetscDevice device)
 #if PetscDefined(HAVE_CUDA)
   case PETSC_DEVICE_CUDA:
     ierr = cudaDevice.configureDevice(device);CHKERRQ(ierr);
-    break;
+    PetscFunctionReturn(0);
 #endif
 #if PetscDefined(HAVE_HIP)
   case PETSC_DEVICE_HIP:
     ierr = hipDevice.configureDevice(device);CHKERRQ(ierr);
-    break;
+    PetscFunctionReturn(0);
 #endif
   default:
     SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"Must have configured PETSc with %s support to use PetscDeviceKind %d",PetscDeviceKinds[device->kind],device->kind);
   }
-  PetscFunctionReturn(0);
 }
 
 /*@C
