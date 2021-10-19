@@ -20,6 +20,16 @@ Changes: Development
 
 .. rubric:: Sys:
 
+- Add ``MPI_Comm_[get|set]_name()`` and to MPIUNI
+- Remove ``petsccublas.h`` and ``petschipblas.h``
+- Remove ``-petsc_use_default_null_stream`` and ``-[cuda|hip]_synchronize`` options
+- Add ``-device_enable``, ``-device_select`` and ``-device_view`` startup-options
+- Replace ``-[cuda|hip]_device`` with split options ``-device_enable_[cuda|hip]`` and ``-device_select_[cuda|hip]`` to enable fine-grained control of device selection and initialization strategy
+- Replace ``-[cuda|hip]_view`` with ``-device_view_[cuda|hip]``
+- Add ``PetscDeviceInitType`` to enumerate PETSc device initialization strategies
+- Add ``PetscDeviceInitialize()`` to eagerly initialize a ``PetscDeviceType``, and ``PetscDeviceInitialized()`` to query the corresponding initialization state
+- Add ``PetscDeviceView()``
+
 .. rubric:: PetscViewer:
 
 .. rubric:: PetscDraw:
