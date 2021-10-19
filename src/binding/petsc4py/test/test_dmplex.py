@@ -137,7 +137,7 @@ class BaseTestPlex(object):
         if not self.plex.isSimplex(): return
         metric = self.plex.metricCreateUniform(9.0)
         try:
-            newplex = self.plex.adaptMetric(metric,"")
+            newplex = self.plex.adaptMetric(metric)
         except PETSc.Error as exc:
             if exc.ierr != ERR_SUP: raise
 
