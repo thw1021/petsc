@@ -130,6 +130,16 @@ class BaseTestPlex(object):
         self.assertNotEqual(numInterior, pEnd - pStart)
         self.assertEqual(numBoundary + numInterior, pEnd - pStart)
 
+    def testMetric(self):
+        dim = self.plex.getDimension()
+        if dim == 1: return
+        if not self.plex.isSimplex(): return
+        metric1 = self.plex.metricCreateUniform(0.625)
+        metric2 = self.plex.metricCreateUniform(2.5)
+        metric = self.plex.metricIntersection2(metric1, metric2)
+        assert np.allclose(metric.array, metric1.array)
+        self.plex.metricEnforceSPD(metric)
+        assert np.allclose(metric.array, metric1.array)
 
 # --------------------------------------------------------------------
 
