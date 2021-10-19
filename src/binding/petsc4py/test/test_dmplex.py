@@ -134,6 +134,7 @@ class BaseTestPlex(object):
     def testAdapt(self):
         dim = self.plex.getDimension()
         if dim == 1: return
+        if not self.plex.isSimplex(): return
         vStart, vEnd = self.plex.getDepthStratum(0)
         numVertices = vEnd-vStart
         metric_array = np.zeros([numVertices,dim,dim],dtype=PETSc.ScalarType)
@@ -141,7 +142,7 @@ class BaseTestPlex(object):
             met[:,:] = np.diag([9]*dim)
         metric = PETSc.Vec().createWithArray(metric_array)
         try:
-            newplex = self.plex.adaptMetric(metric,"")
+            newplex = self.plex.adaptMetric(metric)
         except PETSc.Error as exc:
             if exc.ierr != ERR_SUP: raise
 
