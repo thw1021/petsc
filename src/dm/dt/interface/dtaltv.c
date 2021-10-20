@@ -403,7 +403,7 @@ PetscErrorCode PetscDTAltVWedgePattern(PetscInt N, PetscInt j, PetscInt k, Petsc
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDTAltVDifferentialPatttern(PetscInt N, PetscInt j, PetscInt k, PetscInt (*pattern)[3])
+PetscErrorCode PetscDTAltVDifferentialPattern(PetscInt N, PetscInt j, PetscInt k, PetscInt (*pattern)[3])
 {
   PetscErrorCode ierr;
 
