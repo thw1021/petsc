@@ -17,8 +17,8 @@
 
 /*
     Allocates space for the vector array on the GPU if it does not exist.
-    Does NOT change the PetscCUDAFlag for the vector
-    Does NOT zero the CUDA array
+    Change the PetscCUDAFlag for the vector
+    Zero the CUDA array
 
  */
 PetscErrorCode VecCUDAAllocateCheck(Vec v)
@@ -34,14 +34,13 @@ PetscErrorCode VecCUDAAllocateCheck(Vec v)
     ierr = PetscCalloc(sizeof(Vec_CUDA),&v->spptr);CHKERRQ(ierr);
     veccuda = (Vec_CUDA*)v->spptr;
     err = cudaMalloc((void**)&veccuda->GPUarray_allocated,sizeof(PetscScalar)*((PetscBLASInt)v->map->n));CHKERRCUDA(err);
-    veccuda->GPUarray = veccuda->GPUarray_allocated;
-    if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
-      if (v->data && ((Vec_Seq*)v->data)->array) {
-        v->offloadmask = PETSC_OFFLOAD_CPU;
-      } else {
-        v->offloadmask = PETSC_OFFLOAD_GPU;
-      }
+    if (v->data && ((Vec_Seq*)v->data)->array) {
+      v->offloadmask = PETSC_OFFLOAD_CPU;
+    } else {
+      err = cudaMemset(veccuda->GPUarray_allocated,0,sizeof(PetscScalar)*((PetscBLASInt)v->map->n));CHKERRCUDA(err);
+      v->offloadmask = PETSC_OFFLOAD_GPU;
     }
+    veccuda->GPUarray = veccuda->GPUarray_allocated;
     pinned_memory_min = 0;
 
     /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
@@ -791,6 +790,7 @@ PetscErrorCode VecCopy_SeqCUDA(Vec xin,Vec yin)
         err = cudaMemcpyAsync(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToDevice,PetscDefaultCudaStream);CHKERRCUDA(err);
       } else {
         err = cudaMemcpy(yarray,xarray,yin->map->n*sizeof(PetscScalar),cudaMemcpyDeviceToHost);CHKERRCUDA(err);
+        ierr = PetscLogGpuToCpu((yin->map->n)*sizeof(PetscScalar));CHKERRQ(ierr);
       }
       ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
       ierr = VecCUDARestoreArrayRead(xin,&xarray);CHKERRQ(ierr);
