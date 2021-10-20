@@ -2142,7 +2142,10 @@ static PetscErrorCode PetscDualSpacePolynomialMoments(PetscInt dim, PetscInt deg
   ierr = MatDenseGetArrayWrite(V, &V_array);CHKERRQ(ierr);
   ierr = PetscDTPKDEvalJet(dim, npoints, points, deg, 0, V_array);CHKERRQ(ierr);
   ierr = MatDenseRestoreArrayWrite(V, &V_array);CHKERRQ(ierr);
+  // V maps (on the left) basis to evaluation at the points
   ierr = MatTranspose(V, MAT_INPLACE_MATRIX, &V);CHKERRQ(ierr);
+  // V^{-1} maps (on the left) evaluation at the points to the basis
+  // V^{-T} maps (on the right) evaluation at the points to the basis
   ierr = MatLUFactor(V, NULL, NULL, NULL);CHKERRQ(ierr);
 
   ierr = PetscDTStroudConicalQuadrature(dim, 1, momentOrder + 1, -1., 1., &mQ);CHKERRQ(ierr);
@@ -2154,13 +2157,15 @@ static PetscErrorCode PetscDualSpacePolynomialMoments(PetscInt dim, PetscInt deg
     PetscReal w = weights[pt];
 
     for (PetscInt i = 0; i < Ns; i++) {
-      Vm_array[i * npoints + pt] *= w;
+      Vm_array[i * mpoints + pt] *= w;
     }
   }
+  // Vm maps (on the left) basis to evaluation at the quadrature points
   ierr = MatDenseRestoreArrayWrite(Vm, &Vm_array);CHKERRQ(ierr);
+  // Vm^T maps (on the right) basis to evaluation at the quadrature points
   ierr = MatTranspose(Vm, MAT_INPLACE_MATRIX, &Vm);CHKERRQ(ierr);
   ierr = MatCreateSeqDense(PETSC_COMM_SELF, Ns, mpoints, NULL, &P);CHKERRQ(ierr);
-  // P maps values at the quadrature points to moments against a nodal basis of the polynomials
+  // V^{-T} Vm^T maps (on the right) evaluation at the nodes to the basis to the quadrature points
   ierr = MatMatSolve(V, Vm, P);CHKERRQ(ierr);
   if (Nk > 1) {
     Mat Pv;
@@ -2229,13 +2234,13 @@ static PetscErrorCode PetscDualSpaceTrimmedMoments(PetscInt dim, PetscInt deg, P
     PetscReal w = weights[pt];
 
     for (PetscInt i = 0; i < Ns * Nk; i++) {
-      Vm_array_T[i * npoints + pt] *= w;
+      Vm_array_T[i * mpoints + pt] *= w;
     }
   }
   for (PetscInt b = 0; b < Ns; b++) {
     for (PetscInt pt = 0; pt < mpoints; pt++) {
       for (PetscInt f = 0; f < Nk; f++) {
-        Vm_array[(b * npoints + pt) * Nk + f] = Vm_array_T[(b * Nk + f) * npoints + pt];
+        Vm_array[(b * mpoints + pt) * Nk + f] = Vm_array_T[(b * Nk + f) * mpoints + pt];
       }
     }
   }
