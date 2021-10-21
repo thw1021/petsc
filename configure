@@ -14,17 +14,20 @@ exit 127
 
 import sys, os
 
-if sys.version_info < (3,0):
-  print('************************************************************************')
-  print('*             python2 support in configure is deprecated               *')
-  print('*         PETSc version 3.18+ will require at least python3.4          *')
-  print('************************************************************************')
+starlen = 93
+bannerline = '*'*starlen
 
-if sys.version_info < (2,7) or (sys.version_info >= (3,0) and sys.version_info < (3,4)):
-  print('************************************************************************')
-  print('*      Python version 2.7 or 3.4+ is required to run ./configure      *')
-  print('*         Try: "python3 ./configure" or "python2.7 ./configure"        *')
-  print('************************************************************************')
+if sys.version_info < (3,0):
+  print(bannerline)
+  print('*'+'python2 support in configure is deprecated'.center(starlen-2)+'*')
+  print('*'+'PETSc version 3.18+ will require at least python3.4'.center(starlen-2)+'*')
+  print(bannerline)
+
+if sys.version_info < (2,7) or ((3,0) <= sys.version_info < (3,4)):
+  print(bannerline)
+  print('*'+'Python version 2.7 or 3.4+ is required to run ./configure'.center(starlen-2)+'*')
+  print('*'+'Try: "python3 ./configure" or "python2.7 ./configure"'.center(starlen-2)+'*')
+  print(bannerline)
   sys.exit(4)
 
 sys.path.insert(0, os.path.abspath('config'))
