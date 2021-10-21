@@ -219,6 +219,7 @@ class PetscDocString(object):
       names = data["names"] if "names" in data else tuple()
       return cls(lines=lines,names=names)
 
+
   preambleHeading  = "preamble"
   paramHeading     = "params"
   noteHeading      = "notes"
@@ -252,6 +253,9 @@ class PetscDocString(object):
     return
 
   def parse(self,linter):
+    def defaultEntry():
+      return {"all" : []}
+
     def makeSourceRange(token,string,line):
       colBegin = string.index(token)+1
       colEnd   = colBegin+len(token)
@@ -267,11 +271,20 @@ class PetscDocString(object):
       linter.addErrorFromCursor(cursor,error)
       return
 
-    def postProcessHeading(headings,subname,testItem,countMax=-1):
+    def postProcessHeading(headings,subname,testItem,requiredName=None,countMax=-1):
+      subheading = headings.get(subname)
+      if not subheading:
+        if requiredName is not None:
+          addErrorFromCursor(
+            "Missing required subheading '{}:', not found in docstring;\n\n{}",
+            "","",self.extent.start.line, # entire docstring
+            formatargs=(requiredName,),
+            numContext=0,numAfterContext=len(self.raw.split('\n'))-1,highlight=False
+          )
+        return
       nameList    = []
       count,seen  = 0,set()
       multiHeader = False
-      subheading  = headings[subname]
       for i,(line,origitem) in enumerate(subheading["all"]):
         if ":" in origitem:
           # check that header is correctly title-cased
@@ -335,7 +348,8 @@ class PetscDocString(object):
         "","",self.extent.end.line+1,
         highlight=False,
       )
-    headings  = collections.OrderedDict([(head,{"all" : []}) for head in self.allHeadings])
+    #headings  = collections.OrderedDict([(head,{"all" : []}) for head in self.allHeadings])
+    headings  = collections.OrderedDict()
     heading   = self.preambleHeading
     startLine = self.extent.start.line
     for offset,line in enumerate(self.raw.split("\n")):
@@ -376,13 +390,13 @@ class PetscDocString(object):
           heading = self.referenceHeading
         else:
           raise RuntimeError(heading)
-      headings[heading]["all"].append((offset+startLine,line))
+      headings.setdefault(heading,default=defaultEntry())["all"].append((offset+startLine,line))
 
     postProcessHeading(headings,self.preambleHeading,validHeading,countMax=1)
     postProcessHeading(headings,self.paramHeading,validParams)
     postProcessHeading(headings,self.optionsHeading,validParams)
-    postProcessHeading(headings,self.levelHeading,validLevel)
-    headings[self.seealsoHeading]["names"] = tuple([name.strip() for _,sa in headings[self.seealsoHeading]["all"] for name in sa.split(",")])
+    postProcessHeading(headings,self.levelHeading,validLevel,requiredName='level')
+    #headings.setdefault(self.seealsoHeading,default=self.defaultEntry)["names"] = tuple([name.strip() for _,sa in headings.setdefault(self.seealsoHeading,default=self.defaultEntry)["all"] for name in sa.split(",")])
     for head,data in headings.items():
       setattr(self,head,self.Section.create(data))
     return self
@@ -1085,7 +1099,7 @@ class PetscLinter(object):
     processedFuncs = collections.defaultdict(list)
     for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       if isinstance(results,clx.Cursor):
-        #checkDocMap[results.kind](self,results)
+        checkDocMap[results.kind](self,results)
         continue
       func,parent,scope = results
       try:
@@ -1358,11 +1372,18 @@ class WorkerPool(mp.queues.JoinableQueue):
 
 """utilities for checking docstrings"""
 def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
-  docStringArgs = parsed.params.names
-  if len(docStringArgs) == len(fnargs) == 0:
-    # if both fnargs and docStringArgs are empty then the function has no arguments and
-    # we have nothing to do here
-    return
+  try:
+    params = parsed.params
+  except AttributeError:
+    # docstring is missing both 'Input Parameters' and 'Output Parameters'
+    if len(fnargs) == 0:
+      # if both are empty then the function has no arguments and we have nothing to do
+      # here
+      return
+    else:
+      import ipdb; ipdb.set_trace()
+
+  docStringArgs = params.names
   allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
   errorMessage  = None
@@ -1416,7 +1437,14 @@ def checkDocValidHeader(linter,cursor,parsed):
   return
 
 def checkDocValidLevel(linter,cursor,parsed):
-  levelNames  = parsed.level.names
+  try:
+    level = parsed.level
+  except AttributeError:
+    # if no level, nothing to check here, error will already have been logged by
+    # PetscDocString.parse()
+    return
+
+  levelNames  = level.names
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   if len(levelNames):
     allLevels = tuple([l for _,l in levelNames])
