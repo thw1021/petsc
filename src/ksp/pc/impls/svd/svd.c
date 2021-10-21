@@ -77,7 +77,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
     PetscBLASInt lierr;
     ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
     PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nb,&nb,a,&nb,d,u,&nb,v,&nb,work,&lwork,&lierr));
-    if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %d",lierr);
+    if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %" PetscBLASInt_FMT,lierr);
     ierr = PetscFPTrapPop();CHKERRQ(ierr);
   }
 #else
@@ -88,7 +88,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
     ierr = PetscMalloc1(nb,&dd);CHKERRQ(ierr);
     ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
     PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nb,&nb,a,&nb,dd,u,&nb,v,&nb,work,&lwork,rwork,&lierr));
-    if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %d",lierr);
+    if (lierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %" PetscBLASInt_FMT,lierr);
     ierr = PetscFree(rwork);CHKERRQ(ierr);
     for (i=0; i<n; i++) d[i] = dd[i];
     ierr = PetscFree(dd);CHKERRQ(ierr);
@@ -102,7 +102,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
   jac->nzero = n-1-i;
   if (jac->monitor) {
     ierr = PetscViewerASCIIAddTab(jac->monitor,((PetscObject)pc)->tablevel);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: condition number %14.12e, %D of %D singular values are (nearly) zero\n",(double)PetscRealPart(d[0]/d[n-1]),jac->nzero,n);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: condition number %14.12e, %" PetscInt_FMT " of %" PetscInt_FMT " singular values are (nearly) zero\n",(double)PetscRealPart(d[0]/d[n-1]),jac->nzero,n);CHKERRQ(ierr);
     if (n >= 10) {              /* print 5 smallest and 5 largest */
       ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: smallest singular values: %14.12e %14.12e %14.12e %14.12e %14.12e\n",(double)PetscRealPart(d[n-1]),(double)PetscRealPart(d[n-2]),(double)PetscRealPart(d[n-3]),(double)PetscRealPart(d[n-4]),(double)PetscRealPart(d[n-5]));CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: largest singular values : %14.12e %14.12e %14.12e %14.12e %14.12e\n",(double)PetscRealPart(d[4]),(double)PetscRealPart(d[3]),(double)PetscRealPart(d[2]),(double)PetscRealPart(d[1]),(double)PetscRealPart(d[0]));CHKERRQ(ierr);
@@ -127,7 +127,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
   for (i=0; i<n-jac->nzero; i++) d[i] = 1.0/d[i];
   for (; i<n; i++) d[i] = 0.0;
   if (jac->essrank > 0) for (i=0; i<n-jac->nzero-jac->essrank; i++) d[i] = 0.0; /* Skip all but essrank eigenvalues */
-  ierr = PetscInfo1(pc,"Number of zero or nearly singular values %D\n",jac->nzero);CHKERRQ(ierr);
+  ierr = PetscInfo1(pc,"Number of zero or nearly singular values %" PetscInt_FMT "\n",jac->nzero);CHKERRQ(ierr);
   ierr = VecRestoreArray(jac->diag,&d);CHKERRQ(ierr);
 #if defined(foo)
   {
@@ -335,7 +335,7 @@ static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
     ierr = PetscViewerASCIIPrintf(viewer,"  All singular values smaller than %g treated as zero\n",(double)svd->zerosing);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  Provided essential rank of the matrix %D (all other eigenvalues are zeroed)\n",svd->essrank);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Provided essential rank of the matrix %" PetscInt_FMT " (all other eigenvalues are zeroed)\n",svd->essrank);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

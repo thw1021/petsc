@@ -21,7 +21,7 @@ int main(int argc,char **args)
 #if defined(PETSC_HAVE_HPDDM)
     ierr = KSPHPDDMGetType(ksp,&type);CHKERRQ(ierr);
     ierr = PetscStrcmp(KSPHPDDMTypes[type],common[i],&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"KSPType and KSPHPDDMType do not match: %s != %s", common[i], type);
+    if (!flg) SETERRQ2(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"KSPType and KSPHPDDMType do not match: %s != %s", common[i], KSPHPDDMTypes[type]);
     ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
     ierr = KSPHPDDMGetType(ksp,&type);CHKERRQ(ierr);
     if (type != KSP_HPDDM_TYPE_GCRODR) SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"-ksp_hpddm_type gcrodr and KSPHPDDMType do not match: gcrodr != %s", KSPHPDDMTypes[type]);

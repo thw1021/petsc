@@ -87,7 +87,7 @@ int main(int argc,char **argv)
   ierr = FormInitialGuess(snes,x);CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
   ierr = SNESGetIterationNumber(snes,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %D\n\n",its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %" PetscInt_FMT "\n\n",its);CHKERRQ(ierr);
 
   /* Free data structures */
   ierr = VecDestroy(&x);CHKERRQ(ierr);  ierr = VecDestroy(&r);CHKERRQ(ierr);
@@ -231,7 +231,7 @@ PetscErrorCode  Monitor(SNES snes,PetscInt its,PetscReal fnorm,void *dummy)
   MPI_Comm       comm;
 
   ierr = PetscObjectGetComm((PetscObject)snes,&comm);CHKERRQ(ierr);
-  ierr = PetscFPrintf(comm,stdout,"iter = %D, SNES Function norm %g \n",its,(double)fnorm);CHKERRQ(ierr);
+  ierr = PetscFPrintf(comm,stdout,"iter = %" PetscInt_FMT ", SNES Function norm %g \n",its,(double)fnorm);CHKERRQ(ierr);
   ierr = SNESGetSolution(snes,&x);CHKERRQ(ierr);
   ierr = VecView(x,monP->viewer);CHKERRQ(ierr);
   return 0;

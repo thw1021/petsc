@@ -112,11 +112,11 @@ static PetscErrorCode TaoView_NM(Tao tao,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"expansions: %D\n",nm->nexpand);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"reflections: %D\n",nm->nreflect);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"inside contractions: %D\n",nm->nincontract);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"outside contractionss: %D\n",nm->noutcontract);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Shrink steps: %D\n",nm->nshrink);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"expansions: %" PetscInt_FMT "\n",nm->nexpand);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"reflections: %" PetscInt_FMT "\n",nm->nreflect);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"inside contractions: %" PetscInt_FMT "\n",nm->nincontract);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"outside contractionss: %" PetscInt_FMT "\n",nm->noutcontract);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Shrink steps: %" PetscInt_FMT "\n",nm->nshrink);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);

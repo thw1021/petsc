@@ -97,7 +97,7 @@ int main(int argc,char **argv)
     ierr = MatMult(A,x,b1);CHKERRQ(ierr);
     ierr = VecAXPY(b1,-1.0,b);CHKERRQ(ierr);
     ierr = VecNorm(b1,NORM_2,&norm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Final residual %g\n",norm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Final residual %g\n",(double)norm);CHKERRQ(ierr);
     ierr = VecDestroy(&b1);CHKERRQ(ierr);
   }
 
@@ -133,7 +133,7 @@ PetscErrorCode ComputeMatrix(DM da,Mat B)
   PetscFunctionBeginUser;
   ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,&dof,0,0,0,0,0);CHKERRQ(ierr);
   /* For simplicity, this example only works on mx=my=mz */
-  if (mx != my || mx != mz) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"This example only works with mx %D = my %D = mz %D\n",mx,my,mz);
+  if (mx != my || mx != mz) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_SUP,"This example only works with mx %" PetscInt_FMT " = my %" PetscInt_FMT " = mz %" PetscInt_FMT "\n",mx,my,mz);
 
   Hx      = 1.0 / (PetscReal)(mx-1); Hy = 1.0 / (PetscReal)(my-1); Hz = 1.0 / (PetscReal)(mz-1);
   HxHydHz = Hx*Hy/Hz; HxHzdHy = Hx*Hz/Hy; HyHzdHx = Hy*Hz/Hx;

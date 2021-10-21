@@ -77,7 +77,7 @@ int main(int argc,char **argv)
 
   ierr = PetscInitialize(&argc,&argv,(char *)0,help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL,"-wtype",&wtype,&flg);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"wtype=%d\n",wtype);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"wtype=%" PetscInt_FMT "\n",wtype);CHKERRQ(ierr);
   /* Allocate vectors */
   ierr = VecCreateSeq(MPI_COMM_SELF,NPARAMETERS,&x);CHKERRQ(ierr);
   ierr = VecCreateSeq(MPI_COMM_SELF,NOBSERVATIONS,&f);CHKERRQ(ierr);

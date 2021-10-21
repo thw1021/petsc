@@ -568,7 +568,7 @@ static PetscErrorCode TaoSolveADMM(UserCtx ctx,  Vec x)
     /* Duality : sqrt(n)*ABSTOL + RELTOL*norm(mu*u)*/
     ierr = VecNorm(u,NORM_2,&u_norm);CHKERRQ(ierr);
     dual = PetscSqrtReal(ctx->n)*ctx->abstol + ctx->reltol*u_norm*mu;
-    ierr = PetscPrintf(PetscObjectComm((PetscObject)tao1),"Iter %D : ||x-z||: %g, mu*||z-zold||: %g\n", i, (double) r_norm, (double) s_norm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PetscObjectComm((PetscObject)tao1),"Iter %" PetscInt_FMT " : ||x-z||: %g, mu*||z-zold||: %g\n", i, (double) r_norm, (double) s_norm);CHKERRQ(ierr);
     if (r_norm < primal && s_norm < dual) break;
   }
   ierr = VecCopy(xk, x);CHKERRQ(ierr);
@@ -618,7 +618,7 @@ static PetscErrorCode TaylorTest(UserCtx ctx, Tao tao, Vec x, PetscReal *C)
   }
   for (j=1; j<numValues; j++) {
     temp    = PetscLogReal(Js[j]/Js[j-1]) / PetscLogReal (hs[j]/hs[j-1]);
-    ierr    = PetscPrintf (comm, "Convergence rate step %D: %g\n", j-1, (double) temp);CHKERRQ(ierr);
+    ierr    = PetscPrintf (comm, "Convergence rate step %" PetscInt_FMT ": %g\n", j-1, (double) temp);CHKERRQ(ierr);
     minrate = PetscMin(minrate, temp);
   }
   /* If O is not ~2, then the test is wrong */

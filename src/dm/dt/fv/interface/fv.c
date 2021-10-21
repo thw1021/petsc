@@ -1867,10 +1867,10 @@ static PetscErrorCode PetscFVView_Upwind_Ascii(PetscFV fv, PetscViewer viewer)
   ierr = PetscFVGetNumComponents(fv, &Nc);CHKERRQ(ierr);
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer, "Upwind Finite Volume:\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc);CHKERRQ(ierr);
   for (c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) {
-      ierr = PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -1985,10 +1985,10 @@ static PetscErrorCode PetscFVView_LeastSquares_Ascii(PetscFV fv, PetscViewer vie
   ierr = PetscFVGetNumComponents(fv, &Nc);CHKERRQ(ierr);
   ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPrintf(viewer, "Finite Volume with Least Squares Reconstruction:\n");CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc);CHKERRQ(ierr);
   for (c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) {
-      ierr = PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -2173,7 +2173,7 @@ static PetscErrorCode PetscFVComputeGradient_LeastSquares(PetscFV fvm, PetscInt 
   PetscFunctionBegin;
   if (numFaces > maxFaces) {
     if (maxFaces < 0) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
-    SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %D > %D maxfaces", numFaces, maxFaces);
+    SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %" PetscInt_FMT " > %" PetscInt_FMT " maxfaces", numFaces, maxFaces);
   }
   ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
   for (f = 0; f < numFaces; ++f) {

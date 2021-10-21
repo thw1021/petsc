@@ -291,7 +291,7 @@ static PetscErrorCode MyTSMonitorError(TS ts, PetscInt step, PetscReal crtime, V
   ierr = DMGetDS(dm, &ds);CHKERRQ(ierr);
   ierr = PetscDSGetExactSolution(ds, 0, &func[0], &ctxs[0]);CHKERRQ(ierr);
   ierr = DMComputeL2Diff(dm, crtime, func, ctxs, u, &error);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD, "Timestep: %04d time = %-8.4g \t L_2 Error: %2.5g\n", (int) step, (double) crtime, (double) error);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "Timestep: %04" PetscInt_FMT " time = %-8.4g \t L_2 Error: %2.5g\n", step, (double) crtime, (double) error);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

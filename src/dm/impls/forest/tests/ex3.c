@@ -78,7 +78,7 @@ int main (int argc, char **argv)
     ierr = DMConvert(forest, DMPLEX, &plex);CHKERRQ(ierr);
     ierr = DMViewFromOptions(plex, NULL, "-dm_view");CHKERRQ(ierr);
     ierr = DMPlexGetDepthStratum(plex, 0, &vStart, &vEnd);CHKERRQ(ierr);
-    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "Vertices [%D, %D)\n", vStart, vEnd);CHKERRQ(ierr);
+    ierr = PetscSynchronizedPrintf(PETSC_COMM_WORLD, "Vertices [%" PetscInt_FMT ", %" PetscInt_FMT ")\n", vStart, vEnd);CHKERRQ(ierr);
     ierr = PetscSynchronizedFlush(PETSC_COMM_WORLD, NULL);CHKERRQ(ierr);
     ierr = PetscSectionCreate(PetscObjectComm((PetscObject) forest), &s);CHKERRQ(ierr);
     ierr = PetscSectionSetNumFields(s, 1);CHKERRQ(ierr);

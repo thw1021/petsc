@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   ierr = PetscOptionsString("-o", "Filename to write", "ex26", ofilename, ofilename, sizeof(ofilename), NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-order", "FEM polynomial order", "ex26", order, &order, NULL,1);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  if ((order > 2) || (order < 1)) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported polynomial order %D not in [1, 2]", order);
+  if ((order > 2) || (order < 1)) SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported polynomial order %" PetscInt_FMT " not in [1, 2]", order);
 
   /* Read the mesh from a file in any supported format */
   ierr = DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, PETSC_TRUE, &dm);CHKERRQ(ierr);
@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
       zonalVarName[4] = (char *) "Sigma_13";
       zonalVarName[5] = (char *) "Sigma_12";
       break;
-    default: SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %D", sdim);
+    default: SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT "", sdim);
     }
     ierr = PetscViewerExodusIIGetId(viewer,&exoid);CHKERRQ(ierr);
     PetscStackCallStandard(ex_put_variable_param,(exoid, EX_ELEM_BLOCK, numZonalVar));
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
       switch (sdim) {
       case 2: dofS = dofS2D;break;
       case 3: dofS = dofS3D;break;
-      default: SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %D", sdim);
+      default: SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT "", sdim);
       }
 
       /* Identify cell type based on closure size only. This works for Tri/Tet/Quad/Hex meshes
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
           dofA = dofAP2Hex;
         }
         break;
-        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Unknown element with closure size %D\n", closureSize);
+        default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Unknown element with closure size %" PetscInt_FMT "\n", closureSize);
       }
       ierr = DMPlexRestoreTransitiveClosure(dm, cellID[0], PETSC_TRUE, &closureSize, &closureA);CHKERRQ(ierr);
 

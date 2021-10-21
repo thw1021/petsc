@@ -12,6 +12,15 @@
 typedef PetscInt HYPRE_BigInt;
 #endif
 
+/* it is always so ~refreshing~ when library maintainers don't provide basic interface to their
+ * types. */
+#if defined(HYPRE_BIGINT) || defined(HYPRE_MIXEDINT) /* typedef long long int HYPRE_BigInt; */
+#  define PETSC_HYPRE_BigInt_FMT "lld"
+#else
+/* total guess, could be anything really */
+#  define PETSC_HYPRE_BigInt_FMT "d"
+#endif
+
 /*
   With scalar type == real, HYPRE_Complex == PetscScalar;
   With scalar type == complex,  HYPRE_Complex is double __complex__ while PetscScalar may be std::complex<double>

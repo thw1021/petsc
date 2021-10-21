@@ -75,7 +75,7 @@ PetscErrorCode ex1_1(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%D,%D) after(%D,%D)\n",rank,npoints_orig[0],npoints_orig[1],npoints[0],npoints[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%" PetscInt_FMT ",%" PetscInt_FMT ") after(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints_orig[0],npoints_orig[1],npoints[0],npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
@@ -137,7 +137,7 @@ PetscErrorCode ex1_2(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints_orig[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints_orig[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%D,%D)\n",rank,npoints_orig[0],npoints_orig[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints_orig[0],npoints_orig[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
@@ -158,7 +158,7 @@ PetscErrorCode ex1_2(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after(%D,%D)\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
@@ -170,7 +170,7 @@ PetscErrorCode ex1_2(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after_v(%D,%D)\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after_v(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
@@ -257,7 +257,7 @@ PetscErrorCode ex1_3(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints_orig[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints_orig[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%D,%D)\n",rank,npoints_orig[0],npoints_orig[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints_orig[0],npoints_orig[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = DMSwarmCollect_DMDABoundingBox(dms,&ng);CHKERRQ(ierr);
@@ -265,7 +265,7 @@ PetscErrorCode ex1_3(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after(%D,%D)\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }
@@ -453,14 +453,14 @@ PetscErrorCode ex1_4(void)
     ierr = DMSwarmGetLocalSize(dms,&npoints_orig[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints_orig[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%D,%D)\n",rank,npoints_orig[0],npoints_orig[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] before(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints_orig[0],npoints_orig[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = DMSwarmCollect_General(dms,collect_zone,sizeof(CollectZoneCtx),zone,&ng);CHKERRQ(ierr);
     ierr = DMSwarmGetLocalSize(dms,&npoints[0]);CHKERRQ(ierr);
     ierr = DMSwarmGetSize(dms,&npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after(%D,%D)\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(PETSC_VIEWER_STDOUT_WORLD,"rank[%d] after(%" PetscInt_FMT ",%" PetscInt_FMT ")\n",rank,npoints[0],npoints[1]);CHKERRQ(ierr);
     ierr = PetscViewerFlush(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   }

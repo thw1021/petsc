@@ -61,7 +61,7 @@ int main(int argc,char ** argv)
   ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
   ierr = DMNetworkAddSubnetwork(networkdm,"",waterdata->nedge,edgelist,NULL);CHKERRQ(ierr);
   if (!crank) {
-    ierr = PetscPrintf(PETSC_COMM_SELF,"water nvertices %D, nedges %D\n",waterdata->nvertex,waterdata->nedge);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_SELF,"water nvertices %" PetscInt_FMT ", nedges %" PetscInt_FMT "\n",waterdata->nvertex,waterdata->nedge);CHKERRQ(ierr);
   }
 
   /* Set up the network layout */
