@@ -23,7 +23,7 @@ typedef int testType;
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 .seealso: testIllFormedFunctionDocString(), testType
-@*/
+C@*/
 PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 {
   return 0;
@@ -59,14 +59,13 @@ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, Pe
   return 0;
 }
 
-/*@C
+/*
   Not Collective, Synchronous
 
   References:
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
 .seealso: testNonExistentFunction(), testNonExistentType
-@*/
+*/
 PetscErrorCode testIllFormedMinimalDocString(void)
 {
   return 0;
