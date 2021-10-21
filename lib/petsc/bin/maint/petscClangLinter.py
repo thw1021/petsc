@@ -236,25 +236,33 @@ class PetscDocString(object):
     referenceHeading,
     seealsoHeading,
   )
-  __slots__ = "cursor","tu","file","raw","extent",*allHeadings
+  __slots__ = ("cursor","tu","file","raw","extent","indent",*allHeadings)
 
   @classmethod
   def fromCursor(cls,cursor):
     return cls(cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
 
-  def __init__(self,cursor,raw,crange):
-    if (not raw) or (not raw.startswith(("/*@","/*M","/*E"))):
+  def __init__(self,cursor,raw,crange,indent=2):
+    if (not raw):# or (not raw.startswith(("/*@","/*M","/*E"))):
+      import ipdb; ipdb.set_trace()
       raise ParsingError
     self.cursor = cursor
     self.tu     = cursor.translation_unit
     self.file   = cursor.location.file
     self.raw    = raw
     self.extent = crange
+    self.indent = indent
     return
 
   def parse(self,linter):
     def defaultEntry():
       return {"all" : []}
+
+    def symbolTypeToSowingTypeAndLaymanType(cursor):
+      typeMap = {
+        clx.TypeKind.FUNCTIONPROTO : "@"
+      }
+      return typeMap[cursor.type.kind],cursor.type.kind
 
     def makeSourceRange(token,string,line):
       colBegin = string.index(token)+1
@@ -279,7 +287,7 @@ class PetscDocString(object):
             "Missing required subheading '{}:', not found in docstring;\n\n{}",
             "","",self.extent.start.line, # entire docstring
             formatargs=(requiredName,),
-            numContext=0,numAfterContext=len(self.raw.split('\n'))-1,highlight=False
+            numContext=0,numAfterContext=len(self.raw.splitlines())-1,highlight=False
           )
         return
       nameList    = []
@@ -295,7 +303,7 @@ class PetscDocString(object):
               header,origitem,line,
               formatargs=(header.title(),header)
             )
-          headerlo = header.lower()
+          headerlo = header.casefold()
           if headerlo in seen:
             multiHeader = True
           else:
@@ -348,32 +356,65 @@ class PetscDocString(object):
         "","",self.extent.end.line+1,
         highlight=False,
       )
-    #headings  = collections.OrderedDict([(head,{"all" : []}) for head in self.allHeadings])
-    headings  = collections.OrderedDict()
-    heading   = self.preambleHeading
-    startLine = self.extent.start.line
-    for offset,line in enumerate(self.raw.split("\n")):
+    headings      = collections.OrderedDict()
+    heading       = self.preambleHeading
+    startLine     = self.extent.start.line
+    prevLineEmpty = True # start true since the first comment line should count as empty
+    sowingChars   = None
+    for offset,line in enumerate(self.raw.splitlines()):
       lstrip = line.lstrip()
-      if lstrip.startswith("/*") or lstrip.endswith("*/"):
+      if lstrip.startswith("/*"):
+        assert sowingChars is None, "multiple comment begin lines found"
+        sowingChars = lstrip.split("/*")[1].split()
+        try:
+          sowingChars = sowingChars[0]
+        except IndexError:
+          sowingType,layType = symbolTypeToSowingTypeAndLaymanType(self.cursor)
+          addErrorFromCursor(
+            "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
+            line,line,offset+startLine,
+            formatargs=(sowingType,layType)
+          )
+          sowingChars = "/*"+sowingType
         # check that nothing else is on the comment begin line
-        lsplit = lstrip.split()
+        lsplit  = lstrip.split()
         if len(lsplit) != 1:
           addErrorFromCursor(
-            "Invalid comment begin line, must only contain '/*' and docstring identifier:\n\n{}",
+            "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
             " ".join(lsplit[1:]),line,offset+startLine
+          )
+        continue
+      if lstrip.endswith("*/"):
+        assert sowingChars is not None,"never found sowing begin identifier!"
+        endSowingChars = lstrip.split("*/")[0].split()
+        try:
+          endSowingChars = endSowingChars[-1]
+        except IndexError:
+          endSowingChars = ""
+        if sorted(endSowingChars) != sorted(sowingChars):
+          addErrorFromCursor(
+            "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}' found '{}*/':\n\n{}",
+            endSowingChars,line,offset+startLine,
+            formatargs=(sowingChars[::-1],endSowingChars)
           )
         continue
       # if the line is regular (not empty, or a parameter list), check that line is
       # indented correctly
-      if len(lstrip) and not lstrip.startswith((".","+","-")) and (len(line)-len(lstrip) != 2):
+      if len(lstrip) and not lstrip.startswith((".","+","-")) and (len(line)-len(lstrip) != self.indent):
         indent = len(line)-len(lstrip)
         addErrorFromCursor(
-          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to 2 columns:\n\n{}",
+          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
           " "*indent,line,offset+startLine,
-          formatargs=(indent,)
+          formatargs=(indent,self.indent)
         )
       if ":" in lstrip:
-        heading = [s for s in lstrip.split(":") if s][0].strip().lower()
+        if not prevLineEmpty:
+          addErrorFromCursor(
+            "Must have empty line between sections:\n\n{}",
+            "","",offset+startLine, # print the next line
+            highlight=False
+          )
+        heading = [s for s in lstrip.split(":") if s][0].strip().casefold()
         if "synopsis" in heading:
           heading = self.preambleHeading
         elif "parameter" in heading:
@@ -391,6 +432,7 @@ class PetscDocString(object):
         else:
           raise RuntimeError(heading)
       headings.setdefault(heading,default=defaultEntry())["all"].append((offset+startLine,line))
+      prevLineEmpty = not line or line.isspace()
 
     postProcessHeading(headings,self.preambleHeading,validHeading,countMax=1)
     postProcessHeading(headings,self.paramHeading,validParams)
@@ -471,11 +513,13 @@ class PetscCursor(object):
     srcStr   = PetscCursor.getFormattedSourceFromCursor(cursor,nboth=2)
     return "'{}' of kind '{}' of type '{}' at {}:\n{}".format(name,kind,typename,locStr,srcStr)
 
-  @staticmethod
-  def getNameFromCursor(cursor):
+  @classmethod
+  def getNameFromCursor(cls,cursor):
     __doc__="""
     Try to convert **&(PetscObject)obj[i]+73 to obj
     """
+    if isinstance(cursor,cls):
+      return cursor.name
     name = None
     if cursor.spelling:
       name = cursor.spelling
@@ -580,11 +624,13 @@ class PetscCursor(object):
           raise RuntimeError("Could not determine useful name for cursor {}".format(errstr))
     return name
 
-  @staticmethod
-  def getTypenameFromCursor(cursor):
+  @classmethod
+  def getTypenameFromCursor(cls,cursor):
     __doc__="""
     Try to get the most canonical type from a cursor so DM -> _p_DM *
     """
+    if isinstance(cursor,cls):
+      return cursor.typename
     if cursor.type.get_pointee().spelling:
       ctemp = cursor.type.get_pointee()
       if ctemp.get_canonical().spelling:
@@ -640,8 +686,8 @@ class PetscCursor(object):
   def viewAst(self):
     return self.viewAstFromCursor(self)
 
-  @staticmethod
-  def findCursorReferencesFromCursor(cursor):
+  @classmethod
+  def findCursorReferencesFromCursor(cls,cursor):
     __doc__="""
     Brute force find and collect all references in a file that pertain to a particular
     cursor. Essentially refers to finding every reference to the symbol that the cursor
@@ -684,11 +730,11 @@ class PetscCursor(object):
           print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
         return 1 # continue
 
-    if not PetscCursor.registered_clang_findReferencesInFile and 0:
+    if not cls.registered_clang_findReferencesInFile:
       # have to do the bookkeeping ourselves since it may not be properly hooked up
       item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
       clx.register_function(clx.conf.lib,item,False)
-      PetscCursor.registered_clang_findReferencesInFile = True
+      cls.registered_clang_findReferencesInFile = True
 
     pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
     callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
@@ -699,13 +745,13 @@ class PetscCursor(object):
   def findCursorReferences(self):
     return self.findCursorReferencesFromCursor(self)
 
-  @staticmethod
-  def getCommentAndRangeFromCursor(cursor):
-    if not PetscCursor.registered_clang_Cursor_getCommentRange:
+  @classmethod
+  def getCommentAndRangeFromCursor(cls,cursor):
+    if not cls.registered_clang_Cursor_getCommentRange:
       # have to do the bookkeeping ourselves since it may not be properly hooked up
       item = ("clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange)
       clx.register_function(clx.conf.lib,item,False)
-      PetscCursor.registered_clang_Cursor_getCommentRange = True
+      cls.registered_clang_Cursor_getCommentRange = True
 
     comment = cursor.raw_comment
     range   = clx.conf.lib.clang_Cursor_getCommentRange(cursor)
@@ -1382,6 +1428,7 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
       return
     else:
       import ipdb; ipdb.set_trace()
+      raise RuntimeError("no params, but function has args; this should be handled")
 
   docStringArgs = params.names
   allParamNames = tuple(n for _,n in docStringArgs)
@@ -1452,8 +1499,8 @@ def checkDocValidLevel(linter,cursor,parsed):
       levelName = level[1]
       if levelName not in validLevels:
         src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
-        if levelName.lower() in validLevels:
-          errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(levelName.lower(),levelName,src)
+        if levelName.casefold() in validLevels:
+          errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(levelName.casefold(),levelName,src)
         else:
           errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,", ".join(validLevels),src)
         linter.addErrorFromCursor(cursor,errorMessage)
@@ -2111,7 +2158,7 @@ def tryToFindLibclangDir():
       # try to find llvmLibDir by hand
       import platform
 
-      if platform.system().lower() == "darwin":
+      if platform.system().casefold() == "darwin":
         try:
           output = subprocessRun(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
           xcodeDir = output.stdout.strip()
@@ -2196,7 +2243,7 @@ def getClangSysIncludes():
   # goes to stderr because of /dev/null
   includes = output.stderr.split("#include <...> search starts here:\n")[1]
   includes = includes.split("End of search list.")[0].replace("(framework directory)","")
-  includes = includes.split("\n")
+  includes = includes.splitlines()
   includes = ["-I"+os.path.abspath(i.strip()) for i in includes if i]
   return includes
 
@@ -2529,7 +2576,7 @@ if __name__ == "__main__":
   def str2bool(v):
     if isinstance(v,bool):
       return v
-    v = v.lower()
+    v = v.casefold()
     if v in {"yes","true","t","y","1"}:
       return True
     elif v in {"no","false","f","n","0",""}:
