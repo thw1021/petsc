@@ -1,10 +1,9 @@
 #include <petsc/private/matimpl.h>        /*I "petscmat.h" I*/
 
-PetscErrorCode MatConvert_Shell(Mat oldmat, MatType newtype,MatReuse reuse,Mat *newmat)
+PetscErrorCode MatConvert_Shell(Mat oldmat,MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat            mat;
   Vec            in,out;
-  MPI_Comm       comm;
   PetscScalar    *array;
   PetscInt       *dnnz,*onnz,*dnnzu,*onnzu;
   PetscInt       cst,Nbs,mbs,nbs,rbs,cbs;
@@ -12,16 +11,13 @@ PetscErrorCode MatConvert_Shell(Mat oldmat, MatType newtype,MatReuse reuse,Mat *
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)oldmat,&comm);CHKERRQ(ierr);
-
   ierr = MatGetOwnershipRange(oldmat,&start,NULL);CHKERRQ(ierr);
   ierr = MatGetOwnershipRangeColumn(oldmat,&cst,NULL);CHKERRQ(ierr);
   ierr = MatCreateVecs(oldmat,&in,&out);CHKERRQ(ierr);
   ierr = MatGetLocalSize(oldmat,&m,&n);CHKERRQ(ierr);
   ierr = MatGetSize(oldmat,&M,&N);CHKERRQ(ierr);
   ierr = PetscMalloc1(m,&rows);CHKERRQ(ierr);
-
-  ierr = MatCreate(comm,&mat);CHKERRQ(ierr);
+  ierr = MatCreate(PetscObjectComm((PetscObject)oldmat),&mat);CHKERRQ(ierr);
   ierr = MatSetSizes(mat,m,n,M,N);CHKERRQ(ierr);
   ierr = MatSetType(mat,newtype);CHKERRQ(ierr);
   ierr = MatSetBlockSizesFromMats(mat,oldmat,oldmat);CHKERRQ(ierr);
