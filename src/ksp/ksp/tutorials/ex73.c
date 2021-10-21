@@ -87,16 +87,18 @@ PetscErrorCode CommHierarchyCreate(MPI_Comm comm,PetscInt n,PetscInt number[],Pe
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  for (k=0; k<n; k++) {
-    pscommlist[k] = NULL;
-  }
-
+  ierr = PetscArrayzero(pscommlist,n);CHKERRQ(ierr);
   if (n < 1) PetscFunctionReturn(0);
 
   ierr = CommCoarsen(comm,number[n-1],&pscommlist[n-1]);CHKERRQ(ierr);
   for (k=n-2; k>=0; k--) {
-    MPI_Comm comm_k = PetscSubcommChild(pscommlist[k+1]);
-    if (pscommlist[k+1]->color == 0) {
+    PetscMPIInt color;
+
+    ierr = PetscSubcommGetColor(pscommlist[k+1],&color);CHKERRQ(ierr);
+    if (!color) {
+      MPI_Comm comm_k;
+
+      ierr = PetscSubcommGetChild(pscommlist[k+1],&comm_k);CHKERRQ(ierr);
       ierr = CommCoarsen(comm_k,number[k],&pscommlist[k]);CHKERRQ(ierr);
     }
   }
@@ -109,9 +111,13 @@ PetscErrorCode CommHierarchyCreate(MPI_Comm comm,PetscInt n,PetscInt number[],Pe
     ierr = PetscPrintf(comm,"level[%D] size %d\n",n,(int)size);CHKERRQ(ierr);
     for (k=n-1; k>=0; k--) {
       if (pscommlist[k]) {
-        MPI_Comm comm_k = PetscSubcommChild(pscommlist[k]);
+        PetscMPIInt color;
 
-        if (pscommlist[k]->color == 0) {
+        ierr = PetscSubcommGetColor(pscommlist[k],&color);CHKERRQ(ierr);
+        if (!color) {
+          MPI_Comm comm_k;
+
+          ierr = PetscSubcommGetChild(pscommlist[k],&comm_k);CHKERRQ(ierr);
           ierr = MPI_Comm_size(comm_k,&size);CHKERRMPI(ierr);
           ierr = PetscPrintf(comm_k,"level[%D] size %d\n",k,(int)size);CHKERRQ(ierr);
         }
@@ -687,31 +693,26 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
   found = ncoarsen;
   set = PETSC_FALSE;
   ierr = PetscOptionsGetIntArray(NULL,NULL,"-level_comm_red_factor",number,&found,&set);CHKERRQ(ierr);
-  if (set) {
-    if (found != ncoarsen) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_USER,"Expected %D values for -level_comm_red_factor. Found %D",ncoarsen,found);
-  }
+  if (set && (found != ncoarsen)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_USER,"Expected %D values for -level_comm_red_factor. Found %D",ncoarsen,found);
 
-  ierr = PetscMalloc1(ncoarsen+1,&pscommlist);CHKERRQ(ierr);
-  for (k=0; k<ncoarsen+1; k++) {
-    pscommlist[k] = NULL;
-  }
-
+  ierr = PetscCalloc1(ncoarsen+1,&pscommlist);CHKERRQ(ierr);
   ierr = PetscMalloc1(ndecomps,&commlist);CHKERRQ(ierr);
   for (k=0; k<ndecomps; k++) {
     commlist[k] = MPI_COMM_NULL;
   }
-  ierr = PetscMalloc1(ndecomps*levelrefs,&dalist);CHKERRQ(ierr);
-  ierr = PetscMalloc1(ndecomps*levelrefs,&dmlist);CHKERRQ(ierr);
-  for (k=0; k<ndecomps*levelrefs; k++) {
-    dalist[k] = NULL;
-    dmlist[k] = NULL;
-  }
+  ierr = PetscCalloc1(ndecomps*levelrefs,&dalist);CHKERRQ(ierr);
+  ierr = PetscCalloc1(ndecomps*levelrefs,&dmlist);CHKERRQ(ierr);
 
   ierr = CommHierarchyCreate(PETSC_COMM_WORLD,ncoarsen,number,pscommlist);CHKERRQ(ierr);
   for (k=0; k<ncoarsen; k++) {
     if (pscommlist[k]) {
-      MPI_Comm comm_k = PetscSubcommChild(pscommlist[k]);
-      if (pscommlist[k]->color == 0) {
+      PetscMPIInt color;
+
+      ierr = PetscSubcommGetColor(pscommlist[k],&color);CHKERRQ(ierr);
+      if (!color) {
+        MPI_Comm comm_k;
+
+        ierr = PetscSubcommGetChild(pscommlist[k],&comm_k);CHKERRQ(ierr);
         ierr = PetscCommDuplicate(comm_k,&commlist[k],NULL);CHKERRQ(ierr);
       }
     }

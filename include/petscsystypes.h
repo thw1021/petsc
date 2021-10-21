@@ -628,14 +628,14 @@ M*/
 
    Notes:
    After a call to PetscSubcommSetType(), PetscSubcommSetTypeGeneral(), or PetscSubcommSetFromOptions() one may call
-$     PetscSubcommChild() returns the associated subcommunicator on this process
-$     PetscSubcommContiguousParent() returns a parent communitor but with all child of the same subcommunicator having contiguous rank
+$     PetscSubcommGetChild() returns the associated subcommunicator on this process
+$     PetscSubcommGetContiguousParent() returns a parent communitor but with all child of the same subcommunicator having contiguous rank
 
    Sample Usage:
        PetscSubcommCreate()
        PetscSubcommSetNumber()
        PetscSubcommSetType(PETSC_SUBCOMM_INTERLACED);
-       ccomm = PetscSubcommChild()
+       PetscSubcommGetChild()
        PetscSubcommDestroy()
 
    Level: advanced

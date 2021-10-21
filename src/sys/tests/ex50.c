@@ -41,7 +41,7 @@ int main(int argc,char **argv)
   ierr = PetscSubcommSetType(psubcomm,PETSC_SUBCOMM_CONTIGUOUS);CHKERRQ(ierr);
   /* enable runtime switch of psubcomm type, e.g., '-psubcomm_type interlaced */
   ierr = PetscSubcommSetFromOptions(psubcomm);CHKERRQ(ierr);
-  subcomm = PetscSubcommChild(psubcomm);
+  ierr = PetscSubcommGetChild(psubcomm,&subcomm);CHKERRQ(ierr);
 
   ierr = PetscViewerGetSubViewer(viewer,subcomm,&subviewer);CHKERRQ(ierr);
 
@@ -52,7 +52,7 @@ int main(int argc,char **argv)
   ierr = PetscSubcommSetType(psubsubcomm,PETSC_SUBCOMM_CONTIGUOUS);CHKERRQ(ierr);
   /* enable runtime switch of psubcomm type, e.g., '-psubcomm_type interlaced */
   ierr = PetscSubcommSetFromOptions(psubsubcomm);CHKERRQ(ierr);
-  subsubcomm = PetscSubcommChild(psubsubcomm);
+  ierr = PetscSubcommGetChild(psubsubcomm,&subsubcomm);CHKERRQ(ierr);
 
   ierr = PetscViewerGetSubViewer(subviewer,subsubcomm,&subsubviewer);CHKERRQ(ierr);
 

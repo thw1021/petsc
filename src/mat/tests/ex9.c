@@ -96,6 +96,7 @@ int main(int argc,char **args)
   /* Test MatCreateRedundantMatrix() with user-provided subcomm */
   {
     PetscSubcomm psubcomm;
+    MPI_Comm     child;
 
     ierr = PetscSubcommCreate(PETSC_COMM_WORLD,&psubcomm);CHKERRQ(ierr);
     ierr = PetscSubcommSetNumber(psubcomm,nsubcomms);CHKERRQ(ierr);
@@ -103,8 +104,9 @@ int main(int argc,char **args)
     /* enable runtime switch of psubcomm type, e.g., '-psubcomm_type interlaced */
     ierr = PetscSubcommSetFromOptions(psubcomm);CHKERRQ(ierr);
 
-    ierr = MatCreateRedundantMatrix(C,nsubcomms,PetscSubcommChild(psubcomm),MAT_INITIAL_MATRIX,&Credundant);CHKERRQ(ierr);
-    ierr = MatCreateRedundantMatrix(C,nsubcomms,PetscSubcommChild(psubcomm),MAT_REUSE_MATRIX,&Credundant);CHKERRQ(ierr);
+    ierr = PetscSubcommGetChild(psubcomm,&child);CHKERRQ(ierr);
+    ierr = MatCreateRedundantMatrix(C,nsubcomms,child,MAT_INITIAL_MATRIX,&Credundant);CHKERRQ(ierr);
+    ierr = MatCreateRedundantMatrix(C,nsubcomms,child,MAT_REUSE_MATRIX,&Credundant);CHKERRQ(ierr);
 
     ierr = PetscSubcommDestroy(&psubcomm);CHKERRQ(ierr);
     ierr = MatDestroy(&Credundant);CHKERRQ(ierr);
