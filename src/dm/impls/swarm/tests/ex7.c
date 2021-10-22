@@ -312,14 +312,14 @@ PetscErrorCode go()
   ierr = PetscLogEventEnd(swarm_create_ev,0,0,0,0);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(solve_ev,0,0,0,0);CHKERRQ(ierr);
   /* Create particle swarm */
-#pragma omp parallel for
+  PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
     PetscErrorCode  ierr_t;
     ierr_t = createSwarm(dm_t[tid], &sw_t[tid]);
     if (ierr_t) ierr = ierr_t;
   }
   CHKERRQ(ierr);
-#pragma omp parallel for
+  PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
     PetscErrorCode  ierr_t;
     ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
@@ -328,14 +328,14 @@ PetscErrorCode go()
   CHKERRQ(ierr);
   /* Project field to particles */
   /*   This gives f_p = M_p^+ M f */
-#pragma omp parallel for private(ierr)
+  PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
     PetscErrorCode  ierr_t;
     ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
     if (ierr_t) ierr = ierr_t;
   }
   CHKERRQ(ierr);
-#pragma omp parallel for
+  PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
     PetscErrorCode  ierr_t;
     ierr_t = gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]);
@@ -361,28 +361,28 @@ PetscErrorCode go()
   ierr = PetscLogEventBegin(solve_loop_ev,0,0,0,0);CHKERRQ(ierr);
   for (int d=0; d<NUM_SOLVE_LOOPS; d++) {
   /* Create particle swarm */
-#pragma omp parallel for
+    PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
       PetscErrorCode  ierr_t;
       ierr_t = createSwarm(dm_t[tid], &sw_t[tid]);
       if (ierr_t) ierr = ierr_t;
     }
     CHKERRQ(ierr);
-#pragma omp parallel for
+    PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
       PetscErrorCode  ierr_t;
       ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
       if (ierr_t) ierr = ierr_t;
     }
     CHKERRQ(ierr);
-#pragma omp parallel for private(ierr)
+    PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
       PetscErrorCode  ierr_t;
       ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
       if (ierr_t) ierr = ierr_t;
     }
     CHKERRQ(ierr);
-#pragma omp parallel for
+    PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
       PetscErrorCode  ierr_t;
       ierr_t = gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]);
