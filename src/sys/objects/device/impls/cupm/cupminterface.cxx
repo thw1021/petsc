@@ -18,7 +18,7 @@ namespace Impl
 {
 
 #define PETSC_CUPM_STATIC_VARIABLE_DEFN(theirs,DEVICE,ours)     \
-  const decltype(theirs) Interface<DeviceType::DEVICE>::ours;
+  const decltype(theirs) InterfaceImpl<DeviceType::DEVICE>::ours;
 
 // in case either one or the other don't agree on a name, you can specify all three here:
 //
