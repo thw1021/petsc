@@ -1,4 +1,4 @@
-#if !defined(PETSCDEVICECONTEXTCUPM_HPP)
+#ifndef PETSCDEVICECONTEXTCUPM_HPP
 #define PETSCDEVICECONTEXTCUPM_HPP
 
 #include <petsc/private/deviceimpl.h>
