@@ -14,6 +14,7 @@ namespace util
 {
 
 #if (__cplusplus >= 201402L) || PetscDefined(HAVE_CXX_DIALECT_CXX14) // C++14
+using std::enable_if_t;
 using std::conditional_t;
 using std::remove_const_t;
 using std::add_const_t;
@@ -24,12 +25,13 @@ using std::index_sequence;
 using std::make_index_sequence;
 using std::decay_t;
 using std::tuple_element_t;
-#if (__cplusplus >= 201703L)
+#if (__cplusplus >= 201703L) // C++17
 using std::void_t;
 #else // C++17
 template <class... T> using void_t = void;
 #endif // C++17
 #else // C++14
+template <bool B, class T = void >  using enable_if_t   = typename enable_if<B,T>::type;
 template <bool B, class T, class F> using conditional_t = typename std::conditional<B,T,F>::type;
 template <class T> using remove_const_t    = typename std::remove_const<T>::type;
 template <class T> using add_const_t       = typename std::add_const<T>::type;
@@ -118,6 +120,16 @@ static inline constexpr can_call<F,A...> is_callable_with(F&&) noexcept
 
 template <typename... T> struct always_false : std::false_type { };
 
+// type identity
+template <typename T> struct identity { using type = T; };
+
+template <typename T>
+struct remove_all_pointers
+  : conditional_t<std::is_pointer<T>::value,remove_all_pointers<remove_pointer_t<T>>,identity<T>>
+{ };
+
+template <typename T> using remove_all_pointers_t = typename remove_all_pointers<T>::type;
+
 } // namespace util
 
 template <typename T>
@@ -151,7 +163,6 @@ static inline constexpr util::add_const_t<T>*& PetscAddConstCast(T*& object) noe
   return const_cast<util::add_const_t<T>*&>(std::forward<T>(object));
 }
 
-
 // PetscObjectCast() - Cast an object to PetscObject
 //
 // input param:
@@ -179,31 +190,26 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
   return PetscObjectCast(PetscRemoveConstCast(object));
 }
 
-#define PETSC_ALIAS_FUNCTION__(alias,original,dispatch)			\
-  template <typename... Args>						\
-  static inline auto dispatch(int, Args&&... args)		\
-    noexcept(noexcept(original(std::forward<Args>(args)...)))		\
-    -> decltype(original(std::forward<Args>(args)...))			\
-  {									\
-    return original(std::forward<Args>(args)...);			\
-  }									\
-  template <typename... Args>						\
-  static inline int dispatch(char,Args&&...)			\
-  {									\
-    static_assert(							\
-      Petsc::util::is_callable_with<Args...>(original) &&		\
-      Petsc::util::always_false<Args...>::value,			\
-      "function is not callable with given arguments"			\
-    );									\
-    return EXIT_FAILURE;						\
-  }									\
-  template <typename... Args>                                           \
-  PETSC_NODISCARD auto alias(Args&&... args)				\
-    noexcept(noexcept(dispatch(0,std::forward<Args>(args)...)))         \
-    -> decltype(dispatch(0,std::forward<Args>(args)...))                \
-  {                                                                     \
-    return dispatch(0,std::forward<Args>(args)...);                     \
-  }
+#define PETSC_DECLTYPE_AUTO(...)             -> decltype(__VA_ARGS__) { return __VA_ARGS__; }
+#define PETSC_DECLTYPE_NOEXCEPT_RETURNS(...) noexcept(noexcept(__VA_ARGS__)) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
+
+#define PETSC_ALIAS_FUNCTION_(alias,original,dispatch)                                  \
+  template <typename... Args> static inline auto dispatch(int,Args... args)             \
+    PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::forward<Args>(args)...));             \
+  template <typename... Args> static inline int dispatch(char,Args...)                  \
+  {                                                                                     \
+    using namespace Petsc::util;                                                        \
+    static_assert(                                                                      \
+      is_callable_with<Args...>(original) && always_false<Args...>::value,              \
+      "function " PetscStringize(original) "() is not callable with given arguments"    \
+    );                                                                                  \
+    return EXIT_FAILURE;                                                                \
+  }                                                                                     \
+  template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args)                \
+    PETSC_DECLTYPE_NOEXCEPT_RETURNS(dispatch(0,std::forward<Args>(args)...))
+
+// makes prefix_lineno_name
+#define PETSC_ALIAS_UNIQUE_NAME_INTERNAL(prefix,name) PetscConcat(PetscConcat(PetscConcat(PetscConcat(prefix,_),__LINE__),_),name)
 
 // PETSC_ALIAS_FUNCTION() - Alias a function
 //
@@ -224,10 +230,7 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 //
 // example usage:
 // PETSC_ALIAS_FUNCTION(bar,foo);
-#define PETSC_ALIAS_FUNCTION_(alias,original,prefix)                    \
-  PETSC_ALIAS_FUNCTION__(alias,original,PetscConcat(PetscConcat(prefix,_),original))
-#define PETSC_ALIAS_FUNCTION(alias,original)                            \
-  PETSC_ALIAS_FUNCTION_(alias,original,PetscConcat(PetscAliasFunctionDispatch_,__LINE__))
+#define PETSC_ALIAS_FUNCTION(alias,original) PETSC_ALIAS_FUNCTION_(alias,original,PETSC_ALIAS_UNIQUE_NAME_INTERNAL(PetscAliasFunctionDispatch,original))
 
 // Similar to PETSC_ALIAS_FUNCTION() this macro creates a thin wrapper which passes all
 // arguments to the target function ~except~ the last N arguments. So
@@ -245,27 +248,19 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 // }
 //
 // for you.
-#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,gobblefn,N) \
-  template <typename TupleT, std::size_t... idx> static inline    \
-  auto gobblefn(TupleT&& tuple, Petsc::util::index_sequence<idx...>)    \
-    noexcept(noexcept(original(std::get<idx>(tuple)...)))               \
-    -> decltype(original(std::get<idx>(tuple)...))                      \
-  {                                                                     \
-    return original(std::get<idx>(tuple)...);                           \
-  };                                                                    \
-  template <typename... Args>                                           \
-  PETSC_NODISCARD auto alias(Args&&... args)                            \
-    noexcept(noexcept(gobblefn(std::forward_as_tuple(args...),Petsc::util::make_index_sequence<sizeof...(Args)-(N)>{}))) \
-    -> decltype(gobblefn(std::forward_as_tuple(args...),Petsc::util::make_index_sequence<sizeof...(Args)-(N)>{})) \
-  {                                                                     \
-    static_assert(std::is_integral<decltype(N)>::value,"");             \
-    static_assert((N) >= 0,"");                                         \
-    using seq = Petsc::util::make_index_sequence<sizeof...(Args)-(N)>;  \
-    return gobblefn(std::forward_as_tuple(args...),seq{});              \
-  }
+#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,gobblefn,N)                  \
+  static_assert(std::is_integral<decltype(N)>::value && ((N) >= 0),"");                        \
+  template <typename TupleT, std::size_t... idx>                                               \
+  static inline auto gobblefn(TupleT&& tuple, Petsc::util::index_sequence<idx...>)             \
+    PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::get<idx>(tuple)...));                        \
+  template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args)                       \
+    PETSC_DECLTYPE_NOEXCEPT_RETURNS(                                                           \
+      gobblefn(                                                                                \
+        std::forward_as_tuple(args...),Petsc::util::make_index_sequence<sizeof...(Args)-(N)>{} \
+      )                                                                                        \
+    )
 
-#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PetscConcat(petsc_private_gobble_,original),N)
+#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N) PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PETSC_ALIAS_UNIQUE_NAME_INTERNAL(PetscAliasFunctionGobbleDispatch,original),N)
 
 // PETSC_CXX_COMPAT_DECL() - Helper macro to declare a C++ class member function or
 // free-standing function guaranteed to be compatible with C
@@ -307,7 +302,7 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 // {
 //   ...
 // }
-#define PETSC_CXX_COMPAT_DECL(...) PETSC_NODISCARD static __VA_ARGS__ noexcept
+#define PETSC_CXX_COMPAT_DECL(...) PETSC_NODISCARD static inline __VA_ARGS__ noexcept
 
 // PETSC_CXX_COMPAT_DEFN() - Corresponding macro to define a C++ member function declared using
 // PETSC_CXX_COMPAT_DECL()

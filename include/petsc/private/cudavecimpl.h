@@ -74,6 +74,8 @@ PETSC_INTERN PetscErrorCode PetscNvshmemSum(PetscInt,PetscScalar*,const PetscSca
 PETSC_INTERN PetscErrorCode PetscNvshmemMax(PetscInt,PetscReal*,const PetscReal*);
 PETSC_INTERN PetscErrorCode VecNormAsync_NVSHMEM(Vec,NormType,PetscReal*);
 PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
+#else
+#  define PetscNvshmemFree(ptr) ((ptr) = PETSC_NULLPTR,0)
 #endif
 
 /* complex single */
