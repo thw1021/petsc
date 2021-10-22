@@ -7,7 +7,6 @@ SOURCEC  =
 SOURCECU =
 SOURCEKOKKOS = veckok.kokkos.cxx
 SOURCEF  =
-SOURCEH  = ../../../../../../include/petsc/private/cudavecimpl.h
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 LOCDIR   = src/vec/vec/impls/seq/kokkos/
