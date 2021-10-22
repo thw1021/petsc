@@ -2,7 +2,9 @@
 #define CUSPARSEMATIMPL
 
 #include <petscpkg_version.h>
-#include <petsc/private/cudavecimpl.h>
+#include <petsc/private/veccupmimpl.h>
+#include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp>
+#include <petsc/private/legacycublasapi.h>
 #include <petscaijdevice.h>
 
 #include <cusparse_v2.h>
@@ -17,6 +19,8 @@
 #include <thrust/functional.h>
 #include <thrust/sequence.h>
 #include <thrust/system/system_error.h>
+
+using VecSeq_CUDA = Petsc::Vector::CUPM::Impl::VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 #define PetscStackCallThrust(body) do {                                     \
     try {                                                                   \

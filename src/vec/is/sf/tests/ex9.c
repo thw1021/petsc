@@ -128,13 +128,7 @@ int main(int argc,char **argv)
       ierr = VecScatterBegin(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecScatterEnd(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecResetArray(yg);CHKERRQ(ierr);
-      if (iscuda) {
-        #if defined(PETSC_HAVE_CUDA)
-          ierr = VecCUDARestoreArray(y,&yvalue);CHKERRQ(ierr);
-        #endif
-      } else {
-        ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
-      }
+      ierr = VecRestoreArray(y,&yvalue);CHKERRQ(ierr);
 
       ierr = VecDestroy(&y);CHKERRQ(ierr);
     } else {
