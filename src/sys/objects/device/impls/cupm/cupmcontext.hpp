@@ -27,10 +27,10 @@ template <typename T> struct HandleTag { using type = T; };
 } // namespace detail
 
 // Forward declare
-template <DeviceType T> class PETSC_VISIBILITY_INTERNAL DeviceContext;
+template <DeviceType> class PETSC_TEMPLATE_VISIBILITY_INTERNAL DeviceContext;
 
 template <DeviceType T>
-class DeviceContext : Impl::BlasInterface<T>
+class DeviceContext : BlasInterface<T>
 {
 public:
   PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
@@ -154,7 +154,7 @@ public:
     getHandle<solver_tag>,
     getHandle<stream_tag>,
     beginTimer,
-    endTimer,
+    endTimer
   };
 
   // All of these functions MUST be static in order to be callable from C, otherwise they

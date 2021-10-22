@@ -1205,7 +1205,7 @@ PetscErrorCode MatAXPY_SeqSBAIJ(Mat Y,PetscScalar a,Mat X,MatStructure str)
         if (e) str = SAME_NONZERO_PATTERN;
       }
     }
-    if (!e && str == SAME_NONZERO_PATTERN) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatStructure is not SAME_NONZERO_PATTERN");
+    PetscCheckFalse(!e && str == SAME_NONZERO_PATTERN,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatStructure is not SAME_NONZERO_PATTERN");
   }
   if (str == SAME_NONZERO_PATTERN) {
     PetscScalar  alpha = a;

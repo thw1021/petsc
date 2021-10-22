@@ -281,13 +281,29 @@ function petsc_testend() {
 }
 
 function petsc_mpiexec_cudamemcheck() {
-  _mpiexec=$1;shift
-  npopt=$1;shift
-  np=$1;shift
-
-  cudamemchk="cuda-memcheck"
-
-  $_mpiexec $npopt $np $cudamemchk $*
+  # loops over the argument list to find the integer argument to mpiexec -n and insert the
+  # cuda memcheck command.
+  pre_args=()
+  re='^[0-9]+$' # regex to detect a positive integer
+  for i in "$@"; do
+    pre_args+=("$i")
+    shift
+    if [[ $i =~ $re ]]; then
+      # found it, put cuda memcheck command in
+      pre_args+=("${PETSC_CUDAMEMCHECK_COMMAND:-cuda-memcheck} --leak-check full --flush-to-disk yes --report-api-errors no")
+      break
+    fi
+  done
+  # run command, but filter out
+  # ===== CUDA-MEMCHECK
+  # and
+  # ===== ERROR SUMMARY: 0 errors
+  ${pre_args[@]} $* \
+    | grep -v 'CUDA-MEMCHECK' \
+    | grep -v 'LEAK SUMMARY: 0 bytes leaked in 0 allocations' \
+    | grep -v 'ERROR SUMMARY: 0 errors' || [[ $? == 1 ]]
+  # last or is needed to suppress grep exiting with error code 1 if it doesn't find a
+  # match
 }
 
 function petsc_mpiexec_valgrind() {
