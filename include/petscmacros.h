@@ -535,7 +535,7 @@ $ #define PETSC_DONT_HAVE_FOO PetscCompl(PetscDefined(HAVE_FOO))
 
 .seealso: PetscConcat(), PetscDefined()
 MC*/
-#define PetscCompl(b) PetscConcat_(PETSC_INTERNAL_COMPL_,PetscExpand(b))
+#define PetscCompl(b) PetscConcat(PETSC_INTERNAL_COMPL_,PetscExpand(b))
 
 #if !defined(PETSC_SKIP_VARIADIC_MACROS)
 /*MC

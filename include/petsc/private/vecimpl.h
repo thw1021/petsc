@@ -208,14 +208,6 @@ PETSC_EXTERN PetscErrorCode VecView_Seq(Vec,PetscViewer);
 PETSC_EXTERN PetscErrorCode VecViennaCLAllocateCheckHost(Vec v);
 PETSC_EXTERN PetscErrorCode VecViennaCLCopyFromGPU(Vec v);
 #endif
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode VecCUDAAllocateCheckHost(Vec v);
-PETSC_EXTERN PetscErrorCode VecCUDACopyFromGPU(Vec v);
-#endif
-#if defined(PETSC_HAVE_HIP)
-PETSC_EXTERN PetscErrorCode VecHIPAllocateCheckHost(Vec v);
-PETSC_EXTERN PetscErrorCode VecHIPCopyFromGPU(Vec v);
-#endif
 
 /*
      Common header shared by array based vectors,
