@@ -9740,7 +9740,6 @@ static PetscErrorCode MatProduct_Private(Mat A,Mat B,MatReuse scall,PetscReal fi
         product = (*C)->product;
         product->fill     = fill;
         product->api_user = PETSC_TRUE;
-        product->clear    = PETSC_TRUE;
 
         ierr = MatProductSetType(*C,ptype);CHKERRQ(ierr);
         ierr = MatProductSetFromOptions(*C);CHKERRQ(ierr);
