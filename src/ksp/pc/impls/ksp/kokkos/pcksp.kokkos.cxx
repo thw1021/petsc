@@ -252,9 +252,13 @@ static PetscErrorCode PCApply_KSPKOKKOS(PC pc,Vec b,Vec x)
       }
     }
     errsum = 0;
-    Kokkos::parallel_reduce (nBlk, [=] (const int idx, PetscInt& lsum) {
+#if defined(KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA)
+    Kokkos::parallel_reduce(nBlk, KOKKOS_LAMBDA (const int idx, int& lsum) {
         if (d_metadata[idx].reason < 0 && d_metadata[idx].reason != KSP_DIVERGED_ITS && d_metadata[idx].reason != KSP_CONVERGED_ITS) lsum += 1;
       }, errsum);
+#else
+#errror
+#endif
     if (!errsum) pcreason = PC_NOERROR;
     else pcreason = PC_SUBPC_ERROR;
 #if defined(PETSC_USE_DEBUG)
@@ -332,7 +336,6 @@ static PetscErrorCode PCSetUp_KSPKOKKOS(PC pc)
     // get diagonal
     Kokkos::parallel_for("Diag", Kokkos::TeamPolicy<>(jac->nBlocks, team_size, KOKKOS_VEC_SIZE), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt blkID = team.league_rank();
-        PetscInfo2(pc,"blkID = %d, nloc=%d\n",blkID,d_block_offsets[blkID+1] - d_block_offsets[blkID]);
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team,d_block_offsets[blkID],d_block_offsets[blkID+1]), [=] (const int row) {
             const PetscInt    *rp1 = d_aj + d_ai[row];
             const PetscScalar *ap1 = d_aa + d_ai[row];
@@ -427,7 +430,7 @@ static PetscErrorCode  PCKSPKOKKOSSetKSP_KSPKOKKOS(PC pc,KSP ksp)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    PCKSPKOKKOSSetKSP - Sets the KSP context for a KSP PC.
 
    Collective on PC
@@ -465,7 +468,7 @@ static PetscErrorCode  PCKSPKOKKOSGetKSP_KSPKOKKOS(PC pc,KSP *ksp)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    PCKSPKOKKOSGetKSP - Gets the KSP context for a KSP PC.
 
    Not Collective but KSP returned is parallel if PC was parallel
