@@ -96,6 +96,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA>
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,StreamNonBlocking);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,DeviceMapHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,MemcpyHostToDevice);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(cuda,MemcpyDeviceToDevice);
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(cuda,GetErrorName);
@@ -252,6 +253,7 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,StreamNonBlocking);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,DeviceMapHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,MemcpyHostToDevice);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(hip,MemcpyDeviceToDevice);
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(hip,GetErrorName);
@@ -377,6 +379,7 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   using base_name_::cupmStreamNonBlocking;                              \
   using base_name_::cupmDeviceMapHost;                                  \
   using base_name_::cupmMemcpyHostToDevice;                             \
+  using base_name_::cupmMemcpyDeviceToDevice;                           \
   /* functions */                                                       \
   using base_name_::cupmName;                                           \
   using base_name_::cupmGetErrorName;                                   \
