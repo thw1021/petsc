@@ -17,6 +17,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_ICC(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_GASM(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_KSP(PC);
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+PETSC_EXTERN PetscErrorCode PCCreate_KSPKOKKOS(PC);
+#endif
 PETSC_EXTERN PetscErrorCode PCCreate_Composite(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Redundant(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_NN(PC);
@@ -103,6 +106,9 @@ PetscErrorCode  PCRegisterAll(void)
   ierr = PCRegister(PCASM          ,PCCreate_ASM);CHKERRQ(ierr);
   ierr = PCRegister(PCGASM         ,PCCreate_GASM);CHKERRQ(ierr);
   ierr = PCRegister(PCKSP          ,PCCreate_KSP);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+  ierr = PCRegister(PCKSPKOKKOS    ,PCCreate_KSPKOKKOS);CHKERRQ(ierr);
+#endif
   ierr = PCRegister(PCCOMPOSITE    ,PCCreate_Composite);CHKERRQ(ierr);
   ierr = PCRegister(PCREDUNDANT    ,PCCreate_Redundant);CHKERRQ(ierr);
   ierr = PCRegister(PCNN           ,PCCreate_NN);CHKERRQ(ierr);

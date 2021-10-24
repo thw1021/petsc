@@ -1,16 +1,18 @@
--include ../../../../../petscdir.mk
+#requirespackage 'PETSC_HAVE_KOKKOS_KERNELS'
+-include ../../../../../../petscdir.mk
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
-SOURCEC   = pcksp.c
+SOURCEC   = 
+SOURCEKOKKOS = pcksp.kokkos.cxx
 SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      = kokkos
+DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
-LOCDIR    = src/ksp/pc/impls/ksp/
+LOCDIR    = src/ksp/pc/impls/ksp/kokkos
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
