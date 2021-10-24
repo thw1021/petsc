@@ -3,15 +3,15 @@
 #include <petsc/private/kspimpl.h>
 #include <petscksp.h>            /*I "petscksp.h" I*/
 #include <petscdmcomposite.h>
-
 #include <Kokkos_Core.hpp>
+
 typedef Kokkos::TeamPolicy<>::member_type team_member;
 
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <../src/mat/impls/aij/seq/kokkos/aijkokkosimpl.hpp>
 
 #define KOKKOS_SHARED_LEVEL 1
-#define KOKKOS_VEC_SIZE 1
+#define KOKKOS_VEC_SIZE 16
 
 typedef enum {BICG_IDX,NUM_KSP_IDX} KSPIndex;
 typedef struct {
@@ -57,7 +57,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode MatMult(const team_member team,  const Pet
       const PetscScalar *aa  = glb_Aaa + glb_Aai[glb_row];
       PetscScalar sum = 0;
       Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, n), [=] (const int i, PetscScalar& lsum) {
-          lsum += aa[i] * x[aj[i]];
+          lsum += aa[i] * x[aj[i]-start];
         }, sum);
       y[glb_row-start] = sum;
     });
@@ -77,25 +77,25 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode MatMultTranspose(const team_member team, c
       const PetscScalar xx = x[glb_row-start];
       Kokkos::parallel_for(Kokkos::ThreadVectorRange(team,n), [=] (const int &i) {
           PetscScalar val = aa[i] * xx;
-          Kokkos::atomic_fetch_add(&y[aj[i]], val);
+          Kokkos::atomic_fetch_add(&y[aj[i]-start], val);
         });
     });
   return 0;
 }
 
-typedef struct device_meta_data
+typedef struct PCKSP_MetaData_TAG
 {
   PetscInt           its;
   KSPConvergedReason reason;
-} PCKSP_MetaData;
+}PCKSP_MetaData;
 
 // Solve Ax = y with biCG stabilized
-KOKKOS_INLINE_FUNCTION PetscErrorCode PCKSPSolve_BICG(const team_member team, const PetscInt *Aai, const PetscInt *Aaj, const PetscScalar *Aaa, PetscScalar *work_space, PetscReal rtol, PetscInt maxit, PCKSP_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar idiag[], const PetscScalar *a_b, PetscScalar *a_x)
+KOKKOS_INLINE_FUNCTION PetscErrorCode PCKSPSolve_BICG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, PetscScalar *work_space, PetscReal rtol, PetscInt maxit, PCKSP_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x)
 {
   PetscInt          Nblk = end-start, i;
   PetscReal         dp;
-  const PetscScalar *B = &a_b[start];
-  PetscScalar       *X = &a_x[start], *ptr = work_space, dpi, a=1.0, beta, betaold=1.0, b,ma, r0;
+  const PetscScalar *B = &glb_b[start], *idiag = &glb_idiag[start];
+  PetscScalar       *X = &glb_x[start], *ptr = work_space, dpi, a=1.0, beta, betaold=1.0, b,ma, r0;
   PetscScalar       *Rl = ptr; ptr += Nblk;
   PetscScalar       *Zl = ptr; ptr += Nblk;
   PetscScalar       *Pl = ptr; ptr += Nblk;
@@ -145,10 +145,10 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode PCKSPSolve_BICG(const team_member team, co
     }
     betaold = beta;
     //ierr    = KSP_MatMult(ksp,Amat,Pr,Zr);CHKERRQ(ierr); /*     z <- Kp         */
-    MatMult         (team,Aai,Aaj,Aaa,start,end,Pr,Zr);
+    MatMult         (team,glb_Aai,glb_Aaj,glb_Aaa,start,end,Pr,Zr);
     team.team_barrier();
     //ierr    = KSP_MatMultHermitianTranspose(ksp,Amat,Pl,Zl);CHKERRQ(ierr);
-    MatMultTranspose(team,Aai,Aaj,Aaa,start,end,Pl,Zl);
+    MatMultTranspose(team,glb_Aai,glb_Aaj,glb_Aaa,start,end,Pl,Zl);
     team.team_barrier();
     //ierr    = VecDot(Zr,Pl,&dpi);CHKERRQ(ierr);            /*     dpi <- z'p      */
     dpi = 0;
@@ -170,8 +170,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode PCKSPSolve_BICG(const team_member team, co
 #if defined(PETSC_USE_DEBUG)
     printf("%7d KSP Residual norm %14.12e \n",i+1,(double)dp);
 #endif
-    //ksp->its   = i+1;
-    //ksp->rnorm = dp;
     if (dp < 1e-50) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; goto done;}
     if (dp/r0 < rtol) {metad->reason = KSP_CONVERGED_RTOL_NORMAL; goto done;}
     if (dp/r0 > 1.e5) {metad->reason = KSP_DIVERGED_DTOL; goto done;}
@@ -202,55 +200,66 @@ static PetscErrorCode PCApply_KSPKOKKOS(PC pc,Vec b,Vec x)
   else {
     using scr_mem_t  = Kokkos::DefaultExecutionSpace::scratch_memory_space;
     using vect2D_scr_t = Kokkos::View<PetscScalar**, Kokkos::LayoutLeft, scr_mem_t>;
-    PetscInt          N, *d_block_offsets, maxit = jac->ksp->max_it;
+    PetscInt          N, *d_block_offsets, maxit = jac->ksp->max_it, errsum;
     const PetscInt    conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp==0) ? 16 : 1;
-    const PetscInt    nwork = jac->nwork,blkSz = jac->maxBlkSize,nBlk = jac->nBlocks;
-    PetscScalar       *xdata=NULL;
+    const PetscInt    nwork = jac->nwork,blkSz = jac->maxBlkSize, nBlk = jac->nBlocks;
+    PetscScalar       *glb_xdata=NULL;
     PetscReal         rtol = jac->ksp->rtol;
-    const PetscScalar *idiag =jac->d_idiag->data(), *bdata=NULL;;
-    const PetscInt    *Aai = aijkok->i_d.data(), *Aaj = aijkok->j_d.data();
-    const PetscScalar *Aaa = aijkok->a_d.data();
-    Kokkos::View<PCKSP_MetaData, Kokkos::DefaultExecutionSpace> d_metadata("solver meta data");
+    const PetscScalar *glb_idiag =jac->d_idiag->data(), *glb_bdata=NULL;
+    const PetscInt    *glb_Aai = aijkok->i_d.data(), *glb_Aaj = aijkok->j_d.data();
+    const PetscScalar *glb_Aaa = aijkok->a_d.data();
+    Kokkos::View<PCKSP_MetaData*, Kokkos::DefaultExecutionSpace> d_metadata("solver meta data", nBlk);
     PCFailedReason    pcreason;
 
     ierr = VecGetSize(x,&N);CHKERRQ(ierr);
-    ierr = VecGetArrayAndMemType(x,&xdata,&mtype);CHKERRQ(ierr);
+    ierr = VecGetArrayAndMemType(x,&glb_xdata,&mtype);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     if (mtype!=PETSC_MEMTYPE_DEVICE) SETERRQ2(PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"No GPU data for x %D != %D",mtype,PETSC_MEMTYPE_DEVICE);
 #endif
-    ierr = VecGetArrayReadAndMemType(b,&bdata,&mtype);CHKERRQ(ierr);
+    ierr = VecGetArrayReadAndMemType(b,&glb_bdata,&mtype);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     if (mtype!=PETSC_MEMTYPE_DEVICE) SETERRQ(PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"No GPU data for b");
 #endif
     d_block_offsets = jac->d_block_offsets->data();
     // solve each block independently
     const int scr_bytes = vect2D_scr_t::shmem_size(blkSz*nBlk,nwork);
-    PetscInfo4(pc,"\tN = %D. %d shared memory bytes. maxBlkSize = %d. rtol=%e\n",N,scr_bytes,blkSz,rtol);
+    PetscInfo6(pc,"\tN = %D. %d shared memory words. maxBlkSize = %d. rtol=%e team_size=%D, %D vector threads\n",N,scr_bytes/sizeof(PetscScalar),blkSz,rtol,team_size,KOKKOS_VEC_SIZE);
     Kokkos::parallel_for("Solve", Kokkos::TeamPolicy<>(nBlk, team_size, KOKKOS_VEC_SIZE).set_scratch_size(KOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes)), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt blkID = team.league_rank(), start = d_block_offsets[blkID], end = d_block_offsets[blkID+1];
         vect2D_scr_t work_vecs(team.team_scratch(KOKKOS_SHARED_LEVEL),end-start,nwork);
         switch (jac->ksp_idx) {
         case BICG_IDX:
-          PCKSPSolve_BICG(team, Aai, Aaj, Aaa, work_vecs.data(), rtol, maxit, d_metadata.data(), start, end, idiag, bdata, xdata);
+          PCKSPSolve_BICG(team, glb_Aai, glb_Aaj, glb_Aaa, work_vecs.data(), rtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata);
           break;
         default:
 #if defined(PETSC_USE_DEBUG)
           printf("Unknown KSP type %d\n",jac->ksp_idx);
+#else
+          /* void */;
 #endif
         }
 #if defined(PETSC_USE_DEBUG)
-        if (d_metadata().reason<0) printf("Solver diverged %d\n",d_metadata().reason);
+        if (d_metadata[blkID].reason<0) printf("Solver diverged %d\n",d_metadata[blkID].reason);
 #endif
       });
-    ierr = VecRestoreArrayAndMemType(x,&xdata);CHKERRQ(ierr);
-    ierr = VecRestoreArrayReadAndMemType(b,&bdata);CHKERRQ(ierr);
-    auto h_metadata = Kokkos::create_mirror(Kokkos::HostSpace::memory_space(),d_metadata);
-    Kokkos::deep_copy (h_metadata, d_metadata);
-printf("Solver reason %d, %d iterations\n",h_metadata().reason,h_metadata().its);
-    if (!h_metadata().reason || h_metadata().reason==KSP_DIVERGED_ITS || h_metadata().reason==KSP_CONVERGED_ITS) pcreason = PC_NOERROR;
-    else if (h_metadata().reason < 0) pcreason = PC_SUBPC_ERROR;
-    else pcreason = PC_NOERROR;
+    ierr = VecRestoreArrayAndMemType(x,&glb_xdata);CHKERRQ(ierr);
+    ierr = VecRestoreArrayReadAndMemType(b,&glb_bdata);CHKERRQ(ierr);
+    {
+      auto h_metadata = Kokkos::create_mirror(Kokkos::HostSpace::memory_space(), d_metadata);
+      Kokkos::deep_copy (h_metadata, d_metadata);
+      for (int i=0;i<nBlk;i++) {
+        PetscInfo3(pc,"%d) Solver reason %d, %d iterations\n",i, h_metadata[i].reason, h_metadata[i].its);
+      }
+    }
+    errsum = 0;
+    Kokkos::parallel_reduce (nBlk, [=] (const int idx, PetscInt& lsum) {
+        if (d_metadata[idx].reason < 0 && d_metadata[idx].reason != KSP_DIVERGED_ITS && d_metadata[idx].reason != KSP_CONVERGED_ITS) lsum += 1;
+      }, errsum);
+    if (!errsum) pcreason = PC_NOERROR;
+    else pcreason = PC_SUBPC_ERROR;
+#if defined(PETSC_USE_DEBUG)
     printf("PCSetFailedReason %d\n",pcreason);
+#endif
     ierr = PCSetFailedReason(pc,pcreason);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
