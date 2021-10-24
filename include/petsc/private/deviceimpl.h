@@ -233,6 +233,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice d
 #else /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
 #define PetscDeviceInitializeFromOptions_Internal(comm)      0
 #define PetscDeviceInitializeDefaultDevice_Internal(type,id) 0
+#define PetscDeviceConfiguredFor_Internal(type)              PETSC_FALSE
 #define PetscDeviceGetDefaultForType_Internal(Type,device)   0
 #define PetscDeviceGetDefault_Internal(device)               0
 #define PetscDeviceCheckDeviceCount_Internal(count)          0
@@ -333,6 +334,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
   ierr = (*dctx->ops->endtimer)(dctx,elapsed);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
 #else /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
 #define PetscDeviceContextSetRootDeviceType_Internal(type)                0
 #define PetscDeviceContextValidateIdle_Internal(dctx)                     0
