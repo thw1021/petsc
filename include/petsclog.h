@@ -289,9 +289,6 @@ PETSC_EXTERN PetscLogDouble petsc_ctog_sz_scalar;
 PETSC_EXTERN PetscLogDouble petsc_gtoc_sz_scalar;
 PETSC_EXTERN PetscLogDouble petsc_gflops;
 PETSC_EXTERN PetscLogDouble petsc_gtime;
-#if defined(PETSC_USE_DEBUG)
-PETSC_EXTERN PetscBool      petsc_gtime_inuse;
-#endif
 
 PETSC_STATIC_INLINE PetscErrorCode PetscLogCpuToGpu(PetscLogDouble size)
 {
