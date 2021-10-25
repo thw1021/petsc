@@ -2,7 +2,7 @@
 #define PETSCDEVICECONTEXTCUPM_HPP
 
 #include <petsc/private/deviceimpl.h>
-#include <petsc/private/cupminterface.hpp>
+#include <petsc/private/cupmblasinterface.hpp>
 
 #if !defined(PETSC_HAVE_CXX_DIALECT_CXX11)
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
@@ -25,13 +25,13 @@ template <typename HT> struct HandleTag { };
 template <CUPMDeviceType T> class CUPMContext;
 
 template <CUPMDeviceType T>
-class CUPMContext : CUPMInterface<T>
+class CUPMContext : CUPMBlasInterface<T>
 {
   template <typename H>
   using HandleTag = typename detail::HandleTag<H>;
 
 public:
-  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T)
+  PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
 
   // This is the canonical PETSc "impls" struct that normally resides in a standalone impls
   // header, but since we are using the power of templates it must be declared part of
@@ -63,16 +63,61 @@ private:
     return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
   }
 
-  PETSC_NODISCARD static PetscErrorCode __finalize() noexcept
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cupmMemcpy_t __mem_op_to_cupmmemcpy_t(PetscDeviceMemOpType op)
   {
-    PetscErrorCode ierr;
+    switch (op) {
+    case PETSC_DEVICE_MEMCPY_DTOD: return cupmMemcpyDeviceToDevice;
+    case PETSC_DEVICE_MEMCPY_HTOD: return cupmMemcpyHostToDevice;
+    case PETSC_DEVICE_MEMCPY_DTOH: return cupmMemcpyDeviceToHost;
+    case PETSC_DEVICE_MEMCPY_HTOH: return cupmMemcpyHostToHost;
+    case PETSC_DEVICE_MEMCPY_AUTO: return cupmMemcpyDefault;
+    default:
+      SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscDeviceMemOpType");
+    }
+  }
+
+  PETSC_NODISCARD static PetscErrorCode __initialize_handle(cupmBlasHandle_t &handle) noexcept
+  {
+    constexpr std::size_t end = 3;
+    cupmBlasError_t       cberr;
 
     PetscFunctionBegin;
+    if (handle) PetscFunctionReturn(0);
+    for (std::size_t i = 0; i < end; ++i) {
+      cberr = cupmBlasCreate(&handle);
+      if (PetscLikely(cberr == CUPMBLAS_STATUS_SUCCESS)) break;
+      if ((cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) CHKERRCUPMBLAS(cberr);
+      if (i != end-1) {auto ierr = PetscSleep(3);CHKERRQ(ierr);}
+    }
+    if (PetscUnlikely(cberr != CUPMBLAS_STATUS_SUCCESS)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize %s",cupmBlasName());
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_NODISCARD static PetscErrorCode __set_handle_stream(cupmBlasHandle_t &handle, cupmStream_t &stream) noexcept
+  {
+    cupmStream_t    cupmStream;
+    cupmBlasError_t cberr;
+
+    PetscFunctionBegin;
+    cberr = cupmBlasGetStream(handle,&cupmStream);CHKERRCUPMBLAS(cberr);
+    if (cupmStream != stream) {cberr = cupmBlasSetStream(handle,stream);CHKERRCUPMBLAS(cberr);}
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_NODISCARD static PetscErrorCode __finalize() noexcept
+  {
+    PetscFunctionBegin;
     for (auto&& handle : _blashandles) {
-      if (handle) {ierr = cupmInterface_t::DestroyHandle(handle);CHKERRQ(ierr);}
+      if (handle) {
+        auto cberr = cupmBlasDestroy(handle);CHKERRCUPMBLAS(cberr);
+        handle     = nullptr;
+      }
     }
     for (auto&& handle : _solverhandles) {
-      if (handle) {ierr = cupmInterface_t::DestroyHandle(handle);CHKERRQ(ierr);}
+      if (handle) {
+        auto ierr = cupmBlasInterface_t::DestroyHandle(handle);CHKERRQ(ierr);
+        handle    = nullptr;
+      }
     }
     _initialized = false;
     PetscFunctionReturn(0);
@@ -90,11 +135,11 @@ private:
     }
     // use the blashandle as a canary
     if (!_blashandles[id]) {
-      ierr = cupmInterface_t::InitializeHandle(_blashandles[id]);CHKERRQ(ierr);
-      ierr = cupmInterface_t::InitializeHandle(_solverhandles[id]);CHKERRQ(ierr);
+      ierr = __initialize_handle(_blashandles[id]);CHKERRQ(ierr);
+      ierr = cupmBlasInterface_t::InitializeHandle(_solverhandles[id]);CHKERRQ(ierr);
     }
-    ierr = cupmInterface_t::SetHandleStream(_blashandles[id],dci->stream);CHKERRQ(ierr);
-    ierr = cupmInterface_t::SetHandleStream(_solverhandles[id],dci->stream);CHKERRQ(ierr);
+    ierr = __set_handle_stream(_blashandles[id],dci->stream);CHKERRQ(ierr);
+    ierr = cupmBlasInterface_t::SetHandleStream(_solverhandles[id],dci->stream);CHKERRQ(ierr);
     dci->blas   = _blashandles[id];
     dci->solver = _solverhandles[id];
     PetscFunctionReturn(0);
@@ -111,7 +156,8 @@ public:
     getHandle<cupmBlasHandle_t>,
     getHandle<cupmSolverHandle_t>,
     beginTimer,
-    endTimer
+    endTimer,
+    binarymemop
   };
 
   // default constructor
@@ -129,6 +175,7 @@ public:
   PETSC_NODISCARD static PetscErrorCode getHandle(PetscDeviceContext,void*) noexcept;
   PETSC_NODISCARD static PetscErrorCode beginTimer(PetscDeviceContext) noexcept;
   PETSC_NODISCARD static PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*) noexcept;
+  PETSC_NODISCARD static PetscErrorCode binarymemop(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceMemOpType) noexcept;
 };
 
 template <CUPMDeviceType T>
@@ -261,6 +308,7 @@ inline PetscErrorCode CUPMContext<T>::beginTimer(PetscDeviceContext dctx) noexce
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
+
   if (PetscUnlikely(dci->timerInUse)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   dci->timerInUse = PETSC_TRUE;
 #endif
@@ -284,6 +332,16 @@ inline PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext dctx, PetscLog
   cerr = cupmEventSynchronize(dci->end);CHKERRCUPM(cerr);
   cerr = cupmEventElapsedTime(&gtime,dci->begin,dci->end);CHKERRCUPM(cerr);
   *elapsed = static_cast<PetscLogDouble>(gtime);
+  PetscFunctionReturn(0);
+}
+
+template <CUPMDeviceType T>
+inline PetscErrorCode CUPMContext<T>::binarymemop(PetscDeviceContext dctx, void * PETSC_RESTRICT dest, const void * PETSC_RESTRICT src, std::size_t n, PetscDeviceMemOpType op) noexcept
+{
+  cupmError_t cerr;
+
+  PetscFunctionBegin;
+  cerr = cupmMemcpyAsync(dest,src,n,__mem_op_to_cupmmemcpy_t(op),__impls_cast(dctx)->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
