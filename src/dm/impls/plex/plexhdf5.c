@@ -390,6 +390,7 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
 
   PetscFunctionBegin;
   ierr = DMPlexSetUpStorageVersionWriting_Private(dm, viewer, &versionMajor, &versionMinor);CHKERRQ(ierr);
+  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) is currently unsupported for saving", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
   ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
   ierr = PetscObjectGetName((PetscObject)dm, &topologydm_name);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
@@ -654,6 +655,7 @@ PetscErrorCode DMPlexCoordinatesView_HDF5_Internal(DM dm, PetscViewer viewer)
 
     ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
     ierr = DMPlexSetUpStorageVersionWriting_Private(dm, viewer, &versionMajor, &versionMinor);CHKERRQ(ierr);
+  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) is currently unsupported for saving", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
     if (format == PETSC_VIEWER_HDF5_XDMF || format == PETSC_VIEWER_HDF5_VIZ || versionMinor < DMPLEX_STORAGE_VERSION_MINOR_1) {
       ierr = DMPlexCoordinatesView_HDF5_V0_Private(dm, viewer);CHKERRQ(ierr);
       PetscFunctionReturn(0);
@@ -834,6 +836,8 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
 
   PetscFunctionBegin;
   ierr = DMPlexSetUpStorageVersionWriting_Private(dm, viewer, &versionMajor, &versionMinor);CHKERRQ(ierr);
+  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) is currently unsupported for saving", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
+
   ierr = ISGetIndices(globalPointNumbers, &gpoint);CHKERRQ(ierr);
   ierr = PetscObjectGetName((PetscObject)dm, &topologydm_name);CHKERRQ(ierr);
   if (versionMinor < DMPLEX_STORAGE_VERSION_MINOR_1) {
@@ -1182,9 +1186,7 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   ctx.viewer = viewer;
   ierr = PetscObjectGetName((PetscObject)dm, &topologydm_name);CHKERRQ(ierr);
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "dmplex_storage_version_major", PETSC_ENUM, &versionMajor, &versionMajor);CHKERRQ(ierr);
-  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) {
-    SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) used in the HDF5 file, which is currently unsupported for loading", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
-  }
+  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) used in the HDF5 file, which is currently unsupported for loading", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "dmplex_storage_version_minor", PETSC_ENUM, &versionMinor, &versionMinor);CHKERRQ(ierr);
   if (versionMinor < DMPLEX_STORAGE_VERSION_MINOR_1) {
     ierr = PetscStrcpy(group, "/labels");CHKERRQ(ierr);
@@ -1224,9 +1226,7 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscObjectGetName((PetscObject)dm, &topologydm_name);CHKERRQ(ierr);
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "dmplex_storage_version_major", PETSC_ENUM, &versionMajor, &versionMajor);CHKERRQ(ierr);
-  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) {
-    SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) used in the HDF5 file, which is currently unsupported for loading", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
-  }
+  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) used in the HDF5 file, which is currently unsupported for loading", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "dmplex_storage_version_minor", PETSC_ENUM, &versionMinor, &versionMinor);CHKERRQ(ierr);
   if (versionMinor < DMPLEX_STORAGE_VERSION_MINOR_1) {
     ierr = PetscStrcpy(group, "/topology");CHKERRQ(ierr);
@@ -1375,9 +1375,7 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer, Pe
 
   PetscFunctionBegin;
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "dmplex_storage_version_major", PETSC_ENUM, &versionMajor, &versionMajor);CHKERRQ(ierr);
-  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) {
-    SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) used in the HDF5 file, which is currently unsupported for loading", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
-  }
+  if (versionMajor > DMPLEX_STORAGE_VERSION_MAJOR_0) SETERRQ2(PetscObjectComm((PetscObject)dm), PETSC_ERR_FILE_UNEXPECTED, "DMPlex storage major version %d ( > %d) used in the HDF5 file, which is currently unsupported for loading", versionMajor, DMPLEX_STORAGE_VERSION_MAJOR_0);
   ierr = PetscViewerHDF5ReadAttribute(viewer, NULL, "dmplex_storage_version_minor", PETSC_ENUM, &versionMinor, &versionMinor);CHKERRQ(ierr);
   /* If the file is old, it not only has different path to the coordinates, but   */
   /* does not contain coordinateDMs, so must fall back to the old implementation. */
