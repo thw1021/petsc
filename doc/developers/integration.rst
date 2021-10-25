@@ -121,6 +121,8 @@ The PETSc continuous integration (CI) pipeline runs the entire test suite on aro
 
 Since the full pipeline requires many resources, when a merge request is created, a pipeline is triggered but you must manually un-pause it for the tests to run. For detailed instructions and help diagnosing failures, see :doc:`/developers/pipelines`.
 
+.. _sec_mr_reviewing:
+
 MR reviewing
 ============
 
@@ -179,6 +181,49 @@ Both of these should also be marked as "Draft" on the MR page.
 These two states are usually eventually converted by the developer to ``workflow::Review``.
 
 You can run the pipelines on an MR in any workflow state.
+
+Merge request management
+========================
+
+At any give time, at least one of the :any:`sec_core_developers` has the role
+of "MR Shepherd", and is responsible for ensuring that the list of open merge
+requests continue to progress according to the :any:`review process <sec_mr_reviewing>`.
+They should frequently examine the list of merge requests and take appropriate action.
+
+.. list-table:: MR Shepherd Checks
+      :widths: 50 50
+      :align: left
+      :header-rows: 1
+
+      * - MR State
+        - Action
+      * - Missing a :any:`workflow label <sec_workflow_labels>`
+        - Add an appropriate label, or label ``workflow::Waiting-on-Submitter`` and ask the submitter to update
+      * - Approved but without pipelines run
+        - Run the pipelines
+      * - From an external person without an assignee
+        - Assign an appropriate developer or ask the submitter to choose someone
+      * - From an external person who seems stuck
+        - Remind the assignee
+
+If MRs are inactive for too long, remind the submitter, assignee(s), and reviewer(s) of actions to take. Where the submitter must take action, change the label to ``workflow::Waiting-on-Submitter``.
+
+.. list-table:: MR Inactivity Thresholds
+      :widths: 50 50
+      :align: left
+      :header-rows: 1
+
+      * - MR state
+        - Inactivity threshold
+      * - ``workflow::Review``, ``workflow::Ready-for-Merge``, ``workflow:Pipeline-Testing``
+        - One week
+      * - ``workflow::Waiting-on-Submitter``, ``workflow::Request-for-Comment``, ``workflow::Requires-Discussion``
+        - One month
+      * - Any
+        - One year
+
+If an MR has been inactive for a year and the last activity was a reminder to the submitter, close the MR, label ``workflow::Inactive-closed``, and let the submitter know that they may reopen if desired.
+
 
 .. rubric:: Footnotes
 
