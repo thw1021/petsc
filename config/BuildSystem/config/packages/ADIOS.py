@@ -3,8 +3,8 @@ import config.package
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.gitcommit         = '6f24c5e' # master may 23, 2019
-    self.download          = ['git://https://github.com/ornladios/ADIOS.git']
+    self.gitcommit         = '5500ea0411639d0cb538a3f1818c74c8d070d352' # master August 3, 2021 Fix for Netcdf 4.8.0 
+    self.download          = ['git://https://github.com/petsc/ADIOS.git']
     self.downloaddirnames  = ['adios']
     self.functions         = ['adios_open']
     self.includes          = ['adios.h']

@@ -75,6 +75,8 @@ class Configure(config.package.GNUPackage):
       args.append('--with-netcdf="'+self.netcdf.directory+'"')
     else:
       args.append('--without-netcdf')
+    # always disable this because PETSc does not provide it and it may be in the system directories and be incompatable with the netcdf that PETSc provides
+    args.append('--with-netcdf-cxx=no')
     if self.eigen.found:
       args.append('--with-eigen3="'+self.eigen.directory+'"')
     if self.metis.found:
