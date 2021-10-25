@@ -1053,7 +1053,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
 
    KSPSolve() will normally return without generating an error regardless of whether the linear system was solved or if constructing the preconditioner failed.
    Call KSPGetConvergedReason() to determine if the solver converged or failed and why. The option -ksp_error_if_not_converged or function KSPSetErrorIfNotConverged()
-   will cause KSPSolve() to error as soon as an occurs in the linear solver.  In innerr KSPSolves() KSP_DIVERGED_ITS is not treated as an error because when using nested solvers
+   will cause KSPSolve() to error as soon as an error occurs in the linear solver.  In innerr KSPSolves() KSP_DIVERGED_ITS is not treated as an error because when using nested solvers
    it may be fine that inner solvers in the preconditioner do not converge during the solution process.
 
    The number of iterations can be obtained from KSPGetIterationNumber().
