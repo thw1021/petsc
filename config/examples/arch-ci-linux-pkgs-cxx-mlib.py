@@ -27,7 +27,9 @@ configure_options = [
   '--download-elemental=1',
   '--download-spai=1',
   '--download-chaco=1',
-  '--download-netcdf=1',
+  # requires older version of netcdf that works with netcdf-c++ installed on GCE systems
+  # because MOAB always looks for netcdf-c++ in system directories even when told not to
+  '--download-netcdf=https://github.com/Unidata/netcdf-c/archive/v4.5.0.tar.gz',
   '--download-hdf5=1',
   '--download-adios=1',
   '--with-zlib=1',

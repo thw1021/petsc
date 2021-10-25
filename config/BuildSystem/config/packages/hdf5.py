@@ -67,6 +67,8 @@ class Configure(config.package.GNUPackage):
     ''' Add HDF5 specific --enable-parallel flag and enable Fortran if available '''
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
 
+    # netcdf-4.8 wants this, but it seems problematic
+    args.append('--with-default-api-version=v18')
     if not self.mpi.usingMPIUni:
       args.append('--enable-parallel')
     if not self.argDB['download-hdf5-shared-libraries']:
