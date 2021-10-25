@@ -158,7 +158,7 @@ public:
     getHandle<solver_tag>,
     getHandle<stream_tag>,
     beginTimer,
-    endTimer,
+    endTimer
   };
 
   // All of these functions MUST be static in order to be callable from C, otherwise they
@@ -299,6 +299,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceCon
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
+
   if (PetscUnlikely(dci->timerInUse)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   dci->timerInUse = PETSC_TRUE;
 #endif
@@ -326,6 +327,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceConte
   cerr = cupmEventSynchronize(dci->end);CHKERRCUPM(cerr);
   cerr = cupmEventElapsedTime(&gtime,dci->begin,dci->end);CHKERRCUPM(cerr);
   *elapsed = static_cast<util::remove_pointer_t<decltype(elapsed)>>(gtime);
+  PetscFunctionReturn(0);
+}
+
+template <CUPMDeviceType T>
+inline PetscErrorCode CUPMContext<T>::binarymemop(PetscDeviceContext dctx, void * PETSC_RESTRICT dest, const void * PETSC_RESTRICT src, std::size_t n, PetscDeviceMemOpType op) noexcept
+{
+  cupmError_t cerr;
+
+  PetscFunctionBegin;
+  cerr = cupmMemcpyAsync(dest,src,n,__mem_op_to_cupmmemcpy_t(op),__impls_cast(dctx)->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
