@@ -566,7 +566,7 @@ $     -info :sys:~self
 
 .seealso: PetscInfoAllow(), PetscInfoSetFromOptions()
 M*/
-PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char message[], ...)
+PetscErrorCode  PetscInfo_Private(int line, const char func[], const char file[], PetscObject obj, const char message[], ...)
 {
   va_list        Argp;
   PetscMPIInt    rank = 0,urank,size = 1;
@@ -578,11 +578,11 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   int            err;
 
   PetscFunctionBegin;
-  if (obj) PetscValidHeader(obj,2);
+  if (obj) PetscValidHeader(obj,4);
   classid = obj ? obj->classid : PETSC_SMALLEST_CLASSID;
   ierr = PetscInfoEnabled(classid, &enabled);CHKERRQ(ierr);
   if (!enabled) PetscFunctionReturn(0);
-  PetscValidCharPointer(message,3);
+  PetscValidCharPointer(message,5);
   if (obj) {
     ierr = MPI_Comm_rank(obj->comm, &rank);CHKERRMPI(ierr);
     ierr = MPI_Comm_size(obj->comm, &size);CHKERRMPI(ierr);
@@ -600,7 +600,7 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   oldflag = PetscLogPrintInfo; PetscLogPrintInfo = PETSC_FALSE;
   ierr = MPI_Comm_rank(MPI_COMM_WORLD, &urank);CHKERRMPI(ierr);
   va_start(Argp, message);
-  sprintf(string, "[%d] %s(): ",urank,func);
+  sprintf(string, "[%d] %s:%s():%d: ",urank,file,func,line);
   ierr = PetscStrlen(string, &len);CHKERRQ(ierr);
   ierr = PetscVSNPrintf(string+len, 8*1024-len,message,&fullLength, Argp);CHKERRQ(ierr);
   ierr = PetscFPrintf(PETSC_COMM_SELF,PetscInfoFile, "%s", string);CHKERRQ(ierr);

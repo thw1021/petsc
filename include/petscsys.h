@@ -47,6 +47,28 @@
 #  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_C
 #endif
 
+#if defined(__FILE_NAME__) /* gcc extension, but most compilers should have this */
+#  define PETSC_BASE_FILE_NAME __FILE_NAME__
+#elif defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+/* alternatively do it via constexpr at compile time, we walk backwards from the end of the
+   string util we find a "/", then return the index of that location. Has the effect of
+   chopping off the file name */
+namespace PetscPrivate__ {
+  /* namespace this stuff since it should never see the light of day */
+  template <typename T, std::size_t L>
+  inline constexpr std::size_t PetscBaseFileName_Internal(const T (&path)[L], std::size_t i = L-1)
+  {
+    return (path[i] == PETSC_DIR_SEPARATOR) ? i+1 : (i ? PetscBaseFileName_Internal(path,i-1) : i);
+  }
+  /* in case __FILE__  is just "/" */
+  template <typename T>
+  inline constexpr std::size_t PetscBaseFileName_Internal(const T (&path)[1]) { return 0; }
+}
+#  define PETSC_FORCE_CONSTEXPR(expr) std::integral_constant<decltype(expr),expr>::value
+#  define PETSC_BASE_FILE_NAME  &__FILE__[PETSC_FORCE_CONSTEXPR(PetscPrivate__::PetscBaseFileName_Internal(__FILE__))]
+#else
+#  define PETSC_BASE_FILE_NAME __FILE__
+#endif
 /* ========================================================================== */
 /*
    Since PETSc manages its own extern "C" handling users should never include PETSc include
