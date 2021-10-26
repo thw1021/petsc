@@ -392,7 +392,7 @@ static PetscErrorCode PCView_HPDDM(PC pc, PetscViewer viewer)
       ierr = PetscViewerASCIIGetTab(viewer, &tabs);CHKERRQ(ierr);
       ierr = PetscViewerASCIISetTab(viewer, 0);CHKERRQ(ierr);
       for (i = 1; i < data->N; ++i) {
-        ierr = PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT "", data->levels[i - 1]->nu);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT, data->levels[i - 1]->nu);CHKERRQ(ierr);
         if (data->levels[i - 1]->threshold > -0.1) {
           ierr = PetscViewerASCIIPrintf(viewer, " (%g)", (double)data->levels[i - 1]->threshold);CHKERRQ(ierr);
         }
