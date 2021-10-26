@@ -1,0 +1,32 @@
+DL evaluated. delta: 2.5000e-01, ynnorm: 6.8624e+00, ycnorm: 2.5000e-01
+DL evaluated. delta: 5.0000e-01, ynnorm: 6.4472e+00, ycnorm: 5.0000e-01
+DL evaluated. delta: 1.2500e-01, ynnorm: 6.4472e+00, ycnorm: 1.2500e-01
+DL evaluated. delta: 1.2500e-01, ynnorm: 7.3751e+01, ycnorm: 1.2500e-01
+DL evaluated. delta: 3.1250e-02, ynnorm: 7.3751e+01, ycnorm: 3.1250e-02
+DL evaluated. delta: 7.8125e-03, ynnorm: 7.3751e+01, ycnorm: 7.8125e-03
+DL evaluated. delta: 7.8125e-03, ynnorm: 3.3517e+02, ycnorm: 7.8125e-03
+DL evaluated. delta: 1.9531e-03, ynnorm: 3.3517e+02, ycnorm: 1.9531e-03
+DL evaluated. tau: 1.2636e-06, ynnorm: 3.0913e+03, ycnorm: 1.9531e-03
+DL evaluated. tau: 3.1590e-07, ynnorm: 3.0913e+03, ycnorm: 4.8828e-04
+DL evaluated. tau: 7.8976e-08, ynnorm: 3.0913e+03, ycnorm: 1.2207e-04
+DL evaluated. delta: 3.0518e-05, ynnorm: 5.6836e+03, ycnorm: 3.0518e-05
+DL evaluated. delta: 6.1035e-05, ynnorm: 7.4450e+03, ycnorm: 6.1035e-05
+DL evaluated. delta: 6.1035e-05, ynnorm: 1.9581e+04, ycnorm: 6.1035e-05
+DL evaluated. delta: 1.5259e-05, ynnorm: 3.1080e+04, ycnorm: 1.5259e-05
+DL evaluated. delta: 1.5259e-05, ynnorm: 8.7994e+04, ycnorm: 1.5259e-05
+DL evaluated. delta: 3.8147e-06, ynnorm: 1.0586e+05, ycnorm: 3.8147e-06
+DL evaluated. delta: 3.8147e-06, ynnorm: 2.3565e+05, ycnorm: 3.8147e-06
+DL evaluated. delta: 3.8147e-06, ynnorm: 1.0427e+06, ycnorm: 3.8147e-06
+DL evaluated. delta: 9.5367e-07, ynnorm: 1.0427e+06, ycnorm: 9.5367e-07
+DL evaluated. tau: 6.5154e-13, ynnorm: 2.9275e+06, ycnorm: 9.5367e-07
+DL evaluated. tau: 1.6288e-13, ynnorm: 2.9275e+06, ycnorm: 2.3842e-07
+DL evaluated. tau: 4.0721e-14, ynnorm: 2.9275e+06, ycnorm: 5.9605e-08
+DL evaluated. delta: 5.9605e-08, ynnorm: 1.0234e+07, ycnorm: 5.9605e-08
+DL evaluated. delta: 5.9605e-08, ynnorm: 6.0889e+07, ycnorm: 5.9605e-08
+DL evaluated. delta: 1.4901e-08, ynnorm: 6.0889e+07, ycnorm: 1.4901e-08
+Vec Object: 1 MPI processes
+  type: seq
+2.865
+Vec Object: 1 MPI processes
+  type: seq
+6.07698
