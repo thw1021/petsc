@@ -62,7 +62,7 @@ static PetscErrorCode SNESTRDC_Converged_Private(SNES snes,PetscInt it,PetscReal
   PetscFunctionBegin;
   *reason = SNES_CONVERGED_ITERATING;
   if (neP->delta < xnorm * snes->deltatol) {
-    ierr    = PetscInfo3(snes,"Converged due to trust region param %g<%g*%g\n",(double)neP->delta,(double)xnorm,(double)snes->deltatol);CHKERRQ(ierr);
+    ierr    = PetscInfo3(snes,"Diverged due to too small a trust region %g<%g*%g\n",(double)neP->delta,(double)xnorm,(double)snes->deltatol);CHKERRQ(ierr);
     *reason = SNES_DIVERGED_TR_DELTA;
   } else if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
     ierr    = PetscInfo1(snes,"Exceeded maximum number of function evaluations: %D\n",snes->max_funcs);CHKERRQ(ierr);
