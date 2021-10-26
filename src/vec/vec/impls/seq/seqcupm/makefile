@@ -4,7 +4,7 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 SOURCEC   =
-SOURCECXX = veccupm.cxx
+SOURCECXX =
 SOURCEF   =
 SOURCEH   = veccupm.hpp
 LIBBASE   = libpetscvec
@@ -15,4 +15,3 @@ DIRS      = cuda
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${PETSC_DIR}/lib/petsc/conf/test
-
