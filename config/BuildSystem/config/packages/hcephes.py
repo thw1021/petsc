@@ -12,7 +12,7 @@ class Configure(config.package.CMakePackage):
     self.functions              = ['hcephes_erf']
     self.liblist                = [['libhcephes.a']]
     self.precisions             = ['double']
-
+    self.useddirectly           = 0
   def setupDependencies(self, framework):
     config.package.CMakePackage.setupDependencies(self, framework)
     self.compilerFlags = framework.require('config.compilerFlags', self)
