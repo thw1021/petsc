@@ -447,10 +447,10 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
   ierr = KSPGetOperators(ksp, &A, NULL);CHKERRQ(ierr);
   ierr = MatGetLocalSize(B, &n, NULL);CHKERRQ(ierr);
   ierr = MatDenseGetLDA(B, &lda);CHKERRQ(ierr);
-  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %" PetscInt_FMT " with n = %" PetscInt_FMT "", lda, n);
+  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %" PetscInt_FMT " with n = %" PetscInt_FMT, lda, n);
   ierr = MatGetLocalSize(A, &n, NULL);CHKERRQ(ierr);
   ierr = MatDenseGetLDA(X, &lda);CHKERRQ(ierr);
-  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %" PetscInt_FMT " with n = %" PetscInt_FMT "", lda, n);
+  if (n != lda) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Unhandled leading dimension lda = %" PetscInt_FMT " with n = %" PetscInt_FMT, lda, n);
   ierr = MatDenseGetArrayRead(B, &b);CHKERRQ(ierr);
   ierr = MatDenseGetArrayWrite(X, &x);CHKERRQ(ierr);
   ierr = MatGetSize(X, NULL, &n);CHKERRQ(ierr);
