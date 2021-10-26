@@ -26,6 +26,7 @@ configure_options = [
   '--download-adblaslapack=1',
   '--download-libpng=1',
   '--download-libjpeg=1',
+  '--download-hcephes=0',
   '--with-zlib=1',
   ]
 
