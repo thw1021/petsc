@@ -440,17 +440,17 @@ static PetscErrorCode KSPAGMRESBuildSoln(KSP ksp,PetscInt it)
   }
   /* QR factorize the Hessenberg matrix */
   PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&lC, &KspSize, agmres->hh_origin, &ldH, agmres->tau, agmres->work, &lwork, &info));
-  if (info) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XGEQRF INFO=%d", info);
+  if (info) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XGEQRF INFO=%" PetscBLASInt_FMT, info);
   /* Update the right hand side of the least square problem */
   ierr = PetscArrayzero(agmres->nrs, N);CHKERRQ(ierr);
 
   agmres->nrs[0] = ksp->rnorm;
   PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("L", "T", &lC, &nrhs, &KspSize, agmres->hh_origin, &ldH, agmres->tau, agmres->nrs, &N, agmres->work, &lwork, &info));
-  if (info) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XORMQR INFO=%d",info);
+  if (info) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XORMQR INFO=%" PetscBLASInt_FMT,info);
   ksp->rnorm = PetscAbsScalar(agmres->nrs[KspSize]);
   /* solve the least-square problem */
   PetscStackCallBLAS("LAPACKtrtrs",LAPACKtrtrs_("U", "N", "N", &KspSize, &nrhs, agmres->hh_origin, &ldH, agmres->nrs, &N, &info));
-  if (info) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XTRTRS INFO=%d",info);
+  if (info) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XTRTRS INFO=%" PetscBLASInt_FMT,info);
   /* Accumulate the correction to the solution of the preconditioned problem in VEC_TMP */
   ierr = VecZeroEntries(VEC_TMP);CHKERRQ(ierr);
   ierr = VecMAXPY(VEC_TMP, max_k, agmres->nrs, &VEC_V(0));CHKERRQ(ierr);
@@ -621,26 +621,26 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
 
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer, " restart=%d using %s\n", agmres->max_k, cstr);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " restart=%" PetscInt_FMT " using %s\n", agmres->max_k, cstr);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, " %s\n", Nstr);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, " Number of matvecs : %D\n", agmres->matvecs);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " Number of matvecs : %" PetscInt_FMT "\n", agmres->matvecs);CHKERRQ(ierr);
     if (agmres->force) {ierr = PetscViewerASCIIPrintf (viewer, " Adaptive strategy is used: FALSE\n");CHKERRQ(ierr);}
     else PetscViewerASCIIPrintf(viewer, " Adaptive strategy is used: TRUE\n");
     if (agmres->DeflPrecond) {
       ierr = PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: PRECONDITIONER \n");CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "  Frequency of extracted eigenvalues = %D\n", agmres->neig);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "  Total number of extracted eigenvalues = %D\n", agmres->r);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "  Maximum number of eigenvalues set to be extracted = %D\n", agmres->max_neig);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "  Frequency of extracted eigenvalues = %" PetscInt_FMT "\n", agmres->neig);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "  Total number of extracted eigenvalues = %" PetscInt_FMT "\n", agmres->r);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer, "  Maximum number of eigenvalues set to be extracted = %" PetscInt_FMT "\n", agmres->max_neig);CHKERRQ(ierr);
     } else {
       if (agmres->ritz) sprintf(ritzvec, "Ritz vectors");
       else sprintf(ritzvec, "Harmonic Ritz vectors");
       ierr = PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: AUGMENT\n");CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer," augmented vectors  %d at frequency %d with %s\n", agmres->r, agmres->neig, ritzvec);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer," augmented vectors  %" PetscInt_FMT " at frequency %" PetscInt_FMT " with %s\n", agmres->r, agmres->neig, ritzvec);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", agmres->smv);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", agmres->bgv);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", (double)(agmres->smv));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", (double)(agmres->bgv));CHKERRQ(ierr);
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer,"%s restart %D",cstr,agmres->max_k);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer,"%s restart %" PetscInt_FMT,cstr,agmres->max_k);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

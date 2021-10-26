@@ -96,8 +96,8 @@ int main(int argc,char **argv)
     ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"ex23: Norm of difference %g should be zero\n",(double)norm);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  Number of processors %d\n",size);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  M,N,P,dof %D %D %D %D\n",M,N,P,dof);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  stencil_width %D stencil_type %d periodic %d\n",stencil_width,(int)stencil_type,(int)bx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  M,N,P,dof %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",M,N,P,dof);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  stencil_width %" PetscInt_FMT " stencil_type %d periodic %d\n",stencil_width,(int)stencil_type,(int)bx);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  dimension %d\n",1 + (int) flg2 + (int) flg3);CHKERRQ(ierr);
   }
   ierr = VecAXPY(global4,mone,global3);CHKERRQ(ierr);
@@ -106,8 +106,8 @@ int main(int argc,char **argv)
     ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"ex23: Norm of difference %g should be zero\n",(double)norm);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  Number of processors %d\n",size);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  M,N,P,dof %D %D %D %D\n",M,N,P,dof);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"  stencil_width %D stencil_type %d periodic %d\n",stencil_width,(int)stencil_type,(int)bx);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  M,N,P,dof %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\n",M,N,P,dof);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"  stencil_width %" PetscInt_FMT " stencil_type %d periodic %d\n",stencil_width,(int)stencil_type,(int)bx);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"  dimension %d\n",1 + (int) flg2 + (int) flg3);CHKERRQ(ierr);
   }
 

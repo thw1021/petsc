@@ -664,7 +664,7 @@ PetscErrorCode MonitorError(Tao tao,void *ctx)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%% Iteration Error Objective Gradient-norm\n");CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD,"history = [\n");CHKERRQ(ierr);
   }
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D %g %g %g\n",its,(double)nrm,(double)fct,(double)gnorm);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " %g %g %g\n",its,(double)nrm,(double)fct,(double)gnorm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

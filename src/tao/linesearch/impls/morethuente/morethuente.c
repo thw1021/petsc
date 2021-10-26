@@ -277,12 +277,12 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
     }
   }
   if ((ls->nfeval+ls->nfgeval) > ls->max_funcs) {
-    ierr = PetscInfo2(ls,"Number of line search function evals (%D) > maximum (%D)\n",(ls->nfeval+ls->nfgeval),ls->max_funcs);CHKERRQ(ierr);
+    ierr = PetscInfo2(ls,"Number of line search function evals (%" PetscInt_FMT ") > maximum (%" PetscInt_FMT ")\n",(ls->nfeval+ls->nfgeval),ls->max_funcs);CHKERRQ(ierr);
     ls->reason = TAOLINESEARCH_HALTED_MAXFCN;
   }
 
   /* Finish computations */
-  ierr = PetscInfo2(ls,"%D function evals in line search, step = %g\n",(ls->nfeval+ls->nfgeval),(double)ls->step);CHKERRQ(ierr);
+  ierr = PetscInfo2(ls,"%" PetscInt_FMT " function evals in line search, step = %g\n",(ls->nfeval+ls->nfgeval),(double)ls->step);CHKERRQ(ierr);
 
   /* Set new solution vector and compute gradient if needed */
   ierr = VecCopy(mt->work,x);CHKERRQ(ierr);

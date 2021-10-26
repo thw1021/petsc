@@ -147,7 +147,7 @@ cdef PetscErrorCode PetscCHKERR(PetscErrorCode ierr) nogil:
     istack = 0; fstack[istack] = NULL;
     global FUNCT
     return PetscERROR(PETSC_COMM_SELF,FUNCT,ierr,
-                      PETSC_ERROR_REPEAT, b"", NULL)
+                      PETSC_ERROR_REPEAT, NULL, NULL)
 
 
 cdef extern from *:

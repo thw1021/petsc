@@ -262,7 +262,7 @@ PetscErrorCode  DMCreateColoring_DA(DM da,ISColoringType ctype,ISColoring *color
     ierr = DMCreateColoring_DA_2d_MPIAIJ(da,ctype,coloring);CHKERRQ(ierr);
   } else if (dim == 3) {
     ierr = DMCreateColoring_DA_3d_MPIAIJ(da,ctype,coloring);CHKERRQ(ierr);
-  } else SETERRQ1(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not done for %D dimension, send us mail petsc-maint@mcs.anl.gov for code",dim);
+  } else SETERRQ1(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not done for %" PetscInt_FMT " dimension, send us mail petsc-maint@mcs.anl.gov for code",dim);
   if (isBAIJ) {
     dd->w  = nc;
     dd->xs = dd->xs*nc;
@@ -781,19 +781,19 @@ PetscErrorCode DMCreateMatrix_DA(DM da, Mat *J)
       ierr = DMCreateMatrix_DA_2d_MPIBAIJ(da,A);CHKERRQ(ierr);
     } else if (dim == 3) {
       ierr = DMCreateMatrix_DA_3d_MPIBAIJ(da,A);CHKERRQ(ierr);
-    } else SETERRQ3(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not implemented for %D dimension and Matrix Type: %s in %D dimension! Send mail to petsc-maint@mcs.anl.gov for code",dim,Atype,dim);
+    } else SETERRQ3(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not implemented for %" PetscInt_FMT " dimension and Matrix Type: %s in %" PetscInt_FMT " dimension! Send mail to petsc-maint@mcs.anl.gov for code",dim,Atype,dim);
   } else if (sbaij) {
     if (dim == 2) {
       ierr = DMCreateMatrix_DA_2d_MPISBAIJ(da,A);CHKERRQ(ierr);
     } else if (dim == 3) {
       ierr = DMCreateMatrix_DA_3d_MPISBAIJ(da,A);CHKERRQ(ierr);
-    } else SETERRQ3(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not implemented for %D dimension and Matrix Type: %s in %D dimension! Send mail to petsc-maint@mcs.anl.gov for code",dim,Atype,dim);
+    } else SETERRQ3(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not implemented for %" PetscInt_FMT " dimension and Matrix Type: %s in %" PetscInt_FMT " dimension! Send mail to petsc-maint@mcs.anl.gov for code",dim,Atype,dim);
   } else if (sell) {
      if (dim == 2) {
        ierr = DMCreateMatrix_DA_2d_MPISELL(da,A);CHKERRQ(ierr);
      } else if (dim == 3) {
        ierr = DMCreateMatrix_DA_3d_MPISELL(da,A);CHKERRQ(ierr);
-     } else SETERRQ3(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not implemented for %D dimension and Matrix Type: %s in %D dimension! Send mail to petsc-maint@mcs.anl.gov for code",dim,Atype,dim);
+     } else SETERRQ3(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not implemented for %" PetscInt_FMT " dimension and Matrix Type: %s in %" PetscInt_FMT " dimension! Send mail to petsc-maint@mcs.anl.gov for code",dim,Atype,dim);
   } else if (is) {
     ierr = DMCreateMatrix_DA_IS(da,A);CHKERRQ(ierr);
   } else {
@@ -897,7 +897,7 @@ PetscErrorCode DMCreateMatrix_DA_IS(DM dm,Mat J)
     ierr = PetscObjectComposeFunction((PetscObject)J,"MatMPIAIJSetPreallocation_C",NULL);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unhandled dimension %d",dim);
+    SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unhandled dimension %" PetscInt_FMT,dim);
   }
   dm->prealloc_only = flg;
   PetscFunctionReturn(0);

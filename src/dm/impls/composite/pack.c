@@ -70,10 +70,10 @@ PetscErrorCode  DMView_Composite(DM dm,PetscViewer v)
     PetscInt               i;
 
     ierr = PetscViewerASCIIPrintf(v,"DM (%s)\n",((PetscObject)dm)->prefix ? ((PetscObject)dm)->prefix : "no prefix");CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(v,"  contains %D DMs\n",com->nDM);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(v,"  contains %" PetscInt_FMT " DMs\n",com->nDM);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
     for (i=0; lnk; lnk=lnk->next,i++) {
-      ierr = PetscViewerASCIIPrintf(v,"Link %D: DM of type %s\n",i,((PetscObject)lnk->dm)->type_name);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(v,"Link %" PetscInt_FMT ": DM of type %s\n",i,((PetscObject)lnk->dm)->type_name);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(v);CHKERRQ(ierr);
       ierr = DMView(lnk->dm,v);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopTab(v);CHKERRQ(ierr);
@@ -560,7 +560,7 @@ PetscErrorCode  DMCompositeScatter(DM dm,Vec gvec,...)
     if (local) {
       Vec               global;
       const PetscScalar *array;
-      PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidHeaderSpecific(local,VEC_CLASSID,cnt));
+      PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidHeaderSpecific(local,VEC_CLASSID,(int)(cnt)));
       ierr = DMGetGlobalVector(next->dm,&global);CHKERRQ(ierr);
       ierr = VecGetArrayRead(gvec,&array);CHKERRQ(ierr);
       ierr = VecPlaceArray(global,array+next->rstart);CHKERRQ(ierr);
@@ -677,7 +677,7 @@ PetscErrorCode  DMCompositeGather(DM dm,InsertMode imode,Vec gvec,...)
     if (local) {
       PetscScalar *array;
       Vec         global;
-      PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidHeaderSpecific(local,VEC_CLASSID,cnt));
+      PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidHeaderSpecific(local,VEC_CLASSID,(int)(cnt)));
       ierr = DMGetGlobalVector(next->dm,&global);CHKERRQ(ierr);
       ierr = VecGetArray(gvec,&array);CHKERRQ(ierr);
       ierr = VecPlaceArray(global,array+next->rstart);CHKERRQ(ierr);
@@ -1137,7 +1137,7 @@ PetscErrorCode DMCreateFieldIS_Composite(DM dm, PetscInt *numFields,char ***fiel
         }
       }
       if (!splitname) {
-        ierr      = PetscSNPrintf(buf,sizeof(buf),"%D",i);CHKERRQ(ierr);
+        ierr      = PetscSNPrintf(buf,sizeof(buf),"%" PetscInt_FMT "",i);CHKERRQ(ierr);
         splitname = buf;
       }
       ierr = PetscStrallocpy(splitname,&(*fieldNames)[i]);CHKERRQ(ierr);
@@ -1526,7 +1526,7 @@ PetscErrorCode  DMCreateInterpolation_Composite(DM coarse,DM fine,Mat *A,Vec *v)
   ierr = DMRestoreGlobalVector(fine,&gfine);CHKERRQ(ierr);
 
   nDM = comfine->nDM;
-  if (nDM != comcoarse->nDM) SETERRQ2(PetscObjectComm((PetscObject)fine),PETSC_ERR_ARG_INCOMP,"Fine DMComposite has %D entries, but coarse has %D",nDM,comcoarse->nDM);
+  if (nDM != comcoarse->nDM) SETERRQ2(PetscObjectComm((PetscObject)fine),PETSC_ERR_ARG_INCOMP,"Fine DMComposite has %" PetscInt_FMT " entries, but coarse has %" PetscInt_FMT "",nDM,comcoarse->nDM);
   ierr = PetscCalloc1(nDM*nDM,&mats);CHKERRQ(ierr);
   if (v) {
     ierr = PetscCalloc1(nDM,&vecs);CHKERRQ(ierr);

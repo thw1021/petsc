@@ -52,7 +52,7 @@ static PetscErrorCode TaoView_GPCG(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
   if (isascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"Total PG its: %D,",gpcg->total_gp_its);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Total PG its: %" PetscInt_FMT ",",gpcg->total_gp_its);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"PG tolerance: %g \n",(double)gpcg->pg_ftol);CHKERRQ(ierr);
   }
   ierr = TaoLineSearchView(tao->linesearch,viewer);CHKERRQ(ierr);

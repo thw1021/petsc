@@ -34,7 +34,7 @@ PetscErrorCode monitor(Tao tao,AppCtx *ctx)
   ierr = TaoGetSolutionStatus(tao,&iterate,&f,&gnorm,&cnorm,&xdiff,&reason);CHKERRQ(ierr);
 
   fp = fopen("ex3opt_conv.out","a");
-  ierr = PetscFPrintf(PETSC_COMM_WORLD,fp,"%D %g\n",iterate,(double)gnorm);CHKERRQ(ierr);
+  ierr = PetscFPrintf(PETSC_COMM_WORLD,fp,"%" PetscInt_FMT " %g\n",iterate,(double)gnorm);CHKERRQ(ierr);
   fclose(fp);
   PetscFunctionReturn(0);
 }

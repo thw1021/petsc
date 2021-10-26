@@ -161,7 +161,7 @@ static PetscErrorCode TaoSetup_LCL(Tao tao)
     PetscInt sizeU,sizeV;
     ierr = VecGetSize(lclP->U,&sizeU);CHKERRQ(ierr);
     ierr = VecGetSize(lclP->V,&sizeV);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"size(U)=%D, size(V)=%D\n",sizeU,sizeV);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"size(U)=%" PetscInt_FMT ", size(V)=%" PetscInt_FMT "\n",sizeU,sizeV);CHKERRQ(ierr);
   }
   ierr = ISCreateStride(((PetscObject)lclP->V)->comm,hi-lo,lo,1,&is_design);CHKERRQ(ierr);
   ierr = VecScatterCreate(tao->solution,tao->state_is,lclP->U,is_state,&lclP->state_scatter);CHKERRQ(ierr);

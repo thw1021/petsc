@@ -65,7 +65,7 @@ int main(int argc,char **args)
 
     for (i=0; i<Nsub1; ++i) {
       ierr = ISEqual(is1[i],is2[i],&flg);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"i =  %D,flg = %d \n",i,(int)flg);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"i =  %" PetscInt_FMT ",flg = %d \n",i,(int)flg);CHKERRQ(ierr);
 
     }
     for (i=0; i<Nsub1; ++i) {ierr = ISDestroy(&is1[i]);CHKERRQ(ierr);}

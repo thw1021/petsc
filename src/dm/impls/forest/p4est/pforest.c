@@ -305,9 +305,9 @@ static PetscErrorCode DMFTopologyCreate_pforest(DM dm, DMForestTopology topology
       ierr = PetscOptionsGetIntArray(((PetscObject)dm)->options,prefix,"-dm_p4est_brick_periodicity",P,&nretP,&flgP);CHKERRQ(ierr);
       ierr = PetscOptionsGetRealArray(((PetscObject)dm)->options,prefix,"-dm_p4est_brick_bounds",B,&nretB,&flgB);CHKERRQ(ierr);
       ierr = PetscOptionsGetBool(((PetscObject)dm)->options,prefix,"-dm_p4est_brick_use_morton_curve",&useMorton,&flgM);CHKERRQ(ierr);
-      if (flgN && nretN != P4EST_DIM) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d sizes in -dm_p4est_brick_size, gave %d",P4EST_DIM,nretN);
-      if (flgP && nretP != P4EST_DIM) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d periodicities in -dm_p4est_brick_periodicity, gave %d",P4EST_DIM,nretP);
-      if (flgB && nretB != 2 * P4EST_DIM) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d bounds in -dm_p4est_brick_bounds, gave %d",P4EST_DIM,nretP);
+      if (PetscUnlikely(flgN && nretN != P4EST_DIM)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d sizes in -dm_p4est_brick_size, gave %" PetscInt_FMT,P4EST_DIM,nretN);
+      if (PetscUnlikely(flgP && nretP != P4EST_DIM)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d periodicities in -dm_p4est_brick_periodicity, gave %" PetscInt_FMT,P4EST_DIM,nretP);
+      if (PetscUnlikely(flgB && nretB != 2 * P4EST_DIM)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_SIZ,"Need to give %d bounds in -dm_p4est_brick_bounds, gave %" PetscInt_FMT,P4EST_DIM,nretP);
     }
     for (i = 0; i < P4EST_DIM; i++) {
       P[i]  = (P[i] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE);
@@ -367,7 +367,7 @@ static PetscErrorCode DMConvert_plex_pforest(DM dm, DMType newtype, DM *pforest)
   ierr = PetscObjectTypeCompare((PetscObject)dm,DMPLEX,&isPlex);CHKERRQ(ierr);
   if (!isPlex) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM type %s, got %s",DMPLEX,((PetscObject)dm)->type_name);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (dim != P4EST_DIM) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %d",P4EST_DIM,dim);
+  if (PetscUnlikely(dim != P4EST_DIM)) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %" PetscInt_FMT,P4EST_DIM,dim);
   ierr = DMCreate(comm,pforest);CHKERRQ(ierr);
   ierr = DMSetType(*pforest,DMPFOREST);CHKERRQ(ierr);
   ierr = DMForestSetBaseDM(*pforest,dm);CHKERRQ(ierr);
@@ -766,7 +766,7 @@ static PetscErrorCode DMSetUp_pforest(DM dm)
         base = connDM;
         ierr = DMForestSetBaseDM(dm,base);CHKERRQ(ierr);
         ierr = DMDestroy(&connDM);CHKERRQ(ierr);
-      } else if (depth != P4EST_DIM) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Base plex is neither interpolated nor uninterpolated? depth %D, expected 2 or %d",depth,P4EST_DIM + 1);
+      } else if (depth != P4EST_DIM) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Base plex is neither interpolated nor uninterpolated? depth %" PetscInt_FMT ", expected 2 or %d",depth,P4EST_DIM + 1);
       ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
       if (size > 1) {
         DM      dmRedundant;
@@ -1371,8 +1371,8 @@ static PetscErrorCode DMView_ASCII_pforest(PetscObject odm, PetscViewer viewer)
 
     ierr = PetscObjectGetName((PetscObject) dm, &name);CHKERRQ(ierr);
     ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    if (name) {ierr = PetscViewerASCIIPrintf(viewer, "Forest %s in %D dimensions:\n", name, dim);CHKERRQ(ierr);}
-    else      {ierr = PetscViewerASCIIPrintf(viewer, "Forest in %D dimensions:\n", dim);CHKERRQ(ierr);}
+    if (name) {ierr = PetscViewerASCIIPrintf(viewer, "Forest %s in %" PetscInt_FMT " dimensions:\n", name, dim);CHKERRQ(ierr);}
+    else      {ierr = PetscViewerASCIIPrintf(viewer, "Forest in %" PetscInt_FMT " dimensions:\n", dim);CHKERRQ(ierr);}
   }
   case PETSC_VIEWER_ASCII_INFO_DETAIL:
   case PETSC_VIEWER_LOAD_BALANCE:
@@ -1567,7 +1567,7 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
         /* we want to count every time cell p references v, so we see how many times it comes up in the closure.  This
          * only protects against periodicity problems */
         ierr = DMPlexGetTransitiveClosure(dm,p,PETSC_TRUE,&closureSize,&closure);CHKERRQ(ierr);
-        if (closureSize != P4EST_INSUL) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cell %D with wrong closure size %D != %D", p, closureSize, P4EST_INSUL);
+        if (PetscUnlikely(closureSize != P4EST_INSUL)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Cell %" PetscInt_FMT " with wrong closure size %" PetscInt_FMT " != %d", p, closureSize, P4EST_INSUL);
         for (c = 0; c < P4EST_CHILDREN; c++) {
           PetscInt cellVert = closure[2 * (c + vertOff)];
 
@@ -1634,7 +1634,7 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
     const PetscInt *supp;
 
     ierr = DMPlexGetSupportSize(dm, f, &numSupp);CHKERRQ(ierr);
-    if (numSupp != 1 && numSupp != 2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"point %D has facet with %D sides: must be 1 or 2 (boundary or conformal)",f,numSupp);
+    if (numSupp != 1 && numSupp != 2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"point %" PetscInt_FMT " has facet with %" PetscInt_FMT " sides: must be 1 or 2 (boundary or conformal)",f,numSupp);
     ierr = DMPlexGetSupport(dm, f, &supp);CHKERRQ(ierr);
 
     for (s = 0; s < numSupp; s++) {
@@ -1655,7 +1655,7 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
       PetscInt       orient = PETSC_MIN_INT;
 
       ierr = DMPlexGetConeSize(dm, p, &numCone);CHKERRQ(ierr);
-      if (numCone != P4EST_FACES) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"cell %D has %D facets, expect %d",p,numCone,P4EST_FACES);
+      if (numCone != P4EST_FACES) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"cell %" PetscInt_FMT " has %" PetscInt_FMT " facets, expect %d",p,numCone,P4EST_FACES);
       ierr = DMPlexGetCone(dm, p, &cone);CHKERRQ(ierr);
       ierr = DMPlexGetCellType(dm, cone[0], &ct);CHKERRQ(ierr);
       ierr = DMPlexGetConeOrientation(dm, p, &ornt);CHKERRQ(ierr);
@@ -1665,11 +1665,11 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
           break;
         }
       }
-      if (i >= P4EST_FACES) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"cell %D faced %D mismatch",p,f);
+      if (i >= P4EST_FACES) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"cell %" PetscInt_FMT " faced %" PetscInt_FMT " mismatch",p,f);
       if (p < cStart || p >= cEnd) {
         DMPolytopeType ct;
         ierr = DMPlexGetCellType(dm, p, &ct);CHKERRQ(ierr);
-        SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"cell %D (%s) should be in [%D, %D)",p,DMPolytopeTypes[ct],cStart,cEnd);
+        SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"cell %" PetscInt_FMT " (%s) should be in [%" PetscInt_FMT ", %" PetscInt_FMT ")",p,DMPolytopeTypes[ct],cStart,cEnd);
       }
       ttf[P4EST_FACES * (p - cStart) + PetscFaceToP4estFace[i]] = f - fStart;
       if (numSupp == 1) {
@@ -1810,7 +1810,7 @@ static PetscErrorCode DMPlexCreateConnectivity_pforest(DM dm, p4est_connectivity
       PetscScalar *cellCoords = NULL;
 
       ierr = DMPlexVecGetClosure(dm, coordSec, coordVec, c, &dof, &cellCoords);CHKERRQ(ierr);
-      if (!localized && dof != P4EST_CHILDREN * coordDim) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Need coordinates at the corners: (dof) %D != %D * %D (sdim)", dof, P4EST_CHILDREN, coordDim);
+      if (PetscUnlikely(!localized && dof != P4EST_CHILDREN * coordDim)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Need coordinates at the corners: (dof) %" PetscInt_FMT " != %d * %" PetscInt_FMT " (sdim)", dof, P4EST_CHILDREN, coordDim);
       for (v = 0; v < P4EST_CHILDREN; v++) {
         PetscInt i, lim = PetscMin(3, coordDim);
         PetscInt p4estVert = PetscVertToP4estVert[v];
@@ -1978,8 +1978,8 @@ static PetscErrorCode DMReferenceTreeGetChildSymmetry_pforest(DM dm, PetscInt pa
     ierr = DMPlexGetDepthStratum(dm,dim,&dStart,&dEnd);CHKERRQ(ierr);
     if (parent >= dStart && parent <= dEnd) break;
   }
-  if (dim > 2) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot perform child symmetry for %d-cells",dim);
-  if (!dim) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A vertex has no children");
+  if (PetscUnlikely(dim > 2)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot perform child symmetry for %" PetscInt_FMT "-cells",dim);
+  if (PetscUnlikely(!dim)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"A vertex has no children");
   if (childA < dStart || childA >= dEnd) { /* a 1-cell in a 2-cell */
     /* this is a lower-dimensional child: bootstrap */
     PetscInt       size, i, sA = -1, sB, sOrientB, sConeSize;
@@ -3318,12 +3318,12 @@ static PetscErrorCode DMPforestLabelsInitialize(DM dm, DM plex)
         if (print) {
           PetscInt i;
 
-          ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Failed to find cell with point %D in its closure for label %s (starSize %D)\n",PetscGlobalRank,p,baseLabel ? ((PetscObject)baseLabel)->name : "_forest_base_subpoint_map",starSize);CHKERRQ(ierr);
-          for (i = 0; i < starSize; i++) { ierr = PetscPrintf(PETSC_COMM_SELF,"  star[%D] = %D,%D\n",i,star[2*i],star[2*i+1]);CHKERRQ(ierr); }
+          ierr = PetscPrintf(PETSC_COMM_SELF,"[%d] Failed to find cell with point %" PetscInt_FMT " in its closure for label %s (starSize %" PetscInt_FMT ")\n",PetscGlobalRank,p,baseLabel ? ((PetscObject)baseLabel)->name : "_forest_base_subpoint_map",starSize);CHKERRQ(ierr);
+          for (i = 0; i < starSize; i++) { ierr = PetscPrintf(PETSC_COMM_SELF,"  star[%" PetscInt_FMT "] = %" PetscInt_FMT ",%" PetscInt_FMT "\n",i,star[2*i],star[2*i+1]);CHKERRQ(ierr); }
         }
         ierr = DMPlexRestoreTransitiveClosure(plex,p,PETSC_FALSE,NULL,&star);CHKERRQ(ierr);
         if (zerosupportpoint) continue;
-        else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Failed to find cell with point %D in its closure for label %s. Rerun with -dm_forest_print_label_error for more information",p,baseLabel ? ((PetscObject) baseLabel)->name : "_forest_base_subpoint_map");
+        else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Failed to find cell with point %" PetscInt_FMT " in its closure for label %s. Rerun with -dm_forest_print_label_error for more information",p,baseLabel ? ((PetscObject) baseLabel)->name : "_forest_base_subpoint_map");
       }
       ierr = DMPlexRestoreTransitiveClosure(plex,p,PETSC_FALSE,NULL,&star);CHKERRQ(ierr);
 
@@ -3632,7 +3632,7 @@ static PetscErrorCode DMPforestLabelsFinalize(DM dm, DM plex)
       ierr = PetscSFBcastBegin(pointSF,MPIU_INT,values,values,MPI_REPLACE);CHKERRQ(ierr);
       ierr = PetscSFBcastEnd(pointSF,MPIU_INT,values,values,MPI_REPLACE);CHKERRQ(ierr);
       for (p = pStart; p < pEnd; p++) {
-        if (values[p-pStart] == -2) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"uncovered point %D",p);
+        if (values[p-pStart] == -2) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"uncovered point %" PetscInt_FMT "",p);
       }
     }
     while (next) {
@@ -4071,7 +4071,7 @@ static PetscErrorCode DMPforestLocalizeCoordinates(DM dm, DM plex)
       if (overlap) localize[newCell] = cdof;
     }
   }
-  if (cp != cEnd - cStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected number of fine cells %D != %D",cp,cEnd-cStart);
+  if (cp != cEnd - cStart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected number of fine cells %" PetscInt_FMT " != %" PetscInt_FMT "",cp,cEnd-cStart);
 
   if (base) { /* we need to localize on all the cells in the star of the coarse cell vertices */
     PetscInt *closure = NULL, closureSize;
@@ -4273,9 +4273,9 @@ static PetscErrorCode DMConvert_pforest_plex(DM dm, DMType newtype, DM *plex)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   comm = PetscObjectComm((PetscObject)dm);
   ierr = PetscObjectTypeCompare((PetscObject)dm,DMPFOREST,&isPforest);CHKERRQ(ierr);
-  if (!isPforest) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM type %s, got %s",DMPFOREST,((PetscObject)dm)->type_name);
+  if (PetscUnlikely(!isPforest)) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM type %s, got %s",DMPFOREST,((PetscObject)dm)->type_name);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (dim != P4EST_DIM) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %d",P4EST_DIM,dim);
+  if (PetscUnlikely(dim != P4EST_DIM)) SETERRQ2(comm,PETSC_ERR_ARG_WRONG,"Expected DM dimension %d, got %" PetscInt_FMT,P4EST_DIM,dim);
   forest  = (DM_Forest*) dm->data;
   pforest = (DM_Forest_pforest*) forest->data;
   ierr    = DMForestGetBaseDM(dm,&base);CHKERRQ(ierr);
@@ -4303,9 +4303,9 @@ static PetscErrorCode DMConvert_pforest_plex(DM dm, DMType newtype, DM *plex)
       ctype = P8EST_CONNECT_EDGE;
 #endif
     } else {
-      SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Invalid adjacency dimension %d",adjDim);
+      SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Invalid adjacency dimension %" PetscInt_FMT,adjDim);
     }
-    if (ctype != P4EST_CONNECT_FULL) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Adjacency dimension %D / codimension %D not supported yet",adjDim,adjCodim);
+    if (PetscUnlikely(ctype != P4EST_CONNECT_FULL)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Adjacency dimension %" PetscInt_FMT " / codimension %" PetscInt_FMT " not supported yet",adjDim,adjCodim);
     ierr = DMForestGetPartitionOverlap(dm,&overlap);CHKERRQ(ierr);
     ((DM_Plex *) newPlex->data)->overlap = overlap;
 
@@ -4640,10 +4640,10 @@ static PetscErrorCode DMForestTransferVecFromBase_pforest(DM dm, Vec vecIn, Vec 
 
     ierr = DMGetLocalSection(dmVecIn,&section);CHKERRQ(ierr);
     ierr = PetscSectionGetNumFields(section,&Nf);CHKERRQ(ierr);
-    if (Nf > 3) SETERRQ1(PetscObjectComm((PetscObject)dmVecIn),PETSC_ERR_SUP,"Number of fields %D are currently not supported! Send an email at petsc-dev@mcs.anl.gov",Nf);
+    if (Nf > 3) SETERRQ1(PetscObjectComm((PetscObject)dmVecIn),PETSC_ERR_SUP,"Number of fields %" PetscInt_FMT " are currently not supported! Send an email at petsc-dev@mcs.anl.gov",Nf);
   }
   ierr = DMForestGetMinimumRefinement(dm,&minLevel);CHKERRQ(ierr);
-  if (minLevel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Cannot transfer with minimum refinement set to %D. Rerun with DMForestSetMinimumRefinement(dm,0)",minLevel);
+  if (minLevel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Cannot transfer with minimum refinement set to %" PetscInt_FMT ". Rerun with DMForestSetMinimumRefinement(dm,0)",minLevel);
   ierr = DMForestGetBaseDM(dm,&base);CHKERRQ(ierr);
   if (!base) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Missing base DM");
 
@@ -4726,7 +4726,7 @@ static PetscErrorCode DMForestTransferVecFromBase_pforest(DM dm, Vec vecIn, Vec 
     ierr = ISGetMinMax(gnum[0],NULL,&ncells[0]);CHKERRQ(ierr);
     ierr = ISGetMinMax(gnum[1],NULL,&ncells[1]);CHKERRQ(ierr);
     ierr = MPIU_Allreduce(ncells,gncells,2,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
-    if (gncells[0] != gncells[1]) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Invalid number of base cells! Expected %D, found %D",gncells[0]+1,gncells[1]+1);
+    if (gncells[0] != gncells[1]) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Invalid number of base cells! Expected %" PetscInt_FMT ", found %" PetscInt_FMT "",gncells[0]+1,gncells[1]+1);
   }
 
   ierr = DMGetLabel(dmIn,"_forest_base_subpoint_map",&subpointMap);CHKERRQ(ierr);

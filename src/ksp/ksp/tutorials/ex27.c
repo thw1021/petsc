@@ -142,7 +142,7 @@ int main(int argc,char **args)
     ierr = MatSetFromOptions(A);CHKERRQ(ierr);
     ierr = MatLoad(A,fd);CHKERRQ(ierr);
     ierr = MatGetLocalSize(A,&m1,&n1);CHKERRQ(ierr);
-    if (m1 != m || n1 != n) SETERRQ4(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"resulting sizes differ from demanded ones: %D %D != %D %D",m1,n1,m,n);
+    if (m1 != m || n1 != n) SETERRQ4(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"resulting sizes differ from demanded ones: %" PetscInt_FMT " %" PetscInt_FMT " != %" PetscInt_FMT " %" PetscInt_FMT "",m1,n1,m,n);
   }
   ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
 
@@ -262,7 +262,7 @@ int main(int argc,char **args)
   ierr = KSPGetIterationNumber(ksp,&its);CHKERRQ(ierr);
   ierr = KSPGetType(ksp,&ksptype);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"KSP type: %s\n",ksptype);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3D\n",its);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm %g\n",(double)norm);CHKERRQ(ierr);
 
   /*

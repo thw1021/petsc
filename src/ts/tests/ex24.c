@@ -223,7 +223,7 @@ int main(int argc,char **argv)
   ierr = MatAXPY(Jac,-1,Jac2,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   ierr = MatNorm(Jac,NORM_INFINITY,&norm);CHKERRQ(ierr);
   if (norm > 100.0*PETSC_MACHINE_EPSILON) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Error Norm %g \n Incorrect behaviour of TSComputeIJacobian(). The two matrices should have the same results.\n",norm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Error Norm %g \n Incorrect behaviour of TSComputeIJacobian(). The two matrices should have the same results.\n",(double)norm);CHKERRQ(ierr);
   }
   ierr = MatDestroy(&Jac);CHKERRQ(ierr);
   ierr = MatDestroy(&Jac2);CHKERRQ(ierr);

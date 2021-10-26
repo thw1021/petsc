@@ -181,7 +181,7 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec U,void *ctx)
     ierr = VecDuplicate(U,&interpolatedU);CHKERRQ(ierr);
     ierr = TSInterpolate(ts,user->next_output,interpolatedU);CHKERRQ(ierr);
     ierr = VecGetArrayRead(interpolatedU,&u);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%g] %D TS %g (dt = %g) X %g %g\n",
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%g] %" PetscInt_FMT " TS %g (dt = %g) X %g %g\n",
                        (double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(u[0]),
                        (double)PetscRealPart(u[1]));CHKERRQ(ierr);
     ierr = VecRestoreArrayRead(interpolatedU,&u);CHKERRQ(ierr);

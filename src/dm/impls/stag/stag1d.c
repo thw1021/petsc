@@ -64,7 +64,7 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM dm,PetscRe
   ierr = DMGetCoordinateDM(dm, &dmCoord);CHKERRQ(ierr);
   stagCoord = (DM_Stag*) dmCoord->data;
   for (s=0; s<2; ++s) {
-    if (stagCoord->dof[s] !=0 && stagCoord->dof[s] != 1) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 1 dimensions must have 0 or 1 dof on each stratum, but stratum %d has %d dof",s,stagCoord->dof[s]);
+    if (PetscUnlikely(stagCoord->dof[s] !=0 && stagCoord->dof[s] != 1)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 1 dimensions must have 0 or 1 dof on each stratum, but stratum %" PetscInt_FMT " has %" PetscInt_FMT " dof",s,stagCoord->dof[s]);
   }
   ierr = DMCreateLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
 
@@ -114,10 +114,10 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   /* Check Global size */
-  if (stag->N[0] < 1) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Global grid size of %D < 1 specified",stag->N[0]);
+  if (stag->N[0] < 1) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Global grid size of %" PetscInt_FMT " < 1 specified",stag->N[0]);
 
   /* Local sizes */
-  if (stag->N[0] < size) SETERRQ2(comm,PETSC_ERR_ARG_OUTOFRANGE,"More ranks (%d) than elements (%D) specified",size,stag->N[0]);
+  if (stag->N[0] < size) SETERRQ2(comm,PETSC_ERR_ARG_OUTOFRANGE,"More ranks (%d) than elements (%" PetscInt_FMT ") specified",size,stag->N[0]);
   if (!stag->l[0]) {
     /* Divide equally, giving an extra elements to higher ranks */
     ierr = PetscMalloc1(stag->nRanks[0],&stag->l[0]);CHKERRQ(ierr);
@@ -126,7 +126,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
   {
     PetscInt Nchk = 0;
     for (j=0; j<size; ++j) Nchk += stag->l[0][j];
-    if (Nchk != stag->N[0]) SETERRQ2(comm,PETSC_ERR_ARG_OUTOFRANGE,"Sum of specified local sizes (%D) is not equal to global size (%D)",Nchk,stag->N[0]);
+    if (Nchk != stag->N[0]) SETERRQ2(comm,PETSC_ERR_ARG_OUTOFRANGE,"Sum of specified local sizes (%" PetscInt_FMT ") is not equal to global size (%" PetscInt_FMT ")",Nchk,stag->N[0]);
   }
   stag->n[0] = stag->l[0][rank];
 
@@ -228,9 +228,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
     stag->neighbors[2] = stag->rank[0]+1;
   }
 
-  if (stag->n[0] < stag->stencilWidth) {
-    SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"DMStag 1d setup does not support local sizes (%d) smaller than the elementwise stencil width (%d)",stag->n[0],stag->stencilWidth);
-  }
+  if (PetscUnlikely(stag->n[0] < stag->stencilWidth)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"DMStag 1d setup does not support local sizes (%" PetscInt_FMT ") smaller than the elementwise stencil width (%" PetscInt_FMT ")",stag->n[0],stag->stencilWidth);
 
   /* Create global->local VecScatter and ISLocalToGlobalMapping */
   {

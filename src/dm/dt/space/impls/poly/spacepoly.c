@@ -22,7 +22,7 @@ static PetscErrorCode PetscSpacePolynomialView_Ascii(PetscSpace sp, PetscViewer 
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerASCIIPrintf(v, "%s%s%s space of degree %D\n", poly->ptype ? PetscSpacePolynomialTypes[poly->ptype] : "", poly->ptype ? " " : "", poly->tensor ? "Tensor polynomial" : "Polynomial", sp->degree);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(v, "%s%s%s space of degree %" PetscInt_FMT "\n", poly->ptype ? PetscSpacePolynomialTypes[poly->ptype] : "", poly->ptype ? " " : "", poly->tensor ? "Tensor polynomial" : "Polynomial", sp->degree);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -536,7 +536,7 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Polynomial(PetscSpace sp, Pets
   ierr = PetscSpaceGetNumVariables(sp, &dim);CHKERRQ(ierr);
   ierr = PetscSpaceGetDegree(sp, &order, NULL);CHKERRQ(ierr);
   ierr = PetscSpacePolynomialGetTensor(sp, &tensor);CHKERRQ(ierr);
-  if (height > dim || height < 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %D for dimension %D space", height, dim);
+  if (height > dim || height < 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %" PetscInt_FMT " for dimension %" PetscInt_FMT " space", height, dim);
   if (!poly->subspaces) {ierr = PetscCalloc1(dim, &poly->subspaces);CHKERRQ(ierr);}
   if (height <= dim) {
     if (!poly->subspaces[height-1]) {

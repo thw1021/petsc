@@ -40,7 +40,7 @@ PetscErrorCode MyMonitor(TS ts,PetscInt stepnum,PetscReal time,Vec U,void *ctx)
     ierr = TSForwardGetSensitivities(ts,&nump,&sp);CHKERRQ(ierr);
     ierr = MatDenseGetColumn(sp,2,&u);CHKERRQ(ierr);
     f = fopen("fwd_sp.out", "a");
-    ierr = PetscFPrintf(PETSC_COMM_WORLD,f,"%20.15lf %20.15lf %20.15lf\n",time,u[0],u[1]);CHKERRQ(ierr);
+    ierr = PetscFPrintf(PETSC_COMM_WORLD,f,"%20.15g %20.15g %20.15g\n",(double)time,(double)PetscRealPart(u[0]),(double)PetscRealPart(u[1]));CHKERRQ(ierr);
     ierr = MatDenseRestoreColumn(sp,&u);CHKERRQ(ierr);
     fclose(f);
   }

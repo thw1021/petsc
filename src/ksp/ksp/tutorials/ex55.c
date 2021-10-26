@@ -59,7 +59,7 @@ int main(int argc,char **args)
 #endif
 
   ierr = MatGetOwnershipRange(Amat,&Istart,&Iend);CHKERRQ(ierr);
-  if (m != Iend - Istart) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"m %D does not equal Iend %D - Istart %D",m,Iend,Istart);
+  if (m != Iend - Istart) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"m %" PetscInt_FMT " does not equal Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT "",m,Iend,Istart);
   /* Generate vectors */
   ierr = MatCreateVecs(Amat,&xx,&bb);CHKERRQ(ierr);
   ierr = VecSet(bb,.0);CHKERRQ(ierr);
@@ -241,7 +241,7 @@ int main(int argc,char **args)
     ierr = VecAXPY(bb, -1.0, res);CHKERRQ(ierr);
     ierr = VecDestroy(&res);CHKERRQ(ierr);
     ierr = VecNorm(bb, NORM_2, &norm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%d]%s |b-Ax|/|b|=%e, |b|=%e\n",0,PETSC_FUNCTION_NAME,norm/norm2,norm2);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%d]%s |b-Ax|/|b|=%e, |b|=%e\n",0,PETSC_FUNCTION_NAME,(double)(norm/norm2),(double)norm2);CHKERRQ(ierr);
     ierr = PetscViewerASCIIOpen(comm, "residual.m", &viewer);CHKERRQ(ierr);
     ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);CHKERRQ(ierr);
     ierr = VecView(bb,viewer);CHKERRQ(ierr);

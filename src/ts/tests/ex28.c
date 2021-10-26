@@ -137,7 +137,7 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   ierr = DMSwarmGetCellDM(dmSw, &dm);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);
-  if (n != (cEnd-cStart)*Np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "TS solution local size %D != %D nm particles", n, (cEnd-cStart)*Np);
+  if (n != (cEnd-cStart)*Np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "TS solution local size %" PetscInt_FMT " != %" PetscInt_FMT " nm particles", n, (cEnd-cStart)*Np);
   ierr = DMSwarmGetField(dmSw, "w_q", NULL, NULL, (void **) &vals);CHKERRQ(ierr);
   ierr = VecGetArray(u, &initialConditions);CHKERRQ(ierr);
   for (c = cStart; c < cEnd; ++c) {

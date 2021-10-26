@@ -205,7 +205,7 @@ PetscErrorCode Compute_Lagrange_Basis_1D_Internal(const PetscInt nverts, const P
         if (dphidx) dphidx[i + offset] += dNi_dxi[i] * ijacobian[0];
       }
     }
-  } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of entity vertices are invalid. Currently only support EDGE2 and EDGE3 basis evaluations in 1-D : %D", nverts);
+  } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of entity vertices are invalid. Currently only support EDGE2 and EDGE3 basis evaluations in 1-D : %" PetscInt_FMT "", nverts);
   PetscFunctionReturn(0);
 }
 
@@ -364,7 +364,7 @@ PetscErrorCode Compute_Lagrange_Basis_2D_Internal(const PetscInt nverts, const P
       }
 
     }
-  } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of entity vertices are invalid. Currently only support QUAD4 and TRI3 basis evaluations in 2-D : %D", nverts);
+  } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of entity vertices are invalid. Currently only support QUAD4 and TRI3 basis evaluations in 2-D : %" PetscInt_FMT "", nverts);
   PetscFunctionReturn(0);
 }
 
@@ -603,7 +603,7 @@ PetscErrorCode Compute_Lagrange_Basis_3D_Internal(const PetscInt nverts, const P
       }
 
     } /* Tetrahedra -- ends */
-  } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of entity vertices are invalid. Currently only support HEX8 and TET4 basis evaluations in 3-D : %D", nverts);
+  } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of entity vertices are invalid. Currently only support HEX8 and TET4 basis evaluations in 3-D : %" PetscInt_FMT "", nverts);
   PetscFunctionReturn(0);
 }
 
@@ -646,7 +646,7 @@ PetscErrorCode DMMoabFEMComputeBasis(const PetscInt dim, const PetscInt nverts, 
 
   /* Get the quadrature points and weights for the given quadrature rule */
   ierr = PetscQuadratureGetData(quadrature, &idim, NULL, &npoints, &quadpts, &quadwts);CHKERRQ(ierr);
-  if (idim != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Dimension mismatch: provided (%D) vs quadrature (%D)\n",idim,dim);
+  if (idim != dim) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Dimension mismatch: provided (%" PetscInt_FMT ") vs quadrature (%" PetscInt_FMT ")\n",idim,dim);
   if (jacobian_quadrature_weight_product) {
     ierr = PetscArraycpy(jacobian_quadrature_weight_product, quadwts, npoints);CHKERRQ(ierr);
   }
@@ -674,7 +674,7 @@ PetscErrorCode DMMoabFEMComputeBasis(const PetscInt dim, const PetscInt nverts, 
            jacobian, ijacobian, &volume);CHKERRQ(ierr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %D", dim);
+    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %" PetscInt_FMT "", dim);
   }
   PetscFunctionReturn(0);
 }
@@ -727,7 +727,7 @@ PetscErrorCode DMMoabFEMCreateQuadratureDefault(const PetscInt dim, const PetscI
         x[11] = 0.09157621350977;
         w[0] = w[1] = w[2] = 0.22338158967801;
         w[3] = w[4] = w[5] = 0.10995174365532;
-      } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Triangle quadrature rules for points 3 and 6 supported; npoints : %D", npoints);
+      } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Triangle quadrature rules for points 3 and 6 supported; npoints : %" PetscInt_FMT "", npoints);
       ierr = PetscQuadratureCreate(PETSC_COMM_SELF, quadrature);CHKERRQ(ierr);
       ierr = PetscQuadratureSetOrder(*quadrature, order);CHKERRQ(ierr);
       ierr = PetscQuadratureSetData(*quadrature, dim, nc, npoints, x, w);CHKERRQ(ierr);
@@ -769,7 +769,7 @@ PetscErrorCode DMMoabFEMCreateQuadratureDefault(const PetscInt dim, const PetscI
         w[0] = w[1] = w[2] = w[3] = 0.2177650698804054;
         w[4] = w[5] = w[6] = w[7] = w[8] = w[9] = 0.0214899534130631;
         order = 10;
-      } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Tetrahedral quadrature rules for points 4 and 10 supported; npoints : %D", npoints);
+      } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Tetrahedral quadrature rules for points 4 and 10 supported; npoints : %" PetscInt_FMT "", npoints);
       ierr = PetscQuadratureCreate(PETSC_COMM_SELF, quadrature);CHKERRQ(ierr);
       ierr = PetscQuadratureSetOrder(*quadrature, order);CHKERRQ(ierr);
       ierr = PetscQuadratureSetData(*quadrature, dim, nc, npoints, x, w);CHKERRQ(ierr);
@@ -779,7 +779,7 @@ PetscErrorCode DMMoabFEMCreateQuadratureDefault(const PetscInt dim, const PetscI
     }
     break;
   default:
-    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %D", dim);
+    SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %" PetscInt_FMT "", dim);
   }
   PetscFunctionReturn(0);
 }
@@ -821,7 +821,7 @@ PetscErrorCode ComputeJacobian_Internal (const PetscInt dim, const PetscInt nver
         jacobian[0] += dNi_dxi[i] * vertices[0];
       }
     } else {
-      SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of 1-D entity vertices are invalid. Currently only support EDGE2 and EDGE3 basis evaluations in 1-D : %D", nverts);
+      SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of 1-D entity vertices are invalid. Currently only support EDGE2 and EDGE3 basis evaluations in 1-D : %" PetscInt_FMT "", nverts);
     }
 
     if (ijacobian) {
@@ -850,7 +850,7 @@ PetscErrorCode ComputeJacobian_Internal (const PetscInt dim, const PetscInt nver
       /* Jacobian is constant */
       jacobian[0] = (coordinates[0 * 3 + 0] - x2); jacobian[1] = (coordinates[1 * 3 + 0] - x2);
       jacobian[2] = (coordinates[0 * 3 + 1] - y2); jacobian[3] = (coordinates[1 * 3 + 1] - y2);
-    } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of 2-D entity vertices are invalid. Currently only support QUAD4 and TRI3 basis evaluations in 2-D : %D", nverts);
+    } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of 2-D entity vertices are invalid. Currently only support QUAD4 and TRI3 basis evaluations in 2-D : %" PetscInt_FMT "", nverts);
 
     /* invert the jacobian */
     if (ijacobian) {
@@ -911,7 +911,7 @@ PetscErrorCode ComputeJacobian_Internal (const PetscInt dim, const PetscInt nver
       jacobian[0] = coordinates[1 * 3 + 0] - x0;  jacobian[1] = coordinates[2 * 3 + 0] - x0; jacobian[2] = coordinates[3 * 3 + 0] - x0;
       jacobian[3] = coordinates[1 * 3 + 1] - y0;  jacobian[4] = coordinates[2 * 3 + 1] - y0; jacobian[5] = coordinates[3 * 3 + 1] - y0;
       jacobian[6] = coordinates[1 * 3 + 2] - z0;  jacobian[7] = coordinates[2 * 3 + 2] - z0; jacobian[8] = coordinates[3 * 3 + 2] - z0;
-    } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of 3-D entity vertices are invalid. Currently only support HEX8 and TET4 basis evaluations in 3-D : %D", nverts);
+    } else SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "The number of 3-D entity vertices are invalid. Currently only support HEX8 and TET4 basis evaluations in 3-D : %" PetscInt_FMT "", nverts);
 
     if (ijacobian) {
       /* invert the jacobian */
@@ -944,7 +944,7 @@ PetscErrorCode FEMComputeBasis_JandF(const PetscInt dim, const PetscInt nverts, 
             NULL, phibasis, NULL, NULL, NULL, jacobian, ijacobian, volume);CHKERRQ(ierr);
       break;
     default:
-      SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %D", dim);
+      SETERRQ1(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %" PetscInt_FMT "", dim);
   }
   PetscFunctionReturn(0);
 }
