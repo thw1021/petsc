@@ -2770,6 +2770,21 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
     ierr = DMSetFromOptions_NonRefinement_Plex(PetscOptionsObject, dm);CHKERRQ(ierr);
     extLayers = 0;
   }
+  /* Handle DMPlex reordering before distribution */
+  PetscFunctionList ordlist;
+  char              oname[256];
+  ierr = MatGetOrderingList(&ordlist);CHKERRQ(ierr);
+  ierr = PetscOptionsFList("-dm_plex_reorder", "Set mesh reordering type", "DMPlexGetOrdering", ordlist, MATORDERINGNATURAL, oname, sizeof(oname), &flg);CHKERRQ(ierr);
+  if (flg) {
+    DM pdm;
+    IS perm;
+
+    ierr = DMPlexGetOrdering(dm, oname, NULL, &perm); CHKERRQ(ierr);
+    ierr = DMPlexPermute(dm, perm, &pdm); CHKERRQ(ierr);
+    ierr = ISDestroy(&perm); CHKERRQ(ierr);
+    ierr = DMPlexReplace_Static(dm, &pdm);CHKERRQ(ierr);
+    ierr = DMSetFromOptions_NonRefinement_Plex(PetscOptionsObject, dm);CHKERRQ(ierr);
+  }
   /* TODO Old-style extrusion which can be removed */
   ierr = PetscOptionsBool("-dm_plex_interpolate", "Flag to create edges and faces automatically", "", interpolate, &interpolate, NULL);CHKERRQ(ierr);
   /* Handle DMPlex distribution */
