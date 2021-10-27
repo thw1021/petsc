@@ -665,6 +665,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscInt       dim          = user->dim;
   PetscBool      cellSimplex  = user->cellSimplex, hasFault, hasFault2, hasParallelFault;
   PetscMPIInt    rank, size;
+  DMLabel        matLabel;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -693,6 +694,10 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   }
   ierr = PetscObjectSetOptionsPrefix((PetscObject) *dm, "orig_");CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
+  ierr = DMGetLabel(*dm, "material", &matLabel);CHKERRQ(ierr);
+  if (matLabel) {
+    ierr = DMPlexLabelComplete(*dm, matLabel);CHKERRQ(ierr);
+  }
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   ierr = DMHasLabel(*dm, "fault", &hasFault);CHKERRQ(ierr);
   if (hasFault) {
@@ -978,16 +983,16 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   ierr = PetscDSSetBdJacobian(probh, 0, 1, g0_bd_ul, NULL, NULL, NULL);CHKERRQ(ierr);
   if (Nf > 1) {ierr = PetscDSSetBdJacobian(probh, 1, 0, g0_bd_lu, NULL, NULL, NULL);CHKERRQ(ierr);}
 
-  keys[0].label = material;
-  keys[0].value = 1;
+  keys[0].label = NULL;
+  keys[0].value = 0;
   keys[0].field = 0;
   keys[0].part  = 0;
-  keys[1].label = material;
-  keys[1].value = 2;
+  keys[1].label = NULL;
+  keys[1].value = 0;
   keys[1].field = 0;
   keys[1].part  = 0;
-  keys[2].label = fault;
-  keys[2].value = 1;
+  keys[2].label = NULL;
+  keys[2].value = 0;
   keys[2].field = 0;
   keys[2].part  = 0;
   ierr = VecSet(locF, 0.);CHKERRQ(ierr);
