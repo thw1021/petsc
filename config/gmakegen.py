@@ -62,7 +62,7 @@ class Mistakes(object):
         smsources = set(msources)
         ssources  = set(f for f in files if getlangext(f) in ['.c', '.kokkos.cxx','.cxx', '.cc', '.cu', '.cpp', '.F', '.F90', '.hip.cpp', '.sycl.cxx'])
         if not smsources.issubset(ssources):
-            self.mistakes.append('The makefile in %s contains a file not on the filesystem: %r' % (root, sorted(smsources - ssources)))
+            self.mistakes.append('%s/makefile contains a file not on the filesystem: %r' % (root, sorted(smsources - ssources)))
         if not self.verbose: return
         if smsources != ssources:
             from sys import stderr
