@@ -126,10 +126,10 @@ int main(int argc,char **argv)
         ierr = VecSum(Xglobal, &sum);CHKERRQ(ierr);
         if (PetscAbsScalar(sum) > 0.1) {
           if (step == check_step_dead) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD,"Simulation alive at step %D\n",step);CHKERRQ(ierr);
+            ierr = PetscPrintf(PETSC_COMM_WORLD,"Simulation alive at step %" PetscInt_FMT "\n",step);CHKERRQ(ierr);
           }
         } else if (step == check_step_alive) {
-          ierr = PetscPrintf(PETSC_COMM_WORLD,"Simulation dead at step %D\n",step);CHKERRQ(ierr);
+          ierr = PetscPrintf(PETSC_COMM_WORLD,"Simulation dead at step %" PetscInt_FMT "\n",step);CHKERRQ(ierr);
         }
       }
       if (step % viz_interval == 0) {

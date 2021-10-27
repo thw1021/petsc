@@ -146,4 +146,21 @@ typedef struct {
 
 PETSC_INTERN PetscErrorCode PetscDSGetDiscType_Internal(PetscDS, PetscInt, PetscDiscType *);
 
+#define PetscDTDSCheckPositiveField(field) do {                         \
+    if (PetscUnlikely((field) < 0)) {                                   \
+      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE,               \
+               "Field number %" PetscInt_FMT " must be non-negative",   \
+               (field));                                                \
+    }                                                                   \
+  } while (0)
+
+#define PetscDTDSCheckValidField(field,numfields) do {          \
+    PetscDTDSCheckPositiveField(field);                         \
+    if (PetscUnlikely((field) >= (numfields))) {                \
+      SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,        \
+               "Field number %" PetscInt_FMT " must be in "     \
+               "[0, %" PetscInt_FMT ")",(field),(numfields));   \
+    }                                                           \
+  } while (0)
+
 #endif

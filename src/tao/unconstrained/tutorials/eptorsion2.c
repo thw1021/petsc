@@ -96,7 +96,7 @@ int main(int argc, char **argv)
     ierr = PetscOptionsGetInt(NULL,NULL,"-mx",&user.mx,&flg);CHKERRQ(ierr);
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n---- Elastic-Plastic Torsion Problem -----\n");CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"mx: %D     my: %D   \n\n",user.mx,user.my);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"mx: %" PetscInt_FMT "     my: %" PetscInt_FMT "   \n\n",user.mx,user.my);CHKERRQ(ierr);
 
     /* Set up distributed array */
     ierr = DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,user.mx,user.my,Nx,Ny,1,1,NULL,NULL,&user.dm);CHKERRQ(ierr);

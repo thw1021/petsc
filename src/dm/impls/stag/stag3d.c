@@ -70,7 +70,7 @@ PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_3d(DM dm,PetscRe
   ierr = DMGetCoordinateDM(dm,&dmCoord);CHKERRQ(ierr);
   stagCoord = (DM_Stag*) dmCoord->data;
   for (s=0; s<4; ++s) {
-    if (stagCoord->dof[s] !=0 && stagCoord->dof[s] != 3) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 3 dimensions must have 0 or 3 dof on each stratum, but stratum %d has %d dof",s,stagCoord->dof[s]);
+    if (PetscUnlikely(stagCoord->dof[s] !=0 && stagCoord->dof[s] != 3)) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Coordinate DM in 3 dimensions must have 0 or 3 dof on each stratum, but stratum %" PetscInt_FMT " has %" PetscInt_FMT " dof",s,stagCoord->dof[s]);
   }
   ierr = DMCreateLocalVector(dmCoord,&coordLocal);CHKERRQ(ierr);
   ierr = DMStagVecGetArray(dmCoord,coordLocal,&arr);CHKERRQ(ierr);
@@ -210,7 +210,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_3d(DM dm)
       PetscInt Ncheck,j;
       Ncheck = 0;
       for (j=0; j<stag->nRanks[i]; ++j) Ncheck += stag->l[i][j];
-      if (Ncheck != stag->N[i]) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local sizes in dimension %d don't add up. %d != %d\n",i,Ncheck,stag->N[i]);
+      if (PetscUnlikely(Ncheck != stag->N[i])) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local sizes in dimension %" PetscInt_FMT " don't add up. %" PetscInt_FMT " != %" PetscInt_FMT "\n",i,Ncheck,stag->N[i]);
     }
   }
 
@@ -248,7 +248,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_3d(DM dm)
 
   /* Check that we will not overflow 32 bit indices (slightly overconservative) */
   if (!PetscDefined(USE_64BIT_INDICES)) {
-    if (((PetscInt64) stag->n[0])*((PetscInt64) stag->n[1])*((PetscInt64) stag->n[2])*((PetscInt64) stag->entriesPerElement) > (PetscInt64) PETSC_MPI_INT_MAX) SETERRQ4(PetscObjectComm((PetscObject)dm),PETSC_ERR_INT_OVERFLOW,"Mesh of %D x %D x %D with %D entries per (interior) element is likely too large for 32 bit indices",stag->n[0],stag->n[1],stag->n[2],stag->entriesPerElement);
+    if (((PetscInt64) stag->n[0])*((PetscInt64) stag->n[1])*((PetscInt64) stag->n[2])*((PetscInt64) stag->entriesPerElement) > (PetscInt64) PETSC_MPI_INT_MAX) SETERRQ4(PetscObjectComm((PetscObject)dm),PETSC_ERR_INT_OVERFLOW,"Mesh of %" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT " with %" PetscInt_FMT " entries per (interior) element is likely too large for 32 bit indices",stag->n[0],stag->n[1],stag->n[2],stag->entriesPerElement);
   }
 
   /* Compute offsets for each rank into global vectors
@@ -319,7 +319,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_3d(DM dm)
             SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unrecognized ghost stencil type %d",stag->stencilType);
         }
         break;
-      default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported boundary type in dimension %D",d);
+      default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported boundary type in dimension %" PetscInt_FMT "",d);
     }
   }
   stag->entriesGhost = stag->nGhost[0]*stag->nGhost[1]*stag->nGhost[2]*stag->entriesPerElement;
@@ -367,18 +367,18 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_3d(DM dm)
   p = stag->nRanks[2];
 
   if (m != PETSC_DECIDE) {
-    if (m < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of processors in X direction: %D",m);
-    else if (m > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many processors in X direction: %D %d",m,size);
+    if (m < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of processors in X direction: %" PetscInt_FMT "",m);
+    else if (m > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many processors in X direction: %" PetscInt_FMT " %d",m,size);
   }
   if (n != PETSC_DECIDE) {
-    if (n < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of processors in Y direction: %D",n);
-    else if (n > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many processors in Y direction: %D %d",n,size);
+    if (n < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of processors in Y direction: %" PetscInt_FMT "",n);
+    else if (n > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many processors in Y direction: %" PetscInt_FMT " %d",n,size);
   }
   if (p != PETSC_DECIDE) {
-    if (p < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of processors in Z direction: %D",p);
-    else if (p > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many processors in Z direction: %D %d",p,size);
+    if (p < 1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Non-positive number of processors in Z direction: %" PetscInt_FMT "",p);
+    else if (p > size) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many processors in Z direction: %" PetscInt_FMT " %d",p,size);
   }
-  if ((m > 0) && (n > 0) && (p > 0) && (m*n*p != size)) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m %D * n %D * p %D != size %d",m,n,p,size);
+  if ((m > 0) && (n > 0) && (p > 0) && (m*n*p != size)) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m %" PetscInt_FMT " * n %" PetscInt_FMT " * p %" PetscInt_FMT " != size %d",m,n,p,size);
 
   /* Partition the array among the processors */
   if (m == PETSC_DECIDE && n != PETSC_DECIDE && p != PETSC_DECIDE) {
@@ -396,7 +396,7 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_3d(DM dm)
       if (m*n*p == size) break;
       m--;
     }
-    if (!m) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"bad p value: p = %D",p);
+    if (!m) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"bad p value: p = %" PetscInt_FMT "",p);
     if (M > N && m < n) {PetscInt _m = m; m = n; n = _m;}
   } else if (m == PETSC_DECIDE && n != PETSC_DECIDE && p == PETSC_DECIDE) {
     /* try for squarish distribution */
@@ -407,7 +407,7 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_3d(DM dm)
       if (m*n*p == size) break;
       m--;
     }
-    if (!m) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"bad n value: n = %D",n);
+    if (!m) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"bad n value: n = %" PetscInt_FMT "",n);
     if (M > P && m < p) {PetscInt _m = m; m = p; p = _m;}
   } else if (m != PETSC_DECIDE && n == PETSC_DECIDE && p == PETSC_DECIDE) {
     /* try for squarish distribution */
@@ -418,7 +418,7 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_3d(DM dm)
       if (m*n*p == size) break;
       n--;
     }
-    if (!n) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"bad m value: m = %D",n);
+    if (!n) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"bad m value: m = %" PetscInt_FMT "",n);
     if (N > P && n < p) {PetscInt _n = n; n = p; p = _n;}
   } else if (m == PETSC_DECIDE && n == PETSC_DECIDE && p == PETSC_DECIDE) {
     /* try for squarish distribution */
@@ -441,9 +441,9 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_3d(DM dm)
   } else if (m*n*p != size) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Given Bad partition");
 
   if (m*n*p != size) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Could not find good partition");
-  if (M < m) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in x direction is too fine! %D %D",M,m);
-  if (N < n) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in y direction is too fine! %D %D",N,n);
-  if (P < p) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in z direction is too fine! %D %D",P,p);
+  if (M < m) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in x direction is too fine! %" PetscInt_FMT " %" PetscInt_FMT "",M,m);
+  if (N < n) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in y direction is too fine! %" PetscInt_FMT " %" PetscInt_FMT "",N,n);
+  if (P < p) SETERRQ2(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Partition in z direction is too fine! %" PetscInt_FMT " %" PetscInt_FMT "",P,p);
 
   stag->nRanks[0] = m;
   stag->nRanks[1] = n;
@@ -860,7 +860,7 @@ static PetscErrorCode DMStagSetUpBuildScatter_3d(DM dm,const PetscInt *globalOff
   PetscFunctionBegin;
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRMPI(ierr);
   if (stag->n[0] < stag->stencilWidth || stag->n[1] < stag->stencilWidth || stag->n[2] < stag->stencilWidth) {
-    SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_SUP,"DMStag 3d setup does not support local sizes (%D x %D x %D) smaller than the elementwise stencil width (%D)",stag->n[0],stag->n[1],stag->n[2],stag->stencilWidth);
+    SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_SUP,"DMStag 3d setup does not support local sizes (%" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT ") smaller than the elementwise stencil width (%" PetscInt_FMT ")",stag->n[0],stag->n[1],stag->n[2],stag->stencilWidth);
   }
 
   /* Check stencil type */
@@ -1529,7 +1529,7 @@ static PetscErrorCode DMStagSetUpBuildScatter_3d(DM dm,const PetscInt *globalOff
     ierr = DMStagSetUpBuildScatterPopulateIdx_3d(stag,&count,idxLocal,idxGlobal,entriesPerEdge,entriesPerFace,eprNeighbor,eplNeighbor,eprGhost,eplGhost,epFaceRow,globalOffsets[stag->neighbors[neighbor]],start0,start1,start2,startGhost0,startGhost1,startGhost2,endGhost0,endGhost1,endGhost2,extra0,extra1,extra2);CHKERRQ(ierr);
   }
 
-  if (count != entriesToTransferTotal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of entries computed in gtol (%d) is not as expected (%d)",count,entriesToTransferTotal);
+  if (PetscUnlikely(count != entriesToTransferTotal)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of entries computed in gtol (%" PetscInt_FMT ") is not as expected (%" PetscInt_FMT ")",count,entriesToTransferTotal);
 
   /* Create stag->gtol. The order is computed as PETSc ordering, and doesn't include dummy entries */
   {

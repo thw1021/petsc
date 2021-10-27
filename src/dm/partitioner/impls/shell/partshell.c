@@ -102,11 +102,11 @@ static PetscErrorCode PetscPartitionerPartition_Shell(PetscPartitioner part, Pet
     ierr = PetscPartitionerShellSetPartition(part, nparts, sizes, points);CHKERRQ(ierr);
     ierr = PetscFree2(sizes, points);CHKERRQ(ierr);
   }
-  if (!p->section) SETERRQ(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_WRONG, "Shell partitioner information not provided. Please call PetscPartitionerShellSetPartition()");
+  if (PetscUnlikely(!p->section)) SETERRQ(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_WRONG, "Shell partitioner information not provided. Please call PetscPartitionerShellSetPartition()");
   ierr = PetscSectionGetChart(p->section, NULL, &np);CHKERRQ(ierr);
-  if (nparts != np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of requested partitions %d != configured partitions %d", nparts, np);
+  if (PetscUnlikely(nparts != np)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of requested partitions %" PetscInt_FMT " != configured partitions %" PetscInt_FMT, nparts, np);
   ierr = ISGetLocalSize(p->partition, &np);CHKERRQ(ierr);
-  if (numVertices != np) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input vertices %d != configured vertices %d", numVertices, np);
+  if (PetscUnlikely(numVertices != np)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input vertices %" PetscInt_FMT " != configured vertices %" PetscInt_FMT, numVertices, np);
   ierr = PetscSectionCopy(p->section, partSection);CHKERRQ(ierr);
   *partition = p->partition;
   ierr = PetscObjectReference((PetscObject) p->partition);CHKERRQ(ierr);

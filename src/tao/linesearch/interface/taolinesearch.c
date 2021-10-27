@@ -80,11 +80,11 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"maximum function evaluations=%D\n",ls->max_funcs);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"maximum function evaluations=%" PetscInt_FMT "\n",ls->max_funcs);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"tolerances: ftol=%g, rtol=%g, gtol=%g\n",(double)ls->ftol,(double)ls->rtol,(double)ls->gtol);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"total number of function evaluations=%D\n",ls->nfeval);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"total number of gradient evaluations=%D\n",ls->ngeval);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"total number of function/gradient evaluations=%D\n",ls->nfgeval);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"total number of function evaluations=%" PetscInt_FMT "\n",ls->nfeval);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"total number of gradient evaluations=%" PetscInt_FMT "\n",ls->ngeval);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"total number of function/gradient evaluations=%" PetscInt_FMT "\n",ls->nfgeval);CHKERRQ(ierr);
 
     if (ls->bounded) {
       ierr = PetscViewerASCIIPrintf(viewer,"using variable bounds\n");CHKERRQ(ierr);
@@ -387,7 +387,7 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
     *reason=TAOLINESEARCH_FAILED_BADPARAMETER;
   }
   if (ls->max_funcs < 0) {
-    ierr = PetscInfo1(ls,"Bad Line Search Parameter: max_funcs (%D) < 0\n",ls->max_funcs);CHKERRQ(ierr);
+    ierr = PetscInfo1(ls,"Bad Line Search Parameter: max_funcs (%" PetscInt_FMT ") < 0\n",ls->max_funcs);CHKERRQ(ierr);
     *reason=TAOLINESEARCH_FAILED_BADPARAMETER;
   }
   if (PetscIsInfOrNanReal(*f)) {
@@ -505,7 +505,7 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
   if (ls->usemonitor) {
     ierr = PetscViewerASCIIGetTab(ls->viewer, &tabs);CHKERRQ(ierr);
     ierr = PetscViewerASCIISetTab(ls->viewer, ((PetscObject)ls)->tablevel);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(ls->viewer, "%3D LS", its);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(ls->viewer, "%3" PetscInt_FMT " LS", its);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(ls->viewer, "  Function value: %g,", (double)f);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(ls->viewer, "  Step length: %g\n", (double)step);CHKERRQ(ierr);
     if (ls->ops->monitor && its > 0) {

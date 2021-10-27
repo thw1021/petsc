@@ -66,7 +66,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user)
   }
   else {
     if (user->debug) {
-      PetscPrintf(comm, "Creating a %D-dimensional structured %s mesh of %Dx%Dx%D in memory and creating a DM object.\n",user->dim,(user->simplex?"simplex":"regular"),user->nele,user->nele,user->nele);
+      PetscPrintf(comm, "Creating a %" PetscInt_FMT "-dimensional structured %s mesh of %" PetscInt_FMT "x%" PetscInt_FMT "x%" PetscInt_FMT " in memory and creating a DM object.\n",user->dim,(user->simplex?"simplex":"regular"),user->nele,user->nele,user->nele);
     }
     ierr = DMMoabCreateBoxMesh(comm, user->dim, user->simplex, NULL, user->nele, user->nghost, &user->dm);CHKERRQ(ierr);
   }
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
   if (user.nlevels) {
     ierr = PetscMalloc1(user.nlevels, &degrees);CHKERRQ(ierr);
     for (i=0; i < user.nlevels; i++) degrees[i] = user.degree;
-    if (user.debug) PetscPrintf(comm, "Generate the MOAB mesh hierarchy with %D levels.\n", user.nlevels);
+    if (user.debug) PetscPrintf(comm, "Generate the MOAB mesh hierarchy with %" PetscInt_FMT " levels.\n", user.nlevels);
     ierr = DMMoabGenerateHierarchy(user.dm,user.nlevels,degrees);CHKERRQ(ierr);
 
     PetscBool usehierarchy=PETSC_FALSE;
@@ -118,11 +118,11 @@ int main(int argc, char **argv)
     }
     else {
       if (user.debug) {
-        PetscPrintf(PETSC_COMM_WORLD, "Level %D\n", 0);
+        PetscPrintf(PETSC_COMM_WORLD, "Level %" PetscInt_FMT "\n", 0);
         ierr = DMView(user.dm, 0);CHKERRQ(ierr);
       }
       for (i=1; i<=user.nlevels; i++) {
-        if (user.debug) PetscPrintf(PETSC_COMM_WORLD, "Level %D\n", i);
+        if (user.debug) PetscPrintf(PETSC_COMM_WORLD, "Level %" PetscInt_FMT "\n", i);
         ierr = DMRefine(dmhierarchy[i-1],MPI_COMM_NULL,&dmhierarchy[i]);CHKERRQ(ierr);
         if (createR) {
           ierr = DMCreateInterpolation(dmhierarchy[i-1],dmhierarchy[i],&R,NULL);CHKERRQ(ierr);

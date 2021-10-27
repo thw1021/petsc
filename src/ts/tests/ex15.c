@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
   }
   ierr = VecView(U,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = VecSum(U,&sum);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Conservation error %g\n", PetscRealPart(sum - 3.));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Conservation error %g\n", (double)PetscRealPart(sum - 3.));CHKERRQ(ierr);
 
   ierr = VecDestroy(&U);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);

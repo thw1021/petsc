@@ -1161,7 +1161,7 @@ static PetscErrorCode TSView_MPRK(TS ts,PetscViewer viewer)
     PetscInt    i;
     ierr = TSMPRKGetType(ts,&mprktype);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  MPRK type %s\n",mprktype);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"  Order: %D\n",tab->order);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  Order: %" PetscInt_FMT "\n",tab->order);CHKERRQ(ierr);
 
     ierr = PetscFormatRealArray(fbuf,sizeof(fbuf),"% 8.6f",tab->s,tab->cf);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Abscissa cf = %s\n",fbuf);CHKERRQ(ierr);

@@ -42,13 +42,13 @@ PetscErrorCode RunTest(void)
 
   if (test) {
     ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %D\n", its);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %" PetscInt_FMT "\n", its);CHKERRQ(ierr);
   } else {
     ierr = VecDuplicate(b,&r);CHKERRQ(ierr);
     ierr = MatMult(A,x,r);CHKERRQ(ierr);
     ierr = VecAYPX(r,-1,b);CHKERRQ(ierr);
     ierr = VecNorm(r,NORM_2,&rnorm);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",rnorm);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",(double)rnorm);CHKERRQ(ierr);
     ierr = VecDestroy(&r);CHKERRQ(ierr);
   }
 

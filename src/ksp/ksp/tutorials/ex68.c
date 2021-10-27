@@ -113,7 +113,7 @@ int main(int argc,char **args)
     ierr = PetscGaussLobattoLegendreIntegrate(n,nodes,weights,f,&norm);CHKERRQ(ierr);
     ierr = VecRestoreArray(x,&f);CHKERRQ(ierr);
     norm = PetscSqrtReal(norm);
-    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF,"L^2 norm of the error %D %g\n",n,(double)norm);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF,"L^2 norm of the error %" PetscInt_FMT " %g\n",n,(double)norm);CHKERRQ(ierr);
     xc   = (PetscReal)n;
     yc   = PetscLog10Real(norm);
     ierr = PetscDrawLGAddPoint(lg,&xc,&yc);CHKERRQ(ierr);

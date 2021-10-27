@@ -1195,7 +1195,7 @@ static PetscErrorCode DMDAIntegrateErrors3D(DM stokes_da,Vec X,Vec X_analytic)
   ierr = MPI_Allreduce(&tint_p_ms,&int_p_ms,1,MPIU_SCALAR,MPIU_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   ierr = MPI_Allreduce(&tint_p,&int_p,1,MPIU_SCALAR,MPIU_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\\int P dv %1.4e (h)  %1.4e (ms)\n",PetscRealPart(int_p),PetscRealPart(int_p_ms));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\\int P dv %1.4e (h)  %1.4e (ms)\n",(double)PetscRealPart(int_p),(double)PetscRealPart(int_p_ms));CHKERRQ(ierr);
 
   /* remove mine and add manufacture one */
   ierr = DMDAVecRestoreArray(stokes_da,X_analytic_local,&stokes_analytic);CHKERRQ(ierr);
@@ -1273,7 +1273,7 @@ static PetscErrorCode DMDAIntegrateErrors3D(DM stokes_da,Vec X,Vec X_analytic)
   u_L2 = PetscSqrtScalar(u_L2);
   u_H1 = PetscSqrtScalar(u_H1);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%1.4e   %1.4e   %1.4e   %1.4e \n",PetscRealPart(h),PetscRealPart(p_L2),PetscRealPart(u_L2),PetscRealPart(u_H1));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%1.4e   %1.4e   %1.4e   %1.4e \n",(double)PetscRealPart(h),(double)PetscRealPart(p_L2),(double)PetscRealPart(u_L2),(double)PetscRealPart(u_H1));CHKERRQ(ierr);
 
   ierr = DMDAVecRestoreArray(cda,coords,&_coords);CHKERRQ(ierr);
 
@@ -1319,8 +1319,8 @@ PetscErrorCode DAView_3DVTK_StructuredGrid_appended(DM da,Vec FIELD,const char f
   N    = nx * ny * nz;
 
   PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"<VTKFile type=\"StructuredGrid\" version=\"0.1\" byte_order=\"%s\">\n",byte_order);
-  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"  <StructuredGrid WholeExtent=\"%D %D %D %D %D %D\">\n",si,si+nx-1,sj,sj+ny-1,sk,sk+nz-1);
-  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"    <Piece Extent=\"%D %D %D %D %D %D\">\n",si,si+nx-1,sj,sj+ny-1,sk,sk+nz-1);
+  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"  <StructuredGrid WholeExtent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",si,si+nx-1,sj,sj+ny-1,sk,sk+nz-1);
+  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"    <Piece Extent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",si,si+nx-1,sj,sj+ny-1,sk,sk+nz-1);
 
   memory_offset = 0;
 
@@ -1331,7 +1331,7 @@ PetscErrorCode DAView_3DVTK_StructuredGrid_appended(DM da,Vec FIELD,const char f
   /* copy coordinates */
   ierr = DMGetCoordinateDM(da,&cda);CHKERRQ(ierr);
   ierr = DMGetCoordinatesLocal(da,&coords);CHKERRQ(ierr);
-  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"        <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"appended\" offset=\"%d\" />\n",memory_offset);
+  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"        <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"appended\" offset=\"%" PetscInt_FMT "\" />\n",memory_offset);
   memory_offset = memory_offset + sizeof(PetscInt) + sizeof(PetscScalar)*N*3;
 
   PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"      </Points>\n");
@@ -1349,7 +1349,7 @@ PetscErrorCode DAView_3DVTK_StructuredGrid_appended(DM da,Vec FIELD,const char f
     const char *field_name;
 
     ierr = DMDAGetFieldName(da,f,&field_name);CHKERRQ(ierr);
-    PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"        <DataArray type=\"Float64\" Name=\"%s\" format=\"appended\" offset=\"%d\"/>\n", field_name,memory_offset);
+    PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"        <DataArray type=\"Float64\" Name=\"%s\" format=\"appended\" offset=\"%" PetscInt_FMT "\"/>\n", field_name,memory_offset);
     memory_offset = memory_offset + sizeof(PetscInt) + sizeof(PetscScalar)*N;
   }
 
@@ -1475,10 +1475,10 @@ PetscErrorCode DAViewVTK_write_PieceExtend(FILE *vtk_fp,PetscInt indent_level,DM
       for (i=0; i<pM; i++) {
         char     name[PETSC_MAX_PATH_LEN];
         PetscInt procid = i + j*pM + k*pM*pN; /* convert proc(i,j,k) to pid */
-        ierr = PetscSNPrintf(name,sizeof(name),"subdomain-%s-p%1.4d.vts",local_file_prefix,procid);CHKERRQ(ierr);
+        ierr = PetscSNPrintf(name,sizeof(name),"subdomain-%s-p%1.4" PetscInt_FMT ".vts",local_file_prefix,procid);CHKERRQ(ierr);
         for (II=0; II<indent_level; II++) PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"  ");
 
-        PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"<Piece Extent=\"%d %d %d %d %d %d\"      Source=\"%s\"/>\n",
+        PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"<Piece Extent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\"      Source=\"%s\"/>\n",
                      osx[i],oex[i]-1,
                      osy[j],oey[j]-1,
                      osz[k],oez[k]-1,name);
@@ -1529,7 +1529,7 @@ PetscErrorCode DAView_3DVTK_PStructuredGrid(DM da,const char file_prefix[],const
   /* define size of the nodal mesh based on the cell DM */
   ierr = DMDAGetInfo(da,0,&M,&N,&P,0,0,0,&dofs,0,0,0,0,0);CHKERRQ(ierr);
   ierr = DMDAGetGhostCorners(da,&si,&sj,&sk,&nx,&ny,&nz);CHKERRQ(ierr);
-  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"  <PStructuredGrid GhostLevel=\"1\" WholeExtent=\"%d %d %d %d %d %d\">\n",0,M-1,0,N-1,0,P-1); /* note overlap = 1 for Q1 */
+  PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"  <PStructuredGrid GhostLevel=\"1\" WholeExtent=\"0 %" PetscInt_FMT " 0 %" PetscInt_FMT " 0 %" PetscInt_FMT "\">\n",M-1,N-1,P-1); /* note overlap = 1 for Q1 */
 
   /* DUMP THE CELL REFERENCES */
   PetscFPrintf(PETSC_COMM_SELF,vtk_fp,"    <PCellData>\n");
@@ -1597,7 +1597,7 @@ PetscErrorCode KSPMonitorStokesBlocks(KSP ksp,PetscInt n,PetscReal rnorm,void *d
   ierr = VecDestroy(&v);CHKERRQ(ierr);
   ierr = VecDestroy(&w);CHKERRQ(ierr);
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D KSP Component U,V,W,P residual norm [ %1.12e, %1.12e, %1.12e, %1.12e ]\n",n,norms[0],norms[1],norms[2],norms[3]);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " KSP Component U,V,W,P residual norm [ %1.12e, %1.12e, %1.12e, %1.12e ]\n",n,(double)norms[0],(double)norms[1],(double)norms[2],(double)norms[3]);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
