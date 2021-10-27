@@ -2870,6 +2870,10 @@ PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
 /*
  OpenMP support
 */
-#define PetscPragmaOMP(arg) _Pragma(PetscStringize(omp arg))
+#if defined(_OPENMP)
+#  define PetscPragmaOMP(arg) _Pragma(PetscStringize(omp arg))
+#else // no OpenMP so no threads
+#  defined PetscPragmaOMP(arg)
+#endif
 
 #endif
