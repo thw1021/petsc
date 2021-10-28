@@ -2500,7 +2500,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   /* TODO Turn this into a registration interface */
   ierr = PetscOptionsString("-dm_plex_filename", "File containing a mesh", "DMPlexCreateFromFile", filename, filename, sizeof(filename), &fflg);CHKERRQ(ierr);
   ierr = PetscOptionsString("-dm_plex_boundary_filename", "File containing a mesh boundary", "DMPlexCreateFromFile", bdFilename, bdFilename, sizeof(bdFilename), &bdfflg);CHKERRQ(ierr);
-  ierr = PetscOptionsString("-dm_plex_name", "Name of the mesh in the file", "", plexname, plexname, sizeof(plexname), &nameflg);CHKERRQ(ierr);
+  ierr = PetscOptionsString("-dm_plex_name", "Name of the mesh in the file", "DMPlexCreateFromFile", plexname, plexname, sizeof(plexname), &nameflg);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-dm_plex_cell", "Cell shape", "", DMPolytopeTypes, (PetscEnum) cell, (PetscEnum *) &cell, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_plex_reference_cell_domain", "Use a reference cell domain", "", refDomain, &refDomain, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnum("-dm_plex_shape", "Shape for built-in mesh", "", DMPlexShapes, (PetscEnum) shape, (PetscEnum *) &shape, &flg);CHKERRQ(ierr);
@@ -4005,7 +4005,7 @@ $ -dm_plex_create_viewer_hdf5_collective
 
   Level: beginner
 
-.seealso: DMPlexCreateFromDAG(), DMPlexCreateFromCellListPetsc(), DMPlexCreate(), PetscObjectSetName()
+.seealso: DMPlexCreateFromDAG(), DMPlexCreateFromCellListPetsc(), DMPlexCreate(), PetscObjectSetName(), DMView(), DMLoad()
 @*/
 PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const char plexname[], PetscBool interpolate, DM *dm)
 {

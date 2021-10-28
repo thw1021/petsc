@@ -951,7 +951,7 @@ PetscErrorCode  DMViewFromOptions(DM dm,PetscObject obj,const char name[])
 
     Level: beginner
 
-.seealso DMDestroy(), DMCreateGlobalVector(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
+.seealso DMDestroy(), DMCreateGlobalVector(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix(), DMLoad(), PetscObjectSetName()
 
 @*/
 PetscErrorCode  DMView(DM dm,PetscViewer v)
