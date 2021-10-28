@@ -323,7 +323,7 @@ PetscErrorCode DMAdaptLabel_Plex(DM dm, PETSC_UNUSED Vec metric, DMLabel adaptLa
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMAdaptMetric_Pragmatic_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
+PETSC_EXTERN PetscErrorCode DMAdaptMetric_Pragmatic_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
 {
 #if defined(PETSC_HAVE_PRAGMATIC)
   MPI_Comm           comm;
@@ -546,7 +546,7 @@ PetscErrorCode DMAdaptMetric_Pragmatic_Plex(DM dm, Vec vertexMetric, DMLabel bdL
 #endif
 }
 
-PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
+PETSC_EXTERN PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
 {
 #if defined(PETSC_HAVE_MMG)
   MPI_Comm           comm;
@@ -767,7 +767,7 @@ PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, 
 #endif
 }
 
-PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
+PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, DMLabel bdLabel, DM *dmNew)
 {
 #if defined(PETSC_HAVE_PARMMG)
   MPI_Comm           comm;
