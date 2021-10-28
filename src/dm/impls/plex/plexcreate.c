@@ -3984,7 +3984,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
   Input Parameters:
 + comm - The communicator
 . filename - A file name
-. name - The object name of the resulting DM, also used for intra-datafile lookup by some formats
+. plexname - The object name of the resulting DM, also used for intra-datafile lookup by some formats
 - interpolate - Flag to create intermediate mesh pieces (edges, faces)
 
   Output Parameter:
