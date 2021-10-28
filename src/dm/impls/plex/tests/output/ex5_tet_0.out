@@ -184,37 +184,37 @@ Process 0:
   (  36) dim  3 offset  30
 Vec Object: Local Solution 1 MPI processes
   type: seq
-7.37877e-18
+0.
 1.
 0.5
-7.37877e-18
+0.
 0.5
 1.
 1.
 1.
 1.
-8.8886e-17
+0.
 1.5
 1.
-7.37877e-18
+0.
 1.
 1.5
-7.37877e-18
+0.
 0.5
 1.
 1.
 1.
 1.
-8.8886e-17
+0.
 1.5
 1.
 0.5
-4.81324e-17
+0.
 0.
 -0.5
-4.81324e-17
 0.
-2.77556e-17
+0.
+0.
 1.
 0.
 Vec Object: Local Residual 1 MPI processes
@@ -228,7 +228,7 @@ Vec Object: Local Residual 1 MPI processes
 -0.0208333
 0.0416667
 0.0833333
-1.73472e-18
+-1.73472e-18
 0.104167
 0.0416667
 0.
@@ -240,7 +240,7 @@ Vec Object: Local Residual 1 MPI processes
 -0.0208333
 0.0416667
 0.0833333
-1.73472e-18
+-1.73472e-18
 0.104167
 0.0416667
 0.
