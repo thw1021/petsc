@@ -28,7 +28,7 @@ static PetscErrorCode PCView_Redistribute(PC pc,PetscViewer viewer)
   if (iascii) {
     ierr = MPIU_Allreduce(&red->dcnt,&ncnt,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
     ierr = MatGetSize(pc->pmat,&N,NULL);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"    Number rows eliminated %D Percentage rows eliminated %g\n",ncnt,100.0*((PetscReal)ncnt)/((PetscReal)N));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    Number rows eliminated %" PetscInt_FMT " Percentage rows eliminated %g\n",ncnt,(double)(100.0*((PetscReal)ncnt)/((PetscReal)N)));CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"  Redistribute preconditioner: \n");CHKERRQ(ierr);
     ierr = KSPView(red->ksp,viewer);CHKERRQ(ierr);
   } else if (isstring) {
@@ -120,7 +120,7 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
     ierr = PetscLayoutSetUp(nmap);CHKERRQ(ierr);
 
     ierr = MatGetSize(pc->pmat,&NN,NULL);CHKERRQ(ierr);
-    ierr = PetscInfo2(pc,"Number of diagonal rows eliminated %d, percentage eliminated %g\n",NN-ncnt,((PetscReal)(NN-ncnt))/((PetscReal)(NN)));CHKERRQ(ierr);
+    ierr = PetscInfo2(pc,"Number of diagonal rows eliminated %" PetscInt_FMT ", percentage eliminated %g\n",NN-ncnt,(double)(((PetscReal)(NN-ncnt))/((PetscReal)(NN))));CHKERRQ(ierr);
 
     if (size > 1) {
       /* the following block of code assumes MPI can send messages to self, which is not supported for MPI-uni hence we need to handle the size 1 case as a special case */
@@ -190,7 +190,7 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
         slen += n;
         count--;
       }
-      if (slen != recvtotal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Total message lengths %D not expected %D",slen,recvtotal);
+      if (slen != recvtotal) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Total message lengths %" PetscInt_FMT " not expected %" PetscInt_FMT "",slen,recvtotal);
       ierr = ISCreateGeneral(comm,slen,rvalues,PETSC_COPY_VALUES,&red->is);CHKERRQ(ierr);
 
       /* free all work space */

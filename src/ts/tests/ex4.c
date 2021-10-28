@@ -264,7 +264,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec global,void *ctx)
   ierr = VecScatterEnd(scatter,global,tmp_vec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
 
   ierr = VecGetArrayRead(tmp_vec,&tmp);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"At t[%D] =%14.2e u= %14.2e at the center \n",nsteps,(double)time,(double)PetscRealPart(tmp[n/2]));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"At t[%" PetscInt_FMT "] =%14.2e u= %14.2e at the center \n",nsteps,(double)time,(double)PetscRealPart(tmp[n/2]));CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(tmp_vec,&tmp);CHKERRQ(ierr);
 
   ierr = PetscFree(idx);CHKERRQ(ierr);

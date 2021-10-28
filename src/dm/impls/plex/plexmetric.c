@@ -154,7 +154,7 @@ PetscErrorCode DMPlexMetricSetMinimumMagnitude(DM dm, PetscReal h_min)
     ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
     ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
   }
-  if (h_min <= 0.0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", h_min);
+  if (PetscUnlikely(h_min <= 0.0)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", (double)h_min);
   plex->metricCtx->h_min = h_min;
   PetscFunctionReturn(0);
 }
@@ -207,7 +207,7 @@ PetscErrorCode DMPlexMetricSetMaximumMagnitude(DM dm, PetscReal h_max)
     ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
     ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
   }
-  if (h_max <= 0.0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", h_max);
+  if (PetscUnlikely(h_max <= 0.0)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", (double)h_max);
   plex->metricCtx->h_max = h_max;
   PetscFunctionReturn(0);
 }
@@ -262,7 +262,7 @@ PetscErrorCode DMPlexMetricSetMaximumAnisotropy(DM dm, PetscReal a_max)
     ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
     ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
   }
-  if (a_max < 1.0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Anisotropy must be at least one, not %.4e", a_max);
+  if (PetscUnlikely(a_max < 1.0)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Anisotropy must be at least one, not %.4e", (double)a_max);
   plex->metricCtx->a_max = a_max;
   PetscFunctionReturn(0);
 }
@@ -512,8 +512,8 @@ PetscErrorCode DMPlexMetricCreateUniform(DM dm, PetscInt f, PetscReal alpha, Vec
 
   PetscFunctionBegin;
   ierr = DMPlexMetricCreate(dm, f, metric);CHKERRQ(ierr);
-  if (!alpha) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Uniform metric scaling is undefined");
-  if (alpha < 1.0e-30) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Uniform metric scaling %e should be positive", alpha);
+  if (PetscUnlikely(!alpha)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Uniform metric scaling is undefined");
+  if (PetscUnlikely(alpha < 1.0e-30)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Uniform metric scaling %e should be positive", (double)alpha);
   else user.scaling = alpha;
   funcs[0] = diagonal;
   ctxs[0] = &user;
@@ -674,7 +674,7 @@ PetscErrorCode DMPlexMetricEnforceSPD(DM dm, PetscBool restrictSizes, PetscBool 
     ierr = DMPlexMetricGetMaximumMagnitude(dm, &h_max);CHKERRQ(ierr);
     h_min = PetscMax(h_min, 1.0e-30);
     h_max = PetscMin(h_max, 1.0e+30);
-    if (h_min >= h_max) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Incompatible min/max metric magnitudes (%.4e not smaller than %.4e)", h_min, h_max);
+    if (PetscUnlikely(h_min >= h_max)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Incompatible min/max metric magnitudes (%.4e not smaller than %.4e)", (double)h_min, (double)h_max);
   }
   if (restrictAnisotropy) {
     ierr = DMPlexMetricGetMaximumAnisotropy(dm, &a_max);CHKERRQ(ierr);
@@ -762,7 +762,7 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
     ierr = DMPlexMetricGetMaximumMagnitude(dm, &h_max);CHKERRQ(ierr);
     h_min = PetscMax(h_min, 1.0e-30);
     h_max = PetscMin(h_max, 1.0e+30);
-    if (h_min >= h_max) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Incompatible min/max metric magnitudes (%.4e not smaller than %.4e)", h_min, h_max);
+    if (PetscUnlikely(h_min >= h_max)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Incompatible min/max metric magnitudes (%.4e not smaller than %.4e)", (double)h_min, (double)h_max);
   }
   if (restrictAnisotropy && !restrictAnisotropyFirst) {
     ierr = DMPlexMetricGetMaximumAnisotropy(dm, &a_max);CHKERRQ(ierr);
@@ -777,7 +777,7 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
     ierr = DMPlexPointLocalRef(dm, v, met, &Mp);CHKERRQ(ierr);
     if      (dim == 2) DMPlex_Det2D_Scalar_Internal(&detM, Mp);
     else if (dim == 3) DMPlex_Det3D_Scalar_Internal(&detM, Mp);
-    else SETERRQ1(comm, PETSC_ERR_SUP, "Dimension %d not supported", dim);
+    else SETERRQ1(comm, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
     fact = factGlob * PetscPowReal(PetscAbsReal(detM), -1.0/(2*p+dim));
     for (i = 0; i < Nd; ++i) Mp[i] *= fact;
     if (restrictSizes) { ierr = DMPlexMetricModify_Private(dim, h_min, h_max, a_max, Mp);CHKERRQ(ierr); }
@@ -816,7 +816,7 @@ PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights
   PetscReal      sum = 0.0, tol = 1.0e-10;
 
   PetscFunctionBegin;
-  if (numMetrics < 1) { SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot average %d < 1 metrics", numMetrics); }
+  if (PetscUnlikely(numMetrics < 1)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot average %" PetscInt_FMT " < 1 metrics", numMetrics);
   ierr = DMPlexMetricCreate(dm, 0, metricAvg);CHKERRQ(ierr);
   ierr = VecSet(*metricAvg, 0.0);CHKERRQ(ierr);
 
@@ -927,7 +927,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
 #else
       PetscStackCallBLAS("LAPACKsyev", LAPACKsyev_("V", "U", &nb, evecs, &nb, evals1, work, &lwork, &lierr));
 #endif
-      if (lierr) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int) lierr);
+      if (PetscUnlikely(lierr)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int) lierr);
       ierr = PetscFPTrapPop();
 
       /* Compute square root and reciprocal */
@@ -1021,7 +1021,7 @@ PetscErrorCode DMPlexMetricIntersection(DM dm, PetscInt numMetrics, Vec metrics[
   PetscScalar   *met, *meti, *M, *Mi;
 
   PetscFunctionBegin;
-  if (numMetrics < 1) { SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot intersect %d < 1 metrics", numMetrics); }
+  if (PetscUnlikely(numMetrics < 1)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot intersect %" PetscInt_FMT " < 1 metrics", numMetrics);
 
   /* Extract metadata from dm */
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);

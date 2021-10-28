@@ -215,7 +215,7 @@ static PetscErrorCode TSGLLESchemeCreate(PetscInt p,PetscInt q,PetscInt r,PetscI
     for (j=1; j<r; j++) scheme->gamma[0] += v[0*s+j]*scheme->gamma[j];
 
     /* Assemble H
-    *    % Determine the error estimators phi
+    *    % " PetscInt_FMT "etermine the error estimators phi
        H = [[cpow(glm.c,p) + C*e.alpha] [cpow(glm.c,p+1) + C*e.beta] ...
                [e.xi - C*(e.gamma + 0*e.epsilon*eye(s-1,1))]]';
     % Paper has formula above without the 0, but that term must be left
@@ -326,7 +326,7 @@ static PetscErrorCode TSGLLEViewTable_Private(PetscViewer viewer,PetscInt m,Pets
       if (i) {ierr = PetscViewerASCIIPrintf(viewer,"%30s   [","");CHKERRQ(ierr);}
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_FALSE);CHKERRQ(ierr);
       for (j=0; j<n; j++) {
-        ierr = PetscViewerASCIIPrintf(viewer," %12.8g",PetscRealPart(a[i*n+j]));CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer," %12.8g",(double)PetscRealPart(a[i*n+j]));CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer,"]\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer,PETSC_TRUE);CHKERRQ(ierr);
@@ -343,11 +343,11 @@ static PetscErrorCode TSGLLESchemeView(TSGLLEScheme sc,PetscBool view_details,Pe
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"GL scheme p,q,r,s = %d,%d,%d,%d\n",sc->p,sc->q,sc->r,sc->s);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"GL scheme p,q,r,s = %" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "8~3~,%" PetscInt_FMT "\n",sc->p,sc->q,sc->r,sc->s);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"Stiffly accurate: %s,  FSAL: %s\n",sc->stiffly_accurate ? "yes" : "no",sc->fsal ? "yes" : "no");CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer,"Leading error constants: %10.3e  %10.3e  %10.3e\n",
-                                  PetscRealPart(sc->alpha[0]),PetscRealPart(sc->beta[0]),PetscRealPart(sc->gamma[0]));CHKERRQ(ierr);
+                                  (double)PetscRealPart(sc->alpha[0]),(double)PetscRealPart(sc->beta[0]),(double)PetscRealPart(sc->gamma[0]));CHKERRQ(ierr);
     ierr = TSGLLEViewTable_Private(viewer,1,sc->s,sc->c,"Abscissas c");CHKERRQ(ierr);
     if (view_details) {
       ierr = TSGLLEViewTable_Private(viewer,sc->s,sc->s,sc->a,"A");CHKERRQ(ierr);
@@ -804,7 +804,7 @@ static PetscErrorCode TSGLLEChooseNextScheme(TS ts,PetscReal h,const PetscReal h
   if (cur < 0 || gl->nschemes <= cur) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Current scheme not found in scheme list");
   ierr = TSGLLEAdaptChoose(gl->adapt,n,orders,errors,costs,cur,h,tleft,&next_sc,next_h,finish);CHKERRQ(ierr);
   *next_scheme = candidates[next_sc];
-  ierr = PetscInfo7(ts,"Adapt chose scheme %d (%d,%d,%d,%d) with step size %6.2e, finish=%d\n",*next_scheme,gl->schemes[*next_scheme]->p,gl->schemes[*next_scheme]->q,gl->schemes[*next_scheme]->r,gl->schemes[*next_scheme]->s,*next_h,*finish);CHKERRQ(ierr);
+  ierr = PetscInfo7(ts,"Adapt chose scheme %" PetscInt_FMT " (%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ") with step size %6.2e, finish=%" PetscInt_FMT "\n",*next_scheme,gl->schemes[*next_scheme]->p,gl->schemes[*next_scheme]->q,gl->schemes[*next_scheme]->r,gl->schemes[*next_scheme]->s,(double)(*next_h),(PetscInt)(*finish));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -852,7 +852,7 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
     ts->snes_its += its; ts->ksp_its += lits;
     if (snesreason < 0 && ts->max_snes_failures > 0 && ++ts->num_snes_failures >= ts->max_snes_failures) {
       ts->reason = TS_DIVERGED_NONLINEAR_SOLVE;
-      ierr = PetscInfo2(ts,"Step=%D, nonlinear solve solve failures %D greater than current TS allowed, stopping solve\n",ts->steps,ts->num_snes_failures);CHKERRQ(ierr);
+      ierr = PetscInfo2(ts,"Step=%" PetscInt_FMT ", nonlinear solve solve failures %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,ts->num_snes_failures);CHKERRQ(ierr);
       PetscFunctionReturn(0);
     }
   }
@@ -926,7 +926,7 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
         ts->snes_its += its; ts->ksp_its += lits;
         if (snesreason < 0 && ts->max_snes_failures > 0 && ++ts->num_snes_failures >= ts->max_snes_failures) {
           ts->reason = TS_DIVERGED_NONLINEAR_SOLVE;
-          ierr = PetscInfo2(ts,"Step=%D, nonlinear solve solve failures %D greater than current TS allowed, stopping solve\n",ts->steps,ts->num_snes_failures);CHKERRQ(ierr);
+          ierr = PetscInfo2(ts,"Step=%" PetscInt_FMT ", nonlinear solve solve failures %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,ts->num_snes_failures);CHKERRQ(ierr);
           PetscFunctionReturn(0);
         }
       }
@@ -944,7 +944,7 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
       ierr = (*gl->Accept)(ts,ts->max_time-gl->stage_time,h,enorm,&accept);CHKERRQ(ierr);
       if (accept) goto accepted;
       rejections++;
-      ierr = PetscInfo3(ts,"Step %D (t=%g) not accepted, rejections=%D\n",k,gl->stage_time,rejections);CHKERRQ(ierr);
+      ierr = PetscInfo3(ts,"Step %" PetscInt_FMT " (t=%g) not accepted, rejections=%" PetscInt_FMT "\n",k,(double)gl->stage_time,rejections);CHKERRQ(ierr);
       if (rejections > gl->max_step_rejections) break;
       /*
         There are lots of reasons why a step might be rejected, including solvers not converging and other factors that
@@ -959,14 +959,14 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
         ierr = VecScale(X[i],PetscPowRealInt(0.5,i));CHKERRQ(ierr);
       }
     }
-    SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"Time step %D (t=%g) not accepted after %D failures\n",k,gl->stage_time,rejections);
+    SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"Time step %" PetscInt_FMT " (t=%g) not accepted after %" PetscInt_FMT " failures\n",k,(double)gl->stage_time,rejections);
 
 accepted:
     /* This term is not error, but it *would* be the leading term for a lower order method */
     ierr = TSGLLEVecNormWRMS(ts,gl->X[scheme->r-1],&hmnorm[0]);CHKERRQ(ierr);
     /* Correct scaling so that these are equivalent to norms of the Nordsieck vectors */
 
-    ierr = PetscInfo4(ts,"Last moment norm %10.2e, estimated error norms %10.2e %10.2e %10.2e\n",hmnorm[0],enorm[0],enorm[1],enorm[2]);CHKERRQ(ierr);
+    ierr = PetscInfo4(ts,"Last moment norm %10.2e, estimated error norms %10.2e %10.2e %10.2e\n",(double)(hmnorm[0]),(double)(enorm[0]),(double)(enorm[1]),(double)(enorm[2]));CHKERRQ(ierr);
     if (!final_step) {
       ierr = TSGLLEChooseNextScheme(ts,h,hmnorm,&next_scheme,&next_h,&final_step);CHKERRQ(ierr);
     } else {
@@ -1109,7 +1109,7 @@ static PetscErrorCode TSSetUp_GLLE(TS ts)
     PetscInt i;
     for (i=0;; i++) {
       if (gl->schemes[i]->p == gl->start_order) break;
-      if (i+1 == gl->nschemes) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No schemes available with requested start order %d",i);
+      if (PetscUnlikely(i+1 == gl->nschemes)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No schemes available with requested start order %" PetscInt_FMT,i);
     }
     gl->current_scheme = i;
   }
@@ -1178,7 +1178,7 @@ static PetscErrorCode TSView_GLLE(TS ts,PetscViewer viewer)
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
-    ierr    = PetscViewerASCIIPrintf(viewer,"  min order %D, max order %D, current order %D\n",gl->min_order,gl->max_order,gl->schemes[gl->current_scheme]->p);CHKERRQ(ierr);
+    ierr    = PetscViewerASCIIPrintf(viewer,"  min order %" PetscInt_FMT ", max order %" PetscInt_FMT ", current order %" PetscInt_FMT "\n",gl->min_order,gl->max_order,gl->schemes[gl->current_scheme]->p);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPrintf(viewer,"  Error estimation: %s\n",TSGLLEErrorDirections[gl->error_direction]);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPrintf(viewer,"  Extrapolation: %s\n",gl->extrapolate ? "yes" : "no");CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPrintf(viewer,"  Acceptance test: %s\n",gl->accept_name[0] ? gl->accept_name : "(not yet set)");CHKERRQ(ierr);
@@ -1186,7 +1186,7 @@ static PetscErrorCode TSView_GLLE(TS ts,PetscViewer viewer)
     ierr    = TSGLLEAdaptView(gl->adapt,viewer);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPrintf(viewer,"  type: %s\n",gl->type_name[0] ? gl->type_name : "(not yet set)");CHKERRQ(ierr);
-    ierr    = PetscViewerASCIIPrintf(viewer,"Schemes within family (%d):\n",gl->nschemes);CHKERRQ(ierr);
+    ierr    = PetscViewerASCIIPrintf(viewer,"Schemes within family (%" PetscInt_FMT "):\n",gl->nschemes);CHKERRQ(ierr);
     details = PETSC_FALSE;
     ierr    = PetscOptionsGetBool(((PetscObject)ts)->options,((PetscObject)ts)->prefix,"-ts_gl_view_detailed",&details,NULL);CHKERRQ(ierr);
     ierr    = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);

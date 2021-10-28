@@ -189,9 +189,9 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
   if (iascii) {
     if (pc->useAmat) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  using Amat local matrix, number of blocks = %D\n",jac->n);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  using Amat local matrix, number of blocks = %" PetscInt_FMT "\n",jac->n);CHKERRQ(ierr);
     }
-    ierr = PetscViewerASCIIPrintf(viewer,"  number of blocks = %D\n",jac->n);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"  number of blocks = %" PetscInt_FMT "\n",jac->n);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank);CHKERRMPI(ierr);
     ierr = PetscViewerGetFormat(viewer,&format);CHKERRQ(ierr);
     if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
@@ -230,12 +230,12 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
       ierr = MPIU_Allreduce(&jac->n_local,&n_global,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)pc));CHKERRMPI(ierr);
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following KSP and PC objects:\n");CHKERRQ(ierr);
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] number of local blocks = %D, first local block number = %D\n",
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] number of local blocks = %" PetscInt_FMT ", first local block number = %" PetscInt_FMT "\n",
                                                 rank,jac->n_local,jac->first_local);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
       ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
       for (i=0; i<jac->n_local; i++) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] local block number %D\n",rank,i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] local block number %" PetscInt_FMT "\n",rank,i);CHKERRQ(ierr);
         ierr = KSPView(jac->ksp[i],sviewer);CHKERRQ(ierr);
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"- - - - - - - - - - - - - - - - - -\n");CHKERRQ(ierr);
       }
@@ -245,7 +245,7 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     }
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer," blks=%D",jac->n);CHKERRQ(ierr);
+    ierr = PetscViewerStringSPrintf(viewer," blks=%" PetscInt_FMT "",jac->n);CHKERRQ(ierr);
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     if (jac->ksp) {ierr = KSPView(jac->ksp[0],sviewer);CHKERRQ(ierr);}
     ierr = PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
@@ -256,7 +256,7 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
 
     ierr   = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
     ierr   = PetscDrawGetCurrentPoint(draw,&x,&y);CHKERRQ(ierr);
-    ierr   = PetscSNPrintf(str,25,"Number blocks %D",jac->n);CHKERRQ(ierr);
+    ierr   = PetscSNPrintf(str,25,"Number blocks %" PetscInt_FMT "",jac->n);CHKERRQ(ierr);
     ierr   = PetscDrawStringBoxed(draw,x,y,PETSC_DRAW_RED,PETSC_DRAW_BLACK,str,NULL,&h);CHKERRQ(ierr);
     bottom = y - h;
     ierr   = PetscDrawPushCurrentPoint(draw,x,bottom);CHKERRQ(ierr);

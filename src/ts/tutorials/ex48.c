@@ -207,7 +207,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     options->kx = 0;
     options->DeltaPrime = -2.0;
   }
-  ierr = PetscPrintf(comm, "DeltaPrime=%g\n",options->DeltaPrime);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm, "DeltaPrime=%g\n",(double)options->DeltaPrime);CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }
@@ -249,7 +249,7 @@ static PetscErrorCode PostStep(TS ts)
     ierr = DMPlexComputeIntegralFEM(plex,X,tt,ctx);CHKERRQ(ierr);
     den = tt[0];
     ierr = DMDestroy(&plex);CHKERRQ(ierr);
-    PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den));CHKERRQ(ierr);
+    PetscPrintf(PetscObjectComm((PetscObject)dm), "%" PetscInt_FMT ") total perturbed mass = %g\n", stepi, (double) PetscRealPart(den));CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -392,9 +392,9 @@ static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
     ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5);CHKERRQ(ierr);
     ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK);CHKERRQ(ierr);
     if (isHDF5) {
-      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%dD.h5", dim);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.h5", dim);CHKERRQ(ierr);
     } else if (isVTK) {
-      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%dD.vtu", dim);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.vtu", dim);CHKERRQ(ierr);
       ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU);CHKERRQ(ierr);
     }
     ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
@@ -528,7 +528,7 @@ int main(int argc, char **argv)
   ierr = TSGetTime(ts, &t);CHKERRQ(ierr);
   ierr = DMComputeL2Diff(dm, t, ctx.initialFuncs, (void **)ctxarr, u, &L2error);CHKERRQ(ierr);
   if (L2error < 1.0e-11) {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: < 1.0e-11\n");CHKERRQ(ierr);}
-  else                   {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", L2error);CHKERRQ(ierr);}
+  else                   {ierr = PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", (double)L2error);CHKERRQ(ierr);}
   ierr = VecDestroy(&u);CHKERRQ(ierr);
   ierr = VecDestroy(&r);CHKERRQ(ierr);
   ierr = TSDestroy(&ts);CHKERRQ(ierr);

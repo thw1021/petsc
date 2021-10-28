@@ -1,2 +1,2 @@
-sum(p)*dw*dtheta at t = 0.01 = 1.000000
-sum(p)*dw*dtheta at t = 0.01 = 1.000000
+sum(p)*dw*dtheta at t = 0.005 = 1
+sum(p)*dw*dtheta at t = 0.01 = 1

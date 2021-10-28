@@ -151,13 +151,12 @@ int main(int argc,char **argv)
   ierr = VecGetArray(user.x,&x_ptr);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"\n ode solution %g\n",(double)PetscRealPart(x_ptr[0]));CHKERRQ(ierr);
   ierr = VecRestoreArray(user.x,&x_ptr);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical solution %g\n",(double)user.a*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical solution %g\n",(double)(user.a*PetscExpReal(user.b/user.c*user.ftime)));CHKERRQ(ierr);
 
   if (user.der == 1) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. c %g\n",(double)-user.a*user.ftime*user.b/(user.c*user.c)*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
-  }
-  if (user.der == 2) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. b %g\n",user.a*user.ftime/user.c*PetscExpReal(user.b/user.c*user.ftime));CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. c %g\n",(double)(-user.a*user.ftime*user.b/(user.c*user.c)*PetscExpReal(user.b/user.c*user.ftime)));CHKERRQ(ierr);
+  } else if (user.der == 2) {
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n analytical derivative w.r.t. b %g\n",(double)(user.a*user.ftime/user.c*PetscExpReal(user.b/user.c*user.ftime)));CHKERRQ(ierr);
   }
   ierr = PetscPrintf(PETSC_COMM_WORLD,"\n forward sensitivity:\n");CHKERRQ(ierr);
   ierr = MatView(user.sp,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);

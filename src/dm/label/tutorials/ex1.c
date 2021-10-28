@@ -13,12 +13,12 @@ PetscErrorCode ViewLabels(DM dm, PetscViewer viewer)
   PetscFunctionBegin;
   /* query the number and name of labels*/
   ierr = DMGetNumLabels(dm, &numLabels);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer, "Number of labels: %d\n", numLabels);CHKERRQ(ierr);
+  ierr = PetscViewerASCIIPrintf(viewer, "Number of labels: %" PetscInt_FMT "\n", numLabels);CHKERRQ(ierr);
   for (l = 0; l < numLabels; ++l) {
     IS labelIS, tmpIS;
 
     ierr = DMGetLabelName(dm, l, &labelName);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Label %d: name: %s\n", l, labelName);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "Label %" PetscInt_FMT ": name: %s\n", l, labelName);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(viewer, "IS of values\n");CHKERRQ(ierr);
     ierr = DMGetLabel(dm, labelName, &label);CHKERRQ(ierr);
     ierr = DMLabelGetValueIS(label, &labelIS);CHKERRQ(ierr);

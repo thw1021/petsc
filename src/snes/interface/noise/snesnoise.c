@@ -114,7 +114,7 @@ PetscErrorCode SNESDiffParameterCompute_More(SNES snes,void *nePv,Vec x,Vec p,do
 
   /* We have 5 tries to attempt to compute a good hopt value */
   ierr = SNESGetIterationNumber(snes,&i);CHKERRQ(ierr);
-  ierr = PetscFPrintf(comm,fp,"\n ------- SNES iteration %D ---------\n",i);CHKERRQ(ierr);
+  ierr = PetscFPrintf(comm,fp,"\n ------- SNES iteration %" PetscInt_FMT " ---------\n",i);CHKERRQ(ierr);
   for (iter=0; iter<5; iter++) {
     neP->h_first_try = h;
 
@@ -139,7 +139,7 @@ PetscErrorCode SNESDiffParameterCompute_More(SNES snes,void *nePv,Vec x,Vec p,do
     }
 
     /* Print the difference table */
-    ierr = PetscFPrintf(comm,fp,"Difference Table: iter = %D\n",iter);CHKERRQ(ierr);
+    ierr = PetscFPrintf(comm,fp,"Difference Table: iter = %" PetscInt_FMT "\n",iter);CHKERRQ(ierr);
     for (i=0; i<nf; i++) {
       for (j=0; j<nf-i; j++) {
         ierr = PetscFPrintf(comm,fp," %10.2e ",tab[i][j]);CHKERRQ(ierr);
@@ -208,7 +208,7 @@ theend:
   }
   */
   fcount = neP->function_count - fcount;
-  ierr   = PetscInfo5(snes,"fct_now = %D, fct_cum = %D, rerrf=%g, sqrt(noise)=%g, h_more=%g\n",fcount,neP->function_count,(double)rerrf,(double)PetscSqrtReal(*fnoise),(double)*hopt);CHKERRQ(ierr);
+  ierr   = PetscInfo5(snes,"fct_now = %" PetscInt_FMT ", fct_cum = %" PetscInt_FMT ", rerrf=%g, sqrt(noise)=%g, h_more=%g\n",fcount,neP->function_count,(double)rerrf,(double)PetscSqrtReal(*fnoise),(double)*hopt);CHKERRQ(ierr);
 
   ierr = PetscOptionsGetBool(NULL,NULL,"-noise_test",&noise_test,NULL);CHKERRQ(ierr);
   if (noise_test) {
@@ -300,7 +300,7 @@ PetscErrorCode SNESNoiseMonitor(SNES snes,PetscInt its,double fnorm,void *dummy)
   PetscFunctionBegin;
   ierr           = SNESGetLinearSolveIterations(snes,&lin_its);CHKERRQ(ierr);
   lin_its_total += lin_its;
-  ierr           = PetscPrintf(PetscObjectComm((PetscObject)snes), "iter = %D, SNES Function norm = %g, lin_its = %D, total_lin_its = %D\n",its,(double)fnorm,lin_its,lin_its_total);CHKERRQ(ierr);
+  ierr           = PetscPrintf(PetscObjectComm((PetscObject)snes), "iter = %" PetscInt_FMT ", SNES Function norm = %g, lin_its = %" PetscInt_FMT ", total_lin_its = %" PetscInt_FMT "\n",its,(double)fnorm,lin_its,lin_its_total);CHKERRQ(ierr);
 
   ierr = SNESUnSetMatrixFreeParameter(snes);CHKERRQ(ierr);
   PetscFunctionReturn(0);

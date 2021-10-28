@@ -635,7 +635,7 @@ PetscErrorCode DMSwarmPICInsertPointsCellwise(DM dm,DM dmc,PetscInt e,PetscInt n
           min_sep = sep;
         }
       }
-      if (nearest_neighour == -1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_USER,"Cell %D is empty - cannot initialize using nearest neighbours",e);
+      if (nearest_neighour == -1) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_USER,"Cell %" PetscInt_FMT " is empty - cannot initialize using nearest neighbours",e);
       nnlist[q] = nearest_neighour;
     }
     ierr = DMSwarmRestoreField(dm,DMSwarmPICField_cellid,NULL,NULL,(void**)&swarm_cellid);CHKERRQ(ierr);
@@ -718,7 +718,7 @@ PetscErrorCode MaterialPoint_PopulateCell(DM dm_vp,DM dm_mpoint)
   }
   ierr = MPI_Allreduce(&cnt,&cnt_g,1,MPIU_INT,MPI_SUM,PETSC_COMM_WORLD);CHKERRMPI(ierr);
   if (cnt_g > 0) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,".... ....pop cont: adjusted %D cells\n",cnt_g);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,".... ....pop cont: adjusted %" PetscInt_FMT " cells\n",cnt_g);CHKERRQ(ierr);
   }
 
   ierr = DMSwarmSortRestoreAccess(dm_mpoint);CHKERRQ(ierr);
@@ -772,10 +772,10 @@ PetscErrorCode MaterialPoint_AdvectRK1(DM dm_vp,Vec vp,PetscReal dt,DM dm_mpoint
 
     xi_p[0] = 2.0 * (coor_p[0] - x0[0])/dx[0] - 1.0;
     xi_p[1] = 2.0 * (coor_p[1] - x0[1])/dx[1] - 1.0;
-    if (PetscRealPart(xi_p[0]) < -1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (xi) too small %1.4e [e=%D]\n",(double)PetscRealPart(xi_p[0]),e);
-    if (PetscRealPart(xi_p[0]) >  1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (xi) too large %1.4e [e=%D]\n",(double)PetscRealPart(xi_p[0]),e);
-    if (PetscRealPart(xi_p[1]) < -1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (eta) too small %1.4e [e=%D]\n",(double)PetscRealPart(xi_p[1]),e);
-    if (PetscRealPart(xi_p[1]) >  1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (eta) too large %1.4e [e=%D]\n",(double)PetscRealPart(xi_p[1]),e);
+    if (PetscRealPart(xi_p[0]) < -1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (xi) too small %1.4e [e=%" PetscInt_FMT "]\n",(double)PetscRealPart(xi_p[0]),e);
+    if (PetscRealPart(xi_p[0]) >  1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (xi) too large %1.4e [e=%" PetscInt_FMT "]\n",(double)PetscRealPart(xi_p[0]),e);
+    if (PetscRealPart(xi_p[1]) < -1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (eta) too small %1.4e [e=%" PetscInt_FMT "]\n",(double)PetscRealPart(xi_p[1]),e);
+    if (PetscRealPart(xi_p[1]) >  1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"value (eta) too large %1.4e [e=%" PetscInt_FMT "]\n",(double)PetscRealPart(xi_p[1]),e);
 
     /* evaluate basis functions */
     EvaluateBasis_Q1(xi_p,Ni);
@@ -1256,10 +1256,10 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
       PetscViewer viewer;
 
       ierr = PetscPrintf(PETSC_COMM_WORLD,".... write XDMF, VTS\n");CHKERRQ(ierr);
-      ierr = PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4D_coeff_dms.xmf",tk);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_coeff_dms.xmf",tk);CHKERRQ(ierr);
       ierr = DMSwarmViewXDMF(dms_mpoint,filename);CHKERRQ(ierr);
 
-      ierr = PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4D_vp_dm.vts",tk);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_vp_dm.vts",tk);CHKERRQ(ierr);
       ierr = PetscViewerCreate(PETSC_COMM_WORLD,&viewer);CHKERRQ(ierr);
       ierr = PetscViewerSetType(viewer,PETSCVIEWERVTK);CHKERRQ(ierr);
       ierr = PetscViewerFileSetMode(viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
@@ -1268,7 +1268,7 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
     }
     time += dt;
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"step %D : time %1.2e \n",tk,(double)time);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"step %" PetscInt_FMT " : time %1.2e \n",tk,(double)time);CHKERRQ(ierr);
   }
 
   ierr = KSPDestroy(&ksp);CHKERRQ(ierr);

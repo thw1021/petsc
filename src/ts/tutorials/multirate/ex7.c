@@ -606,7 +606,7 @@ static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
     ierr = VecMin(X,&imin,&xmin);CHKERRQ(ierr);
     ierr = VecMax(X,&imax,&xmax);CHKERRQ(ierr);
     ierr = VecSum(X,&sum);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer,"Solution range [%g,%g] with minimum at %D, mean %g, ||x||_TV %g\n",(double)xmin,(double)xmax,imin,(double)(sum/Mx),(double)(tvgsum/Mx));CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"Solution range [%g,%g] with minimum at %" PetscInt_FMT ", mean %g, ||x||_TV %g\n",(double)xmin,(double)xmax,imin,(double)(sum/Mx),(double)(tvgsum/Mx));CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Viewer type not supported");
   PetscFunctionReturn(0);
 }
@@ -778,7 +778,7 @@ int main(int argc,char *argv[])
     mass_difference = mass_final-mass_initial;
     ierr = MPI_Allreduce(&mass_difference,&mass_differenceg,1,MPIU_SCALAR,MPIU_SUM,comm);CHKERRMPI(ierr);
     ierr = PetscPrintf(comm,"Mass difference %g\n",(double)mass_differenceg);CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,"Final time %g, steps %D\n",(double)ptime,steps);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Final time %g, steps %" PetscInt_FMT "\n",(double)ptime,steps);CHKERRQ(ierr);
     if (ctx.exact) {
       PetscReal nrm1 = 0;
       ierr = SolutionErrorNorms(&ctx,da,ptime,X,&nrm1);CHKERRQ(ierr);
