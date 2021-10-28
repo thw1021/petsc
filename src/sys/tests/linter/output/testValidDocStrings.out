@@ -1,0 +1,347 @@
+[ROOT] -------------------------------------------------------------------------------------
+ERROR 0: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:
+
+  53: .seealso: testNonExistentFunction(), testNonExistentType
+  54: @*/
+> 55: 
+  56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+  57: {
+
+ERROR 1: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Invalid comment begin line, must only contain '/*' and sowing identifier:
+
+  30: }
+  31: 
+> 32: /*@C Lorem ipsum dolor sit amet
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  33:   someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  34:   eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
+
+ERROR 2: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Invalid indentation (3), all regular (non-empty, non-parameter) text must be indented to 2 columns:
+
+  37:   Not Collective, Synchronous
+  38: 
+> 39:    Input Parameters:
+      ^^^
+  40: + viewer - a PetscViewer
+  41: 
+
+ERROR 3: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+All headings with the exception of seelso and Level shall appear alone on a line; any content shall appear on the next line:
+
+  49:   Beginner
+  50: 
+> 51:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  52: 
+  53: .seealso: testNonExistentFunction(), testNonExistentType
+
+ERROR 4: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected 'C@' found '@*/':
+
+  52: 
+  53: .seealso: testNonExistentFunction(), testNonExistentType
+> 54: @*/
+      ^
+  55: 
+  56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+
+ERROR 5: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Invalid heading, not title-cased. Expected 'Level' found 'level':
+
+  44: - z - a nonexistent parameter
+  45: 
+> 46:   level: Lorem ipsum dolor sit amet
+        ^^^^^
+  47: 
+  48:   Level:
+
+ERROR 6: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Multiple 'Level' subheadings. Much like Highlanders, there can only be one:
+
+  44: - z - a nonexistent parameter
+  45: 
+> 46:   level: Lorem ipsum dolor sit amet
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  47: 
+  48:   Level:
+> 49:   Beginner
+        ^^^^^^^^
+  50: 
+  51:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+ERROR 7: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Docstring name does not match symbol name. Expected 'testIllFormedFunctionDocString' found 'someOtherFunctionName' instead:
+
+  31: 
+  32: /*@C Lorem ipsum dolor sit amet
+> 33:   someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        ^^^^^^^^^^^^^^^^^^^^^
+  34:   eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
+  35:   non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+ERROR 8: ./src/sys/tests/linter/testValidDocStrings.c:76:56
+'x' of derived type 'PetscInt', canonical type 'int'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+                                                                        ^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Undocumented parameter 'x' not found in docstring:
+
+  38: 
+  39:    Input Parameters:
+> 40: + viewer - a PetscViewer
+> 41: 
+> 42:   Output Parameter:
+> 43: + y - a pointer
+> 44: - z - a nonexistent parameter
+  45: 
+  46:   level: Lorem ipsum dolor sit amet
+
+ERROR 9: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Extra docstring parameter 'z' not found in function arguments:
+
+  42:   Output Parameter:
+  43: + y - a pointer
+> 44: - z - a nonexistent parameter
+        ^
+  45: 
+  46:   level: Lorem ipsum dolor sit amet
+
+ERROR 10: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, deprecated:
+
+  44: - z - a nonexistent parameter
+  45: 
+> 46:   level: Lorem ipsum dolor sit amet
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  47: 
+  48:   Level:
+
+ERROR 11: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Level subheading must be lowercase, expected 'beginner' found 'Beginner':
+
+  47: 
+  48: Level:
+> 49: Beginner
+      ^^^^^^^^
+  50: 
+  51: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+ERROR 12: ./src/sys/tests/linter/testValidDocStrings.c:16:56
+'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  54: @*/
+  55: 
+> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  57: {
+  58:   return 0;
+
+Level values must be on the same line as the 'Level' heading, not on separate line:
+
+  47: 
+  48: Level:
+> 49: Beginner
+      ^^^^^^^^
+  50: 
+  51: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+ERROR 13: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
+Invalid comment begin line, does not contain sowing identifier. Expected '/*@' for functions:
+
+  59: }
+  60: 
+> 61: /*
+      ^^
+  62:   Not Collective, Synchronous
+  63: 
+
+ERROR 14: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
+Must have empty line between sections:
+
+  64:   References:
+  65:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+  68: PetscErrorCode testIllFormedMinimalDocString(void)
+
+ERROR 15: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
+Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '@*/' found '*/':
+
+  65:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+> 67: */
+      ^
+  68: PetscErrorCode testIllFormedMinimalDocString(void)
+  69: {
+
+ERROR 16: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
+Missing required subheading 'level:', not found in docstring;
+
+> 61: /*
+  62:   Not Collective, Synchronous
+  63: 
+  64:   References:
+  65:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+
+ERROR 17: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
+Docstring name does not match symbol name. Expected 'testIllFormedMinimalDocString' found 'Not Collective, Synchronous' instead:
+
+  60: 
+  61: /*
+> 62:   Not Collective, Synchronous
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  63: 
+  64:   References:
+
+ERROR 18: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
+Docstring missing summary text. Expected 'testIllFormedMinimalDocString - very useful description here':
+
+  61: /*
+> 62:   Not Collective, Synchronous
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  63: 
+[ROOT] -------------------------------------------------------------------------------------
