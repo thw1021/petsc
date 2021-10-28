@@ -113,7 +113,6 @@ static PetscErrorCode PetscSpaceSetUp_Polynomial(PetscSpace sp)
   PetscFunctionReturn(0);
 }
 
-/* We treat the space as a tensor product of scalar polynomial spaces, so the dimension is multiplied by Nc */
 static PetscErrorCode PetscSpaceGetDimension_Polynomial(PetscSpace sp, PetscInt *dim)
 {
   PetscInt         deg  = sp->degree;
@@ -126,11 +125,42 @@ static PetscErrorCode PetscSpaceGetDimension_Polynomial(PetscSpace sp, PetscInt 
   PetscFunctionReturn(0);
 }
 
-/*
-  p in [0, npoints), i in [0, pdim), c in [0, Nc)
+static PetscErrorCode BiunitSimplexHatFunctions(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt jet, PetscInt Njet, PetscReal pScalar[])
+{
+  PetscFunctionBegin;
+  for (PetscInt b = 0; b < 1 + dim; b++) {
+    for (PetscInt j = 0; j < PetscMin(1 + dim, Njet); j++) {
+      if (j == 0) {
+        if (b == 0) {
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            pScalar[b * Njet * npoints + j * npoints + pt] = 1. - dim/2.;
+          }
+          for (PetscInt d = 0; d < dim; d++) {
+            for (PetscInt pt = 0; pt < npoints; pt++) {
+              pScalar[b * Njet * npoints + j * npoints + pt] -= 0.5 * points[pt * dim + d];
+            }
+          }
+        } else {
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            pScalar[b * Njet * npoints + j * npoints + pt] = 0.5 * points[pt * dim + (b-1)] + 0.5;
+          }
+        }
+      } else {
+        if (b == 0) {
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            pScalar[b * Njet * npoints + j * npoints + pt] = -0.5;
+          }
+        } else if (j == b) {
+          for (PetscInt pt = 0; pt < npoints; pt++) {
+            pScalar[b * Njet * npoints + j * npoints + pt] = 0.5;
+          }
+        }
+      }
+    }
+  }
+  PetscFunctionReturn(0);
+}
 
-  B[p][i][c] = B[p][i_scalar][c][c]
-*/
 static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoints, const PetscReal points[], PetscReal B[], PetscReal D[], PetscReal H[])
 {
   PetscSpace_Poly *poly    = (PetscSpace_Poly *) sp->data;
@@ -157,7 +187,15 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
   }
   ierr = PetscDTBinomialInt(dim + jet, dim, &Njet);CHKERRQ(ierr);
   ierr = DMGetWorkArray(dm, Nb * Njet * npoints, MPIU_REAL, &pScalar);CHKERRQ(ierr);
-  ierr = PetscDTPKDEvalJet(dim, npoints, points, sp->degree, jet, pScalar);CHKERRQ(ierr);
+  // Why are we handling the case degree == 1 specially?  Because we don't want numerical noise when we evaluate hat
+  // functions at the vertices of a simplex, which happens when we invert the Vandermonde matrix of the PKD basis.
+  // We don't make any promise about which basis is used.
+  if (sp->degree == 1) {
+    ierr = PetscArrayzero(pScalar, Nb * Njet * npoints);CHKERRQ(ierr);
+    ierr = BiunitSimplexHatFunctions(dim, npoints, points, jet, Njet, pScalar);CHKERRQ(ierr);
+  } else {
+    ierr = PetscDTPKDEvalJet(dim, npoints, points, sp->degree, jet, pScalar);CHKERRQ(ierr);
+  }
   if (B) {
     PetscInt p_strl = Nb;
     PetscInt b_strl = 1;
