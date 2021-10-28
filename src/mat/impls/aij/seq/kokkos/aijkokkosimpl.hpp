@@ -83,7 +83,7 @@ struct Mat_SeqAIJKokkos {
   KokkosCsrMatrix            csrmat; /* The CSR matrix, used to call KK functions */
   PetscObjectState           nonzerostate; /* State of the nonzero pattern (graph) on device */
 
-  Mat                        At,Ah; /* Transpose and Hermitian of the matrix in MATAIJKOKKOS type (built on demand) */
+  KokkosCsrMatrix            csrmatT,csrmatH; /* Transpose and Hermitian of the matrix (built on demand) */
   PetscBool                  transpose_updated,hermitian_updated; /* Are At, Ah updated wrt the matrix? */
 
   Kokkos::View<PetscInt*>         *i_uncompressed_d;
@@ -111,7 +111,6 @@ struct Mat_SeqAIJKokkos {
 
     csrmat       = KokkosCsrMatrix("csrmat",ncols,a_d,KokkosCsrGraph(j_d,i_d));
     nonzerostate = nzstate;
-    At = Ah = NULL;
     transpose_updated = hermitian_updated = PETSC_FALSE;
     i_uncompressed_d = colmap_d = diag_d = NULL;
   }
@@ -142,11 +141,6 @@ struct Mat_SeqAIJKokkos {
     Init();
   }
 
-  ~Mat_SeqAIJKokkos()
-  {
-    DestroyMatTranspose();
-  }
-
   MatScalarType* a_host_data() {return a_dual.view_host().data();}
   MatRowMapType* i_host_data() {return i_dual.view_host().data();}
   MatColIdxType* j_host_data() {return j_dual.view_host().data();}
@@ -165,7 +159,6 @@ struct Mat_SeqAIJKokkos {
   /* Shared init stuff */
   void Init(void)
   {
-    At = Ah = NULL;
     transpose_updated = hermitian_updated = PETSC_FALSE;
     i_uncompressed_d = colmap_d = diag_d = NULL;
     nonzerostate = 0;
@@ -173,10 +166,9 @@ struct Mat_SeqAIJKokkos {
 
   PetscErrorCode DestroyMatTranspose(void)
   {
-    PetscErrorCode ierr;
     PetscFunctionBegin;
-    ierr = MatDestroy(&At);CHKERRQ(ierr);
-    ierr = MatDestroy(&Ah);CHKERRQ(ierr);
+    csrmatT = KokkosCsrMatrix(); /* Overwrite with empty matrices */
+    csrmatH = KokkosCsrMatrix();
     PetscFunctionReturn(0);
   }
 };
