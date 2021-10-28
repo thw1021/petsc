@@ -29,7 +29,7 @@ typedef const char* PCType;
 #define PCLU              "lu"
 #define PCQR              "qr"
 #define PCSHELL           "shell"
-#define PCAMGX           "amgx"
+#define PCAMGX            "amgx"
 #define PCBJACOBI         "bjacobi"
 #define PCMG              "mg"
 #define PCEISENSTAT       "eisenstat"

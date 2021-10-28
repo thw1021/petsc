@@ -11,7 +11,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_LU(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_QR(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_SOR(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Shell(PC);
-PETSC_EXTERN PetscErrorCode PCCreate_AMGx(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_MG(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_ICC(PC);
@@ -36,6 +35,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_Telescope(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_Patch(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_LMVM(PC);
 PETSC_EXTERN PetscErrorCode PCCreate_HMG(PC);
+#if defined(PETSC_HAVE_AMGX)
+PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC);
+#endif
 #if defined(PETSC_HAVE_ML)
 PETSC_EXTERN PetscErrorCode PCCreate_ML(PC);
 #endif
@@ -95,7 +97,6 @@ PetscErrorCode  PCRegisterAll(void)
   PetscCall(PCRegister(PCLU           ,PCCreate_LU));
   PetscCall(PCRegister(PCQR           ,PCCreate_QR));
   PetscCall(PCRegister(PCSHELL        ,PCCreate_Shell));
-  PetscCall(PCRegister(PCAMGX         ,PCCreate_AMGx));
   PetscCall(PCRegister(PCMG           ,PCCreate_MG));
   PetscCall(PCRegister(PCEISENSTAT    ,PCCreate_Eisenstat));
   PetscCall(PCRegister(PCILU          ,PCCreate_ILU));
@@ -123,6 +124,9 @@ PetscErrorCode  PCRegisterAll(void)
   PetscCall(PCRegister(PCTELESCOPE    ,PCCreate_Telescope));
   PetscCall(PCRegister(PCPATCH        ,PCCreate_Patch));
   PetscCall(PCRegister(PCHMG          ,PCCreate_HMG));
+#if defined(PETSC_HAVE_AMGX)
+  PetscCall(PCRegister(PCAMGX         ,PCCreate_AMGx));
+#endif
 #if defined(PETSC_HAVE_ML)
   PetscCall(PCRegister(PCML           ,PCCreate_ML));
 #endif
