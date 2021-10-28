@@ -18,7 +18,7 @@ Discrete System with 1 fields
         type: tensor
         Space in 2 variables with 1 components, size 16
         Tensor space of 2 subspaces (all identical)
-          PetscSpace Object: (tensorcomp_) 1 MPI processes
+          PetscSpace Object: tensor component (tensorcomp_) 1 MPI processes
             type: poly
             Space in 1 variables with 1 components, size 4
             Polynomial space of degree 3
