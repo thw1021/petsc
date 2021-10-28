@@ -7,6 +7,7 @@ Created on Mon Mar 22 17:05:39 2021
 """
 import os
 import sys
+from pathlib import Path
 import enum
 import itertools
 import collections
@@ -236,54 +237,53 @@ class PetscDocString(object):
     referenceHeading,
     seealsoHeading,
   )
-  __slots__ = ("cursor","tu","file","raw","extent","indent",*allHeadings)
+  sowingTypes     = {"@","S","E"}
+  clxToSowingType = {
+    clx.TypeKind.FUNCTIONPROTO : ("@","functions")
+  }
+  __slots__ = ("cursor","raw","extent","indent",*allHeadings)
 
   @classmethod
   def fromCursor(cls,cursor):
     return cls(cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
 
-  def __init__(self,cursor,raw,crange,indent=2):
-    if (not raw):# or (not raw.startswith(("/*@","/*M","/*E"))):
+  def __init__(self,cursor,raw,extent,indent=2):
+    if not raw:# or (not raw.startswith(("/*@","/*M","/*E"))):
       import ipdb; ipdb.set_trace()
       raise ParsingError
     self.cursor = cursor
-    self.tu     = cursor.translation_unit
-    self.file   = cursor.location.file
     self.raw    = raw
-    self.extent = crange
+    self.extent = extent
     self.indent = indent
+    return
+
+  def makeSourceRange(self,token,string,line):
+    tu       = self.cursor.translation_unit
+    clxFile  = self.cursor.location.file
+    colBegin = string.index(token)+1
+    colEnd   = colBegin+len(token)
+    begin    = clx.SourceLocation.from_position(tu,clxFile,line,colBegin)
+    end      = clx.SourceLocation.from_position(tu,clxFile,line,colEnd)
+    return clx.SourceRange.from_locations(begin,end),token.strip()
+
+  def addErrorFromCursor(self,linter,errstr,token,raw,lineno,cursor=None,formatargs=(),**kwargs):
+    crange,_ = self.makeSourceRange(token,raw,lineno)
+    src      = petscClangLinterUtil.getFormattedSourceFromSourceRange(
+      crange,numContext=kwargs.pop("numContext",2),**kwargs
+    )
+    error    = errstr.format(*formatargs,src)
+    linter.addErrorFromCursor(cursor if cursor is not None else self.cursor,error)
     return
 
   def parse(self,linter):
     def defaultEntry():
       return {"all" : []}
 
-    def symbolTypeToSowingTypeAndLaymanType(cursor):
-      typeMap = {
-        clx.TypeKind.FUNCTIONPROTO : "@"
-      }
-      return typeMap[cursor.type.kind],cursor.type.kind
-
-    def makeSourceRange(token,string,line):
-      colBegin = string.index(token)+1
-      colEnd   = colBegin+len(token)
-      begin    = clx.SourceLocation.from_position(self.tu,self.file,line,colBegin)
-      end      = clx.SourceLocation.from_position(self.tu,self.file,line,colEnd)
-      return clx.SourceRange.from_locations(begin,end),token.strip()
-
-    def addErrorFromCursor(errstr,token,raw,lineno,cursor=self.cursor,formatargs=(),**kwargs):
-      crange,_ = makeSourceRange(token,raw,lineno)
-      ncontext = kwargs.pop("numContext",2)
-      src      = petscClangLinterUtil.getFormattedSourceFromSourceRange(crange,numContext=ncontext,**kwargs)
-      error    = errstr.format(*formatargs,src)
-      linter.addErrorFromCursor(cursor,error)
-      return
-
     def postProcessHeading(headings,subname,testItem,requiredName=None,countMax=-1):
       subheading = headings.get(subname)
       if not subheading:
         if requiredName is not None:
-          addErrorFromCursor(
+          self.addErrorFromCursor(linter,
             "Missing required subheading '{}:', not found in docstring;\n\n{}",
             "","",self.extent.start.line, # entire docstring
             formatargs=(requiredName,),
@@ -298,7 +298,7 @@ class PetscDocString(object):
           # check that header is correctly title-cased
           header = origitem.split(":")[0].strip()
           if not header.istitle():
-            addErrorFromCursor(
+            self.addErrorFromCursor(linter,
               "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
               header,origitem,line,
               formatargs=(header.title(),header)
@@ -311,7 +311,7 @@ class PetscDocString(object):
         # let each subheading type determine if this line is useful
         valid,item = testItem(i,origitem)
         if valid and (count != countMax):
-          nameList.append(makeSourceRange(item,origitem,line))
+          nameList.append(self.makeSourceRange(item,origitem,line))
           count += 1
       if multiHeader:
         # check that a particular subsection does not appear twice
@@ -323,7 +323,9 @@ class PetscDocString(object):
             nbefore = name[0].start.line-prevLineBegin-1
             if i == len(nameList)-1:
               nafter = 2
-          srclist.append(petscClangLinterUtil.getFormattedSourceFromSourceRange(name[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
+          srclist.append(petscClangLinterUtil.getFormattedSourceFromSourceRange(
+            name[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False
+          ))
           prevLineBegin = name[0].start.line
         error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n\n{}".format(header,"\n".join(srclist))
         linter.addErrorFromCursor(self.cursor,error)
@@ -351,7 +353,7 @@ class PetscDocString(object):
     if self.extent.end.line != self.cursor.extent.start.line-1:
       # there is at least 1 (probably empty) line between the comment end and whatever it
       # is describing
-      addErrorFromCursor(
+      self.addErrorFromCursor(linter,
         "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
         "","",self.extent.end.line+1,
         highlight=False,
@@ -366,20 +368,29 @@ class PetscDocString(object):
       if lstrip.startswith("/*"):
         assert sowingChars is None, "multiple comment begin lines found"
         sowingChars = lstrip.split("/*")[1].split()
+        sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
         try:
           sowingChars = sowingChars[0]
         except IndexError:
-          sowingType,layType = symbolTypeToSowingTypeAndLaymanType(self.cursor)
-          addErrorFromCursor(
-            "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
-            line,line,offset+startLine,
-            formatargs=(sowingType,layType)
-          )
-          sowingChars = "/*"+sowingType
+          if any(keyword in self.raw for keyword in ("Level",".seealso","Input Parameter","Output Parameter","References","Synopsis")):
+            # if we find these keywords, likely this is a docstring but the implementer
+            # forgot to add the sowing characters
+            self.addErrorFromCursor(linter,
+              "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
+              line,line,offset+startLine,
+              formatargs=(sowingType,layType)
+            )
+            sowingChars = [sowingType]
+          else:
+            # not a sowing docstring? bail here
+            raise ParsingError
+        if sowingChars[0] not in self.sowingTypes:
+          raise ParsingError
+        sowingChars = "/*"+"".join(sowingChars)
         # check that nothing else is on the comment begin line
-        lsplit  = lstrip.split()
+        lsplit = lstrip.split()
         if len(lsplit) != 1:
-          addErrorFromCursor(
+          self.addErrorFromCursor(linter,
             "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
             " ".join(lsplit[1:]),line,offset+startLine
           )
@@ -392,7 +403,7 @@ class PetscDocString(object):
         except IndexError:
           endSowingChars = ""
         if sorted(endSowingChars) != sorted(sowingChars):
-          addErrorFromCursor(
+          self.addErrorFromCursor(linter,
             "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}' found '{}*/':\n\n{}",
             endSowingChars,line,offset+startLine,
             formatargs=(sowingChars[::-1],endSowingChars)
@@ -400,21 +411,28 @@ class PetscDocString(object):
         continue
       # if the line is regular (not empty, or a parameter list), check that line is
       # indented correctly
-      if len(lstrip) and not lstrip.startswith((".","+","-")) and (len(line)-len(lstrip) != self.indent):
-        indent = len(line)-len(lstrip)
-        addErrorFromCursor(
+      indent = len(line)-len(lstrip)
+      if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
+        self.addErrorFromCursor(linter,
           "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
           " "*indent,line,offset+startLine,
           formatargs=(indent,self.indent)
         )
       if ":" in lstrip:
         if not prevLineEmpty:
-          addErrorFromCursor(
+          self.addErrorFromCursor(linter,
             "Must have empty line between sections:\n\n{}",
             "","",offset+startLine, # print the next line
             highlight=False
           )
-        heading = [s for s in lstrip.split(":") if s][0].strip().casefold()
+        splitheading = [s for s in lstrip.split(":") if s]
+        heading      = splitheading[0].strip().casefold()
+        if len(splitheading) != 1 and heading not in ("level",".seealso"):
+          self.addErrorFromCursor(linter,
+            "All headings with the exception of seelso and Level shall appear alone on a line; any content shall appear on the next line:\n\n{}",
+            ''.join(splitheading[1:]),line,offset+startLine
+          )
+
         if "synopsis" in heading:
           heading = self.preambleHeading
         elif "parameter" in heading:
@@ -590,6 +608,7 @@ class PetscCursor(object):
         elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
           raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
         else:
+          import ipdb; ipdb.set_trace()
           raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errstr))
       name = tokenList[0].spelling
       assert name, "Cannot determine name of symbol from cursor {}".format(PetscCursor.errorViewFromCursor(cursor))
@@ -764,7 +783,7 @@ class PetscCursor(object):
 class SourceFix(object):
   __slots__ = "filename","src","startLine","begins","ends","replace","deltas","fixed","fixDepth"
   def __init__(self,filename,src,startline,begin,end,value):
-    self.filename  = filename
+    self.filename  = Path(filename)
     self.src       = src
     self.startLine = startline
     assert self.startLine >= 1, "startline {} < 1".format(self.startLine)
@@ -1003,7 +1022,7 @@ class PetscLinter(object):
     self.lock       = lock
     self.errPrefix  = " ".join([prefix,85*"-"])
     self.warnPrefix = " ".join([prefix,85*"%"])
-    self.errors     = []
+    self.errors     = collections.OrderedDict()
     self.warnings   = []
     # This can actually just be a straight list, since each linter object only ever
     # handles a single file, but use dict nonetheless
@@ -1120,7 +1139,7 @@ class PetscLinter(object):
     __doc__="""
     resets the linter error, warning and patch buffers. Should be called before processing a new file
     """
-    self.errors   = []
+    self.errors   = collections.OrderedDict()
     self.warnings = []
     self.patches  = {}
     return
@@ -1131,12 +1150,12 @@ class PetscLinter(object):
     """
     if self.verbose:
       self.__print(self.prefix,"Processing file     ",filename)
-    tu = self.index.parse(filename,args=self.flags,options=self.clangOpts)
+    tu = self.index.parse(str(filename),args=self.flags,options=self.clangOpts)
     if tu.diagnostics and self.verbose:
       diags = {" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}
       self.__print("\n".join(diags))
     self.process(tu)
-    return
+    return self
 
   def process(self,tu):
     __doc__="""
@@ -1185,10 +1204,14 @@ class PetscLinter(object):
     __doc__="""
     given a cursor attach a diagnostic error message to it, and optionally a fix
     """
-    cursor  = PetscCursor.asPetscCursor(cursor)
-    errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
-    self.errors.append((errMess,patch is not None))
+    cursor   = PetscCursor.asPetscCursor(cursor)
+    filename = Path(cursor.location.file.name)
+    if filename not in self.errors:
+      self.errors[filename] = []
+    errMess = "\nERROR {}: {}\n{}".format(len(self.errors[filename]),str(cursor),errorMessage)
+    self.errors[filename].append((errMess,patch is not None))
     try:
+      assert filename == patch.filename
       self.patches[patch.filename].append(patch)
     except KeyError:
       self.patches[patch.filename] = [patch]
@@ -1206,23 +1229,6 @@ class PetscLinter(object):
         prevPatch.appendFix(patch)
         break
     return
-
-  def getAllErrors(self):
-    __doc__="""
-    return all errors collected so far in a tuple
-    """
-    errLeftStr,errFixedStr = "",""
-    errLeft,errFixed       = [],[]
-    for err,fixed in self.errors:
-      if fixed:
-        errFixed.append(err)
-      else:
-        errLeft.append(err)
-    if errLeft:
-      errLeftStr = "\n".join([self.errPrefix,"\n".join(errLeft)[1:],self.errPrefix])
-    if errFixed:
-      errFixedStr = "\n".join([self.errPrefix,"\n".join(errFixed)[1:],self.errPrefix])
-    return errLeftStr,errFixedStr
 
   def addWarning(self,filename,warnMsg):
     __doc__="""
@@ -1254,6 +1260,23 @@ class PetscLinter(object):
       self.warnings.append((warnFile,warnStr))
     return
 
+  def getAllErrors(self):
+    __doc__="""
+    return all errors collected so far in a tuple
+    """
+    allErrLeft,allErrFixt = [],[]
+    for path,errors in self.errors.items():
+      errLeft,errFixt = [],[]
+      for err,fixed in errors:
+        errFixt.append(err) if fixed else errLeft.append(err)
+      if len(errLeft):
+        errLeftStr = "{prefix}\n{}\n{prefix}".format("\n".join(errLeft)[1:],prefix=self.errPrefix)
+        allErrLeft.append((path,errLeftStr))
+      if len(errFixt):
+        errFixtStr = "{prefix}\n{}\n{prefix}".format("\n".join(errFixt)[1:],prefix=self.errPrefix)
+        allErrFixt.append((path,errFixtStr))
+    return allErrLeft,allErrFixt
+
   def getAllWarnings(self,joinToString=False):
     __doc__="""
     return all warnings collected so far, and optionally join them all as one string
@@ -1270,13 +1293,20 @@ class PetscLinter(object):
     """
     combinedPatches = []
     for filename,patches in self.patches.items():
+      src,fixed = [],[]
       for p in patches:
         p.collapse()
-      srcList   = [(p.src,p.startLine) for p in patches]
-      fixedList = [(p.fixed,p.startLine) for p in patches]
-      diff      = SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename)
-      combinedPatches.append((filename,"".join(diff)))
+        src.append((p.src,p.startLine))
+        fixed.append((p.fixed,p.startLine))
+      diff = "".join(SourceFix.fastUnifiedDiff(src,fixed,fromfile=filename,tofile=filename))
+      combinedPatches.append((filename,diff))
     return combinedPatches
+
+  def diagnostics(self):
+    errorsLeft,errorsFixed = self.getAllErrors()
+    warnings = self.getAllWarnings()
+    patches  = self.coalescePatches()
+    return errorsLeft,errorsFixed,warnings,patches
 
 
 class WorkerPool(mp.queues.JoinableQueue):
@@ -1325,7 +1355,7 @@ class WorkerPool(mp.queues.JoinableQueue):
     return
 
   def walk(self,srcPath,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
-    if os.path.isfile(srcPath):
+    if srcPath.is_file():
       self.put(srcPath)
     else:
       for root,dirs,files in os.walk(srcPath):
@@ -1351,12 +1381,11 @@ class WorkerPool(mp.queues.JoinableQueue):
           # we don't want to join here since a child may have encountered an error!
           self.check()
     else:
-      self.linter.parse(filename)
-      self.patches.extend(self.linter.coalescePatches())
-      errLeft,errFixed = self.linter.getAllErrors()
-      self.errorsLeft.append(errLeft)
-      self.errorsFixed.append(errFixed)
-      self.warnings.append(self.linter.getAllWarnings())
+      errLeft,errFixed,warnings,patches = self.linter.parse(filename).diagnostics()
+      self.errorsLeft.extend(errLeft)
+      self.errorsFixed.extend(errFixed)
+      self.warnings.append(warnings)
+      self.patches.extend(patches)
       self.linter.clear()
     return
 
@@ -1392,7 +1421,7 @@ class WorkerPool(mp.queues.JoinableQueue):
       while not self.returnQueue.empty():
         signal,returnData = self.returnQueue.get()
         if signal == QueueSignal.ERRORS_LEFT:
-          self.errorsLeft.append(returnData)
+          self.errorsLeft.extend(returnData)
         elif signal == QueueSignal.ERRORS_FIXED:
           self.errorsFixed.append(returnData)
         elif signal == QueueSignal.UNIFIED_DIFF:
@@ -1416,6 +1445,16 @@ class WorkerPool(mp.queues.JoinableQueue):
     return self.warnings,self.errorsLeft,self.errorsFixed,self.patches
 
 
+"""
+TODO:
+- make an object to hold all the PetscLinter diagnostics per file
+- make PetscLinter.diagnostics() be the one-stop shop
+- make warnings into a list with filename
+- integrate warnings into the test output as well
+- generate the error and warning outputs for the tests
+- optimize detection of a valid docstring so we can bail out earlier for random comments
+- implement fixits for stuff we can fix
+"""
 """utilities for checking docstrings"""
 def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
   try:
@@ -2113,18 +2152,6 @@ def osResolvePath(path):
     path = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
   return path
 
-def osRemoveSilent(filename):
-  __doc__="""
-  Silently remove a file, suppressing error if the file does not exist
-  """
-  try:
-    os.remove(filename)
-  except OSError as ose:
-    import errno
-    if ose.errno != errno.ENOENT: # no such file or directory
-      raise # re-raise exception if a different error occurred
-  return
-
 def subprocessRun(*args,**kwargs):
   __doc__="""
   lightweight wrapper to hoist the ugly version check out of the regular code
@@ -2162,9 +2189,9 @@ def tryToFindLibclangDir():
           output = subprocessRun(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
           xcodeDir = output.stdout.strip()
           if xcodeDir == "/Applications/Xcode.app/Contents/Developer": # default Xcode path
-            llvmLibDir = os.path.join(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
+            llvmLibDir = Path(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
           elif xcodeDir == "/Library/Developer/CommandLineTools":      # CLT path
-            llvmLibDir = os.path.join(xcodeDir,"usr","lib")
+            llvmLibDir = Path(xcodeDir,"usr","lib")
         except FileNotFoundError:
           # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
           pass
@@ -2177,14 +2204,14 @@ def initializeLibclang(clangDir=None,clangLib=None):
   if not clx.conf.loaded:
     clx.conf.set_compatibility_check(True)
     if clangLib:
-      clangLib = osResolvePath(clangLib)
+      clangLib = Path(clangLib).resolve()
       clx.conf.set_library_file(clangLib)
     elif clangDir:
-      clangDir = osResolvePath(clangDir)
+      clangDir = Path(clangDir).resolve()
       clx.conf.set_library_path(clangDir)
     else:
       raise RuntimeError("Must supply either clang directory path or clang library path")
-  return
+  return clangDir,clangLib
 
 def filterCheckFunctionMap(filterChecks):
   __doc__="""
@@ -2211,7 +2238,7 @@ def getPetscExtraIncludes(petscDir,petscArch):
   petscIncludes = []
   mpiIncludes   = []
   cxxflags      = []
-  with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
+  with open(Path(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
     ccinc  = re.compile("^PETSC_CC_INCLUDES\s*=")
     mpiinc = re.compile("^MPI_INCLUDE\s*=")
     shoinc = re.compile("^MPICC_SHOW\s*=")
@@ -2243,7 +2270,7 @@ def getClangSysIncludes():
   includes = output.stderr.split("#include <...> search starts here:\n")[1]
   includes = includes.split("End of search list.")[0].replace("(framework directory)","")
   includes = includes.splitlines()
-  includes = ["-I"+os.path.abspath(i.strip()) for i in includes if i]
+  includes = ["".join(["-I",str(Path(i.strip()).resolve())]) for i in includes if i]
   return includes
 
 def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,printPrefix="[ROOT]"):
@@ -2251,8 +2278,8 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   build the baseline set of compiler flags, these are passed to all translation unit parse attempts
   """
   miscFlags        = [
-    "-D","PETSC_CLANG_STATIC_ANALYZER",
-    "-x","c++",
+    "-DPETSC_CLANG_STATIC_ANALYZER",
+    "-xc++",
     "-Wno-empty-body",
     "-Wno-writable-strings",
     "-Wno-array-bounds",
@@ -2272,13 +2299,13 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
   Including petsc.h first should define almost everything we need so no side effects from including headers in the wrong order below.
   """
   index             = clx.Index.create()
-  precompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
+  precompiledHeader = Path(petscDir,"include","petsc_ast_precompile.pch")
   megaHeaderLines   = [("petsc.h","#include <petsc.h>")]
-  privateDirName    = os.path.join(petscDir,"include","petsc","private")
+  privateDirName    = Path(petscDir,"include","petsc","private")
   # build a megaheader from every header in private first
-  for headerFile in os.listdir(privateDirName):
-    if headerFile.endswith((".h",".hpp")):
-      megaHeaderLines.append((headerFile,"#include <petsc/private/{}>".format(headerFile)))
+  for header in privateDirName.iterdir():
+    if header.suffix in (".h",".hpp"):
+      megaHeaderLines.append((header.name,"#include <petsc/private/{}>".format(header.name)))
   while True:
     # loop until we get a completely clean compilation, any problematic headers are simply
     # discarded
@@ -2338,68 +2365,68 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
       raise clx.LibclangError("\n\nWarnings or errors generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
   elif verbose:
     print("\n".join([printPrefix+" Mega header:",megaHeader]))
-  osRemoveSilent(precompiledHeader)
+  precompiledHeader.unlink(missing_ok=True)
   tu.save(precompiledHeader)
-  compilerFlags.extend(["-include-pch",precompiledHeader])
+  compilerFlags.extend(["-include-pch",str(precompiledHeader)])
   if verbose:
     print(printPrefix,"Saving precompiled header",precompiledHeader)
   return precompiledHeader
 
 
 """Main functions for root and queue processes"""
-def testMain(petscDir,srcDir,outputDir,patches,replace=False,verbose=False):
+def testMain(petscDir,testPath,outputDir,patches,errors,replace=False,verbose=False):
   import glob
   import difflib
 
   class TestException(Exception):
     pass
 
-  if not patches:
-    raise RuntimeError("outputDir {} provided but no patches generated".format(outputDir))
-  returncode = 0
+  def test(input,referenceFile,sanitize):
+    inputlines = [] if input is None else sanitize(input.splitlines(True))
+    if replace:
+      print("\tREPLACE",shortName)
+      if input is None:
+        raise TestException("Trying to replace contents of {} with 'None', are you sure thats what you intended?\n".format(referenceFile))
+      referenceFile.write_text("".join(inputlines))
+      return
+    if not referenceFile.exists():
+      raise TestException("Missing reference file '{}'\n".format(referenceFile))
+    # skip header lines containing date, the output files shouldn't contain them
+    with referenceFile.open() as fd:
+      fileLines = fd.readlines()
+    diffs = list(difflib.unified_diff(fileLines,inputlines,n=0))
+    if diffs:
+      raise TestException("".join(diffs))
+    return
+
   patchError = {}
   patches    = dict(patches)
-  fileList   = []
-  for ext in ('c','cxx','cpp','cc','CC'):
-    fileList.extend(glob.glob("".join([srcDir,os.path.sep,"*."+ext])))
+  errors     = dict(errors)
+  if testPath.is_dir():
+    fileList = [item for sublist in map(testPath.glob,('*.c','*.cxx','*.cpp','*.cc','*.CC')) for item in sublist]
+  else:
+    fileList = [testPath]
   for testFile in fileList:
-    basename   = os.path.basename(os.path.splitext(testFile)[0])
-    outputFile = os.path.join(outputDir,basename+".patch")
-    shortName  = testFile.replace(petscDir+os.path.sep,"")
+    outputBase = outputDir/testFile.stem
+    outputFile = outputBase.with_suffix(".out")
+    patchFile  = outputBase.with_suffix(".patch")
+    shortName  = testFile.relative_to(petscDir)
 
     print("\tTEST   ",shortName)
     try:
-      try:
-        patch = patches[testFile]
-      except KeyError:
-        raise TestException("File had no corresponding patch: '{}'\n".format(testFile))
-      if replace:
-        print("\tREPLACE",shortName)
-        patch = "".join(patch.splitlines(True)[2:])
-        with open(outputFile,"w") as fd:
-          fd.write(patch)
-        continue
-      elif not os.path.exists(outputFile):
-        raise TestException("File had no corresponding output: '{}'\n".format(testFile))
-
-      with open(outputFile,"r") as fd:
-        fileLines  = fd.readlines()
-        # skip header lines containing date, the output files shouldn't contain them
-        patchLines = patch.splitlines(True)[2:]
-        diffs      = list(difflib.unified_diff(fileLines,patchLines,n=0))
-        if diffs:
-          raise TestException("".join(diffs))
+      test(errors.get(testFile),outputFile,lambda x: [l.replace(str(petscDir),".") for l in x])
+      test(patches.get(testFile),patchFile,lambda x: x[2:])
       print("\tOK     ",shortName)
     except TestException as te:
       print("\tNOT OK ",shortName)
       patchError[testFile] = str(te)
   if patchError:
-    returncode = 21
-    errBars    = "".join(["[ERROR]",85*"-","[ERROR]"])
-    errBars    = [errBars+"\n",errBars]
+    errBars = "".join(["[ERROR]",85*"-","[ERROR]"])
+    errBars = [errBars+"\n",errBars]
     for errFile in patchError:
       print(patchError[errFile].join(errBars))
-  return returncode
+    return 21
+  return 0
 
 def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,verbose,werror,errorQueue,returnQueue,fileQueue,lock):
   __doc__="""
@@ -2465,7 +2492,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
   returnQueue.close()
   return
 
-def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testDir=None,replaceTests=False,werror=False):
+def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testOutputDir=None,replaceTests=False,werror=False):
   __doc__="""
   entry point for linter
 
@@ -2474,7 +2501,7 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   petscArch -- $PETSC_ARCH
 
   Keyword arguments:
-  srcDir              -- alternative directory to use as src root (default: $PETSC_DIR/src)
+  srcPath             -- alternative directory (or single file) to use as src root (default: $PETSC_DIR/src)
   clangDir            -- directory containing libclang.[so|dylib|dll] (default: None)
   clangLib            -- direct path to libclang.[so|dylib|dll], overrrides clangDir if set (default: None)
   verbose             -- display debugging statements (default: False)
@@ -2484,90 +2511,90 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   applyPatches        -- automatically apply patch files to source if they are generated (default: False)
   extraCompilerFlags  -- list of extra compiler flags to append to petsc and system flags. For example ["-I/my/non/standard/include","-Wsome_warning"] (default: None)
   extraHeaderIncludes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path. Use extraCompilerFlags to make any other search path additions. For example ["#include <slepc/private/epsimpl.h>"] (default: None)
-  testDir             -- directory containing test output to compare patches against, use special keyword '__at_src__' to use srcDir/output (default: None)
-  replaceTests        -- replace output files in testDir with patches generated (default: False)
+  testOutputDir       -- directory containing test output to compare patches against, use special keyword '__at_src__' to use srcPath/output (default: None)
+  replaceTests        -- replace output files in testOutputDir with patches generated (default: False)
   werror              -- treat all linter-generated warnings as errors (default: False)
   """
 
   # pre-processing setup
-  if applyPatches and testDir:
+  if applyPatches and testOutputDir:
     raise RuntimeError("Test directory and apply patches are both non-zero. It is probably not a good idea to apply patches over the test directory!")
-  initializeLibclang(clangDir=clangDir,clangLib=clangLib)
-  petscDir = osResolvePath(petscDir)
-  if srcDir is None:
-    srcDir = os.path.join(petscDir,"src")
+  clangDir,clangLib = initializeLibclang(clangDir=clangDir,clangLib=clangLib)
+  petscDir = Path(petscDir).resolve()
+  if srcPath is None:
+    srcPath = petscDir/"src"
   else:
-    srcDir = osResolvePath(srcDir)
+    srcPath = Path(srcPath).resolve()
   if patchDir is None:
-    patchDir = os.path.join(petscDir,"petscLintPatches")
+    patchDir = petscDir/"petscLintPatches"
   else:
-    patchDir = osResolvePath(patchDir)
-  if testDir == "__at_src__":
-    testDir = os.path.join(srcDir,"output")
+    patchDir = Path(patchDir).resolve()
+  if testOutputDir == "__at_src__":
+    if srcPath.is_dir():
+      testOutputDir = srcPath/"output"
+    elif srcPath.is_file():
+      testOutputDir = srcPath.parent/"output"
+    else:
+      raise RuntimeError("Got neither a directory or file as srcPath",srcPath)
 
-  rootPrintPrefix   = "[ROOT]"
-  compilerFlags     = buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=extraCompilerFlags,verbose=verbose)
-  precompiledHeader = buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose)
   filterCheckFunctionMap(checkFunctionFilter)
+  rootPrintPrefix   = "[ROOT]"
+  compilerFlags     = buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=extraCompilerFlags,verbose=verbose,printPrefix=rootPrintPrefix)
+  precompiledHeader = buildPrecompiledHeader(
+    petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose
+  )
 
   pool = WorkerPool(numWorkers=workers,verbose=verbose)
   pool.setup(compilerFlags,werror=werror)
-  pool.walk(srcDir)
+  pool.walk(srcPath)
   warnings,errorsLeft,errorsFixed,patches = pool.finalize()
   if verbose: print(rootPrintPrefix,"Deleting precompiled header",precompiledHeader)
-  osRemoveSilent(precompiledHeader)
-  if testDir is not None:
-    return testMain(petscDir,srcDir,testDir,patches,replace=replaceTests,verbose=verbose)
-  if patches:
+  precompiledHeader.unlink()
+  if testOutputDir is not None:
+    return testMain(petscDir,srcPath,testOutputDir,patches,errorsLeft,replace=replaceTests,verbose=verbose)
+  elif patches:
     import time
 
-    try:
-      os.mkdir(patchDir)
-    except FileExistsError:
-      pass
+    patchDir.mkdir(exist_ok=True)
     manglePostfix = "".join(["_",str(int(time.time())),".patch"])
-    for filename,patch in patches:
-      filename    = filename.replace(srcDir,"").replace(os.path.sep,"_")[1:]
-      mangledFile = os.path.splitext(filename)[0]+manglePostfix
-      mangledFile = os.path.join(patchDir,mangledFile)
+    rootDir       = "-d"+patchDir.anchor
+    for fname,patch in patches:
+      mangledName = str(fname.with_name(fname.stem+manglePostfix).relative_to(srcPath)).replace(os.path.sep,"_")
+      mangledFile = patchDir/mangledName
       if verbose: print(rootPrintPrefix,"Writing patch to file",mangledFile)
-      with open(mangledFile,"w") as fd:
-        fd.write(patch)
+      mangledFile.write_text(patch)
     if applyPatches:
       import glob
 
       if verbose: print(rootPrintPrefix,"Applying patches from patch directory",patchDir)
-      rootDir   = "".join(["-d",os.path.abspath(os.path.sep)])
       patchGlob = "".join([patchDir,os.path.sep,"*",manglePostfix])
       for patchFile in glob.iglob(patchGlob):
         if verbose: print(rootPrintPrefix,"Applying patch",patchFile)
         output = subprocessRun(["patch",rootDir,"-p0","--unified","-i",patchFile],check=True,universal_newlines=True,capture_output=True)
         if verbose: print(output.stdout)
-  returnCode = 0
   if warnings and verbose:
     print("\n"+rootPrintPrefix,30*"=","Found warnings      ",33*"=")
     print("\n".join(s for tup in warnings for _,s in tup))
     print(rootPrintPrefix,30*"=","End warnings        ",33*"=")
   if errorsFixed and verbose:
     print("\n"+rootPrintPrefix,30*"=","Fixed Errors        ",33*"=")
-    print("\n".join(errorsFixed))
+    print("\n".join(e for _,e in errorsFixed))
     print(rootPrintPrefix,30*"=","End fixed errors    ",33*"=")
   if errorsLeft:
     print("\n"+rootPrintPrefix,30*"=","Unfixable Errors    ",33*"=")
-    print("\n".join(errorsLeft))
+    print("\n".join(e for _,e in errorsLeft))
     print(rootPrintPrefix,30*"=","End unfixable errors",33*"=")
-    returnCode = 11
     print("Some errors or warnings could not be automatically corrected via the patch files, see above")
+    return 11
   elif patches:
     if applyPatches:
       print("\nAll errors or warnings successfully patched")
     else:
-      rootDir = "".join(["-d",os.path.abspath(os.path.sep)])
       print("\nAll errors fixable via patch files written to",patchDir)
-      patchGlob = "*".join([patchDir+os.path.sep,manglePostfix])
+      patchGlob = patchDir/("*"+manglePostfix)
       print("Apply manually using:\n\tpatch {} -p0 --unified -i {}".format(rootDir,patchGlob))
-      returnCode = 12
-  return returnCode
+      return 12
+  return 0
 
 
 if __name__ == "__main__":
@@ -2586,7 +2613,7 @@ if __name__ == "__main__":
   clangDir = tryToFindLibclangDir()
   try:
     petscDir      = os.environ["PETSC_DIR"]
-    defaultSrcDir = os.path.join(petscDir,"src")
+    defaultSrcDir = Path(petscDir).resolve()/"src"
   except KeyError:
     petscDir      = None
     defaultSrcDir = "$PETSC_DIR/src"
@@ -2624,8 +2651,5 @@ if __name__ == "__main__":
   if args.clanglib:
     args.clangdir = None
 
-  if args.src == "$PETSC_DIR/src":
-    args.src = os.path.join(petscDir,"src")
-
-  ret = main(args.petscdir,args.petscarch,srcDir=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testDir=args.test,replaceTests=args.replace,werror=args.werror)
+  ret = main(args.petscdir,args.petscarch,srcPath=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testOutputDir=args.test,replaceTests=args.replace,werror=args.werror)
   sys.exit(ret)

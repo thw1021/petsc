@@ -1,4 +1,4 @@
-/* for access to private vec members */
+/* for access to private viewer members */
 #include <petsc/private/viewerimpl.h>
 
 /* foward declare */
