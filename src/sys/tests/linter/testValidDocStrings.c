@@ -48,8 +48,7 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
   Level:
   Beginner
 
-  References:
-  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 .seealso: testNonExistentFunction(), testNonExistentType
 @*/
@@ -70,3 +69,6 @@ PetscErrorCode testIllFormedMinimalDocString(void)
 {
   return 0;
 }
+
+/* a random comment above a funciton */
+void function();
