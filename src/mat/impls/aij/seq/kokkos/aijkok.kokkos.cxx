@@ -273,6 +273,7 @@ static PetscErrorCode MatMultTranspose_SeqAIJKokkos(Mat A,Vec xx,Vec yy)
     mode = "T";
   }
   aijkok = static_cast<Mat_SeqAIJKokkos*>(B->spptr);
+  aijkok->a_dual.sync_device();
   KokkosSparse::spmv(mode,1.0/*alpha*/,aijkok->csrmat,xv,0.0/*beta*/,yv); /* y = alpha A^T x + beta y */
   ierr = VecRestoreKokkosView(xx,&xv);CHKERRQ(ierr);
   ierr = VecRestoreKokkosView(yy,&yv);CHKERRQ(ierr);
