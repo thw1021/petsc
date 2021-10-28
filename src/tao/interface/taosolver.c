@@ -2091,8 +2091,8 @@ PetscErrorCode TaoDefaultConvergenceTest(Tao tao,void *dummy)
 
    This would enable use of different options for each system, such as
 .vb
-      -sys1_tao_method blmvm -sys1_tao_gtol 1.e-3
-      -sys2_tao_method lmvm  -sys2_tao_gtol 1.e-4
+      -sys1_tao_method blmvm -sys1_tao_grtol 1.e-3
+      -sys2_tao_method lmvm  -sys2_tao_grtol 1.e-4
 .ve
 
    Level: advanced
