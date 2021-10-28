@@ -451,7 +451,4 @@ PETSC_EXTERN PetscErrorCode PCHPDDMGetSTShareSubKSP(PC,PetscBool*);
 PETSC_EXTERN PetscErrorCode PCHPDDMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PCHPDDMInitializePackage(void);
 
-PETSC_EXTERN PetscErrorCode PCAMGxSetFixDiagonal(PC,PetscBool);
-PETSC_EXTERN PetscErrorCode PCAMGxGetFixDiagonal(PC,PetscBool*);
-
 #endif /* PETSCPC_H */
