@@ -1,12 +1,12 @@
 DM Object: sphere 4 MPI processes
   type: plex
 sphere in 2 dimensions:
-  0-cells: 113 113 113 113
-  1-cells: 208 208 208 208
+  0-cells: 126 126 121 121
+  1-cells: 220 220 216 216
   2-cells: 96 96 96 96
 Labels:
-  celltype: 3 strata with value/size (0 (113), 1 (208), 4 (96))
-  depth: 3 strata with value/size (0 (113), 1 (208), 2 (96))
+  celltype: 3 strata with value/size (0 (126), 1 (220), 4 (96))
+  depth: 3 strata with value/size (0 (126), 1 (220), 2 (96))
 libCEED Backend: /cpu/self/avx/blocked
 Discrete System with 1 fields
     cell total dim 16 total comp 1
@@ -18,7 +18,7 @@ Discrete System with 1 fields
         type: tensor
         Space in 2 variables with 1 components, size 16
         Tensor space of 2 subspaces (all identical)
-          PetscSpace Object: (tensorcomp_) 1 MPI processes
+          PetscSpace Object: tensor component (tensorcomp_) 1 MPI processes
             type: poly
             Space in 1 variables with 1 components, size 4
             Polynomial space of degree 3

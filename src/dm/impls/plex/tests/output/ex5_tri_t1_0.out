@@ -158,10 +158,10 @@ Process 0:
 Vec Object: Local Solution 1 MPI processes
   type: seq
 -1.
--1.11022e-16
+0.
 0.
 1.
-5.55112e-17
+0.
 -1.
 1.
 1.
@@ -171,12 +171,12 @@ Vec Object: Local Solution 1 MPI processes
 3.
 1.11022e-16
 2.
--5.55112e-17
+0.
 0.
 -2.
 2.
 -1.
-1.85037e-17
+0.
 1.
 0.
 -1.
@@ -188,7 +188,7 @@ Vec Object: Local Residual 1 MPI processes
 -1.33333
 -0.666667
 0.
-6.16791e-18
+0.
 0.
 0.
 -0.666667
@@ -198,13 +198,13 @@ Vec Object: Local Residual 1 MPI processes
 -1.33333
 -0.666667
 0.
-6.16791e-18
+0.
 -0.666667
 -1.33333
--1.24568e-16
-1.17309e-17
-3.70074e-17
-4.37803e-17
+-1.61575e-16
+0.
+-3.70074e-17
+0.
 -2.34618e-17
 0.
 Mat Object: Jacobian 1 MPI processes
