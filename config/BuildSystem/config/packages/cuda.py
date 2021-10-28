@@ -347,19 +347,23 @@ to set the right generation for your hardware.')
       self.logPrint('PETSc C++ compiler '+self.compilers.CXX)
 
       # TODO: How to handle MPI compiler wrapper as opposed to its underlying compiler
+      # join XXXFLAGS strings with a space and then split to get a list of individual flags
+      rawFlags = ' '.join(getattr(self.setCompilers,attr,'') for attr in ('CPPFLAGS','CFLAGS','CXXPPFLAGS','CXXFLAGS')).split()
+      # remove duplicate entries
+      noDupFlags = []
+      for item in rawFlags:
+        if item not in noDupFlags: noDupFlags.append(item)
+
       if out == self.compilers.CC or out == self.compilers.CXX:
         # nvcc will say it is using gcc as its compiler, it pass a flag when using to
         # treat it as a C++ compiler
-        newFlags = self.setCompilers.CPPFLAGS.split()+self.setCompilers.CFLAGS.split()+self.setCompilers.CXXPPFLAGS.split()+self.setCompilers.CXXFLAGS.split()
         # need to remove the std flag from the list, nvcc will already have its own flag set
         # With IBM XL compilers, we also need to remove -+
-        self.setCompilers.CUDA_CXXFLAGS = ' '.join([flg for flg in newFlags if not flg.startswith(('-std=c++','-std=gnu++','-+'))])
+        self.setCompilers.CUDA_CXXFLAGS = ' '.join([flg for flg in noDupFlags if not flg.startswith(('-std=c++','-std=gnu++','-+'))])
       else:
         # only add any -I arguments since compiler arguments may not work
-        flags = self.setCompilers.CPPFLAGS.split(' ')+self.setCompilers.CFLAGS.split(' ')+self.setCompilers.CXXFLAGS.split(' ')
-        for i in flags:
-          if i.startswith('-I'):
-            self.setCompilers.CUDA_CXXFLAGS += ' '+i
+        self.setCompilers.CUDA_CXXFLAGS = ' '.join([flg for flg in noDupFlags if flg.startswith('-I')])
+
       # set compiler flags for compiler called by nvcc
       if self.setCompilers.CUDA_CXXFLAGS:
         self.addMakeMacro('CUDA_CXXFLAGS',self.setCompilers.CUDA_CXXFLAGS)
