@@ -453,7 +453,4 @@ PETSC_EXTERN PetscErrorCode PCHPDDMSetDeflationMat(PC,IS,Mat);
 PETSC_EXTERN PetscErrorCode PCHPDDMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PCHPDDMInitializePackage(void);
 
-PETSC_EXTERN PetscErrorCode PCAMGxSetFixDiagonal(PC,PetscBool);
-PETSC_EXTERN PetscErrorCode PCAMGxGetFixDiagonal(PC,PetscBool*);
-
 #endif /* PETSCPC_H */
