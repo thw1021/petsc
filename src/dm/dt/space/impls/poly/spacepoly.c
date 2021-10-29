@@ -125,35 +125,27 @@ static PetscErrorCode PetscSpaceGetDimension_Polynomial(PetscSpace sp, PetscInt 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode BiunitSimplexHatFunctions(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt jet, PetscInt Njet, PetscReal pScalar[])
+static PetscErrorCode CoordinateBasis(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt jet, PetscInt Njet, PetscReal pScalar[])
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
+  ierr = PetscArrayzero(pScalar, (1 + dim) * Njet * npoints);CHKERRQ(ierr);
   for (PetscInt b = 0; b < 1 + dim; b++) {
     for (PetscInt j = 0; j < PetscMin(1 + dim, Njet); j++) {
       if (j == 0) {
         if (b == 0) {
           for (PetscInt pt = 0; pt < npoints; pt++) {
-            pScalar[b * Njet * npoints + j * npoints + pt] = 1. - dim/2.;
-          }
-          for (PetscInt d = 0; d < dim; d++) {
-            for (PetscInt pt = 0; pt < npoints; pt++) {
-              pScalar[b * Njet * npoints + j * npoints + pt] -= 0.5 * points[pt * dim + d];
-            }
+            pScalar[b * Njet * npoints + j * npoints + pt] = 1.;
           }
         } else {
           for (PetscInt pt = 0; pt < npoints; pt++) {
-            pScalar[b * Njet * npoints + j * npoints + pt] = 0.5 * points[pt * dim + (b-1)] + 0.5;
+            pScalar[b * Njet * npoints + j * npoints + pt] = points[pt * dim + (b-1)];
           }
         }
-      } else {
-        if (b == 0) {
-          for (PetscInt pt = 0; pt < npoints; pt++) {
-            pScalar[b * Njet * npoints + j * npoints + pt] = -0.5;
-          }
-        } else if (j == b) {
-          for (PetscInt pt = 0; pt < npoints; pt++) {
-            pScalar[b * Njet * npoints + j * npoints + pt] = 0.5;
-          }
+      } else if (j == b) {
+        for (PetscInt pt = 0; pt < npoints; pt++) {
+          pScalar[b * Njet * npoints + j * npoints + pt] = 1.;
         }
       }
     }
@@ -191,8 +183,7 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
   // functions at the vertices of a simplex, which happens when we invert the Vandermonde matrix of the PKD basis.
   // We don't make any promise about which basis is used.
   if (sp->degree == 1) {
-    ierr = PetscArrayzero(pScalar, Nb * Njet * npoints);CHKERRQ(ierr);
-    ierr = BiunitSimplexHatFunctions(dim, npoints, points, jet, Njet, pScalar);CHKERRQ(ierr);
+    ierr = CoordinateBasis(dim, npoints, points, jet, Njet, pScalar);CHKERRQ(ierr);
   } else {
     ierr = PetscDTPKDEvalJet(dim, npoints, points, sp->degree, jet, pScalar);CHKERRQ(ierr);
   }
