@@ -79,7 +79,7 @@ ERROR 4: ./src/sys/tests/linter/testValidDocStrings.c:16:56
   57: {
   58:   return 0;
 
-Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected 'C@' found '@*/':
+Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected 'C@*/' found '@*/':
 
   52: 
   53: .seealso: testNonExistentFunction(), testNonExistentType
