@@ -67,6 +67,13 @@ Changes: Development
 
 .. rubric:: SNES:
 
+-  Add ``SNESSetComputeMFFunction()``
+-  Add support for ``-snes_mf_operator`` for use with ``SNESSetPicard()``
+-  ``SNESShellGetContext()`` now takes ``void*`` as return argument
+-  Add ``SNESNewtonTRDCGetRhoFlag()``, ``SNESNewtonTRDCSetPreCheck()``, ``SNESNewtonTRDCGetPreCheck()``, ``SNESNewtonTRDCSetPostCheck()``, ``SNESNewtonTRDCGetPostCheck()``
+
+-  Add ``SNESNewtonTRDCGetRhoFlag()``, ``SNESNewtonTRDCSetPreCheck()``, ``SNESNewtonTRDCGetPreCheck()``, ``SNESNewtonTRDCSetPostCheck()``, ``SNESNewtonTRDCGetPostCheck()``
+
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
