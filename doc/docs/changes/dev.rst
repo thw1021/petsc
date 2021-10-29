@@ -72,6 +72,8 @@ Changes: Development
 -  ``SNESShellGetContext()`` now takes ``void*`` as return argument
 -  Add ``SNESNewtonTRDCGetRhoFlag()``, ``SNESNewtonTRDCSetPreCheck()``, ``SNESNewtonTRDCGetPreCheck()``, ``SNESNewtonTRDCSetPostCheck()``, ``SNESNewtonTRDCGetPostCheck()``
 
+-  Add ``SNESNewtonTRDCGetRhoFlag()``, ``SNESNewtonTRDCSetPreCheck()``, ``SNESNewtonTRDCGetPreCheck()``, ``SNESNewtonTRDCSetPostCheck()``, ``SNESNewtonTRDCGetPostCheck()``
+
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:

@@ -331,6 +331,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     norm1 = nrm;
 
     while (1) {
+
       PetscBool changed_y;
       PetscBool changed_w;
       ierr = VecCopy(Ytmp,Y);CHKERRQ(ierr);
