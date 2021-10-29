@@ -286,6 +286,7 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
   PetscErrorCode           ierr;
   PetscInt                 maxits,i,j,lits,bs,inner_count;
   PetscReal                rho,fnorm,gnorm,xnorm=0,delta,ynorm,temp_xnorm,temp_ynorm;  /* TRDC inner iteration */
+  PetscReal                *inorms;
   PetscReal                deltaM,ynnorm,f0,mp,gTy,g,yTHy;  /* rho calculation */
   PetscReal                auk,gfnorm,ycnorm,c0,c1,c2,tau,tau_pos,tau_neg,gTBg;  /* Cauchy Point */
   KSP                      ksp;
@@ -309,8 +310,8 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
   if (snes->xl || snes->xu || snes->ops->computevariablebounds) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   /* for multiphase (multivariable) scaling */
-  ierr = VecGetBlockSize(YNtmp,&bs);
-  PetscReal inorms[bs];
+  ierr = VecGetBlockSize(YNtmp,&bs);CHKERRQ(ierr);
+  ierr = PetscMalloc1(bs,&inorms);CHKERRQ(ierr);
   neP->rho_satisfied = PETSC_FALSE;
   ierr       = PetscObjectSAWsTakeAccess((PetscObject)snes);CHKERRQ(ierr);
   snes->iter = 0;
