@@ -386,7 +386,7 @@ class PetscDocString(object):
             raise ParsingError
         if sowingChars[0] not in self.sowingTypes:
           raise ParsingError
-        sowingChars = "/*"+"".join(sowingChars)
+        sowingChars = "".join(sowingChars)
         # check that nothing else is on the comment begin line
         lsplit = lstrip.split()
         if len(lsplit) != 1:
@@ -404,7 +404,7 @@ class PetscDocString(object):
           endSowingChars = ""
         if sorted(endSowingChars) != sorted(sowingChars):
           self.addErrorFromCursor(linter,
-            "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}' found '{}*/':\n\n{}",
+            "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
             endSowingChars,line,offset+startLine,
             formatargs=(sowingChars[::-1],endSowingChars)
           )
@@ -608,7 +608,6 @@ class PetscCursor(object):
         elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
           raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
         else:
-          import ipdb; ipdb.set_trace()
           raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errstr))
       name = tokenList[0].spelling
       assert name, "Cannot determine name of symbol from cursor {}".format(PetscCursor.errorViewFromCursor(cursor))
