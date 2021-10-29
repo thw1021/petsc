@@ -49,15 +49,15 @@ P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
 # clang options used for parsing files
 baseClangOptions = (
   P_CXTranslationUnit_PrecompiledPreamble |
-  P_CXTranslationUnit_SkipFunctionBodies |
+  P_CXTranslationUnit_SkipFunctionBodies  |
   P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble
 )
 
 # clang options for creating the precompiled megaheader
 basePCHClangOptions = (
   P_CXTranslationUnit_CreatePreambleOnFirstParse |
-  P_CXTranslationUnit_Incomplete |
-  P_CXTranslationUnit_ForSerialization |
+  P_CXTranslationUnit_Incomplete                 |
+  P_CXTranslationUnit_ForSerialization           |
   P_CXTranslationUnit_KeepGoing
 )
 
@@ -68,13 +68,27 @@ funcCallCursors = {clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR}
 scopeCursors    = {clx.CursorKind.COMPOUND_STMT}
 
 # Cursors that may be attached to mathemateical operations or types
-mathCursors     = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.UNARY_OPERATOR,clx.CursorKind.BINARY_OPERATOR}
+mathCursors     = {
+  clx.CursorKind.INTEGER_LITERAL,
+  clx.CursorKind.UNARY_OPERATOR,
+  clx.CursorKind.BINARY_OPERATOR
+}
 
 # Cursors that contain base literal types
-literalCursors  = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.STRING_LITERAL}
+literalCursors  = {
+  clx.CursorKind.INTEGER_LITERAL,
+  clx.CursorKind.STRING_LITERAL
+}
 
 # Cursors that may be attached to casting
-castCursors     = {clx.CursorKind.CSTYLE_CAST_EXPR,clx.CursorKind.CXX_STATIC_CAST_EXPR,clx.CursorKind.CXX_DYNAMIC_CAST_EXPR,clx.CursorKind.CXX_REINTERPRET_CAST_EXPR,clx.CursorKind.CXX_CONST_CAST_EXPR,clx.CursorKind.CXX_FUNCTIONAL_CAST_EXPR}
+castCursors     = {
+  clx.CursorKind.CSTYLE_CAST_EXPR,
+  clx.CursorKind.CXX_STATIC_CAST_EXPR,
+  clx.CursorKind.CXX_DYNAMIC_CAST_EXPR,
+  clx.CursorKind.CXX_REINTERPRET_CAST_EXPR,
+  clx.CursorKind.CXX_CONST_CAST_EXPR,
+  clx.CursorKind.CXX_FUNCTIONAL_CAST_EXPR
+}
 
 # Cursors that may be attached when types are converted
 convertCursors  = castCursors|{clx.CursorKind.UNEXPOSED_EXPR}
@@ -85,7 +99,11 @@ functionTypes   = {clx.TypeKind.FUNCTIONPROTO,clx.TypeKind.FUNCTIONNOPROTO}
 
 # General Array types, note this doesn't contain the pointer type since that is usually handled
 # differently
-arrayTypes      = {clx.TypeKind.INCOMPLETEARRAY,clx.TypeKind.CONSTANTARRAY,clx.TypeKind.VARIABLEARRAY}
+arrayTypes      = {
+  clx.TypeKind.INCOMPLETEARRAY,
+  clx.TypeKind.CONSTANTARRAY,
+  clx.TypeKind.VARIABLEARRAY
+}
 
 # Specific types
 enumTypes   = {clx.TypeKind.ENUM}
@@ -93,8 +111,20 @@ enumTypes   = {clx.TypeKind.ENUM}
 boolTypes   = enumTypes|{clx.TypeKind.BOOL}
 charTypes   = {clx.TypeKind.CHAR_S,clx.TypeKind.UCHAR}
 mpiIntTypes = {clx.TypeKind.INT}
-intTypes    = enumTypes|mpiIntTypes|{clx.TypeKind.USHORT,clx.TypeKind.SHORT,clx.TypeKind.UINT,clx.TypeKind.LONG,clx.TypeKind.LONGLONG,clx.TypeKind.ULONGLONG}
-realTypes   = {clx.TypeKind.FLOAT,clx.TypeKind.DOUBLE,clx.TypeKind.LONGDOUBLE,clx.TypeKind.FLOAT128}
+intTypes    = enumTypes|mpiIntTypes|{
+  clx.TypeKind.USHORT,
+  clx.TypeKind.SHORT,
+  clx.TypeKind.UINT,
+  clx.TypeKind.LONG,
+  clx.TypeKind.LONGLONG,
+  clx.TypeKind.ULONGLONG
+}
+realTypes   = {
+  clx.TypeKind.FLOAT,
+  clx.TypeKind.DOUBLE,
+  clx.TypeKind.LONGDOUBLE,
+  clx.TypeKind.FLOAT128
+}
 scalarTypes = realTypes|{clx.TypeKind.COMPLEX}
 
 """
@@ -207,18 +237,20 @@ class ParsingError(Exception):
 class PetscDocString(object):
   __doc__="""Container to encapsulate a sowing docstring and retrieve various objects for it. Essentially a PetscCursor for comments"""
 
-  class Section(collections.namedtuple("Section",["lines","names"])):
+  class Section(collections.namedtuple("Section",["extent","lines","names"])):
     __doc__ = """Container for a single section of the docstring, has members:
-    'lines' - a tuple of each line of text in the section
-    'names' - a tuple of extracted tokens of interest, e.g. the title, options parameters, function parameters, etc.
+    'extent' - the SourceRange for the whole section
+    'lines'  - a tuple of each line of text and its SourceRange in the section
+    'names'  - a tuple of extracted tokens of interest, e.g. the title, options parameters, function parameters, etc.
     """
     __slots__ = ()
 
     @classmethod
     def create(cls,data):
-      lines = tuple(s for _,s in data["all"])
-      names = data["names"] if "names" in data else tuple()
-      return cls(lines=lines,names=names)
+      lines  = tuple(data["all"])
+      extent = clx.SourceRange.from_locations(lines[0][0].start,lines[-1][0].end)
+      names  = data["names"] if "names" in data else tuple()
+      return cls(extent=extent,lines=lines,names=names)
 
 
   preambleHeading  = "preamble"
@@ -257,61 +289,151 @@ class PetscDocString(object):
     self.indent = indent
     return
 
-  def makeSourceRange(self,token,string,line):
+  def makeSourceRange(self,token,string,lineno):
     tu       = self.cursor.translation_unit
     clxFile  = self.cursor.location.file
     colBegin = string.index(token)+1
     colEnd   = colBegin+len(token)
-    begin    = clx.SourceLocation.from_position(tu,clxFile,line,colBegin)
-    end      = clx.SourceLocation.from_position(tu,clxFile,line,colEnd)
+    begin    = clx.SourceLocation.from_position(tu,clxFile,lineno,colBegin)
+    end      = clx.SourceLocation.from_position(tu,clxFile,lineno,colEnd)
     return clx.SourceRange.from_locations(begin,end),token.strip()
 
-  def addErrorFromCursor(self,linter,errstr,token,raw,lineno,cursor=None,formatargs=(),**kwargs):
-    crange,_ = self.makeSourceRange(token,raw,lineno)
-    src      = petscClangLinterUtil.getFormattedSourceFromSourceRange(
+  def addErrorFromSourceRange(self,linter,errstr,crange,cursor=None,formatargs=tuple(),**kwargs):
+    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(
       crange,numContext=kwargs.pop("numContext",2),**kwargs
     )
-    error    = errstr.format(*formatargs,src)
-    linter.addErrorFromCursor(cursor if cursor is not None else self.cursor,error)
+    error = errstr.format(*formatargs,src)
+    linter.addErrorFromCursor(self.cursor if cursor is None else cursor,error)
+    return
+
+  def addErrorFromCursor(self,linter,errstr,token,raw,lineno,**kwargs):
+    crange,_ = self.makeSourceRange(token,raw,lineno)
+    return self.addErrorFromSourceRange(linter,errstr,crange,**kwargs)
+
+  def addErrorFromSection(self,linter,errstr,section,**kwargs):
+    return self.addErrorFromSourceRange(linter,errstr,section.extent,**kwargs)
+
+  def getSection(self,linter,attr,requiredName=None):
+    heading = getattr(self,attr,None)
+    if heading is None and requiredName is not None:
+      if requiredName in self.raw:
+        err = "Don't have attribute {}, but found heading {} in raw, this should be handled".format(attr,requiredName)
+        raise RuntimeError(err)
+      self.addErrorFromSourceRange(linter,
+        "Required subheading '{}' not found in docstring:\n\n{}",
+        self.extent, # entire docstring
+        formatargs=(requiredName,),
+        highlight=False
+      )
+    return heading
+
+  def checkValidSolitarySectionHeading(self,linter,section):
+    startline = section.lines[0]
+    _,sep,after = startline[1].partition(":")
+    assert sep
+    if after.rstrip():
+      self.addErrorFromCursor(linter,
+        "Heading must appear alone on a line, any content must be on the next line:\n\n{}",
+        after,startline[1],startline[0].start.line
+      )
+    return
+
+  def checkValidSowingChars(self,linter):
+    sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
+    # check that beginning
+    splitlines  = self.raw.splitlines()
+    line        = splitlines[0]
+    beginSowing = line.split("/*")[1].split()
+    try:
+      beginSowing = beginSowing[0]
+    except IndexError:
+      headerKeywords = ("Level",".seealso","Input Parameter","Output Parameter","References","Synopsis")
+      if any(keyword in self.raw for keyword in headerKeywords):
+        # if we find these keywords, likely this is a docstring but the implementer
+        # forgot to add the sowing characters
+        self.addErrorFromCursor(linter,
+          "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
+          line,line,self.extent.start.line,
+          formatargs=(sowingType,layType)
+        )
+        beginSowing = [sowingType]
+      else:
+        # not a sowing docstring? bail here
+        raise ParsingError
+    if beginSowing[0] not in self.sowingTypes:
+      raise ParsingError
+    beginSowing = "".join(beginSowing)
+    # check that nothing else is on the comment begin line
+    lsplit = line.strip().split()
+    if len(lsplit) != 1:
+      self.addErrorFromCursor(linter,
+        "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
+        " ".join(lsplit[1:]),line,self.extent.start.line
+      )
+    # now check the end
+    line           = splitlines[-1]
+    endSowing = line.split("*/")[0].split()
+    try:
+      endSowing = endSowing[-1]
+    except IndexError:
+      endSowing = ""
+    if sorted(endSowing) != sorted(beginSowing):
+      self.addErrorFromCursor(
+        linter,
+        "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
+        endSowing,line,self.extent.end.line,
+        formatargs=(beginSowing[::-1],endSowing)
+      )
+    return
+
+  def checkValidTitleCasedSectionHeading(self,linter,section):
+    # check that header is correctly title-cased
+    lineloc,line = section.lines[0]
+    heading      = line.partition(":")[0].strip()
+    if not heading.istitle():
+      self.addErrorFromCursor(linter,
+        "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
+        heading,line,lineloc.start.line,
+        formatargs=(heading.title(),heading)
+      )
     return
 
   def parse(self,linter):
-    def defaultEntry():
-      return {"all" : []}
+    def validHeading(i,x):
+      xsplit = x.split(" - ")[0].strip()
+      return xsplit or i == 0,xsplit
+
+    def validParams(i,x):
+      xstrip = x.lstrip()
+      if xstrip.startswith(("+",".","-")):
+        return True,xstrip[1:].split("-")[0].strip()
+      return False,x
+
+    def validLevel(i,x):
+      xstrip = x.lstrip()
+      if ":" in xstrip:
+        rest = xstrip.split(":")[1].strip()
+        return rest,rest
+      return xstrip,xstrip
 
     def postProcessHeading(headings,subname,testItem,requiredName=None,countMax=-1):
       subheading = headings.get(subname)
       if not subheading:
-        if requiredName is not None:
-          self.addErrorFromCursor(linter,
-            "Missing required subheading '{}:', not found in docstring;\n\n{}",
-            "","",self.extent.start.line, # entire docstring
-            formatargs=(requiredName,),
-            numContext=0,numAfterContext=len(self.raw.splitlines())-1,highlight=False
-          )
         return
       nameList    = []
       count,seen  = 0,set()
       multiHeader = False
-      for i,(line,origitem) in enumerate(subheading["all"]):
-        if ":" in origitem:
-          # check that header is correctly title-cased
-          header = origitem.split(":")[0].strip()
-          if not header.istitle():
-            self.addErrorFromCursor(linter,
-              "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
-              header,origitem,line,
-              formatargs=(header.title(),header)
-            )
-          headerlo = header.casefold()
-          if headerlo in seen:
+      for i,(srcloc,line) in enumerate(subheading["all"]):
+        if ":" in line:
+          header = line.split(":")[0].strip().casefold()
+          if header in seen:
             multiHeader = True
           else:
-            seen.add(headerlo)
+            seen.add(header)
         # let each subheading type determine if this line is useful
-        valid,item = testItem(i,origitem)
+        valid,item = testItem(i,line)
         if valid and (count != countMax):
-          nameList.append(self.makeSourceRange(item,origitem,line))
+          nameList.append(self.makeSourceRange(item,line,srcloc.start.line))
           count += 1
       if multiHeader:
         # check that a particular subsection does not appear twice
@@ -332,23 +454,6 @@ class PetscDocString(object):
       subheading["names"] = tuple(nameList)
       return
 
-    def validHeading(i,x):
-      xsplit = x.split("-")[0].strip()
-      return xsplit or i == 0,xsplit
-
-    def validParams(i,x):
-      xstrip = x.lstrip()
-      if xstrip.startswith(("+",".","-")):
-        return True, xstrip[1:].split("-")[0].strip()
-      return False, x
-
-    def validLevel(i,x):
-      xstrip = x.lstrip()
-      if ":" in xstrip:
-        rest = xstrip.split(":")[1].strip()
-        return rest,rest
-      return xstrip,xstrip
-
 
     if self.extent.end.line != self.cursor.extent.start.line-1:
       # there is at least 1 (probably empty) line between the comment end and whatever it
@@ -358,56 +463,13 @@ class PetscDocString(object):
         "","",self.extent.end.line+1,
         highlight=False,
       )
+    self.checkValidSowingChars(linter)
     headings      = collections.OrderedDict()
     heading       = self.preambleHeading
-    startLine     = self.extent.start.line
     prevLineEmpty = True # start true since the first comment line should count as empty
-    sowingChars   = None
-    for offset,line in enumerate(self.raw.splitlines()):
+    for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
-      if lstrip.startswith("/*"):
-        assert sowingChars is None, "multiple comment begin lines found"
-        sowingChars = lstrip.split("/*")[1].split()
-        sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
-        try:
-          sowingChars = sowingChars[0]
-        except IndexError:
-          if any(keyword in self.raw for keyword in ("Level",".seealso","Input Parameter","Output Parameter","References","Synopsis")):
-            # if we find these keywords, likely this is a docstring but the implementer
-            # forgot to add the sowing characters
-            self.addErrorFromCursor(linter,
-              "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
-              line,line,offset+startLine,
-              formatargs=(sowingType,layType)
-            )
-            sowingChars = [sowingType]
-          else:
-            # not a sowing docstring? bail here
-            raise ParsingError
-        if sowingChars[0] not in self.sowingTypes:
-          raise ParsingError
-        sowingChars = "".join(sowingChars)
-        # check that nothing else is on the comment begin line
-        lsplit = lstrip.split()
-        if len(lsplit) != 1:
-          self.addErrorFromCursor(linter,
-            "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
-            " ".join(lsplit[1:]),line,offset+startLine
-          )
-        continue
-      if lstrip.endswith("*/"):
-        assert sowingChars is not None,"never found sowing begin identifier!"
-        endSowingChars = lstrip.split("*/")[0].split()
-        try:
-          endSowingChars = endSowingChars[-1]
-        except IndexError:
-          endSowingChars = ""
-        if sorted(endSowingChars) != sorted(sowingChars):
-          self.addErrorFromCursor(linter,
-            "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
-            endSowingChars,line,offset+startLine,
-            formatargs=(sowingChars[::-1],endSowingChars)
-          )
+      if lstrip.startswith("/*") or lstrip.endswith("*/"):
         continue
       # if the line is regular (not empty, or a parameter list), check that line is
       # indented correctly
@@ -415,31 +477,25 @@ class PetscDocString(object):
       if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
         self.addErrorFromCursor(linter,
           "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
-          " "*indent,line,offset+startLine,
+          " "*indent,line,lineno,
           formatargs=(indent,self.indent)
         )
       if ":" in lstrip:
         if not prevLineEmpty:
           self.addErrorFromCursor(linter,
-            "Must have empty line between sections:\n\n{}",
-            "","",offset+startLine, # print the next line
+            "Missing empty line between sections, must have one before this section:\n\n{}",
+            "","",lineno, # print the next line
             highlight=False
           )
-        splitheading = [s for s in lstrip.split(":") if s]
-        heading      = splitheading[0].strip().casefold()
-        if len(splitheading) != 1 and heading not in ("level",".seealso"):
-          self.addErrorFromCursor(linter,
-            "All headings with the exception of seelso and Level shall appear alone on a line; any content shall appear on the next line:\n\n{}",
-            ''.join(splitheading[1:]),line,offset+startLine
-          )
-
+        heading = [s for s in lstrip.split(":") if s][0].strip().casefold()
+        heading = heading.casefold()
         if "synopsis" in heading:
           heading = self.preambleHeading
         elif "parameter" in heading:
           heading = self.paramHeading
         elif "note" in heading:
           heading = self.noteHeading
-        elif "option" in heading:
+        elif "options database" in heading:
           heading = self.optionsHeading
         elif "seealso" in heading:
           heading = self.seealsoHeading
@@ -449,13 +505,14 @@ class PetscDocString(object):
           heading = self.referenceHeading
         else:
           raise RuntimeError(heading)
-      headings.setdefault(heading,default=defaultEntry())["all"].append((offset+startLine,line))
+      srcLine,_ = self.makeSourceRange(line,line,lineno)
+      headings.setdefault(heading,default={"all" : []})["all"].append((srcLine,line))
       prevLineEmpty = not line or line.isspace()
 
     postProcessHeading(headings,self.preambleHeading,validHeading,countMax=1)
     postProcessHeading(headings,self.paramHeading,validParams)
     postProcessHeading(headings,self.optionsHeading,validParams)
-    postProcessHeading(headings,self.levelHeading,validLevel,requiredName='level')
+    postProcessHeading(headings,self.levelHeading,validLevel,requiredName="Level")
     #headings.setdefault(self.seealsoHeading,default=self.defaultEntry)["names"] = tuple([name.strip() for _,sa in headings.setdefault(self.seealsoHeading,default=self.defaultEntry)["all"] for name in sa.split(",")])
     for head,data in headings.items():
       setattr(self,head,self.Section.create(data))
@@ -1455,11 +1512,9 @@ TODO:
 - implement fixits for stuff we can fix
 """
 """utilities for checking docstrings"""
-def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
-  try:
-    params = parsed.params
-  except AttributeError:
-    # docstring is missing both 'Input Parameters' and 'Output Parameters'
+def checkDocValidParameters(linter,cursor,docstring,fnargs):
+  params = docstring.getSection(linter,docstring.paramHeading)
+  if params is None:
     if len(fnargs) == 0:
       # if both are empty then the function has no arguments and we have nothing to do
       # here
@@ -1468,10 +1523,11 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
       import ipdb; ipdb.set_trace()
       raise RuntimeError("no params, but function has args; this should be handled")
 
+  docstring.checkValidSolitarySectionHeading(linter,params)
+  docstring.checkValidTitleCasedSectionHeading(linter,params)
   docStringArgs = params.names
   allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
-  errorMessage  = None
   for i,arg in enumerate(fnargs):
     argname = arg.name
     try:
@@ -1479,9 +1535,12 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
     except ValueError:
       # function argument isn't in the docstring
       begin,end = docStringArgs[0][0],docStringArgs[-1][0]
-      extent    = clx.SourceRange.from_locations(begin.start,end.start)
-      src = petscClangLinterUtil.getFormattedSourceFromSourceRange(extent,numContext=2,highlight=False)
-      errorMessage = "Undocumented parameter '{}' not found in docstring:\n\n{}".format(argname,src)
+      docstring.addErrorFromSourceRange(linter,
+        "Undocumented parameter '{}' not found in parameter section:\n\n{}",
+        clx.SourceRange.from_locations(begin.start,end.start),
+        formatargs=(argname,),
+        highlight=False
+      )
     else:
       # argument is in the docstring, lets see if its in the right place
       if i != idx and 0:
@@ -1491,24 +1550,23 @@ def checkDocFunctionArgumentsMatch(linter,cursor,parsed,fnargs):
         assert argname in allParamLeft
         src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numBeforeContext=idx+1,numAfterContext=2)
         errorMessage = "Docstring parameter out of order. Expected '{}' for as paramater #{}, found in position {} instead:\n\n{}".format(argname,i+1,idx+1,src)
-      allParamLeft.remove(argname)
-    finally:
-      if errorMessage is not None:
         linter.addErrorFromCursor(arg,errorMessage)
-        errorMessage = None
+      allParamLeft.remove(argname)
 
   for p in allParamLeft:
     idx = allParamNames.index(p)
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numContext=2)
-    errorMessage = "Extra docstring parameter '{}' not found in function arguments:\n\n{}".format(docStringArgs[idx][-1],src)
-    linter.addErrorFromCursor(cursor,errorMessage)
+    docstring.addErrorFromSourceRange(linter,
+      "Extra docstring parameter '{}' not found in function arguments:\n\n{}",
+      docStringArgs[idx][0],
+      formatargs=(docStringArgs[idx][-1])
+    )
   return
 
-def checkDocValidHeader(linter,cursor,parsed):
-  header         = parsed.preamble
+def checkDocValidSynopsis(linter,cursor,docstring):
+  header         = docstring.preamble
   allSymbolNames = header.names
   assert len(allSymbolNames)
-  headerRaw  = "\n".join(header.lines)
+  headerRaw  = "\n".join(s for _,s in header.lines)
   symbolName = allSymbolNames[0]
   cursorName = PetscCursor.getNameFromCursor(cursor)
   if symbolName[1] != cursorName:
@@ -1521,14 +1579,12 @@ def checkDocValidHeader(linter,cursor,parsed):
     linter.addErrorFromCursor(cursor,errorMessage)
   return
 
-def checkDocValidLevel(linter,cursor,parsed):
-  try:
-    level = parsed.level
-  except AttributeError:
-    # if no level, nothing to check here, error will already have been logged by
-    # PetscDocString.parse()
+def checkDocValidLevel(linter,cursor,docstring):
+  level = docstring.getSection(linter,docstring.levelHeading,requiredName="Level")
+  if level is None:
+    # if no level, nothing to check here, error will already have been logged
     return
-
+  docstring.checkValidTitleCasedSectionHeading(linter,level)
   levelNames  = level.names
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   if len(levelNames):
@@ -1542,21 +1598,16 @@ def checkDocValidLevel(linter,cursor,parsed):
         else:
           errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,", ".join(validLevels),src)
         linter.addErrorFromCursor(cursor,errorMessage)
-      for line in parsed.level.lines:
+      for _,line in docstring.level.lines:
         if (levelName in line) and (":" not in line):
           src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
           errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(src)
           linter.addErrorFromCursor(cursor,errorMessage)
-  else:
-    _,srcrange = PetscCursor.getCommentAndRangeFromCursor(cursor)
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(srcrange,numContext=2,highlight=False)
-    errorMessage = "Missing Level subheading. Expected 'Level: (one of) {}':\n\n{}".format(", ".join(validLevels),src)
-    linter.addErrorFromCursor(cursor,errorMessage)
   return
 
-def checkDocValidSeealso(linter,cursor,parsed):
+def checkDocValidSeealso(linter,cursor,docstring):
   import ipdb; ipdb.set_trace()
-  seealsoNames = parsed.seealso.names
+  seealsoNames = docstring.seealso.names
   allSeealsos  = tuple([s for _,s in sealsoNames])
   for other in seealsoNames:
     otherName = other[1]
@@ -1566,14 +1617,14 @@ def checkDocValidSeealso(linter,cursor,parsed):
 """Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,function):
   try:
-    parsed = PetscDocString.fromCursor(function).parse(linter)
+    docstring = PetscDocString.fromCursor(function).parse(linter)
   except ParsingError:
     return # error already logged with linter
   fnargs = linter.getArgumentCursors(function)
 
-  checkDocValidHeader(linter,function,parsed)
-  checkDocFunctionArgumentsMatch(linter,function,parsed,fnargs)
-  checkDocValidLevel(linter,function,parsed)
+  checkDocValidSynopsis(linter,function,docstring)
+  checkDocValidParameters(linter,function,docstring,fnargs)
+  checkDocValidLevel(linter,function,docstring)
   return
 
 
@@ -2300,7 +2351,8 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
   """
   index             = clx.Index.create()
   precompiledHeader = Path(petscDir,"include","petsc_ast_precompile.pch")
-  megaHeaderLines   = [("petsc.h","#include <petsc.h>")]
+  megaHeaderLines   = [("petscvec_kokkos.hpp","#include <petscvec_kokkos.hpp>"),
+                       ("petsc.h","#include <petsc.h>")]
   privateDirName    = Path(petscDir,"include","petsc","private")
   # build a megaheader from every header in private first
   for header in privateDirName.iterdir():
