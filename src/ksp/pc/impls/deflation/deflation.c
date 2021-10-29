@@ -420,15 +420,18 @@ PetscErrorCode PCDeflationGetPC(PC pc,PC *apc)
 /*
   x <- x + W*(W'*A*W)^{-1}*W'*r  = x + Q*r
 */
-static PetscErrorCode PCPreSolve_Deflation(PC pc,KSP ksp,Vec b, Vec x)
+static PetscErrorCode PCPreSolve_Deflation(PC pc,KSP ksp)
 {
   PC_Deflation     *def = (PC_Deflation*)pc->data;
   Mat              A;
-  Vec              r,w1,w2;
+  Vec              r,w1,w2,b,x;
   PetscBool        nonzero;
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&b);CHKERRQ(ierr);
+
   w1 = def->workcoarse[0];
   w2 = def->workcoarse[1];
   r  = def->work;
@@ -916,12 +919,12 @@ PETSC_EXTERN PetscErrorCode PCCreate_Deflation(PC pc)
   def->Wt            = NULL;
 
   pc->ops->apply          = PCApply_Deflation;
-  pc->ops->presolve       = PCPreSolve_Deflation;
   pc->ops->setup          = PCSetUp_Deflation;
   pc->ops->reset          = PCReset_Deflation;
   pc->ops->destroy        = PCDestroy_Deflation;
   pc->ops->setfromoptions = PCSetFromOptions_Deflation;
   pc->ops->view           = PCView_Deflation;
+  pc->ops->presolve       = PCPreSolve_Deflation;
 
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCDeflationSetInitOnly_C",PCDeflationSetInitOnly_Deflation);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCDeflationSetLevels_C",PCDeflationSetLevels_Deflation);CHKERRQ(ierr);

@@ -433,7 +433,7 @@ static PetscErrorCode PCView_HPDDM(PC pc, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PCPreSolve_HPDDM(PC pc, KSP ksp, Vec, Vec)
+static PetscErrorCode PCPreSolve_HPDDM(PC pc,KSP ksp)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
   PetscBool      flg;

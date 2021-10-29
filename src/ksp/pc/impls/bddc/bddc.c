@@ -1315,7 +1315,7 @@ PetscErrorCode PCBDDCSetDofsSplitting(PC pc,PetscInt n_is, IS ISForDofs[])
 }
 
 /*
-   PCPreSolve_BDDC - Changes the right hand side and (if necessary) the initial
+   PCPreSolve_BDDC_private - Changes the right hand side and (if necessary) the initial
                      guess if a transformation of basis approach has been selected.
 
    Input Parameter:
@@ -1327,7 +1327,7 @@ PetscErrorCode PCBDDCSetDofsSplitting(PC pc,PetscInt n_is, IS ISForDofs[])
      The interface routine PCPreSolve() is not usually called directly by
    the user, but instead is called by KSPSolve().
 */
-static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
+static PetscErrorCode PCPreSolve_BDDC_private(PC pc, KSP ksp, Vec rhs, Vec x)
 {
   PetscErrorCode ierr;
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
@@ -1528,8 +1528,20 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PCPreSolve_BDDC(PC pc,KSP ksp)
+{
+  PetscErrorCode ierr;
+  Vec            rhs,x;
+
+  PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
+  ierr = PCPreSolve_BDDC_private(pc,ksp,rhs,x);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*
-   PCPostSolve_BDDC - Changes the computed solution if a transformation of basis
+   PCPostSolve_BDDC_private - Changes the computed solution if a transformation of basis
                      approach has been selected. Also, restores rhs to its original state.
 
    Input Parameter:
@@ -1541,7 +1553,7 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
      The interface routine PCPostSolve() is not usually called directly by
      the user, but instead is called by KSPSolve().
 */
-static PetscErrorCode PCPostSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
+static PetscErrorCode PCPostSolve_BDDC_private(PC pc, KSP ksp, Vec rhs, Vec x)
 {
   PetscErrorCode ierr;
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
@@ -1569,6 +1581,18 @@ static PetscErrorCode PCPostSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
     /* reset flag for exact dirichlet trick */
     pcbddc->exact_dirichlet_trick_app = PETSC_FALSE;
   }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCPostSolve_BDDC(PC pc,KSP ksp)
+{
+  PetscErrorCode ierr;
+  Vec            rhs,x;
+
+  PetscFunctionBegin;
+  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
+  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
+  ierr = PCPostSolve_BDDC_private(pc,ksp,rhs,x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2374,7 +2398,7 @@ static PetscErrorCode PCBDDCMatFETIDPGetRHS_BDDC(Mat fetidp_mat, Vec standard_rh
      change of basis for physical rhs if needed
      It also changes the rhs in case of dirichlet boundaries
   */
-  ierr = PCPreSolve_BDDC(mat_ctx->pc,NULL,pcbddc->original_rhs,NULL);CHKERRQ(ierr);
+  ierr = PCPreSolve_BDDC_private(mat_ctx->pc,NULL,pcbddc->original_rhs,NULL);CHKERRQ(ierr);
   if (pcbddc->ChangeOfBasisMatrix) {
     ierr = MatMultTranspose(pcbddc->ChangeOfBasisMatrix,pcbddc->original_rhs,pcbddc->work_change);CHKERRQ(ierr);
     work = pcbddc->work_change;
@@ -2525,7 +2549,7 @@ static PetscErrorCode PCBDDCMatFETIDPGetSolution_BDDC(Mat fetidp_mat, Vec fetidp
   if (pcbddc->ChangeOfBasisMatrix) {
     ierr = MatMult(pcbddc->ChangeOfBasisMatrix,work,standard_sol);CHKERRQ(ierr);
   }
-  ierr = PCPostSolve_BDDC(mat_ctx->pc,NULL,NULL,standard_sol);CHKERRQ(ierr);
+  ierr = PCPostSolve_BDDC_private(mat_ctx->pc,NULL,NULL,standard_sol);CHKERRQ(ierr);
   if (mat_ctx->g2g_p) {
     ierr = VecScatterBegin(mat_ctx->g2g_p,fetidp_flux_sol,standard_sol,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
     ierr = VecScatterEnd(mat_ctx->g2g_p,fetidp_flux_sol,standard_sol,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
@@ -3058,9 +3082,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
   pc->ops->applyrichardson     = NULL;
   pc->ops->applysymmetricleft  = NULL;
   pc->ops->applysymmetricright = NULL;
+  pc->ops->reset               = PCReset_BDDC;
   pc->ops->presolve            = PCPreSolve_BDDC;
   pc->ops->postsolve           = PCPostSolve_BDDC;
-  pc->ops->reset               = PCReset_BDDC;
 
   /* composing function */
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCBDDCSetDiscreteGradient_C",PCBDDCSetDiscreteGradient_BDDC);CHKERRQ(ierr);
