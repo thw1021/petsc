@@ -255,7 +255,7 @@ class Configure(config.base.Configure):
     '''returns true if the compiler is gcc-11.0.x or later'''
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output +  error
+      output = output + error
       import re
       strmatch = re.match('gcc\s+\(.*\)\s+(\d+)\.(\d+)',output)
       if strmatch:
@@ -271,7 +271,7 @@ class Configure(config.base.Configure):
     '''returns true if the compiler is gfortran-4.5.x'''
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output +  error
+      output = output + error
       import re
       if re.match(r'GNU Fortran \(.*\) (4.5.\d+|4.6.0 20100703)', output):
         if log: log.write('Detected GFortran45x compiler\n')
@@ -284,7 +284,7 @@ class Configure(config.base.Configure):
     '''returns true if the compiler is gfortran-4.6.x or later'''
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output +  error
+      output = output + error
       import re
       strmatch = re.match('GNU Fortran\s+\(.*\)\s+(\d+)\.(\d+)',output)
       if strmatch:
@@ -300,7 +300,7 @@ class Configure(config.base.Configure):
     '''returns true if the compiler is gfortran-4.7.x or later'''
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output +  error
+      output = output + error
       import re
       strmatch = re.match('GNU Fortran\s+\(.*\)\s+(\d+)\.(\d+)',output)
       if strmatch:
@@ -316,7 +316,7 @@ class Configure(config.base.Configure):
     '''returns true if the compiler is gfortran-10.0.x or later'''
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output +  error
+      output = output + error
       import re
       strmatch = re.match('GNU Fortran\s+\(.*\)\s+(\d+)\.(\d+)',output)
       if strmatch:
@@ -328,11 +328,27 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
+  def isGfortran110plus(compiler, log):
+    '''returns true if the compiler is gfortran-11.0.x or later'''
+    try:
+      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
+      output = output + error
+      import re
+      strmatch = re.match('GNU Fortran\s+\(.*\)\s+(\d+)\.(\d+)',output)
+      if strmatch:
+        VMAJOR,VMINOR = strmatch.groups()
+        if (int(VMAJOR),int(VMINOR)) >= (11,0):
+          if log: log.write('Detected GFortran110plus compiler\n')
+          return 1
+    except RuntimeError:
+      pass
+
+  @staticmethod
   def isGfortran8plus(compiler, log):
     '''returns true if the compiler is gfortran-8 or later'''
     try:
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output +  error
+      output = output + error
       import re
       strmatch = re.match('GNU Fortran\s+\(.*\)\s+(\d+)\.(\d+)',output)
       if strmatch:
@@ -553,6 +569,18 @@ class Configure(config.base.Configure):
     if v < (10,15,0): return 0
     if log: log.write('Detected Darwin/MacOSX Catalina OS\n')
     return 1
+
+  @staticmethod
+  def isDarwinARM(log):
+    '''Returns true if system is Darwin/MacOSX with an ARM chip'''
+    if config.setCompilers.Configure.isDarwin(log):
+      (output, error, status) = config.base.Configure.executeShellCommand('uname -m', log = log)
+      if not status:
+        word = output.lower()
+        found = (output.lower().strip() == 'arm64')
+        if found:
+          if log: log.write('Detected Darwin/MacOSX OS with an ARM chip\n\n')
+        return found
 
   @staticmethod
   def isFreeBSD(log):
