@@ -3677,10 +3677,10 @@ int main(int argc, char **argv)
     test:
       requires: mkl_pardiso double
       suffix: benign_deluxe_mkl
-      args: -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mkl_pardiso -snes_rtol 1.e-7
+      args: -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mkl_pardiso -snes_rtol 1.e-7 -ksp_monitor
     test:
       requires: mkl_pardiso double
       suffix: benign_deluxe_adaptive_mkl
-      args: -pc_bddc_adaptive_threshold 1.7 -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mkl_pardiso -snes_rtol 1.e-7
+      args: -pc_bddc_adaptive_threshold 1.7 -pc_bddc_use_deluxe_scaling -pc_bddc_deluxe_zerorows -sub_schurs_mat_solver_type mkl_pardiso -snes_rtol 1.e-7 -ksp_monitor
 
 TEST*/
