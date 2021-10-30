@@ -63,7 +63,17 @@ class Configure(config.package.CMakePackage):
     if self.mpi.found:
       args.append('-DENABLE_MPI=ON')
 
+    # Raja documents these flags though they may not exist 
     args.append('-DRAJA_ENABLE_TESTS=OFF')
+    args.append('-DRAJA_ENABLE_BENCHMARKS=OFF')
+    args.append('-DRAJA_ENABLE_EXAMPLES=OFF')
+    args.append('-DRAJA_ENABLE_EXERCISES=OFF')
+    # submodule BLT has the following flags
+    args.append('-DENABLE_TESTS=OFF')
+    args.append('-DENABLE_BENCHMARKS=OFF')
+    args.append('-DENABLE_EXAMPLES=OFF')
+    args.append('-DENABLE_EXERCISES=OFF')
+    args.append('-DENABLE_CTEST=OFF')
 
     if self.cuda.found:
       args.append('-DENABLE_CUDA=ON')
@@ -71,13 +81,15 @@ class Configure(config.package.CMakePackage):
 
       with self.Language('CUDA'):
         args.append('-DCMAKE_CUDA_COMPILER='+self.getCompiler())
-        args.append('-DCMAKE_CUDA_FLAGS="'+self.getCompilerFlags()+'"')
+        # Raja cmake adds the -ccbin and -std therefor remove them from provided options to prevent error from double use
+        args.append('-DCMAKE_CUDA_FLAGS="'+' '.join(self.rmArgsStartsWith(self.rmArgsPair(self.getCompilerFlags().split(' '),['-ccbin']),['-std=']))+'"')
 
       if hasattr(self.cuda,'cudaArch'):
         generation = 'sm_'+self.cuda.cudaArch
       else:
         raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
       args.append('-DCUDA_ARCH='+generation)
+
     elif self.hip.found:
       raise RuntimeError('No support in downloader for HIP')
 
