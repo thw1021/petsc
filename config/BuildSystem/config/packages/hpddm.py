@@ -28,8 +28,9 @@ class Configure(config.package.Package):
     self.mpi             = framework.require('config.packages.MPI',self)
     self.blasLapack      = framework.require('config.packages.BlasLapack',self)
     self.slepc           = framework.require('config.packages.slepc',self)
+    self.flibs           = framework.require('config.packages.flibs',self)
     self.deps            = [self.blasLapack,self.cxxlibs,self.mathlib]
-    self.odeps           = [self.mpi,self.slepc]
+    self.odeps           = [self.mpi,self.slepc,self.flibs]
     return
 
   def Install(self):
@@ -73,6 +74,8 @@ class Configure(config.package.Package):
           #ldflags += self.libraries.toString(self.slepc.dlib)
           dinclude = [incDir]+self.dinclude+[os.path.join(PETSC_DIR,'include'),os.path.join(PETSC_DIR,PETSC_ARCH,'include'),os.path.join(self.petscdir.dir,'include'),os.path.join(self.packageDir,'include')]
           dlib = [os.path.join(libDir,'libslepc.'+self.setCompilers.sharedLibraryExt)]
+          if self.flibs.found and self.setCompilers.isDarwinARM(self.log) and config.setCompilers.Configure.isGfortran110plus:
+            dlib = self.flibs.lib+dlib # need to get the path to -lgcc_s.1.1 on arm64-apple
           cxxflags += ' '+self.headers.toStringNoDupes(dinclude)
           ldflags += ' '+self.libraries.toStringNoDupes(dlib)
           slepcbuilddep = 'slepc-install slepc-build'
