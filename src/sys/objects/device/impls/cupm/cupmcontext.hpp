@@ -299,7 +299,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceCon
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
-
   if (PetscUnlikely(dci->timerInUse)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   dci->timerInUse = PETSC_TRUE;
 #endif

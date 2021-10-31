@@ -75,6 +75,8 @@ template <DeviceType T> int Device<T>::defaultDevice_ = PETSC_CUPM_DEVICE_NONE;
 
 } // namespace Device
 
+} // namespace Impl
+
 } // namespace Petsc
 
 #endif /* PETSCCUPMDEVICE_HPP */
