@@ -7,11 +7,17 @@
 namespace Petsc
 {
 
+namespace Impl
+{
+
 // do all of this with macros to enforce that both CUDA and HIP implementations both have
 // things defined. If you for example implement something on the HIP side but forget to
 // implement it on the CUDA side you'll get an error.
 
 // need these for the indirection when building the if_0 and if_1 variants of the macro
+#undef CAT_
+#undef CAT
+
 #define CAT_(x,y) x ## y
 #define CAT(x,y) CAT_(x,y)
 
@@ -63,5 +69,7 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE(MemcpyDeviceToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(MemcpyDeviceToDevice)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(MemcpyHostToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE(MemcpyDefault)
+
+} // namespace Impl
 
 } // namespace Petsc
