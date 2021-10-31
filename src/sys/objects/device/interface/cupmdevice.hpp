@@ -17,6 +17,9 @@ namespace Petsc
 
 #define PETSC_CUPM_DEVICE_NONE -3
 
+namespace Impl
+{
+
 template <CUPMDeviceType T>
 class CUPMDevice : CUPMInterface<T>
 {
@@ -79,6 +82,8 @@ std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEV
 CUPMDevice<T>::_devices = { };
 
 template <CUPMDeviceType T> int CUPMDevice<T>::_defaultDevice = PETSC_CUPM_DEVICE_NONE;
+
+} // namespace Impl
 
 } // namespace Petsc
 

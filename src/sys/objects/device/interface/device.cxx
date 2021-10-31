@@ -1,6 +1,6 @@
 #include "cupmdevice.hpp" /* I "petscdevice.h" */
 
-using namespace Petsc;
+using namespace Petsc::Impl;
 
 /* note to anyone adding more classes, the name must be ALL_CAPS_SHORT_NAME + Device exactly to
  * be picked up by the switch-case macros below. */
@@ -39,9 +39,6 @@ static_assert(
            "PETSc was seemingly configured for PetscDeviceType %s but " \
            "we've fallen through all cases in a switch",                \
            PetscDeviceTypes[type])
-
-#define CAT_(a,...) a ## __VA_ARGS__
-#define CAT(a,...)  CAT_(a,__VA_ARGS__)
 
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED__0(IMPLS,func,...)
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED__1(IMPLS,func,...)           \
@@ -180,7 +177,7 @@ PetscErrorCode PetscDeviceConfigure(PetscDevice device)
   Collective on viewer, Asynchronous
 
   Input Parameter:
-+ device - The PetscDevice to configure
++ device - The PetscDevice to view
 - viewer - The PetscViewer to view the device with (NULL for PETSC_VIEWER_STDOUT_WORLD)
 
   Level: beginner
@@ -320,7 +317,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
     const auto PetscDeviceCheckAllDestroyedAfterFinalize = [](){
       PetscFunctionBegin;
       for (const auto &device : defaultDevices) {
-        if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of type '%s' had reference count %D and was not type name(args) const;ully destroyed during PetscFinalize()",PetscDeviceTypes[device->type],device->refcnt);
+        if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of type '%s' had reference count %D and was not fully destroyed during PetscFinalize()",PetscDeviceTypes[device->type],device->refcnt);
       }
       PetscFunctionReturn(0);
     };
@@ -396,7 +393,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 
     ierr = PetscOptionsBegin(comm,PETSC_NULLPTR,"PetscDevice Options","Sys");CHKERRQ(ierr);
     ierr = PetscOptionsEList("-device_enable","How (or whether) to initialize PetscDevices","PetscDeviceInitializeFromOptions_Internal()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initIdx],&initIdx,PETSC_NULLPTR);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",defaultDevice,&defaultDevice,PETSC_NULLPTR,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate()",defaultDevice,&defaultDevice,PETSC_NULLPTR,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
     ierr = PetscOptionsBool("-device_view","Display device information and assignments (forces eager initialization)",PETSC_NULLPTR,defaultView,&defaultView,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
     if (initIdx == PETSC_DEVICE_INIT_NONE) {
