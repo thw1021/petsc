@@ -340,20 +340,23 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceBinaryMemOp_Internal(PetscDeviceContext dctx, void * PETSC_RESTRICT src, const void * PETSC_RESTRICT dest, size_t n, PetscDeviceMemOpType op)
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceBinaryMemOp_Internal(PetscDeviceContext dctx, void * PETSC_RESTRICT dest, const void * PETSC_RESTRICT src, size_t n, PetscDeviceMemOpType op)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   if (!n) PetscFunctionReturn(0);
-  ierr = (*dctx->ops->binarymemop)(dctx,src,dest,n,op);CHKERRQ(ierr);
+  ierr = (*dctx->ops->binarymemop)(dctx,dest,src,n,op);CHKERRQ(ierr);
   switch (op) {
   case PETSC_DEVICE_MEMCPY_HTOD:
     ierr = PetscLogCpuToGpu(n);CHKERRQ(ierr);
     break;
   case PETSC_DEVICE_MEMCPY_DTOH:
     ierr = PetscLogGpuToCpu(n);CHKERRQ(ierr);
+    break;
+  case PETSC_DEVICE_MEMCPY_DTOD:
+    break;
   default:
     break;
   }
@@ -373,9 +376,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceBinaryMemOp_Internal(PetscDeviceCo
 #define PetscDeviceBinaryMemOp_Internal(dctx,src,dest,n,op)               0
 #endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
 
-#define PetscDeviceArraycpy(dctx,src,dest,cnt,op)                       \
+#define PetscDeviceArraycpy(dctx,dest,src,cnt,op)                       \
   ((sizeof(*(src)) != sizeof(*(dest))) ||                               \
-   PetscDeviceBinaryMemOp_Internal(dctx,src,dest,(size_t)(cnt)*sizeof(*(src)),op))
+   PetscDeviceBinaryMemOp_Internal(dctx,dest,src,(size_t)(cnt)*sizeof(*(src)),op))
 
 #if PetscDefined(HAVE_CUDA)
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
