@@ -14,6 +14,9 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 namespace Petsc
 {
 
+namespace Impl
+{
+
 // internal "impls" class for CUPMDevice. Each instance represents a single cupm device
 template <CUPMDeviceType T>
 class CUPMDevice<T>::CUPMDeviceInternal
@@ -236,6 +239,9 @@ PetscErrorCode CUPMDevice<T>::__finalize() noexcept
 template <CUPMDeviceType T>
 static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
 
+#undef CAT_
+#undef CAT
+
 #define CAT_(x,y) x ## y
 #define CAT(x,y)  CAT_(x,y)
 
@@ -283,7 +289,7 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
 
     ierr = PetscOptionsBegin(comm,nullptr,std::get<0>(options),"Sys");CHKERRQ(ierr);
     ierr = PetscOptionsEList(std::get<1>(options),"How (or whether) to initialize a device","CUPMDevice<CUPMDeviceType>::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initTypeCUPM],&initTypeCUPM,nullptr);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt(std::get<2>(options),"Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt(std::get<2>(options),"Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,std::numeric_limits<decltype(_defaultDevice)>::max());CHKERRQ(ierr);
     ierr = PetscOptionsBool(std::get<3>(options),"Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
@@ -388,5 +394,7 @@ template class CUPMDevice<CUPMDeviceType::CUDA>;
 #if PetscDefined(HAVE_HIP)
 template class CUPMDevice<CUPMDeviceType::HIP>;
 #endif
+
+} // namespace Impl
 
 } // namespace Petsc
