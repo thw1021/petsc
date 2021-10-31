@@ -13,11 +13,14 @@
 namespace Petsc
 {
 
+namespace Impl
+{
+
 namespace detail
 {
 
 // for tag-based dispatch of handle retrieval
-template <typename HT> struct HandleTag { };
+template <typename T> struct HandleTag { };
 
 } // namespace detail
 
@@ -308,7 +311,6 @@ inline PetscErrorCode CUPMContext<T>::beginTimer(PetscDeviceContext dctx) noexce
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
-
   if (PetscUnlikely(dci->timerInUse)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   dci->timerInUse = PETSC_TRUE;
 #endif
@@ -358,12 +360,12 @@ std::array<typename CUPMContext<T>::cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES>
 using CUPMContextCuda = CUPMContext<CUPMDeviceType::CUDA>;
 using CUPMContextHip  = CUPMContext<CUPMDeviceType::HIP>;
 
+} // namespace Impl
+
 } // namespace Petsc
 
 // shorthand for what is an EXTREMELY long name
-#define PetscDeviceContext_(IMPLS) Petsc::CUPMContext<Petsc::CUPMDeviceType::IMPLS>::PetscDeviceContext_IMPLS
-
-// shorthand for casting dctx->data to the appropriate object to access the handles
-#define PDC_IMPLS_STATIC_CAST(IMPLS,obj) static_cast<PetscDeviceContext_(IMPLS) *>((obj)->data)
+#define PetscDeviceContext_(IMPLS)                                      \
+  Petsc::Impl::CUPMContext<Petsc::CUPMDeviceType::IMPLS>::PetscDeviceContext_IMPLS
 
 #endif // PETSCDEVICECONTEXTCUDA_HPP
