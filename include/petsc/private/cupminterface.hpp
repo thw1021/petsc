@@ -2,13 +2,15 @@
 #define PETSCCUPMINTERFACE_HPP
 
 #include <petsc/private/deviceimpl.h>
-#include <petsc/private/traithelpers.hpp>
+#include <petsc/private/petsctypetraits.hpp>
 
 #if defined(__cplusplus)
 
 #if !PetscDefined(HAVE_CXX_DIALECT_CXX11)
-#error CUPMInterface requires c++11
-#endif // PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#  error CUPMInterface requires c++11
+#endif
+
+#include <array>
 
 namespace Petsc
 {
@@ -20,7 +22,7 @@ enum class CUPMDeviceType : int {
   HIP
 };
 
-static constexpr const char *const CUPMDeviceTypes[] = {
+static constexpr std::array<const char*const,5> CUPMDeviceTypes = {
   "cuda",
   "hip",
   "CUPMDeviceType",
@@ -28,9 +30,11 @@ static constexpr const char *const CUPMDeviceTypes[] = {
   nullptr
 };
 
-#if defined(CHKERRCUPM)
-#  error "Invalid redefinition of CHKERRCUPM, perhaps change order of header-file includes"
-#endif
+namespace Impl
+{
+
+namespace detail
+{
 
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
@@ -45,27 +49,29 @@ static constexpr const char *const CUPMDeviceTypes[] = {
     }                                                                   \
   } while (0)
 
-// A templated C++ struct that defines the entire CUPM interface. Use of templating vs
-// preprocessor macros allows us to use both interfaces simultaneously as well as easily
-// import them into classes.
-template <CUPMDeviceType T> struct CUPMInterface;
+#undef CAT_
+#undef CAT
 
-#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT_(cupmprefix,mapped,prefix,original) \
-  static const auto cupmprefix ## mapped = prefix ## original
+#define CAT_(x,y) x ## y
+#define CAT(x,y)  CAT_(x,y)
 
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupmprefix,mapped,prefix,original) \
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT_(cupmprefix,mapped,prefix,original)
+  static const auto CAT(cupmprefix,mapped) = CAT(prefix,original)
 
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE(common)                         \
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,common,PETSC_CUPM_STEM,common)
 
-#define PETSC_CUPM_ALIAS_FUNCTION_EXACT_(cupmprefix,prefix,stem)        \
-  PETSC_ALIAS_FUNCTION(static constexpr cupmprefix ## stem, prefix ## stem)
-
 #define PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmprefix,prefix,stem) \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT_(cupmprefix,prefix,stem)
+  PETSC_ALIAS_FUNCTION(static constexpr CAT(cupmprefix,stem), CAT(prefix,stem))
 
 #define PETSC_CUPM_ALIAS_FUNCTION(stem) PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,PETSC_CUPM_STEM,stem)
+
+} // namespace detail
+
+// A templated C++ struct that defines the entire CUPM interface. Use of templating vs
+// preprocessor macros allows us to use both interfaces simultaneously as well as easily
+// import them into classes.
+template <CUPMDeviceType T> struct CUPMInterface;
 
 #if PetscDefined(HAVE_CUDA)
 #define PETSC_CUPM_STEM cuda
@@ -78,7 +84,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA>
   { return PETSC_DEVICE_CUDA; }
 
   PETSC_NODISCARD static constexpr const char* cupmName() noexcept
-  { return CUPMDeviceTypes[static_cast<int>(type)]; }
+  { return std::get<util::integral_value(type)>(CUPMDeviceTypes); }
 
   // typedefs
   using cupmError_t        = cudaError_t;
@@ -156,7 +162,7 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   { return PETSC_DEVICE_HIP; }
 
   PETSC_NODISCARD static constexpr const char* cupmName() noexcept
-  { return CUPMDeviceTypes[static_cast<int>(type)]; }
+  { return std::get<util::integral_value(type)>(CUPMDeviceTypes); }
 
   // typedefs
   using cupmError_t        = hipError_t;
@@ -218,6 +224,8 @@ struct CUPMInterface<CUPMDeviceType::HIP>
 };
 #undef PETSC_CUPM_STEM
 #endif // PetscDefined(HAVE_HIP)
+
+} // namespace Impl
 
 } // namespace Petsc
 
