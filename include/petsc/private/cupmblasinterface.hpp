@@ -7,15 +7,12 @@
 #if defined(__cplusplus)
 
 #if !PetscDefined(HAVE_CXX_DIALECT_CXX11) || (__cplusplus < 201103L)
-#  error CUPMBlasInterface requires c++11
+#  error "CUPMBlasInterface requires c++11"
 #endif
 
 #include <array>
 
 namespace Petsc
-{
-
-namespace detail
 {
 
 static constexpr std::array<const char*const,5> CUPMBlasTypes = {
@@ -26,11 +23,16 @@ static constexpr std::array<const char*const,5> CUPMBlasTypes = {
   nullptr
 };
 
+namespace detail
+{
+
 #if PetscDefined(USE_COMPLEX)
 #  if PetscDefined(USE_REAL_SINGLE)
-#    define PETSC_CUPMBLAS_FP_TYPE C
+#    define PETSC_CUPMBLAS_FP_TYPE        C
+#    define PETSC_CUPMBLAS_FP_RETURN_TYPE c
 #  elif PetscDefined(USE_REAL_DOUBLE)
-#    define PETSC_CUPMBLAS_FP_TYPE Z
+#    define PETSC_CUPMBLAS_FP_TYPE        Z
+#    define PETSC_CUPMBLAS_FP_RETURN_TYPE z
 #  endif
 #else
 #  if PetscDefined(USE_REAL_SINGLE)
@@ -38,14 +40,12 @@ static constexpr std::array<const char*const,5> CUPMBlasTypes = {
 #  elif PetscDefined(USE_REAL_DOUBLE)
 #    define PETSC_CUPMBLAS_FP_TYPE D
 #  endif
+#  define PETSC_CUPMBLAS_FP_RETURN_TYPE
 #endif // USE_COMPLEX
 
 #if !defined(PETSC_CUPMBLAS_FP_TYPE)
 #  error Unsupported CUPM Blas floating-point type
 #endif
-
-#define CAT_(x,y) x ## y
-#define CAT(x,y)  CAT_(x,y)
 
 #define PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE_EXACT(CUPMPREFIX,MAPPED,PREFIX,ORIGINAL) \
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(CUPMPREFIX,MAPPED,PREFIX,ORIGINAL)
@@ -53,8 +53,11 @@ static constexpr std::array<const char*const,5> CUPMBlasTypes = {
 #define PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE(COMMON)                     \
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE_EXACT(CUPMBLAS,COMMON,PETSC_CUPMBLAS_STEM_U,COMMON)
 
-#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmprefix,prefix,blasfptype,suffix) \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT(CAT(cupmprefix,X),CAT(prefix,blasfptype),suffix)
+#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmprefix,prefix,FPTYPE,suffix) \
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(CAT(cupmprefix,X),CAT(prefix,FPTYPE),suffix)
+
+#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(suffix)     \
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_STEM,CAT(PETSC_CUPMBLAS_FP_TYPE,PETSC_CUPMBLAS_FP_RETURN_TYPE),suffix)
 
 #define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(suffix)                      \
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_STEM,PETSC_CUPMBLAS_FP_TYPE,suffix)
@@ -84,6 +87,9 @@ static constexpr std::array<const char*const,5> CUPMBlasTypes = {
 
 } // namespace detail
 
+namespace Impl
+{
+
 template <CUPMDeviceType T> struct CUPMBlasInterface;
 
 #if PetscDefined(HAVE_CUDA)
@@ -95,7 +101,7 @@ struct CUPMBlasInterface<CUPMDeviceType::CUDA> : CUPMInterface<CUPMDeviceType::C
   PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,CUPMDeviceType::CUDA);
 
   PETSC_NODISCARD static constexpr const char* cupmBlasName() noexcept
-  { return std::get<static_cast<int>(type)>(detail::CUPMBlasTypes); }
+  { return std::get<util::integral_value(type)>(CUPMBlasTypes); }
 
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,PetscCUBLAS,GetErrorName);
 
@@ -117,6 +123,18 @@ struct CUPMBlasInterface<CUPMDeviceType::CUDA> : CUPMInterface<CUPMDeviceType::C
   // level 1 BLAS
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(axpy);
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(scal);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(dot);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(swap);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(nrm2);
+
+  // level 2 BLAS
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemv);
+
+  // level 3 BLAS
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemm);
+
+  // BLAS extensions
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(geam);
 
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) noexcept
   {
@@ -172,7 +190,7 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : CUPMInterface<CUPMDeviceType::HI
   PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,CUPMDeviceType::HIP);
 
   PETSC_NODISCARD static constexpr const char* cupmBlasName() noexcept
-  { return std::get<static_cast<int>(type)>(detail::CUPMBlasTypes); }
+  { return std::get<util::integral_value(type)>(CUPMBlasTypes); }
 
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,PetscHIPBLAS,GetErrorName);
 
@@ -192,8 +210,20 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : CUPMInterface<CUPMDeviceType::HI
   PETSC_CUPMBLAS_ALIAS_FUNCTION(SetStream);
 
   // level 1 BLAS
-  PETSC_CUPMBLAS_ALIAS_FUNCTION(axpy);
-  PETSC_CUPMBLAS_ALIAS_FUNCTION(scal);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(axpy);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(scal);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(dot);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(swap);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(nrm2);
+
+  // level 2 BLAS
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemv);
+
+  // level 3 BLAS
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemm);
+
+  // BLAS extensions
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(geam);
 
   PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) noexcept
   {
@@ -247,15 +277,26 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : CUPMInterface<CUPMDeviceType::HI
   using base_name::cupmBlasDestroy;                                     \
   using base_name::cupmBlasGetStream;                                   \
   using base_name::cupmBlasSetStream;                                   \
-  /* Level 1 BLAS */                                                    \
+  /* level 1 BLAS */                                                    \
   using base_name::cupmBlasXaxpy;                                       \
-  using base_name::cupmBlasXscal
+  using base_name::cupmBlasXscal;                                       \
+  using base_name::cupmBlasXdot;                                        \
+  using base_name::cupmBlasXswap;                                       \
+  using base_name::cupmBlasXnrm2;                                       \
+  /* level 2 BLAS */                                                    \
+  using base_name::cupmBlasXgemv;                                       \
+  /* level 3 BLAS */                                                    \
+  using base_name::cupmBlasXgemm;                                       \
+  /* BLAS extensions */                                                 \
+  using base_name::cupmBlasXgeam
 
 #define PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING(base_name,Tp)   \
   PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING_(base_name,Tp)
 
+} // namespace Impl
+
 } // namespace Petsc
 
-#endif /* defined(__cplusplus) */
+#endif // defined(__cplusplus)
 
-#endif /* PETSCCUPMBLASINTERFACE_HPP */
+#endif // PETSCCUPMBLASINTERFACE_HPP
