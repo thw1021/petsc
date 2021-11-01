@@ -1,0 +1,15 @@
+DM Object: box 2 MPI processes
+  type: plex
+box in 2 dimensions:
+  0-cells: 15 15
+  1-cells: 22 22
+  2-cells: 8 8
+Labels:
+  depth: 3 strata with value/size (0 (15), 1 (22), 2 (8))
+  celltype: 3 strata with value/size (0 (15), 1 (22), 4 (8))
+  marker: 3 strata with value/size (1 (9), 2 (5), 4 (5))
+  Face Sets: 3 strata with value/size (1 (6), 2 (3), 4 (3))
+  markerBottom: 1 strata with value/size (1 (9))
+  markerRight: 1 strata with value/size (1 (5))
+  markerTop: 0 strata with value/size ()
+  markerLeft: 1 strata with value/size (1 (5))
