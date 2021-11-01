@@ -407,7 +407,7 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
     /* No need to do the extra function lookup and event record if the stream were waiting on isn't doing anything */
     ierr = PetscDeviceContextValidateIdle_Internal(dctxb);CHKERRQ(ierr);
   } else {
-    ierr = (*dctxa->ops->waitforctx)(dctxa,dctxb);CHKERRQ(ierr);
+    ierr = (*dctxa->ops->waitforcontext)(dctxa,dctxb);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
