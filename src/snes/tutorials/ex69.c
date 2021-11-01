@@ -3658,8 +3658,8 @@ int main(int argc, char **argv)
   #BDDC with benign trick
   testset:
     suffix: q2p1bddc
-    output_file: output/ex69_q2p1fetidp_deluxe.out
-    nsize: 5
+    output_file: output/ex69_q2p1bddc_n2.out
+    nsize: 2
     args: -dm_distribute -dm_plex_simplex 0 -dm_plex_separate_marker -dm_refine_pre 1 -dm_mat_type is -dm_view -petscpartitioner_type simple -vel_petscspace_degree 2 -pres_petscspace_degree 1 -pres_petscspace_poly_tensor 0 -pres_petscdualspace_lagrange_continuity 0 -pres_petscdualspace_lagrange_node_endpoints 0 -petscds_jac_pre 0 -snes_error_if_not_converged -ksp_error_if_not_converged -ksp_type cg -ksp_norm_type natural -pc_type bddc -pc_bddc_benign_trick -pc_bddc_nonetflux -pc_bddc_detect_disconnected -pc_bddc_vertex_size 2 -pc_bddc_coarse_redundant_pc_type svd -pc_bddc_use_qr_single
     test:
       requires: double
