@@ -329,16 +329,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceConte
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-inline PetscErrorCode CUPMContext<T>::binarymemop(PetscDeviceContext dctx, void * PETSC_RESTRICT dest, const void * PETSC_RESTRICT src, std::size_t n, PetscDeviceMemOpType op) noexcept
-{
-  cupmError_t cerr;
-
-  PetscFunctionBegin;
-  cerr = cupmMemcpyAsync(dest,src,n,__mem_op_to_cupmmemcpy_t(op),__impls_cast(dctx)->stream);CHKERRCUPM(cerr);
-  PetscFunctionReturn(0);
-}
-
 // initialize the static member variables
 template <DeviceType T> bool DeviceContext<T>::initialized_ = false;
 

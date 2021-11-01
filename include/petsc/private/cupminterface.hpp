@@ -386,7 +386,6 @@ struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(MallocAsync);
 #else
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
-  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
 #endif
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
