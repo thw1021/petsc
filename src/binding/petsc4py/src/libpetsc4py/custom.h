@@ -80,6 +80,9 @@ PetscErrorCode SNESConverged(SNES snes,
 #define PETSC_ERR_PYTHON ((PetscErrorCode)(-1))
 #endif
 
+#define PetscERRORNoArg(comm,FUNCT,n,t,msg) \
+        PetscError(comm,__LINE__,FUNCT,__FILE__,n,t,msg)
+
 #define PetscERROR(comm,FUNCT,n,t,msg,arg) \
         PetscError(comm,__LINE__,FUNCT,__FILE__,n,t,msg,arg)
 

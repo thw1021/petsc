@@ -45,6 +45,7 @@ cdef extern from * nogil:
     enum: PETSC_ERR_USER
     enum: PETSC_ERROR_INITIAL
     enum: PETSC_ERROR_REPEAT
+    PetscErrorCode PetscERRORNoArg(MPI_Comm,char[],PetscErrorCode,int,char[])
     PetscErrorCode PetscERROR(MPI_Comm,char[],PetscErrorCode,int,char[],char[])
 
     ctypedef enum PetscBool:
@@ -146,7 +147,7 @@ cdef PetscErrorCode PetscCHKERR(PetscErrorCode ierr) nogil:
     global fstack, istack
     istack = 0; fstack[istack] = NULL;
     global FUNCT
-    return PetscERROR(PETSC_COMM_SELF, FUNCT, ierr, PETSC_ERROR_REPEAT, NULL)
+    return PetscERRORNoArg(PETSC_COMM_SELF, FUNCT, ierr, PETSC_ERROR_REPEAT, NULL)
 
 
 cdef extern from *:
