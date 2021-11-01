@@ -183,15 +183,12 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 
   // memory management
   PETSC_CUPM_ALIAS_FUNCTION(Free);
+  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
 #if PETSC_PKG_CUDA_VERSION_GE(11,2,0)
   PETSC_CUPM_ALIAS_FUNCTION(FreeAsync);
-#else
-  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
-#endif
-  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
-  #if PETSC_PKG_CUDA_VERSION_GE(11,2,0)
   PETSC_CUPM_ALIAS_FUNCTION(MallocAsync);
 #else
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
 #endif
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
@@ -265,11 +262,11 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 
   // memory management
   PETSC_CUPM_ALIAS_FUNCTION(Free);
+  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
   // HIP has no hipFreeAsync
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
-  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
   // HIP has no hipMallocAsync
-  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
 };
@@ -337,6 +334,8 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using base_name_::cupmStreamSynchronize;                              \
   using base_name_::cupmFree;                                           \
   using base_name_::cupmMalloc;                                         \
+  using base_name_::cupmFreeAsync;                                      \
+  using base_name_::cupmMallocAsync;                                    \
   using base_name_::cupmMemcpy;                                         \
   using base_name_::cupmMemcpyAsync;                                    \
   using base_name_::cupmDeviceSynchronize
