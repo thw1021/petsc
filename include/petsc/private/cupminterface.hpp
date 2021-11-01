@@ -55,16 +55,59 @@ namespace detail
 #define CAT_(x,y) x ## y
 #define CAT(x,y)  CAT_(x,y)
 
-#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupmprefix,mapped,prefix,original) \
-  static const auto CAT(cupmprefix,mapped) = CAT(prefix,original)
+#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
+  static const auto CAT(our_prefix,our_suffix) = CAT(their_prefix,their_suffix)
 
-#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE(common)                         \
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,common,PETSC_CUPM_STEM,common)
+#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(our_suffix,their_suffix) \
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
 
-#define PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmprefix,prefix,stem) \
-  PETSC_ALIAS_FUNCTION(static constexpr CAT(cupmprefix,stem), CAT(prefix,stem))
+#define PETSC_CUPM_ALIAS_INTEGRAL_VALUE(suffix)         \
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(suffix,suffix)
 
-#define PETSC_CUPM_ALIAS_FUNCTION(stem) PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,PETSC_CUPM_STEM,stem)
+#define PETSC_CUPM_ALIAS_FUNCTION_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
+  PETSC_ALIAS_FUNCTION(static constexpr CAT(our_prefix,our_suffix),CAT(their_prefix,their_suffix))
+
+#define PETSC_CUPM_ALIS_FUNCTION_COMMON(our_suffix,their_suffix)        \
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
+
+#define PETSC_CUPM_ALIAS_FUNCTION(suffix) PETSC_CUPM_ALIAS_FUNCTION_COMMON(suffix,suffix)
+
+#define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix,N) \
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr CAT(our_prefix,our_suffix),CAT(their_prefix,their_suffix),N)
+
+#define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(our_suffix,their_suffix,N) \
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix,N)
+
+// Base class that holds stuff that can be directly determined with templates
+template <CUPMDeviceType T>
+struct CUPMInterfaceBase
+{
+  static constexpr CUPMDeviceType type = T;
+
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetsc() noexcept
+  {
+    switch (type) {
+    case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
+    case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
+    default:                   return PETSC_DEVICE_INVALID;
+    }
+  }
+
+  PETSC_NODISCARD static constexpr const char* cupmName() noexcept
+  {
+    return std::get<util::integral_value(type)>(CUPMDeviceTypes);
+  }
+};
+
+template <CUPMDeviceType T> constexpr CUPMDeviceType CUPMInterfaceBase<T>::type;
+
+#define PETSC_CUPM_BASE_CLASS_HEADER_(DEVICE_TYPE)                      \
+  using base_type = detail::CUPMInterfaceBase<DEVICE_TYPE>;             \
+  using base_type::type;                                                \
+  using base_type::cupmName;                                            \
+  using base_type::cupmDeviceTypeToPetsc
+
+#define PETSC_CUPM_BASE_CLASS_HEADER(STEM) PETSC_CUPM_BASE_CLASS_HEADER_(STEM)
 
 } // namespace detail
 
@@ -74,17 +117,13 @@ namespace detail
 template <CUPMDeviceType T> struct CUPMInterface;
 
 #if PetscDefined(HAVE_CUDA)
-#define PETSC_CUPM_STEM cuda
+#define PETSC_CUPM_PREFIX      cuda
+#define PETSC_CUPM_PREFIX_U    CUDA
+#define PETSC_CUPM_DEVICE_TYPE CUPMDeviceType::PETSC_CUPM_PREFIX_U
 template <>
-struct CUPMInterface<CUPMDeviceType::CUDA>
+struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
 {
-  static constexpr CUPMDeviceType type = CUPMDeviceType::CUDA;
-
-  PETSC_NODISCARD static constexpr PetscDeviceType cupmDeviceTypeToPetsc() noexcept
-  { return PETSC_DEVICE_CUDA; }
-
-  PETSC_NODISCARD static constexpr const char* cupmName() noexcept
-  { return std::get<util::integral_value(type)>(CUPMDeviceTypes); }
+  PETSC_CUPM_BASE_CLASS_HEADER(PETSC_CUPM_DEVICE_TYPE);
 
   // typedefs
   using cupmError_t        = cudaError_t;
@@ -95,7 +134,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA>
   using cupmSolverHandle_t = cusolverDnHandle_t;
   using cupmSolverError_t  = cusolverStatus_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
-  using cupmMemcpy_t       = cudaMemcpyKind;
+  using cupmMemcpyKind_t   = cudaMemcpyKind;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -105,7 +144,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA>
 #if PETSC_PKG_CUDA_VERSION_GE(11,1,0)
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(ErrorStubLibrary);
 #else
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,ErrorStubLibrary,cuda,ErrorInsufficientDriver);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(ErrorStubLibrary,ErrorInsufficientDriver);
 #endif
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(ErrorNoDevice);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(StreamNonBlocking);
@@ -141,28 +180,37 @@ struct CUPMInterface<CUPMDeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(StreamWaitEvent);
   PETSC_CUPM_ALIAS_FUNCTION(StreamQuery);
   PETSC_CUPM_ALIAS_FUNCTION(StreamSynchronize);
-
-  // general purpose
-  PETSC_CUPM_ALIAS_FUNCTION(Free);
-  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
-  PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(DeviceSynchronize);
+
+  // memory management
+  PETSC_CUPM_ALIAS_FUNCTION(Free);
+#if PETSC_PKG_CUDA_VERSION_GE(11,2,0)
+  PETSC_CUPM_ALIAS_FUNCTION(FreeAsync);
+#else
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
+#endif
+  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
+  #if PETSC_PKG_CUDA_VERSION_GE(11,2,0)
+  PETSC_CUPM_ALIAS_FUNCTION(MallocAsync);
+#else
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
+#endif
+  PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
+  PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
 };
-#undef PETSC_CUPM_STEM
+#undef PETSC_CUPM_PREFIX
+#undef PETSC_CUPM_PREFIX_U
+#undef PETSC_CUPM_DEVICE_TYPE
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
-#define PETSC_CUPM_STEM hip
+#define PETSC_CUPM_PREFIX   hip
+#define PETSC_CUPM_PREFIX_U HIP
+#define PETSC_CUPM_DEVICE_TYPE CUPMDeviceType::PETSC_CUPM_PREFIX_U
 template <>
-struct CUPMInterface<CUPMDeviceType::HIP>
+struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
 {
-  static constexpr CUPMDeviceType type = CUPMDeviceType::HIP;
-
-  PETSC_NODISCARD static constexpr PetscDeviceType cupmDeviceTypeToPetsc() noexcept
-  { return PETSC_DEVICE_HIP; }
-
-  PETSC_NODISCARD static constexpr const char* cupmName() noexcept
-  { return std::get<util::integral_value(type)>(CUPMDeviceTypes); }
+  PETSC_CUPM_BASE_CLASS_HEADER(PETSC_CUPM_DEVICE_TYPE);
 
   // typedefs
   using cupmError_t        = hipError_t;
@@ -171,16 +219,16 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   using cupmSolverHandle_t = hipsolverHandle_t;
   using cupmSolverError_t  = hipsolverStatus_t;
   using cupmDeviceProp_t   = hipDeviceProp_t;
-  using cupmMemcpy_t       = hipMemcpyKind;
+  using cupmMemcpyKind_t   = hipMemcpyKind;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(ErrorNotReady);
   // see https://github.com/ROCm-Developer-Tools/HIP/blob/develop/bin/hipify-perl
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,ErrorDeviceAlreadyInUse,hip,ErrorContextAlreadyInUse);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(ErrorDeviceAlreadyInUse,ErrorContextAlreadyInUse);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(ErrorSetOnActiveProcess);
   // as of HIP v4.2 cudaErrorStubLibrary has no HIP equivalent
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,ErrorStubLibrary,hip,ErrorInsufficientDriver);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(ErrorStubLibrary,ErrorInsufficientDriver);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(ErrorNoDevice);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(StreamNonBlocking);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(DeviceMapHost);
@@ -215,15 +263,25 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(StreamWaitEvent);
   PETSC_CUPM_ALIAS_FUNCTION(StreamQuery);
   PETSC_CUPM_ALIAS_FUNCTION(StreamSynchronize);
-
-  // general purpose
-  PETSC_CUPM_ALIAS_FUNCTION(Free);
-  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
-  PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(DeviceSynchronize);
+
+  // memory management
+  PETSC_CUPM_ALIAS_FUNCTION(Free);
+  // HIP has no hipFreeAsync
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
+  PETSC_CUPM_ALIAS_FUNCTION(Malloc);
+  // HIP has no hipMallocAsync
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
+  PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
+  PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
 };
-#undef PETSC_CUPM_STEM
+#undef PETSC_CUPM_PREFIX
+#undef PETSC_CUPM_PREFIX_U
+#undef PETSC_CUPM_DEVICE_TYPE
 #endif // PetscDefined(HAVE_HIP)
+
+#undef PETSC_CUPM_BASE_CLASS_HEADER_
+#undef PETSC_CUPM_BASE_CLASS_HEADER
 
 } // namespace Impl
 
@@ -244,7 +302,7 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   using typename base_name_::cupmSolverError_t;                         \
   using typename base_name_::cupmSolverHandle_t;                        \
   using typename base_name_::cupmDeviceProp_t;                          \
-  using typename base_name_::cupmMemcpy_t;                              \
+  using typename base_name_::cupmMemcpyKind_t;                          \
   /* variables */                                                       \
   using base_name_::cupmSuccess;                                        \
   using base_name_::cupmErrorNotReady;                                  \
@@ -283,7 +341,8 @@ struct CUPMInterface<CUPMDeviceType::HIP>
   using base_name_::cupmFree;                                           \
   using base_name_::cupmMalloc;                                         \
   using base_name_::cupmMemcpy;                                         \
-  using base_name_::cupmDeviceSynchronize;
+  using base_name_::cupmMemcpyAsync;                                    \
+  using base_name_::cupmDeviceSynchronize
 
 // allow any macros to expand in case someone needs it
 #define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
