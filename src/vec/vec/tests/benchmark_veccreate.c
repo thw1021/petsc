@@ -34,3 +34,8 @@ int main(int argc,char **argv)
   ierr = PetscFinalize();
   return ierr;
 }
+/*TEST
+  test:
+      requires: cuda
+      args: -vec_type cuda
+TEST*/
