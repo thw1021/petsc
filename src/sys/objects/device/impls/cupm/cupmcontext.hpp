@@ -52,8 +52,9 @@ public:
     cupmBlasHandle_t   blas;
     cupmSolverHandle_t solver;
 
-    PETSC_NODISCARD cupmBlasHandle_t   handle(HandleTag<cupmBlasHandle_t>)   { return blas;   }
-    PETSC_NODISCARD cupmSolverHandle_t handle(HandleTag<cupmSolverHandle_t>) { return solver; }
+    PETSC_NODISCARD cupmBlasHandle_t   get(HandleTag<cupmStream_t>)       { return stream; }
+    PETSC_NODISCARD cupmBlasHandle_t   get(HandleTag<cupmBlasHandle_t>)   { return blas;   }
+    PETSC_NODISCARD cupmSolverHandle_t get(HandleTag<cupmSolverHandle_t>) { return solver; }
   };
 
 private:
@@ -66,7 +67,7 @@ private:
     return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
   }
 
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cupmMemcpy_t __mem_op_to_cupmmemcpy_t(PetscDeviceMemOpType op)
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cupmMemcpy_t __mem_op_to_cupmmemcpy_t(PetscDeviceBinaryMemOpType op)
   {
     switch (op) {
     case PETSC_DEVICE_MEMCPY_DTOD: return cupmMemcpyDeviceToDevice;
@@ -158,9 +159,9 @@ public:
     synchronize,
     getHandle<cupmBlasHandle_t>,
     getHandle<cupmSolverHandle_t>,
+    getHandle<cupmStream_t>,
     beginTimer,
     endTimer,
-    binarymemop
   };
 
   // default constructor
@@ -178,7 +179,6 @@ public:
   PETSC_NODISCARD static PetscErrorCode getHandle(PetscDeviceContext,void*) noexcept;
   PETSC_NODISCARD static PetscErrorCode beginTimer(PetscDeviceContext) noexcept;
   PETSC_NODISCARD static PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*) noexcept;
-  PETSC_NODISCARD static PetscErrorCode binarymemop(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceMemOpType) noexcept;
 };
 
 template <CUPMDeviceType T>
@@ -299,7 +299,7 @@ template <typename Handle_T>
 inline PetscErrorCode CUPMContext<T>::getHandle(PetscDeviceContext dctx, void *handle) noexcept
 {
   PetscFunctionBegin;
-  *static_cast<Handle_T*>(handle) = __impls_cast(dctx)->handle(HandleTag<Handle_T>());
+  *static_cast<Handle_T*>(handle) = __impls_cast(dctx)->get(HandleTag<Handle_T>());
   PetscFunctionReturn(0);
 }
 
@@ -334,16 +334,6 @@ inline PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext dctx, PetscLog
   cerr = cupmEventSynchronize(dci->end);CHKERRCUPM(cerr);
   cerr = cupmEventElapsedTime(&gtime,dci->begin,dci->end);CHKERRCUPM(cerr);
   *elapsed = static_cast<PetscLogDouble>(gtime);
-  PetscFunctionReturn(0);
-}
-
-template <CUPMDeviceType T>
-inline PetscErrorCode CUPMContext<T>::binarymemop(PetscDeviceContext dctx, void * PETSC_RESTRICT dest, const void * PETSC_RESTRICT src, std::size_t n, PetscDeviceMemOpType op) noexcept
-{
-  cupmError_t cerr;
-
-  PetscFunctionBegin;
-  cerr = cupmMemcpyAsync(dest,src,n,__mem_op_to_cupmmemcpy_t(op),__impls_cast(dctx)->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
