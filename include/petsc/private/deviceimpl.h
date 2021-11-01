@@ -149,27 +149,19 @@ struct _n_PetscDevice {
   void             *data;     /* placeholder */
 };
 
-typedef enum {
-  PETSC_DEVICE_MEMCPY_DTOD,
-  PETSC_DEVICE_MEMCPY_HTOD,
-  PETSC_DEVICE_MEMCPY_DTOH,
-  PETSC_DEVICE_MEMCPY_HTOH,
-  PETSC_DEVICE_MEMCPY_AUTO
-} PetscDeviceMemOpType;
-
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
   PetscErrorCode (*destroy)(PetscDeviceContext);
   PetscErrorCode (*changestreamtype)(PetscDeviceContext,PetscStreamType);
   PetscErrorCode (*setup)(PetscDeviceContext);
   PetscErrorCode (*query)(PetscDeviceContext,PetscBool*);
-  PetscErrorCode (*waitforctx)(PetscDeviceContext,PetscDeviceContext);
+  PetscErrorCode (*waitforcontext)(PetscDeviceContext,PetscDeviceContext);
   PetscErrorCode (*synchronize)(PetscDeviceContext);
   PetscErrorCode (*getblashandle)(PetscDeviceContext,void*);
   PetscErrorCode (*getsolverhandle)(PetscDeviceContext,void*);
+  PetscErrorCode (*getstreamhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
-  PetscErrorCode (*binarymemop)(PetscDeviceContext,void*,const void*,size_t,PetscDeviceMemOpType);
 };
 
 struct _n_PetscDeviceContext {
@@ -317,6 +309,18 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetSOLVERHandle_Internal(Pe
   PetscFunctionReturn(0);
 }
 
+PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetStreamHandle_Internal(PetscDeviceContext dctx, void *handle)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  /* we do error checking here as this routine is an entry-point */
+  PetscValidDeviceContext(dctx,1);
+  PetscValidPointer(handle,2);
+  ierr = (*dctx->ops->getstreamhandle)(dctx,handle);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextBeginTimer_Internal(PetscDeviceContext dctx)
 {
   PetscErrorCode ierr;
@@ -340,29 +344,6 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
   PetscFunctionReturn(0);
 }
 
-PETSC_STATIC_INLINE PetscErrorCode PetscDeviceBinaryMemOp_Internal(PetscDeviceContext dctx, void * PETSC_RESTRICT dest, const void * PETSC_RESTRICT src, size_t n, PetscDeviceMemOpType op)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidDeviceContext(dctx,1);
-  if (!n) PetscFunctionReturn(0);
-  ierr = (*dctx->ops->binarymemop)(dctx,dest,src,n,op);CHKERRQ(ierr);
-  switch (op) {
-  case PETSC_DEVICE_MEMCPY_HTOD:
-    ierr = PetscLogCpuToGpu(n);CHKERRQ(ierr);
-    break;
-  case PETSC_DEVICE_MEMCPY_DTOH:
-    ierr = PetscLogGpuToCpu(n);CHKERRQ(ierr);
-    break;
-  case PETSC_DEVICE_MEMCPY_DTOD:
-    break;
-  default:
-    break;
-  }
-  PetscFunctionReturn(0);
-}
-
 #else /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
 #define PetscDeviceContextSetRootDeviceType_Internal(type)                0
 #define PetscDeviceContextValidateIdle_Internal(dctx)                     0
@@ -371,14 +352,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceBinaryMemOp_Internal(PetscDeviceCo
 #define PetscDeviceContextGetCurrentContextAssertType_Internal(dctx,type) 0
 #define PetscDeviceContextGetBLASHandle_Internal(dctx,handle)             0
 #define PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle)           0
+#define PetscDeviceContextGetStreamHandle_Internal(dctx,handle)           0
 #define PetscDeviceContextBeginTimer_Internal(dctx)                       0
 #define PetscDeviceContextEndTimer_Internal(dctx,elapsed)                 0
-#define PetscDeviceBinaryMemOp_Internal(dctx,src,dest,n,op)               0
 #endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
-
-#define PetscDeviceArraycpy(dctx,dest,src,cnt,op)                       \
-  ((sizeof(*(src)) != sizeof(*(dest))) ||                               \
-   PetscDeviceBinaryMemOp_Internal(dctx,dest,src,(size_t)(cnt)*sizeof(*(src)),op))
 
 #if PetscDefined(HAVE_CUDA)
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
