@@ -25,7 +25,7 @@ class CUPMDevice : CUPMInterface<T>
 {
 public:
   using createContextFunction_t = PetscErrorCode (*)(PetscDeviceContext);
-  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T)
+  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
 
   // default constructor
   explicit CUPMDevice(createContextFunction_t func) noexcept : _create(func) { }
