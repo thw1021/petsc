@@ -69,15 +69,8 @@ class Configure(config.package.Package):
         if self.checkSharedLibrariesEnabled():
           slepcbuilddep = ''
           ldflags = ' '.join(self.setCompilers.sharedLibraryFlags)
-          # how can we get the slepc lib? Eventually, we may want to use the variables from the framework
-          #cxxflags += self.headers.toStringNoDupes(self.slepc.dinclude)
-          #ldflags += self.libraries.toString(self.slepc.dlib)
-          dinclude = [incDir]+self.dinclude+[os.path.join(PETSC_DIR,'include'),os.path.join(PETSC_DIR,PETSC_ARCH,'include'),os.path.join(self.petscdir.dir,'include'),os.path.join(self.packageDir,'include')]
-          dlib = [os.path.join(libDir,'libslepc.'+self.setCompilers.sharedLibraryExt)]
-          if hasattr(self.compilers, 'FC') and self.setCompilers.isDarwinARM(self.log) and config.setCompilers.Configure.isGfortran110plus:
-            dlib = dlib+self.flibs.lib # path to -lgcc_s.1.1 on arm64-apple
-          cxxflags += ' '+self.headers.toStringNoDupes(dinclude)
-          ldflags += ' '+self.libraries.toStringNoDupes(dlib)
+          cxxflags += ' '+self.headers.toStringNoDupes(self.dinclude+[os.path.join(PETSC_DIR,'include'),os.path.join(PETSC_DIR,PETSC_ARCH,'include')])
+          ldflags += ' '+self.libraries.toStringNoDupes(self.dlib)
           slepcbuilddep = 'slepc-install slepc-build'
           oldFlags = self.compilers.CXXPPFLAGS
           self.compilers.CXXPPFLAGS += ' -I'+incDir
