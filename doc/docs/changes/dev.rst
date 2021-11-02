@@ -118,6 +118,8 @@ Changes: Development
 
 .. rubric:: FE/FV:
 
+- Deprecate `PetscSpacePolynomialGetSymmetric() and PetscSpacePolynomialSetSymmetric()`: symmetric polynomials were never supported and support is no longer planned
+
 .. rubric:: DMNetwork:
 
 .. rubric:: DMStag:
