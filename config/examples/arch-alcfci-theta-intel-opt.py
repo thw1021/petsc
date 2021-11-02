@@ -19,6 +19,7 @@ configure_options = [
   '--with-mkl_sparse=0',
   '--with-mkl_sparse_optimize=0',
   '--download-chaco=1',
+  'CFLAGS=-DADDC_', # workaround exodusii cmake failure 'cannot automatically determine Fortran mangling'
   '--download-exodusii=1',
   '--download-metis=1',
   '--download-parmetis=1',
