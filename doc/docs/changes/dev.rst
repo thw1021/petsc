@@ -34,6 +34,7 @@ Changes: Development
 - Add ``PetscDeviceInitialize()`` to eagerly initialize a ``PetscDeviceType``, and ``PetscDeviceInitialized()`` to query the corresponding initialization state
 - Change ``PetscDeviceCreate()`` to also accept a ``PetscInt devid``, to create a ``PetscDevice`` for a specific device
 - Add ``PetscDeviceView()``
+- ``PetscDevice`` initialization for CUDA and HIP will now respect ``CUDA_VISIBILE_DEVICES`` and ``HIP_VISIBLE_DEVICES`` environment variables respectively
 
 .. rubric:: PetscViewer:
 
