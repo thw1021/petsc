@@ -35,7 +35,8 @@ int main(int argc,char **argv)
   return ierr;
 }
 /*TEST
-  test:
+  build:
       requires: cuda
+  test:
       args: -vec_type cuda
 TEST*/
