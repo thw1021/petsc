@@ -1,4 +1,7 @@
 #include <petscsys.h>
+#if defined(_OPENMP)
+#  include <omp.h>
+#endif
 
 struct _PetscSegBufferLink {
   struct _PetscSegBufferLink *tail;
@@ -93,8 +96,7 @@ PetscErrorCode PetscSegBufferGet(PetscSegBuffer seg,size_t count,void *buf)
   struct _PetscSegBufferLink *s;
 
   PetscFunctionBegin;
-  //PetscPragmaOMP("critical (PetscSegBufferGet), omp_sync_hint_uncontended") {
-  PetscPragmaOMP(critical) {
+  PetscPragmaOMP(critical (PetscSegBuffer), hint(omp_sync_hint_uncontended)) {
     s = seg->head;
     if (PetscUnlikely(s->used + count > s->alloc)) ierr = PetscSegBufferAlloc_Private(seg,count);
     s = seg->head;
@@ -284,8 +286,7 @@ PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer seg,size_t unused)
   struct _PetscSegBufferLink *head;
 
   PetscFunctionBegin;
-  //  PetscPragmaOMP(critical (PetscSegBufferUnuse), omp_sync_hint_uncontended) {
-  PetscPragmaOMP(critical) {
+  PetscPragmaOMP(critical (PetscSegBuffer), hint(omp_sync_hint_uncontended)) {
     head = seg->head;
     if (PetscUnlikely(head->used < unused)) ierr = 1;
     head->used -= unused;
