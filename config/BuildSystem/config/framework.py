@@ -1278,10 +1278,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       return moduleList[0]
 
 
-    ndepGraph     = list(graph.DirectedGraph.topologicalSort(depGraph))
-    setCompilers  = findModule(ndepGraph,config.setCompilers.Configure)
-    compilers     = findModule(ndepGraph,config.compilers.Configure)
-    minCxx,maxCxx = compilers.cxxDialectRange['Cxx']
+    ndepGraph       = list(graph.DirectedGraph.topologicalSort(depGraph))
+    setCompilers    = findModule(ndepGraph,config.setCompilers.Configure)
+    compilers       = findModule(ndepGraph,config.compilers.Configure)
+    minCxx,maxCxx,_ = compilers.cxxDialectRange['Cxx']
     self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange['Cxx']))
     minCxxVersionBlameList = {}
     maxCxxVersionBlameList = {}

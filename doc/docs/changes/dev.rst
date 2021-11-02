@@ -17,6 +17,7 @@ Changes: Development
 - Change C++ dialect flag option to be consistent with compiler flags;  ``--with-cxx-dialect=gnu++14`` means you want ``-std=gnu++14``, no more, no less
 - Fix for requesting no C++ dialect flag via ``--with-cxx-dialect=0``. Previously ``configure`` would bail out immediately without running the tests and therefore wouldn't set any of the capability defines. ``configure`` now runs all tests, just doesn't add the flag in the end
 - Fix a number of corner-cases when handling C++ dialect detection
+- Change enforcement of C++ dialect on packages to also enforce auto-detected dialects. Previously we would only enforce a dialect if it was explicitly set (e.g. by using ``--with-<languague>-dialect=c++14``)
 
 .. rubric:: Sys:
 

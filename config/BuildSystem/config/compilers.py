@@ -37,8 +37,8 @@ class CaseInsensitiveDefaultDict(defaultdict):
       self[key] = self.default_factory()
     return self[key]
 
-def default_cxx_dialect_ranges():
-  return ('c++03','c++17')
+CxxDialectRange = namedtuple('CxxDialectRange',['min','max','propagateToPackages'])
+CxxDialectRange.__new__.__defaults__ = ('c++03','c++17',False)
 
 class Configure(config.base.Configure):
   def __init__(self, framework):
@@ -56,7 +56,7 @@ class Configure(config.base.Configure):
     self.cRestrict               = ' '
     self.cxxRestrict             = ' '
     self.c99flag                 = None
-    self.cxxDialectRange         = CaseInsensitiveDefaultDict(default_cxx_dialect_ranges)
+    self.cxxDialectRange         = CaseInsensitiveDefaultDict(CxxDialectRange)
     self.cxxDialectPackageRanges = ({},{})
     return
 
@@ -533,13 +533,12 @@ class Configure(config.base.Configure):
       [[c|gnu][xx|++]]17: gnu++17 or c++17
       [[c|gnu][xx|++]]14: gnu++14 or c++14
       [[c|gnu][xx|++]]11: gnu++11 or c++11
-      0: disable CxxDialect check and use compiler default
+      0/none: do not use a flag, use compilers default
 
     On return this function sets the following values:
     - if needed, appends the relevant CXX dialect flag to <lang> compiler flags
-    - self.cxxDialectRange = (minSupportedDialect,maxSupportedDialect) (e.g. ('c++03','c++14'))
+    - self.cxxDialectRange = (minSupportedDialect,maxSupportedDialect,propagateToPackages) where 'propagateToPackages' is True if the maximum dialect should be explicitly set for packages, False otherwise. Note that --with-<lang>-dialect=[none|0|<empty>] implies 'propagateToPackages' -> True while --with-<lang>-dialect=auto implies 'propagateToPackages' -> False (e.g. ('c++03','c++14',True))
     - self.addDefine('HAVE_{LANG}_DIALECT_CXX{DIALECT_NUM}',1) for every supported dialect
-    - self.lang+'dialect' = 'c++'+maxDialectNumber (e.g. 'c++14') but ONLY if the user specifically requests a dialect version, otherwise this is not set
 
     or raises a RuntimeException if either:
     - The user has set both the --with-dialect=[...] configure options and -std=[...] in their compiler flags
@@ -563,12 +562,16 @@ class Configure(config.base.Configure):
       useFlag         = False # we still do the checks, just not add the flag in the end
     self.logPrint('checkCxxDialect: configure option after sanitization: --{opt}={val}'.format(opt=configureArg,val=withLangDialect))
 
+    # assume that we should set the flag for packages by default
+    propagateFlagToPackages = False
     # check the configure argument
     if withLangDialect.startswith('GNU'):
       allowedBaseFlags = [BaseFlags.gnu]
     elif withLangDialect.startswith('C++'):
       allowedBaseFlags = [BaseFlags.standard]
     elif withLangDialect == 'NONE':
+      # but if user requests no flag at all, we obvoiusly shouldn't propagate the flag
+      propagateFlagToPackages = False
       allowedBaseFlags = ['(NO FLAG)']
     else:
       # if we are here withLangDialect is either AUTO or e.g. 14
@@ -579,19 +582,19 @@ class Configure(config.base.Configure):
     # search compiler flags to see if user has set the c++ standard from there
     with self.Language(language):
       allFlags = tuple(self.getCompilerFlags().strip().split())
-    langDialectFromFlags = tuple(f for f in allFlags for flg in BaseFlags if f.startswith(flg))
-    if len(langDialectFromFlags):
+    langDialectFromCompilerFlags = tuple(f for f in allFlags for flg in BaseFlags if f.startswith(flg))
+    if len(langDialectFromCompilerFlags):
       if withLangDialect != 'AUTO':
         # user has set both flags
-        errorMessage = 'Competing or duplicate C++ dialect flags, have specified {flagdialect} in compiler ({compiler}) flags and used configure option {opt}'.format(flagdialect=langDialectFromFlags,compiler=self.getCompiler(lang=language),opt='--'+configureArg+'='+withLangDialect.lower())
+        errorMessage = 'Competing or duplicate C++ dialect flags, have specified {flagdialect} in compiler ({compiler}) flags and used configure option {opt}'.format(flagdialect=langDialectFromCompilerFlags,compiler=self.getCompiler(lang=language),opt='--'+configureArg+'='+withLangDialect.lower())
         raise RuntimeError(errorMessage)
-      sanitized = langDialectFromFlags[-1].lower().replace('-std=','')
+      sanitized = langDialectFromCompilerFlags[-1].lower().replace('-std=','')
       self.logPrintBox('\n'.join([
         ' ***** WARNING: Explicitly setting C++ dialect in compiler flags may not be optimal.',
         'Use ./configure --{opt}={sanitized} if you really want to use that value,',
         'otherwise remove {flag} from compiler flags and omit --{opt}=[...]',
         'from configure to have PETSc automatically detect the most appropriate flag for you'
-      ]).format(opt=configureArg,sanitized=sanitized,flag=langDialectFromFlags[-1]))
+      ]).format(opt=configureArg,sanitized=sanitized,flag=langDialectFromCompilerFlags[-1]))
       # the user has already set the flag in their options, no need to set it a second time
       useFlag          = False
       # set the dialect to whatever was in the users compiler flags
@@ -713,7 +716,7 @@ class Configure(config.base.Configure):
 
     if withLangDialect in ('AUTO','NONE'):
       # see top of file
-      dialectNumStr = default_cxx_dialect_ranges()[1]
+      dialectNumStr = CxxDialectRange().max
       explicit      = withLangDialect == 'NONE' # AUTO is not explicit but NONE is
     else:
       dialectNumStr = withLangDialect = withLangDialect.lower() # we can stop shouting now
@@ -786,7 +789,12 @@ class Configure(config.base.Configure):
       # if the user asks for a particular version we should pin that version
       minDialect = maxDialect
 
-    flagPool = [(''.join((b,d.num)),d) for d in reversed(dialects[minDialect:maxDialect+1]) for b in allowedBaseFlags]
+    # compile a list of all the flags we will test in descending order, for example
+    # -std=gnu++17
+    # -std=c++17
+    # -std=gnu++14
+    # ...
+    flagPool = [(''.join((base,dlct.num)),dlct) for dlct in reversed(dialects[minDialect:maxDialect+1]) for base in allowedBaseFlags]
 
     self.logPrint('\n'.join([
       'checkCxxDialect: Have potential flag pool:',
@@ -810,7 +818,13 @@ class Configure(config.base.Configure):
             pass
           else:
             # success
-            self.cxxDialectRange[language] = ('c++'+dialects[minDialect].num,'c++'+dlct.num)
+            self.cxxDialectRange[language] = CxxDialectRange(
+              min='c++'+dialects[minDialect].num,
+              max='c++'+dlct.num,
+              # propagateFlagToPackages is True IFF withLangDialect != 'None', i.e. we
+              # always propagate the flag, unless we use no flag at all
+              propagateToPackages=propagateFlagToPackages
+            )
             if not useFlag:
               compilerFlags = self.getCompilerFlags()
               if compilerFlags.count(flag) > 1:
@@ -853,10 +867,6 @@ class Configure(config.base.Configure):
       if dlct.num > flag[-2:]:
         break
       self.addDefine('HAVE_{lang}_DIALECT_CXX{ver}'.format(lang=LANG,ver=dlct.num),1)
-    if not useFlag:
-      # if we don't use the flag we shouldn't set this attr because its existence implies
-      # a particular dialect is *chosen*
-      setattr(self,lang+'dialect','c++'+dialects[maxDialect].num)
     return
 
   def checkCxxComplexFix(self):
