@@ -74,6 +74,7 @@ PetscErrorCode PetscSegBufferCreate(size_t unitbytes,size_t expected,PetscSegBuf
    PetscSegBufferGet - get new buffer space from a segmented buffer
 
    Not Collective
+   Thread safe (wip)
 
    Input Parameters:
 +  seg - address of segmented buffer
@@ -267,6 +268,7 @@ PetscErrorCode PetscSegBufferGetSize(PetscSegBuffer seg,size_t *usedsize)
    PetscSegBufferUnuse - return some unused entries obtained with an overzealous PetscSegBufferGet()
 
    Not Collective
+   Thread safe (wip)
 
    Input Parameters:
 +  seg - segmented buffer object
