@@ -328,22 +328,6 @@ class Configure(config.base.Configure):
       pass
 
   @staticmethod
-  def isGfortran110plus(compiler, log):
-    '''returns true if the compiler is gfortran-11.0.x or later'''
-    try:
-      (output, error, status) = config.base.Configure.executeShellCommand(compiler+' --version', log = log)
-      output = output + error
-      import re
-      strmatch = re.match('GNU Fortran\s+\(.*\)\s+(\d+)\.(\d+)',output)
-      if strmatch:
-        VMAJOR,VMINOR = strmatch.groups()
-        if (int(VMAJOR),int(VMINOR)) >= (11,0):
-          if log: log.write('Detected GFortran110plus compiler\n')
-          return 1
-    except RuntimeError:
-      pass
-
-  @staticmethod
   def isGfortran8plus(compiler, log):
     '''returns true if the compiler is gfortran-8 or later'''
     try:
@@ -569,17 +553,6 @@ class Configure(config.base.Configure):
     if v < (10,15,0): return 0
     if log: log.write('Detected Darwin/MacOSX Catalina OS\n')
     return 1
-
-  @staticmethod
-  def isDarwinARM(log):
-    '''Returns true if system is Darwin/MacOSX with an ARM chip'''
-    if config.setCompilers.Configure.isDarwin(log):
-      (output, error, status) = config.base.Configure.executeShellCommand('uname -m', log = log)
-      if not status:
-        found = (output.lower().strip() == 'arm64')
-        if found:
-          if log: log.write('Detected Darwin/MacOSX OS with an ARM chip\n\n')
-        return found
 
   @staticmethod
   def isFreeBSD(log):
