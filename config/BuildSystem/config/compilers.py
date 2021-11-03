@@ -739,8 +739,11 @@ class Configure(config.base.Configure):
     self.logPrint('checkCxxDialect: configure option after sanitization: --{opt}={val}'.format(opt=configureArg,val=withCxxDialectInit))
 
     dialectBounds = []
-    for language,isGnuIsh in languageList:
-      self.logPrint('checkCxxDialect: checking C++ dialect version for language "{lang}" using compiler ({compiler}) '.format(lang=language,compiler=self.getCompiler(lang=language)))
+    for language in languageList:
+
+      self.getCompiler(lang=language)
+      raise RuntimeError(language)
+      self.logPrint('checkCxxDialect: checking C++ dialect version for language "{lang}" using compiler ({compiler}) '.format(lang=LANG,compiler=self.getCompiler(lang=language)))
 
       # reset defaults
       lang,LANG = language.lower(),language.upper()
@@ -865,7 +868,7 @@ class Configure(config.base.Configure):
               '{flaglist}'
             ]).format(
               lang=language.replace('x','+'),compiler=self.getCompiler(lang=language),flaglist=flist,
-              dlct='{dlct}' # stupid hack to get format to leave unknown options for later
+              dlct='{dlct}' # kludge to get format to leave unknown options for later
             )
             if flag.endswith(dialects[0].num):
               # it's the compilers fault we can't try the next dialect
@@ -1908,15 +1911,11 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
 
     compilerList = []
     if hasattr(self.setCompilers, 'CXX'):
-      self.isGCXX = config.setCompilers.Configure.isGNU(self.setCompilers.CXX, self.log)
-      isClang     = config.setCompilers.Configure.isClang(self.setCompilers.CXX,self.log)
-      compilerList.append(('Cxx',isClang or self.isGCXX))
-    else:
-      compilerList.append(('Cxx',False))
+      compilerList.append('Cxx')
     if hasattr(self.setCompilers, 'CUDAC'):
-      compilerList.append(('CUDA',False))
+      compilerList.append('CUDA')
     if hasattr(self.setCompilers, 'HIPC'):
-      compilerList.append(('HIP',False))
+      compilerList.append('HIP')
     self.executeTest(self.checkCxxDialect,[compilerList])
 
     if hasattr(self.setCompilers, 'CUDAC'):
