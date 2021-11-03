@@ -65,11 +65,11 @@ int main(int argc, char *argv[])
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc, &argv, NULL, help);if (ierr) return ierr;
-  for (PetscInt dim = 0; dim <= 4; dim++) {
+  for (PetscInt dim = 0; dim <= 3; dim++) {
     for (PetscInt formDegree = -dim; formDegree <= dim; formDegree++) {
       for (PetscInt degree = 0; degree <= 4; degree++) {
         if (formDegree == 0 && degree == 0) continue;
-        for (PetscInt nCopies = 1; nCopies <= dim; nCopies++) {
+        for (PetscInt nCopies = 1; nCopies <= PetscMax(2,dim); nCopies++) {
           ierr = test(dim, formDegree, degree, nCopies);CHKERRQ(ierr);
         }
       }
