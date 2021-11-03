@@ -166,7 +166,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
       args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
 
-    langDialect = self.compilers.cxxDialectRange[lang]
+    langDialect = self.compilers.cxxDialectRange
     if langDialect.propagateToPackages:
       # (see config/compilers.py::checkCxxDialect())
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
