@@ -1824,7 +1824,7 @@ static PetscErrorCode PetscFWrite_FUN3D(MPI_Comm comm,FILE *fp,void *data,PetscI
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  if (n < 0) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT "",n);
+  if (n < 0) SETERRQ1(comm,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
   if (!n) PetscFunctionReturn(0);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (rank == 0) {
@@ -1875,7 +1875,7 @@ static PetscErrorCode PetscFWrite_FUN3D(MPI_Comm comm,FILE *fp,void *data,PetscI
       count = fwrite(data,size,(size_t)n,fp);
       if ((int)count != n) {
         perror("");
-        SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Wrote %" PetscInt_FMT "/%" PetscInt_FMT " array members of size %" PetscInt_FMT "",(PetscInt)count,n,(PetscInt)size);
+        SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Wrote %" PetscInt_FMT "/%" PetscInt_FMT " array members of size %" PetscInt_FMT,(PetscInt)count,n,(PetscInt)size);
       }
     }
   }
@@ -2236,10 +2236,10 @@ static PetscErrorCode WritePVTU(AppCtx *user,const char *fname,PetscBool base64)
   ierr = VecScatterBegin(grid->scatter,grid->qnode,Xloc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(grid->scatter,grid->qnode,Xloc,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecGetBlockSize(Xloc,&bs);CHKERRQ(ierr);
-  if (bs != 4) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"expected block size 4, got %" PetscInt_FMT "",bs);
+  if (bs != 4) SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"expected block size 4, got %" PetscInt_FMT,bs);
   ierr = VecGetSize(Xloc,&nloc);CHKERRQ(ierr);
-  if (nloc/bs != nvertices) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nloc/bs=%" PetscInt_FMT " to match nvertices=%" PetscInt_FMT "",nloc/bs,nvertices);
-  if (nvertices != grid->nvertices) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nvertices=%" PetscInt_FMT " to match grid->nvertices=%" PetscInt_FMT "",nvertices,grid->nvertices);
+  if (nloc/bs != nvertices) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nloc/bs=%" PetscInt_FMT " to match nvertices=%" PetscInt_FMT,nloc/bs,nvertices);
+  if (nvertices != grid->nvertices) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nvertices=%" PetscInt_FMT " to match grid->nvertices=%" PetscInt_FMT,nvertices,grid->nvertices);
   ierr = VecCreateSeq(PETSC_COMM_SELF,nvertices,&Xploc);CHKERRQ(ierr);
 
   ierr = VecCreate(PETSC_COMM_SELF,&Xuloc);CHKERRQ(ierr);
