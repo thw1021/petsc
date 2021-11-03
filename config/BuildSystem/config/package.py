@@ -73,8 +73,8 @@ class Package(config.base.Configure):
     self.license                = None # optional license text
     self.excludedDirs           = []   # list of directory names that could be false positives, SuperLU_DIST when looking for SuperLU
     self.downloadonWindows      = 0  # 1 means the --download-package works on Microsoft Windows
-    self.minCxxVersion          = framework.compilers.cxxDialectRange['Cxx'][0] # minimum c++ standard version required by the package, e.g. 'c++11'
-    self.maxCxxVersion          = framework.compilers.cxxDialectRange['Cxx'][1] # maximum c++ standard version allowed by the package, e.g. 'c++14', must be greater than self.minCxxVersion
+    self.minCxxVersion          = framework.compilers.cxxDialectRange.min # minimum c++ standard version required by the package, e.g. 'c++11'
+    self.maxCxxVersion          = framework.compilers.cxxDialectRange.max # maximum c++ standard version allowed by the package, e.g. 'c++14', must be greater than self.minCxxVersion
     self.publicInstall          = 1  # Installs the package in the --prefix directory if it was given. Packages that are only used
                                      # during the configuration/installation process such as sowing, make etc should be marked as 0
     self.parallelMake           = 1  # 1 indicates the package supports make -j np option
@@ -1019,7 +1019,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           blaslapackconflict = 1
 
     cxxVersionRange = (self.minCxxVersion,self.maxCxxVersion)
-    cxxVersionConflict = not inVersionRange(cxxVersionRange,self.compilers.cxxDialectRange[self.getDefaultLanguage()])
+    cxxVersionConflict = not inVersionRange(cxxVersionRange,self.compilers.cxxDialectRange)
     # if user did not request option, then turn it off if conflicts with configuration
     if self.lookforbydefault and 'with-'+self.package not in self.framework.clArgDB:
       if (self.cxx and not hasattr(self.compilers, 'CXX')) or \
@@ -1042,7 +1042,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       if self.noMPIUni and self.mpi.usingMPIUni:
         raise RuntimeError('Cannot use '+self.name+' with MPIUNI, you need a real MPI')
       if cxxVersionConflict:
-        raise RuntimeError('Cannot use '+self.name+' as it requires -std=['+','.join(map(str,cxxVersionRange))+'], while your compiler seemingly only supports -std=['+','.join(map(str,self.compilers.cxxDialectRange[self.getDefaultLanguage()]))+']')
+        raise RuntimeError('Cannot use '+self.name+' as it requires -std=['+','.join(map(str,cxxVersionRange))+'], while your compiler seemingly only supports -std=['+','.join(map(str,self.compilers.cxxDialectRange[:2]))+']')
       if self.download and self.argDB.get('download-'+self.downloadname.lower()) and not self.downloadonWindows and (self.setCompilers.CC.find('win32fe') >= 0):
         raise RuntimeError('External package '+self.name+' does not support --download-'+self.downloadname.lower()+' with Microsoft compilers')
       if not self.defaultPrecision.lower() in self.precisions:
@@ -1809,11 +1809,10 @@ class CMakePackage(Package):
       args.append('-DCMAKE_CXX_FLAGS:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_DEBUG:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
       args.append('-DCMAKE_CXX_FLAGS_RELEASE:STRING="{cxxFlags}"'.format(cxxFlags=cxxFlags))
-      langdialect = getattr(self.compilers,lang+'dialect',None)
-      if langdialect:
-        # langdialect is only set as an attribute if the user specifically chose a dialect
+      langDialectRange = self.compilers.cxxDialectRange
+      if langDialectRange.propagateToPackages:
         # (see config/compilers.py::checkCxxDialect())
-        args.append('-DCMAKE_CXX_STANDARD={stdver}'.format(stdver=langdialect[-2:])) # extract '17' from c++17
+        args.append('-DCMAKE_CXX_STANDARD={stdver}'.format(stdver=langdialect.max[-2:])) # extract '17' from c++17
       self.framework.popLanguage()
 
     if hasattr(self.compilers, 'FC'):
