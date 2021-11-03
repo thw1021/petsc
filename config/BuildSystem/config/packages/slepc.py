@@ -51,6 +51,8 @@ class Configure(config.package.Package):
     else:
       configargs = ''
 
+    self.include = [os.path.join(prefix,'include')]
+    self.lib = [os.path.join(prefix,'lib','libslepc.'+self.setCompilers.sharedLibraryExt)]
     self.addDefine('HAVE_SLEPC',1)
     self.addMakeMacro('SLEPC','yes')
     self.addMakeRule('slepcbuild','', \
