@@ -66,6 +66,7 @@ Changes: Development
 -  Add ``-mat_bind_below`` option for specifying size threshold below which GPU is not used for ``Mat`` operations
 -  Add ``MatSetBindingPropagates()``
 -  Add ``MatGetBindingPropagates()``
+-  Change ``MatCreateIS()`` behavior when NULL is passed for the mappings. Now a NULL map implies matching local and global spaces
 
 .. rubric:: PC:
 
