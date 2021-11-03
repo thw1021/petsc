@@ -659,7 +659,7 @@ class Configure(config.base.Configure):
           w = std::get<0>(v);   // same effect as the previous line
           w = v;                // same effect as the previous line
           S2 foo;
-          foo.f(aivar);
+          foo.f(ivar);
           if constexpr (std::is_arithmetic_v<int>) std::cout << "c++17" << std::endl;
           typedef std::integral_constant<Shapes,Shapes::SQUARE> squareShape;
           // static_assert with no message since c++17
@@ -723,11 +723,11 @@ class Configure(config.base.Configure):
         'checkCxxDialect: user has requested NO cxx dialect, we\'ll check but not add the flag'
       )
       withCxxDialectInit = 'NONE'
-      useFlagInit        = False # we still do the checks, just not add the flag in the end
+      useFlag            = False # we still do the checks, just not add the flag in the end
       propagateInit      = False # propagating nothing at all would be pretty useless
       baseFlagsInit      = ['(NO FLAG)']
     else:
-      useFlagInit   = True  # we plan to add the flag
+      useFlag       = True  # we plan to add the flag
       propagateInit = True  # we plan to set the flag for packages
       # setup our allowed base-flag stubs
       if withCxxDialectInit.startswith('GNU++'):
@@ -739,11 +739,9 @@ class Configure(config.base.Configure):
     self.logPrint('checkCxxDialect: configure option after sanitization: --{opt}={val}'.format(opt=configureArg,val=withCxxDialectInit))
 
     dialectBounds = []
-    for language,isGnuIsh in languageList:
-      self.logPrint('checkCxxDialect: checking C++ dialect version for language "{lang}" using compiler ({compiler}) '.format(lang=language,compiler=self.getCompiler(lang=language)))
-
-      # reset defaults
+    for language in languageList:
       lang,LANG = language.lower(),language.upper()
+      self.logPrint('checkCxxDialect: checking C++ dialect version for language "{lang}" using compiler ({compiler}) '.format(lang=LANG,compiler=self.getCompiler(lang=language)))
 
       # search compiler flags to see if user has set the c++ standard from there
       withCxxDialect,baseFlags,propagate = checkCompilerArgumentsForDialect(
@@ -851,11 +849,14 @@ class Configure(config.base.Configure):
               # success
               flagBase = flag.replace('-std=','')
               dialectBounds.append(CxxDialectRange(
-                min=flagBase[:-2]+dialects[minDialect].num,
+                min='c++'+dialects[minDialect].num,
                 max=flagBase,
                 propagateToPackages=propagate
               ))
-              self.logPrint('checkCxxDialect: success using {flag} for {lang} dialect c++{ver}, added new cxxDialectRange: {drange}'.format(flag=flag,lang=language,ver=dlct.num,drange=dialectBounds[-1]))
+              self.logPrint('\n'.join([
+                'checkCxxDialect: success using {flag} for {lang} dialect c++{ver}, added new cxxDialectRange:',
+                '{drange}'
+              ]).format(flag=flag,lang=language,ver=dlct.num,drange=dialectBounds[-1]))
               break # allowed flags loop
           if index == len(flagPool)-1:
             # compiler does not support the minimum required c++ dialect
@@ -865,7 +866,7 @@ class Configure(config.base.Configure):
               '{flaglist}'
             ]).format(
               lang=language.replace('x','+'),compiler=self.getCompiler(lang=language),flaglist=flist,
-              dlct='{dlct}' # stupid hack to get format to leave unknown options for later
+              dlct='{dlct}' # kludge to get format to leave unknown options for later
             )
             if flag.endswith(dialects[0].num):
               # it's the compilers fault we can't try the next dialect
@@ -889,20 +890,28 @@ class Configure(config.base.Configure):
     minfinal,maxfinal,propfinal = dialectBounds[0]
     for lang,(mini,maxi,propi) in zip(languageList,dialectBounds):
       if (mini[-2:] > minfinal[-2:]) or\
-         ((mini[-2:] == minfinal[-2:]) and 'gnu' in mini and 'gnu' not in minfinal):
+         ((mini[-2:] == minfinal[-2:]) and mini.startswith('gnu') and minfinal.startswith('c++')):
+        # gnu++11 is a more restrictive lower bound than c++11
         lolang   = lang
         minfinal = mini
       if (maxi[-2:] < maxfinal[-2:]) or\
-         ((maxi[-2:] == maxfinal[-2:]) and 'gnu' in maxi and 'gnu' not in maxfinal):
+         ((maxi[-2:] == maxfinal[-2:]) and maxi.startswith('c++') and maxfinal.startswith('gnu')):
+        # c++17 is a more restrictive upper bound than gnu++17
         hilang   = lang
         maxfinal = maxi
       if propi:
         propfinal = propi
-    if maxfinal < minfinal:
+    if maxfinal[-2:] < minfinal[-2:]:
       errorMessage = 'Using c++ dialect {dlct} as lower bound due to {lolang} compiler ({locompiler}) but {hilang} compiler ({hicompiler}) appears non-compliant with {dlct}'.format(lolang=lolang,locompiler=self.getCompiler(lang=lolang),hilang=hilang,hicompiler=self.getCompiler(lang=hilang),dlct=minfinal)
       raise RuntimeError(errorMessage)
     self.cxxDialectRange = CxxDialectRange(min=minfinal,max=maxfinal,propagateToPackages=propfinal)
     self.logPrint('checkCxxDialect: success, final cxxDialectRange: {drange}'.format(drange=self.cxxDialectRange))
+    if useFlag:
+      # one final loop over the languages to set the flag
+      flag = '-std='+maxfinal
+      for lang in languageList:
+        with self.setCompilers.Language(lang):
+          self.setCompilers.addCompilerFlag(flag,compilerOnly=True)
     return
 
   def checkCxxComplexFix(self):
@@ -1908,16 +1917,13 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
 
     compilerList = []
     if hasattr(self.setCompilers, 'CXX'):
-      self.isGCXX = config.setCompilers.Configure.isGNU(self.setCompilers.CXX, self.log)
-      isClang     = config.setCompilers.Configure.isClang(self.setCompilers.CXX,self.log)
-      compilerList.append(('Cxx',isClang or self.isGCXX))
-    else:
-      compilerList.append(('Cxx',False))
+      compilerList.append('Cxx')
     if hasattr(self.setCompilers, 'CUDAC'):
-      compilerList.append(('CUDA',False))
+      compilerList.append('CUDA')
     if hasattr(self.setCompilers, 'HIPC'):
-      compilerList.append(('HIP',False))
-    self.executeTest(self.checkCxxDialect,[compilerList])
+      compilerList.append('HIP')
+    if len(compilerList):
+      self.executeTest(self.checkCxxDialect,[compilerList])
 
     if hasattr(self.setCompilers, 'CUDAC'):
       self.executeTest(self.checkDeviceHostCompiler,['CUDA'])

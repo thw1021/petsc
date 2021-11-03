@@ -1006,7 +1006,7 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     def inVersionRange(myRange,reqRange):
       # my minimum needs to be less than the maximum and my maximum must be greater than
       # the minimum
-      return (myRange[0].lower() <= reqRange[1].lower()) and (myRange[1].lower() >= reqRange[0].lower())
+      return (myRange[0][-2:] <= reqRange[1][-2:]) and (myRange[1][-2:] >= reqRange[0][-2:])
 
     self.printTest(self.consistencyChecks)
     if 'with-'+self.package+'-dir' in self.argDB and ('with-'+self.package+'-include' in self.argDB or 'with-'+self.package+'-lib' in self.argDB):
