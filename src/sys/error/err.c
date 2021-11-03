@@ -463,7 +463,7 @@ PetscErrorCode  PetscIntView(PetscInt N,const PetscInt idx[],PetscViewer viewer)
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT ":",20*i);CHKERRQ(ierr);
       }
       for (j=0; j<20; j++) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT "",idx[i*20+j]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT,idx[i*20+j]);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
     }
@@ -473,7 +473,7 @@ PetscErrorCode  PetscIntView(PetscInt N,const PetscInt idx[],PetscViewer viewer)
       } else {
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT ":",20*n);CHKERRQ(ierr);
       }
-      for (i=0; i<p; i++) { ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT "",idx[20*n+i]);CHKERRQ(ierr);}
+      for (i=0; i<p; i++) { ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT,idx[20*n+i]);CHKERRQ(ierr);}
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
     }
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);

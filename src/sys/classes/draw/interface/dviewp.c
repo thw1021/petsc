@@ -164,7 +164,7 @@ PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDra
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (PetscUnlikely(nports < 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Number of divisions must be positive: %" PetscInt_FMT "", nports);
+  if (PetscUnlikely(nports < 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Number of divisions must be positive: %" PetscInt_FMT, nports);
   PetscValidPointer(newports,3);
   ierr = PetscDrawIsNull(draw,&isnull);CHKERRQ(ierr);
   if (isnull) {*newports = NULL; PetscFunctionReturn(0);}
