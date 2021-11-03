@@ -51,6 +51,7 @@ cdef extern from * nogil:
     int VecCreateShared(MPI_Comm,PetscInt,PetscInt,PetscVec*)
     int VecCreateNest(MPI_Comm,PetscInt,PetscIS[],PetscVec[],PetscVec*)
     int VecGetType(PetscVec,PetscVecType*)
+    int VecGetSeqType(PetscVec,PetscVecType*)
     int VecSetType(PetscVec,PetscVecType)
     int VecSetOption(PetscVec,PetscVecOption,PetscBool)
     int VecSetSizes(PetscVec,PetscInt,PetscInt)
