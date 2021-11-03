@@ -181,14 +181,19 @@ class Configure(config.package.Package):
     return valid
 
   def configureTypes(self):
-    import config.setCompilers
     if not self.getDefaultPrecision() in ['double', 'single']:
       raise RuntimeError('Must use either single or double precision with CUDA')
     self.checkSizeofVoidP()
     # if no user-supplied thrust, check the system's complex ability
     if not self.thrust.found and self.scalarTypes.scalartype == 'complex':
-      if self.compilers.cxxDialectRange['CUDA'][1][-2:] < '11':
-        raise RuntimeError('CUDA Error: Using CUDA with PetscComplex requires at least c++11 (have {cudadialect}). Run\n$ ./configure --help compilers | grep -A 1 dialect\nfor available options on how to set this'.format(cudadialect=self.compilers.cxxDialect[1]))
+      cudaDialect = self.compilers.cxxDialectRange.max
+      if cudaDialect[-2:] < '11':
+        errorMessage = '\n'.join([
+          'Using CUDA with PetscComplex requires at least c++11 (have {cudadialect}). Run',
+          '$ ./configure --help compilers | grep -A 1 dialect',
+          'for available options on how to set this'
+        ]).format(cudadialect=cudaDialect)
+        raise RuntimeError(errorMessage)
       if not self.checkThrustVersion(100908):
         raise RuntimeError('CUDA Error: The thrust library is too low to support PetscComplex. Use --download-thrust or --with-thrust-dir to give a thrust >= 1.9.8')
     return
