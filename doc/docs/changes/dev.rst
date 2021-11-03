@@ -62,6 +62,7 @@ Changes: Development
 -  Add ``VecSetBindingPropagates()``
 -  Add ``VecGetBindingPropagates()``
 -  For CUDA and ViennaCL and HIP GPU vectors, ``VecCreate()`` no longer allocates the array on CPU eagerly, it is only allocated if it is needed
+-  Add ``VecGetSeqType()`` method to get the sequential type associated to a Vec
 
 .. rubric:: PetscSection:
 
