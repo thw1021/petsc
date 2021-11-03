@@ -20,7 +20,17 @@ using std::conditional_t;
 using std::remove_const_t;
 using std::underlying_type_t;
 using std::make_index_sequence;
+using std::remove_pointer_t;
 #else // c++14
+template <bool B, class T, class F>
+using conditional_t     = typename std::conditional<B,T,F>::type;
+template <class T>
+using remove_const_t    = typename std::remove_const<T>::type;
+template <class T>
+using underlying_type_t = typename std::underlying_type<T>::type;
+template <class T>
+using remove_pointer_t  = typename std::remove_pointer<T>::type;
+
 namespace detail
 {
 
@@ -39,24 +49,56 @@ struct index_sequence_impl<0U,rest...>
 
 } // namespace detail
 
-template <bool B, class T, class F>
-using conditional_t     = typename std::conditional<B,T,F>::type;
-template <class T>
-using remove_const_t    = typename std::remove_const<T>::type;
-template <class T>
-using underlying_type_t = typename std::underlying_type<T>::type;
 template <std::size_t N>
 using make_index_sequence = typename detail::index_sequence_impl<N>::type;
 #endif // c++14
 
+namespace detail
+{
+
+template <typename T, typename M> M member_type(M T::*);
+template <typename T, typename M> T class_type(M T::*);
+
+template <typename T,typename R, R T::*M>
+constexpr std::size_t offset_of()
+{
+  return reinterpret_cast<std::size_t>(&(((T*)0)->*M));
+}
+
+template <typename T, typename U = void> struct is_petsc_object : std::false_type { };
+
 template <typename T>
-PETSC_STATIC_INLINE constexpr underlying_type_t<T> integral_value(T value)
+struct is_petsc_object<T,decltype((void)remove_pointer_t<T>::hdr,void())>
+  : conditional_t<
+  (std::is_pointer<T>::value                           &&
+   std::is_class<remove_pointer_t<T>>::value           &&
+   std::is_standard_layout<remove_pointer_t<T>>::value &&
+   offsetof(remove_pointer_t<T>,hdr) == 0),
+  std::true_type,
+  std::false_type
+  >
+{ };
+
+template <typename T> struct is_petsc_object<T,PetscObject> : std::true_type { };
+
+} // namespace detail
+
+template <typename T>
+PETSC_STATIC_INLINE constexpr underlying_type_t<T> integral_value(T value) noexcept
 {
   static_assert(std::is_enum<T>::value,"");
   return static_cast<underlying_type_t<T>>(value);
 }
 
 } // namespace util
+
+// define this outside namespace util since it can be universally used
+template <typename T>
+PETSC_STATIC_INLINE constexpr PetscObject PetscObjectCast(T object) noexcept
+{
+  static_assert(util::detail::is_petsc_object<T>::value,"");
+  return reinterpret_cast<PetscObject>(object);
+}
 
 } // namespace Petsc
 
