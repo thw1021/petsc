@@ -3,7 +3,7 @@
 
 #include <petsc/private/deviceimpl.h> /* I "petscdevice.h" */
 #include <petsc/private/cupminterface.hpp>
-#include <petscviewer.h>
+#include <petsc/private/viewerimpl.h>
 #include <array>
 #include <memory>
 #include <limits>
