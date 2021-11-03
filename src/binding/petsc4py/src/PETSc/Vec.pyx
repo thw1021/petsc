@@ -640,6 +640,11 @@ cdef class Vec(Object):
         CHKERR( VecGetType(self.vec, &cval) )
         return bytes2str(cval)
 
+    def getSeqType(self):
+        cdef PetscVecType cval = NULL
+        CHKERR( VecGetSeqType(self.vec, &cval) )
+        return bytes2str(cval)
+
     def getSize(self):
         cdef PetscInt N = 0
         CHKERR( VecGetSize(self.vec, &N) )
