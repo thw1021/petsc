@@ -81,11 +81,10 @@ class Configure(config.package.Package):
             cxxflags += ' -Dpetsc_EXPORTS'
             # need to explicitly link to PETSc and BLAS on Windows
             ldflags += ' '+self.libraries.toStringNoDupes([os.path.join(libDir,'libpetsc.'+self.setCompilers.sharedLibraryExt),self.libraries.toStringNoDupes(self.blasLapack.lib)])
-          self.lib = [os.path.join(libDir,'libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)]
           self.addMakeRule('hpddmbuild',slepcbuilddep,\
                              ['@echo "*** Building and installing HPDDM ***"',\
                               '@${RM} -f ${PETSC_ARCH}/lib/petsc/conf/hpddm.errorflg',\
-                              '@'+cxx+' '+cxxflags+' '+os.path.join(self.packageDir,'interface','hpddm_petsc.cpp')+' '+ldflags+' -o '+self.lib[0]+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
+                              '@'+cxx+' '+cxxflags+' '+os.path.join(self.packageDir,'interface','hpddm_petsc.cpp')+' '+ldflags+' -o '+os.path.join(libDir,'libhpddm_petsc.'+self.setCompilers.sharedLibraryExt)+' > ${PETSC_ARCH}/lib/petsc/conf/hpddm.log 2>&1 || \\\n\
                    (echo "**************************ERROR*************************************" && \\\n\
                    echo "Error building HPDDM. Check ${PETSC_ARCH}/lib/petsc/conf/hpddm.log" && \\\n\
                    echo "********************************************************************" && \\\n\
