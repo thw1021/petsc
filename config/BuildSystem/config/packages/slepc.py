@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'f25fb3adb031964aea5fa9b06e418680bb99dcaf' # main oct-01-2021
+    self.gitcommit              = '8e61e08cb4162a6e4d5ef1bb272734b531b8dd50' # jolivet/feature-format nov-02-2021
     self.download               = ['git://https://gitlab.com/slepc/slepc.git','https://gitlab.com/slepc/slepc/-/archive/'+self.gitcommit+'/slepc-'+self.gitcommit+'.tar.gz']
     self.functions              = []
     self.includes               = []
