@@ -186,7 +186,7 @@ class Configure(config.package.Package):
     self.checkSizeofVoidP()
     # if no user-supplied thrust, check the system's complex ability
     if not self.thrust.found and self.scalarTypes.scalartype == 'complex':
-      cudaDialect = self.compilers.cxxDialectRange['CUDA'].max
+      cudaDialect = self.compilers.cxxDialectRange.max
       if cudaDialect[-2:] < '11':
         errorMessage = '\n'.join([
           'Using CUDA with PetscComplex requires at least c++11 (have {cudadialect}). Run',

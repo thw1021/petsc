@@ -1281,8 +1281,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     ndepGraph       = list(graph.DirectedGraph.topologicalSort(depGraph))
     setCompilers    = findModule(ndepGraph,config.setCompilers.Configure)
     compilers       = findModule(ndepGraph,config.compilers.Configure)
-    minCxx,maxCxx,_ = compilers.cxxDialectRange['Cxx']
-    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange['Cxx']))
+    minCxx,maxCxx,_ = compilers.cxxDialectRange
+    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange))
     minCxxVersionBlameList = {}
     maxCxxVersionBlameList = {}
     for child in ndepGraph:
@@ -1345,7 +1345,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       hiPack = ', '.join(maxCxxVersionBlameList[maxCxx])
       raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPacks} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
     compilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
-    self.logPrint('serialEvaluation: new cxxDialectRanges {rng}'.format(rng=(minCxx,maxCxx)))
+    self.logPrint('serialEvaluation: cxxDialectPackageRanges {rng}'.format(rng=(minCxx,maxCxx)))
     depGraph  = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()
