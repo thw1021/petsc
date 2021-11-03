@@ -364,12 +364,14 @@ PetscErrorCode PetscLayoutReference(PetscLayout in,PetscLayout *out)
 PetscErrorCode PetscLayoutSetISLocalToGlobalMapping(PetscLayout in,ISLocalToGlobalMapping ltog)
 {
   PetscErrorCode ierr;
-  PetscInt       bs;
 
   PetscFunctionBegin;
-  ierr = ISLocalToGlobalMappingGetBlockSize(ltog,&bs);CHKERRQ(ierr);
-  if (in->bs > 0 && (bs != 1) && in->bs != bs) SETERRQ2(in->comm,PETSC_ERR_PLIB,"Blocksize of layout %D must match that of mapping %D (or the latter must be 1)",in->bs,bs);
-  ierr = PetscObjectReference((PetscObject)ltog);CHKERRQ(ierr);
+  if (ltog) {
+    PetscInt bs;
+    ierr = ISLocalToGlobalMappingGetBlockSize(ltog,&bs);CHKERRQ(ierr);
+    if (in->bs > 0 && (bs != 1) && in->bs != bs) SETERRQ2(in->comm,PETSC_ERR_PLIB,"Blocksize of layout %D must match that of mapping %D (or the latter must be 1)",in->bs,bs);
+    ierr = PetscObjectReference((PetscObject)ltog);CHKERRQ(ierr);
+  }
   ierr = ISLocalToGlobalMappingDestroy(&in->mapping);CHKERRQ(ierr);
   in->mapping = ltog;
   PetscFunctionReturn(0);
