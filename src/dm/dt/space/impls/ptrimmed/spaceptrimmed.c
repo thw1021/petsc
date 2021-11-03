@@ -71,6 +71,44 @@ static PetscErrorCode PetscSpaceSetUp_Ptrimmed(PetscSpace sp)
     sp->Nc = Nf;
   }
   if (sp->Nc % Nf) SETERRQ2(PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "Number of components %D is not a multiple of form dimension %D\n", sp->Nc, Nf);
+  if (sp->Nc != Nf) {
+    PetscSpace  subsp;
+    PetscInt    nCopies = sp->Nc / Nf;
+    PetscInt    Nv, deg, maxDeg;
+    PetscInt    formDegree = pt->formDegree;
+    const char *prefix;
+    const char *name;
+    char        subname[PETSC_MAX_PATH_LEN];
+
+    ierr = PetscSpaceSetType(sp, PETSCSPACESUM);CHKERRQ(ierr);
+    ierr = PetscSpaceSumSetConcatenate(sp, PETSC_TRUE);CHKERRQ(ierr);
+    ierr = PetscSpaceSumSetNumSubspaces(sp, nCopies);CHKERRQ(ierr);
+    ierr = PetscSpaceCreate(PetscObjectComm((PetscObject)sp), &subsp);CHKERRQ(ierr);
+    ierr = PetscObjectGetOptionsPrefix((PetscObject)sp, &prefix);CHKERRQ(ierr);
+    ierr = PetscObjectSetOptionsPrefix((PetscObject)subsp, prefix);CHKERRQ(ierr);
+    ierr = PetscObjectAppendOptionsPrefix((PetscObject)subsp, "sumcomp_");CHKERRQ(ierr);
+    if (((PetscObject)sp)->name) {
+      ierr = PetscObjectGetName((PetscObject)sp, &name);CHKERRQ(ierr);
+      ierr = PetscSNPrintf(subname, PETSC_MAX_PATH_LEN-1, "%s sum component", name);CHKERRQ(ierr);
+      ierr = PetscObjectSetName((PetscObject)subsp, subname);CHKERRQ(ierr);
+    } else {
+      ierr = PetscObjectSetName((PetscObject)subsp, "sum component");CHKERRQ(ierr);
+    }
+    ierr = PetscSpaceSetType(subsp, PETSCSPACEPTRIMMED);CHKERRQ(ierr);
+    ierr = PetscSpaceGetNumVariables(sp, &Nv);CHKERRQ(ierr);
+    ierr = PetscSpaceSetNumVariables(subsp, Nv);CHKERRQ(ierr);
+    ierr = PetscSpaceSetNumComponents(subsp, Nf);CHKERRQ(ierr);
+    ierr = PetscSpaceGetDegree(sp, &deg, &maxDeg);CHKERRQ(ierr);
+    ierr = PetscSpaceSetDegree(subsp, deg, maxDeg);CHKERRQ(ierr);
+    ierr = PetscSpacePTrimmedSetFormDegree(subsp, formDegree);CHKERRQ(ierr);
+    ierr = PetscSpaceSetUp(subsp);CHKERRQ(ierr);
+    for (PetscInt i = 0; i < nCopies; i++) {
+      ierr = PetscSpaceSumSetSubspace(sp, i, subsp);CHKERRQ(ierr);
+    }
+    ierr = PetscSpaceDestroy(&subsp);CHKERRQ(ierr);
+    ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   if (sp->degree == PETSC_DEFAULT) {
     sp->degree = 0;
   } else if (sp->degree < 0) {
@@ -121,6 +159,11 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  if (!pt->setupCalled) {
+    ierr = PetscSpaceSetUp(sp);CHKERRQ(ierr);
+    ierr = PetscSpaceEvaluate(sp, npoints, points, B, D, H);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   if (H) {
     jet = 2;
   } else if (D) {
@@ -132,26 +175,24 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
   degree = f == 0 ? sp->degree : sp->degree + 1;
   ierr = PetscDTBinomialInt(dim, PetscAbsInt(f), &Nf);CHKERRQ(ierr);
   Ncopies = Nc / Nf;
+  if (Ncopies != 1) SETERRQ(PetscObjectComm((PetscObject) sp), PETSC_ERR_PLIB, "Multicopy spaces should have been converted to PETSCSPACESUM");
   ierr = PetscDTBinomialInt(dim + jet, dim, &Njet);CHKERRQ(ierr);
   ierr = PetscDTPTrimmedSize(dim, degree, f, &Nb);CHKERRQ(ierr);
   ierr = DMGetWorkArray(dm, Nb * Nf * Njet * npoints, MPIU_REAL, &eval);CHKERRQ(ierr);
   ierr = PetscDTPTrimmedEvalJet(dim, npoints, points, degree, f, jet, eval);CHKERRQ(ierr);
   if (B) {
-    PetscInt p_strl = Nb*Ncopies*Nc;
-    PetscInt b_strl = Nb*Nc;
-    PetscInt c_strl = Nc + Nf;
+    PetscInt p_strl = Nf*Nb;
+    PetscInt b_strl = Nf;
     PetscInt v_strl = 1;
 
     PetscInt b_strr = Nf*Njet*npoints;
     PetscInt v_strr = Njet*npoints;
     PetscInt p_strr = 1;
 
-    for (PetscInt c = 0; c < Ncopies; c++) {
-      for (PetscInt v = 0; v < Nf; v++) {
-        for (PetscInt b = 0; b < Nb; b++) {
-          for (PetscInt p = 0; p < npoints; p++) {
-            B[p*p_strl + b*b_strl + c*c_strl + v*v_strl] = eval[b*b_strr + v*v_strr + p*p_strr];
-          }
+    for (PetscInt v = 0; v < Nf; v++) {
+      for (PetscInt b = 0; b < Nb; b++) {
+        for (PetscInt p = 0; p < npoints; p++) {
+          B[p*p_strl + b*b_strl + v*v_strl] = eval[b*b_strr + v*v_strr + p*p_strr];
         }
       }
     }
