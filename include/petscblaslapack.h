@@ -34,7 +34,7 @@
     PetscStackPop;                                              \
   } while (0)
 
-PETSC_STATIC_INLINE void PetscMissingLapack_(const char *fname,...)
+static inline void PetscMissingLapack(const char *fname,...)
 {
   PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,PETSC_ERR_SUP,PETSC_ERROR_INITIAL,"%s - Lapack routine is unavailable.",fname);
   MPI_Abort(PETSC_COMM_SELF,PETSC_ERR_SUP);

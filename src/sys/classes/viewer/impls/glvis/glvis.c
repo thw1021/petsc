@@ -151,7 +151,7 @@ static PetscErrorCode PetscViewerGLVisSetFields_GLVis(PetscViewer viewer, PetscI
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  if (socket->nwindow && socket->nwindow != nfields) SETERRQ2(PetscObjectComm((PetscObject)viewer),PETSC_ERR_USER,"Cannot set number of fields %" PetscInt_FMT " with number of windows %" PetscInt_FMT "",nfields,socket->nwindow);
+  if (socket->nwindow && socket->nwindow != nfields) SETERRQ2(PetscObjectComm((PetscObject)viewer),PETSC_ERR_USER,"Cannot set number of fields %" PetscInt_FMT " with number of windows %" PetscInt_FMT,nfields,socket->nwindow);
   if (!socket->nwindow) {
     socket->nwindow = nfields;
 

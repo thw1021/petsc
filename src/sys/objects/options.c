@@ -2840,7 +2840,7 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options,const char pre[],con
         ierr = PetscOptionsStringToInt(value+i+1,&end);CHKERRQ(ierr);
         if (end <= start) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry, %s-%s cannot have decreasing list",n,value,value+i+1);
         nvalues = (end-start)/inc + (end-start)%inc;
-        if (n + nvalues  > *nmax) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry, not enough space left in array (%" PetscInt_FMT ") to contain entire range from %" PetscInt_FMT " to %" PetscInt_FMT "",n,*nmax-n,start,end);
+        if (n + nvalues  > *nmax) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry, not enough space left in array (%" PetscInt_FMT ") to contain entire range from %" PetscInt_FMT " to %" PetscInt_FMT,n,*nmax-n,start,end);
         for (;start<end; start+=inc) {
           *ivalue = start; ivalue++;n++;
         }
