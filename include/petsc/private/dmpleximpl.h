@@ -193,6 +193,7 @@ typedef struct {
   PetscInt             printFEM;
   PetscInt             printL2;
   PetscReal            printTol;
+  IS                   vecghostperm;        /* permutation to map all all ghost dof appropriate to VecCreateGhost() to the end of the vector */
 } DM_Plex;
 
 PETSC_EXTERN PetscErrorCode DMPlexVTKWriteAll_VTU(DM,PetscViewer);
