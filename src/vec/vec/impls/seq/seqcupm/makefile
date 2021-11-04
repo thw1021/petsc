@@ -4,7 +4,7 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 SOURCEC   =
-SOURCECXX =
+SOURCECXX = veccupm.cxx
 SOURCEF   =
 SOURCEH   = veccupm.hpp
 LIBBASE   = libpetscvec
