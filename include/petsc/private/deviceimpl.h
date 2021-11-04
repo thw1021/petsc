@@ -135,8 +135,8 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 
 typedef struct _DeviceOps *DeviceOps;
 struct _DeviceOps {
-  /* the creation routine for the corresponding PetscDeviceContext, this is NOT intended
-     to be called by the PetscDevice itself */
+  /* the creation routine for the corresponding PetscDeviceContext, this is NOT intended to be
+   * called by the PetscDevice itself */
   PetscErrorCode (*createcontext)(PetscDeviceContext);
   PetscErrorCode (*configure)(PetscDevice);
   PetscErrorCode (*view)(PetscDevice,PetscViewer);
