@@ -29,24 +29,18 @@ programming model. It is not -- major ramifications must be understood if such a
 approach is to be used successfully. Hybrid approaches can be developed in many ways that
 affect usability and performance.
 
-The simple model of PETSc with threads
+The simple model of PETSc with threads: back-ends
 ======================================
 
-One may contain all the thread operations inside the Mat and Vec classes, leaving the
-user's programming model identical to what it is today. This model can be done in two ways
-by having Vec and Mat class implementations that use
+One may contain all the thread operations inside the Mat and Vec
+classes, or a 3rd party solver library like hypre or SuperLU, leaving the
+user's programming model identical to what it is today. This is
+identical to our support for GPUs :any:`doc_gpu`.
 
-#. OpenMP compiler directives to parallelize some of the methods
-
-#. POSIX threads (pthread) calls to parallelize some of the methods.
-
-We tried this approach (with support for both OpenMP and pthreads) and found the code was
-never faster than pure MPI and cumbersome to use hence we have removed it.
-
-An alternative simple model of PETSc with threads
+An alternative simple model of PETSc with threads: serial PETSc object in a thread
 =================================================
 
-Alternatively, on my have individual threads (OpenMP or others) to each manage their own
+Alternatively, on my have individual threads (OpenMP or others) manage their own
 (sequential) PETSc objects (and each thread can interact only with its own objects). This
 is useful when one has many small systems (or sets of ODEs) that must be integrated in an
 "embarrassingly parallel" fashion.
@@ -58,8 +52,31 @@ how this may be used with OpenMP. The code uses a small number of ``#pragma omp 
 in non-time-critical locations in the code and thus only works with OpenMP and not with
 pthreads.
 
+Methods that have been tested for thread safety are noted as such on
+the man page for the method after the "Collective" label. And example
+is in src/sys/utils/segbuffer.c, the PetscSegBufferGet and
+PetscSegBufferUnuse methods. This internal thread safety allows a user
+to create and use DMPlex and DMSwarm, created with PETSC_COMM_SELF, in
+an OpenMP thread loop as demonstrated in src/dm/impls/swarm/tests/ex7.c
+
+
+Calling non thread safe methods from threads
+============================================
+
+To call a non-threadsafe PETSc method in a thread parallel region, one
+must synchronize before calling a non-threadsafe function, only one
+thread may call it at a time and a memory fence is needed after
+mutation by one thread before changes can be observed in-order by
+another thread.
+
+
 A more complicated model of PETSc with threads
 ==============================================
+
+COMMENT: I would like to delete this whole section: it is not
+constructive (we don't support this but we are going to talk about ?),
+obsolete (hardware and software threads have the same semantics
+afaik). A thread tutorial (PETSc is not the right place for a thread tutorial).
 
 This would allow users to write threaded code that made PETSc calls, is not supported
 because PETSc is not currently thread-safe. Because the issues involved with toolkits and
@@ -124,9 +141,9 @@ to maintain its own private data structure that is later merged into a common da
 structure. But to do this, one has to introduce a great deal of private state associated
 with the thread, i.e., it becomes more like a "light-weight process".
 
-In conclusion, at least for the PETSc package, the concept of being thread-safe is not
+In conclusion, the concept of being thread-safe for a library is not
 simple. It has major ramifications about its performance and how it would be used; it is
-not a simple matter of throwing a few locks around and then everything is honky-dory.
+not a simple matter of throwing a few locks around.
 
 If you have any comments/brickbats on this summary, please direct them to
 petsc-maint@mcs.anl.gov; we are interested in alternative viewpoints.
