@@ -7737,6 +7737,10 @@ PetscErrorCode DMGetStratumSize(DM dm, const char name[], PetscInt value, PetscI
 
   Level: beginner
 
+  Notes:
+  The output IS should be destroyed when no longer needed.
+  Returns NULL if the stratum is empty.
+
 .seealso: DMLabelGetStratumIS(), DMGetStratumSize()
 @*/
 PetscErrorCode DMGetStratumIS(DM dm, const char name[], PetscInt value, IS *points)
