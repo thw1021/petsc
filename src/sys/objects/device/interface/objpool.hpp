@@ -292,7 +292,7 @@ inline PetscErrorCode ObjectPool<T,_Allocator>::reclaim(value_type &&obj) PETSC_
     // this is necessary if an object is "reclaimed" within another PetscFinalize() registered
     // cleanup after this object pool has returned from it's finalizer. In this case, instead
     // of pushing onto the stack we just destroy the object directly
-    ierr = base_type::__getAllocator().destroy(obj);CHKERRQ(ierr);
+    ierr = base_type::__getAllocator().destroy(std::move(obj));CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

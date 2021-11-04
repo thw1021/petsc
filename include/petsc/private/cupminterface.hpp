@@ -84,12 +84,19 @@ struct CUPMInterfaceBase
 {
   static constexpr CUPMDeviceType type = T;
 
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetsc() noexcept
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType() noexcept
   {
     switch (type) {
     case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
-    default:                   return PETSC_DEVICE_INVALID;
+    }
+  }
+
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType() noexcept
+  {
+    switch (type) {
+    case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
+    case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
     }
   }
 
@@ -291,7 +298,8 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   /* introspection */                                                   \
   using base_name_::type;                                               \
   using base_name_::cupmName;                                           \
-  using base_name_::cupmDeviceTypeToPetsc;                              \
+  using base_name_::cupmDeviceTypeToPetscDeviceType;                    \
+  using base_name_::cupmDeviceTypeToPetscMemType;                       \
   /* types */                                                           \
   using typename base_name_::cupmError_t;                               \
   using typename base_name_::cupmEvent_t;                               \

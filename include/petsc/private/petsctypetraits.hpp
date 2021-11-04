@@ -86,11 +86,38 @@ PETSC_STATIC_INLINE constexpr underlying_type_t<T> integral_value(T value) noexc
 
 // define this outside namespace util since it can be universally used
 template <typename T>
-PETSC_STATIC_INLINE constexpr PetscObject PetscObjectCast(T object) noexcept
+PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(T& object) noexcept
 {
   static_assert(util::is_petsc_object<T>::value,"");
-  return reinterpret_cast<PetscObject>(object);
+  return reinterpret_cast<PetscObject&>(object);
 }
+
+template <typename T>
+PETSC_STATIC_INLINE util::remove_const_t<T>& PetscRemoveConstCast(T& object) noexcept
+{
+  return const_cast<util::remove_const_t<T>&>(object);
+}
+
+template <typename T>
+PETSC_STATIC_INLINE T& PetscRemoveConstCast(const T& object) noexcept
+{
+  return const_cast<T&>(object);
+}
+
+template <typename T>
+PETSC_STATIC_INLINE T*& PetscRemoveConstCast(const T*& object) noexcept
+{
+  return const_cast<T*&>(object);
+}
+
+template <typename T>
+PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
+{
+  static_assert(!std::is_const<T>::value,"");
+  return const_cast<const T&>(object);
+}
+
+#define PetscConsteval(expr) (std::integral_constant<decltype(expr),expr>::value)
 
 } // namespace Petsc
 
