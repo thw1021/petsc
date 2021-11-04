@@ -52,7 +52,7 @@ public:
     cupmBlasHandle_t   blas;
     cupmSolverHandle_t solver;
 
-    PETSC_NODISCARD cupmBlasHandle_t   get(HandleTag<cupmStream_t>)       { return stream; }
+    PETSC_NODISCARD cupmStream_t       get(HandleTag<cupmStream_t>)       { return stream; }
     PETSC_NODISCARD cupmBlasHandle_t   get(HandleTag<cupmBlasHandle_t>)   { return blas;   }
     PETSC_NODISCARD cupmSolverHandle_t get(HandleTag<cupmSolverHandle_t>) { return solver; }
   };
@@ -67,27 +67,14 @@ private:
     return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
   }
 
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cupmMemcpy_t __mem_op_to_cupmmemcpy_t(PetscDeviceBinaryMemOpType op)
-  {
-    switch (op) {
-    case PETSC_DEVICE_MEMCPY_DTOD: return cupmMemcpyDeviceToDevice;
-    case PETSC_DEVICE_MEMCPY_HTOD: return cupmMemcpyHostToDevice;
-    case PETSC_DEVICE_MEMCPY_DTOH: return cupmMemcpyDeviceToHost;
-    case PETSC_DEVICE_MEMCPY_HTOH: return cupmMemcpyHostToHost;
-    case PETSC_DEVICE_MEMCPY_AUTO: return cupmMemcpyDefault;
-    default:
-      SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscDeviceMemOpType");
-    }
-  }
-
   PETSC_NODISCARD static PetscErrorCode __initialize_handle(cupmBlasHandle_t &handle) noexcept
   {
-    constexpr std::size_t end = 3;
-    cupmBlasError_t       cberr;
+    constexpr auto  end = 3;
+    cupmBlasError_t cberr;
 
     PetscFunctionBegin;
     if (handle) PetscFunctionReturn(0);
-    for (std::size_t i = 0; i < end; ++i) {
+    for (auto i = 0; i < end; ++i) {
       cberr = cupmBlasCreate(&handle);
       if (PetscLikely(cberr == CUPMBLAS_STATUS_SUCCESS)) break;
       if ((cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) CHKERRCUPMBLAS(cberr);
