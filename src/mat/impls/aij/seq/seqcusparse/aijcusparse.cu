@@ -248,15 +248,18 @@ PETSC_INTERN PetscErrorCode MatCUSPARSESetUseCPUSolve_SeqAIJCUSPARSE(Mat A,Petsc
 }
 
 /*@
-   MatCUSPARSESetUseCPUSolve - Sets use CPU MatSolve. The cuSparse LU solver currently computes the factors with the built-in CPU method 
-   and moves the factors to the GPU for the solve. We have observed better performance keeping the data on the CPU and computing the solve there. 
-   This method to specify if the solve is done on the CPU or GPU (GPU is the default).
+   MatCUSPARSESetUseCPUSolve - Sets use CPU MatSolve.
 
    Input Parameters:
 +  A - Matrix of type SEQAIJCUSPARSE
 -  use_cpu - set flag for using the built-in CPU MatSolve
 
    Output Parameter:
+
+   Notes:
+   The cuSparse LU solver currently computes the factors with the built-in CPU method
+   and moves the factors to the GPU for the solve. We have observed better performance keeping the data on the CPU and computing the solve there.
+   This method to specify if the solve is done on the CPU or GPU (GPU is the default).
 
    Level: intermediate
 
