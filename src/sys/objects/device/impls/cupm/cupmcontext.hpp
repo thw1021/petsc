@@ -62,9 +62,9 @@ private:
   static std::array<cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   _blashandles;
   static std::array<cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> _solverhandles;
 
-  PETSC_NODISCARD static constexpr PetscDeviceContext_IMPLS* __impls_cast(PetscDeviceContext ptr) noexcept
+  PETSC_NODISCARD static constexpr PetscDeviceContext_IMPLS*& __impls_cast(PetscDeviceContext& ptr) noexcept
   {
-    return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
+    return static_cast<PetscDeviceContext_IMPLS*&>(ptr->data);
   }
 
   PETSC_NODISCARD static PetscErrorCode __initialize_handle(cupmBlasHandle_t &handle) noexcept
