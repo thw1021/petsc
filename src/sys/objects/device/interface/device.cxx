@@ -1,16 +1,20 @@
 #include "cupmdevice.hpp" /* I "petscdevice.h" */
 
-using namespace Petsc::Impl;
+using namespace Petsc;
 
 /* note to anyone adding more classes, the name must be ALL_CAPS_SHORT_NAME + Device exactly to
  * be picked up by the switch-case macros below. */
 #if PetscDefined(HAVE_CUDA)
-static CUPMDevice<CUPMDeviceType::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA);
+static Impl::CUPMDevice<CUPMDeviceType::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA);
 #endif
 #if PetscDefined(HAVE_HIP)
-static CUPMDevice<CUPMDeviceType::HIP>  HIPDevice(PetscDeviceContextCreate_HIP);
+static Impl::CUPMDevice<CUPMDeviceType::HIP>  HIPDevice(PetscDeviceContextCreate_HIP);
 #endif
 
+static_assert(util::integral_value(PETSC_DEVICE_INVALID) == 0,"");
+static_assert(util::integral_value(PETSC_DEVICE_CUDA)    == 1,"");
+static_assert(util::integral_value(PETSC_DEVICE_HIP)     == 2,"");
+static_assert(util::integral_value(PETSC_DEVICE_MAX)     == 3,"");
 const char *const PetscDeviceTypes[] = {
   "invalid",
   "cuda",
@@ -21,6 +25,9 @@ const char *const PetscDeviceTypes[] = {
   PETSC_NULLPTR
 };
 
+static_assert(util::integral_value(PETSC_DEVICE_INIT_NONE)  == 0,"");
+static_assert(util::integral_value(PETSC_DEVICE_INIT_LAZY)  == 1,"");
+static_assert(util::integral_value(PETSC_DEVICE_INIT_EAGER) == 2,"");
 const char *const PetscDeviceInitTypes[] = {
   "none",
   "lazy",
@@ -35,7 +42,7 @@ static_assert(
 );
 
 #define PETSC_DEVICE_DEFAULT_CASE(comm,type)                            \
-  SETERRQ1((comm),PETSC_ERR_PLIB,                                       \
+  SETERRQ1(comm,PETSC_ERR_PLIB,                                         \
            "PETSc was seemingly configured for PetscDeviceType %s but " \
            "we've fallen through all cases in a switch",                \
            PetscDeviceTypes[type])
@@ -94,7 +101,7 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceType type, PetscInt devid, PetscDevi
   dev->type   = type;
   dev->refcnt = 1;
   /* if you are adding a device, you also need to add it's initialization in
-     PetscDeviceInitializeTypeFromOptions_Private() below */
+   * PetscDeviceInitializeTypeFromOptions_Private() below */
   switch (type) {
     PETSC_DEVICE_CASE_IF_PETSC_DEFINED(CUDA,getDevice,dev,devid);
     PETSC_DEVICE_CASE_IF_PETSC_DEFINED(HIP,getDevice,dev,devid);
@@ -262,13 +269,6 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type,
   if (PetscUnlikelyDebug(defaultDevices[type])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
   ierr = PetscDeviceCreate(type,defaultDeviceId,&defaultDevices[type]);CHKERRQ(ierr);
   ierr = PetscDeviceConfigure(defaultDevices[type]);CHKERRQ(ierr);
-  /* the default devices are all automatically "referenced" at least once, otherwise the
-   * reference counting is off for them. We could alternatively increase the reference count
-   * when they are retrieved but that is a lot more brittle; what's to stop someone from doing
-   * the following?
-
-   for (int i = 0; i < 10000; ++i) auto device = PetscDeviceDefault_Internal();
-   */
   initializedDevice[type] = true;
   PetscFunctionReturn(0);
 }

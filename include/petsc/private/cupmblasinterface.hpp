@@ -15,6 +15,8 @@
 namespace Petsc
 {
 
+static_assert(util::integral_value(CUPMDeviceType::CUDA) == 0,"");
+static_assert(util::integral_value(CUPMDeviceType::HIP)  == 1,"");
 static constexpr std::array<const char*const,5> CUPMBlasTypes = {
   "cuBLAS",
   "hipBLAS",
@@ -22,6 +24,9 @@ static constexpr std::array<const char*const,5> CUPMBlasTypes = {
   "CUPMBlasType::",
   nullptr
 };
+
+namespace Impl
+{
 
 namespace detail
 {
@@ -86,7 +91,7 @@ namespace detail
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,suffix,PETSC_CUPMBLAS_PREFIX,suffix)
 
 template <CUPMDeviceType T>
-struct CUPMBlasInterfaceBase : Impl::CUPMInterface<T>
+struct CUPMBlasInterfaceBase : CUPMInterface<T>
 {
   PETSC_NODISCARD static constexpr const char* cupmBlasName() noexcept
   {
@@ -105,9 +110,6 @@ struct CUPMBlasInterfaceBase : Impl::CUPMInterface<T>
 #define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE) PETSC_CUPMBLAS_BASE_CLASS_HEADER_(DEV_TYPE)
 
 } // namespace detail
-
-namespace Impl
-{
 
 template <CUPMDeviceType T> struct CUPMBlasInterface;
 
