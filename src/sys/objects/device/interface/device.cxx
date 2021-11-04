@@ -165,7 +165,7 @@ PetscErrorCode PetscDeviceConfigure(PetscDevice device)
   PetscValidDevice(device,1);
   if (PetscDefined(USE_DEBUG)) {
     /* if no available configuration is available, this cascades all the way down to default
-       and error */
+     * and error */
     switch (device->type) {
     case PETSC_DEVICE_CUDA: if (PetscDefined(HAVE_CUDA)) break;
     case PETSC_DEVICE_HIP:  if (PetscDefined(HAVE_HIP))  break;
