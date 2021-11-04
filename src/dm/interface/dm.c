@@ -278,7 +278,8 @@ PetscErrorCode VecGetDM(Vec v, DM *dm)
 + v - The Vec
 - dm - The DM
 
-  Note: This is NOT the same as DMCreateGlobalVector() since it does not change the view methods or perform other customization, but merely sets the DM member.
+  Note:
+    This is NOT the same as DMCreateGlobalVector() since it does not change the view methods or perform other customization, but merely sets the DM member.
 
   Level: intermediate
 
@@ -413,8 +414,8 @@ PetscErrorCode  DMGetMatType(DM dm,MatType *ctype)
 
   Level: intermediate
 
-  Developer Note: Since the Mat class doesn't know about the DM class the DM object is associated with
-                  the Mat through a PetscObjectCompose() operation
+  Developer Note:
+    Since the Mat class doesn't know about the DM class the DM object is associated with the Mat through a PetscObjectCompose() operation
 
 .seealso: MatSetDM(), DMCreateMatrix(), DMSetMatType()
 @*/
@@ -440,8 +441,8 @@ PetscErrorCode MatGetDM(Mat A, DM *dm)
 
   Level: intermediate
 
-  Developer Note: Since the Mat class doesn't know about the DM class the DM object is associated with
-                  the Mat through a PetscObjectCompose() operation
+  Developer Note:
+    Since the Mat class doesn't know about the DM class the DM object is associated with the Mat through a PetscObjectCompose() operation
 
 .seealso: MatGetDM(), DMCreateMatrix(), DMSetMatType()
 @*/
@@ -1955,7 +1956,8 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
 + is - The global indices for the subproblem
 - subdm - The DM for the subproblem
 
-  Note: You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
+  Note:
+    You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
 
   Level: intermediate
 
@@ -1988,7 +1990,8 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 + is - The global indices for the subproblem, or NULL
 - superdm - The DM for the superproblem
 
-  Note: You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
+  Note:
+    You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
 
   Level: intermediate
 
@@ -2128,7 +2131,8 @@ PetscErrorCode DMCreateDomainDecompositionScatters(DM dm,PetscInt n,DM *subdms,V
   Options Database Keys:
 . -dm_plex_cell_refiner <strategy> - chooses the refinement strategy, e.g. regular, tohex
 
-  Note: If no refinement was done, the return value is NULL
+  Note:
+    If no refinement was done, the return value is NULL
 
   Level: developer
 
@@ -2304,10 +2308,11 @@ PetscErrorCode DMInterpolate(DM coarse,Mat interp,DM fine)
 
    Level: developer
 
-   Note: This function exists because the interpolation of a solution vector between meshes is not always a linear
-   map.  For example, if a boundary value problem has an inhomogeneous Dirichlet boundary condition that is compressed
-   out of the solution vector.  Or if interpolation is inherently a nonlinear operation, such as a method using
-   slope-limiting reconstruction.
+   Note:
+     This function exists because the interpolation of a solution vector between meshes is not always a linear
+     map.  For example, if a boundary value problem has an inhomogeneous Dirichlet boundary condition that is compressed
+     out of the solution vector.  Or if interpolation is inherently a nonlinear operation, such as a method using
+     slope-limiting reconstruction.
 
 .seealso DMInterpolate(), DMCreateInterpolation()
 @*/
@@ -2392,7 +2397,8 @@ PetscErrorCode  DMSetRefineLevel(DM dm,PetscInt level)
   Output Parameter:
 . dme - the extruded DM, or NULL
 
-  Note: If no extrusion was done, the return value is NULL
+  Note:
+    If no extrusion was done, the return value is NULL
 
   Level: developer
 
@@ -4076,7 +4082,8 @@ PetscErrorCode  DMLoad(DM newdm, PetscViewer viewer)
 
   Level: beginner
 
-  Note: If the DM is a DMDA and has no coordinates, the index bounds are returned instead.
+  Note:
+    If the DM is a DMDA and has no coordinates, the index bounds are returned instead.
 
 .seealso: DMGetCoordinates(), DMGetCoordinatesLocal(), DMGetBoundingBox()
 @*/
@@ -4227,9 +4234,9 @@ PetscErrorCode DMPrintLocalVec(DM dm, const char name[], PetscReal tol, Vec X)
   Level: advanced
 
   Notes:
-  Use DMGetLocalSection() in new code.
+    Use DMGetLocalSection() in new code.
 
-  This gets a borrowed reference, so the user should not destroy this PetscSection.
+    This gets a borrowed reference, so the user should not destroy this PetscSection.
 
 .seealso: DMGetLocalSection(), DMSetLocalSection(), DMGetGlobalSection()
 @*/
@@ -4243,7 +4250,7 @@ PetscErrorCode DMGetSection(DM dm, PetscSection *section)
 }
 
 /*@
-  DMGetLocalSection - Get the PetscSection encoding the local data layout for the DM.
+  DMGetLocalSection - Get the PetscSection encoding the local vector data layout for the DM.
 
   Input Parameter:
 . dm - The DM
@@ -4256,7 +4263,10 @@ PetscErrorCode DMGetSection(DM dm, PetscSection *section)
 
   Level: intermediate
 
-  Note: This gets a borrowed reference, so the user should not destroy this PetscSection.
+  Note:
+    This gets a borrowed reference, so the user should not destroy this PetscSection.
+
+    This must be called after DMAddField() and DMSetDS() or the section will be empty
 
 .seealso: DMSetLocalSection(), DMGetGlobalSection()
 @*/
@@ -4329,7 +4339,8 @@ PetscErrorCode DMSetSection(DM dm, PetscSection section)
 
   Level: intermediate
 
-  Note: Any existing Section will be destroyed
+  Note:
+    Any existing local or global Section will be destroyed
 
 .seealso: DMGetLocalSection(), DMSetGlobalSection()
 @*/
@@ -4376,7 +4387,8 @@ PetscErrorCode DMSetLocalSection(DM dm, PetscSection section)
 
   Level: advanced
 
-  Note: This gets borrowed references, so the user should not destroy the PetscSection or the Mat.
+  Note:
+   This gets borrowed references, so the user should not destroy the PetscSection or the Mat.
 
 .seealso: DMSetDefaultConstraints()
 @*/
@@ -4408,7 +4420,8 @@ PetscErrorCode DMGetDefaultConstraints(DM dm, PetscSection *section, Mat *mat)
 
   Level: advanced
 
-  Note: This increments the references of the PetscSection and the Mat, so they user can destroy them
+  Note:
+    This increments the references of the PetscSection and the Mat, so they user can destroy them
 
 .seealso: DMGetDefaultConstraints()
 @*/
@@ -4508,7 +4521,7 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 #endif
 
 /*@
-  DMGetGlobalSection - Get the PetscSection encoding the global data layout for the DM.
+  DMGetGlobalSection - Get the PetscSection encoding the global vector data layout for the DM.
 
   Collective on dm
 
@@ -4520,7 +4533,10 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 
   Level: intermediate
 
-  Note: This gets a borrowed reference, so the user should not destroy this PetscSection.
+  Note:
+    This gets a borrowed reference, so the user should not destroy this PetscSection.
+
+    This must be called after DMAddField() and DMSetDS() or the section will be empty
 
 .seealso: DMSetLocalSection(), DMGetLocalSection()
 @*/
@@ -4555,7 +4571,8 @@ PetscErrorCode DMGetGlobalSection(DM dm, PetscSection *section)
 
   Level: intermediate
 
-  Note: Any existing Section will be destroyed
+  Note:
+    Any existing global Section will be destroyed
 
 .seealso: DMGetGlobalSection(), DMSetLocalSection()
 @*/
@@ -4587,7 +4604,8 @@ PetscErrorCode DMSetGlobalSection(DM dm, PetscSection section)
 
   Level: intermediate
 
-  Note: This gets a borrowed reference, so the user should not destroy this PetscSF.
+  Note:
+    This gets a borrowed reference, so the user should not destroy this PetscSF.
 
 .seealso: DMSetSectionSF(), DMCreateSectionSF()
 @*/
@@ -4628,7 +4646,8 @@ PetscErrorCode DMGetSectionSF(DM dm, PetscSF *sf)
 
   Level: intermediate
 
-  Note: Any previous SF is destroyed
+  Note:
+    Any previous SF is destroyed
 
 .seealso: DMGetSectionSF(), DMCreateSectionSF()
 @*/
@@ -7736,6 +7755,10 @@ PetscErrorCode DMGetStratumSize(DM dm, const char name[], PetscInt value, PetscI
 . points - The stratum points, or NULL if the label does not exist or does not have that value
 
   Level: beginner
+
+  Notes:
+  The output IS should be destroyed when no longer needed.
+  Returns NULL if the stratum is empty.
 
 .seealso: DMLabelGetStratumIS(), DMGetStratumSize()
 @*/
