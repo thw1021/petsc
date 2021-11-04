@@ -443,6 +443,7 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
   PetscInt       depth, dim, numBC = 0, Nf, Nds, s, bc = 0, f;
   PetscInt       cStart, cEnd, cEndInterior;
   PetscErrorCode ierr;
+  DM_Plex        *plex = (DM_Plex*)dm->data;
 
   PetscFunctionBegin;
   ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
@@ -594,7 +595,7 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
       if ((numDof[f*(dim+1)+d] > 0) && (depth < dim)) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh must be interpolated when unknowns are specified on edges or faces.");
     }
   }
-  ierr = DMPlexCreateSection(dm, labels, numComp, numDof, numBC, bcFields, bcComps, bcPoints, NULL, &section);CHKERRQ(ierr);
+  ierr = DMPlexCreateSection(dm, labels, numComp, numDof, numBC, bcFields, bcComps, bcPoints, plex->vecghostperm, &section);CHKERRQ(ierr);
   for (f = 0; f < Nf; ++f) {
     PetscFE     fe;
     const char *name;
