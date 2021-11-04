@@ -67,7 +67,7 @@ namespace detail
 #define PETSC_CUPM_ALIAS_FUNCTION_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
   PETSC_ALIAS_FUNCTION(static constexpr CAT(our_prefix,our_suffix),CAT(their_prefix,their_suffix))
 
-#define PETSC_CUPM_ALIS_FUNCTION_COMMON(our_suffix,their_suffix)        \
+#define PETSC_CUPM_ALIAS_FUNCTION_COMMON(our_suffix,their_suffix)       \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
 
 #define PETSC_CUPM_ALIAS_FUNCTION(suffix) PETSC_CUPM_ALIAS_FUNCTION_COMMON(suffix,suffix)
