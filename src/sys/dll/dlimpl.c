@@ -15,7 +15,6 @@
 #if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 #undef PETSC_HAVE_WINDOWS_H
 #undef PETSC_HAVE_DLFCN_H
-#undef PETSC_HAVE_DLADDR
 #endif
 
 #if defined(PETSC_HAVE_WINDOWS_H)
@@ -340,7 +339,7 @@ PetscErrorCode PetscDLAddr(void (*func)(void), char **name)
   PetscFunctionBegin;
   PetscValidCharPointer(name,2);
   *name = NULL;
-#if defined(PETSC_HAVE_DLADDR)
+#if defined(PETSC_HAVE_DLADDR) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
   dlerror(); /* clear any previous error */
   {
     Dl_info        info;
