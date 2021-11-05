@@ -15,6 +15,8 @@
 #if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 #undef PETSC_HAVE_WINDOWS_H
 #undef PETSC_HAVE_DLFCN_H
+#undef PETSC_HAVE_DLOPEN
+#undef PETSC_HAVE_DLADDR
 #endif
 
 #if defined(PETSC_HAVE_WINDOWS_H)
@@ -251,7 +253,7 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
   if (handle) dlhandle = (dlhandle_t) handle;
   else {
 
-#if defined(PETSC_HAVE_DLOPEN) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
+#if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
     /* Attempt to retrieve the main executable's dlhandle. */
     { int dlflags1 = 0, dlflags2 = 0;
 #if defined(PETSC_HAVE_RTLD_LAZY)
@@ -339,7 +341,7 @@ PetscErrorCode PetscDLAddr(void (*func)(void), char **name)
   PetscFunctionBegin;
   PetscValidCharPointer(name,2);
   *name = NULL;
-#if defined(PETSC_HAVE_DLADDR) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
+#if defined(PETSC_HAVE_DLADDR)
   dlerror(); /* clear any previous error */
   {
     Dl_info        info;
