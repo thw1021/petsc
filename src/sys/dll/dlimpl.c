@@ -1,4 +1,3 @@
-
 /*
    Low-level routines for managing dynamic link libraries (DLLs).
 */
@@ -16,6 +15,7 @@
 #if !defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
 #undef PETSC_HAVE_WINDOWS_H
 #undef PETSC_HAVE_DLFCN_H
+#undef PETSC_HAVE_DLADDR
 #endif
 
 #if defined(PETSC_HAVE_WINDOWS_H)
