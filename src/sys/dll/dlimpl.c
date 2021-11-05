@@ -1,4 +1,3 @@
-
 /*
    Low-level routines for managing dynamic link libraries (DLLs).
 */
@@ -340,7 +339,7 @@ PetscErrorCode PetscDLAddr(void (*func)(void), char **name)
   PetscFunctionBegin;
   PetscValidCharPointer(name,2);
   *name = NULL;
-#if defined(PETSC_HAVE_DLADDR)
+#if defined(PETSC_HAVE_DLADDR) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
   dlerror(); /* clear any previous error */
   {
     Dl_info        info;
