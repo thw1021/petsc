@@ -116,8 +116,21 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_SINGLE_LIBRARY_INTERN PETSC_EXTERN
 #endif
 
+/* initial PETSC_HAVE<VER> is set at configure time, but we double check here */
+#if defined(__cplusplus)
+#  if (__cplusplus < 201103L) && defined(PETSC_HAVE_CXX11)
+#    error "PETSC_HAVE_CXX11 is defined but __cplusplus < 201103L"
+#  endif
+#  if (__cplusplus < 201402L) && defined(PETSC_HAVE_CXX14)
+#    error "PETSC_HAVE_CXX14 is defined but __cplusplus < 201402L"
+#  endif
+#  if (__cplusplus < 201703L) && defined(PETSC_HAVE_CXX17)
+#    error "PETSC_HAVE_CXX17 is defined but __cplusplus < 201703L"
+#  endif
+#endif /* __cplusplus */
+
 /* C++11 features */
-#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#if defined(PETSC_HAVE_CXX11)
 #  define PETSC_NULLPTR             nullptr
 #  define PETSC_CONSTEXPR           constexpr
 #  define PETSC_NOEXCEPT            noexcept
@@ -127,24 +140,23 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR
 #  define PETSC_NOEXCEPT
 #  define PETSC_NOEXCEPT_ARG(cond_)
-#endif /* __cplusplus && PETSC_HAVE_CXX_DIALECT_CXX11 */
+#endif /* PETSC_HAVE_CXX11 */
 
 /* C++14 features */
-#if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
+#if defined(PETSC_HAVE_CXX14)
 #  define PETSC_CONSTEXPR_14 PETSC_CONSTEXPR
 #else
 #  define PETSC_CONSTEXPR_14
-#endif
+#endif /* PETSC_HAVE_CXX14 */
 
 /* C++17 features */
-/* We met cases that the host CXX compiler (say mpicxx) supports C++17, but nvcc does not agree, even with -ccbin mpicxx! */
-#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX17) && (!defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_CUDA_DIALECT_CXX17))
+#if defined(PETSC_HAVE_CXX17)
 #  define PETSC_NODISCARD    [[nodiscard]]
 #  define PETSC_CONSTEXPR_17 PETSC_CONSTEXPR
 #else
 #  define PETSC_NODISCARD
 #  define PETSC_CONSTEXPR_17
-#endif
+#endif /* PETSC_HAVE_CXX17 */
 
 #include <petscversion.h>
 #define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://petsc.org/\n"

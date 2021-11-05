@@ -4,7 +4,7 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupminterface.hpp>
 
-#if !defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#if !defined(PETSC_HAVE_CXX11)
 #error PetscDeviceContext backends for CUDA and HIP requires C++11
 #endif
 

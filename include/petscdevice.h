@@ -235,7 +235,7 @@ PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PetscDefined(HAVE_HIP) */
 
 /* Cannot use the device context api without C++11 */
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#if PetscDefined(HAVE_CXX11)
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
 
@@ -264,5 +264,5 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
-#endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
+#endif /* PetscDefined(HAVE_CXX11) */
 #endif /* PETSCDEVICE_H */
