@@ -177,7 +177,7 @@ struct _n_PetscDeviceContext {
 };
 
 /* PetscDevice Internal Functions */
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#if PetscDefined(HAVE_CXX11)
 PETSC_INTERN PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType,PetscInt);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType,PetscDevice*);
@@ -226,7 +226,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice d
   if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"PetscDevice has negative reference count %D",device->refcnt);
   PetscFunctionReturn(0);
 }
-#else /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
+#else /* PetscDefined(HAVE_CXX11) */
 #define PetscDeviceInitializeFromOptions_Internal(comm)      0
 #define PetscDeviceInitializeDefaultDevice_Internal(type,id) 0
 #define PetscDeviceGetDefaultForType_Internal(Type,device)   0
@@ -234,10 +234,10 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice d
 #define PetscDeviceCheckDeviceCount_Internal(count)          0
 #define PetscDeviceReference_Internal(device)                0
 #define PetscDeviceDereference_Internal(device)              0
-#endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
+#endif /* PetscDefined(HAVE_CXX11) */
 
 /* PetscDeviceContext Internal Functions */
-#if PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#if PetscDefined(HAVE_CXX11)
 PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootDeviceType_Internal(PetscDeviceType);
 
 /* Called in debug-mode when a context claims it is idle to check that it isn't lying. A
@@ -329,7 +329,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
   ierr = (*dctx->ops->endtimer)(dctx,elapsed);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-#else /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
+#else /* PetscDefined(HAVE_CXX11) */
 #define PetscDeviceContextSetRootDeviceType_Internal(type)                0
 #define PetscDeviceContextValidateIdle_Internal(dctx)                     0
 #define PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,type)     0
@@ -339,7 +339,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDevi
 #define PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle)           0
 #define PetscDeviceContextBeginTimer_Internal(dctx)                       0
 #define PetscDeviceContextEndTimer_Internal(dctx,elapsed)                 0
-#endif /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
+#endif /* PetscDefined(HAVE_CXX11) */
 
 #if PetscDefined(HAVE_CUDA)
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext);
