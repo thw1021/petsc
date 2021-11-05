@@ -30,7 +30,7 @@ approach is to be used successfully. Hybrid approaches can be developed in many 
 affect usability and performance.
 
 The simple model of PETSc with threads: back-ends
-======================================
+=================================================
 
 One may contain all the thread operations inside the Mat and Vec
 classes, or a 3rd party solver library like hypre or SuperLU, leaving the
@@ -38,7 +38,7 @@ user's programming model identical to what it is today. This is
 identical to our support for GPUs :any:`doc_gpu`.
 
 An alternative simple model of PETSc with threads: serial PETSc object in a thread
-=================================================
+==================================================================================
 
 Alternatively, on my have individual threads (OpenMP or others) manage their own
 (sequential) PETSc objects (and each thread can interact only with its own objects). This
@@ -54,7 +54,7 @@ pthreads.
 
 Methods that have been tested for thread safety are noted as such on
 the man page for the method after the "Collective" label. And example
-is in src/sys/utils/segbuffer.c, the PetscSegBufferGet and
+is in `segbuffer.c <../../src/sys/utils/segbuffer.c.html>`__, the ``PetscSegBufferGet`` and
 PetscSegBufferUnuse methods. This internal thread safety allows a user
 to create and use DMPlex and DMSwarm, created with PETSC_COMM_SELF, in
 an OpenMP thread loop as demonstrated in src/dm/impls/swarm/tests/ex7.c
