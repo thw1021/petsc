@@ -15,12 +15,6 @@ namespace Impl
 // implement it on the CUDA side you'll get an error.
 
 // need these for the indirection when building the if_0 and if_1 variants of the macro
-#undef CAT_
-#undef CAT
-
-#define CAT_(x,y) x ## y
-#define CAT(x,y) CAT_(x,y)
-
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_0(PREFIX,original,mapped)
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_1(PREFIX,original,mapped) \
   const decltype(original) CUPMInterface<CUPMDeviceType::PREFIX>::mapped;
