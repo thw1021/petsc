@@ -116,15 +116,16 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_SINGLE_LIBRARY_INTERN PETSC_EXTERN
 #endif
 
+/* initial PETSC_HAVE<VER> is set at configure time, but we double check here */
 #if defined(__cplusplus)
-#  if __cplusplus >= 201103L
-#    define PETSC_HAVE_CXX11 1
+#  if (__cplusplus < 201103L) && defined(PETSC_HAVE_CXX11)
+#    error "PETSC_HAVE_CXX11 is defined but __cplusplus < 201103L"
 #  endif
-#  if __cplusplus >= 201402L
-#    define PETSC_HAVE_CXX14 1
+#  if (__cplusplus < 201402L) && defined(PETSC_HAVE_CXX14)
+#    error "PETSC_HAVE_CXX14 is defined but __cplusplus < 201402L"
 #  endif
-#  if __cplusplus >= 201703L
-#    define PETSC_HAVE_CXX17 1
+#  if (__cplusplus < 201703L) && defined(PETSC_HAVE_CXX17)
+#    error "PETSC_HAVE_CXX17 is defined but __cplusplus < 201703L"
 #  endif
 #endif /* __cplusplus */
 

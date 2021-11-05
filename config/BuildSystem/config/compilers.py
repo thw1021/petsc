@@ -837,9 +837,7 @@ class Configure(config.base.Configure):
       ]).format(flags='\n'.join('\t   - '+f for f,_ in flagPool)))
       with self.Language(language):
         for index,(flag,dlct) in enumerate(flagPool):
-          self.logPrint(
-            ' '.join(['checkCxxDialect: checking CXX',dlct.num,'for',language,'with',flag])
-          )
+          self.logPrint('checkCxxDialect: checking CXX {dlctnum} for {lang} with {flag}'.format(dlctnum=dlct.num,lang=language,flag=flag))
           # test with flag
           with self.setCompilers.Language(language):
             # needs compilerOnly = True as we need to keep the flag out of the linker flags
@@ -857,7 +855,7 @@ class Configure(config.base.Configure):
                 'checkCxxDialect: success using {flag} for {lang} dialect c++{ver}, added new cxxDialectRange:',
                 '{drange}'
               ]).format(flag=flag,lang=language,ver=dlct.num,drange=dialectBounds[-1]))
-              break # allowed flags loop
+              break # on to the next language
           if index == len(flagPool)-1:
             # compiler does not support the minimum required c++ dialect
             flist = '\n'.join('- '+flg for flg,_ in flagPool[:index+1])+'\n'
@@ -889,23 +887,34 @@ class Configure(config.base.Configure):
     lolang = hilang = languageList[0]
     minfinal,maxfinal,propfinal = dialectBounds[0]
     for lang,(mini,maxi,propi) in zip(languageList,dialectBounds):
-      if (mini[-2:] > minfinal[-2:]) or\
-         ((mini[-2:] == minfinal[-2:]) and mini.startswith('gnu') and minfinal.startswith('c++')):
+      miniNum     = mini[-2:]
+      minFinalNum = minfinal[-2:]
+      if (miniNum > minFinalNum) or\
+         ((miniNum == minFinalNum) and mini.startswith('gnu') and minfinal.startswith('c++')):
         # gnu++11 is a more restrictive lower bound than c++11
         lolang   = lang
         minfinal = mini
-      if (maxi[-2:] < maxfinal[-2:]) or\
-         ((maxi[-2:] == maxfinal[-2:]) and maxi.startswith('c++') and maxfinal.startswith('gnu')):
+      maxiNum     = maxi[-2:]
+      maxFinalNum = maxfinal[-2:]
+      if (maxiNum < maxFinalNum) or\
+         ((maxiNum == maxFinalNum) and maxi.startswith('c++') and maxfinal.startswith('gnu')):
         # c++17 is a more restrictive upper bound than gnu++17
         hilang   = lang
         maxfinal = maxi
       if propi:
         propfinal = propi
-    if maxfinal[-2:] < minfinal[-2:]:
+    if maxFinalNum < minFinalNum:
       errorMessage = 'Using c++ dialect {dlct} as lower bound due to {lolang} compiler ({locompiler}) but {hilang} compiler ({hicompiler}) appears non-compliant with {dlct}'.format(lolang=lolang,locompiler=self.getCompiler(lang=lolang),hilang=hilang,hicompiler=self.getCompiler(lang=hilang),dlct=minfinal)
       raise RuntimeError(errorMessage)
     self.cxxDialectRange = CxxDialectRange(min=minfinal,max=maxfinal,propagateToPackages=propfinal)
     self.logPrint('checkCxxDialect: success, final cxxDialectRange: {drange}'.format(drange=self.cxxDialectRange))
+    # grab the latest in case the last loop around set it
+    maxFinalNum = maxfinal[-2:]
+    for dlct in dialects:
+      if dlct.num > maxFinalNum:
+        break
+      self.addDefine('HAVE_CXX{ver}'.format(ver=dlct.num),1)
+    import ipdb; ipdb.set_trace()
     if useFlag:
       # one final loop over the languages to set the flag
       flag = '-std='+maxfinal
