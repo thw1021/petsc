@@ -117,8 +117,6 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
   return const_cast<const T&>(object);
 }
 
-#define PetscConsteval(expr) (std::integral_constant<decltype(expr),expr>::value)
-
 } // namespace Petsc
 
 #endif // c++11

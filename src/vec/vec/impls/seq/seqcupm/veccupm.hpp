@@ -9,7 +9,7 @@
 #include <petsc/private/cupmblasinterface.hpp>
 
 #if !defined(__cplusplus) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
-#  error "VecSeqCUPM requires C++11"
+#  error "VecSeq_CUPM requires C++11"
 #endif
 
 #include <thrust/device_ptr.h>
@@ -30,6 +30,7 @@
 // - There is also an overloaded version of cudaMallocAsync that takes the same arguments as
 //   cudaMallocFromPoolAsync
 // - Make createseqcupm_async callable from C
+// - port bindtocpu
 
 namespace Petsc
 {
@@ -37,11 +38,48 @@ namespace Petsc
 namespace Impl
 {
 
+// VEC<PAR_TYPE>CUPM() gives the full expansion of the macro for each variant, (for cuda this
+// would be VECSEQCUDA, i.e. "seqcuda") while VEC<PAR_TYPE>CUPMMACRO() gives the
+// stringificationo of the macro name, i.e. for cuda "VECSEQCUDA"
+#define PETSC_VECCUPM_DEFINE_UTILITY(PAR_TYPE,CUPM_TYPE)                \
+  static constexpr const char* VEC ## PAR_TYPE ## CUPM() noexcept       \
+  {                                                                     \
+    return PetscStringize(VEC ## PAR_TYPE ## CUPM_TYPE);                \
+  };                                                                    \
+  static constexpr const char* VEC ## PAR_TYPE ## CUPMMACRO() noexcept  \
+  {                                                                     \
+    return PetscStringize_(VEC ## PAR_TYPE ## CUPM_TYPE);               \
+  };
+
+template <CUPMDeviceType T> struct VecSeq_CUPMBase;
+
+#define PETSC_VECCUPM_DEFINE_BASE_CLASS(TYPE)                           \
+  template <>                                                           \
+  struct VecSeq_CUPMBase<CUPMDeviceType::TYPE>                          \
+  {                                                                     \
+    static constexpr auto& VEC_CUPMCopyToGPU   = VEC_ ## TYPE ## CopyToGPU; \
+    static constexpr auto& VEC_CUPMCopyFromGPU = VEC_ ## TYPE ## CopyFromGPU; \
+                                                                        \
+    PETSC_VECCUPM_DEFINE_UTILITY(SEQ,TYPE)                              \
+    PETSC_VECCUPM_DEFINE_UTILITY(MPI,TYPE)                              \
+  }
+
+PETSC_VECCUPM_DEFINE_BASE_CLASS(CUDA);
+PETSC_VECCUPM_DEFINE_BASE_CLASS(HIP);
+
 template <CUPMDeviceType T>
-struct VecSeq_CUPM : CUPMBlasInterface<T>
+struct VecSeq_CUPM : VecSeq_CUPMBase<T>,CUPMBlasInterface<T>
 {
 public:
   PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
+
+  using base_type = VecSeq_CUPMBase<T>;
+  using base_type::VEC_CUPMCopyToGPU;
+  using base_type::VEC_CUPMCopyFromGPU;
+  using base_type::VECSEQCUPM;
+  using base_type::VECSEQCUPMMACRO;
+  using base_type::VECMPICUPM;
+  using base_type::VECMPICUPMMACRO;
 
   struct Vec_CUPM
   {
@@ -161,9 +199,9 @@ private:
       cupmError_t  cerr;
 
       ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,&stream);CHKERRQ(ierr);
-      ierr = PetscLogEventBegin(VEC_CUDACopyToGPU,v,0,0,0);CHKERRQ(ierr);
+      ierr = PetscLogEventBegin(VEC_CUPMCopyToGPU,v,0,0,0);CHKERRQ(ierr);
       cerr = cupmMemcpyAsync(__cupm_impls_cast(v)->device_array,__vec_impls_cast(v)->array,xfersize,cupmMemcpyHostToDevice,stream);CHKERRCUPM(cerr);
-      ierr = PetscLogEventEnd(VEC_CUDACopyToGPU,v,0,0,0);CHKERRQ(ierr);
+      ierr = PetscLogEventEnd(VEC_CUPMCopyToGPU,v,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogCpuToGpu(xfersize);CHKERRQ(ierr);
       v->offloadmask = PETSC_OFFLOAD_BOTH;
     }
@@ -182,9 +220,9 @@ private:
       cupmError_t  cerr;
 
       ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,&stream);CHKERRQ(ierr);
-      ierr = PetscLogEventBegin(VEC_CUDACopyFromGPU,v,0,0,0);CHKERRQ(ierr);
+      ierr = PetscLogEventBegin(VEC_CUPMCopyFromGPU,v,0,0,0);CHKERRQ(ierr);
       cerr = cupmMemcpyAsync(__vec_impls_cast(v)->array,__cupm_impls_cast(v)->device_array,xfersize,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
-      ierr = PetscLogEventEnd(VEC_CUDACopyFromGPU,v,0,0,0);CHKERRQ(ierr);
+      ierr = PetscLogEventEnd(VEC_CUPMCopyFromGPU,v,0,0,0);CHKERRQ(ierr);
       ierr = PetscLogGpuToCpu(xfersize);CHKERRQ(ierr);
       v->offloadmask = PETSC_OFFLOAD_BOTH;
     }
@@ -422,10 +460,10 @@ inline PetscErrorCode VecSeq_CUPM<T>::__create_async(Vec v, PetscScalar *device_
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm(PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  if (PetscUnlikely(size > 1)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQCUDA on more than one process");
+  if (PetscUnlikely(size > 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create %s on more than one process",VECSEQCUPMMACRO());
   ierr = PetscDeviceInitialize(cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
   ierr = VecCreate_Seq_Private(v,nullptr);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName(PetscObjectCast(v),VECSEQCUDA);CHKERRQ(ierr);
+  ierr = PetscObjectChangeTypeName(PetscObjectCast(v),VECSEQCUPM());CHKERRQ(ierr);
   ierr = VecBindToCPU_SeqCUDA(v,PETSC_FALSE);CHKERRQ(ierr);
   V->ops->bindtocpu = VecBindToCPU_SeqCUDA;
 
@@ -449,7 +487,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::__minmax_async(Tt&& tuple_functor, Tu&& un
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
-  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
+  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   if (!n) {
     *m = initialValue;
     if (p) *p = -1;
@@ -523,7 +561,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async(MPI_Comm comm, PetscIn
   PetscFunctionBegin;
   ierr = VecCreate(comm,v);CHKERRQ(ierr);
   ierr = VecSetSizes(*v,n,n);CHKERRQ(ierr);
-  ierr = VecSetType(*v,VECSEQCUDA);CHKERRQ(ierr);
+  ierr = VecSetType(*v,VECSEQCUPM());CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -653,12 +691,12 @@ template <bool read>
 inline PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v, Vec w) noexcept
 {
   PetscErrorCode ierr;
-  PetscBool      wisseqcuda;
+  PetscBool      wisseqcupm;
 
   PetscFunctionBegin;
-  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
-  ierr = PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUDA,&wisseqcuda);CHKERRQ(ierr);
-  if (wisseqcuda) {
+  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  ierr = PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUPM(),&wisseqcupm);CHKERRQ(ierr);
+  if (wisseqcupm) {
     if (auto vseq = __vec_impls_cast(w)) {
       if (vseq->array_allocated) {
         if (w->pinned_memory) {ierr = PetscMallocSetCUDAHost();CHKERRQ(ierr);}
@@ -683,7 +721,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v, Vec w) noexcep
       ierr = PetscFree(w->spptr);CHKERRQ(ierr);
     }
   }
-  if (v->petscnative && wisseqcuda) {
+  if (v->petscnative && wisseqcupm) {
     ierr = PetscFree(w->data);CHKERRQ(ierr);
     w->data          = v->data;
     w->offloadmask   = v->offloadmask;
@@ -693,7 +731,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v, Vec w) noexcep
   } else {
     ierr = (read ? VecGetArrayRead : VecGetArray)(v,&__vec_impls_cast(w)->array);CHKERRQ(ierr);
     w->offloadmask = PETSC_OFFLOAD_CPU;
-    if (wisseqcuda) {
+    if (wisseqcupm) {
       PetscDeviceContext dctx;
 
       ierr = __get_handles(&dctx);CHKERRQ(ierr);
@@ -708,12 +746,12 @@ template <bool read>
 inline PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Vec v, Vec w) noexcept
 {
   PetscErrorCode ierr;
-  PetscBool      wisseqcuda;
+  PetscBool      wisseqcupm;
 
   PetscFunctionBegin;
-  PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
-  ierr = PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUDA,&wisseqcuda);CHKERRQ(ierr);
-  if (v->petscnative && wisseqcuda) {
+  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  ierr = PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUPM(),&wisseqcupm);CHKERRQ(ierr);
+  if (v->petscnative && wisseqcupm) {
     v->data          = w->data;
     v->offloadmask   = w->offloadmask;
     v->pinned_memory = w->pinned_memory;
@@ -723,7 +761,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Vec v, Vec w) noe
     w->spptr         = nullptr;
   } else {
     ierr = (read ? VecRestoreArrayRead : VecRestoreArray)(v,&__vec_impls_cast(w)->array);CHKERRQ(ierr);
-    if (w->spptr && wisseqcuda) {
+    if (w->spptr && wisseqcupm) {
       cupmStream_t stream;
       cupmError_t  cerr;
 
@@ -867,12 +905,12 @@ template <CUPMDeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscScalar alpha, Vec xin) noexcept
 {
   PetscErrorCode ierr;
-  PetscBool      xiscuda;
+  PetscBool      xiscupm;
 
   PetscFunctionBegin;
   if (alpha == PetscScalar(0.0)) PetscFunctionReturn(0);
-  ierr = PetscObjectTypeCompareAny(PetscObjectCast(xin),&xiscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
-  if (xiscuda) {
+  ierr = PetscObjectTypeCompareAny(PetscObjectCast(xin),&xiscupm,VECSEQCUPM(),VECMPICUPM(),"");CHKERRQ(ierr);
+  if (xiscupm) {
     PetscBLASInt       bn;
     cupmBlasHandle_t   cupmBlasHandle;
     cupmBlasError_t    cberr;
@@ -1146,7 +1184,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin) noexcept
   PetscFunctionBegin;
   if (xin != yin) {
     const auto         n = xin->map->n;
-    auto               yiscuda = PETSC_TRUE,xondevice = PETSC_TRUE; // assume we start on device
+    auto               yiscupm = PETSC_TRUE,xondevice = PETSC_TRUE; // assume we start on device
     cupmMemcpyKind_t   mode;
     PetscDeviceContext dctx;
     cupmStream_t       stream;
@@ -1168,10 +1206,10 @@ inline PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin) noexcept
     case PETSC_OFFLOAD_KOKKOS:
     case PETSC_OFFLOAD_UNALLOCATED:
     case PETSC_OFFLOAD_CPU:
-      ierr = PetscObjectTypeCompareAny(PetscObjectCast(yin),&yiscuda,VECSEQCUDA,VECMPICUDA,"");CHKERRQ(ierr);
+      ierr = PetscObjectTypeCompareAny(PetscObjectCast(yin),&yiscupm,VECSEQCUPM(),VECMPICUPM(),"");CHKERRQ(ierr);
     case PETSC_OFFLOAD_GPU:
     case PETSC_OFFLOAD_BOTH:
-      if (yiscuda) { // PETSC_TRUE by default (unless on the host)
+      if (yiscupm) { // PETSC_TRUE by default (unless on the host)
         // even though y may be on the host, its a cuda vector, so it ought to be on the device
         mode = xondevice ? cupmMemcpyDeviceToDevice : cupmMemcpyHostToDevice;
       } else {
