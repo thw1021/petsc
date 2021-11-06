@@ -42,6 +42,28 @@ PetscErrorCode MatMultAddMtM_SeqAIJ(Mat MtM,Vec xx, Vec yy, Vec zz)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode createPlex(DM *a_dm)
+{
+  PetscErrorCode ierr;
+  DM             dm;
+  PetscInt       Nc = 1, dim = 2, field = 0;
+  PetscFE        fe;
+
+  PetscFunctionBeginUser;
+  // setup mesh dm_t, could use PETSc's Landau create velocity space mesh here to get dm
+  ierr = DMCreate(PETSC_COMM_SELF, a_dm);CHKERRQ(ierr);
+  dm = *a_dm;
+  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
+  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
+  ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, Nc, PETSC_FALSE, "", PETSC_DECIDE, &fe);CHKERRQ(ierr);
+  ierr = PetscFESetFromOptions(fe);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject)fe, "fe");CHKERRQ(ierr);
+  ierr = DMSetField(dm, field, NULL, (PetscObject)fe);CHKERRQ(ierr);
+  ierr = DMCreateDS(dm);CHKERRQ(ierr);
+  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode createSwarm(const DM dm, DM *sw)
 {
   PetscErrorCode ierr;
@@ -219,16 +241,15 @@ static PetscErrorCode maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt
   u[0] = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta)) * 2.*PETSC_PI*x[1]; // radial term for 2D axi-sym.
   PetscFunctionReturn(0);
 }
-#define NUM_SOLVE_LOOPS 100
+#define NUM_SOLVE_LOOPS 10
 #define MAX_NUM_THRDS 12
 PetscErrorCode go()
 {
   DM              dm_t[MAX_NUM_THRDS], sw_t[MAX_NUM_THRDS];
-  PetscFE         fe;
-  PetscInt        dim = 2, Nc = 1, timestep = 0, i, faces[3];
-  PetscInt        Np[2] = {10,10}, Np2[2], field = 0, target = 0, Np_t[MAX_NUM_THRDS];
-  PetscReal       time = 0.0, moments_0[3], moments_1[3], vol;
-  PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], hp[3], *xx_t[MAX_NUM_THRDS], *yy_t[MAX_NUM_THRDS], *wp_t[MAX_NUM_THRDS], solve_time = 0;
+  PetscInt        dim = 2, i, faces[3];
+  PetscInt        Np[2] = {10,10}, Np2[2], target = 10, Np_t[MAX_NUM_THRDS];
+  PetscReal       moments_0[3], moments_1[3], vol;
+  PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], *xx_t[MAX_NUM_THRDS], *yy_t[MAX_NUM_THRDS], *wp_t[MAX_NUM_THRDS], solve_time = 0;
   Vec             rho_t[MAX_NUM_THRDS], rhs_t[MAX_NUM_THRDS];
   Mat             M_p_t[MAX_NUM_THRDS];
   PetscErrorCode  ierr;
@@ -242,53 +263,37 @@ PetscErrorCode go()
 #else
   PetscInt        numthreads = 1;
 #endif
+  PetscBool       flg;
 
   PetscFunctionBeginUser;
 #if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
   if (numthreads>MAX_NUM_THRDS) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %D > %D", numthreads, MAX_NUM_THRDS);
   if (numthreads<=0) SETERRQ2(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "No threads %D > %D ", numthreads,  MAX_NUM_THRDS);
 #endif
-  if (target >= numthreads) target = numthreads-1;
   ierr = PetscLogEventRegister("Create Swarm", DM_CLASSID, &swarm_create_ev);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("Single solve", DM_CLASSID, &solve_ev);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("Solve loop", DM_CLASSID, &solve_loop_ev);CHKERRQ(ierr);
   ierr = PetscLogStageRegister("Solve", &stage);CHKERRQ(ierr);
   i    = dim;
-  ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces", faces, &i, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetIntArray(NULL, NULL, "-dm_plex_box_faces", faces, &i, &flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "-dm_plex_box_faces not provided");
   i    = dim;
   ierr = PetscOptionsGetIntArray(NULL, NULL, "-np", Np,  &i, NULL);CHKERRQ(ierr);
-  /* Create thread meshes */
-  for (int tid=0; tid<numthreads; tid++) {
-    // setup mesh dm_t, could use PETSc's Landau create velocity space mesh here to get dm_t[tid]
-    ierr = DMCreate(PETSC_COMM_SELF, &dm_t[tid]);CHKERRQ(ierr);
-    ierr = DMSetType(dm_t[tid], DMPLEX);CHKERRQ(ierr);
-    ierr = DMSetFromOptions(dm_t[tid]);CHKERRQ(ierr);
-    ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, Nc, PETSC_FALSE, "", PETSC_DECIDE, &fe);CHKERRQ(ierr);
-    ierr = PetscFESetFromOptions(fe);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)fe, "fe");CHKERRQ(ierr);
-    ierr = DMSetField(dm_t[tid], field, NULL, (PetscObject)fe);CHKERRQ(ierr);
-    ierr = DMCreateDS(dm_t[tid]);CHKERRQ(ierr);
-    ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-    // helper vectors
-    ierr = DMSetOutputSequenceNumber(dm_t[tid], timestep, time);CHKERRQ(ierr); // not used
-    ierr = DMCreateGlobalVector(dm_t[tid], &rho_t[tid]);CHKERRQ(ierr);
-    ierr = DMCreateGlobalVector(dm_t[tid], &rhs_t[tid]);CHKERRQ(ierr);
-    // this mimics application code
-    ierr = DMGetBoundingBox(dm_t[tid], lo, hi);CHKERRQ(ierr);
-    if (tid==target) {
-      ierr = DMViewFromOptions(dm_t[tid], NULL, "-dm_view");CHKERRQ(ierr);
-      for (i=0,vol=1;i<dim;i++) {
-        h[i] = (hi[i] - lo[i])/faces[i];
-        hp[i] = (hi[i] - lo[i])/Np[i];
-        vol *= (hi[i] - lo[i]);
-        ierr = PetscInfo5(dm_t[tid]," lo = %g hi = %g n = %D h = %g hp = %g\n",lo[i],hi[i],faces[i],h[i],hp[i]);CHKERRQ(ierr);
-      }
-    }
-  }
+  ierr = PetscOptionsGetInt(NULL, NULL, "-target",  &target, NULL);CHKERRQ(ierr);
+  if (target >= numthreads) target = numthreads-1;
   // prepare particle data for problems. This mimics application code
   ierr = PetscLogEventBegin(swarm_create_ev,0,0,0,0);CHKERRQ(ierr);
+  for (i=0,vol=1;i<dim;i++) {
+    h[i] = (hi[i] - lo[i])/faces[i];
+    vol *= (hi[i] - lo[i]);
+    ierr = PetscInfo4(0," lo = %g hi = %g n = %D h = %g\n",lo[i],hi[i],faces[i],h[i]);
+  }
   Np2[0] = Np[0]; Np2[1] = Np[1];
-  for (int tid=0; tid<numthreads; tid++) { // change size of particle list a little
+  for (int tid=0; tid<numthreads; tid++) {
+    PetscReal hp[3];
+    for (i=0;i<dim;i++) {
+      hp[i] = (hi[i] - lo[i])/Np2[i];
+    }
     Np_t[tid] = Np2[0]*Np2[1];
     ierr = PetscMalloc3(Np_t[tid],&xx_t[tid],Np_t[tid],&yy_t[tid],Np_t[tid],&wp_t[tid]);CHKERRQ(ierr);
     if (tid==target) {moments_0[0] = moments_0[1] = moments_0[2] = 0;}
@@ -300,50 +305,55 @@ PetscErrorCode go()
           PetscReal x[] = {xx_t[tid][pp],yy_t[tid][pp]};
           ierr = maxwellian(2, x, 1.0, vol/(PetscReal)Np_t[tid], &wp_t[tid][pp]);
         }
-        if (tid==target) { //energy_0 += wp_t[tid][pp]*(PetscSqr(xx_t[tid][pp])+PetscSqr(yy_t[tid][pp]));
+        if (tid==target) {
           moments_0[0] += wp_t[tid][pp];
           moments_0[1] += wp_t[tid][pp] * xx_t[tid][pp]; // x-momentum
           moments_0[2] += wp_t[tid][pp] * (PetscSqr(xx_t[tid][pp]) + PetscSqr(yy_t[tid][pp]));
         }
       }
     }
-    Np2[0]++; Np2[1]++;
+    Np2[0]++; Np2[1]++; // change each "vertex" particle grid a little
   }
   ierr = PetscLogEventEnd(swarm_create_ev,0,0,0,0);CHKERRQ(ierr);
+  /* Create thread meshes */
+  PetscPragmaOMP(parallel for)
+  for (int tid=0; tid<numthreads; tid++) {
+    ierr = createPlex(&dm_t[tid]);
+    if (tid==target) {
+      ierr = DMViewFromOptions(dm_t[tid], NULL, "-dm_view");
+    }
+  }
   ierr = PetscLogEventBegin(solve_ev,0,0,0,0);CHKERRQ(ierr);
   /* Create particle swarm */
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = createSwarm(dm_t[tid], &sw_t[tid]);
-    if (ierr_t) ierr = ierr_t;
+    ierr = createSwarm(dm_t[tid], &sw_t[tid]);
   }
   CHKERRQ(ierr);
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
-    if (ierr_t) ierr = ierr_t;
+    // helper vectors
+    ierr = DMCreateGlobalVector(dm_t[tid], &rho_t[tid]);
+    ierr = DMCreateGlobalVector(dm_t[tid], &rhs_t[tid]);
+    ierr = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
   }
   CHKERRQ(ierr);
   /* Project field to particles */
   /*   This gives f_p = M_p^+ M f */
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
-    if (ierr_t) ierr = ierr_t;
+    ierr = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
   }
   CHKERRQ(ierr);
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]);
-    if (ierr_t) ierr = ierr_t;
+    ierr = gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]);
   }
   CHKERRQ(ierr);
   /* Cleanup */
   for (int tid=0; tid<numthreads; tid++) {
+    ierr = VecDestroy(&rho_t[tid]);CHKERRQ(ierr);
+    ierr = VecDestroy(&rhs_t[tid]);CHKERRQ(ierr);
     ierr = MatDestroy(&M_p_t[tid]);CHKERRQ(ierr);
     ierr = DMDestroy(&sw_t[tid]);CHKERRQ(ierr);
   }
@@ -363,34 +373,30 @@ PetscErrorCode go()
   /* Create particle swarm */
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = createSwarm(dm_t[tid], &sw_t[tid]);
-      if (ierr_t) ierr = ierr_t;
+      ierr = createSwarm(dm_t[tid], &sw_t[tid]);
     }
     CHKERRQ(ierr);
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
-      if (ierr_t) ierr = ierr_t;
+      ierr = DMCreateGlobalVector(dm_t[tid], &rho_t[tid]);
+      ierr = DMCreateGlobalVector(dm_t[tid], &rhs_t[tid]);
+      ierr = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
     }
     CHKERRQ(ierr);
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
-      if (ierr_t) ierr = ierr_t;
+      ierr = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
     }
     CHKERRQ(ierr);
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]);
-      if (ierr_t) ierr = ierr_t;
+      ierr = gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]);
     }
     CHKERRQ(ierr);
     /* Cleanup */
     for (int tid=0; tid<numthreads; tid++) {
+      ierr = VecDestroy(&rho_t[tid]);CHKERRQ(ierr);
+      ierr = VecDestroy(&rhs_t[tid]);CHKERRQ(ierr);
       ierr = MatDestroy(&M_p_t[tid]);CHKERRQ(ierr);
       ierr = DMDestroy(&sw_t[tid]);CHKERRQ(ierr);
     }
@@ -402,11 +408,9 @@ PetscErrorCode go()
 #endif
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   //
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number density: %20.12e (%20.12e); x-momentum = %g (%g); energy = %g error = %e, %D particles. Use %D threads, Solve time: %g\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2], (moments_1[2]-moments_0[2])/moments_0[2],Np[0]*Np[1],numthreads,solve_time);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_SELF,"Total number density: %20.12e (%20.12e); x-momentum = %g (%g); energy = %g, relative energy error = %e, %D particles. Use %D threads, Solve time: %g\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2], (moments_1[2]-moments_0[2])/moments_0[2],Np[0]*Np[1],numthreads,solve_time);CHKERRQ(ierr);
   /* Cleanup */
   for (int tid=0; tid<numthreads; tid++) {
-    ierr = VecDestroy(&rho_t[tid]);CHKERRQ(ierr);
-    ierr = VecDestroy(&rhs_t[tid]);CHKERRQ(ierr);
     ierr = DMDestroy(&dm_t[tid]);CHKERRQ(ierr);
     ierr = PetscFree3(xx_t[tid],yy_t[tid],wp_t[tid]);CHKERRQ(ierr);
   }
