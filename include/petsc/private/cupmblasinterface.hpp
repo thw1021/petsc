@@ -36,7 +36,7 @@ namespace detail
     if (PetscUnlikely(_cberr__ != CUPMBLAS_STATUS_SUCCESS)) {           \
       if (((_cberr__ == CUPMBLAS_STATUS_NOT_INITIALIZED) ||             \
            (_cberr__ == CUPMBLAS_STATUS_ALLOC_FAILED))   &&             \
-          PetscDeviceInitialized(cupmDeviceTypeToPetsc())) {            \
+          PetscDeviceInitialized(cupmDeviceTypeToPetscDeviceType())) {  \
         SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,                \
                  "%s error %d (%s). "                                   \
                  "Reports not initialized or alloc failed; "            \
@@ -93,21 +93,17 @@ namespace detail
 template <CUPMDeviceType T>
 struct CUPMBlasInterfaceBase : CUPMInterface<T>
 {
-  PETSC_NODISCARD static constexpr const char* cupmBlasName() noexcept
+  PETSC_CXX_COMPAT_DECL(constexpr const char*const cupmBlasName())
   {
     return std::get<util::integral_value(T)>(CUPMBlasTypes);
   }
 };
 
-#define PETSC_CUPMBLAS_BASE_CLASS_HEADER_(DEV_TYPE)                     \
-  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE); \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,                \
-                                  CAT(Petsc,PETSC_CUPMBLAS_PREFIX_U),   \
-                                  GetErrorName);                        \
+#define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE)                      \
   using base_type = detail::CUPMBlasInterfaceBase<DEV_TYPE>;            \
-  using base_type::cupmBlasName
-
-#define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE) PETSC_CUPMBLAS_BASE_CLASS_HEADER_(DEV_TYPE)
+  using base_type::cupmBlasName;                                        \
+  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE); \
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,CAT(Petsc,PETSC_CUPMBLAS_PREFIX_U),GetErrorName)
 
 } // namespace detail
 
@@ -154,7 +150,7 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   // BLAS extensions
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(geam);
 
-  PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle))
   {
     cupmSolverError_t cerr;
 
@@ -172,7 +168,7 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream))
   {
     cupmStream_t      cupmStream;
     cupmSolverError_t cerr;
@@ -183,13 +179,11 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle))
   {
     PetscFunctionBegin;
     if (handle) {
-      cupmSolverError_t cerr;
-
-      cerr   = cusolverDnDestroy(handle);CHKERRCUSOLVER(cerr);
+      auto cerr = cusolverDnDestroy(handle);CHKERRCUSOLVER(cerr);
       handle = nullptr;
     }
     PetscFunctionReturn(0);
@@ -241,14 +235,14 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   // BLAS extensions
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(geam);
 
-  PETSC_NODISCARD static PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle))
   {
     PetscFunctionBegin;
     if (!handle) {cupmSolverError_t cerr = hipsolverCreate(&handle);CHKERRHIPSOLVER(cerr);}
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream))
   {
     cupmStream_t      cupmStream;
     cupmSolverError_t cerr;
@@ -259,7 +253,7 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode DestroyHandle(cupmSolverHandle_t &handle))
   {
     PetscFunctionBegin;
     if (handle) {
@@ -276,15 +270,14 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
 #undef PETSC_CUPMBLAS_DEVICE_TYPE
 #endif // PetscDefined(HAVE_HIP)
 
-#undef PETSC_CUPMBLAS_BASE_CLASS_HEADER_
 #undef PETSC_CUPMBLAS_BASE_CLASS_HEADER
 
 } // namespace Impl
 
 } // namespace Petsc
 
-#define PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING_(base_name,Tp)  \
-  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(cupmInterface_t,Tp);      \
+#define PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,Tp)   \
+  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,Tp);      \
   using base_name = CUPMBlasInterface<Tp>;                              \
   /* introspection */                                                   \
   using base_name::cupmBlasName;                                        \
@@ -313,9 +306,6 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   using base_name::cupmBlasXgemm;                                       \
   /* BLAS extensions */                                                 \
   using base_name::cupmBlasXgeam
-
-#define PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING(base_name,Tp)   \
-  PETSC_INHERIT_CUPMBLAS_INTERFACE_TYPEDEFS_USING_(base_name,Tp)
 
 #endif // defined(__cplusplus)
 
