@@ -184,6 +184,13 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
 #define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)  \
   PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,N)
 
+// helper macros when declaring class member functions that should be callable from C. Member
+// functions need to be static to be callable from C otherwise they get an implicit 'this'
+// pointer as the first argument
+#define PETSC_CXX_COMPAT_DECL(...) PETSC_NODISCARD static __VA_ARGS__ PETSC_NOEXCEPT
+// A corresponding out-of-line definition macro to the one above
+#define PETSC_CXX_COMPAT_DEFN(...) PETSC_INLINE __VA_ARGS__ PETSC_NOEXCEPT
+
 #endif // __cplusplus
 
 #endif // PETSCTYPETRAITS_HPP
