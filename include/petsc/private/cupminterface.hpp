@@ -300,6 +300,25 @@ struct InterfaceBase
     PetscUnreachable();
     return PETSC_MEMTYPE_HOST;
   }
+
+#define CASE_RETURN(DEV_TYPE,STEM) case CUPMDeviceType::DEV_TYPE: return CAT(CAT(STEM,_),DEV_TYPE)
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
+  {
+    switch (type) {
+      CASE_RETURN(CUDA,PETSC_DEVICE);
+      CASE_RETURN(HIP,PETSC_DEVICE);
+    }
+  }
+
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
+  {
+    switch (type) {
+      CASE_RETURN(CUDA,PETSC_MEMTYPE);
+      CASE_RETURN(HIP,PETSC_MEMTYPE);
+    }
+  }
+#undef CASE_RETURN
+
 };
 
 // declare the base class static member variables
@@ -489,6 +508,7 @@ struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
 #endif // PetscDefined(HAVE_HIP)
 
 #undef PETSC_CUPM_BASE_CLASS_HEADER
+#undef PETSC_CUPM_DEVICE_TYPE
 
 // shorthand for bringing all of the typedefs from the base Interface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
