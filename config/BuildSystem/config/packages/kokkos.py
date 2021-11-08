@@ -119,7 +119,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('Cxx')) # use the host CXX compiler, let Kokkos handle the nvcc_wrapper business
       genToName = {'3': 'KEPLER','5': 'MAXWELL', '6': 'PASCAL', '7': 'VOLTA', '8': 'AMPERE', '9': 'LOVELACE', '10': 'HOPPER'}
       if hasattr(self.cuda,'cudaArch'):
-        generation = self.cuda.cudaArch[:-1]
+        generation = self.cuda.cudaArch[:-1] # cudaArch is a number 'nn', such as '75'
         try:
           # Kokkos uses names like VOLTA75, AMPERE86
           deviceArchName = genToName[generation] + self.cuda.cudaArch
@@ -153,10 +153,10 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
       if hasattr(self.hip,'hipArch'):
         genToName = {'gfx': 'VEGA'}
-        generation = self.hip.hipArch[0:3]
+        generation = self.hip.hipArch[0:3] # hipArch is a string 'gfxabc'
         try:
-          # Kokkos uses names like VEGA908
-          deviceArchName = genToName[generation] + self.hip.hipArch[3:]
+          # Kokkos uses names like VEGA908, VEGA90A in upper case
+          deviceArchName = genToName[generation] + self.hip.hipArch[3:].upper()
         except KeyError:
           raise RuntimeError('Could not find an arch name for HIP gen number '+ self.hip.hipArch)
       else:
