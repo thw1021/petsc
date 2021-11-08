@@ -118,6 +118,7 @@ class Configure(config.package.Package):
       self.framework.addDefine('__HIP_PLATFORM_AMD__',1)
       if 'with-hip-arch' in self.framework.clArgDB:
         self.hipArch = self.argDB['with-hip-arch']
+        self.log.write('Configure options said the HIP arch is ' + self.hipArch + '\n')
       else:
         self.getExecutable('rocminfo',getFullPath=1)
         if hasattr(self,'rocminfo'):
@@ -129,6 +130,7 @@ class Configure(config.package.Package):
             try:
               s = set([i for i in out.split() if 'gfx' in i])
               self.hipArch = list(s)[0]
+              self.log.write('ROCM utility ' + self.rocminfo + ' said the HIP arch is ' + self.hipArch + '\n')
             except:
               self.log.write('Unable to parse the ROCM utility ' + self.rocminfo + '\n')
         if hasattr(self,'hipArch'):
