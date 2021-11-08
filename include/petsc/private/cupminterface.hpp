@@ -38,14 +38,12 @@ namespace detail
 
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
-#define CHKERRCUPM(cerr) do {                                           \
-    cupmError_t _cerr__ = (cerr);                                       \
+#define CHKERRCUPM(expression) do {                                     \
+    const cupmError_t _cerr__ = expression;                             \
     if (PetscUnlikely(_cerr__ != cupmSuccess)) {                        \
-      const auto name    = cupmGetErrorName(_cerr__);                   \
-      const auto desc    = cupmGetErrorString(_cerr__);                 \
-      const auto backend = cupmName();                                  \
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
-               backend,static_cast<PetscErrorCode>(_cerr__),name,desc); \
+               cupmName(),static_cast<PetscErrorCode>(_cerr__),         \
+               cupmGetErrorName(_cerr__),cupmGetErrorString(_cerr__));  \
     }                                                                   \
   } while (0)
 
@@ -78,43 +76,47 @@ namespace detail
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(our_suffix,their_suffix,N) \
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix,N)
 
+#define PETSC_CUPM_DEVICE_TYPE CUPMDeviceType::PETSC_CUPM_PREFIX_U
+
 // Base class that holds stuff that can be directly determined with templates
 template <CUPMDeviceType T>
 struct CUPMInterfaceBase
 {
-  static constexpr CUPMDeviceType type = T;
+  static constexpr const auto type = T;
 
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType() noexcept
-  {
-    switch (type) {
-    case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
-    case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
-    }
-  }
-
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType() noexcept
-  {
-    switch (type) {
-    case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
-    case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
-    }
-  }
-
-  PETSC_NODISCARD static constexpr const char* cupmName() noexcept
+  PETSC_CXX_COMPAT_DECL(constexpr const char*const cupmName())
   {
     return std::get<util::integral_value(type)>(CUPMDeviceTypes);
   }
+
+#define CASE_RETURN(DEV_TYPE,STEM) case CUPMDeviceType::DEV_TYPE: return CAT(CAT(STEM,_),DEV_TYPE)
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
+  {
+    switch (type) {
+      CASE_RETURN(CUDA,PETSC_DEVICE);
+      CASE_RETURN(HIP,PETSC_DEVICE);
+    }
+  }
+
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
+  {
+    switch (type) {
+      CASE_RETURN(CUDA,PETSC_MEMTYPE);
+      CASE_RETURN(HIP,PETSC_MEMTYPE);
+    }
+  }
+#undef CASE_RETURN
+
 };
 
-template <CUPMDeviceType T> constexpr CUPMDeviceType CUPMInterfaceBase<T>::type;
+template <CUPMDeviceType T> constexpr const CUPMDeviceType CUPMInterfaceBase<T>::type;
 
-#define PETSC_CUPM_BASE_CLASS_HEADER_(DEVICE_TYPE)                      \
+#define PETSC_CUPM_BASE_CLASS_HEADER(DEVICE_TYPE)                       \
   using base_type = detail::CUPMInterfaceBase<DEVICE_TYPE>;             \
   using base_type::type;                                                \
   using base_type::cupmName;                                            \
-  using base_type::cupmDeviceTypeToPetsc
-
-#define PETSC_CUPM_BASE_CLASS_HEADER(STEM) PETSC_CUPM_BASE_CLASS_HEADER_(STEM)
+  using base_type::cupmDeviceTypeToPetscDeviceType;                     \
+  using base_type::cupmDeviceTypeToPetscMemType
 
 } // namespace detail
 
@@ -126,7 +128,6 @@ template <CUPMDeviceType T> struct CUPMInterface;
 #if PetscDefined(HAVE_CUDA)
 #define PETSC_CUPM_PREFIX      cuda
 #define PETSC_CUPM_PREFIX_U    CUDA
-#define PETSC_CUPM_DEVICE_TYPE CUPMDeviceType::PETSC_CUPM_PREFIX_U
 template <>
 struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
 {
@@ -200,16 +201,16 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 #endif
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
+  PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
+  PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
 };
 #undef PETSC_CUPM_PREFIX
 #undef PETSC_CUPM_PREFIX_U
-#undef PETSC_CUPM_DEVICE_TYPE
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
 #define PETSC_CUPM_PREFIX   hip
 #define PETSC_CUPM_PREFIX_U HIP
-#define PETSC_CUPM_DEVICE_TYPE CUPMDeviceType::PETSC_CUPM_PREFIX_U
 template <>
 struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
 {
@@ -276,14 +277,15 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
+  PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
+  PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
 };
 #undef PETSC_CUPM_PREFIX
 #undef PETSC_CUPM_PREFIX_U
-#undef PETSC_CUPM_DEVICE_TYPE
 #endif // PetscDefined(HAVE_HIP)
 
-#undef PETSC_CUPM_BASE_CLASS_HEADER_
 #undef PETSC_CUPM_BASE_CLASS_HEADER
+#undef PETSC_CUPM_DEVICE_TYPE
 
 } // namespace Impl
 
@@ -291,7 +293,7 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 
 // shorthand for bringing all of the typedefs from the base CUPMInterface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
-#define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING_(base_name_,Tp_)    \
+#define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
   using base_name_ = CUPMInterface<Tp_>;                                \
   /* introspection */                                                   \
   using base_name_::type;                                               \
@@ -340,17 +342,15 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using base_name_::cupmStreamWaitEvent;                                \
   using base_name_::cupmStreamQuery;                                    \
   using base_name_::cupmStreamSynchronize;                              \
+  using base_name_::cupmDeviceSynchronize;                              \
   using base_name_::cupmFree;                                           \
   using base_name_::cupmMalloc;                                         \
   using base_name_::cupmFreeAsync;                                      \
   using base_name_::cupmMallocAsync;                                    \
   using base_name_::cupmMemcpy;                                         \
   using base_name_::cupmMemcpyAsync;                                    \
-  using base_name_::cupmDeviceSynchronize
-
-// allow any macros to expand in case someone needs it
-#define PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
-  PETSC_INHERIT_CUPM_INTERFACE_TYPEDEFS_USING_(base_name_,Tp_)
+  using base_name_::cupmMallocHost;                                     \
+  using base_name_::cupmFreeHost
 
 #endif /* __cplusplus */
 
