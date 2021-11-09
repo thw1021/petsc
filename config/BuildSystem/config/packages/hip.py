@@ -118,7 +118,6 @@ class Configure(config.package.Package):
       self.framework.addDefine('__HIP_PLATFORM_AMD__',1)
       if 'with-hip-arch' in self.framework.clArgDB:
         self.hipArch = self.argDB['with-hip-arch']
-        self.log.write('Configure options said the HIP arch is ' + self.hipArch + '\n')
       else:
         self.getExecutable('rocminfo',getFullPath=1)
         if hasattr(self,'rocminfo'):
