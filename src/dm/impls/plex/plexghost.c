@@ -3,7 +3,7 @@
 
 /*
 
-     Reorders marks every DM point (vertex, edge, ...)
+   Reorders marks every DM point (vertex, edge, ...)
 
     core   : owned and on an element all of whose points are private to this rank, definitely not a root in the PETSc SF
     owned  : owned but on an element that shares some points with other ranks, this does not mean the point is necessarily shared so it may
@@ -14,7 +14,7 @@
 
    Could use PetscSFGetLeafRanks() to determine the points that are roots in the PETSc SF
 
-
+   The code was translated from FireDrake Cython code
 */
 PetscErrorCode DMPlexLabelPointOwnershipType(DM dm)
 {
@@ -156,21 +156,13 @@ PetscErrorCode DMGetEntityClasses(DM dm,PetscInt *depth,PetscInt **entity_class_
 }
 
 /*
-    Build a global node renumbering as a permutation of Plex points.
-
-    :arg plex: The DMPlex object encapsulating the mesh topology
-    :arg entity_classes: Array of entity class offsets for
-         each dimension.
-    :arg reordering: A reordering from reordered to original plex
-         points used to provide the traversal order of the cells
-         (i.e. the inverse of the ordering obtained from
-         DMPlexGetOrdering).  Optional, if not provided (or ``None``),
-         no reordering is applied and the plex is traversed in
-         original order.
+    Build a global point renumbering as a permutation of Plex points.
 
     The node permutation is derived from a depth-first traversal of
     the Plex graph over each entity class in turn. The returned IS
     is the Plex -> PyOP2 permutation.
+
+    The code was translated from FireDrake Cython code
 */
 PetscErrorCode DMPlexSetUseVecGhostPermutation(DM dm)
 {
@@ -186,6 +178,8 @@ PetscErrorCode DMPlexSetUseVecGhostPermutation(DM dm)
   DM_Plex        *plex = (DM_Plex*)dm->data;
 
   PetscFunctionBegin;
+  if (plex->vecghostperm) PetscFunctionReturn(0);
+
   ierr = DMPlexLabelPointOwnershipType(dm);CHKERRQ(ierr);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
@@ -243,6 +237,40 @@ PetscErrorCode DMPlexSetUseVecGhostPermutation(DM dm)
   ierr = ISGeneralSetIndices(plex->vecghostperm, pEnd - pStart,perm,PETSC_OWN_POINTER);CHKERRQ(ierr);
   ierr = ISSetPermutation(plex->vecghostperm);CHKERRQ(ierr);
   ierr = ISView(plex->vecghostperm,PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)dm)));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
+{
+  PetscErrorCode ierr;
+  PetscInt       n, nghost = 0,*ghosts;
+  MPI_Comm       comm;
+  PetscSection   section;
+  PetscInt       localSize, blockSize = -1, pStart, pEnd, p;
+  PetscSF        sf;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+
+  /*
+       ghosts are the global numbers of the roots on the other processes we receive from
+  */
+  ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
+  ierr = DMGetSectionSF(dm, &sf);CHKERRQ(ierr);
+
+  /* could possibly figure out ghosts form the information obtained with
+
+  ierr = PetscSFGetRootRanks(sf,&nranks,&ranks,&roffset,&rmine,&rremote);CHKERRQ(ierr);
+
+  but is cumbersome to figure out the global numbers for the rremote.
+
+  Is there a better way?
+ */
+
+  ierr = PetscSectionGetStorageSize(section, &localSize);CHKERRQ(ierr);
+  n    = localSize - nghosts;
+  ierr = VecCreateGhost(comm,n,PETSC_DETERMINE,nghost,ghosts,v);CHKERRQ(ierr);
+  ierr = VecSetDM(*v, dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

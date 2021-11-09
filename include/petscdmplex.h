@@ -481,4 +481,6 @@ PETSC_EXTERN PetscErrorCode DMPlexLocalVectorLoad(DM,PetscViewer,DM,PetscSF,Vec)
 
 PETSC_EXTERN PetscErrorCode DMPlexLabelPointOwnershipType(DM);
 PETSC_EXTERN PetscErrorCode DMPlexSetUseVecGhostPermutation(DM);
+PETSC_EXTERN PetscErrorCode DMPlexCreateGhostVector(DM,Vec*);
+
 #endif

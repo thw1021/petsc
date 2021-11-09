@@ -49,6 +49,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   DM             distributedMesh;
   PetscSF        sf;
   PetscInt       nranks;
+  Vec            v;
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(user->createMeshEvent,0,0,0,0);CHKERRQ(ierr);
@@ -101,6 +102,8 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   }
 
   ierr = DMPlexSetUseVecGhostPermutation(*dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateGhostVector(*dm,&v);CHKERRQ(ierr);
+  ierr = VecDestroy(&v);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) *dm, "Generated Mesh");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   if (user->final_diagnostics) {
