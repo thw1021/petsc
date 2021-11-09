@@ -301,23 +301,15 @@ struct InterfaceBase
     return PETSC_MEMTYPE_HOST;
   }
 
-#define CASE_RETURN(DEV_TYPE,STEM) case CUPMDeviceType::DEV_TYPE: return CAT(CAT(STEM,_),DEV_TYPE)
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
+  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceType cupmDeviceTypeToPetscDeviceType())
   {
-    switch (type) {
-      CASE_RETURN(CUDA,PETSC_DEVICE);
-      CASE_RETURN(HIP,PETSC_DEVICE);
-    }
+    return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscDeviceTypes);
   }
 
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
+  PETSC_CXX_COMPAT_DECL(constexpr PetscMemType cupmDeviceTypeToPetscMemType())
   {
-    switch (type) {
-      CASE_RETURN(CUDA,PETSC_MEMTYPE);
-      CASE_RETURN(HIP,PETSC_MEMTYPE);
-    }
+    return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscMemTypes);
   }
-#undef CASE_RETURN
 
 };
 
@@ -350,6 +342,7 @@ struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   using cupmStream_t       = cudaStream_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
   using cupmMemcpyKind_t   = cudaMemcpyKind;
+  using cupmDim3           = dim3;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -382,6 +375,7 @@ struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(SetDevice);
   PETSC_CUPM_ALIAS_FUNCTION(GetDeviceFlags);
   PETSC_CUPM_ALIAS_FUNCTION(SetDeviceFlags);
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
@@ -470,6 +464,7 @@ struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(SetDevice);
   PETSC_CUPM_ALIAS_FUNCTION(GetDeviceFlags);
   PETSC_CUPM_ALIAS_FUNCTION(SetDeviceFlags);
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
