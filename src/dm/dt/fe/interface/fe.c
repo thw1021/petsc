@@ -2089,49 +2089,53 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
 
 PetscErrorCode PetscFEEvaluateFieldJets_Hybrid_Internal(PetscDS ds, PetscInt Nf, PetscInt r, PetscInt q, PetscTabulation T[], PetscFEGeom *fegeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscScalar u[], PetscScalar u_x[], PetscScalar u_t[])
 {
-  PetscInt       dOffset = 0, fOffset = 0, g;
+  PetscInt       dOffset = 0, fOffset = 0, f, g;
   PetscErrorCode ierr;
 
-  for (g = 0; g < 2*Nf-1; ++g) {
-    if (!T[g/2]) continue;
-    {
-    PetscFE          fe;
-    const PetscInt   f   = g/2;
+  /* f is the field number in the DS, g is the field number in u[] */
+  for (f = 0, g = 0; f < Nf; ++f) {
+    PetscFE          fe   = (PetscFE) ds->disc[f];
     const PetscInt   cdim = T[f]->cdim;
     const PetscInt   Nq   = T[f]->Np;
     const PetscInt   Nbf  = T[f]->Nb;
     const PetscInt   Ncf  = T[f]->Nc;
     const PetscReal *Bq   = &T[f]->T[0][(r*Nq+q)*Nbf*Ncf];
     const PetscReal *Dq   = &T[f]->T[1][(r*Nq+q)*Nbf*Ncf*cdim];
-    PetscInt         b, c, d;
+    PetscBool        isCohesive;
+    PetscInt         Ns, s;
 
-    fe = (PetscFE) ds->disc[f];
-    for (c = 0; c < Ncf; ++c)      u[fOffset+c] = 0.0;
-    for (d = 0; d < cdim*Ncf; ++d) u_x[fOffset*cdim+d] = 0.0;
-    for (b = 0; b < Nbf; ++b) {
-      for (c = 0; c < Ncf; ++c) {
-        const PetscInt cidx = b*Ncf+c;
+    if (!T[f]) continue;
+    ierr = PetscDSGetCohesive(ds, f, &isCohesive);CHKERRQ(ierr);
+    Ns   = isCohesive ? 1 : 2;
+    for (s = 0; s < Ns; ++s, ++g) {
+      PetscInt b, c, d;
 
-        u[fOffset+c] += Bq[cidx]*coefficients[dOffset+b];
-        for (d = 0; d < cdim; ++d) u_x[(fOffset+c)*cdim+d] += Dq[cidx*cdim+d]*coefficients[dOffset+b];
-      }
-    }
-    ierr = PetscFEPushforward(fe, fegeom, 1, &u[fOffset]);CHKERRQ(ierr);
-    ierr = PetscFEPushforwardGradient(fe, fegeom, 1, &u_x[fOffset*cdim]);CHKERRQ(ierr);
-    if (u_t) {
-      for (c = 0; c < Ncf; ++c) u_t[fOffset+c] = 0.0;
+      for (c = 0; c < Ncf; ++c)      u[fOffset+c] = 0.0;
+      for (d = 0; d < cdim*Ncf; ++d) u_x[fOffset*cdim+d] = 0.0;
       for (b = 0; b < Nbf; ++b) {
         for (c = 0; c < Ncf; ++c) {
           const PetscInt cidx = b*Ncf+c;
 
-          u_t[fOffset+c] += Bq[cidx]*coefficients_t[dOffset+b];
+          u[fOffset+c] += Bq[cidx]*coefficients[dOffset+b];
+          for (d = 0; d < cdim; ++d) u_x[(fOffset+c)*cdim+d] += Dq[cidx*cdim+d]*coefficients[dOffset+b];
         }
       }
-      ierr = PetscFEPushforward(fe, fegeom, 1, &u_t[fOffset]);CHKERRQ(ierr);
+      ierr = PetscFEPushforward(fe, fegeom, 1, &u[fOffset]);CHKERRQ(ierr);
+      ierr = PetscFEPushforwardGradient(fe, fegeom, 1, &u_x[fOffset*cdim]);CHKERRQ(ierr);
+      if (u_t) {
+        for (c = 0; c < Ncf; ++c) u_t[fOffset+c] = 0.0;
+        for (b = 0; b < Nbf; ++b) {
+          for (c = 0; c < Ncf; ++c) {
+            const PetscInt cidx = b*Ncf+c;
+
+            u_t[fOffset+c] += Bq[cidx]*coefficients_t[dOffset+b];
+          }
+        }
+        ierr = PetscFEPushforward(fe, fegeom, 1, &u_t[fOffset]);CHKERRQ(ierr);
+      }
+      fOffset += Ncf;
+      dOffset += Nbf;
     }
-    fOffset += Ncf;
-    dOffset += Nbf;
-  }
   }
   return 0;
 }
