@@ -2949,6 +2949,42 @@ PetscErrorCode PetscDSGetFieldOffset(PetscDS prob, PetscInt f, PetscInt *off)
 }
 
 /*@
+  PetscDSGetFieldOffsetCohesive - Returns the offset of the given field in the full space basis on a cohesive cell
+
+  Not collective
+
+  Input Parameters:
++ prob - The PetscDS object
+- f - The field number
+
+  Output Parameter:
+. off - The offset
+
+  Level: beginner
+
+.seealso: PetscDSGetFieldSize(), PetscDSGetNumFields(), PetscDSCreate()
+@*/
+PetscErrorCode PetscDSGetFieldOffsetCohesive(PetscDS ds, PetscInt f, PetscInt *off)
+{
+  PetscInt       size, g;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
+  PetscValidPointer(off, 3);
+  if ((f < 0) || (f >= ds->Nf)) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Field number %d must be in [0, %d)", f, ds->Nf);
+  *off = 0;
+  for (g = 0; g < f; ++g) {
+    PetscBool cohesive;
+
+    ierr = PetscDSGetCohesive(ds, g, &cohesive);CHKERRQ(ierr);
+    ierr = PetscDSGetFieldSize(ds, g, &size);CHKERRQ(ierr);
+    *off += cohesive ? size : size*2;
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
   PetscDSGetDimensions - Returns the size of the approximation space for each field on an evaluation point
 
   Not collective
