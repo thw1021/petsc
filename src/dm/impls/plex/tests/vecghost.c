@@ -49,6 +49,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   DM             distributedMesh;
   PetscSF        sf;
   PetscInt       nranks;
+  Vec            v;
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(user->createMeshEvent,0,0,0,0);CHKERRQ(ierr);
@@ -101,6 +102,40 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   }
 
   ierr = DMPlexSetUseVecGhostPermutation(*dm);CHKERRQ(ierr);
+  {
+    PetscFE fe;
+
+    /* piecewise linear finite elements */
+    ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, PETSC_TRUE, NULL,PETSC_DETERMINE, &fe);CHKERRQ(ierr);
+    ierr = DMAddField(*dm, NULL, (PetscObject) fe);CHKERRQ(ierr);
+    ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
+    ierr = DMCreateDS(*dm);CHKERRQ(ierr);
+
+    ierr = DMPlexCreateGhostVector(*dm,&v);CHKERRQ(ierr);
+    {
+      PetscInt    i,rstart,rend;
+      Vec         lv;
+      PetscScalar value;
+      PetscViewer viewer;
+
+      ierr = VecGetOwnershipRange(v,&rstart,&rend);CHKERRQ(ierr);
+      for (i=rstart; i<rend; i++) {
+        value = i+1;
+        ierr  = VecSetValues(v,1,&i,&value,INSERT_VALUES);CHKERRQ(ierr);
+      }
+      ierr = VecAssemblyBegin(v);CHKERRQ(ierr);
+      ierr = VecAssemblyEnd(v);CHKERRQ(ierr);
+      ierr = VecView(v,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+      ierr = VecGhostUpdateBegin(v,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecGhostUpdateEnd(v,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecGhostGetLocalForm(v,&lv);CHKERRQ(ierr);
+      ierr = PetscViewerGetSubViewer(PETSC_VIEWER_STDOUT_WORLD,PETSC_COMM_SELF,&viewer);CHKERRQ(ierr);
+      ierr = VecView(lv,viewer);CHKERRQ(ierr);
+      ierr = PetscViewerRestoreSubViewer(PETSC_VIEWER_STDOUT_WORLD,PETSC_COMM_SELF,&viewer);CHKERRQ(ierr);
+      ierr = VecGhostRestoreLocalForm(v,&lv);CHKERRQ(ierr);
+    }
+    ierr = VecDestroy(&v);CHKERRQ(ierr);
+  }
   ierr = PetscObjectSetName((PetscObject) *dm, "Generated Mesh");CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   if (user->final_diagnostics) {
