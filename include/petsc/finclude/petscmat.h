@@ -210,5 +210,9 @@
 ! sparsity reducing ordering for STRUMPACK
 !
 #define MatSTRUMPACKReordering PetscEnum
+!
+! compression types for STRUMPACK
+!
+#define MatSTRUMPACKCompression PetscEnum
 
 #endif
