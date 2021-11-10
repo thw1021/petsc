@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.version          = '3.1.1'
+    self.version          = '6.2.0'
     self.versionname      = 'STRUMPACK_VERSION_MAJOR.STRUMPACK_VERSION_MINOR.STRUMPACK_VERSION_PATCH'
     self.versioninclude   = 'StrumpackConfig.hpp'
     self.gitcommit        = 'v'+self.version
@@ -19,6 +19,11 @@ class Configure(config.package.CMakePackage):
     self.hastests         = 1
     return
 
+  def __str__(self):
+    output  = config.package.CMakePackage.__str__(self)
+    if hasattr(self,'system'): output += '  Backend: '+self.system+'\n'
+    return output
+
   def setupDependencies(self, framework):
     config.package.CMakePackage.setupDependencies(self, framework)
     self.compilerFlags   = framework.require('config.compilerFlags', self)
@@ -30,8 +35,9 @@ class Configure(config.package.CMakePackage):
     self.ptscotch       = framework.require('config.packages.PTScotch',self)
     self.mpi            = framework.require('config.packages.MPI',self)
     self.openmp         = framework.require('config.packages.openmp',self)
+    self.cuda           = framework.require('config.packages.cuda',self)
     self.deps           = [self.mpi,self.blasLapack,self.scalapack,self.metis]
-    self.odeps          = [self.parmetis,self.ptscotch,self.openmp]
+    self.odeps          = [self.parmetis,self.ptscotch,self.openmp,self.cuda]
     return
 
   def formCMakeConfigureArgs(self):
@@ -44,6 +50,11 @@ class Configure(config.package.CMakePackage):
     args.append('-DTPL_METIS_LIBRARIES="'+self.libraries.toString(self.metis.lib)+'"')
     args.append('-DTPL_METIS_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.metis.include)[2:]+'"')
 
+    if self.sharedLibraries:
+      args.append('-DBUILD_SHARED_LIBS=ON')
+    else:
+      args.append('-DBUILD_SHARED_LIBS=OFF')
+
     if self.parmetis.found:
       args.append('-DTPL_ENABLE_PARMETIS=ON')
       args.append('-DTPL_PARMETIS_LIBRARIES="'+self.libraries.toString(self.parmetis.lib)+'"')
@@ -55,13 +66,36 @@ class Configure(config.package.CMakePackage):
       args.append('-DTPL_ENABLE_SCOTCH=ON')
       args.append('-DTPL_SCOTCH_LIBRARIES="'+self.libraries.toString(self.ptscotch.lib)+'"')
       args.append('-DTPL_SCOTCH_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.ptscotch.include)[2:]+'"')
+      args.append('-DTPL_ENABLE_PTSCOTCH=ON')
+      args.append('-DTPL_PTSCOTCH_LIBRARIES="'+self.libraries.toString(self.ptscotch.lib)+'"')
+      args.append('-DTPL_PTSCOTCH_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.ptscotch.include)[2:]+'"')
     else:
       args.append('-DTPL_ENABLE_SCOTCH=OFF')
+      args.append('-DTPL_ENABLE_PTSCOTCH=OFF')
 
     if self.openmp.found:
       args.append('-DSTRUMPACK_USE_OPENMP=ON')
     else:
       args.append('-DSTRUMPACK_USE_OPENMP=OFF')
+
+    if self.cuda.found:
+      args.append('-DSTRUMPACK_USE_CUDA=ON')
+      self.system = 'CUDA'
+
+      with self.Language('CUDA'):
+        args.append('-DCMAKE_CUDA_COMPILER='+self.getCompiler())
+
+      if hasattr(self.cuda, 'cudaArch'):
+        generation = 'sm_'+self.cuda.cudaArch
+      else:
+        raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
+      args.append('-DCUDA_ARCH='+generation)
+
+    # elif self.hip.found:
+    #   args.append('-DSTRUMPACK_USE_HIP=ON')
+    #   self.system = 'HIP'
+
+    # TODO other dependencies: HIP, SLATE, ZFP, ButterflyPACK, CombBLAS?
 
     return args
 

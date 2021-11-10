@@ -27,7 +27,7 @@ int main(int argc,char **args)
   PetscBool      flg_superlu=PETSC_FALSE;
 #endif
 #if defined(PETSC_HAVE_STRUMPACK)
-  PetscBool      flg_strumpack=PETSC_FALSE;
+  PetscBool      flg_strumpack=PETSC_FALSE,flg_strumpack_ilu=PETSC_FALSE;
 #endif
   PetscScalar    v;
   PetscMPIInt    rank,size;
@@ -233,62 +233,78 @@ int main(int argc,char **args)
   }
 #endif
 
+#if defined(PETSC_HAVE_STRUMPACK)
   /*
     Example of how to use external package STRUMPACK
     Note: runtime options
           '-pc_type lu/ilu \
            -pc_factor_mat_solver_type strumpack \
-           -mat_strumpack_reordering METIS \
+           -mat_strumpack_reordering GEOMETRIC \
+           -mat_strumpack_geometric_nx n \
+           -mat_strumpack_geometric_ny m \
            -mat_strumpack_colperm 0 \
-           -mat_strumpack_hss_rel_tol 1.e-3 \
-           -mat_strumpack_hss_min_sep_size 50 \
-           -mat_strumpack_max_rank 100 \
+           -mat_strumpack_compression_rel_tol 1.e-3 \
+           -mat_strumpack_compression_min_sep_size 15 \
            -mat_strumpack_leaf_size 4'
        are equivalent to these procedural calls
 
     We refer to the STRUMPACK-sparse manual, section 5, for more info on
     how to tune the preconditioner.
   */
-#if defined(PETSC_HAVE_STRUMPACK)
-  flg_ilu       = PETSC_FALSE;
-  flg_strumpack = PETSC_FALSE;
+  flg_strumpack_ilu = PETSC_FALSE;
+  flg_strumpack     = PETSC_FALSE;
   ierr = PetscOptionsGetBool(NULL,NULL,"-use_strumpack_lu",&flg_strumpack,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-use_strumpack_ilu",&flg_ilu,NULL);CHKERRQ(ierr);
-  if (flg_strumpack || flg_ilu) {
+  ierr = PetscOptionsGetBool(NULL,NULL,"-use_strumpack_ilu",&flg_strumpack_ilu,NULL);CHKERRQ(ierr);
+  if (flg_strumpack || flg_strumpack_ilu) {
     ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
     ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
     if (flg_strumpack) {
       ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
-    } else if (flg_ilu) {
+    } else if (flg_strumpack_ilu) {
       ierr = PCSetType(pc,PCILU);CHKERRQ(ierr);
     }
-#if !defined(PETSC_HAVE_STRUMPACK)
-    SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"This test requires STRUMPACK");
-#endif
     ierr = PCFactorSetMatSolverType(pc,MATSOLVERSTRUMPACK);CHKERRQ(ierr);
     ierr = PCFactorSetUpMatSolverType(pc);CHKERRQ(ierr); /* call MatGetFactor() to create F */
     ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_STRUMPACK)
-    /* Set the fill-reducing reordering.                              */
-    ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_METIS);CHKERRQ(ierr);
+
+    /* Set the fill-reducing reordering, MAT_STRUMPACK_METIS is       */
+    /* always supported, but is sequential. Parallel alternatives are */
+    /* MAT_STRUMPACK_PARMETIS and MAT_STRUMPACK_PTSCOTCH, but         */
+    /* strumpack needs to be configured with support for these.       */
+    /*ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_METIS);CHKERRQ(ierr);*/
+    /* However, since this is a problem on a regular grid, we can use */
+    /* a simple geometric nested dissection implementation, which     */
+    /* requires passing the grid dimensions to strumpack.             */
+    ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_GEOMETRIC);CHKERRQ(ierr);
+    ierr = MatSTRUMPACKSetGeometricNx(F,n);CHKERRQ(ierr);
+    ierr = MatSTRUMPACKSetGeometricNy(F,m);CHKERRQ(ierr);
+    /* These are optional, since the defaults are 1.                  */
+    ierr = MatSTRUMPACKSetGeometricNz(F,1);CHKERRQ(ierr);
+    ierr = MatSTRUMPACKSetGeometricComponents(F,1);CHKERRQ(ierr);
+    ierr = MatSTRUMPACKSetGeometricWidth(F,1);CHKERRQ(ierr);
+
     /* Since this is a simple discretization, the diagonal is always  */
     /* nonzero, and there is no need for the extra MC64 permutation.  */
     ierr = MatSTRUMPACKSetColPerm(F,PETSC_FALSE);CHKERRQ(ierr);
-    /* The compression tolerance used when doing low-rank compression */
-    /* in the preconditioner. This is problem specific!               */
-    ierr = MatSTRUMPACKSetHSSRelTol(F,1.e-3);CHKERRQ(ierr);
-    /* Set minimum matrix size for HSS compression to 15 in order to  */
-    /* demonstrate preconditioner on small problems. For performance  */
-    /* a value of say 500 is better.                                  */
-    ierr = MatSTRUMPACKSetHSSMinSepSize(F,15);CHKERRQ(ierr);
-    /* You can further limit the fill in the preconditioner by        */
-    /* setting a maximum rank                                         */
-    ierr = MatSTRUMPACKSetHSSMaxRank(F,100);CHKERRQ(ierr);
-    /* Set the size of the diagonal blocks (the leafs) in the HSS     */
-    /* approximation. The default value should be better for real     */
-    /* problems. This is mostly for illustration on a small problem.  */
-    ierr = MatSTRUMPACKSetHSSLeafSize(F,4);CHKERRQ(ierr);
-#endif
+
+    if (flg_strumpack_ilu) {
+      /* The compression tolerance used when doing low-rank compression */
+      /* in the preconditioner. This is problem specific!               */
+      ierr = MatSTRUMPACKSetCompRelTol(F,1.e-3);CHKERRQ(ierr);
+
+      /* Set a small minimum (dense) matrix size for compression to     */
+      /* demonstrate the preconditioner on small problems.              */
+      /* For performance the default value should be better.            */
+      /* This size corresponds to the size of separators in the graph.  */
+      /* For instance on an m x n mesh, the top level separator is of   */
+      /* size m (if m <= n)                                             */
+      /*ierr = MatSTRUMPACKSetCompMinSepSize(F,15);CHKERRQ(ierr);*/
+
+      /* Set the size of the diagonal blocks (the leafs) in the HSS     */
+      /* approximation. The default value should be better for real     */
+      /* problems. This is mostly for illustration on a small problem.  */
+      /*ierr = MatSTRUMPACKSetCompLeafSize(F,4);CHKERRQ(ierr);*/
+    }
   }
 #endif
 
@@ -370,7 +386,7 @@ int main(int argc,char **args)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error < 1.e-12 iterations %D\n",its);CHKERRQ(ierr);
   } else {
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %D\n",(double)norm,its);CHKERRQ(ierr);
- }
+  }
 
   /*
      Free work space.  All PETSc objects should be destroyed when they
