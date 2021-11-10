@@ -50,6 +50,24 @@ static constexpr std::array<PetscMemType,2> CUPMDeviceTypeToPetscMemTypes = {
   PETSC_MEMTYPE_HIP
 };
 
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAV_HIP)
+#  define PETSC_HAVE_CUPM 1
+#endif
+
+#if PetscDefined(HAVE_CUPM)
+#  define PETSC_HOST_DECL       __host__
+#  define PETSC_DEVICE_DECL     __device__ __forceinline__
+#  define PETSC_KERNEL_DECL     __global__
+#  define PETSC_SHAREDMEM_DECL  __shared__
+#else
+#  define PETSC_HOST_DECL
+#  define PETSC_DEVICE_DECL
+#  define PETSC_KERNEL_DECL
+#  define PETSC_SHAREDMEM_DECL
+#endif
+
+#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
+
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
 #define CHKERRCUPM(expression) do {                                     \
@@ -112,12 +130,26 @@ struct CUPMInterfaceBase
   {
     return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscMemTypes);
   }
-
 };
 
 template <CUPMDeviceType T> constexpr const CUPMDeviceType CUPMInterfaceBase<T>::type;
 
+#define PETSC_CUPM_DEFINE_BUILTIN_DEVICE_TYPES(name,MACRO)              \
+  struct name                                                           \
+  {                                                                     \
+    PETSC_CXX_COMPAT_DECL(PETSC_DEVICE_DECL constexpr unsigned int x()) \
+    { return MACRO(x); };                                               \
+    PETSC_CXX_COMPAT_DECL(PETSC_DEVICE_DECL constexpr unsigned int y()) \
+    { return MACRO(y); };                                               \
+    PETSC_CXX_COMPAT_DECL(PETSC_DEVICE_DECL constexpr unsigned int z()) \
+    { return MACRO(z); };                                               \
+  }
+
 #define PETSC_CUPM_BASE_CLASS_HEADER(DEVICE_TYPE)                       \
+  PETSC_CUPM_DEFINE_BUILTIN_DEVICE_TYPES(cupmThreadIdx,THREAD_IDX);     \
+  PETSC_CUPM_DEFINE_BUILTIN_DEVICE_TYPES(cupmBlockIdx,BLOCK_IDX);       \
+  PETSC_CUPM_DEFINE_BUILTIN_DEVICE_TYPES(cupmBlockDim,BLOCK_DIM);       \
+  PETSC_CUPM_DEFINE_BUILTIN_DEVICE_TYPES(cupmGridDim,GRID_DIM);         \
   using base_type = detail::CUPMInterfaceBase<DEVICE_TYPE>;             \
   using base_type::type;                                                \
   using base_type::cupmName;                                            \
@@ -132,8 +164,12 @@ template <CUPMDeviceType T> constexpr const CUPMDeviceType CUPMInterfaceBase<T>:
 template <CUPMDeviceType T> struct CUPMInterface;
 
 #if PetscDefined(HAVE_CUDA)
-#define PETSC_CUPM_PREFIX      cuda
-#define PETSC_CUPM_PREFIX_U    CUDA
+#define PETSC_CUPM_PREFIX   cuda
+#define PETSC_CUPM_PREFIX_U CUDA
+#define THREAD_IDX(w)       CAT(threadIdx.,w)
+#define BLOCK_IDX(w)        CAT(blockIdx.,w)
+#define BLOCK_DIM(w)        CAT(blockDim.,w)
+#define GRID_DIM(w)         CAT(gridDim.,w)
 template <>
 struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
 {
@@ -149,7 +185,6 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using cupmSolverError_t  = cusolverStatus_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
   using cupmMemcpyKind_t   = cudaMemcpyKind;
-  using cupmDim3           = dim3;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -215,11 +250,19 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 };
 #undef PETSC_CUPM_PREFIX
 #undef PETSC_CUPM_PREFIX_U
+#undef THREAD_IDX
+#undef BLOCK_IDX
+#undef BLOCK_DIM
+#undef GRID_DIM
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
 #define PETSC_CUPM_PREFIX   hip
 #define PETSC_CUPM_PREFIX_U HIP
+#define THREAD_IDX(w)       CAT(hipThreadIdx_,w)
+#define BLOCK_IDX(w)        CAT(hipBlockIdx_,w)
+#define BLOCK_DIM(w)        CAT(hipBlockDim_,w)
+#define GRID_DIM(w)         CAT(hipGridDim_,w)
 template <>
 struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
 {
@@ -293,6 +336,10 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 };
 #undef PETSC_CUPM_PREFIX
 #undef PETSC_CUPM_PREFIX_U
+#undef THREAD_IDX
+#undef BLOCK_IDX
+#undef BLOCK_DIM
+#undef GRID_DIM
 #endif // PetscDefined(HAVE_HIP)
 
 #undef PETSC_CUPM_BASE_CLASS_HEADER
@@ -312,6 +359,10 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using base_name_::cupmDeviceTypeToPetscDeviceType;                    \
   using base_name_::cupmDeviceTypeToPetscMemType;                       \
   /* types */                                                           \
+  using typename base_name_::cupmThreadIdx;                             \
+  using typename base_name_::cupmBlockIdx;                              \
+  using typename base_name_::cupmBlockDim;                              \
+  using typename base_name_::cupmGridDim;                               \
   using typename base_name_::cupmError_t;                               \
   using typename base_name_::cupmEvent_t;                               \
   using typename base_name_::cupmStream_t;                              \
@@ -319,7 +370,6 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using typename base_name_::cupmSolverHandle_t;                        \
   using typename base_name_::cupmDeviceProp_t;                          \
   using typename base_name_::cupmMemcpyKind_t;                          \
-  using typename base_name_::dim3;                                      \
   /* variables */                                                       \
   using base_name_::cupmSuccess;                                        \
   using base_name_::cupmErrorNotReady;                                  \
