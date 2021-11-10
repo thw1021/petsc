@@ -310,7 +310,6 @@ struct InterfaceBase
   {
     return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscMemTypes);
   }
-
 };
 
 // declare the base class static member variables
@@ -342,7 +341,6 @@ struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   using cupmStream_t       = cudaStream_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
   using cupmMemcpyKind_t   = cudaMemcpyKind;
-  using cupmDim3           = dim3;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -418,11 +416,19 @@ struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
 };
 #undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U
+#undef THREAD_IDX
+#undef BLOCK_IDX
+#undef BLOCK_DIM
+#undef GRID_DIM
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
 #define PETSC_CUPM_PREFIX_L hip
 #define PETSC_CUPM_PREFIX_U HIP
+#define THREAD_IDX(w)       CAT(hipThreadIdx_,w)
+#define BLOCK_IDX(w)        CAT(hipBlockIdx_,w)
+#define BLOCK_DIM(w)        CAT(hipBlockDim_,w)
+#define GRID_DIM(w)         CAT(hipGridDim_,w)
 template <>
 struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
 {
@@ -500,6 +506,10 @@ struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
 };
 #undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U
+#undef THREAD_IDX
+#undef BLOCK_IDX
+#undef BLOCK_DIM
+#undef GRID_DIM
 #endif // PetscDefined(HAVE_HIP)
 
 #undef PETSC_CUPM_BASE_CLASS_HEADER
