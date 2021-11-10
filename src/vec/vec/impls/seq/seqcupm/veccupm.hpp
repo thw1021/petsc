@@ -12,10 +12,6 @@
 #  error "VecSeq_CUPM requires C++11"
 #endif
 
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAV_HIP)
-#  define PETSC_HAVE_CUPM 1
-#endif
-
 #if PetscDefined(HAVE_CUPM)
 #  include <thrust/device_ptr.h>
 #  include <thrust/transform.h>
@@ -36,6 +32,8 @@
 //   cudaMallocFromPoolAsync
 // - Make createseqcupm_async callable from C
 // - port bindtocpu
+// - provide explicit wrappers for the kernel launch function for CUDA, HIP actually has the
+//   superior interface here
 
 namespace Petsc
 {
@@ -44,20 +42,6 @@ namespace Impl
 {
 
 #define CHKERRCXXCTOR(expr) CHKERRABORT(PETSC_COMM_SELF,expr)
-
-#if PetscDefined(HAVE_CUPM)
-#  define PETSC_HOST_DECL       __host__
-#  define PETSC_DEVICE_DECL     __device__ __forceinline_
-#  define PETSC_KERNEL_DECL     __global__
-#  define PETSC_SHAREDMEM_DECL  __shared__
-#else
-#  define PETSC_HOST_DECL
-#  define PETSC_DEVICE_DECL
-#  define PETSC_KERNEL_DECL
-#  define PETSC_SHAREDMEM_DECL
-#endif
-
-#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
 
 // VEC<PAR_TYPE>CUPM() gives the full expansion of the macro for each variant, (for cuda this
 // would be VECSEQCUDA, i.e. "seqcuda") while VEC<PAR_TYPE>CUPMMACRO() gives the
@@ -1132,8 +1116,8 @@ PETSC_KERNEL_DECL PETSC_STATIC_INLINE void mdot_kernel(const PetscScalar *PETSC_
   static_assert(N > 0,"");
   using iter_type = decltype(N);
   PETSC_SHAREDMEM_DECL PetscScalar shmem[N*MDOT_WORKGROUP_SIZE];
-  const auto  tx           = threadIdx.x,bx = blockIdx.x;
-  const auto  bdx          = blockDim.x,gdx = gridDim.x;
+  const auto  tx           = cupmThreadIdx.x(),bx = cupmBlockIdx.x;
+  const auto  bdx          = PETSC_BLOCK_DIM(x),gdx = PETSC_GRID_DIM(x);
   const auto  worksize     = __entries_per_group(size);
   const auto  begin        = tx+bx*worksize;
   const auto  end          = PetscMin((bx+1)*worksize,size);
