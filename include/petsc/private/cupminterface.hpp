@@ -301,14 +301,20 @@ struct InterfaceBase
     return PETSC_MEMTYPE_HOST;
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceType cupmDeviceTypeToPetscDeviceType())
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
   {
-    return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscDeviceTypes);
+    switch (type) {
+    case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
+    case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
+    }
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscMemType cupmDeviceTypeToPetscMemType())
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
   {
-    return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscMemTypes);
+    switch (type) {
+    case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
+    case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
+    }
   }
 };
 
@@ -462,7 +468,6 @@ struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(SetDevice);
   PETSC_CUPM_ALIAS_FUNCTION(GetDeviceFlags);
   PETSC_CUPM_ALIAS_FUNCTION(SetDeviceFlags);
-  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
