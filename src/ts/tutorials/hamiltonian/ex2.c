@@ -416,7 +416,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   ierr = PetscDSSetJacobian(prob, 0, 1, NULL, NULL, g2_qu, NULL);CHKERRQ(ierr);
   ierr = PetscDSSetJacobian(prob, 1, 0, NULL, g1_uq, NULL, NULL);CHKERRQ(ierr);
 
-  //ierr = PetscDSSetExactSolution(prob,2,zero_func,NULL);CHKERRQ(ierr);
   switch (user->solType)
   {
     case SOL_LINEAR:
@@ -460,15 +459,11 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   ierr = PetscObjectSetName((PetscObject) feq, "field");CHKERRQ(ierr);
   ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, 1,   user->simplex, "potential_", -1, &feu);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) feu, "potential");CHKERRQ(ierr);
-  //ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) dm), dim, 1, user->simplex, "divErr_",-1, &fedivErr);CHKERRQ(ierr);
-  //ierr = PetscObjectSetName((PetscObject) fedivErr,"divErr");CHKERRQ(ierr);
   ierr = PetscFEGetQuadrature(feq, &q);CHKERRQ(ierr);
   ierr = PetscFESetQuadrature(feu,  q);CHKERRQ(ierr);
-  //ierr = PetscFESetQuadrature(fedivErr, q);CHKERRQ(ierr);
   /* Set discretization and boundary conditions for each mesh */
   ierr = DMSetField(dm, 0, NULL, (PetscObject) feq);CHKERRQ(ierr);
   ierr = DMSetField(dm, 1, NULL, (PetscObject) feu);CHKERRQ(ierr);
-  //ierr = DMSetField(dm, 2, NULL, (PetscObject) fedivErr);CHKERRQ(ierr);
   
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   ierr = (*setup)(dm, user);CHKERRQ(ierr);
@@ -478,57 +473,9 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscErrorCode (*setup)(DM, App
   }
   ierr = PetscFEDestroy(&feq);CHKERRQ(ierr);
   ierr = PetscFEDestroy(&feu);CHKERRQ(ierr);
-  //ierr = PetscFEDestroy(&fedivErr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-#if 0
-static PetscErrorCode SetupDiscretization(DM mesh,PetscErrorCode (*setup)(DM,UserCtx*),UserCtx *user)
-{
-  DM             cdm = mesh;
-  PetscFE        fevel,fepres,fedivErr;
-  PetscInt       dim;
-  PetscBool      simplex;
-  PetscErrorCode ierr;
 
-  PetscFunctionBegin;
-  ierr = DMGetDimension(mesh, &dim);CHKERRQ(ierr);
-  ierr = DMPlexIsSimplex(mesh, &simplex);CHKERRQ(ierr);
-  /* Create FE objects and give them names so that options can be set from
-   * command line */
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,dim,simplex,"velocity_",-1,&fevel);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fevel,"velocity");CHKERRQ(ierr);
-
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject) mesh),dim,1,simplex,"pressure_",-1,&fepres);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fepres,"pressure");CHKERRQ(ierr);
-
-  ierr = PetscFECreateDefault(PetscObjectComm((PetscObject)
-                                              mesh),dim,1,simplex,"divErr_",-1,&fedivErr);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) fedivErr,"divErr");CHKERRQ(ierr);
-
-  ierr = PetscFECopyQuadrature(fevel,fepres);CHKERRQ(ierr);
-  ierr = PetscFECopyQuadrature(fevel,fedivErr);CHKERRQ(ierr);
-
-  /* Associate the FE objects with the mesh and setup the system */
-  ierr = DMSetField(mesh,0,NULL,(PetscObject) fevel);CHKERRQ(ierr);
-  ierr = DMSetField(mesh,1,NULL,(PetscObject) fepres);CHKERRQ(ierr);
-  ierr = DMSetField(mesh,2,NULL,(PetscObject) fedivErr);CHKERRQ(ierr);
-  ierr = DMCreateDS(mesh);CHKERRQ(ierr);
-  ierr = (*setup)(mesh,user);CHKERRQ(ierr);
-
-  while (cdm) {
-    ierr = DMCopyDisc(mesh,cdm);CHKERRQ(ierr);
-    ierr = DMGetCoarseDM(cdm,&cdm);CHKERRQ(ierr);
-  }
-
-  /* The Mesh now owns the fields, so we can destroy the FEs created in this
-   * function */
-  ierr = PetscFEDestroy(&fevel);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fepres);CHKERRQ(ierr);
-  ierr = PetscFEDestroy(&fedivErr);CHKERRQ(ierr);
-  ierr = DMDestroy(&cdm);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-#endif 
 /*
   Creates the particles with initial distribution. The kinematics vector will need to be changed.
   More recent implementations including collision operator implementations utilize a velocity vector,
@@ -776,24 +723,20 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     PetscInt    *points   = PETSC_NULL, Ncp, cp;
     PetscScalar  gradPhi[3];
 
-    // Get geometry of cell
-    //   TODO Put in correct quadrature handling
     ierr = DMPlexComputeCellGeometryFEM(plex, cell, NULL, v, J, invJ, &detJ);CHKERRQ(ierr);
-    // Determine particles in cell from swarm
     ierr = DMSwarmSortGetPointsPerCell(dm, cell, &Ncp, &points);CHKERRQ(ierr);
-    // Get particle coordinates
     ierr = DMGetWorkArray(dm, Ncp*cdim, MPIU_REAL, &pcoord);CHKERRQ(ierr);
     ierr = DMGetWorkArray(dm, Ncp*cdim, MPIU_REAL, &refcoord);CHKERRQ(ierr);
     for (cp = 0; cp < Ncp; ++cp) {
+    
       for (d = 0; d < cdim; ++d) {
+    
         pcoord[cp*cdim+d] = coords[points[cp]*cdim+d];
       }
     }
-    // Tabulate basis at particle coordinates
-    // Need to tabulate basis for particle coordinates in the reference cell
+    
     ierr = DMPlexCoordinatesToReference(plex, cell, Ncp, pcoord, refcoord);CHKERRQ(ierr);
-    //ierr = PetscFEGetCellTabulation(fe, 1, &tab);CHKERRQ(ierr);
-    PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
+    ierr = PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
     // Get coefficients from phi for closure of cell
     ierr = DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
     // Interpolate gradient
@@ -811,15 +754,10 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
       } else {
         ierr = PetscFEFreeInterpolateGradient_Static(fe, basisDer, ph, cdim, invJ, NULL, cp, gradPhi);CHKERRQ(ierr);
       }
-      // Compute particle residual
+      
       for (d = 0; d < cdim; ++d) {
-        // TODO put in electrostatic force using gradPhi[p*cdim]
-        vres[p*cdim+d] = d == 0 ? gradPhi[d] : 0.;
-        //PetscPrintf(MPI_COMM_WORLD, "gradphi indexing: %i\n", d);
-        //PetscPrintf(MPI_COMM_WORLD, "gradphi[%i]: %f\n", d, gradPhi[d]);
-        //PetscPrintf(MPI_COMM_WORLD, "cell: %i\n", cell);
 
-        //ierr = PetscPrintf(PETSC_COMM_SELF, "vres for particle %d, dim %d: %g\n", cp, d, vres[p*dim+d]);CHKERRQ(ierr);
+        vres[p*cdim+d] = d == 0 ? gradPhi[d] : 0.;
       }
     }
     ierr = DMPlexVecRestoreClosure(plex, NULL, locPhi, cell, NULL, &ph);CHKERRQ(ierr);
@@ -1101,28 +1039,69 @@ int main(int argc,char **argv)
    test:
      suffix: bsi1_bdm_linear
      args: -dm_plex_dim 2 \
-       -dm_plex_simplex 0 -particlesPerCell 2000 \
-       -simplex 0 -ts_basicsymplectic_type 1\
-       -field_petscspace_degree 1\
-       -field_petscdualspace_type bdm\
-       -field_petscdualspace_lagrange_tensor 1\
-       -snes_error_if_not_converged\
-       -pc_type fieldsplit\
-       -pc_fieldsplit_detect_saddle_point\
-       -pc_fieldsplit_type schur\
-       -pc_fieldsplit_schur_precondition full\
-       -pc_fieldsplit_schur_fact_type full\
-       -fieldsplit_0_pc_type lu\
-       -fieldsplit_1_pc_type lu\
-       -steps 1\
-       -bdm\
-       -solType linear\
-       -snes_monitor\
-       -ksp_monitor\
-       -ksp_rtol 1e-10\
-       -uniform\
-       -sigma 1.0e-8\
-       -timeScale 2.0e-14\
-       -stepSize 1.0e-2\
-       -snes_linesearch_monitor
+           -dm_plex_simplex 0 -particlesPerCell 2000 \
+           -simplex 0 -ts_basicsymplectic_type 1\
+           -field_petscspace_degree 1\
+           -field_petscdualspace_type bdm\
+           -field_petscdualspace_lagrange_tensor 1\
+           -snes_error_if_not_converged\
+           -pc_type fieldsplit\
+           -pc_fieldsplit_detect_saddle_point\
+           -pc_fieldsplit_type schur\
+           -pc_fieldsplit_schur_precondition full\
+           -pc_fieldsplit_schur_fact_type full\
+           -fieldsplit_0_pc_type lu\
+           -fieldsplit_1_pc_type lu\
+           -steps 1\
+           -bdm\
+           -solType linear\
+           -snes_monitor\
+           -ksp_monitor\
+           -ksp_rtol 1e-10\
+           -uniform\
+           -sigma 1.0e-8\
+           -timeScale 2.0e-14\
+           -stepSize 1.0e-2\
+           -snes_linesearch_monitor
+   test:
+     suffix: bsi1_rt
+     args: -dm_plex_dim 2 \
+           -dm_plex_simplex 0 -particlesPerCell 2000 \
+           -simplex 0 -ts_basicsymplectic_type 1\
+           -snes_monitor\
+           -ksp_monitor\
+           -ksp_rtol 1e-10\
+           -uniform\
+           -sigma 1.0e-8\
+           -timeScale 2.0e-14\
+           -stepSize 1.0e-2\
+           -snes_linesearch_monitor\
+           -snes_error_if_not_converged \
+           -ksp_rtol 1e-10 \
+           -ksp_error_if_not_converged \
+           -pc_type fieldsplit\
+           -pc_fieldsplit_detect_saddle_point\
+           -pc_fieldsplit_type schur\
+           -pc_fieldsplit_schur_precondition full \
+           -field_petscfe_default_quadrature_order 1 \
+           -field_petscspace_type sum \
+           -field_petscspace_variables 2 \
+           -field_petscspace_components 2 \
+           -field_petscspace_sum_spaces 2 \
+           -field_petscspace_sum_concatenate true \
+           -field_subspace0_petscspace_variables 2 \
+           -field_subspace0_petscspace_type tensor \
+           -field_subspace0_petscspace_tensor_spaces 2 \
+           -field_subspace0_petscspace_tensor_uniform false \
+           -field_subspace0_subspace_0_petscspace_degree 1 \
+           -field_subspace0_subspace_1_petscspace_degree 0 \
+           -field_subspace1_petscspace_variables 2 \
+           -field_subspace1_petscspace_type tensor \
+           -field_subspace1_petscspace_tensor_spaces 2 \
+           -field_subspace1_petscspace_tensor_uniform false \
+           -field_subspace1_subspace_0_petscspace_degree 0 \
+           -field_subspace1_subspace_1_petscspace_degree 1 \
+           -field_petscdualspace_form_degree -1 \
+           -field_petscdualspace_order 1 \
+           -field_petscdualspace_lagrange_trimmed true
 TEST*/
