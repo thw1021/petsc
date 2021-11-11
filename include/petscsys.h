@@ -2780,7 +2780,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCitationsRegister(const char cit[],Petsc
   ierr = PetscSpinlockUnlock(&SpinLock);CHKERRQ(ierr);
   ierr = PetscSpinlockDestroy(&SpinLock);CHKERRQ(ierr);
 #endif
-  Ierr = PetscArraycpy(vstring,cit,len);CHKERRQ(ierr);
+  ierr = PetscArraycpy(vstring,cit,len);CHKERRQ(ierr);
   if (set) *set = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
