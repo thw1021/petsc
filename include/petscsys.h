@@ -2765,12 +2765,22 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCitationsRegister(const char cit[],Petsc
   size_t         len;
   char           *vstring;
   PetscErrorCode ierr;
-
+#if defined(PETSC_HAVE_THREADSAFETY)
+  PetscSpinlock  SpinLock;
+#endif
   PetscFunctionBegin;
   if (set && *set) PetscFunctionReturn(0);
   ierr = PetscStrlen(cit,&len);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  ierr = PetscSpinlockCreate(&SpinLock);CHKERRQ(ierr);
+  ierr = PetscSpinlockLock(&SpinLock);CHKERRQ(ierr);
+#endif
   ierr = PetscSegBufferGet(PetscCitationsList,len,&vstring);CHKERRQ(ierr);
-  ierr = PetscArraycpy(vstring,cit,len);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  ierr = PetscSpinlockUnlock(&SpinLock);CHKERRQ(ierr);
+  ierr = PetscSpinlockDestroy(&SpinLock);CHKERRQ(ierr);
+#endif
+  Ierr = PetscArraycpy(vstring,cit,len);CHKERRQ(ierr);
   if (set) *set = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
