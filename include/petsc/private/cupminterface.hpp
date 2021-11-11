@@ -38,20 +38,6 @@ namespace Impl
 namespace detail
 {
 
-static_assert(util::integral_value(CUPMDeviceType::CUDA) == 0,"");
-static_assert(util::integral_value(CUPMDeviceType::HIP)  == 1,"");
-static constexpr std::array<PetscDeviceType,2> CUPMDeviceTypeToPetscDeviceTypes = {
-  PETSC_DEVICE_CUDA,
-  PETSC_DEVICE_HIP
-};
-
-static_assert(util::integral_value(CUPMDeviceType::CUDA) == 0,"");
-static_assert(util::integral_value(CUPMDeviceType::HIP)  == 1,"");
-static constexpr std::array<PetscMemType,2> CUPMDeviceTypeToPetscMemTypes = {
-  PETSC_MEMTYPE_CUDA,
-  PETSC_MEMTYPE_HIP
-};
-
 #if PetscDefined(HAVE_CUDA) || PetscDefined(HAV_HIP)
 #  define PETSC_HAVE_CUPM 1
 #endif
@@ -123,14 +109,20 @@ struct CUPMInterfaceBase
     return std::get<util::integral_value(type)>(CUPMDeviceTypes);
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceType cupmDeviceTypeToPetscDeviceType())
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
   {
-    return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscDeviceTypes);
+    switch (type) {
+    case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
+    case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
+    }
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscMemType cupmDeviceTypeToPetscMemType())
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
   {
-    return std::get<util::integral_value(type)>(CUPMDeviceTypeToPetscMemTypes);
+    switch (type) {
+    case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
+    case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
+    }
   }
 };
 
@@ -229,6 +221,17 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
   PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
+
+  // specific wrapper for device launch function to mimic the HIP API since it has the superior
+  // interface here, and it's not worth it to write another macro just for this specific
+  // use-case
+  template <class FunctionT, typename... KernelArgsT>
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cudaError_t cupmLaunchKernel(const FunctionT* func, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream, KernelArgsT&&... args)
+  {
+    // local variables in constexpr functions since C++14
+    void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(args)...};
+    return cudaLaunchKernel(func,gridDim,blockDim,args,sharedMem,stream);
+  }
 };
 #undef PETSC_CUPM_PREFIX
 #undef PETSC_CUPM_PREFIX_U
@@ -279,7 +282,6 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   PETSC_CUPM_ALIAS_FUNCTION(SetDevice);
   PETSC_CUPM_ALIAS_FUNCTION(GetDeviceFlags);
   PETSC_CUPM_ALIAS_FUNCTION(SetDeviceFlags);
-  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
@@ -306,6 +308,9 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
   PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
+
+  // kernel launching
+  PETSC_CUPM_ALIAS_FUNCTION_COMMON(LaunchKernel,LaunchKernelGGL);
 };
 #undef PETSC_CUPM_PREFIX
 #undef PETSC_CUPM_PREFIX_U
@@ -328,10 +333,6 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using base_name_::cupmDeviceTypeToPetscDeviceType;                    \
   using base_name_::cupmDeviceTypeToPetscMemType;                       \
   /* types */                                                           \
-  using typename base_name_::cupmThreadIdx;                             \
-  using typename base_name_::cupmBlockIdx;                              \
-  using typename base_name_::cupmBlockDim;                              \
-  using typename base_name_::cupmGridDim;                               \
   using typename base_name_::cupmError_t;                               \
   using typename base_name_::cupmEvent_t;                               \
   using typename base_name_::cupmStream_t;                              \
@@ -362,7 +363,6 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using base_name_::cupmSetDevice;                                      \
   using base_name_::cupmGetDeviceFlags;                                 \
   using base_name_::cupmSetDeviceFlags;                                 \
-  using base_name_::cupmLaunchKernel;                                   \
   using base_name_::cupmEventCreate;                                    \
   using base_name_::cupmEventDestroy;                                   \
   using base_name_::cupmEventRecord;                                    \
@@ -382,7 +382,8 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   using base_name_::cupmMemcpy;                                         \
   using base_name_::cupmMemcpyAsync;                                    \
   using base_name_::cupmMallocHost;                                     \
-  using base_name_::cupmFreeHost
+  using base_name_::cupmFreeHost;                                       \
+  using base_name_::cupmLaunchKernel
 
 #endif /* __cplusplus */
 
