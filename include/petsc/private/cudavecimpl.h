@@ -6,8 +6,8 @@
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
-  PetscScalar  *GPUarray;           /* this always holds the GPU data */
-  PetscScalar  *GPUarray_allocated; /* if the array was allocated by PETSc this is its pointer */
+  PetscScalar PETSC_ATTRIBUTE_NODEREF *GPUarray; /* this always holds the GPU data */
+  PetscScalar PETSC_ATTRIBUTE_NODEREF *GPUarray_allocated; /* if the array was allocated by PETSc this is its pointer */
   cudaStream_t stream;              /* A stream for doing asynchronous data transfers */
   PetscBool    nvshmem;             /* Is GPUarray_allocated allocated in nvshmem? It is used to allocate Mvctx->lvec in nvshmem */
 } Vec_CUDA;

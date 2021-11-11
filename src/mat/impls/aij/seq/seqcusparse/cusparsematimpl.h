@@ -183,20 +183,20 @@ struct CsrMatrix {
 /* This is struct holding the relevant data needed to a MatSolve */
 struct Mat_SeqAIJCUSPARSETriFactorStruct {
   /* Data needed for triangular solve */
-  cusparseMatDescr_t          descr;
-  cusparseOperation_t         solveOp;
-  CsrMatrix                   *csrMat;
+  cusparseMatDescr_t           descr;
+  cusparseOperation_t          solveOp;
+  CsrMatrix                    *csrMat;
  #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-  csrsv2Info_t                solveInfo;
+  csrsv2Info_t                 solveInfo;
  #else
-  cusparseSolveAnalysisInfo_t solveInfo;
+  cusparseSolveAnalysisInfo_t  solveInfo;
  #endif
-  cusparseSolvePolicy_t       solvePolicy;     /* whether level information is generated and used */
-  int                         solveBufferSize;
-  void                        *solveBuffer;
-  size_t                      csr2cscBufferSize; /* to transpose the triangular factor (only used for CUDA >= 11.0) */
-  void                        *csr2cscBuffer;
-  PetscScalar                 *AA_h; /* managed host buffer for moving values to the GPU */
+  cusparseSolvePolicy_t        solvePolicy;     /* whether level information is generated and used */
+  int                          solveBufferSize;
+  void PETSC_ATTRIBUTE_NODEREF *solveBuffer;
+  size_t                       csr2cscBufferSize; /* to transpose the triangular factor (only used for CUDA >= 11.0) */
+  void PETSC_ATTRIBUTE_NODEREF *csr2cscBuffer;
+  PetscScalar                  *AA_h; /* managed host buffer for moving values to the GPU */
 };
 
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and any indices used in a reordering */
@@ -217,11 +217,11 @@ struct Mat_SeqAIJCUSPARSETriFactors {
 };
 
 struct Mat_CusparseSpMV {
-  PetscBool             initialized;    /* Don't rely on spmvBuffer != NULL to test if the struct is initialized, */
-  size_t                spmvBufferSize; /* since I'm not sure if smvBuffer can be NULL even after cusparseSpMV_bufferSize() */
-  void                  *spmvBuffer;
+  PetscBool                    initialized;    /* Don't rely on spmvBuffer != NULL to test if the struct is initialized, */
+  size_t                       spmvBufferSize; /* since I'm not sure if smvBuffer can be NULL even after cusparseSpMV_bufferSize() */
+  void PETSC_ATTRIBUTE_NODEREF *spmvBuffer;
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)  /* these are present from CUDA 10.1, but PETSc code makes use of them from CUDA 11 on */
-  cusparseDnVecDescr_t  vecXDescr,vecYDescr; /* descriptor for the dense vectors in y=op(A)x */
+  cusparseDnVecDescr_t         vecXDescr,vecYDescr; /* descriptor for the dense vectors in y=op(A)x */
  #endif
 };
 
@@ -230,9 +230,9 @@ struct Mat_SeqAIJCUSPARSEMultStruct {
   void               *mat;  /* opaque pointer to a matrix. This could be either a cusparseHybMat_t or a CsrMatrix */
   cusparseMatDescr_t descr; /* Data needed to describe the matrix for a multiply */
   THRUSTINTARRAY     *cprowIndices;   /* compressed row indices used in the parallel SpMV */
-  PetscScalar        *alpha_one; /* pointer to a device "scalar" storing the alpha parameter in the SpMV */
-  PetscScalar        *beta_zero; /* pointer to a device "scalar" storing the beta parameter in the SpMV as zero*/
-  PetscScalar        *beta_one; /* pointer to a device "scalar" storing the beta parameter in the SpMV as one */
+  PetscScalar PETSC_ATTRIBUTE_NODEREF *alpha_one; /* pointer to a device "scalar" storing the alpha parameter in the SpMV */
+  PetscScalar PETSC_ATTRIBUTE_NODEREF *beta_zero; /* pointer to a device "scalar" storing the beta parameter in the SpMV as zero*/
+  PetscScalar PETSC_ATTRIBUTE_NODEREF *beta_one; /* pointer to a device "scalar" storing the beta parameter in the SpMV as one */
  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   cusparseSpMatDescr_t  matDescr;  /* descriptor for the matrix, used by SpMV and SpMM */
   Mat_CusparseSpMV      cuSpMV[3]; /* different Mat_CusparseSpMV structs for non-transpose, transpose, conj-transpose */
