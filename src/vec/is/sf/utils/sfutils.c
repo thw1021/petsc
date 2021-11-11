@@ -400,7 +400,7 @@ PetscErrorCode PetscSFCreateSectionSF(PetscSF sf, PetscSection rootSection, Pets
 
     if ((localPoint >= lpStart) && (localPoint < lpEnd)) {
       ierr = PetscSectionGetDof(leafSection, localPoint, &dof);CHKERRQ(ierr);
-      numIndices += dof;
+      numIndices += dof < 0 ? 0 : dof;
     }
   }
   ierr = PetscMalloc1(numIndices, &localIndices);CHKERRQ(ierr);
