@@ -176,7 +176,7 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
     )                                                                   \
   )                                                                     \
   {                                                                     \
-    static_assert((N) >= 0,"");                                         \
+    static_assert(std::is_integral<decltype(N)>::value && (N) >= 0,""); \
     using seq = Petsc::util::make_index_sequence<sizeof...(Args)-(N)>;  \
     return original ## _gobble__(std::forward_as_tuple(args...),seq()); \
   }

@@ -7,6 +7,7 @@
 #include <../src/vec/vec/impls/dvecimpl.h> // for Vec_Seq
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupmblasinterface.hpp>
+#include <petsc/private/randomimpl.h>
 
 #if !defined(__cplusplus) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
 #  error "VecSeq_CUPM requires C++11"
@@ -32,14 +33,19 @@
 //   cudaMallocFromPoolAsync
 // - Make createseqcupm_async callable from C
 // - port bindtocpu
-// - provide explicit wrappers for the kernel launch function for CUDA, HIP actually has the
-//   superior interface here
 
 namespace Petsc
 {
 
 namespace Impl
 {
+
+namespace detail
+{
+
+template <bool b> struct use_complex_tag { };
+
+} // namespace detail
 
 #define CHKERRCXXCTOR(expr) CHKERRABORT(PETSC_COMM_SELF,expr)
 
@@ -284,11 +290,11 @@ private:
   template <typename UnaryFuncT>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode __pointwiseunary_async(UnaryFuncT&&,Vec,Vec,Vec));
   // mdot dispatcher
-  template <bool use_complex>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode __mdot_async(Vec,PetscInt,const Vec[],PetscScalar*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode __mdot_async(detail::use_complex_tag<true>,Vec,PetscInt,const Vec[],PetscScalar*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode __mdot_async(detail::use_complex_tag<false>,Vec,PetscInt,const Vec[],PetscScalar*));
   // dispatcher for the actual kernels for mdot
   template <int N>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode __mdot_kernel_dispatch(PetscDeviceContext,cupmStream_t,const Vec[],const device_array_read&,PetscInt,PetscScalar*,PetscInt*,PetscScalar*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode __mdot_kernel_dispatch(PetscDeviceContext,cupmStream_t,const Vec[],const PetscScalar*,PetscInt,PetscScalar*,PetscInt*,PetscScalar*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode __create_async(Vec,PetscScalar* = nullptr));
 
 public:
@@ -379,6 +385,7 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode sum_async(Vec,PetscScalar*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode shift_async(Vec,PetscScalar));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode setrandom_async(Vec,PetscRandom));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode bindtocpu_async(Vec,PetscBool));
 };
 
 // ================================================================================== //
@@ -546,8 +553,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__create_async(Vec v, Petsc
   ierr = PetscDeviceInitialize(cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
   ierr = VecCreate_Seq_Private(v,nullptr);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName(PetscObjectCast(v),VECSEQCUPM());CHKERRQ(ierr);
-  ierr = VecBindToCPU_SeqCUDA(v,PETSC_FALSE);CHKERRQ(ierr);
-  V->ops->bindtocpu = VecBindToCPU_SeqCUDA;
+  ierr = bindtocpu_async(v,PETSC_FALSE);CHKERRQ(ierr);
 
   // Later, functions check for the Vec_CUPM structure existence, so do not create it without an
   // array attached
@@ -767,8 +773,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
     w->spptr         = v->spptr;
     ierr = PetscObjectStateIncrease(PetscObjectCast(w));CHKERRQ(ierr);
   } else {
-    if (read) {
-      ierr = VecGetArrayRead(v,&__vec_impls_cast(w)->array);CHKERRQ(ierr);
+    if PETSC_CONSTEXPR_17 (read) {
+      ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(&__vec_impls_cast(w)->array));CHKERRQ(ierr);
     } else {
       ierr = VecGetArray(v,&__vec_impls_cast(w)->array);CHKERRQ(ierr);
     }
@@ -802,7 +808,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
     w->offloadmask   = PETSC_OFFLOAD_UNALLOCATED;
     w->spptr         = nullptr;
   } else {
-    ierr = (read ? VecRestoreArrayRead : VecRestoreArray)(v,&__vec_impls_cast(w)->array);CHKERRQ(ierr);
+    if PETSC_CONSTEXPR_17 (read) {
+      ierr = VecRestoreArrayRead(v,const_cast<const PetscScalar**>(&__vec_impls_cast(w)->array));CHKERRQ(ierr);
+    } else {
+      ierr = VecRestoreArray(v,&__vec_impls_cast(w)->array);CHKERRQ(ierr);
+    }
     if (w->spptr && wisseqcupm) {
       cupmStream_t stream;
       cupmError_t  cerr;
@@ -1111,7 +1121,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dot_async(Vec xin, Vec yin,
 namespace kernels
 {
 
-PETSC_DEVICE_DECL PetscInt __entries_per_group(const PetscInt size)
+PETSC_DEVICE_DECL PetscInt __entries_per_group(PetscInt size)
 {
   const auto group_entries = (size-1)/(MDOT_WORKGROUP_SIZE+1);
   // for very small vectors, a group should still do some work
@@ -1119,17 +1129,20 @@ PETSC_DEVICE_DECL PetscInt __entries_per_group(const PetscInt size)
 }
 
 template <int N>
-PETSC_KERNEL_DECL PETSC_STATIC_INLINE void __mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar y[PETSC_RESTRICT N], const PetscInt size, PetscScalar *PETSC_RESTRICT results)
+PETSC_KERNEL_DECL PETSC_STATIC_INLINE void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar y[PETSC_RESTRICT N], const PetscInt size, PetscScalar *PETSC_RESTRICT results)
 {
   static_assert(N > 0,"");
   using iter_type = decltype(N);
   PETSC_SHAREDMEM_DECL PetscScalar shmem[N*MDOT_WORKGROUP_SIZE];
-  const auto  tx           = threadIdx.x,bx = blockIdx.x;
-  const auto  bdx          = blockDim.x,gdx = gridDim.x;
-  const auto  worksize     = __entries_per_group(size);
-  const auto  begin        = tx+bx*worksize;
-  const auto  end          = PetscMin((bx+1)*worksize,size);
-  PetscScalar group_sum[N] = {};
+  const auto tx       = threadIdx.x,bx = blockIdx.x;
+  const auto bdx      = blockDim.x,gdx = gridDim.x;
+  const auto worksize = __entries_per_group(size);
+  const auto begin    = tx+bx*worksize;
+  const auto end      = PetscMin((bx+1)*worksize,size);
+  PetscScalar group_sum[N];
+
+#pragma unroll
+  for (auto i = iter_type(0); i < N; ++i) group_sum[i] = 0;
 
 #pragma unroll
   for (auto i = begin; i < end; i += bdx) {
@@ -1166,24 +1179,22 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_kernel_dispatch(Pets
   const auto  yidxt   = *yidx;
   const auto  results = device_results+yidxt*MDOT_WORKGROUP_NUM;
   PetscScalar device_ptrs[N];
-  void        *args[] = {&xptr,&device_ptrs,&n,&results};
   cupmError_t cerr;
 
   PetscFunctionBegin;
   for (iter_type i = 0; i < N; ++i) device_ptrs[i] = device_array_read(dctx,yin+yidxt+i);
-  cerr = cupmLaunchKernel(kernels::mdot_kernel<N>,MDOT_WORKGROUP_NUM,MDOT_WORKGROUP_SIZE,args,0,stream);CHKERRCUPM(cerr);
+  cerr = cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xptr,device_ptrs,n,results);CHKERRCUPM(cerr);
   *yidx += N;
   PetscFunctionReturn(0);
 }
 
 template <CUPMDeviceType T>
-template <>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex = */false>(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async(detail::use_complex_tag<false>, Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
 {
-  const auto          n = xin->map->n;
-  const auto          nv1 = ((nv % 4) == 1) ? nv-1 : nv;
-  PetscScalar        *d_results,*h_results;
-  const auto          nbytes = nv1*MDOT_WORKGROUP_NUM*sizeof(*d_results);
+  const auto          n      = xin->map->n;
+  const auto          nv1    = ((nv % 4) == 1) ? nv-1 : nv;
+  const auto          nbytes = nv1*MDOT_WORKGROUP_NUM*sizeof(*__vec_impls_cast(xin)->array);
+  PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
   cupmError_t         cerr;
@@ -1192,8 +1203,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex
   PetscFunctionBegin;
   ierr = __get_handles(&dctx,&stream);CHKERRQ(ierr);
   // allocate scratchpad memory for the results of individual work groups
-  cerr = cupmMallocAsync(static_cast<void**>(&d_results),nbytes,stream);CHKERRCUPM(cerr);
-  ierr = PetscMalloc1(nv1*MDOT_WORKGROUP_NUM,&h_results);CHKERRQ(ierr);
+  cerr = cupmMallocAsync(reinterpret_cast<void*>(&d_results),nbytes,stream);CHKERRCUPM(cerr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
     auto yidx = 0;
@@ -1216,8 +1226,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex
         break;
       case 1:
         ierr = __mdot_kernel_dispatch<1>(dctx,stream,yin,xptr,n,d_results,&yidx,z);CHKERRQ(ierr);
+      case 0:
         break;
-      default:
+      default: // 8 or more
         ierr = __mdot_kernel_dispatch<8>(dctx,stream,yin,xptr,n,d_results,&yidx,z);CHKERRQ(ierr);
         break;
       }
@@ -1225,19 +1236,27 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   // copy results to CPU
-  cerr = cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
+  {
+    PetscScalar *h_results;
 
-  // REVIEW ME: need to hard sync here...
-  ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
-  // sum group results into z
-  for (auto j = 0; j < nv1; ++j) {
-    for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) z[j] += h_results[i];
+    ierr = PetscMalloc1(nv1*MDOT_WORKGROUP_NUM,&h_results);CHKERRQ(ierr);
+    cerr = cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
+    // REVIEW ME: double count of flops??
+    // do these now while memcpy is in flight
+    ierr = PetscLogFlops(nv1*MDOT_WORKGROUP_NUM);CHKERRQ(ierr);
+    ierr = PetscLogGpuToCpuScalar(nbytes);CHKERRQ(ierr);
+    // for systems without async free this will synchronize implicitly
+    cerr = cupmFreeAsync(d_results,stream);CHKERRCUPM(cerr);
+    // REVIEW ME: need to hard sync here...
+    ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+    // REVIEW ME: it is likely faster to do this in a micro kernel rather than do it on the
+    // host which that requires synchronization
+    // sum group results into z
+    for (auto j = decltype(nv1)(0); j < nv1; ++j) {
+      for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) z[j] += h_results[i];
+    }
+    ierr = PetscFree(h_results);CHKERRQ(ierr);
   }
-  cerr = cupmFreeAsync(d_results,stream);CHKERRCUPM(cerr);
-  ierr = PetscFree(h_results);CHKERRQ(ierr);
-  // REVIEW ME: double count??
-  ierr = PetscLogFlops(nv1*MDOT_WORKGROUP_NUM);CHKERRQ(ierr);
-  ierr = PetscLogGpuToCpuScalar(nbytes);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1245,8 +1264,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex
 #undef MDOT_WORKGROUP_SIZE
 
 template <CUPMDeviceType T>
-template <>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex = */true>(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async(detail::use_complex_tag<true>, Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
 {
   PetscBLASInt       bn;
   PetscDeviceContext dctx;
@@ -1273,16 +1291,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::__mdot_async</* use complex
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
 {
+  using complex_tag = detail::use_complex_tag<PetscDefined(USE_COMPLEX)>;
   const auto     n = xin->map->n;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscUnlikely(nv <= 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to VecMDot_SeqCUDA %" PetscInt_FMT " not positive.",nv);
+  if (PetscUnlikely(nv == 1)) {
+    ierr = dot_async(xin,PetscRemoveConstCast(yin[0]),z);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
   // z will always need to be zeroed first, either for a quick return or for summing later on
   ierr = PetscArrayzero(z,nv);CHKERRQ(ierr);
   // nothing to do if x has no entries
   if (!n) PetscFunctionReturn(0);
-  ierr = __mdot_async<PetscDefined(USE_COMPLEX)>(xin,nv,yin,z);CHKERRQ(ierr);
+  ierr = __mdot_async(complex_tag(),xin,nv,yin,z);CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(PetscMax(nv*(2.0*n-1),0.0));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1435,7 +1458,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin
       PetscScalar *yarray;
 
       ierr = VecGetArrayWrite(yin,&yarray);CHKERRQ(ierr);
-      ierr = PetscArraycpy(ya,host_array_read(dctx,xin),n);CHKERRQ(ierr);
+      ierr = PetscArraycpy(yarray,host_array_read(dctx,xin),n);CHKERRQ(ierr);
       ierr = VecRestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
     } break;
     default:
@@ -1832,19 +1855,83 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::shift_async(Vec v, PetscSca
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, PetscRandom rand))
 {
-  PetscErrorCode     ierr;
-  const auto         n = xin->map->n;
+  const auto         n = v->map->n;
   PetscDeviceContext dctx;
   PetscBool          iscurand;
+  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare(PetscObjectCast(r),PETSCCURAND,&iscurand);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare(PetscObjectCast(rand),PETSCCURAND,&iscurand);CHKERRQ(ierr);
   ierr = __get_handles(&dctx);CHKERRQ(ierr);
   if (iscurand) {
-    ierr = PetscRandomGetValues(r,n,device_array_write(dctx,v));CHKERRQ(ierr);
+    ierr = PetscRandomGetValues(rand,n,device_array_write(dctx,v));CHKERRQ(ierr);
   } else {
-    ierr = PetscRandomGetValues(r,n,host_array_write(dctx,v));CHKERRQ(ierr);
+    ierr = PetscRandomGetValues(rand,n,host_array_write(dctx,v));CHKERRQ(ierr);
   }
+  // REVIEW ME: flops????
+  PetscFunctionReturn(0);
+}
+
+template <CUPMDeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, PetscBool pin_to_host))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (v->boundtocpu) PetscFunctionReturn(0);
+  v->boundtocpu = pin_to_host;
+  // default random number generator
+  ierr = PetscFree(v->defaultrandtype);CHKERRQ(ierr);
+  if (pin_to_host) {
+    PetscDeviceContex dctx;
+
+    ierr = __get_handles(&dctx);CHKERRQ(ierr);
+    ierr = __copy_to_host(dctx,v);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(PETSCRANDER48,&v->defaultrandtype);CHKERRQ(ierr);
+  } else {
+    // REVIEW ME: hip seemingly has no equivalent?
+    ierr = PetscStrallocpy(PETSCCURAND,&v->defaultrandtype);CHKERRQ(ierr);
+  }
+  v->ops->dot                    = v->ops->dot_local   = pin_to_host ? VecDot_Seq   : dot_async;
+  v->ops->norm                   = v->ops->norm_local  = pin_to_host ? VecNorm_Seq  : norm_async;
+  v->ops->tdot                   = v->ops->tdot_local  = pin_to_host ? VecTDot_Seq  : tdot_async;
+  v->ops->mdot                   = v->ops->mdot_local  = pin_to_host ? VecMDot_Seq  : mdot_async;
+  v->ops->mtdot                  = v->ops->mtdot_local = pin_to_host ? VecMTDot_Seq : nullptr;
+  v->ops->scale                  = pin_to_host ? VecScale_Seq : scale_async;
+  v->ops->copy                   = pin_to_host ? VecCopy_Seq : copy_async;
+  v->ops->set                    = pin_to_host ? VecSet_Seq : set_async;
+  v->ops->swap                   = pin_to_host ? VecSwap_Seq : swap_async;
+  v->ops->axpy                   = pin_to_host ? VecAXPY_Seq : axpy_async;
+  v->ops->axpby                  = pin_to_host ? VecAXPBY_Seq : axpby_async;
+  v->ops->axpbypcz               = pin_to_host ? VecAXPBYPCZ_Seq : axpbypcz_async;
+  v->ops->pointwisemult          = pin_to_host ? VecPointwiseMult_Seq : pointwisemult_async;
+  v->ops->pointwisedivide        = pin_to_host ? VecPointwiseDivide_Seq : pointwisedivide_async;
+  v->ops->setrandom              = pin_to_host ? VecSetRandom_Seq : setrandom_async;
+  v->ops->maxpy                  = pin_to_host ? VecMAXPY_Seq : maxpy_async;
+  v->ops->aypx                   = pin_to_host ? VecAYPX_Seq : aypx_async;
+  v->ops->waxpy                  = pin_to_host ? VecWAXPY_Seq : waxpy_async;
+  v->ops->dotnorm2               = pin_to_host ? nullptr : dotnorm2_async;
+  v->ops->placearray             = pin_to_host ? VecPlaceArray_Seq : placearray_async;
+  v->ops->replacearray           = replacearray_async;
+  v->ops->resetarray             = pin_to_host ? VecResetArray_Seq : resetarray_async;
+  v->ops->duplicate              = pin_to_host ? VecDuplicate_Seq : duplicate_async;
+  v->ops->conjugate              = pin_to_host ? VecConjugate_Seq : conjugate_async;
+  v->ops->getlocalvector         = pin_to_host ? nullptr : getlocalvector_async<false>;
+  v->ops->getlocalvectorread     = pin_to_host ? nullptr : getlocalvector_async<true>;
+  v->ops->restorelocalvector     = pin_to_host ? nullptr : restorelocalvector_async<false>;
+  v->ops->restorelocalvectorread = pin_to_host ? nullptr : restorelocalvector_async<true>;
+  v->ops->getarraywrite          = pin_to_host ? nullptr : getarraywrite_async;
+  v->ops->max                    = pin_to_host ? VecMax_Seq : max_async;
+  v->ops->min                    = pin_to_host ? VecMin_Seq : min_async;
+  v->ops->reciprocal             = pin_to_host ? VecReciprocal_Default : reciprocal_async;
+  v->ops->sum                    = pin_to_host ? nullptr : sum_async;
+  v->ops->shift                  = pin_to_host ? nullptr : shift_async;
+  v->ops->bindtocpu              = bindtocpu_async;
+  v->ops->destroy                = destroy_async;
+  v->ops->getarray               = getarray_async;
+  v->ops->restorearray           = restorearray_async;
+  v->ops->getarrayandmemtype     = getarrayandmemtype_async;
+  v->ops->restorearrayandmemtype = restorearrayandmemtype_async;
   PetscFunctionReturn(0);
 }
 
