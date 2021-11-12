@@ -62,16 +62,16 @@ public:
   };
 
 private:
-  static bool _initialized;
-  static std::array<cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   _blashandles;
-  static std::array<cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> _solverhandles;
+  static bool initialized_;
+  static std::array<cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   blashandles_;
+  static std::array<cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> solverhandles_;
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceContext_IMPLS*& __impls_cast(PetscDeviceContext& ptr))
+  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceContext_IMPLS*& impls_cast_(PetscDeviceContext& ptr))
   {
     return static_cast<PetscDeviceContext_IMPLS*&>(ptr->data);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode __initialize_handle(cupmBlasHandle_t &handle))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(cupmBlasHandle_t &handle))
   {
     constexpr auto  end = 3;
     cupmBlasError_t cberr;
@@ -88,7 +88,7 @@ private:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode __set_handle_stream(cupmBlasHandle_t &handle, cupmStream_t &stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode set_handle_stream_(cupmBlasHandle_t &handle, cupmStream_t &stream))
   {
     cupmStream_t    cupmStream;
     cupmBlasError_t cberr;
@@ -99,44 +99,44 @@ private:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode __finalize())
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode finalize_())
   {
     PetscFunctionBegin;
-    for (auto&& handle : _blashandles) {
+    for (auto&& handle : blashandles_) {
       if (handle) {
         auto cberr = cupmBlasDestroy(handle);CHKERRCUPMBLAS(cberr);
         handle     = nullptr;
       }
     }
-    for (auto&& handle : _solverhandles) {
+    for (auto&& handle : solverhandles_) {
       if (handle) {
         auto ierr = cupmBlasInterface_t::DestroyHandle(handle);CHKERRQ(ierr);
         handle    = nullptr;
       }
     }
-    _initialized = false;
+    initialized_ = false;
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode __initialize(PetscInt id, PetscDeviceContext_IMPLS *dci))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_(PetscInt id, PetscDeviceContext_IMPLS *dci))
   {
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
     ierr = PetscDeviceCheckDeviceCount_Internal(id);CHKERRQ(ierr);
-    if (!_initialized) {
-      _initialized = true;
-      ierr = PetscRegisterFinalize(__finalize);CHKERRQ(ierr);
+    if (!initialized_) {
+      initialized_ = true;
+      ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
     }
     // use the blashandle as a canary
-    if (!_blashandles[id]) {
-      ierr = __initialize_handle(_blashandles[id]);CHKERRQ(ierr);
-      ierr = cupmBlasInterface_t::InitializeHandle(_solverhandles[id]);CHKERRQ(ierr);
+    if (!blashandles_[id]) {
+      ierr = initialize_handle_(blashandles_[id]);CHKERRQ(ierr);
+      ierr = cupmBlasInterface_t::InitializeHandle(solverhandles_[id]);CHKERRQ(ierr);
     }
-    ierr = __set_handle_stream(_blashandles[id],dci->stream);CHKERRQ(ierr);
-    ierr = cupmBlasInterface_t::SetHandleStream(_solverhandles[id],dci->stream);CHKERRQ(ierr);
-    dci->blas   = _blashandles[id];
-    dci->solver = _solverhandles[id];
+    ierr = set_handle_stream_(blashandles_[id],dci->stream);CHKERRQ(ierr);
+    ierr = cupmBlasInterface_t::SetHandleStream(solverhandles_[id],dci->stream);CHKERRQ(ierr);
+    dci->blas   = blashandles_[id];
+    dci->solver = solverhandles_[id];
     PetscFunctionReturn(0);
   }
 
@@ -174,7 +174,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::destroy(PetscDeviceContext 
 {
   cupmError_t    cerr;
   PetscErrorCode ierr;
-  auto           dci = __impls_cast(dctx);
+  auto           dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   if (dci->stream) {cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);}
@@ -190,7 +190,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::destroy(PetscDeviceContext 
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::changeStreamType(PetscDeviceContext dctx, PETSC_UNUSED PetscStreamType stype))
 {
-  auto dci = __impls_cast(dctx);
+  auto dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   if (dci->stream) {
@@ -208,7 +208,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dc
 {
   PetscErrorCode ierr;
   cupmError_t    cerr;
-  auto           dci = __impls_cast(dctx);
+  auto           dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   if (dci->stream) {cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);}
@@ -235,7 +235,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dc
 #if PetscDefined(USE_DEBUG)
   dci->timerInUse = PETSC_FALSE;
 #endif
-  ierr = __initialize(dctx->device->deviceId,dci);CHKERRQ(ierr);
+  ierr = initialize_(dctx->device->deviceId,dci);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -245,7 +245,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::query(PetscDeviceContext dc
   cupmError_t cerr;
 
   PetscFunctionBegin;
-  cerr = cupmStreamQuery(__impls_cast(dctx)->stream);
+  cerr = cupmStreamQuery(impls_cast_(dctx)->stream);
   if (cerr == cupmSuccess) *idle = PETSC_TRUE;
   else {
     // somethings gone wrong
@@ -259,7 +259,7 @@ template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb))
 {
   cupmError_t cerr;
-  auto        dcia = __impls_cast(dctxa),dcib = __impls_cast(dctxb);
+  auto        dcia = impls_cast_(dctxa),dcib = impls_cast_(dctxb);
 
   PetscFunctionBegin;
   cerr = cupmEventRecord(dcib->event,dcib->stream);CHKERRCUPM(cerr);
@@ -271,7 +271,7 @@ template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::synchronize(PetscDeviceContext dctx))
 {
   cupmError_t cerr;
-  auto        dci = __impls_cast(dctx);
+  auto        dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   // in case anything was queued on the event
@@ -285,14 +285,14 @@ template <typename handle_t>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
 {
   PetscFunctionBegin;
-  *static_cast<typename handle_t::type*>(handle) = __impls_cast(dctx)->get(handle_t());
+  *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t());
   PetscFunctionReturn(0);
 }
 
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::beginTimer(PetscDeviceContext dctx))
 {
-  auto        dci = __impls_cast(dctx);
+  auto        dci = impls_cast_(dctx);
   cupmError_t cerr;
 
   PetscFunctionBegin;
@@ -309,7 +309,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext
 {
   cupmError_t cerr;
   float       gtime;
-  auto        dci = __impls_cast(dctx);
+  auto        dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
@@ -324,13 +324,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext
 }
 
 // initialize the static member variables
-template <CUPMDeviceType T> bool CUPMContext<T>::_initialized = false;
+template <CUPMDeviceType T> bool CUPMContext<T>::initialized_ = false;
 
 template <CUPMDeviceType T>
-std::array<typename CUPMContext<T>::cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   CUPMContext<T>::_blashandles = {};
+std::array<typename CUPMContext<T>::cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   CUPMContext<T>::blashandles_ = {};
 
 template <CUPMDeviceType T>
-std::array<typename CUPMContext<T>::cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> CUPMContext<T>::_solverhandles = {};
+std::array<typename CUPMContext<T>::cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> CUPMContext<T>::solverhandles_ = {};
 
 // shorten this one up a bit (and instantiate the templates)
 using CUPMContextCuda = CUPMContext<CUPMDeviceType::CUDA>;
