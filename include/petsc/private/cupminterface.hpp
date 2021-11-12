@@ -506,7 +506,6 @@ struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
 #endif // PetscDefined(HAVE_HIP)
 
 #undef PETSC_CUPM_BASE_CLASS_HEADER
-#undef PETSC_CUPM_DEVICE_TYPE
 
 // shorthand for bringing all of the typedefs from the base Interface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
