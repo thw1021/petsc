@@ -10183,3 +10183,183 @@ PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], 
   }
   PetscFunctionReturn(0);
 }
+
+PetscErrorCode DMGlobalGetLocalBegin_Default(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalGetLocalEnd_Default(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalGetLocal_Default(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",(PetscObject)g);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalRestoreLocal_Default(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  Vec            gp;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)*l,"GlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
+  if (gp){
+    if (g != gp) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector's global partner does not match input global vector");
+    ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",NULL);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+  }
+  ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalGetLocalBegin - returns a local vector associated with a global vector with the values from the global vector
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+-  g - the global vector
+
+  Output Parameter:
+. l - the local vector, not valid until DMGlobalGetLocalEnd() is called.
+
+  Level: beginner
+
+  Usage pattern:
+$      DMGlobalGetLocalBegin(dm,gi,&li);
+$      DMGlobalGetLocalEnd(dm,gi,&li);          -- get gi values into li --
+$      DMGlobalGetLocal(dm,gf,&lf);
+$      VecSet(lf,0.0);
+$      -- fill the values in lf using computations that use values in li --
+$      DMGlobalRestoreLocal(dm,gf,&lf);        -- commmunicate the values in lf into gf --
+$      DMGlobalRestoreLocal(dm,gi,&li);        -- return li so it can be reused later for other purposes --
+
+  Notes:
+    The resulting local vector, after DMGlobalGetLocalEnd(), will contain the values in the global vector, suitably communicated
+
+    The usage pattern indicated above may be more efficient for DMPLEX then the pattern
+$      DMGetLocalVector(dm,&li);
+$      DMGlobalGetLocalBegin(dm,gi,INSERT_VALUES,li);
+$      DMGlobalGetLocalEnd(dm,gi,INSERT_VALUES,li);          -- get gi values into li --
+$      DMGetLocalVector(dm,&lf);
+$      VecSet(lf,0.0);
+$      -- fill the values in lf using computations that use values in li --
+$      DMLocalToGlobalBegin(dm,lf,ADD_VALUES,gf);        -- commmunicate the values in lf into gf --
+$      DMLocalToGlobalEnd(dm,lf,ADD_VALUES,gf);
+$      DMRestoreLocalVector(dm,&lf);        -- return li so it can be reused later for other purposes --
+$      DMRestoreLocalVector(dm,&li);        -- return li so it can be reused later for other purposes --
+
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalGetLocalEnd(), DMGlobalRestoreLocal(), DMLocalGetGlobal()
+@*/
+PetscErrorCode DMGlobalGetLocalBegin(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = (*dm->ops->globalgetlocalbegin)(dm,g,l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalGetLocalEnd - gets a local vector associated with a global vector with the values from the global vector
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+-  g - the global vector
+
+  Output Parameter:
+. l - the local vector
+
+  Level: beginner
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalGetLocalBegin(), DMGlobalRestoreLocalEnd(), DMLocalGetGlobal()
+@*/
+PetscErrorCode DMGlobalGetLocalEnd(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = (*dm->ops->globalgetlocalend)(dm,g,l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalGetLocal - obtains a local vector obtained with a global DM vector, with invalid entries
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+-  g - the global vector
+
+  Output Parameter:
+.  l - the local vector
+
+  Level: beginner
+
+  Notes:
+     No communication is performed in this operation, the local vector has invalid values in its array
+
+     Use DMGlobalGetLocalBegin()/DMGlobalGetLocalEnd() to perform a copy of the global values into the local values
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalGetLocalBegin(), DMGlobalGetLocalEnd(), DMLocalRestoreGlobal()
+@*/
+PetscErrorCode DMGlobalGetLocal(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = (*dm->ops->globalgetlocal)(dm,g,l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalRestoreLocal - restores a local vector obtained with DMGlobalGetLocalBegin()/DMGlobalGetLocalEnd() or DMGlobalGetLocal()
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+.  g - the global vector
+- l - the local vector
+
+  Level: beginner
+
+  Notes:
+    If the local vector was obtained with DMGlobalGetLocalBegin()/DMGlobalGetLocalEnd() then no communication is done from this vector.
+    its values are discarded
+
+    If the local vector was obtained with DMGlobalGetLocal() then the values are accumulated back into the global vector.
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalGetLocalBegin(), DMGlobalGetLocalEnd(), DMLocalGetGlobal()
+@*/
+PetscErrorCode DMGlobalRestoreLocal(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = (*dm->ops->globalrestorelocal)(dm,g,l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
