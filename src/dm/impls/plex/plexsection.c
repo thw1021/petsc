@@ -446,6 +446,9 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
   DM_Plex        *plex = (DM_Plex*)dm->data;
 
   PetscFunctionBegin;
+  if (plex->useghostperm && !plex->vecghostperm) {
+    ierr = DMPlexSetUpVecGhostPermutation(dm);CHKERRQ(ierr);
+  }
   ierr = DMGetNumFields(dm, &Nf);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd);CHKERRQ(ierr);

@@ -160,6 +160,34 @@ PetscErrorCode DMPlexGetPointOwnershipType(DM dm,PetscInt *depth,PetscInt **enti
     Input Parameter:
 .    DM - the DMPLEX object
 
+    Options Database:
+.    -dmplex_use_vec_ghost_permutation
+
+    Level: basic
+
+    Notes:
+      Must be called before DMCreateGlobalVector() or DMCreateLocalVector() and DMGetGlobalSection() or DMGetLocalSection()
+
+      Using this in conjuction with DMGlobalGetLocal*()/DMGlobalRestoreLocal() will eliminate copying of local data when moving between
+      the local and the global vector representations.
+
+.seealso: DMPlexCreateGhostVector(), DMPlexSetUpVecGhostPermutation()
+@*/
+PetscErrorCode DMPlexSetUseVecGhostPermutation(DM dm)
+{
+  DM_Plex        *plex = (DM_Plex*) dm->data;
+
+  PetscFunctionBegin;
+  plex->useghostperm = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+/*@
+    DMPlexSetUpVecGhostPermutation - Reorders a DMPLEX so that DMPlexCreateVecGhost() may be used
+
+    Input Parameter:
+.    DM - the DMPLEX object
+
     Level: basic
 
     Notes:
@@ -173,9 +201,9 @@ PetscErrorCode DMPlexGetPointOwnershipType(DM dm,PetscInt *depth,PetscInt **enti
 
     The code was translated from FireDrake Cython code
 
-.seealso: DMPlexCreateGhostVector()
+.seealso: DMPlexCreateGhostVector(), DMPlexSetUseVecGhostPermutation()
 @*/
-PetscErrorCode DMPlexSetUseVecGhostPermutation(DM dm)
+PetscErrorCode DMPlexSetUpVecGhostPermutation(DM dm)
 {
   PetscErrorCode ierr;
   PetscInt       dim, cStart, cEnd, nclosure, ci, l, p, i,d;
@@ -308,5 +336,51 @@ PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
   ierr = VecCreateGhost(comm,n,PETSC_DETERMINE,nghosts,ghosts,v);CHKERRQ(ierr);
   ierr = PetscFree(ghosts);CHKERRQ(ierr);
   ierr = VecSetDM(*v, dm);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalGetLocalBegin_Plex(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalGetLocalEnd_Plex(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalGetLocal_Plex(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",(PetscObject)g);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DMGlobalRestoreLocal_Plex(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  Vec            gp;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)*l,"GlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
+  if (gp){
+    if (g != gp) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector's global partner does not match input global vector");
+    ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",NULL);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+  }
+  ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
