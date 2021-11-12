@@ -1050,5 +1050,5 @@ PETSC_EXTERN PetscErrorCode DMGlobalGetLocalBegin(DM,Vec,Vec*);
 PETSC_EXTERN PetscErrorCode DMGlobalGetLocalEnd(DM,Vec,Vec*);
 PETSC_EXTERN PetscErrorCode DMGlobalGetLocal(DM,Vec,Vec*);
 PETSC_EXTERN PetscErrorCode DMGlobalRestoreLocal(DM,Vec,Vec*);
-  
+
 #endif

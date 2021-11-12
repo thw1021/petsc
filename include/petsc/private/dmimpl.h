@@ -516,9 +516,9 @@ PETSC_EXTERN PetscErrorCode DMUniversalLabelGetLabel(DMUniversalLabel, DMLabel *
 PETSC_EXTERN PetscErrorCode DMUniversalLabelCreateLabels(DMUniversalLabel, PetscBool, DM);
 PETSC_EXTERN PetscErrorCode DMUniversalLabelSetLabelValue(DMUniversalLabel, DM, PetscBool, PetscInt, PetscInt);
 
-PETSC_EXTERN PetscErrorCode DMGlobalGetLocalBegin_Default(DM,Vec,Vec*);
-PETSC_EXTERN PetscErrorCode DMGlobalGetLocalEnd_Default(DM,Vec,Vec*);
-PETSC_EXTERN PetscErrorCode DMGlobalGetLocal_Default(DM,Vec,Vec*);
-PETSC_EXTERN PetscErrorCode DMGlobalRestoreLocal_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocalBegin_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocalEnd_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocal_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalRestoreLocal_Default(DM,Vec,Vec*);
 
 #endif
