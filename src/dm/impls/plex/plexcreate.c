@@ -3053,6 +3053,12 @@ static PetscErrorCode DMInitialize_Plex(DM dm)
   dm->ops->computel2gradientdiff           = DMComputeL2GradientDiff_Plex;
   dm->ops->computel2fielddiff              = DMComputeL2FieldDiff_Plex;
   dm->ops->getneighbors                    = DMGetNeighbors_Plex;
+
+  dm->ops->globalgetlocalbegin = DMGlobalGetLocalBegin_Default;
+  dm->ops->globalgetlocalend   = DMGlobalGetLocalEnd_Default;
+  dm->ops->globalgetlocal      = DMGlobalGetLocal_Default;
+  dm->ops->globalrestorelocal  = DMGlobalRestoreLocal_Default;
+
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexInsertBoundaryValues_C",DMPlexInsertBoundaryValues_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexInsertTimeDerviativeBoundaryValues_C",DMPlexInsertTimeDerivativeBoundaryValues_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",DMSetUpGLVisViewer_Plex);CHKERRQ(ierr);
