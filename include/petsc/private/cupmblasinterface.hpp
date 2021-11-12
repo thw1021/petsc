@@ -7,10 +7,8 @@
 #if defined(__cplusplus)
 
 #if !PetscDefined(HAVE_CXX_DIALECT_CXX11) || (__cplusplus < 201103L)
-#  error "CUPMBlasInterface requires c++11"
+#  error "CUPMBlasInterface requires C++11"
 #endif
-
-#include <array>
 
 namespace Petsc
 {
@@ -93,7 +91,7 @@ namespace detail
 template <CUPMDeviceType T>
 struct CUPMBlasInterfaceBase : CUPMInterface<T>
 {
-  PETSC_CXX_COMPAT_DECL(constexpr const char*const cupmBlasName())
+  PETSC_CXX_COMPAT_DECL(constexpr const char* cupmBlasName())
   {
     return std::get<util::integral_value(T)>(CUPMBlasTypes);
   }
