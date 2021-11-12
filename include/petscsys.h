@@ -2768,6 +2768,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCitationsRegister(const char cit[],Petsc
 #if defined(PETSC_HAVE_THREADSAFETY)
   PetscSpinlock  SpinLock;
 #endif
+
   PetscFunctionBegin;
   if (set && *set) PetscFunctionReturn(0);
   ierr = PetscStrlen(cit,&len);CHKERRQ(ierr);
