@@ -32,21 +32,21 @@ namespace detail
 {
 
 #define CHKERRCUPMBLAS(cberr) do {                                      \
-    cupmBlasError_t _cberr__ = cberr;                                   \
-    if (PetscUnlikely(_cberr__ != CUPMBLAS_STATUS_SUCCESS)) {           \
-      if (((_cberr__ == CUPMBLAS_STATUS_NOT_INITIALIZED) ||             \
-           (_cberr__ == CUPMBLAS_STATUS_ALLOC_FAILED))   &&             \
+    const cupmBlasError_t cberr__ = cberr;                              \
+    if (PetscUnlikely(cberr__ != CUPMBLAS_STATUS_SUCCESS)) {            \
+      if (((cberr__ == CUPMBLAS_STATUS_NOT_INITIALIZED) ||              \
+           (cberr__ == CUPMBLAS_STATUS_ALLOC_FAILED))   &&              \
           PetscDeviceInitialized(cupmDeviceTypeToPetscDeviceType())) {  \
         SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,                \
                  "%s error %d (%s). "                                   \
                  "Reports not initialized or alloc failed; "            \
                  "this indicates the GPU may have run out resources",   \
-                 cupmBlasName(),static_cast<PetscErrorCode>(_cberr__),  \
-                 cupmBlasGetErrorName(_cberr__));                       \
+                 cupmBlasName(),static_cast<PetscErrorCode>(cberr__),   \
+                 cupmBlasGetErrorName(cberr__));                        \
       } else {                                                          \
         SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s)",      \
-                 cupmBlasName(),static_cast<PetscErrorCode>(_cberr__),  \
-                 cupmBlasGetErrorName(_cberr__));                       \
+                 cupmBlasName(),static_cast<PetscErrorCode>(cberr__),   \
+                 cupmBlasGetErrorName(cberr__));                        \
       }                                                                 \
     }                                                                   \
   } while (0)
