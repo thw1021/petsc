@@ -1,12 +1,12 @@
 #include "../cupmcontext.hpp" /*I "petscdevice.h" I*/
 
-using namespace Petsc::Impl;
+using namespace Petsc;
 
 PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
 {
-  static constexpr CUPMContextHip contextHip;
-  PetscDeviceContext_(HIP)        *dci;
-  PetscErrorCode                  ierr;
+  static constexpr auto     contextHip = Impl::CUPMContext<Petsc::CUPMDeviceType::HIP>();
+  PetscDeviceContext_(HIP) *dci;
+  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   ierr = PetscNew(&dci);CHKERRQ(ierr);
