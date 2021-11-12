@@ -66,9 +66,9 @@ private:
   static std::array<cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   blashandles_;
   static std::array<cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> solverhandles_;
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceContext_IMPLS*& impls_cast_(PetscDeviceContext& ptr))
+  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceContext_IMPLS* impls_cast_(PetscDeviceContext ptr))
   {
-    return static_cast<PetscDeviceContext_IMPLS*&>(ptr->data);
+    return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
   }
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(cupmBlasHandle_t &handle))
@@ -224,7 +224,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dc
     cerr = cupmStreamCreateWithFlags(&dci->stream,cupmStreamNonBlocking);CHKERRCUPM(cerr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[static_cast<int>(dctx->streamType)]);
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[util::integral_value(dctx->streamType)]);
     break;
   }
   if (!dci->event) {
@@ -259,11 +259,11 @@ template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb))
 {
   cupmError_t cerr;
-  auto        dcia = impls_cast_(dctxa),dcib = impls_cast_(dctxb);
+  auto        dcib = impls_cast_(dctxb);
 
   PetscFunctionBegin;
   cerr = cupmEventRecord(dcib->event,dcib->stream);CHKERRCUPM(cerr);
-  cerr = cupmStreamWaitEvent(dcia->stream,dcib->event,0);CHKERRCUPM(cerr);
+  cerr = cupmStreamWaitEvent(impls_cast_(dctxa)->stream,dcib->event,0);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
