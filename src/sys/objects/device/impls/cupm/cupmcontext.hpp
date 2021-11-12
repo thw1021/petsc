@@ -74,7 +74,7 @@ private:
 
   PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceContext_IMPLS* impls_cast_(PetscDeviceContext ptr))
   {
-    return static_cast<PetscDeviceContext_IMPLS*&>(ptr->data);
+    return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
   }
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(cupmBlasHandle_t &handle))
