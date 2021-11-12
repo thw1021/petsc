@@ -59,11 +59,11 @@ namespace detail
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
 #define CHKERRCUPM(expression) do {                                     \
-    const cupmError_t _cerr__ = expression;                             \
-    if (PetscUnlikely(_cerr__ != cupmSuccess)) {                        \
+    const cupmError_t cerr__ = expression;                              \
+    if (PetscUnlikely(cerr__ != cupmSuccess)) {                         \
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
-               cupmName(),static_cast<PetscErrorCode>(_cerr__),         \
-               cupmGetErrorName(_cerr__),cupmGetErrorString(_cerr__));  \
+               cupmName(),static_cast<PetscErrorCode>(cerr__),          \
+               cupmGetErrorName(cerr__),cupmGetErrorString(cerr__));    \
     }                                                                   \
   } while (0)
 
