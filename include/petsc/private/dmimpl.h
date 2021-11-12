@@ -65,6 +65,11 @@ struct _DMOps {
   PetscErrorCode (*localtolocalbegin)(DM,Vec,InsertMode,Vec);
   PetscErrorCode (*localtolocalend)(DM,Vec,InsertMode,Vec);
 
+  PetscErrorCode (*globalgetlocalbegin)(DM,Vec,Vec*);
+  PetscErrorCode (*globalgetlocalend)(DM,Vec,Vec*);
+  PetscErrorCode (*globalgetlocal)(DM,Vec,Vec*);
+  PetscErrorCode (*globalrestorelocal)(DM,Vec,Vec*);
+
   PetscErrorCode (*destroy)(DM);
 
   PetscErrorCode (*computevariablebounds)(DM,Vec,Vec);
@@ -510,5 +515,10 @@ PETSC_EXTERN PetscErrorCode DMUniversalLabelDestroy(DMUniversalLabel *);
 PETSC_EXTERN PetscErrorCode DMUniversalLabelGetLabel(DMUniversalLabel, DMLabel *);
 PETSC_EXTERN PetscErrorCode DMUniversalLabelCreateLabels(DMUniversalLabel, PetscBool, DM);
 PETSC_EXTERN PetscErrorCode DMUniversalLabelSetLabelValue(DMUniversalLabel, DM, PetscBool, PetscInt, PetscInt);
+
+PETSC_INTERN PetscErrorCode DMGlobalGetLocalBegin_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocalEnd_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocal_Default(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalRestoreLocal_Default(DM,Vec,Vec*);
 
 #endif

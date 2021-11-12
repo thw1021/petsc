@@ -193,6 +193,8 @@ typedef struct {
   PetscInt             printFEM;
   PetscInt             printL2;
   PetscReal            printTol;
+  PetscBool            useghostperm;        /* use the ghost permutation and ghost vectors with this DMPLEX */
+  IS                   vecghostperm;        /* permutation to map all all ghost dof appropriate to VecCreateGhost() to the end of the vector */
 } DM_Plex;
 
 PETSC_EXTERN PetscErrorCode DMPlexVTKWriteAll_VTU(DM,PetscViewer);
@@ -697,5 +699,10 @@ PETSC_INTERN PetscErrorCode DMView_Plex(DM dm, PetscViewer viewer);
 PETSC_INTERN PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer);
 PETSC_INTERN PetscErrorCode DMCreateSubDM_Plex(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm);
 PETSC_INTERN PetscErrorCode DMCreateSuperDM_Plex(DM dms[], PetscInt len, IS **is, DM *superdm);
+
+PETSC_INTERN PetscErrorCode DMGlobalGetLocalBegin_Plex(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocalEnd_Plex(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalGetLocal_Plex(DM,Vec,Vec*);
+PETSC_INTERN PetscErrorCode DMGlobalRestoreLocal_Plex(DM,Vec,Vec*);
 
 #endif /* _PLEXIMPL_H */
