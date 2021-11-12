@@ -700,9 +700,4 @@ PETSC_INTERN PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer);
 PETSC_INTERN PetscErrorCode DMCreateSubDM_Plex(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm);
 PETSC_INTERN PetscErrorCode DMCreateSuperDM_Plex(DM dms[], PetscInt len, IS **is, DM *superdm);
 
-PETSC_INTERN PetscErrorCode DMGlobalGetLocalBegin_Plex(DM,Vec,Vec*);
-PETSC_INTERN PetscErrorCode DMGlobalGetLocalEnd_Plex(DM,Vec,Vec*);
-PETSC_INTERN PetscErrorCode DMGlobalGetLocal_Plex(DM,Vec,Vec*);
-PETSC_INTERN PetscErrorCode DMGlobalRestoreLocal_Plex(DM,Vec,Vec*);
-
 #endif /* _PLEXIMPL_H */

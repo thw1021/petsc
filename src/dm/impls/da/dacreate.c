@@ -449,11 +449,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
   da->ops->locatepoints                = DMLocatePoints_DA_Regular;
   da->ops->getcompatibility            = DMGetCompatibility_DA;
 
-  da->ops->globalgetlocalbegin         = DMGlobalGetLocalBegin_Default;
-  da->ops->globalgetlocalend           = DMGlobalGetLocalEnd_Default;
-  da->ops->globalgetlocal              = DMGlobalGetLocal_Default;
-  da->ops->globalrestorelocal          = DMGlobalRestoreLocal_Default;
-
   ierr = PetscObjectComposeFunction((PetscObject)da,"DMSetUpGLVisViewer_C",DMSetUpGLVisViewer_DMDA);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

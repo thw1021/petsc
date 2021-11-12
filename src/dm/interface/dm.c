@@ -10184,52 +10184,6 @@ PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMGlobalGetLocalBegin_Default(DM dm,Vec g,Vec *l)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode DMGlobalGetLocalEnd_Default(DM dm,Vec g,Vec *l)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode DMGlobalGetLocal_Default(DM dm,Vec g,Vec *l)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",(PetscObject)g);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode DMGlobalRestoreLocal_Default(DM dm,Vec g,Vec *l)
-{
-  PetscErrorCode ierr;
-  Vec            gp;
-
-  PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)*l,"GlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
-  if (gp){
-    if (g != gp) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector's global partner does not match input global vector");
-    ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",NULL);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
-  }
-  ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 /*@
   DMGlobalGetLocalBegin - returns a local vector associated with a global vector with the values from the global vector
 
@@ -10276,7 +10230,8 @@ PetscErrorCode DMGlobalGetLocalBegin(DM dm,Vec g,Vec *l)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = (*dm->ops->globalgetlocalbegin)(dm,g,l);CHKERRQ(ierr);
+  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -10301,7 +10256,7 @@ PetscErrorCode DMGlobalGetLocalEnd(DM dm,Vec g,Vec *l)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = (*dm->ops->globalgetlocalend)(dm,g,l);CHKERRQ(ierr);
+  ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -10331,7 +10286,8 @@ PetscErrorCode DMGlobalGetLocal(DM dm,Vec g,Vec *l)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = (*dm->ops->globalgetlocal)(dm,g,l);CHKERRQ(ierr);
+  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",(PetscObject)g);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -10358,8 +10314,17 @@ PetscErrorCode DMGlobalGetLocal(DM dm,Vec g,Vec *l)
 PetscErrorCode DMGlobalRestoreLocal(DM dm,Vec g,Vec *l)
 {
   PetscErrorCode ierr;
+  Vec            gp;
+
   PetscFunctionBegin;
-  ierr = (*dm->ops->globalrestorelocal)(dm,g,l);CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)*l,"GlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
+  if (gp){
+    if (g != gp) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector's global partner does not match input global vector");
+    ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",NULL);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+    ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+  }
+  ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
