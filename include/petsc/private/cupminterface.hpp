@@ -4,9 +4,27 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/petsctypetraits.hpp>
 
+#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+#  define PETSC_HAVE_CUPM 1
+#endif
+
+#if PetscDefined(HAVE_CUPM)
+#  define PETSC_HOST_DECL       __host__
+#  define PETSC_DEVICE_DECL     __device__ __forceinline__
+#  define PETSC_KERNEL_DECL     __global__
+#  define PETSC_SHAREDMEM_DECL  __shared__
+#else
+#  define PETSC_HOST_DECL
+#  define PETSC_DEVICE_DECL
+#  define PETSC_KERNEL_DECL
+#  define PETSC_SHAREDMEM_DECL
+#endif
+
+#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
+
 #if defined(__cplusplus)
 
-#if !PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#if !PetscDefined(HAVE_CXX_DIALECT_CXX11) || (__cplusplus < 201103L)
 #  error CUPMInterface requires c++11
 #endif
 
@@ -37,24 +55,6 @@ namespace Impl
 
 namespace detail
 {
-
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAV_HIP)
-#  define PETSC_HAVE_CUPM 1
-#endif
-
-#if PetscDefined(HAVE_CUPM)
-#  define PETSC_HOST_DECL       __host__
-#  define PETSC_DEVICE_DECL     __device__ __forceinline__
-#  define PETSC_KERNEL_DECL     __global__
-#  define PETSC_SHAREDMEM_DECL  __shared__
-#else
-#  define PETSC_HOST_DECL
-#  define PETSC_DEVICE_DECL
-#  define PETSC_KERNEL_DECL
-#  define PETSC_SHAREDMEM_DECL
-#endif
-
-#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
 
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
@@ -96,15 +96,13 @@ namespace detail
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(our_suffix,their_suffix,N) \
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix,N)
 
-#define PETSC_CUPM_DEVICE_TYPE CUPMDeviceType::PETSC_CUPM_PREFIX_U
-
 // Base class that holds stuff that can be directly determined with templates
 template <CUPMDeviceType T>
 struct CUPMInterfaceBase
 {
   static constexpr const auto type = T;
 
-  PETSC_CXX_COMPAT_DECL(constexpr const char*const cupmName())
+  PETSC_CXX_COMPAT_DECL(constexpr const char* cupmName())
   {
     return std::get<util::integral_value(type)>(CUPMDeviceTypes);
   }
@@ -146,9 +144,9 @@ template <CUPMDeviceType T> struct CUPMInterface;
 #define PETSC_CUPM_PREFIX   cuda
 #define PETSC_CUPM_PREFIX_U CUDA
 template <>
-struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
+struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDeviceType::CUDA>
 {
-  PETSC_CUPM_BASE_CLASS_HEADER(PETSC_CUPM_DEVICE_TYPE);
+  PETSC_CUPM_BASE_CLASS_HEADER(CUPMDeviceType::CUDA);
 
   // typedefs
   using cupmError_t        = cudaError_t;
@@ -227,10 +225,10 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
   // interface here, and it's not worth it to write another macro just for this specific
   // use-case
   template <class FunctionT, typename... KernelArgsT>
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cudaError_t cupmLaunchKernel(const FunctionT* func, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream, KernelArgsT&&... args)
+  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cudaError_t cupmLaunchKernel(const FunctionT* func, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
   {
     // local variables in constexpr functions since C++14
-    void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(args)...};
+    void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(kernelArgs)...};
     return cudaLaunchKernel(func,gridDim,blockDim,args,sharedMem,stream);
   }
 };
@@ -242,9 +240,9 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 #define PETSC_CUPM_PREFIX   hip
 #define PETSC_CUPM_PREFIX_U HIP
 template <>
-struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_CUPM_DEVICE_TYPE>
+struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDeviceType::HIP>
 {
-  PETSC_CUPM_BASE_CLASS_HEADER(PETSC_CUPM_DEVICE_TYPE);
+  PETSC_CUPM_BASE_CLASS_HEADER(CUPMDeviceType::HIP);
 
   // typedefs
   using cupmError_t        = hipError_t;
@@ -319,7 +317,6 @@ struct CUPMInterface<PETSC_CUPM_DEVICE_TYPE> : detail::CUPMInterfaceBase<PETSC_C
 #endif // PetscDefined(HAVE_HIP)
 
 #undef PETSC_CUPM_BASE_CLASS_HEADER
-#undef PETSC_CUPM_DEVICE_TYPE
 
 } // namespace Impl
 
