@@ -28,7 +28,7 @@ public:
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
 
   // default constructor
-  explicit CUPMDevice(createContextFunction_t func) noexcept : _create(func) { }
+  explicit CUPMDevice(createContextFunction_t func) noexcept : create_(func) { }
 
   // copy constructor
   CUPMDevice(const CUPMDevice &other) noexcept = default;
@@ -58,30 +58,30 @@ private:
   class CUPMDeviceInternal;
 
   // all known devices
-  static std::array<std::unique_ptr<CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> _devices;
+  static std::array<std::unique_ptr<CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> devices_;
 
   // this ranks default device, if < 0  then devices are specifically disabled
-  static int _defaultDevice;
+  static int defaultDevice_;
 
   // function to create a PetscDeviceContext (the (*create) function pointer usually set
   // via XXXSetType() for other PETSc objects)
-  const createContextFunction_t _create;
+  const createContextFunction_t create_;
 
   // have we tried looking for devices
-  static bool _initialized;
+  static bool initialized_;
 
   // clean-up
-  PETSC_NODISCARD static PetscErrorCode __finalize() noexcept;
+  PETSC_NODISCARD static PetscErrorCode finalize__() noexcept;
 };
 
 // define static variables
-template <CUPMDeviceType T> bool CUPMDevice<T>::_initialized = false;
+template <CUPMDeviceType T> bool CUPMDevice<T>::initialized_ = false;
 
 template <CUPMDeviceType T>
 std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES>
-CUPMDevice<T>::_devices = { };
+CUPMDevice<T>::devices_ = { };
 
-template <CUPMDeviceType T> int CUPMDevice<T>::_defaultDevice = PETSC_CUPM_DEVICE_NONE;
+template <CUPMDeviceType T> int CUPMDevice<T>::defaultDevice_ = PETSC_CUPM_DEVICE_NONE;
 
 } // namespace Impl
 
