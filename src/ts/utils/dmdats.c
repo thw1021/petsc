@@ -171,7 +171,7 @@ static PetscErrorCode TSComputeRHSFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec 
     ierr = (*dmdats->rhsfunctionlocal)(&info,ptime,x,f,dmdats->rhsfunctionlocalctx);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = DMDAVecRestoreArray(dm,Floc,&f);CHKERRQ(ierr);
-    ierr = DMGlobalRestoreLocal(dm,Floc,&F);CHKERRQ(ierr);
+    ierr = DMGlobalRestoreLocal(dm,F,&Floc);CHKERRQ(ierr);
   } break;
   default: SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Cannot use imode=%d",(int)dmdats->rhsfunctionlocalimode);
   }
