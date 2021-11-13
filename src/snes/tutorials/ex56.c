@@ -568,6 +568,7 @@ int main(int argc,char **args)
   test:
     suffix: gamg_plate
     nsize: 4
+    requires: !single
     args: -run_type 0 -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -max_conv_its 2 -petscspace_degree 2 -dm_plex_box_lower -4,-4,0 -dm_plex_box_upper 4,4,1 -snes_max_it 1 -ksp_max_it 1000 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -snes_rtol 1.e-9 -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 1000 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .1 -use_mat_nearnullspace true -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 -mg_levels_pc_type jacobi -ksp_monitor_short -ksp_converged_reason -snes_converged_reason -snes_monitor_short -ex56_dm_view -petscpartitioner_type simple -pc_gamg_process_eq_limit 100 -snes_type ksponly -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_use_sa_esteig
     output_file: output/ex56_gamg_plate.out
 
