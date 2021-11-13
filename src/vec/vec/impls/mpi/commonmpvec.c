@@ -63,7 +63,7 @@ $     VecGhostRestoreLocalForm(x,&xlocal);
 
     Level: advanced
 
-.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray()
+.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostHasLocalForm(), VecGhostIsLocalForm()
 
 @*/
 PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
@@ -93,6 +93,47 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 }
 
 /*@
+    VecGhostHasLocalForm - Determines if a Vec has a local ghosted representation
+
+    Logically Collective
+
+    Input Parameter:
+.   g - the global vector
+
+    Output Parameter:
+.   haslocal - indicates the vector has a local ghosted representation
+
+    Notes:
+      Sequential vectors always have local ghosted representations, the same vector
+
+    Level: advanced
+
+.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm()
+
+@*/
+PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
+{
+  PetscErrorCode ierr;
+  PetscBool      isseq,ismpi;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(g,VEC_CLASSID,1);
+  PetscValidPointer(haslocal,2);
+
+  ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
+  if (ismpi) {
+    Vec_MPI *v = (Vec_MPI*)g->data;
+    *haslocal = v->localrep ? PETSC_TRUE : PETSC_FALSE;
+  } else if (isseq) {
+    *haslocal = PETSC_TRUE;
+  } else {
+    *haslocal = PETSC_FALSE;
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
     VecGhostIsLocalForm - Checks if a given vector is the local form of a global vector
 
     Not Collective
@@ -106,7 +147,7 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 
     Level: advanced
 
-.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm()
+.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm(), VecGhostHasLocalForm()
 
 @*/
 PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
@@ -147,7 +188,7 @@ PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 
     Level: advanced
 
-.seealso: VecCreateGhost(), VecGhostGetLocalForm(), VecCreateGhostWithArray()
+.seealso: VecCreateGhost(), VecGhostGetLocalForm(), VecCreateGhostWithArray(), , VecGhostHasLocalForm()
 @*/
 PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
 {

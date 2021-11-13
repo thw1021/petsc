@@ -10228,10 +10228,16 @@ $      DMRestoreLocalVector(dm,&li);        -- return li so it can be reused lat
 PetscErrorCode DMGlobalGetLocalBegin(DM dm,Vec g,Vec *l)
 {
   PetscErrorCode ierr;
+  PetscBool      isghost;
 
   PetscFunctionBegin;
-  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
+    ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+    ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  } else {
+    ierr = VecGhostUpdateBegin(g,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -10254,9 +10260,16 @@ PetscErrorCode DMGlobalGetLocalBegin(DM dm,Vec g,Vec *l)
 PetscErrorCode DMGlobalGetLocalEnd(DM dm,Vec g,Vec *l)
 {
   PetscErrorCode ierr;
+  PetscBool      isghost;
 
   PetscFunctionBegin;
-  ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
+    ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  } else {
+    ierr = VecGhostUpdateEnd(g,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecGhostGetLocalForm(g,l);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -10284,10 +10297,15 @@ PetscErrorCode DMGlobalGetLocalEnd(DM dm,Vec g,Vec *l)
 PetscErrorCode DMGlobalGetLocal(DM dm,Vec g,Vec *l)
 {
   PetscErrorCode ierr;
+  PetscBool      isghost;
 
   PetscFunctionBegin;
-  ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
-  ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",(PetscObject)g);CHKERRQ(ierr);
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
+    ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  } else {
+    ierr = VecGhostGetLocalForm(g,l);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -10314,17 +10332,23 @@ PetscErrorCode DMGlobalGetLocal(DM dm,Vec g,Vec *l)
 PetscErrorCode DMGlobalRestoreLocal(DM dm,Vec g,Vec *l)
 {
   PetscErrorCode ierr;
-  Vec            gp;
+  PetscBool      isghost;
 
   PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)*l,"GlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
-  if (gp){
-    if (g != gp) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector's global partner does not match input global vector");
-    ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",NULL);CHKERRQ(ierr);
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
     ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
     ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+    ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
+  } else {
+    PetscBool isform;
+
+    ierr = VecGhostIsLocalForm(g,*l,&isform);CHKERRQ(ierr);
+    if (!isform) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector passed in is not the local form of the global ghost vector");
+    ierr = VecGhostRestoreLocalForm(g,l);CHKERRQ(ierr);
+    ierr = VecGhostUpdateBegin(g,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    ierr = VecGhostUpdateEnd(g,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
   }
-  ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
