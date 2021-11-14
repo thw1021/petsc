@@ -60,8 +60,8 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                           \
   } while (0)
 
-/* for now just checks strict equality, but this can be changed as some devices
-   (i.e. kokkos and any cupm should be compatible once implemented) */
+/* for now just checks strict equality, but this can be changed as some devices (i.e. kokkos
+ * and any cupm should be compatible once implemented) */
 #define PetscCheckCompatibleDevices(_p_dev1__,_p_arg1__,_p_dev2__,_p_arg2__) \
   do {                                                                  \
     PetscValidDevice(_p_dev1__,_p_arg1__);                              \
@@ -147,7 +147,7 @@ struct _n_PetscDevice {
   PetscInt          refcnt;   /* reference count for the device */
   PetscInt          id;       /* unique id per created PetscDevice */
   PetscInt          deviceId; /* the id of the underlying device, i.e. the return of
-                                 cudaGetDevice() for example */
+                               * cudaGetDevice() for example */
   PetscDeviceType   type;     /* type of device */
   void             *data;     /* placeholder */
 };
@@ -189,7 +189,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForType_Internal
 PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Internal(PetscDeviceType type)
 {
 #if defined(PetscUnreachable)
-#error "PetscUnreachable merged"
+#  error "PetscUnreachable merged"
 #endif
   switch(type) {
   case PETSC_DEVICE_INVALID: return PETSC_FALSE;
@@ -206,9 +206,10 @@ PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Intern
   return PETSC_FALSE;
 }
 
-/* More general form of PetscDeviceDefaultType_Internal(), as it calls the former using
-   the automatically selected default PetscDeviceType */
-#define PetscDeviceGetDefault_Internal(device) PetscDeviceGetDefaultForType_Internal(PETSC_DEVICE_DEFAULT,device)
+/* More general form of PetscDeviceDefaultType_Internal(), as it calls the former using the
+ * automatically selected default PetscDeviceType */
+#define PetscDeviceGetDefault_Internal(device)                          \
+  PetscDeviceGetDefaultForType_Internal(PETSC_DEVICE_DEFAULT,device)
 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt count)
 {
@@ -274,7 +275,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetDefaultDeviceForType_Int
   PetscFunctionReturn(0);
 }
 
-#define PetscDeviceContextSetDefaultDevice_Internal(dctx) PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,PETSC_DEVICE_DEFAULT)
+#define PetscDeviceContextSetDefaultDevice_Internal(dctx)               \
+  PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,PETSC_DEVICE_DEFAULT)
 
 /* note, only does assertion checking in debug mode */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCurrentContextAssertType_Internal(PetscDeviceContext *dctx, PetscDeviceType type)
