@@ -92,20 +92,22 @@ enum class MemoryAccess {
 
 } // namespace detail
 
+#define PETSC_VECCUPM_BASE_CLASS_HEADER(name,Tp)                        \
+  PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,Tp); \
+  using MemoryAccess = detail::MemoryAccess;                            \
+  using name = detail::VecCUPMBase<Tp>;                                 \
+  using name::VEC_CUPMCopyToGPU;                                        \
+  using name::VEC_CUPMCopyFromGPU;                                      \
+  using name::VECSEQCUPM;                                               \
+  using name::VECMPICUPM
+
 #define CHKERRCXXCTOR(expr) CHKERRABORT(PETSC_COMM_SELF,expr)
 
 template <CUPMDeviceType T>
 struct VecSeq_CUPM : detail::VecCUPMBase<T>,CUPMBlasInterface<T>
 {
 public:
-  PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
-
-  using MemoryAccess = detail::MemoryAccess;
-  using base_type    = detail::VecCUPMBase<T>;
-  using base_type::VEC_CUPMCopyToGPU;
-  using base_type::VEC_CUPMCopyFromGPU;
-  using base_type::VECSEQCUPM;
-  using base_type::VECMPICUPM;
+  PETSC_VECCUPM_BASE_CLASS_HEADER(base_type,T);
 
   struct Vec_CUPM
   {
@@ -118,7 +120,7 @@ public:
 
 private:
 
-  // casting
+  // utility
   PETSC_CXX_COMPAT_DECL(constexpr Vec_Seq* vec_impls_cast_(Vec v))
   {
     return static_cast<Vec_Seq*>(v->data);
@@ -129,7 +131,6 @@ private:
     return static_cast<Vec_CUPM*>(v->spptr);
   }
 
-  // retrieving the various handles
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_handle_dispatch_(PetscDeviceContext *dctx, cupmBlasHandle_t *handle, cupmStream_t *stream))
   {
     PetscDeviceContext dctx_;
@@ -385,6 +386,9 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode setrandom_async(Vec,PetscRandom));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode bindtocpu_async(Vec,PetscBool));
 };
+
+#undef PETSC_VECCUPM_BASE_CLASS_HEADER
+#undef CHKERRCXXCTOR
 
 // ================================================================================== //
 //                                                                                    //
@@ -839,10 +843,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
     w->spptr         = v->spptr;
     ierr = PetscObjectStateIncrease(PetscObjectCast(w));CHKERRQ(ierr);
   } else {
-    if PETSC_CONSTEXPR_17 (read) {
-      ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(&vec_impls_cast_(w)->array));CHKERRQ(ierr);
+    const auto arrayptr = &vec_impls_cast_(w)->array;
+    if (read) {
+      ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(arrayptr));CHKERRQ(ierr);
     } else {
-      ierr = VecGetArray(v,&vec_impls_cast_(w)->array);CHKERRQ(ierr);
+      ierr = VecGetArray(v,arrayptr);CHKERRQ(ierr);
     }
     w->offloadmask = PETSC_OFFLOAD_CPU;
     if (wisseqcupm) {
