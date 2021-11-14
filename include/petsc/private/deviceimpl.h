@@ -59,8 +59,8 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                           \
   } while (0)
 
-/* for now just checks strict equality, but this can be changed as some devices
-   (i.e. kokkos and any cupm should be compatible once implemented) */
+/* for now just checks strict equality, but this can be changed as some devices (i.e. kokkos
+ * and any cupm should be compatible once implemented) */
 #define PetscCheckCompatibleDevices(_p_dev1__,_p_arg1__,_p_dev2__,_p_arg2__) \
   do {                                                                  \
     PetscValidDevice(_p_dev1__,_p_arg1__);                              \
@@ -144,7 +144,7 @@ struct _n_PetscDevice {
   PetscInt          refcnt;   /* reference count for the device */
   PetscInt          id;       /* unique id per created PetscDevice */
   PetscInt          deviceId; /* the id of the underlying device, i.e. the return of
-                                 cudaGetDevice() for example */
+                               * cudaGetDevice() for example */
   PetscDeviceType   type;     /* type of device */
   void             *data;     /* placeholder */
 };
@@ -186,7 +186,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForType_Internal
 PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Internal(PetscDeviceType type)
 {
 #if defined(PetscUnreachable)
-#error "PetscUnreachable merged"
+#  error "PetscUnreachable merged"
 #endif
   switch(type) {
   case PETSC_DEVICE_INVALID: return PETSC_FALSE;
@@ -202,14 +202,15 @@ PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Intern
   return PETSC_FALSE;
 }
 
-/* More general form of PetscDeviceDefaultType_Internal(), as it calls the former using
-   the automatically selected default PetscDeviceType */
-#define PetscDeviceGetDefault_Internal(device) PetscDeviceGetDefaultForType_Internal(PETSC_DEVICE_DEFAULT,device)
+/* More general form of PetscDeviceDefaultType_Internal(), as it calls the former using the
+ * automatically selected default PetscDeviceType */
+#define PetscDeviceGetDefault_Internal(device)                          \
+  PetscDeviceGetDefaultForType_Internal(PETSC_DEVICE_DEFAULT,device)
 
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt count)
 {
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(count >= PETSC_DEVICE_MAX_DEVICES)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Detected %D devices, which is larger than maximum supported number of devices %d",count,PETSC_DEVICE_MAX_DEVICES);
+  if (PetscUnlikelyDebug(count >= PETSC_DEVICE_MAX_DEVICES)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Detected %" PetscInt_FMT " devices, which is larger than maximum supported number of devices %d",count,PETSC_DEVICE_MAX_DEVICES);
   PetscFunctionReturn(0);
 }
 
@@ -224,7 +225,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceDereference_Internal(PetscDevice d
 {
   PetscFunctionBegin;
   --(device->refcnt);
-  if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"PetscDevice has negative reference count %D",device->refcnt);
+  if (PetscUnlikelyDebug(device->refcnt < 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"PetscDevice has negative reference count %" PetscInt_FMT,device->refcnt);
   PetscFunctionReturn(0);
 }
 #else /* PetscDefined(HAVE_CXX_DIALECT_CXX11) */
@@ -270,7 +271,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextSetDefaultDeviceForType_Int
   PetscFunctionReturn(0);
 }
 
-#define PetscDeviceContextSetDefaultDevice_Internal(dctx) PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,PETSC_DEVICE_DEFAULT)
+#define PetscDeviceContextSetDefaultDevice_Internal(dctx)               \
+  PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,PETSC_DEVICE_DEFAULT)
 
 /* note, only does assertion checking in debug mode */
 PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCurrentContextAssertType_Internal(PetscDeviceContext *dctx, PetscDeviceType type)
@@ -281,7 +283,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscDeviceContextGetCurrentContextAssertType
   PetscValidPointer(dctx,1);
   PetscValidDeviceType(type,2);
   ierr = PetscDeviceContextGetCurrentContext(dctx);CHKERRQ(ierr);
-  if (PetscUnlikelyDebug((*dctx)->device->type != type)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected current global PetscDeviceContext (id %D) to have PetscDeviceType '%s' but has '%s' instead",(*dctx)->id,PetscDeviceTypes[type],PetscDeviceTypes[(*dctx)->device->type]);
+  if (PetscUnlikelyDebug((*dctx)->device->type != type)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected current global PetscDeviceContext (id %" PetscInt_FMT ") to have PetscDeviceType '%s' but has '%s' instead",(*dctx)->id,PetscDeviceTypes[type],PetscDeviceTypes[(*dctx)->device->type]);
   PetscFunctionReturn(0);
 }
 

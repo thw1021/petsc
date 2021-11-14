@@ -839,10 +839,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
     w->spptr         = v->spptr;
     ierr = PetscObjectStateIncrease(PetscObjectCast(w));CHKERRQ(ierr);
   } else {
-    if PETSC_CONSTEXPR_17 (read) {
-      ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(&vec_impls_cast_(w)->array));CHKERRQ(ierr);
+    const auto arrayptr = &vec_impls_cast_(w)->array;
+    if (read) {
+      ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(arrayptr));CHKERRQ(ierr);
     } else {
-      ierr = VecGetArray(v,&vec_impls_cast_(w)->array);CHKERRQ(ierr);
+      ierr = VecGetArray(v,arrayptr);CHKERRQ(ierr);
     }
     w->offloadmask = PETSC_OFFLOAD_CPU;
     if (wisseqcupm) {
