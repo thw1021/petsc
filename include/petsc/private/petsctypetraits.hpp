@@ -5,7 +5,7 @@
 
 #if defined(__cplusplus)
 
-#if __cplusplus >= 201103L // c++11
+#if __cplusplus >= 201103L // C++11
 #include <type_traits>
 #include <tuple>
 
@@ -123,8 +123,12 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
 
 } // namespace Petsc
 
-#endif // c++11
+#define PETSC_CONCAT_(x,...) x ## __VA_ARGS__
+#define PETSC_CONCAT(x,...)  PETSC_CONCAT_(x,__VA_ARGS__)
 
+#endif // C++11
+
+#if __cplusplus >= 201103L // C++11
 // A useful template to serve as a function wrapper factory. Given a function "foo" which
 // you'd like to thinly wrap as "bar", then:
 //
@@ -138,16 +142,22 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
 // }
 //
 // for you. You may then call bar exactly as you would foo.
-#define PETSC_ALIAS_FUNCTION_(alias,original)                           \
+#define PETSC_ALIAS_FUNCTION_(alias,...)                                \
   template <typename... Args>                                           \
-  PETSC_NODISCARD auto alias(Args&&... args)                            \
-    -> decltype(original(std::forward<Args>(args)...))                  \
+  PETSC_NODISCARD auto alias(Args&&... args) noexcept(                  \
+    noexcept(__VA_ARGS__(std::forward<Args>(args)...))                  \
+  ) -> decltype(__VA_ARGS__(std::forward<Args>(args)...))               \
   {                                                                     \
-    return original(std::forward<Args>(args)...);                       \
+    return __VA_ARGS__(std::forward<Args>(args)...);                    \
   }
 
 #define PETSC_ALIAS_FUNCTION(alias,original) PETSC_ALIAS_FUNCTION_(alias,original)
+#else
+#define PETSC_ALIAS_FUNCTION(alias,original)                    \
+  static_assert(0,"PETSC_ALIAS_FUNCTION() requires C++11")
+#endif
 
+#if __cplusplus >= 201103L // C++11
 // Similar to PETSC_ALIAS_FUNCTION() this macro creates a thin wrapper which passes all
 // arguments to the target function ~except~ the last N arguments. So
 //
@@ -164,29 +174,37 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
 // }
 //
 // for you.
-#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,N)    \
+#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,gobblefn,N) \
   template <typename tuple_type, std::size_t... idx>                    \
-  auto original ## _gobble__(tuple_type &&tuple,                        \
-                              Petsc::util::index_sequence<idx...>)      \
+  auto gobblefn(tuple_type &&tuple,Petsc::util::index_sequence<idx...>) \
+    noexcept(noexcept(original(std::get<idx>(tuple)...)))               \
     -> decltype(original(std::get<idx>(tuple)...))                      \
   {                                                                     \
     return original(std::get<idx>(tuple)...);                           \
   };                                                                    \
   template <typename... Args>                                           \
-  PETSC_NODISCARD auto alias(Args&&... args) -> decltype(               \
-    original ## _gobble__(                                              \
-      std::forward_as_tuple(args...),                                   \
-      Petsc::util::make_index_sequence<sizeof...(Args)-(N)>             \
-    )                                                                   \
-  )                                                                     \
+  PETSC_NODISCARD auto alias(Args&&... args) noexcept(                  \
+    noexcept(                                                           \
+      gobblefn(std::forward_as_tuple(args...),                          \
+               Petsc::util::make_index_sequence<sizeof...(Args)-(N)>))) \
+    -> decltype(                                                        \
+      gobblefn(std::forward_as_tuple(args...),                          \
+               Petsc::util::make_index_sequence<sizeof...(Args)-(N)>))  \
   {                                                                     \
-    static_assert(std::is_integral<decltype(N)>::value && (N) >= 0,""); \
+    static_assert(std::is_integral<decltype(N)>::value,                 \
+                  "N must be an integer type!");                        \
+    static_assert((N) >= 0,"");                                         \
     using seq = Petsc::util::make_index_sequence<sizeof...(Args)-(N)>;  \
-    return original ## _gobble__(std::forward_as_tuple(args...),seq()); \
+    return gobblefn(std::forward_as_tuple(args...),seq());              \
   }
 
-#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)  \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,N)
+
+#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PETSC_CONCAT(gobble_,original),N)
+#else
+#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
+  static_assert(0,"PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS() requires C++11")
+#endif // C++11
 
 // helper macros when declaring class member functions that should be callable from C. Member
 // functions need to be static to be callable from C otherwise they get an implicit 'this'
