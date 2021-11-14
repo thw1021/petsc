@@ -3,7 +3,6 @@
     Defines the multigrid preconditioner interface.
 */
 #include <petsc/private/pcmgimpl.h>                    /*I "petscksp.h" I*/
-#include <petsc/private/matimpl.h>
 #include <petsc/private/kspimpl.h>
 #include <petscdm.h>
 PETSC_INTERN PetscErrorCode PCPreSolveChangeRHS(PC,PetscBool*);
@@ -1344,7 +1343,7 @@ PetscErrorCode PCMGGetGridComplexity(PC pc, PetscReal *gc, PetscReal *oc)
   PetscErrorCode ierr;
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscInt       lev;
+  PetscInt       lev,N;
   PetscLogDouble nnz0 = 0, sgc = 0, soc = 0, n0 = 0;
   MatInfo        info;
 
@@ -1358,9 +1357,10 @@ PetscErrorCode PCMGGetGridComplexity(PC pc, PetscReal *gc, PetscReal *oc)
     Mat dB;
     ierr = KSPGetOperators(mglevels[lev]->smoothd,NULL,&dB);CHKERRQ(ierr);
     ierr = MatGetInfo(dB,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr); /* global reduction */
-    sgc += dB->rmap->N;
+    ierr = MatGetSize(dB,&N,NULL);CHKERRQ(ierr);
+    sgc += N;
     soc += info.nz_used;
-    if (lev==mg->nlevels-1) {nnz0 = info.nz_used; n0 = dB->rmap->N;}
+    if (lev==mg->nlevels-1) {nnz0 = info.nz_used; n0 = N;}
   }
   if (n0 > 0) *gc = (PetscReal)(sgc/n0);
   else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number for grid points on finest level is not available");
