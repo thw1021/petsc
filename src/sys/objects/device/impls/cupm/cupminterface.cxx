@@ -19,16 +19,32 @@ namespace Impl
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_1(PREFIX,original,mapped) \
   const decltype(original) CUPMInterface<CUPMDeviceType::PREFIX>::mapped;
 
-#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT(HAVE,PREFIX,orginal,mapped) \
-  CAT(PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_,HAVE)(PREFIX,orginal,mapped)
+#define PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT(ZERO_OR_ONE,PREFIX,orginal,mapped) \
+  PETSC_CONCAT(                                                         \
+    PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT_,                   \
+    ZERO_OR_ONE                                                         \
+  )(PREFIX,orginal,mapped)
 
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(PREFIX,orginal,mapped) \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT(PetscDefined(HAVE_ ## PREFIX),PREFIX,orginal,mapped)
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_IF_HAVE_EXACT(                      \
+    PetscDefined(PETSC_CONCAT(HAVE_,PREFIX)),                           \
+    PREFIX,                                                             \
+    orginal,                                                            \
+    mapped                                                              \
+  )
 
 // in case either one or the other don't agree on a name, you can specify all three here
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cuoriginal,hiporiginal,mapped) \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(CUDA,CAT(cuda,cuoriginal),CAT(cupm,mapped)) \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(HIP,CAT(hip,hiporiginal),CAT(cupm,mapped))
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(                             \
+    CUDA,                                                               \
+    PETSC_CONCAT(cuda,cuoriginal),                                      \
+    PETSC_CONCAT(cupm,mapped)                                           \
+  )                                                                     \
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT_(                             \
+    HIP,                                                                \
+    PETSC_CONCAT(hip,hiporiginal),                                      \
+    PETSC_CONCAT(cupm,mapped)                                           \
+  )
 
 // if both cuda and hip agree on the same name
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE(stem)                 \
