@@ -1687,6 +1687,7 @@ PETSC_EXTERN PetscErrorCode PetscFormatRealArray(char[],size_t,const char*,Petsc
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfDefault(const char [],...);
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfNone(const char [],...);
 PETSC_EXTERN PetscErrorCode PetscHelpPrintfDefault(MPI_Comm,const char [],...);
+PETSC_EXTERN PetscErrorCode PetscErrorPrintBanner(void);
 
 PETSC_EXTERN PetscErrorCode PetscFormatConvertGetSize(const char*,size_t*);
 PETSC_EXTERN PetscErrorCode PetscFormatConvert(const char*,char *);
