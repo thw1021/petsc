@@ -2668,10 +2668,8 @@ PetscErrorCode DMPlexAddConeSize(DM dm, PetscInt p, PetscInt size)
   Level: beginner
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-  You must also call DMPlexRestoreCone() after you finish using the returned array.
-  DMPlexRestoreCone() is not needed/available in C.
+    You must also call DMPlexRestoreCone() after you finish using the returned array.
+    DMPlexRestoreCone() is not needed/available in C.
 
 .seealso: DMPlexGetConeSize(), DMPlexSetCone(), DMPlexGetConeTuple(), DMPlexSetChart()
 @*/
@@ -2959,10 +2957,8 @@ PetscErrorCode DMPlexSetCone(DM dm, PetscInt p, const PetscInt cone[])
   with the identity.
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-  You must also call DMPlexRestoreConeOrientation() after you finish using the returned array.
-  DMPlexRestoreConeOrientation() is not needed/available in C.
+    You must also call DMPlexRestoreConeOrientation() after you finish using the returned array.
+    DMPlexRestoreConeOrientation() is not needed/available in C.
 
 .seealso: DMPolytopeTypeComposeOrientation(), DMPolytopeTypeComposeOrientationInv(), DMPlexCreate(), DMPlexGetCone(), DMPlexSetCone(), DMPlexSetChart()
 @*/
@@ -3174,10 +3170,8 @@ PetscErrorCode DMPlexSetSupportSize(DM dm, PetscInt p, PetscInt size)
   Level: beginner
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-  You must also call DMPlexRestoreSupport() after you finish using the returned array.
-  DMPlexRestoreSupport() is not needed/available in C.
+    You must also call DMPlexRestoreSupport() after you finish using the returned array.
+    DMPlexRestoreSupport() is not needed/available in C.
 
 .seealso: DMPlexGetSupportSize(), DMPlexSetSupport(), DMPlexGetCone(), DMPlexSetChart()
 @*/
@@ -3581,9 +3575,7 @@ PetscErrorCode DMPlexGetTransitiveClosure_Internal(DM dm, PetscInt p, PetscInt o
   If using internal storage (points is NULL on input), each call overwrites the last output.
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must include petsc.h90 in your code.
-
-  The numPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
   Level: beginner
 
@@ -3617,9 +3609,7 @@ PetscErrorCode DMPlexGetTransitiveClosure(DM dm, PetscInt p, PetscBool useCone, 
   If not using internal storage (points is not NULL on input), this call is unnecessary
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must include petsc.h90 in your code.
-
-  The numPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
   Level: beginner
 
@@ -4118,10 +4108,7 @@ PetscErrorCode DMPlexComputeCellTypes(DM dm)
   Note: Currently, this is restricted to a single level join
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
 .seealso: DMPlexRestoreJoin(), DMPlexGetMeet()
 @*/
@@ -4186,10 +4173,7 @@ PetscErrorCode DMPlexGetJoin(DM dm, PetscInt numPoints, const PetscInt points[],
 - coveredPoints - The points in the join
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
   Level: intermediate
 
@@ -4224,10 +4208,7 @@ PetscErrorCode DMPlexRestoreJoin(DM dm, PetscInt numPoints, const PetscInt point
 - coveredPoints - The points in the join
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
   Level: intermediate
 
@@ -4334,10 +4315,7 @@ PetscErrorCode DMPlexGetFullJoin(DM dm, PetscInt numPoints, const PetscInt point
   Note: Currently, this is restricted to a single level meet
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
 .seealso: DMPlexRestoreMeet(), DMPlexGetJoin()
 @*/
@@ -4404,10 +4382,7 @@ PetscErrorCode DMPlexGetMeet(DM dm, PetscInt numPoints, const PetscInt points[],
   Level: intermediate
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
 .seealso: DMPlexGetMeet(), DMPlexGetFullMeet(), DMPlexGetJoin()
 @*/
@@ -4442,10 +4417,7 @@ PetscErrorCode DMPlexRestoreMeet(DM dm, PetscInt numPoints, const PetscInt point
   Level: intermediate
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
+    The numCoveredPoints argument is not present in the Fortran 90 binding since it is internal to the array.
 
 .seealso: DMPlexGetMeet(), DMPlexRestoreMeet(), DMPlexGetJoin()
 @*/
@@ -5744,10 +5716,7 @@ $  }
 $  PetscFree(values);
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The csize argument is not present in the Fortran 90 binding since it is internal to the array.
+    The csize argument is not present in the Fortran 90 binding since it is internal to the array.
 
   Level: intermediate
 
@@ -5897,10 +5866,7 @@ PetscErrorCode DMPlexVecGetClosureAtDepth_Internal(DM dm, PetscSection section, 
   Note that the array values are discarded and not copied back into v. In order to copy values back to v, use DMPlexVecSetClosure()
 
   Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
-
-  The csize argument is not present in the Fortran 90 binding since it is internal to the array.
+    The csize argument is not present in the Fortran 90 binding since it is internal to the array.
 
   Level: intermediate
 
@@ -6239,9 +6205,6 @@ PETSC_STATIC_INLINE PetscErrorCode DMPlexVecSetClosure_Depth1_Static(DM dm, Pets
 - mode - The insert mode. One of INSERT_ALL_VALUES, ADD_ALL_VALUES, INSERT_VALUES, ADD_VALUES, INSERT_BC_VALUES, and ADD_BC_VALUES,
          where INSERT_ALL_VALUES and ADD_ALL_VALUES also overwrite boundary conditions.
 
-  Fortran Notes:
-  This routine is only available in Fortran 90, and you must include petsc.h90 in your code.
-
   Level: intermediate
 
 .seealso DMPlexVecGetClosure(), DMPlexMatSetClosure()
@@ -6275,7 +6238,6 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
     clsize += dof;
   }
   ierr = PetscSectionGetClosureInversePermutation_Internal(section, (PetscObject) dm, depth, clsize, &clperm);CHKERRQ(ierr);
-  /* Get array */
   ierr = VecGetArray(v, &array);CHKERRQ(ierr);
   /* Get values */
   if (numFields > 0) {
@@ -6291,42 +6253,42 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, clperm, values, &offset, array);
+          ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);
         } break;
       case INSERT_ALL_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, clperm, values, &offset, array);
+          ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, clperm, values, &offset, array);CHKERRQ(ierr);
         } break;
       case INSERT_BC_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, insert, clperm, values, &offset, array);
+          ierr = updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, insert, clperm, values, &offset, array);CHKERRQ(ierr);
         } break;
       case ADD_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, clperm, values, &offset, array);
+          ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
         } break;
       case ADD_ALL_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, clperm, values, &offset, array);
+          ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
         } break;
       case ADD_BC_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, add, clperm, values, &offset, array);
+          ierr = updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, add, clperm, values, &offset, array);CHKERRQ(ierr);
         } break;
       default:
         SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insert mode %d", mode);
@@ -6337,7 +6299,6 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
     PetscInt dof, off;
     const PetscInt    **perms = NULL;
     const PetscScalar **flips = NULL;
-
     ierr = PetscSectionGetPointSyms(section,numPoints,points,&perms,&flips);CHKERRQ(ierr);
     switch (mode) {
     case INSERT_VALUES:
@@ -6346,7 +6307,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        updatePoint_private(section, point, dof, insert, PETSC_FALSE, perm, flip, clperm, values, off, array);
+        ierr = updatePoint_private(section, point, dof, insert, PETSC_FALSE, perm, flip, clperm, values, off, array);CHKERRQ(ierr);
       } break;
     case INSERT_ALL_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6354,7 +6315,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        updatePoint_private(section, point, dof, insert, PETSC_TRUE,  perm, flip, clperm, values, off, array);
+        ierr = updatePoint_private(section, point, dof, insert, PETSC_TRUE,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
       } break;
     case INSERT_BC_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6362,7 +6323,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        updatePointBC_private(section, point, dof, insert,  perm, flip, clperm, values, off, array);
+        ierr = updatePointBC_private(section, point, dof, insert,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
       } break;
     case ADD_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6370,7 +6331,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        updatePoint_private(section, point, dof, add,    PETSC_FALSE, perm, flip, clperm, values, off, array);
+        ierr = updatePoint_private(section, point, dof, add,    PETSC_FALSE, perm, flip, clperm, values, off, array);CHKERRQ(ierr);
       } break;
     case ADD_ALL_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6378,7 +6339,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        updatePoint_private(section, point, dof, add,    PETSC_TRUE,  perm, flip, clperm, values, off, array);
+        ierr = updatePoint_private(section, point, dof, add,    PETSC_TRUE,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
       } break;
     case ADD_BC_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6386,7 +6347,7 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        updatePointBC_private(section, point, dof, add,  perm, flip, clperm, values, off, array);
+        ierr = updatePointBC_private(section, point, dof, add,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
       } break;
     default:
       SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insert mode %d", mode);
@@ -6466,7 +6427,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = CheckPoint_Private(label, labelId, section, point, f, &offset); if (ierr) continue;
-        updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, NULL, values, &offset, array);
+        ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, NULL, values, &offset, array);CHKERRQ(ierr);
       } break;
     case INSERT_ALL_VALUES:
       for (p = 0; p < numPoints; p++) {
@@ -6474,7 +6435,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = CheckPoint_Private(label, labelId, section, point, f, &offset); if (ierr) continue;
-        updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, NULL, values, &offset, array);
+        ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, NULL, values, &offset, array);CHKERRQ(ierr);
       } break;
     case INSERT_BC_VALUES:
       for (p = 0; p < numPoints; p++) {
@@ -6482,7 +6443,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = CheckPoint_Private(label, labelId, section, point, f, &offset); if (ierr) continue;
-        updatePointFieldsBC_private(section, point, perm, flip, f, Ncc, comps, insert, NULL, values, &offset, array);
+        ierr = updatePointFieldsBC_private(section, point, perm, flip, f, Ncc, comps, insert, NULL, values, &offset, array);CHKERRQ(ierr);
       } break;
     case ADD_VALUES:
       for (p = 0; p < numPoints; p++) {
@@ -6490,7 +6451,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = CheckPoint_Private(label, labelId, section, point, f, &offset); if (ierr) continue;
-        updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, NULL, values, &offset, array);
+        ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, NULL, values, &offset, array);CHKERRQ(ierr);
       } break;
     case ADD_ALL_VALUES:
       for (p = 0; p < numPoints; p++) {
@@ -6498,7 +6459,7 @@ PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM dm, PetscSection section, Ve
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = CheckPoint_Private(label, labelId, section, point, f, &offset); if (ierr) continue;
-        updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, NULL, values, &offset, array);
+        ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, NULL, values, &offset, array);CHKERRQ(ierr);
       } break;
     default:
       SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insert mode %d", mode);
@@ -7507,9 +7468,6 @@ PetscErrorCode DMPlexRestoreClosureIndices(DM dm, PetscSection section, PetscSec
 . point - The point in the DM
 . values - The array of values
 - mode - The insert mode, where INSERT_ALL_VALUES and ADD_ALL_VALUES also overwrite boundary conditions
-
-  Fortran Notes:
-  This routine is only available in Fortran 90, and you must include petsc.h90 in your code.
 
   Level: intermediate
 
