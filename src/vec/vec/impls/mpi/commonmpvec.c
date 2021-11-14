@@ -78,8 +78,7 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
   ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
   if (ismpi) {
-    Vec_MPI *v = (Vec_MPI*)g->data;
-    *l = v->localrep;
+    *l = g->localrep;
   } else if (isseq) {
     *l = g;
   } else {
@@ -114,21 +113,17 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
 {
   PetscErrorCode ierr;
-  PetscBool      isseq,ismpi;
+  PetscBool      isseq;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
   PetscValidPointer(haslocal,2);
 
   ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
-  if (ismpi) {
-    Vec_MPI *v = (Vec_MPI*)g->data;
-    *haslocal = v->localrep ? PETSC_TRUE : PETSC_FALSE;
-  } else if (isseq) {
+  if (isseq) {
     *haslocal = PETSC_TRUE;
   } else {
-    *haslocal = PETSC_FALSE;
+    *haslocal = g->localrep ? PETSC_TRUE : PETSC_FALSE;
   }
   PetscFunctionReturn(0);
 }
@@ -153,7 +148,7 @@ PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
 PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 {
   PetscErrorCode ierr;
-  PetscBool      isseq,ismpi;
+  PetscBool      isseq;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
@@ -161,10 +156,8 @@ PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 
   *flg = PETSC_FALSE;
   ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
-  if (ismpi) {
-    Vec_MPI *v = (Vec_MPI*)g->data;
-    if (l == v->localrep) *flg = PETSC_TRUE;
+  if (g->localrep) {
+    if (l == g->localrep) *flg = PETSC_TRUE;
   } else if (isseq) {
     if (l == g) *flg = PETSC_TRUE;
   } else SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Global vector is not ghosted");
@@ -243,26 +236,20 @@ PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
 @*/
 PetscErrorCode  VecGhostUpdateBegin(Vec g,InsertMode insertmode,ScatterMode scattermode)
 {
-  Vec_MPI        *v;
   PetscErrorCode ierr;
-  PetscBool      ismpi,isseq;
+  PetscBool      isseq;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
-  if (ismpi) {
-    v = (Vec_MPI*)g->data;
-    if (!v->localrep) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Vector is not ghosted");
-    if (!v->localupdate) PetscFunctionReturn(0);
+  if (g->localrep) {
+    if (!g->localupdate) PetscFunctionReturn(0);
     if (scattermode == SCATTER_REVERSE) {
-      ierr = VecScatterBegin(v->localupdate,v->localrep,g,insertmode,scattermode);CHKERRQ(ierr);
+      ierr = VecScatterBegin(g->localupdate,g->localrep,g,insertmode,scattermode);CHKERRQ(ierr);
     } else {
-      ierr = VecScatterBegin(v->localupdate,g,v->localrep,insertmode,scattermode);CHKERRQ(ierr);
+      ierr = VecScatterBegin(g->localupdate,g,g->localrep,insertmode,scattermode);CHKERRQ(ierr);
     }
-  } else if (isseq) {
-    /* Do nothing */
-  } else SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Vector is not ghosted");
+  } else if (!isseq) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Vector is not ghosted");
   PetscFunctionReturn(0);
 }
 
@@ -308,21 +295,16 @@ PetscErrorCode  VecGhostUpdateBegin(Vec g,InsertMode insertmode,ScatterMode scat
 @*/
 PetscErrorCode  VecGhostUpdateEnd(Vec g,InsertMode insertmode,ScatterMode scattermode)
 {
-  Vec_MPI        *v;
   PetscErrorCode ierr;
-  PetscBool      ismpi;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
-  if (ismpi) {
-    v = (Vec_MPI*)g->data;
-    if (!v->localrep) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vector is not ghosted");
-    if (!v->localupdate) PetscFunctionReturn(0);
+  if (g->localrep) {
+    if (!g->localupdate) PetscFunctionReturn(0);
     if (scattermode == SCATTER_REVERSE) {
-      ierr = VecScatterEnd(v->localupdate,v->localrep,g,insertmode,scattermode);CHKERRQ(ierr);
+      ierr = VecScatterEnd(g->localupdate,g->localrep,g,insertmode,scattermode);CHKERRQ(ierr);
     } else {
-      ierr = VecScatterEnd(v->localupdate,g,v->localrep,insertmode,scattermode);CHKERRQ(ierr);
+      ierr = VecScatterEnd(g->localupdate,g,g->localrep,insertmode,scattermode);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);

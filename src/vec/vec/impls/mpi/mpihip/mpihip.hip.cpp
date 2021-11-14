@@ -505,7 +505,7 @@ PetscErrorCode VecCreate_MPIHIP_Private(Vec vv,PetscBool alloc,PetscInt nghost,c
   Vec_HIP       *vechip;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0,NULL);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPIHIP);CHKERRQ(ierr);
 
   ierr = VecBindToCPU_MPIHIP(vv,PETSC_FALSE);CHKERRQ(ierr);

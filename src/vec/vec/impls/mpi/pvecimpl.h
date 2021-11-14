@@ -21,10 +21,6 @@ typedef struct {
 
 typedef struct {
   VECHEADER
-  PetscInt    nghost;                   /* number of ghost points on this process */
-  Vec         localrep;                 /* local representation of vector */
-  VecScatter  localupdate;              /* scatter to update ghost values */
-
   PetscBool   assembly_subset;          /* Subsequent assemblies will set a subset (perhaps equal) of off-process entries set on first assembly */
   PetscBool   first_assembly_done;      /* Is the first time assembly done? */
   PetscBool   use_status;               /* Use MPI_Status to determine number of items in each message */
@@ -65,7 +61,7 @@ PETSC_INTERN PetscErrorCode VecSetValuesBlocked_MPI(Vec,PetscInt,const PetscInt 
 PETSC_INTERN PetscErrorCode VecAssemblyBegin_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyEnd_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyReset_MPI(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_MPI_Private(Vec,PetscBool,PetscInt,const PetscScalar[]);
+PETSC_INTERN PetscErrorCode VecCreate_MPI_Private(Vec,PetscBool,PetscInt,PetscInt,const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec,Vec*);
 
