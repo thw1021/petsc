@@ -30,21 +30,6 @@ public:
   // default constructor
   explicit CUPMDevice(createContextFunction_t func) noexcept : create_(func) { }
 
-  // copy constructor
-  CUPMDevice(const CUPMDevice &other) noexcept = default;
-
-  // move constructor
-  CUPMDevice(CUPMDevice &&other) noexcept = default;
-
-  // destructor
-  ~CUPMDevice() noexcept = default;
-
-  // copy assignment operator
-  CUPMDevice& operator=(const CUPMDevice &other) = default;
-
-  // move assignment operator
-  CUPMDevice& operator=(CUPMDevice &&other) noexcept = default;
-
   PETSC_NODISCARD static PetscErrorCode initialize(MPI_Comm,PetscInt*,PetscDeviceInitType*) noexcept;
 
   PETSC_NODISCARD PetscErrorCode getDevice(PetscDevice,PetscInt) const noexcept;
