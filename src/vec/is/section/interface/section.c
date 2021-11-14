@@ -1223,7 +1223,7 @@ PetscErrorCode PetscSectionGetMaxDof(PetscSection s, PetscInt *maxDof)
 }
 
 /*@
-  PetscSectionGetStorageSize - Return the size of an array or local Vec capable of holding all the degrees of freedom.
+  PetscSectionGetStorageSize - Return the size of an array of a local Vec capable of holding all the degrees of freedom.
 
   Not collective
 
