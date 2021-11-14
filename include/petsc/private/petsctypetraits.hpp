@@ -114,7 +114,7 @@ template <typename T>
 PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
 {
   static_assert(!std::is_const<T>::value,"");
-  return const_cast<const T&>(object);
+  return const_cast<const T&>(std::forward<T>(object));
 }
 
 } // namespace Petsc
