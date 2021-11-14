@@ -135,6 +135,18 @@ static void PetscErrorPrintfNormal(void)
 
 PETSC_EXTERN PetscErrorCode  PetscOptionsViewError(void);
 
+PetscErrorCode  PetscErrorPrintBanner(void)
+{
+  static PetscBool printed = PETSC_FALSE;
+
+  if (printed) return(0);
+  PetscErrorPrintfHilight();
+  (*PetscErrorPrintf)("--------------------- Error Message --------------------------------------------------------------\n");
+  PetscErrorPrintfNormal();
+  printed = PETSC_TRUE;
+  return(0);
+}
+
 /*@C
 
    PetscTraceBackErrorHandler - Default error handler routine that generates
@@ -182,9 +194,7 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
     static int cnt = 1;
 
     if (cnt == 1) {
-      PetscErrorPrintfHilight();
-      (*PetscErrorPrintf)("--------------------- Error Message --------------------------------------------------------------\n");
-      PetscErrorPrintfNormal();
+      PetscErrorPrintBanner();
       if (n == PETSC_ERR_MEM) {
         (*PetscErrorPrintf)("Out of memory. This could be due to allocating\n");
         (*PetscErrorPrintf)("too large an object or bleeding by not properly\n");
@@ -201,6 +211,7 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
           else (*PetscErrorPrintf)("Try running with -malloc_dump or -malloc_view for info.\n");
         }
       } else {
+        /* Should not print text if it is memory corruption and PetscMallocValidate() has already printed information */
         const char *text;
         PetscErrorMessage(n,&text,NULL);
         if (text) (*PetscErrorPrintf)("%s\n",text);

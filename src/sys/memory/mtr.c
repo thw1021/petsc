@@ -101,6 +101,9 @@ static PetscViewer PetscLogMallocTraceViewer   = NULL;
    Developers Note:
      Uses the flg TRdebugLevel (set as the first argument to PetscMallocSetDebug()) to determine if it should run
 
+     Turns off TRdebugLevel if memory corruption is found so that PETSc calls (such as VecView()) can be made after a
+     crash in the debugger to help track down the cause of the corruption
+
 .seealso: CHKMEMQ
 
 @*/
@@ -113,40 +116,48 @@ PetscErrorCode  PetscMallocValidate(int line,const char function[],const char fi
   if (!TRdebugLevel) return 0;
   head = TRhead; lasthead = NULL;
   if (head && head->prev) {
+    PetscErrorPrintBanner();
     (*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n",function,file,line);
-    (*PetscErrorPrintf)("Root memory header %p has invalid back pointer %p\n",head,head->prev);
+    (*PetscErrorPrintf)("  Root memory header %p has invalid back pointer %p\n",head,head->prev);
+    TRdebugLevel = PETSC_FALSE;
     return PETSC_ERR_MEMC;
   }
   while (head) {
     if (head->classid != CLASSID_VALUE) {
+      PetscErrorPrintBanner();
       (*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n",function,file,line);
-      (*PetscErrorPrintf)("Memory at address %p is corrupted\n",head);
-      (*PetscErrorPrintf)("Probably write before beginning of or past end of array\n");
+      (*PetscErrorPrintf)("  Memory at address %p is corrupted\n",head);
+      (*PetscErrorPrintf)("  Probably write before beginning of or past end of array\n");
       if (lasthead) {
         a    = (char*)(((TrSPACE*)head) + 1);
         (*PetscErrorPrintf)("Last intact block [id=%d(%.0f)] at address %p allocated in %s() at %s:%d\n",lasthead->id,(PetscLogDouble)lasthead->size,a,lasthead->functionname,lasthead->filename,lasthead->lineno);
       }
+      TRdebugLevel = PETSC_FALSE;
       abort();
       return PETSC_ERR_MEMC;
     }
     a    = (char*)(((TrSPACE*)head) + 1);
     nend = (PetscClassId*)(a + head->size);
     if (*nend != CLASSID_VALUE) {
+      PetscErrorPrintBanner();
       (*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n",function,file,line);
       if (*nend == ALREADY_FREED) {
-        (*PetscErrorPrintf)("Memory [id=%d(%.0f)] at address %p already freed\n",head->id,(PetscLogDouble)head->size,a);
+        (*PetscErrorPrintf)("  Memory [id=%d(%.0f)] at address %p already freed\n",head->id,(PetscLogDouble)head->size,a);
         return PETSC_ERR_MEMC;
       } else {
-        (*PetscErrorPrintf)("Memory [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
-        (*PetscErrorPrintf)("Memory originally allocated in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
+        (*PetscErrorPrintf)("  Memory [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
+        (*PetscErrorPrintf)("  Memory originally allocated in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
+        TRdebugLevel = PETSC_FALSE;
         return PETSC_ERR_MEMC;
       }
     }
     if (head->prev && head->prev != lasthead) {
+      PetscErrorPrintBanner();
       (*PetscErrorPrintf)("PetscMallocValidate: error detected in %s() at %s:%d\n",function,file,line);
-      (*PetscErrorPrintf)("Backpointer %p is invalid, should be %p\n",head->prev,lasthead);
-      (*PetscErrorPrintf)("Previous memory originally allocated in %s() at %s:%d\n",lasthead->functionname,lasthead->filename,lasthead->lineno);
-      (*PetscErrorPrintf)("Memory originally allocated in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
+      (*PetscErrorPrintf)("  Backpointer %p is invalid, should be %p\n",head->prev,lasthead);
+      (*PetscErrorPrintf)("  Previous memory originally allocated in %s() at %s:%d\n",lasthead->functionname,lasthead->filename,lasthead->lineno);
+      (*PetscErrorPrintf)("  Memory originally allocated in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
+      TRdebugLevel = PETSC_FALSE;
       return PETSC_ERR_MEMC;
     }
     lasthead = head;
@@ -284,26 +295,29 @@ PetscErrorCode  PetscTrFreeDefault(void *aa,int lineno,const char function[],con
   head  = (TRSPACE*)a;
 
   if (head->classid != CLASSID_VALUE) {
+    PetscErrorPrintBanner();
     (*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() at %s:%d\n",function,filename,lineno);
-    (*PetscErrorPrintf)("Block at address %p is corrupted; cannot free;\nmay be block not allocated with PetscMalloc()\n",a);
+    (*PetscErrorPrintf)("  Block at address %p is corrupted; cannot free;\nmay be block not allocated with PetscMalloc()\n",a);
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"Bad location or corrupted memory");
   }
   nend = (PetscClassId*)(ahead + head->size);
   if (*nend != CLASSID_VALUE) {
     if (*nend == ALREADY_FREED) {
+      PetscErrorPrintBanner();
       (*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() at %s:%d\n",function,filename,lineno);
-      (*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p was already freed\n",head->id,(PetscLogDouble)head->size,a + sizeof(TrSPACE));
+      (*PetscErrorPrintf)("  Block [id=%d(%.0f)] at address %p was already freed\n",head->id,(PetscLogDouble)head->size,a + sizeof(TrSPACE));
       if (head->lineno > 0 && head->lineno < 50000 /* sanity check */) {
-        (*PetscErrorPrintf)("Block freed in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
+        (*PetscErrorPrintf)("  Block freed in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
       } else {
-        (*PetscErrorPrintf)("Block allocated in %s() at %s:%d\n",head->functionname,head->filename,-head->lineno);
+        (*PetscErrorPrintf)("  Block allocated in %s() at %s:%d\n",head->functionname,head->filename,-head->lineno);
       }
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Memory already freed");
     } else {
       /* Damaged tail */
+      PetscErrorPrintBanner();
       (*PetscErrorPrintf)("PetscTrFreeDefault() called from %s() at %s:%d\n",function,filename,lineno);
-      (*PetscErrorPrintf)("Block [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
-      (*PetscErrorPrintf)("Block allocated in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
+      (*PetscErrorPrintf)("  Block [id=%d(%.0f)] at address %p is corrupted (probably write past end of array)\n",head->id,(PetscLogDouble)head->size,a);
+      (*PetscErrorPrintf)("  Block allocated in %s() at %s:%d\n",head->functionname,head->filename,head->lineno);
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEMC,"Corrupted memory");
     }
   }
