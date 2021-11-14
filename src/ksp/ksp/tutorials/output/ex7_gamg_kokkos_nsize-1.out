@@ -22,7 +22,7 @@ PC Object: 1 MPI processes
           Symmetric graph false
           Number of levels to square graph 1
           Number smoothing steps 1
-        Complexity:    grid = 1.3
+        Complexity:    grid = 1.25    operator = 1.3
   Coarse grid solver -- level -------------------------------
     KSP Object: (mg_coarse_) 1 MPI processes
       type: preonly

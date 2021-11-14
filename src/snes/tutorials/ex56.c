@@ -500,7 +500,7 @@ int main(int argc,char **args)
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -max_conv_its 2 -petscspace_degree 2 -ksp_type cg -ksp_monitor_short -ksp_rtol 1.e-10 -ksp_converged_reason -petscpartitioner_type simple -ex56_dm_mat_type is -matis_localmat_type aij -pc_type bddc -attach_mat_nearnullspace {{0 1}separate output}
     test:
       suffix: bddc_approx_gamg
-      args: -pc_bddc_switch_static -prefix_push pc_bddc_dirichlet_ -approximate -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -prefix_pop -prefix_push pc_bddc_neumann_ -approximate -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -pc_gamg_use_sa_esteig -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -prefix_pop
+      args: -pc_bddc_switch_static -prefix_push pc_bddc_dirichlet_ -approximate -pc_type gamg -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -prefix_pop -prefix_push pc_bddc_neumann_ -approximate -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -pc_gamg_use_sa_esteig -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -prefix_pop
     # HYPRE PtAP broken with complex numbers
     test:
       requires: hypre !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
@@ -532,23 +532,23 @@ int main(int argc,char **args)
   testset:
     nsize: 4
     requires: !single
-    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -max_conv_its 2 -petscspace_degree 2 -snes_max_it 2 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -snes_rtol 1.e-10 -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -pc_gamg_use_sa_esteig -use_mat_nearnullspace true -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 -mg_levels_pc_type jacobi -ksp_monitor_short -ksp_converged_reason -snes_converged_reason -snes_monitor_short -ex56_dm_view -petscpartitioner_type simple -pc_gamg_process_eq_limit 20
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,1 -max_conv_its 2 -petscspace_degree 2 -snes_max_it 2 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -snes_rtol 1.e-10 -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -pc_gamg_use_sa_esteig -use_mat_nearnullspace true -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_use_sa_esteig -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 -mg_levels_pc_type jacobi -ksp_monitor_short -ksp_converged_reason -snes_converged_reason -snes_monitor_short -ex56_dm_view -petscpartitioner_type simple -pc_gamg_process_eq_limit 20
     output_file: output/ex56_cuda.out
 
     test:
       suffix: cuda
       requires: cuda
-      args: -ex56_dm_mat_type aijcusparse -ex56_dm_vec_type cuda -dm_plex_box_lower 0,-5,-5 -dm_plex_box_upper 1,5,5
+      args: -ex56_dm_mat_type aijcusparse -ex56_dm_vec_type cuda
 
     test:
       suffix: viennacl
       requires: viennacl
-      args: -ex56_dm_mat_type aijviennacl -ex56_dm_vec_type viennacl -dm_plex_box_lower 0,-5,-5 -dm_plex_box_upper 1,5,5
+      args: -ex56_dm_mat_type aijviennacl -ex56_dm_vec_type viennacl
 
     test:
       suffix: kokkos
       requires: kokkos_kernels
-      args: -ex56_dm_mat_type aijkokkos -ex56_dm_vec_type kokkos -dm_plex_box_lower 0,-5,-5 -dm_plex_box_upper 1,5,5
+      args: -ex56_dm_mat_type aijkokkos -ex56_dm_vec_type kokkos
   # Don't run AIJMKL caes with complex scalars because of convergence issues.
   # Note that we need to test both single and multiple MPI rank cases, because these use different sparse MKL routines to implement the PtAP operation.
   test:
