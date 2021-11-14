@@ -13,16 +13,6 @@
 namespace Petsc
 {
 
-static_assert(util::integral_value(CUPMDeviceType::CUDA) == 0,"");
-static_assert(util::integral_value(CUPMDeviceType::HIP)  == 1,"");
-static constexpr std::array<const char*const,5> CUPMBlasTypes = {
-  "cuBLAS",
-  "hipBLAS",
-  "CUPMBlasType",
-  "CUPMBlasType::",
-  nullptr
-};
-
 namespace Impl
 {
 
@@ -77,10 +67,10 @@ namespace detail
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE_EXACT(CUPMBLAS,COMMON,PETSC_CUPMBLAS_PREFIX_U,COMMON)
 
 #define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(our_prefix,their_prefix,FPTYPE,suffix) \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT(CAT(our_prefix,X),suffix,CAT(their_prefix,FPTYPE),suffix)
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(PETSC_CONCAT(our_prefix,X),suffix,PETSC_CONCAT(their_prefix,FPTYPE),suffix)
 
 #define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(suffix)     \
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_PREFIX,CAT(PETSC_CUPMBLAS_FP_TYPE,PETSC_CUPMBLAS_FP_RETURN_TYPE),suffix)
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_PREFIX,PETSC_CONCAT(PETSC_CUPMBLAS_FP_TYPE,PETSC_CUPMBLAS_FP_RETURN_TYPE),suffix)
 
 #define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(suffix)                      \
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_PREFIX,PETSC_CUPMBLAS_FP_TYPE,suffix)
@@ -91,9 +81,12 @@ namespace detail
 template <CUPMDeviceType T>
 struct CUPMBlasInterfaceBase : CUPMInterface<T>
 {
-  PETSC_CXX_COMPAT_DECL(constexpr const char* cupmBlasName())
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* cupmBlasName())
   {
-    return std::get<util::integral_value(T)>(CUPMBlasTypes);
+    switch (T) {
+    case CUPMDeviceType::CUDA: return "cuBLAS";
+    case CUPMDeviceType::HIP:  return "hipBLAS";
+    }
   }
 };
 
@@ -101,7 +94,7 @@ struct CUPMBlasInterfaceBase : CUPMInterface<T>
   using base_type = detail::CUPMBlasInterfaceBase<DEV_TYPE>;            \
   using base_type::cupmBlasName;                                        \
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE); \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,CAT(Petsc,PETSC_CUPMBLAS_PREFIX_U),GetErrorName)
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,PETSC_CONCAT(Petsc,PETSC_CUPMBLAS_PREFIX_U),GetErrorName)
 
 } // namespace detail
 
@@ -138,6 +131,7 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(dot);
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(swap);
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(nrm2);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(asum);
 
   // level 2 BLAS
   PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemv);

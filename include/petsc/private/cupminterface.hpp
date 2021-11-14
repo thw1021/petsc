@@ -67,14 +67,8 @@ namespace detail
     }                                                                   \
   } while (0)
 
-#undef CAT_
-#undef CAT
-
-#define CAT_(x,y) x ## y
-#define CAT(x,y)  CAT_(x,y)
-
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
-  static const auto CAT(our_prefix,our_suffix) = CAT(their_prefix,their_suffix)
+  static const auto PETSC_CONCAT(our_prefix,our_suffix) = PETSC_CONCAT(their_prefix,their_suffix)
 
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(our_suffix,their_suffix) \
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
@@ -83,7 +77,7 @@ namespace detail
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(suffix,suffix)
 
 #define PETSC_CUPM_ALIAS_FUNCTION_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
-  PETSC_ALIAS_FUNCTION(static constexpr CAT(our_prefix,our_suffix),CAT(their_prefix,their_suffix))
+  PETSC_ALIAS_FUNCTION(static constexpr PETSC_CONCAT(our_prefix,our_suffix),PETSC_CONCAT(their_prefix,their_suffix))
 
 #define PETSC_CUPM_ALIAS_FUNCTION_COMMON(our_suffix,their_suffix)       \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
@@ -91,7 +85,7 @@ namespace detail
 #define PETSC_CUPM_ALIAS_FUNCTION(suffix) PETSC_CUPM_ALIAS_FUNCTION_COMMON(suffix,suffix)
 
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix,N) \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr CAT(our_prefix,our_suffix),CAT(their_prefix,their_suffix),N)
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr PETSC_CONCAT(our_prefix,our_suffix),PETSC_CONCAT(their_prefix,their_suffix),N)
 
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(our_suffix,their_suffix,N) \
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix,N)
