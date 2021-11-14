@@ -70,7 +70,8 @@ Changes: Development
 -  Add ``MatSetBindingPropagates()``
 -  Add ``MatGetBindingPropagates()``
 
-.. rubric:: PC:
+.. rubric:: PCMG:
+- Add ``PCMGGetGridComplexity()`` to get operator and grid complexity of MG hierarchy
 
 .. rubric:: KSP:
 
