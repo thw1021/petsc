@@ -18,15 +18,19 @@ namespace util
 #if __cplusplus >= 201402L // c++14
 using std::conditional_t;
 using std::remove_const_t;
+using std::add_const_t;
 using std::underlying_type_t;
 using std::remove_pointer_t;
+using std::add_pointer_t;
 using std::index_sequence;
 using std::make_index_sequence;
 #else // c++14
 template <bool B, class T, class F> using conditional_t = typename std::conditional<B,T,F>::type;
 template <class T> using remove_const_t    = typename std::remove_const<T>::type;
+template <class T> using add_const_t       = typename std::add_const<T>::type;
 template <class T> using underlying_type_t = typename std::underlying_type<T>::type;
 template <class T> using remove_pointer_t  = typename std::remove_pointer<T>::type;
+template <class T> using add_pointer_t     = typename std::add_pointer<T>::type;
 
 // index sequence only
 template <std::size_t... idx> struct index_sequence
