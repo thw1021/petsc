@@ -1,4 +1,4 @@
-static char help[] = "3D, tri-quadratic hexahedra (eg, Q2), displacement finite element formulation with convergence test\n\
+static char help[] = "3D, tri-quadratic hexahedra (i.e., Q2), displacement finite element formulation with convergence test\n\
 of linear elasticity.  E=1.0, nu=1/3.\n\
 Unit cube domain with Dirichlet boundary\n\n";
 
@@ -425,9 +425,7 @@ int main(int argc,char **args)
       ierr = PetscOptionsGetViewer(comm,NULL,"ex56_","-vec_view",&viewer,&fmt,&flg);CHKERRQ(ierr);
       if (flg) {
         ierr = PetscViewerPushFormat(viewer,fmt);CHKERRQ(ierr);
-        //ierr = DMView(dm,viewer);CHKERRQ(ierr);
         ierr = VecView(xx,viewer);CHKERRQ(ierr);
-        //ierr = VecView(bb,viewer);CHKERRQ(ierr);
         ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
       }
       ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);

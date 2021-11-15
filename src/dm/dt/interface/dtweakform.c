@@ -634,14 +634,14 @@ PetscErrorCode PetscWeakFormSetBdResidual(PetscWeakForm wf, DMLabel label, Petsc
 
   Input Parameters:
 +   wf    - The original PetscWeakForm
--   label - The label to change keys for
+.   label - The label to change keys for
 .   val - id
-+   f - field
--   part - part
+.   f - field
+.   part - part
 .   i0 - id
-+   f0 - residual function
--   i1 - id
-.   f1 - risidual Jacobian
+.   f0 - residual function
+.   i1 - id
+-   f1 - residual Jacobian
 
   Note: Set residual traction function
 
