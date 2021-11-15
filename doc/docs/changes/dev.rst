@@ -72,6 +72,10 @@ Changes: Development
 
 .. rubric:: PC:
 
+.. rubric:: PCMG:
+
+- Add ``PCMGGetGridComplexity()`` to get operator and grid complexity of MG hierarchy
+
 .. rubric:: KSP:
 
 -  Outer most ``KSPSolve()`` will error if KSP_DIVERGED_ITS and ```KSPSetErrorIfNotConverged()`` is used

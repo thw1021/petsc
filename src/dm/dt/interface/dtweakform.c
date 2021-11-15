@@ -627,6 +627,28 @@ PetscErrorCode PetscWeakFormSetBdResidual(PetscWeakForm wf, DMLabel label, Petsc
   PetscFunctionReturn(0);
 }
 
+/*@C
+  PetscWeakFormSetIndexBdResidual - Set functions for traction force and Jacobian of that force
+
+  Not Collective
+
+  Input Parameters:
++   wf    - The original PetscWeakForm
+.   label - The label to change keys for
+.   val - id
+.   f - field
+.   part - part
+.   i0 - id
+.   f0 - residual function
+.   i1 - id
+-   f1 - residual Jacobian
+
+  Note: Set residual traction function
+
+  Level: intermediate
+
+.seealso: DMAddBoundary(), PetscDSGetBoundary(), DMGetLabel()
+@*/
 PetscErrorCode PetscWeakFormSetIndexBdResidual(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt part,
                                           PetscInt i0,
                                           void (*f0)(PetscInt, PetscInt, PetscInt,
