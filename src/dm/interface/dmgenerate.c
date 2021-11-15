@@ -198,7 +198,7 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
 }
 
 /*@C
-  DMAdaptMetric - Generates a mesh adapted to the specified metric field using the pragmatic library.
+  DMAdaptMetric - Generates a mesh adapted to the specified metric field.
 
   Input Parameters:
 + dm - The DM object
