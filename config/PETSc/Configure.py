@@ -343,9 +343,9 @@ prepend-path PATH "%s"
       self.addMakeMacro('HIPPP_FLAGS',self.setCompilers.HIPPPFLAGS)
       self.setCompilers.popLanguage()
 
-    if hasattr(self.compilers, 'SYCLCXX'):
+    if hasattr(self.compilers, 'SYCLC'):
       self.setCompilers.pushLanguage('SYCL')
-      self.addMakeMacro('SYCLCXX_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('SYCLC_FLAGS',self.setCompilers.getCompilerFlags())
       self.setCompilers.popLanguage()
 
     # shared library linker values

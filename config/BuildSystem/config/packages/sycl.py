@@ -26,6 +26,7 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
+    help.addArgument('SYCL', '-with-sycl-arch', nargs.ArgString(None, None, 'Intel GPU architecture for code generation, for example gen9, xehp (this may be used by external packages)'))
     return
 
   def setupDependencies(self, framework):
@@ -39,15 +40,15 @@ class Configure(config.package.Package):
     self.pushLanguage('SYCL')
     petscSycl = self.getCompiler()
     self.popLanguage()
-    self.getExecutable(petscSycl,getFullPath=1,resultName='systemDpcpp')
-    if hasattr(self,'systemDpcpp'):
-      dpcppDir = os.path.dirname(self.systemSyclcxx)
-      dpcDir = os.path.split(dpcppDir)[0]
-      yield dpcDir
+    self.getExecutable(petscSycl,getFullPath=1,resultName='systemSyclc')
+    if hasattr(self,'systemSyclc'):
+      syclcDir = os.path.dirname(self.systemSyclc)
+      syclDir = os.path.split(syclcDir)[0]
+      yield syclDir
     return
 
   def checkSizeofVoidP(self):
-    '''Checks if the SYCLCXX compiler agrees with the C compiler on what size of void * should be'''
+    '''Checks if the SYCL compiler agrees with the C compiler on what size of void * should be'''
     self.log.write('Checking if sizeof(void*) in SYCL is the same as with regular compiler\n')
     size = self.types.checkSizeof('void *', (8, 4), lang='SYCL', save=False)
     if size != self.types.sizes['void-p']:
@@ -61,7 +62,7 @@ class Configure(config.package.Package):
     self.checkSizeofVoidP()
     return
 
-  def checkSYCLCXXDoubleAlign(self):
+  def checkSYCLCDoubleAlign(self):
     if 'known-sycl-align-double' in self.argDB:
       if not self.argDB['known-sycl-align-double']:
         raise RuntimeError('SYCL error: PETSC currently requires that SYCL double alignment match the C compiler')
@@ -77,7 +78,7 @@ class Configure(config.package.Package):
     self.libraries.pushLanguage('SYCL')
     self.addDefine('HAVE_SYCL','1')
     config.package.Package.configureLibrary(self)
-    #self.checkSYCLCXXDoubleAlign()
+    #self.checkSYCLCDoubleAlign()
     self.configureTypes()
     self.libraries.popLanguage()
     return

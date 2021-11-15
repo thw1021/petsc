@@ -39,7 +39,8 @@ class Configure(config.package.CMakePackage):
     self.deps                = [self.kokkos]
     self.cuda                = framework.require('config.packages.cuda',self)
     self.hip                 = framework.require('config.packages.hip',self)
-    self.odeps               = [self.cuda,self.hip]
+    self.sycl                = framework.require('config.packages.sycl',self)
+    self.odeps               = [self.cuda,self.hip,self.sycl]
     return
 
   def versionToStandardForm(self,ver):
@@ -90,6 +91,9 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
+    elif self.sycl.found:
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
+      args.append('-DCMAKE_CXX_COMPILER='+self.kokkos.systemSyclc)
 
     # -DCMAKE_CXX_STANDARD= will be taken from Kokkos
     args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')

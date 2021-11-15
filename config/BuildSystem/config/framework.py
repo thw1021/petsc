@@ -1358,7 +1358,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       child._configured = 1
       ctime = time.time()-start
       totaltime = totaltime + ctime
-      self.logPrint('child %s %f' % (child.__class__.__module__,ctime))
+      self.logPrint('child %s took %f seconds' % (child.__class__.__module__,ctime))
     self.logPrint('child sum %f' % (totaltime))
     self.logPrint('child total %f' % (time.time()-starttime))
     # use grep child configure.log | sort -k3 -g

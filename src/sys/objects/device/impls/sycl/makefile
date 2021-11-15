@@ -1,16 +1,17 @@
-
+#requiresdefine 'PETSC_HAVE_SYCL'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
+SOURCECXX = sycldevice.sycl.cxx
 SOURCEF	  =
-SOURCEH	  =
+SOURCEH   =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
-DIRS	    = cupm sycl
-LOCDIR	  = src/sys/objects/device/impls/
+DIRS	    =
+LOCDIR	  = src/sys/objects/device/impls/sycl/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

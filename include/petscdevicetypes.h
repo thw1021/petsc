@@ -14,9 +14,11 @@ $ z = 0                - Host memory
 $ z = 1                - Device memory
 $ yyy = 000            - CUDA-related memory
 $ yyy = 001            - HIP-related memory
+$ yyy = 010            - SYCL-related memory
 $ xxxxyyy1 = 0000,0001 - CUDA memory
 $ xxxxyyy1 = 0001,0001 - CUDA NVSHMEM memory
 $ xxxxyyy1 = 0000,0011 - HIP memory
+$ xxxxyyy1 = 0000,0101 - SYCL memory
 
   Other types of memory, e.g., CUDA managed memory, can be added when needed.
 
@@ -29,13 +31,15 @@ typedef enum {
   PETSC_MEMTYPE_DEVICE  = 0x01,
   PETSC_MEMTYPE_CUDA    = 0x01,
   PETSC_MEMTYPE_NVSHMEM = 0x11,
-  PETSC_MEMTYPE_HIP     = 0x03
+  PETSC_MEMTYPE_HIP     = 0x03,
+  PETSC_MEMTYPE_SYCL    = 0x05
 } PetscMemType;
 
 #define PetscMemTypeHost(m)    (((m) & 0x1) == PETSC_MEMTYPE_HOST)
 #define PetscMemTypeDevice(m)  (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
 #define PetscMemTypeCUDA(m)    (((m) & 0xF) == PETSC_MEMTYPE_CUDA)
 #define PetscMemTypeHIP(m)     (((m) & 0xF) == PETSC_MEMTYPE_HIP)
+#define PetscMemTypeSYCL(m)    (((m) & 0xF) == PETSC_MEMTYPE_SYCL)
 #define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
 
 /*E
@@ -101,6 +105,7 @@ typedef enum {
   PETSC_DEVICE_INVALID,
   PETSC_DEVICE_CUDA,
   PETSC_DEVICE_HIP,
+  PETSC_DEVICE_SYCL,
   PETSC_DEVICE_MAX
 } PetscDeviceType;
 PETSC_EXTERN const char *const PetscDeviceTypes[];
@@ -108,6 +113,8 @@ PETSC_EXTERN const char *const PetscDeviceTypes[];
 #  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_HIP
 #elif PetscDefined(HAVE_CUDA)
 #  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_CUDA
+#elif PetscDefined(HAVE_SYCL)
+#  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_SYCL
 #else
 #  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_INVALID
 #endif
