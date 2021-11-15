@@ -49,7 +49,6 @@ static PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
 PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
 {
   PetscErrorCode ierr;
-  Vec_MPI        *vw;
   PetscScalar    *array;
 
   PetscFunctionBegin;
@@ -57,7 +56,6 @@ PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
   ierr = VecCreate_MPI_Private(*v,PETSC_TRUE,win->nghost,win->nextra,NULL);CHKERRQ(ierr);
-  vw   = (Vec_MPI*)(*v)->data;
   ierr = PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
 
   /* save local representation of the parallel vector (and scatter) if it exists */

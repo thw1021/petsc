@@ -298,10 +298,10 @@ PetscErrorCode DMPlexSetUpVecGhostPermutation(DM dm)
 PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
 {
   PetscErrorCode ierr;
-  PetscInt       n, nghosts = 0,*ghosts;
+  PetscInt       n, nghosts = 0,*ghosts,nextra = 0;
   MPI_Comm       comm;
   PetscSection   section,localsection;
-  PetscInt       localSize, pStart, pEnd, p, dof, idx, i;
+  PetscInt       localSize, globalSize, pStart, pEnd, p, dof, idx, i;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
@@ -310,6 +310,7 @@ PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
        ghosts are the global numbers of the roots on the other processes we receive from
   */
   ierr = DMGetGlobalSection(dm, &section);CHKERRQ(ierr);
+  ierr = PetscSectionGetStorageSize(section, &globalSize);CHKERRQ(ierr);
   ierr = PetscSectionGetChart(section,&pStart,&pEnd);CHKERRQ(ierr);
   for (p=pStart; p<pEnd; p++) {
     ierr = PetscSectionGetDof(section,p,&dof);CHKERRQ(ierr);
@@ -332,8 +333,8 @@ PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
 
   ierr = DMGetLocalSection(dm, &localsection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(localsection, &localSize);CHKERRQ(ierr);
-  n    = localSize - nghosts;
-  ierr = VecCreateGhost(comm,n,PETSC_DETERMINE,nghosts,ghosts,0,v);CHKERRQ(ierr);
+  nextra = localSize - nghosts - globalSize;
+  ierr = VecCreateGhost(comm,globalSize,PETSC_DETERMINE,nghosts,ghosts,nextra,v);CHKERRQ(ierr);
   ierr = PetscFree(ghosts);CHKERRQ(ierr);
   ierr = VecSetDM(*v, dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);
