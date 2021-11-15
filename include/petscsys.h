@@ -2765,11 +2765,22 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCitationsRegister(const char cit[],Petsc
   size_t         len;
   char           *vstring;
   PetscErrorCode ierr;
+#if defined(PETSC_HAVE_THREADSAFETY)
+  PetscSpinlock  SpinLock;
+#endif
 
   PetscFunctionBegin;
   if (set && *set) PetscFunctionReturn(0);
   ierr = PetscStrlen(cit,&len);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  ierr = PetscSpinlockCreate(&SpinLock);CHKERRQ(ierr);
+  ierr = PetscSpinlockLock(&SpinLock);CHKERRQ(ierr);
+#endif
   ierr = PetscSegBufferGet(PetscCitationsList,len,&vstring);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_THREADSAFETY)
+  ierr = PetscSpinlockUnlock(&SpinLock);CHKERRQ(ierr);
+  ierr = PetscSpinlockDestroy(&SpinLock);CHKERRQ(ierr);
+#endif
   ierr = PetscArraycpy(vstring,cit,len);CHKERRQ(ierr);
   if (set) *set = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -2867,5 +2878,14 @@ PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win,PetscMPIInt,MPI_Aint*,
     List of external packages and queries on it
 */
 PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
+
+/*
+ OpenMP support
+*/
+#if defined(_OPENMP)
+#define PetscPragmaOMP(...) _Pragma(PetscStringize(omp __VA_ARGS__))
+#else // no OpenMP so no threads
+#define PetscPragmaOMP(...)
+#endif
 
 #endif
