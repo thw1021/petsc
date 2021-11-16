@@ -56,7 +56,7 @@ private:
   static bool initialized_;
 
   // clean-up
-  PETSC_NODISCARD static PetscErrorCode finalize__() noexcept;
+  PETSC_NODISCARD static PetscErrorCode finalize_() noexcept;
 };
 
 // define static variables
