@@ -317,7 +317,7 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
 // shorthand for bringing all of the typedefs from the base CUPMInterface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
-  using base_name_ = CUPMInterface<Tp_>;                                \
+  using base_name_ = Petsc::Impl::CUPMInterface<Tp_>;                   \
   /* introspection */                                                   \
   using base_name_::type;                                               \
   using base_name_::cupmName;                                           \

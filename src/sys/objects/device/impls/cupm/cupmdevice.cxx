@@ -26,7 +26,7 @@ class CUPMDevice<T>::CUPMDeviceInternal
   cupmDeviceProp_t dprop_; // cudaDeviceProp appears to be an actual struct, i.e. you can't
                            // initialize it with nullptr or NULL (i've tried)
 
-  PETSC_NODISCARD static bool CUPMAwareMPI__() noexcept;
+  PETSC_NODISCARD static bool CUPMAwareMPI_() noexcept;
 
 public:
   // default constructor
@@ -81,7 +81,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
     // Spectrum MPI (e.g., 10.3.1) on Summit meet above conditions, but one has to use jsrun
     // --smpiargs=-gpu to really enable GPU-aware MPI. So we do the check at runtime with a
     // code that works only with GPU-aware MPI.
-    if (PetscUnlikely(!CUPMAwareMPI__())) {
+    if (PetscUnlikely(!CUPMAwareMPI_())) {
       (*PetscErrorPrintf)("PETSc is configured with GPU support, but your MPI is not GPU-aware. For better performance, please use a GPU-aware MPI.\n");
       (*PetscErrorPrintf)("If you do not care, add option -use_gpu_aware_mpi 0. To not see the message again, add the option to your .petscrc, OR add it to the env var PETSC_OPTIONS.\n");
       (*PetscErrorPrintf)("If you do care, for IBM Spectrum MPI on OLCF Summit, you may need jsrun --smpiargs=-gpu.\n");
@@ -165,7 +165,7 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
 #define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false;
 
 template <CUPMDeviceType T>
-bool CUPMDevice<T>::CUPMDeviceInternal::CUPMAwareMPI__() noexcept
+bool CUPMDevice<T>::CUPMDeviceInternal::CUPMAwareMPI_() noexcept
 {
   constexpr int  bufSize = 2;
   constexpr int  hbuf[bufSize] = {1,0};
@@ -222,7 +222,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::finalize() noexcept
 }
 
 template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::finalize__() noexcept
+PetscErrorCode CUPMDevice<T>::finalize_() noexcept
 {
   PetscFunctionBegin;
   if (!initialized_) PetscFunctionReturn(0);
@@ -283,7 +283,7 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
   PetscFunctionBegin;
   if (initialized_) PetscFunctionReturn(0);
   initialized_ = true;
-  ierr = PetscRegisterFinalize(finalize__);CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
 
   {
     constexpr const auto options = cupmOptions<T>();
