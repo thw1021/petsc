@@ -29,11 +29,12 @@ PetscErrorCode VecCreate_SeqCUDA(Vec v)
   Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an
   existing vector.
 
-  This function may initialize CUDA, which may incur a device synchronization.
+  This function may initialize PetscDevice, which may incur a device synchronization.
 
   Level: intermediate
 
-.seealso: VecCreate(), VecCreateSeq(), VecCreateSeqCUDAWithArray(), VecCreateMPI(), VecCreateMPICUDA(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost()
+.seealso: PetscDeviceInitialize(), VecCreate(), VecCreateSeq(), VecCreateSeqCUDAWithArray(),
+VecCreateMPI(), VecCreateMPICUDA(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost()
 @*/
 PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
 {
@@ -53,10 +54,10 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
   Collective, Possibly Synchronous
 
   Input Parameters:
-+ comm  - the communicator, must be PETSC_COMM_SELF
-. bs    - the block size
-. n     - the vector length
-- array - GPU memory where the vector elements are to be stored.
++ comm     - the communicator, must be PETSC_COMM_SELF
+. bs       - the block size
+. n        - the vector length
+- gpuarray - GPU memory where the vector elements are to be stored.
 
   Output Parameter:
 . v - the vector
@@ -71,22 +72,20 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
   PETSc does NOT free the array when the vector is destroyed via VecDestroy(). The user should
   not free the array until the vector is destroyed.
 
-  This function may initialize CUDA, which may incur a device synchronization.
+  This function may initialize PetscDevice, which may incur a device synchronization.
 
   Level: intermediate
 
-.seealso: VecCreate(), VecCreateSeq(), VecCreateSeqWithArray(), VecCreateSeqCUDA(),
-VecCreateMPICUDAWithArray(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-VecCUDAPlaceArray(), VecCreateMPIWithArray()
+.seealso: PetscDeviceInitialize(), VecCreate(), VecCreateSeq(), VecCreateSeqWithArray(),
+VecCreateSeqCUDA(), VecCreateMPICUDAWithArray(), VecDuplicate(), VecDuplicateVecs(),
+VecCreateGhost(), VecCUDAPlaceArray(), VecCreateMPIWithArray()
 @*/
-PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar array[], Vec *v)
+PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar gpuarray[], Vec *v)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (n) PetscValidScalarPointer(array,4);
-  PetscValidPointer(v,5);
-  ierr = VecSeqCUDA.createwitharray_async(comm,bs,n,array,v);CHKERRQ(ierr);
+  ierr = VecCreateSeqCUDAWithArrays(comm,bs,n,nullptr,gpuarray,v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -114,15 +113,15 @@ PetscErrorCode  VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n
   user is instead responsible for freeing them, although they should not do so before calling
   VecDestroy() on the vector.
 
-  This function may initialize CUDA, which may incur a device synchronization.
+  This function may initialize PetscDevice, which may incur a device synchronization.
 
   Level: intermediate
 
-.seealso: VecCreate(), VecCreateSeqWithArray(), VecCreateSeqCUDA(),
+.seealso: PetscDeviceInitialize(), VecCreate(), VecCreateSeqWithArray(), VecCreateSeqCUDA(),
 VecCreateSeqCUDAWithArray(), VecCreateMPICUDA(), VecCreateMPICUDAWithArray(),
 VecCreateMPICUDAWithArrays(), VecCUDAPlaceArray()
 @*/
-PetscErrorCode  VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const PetscScalar gpuarray[], Vec *v)
+PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const PetscScalar gpuarray[], Vec *v)
 {
   PetscErrorCode ierr;
 
@@ -237,7 +236,7 @@ PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
 
 .seealso: VecCUDARestoreArrayRead(), VecCUDAGetArray(), VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
 @*/
-PetscErrorCode VecCUDAGetArrayRead(Vec v,const PetscScalar **a)
+PetscErrorCode VecCUDAGetArrayRead(Vec v, const PetscScalar **a)
 {
   using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
@@ -370,7 +369,7 @@ PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 .seealso: VecPlaceArray(), VecGetArray(), VecRestoreArray(), VecReplaceArray(), VecResetArray(), VecCUDAResetArray(), VecCUDAReplaceArray()
 
 @*/
-PetscErrorCode VecCUDAPlaceArray(Vec vin,const PetscScalar a[])
+PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
 {
   PetscErrorCode ierr;
 
@@ -405,7 +404,7 @@ PetscErrorCode VecCUDAPlaceArray(Vec vin,const PetscScalar a[])
 .seealso: VecGetArray(), VecRestoreArray(), VecPlaceArray(), VecResetArray(), VecCUDAResetArray(), VecCUDAPlaceArray(), VecReplaceArray()
 
 @*/
-PetscErrorCode VecCUDAReplaceArray(Vec vin,const PetscScalar a[])
+PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
 {
   PetscErrorCode ierr;
 
