@@ -176,6 +176,9 @@ public:
     : base_type(std::move(alloc))
   { }
 
+  // Access the allocator instance directly
+  PETSC_NODISCARD       allocator_type& allocator()       noexcept { return base_type::getAllocator_(); }
+  PETSC_NODISCARD const allocator_type& allocator() const noexcept { return base_type::getAllocator_(); }
   // Retrieve an object from the pool, if the pool is empty a new object is created instead
   PETSC_NODISCARD PetscErrorCode get(value_type&)      noexcept;
 
