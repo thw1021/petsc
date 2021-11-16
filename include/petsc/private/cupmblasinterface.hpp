@@ -270,7 +270,7 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
 
 #define PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,Tp)   \
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,Tp);      \
-  using base_name = CUPMBlasInterface<Tp>;                              \
+  using base_name = Petsc::Impl::CUPMBlasInterface<Tp>;                 \
   /* introspection */                                                   \
   using base_name::cupmBlasName;                                        \
   using base_name::cupmBlasGetErrorName;                                \
