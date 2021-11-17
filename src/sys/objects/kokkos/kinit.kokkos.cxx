@@ -38,13 +38,18 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     args.disable_warnings = true;
 #endif
 
-#if PETSC_AND_KOKKOS_HAVE(CUDA) || PETSC_AND_KOKKOS_HAVE(HIP)
-    /* Kokkos does not support CUDA and HIP at the same time (but we do :)) */
+#if PETSC_AND_KOKKOS_HAVE(CUDA) || PETSC_AND_KOKKOS_HAVE(HIP) || PETSC_AND_KOKKOS_HAVE(SYCL)
     PetscDeviceContext dctx;
     PetscErrorCode     ierr;
 
     ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
     ierr = PetscMPIIntCast(dctx->device->deviceId,&args.device_id);CHKERRQ(ierr);
+  #if PETSC_AND_KOKKOS_HAVE(SYCL)
+    /* petsc uses -1 for host, 0 and up for GPUs. But I was only able to pass
+       device_id = -2 and ndevices = -1 to force Kokkos-SYCL to select the sycl host device.
+    */
+    if (args.device_id == -1) args.device_id = -2;
+  #endif
 #endif
 
     /* To use PetscNumOMPThreads, one has to configure petsc --with-openmp.
