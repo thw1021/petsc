@@ -104,7 +104,8 @@ struct _n_SplitCSRMat {
   }                                                                    \
 }
 
-#if defined(PETSC_USE_DEBUG)
+/* FIXME: Intel dpcpp does not support variadic printf */
+#if defined(PETSC_USE_DEBUG) && !defined(PETSC_HAVE_SYCL)
 #define SETERR {                                                                                 \
    printf("[%d] ERROR in %s() at %s:%d: Location (%ld,%ld) not found!\n",     \
           d_mat->rank,__func__,__FILE__,__LINE__,(long int)im[i],(long int)in[j]); \
