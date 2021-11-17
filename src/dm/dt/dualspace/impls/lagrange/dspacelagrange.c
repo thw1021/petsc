@@ -209,6 +209,140 @@ static PetscErrorCode Petsc1DNodeFamilyComputeSimplexNodes(Petsc1DNodeFamily f, 
   PetscFunctionReturn(0);
 }
 
+/* OEIS A000041: https://oeis.org/A000041 */
+const static PetscInt PartitionFunctionValues[] = {
+  1,1,2,3,5,7,11,15,22,30,42,56,77,101,135,176,231,
+  297,385,490,627,792,1002,1255,1575,1958,2436,3010,
+  3718,4565,5604,6842,8349,10143,12310,14883,17977,
+  21637,26015,31185,37338,44583,53174,63261,75175,
+  89134,105558,124754,147273,173525
+};
+
+static PetscErrorCode PetscDTPartitionFunctionUpTo(PetscInt n, PetscInt p[])
+{
+  PetscInt       n_static = sizeof(PartitionFunctionValues) / sizeof(PetscInt);
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscArraycpy(p, PartitionFunctionValues, PetscMin(n+1,n_static));CHKERRQ(ierr);
+  if (n >= n_static) {
+    for (PetscInt m = n_static; m <= n; m++) {
+      p[m] = 0;
+      for (PetscInt k = 1, sign = 1; ; k++, sign *= -1) {
+        PetscInt nk = -k;
+        PetscInt pos_offset = (k * (3 * k - 1)) / 2;
+        PetscInt neg_offset = (nk * (3 * nk - 1)) / 2;
+        if (pos_offset <= m) {
+          p[m] += sign * p[m - pos_offset];
+        }
+        if (neg_offset <= m) {
+          p[m] += sign * p[m - neg_offset];
+        }
+        if (pos_offset > m && neg_offset > m) {
+          break;
+        }
+      }
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscDTPartitionFunction(PetscInt n, PetscInt *pf)
+{
+  PetscInt       n_static = sizeof(PartitionFunctionValues) / sizeof(PetscInt);
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (n < 0) {
+    *pf = 0;
+  } else if (n < n_static) {
+    *pf = PartitionFunctionValues[n];
+  } else {
+    PetscInt *p;
+
+    ierr = PetscMalloc1(n+1, &p);CHKERRQ(ierr);
+    ierr = PetscDTPartitionFunctionUpTo(n, p);CHKERRQ(ierr);
+    *pf = p[n];
+    ierr = PetscFree(p);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+// ydrows and ydcols should be length partition(n) * n
+static PetscErrorCode PetscDTYoungDiagrams(PetscInt n, PetscInt ydrows[], PetscInt ydcols[])
+{
+  PetscInt       pn;
+  PetscInt       *x;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (n <= 0) {
+    PetscFunctionReturn(0);
+  }
+  ierr = PetscDTPartitionFunction(n, &pn);CHKERRQ(ierr);
+  ierr = PetscMemzero(ydrows, pn*n);CHKERRQ(ierr);
+  ierr = PetscMemzero(ydcols, pn*n);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n, &x);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < n; i++) x[i] = 1;
+  x[0] = ydrows[0] = n;
+  for (PetscInt d = 1, h = 0, m = 1; d < pn; d++) {
+    PetscInt *rows = &ydrows[d * n];
+    if (x[h] == 2) {
+      m++;
+      x[h--] = 1;
+    } else {
+      PetscInt r = x[h] - 1;
+      PetscInt t = m - h;
+
+      x[h] = r;
+      while (t >= r) {
+        x[++h] = r;
+        t -= r;
+      }
+      if (t == 0) {
+        m = h+1;
+      } else {
+        m = h+2;
+        if (t > 1) {
+          x[++h] = t;
+        }
+      }
+    }
+    for (PetscInt i = 0; i < m; i++) rows[i] = x[i];
+  }
+  for (PetscInt d = 0; d < pn; d++) {
+    const PetscInt *rows = &ydrows[d * n];
+    PetscInt *cols = &ydcols[d * n];
+    PetscInt filled = 0;
+    for (PetscInt r = n-1; r >= 0; r--) {
+      if (rows[r] > filled) {
+        for (PetscInt c = filled; c < rows[r]; c++) {
+          cols[c] = r+1;
+        }
+      }
+    }
+  }
+  ierr = PetscFree(x);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscDTIrrepDim(PetscInt n, const PetscInt ydrows[], const PetscInt ydcols[], PetscInt *irrepdim)
+{
+  PetscInt id;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDTFactorialInt(n, &id);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < n; i++) {
+    for (PetscInt j = 0; j < ydrows[i]; j++) {
+      PetscInt hooklength = 1 + (ydrows[i] - 1 - j) + (ydcols[j] - 1 - i);
+      id /= hooklength;
+    }
+  }
+  *irrepdim = id;
+  PetscFunctionReturn(0);
+}
+
 /* If we need to get the dofs from a mesh point, or add values into dofs at a mesh point, and there is more than one dof
  * on that mesh point, we have to be careful about getting/adding everything in the right place.
  *
