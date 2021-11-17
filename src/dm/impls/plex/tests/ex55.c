@@ -263,25 +263,25 @@ int main(int argc, char **argv)
     suffix: 10-v3.16.0-v0
     requires: hdf5 !complex datafilespath
     args: -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_geometry -compare
-    args: -dm_plex_view_hdf5_storage_version {{0 1}} -use_low_level_functions {{0 1}}
+    args: -dm_plex_view_hdf5_storage_version {{1.0.0 2.0.0}} -use_low_level_functions {{0 1}}
     test:
       suffix: a
-      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v0/annulus-20.h5
+      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/annulus-20.h5
     test:
       suffix: b
       TODO: broken
-      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v0/barycentricallyrefinedcube.h5
+      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/barycentricallyrefinedcube.h5
     test:
       suffix: c
-      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v0/blockcylinder-50.h5
+      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/blockcylinder-50.h5
     test:
       suffix: d
-      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v0/cube-hexahedra-refined.h5
+      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/cube-hexahedra-refined.h5
     test:
       suffix: e
-      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v0/hybrid_hexwedge.h5
+      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/hybrid_hexwedge.h5
     test:
       suffix: f
-      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v0/square.h5
+      args: -filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/square.h5
 
 TEST*/
