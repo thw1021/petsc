@@ -149,7 +149,7 @@ class Package(config.base.Configure):
       self.petscdir        = FakePETScDir()
     # All packages depend on make
     self.make          = framework.require('config.packages.make',self)
-    if not self.isMPI and not self.package in ['make','cuda','hip','thrust','hwloc','x']:
+    if not self.isMPI and not self.package in ['make','cuda','hip','sycl','thrust','hwloc','x']:
       # force MPI to be the first package (except for those listed above) configured since all other packages
       # may depend on its compilers defined here
       self.mpi         = framework.require('config.packages.MPI',self)
@@ -1093,7 +1093,11 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     setattr(self.compilers, flagsArg, oldFlags+' '+self.headers.toString(self.include))
     self.compilers.saveLog()
     try:
-      output = self.outputPreprocess('#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n')
+      if hasattr(self,'versionCheckingCode'): # some weird packages (ex. sycl) might provide their own version checking code
+        versionCheckingCode = self.versionCheckingCode
+      else:
+        versionCheckingCode = '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n'
+      output = self.outputPreprocess(versionCheckingCode)
       self.logWrite(self.compilers.restoreLog())
     except:
       self.log.write('For '+self.package+' unable to run preprocessor to obtain version information, skipping version check\n')
