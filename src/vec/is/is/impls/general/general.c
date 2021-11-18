@@ -353,16 +353,16 @@ static PetscErrorCode ISView_General(IS is,PetscViewer viewer)
         ierr = PetscObjectGetName((PetscObject)is,&name);CHKERRQ(ierr);
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s_%d = [...\n",name,rank);CHKERRQ(ierr);
         for (i=0; i<n; i++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%D\n",idx[i]+1);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT "\n",idx[i]+1);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"];\n");CHKERRQ(ierr);
       } else {
         PetscInt  st = 0;
 
         if (fmt == PETSC_VIEWER_ASCII_INDEX) st = is->map->rstart;
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Number of indices in set %D\n",rank,n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Number of indices in set %" PetscInt_FMT "\n",rank,n);CHKERRQ(ierr);
         for (i=0; i<n; i++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %D %D\n",rank,i + st,idx[i]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %" PetscInt_FMT " %" PetscInt_FMT "\n",rank,i + st,idx[i]);CHKERRQ(ierr);
         }
       }
     } else {
@@ -372,16 +372,16 @@ static PetscErrorCode ISView_General(IS is,PetscViewer viewer)
         ierr = PetscObjectGetName((PetscObject)is,&name);CHKERRQ(ierr);
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s = [...\n",name);CHKERRQ(ierr);
         for (i=0; i<n; i++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%D\n",idx[i]+1);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT "\n",idx[i]+1);CHKERRQ(ierr);
         }
         ierr = PetscViewerASCIISynchronizedPrintf(viewer,"];\n");CHKERRQ(ierr);
       } else {
         PetscInt  st = 0;
 
         if (fmt == PETSC_VIEWER_ASCII_INDEX) st = is->map->rstart;
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Number of indices in set %D\n",n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Number of indices in set %" PetscInt_FMT "\n",n);CHKERRQ(ierr);
         for (i=0; i<n; i++) {
-          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%D %D\n",i + st,idx[i]);CHKERRQ(ierr);
+          ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT " %" PetscInt_FMT "\n",i + st,idx[i]);CHKERRQ(ierr);
         }
       }
     }
