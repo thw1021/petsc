@@ -153,7 +153,6 @@ PETSC_STATIC_INLINE constexpr util::add_const_t<T>*& PetscAddConstCast(T*& objec
   return const_cast<util::add_const_t<T>*&>(std::forward<T>(object));
 }
 
-
 // PetscObjectCast() - Cast an object to PetscObject
 //
 // input param:
