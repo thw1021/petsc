@@ -36,6 +36,7 @@
 //   have everyone else refer to it
 // - remove the cuda and hip separate versions
 // - remove bindtocpu?
+// - do rocblas instead of hipblas
 
 namespace Petsc
 {
