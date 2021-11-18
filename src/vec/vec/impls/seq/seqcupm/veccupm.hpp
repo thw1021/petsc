@@ -8,6 +8,7 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupmblasinterface.hpp>
 #include <petsc/private/randomimpl.h> // for _p_PetscRandom
+#include <array>
 
 #if !defined(__cplusplus) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
 #  error "VecSeq_CUPM requires C++11"
@@ -204,7 +205,7 @@ private:
         PetscTrRealloc = [](size_t,int,const char*,const char*,void**)
         {
           // REVIEW ME: can be implemented by malloc->copy->free?
-          SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"CUDA/HIP have no realloc()");
+          SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s has no realloc()",cupmName());
         };
       }
     }
@@ -270,7 +271,7 @@ private:
     {
       // 1. can't actually do anything about the error since we may already be seterrq-ing out
       // 2. no clue what happens if two different error codes are in flight simultaneously
-      auto PETSC_UNUSED ierr = PetscObjectStateIncrease(PetscObjectCast(v_));
+      auto ierr = PetscObjectStateIncrease(PetscObjectCast(v_));CHKERRCONTINUE(ierr);
       v_->offloadmask = PETSC_OFFLOAD_GPU;
     }
 
@@ -309,7 +310,7 @@ private:
     {
       // 1. can't actually do anything about the error since we may already be seterrq-ing out
       // 2. no clue what happens if two different error codes are in flight simultaneously
-      auto PETSC_UNUSED ierr = PetscObjectStateIncrease(PetscObjectCast(v_));
+      auto ierr = PetscObjectStateIncrease(PetscObjectCast(v_));CHKERRCONTINUE(ierr);
       v_->offloadmask = PETSC_OFFLOAD_CPU;
     }
 
@@ -336,7 +337,7 @@ private:
   // dispatcher for the actual kernels for mdot when NOT configured for complex, called by
   // mdot_async_(use_complex_tag<false>,...)
   template <int N>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_kernel_dispatch_(PetscDeviceContext,cupmStream_t,const PetscScalar*,const Vec[],PetscInt,PetscScalar*,PetscInt*,PetscScalar*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_kernel_dispatch_(PetscDeviceContext,cupmStream_t,const PetscScalar*,const Vec[],PetscInt,PetscScalar*,PetscInt*));
   // common core for the various create routines
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async_(Vec,PetscScalar* /*device_ptr*/= nullptr));
 
@@ -677,10 +678,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::duplicate_async(Vec v, Vec 
 //                                    mutatators                                      //
 
 #define STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype) \
-  static_assert(                                                        \
-    (mtype == PETSC_MEMTYPE_HOST) || (mtype == PETSC_MEMTYPE_DEVICE),   \
-    "Only comparisons between purely host and device memory are valid"  \
-  )
+  static_assert((mtype == PETSC_MEMTYPE_HOST) || (mtype == PETSC_MEMTYPE_DEVICE),"Only comparisons between purely host and device memory are valid")
 
 // v->ops->resetarray or VecCUPMResetArray()
 template <CUPMDeviceType T>
@@ -926,7 +924,6 @@ template <PetscMemType mtype, detail::MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorearray_async(Vec v, PetscScalar **a))
 {
   constexpr auto host = PetscMemTypeHost(mtype);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
@@ -1314,9 +1311,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(detail::UseComp
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   // copy results to CPU
   {
-    PetscScalar *h_results;
+    std::array<PetscScalar,PETSC_MAX_PATH_LEN> stackarray;
+    const auto allocate   = nv1*MDOT_WORKGROUP_NUM > stackarray.size();
+    auto       h_results  = stackarray.data();
 
-    ierr = PetscMalloc1(nv1*MDOT_WORKGROUP_NUM,&h_results);CHKERRQ(ierr);
+    if (allocate) {ierr = PetscMalloc1(nv1*MDOT_WORKGROUP_NUM,&h_results);CHKERRQ(ierr);}
     cerr = cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
     // REVIEW ME: double count of flops??
     // do these now while memcpy is in flight
@@ -1332,7 +1331,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(detail::UseComp
     for (auto j = decltype(nv1)(0); j < nv1; ++j) {
       for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) z[j] += h_results[i];
     }
-    ierr = PetscFree(h_results);CHKERRQ(ierr);
+    if (allocate) {ierr = PetscFree(h_results);CHKERRQ(ierr);}
   }
   PetscFunctionReturn(0);
 }
