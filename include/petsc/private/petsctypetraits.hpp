@@ -3,11 +3,21 @@
 
 #include <petsc/private/petscimpl.h> // for PETSC_NODISCARD
 
+#define PETSC_CONCAT_(x,y) x ## y
+#define PETSC_CONCAT(x,y)  PETSC_CONCAT_(x,y)
+
 #if defined(__cplusplus)
 
 #if __cplusplus >= 201103L // C++11
 #include <type_traits>
 #include <tuple>
+
+#define PETSC_IF(cond,result_if_true,...) PETSC_CONCAT(PETSC_IF_,cond)(result_if_true,__VA_ARGS__)
+#define PETSC_IF_0(result_if_true,...)    __VA_ARGS__
+#define PETSC_IF_1(result_if_true,...)    result_if_true
+
+#define PETSC_IF_PETSC_DEFINED(cond,result_if_true,...)         \
+  PETSC_IF(PetscDefined(cond),result_if_true,__VA_ARGS__)
 
 namespace Petsc
 {
@@ -69,7 +79,7 @@ template <typename T> struct is_petsc_object_impl<T,PetscObject> : std::true_typ
 template <typename T>
 struct is_petsc_object_impl<T,decltype(T::hdr)>
   : conditional_t<
-  !std::is_pointer<T>::value && std::is_class<T>::value && std::is_standard_layout<T>::value,
+  (!std::is_pointer<T>::value) && (std::is_class<T>::value) && (std::is_standard_layout<T>::value),
   std::true_type,
   std::false_type
   >
@@ -92,7 +102,7 @@ PETSC_STATIC_INLINE constexpr underlying_type_t<T> integral_value(T value) noexc
 template <typename T>
 PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(T& object) noexcept
 {
-  static_assert(util::is_petsc_object<T>::value,"");
+  static_assert(util::is_petsc_object<T>::value,"Did you forget to include the private header?");
   return reinterpret_cast<PetscObject&>(object);
 }
 
@@ -115,16 +125,20 @@ PETSC_STATIC_INLINE T*& PetscRemoveConstCast(const T*& object) noexcept
 }
 
 template <typename T>
-PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
+PETSC_STATIC_INLINE constexpr util::add_const_t<T>& PetscAddConstCast(T& object) noexcept
 {
   static_assert(!std::is_const<T>::value,"");
-  return const_cast<const T&>(std::forward<T>(object));
+  return const_cast<util::add_const_t<T>&>(std::forward<T>(object));
+}
+
+template <typename T>
+PETSC_STATIC_INLINE constexpr util::add_const_t<T>*& PetscAddConstCast(T*& object) noexcept
+{
+  static_assert(!std::is_const<T>::value,"");
+  return const_cast<util::add_const_t<T>*&>(std::forward<T>(object));
 }
 
 } // namespace Petsc
-
-#define PETSC_CONCAT_(x,...) x ## __VA_ARGS__
-#define PETSC_CONCAT(x,...)  PETSC_CONCAT_(x,__VA_ARGS__)
 
 #endif // C++11
 
@@ -142,13 +156,13 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
 // }
 //
 // for you. You may then call bar exactly as you would foo.
-#define PETSC_ALIAS_FUNCTION_(alias,...)                                \
+#define PETSC_ALIAS_FUNCTION_(alias,orig)                               \
   template <typename... Args>                                           \
   PETSC_NODISCARD auto alias(Args&&... args) noexcept(                  \
-    noexcept(__VA_ARGS__(std::forward<Args>(args)...))                  \
-  ) -> decltype(__VA_ARGS__(std::forward<Args>(args)...))               \
+    noexcept(orig(std::forward<Args>(args)...))                         \
+  ) -> decltype(orig(std::forward<Args>(args)...))                      \
   {                                                                     \
-    return __VA_ARGS__(std::forward<Args>(args)...);                    \
+    return orig(std::forward<Args>(args)...);                           \
   }
 
 #define PETSC_ALIAS_FUNCTION(alias,original) PETSC_ALIAS_FUNCTION_(alias,original)
@@ -197,7 +211,6 @@ PETSC_STATIC_INLINE constexpr const T& PetscAddConstCast(T& object) noexcept
     using seq = Petsc::util::make_index_sequence<sizeof...(Args)-(N)>;  \
     return gobblefn(std::forward_as_tuple(args...),seq());              \
   }
-
 
 #define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
   PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PETSC_CONCAT(gobble_,original),N)
