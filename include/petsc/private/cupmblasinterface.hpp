@@ -142,6 +142,7 @@ struct CUPMBlasInterface<CUPMDeviceType::CUDA>
   // typedefs
   using cupmBlasHandle_t   = cublasHandle_t;
   using cupmBlasError_t    = cublasStatus_t;
+  using cupmBlasInt_t      = int;
   using cupmSolverHandle_t = cusolverDnHandle_t;
   using cupmSolverError_t  = cusolverStatus_t;
 
@@ -234,6 +235,7 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CU
   // typedefs
   using cupmBlasHandle_t   = hipblasHandle_t;
   using cupmBlasError_t    = hipblasStatus_t;
+  using cupmBlasInt_t      = int; // rocblas will have its own
   using cupmSolverHandle_t = hipsolverHandle_t;
   using cupmSolverError_t  = hipsolverStatus_t;
 
@@ -317,6 +319,7 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CU
   /* types */                                                           \
   using typename base_name::cupmBlasHandle_t;                           \
   using typename base_name::cupmBlasError_t;                            \
+  using typename base_name::cupmBlasInt_t;                              \
   using typename base_name::cupmSolverHandle_t;                         \
   using typename base_name::cupmSolverError_t;                          \
   /* values */                                                          \
