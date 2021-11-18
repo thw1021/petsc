@@ -41,23 +41,36 @@ namespace detail
 
 #if PetscDefined(USE_COMPLEX)
 #  if PetscDefined(USE_REAL_SINGLE)
-#    define PETSC_CUPMBLAS_FP_TYPE        C
-#    define PETSC_CUPMBLAS_FP_RETURN_TYPE c
+#    define PETSC_CUPMBLAS_FP_TYPE_U        C
+#    define PETSC_CUPMBLAS_FP_TYPE_L        c
+#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_U C
+#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_L c
+#    define PETSC_CUPMBLAS_FP_INPUT_TYPE_U  S
+#    define PETSC_CUPMBLAS_FP_INPUT_TYPE_L  s
 #  elif PetscDefined(USE_REAL_DOUBLE)
-#    define PETSC_CUPMBLAS_FP_TYPE        Z
-#    define PETSC_CUPMBLAS_FP_RETURN_TYPE z
+#    define PETSC_CUPMBLAS_FP_TYPE_U        Z
+#    define PETSC_CUPMBLAS_FP_TYPE_L        z
+#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_U Z
+#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_L z
+#    define PETSC_CUPMBLAS_FP_INPUT_TYPE_U  D
+#    define PETSC_CUPMBLAS_FP_INPUT_TYPE_L  d
 #  endif
 #else
 #  if PetscDefined(USE_REAL_SINGLE)
-#    define PETSC_CUPMBLAS_FP_TYPE S
+#    define PETSC_CUPMBLAS_FP_TYPE_U S
+#    define PETSC_CUPMBLAS_FP_TYPE_L s
 #  elif PetscDefined(USE_REAL_DOUBLE)
-#    define PETSC_CUPMBLAS_FP_TYPE D
+#    define PETSC_CUPMBLAS_FP_TYPE_U D
+#    define PETSC_CUPMBLAS_FP_TYPE_L d
 #  endif
-#  define PETSC_CUPMBLAS_FP_RETURN_TYPE
+#  define PETSC_CUPMBLAS_FP_RETURN_TYPE_U
+#  define PETSC_CUPMBLAS_FP_RETURN_TYPE_L
+#  define PETSC_CUPMBLAS_FP_INPUT_TYPE_U
+#  define PETSC_CUPMBLAS_FP_INPUT_TYPE_L
 #endif // USE_COMPLEX
 
-#if !defined(PETSC_CUPMBLAS_FP_TYPE)
-#  error Unsupported CUPM Blas floating-point type
+#if !defined(PETSC_CUPMBLAS_FP_TYPE_U)
+#  error "Unsupported CUPM Blas floating-point type"
 #endif
 
 #define PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE_EXACT(OUR_PREFIX,OUR_SUFFIX,THEIR_PREFIX,THEIR_SUFFIX) \
@@ -66,14 +79,34 @@ namespace detail
 #define PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE(COMMON)                     \
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE_EXACT(CUPMBLAS,COMMON,PETSC_CUPMBLAS_PREFIX_U,COMMON)
 
-#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(our_prefix,their_prefix,FPTYPE,suffix) \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT(PETSC_CONCAT(our_prefix,X),suffix,PETSC_CONCAT(their_prefix,FPTYPE),suffix)
+#define PETSC_CUPMBLAS_BUILD_BLAS_FUNCTION_ALIAS_RETURNVALUE(func)      \
+  PETSC_CONCAT(                                                         \
+    PETSC_CONCAT(                                                       \
+      PETSC_CUPMBLAS_FP_INPUT_TYPE,                                     \
+      PETSC_CUPMBLAS_FP_RETURN_TYPE                                     \
+    ),                                                                  \
+    func                                                                \
+  )
 
-#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(suffix)     \
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_PREFIX,PETSC_CONCAT(PETSC_CUPMBLAS_FP_TYPE,PETSC_CUPMBLAS_FP_RETURN_TYPE),suffix)
+#define PETSC_CUPMBLAS_BUILD_BLAS_FUNCTION_ALIAS_IFPTYPE(func)          \
+  PETSC_CONCAT(I,PETSC_CONCAT(PETSC_CUPMBLAS_FP_TYPE_L,func))
 
-#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(suffix)                      \
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(cupmBlas,PETSC_CUPMBLAS_PREFIX,PETSC_CUPMBLAS_FP_TYPE,suffix)
+#define PETSC_CUPMBLAS_BUILD_BLAS_FUNCTION_ALIAS_STANDARD(func)  \
+  PETSC_CONCAT(PETSC_CUPMBLAS_FP_TYPE,func)
+
+#define PETSC_CUPMBLAS_BUILD_BLAS_FUNCTION_ALIAS(MACRO_SUFFIX)          \
+  PETSC_CONCAT(PETSC_CUPMBLAS_BUILD_BLAS_FUNCTION_ALIAS_,MACRO_SUFFIX)
+
+#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(MACRO_SUFFIX,our_suffix,their_suffix) \
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(                                      \
+    cupmBlasX,                                                          \
+    our_suffix,                                                         \
+    PETSC_CUPMBLAS_PREFIX,                                              \
+    PETSC_CUPMBLAS_BUILD_BLAS_FUNCTION_ALIAS(MACRO_SUFFIX)(their_suffix) \
+  )
+
+#define PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(MACRO_SUFFIX,suffix) \
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(MACRO_SUFFIX,suffix,suffix)
 
 #define PETSC_CUPMBLAS_ALIAS_FUNCTION(suffix)                           \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,suffix,PETSC_CUPMBLAS_PREFIX,suffix)
@@ -101,14 +134,16 @@ struct CUPMBlasInterfaceBase : CUPMInterface<T>
 template <CUPMDeviceType T> struct CUPMBlasInterface;
 
 #if PetscDefined(HAVE_CUDA)
-#define PETSC_CUPMBLAS_PREFIX      cublas
-#define PETSC_CUPMBLAS_PREFIX_U    CUBLAS
-#define PETSC_CUPMBLAS_DEVICE_TYPE CUPMDeviceType::CUDA
+#define PETSC_CUPMBLAS_PREFIX         cublas
+#define PETSC_CUPMBLAS_PREFIX_U       CUBLAS
+#define PETSC_CUPMBLAS_FP_TYPE        PETSC_CUPMBLAS_FP_TYPE_U
+#define PETSC_CUPMBLAS_FP_INPUT_TYPE  PETSC_CUPMBLAS_FP_INPUT_TYPE_U
+#define PETSC_CUPMBLAS_FP_RETURN_TYPE PETSC_CUPMBLAS_FP_RETURN_TYPE_L
 template <>
-struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
-  : detail::CUPMBlasInterfaceBase<PETSC_CUPMBLAS_DEVICE_TYPE>
+struct CUPMBlasInterface<CUPMDeviceType::CUDA>
+  : detail::CUPMBlasInterfaceBase<CUPMDeviceType::CUDA>
 {
-  PETSC_CUPMBLAS_BASE_CLASS_HEADER(PETSC_CUPMBLAS_DEVICE_TYPE);
+  PETSC_CUPMBLAS_BASE_CLASS_HEADER(CUPMDeviceType::CUDA);
 
   // typedefs
   using cupmBlasHandle_t = cublasHandle_t;
@@ -126,37 +161,38 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   PETSC_CUPMBLAS_ALIAS_FUNCTION(SetStream);
 
   // level 1 BLAS
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(axpy);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(scal);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(dot);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(swap);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(nrm2);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(asum);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,axpy);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,scal);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD,dot,PETSC_IF_PETSC_DEFINED(USE_COMPLEX,dotc,dot));
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD,dotu,PETSC_IF_PETSC_DEFINED(USE_COMPLEX,dotu,dot));
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,swap);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(RETURNVALUE,nrm2);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(IFPTYPE,amax);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(RETURNVALUE,asum);
 
   // level 2 BLAS
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemv);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,gemv);
 
   // level 3 BLAS
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemm);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,gemm);
 
   // BLAS extensions
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(geam);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,geam);
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle))
   {
-    cupmSolverError_t cerr;
-
     PetscFunctionBegin;
     if (handle) PetscFunctionReturn(0);
-    for (int i = 0; i < 3; ++i) {
-      PetscErrorCode ierr;
-
-      cerr = cusolverDnCreate(&handle);
-      if (cerr == CUSOLVER_STATUS_SUCCESS) break;
+    for (auto i = 0; i < 3; ++i) {
+      const auto cerr = cusolverDnCreate(&handle);
+      if (PetscLikely(cerr == CUSOLVER_STATUS_SUCCESS)) break;
       if ((cerr != CUSOLVER_STATUS_NOT_INITIALIZED) && (cerr != CUSOLVER_STATUS_ALLOC_FAILED)) CHKERRCUSOLVER(cerr);
-      if (i < 2) {ierr = PetscSleep(3);CHKERRQ(ierr);}
+      if (i < 2) {
+        auto ierr = PetscSleep(3);CHKERRQ(ierr);
+        continue;
+      }
+      if (PetscUnlikely(cerr != CUSOLVER_STATUS_SUCCESS)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuSolverDn");
     }
-    if (PetscUnlikely(cerr != CUSOLVER_STATUS_SUCCESS)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize cuSolverDn");
     PetscFunctionReturn(0);
   }
 
@@ -183,18 +219,21 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
 };
 #undef PETSC_CUPMBLAS_PREFIX
 #undef PETSC_CUPMBLAS_PREFIX_U
-#undef PETSC_CUPMBLAS_DEVICE_TYPE
+#undef PETSC_CUPMBLAS_FP_TYPE
+#undef PETSC_CUPMBLAS_FP_INPUT_TYPE
+#undef PETSC_CUPMBLAS_FP_RETURN_TYPE
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
-#define PETSC_CUPMBLAS_PREFIX      hipblas
-#define PETSC_CUPMBLAS_PREFIX_U    HIPBLAS
-#define PETSC_CUPMBLAS_DEVICE_TYPE CUPMDeviceType::HIP
+#define PETSC_CUPMBLAS_PREFIX         hipblas
+#define PETSC_CUPMBLAS_PREFIX_U       HIPBLAS
+#define PETSC_CUPMBLAS_FP_TYPE        PETSC_CUPMBLAS_FP_TYPE_U
+#define PETSC_CUPMBLAS_FP_INPUT_TYPE  PETSC_CUPMBLAS_FP_INPUT_TYPE_U
+#define PETSC_CUPMBLAS_FP_RETURN_TYPE PETSC_CUPMBLAS_FP_RETURN_TYPE_L
 template <>
-struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
-  : detail::CUPMBlasInterfaceBase<PETSC_CUPMBLAS_DEVICE_TYPE>
+struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CUPMDeviceType::HIP>
 {
-  PETSC_CUPMBLAS_BASE_CLASS_HEADER(PETSC_CUPMBLAS_DEVICE_TYPE);
+  PETSC_CUPMBLAS_BASE_CLASS_HEADER(CUPMDeviceType::HIP);
 
   // typedefs
   using cupmBlasHandle_t = hipblasHandle_t;
@@ -212,25 +251,28 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   PETSC_CUPMBLAS_ALIAS_FUNCTION(SetStream);
 
   // level 1 BLAS
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(axpy);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(scal);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(dot);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(swap);
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_WITH_RETURN_TYPE(nrm2);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,axpy);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,scal);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD,dot,PETSC_IF_PETSC_DEFINED(USE_COMPLEX,dotc,dot));
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION_EXACT(STANDARD,dotu,PETSC_IF_PETSC_DEFINED(USE_COMPLEX,dotu,dot));
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,swap);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(RETURNVALUE,nrm2);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(IFPTYPE,amax);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(RETURNVALUE,asum);
 
   // level 2 BLAS
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemv);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,gemv);
 
   // level 3 BLAS
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(gemm);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,gemm);
 
   // BLAS extensions
-  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(geam);
+  PETSC_CUPMBLAS_ALIAS_BLAS_FUNCTION(STANDARD,geam);
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode InitializeHandle(cupmSolverHandle_t &handle))
   {
     PetscFunctionBegin;
-    if (!handle) {cupmSolverError_t cerr = hipsolverCreate(&handle);CHKERRHIPSOLVER(cerr);}
+    if (!handle) {auto cerr = hipsolverCreate(&handle);CHKERRHIPSOLVER(cerr);}
     PetscFunctionReturn(0);
   }
 
@@ -249,9 +291,7 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   {
     PetscFunctionBegin;
     if (handle) {
-      cupmSolverError_t cerr;
-
-      cerr   = hipsolverDestroy(handle);CHKERRHIPSOLVER(cerr);
+      auto cerr = hipsolverDestroy(handle);CHKERRHIPSOLVER(cerr);
       handle = nullptr;
     }
     PetscFunctionReturn(0);
@@ -259,7 +299,9 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
 };
 #undef PETSC_CUPMBLAS_PREFIX
 #undef PETSC_CUPMBLAS_PREFIX_U
-#undef PETSC_CUPMBLAS_DEVICE_TYPE
+#undef PETSC_CUPMBLAS_FP_TYPE
+#undef PETSC_CUPMBLAS_FP_INPUT_TYPE
+#undef PETSC_CUPMBLAS_FP_RETURN_TYPE
 #endif // PetscDefined(HAVE_HIP)
 
 #undef PETSC_CUPMBLAS_BASE_CLASS_HEADER
@@ -290,8 +332,11 @@ struct CUPMBlasInterface<PETSC_CUPMBLAS_DEVICE_TYPE>
   using base_name::cupmBlasXaxpy;                                       \
   using base_name::cupmBlasXscal;                                       \
   using base_name::cupmBlasXdot;                                        \
+  using base_name::cupmBlasXdotu;                                       \
   using base_name::cupmBlasXswap;                                       \
   using base_name::cupmBlasXnrm2;                                       \
+  using base_name::cupmBlasXamax;                                       \
+  using base_name::cupmBlasXasum;                                       \
   /* level 2 BLAS */                                                    \
   using base_name::cupmBlasXgemv;                                       \
   /* level 3 BLAS */                                                    \
