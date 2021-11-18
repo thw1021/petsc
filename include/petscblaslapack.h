@@ -52,6 +52,9 @@ BLAS_EXTERN void LAPACKorgqr_(PetscBLASInt*,PetscBLASInt*,PetscBLASInt*,PetscSca
 #define LAPACKorgqr_(a,b,c,d,e,f,g,h,i) PetscMissingLapack("ORGQR",a,b,c,d,e,f,g,h,i)
 #endif
 BLAS_EXTERN void LAPACKgeqrf_(PetscBLASInt*,PetscBLASInt*,PetscScalar*,PetscBLASInt*,PetscScalar*,PetscScalar*,PetscBLASInt*,PetscBLASInt*);
+#if !defined(PETSC_MISSING_LAPACK_geqp3)
+BLAS_EXTERN void LAPACKgeqp3_(PetscBLASInt*,PetscBLASInt*,PetscScalar*,PetscBLASInt*,PetscBLASInt*,PetscScalar*,PetscScalar*,PetscBLASInt*,PetscBLASInt*);
+#endif
 #if defined(PETSC_USE_REAL_SINGLE) && defined(PETSC_BLASLAPACK_SNRM2_RETURNS_DOUBLE)
 BLAS_EXTERN double BLASnrm2_(const PetscBLASInt*,const PetscScalar*,const PetscBLASInt*);
 #else

@@ -1,6 +1,7 @@
 const char help[] = "Test polynomial symmetrization.\n\n";
 
 #include <petscdt.h>
+#include <petscmat.h>
 #include <petscblaslapack.h>
 
 /* OEIS A000041: https://oeis.org/A000041 */
@@ -158,19 +159,21 @@ static PetscErrorCode PetscDTIrrepDim(PetscInt n, const PetscInt ydrows[], const
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscDTIrrepMats(PetscInt n, const PetscInt rows[], const PetscInt cols[],
-                                       PetscScalar **irrep_mats)
+static PetscErrorCode PetscDTGetIrrepMats(PetscInt n, const PetscInt rows[], const PetscInt cols[],
+                                          Mat **irrep_mats)
 {
   PetscInt       dim, fact;
   PetscInt       *perm, *perm2, *perm3;
   PetscInt       *yd;
   PetscScalar    *bvec, *svec;
   PetscScalar    *sorbit;
+  Mat            *im;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscDTIrrepDim(n, rows, cols, &dim);CHKERRQ(ierr);
   ierr = PetscDTFactorialInt(n, &fact);CHKERRQ(ierr);
+  ierr = PetscMalloc1(fact, &im);CHKERRQ(ierr);
   ierr = PetscCalloc1(fact, &bvec);CHKERRQ(ierr);
   ierr = PetscCalloc1(fact, &svec);CHKERRQ(ierr);
   ierr = PetscMalloc3(n, &perm, n, &perm2, n, &perm3);CHKERRQ(ierr);
@@ -270,24 +273,29 @@ static PetscErrorCode PetscDTIrrepMats(PetscInt n, const PetscInt rows[], const 
     }
   }
   {
-    PetscBLASInt M, N, info;
+    PetscBLASInt M, N, lwork, info;
     PetscScalar *tau, *work;
+    PetscBLASInt *pivots;
 
-    ierr = PetscMalloc2(fact, &tau, fact, &work);CHKERRQ(ierr);
+    ierr = PetscMalloc3(fact, &tau, 4*fact, &work, fact, &pivots);CHKERRQ(ierr);
     ierr = PetscBLASIntCast(fact,&M);CHKERRQ(ierr);
+    ierr = PetscBLASIntCast(4*fact,&lwork);CHKERRQ(ierr);
     ierr = PetscBLASIntCast(dim,&N);CHKERRQ(ierr);
     ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
-    PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&M,&M,sorbit,&M,tau,work,&M,&info));
+    for (PetscInt i = 0; i < fact; i++) pivots[i] = 0;
+    PetscStackCallBLAS("LAPACKgeqp3",LAPACKgeqp3_(&M,&M,sorbit,&M,pivots,tau,work,&lwork,&info));
     ierr = PetscFPTrapPop();CHKERRQ(ierr);
-    if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"xGEQRF error");
-    PetscStackCallBLAS("LAPACKorgqr",LAPACKorgqr_(&M,&N,&N,sorbit,&M,tau,work,&M,&info));
+    if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"xGEQP3 error");
+    PetscStackCallBLAS("LAPACKorgqr",LAPACKorgqr_(&M,&N,&N,sorbit,&M,tau,work,&lwork,&info));
     if (info) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"xORGQR/xUNGQR error");
-    ierr = PetscFree2(tau, work);CHKERRQ(ierr);
+    ierr = PetscFree3(tau, work, pivots);CHKERRQ(ierr);
   }
   for (PetscInt p = 0; p < fact; p++) {
-    PetscScalar *mat = irrep_mats[p];
+    PetscScalar *mat;
     PetscBool isOdd;
 
+    ierr = MatCreateSeqDense(PETSC_COMM_SELF, dim, dim, NULL, &im[p]);CHKERRQ(ierr);
+    ierr = MatDenseGetArrayWrite(im[p], &mat);CHKERRQ(ierr);
     ierr = PetscDTEnumPerm(n, p, perm, &isOdd);CHKERRQ(ierr);
     ierr = PetscArrayzero(mat, dim*dim);CHKERRQ(ierr);
     for (PetscInt j = 0; j < fact; j++) {
@@ -304,12 +312,71 @@ static PetscErrorCode PetscDTIrrepMats(PetscInt n, const PetscInt rows[], const 
         }
       }
     }
+    ierr = MatDenseRestoreArrayWrite(im[p], &mat);CHKERRQ(ierr);
   }
   ierr = PetscFree(sorbit);CHKERRQ(ierr);
   ierr = PetscFree(yd);CHKERRQ(ierr);
   ierr = PetscFree3(perm, perm2, perm3);CHKERRQ(ierr);
   ierr = PetscFree(svec);CHKERRQ(ierr);
   ierr = PetscFree(bvec);CHKERRQ(ierr);
+  *irrep_mats = im;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscDTRestoreIrrepMats(PetscInt n, const PetscInt rows[], const PetscInt cols[],
+                                              Mat **irrep_mats)
+{
+  Mat            *im = *irrep_mats;
+  PetscInt       fact;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDTFactorialInt(n, &fact);CHKERRQ(ierr);
+  for (PetscInt i = 0; i < fact; i++) {
+    ierr = MatDestroy(&im[i]);CHKERRQ(ierr);
+  }
+  ierr = PetscFree(im);CHKERRQ(ierr);
+  *irrep_mats = NULL;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode testIrrepMats(PetscInt n, Mat *irrepmats)
+{
+  PetscInt       *permi, *permj, *permk, fact;
+  Mat             outmat = NULL;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscDTFactorialInt(n, &fact);CHKERRQ(ierr);
+  ierr = PetscMalloc3(fact, &permi, fact, &permj, fact, &permk);CHKERRQ(ierr);
+  if (fact) {
+    ierr = MatDuplicate(irrepmats[0], MAT_DO_NOT_COPY_VALUES, &outmat);CHKERRQ(ierr);
+  }
+  for (PetscInt i = 0; i < fact; i++) {
+    Mat mati = irrepmats[i];
+    PetscBool isOdd;
+    PetscReal errnorm;
+
+    ierr = PetscDTEnumPerm(n, i, permi, &isOdd);CHKERRQ(ierr);
+    for (PetscInt j = 0; j < fact; j++) {
+      Mat matj = irrepmats[j];
+      PetscInt k;
+
+      ierr = MatMatMult(matj, mati, MAT_REUSE_MATRIX, PETSC_DEFAULT, &outmat);CHKERRQ(ierr);
+      ierr = PetscDTEnumPerm(n, j, permj, &isOdd);CHKERRQ(ierr);
+      for (PetscInt l = 0; l < n; l++) {
+        permk[l] = permj[permi[l]];
+      }
+      ierr = PetscDTPermIndex(n, permk, &k, &isOdd);CHKERRQ(ierr);
+      ierr = MatAXPY(outmat, -1., irrepmats[k], SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+      ierr = MatNorm(outmat, NORM_FROBENIUS, &errnorm);CHKERRQ(ierr);
+      if (errnorm > PETSC_SMALL) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD, "%D * %D = %D error, %g\n", i, j, k, errnorm);CHKERRQ(ierr);
+      }
+    }
+  }
+  ierr = MatDestroy(&outmat);CHKERRQ(ierr);
+  ierr = PetscFree3(permi, permj, permk);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -330,7 +397,7 @@ static PetscErrorCode testPetscDTYoungDiagrams(PetscInt n)
     const PetscInt *rows = &ydrows[i*n];
     const PetscInt *cols = &ydcols[i*n];
     PetscInt irrepdim;
-    PetscScalar **irrepmats;
+    Mat *irrepmats;
 
     for (PetscInt j = 0; j < n; j++) {
       if (rows[j]) {
@@ -350,23 +417,9 @@ static PetscErrorCode testPetscDTYoungDiagrams(PetscInt n)
     ierr = PetscDTIrrepDim(n, rows, cols, &irrepdim);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD, "\n  Irrep dim: %D\n", irrepdim);CHKERRQ(ierr);
     id2sum += irrepdim*irrepdim;
-    ierr = PetscMalloc1(fact, &irrepmats);CHKERRQ(ierr);
-    for (PetscInt p = 0; p < fact; p++) {
-      ierr = PetscMalloc1(irrepdim * irrepdim, &(irrepmats[p]));CHKERRQ(ierr);
-    }
-    ierr = PetscDTIrrepMats(n, rows, cols, irrepmats);CHKERRQ(ierr);
-    for (PetscInt p = 0; p < fact; p++) {
-      if (n && irrepdim) {
-        for (PetscInt i = 0; i < irrepdim; i++) {
-          ierr = PetscPrintf(PETSC_COMM_WORLD, "\n  ");CHKERRQ(ierr);
-          for (PetscInt j = 0; j < irrepdim; j++) {
-            ierr = PetscPrintf(PETSC_COMM_WORLD, " %g", irrepmats[p][i + j*irrepdim]);CHKERRQ(ierr);
-          }
-        }
-        ierr = PetscPrintf(PETSC_COMM_WORLD, "\n");CHKERRQ(ierr);
-      }
-      ierr = PetscFree(irrepmats[p]);CHKERRQ(ierr);
-    }
+    ierr = PetscDTGetIrrepMats(n, rows, cols, &irrepmats);CHKERRQ(ierr);
+    ierr = testIrrepMats(n, irrepmats);CHKERRQ(ierr);
+    ierr = PetscDTRestoreIrrepMats(n, rows, cols, &irrepmats);CHKERRQ(ierr);
     ierr = PetscFree(irrepmats);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD, "\n");CHKERRQ(ierr);
   }

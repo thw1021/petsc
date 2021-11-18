@@ -124,6 +124,7 @@
 /* Subroutine names that are the same for real/complex data: */
 /* no character-string arguments: */
 #define LAPACKgeqrf_ PETSCBLAS(geqrf,GEQRF)
+#define LAPACKgeqp3_ PETSCBLAS(geqp3,GEQP3)
 #define LAPACKgetrf_ PETSCBLAS(getrf,GETRF)
 #define LAPACKgetri_ PETSCBLAS(getri,GETRI)
 #define LAPACKREALgetrf_ PETSCBLASREAL(getrf,GETRF)
