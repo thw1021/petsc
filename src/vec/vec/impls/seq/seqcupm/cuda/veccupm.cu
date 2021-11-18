@@ -1,4 +1,4 @@
-#include  "../veccupm.hpp"
+#include  "../veccupm.hpp" /*I "petscvec.h" I*/
 
 using namespace Petsc;
 
