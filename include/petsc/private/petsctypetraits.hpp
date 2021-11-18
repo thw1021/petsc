@@ -127,20 +127,6 @@ constexpr can_call<F,A...> is_callable_with(F&&) { return can_call<F(A...)>{}; }
 
 } // namespace util
 
-// define this outside namespace util since it can be universally used
-template <typename T>
-PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(T& object) noexcept
-{
-  static_assert(util::is_petsc_object<T>::value,"Did you forget to include the private header?");
-  return reinterpret_cast<PetscObject&>(object);
-}
-
-template <typename T>
-PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noexcept
-{
-  return PetscObjectCast(PetscRemoveConstCast(object));
-}
-
 template <typename T>
 PETSC_STATIC_INLINE util::remove_const_t<T>& PetscRemoveConstCast(T& object) noexcept
 {
@@ -162,7 +148,6 @@ PETSC_STATIC_INLINE T*& PetscRemoveConstCast(const T*& object) noexcept
 template <typename T>
 PETSC_STATIC_INLINE constexpr util::add_const_t<T>& PetscAddConstCast(T& object) noexcept
 {
-  static_assert(!std::is_const<T>::value,"");
   return const_cast<util::add_const_t<T>&>(std::forward<T>(object));
 }
 
@@ -171,6 +156,20 @@ PETSC_STATIC_INLINE constexpr util::add_const_t<T>*& PetscAddConstCast(T*& objec
 {
   static_assert(!std::is_const<T>::value,"");
   return const_cast<util::add_const_t<T>*&>(std::forward<T>(object));
+}
+
+// define this outside namespace util since it can be universally used
+template <typename T>
+PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(T& object) noexcept
+{
+  static_assert(util::is_petsc_object<T>::value,"Did you forget to include the private header?");
+  return reinterpret_cast<PetscObject&>(object);
+}
+
+template <typename T>
+PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noexcept
+{
+  return PetscObjectCast(PetscRemoveConstCast(object));
 }
 
 } // namespace Petsc
