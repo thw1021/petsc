@@ -146,10 +146,6 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   using cupmError_t        = cudaError_t;
   using cupmEvent_t        = cudaEvent_t;
   using cupmStream_t       = cudaStream_t;
-  using cupmBlasHandle_t   = cublasHandle_t;
-  using cupmBlasError_t    = cublasStatus_t;
-  using cupmSolverHandle_t = cusolverDnHandle_t;
-  using cupmSolverError_t  = cusolverStatus_t;
   using cupmDeviceProp_t   = cudaDeviceProp;
   using cupmMemcpyKind_t   = cudaMemcpyKind;
 
@@ -213,6 +209,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
   PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
+  PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
   // specific wrapper for device launch function to mimic the HIP API since it has the superior
   // interface here, and it's not worth it to write another macro just for this specific
@@ -240,8 +237,6 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   using cupmError_t        = hipError_t;
   using cupmEvent_t        = hipEvent_t;
   using cupmStream_t       = hipStream_t;
-  using cupmSolverHandle_t = hipsolverHandle_t;
-  using cupmSolverError_t  = hipsolverStatus_t;
   using cupmDeviceProp_t   = hipDeviceProp_t;
   using cupmMemcpyKind_t   = hipMemcpyKind;
 
@@ -300,6 +295,7 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
   PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
+  PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
   // kernel launching
   PETSC_CUPM_ALIAS_FUNCTION_COMMON(LaunchKernel,LaunchKernelGGL);
@@ -327,8 +323,6 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   using typename base_name_::cupmError_t;                               \
   using typename base_name_::cupmEvent_t;                               \
   using typename base_name_::cupmStream_t;                              \
-  using typename base_name_::cupmSolverError_t;                         \
-  using typename base_name_::cupmSolverHandle_t;                        \
   using typename base_name_::cupmDeviceProp_t;                          \
   using typename base_name_::cupmMemcpyKind_t;                          \
   /* variables */                                                       \
@@ -375,6 +369,7 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   using base_name_::cupmMemcpyAsync;                                    \
   using base_name_::cupmMallocHost;                                     \
   using base_name_::cupmFreeHost;                                       \
+  using base_name_::cupmMemsetAsync;                                    \
   using base_name_::cupmLaunchKernel
 
 #endif /* __cplusplus */
