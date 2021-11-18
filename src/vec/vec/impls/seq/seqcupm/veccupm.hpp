@@ -121,8 +121,21 @@ public:
   };
 
 private:
-
   // utility
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode CUPMBlasIntCast_(PetscInt x, cupmBlasInt_t *y))
+  {
+    using petsc_type = decltype(x);
+    using blas_type  = decltype(*y);
+
+    PetscFunctionBegin;
+    if PETSC_CONSTEXPR_17 (!std::is_same<petsc_type,blas_type>::value) {
+      if (PetscUnlikely(x > std::numeric_limits<blas_type>::max())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for %s, which may be restricted to 32 bit integers",x,cupmBlasName());
+    }
+    if (PetscUnlikely(x < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to %s routine: %" PetscInt_FMT,cupmBlasName(),x);
+    *y = static_cast<blas_type>(x);
+    PetscFunctionReturn(0);
+  }
+
   PETSC_CXX_COMPAT_DECL(constexpr Vec_Seq* VecSeqCast_(Vec v))
   {
     return static_cast<Vec_Seq*>(v->data);
@@ -248,6 +261,8 @@ private:
   // RAII VecCUPMGetArrayRead()
   struct PETSC_NODISCARD DeviceArrayRead  : vector_array
   {
+    using vector_array::operator typename vector_array::const_pointer_type;
+
     DeviceArrayRead(PetscDeviceContext dctx, Vec vector) noexcept
       : vector_array(initialize_(dctx,vector))
     { }
@@ -434,7 +449,7 @@ template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::DeviceAllocateCheck_(PetscDeviceContext dctx, Vec v, PetscScalar *device_array))
 {
   auto           vcu = CUPMCast_(v);
-  PetscBLASInt   bn;
+  cupmBlasInt_t  bn;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -455,7 +470,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::DeviceAllocateCheck_(PetscD
   // do a cast to blasint check because if blasint cant hold the size, then any subsequent
   // cupmblas calls can't use it either. Doing this now this means we don't have to check
   // during every function
-  ierr = PetscBLASIntCast(v->map->n,&bn);CHKERRQ(ierr);
+  ierr = CUPMBlasIntCast_(v->map->n,&bn);CHKERRQ(ierr);
   if (device_array) {
     // array is being placed from the user
     vcu->device_array  = device_array;
@@ -990,7 +1005,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorearrayandmemtype_asyn
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscScalar alpha, Vec xin))
 {
-  const auto         n = static_cast<PetscBLASInt>(yin->map->n);
+  const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
   PetscDeviceContext dctx;
   PetscErrorCode     ierr;
 
@@ -1041,7 +1056,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscSc
   if (alpha == PetscScalar(0.0)) PetscFunctionReturn(0);
   ierr = PetscObjectTypeCompareAny(PetscObjectCast(xin),&xiscupm,VECSEQCUPM(),VECMPICUPM(),"");CHKERRQ(ierr);
   if (xiscupm) {
-    const auto         n = static_cast<PetscBLASInt>(yin->map->n);
+    const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
     cupmBlasHandle_t   cupmBlasHandle;
     cupmBlasError_t    cberr;
     PetscDeviceContext dctx;
@@ -1342,7 +1357,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(detail::UseComp
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(detail::UseComplexTag<true>, Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
 {
-  const auto         n = static_cast<PetscBLASInt>(xin->map->n);
+  const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
   PetscDeviceContext dctx;
   cupmBlasHandle_t   cupmBlasHandle;
   PetscErrorCode     ierr;
@@ -1426,7 +1441,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::scale_async(Vec xin, PetscS
   else if (alpha == PetscScalar(0.0)) {
     auto ierr = set_async(xin,alpha);CHKERRQ(ierr);
   } else {
-    const auto         n = static_cast<PetscBLASInt>(xin->map->n);
+    const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
     cupmBlasError_t    cberr;
@@ -1445,7 +1460,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::scale_async(Vec xin, PetscS
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::tdot_async(Vec xin, Vec yin, PetscScalar *z))
 {
-  const auto         n = static_cast<PetscBLASInt>(xin->map->n);
+  const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
   PetscDeviceContext dctx;
   cupmBlasHandle_t   cupmBlasHandle;
   cupmBlasError_t    cberr;
@@ -1547,7 +1562,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::swap_async(Vec xin, Vec yin
 {
   PetscFunctionBegin;
   if (xin != yin) {
-    const auto         n = static_cast<PetscBLASInt>(xin->map->n);
+    const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
     cupmBlasError_t    cberr;
@@ -1576,7 +1591,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscS
     ierr = aypx_async(yin,beta,xin);CHKERRQ(ierr);
   } else {
     const auto         betaIsZero = beta == PetscScalar(0.0);
-    const auto         n = static_cast<PetscBLASInt>(yin->map->n);
+    const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
     cupmBlasHandle_t   cupmBlasHandle;
     cupmBlasError_t    cberr;
     PetscDeviceContext dctx;
@@ -1624,7 +1639,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpbypcz_async(Vec zin, Pet
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormType type, PetscReal *z))
 {
-  const auto         n = static_cast<PetscBLASInt>(xin->map->n);
+  const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
   PetscInt           flopCount = 0;
   cupmBlasHandle_t   cupmBlasHandle;
   PetscDeviceContext dctx;
