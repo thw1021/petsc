@@ -125,7 +125,7 @@ private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode CUPMBlasIntCast_(PetscInt x, cupmBlasInt_t *y))
   {
     using petsc_type = decltype(x);
-    using blas_type  = decltype(*y);
+    using blas_type  = util::remove_pointer_t<decltype(y)>;
 
     PetscFunctionBegin;
     if PETSC_CONSTEXPR_17 (!std::is_same<petsc_type,blas_type>::value) {
