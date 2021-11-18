@@ -192,18 +192,21 @@ PETSC_STATIC_INLINE constexpr util::add_const_t<T>*& PetscAddConstCast(T*& objec
 //
 // for you. You may then call bar exactly as you would foo.
 #define PETSC_ALIAS_FUNCTION_(alias,orig,dispatch)                      \
-  template <typename... Args> auto dispatch(int,Args&&... args)         \
+  template <typename... Args>                                           \
+  static inline auto dispatch(int,Args&&... args)                       \
     noexcept(noexcept(orig(std::forward<Args>(args)...)))               \
     -> decltype(orig(std::forward<Args>(args)...))                      \
   {                                                                     \
     return orig(std::forward<Args>(args)...);                           \
   };                                                                    \
-  template <typename... Args> int dispatch(char,Args&&... args)         \
+  template <typename... Args>                                           \
+  static inline int dispatch(char,Args&&... args)                       \
   {                                                                     \
     static_assert(util::is_callable_with<Args...>(orig),PetscStringize(orig) "() is not callable with the provided arguments"); \
     return 1;                                                           \
   };                                                                    \
-  template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args) \
+  template <typename... Args>                                           \
+  PETSC_NODISCARD auto alias(Args&&... args)                            \
     noexcept(noexcept(dispatch(0,std::forward<Args>(args)...)))         \
     -> decltype(dispatch(0,std::forward<Args>(args)...))                \
   {                                                                     \

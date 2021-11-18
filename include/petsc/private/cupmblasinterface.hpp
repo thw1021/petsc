@@ -39,22 +39,25 @@ namespace detail
     }                                                                   \
   } while (0)
 
+// given cupmBlas<T>axpy() then
+// T = PETSC_CUPBLAS_FP_TYPE
+// given cupmBlas<T><u>nrm2() then
+// T = PETSC_CUPMBLAS_FP_INPUT_TYPE
+// u = PETSC_CUPMBLAS_FP_RETURN_TYPE
 #if PetscDefined(USE_COMPLEX)
 #  if PetscDefined(USE_REAL_SINGLE)
 #    define PETSC_CUPMBLAS_FP_TYPE_U        C
 #    define PETSC_CUPMBLAS_FP_TYPE_L        c
-#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_U C
-#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_L c
 #    define PETSC_CUPMBLAS_FP_INPUT_TYPE_U  S
 #    define PETSC_CUPMBLAS_FP_INPUT_TYPE_L  s
 #  elif PetscDefined(USE_REAL_DOUBLE)
 #    define PETSC_CUPMBLAS_FP_TYPE_U        Z
 #    define PETSC_CUPMBLAS_FP_TYPE_L        z
-#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_U Z
-#    define PETSC_CUPMBLAS_FP_RETURN_TYPE_L z
 #    define PETSC_CUPMBLAS_FP_INPUT_TYPE_U  D
 #    define PETSC_CUPMBLAS_FP_INPUT_TYPE_L  d
 #  endif
+#  define PETSC_CUPMBLAS_FP_RETURN_TYPE_U PETSC_CUPMBLAS_FP_TYPE_U
+#  define PETSC_CUPMBLAS_FP_RETURN_TYPE_L PETSC_CUPMBLAS_FP_TYPE_L
 #else
 #  if PetscDefined(USE_REAL_SINGLE)
 #    define PETSC_CUPMBLAS_FP_TYPE_U S
@@ -63,10 +66,10 @@ namespace detail
 #    define PETSC_CUPMBLAS_FP_TYPE_U D
 #    define PETSC_CUPMBLAS_FP_TYPE_L d
 #  endif
+#  define PETSC_CUPMBLAS_FP_INPUT_TYPE_U  PETSC_CUPMBLAS_FP_TYPE_U
+#  define PETSC_CUPMBLAS_FP_INPUT_TYPE_L  PETSC_CUPMBLAS_FP_TYPE_L
 #  define PETSC_CUPMBLAS_FP_RETURN_TYPE_U
 #  define PETSC_CUPMBLAS_FP_RETURN_TYPE_L
-#  define PETSC_CUPMBLAS_FP_INPUT_TYPE_U
-#  define PETSC_CUPMBLAS_FP_INPUT_TYPE_L
 #endif // USE_COMPLEX
 
 #if !defined(PETSC_CUPMBLAS_FP_TYPE_U)
