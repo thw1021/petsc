@@ -1941,16 +1941,31 @@ typedef enum {MAT_STRUMPACK_NATURAL=0,
               MAT_STRUMPACK_PARMETIS=2,
               MAT_STRUMPACK_SCOTCH=3,
               MAT_STRUMPACK_PTSCOTCH=4,
-              MAT_STRUMPACK_RCM=5} MatSTRUMPACKReordering;
+              MAT_STRUMPACK_RCM=5,
+              MAT_STRUMPACK_GEOMETRIC=6} MatSTRUMPACKReordering;
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetReordering(Mat,MatSTRUMPACKReordering);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNx(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNy(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNz(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricWidth(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetColPerm(Mat,PetscBool);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSRelTol(Mat,PetscReal);
-PETSC_DEPRECATED_FUNCTION("Use MatSTRUMPACKSetHSSRelTol() (since version 3.9)") PETSC_STATIC_INLINE PetscErrorCode MatSTRUMPACKSetHSSRelCompTol(Mat mat,PetscReal rtol) {return MatSTRUMPACKSetHSSRelTol(mat,rtol);}
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSAbsTol(Mat,PetscReal);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSMinSepSize(Mat,PetscInt);
-PETSC_DEPRECATED_FUNCTION("Use MatSTRUMPACKSetHSSMinSepSize() (since version 3.9)") PETSC_STATIC_INLINE PetscErrorCode MatSTRUMPACKSetHSSMinSize(Mat mat,PetscInt hssminsize) {return MatSTRUMPACKSetHSSMinSepSize(mat,hssminsize);}
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSMaxRank(Mat,PetscInt);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGPU(Mat,PetscBool);
+typedef enum {MAT_STRUMPACK_NONE=0,
+              MAT_STRUMPACK_HSS=1,
+              MAT_STRUMPACK_BLR=2,
+              MAT_STRUMPACK_HODLR=3,
+              MAT_STRUMPACK_BLR_HODLR=4,
+              MAT_STRUMPACK_ZFP_BLR_HODLR=5,
+              MAT_STRUMPACK_LOSSLESS=6,
+              MAT_STRUMPACK_LOSSY=7} MatSTRUMPACKCompression;
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompression(Mat,MatSTRUMPACKCompression);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompRelTol(Mat,PetscReal);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompAbsTol(Mat,PetscReal);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompMinSepSize(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompLeafSize(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompLossyPrecision(Mat,PetscInt);
+PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetCompButterflyLevels(Mat,PetscInt);
 #endif
 
 PETSC_EXTERN PetscErrorCode MatBindToCPU(Mat,PetscBool);
