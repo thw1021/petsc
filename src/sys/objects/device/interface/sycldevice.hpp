@@ -2,7 +2,6 @@
 #define PETSCSYCLDEVICE_HPP
 
 #include <petsc/private/deviceimpl.h> /* I "petscdevice.h" */
-#include <petsc/private/cupminterface.hpp>
 #include <petscviewer.h>
 #include <array>
 #include <limits>
@@ -12,7 +11,8 @@ namespace Petsc
 #define PETSC_SYCL_DEVICE_HOST -1  // Note -1 is also used by PETSC_DECIDE, so user needs to pass -2 to expilictly select the host
 #define PETSC_SYCL_DEVICE_NONE -3
 
-class SyclDevice {
+class SyclDevice 
+{
 public:
   using createContextFunction_t = PetscErrorCode (*)(PetscDeviceContext);
 

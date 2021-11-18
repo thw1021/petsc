@@ -1,7 +1,8 @@
 #include "../../interface/sycldevice.hpp"
 #include <CL/sycl.hpp>
 
-namespace Petsc {
+namespace Petsc 
+{
 
 class SyclContext
 {

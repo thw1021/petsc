@@ -22,7 +22,7 @@ static std::jmp_buf MPISyclAwareJumpBuffer;
 static bool         MPISyclAwareJumpBufferSet;
 
 // internal "impls" class for SyclDevice. Each instance represents a single sycl device
-class SyclDevice::SyclDeviceInternal
+class PETSC_NODISCARD SyclDevice::SyclDeviceInternal
 {
   const int        _id; // -1 for the host device; 0 and up for gpu devices
   bool             _devInitialized;
@@ -38,9 +38,9 @@ public:
     }
   }
   int  id() const {return _id;}
-  bool initialized() {return _devInitialized;}
+  bool initialized() const {return _devInitialized;}
 
-  PetscErrorCode initialize() noexcept
+  PETSC_NODISCARD PetscErrorCode initialize() noexcept
   {
     PetscFunctionBegin;
     if (_devInitialized) PetscFunctionReturn(0);
@@ -55,7 +55,7 @@ public:
     PetscFunctionReturn(0);
   }
 
-  PetscErrorCode view(PetscViewer viewer) const noexcept
+  PETSC_NODISCARD PetscErrorCode view(PetscViewer viewer) const noexcept
   {
     PetscErrorCode ierr;
     MPI_Comm       comm;
@@ -127,7 +127,7 @@ PetscErrorCode SyclDevice::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, 
 
   ierr = PetscOptionsBegin(comm,nullptr,"PetscDevice SYCL Options","Sys");CHKERRQ(ierr);
   ierr = PetscOptionsEList("-device_enable_sycl","How (or whether) to initialize a device","SyclDevice::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initType],&initType,nullptr);CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-device_select_sycl","Which sycl device to use. Pass -2 for host, PETSC_DECIDE (-1) to have PETSc decide, 0 and up for GPUs","PetscDeviceCreate",id,&id,nullptr,-2,std::numeric_limits<int>::max());CHKERRQ(ierr);
+  ierr = PetscOptionsRangeInt("-device_select_sycl","Which sycl device to use. Pass -2 for host, PETSC_DECIDE (-1) to have PETSc decide, 0 and up for GPUs","PetscDeviceCreate",id,&id,nullptr,-2,std::numeric_limits<decltype(ngpus)>::max());CHKERRQ(ierr);
   ierr = PetscOptionsBool("-device_view_sycl","Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -152,8 +152,8 @@ PetscErrorCode SyclDevice::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, 
 
   if (id == -2) id = PETSC_SYCL_DEVICE_HOST; // user passed in '-device_select_sycl -2'. We transform it into canonical form
 
-  _defaultDevice = static_cast<int>(id);
-  if (initType == PETSC_DEVICE_INIT_EAGER && id == PETSC_SYCL_DEVICE_NONE) SETERRQ(comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize sycl devices as you disabled them by -device_enable_sycl none");
+  _defaultDevice = static_cast<decltype(_defaultDevice)>(id);
+  if (PetscUnlikely(initType == PETSC_DEVICE_INIT_EAGER && id == PETSC_SYCL_DEVICE_NONE)) SETERRQ(comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize sycl devices as you disabled them by -device_enable_sycl none");
 
   if (initType == PETSC_DEVICE_INIT_EAGER) {
     _devices[_defaultDevice] = new SyclDeviceInternal(_defaultDevice);
@@ -187,7 +187,7 @@ PetscErrorCode SyclDevice::getDevice(PetscDevice device, PetscInt id) const noex
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (_defaultDevice == PETSC_SYCL_DEVICE_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a SYCL PetscDevice when it has been disabled");
+  if (PetscUnlikely(_defaultDevice == PETSC_SYCL_DEVICE_NONE)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a SYCL PetscDevice when it has been disabled");
   if (id == PETSC_DECIDE) id = _defaultDevice;
   if ((id < PETSC_SYCL_DEVICE_HOST) || (id-PETSC_SYCL_DEVICE_HOST >= PETSC_DEVICE_MAX_DEVICES)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %" PetscInt_FMT,_devices_array.size(),id);
   if (_devices[id]) {
@@ -217,4 +217,4 @@ PetscErrorCode SyclDevice::viewDevice(PetscDevice device, PetscViewer viewer) no
   PetscFunctionReturn(0);
 }
 
-}
+} // namespace Petsc
