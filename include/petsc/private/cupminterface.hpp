@@ -103,7 +103,7 @@ struct CUPMInterfaceBase
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
   {
-    switch (type) {
+    switch (T) {
     case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
     }
@@ -111,7 +111,7 @@ struct CUPMInterfaceBase
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
   {
-    switch (type) {
+    switch (T) {
     case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
     }
@@ -184,7 +184,6 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   PETSC_CUPM_ALIAS_FUNCTION(SetDevice);
   PETSC_CUPM_ALIAS_FUNCTION(GetDeviceFlags);
   PETSC_CUPM_ALIAS_FUNCTION(SetDeviceFlags);
-  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
@@ -219,9 +218,8 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   // interface here, and it's not worth it to write another macro just for this specific
   // use-case
   template <class FunctionT, typename... KernelArgsT>
-  PETSC_NODISCARD static PETSC_CONSTEXPR_14 cudaError_t cupmLaunchKernel(const FunctionT* func, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
+  PETSC_NODISCARD static cudaError_t cupmLaunchKernel(const FunctionT *func, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
   {
-    // local variables in constexpr functions since C++14
     void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(kernelArgs)...};
     return cudaLaunchKernel(func,gridDim,blockDim,args,sharedMem,stream);
   }
