@@ -214,11 +214,11 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   // specific wrapper for device launch function to mimic the HIP API since it has the superior
   // interface here, and it's not worth it to write another macro just for this specific
   // use-case
-  template <class FunctionT, typename... KernelArgsT>
-  PETSC_NODISCARD static cudaError_t cupmLaunchKernel(const FunctionT *func, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
+  template <typename FunctionT, typename... KernelArgsT>
+  PETSC_NODISCARD static cudaError_t cupmLaunchKernel(FunctionT&& func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
   {
     void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(kernelArgs)...};
-    return cudaLaunchKernel(func,gridDim,blockDim,args,sharedMem,stream);
+    return cudaLaunchKernel(std::forward<FunctionT>(func),gridDim,blockDim,args,sharedMem,stream);
   }
 };
 #undef PETSC_CUPM_PREFIX

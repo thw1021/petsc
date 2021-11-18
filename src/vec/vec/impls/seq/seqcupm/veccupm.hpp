@@ -17,7 +17,10 @@
 #if PetscDefined(HAVE_CUPM)
 #  include <thrust/device_ptr.h>
 #  include <thrust/transform.h>
+#  include <thrust/transform_reduce.h>
+#  include <thrust/reduce.h>
 #  include <thrust/functional.h>
+#  include <thrust/iterator/counting_iterator.h>
 #endif
 
 // TODO
@@ -38,6 +41,8 @@
 // - remove the cuda and hip separate versions
 // - remove bindtocpu?
 // - do rocblas instead of hipblas
+// - reomve this define and use the right header (i.e. clean up the headers first)
+#define PetscNvShmemFree(ptr) 0
 
 namespace Petsc
 {
@@ -889,7 +894,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
   } else {
     const auto array = &VecSeqCast_(w)->array;
     if (read) {
-      ierr = VecRestoreArrayRead(v,const_cast<const PetscScalar**>(array));CHKERRQ(ierr);
+      ierr = VecRestoreArrayRead(v,const_cast<const decltype(array)>(array));CHKERRQ(ierr);
     } else {
       ierr = VecRestoreArray(v,array);CHKERRQ(ierr);
     }
@@ -921,12 +926,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getarray_async(Vec v, Petsc
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-  if (access == MemoryAccess::WRITE) {
+  if PETSC_CONSTEXPR_17 (access == MemoryAccess::WRITE) {
     *a = hostMem ? HostArrayWrite(dctx,v) : DeviceArrayWrite(dctx,v);
   } else {
     // READ or READ_WRITE
     *a = hostMem ? HostArrayRead(dctx,v)  : DeviceArrayRead(dctx,v);
-    if (access == MemoryAccess::READ_WRITE) {
+    if PETSC_CONSTEXPR_17 (access == MemoryAccess::READ_WRITE) {
       v->offloadmask = hostMem ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;
     }
   }
@@ -938,13 +943,13 @@ template <CUPMDeviceType T>
 template <PetscMemType mtype, detail::MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorearray_async(Vec v, PetscScalar **a))
 {
-  constexpr auto host = PetscMemTypeHost(mtype);
-
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  // READ or READ_WRITE
-  if (access != MemoryAccess::READ) v->offloadmask = host ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;
+  if PETSC_CONSTEXPR_17 (access != MemoryAccess::READ) {
+    // WRITE or READ_WRITE
+    v->offloadmask = PetscMemTypeHost(mtype) ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;
+  }
   *a = nullptr;
   PetscFunctionReturn(0);
 }
@@ -988,14 +993,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getarrayandmemtype_async(Ve
 
 // v->ops->restorearrayandmemtype
 template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorearrayandmemtype_async(Vec v, PetscScalar**))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorearrayandmemtype_async(Vec v, PetscScalar **a))
 {
   PetscFunctionBegin;
-  if (v->offloadmask & PETSC_OFFLOAD_GPU) {
-    v->offloadmask = PETSC_OFFLOAD_GPU;
-  } else {
-    v->offloadmask = PETSC_OFFLOAD_CPU;
-  }
+  *a             = nullptr;
+  v->offloadmask = (v->offloadmask & PETSC_OFFLOAD_GPU) ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
   PetscFunctionReturn(0);
 }
 
