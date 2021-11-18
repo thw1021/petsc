@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.version          = '6.2.0'
+    self.version          = '6.2.1'
     self.versionname      = 'STRUMPACK_VERSION_MAJOR.STRUMPACK_VERSION_MINOR.STRUMPACK_VERSION_PATCH'
     self.versioninclude   = 'StrumpackConfig.hpp'
     self.gitcommit        = 'v'+self.version
@@ -34,8 +34,9 @@ class Configure(config.package.CMakePackage):
     self.mpi            = framework.require('config.packages.MPI',self)
     self.openmp         = framework.require('config.packages.openmp',self)
     self.cuda           = framework.require('config.packages.cuda',self)
+    self.hip            = framework.require('config.packages.hip',self)
     self.deps           = [self.mpi,self.blasLapack,self.scalapack,self.metis]
-    self.odeps          = [self.parmetis,self.ptscotch,self.openmp,self.cuda]
+    self.odeps          = [self.parmetis,self.ptscotch,self.openmp,self.cuda,self.hip]
     return
 
   def formCMakeConfigureArgs(self):
@@ -89,9 +90,10 @@ class Configure(config.package.CMakePackage):
         raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
       args.append('-DCUDA_ARCH='+generation)
 
-    # elif self.hip.found:
-    #   args.append('-DSTRUMPACK_USE_HIP=ON')
-    #   self.system = 'HIP'
+    elif self.hip.found:
+      args.append('-DSTRUMPACK_USE_CUDA=OFF')
+      args.append('-DSTRUMPACK_USE_HIP=ON')
+      self.system = 'HIP'
 
     # TODO other dependencies: HIP, SLATE, ZFP, ButterflyPACK, CombBLAS?
 
