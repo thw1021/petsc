@@ -25,7 +25,7 @@ namespace Petsc
 namespace util
 {
 
-#if __cplusplus >= 201402L // c++14
+#if __cplusplus >= 201402L // C++14
 using std::conditional_t;
 using std::remove_const_t;
 using std::add_const_t;
@@ -34,13 +34,21 @@ using std::remove_pointer_t;
 using std::add_pointer_t;
 using std::index_sequence;
 using std::make_index_sequence;
-#else // c++14
+using std::decay_t;
+#if __cplusplus >= 201703L
+using std::void_t;
+#else // C++17
+template <class...> using void_t = void;
+#endif // C++17
+#else // C++14
 template <bool B, class T, class F> using conditional_t = typename std::conditional<B,T,F>::type;
 template <class T> using remove_const_t    = typename std::remove_const<T>::type;
 template <class T> using add_const_t       = typename std::add_const<T>::type;
 template <class T> using underlying_type_t = typename std::underlying_type<T>::type;
 template <class T> using remove_pointer_t  = typename std::remove_pointer<T>::type;
 template <class T> using add_pointer_t     = typename std::add_pointer<T>::type;
+template <class T> using decay_t           = typename std::decay<T>::type;
+template <class...> using void_t = void;
 
 // index sequence only
 template <std::size_t... idx> struct index_sequence
@@ -95,6 +103,27 @@ PETSC_STATIC_INLINE constexpr underlying_type_t<T> integral_value(T value) noexc
   static_assert(std::is_enum<T>::value,"");
   return static_cast<underlying_type_t<T>>(value);
 }
+
+namespace detail
+{
+
+struct can_call_test
+{
+  template<typename F, typename... A>
+  static decltype(std::declval<F>()(std::declval<A>()...),std::true_type()) f(int);
+
+  template<typename F, typename... A> static std::false_type f(...);
+};
+
+} // namespace detail
+
+template <typename F, typename... A>
+struct can_call : decltype(detail::can_call_test::f<F,A...>(0)) { };
+
+template <typename F, typename... A> struct can_call <F(A...)> : can_call <F,A...> { };
+
+template <typename... A, typename F>
+constexpr can_call<F,A...> is_callable_with(F&&) { return can_call<F(A...)>{}; }
 
 } // namespace util
 
@@ -162,16 +191,27 @@ PETSC_STATIC_INLINE constexpr util::add_const_t<T>*& PetscAddConstCast(T*& objec
 // }
 //
 // for you. You may then call bar exactly as you would foo.
-#define PETSC_ALIAS_FUNCTION_(alias,orig)                               \
-  template <typename... Args>                                           \
-  PETSC_NODISCARD auto alias(Args&&... args) noexcept(                  \
-    noexcept(orig(std::forward<Args>(args)...))                         \
-  ) -> decltype(orig(std::forward<Args>(args)...))                      \
+#define PETSC_ALIAS_FUNCTION_(alias,orig,dispatch)                      \
+  template <typename... Args> auto dispatch(int,Args&&... args)         \
+    noexcept(noexcept(orig(std::forward<Args>(args)...)))               \
+    -> decltype(orig(std::forward<Args>(args)...))                      \
   {                                                                     \
     return orig(std::forward<Args>(args)...);                           \
+  };                                                                    \
+  template <typename... Args> int dispatch(char,Args&&... args)         \
+  {                                                                     \
+    static_assert(util::is_callable_with<Args...>(orig),PetscStringize(orig) "() is not callable with the provided arguments"); \
+    return 1;                                                           \
+  };                                                                    \
+  template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args) \
+    noexcept(noexcept(dispatch(0,std::forward<Args>(args)...)))         \
+    -> decltype(dispatch(0,std::forward<Args>(args)...))                \
+  {                                                                     \
+    return dispatch(0,std::forward<Args>(args)...);                     \
   }
 
-#define PETSC_ALIAS_FUNCTION(alias,original) PETSC_ALIAS_FUNCTION_(alias,original)
+#define PETSC_ALIAS_FUNCTION(alias,original)                            \
+  PETSC_ALIAS_FUNCTION_(alias,original,PETSC_CONCAT(original,_dispatch_petsc_wrapper_))
 #else
 #define PETSC_ALIAS_FUNCTION(alias,original)                    \
   static_assert(0,"PETSC_ALIAS_FUNCTION() requires C++11")
