@@ -1655,6 +1655,7 @@ PetscErrorCode PetscFEIntegrateBdJacobian(PetscDS ds, PetscWeakForm wf, PetscFor
 + ds           - The PetscDS specifying the discretizations and continuum functions
 . jtype        - The type of matrix pointwise functions that should be used
 . key          - The (label+value, fieldI*Nf + fieldJ) being integrated
+. s            - The side of the cell being integrated, 0 for negative and 1 for positive
 . Ne           - The number of elements in the chunk
 . fgeom        - The face geometry for each cell in the chunk
 . coefficients - The array of FEM basis coefficients for the elements for the Jacobian evaluation point
@@ -1680,7 +1681,7 @@ $                      + \nabla\psi^{fc}_f(q) \cdot g3_{fc,gc,df,dg}(u, \nabla u
 
 .seealso: PetscFEIntegrateJacobian(), PetscFEIntegrateResidual()
 @*/
-PetscErrorCode PetscFEIntegrateHybridJacobian(PetscDS ds, PetscFEJacobianType jtype, PetscFormKey key, PetscInt Ne, PetscFEGeom *fgeom,
+PetscErrorCode PetscFEIntegrateHybridJacobian(PetscDS ds, PetscFEJacobianType jtype, PetscFormKey key, PetscInt s, PetscInt Ne, PetscFEGeom *fgeom,
                                               const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscReal u_tshift, PetscScalar elemMat[])
 {
   PetscFE        fe;
@@ -1691,7 +1692,7 @@ PetscErrorCode PetscFEIntegrateHybridJacobian(PetscDS ds, PetscFEJacobianType jt
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   ierr = PetscDSGetNumFields(ds, &Nf);CHKERRQ(ierr);
   ierr = PetscDSGetDiscretization(ds, key.field / Nf, (PetscObject *) &fe);CHKERRQ(ierr);
-  if (fe->ops->integratehybridjacobian) {ierr = (*fe->ops->integratehybridjacobian)(ds, jtype, key, Ne, fgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, u_tshift, elemMat);CHKERRQ(ierr);}
+  if (fe->ops->integratehybridjacobian) {ierr = (*fe->ops->integratehybridjacobian)(ds, jtype, key, s, Ne, fgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, u_tshift, elemMat);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -2301,7 +2302,7 @@ PetscErrorCode PetscFEUpdateElementMat_Internal(PetscFE feI, PetscFE feJ, PetscI
   return(0);
 }
 
-PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool isHybridI, PetscFE feJ, PetscBool isHybridJ, PetscInt r, PetscInt q, PetscTabulation TI, PetscScalar tmpBasisI[], PetscScalar tmpBasisDerI[], PetscTabulation TJ, PetscScalar tmpBasisJ[], PetscScalar tmpBasisDerJ[], PetscFEGeom *fegeom, const PetscScalar g0[], const PetscScalar g1[], const PetscScalar g2[], const PetscScalar g3[], PetscInt eOffset, PetscInt totDim, PetscInt offsetI, PetscInt offsetJ, PetscScalar elemMat[])
+PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool isHybridI, PetscFE feJ, PetscBool isHybridJ, PetscInt r, PetscInt s, PetscInt q, PetscTabulation TI, PetscScalar tmpBasisI[], PetscScalar tmpBasisDerI[], PetscTabulation TJ, PetscScalar tmpBasisJ[], PetscScalar tmpBasisDerJ[], PetscFEGeom *fegeom, const PetscScalar g0[], const PetscScalar g1[], const PetscScalar g2[], const PetscScalar g3[], PetscInt eOffset, PetscInt totDim, PetscInt offsetI, PetscInt offsetJ, PetscScalar elemMat[])
 {
   const PetscInt   dE        = TI->cdim;
   const PetscInt   NqI       = TI->Np;
@@ -2314,9 +2315,7 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
   const PetscInt   NcJ       = TJ->Nc;
   const PetscReal *basisJ    = &TJ->T[0][(r*NqJ+q)*NbJ*NcJ];
   const PetscReal *basisDerJ = &TJ->T[1][(r*NqJ+q)*NbJ*NcJ*dE];
-  const PetscInt   Ns = isHybridI ? 1 : 2;
-  const PetscInt   Nt = isHybridJ ? 1 : 2;
-  PetscInt         f, fc, g, gc, df, dg, s, t;
+  PetscInt         f, fc, g, gc, df, dg;
   PetscErrorCode   ierr;
 
   for (f = 0; f < NbI; ++f) {
@@ -2339,28 +2338,22 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
   }
   ierr = PetscFEPushforward(feJ, fegeom, NbJ, tmpBasisJ);CHKERRQ(ierr);
   ierr = PetscFEPushforwardGradient(feJ, fegeom, NbJ, tmpBasisDerJ);CHKERRQ(ierr);
-  for (s = 0; s < Ns; ++s) {
-    for (f = 0; f < NbI; ++f) {
-      for (fc = 0; fc < NcI; ++fc) {
-        const PetscInt sc   = NcI*s+fc;  /* components from each side of the surface */
-        const PetscInt fidx = f*NcI+fc;  /* Test function basis index */
-        const PetscInt i    = offsetI+NbI*s+f; /* Element matrix row */
-        for (t = 0; t < Nt; ++t) {
-          for (g = 0; g < NbJ; ++g) {
-            for (gc = 0; gc < NcJ; ++gc) {
-              const PetscInt tc   = NcJ*t+gc;  /* components from each side of the surface */
-              const PetscInt gidx = g*NcJ+gc;  /* Trial function basis index */
-              const PetscInt j    = offsetJ+NbJ*t+g; /* Element matrix column */
-              const PetscInt fOff = eOffset+i*totDim+j;
+  for (f = 0; f < NbI; ++f) {
+    for (fc = 0; fc < NcI; ++fc) {
+      const PetscInt fidx = f*NcI+fc;        /* Test function basis index */
+      const PetscInt i    = offsetI+NbI*s+f; /* Element matrix row */
+      for (g = 0; g < NbJ; ++g) {
+        for (gc = 0; gc < NcJ; ++gc) {
+          const PetscInt gidx = g*NcJ+gc;        /* Trial function basis index */
+          const PetscInt j    = offsetJ+NbJ*s+g; /* Element matrix column */
+          const PetscInt fOff = eOffset+i*totDim+j;
 
-              elemMat[fOff] += tmpBasisI[fidx]*g0[sc*NcJ*Nt+tc]*tmpBasisJ[gidx];
-              for (df = 0; df < dE; ++df) {
-                elemMat[fOff] += tmpBasisI[fidx]*g1[(sc*NcJ*Nt+tc)*dE+df]*tmpBasisDerJ[gidx*dE+df];
-                elemMat[fOff] += tmpBasisDerI[fidx*dE+df]*g2[(sc*NcJ*Nt+tc)*dE+df]*tmpBasisJ[gidx];
-                for (dg = 0; dg < dE; ++dg) {
-                  elemMat[fOff] += tmpBasisDerI[fidx*dE+df]*g3[((sc*NcJ*Nt+tc)*dE+df)*dE+dg]*tmpBasisDerJ[gidx*dE+dg];
-                }
-              }
+          elemMat[fOff] += tmpBasisI[fidx]*g0[fc*NcJ+gc]*tmpBasisJ[gidx];
+          for (df = 0; df < dE; ++df) {
+            elemMat[fOff] += tmpBasisI[fidx]*g1[(fc*NcJ+gc)*dE+df]*tmpBasisDerJ[gidx*dE+df];
+            elemMat[fOff] += tmpBasisDerI[fidx*dE+df]*g2[(fc*NcJ+gc)*dE+df]*tmpBasisJ[gidx];
+            for (dg = 0; dg < dE; ++dg) {
+              elemMat[fOff] += tmpBasisDerI[fidx*dE+df]*g3[((fc*NcJ+gc)*dE+df)*dE+dg]*tmpBasisDerJ[gidx*dE+dg];
             }
           }
         }
