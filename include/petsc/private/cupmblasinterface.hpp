@@ -146,8 +146,10 @@ struct CUPMBlasInterface<CUPMDeviceType::CUDA>
   PETSC_CUPMBLAS_BASE_CLASS_HEADER(CUPMDeviceType::CUDA);
 
   // typedefs
-  using cupmBlasHandle_t = cublasHandle_t;
-  using cupmBlasError_t  = cublasStatus_t;
+  using cupmBlasHandle_t   = cublasHandle_t;
+  using cupmBlasError_t    = cublasStatus_t;
+  using cupmSolverHandle_t = cusolverDnHandle_t;
+  using cupmSolverError_t  = cusolverStatus_t;
 
   // values
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE(_STATUS_SUCCESS);
@@ -236,8 +238,10 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CU
   PETSC_CUPMBLAS_BASE_CLASS_HEADER(CUPMDeviceType::HIP);
 
   // typedefs
-  using cupmBlasHandle_t = hipblasHandle_t;
-  using cupmBlasError_t  = hipblasStatus_t;
+  using cupmBlasHandle_t   = hipblasHandle_t;
+  using cupmBlasError_t    = hipblasStatus_t;
+  using cupmSolverHandle_t = hipsolverHandle_t;
+  using cupmSolverError_t  = hipsolverStatus_t;
 
   // values
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE(_STATUS_SUCCESS);
@@ -319,6 +323,8 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CU
   /* types */                                                           \
   using typename base_name::cupmBlasHandle_t;                           \
   using typename base_name::cupmBlasError_t;                            \
+  using typename base_name::cupmSolverHandle_t;                         \
+  using typename base_name::cupmSolverError_t;                          \
   /* values */                                                          \
   using base_name::CUPMBLAS_STATUS_SUCCESS;                             \
   using base_name::CUPMBLAS_STATUS_NOT_INITIALIZED;                     \
