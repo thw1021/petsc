@@ -218,7 +218,7 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   PETSC_NODISCARD static cudaError_t cupmLaunchKernel(FunctionT&& func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
   {
     void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(kernelArgs)...};
-    return cudaLaunchKernel(std::forward<FunctionT>(func),gridDim,blockDim,args,sharedMem,stream);
+    return cudaLaunchKernel(&std::forward<FunctionT>(func),gridDim,blockDim,args,sharedMem,stream);
   }
 };
 #undef PETSC_CUPM_PREFIX
