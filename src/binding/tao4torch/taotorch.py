@@ -30,16 +30,19 @@ class TAOtorch(torch.optim.Optimizer):
         if adaptive not in ['rmsgrad', 'amsgrad', 'norm', None]:
             raise ValueError("Invalid adaptive LR method: {}".format(adaptive))
         defaults = dict(
-            paramvec=None,
             lr=lr,
             rho=rho,
             eps=eps,
-            tao=None,
             adaptive=adaptive,
             dir_sq_avg=None,
             dir_sq_avg_max=None)
         super(TAOtorch, self).__init__(params, defaults)
-        self.defaults['tao'] = self.getTAO()
+        # these two vectors below share memory!!
+        self.flatpar = None   # torch "flat" parameter tensor
+        self.paramvec = None  # TAO solution vector
+        # intialize the TAO solver
+        self.tao = None
+        self.tao = self.getTAO()
 
     def _getParams(self, zero=False, grad=False):
         flatpar = []
@@ -59,6 +62,7 @@ class TAOtorch(torch.optim.Optimizer):
                             flatpar[-1][:] = 0.0
         return torch.cat(flatpar, 0)
 
+    @torch.no_grad()
     def _setParams(self, flatpar):
         begin = 0
         for group in self.param_groups:
@@ -98,21 +102,24 @@ class TAOtorch(torch.optim.Optimizer):
     def _evalObjGrad(self, tao, x, G):
         # assume that loss.backward() has already been called before tao.step()
         # create a flattened parameter tensor that shares memory with the TAO gradient vector
-        G.buildTensorInfo(self.defaults['paramvec'])
+        G.attachDLPackInfo(vec=self.paramvec)
         flatgrad = torch.utils.dlpack.from_dlpack(G.toDLPack())
         # copy NN gradients into the flattened tensor
-        flatgrad.copy_(self.getParams(grad=True))
+        flatgrad.copy_(self._getParams(grad=True))
         # scale the gradient with RMSgrad/AMSGrad adaptive learning rate
         lr = self._computeAdaptiveLR(flatgrad)
         flatgrad.mul_(lr)
         return flatgrad.norm(2)
 
     def _configureTAO(self, tao):
-        if self.defaults['paramvec'] is not None:
-            tao.setInitial(self.defaults['paramvec'])
+        if self.paramvec is not None:
+            tao.setInitial(self.paramvec)
+            if self.flatpar is None:
+                self.flatpar = torch.utils.dlpack.from_dlpack(self.paramvec.toDLPack())
         else:
-            self.defaults['paramvec'] = PETSc.Vec().createWithDLPack(torch.utils.dlpack.to_dlpack(self._getParams()))
-            tao.setInitial(self.defaults['paramvec'])
+            self.flatpar = self._getParams()
+            self.paramvec = PETSc.Vec().createWithDLPack(torch.utils.dlpack.to_dlpack(self.flatpar))
+            tao.setInitial(self.paramvec)
         tao.setObjectiveGradient(self._evalObjGrad)
         tao.setMaximumIterations(1)
         tao.setTolerances(gatol=0.0, gttol=0.0, grtol=0.0)
@@ -121,29 +128,28 @@ class TAOtorch(torch.optim.Optimizer):
         return tao
 
     def getTAO(self):
-        if self.defaults['tao'] is None:
+        if self.tao is None:
             tao = PETSc.TAO().create()
             tao.setOptionsPrefix('torch_')
             tao.setType('bncg')
             tao.setBNCGType(PETSc.TAOBNCGType.GD)
             tao = self._configureTAO(tao)
-            self.defaults['tao'] = tao
-        return self.defaults['tao']
+            self.tao = tao
+        return self.tao
 
     def setTAO(self, tao):
         tao = self._configureTAO(tao)
-        self.defaults['tao'].destroy()
-        self.defaults['tao'] = tao
+        self.tao.destroy()
+        self.tao = tao
 
     def step(self, closure=None):
-        # first create a flattened parameter tensor that shares memory with the TAO solution
-        flatpar = torch.utils.dlpack.from_dlpack(self.defaults['paramvec'].toDLPack())
         # get the NN parameters and write into the flattened tensor
-        flatpar.copy_(self._getParams())
-        # trigger the tao solution (for 1 iteration) and then write it to NN parameters
-        self.defaults['tao'].solve()
-        self._setParams(flatpar)
+        self.flatpar.copy_(self._getParams())
+        # trigger the tao solution (for 1 iteration)
+        self.tao.solve()
+        # write the updated solution to NN parameters
+        self._setParams(self.flatpar)
 
     def destroy(self):
-        self.defaults['tao'].destroy()
-        self.defaults['paramvec'].destroy()
+        self.tao.destroy()
+        self.paramvec.destroy()
