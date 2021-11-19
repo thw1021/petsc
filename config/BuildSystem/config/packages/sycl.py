@@ -9,6 +9,7 @@ class Configure(config.package.Package):
     self.versioninclude  = 'CL/sycl/version.hpp'
     self.requiresversion = 2200
     # CL/sycl.h is dpcpp.  Other SYCL impls may use SYCL/sycl.hpp -- defer
+    self.doNotCheckIncludes = 1
     self.includes         = ['CL/sycl.hpp']
     self.includedir       = 'include/sycl'
     self.functionsCxx     = [1,'namespace sycl = cl;','sycl::device::get_devices()']

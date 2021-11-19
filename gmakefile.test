@@ -110,7 +110,7 @@ PETSC_COMPILE.c = $(call quiet,$(cc_name)) -c $(PCC_FLAGS) $($(CLANGUAGE)FLAGS) 
 PETSC_COMPILE.cxx = $(call quiet,CXX) -c $(CXX_FLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(CXX_DEPFLAGS)
 PETSC_COMPILE.cu = $(call quiet,CUDAC) -c $(MPICXX_INCLUDES) $(CUDAC_FLAGS) $(CUFLAGS) --compiler-options="${PETSC_CCPPFLAGS} $(CUDACPPFLAGS) $(CUDA_CXXFLAGS)"
 PETSC_COMPILE.hip.cpp = $(call quiet,HIPC)   -c $(MPICXX_INCLUDES) $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPFLAGS) $(HIPPPFLAGS) $(HIPOPTFLAGS) $(HIPC_DEPFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(HIP_DEPFLAGS)
-PETSC_COMPILE.sycl.cpp = $(call quiet,SYCLC) -c $(MPICXX_INCLUDES) $(SYCLC_FLAGS) $(SYCLPP_FLAGS) $(SYCLFLAGS) $(SYCLPPFLAGS) $(SYCLOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(SYCL_DEPFLAGS)
+PETSC_COMPILE.sycl.cxx = $(call quiet,SYCLC) -c $(MPICXX_INCLUDES) $(SYCLC_FLAGS) $(SYCLPP_FLAGS) $(SYCLFLAGS) $(SYCLPPFLAGS) $(SYCLOPTFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(SYCL_DEPFLAGS)
 PETSC_GENDEPS.cu = $(call quiet,CUDAC,.dep) --generate-dependencies --output-directory=$(@D) $(MPICXX_INCLUDES) $(CUDAC_FLAGS) $(CUFLAGS)  --compiler-options="${PETSC_CCPPFLAGS} $(CUDA_CXXFLAGS)"
 PETSC_COMPILE.F = $(call quiet,FC) -c $(FC_FLAGS) $(FFLAGS) $(FCPPFLAGS) $(FC_DEPFLAGS)
 
@@ -122,7 +122,7 @@ else ifneq ($(KOKKOS_USE_HIP_COMPILER),)
   PETSC_COMPILE.kokkos.cxx = $(PETSC_COMPILE.hip.cpp)
   PETSC_LINK.kokkos.cxx = $(HIPC) $(HIPFLAGS) $(CXXFLAGS) $(PETSC_CCPPFLAGS) $(CPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 else ifneq ($(KOKKOS_USE_SYCL_COMPILER),)
-  PETSC_COMPILE.kokkos.cxx = $(PETSC_COMPILE.sycl.cpp) $(KOKKOS_CXXFLAGS)
+  PETSC_COMPILE.kokkos.cxx = $(PETSC_COMPILE.sycl.cxx)
   PETSC_LINK.kokkos.cxx = $(SYCLC) $(SYCLFLAGS) $(CXXFLAGS) $(PETSC_CCPPFLAGS) $(CPPFLAGS) $(LDFLAGS) $(MPICXX_INCLUDES) $(MPICXX_LIBS)
 else
   PETSC_COMPILE.kokkos.cxx = $(PETSC_COMPILE.cxx)
@@ -135,7 +135,7 @@ else
   PETSC_COMPILE.raja.cxx = ${CXX} -o $*.o -c ${CXX_FLAGS} ${CXXFLAGS} ${CXXCPPFLAGS}
 endif
 
-testlangs := c cu cxx F F90 kokkos.cxx hip.cpp sycl.cpp raja.cxx
+testlangs := c cu cxx F F90 kokkos.cxx hip.cpp sycl.cxx raja.cxx
 $(foreach lang, $(testlangs), $(eval \
   testexe.$(lang) = $(foreach pkg, $(pkgs), $(testsrcs-$(pkg).$(lang):%.$(lang)=$(TESTDIR)/%))))
 concattestlang = $(foreach lang, $(2), $(testsrcs-$(1).$(lang):%.$(lang)=$(TESTDIR)/%.o))
@@ -158,6 +158,9 @@ $(TESTDIR)/%.o : $(EXAMPLESDIR)/%.c | $$(@D)/.DIR
 
 $(TESTDIR)/%.o : $(EXAMPLESDIR)/%.kokkos.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.kokkos.cxx) $(abspath $<) -o $@
+
+$(TESTDIR)/%.o : $(EXAMPLESDIR)/%.sycl.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
 
 $(TESTDIR)/%.o : $(EXAMPLESDIR)/%.raja.cxx | $$(@D)/.DIR
 	$(PETSC_COMPILE.raja.cxx) $(abspath $<) -o $@

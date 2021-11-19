@@ -40,7 +40,7 @@ class Compiler(config.compile.processor.Processor):
     '''Return the object file name for 'source'; None if 'source' is a header file'''
     import os
 
-    # SYCL files are foo.sycl.cpp
+    # SYCL files are foo.sycl.cxx
     base1, ext1 = os.path.splitext(source)
     base2, ext2 = os.path.splitext(base1)
     if ext1 in ['.h', '.hh', '.hpp']:

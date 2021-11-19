@@ -81,7 +81,7 @@ endif
 ifneq ($(HIPC),)
 langs += hip.cpp
 endif
-ifneq ($(SYCLCPP),)
+ifneq ($(SYCLC),)
 langs += sycl.cxx
 endif
 ifneq ($(KOKKOS_LIB),)
@@ -194,12 +194,12 @@ $(OBJDIR)/%.o : src/%.cxx | $$(@D)/.DIR
 $(OBJDIR)/%.o : src/%.hip.cpp | $$(@D)/.DIR
 	$(PETSC_COMPILE.hip.cpp) $(abspath $<) -o $@
 
-$(OBJDIR)/%.o : src/%.sycl.cxx | $$(@D)/.DIR
-	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
-
 $(OBJDIR)/%.o : src/%.cu | $$(@D)/.DIR
 	$(PETSC_COMPILE.cu) $(abspath $<) -o $@ # Compile first so that if there is an error, it comes from a normal compile
 	@$(PETSC_GENDEPS.cu) $(abspath $<) -o $(@:%.o=%.d) # Generate the dependencies for later
+
+$(OBJDIR)/%.o : src/%.sycl.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
 
 FCMOD = cd
 $(OBJDIR)/%.o : src/%.F | $$(@D)/.DIR
