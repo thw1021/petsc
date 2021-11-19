@@ -181,6 +181,9 @@ $(call soname_function,%) : $(call libname_function,%)
 
 .PRECIOUS: $(call soname_function,%)
 
+$(OBJDIR)/%.o : src/%.sycl.cxx | $$(@D)/.DIR
+	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
+
 $(OBJDIR)/%.o : src/%.c | $$(@D)/.DIR
 	$(PETSC_COMPILE.c) $(abspath $<) -o $@
 
@@ -197,9 +200,6 @@ $(OBJDIR)/%.o : src/%.hip.cpp | $$(@D)/.DIR
 $(OBJDIR)/%.o : src/%.cu | $$(@D)/.DIR
 	$(PETSC_COMPILE.cu) $(abspath $<) -o $@ # Compile first so that if there is an error, it comes from a normal compile
 	@$(PETSC_GENDEPS.cu) $(abspath $<) -o $(@:%.o=%.d) # Generate the dependencies for later
-
-$(OBJDIR)/%.o : src/%.sycl.cxx | $$(@D)/.DIR
-	$(PETSC_COMPILE.sycl.cxx) $(abspath $<) -o $@
 
 FCMOD = cd
 $(OBJDIR)/%.o : src/%.F | $$(@D)/.DIR

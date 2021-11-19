@@ -1,11 +1,11 @@
-#requiresdefine 'PETSC_HAVE_SYCL'
+#requirespackage 'PETSC_HAVE_SYCL'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCECXX = sycldevice.sycl.cxx syclcontext.sycl.cxx
+SOURCESYCL = sycldevice.sycl.cxx syclcontext.sycl.cxx
 SOURCEF	  =
 SOURCEH   =
 MANSEC	  = Sys
