@@ -23,6 +23,8 @@ PetscErrorCode TaoFinalizePackage(void)
 const char *const TaoADMMRegularizerTypes[] = {"REGULARIZER_USER","REGULARIZER_SOFT_THRESH","TaoADMMRegularizerType","TAO_ADMM_",NULL};
 const char *const TaoADMMUpdateTypes[]      = {"UPDATE_BASIC","UPDATE_ADAPTIVE","UPDATE_ADAPTIVE_RELAXED","TaoADMMUpdateType","TAO_ADMM_",NULL};
 const char *const TaoALMMTypes[]            = {"CLASSIC","PHR","TaoALMMType","TAO_ALMM_",NULL};
+const char *const TaoBNCGTypes[]            = {"GD","PCGD","HS","FR","PRP","PRP_PLUS","DY","HZ","DK","KD","SSML_BFGS","SSML_DFP","SSML_BRDN","TaoBNCGType","TAO_BNCG_",NULL};
+
 /*@C
   TaoInitializePackage - This function sets up PETSc to use the Tao
   package.  When using static or shared libraries, this function is called from the

@@ -77,6 +77,9 @@ cdef extern from "petsc.h":
     struct _p_TAO "_p_Tao"
     ctypedef _p_TAO* PetscTAO "Tao"
 
+    struct _p_TAOLineSearch "_p_TaoLineSearch"
+    ctypedef _p_TAOLineSearch* PetscTAOLineSearch "TaoLineSearch"
+
     struct _p_AO
     ctypedef _p_AO* PetscAO "AO"
 
@@ -218,6 +221,13 @@ ctypedef public api class TAO(Object) [
     object PyPetscTAOObject,
     ]:
     cdef PetscTAO tao
+
+ctypedef public api class TAOLineSearch(Object) [
+    type   PyPetscTAOLineSearch_Type,
+    object PyPetscTAOLineSearchObject,
+    ]:
+    cdef PetscTAOLineSearch taols
+
 
 ctypedef public api class AO(Object) [
     type   PyPetscAO_Type,
