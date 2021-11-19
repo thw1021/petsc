@@ -1,7 +1,7 @@
 from __future__ import print_function
 import argparse
-from taotorch import TAOtorch
 from petsc4py import PETSc
+from petsc4py import torchutils
 import numpy as np
 import torch
 import torch.nn as nn
@@ -74,7 +74,15 @@ def test(model, device, test_loader):
 
 def main():
     # set torch precision to match petsc
-    torch.set_default_dtype(torch.double)
+    if PETSc.RealType == np.float16:
+        torchtype = torch.half
+    elif PETSc.RealType == np.float32:
+        torchtype = torch.float
+    elif PETSc.RealType == np.float64:
+        torchtype = torch.double
+    else:
+        raise NotImplementedError("PETSc compiled with incompatible data type: must be half, single or double precision reals only!")
+    torch.set_default_dtype(torchtype)
 
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -129,7 +137,7 @@ def main():
 
     model = Net().to(device)
     # optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
-    optimizer = TAOtorch(model.parameters(), lr=args.lr)
+    optimizer = torchutils.TAOtorch(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
     for epoch in range(1, args.epochs + 1):
