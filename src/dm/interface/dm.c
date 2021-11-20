@@ -10338,6 +10338,7 @@ PetscErrorCode DMGlobalRestoreLocal(DM dm,Vec g,Vec *l)
 
   PetscFunctionBegin;
   ierr = PetscObjectQuery((PetscObject)*l,"HasDataFromGlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)*l,"HasDataFromGlobalPartner",NULL);CHKERRQ(ierr);
   ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
   if (!gp) {
     if (!isghost) {
