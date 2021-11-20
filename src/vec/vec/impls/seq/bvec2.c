@@ -711,6 +711,11 @@ PetscErrorCode VecDestroy_Seq(Vec v)
 #if defined(PETSC_USE_LOG)
   PetscLogObjectState((PetscObject)v,"Length=%D",v->map->n);
 #endif
+  /* Destroy local representation of vector if it exists */
+  if (v->localrep) {
+    ierr = VecDestroy(&v->localrep);CHKERRQ(ierr);
+    ierr = VecScatterDestroy(&v->localupdate);CHKERRQ(ierr);
+  }
   if (vs) { ierr = PetscFree(vs->array_allocated);CHKERRQ(ierr); }
   ierr = PetscFree(v->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);

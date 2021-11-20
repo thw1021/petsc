@@ -5893,7 +5893,8 @@ PETSC_STATIC_INLINE PetscErrorCode updatePointBC_private(PetscSection section, P
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSectionGetConstraintDof(section, point, &cdof);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = PetscSectionGetConstraintDof(section, point, &cdof);CHKERRQ(ierr);
   ierr = PetscSectionGetOffset(section, point, &off);CHKERRQ(ierr);
   a    = &array[off];
   if (cdof) {
@@ -5902,15 +5903,19 @@ PETSC_STATIC_INLINE PetscErrorCode updatePointBC_private(PetscSection section, P
       if (perm) {
         for (k = 0; k < dof; ++k) {
           if ((cind < cdof) && (k == cdofs[cind])) {
-            fuse(&a[k], values[clperm[offset+perm[k]]] * (flip ? flip[perm[k]] : 1.));
+        CHKMEMQ;
+        fuse(&a[k], values[clperm[offset+perm[k]]] * (flip ? flip[perm[k]] : 1.));
+            CHKMEMQ;
             cind++;
           }
         }
       } else {
         for (k = 0; k < dof; ++k) {
           if ((cind < cdof) && (k == cdofs[cind])) {
-            fuse(&a[k], values[clperm[offset+     k ]] * (flip ? flip[     k ] : 1.));
-            cind++;
+                CHKMEMQ;
+                fuse(&a[k], values[clperm[offset+     k ]] * (flip ? flip[     k ] : 1.));
+    CHKMEMQ;
+    cind++;
           }
         }
       }
@@ -5918,14 +5923,18 @@ PETSC_STATIC_INLINE PetscErrorCode updatePointBC_private(PetscSection section, P
       if (perm) {
         for (k = 0; k < dof; ++k) {
           if ((cind < cdof) && (k == cdofs[cind])) {
-            fuse(&a[k], values[offset+perm[k]] * (flip ? flip[perm[k]] : 1.));
-            cind++;
+        CHKMEMQ;
+        fuse(&a[k], values[offset+perm[k]] * (flip ? flip[perm[k]] : 1.));
+    CHKMEMQ;
+    cind++;
           }
         }
       } else {
         for (k = 0; k < dof; ++k) {
           if ((cind < cdof) && (k == cdofs[cind])) {
-            fuse(&a[k], values[offset+     k ] * (flip ? flip[     k ] : 1.));
+        CHKMEMQ;
+        fuse(&a[k], values[offset+     k ] * (flip ? flip[     k ] : 1.));
+            CHKMEMQ;
             cind++;
           }
         }
@@ -5950,11 +5959,11 @@ PETSC_STATIC_INLINE PetscErrorCode updatePointFields_private(PetscSection sectio
   a    = &array[foff];
   if (!fcdof || setBC) {
     if (clperm) {
-      if (perm) {for (b = 0; b < fdof; b++) {fuse(&a[b], values[clperm[foffset+perm[b]]] * (flip ? flip[perm[b]] : 1.));}}
-      else      {for (b = 0; b < fdof; b++) {fuse(&a[b], values[clperm[foffset+     b ]] * (flip ? flip[     b ] : 1.));}}
+      if (perm) {for (b = 0; b < fdof; b++) {  CHKMEMQ;fuse(&a[b], values[clperm[foffset+perm[b]]] * (flip ? flip[perm[b]] : 1.));  CHKMEMQ;}}
+      else      {for (b = 0; b < fdof; b++) {  CHKMEMQ;fuse(&a[b], values[clperm[foffset+     b ]] * (flip ? flip[     b ] : 1.));  CHKMEMQ;}}
     } else {
-      if (perm) {for (b = 0; b < fdof; b++) {fuse(&a[b], values[foffset+perm[b]] * (flip ? flip[perm[b]] : 1.));}}
-      else      {for (b = 0; b < fdof; b++) {fuse(&a[b], values[foffset+     b ] * (flip ? flip[     b ] : 1.));}}
+      if (perm) {for (b = 0; b < fdof; b++) {  CHKMEMQ;fuse(&a[b], values[foffset+perm[b]] * (flip ? flip[perm[b]] : 1.));  CHKMEMQ;}}
+      else      {for (b = 0; b < fdof; b++) {  CHKMEMQ;fuse(&a[b], values[foffset+     b ] * (flip ? flip[     b ] : 1.));  CHKMEMQ;}}
     }
   } else {
     ierr = PetscSectionGetFieldConstraintIndices(section, point, f, &fcdofs);CHKERRQ(ierr);
@@ -5962,28 +5971,37 @@ PETSC_STATIC_INLINE PetscErrorCode updatePointFields_private(PetscSection sectio
       if (perm) {
         for (b = 0; b < fdof; b++) {
           if ((cind < fcdof) && (b == fcdofs[cind])) {++cind; continue;}
+          CHKMEMQ;
           fuse(&a[b], values[clperm[foffset+perm[b]]] * (flip ? flip[perm[b]] : 1.));
+  CHKMEMQ;
         }
       } else {
         for (b = 0; b < fdof; b++) {
           if ((cind < fcdof) && (b == fcdofs[cind])) {++cind; continue;}
+          CHKMEMQ;
           fuse(&a[b], values[clperm[foffset+     b ]] * (flip ? flip[     b ] : 1.));
+  CHKMEMQ;
         }
       }
     } else {
       if (perm) {
         for (b = 0; b < fdof; b++) {
           if ((cind < fcdof) && (b == fcdofs[cind])) {++cind; continue;}
+          CHKMEMQ;
           fuse(&a[b], values[foffset+perm[b]] * (flip ? flip[perm[b]] : 1.));
+  CHKMEMQ;
         }
       } else {
         for (b = 0; b < fdof; b++) {
           if ((cind < fcdof) && (b == fcdofs[cind])) {++cind; continue;}
+          CHKMEMQ;
           fuse(&a[b], values[foffset+     b ] * (flip ? flip[     b ] : 1.));
+  CHKMEMQ;
         }
       }
     }
   }
+  CHKMEMQ;
   *offset += fdof;
   PetscFunctionReturn(0);
 }
@@ -6167,25 +6185,32 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
   PetscErrorCode  ierr;
 
   PetscFunctionBeginHot;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+    CHKMEMQ;
+    PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (!section) {ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);}
   PetscValidHeaderSpecific(section, PETSC_SECTION_CLASSID, 2);
   PetscValidHeaderSpecific(v, VEC_CLASSID, 3);
   ierr = DMPlexGetDepth(dm, &depth);CHKERRQ(ierr);
   ierr = PetscSectionGetNumFields(section, &numFields);CHKERRQ(ierr);
   if (depth == 1 && numFields < 2 && mode == ADD_VALUES) {
+    CHKMEMQ;
     ierr = DMPlexVecSetClosure_Depth1_Static(dm, section, v, point, values, mode);CHKERRQ(ierr);
+    CHKMEMQ;
     PetscFunctionReturn(0);
   }
   /* Get points */
-  ierr = DMPlexGetCompressedClosure(dm,section,point,&numPoints,&points,&clSection,&clPoints,&clp);CHKERRQ(ierr);
-  for (clsize=0,p=0; p<numPoints; p++) {
+    CHKMEMQ;
+    ierr = DMPlexGetCompressedClosure(dm,section,point,&numPoints,&points,&clSection,&clPoints,&clp);CHKERRQ(ierr);
+    CHKMEMQ;
+    for (clsize=0,p=0; p<numPoints; p++) {
     PetscInt dof;
     ierr = PetscSectionGetDof(section, points[2*p], &dof);CHKERRQ(ierr);
     clsize += dof;
   }
+        CHKMEMQ;
   ierr = PetscSectionGetClosureInversePermutation_Internal(section, (PetscObject) dm, depth, clsize, &clperm);CHKERRQ(ierr);
-  ierr = VecGetArray(v, &array);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = VecGetArray(v, &array);CHKERRQ(ierr);
   /* Get values */
   if (numFields > 0) {
     PetscInt offset = 0, f;
@@ -6200,42 +6225,55 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);
+        CHKMEMQ;
+        ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);
+            CHKMEMQ;
         } break;
       case INSERT_ALL_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, clperm, values, &offset, array);CHKERRQ(ierr);
+            CHKMEMQ;
+            ierr = updatePointFields_private(section, point, perm, flip, f, insert, PETSC_TRUE, clperm, values, &offset, array);CHKERRQ(ierr);
+    CHKMEMQ;
         } break;
       case INSERT_BC_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          ierr = updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, insert, clperm, values, &offset, array);CHKERRQ(ierr);
+            CHKMEMQ;
+            ierr = updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, insert, clperm, values, &offset, array);CHKERRQ(ierr);
+    CHKMEMQ;
         } break;
       case ADD_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
+            CHKMEMQ;
+            ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
+                CHKMEMQ;
+                
         } break;
       case ADD_ALL_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_TRUE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
+        CHKMEMQ;
         } break;
       case ADD_BC_VALUES:
         for (p = 0; p < numPoints; p++) {
           const PetscInt    point = points[2*p];
           const PetscInt    *perm = perms ? perms[p] : NULL;
           const PetscScalar *flip = flips ? flips[p] : NULL;
-          ierr = updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, add, clperm, values, &offset, array);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = updatePointFieldsBC_private(section, point, perm, flip, f, -1, NULL, add, clperm, values, &offset, array);CHKERRQ(ierr);
+        CHKMEMQ;
         } break;
       default:
         SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insert mode %d", mode);
@@ -6254,7 +6292,9 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        ierr = updatePoint_private(section, point, dof, insert, PETSC_FALSE, perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+            CHKMEMQ;
+            ierr = updatePoint_private(section, point, dof, insert, PETSC_FALSE, perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
       } break;
     case INSERT_ALL_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6262,7 +6302,9 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        ierr = updatePoint_private(section, point, dof, insert, PETSC_TRUE,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = updatePoint_private(section, point, dof, insert, PETSC_TRUE,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
       } break;
     case INSERT_BC_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6270,7 +6312,9 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        ierr = updatePointBC_private(section, point, dof, insert,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = updatePointBC_private(section, point, dof, insert,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+        CHKMEMQ;
       } break;
     case ADD_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6278,7 +6322,9 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        ierr = updatePoint_private(section, point, dof, add,    PETSC_FALSE, perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = updatePoint_private(section, point, dof, add,    PETSC_FALSE, perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+        CHKMEMQ;
       } break;
     case ADD_ALL_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6286,7 +6332,9 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        ierr = updatePoint_private(section, point, dof, add,    PETSC_TRUE,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+          CHKMEMQ;
+          ierr = updatePoint_private(section, point, dof, add,    PETSC_TRUE,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
       } break;
     case ADD_BC_VALUES:
       for (p = 0, off = 0; p < numPoints; p++, off += dof) {
@@ -6294,7 +6342,9 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
         const PetscInt    *perm = perms ? perms[p] : NULL;
         const PetscScalar *flip = flips ? flips[p] : NULL;
         ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
-        ierr = updatePointBC_private(section, point, dof, add,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+          CHKMEMQ;
+          ierr = updatePointBC_private(section, point, dof, add,  perm, flip, clperm, values, off, array);CHKERRQ(ierr);
+    CHKMEMQ;
       } break;
     default:
       SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid insert mode %d", mode);

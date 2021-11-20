@@ -69,25 +69,15 @@ $     VecGhostRestoreLocalForm(x,&xlocal);
 PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 {
   PetscErrorCode ierr;
-  PetscBool      isseq,ismpi;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
   PetscValidPointer(l,2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECMPI,&ismpi);CHKERRQ(ierr);
-  if (ismpi) {
-    *l = g->localrep;
-  } else if (isseq) {
-    *l = g;
-  } else {
-    *l = NULL;
-  }
-  if (*l) {
-    ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
-    ierr = PetscObjectReference((PetscObject)*l);CHKERRQ(ierr);
-  }
+  *l = g->localrep;
+  if (!*l) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_USER,"Vector does not have a local form");
+  ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
+  ierr = PetscObjectReference((PetscObject)*l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -112,19 +102,10 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 @*/
 PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
 {
-  PetscErrorCode ierr;
-  PetscBool      isseq;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
   PetscValidPointer(haslocal,2);
-
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
-  if (isseq) {
-    *haslocal = PETSC_TRUE;
-  } else {
-    *haslocal = g->localrep ? PETSC_TRUE : PETSC_FALSE;
-  }
+  *haslocal = g->localrep ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -147,19 +128,13 @@ PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
 @*/
 PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 {
-  PetscErrorCode ierr;
-  PetscBool      isseq;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
   PetscValidHeaderSpecific(l,VEC_CLASSID,2);
 
   *flg = PETSC_FALSE;
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
   if (g->localrep) {
     if (l == g->localrep) *flg = PETSC_TRUE;
-  } else if (isseq) {
-    if (l == g) *flg = PETSC_TRUE;
   } else SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Global vector is not ghosted");
   PetscFunctionReturn(0);
 }
@@ -188,10 +163,8 @@ PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (*l) {
-    ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
-    ierr = PetscObjectDereference((PetscObject)*l);CHKERRQ(ierr);
-  }
+  ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
+  ierr = PetscObjectDereference((PetscObject)*l);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

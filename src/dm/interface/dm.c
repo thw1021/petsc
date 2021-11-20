@@ -10261,7 +10261,6 @@ PetscErrorCode DMGlobalGetLocalEnd(DM dm,Vec g,Vec *l)
 {
   PetscErrorCode ierr;
   PetscBool      isghost;
-  PetscMPIInt    size;
 
   PetscFunctionBegin;
   ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
@@ -10271,10 +10270,7 @@ PetscErrorCode DMGlobalGetLocalEnd(DM dm,Vec g,Vec *l)
     ierr = VecGhostUpdateEnd(g,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecGhostGetLocalForm(g,l);CHKERRQ(ierr);
   }
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)dm),&size);CHKERRQ(ierr);
-  if (size > 1) {
-    ierr = PetscObjectCompose((PetscObject)*l,"GlobalPartner",(PetscObject)g);CHKERRQ(ierr);
-  }
+  ierr = PetscObjectCompose((PetscObject)*l,"HasDataFromGlobalPartner",(PetscObject)g);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -10341,9 +10337,9 @@ PetscErrorCode DMGlobalRestoreLocal(DM dm,Vec g,Vec *l)
   Vec            gp;
 
   PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)*l,"GlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)*l,"HasDataFromGlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
   ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
-  if (gp) {
+  if (!gp) {
     if (!isghost) {
       ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
       ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
