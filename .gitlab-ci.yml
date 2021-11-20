@@ -1014,7 +1014,7 @@ pages:  # this job name has special meaning to GitLab
     - mkdir -p ../public/ && cp public/* ../public/
     - git fetch --unshallow --no-tags origin +release:remotes/origin/release +main:remotes/origin/main
     - git checkout origin/main && make website-deploy BUILDDIR="../public/main" && make latexpdf && mkdir -p ../public/main/docs/manual && cp _build/latex/manual.pdf ../public/main/docs/manual/
-    - make clean BUILDDIR="../public/release"
+    - make clean BUILDDIR="../public/release" && rm -rf ../arch-classic-docs
     - git checkout origin/release && make website-deploy BUILDDIR="../public/release" && make latexpdf && mkdir -p ../public/release/docs/manual && cp _build/latex/manual.pdf ../public/release/docs/manual/
   only:
     variables:
