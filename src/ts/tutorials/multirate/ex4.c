@@ -309,7 +309,7 @@ static PetscErrorCode PhysicsSample_Shallow(void *vctx,PetscInt initial,FVBCType
       if (x < -0.1) {
        u[0] = 1e-9;
        u[1] = 0.0;
-      } else if(x < 0.1){
+      } else if (x < 0.1) {
        u[0] = 1.0;
        u[1] = 0.0;
       } else {
@@ -321,7 +321,7 @@ static PetscErrorCode PhysicsSample_Shallow(void *vctx,PetscInt initial,FVBCType
      if (x < -0.1) {
        u[0] = 2;
        u[1] = 0.0;
-      } else if(x < 0.1){
+      } else if (x < 0.1) {
        u[0] = 3.0;
        u[1] = 0.0;
       } else {
@@ -341,7 +341,7 @@ static PetscErrorCode PhysicsInflow_Shallow(void *vctx,PetscReal t,PetscReal x,P
   FVCtx          *ctx = (FVCtx*)vctx;
 
   PetscFunctionBeginUser;
-  if (ctx->bctype == FVBC_INFLOW){
+  if (ctx->bctype == FVBC_INFLOW) {
     switch (ctx->initial) {
       case 0:
       case 1:
@@ -550,23 +550,23 @@ PetscErrorCode FVRHSFunction_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vc
   if (ctx->bctype == FVBC_INFLOW) {
     /* See LeVeque, R. (2002). Finite Volume Methods for Hyperbolic Problems. doi:10.1017/CBO9780511791253
     pages 137-138 for the scheme. */
-    if(xs==0){ /* Left Boundary */
+    if (xs==0){ /* Left Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmin,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[j]){
-          for(i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[j]){
+          for (i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
         } else {
-          for(i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
+          for (i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
         }
       }
     }
-    if(xs+xm==Mx){ /* Right Boundary */
+    if (xs+xm==Mx){ /* Right Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmax,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[dof+j]){
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[dof+j]){
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
         } else {
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
         }
       }
     }
@@ -725,23 +725,23 @@ PetscErrorCode FVRHSFunctionslow_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void
   if (ctx->bctype == FVBC_INFLOW) {
     /* See LeVeque, R. (2002). Finite Volume Methods for Hyperbolic Problems. doi:10.1017/CBO9780511791253
     pages 137-138 for the scheme. */
-    if(xs==0){ /* Left Boundary */
+    if (xs==0){ /* Left Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmin,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[j]==PETSC_TRUE){
-          for(i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[j]==PETSC_TRUE){
+          for (i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
         } else {
-          for(i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
+          for (i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
         }
       }
     }
-    if(xs+xm==Mx){ /* Right Boundary */
+    if (xs+xm==Mx){ /* Right Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmax,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[dof+j]==PETSC_TRUE){
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[dof+j]==PETSC_TRUE){
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
         } else {
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
         }
       }
     }
@@ -877,23 +877,23 @@ PetscErrorCode FVRHSFunctionslowbuffer_2WaySplit(TS ts,PetscReal time,Vec X,Vec 
   if (ctx->bctype == FVBC_INFLOW) {
     /* See LeVeque, R. (2002). Finite Volume Methods for Hyperbolic Problems. doi:10.1017/CBO9780511791253
     pages 137-138 for the scheme. */
-    if(xs==0){ /* Left Boundary */
+    if (xs==0){ /* Left Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmin,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[j]==PETSC_TRUE){
-          for(i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[j]==PETSC_TRUE){
+          for (i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
         } else {
-          for(i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
+          for (i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
         }
       }
     }
-    if(xs+xm==Mx){ /* Right Boundary */
+    if (xs+xm==Mx){ /* Right Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmax,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[dof+j]==PETSC_TRUE){
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[dof+j]==PETSC_TRUE){
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
         } else {
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
         }
       }
     }
@@ -1049,23 +1049,23 @@ PetscErrorCode FVRHSFunctionfast_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void
   if (ctx->bctype == FVBC_INFLOW) {
     /* See LeVeque, R. (2002). Finite Volume Methods for Hyperbolic Problems. doi:10.1017/CBO9780511791253
     pages 137-138 for the scheme. */
-    if(xs==0){ /* Left Boundary */
+    if (xs==0){ /* Left Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmin,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[j]==PETSC_TRUE){
-          for(i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[j]==PETSC_TRUE){
+          for (i=-2; i<0; i++) x[i*dof+j] = 2.0*ctx->ub[j]-x[-(i+1)*dof+j];
         } else {
-          for(i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
+          for (i=-2; i<0; i++) x[i*dof+j] = x[j]; /* Outflow */
         }
       }
     }
-    if(xs+xm==Mx){ /* Right Boundary */
+    if (xs+xm==Mx){ /* Right Boundary */
       ctx->physics2.inflow(ctx,time,ctx->xmax,ctx->ub);
-      for(j=0; j<dof; j++) {
-        if(ctx->physics2.bcinflowindex[dof+j]==PETSC_TRUE){
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
+      for (j=0; j<dof; j++) {
+        if (ctx->physics2.bcinflowindex[dof+j]==PETSC_TRUE){
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = 2.0*ctx->ub[dof+j]-x[(2*Mx-(i+1))*dof+j];
         } else {
-          for(i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
+          for (i=Mx; i<Mx+2; i++) x[i*dof+j] = x[(Mx-1)*dof+j]; /* Outflow */
         }
       }
     }
@@ -1344,8 +1344,8 @@ int main(int argc,char *argv[])
       ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
       ierr = VecGetArrayRead(X,&ptr_X);CHKERRQ(ierr);
       ierr = VecGetArrayRead(XR,&ptr_XR);CHKERRQ(ierr);
-      for(i=xs;i<xs+xm;i++) {
-        if(i < ctx.sf || i > ctx.fs-1)
+      for (i=xs;i<xs+xm;i++) {
+        if (i < ctx.sf || i > ctx.fs-1)
           for (k=0; k<dof; k++) nrm1 = nrm1 + hs*PetscAbs(ptr_X[i*dof+k]-ptr_XR[i*dof+k]);
         else
           for (k=0; k<dof; k++) nrm1 = nrm1 + hf*PetscAbs(ptr_X[i*dof+k]-ptr_XR[i*dof+k]);
