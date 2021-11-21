@@ -788,11 +788,11 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *n
    We are not currently requiring that the graph is set, thus returning nroots=-1 if it has not been set yet
 
    When called from Fortran, the returned iremote array is a copy and must be deallocated after use. Consequently, if you
-   want to update the graph, you must call PetscSFSetGraph after modifying the iremote array.
+   want to update the graph, you must call PetscSFSetGraph() after modifying the iremote array.
 
    Level: intermediate
 
-.seealso: PetscSFCreate(), PetscSFView(), PetscSFSetGraph()
+.seealso: PetscSFCreate(), PetscSFView(), PetscSFSetGraph(), PetscSFGetRootRanks(), PetscSFGetLeafRanks()
 @*/
 PetscErrorCode PetscSFGetGraph(PetscSF sf,PetscInt *nroots,PetscInt *nleaves,const PetscInt **ilocal,const PetscSFNode **iremote)
 {
