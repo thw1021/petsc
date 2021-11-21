@@ -6255,7 +6255,6 @@ PetscErrorCode DMPlexVecSetClosure(DM dm, PetscSection section, Vec v, PetscInt 
             CHKMEMQ;
             ierr = updatePointFields_private(section, point, perm, flip, f, add, PETSC_FALSE, clperm, values, &offset, array);CHKERRQ(ierr);CHKERRQ(ierr);
                 CHKMEMQ;
-                
         } break;
       case ADD_ALL_VALUES:
         for (p = 0; p < numPoints; p++) {

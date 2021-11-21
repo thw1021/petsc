@@ -10222,7 +10222,6 @@ $      DMLocalToGlobalEnd(dm,lf,ADD_VALUES,gf);
 $      DMRestoreLocalVector(dm,&lf);        -- return li so it can be reused later for other purposes --
 $      DMRestoreLocalVector(dm,&li);        -- return li so it can be reused later for other purposes --
 
-
 .seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalGetLocalEnd(), DMGlobalRestoreLocal(), DMLocalGetGlobal()
 @*/
 PetscErrorCode DMGlobalGetLocalBegin(DM dm,Vec g,Vec *l)
