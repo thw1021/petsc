@@ -4657,11 +4657,17 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
         offset    = numCells - Nr;
         /* Integrate FE residual to get elemVec (need fields at quadrature points) */
         /*   For FV, I think we use a P0 basis and the cell coefficients (for subdivided cells, we can tweak the basis tabulation to be the indicator function) */
+        CHKMEMQ;
         ierr = PetscFEGeomGetChunk(geom,0,offset,&chunkGeom);CHKERRQ(ierr);
-        ierr = PetscFEIntegrateResidual(ds, key, Ne, chunkGeom, u, u_t, dsAux, a, t, elemVec);CHKERRQ(ierr);
-        ierr = PetscFEGeomGetChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
+            CHKMEMQ;
+            ierr = PetscFEIntegrateResidual(ds, key, Ne, chunkGeom, u, u_t, dsAux, a, t, elemVec);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = PetscFEGeomGetChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
+        CHKMEMQ;
         ierr = PetscFEIntegrateResidual(ds, key, Nr, chunkGeom, &u[offset*totDim], u_t ? &u_t[offset*totDim] : NULL, dsAux, &a[offset*totDimAux], t, &elemVec[offset*totDim]);CHKERRQ(ierr);
-        ierr = PetscFEGeomRestoreChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
+            CHKMEMQ;
+            ierr = PetscFEGeomRestoreChunk(geom,offset,numCells,&chunkGeom);CHKERRQ(ierr);
+    CHKMEMQ;
       } else if (id == PETSCFV_CLASSID) {
         PetscFV fv = (PetscFV) obj;
 
@@ -4683,9 +4689,12 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
           PetscInt ghostVal;
 
           ierr = DMLabelGetValue(ghostLabel,cell,&ghostVal);CHKERRQ(ierr);
-          if (ghostVal > 0) continue;
+    CHKMEMQ;
+    if (ghostVal > 0) continue;
         }
-        ierr = DMPlexVecSetClosure(dm, section, locF, cell, &elemVec[cind*totDim], ADD_ALL_VALUES);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = DMPlexVecSetClosure(dm, section, locF, cell, &elemVec[cind*totDim], ADD_ALL_VALUES);CHKERRQ(ierr);
+    CHKMEMQ;
       }
     }
     if (useFVM) {
@@ -4698,13 +4707,17 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
         PetscObject  obj;
         PetscClassId id;
         PetscInt     foff, pdim;
-
+        CHKMEMQ;
         ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
+        CHKMEMQ;
         ierr = PetscDSGetFieldOffset(ds, f, &foff);CHKERRQ(ierr);
+        CHKMEMQ;
         ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
+        CHKMEMQ;
         if (id != PETSCFV_CLASSID) continue;
         fv   = (PetscFV) obj;
         ierr = PetscFVGetNumComponents(fv, &pdim);CHKERRQ(ierr);
+        CHKMEMQ;
         /* Accumulate fluxes to cells */
         for (face = fS, iface = 0; face < fE; ++face) {
           const PetscInt *scells;
@@ -4712,17 +4725,26 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
           PetscInt        ghost, d, nsupp, nchild;
 
           ierr = DMLabelGetValue(ghostLabel, face, &ghost);CHKERRQ(ierr);
-          ierr = DMPlexGetSupportSize(dm, face, &nsupp);CHKERRQ(ierr);
-          ierr = DMPlexGetTreeChildren(dm, face, &nchild, NULL);CHKERRQ(ierr);
+        CHKMEMQ;
+        ierr = DMPlexGetSupportSize(dm, face, &nsupp);CHKERRQ(ierr);
+        CHKMEMQ;
+        ierr = DMPlexGetTreeChildren(dm, face, &nchild, NULL);CHKERRQ(ierr);
           if (ghost >= 0 || nsupp > 2 || nchild > 0) continue;
           ierr = DMPlexGetSupport(dm, face, &scells);CHKERRQ(ierr);
-          ierr = DMLabelGetValue(ghostLabel,scells[0],&ghost);CHKERRQ(ierr);
-          if (ghost <= 0) {ierr = DMPlexPointLocalFieldRef(dm, scells[0], f, fa, &fL);CHKERRQ(ierr);}
-          ierr = DMLabelGetValue(ghostLabel,scells[1],&ghost);CHKERRQ(ierr);
-          if (ghost <= 0) {ierr = DMPlexPointLocalFieldRef(dm, scells[1], f, fa, &fR);CHKERRQ(ierr);}
+        CHKMEMQ;
+        ierr = DMLabelGetValue(ghostLabel,scells[0],&ghost);CHKERRQ(ierr);
+        CHKMEMQ;
+        if (ghost <= 0) {ierr = DMPlexPointLocalFieldRef(dm, scells[0], f, fa, &fL);CHKERRQ(ierr);}
+        CHKMEMQ;
+        ierr = DMLabelGetValue(ghostLabel,scells[1],&ghost);CHKERRQ(ierr);
+        CHKMEMQ;
+        if (ghost <= 0) {ierr = DMPlexPointLocalFieldRef(dm, scells[1], f, fa, &fR);CHKERRQ(ierr);}
           for (d = 0; d < pdim; ++d) {
-            if (fL) fL[d] -= fluxL[iface*totDim+foff+d];
+                CHKMEMQ;
+                if (fL) fL[d] -= fluxL[iface*totDim+foff+d];
+                        CHKMEMQ;
             if (fR) fR[d] += fluxR[iface*totDim+foff+d];
+                    CHKMEMQ;
           }
           ++iface;
         }
@@ -4740,7 +4762,7 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
         PetscObject  obj;
         PetscClassId id;
         PetscInt     pdim, d;
-
+  CHKMEMQ;
         ierr = PetscDSGetDiscretization(ds, f, &obj);CHKERRQ(ierr);
         ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
         if (id != PETSCFV_CLASSID) continue;
@@ -4749,33 +4771,45 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
         for (c = cS; c < cE; ++c) {
           const PetscInt cell = cells ? cells[c] : c;
           PetscScalar   *u_t, *r;
-
+  CHKMEMQ;
           if (ghostLabel) {
             PetscInt ghostVal;
 
             ierr = DMLabelGetValue(ghostLabel, cell, &ghostVal);CHKERRQ(ierr);
             if (ghostVal > 0) continue;
           }
+          CHKMEMQ;
           ierr = DMPlexPointLocalFieldRead(dm, cell, f, x_t, &u_t);CHKERRQ(ierr);
           ierr = DMPlexPointLocalFieldRef(dm, cell, f, fa, &r);CHKERRQ(ierr);
           for (d = 0; d < pdim; ++d) r[d] += u_t[d];
+      CHKMEMQ;
         }
       }
       ierr = VecRestoreArray(locX_t, &x_t);CHKERRQ(ierr);
       ierr = VecRestoreArray(locF, &fa);CHKERRQ(ierr);
+    CHKMEMQ;
     }
     if (useFEM) {
-      ierr = DMPlexRestoreCellFields(dm, chunkIS, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
-      ierr = DMRestoreWorkArray(dm, numCells*totDim, MPIU_SCALAR, &elemVec);CHKERRQ(ierr);
+    CHKMEMQ;
+    ierr = DMPlexRestoreCellFields(dm, chunkIS, locX, locX_t, locA, &u, &u_t, &a);CHKERRQ(ierr);
+  CHKMEMQ;
+  ierr = DMRestoreWorkArray(dm, numCells*totDim, MPIU_SCALAR, &elemVec);CHKERRQ(ierr);
+  CHKMEMQ;
     }
     if (useFVM) {
-      ierr = DMPlexRestoreFaceFields(dm, fS, fE, locX, locX_t, faceGeometryFVM, cellGeometryFVM, locGrad, &numFaces, &uL, &uR);CHKERRQ(ierr);
-      ierr = DMPlexRestoreFaceGeometry(dm, fS, fE, faceGeometryFVM, cellGeometryFVM, &numFaces, &fgeom, &vol);CHKERRQ(ierr);
-      ierr = DMRestoreWorkArray(dm, numFaces*totDim, MPIU_SCALAR, &fluxL);CHKERRQ(ierr);
+  CHKMEMQ;
+  ierr = DMPlexRestoreFaceFields(dm, fS, fE, locX, locX_t, faceGeometryFVM, cellGeometryFVM, locGrad, &numFaces, &uL, &uR);CHKERRQ(ierr);
+        CHKMEMQ;
+        ierr = DMPlexRestoreFaceGeometry(dm, fS, fE, faceGeometryFVM, cellGeometryFVM, &numFaces, &fgeom, &vol);CHKERRQ(ierr);
+        CHKMEMQ;
+        ierr = DMRestoreWorkArray(dm, numFaces*totDim, MPIU_SCALAR, &fluxL);CHKERRQ(ierr);
       ierr = DMRestoreWorkArray(dm, numFaces*totDim, MPIU_SCALAR, &fluxR);CHKERRQ(ierr);
+      CHKMEMQ;
       if (dmGrad) {ierr = DMRestoreLocalVector(dmGrad, &locGrad);CHKERRQ(ierr);}
+  CHKMEMQ;
     }
   }
+  CHKMEMQ;
   if (useFEM) {ierr = ISDestroy(&chunkIS);CHKERRQ(ierr);}
   ierr = ISRestorePointRange(cellIS, &cStart, &cEnd, &cells);CHKERRQ(ierr);
 
