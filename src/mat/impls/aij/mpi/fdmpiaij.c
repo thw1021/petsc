@@ -418,7 +418,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
           garray[i*bs+j] = bs*baij->garray[i]+j;
         }
       }
-      ierr = VecCreateGhost(PetscObjectComm((PetscObject)mat),mat->cmap->n,PETSC_DETERMINE,B->cmap->n,garray,&c->vscale);CHKERRQ(ierr);
+      ierr = VecCreateGhost(PetscObjectComm((PetscObject)mat),mat->cmap->n,PETSC_DETERMINE,B->cmap->n,garray,0,&c->vscale);CHKERRQ(ierr);
       ierr = VecBindToCPU(c->vscale,PETSC_TRUE);CHKERRQ(ierr);
       ierr = PetscFree(garray);CHKERRQ(ierr);
     }
@@ -440,7 +440,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
     bs = 1; /* only bs=1 is supported for non MPIBAIJ matrix */
 
     if (ctype == IS_COLORING_GLOBAL && c->htype[0] == 'd') { /* create vscale for storing dx */
-      ierr = VecCreateGhost(PetscObjectComm((PetscObject)mat),mat->cmap->n,PETSC_DETERMINE,B->cmap->n,sell->garray,&c->vscale);CHKERRQ(ierr);
+      ierr = VecCreateGhost(PetscObjectComm((PetscObject)mat),mat->cmap->n,PETSC_DETERMINE,B->cmap->n,sell->garray,0,&c->vscale);CHKERRQ(ierr);
       ierr = VecBindToCPU(c->vscale,PETSC_TRUE);CHKERRQ(ierr);
     }
   } else {
@@ -461,7 +461,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
     bs = 1; /* only bs=1 is supported for non MPIBAIJ matrix */
 
     if (ctype == IS_COLORING_GLOBAL && c->htype[0] == 'd') { /* create vscale for storing dx */
-      ierr = VecCreateGhost(PetscObjectComm((PetscObject)mat),mat->cmap->n,PETSC_DETERMINE,B->cmap->n,aij->garray,&c->vscale);CHKERRQ(ierr);
+      ierr = VecCreateGhost(PetscObjectComm((PetscObject)mat),mat->cmap->n,PETSC_DETERMINE,B->cmap->n,aij->garray,0,&c->vscale);CHKERRQ(ierr);
       ierr = VecBindToCPU(c->vscale,PETSC_TRUE);CHKERRQ(ierr);
     }
   }

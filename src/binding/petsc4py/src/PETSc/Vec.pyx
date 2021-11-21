@@ -496,7 +496,7 @@ cdef class Vec(Object):
         PetscCLEAR(self.obj); self.vec = newvec
         return self
 
-    def createGhostWithArray(self, ghosts, array,
+    def createGhostWithArray(self, ghosts, ne, array,
                              size=None, bsize=None, comm=None):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscInt ng=0, *ig=NULL
@@ -516,10 +516,10 @@ cdef class Vec(Object):
         cdef PetscVec newvec = NULL
         if bs == PETSC_DECIDE:
             CHKERR( VecCreateGhostWithArray(
-                    ccomm, n, N, ng, ig, sa, &newvec) )
+                    ccomm, n, N, ng, ig, ne, sa, &newvec) )
         else:
             CHKERR( VecCreateGhostBlockWithArray(
-                    ccomm, bs, n, N, ng, ig, sa, &newvec) )
+                    ccomm, bs, n, N, ng, ig, ne, sa, &newvec) )
         PetscCLEAR(self.obj); self.vec = newvec
         self.set_attr('__array__', array)
         return self
