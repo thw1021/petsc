@@ -201,6 +201,8 @@ typedef struct {
   PetscInt             printFEM;
   PetscInt             printL2;
   PetscReal            printTol;
+  PetscBool            useghostperm;        /* use the ghost permutation and ghost vectors with this DMPLEX */
+  IS                   vecghostperm;        /* permutation to map all all ghost dof appropriate to VecCreateGhost() to the end of the vector */
 } DM_Plex;
 
 PETSC_EXTERN PetscErrorCode DMPlexVTKWriteAll_VTU(DM,PetscViewer);

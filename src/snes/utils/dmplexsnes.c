@@ -1330,10 +1330,19 @@ PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *user)
 {
   DM             plex;
   PetscErrorCode ierr;
+  PetscInt       state;
 
   PetscFunctionBegin;
   ierr = DMSNESConvertPlex(dm,&plex,PETSC_TRUE);CHKERRQ(ierr);
+  /* this is not legal; the assumption is only values that do not affect the solution are changed */
+  ierr = VecLockGet(X,&state);CHKERRQ(ierr);
+  if (state > 0) {
+    ierr = VecLockReadPop(X);CHKERRQ(ierr);
+  }
   ierr = DMPlexInsertBoundaryValues(plex, PETSC_TRUE, X, PETSC_MIN_REAL, NULL, NULL, NULL);CHKERRQ(ierr);
+  if (state > 0) {
+    ierr = VecLockReadPush(X);CHKERRQ(ierr);
+  }
   ierr = DMDestroy(&plex);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1770,7 +1779,9 @@ PetscErrorCode DMSNESCheckResidual(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
   ierr = PetscObjectGetComm((PetscObject) snes, &comm);CHKERRQ(ierr);
   ierr = DMComputeExactSolution(dm, 0.0, u, NULL);CHKERRQ(ierr);
   ierr = VecDuplicate(u, &r);CHKERRQ(ierr);
+  CHKMEMQ;
   ierr = SNESComputeFunction(snes, u, r);CHKERRQ(ierr);
+  CHKMEMQ;
   ierr = VecNorm(r, NORM_2, &res);CHKERRQ(ierr);
   if (tol >= 0.0) {
     if (res > tol) SETERRQ2(comm, PETSC_ERR_ARG_WRONG, "L_2 Residual %g exceeds tolerance %g", (double) res, (double) tol);
