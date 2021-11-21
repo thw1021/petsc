@@ -115,6 +115,45 @@ E*/
 typedef enum {TAO_ALMM_CLASSIC,TAO_ALMM_PHR} TaoALMMType;
 PETSC_EXTERN const char *const TaoALMMTypes[];
 
+/*E
+     TaoBNCGType - Determine the conjugate gradient update formulaused in the TAOBNCG algorithm.
+
+$  TAO_BNCG_GD         - basic gradient descent, no CG update
+$  TAO_BNCG_PCGD       - preconditioned/scaled gradient descent
+$  TAO_BNCG_HS         - Hestenes-Stiefel
+$  TAO_BNCG_FR         - Fletcher-Reeves
+$  TAO_BNCG_PRP        - Polak-Ribiere-Polyak (PRP)
+$  TAO_BNCG_PRP_PLUS   - Polak-Ribiere-Polyak "plus" (PRP+)
+$  TAO_BNCG_DY         - Dai-Yuan
+$  TAO_BNCG_HZ         - Hager-Zhang (CG_DESCENT 5.3)
+$  TAO_BNCG_DK         - Dai-Kou (2013)
+$  TAO_BNCG_KD         - Kou-Dai (2015)
+$  TAO_BNCG_SSML_BFGS  - Self-Scaling Memoryless BFGS (Perry-Shanno)
+$  TAO_BNCG_SSML_DFP   - Self-Scaling Memoryless DFP
+$  TAO_BNCG_SSML_BRDN  - Self-Scaling Memoryless (Symmetric) Broyden
+
+  Level: advanced
+
+.seealso TAOBNCG, TaoBNCGSetType(), TaoBNCGGetType()
+E*/
+
+typedef enum {
+  TAO_BNCG_GD,
+  TAO_BNCG_PCGD,
+  TAO_BNCG_HS,
+  TAO_BNCG_FR,
+  TAO_BNCG_PRP,
+  TAO_BNCG_PRP_PLUS,
+  TAO_BNCG_DY,
+  TAO_BNCG_HZ,
+  TAO_BNCG_DK,
+  TAO_BNCG_KD,
+  TAO_BNCG_SSML_BFGS,
+  TAO_BNCG_SSML_DFP,
+  TAO_BNCG_SSML_BRDN
+} TaoBNCGType;
+PETSC_EXTERN const char *const TaoBNCGTypes[];
+
 typedef struct _p_Tao*   Tao;
 
 /*J
@@ -354,6 +393,8 @@ typedef struct _n_TaoMonitorDrawCtx* TaoMonitorDrawCtx;
 PETSC_EXTERN PetscErrorCode TaoMonitorDrawCtxCreate(MPI_Comm,const char[],const char[],int,int,int,int,PetscInt,TaoMonitorDrawCtx*);
 PETSC_EXTERN PetscErrorCode TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx*);
 
+PETSC_EXTERN PetscErrorCode TaoBNCGSetType(Tao,TaoBNCGType);
+PETSC_EXTERN PetscErrorCode TaoBNCGGetType(Tao,TaoBNCGType*);
 PETSC_EXTERN PetscErrorCode TaoBRGNGetSubsolver(Tao,Tao *);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerObjectiveAndGradientRoutine(Tao,PetscErrorCode (*)(Tao,Vec,PetscReal*,Vec,void*),void*);
 PETSC_EXTERN PetscErrorCode TaoBRGNSetRegularizerHessianRoutine(Tao,Mat,PetscErrorCode (*)(Tao,Vec,Mat,void*),void*);

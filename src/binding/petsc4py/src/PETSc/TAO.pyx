@@ -35,7 +35,6 @@ class TAOType:
     PDIPM    = S_(TAOPDIPM)
     SHELL    = S_(TAOSHELL)
     ADMM     = S_(TAOADMM)
-    ALMM     = S_(TAOALMM)
 
 class TAOConvergedReason:
     """
@@ -60,6 +59,23 @@ class TAOConvergedReason:
     DIVERGED_TR_REDUCTION = TAO_DIVERGED_TR_REDUCTION #
     DIVERGED_USER         = TAO_DIVERGED_USER         # user defined
 
+class TAOBNCGType:
+    """
+    TAO Bound Constrained Conjugate Gradient (BNCG) Update Type
+    """
+    GD         = TAO_BNCG_GD
+    PCGD       = TAO_BNCG_PCGD
+    HS         = TAO_BNCG_HS
+    FR         = TAO_BNCG_FR
+    PRP        = TAO_BNCG_PRP
+    PRP_PLUS   = TAO_BNCG_PRP_PLUS
+    DY         = TAO_BNCG_DY
+    HZ         = TAO_BNCG_HZ
+    DK         = TAO_BNCG_DK
+    KD         = TAO_BNCG_KD
+    SSML_BFGS  = TAO_BNCG_SSML_BFGS
+    SSML_DFP   = TAO_BNCG_SSML_DFP
+    SSML_BRDN  = TAO_BNCG_SSML_BRDN
 # --------------------------------------------------------------------
 
 cdef class TAO(Object):
@@ -157,53 +173,36 @@ cdef class TAO(Object):
     def setObjective(self, objective, args=None, kargs=None):
         """
         """
+        CHKERR( TaoSetObjectiveRoutine(self.tao, TAO_Objective, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (objective, args, kargs)
-        self.set_attr("__objective__", context)
-        CHKERR( TaoSetObjectiveRoutine(self.tao, TAO_Objective, <void*>context) )
+        self.set_attr("__objective__", (objective, args, kargs))
 
     def setResidual(self, residual, Vec R=None, args=None, kargs=None):
         """
         """
         cdef PetscVec Rvec = NULL
         if R is not None: Rvec = R.vec
+        CHKERR( TaoSetResidualRoutine(self.tao, Rvec, TAO_Residual, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (residual, args, kargs)
-        self.set_attr("__residual__", context)
-        CHKERR( TaoSetResidualRoutine(self.tao, Rvec, TAO_Residual, <void*>context) )
-
-    def setJacobianResidual(self, jacobian, Mat J=None, Mat P=None, args=None, kargs=None):
-        """
-        """
-        cdef PetscMat Jmat=NULL
-        if J is not None: Jmat = J.mat
-        cdef PetscMat Pmat = Jmat
-        if P is not None: Pmat = P.mat
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (jacobian, args, kargs)
-        self.set_attr("__jacobian_residual__", context)
-        CHKERR( TaoSetJacobianResidualRoutine(self.tao, Jmat, Pmat, TAO_JacobianResidual, <void*>context) )
+        self.set_attr("__residual__", (residual, args, kargs))
 
     def setGradient(self, gradient, args=None, kargs=None):
         """
         """
+        CHKERR( TaoSetGradientRoutine(self.tao, TAO_Gradient, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (gradient, args, kargs)
-        self.set_attr("__gradient__", context)
-        CHKERR( TaoSetGradientRoutine(self.tao, TAO_Gradient, <void*>context) )
+        self.set_attr("__gradient__", (gradient, args, kargs))
 
     def setObjectiveGradient(self, objgrad, args=None, kargs=None):
         """
         """
+        CHKERR( TaoSetObjectiveAndGradientRoutine(self.tao, TAO_ObjGrad, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (objgrad, args, kargs)
-        self.set_attr("__objgrad__", context)
-        CHKERR( TaoSetObjectiveAndGradientRoutine(self.tao, TAO_ObjGrad, <void*>context) )
+        self.set_attr("__objgrad__", (objgrad, args, kargs))
 
     def setVariableBounds(self, varbounds, args=None, kargs=None):
         """
@@ -219,22 +218,20 @@ cdef class TAO(Object):
             xl = <Vec?> ol; xu = <Vec?> ou
             CHKERR( TaoSetVariableBounds(self.tao, xl.vec, xu.vec) )
             return
+        CHKERR( TaoSetVariableBoundsRoutine(self.tao, TAO_VarBounds, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (varbounds, args, kargs)
-        self.set_attr("__varbounds__", context)
-        CHKERR( TaoSetVariableBoundsRoutine(self.tao, TAO_VarBounds, <void*>context) )
+        self.set_attr("__varbounds__", (varbounds, args, kargs))
 
     def setConstraints(self, constraints, Vec C=None, args=None, kargs=None):
         """
         """
         cdef PetscVec Cvec=NULL
         if C is not None: Cvec = C.vec
+        CHKERR( TaoSetConstraintsRoutine(self.tao, Cvec, TAO_Constraints, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (constraints, args, kargs)
-        self.set_attr("__constraints__", context)
-        CHKERR( TaoSetConstraintsRoutine(self.tao, Cvec, TAO_Constraints, <void*>context) )
+        self.set_attr("__constraints__", (constraints, args, kargs))
 
     def setHessian(self, hessian, Mat H=None, Mat P=None,
                    args=None, kargs=None):
@@ -242,11 +239,10 @@ cdef class TAO(Object):
         if H is not None: Hmat = H.mat
         cdef PetscMat Pmat = Hmat
         if P is not None: Pmat = P.mat
+        CHKERR( TaoSetHessianRoutine(self.tao, Hmat, Pmat, TAO_Hessian, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (hessian, args, kargs)
-        self.set_attr("__hessian__", context)
-        CHKERR( TaoSetHessianRoutine(self.tao, Hmat, Pmat, TAO_Hessian, <void*>context) )
+        self.set_attr("__hessian__", (hessian, args, kargs))
 
     def setJacobian(self, jacobian, Mat J=None, Mat P=None,
                     args=None, kargs=None):
@@ -256,11 +252,10 @@ cdef class TAO(Object):
         if J is not None: Jmat = J.mat
         cdef PetscMat Pmat = Jmat
         if P is not None: Pmat = P.mat
+        CHKERR( TaoSetJacobianRoutine(self.tao, Jmat, Pmat, TAO_Jacobian, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (jacobian, args, kargs)
-        self.set_attr("__jacobian__", context)
-        CHKERR( TaoSetJacobianRoutine(self.tao, Jmat, Pmat, TAO_Jacobian, <void*>context) )
+        self.set_attr("__jacobian__", (jacobian, args, kargs))
 
     #
 
@@ -282,12 +277,11 @@ cdef class TAO(Object):
         if P is not None: Pmat = P.mat
         cdef PetscMat Imat = NULL
         if I is not None: Imat = I.mat
+        CHKERR( TaoSetJacobianStateRoutine(self.tao, Jmat, Pmat, Imat,
+                                           TAO_JacobianState, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (jacobian_state, args, kargs)
-        self.set_attr("__jacobian_state__", context)
-        CHKERR( TaoSetJacobianStateRoutine(self.tao, Jmat, Pmat, Imat,
-                                           TAO_JacobianState, <void*>context) )
+        self.set_attr("__jacobian_state__", (jacobian_state, args, kargs))
 
     def setJacobianDesign(self, jacobian_design, Mat J=None,
                           args=None, kargs=None):
@@ -295,12 +289,11 @@ cdef class TAO(Object):
         """
         cdef PetscMat Jmat=NULL
         if J is not None: Jmat = J.mat
+        CHKERR( TaoSetJacobianDesignRoutine(self.tao, Jmat,
+                                            TAO_JacobianDesign, NULL) )
         if args is None: args = ()
         if kargs is None: kargs = {}
-        context = (jacobian_design, args, kargs)
-        self.set_attr("__jacobian_design__", context)
-        CHKERR( TaoSetJacobianDesignRoutine(self.tao, Jmat,
-                                            TAO_JacobianDesign, <void*>context) )
+        self.set_attr("__jacobian_design__", (jacobian_design, args, kargs))
 
     # --------------
 
@@ -372,6 +365,12 @@ cdef class TAO(Object):
     # --------------
 
     #
+
+    def setMaximumIterations(self, maxits):
+        """
+        """
+        cdef PetscInt _maxits = asInt(maxits)
+        CHKERR( TaoSetMaximumIterations(self.tao, _maxits))
 
     def setTolerances(self, gatol=None, grtol=None, gttol=None):
         """
@@ -517,6 +516,19 @@ cdef class TAO(Object):
         PetscINCREF(ksp.obj)
         return ksp
 
+    def setBNCGType(self, cg_type):
+        """
+        """
+        cdef PetscTAOBNCGType ctype = cg_type
+        CHKERR( TaoBNCGSetType(self.tao, ctype) )
+
+    def getBNCGType(self):
+        """
+        """
+        cdef PetscTAOBNCGType cg_type = TAO_BNCG_GD
+        CHKERR( TaoBNCGGetType(self.tao, &cg_type) )
+        return cg_type
+
     def getVariableBounds(self):
         """
         """
@@ -578,58 +590,13 @@ cdef class TAO(Object):
         PetscINCREF(ksp.obj)
         return ksp
 
-    # BRGN routines
-
-    def getBRGNSubsolver(self):
+    def getLineSearch(self):
         """
         """
-        cdef TAO subsolver = TAO()
-        CHKERR( TaoBRGNGetSubsolver(self.tao, &subsolver.tao) )
-        PetscINCREF(subsolver.obj)
-        return subsolver
-
-    def setBRGNRegularizerObjectiveGradient(self, objgrad, args=None, kargs=None):
-        """
-        """
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (objgrad, args, kargs)
-        self.set_attr("__brgnregobjgrad__", context)
-        CHKERR( TaoBRGNSetRegularizerObjectiveAndGradientRoutine(self.tao, TAO_BRGNRegObjGrad, <void*>context) )
-
-    def setBRGNRegularizerHessian(self, hessian, Mat H=None, args=None, kargs=None):
-        cdef PetscMat Hmat=NULL
-        if H is not None: Hmat = H.mat
-        if args is None: args = ()
-        if kargs is None: kargs = {}
-        context = (hessian, args, kargs)
-        self.set_attr("__brgnreghessian__", context)
-        CHKERR( TaoBRGNSetRegularizerHessianRoutine(self.tao, Hmat, TAO_BRGNRegHessian, <void*>context) )
-
-    def setBRGNRegularizerWeight(self, weight):
-        """
-        """
-        cdef PetscReal cweight = asReal(weight)
-        CHKERR( TaoBRGNSetRegularizerWeight(self.tao, cweight) )
-
-    def setBRGNSmoothL1Epsilon(self, epsilon):
-        """
-        """
-        cdef PetscReal ceps = asReal(epsilon)
-        CHKERR( TaoBRGNSetL1SmoothEpsilon(self.tao, ceps) )
-
-    def setBRGNDictionaryMatrix(self, Mat D):
-        """
-        """
-        CHKERR( TaoBRGNSetDictionaryMatrix(self.tao, D.mat) )
-
-    def getBRGNDampingVector(self):
-        """
-        """
-        cdef Vec damp = Vec()
-        CHKERR( TaoBRGNGetDampingVector(self.tao, &damp.vec) )
-        PetscINCREF(damp.obj)
-        return damp
+        cdef TAOLineSearch ls = TAOLineSearch()
+        CHKERR( TaoGetLineSearch(self.tao, &ls.taols) )
+        PetscINCREF(ls.obj)
+        return ls
 
     # --- application context ---
 
@@ -734,3 +701,153 @@ del TAOType
 del TAOConvergedReason
 
 # --------------------------------------------------------------------
+
+class TAOLineSearchType:
+    """
+    TAO Line Search Types
+    """
+    UNIT        = S_(TAOLINESEARCHUNIT)
+    ARMIJO      = S_(TAOLINESEARCHARMIJO)
+    MORETHUENTE = S_(TAOLINESEARCHMT)
+    IPM         = S_(TAOLINESEARCHIPM)
+    OWARMIJO    = S_(TAOLINESEARCHOWARMIJO)
+    GPCG        = S_(TAOLINESEARCHGPCG)
+
+class TAOLineSearchConvergedReason:
+    """
+    TAO Line Search Termination Reasons
+    """
+    # iterating
+    CONTINUE_SEARCH       = TAOLINESEARCH_CONTINUE_ITERATING
+    # failed
+    FAILED_INFORNAN       = TAOLINESEARCH_FAILED_INFORNAN      # inf or NaN in user function
+    FAILED_BADPARAMETER   = TAOLINESEARCH_FAILED_BADPARAMETER  # negative value set as parameter
+    FAILED_ASCENT         = TAOLINESEARCH_FAILED_ASCENT        # search direction is not a descent direction
+    # succeeded
+    SUCCESS               = TAOLINESEARCH_SUCCESS              # found step length
+    SUCCESS_USER          = TAOLINESEARCH_SUCCESS_USER         # user-defined success criteria reached
+    # halted
+    HALTED_OTHER          = TAOLINESEARCH_HALTED_OTHER         # stopped search with unknown reason
+    HALTED_MAXFCN         = TAOLINESEARCH_HALTED_MAXFCN        # maximum function evaluations reached
+    HALTED_UPPERBOUND     = TAOLINESEARCH_HALTED_UPPERBOUND    # stopped at upper bound
+    HALTED_LOWERBOUND     = TAOLINESEARCH_HALTED_LOWERBOUND    # stopped at lower bound
+    HALTED_RTOL           = TAOLINESEARCH_HALTED_RTOL          # range of uncertainty is below tolerance
+    HALTED_USER           = TAOLINESEARCH_HALTED_USER          # user-defined halt criteria reached
+
+# --------------------------------------------------------------------
+
+cdef class TAOLineSearch(Object):
+
+    """
+    TAO Line Search
+    """
+
+    Type   = TAOLineSearchType
+    Reason = TAOLineSearchConvergedReason
+
+    def __cinit__(self):
+         self.obj = <PetscObject*> &self.taols
+         self.taols = NULL
+
+    def view(self, Viewer viewer=None):
+        """
+        """
+        cdef PetscViewer vwr = NULL
+        if viewer is not None: vwr = viewer.vwr
+        CHKERR( TaoLineSearchView(self.taols, vwr) )
+
+    def destroy(self):
+        """
+        """
+        CHKERR( TaoLineSearchDestroy(&self.taols) )
+        return self
+
+    def create(self, comm=None):
+        """
+        """
+        cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+        cdef PetscTAOLineSearch newtaols = NULL
+        CHKERR( TaoLineSearchCreate(ccomm, &newtaols) )
+        PetscCLEAR(self.obj); self.taols = newtaols
+        return self
+
+    def setType(self, ls_type):
+        """
+        """
+        cdef PetscTAOLineSearchType ctype = NULL
+        ls_type = str2bytes(ls_type, &ctype)
+        CHKERR( TaoLineSearchSetType(self.taols, ctype) )
+
+    def getType(self):
+        """
+        """
+        cdef PetscTAOLineSearchType ctype = NULL
+        CHKERR( TaoLineSearchGetType(self.taols, &ctype) )
+        return bytes2str(ctype)
+
+    def setFromOptions(self):
+        """
+        """
+        CHKERR( TaoLineSearchSetFromOptions(self.taols) )
+
+    def setUp(self):
+        """
+        """
+        CHKERR( TaoLineSearchSetUp(self.taols) )
+
+    def setOptionsPrefix(self, prefix):
+        """
+        """
+        cdef const char *cprefix = NULL
+        prefix = str2bytes(prefix, &cprefix)
+        CHKERR( TaoLineSearchSetOptionsPrefix(self.taols, cprefix) )
+
+    def getOptionsPrefix(self):
+        """
+        """
+        cdef const char *prefix = NULL
+        CHKERR( TaoLineSearchGetOptionsPrefix(self.taols, &prefix) )
+        return bytes2str(prefix)
+
+    def setObjective(self, objective, args=None, kargs=None):
+        """
+        """
+        CHKERR( TaoLineSearchSetObjectiveRoutine(self.taols, TAOLS_Objective, NULL) )
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        self.set_attr("__objective__", (objective, args, kargs))
+
+    def setGradient(self, gradient, args=None, kargs=None):
+        """
+        """
+        CHKERR( TaoLineSearchSetGradientRoutine(self.taols, TAOLS_Gradient, NULL) )
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        self.set_attr("__gradient__", (gradient, args, kargs))
+
+    def setObjectiveGradient(self, objgrad, args=None, kargs=None):
+        """
+        """
+        CHKERR( TaoLineSearchSetObjectiveAndGradientRoutine(self.taols, TAOLS_ObjGrad, NULL) )
+        if args is None: args = ()
+        if kargs is None: kargs = {}
+        self.set_attr("__objgrad__", (objgrad, args, kargs))
+
+    def useTAORoutines(self, TAO tao):
+        """
+        """
+        CHKERR( TaoLineSearchUseTaoRoutines(self.taols, tao.tao) )
+
+    def apply(self, Vec x, Vec g, Vec s):
+        """
+        """
+        cdef PetscReal f = 0
+        cdef PetscReal steplen = 0
+        cdef PetscTAOLineSearchConvergedReason reason = TAOLINESEARCH_CONTINUE_ITERATING
+        CHKERR( TaoLineSearchApply(self.taols,x.vec,&f,g.vec,s.vec,&steplen,&reason))
+        return toReal(f), toReal(steplen), reason
+
+# --------------------------------------------------------------------
+
+del TAOLineSearchType
+del TAOLineSearchConvergedReason
