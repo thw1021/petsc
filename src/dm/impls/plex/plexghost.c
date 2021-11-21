@@ -298,7 +298,7 @@ PetscErrorCode DMPlexSetUpVecGhostPermutation(DM dm)
 PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
 {
   PetscErrorCode ierr;
-  PetscInt       n, nghosts = 0,*ghosts,nextra = 0;
+  PetscInt       nghosts = 0,*ghosts,nextra = 0;
   MPI_Comm       comm;
   PetscSection   section,localsection;
   PetscInt       localSize, globalSize, pStart, pEnd, p, dof, idx, i;
