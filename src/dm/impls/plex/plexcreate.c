@@ -2708,8 +2708,8 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
   char              oname[256];
   PetscReal         volume = -1.0;
   PetscInt          prerefine = 0, refine = 0, r, coarsen = 0, overlap = 0, extLayers = 0, dim;
-  PetscBool         uniformOrig, created = PETSC_FALSE, uniform = PETSC_TRUE, distribute = PETSC_FALSE, interpolate = PETSC_TRUE, coordSpace = PETSC_TRUE, remap = PETSC_TRUE, ghostCells = PETSC_FALSE, isHierarchy, ignoreModel = PETSC_FALSE, flg;
-  PetscErrorCode ierr;
+  PetscBool         uniformOrig, created = PETSC_FALSE, uniform = PETSC_TRUE, distribute = PETSC_FALSE, interpolate = PETSC_TRUE, coordSpace = PETSC_TRUE, remap = PETSC_TRUE, ghostCells = PETSC_FALSE, isHierarchy, ignoreModel = PETSC_FALSE, flg, useghostperm = PETSC_FALSE;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
@@ -2717,6 +2717,10 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
   /* Handle automatic creation */
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   if (dim < 0) {ierr = DMPlexCreateFromOptions_Internal(PetscOptionsObject, &coordSpace, dm);CHKERRQ(ierr);created = PETSC_TRUE;}
+  ierr = PetscOptionsBool("-dm_plex_use_vec_ghost_permutation", "Put the vector ghost entries at the end of the global vector", "DMPlexSetUseGhostPermutation",useghostperm,&useghostperm,NULL);CHKERRQ(ierr);
+  if (useghostperm) {
+    ierr = DMPlexSetUseVecGhostPermutation(dm);CHKERRQ(ierr);
+  }
   /* Handle interpolation before distribution */
   ierr = PetscOptionsBool("-dm_plex_interpolate_pre", "Flag to interpolate mesh before distribution", "", interpolate, &interpolate, &flg);CHKERRQ(ierr);
   if (flg) {
@@ -2935,9 +2939,17 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
 static PetscErrorCode DMCreateGlobalVector_Plex(DM dm,Vec *vec)
 {
   PetscErrorCode ierr;
+  DM_Plex        *plex = (DM_Plex*) dm->data;
 
   PetscFunctionBegin;
-  ierr = DMCreateGlobalVector_Section_Private(dm,vec);CHKERRQ(ierr);
+  if (plex->useghostperm) {
+    ierr = DMPlexSetUpVecGhostPermutation(dm);CHKERRQ(ierr);
+  }
+  if (plex->vecghostperm) {
+    ierr = DMPlexCreateGhostVector(dm,vec);CHKERRQ(ierr);
+  } else {
+    ierr = DMCreateGlobalVector_Section_Private(dm,vec);CHKERRQ(ierr);
+   }
   /* ierr = VecSetOperation(*vec, VECOP_DUPLICATE, (void(*)(void)) VecDuplicate_MPI_DM);CHKERRQ(ierr); */
   ierr = VecSetOperation(*vec, VECOP_VIEW, (void (*)(void)) VecView_Plex);CHKERRQ(ierr);
   ierr = VecSetOperation(*vec, VECOP_VIEWNATIVE, (void (*)(void)) VecView_Plex_Native);CHKERRQ(ierr);
@@ -2949,8 +2961,12 @@ static PetscErrorCode DMCreateGlobalVector_Plex(DM dm,Vec *vec)
 static PetscErrorCode DMCreateLocalVector_Plex(DM dm,Vec *vec)
 {
   PetscErrorCode ierr;
+  DM_Plex        *plex = (DM_Plex*) dm->data;
 
   PetscFunctionBegin;
+  if (plex->useghostperm) {
+    ierr = DMPlexSetUpVecGhostPermutation(dm);CHKERRQ(ierr);
+  }
   ierr = DMCreateLocalVector_Section_Private(dm,vec);CHKERRQ(ierr);
   ierr = VecSetOperation(*vec, VECOP_VIEW, (void (*)(void)) VecView_Plex_Local);CHKERRQ(ierr);
   ierr = VecSetOperation(*vec, VECOP_LOAD, (void (*)(void)) VecLoad_Plex_Local);CHKERRQ(ierr);
@@ -3053,6 +3069,7 @@ static PetscErrorCode DMInitialize_Plex(DM dm)
   dm->ops->computel2gradientdiff           = DMComputeL2GradientDiff_Plex;
   dm->ops->computel2fielddiff              = DMComputeL2FieldDiff_Plex;
   dm->ops->getneighbors                    = DMGetNeighbors_Plex;
+
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexInsertBoundaryValues_C",DMPlexInsertBoundaryValues_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexInsertTimeDerviativeBoundaryValues_C",DMPlexInsertTimeDerivativeBoundaryValues_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",DMSetUpGLVisViewer_Plex);CHKERRQ(ierr);

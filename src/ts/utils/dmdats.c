@@ -66,12 +66,10 @@ static PetscErrorCode TSComputeIFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
   PetscValidHeaderSpecific(F,VEC_CLASSID,5);
   if (!dmdats->ifunctionlocal) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm,&Xdotloc);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,Xdot,INSERT_VALUES,Xdotloc);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(dm,Xdot,INSERT_VALUES,Xdotloc);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm,&Xloc);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalBegin(dm,Xdot,&Xdotloc);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalEnd(dm,Xdot,&Xdotloc);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalBegin(dm,X,&Xloc);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalEnd(dm,X,&Xloc);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(dm,&info);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(dm,Xloc,&x);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(dm,Xdotloc,&xdot);CHKERRQ(ierr);
@@ -85,24 +83,21 @@ static PetscErrorCode TSComputeIFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
   } break;
   case ADD_VALUES: {
     Vec Floc;
-    ierr = DMGetLocalVector(dm,&Floc);CHKERRQ(ierr);
+    ierr = DMGlobalGetLocal(dm,F,&Floc);CHKERRQ(ierr);
     ierr = VecZeroEntries(Floc);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(dm,Floc,&f);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = (*dmdats->ifunctionlocal)(&info,ptime,x,xdot,f,dmdats->ifunctionlocalctx);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = DMDAVecRestoreArray(dm,Floc,&f);CHKERRQ(ierr);
-    ierr = VecZeroEntries(F);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalBegin(dm,Floc,ADD_VALUES,F);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(dm,Floc,ADD_VALUES,F);CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(dm,&Floc);CHKERRQ(ierr);
+    ierr = DMGlobalRestoreLocal(dm,F,&Floc);CHKERRQ(ierr);
   } break;
   default: SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Cannot use imode=%d",(int)dmdats->ifunctionlocalimode);
   }
   ierr = DMDAVecRestoreArray(dm,Xloc,&x);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm,&Xloc);CHKERRQ(ierr);
+  ierr = DMGlobalRestoreLocal(dm,X,&Xloc);CHKERRQ(ierr);
   ierr = DMDAVecRestoreArray(dm,Xdotloc,&xdot);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm,&Xdotloc);CHKERRQ(ierr);
+  ierr = DMGlobalRestoreLocal(dm,Xdot,&Xdotloc);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -120,9 +115,8 @@ static PetscErrorCode TSComputeIJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
 
   if (dmdats->ijacobianlocal) {
-    ierr = DMGetLocalVector(dm,&Xloc);CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
+    ierr = DMGlobalUpdateLocalBegin(dm,X,&Xloc);CHKERRQ(ierr);
+    ierr = DMGlobalUpdateLocalEnd(dm,X,&Xloc);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dm,&info);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(dm,Xloc,&x);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(dm,Xdot,&xdot);CHKERRQ(ierr);
@@ -131,7 +125,7 @@ static PetscErrorCode TSComputeIJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
     CHKMEMQ;
     ierr = DMDAVecRestoreArray(dm,Xloc,&x);CHKERRQ(ierr);
     ierr = DMDAVecRestoreArray(dm,Xdot,&xdot);CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(dm,&Xloc);CHKERRQ(ierr);
+    ierr = DMGlobalRestoreLocal(dm,X,&Xloc);CHKERRQ(ierr);
   } else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"TSComputeIJacobian_DMDA() called without calling DMDATSSetIJacobian()");
   /* This will be redundant if the user called both, but it's too common to forget. */
   if (A != B) {
@@ -156,9 +150,8 @@ static PetscErrorCode TSComputeRHSFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec 
   PetscValidHeaderSpecific(F,VEC_CLASSID,4);
   if (!dmdats->rhsfunctionlocal) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(dm,&Xloc);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalBegin(dm,X,&Xloc);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalEnd(dm,X,&Xloc);CHKERRQ(ierr);
   ierr = DMDAGetLocalInfo(dm,&info);CHKERRQ(ierr);
   ierr = DMDAVecGetArray(dm,Xloc,&x);CHKERRQ(ierr);
   switch (dmdats->rhsfunctionlocalimode) {
@@ -171,22 +164,19 @@ static PetscErrorCode TSComputeRHSFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec 
   } break;
   case ADD_VALUES: {
     Vec Floc;
-    ierr = DMGetLocalVector(dm,&Floc);CHKERRQ(ierr);
+    ierr = DMGlobalGetLocal(dm,F,&Floc);CHKERRQ(ierr);
     ierr = VecZeroEntries(Floc);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(dm,Floc,&f);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = (*dmdats->rhsfunctionlocal)(&info,ptime,x,f,dmdats->rhsfunctionlocalctx);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = DMDAVecRestoreArray(dm,Floc,&f);CHKERRQ(ierr);
-    ierr = VecZeroEntries(F);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalBegin(dm,Floc,ADD_VALUES,F);CHKERRQ(ierr);
-    ierr = DMLocalToGlobalEnd(dm,Floc,ADD_VALUES,F);CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(dm,&Floc);CHKERRQ(ierr);
+    ierr = DMGlobalRestoreLocal(dm,F,&Floc);CHKERRQ(ierr);
   } break;
   default: SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Cannot use imode=%d",(int)dmdats->rhsfunctionlocalimode);
   }
   ierr = DMDAVecRestoreArray(dm,Xloc,&x);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(dm,&Xloc);CHKERRQ(ierr);
+  ierr = DMGlobalRestoreLocal(dm,X,&Xloc);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -204,16 +194,15 @@ static PetscErrorCode TSComputeRHSJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Mat 
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
 
   if (dmdats->rhsjacobianlocal) {
-    ierr = DMGetLocalVector(dm,&Xloc);CHKERRQ(ierr);
-    ierr = DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
-    ierr = DMGlobalToLocalEnd(dm,X,INSERT_VALUES,Xloc);CHKERRQ(ierr);
+    ierr = DMGlobalUpdateLocalBegin(dm,X,&Xloc);CHKERRQ(ierr);
+    ierr = DMGlobalUpdateLocalEnd(dm,X,&Xloc);CHKERRQ(ierr);
     ierr = DMDAGetLocalInfo(dm,&info);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(dm,Xloc,&x);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = (*dmdats->rhsjacobianlocal)(&info,ptime,x,A,B,dmdats->rhsjacobianlocalctx);CHKERRQ(ierr);
     CHKMEMQ;
     ierr = DMDAVecRestoreArray(dm,Xloc,&x);CHKERRQ(ierr);
-    ierr = DMRestoreLocalVector(dm,&Xloc);CHKERRQ(ierr);
+    ierr = DMGlobalRestoreLocal(dm,X,&Xloc);CHKERRQ(ierr);
   } else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"TSComputeRHSJacobian_DMDA() called without calling DMDATSSetRHSJacobian()");
   /* This will be redundant if the user called both, but it's too common to forget. */
   if (A != B) {
