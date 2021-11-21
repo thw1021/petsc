@@ -2346,6 +2346,7 @@ PetscErrorCode DMDestroy_Plex(DM dm)
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMCreateNeumannOverlap_C", NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMInterpolateSolution_C", NULL);CHKERRQ(ierr);
   if (--mesh->refct > 0) PetscFunctionReturn(0);
+  ierr = ISDestroy(&mesh->vecghostperm);CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&mesh->coneSection);CHKERRQ(ierr);
   ierr = PetscFree(mesh->cones);CHKERRQ(ierr);
   ierr = PetscFree(mesh->coneOrientations);CHKERRQ(ierr);
@@ -5444,10 +5445,11 @@ PetscErrorCode DMPlexGetPointDualSpaceFEM(DM dm, PetscInt point, PetscInt field,
 
 PETSC_STATIC_INLINE PetscErrorCode DMPlexVecGetClosure_Depth1_Static(DM dm, PetscSection section, Vec v, PetscInt point, PetscInt *csize, PetscScalar *values[])
 {
-  PetscScalar    *array, *vArray;
-  const PetscInt *cone, *coneO;
-  PetscInt        pStart, pEnd, p, numPoints, size = 0, offset = 0;
-  PetscErrorCode  ierr;
+  PetscScalar       *array;
+  const PetscScalar *vArray;
+  const PetscInt    *cone, *coneO;
+  PetscInt          pStart, pEnd, p, numPoints, size = 0, offset = 0;
+  PetscErrorCode    ierr;
 
   PetscFunctionBeginHot;
   ierr = PetscSectionGetChart(section, &pStart, &pEnd);CHKERRQ(ierr);
@@ -5478,10 +5480,10 @@ PETSC_STATIC_INLINE PetscErrorCode DMPlexVecGetClosure_Depth1_Static(DM dm, Pets
     array = *values;
   }
   size = 0;
-  ierr = VecGetArray(v, &vArray);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(v, &vArray);CHKERRQ(ierr);
   if ((point >= pStart) && (point < pEnd)) {
-    PetscInt     dof, off, d;
-    PetscScalar *varr;
+    PetscInt          dof, off, d;
+    const PetscScalar *varr;
 
     ierr = PetscSectionGetDof(section, point, &dof);CHKERRQ(ierr);
     ierr = PetscSectionGetOffset(section, point, &off);CHKERRQ(ierr);
@@ -5492,10 +5494,10 @@ PETSC_STATIC_INLINE PetscErrorCode DMPlexVecGetClosure_Depth1_Static(DM dm, Pets
     size += dof;
   }
   for (p = 0; p < numPoints; ++p) {
-    const PetscInt cp = cone[p];
-    PetscInt       o  = coneO[p];
-    PetscInt       dof, off, d;
-    PetscScalar   *varr;
+    const PetscInt    cp = cone[p];
+    PetscInt          o  = coneO[p];
+    PetscInt          dof, off, d;
+    const PetscScalar *varr;
 
     if ((cp < pStart) || (cp >= pEnd)) continue;
     ierr = PetscSectionGetDof(section, cp, &dof);CHKERRQ(ierr);
@@ -5512,7 +5514,7 @@ PETSC_STATIC_INLINE PetscErrorCode DMPlexVecGetClosure_Depth1_Static(DM dm, Pets
     }
     size += dof;
   }
-  ierr = VecRestoreArray(v, &vArray);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(v, &vArray);CHKERRQ(ierr);
   if (!*values) {
     if (csize) *csize = size;
     *values = array;
