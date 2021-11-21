@@ -21,7 +21,7 @@
 
       PetscMPIInt size,rank
       PetscInt nlocal,nghost,ifrom(2)
-      PetscInt i,rstart,rend,bs,ione
+      PetscInt i,rstart,rend,bs,ione,nextra
       PetscBool       flag
       PetscErrorCode ierr
       PetscScalar  value,tarray(20)
@@ -30,6 +30,7 @@
 
       nlocal = 6
       nghost = 2
+      nextra = 0
       bs     = 2
       nlocal = bs*nlocal
 
@@ -79,10 +80,10 @@
      &                         '-allocate',flag,ierr)
       if (flag) then
         call VecCreateGhostBlockWithArray(PETSC_COMM_WORLD,bs,nlocal,    &
-     &        PETSC_DECIDE,nghost,ifrom,tarray,gxs,ierr)
+     &        PETSC_DECIDE,nghost,ifrom,nextra,tarray,gxs,ierr)
       else
         call VecCreateGhostBlock(PETSC_COMM_WORLD,bs,nlocal,             &
-     &       PETSC_DECIDE,nghost,ifrom,gxs,ierr)
+     &       PETSC_DECIDE,nghost,ifrom,nextra,gxs,ierr)
       endif
 
 !      Test VecDuplicate
