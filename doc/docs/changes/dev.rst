@@ -62,6 +62,9 @@ Changes: Development
 -  Add ``VecSetBindingPropagates()``
 -  Add ``VecGetBindingPropagates()``
 -  For CUDA and ViennaCL and HIP GPU vectors, ``VecCreate()`` no longer allocates the array on CPU eagerly, it is only allocated if it is needed
+-  Add ``nextra`` argument to ``VecCreateGhost()``, ``VecCreateGhostWithArray()``, ``VecCreateGhostBlock()``, ``VecCreateGhostBlockWithArray()``
+-  Refactor ``VecGhost`` so it can also work with sequential vectors
+   -  Add ``VecGhostHasLocalForm()``
 
 .. rubric:: PetscSection:
 

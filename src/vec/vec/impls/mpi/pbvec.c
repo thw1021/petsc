@@ -40,8 +40,8 @@ static PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
   if (v->unplacedarray) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array;  /* save previous array so reset can bring it back */
   v->array         = (PetscScalar*)a;
-  if (v->localrep) {
-    ierr = VecPlaceArray(v->localrep,a);CHKERRQ(ierr);
+  if (vin->localrep) {
+    ierr = VecPlaceArray(vin->localrep,a);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -49,28 +49,26 @@ static PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
 PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
 {
   PetscErrorCode ierr;
-  Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
   PetscScalar    *array;
 
   PetscFunctionBegin;
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
-  ierr = VecCreate_MPI_Private(*v,PETSC_TRUE,w->nghost,NULL);CHKERRQ(ierr);
-  vw   = (Vec_MPI*)(*v)->data;
+  ierr = VecCreate_MPI_Private(*v,PETSC_TRUE,win->nghost,win->nextra,NULL);CHKERRQ(ierr);
   ierr = PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
 
   /* save local representation of the parallel vector (and scatter) if it exists */
-  if (w->localrep) {
+  if (win->localrep) {
     ierr = VecGetArray(*v,&array);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,PetscAbs(win->map->bs),win->map->n+w->nghost,array,&vw->localrep);CHKERRQ(ierr);
-    ierr = PetscMemcpy(vw->localrep->ops,w->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,PetscAbs(win->map->bs),win->map->n+win->nghost+win->nextra,array,&(*v)->localrep);CHKERRQ(ierr);
+    ierr = PetscMemcpy((*v)->localrep->ops,win->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
     ierr = VecRestoreArray(*v,&array);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)vw->localrep);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)(*v)->localrep);CHKERRQ(ierr);
 
-    vw->localupdate = w->localupdate;
-    if (vw->localupdate) {
-      ierr = PetscObjectReference((PetscObject)vw->localupdate);CHKERRQ(ierr);
+    (*v)->localupdate = win->localupdate;
+    if ((*v)->localupdate) {
+      ierr = PetscObjectReference((PetscObject)(*v)->localupdate);CHKERRQ(ierr);
     }
   }
 
@@ -111,14 +109,14 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
 
 static PetscErrorCode VecResetArray_MPI(Vec vin)
 {
-  Vec_MPI        *v = (Vec_MPI*)vin->data;
   PetscErrorCode ierr;
+  Vec_MPI        *v = (Vec_MPI*)vin->data;
 
   PetscFunctionBegin;
   v->array         = v->unplacedarray;
   v->unplacedarray = NULL;
-  if (v->localrep) {
-    ierr = VecResetArray(v->localrep);CHKERRQ(ierr);
+  if (vin->localrep) {
+    ierr = VecResetArray(vin->localrep);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -490,7 +488,7 @@ static struct _VecOps DvOps = { VecDuplicate_MPI, /* 1 */
     If alloc is true and array is NULL then this routine allocates the space, otherwise
     no space is allocated.
 */
-PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
+PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,PetscInt nextra,const PetscScalar array[])
 {
   Vec_MPI        *s;
   PetscErrorCode ierr;
@@ -499,7 +497,8 @@ PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const
   ierr           = PetscNewLog(v,&s);CHKERRQ(ierr);
   v->data        = (void*)s;
   ierr           = PetscMemcpy(v->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
-  s->nghost      = nghost;
+  v->nghost      = nghost;
+  v->nextra      = nextra;
   v->petscnative = PETSC_TRUE;
   if (array) v->offloadmask = PETSC_OFFLOAD_CPU;
 
@@ -508,15 +507,15 @@ PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const
   s->array           = (PetscScalar*)array;
   s->array_allocated = NULL;
   if (alloc && !array) {
-    PetscInt n = v->map->n+nghost;
+    PetscInt n = v->map->n+nghost+nextra;
     ierr               = PetscCalloc1(n,&s->array);CHKERRQ(ierr);
     ierr               = PetscLogObjectMemory((PetscObject)v,n*sizeof(PetscScalar));CHKERRQ(ierr);
     s->array_allocated = s->array;
   }
 
   /* By default parallel vectors do not have local representation */
-  s->localrep    = NULL;
-  s->localupdate = NULL;
+  v->localrep    = NULL;
+  v->localupdate = NULL;
 
   v->stash.insertmode = NOT_SET_VALUES;
   v->bstash.insertmode = NOT_SET_VALUES;
@@ -550,7 +549,7 @@ PetscErrorCode VecCreate_MPI(Vec vv)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,0,0,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -622,7 +621,7 @@ PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Petsc
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vv,bs);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_FALSE,0,array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(*vv,PETSC_FALSE,0,0,array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -638,6 +637,7 @@ PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Petsc
 .  N - global vector length (or PETSC_DECIDE to have calculated if n is given)
 .  nghost - number of local ghost points
 .  ghosts - global indices of ghost points (or NULL if not needed), these do not need to be in increasing order (sorted)
+.  nextra - extra locations at the end of the local vector
 -  array - the space to store the vector values (as long as n + nghost)
 
    Output Parameter:
@@ -656,10 +656,9 @@ PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Petsc
           VecCreateGhostBlock(), VecCreateGhostBlockWithArray(), VecMPISetGhost()
 
 @*/
-PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],const PetscScalar array[],Vec *vv)
+PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],PetscInt nextra,const PetscScalar array[],Vec *vv)
 {
   PetscErrorCode         ierr;
-  Vec_MPI                *w;
   PetscScalar            *larray;
   IS                     from,to;
   ISLocalToGlobalMapping ltog;
@@ -671,25 +670,26 @@ PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,Pets
   if (n == PETSC_DECIDE)      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size");
   if (nghost == PETSC_DECIDE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local ghost size");
   if (nghost < 0)             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Ghost length must be >= 0");
+  if (nextra == PETSC_DECIDE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local nextra size");
+  if (nextra < 0)             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Extra length must be >= 0");
   ierr = PetscSplitOwnership(comm,&n,&N);CHKERRQ(ierr);
   /* Create global representation */
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost,array);CHKERRQ(ierr);
-  w    = (Vec_MPI*)(*vv)->data;
+  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost,nextra,array);CHKERRQ(ierr);
   /* Create local representation */
   ierr = VecGetArray(*vv,&larray);CHKERRQ(ierr);
-  ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,n+nghost,larray,&w->localrep);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)w->localrep);CHKERRQ(ierr);
+  ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,n+nghost+nextra,larray,&(*vv)->localrep);CHKERRQ(ierr);
+  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)(*vv)->localrep);CHKERRQ(ierr);
   ierr = VecRestoreArray(*vv,&larray);CHKERRQ(ierr);
 
   /*
        Create scatter context for scattering (updating) ghost values
   */
-  ierr = ISCreateGeneral(comm,nghost,ghosts,PETSC_COPY_VALUES,&from);CHKERRQ(ierr);
+  ierr = ISCreateGeneral(comm,nghost,ghosts,PETSC_USE_POINTER,&from);CHKERRQ(ierr);
   ierr = ISCreateStride(PETSC_COMM_SELF,nghost,n,1,&to);CHKERRQ(ierr);
-  ierr = VecScatterCreate(*vv,from,w->localrep,to,&w->localupdate);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)w->localupdate);CHKERRQ(ierr);
+  ierr = VecScatterCreate(*vv,from,(*vv)->localrep,to,&(*vv)->localupdate);CHKERRQ(ierr);
+  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)(*vv)->localupdate);CHKERRQ(ierr);
   ierr = ISDestroy(&to);CHKERRQ(ierr);
   ierr = ISDestroy(&from);CHKERRQ(ierr);
 
@@ -737,12 +737,12 @@ PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,Pets
           VecCreateGhostBlock(), VecCreateGhostBlockWithArray(), VecMPISetGhost()
 
 @*/
-PetscErrorCode  VecCreateGhost(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],Vec *vv)
+PetscErrorCode  VecCreateGhost(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],PetscInt nextra,Vec *vv)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreateGhostWithArray(comm,n,N,nghost,ghosts,NULL,vv);CHKERRQ(ierr);
+  ierr = VecCreateGhostWithArray(comm,n,N,nghost,ghosts,nextra,NULL,vv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -754,11 +754,11 @@ PetscErrorCode  VecCreateGhost(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt ngho
    Input Parameters:
 +  vv - the MPI vector
 .  nghost - number of local ghost points
--  ghosts - global indices of ghost points, these do not need to be in increasing order (sorted)
+.  ghosts - global indices of ghost points, these do not need to be in increasing order (sorted)
+-  nextra - extra entries for the end of the array
 
    Notes:
-   Use VecGhostGetLocalForm() to access the local, ghosted representation
-   of the vector.
+   Use VecGhostGetLocalForm() to access the local, ghosted representation of the vector.
 
    This also automatically sets the ISLocalToGlobalMapping() for this vector.
 
@@ -772,17 +772,16 @@ PetscErrorCode  VecCreateGhost(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt ngho
           VecCreateGhostBlock(), VecCreateGhostBlockWithArray()
 
 @*/
-PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
+PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[],PetscInt nextra)
 {
   PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)vv,VECMPI,&flg);CHKERRQ(ierr);
-  /* if already fully existant VECMPI then basically destroy it and rebuild with ghosting */
+  /* if already fully existant vector then destroy it and rebuild with ghosting */
   if (flg) {
     PetscInt               n,N;
-    Vec_MPI                *w;
     PetscScalar            *larray;
     IS                     from,to;
     ISLocalToGlobalMapping ltog;
@@ -794,12 +793,11 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
     N    = vv->map->N;
     ierr = (*vv->ops->destroy)(vv);CHKERRQ(ierr);
     ierr = VecSetSizes(vv,n,N);CHKERRQ(ierr);
-    ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,NULL);CHKERRQ(ierr);
-    w    = (Vec_MPI*)(vv)->data;
+    ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,nextra,NULL);CHKERRQ(ierr);
     /* Create local representation */
     ierr = VecGetArray(vv,&larray);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,n+nghost,larray,&w->localrep);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)w->localrep);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,n+nghost+nextra,larray,&vv->localrep);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)vv->localrep);CHKERRQ(ierr);
     ierr = VecRestoreArray(vv,&larray);CHKERRQ(ierr);
 
     /*
@@ -807,8 +805,8 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
      */
     ierr = ISCreateGeneral(comm,nghost,ghosts,PETSC_COPY_VALUES,&from);CHKERRQ(ierr);
     ierr = ISCreateStride(PETSC_COMM_SELF,nghost,n,1,&to);CHKERRQ(ierr);
-    ierr = VecScatterCreate(vv,from,w->localrep,to,&w->localupdate);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)w->localupdate);CHKERRQ(ierr);
+    ierr = VecScatterCreate(vv,from,vv->localrep,to,&vv->localupdate);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)vv->localupdate);CHKERRQ(ierr);
     ierr = ISDestroy(&to);CHKERRQ(ierr);
     ierr = ISDestroy(&from);CHKERRQ(ierr);
 
@@ -841,7 +839,8 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
 .  N - global vector length (or PETSC_DECIDE to have calculated if n is given)
 .  nghost - number of local ghost blocks
 .  ghosts - global indices of ghost blocks (or NULL if not needed), counts are by block not by index, these do not need to be in increasing order (sorted)
--  array - the space to store the vector values (as long as n + nghost*bs)
+.  nextra - number of local extra blocks at end of vector
+-  array - the space to store the vector values (as long as n + nghost*bs + nextra*bs)
 
    Output Parameter:
 .  vv - the global vector representation (without ghost points as part of vector)
@@ -861,10 +860,9 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
           VecCreateGhostWithArray(), VecCreateGhostBlock()
 
 @*/
-PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],const PetscScalar array[],Vec *vv)
+PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],PetscInt nextra,const PetscScalar array[],Vec *vv)
 {
   PetscErrorCode         ierr;
-  Vec_MPI                *w;
   PetscScalar            *larray;
   IS                     from,to;
   ISLocalToGlobalMapping ltog;
@@ -876,18 +874,19 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
   if (n == PETSC_DECIDE)      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size");
   if (nghost == PETSC_DECIDE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local ghost size");
   if (nghost < 0)             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Ghost length must be >= 0");
+  if (nextra == PETSC_DECIDE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set extra size");
+  if (nextra < 0)             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Extra length must be >= 0");
   if (n % bs)                 SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size must be a multiple of block size");
   ierr = PetscSplitOwnership(comm,&n,&N);CHKERRQ(ierr);
   /* Create global representation */
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vv,bs);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,array);CHKERRQ(ierr);
-  w    = (Vec_MPI*)(*vv)->data;
+  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,nextra*bs,array);CHKERRQ(ierr);
   /* Create local representation */
   ierr = VecGetArray(*vv,&larray);CHKERRQ(ierr);
-  ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,bs,n+bs*nghost,larray,&w->localrep);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)w->localrep);CHKERRQ(ierr);
+  ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,bs,n+bs*nghost+bs*nextra,larray,&(*vv)->localrep);CHKERRQ(ierr);
+  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)(*vv)->localrep);CHKERRQ(ierr);
   ierr = VecRestoreArray(*vv,&larray);CHKERRQ(ierr);
 
   /*
@@ -895,8 +894,8 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
   */
   ierr = ISCreateBlock(comm,bs,nghost,ghosts,PETSC_COPY_VALUES,&from);CHKERRQ(ierr);
   ierr = ISCreateStride(PETSC_COMM_SELF,bs*nghost,n,1,&to);CHKERRQ(ierr);
-  ierr = VecScatterCreate(*vv,from,w->localrep,to,&w->localupdate);CHKERRQ(ierr);
-  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)w->localupdate);CHKERRQ(ierr);
+  ierr = VecScatterCreate(*vv,from,(*vv)->localrep,to,&(*vv)->localupdate);CHKERRQ(ierr);
+  ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)(*vv)->localupdate);CHKERRQ(ierr);
   ierr = ISDestroy(&to);CHKERRQ(ierr);
   ierr = ISDestroy(&from);CHKERRQ(ierr);
 
@@ -927,14 +926,14 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
 .  n - local vector length
 .  N - global vector length (or PETSC_DECIDE to have calculated if n is given)
 .  nghost - number of local ghost blocks
--  ghosts - global indices of ghost blocks, counts are by block, not by individual index, these do not need to be in increasing order (sorted)
+.  ghosts - global indices of ghost blocks, counts are by block, not by individual index, these do not need to be in increasing order (sorted)
+-  nextra - extra blocks at the end of the vector
 
    Output Parameter:
 .  vv - the global vector representation (without ghost points as part of vector)
 
    Notes:
-   Use VecGhostGetLocalForm() to access the local, ghosted representation
-   of the vector.
+   Use VecGhostGetLocalForm() to access the local, ghosted representation of the vector.
 
    n is the local vector size (total local size not the number of blocks) while nghost
    is the number of blocks in the ghost portion, i.e. the number of elements in the ghost
@@ -947,11 +946,11 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
           VecCreateGhostWithArray(), VecCreateMPIWithArray(), VecCreateGhostBlockWithArray()
 
 @*/
-PetscErrorCode  VecCreateGhostBlock(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],Vec *vv)
+PetscErrorCode  VecCreateGhostBlock(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],PetscInt nextra,Vec *vv)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreateGhostBlockWithArray(comm,bs,n,N,nghost,ghosts,NULL,vv);CHKERRQ(ierr);
+  ierr = VecCreateGhostBlockWithArray(comm,bs,n,N,nghost,ghosts,nextra,NULL,vv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

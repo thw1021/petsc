@@ -479,29 +479,31 @@ cdef class Vec(Object):
         dlm_tensor.manager_deleter = manager_deleter
         return PyCapsule_New(dlm_tensor, 'dltensor', pycapsule_deleter)
 
-    def createGhost(self, ghosts, size, bsize=None, comm=None):
+    def createGhost(self, ghosts, size, bsize=None, nextra=0, comm=None):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscInt ng=0, *ig=NULL
         ghosts = iarray_i(ghosts, &ng, &ig)
         cdef PetscInt bs=0, n=0, N=0
+        cdef PetscInt ne = nextra
         Vec_Sizes(size, bsize, &bs, &n, &N)
         Sys_Layout(ccomm, bs, &n, &N)
         cdef PetscVec newvec = NULL
         if bs == PETSC_DECIDE:
             CHKERR( VecCreateGhost(
-                    ccomm, n, N, ng, ig, &newvec) )
+                    ccomm, n, N, ng, ig, ne, &newvec) )
         else:
             CHKERR( VecCreateGhostBlock(
-                    ccomm, bs, n, N, ng, ig, &newvec) )
+                    ccomm, bs, n, N, ng, ig, ne, &newvec) )
         PetscCLEAR(self.obj); self.vec = newvec
         return self
 
     def createGhostWithArray(self, ghosts, array,
-                             size=None, bsize=None, comm=None):
+                             size=None, bsize=None, nextra=0, comm=None):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscInt ng=0, *ig=NULL
         ghosts = iarray_i(ghosts, &ng, &ig)
         cdef PetscInt na=0
+        cdef PetscInt ne = nextra
         cdef PetscScalar *sa=NULL
         array = oarray_s(array, &na, &sa)
         cdef PetscInt b = 1 if bsize is None else asInt(bsize)
@@ -516,10 +518,10 @@ cdef class Vec(Object):
         cdef PetscVec newvec = NULL
         if bs == PETSC_DECIDE:
             CHKERR( VecCreateGhostWithArray(
-                    ccomm, n, N, ng, ig, sa, &newvec) )
+                    ccomm, n, N, ng, ig, ne, sa, &newvec) )
         else:
             CHKERR( VecCreateGhostBlockWithArray(
-                    ccomm, bs, n, N, ng, ig, sa, &newvec) )
+                    ccomm, bs, n, N, ng, ig, ne, sa, &newvec) )
         PetscCLEAR(self.obj); self.vec = newvec
         self.set_attr('__array__', array)
         return self
@@ -1135,11 +1137,11 @@ cdef class Vec(Object):
         CHKERR( VecGhostUpdateBegin(self.vec, caddv, csctm) )
         CHKERR( VecGhostUpdateEnd(self.vec, caddv, csctm) )
 
-    def setMPIGhost(self, ghosts):
+    def setMPIGhost(self, ghosts, nextra=0):
         "Alternative to createGhost()"
-        cdef PetscInt ng=0, *ig=NULL
+        cdef PetscInt ng=0, *ig=NULL, ne = nextra
         ghosts = iarray_i(ghosts, &ng, &ig)
-        CHKERR( VecMPISetGhost(self.vec, ng, ig) )
+        CHKERR( VecMPISetGhost(self.vec, ng, ig, ne) )
 
     #
 

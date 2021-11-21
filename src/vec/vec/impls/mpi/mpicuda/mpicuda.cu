@@ -135,27 +135,25 @@ M*/
 PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
 {
   PetscErrorCode ierr;
-  Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
   PetscScalar    *array;
 
   PetscFunctionBegin;
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
-  ierr = VecCreate_MPICUDA_Private(*v,PETSC_TRUE,w->nghost,0);CHKERRQ(ierr);
-  vw   = (Vec_MPI*)(*v)->data;
+  ierr = VecCreate_MPICUDA_Private(*v,PETSC_TRUE,win->nghost,0);CHKERRQ(ierr);
   ierr = PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
 
   /* save local representation of the parallel vector (and scatter) if it exists */
-  if (w->localrep) {
+  if (win->localrep) {
     ierr = VecGetArray(*v,&array);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,win->map->n+w->nghost,array,&vw->localrep);CHKERRQ(ierr);
-    ierr = PetscMemcpy(vw->localrep->ops,w->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,win->map->n+win->nghost,array,&(*v)->localrep);CHKERRQ(ierr);
+    ierr = PetscMemcpy((*v)->localrep->ops,win->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
     ierr = VecRestoreArray(*v,&array);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)vw->localrep);CHKERRQ(ierr);
-    vw->localupdate = w->localupdate;
-    if (vw->localupdate) {
-      ierr = PetscObjectReference((PetscObject)vw->localupdate);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)(*v)->localrep);CHKERRQ(ierr);
+    (*v)->localupdate = win->localupdate;
+    if ((*v)->localupdate) {
+      ierr = PetscObjectReference((PetscObject)(*v)->localupdate);CHKERRQ(ierr);
     }
   }
 
@@ -511,7 +509,7 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
   Vec_CUDA       *veccuda;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0,NULL);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPICUDA);CHKERRQ(ierr);
 
   ierr = VecBindToCPU_MPICUDA(vv,PETSC_FALSE);CHKERRQ(ierr);

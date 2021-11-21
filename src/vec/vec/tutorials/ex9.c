@@ -72,14 +72,14 @@ int main(int argc,char **argv)
   ierr = PetscOptionsHasName(NULL,NULL,"-minvalues",&flg3);CHKERRQ(ierr);
   if (flg) {
     ierr = PetscMalloc1(nlocal+nghost,&tarray);CHKERRQ(ierr);
-    ierr = VecCreateGhostWithArray(PETSC_COMM_WORLD,nlocal,PETSC_DECIDE,nghost,ifrom,tarray,&gxs);CHKERRQ(ierr);
+    ierr = VecCreateGhostWithArray(PETSC_COMM_WORLD,nlocal,PETSC_DECIDE,nghost,ifrom,0,tarray,&gxs);CHKERRQ(ierr);
   } else if (flg2) {
     ierr = VecCreate(PETSC_COMM_WORLD,&gxs);CHKERRQ(ierr);
     ierr = VecSetType(gxs,VECMPI);CHKERRQ(ierr);
     ierr = VecSetSizes(gxs,nlocal,PETSC_DECIDE);CHKERRQ(ierr);
-    ierr = VecMPISetGhost(gxs,nghost,ifrom);CHKERRQ(ierr);
+    ierr = VecMPISetGhost(gxs,nghost,ifrom,0);CHKERRQ(ierr);
   } else {
-    ierr = VecCreateGhost(PETSC_COMM_WORLD,nlocal,PETSC_DECIDE,nghost,ifrom,&gxs);CHKERRQ(ierr);
+    ierr = VecCreateGhost(PETSC_COMM_WORLD,nlocal,PETSC_DECIDE,nghost,ifrom,0,&gxs);CHKERRQ(ierr);
   }
 
   /*
