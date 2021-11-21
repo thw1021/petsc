@@ -161,7 +161,7 @@ PetscErrorCode DMPlexGetPointOwnershipType(DM dm,PetscInt *depth,PetscInt **enti
 .    DM - the DMPLEX object
 
     Options Database:
-.    -dmplex_use_vec_ghost_permutation
+.    -dm_plex_use_vec_ghost_permutation
 
     Level: basic
 

@@ -77,7 +77,7 @@ int main(int argc,char **argv)
     ierr = VecCreate(PETSC_COMM_WORLD,&gxs);CHKERRQ(ierr);
     ierr = VecSetType(gxs,VECMPI);CHKERRQ(ierr);
     ierr = VecSetSizes(gxs,nlocal,PETSC_DECIDE);CHKERRQ(ierr);
-    ierr = VecMPISetGhost(gxs,nghost,ifrom);CHKERRQ(ierr);
+    ierr = VecMPISetGhost(gxs,nghost,ifrom,0);CHKERRQ(ierr);
   } else {
     ierr = VecCreateGhost(PETSC_COMM_WORLD,nlocal,PETSC_DECIDE,nghost,ifrom,0,&gxs);CHKERRQ(ierr);
   }
