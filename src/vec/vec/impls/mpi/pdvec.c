@@ -20,9 +20,9 @@ PetscErrorCode VecDestroy_MPI(Vec v)
   ierr = PetscFree(x->array_allocated);CHKERRQ(ierr);
 
   /* Destroy local representation of vector if it exists */
-  if (x->localrep) {
-    ierr = VecDestroy(&x->localrep);CHKERRQ(ierr);
-    ierr = VecScatterDestroy(&x->localupdate);CHKERRQ(ierr);
+  if (v->localrep) {
+    ierr = VecDestroy(&v->localrep);CHKERRQ(ierr);
+    ierr = VecScatterDestroy(&v->localupdate);CHKERRQ(ierr);
   }
   ierr = VecAssemblyReset_MPI(v);CHKERRQ(ierr);
 

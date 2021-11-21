@@ -494,7 +494,7 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
     if (!is_global_vec) {
       /* This is an MPI Vector with ghosted padding */
       ierr = VecCreateGhostBlock((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,
-                                 dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], vec);CHKERRQ(ierr);
+                                 dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], 0, vec);CHKERRQ(ierr);
     }
     else {
       /* This is an MPI/SEQ Vector */
@@ -520,7 +520,7 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
     if (!is_global_vec) {
       /* This is an MPI Vector with ghosted padding */
       ierr = VecCreateGhostBlockWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,
-                                          dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], data_ptr, vec);CHKERRQ(ierr);
+                                          dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], 0, data_ptr, vec);CHKERRQ(ierr);
     }
     else {
       /* This is an MPI Vector without ghosted padding */

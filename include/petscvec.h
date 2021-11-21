@@ -653,14 +653,15 @@ PETSC_EXTERN PetscErrorCode VecSetOperation(Vec,VecOperation,void(*)(void));
      Routines for dealing with ghosted vectors:
   vectors with ghost elements at the end of the array.
 */
-PETSC_EXTERN PetscErrorCode VecMPISetGhost(Vec,PetscInt,const PetscInt[]);
-PETSC_EXTERN PetscErrorCode VecCreateGhost(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateGhostWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateGhostBlock(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateGhostBlockWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],const PetscScalar[],Vec*);
+PETSC_EXTERN PetscErrorCode VecMPISetGhost(Vec,PetscInt,const PetscInt[],PetscInt);
+PETSC_EXTERN PetscErrorCode VecCreateGhost(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,Vec*);
+PETSC_EXTERN PetscErrorCode VecCreateGhostWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscScalar[],Vec*);
+PETSC_EXTERN PetscErrorCode VecCreateGhostBlock(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,Vec*);
+PETSC_EXTERN PetscErrorCode VecCreateGhostBlockWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscScalar[],Vec*);
 PETSC_EXTERN PetscErrorCode VecGhostGetLocalForm(Vec,Vec*);
 PETSC_EXTERN PetscErrorCode VecGhostRestoreLocalForm(Vec,Vec*);
 PETSC_EXTERN PetscErrorCode VecGhostIsLocalForm(Vec,Vec,PetscBool*);
+PETSC_EXTERN PetscErrorCode VecGhostHasLocalForm(Vec,PetscBool*);
 PETSC_EXTERN PetscErrorCode VecGhostUpdateBegin(Vec,InsertMode,ScatterMode);
 PETSC_EXTERN PetscErrorCode VecGhostUpdateEnd(Vec,InsertMode,ScatterMode);
 
