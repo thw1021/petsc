@@ -59,11 +59,11 @@ namespace detail
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
 // functions of a class inheriting from CUPMInterface
 #define CHKERRCUPM(expression) do {                                     \
-    const cupmError_t cerr__ = expression;                              \
-    if (PetscUnlikely(cerr__ != cupmSuccess)) {                         \
+    const cupmError_t cerr_p_ = expression;                             \
+    if (PetscUnlikely(cerr_p_ != cupmSuccess)) {                        \
       SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
-               cupmName(),static_cast<PetscErrorCode>(cerr__),          \
-               cupmGetErrorName(cerr__),cupmGetErrorString(cerr__));    \
+               cupmName(),static_cast<PetscErrorCode>(cerr_p_),         \
+               cupmGetErrorName(cerr_p_),cupmGetErrorString(cerr_p_));  \
     }                                                                   \
   } while (0)
 
@@ -71,7 +71,7 @@ namespace detail
   static const auto PETSC_CONCAT(our_prefix,our_suffix) = PETSC_CONCAT(their_prefix,their_suffix)
 
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(our_suffix,their_suffix) \
-  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX_L,their_suffix)
 
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE(suffix)         \
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(suffix,suffix)
@@ -80,7 +80,7 @@ namespace detail
   PETSC_ALIAS_FUNCTION(static constexpr PETSC_CONCAT(our_prefix,our_suffix),PETSC_CONCAT(their_prefix,their_suffix))
 
 #define PETSC_CUPM_ALIAS_FUNCTION_COMMON(our_suffix,their_suffix)       \
-  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix)
+  PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX_L,their_suffix)
 
 #define PETSC_CUPM_ALIAS_FUNCTION(suffix) PETSC_CUPM_ALIAS_FUNCTION_COMMON(suffix,suffix)
 
@@ -88,7 +88,7 @@ namespace detail
   PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr PETSC_CONCAT(our_prefix,our_suffix),PETSC_CONCAT(their_prefix,their_suffix),N)
 
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(our_suffix,their_suffix,N) \
-  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX,their_suffix,N)
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(cupm,our_suffix,PETSC_CUPM_PREFIX_L,their_suffix,N)
 
 // Base class that holds stuff that can be directly determined with templates
 template <CUPMDeviceType T>
@@ -98,7 +98,7 @@ struct CUPMInterfaceBase
 
   PETSC_CXX_COMPAT_DECL(constexpr const char* cupmName())
   {
-    return std::get<util::integral_value(type)>(CUPMDeviceTypes);
+    return std::get<util::integral_value(T)>(CUPMDeviceTypes);
   }
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
@@ -135,7 +135,7 @@ template <CUPMDeviceType T> constexpr const CUPMDeviceType CUPMInterfaceBase<T>:
 template <CUPMDeviceType T> struct CUPMInterface;
 
 #if PetscDefined(HAVE_CUDA)
-#define PETSC_CUPM_PREFIX   cuda
+#define PETSC_CUPM_PREFIX_L cuda
 #define PETSC_CUPM_PREFIX_U CUDA
 template <>
 struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDeviceType::CUDA>
@@ -215,18 +215,18 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
   // interface here, and it's not worth it to write another macro just for this specific
   // use-case
   template <typename FunctionT, typename... KernelArgsT>
-  PETSC_NODISCARD static cudaError_t cupmLaunchKernel(FunctionT&& func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs)
+  PETSC_CXX_COMPAT_DECL(cudaError_t cupmLaunchKernel(FunctionT func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs))
   {
-    void* args[sizeof...(KernelArgsT)] = {&std::forward<KernelArgsT>(kernelArgs)...};
-    return cudaLaunchKernel(&std::forward<FunctionT>(func),gridDim,blockDim,args,sharedMem,stream);
+    void* args[] = {&kernelArgs...};
+    return cudaLaunchKernel(&func,gridDim,blockDim,args,sharedMem,stream);
   }
 };
-#undef PETSC_CUPM_PREFIX
+#undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U
 #endif // PetscDefined(HAVE_CUDA)
 
 #if PetscDefined(HAVE_HIP)
-#define PETSC_CUPM_PREFIX   hip
+#define PETSC_CUPM_PREFIX_L hip
 #define PETSC_CUPM_PREFIX_U HIP
 template <>
 struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDeviceType::HIP>
@@ -300,7 +300,7 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   // kernel launching
   PETSC_CUPM_ALIAS_FUNCTION_COMMON(LaunchKernel,LaunchKernelGGL);
 };
-#undef PETSC_CUPM_PREFIX
+#undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U
 #endif // PetscDefined(HAVE_HIP)
 
@@ -312,65 +312,65 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
 
 // shorthand for bringing all of the typedefs from the base CUPMInterface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
-#define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name_,Tp_)     \
-  using base_name_ = Petsc::Impl::CUPMInterface<Tp_>;                   \
+#define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
+  using base_name = Petsc::Impl::CUPMInterface<T>;                      \
   /* introspection */                                                   \
-  using base_name_::type;                                               \
-  using base_name_::cupmName;                                           \
-  using base_name_::cupmDeviceTypeToPetscDeviceType;                    \
-  using base_name_::cupmDeviceTypeToPetscMemType;                       \
+  using base_name::type;                                                \
+  using base_name::cupmName;                                            \
+  using base_name::cupmDeviceTypeToPetscDeviceType;                     \
+  using base_name::cupmDeviceTypeToPetscMemType;                        \
   /* types */                                                           \
-  using typename base_name_::cupmError_t;                               \
-  using typename base_name_::cupmEvent_t;                               \
-  using typename base_name_::cupmStream_t;                              \
-  using typename base_name_::cupmDeviceProp_t;                          \
-  using typename base_name_::cupmMemcpyKind_t;                          \
+  using typename base_name::cupmError_t;                                \
+  using typename base_name::cupmEvent_t;                                \
+  using typename base_name::cupmStream_t;                               \
+  using typename base_name::cupmDeviceProp_t;                           \
+  using typename base_name::cupmMemcpyKind_t;                           \
   /* variables */                                                       \
-  using base_name_::cupmSuccess;                                        \
-  using base_name_::cupmErrorNotReady;                                  \
-  using base_name_::cupmErrorDeviceAlreadyInUse;                        \
-  using base_name_::cupmErrorSetOnActiveProcess;                        \
-  using base_name_::cupmErrorStubLibrary;                               \
-  using base_name_::cupmErrorNoDevice;                                  \
-  using base_name_::cupmStreamNonBlocking;                              \
-  using base_name_::cupmDeviceMapHost;                                  \
-  using base_name_::cupmMemcpyHostToDevice;                             \
-  using base_name_::cupmMemcpyDeviceToHost;                             \
-  using base_name_::cupmMemcpyDeviceToDevice;                           \
-  using base_name_::cupmMemcpyHostToHost;                               \
-  using base_name_::cupmMemcpyDefault;                                  \
+  using base_name::cupmSuccess;                                         \
+  using base_name::cupmErrorNotReady;                                   \
+  using base_name::cupmErrorDeviceAlreadyInUse;                         \
+  using base_name::cupmErrorSetOnActiveProcess;                         \
+  using base_name::cupmErrorStubLibrary;                                \
+  using base_name::cupmErrorNoDevice;                                   \
+  using base_name::cupmStreamNonBlocking;                               \
+  using base_name::cupmDeviceMapHost;                                   \
+  using base_name::cupmMemcpyHostToDevice;                              \
+  using base_name::cupmMemcpyDeviceToHost;                              \
+  using base_name::cupmMemcpyDeviceToDevice;                            \
+  using base_name::cupmMemcpyHostToHost;                                \
+  using base_name::cupmMemcpyDefault;                                   \
   /* functions */                                                       \
-  using base_name_::cupmGetErrorName;                                   \
-  using base_name_::cupmGetErrorString;                                 \
-  using base_name_::cupmGetLastError;                                   \
-  using base_name_::cupmGetDeviceCount;                                 \
-  using base_name_::cupmGetDeviceProperties;                            \
-  using base_name_::cupmGetDevice;                                      \
-  using base_name_::cupmSetDevice;                                      \
-  using base_name_::cupmGetDeviceFlags;                                 \
-  using base_name_::cupmSetDeviceFlags;                                 \
-  using base_name_::cupmEventCreate;                                    \
-  using base_name_::cupmEventDestroy;                                   \
-  using base_name_::cupmEventRecord;                                    \
-  using base_name_::cupmEventSynchronize;                               \
-  using base_name_::cupmEventElapsedTime;                               \
-  using base_name_::cupmStreamCreate;                                   \
-  using base_name_::cupmStreamCreateWithFlags;                          \
-  using base_name_::cupmStreamDestroy;                                  \
-  using base_name_::cupmStreamWaitEvent;                                \
-  using base_name_::cupmStreamQuery;                                    \
-  using base_name_::cupmStreamSynchronize;                              \
-  using base_name_::cupmDeviceSynchronize;                              \
-  using base_name_::cupmFree;                                           \
-  using base_name_::cupmFreeAsync;                                      \
-  using base_name_::cupmMalloc;                                         \
-  using base_name_::cupmMallocAsync;                                    \
-  using base_name_::cupmMemcpy;                                         \
-  using base_name_::cupmMemcpyAsync;                                    \
-  using base_name_::cupmMallocHost;                                     \
-  using base_name_::cupmFreeHost;                                       \
-  using base_name_::cupmMemsetAsync;                                    \
-  using base_name_::cupmLaunchKernel
+  using base_name::cupmGetErrorName;                                    \
+  using base_name::cupmGetErrorString;                                  \
+  using base_name::cupmGetLastError;                                    \
+  using base_name::cupmGetDeviceCount;                                  \
+  using base_name::cupmGetDeviceProperties;                             \
+  using base_name::cupmGetDevice;                                       \
+  using base_name::cupmSetDevice;                                       \
+  using base_name::cupmGetDeviceFlags;                                  \
+  using base_name::cupmSetDeviceFlags;                                  \
+  using base_name::cupmEventCreate;                                     \
+  using base_name::cupmEventDestroy;                                    \
+  using base_name::cupmEventRecord;                                     \
+  using base_name::cupmEventSynchronize;                                \
+  using base_name::cupmEventElapsedTime;                                \
+  using base_name::cupmStreamCreate;                                    \
+  using base_name::cupmStreamCreateWithFlags;                           \
+  using base_name::cupmStreamDestroy;                                   \
+  using base_name::cupmStreamWaitEvent;                                 \
+  using base_name::cupmStreamQuery;                                     \
+  using base_name::cupmStreamSynchronize;                               \
+  using base_name::cupmDeviceSynchronize;                               \
+  using base_name::cupmFree;                                            \
+  using base_name::cupmFreeAsync;                                       \
+  using base_name::cupmMalloc;                                          \
+  using base_name::cupmMallocAsync;                                     \
+  using base_name::cupmMemcpy;                                          \
+  using base_name::cupmMemcpyAsync;                                     \
+  using base_name::cupmMallocHost;                                      \
+  using base_name::cupmFreeHost;                                        \
+  using base_name::cupmMemsetAsync;                                     \
+  using base_name::cupmLaunchKernel
 
 #endif /* __cplusplus */
 
