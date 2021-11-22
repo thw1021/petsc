@@ -52,6 +52,21 @@ cdef extern from * nogil:
         TAO_DIVERGED_TR_REDUCTION
         TAO_DIVERGED_USER
 
+    ctypedef enum PetscTAOBNCGType "TaoBNCGType":
+        TAO_BNCG_GD
+        TAO_BNCG_PCGD
+        TAO_BNCG_HS
+        TAO_BNCG_FR
+        TAO_BNCG_PRP
+        TAO_BNCG_PRP_PLUS
+        TAO_BNCG_DY
+        TAO_BNCG_HZ
+        TAO_BNCG_DK
+        TAO_BNCG_KD
+        TAO_BNCG_SSML_BFGS
+        TAO_BNCG_SSML_DFP
+        TAO_BNCG_SSML_BRDN
+
     int TaoView(PetscTAO,PetscViewer)
     int TaoDestroy(PetscTAO*)
     int TaoCreate(MPI_Comm,PetscTAO*)
@@ -70,7 +85,7 @@ cdef extern from * nogil:
     int TaoGetConstraintTolerances(PetscTAO,PetscReal*,PetscReal*)
 
     int TaoSetFunctionLowerBound(PetscTAO,PetscReal)
-    int TaoSetMaximumIterates(PetscTAO, PetscInt)
+    int TaoSetMaximumIterations(PetscTAO, PetscInt)
     int TaoSetMaximumFunctionEvaluations(PetscTAO, PetscInt)
 
     int TaoSetTrustRegionTolerance(PetscTAO,PetscReal)
@@ -92,10 +107,6 @@ cdef extern from * nogil:
     ctypedef int (*TaoMonitorDestroy)(void**)
     int TaoSetMonitor(PetscTAO,TaoMonitor,void*,TaoMonitorDestroy)
     int TaoCancelMonitors(PetscTAO)
-
-
-
-
 
     int TaoComputeObjective(PetscTAO,PetscVec,PetscReal*)
     int TaoComputeResidual(PetscTAO,PetscVec,PetscVec)
@@ -120,6 +131,8 @@ cdef extern from * nogil:
     int TaoLMVMSetH0(PetscTAO,PetscMat)
     int TaoLMVMGetH0(PetscTAO,PetscMat*)
     int TaoLMVMGetH0KSP(PetscTAO,PetscKSP*)
+    int TaoBNCGGetType(PetscTAO,PetscTAOBNCGType*)
+    int TaoBNCGSetType(PetscTAO,PetscTAOBNCGType)
     int TaoGetVariableBounds(PetscTAO,PetscVec*,PetscVec*)
     #int TaoGetConstraintsVec(PetscTAO,PetscVec*)
     #int TaoGetVariableBoundVecs(PetscTAO,PetscVec*,PetscVec*)
@@ -167,6 +180,7 @@ cdef extern from * nogil:
     int TaoSetInitialTrustRegionRadius(PetscTAO,PetscReal)
 
     int TaoGetKSP(PetscTAO,PetscKSP*)
+    int TaoGetLineSearch(PetscTAO,PetscTAOLineSearch*)
 
     int TaoBRGNGetSubsolver(PetscTAO,PetscTAO*)
     int TaoBRGNSetRegularizerObjectiveAndGradientRoutine(PetscTAO,TaoRegularizerObjGrad*,void*)
@@ -175,6 +189,54 @@ cdef extern from * nogil:
     int TaoBRGNSetL1SmoothEpsilon(PetscTAO,PetscReal)
     int TaoBRGNSetDictionaryMatrix(PetscTAO,PetscMat)
     int TaoBRGNGetDampingVector(PetscTAO,PetscVec*)
+
+# --------------------------------------------------------------------
+
+    ctypedef const char* PetscTAOLineSearchType "TaoLineSearchType"
+    PetscTAOLineSearchType TAOLINESEARCHUNIT
+    PetscTAOLineSearchType TAOLINESEARCHARMIJO
+    PetscTAOLineSearchType TAOLINESEARCHOWARMIJO
+    PetscTAOLineSearchType TAOLINESEARCHGPCG
+    PetscTAOLineSearchType TAOLINESEARCHMT
+    PetscTAOLineSearchType TAOLINESEARCHIPM
+
+    ctypedef enum PetscTAOLineSearchConvergedReason "TaoLineSearchConvergedReason":
+        # failed
+        TAOLINESEARCH_FAILED_INFORNAN
+        TAOLINESEARCH_FAILED_BADPARAMETER
+        TAOLINESEARCH_FAILED_ASCENT
+        # continue
+        TAOLINESEARCH_CONTINUE_ITERATING
+        # success
+        TAOLINESEARCH_SUCCESS
+        TAOLINESEARCH_SUCCESS_USER
+        # halted
+        TAOLINESEARCH_HALTED_OTHER
+        TAOLINESEARCH_HALTED_MAXFCN
+        TAOLINESEARCH_HALTED_UPPERBOUND
+        TAOLINESEARCH_HALTED_LOWERBOUND
+        TAOLINESEARCH_HALTED_RTOL
+        TAOLINESEARCH_HALTED_USER
+
+    ctypedef int TaoLineSearchObjective(PetscTAOLineSearch,PetscVec,PetscReal*,void*) except PETSC_ERR_PYTHON
+    ctypedef int TaoLineSearchGradient(PetscTAOLineSearch,PetscVec,PetscVec,void*) except PETSC_ERR_PYTHON
+    ctypedef int TaoLineSearchObjGrad(PetscTAOLineSearch,PetscVec,PetscReal*,PetscVec,void*) except PETSC_ERR_PYTHON
+    ctypedef int TaoLineSearchObjGTS(PetscTaoLineSearch,PetscVec,PetscVec,PetscReal*,PetscReal*,void*) except PETSC_ERR_PYTHON
+    
+    int TaoLineSearchCreate(MPI_Comm,PetscTAOLineSearch*)
+    int TaoLineSearchDestroy(PetscTAOLineSearch*)
+    int TaoLineSearchView(PetscTAOLineSearch,PetscViewer)
+    int TaoLineSearchSetType(PetscTAOLineSearch,PetscTAOLineSearchType)
+    int TaoLineSearchGetType(PetscTAOLineSearch,PetscTAOLineSearchType*)
+    int TaoLineSearchSetOptionsPrefix(PetscTAOLineSearch,char[])
+    int TaoLineSearchGetOptionsPrefix(PetscTAOLineSearch,char*[])
+    int TaoLineSearchSetFromOptions(PetscTAOLineSearch)
+    int TaoLineSearchSetUp(PetscTAOLineSearch)
+    int TaoLineSearchUseTaoRoutines(PetscTAOLineSearch,PetscTAO)
+    int TaoLineSearchSetObjectiveRoutine(PetscTAOLineSearch,TaoLineSearchObjective,void*)
+    int TaoLineSearchSetGradientRoutine(PetscTAOLineSearch,TaoLineSearchGradient,void*)
+    int TaoLineSearchSetObjectiveAndGradientRoutine(PetscTAOLineSearch,TaoLineSearchObjGrad,void*)
+    int TaoLineSearchApply(PetscTAOLineSearch,PetscVec,PetscReal*,PetscVec,PetscVec,PetscReal*,PetscTAOLineSearchConvergedReason*)
 
 # --------------------------------------------------------------------
 
@@ -410,6 +472,51 @@ cdef int TAO_Monitor(PetscTAO _tao,
     if monitorlist is None: return 0
     for (monitor, args, kargs) in monitorlist:
         monitor(tao, *args, **kargs)
+    return 0
+
+# --------------------------------------------------------------------
+
+cdef inline TAOLineSearch ref_TAOLS(PetscTAOLineSearch taols):
+    cdef TAOLineSearch ob = <TAOLineSearch> TAOLineSearch()
+    ob.taols = taols
+    PetscINCREF(ob.obj)
+    return ob
+
+# --------------------------------------------------------------------
+
+cdef int TAOLS_Objective(
+    PetscTAOLineSearch _ls, PetscVec _x, PetscReal *_f,
+    void *ctx) except PETSC_ERR_PYTHON with gil:
+
+    cdef TAOLineSearch ls = ref_TAOLS(_ls)
+    cdef Vec x   = ref_Vec(_x)
+    (objective, args, kargs) = ls.get_attr("__objective__")
+    retv = objective(ls, x, *args, **kargs)
+    _f[0] = asReal(retv)
+    return 0
+
+cdef int TAOLS_Gradient(
+    PetscTAOLineSearch _ls, PetscVec _x, PetscVec _g,
+    void *ctx) except PETSC_ERR_PYTHON with gil:
+
+    cdef TAOLineSearch ls = ref_TAOLS(_ls)
+    cdef Vec x   = ref_Vec(_x)
+    cdef Vec g   = ref_Vec(_g)
+    (gradient, args, kargs) = ls.get_attr("__gradient__")
+    gradient(ls, x, g, *args, **kargs)
+    return 0
+
+
+cdef int TAOLS_ObjGrad(
+    PetscTAOLineSearch _ls, PetscVec _x, PetscReal *_f, PetscVec _g,
+    void *ctx) except PETSC_ERR_PYTHON with gil:
+
+    cdef TAOLineSearch ls = ref_TAOLS(_ls)
+    cdef Vec x   = ref_Vec(_x)
+    cdef Vec g   = ref_Vec(_g)
+    (objgrad, args, kargs) = ls.get_attr("__objgrad__")
+    retv = objgrad(ls, x, g, *args, **kargs)
+    _f[0] = asReal(retv)
     return 0
 
 # --------------------------------------------------------------------

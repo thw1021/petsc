@@ -24,7 +24,7 @@ iter =  18, Function value 1.50566, Residual: 0.000144096
 iter =  19, Function value 1.50566, Residual: 8.16242e-05 
 Tao Object: 1 MPI processes
   type: bncg
-    CG Type: ssml_bfgs
+    CG Type: SSML_BFGS
     Skipped Stepdirection Updates: 0
     Scaled gradient steps: 0
     Pure gradient steps: 0
