@@ -53,8 +53,8 @@ enum class DeviceType : int {
 static constexpr std::array<const char*const,5> DeviceTypes = {
   "cuda",
   "hip",
-  "Petsc::Device::CUPM::CUPMDeviceType",
-  "Petsc::Device::CUPM::CUPMDeviceType::",
+  "Petsc::Device::CUPM::DeviceType",
+  "Petsc::Device::CUPM::DeviceType::",
   nullptr
 };
 
@@ -300,22 +300,6 @@ struct InterfaceBase
     PetscUnreachable();
     return PETSC_MEMTYPE_HOST;
   }
-
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
-  {
-    switch (T) {
-    case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
-    case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
-    }
-  }
-
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
-  {
-    switch (T) {
-    case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
-    case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
-    }
-  }
 };
 
 // declare the base class static member variables
@@ -402,6 +386,7 @@ struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(MallocAsync);
 #else
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
+  PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
 #endif
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
