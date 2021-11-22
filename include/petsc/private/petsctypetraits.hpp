@@ -35,10 +35,11 @@ using std::add_pointer_t;
 using std::index_sequence;
 using std::make_index_sequence;
 using std::decay_t;
+using std::tuple_element_t;
 #if __cplusplus >= 201703L
 using std::void_t;
 #else // C++17
-template <class...> using void_t = void;
+template <class... T> using void_t = void;
 #endif // C++17
 #else // C++14
 template <bool B, class T, class F> using conditional_t = typename std::conditional<B,T,F>::type;
@@ -48,8 +49,8 @@ template <class T> using underlying_type_t = typename std::underlying_type<T>::t
 template <class T> using remove_pointer_t  = typename std::remove_pointer<T>::type;
 template <class T> using add_pointer_t     = typename std::add_pointer<T>::type;
 template <class T> using decay_t           = typename std::decay<T>::type;
-template <class...> using void_t = void;
-
+template <class... T> using void_t = void;
+template <std::size_t I, class T> using tuple_element_t = typename std::tuple_element<I,T>::type;
 // index sequence only
 template <std::size_t... idx> struct index_sequence
 {
@@ -120,27 +121,30 @@ struct can_call_test
 template <typename F, typename... A>
 struct can_call : decltype(detail::can_call_test::f<F,A...>(0)) { };
 
-template <typename F, typename... A> struct can_call <F(A...)> : can_call <F,A...> { };
-
 template <typename... A, typename F>
-constexpr can_call<F,A...> is_callable_with(F&&) { return can_call<F(A...)>{}; }
+PETSC_STATIC_INLINE constexpr can_call<F,A...> is_callable_with(F&&) noexcept
+{
+  return can_call<F,A...>{};
+}
+
+template <typename... T> struct always_false : std::false_type { };
 
 } // namespace util
 
 template <typename T>
-PETSC_STATIC_INLINE util::remove_const_t<T>& PetscRemoveConstCast(T& object) noexcept
+PETSC_STATIC_INLINE constexpr util::remove_const_t<T>& PetscRemoveConstCast(T& object) noexcept
 {
   return const_cast<util::remove_const_t<T>&>(object);
 }
 
 template <typename T>
-PETSC_STATIC_INLINE T& PetscRemoveConstCast(const T& object) noexcept
+PETSC_STATIC_INLINE constexpr T& PetscRemoveConstCast(const T& object) noexcept
 {
   return const_cast<T&>(object);
 }
 
 template <typename T>
-PETSC_STATIC_INLINE T*& PetscRemoveConstCast(const T*& object) noexcept
+PETSC_STATIC_INLINE constexpr T*& PetscRemoveConstCast(const T*& object) noexcept
 {
   return const_cast<T*&>(object);
 }
@@ -192,17 +196,21 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
 // for you. You may then call bar exactly as you would foo.
 #define PETSC_ALIAS_FUNCTION_(alias,orig,dispatch)                      \
   template <typename... Args>                                           \
-  static inline auto dispatch(int,Args&&... args)                       \
+  PETSC_STATIC_INLINE auto dispatch(int,Args&&... args)                 \
     noexcept(noexcept(orig(std::forward<Args>(args)...)))               \
     -> decltype(orig(std::forward<Args>(args)...))                      \
   {                                                                     \
     return orig(std::forward<Args>(args)...);                           \
   };                                                                    \
   template <typename... Args>                                           \
-  static inline int dispatch(char,Args&&... args)                       \
+  PETSC_STATIC_INLINE int dispatch(char,Args&&... args)                 \
   {                                                                     \
-    static_assert(util::is_callable_with<Args...>(orig),PetscStringize(orig) "() is not callable with the provided arguments"); \
-    return 1;                                                           \
+    static_assert(                                                      \
+      Petsc::util::is_callable_with<Args...>(orig) &&                   \
+      Petsc::util::always_false<Args...>::value,                        \
+      PetscStringize(orig) "() is not callable with given arguments"    \
+    );                                                                  \
+    return EXIT_FAILURE;                                                \
   };                                                                    \
   template <typename... Args>                                           \
   PETSC_NODISCARD auto alias(Args&&... args)                            \

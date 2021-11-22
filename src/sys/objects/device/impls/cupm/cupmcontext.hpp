@@ -73,18 +73,18 @@ private:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(cupmBlasHandle_t &handle))
   {
-    constexpr auto  end = 3;
-    cupmBlasError_t cberr;
-
     PetscFunctionBegin;
     if (handle) PetscFunctionReturn(0);
-    for (auto i = 0; i < end; ++i) {
-      cberr = cupmBlasCreate(&handle);
+    for (auto i = 0; i < 3; ++i) {
+      auto cberr = cupmBlasCreate(&handle);
       if (PetscLikely(cberr == CUPMBLAS_STATUS_SUCCESS)) break;
-      if ((cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) CHKERRCUPMBLAS(cberr);
-      if (i != end-1) {auto ierr = PetscSleep(3);CHKERRQ(ierr);}
+      if (PetscUnlikely(cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) CHKERRCUPMBLAS(cberr);
+      if (i != 2) {
+        auto ierr = PetscSleep(3);CHKERRQ(ierr);
+        continue;
+      }
+      if (PetscUnlikely(cberr != CUPMBLAS_STATUS_SUCCESS)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize %s",cupmBlasName());
     }
-    if (PetscUnlikely(cberr != CUPMBLAS_STATUS_SUCCESS)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize %s",cupmBlasName());
     PetscFunctionReturn(0);
   }
 
@@ -227,11 +227,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dc
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[util::integral_value(dctx->streamType)]);
     break;
   }
-  if (!dci->event) {
-    cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);
-    cerr = cupmEventCreate(&dci->begin);CHKERRCUPM(cerr);
-    cerr = cupmEventCreate(&dci->end);CHKERRCUPM(cerr);
-  }
+  if (!dci->event) {cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);}
 #if PetscDefined(USE_DEBUG)
   dci->timerInUse = PETSC_FALSE;
 #endif
@@ -300,6 +296,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::beginTimer(PetscDeviceConte
   if (PetscUnlikely(dci->timerInUse)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   dci->timerInUse = PETSC_TRUE;
 #endif
+  if (!dci->begin) {
+    cerr = cupmEventCreate(&dci->begin);CHKERRCUPM(cerr);
+    cerr = cupmEventCreate(&dci->end);CHKERRCUPM(cerr);
+  }
   cerr = cupmEventRecord(dci->begin,dci->stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
