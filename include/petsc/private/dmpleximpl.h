@@ -45,16 +45,18 @@ PETSC_EXTERN PetscLogEvent DMPLEX_CreateFromFile;
 PETSC_EXTERN PetscLogEvent DMPLEX_BuildFromCellList;
 PETSC_EXTERN PetscLogEvent DMPLEX_BuildCoordinatesFromCellList;
 PETSC_EXTERN PetscLogEvent DMPLEX_LocatePoints;
-
-typedef struct _n_PlexGeneratorFunctionList *PlexGeneratorFunctionList;
-struct _n_PlexGeneratorFunctionList {
-  PetscErrorCode    (*generate)(DM, PetscBool, DM*);
-  PetscErrorCode    (*refine)(DM, PetscReal*, DM*);
-  PetscErrorCode    (*adaptlabel)(DM, DMLabel, DM*);
-  char              *name;
-  PetscInt          dim;
-  PlexGeneratorFunctionList next;
-};
+PETSC_EXTERN PetscLogEvent DMPLEX_TopologyView;
+PETSC_EXTERN PetscLogEvent DMPLEX_LabelsView;
+PETSC_EXTERN PetscLogEvent DMPLEX_CoordinatesView;
+PETSC_EXTERN PetscLogEvent DMPLEX_SectionView;
+PETSC_EXTERN PetscLogEvent DMPLEX_GlobalVectorView;
+PETSC_EXTERN PetscLogEvent DMPLEX_LocalVectorView;
+PETSC_EXTERN PetscLogEvent DMPLEX_TopologyLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_LabelsLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_CoordinatesLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_SectionLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_GlobalVectorLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_LocalVectorLoad;
 
 /* Utility struct to store the contents of a Fluent file in memory */
 typedef struct {
@@ -82,10 +84,16 @@ struct _PetscGridHash {
 typedef struct {
   PetscBool isotropic;                    /* Is the metric isotropic? */
   PetscBool restrictAnisotropyFirst;      /* Should anisotropy or normalization come first? */
+  PetscBool noInsert;                     /* Should node insertion/deletion be turned off? */
+  PetscBool noSwap;                       /* Should facet swapping be turned off? */
+  PetscBool noMove;                       /* Should node movement be turned off? */
   PetscReal h_min, h_max;                 /* Minimum/maximum tolerated metric magnitudes */
   PetscReal a_max;                        /* Maximum tolerated anisotropy */
   PetscReal targetComplexity;             /* Target metric complexity */
   PetscReal p;                            /* Degree for L-p normalization methods */
+  PetscReal gradationFactor;              /* Maximum tolerated length ratio for adjacent edges */
+  PetscInt  numIter;                      /* Number of ParMmg mesh adaptation iterations */
+  PetscInt  verbosity;                    /* Level of verbosity for remesher (-1 = no output, 10 = maximum) */
 } DMPlexMetricCtx;
 
 /* Point Numbering in Plex:
@@ -220,7 +228,7 @@ PETSC_INTERN PetscErrorCode DMPlexSectionView_HDF5_Internal(DM, PetscViewer, DM)
 PETSC_INTERN PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM, PetscViewer, DM, Vec);
 PETSC_INTERN PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM, PetscViewer, DM, Vec);
 PETSC_INTERN PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM, PetscViewer, PetscSF*);
-PETSC_INTERN PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM, PetscViewer);
+PETSC_INTERN PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM, PetscViewer, PetscSF);
 PETSC_INTERN PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM, PetscViewer);
 PETSC_INTERN PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM, PetscViewer, DM, PetscSF, PetscSF*, PetscSF*);
 PETSC_INTERN PetscErrorCode DMPlexVecLoad_HDF5_Internal(DM, PetscViewer, DM, PetscSF, Vec);
@@ -241,8 +249,7 @@ PETSC_INTERN PetscErrorCode DMCoarsen_Plex(DM, MPI_Comm, DM *);
 PETSC_INTERN PetscErrorCode DMCoarsenHierarchy_Plex(DM, PetscInt, DM []);
 PETSC_INTERN PetscErrorCode DMRefine_Plex(DM, MPI_Comm, DM *);
 PETSC_INTERN PetscErrorCode DMRefineHierarchy_Plex(DM, PetscInt, DM []);
-PETSC_INTERN PetscErrorCode DMAdaptLabel_Plex(DM, DMLabel, DM *);
-PETSC_INTERN PetscErrorCode DMAdaptMetric_Plex(DM, Vec, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMAdaptLabel_Plex(DM, Vec, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMExtrude_Plex(DM, PetscInt, DM *);
 PETSC_INTERN PetscErrorCode DMPlexInsertBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode DMPlexInsertTimeDerivativeBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
@@ -289,8 +296,8 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateNumbering_Plex(DM, PetscInt, PetscInt, P
 
 PETSC_INTERN PetscErrorCode DMPlexCreateCellNumbering_Internal(DM, PetscBool, IS *);
 PETSC_INTERN PetscErrorCode DMPlexCreateVertexNumbering_Internal(DM, PetscBool, IS *);
-PETSC_INTERN PetscErrorCode DMPlexRefine_Internal(DM, DMLabel, DM *);
-PETSC_INTERN PetscErrorCode DMPlexCoarsen_Internal(DM, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMPlexRefine_Internal(DM, Vec, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMPlexCoarsen_Internal(DM, Vec, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Plex(DM, Mat*);
 
 PETSC_INTERN PetscErrorCode DMPlexGetOverlap_Plex(DM, PetscInt *);

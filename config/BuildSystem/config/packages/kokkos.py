@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = 'd4ed86ffb1b156faaa0f936ce839cfd6d3282478' # develop of 2021-04-28
+    self.gitcommit        = '4c5dbd30f9da84b7754010e501982ea875e498e8' # develop of 2021-11-04
     self.versionname      = 'KOKKOS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
     self.downloaddirnames = ['kokkos']
@@ -33,7 +33,6 @@ class Configure(config.package.CMakePackage):
   def setupHelp(self, help):
     import nargs
     config.package.CMakePackage.setupHelp(self, help)
-    help.addArgument('KOKKOS', '-with-kokkos-hip-arch=<string>',  nargs.ArgString(None, 0, 'One of VEGA900, VEGA906, VEGA908'))
     help.addArgument('KOKKOS', '-with-kokkos-init-warnings=<bool>',  nargs.ArgBool(None, True, 'Enable/disable warnings in Kokkos initialization'))
     return
 
@@ -120,7 +119,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('Cxx')) # use the host CXX compiler, let Kokkos handle the nvcc_wrapper business
       genToName = {'3': 'KEPLER','5': 'MAXWELL', '6': 'PASCAL', '7': 'VOLTA', '8': 'AMPERE', '9': 'LOVELACE', '10': 'HOPPER'}
       if hasattr(self.cuda,'cudaArch'):
-        generation = self.cuda.cudaArch[:-1]
+        generation = self.cuda.cudaArch[:-1] # cudaArch is a number 'nn', such as '75'
         try:
           # Kokkos uses names like VOLTA75, AMPERE86
           deviceArchName = genToName[generation] + self.cuda.cudaArch
@@ -152,17 +151,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
-      if hasattr(self.hip,'hipArch'):
-        genToName = {'gfx': 'VEGA'}
-        generation = self.hip.hipArch[0:3]
-        try:
-          # Kokkos uses names like VEGA908
-          deviceArchName = genToName[generation] + self.hip.hipArch[3:]
-        except KeyError:
-          raise RuntimeError('Could not find an arch name for HIP gen number '+ self.hip.hipArch)
-      else:
-        raise RuntimeError('You must set --with-hip-arch=gfx900, gfx906, gfx908 etc.')
-
+      deviceArchName = self.hip.hipArch.upper().replace('GFX','VEGA',1) # ex. map gfx90a to VEGA90A
       args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
       args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
 

@@ -35,6 +35,9 @@ Changes: Development
 - Add ``PetscDeviceInitialize()`` to eagerly initialize a ``PetscDeviceType``, and ``PetscDeviceInitialized()`` to query the corresponding initialization state
 - Change ``PetscDeviceCreate()`` to also accept a ``PetscInt devid``, to create a ``PetscDevice`` for a specific device
 - Add ``PetscDeviceView()``
+- Move ``PetscInt64_FMT`` and ``MPIU_INT64`` definitions to ``petscsystypes.h``
+- Add ``PetscBLASInt_FMT``, ``PETSC_MPI_COMM_FMT``, and ``PETSC_MPI_WIN_FMT`` format specifiers
+- Add ``PetscHasAttribute()`` macro to query for existence of an ``__attribute__`` specifier
 
 .. rubric:: PetscViewer:
 
@@ -69,6 +72,8 @@ Changes: Development
 -  Add ``-mat_bind_below`` option for specifying size threshold below which GPU is not used for ``Mat`` operations
 -  Add ``MatSetBindingPropagates()``
 -  Add ``MatGetBindingPropagates()``
+-  Add ``MatSeqAIJGetArrayWrite()`` and ``MatSeqAIJRestoreArrayWrite()`` to get write-access to the value array of ``MatSeqAIJ`` on CPU
+-  Add ``MatCUSPARSESetUseCPUSolve()`` Use CPU solve with cuSparse for LU factorization that are on the CPU.
 
 .. rubric:: PC:
 
@@ -81,6 +86,8 @@ Changes: Development
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
+
+- Add ``TSSundialsSetUseDense()`` and options database option ``-ts_sundials_use_dense`` to use a dense linear solver (serial only) within CVODE, instead of the default iterative solve.
 
 .. rubric:: TAO:
 
@@ -98,29 +105,52 @@ Changes: Development
 
 - Add ``DMExtrude()`` which now the default extrusion
 - Change ``DMPlexExtrude()`` to use DMPlexTransform underneath
-- Move ``DMPlexMetricCtx`` from public to private and give it to ``DMPlex``
-- Add ``DMPlexMetricSetFromOptions()`` to assign values to ``DMPlexMetricCtx``
-- Add ``DMPlexMetricSetIsotropic()`` for declaring whether a metric is isotropic
-- Add ``DMPlexMetricIsIsotropic()`` for determining whether a metric is isotropic
-- Add ``DMPlexMetricSetRestrictAnisotropyFirst()`` for declaring whether anisotropy should be restricted before normalization
-- Add ``DMPlexMetricRestrictAnisotropyFirst()`` for determining whether anisotropy should be restricted before normalization
-- Add ``DMPlexMetricSetMinimumMagnitude()`` for specifying the minimum tolerated metric magnitude
-- Add ``DMPlexMetricGetMinimumMagnitude()`` for retrieving the minimum tolerated metric magnitude
-- Add ``DMPlexMetricSetMaximumMagnitude()`` for specifying the maximum tolerated metric magnitude
-- Add ``DMPlexMetricGetMaximumMagnitude()`` for retrieving the maximum tolerated metric magnitude
-- Add ``DMPlexMetricSetMaximumAnisotropy()`` for specifying the maximum tolerated metric anisostropy
-- Add ``DMPlexMetricGetMaximumAnisotropy()`` for retrieving the maximum tolerated metric anisotropy
-- Add ``DMPlexMetricSetTargetComplexity()`` for specifying the target metric complexity
-- Add ``DMPlexMetricGetTargetComplexity()`` for retrieving the target metric complexity
-- Add ``DMPlexMetricSetNormalizationOrder()`` for specifying the order of L-p normalization
-- Add ``DMPlexMetricGetNormalizationOrder()`` for retrieving the order of L-p normalization
-- Change ``DMPlexMetricCtx`` so that it is only instantiated when one of the above routines are called
-- Change ``DMPlexMetricEnforceSPD()`` to have another argument, for controlling whether anisotropy is restricted
-- Change ``DMPlexMetricNormalize()`` to have another argument, for controlling whether anisotropy is restricted
-- Change ``DMAdaptor`` so that its ``-adaptor_refinement_h_min/h_max/a_max/p`` command line arguments become ``-dm_plex_metric_h_min/h_max/a_max/p``
 - Add ``DMGetNaturalSF()`` and ``DMSetNaturalSF()``
+- Change ``-dm_plex_csr_via_mat`` to ``-dm_plex_csr_alg`` which takes a DMPlexCSRAlgorithm name
+- Add public API for metric-based mesh adaptation:
+    - Move ``DMPlexMetricCtx`` from public to private and give it to ``DMPlex``
+    - Add ``DMPlexMetricSetFromOptions()`` to assign values to ``DMPlexMetricCtx``
+    - Add ``DMPlexMetricSetIsotropic()`` for declaring whether a metric is isotropic
+    - Add ``DMPlexMetricIsIsotropic()`` for determining whether a metric is isotropic
+    - Add ``DMPlexMetricSetRestrictAnisotropyFirst()`` for declaring whether anisotropy should be restricted before normalization
+    - Add ``DMPlexMetricRestrictAnisotropyFirst()`` for determining whether anisotropy should be restricted before normalization
+    - Add ``DMPlexMetricSetMinimumMagnitude()`` for specifying the minimum tolerated metric magnitude
+    - Add ``DMPlexMetricGetMinimumMagnitude()`` for retrieving the minimum tolerated metric magnitude
+    - Add ``DMPlexMetricSetMaximumMagnitude()`` for specifying the maximum tolerated metric magnitude
+    - Add ``DMPlexMetricGetMaximumMagnitude()`` for retrieving the maximum tolerated metric magnitude
+    - Add ``DMPlexMetricSetMaximumAnisotropy()`` for specifying the maximum tolerated metric anisostropy
+    - Add ``DMPlexMetricGetMaximumAnisotropy()`` for retrieving the maximum tolerated metric anisotropy
+    - Add ``DMPlexMetricSetTargetComplexity()`` for specifying the target metric complexity
+    - Add ``DMPlexMetricGetTargetComplexity()`` for retrieving the target metric complexity
+    - Add ``DMPlexMetricSetNormalizationOrder()`` for specifying the order of L-p normalization
+    - Add ``DMPlexMetricGetNormalizationOrder()`` for retrieving the order of L-p normalization
+    - Change ``DMPlexMetricCtx`` so that it is only instantiated when one of the above routines are called
+    - Change ``DMPlexMetricEnforceSPD()`` to have another argument, for controlling whether anisotropy is restricted
+    - Change ``DMPlexMetricNormalize()`` to have another argument, for controlling whether anisotropy is restricted
+- Change ``DMAdaptor`` so that its ``-adaptor_refinement_h_min/h_max/a_max/p`` command line arguments become ``-dm_plex_metric_h_min/h_max/a_max/p``
+- Add 2D and 3D mesh adaptation interface to Mmg and 3D mesh adaptation interface to ParMmg. Mmg/ParMmg specific changes:
+    - Change ``DMPlexBuildFromCellListParallel()`` to have another argument, for the connectivity
+    - Change ``DMPlexCreateFromCellListParallelPetsc()`` to have another argument, for the connectivity
+    - Add ``DMPlexMetricSetVerbosity()`` for setting the verbosity of the metric-based mesh adaptation package
+    - Add ``DMPlexMetricGetVerbosity()`` for getting the verbosity of the metric-based mesh adaptation package
+    - Add ``DMPlexMetricSetNoInsertion()`` to turn off node insertion and deletion for (Par)Mmg
+    - Add ``DMPlexMetricNoInsertion()`` to determine whether node insertion and deletion are turned off for (Par)Mmg
+    - Add ``DMPlexMetricSetNoSwapping()`` to turn off facet swapping for (Par)Mmg
+    - Add ``DMPlexMetricNoSwapping()`` to determine whether facet swapping is turned off for (Par)Mmg
+    - Add ``DMPlexMetricSetNoMovement()`` to turn off node movement for (Par)Mmg
+    - Add ``DMPlexMetricNoMovement()`` to determine whether node movement is turned off for (Par)Mmg
+    - Add ``DMPlexMetricSetGradationFactor()`` to set the metric gradation factor
+    - Add ``DMPlexMetricGetGradationFactor()`` to get the metric gradation factor
+    - Add ``DMPlexMetricSetNumIterations()`` to set the number of ParMmg adaptation iterations
+    - Add ``DMPlexMetricGetNumIterations()`` to get the number of ParMmg adaptation iterations
+- Change ``DMPlexCoordinatesLoad()`` to take a ``PetscSF`` as argument
+- Change ``DMPlexCreateFromFile()`` to take the mesh name as argument
 
 .. rubric:: FE/FV:
+
+- Deprecate ``PetscSpacePolynomialGetSymmetric()`` and ``PetscSpacePolynomialSetSymmetric()``: symmetric polynomials were never supported and support is no longer planned
+- Remove ``PetscSpacePolynomialType`` enum and associated array of strings ``PetscSpacePolynomialTypes``: other polynomial spaces are now handled by other implementations of ``PetscSpace``
+- Add ``PETSCSPACEPTRIMMED`` that implements trimmed polynomial spaces (also known as the spaces in Nedelec face / edge elements of the first kind)
 
 .. rubric:: DMNetwork:
 

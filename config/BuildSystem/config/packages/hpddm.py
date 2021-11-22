@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self,framework):
     config.package.Package.__init__(self,framework)
-    self.gitcommit              = '5fd4ea2cec52b491874ccd3907b53f92f43e5093' # main nov-03-2021
+    self.gitcommit              = '6ed0a6b685cec4dc0fa5ff06c0c2aa04158c1e82' # main nov-16-2021
     self.download               = ['git://https://github.com/hpddm/hpddm','https://github.com/hpddm/hpddm/archive/'+self.gitcommit+'.tar.gz']
     self.minversion             = '2.0.8'
     self.versionname            = 'HPDDM_VERSION'
