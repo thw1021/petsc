@@ -165,7 +165,6 @@ PetscErrorCode MatSTRUMPACKSetGPU(Mat F,PetscBool gpu)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F,MatSTRUMPACKCompression comp)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
@@ -204,7 +203,6 @@ PetscErrorCode MatSTRUMPACKSetCompression(Mat F,MatSTRUMPACKCompression comp)
   ierr = PetscTryMethod(F,"MatSTRUMPACKSetCompression_C",(Mat,MatSTRUMPACKCompression),(F,comp));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode MatSTRUMPACKSetCompRelTol_STRUMPACK(Mat F,PetscReal rtol)
 {
@@ -282,7 +280,6 @@ PetscErrorCode MatSTRUMPACKSetCompAbsTol(Mat F,PetscReal atol)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode MatSTRUMPACKSetCompLeafSize_STRUMPACK(Mat F,PetscInt leaf_size)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
@@ -320,7 +317,6 @@ PetscErrorCode MatSTRUMPACKSetCompLeafSize(Mat F,PetscInt leaf_size)
   ierr = PetscTryMethod(F,"MatSTRUMPACKSetCompLeafSize_C",(Mat,PetscInt),(F,leaf_size));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode MatSTRUMPACKSetGeometricNx_STRUMPACK(Mat F,PetscInt nx)
 {
@@ -504,7 +500,6 @@ PetscErrorCode MatSTRUMPACKSetGeometricWidth(Mat F,PetscInt w)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode MatSTRUMPACKSetCompMinSepSize_STRUMPACK(Mat F,PetscInt min_sep_size)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
@@ -542,7 +537,6 @@ PetscErrorCode MatSTRUMPACKSetCompMinSepSize(Mat F,PetscInt min_sep_size)
   ierr = PetscTryMethod(F,"MatSTRUMPACKSetCompMinSepSize_C",(Mat,PetscInt),(F,min_sep_size));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F,PetscInt lossy_prec)
 {
@@ -582,7 +576,6 @@ PetscErrorCode MatSTRUMPACKSetCompLossyPrecision(Mat F,PetscInt lossy_prec)
   PetscFunctionReturn(0);
 }
 
-
 static PetscErrorCode MatSTRUMPACKSetCompButterflyLevels_STRUMPACK(Mat F,PetscInt bfly_lvls)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
@@ -620,7 +613,6 @@ PetscErrorCode MatSTRUMPACKSetCompButterflyLevels(Mat F,PetscInt bfly_lvls)
   ierr = PetscTryMethod(F,"MatSTRUMPACKSetButterflyLevels_C",(Mat,PetscInt),(F,bfly_lvls));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
 
 static PetscErrorCode MatSolve_STRUMPACK(Mat A,Vec b_mpi,Vec x)
 {
