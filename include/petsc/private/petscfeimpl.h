@@ -345,16 +345,14 @@ PETSC_STATIC_INLINE PetscErrorCode PetscFEFreeInterpolateGradient_Static(PetscFE
    interpolant[fc] = 0.0;
    for (d = 0; d < dim; ++d) compGradient[d] = 0.0;
    for (d = 0; d < dim; ++d) {
-    
       for (d = 0; d < dim; ++d) {
         realSpaceDer[d] = 0.0;
         for (g = 0; g < dim; ++g) {
           realSpaceDer[d] += invJ[g*dim+d]*basisDer[((q*Nb + f)*Nc + fc)*dim + g];
         }
         compGradient[d] += x[f]*realSpaceDer[d];
-      } 
+      }
    }
-   
    if (n) {
      for (d = 0; d < dim; ++d) interpolant[fc] += compGradient[d]*n[d];
    } else {

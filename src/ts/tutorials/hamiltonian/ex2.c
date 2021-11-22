@@ -107,7 +107,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMPlexCreateBoxMesh(PetscObjectComm((PetscObject) *dm), 2, PETSC_FALSE, faces, user->domain_lo, user->domain_hi, user->boundary, PETSC_TRUE, dm);
-  //ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -284,7 +283,7 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
  */
 static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
 {
- AppCtx            *user = (AppCtx *) ctx;
+ AppCtx             *user = (AppCtx *) ctx;
   DM                 dm, plex;
   PetscDS            prob;
   PetscFE            fe;
@@ -540,14 +539,17 @@ int main(int argc,char **argv)
     ierr = DMSwarmMigrate(sw, PETSC_TRUE);CHKERRQ(ierr);
     ierr = DMLocalizeCoordinates(sw);CHKERRQ(ierr);
     ierr = TSReset(ts);CHKERRQ(ierr);
-    ierr = PetscFree(idx1);CHKERRQ(ierr);
-    ierr = PetscFree(idx2);CHKERRQ(ierr);
-    ierr = PetscFree(probArr);CHKERRQ(ierr);
+    //ierr = PetscFree(idx1);CHKERRQ(ierr);
+    //ierr = PetscFree(idx2);CHKERRQ(ierr);
+    //ierr = PetscFree(probArr);CHKERRQ(ierr);
+    ierr = VecDestroy(&probVec);CHKERRQ(ierr);
+    ierr = ISDestroy(&is1);CHKERRQ(ierr);
+    ierr = ISDestroy(&is2);CHKERRQ(ierr);
   }
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = SNESDestroy(&user.snes);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = DMDestroy(&sw);CHKERRQ(ierr);
+  ierr = SNESDestroy(&user.snes);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
@@ -558,9 +560,31 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q3
-     args: -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 1 -pc_type svd -uniform -sigma 1.0e-8 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -steps 100
+     args: -particlesPerCell 2000\
+      -petscspace_degree 2\
+      -petscfe_default_quadrature_order 3\
+      -ts_basicsymplectic_type 1\
+      -pc_type svd\
+      -uniform\
+      -sigma 1.0e-8\
+      -timeScale 2.0e-14\
+      -stepSize 1.0e-2\
+      -ts_monitor_sp_swarm\
+      -steps 10\
+      -dm_view -sw_view
    test:
      suffix: bsi2q3
-     args: -particlesPerCell 2000 -petscspace_degree 2 -petscfe_default_quadrature_order 3 -ts_basicsymplectic_type 2 -pc_type svd -uniform -sigma 1.0e-8 -timeScale 2.0e-14 -stepSize 1.0e-2 -ts_monitor_sp_swarm_phase -steps 100
+     args: -particlesPerCell 2000\
+      -petscspace_degree 2\
+      -petscfe_default_quadrature_order 3\
+      -ts_basicsymplectic_type 2\
+      -pc_type svd\
+      -uniform\
+      -sigma 1.0e-8\
+      -timeScale 2.0e-14\
+      -stepSize 1.0e-2\
+      -ts_monitor_sp_swarm\
+      -steps 10\
+      -dm_view -sw_view
 
 TEST*/

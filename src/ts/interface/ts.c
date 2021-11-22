@@ -265,14 +265,6 @@ PetscErrorCode  TSSetFromOptions(TS ts)
     ierr = PetscDrawAxisSetLabels(axis,"Phase Diagram","Variable 1","Variable 2");CHKERRQ(ierr);
     ierr = TSMonitorSet(ts,TSMonitorDrawSolutionPhase,ctx,(PetscErrorCode (*)(void**))TSMonitorDrawCtxDestroy);CHKERRQ(ierr);
   }
-  ierr = PetscOptionsName("-ts_monitor_sp_swarm_phase","Display particle phase from the DMSwarm","TSMonitorSPSwarm",&opt);CHKERRQ(ierr);
-  if (opt) {
-    TSMonitorSPCtx  ctx;
-    PetscInt        howoften = 1;
-    ierr = PetscOptionsInt("-ts_monitor_sp_swarm_phase","Display particles phase from the DMSwarm","TSMonitorSPSwarm",howoften,&howoften,NULL);CHKERRQ(ierr);
-    ierr = TSMonitorSPCtxCreate(PETSC_COMM_SELF, NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, &ctx);CHKERRQ(ierr);
-    ierr = TSMonitorSet(ts, TSMonitorSPSwarmPhase, ctx, (PetscErrorCode (*)(void**))TSMonitorSPCtxDestroy);CHKERRQ(ierr);
-  }
   opt  = PETSC_FALSE;
   ierr = PetscOptionsName("-ts_monitor_draw_error","Monitor error graphically","TSMonitorDrawError",&opt);CHKERRQ(ierr);
   if (opt) {
@@ -6004,63 +5996,6 @@ PetscErrorCode TSComputeIJacobianDefaultColor(TS ts,PetscReal t,Vec U,Vec Udot,P
   PetscFunctionReturn(0);
 }
 
-
-PetscErrorCode TSMonitorSPSwarmPhase(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dctx)
-{
-  PetscErrorCode    ierr;
-  TSMonitorSPCtx    ctx = (TSMonitorSPCtx)dctx;
-  const PetscScalar *yy;
-  PetscScalar       *y,*x;
-  PetscInt          Np, p, dim=2;
-  DM                dm;
-
-  PetscFunctionBegin;
-  
-  if (step < 0) PetscFunctionReturn(0); /* -1 indicates interpolated solution */
-  if (!step) {
-    PetscDrawAxis axis;
-    ierr = PetscDrawSPGetAxis(ctx->sp,&axis);CHKERRQ(ierr);
-    ierr = PetscDrawAxisSetLabels(axis,"Particle Phase","T","X");CHKERRQ(ierr);
-    ierr = PetscDrawAxisSetLimits(axis, 0, 7, -3., 3.);CHKERRQ(ierr);
-    ierr = PetscDrawAxisSetHoldLimits(axis, PETSC_TRUE);CHKERRQ(ierr);
-    ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
-    ierr = DMGetDimension(dm, &dim);
-    //if(dim!=2) SETERRQ(PETSC_COMM_SELF, ierr, "Dimensions improper for monitor arguments! Current support: two dimensions.");CHKERRQ(ierr);
-    ierr = VecGetLocalSize(u, &Np);CHKERRQ(ierr);
-    Np /= 2*dim;
-    ierr = PetscDrawSPSetDimension(ctx->sp, Np);CHKERRQ(ierr);
-    ierr = PetscDrawSPReset(ctx->sp);CHKERRQ(ierr);
-  }
-  
-  ierr = VecGetLocalSize(u, &Np);CHKERRQ(ierr);
-  Np /= 2*dim;
-  ierr = PetscDrawSPSetDimension(ctx->sp, Np);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(u,&yy);CHKERRQ(ierr);
-  ierr = PetscMalloc2(Np, &x, Np, &y);CHKERRQ(ierr);
-  /* get points from solution vector */
-  for (p=0; p<Np; ++p){
-    x[p] = yy[2*dim*p];
-    y[p] = yy[(2*dim*p)+dim];
-    //PetscPrintf(PETSC_COMM_WORLD, "plotter index for particle %i: %i\n", p, (2*dim*p)+dim);
-  }
-  ierr = VecRestoreArrayRead(u,&yy);CHKERRQ(ierr);
-  
-  if (((ctx->howoften > 0) && (!(step % ctx->howoften))) || ((ctx->howoften == -1) && ts->reason)) {
-    PetscDraw draw;
-    PetscDrawSPGetDraw(ctx->sp, &draw);
-    PetscDrawClear(draw);
-    PetscDrawFlush(draw);
-    PetscDrawSPReset(ctx->sp);
-    ierr = PetscDrawSPAddPoint(ctx->sp,x,y);CHKERRQ(ierr);
-    ierr = PetscDrawSPDraw(ctx->sp,PETSC_FALSE);CHKERRQ(ierr);
-    //ierr = PetscDrawSPSave(ctx->sp);CHKERRQ(ierr);
-    
-  
-  }
-  ierr = PetscFree2(x, y);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-
-}
 /*@
     TSSetFunctionDomainError - Set a function that tests if the current state vector is valid
 
