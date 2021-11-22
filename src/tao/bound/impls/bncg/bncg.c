@@ -1073,29 +1073,44 @@ PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
 
 PetscErrorCode TaoBNCGSetH0(Tao tao, Mat H0)
 {
-  TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode               ierr;
+  TAO_BNCG       *cg = (TAO_BNCG*)tao->data;
+  PetscBool      same;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectReference((PetscObject)H0);CHKERRQ(ierr);
-  cg->pc = H0;
+  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBNCG, &same);CHKERRQ(ierr);
+  if (same) {
+    ierr = PetscObjectReference((PetscObject)H0);CHKERRQ(ierr);
+    cg->pc = H0;
+  }
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode TaoBNCGGetType(Tao tao, TaoBNCGType* type)
 {
-  TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
+  TAO_BNCG       *cg = (TAO_BNCG*)tao->data;
+  PetscBool      same;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  *type = cg->cg_type;
+  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBNCG, &same);CHKERRQ(ierr);
+  if (same) {
+    *type = cg->cg_type;
+  }
+  else {
+    SETERRQ(PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "TAO solver is not BNCG type");
+  }
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode TaoBNCGSetType(Tao tao, TaoBNCGType type)
 {
-  TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
+  TAO_BNCG       *cg = (TAO_BNCG*)tao->data;
+  PetscBool      same;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  cg->cg_type = type;
+  ierr = PetscObjectTypeCompare((PetscObject)tao, TAOBNCG, &same);CHKERRQ(ierr);
+  if (same) cg->cg_type = type;
   PetscFunctionReturn(0);
 }

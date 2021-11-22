@@ -138,6 +138,7 @@ class TAOtorch(torch.optim.Optimizer):
         return self.tao
 
     def setTAO(self, tao):
+        assert isinstance(tao, PETSc.TAO)
         tao = self._configureTAO(tao)
         self.tao.destroy()
         self.tao = tao

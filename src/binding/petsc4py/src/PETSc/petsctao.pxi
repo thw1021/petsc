@@ -484,9 +484,10 @@ cdef inline TAOLineSearch ref_TAOLS(PetscTAOLineSearch taols):
 
 # --------------------------------------------------------------------
 
-cdef int TAOLS_Objective(
-    PetscTAOLineSearch _ls, PetscVec _x, PetscReal *_f,
-    void *ctx) except PETSC_ERR_PYTHON with gil:
+cdef int TAOLS_Objective(PetscTAOLineSearch _ls,
+                         PetscVec _x, 
+                         PetscReal *_f,
+                         void *ctx) except PETSC_ERR_PYTHON with gil:
 
     cdef TAOLineSearch ls = ref_TAOLS(_ls)
     cdef Vec x   = ref_Vec(_x)
@@ -495,9 +496,10 @@ cdef int TAOLS_Objective(
     _f[0] = asReal(retv)
     return 0
 
-cdef int TAOLS_Gradient(
-    PetscTAOLineSearch _ls, PetscVec _x, PetscVec _g,
-    void *ctx) except PETSC_ERR_PYTHON with gil:
+cdef int TAOLS_Gradient(PetscTAOLineSearch _ls,
+                        PetscVec _x,
+                        PetscVec _g,
+                        void *ctx) except PETSC_ERR_PYTHON with gil:
 
     cdef TAOLineSearch ls = ref_TAOLS(_ls)
     cdef Vec x   = ref_Vec(_x)
@@ -507,9 +509,11 @@ cdef int TAOLS_Gradient(
     return 0
 
 
-cdef int TAOLS_ObjGrad(
-    PetscTAOLineSearch _ls, PetscVec _x, PetscReal *_f, PetscVec _g,
-    void *ctx) except PETSC_ERR_PYTHON with gil:
+cdef int TAOLS_ObjGrad(PetscTAOLineSearch _ls, 
+                       PetscVec _x,
+                       PetscReal *_f,
+                       PetscVec _g,
+                       void *ctx) except PETSC_ERR_PYTHON with gil:
 
     cdef TAOLineSearch ls = ref_TAOLS(_ls)
     cdef Vec x   = ref_Vec(_x)
