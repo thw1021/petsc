@@ -426,7 +426,6 @@ PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
    Level: developer
 
 .seealso: VecGetArray(), VecRestoreArray(), VecReplaceArray(), VecPlaceArray(), VecResetArray(), VecCUDAPlaceArray(), VecCUDAReplaceArray()
-
 @*/
 PetscErrorCode VecCUDAResetArray(Vec vin)
 {
