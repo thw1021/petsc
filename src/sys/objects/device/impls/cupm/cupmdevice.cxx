@@ -26,7 +26,7 @@ class CUPMDevice<T>::CUPMDeviceInternal
   cupmDeviceProp_t dprop_; // cudaDeviceProp appears to be an actual struct, i.e. you can't
                            // initialize it with nullptr or NULL (i've tried)
 
-  PETSC_NODISCARD static bool CUPMAwareMPI_() noexcept;
+  PETSC_CXX_COMPAT_DECL(bool CUPMAwareMPI_());
 
 public:
   // default constructor
@@ -39,12 +39,12 @@ public:
   PETSC_NODISCARD PetscErrorCode view(PetscViewer) const noexcept;
   PETSC_NODISCARD PetscErrorCode finalize() noexcept;
 
-  PETSC_NODISCARD auto id() const -> decltype(id_) { return id_; }
+  PETSC_NODISCARD auto id()          const -> decltype(id_)             { return id_;             }
   PETSC_NODISCARD auto initialized() const -> decltype(devInitialized_) { return devInitialized_; }
-  PETSC_NODISCARD auto prop() const -> const decltype(dprop_)& { return dprop_; }
+  PETSC_NODISCARD auto prop()        const -> const decltype(dprop_)&   { return dprop_;          }
 
   // factory
-  static constexpr std::unique_ptr<CUPMDeviceInternal> makeDevice(int i) noexcept
+  PETSC_CXX_COMPAT_DECL(std::unique_ptr<CUPMDeviceInternal> makeDevice(int i))
   {
     return std::unique_ptr<CUPMDeviceInternal>(new CUPMDeviceInternal(i));
   }
@@ -165,7 +165,7 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
 #define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false;
 
 template <CUPMDeviceType T>
-bool CUPMDevice<T>::CUPMDeviceInternal::CUPMAwareMPI_() noexcept
+PETSC_CXX_COMPAT_DEFN(bool CUPMDevice<T>::CUPMDeviceInternal::CUPMAwareMPI_())
 {
   constexpr int  bufSize = 2;
   constexpr int  hbuf[bufSize] = {1,0};

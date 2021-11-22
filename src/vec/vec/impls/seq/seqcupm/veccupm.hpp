@@ -14,14 +14,12 @@
 #  error "VecSeq_CUPM requires C++11"
 #endif
 
-#if PetscDefined(HAVE_CUPM)
-#  include <thrust/device_ptr.h>
-#  include <thrust/transform.h>
-#  include <thrust/transform_reduce.h>
-#  include <thrust/reduce.h>
-#  include <thrust/functional.h>
-#  include <thrust/iterator/counting_iterator.h>
-#endif
+#include <thrust/device_ptr.h>
+#include <thrust/transform.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/reduce.h>
+#include <thrust/functional.h>
+#include <thrust/iterator/counting_iterator.h>
 
 // TODO
 // - refactor the AXPY's for code reuse
@@ -254,15 +252,14 @@ private:
     // PetscScalar *const
     const pointer_type ptr;
 
-    //operator const_pointer_type() const noexcept { return const_cast<const_pointer_type>(this->ptr); }
-    operator       pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
+    operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
 
     vector_array(PetscDeviceContext dctx, Vec v) noexcept : ptr(initialize_(dctx,v)), v_(v) { }
 
     ~vector_array() noexcept
     {
       // could just as well CHKERRABORT() here
-      auto ierr = restorearray_async<MT,MA>(PetscRemoveConstCast(v_),const_cast<PetscScalar**>(&this->ptr));CHKERRCONTINUE(ierr);
+      auto ierr = restorearray_async<MT,MA>(PetscRemoveConstCast(v_),&PetscRemoveConstCast(this->ptr));CHKERRCONTINUE(ierr);
     }
 
   private:
@@ -457,7 +454,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getarrayandmemtype_async(Ve
 
     ierr = GetHandles_(&dctx);CHKERRQ(ierr);
     ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
-    *a   = *static_cast<decltype(a)>(v->data);
+    *a   = *static_cast<decltype(a)>(v->data); // REVIEW ME: what kind of deep magic is this?
     if (mtype) *mtype = PETSC_MEMTYPE_HOST;
   }
   PetscFunctionReturn(0);
@@ -644,7 +641,7 @@ template <CUPMDeviceType T>
 template <typename UnaryFuncT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(UnaryFuncT&& unary, Vec xin, Vec yin))
 {
-  const auto         inplace = (xin == yin) || (yin == nullptr);
+  const auto         inplace = yin ? xin == yin : false;
   const auto         n = xin->map->n;
   PetscDeviceContext dctx;
   PetscErrorCode     ierr;
@@ -713,6 +710,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createwithbotharrays_async(
   PetscFunctionBegin;
   ierr = VecCreate(comm,v);CHKERRQ(ierr);
   ierr = VecSetSizes(*v,n,n);CHKERRQ(ierr);
+  // REVIEW ME: why doesn't this set type?
   ierr = VecSetBlockSize(*v,bs);CHKERRQ(ierr);
   // REVIEW ME: why no PetscLayoutSetUp()????
   // set v's device array to be device_array, do not allocate memory on host yet.
@@ -720,18 +718,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createwithbotharrays_async(
   if (host_array) {
     VecSeqCast_(*v)->array = PetscRemoveConstCast(host_array);
     (*v)->offloadmask = device_array ? PETSC_OFFLOAD_BOTH : PETSC_OFFLOAD_CPU;
-  } else if (device_array) {
-    (*v)->offloadmask = PETSC_OFFLOAD_GPU;
   } else {
-    (*v)->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
+    (*v)->offloadmask = device_array ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_UNALLOCATED;
   }
+
   // REVIEW ME: should this check exist? It is to assert the following from createwitharrays
   // docstrings,  but doing so is potentially ridiculously expensive:
   // "If both cpuarray and gpuarray are provided, the provided arrays must have identical
   // values."
   if (PetscDefined(USE_DEBUG) && device_array && host_array) {
     constexpr auto      atol   = PetscReal(1e-08),rtol = PetscReal(1e-05);
-    const auto          nscal  = n*bs; // REVIEW ME
+    const auto          nscal  = n*bs; // REVIEW ME: is this correct for total length of array?
     const auto          nbytes = nscal*sizeof(*device_array);
     PetscDeviceContext  dctx;
     cupmError_t         cerr;
@@ -1096,6 +1093,7 @@ struct reciprocal
 };
 
 } // namespace detail
+
 template <CUPMDeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::reciprocal_async(Vec xin))
 {
@@ -1193,7 +1191,7 @@ PETSC_HOSTDEVICE_DECL static PetscInt EntriesPerGroup(PetscInt size)
 }
 
 template <int N>
-PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar *PETSC_RESTRICT y[N], PetscInt size, PetscScalar *PETSC_RESTRICT results)
+PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar *PETSC_RESTRICT y[PETSC_RESTRICT N], PetscInt size, PetscScalar *PETSC_RESTRICT results)
 {
   static_assert(N > 0,"");
   using iter_type = decltype(N);
@@ -1202,21 +1200,26 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
   const auto bdx      = blockDim.x,gdx = gridDim.x;
   const auto worksize = EntriesPerGroup(size);
   const auto begin    = tx+bx*worksize;
-  const auto end      = PetscMin((bx+1)*worksize,size);
-  PetscScalar group_sum[N];
+  const auto end      = min((bx+1)*worksize,size);
+  PetscScalar sumlocal[N];
+  PetscScalar *ylocal[N];
 
 #pragma unroll
-  for (auto i = 0; i < N; ++i) group_sum[i] = 0;
+  for (auto i = 0; i < N; ++i) {
+    sumlocal[i] = 0;
+    ylocal[i]   = y[i]; // load pointer once
+  }
 
 #pragma unroll
   for (auto i = begin; i < end; i += bdx) {
     const auto xi = x[i]; // load only once from global memory!
 
 #pragma unroll
-    for (auto j = 0; j < N; ++j) group_sum[j] += y[j][i]*xi;
+    for (auto j = 0; j < N; ++j) sumlocal[j] += ylocal[j][i]*xi;
   }
+
 #pragma unroll
-  for (auto i = 0; i < N; ++i) shmem[tx+i*MDOT_WORKGROUP_SIZE] = group_sum[i];
+  for (auto i = 0; i < N; ++i) shmem[tx+i*MDOT_WORKGROUP_SIZE] = sumlocal[i];
 
   // parallel reduction
 #pragma unroll
