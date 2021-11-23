@@ -526,7 +526,7 @@ int main(int argc,char **argv)
      requires: triangle !single !complex
    test:
      suffix: bsi1q3
-     args: -particlesPerCell 2000\
+     args: -particlesPerCell 200\
       -petscspace_degree 2\
       -petscfe_default_quadrature_order 3\
       -ts_basicsymplectic_type 1\
@@ -545,7 +545,7 @@ int main(int argc,char **argv)
       -dm_plex_box_faces 4,1
    test:
      suffix: bsi2q3
-     args: -particlesPerCell 2000\
+     args: -particlesPerCell 200\
       -petscspace_degree 2\
       -petscfe_default_quadrature_order 3\
       -ts_basicsymplectic_type 2\
