@@ -3428,11 +3428,20 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dm, DM dmAux[], PetscDS dsAux[
     ierr = DMPlexGetConeOrientation(dm, cell, &ornt);CHKERRQ(ierr);
     if (ornt[0]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Face %D in hybrid cell %D has orientation %D != 0", cone[0], cell, ornt[0]);
     for (s = 0; s < 2; ++s) {
-      PetscScalar   *x = NULL, *al = a[s];
-      const PetscInt tdA = totDimAux[s];
-      PetscInt       subface, Na, i;
+      const PetscInt *support;
+      PetscScalar    *x = NULL, *al = a[s];
+      const PetscInt  tdA = totDimAux[s];
+      PetscInt        ssize, scell;
+      PetscInt        subface, Na, i;
 
-      ierr = DMGetEnclosurePoint(plexA[s], dm, encAux[s], cone[s], &subface);CHKERRQ(ierr);
+      ierr = DMPlexGetSupport(dm, cone[s], &support);CHKERRQ(ierr);
+      ierr = DMPlexGetSupportSize(dm, cone[s], &ssize);CHKERRQ(ierr);
+      if (ssize != 2) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %D from cell %D has support size %D != 2", cone[s], cell, ssize);
+      if      (support[0] == cell) scell = support[1];
+      else if (support[1] == cell) scell = support[0];
+      else SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %D does not have cell %D in its support", cone[s], cell);
+
+      ierr = DMGetEnclosurePoint(plexA[s], dm, encAux[s], scell, &subface);CHKERRQ(ierr);
       ierr = DMPlexVecGetClosure(plexA[s], sectionAux[s], locA[s], subface, &Na, &x);CHKERRQ(ierr);
       for (i = 0; i < Na; ++i) al[cind*tdA+i] = x[i];
       ierr = DMPlexVecRestoreClosure(plexA[s], sectionAux[s], locA[s], subface, &Na, &x);CHKERRQ(ierr);
