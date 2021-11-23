@@ -103,11 +103,11 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
   PetscErrorCode ierr;
   PetscInt faces[3] = {4, 1, 1};
+
   PetscFunctionBeginUser;
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
-  ierr = DMPlexCreateBoxMesh(PetscObjectComm((PetscObject) *dm), 2, PETSC_FALSE, faces, user->domain_lo, user->domain_hi, user->boundary, PETSC_TRUE, dm);
-  ierr = DMLocalizeCoordinates(*dm);CHKERRQ(ierr);
+  ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -539,17 +539,14 @@ int main(int argc,char **argv)
     ierr = DMSwarmMigrate(sw, PETSC_TRUE);CHKERRQ(ierr);
     ierr = DMLocalizeCoordinates(sw);CHKERRQ(ierr);
     ierr = TSReset(ts);CHKERRQ(ierr);
-    //ierr = PetscFree(idx1);CHKERRQ(ierr);
-    //ierr = PetscFree(idx2);CHKERRQ(ierr);
-    //ierr = PetscFree(probArr);CHKERRQ(ierr);
     ierr = VecDestroy(&probVec);CHKERRQ(ierr);
     ierr = ISDestroy(&is1);CHKERRQ(ierr);
     ierr = ISDestroy(&is2);CHKERRQ(ierr);
   }
-  ierr = TSDestroy(&ts);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
-  ierr = DMDestroy(&sw);CHKERRQ(ierr);
   ierr = SNESDestroy(&user.snes);CHKERRQ(ierr);
+  ierr = TSDestroy(&ts);CHKERRQ(ierr);
+  ierr = DMDestroy(&sw);CHKERRQ(ierr);
+  ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }
@@ -571,7 +568,11 @@ int main(int argc,char **argv)
       -stepSize 1.0e-2\
       -ts_monitor_sp_swarm\
       -steps 10\
-      -dm_view -sw_view
+      -dm_view -sw_view\
+      -dm_plex_simplex 0 -dm_plex_dim 2\
+      -dm_plex_box_lower 0,-1\
+      -dm_plex_box_upper 6.283185307179586,1\
+      -dm_plex_box_bd periodic,none
    test:
      suffix: bsi2q3
      args: -particlesPerCell 2000\
@@ -585,6 +586,9 @@ int main(int argc,char **argv)
       -stepSize 1.0e-2\
       -ts_monitor_sp_swarm\
       -steps 10\
-      -dm_view -sw_view
-
+      -dm_view -sw_view\
+      -dm_plex_simplex 0 -dm_plex_dim 2\
+      -dm_plex_box_lower 0,-1\
+      -dm_plex_box_upper 6.283185307179586,1\
+      -dm_plex_box_bd periodic,none
 TEST*/
