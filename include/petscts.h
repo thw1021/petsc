@@ -594,8 +594,6 @@ PETSC_EXTERN PetscErrorCode TSGetType(TS,TSType*);
 PETSC_EXTERN PetscErrorCode TSSetType(TS,TSType);
 PETSC_EXTERN PetscErrorCode TSRegister(const char[], PetscErrorCode (*)(TS));
 
-PETSC_EXTERN PetscErrorCode TSMonitorSPSwarmPhase(TS,PetscInt,PetscReal,Vec,void*);
-
 PETSC_EXTERN PetscErrorCode TSGetSNES(TS,SNES*);
 PETSC_EXTERN PetscErrorCode TSSetSNES(TS,SNES);
 PETSC_EXTERN PetscErrorCode TSGetKSP(TS,KSP*);
