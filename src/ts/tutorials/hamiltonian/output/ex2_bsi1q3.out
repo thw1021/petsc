@@ -1,15 +1,15 @@
 DM Object: box 1 MPI processes
   type: plex
 box in 2 dimensions:
-  0-cells: 6
-  1-cells: 10
+  0-cells: 8
+  1-cells: 12
   2-cells: 4
-Periodic mesh (PERIODIC, NONE) coordinates not localized
+Periodic mesh (PERIODIC, NONE) coordinates localized
 Labels:
-  marker: 1 strata with value/size (1 (8))
-  Face Sets: 2 strata with value/size (1 (2), 3 (2))
-  depth: 3 strata with value/size (0 (6), 1 (10), 2 (4))
-  celltype: 3 strata with value/size (4 (4), 0 (6), 1 (10))
+  marker: 1 strata with value/size (1 (16))
+  Face Sets: 2 strata with value/size (1 (4), 3 (4))
+  depth: 3 strata with value/size (0 (8), 1 (12), 2 (4))
+  celltype: 3 strata with value/size (4 (4), 0 (8), 1 (12))
 DM Object: Particles 1 MPI processes
   type: swarm
 DMSwarmDataBucketView: 

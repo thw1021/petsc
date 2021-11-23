@@ -472,7 +472,7 @@ int main(int argc,char **argv)
     }
     ierr = TSStep(ts);CHKERRQ(ierr);
     if (ts->steprollback) {
-         ierr = TSPostEvaluate(ts);CHKERRQ(ierr);
+      ierr = TSPostEvaluate(ts);CHKERRQ(ierr);
     }
     if (!ts->steprollback) {
 
@@ -541,7 +541,8 @@ int main(int argc,char **argv)
       -dm_plex_simplex 0 -dm_plex_dim 2\
       -dm_plex_box_lower 0,-1\
       -dm_plex_box_upper 6.283185307179586,1\
-      -dm_plex_box_bd periodic,none
+      -dm_plex_box_bd periodic,none\
+      -dm_plex_box_faces 4,1
    test:
      suffix: bsi2q3
      args: -particlesPerCell 2000\
@@ -559,5 +560,6 @@ int main(int argc,char **argv)
       -dm_plex_simplex 0 -dm_plex_dim 2\
       -dm_plex_box_lower 0,-1\
       -dm_plex_box_upper 6.283185307179586,1\
-      -dm_plex_box_bd periodic,none
+      -dm_plex_box_bd periodic,none\
+      -dm_plex_box_faces 4,1
 TEST*/
