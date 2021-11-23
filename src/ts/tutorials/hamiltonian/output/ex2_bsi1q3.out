@@ -1,0 +1,40 @@
+DM Object: box 1 MPI processes
+  type: plex
+box in 2 dimensions:
+  0-cells: 6
+  1-cells: 10
+  2-cells: 4
+Periodic mesh (PERIODIC, NONE) coordinates not localized
+Labels:
+  marker: 1 strata with value/size (1 (8))
+  Face Sets: 2 strata with value/size (1 (2), 3 (2))
+  depth: 3 strata with value/size (0 (6), 1 (10), 2 (4))
+  celltype: 3 strata with value/size (4 (4), 0 (6), 1 (10))
+DM Object: Particles 1 MPI processes
+  type: swarm
+DMSwarmDataBucketView: 
+  L                  = 8000 
+  buffer             = 0 
+  allocated          = 8000 
+  nfields registered = 6 
+    [  0]     DMSwarm_pid : Mem. usage       = 6.40e-02 (MB) [rank0]
+                            blocksize        = 1 
+                            atomic size      = 8 
+    [  1]    DMSwarm_rank : Mem. usage       = 3.20e-02 (MB) [rank0]
+                            blocksize        = 1 
+                            atomic size      = 4 
+    [  2] DMSwarmPIC_coor : Mem. usage       = 1.28e-01 (MB) [rank0]
+                            blocksize        = 2 
+                            atomic size      = 16 [full block, bs=2]
+                            atomic size/item = 8 
+    [  3]  DMSwarm_cellid : Mem. usage       = 3.20e-02 (MB) [rank0]
+                            blocksize        = 1 
+                            atomic size      = 4 
+    [  4]             w_q : Mem. usage       = 6.40e-02 (MB) [rank0]
+                            blocksize        = 1 
+                            atomic size      = 8 
+    [  5]      kinematics : Mem. usage       = 1.28e-01 (MB) [rank0]
+                            blocksize        = 2 
+                            atomic size      = 16 [full block, bs=2]
+                            atomic size/item = 8 
+  Total mem. usage                           = 4.48e-01 (MB) (collective)
