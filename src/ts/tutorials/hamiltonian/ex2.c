@@ -18,11 +18,8 @@ typedef struct {
   PetscBool      monitor;                          /* Flag for use of the TS monitor */
   PetscBool      uniform;                          /* Flag to uniformly space particles in x */
   char           meshFilename[PETSC_MAX_PATH_LEN]; /* Name of the mesh filename if any */
-  PetscInt       faces;                            /* Number of faces per edge if unit square/cube generated */
-  PetscReal      domain_lo[3], domain_hi[3];       /* Lower left and upper right mesh corners */
   PetscReal      sigma;                            /* Linear charge per box length */
   PetscReal      timeScale;                        /* Nondimensionalizing time scaling */
-  DMBoundaryType boundary[3];                      /* The domain boundary type, e.g. periodic */
   PetscInt       particlesPerCell;                 /* The number of partices per cell */
   PetscReal      particleRelDx;                    /* Relative particle position perturbation compared to average cell diameter h */
   PetscInt       k;                                /* Mode number for test function */
@@ -43,16 +40,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->dim              = 2;
   options->simplex          = PETSC_TRUE;
   options->monitor          = PETSC_TRUE;
-  options->faces            = 1;
-  options->domain_lo[0]     = 0.0;
-  options->domain_lo[1]     = -1.0;
-  options->domain_lo[2]     = -1.0;
-  options->domain_hi[0]     = 2*PETSC_PI;
-  options->domain_hi[1]     = 1.0;
-  options->domain_hi[2]     = 1.0;
-  options->boundary[0]      = DM_BOUNDARY_PERIODIC;
-  options->boundary[1]      = DM_BOUNDARY_NONE;
-  options->boundary[2]      = DM_BOUNDARY_NONE;
   options->particlesPerCell = 1;
   options->k                = 1;
   options->particleRelDx    = 1.e-20;
@@ -65,7 +52,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->stepSize         = 0.01;
   options->bdm              = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm, "", "L2 Projection Options", "DMPLEX");CHKERRQ(ierr);
+  ierr = PetscOptionsBegin(comm, "", "Two Stream options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscStrcpy(options->meshFilename, "");CHKERRQ(ierr);
   ierr = PetscOptionsInt("-next_output","time steps for next output point","<100>",options->nts,&options->nts,PETSC_NULL);CHKERRQ(ierr); 
   ierr = PetscOptionsInt("-dim", "The topological mesh dimension", "ex2.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
@@ -75,26 +62,12 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsBool("-uniform", "Uniform particle spacing", "ex2.c", options->uniform, &options->uniform, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-bdm", "Use H1 instead of C0", "ex2.c", options->bdm, &options->bdm, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsString("-mesh", "Name of the mesh filename if any", "ex2.c", options->meshFilename, options->meshFilename, PETSC_MAX_PATH_LEN, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-faces", "Number of faces per edge if unit square/cube generated", "ex2.c", options->faces, &options->faces, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-k", "Mode number of test", "ex5.c", options->k, &options->k, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-particlesPerCell", "Number of particles per cell", "ex2.c", options->particlesPerCell, &options->particlesPerCell, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-sigma","parameter","<1>",options->sigma,&options->sigma,PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-stepSize","parameter","<1e-2>",options->stepSize,&options->stepSize,PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-timeScale","parameter","<1>",options->timeScale,&options->timeScale,PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsReal("-particle_perturbation", "Relative perturbation of particles (0,1)", "ex2.c", options->particleRelDx, &options->particleRelDx, NULL);CHKERRQ(ierr);
-  ii = options->dim;
-  ierr = PetscOptionsRealArray("-domain_hi", "Domain size", "ex2.c", options->domain_hi, &ii, NULL);CHKERRQ(ierr);
-  ii = options->dim;
-  ierr = PetscOptionsRealArray("-domain_lo", "Domain size", "ex2.c", options->domain_lo, &ii, NULL);CHKERRQ(ierr);
-  bd = options->boundary[0];
-  ierr = PetscOptionsEList("-x_boundary", "The x-boundary", "ex2.c", DMBoundaryTypes, 5, DMBoundaryTypes[options->boundary[0]], &bd, NULL);CHKERRQ(ierr);
-  options->boundary[0] = (DMBoundaryType) bd;
-  bd = options->boundary[1];
-  ierr = PetscOptionsEList("-y_boundary", "The y-boundary", "ex2.c", DMBoundaryTypes, 5, DMBoundaryTypes[options->boundary[1]], &bd, NULL);CHKERRQ(ierr);
-  options->boundary[1] = (DMBoundaryType) bd;
-  bd = options->boundary[2];
-  ierr = PetscOptionsEList("-z_boundary", "The z-boundary", "ex2.c", DMBoundaryTypes, 5, DMBoundaryTypes[options->boundary[2]], &bd, NULL);CHKERRQ(ierr);
-  options->boundary[2] = (DMBoundaryType) bd; 
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -102,7 +75,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
   PetscErrorCode ierr;
-  PetscInt faces[3] = {4, 1, 1};
 
   PetscFunctionBeginUser;
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
