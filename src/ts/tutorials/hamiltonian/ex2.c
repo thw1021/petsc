@@ -12,7 +12,6 @@ static char help[] = "Two stream instability from Birdsal and Langdon with DMSwa
 
 typedef struct {
   PetscInt       dim;                              /* The topological mesh dimension */
-  PetscInt       nts;                              /* print the energy at each nts time steps */
   PetscBool      simplex;                          /* Flag for simplices or tensor cells */
   PetscBool      bdm;                              /* Flag for mixed form poisson */
   PetscBool      monitor;                          /* Flag for use of the TS monitor */
@@ -46,7 +45,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->momentTol        = 100.*PETSC_MACHINE_EPSILON;
   options->sigma            = 1.;
   options->timeScale        = 1.0e-6;
-  options->nts              = 100;
   options->uniform          = PETSC_FALSE;
   options->steps            = 1;
   options->stepSize         = 0.01;
@@ -54,7 +52,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
   ierr = PetscOptionsBegin(comm, "", "Two Stream options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscStrcpy(options->meshFilename, "");CHKERRQ(ierr);
-  ierr = PetscOptionsInt("-next_output","time steps for next output point","<100>",options->nts,&options->nts,PETSC_NULL);CHKERRQ(ierr); 
   ierr = PetscOptionsInt("-dim", "The topological mesh dimension", "ex2.c", options->dim, &options->dim, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-steps", "TS steps to take", "ex2.c", options->steps, &options->steps, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor", "To use the TS monitor or not", "ex2.c", options->monitor, &options->monitor, NULL);CHKERRQ(ierr);
@@ -171,7 +168,7 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   ierr = DMSwarmGetField(*sw, DMSwarmPICField_cellid, NULL, NULL, (void **) &cellid);CHKERRQ(ierr);
   ierr = DMSwarmGetField(*sw, "w_q", NULL, NULL, (void **) &vals);CHKERRQ(ierr);
   ierr = DMSwarmGetField(*sw, "kinematics", NULL, NULL, (void **) &initialConditions);CHKERRQ(ierr);
-  ierr = PetscMalloc5(dim, &centroid, dim, &xi0, dim, &v0, dim*dim, &J, dim*dim, &invJ);CHKERRQ(ierr);  
+  ierr = PetscMalloc5(dim, &centroid, dim, &xi0, dim, &v0, dim*dim, &J, dim*dim, &invJ);CHKERRQ(ierr);
   for (c = cStart; c < Ncell; c++) {
     if (Np == 1) {
       ierr = DMPlexComputeCellGeometryFVM(dm, c, NULL, centroid, NULL);CHKERRQ(ierr);
@@ -183,12 +180,12 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
       for (p = 0; p < Np; ++p) {
         const PetscInt n   = c*Np + p;
         PetscReal      refcoords[3], spacing;
-        
+
         cellid[n] = c;
-        if(user->uniform){
+        if (user->uniform) {
           spacing = 2./Np;
           ierr = PetscRandomGetValue(rnd, &value);
-          for(d=0; d<dim; ++d) refcoords[d] = d == 0 ? -1. + spacing/2. + p*spacing + value/100. : 0.;  
+          for (d=0; d<dim; ++d) refcoords[d] = d == 0 ? -1. + spacing/2. + p*spacing + value/100. : 0.;
         }
         else{
           for (d = 0; d < dim; ++d) {ierr = PetscRandomGetValue(rnd, &value);CHKERRQ(ierr); refcoords[d] = d == 0 ? PetscRealPart(value) : 0. ;}
@@ -203,9 +200,9 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   normalized_vel = 1.;
   for (c = 0; c < Ncell; ++c) {
     for (p = 0; p < Np; ++p) {
-      if(p%2 == 0 ){
+      if (p%2 == 0) {
         for (d = 0; d < dim; ++d) initialConditions[(c*Np + p)*dim + d] = d == 0 ? normalized_vel : 0.;
-      } 
+      }
       else {
         for (d = 0; d < dim; ++d) initialConditions[(c*Np + p)*dim + d] = d == 0 ? -(normalized_vel) : 0.;
       }
@@ -240,7 +237,7 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
   Np  /= dim;
   for (p = 0; p < Np; ++p) {
-     for(d = 0; d < dim; ++d){
+     for (d = 0; d < dim; ++d) {
        posres[p*dim+d] = v[p*dim+d];
      }
   }
@@ -250,7 +247,7 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
 
 }
 
-/* 
+/*
   Solve for the gradient of the electric field and apply force to particles.
  */
 static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
@@ -296,7 +293,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     PetscScalar sum;
     PetscInt    n;
     phi_0 = (user->sigma*user->sigma*user->sigma)*(user->timeScale*user->timeScale)/(m_e*q_e*epsi_0);
-  
+
     ierr = VecGetSize(rho, &n);CHKERRQ(ierr);
     ierr = VecSum(rho, &sum);CHKERRQ(ierr);
     ierr = VecShift(rho, -sum/n);CHKERRQ(ierr);
@@ -384,7 +381,7 @@ int main(int argc,char **argv)
   PetscReal         *coor, *kin, *pos, *mom;
   PetscScalar       *weights;
 
-  ierr = PetscInitialize(&argc,&argv,NULL,help);CHKERRQ(ierr);
+  ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
   ierr = ProcessOptions(comm, &user);CHKERRQ(ierr);
   /* Create dm and particles */
@@ -413,7 +410,7 @@ int main(int argc,char **argv)
   ierr = TSSetMaxSteps(ts,100000);CHKERRQ(ierr);
   ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_MATCHSTEP);CHKERRQ(ierr);
   for (step = 0; step < user.steps ; ++step){
-  
+
     ierr = DMSwarmCreateGlobalVectorFromField(sw, "kinematics", &kinVec);CHKERRQ(ierr);
     ierr = DMSwarmCreateGlobalVectorFromField(sw, DMSwarmPICField_coor, &coorVec);CHKERRQ(ierr);
     ierr = VecViewFromOptions(kinVec, NULL, "-ic_vec_view");
@@ -426,7 +423,7 @@ int main(int argc,char **argv)
     ierr = VecGetArrayRead(kinVec, &kinArr);CHKERRQ(ierr);
     ierr = VecGetArrayRead(coorVec, &coorArr);CHKERRQ(ierr);
     for (p=0; p<Np; ++p){
-        for(d=0; d<dim;++d){
+        for (d=0; d<dim;++d) {
             probArr[p*2*dim + d] = coorArr[p*dim+d];
             probArr[(p*2+1)*dim + d] = kinArr[p*dim+d];
         }
@@ -451,7 +448,7 @@ int main(int argc,char **argv)
     ierr = TSRHSSplitSetRHSFunction(ts,"position",NULL,RHSFunction1,&user);CHKERRQ(ierr);
     ierr = TSRHSSplitSetRHSFunction(ts,"momentum",NULL,RHSFunction2,&user);CHKERRQ(ierr);
     ierr = TSSetTime(ts, step*user.stepSize);CHKERRQ(ierr);
-    if (step == 0){
+    if (step == 0) {
       ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
     }
     /* Compose vector from array for TS solve with all kinematic variables */
@@ -478,7 +475,7 @@ int main(int argc,char **argv)
          ierr = TSPostEvaluate(ts);CHKERRQ(ierr);
     }
     if (!ts->steprollback) {
-    
+
       TSPostStep(ts);
       ierr = DMSwarmGetField(sw, DMSwarmPICField_coor, NULL, NULL, (void **) &coor);CHKERRQ(ierr);
       ierr = DMSwarmGetField(sw, "kinematics", NULL, NULL, (void **) &kin);CHKERRQ(ierr);
@@ -489,10 +486,10 @@ int main(int argc,char **argv)
       ierr = VecGetArray(momentum, &mom);CHKERRQ(ierr);
       for (par = 0; par < Np; ++par){
         for (d=0; d<dim; ++d){
-          if (pos[par*dim+d] < 0.){
+          if (pos[par*dim+d] < 0.) {
             coor[par*dim+d] = pos[par*dim+d] + 2.*PETSC_PI;
           }
-          else if (pos[par*dim+d] > 2.*PETSC_PI){
+          else if (pos[par*dim+d] > 2.*PETSC_PI) {
             coor[par*dim+d] = pos[par*dim+d] - 2.*PETSC_PI;
           }
           else{
