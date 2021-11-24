@@ -11,18 +11,6 @@ static char help[] = "Test of Kokkos matrix assemble with 1D Laplacian. Kokkos v
 
 #include <petscaijdevice.h>
 
-void assemble_mat(Mat A, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank)
-{
-  PetscInt        i;
-  PetscScalar     values[] = {1,-1,-1,1.1};
-  PetscErrorCode  ierr;
-  for (i=start; i<end; i++) {
-    PetscInt js[] = {i-1, i};
-    ierr = MatSetValues(A,2,js,2,js,values,ADD_VALUES);
-    if (ierr) return;
-  }
-}
-
 int main(int argc,char **argv)
 {
   PetscErrorCode               ierr;
@@ -58,12 +46,16 @@ int main(int argc,char **argv)
   ierr = MatCreateVecs(A,&x,&y);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
 
-  // assemble end on CPU. We are not doing it redudent here, and ignoring off proc entries, but we could
-  assemble_mat(A, Istart, Iend, N, rank);CHKERRQ(ierr);
+  // assemble end on CPU. We are not assembling redudent here, and ignoring off proc entries, but we could
+  for (int i=Istart; i<Iend; i++) {
+    PetscScalar values[] = {1,-1,-1,1};
+    PetscInt    js[] = {i-1,i};
+    ierr = MatSetValues(A,2,js,2,js,values,ADD_VALUES);CHKERRQ(ierr);
+  }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
-  // test cusparse
+  // test Kokkos
   ierr = VecSet(x,1.0);CHKERRQ(ierr);
   ierr = MatMult(A,x,y);CHKERRQ(ierr);
   ierr = VecViewFromOptions(y,NULL,"-vec_view");CHKERRQ(ierr);
@@ -73,11 +65,13 @@ int main(int argc,char **argv)
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   ierr = MatKokkosGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
   ierr = MatZeroEntries(A);CHKERRQ(ierr); // needed?
+  Kokkos::fence();
   Kokkos:: parallel_for (Kokkos::RangePolicy<> (Istart,Iend), KOKKOS_LAMBDA ( int i) {
-      PetscScalar                  values[] = {1,-1,-1,1.1};
-      PetscInt js[] = {i-1, i};
+      PetscScalar  values[] = {1,1,1,1};
+      PetscInt     js[] = {i-1, i};
       MatSetValuesDevice(d_mat,2,js,2,js,values,ADD_VALUES);
     });
+  Kokkos::fence();
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
@@ -96,20 +90,15 @@ int main(int argc,char **argv)
   return ierr;
 }
 
-/*
-     The first test works for Kokkos wtih OpenMP and PThreads, the second with CUDA.
-
-*/
-
 /*TEST
 
    build:
      requires: kokkos_kernels
 
    test:
-     suffix: 0
+     suffix: kokkos
      requires: kokkos_kernels double !complex !single
-     args: -view_kokkos_configuration -n 11 -vec_view
+     args: -view_kokkos_configuration -n 11 -vec_view -mat_view -mat_type aijkokkos
      nsize:  2
 
 TEST*/
