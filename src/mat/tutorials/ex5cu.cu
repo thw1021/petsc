@@ -16,31 +16,31 @@ static char help[] = "Test of CUDA matrix assemble with simple matrix.\n\n";
 
 #include <petscaijdevice.h>
 __global__
-void assemble_on_gpu(PetscSplitCSRDataStructure d_mat, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank)
+void assemble_on_gpu(PetscSplitCSRDataStructure d_mat, PetscInt start, PetscInt end, PetscInt N, PetscMPIInt rank)
 {
   const PetscInt  inc = blockDim.x, my0 = threadIdx.x;
   PetscInt        i;
   PetscErrorCode  ierr;
 
-  for (i=start+my0; i<end; i+=inc) {
+  for (i=start+my0; i<end+1; i+=inc) {
     PetscInt    js[] = {i-1, i};
-    PetscScalar is = i;
+    PetscScalar is = i, nn = (i==N) ? 1 : 2; // negative indices are igored but >= N are not
     PetscScalar values[] = {is,-2*is,-3*is,4*is};
-    ierr = MatSetValuesDevice(d_mat,2,js,2,js,values,ADD_VALUES);if (ierr) assert(0);
+    ierr = MatSetValuesDevice(d_mat,nn,js,nn,js,values,ADD_VALUES);if (ierr) assert(0);
   }
 }
 
-PetscErrorCode assemble_on_cpu(Mat A, PetscInt start, PetscInt end, PetscInt Ne, PetscMPIInt rank)
+PetscErrorCode assemble_on_cpu(Mat A, PetscInt start, PetscInt end, PetscInt N, PetscMPIInt rank)
 {
   PetscInt       i;
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  for (i=start; i<end; i++) {
+  for (i=start; i<end+1; i++) {
     PetscInt    js[] = {i-1, i};
-    PetscScalar is = i;
+    PetscScalar is = i, nn = (i==N) ? 1 : 2;
     PetscScalar values[] = {is,-2*is,-3*is,4*is};
-    ierr = MatSetValues(A,2,js,2,js,values,ADD_VALUES);CHKERRQ(ierr);
+    ierr = MatSetValues(A,nn,js,nn,js,values,ADD_VALUES);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -94,7 +94,7 @@ int main(int argc,char **args)
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = PetscLogEventEnd(event,0,0,0,0);CHKERRQ(ierr);
 
-  ierr = MatComputeOperator(A,MATAIJ,&Ae);CHKERRQ(ierr);
+  ierr = MatComputeOperator(A,MATAIJ,&Ae);CHKERRQ(ierr); // setting the name on A has side effect
   ierr = PetscObjectSetName((PetscObject)Ae,"GPU MATRIX");CHKERRQ(ierr);
   ierr = MatView(Ae,NULL);CHKERRQ(ierr);
   ierr = MatDestroy(&Ae);CHKERRQ(ierr);

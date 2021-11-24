@@ -47,10 +47,10 @@ int main(int argc,char **argv)
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
 
   // assemble end on CPU. We are not assembling redudent here, and ignoring off proc entries, but we could
-  for (int i=Istart; i<Iend; i++) {
+  for (int i=Istart; i<Iend+1; i++) {
     PetscScalar values[] = {1,-1,-1,1};
-    PetscInt    js[] = {i-1,i};
-    ierr = MatSetValues(A,2,js,2,js,values,ADD_VALUES);CHKERRQ(ierr);
+    PetscInt    js[] = {i-1,i}, nn = (i==N) ? 1 : 2;
+    ierr = MatSetValues(A,nn,js,nn,js,values,ADD_VALUES);CHKERRQ(ierr);
   }
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -66,10 +66,10 @@ int main(int argc,char **argv)
   ierr = MatKokkosGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
   ierr = MatZeroEntries(A);CHKERRQ(ierr); // needed?
   Kokkos::fence();
-  Kokkos:: parallel_for (Kokkos::RangePolicy<> (Istart,Iend), KOKKOS_LAMBDA ( int i) {
+  Kokkos:: parallel_for (Kokkos::RangePolicy<> (Istart,Iend+1), KOKKOS_LAMBDA ( int i) {
       PetscScalar  values[] = {1,1,1,1};
-      PetscInt     js[] = {i-1, i};
-      MatSetValuesDevice(d_mat,2,js,2,js,values,ADD_VALUES);
+      PetscInt     js[] = {i-1, i}, nn = (i==N) ? 1 : 2;
+      MatSetValuesDevice(d_mat,nn,js,nn,js,values,ADD_VALUES);
     });
   Kokkos::fence();
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
