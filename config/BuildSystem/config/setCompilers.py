@@ -2118,15 +2118,14 @@ if (dlclose(handle)) {
     for envVal in ignoreEnv:
       if envVal in os.environ:
         if envVal in self.framework.clArgDB:
-          self.logPrint(envVal+' (set to '+os.environ[envVal]+') found in environment variables - ignoring since also set on command line')
+          self.logPrint(envVal+' (set to '+os.environ[envVal]+')\n found in environment variables - ignoring since also set on command line')
           del os.environ[envVal]
         elif self.argDB['with-environment-variables']:
-          self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+') found in environment variables - using it \n use ./configure --disable-environment-variables to NOT use the environmental variables******')
+          self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+')\n found in environment variables - using it. Use ./configure --disable-environment-variables to NOT use the environmental variables******')
         else:
-          self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+') found in environment variables - ignoring \n use ./configure '+envVal+'=$'+envVal+' if you really want to use that value ******')
+          self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+')\n found in environment variables - ignoring it. Use ./configure '+envVal+'=$'+envVal+' if you really want to use that value ******')
           del os.environ[envVal]
     return
-
 
   def checkEnvCompilers(self):
     if 'with-environment-variables' in self.framework.clArgDB or 'with-xsdk-defaults' in self.framework.clArgDB:
