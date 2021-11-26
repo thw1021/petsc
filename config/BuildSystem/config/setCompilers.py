@@ -2118,7 +2118,7 @@ if (dlclose(handle)) {
     for envVal in ignoreEnv:
       if envVal in os.environ:
         if envVal in self.framework.clArgDB:
-          self.logPrint(envVal+' (set to '+os.environ[envVal]+')\n found in environment variables - ignoring since also set on command line')
+          self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+')\n found in environment variables - ignoring since also set on command line******')
           del os.environ[envVal]
         elif self.argDB['with-environment-variables']:
           self.logPrintBox('***** WARNING: '+envVal+' (set to '+os.environ[envVal]+')\n found in environment variables - using it. Use ./configure --disable-environment-variables to NOT use the environmental variables******')
