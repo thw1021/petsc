@@ -6,7 +6,11 @@
 
 #include <../src/mat/impls/fft/fft.h>   /*I "petscmat.h" I*/
 EXTERN_C_BEGIN
+#if PetscDefined(USE_MPI)
 #include <fftw3-mpi.h>
+#else
+#include <fftw3.h>
+#endif
 EXTERN_C_END
 
 typedef struct {
