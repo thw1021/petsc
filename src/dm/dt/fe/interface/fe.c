@@ -2316,6 +2316,8 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
   const PetscInt   NcJ       = TJ->Nc;
   const PetscReal *basisJ    = &TJ->T[0][(r*NqJ+q)*NbJ*NcJ];
   const PetscReal *basisDerJ = &TJ->T[1][(r*NqJ+q)*NbJ*NcJ*dE];
+  const PetscInt   so        = isHybridI ? 0 : s;
+  const PetscInt   to        = isHybridJ ? 0 : s;
   PetscInt         f, fc, g, gc, df, dg;
   PetscErrorCode   ierr;
 
@@ -2341,12 +2343,12 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
   ierr = PetscFEPushforwardGradient(feJ, fegeom, NbJ, tmpBasisDerJ);CHKERRQ(ierr);
   for (f = 0; f < NbI; ++f) {
     for (fc = 0; fc < NcI; ++fc) {
-      const PetscInt fidx = f*NcI+fc;        /* Test function basis index */
-      const PetscInt i    = offsetI+NbI*s+f; /* Element matrix row */
+      const PetscInt fidx = f*NcI+fc;         /* Test function basis index */
+      const PetscInt i    = offsetI+NbI*so+f; /* Element matrix row */
       for (g = 0; g < NbJ; ++g) {
         for (gc = 0; gc < NcJ; ++gc) {
-          const PetscInt gidx = g*NcJ+gc;        /* Trial function basis index */
-          const PetscInt j    = offsetJ+NbJ*s+g; /* Element matrix column */
+          const PetscInt gidx = g*NcJ+gc;         /* Trial function basis index */
+          const PetscInt j    = offsetJ+NbJ*to+g; /* Element matrix column */
           const PetscInt fOff = eOffset+i*totDim+j;
 
           elemMat[fOff] += tmpBasisI[fidx]*g0[fc*NcJ+gc]*tmpBasisJ[gidx];
