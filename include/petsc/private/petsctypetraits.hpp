@@ -44,7 +44,7 @@
 #define PETSC_IF_INTERNAL_0(result_if_true,...) __VA_ARGS__
 #define PETSC_IF_INTERNAL_1(result_if_true,...) result_if_true
 
-// PETSC_IF() - Conditionally expand to the second or remaining args based on condition
+// PETSC_IF() - Conditionally expand to the second or remaining args
 //
 // input params:
 // cond           - preprocessor conditional, must expand to either 0 or 1
@@ -53,10 +53,10 @@
 //
 // example usage:
 // #define MY_VAR 1
-// const char *message = PETSC_IF(MY_VAR,"hello","goodbye"); -> "hello"
+// PETSC_IF(MY_VAR,"hello","goodbye") -> "hello"
 //
 // #define MY_VAR 0
-// const char *message = PETSC_IF(MY_VAR,"hello",func<type1,type2>()); -> func<type1,type2>()
+// PETSC_IF(MY_VAR,"hello",func<type1,type2>()) -> func<type1,type2>()
 #define PETSC_IF(cond,result_if_true,...) PETSC_CONCAT(PETSC_IF_INTERNAL_,cond)(result_if_true,__VA_ARGS__)
 
 // PETSC_IF_PETSC_DEFINED() - Like PETSC_IF(), but passes cond through PetscDefined() first
