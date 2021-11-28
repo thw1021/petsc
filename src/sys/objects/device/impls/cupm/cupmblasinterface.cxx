@@ -32,6 +32,16 @@ PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(STATUS_SUCCESS)
 PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(STATUS_NOT_INITIALIZED)
 PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(STATUS_ALLOC_FAILED)
 
+#if PetscDefined(HAVE_CUDA)
+template struct detail::CUPMBlasInterfaceBase<CUPMDeviceType::CUDA>;
+template struct CUPMBlasInterface<CUPMDeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+template struct detail::CUPMBlasInterfaceBase<CUPMDeviceType::HIP>;
+template struct CUPMBlasInterface<CUPMDeviceType::HIP>;
+#endif
+
 } // namespace Impl
 
 } // namespace Petsc
