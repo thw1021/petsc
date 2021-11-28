@@ -10,15 +10,6 @@ namespace Petsc
 namespace Impl
 {
 
-namespace detail
-{
-
-// instantiate the base class
-template struct CUPMInterfaceBase<CUPMDeviceType::CUDA>;
-template struct CUPMInterfaceBase<CUPMDeviceType::HIP>;
-
-} // namespace detail
-
 #define PETSC_CUPM_STATIC_VARIABLE_DEFN(theirs,DEVICE,ours) \
   const decltype(theirs) CUPMInterface<CUPMDeviceType::DEVICE>::ours;
 
@@ -69,6 +60,23 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDeviceToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDeviceToDevice)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyHostToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDefault)
+
+namespace detail
+{
+
+// instantiate the base class
+template struct CUPMInterfaceBase<CUPMDeviceType::CUDA>;
+template struct CUPMInterfaceBase<CUPMDeviceType::HIP>;
+
+} // namespace detail
+
+// instantiate the interfaces
+#if PetscDefined(HAVE_CUDA)
+template struct CUPMInterface<CUPMDeviceType::CUDA>;
+#endif
+#if PetscDefined(HAVE_HIP)
+template struct CUPMInterface<CUPMDeviceType::HIP>;
+#endif
 
 } // namespace Impl
 
