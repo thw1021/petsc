@@ -467,8 +467,8 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
-  PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
-  PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
+  PETSC_CUPM_ALIAS_FUNCTION_COMMON(MallocHost,HostMalloc);
+  PETSC_CUPM_ALIAS_FUNCTION_COMMON(FreeHost,HostFree);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
   // kernel launching
