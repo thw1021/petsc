@@ -528,6 +528,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   /* (3) Create network->plex */
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
+  ierr = DMPlexSetUseVecGhostPermutation(network->plex);CHKERRQ(ierr);
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
   if (size == 1) {
     ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices-nmerged,2,edges);CHKERRQ(ierr);

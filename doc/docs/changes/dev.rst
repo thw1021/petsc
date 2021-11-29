@@ -104,6 +104,7 @@ Changes: Development
 -  Add ``DMPlexCreateVecGhost()``
 -  Add ``DMGlobalGetLocalBegin()``, ``DMGlobalGetLocalEnd()``, ``DMGlobalGetLocal()``, ``DMGlobalRestoreLocal()`` to provide a local representation for a global vector that may be a ghosted local representation of the global vector.
 -  Add ``-dm_plex_use_vec_ghost_permutation`` to have DMPLEX use VecGhost and thus have a shared global and local vector that does not need to copy to copy the local part of the vector in global to local and local to global operations
+-  Change DMNETWORK to always DMPlexSetUseVecGhostPermutation(), this will decrease the time for many DMNETWORK computations since local copies from global to local and local to global communication will be eliminated
 
 .. rubric:: DMSwarm:
 
