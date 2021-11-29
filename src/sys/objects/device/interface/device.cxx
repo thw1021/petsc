@@ -42,15 +42,15 @@ static_assert(
 );
 
 #define PETSC_DEVICE_CASE(IMPLS,func,...)                               \
-  case PETSC_CONCAT(PETSC_DEVICE_,IMPLS): {                             \
-    auto ierr_ = PETSC_CONCAT(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr_); \
+  case PETSCPP_CONCAT(PETSC_DEVICE_,IMPLS): {                             \
+    auto ierr_ = PETSCPP_CONCAT(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr_); \
   } break
 
 // Expands to either PETSC_DEVICE_CASE_IF_PETSC_DEFINED__0 or
 // PETSC_DEVICE_CASE_IF_PETSC_DEFINED__1 depending on the value of the PetscDefined() clause,
 // which is given by PetscDefined(HAVE_ ## IMPLS)
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED(IMPLS,...)                   \
-  PETSC_IF_PETSC_DEFINED(PETSC_CONCAT(HAVE_,IMPLS),PETSC_DEVICE_CASE,PETSC_EXPAND_TO_NOTHING)(IMPLS,__VA_ARGS__)
+  PETSCPP_IF_PETSC_DEFINED(PETSCPP_CONCAT(HAVE_,IMPLS),PETSC_DEVICE_CASE,PETSCPP_EXPAND_TO_NOTHING)(IMPLS,__VA_ARGS__)
 
 /*@C
   PetscDeviceCreate - Get a new handle for a particular device type
