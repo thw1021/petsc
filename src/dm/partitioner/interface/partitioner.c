@@ -159,7 +159,10 @@ static PetscErrorCode PetscPartitionerGetDefaultType(MPI_Comm comm, const char *
 .  -petscpartitioner_use_vertex_weights - Uses weights associated with the graph vertices
 -  -petscpartitioner_view_graph - View the graph each time PetscPartitionerPartition is called. Viewer can be customized, see PetscOptionsGetViewer()
 
-  Level: developer
+  Level: beginner
+
+  Notes:
+    If the type is not set it defaults to using ParMeTIS, PTScotch, Chaco, or simple in that order depending which ones PETSc was configured with
 
 .seealso: PetscPartitionerView(), PetscPartitionerSetType(), PetscPartitionerPartition()
 @*/
@@ -396,6 +399,7 @@ PetscErrorCode PetscPartitionerCreate(MPI_Comm comm, PetscPartitioner *part)
 
   ierr = PetscHeaderCreate(p, PETSCPARTITIONER_CLASSID, "PetscPartitioner", "Graph Partitioner", "PetscPartitioner", comm, PetscPartitionerDestroy, PetscPartitionerView);CHKERRQ(ierr);
   ierr = PetscPartitionerGetDefaultType(comm, &partitionerType);CHKERRQ(ierr);
+  ierr = PetscInfo1(p,"Using default PetscPartitionerType %s\n",partitionerType);CHKERRQ(ierr);
   ierr = PetscPartitionerSetType(p, partitionerType);CHKERRQ(ierr);
 
   p->edgeCut = 0;
