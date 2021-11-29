@@ -2,7 +2,7 @@
 #define PETSCCUPMINTERFACE_HPP
 
 #include <petsc/private/deviceimpl.h>
-#include <petsc/private/petsctypetraits.hpp>
+#include <petsc/private/cpputil.hpp>
 
 #if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
 #  define PETSC_HAVE_CUPM 1
@@ -24,8 +24,12 @@
 
 #if defined(__cplusplus)
 
-#if (!PetscDefined(HAVE_CXX_DIALECT_CXX11)) || (__cplusplus < 201103L)
-#  error "CUPMInterface requires c++11"
+#if (__cplusplus < 201103L) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
+// icc (and for that matter any windows compiler) is only fully compliant to the letter of
+// the standard up to C++03, while supporting the vast majority of later standards
+#  if !PetscDefined(HAVE_WINDOWS_COMPILERS)
+#    error "CUPMInterface requires c++11"
+#  endif
 #endif
 
 #include <array>
@@ -92,7 +96,7 @@ namespace detail
 // PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(cupm,Success,hip,AllRight); ->
 // static const auto cupmSuccess = hipAllRight;
 #define PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
-  static const auto PETSC_CONCAT(our_prefix,our_suffix) = PETSC_CONCAT(their_prefix,their_suffix)
+  static const auto PETSCPP_CONCAT(our_prefix,our_suffix) = PETSCPP_CONCAT(their_prefix,their_suffix)
 
 // PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON() - declaration to alias a cuda/hip integral constant
 // value
@@ -151,7 +155,7 @@ namespace detail
 //   return cudaMalloc(std::forward<T>(args)...);
 // }
 #define PETSC_CUPM_ALIAS_FUNCTION_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
-  PETSC_ALIAS_FUNCTION(static constexpr PETSC_CONCAT(our_prefix,our_suffix),PETSC_CONCAT(their_prefix,their_suffix))
+  PETSC_ALIAS_FUNCTION(static constexpr PETSCPP_CONCAT(our_prefix,our_suffix),PETSCPP_CONCAT(their_prefix,their_suffix))
 
 // PETSC_CUPM_ALIAS_FUNCTION_COMMON() - declaration to alias a cuda/hip function
 //
@@ -232,7 +236,7 @@ namespace detail
 //   return cudaMalloc(std::forward<T>(args)...);
 // }
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix,N) \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr PETSC_CONCAT(our_prefix,our_suffix),PETSC_CONCAT(their_prefix,their_suffix),N)
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr PETSCPP_CONCAT(our_prefix,our_suffix),PETSCPP_CONCAT(their_prefix,their_suffix),N)
 
 // PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON() - declaration to alias a cuda/hip function but
 // discard the last N arguments
@@ -467,12 +471,14 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(MallocAsync,Malloc,1);
   PETSC_CUPM_ALIAS_FUNCTION(Memcpy);
   PETSC_CUPM_ALIAS_FUNCTION(MemcpyAsync);
+  // hipMallocHost is deprecated
   PETSC_CUPM_ALIAS_FUNCTION_COMMON(MallocHost,HostMalloc);
+  // hipFreeHost is deprecated
   PETSC_CUPM_ALIAS_FUNCTION_COMMON(FreeHost,HostFree);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
   // kernel launching
-  PETSC_CUPM_ALIAS_FUNCTION_COMMON(LaunchKernel,LaunchKernelGGL);
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
 };
 #undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U

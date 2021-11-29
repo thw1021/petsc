@@ -1,73 +1,14 @@
-#ifndef PETSCTYPETRAITS_HPP
-#define PETSCTYPETRAITS_HPP
+#ifndef PETSC_CPPUTIL_HPP
+#define PETSC_CPPUTIL_HPP
 
 #include <petsc/private/petscimpl.h> // for PETSC_NODISCARD
-
-// PETSC_CONCAT() - Concatenate two tokens
-//
-// input params:
-// x - first token
-// y - second token
-//
-// notes:
-// PETSC_CONCAT() will expand both arguments before pasting them together, use PETSC_CONCAT_()
-// if you don't want to expand them
-//
-// example usage:
-// PETSC_CONCAT(hello,there) -> hellothere
-//
-// #define HELLO hello
-//
-// PETSC_CONCAT(HELLO,there)  -> hellothere
-// PETSC_CONCAT_(HELLO,there) -> HELLOthere
-#define PETSC_CONCAT_(x,y) x ## y
-#define PETSC_CONCAT(x,y)  PETSC_CONCAT_(x,y)
+#include <petsc/private/macros.h>
 
 #if defined(__cplusplus)
 
 #if __cplusplus >= 201103L // C++11
 #include <type_traits>
 #include <tuple>
-
-// PETSC_EXPAND_TO_NOTHING() - Expands to absolutely nothing at all
-//
-// input params:
-// __VA_ARGS__ - anything at all
-//
-// notes:
-// must have at least 1 argument
-//
-// example usage:
-// PETSC_EXPAND_TO_NOTHING(a,b,c) -> *nothing*
-#define PETSC_EXPAND_TO_NOTHING(...)
-
-#define PETSC_IF_INTERNAL_0(result_if_true,...) __VA_ARGS__
-#define PETSC_IF_INTERNAL_1(result_if_true,...) result_if_true
-
-// PETSC_IF() - Conditionally expand to the second or remaining args
-//
-// input params:
-// cond           - preprocessor conditional, must expand to either 0 or 1
-// result_if_true - result of macro expansion if cond expands to 1
-// __VA_ARGS__    - result of macro expansion if cond expands to 0
-//
-// example usage:
-// #define MY_VAR 1
-// PETSC_IF(MY_VAR,"hello","goodbye") -> "hello"
-//
-// #define MY_VAR 0
-// PETSC_IF(MY_VAR,"hello",func<type1,type2>()) -> func<type1,type2>()
-#define PETSC_IF(cond,result_if_true,...) PETSC_CONCAT(PETSC_IF_INTERNAL_,cond)(result_if_true,__VA_ARGS__)
-
-// PETSC_IF_PETSC_DEFINED() - Like PETSC_IF(), but passes cond through PetscDefined() first
-//
-// example usage:
-// #define PETSC_HAVE_THING 1
-// PETSC_IF_PETSC_DEFINED(HAVE_THING,"have thing!","don't have thing") -> "have thing!"
-//
-// #undef PETSC_HAVE_THING
-// PETSC_IF_PETSC_DEFINED(HAVE_THING,"have thing!","don't have thing") -> "don't have thing"
-#define PETSC_IF_PETSC_DEFINED(cond,result_if_true,...) PETSC_IF(PetscDefined(cond),result_if_true,__VA_ARGS__)
 
 namespace Petsc
 {
@@ -138,7 +79,7 @@ template <typename T> struct is_petsc_object_impl<T,PetscObject> : std::true_typ
 template <typename T>
 struct is_petsc_object_impl<T,decltype(T::hdr)>
   : conditional_t<
-  (!std::is_pointer<T>::value) && (std::is_class<T>::value) && (std::is_standard_layout<T>::value),
+  (!std::is_pointer<T>::value) && std::is_class<T>::value && std::is_standard_layout<T>::value,
   std::true_type,
   std::false_type
   >
@@ -169,7 +110,8 @@ struct can_call_test
 } // namespace detail
 
 template <typename F, typename... A>
-struct can_call : decltype(detail::can_call_test::f<F,A...>(0)) { };
+struct can_call : decltype(detail::can_call_test::f<F,A...>(0))
+{ };
 
 template <typename... A, typename F>
 PETSC_STATIC_INLINE constexpr can_call<F,A...> is_callable_with(F&&) noexcept
@@ -254,7 +196,8 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
     return orig(std::forward<Args>(args)...);                           \
   };                                                                    \
   template <typename... Args>                                           \
-  PETSC_STATIC_INLINE int dispatch(char,Args&&... args)                 \
+  PETSC_STATIC_INLINE auto dispatch(char,Args&&... args)                \
+    -> decltype(EXIT_FAILURE)                                           \
   {                                                                     \
     static_assert(                                                      \
       Petsc::util::is_callable_with<Args...>(orig) &&                   \
@@ -291,7 +234,7 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
 // example usage:
 // PETSC_ALIAS_FUNCTION(bar,foo);
 #define PETSC_ALIAS_FUNCTION(alias,original)                            \
-  PETSC_ALIAS_FUNCTION_(alias,original,PETSC_CONCAT(PETSC_CONCAT(original,_petsc_dispatch_),__LINE__))
+  PETSC_ALIAS_FUNCTION_(alias,original,PETSCPP_CONCAT(PETSCPP_CONCAT(original,_petsc_dispatch_),__LINE__))
 #else
 #define PETSC_ALIAS_FUNCTION(alias,original)                    \
   static_assert(0,"PETSC_ALIAS_FUNCTION() requires C++11")
@@ -335,7 +278,7 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
   }
 
 #define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PETSC_CONCAT(petsc_private_gobble_,original),N)
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PETSCPP_CONCAT(petsc_private_gobble_,original),N)
 #else
 #define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
   static_assert(0,"PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS() requires C++11")
@@ -401,4 +344,4 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
 
 #endif // __cplusplus
 
-#endif // PETSCTYPETRAITS_HPP
+#endif // PETSC_CPPUTIL_HPP
