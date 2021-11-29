@@ -64,13 +64,12 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
 
   PetscFunctionBegin;
   ierr = SNESGetDM(snes,&networkdm);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(networkdm,&localX);CHKERRQ(ierr);
 
   ierr = PetscObjectGetComm((PetscObject)networkdm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
-  ierr = DMGlobalToLocalBegin(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
+  ierr = DMGlobalGetLocalBegin(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalGetLocalEnd(networkdm,X,&localX);CHKERRQ(ierr);
 
   ierr = MatZeroEntries(J);CHKERRQ(ierr);
 
@@ -94,7 +93,7 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
   ierr = MatAssemblyBegin(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
-  ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalRestoreLocal(networkdm,X,&localX);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -107,11 +106,10 @@ PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt n
   PetscInt          i,j,offset,nvar;
   PetscBool         ghostvtex;
   UserCtx           *user = (UserCtx*)appctx;
-  Vec               localXold = user->localXold;
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(localX,&xarr);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(localXold,&xoldarr);CHKERRQ(ierr);
+  ierr = VecGetArrayRead(user->localXold,&xoldarr);CHKERRQ(ierr);
   ierr = VecGetArray(localF,&farr);CHKERRQ(ierr);
 
   for (i=0; i<nv; i++) {
@@ -126,7 +124,7 @@ PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt n
   }
 
   ierr = VecRestoreArrayRead(localX,&xarr);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(localXold,&xoldarr);CHKERRQ(ierr);
+  ierr = VecRestoreArrayRead(user->localXold,&xoldarr);CHKERRQ(ierr);
   ierr = VecRestoreArray(localF,&farr);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -149,13 +147,11 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   ierr = PetscObjectGetComm((PetscObject)networkdm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
-  ierr = DMGetLocalVector(networkdm,&localX);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(networkdm,&localF);CHKERRQ(ierr);
   ierr = VecSet(F,0.0);CHKERRQ(ierr);
+  ierr = DMGlobalGetLocal(networkdm,F,&localF);CHKERRQ(ierr);
   ierr = VecSet(localF,0.0);CHKERRQ(ierr);
-
-  ierr = DMGlobalToLocalBegin(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
-  ierr = DMGlobalToLocalEnd(networkdm,X,INSERT_VALUES,localX);CHKERRQ(ierr);
+  ierr = DMGlobalGetLocalBegin(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalGetLocalEnd(networkdm,X,&localX);CHKERRQ(ierr);
 
   /* Form Function for power subnetwork */
   ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
@@ -223,11 +219,8 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
     }
   }
 
-  ierr = DMRestoreLocalVector(networkdm,&localX);CHKERRQ(ierr);
-
-  ierr = DMLocalToGlobalBegin(networkdm,localF,ADD_VALUES,F);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalEnd(networkdm,localF,ADD_VALUES,F);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(networkdm,&localF);CHKERRQ(ierr);
+  ierr = DMGlobalRestoreLocal(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalRestoreLocal(networkdm,F,&localF);CHKERRQ(ierr);
 #if 0
   if (rank == 0) printf("F:\n");
   ierr = VecView(F,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
@@ -241,7 +234,6 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
   PetscInt       nv,ne,i,j,ncomp,offset,key;
   const PetscInt *vtx,*edges;
   UserCtx        *user = (UserCtx*)appctx;
-  Vec            localX = user->localXold;
   UserCtx_Power  appctx_power = (*user).appctx_power;
   AppCtx_Water   appctx_water = (*user).appctx_water;
   PetscBool      ghost;
@@ -252,19 +244,18 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
   GEN            gen;
 
   PetscFunctionBegin;
-  ierr = VecSet(X,0.0);CHKERRQ(ierr);
-  ierr = VecSet(localX,0.0);CHKERRQ(ierr);
+  ierr = VecSet(user->localXold,0.0);CHKERRQ(ierr);
 
   /* Set initial guess for power subnetwork */
   ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-  ierr = SetInitialGuess_Power(networkdm,localX,nv,ne,vtx,edges,&appctx_power);CHKERRQ(ierr);
+  ierr = SetInitialGuess_Power(networkdm,user->localXold,nv,ne,vtx,edges,&appctx_power);CHKERRQ(ierr);
 
   /* Set initial guess for water subnetwork */
   ierr = DMNetworkGetSubnetwork(networkdm,1,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
-  ierr = SetInitialGuess_Water(networkdm,localX,nv,ne,vtx,edges,NULL);CHKERRQ(ierr);
+  ierr = SetInitialGuess_Water(networkdm,user->localXold,nv,ne,vtx,edges,NULL);CHKERRQ(ierr);
 
   /* Set initial guess at the coupling vertex */
-  ierr = VecGetArray(localX,&xarr);CHKERRQ(ierr);
+  ierr = VecGetArray(user->localXold,&xarr);CHKERRQ(ierr);
   ierr = DMNetworkGetSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (i=0; i<nv; i++) {
     ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghost);CHKERRQ(ierr);
@@ -294,26 +285,26 @@ PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
       }
     }
   }
-  ierr = VecRestoreArray(localX,&xarr);CHKERRQ(ierr);
-
-  ierr = DMLocalToGlobalBegin(networkdm,localX,ADD_VALUES,X);CHKERRQ(ierr);
-  ierr = DMLocalToGlobalEnd(networkdm,localX,ADD_VALUES,X);CHKERRQ(ierr);
+  ierr = VecRestoreArray(user->localXold,&xarr);CHKERRQ(ierr);
+  ierr = VecSet(X,0.0);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalBegin(networkdm,user->localXold,ADD_VALUES,X);CHKERRQ(ierr);
+  ierr = DMLocalToGlobalEnd(networkdm,user->localXold,ADD_VALUES,X);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 int main(int argc,char **argv)
 {
-  PetscErrorCode   ierr;
-  DM               networkdm;
-  PetscLogStage    stage[4];
-  PetscMPIInt      rank,size;
-  PetscInt         Nsubnet=2,numVertices[2],numEdges[2],i,j,nv,ne,it_max=10;
-  const PetscInt   *vtx,*edges;
-  Vec              X,F;
-  SNES             snes,snes_power,snes_water;
-  Mat              Jac;
-  PetscBool        ghost,viewJ=PETSC_FALSE,viewX=PETSC_FALSE,viewDM=PETSC_FALSE,test=PETSC_FALSE,distribute=PETSC_TRUE,flg;
-  UserCtx          user;
+  PetscErrorCode      ierr;
+  DM                  networkdm;
+  PetscLogStage       stage[4];
+  PetscMPIInt         rank,size;
+  PetscInt            Nsubnet=2,numVertices[2],numEdges[2],i,j,nv,ne,it_max=10;
+  const PetscInt      *vtx,*edges;
+  Vec                 X,F;
+  SNES                snes,snes_power,snes_water;
+  Mat                 Jac;
+  PetscBool           ghost,viewJ=PETSC_FALSE,viewX=PETSC_FALSE,viewDM=PETSC_FALSE,test=PETSC_FALSE,distribute=PETSC_TRUE,flg;
+  UserCtx             user;
   SNESConvergedReason reason;
 
   /* Power subnetwork */
@@ -330,7 +321,7 @@ int main(int argc,char **argv)
   PetscInt            *edgelist_water = NULL,water_netnum;
 
   /* Shared vertices between subnetworks */
-  PetscInt           power_svtx,water_svtx;
+  PetscInt            power_svtx,water_svtx;
 
   ierr = PetscInitialize(&argc,&argv,"ex1options",help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -540,7 +531,7 @@ int main(int argc,char **argv)
   /* Create solution vector X */
   ierr = DMCreateGlobalVector(networkdm,&X);CHKERRQ(ierr);
   ierr = VecDuplicate(X,&F);CHKERRQ(ierr);
-  ierr = DMGetLocalVector(networkdm,&user.localXold);CHKERRQ(ierr);
+  ierr = DMCreateLocalVector(networkdm,&user.localXold);CHKERRQ(ierr);
   PetscLogStagePop();
 
   /* (3) Setup Solvers */
@@ -656,7 +647,7 @@ int main(int argc,char **argv)
   /* -------------*/
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   ierr = VecDestroy(&F);CHKERRQ(ierr);
-  ierr = DMRestoreLocalVector(networkdm,&user.localXold);CHKERRQ(ierr);
+  ierr = VecDestroy(&user.localXold);CHKERRQ(ierr);
 
   ierr = SNESDestroy(&snes);CHKERRQ(ierr);
   ierr = MatDestroy(&Jac);CHKERRQ(ierr);
