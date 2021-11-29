@@ -11,6 +11,7 @@ from pathlib import Path
 import enum
 import itertools
 import collections
+import ctypes
 import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil
@@ -281,7 +282,7 @@ class PetscDocString(object):
 
   def __init__(self,cursor,raw,extent,indent=2):
     if not raw:# or (not raw.startswith(("/*@","/*M","/*E"))):
-      import ipdb; ipdb.set_trace()
+      print(PetscCursor.getFormattedSourceFromCursor(cursor,view=True))
       raise ParsingError
     self.cursor = cursor
     self.raw    = raw
@@ -519,6 +520,25 @@ class PetscDocString(object):
     return self
 
 
+CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
+  ctypes.c_uint,ctypes.py_object,clx.Cursor,clx.SourceRange
+)
+
+class PetscCXCursorAndRangeVisitor(ctypes.Structure):
+  # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
+  #
+  # typedef struct CXCursorAndRangeVisitor {
+  #   void *context;
+  #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
+  # } CXCursorAndRangeVisitor;
+  #
+  # Note this is not a  strictly accurate recreation, as this struct expects a
+  # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
+  _fields_ = [
+    ("context",ctypes.py_object),
+    ("visit",CXCursorAndRangeVisitorCallBackProto)
+  ]
+
 class PetscCursor(object):
   __doc__="""
   A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties (such as demangled names) from a cursor easier.
@@ -554,6 +574,10 @@ class PetscCursor(object):
     if isinstance(cursor,clx.Cursor):
       cursor = PetscCursor(cursor)
     return cursor
+
+  def clangCursor(self):
+    __doc__="""return the internal clang cursor"""
+    return self.__cursor
 
   def __getattr__(self,attr):
     __doc__="""
@@ -761,6 +785,19 @@ class PetscCursor(object):
   def viewAst(self):
     return self.viewAstFromCursor(self)
 
+  @staticmethod
+  def getOrRegisterClangFunction(funcName,argtypes,rettype):
+    try:
+      func = getattr(clx.conf.lib,funcName)
+      if func.argtypes is None and func.errcheck is None:
+        # if this hasn't been registered before these will be none
+        raise AttributeError
+    except AttributeError:
+      # have to do the book-keeping ourselves since it may not be properly hooked up
+      clx.register_function(clx.conf.lib,(funcName,argtypes,rettype),False)
+      func = getattr(clx.conf.lib,funcName)
+    return func
+
   @classmethod
   def findCursorReferencesFromCursor(cls,cursor):
     __doc__="""
@@ -769,52 +806,31 @@ class PetscCursor(object):
     represents, so this function is only useful for first-class symbols (i.e. variables,
     functions)
     """
-    import ctypes
+    foundCursors = []
+    def callBackFunc(ctx,cursor,srcRange):
+      # The "cursor" returned here is actually just a CXCursor, not the real
+      # clx.Cursor that we lead python to believe in our function prototype. Luckily we
+      # have all we need to remake the python object from scratch
+      cursor = clx.Cursor.from_location(ctx.translation_unit,srcRange.start)
+      try:
+        foundCursors.append(PetscCursor(cursor))
+      except ParsingError:
+        pass
+      except Exception as exc:
+        string = "Full error full error message below:"
+        print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
+        print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",exc,sep="")
+        print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
+      return 1 # continue
 
-    foundCursors  = []
-    callbackProto = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
-
-    class CXCursorAndRangeVisitor(ctypes.Structure):
-      # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
-      #
-      # typedef struct CXCursorAndRangeVisitor {
-      #   void *context;
-      #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
-      # } CXCursorAndRangeVisitor;
-      #
-      # Note this is not a  strictly accurate recreation, as this struct expects a
-      # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
-      _fields_ = [("context",ctypes.py_object),("visit",callbackProto)]
-
-      @staticmethod
-      def callBack(ctx,cursor,srcRange):
-        # convert to py_object then take value of the pointer, i.e. the original class
-        origCursor = ctypes.cast(ctx,ctypes.py_object).value
-        # The "cursor" returned here is actually just a CXCursor, not the real
-        # clx.Cursor that we lead python to believe in our function prototype. Luckily we
-        # have all we need to remake the python object from scratch
-        cursor = clx.Cursor.from_location(origCursor.translation_unit,srcRange.start)
-        try:
-          foundCursors.append(PetscCursor(cursor))
-        except ParsingError:
-          pass
-        except RuntimeError as re:
-          string = "Full error full error message below:"
-          print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
-          print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",re,sep="")
-          print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
-        return 1 # continue
-
-    if not cls.registered_clang_findReferencesInFile:
-      # have to do the bookkeeping ourselves since it may not be properly hooked up
-      item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
-      clx.register_function(clx.conf.lib,item,False)
-      cls.registered_clang_findReferencesInFile = True
-
+    callBack   = CXCursorAndRangeVisitorCallBackProto(callBackFunc)
     pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
-    callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
-    cxCallback = CXCursorAndRangeVisitor(pyCtx,callBack)
-    clx.conf.lib.clang_findReferencesInFile(cursor._PetscCursor__cursor,cursor.location.file,cxCallback)
+    cxCallback = PetscCXCursorAndRangeVisitor(pyCtx,callBack)
+    cls.getOrRegisterClangFunction(
+      "clang_findReferencesInFile",
+      [clx.Cursor,clx.File,PetscCXCursorAndRangeVisitor],
+      ctypes.c_uint
+    )(cursor.clangCursor(),cursor.location.file,cxCallback)
     return foundCursors
 
   def findCursorReferences(self):
@@ -822,15 +838,12 @@ class PetscCursor(object):
 
   @classmethod
   def getCommentAndRangeFromCursor(cls,cursor):
-    if not cls.registered_clang_Cursor_getCommentRange:
-      # have to do the bookkeeping ourselves since it may not be properly hooked up
-      item = ("clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange)
-      clx.register_function(clx.conf.lib,item,False)
-      cls.registered_clang_Cursor_getCommentRange = True
-
-    comment = cursor.raw_comment
-    range   = clx.conf.lib.clang_Cursor_getCommentRange(cursor)
-    return comment,range
+    func = cls.getOrRegisterClangFunction(
+      "clang_Cursor_getCommentRange",
+      [clx.Cursor],
+      clx.SourceRange
+    )
+    return cursor.raw_comment,func(cursor)
 
   def getCommentAndRange(self):
     return self.getCommentAndRangeFromCursor(self)
