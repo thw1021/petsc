@@ -19,8 +19,8 @@ namespace Impl
 // const decltype(cudaSuccess) CUPMInterface<CUPMDeviceType::CUDA>::cupmSuccess;
 // const decltype(hipAllGood)  CUPMInterface<CUPMDeviceType::HIP>::cupmSuccess;
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cuoriginal,hiporiginal,ours) \
-  PETSC_IF_PETSC_DEFINED(HAVE_CUDA,PETSC_CUPM_STATIC_VARIABLE_DEFN,PETSC_EXPAND_TO_NOTHING)(cuoriginal,CUDA,ours) \
-  PETSC_IF_PETSC_DEFINED(HAVE_HIP,PETSC_CUPM_STATIC_VARIABLE_DEFN,PETSC_EXPAND_TO_NOTHING)(hiporiginal,HIP,ours)
+  PETSCPP_IF_PETSC_DEFINED(HAVE_CUDA,PETSC_CUPM_STATIC_VARIABLE_DEFN,PETSCPP_EXPAND_TO_NOTHING)(cuoriginal,CUDA,ours) \
+  PETSCPP_IF_PETSC_DEFINED(HAVE_HIP,PETSC_CUPM_STATIC_VARIABLE_DEFN,PETSCPP_EXPAND_TO_NOTHING)(hiporiginal,HIP,ours)
 
 // if both cuda and hip agree on the same naming scheme i.e. cudaSuccess and hipSuccess:
 //
@@ -28,7 +28,7 @@ namespace Impl
 // const decltype(cudaSuccess) CUPMInterface<CUPMDeviceType::CUDA>::cupmSuccess;
 // const decltype(hipSuccess)  CUPMInterface<CUPMDeviceType::HIP>::cupmSuccess;
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(suffix)         \
-  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(PETSC_CONCAT(cuda,suffix),PETSC_CONCAT(hip,suffix),PETSC_CONCAT(cupm,suffix))
+  PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(PETSCPP_CONCAT(cuda,suffix),PETSCPP_CONCAT(hip,suffix),PETSCPP_CONCAT(cupm,suffix))
 
 // error codes
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(Success)
@@ -50,7 +50,7 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cudaErrorDeviceAlreadyInUse,hipErrorCont
 #define PetscCudaErrorStubLibrary ErrorInsufficientDriver
 #endif
 
-PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(PETSC_CONCAT(cuda,PetscCudaErrorStubLibrary),hipErrorInsufficientDriver,cupmErrorStubLibrary)
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(PETSCPP_CONCAT(cuda,PetscCudaErrorStubLibrary),hipErrorInsufficientDriver,cupmErrorStubLibrary)
 
 // enums
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(StreamNonBlocking)
@@ -60,23 +60,6 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDeviceToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDeviceToDevice)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyHostToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDefault)
-
-namespace detail
-{
-
-// instantiate the base class
-template struct CUPMInterfaceBase<CUPMDeviceType::CUDA>;
-template struct CUPMInterfaceBase<CUPMDeviceType::HIP>;
-
-} // namespace detail
-
-// instantiate the interfaces
-#if PetscDefined(HAVE_CUDA)
-template struct CUPMInterface<CUPMDeviceType::CUDA>;
-#endif
-#if PetscDefined(HAVE_HIP)
-template struct CUPMInterface<CUPMDeviceType::HIP>;
-#endif
 
 } // namespace Impl
 
