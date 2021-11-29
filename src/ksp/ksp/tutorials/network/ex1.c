@@ -1,4 +1,4 @@
-static char help[] = "This example demonstrates the use of DMNetwork interface for solving a simple electric circuit. \n\
+static char help[] = "This example demonstrates the use of DMNetwork interface for solving a simple linear electric circuit. \n\
                       The example can be found in p.150 of 'Strang, Gilbert. Computational Science and Engineering. Wellesley, MA'.\n\n";
 
 /* T
@@ -36,7 +36,7 @@ static char help[] = "This example demonstrates the use of DMNetwork interface f
 
 /*
   Structures containing physical data of circuit.
-  Note that no topology is defined
+  Note that no geometry is defined
 */
 
 typedef struct {
