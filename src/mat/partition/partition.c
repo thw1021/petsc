@@ -812,6 +812,7 @@ PetscErrorCode  MatPartitioningSetFromOptions(MatPartitioning part)
 #else
     def = MATPARTITIONINGCURRENT;
 #endif
+    ierr = PetscInfo1(part,"Using default MatPartitioningType %s\n",def);CHKERRQ(ierr);
   } else {
     def = ((PetscObject)part)->type_name;
   }

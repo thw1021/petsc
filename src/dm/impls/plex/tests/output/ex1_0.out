@@ -1,3 +1,5 @@
+[0] PetscPartitionerCreate(): Using default PetscPartitionerType simple
+[0] PetscPartitionerCreate(): Using default PetscPartitionerType simple
 [0] TetGenMeshDelaunizeVertices(): Constructing Delaunay tetrahedralization.
 [0] TetGenMeshDelaunizeVertices():   Sorting vertices by a bsp-tree.
 [0] TetGenMeshBTreeSort():   Depth 0, 8 verts.
@@ -228,6 +230,7 @@
 [0] TetGenMeshOutputNodes(): Writing nodes.
 [0] TetGenMeshOutputElements(): Writing elements.
 [0] TetGenMeshOutputSubfaces(): Writing faces.
+[0] PetscPartitionerCreate(): Using default PetscPartitionerType simple
 DM Object: Generated Mesh 1 MPI processes
   type: plex
 Generated Mesh in 3 dimensions:
