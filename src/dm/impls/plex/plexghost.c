@@ -334,7 +334,10 @@ PetscErrorCode DMPlexCreateGhostVector(DM dm,Vec *v)
   ierr = DMGetLocalSection(dm, &localsection);CHKERRQ(ierr);
   ierr = PetscSectionGetStorageSize(localsection, &localSize);CHKERRQ(ierr);
   nextra = localSize - nghosts - globalSize;
-  ierr = VecCreateGhost(comm,globalSize,PETSC_DETERMINE,nghosts,ghosts,nextra,v);CHKERRQ(ierr);
+  ierr = VecCreate(comm,v);CHKERRQ(ierr);
+  ierr = VecSetGhost(*v,nghosts,ghosts,nextra);CHKERRQ(ierr);
+  ierr = VecSetSizes(*v,globalSize,PETSC_DETERMINE);CHKERRQ(ierr);
+  ierr = VecSetType(*v,dm->vectype);CHKERRQ(ierr);
   ierr = PetscFree(ghosts);CHKERRQ(ierr);
   ierr = VecSetDM(*v, dm);CHKERRQ(ierr);
   PetscFunctionReturn(0);

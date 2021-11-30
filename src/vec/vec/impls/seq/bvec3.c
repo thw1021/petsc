@@ -25,10 +25,11 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
   Vec_Seq        *s;
   PetscScalar    *array;
   PetscErrorCode ierr;
-  PetscInt       n = PetscMax(V->map->n,V->map->N);
+  PetscInt       n = V->nextra+PetscMax(V->map->n,V->map->N);
   PetscMPIInt    size;
 
   PetscFunctionBegin;
+  if (V->nghost > 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"VECSEQ cannot have ghost locations");
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)V),&size);CHKERRMPI(ierr);
   if (size > 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQ on more than one process");
 #if !defined(PETSC_USE_MIXED_PRECISION)
@@ -65,5 +66,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
   default: SETERRQ1(PetscObjectComm((PetscObject)V),PETSC_ERR_SUP,"No support for mixed precision %d",(int)(((PetscObject)V)->precision));
   }
 #endif
+
+  if (V->nextra > 0) SETERRQ(PetscObjectComm((PetscObject)V),PETSC_ERR_SUP,"No support yet for extra locations in ghosted sequential vectors");
   PetscFunctionReturn(0);
 }

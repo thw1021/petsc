@@ -49,3 +49,40 @@ PetscErrorCode  VecCreate(MPI_Comm comm, Vec *vec)
   PetscFunctionReturn(0);
 }
 
+/*@
+   VecSetGhost - sets that a vector will be ghosted vector
+
+   Collective
+
+   Input Parameters:
++  vec - the vectore
+.  nghost - number of local ghost points
+.  ghosts - global indices of ghost points, these do not need to be in increasing order (sorted)
+-  nextra - extra locations at the end of the local vector
+
+   Notes:
+     Do not free the ghosts array until after the vector type has been set and the vector fully created
+
+     Use VecGhostGetLocalForm() to access the local, ghosted representation
+     of the vector.
+
+     This also automatically sets the ISLocalToGlobalMapping() for this vector.
+
+   Level: advanced
+
+.seealso: VecCreateSeq(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateMPI(),
+          VecGhostGetLocalForm(), VecGhostRestoreLocalForm(), VecGhostUpdateBegin(),
+          VecCreateGhostWithArray(), VecCreateMPIWithArray(), VecGhostUpdateEnd(),
+          VecCreateGhostBlock(), VecCreateGhostBlockWithArray(), VecSetGhost()
+
+@*/
+PetscErrorCode  VecSetGhost(Vec vec,PetscInt nghost,const PetscInt ghosts[],PetscInt nextra)
+{
+  PetscFunctionBegin;
+  if (((PetscObject)vec)->type_name) SETERRQ(PetscObjectComm((PetscObject)vec),PETSC_ERR_ARG_WRONGSTATE,"Vector type has already been set");
+  vec->nghost  = nghost;
+  vec->ghosts  = (PetscInt*) ghosts;
+  vec->nextra  = nextra;
+  vec->isghost = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
