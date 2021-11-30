@@ -71,32 +71,36 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
   return retList
 
 
-def getRawSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
-  return getRawSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,trim=trim)
+def getRawSourceFromCursor(cursor,**kwargs):
+  return getRawSourceFromSourceRange(cursor.extent,**kwargs)
 
-def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False):
+def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False,tight=False):
   numBeforeContext = numBeforeContext if numBeforeContext else numContext
   numAfterContext  = numAfterContext  if numAfterContext  else numContext
-  lineno  = sourceRange.start.line
-  lobound = max(1,lineno-numBeforeContext)
-  hibound = lineno+numAfterContext
+  lineBegin = sourceRange.start.line
+  lineEnd   = sourceRange.end.line
+  lobound   = max(1,lineBegin-numBeforeContext)
+  hibound   = lineEnd+numAfterContext
   with open(sourceRange.start.file.name,"r") as fd:
     lineList = [l for i,l in enumerate(fd,start=1) if (lobound <= i <= hibound)]
-  # with open(sourceRange.start.file.name,"r") as fd:
-  #   for lineFile,line in enumerate(fd,start=1):
-  #     if lineFile >= lineno-numBeforeContext and lineFile <= lineno+numAfterContext:
-  #       lineList.append(line)
+  if tight:
+    import ipdb; ipdb.set_trace()
+    # index into lineList where our actual line starts if we have context
+    loidx           = lineBegin-lobound
+    lineList[loidx] = lineList[loidx][sourceRange.start.column-1:]
+    hiidx           = hibound-lineBegin
+    lineList[hiidx] = lineList[hiidx][:sourceRange.end.column-1]
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
   if trim:
     minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList if s.replace("\n","")])
-    lineList  = [s[minSpaces:].rstrip() for s in lineList]
-  return "\n".join(lineList)
+    return "\n".join([s[minSpaces:].rstrip() for s in lineList])
+  return "".join(lineList)
 
 
-def getFormattedSourceFromCursor(cursor,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True,trim=True):
-  return getFormattedSourceFromSourceRange(cursor.extent,numBeforeContext=numBeforeContext,numAfterContext=numAfterContext,numContext=numContext,view=view,highlight=highlight,trim=trim)
+def getFormattedSourceFromCursor(cursor,**kwargs):
+  return getFormattedSourceFromSourceRange(cursor.extent,**kwargs)
 
 def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True,trim=True):
   numBeforeContext  = numBeforeContext if numBeforeContext else numContext
