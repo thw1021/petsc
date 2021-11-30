@@ -321,7 +321,7 @@ PetscErrorCode  VecCreateMPIKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n
   if (std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) {harray = const_cast<PetscScalar*>(darray);}
   else {ierr = PetscMalloc1(w->map->n,&harray);CHKERRQ(ierr);} /* If device is not the same as host, allocate the host array ourselves */
 
-  ierr   = VecCreate_MPI_Private(w,PETSC_FALSE/*alloc*/,0/*nghost*/,0,harray);CHKERRQ(ierr); /* Build a sequential vector with provided data */
+  ierr   = VecCreate_MPI_Private(w,PETSC_FALSE/*alloc*/,harray);CHKERRQ(ierr); /* Build a sequential vector with provided data */
   vecmpi = static_cast<Vec_MPI*>(w->data);
 
   if (!std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) vecmpi->array_allocated = harray; /* The host array was allocated by petsc */

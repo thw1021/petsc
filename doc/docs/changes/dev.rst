@@ -64,7 +64,8 @@ Changes: Development
 -  For CUDA and ViennaCL and HIP GPU vectors, ``VecCreate()`` no longer allocates the array on CPU eagerly, it is only allocated if it is needed
 -  Add ``nextra`` argument to ``VecCreateGhost()``, ``VecCreateGhostWithArray()``, ``VecCreateGhostBlock()``, ``VecCreateGhostBlockWithArray()``
 -  Refactor ``VecGhost`` so it can also work with sequential vectors
-   -  Add ``VecGhostHasLocalForm()``
+-  Add ``VecGhostHasLocalForm()``
+-  Add ``VecSetGhost()`` to cause a vector (of any type including GPU) to be created as a ghosted vector
 
 .. rubric:: PetscSection:
 

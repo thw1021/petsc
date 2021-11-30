@@ -39,7 +39,7 @@ PETSC_INTERN PetscErrorCode VecCUDAAllocateCheck(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_SeqCUDA_Private(Vec,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecCreate_MPICUDA(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_MPICUDA_Private(Vec,PetscBool,PetscInt,const PetscScalar*);
+PETSC_INTERN PetscErrorCode VecCreate_MPICUDA_Private(Vec,PetscBool,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecCreate_CUDA(Vec);
 PETSC_INTERN PetscErrorCode VecDestroy_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecDestroy_MPICUDA(Vec);
