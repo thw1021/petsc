@@ -282,7 +282,7 @@ class PetscDocString(object):
 
   def __init__(self,cursor,raw,extent,indent=2):
     if not raw:# or (not raw.startswith(("/*@","/*M","/*E"))):
-      print(PetscCursor.getFormattedSourceFromCursor(cursor,view=True))
+      #print(PetscCursor.getFormattedSourceFromCursor(cursor,view=True))
       raise ParsingError
     self.cursor = cursor
     self.raw    = raw
@@ -290,21 +290,26 @@ class PetscDocString(object):
     self.indent = indent
     return
 
+  def makeSourceLocation(self,lineno,col):
+    tu      = self.cursor.translation_unit
+    clxFile = self.cursor.location.file
+    assert lineno >= 1
+    return clx.SourceLocation.from_position(tu,clxFile,lineno,col)
+
   def makeSourceRange(self,token,string,lineno):
-    tu       = self.cursor.translation_unit
-    clxFile  = self.cursor.location.file
     colBegin = string.index(token)+1
     colEnd   = colBegin+len(token)
-    begin    = clx.SourceLocation.from_position(tu,clxFile,lineno,colBegin)
-    end      = clx.SourceLocation.from_position(tu,clxFile,lineno,colEnd)
+    begin    = self.makeSourceLocation(lineno,colBegin)
+    end      = self.makeSourceLocation(lineno,colEnd)
     return clx.SourceRange.from_locations(begin,end),token.strip()
 
   def addErrorFromSourceRange(self,linter,errstr,crange,cursor=None,formatargs=tuple(),**kwargs):
+    patch = kwargs.pop("patch",None)
     src = petscClangLinterUtil.getFormattedSourceFromSourceRange(
       crange,numContext=kwargs.pop("numContext",2),**kwargs
     )
     error = errstr.format(*formatargs,src)
-    linter.addErrorFromCursor(self.cursor if cursor is None else cursor,error)
+    linter.addErrorFromCursor(self.cursor if cursor is None else cursor,error,patch=patch)
     return
 
   def addErrorFromCursor(self,linter,errstr,token,raw,lineno,**kwargs):
@@ -367,12 +372,15 @@ class PetscDocString(object):
     # check that nothing else is on the comment begin line
     lsplit = line.strip().split()
     if len(lsplit) != 1:
+      rest   = " ".join(lsplit[1:])
+      crange = self.makeSourceRange(line,line,self.extent.start.line)[0]
       self.addErrorFromCursor(linter,
         "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
-        " ".join(lsplit[1:]),line,self.extent.start.line
+        rest,line,self.extent.start.line,
+        patch=SourceFix.fromSourceRange(crange,lsplit[0]+"\n"+(" "*self.indent)+rest)
       )
     # now check the end
-    line           = splitlines[-1]
+    line      = splitlines[-1]
     endSowing = line.split("*/")[0].split()
     try:
       endSowing = endSowing[-1]
@@ -459,10 +467,14 @@ class PetscDocString(object):
     if self.extent.end.line != self.cursor.extent.start.line-1:
       # there is at least 1 (probably empty) line between the comment end and whatever it
       # is describing
+      start = clx.SourceLocation.from_position(
+        self.cursor.translation_unit,self.cursor.location.file,self.extent.end.line+1,1
+      )
       self.addErrorFromCursor(linter,
         "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
         "","",self.extent.end.line+1,
         highlight=False,
+        patch=SourceFix(start,self.cursor.extent.start,"")
       )
     self.checkValidSowingChars(linter)
     headings      = collections.OrderedDict()
@@ -538,6 +550,7 @@ class PetscCXCursorAndRangeVisitor(ctypes.Structure):
     ("context",ctypes.py_object),
     ("visit",CXCursorAndRangeVisitorCallBackProto)
   ]
+
 
 class PetscCursor(object):
   __doc__="""
@@ -850,47 +863,50 @@ class PetscCursor(object):
 
 
 class SourceFix(object):
-  __slots__ = "filename","src","startLine","begins","ends","replace","deltas","fixed","fixDepth"
-  def __init__(self,filename,src,startline,begin,end,value):
-    self.filename  = Path(filename)
-    self.src       = src
-    self.startLine = startline
-    assert self.startLine >= 1, "startline {} < 1".format(self.startLine)
-    assert end > begin, "end {} <= begin {}, ill-formed source fix".format(end,begin)
-    self.begins    = [begin]
-    self.ends      = [end]
-    value, replace = str(value),self.src[begin:end]
+  __slots__ = "range","filename","src","ctxlines","src","begins","ends","deltas","offset","fixed","fixDepth"
+  def __init__(self,begin,end,value,contextlines=2):
+    def validrange(begin,end):
+      assert begin.line >= 1, "startline {} < 1".format(begin.line)
+      if begin.line == end.line:
+        assert begin.column < end.column, "end col {} <= begin col {}, ill-formed source fix".format(end.column,begin.column)
+      elif begin.line > end.line:
+        mess = "end line {} < begin line {}, ill-formed source fix".format(end.line,begin.line)
+        raise AssertionError(mess)
+      return clx.SourceRange.from_locations(begin,end)
+
+    self.range    = validrange(begin,end)
+    self.filename = Path(self.range.start.file.name)
+    self.ctxlines = contextlines
+    self.src      = petscClangLinterUtil.getRawSourceFromSourceRange(
+      self.range,numContext=self.ctxlines
+    )
+    self.begins   = [self.range.start]
+    self.ends     = [self.range.end]
+    self.deltas   = [str(value)]
+    # if we have context, this is the character offset into self.src such that
+    # self.src[self.begins[i].offset-self.offset]
+    # gives the start of the src snippet to replace
+    offset        = self.begins[0].column-1+sum(map(len,self.src.splitlines(True)[:self.ctxlines]))
+    self.offset   = self.begins[0].offset-offset
     # this is an error, since previous detection should not have created a fix
-    assert value != replace, "trying to replace {} with itself".format(replace)
-    self.replace   = [replace]
-    self.deltas    = [value]
-    self.fixed     = None
-    self.fixDepth  = 0
+    assert self.deltas[0] != self.src, "trying to replace {} with itself".format(self.src)
+    self.fixed    = None
+    self.fixDepth = 0
     return
 
   @classmethod
-  def fromSourceRange(cls,srcLocation,value):
-    src   = petscClangLinterUtil.getRawSourceFromSourceRange(srcLocation)
-    start = srcLocation.start
-    line  = start.line
-    begin = start.column-1
-    end   = srcLocation.end.column-1
-    return cls(fname,src,line,begin,end,value)
+  def fromSourceRange(cls,srcRange,value,**kwargs):
+    return cls(srcRange.start,srcRange.end,value,**kwargs)
 
   @classmethod
-  def fromCursor(cls,cursor,value):
-    fname     = cursor.location.file.name
-    src       = PetscCursor.getRawSourceFromCursor(cursor)
-    startline = cursor.extent.start.line
-    begin,end = cursor.extent.start.column-1,cursor.extent.end.column-1
-    return cls(fname,src,startline,begin,end,value)
+  def fromCursor(cls,cursor,value,**kwargs):
+    return cls.fromSourceRange(cursor.extent,value,**kwargs)
 
   def appendFix(self,fix):
     assert isinstance(fix,SourceFix)
     assert self.src == fix.src, "Cannot combine fixes that do not share identical source!"
     self.begins.extend(fix.begins)
     self.ends.extend(fix.ends)
-    self.replace.extend(fix.replace)
     self.deltas.extend(fix.deltas)
     return
 
@@ -906,13 +922,13 @@ class SourceFix(object):
       return
     idxDelta = 0
     newSrc   = self.src
-    for begin,end,replace,delta in zip(self.begins,self.ends,self.replace,self.deltas):
-      assert replace in newSrc, "Target replacement '{}' not in src '{}' anymore, fix no longer relevant".format(replace,newSrc)
-      if (begin+idxDelta < 0) or (end+idxDelta > len(newSrc)):
-        raise RuntimeError("Idx out of bounds of src, fix not viable")
-      newSrcTemp = newSrc[:begin+idxDelta]+delta+newSrc[end+idxDelta:]
-      idxDelta   = len(newSrcTemp)-len(newSrc)
-      newSrc     = newSrcTemp
+    for begin,end,delta in zip(self.begins,self.ends,self.deltas):
+      assert begin in self.range and end in self.range, "Idx out of bounds of src, fix not viable"
+      beginoffset = begin.offset-self.offset
+      endoffset   = end.offset-self.offset
+      newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta,newSrc[endoffset+idxDelta:]])
+      idxDelta    = len(newSrcTemp)-len(newSrc)
+      newSrc      = newSrcTemp
     self.fixDepth = len(self.deltas)
     self.fixed    = newSrc
     return
@@ -934,7 +950,7 @@ class SourceFix(object):
       length    = stop-start
       if length == 1:
         return "{}".format(beginning)
-      if not length:
+      elif length == 0:
         beginning -= 1 # empty ranges begin at line just before the range
       return "{},{}".format(beginning,length)
 
@@ -945,10 +961,8 @@ class SourceFix(object):
         fromfiledate = rn
       if not tofiledate:
         tofiledate   = rn
-    fromdate = "\t{}".format(fromfiledate)
-    todate   = "\t{}".format(tofiledate)
-    yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
-    yield "+++ {}{}{}".format(tofile,todate,lineterm)
+    yield "--- {}{}{}".format(fromfile,"\t{}".format(fromfiledate),lineterm)
+    yield "+++ {}{}{}".format(tofile,"\t{}".format(tofiledate),lineterm)
     deletes = {"replace","delete"}
     inserts = {"replace","insert"}
 
@@ -957,7 +971,8 @@ class SourceFix(object):
     for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
       groupIdxs = list(g)
       lineStart = min(l for _,l in groupIdxs)
-      groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs if listB[i][0]]
+      groupA    = [listA[i][0] for i,_ in groupIdxs]
+      groupB    = [listB[i][0] for i,_ in groupIdxs if listB[i][0]]
       for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
         first,last  = group[0],group[-1]
         file1_range = formatRangeUnified(lineStart,first[1],last[2])
@@ -1254,11 +1269,16 @@ class PetscLinter(object):
           seen[combo] = (func,scope)
         elif scope >= seen[combo][1]:
           seenStart = seen[combo][0].extent.start.line
-          fname     = func.location.file.name
-          src       = func.getRawSource()
-          startline = func.extent.start.line
-          begin,end = 0,len(src)
-          patch     = SourceFix(fname,src,startline,begin,end,"")
+          #fname     = func.location.file.name
+          #src       = func.getRawSource()
+          start     = func.extent.start
+          startline = start.line
+          #begin,end = 0,len(src)
+          #patch     = SourceFix(fname,src,startline,begin,end,"")
+          end       = clx.SourceLocation.from_position(
+            func.translation_unit,func.location.file,startline,-1
+          )
+          patch     = SourceFix(start,end,"")
           self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
     return
 
@@ -1291,7 +1311,7 @@ class PetscLinter(object):
     # check if this is a compound error, i.e. an additional error on the same line
     # in which case we need to combine with previous patch
     for prevPatch in self.patches[patch.filename][:-1]:
-      if prevPatch.startLine == patch.startLine:
+      if prevPatch.range == patch.range:
         # remove ourselves from the list
         patch = self.patches[patch.filename].pop()
         # this should now be the previous patch on the same line, so we combine with it
@@ -1360,15 +1380,34 @@ class PetscLinter(object):
     __doc__="""
     given a set of patches, collapse all patches and return the minimal set of diffs required
     """
+    import difflib
+    import datetime
+    import re
+
+    class addline(object):
+      def __init__(self,offset):
+        self.offset = offset
+
+      def __call__(self,match):
+        ll,lr = match.group(1).split(",")
+        rl,rr = match.group(2).split(",")
+        return "@@ -{},{} +{},{} @@".format(self.offset+int(ll),lr,self.offset+int(rl),rr)
+
     combinedPatches = []
     for filename,patches in self.patches.items():
-      src,fixed = [],[]
-      for p in patches:
+      fstr  = str(filename)
+      diffs = []
+      for p in sorted(patches,key=lambda x: x.range.start.line):
         p.collapse()
-        src.append((p.src,p.startLine))
-        fixed.append((p.fixed,p.startLine))
-      diff = "".join(SourceFix.fastUnifiedDiff(src,fixed,fromfile=filename,tofile=filename))
-      combinedPatches.append((filename,diff))
+        rn  = datetime.datetime.now().ctime()
+        tmp = list(difflib.unified_diff(
+          p.src.splitlines(True),p.fixed.splitlines(True),
+          fromfile=fstr,tofile=fstr,fromfiledate=rn,tofiledate=rn,n=p.ctxlines
+        ))
+        tmp[2] = re.sub(r"^@@ -([0-9,]+) \+([0-9,]+) @@",addline(p.range.start.line),tmp[2])
+        # only the first diff should get the file heading
+        diffs.append("".join(tmp[2:] if len(diffs) else tmp))
+      combinedPatches.append((filename,"".join(diffs)))
     return combinedPatches
 
   def diagnostics(self):
@@ -2218,18 +2257,20 @@ def osResolvePath(path):
 
 def subprocessRun(*args,**kwargs):
   __doc__="""
-  lightweight wrapper to hoist the ugly version check out of the regular code
+  lightweight wrapper to hoist the ugly version check out of the regular code, turns a subprocess.CalledProcessError into a RuntimeError with more diagnostics
   """
   import sys
   import subprocess
 
-  if sys.version_info >= (3,7):
-    output = subprocess.run(*args,**kwargs)
-  else:
+  if sys.version_info < (3,7):
     if kwargs.pop("capture_output",None):
       kwargs.setdefault("stdout",subprocess.PIPE)
       kwargs.setdefault("stderr",subprocess.PIPE)
+  try:
     output = subprocess.run(*args,**kwargs)
+  except subprocess.CalledProcessError as cpe:
+    emess = "Subprocess error:\nstderr:\n{}\nstdout:\n{}\n{}".format(cpe.stderr,cpe.stdout,cpe)
+    raise RuntimeError(emess) from cpe
   return output
 
 def tryToFindLibclangDir():
@@ -2440,7 +2481,6 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
 
 """Main functions for root and queue processes"""
 def testMain(petscDir,testPath,outputDir,patches,errors,replace=False,verbose=False):
-  import glob
   import difflib
 
   class TestException(Exception):
@@ -2450,8 +2490,9 @@ def testMain(petscDir,testPath,outputDir,patches,errors,replace=False,verbose=Fa
     inputlines = [] if input is None else sanitize(input.splitlines(True))
     if replace:
       print("\tREPLACE",shortName)
-      if input is None:
-        raise TestException("Trying to replace contents of {} with 'None', are you sure thats what you intended?\n".format(referenceFile))
+      # if input is None:
+      #   import ipdb; ipdb.set_trace()
+      #   raise TestException("Trying to replace contents of {} with 'None', are you sure thats what you intended?\n".format(referenceFile))
       referenceFile.write_text("".join(inputlines))
       return
     if not referenceFile.exists():
@@ -2481,10 +2522,11 @@ def testMain(petscDir,testPath,outputDir,patches,errors,replace=False,verbose=Fa
     try:
       test(errors.get(testFile),outputFile,lambda x: [l.replace(str(petscDir),".") for l in x])
       test(patches.get(testFile),patchFile,lambda x: x[2:])
-      print("\tOK     ",shortName)
     except TestException as te:
       print("\tNOT OK ",shortName)
       patchError[testFile] = str(te)
+    else:
+      print("\tOK     ",shortName)
   if patchError:
     errBars = "".join(["[ERROR]",85*"-","[ERROR]"])
     errBars = [errBars+"\n",errBars]
@@ -2624,16 +2666,15 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
     manglePostfix = "".join(["_",str(int(time.time())),".patch"])
     rootDir       = "-d"+patchDir.anchor
     for fname,patch in patches:
-      mangledName = str(fname.with_name(fname.stem+manglePostfix).relative_to(srcPath)).replace(os.path.sep,"_")
-      mangledFile = patchDir/mangledName
+      mangledRel = fname.with_name(fname.stem+manglePostfix)
+      if mangledRel.parent != srcPath.parent: # not in same directory
+        mangledRel = mangledRel.relative_to(srcPath)
+      mangledFile = patchDir/str(mangledRel).replace(os.path.sep,"_")
       if verbose: print(rootPrintPrefix,"Writing patch to file",mangledFile)
       mangledFile.write_text(patch)
     if applyPatches:
-      import glob
-
       if verbose: print(rootPrintPrefix,"Applying patches from patch directory",patchDir)
-      patchGlob = "".join([patchDir,os.path.sep,"*",manglePostfix])
-      for patchFile in glob.iglob(patchGlob):
+      for patchFile in patchDir.glob("*"+manglePostfix):
         if verbose: print(rootPrintPrefix,"Applying patch",patchFile)
         output = subprocessRun(["patch",rootDir,"-p0","--unified","-i",patchFile],check=True,universal_newlines=True,capture_output=True)
         if verbose: print(output.stdout)
