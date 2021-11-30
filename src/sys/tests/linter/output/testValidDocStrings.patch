@@ -1,0 +1,14 @@
+@@ -33,5 +33,6 @@
+ }
+ 
+-/*@C Lorem ipsum dolor sit amet
++/*@C
++  Lorem ipsum dolor sit amet
+   someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+   eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
+@@ -56,5 +56,4 @@
+ .seealso: testNonExistentFunction(), testNonExistentType
+ @*/
+-
+ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+ {
