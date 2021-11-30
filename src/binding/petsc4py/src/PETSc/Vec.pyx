@@ -1137,11 +1137,11 @@ cdef class Vec(Object):
         CHKERR( VecGhostUpdateBegin(self.vec, caddv, csctm) )
         CHKERR( VecGhostUpdateEnd(self.vec, caddv, csctm) )
 
-    def setMPIGhost(self, ghosts, nextra=0):
+    def setGhost(self, ghosts, nextra=0):
         "Alternative to createGhost()"
         cdef PetscInt ng=0, *ig=NULL, ne = nextra
         ghosts = iarray_i(ghosts, &ng, &ig)
-        CHKERR( VecMPISetGhost(self.vec, ng, ig, ne) )
+        CHKERR( VecSetGhost(self.vec, ng, ig, ne) )
 
     #
 

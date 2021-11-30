@@ -752,6 +752,8 @@ PetscErrorCode VecDuplicate_Seq(Vec win,Vec *V)
       ierr = PetscObjectReference((PetscObject)(*V)->localupdate);CHKERRQ(ierr);
     }
   }
+  (*V)->isghost = win->isghost;
+
   ierr = PetscObjectListDuplicate(((PetscObject)win)->olist,&((PetscObject)(*V))->olist);CHKERRQ(ierr);
   ierr = PetscFunctionListDuplicate(((PetscObject)win)->qlist,&((PetscObject)(*V))->qlist);CHKERRQ(ierr);
 

@@ -127,8 +127,10 @@ PetscErrorCode VecDuplicate_MPIViennaCL(Vec win,Vec *v)
   PetscFunctionBegin;
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
-
-  ierr = VecCreate_MPI_Private(*v,PETSC_FALSE,w->nghost,0,NULL);CHKERRQ(ierr);
+  if (win->isghost) {
+    ierr = VecSetGhost(*v,win->nghost,win->ghosts,win->nextra);CHKERRQ(ierr);
+  }
+  ierr = VecCreate_MPI_Private(*v,PETSC_FALSE,NULL);CHKERRQ(ierr);
   vw   = (Vec_MPI*)(*v)->data;
   ierr = PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
 
@@ -388,7 +390,7 @@ PetscErrorCode VecCreate_MPIViennaCL_Private(Vec vv,PetscBool alloc,PetscInt ngh
   Vec_ViennaCL   *vecviennacl;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0,NULL);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,NULL);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPIVIENNACL);CHKERRQ(ierr);
 
   ierr = VecBindToCPU_MPIViennaCL(vv,PETSC_FALSE);CHKERRQ(ierr);

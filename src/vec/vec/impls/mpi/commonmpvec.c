@@ -2,7 +2,7 @@
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
 
 /*
-  This is used in VecGhostGetLocalForm and VecGhostRestoreLocalForm to ensure
+  This is used in VecGhostGetLocalForm and VecGhostRestoreLocalForm() to ensure
   that the state is updated if either vector has changed since the last time
   one of these functions was called.  It could apply to any PetscObject, but
   VecGhost is quite different from other objects in that two separate vectors
@@ -73,11 +73,12 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
   PetscValidPointer(l,2);
+  if (!g->isghost) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_USER,"Vector does not have a local form");
 
-  *l = g->localrep;
-  if (!*l) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_USER,"Vector does not have a local form");
-  ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject)*l);CHKERRQ(ierr);
+  if ((*l = g->localrep)) {
+    ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
+    ierr = PetscObjectReference((PetscObject)*l);CHKERRQ(ierr);
+  } else *l = g;
   PetscFunctionReturn(0);
 }
 
@@ -97,7 +98,8 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 
     Level: advanced
 
-.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm()
+.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm(), VecSetGhost(),
+          VecGhostIsLocalForm()
 
 @*/
 PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
@@ -105,7 +107,7 @@ PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
   PetscValidPointer(haslocal,2);
-  *haslocal = g->localrep ? PETSC_TRUE : PETSC_FALSE;
+  *haslocal = g->isghost;
   PetscFunctionReturn(0);
 }
 
@@ -123,7 +125,8 @@ PetscErrorCode  VecGhostHasLocalForm(Vec g,PetscBool *haslocal)
 
     Level: advanced
 
-.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm(), VecGhostHasLocalForm()
+.seealso: VecCreateGhost(), VecGhostRestoreLocalForm(), VecCreateGhostWithArray(), VecGhostGetLocalForm(), VecGhostHasLocalForm(),
+          VecSetGhost(), VecGhostHasLocalForm()
 
 @*/
 PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
@@ -133,9 +136,10 @@ PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
   PetscValidHeaderSpecific(l,VEC_CLASSID,2);
 
   *flg = PETSC_FALSE;
+  if (!g->isghost) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Global vector is not ghosted");
   if (g->localrep) {
     if (l == g->localrep) *flg = PETSC_TRUE;
-  } else SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Global vector is not ghosted");
+  } else if (g == l) *flg = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -156,15 +160,18 @@ PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 
     Level: advanced
 
-.seealso: VecCreateGhost(), VecGhostGetLocalForm(), VecCreateGhostWithArray(), , VecGhostHasLocalForm()
+.seealso: VecCreateGhost(), VecGhostGetLocalForm(), VecCreateGhostWithArray(), , VecGhostHasLocalForm(), VecSetGhost(),
+          VecGhostHasLocalForm()
 @*/
 PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
-  ierr = PetscObjectDereference((PetscObject)*l);CHKERRQ(ierr);
+  if (*l == g->localrep) {
+    ierr = VecGhostStateSync_Private(g,*l);CHKERRQ(ierr);
+    ierr = PetscObjectDereference((PetscObject)*l);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -204,17 +211,16 @@ PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
    Level: advanced
 
 .seealso: VecCreateGhost(), VecGhostUpdateEnd(), VecGhostGetLocalForm(),
-          VecGhostRestoreLocalForm(),VecCreateGhostWithArray()
+          VecGhostRestoreLocalForm(),VecCreateGhostWithArray(), VecSetGhost(),
+          VecGhostHasLocalForm()
 
 @*/
 PetscErrorCode  VecGhostUpdateBegin(Vec g,InsertMode insertmode,ScatterMode scattermode)
 {
   PetscErrorCode ierr;
-  PetscBool      isseq;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(g,VEC_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)g,VECSEQ,&isseq);CHKERRQ(ierr);
   if (g->localrep) {
     if (!g->localupdate) PetscFunctionReturn(0);
     if (scattermode == SCATTER_REVERSE) {
@@ -222,7 +228,7 @@ PetscErrorCode  VecGhostUpdateBegin(Vec g,InsertMode insertmode,ScatterMode scat
     } else {
       ierr = VecScatterBegin(g->localupdate,g,g->localrep,insertmode,scattermode);CHKERRQ(ierr);
     }
-  } else if (!isseq) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Vector is not ghosted");
+  } else if (!g->isghost) SETERRQ(PetscObjectComm((PetscObject)g),PETSC_ERR_ARG_WRONG,"Vector is not ghosted");
   PetscFunctionReturn(0);
 }
 

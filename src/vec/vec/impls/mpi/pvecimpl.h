@@ -61,7 +61,7 @@ PETSC_INTERN PetscErrorCode VecSetValuesBlocked_MPI(Vec,PetscInt,const PetscInt 
 PETSC_INTERN PetscErrorCode VecAssemblyBegin_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyEnd_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyReset_MPI(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_MPI_Private(Vec,PetscBool,PetscInt,PetscInt,const PetscScalar[]);
+PETSC_INTERN PetscErrorCode VecCreate_MPI_Private(Vec,PetscBool,const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec,Vec*);
 
