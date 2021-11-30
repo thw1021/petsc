@@ -56,13 +56,12 @@ int main(int argc,char **argv)
   // test Kokkos
   ierr = VecSet(x,1.0);CHKERRQ(ierr);
   ierr = MatMult(A,x,y);CHKERRQ(ierr);
-  ierr = VecViewFromOptions(y,NULL,"-vec_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(y,NULL,"-ex5_vec_view");CHKERRQ(ierr);
 
   // assemble on GPU
   if (Iend<N) Iend++; // elements, ignore off processor entries so do redundent
   ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
   ierr = MatKokkosGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
-  ierr = MatZeroEntries(A);CHKERRQ(ierr);
   Kokkos::fence();
   Kokkos::parallel_for (Kokkos::RangePolicy<> (Istart,Iend+1), KOKKOS_LAMBDA (int i) {
       PetscScalar  values[] = {1,1,1,1};
@@ -75,7 +74,7 @@ int main(int argc,char **argv)
 
   ierr = VecSet(x,1.0);CHKERRQ(ierr);
   ierr = MatMult(A,x,y);CHKERRQ(ierr);
-  ierr = VecViewFromOptions(y,NULL,"-vec_view");CHKERRQ(ierr);
+  ierr = VecViewFromOptions(y,NULL,"-ex5_vec_view");CHKERRQ(ierr);
   ierr = PetscLogEventEnd(event,0,0,0,0);CHKERRQ(ierr);
 
   ierr = MatDestroy(&A);CHKERRQ(ierr);
@@ -96,7 +95,7 @@ int main(int argc,char **argv)
    test:
      suffix: 0
      requires: kokkos_kernels double !complex !single
-     args: -n 11 -vec_view -mat_view -mat_type aijkokkos
+     args: -n 11 -ex5_vec_view
      nsize:  2
 
 TEST*/
