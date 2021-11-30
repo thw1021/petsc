@@ -156,7 +156,9 @@ struct _p_Vec {
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
 #endif
   char                   *defaultrandtype;
+  PetscBool              isghost;
   PetscInt               nghost;             /* number of ghost points in local representation on this process */
+  PetscInt               *ghosts;
   PetscInt               nextra;             /* number of extra entries in local representation on this process (at end of array) */
   Vec                    localrep;           /* local representation of vector */
   VecScatter             localupdate;        /* scatter to update ghost values */

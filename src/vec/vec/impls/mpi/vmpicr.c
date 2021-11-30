@@ -25,7 +25,7 @@
    Level: intermediate
 
 .seealso: VecCreateSeq(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
+          VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecSetGhost()
 
 @*/
 PetscErrorCode  VecCreateMPI(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)

@@ -150,7 +150,7 @@ cdef extern from * nogil:
     int VecGhostRestoreLocalForm(PetscVec,PetscVec*)
     int VecGhostUpdateBegin(PetscVec,PetscInsertMode,PetscScatterMode)
     int VecGhostUpdateEnd(PetscVec,PetscInsertMode,PetscScatterMode)
-    int VecMPISetGhost(PetscVec,PetscInt,const PetscInt*,PetscInt)
+    int VecSetGhost(PetscVec,PetscInt,const PetscInt*,PetscInt)
 
     int VecGetSubVector(PetscVec,PetscIS,PetscVec*)
     int VecRestoreSubVector(PetscVec,PetscIS,PetscVec*)

@@ -239,7 +239,7 @@ PetscErrorCode VecCreate_HIP(Vec v)
 
  .seealso: VecCreateMPIHIPWithArray(), VecCreateMPIHIPWithArrays(), VecCreateSeqHIP(), VecCreateSeq(),
            VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
+           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecSetGhost()
 
  @*/
  PetscErrorCode VecCreateMPIHIP(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
@@ -505,7 +505,7 @@ PetscErrorCode VecCreate_MPIHIP_Private(Vec vv,PetscBool alloc,PetscInt nghost,c
   Vec_HIP       *vechip;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0,NULL);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,NULL);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPIHIP);CHKERRQ(ierr);
 
   ierr = VecBindToCPU_MPIHIP(vv,PETSC_FALSE);CHKERRQ(ierr);
