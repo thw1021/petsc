@@ -68,8 +68,8 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
   ierr = PetscObjectGetComm((PetscObject)networkdm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
-  ierr = DMGlobalGetLocalBegin(networkdm,X,&localX);CHKERRQ(ierr);
-  ierr = DMGlobalGetLocalEnd(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalBegin(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalEnd(networkdm,X,&localX);CHKERRQ(ierr);
 
   ierr = MatZeroEntries(J);CHKERRQ(ierr);
 
@@ -150,8 +150,8 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
   ierr = VecSet(F,0.0);CHKERRQ(ierr);
   ierr = DMGlobalGetLocal(networkdm,F,&localF);CHKERRQ(ierr);
   ierr = VecSet(localF,0.0);CHKERRQ(ierr);
-  ierr = DMGlobalGetLocalBegin(networkdm,X,&localX);CHKERRQ(ierr);
-  ierr = DMGlobalGetLocalEnd(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalBegin(networkdm,X,&localX);CHKERRQ(ierr);
+  ierr = DMGlobalUpdateLocalEnd(networkdm,X,&localX);CHKERRQ(ierr);
 
   /* Form Function for power subnetwork */
   ierr = DMNetworkGetSubnetwork(networkdm,0,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);

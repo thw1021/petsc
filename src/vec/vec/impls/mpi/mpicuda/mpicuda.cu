@@ -237,7 +237,7 @@ PetscErrorCode VecCreate_CUDA(Vec v)
 
  .seealso: VecCreateMPICUDAWithArray(), VecCreateMPICUDAWithArrays(), VecCreateSeqCUDA(), VecCreateSeq(),
            VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
+           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecSetGhost()
 
  @*/
  PetscErrorCode VecCreateMPICUDA(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
@@ -509,7 +509,7 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
   Vec_CUDA       *veccuda;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0,NULL);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,NULL);CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName((PetscObject)vv,VECMPICUDA);CHKERRQ(ierr);
 
   ierr = VecBindToCPU_MPICUDA(vv,PETSC_FALSE);CHKERRQ(ierr);
