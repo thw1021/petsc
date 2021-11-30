@@ -40,6 +40,9 @@ def getoptionparser():
     parser.add_option("-s","--summary",
                       action="store_true", dest="summary", default=0,
                       help="print PETSc log summary")
+    parser.add_option("-d","--memdebug",type="int",
+                      action="store", dest="memdebug", default=1,
+                      help="Use PETSc memory debugging")
     return parser
 
 def getbuilddir():
@@ -76,14 +79,14 @@ def setup_unittest(options):
     _WritelnDecorator.writeln = writeln
 
 def import_package(options, pkgname):
-    args = [
-        sys.argv[0],
-        '-malloc',
-        '-malloc_debug',
-        '-malloc_dump',
-    ]
+    args = [ sys.argv[0] ]
+    if options.memdebug:
+        args.append('-malloc')
+        args.append('-malloc_debug')
+        args.append('-malloc_dump')
     if options.summary:
         args.append('-log_view')
+    print(args)
     package = __import__(pkgname)
     package.init(args, arch=options.arch)
     return package
@@ -208,6 +211,7 @@ def main(args=None):
     pkgname = 'petsc4py'
     parser = getoptionparser()
     (options, args) = parser.parse_args(args)
+    print(options)
     setup_python(options)
     setup_unittest(options)
     package = import_package(options, pkgname)
