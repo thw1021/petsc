@@ -12,7 +12,7 @@
   boolean PetscHasAttribute(name)
 
   Input Parameter:
-. name - the name of the attribute to test
+. name - The name of the attribute to test
 
   Notes:
   name should be identical to what you might pass to the __attribute__ declaration itself --
@@ -57,6 +57,45 @@ M*/
 #endif
 
 /*MC
+  PETSCPP_STRINGIZE - Stringize a token
+
+  Synopsis:
+  #include <petscmacros.h>
+  const char* PETSCPP_STRINGIZE(x)
+
+  Input Parameter:
+. x - The token you would like to stringize
+
+  Output Parameter:
+. <return-value> - The string representation of x
+
+  Notes:
+  Not available from Fortran.
+
+  PETSCPP_STRINGIZE() expands x before stringizing it, if you do not wish to do so, use
+  PETSCPP_STRINGIZE_() instead.
+
+  Example Usage:
+.vb
+  #define MY_OTHER_VAR hello there
+  #define MY_VAR       MY_OTHER_VAR
+
+  PETSCPP_STRINGIZE(MY_VAR)  -> "hello there"
+  PETSCPP_STRINGIZE_(MY_VAR) -> "MY_VAR"
+
+  int foo;
+  PETSCPP_STRINGIZE(foo)  -> "foo"
+  PETSCPP_STRINGIZE_(foo) -> "foo"
+.ve
+
+  Level: beginner
+
+.seealso: PETSCPP_CONCAT(), PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_IF()
+MC*/
+#define PETSCPP_STRINGIZE_(x) #x
+#define PETSCPP_STRINGIZE(x)  PETSCPP_STRINGIZE_(x)
+
+/*MC
   PETSCPP_CONCAT - Concatenate two tokens
 
   Synopsis:
@@ -68,10 +107,10 @@ M*/
 - y - Second token
 
   Notes:
-  Not available from Fortran
+  Not available from Fortran.
 
   PETSCPP_CONCAT() will expand both arguments before pasting them together, use PETSCPP_CONCAT_()
-  if you don't want to expand them
+  if you don't want to expand them.
 
   Example usage:
 .vb
@@ -84,7 +123,7 @@ M*/
 
   Level: beginner
 
-.seealso: PETSCPP_IF(), PETSCPP_IF_PETSC_DEFINED()
+.seealso: PETSCPP_IF(), PETSCPP_IF_PETSC_DEFINED(), PETSCPP_STRINGIZE()
 MC*/
 #define PETSCPP_CONCAT_(x,y) x ## y
 #define PETSCPP_CONCAT(x,y)  PETSCPP_CONCAT_(x,y)
@@ -103,10 +142,10 @@ MC*/
 . b - Preprocessor variable, must expand to either 0 or 1
 
   Notes:
-  Not available from Fortran
+  Not available from Fortran.
 
   Expands to integer literal 0 if b expands to 1, or integer literal 1 if b expands to
-  0. PETSCPP_COMPL() will expand its argument before returning the complement
+  0. PETSCPP_COMPL() will expand its argument before returning the complement.
 
   Example usage:
 .vb
@@ -157,13 +196,15 @@ MC*/
 . <return-value> either integer literal 0 or integer literal 1
 
   Notes:
+  Not available from Fortran.
+
   PetscDefined() returns 1 if and only if "PETSC_ ## def" is defined (but empty) or defined to
   integer literal 1. In all other cases, PetscDefined() returns integer literal 0. Therefore
   this macro should not be used if its argument may be defined to a non-empty value other than
   1.
 
   The prefix "PETSC_" is automatically prepended to def. To avoid prepending "PETSC_", say to
-  add custom checks in user code, one should use PetscDefined_(),
+  add custom checks in user code, one should use PetscDefined_().
 
 $ #define FooDefined(d) PetscDefined_(PETSCPP_CONCAT(FOO_,d))
 
@@ -225,7 +266,6 @@ MC*/
 #define PetscDefined(def)              PetscDefined_(PETSCPP_CONCAT(PETSC_,def))
 /* what do we do if we dont have variadic macros -> PetscDefined()?????? */
 
-
 /*MC
   PETSCPP_EXPAND_TO_NOTHING - Expands to absolutely nothing at all
 
@@ -237,9 +277,9 @@ MC*/
 . __VA_ARGS__ - Anything at all
 
   Notes:
-  Not available from Fortran, requires variadic macro support
+  Not available from Fortran, requires variadic macro support.
 
-  Must have at least 1 parameter
+  Must have at least 1 parameter.
 
   Example usage:
 .vb
@@ -250,7 +290,7 @@ MC*/
 
   Level: advanced
 
-.seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PetscDefined()
+.seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PetscDefined(), PETSCPP_STRINGIZE()
 MC*/
 #define PETSCPP_EXPAND_TO_NOTHING(...)
 
@@ -270,9 +310,9 @@ MC*/
 - __VA_ARGS__    - Result of macro expansion if cond expands to 0
 
   Notes:
-  Not available from Fortran, requires variadic macro support
+  Not available from Fortran, requires variadic macro support.
 
-  Must have at least 1 argument for __VA_ARGS__
+  Must have at least 1 argument for __VA_ARGS__.
 
   Example usage:
 .vb
@@ -307,7 +347,7 @@ MC*/
 - __VA_ARGS__    - Result of macro expansion if PetscDefined(cond) expands to 0
 
   Notes:
-  Not available in Fortran, requires variadic macro support
+  Not available in Fortran, requires variadic macro support.
 
   Example usage:
 .vb
