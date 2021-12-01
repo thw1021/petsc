@@ -42,15 +42,38 @@ static_assert(
 );
 
 #define PETSC_DEVICE_CASE(IMPLS,func,...)                               \
-  case PETSCPP_CONCAT(PETSC_DEVICE_,IMPLS): {                             \
-    auto ierr_ = PETSCPP_CONCAT(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr_); \
+  case PETSCPP_CONCAT_(PETSC_DEVICE_,IMPLS): {                          \
+    auto ierr_ = PETSCPP_CONCAT_(IMPLS,Device).func(__VA_ARGS__);CHKERRQ(ierr_); \
   } break
 
-// Expands to either PETSC_DEVICE_CASE_IF_PETSC_DEFINED__0 or
-// PETSC_DEVICE_CASE_IF_PETSC_DEFINED__1 depending on the value of the PetscDefined() clause,
-// which is given by PetscDefined(HAVE_ ## IMPLS)
-#define PETSC_DEVICE_CASE_IF_PETSC_DEFINED(IMPLS,...)                   \
-  PETSCPP_IF_PETSC_DEFINED(PETSCPP_CONCAT(HAVE_,IMPLS),PETSC_DEVICE_CASE,PETSCPP_EXPAND_TO_NOTHING)(IMPLS,__VA_ARGS__)
+/* Suppose you have:
+ *
+ * CUDADevice.myFunction(arg1,arg2)
+ *
+ * that you would like to conditionally define and call in a switch-case:
+ *
+ * switch(PetscDeviceType) {
+ * #if PetscDefined(HAVE_CUDA)
+ * case PETSC_DEVICE_CUDA: {
+ *   auto ierr = CUDADevice.myFunction(arg1,arg2);CHKERRQ(ierr);
+ * } break;
+ * #endif
+ * }
+ *
+ * then calling this macro:
+ *
+ * PETSC_DEVICE_CASE_IF_PETSC_DEFINED(CUDA,myFunction,arg1,arg2)
+ *
+ * will expand to the following case statement:
+ *
+ * case PETSC_DEVICE_CUDA: {
+ *   auto ierr = CUDADevice.myFunction(arg1,arg2);CHKERRQ(ierr);
+ * } break
+ *
+ * if PetscDefined(HAVE_CUDA) evaluates to 1, and expand to nothing otherwise
+ */
+#define PETSC_DEVICE_CASE_IF_PETSC_DEFINED(IMPLS,func,...)              \
+  PETSCPP_IF_PETSC_DEFINED(PETSCPP_CONCAT_(HAVE_,IMPLS),PETSC_DEVICE_CASE,PETSCPP_EXPAND_TO_NOTHING)(IMPLS,func,__VA_ARGS__)
 
 /*@C
   PetscDeviceCreate - Get a new handle for a particular device type
