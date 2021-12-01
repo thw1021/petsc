@@ -16,58 +16,7 @@
 #include <petscconf.h>
 #include <petscconf_poison.h>
 #include <petscfix.h>
-
-/*MC
-  PetscHasAttribute - determine whether a particular __attribute__ is supported by the compiler
-
-  Synopsis:
-  #include <petscsys.h>
-  boolean PetscHasAttribute(name)
-
-  Input Parameter:
-. name - the name of the attribute to test
-
-  Notes:
-  name should be identical to what you might pass to the __attribute__ declaration itself --
-  plain, unbroken text.
-
-  As PetscHasAttribute() is wrapper over the function-like macro __has_attribute(), the exact
-  type and value returned is implementation defined. In practice however, it usually returns
-  the integer literal 1 if the attribute is supported, and integer literal 0 if the attribute
-  is not supported.
-
-  Sample usage:
-  Typical usage is usually using the preprocessor
-
-.vb
-  #if PetscHasAttribute(always_inline)
-  #  define MY_ALWAYS_INLINE __attribute__((always_inline))
-  #else
-  #  define MY_ALWAYS_INLINE
-  #endif
-
-  void foo(void) MY_ALWAYS_INLINE;
-.ve
-
-  but can also be used in regular code
-
-.vb
-  if (PetscHasAttribute(some_attribute)) {
-    foo();
-  } else {
-    bar();
-  }
-.ve
-
-  Level: advanced
-
-.seealso: PetscDefined(), PetscLikely(), PetscUnlikely()
-M*/
-#if defined(__has_attribute)
-#  define PetscHasAttribute(x) __has_attribute(x)
-#else
-#  define PetscHasAttribute(x) 0
-#endif
+#include <petscmacros.h>
 
 /* placeholder defines */
 #if PetscHasAttribute(format)
@@ -230,54 +179,6 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  include <petsc/mpiuni/mpi.h>
 #else
 #  include <mpi.h>
-#endif
-
-/*MC
-  PetscDefined - determine whether a boolean macro is defined
-
-  Notes:
-  The prefix "PETSC_" is added to the argument.
-
-  Typical usage is within normal code,
-
-$   if (PetscDefined(USE_DEBUG)) { ... }
-
-  but can also be used in the preprocessor,
-
-$   #if PetscDefined(USE_DEBUG)
-$     ...
-$   #else
-
-  Either way, it evaluates true if PETSC_USE_DEBUG is defined (merely defined or defined to 1), and false if PETSC_USE_DEBUG is undefined.  This macro
-  should not be used if its argument may be defined to a non-empty value other than 1.
-
-  To avoid prepending "PETSC_", say to add custom checks in user code, one can use e.g.
-
-$  #define FooDefined(d) PetscDefined_(FOO_ ## d)
-
-  Developer Notes:
-  Getting something that works in C and CPP for an arg that may or may not be defined is tricky.  Here, if we have
-  "#define PETSC_HAVE_BOOGER 1" we match on the placeholder define, insert the "0," for arg1 and generate the triplet
-  (0, 1, 0).  Then the last step cherry picks the 2nd arg (a one).  When PETSC_HAVE_BOOGER is not defined, we generate
-  a (... 1, 0) pair, and when the last step cherry picks the 2nd arg, we get a zero.
-
-  Our extra expansion via PetscDefined__take_second_expand() is needed with MSVC, which has a nonconforming
-  implementation of variadic macros.
-
-  Level: developer
-.seealso: PetscHasAttribute(), PetscUnlikely(), PetscLikely()
-M*/
-#if !defined(PETSC_SKIP_VARIADIC_MACROS)
-#  define PetscDefined_arg_1    shift,
-#  define PetscDefined_arg_     shift,
-#  define PetscDefined__take_second_expanded(ignored, val, ...) val
-#  define PetscDefined__take_second_expand(args) PetscDefined__take_second_expanded args
-#  define PetscDefined__take_second(...) PetscDefined__take_second_expand((__VA_ARGS__))
-#  define PetscDefined____(arg1_or_junk) PetscDefined__take_second(arg1_or_junk 1, 0, at_)
-#  define PetscDefined___(value) PetscDefined____(PetscDefined_arg_ ## value)
-#  define PetscDefined__(d)      PetscDefined___(d)
-#  define PetscDefined_(d)       PetscDefined__(PETSC_ ## d)
-#  define PetscDefined(d)        PetscDefined_(d)
 #endif
 
 /*
