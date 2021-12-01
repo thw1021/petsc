@@ -6,7 +6,7 @@ static char help[] = "Tests options database";
 if (PetscUnlikely(!(expr)))               \
   SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB, \
            "Assertion: `%s' failed.",     \
-           PetscStringize(expr));         \
+           PETSCPP_STRINGIZE(expr));         \
 } while (0)
 
 int main(int argc,char **argv)
