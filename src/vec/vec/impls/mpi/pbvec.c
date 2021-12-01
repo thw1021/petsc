@@ -500,8 +500,6 @@ PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,const PetscScalar arr
   ierr           = PetscNewLog(v,&s);CHKERRQ(ierr);
   v->data        = (void*)s;
   ierr           = PetscMemcpy(v->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
-  v->nghost      = nghost;
-  v->nextra      = nextra;
   v->petscnative = PETSC_TRUE;
   if (array) v->offloadmask = PETSC_OFFLOAD_CPU;
 
@@ -510,13 +508,10 @@ PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,const PetscScalar arr
   s->array           = (PetscScalar*)array;
   s->array_allocated = NULL;
   if (alloc && !array) {
-    PetscInt n = v->map->n+vec->nghost+vec->nextra;
+    PetscInt n = v->map->n+v->nghost+v->nextra;
     ierr               = PetscCalloc1(n,&s->array);CHKERRQ(ierr);
     ierr               = PetscLogObjectMemory((PetscObject)v,n*sizeof(PetscScalar));CHKERRQ(ierr);
     s->array_allocated = s->array;
-  }
-
-  if (vec->isghost) {
   }
 
   v->stash.insertmode = NOT_SET_VALUES;
@@ -554,33 +549,38 @@ PetscErrorCode VecCreate_MPI(Vec vv)
   ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,NULL);CHKERRQ(ierr);
 
   if (vv->isghost) {
+    PetscScalar            *larray;
+    IS                     from,to;
+    PetscInt               rstart,i,*indices;
+    ISLocalToGlobalMapping ltog;
+
     /* Create local representation */
-    ierr = VecGetArray(*vv,&larray);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,n+nghost+nextra,larray,&(*vv)->localrep);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)(*vv)->localrep);CHKERRQ(ierr);
-    ierr = VecRestoreArray(*vv,&larray);CHKERRQ(ierr);
+    ierr = VecGetArray(vv,&larray);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,vv->map->n+vv->nghost+vv->nextra,larray,&(vv)->localrep);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)(vv)->localrep);CHKERRQ(ierr);
+    ierr = VecRestoreArray(vv,&larray);CHKERRQ(ierr);
 
     /*
      Create scatter context for scattering (updating) ghost values
      */
-    ierr = ISCreateGeneral(comm,nghost,ghosts,PETSC_USE_POINTER,&from);CHKERRQ(ierr);
-    ierr = ISCreateStride(PETSC_COMM_SELF,nghost,n,1,&to);CHKERRQ(ierr);
-    ierr = VecScatterCreate(*vv,from,(*vv)->localrep,to,&(*vv)->localupdate);CHKERRQ(ierr);
-    ierr = PetscLogObjectParent((PetscObject)*vv,(PetscObject)(*vv)->localupdate);CHKERRQ(ierr);
+    ierr = ISCreateGeneral(PetscObjectComm((PetscObject)vv),vv->nghost,vv->ghosts,PETSC_USE_POINTER,&from);CHKERRQ(ierr);
+    ierr = ISCreateStride(PETSC_COMM_SELF,vv->nghost,vv->map->n,1,&to);CHKERRQ(ierr);
+    ierr = VecScatterCreate(vv,from,vv->localrep,to,&vv->localupdate);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)vv->localupdate);CHKERRQ(ierr);
     ierr = ISDestroy(&to);CHKERRQ(ierr);
     ierr = ISDestroy(&from);CHKERRQ(ierr);
 
     /* set local to global mapping for ghosted vector */
-    ierr = PetscMalloc1(n+nghost,&indices);CHKERRQ(ierr);
-    ierr = VecGetOwnershipRange(*vv,&rstart,NULL);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
+    ierr = PetscMalloc1(vv->map->n+vv->nghost,&indices);CHKERRQ(ierr);
+    ierr = VecGetOwnershipRange(vv,&rstart,NULL);CHKERRQ(ierr);
+    for (i=0; i<vv->map->n; i++) {
       indices[i] = rstart + i;
     }
-    for (i=0; i<nghost; i++) {
-      indices[n+i] = ghosts[i];
+    for (i=0; i<vv->nghost; i++) {
+      indices[vv->map->n+i] = vv->ghosts[i];
     }
-    ierr = ISLocalToGlobalMappingCreate(comm,1,n+nghost,indices,PETSC_OWN_POINTER,&ltog);CHKERRQ(ierr);
-    ierr = VecSetLocalToGlobalMapping(*vv,ltog);CHKERRQ(ierr);
+    ierr = ISLocalToGlobalMappingCreate(PetscObjectComm((PetscObject)vv),1,vv->map->n+vv->nghost,indices,PETSC_OWN_POINTER,&ltog);CHKERRQ(ierr);
+    ierr = VecSetLocalToGlobalMapping(vv,ltog);CHKERRQ(ierr);
     ierr = ISLocalToGlobalMappingDestroy(&ltog);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -826,7 +826,7 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[],Pe
     n    = vv->map->n;
     N    = vv->map->N;
     ierr = (*vv->ops->destroy)(vv);CHKERRQ(ierr);
-    ierr = VecSetGhost(vv,win->nghost,win->ghosts,win->nextra);CHKERRQ(ierr);
+    ierr = VecSetGhost(vv,nghost,ghosts,nextra);CHKERRQ(ierr);
     ierr = VecSetSizes(vv,n,N);CHKERRQ(ierr);
     ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,NULL);CHKERRQ(ierr);
     /* Create local representation */
@@ -917,7 +917,8 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vv,bs);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,nextra*bs,array);CHKERRQ(ierr);
+  ierr = VecSetGhost(*vv,bs*nghost,ghosts,bs*nextra);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,array);CHKERRQ(ierr);
   /* Create local representation */
   ierr = VecGetArray(*vv,&larray);CHKERRQ(ierr);
   ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,bs,n+bs*nghost+bs*nextra,larray,&(*vv)->localrep);CHKERRQ(ierr);

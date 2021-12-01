@@ -47,7 +47,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec vv)
   ierr = PetscSplitOwnership(PetscObjectComm((PetscObject)vv),&vv->map->n,&vv->map->N);CHKERRQ(ierr);
   ierr = PetscSharedMalloc(PetscObjectComm((PetscObject)vv),vv->map->n*sizeof(PetscScalar),vv->map->N*sizeof(PetscScalar),(void**)&array);CHKERRQ(ierr);
 
-  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,0,0,array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_FALSE,array);CHKERRQ(ierr);
   vv->ops->duplicate = VecDuplicate_Shared;
   PetscFunctionReturn(0);
 }
