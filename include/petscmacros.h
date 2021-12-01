@@ -56,6 +56,9 @@ M*/
 #  define PetscHasAttribute(name) 0
 #endif
 
+#define PETSCPP_STRINGIZE_(a) #a
+#define PETSCPP_STRINGIZE(a)  PETSCPP_STRINGIZE_(a)
+
 /*MC
   PETSCPP_CONCAT - Concatenate two tokens
 
