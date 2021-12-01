@@ -20,7 +20,10 @@ PetscErrorCode VecDuplicate_Shared(Vec win,Vec *v)
 
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = VecSetSizes(*v,win->map->n,win->map->N);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*v,PETSC_FALSE,win->nghost,win->nextra,array);CHKERRQ(ierr);
+  if (win->isghost) {
+    ierr = VecSetGhost(*v,win->nghost,win->ghosts,win->nextra);CHKERRQ(ierr);
+  }
+  ierr = VecCreate_MPI_Private(*v,PETSC_FALSE,array);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
   /* New vector should inherit stashing property of parent */
