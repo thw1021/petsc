@@ -532,7 +532,7 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 }
 
 /*@
-  TSDiscGradGetGonzalez - Gets whether to use the Gonzalez term in DG formulation.
+  TSDiscGradGetGonzalez - Checks flag for whether to use additional conservative terms in discrete gradient formulation.
 
   Not Collective
 
@@ -558,7 +558,7 @@ PetscErrorCode TSDiscGradGetGonzalez(TS ts,PetscBool *gonzalez)
 }
 
 /*@
-  TSDiscGradSetGonzalez - Sets whether to use the Gonzalez term in DG formulation.
+  TSDiscGradSetGonzalez - Sets discrete gradient formulation with or without additional conservative terms.  Without flag, the discrete gradients timestepper is just backwards euler
 
   Not Collective
 
