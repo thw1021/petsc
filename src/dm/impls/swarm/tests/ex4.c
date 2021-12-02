@@ -572,6 +572,6 @@ int main(int argc,char **argv)
 
    test:
      suffix: 7
-     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2 -dm_view 
+     args: -dm_plex_box_faces 1,1 -ts_type discgrad -ts_discgrad_gonzalez -monitor -output_step 50 -error -ts_convergence_estimate -convest_num_refine 2 -dm_view
 
 TEST*/
