@@ -334,7 +334,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
     ierr = (*dg->Ffunc)(ts, dg->stage_time, X0,  &F0, dg->funcCtx);CHKERRQ(ierr);
     ierr = (*dg->Gfunc)(ts, dg->stage_time, x ,   G,  dg->funcCtx);CHKERRQ(ierr);
 
-    /*Adding Extra Gonzalez Term*/
+    /* Adding Extra Gonzalez Term */
     ierr = VecDot(Xdiff, G, &Gp);CHKERRQ(ierr);
     ierr = VecNorm(Xdiff, NORM_2, &norm);CHKERRQ(ierr);
     if (norm < PETSC_SQRT_MACHINE_EPSILON) {
@@ -350,7 +350,7 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
     ierr = (*dg->Sfunc)(ts, dg->stage_time, x, S,  dg->funcCtx);CHKERRQ(ierr);
     ierr = (*dg->Gfunc)(ts, dg->stage_time, x, G,  dg->funcCtx);CHKERRQ(ierr);
 
-    ierr = MatMult(S, G , SgF);CHKERRQ(ierr);/* Xdot = S*gradF */
+    ierr = MatMult(S, G , SgF);CHKERRQ(ierr); /* Xdot = S*gradF */
   }
   /* DM monkey-business allows user code to call TSGetDM() inside of functions evaluated on levels of FAS */
   dmsave = ts->dm;

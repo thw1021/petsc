@@ -408,7 +408,7 @@ PetscErrorCode Ffunc(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
   PetscFunctionBeginUser;
   ierr = TSGetDM(ts, &dm);CHKERRQ(ierr);
 
-  /*Define F*/
+  /* Define F */
   ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
   ierr = VecGetLocalSize(U, &Np);CHKERRQ(ierr);
   Np /= 2;
