@@ -88,7 +88,12 @@ Changes: Development
 .. rubric:: TS:
 
 - Add ``TSSundialsSetUseDense()`` and options database option ``-ts_sundials_use_dense`` to use a dense linear solver (serial only) within CVODE, instead of the default iterative solve.
-
+- Add ``TSSundialsSetUseDense()`` and options database option ``-ts_sundials_use_dense`` to use a dense linear solver (serial only) within CVODE, instead of the default iterative solve.
+- Change timestepper type ``TSDISCGRAD`` to include additional conservation terms based on formulation from [Gonzalez 1996] for hamiltonian systems:
+  - Change ``SNESTSFormFunction_DiscGrad()`` to include additional Gonzalez terms
+  - Add ``TSDiscGradGetGonzalez`` which gets whether to use conservative terms
+  - Add ``TSDiscGradSetGonzalez`` which sets whether to use conservative terms
+  
 .. rubric:: TAO:
 
 .. rubric:: DM/DA:
