@@ -703,8 +703,10 @@ Unable to run hostname to check the network')
     cflagsOutput = ''
     libsOutput   = ''
     if config.setCompilers.Configure.isCrayPEWrapper(self.setCompilers.CC, self.log):
-      cflagsOutput = self.executeShellCommand(self.compilers.CC + ' --cray-print-opts=cflags', log = self.log)[0]
-      libsOutput   = self.executeShellCommand(self.compilers.CC + ' --cray-print-opts=libs', log = self.log)[0]
+      # set these PE env vars to only query MPICH includes and libs. Cray PE may include other libs.
+      cflagsOutput = self.executeShellCommand('PE_PKGCONFIG_LIBS=mpich PE_PKGCONFIG_PRODUCTS=PE_MPICH ' + self.compilers.CC + ' --cray-print-opts=cflags', log = self.log)[0]
+      # --no-as-needed since we always need MPI
+      libsOutput   = self.executeShellCommand('PE_PKGCONFIG_LIBS=mpich PE_PKGCONFIG_PRODUCTS=PE_MPICH ' + self.compilers.CC + ' --no-as-needed --cray-print-opts=libs', log = self.log)[0]
     else:
       cflagsOutput = self.executeShellCommand(self.compilers.CC + ' -show', log = self.log)[0]
       libsOutput   = cflagsOutput # same output as -show
