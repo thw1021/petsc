@@ -4895,6 +4895,11 @@ PetscErrorCode DMPlexComputeResidual_Hybrid_Internal(DM dm, PetscFormKey key[], 
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
+  if ((key[0].label == key[1].label) && (key[0].value == key[1].value) && (key[0].part == key[1].part)) {
+    const char *name;
+    ierr = PetscObjectGetName((PetscObject) key[0].label, &name);CHKERRQ(ierr);
+    SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Form keys for each side of a cohesive surface must be different (%s, %D, %D)", name, key[0].value, key[0].part);
+  }
   ierr = PetscLogEventBegin(DMPLEX_ResidualFEM,dm,0,0,0);CHKERRQ(ierr);
   /* TODO The places where we have to use isFE are probably the member functions for the PetscDisc class */
   /* FEM */
@@ -5524,7 +5529,6 @@ PetscErrorCode DMPlexComputeJacobian_Hybrid_Internal(DM dm, PetscFormKey key[], 
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  /* If keys are the same, both kernel will be run using the first key */
   if ((key[0].label == key[1].label) && (key[0].value == key[1].value) && (key[0].part == key[1].part)) {
     const char *name;
     ierr = PetscObjectGetName((PetscObject) key[0].label, &name);CHKERRQ(ierr);
