@@ -215,6 +215,7 @@ Changes: Development
 - Add ``DMPlexTSComputeRHSFunctionFEM()`` to support explicit timestepping
 - Newly created ``DMPlex`` will be distributed by default; this previously required ``-dm_distribute`` or explicit calls to ``DMPlexDistribute()``
 - Add ``DMPlexDistributeGetDefault()`` and ``DMPlexDistributeSetDefault()`` to determine and set the default for ``DMPlex`` distribution
+- Add ``DMCreateFEDefault()`` as a convenience method for creating the right element on a mesh
 
 .. rubric:: FE/FV:
 
@@ -235,5 +236,6 @@ Changes: Development
 
 - Add ``PetscDTPTrimmedEvalJet()`` to evaluate a stable basis for trimmed polynomials, and ``PetscDTPTrimmedSize()`` for the size of that space
 - Add ``PetscDSGetRHSResidual()`` and ``PetscDSSetRHSResidual()`` to support explicit timestepping
+- Add ``PetscDTTensorQuadratureCreate()`` to combine different quadratures, such as on a prism
 
 .. rubric:: Fortran:
