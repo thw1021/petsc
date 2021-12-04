@@ -420,6 +420,8 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, AppCtx *user, DM dm)
       for (p = 0; p < 3; ++p) {
         ierr = DMSetLabelValue(dm, "fault", faultPoints[p], 1);CHKERRQ(ierr);
       }
+      ierr = DMSetLabelValue(dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(dm, "material", 1, 2);CHKERRQ(ierr);
     }
     break;
     case 1:
@@ -439,6 +441,8 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, AppCtx *user, DM dm)
       for (p = 0; p < 4; ++p) {
         ierr = DMSetLabelValue(dm, "fault", faultPoints[p], 1);CHKERRQ(ierr);
       }
+      ierr = DMSetLabelValue(dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(dm, "material", 1, 2);CHKERRQ(ierr);
     }
     break;
     default:
@@ -479,6 +483,8 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscInt testNum, DM *dm)
       for (p = 0; p < 6; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       if (testNum == 0) for (p = 0; p < 2; ++p) {ierr = DMSetLabelValue(*dm, "fault", faultPoints[p], 1);CHKERRQ(ierr);}
       if (testNum == 2) for (p = 0; p < 2; ++p) {ierr = DMSetLabelValue(*dm, "pfault", faultPoints[p], 1);CHKERRQ(ierr);}
+      ierr = DMSetLabelValue(*dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 1, 2);CHKERRQ(ierr);
     }
     break;
     case 1:
@@ -503,6 +509,15 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscInt testNum, DM *dm)
       ierr = DMPlexCreateFromDAG(*dm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
       for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "fault",  faultPoints[p], 1);CHKERRQ(ierr);}
       for (p = 0; p < 2; ++p) {ierr = DMSetLabelValue(*dm, "fault2", fault2Points[p], 1);CHKERRQ(ierr);}
+      ierr = DMSetLabelValue(*dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 1, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 2, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 3, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 4, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 5, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 6, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 7, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 8, 2);CHKERRQ(ierr);
     }
     break;
     default:
@@ -549,6 +564,8 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscInt testNum, DM *dm)
       ierr = DMPlexInterpolate(*dm, &idm);CHKERRQ(ierr);
       for (p = 0; p < 8; ++p) {ierr = DMSetLabelValue(idm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(idm, "fault", faultPoints[p], 1);CHKERRQ(ierr);}
+      ierr = DMSetLabelValue(*dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 1, 2);CHKERRQ(ierr);
     }
     break;
     case 1:
@@ -582,6 +599,13 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscInt testNum, DM *dm)
       ierr = DMPlexCreateFromDAG(*dm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
       ierr = DMPlexInterpolate(*dm, &idm);CHKERRQ(ierr);
       for (p = 0; p < 6; ++p) {ierr = DMSetLabelValue(idm, "fault", faultPoints[p], 1);CHKERRQ(ierr);}
+      ierr = DMSetLabelValue(*dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 1, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 2, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 3, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 4, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 5, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 6, 2);CHKERRQ(ierr);
     }
     break;
     case 2:
@@ -602,6 +626,10 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscInt testNum, DM *dm)
       ierr = DMPlexCreateFromDAG(*dm, 1, numPoints, coneSize, cones, coneOrientations, vertexCoords);CHKERRQ(ierr);
       ierr = DMPlexInterpolate(*dm, &idm);CHKERRQ(ierr);
       for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(idm, "fault", faultPoints[p], 1);CHKERRQ(ierr);}
+      ierr = DMSetLabelValue(*dm, "material", 0, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 1, 1);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 2, 2);CHKERRQ(ierr);
+      ierr = DMSetLabelValue(*dm, "material", 3, 2);CHKERRQ(ierr);
     }
     break;
     default: SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %d", testNum);
