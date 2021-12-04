@@ -5665,6 +5665,35 @@ PetscErrorCode DMFindRegionNum(DM dm, PetscDS ds, PetscInt *num)
 }
 
 /*@
+  DMCreateFEDefault - Create a PetscFE based on the celltype for the mesh
+
+  Collective on dm
+
+  Input Parameter:
+. dm - The DM
+
+  Note: This is a convenience method that just calls PetscFECreateByCell() underneath.
+
+  Level: intermediate
+
+.seealso: PetscFECreateByCell(), DMAddField(), DMCreateDS(), DMGetCellDS(), DMGetRegionDS()
+@*/
+PetscErrorCode DMCreateFEDefault(DM dm, PetscInt Nc, const char prefix[], PetscInt qorder, PetscFE *fem)
+{
+  DMPolytopeType ct;
+  PetscInt       dim, cStart;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  ierr = DMPlexGetHeightStratum(dm, 0, &cStart, NULL);CHKERRQ(ierr);
+  ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
+  ierr = PetscFECreateByCell(PETSC_COMM_SELF, dim, Nc, ct, prefix, qorder, fem);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
   DMCreateDS - Create the discrete systems for the DM based upon the fields added to the DM
 
   Collective on dm
