@@ -188,7 +188,7 @@ namespace detail
 
 // PETSC_CUPM_ALIAS_FUNCTION() - declaration to alias a cuda/hip function
 //
-  // input param:
+// input param:
 // suffix - the common suffix for hip, cuda and the alias
 //
 // notes:
@@ -284,6 +284,10 @@ struct CUPMInterfaceBase
     case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
     }
+#if !(PetscDefined(HAVE_WINDOWS_COMPILERS) || PetscDefined(HAVE_SUN_CXX))
+    __builtin_unreachable();
+#endif
+    return PETSC_DEVICE_INVALID;
   }
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
@@ -292,6 +296,10 @@ struct CUPMInterfaceBase
     case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
     }
+#if !(PetscDefined(HAVE_WINDOWS_COMPILERS) || PetscDefined(HAVE_SUN_CXX))
+    __builtin_unreachable();
+#endif
+    return PETSC_MEMTYPE_HOST;
   }
 };
 
