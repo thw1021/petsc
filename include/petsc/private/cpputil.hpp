@@ -183,26 +183,31 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
 
 } // namespace Petsc
 
-#endif // C++11
-
-#if (__cplusplus >= 201103L) || PetscDefined(HAVE_CXX_DIALECT_CXX11) // C++11
-template <typename F, typename... Args>
-PETSC_STATIC_INLINE auto PetscAliasFunctionDispatch_Internal(int, F&& fn, Args&&... args)
-  noexcept(noexcept(fn(std::forward<Args>(args)...)))
-  -> decltype(fn(std::forward<Args>(args)...))
-{
-  return fn(std::forward<Args>(args)...);
-}
-
-template <typename F, typename... Args>
-PETSC_STATIC_INLINE constexpr int PetscAliasFunctionDispatch_Internal(char, F&& fn, Args&&...)
-{
-  static_assert(
-    Petsc::util::is_callable_with<Args...>(fn) && Petsc::util::always_false<Args...>::value,
-    "function is not callable with given arguments"
-  );
-  return EXIT_FAILURE;
-}
+#define PETSC_ALIAS_FUNCTION__(alias,original,dispatch)			\
+  template <typename... Args>						\
+  PETSC_STATIC_INLINE auto dispatch(int, Args&&... args)		\
+    noexcept(noexcept(original(std::forward<Args>(args)...)))		\
+    -> decltype(original(std::forward<Args>(args)...))			\
+  {									\
+    return original(std::forward<Args>(args)...);			\
+  }									\
+  template <typename... Args>						\
+  PETSC_STATIC_INLINE int dispatch(char,Args&&...)			\
+  {									\
+    static_assert(							\
+      Petsc::util::is_callable_with<Args...>(original) &&		\
+      Petsc::util::always_false<Args...>::value,			\
+      "function is not callable with given arguments"			\
+    );									\
+    return EXIT_FAILURE;						\
+  }									\
+  template <typename... Args>                                           \
+  PETSC_NODISCARD auto alias(Args&&... args)				\
+    noexcept(noexcept(dispatch(0,std::forward<Args>(args)...)))         \
+    -> decltype(dispatch(0,std::forward<Args>(args)...))                \
+  {                                                                     \
+    return dispatch(0,std::forward<Args>(args)...);                     \
+  }
 
 // PETSC_ALIAS_FUNCTION() - Alias a function
 //
@@ -223,20 +228,10 @@ PETSC_STATIC_INLINE constexpr int PetscAliasFunctionDispatch_Internal(char, F&& 
 //
 // example usage:
 // PETSC_ALIAS_FUNCTION(bar,foo);
+#define PETSC_ALIAS_FUNCTION_(alias,original,prefix)                    \
+  PETSC_ALIAS_FUNCTION__(alias,original,PETSCPP_CONCAT(PETSCPP_CONCAT(prefix,_),original))
 #define PETSC_ALIAS_FUNCTION(alias,original)                            \
-  template <typename... Args>                                           \
-  PETSC_NODISCARD auto alias(Args&&... args)                            \
-    noexcept(noexcept(PetscAliasFunctionDispatch_Internal(0,original,std::forward<Args>(args)...))) \
-    -> decltype(PetscAliasFunctionDispatch_Internal(0,original,std::forward<Args>(args)...)) \
-  {                                                                     \
-    return PetscAliasFunctionDispatch_Internal(0,original,std::forward<Args>(args)...); \
-  }
-#else
-#define PETSC_ALIAS_FUNCTION(alias,original)                    \
-  static_assert(0,"PETSC_ALIAS_FUNCTION() requires C++11")
-#endif
-
-#if (__cplusplus >= 201103L) || PetscDefined(HAVE_CXX_DIALECT_CXX11) // C++11
+  PETSC_ALIAS_FUNCTION_(alias,original,PETSCPP_CONCAT(PetscAliasFunctionDispatch_,__LINE__))
 
 // Similar to PETSC_ALIAS_FUNCTION() this macro creates a thin wrapper which passes all
 // arguments to the target function ~except~ the last N arguments. So
@@ -275,10 +270,6 @@ PETSC_STATIC_INLINE constexpr int PetscAliasFunctionDispatch_Internal(char, F&& 
 
 #define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
   PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS_(alias,original,PETSCPP_CONCAT(petsc_private_gobble_,original),N)
-#else
-#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(alias,original,N)     \
-  static_assert(0,"PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS() requires C++11")
-#endif // C++11
 
 // PETSC_CXX_COMPAT_DECL() - Helper macro to declare a C++ class member function or
 // free-standing function guaranteed to be compatible with C
@@ -337,6 +328,13 @@ PETSC_STATIC_INLINE constexpr int PetscAliasFunctionDispatch_Internal(char, F&& 
 //   ...
 // }
 #define PETSC_CXX_COMPAT_DEFN(...) PETSC_INLINE __VA_ARGS__ PETSC_NOEXCEPT
+
+#else
+#define PETSC_ALIAS_FUNCTION(a,o)                        static_assert(0,"requires C++11")
+#define PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(a,o,N) static_assert(0,"Requires C++11")
+#define PETSC_CXX_COMPAT_DECL(x)                         static_assert(0,"requires C++11")
+#define PETSC_CXX_COMPAT_DEFN(x)                         static_assert(0,"requires C++11")
+#endif // C++11
 
 #endif // __cplusplus
 
