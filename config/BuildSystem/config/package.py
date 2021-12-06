@@ -1093,7 +1093,24 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     setattr(self.compilers, flagsArg, oldFlags+' '+self.headers.toString(self.include))
     self.compilers.saveLog()
     try:
-      output = self.outputPreprocess('#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n')
+      # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
+      # but some preprocessors are picky (ex. dpcpp -E), reporting errors on the code above even
+      # it is just supposed to do preprocessing:
+      #
+      #  error: C++ requires a type specifier for all declarations
+      #  petscpkgver(__SYCL_COMPILER_VERSION);
+      #  ^
+      #
+      # So we instead use this compilable code.
+      output = self.outputPreprocess(
+        '''
+        #include "{x}"
+        #define  xstr(s) str(s)
+        #define  str(s)  #s
+        char     *ver = "petscpkgver(" xstr({y}) ")";
+        '''.format(x=self.versioninclude, y=self.versionname))
+       # Ex. char * ver = "petscpkgver(" "20211206" ")";
+       # But after stripping spaces and quotes below, it becomes char*ver=petscpkgver(20211206);
       self.logWrite(self.compilers.restoreLog())
     except:
       self.log.write('For '+self.package+' unable to run preprocessor to obtain version information, skipping version check\n')
