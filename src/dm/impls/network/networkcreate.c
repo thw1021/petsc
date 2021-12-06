@@ -209,24 +209,25 @@ PetscErrorCode VecView_Network(Vec v,PetscViewer viewer)
 {
   DM             dm;
   PetscErrorCode ierr;
-  PetscBool      isseq;
   PetscBool      iascii;
+  PetscMPIInt    size;
 
   PetscFunctionBegin;
   ierr = VecGetDM(v,&dm);CHKERRQ(ierr);
   if (!dm) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"Vector not generated from a DM");
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)v,VECSEQ,&isseq);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)v),&size);CHKERRMPI(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
 
   /* Use VecView_Network if the viewer is ASCII; use VecView_Seq/MPI for other viewer formats */
   if (iascii) {
-    if (isseq) {
+    if (size == 1) {
       ierr = VecView_Network_Seq(dm,v,viewer);CHKERRQ(ierr);
     } else {
       ierr = VecView_Network_MPI(dm,v,viewer);CHKERRQ(ierr);
     }
-  } else {
-    if (isseq) {
+  } else { /* this code is wrong because the vector may not be a seq or mpi vector */
+    if (size ==1) {
       ierr = VecView_Seq(v,viewer);CHKERRQ(ierr);
     } else {
       ierr = VecView_MPI(v,viewer);CHKERRQ(ierr);
