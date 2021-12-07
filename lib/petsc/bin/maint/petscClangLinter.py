@@ -14,7 +14,7 @@ import collections
 import ctypes
 import multiprocessing as mp
 import multiprocessing.queues
-import petscClangLinterUtil
+import petscClangLinterUtil as pclu
 try:
   import clang.cindex as clx
 except ModuleNotFoundError as mnfe:
@@ -249,7 +249,7 @@ class PetscDocString(object):
     @classmethod
     def create(cls,data):
       lines  = tuple(data["all"])
-      extent = clx.SourceRange.from_locations(lines[0][0].start,lines[-1][0].end)
+      extent = pclu.PetscSourceRange.fromLocations(lines[0][0].start,lines[-1][0].end)
       names  = data["names"] if "names" in data else tuple()
       return cls(extent=extent,lines=lines,names=names)
 
@@ -294,18 +294,18 @@ class PetscDocString(object):
     tu      = self.cursor.translation_unit
     clxFile = self.cursor.location.file
     assert lineno >= 1
-    return clx.SourceLocation.from_position(tu,clxFile,lineno,col)
+    return pclu.PetscSourceLocation.fromPosition(tu,clxFile,lineno,col)
 
   def makeSourceRange(self,token,string,lineno):
     colBegin = string.index(token)+1
     colEnd   = colBegin+len(token)
     begin    = self.makeSourceLocation(lineno,colBegin)
     end      = self.makeSourceLocation(lineno,colEnd)
-    return clx.SourceRange.from_locations(begin,end),token.strip()
+    return pclu.PetscSourceRange.fromLocations(begin,end),token.strip()
 
   def addErrorFromSourceRange(self,linter,errstr,crange,cursor=None,formatargs=tuple(),**kwargs):
     patch = kwargs.pop("patch",None)
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(
+    src = pclu.getFormattedSourceFromSourceRange(
       crange,numContext=kwargs.pop("numContext",2),**kwargs
     )
     error = errstr.format(*formatargs,src)
@@ -385,14 +385,19 @@ class PetscDocString(object):
     try:
       endSowing = endSowing[-1]
     except IndexError:
-      endSowing = ""
-    if sorted(endSowing) != sorted(beginSowing):
-      self.addErrorFromCursor(
-        linter,
-        "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
-        endSowing,line,self.extent.end.line,
-        formatargs=(beginSowing[::-1],endSowing)
-      )
+      pass
+    else:
+      if sorted(endSowing) != sorted(beginSowing):
+        correct = beginSowing[::-1]
+        self.addErrorFromCursor(linter,
+          "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
+          endSowing,line,self.extent.end.line,
+          formatargs=(correct,endSowing),
+          patch=SourceFix.fromSourceRange(
+            self.makeSourceRange(line,line,self.extent.end.line)[0],
+            line.replace(endSowing,correct)
+          )
+        )
     return
 
   def checkValidTitleCasedSectionHeading(self,linter,section):
@@ -400,10 +405,12 @@ class PetscDocString(object):
     lineloc,line = section.lines[0]
     heading      = line.partition(":")[0].strip()
     if not heading.istitle():
-      self.addErrorFromCursor(linter,
+      self.addErrorFromCursor(
+        linter,
         "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
         heading,line,lineloc.start.line,
-        formatargs=(heading.title(),heading)
+        formatargs=(heading.title(),heading),
+        patch=SourceFix.fromSourceRange(lineloc,line.replace(heading,heading.title()))
       )
     return
 
@@ -454,7 +461,7 @@ class PetscDocString(object):
             nbefore = name[0].start.line-prevLineBegin-1
             if i == len(nameList)-1:
               nafter = 2
-          srclist.append(petscClangLinterUtil.getFormattedSourceFromSourceRange(
+          srclist.append(pclu.getFormattedSourceFromSourceRange(
             name[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False
           ))
           prevLineBegin = name[0].start.line
@@ -467,7 +474,7 @@ class PetscDocString(object):
     if self.extent.end.line != self.cursor.extent.start.line-1:
       # there is at least 1 (probably empty) line between the comment end and whatever it
       # is describing
-      start = clx.SourceLocation.from_position(
+      start = pclu.PetscSourceLocation.fromPosition(
         self.cursor.translation_unit,self.cursor.location.file,self.extent.end.line+1,1
       )
       self.addErrorFromCursor(linter,
@@ -488,10 +495,15 @@ class PetscDocString(object):
       # indented correctly
       indent = len(line)-len(lstrip)
       if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
-        self.addErrorFromCursor(linter,
+        self.addErrorFromCursor(
+          linter,
           "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
           " "*indent,line,lineno,
-          formatargs=(indent,self.indent)
+          formatargs=(indent,self.indent),
+          patch=SourceFix.fromSourceRange(
+            self.makeSourceRange(line,line,lineno)[0],
+            self.indent*" "+lstrip
+          )
         )
       if ":" in lstrip:
         if not prevLineEmpty:
@@ -530,26 +542,6 @@ class PetscDocString(object):
     for head,data in headings.items():
       setattr(self,head,self.Section.create(data))
     return self
-
-
-CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
-  ctypes.c_uint,ctypes.py_object,clx.Cursor,clx.SourceRange
-)
-
-class PetscCXCursorAndRangeVisitor(ctypes.Structure):
-  # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
-  #
-  # typedef struct CXCursorAndRangeVisitor {
-  #   void *context;
-  #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
-  # } CXCursorAndRangeVisitor;
-  #
-  # Note this is not a  strictly accurate recreation, as this struct expects a
-  # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
-  _fields_ = [
-    ("context",ctypes.py_object),
-    ("visit",CXCursorAndRangeVisitorCallBackProto)
-  ]
 
 
 class PetscCursor(object):
@@ -764,7 +756,7 @@ class PetscCursor(object):
 
   @staticmethod
   def getRawSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,trim=False):
-    return petscClangLinterUtil.getRawSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
+    return pclu.getRawSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
 
   def getRawSource(self,nbefore=0,nafter=0,nboth=0,trim=False):
     return self.getRawSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,trim=trim)
@@ -774,11 +766,13 @@ class PetscCursor(object):
     if cursor.kind == clx.CursorKind.FUNCTION_DECL:
       begin  = cursor.extent.start
       # -1 gives you EOL
-      fnline = clx.SourceLocation.from_position(cursor.translation_unit,begin.file,begin.line,-1)
-      extent = clx.SourceRange.from_locations(cursor.extent.start,fnline)
+      fnline = pclu.PetscSourceLocation.fromPosition(
+        cursor.translation_unit,begin.file,begin.line,-1
+      )
+      extent = pclu.PetscSourceRange.fromLocations(cursor.extent.start,fnline)
     else:
       extent = cursor.extent
-    return petscClangLinterUtil.getFormattedSourceFromSourceRange(extent,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
+    return pclu.getFormattedSourceFromSourceRange(extent,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
 
   def getFormattedSource(self,nbefore=0,nafter=0,nboth=0,view=False):
     return self.getFormattedSourceFromCursor(self,nbefore=nbefore,nafter=nafter,nboth=nboth,view=view)
@@ -793,7 +787,7 @@ class PetscCursor(object):
 
   @staticmethod
   def viewAstFromCursor(cursor):
-    return print("\n".join(petscClangLinterUtil.viewAstFromCursor(cursor)))
+    return print("\n".join(pclu.viewAstFromCursor(cursor)))
 
   def viewAst(self):
     return self.viewAstFromCursor(self)
@@ -836,12 +830,12 @@ class PetscCursor(object):
         print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
       return 1 # continue
 
-    callBack   = CXCursorAndRangeVisitorCallBackProto(callBackFunc)
+    callBack   = pclu.CXCursorAndRangeVisitorCallBackProto(callBackFunc)
     pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
-    cxCallback = PetscCXCursorAndRangeVisitor(pyCtx,callBack)
+    cxCallback = pclu.PetscCXCursorAndRangeVisitor(pyCtx,callBack)
     cls.getOrRegisterClangFunction(
       "clang_findReferencesInFile",
-      [clx.Cursor,clx.File,PetscCXCursorAndRangeVisitor],
+      [clx.Cursor,clx.File,pclu.PetscCXCursorAndRangeVisitor],
       ctypes.c_uint
     )(cursor.clangCursor(),cursor.location.file,cxCallback)
     return foundCursors
@@ -866,18 +860,19 @@ class SourceFix(object):
   __slots__ = "range","filename","src","ctxlines","src","begins","ends","deltas","offset","fixed","fixDepth"
   def __init__(self,begin,end,value,contextlines=2):
     def validrange(begin,end):
-      assert begin.line >= 1, "startline {} < 1".format(begin.line)
+      begin = pclu.PetscSourceLocation.cast(begin)
+      end   = pclu.PetscSourceLocation.cast(end)
       if begin.line == end.line:
         assert begin.column < end.column, "end col {} <= begin col {}, ill-formed source fix".format(end.column,begin.column)
       elif begin.line > end.line:
         mess = "end line {} < begin line {}, ill-formed source fix".format(end.line,begin.line)
         raise AssertionError(mess)
-      return clx.SourceRange.from_locations(begin,end)
+      return pclu.PetscSourceRange.fromLocations(begin,end)
 
     self.range    = validrange(begin,end)
     self.filename = Path(self.range.start.file.name)
     self.ctxlines = contextlines
-    self.src      = petscClangLinterUtil.getRawSourceFromSourceRange(
+    self.src      = pclu.getRawSourceFromSourceRange(
       self.range,numContext=self.ctxlines
     )
     self.begins   = [self.range.start]
@@ -1275,7 +1270,7 @@ class PetscLinter(object):
           startline = start.line
           #begin,end = 0,len(src)
           #patch     = SourceFix(fname,src,startline,begin,end,"")
-          end       = clx.SourceLocation.from_position(
+          end       = pclu.PetscSourceLocation.fromPosition(
             func.translation_unit,func.location.file,startline,-1
           )
           patch     = SourceFix(start,end,"")
@@ -1589,7 +1584,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
       begin,end = docStringArgs[0][0],docStringArgs[-1][0]
       docstring.addErrorFromSourceRange(linter,
         "Undocumented parameter '{}' not found in parameter section:\n\n{}",
-        clx.SourceRange.from_locations(begin.start,end.start),
+        pclu.PetscSourceRange.fromLocations(begin.start,end.start),
         formatargs=(argname,),
         highlight=False
       )
@@ -1600,7 +1595,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
         import ipdb; ipdb.set_trace()
         # it's not, but it should still be in the docstring somewhere
         assert argname in allParamLeft
-        src = petscClangLinterUtil.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numBeforeContext=idx+1,numAfterContext=2)
+        src = pclu.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numBeforeContext=idx+1,numAfterContext=2)
         errorMessage = "Docstring parameter out of order. Expected '{}' for as paramater #{}, found in position {} instead:\n\n{}".format(argname,i+1,idx+1,src)
         linter.addErrorFromCursor(arg,errorMessage)
       allParamLeft.remove(argname)
@@ -1622,11 +1617,11 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   symbolName = allSymbolNames[0]
   cursorName = PetscCursor.getNameFromCursor(cursor)
   if symbolName[1] != cursorName:
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numContext=2)
+    src = pclu.getFormattedSourceFromSourceRange(symbolName[0],numContext=2)
     errorMessage = "Docstring name does not match symbol name. Expected '{}' found '{}' instead:\n\n{}".format(cursorName,symbolName[-1],src)
     linter.addErrorFromCursor(cursor,errorMessage)
   if "-" not in headerRaw:
-    src = petscClangLinterUtil.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(header.lines)-1)
+    src = pclu.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(header.lines)-1)
     errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
@@ -1637,24 +1632,33 @@ def checkDocValidLevel(linter,cursor,docstring):
     # if no level, nothing to check here, error will already have been logged
     return
   docstring.checkValidTitleCasedSectionHeading(linter,level)
-  levelNames  = level.names
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
-  if len(levelNames):
-    allLevels = tuple([l for _,l in levelNames])
-    for level in levelNames:
-      levelName = level[1]
-      if levelName not in validLevels:
-        src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
-        if levelName.casefold() in validLevels:
-          errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(levelName.casefold(),levelName,src)
-        else:
-          errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,", ".join(validLevels),src)
+  expected    = ", ".join(validLevels[:-1])+", or "+str(validLevels[-1])
+  newLineWithProperIndent = ":\n"+docstring.indent*" "
+  for loc,levelName in level.names:
+    if levelName not in validLevels:
+      src = pclu.getFormattedSourceFromSourceRange(loc,numContext=2)
+      if levelName.casefold() in validLevels:
+        errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(levelName.casefold(),levelName,src)
+        patch = SourceFix.fromSourceRange(loc,levelName.casefold())
+        linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
+      else:
+        errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,expected,src)
         linter.addErrorFromCursor(cursor,errorMessage)
-      for _,line in docstring.level.lines:
-        if (levelName in line) and (":" not in line):
-          src = petscClangLinterUtil.getFormattedSourceFromSourceRange(level[0],numContext=2)
-          errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(src)
-          linter.addErrorFromCursor(cursor,errorMessage)
+  for loc,line in level.lines:
+    if line and ":" not in line:
+      # if you get a "prevloc" and "prevline" not defined error here this means that we
+      # are erroring out on the first trip round this loop and somehow have a
+      # lone-standing 'beginner' or whatever without an explicit "Level:" line...
+      crange = prevloc.mergeWith(loc)
+      src    = pclu.getFormattedSourceFromSourceRange(crange,numContext=2,highlight=False)
+      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(src)
+      rawsrc = pclu.getRawSourceFromSourceRange(crange)
+      newsrc = rawsrc.replace("\n","",rawsrc.count("\n")-1) # don't want to replace the last "\n"
+      patch = SourceFix.fromSourceRange(crange,newsrc)
+      linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
+    prevloc  = loc
+    prevline = line
   return
 
 def checkDocValidSeealso(linter,cursor,docstring):
@@ -1919,9 +1923,9 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     # our co-arguments to the function, i.e. "adjacent" branches since they should link
     # to (or be) in the parent functions argument list. So we have to
     # essentially reparse this line to be able to start from the top.
-    lineStart = clx.SourceLocation.from_position(tu,loc.file,loc.line,1)
-    lineEnd   = clx.SourceLocation.from_position(tu,loc.file,loc.line,srcLen+1)
-    lineRange = clx.SourceRange.from_locations(lineStart,lineEnd)
+    lineStart = pclu.PetscSourceLocation.fromPosition(tu,loc.file,loc.line,1)
+    lineEnd   = pclu.PetscSourceLocation.fromPosition(tu,loc.file,loc.line,srcLen+1)
+    lineRange = pclu.PetscSourceRange.fromLocations(lineStart,lineEnd)
     tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
     funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
     if funcProto:
