@@ -1,40 +1,4 @@
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 2: ./src/sys/tests/linter/testValidDocStrings.c:16:56
-'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
-  54: @*/
-  55: 
-> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  57: {
-  58:   return 0;
-
-Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected 'C@*/' found '@*/':
-
-  52: 
-  53: .seealso: testNonExistentFunction(), testNonExistentType
-> 54: @*/
-      ^
-  55: 
-  56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-
-ERROR 3: ./src/sys/tests/linter/testValidDocStrings.c:16:56
-'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
-  54: @*/
-  55: 
-> 56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  57: {
-  58:   return 0;
-
-Invalid indentation (3), all regular (non-empty, non-parameter) text must be indented to 2 columns:
-
-  37:   Not Collective, Synchronous
-  38: 
-> 39:    Input Parameters:
-      ^^^
-  40: + viewer - a PetscViewer
-  41: 
-
 ERROR 4: ./src/sys/tests/linter/testValidDocStrings.c:16:56
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
   54: @*/
@@ -213,24 +177,6 @@ ERROR 13: ./src/sys/tests/linter/testValidDocStrings.c:16:68
   69: {
   70:   return 0;
 
-Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '@*/' found '*/':
-
-  65:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-  66: .seealso: testNonExistentFunction(), testNonExistentType
-> 67: */
-      ^
-  68: PetscErrorCode testIllFormedMinimalDocString(void)
-  69: {
-
-ERROR 14: ./src/sys/tests/linter/testValidDocStrings.c:16:68
-'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  66: .seealso: testNonExistentFunction(), testNonExistentType
-  67: */
-> 68: PetscErrorCode testIllFormedMinimalDocString(void)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  69: {
-  70:   return 0;
-
 Missing empty line between sections, must have one before this section:
 
   64:   References:
@@ -239,7 +185,7 @@ Missing empty line between sections, must have one before this section:
   67: */
   68: PetscErrorCode testIllFormedMinimalDocString(void)
 
-ERROR 15: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+ERROR 14: ./src/sys/tests/linter/testValidDocStrings.c:16:68
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   66: .seealso: testNonExistentFunction(), testNonExistentType
   67: */
@@ -257,7 +203,7 @@ Docstring name does not match symbol name. Expected 'testIllFormedMinimalDocStri
   63: 
   64:   References:
 
-ERROR 16: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+ERROR 15: ./src/sys/tests/linter/testValidDocStrings.c:16:68
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   66: .seealso: testNonExistentFunction(), testNonExistentType
   67: */
@@ -273,7 +219,7 @@ Docstring missing summary text. Expected 'testIllFormedMinimalDocString - very u
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
   63: 
 
-ERROR 17: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+ERROR 16: ./src/sys/tests/linter/testValidDocStrings.c:16:68
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   66: .seealso: testNonExistentFunction(), testNonExistentType
   67: */
