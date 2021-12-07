@@ -235,6 +235,13 @@ class PetscSourceRange(object):
     ))
 
   @classmethod
+  def fromPositions(cls,tu,lineLeft,colLeft,lineRight,colRight):
+    return cls.fromLocations(
+      PetscSourceLocation.fromPosition(tu,lineLeft,colLeft),
+      PetscSourceLocation.fromPosition(tu,lineRight,colRight)
+    )
+
+  @classmethod
   def asClangSourceRange(cls,other):
     if isinstance(other,clx.SourceRange):
       return other
