@@ -164,6 +164,27 @@ builtin and then its argument prototype would still apply. */
       self.addDefine('HAVE___VA_COPY', 1)
     return
 
+  def checkVariadicMacros(self):
+    '''Checks whether a compiler supports variadic macros'''
+    includes = """
+    #include <stdio.h>
+    #define CALL_VARIADIC(fn,...) fn(__VA_ARGS__)
+    #define PRINT_VARIADIC(...)   CALL_VARIADIC(printf,__VA_ARGS__)
+
+    int foo(int x, int y, int z) { return x+y+z; }
+    """
+    body = """
+    int x = 1, y = 2, z = 3;
+    int w = CALL_VARIADIC(foo,x,y,z);
+    PRINT_VARIADIC("x = %d, y = %d, z = %d, w = %d",x,y,z,w);
+    """
+    for lang in ['C','C++']:
+      with self.Language(lang):
+        if not self.checkCompile(includes=includes,body=body):
+          return # if any of the compilers don't support it, bail
+    self.addDefine('HAVE_VARIADIC_MACROS',1)
+    return
+
   def checkNanosleep(self):
     '''Check for functional nanosleep() - as time.h behaves differently for different compiler flags - like -std=c89'''
     if self.checkLink('#include <time.h>','struct timespec tp;\n tp.tv_sec = 0;\n tp.tv_nsec = (long)(1e9);\n nanosleep(&tp,0);\n'):
@@ -193,6 +214,7 @@ builtin and then its argument prototype would still apply. */
       self.executeTest(self.checkSignalHandlerType)
     self.executeTest(self.checkFreeReturnType)
     self.executeTest(self.checkVariableArgumentLists)
+    self.executeTest(self.checkVariadicMacros)
     self.executeTest(self.checkClassify, set(self.functions))
     self.executeTest(self.checkMmap)
     return
