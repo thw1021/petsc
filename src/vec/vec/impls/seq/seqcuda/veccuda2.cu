@@ -33,7 +33,7 @@ PetscErrorCode VecCUDAAllocateCheck(Vec v)
     PetscReal pinned_memory_min;
     ierr = PetscCalloc(sizeof(Vec_CUDA),&v->spptr);CHKERRQ(ierr);
     veccuda = (Vec_CUDA*)v->spptr;
-    err = cudaMalloc((void**)&veccuda->GPUarray_allocated,sizeof(PetscScalar)*((PetscBLASInt)v->map->n));CHKERRCUDA(err);
+    err = cudaMalloc((void**)&veccuda->GPUarray_allocated,sizeof(PetscScalar)*((PetscBLASInt)(v->nextra+v->nghost+v->map->n)));CHKERRCUDA(err);
     veccuda->GPUarray = veccuda->GPUarray_allocated;
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
       if (v->data && ((Vec_Seq*)v->data)->array) {

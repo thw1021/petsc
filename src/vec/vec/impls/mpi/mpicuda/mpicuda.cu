@@ -146,11 +146,12 @@ PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
 
   /* save local representation of the parallel vector (and scatter) if it exists */
   if (win->localrep) {
-    ierr = VecGetArray(*v,&array);CHKERRQ(ierr);
-    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,1,win->map->n+win->nghost,array,&(*v)->localrep);CHKERRQ(ierr);
+    ierr = VecCUDAGetArray(*v,&array);CHKERRQ(ierr);
+    ierr = VecCreateSeqCUDAWithArray(PETSC_COMM_SELF,1,win->map->n+win->nghost,array,&(*v)->localrep);CHKERRQ(ierr);
     ierr = PetscMemcpy((*v)->localrep->ops,win->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
-    ierr = VecRestoreArray(*v,&array);CHKERRQ(ierr);
+    ierr = VecCUDARestoreArray(*v,&array);CHKERRQ(ierr);
     ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)(*v)->localrep);CHKERRQ(ierr);
+    /* TODO: need to have the CPU arrays shared also */
     (*v)->localupdate = win->localupdate;
     if ((*v)->localupdate) {
       ierr = PetscObjectReference((PetscObject)(*v)->localupdate);CHKERRQ(ierr);
@@ -198,6 +199,43 @@ PetscErrorCode VecCreate_MPICUDA(Vec vv)
   ierr = VecSet(vv,0.0);CHKERRQ(ierr);
   ierr = VecSet_Seq(vv,0.0);CHKERRQ(ierr);
   vv->offloadmask = PETSC_OFFLOAD_BOTH;
+
+  if (vv->isghost) {
+    PetscScalar            *larray;
+    IS                     from,to;
+    PetscInt               rstart,i,*indices;
+    ISLocalToGlobalMapping ltog;
+
+    /* Create local representation */
+    ierr = VecCUDAGetArray(vv,&larray);CHKERRQ(ierr);
+    ierr = VecCreateSeqCUDAWithArray(PETSC_COMM_SELF,1,vv->map->n+vv->nghost+vv->nextra,larray,&(vv)->localrep);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)(vv)->localrep);CHKERRQ(ierr);
+    ierr = VecCUDARestoreArray(vv,&larray);CHKERRQ(ierr);
+    /* TODO: need to have the CPU arrays shared also */
+
+    /*
+     Create scatter context for scattering (updating) ghost values
+     */
+    ierr = ISCreateGeneral(PetscObjectComm((PetscObject)vv),vv->nghost,vv->ghosts,PETSC_USE_POINTER,&from);CHKERRQ(ierr);
+    ierr = ISCreateStride(PETSC_COMM_SELF,vv->nghost,vv->map->n,1,&to);CHKERRQ(ierr);
+    ierr = VecScatterCreate(vv,from,vv->localrep,to,&vv->localupdate);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)vv->localupdate);CHKERRQ(ierr);
+    ierr = ISDestroy(&to);CHKERRQ(ierr);
+    ierr = ISDestroy(&from);CHKERRQ(ierr);
+
+    /* set local to global mapping for ghosted vector */
+    ierr = PetscMalloc1(vv->map->n+vv->nghost,&indices);CHKERRQ(ierr);
+    ierr = VecGetOwnershipRange(vv,&rstart,NULL);CHKERRQ(ierr);
+    for (i=0; i<vv->map->n; i++) {
+      indices[i] = rstart + i;
+    }
+    for (i=0; i<vv->nghost; i++) {
+      indices[vv->map->n+i] = vv->ghosts[i];
+    }
+    ierr = ISLocalToGlobalMappingCreate(PetscObjectComm((PetscObject)vv),1,vv->map->n+vv->nghost,indices,PETSC_OWN_POINTER,&ltog);CHKERRQ(ierr);
+    ierr = VecSetLocalToGlobalMapping(vv,ltog);CHKERRQ(ierr);
+    ierr = ISLocalToGlobalMappingDestroy(&ltog);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
