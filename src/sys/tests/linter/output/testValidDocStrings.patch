@@ -13,6 +13,20 @@
 +  Input Parameters:
  + viewer - a PetscViewer
  
+@@ -47,5 +47,5 @@
+ - z - a nonexistent parameter
+ 
+-  level: Lorem ipsum dolor sit amet
++  Level: Lorem ipsum dolor sit amet
+ 
+   Level:
+@@ -50,5 +50,5 @@
+ 
+   Level:
+-  Beginner
++  beginner
+ 
+   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 @@ -55,5 +55,5 @@
  
  .seealso: testNonExistentFunction(), testNonExistentType
@@ -26,3 +40,9 @@
 -
  PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
  {
+@@ -67,4 +67,5 @@
+   References:
+   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
++
+ .seealso: testNonExistentFunction(), testNonExistentType
+ */
