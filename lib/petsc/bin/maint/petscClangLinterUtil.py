@@ -6,7 +6,8 @@ Created on Tue Mar 23 17:56:06 2021
 @author: jacobfaibussowitsch
 """
 import clang.cindex as clx
-import petscClangLinter
+import ctypes
+import functools
 
 def verbosePrint(*args,**kwargs):
     '''filter predicate for show_ast: show all'''
@@ -137,6 +138,144 @@ def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterCon
   if view:
     print(srcStr)
   return srcStr
+
+
+@functools.total_ordering
+class PetscSourceLocation(object):
+  """A simple wrapper class to add comparison operators to clx.SourceLocations since they only implement equal"""
+  __slots__ = ("sourceLocation",)
+
+  def __init__(self,sourceLoc):
+    assert sourceLoc.line >= 1, "startline {} < 1".format(sourceLoc.line)
+    self.sourceLocation = sourceLoc
+    return
+
+  def __getattr__(self,attr):
+    return getattr(self.sourceLocation,attr)
+
+  @classmethod
+  def cast(cls,other):
+    if isinstance(other,cls):
+      return other
+    elif isinstance(other,clx.SourceLocation):
+      return cls(other)
+    else:
+      raise NotImplementedError
+
+  @classmethod
+  def fromPosition(cls,tu,filename,line,col):
+    return cls(clx.SourceLocation.from_position(tu,filename,line,col))
+
+  @classmethod
+  def getClangSourceLocation(cls,other):
+    if isinstance(other,clx.SourceLocation):
+      return other
+    elif isinstance(other,cls):
+      return other.sourceLocation
+    else:
+      raise NotImplementedError
+
+  def __eq__(self,other):
+    return self.sourceLocation.__eq__(self.getClangSourceLocation(other))
+
+  def __lt__(self,other):
+    other = self.getClangSourceLocation(other)
+    if self.line < other.line:
+      return True
+    elif self.line == other.line:
+      return self.column < other.column
+    else:
+      return False
+
+  def __contains__(self,other):
+    return self.sourceLocation.__contains__(self.getClangSourceLocation(other))
+
+
+@functools.total_ordering
+class PetscSourceRange(object):
+  """Like PetscSourceLocation but for clx.SourceRanges"""
+  __slots__ = ("sourceRange",)
+
+  def __init__(self,sourceRange):
+    self.sourceRange = sourceRange
+    return
+
+  def __getattr__(self,attr):
+    return getattr(self.sourceRange,attr)
+
+  def __eq__(self,other):
+    return self.sourceRange.__eq__(self.getClangSourceRange(other))
+
+  def __lt__(self,other):
+    raise NotImplementedError
+
+  def __contains__(self,other):
+    return self.sourceRange.__contains__(self.getClangSourceRange(other))
+
+  @classmethod
+  def cast(cls,other):
+    if isinstance(other,cls):
+      return other
+    elif isinstance(other,clx.SourceRange):
+      return cls(other)
+    else:
+      raise NotImplementedError
+
+  @classmethod
+  def fromLocations(cls,left,right):
+    return cls(clx.SourceRange.from_locations(
+      PetscSourceLocation.getClangSourceLocation(left),
+      PetscSourceLocation.getClangSourceLocation(right)
+    ))
+
+  @classmethod
+  def getClangSourceRange(cls,other):
+    if isinstance(other,clx.SourceRange):
+      return other
+    elif isinstance(other,cls):
+      return other.sourceRange
+    else:
+      raise NotImplementedError
+
+  @classmethod
+  def merge(cls,left,right):
+    left  = cls.cast(left)
+    right = cls.cast(right)
+    if left in right:
+      return right
+    elif right in left:
+      return left
+    begin = min(
+      PetscSourceLocation.cast(left.start),
+      PetscSourceLocation.cast(right.start)
+    ).sourceLocation
+    end   = max(
+      PetscSourceLocation.cast(left.end),
+      PetscSourceLocation.cast(right.end)
+    ).sourceLocation
+    return cls.fromLocations(begin,end)
+
+  def mergeWith(self,other):
+    return self.merge(self,other)
+
+CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
+  ctypes.c_uint,ctypes.py_object,clx.Cursor,clx.SourceRange
+)
+
+class PetscCXCursorAndRangeVisitor(ctypes.Structure):
+  # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
+  #
+  # typedef struct CXCursorAndRangeVisitor {
+  #   void *context;
+  #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
+  # } CXCursorAndRangeVisitor;
+  #
+  # Note this is not a  strictly accurate recreation, as this struct expects a
+  # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
+  _fields_ = [
+    ("context",ctypes.py_object),
+    ("visit",CXCursorAndRangeVisitorCallBackProto)
+  ]
 
 
 def viewCursorFull(cursor):
