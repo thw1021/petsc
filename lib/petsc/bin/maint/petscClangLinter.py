@@ -291,10 +291,7 @@ class PetscDocString(object):
     return
 
   def makeSourceLocation(self,lineno,col):
-    tu      = self.cursor.translation_unit
-    clxFile = self.cursor.location.file
-    assert lineno >= 1
-    return pclu.PetscSourceLocation.fromPosition(tu,clxFile,lineno,col)
+    return pclu.PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
 
   def makeSourceRange(self,token,string,lineno):
     colBegin = string.index(token)+1
@@ -415,6 +412,12 @@ class PetscDocString(object):
     return
 
   def parse(self,linter):
+    def smartIndent(line):
+      lstrip = line.lstrip()
+      if lstrip.startswith(("+",".","-")):
+        return lstrip
+      return self.indent*" "+lstrip
+
     def validHeading(i,x):
       xsplit = x.split(" - ")[0].strip()
       return xsplit or i == 0,xsplit
@@ -475,7 +478,7 @@ class PetscDocString(object):
       # there is at least 1 (probably empty) line between the comment end and whatever it
       # is describing
       start = pclu.PetscSourceLocation.fromPosition(
-        self.cursor.translation_unit,self.cursor.location.file,self.extent.end.line+1,1
+        self.cursor.translation_unit,self.extent.end.line+1,1
       )
       self.addErrorFromCursor(linter,
         "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
@@ -484,9 +487,8 @@ class PetscDocString(object):
         patch=SourceFix(start,self.cursor.extent.start,"")
       )
     self.checkValidSowingChars(linter)
-    headings      = collections.OrderedDict()
-    heading       = self.preambleHeading
-    prevLineEmpty = True # start true since the first comment line should count as empty
+    headings = collections.OrderedDict()
+    heading  = self.preambleHeading
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
@@ -496,21 +498,22 @@ class PetscDocString(object):
       indent = len(line)-len(lstrip)
       if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
         self.addErrorFromCursor(
-          linter,
-          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
+          linter,"Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
           " "*indent,line,lineno,
           formatargs=(indent,self.indent),
           patch=SourceFix.fromSourceRange(
-            self.makeSourceRange(line,line,lineno)[0],
-            self.indent*" "+lstrip
+            self.makeSourceRange(line,line,lineno)[0],smartIndent(line)
           )
         )
       if ":" in lstrip:
-        if not prevLineEmpty:
-          self.addErrorFromCursor(linter,
-            "Missing empty line between sections, must have one before this section:\n\n{}",
+        if prevline and not prevline.isspace():
+          self.addErrorFromCursor(
+            linter,"Missing empty line between sections, must have one before this section:\n\n{}",
             "","",lineno, # print the next line
-            highlight=False
+            highlight=False,
+            patch=SourceFix.fromSourceRange(
+              self.makeSourceRange(line,line,lineno)[0],"\n"+smartIndent(lstrip)
+            )
           )
         heading = [s for s in lstrip.split(":") if s][0].strip().casefold()
         heading = heading.casefold()
@@ -532,7 +535,7 @@ class PetscDocString(object):
           raise RuntimeError(heading)
       srcLine,_ = self.makeSourceRange(line,line,lineno)
       headings.setdefault(heading,default={"all" : []})["all"].append((srcLine,line))
-      prevLineEmpty = not line or line.isspace()
+      prevline = line
 
     postProcessHeading(headings,self.preambleHeading,validHeading,countMax=1)
     postProcessHeading(headings,self.paramHeading,validParams)
@@ -766,9 +769,7 @@ class PetscCursor(object):
     if cursor.kind == clx.CursorKind.FUNCTION_DECL:
       begin  = cursor.extent.start
       # -1 gives you EOL
-      fnline = pclu.PetscSourceLocation.fromPosition(
-        cursor.translation_unit,begin.file,begin.line,-1
-      )
+      fnline = pclu.PetscSourceLocation.fromPosition(cursor.translation_unit,begin.line,-1)
       extent = pclu.PetscSourceRange.fromLocations(cursor.extent.start,fnline)
     else:
       extent = cursor.extent
@@ -897,12 +898,25 @@ class SourceFix(object):
   def fromCursor(cls,cursor,value,**kwargs):
     return cls.fromSourceRange(cursor.extent,value,**kwargs)
 
-  def appendFix(self,fix):
-    assert isinstance(fix,SourceFix)
-    assert self.src == fix.src, "Cannot combine fixes that do not share identical source!"
-    self.begins.extend(fix.begins)
-    self.ends.extend(fix.ends)
-    self.deltas.extend(fix.deltas)
+  def dofix(self,i=0):
+    newSrc = self.src
+    idxDelta = 0
+    begin = self.begins[i]
+    end = self.ends[i]
+    beginoffset = begin.offset-self.offset
+    endoffset   = end.offset-self.offset
+    delta = self.deltas[i]
+    newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta,newSrc[endoffset+idxDelta:]])
+    print(newSrcTemp)
+
+  def appendFix(self,other):
+    assert isinstance(other,type(self))
+    import ipdb; ipdb.set_trace()
+    #assert self.src == other.src, "Cannot combine fixes that do not share identical source!"
+    self.range = self.range.mergeWith(other.range)
+    self.begins.extend(other.begins)
+    self.ends.extend(other.ends)
+    self.deltas.extend(other.deltas)
     return
 
   def collapse(self):
@@ -1270,9 +1284,7 @@ class PetscLinter(object):
           startline = start.line
           #begin,end = 0,len(src)
           #patch     = SourceFix(fname,src,startline,begin,end,"")
-          end       = pclu.PetscSourceLocation.fromPosition(
-            func.translation_unit,func.location.file,startline,-1
-          )
+          end       = pclu.PetscSourceLocation.fromPosition(func.translation_unit,startline,-1)
           patch     = SourceFix(start,end,"")
           self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
     return
@@ -1301,12 +1313,14 @@ class PetscLinter(object):
       self.patches[patch.filename] = [patch]
       return
     except AttributeError:
+      assert patch is None
       # patch = None, return
       return
     # check if this is a compound error, i.e. an additional error on the same line
     # in which case we need to combine with previous patch
     for prevPatch in self.patches[patch.filename][:-1]:
-      if prevPatch.range == patch.range:
+      if (prevPatch.range == patch.range) or patch.range.overlaps(prevPatch.range):
+        import ipdb; ipdb.set_trace()
         # remove ourselves from the list
         patch = self.patches[patch.filename].pop()
         # this should now be the previous patch on the same line, so we combine with it
@@ -1557,6 +1571,7 @@ TODO:
 - generate the error and warning outputs for the tests
 - optimize detection of a valid docstring so we can bail out earlier for random comments
 - implement fixits for stuff we can fix
+- figure out how to handle overwriting fixits...
 """
 """utilities for checking docstrings"""
 def checkDocValidParameters(linter,cursor,docstring,fnargs):
@@ -1602,8 +1617,8 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
 
   for p in allParamLeft:
     idx = allParamNames.index(p)
-    docstring.addErrorFromSourceRange(linter,
-      "Extra docstring parameter '{}' not found in function arguments:\n\n{}",
+    docstring.addErrorFromSourceRange(
+      linter,"Extra docstring parameter '{}' not found in function arguments:\n\n{}",
       docStringArgs[idx][0],
       formatargs=(docStringArgs[idx][-1])
     )
@@ -1637,11 +1652,11 @@ def checkDocValidLevel(linter,cursor,docstring):
   newLineWithProperIndent = ":\n"+docstring.indent*" "
   for loc,levelName in level.names:
     if levelName not in validLevels:
-      src = pclu.getFormattedSourceFromSourceRange(loc,numContext=2)
-      if levelName.casefold() in validLevels:
-        errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(levelName.casefold(),levelName,src)
-        patch = SourceFix.fromSourceRange(loc,levelName.casefold())
-        linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
+      src    = pclu.getFormattedSourceFromSourceRange(loc,numContext=2)
+      locase = levelName.casefold()
+      if locase in validLevels:
+        errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(locase,levelName,src)
+        linter.addErrorFromCursor(cursor,errorMessage,patch=SourceFix.fromSourceRange(loc,locase))
       else:
         errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,expected,src)
         linter.addErrorFromCursor(cursor,errorMessage)
@@ -1651,12 +1666,10 @@ def checkDocValidLevel(linter,cursor,docstring):
       # are erroring out on the first trip round this loop and somehow have a
       # lone-standing 'beginner' or whatever without an explicit "Level:" line...
       crange = prevloc.mergeWith(loc)
-      src    = pclu.getFormattedSourceFromSourceRange(crange,numContext=2,highlight=False)
-      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(src)
+      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(pclu.getFormattedSourceFromSourceRange(crange,numContext=2,highlight=False))
       rawsrc = pclu.getRawSourceFromSourceRange(crange)
       newsrc = rawsrc.replace("\n","",rawsrc.count("\n")-1) # don't want to replace the last "\n"
-      patch = SourceFix.fromSourceRange(crange,newsrc)
-      linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
+      linter.addErrorFromCursor(cursor,errorMessage,patch=SourceFix.fromSourceRange(crange,newsrc))
     prevloc  = loc
     prevline = line
   return
@@ -1915,17 +1928,17 @@ def checkTraceableToParentArgs(obj,parentArgNames):
 
     assert len(argRefs), "Could not determine the origin of cursor {}".format(obj)
     # take the first, as this is the earliest
-    firstRef  = argRefs[0]
-    tu,loc    = firstRef.translation_unit,firstRef.location
-    srcLen    = len(firstRef.getRawSource())
+    firstRef = argRefs[0]
+    tu,loc   = firstRef.translation_unit,firstRef.location
+    srcLen   = len(firstRef.getRawSource())
     # why the following song and dance? Because you cannot walk the AST backwards, and
     # in the case that the current cursor is in a function call we need to access
     # our co-arguments to the function, i.e. "adjacent" branches since they should link
     # to (or be) in the parent functions argument list. So we have to
     # essentially reparse this line to be able to start from the top.
-    lineStart = pclu.PetscSourceLocation.fromPosition(tu,loc.file,loc.line,1)
-    lineEnd   = pclu.PetscSourceLocation.fromPosition(tu,loc.file,loc.line,srcLen+1)
-    lineRange = pclu.PetscSourceRange.fromLocations(lineStart,lineEnd)
+    lineStart = pclu.PetscSourceLocation.fromPosition(tu,loc.line,1)
+    lineEnd   = pclu.PetscSourceLocation.fromPosition(tu,loc.line,srcLen+1)
+    lineRange = pclu.PetscSourceRange.fromLocations(lineStart,lineEnd).sourceRange
     tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
     funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
     if funcProto:
@@ -1940,8 +1953,7 @@ def checkTraceableToParentArgs(obj,parentArgNames):
       # assert that the current obj is being assigned to
       assert PetscCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
       # find the binary operator, it will contain the most comprehensive AST
-      eqLoc    = list(map(lambda x: x.spelling,tGroup)).index("=")
-      iterator = tGroup[eqLoc].cursor.walk_preorder()
+      iterator = tGroup[[x.spelling for x in tGroup].index("=")].cursor.walk_preorder()
       iterator = [c for c in iterator if c.kind == clx.CursorKind.DECL_REF_EXPR]
     altCursor = [c for c in iterator if PetscCursor.getNameFromCursor(c) != obj.name]
     potentialParents.extend(altCursor)
