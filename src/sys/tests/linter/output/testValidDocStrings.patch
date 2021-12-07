@@ -6,6 +6,20 @@
 +  Lorem ipsum dolor sit amet
    someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
    eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
+@@ -40,5 +40,5 @@
+   Not Collective, Synchronous
+ 
+-   Input Parameters:
++  Input Parameters:
+ + viewer - a PetscViewer
+ 
+@@ -55,5 +55,5 @@
+ 
+ .seealso: testNonExistentFunction(), testNonExistentType
+-@*/
++C@*/
+ 
+ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 @@ -56,5 +56,4 @@
  .seealso: testNonExistentFunction(), testNonExistentType
  @*/
