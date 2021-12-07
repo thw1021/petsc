@@ -516,7 +516,6 @@ class PetscDocString(object):
             )
           )
         heading = [s for s in lstrip.split(":") if s][0].strip().casefold()
-        heading = heading.casefold()
         if "synopsis" in heading:
           heading = self.preambleHeading
         elif "parameter" in heading:
@@ -532,6 +531,7 @@ class PetscDocString(object):
         elif "reference" in heading:
           heading = self.referenceHeading
         else:
+          import ipdb; ipdb.set_trace()
           raise RuntimeError(heading)
       srcLine,_ = self.makeSourceRange(line,line,lineno)
       headings.setdefault(heading,default={"all" : []})["all"].append((srcLine,line))
@@ -908,11 +908,11 @@ class SourceFix(object):
     delta = self.deltas[i]
     newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta,newSrc[endoffset+idxDelta:]])
     print(newSrcTemp)
+    return newSrcTemp
 
   def appendFix(self,other):
     assert isinstance(other,type(self))
-    import ipdb; ipdb.set_trace()
-    #assert self.src == other.src, "Cannot combine fixes that do not share identical source!"
+    assert self.src == other.src, "Cannot combine fixes that do not share identical source!"
     self.range = self.range.mergeWith(other.range)
     self.begins.extend(other.begins)
     self.ends.extend(other.ends)
@@ -941,64 +941,6 @@ class SourceFix(object):
     self.fixDepth = len(self.deltas)
     self.fixed    = newSrc
     return
-
-  @staticmethod
-  def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n"):
-    __doc__="""
-    Optimized version of difflib.unified_diff. difflib.SequenceMatcher is unbelievably slow but we can aggresively cut corners since we know the general location of all of the differences. This function only really serves to format the changes into the unified diff format.
-    """
-    import difflib
-    def formatRangeUnified(pre,start,stop):
-      __doc__="""
-      Convert range to the 'ed' format
-      """
-      start += pre
-      stop  += pre
-      # Per the diff spec at http://www.unix.org/single_unix_specification/
-      beginning = max(start,1) # lines start numbering with one
-      length    = stop-start
-      if length == 1:
-        return "{}".format(beginning)
-      elif length == 0:
-        beginning -= 1 # empty ranges begin at line just before the range
-      return "{},{}".format(beginning,length)
-
-    if not fromfiledate or not tofiledate:
-      import datetime
-      rn = datetime.datetime.now().ctime()
-      if not fromfiledate:
-        fromfiledate = rn
-      if not tofiledate:
-        tofiledate   = rn
-    yield "--- {}{}{}".format(fromfile,"\t{}".format(fromfiledate),lineterm)
-    yield "+++ {}{}{}".format(tofile,"\t{}".format(tofiledate),lineterm)
-    deletes = {"replace","delete"}
-    inserts = {"replace","insert"}
-
-    # find consecutive streaks of values, do this by taking the difference between a value
-    # and its index. If the values are consecutive val-idx(val) will be equal.
-    for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
-      groupIdxs = list(g)
-      lineStart = min(l for _,l in groupIdxs)
-      groupA    = [listA[i][0] for i,_ in groupIdxs]
-      groupB    = [listB[i][0] for i,_ in groupIdxs if listB[i][0]]
-      for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
-        first,last  = group[0],group[-1]
-        file1_range = formatRangeUnified(lineStart,first[1],last[2])
-        file2_range = formatRangeUnified(lineStart,first[3],last[4])
-        yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
-
-        for tag,i1,i2,j1,j2 in group:
-          if tag == "equal":
-            for line in groupA[i1:i2]:
-              yield " "+line
-            continue
-          if tag in deletes:
-            for line in groupA[i1:i2]:
-              yield "-"+line
-          if tag in inserts:
-            for line in groupB[j1:j2]:
-                yield "+"+line
 
 
 class Scope(object):
@@ -1319,8 +1261,7 @@ class PetscLinter(object):
     # check if this is a compound error, i.e. an additional error on the same line
     # in which case we need to combine with previous patch
     for prevPatch in self.patches[patch.filename][:-1]:
-      if (prevPatch.range == patch.range) or patch.range.overlaps(prevPatch.range):
-        import ipdb; ipdb.set_trace()
+      if patch.range.overlaps(prevPatch.range):
         # remove ourselves from the list
         patch = self.patches[patch.filename].pop()
         # this should now be the previous patch on the same line, so we combine with it
@@ -1583,6 +1524,8 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
       return
     else:
       import ipdb; ipdb.set_trace()
+      linter.addErrorFromCursor(cursor,"Function parameters are all undocumented")
+      return
       raise RuntimeError("no params, but function has args; this should be handled")
 
   docstring.checkValidSolitarySectionHeading(linter,params)
@@ -1661,15 +1604,36 @@ def checkDocValidLevel(linter,cursor,docstring):
         errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,expected,src)
         linter.addErrorFromCursor(cursor,errorMessage)
   for loc,line in level.lines:
+    continue # TODO FIX ME, need to be able to handle the below
     if line and ":" not in line:
       # if you get a "prevloc" and "prevline" not defined error here this means that we
       # are erroring out on the first trip round this loop and somehow have a
       # lone-standing 'beginner' or whatever without an explicit "Level:" line...
-      crange = prevloc.mergeWith(loc)
-      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(pclu.getFormattedSourceFromSourceRange(crange,numContext=2,highlight=False))
-      rawsrc = pclu.getRawSourceFromSourceRange(crange)
-      newsrc = rawsrc.replace("\n","",rawsrc.count("\n")-1) # don't want to replace the last "\n"
-      linter.addErrorFromCursor(cursor,errorMessage,patch=SourceFix.fromSourceRange(crange,newsrc))
+      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(pclu.getFormattedSourceFromSourceRange(prevloc.mergeWith(loc),numContext=2,highlight=False))
+      # This is a stupid hack to solve a multifaceted issue. Suppose you have
+      # Level:
+      # BLABLABLA
+      # The first fix above does a tolower() transformation
+      # Level:
+      # blabla
+      # whle this fix would apply a join transformation
+      # Level: BLABLA
+      # See the issue already? Since we sort the transformations by line the second
+      # transformation would actually end up going *first*, meaning that the lowercase
+      # transformation is no longer valid for patch...
+
+      # create a range starting at newline of previous line going until the first
+      # non-space character on the next line
+      import ipdb; ipdb.set_trace()
+      delrange = pclu.PetscSourceRange.fromPositions(
+        cursor.translation_unit,prevloc.end.line,-1,loc.start.line,len(line)-len(line.lstrip())
+      )
+      # given '  Level:\n  blabla'
+      #                ^^^
+      #                 |
+      #              delrange
+      # delete delrange from it to get '  Level: blabla'
+      linter.addErrorFromCursor(cursor,errorMessage,patch=SourceFix.fromSourceRange(delrange,""))
     prevloc  = loc
     prevline = line
   return
@@ -2515,7 +2479,7 @@ def testMain(petscDir,testPath,outputDir,patches,errors,replace=False,verbose=Fa
     # skip header lines containing date, the output files shouldn't contain them
     with referenceFile.open() as fd:
       fileLines = fd.readlines()
-    diffs = list(difflib.unified_diff(fileLines,inputlines,n=0))
+    diffs = list(difflib.unified_diff(fileLines,inputlines,fromfile=str(referenceFile),n=0))
     if diffs:
       raise TestException("".join(diffs))
     return
@@ -2673,7 +2637,9 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
   if verbose: print(rootPrintPrefix,"Deleting precompiled header",precompiledHeader)
   precompiledHeader.unlink()
   if testOutputDir is not None:
-    return testMain(petscDir,srcPath,testOutputDir,patches,errorsLeft,replace=replaceTests,verbose=verbose)
+    return testMain(
+      petscDir,srcPath,testOutputDir,patches,errorsLeft,replace=replaceTests,verbose=verbose
+    )
   elif patches:
     import time
 
