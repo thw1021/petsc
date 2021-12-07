@@ -162,17 +162,31 @@ MC*/
 MC*/
 #define PETSCPP_COMPL(b) PETSCPP_CONCAT_(PETSCPP_INTERNAL_COMPL_,b)
 
-#if defined(__cplusplus)
-/* icc (and for that matter any windows compiler) is only fully compliant to the letter of the
- * standard up to C++98, so they always set __cplusplus to 199711L (even if they secretly
- * support the vast majority of later standards features). Hence we can't just use the value of
- * __cplusplus
+/* elif preprocessor short-circuiting since DR412 (C89)
+ * http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2396.htm#dr_412
  */
-#  if (__cplusplus >= 201103L) || defined(PETSC_HAVE_CXX_DIALECT_CXX11) /* C++11 */
+#if defined(__cplusplus) && (__cplusplus >= 201103L) /* C++11 */
+#  define PETSC_HAVE_VARIADIC_MACROS 1
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) /* C99 */
+#  define PETSC_HAVE_VARIADIC_MACROS 1
+#elif defined(PETSC_HAVE_WINDOWS_COMPILERS)
+/* Most windows compilers are only fully compliant to the letter of the standard up to C/C++98.
+ * Even though they secretly support the vast majority of later standards features they cannot
+ * define __STDC_VERSION__ (since C99) and must set __cplusplus to 199711L (C++98). Hence we
+ * can't just use the value of either, and have to resort to the following song and dance...
+ */
+#  if defined(_MSC_VER) && (_MSC_VER >= 1400)
+/* Microsoft doesn't list anywhere when variadic macros were added MSVC, but according to
+ * https://stackoverflow.com/a/28118893/13615317 they appear to work since Visual Studio .NET
+ * 2003 (7.1) which corresponds to _MSC_VER = 1310.
+ * To err on the side of caution we gate this behind Visual Studio 2005 (8.0) which corresponds
+ * to _MSC_VER = 1400.
+ * Values found here:
+ * https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170
+ */
 #    define PETSC_HAVE_VARIADIC_MACROS 1
-#  endif
-#elif defined(__STDC_VERSION__)
-#  if __STDC_VERSION__ >= 199901L /* C99 */
+#  elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+/* intel seems to have always supported variadic macros */
 #    define PETSC_HAVE_VARIADIC_MACROS 1
 #  endif
 #endif
