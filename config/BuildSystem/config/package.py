@@ -1092,6 +1092,13 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     oldFlags = getattr(self.compilers, flagsArg)
     setattr(self.compilers, flagsArg, oldFlags+' '+self.headers.toString(self.include))
     self.compilers.saveLog()
+    if isinstance(self.versioninclude,list): # X.py uses a weird list of more than one headers.
+      includeLines = ''
+      for header in self.versioninclude:
+        includeLines += '#include "'+header+'"\n'
+    else:
+      includeLines = '#include "'+self.versioninclude+'"\n'
+
     try:
       # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
       # but some preprocessors are picky (ex. dpcpp -E), reporting errors on the code above even
@@ -1102,13 +1109,10 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       #  ^
       #
       # So we instead use this compilable code.
-      output = self.outputPreprocess(
-        '''
-        #include "{x}"
-        #define  xstr(s) str(s)
-        #define  str(s)  #s
-        char     *ver = "petscpkgver(" xstr({y}) ")";
-        '''.format(x=self.versioninclude, y=self.versionname))
+      output = self.outputPreprocess('''{x}
+#define  xstr(s) str(s)
+#define  str(s)  #s
+char     *ver = "petscpkgver(" xstr({y}) ")";'''.format(x=includeLines, y=self.versionname))
        # Ex. char *ver = "petscpkgver(" "20211206" ")";
        # But after stripping spaces, quotes etc below, it becomes char*ver=petscpkgver(20211206);
       self.logWrite(self.compilers.restoreLog())
