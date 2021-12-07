@@ -163,11 +163,11 @@ class PetscSourceLocation(object):
       raise NotImplementedError
 
   @classmethod
-  def fromPosition(cls,tu,filename,line,col):
-    return cls(clx.SourceLocation.from_position(tu,filename,line,col))
+  def fromPosition(cls,tu,line,col):
+    return cls(clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),line,col))
 
   @classmethod
-  def getClangSourceLocation(cls,other):
+  def asClangSourceLocation(cls,other):
     if isinstance(other,clx.SourceLocation):
       return other
     elif isinstance(other,cls):
@@ -176,10 +176,10 @@ class PetscSourceLocation(object):
       raise NotImplementedError
 
   def __eq__(self,other):
-    return self.sourceLocation.__eq__(self.getClangSourceLocation(other))
+    return self.sourceLocation.__eq__(self.asClangSourceLocation(other))
 
   def __lt__(self,other):
-    other = self.getClangSourceLocation(other)
+    other = self.asClangSourceLocation(other)
     if self.line < other.line:
       return True
     elif self.line == other.line:
@@ -188,7 +188,7 @@ class PetscSourceLocation(object):
       return False
 
   def __contains__(self,other):
-    return self.sourceLocation.__contains__(self.getClangSourceLocation(other))
+    return self.sourceLocation.__contains__(self.asClangSourceLocation(other))
 
 
 @functools.total_ordering
@@ -204,13 +204,19 @@ class PetscSourceRange(object):
     return getattr(self.sourceRange,attr)
 
   def __eq__(self,other):
-    return self.sourceRange.__eq__(self.getClangSourceRange(other))
+    return self.sourceRange.__eq__(self.asClangSourceRange(other))
 
   def __lt__(self,other):
     raise NotImplementedError
 
   def __contains__(self,other):
-    return self.sourceRange.__contains__(self.getClangSourceRange(other))
+    contains = self.sourceRange.__contains__
+    if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
+      return contains(PetscSourceLocation.asClangSourceLocation(other))
+    elif isinstance(other,(clx.SourceRange,type(self))):
+      return contains(other.start) and contains(other.end)
+    else:
+      raise NotImplementedError
 
   @classmethod
   def cast(cls,other):
@@ -224,17 +230,18 @@ class PetscSourceRange(object):
   @classmethod
   def fromLocations(cls,left,right):
     return cls(clx.SourceRange.from_locations(
-      PetscSourceLocation.getClangSourceLocation(left),
-      PetscSourceLocation.getClangSourceLocation(right)
+      PetscSourceLocation.asClangSourceLocation(left),
+      PetscSourceLocation.asClangSourceLocation(right)
     ))
 
   @classmethod
-  def getClangSourceRange(cls,other):
+  def asClangSourceRange(cls,other):
     if isinstance(other,clx.SourceRange):
       return other
     elif isinstance(other,cls):
       return other.sourceRange
     else:
+      import ipdb; ipdb.set_trace()
       raise NotImplementedError
 
   @classmethod
@@ -257,6 +264,9 @@ class PetscSourceRange(object):
 
   def mergeWith(self,other):
     return self.merge(self,other)
+
+  def overlaps(self,other):
+    return (self.start in other) or (self.end in other) or (other.start in self) or (other.end in self)
 
 CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
   ctypes.c_uint,ctypes.py_object,clx.Cursor,clx.SourceRange
