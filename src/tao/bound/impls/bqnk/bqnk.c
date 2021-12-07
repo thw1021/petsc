@@ -131,9 +131,6 @@ static PetscErrorCode TaoSetFromOptions_BQNK(PetscOptionItems *PetscOptionsObjec
 
   PetscFunctionBegin;
   ierr = TaoSetFromOptions_BNK(PetscOptionsObject,tao);CHKERRQ(ierr);
-  ierr = TaoSetFromOptions(bnk->bncg);CHKERRQ(ierr);
-  ierr = TaoLineSearchSetFromOptions(tao->linesearch);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(tao->ksp);CHKERRQ(ierr);
   if (bnk->init_type == BNK_INIT_INTERPOLATION) bnk->init_type = BNK_INIT_DIRECTION;
   ierr = MatSetFromOptions(bqnk->B);CHKERRQ(ierr);
   ierr = MatGetOption(bqnk->B, MAT_SPD, &bqnk->is_spd);CHKERRQ(ierr);
