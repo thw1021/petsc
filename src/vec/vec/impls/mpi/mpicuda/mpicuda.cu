@@ -151,7 +151,9 @@ PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
     ierr = PetscMemcpy((*v)->localrep->ops,win->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(*v,&array);CHKERRQ(ierr);
     ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)(*v)->localrep);CHKERRQ(ierr);
-    /* TODO: need to have the CPU arrays shared also */
+    ierr = VecGetArray(*v,&array);CHKERRQ(ierr);
+    ierr = VecPlaceArray((*v)->localrep,array);CHKERRQ(ierr);
+    ierr = VecRestoreArray(*v,&array);CHKERRQ(ierr);
     (*v)->localupdate = win->localupdate;
     if ((*v)->localupdate) {
       ierr = PetscObjectReference((PetscObject)(*v)->localupdate);CHKERRQ(ierr);
@@ -208,10 +210,12 @@ PetscErrorCode VecCreate_MPICUDA(Vec vv)
 
     /* Create local representation */
     ierr = VecCUDAGetArray(vv,&larray);CHKERRQ(ierr);
-    ierr = VecCreateSeqCUDAWithArray(PETSC_COMM_SELF,1,vv->map->n+vv->nghost+vv->nextra,larray,&(vv)->localrep);CHKERRQ(ierr);
+    ierr = VecCreateSeqCUDAWithArray(PETSC_COMM_SELF,1,vv->map->n+vv->nghost+vv->nextra,larray,&vv->localrep);CHKERRQ(ierr);
     ierr = PetscLogObjectParent((PetscObject)vv,(PetscObject)(vv)->localrep);CHKERRQ(ierr);
     ierr = VecCUDARestoreArray(vv,&larray);CHKERRQ(ierr);
-    /* TODO: need to have the CPU arrays shared also */
+    ierr = VecGetArray(vv,&larray);CHKERRQ(ierr);
+    ierr = VecPlaceArray(vv->localrep,larray);CHKERRQ(ierr);
+    ierr = VecRestoreArray(vv,&larray);CHKERRQ(ierr);
 
     /*
      Create scatter context for scattering (updating) ghost values
