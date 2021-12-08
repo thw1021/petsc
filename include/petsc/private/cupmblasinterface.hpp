@@ -260,6 +260,8 @@ struct CUPMBlasInterfaceBase : CUPMInterface<T>
     case CUPMDeviceType::CUDA: return "cuBLAS";
     case CUPMDeviceType::HIP:  return "hipBLAS";
     }
+    PetscUnreachable();
+    return "invalid";
   }
 };
 

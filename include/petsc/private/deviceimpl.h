@@ -188,9 +188,6 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceGetDefaultForType_Internal
 
 PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Internal(PetscDeviceType type)
 {
-#if defined(PetscUnreachable)
-#  error "PetscUnreachable merged"
-#endif
   switch(type) {
   case PETSC_DEVICE_INVALID: return PETSC_FALSE;
     /* casts are needed in C++ */
@@ -199,9 +196,7 @@ PETSC_STATIC_INLINE PETSC_CONSTEXPR_14 PetscBool PetscDeviceConfiguredFor_Intern
   case PETSC_DEVICE_MAX:     return PETSC_FALSE;
     /* Do not add default case! Will make compiler warn on new additions to PetscDeviceType! */
   }
-#if !(PetscDefined(HAVE_WINDOWS_COMPILERS) || PetscDefined(HAVE_SUN_CXX))
-  __builtin_unreachable();
-#endif
+  PetscUnreachable();
   return PETSC_FALSE;
 }
 
