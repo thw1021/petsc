@@ -46,7 +46,7 @@
   }
 .ve
 
-  Level: advanced
+  Level: intermediate
 
 .seealso: PetscDefined(), PetscLikely(), PetscUnlikely()
 M*/
@@ -55,6 +55,105 @@ M*/
 #else
 #  define PetscHasAttribute(name) 0
 #endif
+
+/*MC
+  PetscUnlikely - Hints the compiler that the given condition is usually FALSE
+
+  Synopsis:
+  #include <petscmacros.h>
+  bool PetscUnlikely(bool cond)
+
+  Not Collective
+
+  Input Parameter:
+. cond - Boolean expression
+
+  Notes:
+  Not available from fortran.
+
+  This returns the same truth value, it is only a hint to compilers that the result of cond is
+  unlikely to be true.
+
+  Example usage:
+.vb
+  if (PetscUnlikely(cond)) {
+    foo(); // cold path
+  } else {
+    bar(); // hot path
+  }
+.ve
+
+  Level: advanced
+
+.seealso: PetscLikely(), PetscUnlikelyDebug(), CHKERRQ, PetscDefined(), PetscHasAttribute()
+M*/
+
+/*MC
+  PetscLikely - Hints the compiler that the given condition is usually TRUE
+
+  Synopsis:
+  #include <petscmacros.h>
+  bool PetscLikely(bool cond)
+
+  Not Collective
+
+  Input Parameter:
+. cond - Boolean expression
+
+  Notes:
+  Not available from fortran.
+
+  This returns the same truth value, it is only a hint to compilers that the result of cond is
+  likely to be true.
+
+  Example usage:
+.vb
+  if (PetscLikely(cond)) {
+    foo(); // hot path
+  } else {
+    bar(); // cold path
+  }
+.ve
+
+  Level: advanced
+
+.seealso: PetscUnlikely(), PetscDefined(), PetscHasAttribute()
+M*/
+#if defined(PETSC_HAVE_BUILTIN_EXPECT)
+#  define PetscUnlikely(cond) __builtin_expect(!!(cond),0)
+#  define PetscLikely(cond)   __builtin_expect(!!(cond),1)
+#else
+#  define PetscUnlikely(cond) (cond)
+#  define PetscLikely(cond)   (cond)
+#endif
+
+#if defined(__GNUC__)
+/* GCC 4.8+, Clang, Intel and other compilers compatible with GCC (-std=c++0x or above) */
+#  define PetscUnreachable_() __builtin_unreachable()
+#elif defined(_MSC_VER) /* MSVC */
+#  define PetscUnreachable_() __assume(0)
+#else /* ??? */
+#  include <petscerror.h>
+#  define PetscUnreachable_() SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Code path explicitly marked as unreachable executed")
+#endif
+
+/*MC
+  PetscUnreachable() - Indicate to the compiler that a code-path is logically unreachable
+
+  Synopsis:
+  #include <petscmacros.h>
+  void PetscUnreachable(void)
+
+  Notes:
+  Indicates to the compiler (usually via some built-in) that a particular code path is always
+  unreachable. Behavior is undefined if this function is ever executed, the user can expect an
+  unceremonious crash.
+
+  Level: advanced
+
+.seealso: SETERRABORT(), PETSCABORT()
+MC*/
+#define PetscUnreachable() PetscUnreachable_()
 
 /*MC
   PETSCPP_EXPAND - Expand arguments
@@ -162,10 +261,10 @@ MC*/
   Not available from Fortran.
 
   Expands to integer literal 0 if b expands to 1, or integer literal 1 if b expands to
-  0. Behaviour is undefined if b expands to anyting else. PETSCPP_COMPL() will expand its
+  0. Behaviour is undefined if b expands to anything else. PETSCPP_COMPL() will expand its
   argument before returning the complement.
 
-  This macro is useful for "negating" PetscDefined(), inside macros e.g.
+  This macro can be useful for negating PetscDefined() inside macros e.g.
 
 $ #define PETSC_DONT_HAVE_FOO PETSCPP_COMPL(PetscDefined(HAVE_FOO))
 
@@ -183,7 +282,7 @@ $ #define PETSC_DONT_HAVE_FOO PETSCPP_COMPL(PetscDefined(HAVE_FOO))
 
 .seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PETSCPP_IF_PETSC_DEFINED(), PetscDefined()
 MC*/
-#define PETSCPP_COMPL(b) PETSCPP_CONCAT_(PETSCPP_INTERNAL_COMPL_,b)
+#define PETSCPP_COMPL(b) PETSCPP_CONCAT_(PETSCPP_INTERNAL_COMPL_,PETSCPP_EXPAND(b))
 
 #if !defined(PETSC_SKIP_VARIADIC_MACROS)
 /*MC
@@ -200,7 +299,8 @@ MC*/
 . <return-value> - Either integer literal 0 or 1
 
   Notes:
-  Not available from Fortran, requires variadic macro support.
+  Not available from Fortran, requires variadic macro support, definition is disabled by
+  defining PETSC_SKIP_VARIADIC_MACROS.
 
   PetscDefined() returns 1 if and only if "PETSC_ ## def" is defined (but empty) or defined to
   integer literal 1. In all other cases, PetscDefined() returns integer literal 0. Therefore
@@ -241,7 +341,7 @@ $ #define FooDefined(d) PetscDefined_(PETSCPP_CONCAT(FOO_,d))
   }
 .ve
 
-  are equivalent to
+  is equivalent to
 
 .vb
   #if defined(PETSC_USE_DEBUG)
@@ -257,7 +357,7 @@ $ #define FooDefined(d) PetscDefined_(PETSCPP_CONCAT(FOO_,d))
   #endif
 .ve
 
-  Level: advanced
+  Level: intermediate
 
 .seealso: PetscHasAttribute(), PetscUnlikely(), PetscLikely(), PETSCPP_CONCAT(),
 PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_COMPL()
@@ -272,6 +372,60 @@ MC*/
 #define PetscDefined(def)              PetscDefined_(PETSCPP_CONCAT(PETSC_,def))
 
 /*MC
+  PetscUnlikelyDebug - Hints the compiler that the given condition is usually FALSE, eliding
+  the check in optimized mode
+
+  Synopsis:
+  #include <petscmacros.h>
+  bool PetscUnlikelyDebug(bool cond)
+
+  Not Collective
+
+  Input Parameters:
+. cond - Boolean expression
+
+  Notes:
+  Not available from Fortran, requires variadic macro support, definition is disabled by
+  defining PETSC_SKIP_VARIADIC_MACROS.
+
+  This returns the same truth value, it is only a hint to compilers that the result of cond is
+  likely to be false. When PETSc is compiled in optimized mode this will always return
+  false. Additionally, cond is guaranteed to not be evaluated when PETSc is compiled in
+  optimized mode.
+
+  Example usage:
+  This routine is shorthand for checking both the condition and whether PetscDefined(USE_DEBUG)
+  is true. So
+
+.vb
+  if (PetscUnlikelyDebug(cond)) {
+    foo();
+  } else {
+    bar();
+  }
+.ve
+
+  is equivalent to
+
+.vb
+  if (PetscDefined(USE_DEBUG)) {
+    if (PetscUnlikely(cond)) {
+      foo();
+    } else {
+      bar();
+    }
+  } else {
+    bar();
+  }
+.ve
+
+  Level: advanced
+
+.seealso: PetscUnlikely(), PetscLikely(), CHKERRQ, SETERRQ
+M*/
+#define PetscUnlikelyDebug(cond) (PetscDefined(USE_DEBUG) && PetscUnlikely(cond))
+
+/*MC
   PETSCPP_EXPAND_TO_NOTHING - Expands to absolutely nothing at all
 
   Synopsis:
@@ -282,7 +436,8 @@ MC*/
 . __VA_ARGS__ - Anything at all
 
   Notes:
-  Not available from Fortran, requires variadic macro support.
+  Not available from Fortran, requires variadic macro support, definition is disabled by
+  defining PETSC_SKIP_VARIADIC_MACROS.
 
   Must have at least 1 parameter.
 
@@ -291,9 +446,9 @@ MC*/
   PETSCPP_EXPAND_TO_NOTHING(a,b,c) -> *nothing*
 .ve
 
-  Level: advanced
+  Level: beginner
 
-.seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PetscDefined(), PETSCPP_STRINGIZE()
+.seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PetscDefined(), PETSCPP_STRINGIZE(), PETSCPP_EXPAND()
 MC*/
 #define PETSCPP_EXPAND_TO_NOTHING(...)
 
@@ -308,14 +463,16 @@ MC*/
   <macro-expansion> PETSCPP_IF(cond, result_if_true, ...)
 
   Input Parameters:
-+ cond           - Preprocessor conditional, must be defined and expand to either 0 or 1
++ cond           - Preprocessor conditional
 . result_if_true - Result of macro expansion if cond expands to 1
 - __VA_ARGS__    - Result of macro expansion if cond expands to 0
 
   Notes:
-  Not available from Fortran, requires variadic macro support.
+  Not available from Fortran, requires variadic macro support, definition is disabled by
+  defining PETSC_SKIP_VARIADIC_MACROS.
 
-  Must have at least 1 argument for __VA_ARGS__.
+  cond must be defined and expand (not evaluate!) to either integer literal 0 or 1. Must have
+  at least 1 argument for __VA_ARGS__, but it may expand empty.
 
   Example usage:
 .vb
@@ -329,9 +486,9 @@ MC*/
   PETSCPP_IF(MY_VAR,myFunction,PETSCPP_EXPAND_TO_NOTHING)(1,"hello") -> *nothing*
 .ve
 
-  Level: advanced
+  Level: intermediate
 
-.seealso: PETSCPP_IF_PETSC_DEFINED(), PETSCPP_CONCAT(), PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_NOT()
+.seealso: PETSCPP_IF_PETSC_DEFINED(), PETSCPP_CONCAT(), PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_COMPL()
 MC*/
 #define PETSCPP_IF(cond,result_if_true,...) PETSCPP_CONCAT_(PETSCPP_IF_INTERNAL_,cond)(result_if_true,__VA_ARGS__)
 
@@ -343,14 +500,16 @@ MC*/
   <macro-expansion> PETSCPP_IF_PETSC_DEFINED(cond, result_if_true, ...)
 
   Input Parameters:
-+ cond           - Condition passed to PetscDefined(), may be undefined
++ cond           - Condition passed to PetscDefined()
 . result_if_true - Result of macro expansion if PetscDefined(cond) expands to 1
 - __VA_ARGS__    - Result of macro expansion if PetscDefined(cond) expands to 0
 
   Notes:
-  Not available in Fortran, requires variadic macro support.
+  Not available from Fortran, requires variadic macro support, definition is disabled by
+  defining PETSC_SKIP_VARIADIC_MACROS.
 
-  Must have at least 1 argument for __VA_ARGS__.
+  cond must satisfy all conditions for PetscDefined(). Must have at least 1 argument for
+  __VA_ARGS__, but it may expand empty.
 
   Example usage:
 .vb
@@ -361,9 +520,9 @@ MC*/
   PETSCPP_IF_PETSC_DEFINED(HAVE_FOO,foo,bar,baz,bop) -> bar,baz,bop
 .ve
 
-  Level: advanced
+  Level: intermediate
 
-.seealso: PETSCPP_IF(), PetscDefined(), PETSCPP_CONCAT(), PETSCPP_NOT()
+.seealso: PETSCPP_IF(), PetscDefined(), PETSCPP_CONCAT(), PETSCPP_EXPAND(), PETSCPP_COMPL()
 MC*/
 #define PETSCPP_IF_PETSC_DEFINED(cond,result_if_true,...) PETSCPP_IF(PetscDefined(cond),result_if_true,__VA_ARGS__)
 #endif /* !PETSC_SKIP_VARIADIC_MACROS */

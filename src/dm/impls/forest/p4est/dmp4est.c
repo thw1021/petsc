@@ -9,5 +9,5 @@ static const PetscInt P4estVertToPetscVert[4] = {0, 1, 3, 2};
 #define DMPFOREST DMP4EST
 
 #define _append_pforest(a)  PETSCPP_CONCAT_(a,_p4est)
-#define _infix_pforest(a,b) PETSCPP_CONCAT_(_append_pforest(a),b)
+#define _infix_pforest(a,b) PETSCPP_CONCAT(_append_pforest(a),b)
 #include "pforest.c"
