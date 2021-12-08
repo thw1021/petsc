@@ -1112,9 +1112,9 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       output = self.outputPreprocess(
 '''
 {x}
-#define  xstr(s) str(s)
-#define  str(s)  #s
-char     *ver = "petscpkgver(" xstr({y}) ")";
+#define  PetscXstr_(s) PetscStr_(s)
+#define  PetscStr_(s)  #s
+char     *ver = "petscpkgver(" PetscStr_({y}) ")";
 '''.format(x=includeLines, y=self.versionname))
        # Ex. char *ver = "petscpkgver(" "20211206" ")";
        # But after stripping spaces, quotes etc below, it becomes char*ver=petscpkgver(20211206);
