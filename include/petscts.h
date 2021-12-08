@@ -1015,7 +1015,7 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
   .seealso: TS, TSDISCGRAD, TSDiscGradSetFormulation(), TSDiscGradGetFormulation
 J*/
 PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode(*)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode(*)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode(*)(TS, PetscReal, Vec, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode TSDiscGradISGonzalez(TS,PetscBool*);
+PETSC_EXTERN PetscErrorCode TSDiscGradIsGonzalez(TS,PetscBool*);
 PETSC_EXTERN PetscErrorCode TSDiscGradUseGonzalez(TS,PetscBool);
 
 /*
