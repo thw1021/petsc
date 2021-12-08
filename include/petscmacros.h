@@ -149,6 +149,28 @@ M*/
   unreachable. Behavior is undefined if this function is ever executed, the user can expect an
   unceremonious crash.
 
+  Example usage:
+  Useful in situations such as switches over enums where not all enumeration values are
+  explicitly covered by the switch
+
+.vb
+  typedef enum {RED, GREEN, BLUE} Color;
+
+  int foo(Color c)
+  {
+    // it is known to programmer (or checked previously) that c is either RED or GREEN
+    // but compiler may not be able to deduce this and/or emit spurious warnings
+    switch (c) {
+      case RED:
+        return bar();
+      case GREEN:
+        return baz();
+      default:
+        PetscUnreachable(); // program is ill-formed if executed
+    }
+  }
+.ve
+
   Level: advanced
 
 .seealso: SETERRABORT(), PETSCABORT()
