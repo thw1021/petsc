@@ -57,6 +57,20 @@ M*/
 #endif
 
 /*MC
+  PETSCPP_EXPAND - Expand arguments
+
+  Synopsis:
+  #include <petscmacros.h>
+  <macro-expansion> PETSCPP_EXPAND(x)
+
+  Input Paramter:
+. x - The preprocessor token to expand
+
+.seealso: PETSCPP_STRINGIZE(), PETSCPP_CONCAT()
+MC*/
+#define PETSCPP_EXPAND(x) x
+
+/*MC
   PETSCPP_STRINGIZE - Stringize a token
 
   Synopsis:
@@ -90,7 +104,7 @@ M*/
 
   Level: beginner
 
-.seealso: PETSCPP_CONCAT(), PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_IF()
+.seealso: PETSCPP_CONCAT(), PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_IF(), PETSCPP_EXPAND()
 MC*/
 #define PETSCPP_STRINGIZE_(x) #x
 #define PETSCPP_STRINGIZE(x)  PETSCPP_STRINGIZE_(x)
@@ -123,7 +137,7 @@ MC*/
 
   Level: beginner
 
-.seealso: PETSCPP_IF(), PETSCPP_IF_PETSC_DEFINED(), PETSCPP_STRINGIZE()
+.seealso: PETSCPP_IF(), PETSCPP_IF_PETSC_DEFINED(), PETSCPP_STRINGIZE(), PETSCPP_EXPAND()
 MC*/
 #define PETSCPP_CONCAT_(x,y) x ## y
 #define PETSCPP_CONCAT(x,y)  PETSCPP_CONCAT_(x,y)
@@ -136,37 +150,42 @@ MC*/
 
   Synopsis:
   #include <petscmacros.h>
-  <macro-expansion> PETSCPP_COMPL(b)
+  int PETSCPP_COMPL(b)
 
   Input Parameter:
-. b - Preprocessor variable, must expand to either 0 or 1
+. b - Preprocessor variable, must expand to either integer literal 0 or 1
+
+  Output Paramter:
+. <return-value> - Either integer literal 0 or 1
 
   Notes:
   Not available from Fortran.
 
   Expands to integer literal 0 if b expands to 1, or integer literal 1 if b expands to
-  0. PETSCPP_COMPL() will expand its argument before returning the complement.
+  0. Behaviour is undefined if b expands to anyting else. PETSCPP_COMPL() will expand its
+  argument before returning the complement.
+
+  This macro is useful for "negating" PetscDefined(), inside macros e.g.
+
+$ #define PETSC_DONT_HAVE_FOO PETSCPP_COMPL(PetscDefined(HAVE_FOO))
 
   Example usage:
 .vb
   #define MY_VAR 1
   PETSCPP_COMPL(MY_VAR) -> 0
 
+  #undef  MY_VAR
   #define MY_VAR 0
   PETSCPP_COMPL(MY_VAR) -> 1
 .ve
 
   Level: beginner
 
-.seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PETSCPP_IF_PETSC_DEFINED()
+.seealso: PETSCPP_IF(), PETSCPP_CONCAT(), PETSCPP_IF_PETSC_DEFINED(), PetscDefined()
 MC*/
 #define PETSCPP_COMPL(b) PETSCPP_CONCAT_(PETSCPP_INTERNAL_COMPL_,b)
 
-#if defined(PETSC_SKIP_VARIADIC_MACROS)
-#  undef PETSC_HAVE_VARIADIC_MACROS
-#endif
-
-#if defined(PETSC_HAVE_VARIADIC_MACROS)
+#if !defined(PETSC_SKIP_VARIADIC_MACROS)
 /*MC
   PetscDefined - Determine whether a boolean macro is defined
 
@@ -178,10 +197,10 @@ MC*/
 . def - PETSc-style preprocessor variable (without PETSC_ prepended!)
 
   Outut Parameter:
-. <return-value> either integer literal 0 or integer literal 1
+. <return-value> - Either integer literal 0 or 1
 
   Notes:
-  Not available from Fortran.
+  Not available from Fortran, requires variadic macro support.
 
   PetscDefined() returns 1 if and only if "PETSC_ ## def" is defined (but empty) or defined to
   integer literal 1. In all other cases, PetscDefined() returns integer literal 0. Therefore
@@ -206,25 +225,27 @@ $ #define FooDefined(d) PetscDefined_(PETSCPP_CONCAT(FOO_,d))
   Example Usage:
   Suppose you would like to call either "foo()" or "bar()" depending on whether PETSC_USE_DEBUG
   is defined then
+
 .vb
   #if PetscDefined(USE_DEBUG)
     foo();
   #else
     bar();
   #endif
-.ve
-  or alternatively within normal code
-.vb
+
+  // or alternatively within normal code
   if (PetscDefined(USE_DEBUG)) {
     foo();
   } else {
     bar();
   }
 .ve
+
   are equivalent to
+
 .vb
   #if defined(PETSC_USE_DEBUG)
-  #  if MY_DETECT_EMPTY_MACRO(PETSC_USE_DEBUG)
+  #  if MY_DETECT_EMPTY_MACRO(PETSC_USE_DEBUG) // assuming you have such a macro
        foo();
   #   elif PETSC_USE_DEBUG == 1
        foo();
@@ -239,7 +260,7 @@ $ #define FooDefined(d) PetscDefined_(PETSCPP_CONCAT(FOO_,d))
   Level: advanced
 
 .seealso: PetscHasAttribute(), PetscUnlikely(), PetscLikely(), PETSCPP_CONCAT(),
-PETSCPP_EXPAND_TO_NOTHING()
+PETSCPP_EXPAND_TO_NOTHING(), PETSCPP_COMPL()
 MC*/
 #define PetscDefined_arg_1 shift,
 #define PetscDefined_arg_  shift,
@@ -249,7 +270,6 @@ MC*/
 #define PetscDefined__(arg1_or_junk)   PetscDefined__take_second(arg1_or_junk 1, 0, at_)
 #define PetscDefined_(value)           PetscDefined__(PETSCPP_CONCAT_(PetscDefined_arg_,value))
 #define PetscDefined(def)              PetscDefined_(PETSCPP_CONCAT(PETSC_,def))
-/* what do we do if we dont have variadic macros -> PetscDefined()?????? */
 
 /*MC
   PETSCPP_EXPAND_TO_NOTHING - Expands to absolutely nothing at all
@@ -268,9 +288,7 @@ MC*/
 
   Example usage:
 .vb
-  #if defined(PETSC_HAVE_VARIADIC_MACROS)
   PETSCPP_EXPAND_TO_NOTHING(a,b,c) -> *nothing*
-  #endif
 .ve
 
   Level: advanced
@@ -301,7 +319,6 @@ MC*/
 
   Example usage:
 .vb
-  #if defined(PETSC_HAVE_VARIADIC_MACROS)
   void myFunction(int,char*);
   #define MY_VAR 1
   PETSCPP_IF(MY_VAR,"hello","goodbye") -> "hello"
@@ -310,7 +327,6 @@ MC*/
   #define MY_VAR 0
   PETSCPP_IF(MY_VAR,"hello",func<type1,type2>()) -> func<type1,type2>()
   PETSCPP_IF(MY_VAR,myFunction,PETSCPP_EXPAND_TO_NOTHING)(1,"hello") -> *nothing*
-  #endif
 .ve
 
   Level: advanced
@@ -334,15 +350,15 @@ MC*/
   Notes:
   Not available in Fortran, requires variadic macro support.
 
+  Must have at least 1 argument for __VA_ARGS__.
+
   Example usage:
 .vb
-  #if defined(PETSC_HAVE_VARIADIC_MACROS)
-  #define PETSC_HAVE_THING 1
-  PETSCPP_IF_PETSC_DEFINED(HAVE_THING,"have thing!","don't have thing") -> "have thing!"
+  #define PETSC_HAVE_FOO 1
+  PETSCPP_IF_PETSC_DEFINED(HAVE_FOO,foo,bar) -> foo
 
-  #undef PETSC_HAVE_THING
-  PETSCPP_IF_PETSC_DEFINED(HAVE_THING,"have thing!","don't have thing") -> "don't have thing"
-  #endif
+  #undef PETSC_HAVE_FOO
+  PETSCPP_IF_PETSC_DEFINED(HAVE_FOO,foo,bar,baz,bop) -> bar,baz,bop
 .ve
 
   Level: advanced
@@ -350,7 +366,6 @@ MC*/
 .seealso: PETSCPP_IF(), PetscDefined(), PETSCPP_CONCAT(), PETSCPP_NOT()
 MC*/
 #define PETSCPP_IF_PETSC_DEFINED(cond,result_if_true,...) PETSCPP_IF(PetscDefined(cond),result_if_true,__VA_ARGS__)
-
-#endif /* PETSC_HAVE_VARIADIC_MACROS */
+#endif /* !PETSC_SKIP_VARIADIC_MACROS */
 
 #endif /* PETSC_PREPROCESSOR_MACROS_H */
