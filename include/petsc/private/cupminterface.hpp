@@ -284,9 +284,7 @@ struct CUPMInterfaceBase
     case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
     }
-#if !(PetscDefined(HAVE_WINDOWS_COMPILERS) || PetscDefined(HAVE_SUN_CXX))
-    __builtin_unreachable();
-#endif
+    PetscUnreachable();
     return PETSC_DEVICE_INVALID;
   }
 
@@ -296,9 +294,7 @@ struct CUPMInterfaceBase
     case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
     case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
     }
-#if !(PetscDefined(HAVE_WINDOWS_COMPILERS) || PetscDefined(HAVE_SUN_CXX))
-    __builtin_unreachable();
-#endif
+    PetscUnreachable();
     return PETSC_MEMTYPE_HOST;
   }
 };
