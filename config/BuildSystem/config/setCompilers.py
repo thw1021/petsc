@@ -470,6 +470,8 @@ class Configure(config.base.Configure):
       (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -V',checkCommand = noCheck, log = log)
       output = output + error
       found = any([s in output for s in ['The Portland Group','PGI Compilers and Tools']])
+      if not found:
+        found = any([s in output for s in ['NVIDIA Compilers and Tools']])
       if found:
         if log: log.write('Detected PGI compiler\n')
         return 1
