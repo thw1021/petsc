@@ -376,11 +376,7 @@ PetscErrorCode VecView_Plex_Local(Vec v, PetscViewer viewer)
       ierr = DMRestoreLocalVector(dm, &locv);CHKERRQ(ierr);
     }
   } else {
-    PetscBool isseq;
-
-    ierr = PetscObjectTypeCompare((PetscObject) v, VECSEQ, &isseq);CHKERRQ(ierr);
-    if (isseq) {ierr = VecView_Seq(v, viewer);CHKERRQ(ierr);}
-    else       {ierr = VecView_MPI(v, viewer);CHKERRQ(ierr);}
+    ierr = (*v->ops->viewnative)(v, viewer);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -427,11 +423,7 @@ PetscErrorCode VecView_Plex(Vec v, PetscViewer viewer)
     SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "ExodusII not supported in this build.\nPlease reconfigure using --download-exodusii");
 #endif
   } else {
-    PetscBool isseq;
-
-    ierr = PetscObjectTypeCompare((PetscObject) v, VECSEQ, &isseq);CHKERRQ(ierr);
-    if (isseq) {ierr = VecView_Seq(v, viewer);CHKERRQ(ierr);}
-    else       {ierr = VecView_MPI(v, viewer);CHKERRQ(ierr);}
+    ierr = (*v->ops->viewnative)(v, viewer);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
