@@ -1402,6 +1402,7 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
     PetscInt              *colmap;
 
     /* create and copy h_mat */
+    h_mat.N = A->rmap->N; // assume a square matrix?
     ierr = PetscInfo(A,"Create device matrix in Kokkos\n");CHKERRQ(ierr);
     if (size == 1) {
       Amat = A;

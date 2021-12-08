@@ -150,7 +150,7 @@ PetscErrorCode MatSetValuesDevice(PetscSplitCSRDataStructure d_mat, PetscInt m,c
   MatScalar       *ap1,*ap2 = NULL;
   PetscBool       roworiented = PETSC_TRUE;
   PetscInt        i,j,row,col;
-  const PetscInt  rstart = d_mat->rstart,rend = d_mat->rend, cstart = d_mat->rstart,cend = d_mat->rend,N = d_mat->N;
+  const PetscInt  rstart = d_mat->rstart,rend = d_mat->rend, cstart = d_mat->cstart,cend = d_mat->cend,N = d_mat->N;
 
   for (i=0; i<m; i++) {
     if (im[i] >= rstart && im[i] < rend) { // silently ignore off processor rows
