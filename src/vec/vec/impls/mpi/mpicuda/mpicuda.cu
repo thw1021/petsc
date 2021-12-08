@@ -141,7 +141,10 @@ PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
-  ierr = VecCreate_MPICUDA_Private(*v,PETSC_TRUE,win->nghost,0);CHKERRQ(ierr);
+  if (win->isghost) {
+   ierr = VecSetGhost(*v,win->nghost,win->ghosts,win->nextra);CHKERRQ(ierr);
+  }
+  ierr = VecCreate_MPICUDA_Private(*v,PETSC_TRUE,NULL);CHKERRQ(ierr);
   ierr = PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
 
   /* save local representation of the parallel vector (and scatter) if it exists */
@@ -196,7 +199,7 @@ PetscErrorCode VecCreate_MPICUDA(Vec vv)
   ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   ierr = PetscLayoutSetUp(vv->map);CHKERRQ(ierr);
   ierr = VecCUDAAllocateCheck(vv);CHKERRQ(ierr);
-  ierr = VecCreate_MPICUDA_Private(vv,PETSC_FALSE,0,((Vec_CUDA*)vv->spptr)->GPUarray_allocated);CHKERRQ(ierr);
+  ierr = VecCreate_MPICUDA_Private(vv,PETSC_FALSE,((Vec_CUDA*)vv->spptr)->GPUarray_allocated);CHKERRQ(ierr);
   ierr = VecCUDAAllocateCheckHost(vv);CHKERRQ(ierr);
   ierr = VecSet(vv,0.0);CHKERRQ(ierr);
   ierr = VecSet_Seq(vv,0.0);CHKERRQ(ierr);
@@ -336,7 +339,7 @@ PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,P
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vv,bs);CHKERRQ(ierr);
-  ierr = VecCreate_MPICUDA_Private(*vv,PETSC_FALSE,0,array);CHKERRQ(ierr);
+  ierr = VecCreate_MPICUDA_Private(*vv,PETSC_FALSE,array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -545,7 +548,7 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
+PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,const PetscScalar array[])
 {
   PetscErrorCode ierr;
   Vec_CUDA       *veccuda;
