@@ -1009,14 +1009,14 @@ PETSC_EXTERN PetscErrorCode TSBasicSymplecticRegisterDestroy(void);
 
 /*J
   TSDiscreteGradient - The Discrete Gradient integrator is a timestepper for hamiltonian systems designed to conserve the first integral (energy), but also has the property for some systems of monotonicity in a functional.
-  
+
   Level: beginner
 
   .seealso: TS, TSDISCGRAD, TSDiscGradSetFormulation(), TSDiscGradGetFormulation
 J*/
 PETSC_EXTERN PetscErrorCode TSDiscGradSetFormulation(TS, PetscErrorCode(*)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode(*)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode(*)(TS, PetscReal, Vec, Vec, void *), void *);
-PETSC_EXTERN PetscErrorCode TSDiscGradGetGonzalez(TS,PetscBool*);
-PETSC_EXTERN PetscErrorCode TSDiscGradSetGonzalez(TS,PetscBool);
+PETSC_EXTERN PetscErrorCode TSDiscGradISGonzalez(TS,PetscBool*);
+PETSC_EXTERN PetscErrorCode TSDiscGradUseGonzalez(TS,PetscBool);
 
 /*
        PETSc interface to Sundials

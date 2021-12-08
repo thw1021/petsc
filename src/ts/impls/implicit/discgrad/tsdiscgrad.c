@@ -131,7 +131,7 @@ static PetscErrorCode TSSetFromOptions_DiscGrad(PetscOptionItems *PetscOptionsOb
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject, "Discrete Gradients ODE solver options");CHKERRQ(ierr);
   {
-    ierr = PetscOptionsBool("-ts_discgrad_gonzalez","Use Gonzalez term in discrete gradients formulation","TSDiscGradSetGonzalez",dg->gonzalez,&dg->gonzalez,NULL);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-ts_discgrad_gonzalez","Use Gonzalez term in discrete gradients formulation","TSDiscGradUseGonzalez",dg->gonzalez,&dg->gonzalez,NULL);CHKERRQ(ierr);
   }
   ierr = PetscOptionsTail();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -150,7 +150,7 @@ static PetscErrorCode TSView_DiscGrad(TS ts,PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode TSDiscGradGetGonzalez_DiscGrad(TS ts,PetscBool *gonzalez)
+static PetscErrorCode TSDiscGradIsGonzalez_DiscGrad(TS ts,PetscBool *gonzalez)
 {
   TS_DiscGrad *dg = (TS_DiscGrad*)ts->data;
 
@@ -159,7 +159,7 @@ static PetscErrorCode TSDiscGradGetGonzalez_DiscGrad(TS ts,PetscBool *gonzalez)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode TSDiscGradSetGonzalez_DiscGrad(TS ts,PetscBool flg)
+static PetscErrorCode TSDiscGradUseGonzalez_DiscGrad(TS ts,PetscBool flg)
 {
   TS_DiscGrad *dg = (TS_DiscGrad*)ts->data;
 
@@ -451,8 +451,8 @@ PETSC_EXTERN PetscErrorCode TSCreate_DiscGrad(TS ts)
 
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSDiscGradGetFormulation_C",TSDiscGradGetFormulation_DiscGrad);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)ts,"TSDiscGradSetFormulation_C",TSDiscGradSetFormulation_DiscGrad);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSDiscGradGetGonzalez_C",TSDiscGradGetGonzalez_DiscGrad);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSDiscGradSetGonzalez_C",TSDiscGradSetGonzalez_DiscGrad);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSDiscGradIsGonzalez_C",TSDiscGradIsGonzalez_DiscGrad);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)ts,"TSDiscGradUseGonzalez_C",TSDiscGradUseGonzalez_DiscGrad);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -532,7 +532,7 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 }
 
 /*@
-  TSDiscGradGetGonzalez - Checks flag for whether to use additional conservative terms in discrete gradient formulation.
+  TSDiscGradIsGonzalez - Checks flag for whether to use additional conservative terms in discrete gradient formulation.
 
   Not Collective
 
@@ -544,21 +544,21 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 
   Level: Advanced
 
-.seealso: TSDiscGradSetGonzalez(), TSDISCGRAD
+.seealso: TSDiscGradUseGonzalez(), TSDISCGRAD
 @*/
-PetscErrorCode TSDiscGradGetGonzalez(TS ts,PetscBool *gonzalez)
+PetscErrorCode TSDiscGradIsGonzalez(TS ts,PetscBool *gonzalez)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidPointer(gonzalez,2);
-  ierr = PetscUseMethod(ts,"TSDiscGradGetGonzalez_C",(TS,PetscBool*),(ts,gonzalez));CHKERRQ(ierr);
+  ierr = PetscUseMethod(ts,"TSDiscGradIsGonzalez_C",(TS,PetscBool*),(ts,gonzalez));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@
-  TSDiscGradSetGonzalez - Sets discrete gradient formulation with or without additional conservative terms.  Without flag, the discrete gradients timestepper is just backwards euler
+  TSDiscGradUseGonzalez - Sets discrete gradient formulation with or without additional conservative terms.  Without flag, the discrete gradients timestepper is just backwards euler
 
   Not Collective
 
@@ -573,12 +573,12 @@ PetscErrorCode TSDiscGradGetGonzalez(TS ts,PetscBool *gonzalez)
 
 .seealso: TSDISCGRAD
 @*/
-PetscErrorCode TSDiscGradSetGonzalez(TS ts,PetscBool flg)
+PetscErrorCode TSDiscGradUseGonzalez(TS ts,PetscBool flg)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  ierr = PetscTryMethod(ts,"TSDiscGradSetGonzalez_C",(TS,PetscBool),(ts,flg));CHKERRQ(ierr);
+  ierr = PetscTryMethod(ts,"TSDiscGradUseGonzalez_C",(TS,PetscBool),(ts,flg));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
