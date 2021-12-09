@@ -2089,13 +2089,22 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
   return 0;
 }
 
+/*
+  When coefficients are retrieved from a cohesive cell, we get the negative end cap, the positive end cap, and then the middle cohesive fields. However, we output in field order, with the side evaluations stacked up for each field.
+*/
 PetscErrorCode PetscFEEvaluateFieldJets_Hybrid_Internal(PetscDS ds, PetscInt Nf, PetscInt r, PetscInt q, PetscTabulation T[], PetscFEGeom *fegeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscScalar u[], PetscScalar u_x[], PetscScalar u_t[])
 {
-  PetscInt       dOffset = 0, fOffset = 0, f, g;
+  PetscInt       cOffset = 0; /* Offset into coefficient array for negative side field */
+  PetscInt       fOffset = 0; /* Offset into evaluation array for current field */
+  PetscInt       bSize   = 0; /* Size in coefficient array for bulk fields on one side */
+  PetscInt       Nbulk, Ncohesive, f;
   PetscErrorCode ierr;
 
+  ierr = PetscDSGetNumCohesive(ds, &Ncohesive);CHKERRQ(ierr);
+  Nbulk = Nf - Ncohesive;
+  for (f = 0; f < Nbulk; ++f) bSize += T[f]->Nb;
   /* f is the field number in the DS, g is the field number in u[] */
-  for (f = 0, g = 0; f < Nf; ++f) {
+  for (f = 0; f < Nf; ++f) {
     PetscFE          fe   = (PetscFE) ds->disc[f];
     const PetscInt   cdim = T[f]->cdim;
     const PetscInt   Nq   = T[f]->Np;
@@ -2103,13 +2112,15 @@ PetscErrorCode PetscFEEvaluateFieldJets_Hybrid_Internal(PetscDS ds, PetscInt Nf,
     const PetscInt   Ncf  = T[f]->Nc;
     const PetscReal *Bq   = &T[f]->T[0][(r*Nq+q)*Nbf*Ncf];
     const PetscReal *Dq   = &T[f]->T[1][(r*Nq+q)*Nbf*Ncf*cdim];
+    PetscInt         dOffset = cOffset ; /* Offset into coefficient array for current field */
     PetscBool        isCohesive;
     PetscInt         Ns, s;
 
     if (!T[f]) continue;
     ierr = PetscDSGetCohesive(ds, f, &isCohesive);CHKERRQ(ierr);
     Ns   = isCohesive ? 1 : 2;
-    for (s = 0; s < Ns; ++s, ++g) {
+    if (isCohesive) dOffset += bSize;
+    for (s = 0; s < Ns; ++s, dOffset += bSize) {
       PetscInt b, c, d;
 
       for (c = 0; c < Ncf; ++c)      u[fOffset+c] = 0.0;
@@ -2136,8 +2147,8 @@ PetscErrorCode PetscFEEvaluateFieldJets_Hybrid_Internal(PetscDS ds, PetscInt Nf,
         ierr = PetscFEPushforward(fe, fegeom, 1, &u_t[fOffset]);CHKERRQ(ierr);
       }
       fOffset += Ncf;
-      dOffset += Nbf;
     }
+    cOffset += Nbf;
   }
   return 0;
 }
@@ -2180,7 +2191,6 @@ PetscErrorCode PetscFEUpdateElementVec_Internal(PetscFE fe, PetscTabulation T, P
   PetscInt         q, b, c, d;
   PetscErrorCode   ierr;
 
-  for (b = 0; b < Nb; ++b) elemVec[b] = 0.0;
   for (q = 0; q < Nq; ++q) {
     for (b = 0; b < Nb; ++b) {
       for (c = 0; c < Nc; ++c) {
@@ -2217,7 +2227,6 @@ PetscErrorCode PetscFEUpdateElementVec_Hybrid_Internal(PetscFE fe, PetscTabulati
   PetscInt         q, b, c, d;
   PetscErrorCode   ierr;
 
-  for (b = 0; b < Nb; ++b) elemVec[Nb*s+b] = 0.0;
   for (q = 0; q < Nq; ++q) {
     for (b = 0; b < Nb; ++b) {
       for (c = 0; c < Nc; ++c) {
