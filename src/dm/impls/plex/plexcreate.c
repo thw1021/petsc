@@ -2492,7 +2492,9 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   PetscBool      simplex = PETSC_TRUE, interpolate = PETSC_TRUE, adjCone = PETSC_FALSE, adjClosure = PETSC_TRUE, refDomain = PETSC_FALSE;
   PetscBool      flg, flg2, fflg, bdfflg, nameflg;
   MPI_Comm       comm;
-  char           filename[PETSC_MAX_PATH_LEN], bdFilename[PETSC_MAX_PATH_LEN], plexname[PETSC_MAX_PATH_LEN];
+  char           filename[PETSC_MAX_PATH_LEN]   = "<unspecified>";
+  char           bdFilename[PETSC_MAX_PATH_LEN] = "<unspecified>";
+  char           plexname[PETSC_MAX_PATH_LEN]   = "<unspecified>";
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -2527,6 +2529,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   if (fflg) {
     DM dmnew;
 
+    if (!nameflg) SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_USER_INPUT, "If -dm_plex_filename is given, -dm_plex_name needs to be given as well");
     ierr = DMPlexCreateFromFile(PetscObjectComm((PetscObject) dm), filename, plexname, interpolate, &dmnew);CHKERRQ(ierr);
     ierr = DMPlexReplace_Static(dm, &dmnew);CHKERRQ(ierr);
   } else if (refDomain) {
@@ -2534,6 +2537,7 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
   } else if (bdfflg) {
     DM bdm, dmnew;
 
+    if (!nameflg) SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_USER_INPUT, "If -dm_plex_boundary_filename is given, -dm_plex_name needs to be given as well");
     ierr = DMPlexCreateFromFile(PetscObjectComm((PetscObject) dm), bdFilename, plexname, interpolate, &bdm);CHKERRQ(ierr);
     ierr = PetscObjectSetOptionsPrefix((PetscObject) bdm, "bd_");CHKERRQ(ierr);
     ierr = DMSetFromOptions(bdm);CHKERRQ(ierr);
@@ -2635,6 +2639,9 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
     }
   }
   ierr = DMPlexSetRefinementUniform(dm, PETSC_TRUE);CHKERRQ(ierr);
+  if (!((PetscObject)dm)->name && nameflg) {
+    ierr = PetscObjectSetName((PetscObject)dm, plexname);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
