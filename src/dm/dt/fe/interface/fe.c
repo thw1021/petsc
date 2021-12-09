@@ -2180,7 +2180,6 @@ PetscErrorCode PetscFEUpdateElementVec_Internal(PetscFE fe, PetscTabulation T, P
   PetscInt         q, b, c, d;
   PetscErrorCode   ierr;
 
-  for (b = 0; b < Nb; ++b) elemVec[b] = 0.0;
   for (q = 0; q < Nq; ++q) {
     for (b = 0; b < Nb; ++b) {
       for (c = 0; c < Nc; ++c) {
@@ -2217,7 +2216,6 @@ PetscErrorCode PetscFEUpdateElementVec_Hybrid_Internal(PetscFE fe, PetscTabulati
   PetscInt         q, b, c, d;
   PetscErrorCode   ierr;
 
-  for (b = 0; b < Nb; ++b) elemVec[Nb*s+b] = 0.0;
   for (q = 0; q < Nq; ++q) {
     for (b = 0; b < Nb; ++b) {
       for (c = 0; c < Nc; ++c) {
