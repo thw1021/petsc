@@ -1,7 +1,7 @@
 #ifndef PETSC_CPPUTIL_HPP
 #define PETSC_CPPUTIL_HPP
 
-#include <petsc/private/petscimpl.h> // for PETSC_NODISCARD
+#include <petsc/private/petscimpl.h>
 
 #if defined(__cplusplus)
 
