@@ -729,7 +729,7 @@ int main(int argc, char **argv)
     PetscInt *pNf;
     ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
     ierr = PetscMalloc(sizeof(*pNf), &pNf);CHKERRQ(ierr);
-    *pNf = ctx->batch_sz + 100000*ctx->numConcurrency;;
+    *pNf = ctx->batch_sz + 100000*ctx->numConcurrency;
     ierr = PetscContainerSetPointer(container, (void *)pNf);CHKERRQ(ierr);
     ierr = PetscContainerSetUserDestroy(container, MatrixNfDestroy);CHKERRQ(ierr);
     ierr = PetscObjectCompose((PetscObject)ctx->J, "batch size", (PetscObject) container);CHKERRQ(ierr);
