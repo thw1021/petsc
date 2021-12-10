@@ -263,6 +263,9 @@ class PetscDocString(object):
         "Names:   {}".format(self.names)
       ])
 
+    def __bool__(self):
+      return bool(self.raw) or bool(self.lines)
+
     def clear(self):
       self.raw      = None
       self.lines    = None
@@ -286,11 +289,11 @@ class PetscDocString(object):
     def setup(self,docstring,validName=lambda *args:(False,None)):
       if not self.lines:
         if self.required:
-          import ipdb; ipdb.set_trace()
-          requiredName = self.required if isinstance(self.required,str) else self.__class__
+          if not isinstance(self.required,str):
+            import ipdb; ipdb.set_trace()
           docstring.addErrorFromSourceRange(
             "Required subheading '{}' not found in docstring:\n\n{}",
-            docstring.extent,formatargs=(requiredName,),highlight=False
+            docstring.extent,formatargs=(self.required,),highlight=False
           )
         return
       seen        = set()
@@ -330,19 +333,15 @@ class PetscDocString(object):
     def setup(self,docstring):
       class Valid(object):
         __slots__ = ("found")
-
         def __init__(self):
           self.found = False
-          return
 
         def __call__(self,x):
-          if self.found:
-            # if we already found the title can bail quickly here
-            return False,None
+          # if we already found the title can bail quickly here
+          if self.found: return False,None
           partition = x.partition(" - ")
-          if partition[1] == " - ":
-            self.found = True
-            x = partition[0].strip()
+          x = partition[0].strip()
+          self.found = partition[1] == " - "
           return self.found or x,x
 
       return super().setup(docstring,validName=Valid())
@@ -393,7 +392,7 @@ class PetscDocString(object):
           return section
       closestMatches = difflib.get_close_matches(heading,self._sections.keys())
       if closestMatches:
-        print(80*"*","CLOSEST MATCHES FOUND {} FOR {}".format(closestMatches,heading),80*"*",sep="\n")
+        #print(80*"*","CLOSEST MATCHES FOUND {} FOR {}".format(closestMatches,heading),80*"*",sep="\n")
         return self._sections[closestMatches[0]]
       raise ValueError(heading)
 
@@ -1664,12 +1663,11 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   return
 
 def checkDocValidLevel(linter,cursor,docstring):
-  try:
-    level = docstring.sections.level
-  except AttributeError:
-    import ipdb; ipdb.set_trace()
+  level = docstring.sections.level
+  if not level:
     # if no level, nothing to check here, error will already have been logged
     return
+
   docstring.checkValidTitleCasedSectionHeading(level)
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   expected    = ", ".join(validLevels[:-1])+", or "+str(validLevels[-1])

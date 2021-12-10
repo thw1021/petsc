@@ -123,6 +123,29 @@ ERROR 13: ./src/sys/tests/linter/testValidDocStrings.c:16:68
   69: {
   70:   return 0;
 
+Required subheading 'Level' not found in docstring:
+
+  59: }
+  60: 
+> 61: /*
+> 62:   Not Collective, Synchronous
+> 63: 
+> 64:   References:
+> 65:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 66: .seealso: testNonExistentFunction(), testNonExistentType
+> 67: */
+  68: PetscErrorCode testIllFormedMinimalDocString(void)
+  69: {
+
+ERROR 14: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  66: .seealso: testNonExistentFunction(), testNonExistentType
+  67: */
+> 68: PetscErrorCode testIllFormedMinimalDocString(void)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: {
+  70:   return 0;
+
 Docstring name does not match symbol name. Expected 'testIllFormedMinimalDocString' found 'Not Collective, Synchronous' instead:
 
   60: 
@@ -132,7 +155,7 @@ Docstring name does not match symbol name. Expected 'testIllFormedMinimalDocStri
   63: 
   64:   References:
 
-ERROR 14: ./src/sys/tests/linter/testValidDocStrings.c:16:68
+ERROR 15: ./src/sys/tests/linter/testValidDocStrings.c:16:68
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   66: .seealso: testNonExistentFunction(), testNonExistentType
   67: */
@@ -147,27 +170,4 @@ Docstring missing summary text. Expected 'testIllFormedMinimalDocString - very u
 > 62:   Not Collective, Synchronous
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
   63: 
-
-ERROR 15: ./src/sys/tests/linter/testValidDocStrings.c:16:68
-'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  66: .seealso: testNonExistentFunction(), testNonExistentType
-  67: */
-> 68: PetscErrorCode testIllFormedMinimalDocString(void)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  69: {
-  70:   return 0;
-
-Required subheading 'Level' not found in docstring:
-
-  59: }
-  60: 
-> 61: /*
-> 62:   Not Collective, Synchronous
-> 63: 
-> 64:   References:
-> 65:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-> 66: .seealso: testNonExistentFunction(), testNonExistentType
-> 67: */
-  68: PetscErrorCode testIllFormedMinimalDocString(void)
-  69: {
 [ROOT] -------------------------------------------------------------------------------------
