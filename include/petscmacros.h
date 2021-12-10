@@ -241,7 +241,6 @@ M*/
 #elif defined(_MSC_VER) /* MSVC */
 #  define PetscUnreachable_() __assume(0)
 #else /* ??? */
-#  include <petscerror.h>
 #  define PetscUnreachable_() SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Code path explicitly marked as unreachable executed")
 #endif
 

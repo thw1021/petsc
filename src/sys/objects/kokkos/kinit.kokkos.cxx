@@ -25,9 +25,9 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
 {
   PetscFunctionBegin;
   if (!Kokkos::is_initialized()) {
-    Kokkos::InitArguments args; /* use default constructor */
+    auto args = Kokkos::InitArguments{}; /* use default constructor */
 
-    args.disable_warnings = PetscDefined(HAVE_KOKKOS_INIT_WARNINGS);
+    args.disable_warnings = !PetscDefined(HAVE_KOKKOS_INIT_WARNINGS);
 #if PETSC_AND_KOKKOS_HAVE(CUDA) || PETSC_AND_KOKKOS_HAVE(HIP)
     /* Kokkos does not support CUDA and HIP at the same time (but we do :)) */
     PetscDeviceContext dctx;
