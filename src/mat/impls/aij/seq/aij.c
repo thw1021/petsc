@@ -1452,6 +1452,7 @@ PetscErrorCode MatGetDiagonal_SeqAIJ(Mat A,Vec v)
 PetscErrorCode MatMultTransposeAdd_SeqAIJ(Mat A,Vec xx,Vec zz,Vec yy)
 {
   Mat_SeqAIJ        *a = (Mat_SeqAIJ*)A->data;
+  const MatScalar   *aa;
   PetscScalar       *y;
   const PetscScalar *x;
   PetscErrorCode    ierr;
