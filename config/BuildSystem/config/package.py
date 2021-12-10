@@ -1092,6 +1092,16 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     oldFlags = getattr(self.compilers, flagsArg)
     setattr(self.compilers, flagsArg, oldFlags+' '+self.headers.toString(self.include))
     self.compilers.saveLog()
+
+    # X.py uses a weird list of two headers.
+    if not isinstance(self.versioninclude,list):
+      headerList = [self.versioninclude]
+    else:
+      headerList = self.versioninclude
+
+    includeLines = ''
+    for header in headerList:
+      includeLines += '#include "'+header+'"\n'
     try:
       # We once used '#include "'+self.versioninclude+'"\npetscpkgver('+self.versionname+');\n',
       # but some preprocessors are picky (ex. dpcpp -E), reporting errors on the code above even
