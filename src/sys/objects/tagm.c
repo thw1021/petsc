@@ -119,7 +119,7 @@ PetscErrorCode  PetscCommDuplicate(MPI_Comm comm_in,MPI_Comm *comm_out,PetscMPII
 
   if (!flg) {  /* this is NOT a PETSc comm */
     union {MPI_Comm comm; void *ptr;} ucomm;
-    /* check if this communicator has a PETSc communicator imbedded in it */
+    /* check if this communicator has a PETSc communicator embedded in it */
     ierr = MPI_Comm_get_attr(comm_in,Petsc_InnerComm_keyval,&ucomm,&flg);CHKERRMPI(ierr);
     if (!flg) {
       /* This communicator is not yet known to this system, so we duplicate it and make an internal communicator */
@@ -145,23 +145,24 @@ PetscErrorCode  PetscCommDuplicate(MPI_Comm comm_in,MPI_Comm *comm_out,PetscMPII
     }
   } else *comm_out = comm_in;
 
-  if (PetscDefined(USE_DEBUG)) {
-    /*
-     Hanging here means that some processes have called PetscCommDuplicate() and others have not.
-     This likley means that a subset of processes in a MPI_Comm have attempted to create a PetscObject!
-     ALL processes that share a communicator MUST shared objects created from that communicator.
-     */
-    ierr = MPI_Barrier(comm_in);CHKERRMPI(ierr);
-  }
+  if (first_tag) {
+    if (PetscDefined(USE_DEBUG)) {
+      /*
+       Hanging here means that some processes have called PetscCommDuplicate() and requested a tag and others have not.
+       This likley means that a subset of processes in a MPI_Comm have attempted to create a PetscObject!
+       ALL processes that share a communicator MUST shared objects created from that communicator.
+       */
+      ierr = MPI_Barrier(comm_in);CHKERRMPI(ierr);
+    }
 
-  if (counter->tag < 1) {
-    ierr = PetscInfo1(NULL,"Out of tags for object, starting to recycle. Comm reference count %" PetscInt_FMT "\n",counter->refcount);CHKERRQ(ierr);
-    ierr = MPI_Comm_get_attr(MPI_COMM_WORLD,MPI_TAG_UB,&maxval,&flg);CHKERRMPI(ierr);
-    if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI error: MPI_Comm_get_attr() is not returning a MPI_TAG_UB");
-    counter->tag = *maxval - 128; /* hope that any still active tags were issued right at the beginning of the run */
+    if (counter->tag < 1) {
+      ierr = PetscInfo1(NULL,"Out of tags for object, starting to recycle. Comm reference count %" PetscInt_FMT "\n",counter->refcount);CHKERRQ(ierr);
+      ierr = MPI_Comm_get_attr(MPI_COMM_WORLD,MPI_TAG_UB,&maxval,&flg);CHKERRMPI(ierr);
+      if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI error: MPI_Comm_get_attr() is not returning a MPI_TAG_UB");
+      counter->tag = *maxval - 128; /* hope that any still active tags were issued right at the beginning of the run */
+    }
+    *first_tag = counter->tag--;
   }
-
-  if (first_tag) *first_tag = counter->tag--;
 
   counter->refcount++; /* number of references to this comm */
   ierr = PetscSpinlockUnlock(&PetscCommSpinLock);CHKERRQ(ierr);
