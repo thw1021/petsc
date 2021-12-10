@@ -237,39 +237,43 @@ PetscErrorCode CUPMDevice<T>::finalize_() noexcept
   PetscFunctionReturn(0);
 }
 
+// these functions should be named identically to the option they produce where "CUPMTYPE" and
+// "cupmtype" are the uppercase and lowercase string versions of the cupm backend respectively
 template <CUPMDeviceType T>
-static constexpr const std::array<const char*const,4> cupmOptions() noexcept;
-
-#undef CAT_
-#undef CAT
-
-#define CAT_(x,y) x ## y
-#define CAT(x,y)  CAT_(x,y)
-
-// PetscDefined(HAVE_TYPE) = 0 -> expands to nothing
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_0(TYPE,type)
-// PetscDefined(HAVE_TYPE) = 1 -> expands to the function
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_1(TYPE,type)              \
-  template <>                                                           \
-  constexpr const std::array<const char*const,4>                        \
-  cupmOptions<CUPMDeviceType::TYPE>() noexcept                          \
-  {                                                                     \
-    return {                                                            \
-      "PetscDevice " PetscStringize(TYPE) " Options",                   \
-      "-device_enable_" PetscStringize(type),                           \
-      "-device_select_" PetscStringize(type),                           \
-      "-device_view_" PetscStringize(type)                              \
-    };                                                                  \
+PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* PetscDevice_CUPMTYPE_Options())
+{
+  switch (T) {
+  case CUPMDeviceType::CUDA: return "PetscDevice CUDA Options";
+  case CUPMDeviceType::HIP:  return "PetscDevice HIP Options";
   }
+}
 
-// expands to either the cupmOptions function or nothing, we have to do this with macros
-// because for all the lovely compile time features c++ provides, the one thing it can't do is
-// compile time string concatenation.
-#define CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(TYPE,type)                \
-  CAT(CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED_,PetscDefined(CAT(HAVE_,TYPE)))(TYPE,type)
+template <CUPMDeviceType T>
+PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_enable_cupmtype())
+{
+  switch (T) {
+  case CUPMDeviceType::CUDA: return "-device_enable_cuda";
+  case CUPMDeviceType::HIP:  return "-device_enable_hip";
+  }
+}
 
-CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(CUDA,cuda)
-CUPM_DECLARE_OPTIONS_IF_PETSC_DEFINED(HIP,hip)
+template <CUPMDeviceType T>
+PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_select_cupmtype())
+{
+  switch (T) {
+  case CUPMDeviceType::CUDA: return "-device_select_cuda";
+  case CUPMDeviceType::HIP:  return "-device_select_hip";
+  }
+}
+
+template <CUPMDeviceType T>
+PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_view_cupmtype())
+{
+  switch (T) {
+  case CUPMDeviceType::CUDA: return "-device_view_cuda";
+  case CUPMDeviceType::HIP:  return "-device_view_hip";
+  }
+}
 
 template <CUPMDeviceType T>
 PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
@@ -286,12 +290,11 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
   ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
 
   {
-    constexpr const auto options = cupmOptions<T>();
-
-    ierr = PetscOptionsBegin(comm,nullptr,std::get<0>(options),"Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList(std::get<1>(options),"How (or whether) to initialize a device","CUPMDevice<CUPMDeviceType>::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initTypeCUPM],&initTypeCUPM,nullptr);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt(std::get<2>(options),"Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,std::numeric_limits<decltype(defaultDevice_)>::max());CHKERRQ(ierr);
-    ierr = PetscOptionsBool(std::get<3>(options),"Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
+    // the functions to populate the command line strings are named after the string they return
+    ierr = PetscOptionsBegin(comm,nullptr,PetscDevice_CUPMTYPE_Options<T>(),"Sys");CHKERRQ(ierr);
+    ierr = PetscOptionsEList(device_enable_cupmtype<T>(),"How (or whether) to initialize a device","CUPMDevice<CUPMDeviceType>::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initTypeCUPM],&initTypeCUPM,nullptr);CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt(device_select_cupmtype<T>(),"Which device to use. Pass " PETSCPP_STRINGIZE(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,std::numeric_limits<decltype(defaultDevice_)>::max());CHKERRQ(ierr);
+    ierr = PetscOptionsBool(device_view_cupmtype<T>(),"Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
 
