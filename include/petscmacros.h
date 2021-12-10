@@ -4,6 +4,114 @@
 #include <petscconf.h>
 #include <petscconf_poison.h> /* for PetscDefined() error checking */
 
+/* ========================================================================== */
+/* This facilitates using the C version of PETSc from C++ and the C++ version from C. */
+#if defined(__cplusplus)
+#  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_CXX
+#else
+#  define PETSC_FUNCTION_NAME PETSC_FUNCTION_NAME_C
+#endif
+
+/* ========================================================================== */
+/* Since PETSc manages its own extern "C" handling users should never include PETSc include
+ * files within extern "C". This will generate a compiler error if a user does put the include
+ * file within an extern "C".
+ */
+#if defined(__cplusplus)
+void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_put_petsc_headers_inside_an_extern_c(double);
+#endif
+
+#if defined(__cplusplus)
+#  define PETSC_RESTRICT PETSC_CXX_RESTRICT
+#else
+#  define PETSC_RESTRICT PETSC_C_RESTRICT
+#endif
+
+#if defined(__cplusplus)
+#  define PETSC_INLINE PETSC_CXX_INLINE
+#else
+#  define PETSC_INLINE PETSC_C_INLINE
+#endif
+
+#define PETSC_STATIC_INLINE static PETSC_INLINE
+
+#if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES) /* For Win32 shared libraries */
+#  define PETSC_DLLEXPORT __declspec(dllexport)
+#  define PETSC_DLLIMPORT __declspec(dllimport)
+#  define PETSC_VISIBILITY_INTERNAL
+#elif defined(__cplusplus) && defined(PETSC_USE_VISIBILITY_CXX)
+#  define PETSC_DLLEXPORT __attribute__((visibility ("default")))
+#  define PETSC_DLLIMPORT __attribute__((visibility ("default")))
+#  define PETSC_VISIBILITY_INTERNAL __attribute__((visibility ("hidden")))
+#elif !defined(__cplusplus) && defined(PETSC_USE_VISIBILITY_C)
+#  define PETSC_DLLEXPORT __attribute__((visibility ("default")))
+#  define PETSC_DLLIMPORT __attribute__((visibility ("default")))
+#  define PETSC_VISIBILITY_INTERNAL __attribute__((visibility ("hidden")))
+#else
+#  define PETSC_DLLEXPORT
+#  define PETSC_DLLIMPORT
+#  define PETSC_VISIBILITY_INTERNAL
+#endif
+
+#if defined(petsc_EXPORTS) /* CMake defines this when building the shared library */
+#  define PETSC_VISIBILITY_PUBLIC PETSC_DLLEXPORT
+#else  /* Win32 users need this to import symbols from petsc.dll */
+#  define PETSC_VISIBILITY_PUBLIC PETSC_DLLIMPORT
+#endif
+
+/* Functions tagged with PETSC_EXTERN in the header files are always defined as extern "C" when
+ * compiled with C++ so they may be used from C and are always visible in the shared libraries
+ */
+#if defined(__cplusplus)
+#  define PETSC_EXTERN         extern "C" PETSC_VISIBILITY_PUBLIC
+#  define PETSC_EXTERN_TYPEDEF extern "C"
+#  define PETSC_INTERN         extern "C" PETSC_VISIBILITY_INTERNAL
+#else
+#  define PETSC_EXTERN         extern PETSC_VISIBILITY_PUBLIC
+#  define PETSC_EXTERN_TYPEDEF
+#  define PETSC_INTERN         extern PETSC_VISIBILITY_INTERNAL
+#endif
+
+#if defined(PETSC_USE_SINGLE_LIBRARY)
+#  define PETSC_SINGLE_LIBRARY_INTERN PETSC_INTERN
+#else
+#  define PETSC_SINGLE_LIBRARY_INTERN PETSC_EXTERN
+#endif
+
+/* C++11 features */
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#  define PETSC_NULLPTR             nullptr
+#  define PETSC_CONSTEXPR           constexpr
+#  define PETSC_NOEXCEPT            noexcept
+#  define PETSC_NOEXCEPT_ARG(cond_) noexcept(cond_)
+#else
+#  define PETSC_NULLPTR             NULL
+#  define PETSC_CONSTEXPR
+#  define PETSC_NOEXCEPT
+#  define PETSC_NOEXCEPT_ARG(cond_)
+#endif
+
+/* C++14 features */
+#if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
+#  define PETSC_CONSTEXPR_14 PETSC_CONSTEXPR
+#else
+#  define PETSC_CONSTEXPR_14
+#endif
+
+/* C++17 features */
+/* We met cases that the host CXX compiler (say mpicxx) supports C++17, but nvcc does not
+ * agree, even with -ccbin mpicxx! */
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX17) && (!defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_CUDA_DIALECT_CXX17))
+#  define PETSC_NODISCARD    [[nodiscard]]
+#  define PETSC_CONSTEXPR_17 PETSC_CONSTEXPR
+#else
+#  define PETSC_NODISCARD
+#  define PETSC_CONSTEXPR_17
+#endif
+
+#include <petscversion.h>
+#define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://petsc.org/\n"
+
 /*MC
   PetscHasAttribute - Determine whether a particular __attribute__ is supported by the compiler
 
