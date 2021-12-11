@@ -5,9 +5,10 @@ Created on Tue Mar 23 17:56:06 2021
 
 @author: jacobfaibussowitsch
 """
-import clang.cindex as clx
+
 import ctypes
 import functools
+import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
     '''filter predicate for show_ast: show all'''
@@ -138,6 +139,124 @@ def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterCon
   if view:
     print(srcStr)
   return srcStr
+
+
+def viewCursorFull(cursor):
+  try:
+    print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
+  except AttributeError:
+    pass
+  try:
+    print("Semantic Parent:",cursor.semantic_parent.displayname)
+  except AttributeError:
+    pass
+  try:
+    print("Lexical Parent:",cursor.lexical_parent.displayname)
+  except AttributeError:
+    pass
+  print("Children:"," ".join([c.spelling for c in cursor.get_children()]))
+  print("AST View")
+  print("\n".join(viewAstFromCursor(cursor)))
+  return
+
+
+class Scope(object):
+  __doc__="""
+  Scope encompasses both the logical and lexical reach of a callsite, and is used to
+  determine if two function calls may be occur in chronological order. Scopes may be
+  approximated by incrementing or decrementing a counter every time a pair of '{}' are
+  encountered however it is not that simple. In practice they behave almost identically
+  to sets. Every relation between scopes may be formed by the following axioms.
+
+  - Scope A is said to be greater than scope B if one is able to get to scope B from scope A
+  e.g.:
+  { // scope A
+    { // scope B < scope A
+      ...
+    }
+  }
+  - Scope A is said to be equivalent to scope B if and only if they are the same object.
+  e.g.:
+  { // scope A and scope B
+    ...
+  }
+
+  One notable exception are switch-case statements. Here every 'case' label acts as its
+  own scope, regardless of whether a "break" is inserted i.e.:
+
+  switch (cond) { // scope A
+  case 1: // scope B begin
+    ...
+    break; // scope B end
+  case 2: // scope C begin
+    ...
+  case 2:// scope C end, scope D begin
+    ...
+    break; // scope D end
+  }
+
+  Semantics here are weird, as:
+  - scope B, C, D < scope A
+  - scope B != scope C != scope D
+  """
+  __slots__ = "gen","super","children"
+
+  def __init__(self,superScope=None):
+    if superScope:
+      assert isinstance(superScope,Scope)
+      self.gen    = superScope.gen+1
+    else:
+      self.gen    = 0
+    self.super    = superScope
+    self.children = []
+    return
+
+  def __str__(self):
+    return "gen {} id {}".format(self.gen,id(self))
+
+  def __lt__(self,other):
+    assert isinstance(other,Scope)
+    return not (self >= other)
+
+  def __gt__(self,other):
+    assert isinstance(other,Scope)
+    return self.isChildOf(other)
+
+  def __le__(self,other):
+    assert isinstance(other,Scope)
+    return not (self > other)
+
+  def __ge__(self,other):
+    assert isinstance(other,Scope)
+    return (self > other) or (self == other)
+
+  def __eq__(self,other):
+    if other is not None:
+      assert isinstance(other,Scope)
+      return id(self) == id(other)
+    return False
+
+  def __ne__(self,other):
+    return not (self == other)
+
+  def sub(self):
+    __doc__="""spawn sub-scope"""
+    child = Scope(self)
+    self.children.append(child)
+    return child
+
+  def isParentOf(self,other):
+    __doc__="""self is parent of other"""
+    if self == other:
+      return False
+    for child in self.children:
+      if (other == child) or child.isParentOf(other):
+        return True
+    return False
+
+  def isChildOf(self,other):
+    __doc__="""self is child of other, or other is parent of self"""
+    return other.isParentOf(self)
 
 
 @functools.total_ordering
@@ -275,6 +394,7 @@ class PetscSourceRange(object):
   def overlaps(self,other):
     return (self.start in other) or (self.end in other) or (other.start in self) or (other.end in self)
 
+
 CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
   ctypes.c_uint,ctypes.py_object,clx.Cursor,clx.SourceRange
 )
@@ -295,20 +415,100 @@ class PetscCXCursorAndRangeVisitor(ctypes.Structure):
   ]
 
 
-def viewCursorFull(cursor):
-  try:
-    print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
-  except AttributeError:
-    pass
-  try:
-    print("Semantic Parent:",cursor.semantic_parent.displayname)
-  except AttributeError:
-    pass
-  try:
-    print("Lexical Parent:",cursor.lexical_parent.displayname)
-  except AttributeError:
-    pass
-  print("Children:"," ".join([c.spelling for c in cursor.get_children()]))
-  print("AST View")
-  print("\n".join(viewAstFromCursor(cursor)))
-  return
+class Scope(object):
+  __doc__="""
+  Scope encompasses both the logical and lexical reach of a callsite, and is used to
+  determine if two function calls may be occur in chronological order. Scopes may be
+  approximated by incrementing or decrementing a counter every time a pair of '{}' are
+  encountered however it is not that simple. In practice they behave almost identically
+  to sets. Every relation between scopes may be formed by the following axioms.
+
+  - Scope A is said to be greater than scope B if one is able to get to scope B from scope A
+  e.g.:
+  { // scope A
+    { // scope B < scope A
+      ...
+    }
+  }
+  - Scope A is said to be equivalent to scope B if and only if they are the same object.
+  e.g.:
+  { // scope A and scope B
+    ...
+  }
+
+  One notable exception are switch-case statements. Here every 'case' label acts as its
+  own scope, regardless of whether a "break" is inserted i.e.:
+
+  switch (cond) { // scope A
+  case 1: // scope B begin
+    ...
+    break; // scope B end
+  case 2: // scope C begin
+    ...
+  case 2:// scope C end, scope D begin
+    ...
+    break; // scope D end
+  }
+
+  Semantics here are weird, as:
+  - scope B, C, D < scope A
+  - scope B != scope C != scope D
+  """
+  __slots__ = "gen","super","children"
+
+  def __init__(self,superScope=None):
+    if superScope:
+      assert isinstance(superScope,Scope)
+      self.gen    = superScope.gen+1
+    else:
+      self.gen    = 0
+    self.super    = superScope
+    self.children = []
+    return
+
+  def __str__(self):
+    return "gen {} id {}".format(self.gen,id(self))
+
+  def __lt__(self,other):
+    assert isinstance(other,Scope)
+    return not (self >= other)
+
+  def __gt__(self,other):
+    assert isinstance(other,Scope)
+    return self.isChildOf(other)
+
+  def __le__(self,other):
+    assert isinstance(other,Scope)
+    return not (self > other)
+
+  def __ge__(self,other):
+    assert isinstance(other,Scope)
+    return (self > other) or (self == other)
+
+  def __eq__(self,other):
+    if other is not None:
+      assert isinstance(other,Scope)
+      return id(self) == id(other)
+    return False
+
+  def __ne__(self,other):
+    return not (self == other)
+
+  def sub(self):
+    __doc__="""spawn sub-scope"""
+    child = Scope(self)
+    self.children.append(child)
+    return child
+
+  def isParentOf(self,other):
+    __doc__="""self is parent of other"""
+    if self == other:
+      return False
+    for child in self.children:
+      if (other == child) or child.isParentOf(other):
+        return True
+    return False
+
+  def isChildOf(self,other):
+    __doc__="""self is child of other, or other is parent of self"""
+    return other.isParentOf(self)
