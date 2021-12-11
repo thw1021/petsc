@@ -1,4 +1,4 @@
-#include <petscsys.h>
+#include <petsc/private/petscimpl.h>
 
 typedef int testType;
 
