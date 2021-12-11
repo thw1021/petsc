@@ -180,6 +180,29 @@ PetscErrorCode  PetscPopErrorHandler(void)
   PetscFunctionReturn(0);
 }
 
+/*@
+   PetscClearErrorHandler - Removes all error handlers that were  pushed with PetscPushErrorHandler().
+
+   Not Collective
+
+   Level: developer
+
+   Notes:
+     This is called in PetscFinalize() to free the memory used by the error handlers
+
+.seealso: PetscPushErrorHandler(), PetscPopErrorHandler()
+@*/
+PetscErrorCode  PetscClearErrorHandler(void)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  while (eh) {
+    ierr = PetscPopErrorHandler();
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@C
   PetscReturnErrorHandler - Error handler that causes a return without printing an error message.
 

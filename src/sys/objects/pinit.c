@@ -1588,6 +1588,7 @@ PetscErrorCode  PetscFinalize(void)
   ierr = PetscOptionsHelpPrintedDestroy(&PetscOptionsHelpPrintedSingleton);CHKERRQ(ierr);
   ierr = PetscInfoDestroy();CHKERRQ(ierr);
 
+  ierr = PetscClearErrorHandler();CHKERRQ(ierr);
 #if !defined(PETSC_HAVE_THREADSAFETY)
   if (!(PETSC_RUNNING_ON_VALGRIND)) {
     char fname[PETSC_MAX_PATH_LEN];
