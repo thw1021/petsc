@@ -1659,18 +1659,19 @@ PETSC_STATIC_INLINE PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt
 @*/
 PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 {
-  MPI_Comm       comm;
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  DM_Network     *oldDMnetwork = (DM_Network*)((*dm)->data);
-  DM_Network     *newDMnetwork;
-  PetscSF        pointsf=NULL;
-  DM             newDM;
-  PetscInt       j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
-  PetscInt       to_net,from_net,*svto;
-  PetscBT        btable;
+  MPI_Comm                 comm;
+  PetscErrorCode           ierr;
+  PetscMPIInt              size;
+  DM_Network               *oldDMnetwork = (DM_Network*)((*dm)->data);
+  DM_Network               *newDMnetwork;
+  PetscSF                  pointsf = NULL;
+  DM                       newDM;
+  PetscInt                 j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
+  PetscInt                 to_net,from_net,*svto;
+  PetscBT                  btable;
   PetscPartitioner         part;
   DMNetworkComponentHeader header;
+  DM_Plex                  *plex;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)*dm,&comm);CHKERRQ(ierr);
@@ -1679,7 +1680,6 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 
   if (overlap) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %D != 0 is not supported yet",overlap);
 
-  /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
   ierr = DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM);CHKERRQ(ierr);
   newDMnetwork = (DM_Network*)newDM->data;
   newDMnetwork->max_comps_registered = oldDMnetwork->max_comps_registered;
@@ -1692,12 +1692,19 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   /* Distribute plex dm */
   ierr = DMPlexDistribute(oldDMnetwork->plex,overlap,&pointsf,&newDMnetwork->plex);CHKERRQ(ierr);
 
+  /* Permute the new plex entities to put the ghost locations at the end */
+  ierr = DMPlexSetUseVecGhostPermutation(newDMnetwork->plex);CHKERRQ(ierr);
+  ierr = DMPlexSetUpVecGhostPermutation(newDMnetwork->plex);CHKERRQ(ierr);
+  plex = (DM_Plex*)newDMnetwork->plex->data;
+
   /* Distribute dof section */
   ierr = PetscSectionCreate(comm,&newDMnetwork->DofSection);CHKERRQ(ierr);
+  ierr = PetscSectionSetPermutation(newDMnetwork->DofSection, plex->vecghostperm);CHKERRQ(ierr);
   ierr = PetscSFDistributeSection(pointsf,oldDMnetwork->DofSection,NULL,newDMnetwork->DofSection);CHKERRQ(ierr);
 
   /* Distribute data and associated section */
   ierr = PetscSectionCreate(comm,&newDMnetwork->DataSection);CHKERRQ(ierr);
+  ierr = PetscSectionSetPermutation(newDMnetwork->DataSection, plex->vecghostperm);CHKERRQ(ierr);
   ierr = DMPlexDistributeData(newDMnetwork->plex,pointsf,oldDMnetwork->DataSection,MPIU_INT,(void*)oldDMnetwork->componentdataarray,newDMnetwork->DataSection,(void**)&newDMnetwork->componentdataarray);CHKERRQ(ierr);
 
   ierr = PetscSectionGetChart(newDMnetwork->DataSection,&newDMnetwork->pStart,&newDMnetwork->pEnd);CHKERRQ(ierr);
