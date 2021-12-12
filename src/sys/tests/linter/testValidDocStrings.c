@@ -1,4 +1,4 @@
-#include <petsc/private/petscimpl.h>
+#include <petscsys.h>
 
 typedef int testType;
 
@@ -66,6 +66,26 @@ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, Pe
 .seealso: testNonExistentFunction(), testNonExistentType
 */
 PetscErrorCode testIllFormedMinimalDocString(void)
+{
+  return 0;
+}
+
+/*@C
+  testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+  input prametirs:
++ viewer - a PetsViewer
+- x      - a PetscInt
+
+  output Psrammmetrs:
+. y - a PetscScalar pointer
+
+  lvl: itnmediate
+
+.zeeakso: testNonExistentFunction(), testNonExistentType
+C@*/
+PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 {
   return 0;
 }
