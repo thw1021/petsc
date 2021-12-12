@@ -233,45 +233,46 @@ class PetscDocString(object):
 
   class DefaultSection(object):
     __doc__ = """Container for a single section of the docstring, has members:
-    'heading' - the textual heading for this section
-    'raw'     - the raw text in the section
-    'extent'  - the SourceRange for the whole section
-    'lines'   - a tuple of each line of text and its SourceRange in the section
-    'names'   - a tuple of extracted tokens of interest, e.g. the title, options parameters, function parameters, etc.
+    'name'   - the name of this section
+    'raw'    - the raw text in the section
+    'extent' - the SourceRange for the whole section
+    'lines'  - a tuple of each line of text and its SourceRange in the section
+    'items'  - a tuple of extracted tokens of interest, e.g. the title, options parameters, function parameters, etc.
     """
-    __slots__ = "heading","required","raw","extent","lines","names"
+    __slots__ = "name","required","raw","extent","lines","items"
 
-    def __init__(self,heading,required=False):
-      assert isinstance(heading,str)
-      self.heading  = heading
+    def __init__(self,name,required=False):
+      assert isinstance(name,str)
+      self.name     = name
       self.required = required
       self.clear()
       return
 
     def __str__(self):
       return "\n".join([
-        "Type:    {}".format(type(self)),
-        "Heading: {}".format(self.heading),
-        "Extent:  {}".format(self.extent),
-        "Names:   {}".format(self.names)
+        "Type:   {}".format(type(self)),
+        "Name:   {}".format(self.name),
+        "Extent: {}".format(self.extent),
+        "Items:  {}".format(self.items)
       ])
 
     def __bool__(self):
-      return bool(self.raw) or bool(self.lines)
+      return bool(self.raw) or bool(self.lines) or bool(self.extent) or bool(self.items)
 
     def clear(self):
-      self.raw      = None
-      self.lines    = None
-      self.extent   = None
-      self.names    = None
+      self.raw    = None
+      self.extent = None
+      self.lines  = None
+      self.items  = None
       return
 
     def fill(self,data):
       assert len(data)
       try:
-        assert self.lines is None, "Refilling section!"
+        assert not self, "Refilling section!"
       except AssertionError:
         import ipdb; ipdb.set_trace()
+      self.clear()
       self.lines  = tuple(data)
       self.raw    = "\n".join(s for _,s in self.lines)
       self.extent = PetscSourceRange.fromLocations(
@@ -289,36 +290,32 @@ class PetscDocString(object):
             docstring.extent,formatargs=(self.required,),highlight=False
           )
         return
-      seen        = set()
-      multiHeader = False
-      self.names  = []
+      seen       = collections.defaultdict(list)
+      self.items = []
       for srcloc,line in self.lines:
         if ":" in line:
-          header = line.split(":")[0].strip().casefold()
-          if header in seen:
-            multiHeader = True
-          else:
-            seen.add(header)
+          seen[line.split(":")[0].strip().casefold()].append(srcloc)
         # let each section type determine if this line is useful
         valid,item = validName(line)
         if valid:
-          self.names.append(docstring.makeSourceRange(item,line,srcloc.start.line))
-      self.names = tuple(self.names)
-      if multiHeader:
+          self.items.append(docstring.makeSourceRange(item,line,srcloc.start.line))
+      self.items = tuple(self.items)
+      if any(len(locs) > 1 for locs in seen.values()):
         # check that a particular subsection does not appear twice
         srclist        = []
         nbefore,nafter = 2,0
-        prevLineBegin  = self.names[0][0].start.line
-        for i,name in enumerate(self.names):
+        for i,name in enumerate(self.items):
           if i:
             nbefore = name[0].start.line-prevLineBegin-1
-            if i == len(self.names)-1:
+            if i == len(self.items)-1:
               nafter = 2
           srclist.append(pclu.getFormattedSourceFromSourceRange(
             name[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False
           ))
           prevLineBegin = name[0].start.line
-        error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n\n{}".format(header,"\n".join(srclist))
+        if not isinstance(self.required,str):
+          import ipdb; ipdb.set_trace()
+        error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n\n{}".format(self.required,"\n".join(srclist))
         docstring._linter.addErrorFromCursor(docstring.cursor,error)
       return
 
@@ -384,23 +381,30 @@ class PetscDocString(object):
         if head in heading:
           return section
       closestMatches = difflib.get_close_matches(heading,self._sections.keys())
+      if not closestMatches:
+        # try if we can fund a sub-word
+        for head in heading.split():
+          closestMatches = difflib.get_close_matches(head,self._sections.keys())
+          if closestMatches:
+            break
       if closestMatches:
         print(
           80*"*","CLOSEST MATCHES FOUND {} FOR {}".format(closestMatches,heading),80*"*",sep="\n"
         )
         return self._sections[closestMatches[0]]
+      import ipdb; ipdb.set_trace()
       raise ValueError(heading)
 
     def registered(self,section):
       if isinstance(section,PetscDocString.DefaultSection):
-        return section.heading in self._sections
+        return section.name in self._sections
       elif isinstance(section,str):
         return section in self._sections
       raise NotImplementedError
 
     def addSection(self,section):
       assert not self.registered(section)
-      self._sections[section.heading] = section
+      self._sections[section.name] = section
       return
 
 
@@ -544,17 +548,34 @@ class PetscDocString(object):
         )
     return
 
-  def checkValidTitleCasedSectionHeading(self,section):
+  def checkValidTitleCasedSectionHeading(self,line):
     # check that header is correctly title-cased
-    lineloc,line = section.lines[0]
-    heading      = line.partition(":")[0].strip()
+    loc,text = line
+    heading  = text.partition(":")[0].strip()
     if not heading.istitle():
+      titleCased = heading.title()
       self.addErrorFromCursor(
         "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
-        heading,line,lineloc.start.line,
-        formatargs=(heading.title(),heading),
-        patch=SourceFix.fromSourceRange(lineloc,line.replace(heading,heading.title()))
+        heading,text,loc.start.line,
+        formatargs=(titleCased,heading),
+        patch=SourceFix.fromSourceRange(loc,text.replace(heading,titleCased))
       )
+    return True
+
+  def checkValidSectionHeaderSpelling(self,section,correctSpelling=None):
+    if correctSpelling is None:
+      assert section.required and isinstance(section.required,str)
+      correctSpelling = section.required
+    for loc,line in section.lines:
+      if  ":" in line:
+        if correctSpelling in line:
+          return # everything seems to be in order
+        if correctSpelling.istitle():
+          pass
+        import ipdb; ipdb.set_trace()
+        # TODO:
+        # figure out a way to have user provide a "check the prospective heading has this
+        # feature" and a "heres how to fix it if so"
     return
 
   def parse(self,linter):
@@ -1533,7 +1554,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
 
   docstring.checkValidSolitarySectionHeading(params)
   docstring.checkValidTitleCasedSectionHeading(params)
-  docStringArgs = params.names
+  docStringArgs = params.items
   allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
   for i,arg in enumerate(fnargs):
@@ -1570,15 +1591,20 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
 
 def checkDocValidSynopsis(linter,cursor,docstring):
   section        = docstring.sections.synopsis
-  allSymbolNames = section.names
+  allSymbolNames = section.items
   assert len(allSymbolNames)
   sectionRaw  = "\n".join(s for _,s in section.lines)
   symbolName = allSymbolNames[0]
   cursorName = PetscCursor.getNameFromCursor(cursor)
   if symbolName[1] != cursorName:
     src = pclu.getFormattedSourceFromSourceRange(symbolName[0],numContext=2)
-    errorMessage = "Docstring name does not match symbol name. Expected '{}' found '{}' instead:\n\n{}".format(cursorName,symbolName[-1],src)
-    linter.addErrorFromCursor(cursor,errorMessage)
+    if len(difflib.get_close_matches(symbolName[-1],[cursorName])):
+      errorMessage = "Docstring name '{}' does not match symbol. Assuming you meant '{}':\n\n{}".format(symbolName[-1],cursorName,src)
+      patch = SourceFix.fromSourceRange(symbolName[0],cursorName)
+    else:
+      errorMessage = "Docstring name '{}' does not match symbol name '{}':\n\n{}".format(symbolName[-1],cursorName,src)
+      patch = None
+    linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
   if "-" not in sectionRaw:
     src = pclu.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(section.lines)-1)
     errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
@@ -1591,11 +1617,13 @@ def checkDocValidLevel(linter,cursor,docstring):
     # if no level, nothing to check here, error will already have been logged
     return
 
+  import ipdb; ipdb.set_trace()
+  docstring.checkValidSectionHeaderSpelling(level)
   docstring.checkValidTitleCasedSectionHeading(level)
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   expected    = ", ".join(validLevels[:-1])+", or "+str(validLevels[-1])
   newLineWithProperIndent = ":\n"+docstring.indent*" "
-  for loc,levelName in level.names:
+  for loc,levelName in level.items:
     if levelName not in validLevels:
       src    = pclu.getFormattedSourceFromSourceRange(loc,numContext=2)
       locase = levelName.casefold()
@@ -1603,8 +1631,14 @@ def checkDocValidLevel(linter,cursor,docstring):
         errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(locase,levelName,src)
         linter.addErrorFromCursor(cursor,errorMessage,patch=SourceFix.fromSourceRange(loc,locase))
       else:
-        errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,expected,src)
-        linter.addErrorFromCursor(cursor,errorMessage)
+        closeMatches = difflib.get_close_matches(locase,validLevels)
+        if closeMatches:
+          errorMessage = "Unknown Level subheading '{}', assuming you meant '{}':\n\n{}".format(levelName,closeMatches[0],src)
+          patch = SourceFix.fromSourceRange(loc,closeMatches[0])
+        else:
+          errorMessage = "Unknown Level subheading '{}', expected one of {}:\n\n{}".format(levelName,expected,src)
+          patch = None
+        linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
   for loc,line in level.lines:
     continue # TODO FIX ME, need to be able to handle the below
     if line and ":" not in line:
@@ -1642,7 +1676,7 @@ def checkDocValidLevel(linter,cursor,docstring):
 
 def checkDocValidSeealso(linter,cursor,docstring):
   import ipdb; ipdb.set_trace()
-  seealsoNames = docstring.seealso.names
+  seealsoNames = docstring.seealso.items
   allSeealsos  = tuple([s for _,s in sealsoNames])
   for other in seealsoNames:
     otherName = other[1]
