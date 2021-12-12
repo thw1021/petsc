@@ -394,6 +394,9 @@ class PetscSourceRange(object):
   def overlaps(self,other):
     return (self.start in other) or (self.end in other) or (other.start in self) or (other.end in self)
 
+  def view(self):
+    return print(getFormattedSourceFromSourceRange(self,numContext=5))
+
 
 CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
   ctypes.c_uint,ctypes.py_object,clx.Cursor,clx.SourceRange
