@@ -2,8 +2,9 @@
 from __future__ import print_function
 import os, sys
 
-extraLogs = []
-petsc_arch = ''
+extraLogs     = []
+petsc_arch    = ''
+banner_length = 93
 
 # Use en_US as language so that BuildSystem parses compiler messages in english
 def fixLang(lang):
@@ -156,6 +157,7 @@ def chksynonyms():
     name = name.replace('with-mpich','with-mpi')
     name = name.replace('with-blas-lapack','with-blaslapack')
     name = name.replace('with-cuda-gencodearch','with-cuda-arch')
+    name = name.replace('download-hdf5-fortran-bindings','with-hdf5-fortran-bindings')
 
     if name.find('with-debug=') >= 0 or name.endswith('with-debug'):
       if name.find('=') == -1:
@@ -394,9 +396,10 @@ def petsc_configure(configure_options):
         petscnagupgrade.currentversion(petscdir)
     except:
       pass
-  print('=============================================================================================')
-  print('                      Configuring PETSc to compile on your system                            ')
-  print('=============================================================================================')
+  banner_line = banner_length*'='
+  print(banner_line)
+  print('Configuring PETSc to compile on your system'.center(banner_length))
+  print(banner_line)
 
   try:
     # Command line arguments take precedence (but don't destroy argv[0])
@@ -406,10 +409,15 @@ def petsc_configure(configure_options):
   except (TypeError, ValueError) as e:
     emsg = str(e)
     if not emsg.endswith('\n'): emsg = emsg+'\n'
-    msg ='*******************************************************************************\n'\
-    +'                ERROR in COMMAND LINE ARGUMENT to ./configure \n' \
-    +'-------------------------------------------------------------------------------\n'  \
-    +emsg+'*******************************************************************************\n'
+    banner_line = banner_length*'*'
+    msg = '\n'.join([
+      banner_line,
+      'ERROR in COMMAND LINE ARGUMENT to ./configure'.center(banner_length),
+      banner_length*'-',
+      emsg,
+      banner_line,
+      '' # to add an additional newline at the end
+    ])
     sys.exit(msg)
   # check PETSC_ARCH
   check_for_unsupported_combinations(sys.argv)

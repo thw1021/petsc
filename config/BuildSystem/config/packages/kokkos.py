@@ -4,24 +4,23 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = 'd4ed86ffb1b156faaa0f936ce839cfd6d3282478' # develop of 2021-04-28
+    self.gitcommit        = '3.5.00'
+    self.minversion       = '3.5.00'
     self.versionname      = 'KOKKOS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
     self.downloaddirnames = ['kokkos']
     self.excludedDirs     = ['kokkos-kernels'] # Do not wrongly think kokkos-kernels as kokkos-vernum
-    # TODO: BuildSystem checks C++ headers blindly using CXX. However, when Kokkos is compiled by CUDAC, for example, using
-    # CXX to compile a Kokkos code raises an error. As a workaround, we set this field to skip checking headers in includes.
-    self.doNotCheckIncludes = 1
     self.includes         = ['Kokkos_Macros.hpp']
     self.liblist          = [['libkokkoscontainers.a','libkokkoscore.a']]
     self.functions        = ['']
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
-    self.cxx              = 1
     self.minCxxVersion    = 'c++14'
+    self.buildLanguages   = ['Cxx'] # Depending on if cuda, hip or sycl is avaiable, it will be modified.
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['single','double']
+    self.devicePackage    = 1
     return
 
   def __str__(self):
@@ -32,7 +31,6 @@ class Configure(config.package.CMakePackage):
   def setupHelp(self, help):
     import nargs
     config.package.CMakePackage.setupHelp(self, help)
-    help.addArgument('KOKKOS', '-with-kokkos-hip-arch=<string>',  nargs.ArgString(None, 0, 'One of VEGA900, VEGA906, VEGA908'))
     help.addArgument('KOKKOS', '-with-kokkos-init-warnings=<bool>',  nargs.ArgBool(None, True, 'Enable/disable warnings in Kokkos initialization'))
     return
 
@@ -155,22 +153,26 @@ class Configure(config.package.CMakePackage):
       args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
       args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
 
-    # set -DCMAKE_CXX_STANDARD=
-    if not hasattr(self.compilers,lang+'dialect'): # lang can be cuda, hip, or cxx
-      raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' compiler')
-    langdialect = getattr(self.compilers,lang+'dialect')
-    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
-    args.append('-DCMAKE_CXX_STANDARD='+langdialect.split("C++",1)[1]) # e.g., extract 14 from C++14
+    langdialect = getattr(self.compilers,lang+'dialect',None)
+    if langdialect:
+      # langdialect is only set as an attribute if the user specifically chose a dialect
+      # (see config/compilers.py::checkCxxDialect())
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+      args.append('-DCMAKE_CXX_STANDARD='+langdialect[-2:]) # e.g., extract 14 from C++14
     return args
 
   def configureLibrary(self):
     import os
-    config.package.CMakePackage.configureLibrary(self)
     if self.cuda.found:
-      self.addMakeMacro('KOKKOS_BIN',os.path.join(self.directory,'bin'))
+      self.buildLanguages = ['CUDA']
       self.addMakeMacro('KOKKOS_USE_CUDA_COMPILER',1) # use the CUDA compiler to compile PETSc Kokkos code
     elif self.hip.found:
+      self.buildLanguages= ['HIP']
       self.addMakeMacro('KOKKOS_USE_HIP_COMPILER',1)  # use the HIP compiler to compile PETSc Kokkos code
 
+    config.package.CMakePackage.configureLibrary(self)
+
+    if self.cuda.found:
+      self.addMakeMacro('KOKKOS_BIN',os.path.join(self.directory,'bin'))
     if self.argDB['with-kokkos-init-warnings']: # usually one wants to enable warnings
       self.addDefine('HAVE_KOKKOS_INIT_WARNINGS', 1)

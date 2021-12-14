@@ -5,13 +5,13 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.versionname       = 'PACKAGE_VERSION'
-    self.gitcommit         = 'v6.2-p5'
+    self.gitcommit         = 'v6.2-p6'
     self.download          = ['git://https://bitbucket.org/petsc/pkg-ml.git','https://bitbucket.org/petsc/pkg-ml/get/'+self.gitcommit+'.tar.gz']
     self.functions         = ['ML_Set_PrintLevel']
     self.includes          = ['ml_include.h']
     self.liblist           = [['libml.a']]
     self.license           = 'http://trilinos.sandia.gov/'
-    self.cxx               = 1
+    self.buildLanguages    = ['Cxx']
     self.precisions        = ['double']
     self.complex           = 0
     self.downloadonWindows = 1

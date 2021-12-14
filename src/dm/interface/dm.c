@@ -22,6 +22,7 @@ PetscLogEvent DM_Convert, DM_GlobalToLocal, DM_LocalToGlobal, DM_LocalToLocal, D
 const char *const DMBoundaryTypes[] = {"NONE","GHOSTED","MIRROR","PERIODIC","TWIST","DMBoundaryType","DM_BOUNDARY_", NULL};
 const char *const DMBoundaryConditionTypes[] = {"INVALID","ESSENTIAL","NATURAL","INVALID","INVALID","ESSENTIAL_FIELD","NATURAL_FIELD","INVALID","INVALID","ESSENTIAL_BD_FIELD","NATURAL_RIEMANN","DMBoundaryConditionType","DM_BC_", NULL};
 const char *const DMPolytopeTypes[] = {"vertex", "segment", "tensor_segment", "triangle", "quadrilateral", "tensor_quad", "tetrahedron", "hexahedron", "triangular_prism", "tensor_triangular_prism", "tensor_quadrilateral_prism", "pyramid", "FV_ghost_cell", "interior_ghost_cell", "unknown", "invalid", "DMPolytopeType", "DM_POLYTOPE_", NULL};
+const char *const DMCopyLabelsModes[] = {"replace","keep","fail","DMCopyLabelsMode","DM_COPY_LABELS_", NULL};
 
 /*@
   DMCreate - Creates an empty DM object. The type can then be set with DMSetType().
@@ -57,6 +58,7 @@ PetscErrorCode  DMCreate(MPI_Comm comm,DM *dm)
   v->setupcalled              = PETSC_FALSE;
   v->setfromoptionscalled     = PETSC_FALSE;
   v->ltogmap                  = NULL;
+  v->bind_below               = 0;
   v->bs                       = 1;
   v->coloringtype             = IS_COLORING_GLOBAL;
   ierr                        = PetscSFCreate(comm, &v->sf);CHKERRQ(ierr);
@@ -132,7 +134,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(newdm,2);
   ierr = DMCreate(PetscObjectComm((PetscObject) dm), newdm);CHKERRQ(ierr);
-  ierr = DMCopyLabels(dm, *newdm, PETSC_COPY_VALUES, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = DMCopyLabels(dm, *newdm, PETSC_COPY_VALUES, PETSC_TRUE, DM_COPY_LABELS_FAIL);CHKERRQ(ierr);
   (*newdm)->leveldown  = dm->leveldown;
   (*newdm)->levelup    = dm->levelup;
   (*newdm)->prealloc_only = dm->prealloc_only;
@@ -827,11 +829,13 @@ PetscErrorCode  DMSetUp(DM dm)
 +   -dm_preallocate_only - Only preallocate the matrix for DMCreateMatrix(), but do not fill it with zeros
 .   -dm_vec_type <type>  - type of vector to create inside DM
 .   -dm_mat_type <type>  - type of matrix to create inside DM
--   -dm_is_coloring_type - <global or local>
+.   -dm_is_coloring_type - <global or local>
+-   -dm_bind_below <n>   - bind (force execution on CPU) for Vec and Mat objects with local size (number of vector entries or matrix rows) below n; currently only supported for DMDA
 
     DMPLEX Specific creation options
 + -dm_plex_filename <str>           - File containing a mesh
 . -dm_plex_boundary_filename <str>  - File containing a mesh boundary
+. -dm_plex_name <str>               - Name of the mesh in the file
 . -dm_plex_shape <shape>            - The domain shape, such as DM_SHAPE_BOX, DM_SHAPE_SPHERE, etc.
 . -dm_plex_cell <ct>                - Cell shape
 . -dm_plex_reference_cell_domain <bool> - Use a reference cell domain
@@ -847,13 +851,17 @@ PetscErrorCode  DMSetUp(DM dm)
 . -dm_plex_ball_radius <r>          - Radius of the ball
 . -dm_plex_cylinder_bd <bz>         - Boundary type in the z direction
 . -dm_plex_cylinder_num_wedges <n>  - Number of wedges around the cylinder
+. -dm_plex_reorder <order>          - Reorder the mesh using the specified algorithm
 . -dm_refine_pre <n>                - The number of refinements before distribution
 . -dm_refine_uniform_pre <bool>     - Flag for uniform refinement before distribution
 . -dm_refine_volume_limit_pre <v>   - The maximum cell volume after refinement before distribution
 . -dm_refine <n>                    - The number of refinements after distribution
-. -dm_extrude_layers <l>            - The number of layers to extrude
-. -dm_extrude_thickness <t>         - The thickness of the layer to be extruded
-. -dm_extrude_column_first <bool>   - Order the cells in a vertical column first
+. -dm_extrude <l>                   - Activate extrusion and specify the number of layers to extrude
+. -dm_plex_transform_extrude_thickness <t>           - The total thickness of extruded layers
+. -dm_plex_transform_extrude_use_tensor <bool>       - Use tensor cells when extruding
+. -dm_plex_transform_extrude_symmetric <bool>        - Extrude layers symmetrically about the surface
+. -dm_plex_transform_extrude_normal <n0,...,nd>      - Specify the extrusion direction
+. -dm_plex_transform_extrude_thicknesses <t0,...,tl> - Specify thickness of each layer
 . -dm_plex_create_fv_ghost_cells    - Flag to create finite volume ghost cells on the boundary
 . -dm_plex_fv_ghost_cells_label <name> - Label name for ghost cells boundary
 . -dm_distribute <bool>             - Flag to redistribute a mesh among processes
@@ -898,6 +906,7 @@ PetscErrorCode DMSetFromOptions(DM dm)
     ierr = DMSetMatType(dm,typeName);CHKERRQ(ierr);
   }
   ierr = PetscOptionsEnum("-dm_is_coloring_type","Global or local coloring of Jacobian","DMSetISColoringType",ISColoringTypes,(PetscEnum)dm->coloringtype,(PetscEnum*)&dm->coloringtype,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsInt("-dm_bind_below","Set the size threshold (in entries) below which the Vec is bound to the CPU","VecBindToCPU",dm->bind_below,&dm->bind_below,&flg);CHKERRQ(ierr);
   if (dm->ops->setfromoptions) {
     ierr = (*dm->ops->setfromoptions)(PetscOptionsObject,dm);CHKERRQ(ierr);
   }
@@ -939,9 +948,14 @@ PetscErrorCode  DMViewFromOptions(DM dm,PetscObject obj,const char name[])
 +   dm - the DM object to view
 -   v - the viewer
 
+    Notes:
+    Using PETSCVIEWERHDF5 type with PETSC_VIEWER_HDF5_PETSC format, one can save multiple DMPlex
+    meshes in a single HDF5 file. This in turn requires one to name the DMPlex object with PetscObjectSetName()
+    before saving it with DMView() and before loading it with DMLoad() for identification of the mesh object.
+
     Level: beginner
 
-.seealso DMDestroy(), DMCreateGlobalVector(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix()
+.seealso DMDestroy(), DMCreateGlobalVector(), DMCreateInterpolation(), DMCreateColoring(), DMCreateMatrix(), DMLoad(), PetscObjectSetName()
 
 @*/
 PetscErrorCode  DMView(DM dm,PetscViewer v)
@@ -1213,6 +1227,10 @@ PetscErrorCode  DMCreateInterpolation(DM dmc,DM dmf,Mat *mat,Vec *vec)
 
   Level: developer
 
+  Developer Notes:
+  If the fine-scale DMDA has the -dm_bind_below option set to true, then DMCreateInterpolationScale() calls MatSetBindingPropagates()
+  on the restriction/interpolation operator to set the bindingpropagates flag to true.
+
 .seealso: DMCreateInterpolation()
 
 @*/
@@ -1221,11 +1239,25 @@ PetscErrorCode  DMCreateInterpolationScale(DM dac,DM daf,Mat mat,Vec *scale)
   PetscErrorCode ierr;
   Vec            fine;
   PetscScalar    one = 1.0;
+#if defined(PETSC_HAVE_CUDA)
+  PetscBool      bindingpropagates,isbound;
+#endif
 
   PetscFunctionBegin;
   ierr = DMCreateGlobalVector(daf,&fine);CHKERRQ(ierr);
   ierr = DMCreateGlobalVector(dac,scale);CHKERRQ(ierr);
   ierr = VecSet(fine,one);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_CUDA)
+  /* If the 'fine' Vec is bound to the CPU, it makes sense to bind 'mat' as well.
+   * Note that we only do this for the CUDA case, right now, but if we add support for MatMultTranspose() via ViennaCL,
+   * we'll need to do it for that case, too.*/
+  ierr = VecGetBindingPropagates(fine,&bindingpropagates);CHKERRQ(ierr);
+  if (bindingpropagates) {
+    ierr = MatSetBindingPropagates(mat,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = VecBoundToCPU(fine,&isbound);CHKERRQ(ierr);
+    ierr = MatBindToCPU(mat,isbound);CHKERRQ(ierr);
+  }
+#endif
   ierr = MatRestrict(mat,fine,*scale);CHKERRQ(ierr);
   ierr = VecDestroy(&fine);CHKERRQ(ierr);
   ierr = VecReciprocal(*scale);CHKERRQ(ierr);
@@ -2354,6 +2386,41 @@ PetscErrorCode  DMSetRefineLevel(DM dm,PetscInt level)
   PetscFunctionReturn(0);
 }
 
+/*@
+  DMExtrude - Extrude a DM object from a surface
+
+  Collective on dm
+
+  Input Parameter:
++ dm     - the DM object
+- layers - the number of extruded cell layers
+
+  Output Parameter:
+. dme - the extruded DM, or NULL
+
+  Note: If no extrusion was done, the return value is NULL
+
+  Level: developer
+
+.seealso DMRefine(), DMCoarsen(), DMDestroy(), DMView(), DMCreateGlobalVector()
+@*/
+PetscErrorCode DMExtrude(DM dm, PetscInt layers, DM *dme)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (!dm->ops->extrude) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "DM type %s does not implement DMExtrude", ((PetscObject) dm)->type_name);
+  ierr = (*dm->ops->extrude)(dm, layers, dme);CHKERRQ(ierr);
+  if (*dme) {
+    (*dme)->ops->creatematrix = dm->ops->creatematrix;
+    ierr = PetscObjectCopyFortranFunctionPointers((PetscObject) dm, (PetscObject) *dme);CHKERRQ(ierr);
+    (*dme)->ctx = dm->ctx;
+    ierr = DMSetMatType(*dme, dm->mattype);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMGetBasisTransformDM_Internal(DM dm, DM *tdm)
 {
   PetscFunctionBegin;
@@ -3092,6 +3159,7 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
   ierr = PetscLogEventBegin(DM_Coarsen,dm,0,0,0);CHKERRQ(ierr);
   ierr = (*dm->ops->coarsen)(dm, comm, dmc);CHKERRQ(ierr);
   if (*dmc) {
+    (*dmc)->bind_below = dm->bind_below; /* Propagate this from parent DM; otherwise -dm_bind_below will be useless for multigrid cases. */
     ierr = DMSetCoarseDM(dm,*dmc);CHKERRQ(ierr);
     (*dmc)->ops->creatematrix = dm->ops->creatematrix;
     ierr                      = PetscObjectCopyFortranFunctionPointers((PetscObject)dm,(PetscObject)*dmc);CHKERRQ(ierr);
@@ -3959,7 +4027,11 @@ PetscErrorCode  DMRegister(const char sname[],PetscErrorCode (*function)(DM))
    Level: intermediate
 
   Notes:
-   The type is determined by the data in the file, any type set into the DM before this call is ignored.
+  The type is determined by the data in the file, any type set into the DM before this call is ignored.
+
+  Using PETSCVIEWERHDF5 type with PETSC_VIEWER_HDF5_PETSC format, one can save multiple DMPlex
+  meshes in a single HDF5 file. This in turn requires one to name the DMPlex object with PetscObjectSetName()
+  before saving it with DMView() and before loading it with DMLoad() for identification of the mesh object.
 
   Notes for advanced users:
   Most users should not need to know the details of the binary storage
@@ -4657,6 +4729,54 @@ PetscErrorCode DMSetPointSF(DM dm, PetscSF sf)
   ierr = PetscObjectReference((PetscObject) sf);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&dm->sf);CHKERRQ(ierr);
   dm->sf = sf;
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGetNaturalSF - Get the PetscSF encoding the map back to the original mesh ordering
+
+  Input Parameter:
+. dm - The DM
+
+  Output Parameter:
+. sf - The PetscSF
+
+  Level: intermediate
+
+  Note: This gets a borrowed reference, so the user should not destroy this PetscSF.
+
+.seealso: DMSetNaturalSF(), DMSetUseNatural(), DMGetUseNatural(), DMPlexCreateGlobalToNaturalSF(), DMPlexDistribute()
+@*/
+PetscErrorCode DMGetNaturalSF(DM dm, PetscSF *sf)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidPointer(sf, 2);
+  *sf = dm->sfNatural;
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMSetNaturalSF - Set the PetscSF encoding the map back to the original mesh ordering
+
+  Input Parameters:
++ dm - The DM
+- sf - The PetscSF
+
+  Level: intermediate
+
+.seealso: DMGetNaturalSF(), DMSetUseNatural(), DMGetUseNatural(), DMPlexCreateGlobalToNaturalSF(), DMPlexDistribute()
+@*/
+PetscErrorCode DMSetNaturalSF(DM dm, PetscSF sf)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  if (sf) PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 2);
+  ierr = PetscObjectReference((PetscObject) sf);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&dm->sfNatural);CHKERRQ(ierr);
+  dm->sfNatural = sf;
   PetscFunctionReturn(0);
 }
 
@@ -6408,6 +6528,7 @@ PetscErrorCode DMGetCoordinateDM(DM dm, DM *cdm)
 
     if (!dm->ops->createcoordinatedm) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Unable to create coordinates for this DM");
     ierr = (*dm->ops->createcoordinatedm)(dm, &cdm);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)cdm, "coordinateDM");CHKERRQ(ierr);
     /* Just in case the DM sets the coordinate DM when creating it (DMP4est can do this, because it may not setup
      * until the call to CreateCoordinateDM) */
     ierr = DMDestroy(&dm->coordinateDM);CHKERRQ(ierr);
@@ -8162,19 +8283,21 @@ PetscErrorCode DMSetLabelOutput(DM dm, const char name[], PetscBool output)
 
   Input Parameters:
 + dmA - The DM object with initial labels
-. dmB - The DM object with copied labels
+. dmB - The DM object to which labels are copied
 . mode - Copy labels by pointers (PETSC_OWN_POINTER) or duplicate them (PETSC_COPY_VALUES)
-- all  - Copy all labels including "depth", "dim", and "celltype" (PETSC_TRUE) which are otherwise ignored (PETSC_FALSE)
+. all  - Copy all labels including "depth", "dim", and "celltype" (PETSC_TRUE) which are otherwise ignored (PETSC_FALSE)
+- emode - How to behave when a DMLabel in the source and destination DMs with the same name is encountered (see DMCopyLabelsMode)
 
   Level: intermediate
 
-  Note: This is typically used when interpolating or otherwise adding to a mesh
+  Notes:
+  This is typically used when interpolating or otherwise adding to a mesh, or testing.
 
-.seealso: DMGetCoordinates(), DMGetCoordinatesLocal(), DMGetCoordinateDM(), DMGetCoordinateSection(), DMShareLabels()
+.seealso: DMAddLabel(), DMCopyLabelsMode
 @*/
-PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all)
+PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all, DMCopyLabelsMode emode)
 {
-  DMLabel        label, labelNew;
+  DMLabel        label, labelNew, labelOld;
   const char    *name;
   PetscBool      flg;
   DMLabelLink    link;
@@ -8198,6 +8321,20 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all)
       ierr = PetscStrcmp(name, "celltype", &flg);CHKERRQ(ierr);
       if (flg) continue;
     }
+    ierr = DMGetLabel(dmB, name, &labelOld);CHKERRQ(ierr);
+    if (labelOld) {
+      switch (emode) {
+        case DM_COPY_LABELS_KEEP:
+          continue;
+        case DM_COPY_LABELS_REPLACE:
+          ierr = DMRemoveLabelBySelf(dmB, &labelOld, PETSC_TRUE);CHKERRQ(ierr);
+          break;
+        case DM_COPY_LABELS_FAIL:
+          SETERRQ1(PetscObjectComm((PetscObject)dmA), PETSC_ERR_ARG_OUTOFRANGE, "Label %s already exists in destination DM", name);
+        default:
+          SETERRQ1(PetscObjectComm((PetscObject)dmA), PETSC_ERR_ARG_OUTOFRANGE, "Unhandled DMCopyLabelsMode %d", emode);
+      }
+    }
     if (mode==PETSC_COPY_VALUES) {
       ierr = DMLabelDuplicate(label, &labelNew);CHKERRQ(ierr);
     } else {
@@ -8209,9 +8346,88 @@ PetscErrorCode DMCopyLabels(DM dmA, DM dmB, PetscCopyMode mode, PetscBool all)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  DMCompareLabels - Compare labels of two DMPlex meshes
+
+  Collective on dmA
+
+  Input Parameters:
++ dm0 - First DM object
+- dm1 - Second DM object
+
+  Output Parameters
++ same    - (Optional) Flag whether labels of dm0 and dm1 are the same
+- message - (Optional) Message describing the difference, or NULL if there is no difference
+
+  Level: intermediate
+
+  Notes:
+  If both same and message is passed as NULL, and difference is found, an error is thrown with a message describing the difference.
+
+  Message must be freed by user.
+
+  Labels are matched by name. If the number of labels and their names are equal,
+  DMLabelCompare() is used to compare each pair of labels with the same name.
+
+  Fortran Notes:
+  This function is currently not available from Fortran.
+
+.seealso: DMAddLabel(), DMCopyLabelsMode, DMLabelCompare()
+@*/
+PetscErrorCode DMCompareLabels(DM dm0, DM dm1, PetscBool *same, char **message)
+{
+  PetscInt        n0, n1, i;
+  char            msg[PETSC_MAX_PATH_LEN] = "";
+  MPI_Comm        comm;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm0,DM_CLASSID,1);
+  PetscValidHeaderSpecific(dm1,DM_CLASSID,2);
+  PetscCheckSameComm(dm0,1,dm1,2);
+  if (same) PetscValidBoolPointer(same,3);
+  if (message) PetscValidPointer(message, 4);
+  ierr = PetscObjectGetComm((PetscObject)dm0, &comm);CHKERRQ(ierr);
+  ierr = DMGetNumLabels(dm0, &n0);CHKERRQ(ierr);
+  ierr = DMGetNumLabels(dm1, &n1);CHKERRQ(ierr);
+  if (n0 != n1) {
+    ierr = PetscSNPrintf(msg, sizeof(msg), "Number of labels in dm0 = %D != %D = Number of labels in dm1", n0, n1);CHKERRQ(ierr);
+    goto finish;
+  }
+  for (i=0; i<n0; i++) {
+    DMLabel     l0, l1;
+    const char *name;
+    char       *msgInner;
+
+    /* Ignore label order */
+    ierr = DMGetLabelByNum(dm0, i, &l0);CHKERRQ(ierr);
+    ierr = PetscObjectGetName((PetscObject)l0, &name);CHKERRQ(ierr);
+    ierr = DMGetLabel(dm1, name, &l1);CHKERRQ(ierr);
+    if (!l1) {
+      ierr = PetscSNPrintf(msg, sizeof(msg), "Label \"%s\" (#%D in dm0) not found in dm1", name, i);CHKERRQ(ierr);
+      goto finish;
+    }
+    ierr = DMLabelCompare(l0, l1, NULL, &msgInner);CHKERRQ(ierr);
+    ierr = PetscStrncpy(msg, msgInner, sizeof(msg));CHKERRQ(ierr);
+    ierr = PetscFree(msgInner);CHKERRQ(ierr);
+    if (msg[0]) goto finish;
+  }
+finish:
+  if (msg[0] && !same && !message) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, msg);
+  if (same) *same = (PetscBool) !msg[0];
+  if (message) {
+    *message = NULL;
+    if (msg[0]) {
+      ierr = PetscStrallocpy(msg, message);CHKERRQ(ierr);
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMSetLabelValue_Fast(DM dm, DMLabel *label, const char name[], PetscInt point, PetscInt value)
 {
   PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidPointer(label,2);
   if (!*label) {
@@ -9103,76 +9319,6 @@ PetscErrorCode DMComputeL2FieldDiff(DM dm, PetscReal time, PetscErrorCode (**fun
   PetscValidHeaderSpecific(X,VEC_CLASSID,5);
   if (!dm->ops->computel2fielddiff) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2FieldDiff",((PetscObject)dm)->type_name);
   ierr = (dm->ops->computel2fielddiff)(dm,time,funcs,ctxs,X,diff);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  DMAdaptLabel - Adapt a dm based on a label with values interpreted as coarsening and refining flags.  Specific implementations of DM maybe have
-                 specialized flags, but all implementations should accept flag values DM_ADAPT_DETERMINE, DM_ADAPT_KEEP, DM_ADAPT_REFINE, and DM_ADAPT_COARSEN.
-
-  Collective on dm
-
-  Input parameters:
-+ dm - the pre-adaptation DM object
-- label - label with the flags
-
-  Output parameters:
-. dmAdapt - the adapted DM object: may be NULL if an adapted DM could not be produced.
-
-  Level: intermediate
-
-.seealso: DMAdaptMetric(), DMCoarsen(), DMRefine()
-@*/
-PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidPointer(label,2);
-  PetscValidPointer(dmAdapt,3);
-  *dmAdapt = NULL;
-  if (!dm->ops->adaptlabel) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMAdaptLabel",((PetscObject)dm)->type_name);
-  ierr = (dm->ops->adaptlabel)(dm, label, dmAdapt);CHKERRQ(ierr);
-  if (*dmAdapt) {
-    (*dmAdapt)->prealloc_only = dm->prealloc_only;  /* maybe this should go .... */
-    ierr = PetscFree((*dmAdapt)->vectype);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(dm->vectype,(char**)&(*dmAdapt)->vectype);CHKERRQ(ierr);
-    ierr = PetscFree((*dmAdapt)->mattype);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(dm->mattype,(char**)&(*dmAdapt)->mattype);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-/*@C
-  DMAdaptMetric - Generates a mesh adapted to the specified metric field using the pragmatic library.
-
-  Input Parameters:
-+ dm - The DM object
-. metric - The metric to which the mesh is adapted, defined vertex-wise.
-- bdLabel - Label for boundary tags, which will be preserved in the output mesh. bdLabel should be NULL if there is no such label, and should be different from "_boundary_".
-
-  Output Parameter:
-. dmAdapt  - Pointer to the DM object containing the adapted mesh
-
-  Note: The label in the adapted mesh will be registered under the name of the input DMLabel object
-
-  Level: advanced
-
-.seealso: DMAdaptLabel(), DMCoarsen(), DMRefine()
-@*/
-PetscErrorCode DMAdaptMetric(DM dm, Vec metric, DMLabel bdLabel, DM *dmAdapt)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscValidHeaderSpecific(metric, VEC_CLASSID, 2);
-  if (bdLabel) PetscValidPointer(bdLabel, 3);
-  PetscValidPointer(dmAdapt, 4);
-  *dmAdapt = NULL;
-  if (!dm->ops->adaptmetric) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMAdaptMetric",((PetscObject)dm)->type_name);
-  ierr = (dm->ops->adaptmetric)(dm, metric, bdLabel, dmAdapt);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

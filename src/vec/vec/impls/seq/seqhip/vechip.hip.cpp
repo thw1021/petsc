@@ -107,7 +107,7 @@ PetscErrorCode VecDestroy_SeqHIP_Private(Vec v)
   PetscFunctionBegin;
   ierr = PetscObjectSAWsViewOff(v);CHKERRQ(ierr);
 #if defined(PETSC_USE_LOG)
-  PetscLogObjectState((PetscObject)v,"Length=%D",v->map->n);
+  PetscLogObjectState((PetscObject)v,"Length=%" PetscInt_FMT "",v->map->n);
 #endif
   if (vs) {
     if (vs->array_allocated) {
@@ -231,14 +231,11 @@ PetscErrorCode VecCreate_SeqHIP(Vec V)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
   ierr = PetscLayoutSetUp(V->map);CHKERRQ(ierr);
   ierr = VecHIPAllocateCheck(V);CHKERRQ(ierr);
   ierr = VecCreate_SeqHIP_Private(V,((Vec_HIP*)V->spptr)->GPUarray_allocated);CHKERRQ(ierr);
-  ierr = VecHIPAllocateCheckHost(V);CHKERRQ(ierr);
-  ierr = VecSet(V,0.0);CHKERRQ(ierr);
-  ierr = VecSet_Seq(V,0.0);CHKERRQ(ierr);
-  V->offloadmask = PETSC_OFFLOAD_BOTH;
+  ierr = VecSet_SeqHIP(V,0.0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -279,7 +276,7 @@ PetscErrorCode  VecCreateSeqHIPWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,co
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
   ierr = VecCreate(comm,V);CHKERRQ(ierr);
   ierr = VecSetSizes(*V,n,n);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*V,bs);CHKERRQ(ierr);

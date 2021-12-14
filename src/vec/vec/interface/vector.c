@@ -365,6 +365,12 @@ PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
   PetscValidPointer(newv,2);
   PetscValidType(v,1);
   ierr = (*v->ops->duplicate)(v,newv);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  if (v->boundtocpu && v->bindingpropagates) {
+    ierr = VecSetBindingPropagates(*newv,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = VecBindToCPU(*newv,PETSC_TRUE);CHKERRQ(ierr);
+  }
+#endif
   ierr = PetscObjectStateIncrease((PetscObject)*newv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -436,6 +442,20 @@ PetscErrorCode  VecDuplicateVecs(Vec v,PetscInt m,Vec *V[])
   PetscValidPointer(V,3);
   PetscValidType(v,1);
   ierr = (*v->ops->duplicatevecs)(v,m,V);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  if (v->boundtocpu && v->bindingpropagates) {
+    PetscInt i;
+
+    for (i=0; i<m; i++) {
+      /* Since ops->duplicatevecs might itself propagate the value of boundtocpu,
+       * avoid unnecessary overhead by only calling VecBindToCPU() if the vector isn't already bound. */
+      if (!(*V)[i]->boundtocpu) {
+        ierr = VecSetBindingPropagates((*V)[i],PETSC_TRUE);CHKERRQ(ierr);
+        ierr = VecBindToCPU((*V)[i],PETSC_TRUE);CHKERRQ(ierr);
+      }
+    }
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -462,7 +482,7 @@ PetscErrorCode  VecDestroyVecs(PetscInt m,Vec *vv[])
 
   PetscFunctionBegin;
   PetscValidPointer(vv,2);
-  if (m < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of vectors %D",m);
+  if (m < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of vectors %" PetscInt_FMT "",m);
   if (!m || !*vv) {*vv  = NULL; PetscFunctionReturn(0);}
   PetscValidHeaderSpecific(**vv,VEC_CLASSID,2);
   PetscValidType(**vv,2);
@@ -594,9 +614,9 @@ PetscErrorCode  VecView(Vec vec,PetscViewer viewer)
       ierr = VecGetSize(vec,&rows);CHKERRQ(ierr);
       ierr = VecGetBlockSize(vec,&bs);CHKERRQ(ierr);
       if (bs != 1) {
-        ierr = PetscViewerASCIIPrintf(viewer,"length=%D, bs=%D\n",rows,bs);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"length=%" PetscInt_FMT ", bs=%" PetscInt_FMT "\n",rows,bs);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIIPrintf(viewer,"length=%D\n",rows);CHKERRQ(ierr);
+        ierr = PetscViewerASCIIPrintf(viewer,"length=%" PetscInt_FMT "\n",rows);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
@@ -625,7 +645,7 @@ PETSC_UNUSED static int TV_display_type(const struct _p_Vec *v)
   TV_add_row("Global rows", "int", &v->map->N);
   TV_add_row("Typename", TV_ascii_string_type, ((PetscObject)v)->type_name);
   ierr = VecGetArrayRead((Vec)v,&values);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(type,32,"double[%d]",v->map->n);CHKERRQ(ierr);
+  ierr = PetscSNPrintf(type,32,"double[%" PetscInt_FMT "]",v->map->n);CHKERRQ(ierr);
   TV_add_row("values",type, values);
   ierr = VecRestoreArrayRead((Vec)v,&values);CHKERRQ(ierr);
   return TV_format_OK;
@@ -816,7 +836,7 @@ PetscErrorCode VecDuplicateVecs_Default(Vec w,PetscInt m,Vec *V[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidPointer(V,3);
-  if (m <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m must be > 0: m = %D",m);
+  if (m <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m must be > 0: m = %" PetscInt_FMT "",m);
   ierr = PetscMalloc1(m,V);CHKERRQ(ierr);
   for (i=0; i<m; i++) {ierr = VecDuplicate(w,*V+i);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
@@ -1266,6 +1286,8 @@ static PetscErrorCode VecSetTypeFromOptions_Private(PetscOptionItems *PetscOptio
 PetscErrorCode  VecSetFromOptions(Vec vec)
 {
   PetscErrorCode ierr;
+  PetscBool      flg;
+  PetscInt       bind_below = 0;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -1277,6 +1299,14 @@ PetscErrorCode  VecSetFromOptions(Vec vec)
   /* Handle specific vector options */
   if (vec->ops->setfromoptions) {
     ierr = (*vec->ops->setfromoptions)(PetscOptionsObject,vec);CHKERRQ(ierr);
+  }
+
+  /* Bind to CPU if below a user-specified size threshold.
+   * This perhaps belongs in the options for the GPU Vec types, but VecBindToCPU() does nothing when called on non-GPU types,
+   * and putting it here makes is more maintainable than duplicating this for all. */
+  ierr = PetscOptionsInt("-vec_bind_below","Set the size threshold (in local entries) below which the Vec is bound to the CPU","VecBindToCPU",bind_below,&bind_below,&flg);CHKERRQ(ierr);
+  if (flg && vec->map->n < bind_below) {
+    ierr = VecBindToCPU(vec,PETSC_TRUE);CHKERRQ(ierr);
   }
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
@@ -1310,8 +1340,8 @@ PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID,1);
   if (N >= 0) PetscValidLogicalCollectiveInt(v,N,3);
-  if (N >= 0 && n > N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %D cannot be larger than global size %D",n,N);
-  if ((v->map->n >= 0 || v->map->N >= 0) && (v->map->n != n || v->map->N != N)) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset vector sizes to %D local %D global after previously setting them to %D local %D global",n,N,v->map->n,v->map->N);
+  if (N >= 0 && n > N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %" PetscInt_FMT " cannot be larger than global size %" PetscInt_FMT "",n,N);
+  if ((v->map->n >= 0 || v->map->N >= 0) && (v->map->n != n || v->map->N != N)) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset vector sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",n,N,v->map->n,v->map->N);
   v->map->n = n;
   v->map->N = N;
   if (v->ops->create) {
@@ -1727,15 +1757,15 @@ PetscErrorCode  VecStashView(Vec v,PetscViewer viewer)
 
   /* print block stash */
   ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d]Vector Block stash size %D block size %D\n",rank,s->n,s->bs);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d]Vector Block stash size %" PetscInt_FMT " block size %" PetscInt_FMT "\n",rank,s->n,s->bs);CHKERRQ(ierr);
   for (i=0; i<s->n; i++) {
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %D ",rank,s->idx[i]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " ",rank,s->idx[i]);CHKERRQ(ierr);
     for (j=0; j<s->bs; j++) {
       val = s->array[i*s->bs+j];
 #if defined(PETSC_USE_COMPLEX)
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"(%18.16e %18.16e) ",PetscRealPart(val),PetscImaginaryPart(val));CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"(%18.16e %18.16e) ",(double)PetscRealPart(val),(double)PetscImaginaryPart(val));CHKERRQ(ierr);
 #else
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%18.16e ",val);CHKERRQ(ierr);
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%18.16e ",(double)val);CHKERRQ(ierr);
 #endif
     }
     ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
@@ -1745,13 +1775,13 @@ PetscErrorCode  VecStashView(Vec v,PetscViewer viewer)
   s = &v->stash;
 
   /* print basic stash */
-  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d]Vector stash size %D\n",rank,s->n);CHKERRQ(ierr);
+  ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d]Vector stash size %" PetscInt_FMT "\n",rank,s->n);CHKERRQ(ierr);
   for (i=0; i<s->n; i++) {
     val = s->array[i];
 #if defined(PETSC_USE_COMPLEX)
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %D (%18.16e %18.16e) ",rank,s->idx[i],PetscRealPart(val),PetscImaginaryPart(val));CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " (%18.16e %18.16e) ",rank,s->idx[i],(double)PetscRealPart(val),(double)PetscImaginaryPart(val));CHKERRQ(ierr);
 #else
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %D %18.16e\n",rank,s->idx[i],val);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Element %" PetscInt_FMT " %18.16e\n",rank,s->idx[i],(double)val);CHKERRQ(ierr);
 #endif
   }
   ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
@@ -1902,6 +1932,61 @@ PetscErrorCode VecBoundToCPU(Vec v,PetscBool *flg)
   *flg = v->boundtocpu;
 #else
   *flg = PETSC_TRUE;
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecSetBindingPropagates - Sets whether the state of being bound to the CPU for a GPU vector type propagates to child and some other associated objects
+
+   Input Parameters:
++  v - the vector
+-  flg - flag indicating whether the boundtocpu flag should be propagated
+
+   Level: developer
+
+   Notes:
+   If the value of flg is set to true, then VecDuplicate() and VecDuplicateVecs() will bind created vectors to GPU if the input vector is bound to the CPU.
+   The created vectors will also have their bindingpropagates flag set to true.
+
+   Developer Notes:
+   If a DMDA has the -dm_bind_below option set to true, then vectors created by DMCreateGlobalVector() will have VecSetBindingPropagates() called on them to
+   set their bindingpropagates flag to true.
+
+.seealso: MatSetBindingPropagates(), VecGetBindingPropagates()
+@*/
+PetscErrorCode VecSetBindingPropagates(Vec v,PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  v->bindingpropagates = flg;
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecGetBindingPropagates - Gets whether the state of being bound to the CPU for a GPU vector type propagates to child and some other associated objects
+
+   Input Parameter:
+.  v - the vector
+
+   Output Parameter:
+.  flg - flag indicating whether the boundtocpu flag will be propagated
+
+   Level: developer
+
+.seealso: VecSetBindingPropagates()
+@*/
+PetscErrorCode VecGetBindingPropagates(Vec v,PetscBool *flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidBoolPointer(flg,2);
+#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+  *flg = v->bindingpropagates;
+#else
+  *flg = PETSC_FALSE;
 #endif
   PetscFunctionReturn(0);
 }

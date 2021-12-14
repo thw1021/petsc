@@ -519,6 +519,8 @@ PETSC_EXTERN PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm);
 PETSC_EXTERN PetscErrorCode VecBindToCPU(Vec,PetscBool);
 PETSC_DEPRECATED_FUNCTION("Use VecBindToCPU (since v3.13)") PETSC_STATIC_INLINE PetscErrorCode VecPinToCPU(Vec v,PetscBool flg) {return VecBindToCPU(v,flg);}
 PETSC_EXTERN PetscErrorCode VecBoundToCPU(Vec,PetscBool*);
+PETSC_EXTERN PetscErrorCode VecSetBindingPropagates(Vec,PetscBool);
+PETSC_EXTERN PetscErrorCode VecGetBindingPropagates(Vec,PetscBool *);
 PETSC_EXTERN PetscErrorCode VecSetPinnedMemoryMin(Vec,size_t);
 PETSC_EXTERN PetscErrorCode VecGetPinnedMemoryMin(Vec,size_t *);
 
@@ -620,7 +622,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecSetErrorIfLocked(Vec x,PetscInt arg)
 
   PetscFunctionBegin;
   ierr = VecLockGet(x,&state);CHKERRQ(ierr);
-  if (state != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE," Vec is already locked for read-only or read/write access, argument # %d",arg);
+  if (PetscUnlikely(state != 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE," Vec is already locked for read-only or read/write access, argument # %" PetscInt_FMT,arg);
   PetscFunctionReturn(0);
 }
 /* The three are deprecated */
@@ -803,7 +805,7 @@ PETSC_EXTERN PetscErrorCode VecTaggerGetInvert(VecTagger,PetscBool*);
 PETSC_EXTERN PetscErrorCode VecTaggerSetFromOptions(VecTagger);
 PETSC_EXTERN PetscErrorCode VecTaggerSetUp(VecTagger);
 PETSC_EXTERN PetscErrorCode VecTaggerView(VecTagger,PetscViewer);
-PETSC_EXTERN PetscErrorCode VecTaggerComputeIS(VecTagger,Vec,IS *);
+PETSC_EXTERN PetscErrorCode VecTaggerComputeIS(VecTagger,Vec,IS *,PetscBool*);
 PETSC_EXTERN PetscErrorCode VecTaggerDestroy(VecTagger *);
 
 /*S
@@ -818,7 +820,7 @@ typedef struct {
   PetscScalar min;
   PetscScalar max;
 } VecTaggerBox;
-PETSC_EXTERN PetscErrorCode VecTaggerComputeBoxes(VecTagger,Vec,PetscInt *,VecTaggerBox **);
+PETSC_EXTERN PetscErrorCode VecTaggerComputeBoxes(VecTagger,Vec,PetscInt *,VecTaggerBox **,PetscBool*);
 
 PETSC_EXTERN PetscErrorCode VecTaggerAbsoluteSetBox(VecTagger,VecTaggerBox *);
 PETSC_EXTERN PetscErrorCode VecTaggerAbsoluteGetBox(VecTagger,const VecTaggerBox **);

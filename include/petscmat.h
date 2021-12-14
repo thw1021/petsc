@@ -484,8 +484,10 @@ PETSC_EXTERN PetscErrorCode MatRestoreRowUpperTriangular(Mat);
 PETSC_EXTERN PetscErrorCode MatGetColumnVector(Mat,Vec,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetArray(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetArrayRead(Mat,const PetscScalar *[]);
+PETSC_EXTERN PetscErrorCode MatSeqAIJGetArrayWrite(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArray(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArrayRead(Mat,const PetscScalar *[]);
+PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArrayWrite(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetMaxRowNonzeros(Mat,PetscInt*);
 PETSC_EXTERN PetscErrorCode MatSeqAIJSetValuesLocalFast(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 PETSC_EXTERN PetscErrorCode MatSeqAIJSetType(Mat,MatType);
@@ -1954,6 +1956,8 @@ PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatBindToCPU(Mat,PetscBool);
 PETSC_EXTERN PetscErrorCode MatBoundToCPU(Mat,PetscBool*);
 PETSC_DEPRECATED_FUNCTION("Use MatBindToCPU (since v3.13)") PETSC_STATIC_INLINE PetscErrorCode MatPinToCPU(Mat A,PetscBool flg) {return MatBindToCPU(A,flg);}
+PETSC_EXTERN PetscErrorCode MatSetBindingPropagates(Mat,PetscBool);
+PETSC_EXTERN PetscErrorCode MatGetBindingPropagates(Mat,PetscBool *);
 
 typedef struct _n_SplitCSRMat *PetscSplitCSRDataStructure;
 PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure*);
@@ -2007,6 +2011,7 @@ typedef enum {MAT_CUSPARSE_MULT_DIAG, MAT_CUSPARSE_MULT_OFFDIAG, MAT_CUSPARSE_MU
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
+PETSC_EXTERN PetscErrorCode MatCUSPARSESetUseCPUSolve(Mat,PetscBool);
 typedef struct Mat_SeqAIJCUSPARSETriFactors* Mat_SeqAIJCUSPARSETriFactors_p;
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSEGetIJ(Mat,PetscBool,const int**,const int**);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSERestoreIJ(Mat,PetscBool,const int**,const int**);

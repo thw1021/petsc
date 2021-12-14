@@ -537,7 +537,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   if (size == 1) {
     ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices-nmerged,2,edges);CHKERRQ(ierr);
   } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices-nmerged,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices-nmerged,PETSC_DECIDE,2,edges,NULL, NULL);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
@@ -700,7 +700,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   if (size == 1) {
     ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,2,edges);CHKERRQ(ierr);
   } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices,PETSC_DECIDE,2,edges,NULL);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices,PETSC_DECIDE,2,edges,NULL, NULL);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
@@ -1028,9 +1028,9 @@ PetscErrorCode DMNetworkGetEdgeRange(DM dm,PetscInt *eStart,PetscInt *eEnd)
 
 static PetscErrorCode DMNetworkGetIndex(DM dm,PetscInt p,PetscInt *index)
 {
-  PetscErrorCode    ierr;
-  DM_Network        *network = (DM_Network*)dm->data;
-  PetscInt          offsetp;
+  PetscErrorCode           ierr;
+  DM_Network               *network = (DM_Network*)dm->data;
+  PetscInt                 offsetp;
   DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
@@ -1175,9 +1175,9 @@ PetscErrorCode DMNetworkGetLocalVecOffset(DM dm,PetscInt p,PetscInt compnum,Pets
 @*/
 PetscErrorCode DMNetworkGetGlobalVecOffset(DM dm,PetscInt p,PetscInt compnum,PetscInt *offsetg)
 {
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       offsetp,offsetd;
+  PetscErrorCode           ierr;
+  DM_Network               *network = (DM_Network*)dm->data;
+  PetscInt                 offsetp,offsetd;
   DMNetworkComponentHeader header;
 
   PetscFunctionBegin;

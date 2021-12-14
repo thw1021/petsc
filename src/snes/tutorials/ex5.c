@@ -150,7 +150,7 @@ int main(int argc,char **argv)
   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   user.mms_solution = ZeroBCSolution;
   switch (MMS) {
-  case 0: user.mms_solution = NULL; user.mms_forcing = NULL;CHKERRQ(ierr);
+  case 0: user.mms_solution = NULL; user.mms_forcing = NULL;
   case 1: user.mms_solution = MMSSolution1; user.mms_forcing = MMSForcing1; break;
   case 2: user.mms_solution = MMSSolution2; user.mms_forcing = MMSForcing2; break;
   case 3: user.mms_solution = MMSSolution3; user.mms_forcing = MMSForcing3; break;
@@ -214,7 +214,7 @@ int main(int argc,char **argv)
     ierr = VecNorm(e, NORM_2, &errorl2);CHKERRQ(ierr);
     ierr = VecNorm(e, NORM_INFINITY, &errorinf);CHKERRQ(ierr);
     ierr = VecGetSize(e, &N);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %D error L2 %g inf %g\n", N, (double) errorl2/PetscSqrtReal(N), (double) errorinf);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD, "N: %D error L2 %g inf %g\n", N, (double) errorl2/PetscSqrtReal((PetscReal)N), (double) errorinf);CHKERRQ(ierr);
     ierr = VecDestroy(&e);CHKERRQ(ierr);
     ierr = PetscLogEventSetDof(SNES_Solve, 0, N);CHKERRQ(ierr);
     ierr = PetscLogEventSetError(SNES_Solve, 0, errorl2/PetscSqrtReal(N));CHKERRQ(ierr);

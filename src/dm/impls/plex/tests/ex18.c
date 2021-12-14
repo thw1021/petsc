@@ -399,7 +399,7 @@ static PetscErrorCode CreateMesh_1D(MPI_Comm comm, PetscBool interpolate, AppCtx
     default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh for rank %d", rank);
     }
   }
-  ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, PETSC_FALSE, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, PETSC_FALSE, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
   ierr = PetscFree2(cells,coords);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -424,7 +424,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[4] = {-0.5, 0.5, 0.0, 0.0};
         PetscInt       markerPoints[6] = {1, 1, 2, 1, 3, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -435,7 +435,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[4] = {0.0, 1.0, 0.5, 0.5};
         PetscInt       markerPoints[6] = {1, 1, 2, 1, 3, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -452,7 +452,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[4] = {0.0, 1.0, 0.0, 0.0};
         PetscInt       markerPoints[6] = {1, 1, 2, 1, 3, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -463,7 +463,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[4] = {0.5, 0.5, 1.0, 1.0};
         PetscInt       markerPoints[6] = {1, 1, 2, 1, 3, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -474,7 +474,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[2] = {1.0, 0.0};
         PetscInt       markerPoints[10] = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -491,7 +491,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[4] = {0.5, 0.5, 0.0, 1.0};
         PetscInt       markerPoints[6] = {1, 1, 2, 1, 3, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -502,7 +502,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[4] = {0.0, 0.0, 1.0, 1.0};
         PetscInt       markerPoints[6] = {1, 1, 2, 1, 3, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -513,7 +513,7 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[2] = {1.0, 0.0};
         PetscInt       markerPoints[10] = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 3; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -545,7 +545,7 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[6] = {0.0, 0.0, -0.5,  0.0, -0.5, 0.0};
         PetscInt       markerPoints[8] = {1, 1, 2, 1, 3, 1, 4, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -556,7 +556,7 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, PetscBool interpolate, App
         PetscReal      coords[9] = {1.0, 0.0, 0.0,  0.0, 0.5, 0.0,  0.0, 0.0, 0.5};
         PetscInt       markerPoints[8] = {1, 1, 2, 1, 3, 1, 4, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -600,7 +600,7 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscBool interpolate, AppCtx
         PetscReal      coords[6] = {-0.5, 0.0, 0.0, 0.0, 0.0, 1.0};
         PetscInt       markerPoints[4*2] = {1, 1, 2, 1, 3, 1, 4, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -611,7 +611,7 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscBool interpolate, AppCtx
         PetscReal      coords[6] = {-0.5, 1.0, 0.5, 0.0, 0.5, 1.0};
         PetscInt       markerPoints[4*2] = {1, 1, 2, 1, 3, 1, 4, 1};
 
-        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+        ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
         for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
       }
       break;
@@ -643,7 +643,7 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscBool interpolate, AppCtx 
       PetscReal      coords[6*3] = {-0.5,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, -0.5,1.0,0.0, -0.5,0.0,1.0, 0.0,0.0,1.0};
       PetscInt       markerPoints[8*2] = {2,1,3,1,4,1,5,1,6,1,7,1,8,1,9,1};
 
-      ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+      ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
       for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
     }
     break;
@@ -654,7 +654,7 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscBool interpolate, AppCtx 
       PetscReal      coords[6*3] = {0.0,1.0,1.0, -0.5,1.0,1.0, 0.5,0.0,0.0, 0.5,1.0,0.0, 0.5,0.0,1.0,  0.5,1.0,1.0};
       PetscInt       markerPoints[8*2] = {2,1,3,1,4,1,5,1,6,1,7,1,8,1,9,1};
 
-      ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, dm);CHKERRQ(ierr);
+      ierr = DMPlexCreateFromCellListParallelPetsc(comm, user->dim, numCells, numVertices, PETSC_DECIDE, numCorners, interpolate, cells, user->dim, coords, NULL, NULL, dm);CHKERRQ(ierr);
       for (p = 0; p < 4; ++p) {ierr = DMSetLabelValue(*dm, "marker", markerPoints[p*2], markerPoints[p*2+1]);CHKERRQ(ierr);}
     }
     break;
@@ -692,14 +692,14 @@ static PetscErrorCode CreateMeshFromFile(MPI_Comm comm, AppCtx *user, DM *dm, DM
   *serialDM = NULL;
   if (testHeavy && interpCreate) {ierr = DMPlexSetOrientInterface_Private(NULL, PETSC_FALSE);CHKERRQ(ierr);}
   ierr = PetscLogStagePush(stage[0]);CHKERRQ(ierr);
-  ierr = DMPlexCreateFromFile(comm, filename, interpCreate, dm);CHKERRQ(ierr); /* with DMPlexOrientInterface_Internal() call skipped so that PointSF issues are left to DMPlexCheckPointSFHeavy() */
+  ierr = DMPlexCreateFromFile(comm, filename, "ex18_plex", interpCreate, dm);CHKERRQ(ierr); /* with DMPlexOrientInterface_Internal() call skipped so that PointSF issues are left to DMPlexCheckPointSFHeavy() */
   ierr = PetscLogStagePop();CHKERRQ(ierr);
   if (testHeavy && interpCreate) {ierr = DMPlexSetOrientInterface_Private(NULL, PETSC_TRUE);CHKERRQ(ierr);}
   ierr = DMPlexIsDistributed(*dm, &distributed);CHKERRQ(ierr);
   ierr = PetscPrintf(comm, "DMPlexCreateFromFile produced %s mesh.\n", distributed ? "distributed" : "serial");CHKERRQ(ierr);
   if (testHeavy && distributed) {
     ierr = PetscOptionsSetValue(NULL, "-dm_plex_hdf5_force_sequential", NULL);CHKERRQ(ierr);
-    ierr = DMPlexCreateFromFile(comm, filename, interpCreate, serialDM);CHKERRQ(ierr);
+    ierr = DMPlexCreateFromFile(comm, filename, "ex18_plex", interpCreate, serialDM);CHKERRQ(ierr);
     ierr = DMPlexIsDistributed(*serialDM, &distributed);CHKERRQ(ierr);
     if (distributed) SETERRQ(comm, PETSC_ERR_PLIB, "unable to create a serial DM from file");
   }
@@ -1357,7 +1357,7 @@ static PetscErrorCode PointSFGetInterfacePoints_Private(PetscSF pointSF, IS *is)
   PetscFunctionReturn(0);
 }
 
-#define MYCHKERRQ(ierr) do {if (PetscUnlikely(ierr)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "PointSF is wrong. Unable to show details!");} while (0)
+#define CHKERRMY(ierr) do {if (PetscUnlikely(ierr)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "PointSF is wrong. Unable to show details!");} while (0)
 
 static PetscErrorCode ViewPointsWithType_Internal(DM dm, IS pointsIS, PetscViewer v)
 {
@@ -1478,14 +1478,14 @@ static PetscErrorCode DMPlexComparePointSFWithInterface_Private(DM ipdm, IS inte
   if (!flg) {
     IS pointsf_extra_is, pointsf_missing_is;
     PetscViewer errv = PETSC_VIEWER_STDERR_(comm);
-    ierr = ISDifference(interface_is, pointsf_is, &pointsf_missing_is);MYCHKERRQ(ierr);
-    ierr = ISDifference(pointsf_is, interface_is, &pointsf_extra_is);MYCHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(errv, "Points missing in PointSF:\n");MYCHKERRQ(ierr);
-    ierr = ViewPointsWithType(ipdm, pointsf_missing_is, errv);MYCHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(errv, "Extra points in PointSF:\n");MYCHKERRQ(ierr);
-    ierr = ViewPointsWithType(ipdm, pointsf_extra_is, errv);MYCHKERRQ(ierr);
-    ierr = ISDestroy(&pointsf_extra_is);MYCHKERRQ(ierr);
-    ierr = ISDestroy(&pointsf_missing_is);MYCHKERRQ(ierr);
+    ierr = ISDifference(interface_is, pointsf_is, &pointsf_missing_is);CHKERRMY(ierr);
+    ierr = ISDifference(pointsf_is, interface_is, &pointsf_extra_is);CHKERRMY(ierr);
+    ierr = PetscViewerASCIIPrintf(errv, "Points missing in PointSF:\n");CHKERRMY(ierr);
+    ierr = ViewPointsWithType(ipdm, pointsf_missing_is, errv);CHKERRMY(ierr);
+    ierr = PetscViewerASCIIPrintf(errv, "Extra points in PointSF:\n");CHKERRMY(ierr);
+    ierr = ViewPointsWithType(ipdm, pointsf_extra_is, errv);CHKERRMY(ierr);
+    ierr = ISDestroy(&pointsf_extra_is);CHKERRMY(ierr);
+    ierr = ISDestroy(&pointsf_missing_is);CHKERRMY(ierr);
     SETERRQ(comm, PETSC_ERR_PLIB, "PointSF is wrong! See details above.");
   }
   ierr = ISDestroy(&pointsf_is);CHKERRQ(ierr);
@@ -1507,7 +1507,7 @@ static PetscErrorCode DMPlexISFilterVertices_Private(DM dm, IS points)
 }
 
 /*
-  DMPlexCheckPointSFHeavy - Thorough test that the PointSF after parallel DMPlexInterpolate() includes exactly all interface points.
+  DMPlexCheckPointSFHeavy - Thoroughly test that the PointSF after parallel DMPlexInterpolate() includes exactly all interface points.
 
   Collective
 
@@ -1694,14 +1694,14 @@ int main(int argc, char **argv)
     test:
       suffix: 6_tri
       requires: triangle
-      args: -faces {{2,2  1,3  7,4}} -cell_simplex 1 -dm_plex_generator triangle
+      args: -faces {{2,2  1,3  7,4}} -cell_simplex 1 -dm_generator triangle
     test:
       suffix: 6_quad
       args: -faces {{2,2  1,3  7,4}} -cell_simplex 0
     test:
       suffix: 6_tet
       requires: ctetgen
-      args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 1 -dm_plex_generator ctetgen
+      args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 1 -dm_generator ctetgen
     test:
       suffix: 6_hex
       args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 0
@@ -1713,14 +1713,14 @@ int main(int argc, char **argv)
     test:
       suffix: 6_int_tri
       requires: triangle
-      args: -faces {{2,2  1,3  7,4}} -cell_simplex 1 -dm_plex_generator triangle
+      args: -faces {{2,2  1,3  7,4}} -cell_simplex 1 -dm_generator triangle
     test:
       suffix: 6_int_quad
       args: -faces {{2,2  1,3  7,4}} -cell_simplex 0
     test:
       suffix: 6_int_tet
       requires: ctetgen
-      args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 1 -dm_plex_generator ctetgen
+      args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 1 -dm_generator ctetgen
     test:
       suffix: 6_int_hex
       args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 0
@@ -1732,14 +1732,14 @@ int main(int argc, char **argv)
     test:
       suffix: 6_parint_tri
       requires: triangle
-      args: -faces {{2,2  1,3  7,4}} -cell_simplex 1 -dm_plex_generator triangle
+      args: -faces {{2,2  1,3  7,4}} -cell_simplex 1 -dm_generator triangle
     test:
       suffix: 6_parint_quad
       args: -faces {{2,2  1,3  7,4}} -cell_simplex 0
     test:
       suffix: 6_parint_tet
       requires: ctetgen
-      args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 1 -dm_plex_generator ctetgen
+      args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 1 -dm_generator ctetgen
     test:
       suffix: 6_parint_hex
       args: -faces {{2,2,2  1,3,5  3,4,7}} -cell_simplex 0

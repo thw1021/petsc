@@ -362,7 +362,7 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF_Iterative(VecTagger tagger,Vec v
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecTaggerComputeBoxes_CDF(VecTagger tagger,Vec vec,PetscInt *numBoxes,VecTaggerBox **boxes)
+static PetscErrorCode VecTaggerComputeBoxes_CDF(VecTagger tagger,Vec vec,PetscInt *numBoxes,VecTaggerBox **boxes,PetscBool *listed)
 {
   VecTagger_CDF  *cuml = (VecTagger_CDF *)tagger->data;
   PetscMPIInt    size;
@@ -391,6 +391,7 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF(VecTagger tagger,Vec vec,PetscIn
     SETERRQ(PetscObjectComm((PetscObject)tagger),PETSC_ERR_SUP,"Unknown CDF calculation/estimation method.");
   }
   *boxes = bxs;
+  if (listed) *listed = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -409,7 +410,7 @@ static PetscErrorCode VecTaggerView_CDF(VecTagger tagger,PetscViewer viewer)
     ierr = PetscViewerASCIIPrintf(viewer,"CDF computation method: %s\n",VecTaggerCDFMethods[cuml->method]);CHKERRQ(ierr);
     if (cuml->method == VECTAGGER_CDF_ITERATIVE) {
       ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer,"max its: %D, abs tol: %g, rel tol %g\n",cuml->maxit,(double) cuml->atol,(double) cuml->rtol);CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"max its: %" PetscInt_FMT ", abs tol: %g, rel tol %g\n",cuml->maxit,(double) cuml->atol,(double) cuml->rtol);CHKERRQ(ierr);
       ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
     }
   }
