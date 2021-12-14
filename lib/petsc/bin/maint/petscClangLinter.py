@@ -237,14 +237,20 @@ class PetscDocString(object):
     'raw'    - the raw text in the section
     'extent' - the SourceRange for the whole section
     'lines'  - a tuple of each line of text and its SourceRange in the section
-    'items'  - a tuple of extracted tokens of interest, e.g. the title, options parameters, function parameters, etc.
+    'items'  - a tuple of extracted tokens of interest, e.g. the level value, options parameters,
+               function parameters, etc.
     """
-    __slots__ = "name","required","raw","extent","lines","items"
+    __slots__ = "name","required","keywords","raw","extent","lines","items"
 
-    def __init__(self,name,required=False):
+    def __init__(self,name,required=False,keywords=None):
       assert isinstance(name,str)
       self.name     = name
       self.required = required
+      if keywords is None:
+        keywords = (self.name.title(),)
+      else:
+        assert isinstance(keywords,(list,tuple))
+      self.keywords = tuple(keywords)
       self.clear()
       return
 
@@ -283,11 +289,9 @@ class PetscDocString(object):
     def setup(self,docstring,validName=lambda *args:(False,None)):
       if not self.lines:
         if self.required:
-          if not isinstance(self.required,str):
-            import ipdb; ipdb.set_trace()
           docstring.addErrorFromSourceRange(
-            "Required subheading '{}' not found in docstring:\n\n{}",
-            docstring.extent,formatargs=(self.required,),highlight=False
+            "Required subheading(s) '{}' not found in docstring:\n\n{}",
+            docstring.extent,formatargs=(self.keywords,),highlight=False
           )
         return
       seen       = collections.defaultdict(list)
@@ -298,7 +302,7 @@ class PetscDocString(object):
         # let each section type determine if this line is useful
         valid,item = validName(line)
         if valid:
-          self.items.append(docstring.makeSourceRange(item,line,srcloc.start.line))
+          self.items.append((docstring.makeSourceRange(item,line,srcloc.start.line),item.strip()))
       self.items = tuple(self.items)
       if any(len(locs) > 1 for locs in seen.values()):
         # check that a particular subsection does not appear twice
@@ -380,17 +384,16 @@ class PetscDocString(object):
       for head,section in self._sections.items():
         if head in heading:
           return section
-      closestMatches = difflib.get_close_matches(heading,self._sections.keys())
-      if not closestMatches:
-        # try if we can fund a sub-word
+      sectionNames   = self._sections.keys()
+      closestMatches = difflib.get_close_matches(heading,sectionNames)
+      if not len(closestMatches):
+        # try if we can find a sub-word
         for head in heading.split():
-          closestMatches = difflib.get_close_matches(head,self._sections.keys())
-          if closestMatches:
+          closestMatches = difflib.get_close_matches(head,sectionNames)
+          if len(closestMatches):
             break
-      if closestMatches:
-        print(
-          80*"*","CLOSEST MATCHES FOUND {} FOR {}".format(closestMatches,heading),80*"*",sep="\n"
-        )
+      if len(closestMatches):
+        print(80*"*","CLOSEST MATCHES FOUND {} FOR {}".format(closestMatches,heading),80*"*",sep="\n")
         return self._sections[closestMatches[0]]
       import ipdb; ipdb.set_trace()
       raise ValueError(heading)
@@ -407,6 +410,9 @@ class PetscDocString(object):
       self._sections[section.name] = section
       return
 
+    def keywords(self):
+      return (keyword for section in self for keyword in section.keywords)
+
 
   sections        = Sections()
   registered      = False
@@ -422,13 +428,15 @@ class PetscDocString(object):
 
   @classmethod
   def registerDefaultSections(cls):
+    if cls.registered:
+      return
     defaultHeadings = (
       cls.Synopsis("synopsis",required=True),
-      cls.ParameterList("parameters"),
+      cls.ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
       cls.DefaultSection("notes"),
       cls.ParameterList("options"),
-      cls.InlineList("seealso"),
-      cls.InlineList("level",required="Level"),
+      cls.InlineList("seealso",keywords=("seealso",),required=True),
+      cls.InlineList("level",required=True),
       cls.DefaultSection("references")
     )
     for section in defaultHeadings:
@@ -440,12 +448,19 @@ class PetscDocString(object):
   def fromCursor(cls,cursor):
     return cls(cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
 
+  @classmethod
+  def isValidDocstring(cls,raw):
+    if not raw or not isinstance(raw,str):
+      return False
+
+    rawlo = raw.lower()
+    # if we find these keywords, likely this is a docstring
+    return any(keyword.lower() in raw for keyword in cls.sections.keywords())
+
   def __init__(self,cursor,raw,extent,indent=2):
-    if not raw:# or (not raw.startswith(("/*@","/*M","/*E"))):
-      #print(PetscCursor.getFormattedSourceFromCursor(cursor,view=True))
+    self.registerDefaultSections()
+    if not self.isValidDocstring(raw):
       raise ParsingError
-    if not self.registered:
-      self.registerDefaultSections()
     self.cursor  = cursor
     self.raw     = raw
     self.extent  = extent
@@ -461,9 +476,10 @@ class PetscDocString(object):
     colEnd   = colBegin+len(token)
     begin    = self.makeSourceLocation(lineno,colBegin)
     end      = self.makeSourceLocation(lineno,colEnd)
-    return PetscSourceRange.fromLocations(begin,end),token.strip()
+    return PetscSourceRange.fromLocations(begin,end)
 
-  def addErrorFromSourceRange(self,errstr,crange,cursor=None,formatargs=tuple(),**kwargs):
+  def addErrorFromSourceRange(self,errstr,crange,**kwargs):
+    assert isinstance(errstr,str)
     patch = kwargs.pop("patch",None)
     src = pclu.getFormattedSourceFromSourceRange(
       crange,numContext=kwargs.pop("numContext",2),**kwargs
@@ -472,25 +488,11 @@ class PetscDocString(object):
     self._linter.addErrorFromCursor(self.cursor if cursor is None else cursor,error,patch=patch)
     return
 
-  def addErrorFromCursor(self,errstr,token,raw,lineno,**kwargs):
-    crange,_ = self.makeSourceRange(token,raw,lineno)
-    return self.addErrorFromSourceRange(errstr,crange,**kwargs)
-
   def addErrorFromSection(self,errstr,section,**kwargs):
     return self.addErrorFromSourceRange(errstr,section.extent,**kwargs)
 
-  def checkValidSolitarySectionHeading(self,section):
-    startline   = section.lines[0]
-    _,sep,after = startline[1].partition(":")
-    assert sep
-    if after.rstrip():
-      self.addErrorFromCursor(
-        "Heading must appear alone on a line, any content must be on the next line:\n\n{}",
-        after,startline[1],startline[0].start.line
-      )
-    return
 
-  def checkValidSowingChars(self):
+  def _checkValidSowingChars(self):
     sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
     # check that beginning
     splitlines  = self.raw.splitlines()
@@ -499,21 +501,11 @@ class PetscDocString(object):
     try:
       beginSowing = beginSowing[0]
     except IndexError:
-      headerKeywords = (
-        "Level",".seealso","Input Parameter","Output Parameter","References","Synopsis"
+      self.addErrorFromSourceRange(
+        "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
+        self.makeSourceRange(line,line,self.extent.start.line),formatargs=(sowingType,layType)
       )
-      if any(keyword in self.raw for keyword in headerKeywords):
-        # if we find these keywords, likely this is a docstring but the implementer
-        # forgot to add the sowing characters
-        self.addErrorFromCursor(
-          "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
-          line,line,self.extent.start.line,
-          formatargs=(sowingType,layType)
-        )
-        beginSowing = [sowingType]
-      else:
-        # not a sowing docstring? bail here
-        raise ParsingError
+      beginSowing = [sowingType]
     if beginSowing[0] not in self.sowingTypes:
       raise ParsingError
     beginSowing = "".join(beginSowing)
@@ -521,10 +513,10 @@ class PetscDocString(object):
     lsplit = line.strip().split()
     if len(lsplit) != 1:
       rest   = " ".join(lsplit[1:])
-      crange = self.makeSourceRange(line,line,self.extent.start.line)[0]
-      self.addErrorFromCursor(
+      crange = self.makeSourceRange(line,line,self.extent.start.line)
+      self.addErrorFromSourceRange(
         "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
-        rest,line,self.extent.start.line,
+        self.makeSourceRange(rest,line,self.extent.start.line),
         patch=SourceFix.fromSourceRange(crange,lsplit[0]+"\n"+(" "*self.indent)+rest)
       )
     # now check the end
@@ -537,45 +529,33 @@ class PetscDocString(object):
     else:
       if sorted(endSowing) != sorted(beginSowing):
         correct = beginSowing[::-1]
-        self.addErrorFromCursor(
+        self.addErrorFromSourceRange(
           "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
-          endSowing,line,self.extent.end.line,
-          formatargs=(correct,endSowing),
-          patch=SourceFix.fromSourceRange(
-            self.makeSourceRange(line,line,self.extent.end.line)[0],
+          self.makeSourceRange(endSowing,line,self.extent.end.line),
+          formatargs=(correct,endSowing),patch=SourceFix.fromSourceRange(
+            self.makeSourceRange(line,line,self.extent.end.line),
             line.replace(endSowing,correct)
           )
         )
     return
 
-  def checkValidTitleCasedSectionHeading(self,line):
-    # check that header is correctly title-cased
-    loc,text = line
-    heading  = text.partition(":")[0].strip()
-    if not heading.istitle():
-      titleCased = heading.title()
-      self.addErrorFromCursor(
-        "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
-        heading,text,loc.start.line,
-        formatargs=(titleCased,heading),
-        patch=SourceFix.fromSourceRange(loc,text.replace(heading,titleCased))
+  def _checkValidDocstringSpacing(self):
+    endLine     = self.extent.end.line+1
+    cursorStart = self.cursor.extent.start
+    if endLine != cursorStart.line:
+      # there is at least 1 (probably empty) line between the comment end and whatever it
+      # is describing
+      self.addErrorFromSourceRange(
+        "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
+        "","",endLine,highlight=False,
+        patch=SourceFix(self.makeSourceLocation(endLine,1),cursorStart,"")
       )
-    return True
+    return
 
-  def checkValidSectionHeaderSpelling(self,section,correctSpelling=None):
-    if correctSpelling is None:
-      assert section.required and isinstance(section.required,str)
-      correctSpelling = section.required
-    for loc,line in section.lines:
-      if  ":" in line:
-        if correctSpelling in line:
-          return # everything seems to be in order
-        if correctSpelling.istitle():
-          pass
-        import ipdb; ipdb.set_trace()
-        # TODO:
-        # figure out a way to have user provide a "check the prospective heading has this
-        # feature" and a "heres how to fix it if so"
+  def _reset(self,linter):
+    for s in self.sections:
+      s.clear()
+    self._linter = linter # review me
     return
 
   def parse(self,linter):
@@ -585,21 +565,9 @@ class PetscDocString(object):
         return lstrip
       return self.indent*" "+lstrip
 
-    self._linter = linter # review me
-    if self.extent.end.line != self.cursor.extent.start.line-1:
-      # there is at least 1 (probably empty) line between the comment end and whatever it
-      # is describing
-      start = PetscSourceLocation.fromPosition(
-        self.cursor.translation_unit,self.extent.end.line+1,1
-      )
-      self.addErrorFromCursor(
-        "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
-        "","",self.extent.end.line+1,
-        highlight=False,patch=SourceFix(start,self.cursor.extent.start,"")
-      )
-    self.checkValidSowingChars()
-    for s in self.sections:
-      s.clear()
+    self._reset(linter)
+    self._checkValidDocstringSpacing()
+    self._checkValidSowingChars()
     rawData = []
     section = self.sections.synopsis
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
@@ -607,33 +575,79 @@ class PetscDocString(object):
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
         continue
 
-      lrange = self.makeSourceRange(line,line,lineno)[0]
+      lrange = self.makeSourceRange(line,line,lineno)
       # if the line is regular (not empty, or a parameter list), check that line is
       # indented correctly
       indent = len(line)-len(lstrip)
       if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
-        self.addErrorFromCursor("Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}"," "*indent,line,lineno,formatargs=(indent,self.indent),patch=SourceFix.fromSourceRange(lrange,smartIndent(line)))
+        self.addErrorFromSourceRange(
+          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
+          self.makeSourceRange(" "*indent,line,lineno),
+          formatargs=(indent,self.indent),
+          patch=SourceFix.fromSourceRange(lrange,smartIndent(line))
+        )
       if ":" in lstrip:
+        prevline = rawData[-1][1] if len(rawData) else None
         if prevline and not prevline.isspace():
-          self.addErrorFromCursor(
+          self.addErrorFromSourceRange(
             "Missing empty line between sections, must have one before this section:\n\n{}",
-            "","",lineno, # print the next line
-            highlight=False,patch=SourceFix.fromSourceRange(lrange,"\n"+smartIndent(lstrip))
+            self.makeSourceRange("","",lineno),highlight=False,
+            patch=SourceFix.fromSourceRange(lrange,"\n"+smartIndent(lstrip))
           )
-        name = lstrip.split(":")[0].strip().casefold()
-        newSection = self.sections.find(name)
+        newSection = self.sections.find(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
           section.fill(rawData)
           rawData = []
           section = newSection
-
       rawData.append((lrange,line))
-      prevline = line
 
     section.fill(rawData)
     for section in self.sections:
       section.setup(self)
     return self
+
+
+  def checkValidSolitarySectionHeadings(self,section,headingFunc,delim=":"):
+    headings = [l for l in section.lines if headingFunc(l)]
+    assert len(headings)
+    for loc,text in headings:
+      _,sep,after = text.partition(delim)
+      assert sep
+      if after.rstrip():
+        self.addErrorFromSourceRange(
+          "Heading must appear alone on a line, any content must be on the next line:\n\n{}",
+          self.makeSourceRange(after,text,loc.start.line)
+        )
+    return
+
+  def checkValidTitleCasedSectionHeading(self,line):
+    # check that header is correctly title-cased
+    loc,text = line
+    heading  = text.partition(":")[0].strip()
+    if not heading.istitle():
+      titleCased = heading.title()
+      self.addErrorFromSourceRange(
+        "Invalid heading, not title-cased. Expected '{}' found '{}':\n\n{}",
+        self.makeSourceRange(heading,text,loc.start.line),formatargs=(titleCased,heading),
+        patch=SourceFix.fromSourceRange(loc,text.replace(heading,titleCased))
+      )
+    return
+
+  def checkValidSectionHeaderSpelling(self,section,headingFunc=None):
+    import ipdb; ipdb.set_trace()
+    # TODO make headingFunc a default section function, a la
+    # def properHeading(line):
+    #   return ":" in line[1] and not line[1].lstrip().startswith(("+",".","-"))
+
+    keywords = [k.lower() for k in section.keywords]
+    headings = [l for l in section.lines if headingFunc(l)]
+    assert len(headings)
+    for loc,text in headings:
+      if any(k in text for k in keywords):
+        continue
+
+      import ipdb; ipdb.set_trace()
+    return
 
 
 class PetscCursor(object):
@@ -1552,8 +1566,11 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
     return
     raise RuntimeError("no params, but function has args; this should be handled")
 
-  docstring.checkValidSolitarySectionHeading(params)
-  docstring.checkValidTitleCasedSectionHeading(params)
+  def properHeading(line):
+    return ":" in line[1] and not line[1].lstrip().startswith(("+",".","-"))
+
+  docstring.checkValidSolitarySectionHeadings(params,properHeading)
+  #docstring.checkValidTitleCasedSectionHeading(params)
   docStringArgs = params.items
   allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
@@ -1606,7 +1623,9 @@ def checkDocValidSynopsis(linter,cursor,docstring):
       patch = None
     linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
   if "-" not in sectionRaw:
-    src = pclu.getFormattedSourceFromSourceRange(symbolName[0],numBeforeContext=1,numAfterContext=len(section.lines)-1)
+    src = pclu.getFormattedSourceFromSourceRange(
+      symbolName[0],numBeforeContext=1,numAfterContext=len(section.lines)-1
+    )
     errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
@@ -1617,9 +1636,9 @@ def checkDocValidLevel(linter,cursor,docstring):
     # if no level, nothing to check here, error will already have been logged
     return
 
-  import ipdb; ipdb.set_trace()
   docstring.checkValidSectionHeaderSpelling(level)
   docstring.checkValidTitleCasedSectionHeading(level)
+
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   expected    = ", ".join(validLevels[:-1])+", or "+str(validLevels[-1])
   newLineWithProperIndent = ":\n"+docstring.indent*" "
