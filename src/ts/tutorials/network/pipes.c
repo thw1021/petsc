@@ -704,7 +704,7 @@ int main(int argc,char ** argv)
     }
   }
 
-  /* Add Junction component and number of variables to all local vertices, including ghost vertices! (current implementation requires setting the same number of variables at ghost points */
+  /* Add Junction component and number of variables to all local vertices (current implementation requires setting the SAME number of variables at ghost points, but does NOT allow adding a component at a ghost point!) */
   for (v = vStart; v < vEnd; v++) {
     ierr = DMNetworkAddComponent(networkdm,v,KeyJunction,&junctions[v-vStart],2);CHKERRQ(ierr);
   }
