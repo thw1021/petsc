@@ -814,7 +814,9 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 - edge - local edges of the subnetwork
 
   Notes:
-  Cannot call this routine before DMNetworkLayoutSetup()
+    Cannot call this routine before DMNetworkLayoutSetup()
+
+    The local vertices returned on each rank are determined by DMNetwork. The user does not have any control over what vertices are local.
 
   Level: intermediate
 
@@ -1254,14 +1256,20 @@ PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
 
   Input Parameters:
 + dm - the DMNetwork
-. p - the vertex/edge point
+. p - the vertex/edge point. These points are local indices provided by DMNetworkGetSubnetwork().
 . componentkey - component key returned while registering the component; ignored if compvalue=NULL
 . compvalue - pointer to the data structure for the component, or NULL if not required.
 - nvar - number of variables for the component at the vertex/edge point
 
+  Notes:
+    Inserting components on ghost vertices are not supported. Users should call DMNetworkIsGhostVertex() to ensure the vertex is not a ghost vertex
+    before calling this routine.
+
+    DMNetworkLayoutSetUp() must be called before this routine.
+
   Level: beginner
 
-.seealso: DMNetworkGetComponent()
+.seealso: DMNetworkGetComponent(), DMNetworkGetSubnetwork(), DMNetworkIsGhostVertex(), DMNetworkLayoutSetUp()
 @*/
 PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void* compvalue,PetscInt nvar)
 {
@@ -1270,7 +1278,7 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   DMNetworkComponent       *component = &network->component[componentkey];
   DMNetworkComponentHeader header;
   DMNetworkComponentValue  cvalue;
-  PetscBool                sharedv=PETSC_FALSE;
+  PetscBool                ghost=PETSC_FALSE;
   PetscInt                 compnum;
   PetscInt                 *compsize,*compkey,*compoffset,*compnvar,*compoffsetvarrel;
   void*                    *compdata;
@@ -1278,13 +1286,8 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   PetscFunctionBegin;
   ierr = PetscSectionAddDof(network->DofSection,p,nvar);CHKERRQ(ierr);
   if (!compvalue) PetscFunctionReturn(0);
-
-  ierr = DMNetworkIsSharedVertex(dm,p,&sharedv);CHKERRQ(ierr);
-  if (sharedv) {
-    PetscBool ghost;
-    ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
-    if (ghost) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Adding a component at a leaf(ghost) shared vertex is not supported");
-  }
+  ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
+  if (ghost) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Adding a component at a leaf(ghost) vertex is not supported");
 
   header = &network->header[p];
   cvalue = &network->cvalue[p];
