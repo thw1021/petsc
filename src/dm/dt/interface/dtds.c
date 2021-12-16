@@ -437,8 +437,8 @@ PetscErrorCode PetscDSSetUp(PetscDS prob)
     prob->offDer[f+1] = Nc*dim + prob->offDer[f];
     prob->offCohesive[0][f+1]    = (prob->cohesive[f] ? Nc : Nc*2)     + prob->offCohesive[0][f];
     prob->offDerCohesive[0][f+1] = (prob->cohesive[f] ? Nc : Nc*2)*dim + prob->offDerCohesive[0][f];
-    prob->offCohesive[1][f]      = (prob->cohesive[f] ? 0 : Nc)        + prob->offCohesive[0][f];
-    prob->offDerCohesive[1][f]   = (prob->cohesive[f] ? 0 : Nc)*dim    + prob->offDerCohesive[0][f];
+    prob->offCohesive[1][f+1]    = (prob->cohesive[f] ? 0 : Nc)        + prob->offCohesive[0][f+1];
+    prob->offDerCohesive[1][f+1] = (prob->cohesive[f] ? 0 : Nc)*dim    + prob->offDerCohesive[0][f+1];
     prob->offCohesive[2][f+1]    = (prob->cohesive[f] ? Nc : Nc*2)     + prob->offCohesive[2][f];
     prob->offDerCohesive[2][f+1] = (prob->cohesive[f] ? Nc : Nc*2)*dim + prob->offDerCohesive[2][f];
     if (q) {ierr = PetscQuadratureGetData(q, NULL, NULL, &Nq, NULL, NULL);CHKERRQ(ierr);}
@@ -450,8 +450,6 @@ PetscErrorCode PetscDSSetUp(PetscDS prob)
     /* There are two faces for all fields on a cohesive cell, except for cohesive fields */
     if (prob->isCohesive && !prob->cohesive[f]) prob->totDim += Nb;
   }
-  prob->offCohesive[1][Nf]    = prob->offCohesive[0][Nf];
-  prob->offDerCohesive[1][Nf] = prob->offDerCohesive[0][Nf];
   /* Allocate works space */
   NsMax = 2; /* A non-cohesive discretizations can be used on a cohesive cell, so we need this extra workspace for all DS */
   ierr = PetscMalloc3(NsMax*prob->totComp,&prob->u,NsMax*prob->totComp,&prob->u_t,NsMax*prob->totComp*dimEmbed + (hasH ? NsMax*prob->totComp*dimEmbed*dimEmbed : 0),&prob->u_x);CHKERRQ(ierr);
