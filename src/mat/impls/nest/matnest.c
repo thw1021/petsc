@@ -1414,9 +1414,11 @@ PetscErrorCode  MatNestSetVecType(Mat A,VecType vtype)
 PetscErrorCode MatNestSetSubMats_Nest(Mat A,PetscInt nr,const IS is_row[],PetscInt nc,const IS is_col[],const Mat a[])
 {
   Mat_Nest       *s = (Mat_Nest*)A->data;
-  PetscInt       i,j,m,n,M,N;
+  PetscInt       i,j,k=0,m,n,M,N;
   PetscErrorCode ierr;
-  PetscBool      cong;
+  PetscBool      cong,sametype=PETSC_FALSE;
+  MatType        type=NULL;
+  VecType        vtype;
 
   PetscFunctionBegin;
   ierr = MatReset_Nest(A);CHKERRQ(ierr);
@@ -1436,6 +1438,20 @@ PetscErrorCode MatNestSetSubMats_Nest(Mat A,PetscInt nr,const IS is_row[],PetscI
         ierr = PetscObjectReference((PetscObject)a[i*nc+j]);CHKERRQ(ierr);
       }
     }
+  }
+  /* check if all blocks have the same type */
+  for (i=0; i<nr; i++) {
+    for (j=0; j<nc; j++) {
+      if (a[i*nc+j]) {
+        if (!type) { k=i*nc+j; ierr = PetscObjectGetType((PetscObject)a[i*nc+j],&type);CHKERRQ(ierr); }
+        ierr = PetscObjectTypeCompare((PetscObject)a[i*nc+j],type,&sametype);CHKERRQ(ierr);
+        if (!sametype) break;
+      }
+    }
+  }
+  if (sametype) {  /* propagate vectype */
+    ierr = MatGetVecType(a[k],&vtype);CHKERRQ(ierr);
+    ierr = MatSetVecType(A,vtype);CHKERRQ(ierr);
   }
 
   ierr = MatSetUp_NestIS_Private(A,nr,is_row,nc,is_col);CHKERRQ(ierr);
