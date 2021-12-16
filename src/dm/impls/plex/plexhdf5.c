@@ -1168,12 +1168,12 @@ struct _n_LoadLabelsCtx {
   DM          dm;
   PetscViewer viewer;
   DMLabel     label;
-  IS          globalNumbering;
-  PetscLayout uniqueGlobalIndicesLayout;
+  PetscSF     sfXC;
+  PetscLayout layoutX;
 };
 typedef struct _n_LoadLabelsCtx *LoadLabelsCtx;
 
-static PetscErrorCode LoadLabelsCtxCreate(DM dm, PetscViewer viewer, LoadLabelsCtx *ctx)
+static PetscErrorCode LoadLabelsCtxCreate(DM dm, PetscViewer viewer, PetscSF sfXC, LoadLabelsCtx *ctx)
 {
   PetscErrorCode  ierr;
 
@@ -1183,6 +1183,14 @@ static PetscErrorCode LoadLabelsCtxCreate(DM dm, PetscViewer viewer, LoadLabelsC
   ierr = PetscObjectReference((PetscObject) ((*ctx)->viewer = viewer));
   ierr = PetscObjectGetComm((PetscObject)dm, &(*ctx)->comm);CHKERRQ(ierr);
   ierr = MPI_Comm_rank((*ctx)->comm, &(*ctx)->rank);CHKERRMPI(ierr);
+  (*ctx)->sfXC = sfXC;
+  if (sfXC) {
+    PetscInt nX;
+
+    ierr = PetscObjectReference((PetscObject) sfXC);
+    ierr = PetscSFGetGraph(sfXC, &nX, NULL, NULL, NULL);CHKERRQ(ierr);
+    ierr = PetscLayoutCreateFromSizes((*ctx)->comm, nX, PETSC_DECIDE, 1, &(*ctx)->layoutX);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1194,51 +1202,51 @@ static PetscErrorCode LoadLabelsCtxDestroy(LoadLabelsCtx *ctx)
   if (!*ctx) PetscFunctionReturn(0);
   ierr = DMDestroy(&(*ctx)->dm);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&(*ctx)->viewer);CHKERRQ(ierr);
-  ierr = ISDestroy(&(*ctx)->globalNumbering);CHKERRQ(ierr);
-  ierr = PetscLayoutDestroy(&(*ctx)->uniqueGlobalIndicesLayout);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&(*ctx)->sfXC);CHKERRQ(ierr);
+  ierr = PetscLayoutDestroy(&(*ctx)->layoutX);CHKERRQ(ierr);
   ierr = PetscFree(*ctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
+/*
+    A: on-disk points
+    X: global points [0, NX)
+    C: distributed plex points
+*/
 static herr_t ReadLabelStratumHDF5_Distribute_Private(IS stratumIS, LoadLabelsCtx ctx, IS *newStratumIS)
 {
-  PetscSF         s2gSF;
-  DM              dm      = ctx->dm;
   MPI_Comm        comm    = ctx->comm;
-  PetscSF         pointSF;
-  PetscInt        nleaves, nroots;
-  PetscInt        i, j;
-  PetscInt       *leafData, *rootData;
-  const PetscInt *ilocal;
-  PetscInt       *newStratumISArr;
+  PetscSF         sfXC    = ctx->sfXC;
+  PetscLayout     layoutX = ctx->layoutX;
+  PetscSF         sfXA;
+  const PetscInt *A_points;
+  PetscInt        nX, nC;
+  PetscInt        n;
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSFCreateByMatchingIndicesIS(ctx->uniqueGlobalIndicesLayout, ctx->globalNumbering, stratumIS, NULL, &s2gSF);CHKERRQ(ierr);
-  ierr = PetscSFGetGraph(s2gSF, &nroots, &nleaves, &ilocal, NULL);CHKERRQ(ierr);
-  if (nleaves && ilocal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected s2gSF ilocal != NULL");
-  ierr = PetscMalloc3(nroots, &rootData, nleaves, &leafData, nroots, &newStratumISArr);CHKERRQ(ierr);
-  ierr = PetscArrayzero(rootData, nroots);CHKERRQ(ierr);
-  for (i=0; i<nleaves; i++) leafData[i] = 1;
-  ierr = PetscSFReduceBegin(s2gSF, MPIU_INT, leafData, rootData, MPI_REPLACE);CHKERRQ(ierr);
-  ierr = PetscSFReduceEnd(  s2gSF, MPIU_INT, leafData, rootData, MPI_REPLACE);CHKERRQ(ierr);
-  ierr = DMGetPointSF(dm, &pointSF);CHKERRQ(ierr);
+  ierr = PetscSFGetGraph(sfXC, &nX, &nC, NULL, NULL);CHKERRQ(ierr);
+  ierr = ISGetLocalSize(stratumIS, &n);CHKERRQ(ierr);
+  ierr = ISGetIndices(stratumIS, &A_points);CHKERRQ(ierr);
+  ierr = PetscSFCreate(comm, &sfXA);CHKERRQ(ierr);
+  ierr = PetscSFSetGraphLayout(sfXA, layoutX, n, NULL, PETSC_USE_POINTER, A_points);CHKERRQ(ierr);
+  ierr = ISCreate(comm, newStratumIS);CHKERRQ(ierr);
+  ierr = ISSetType(*newStratumIS,ISGENERAL);CHKERRQ(ierr);
   {
-    PetscInt nroots0, nleaves0;
+    PetscInt    i;
+    PetscBool  *A_mask, *X_mask, *C_mask;
 
-    ierr = PetscSFGetGraph(pointSF, &nroots0, &nleaves0, &ilocal, NULL);CHKERRQ(ierr);
-    if (nleaves0 && !ilocal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected pointSF ilocal = NULL");
-    if (nroots0 != nroots) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "s2gSF and pointSF have incompatible root layout");
+    ierr = PetscCalloc3(n, &A_mask, nX, &X_mask, nC, &C_mask);CHKERRQ(ierr);
+    for (i=0; i<n; i++) A_mask[i] = PETSC_TRUE;
+    ierr = PetscSFReduceBegin(sfXA, MPIU_BOOL, A_mask, X_mask, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFReduceEnd(  sfXA, MPIU_BOOL, A_mask, X_mask, MPI_REPLACE);CHKERRQ(ierr);
+    ierr = PetscSFBcastBegin( sfXC, MPIU_BOOL, X_mask, C_mask, MPI_LOR);CHKERRQ(ierr);
+    ierr = PetscSFBcastEnd(   sfXC, MPIU_BOOL, X_mask, C_mask, MPI_LOR);CHKERRQ(ierr);
+    ierr = ISGeneralSetIndicesMask(*newStratumIS, nC, C_mask);CHKERRQ(ierr);
+    ierr = PetscFree3(A_mask, X_mask, C_mask);CHKERRQ(ierr);
   }
-  ierr = PetscSFBcastBegin(pointSF, MPIU_INT, rootData, rootData, MPI_LOR);CHKERRQ(ierr);
-  ierr = PetscSFBcastEnd(  pointSF, MPIU_INT, rootData, rootData, MPI_LOR);CHKERRQ(ierr);
-  for (i=0, j=0; i<nroots; i++) {
-    if (rootData[i]) newStratumISArr[j++] = i;
-  }
-  ierr = ISCreateGeneral(comm, j, newStratumISArr, PETSC_COPY_VALUES, newStratumIS);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) *newStratumIS, ((PetscObject) stratumIS)->name);CHKERRQ(ierr);
-  ierr = PetscFree3(rootData, leafData, newStratumISArr);CHKERRQ(ierr);
-  ierr = PetscSFDestroy(&s2gSF);CHKERRQ(ierr);
+  ierr = PetscSFDestroy(&sfXA);CHKERRQ(ierr);
+  ierr = ISRestoreIndices(stratumIS, &A_points);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1258,7 +1266,7 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   ierr = PetscObjectSetName((PetscObject) stratumIS, "indices");CHKERRQ(ierr);
   ierr = PetscViewerHDF5PushGroup(viewer, vname);CHKERRQ(ierr); /* labels/<lname>/<vname> */
 
-  if (!ctx->globalNumbering) {
+  if (!ctx->sfXC) {
     /* Force serial load */
     ierr = PetscViewerHDF5ReadSizes(viewer, "indices", NULL, &N);CHKERRQ(ierr);
     ierr = PetscLayoutSetLocalSize(stratumIS->map, !ctx->rank ? N : 0);CHKERRQ(ierr);
@@ -1266,7 +1274,7 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   }
   ierr = ISLoad(stratumIS, viewer);CHKERRQ(ierr);
 
-  if (ctx->globalNumbering) {
+  if (ctx->sfXC) {
     IS newStratumIS;
 
     ierr = ReadLabelStratumHDF5_Distribute_Private(stratumIS, ctx, &newStratumIS);CHKERRQ(ierr);
@@ -1300,37 +1308,7 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *lname, const H5L_info
   return err;
 }
 
-static PetscErrorCode DMPlexLabelsLoad_HDF5_SetUpParallel_Private(DM dm, LoadLabelsCtx ctx)
-{
-  IS              globalNumbering;
-  PetscInt        nUniqueGlobalPoints = 0;
-  PetscLayout     layout;
-  PetscErrorCode  ierr;
-
-  PetscFunctionBegin;
-  ierr = DMPlexCreatePointNumbering(dm, &globalNumbering);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) globalNumbering, "globalNumbering");CHKERRQ(ierr);
-  /* Convert negative indices (ghosts) to nonnegative */
-  //TODO ask DMPlexCreatePointNumbering() to do that right away
-  {
-    PetscInt *idx;
-    PetscInt i, n;
-
-    ierr = ISGetLocalSize(globalNumbering, &n);CHKERRQ(ierr);
-    ierr = ISGetIndices(globalNumbering, (const PetscInt **)&idx);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
-      if (idx[i] < 0) idx[i] = -idx[i] - 1;
-      else            nUniqueGlobalPoints++;
-    }
-    ierr = ISRestoreIndices(globalNumbering, (const PetscInt **)&idx);CHKERRQ(ierr);
-  }
-  ierr = PetscLayoutCreateFromSizes(ctx->comm, nUniqueGlobalPoints, PETSC_DECIDE, 1, &layout);CHKERRQ(ierr);
-  ctx->globalNumbering            = globalNumbering;
-  ctx->uniqueGlobalIndicesLayout  = layout;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
+PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF sfXC)
 {
   const char           *topologydm_name;
   LoadLabelsCtx         ctx;
@@ -1341,11 +1319,11 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscErrorCode        ierr;
 
   PetscFunctionBegin;
-  ierr = LoadLabelsCtxCreate(dm, viewer, &ctx);CHKERRQ(ierr);
   ierr = DMPlexIsDistributed(dm, &distributed);CHKERRQ(ierr);
   if (distributed) {
-    ierr = DMPlexLabelsLoad_HDF5_SetUpParallel_Private(dm, ctx);CHKERRQ(ierr);
+    if (!sfXC) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_NULL, "PetscSF must be given for parallel load");
   }
+  ierr = LoadLabelsCtxCreate(dm, viewer, sfXC, &ctx);CHKERRQ(ierr);
   ierr = PetscObjectGetName((PetscObject)dm, &topologydm_name);CHKERRQ(ierr);
   ierr = DMPlexStorageVersionGet_Private(dm, viewer, &version);CHKERRQ(ierr);
   if (version.major <= 1) {
@@ -1577,7 +1555,7 @@ static PetscErrorCode DMPlexLoad_HDF5_Legacy_Private(DM dm, PetscViewer viewer)
 
   PetscFunctionBegin;
   ierr = DMPlexTopologyLoad_HDF5_Internal(dm, viewer, NULL);CHKERRQ(ierr);
-  ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+  ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer, NULL);CHKERRQ(ierr);
   ierr = DMPlexCoordinatesLoad_HDF5_Legacy_Private(dm, viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1598,7 +1576,7 @@ PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
     }
   }
   ierr = DMPlexTopologyLoad_HDF5_Internal(dm, viewer, &sfXC);CHKERRQ(ierr);
-  ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+  ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer, sfXC);CHKERRQ(ierr);
   ierr = DMPlexCoordinatesLoad_HDF5_Internal(dm, viewer, sfXC);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sfXC);CHKERRQ(ierr);
   PetscFunctionReturn(0);

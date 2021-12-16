@@ -2084,13 +2084,14 @@ PetscErrorCode DMPlexCoordinatesLoad(DM dm, PetscViewer viewer, PetscSF globalTo
 
   Input Parameters:
 + dm     - The DM into which the labels are loaded
-- viewer - The PetscViewer for the saved labels
+. viewer - The PetscViewer for the saved labels
+- globalToLocalPointSF - The SF returned by DMPlexTopologyLoad() when loading dm from viewer
 
   Level: advanced
 
 .seealso: DMLoad(), DMPlexTopologyLoad(), DMPlexCoordinatesLoad(), DMView(), PetscViewerHDF5Open(), PetscViewerPushFormat()
 @*/
-PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer)
+PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer, PetscSF globalToLocalPointSF)
 {
   PetscBool      ishdf5;
   PetscErrorCode ierr;
@@ -2098,6 +2099,8 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  //TODO this argument should probably not be obligatory, at least not for old version - the same with DMPlexCoordinatesLoad() above
+  PetscValidHeaderSpecific(globalToLocalPointSF, PETSCSF_CLASSID, 3);
   ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5, &ishdf5);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(DMPLEX_LabelsLoad,viewer,0,0,0);CHKERRQ(ierr);
   if (ishdf5) {
@@ -2106,7 +2109,7 @@ PetscErrorCode DMPlexLabelsLoad(DM dm, PetscViewer viewer)
 
     ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
     if (format == PETSC_VIEWER_HDF5_PETSC || format == PETSC_VIEWER_DEFAULT || format == PETSC_VIEWER_NATIVE) {
-      ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer);CHKERRQ(ierr);
+      ierr = DMPlexLabelsLoad_HDF5_Internal(dm, viewer, globalToLocalPointSF);CHKERRQ(ierr);
     } else SETERRQ1(PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "PetscViewerFormat %s not supported for HDF5 input.", PetscViewerFormats[format]);
 #else
     SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
