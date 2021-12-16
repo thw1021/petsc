@@ -109,7 +109,7 @@ static PetscErrorCode LoadMesh(AppCtx *options, DM *dmnew)
       }
     }
     ierr = DMPlexCoordinatesLoad(dm, v, sfXC);CHKERRQ(ierr);
-    ierr = DMPlexLabelsLoad(dm, v);CHKERRQ(ierr);
+    ierr = DMPlexLabelsLoad(dm, v, sfXC);CHKERRQ(ierr);
     ierr = PetscSFDestroy(&sfXC);CHKERRQ(ierr);
   } else {
     ierr = DMLoad(dm, v);CHKERRQ(ierr);
