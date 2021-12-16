@@ -1,4 +1,4 @@
-#requiresdefine 'PETSC_HAVE_CXX_DIALECT_CXX11'
+#requirespackage 'PETSC_HAVE_CUPM'
 ALL: lib
 
 CFLAGS    =
