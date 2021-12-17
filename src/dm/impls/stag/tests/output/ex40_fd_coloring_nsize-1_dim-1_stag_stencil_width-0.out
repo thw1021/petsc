@@ -1,0 +1,18 @@
+  0 SNES Function norm 8.275264346231e+02 
+  1 SNES Function norm 2.451930225861e+02 
+  2 SNES Function norm 7.264978713656e+01 
+  3 SNES Function norm 2.152586381544e+01 
+  4 SNES Function norm 6.378034138597e+00 
+  5 SNES Function norm 1.889788055307e+00 
+  6 SNES Function norm 5.599372664812e-01 
+  7 SNES Function norm 1.659073643213e-01 
+  8 SNES Function norm 4.915774851575e-02 
+  9 SNES Function norm 1.456526344972e-02 
+ 10 SNES Function norm 4.315635607321e-03 
+ 11 SNES Function norm 1.278707712480e-03 
+ 12 SNES Function norm 3.788767379931e-04 
+ 13 SNES Function norm 1.122599407351e-04 
+ 14 SNES Function norm 3.326227811457e-05 
+ 15 SNES Function norm 9.855522294762e-06 
+ 16 SNES Function norm 2.920169142247e-06 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 16
