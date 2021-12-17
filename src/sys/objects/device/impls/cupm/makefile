@@ -1,4 +1,4 @@
-#requirespackage 'PETSC_HAVE_CUPM'
+#requiresdefine 'PETSC_HAVE_CUPM'
 ALL: lib
 
 CFLAGS    =
