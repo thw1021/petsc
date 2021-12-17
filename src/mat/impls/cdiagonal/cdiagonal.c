@@ -92,7 +92,7 @@ static PetscErrorCode MatNorm_ConstantDiagonal(Mat A,NormType type,PetscReal *nr
 
   PetscFunctionBegin;
   if (type == NORM_FROBENIUS || type == NORM_2 || type == NORM_1 || type == NORM_INFINITY) *nrm = PetscAbsScalar(ctx->diag);
-  else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported norm");
+  else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Unsupported norm");
   PetscFunctionReturn(0);
 }
 
