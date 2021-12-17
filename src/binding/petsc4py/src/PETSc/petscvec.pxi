@@ -46,6 +46,7 @@ cdef extern from * nogil:
     int VecCreateShared(MPI_Comm,PetscInt,PetscInt,PetscVec*)
     int VecCreateNest(MPI_Comm,PetscInt,PetscIS[],PetscVec[],PetscVec*)
     int VecGetType(PetscVec,PetscVecType*)
+    int VecGetSeqType(PetscVec,PetscVecType*)
     int VecSetType(PetscVec,PetscVecType)
     int VecSetOption(PetscVec,PetscVecOption,PetscBool)
     int VecSetSizes(PetscVec,PetscInt,PetscInt)
@@ -598,8 +599,21 @@ cdef struct DLDataType:
     uint8_t bits
     uint16_t lanes
 
+cdef enum PetscDLDeviceType:
+    kDLCPU = <unsigned int>1
+    kDLCUDA = <unsigned int>2
+    kDLCUDAHost = <unsigned int>3
+    #kDLOpenCL = <unsigned int>4
+    #kDLVulkan = <unsigned int>7
+    #kDLMetal = <unsigned int>8
+    #kDLVPI = <unsigned int>9
+    kDLROCM = <unsigned int>10
+    kDLROCMHost = <unsigned int>11
+    #kDLExtDev = <unsigned int>12
+    kDLCUDAManaged = <unsigned int>13
+
 ctypedef struct DLContext:
-    int device_type
+    PetscDLDeviceType device_type
     int device_id
 
 cdef enum DLDataTypeCode:
@@ -625,7 +639,7 @@ cdef void pycapsule_deleter(object dltensor):
     cdef DLManagedTensor* dlm_tensor = NULL
     try:
         dlm_tensor = <DLManagedTensor *>PyCapsule_GetPointer(dltensor, 'used_dltensor')
-        return             # we do not call a used capsule's deleter
+        return # we do not call a used capsule's deleter
     except Exception:
         dlm_tensor = <DLManagedTensor *>PyCapsule_GetPointer(dltensor, 'dltensor')
     manager_deleter(dlm_tensor)
