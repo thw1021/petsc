@@ -1,0 +1,54 @@
+  0 SNES Function norm 2.195923495935e+03 
+  ---------- Testing Jacobian -------------
+  Run with -snes_test_jacobian_view and optionally -snes_test_jacobian <threshold> to show difference
+    of hand-coded and finite difference Jacobian entries greater than <threshold>.
+  Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is
+    O(1.e-8), the hand-coded Jacobian is probably correct.
+  ||J - Jfd||_F/||J||_F = 1.67128e-08, ||J - Jfd||_F = 2.40003e-05
+  1 SNES Function norm 6.506439987956e+02 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 2.51386e-08, ||J - Jfd||_F = 1.60445e-05
+  2 SNES Function norm 1.927834070505e+02 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 3.35394e-08, ||J - Jfd||_F = 9.51389e-06
+  3 SNES Function norm 5.712100949646e+01 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 4.04761e-08, ||J - Jfd||_F = 5.10292e-06
+  4 SNES Function norm 1.692474355451e+01 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 5.48447e-08, ||J - Jfd||_F = 3.07307e-06
+  5 SNES Function norm 5.014738830965e+00 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 7.41993e-08, ||J - Jfd||_F = 1.8478e-06
+  6 SNES Function norm 1.485848542508e+00 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 1.04803e-07, ||J - Jfd||_F = 1.15997e-06
+  7 SNES Function norm 4.402514200024e-01 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 1.465e-07, ||J - Jfd||_F = 7.20658e-07
+  8 SNES Function norm 1.304448651859e-01 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 2.1121e-07, ||J - Jfd||_F = 4.61767e-07
+  9 SNES Function norm 3.865033042545e-02 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 3.06829e-07, ||J - Jfd||_F = 2.98141e-07
+ 10 SNES Function norm 1.145194975569e-02 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 4.50194e-07, ||J - Jfd||_F = 1.94421e-07
+ 11 SNES Function norm 3.393170297982e-03 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 6.65067e-07, ||J - Jfd||_F = 1.27651e-07
+ 12 SNES Function norm 1.005383791995e-03 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 9.87636e-07, ||J - Jfd||_F = 8.4251e-08
+ 13 SNES Function norm 2.978914939243e-04 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 1.47094e-06, ||J - Jfd||_F = 5.57687e-08
+ 14 SNES Function norm 8.826414634795e-05 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 2.19602e-06, ||J - Jfd||_F = 3.7004e-08
+ 15 SNES Function norm 2.615233965865e-05 
+  ---------- Testing Jacobian -------------
+  ||J - Jfd||_F/||J||_F = 3.28356e-06, ||J - Jfd||_F = 2.45909e-08
+ 16 SNES Function norm 7.748841380341e-06 
+Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 16
