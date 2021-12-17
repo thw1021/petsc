@@ -474,11 +474,11 @@ linux-sycl-double:
     - .stage-3
     - .linux_test_nofflags
   tags:
-    - os:linux, name:pj01
+    - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-sycl-double
-    INIT_SCRIPT: /home/glci/bin/ci-inteloneapi.sh
-    DISABLE_TESTS: 1
+    # INIT_SCRIPT: /home/glci/bin/ci-inteloneapi.sh
+    TEST_OPTS: query=requires queryval=kokkos_kernels
 
 linux-c-exodus-dbg:
   extends:
