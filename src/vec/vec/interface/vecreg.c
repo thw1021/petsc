@@ -122,6 +122,41 @@ PetscErrorCode VecGetType(Vec vec, VecType *type)
   PetscFunctionReturn(0);
 }
 
+/*@C
+  VecGetSeqType - Gets the sequential vector type name (as a string) from the Vec.
+
+  Not Collective
+
+  Input Parameter:
+. vec  - The vector
+
+  Output Parameter:
+. type - The sequential vector type name
+
+  Level: intermediate
+
+.seealso: VecSetType(), VecCreate()
+@*/
+PetscErrorCode VecGetSeqType(Vec vec, VecType *vtype)
+{
+  PetscErrorCode ierr;
+  PetscBool      iscuda, iship, iskokkos, isvcl;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidPointer(vtype,2);
+  ierr = PetscObjectTypeCompareAny((PetscObject)vec,&iscuda,VECCUDA,VECMPICUDA,VECSEQCUDA,"");CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompareAny((PetscObject)vec,&iship,VECHIP,VECMPIHIP,VECSEQHIP,"");CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompareAny((PetscObject)vec,&iskokkos,VECKOKKOS,VECMPIKOKKOS,VECSEQKOKKOS,"");CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompareAny((PetscObject)vec,&isvcl,VECVIENNACL,VECMPIVIENNACL,VECSEQVIENNACL,"");CHKERRQ(ierr);
+  if (iscuda)        { *vtype = VECSEQCUDA;     }
+  else if (iship)    { *vtype = VECSEQHIP;      }
+  else if (iskokkos) { *vtype = VECSEQKOKKOS;   }
+  else if (isvcl)    { *vtype = VECSEQVIENNACL; }
+  else               { *vtype = VECSEQ;         }
+  PetscFunctionReturn(0);
+}
+
 /*--------------------------------------------------------------------------------------------------------------------*/
 
 /*@C
