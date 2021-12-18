@@ -1,7 +1,7 @@
 !
 !
       subroutine MPIUNISetModuleBlock()
-      use mpiuni
+      use mpi
       implicit none
       call MPIUNISetFortranBasePointers(MPI_IN_PLACE)
       return

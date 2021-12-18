@@ -1,14 +1,10 @@
         module petscmpi
 #include <petscconf.h>
 #include "petsc/finclude/petscsys.h"
-#if defined(PETSC_HAVE_MPIUNI)
-        use mpiuni
-#else
-#if defined(PETSC_HAVE_MPI_F90MODULE)
+#if defined(PETSC_HAVE_MPIUNI) || defined(PETSC_HAVE_MPI_F90MODULE)
         use mpi
 #else
 #include "mpif.h"
-#endif
 #endif
 
         public:: MPIU_REAL, MPIU_SUM, MPIU_SCALAR, MPIU_INTEGER

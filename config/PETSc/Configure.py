@@ -384,7 +384,8 @@ prepend-path PATH "%s"
     self.logPrintDivider()
     self.framework.packages.reverse()
     petscincludes = [os.path.join(self.petscdir.dir,'include'),os.path.join(self.petscdir.dir,self.arch.arch,'include')]
-    petscincludes_install = [os.path.join(self.installdir.dir, 'include')] if self.framework.argDB['prefix'] else petscincludes
+    petscincludes_install_mpiunimod = [os.path.join(self.installdir.dir, 'include', 'petsc', 'mpiuni')] if self.mpi.usingMPIUni else []
+    petscincludes_install = petscincludes_install_mpiunimod + [os.path.join(self.installdir.dir, 'include')] if self.framework.argDB['prefix'] else petscincludes
     includes = []
     self.packagelibs = []
     for i in self.framework.packages:

@@ -317,10 +317,14 @@ for file in files:
     exclude = ['makefile']
     if not hasattr(self.compilers.setCompilers, 'FC'):
       exclude.append('finclude')
-    if not self.mpi.usingMPIUni:
+    if self.mpi.usingMPIUni:
+      exclude.append('mpi.mod')
+    else:
       exclude.append('mpiuni')
     self.copies.extend(self.copytree(self.rootIncludeDir, self.destIncludeDir,exclude = exclude))
-    self.copies.extend(self.copytree(self.archIncludeDir, self.destIncludeDir))
+    self.copies.extend(self.copytree(self.archIncludeDir, self.destIncludeDir,exclude = exclude))
+    if self.mpi.usingMPIUni:
+      self.copies.extend(self.copyfile(os.path.join(self.archIncludeDir,'mpi.mod'),os.path.join(self.destIncludeDir,'petsc','mpiuni')))
     return
 
   def installConf(self):
