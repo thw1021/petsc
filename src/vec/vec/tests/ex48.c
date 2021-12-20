@@ -882,7 +882,7 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetBool(NULL,NULL, "-verbose", &verbose, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetString(NULL,NULL, "-filename", filename, sizeof(filename), NULL);CHKERRQ(ierr);
   if (verbose) {
-    ierr = PetscPrintf(comm, "np ns " PetscStringize(np) " " PetscStringize(ns) "\n");CHKERRQ(ierr);
+    ierr = PetscPrintf(comm, "np ns " PETSCPP_STRINGIZE(np) " " PETSCPP_STRINGIZE(ns) "\n");CHKERRQ(ierr);
   }
 
   ierr = PetscViewerHDF5Open(comm, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
