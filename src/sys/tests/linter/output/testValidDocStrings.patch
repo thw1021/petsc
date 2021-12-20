@@ -46,3 +46,31 @@
 +
  .seealso: testNonExistentFunction(), testNonExistentType
  */
+@@ -75,5 +75,5 @@
+ 
+ /*@C
+-  testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
++  testTerribleSpellingDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+ 
+@@ -78,5 +78,5 @@
+   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+ 
+-  input prametirs:
++  Input Parameter:
+ + viewer - a PetsViewer
+ - x      - a PetscInt
+@@ -82,5 +82,5 @@
+ - x      - a PetscInt
+ 
+-  output Psrammmetrs:
++  Output Parameter:
+ . y - a PetscScalar pointer
+ 
+@@ -85,5 +85,5 @@
+ . y - a PetscScalar pointer
+ 
+-  lvl: itnmediate
++  Level: intermediate
+ 
+ .zeeakso: testNonExistentFunction(), testNonExistentType
