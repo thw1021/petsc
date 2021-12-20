@@ -26,15 +26,6 @@ Invalid comment begin line, must only contain '/*' and sowing identifier:
   33:   someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
   34:   eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
 
-Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected 'C@*/' found '@*/':
-
-  52: 
-  53: .seealso: testNonExistentFunction(), testNonExistentType
-> 54: @*/
-      ^
-  55: 
-  56: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-
 Invalid indentation (3), all regular (non-empty, non-parameter) text must be indented to 2 columns:
 
   37:   Not Collective, Synchronous
@@ -59,6 +50,15 @@ Level subheading must be lowercase, expected 'beginner' found 'Beginner':
   48: Level:
 > 49: Beginner
       ^^^^^^^^
+  50: 
+  51: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Level values must be on the same line as the 'Level' heading, not on separate line:
+
+  46: level: Lorem ipsum dolor sit amet
+  47: 
+> 48: Level:
+> 49: Beginner
   50: 
   51: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
@@ -104,11 +104,11 @@ Unknown section header 'input prametirs', assuming you meant 'Input Parameter':
 > 77:   input prametirs:
         ^^^^^^^^^^^^^^^
   78: + viewer - a PetsViewer
-  79: - x      - a PetscInt
+  79: - x - a PetscInt
 
 Unknown section header 'output Psrammmetrs', assuming you meant 'Output Parameter':
 
-  79: - x      - a PetscInt
+  79: - x - a PetscInt
   80: 
 > 81:   output Psrammmetrs:
         ^^^^^^^^^^^^^^^^^^
@@ -132,6 +132,35 @@ Unknown Level subheading 'itnmediate', assuming you meant 'intermediate':
              ^^^^^^^^^^
   85: 
   86: .zeeakso: testNonExistentFunction(), testNonExistentType
+
+Unknown section header '.zeeakso', assuming you meant '.seealso':
+
+  84:   lvl: itnmediate
+  85: 
+> 86: .zeeakso: testNonExistentFunction(), testNonExistentType
+      ^^^^^^^^
+  87: C@*/
+  88: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+
+ERROR 3: ./src/sys/tests/linter/testValidDocStrings.c:16:105
+'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *, int (*)(int))'
+  103: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
+  104: @*/
+> 105: PetscErrorCode testCustomFortranInterfaceDocString(char *string, PetscErrorCode (*function_ptr)(PetscInt))
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  106: {
+  107:   return 0;
+
+Function requires custom fortran interface but missing 'C' from docstring header. Due to
+  1. 'string' of derived type 'char *' (is a char pointer)
+  2. 'function_ptr' of derived type 'PetscErrorCode (*)(PetscInt)' (is a function pointer):
+
+  92: 
+  93: 
+> 94: /*@
+      ^^^
+  95:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  96: 
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -173,7 +202,7 @@ Undocumented parameter 'x' not found in parameter section:
 > 40: + viewer - a PetscViewer
 > 41: 
 > 42:   Output Parameter:
-> 43: + y - a pointer
+> 43: + y          - a pointer
 > 44: - z - a nonexistent parameter
   45: 
   46:   level: Lorem ipsum dolor sit amet
@@ -181,7 +210,7 @@ Undocumented parameter 'x' not found in parameter section:
 Extra docstring parameter 'z' not found in function arguments:
 
   42:   Output Parameter:
-  43: + y - a pointer
+  43: + y          - a pointer
 > 44: - z - a nonexistent parameter
         ^
   45: 
