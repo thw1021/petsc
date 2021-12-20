@@ -18,7 +18,7 @@ PetscErrorCode PetscKokkosIsInitialized_Private(PetscBool *isInitialized)
 }
 
 #define PETSC_AND_KOKKOS_HAVE(THING)                                    \
-  (defined(KOKKOS_ENABLE_ ## THING) && PetscDefined(PETSCPP_CONCAT(HAVE_,THING)))
+  (defined(KOKKOS_ENABLE_ ## THING) && PetscDefined(PetscConcat(HAVE_,THING)))
 
 /* Initialize Kokkos if not yet */
 PetscErrorCode PetscKokkosInitializeCheck(void)
