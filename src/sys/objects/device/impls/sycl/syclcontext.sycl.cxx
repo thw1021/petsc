@@ -49,6 +49,7 @@ public:
     synchronize,
     getBlasHandle,
     getSolverHandle,
+    getStreamHandle,
     beginTimer,
     endTimer
   };
@@ -72,6 +73,7 @@ public:
   PETSC_NODISCARD static PetscErrorCode synchronize(PetscDeviceContext) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
   PETSC_NODISCARD static PetscErrorCode getBlasHandle(PetscDeviceContext,void*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
   PETSC_NODISCARD static PetscErrorCode getSolverHandle(PetscDeviceContext,void*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
+  PETSC_NODISCARD static PetscErrorCode getStreamHandle(PetscDeviceContext,void*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
   PETSC_NODISCARD static PetscErrorCode beginTimer(PetscDeviceContext) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
   PETSC_NODISCARD static PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
 };
