@@ -40,7 +40,7 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
 + viewer - a PetscViewer
 
   Output Parameter:
-+ y - a pointer
++ y          - a pointer
 - z - a nonexistent parameter
 
   level: Lorem ipsum dolor sit amet
@@ -76,7 +76,7 @@ PetscErrorCode testIllFormedMinimalDocString(void)
 
   input prametirs:
 + viewer - a PetsViewer
-- x      - a PetscInt
+- x - a PetscInt
 
   output Psrammmetrs:
 . y - a PetscScalar pointer
@@ -90,5 +90,22 @@ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, Pet
   return 0;
 }
 
-/* a random comment above a funciton */
+
+/*@
+  testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+
+  Input Parameters:
++ string -  a char pointer
+- function_ptr - a function pointer
+
+  Level: beginner
+
+.seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
+@*/
+PetscErrorCode testCustomFortranInterfaceDocString(char *string, PetscErrorCode (*function_ptr)(PetscInt))
+{
+  return 0;
+}
+
+/* a random comment above a function */
 void function();

@@ -291,8 +291,8 @@ class PetscDocString(object):
       if not self.lines:
         if self.required:
           docstring.addErrorFromSourceRange(
-            "Required subheading(s) '{}' not found in docstring:\n\n{}",
-            docstring.extent,formatargs=(self.name.title(),),highlight=False
+            "Required subheading(s) '{}' not found in docstring".format(self.name.title()),
+            docstring.extent,highlight=False
           )
         return
       seen       = collections.defaultdict(list)
@@ -314,11 +314,11 @@ class PetscDocString(object):
             nbefore = name[0].start.line-prevLineBegin-1
             if i == len(self.items)-1:
               nafter = 2
-          srclist.append(pclu.getFormattedSourceFromSourceRange(
-            name[0],numBeforeContext=nbefore,numAfterContext=nafter,trim=False
-          ))
+          srclist.append(
+            name[0].formatted(numBeforeContext=nbefore,numAfterContext=nafter,trim=False)
+          )
           prevLineBegin = name[0].start.line
-        error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n\n{}".format(self.name.title(),"\n".join(srclist))
+        error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n\n{}".format(self.transform(self.name)[1],"\n".join(srclist))
         docstring._linter.addErrorFromCursor(docstring.cursor,error)
       return
 
@@ -418,7 +418,7 @@ class PetscDocString(object):
         return section.name in self._sections
       elif isinstance(section,str):
         return section in self._sections
-      raise NotImplementedError
+      raise NotImplementedError(section)
 
     def addSection(self,section):
       assert not self.registered(section)
@@ -435,7 +435,7 @@ class PetscDocString(object):
   clxToSowingType = {
     clx.TypeKind.FUNCTIONPROTO : ("@","functions")
   }
-  __slots__ = "cursor","raw","extent","indent","_linter"
+  __slots__ = "_linter","cursor","raw","extent","indent"
 
   @classmethod
   def registerSection(cls,section):
@@ -460,30 +460,38 @@ class PetscDocString(object):
     return
 
   @classmethod
-  def fromCursor(cls,cursor):
-    return cls(cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
+  def fromCursor(cls,linter,cursor):
+    return cls(linter,cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
 
   @classmethod
-  def isValidDocstring(cls,raw):
+  def isValidDocstring(cls,cursor,raw):
     if not raw or not isinstance(raw,str):
       return False
 
     # if we find sowing chars, its probably a docstring
     if raw.lstrip().startswith("/*@") or raw.rstrip().endswith("@*/"):
       return True
-    # if we find these keywords, likely this is a docstring
-    return any(keyword.casefold() in raw.casefold() for keyword in cls.sections.keywords())
 
-  def __init__(self,cursor,raw,extent,indent=2):
+    # if we find these keywords, likely this is a docstring
+    if any(keyword.casefold() in raw.casefold() for keyword in cls.sections.keywords()):
+      # if it doesn't end with _private or _internal then its very likely a docstring
+      if not PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
+        return True
+    return False
+
+
+  def __init__(self,linter,cursor,raw,extent,indent=2):
+    assert isinstance(linter,PetscLinter)
     self.registerDefaultSections()
-    if not self.isValidDocstring(raw):
+    if not self.isValidDocstring(cursor,raw):
       raise ParsingError("Not a docstring!")
+    self._linter = linter
     self.cursor  = cursor
     self.raw     = raw
-    self.extent  = extent
+    self.extent  = PetscSourceRange.cast(extent)
     self.indent  = indent
-    self._linter = None
     return
+
 
   def makeSourceLocation(self,lineno,col):
     return PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
@@ -495,22 +503,16 @@ class PetscDocString(object):
     end      = self.makeSourceLocation(lineno,colEnd)
     return PetscSourceRange.fromLocations(begin,end)
 
-  def addErrorFromSourceRange(self,errstr,crange,formatargs=tuple(),patch=None,**kwargs):
-    assert isinstance(errstr,str)
-    src = pclu.getFormattedSourceFromSourceRange(
-      crange,numContext=kwargs.pop("numContext",2),**kwargs
-    )
-    error = errstr.format(*formatargs,src)
+  def addErrorFromSourceRange(self,error,crange,patch=None,**kwargs):
+    assert isinstance(error,str)
+    error = ":\n\n".join([error,crange.formatted(numContext=kwargs.pop("numContext",2),**kwargs)])
     self._linter.addErrorFromCursor(self.cursor,error,patch=patch)
     return
-
-  def addErrorFromSection(self,errstr,section,**kwargs):
-    return self.addErrorFromSourceRange(errstr,section.extent,**kwargs)
 
 
   def _checkValidSowingChars(self):
     sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
-    # check that beginning
+    # check the beginning
     splitlines  = self.raw.splitlines()
     line        = splitlines[0]
     beginSowing = line.split("/*")[1].split()
@@ -518,8 +520,8 @@ class PetscDocString(object):
       beginSowing = beginSowing[0]
     except IndexError:
       self.addErrorFromSourceRange(
-        "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}:\n\n{}",
-        self.makeSourceRange(line,line,self.extent.start.line),formatargs=(sowingType,layType)
+        "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}".format(sowingType,layType),
+        self.makeSourceRange(line,line,self.extent.start.line)
       )
       beginSowing = [sowingType]
     if beginSowing[0] not in self.sowingTypes:
@@ -527,14 +529,14 @@ class PetscDocString(object):
       raise ParsingError
     beginSowing = "".join(beginSowing)
     # check that nothing else is on the comment begin line
-    lsplit = line.strip().split()
+    lsplit = line.strip().split(maxsplit=1)
     if len(lsplit) != 1:
-      rest   = " ".join(lsplit[1:])
-      crange = self.makeSourceRange(line,line,self.extent.start.line)
+      rest     = lsplit[1]
+      restOnly = self.makeSourceRange(rest,line,self.extent.start.line)
+      fullLine = self.makeSourceRange(line,line,self.extent.start.line)
       self.addErrorFromSourceRange(
-        "Invalid comment begin line, must only contain '/*' and sowing identifier:\n\n{}",
-        self.makeSourceRange(rest,line,self.extent.start.line),
-        patch=SourceFix.fromSourceRange(crange,lsplit[0]+"\n"+(" "*self.indent)+rest)
+        "Invalid comment begin line, must only contain '/*' and sowing identifier",
+        restOnly,patch=SourceFix.fromSourceRange(fullLine,lsplit[0]+"\n"+(" "*self.indent)+rest)
       )
     # now check the end
     line      = splitlines[-1]
@@ -544,13 +546,13 @@ class PetscDocString(object):
     except IndexError:
       pass
     else:
-      if sorted(endSowing) != sorted(beginSowing):
+      if sorted(endSowing) != sorted(beginSowing) and 0:
+        # TODO: REVIEW: should this check exist?
         correct = beginSowing[::-1]
         endline = self.extent.end.line
         self.addErrorFromSourceRange(
-          "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/':\n\n{}",
-          self.makeSourceRange(endSowing,line,endline),formatargs=(correct,endSowing),
-          patch=SourceFix.fromSourceRange(
+          "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/'".format(correct,endSowing),
+          self.makeSourceRange(endSowing,line,endline),patch=SourceFix.fromSourceRange(
             self.makeSourceRange(line,line,endline),line.replace(endSowing,correct)
           )
         )
@@ -563,30 +565,30 @@ class PetscDocString(object):
       # there is at least 1 (probably empty) line between the comment end and whatever it
       # is describing
       self.addErrorFromSourceRange(
-        "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target:\n\n{}",
+        "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target",
         self.makeSourceRange("","",endLine),highlight=False,
         patch=SourceFix(self.makeSourceLocation(endLine,1),cursorStart,"")
       )
     return
 
-  def _reset(self,linter):
+  def _reset(self):
     for s in self.sections:
       s.clear()
-    self._linter = linter # review me
     return
 
-  def parse(self,linter):
+  def parse(self):
     def smartIndent(line):
       lstrip = line.lstrip()
       if lstrip.startswith(("+",".","-")):
         return lstrip
       return self.indent*" "+lstrip
 
-    self._reset(linter)
+    self._reset()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
-    rawData = []
-    section = self.sections.synopsis
+    rawData        = []
+    section        = self.sections.synopsis
+    invalidIndents = []
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
@@ -598,15 +600,15 @@ class PetscDocString(object):
       indent = len(line)-len(lstrip)
       if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
         self.addErrorFromSourceRange(
-          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns:\n\n{}",
-          self.makeSourceRange(" "*indent,line,lineno),formatargs=(indent,self.indent),
+          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns".format(indent,self.indent),
+          self.makeSourceRange(" "*indent,line,lineno),
           patch=SourceFix.fromSourceRange(lrange,smartIndent(line))
         )
       if ":" in lstrip:
         prevline = rawData[-1][1] if len(rawData) else None
         if prevline and not prevline.isspace():
           self.addErrorFromSourceRange(
-            "Missing empty line between sections, must have one before this section:\n\n{}",
+            "Missing empty line between sections, must have one before this section",
             self.makeSourceRange("","",lineno),highlight=False,
             patch=SourceFix.fromSourceRange(lrange,"\n"+smartIndent(lstrip))
           )
@@ -629,7 +631,7 @@ class PetscDocString(object):
       assert sep
       if after.rstrip():
         self.addErrorFromSourceRange(
-          "Heading must appear alone on a line, any content must be on the next line:\n\n{}",
+          "Heading must appear alone on a line, any content must be on the next line",
           self.makeSourceRange(after,text,loc.start.line)
         )
     return
@@ -638,7 +640,6 @@ class PetscDocString(object):
     if transform is None:
       transform = section.transform
 
-    keywordsLo = tuple(k.casefold() for k in section.keywords)
     for loc,text in headings:
       before,sep,_ = text.partition(delim)
       assert sep
@@ -646,27 +647,22 @@ class PetscDocString(object):
       if any(k in heading for k in section.keywords):
         continue
 
+      headingLoc       = self.makeSourceRange(heading,text,loc.start.line)
       wasValid,correct = transform(heading)
       if not wasValid and any(k in correct for k in section.keywords):
         self.addErrorFromSourceRange(
-          "Invalid header formatting. Expected '{}' found '{}':\n\n{}",
-          self.makeSourceRange(heading,text,loc.start.line),formatargs=(correct,heading),
-          patch=SourceFix.fromSourceRange(loc,text.replace(heading,correct))
+          "Invalid header formatting. Expected '{}' found '{}'".format(correct,heading),
+          headingLoc,patch=SourceFix.fromSourceRange(loc,text.replace(heading,correct))
         )
         continue
 
-      closest = difflib.get_close_matches(heading.casefold(),keywordsLo)
+      closest = difflib.get_close_matches(correct,section.keywords)
       if len(closest):
         match = closest[0]
-        for i,k in enumerate(keywordsLo):
-          if k == match:
-            correct = section.keywords[i]
-            self.addErrorFromSourceRange(
-              "Unknown section header '{}', assuming you meant '{}':\n\n{}",
-              self.makeSourceRange(heading,text,loc.end.line),formatargs=(heading,correct,),
-              patch=SourceFix.fromSourceRange(loc,text.replace(heading,correct))
-            )
-            break
+        self.addErrorFromSourceRange(
+          "Unknown section header '{}', assuming you meant '{}'".format(heading,match),
+          headingLoc,patch=SourceFix.fromSourceRange(loc,text.replace(heading,match))
+        )
       else:
         import ipdb; ipdb.set_trace()
     return
@@ -996,9 +992,7 @@ class SourceFix(object):
     self.range    = validrange(begin,end)
     self.filename = Path(self.range.start.file.name)
     self.ctxlines = contextlines
-    self.src      = pclu.getRawSourceFromSourceRange(
-      self.range,numContext=self.ctxlines
-    )
+    self.src      = self.range.raw(numContext=self.ctxlines)
     self.begins   = [self.range.start]
     self.ends     = [self.range.end]
     self.deltas   = [str(value)]
@@ -1570,8 +1564,6 @@ TODO:
 - make PetscLinter.diagnostics() be the one-stop shop
 - make warnings into a list with filename
 - integrate warnings into the test output as well
-- generate the error and warning outputs for the tests
-- optimize detection of a valid docstring so we can bail out earlier for random comments
 - implement fixits for stuff we can fix
 - figure out how to handle overwriting fixits...
 """
@@ -1584,7 +1576,7 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   symbolName = allSymbolNames[0]
   cursorName = PetscCursor.getNameFromCursor(cursor)
   if symbolName[1] != cursorName:
-    src = pclu.getFormattedSourceFromSourceRange(symbolName[0],numContext=2)
+    src = symbolName[0].formatted(numContext=2)
     if len(difflib.get_close_matches(symbolName[-1],[cursorName])):
       errorMessage = "Docstring name '{}' does not match symbol. Assuming you meant '{}':\n\n{}".format(symbolName[-1],cursorName,src)
       patch = SourceFix.fromSourceRange(symbolName[0],cursorName)
@@ -1593,9 +1585,7 @@ def checkDocValidSynopsis(linter,cursor,docstring):
       patch = None
     linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
   if "-" not in sectionRaw:
-    src = pclu.getFormattedSourceFromSourceRange(
-      symbolName[0],numBeforeContext=1,numAfterContext=len(section.lines)-1
-    )
+    src = symbolName[0].formatted(numBeforeContext=1,numAfterContext=len(section.lines)-1)
     errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
@@ -1612,9 +1602,27 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
     return
     raise RuntimeError("no params, but function has args; this should be handled")
 
-  headings = [l for l in params.lines if params.isHeading(l)]
+  try:
+    headings = [l for l in params.lines if params.isHeading(l)]
+  except:
+    import ipdb; ipdb.set_trace()
   docstring.checkValidSectionHeaderSpelling(params,headings)
   docstring.checkValidSolitarySectionHeadings(params,headings)
+
+  requiresC = []
+  for arg in fnargs:
+    canon = arg.type.get_canonical()
+    if canon.kind == clx.TypeKind.POINTER:
+      dataKind = canon.get_pointee().kind
+      if dataKind in charTypes:
+        requiresC.append((arg,"char"))
+      elif dataKind in functionTypes:
+        requiresC.append((arg,"function"))
+
+  if len(requiresC) and not docstring.raw.startswith("/*@C"):
+    line   = docstring.raw.split(maxsplit=1)[0]
+    crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
+    docstring.addErrorFromSourceRange("Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format("\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))),crange,patch=SourceFix.fromSourceRange(crange,line+"C"))
   docStringArgs = params.items
   allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
@@ -1626,9 +1634,8 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
       # function argument isn't in the docstring
       begin,end = docStringArgs[0][0],docStringArgs[-1][0]
       docstring.addErrorFromSourceRange(
-        "Undocumented parameter '{}' not found in parameter section:\n\n{}",
-        PetscSourceRange.fromLocations(begin.start,end.start),
-        formatargs=(argname,),highlight=False
+        "Undocumented parameter '{}' not found in parameter section".format(argname),
+        PetscSourceRange.fromLocations(begin.start,end.start),highlight=False
       )
     else:
       # argument is in the docstring, lets see if its in the right place
@@ -1637,7 +1644,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
         import ipdb; ipdb.set_trace()
         # it's not, but it should still be in the docstring somewhere
         assert argname in allParamLeft
-        src = pclu.getFormattedSourceFromSourceRange(docStringArgs[idx][0],numBeforeContext=idx+1,numAfterContext=2)
+        src = docStringArgs[idx][0].formatted(numBeforeContext=idx+1,numAfterContext=2)
         errorMessage = "Docstring parameter out of order. Expected '{}' for as paramater #{}, found in position {} instead:\n\n{}".format(argname,i+1,idx+1,src)
         linter.addErrorFromCursor(arg,errorMessage)
       allParamLeft.remove(argname)
@@ -1645,8 +1652,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
   for p in allParamLeft:
     idx = allParamNames.index(p)
     docstring.addErrorFromSourceRange(
-      "Extra docstring parameter '{}' not found in function arguments:\n\n{}",
-      docStringArgs[idx][0],formatargs=(docStringArgs[idx][-1])
+      "Extra docstring parameter '{}' not found in function arguments".format(docStringArgs[idx][-1]),docStringArgs[idx][0]
     )
   return
 
@@ -1659,11 +1665,11 @@ def checkDocValidLevel(linter,cursor,docstring):
   docstring.checkValidSectionHeaderSpelling(level,[l for l in level.lines if level.isHeading(l)])
 
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
-  expected    = ", ".join(validLevels[:-1])+", or "+str(validLevels[-1])
+  expected    = ", or ".join([", ".join(validLevels[:-1]),str(validLevels[-1])])
   newLineWithProperIndent = ":\n"+docstring.indent*" "
   for loc,levelName in level.items:
     if levelName not in validLevels:
-      src    = pclu.getFormattedSourceFromSourceRange(loc,numContext=2)
+      src    = loc.formatted(numContext=2)
       locase = levelName.casefold()
       if locase in validLevels:
         errorMessage = "Level subheading must be lowercase, expected '{}' found '{}':\n\n{}".format(locase,levelName,src)
@@ -1678,12 +1684,12 @@ def checkDocValidLevel(linter,cursor,docstring):
           patch = None
         linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
   for loc,line in level.lines:
-    continue # TODO FIX ME, need to be able to handle the below
+    #continue # TODO FIX ME, need to be able to handle the below
     if line and ":" not in line:
       # if you get a "prevloc" and "prevline" not defined error here this means that we
       # are erroring out on the first trip round this loop and somehow have a
       # lone-standing 'beginner' or whatever without an explicit "Level:" line...
-      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(pclu.getFormattedSourceFromSourceRange(prevloc.mergeWith(loc),numContext=2,highlight=False))
+      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n\n{}".format(prevloc.mergeWith(loc).formatted(numContext=2,highlight=False))
       # This is a stupid hack to solve a multifaceted issue. Suppose you have
       # Level:
       # BLABLABLA
@@ -1698,7 +1704,6 @@ def checkDocValidLevel(linter,cursor,docstring):
 
       # create a range starting at newline of previous line going until the first
       # non-space character on the next line
-      import ipdb; ipdb.set_trace()
       delrange = PetscSourceRange.fromPositions(
         cursor.translation_unit,prevloc.end.line,-1,loc.start.line,len(line)-len(line.lstrip())
       )
@@ -1724,13 +1729,12 @@ def checkDocValidSeealso(linter,cursor,docstring):
 """Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,function):
   try:
-    docstring = PetscDocString.fromCursor(function).parse(linter)
+    docstring = PetscDocString.fromCursor(linter,function).parse()
   except ParsingError:
     return # error already logged with linter
-  fnargs = linter.getArgumentCursors(function)
 
   checkDocValidSynopsis(linter,function,docstring)
-  checkDocValidParameters(linter,function,docstring,fnargs)
+  checkDocValidParameters(linter,function,docstring,linter.getArgumentCursors(function))
   checkDocValidLevel(linter,function,docstring)
   return
 
@@ -2730,33 +2734,36 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
       for patchFile in patchDir.glob("*"+manglePostfix):
         if verbose: print(rootPrintPrefix,"Applying patch",patchFile)
         output = subprocessRun(
-          ["patch",rootDir,"--strip=0","--unified","--input="+patchFile],
+          ["patch",rootDir,"--strip=0","--unified","--input={}".format(patchFile)],
           check=True,universal_newlines=True,capture_output=True
         )
         if verbose: print(output.stdout)
+  ret       = 0
+  formatStr = " ".join([rootPrintPrefix,"{:=^85}"])
   if warnings and verbose:
-    print("\n"+rootPrintPrefix,30*"=","Found warnings      ",33*"=")
+    print(formatStr.format(" Found Warnings "))
     print("\n".join(s for tup in warnings for _,s in tup))
-    print(rootPrintPrefix,30*"=","End warnings        ",33*"=")
+    print(formatStr.format(" End warnings "))
   if errorsFixed and verbose:
-    print("\n"+rootPrintPrefix,30*"=","Fixed Errors        ",33*"=")
+    print(formatStr.format(" Fixed Errors " if applyPatches else " Fixable Errors "))
     print("\n".join(e for _,e in errorsFixed))
-    print(rootPrintPrefix,30*"=","End fixed errors    ",33*"=")
+    print(formatStr.format(" End Fixed Errors "))
   if errorsLeft:
-    print("\n"+rootPrintPrefix,30*"=","Unfixable Errors    ",33*"=")
+    print(formatStr.format(" Unfixable Errors "))
     print("\n".join(e for _,e in errorsLeft))
-    print(rootPrintPrefix,30*"=","End unfixable errors",33*"=")
-    print("Some errors or warnings could not be automatically corrected via the patch files, see above")
-    return 11
+    print(formatStr.format(" End Unfixable Errors "))
+    print("Some errors or warnings could not be automatically corrected via the patch files")
+    ret = 11
   if patches:
     if applyPatches:
-      print("All errors or warnings successfully patched")
+      print("All fixable errors or warnings successfully patched")
     else:
-      print("All errors fixable via patch files written to",patchDir)
+      print("Patch files written to",patchDir)
       print("Apply manually using:")
       print("  patch {} --strip=0 --unified --input={}".format(rootDir,patchDir/("*"+manglePostfix)))
-      return 12
-  return 0
+      if ret != 0:
+        ret = 12
+  return ret
 
 
 if __name__ == "__main__":
