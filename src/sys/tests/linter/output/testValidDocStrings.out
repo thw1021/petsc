@@ -44,7 +44,7 @@ Invalid indentation (3), all regular (non-empty, non-parameter) text must be ind
   40: + viewer - a PetscViewer
   41: 
 
-Invalid heading, not title-cased. Expected 'Level' found 'level':
+Invalid header formatting. Expected 'Level' found 'level':
 
   44: - z - a nonexistent parameter
   45: 
@@ -78,6 +78,60 @@ Missing empty line between sections, must have one before this section:
 > 66: .seealso: testNonExistentFunction(), testNonExistentType
   67: */
   68: PetscErrorCode testIllFormedMinimalDocString(void)
+
+ERROR 2: ./src/sys/tests/linter/testValidDocStrings.c:16:88
+'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  86: .zeeakso: testNonExistentFunction(), testNonExistentType
+  87: C@*/
+> 88: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  89: {
+  90:   return 0;
+
+Docstring name 'testTerbleSpelingDocstring' does not match symbol. Assuming you meant 'testTerribleSpellingDocString':
+
+  72: 
+  73: /*@C
+> 74:   testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  75:   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+  76: 
+
+Unknown section header 'input prametirs', assuming you meant 'Input Parameter':
+
+  75:   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+  76: 
+> 77:   input prametirs:
+        ^^^^^^^^^^^^^^^
+  78: + viewer - a PetsViewer
+  79: - x      - a PetscInt
+
+Unknown section header 'output Psrammmetrs', assuming you meant 'Output Parameter':
+
+  79: - x      - a PetscInt
+  80: 
+> 81:   output Psrammmetrs:
+        ^^^^^^^^^^^^^^^^^^
+  82: . y - a PetscScalar pointer
+  83: 
+
+Unknown section header 'lvl', assuming you meant 'Level':
+
+  82: . y - a PetscScalar pointer
+  83: 
+> 84:   lvl: itnmediate
+        ^^^
+  85: 
+  86: .zeeakso: testNonExistentFunction(), testNonExistentType
+
+Unknown Level subheading 'itnmediate', assuming you meant 'intermediate':
+
+  82: . y - a PetscScalar pointer
+  83: 
+> 84:   lvl: itnmediate
+             ^^^^^^^^^^
+  85: 
+  86: .zeeakso: testNonExistentFunction(), testNonExistentType
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -90,7 +144,7 @@ ERROR 0: ./src/sys/tests/linter/testValidDocStrings.c:16:56
   57: {
   58:   return 0;
 
-Multiple 'level' subheadings. Much like Highlanders, there can only be one:
+Multiple 'Level' subheadings. Much like Highlanders, there can only be one:
 
   44: - z - a nonexistent parameter
   45: 
@@ -103,7 +157,7 @@ Multiple 'level' subheadings. Much like Highlanders, there can only be one:
   50: 
   51:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-Docstring name does not match symbol name. Expected 'testIllFormedFunctionDocString' found 'someOtherFunctionName' instead:
+Docstring name 'someOtherFunctionName' does not match symbol name 'testIllFormedFunctionDocString':
 
   31: 
   32: /*@C Lorem ipsum dolor sit amet
@@ -160,7 +214,7 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*@' f
   62:   Not Collective, Synchronous
   63: 
 
-Required subheading 'Level' not found in docstring:
+Required subheading(s) 'Level' not found in docstring:
 
   59: }
   60: 
@@ -174,7 +228,7 @@ Required subheading 'Level' not found in docstring:
   68: PetscErrorCode testIllFormedMinimalDocString(void)
   69: {
 
-Docstring name does not match symbol name. Expected 'testIllFormedMinimalDocString' found 'Not Collective, Synchronous' instead:
+Docstring name 'Not Collective, Synchronous' does not match symbol name 'testIllFormedMinimalDocString':
 
   60: 
   61: /*
