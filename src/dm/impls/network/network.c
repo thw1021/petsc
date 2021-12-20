@@ -1287,7 +1287,7 @@ PetscErrorCode DMNetworkAddComponent(DM dm,PetscInt p,PetscInt componentkey,void
   ierr = PetscSectionAddDof(network->DofSection,p,nvar);CHKERRQ(ierr);
   if (!compvalue) PetscFunctionReturn(0);
   ierr = DMNetworkIsGhostVertex(dm,p,&ghost);CHKERRQ(ierr);
-  if (ghost) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Adding a component at a leaf(ghost) vertex is not supported");
+  if (ghost) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Adding a component at a leaf(ghost) vertex is not supported before calling DMNetworkIsGhostVertex()");
 
   header = &network->header[p];
   cvalue = &network->cvalue[p];
