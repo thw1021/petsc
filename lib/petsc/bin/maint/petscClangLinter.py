@@ -295,16 +295,16 @@ class PetscDocString(object):
             docstring.extent,highlight=False
           )
         return
-      seen       = collections.defaultdict(list)
-      self.items = []
+      seen  = collections.defaultdict(list)
+      items = []
       for srcloc,line in self.lines:
         if ":" in line:
           seen[line.split(":")[0].strip().casefold()].append(srcloc)
         # let each section type determine if this line is useful
         valid,item = isItem(line)
         if valid:
-          self.items.append((docstring.makeSourceRange(item,line,srcloc.start.line),item.strip()))
-      self.items = tuple(self.items)
+          items.append((docstring.makeSourceRange(item,line,srcloc.start.line),item.strip()))
+      self.items = tuple(items)
       if any(len(locs) > 1 for locs in seen.values()):
         # check that a particular subsection does not appear twice
         srclist        = []
@@ -1590,7 +1590,8 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     linter.addErrorFromCursor(cursor,errorMessage)
   return
 
-def checkDocValidParameters(linter,cursor,docstring,fnargs):
+def checkDocValidFunctionParameters(linter,cursor,docstring):
+  fnargs = linter.getArgumentCursors(cursor)
   if len(fnargs) == 0:
     # if the function has no arguments and we have nothing to do here
     return
@@ -1602,10 +1603,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
     return
     raise RuntimeError("no params, but function has args; this should be handled")
 
-  try:
-    headings = [l for l in params.lines if params.isHeading(l)]
-  except:
-    import ipdb; ipdb.set_trace()
+  headings = [l for l in params.lines if params.isHeading(l)]
   docstring.checkValidSectionHeaderSpelling(params,headings)
   docstring.checkValidSolitarySectionHeadings(params,headings)
 
@@ -1623,6 +1621,10 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
     line   = docstring.raw.split(maxsplit=1)[0]
     crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
     docstring.addErrorFromSourceRange("Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format("\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))),crange,patch=SourceFix.fromSourceRange(crange,line+"C"))
+
+  # ranges of input and output params respectively, MAY BE USEFUL FOR CHECKING PARAMS ARE
+  # INOUT PARAMS
+  # subSectionRanges = [PetscSourceRange.fromLocations(b[0].start,e[0].start) for b,e in zip(headings[:-1],headings[1:])]+[PetscSourceRange.fromLocations(headings[-1][0].start,params.extent.end)]
   docStringArgs = params.items
   allParamNames = tuple(n for _,n in docStringArgs)
   allParamLeft  = set(allParamNames)
@@ -1639,7 +1641,7 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
       )
     else:
       # argument is in the docstring, lets see if its in the right place
-      if i != idx and 0:
+      if 0 and i != idx:
         # TODO, figure out a way to make this work with in-out parameters
         import ipdb; ipdb.set_trace()
         # it's not, but it should still be in the docstring somewhere
@@ -1650,9 +1652,9 @@ def checkDocValidParameters(linter,cursor,docstring,fnargs):
       allParamLeft.remove(argname)
 
   for p in allParamLeft:
-    idx = allParamNames.index(p)
+    loc,name = docStringArgs[allParamNames.index(p)]
     docstring.addErrorFromSourceRange(
-      "Extra docstring parameter '{}' not found in function arguments".format(docStringArgs[idx][-1]),docStringArgs[idx][0]
+      "Extra docstring parameter '{}' not found in function arguments".format(name),loc
     )
   return
 
@@ -1743,7 +1745,7 @@ def checkPetscFunctionDocString(linter,function):
     return # error already logged with linter
 
   checkDocValidSynopsis(linter,function,docstring)
-  checkDocValidParameters(linter,function,docstring,linter.getArgumentCursors(function))
+  checkDocValidFunctionParameters(linter,function,docstring)
   checkDocValidLevel(linter,function,docstring)
   checkDocValidSeealso(linter,function,docstring)
   return
