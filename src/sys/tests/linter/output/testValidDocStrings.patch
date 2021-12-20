@@ -20,6 +20,14 @@
 +  Level: Lorem ipsum dolor sit amet
  
    Level:
+@@ -49,6 +49,5 @@
+   level: Lorem ipsum dolor sit amet
+ 
+-  Level:
+-  Beginner
++  Level: Beginner
+ 
+   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 @@ -50,5 +50,5 @@
  
    Level:
@@ -27,13 +35,6 @@
 +  beginner
  
    References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-@@ -55,5 +55,5 @@
- 
- .seealso: testNonExistentFunction(), testNonExistentType
--@*/
-+C@*/
- 
- PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 @@ -56,5 +56,4 @@
  .seealso: testNonExistentFunction(), testNonExistentType
  @*/
@@ -59,9 +60,9 @@
 -  input prametirs:
 +  Input Parameter:
  + viewer - a PetsViewer
- - x      - a PetscInt
+ - x - a PetscInt
 @@ -82,5 +82,5 @@
- - x      - a PetscInt
+ - x - a PetscInt
  
 -  output Psrammmetrs:
 +  Output Parameter:
@@ -74,3 +75,17 @@
 +  Level: intermediate
  
  .zeeakso: testNonExistentFunction(), testNonExistentType
+@@ -87,5 +87,5 @@
+   lvl: itnmediate
+ 
+-.zeeakso: testNonExistentFunction(), testNonExistentType
++.seealso: testNonExistentFunction(), testNonExistentType
+ C@*/
+ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+@@ -95,5 +95,5 @@
+ 
+ 
+-/*@
++/*@C
+   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+ 
