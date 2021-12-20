@@ -1,7 +1,8 @@
 
 static char help[] = "Solve a small system and a large system through preloading\n\
   Input arguments are:\n\
-   -f0 <small_sys_binary> -f1 <large_sys_binary> \n\n";
+  -permute <natural,rcm,nd,...> : solve system in permuted indexing\n\
+  -f0 <small_sys_binary> -f1 <large_sys_binary> \n\n";
 
 /*T
    Concepts: KSP^basic parallel example
@@ -39,30 +40,39 @@ int main(int argc,char **args)
   KSP               ksp;         /* Krylov subspace method context */
   PetscReal         norm;        /* norm of solution error */
   char              file[2][PETSC_MAX_PATH_LEN];
+  char              ordering[256] = MATORDERINGRCM;
   PetscViewer       viewer;      /* viewer */
-  PetscBool         flg,preload=PETSC_FALSE,same,trans=PETSC_FALSE;
+  PetscBool         flg,preload=PETSC_FALSE,same,trans=PETSC_FALSE,permute=PETSC_FALSE;
   RHSType           rhstype = RHS_FILE;
   PetscInt          its,j,len,start,idx,n1,n2;
   const PetscScalar *val;
+  IS                rowperm=NULL,colperm=NULL;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
 
-  /*
-     Determine files from which we read the two linear systems
-     (matrix and right-hand-side vector).
-  */
-  ierr = PetscOptionsGetBool(NULL,NULL,"-trans",&trans,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsGetString(NULL,NULL,"-f",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
-  if (flg) {
-    ierr    = PetscStrcpy(file[1],file[0]);CHKERRQ(ierr);
-    preload = PETSC_FALSE;
-  } else {
-    ierr = PetscOptionsGetString(NULL,NULL,"-f0",file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
-    if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate binary file with the -f0 or -f option");
-    ierr = PetscOptionsGetString(NULL,NULL,"-f1",file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
-    if (!flg) preload = PETSC_FALSE;   /* don't bother with second system */
+  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Preloading example options","");CHKERRQ(ierr);
+  {
+    /*
+       Determine files from which we read the two linear systems
+       (matrix and right-hand-side vector).
+    */
+    ierr = PetscOptionsBool("-trans","Solve transpose system instead","",trans,&trans,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsString("-f","First file to load (small system)","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsFList("-permute","Permute matrix and vector to solve in new ordering","",MatOrderingList,ordering,ordering,sizeof(ordering),&permute);CHKERRQ(ierr);
+
+    if (flg) {
+      ierr    = PetscStrcpy(file[1],file[0]);CHKERRQ(ierr);
+      preload = PETSC_FALSE;
+    } else {
+      ierr = PetscOptionsString("-f0","First file to load (small system)","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
+      if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate binary file with the -f0 or -f option");
+      ierr = PetscOptionsString("-f1","Second file to load (larger system)","",file[1],file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
+      if (!flg) preload = PETSC_FALSE;   /* don't bother with second system */
+    }
+
+    ierr = PetscOptionsEnum("-rhs","Right hand side","",RHSTypes,(PetscEnum)rhstype,(PetscEnum*)&rhstype,NULL);CHKERRQ(ierr);
   }
-  ierr = PetscOptionsGetEnum(NULL,NULL,"-rhs",RHSTypes,(PetscEnum*)&rhstype,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   /*
     To use preloading, one usually has code like the following:
@@ -151,6 +161,15 @@ int main(int argc,char **args)
   }
   ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
 
+  if (permute) {
+    Mat Aperm;
+    ierr = MatGetOrdering(A,ordering,&rowperm,&colperm);CHKERRQ(ierr);
+    ierr = MatPermute(A,rowperm,colperm,&Aperm);CHKERRQ(ierr);
+    ierr = VecPermute(b,colperm,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = MatDestroy(&A);CHKERRQ(ierr);
+    A    = Aperm;               /* Replace original operator with permuted version */
+  }
+
   PetscPreLoadStage("KSPSetUp 0");
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
@@ -169,6 +188,9 @@ int main(int argc,char **args)
   if (trans) {ierr = KSPSolveTranspose(ksp,b,x);CHKERRQ(ierr);}
   else       {ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);}
 
+  
+  if (permute) {ierr = VecPermute(x,rowperm,PETSC_TRUE);CHKERRQ(ierr);}
+
   ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its);CHKERRQ(ierr);
 
@@ -183,6 +205,8 @@ int main(int argc,char **args)
   ierr = MatDestroy(&A);CHKERRQ(ierr);
   ierr = VecDestroy(&x);CHKERRQ(ierr);
   ierr = VecDestroy(&b);CHKERRQ(ierr);
+  ierr = ISDestroy(&rowperm);CHKERRQ(ierr);  
+  ierr = ISDestroy(&colperm);CHKERRQ(ierr);
 
   /*=========================
     solve a large system
@@ -238,6 +262,15 @@ int main(int argc,char **args)
   }
   ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
 
+  if (permute) {
+    Mat Aperm;
+    ierr = MatGetOrdering(A,ordering,&rowperm,&colperm);CHKERRQ(ierr);
+    ierr = MatPermute(A,rowperm,colperm,&Aperm);CHKERRQ(ierr);
+    ierr = VecPermute(b,colperm,PETSC_FALSE);CHKERRQ(ierr);
+    ierr = MatDestroy(&A);CHKERRQ(ierr);
+    A    = Aperm;               /* Replace original operator with permuted version */
+  }
+
   PetscPreLoadStage("KSPSetUp 1");
   ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
@@ -255,6 +288,8 @@ int main(int argc,char **args)
   if (trans) {ierr = KSPSolveTranspose(ksp,b,x);CHKERRQ(ierr);}
   else       {ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);}
 
+  if (permute) {ierr = VecPermute(x,rowperm,PETSC_TRUE);CHKERRQ(ierr);}
+
   ierr = KSPGetTotalIterations(ksp,&its);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its);CHKERRQ(ierr);
 
@@ -269,6 +304,8 @@ int main(int argc,char **args)
   ierr = MatDestroy(&A);CHKERRQ(ierr);
   ierr = VecDestroy(&x);CHKERRQ(ierr);
   ierr = VecDestroy(&b);CHKERRQ(ierr);
+  ierr = ISDestroy(&rowperm);CHKERRQ(ierr);  
+  ierr = ISDestroy(&colperm);CHKERRQ(ierr);
   PetscPreLoadEnd();
   /*
      Always call PetscFinalize() before exiting a program.  This routine
@@ -302,5 +339,10 @@ int main(int argc,char **args)
       suffix: 3
       requires: double complex !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${wPETSC_DIR}/share/petsc/datafiles/matrices/nh-complex-int32-float64 -ksp_type bicg
+
+   test:
+      suffix: 4
+      args: -f ${DATAFILESPATH}/matrices/medium -ksp_type bicg -permute rcm
+      requires: double !defined(PETSC_USE_64BIT_INDICES)
 
 TEST*/
