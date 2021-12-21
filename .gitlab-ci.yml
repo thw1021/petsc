@@ -477,9 +477,6 @@ linux-sycl-double:
     - gce-nfs, linux-fast
   variables:
     TEST_ARCH: arch-ci-linux-sycl-double
-    MPICH_CC: icx
-    #Intel mpicxx does not accept MPICH_CXX=icpx, though it should.
-    MPICH_CXX: dpcpp
     LOAD_MODULES: compiler/latest mpi/latest
     TEST_OPTS: query=requires queryval=kokkos_kernels
 
