@@ -32,8 +32,8 @@ if __name__ == '__main__':
   import configure
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
-    '--with-cc=mpicc', # with MPICH_CC=icx and MPICH_CXX=icpx, mpicc/mpicxx are SYCL compilers.
-    '--with-cxx=mpicxx',
+    '--with-cc=mpicc -cc=icx', # need to make mpicc/mpicxx also SYCL compilers.
+    '--with-cxx=mpicxx -cxx=dpcpp', # Intel MPI does not accept -cxx=icpx, though it should.
     '--with-fc=0',
     '--COPTFLAGS=-g -O2',
     '--CXXOPTFLAGS=-g -O2',
