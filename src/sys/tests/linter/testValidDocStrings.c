@@ -41,6 +41,7 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
 
   Output Parameter:
 + y          - a pointer
++ cnd           - a boolean
 - z - a nonexistent parameter
 
   level: Lorem ipsum dolor sit amet
@@ -53,7 +54,7 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
 .seealso: testNonExistentFunction(), testNonExistentType
 @*/
 
-PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
 {
   return 0;
 }
@@ -91,7 +92,7 @@ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, Pet
 }
 
 
-/*@
+/*@ asdadsadasdas
   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
 
   Input Parameters:
@@ -102,7 +103,7 @@ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, Pet
 
 .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
 @*/
-PetscErrorCode testCustomFortranInterfaceDocString(char *string, PetscErrorCode (*function_ptr)(PetscInt))
+PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErrorCode (*function_ptr)(PetscInt))
 {
   return 0;
 }
