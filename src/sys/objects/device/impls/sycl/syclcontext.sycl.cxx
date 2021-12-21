@@ -62,6 +62,7 @@ public:
   {
     PetscFunctionBegin;
     delete static_cast<PetscDeviceContext_IMPLS*>(dctx->data);
+    dctx->data = nullptr;
     PetscFunctionReturn(0);
   };
   PETSC_NODISCARD static PetscErrorCode changeStreamType(PetscDeviceContext,PetscStreamType) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
