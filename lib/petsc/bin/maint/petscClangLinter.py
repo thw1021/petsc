@@ -505,7 +505,7 @@ class PetscDocString(object):
 
   def addErrorFromSourceRange(self,error,crange,patch=None,**kwargs):
     assert isinstance(error,str)
-    error = ":\n\n".join([error,crange.formatted(numContext=kwargs.pop("numContext",2),**kwargs)])
+    error = ":\n".join([error,crange.formatted(numContext=kwargs.pop("numContext",2),**kwargs)])
     self._linter.addErrorFromCursor(self.cursor,error,patch=patch)
     return
 
@@ -714,11 +714,7 @@ class PetscCursor(object):
     return getattr(self.__cursor,attr)
 
   def __str__(self):
-    locStr = self.getFormattedLocationString()
-    srcStr = self.getFormattedSource(nboth=2)
-    return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(
-      locStr,self.name,self.derivedtypename,self.typename,srcStr
-    )
+    return "\n".join([self.getFormattedLocationString(),self.getFormattedBlurb()])
 
   @classmethod
   def errorViewFromCursor(cls,cursor):
@@ -904,6 +900,16 @@ class PetscCursor(object):
 
   def getFormattedLocationString(self):
     return self.getFormattedLocationStringFromCursor(self)
+
+  @classmethod
+  def getFormattedBlurbFromCursor(cls,cursor):
+    cursor = cls.asPetscCursor(cursor)
+    return "'{}' of derived type '{}', canonical type '{}'\n{}\n".format(
+      cursor.name,cursor.derivedtypename,cursor.typename,cursor.getFormattedSource(nboth=2)
+    )
+
+  def getFormattedBlurb(self):
+    return self.getFormattedBlurbFromCursor(self)
 
   @staticmethod
   def viewAstFromCursor(cursor):
@@ -1566,6 +1572,7 @@ TODO:
 - integrate warnings into the test output as well
 - implement fixits for stuff we can fix
 - figure out how to handle overwriting fixits...
+- figure out how to handle in-out parameters
 """
 """utilities for checking docstrings"""
 def checkDocValidSynopsis(linter,cursor,docstring):
@@ -1578,15 +1585,15 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   if symbolName[1] != cursorName:
     src = symbolName[0].formatted(numContext=2)
     if len(difflib.get_close_matches(symbolName[-1],[cursorName])):
-      errorMessage = "Docstring name '{}' does not match symbol. Assuming you meant '{}':\n\n{}".format(symbolName[-1],cursorName,src)
+      errorMessage = "Docstring name '{}' does not match symbol. Assuming you meant '{}':\n{}".format(symbolName[-1],cursorName,src)
       patch = SourceFix.fromSourceRange(symbolName[0],cursorName)
     else:
-      errorMessage = "Docstring name '{}' does not match symbol name '{}':\n\n{}".format(symbolName[-1],cursorName,src)
+      errorMessage = "Docstring name '{}' does not match symbol name '{}':\n{}".format(symbolName[-1],cursorName,src)
       patch = None
     linter.addErrorFromCursor(cursor,errorMessage,patch=patch)
   if "-" not in sectionRaw:
     src = symbolName[0].formatted(numBeforeContext=1,numAfterContext=len(section.lines)-1)
-    errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n\n{}".format(cursorName,src)
+    errorMessage = "Docstring missing summary text. Expected '{} - very useful description here':\n{}".format(cursorName,src)
     linter.addErrorFromCursor(cursor,errorMessage)
   return
 
@@ -1607,11 +1614,23 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
   docstring.checkValidSectionHeaderSpelling(params,headings)
   docstring.checkValidSolitarySectionHeadings(params,headings)
 
-  requiresC = []
+  requiresC    = []
+  POINTER_KIND = clx.TypeKind.POINTER
   for arg in fnargs:
     canon = arg.type.get_canonical()
-    if canon.kind == clx.TypeKind.POINTER:
-      dataKind = canon.get_pointee().kind
+    if canon.kind == POINTER_KIND:
+      it = 0
+      while canon.kind == POINTER_KIND:
+        if it > 100:
+          # there is no chance that someone has a variable over 100 pointers deep, so
+          # clearly something is wrong
+          emess = "Ran for {} iterations (> 100) trying to get pointer type for\n{}\n".format(
+            it,arg.errorViewFromCursor(arg),"\n".join(pclu.viewAstFromCursor(arg))
+          )
+          raise RuntimError(emess)
+        canon = canon.get_pointee()
+        it   += 1
+      dataKind = canon.kind
       if dataKind in charTypes:
         requiresC.append((arg,"char"))
       elif dataKind in functionTypes:
@@ -1620,42 +1639,123 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
   if len(requiresC) and not docstring.raw.startswith("/*@C"):
     line   = docstring.raw.split(maxsplit=1)[0]
     crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
-    docstring.addErrorFromSourceRange("Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format("\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))),crange,patch=SourceFix.fromSourceRange(crange,line+"C"))
+    mess   = "Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format("\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC)))
+    # TODO this doesn't play nice if combined with stuff on the same line!
+    docstring.addErrorFromSourceRange(mess,crange,patch=SourceFix.fromSourceRange(crange,line+"C"))
 
-  # ranges of input and output params respectively, MAY BE USEFUL FOR CHECKING PARAMS ARE
-  # INOUT PARAMS
-  # subSectionRanges = [PetscSourceRange.fromLocations(b[0].start,e[0].start) for b,e in zip(headings[:-1],headings[1:])]+[PetscSourceRange.fromLocations(headings[-1][0].start,params.extent.end)]
-  docStringArgs = params.items
-  allParamNames = tuple(n for _,n in docStringArgs)
-  allParamLeft  = set(allParamNames)
-  for i,arg in enumerate(fnargs):
-    argname = arg.name
-    try:
-      idx = allParamNames.index(argname)
-    except ValueError:
-      # function argument isn't in the docstring
-      begin,end = docStringArgs[0][0],docStringArgs[-1][0]
-      docstring.addErrorFromSourceRange(
-        "Undocumented parameter '{}' not found in parameter section".format(argname),
-        PetscSourceRange.fromLocations(begin.start,end.start),highlight=False
-      )
-    else:
-      # argument is in the docstring, lets see if its in the right place
-      if 0 and i != idx:
-        # TODO, figure out a way to make this work with in-out parameters
+  subheading = 0
+  groups     = collections.defaultdict(list)
+  for item in params.lines:
+    if not item[1] or item[1].isspace():
+      continue
+    if item in headings or item == params.lines[-1]:
+      if item != params.lines[0]:
+        subheading += 1
+      continue
+    groups[subheading].append(item)
+
+  def argLen(text):
+    return len(text[1:].split("-",maxsplit=1)[0].rstrip())+1
+
+  fnargnames = [a.name for a in fnargs]
+  fnargseen  = [False]*len(fnargs)
+  notfound   = []
+  for id,group in sorted(groups.items()):
+    maxArgLen = 0
+    indices   = []
+    remove    = set()
+    for i,(loc,text) in enumerate(group.copy()):
+      arg = text.split()[1].strip()
+      try:
+        idx = fnargnames.index(arg)
+      except ValueError:
+        notfound.append((arg,*group[i]))
+        remove.add(i)
+      else:
+        fnargseen[idx] = True
+        indices.append(idx)
+        maxArgLen = max(maxArgLen,argLen(text))
+    group = [g for i,g in enumerate(group) if i not in remove]
+    for loc,text in group:
+      pos = text[1:].find("-")
+      if pos == -1:
+        if not text or text.isspace():
+          continue
         import ipdb; ipdb.set_trace()
-        # it's not, but it should still be in the docstring somewhere
-        assert argname in allParamLeft
-        src = docStringArgs[idx][0].formatted(numBeforeContext=idx+1,numAfterContext=2)
-        errorMessage = "Docstring parameter out of order. Expected '{}' for as paramater #{}, found in position {} instead:\n\n{}".format(argname,i+1,idx+1,src)
-        linter.addErrorFromCursor(arg,errorMessage)
-      allParamLeft.remove(argname)
+      if pos != maxArgLen:
+        docstring.addErrorFromSourceRange(
+          "Dashes must be aligned to largest column ({}) within argument list".format(maxArgLen+1),
+          docstring.makeSourceRange(text[pos:pos+3],text,loc.end.line),
+          patch=SourceFix.fromSourceRange(
+            loc,"{:{}}{}".format(text[:argLen(text)],maxArgLen,text[pos:])
+          )
+        )
 
-  for p in allParamLeft:
-    loc,name = docStringArgs[allParamNames.index(p)]
+  fnargsleft = [name for seen,name in zip(fnargseen,fnargnames) if not seen]
+  if notfound:
+    fnargsleft2 = fnargsleft.copy()
+    for arg,loc,text in notfound:
+      message = "Extra docstring parameter '{}' not found in function arguments:\n{}".format(arg,loc.formatted(numContext=2))
+      closest = difflib.get_close_matches(arg,fnargsleft2)
+      if closest:
+        match     = closest[0]
+        argcursor = [c for c in fnargs if c.name == match][0]
+        message  += "\n\ndid you mean {}".format(argcursor.getFormattedBlurb())
+        fnargsleft2.remove(match)
+      linter.addErrorFromCursor(cursor,message)
+  for arg in fnargsleft:
     docstring.addErrorFromSourceRange(
-      "Extra docstring parameter '{}' not found in function arguments".format(name),loc
+      "Undocumented parameter '{}' not found in parameter section".format(arg),params.extent,
+      highlight=False
     )
+  return
+
+  adjust = []
+  maxPos,maxArgLen,subhead = -1,-1,0
+  for item in params.lines:
+    loc,text = item
+    print("text",text.center(len(text)+2,"'"))
+    if item in headings or item == params.lines[-1]:
+      for pos,loc,text in adjust:
+        docstring.addErrorFromSourceRange(
+          "Dashes must be aligned to largest column ({}) within argument list".format(maxPos),
+          docstring.makeSourceRange(text[pos:pos+3],text,loc.end.line),
+          patch=SourceFix.fromSourceRange(loc,"{:{}}{}".format(text[:pos],maxPos,text[pos:]))
+        )
+        print("need to adjust",text)
+        import ipdb; ipdb.set_trace()
+      subhead += 1
+      maxPos   = maxArgLen = -1
+      adjust   = []
+      print("new subheading",subhead,"resetting maxPos ->",maxPos)
+      continue
+    dashPos = text[1:].find("-")
+    arglen  = len(text[1:].split("-",maxsplit=1)[0].rstrip())+1
+    print("dash position",dashPos)
+    if dashPos == -1:
+      if not text or text.isspace():
+        print("dash not found! (no text, ok)")
+        continue
+      print("dash not found! (have text, not ok)")
+      import ipdb; ipdb.set_trace()
+    if text[dashPos:dashPos+3] != " - ":
+      print("missing spaces!")
+      import ipdb; ipdb.set_trace()
+    if dashPos < maxPos:
+      if text.split()[1].strip() in allParamLeft:
+        print(text,"normally would need adjustment, but is extra param")
+        continue # normally would need adjustment, but is extra param
+      adjust.append((dashPos,*item))
+      print(text,"needs adjustment")
+    maxPos = max(maxPos,dashPos)
+    if text.startswith("+ y   "):
+      import ipdb; ipdb.set_trace()
+    if (arglen != maxArgLen) and (dashPos != arglen):
+      # if it isn't snug
+      print("arg longer",arglen)
+      import ipdb; ipdb.set_trace()
+    maxArgLen = max(maxArgLen,arglen)
+    print("new maxPos",maxPos)
   return
 
 def checkDocValidLevel(linter,cursor,docstring):
