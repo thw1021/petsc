@@ -91,11 +91,12 @@ PETSC_EXTERN const char *const PetscDeviceInitTypes[];
 $ PETSC_DEVICE_INVALID - Invalid type, do not use
 $ PETSC_DEVICE_CUDA    - CUDA enabled GPU
 $ PETSC_DEVICE_HIP     - ROCM/HIP enabled GPU
+$ PETSC_DEVICE_SYCL    - SYCL enabled device
 $ PETSC_DEVICE_DEFAULT - Automatically select backend based on availability
 $ PETSC_DEVICE_MAX     - Always 1 greater than the largest valid PetscDeviceType, invalid type, do not use
 
   Notes:
-  PETSC_DEVICE_DEFAULT is selected in the following order: PETSC_DEVICE_HIP, PETSC_DEVICE_CUDA, PETSC_DEVICE_INVALID.
+  PETSC_DEVICE_DEFAULT is selected in the following order: PETSC_DEVICE_HIP, PETSC_DEVICE_CUDA, PETSC_DEVICE_SYCL, PETSC_DEVICE_INVALID.
 
   Level: beginner
 
