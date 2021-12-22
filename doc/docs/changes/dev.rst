@@ -51,6 +51,7 @@ Changes: Development
 .. rubric:: IS:
 
 -  ``ISLocalToGlobalMappingCreateSF()``: allow passing ``start = PETSC_DECIDE``
+-  Add ``ISGeneralSetIndicesMask()``
 
 .. rubric:: VecScatter / PetscSF:
 
