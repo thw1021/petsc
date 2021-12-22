@@ -110,3 +110,8 @@ PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErro
 
 /* a random comment above a function */
 void function();
+
+PETSC_INTERN PetscErrorCode testInternFunction()
+{
+  return 0;
+}

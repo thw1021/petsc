@@ -73,6 +73,7 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
   return retList
 
 
+
 def getRawSourceFromCursor(cursor,**kwargs):
   return getRawSourceFromSourceRange(cursor.extent,**kwargs)
 
@@ -262,11 +263,12 @@ class Scope(object):
 @functools.total_ordering
 class PetscSourceLocation(object):
   """A simple wrapper class to add comparison operators to clx.SourceLocations since they only implement equal"""
-  __slots__ = ("sourceLocation",)
+  __slots__ = "sourceLocation","translation_unit"
 
-  def __init__(self,sourceLoc):
+  def __init__(self,sourceLoc,tu=None):
     assert sourceLoc.line >= 1, "startline {} < 1".format(sourceLoc.line)
-    self.sourceLocation = sourceLoc
+    self.sourceLocation   = sourceLoc
+    self.translation_unit = tu
     return
 
   def __getattr__(self,attr):
@@ -276,35 +278,38 @@ class PetscSourceLocation(object):
   def cast(cls,other):
     if isinstance(other,cls):
       return other
-    elif isinstance(other,clx.SourceLocation):
+    if isinstance(other,clx.SourceLocation):
       return cls(other)
-    else:
-      raise NotImplementedError
+    raise NotImplementedError
 
   @classmethod
   def fromPosition(cls,tu,line,col):
-    return cls(clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),line,col))
+    return cls(clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),line,col),tu=tu)
 
   @classmethod
   def asClangSourceLocation(cls,other):
     if isinstance(other,clx.SourceLocation):
       return other
-    elif isinstance(other,cls):
+    if isinstance(other,cls):
       return other.sourceLocation
-    else:
-      raise NotImplementedError
+    raise NotImplementedError
 
   def __eq__(self,other):
     return self.sourceLocation.__eq__(self.asClangSourceLocation(other))
 
   def __lt__(self,other):
     other = self.asClangSourceLocation(other)
-    if self.line < other.line:
-      return True
-    elif self.line == other.line:
-      return self.column < other.column
-    else:
+    myfname,ofname = self.file.name,other.file.name
+    if myfname is None and ofname is None:
+      pass
+    elif myfname != ofname:
       return False
+    myline,oline = self.line,other.line
+    if myline < oline:
+      return True
+    if myline == oline:
+      return self.column < other.column
+    return False
 
   def __contains__(self,other):
     return self.sourceLocation.__contains__(self.asClangSourceLocation(other))
@@ -313,10 +318,11 @@ class PetscSourceLocation(object):
 @functools.total_ordering
 class PetscSourceRange(object):
   """Like PetscSourceLocation but for clx.SourceRanges"""
-  __slots__ = ("sourceRange",)
+  __slots__ = "sourceRange","translation_unit"
 
-  def __init__(self,sourceRange):
-    self.sourceRange = sourceRange
+  def __init__(self,sourceRange,tu=None):
+    self.sourceRange      = sourceRange
+    self.translation_unit = tu # store a reference to guard against GC
     return
 
   def __getattr__(self,attr):
@@ -326,49 +332,65 @@ class PetscSourceRange(object):
     return self.sourceRange.__eq__(self.asClangSourceRange(other))
 
   def __lt__(self,other):
+    if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
+      return other < PetscSourceLocation.cast(self.start)
+    if isinstance(other,(clx.SourceRange,type(self))):
+      if other.end < PetscSourceLocation.cast(self.start):
+        return False
+      if other.start > PetscSourceLocation.cast(self.end):
+        return True
     raise NotImplementedError
 
   def __contains__(self,other):
-    contains = self.sourceRange.__contains__
+    def contains(loc):
+      # reimplement clx.SourceRange.__contains__() as it has a bug
+      start = self.sourceRange.start
+      end   = self.sourceRange.end
+      if loc.file is None and start.file is None:
+        pass
+      elif start.file.name != loc.file.name or loc.file.name != end.file.name:
+        return False
+      cast = PetscSourceLocation.cast
+      return cast(start) <= cast(loc) <= cast(end)
+
+
     if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
       return contains(PetscSourceLocation.asClangSourceLocation(other))
-    elif isinstance(other,(clx.SourceRange,type(self))):
+    if isinstance(other,(clx.SourceRange,type(self))):
       return contains(other.start) and contains(other.end)
-    else:
-      raise NotImplementedError
+    raise NotImplementedError
 
   @classmethod
   def cast(cls,other):
     if isinstance(other,cls):
       return other
-    elif isinstance(other,clx.SourceRange):
+    if isinstance(other,clx.SourceRange):
       return cls(other)
-    else:
-      raise NotImplementedError
+    raise NotImplementedError
 
   @classmethod
   def fromLocations(cls,left,right):
+    tu = getattr(left,"translation_unit",None)
     return cls(clx.SourceRange.from_locations(
       PetscSourceLocation.asClangSourceLocation(left),
       PetscSourceLocation.asClangSourceLocation(right)
-    ))
+    ),tu=tu)
 
   @classmethod
   def fromPositions(cls,tu,lineLeft,colLeft,lineRight,colRight):
     return cls.fromLocations(
       PetscSourceLocation.fromPosition(tu,lineLeft,colLeft),
-      PetscSourceLocation.fromPosition(tu,lineRight,colRight)
+      PetscSourceLocation.fromPosition(tu,lineRight,colRight),
     )
 
   @classmethod
   def asClangSourceRange(cls,other):
     if isinstance(other,clx.SourceRange):
       return other
-    elif isinstance(other,cls):
+    if isinstance(other,cls):
       return other.sourceRange
-    else:
-      import ipdb; ipdb.set_trace()
-      raise NotImplementedError
+    import ipdb; ipdb.set_trace()
+    raise NotImplementedError
 
   @classmethod
   def merge(cls,left,right):
@@ -376,17 +398,11 @@ class PetscSourceRange(object):
     right = cls.cast(right)
     if left in right:
       return right
-    elif right in left:
+    if right in left:
       return left
-    begin = min(
-      PetscSourceLocation.cast(left.start),
-      PetscSourceLocation.cast(right.start)
-    ).sourceLocation
-    end   = max(
-      PetscSourceLocation.cast(left.end),
-      PetscSourceLocation.cast(right.end)
-    ).sourceLocation
-    return cls.fromLocations(begin,end)
+    begin = min(PetscSourceLocation.cast(left.start),PetscSourceLocation.cast(right.start))
+    end   = max(PetscSourceLocation.cast(left.end),PetscSourceLocation.cast(right.end))
+    return cls.fromLocations(begin.sourceLocation,end.sourceLocation)
 
   def mergeWith(self,other):
     return self.merge(self,other)
