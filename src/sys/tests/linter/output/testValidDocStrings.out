@@ -49,7 +49,6 @@ Invalid header formatting. Expected 'Level' found 'level':
   49:   Level:
 
 Level subheading must be lowercase, expected 'beginner' found 'Beginner':
-
   48: 
   49: Level:
 > 50: Beginner
@@ -92,7 +91,6 @@ ERROR 2: ./src/sys/tests/linter/testValidDocStrings.c:16:89
   91:   return 0;
 
 Docstring name 'testTerbleSpelingDocstring' does not match symbol. Assuming you meant 'testTerribleSpellingDocString':
-
   73: 
   74: /*@C
 > 75:   testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
@@ -133,7 +131,6 @@ Unknown section header 'lvl', assuming you meant 'Level':
   87: .zeeakso: testNonExistentFunction(), testNonExistentType
 
 Unknown Level subheading 'itnmediate', assuming you meant 'intermediate':
-
   83: . y - a PetscScalar pointer
   84: 
 > 85:   lvl: itnmediate
@@ -150,20 +147,28 @@ Unknown section header '.zeeakso', assuming you meant '.seealso':
   89: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 
 ERROR 3: ./src/sys/tests/linter/testValidDocStrings.c:16:106
-'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *, int (*)(int))'
+'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *******, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *******, int (*)(int))'
   104: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
   105: @*/
-> 106: PetscErrorCode testCustomFortranInterfaceDocString(char *string, PetscErrorCode (*function_ptr)(PetscInt))
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 106: PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErrorCode (*function_ptr)(PetscInt))
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   107: {
   108:   return 0;
 
+Invalid comment begin line, must only contain '/*' and sowing identifier:
+  93: 
+  94: 
+> 95: /*@ asdadsadasdas
+          ^^^^^^^^^^^^^
+  96:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  97: 
+
 Function requires custom fortran interface but missing 'C' from docstring header. Due to
-  1. 'string' of derived type 'char *' (is a char pointer)
+  1. 'string' of derived type 'char *******' (is a char pointer)
   2. 'function_ptr' of derived type 'PetscErrorCode (*)(PetscInt)' (is a function pointer):
   93: 
   94: 
-> 95: /*@
+> 95: /*@ asdadsadasdas
       ^^^
   96:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
   97: 
@@ -201,7 +206,6 @@ Multiple 'Level' subheadings. Much like Highlanders, there can only be one:
   52:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 Docstring name 'someOtherFunctionName' does not match symbol name 'testIllFormedFunctionDocString':
-
   31: 
   32: /*@C Lorem ipsum dolor sit amet
 > 33:   someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
@@ -263,7 +267,6 @@ Undocumented parameter 'cond' not found in parameter section:
   48: 
 
 Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, or deprecated:
-
   45: - z - a nonexistent parameter
   46: 
 > 47:   level: Lorem ipsum dolor sit amet
@@ -302,7 +305,6 @@ Required subheading(s) 'Level' not found in docstring:
   70: {
 
 Docstring name 'Not Collective, Synchronous' does not match symbol name 'testIllFormedMinimalDocString':
-
   61: 
   62: /*
 > 63:   Not Collective, Synchronous
@@ -311,7 +313,6 @@ Docstring name 'Not Collective, Synchronous' does not match symbol name 'testIll
   65:   References:
 
 Docstring missing summary text. Expected 'testIllFormedMinimalDocString - very useful description here':
-
   62: /*
 > 63:   Not Collective, Synchronous
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
