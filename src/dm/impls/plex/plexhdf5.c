@@ -1200,24 +1200,6 @@ static PetscErrorCode LoadLabelsCtxDestroy(LoadLabelsCtx *ctx)
   PetscFunctionReturn(0);
 }
 
-//TODO move to PetscSF, manpage, how to deal with the extra args of PetscSFCreateByMatchingIndices
-static PetscErrorCode PetscSFCreateByMatchingIndicesIS(PetscLayout layout, IS rootIndices, IS leaveIndices, PetscSF *sfA, PetscSF *sf)
-{
-  PetscInt        numRootIndices, numLeafIndices;
-  const PetscInt *rootInd, *leafInd;
-  PetscErrorCode  ierr;
-
-  PetscFunctionBegin;
-  ierr = ISGetLocalSize(rootIndices, &numRootIndices);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(leaveIndices, &numLeafIndices);CHKERRQ(ierr);
-  ierr = ISGetIndices(rootIndices, &rootInd);CHKERRQ(ierr);
-  ierr = ISGetIndices(leaveIndices, &leafInd);CHKERRQ(ierr);
-  ierr = PetscSFCreateByMatchingIndices(layout, numRootIndices, rootInd, NULL, 0, numLeafIndices, leafInd, NULL, 0, sfA, sf);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(rootIndices, &rootInd);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(leaveIndices, &leafInd);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 static herr_t ReadLabelStratumHDF5_Distribute_Private(IS stratumIS, LoadLabelsCtx ctx, IS *newStratumIS)
 {
   PetscSF         s2gSF;
