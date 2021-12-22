@@ -2,7 +2,7 @@
  }
  
 -/*@C Lorem ipsum dolor sit amet
-+/*@C
++/*@C 
 +  Lorem ipsum dolor sit amet
    someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
    eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
@@ -96,11 +96,12 @@
 +.seealso: testNonExistentFunction(), testNonExistentType
  C@*/
  PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-@@ -96,5 +96,5 @@
+@@ -96,5 +96,6 @@
  
  
--/*@
-+/*@C
+-/*@ asdadsadasdas
++/*@C 
++  asdadsadasdas
    testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
  
 @@ -100,5 +100,5 @@
