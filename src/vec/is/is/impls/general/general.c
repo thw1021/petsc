@@ -548,13 +548,15 @@ PetscErrorCode  ISCreateGeneral(MPI_Comm comm,PetscInt n,const PetscInt idx[],Pe
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISCreateStride(), ISCreateBlock(), ISAllGather(), ISBlockSetIndices(), ISGENERAL, PetscCopyMode
+.seealso: ISCreateGeneral(), ISGeneralSetIndicesFromMask(), ISBlockSetIndices(), ISGENERAL, PetscCopyMode
 @*/
 PetscErrorCode  ISGeneralSetIndices(IS is,PetscInt n,const PetscInt idx[],PetscCopyMode mode)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(is,IS_CLASSID,1);
+  if (n) PetscValidIntPointer(idx,3);
   ierr = ISClearInfoCache(is,PETSC_FALSE);CHKERRQ(ierr);
   ierr = PetscUseMethod(is,"ISGeneralSetIndices_C",(IS,PetscInt,const PetscInt[],PetscCopyMode),(is,n,idx,mode));CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -591,6 +593,63 @@ PetscErrorCode  ISGeneralSetIndices_General(IS is,PetscInt n,const PetscInt idx[
 
   ierr = ISSetUp_General(is);CHKERRQ(ierr);
   ierr = ISViewFromOptions(is,NULL,"-is_view");CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+   ISGeneralSetIndicesFromMask - Sets the indices for an ISGENERAL index set using a boolean mask
+
+   Collective on IS
+
+   Input Parameters:
++  is - the index set
+.  rstart - the range start index (inclusive)
+.  rend - the range end index (exclusive)
+-  mask - the boolean mas of length rend-rstart
+
+   Notes:
+   This stores indices of mask values that are PETSC_TRUE, adding rstart.
+   The mask is not taken over and should be freed by user.
+
+   Example:
+$  PetscBool mask[] = {0, 1, 0, 0, 1};
+$  ISGeneralSetIndicesFromMask(is,10,15,mask);
+   will feed the IS with indices
+$  {11, 14}
+   locally.
+
+   Level: beginner
+
+.seealso: ISCreateGeneral(), ISGeneralSetIndices(), ISGENERAL
+@*/
+PetscErrorCode ISGeneralSetIndicesFromMask(IS is,PetscInt rstart,PetscInt rend,const PetscBool mask[])
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(is,IS_CLASSID,1);
+  if (rend-rstart) PetscValidBoolPointer(mask,4);
+  ierr = ISClearInfoCache(is,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscUseMethod(is,"ISGeneralSetIndicesFromMask_C",(IS,PetscInt,PetscInt,const PetscBool[]),(is,rstart,rend,mask));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode ISGeneralSetIndicesFromMask_General(IS is,PetscInt rstart,PetscInt rend,const PetscBool mask[])
+{
+  PetscInt        i,nidx=0;
+  PetscInt       *idx;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscMalloc1(rend-rstart,&idx);CHKERRQ(ierr);
+  for (i=0; i<rend-rstart; i++) {
+    if (mask[i]) {
+      idx[nidx] = i+rstart;
+      nidx++;
+    }
+  }
+  ierr = ISGeneralSetIndices_General(is,nidx,idx,PETSC_COPY_VALUES);CHKERRQ(ierr);
+  ierr = PetscFree(idx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -649,6 +708,7 @@ PETSC_EXTERN PetscErrorCode ISCreate_General(IS is)
   is->data = (void *) sub;
   ierr = PetscMemcpy(is->ops,&myops,sizeof(myops));CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)is,"ISGeneralSetIndices_C",ISGeneralSetIndices_General);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)is,"ISGeneralSetIndicesFromMask_C",ISGeneralSetIndicesFromMask_General);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)is,"ISGeneralFilter_C",ISGeneralFilter_General);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
