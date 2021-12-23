@@ -5,7 +5,7 @@ Created on Tue Mar 23 17:56:06 2021
 
 @author: jacobfaibussowitsch
 """
-
+import pathlib
 import ctypes
 import functools
 import clang.cindex as clx
@@ -268,8 +268,16 @@ class PetscSourceLocation(object):
   def __init__(self,sourceLoc,tu=None):
     assert sourceLoc.line >= 1, "startline {} < 1".format(sourceLoc.line)
     self.sourceLocation   = sourceLoc
-    self.translation_unit = tu
+    self.translation_unit = tu # store a reference to guard against GC
     return
+
+  def __repr__(self):
+    return "\n".join([
+      "self:             {}".format(object.__repr__(self)),
+      "Translation Unit: {}".format(self.translation_unit),
+      "Source Location:  {}".format(self.sourceLocation)
+    ])
+
 
   def __getattr__(self,attr):
     return getattr(self.sourceLocation,attr)
@@ -324,6 +332,13 @@ class PetscSourceRange(object):
     self.sourceRange      = sourceRange
     self.translation_unit = tu # store a reference to guard against GC
     return
+
+  def __repr__(self):
+    return "\n".join([
+      "self:             {}".format(object.__repr__(self)),
+      "Translation Unit: {}".format(self.translation_unit),
+      "Source Range:     {}".format(self.sourceRange)
+    ])
 
   def __getattr__(self,attr):
     return getattr(self.sourceRange,attr)
@@ -537,3 +552,14 @@ class Scope(object):
   def isChildOf(self,other):
     __doc__="""self is child of other, or other is parent of self"""
     return other.isParentOf(self)
+
+class PetscPath(type(pathlib.Path())):
+  # inheriting pathlib.Path:
+  # https://stackoverflow.com/questions/29850801/subclass-pathlib-path-fails
+  def append_suffix(self,suffix):
+    suffix    = str(suffix)
+    dotstring = "" if suffix.startswith(".") else "."
+    return self.with_suffix(dotstring.join((self.suffix,suffix)))
+
+  def append_name(self,name):
+    return self.with_name("".join((self.stem,str(name))))
