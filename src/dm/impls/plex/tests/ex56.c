@@ -12,6 +12,7 @@ typedef struct {
   PetscBool   compare;                      /* Compare the meshes using DMPlexEqual() and DMCompareLabels() */
   PetscBool   compare_labels;               /* Compare labels in the meshes using DMCompareLabels() */
   PetscBool   compare_boundary;             /* Check label I/O via boundary vertex coordinates */
+  PetscBool   compare_pre_post;             /* Compare labels loaded before distribution with those loaded after distribution */
   char        outfile[PETSC_MAX_PATH_LEN];  /* Output file */
   PetscBool   use_low_level_functions;      /* Use low level functions for viewing and loading */
   //TODO This is meant as temporary option; can be removed once we have full parallel loading in place
@@ -28,6 +29,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->compare                    = PETSC_FALSE;
   options->compare_labels             = PETSC_FALSE;
   options->compare_boundary           = PETSC_FALSE;
+  options->compare_pre_post           = PETSC_FALSE;
   options->outfile[0]                 = '\0';
   options->use_low_level_functions    = PETSC_FALSE;
   options->distribute_after_topo_load = PETSC_FALSE;
@@ -37,6 +39,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsBool("-compare", "Compare the meshes using DMPlexEqual() and DMCompareLabels()", EX, options->compare, &options->compare, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-compare_labels", "Compare labels in the meshes using DMCompareLabels()", "ex55.c", options->compare_labels, &options->compare_labels, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-compare_boundary", "Check label I/O via boundary vertex coordinates", "ex55.c", options->compare_boundary, &options->compare_boundary, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-compare_pre_post", "Compare labels loaded before distribution with those loaded after distribution", "ex55.c", options->compare_pre_post, &options->compare_pre_post, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsString("-outfile", "Output mesh file", EX, options->outfile, options->outfile, sizeof(options->outfile), NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-use_low_level_functions", "Use low level functions for viewing and loading", EX, options->use_low_level_functions, &options->use_low_level_functions, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-distribute_after_topo_load", "Distribute topology right after DMPlexTopologyLoad(), if use_low_level_functions=true", EX, options->distribute_after_topo_load, &options->distribute_after_topo_load, NULL);CHKERRQ(ierr);
@@ -78,6 +81,49 @@ static PetscErrorCode SaveMesh(AppCtx *options, DM dm)
   PetscFunctionReturn(0);
 }
 
+typedef enum {NONE=0, PRE_DIST=1, POST_DIST=2} AuxObjLoadMode;
+
+static PetscErrorCode LoadMeshLowLevel(AppCtx *options, PetscViewer v, PetscBool explicitDistribute, AuxObjLoadMode mode, DM *newdm)
+{
+  DM              dm;
+  PetscSF         sfXC;
+  PetscErrorCode  ierr;
+
+  PetscFunctionBeginUser;
+  ierr = DMCreate(options->comm, &dm);CHKERRQ(ierr);
+  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
+  ierr = PetscObjectSetName((PetscObject) dm, options->meshname);CHKERRQ(ierr);
+  ierr = DMPlexTopologyLoad(dm, v, &sfXC);CHKERRQ(ierr);
+  if (mode == PRE_DIST) {
+    ierr = DMPlexCoordinatesLoad(dm, v, sfXC);CHKERRQ(ierr);
+    ierr = DMPlexLabelsLoad(dm, v, sfXC);CHKERRQ(ierr);
+  }
+  if (explicitDistribute) {
+    DM      dmdist;
+    PetscSF sfXB = sfXC, sfBC;
+
+    ierr = DMPlexDistribute(dm, 0, &sfBC, &dmdist);CHKERRQ(ierr);
+    if (dmdist) {
+      const char *name;
+
+      ierr = PetscObjectGetName((PetscObject) dm, &name);CHKERRQ(ierr);
+      ierr = PetscObjectSetName((PetscObject) dmdist, name);CHKERRQ(ierr);
+      ierr = PetscSFCompose(sfXB, sfBC, &sfXC);CHKERRQ(ierr);
+      ierr = PetscSFDestroy(&sfXB);CHKERRQ(ierr);
+      ierr = PetscSFDestroy(&sfBC);CHKERRQ(ierr);
+      ierr = DMDestroy(&dm);CHKERRQ(ierr);
+      dm   = dmdist;
+    }
+  }
+  if (mode == POST_DIST) {
+    ierr = DMPlexCoordinatesLoad(dm, v, sfXC);CHKERRQ(ierr);
+    ierr = DMPlexLabelsLoad(dm, v, sfXC);CHKERRQ(ierr);
+  }
+  ierr = PetscSFDestroy(&sfXC);CHKERRQ(ierr);
+  *newdm = dm;
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode LoadMesh(AppCtx *options, DM *dmnew)
 {
   DM             dm;
@@ -85,33 +131,22 @@ static PetscErrorCode LoadMesh(AppCtx *options, DM *dmnew)
   PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = DMCreate(options->comm, &dm);CHKERRQ(ierr);
-  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
-  ierr = PetscObjectSetName((PetscObject) dm, options->meshname);CHKERRQ(ierr);
-
-  ierr = PetscViewerHDF5Open(PetscObjectComm((PetscObject) dm), options->outfile, FILE_MODE_READ, &v);CHKERRQ(ierr);
+  ierr = PetscViewerHDF5Open(options->comm, options->outfile, FILE_MODE_READ, &v);CHKERRQ(ierr);
   if (options->use_low_level_functions) {
-    PetscSF sfXC;
+    if (options->compare_pre_post) {
+      DM dm0;
 
-    ierr = DMPlexTopologyLoad(dm, v, &sfXC);CHKERRQ(ierr);
-    if (options->distribute_after_topo_load) {
-      DM      dmdist;
-      PetscSF sfXB = sfXC, sfBC;
-
-      ierr = DMPlexDistribute(dm, 0, &sfBC, &dmdist);CHKERRQ(ierr);
-      if (dmdist) {
-        ierr = PetscObjectSetName((PetscObject) dmdist, options->meshname);CHKERRQ(ierr);
-        ierr = PetscSFCompose(sfXB, sfBC, &sfXC);CHKERRQ(ierr);
-        ierr = PetscSFDestroy(&sfXB);CHKERRQ(ierr);
-        ierr = PetscSFDestroy(&sfBC);CHKERRQ(ierr);
-        ierr = DMDestroy(&dm);CHKERRQ(ierr);
-        dm   = dmdist;
-      }
+      ierr = LoadMeshLowLevel(options, v, PETSC_TRUE, PRE_DIST, &dm0);CHKERRQ(ierr);
+      ierr = LoadMeshLowLevel(options, v, PETSC_TRUE, POST_DIST, &dm);CHKERRQ(ierr);
+      ierr = DMCompareLabels(dm0, dm, NULL, NULL);CHKERRQ(ierr);
+      ierr = DMDestroy(&dm0);CHKERRQ(ierr);
+    } else {
+      ierr = LoadMeshLowLevel(options, v, options->distribute_after_topo_load, POST_DIST, &dm);CHKERRQ(ierr);
     }
-    ierr = DMPlexCoordinatesLoad(dm, v, sfXC);CHKERRQ(ierr);
-    ierr = DMPlexLabelsLoad(dm, v, sfXC);CHKERRQ(ierr);
-    ierr = PetscSFDestroy(&sfXC);CHKERRQ(ierr);
   } else {
+    ierr = DMCreate(options->comm, &dm);CHKERRQ(ierr);
+    ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject) dm, options->meshname);CHKERRQ(ierr);
     ierr = DMLoad(dm, v);CHKERRQ(ierr);
   }
   ierr = PetscViewerDestroy(&v);CHKERRQ(ierr);
@@ -351,6 +386,36 @@ int main(int argc, char **argv)
     args: -load_dm_plex_check_all
     args: -use_low_level_functions -distribute_after_topo_load -compare_boundary
     args: -outfile ex56_2.h5
+    nsize: 3
+    test:
+      suffix: a
+      args: -dm_plex_filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/annulus-20.h5
+    test:
+      suffix: b
+      TODO: broken
+      args: -dm_plex_filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/barycentricallyrefinedcube.h5
+    test:
+      suffix: c
+      args: -dm_plex_filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/blockcylinder-50.h5
+    test:
+      suffix: d
+      args: -dm_plex_filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/cube-hexahedra-refined.h5
+    test:
+      suffix: e
+      args: -dm_plex_filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/hybrid_hexwedge.h5
+    test:
+      suffix: f
+      args: -dm_plex_filename ${DATAFILESPATH}/meshes/hdf5-petsc/petsc-v3.16.0/v1.0.0/square.h5
+
+  # load old format, save in new format, reload topology, distribute, load geometry and labels
+  testset:
+    suffix: 3
+    requires: !complex datafilespath
+    args: -dm_plex_name plex
+    args: -dm_plex_view_hdf5_storage_version 2.0.0
+    args: -dm_distribute -dm_plex_interpolate
+    args: -use_low_level_functions -compare_pre_post
+    args: -outfile ex56_3.h5
     nsize: 3
     test:
       suffix: a
