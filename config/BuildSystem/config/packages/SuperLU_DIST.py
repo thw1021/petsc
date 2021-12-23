@@ -11,6 +11,7 @@ class Configure(config.package.CMakePackage):
     self.download         = ['git://https://github.com/xiaoyeli/superlu_dist','https://github.com/xiaoyeli/superlu_dist/archive/'+self.gitcommit+'.tar.gz']
     self.functions        = ['set_default_options_dist']
     self.includes         = ['superlu_ddefs.h']
+    self.versioninclude   = ['superlu_ddefs.h','mpi.h']
     self.liblist          = [['libsuperlu_dist.a']]
     # SuperLU_Dist does not work with --download-fblaslapack with Compaqf90 compiler on windows.
     # However it should work with intel ifort.
