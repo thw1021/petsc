@@ -288,7 +288,7 @@ class PetscSourceLocation(object):
       return other
     if isinstance(other,clx.SourceLocation):
       return cls(other)
-    raise NotImplementedError
+    raise NotImplementedError(type(other))
 
   @classmethod
   def fromPosition(cls,tu,line,col):
@@ -300,7 +300,7 @@ class PetscSourceLocation(object):
       return other
     if isinstance(other,cls):
       return other.sourceLocation
-    raise NotImplementedError
+    raise NotImplementedError(type(other))
 
   def __eq__(self,other):
     return self.sourceLocation.__eq__(self.asClangSourceLocation(other))
@@ -354,7 +354,8 @@ class PetscSourceRange(object):
         return False
       if other.start > PetscSourceLocation.cast(self.end):
         return True
-    raise NotImplementedError
+      raise NotImplementedError("can't handle < for overlapping ranges")
+    raise NotImplementedError(type(other))
 
   def __contains__(self,other):
     def contains(loc):
@@ -373,7 +374,10 @@ class PetscSourceRange(object):
       return contains(PetscSourceLocation.asClangSourceLocation(other))
     if isinstance(other,(clx.SourceRange,type(self))):
       return contains(other.start) and contains(other.end)
-    raise NotImplementedError
+    raise NotImplementedError(type(other))
+
+  def __len__(self):
+    return self.end.offset-self.start.offset
 
   @classmethod
   def cast(cls,other):
@@ -381,11 +385,13 @@ class PetscSourceRange(object):
       return other
     if isinstance(other,clx.SourceRange):
       return cls(other)
-    raise NotImplementedError
+    raise NotImplementedError(type(other))
 
   @classmethod
   def fromLocations(cls,left,right):
     tu = getattr(left,"translation_unit",None)
+    if tu is None:
+      tu = getattr(right,"translation_unit",None)
     return cls(clx.SourceRange.from_locations(
       PetscSourceLocation.asClangSourceLocation(left),
       PetscSourceLocation.asClangSourceLocation(right)
@@ -404,8 +410,7 @@ class PetscSourceRange(object):
       return other
     if isinstance(other,cls):
       return other.sourceRange
-    import ipdb; ipdb.set_trace()
-    raise NotImplementedError
+    raise NotImplementedError(type(other))
 
   @classmethod
   def merge(cls,left,right):
@@ -510,16 +515,19 @@ class Scope(object):
     return "gen {} id {}".format(self.gen,id(self))
 
   def __lt__(self,other):
-    assert isinstance(other,Scope)
-    return not (self >= other)
+    if isinstance(other,Scope):
+      return not (self >= other)
+    raise ValueError(type(other))
 
   def __gt__(self,other):
-    assert isinstance(other,Scope)
-    return self.isChildOf(other)
+    if isinstance(other,Scope):
+      return self.isChildOf(other)
+    raise ValueError(type(other))
 
   def __le__(self,other):
-    assert isinstance(other,Scope)
-    return not (self > other)
+    if isinstance(other,Scope):
+      return not (self > other)
+    raise ValueError(type(other))
 
   def __ge__(self,other):
     assert isinstance(other,Scope)
@@ -527,8 +535,9 @@ class Scope(object):
 
   def __eq__(self,other):
     if other is not None:
-      assert isinstance(other,Scope)
-      return id(self) == id(other)
+      if isinstance(other,Scope):
+        return id(self) == id(other)
+      raise ValueError(type(other))
     return False
 
   def __ne__(self,other):
@@ -552,6 +561,7 @@ class Scope(object):
   def isChildOf(self,other):
     __doc__="""self is child of other, or other is parent of self"""
     return other.isParentOf(self)
+
 
 class PetscPath(type(pathlib.Path())):
   # inheriting pathlib.Path:
