@@ -38,7 +38,11 @@ Changes: Development
 - Add ``PetscDeviceView()``
 - Move ``PetscInt64_FMT`` and ``MPIU_INT64`` definitions to ``petscsystypes.h``
 - Add ``PetscBLASInt_FMT``, ``PETSC_MPI_COMM_FMT``, and ``PETSC_MPI_WIN_FMT`` format specifiers
+- Add ``petscmacros.h`` header to house common PETSc preprocessor macros
+- Add ``PetscUnreachable()`` to indicate unreachable code section to compiler
 - Add ``PetscHasAttribute()`` macro to query for existence of an ``__attribute__`` specifier
+- Add ``PETSCPP_EXPAND()``, ``PETSCPP_CONCAT()``, ``PETSCPP_COMPL()``, ``PETSCPP_EXPAND_TO_NOTHING()``, ``PETSCPP_IF()``, and ``PETSCPP_IF_PETSC_DEFINED()``
+- Rename ``PetscStringize()`` and ``PetscStringize_()`` to ``PETSCPP_STRINGIZE()`` and ``PETSCPP_STRINGIZE_()`` respectively
 
 .. rubric:: PetscViewer:
 
