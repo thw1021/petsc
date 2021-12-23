@@ -13,28 +13,41 @@
 +  Input Parameters:
  + viewer - a PetscViewer
  
+@@ -41,5 +41,5 @@
+ 
+    Input Parameters:
+-+ viewer - a PetscViewer
++. viewer - a PetscViewer
+ 
+   Output Parameter:
 @@ -44,5 +44,5 @@
  
    Output Parameter:
--+ y          - a pointer
+-- y          - a pointer
 ++ y - a pointer
  + cnd           - a boolean
- - z - a nonexistent parameter
+ . z - a nonexistent parameter
+@@ -45,5 +45,5 @@
+   Output Parameter:
+ - y          - a pointer
+-+ cnd           - a boolean
++. cnd           - a boolean
+ . z - a nonexistent parameter
+ 
+@@ -46,5 +46,5 @@
+ - y          - a pointer
+ + cnd           - a boolean
+-. z - a nonexistent parameter
++- z - a nonexistent parameter
+ 
+   level: Lorem ipsum dolor sit amet
 @@ -48,5 +48,5 @@
- - z - a nonexistent parameter
+ . z - a nonexistent parameter
  
 -  level: Lorem ipsum dolor sit amet
 +  Level: Lorem ipsum dolor sit amet
  
    Level:
-@@ -50,6 +50,5 @@
-   level: Lorem ipsum dolor sit amet
- 
--  Level:
--  Beginner
-+  Level: Beginner
- 
-   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 @@ -51,5 +51,5 @@
  
    Level:

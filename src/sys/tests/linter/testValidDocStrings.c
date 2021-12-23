@@ -40,9 +40,9 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
 + viewer - a PetscViewer
 
   Output Parameter:
-+ y          - a pointer
+- y          - a pointer
 + cnd           - a boolean
-- z - a nonexistent parameter
+. z - a nonexistent parameter
 
   level: Lorem ipsum dolor sit amet
 

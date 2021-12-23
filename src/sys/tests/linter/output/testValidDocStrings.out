@@ -32,16 +32,48 @@ Invalid indentation (3), all regular (non-empty, non-parameter) text must be ind
   40: + viewer - a PetscViewer
   41: 
 
+Solitary parameter list entry must start with '.':
+  38: 
+  39:    Input Parameters:
+> 40: + viewer - a PetscViewer
+      ^
+  41: 
+  42:   Output Parameter:
+
+First multi parameter list entry must start with '+':
+  41: 
+  42:   Output Parameter:
+> 43: - y          - a pointer
+      ^
+  44: + cnd           - a boolean
+  45: . z - a nonexistent parameter
+
+Multi parameter list entry must start with '.':
+  42:   Output Parameter:
+  43: - y          - a pointer
+> 44: + cnd           - a boolean
+      ^
+  45: . z - a nonexistent parameter
+  46: 
+
+Last multi parameter list entry must start with '-':
+  43: - y          - a pointer
+  44: + cnd           - a boolean
+> 45: . z - a nonexistent parameter
+      ^
+  46: 
+  47:   level: Lorem ipsum dolor sit amet
+
 Dashes must be aligned to largest column (4) within argument list:
   41: 
   42:   Output Parameter:
-> 43: + y          - a pointer
+> 43: - y          - a pointer
                   ^^^
   44: + cnd           - a boolean
-  45: - z - a nonexistent parameter
+  45: . z - a nonexistent parameter
 
 Invalid header formatting. Expected 'Level' found 'level':
-  45: - z - a nonexistent parameter
+  45: . z - a nonexistent parameter
   46: 
 > 47:   level: Lorem ipsum dolor sit amet
         ^^^^^
@@ -53,15 +85,6 @@ Level subheading must be lowercase, expected 'beginner' found 'Beginner':
   49: Level:
 > 50: Beginner
       ^^^^^^^^
-  51: 
-  52: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-Level values must be on the same line as the 'Level' heading, not on separate line:
-
-  47: level: Lorem ipsum dolor sit amet
-  48: 
-> 49: Level:
-> 50: Beginner
   51: 
   52: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
@@ -193,17 +216,15 @@ ERROR 0: ./src/sys/tests/linter/testValidDocStrings.c:16:57
   59:   return 0;
 
 Multiple 'Level' subheadings. Much like Highlanders, there can only be one:
-
-  45: - z - a nonexistent parameter
+  45: . z - a nonexistent parameter
   46: 
 > 47:   level: Lorem ipsum dolor sit amet
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ^^^^^
   48: 
-  49:   Level:
-> 50:   Beginner
-        ^^^^^^^^
+> 49:   Level:
+        ^^^^^
+  50:   Beginner
   51: 
-  52:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 Docstring name 'someOtherFunctionName' does not match symbol name 'testIllFormedFunctionDocString':
   31: 
@@ -215,10 +236,10 @@ Docstring name 'someOtherFunctionName' does not match symbol name 'testIllFormed
 
 Extra docstring parameter 'cnd' not found in function arguments:
   42:   Output Parameter:
-  43: + y          - a pointer
+  43: - y          - a pointer
 > 44: + cnd           - a boolean
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  45: - z - a nonexistent parameter
+  45: . z - a nonexistent parameter
   46: 
 
 did you mean 'cond' of derived type 'PetscBool', canonical type 'PetscBool'
@@ -231,9 +252,9 @@ did you mean 'cond' of derived type 'PetscBool', canonical type 'PetscBool'
 
 
 Extra docstring parameter 'z' not found in function arguments:
-  43: + y          - a pointer
+  43: - y          - a pointer
   44: + cnd           - a boolean
-> 45: - z - a nonexistent parameter
+> 45: . z - a nonexistent parameter
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   46: 
   47:   level: Lorem ipsum dolor sit amet
@@ -245,9 +266,9 @@ Undocumented parameter 'x' not found in parameter section:
 > 40: + viewer - a PetscViewer
 > 41: 
 > 42:   Output Parameter:
-> 43: + y          - a pointer
+> 43: - y          - a pointer
 > 44: + cnd           - a boolean
-> 45: - z - a nonexistent parameter
+> 45: . z - a nonexistent parameter
 > 46: 
   47:   level: Lorem ipsum dolor sit amet
   48: 
@@ -259,15 +280,15 @@ Undocumented parameter 'cond' not found in parameter section:
 > 40: + viewer - a PetscViewer
 > 41: 
 > 42:   Output Parameter:
-> 43: + y          - a pointer
+> 43: - y          - a pointer
 > 44: + cnd           - a boolean
-> 45: - z - a nonexistent parameter
+> 45: . z - a nonexistent parameter
 > 46: 
   47:   level: Lorem ipsum dolor sit amet
   48: 
 
 Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, or deprecated:
-  45: - z - a nonexistent parameter
+  45: . z - a nonexistent parameter
   46: 
 > 47:   level: Lorem ipsum dolor sit amet
                ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -304,17 +325,11 @@ Required subheading(s) 'Level' not found in docstring:
   69: PetscErrorCode testIllFormedMinimalDocString(void)
   70: {
 
-Docstring name 'Not Collective, Synchronous' does not match symbol name 'testIllFormedMinimalDocString':
+Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very useful description here':
   61: 
   62: /*
 > 63:   Not Collective, Synchronous
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  64: 
+> 64: 
   65:   References:
-
-Docstring missing summary text. Expected 'testIllFormedMinimalDocString - very useful description here':
-  62: /*
-> 63:   Not Collective, Synchronous
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  64: 
+  66:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 [ROOT] -------------------------------------------------------------------------------------
