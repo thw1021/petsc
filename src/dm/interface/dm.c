@@ -7479,11 +7479,10 @@ PetscErrorCode DMCreateLabel(DM dm, const char name[])
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidCharPointer(name, 2);
   ierr = DMHasLabel(dm, name, &flg);CHKERRQ(ierr);
-  if (!flg) {
-    ierr = DMLabelCreate(PETSC_COMM_SELF, name, &label);CHKERRQ(ierr);
-    ierr = DMAddLabel(dm, label);CHKERRQ(ierr);
-    ierr = DMLabelDestroy(&label);CHKERRQ(ierr);
-  }
+  if (flg) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "DMLabel %s already exists in DM", name);
+  ierr = DMLabelCreate(PETSC_COMM_SELF, name, &label);CHKERRQ(ierr);
+  ierr = DMAddLabel(dm, label);CHKERRQ(ierr);
+  ierr = DMLabelDestroy(&label);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
