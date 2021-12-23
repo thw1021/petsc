@@ -62,6 +62,12 @@ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, Pe
 /*
   Not Collective, Synchronous
 
+  inpt parms:
+. foo - a foo
+
+  Output params:
++ bar -  a bar
+
   References:
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 .seealso: testNonExistentFunction(), testNonExistentType
