@@ -3,6 +3,9 @@
 
 #include <petscsys.h>
 
+PETSC_EXTERN PetscErrorCode PetscGatherNumberOfMessages_Private(MPI_Comm,const PetscMPIInt[],const PetscInt[],PetscMPIInt*);
+PETSC_EXTERN PetscErrorCode PetscGatherMessageLengths_Private(MPI_Comm,PetscMPIInt,PetscMPIInt,const PetscInt[],PetscMPIInt**,PetscInt**);
+
 #if !defined(PETSC_HAVE_MPI_LARGE_COUNT) /* No matter PetscInt is 32-bit or 64-bit */
   PETSC_STATIC_INLINE PetscErrorCode MPIU_Send(const void *buf,PetscInt count,MPI_Datatype datatype,PetscMPIInt dest,PetscMPIInt tag,MPI_Comm comm)
   {
