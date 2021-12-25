@@ -21,7 +21,6 @@ ERROR 1: ./src/sys/tests/linter/testValidPointers.c:27:6
   8:   PetscValidBoolPointer(c,4);
 
 Argument number doesn't match for 'a'. Found '2' expected '1' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                             ^^^^^^^
 
@@ -46,7 +45,6 @@ ERROR 3: ./src/sys/tests/linter/testValidPointers.c:26:7
   9: PetscValidRealPointer(d,5);
 
 Argument number doesn't match for 'b'. Found '3' expected '2' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                      ^^^^^^^
 
@@ -71,7 +69,6 @@ ERROR 5: ./src/sys/tests/linter/testValidPointers.c:27:8
   10: PetscValidScalarPointer(e,6);
 
 Argument number doesn't match for 'c'. Found '4' expected '3' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                               ^^^^^^^^^^^
 
@@ -96,7 +93,6 @@ ERROR 7: ./src/sys/tests/linter/testValidPointers.c:27:9
   11: PetscValidIntPointer(f,7);
 
 Argument number doesn't match for 'd'. Found '5' expected '4' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                            ^^^^^^^^^^^^^^
 
@@ -121,7 +117,6 @@ ERROR 9: ./src/sys/tests/linter/testValidPointers.c:29:10
   12: PetscValidRealPointer(g,8);
 
 Argument number doesn't match for 'e'. Found '6' expected '5' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                            ^^^^^^^^^^^^^
 
@@ -146,7 +141,6 @@ ERROR 11: ./src/sys/tests/linter/testValidPointers.c:26:11
   13: PetscValidScalarPointer(h,9);
 
 Argument number doesn't match for 'f'. Found '7' expected '6' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                                           ^^^^^^^^^^^^
 
@@ -171,7 +165,6 @@ ERROR 13: ./src/sys/tests/linter/testValidPointers.c:27:12
   14: 
 
 Argument number doesn't match for 'g'. Found '8' expected '7' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                                                         ^^^^^^^^^^^^^^
 
@@ -196,7 +189,6 @@ ERROR 15: ./src/sys/tests/linter/testValidPointers.c:29:13
   15: /* correct */
 
 Argument number doesn't match for 'h'. Found '9' expected '8' from
-
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                                                                         ^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------

@@ -10,7 +10,6 @@ ERROR 0: ./src/sys/tests/linter/testDisabled.c:51:6
   8:   /* correct by being disabled */
 
 Argument number doesn't match for 'r'. Found '2' expected '1' from
-
 > 3: void testDisabled(PetscRandom r)
                        ^^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------
