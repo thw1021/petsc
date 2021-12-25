@@ -21,7 +21,6 @@ ERROR 1: ./src/sys/tests/linter/testValidLogicalCollective.c:38:8
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
 
 Argument number doesn't match for 'd'. Found '2' expected '4' from
-
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                               ^^^^^^^^^^^
 
@@ -46,7 +45,6 @@ ERROR 3: ./src/sys/tests/linter/testValidLogicalCollective.c:39:9
   11: PetscValidLogicalCollectiveScalar(v,a,5);
 
 Argument number doesn't match for 'e'. Found '3' expected '5' from
-
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                            ^^^^^^^^^^^^^
 
@@ -71,7 +69,6 @@ ERROR 5: ./src/sys/tests/linter/testValidLogicalCollective.c:41:10
   12: PetscValidLogicalCollectiveReal(v,b,6);
 
 Argument number doesn't match for 'f'. Found '4' expected '6' from
-
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                                           ^^^^^^^^^^^
 
@@ -96,7 +93,6 @@ ERROR 7: ./src/sys/tests/linter/testValidLogicalCollective.c:41:11
   13: PetscValidLogicalCollectiveEnum(v,c,7);
 
 Argument number doesn't match for 'a'. Found '5' expected '1' from
-
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                      ^^^^^^^^^^
 
@@ -121,7 +117,6 @@ ERROR 9: ./src/sys/tests/linter/testValidLogicalCollective.c:39:12
   14: 
 
 Argument number doesn't match for 'b'. Found '6' expected '2' from
-
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                  ^^^^^^^^^^^^^
 
@@ -146,7 +141,6 @@ ERROR 11: ./src/sys/tests/linter/testValidLogicalCollective.c:39:13
   15: /* correct */
 
 Argument number doesn't match for 'c'. Found '7' expected '3' from
-
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                 ^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------

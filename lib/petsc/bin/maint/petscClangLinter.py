@@ -359,15 +359,45 @@ class PetscDocString(object):
       return
 
   class ParameterList(DefaultSection):
+    @classmethod
+    def arglen(cls,text):
+      # we don't want the leading dash
+      offset     = text.find("-")+1 if text.lstrip().startswith("-") else 0
+      sub        = text[offset:] if offset else text
+      descrbegin = sub.split(" - ",maxsplit=1)[0]
+      # sub may be missing proper description, ie. ' blabla    -' or ' blabla'
+      if len(descrbegin) == len(sub) and descrbegin.endswith("-"):
+        descrbegin = descrbegin[:-1]
+      return len(descrbegin.rstrip())+offset
+
+    @staticmethod
+    def checkAlignedDescriptions(ds,group,maxArgLen=None):
+      if maxArgLen is None:
+        maxArgLen = max(alen for _,_,alen in group)
+      for loc,text,alen in group:
+        pos = text[1:].find(" - ")
+        if pos == -1:
+          if not text or text.isspace():
+            continue
+          import ipdb; ipdb.set_trace()
+        pos += 1
+        if pos != maxArgLen:
+          endline = loc.end.line
+          fixed   = "{:{}}{}".format(text[:alen],maxArgLen,text[pos:])[alen:]
+          floc    = ds.makeSourceRange(text[alen:],text,endline)
+          eloc    = ds.makeSourceRange(text[pos:pos+3],text,endline)
+          mess    = "Dashes must be aligned to largest column ({}) within argument list".format(
+            maxArgLen+1
+          )
+          ds.addErrorFromSourceRange(mess,eloc,patch=Patch(floc,fixed))
+      return
+
     def setup(self,ds,*args,**kwargs):
       subheading = 0
       groups     = collections.defaultdict(list)
 
-      def checkOptHasDescription(loc,line):
-        return
-
       def checkOptStartsWith(item,descr,char):
-        loc,line = item
+        loc,line,_ = item
         if not line.startswith(char):
           eloc = ds.makeSourceRange(line[0],line,loc.start.line)
           mess = "{} parameter list entry must start with '{}'".format(descr,char)
@@ -382,13 +412,15 @@ class PetscDocString(object):
           subheading += 1
         lstrip = line.lstrip()
         if lstrip.startswith(("+",".","-")):
-          if "-" not in lstrip[1:]:
-            import ipdb; ipdb.set_trace()
-          #item = lstrip[1:].split("-",maxsplit=1)[0].strip()
-          groups[subheading].append((loc,line))
+          opt,dash,rest = lstrip[1:].partition("-")
+          if not dash or not rest.strip():
+            ds.addErrorFromSourceRange("Parameter-list entry missing a description. Expected '{} - a very useful description'".format(opt.split()[0].strip()),loc)
+          groups[subheading].append((loc,line,self.arglen(line)))
         return
 
+
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
+
       self.items = dict(groups)
       for _,opts in sorted(self.items.items()):
         assert len(opts)
@@ -467,7 +499,7 @@ class PetscDocString(object):
       raise NotImplementedError(section)
 
     def addSection(self,section):
-      assert not self.registered(section)
+      assert not self.registered(section),"overwriting section"
       self._sections[section.name] = section
       return
 
@@ -494,8 +526,8 @@ class PetscDocString(object):
     defaultHeadings = (
       cls.Synopsis("synopsis",required=True),
       cls.ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
+      cls.ParameterList("options",keywords=("Options Database",)),
       cls.DefaultSection("notes"),
-      cls.ParameterList("options"),
       cls.InlineList("seealso",keywords=(".seealso",),required=True),
       cls.InlineList("level",required=True),
       cls.DefaultSection("references")
@@ -521,21 +553,29 @@ class PetscDocString(object):
     # if we find these keywords, likely this is a docstring
     if any(keyword.casefold() in raw.casefold() for keyword in cls.sections.keywords()):
       # if it doesn't end with _private or _internal then its very likely a docstring
-      if not PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
-        return True
+      if PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
+        import ipdb; ipdb.set_trace()
+      return True
     return False
-
 
   def __init__(self,linter,cursor,raw,extent,indent=2):
     assert isinstance(linter,PetscLinter)
     self.registerDefaultSections()
     if not self.isValidDocstring(cursor,raw):
-      raise ParsingError("Not a docstring!")
+      raise ParsingError("Not a docstring")
+
     self._linter = linter
-    self.cursor  = cursor
-    self.raw     = raw
+    self.cursor  = PetscCursor.cast(cursor)
     self.extent  = PetscSourceRange.cast(extent)
+    self.raw     = raw
     self.indent  = indent
+
+    has,linkageCursorName,linkageCursor = self.cursor.hasInternalLinkage()
+    if has:
+      mess = "A sowing docstring for a function without external linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),self.cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
+      # TODO: could have a fixit here to simply delete the docstring
+      self._linter.addErrorFromCursor(cursor,mess)
+      raise ParsingError("Internal linkage")
     return
 
 
@@ -628,6 +668,14 @@ class PetscDocString(object):
         return lstrip
       return self.indent*" "+lstrip
 
+    def expectedIndent(line):
+      __doc__="""
+      get the expected indent for the line
+      """
+      if line and not line.startswith((".","+","-")):
+        return self.indent
+      return 0
+
     self._reset()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
@@ -642,20 +690,19 @@ class PetscDocString(object):
       lrange = self.makeSourceRange(line,line,lineno)
       # if the line is regular (not empty, or a parameter list), check that line is
       # indented correctly
-      indent = len(line)-len(lstrip)
-      if lstrip and (indent != self.indent) and not lstrip.startswith((".","+","-")):
-        self.addErrorFromSourceRange(
-          "Invalid indentation ({}), all regular (non-empty, non-parameter) text must be indented to {} columns".format(indent,self.indent),
-          self.makeSourceRange(" "*indent,line,lineno),
-          patch=Patch(lrange,smartIndent(line))
-        )
-      if ":" in lstrip:
+      indent      = len(line)-len(lstrip)
+      expectedInd = expectedIndent(lstrip)
+      if indent != expectedInd:
+        mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
+        loc  = self.makeSourceRange(" "*indent,line,lineno)
+        self.addErrorFromSourceRange(mess,loc,patch=Patch(loc," "*expectedInd))
+      if ": " in lstrip or lstrip.endswith(":"):
         prevline = rawData[-1][1] if len(rawData) else None
         if prevline and not prevline.isspace():
+          loc = self.makeSourceRange("","",lineno)
           self.addErrorFromSourceRange(
             "Missing empty line between sections, must have one before this section",
-            self.makeSourceRange("","",lineno),highlight=False,
-            patch=Patch(lrange,"\n"+smartIndent(lstrip))
+            loc,highlight=False,patch=Patch(loc,"\n")
           )
         newSection = self.sections.find(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
@@ -721,7 +768,7 @@ class PetscCursor(object):
 
   See __getattr__ below for more info.
   """
-  __slots__ = "__cursor","name","typename","derivedtypename","argidx"
+  __slots__ = "__cursor","name","typename","derivedtypename","argidx","_cache"
 
   def __init__(self,cursor,idx=-12345):
     assert isinstance(cursor,(clx.Cursor,PetscCursor))
@@ -731,16 +778,18 @@ class PetscCursor(object):
       self.typename        = cursor.typename
       self.derivedtypename = cursor.derivedtypename
       self.argidx          = cursor.argidx if idx == -12345 else idx
+      self._cache          = cursor._cache
     else:
       self.__cursor        = cursor
       self.name            = self.getNameFromCursor(cursor)
       self.typename        = self.getTypenameFromCursor(cursor)
       self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
       self.argidx          = idx
+      self._cache          = {}
     return
 
   @classmethod
-  def asPetscCursor(cls,cursor):
+  def cast(cls,cursor):
     __doc__="""like numpy.asanyarray but for PetscCursors"""
     assert isinstance(cursor,(clx.Cursor,cls))
     return cls(cursor) if isinstance(cursor,clx.Cursor) else cursor
@@ -812,7 +861,6 @@ class PetscCursor(object):
       # the code. Perhaps this should have some sort of recursion check
       name = cls.getNameFromCursor(castee[0])
     elif (cursor.type.get_canonical().kind == clx.TypeKind.POINTER) or (cursor.kind == clx.CursorKind.UNEXPOSED_EXPR):
-      pointees = []
       if cursor.type.get_pointee().kind  == clx.TypeKind.CHAR_S:
         # For some reason preprocessor macros that contain strings don't propagate
         # their spelling up to the primary cursor, so we need to plumb through
@@ -824,6 +872,8 @@ class PetscCursor(object):
         if not pointees:
           # wasn't a pure array, so we try pointer
           pointees = [c for c in cursor.walk_preorder() if c.type.kind == clx.TypeKind.POINTER]
+      else:
+        pointees = []
       pointees = list({p.spelling: p for p in pointees}.values())
       if len(pointees) > 1:
         # sometimes array subscripts can creep in
@@ -866,6 +916,11 @@ class PetscCursor(object):
     if getNameFromCursor tries to convert **&(PetscObject)obj[i]+73 to obj then this function
     tries to extract **&(PetscObject)obj[i]+73 in the cleanest way possible
     """
+    clsInstance = isinstance(cursor,cls)
+    if clsInstance:
+      cacheEntry = "name"
+      if cacheEntry in cursor._cache:
+        return cursor._cache[cacheEntry]
     name = "".join(t.spelling for t in cursor.get_tokens())
     if not name:
       try:
@@ -885,6 +940,8 @@ class PetscCursor(object):
         elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
           raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
         raise RuntimeError("Could not determine useful name for cursor {}".format(errstr))
+    if clsInstance:
+      cursor._cache[cacheEntry] = name
     return name
 
   @classmethod
@@ -910,6 +967,23 @@ class PetscCursor(object):
     return cursor.type.spelling
 
   @staticmethod
+  def hasInternalLinkageFromCursor(cursor):
+    if cursor.linkage == clx.LinkageKind.INTERNAL:
+      # is a static function or variable
+      return True,cursor.storage_class.name,cursor.get_definition()
+
+    hiddenVisibility = {"hidden","protected"}
+    VISIBILITY_ATTR  = clx.CursorKind.VISIBILITY_ATTR
+    for child in cursor.get_children():
+      if child.kind == VISIBILITY_ATTR and child.spelling in hiddenVisibility:
+        # is PETSC_INTERN
+        return True,PetscSourceRange(child.extent).raw(tight=True),child
+    return False,None,None
+
+  def hasInternalLinkage(self):
+    return self._cache.setdefault("internal_linkage",self.hasInternalLinkageFromCursor(self))
+
+  @staticmethod
   def getRawSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,trim=False):
     return pclu.getRawSourceFromCursor(
       cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim
@@ -919,24 +993,23 @@ class PetscCursor(object):
     return self.getRawSourceFromCursor(self,**kwargs)
 
   @staticmethod
-  def getFormattedSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,view=False):
+  def getFormattedSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,view=False,**kwargs):
     if cursor.kind == clx.CursorKind.FUNCTION_DECL:
       begin  = cursor.extent.start
       # -1 gives you EOL
       fnline = PetscSourceLocation.fromPosition(cursor.translation_unit,begin.line,-1)
-      extent = PetscSourceRange.fromLocations(cursor.extent.start,fnline)
+      extent = PetscSourceRange.fromLocations(begin,fnline)
     else:
       extent = cursor.extent
     return pclu.getFormattedSourceFromSourceRange(
-      extent,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view
+      extent,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view,**kwargs
     )
 
-  def getFormattedSource(self,**kwargs):
+  def formatted(self,**kwargs):
     return self.getFormattedSourceFromCursor(self,**kwargs)
 
   def view(self):
-    print(self.getFormattedSource(nboth=5))
-    return
+    return print(self.formatted(nboth=5))
 
   @staticmethod
   def getFormattedLocationStringFromCursor(cursor):
@@ -948,9 +1021,9 @@ class PetscCursor(object):
 
   @classmethod
   def getFormattedBlurbFromCursor(cls,cursor):
-    cursor = cls.asPetscCursor(cursor)
+    cursor = cls.cast(cursor)
     return "'{}' of derived type '{}', canonical type '{}'\n{}\n".format(
-      cursor.name,cursor.derivedtypename,cursor.typename,cursor.getFormattedSource(nboth=2)
+      cursor.name,cursor.derivedtypename,cursor.typename,cursor.formatted(nboth=2)
     )
 
   def getFormattedBlurb(self):
@@ -1015,7 +1088,7 @@ class PetscCursor(object):
 
   @classmethod
   def getCommentAndRangeFromCursor(cls,cursor):
-    cursor = cls.asPetscCursor(cursor)
+    cursor = cls.cast(cursor)
     func   = cls.getOrRegisterClangFunction(
       "clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange
     )
@@ -1032,27 +1105,22 @@ class Patch(object):
     def __init__(self,value,extent,ctxlines):
       self.value  = str(value)
       self.extent = extent
-      src         = extent.raw(numContext=ctxlines).splitlines(True)
-      begin       = extent.start
-      offset      = begin.column-1+sum(map(len,src[:ctxlines]))
-      self.offset = begin.offset-offset
+      src,begin   = extent.raw(numContext=ctxlines).splitlines(True)[:ctxlines],extent.start
+      self.offset = begin.offset-begin.column-sum(map(len,src))+1
       return
 
     def deleter(self):
-      return self.value == ""
+      return bool(self.value == "")
 
   __slots__ = "extent","filename","ctxlines","src","deltas","fixed","fixDepth","weakData"
 
   def __init__(self,srcRange,value,contextlines=2):
     def validrange(srcRange):
-      try:
-        assert isinstance(srcRange,(clx.SourceRange,PetscSourceRange))
-      except:
-        import ipdb; ipdb.set_trace()
+      assert isinstance(srcRange,(clx.SourceRange,PetscSourceRange))
       start,end = srcRange.start,srcRange.end
       assert start.line <= end.line, "end line {} > begin line {}, ill-formed source fix".format(end.line,start.line)
       if start.line == end.line:
-        assert start.column < end.column, "end col {} <= begin col {}, ill-formed source fix".format(end.column,start.column)
+        assert start.column <= end.column, "start col {} < end col {}, ill-formed source fix".format(start.column,end.column)
       return PetscSourceRange.cast(srcRange)
 
     self.extent   = validrange(srcRange)
@@ -1060,14 +1128,6 @@ class Patch(object):
     self.ctxlines = contextlines
     self.src      = self._makeSource()
     self.deltas   = [self.Delta(value,self.extent,self.ctxlines)]
-    # this is an error, since previous detection should not have created a fix
-    # assert self.deltas[0] != self.extent.raw(), "trying to replace {} with itself".format(self.src)
-    # if we have context, this is the character offset into self.src such that
-    # self.src[self.ranges[i].begin.offset-self.offset]
-    # gives the start of the src snippet to replace
-    # begin         = self.ranges[0].start
-    # offset        = begin.column-1+sum(map(len,self.src.splitlines(True)[:self.ctxlines]))
-    # self.offset   = begin.offset-offset
     self.fixed    = None
     self.fixDepth = 0
     return
@@ -1083,8 +1143,8 @@ class Patch(object):
     __doc__="""
     drops the error messages corresponding to this patch from the linter
     """
-    elist,idx = self.weakData
-    elist     = elist()
+    weakElist,idx = self.weakData
+    elist         = weakElist()
     if elist is not None:
       del elist[1][idx] # delete the error message
       del elist[2][idx] # delete the patch indicator
@@ -1098,14 +1158,14 @@ class Patch(object):
     return
 
   def dofix(self,n=1):
-    newSrc   = self.src
+    newSrc   = self._makeSource()
     idxDelta = 0
-    for rng,i in zip(sorted(self.ranges),range(n)):
-      begin       = rng.start
-      end         = rng.end
-      beginoffset = begin.offset-self.offset
-      endoffset   = end.offset-self.offset
-      delta       = self.deltas[i]
+    for rng,i in zip(sorted(self.deltas),range(n)):
+      begin       = rng.extent.start
+      end         = rng.extent.end
+      beginoffset = begin.offset-rng.offset
+      endoffset   = end.offset-rng.offset
+      delta       = rng.value
       newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta,newSrc[endoffset+idxDelta:]])
       idxDelta    = len(newSrcTemp)-len(newSrc)
       newSrc      = newSrcTemp
@@ -1113,11 +1173,13 @@ class Patch(object):
     return newSrcTemp
 
   @staticmethod
-  def domerge(a,b,adelta,bdelta):
+  def domerge(left,right):
+    a      = left.dofix()
+    b      = right.dofix()
     res    = []
     deltas = []
-    adelta = [d.value for d in adelta]
-    bdelta = [d.value for d in bdelta]
+    adelta = {d.value for d in left.deltas}
+    bdelta = {d.value for d in right.deltas}
     for tag,i1,i2,j1,j2 in difflib.SequenceMatcher(None,a,b).get_opcodes():
       print('{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'.format(tag,i1,i2,j1,j2,a[i1:i2],b[j1:j2]))
       if tag == "equal":
@@ -1136,7 +1198,7 @@ class Patch(object):
             deltas.append(mine)
             continue
         else:
-          print("mne was not in self.deltas")
+          print("mine was not in self.deltas")
         if theirs in bdelta:
           print("theirs was in other.deltas, adding theirs")
           res.append(theirs)
@@ -1147,26 +1209,90 @@ class Patch(object):
         deltas.append(theirs)
     return res,deltas
 
+  @staticmethod
+  def mergeDiff3(mine,other):
+    __doc__="""
+    Try to merge two "overlapping" patches using diff3 and a vile hack.
+
+    diff3 normally may not be able to handle overlap inside a hunk, but by splitting the source
+    into words (including newline and whitespace!) we can try to separate out the overlap.
+
+    I have no idea how robust this is, so this should be used as a last resort. Try first to
+    make the patches as minimal as possible. You don't have to handle complex overlap if there
+    is no overlap to begin with!
+    """
+    def smart_split(string):
+      __doc__="""
+      split a string into words, keeping the separators
+      """
+      specials = {" ","\n","\r","\t"}
+      spaces   = 0
+      result   = []
+      was_word = False
+      for char in string:
+        if char in specials:
+          was_word = False
+          if char == " ":
+            spaces += 1
+          else:
+            result.append(char)
+        else:
+          if spaces:
+            result.append(" "*spaces)
+            spaces = 0
+          if not was_word:
+            result.append("")
+            was_word = True
+          result[-1] += char
+      return "\n".join(result)
+
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=True) as minefd,  \
+         tempfile.NamedTemporaryFile(delete=True) as theirfd, \
+         tempfile.NamedTemporaryFile(delete=True) as commonfd:
+      minep = PetscPath(minefd.name).resolve()
+      minep.write_text(smart_split(self.collapse()))
+      otherp = PetscPath(theirfd.name).resolve()
+      otherp.write_text(smart_split(other.collapse()))
+      commonp = PetscPath(comfd.name).resolve()
+      commonp.write_text(smart_split(self._makeSource()))
+      try:
+        output = subprocessRun(
+          ["diff3","-a","-m",str(minep),str(commonp),str(otherp)],
+          capture_output=True,universal_newlines=True,check=True
+        )
+      except RuntimeError as re:
+        # if we are here it means diff3 failed to merge!
+        print(re)
+        import ipdb; ipdb.set_trace()
+      else:
+        # being here does not imply unqualified success, output may be wrong!
+        merged = "".join(
+          s.replace("\n","")+"\n" if s else "\n" for s in output.stdout.split("\n\n")
+        )[:-1] # remove final newline
+    return merged
+
   def merge(self,other):
-    def checkOverlappingDeletion(left,right):
-      if left.extent in right.extent:
-        if any(left.extent in d.extent and d.deleter() for d in right.deltas):
+    def checkOverlapping(left,right):
+      lextent = left.extent
+      if lextent in right.extent:
+        if any(d.deleter() and lextent in d.extent for d in right.deltas):
           # if right envelops left and deletes all of left's changes then left is
           # pointless
           left.discard()
           return right
-        # TODO handle overlapping but not deleteing
         import ipdb; ipdb.set_trace()
-      return
+        merged = Patch.mergeDiff3(left,right)
+      return None
 
     if not isinstance(other,type(self)):
       raise ValueError(type(other))
 
-    ret = checkOverlappingDeletion(self,other)
+    ret = checkOverlapping(self,other)
     if ret is not None:
       return ret
 
-    ret = checkOverlappingDeletion(other,self)
+    ret = checkOverlapping(other,self)
     if ret is not None:
       return ret
 
@@ -1191,13 +1317,14 @@ class Patch(object):
       return self.fixed
 
     idxDelta = 0
-    newSrc   = self.src
+    newSrc   = self.src = self._makeSource()
     for delta in self.deltas:
-      rng         = delta.extent
-      beginoffset = rng.start.offset-delta.offset
-      endoffset   = rng.end.offset-delta.offset
-      newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta.value,newSrc[endoffset+idxDelta:]])
-      idxDelta    = len(newSrcTemp)-len(newSrc)
+      extent      = delta.extent
+      offset      = idxDelta-delta.offset
+      beginoffset = extent.start.offset+offset
+      endoffset   = extent.end.offset+offset
+      newSrcTemp  = "".join([newSrc[:beginoffset],delta.value,newSrc[endoffset:]])
+      idxDelta   += len(newSrcTemp)-len(newSrc)
       newSrc      = newSrcTemp
     self.fixDepth = len(self.deltas)
     self.fixed    = newSrc
@@ -1383,7 +1510,7 @@ class PetscLinter(object):
       except ParsingError as pe:
         self.addWarning(tu.cursor.spelling,str(pe))
       processedFuncs[PetscCursor.getNameFromCursor(parent)].append(
-        (PetscCursor.asPetscCursor(func),scope)
+        (PetscCursor.cast(func),scope)
       )
     for pname,functionList in processedFuncs.items():
       seen = {}
@@ -1403,8 +1530,8 @@ class PetscLinter(object):
           tu        = func.translation_unit
           end       = clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),startline,-1)
           patch     = Patch(PetscSourceRange.fromLocations(start,end),"")
-          message   = "Duplicate function found previous identical usage:\n\n{}".format(
-            seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)
+          message   = "Duplicate function found previous identical usage:\n{}".format(
+            seen[combo][0].formatted(nbefore=2,nafter=startline-seenStart)
           )
           self.addErrorFromCursor(func,message,patch=patch)
     return
@@ -1420,7 +1547,7 @@ class PetscLinter(object):
     __doc__="""
     given a cursor attach a diagnostic error message to it, and optionally a fix
     """
-    cursor   = PetscCursor.asPetscCursor(cursor)
+    cursor   = PetscCursor.cast(cursor)
     filename = PetscPath(cursor.location.file.name)
     if filename not in self.errors:
       self.errors[filename] = collections.OrderedDict()
@@ -1720,6 +1847,8 @@ class WorkerPool(mp.queues.JoinableQueue):
 
 """
 TODO:
+- make a test for all function parameters undocumented
+- align the options database key dashes
 - make an object to hold all the PetscLinter diagnostics per file
 - make PetscLinter.diagnostics() be the one-stop shop
 - make warnings into a list with filename
@@ -1756,7 +1885,7 @@ def checkDocValidSynopsis(linter,cursor,docstring):
         docstring.addErrorFromSourceRange(mess,loc,patch=patch)
       break
   if foundSynopsis is False:
-    docstring.addErrorFromSourceRange("Docstring missing synopsis. Expected '{} - a very useful description here'".format(cursorName),synopsis.extent,highlight=False)
+    docstring.addErrorFromSourceRange("Docstring missing synopsis. Expected '{} - a very useful description'".format(cursorName),synopsis.extent,highlight=False)
   return
 
 def checkDocValidFunctionParameters(linter,cursor,docstring):
@@ -1787,23 +1916,23 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
   POINTER_KIND = clx.TypeKind.POINTER
   for arg in fnargs:
     canon = arg.type.get_canonical()
-    if canon.kind == POINTER_KIND:
-      it = 0
-      while canon.kind == POINTER_KIND:
-        if it > 100:
-          # there is no chance that someone has a variable over 100 pointers deep, so
-          # clearly something is wrong
-          emess = "Ran for {} iterations (> 100) trying to get pointer type for\n{}\n".format(
-            it,arg.errorViewFromCursor(arg),"\n".join(pclu.viewAstFromCursor(arg))
-          )
-          raise RuntimError(emess)
-        canon = canon.get_pointee()
-        it   += 1
-      dataKind = canon.kind
-      if dataKind in charTypes:
-        requiresC.append((arg,"char"))
-      elif dataKind in functionTypes:
-        requiresC.append((arg,"function"))
+    kind  = canon.kind
+    it    = 0
+    while kind == POINTER_KIND:
+      if it >= 100:
+        # there is no chance that someone has a variable over 100 pointers deep, so
+        # clearly something is wrong
+        emess = "Ran for {} iterations (>= 100) trying to get pointer type for\n{}\n".format(
+          it,arg.errorViewFromCursor(arg),"\n".join(pclu.viewAstFromCursor(arg))
+        )
+        raise RuntimError(emess)
+      canon = canon.get_pointee()
+      kind  = canon.kind
+      it   += 1
+    if kind in charTypes:
+      requiresC.append((arg,"char"))
+    elif kind in functionTypes:
+      requiresC.append((arg,"function"))
 
   if len(requiresC) and not docstring.raw.startswith("/*@C"):
     line   = docstring.raw.split(maxsplit=1)[0]
@@ -1812,63 +1941,52 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
     mess   = "Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format(blame)
     docstring.addErrorFromSourceRange(mess,crange,patch=Patch(crange,line+"C"))
 
-  def argLen(text):
-    return len(text[1:].split("-",maxsplit=1)[0].rstrip())+1
-
   fnargnames = [a.name for a in fnargs]
   fnargseen  = [False]*len(fnargs)
   notfound   = []
-  for id,group in sorted(params.items.items()):
-    maxArgLen = 0
-    indices   = []
-    remove    = set()
-    for i,(loc,text) in enumerate(group.copy()):
+  for _,group in sorted(params.items.items()):
+    indices = []
+    remove  = set()
+    for i,(loc,text,_) in enumerate(group):
       arg = text.split()[1].strip()
       try:
         idx = fnargnames.index(arg)
       except ValueError:
-        notfound.append((arg,*group[i]))
+        notfound.append((arg,loc))
         remove.add(i)
       else:
         fnargseen[idx] = True
         indices.append(idx)
-        maxArgLen = max(maxArgLen,argLen(text))
-    group = [g for i,g in enumerate(group) if i not in remove]
-    for loc,text in group:
-      pos = text[1:].find("-")
-      if pos == -1:
-        if not text or text.isspace():
-          continue
-        import ipdb; ipdb.set_trace()
-      if pos != maxArgLen:
-        alen  = argLen(text)
-        fixed = "{:{}}{}".format(text[:alen],maxArgLen,text[pos:])[alen:]
-        floc  = docstring.makeSourceRange(text[alen:],text,loc.end.line)
-        docstring.addErrorFromSourceRange(
-          "Dashes must be aligned to largest column ({}) within argument list".format(maxArgLen+1),
-          docstring.makeSourceRange(text[pos:pos+3],text,loc.end.line),
-          patch=Patch(floc,fixed)
-        )
+    params.checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove])
 
   fnargsleft = [name for seen,name in zip(fnargseen,fnargnames) if not seen]
   if notfound:
     fnargsleft2 = fnargsleft.copy()
-    for arg,loc,text in notfound:
+    for arg,loc in notfound:
       message = "Extra docstring parameter '{}' not found in function arguments:\n{}".format(
         arg,loc.formatted(numContext=2)
       )
-      closest = difflib.get_close_matches(arg,fnargsleft2,n=1)
-      if closest:
-        match     = closest[0]
+      try:
+        match = difflib.get_close_matches(arg,fnargsleft2,n=1)[0]
+      except IndexError:
+        pass
+      else:
         argcursor = [c for c in fnargs if c.name == match][0]
-        message  += "\n\ndid you mean {}".format(argcursor.getFormattedBlurb())
+        message  += "\n\nmaybe you meant {}".format(argcursor.getFormattedBlurb())
         fnargsleft2.remove(match)
       linter.addErrorFromCursor(cursor,message)
-  for arg in fnargsleft:
-    docstring.addErrorFromSourceRange(
-      "Undocumented parameter '{}' not found in parameter section".format(arg),params.extent,
-      highlight=False
-    )
+
+  for mess in map("Undocumented parameter '{}' not found in parameter section".format,fnargsleft):
+    docstring.addErrorFromSourceRange(mess,params.extent,highlight=False)
+  return
+
+def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
+  options = docstring.sections.options
+  if not options:
+    return
+
+  for _,group in sorted(options.items.items()):
+    options.checkAlignedDescriptions(docstring,group)
   return
 
 def checkDocValidLevel(linter,cursor,docstring):
@@ -1961,6 +2079,7 @@ def checkPetscFunctionDocString(linter,function):
 
   checkDocValidSynopsis(linter,function,docstring)
   checkDocValidFunctionParameters(linter,function,docstring)
+  checkDocValidOptionsDatabaseKeys(linter,function,docstring)
   checkDocValidLevel(linter,function,docstring)
   checkDocValidSeealso(linter,function,docstring)
   return
@@ -2106,11 +2225,11 @@ def checkIsPetscObject(linter,obj):
   else:
     validObject = False
   if not validObject:
-    objDecl = PetscCursor.asPetscCursor(pObjType.get_declaration())
+    objDecl = PetscCursor.cast(pObjType.get_declaration())
     if len(objFields) == 0:
-      linter.addWarningFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+      linter.addWarningFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2)))
     else:
-      linter.addErrorFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+      linter.addErrorFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2)))
   return validObject
 
 def checkMatchingClassid(linter,obj,objClassid):
@@ -2277,15 +2396,17 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
       if len(parentArgs):
         parentFunc = PetscCursor(parentArgs[0].semantic_parent)
         parentFuncName = parentFunc.name+"()"
-        parentFuncSrc  = parentFunc.getFormattedSource()
+        parentFuncSrc  = parentFunc.formatted()
       else:
         # parent function has no arguments (very likely that "obj" is a global variable)
         parentFuncName = "UNKNOWN FUNCTION"
         parentFuncSrc  = "  <could not determine parent function signature from arguments>"
-      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n\n{}".format(parentFuncName,parentFuncSrc))
+      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n{}".format(parentFuncName,parentFuncSrc))
       return
   if idxNum != parentArgs[matchLoc].argidx:
-    errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n\n{}".format(obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].getFormattedSource())
+    errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n{}".format(
+      obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].formatted()
+    )
     fix = Patch.fromCursor(idx,parentArgs[matchLoc].argidx)
     linter.addErrorFromCursor(idx,errMess,patch=fix)
   return
@@ -2558,7 +2679,9 @@ def tryToFindLibclangDir():
   llvmLibDir = ctypes.util.find_library("clang")
   if not llvmLibDir:
     try:
-      output = subprocessRun(["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True)
+      output = subprocessRun(
+        ["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True
+      )
       llvmLibDir = output.stdout.strip()
     except FileNotFoundError:
       # FileNotFoundError: [Errno 2] No such file or directory: 'llvm-config'
@@ -2788,7 +2911,7 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
       shutil.copy2(str(self.fname),str(self.tmpPath))
       return self
 
-    def __exit__(self,*args):
+    def __exit__(self,*args,**kwargs):
       PetscPath.unlink(self.origFile(),missing_ok=True)
       PetscPath.unlink(self.rejFile(),missing_ok=True)
       del self.tmp

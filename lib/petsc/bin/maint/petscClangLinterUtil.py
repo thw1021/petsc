@@ -87,7 +87,7 @@ def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0
   with open(sourceRange.start.file.name,"r") as fd:
     lineList = [l for i,l in enumerate(fd,start=1) if (lobound <= i <= hibound)]
   if tight:
-    import ipdb; ipdb.set_trace()
+    assert lineBegin == lineEnd
     # index into lineList where our actual line starts if we have context
     loidx           = lineBegin-lobound
     lineList[loidx] = lineList[loidx][sourceRange.start.column-1:]
@@ -144,7 +144,7 @@ def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterCon
 
 def viewCursorFull(cursor):
   try:
-    print("Arguments:"," ".join([a.displayname for a in cursor.get_arguments()]))
+    print("Arguments:      "," ".join([a.displayname for a in cursor.get_arguments()]))
   except AttributeError:
     pass
   try:
@@ -152,11 +152,12 @@ def viewCursorFull(cursor):
   except AttributeError:
     pass
   try:
-    print("Lexical Parent:",cursor.lexical_parent.displayname)
+    print("Lexical Parent: ",cursor.lexical_parent.displayname)
   except AttributeError:
     pass
-  print("Children:"," ".join([c.spelling for c in cursor.get_children()]))
-  print("AST View")
+  print("Children:       "," ".join([c.spelling for c in cursor.get_children()]))
+  print("Storage Class:  ",cursor.storage_class)
+  print("AST View:\n")
   print("\n".join(viewAstFromCursor(cursor)))
   return
 

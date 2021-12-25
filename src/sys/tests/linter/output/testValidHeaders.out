@@ -21,7 +21,6 @@ ERROR 1: ./src/sys/tests/linter/testValidHeaders.c:55:6
   8:   PetscValidHeaderSpecificType(d,PETSC_DRAWAXIS_CLASSID,0,DMDA);
 
 Argument number doesn't match for 'r'. Found '0' expected '1' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                            ^^^^^^^^^^^^^
 
@@ -46,7 +45,6 @@ ERROR 3: ./src/sys/tests/linter/testValidHeaders.c:53:7
   9: PetscValidHeaderSpecificType(a,PETSC_RANDOM_CLASSID,0,DMDA);
 
 Argument number doesn't match for 'v'. Found '0' expected '2' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                           ^^^^^^^^^^^^^
 
@@ -71,7 +69,6 @@ ERROR 5: ./src/sys/tests/linter/testValidHeaders.c:57:8
   10: 
 
 Argument number doesn't match for 'd'. Found '0' expected '3' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                                          ^^^^^^^^^^^
 
@@ -96,7 +93,6 @@ ERROR 7: ./src/sys/tests/linter/testValidHeaders.c:55:9
   11: /* correct */
 
 Argument number doesn't match for 'a'. Found '0' expected '4' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                                                       ^^^^^^^^^^^^^^^
 
@@ -121,7 +117,6 @@ ERROR 9: ./src/sys/tests/linter/testValidHeaders.c:49:18
   20: PetscValidHeaderSpecific(d,PETSC_RANDOM_CLASSID,0);
 
 Argument number doesn't match for 'r'. Found '0' expected '1' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                            ^^^^^^^^^^^^^
 
@@ -146,7 +141,6 @@ ERROR 11: ./src/sys/tests/linter/testValidHeaders.c:53:19
   21: PetscValidHeaderSpecific(a,PETSC_VIEWER_CLASSID,0);
 
 Argument number doesn't match for 'v'. Found '0' expected '2' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                           ^^^^^^^^^^^^^
 
@@ -171,7 +165,6 @@ ERROR 13: ./src/sys/tests/linter/testValidHeaders.c:51:20
   22: 
 
 Argument number doesn't match for 'd'. Found '0' expected '3' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                                          ^^^^^^^^^^^
 
@@ -196,7 +189,6 @@ ERROR 15: ./src/sys/tests/linter/testValidHeaders.c:51:21
   23: /* correct */
 
 Argument number doesn't match for 'a'. Found '0' expected '4' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                                                       ^^^^^^^^^^^^^^^
 
@@ -210,7 +202,6 @@ ERROR 16: ./src/sys/tests/linter/testValidHeaders.c:22:30
   32: PetscValidHeader(d,57);
 
 Argument number doesn't match for 'r'. Found '55' expected '1' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                            ^^^^^^^^^^^^^
 
@@ -224,7 +215,6 @@ ERROR 17: ./src/sys/tests/linter/testValidHeaders.c:22:31
   33: PetscValidHeader(a,58);
 
 Argument number doesn't match for 'v'. Found '56' expected '2' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                           ^^^^^^^^^^^^^
 
@@ -238,7 +228,6 @@ ERROR 18: ./src/sys/tests/linter/testValidHeaders.c:22:32
   34: 
 
 Argument number doesn't match for 'd'. Found '57' expected '3' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                                          ^^^^^^^^^^^
 
@@ -252,7 +241,6 @@ ERROR 19: ./src/sys/tests/linter/testValidHeaders.c:22:33
   35: /* correct */
 
 Argument number doesn't match for 'a'. Found '58' expected '4' from
-
 > 3: void testValidHeaders(PetscRandom r, PetscViewer v, PetscDraw d, PetscDrawAxis a)
                                                                       ^^^^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------
