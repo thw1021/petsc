@@ -108,10 +108,10 @@ Found parameter docstring(s), but testIllFormedMinimalDocString() has no argumen
   63:   Not Collective, Synchronous
   64: 
 > 65:   inpt parms:
-> 66: . foo - a foo
+> 66: . foo
 > 67: 
 > 68:   Output params:
-> 69: + bar -  a bar
+> 69: + bar -
 > 70: 
   71:   References:
   72:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
@@ -324,6 +324,22 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*@' f
   63:   Not Collective, Synchronous
   64: 
 
+Parameter docstring missing '-' (and possibly a description). Expected 'foo - a very useful description':
+  64: 
+  65:   inpt parms:
+> 66: . foo
+      ^^^^^
+  67: 
+  68:   Output params:
+
+Missing description for 'bar'. Expected 'bar - a very useful description':
+  67: 
+  68:   Output params:
+> 69: + bar -
+      ^^^^^^^
+  70: 
+  71:   References:
+
 Required subheading(s) 'Level' not found in docstring:
   60: }
   61: 
@@ -331,10 +347,10 @@ Required subheading(s) 'Level' not found in docstring:
 > 63:   Not Collective, Synchronous
 > 64: 
 > 65:   inpt parms:
-> 66: . foo - a foo
+> 66: . foo
 > 67: 
 > 68:   Output params:
-> 69: + bar -  a bar
+> 69: + bar -
 > 70: 
 > 71:   References:
 > 72:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
@@ -349,5 +365,71 @@ Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very use
 > 63:   Not Collective, Synchronous
 > 64: 
   65:   inpt parms:
-  66: . foo - a foo
+  66: . foo
+
+ERROR 4: ./src/sys/tests/linter/testValidDocStrings.c:16:129
+'testInternFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  127: .seealso: function()
+  128: @*/
+> 129: PetscErrorCode testInternFunction()
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  130: {
+  131:   return 0;
+
+A public sowing docstring for a function without external linkage is pointless!:
+  120: PETSC_INTERN PetscErrorCode testInternFunction();
+  121: 
+> 122: /*@
+       ^^^
+> 123:   testInternFunction - an internal function
+> 124: 
+> 125:   Level: developer
+> 126: 
+> 127: .seealso: function()
+> 128: @*/
+  129: PetscErrorCode testInternFunction()
+  130: {
+
+Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidDocStrings.c:1:120
+'hidden' of derived type '', canonical type ''
+  118: void function() { }
+  119: 
+> 120: PETSC_INTERN PetscErrorCode testInternFunction();
+       ^^^^^^^^^^^^
+  121: 
+  122: /*@
+
+
+ERROR 5: ./src/sys/tests/linter/testValidDocStrings.c:23:141
+'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  139: .seealso: function()
+  140: @*/
+> 141: static PetscErrorCode testStaticFunction()
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  142: {
+  143:   return 0;
+
+A public sowing docstring for a function without external linkage is pointless!:
+  132: }
+  133: 
+> 134: /*@
+       ^^^
+> 135:   testStaticFunction - an internal function
+> 136: 
+> 137:   Level: developer
+> 138: 
+> 139: .seealso: function()
+> 140: @*/
+  141: static PetscErrorCode testStaticFunction()
+  142: {
+
+Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidDocStrings.c:23:141
+'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  139: .seealso: function()
+  140: @*/
+> 141: static PetscErrorCode testStaticFunction()
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  142: {
+  143:   return 0;
+
 [ROOT] -------------------------------------------------------------------------------------
