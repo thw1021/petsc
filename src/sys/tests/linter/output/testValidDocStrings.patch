@@ -65,10 +65,10 @@
    Not Collective, Synchronous
  
 -  inpt parms:
--. foo - a foo
+-. foo
 -
 -  Output params:
--+ bar -  a bar
+-+ bar -
  
    References:
 @@ -74,4 +74,5 @@

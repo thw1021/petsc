@@ -63,14 +63,14 @@ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, Pe
   Not Collective, Synchronous
 
   inpt parms:
-. foo - a foo
+. foo
 
   Output params:
-+ bar -  a bar
++ bar -
 
   References:
   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-.seealso: testNonExistentFunction(), testNonExistentType
+   .seealso: testNonExistentFunction(), testNonExistentType
 */
 PetscErrorCode testIllFormedMinimalDocString(void)
 {
@@ -88,6 +88,9 @@ PetscErrorCode testIllFormedMinimalDocString(void)
   output Psrammmetrs:
 . y - a PetscScalar pointer
 
+  optnS dtaaSE:
+- -option_a     - foo
+- -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
   lvl: itnmediate
 
 .zeeakso: testNonExistentFunction(), testNonExistentType
@@ -115,9 +118,30 @@ PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErro
 }
 
 /* a random comment above a function */
-void function();
+void function() { }
 
-PETSC_INTERN PetscErrorCode testInternFunction()
+PETSC_INTERN PetscErrorCode testInternFunction();
+
+/*@
+  testInternFunction - an internal function
+
+  Level: developer
+
+.seealso: function()
+@*/
+PetscErrorCode testInternFunction()
+{
+  return 0;
+}
+
+/*@
+  testStaticFunction - an internal function
+
+  Level: developer
+
+.seealso: function()
+@*/
+static PetscErrorCode testStaticFunction()
 {
   return 0;
 }
