@@ -13,13 +13,14 @@ import collections
 import ctypes
 import difflib
 import re
+import abc
 import weakref
 import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil as pclu
 from petscClangLinterUtil import (
   Scope,PetscSourceLocation,PetscSourceRange,PetscCXCursorAndRangeVisitor,
-  CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError
+  CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,Diagnostic,DiagnosticsManager
 )
 try:
   import clang.cindex as clx
@@ -214,13 +215,15 @@ excludeDirSuffixes  = (".dSYM",".DS_Store")
 # file extensions to process, case sensitve
 allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc",".h",".hpp")
 
+diagnostics = DiagnosticsManager()
+
 class PetscDocString(object):
   __doc__="""
   Container to encapsulate a sowing docstring and retrieve various objects for it.
   Essentially a PetscCursor for comments.
   """
 
-  class DefaultSection(object):
+  class SectionBase(abc.ABC):
     __doc__ = """Container for a single section of the docstring, has members:
     'name'     - the name of this section
     'required' - is this section required in the docstring
@@ -278,8 +281,10 @@ class PetscDocString(object):
       if not self.lines:
         if self.required:
           name = self.transform(self.name)[1]
-          mess = "Required subheading(s) '{}' not found in docstring".format(name)
-          docstring.addErrorFromSourceRange(mess,docstring.extent,highlight=False)
+          mess = "Required heading(s) '{}' not found in docstring".format(name)
+          docstring.addErrorFromSourceRange(
+            "section-header-missing",mess,docstring.extent,highlight=False
+          )
         return
 
       seen = collections.defaultdict(list)
@@ -304,8 +309,9 @@ class PetscDocString(object):
               nafter = 2
           srclist.append(loc.formatted(numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
           prevLineBegin = startline
-        error = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n{}".format(self.transform(self.name)[1],"\n".join(srclist))
-        docstring._linter.addErrorFromCursor(docstring.cursor,error)
+        mess = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n{}".format(self.transform(self.name)[1],"\n".join(srclist))
+        diag = Diagnostic(docstring.diagnosticFlag("unique-subheadings"),mess)
+        docstring._linter.addErrorFromCursor(docstring.cursor,diag)
       return
 
     @staticmethod
@@ -319,7 +325,9 @@ class PetscDocString(object):
       else:
         raise NotImplementedError(type(item))
       text = text.strip()
-      return (": " in text or text.endswith(":")) and not text.startswith(("+",".","-"))
+      if text.startswith(("+ ",". ","- ")):
+        return False
+      return (": " in text and " :" not in text) or text.endswith(":")
 
     @staticmethod
     def transform(text):
@@ -329,8 +337,22 @@ class PetscDocString(object):
     def checkIndentAllowed():
       return True
 
+    @staticmethod
+    @abc.abstractmethod
+    def diagnosticFlag(flag):
+      raise NotImplementedError()
 
-  class Synopsis(DefaultSection):
+
+  class DefaultSection(SectionBase):
+    @staticmethod
+    def diagnosticFlag(flag):
+      return flag
+
+  class Synopsis(SectionBase):
+    @staticmethod
+    def diagnosticFlag(flag):
+      return PetscDocString.diagnosticFlag(flag,prefix="synopsis")
+
     def setup(self,ds,*args,**kwargs):
       found = False
       items = []
@@ -349,7 +371,11 @@ class PetscDocString(object):
       self.items = tuple(items)
       return
 
-  class ParameterList(DefaultSection):
+  class ParameterList(SectionBase):
+    @staticmethod
+    def diagnosticFlag(flag):
+      return PetscDocString.diagnosticFlag(flag,prefix="param-list")
+
     @staticmethod
     def splitParam(text):
       stripped = text.strip()
@@ -379,7 +405,9 @@ class PetscDocString(object):
     @classmethod
     def checkAlignedDescriptions(cls,ds,group,maxArgLen=None):
       if maxArgLen is None:
-        maxArgLen = max(alen for _,_,alen in group)
+        maxArgLen = max(alen for _,_,alen in group) if group else 0
+      assert maxArgLen >= 0
+      alignDiagFlag = ds.diagnosticFlag(cls.diagnosticFlag("aligned"))
       for loc,text,alen in group:
         offset = cls.leadingDashOffset(text)
         pos    = text[offset:].find(" - ")
@@ -391,7 +419,7 @@ class PetscDocString(object):
         if pos != maxArgLen:
           endline = loc.end.line
           # fmtstr  = "{} {:{}}- {}"
-          # spl     = clx.splitParam(text)
+          # spl     = cls.splitParam(text)
           # fixed   = fmtstr.format(spl[0],spl[1],maxArgLen,spl[2])
           fixed   = "{:{}}{}".format(text[:alen],maxArgLen,text[pos:])[alen:]
           floc    = ds.makeSourceRange(text[alen:],text,endline)
@@ -399,7 +427,7 @@ class PetscDocString(object):
           mess    = "Dashes must be aligned to largest column ({}) within argument list".format(
             maxArgLen+1
           )
-          ds.addErrorFromSourceRange(mess,eloc,patch=Patch(floc,fixed))
+          ds.addErrorFromSourceRange(alignDiagFlag,mess,eloc,patch=Patch(floc,fixed))
       return
 
     def setup(self,ds,*args,**kwargs):
@@ -410,15 +438,15 @@ class PetscDocString(object):
         loc,line,_ = item
         pre,_,_    = self.splitParam(line)
         if pre != char:
-          eloc = ds.makeSourceRange(pre,line,loc.start.line)
+          sr   = ds.makeSourceRange(pre,line,loc.start.line)
           mess = "{} parameter list entry must start with '{}'".format(descr,char)
-          ds.addErrorFromSourceRange(mess,eloc,patch=Patch(eloc,char))
+          ds.addErrorFromSourceRange(self.diagnosticFlag("prefix"),mess,sr,patch=Patch(sr,char))
         return
 
       def inspector(loc,line):
         if not line or line.isspace():
           return
-        if self.isHeading(line) and len(groups.keys()):
+        elif self.isHeading(line) and len(groups.keys()):
           nonlocal subheading
           subheading += 1
         lstrip = line.lstrip()
@@ -426,7 +454,8 @@ class PetscDocString(object):
           offset        = self.leadingDashOffset(lstrip)
           opt,dash,rest = lstrip[offset:].partition("-")
           if not dash or not rest.strip():
-            ds.addErrorFromSourceRange("Parameter-list entry missing a description. Expected '{} - a very useful description'".format(opt.split()[0].strip()),loc)
+            mess = "Parameter-list entry missing a description. Expected '{} - a very useful description'".format(opt.split()[0].strip())
+            ds.addErrorFromSourceRange(self.diagnosticFlag("missing-description"),mess,loc)
           groups[subheading].append((loc,line,self.arglen(line)))
         return
 
@@ -447,7 +476,11 @@ class PetscDocString(object):
           checkOptStartsWith(opts[-1],"Last multi","-")
       return
 
-  class Prose(DefaultSection):
+  class Prose(SectionBase):
+    @staticmethod
+    def diagnosticFlag(flag):
+      return PetscDocString.diagnosticFlag(flag,prefix="prose")
+
     def setup(self,ds,*args,**kwargs):
       subheading = 0
       self.items = {}
@@ -473,7 +506,11 @@ class PetscDocString(object):
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
       return
 
-  class InlineList(DefaultSection):
+  class InlineList(SectionBase):
+    @staticmethod
+    def diagnosticFlag(flag):
+      return PetscDocString.diagnosticFlag(flag,prefix="inline-list")
+
     def setup(self,ds,*args,**kwargs):
       items = []
 
@@ -540,7 +577,7 @@ class PetscDocString(object):
       return self._sections["UNKNOWN"]
 
     def registered(self,section):
-      if isinstance(section,PetscDocString.DefaultSection):
+      if isinstance(section,PetscDocString.SectionBase):
         return section.name in self._sections
       elif isinstance(section,str):
         return section in self._sections
@@ -555,7 +592,7 @@ class PetscDocString(object):
       return (keyword for section in self for keyword in section.keywords)
 
 
-  sections        = Sections(
+  sections = Sections(
     DefaultSection("UNKNOWN",keywords=("__UNKNOWN_SECTION__",)),
     Synopsis("synopsis",required=True),
     ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
@@ -569,9 +606,17 @@ class PetscDocString(object):
   )
   sowingTypes     = {"@","S","E"}
   clxToSowingType = {
-    clx.TypeKind.FUNCTIONPROTO : ("@","functions")
+    clx.TypeKind.FUNCTIONPROTO : ("@","functions"),
   }
   __slots__ = "_linter","cursor","raw","extent","indent"
+
+  @staticmethod
+  def diagnosticFlag(text,prefix="doc"):
+    if isinstance(text,str):
+      text = collections.deque((prefix,text))
+    elif text[0] != prefix:
+      text.appendleft(prefix)
+    return text
 
   @classmethod
   def registerSection(cls,section):
@@ -609,11 +654,13 @@ class PetscDocString(object):
     self.raw     = raw
     self.indent  = indent
 
+    # TODO, this should probably also check that the header the cursor is defined in is public
     has,linkageCursorName,linkageCursor = self.cursor.hasInternalLinkage()
-    if has:
+    if has and not self.cursor.translation_unit.spelling.endswith((".h",".hpp")):
       mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),self.cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
       # TODO: could have a fixit here to simply delete the docstring
-      self._linter.addErrorFromCursor(cursor,mess)
+      diag = Diagnostic(self.diagnosticFlag("internal-linkage"),mess)
+      self._linter.addErrorFromCursor(cursor,diag)
       raise ParsingError("Internal linkage")
     return
 
@@ -628,10 +675,12 @@ class PetscDocString(object):
     end      = self.makeSourceLocation(lineno,colEnd)
     return PetscSourceRange.fromLocations(begin,end)
 
-  def addErrorFromSourceRange(self,error,crange,patch=None,numContext=2,**kwargs):
+  def addErrorFromSourceRange(self,flag,error,crange,patch=None,numContext=2,**kwargs):
     assert isinstance(error,str)
     error = ":\n".join([error,crange.formatted(numContext=numContext,**kwargs)])
-    self._linter.addErrorFromCursor(self.cursor,error,patch=patch)
+    self._linter.addErrorFromCursor(
+      self.cursor,Diagnostic(self.diagnosticFlag(flag),error,patch=patch)
+    )
     return
 
 
@@ -641,12 +690,13 @@ class PetscDocString(object):
     splitlines  = self.raw.splitlines()
     line        = splitlines[0]
     beginSowing = line.split("/*")[1].split()
+    diagName    = "sowing-chars"
     try:
       beginSowing = beginSowing[0]
     except IndexError:
+      mess = "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}".format(sowingType,layType)
       self.addErrorFromSourceRange(
-        "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}".format(sowingType,layType),
-        self.makeSourceRange(line,line,self.extent.start.line)
+        diagName,mess,self.makeSourceRange(line,line,self.extent.start.line)
       )
       beginSowing = [sowingType]
     if beginSowing[0] not in self.sowingTypes:
@@ -658,9 +708,9 @@ class PetscDocString(object):
     if len(lsplit) != 1:
       rest    = lsplit[1]
       restloc = self.makeSourceRange(rest,line,self.extent.start.line)
+      mess    = "Invalid comment begin line, must only contain '/*' and sowing identifier"
       self.addErrorFromSourceRange(
-        "Invalid comment begin line, must only contain '/*' and sowing identifier",
-        restloc,patch=Patch(restloc,"\n"+(" "*self.indent)+rest)
+        diagName,mess,restloc,patch=Patch(restloc,"\n"+(" "*self.indent)+rest)
       )
     # now check the end
     line      = splitlines[-1]
@@ -674,11 +724,10 @@ class PetscDocString(object):
         # TODO: REVIEW: should this check exist?
         correct = beginSowing[::-1]
         endline = self.extent.end.line
+        mess    = "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/'".format(correct,endSowing)
+        patch   = Patch(self.makeSourceRange(line,line,endline),line.replace(endSowing,correct))
         self.addErrorFromSourceRange(
-          "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/'".format(correct,endSowing),
-          self.makeSourceRange(endSowing,line,endline),patch=Patch(
-            self.makeSourceRange(line,line,endline),line.replace(endSowing,correct)
-          )
+          diagName,mess,self.makeSourceRange(endSowing,line,endline),patch=patch
         )
     return
 
@@ -688,11 +737,11 @@ class PetscDocString(object):
     if endLine != cursorStart.line:
       # there is at least 1 (probably empty) line between the comment end and whatever it
       # is describing
-      loc = PetscSourceRange.fromLocations(self.makeSourceLocation(endLine,1),cursorStart)
-      self.addErrorFromSourceRange(
-        "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target",
-        self.makeSourceRange("","",endLine),highlight=False,patch=Patch(loc,"")
-      )
+      floc     = PetscSourceRange.fromLocations(self.makeSourceLocation(endLine,1),cursorStart)
+      mess     = "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target"
+      eloc     = self.makeSourceRange("","",endLine)
+      diagName = self.diagnosticFlag("spacing")
+      self.addErrorFromSourceRange(diagName,mess,eloc,highlight=False,patch=Patch(floc,""))
     return
 
   def _checkValidIndentation(self,lineno,line,lstrip):
@@ -711,14 +760,15 @@ class PetscDocString(object):
     if indent != expectedInd:
       loc  = self.makeSourceRange(" "*indent,line,lineno)
       mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
-      self.addErrorFromSourceRange(mess,loc,patch=Patch(loc," "*expectedInd))
+      self.addErrorFromSourceRange("indentation",mess,loc,patch=Patch(loc," "*expectedInd))
     return
 
   def _checkValidSectionSpacing(self,prevline,lineno):
     if prevline and not prevline.isspace():
-      mess = "Missing empty line between sections, must have one before this section"
-      loc  = self.makeSourceRange("","",lineno)
-      self.addErrorFromSourceRange(mess,loc,highlight=False,patch=Patch(loc,"\n"))
+      mess     = "Missing empty line between sections, must have one before this section"
+      loc      = self.makeSourceRange("","",lineno)
+      diagName = self.diagnosticFlag("section-spacing")
+      self.addErrorFromSourceRange(diagName,mess,loc,highlight=False,patch=Patch(loc,"\n"))
     return
 
   def _reset(self):
@@ -733,6 +783,7 @@ class PetscDocString(object):
     rawData     = []
     section     = self.sections.synopsis
     checkIndent = section.checkIndentAllowed()
+    isHeading   = self.SectionBase.isHeading
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
@@ -749,8 +800,8 @@ class PetscDocString(object):
       elif checkIndent:
         self._checkValidIndentation(lineno,line,lstrip)
 
-      if ": " in lstrip or lstrip.endswith(":"):
-        self._checkValidSectionSpacing(rawData[-1][1] if len(rawData) else None,lineno)
+      if isHeading(lstrip):
+        self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
         newSection = self.sections.find(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
           section.fill(rawData)
@@ -770,16 +821,16 @@ class PetscDocString(object):
       _,sep,after = text.partition(delim)
       assert sep
       if after.rstrip():
-        self.addErrorFromSourceRange(
-          "Heading must appear alone on a line, any content must be on the next line",
-          self.makeSourceRange(after,text,loc.start.line)
-        )
+        mess     = "Heading must appear alone on a line, any content must be on the next line"
+        diagName = self.diagnosticFlag("section-header-solitary")
+        self.addErrorFromSourceRange(diagName,mess,self.makeSourceRange(after,text,loc.start.line))
     return
 
   def checkValidSectionHeaderSpelling(self,section,headings,transform=None,delim=":"):
     if transform is None:
       transform = section.transform
 
+    diagName = self.diagnosticFlag("section-header-spelling")
     keywords = section.keywords
     for loc,text in headings:
       before,sep,_ = text.partition(delim)
@@ -791,21 +842,19 @@ class PetscDocString(object):
       headingLoc       = self.makeSourceRange(heading,text,loc.start.line)
       wasValid,correct = transform(heading)
       if not wasValid and any(k in correct for k in keywords):
-        self.addErrorFromSourceRange(
-          "Invalid header formatting. Expected '{}' found '{}'".format(correct,heading),
-          headingLoc,patch=Patch(headingLoc,correct)
-        )
+        mess = "Invalid header formatting. Expected '{}' found '{}'".format(correct,heading)
+        self.addErrorFromSourceRange(diagName,mess,headingLoc,patch=Patch(headingLoc,correct))
         continue
 
       try:
         match = difflib.get_close_matches(correct,keywords,n=1)[0]
       except IndexError:
-        import ipdb; ipdb.set_trace()
-      else:
-        self.addErrorFromSourceRange(
-          "Unknown section header '{}', assuming you meant '{}'".format(heading,match),
-          headingLoc,patch=Patch(headingLoc,match)
+        self._linter.addWarningFromCursor(
+          self.cursor,Diagnostic(diagName,"Unknown section '{}'".format(heading))
         )
+      else:
+        mess = "Unknown section header '{}', assuming you meant '{}'".format(heading,match)
+        self.addErrorFromSourceRange(diagName,mess,headingLoc,patch=Patch(headingLoc,match))
     return
 
 
@@ -1564,7 +1613,7 @@ class PetscLinter(object):
       try:
         checkFunctionMap[func.spelling](self,func,parent)
       except ParsingError as pe:
-        self.addWarning(tu.cursor.spelling,str(pe))
+        self.addWarning(tu.cursor.spelling,Diagnostic("parsing-error",str(pe)))
       processedFuncs[PetscCursor.getNameFromCursor(parent)].append(
         (PetscCursor.cast(func),scope)
       )
@@ -1589,7 +1638,7 @@ class PetscLinter(object):
           message   = "Duplicate function found previous identical usage:\n{}".format(
             seen[combo][0].formatted(nbefore=2,nafter=startline-seenStart)
           )
-          self.addErrorFromCursor(func,message,patch=patch)
+          self.addErrorFromCursor(func,Diagnostic("duplicate-function",message,patch=patch))
     return
 
   @staticmethod
@@ -1599,10 +1648,12 @@ class PetscLinter(object):
     """
     return tuple([PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments())])
 
-  def addErrorFromCursor(self,cursor,errorMessage,patch=None):
+  def addErrorFromCursor(self,cursor,diagnostic):
     __doc__="""
     given a cursor attach a diagnostic error message to it, and optionally a fix
     """
+    if diagnostic.disabled():
+      return
     cursor   = PetscCursor.cast(cursor)
     filename = PetscPath(cursor.location.file.name)
     if filename not in self.errors:
@@ -1612,6 +1663,8 @@ class PetscLinter(object):
       header = "\nERROR {}: {}\n".format(len(self.errors[filename]),str(cursor))
       self.errors[filename][cursorId] = self.weaklist([header,[],[]])
     cursorIdErrors = self.errors[filename][cursorId]
+    errorMessage = diagnostic.formatMessage()
+    patch        = diagnostic.patch
     cursorIdErrors[1].append(errorMessage)
     cursorIdErrors[2].append(patch is not None)
     if patch is not None:
@@ -1638,12 +1691,13 @@ class PetscLinter(object):
         break
     return
 
-  def addWarning(self,filename,warnMsg):
+  def addWarning(self,filename,diag):
     __doc__="""
     add a generic warning given a filename
     """
     if self.werror:
-      return self.addErrorFromCursor(filename,warnMsg)
+      return self.addErrorFromCursor(filename,diag)
+    warnMsg = diag.formatMessage()
     try:
       if warnMsg in self.warnings[-1][1]:
         # we just had the exact same warning, we can ignore it. This happens very often
@@ -1655,12 +1709,12 @@ class PetscLinter(object):
     self.warnings.append((filename,warnStr))
     return
 
-  def addWarningFromCursor(self,cursor,warnMsg):
+  def addWarningFromCursor(self,cursor,diag):
     __doc__="""
     given a cursor attach a diagnostic warning message to it
     """
     if self.werror:
-      return self.addErrorFromCursor(cursor,warnMsg)
+      return self.addErrorFromCursor(cursor,diag)
     warnFile = cursor.location.file.name
     warnStr  = "".join(["\nWARNING {}: ".format(len(self.warnings)),str(cursor),"\n",warnMsg])
     self.warnings.append((warnFile,warnStr))
@@ -1904,7 +1958,6 @@ class WorkerPool(mp.queues.JoinableQueue):
 """
 TODO:
 
-- make a test for all function parameters undocumented
 - make an object to hold all the PetscLinter diagnostics per file
 - make PetscLinter.diagnostics() be the one-stop shop
 - make warnings into a list with filename
@@ -1921,8 +1974,9 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     # wtf
     return
 
-  foundSynopsis = False
-  cursorName    = PetscCursor.getNameFromCursor(cursor)
+  foundSynopsis   = False
+  matchSymbolDiag = docstring.diagnosticFlag(synopsis.diagnosticFlag("matching-symbol-name"))
+  cursorName      = PetscCursor.getNameFromCursor(cursor)
   for lineLoc,line in synopsis.lines:
     symbol,dash,rest = line.partition("-")
     if len(dash) and len(rest):
@@ -1938,26 +1992,33 @@ def checkDocValidSynopsis(linter,cursor,docstring):
         else:
           mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
           patch = None
-        docstring.addErrorFromSourceRange(mess,loc,patch=patch)
+        docstring.addErrorFromSourceRange(matchSymbolDiag,mess,loc,patch=patch)
       break
   if foundSynopsis is False:
-    docstring.addErrorFromSourceRange("Docstring missing synopsis. Expected '{} - a very useful description'".format(cursorName),synopsis.extent,highlight=False)
+    mess     = "Docstring missing synopsis. Expected '{} - a very useful description'".format(
+      cursorName
+    )
+    diagName = synopsis.diagnosticFlag("missing")
+    docstring.addErrorFromSourceRange(diagName,mess,synopsis.extent,highlight=False)
   return
 
 def checkDocValidFunctionParameters(linter,cursor,docstring):
-  fnargs = linter.getArgumentCursors(cursor)
-  params = docstring.sections.parameters
-  if not params:
-    import ipdb; ipdb.set_trace()
-    linter.addErrorFromCursor(cursor,"Function parameters are all undocumented")
+  fnargs         = linter.getArgumentCursors(cursor)
+  params         = docstring.sections.parameters
+  undocParamDiag = docstring.diagnosticFlag(params.diagnosticFlag("undocumented-parameter"))
+  extraParamDiag = docstring.diagnosticFlag(params.diagnosticFlag("extra-parameter"))
+  fortrInterDiag = docstring.diagnosticFlag(params.diagnosticFlag("fortran-interface"))
+  if fnargs and not params:
+    linter.addErrorFromCursor(
+      cursor,Diagnostic(undocParamDiag,"Function parameters are all undocumented")
+    )
     return
-
-  if len(fnargs) == 0:
+  elif not fnargs:
     # check we've got no parameter docstrings, if so, we can delete them
     if len(params.items.values()):
-      loc  = params.extent
+      sr   = params.extent
       mess = "Found parameter docstring(s) but '{}' has no arguments".format(cursor.displayname)
-      docstring.addErrorFromSourceRange(mess,loc,highlight=False,patch=Patch(loc,""))
+      docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
     return
 
   headings = [l for l in params.lines if params.isHeading(l)]
@@ -1991,7 +2052,7 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
     crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
     blame  = "\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))
     mess   = "Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format(blame)
-    docstring.addErrorFromSourceRange(mess,crange,patch=Patch(crange,line+"C"))
+    docstring.addErrorFromSourceRange(fortrInterDiag,mess,crange,patch=Patch(crange,line+"C"))
 
   fnargnames = [a.name for a in fnargs]
   fnargseen  = [False]*len(fnargs)
@@ -2025,10 +2086,10 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
         argcursor = [c for c in fnargs if c.name == match][0]
         message  += "\n\nmaybe you meant {}".format(argcursor.getFormattedBlurb())
         fnargsleft.remove(match)
-      linter.addErrorFromCursor(cursor,message)
+      linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
 
   for mess in map("Undocumented parameter '{}' not found in parameter section".format,fnargsleft):
-    docstring.addErrorFromSourceRange(mess,params.extent,highlight=False)
+    docstring.addErrorFromSourceRange(undocParamDiag,mess,params.extent,highlight=False)
   return
 
 def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
@@ -2050,6 +2111,8 @@ def checkDocValidLevel(linter,cursor,docstring):
     # if no level, nothing to check here, error will already have been logged
     return
 
+  casefoldDiag = docstring.diagnosticFlag(level.diagnosticFlag("level-casefold"))
+  spellingDiag = docstring.diagnosticFlag(level.diagnosticFlag("level-spelling"))
   docstring.checkValidSectionHeaderSpelling(level,[l for l in level.lines if level.isHeading(l)])
 
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
@@ -2058,10 +2121,10 @@ def checkDocValidLevel(linter,cursor,docstring):
     if levelName not in validLevels:
       locase = levelName.casefold()
       if locase in validLevels:
-        docstring.addErrorFromSourceRange(
-          "Level subheading must be lowercase, expected '{}' found '{}'".format(locase,levelName),
-          loc,patch=Patch(loc,locase)
+        mess = "Level subheading must be lowercase, expected '{}' found '{}'".format(
+          locase,levelName
         )
+        docstring.addErrorFromSourceRange(casefoldDiag,mess,loc,patch=Patch(loc,locase))
       else:
         closeMatches = difflib.get_close_matches(locase,validLevels,n=1)
         if closeMatches:
@@ -2071,7 +2134,7 @@ def checkDocValidLevel(linter,cursor,docstring):
         else:
           mess  = "Unknown Level subheading '{}', expected one of {}".format(levelName,expected)
           patch = None
-        docstring.addErrorFromSourceRange(mess,loc,patch=patch)
+        docstring.addErrorFromSourceRange(spellingDiag,mess,loc,patch=patch)
   for loc,line in level.lines:
     continue # TODO FIX ME, need to be able to handle the below
     if line and ":" not in line:
@@ -2154,13 +2217,16 @@ def addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName):
   __doc__="""
   shorthand for extracting a fix from a function cursor
   """
-  call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
+  call = [
+    c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO
+  ]
   assert len(call) == 1
-  fix = Patch.fromCursor(call[0],validFuncName)
-  linter.addErrorFromCursor(obj,"Incorrect use of {}(), use {}() instead".format(funcCursor.displayname,validFuncName),patch=fix)
+  patch = Patch.fromCursor(call[0],validFuncName)
+  mess  = "Incorrect use of {}(), use {}() instead".format(funcCursor.displayname,validFuncName)
+  linter.addErrorFromCursor(obj,Diagnostic("incompatible-function",mess,patch=patch))
   return
 
-def convertToCorrectPetscValidLogicalCollectiveXXX(linter,obj,objType,**kwargs):
+def convertToCorrectPetscValidLogicalCollectiveXXX(linter,obj,objType,funcCursor=None,**kwargs):
   __doc__="""
   Try to glean the correct PetscValidLogicalCollectiveXXX from the type, used as a failure hook in the validlogicalcollective checks.
   """
@@ -2182,12 +2248,11 @@ def convertToCorrectPetscValidLogicalCollectiveXXX(linter,obj,objType,**kwargs):
     elif "PetscMPIInt" in obj.derivedtypename:
       validFuncName = "PetscValidLogicalCollectiveMPIInt"
   if validFuncName:
-    funcCursor = kwargs["funcCursor"]
     addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName)
     return True
   return False
 
-def convertToCorrectPetscValidXXXPointer(linter,obj,objType,**kwargs):
+def convertToCorrectPetscValidXXXPointer(linter,obj,objType,funcCursor=None,**kwargs):
   __doc__="""
   Try to glean the correct PetscValidLogicalXXXPointer from the type, used as a failure hook in the validpointer checks.
   """
@@ -2210,58 +2275,72 @@ def convertToCorrectPetscValidXXXPointer(linter,obj,objType,**kwargs):
     if ("PetscInt" in obj.derivedtypename) or ("PetscMPIInt" in obj.derivedtypename):
       validFuncName = "PetscValidIntPointer"
   if validFuncName:
-    funcCursor = kwargs["funcCursor"]
     addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName)
     return True
   return False
 
-def checkIsPetscScalarAndNotPetscReal(linter,obj,objType,**kwargs):
+def checkIsTypeXAndNotTypeY(typeX,typeY,linter,obj,objType,funcCursor=None,validFunc=None):
   __doc__="""
-  Used as a success hook, since a scalar may (depending on how petsc was configured) pass the type check for reals, so we must double check the name
+  Check that a cursor is at least some form of derived type X and not some form of type Y
+  i.e. for
+
+  myInt **********x;
+
+  you may check that 'x' is some form of 'myInt' instead of say 'PetscBool'
   """
-  if "PetscScalar" not in obj.derivedtypename:
-    funcCursor = kwargs["funcCursor"]
-    if "PetscReal" in obj.derivedtypename:
-      validFunc = kwargs["validFunc"]
+  derivedname = obj.derivedtypename
+  if typeX not in derivedname:
+    if typeY in derivedname:
       addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
     else:
-      linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
+      mess = "Incorrect use of {funcName}(), {funcName}() should only be used for {}".format(
+        typeX,funcName=funcCursor.displayname
+      )
+      import ipdb; ipdb.set_trace()
+      linter.addErrorFromCursor(
+        obj,Diagnostic("incompatible-type-{}".format(typeY.casefold()),mess)
+      )
   return True
 
-def checkIsPetscRealAndNotPetscScalar(linter,obj,objType,**kwargs):
-  if "PetscReal" not in obj.derivedtypename:
-    funcCursor = kwargs["funcCursor"]
-    if "PetscScalar" in obj.derivedtypename:
-      validFunc = kwargs["validFunc"]
-      addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
-    else:
-      linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
-  return True
+def checkIsPetscScalarAndNotPetscReal(*args,**kwargs):
+  return checkIsTypeXAndNotTypeY("PetscScalar","PetscReal",*args,**kwargs)
 
-def checkIntIsNotPetscBool(linter,obj,objType,**kwargs):
-  if "PetscBool" in obj.derivedtypename:
-    funcCursor,validFunc = kwargs["funcCursor"],kwargs["validFunc"]
+def checkIsPetscRealAndNotPetscScalar(*args,**kwargs):
+  return checkIsTypeXAndNotTypeY("PetscReal","PetscScalar",*args,**kwargs)
+
+def checkIsNotType(typename,linter,obj,funcCursor=None,validFunc=None):
+  if isinstance(typename,str):
+    contains = typename in obj.derivedtypename
+  elif isinstance(typename,(tuple,list)):
+    contains = any(t in obj.derivedtypename for t in typename)
+  else:
+    raise ValueError(type(typename))
+  if contains:
     addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
   return True
 
-def checkMPIIntIsNotPetscInt(linter,obj,objType,**kwargs):
-  if "PetscInt" in obj.derivedtypename:
-    funcCursor,validFunc = kwargs["funcCursor"],kwargs["validFunc"]
-    addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
-  return True
+def checkIntIsNotPetscBool(linter,obj,*args,**kwargs):
+  return checkIsNotType("PetscBool",linter,obj,**kwargs)
 
-def checkIsPetscBool(linter,obj,objType,**kwargs):
+def checkMPIIntIsNotPetscInt(linter,obj,*args,**kwargs):
+  return checkIsNotType("PetscInt",linter,obj,**kwargs)
+
+def checkIsPetscBool(linter,obj,*args,funcCursor=None,**kwargs):
+  #return checkIsNotType(("PetscBool","bool"),linter,obj,**kwargs)
   if ("PetscBool" not in obj.derivedtypename) and ("bool" not in obj.typename):
-    funcCursor = kwargs["funcCursor"]
-    linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname))
+    mess = "Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname)
+    linter.addErrorFromCursor(obj,Diagnostic("incompatible-function",mess))
   return True
 
 def checkIsPetscObject(linter,obj):
   __doc__="""
   Returns True if obj is a valid PetscObject, otherwise False. Automatically adds the error to the linter. Raises RuntimeError if obj is a PetscObject that isn't registered in the classIdMap.
   """
+  diagnosticFlag = "incompatible-type-petscobject"
   if not obj.typename.startswith("_p_"):
-    linter.addErrorFromCursor(obj,"Non-PETSc type when PETSc object expected.")
+    linter.addErrorFromCursor(
+      obj,Diagnostic(diagnosticFlag,"Non-PETSc type when PETSc object expected")
+    )
     return False
   elif obj.typename not in classIdMap:
     # Raise exception here since this isn't a bad source, moreso a failure of
@@ -2281,9 +2360,11 @@ def checkIsPetscObject(linter,obj):
   if not validObject:
     objDecl = PetscCursor.cast(pObjType.get_declaration())
     if len(objFields) == 0:
-      linter.addWarningFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2)))
+      mess = "Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2))
+      linter.addWarningFromCursor(obj,Diagnostic(diagnosticFlag,mess))
     else:
-      linter.addErrorFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2)))
+      mess = "Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2))
+      linter.addErrorFromCursor(obj,Diagnostic(diagnosticFlag,mess))
   return validObject
 
 def checkMatchingClassid(linter,obj,objClassid):
@@ -2291,10 +2372,13 @@ def checkMatchingClassid(linter,obj,objClassid):
   Does the classid match the particular PETSc type
   """
   checkIsPetscObject(linter,obj)
-  expectedClassid = classIdMap[obj.typename]
-  if objClassid.name != expectedClassid:
-    fix = Patch.fromCursor(objClassid,expectedClassid)
-    linter.addErrorFromCursor(obj,"Classid doesn't match. Expected '{}' found '{}'".format(expectedClassid,objClassid.name),patch=fix)
+  expected = classIdMap[obj.typename]
+  name     = objClassid.name
+  if name != expected:
+    mess = "Classid doesn't match. Expected '{}' found '{}'".format(expected,name)
+    linter.addErrorFromCursor(
+      obj,Diagnostic("incompatible-classid",mess,patch=Patch.fromCursor(objClassid,expected))
+    )
   return
 
 def checkTraceableToParentArgs(obj,parentArgNames):
@@ -2424,6 +2508,7 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
   __doc__="""
   Is the Arg # correct w.r.t. the function arguments
   """
+  diagName = "matchin-arg-num"
   if idx.canonical.kind not in mathCursors:
     # sometimes it is impossible to tell if the index is correct so this is a warning not
     # an error. For example in the case of a loop:
@@ -2433,14 +2518,15 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
   try:
     idxNum = int(idx.name)
   except ValueError:
-    linter.addWarningFromCursor(idx,"Potential argument mismatch, could not determine integer value")
+    mess = "Potential argument mismatch, could not determine integer value"
+    linter.addWarningFromCursor(idx,Diagnostic(diagName,mess))
     return
   parentArgNames = tuple(s.name for s in parentArgs)
   try:
-    matchLoc = parentArgNames.index(obj.name)
+    expected = parentArgs[parentArgNames.index(obj.name)]
   except ValueError:
     try:
-      matchLoc = checkTraceableToParentArgs(obj,parentArgNames)
+      expected = parentArgs[checkTraceableToParentArgs(obj,parentArgNames)]
     except ParsingError as pe:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
@@ -2455,14 +2541,17 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
         # parent function has no arguments (very likely that "obj" is a global variable)
         parentFuncName = "UNKNOWN FUNCTION"
         parentFuncSrc  = "  <could not determine parent function signature from arguments>"
-      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n{}".format(parentFuncName,parentFuncSrc))
+      mess = "Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n{}".format(parentFuncName,parentFuncSrc)
+      linter.addWarningFromCursor(obj,Diagnostic(diagName,mess))
       return
-  if idxNum != parentArgs[matchLoc].argidx:
-    errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n{}".format(
-      obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].formatted()
+  expectedIdx = expected.argidx
+  if idxNum != expectedIdx:
+    errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from:\n{}".format(
+      obj.name,str(idxNum),str(expectedIdx),expected.formatted()
     )
-    fix = Patch.fromCursor(idx,parentArgs[matchLoc].argidx)
-    linter.addErrorFromCursor(idx,errMess,patch=fix)
+    linter.addErrorFromCursor(
+      idx,Diagnostic(diagName,errMess,patch=Patch.fromCursor(idx,expectedIdx))
+    )
   return
 
 def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=alwaysFalse,**kwargs):
@@ -2485,11 +2574,13 @@ def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNot
   that the object was correct all along, or that a more helpful error message was logged
   and/or that a fix was created.
   """
-  objType = obj.canonical.type.get_canonical()
+  diagnosticFlag = "incompatible-type"
+  objType        = obj.canonical.type.get_canonical()
   if pointer:
     if objType.kind in expectedTypeKinds:
       if not unexpectedNotPointerFunction(linter,obj,objType,**kwargs):
-        linter.addErrorFromCursor(obj,"Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,expectedTypeKinds))
+        mess = "Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,expectedTypeKinds)
+        linter.addErrorFromCursor(obj,Diagnostic(diagnosticFlag,mess))
       return
     if objType.kind == clx.TypeKind.INCOMPLETEARRAY:
       objType = objType.element_type
@@ -2504,16 +2595,17 @@ def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNot
   else:
     if objType.kind in arrayTypes or objType.kind == clx.TypeKind.POINTER:
       if not unexpectedPointerFunction(linter,obj,objType,**kwargs):
-        linter.addErrorFromCursor(obj,"Object of clang type {} is a pointer when it should not be".format(objType.kind))
+        mess = "Object of clang type {} is a pointer when it should not be".format(objType.kind)
+        linter.addErrorFromCursor(obj,Diagnostic(diagnosticFlag,mess))
       return
   if objType.kind in expectedTypeKinds:
-    handled = successFunction(linter,obj,objType,**kwargs)
-    if not handled:
-      errorMessage = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value '{}' indicating unhandled error!".format(obj,objType.kind,'\n- '.join(map(str,expectedTypeKinds)),successFunction,handled,expectedTypeKinds,objType.kind)
+    if not successFunction(linter,obj,objType,**kwargs):
+      errorMessage = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value indicating unhandled error!".format(obj,objType.kind,'\n- '.join(map(str,expectedTypeKinds)),successFunction)
       raise RuntimeError(errorMessage)
   else:
     if not failureFunction(linter,obj,objType,**kwargs):
-      linter.addErrorFromCursor(obj,"Object of clang type {} is not in expected types: {}".format(objType.kind,expectedTypeKinds))
+      mess = "Object of clang type {} is not in expected types: {}".format(objType.kind,expectedTypeKinds)
+      linter.addErrorFromCursor(obj,Diagnostic(diagnosticFlag,mess))
   return
 
 
@@ -3316,6 +3408,7 @@ if __name__ == "__main__":
   parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
   parser.add_argument("--replace",required=False,type=str2bool,nargs="?",const=True,default=False,help="replace output files in test directory with patches generated")
   parser.add_argument("--werror",required=False,type=str2bool,nargs="?",const=True,default=False,help="treat all warnings as errors")
+  parser.add_argument("-w",required=False,nargs="+",help="enabled warnings")
 
   args = parser.parse_args()
 

@@ -9,7 +9,7 @@ ERROR 0: ./src/sys/tests/linter/testDuplicates.c:24:10
   11: /* ~should~ be removed but won't be */
   12: PetscValidScalarPointer(b,7);
 
-Incorrect use of PetscValidIntPointer(), use PetscValidScalarPointer() instead
+Incorrect use of PetscValidIntPointer(), use PetscValidScalarPointer() instead [-fincompatible-function]
 
 ERROR 1: ./src/sys/tests/linter/testDuplicates.c:26:10
 '5' of derived type 'int', canonical type 'int'
@@ -20,7 +20,7 @@ ERROR 1: ./src/sys/tests/linter/testDuplicates.c:26:10
   11: /* ~should~ be removed but won't be */
   12: PetscValidScalarPointer(b,7);
 
-Argument number doesn't match for 'b'. Found '5' expected '2' from
+Argument number doesn't match for 'b'. Found '5' expected '2' from [-fmatchin-arg-num]:
 > 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
                                                  ^^^^^^^^^^^^^^
 
@@ -33,7 +33,7 @@ ERROR 2: ./src/sys/tests/linter/testDuplicates.c:29:12
   13: PetscValidScalarPointer(b,3);
   14: return;
 
-Argument number doesn't match for 'b'. Found '7' expected '2' from
+Argument number doesn't match for 'b'. Found '7' expected '2' from [-fmatchin-arg-num]:
 > 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
                                                  ^^^^^^^^^^^^^^
 
@@ -46,7 +46,7 @@ ERROR 3: ./src/sys/tests/linter/testDuplicates.c:29:13
   14:   return;
   15: }
 
-Argument number doesn't match for 'b'. Found '3' expected '2' from
+Argument number doesn't match for 'b'. Found '3' expected '2' from [-fmatchin-arg-num]:
 > 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
                                                  ^^^^^^^^^^^^^^
 
@@ -59,7 +59,7 @@ ERROR 4: ./src/sys/tests/linter/testDuplicates.c:3:8
   9 : /* no remove */
   10: PetscValidIntPointer(b,5);
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   4: {
   5:   /* no remove */
 > 6:   PetscValidIntPointer(a,1);
@@ -76,7 +76,7 @@ ERROR 5: ./src/sys/tests/linter/testDuplicates.c:3:23
   24: PetscValidScalarPointer(b,2);
   25: {
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   18: {
   19:   /* no remove */
 > 20:   PetscValidIntPointer(a,1);
@@ -94,7 +94,7 @@ ERROR 6: ./src/sys/tests/linter/testDuplicates.c:3:24
   25: {
   26:   /* remove */
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   19: /* no remove */
   20: PetscValidIntPointer(a,1);
 > 21: PetscValidScalarPointer(b,2);
@@ -112,7 +112,7 @@ ERROR 7: ./src/sys/tests/linter/testDuplicates.c:5:27
   28:   PetscValidScalarPointer(b,2);
   29: }
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   18: {
   19:   /* no remove */
 > 20:   PetscValidIntPointer(a,1);
@@ -134,7 +134,7 @@ ERROR 8: ./src/sys/tests/linter/testDuplicates.c:5:28
   29: }
   30: return;
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   19: /* no remove */
   20: PetscValidIntPointer(a,1);
 > 21: PetscValidScalarPointer(b,2);
@@ -156,7 +156,7 @@ ERROR 9: ./src/sys/tests/linter/testDuplicates.c:3:39
   40: PetscValidScalarPointer(b,2);
   41: {
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   34: {
   35:   /* no remove */
 > 36:   PetscValidIntPointer(a,1);
@@ -174,7 +174,7 @@ ERROR 10: ./src/sys/tests/linter/testDuplicates.c:3:40
   41: {
   42:   /* remove */
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   35: /* no remove */
   36: PetscValidIntPointer(a,1);
 > 37: PetscValidScalarPointer(b,2);
@@ -192,7 +192,7 @@ ERROR 11: ./src/sys/tests/linter/testDuplicates.c:5:43
   44:   PetscValidScalarPointer(b,2);
   45: }
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   34: {
   35:   /* no remove */
 > 36:   PetscValidIntPointer(a,1);
@@ -214,7 +214,7 @@ ERROR 12: ./src/sys/tests/linter/testDuplicates.c:5:44
   45: }
   46: {
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   35: /* no remove */
   36: PetscValidIntPointer(a,1);
 > 37: PetscValidScalarPointer(b,2);
@@ -236,7 +236,7 @@ ERROR 13: ./src/sys/tests/linter/testDuplicates.c:5:48
   49:   PetscValidScalarPointer(b,2);
   50: }
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   34: {
   35:   /* no remove */
 > 36:   PetscValidIntPointer(a,1);
@@ -263,7 +263,7 @@ ERROR 14: ./src/sys/tests/linter/testDuplicates.c:5:49
   50: }
   51: return;
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   35: /* no remove */
   36: PetscValidIntPointer(a,1);
 > 37: PetscValidScalarPointer(b,2);
@@ -290,7 +290,7 @@ ERROR 15: ./src/sys/tests/linter/testDuplicates.c:5:79
   80:   PetscValidScalarPointer(b,2);
   81:   break;
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   72: {
   73:   /* no remove */
 > 74:   PetscValidIntPointer(a,1);
@@ -310,7 +310,7 @@ ERROR 16: ./src/sys/tests/linter/testDuplicates.c:5:80
   81:   break;
   82: case PETSC_FALSE:
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   73: /* no remove */
   74: PetscValidIntPointer(a,1);
 > 75: PetscValidScalarPointer(b,2);
@@ -330,7 +330,7 @@ ERROR 17: ./src/sys/tests/linter/testDuplicates.c:5:84
   85:   PetscValidScalarPointer(b,2);
   86:   break;
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   72: {
   73:   /* no remove */
 > 74:   PetscValidIntPointer(a,1);
@@ -355,7 +355,7 @@ ERROR 18: ./src/sys/tests/linter/testDuplicates.c:5:85
   86:   break;
   87: }
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   73: /* no remove */
   74: PetscValidIntPointer(a,1);
 > 75: PetscValidScalarPointer(b,2);
@@ -380,7 +380,7 @@ ERROR 19: ./src/sys/tests/linter/testDuplicates.c:5:112
   113:   PetscValidScalarPointer(b,2);
   114: } else {
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   106: {
   107:   /* no remove */
 > 108:   PetscValidIntPointer(a,1);
@@ -399,7 +399,7 @@ ERROR 20: ./src/sys/tests/linter/testDuplicates.c:5:113
   114: } else {
   115:   /* remove */
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   107: /* no remove */
   108: PetscValidIntPointer(a,1);
 > 109: PetscValidScalarPointer(b,2);
@@ -418,7 +418,7 @@ ERROR 21: ./src/sys/tests/linter/testDuplicates.c:5:116
   117:   PetscValidScalarPointer(b,2);
   118: }
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   106: {
   107:   /* no remove */
 > 108:   PetscValidIntPointer(a,1);
@@ -441,7 +441,7 @@ ERROR 22: ./src/sys/tests/linter/testDuplicates.c:5:117
   118: }
   119: return;
 
-Duplicate function found previous identical usage:
+Duplicate function found previous identical usage [-fduplicate-function]:
   107: /* no remove */
   108: PetscValidIntPointer(a,1);
 > 109: PetscValidScalarPointer(b,2);

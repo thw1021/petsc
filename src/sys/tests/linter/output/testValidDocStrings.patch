@@ -150,3 +150,10 @@
 ++ string       -  a char pointer
  - function_ptr - a function pointer
  
+@@ -166,5 +166,5 @@
+   testAllParamsUndocumented - lorem
+ 
+-  Level: beginner developer
++  Level: developer
+ 
+ .seealso: foo()
