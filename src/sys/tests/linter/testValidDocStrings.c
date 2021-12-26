@@ -158,3 +158,15 @@ static PetscErrorCode testStaticFunction()
 {
   return 0;
 }
+
+/*@
+  testAllParamsUndocumented - lorem
+
+  Level: beginner developer
+
+.seealso: foo()
+@*/
+PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
+{
+  return 0;
+}
