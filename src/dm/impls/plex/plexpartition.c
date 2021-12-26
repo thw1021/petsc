@@ -438,6 +438,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
   ierr = MatDestroy(&conn);CHKERRQ(ierr);
 
   /* extract local part of the CSR */
+  MatView(CSR,PETSC_VIEWER_STDOUT_WORLD);
   ierr = MatMPIAIJGetLocalMat(CSR, MAT_INITIAL_MATRIX, &conn);CHKERRQ(ierr);
   ierr = MatDestroy(&CSR);CHKERRQ(ierr);
   ierr = MatGetRowIJ(conn, 0, PETSC_FALSE, PETSC_FALSE, &m, &ii, &jj, &flg);CHKERRQ(ierr);

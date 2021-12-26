@@ -32,8 +32,6 @@ class Configure(config.package.CMakePackage):
     if self.checkSharedLibrariesEnabled():
       args.append('-DSHARED=1')
       args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
-    if self.compilerFlags.debugging:
-      args.append('-DDEBUG=1')
     if self.getDefaultIndexSize() == 64:
       args.append('-DMETIS_USE_LONGINDEX=1')
     return args

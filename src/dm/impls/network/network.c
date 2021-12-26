@@ -130,6 +130,8 @@ $            [first vertex of first edge, second vertex of first edge, first ver
   There is no copy involved in this operation, only the pointer is referenced. The edgelist should
   not be destroyed before the call to DMNetworkLayoutSetUp()
 
+  An edge can have the same vertex at each end. Multiple edges can connect the same two vertices.
+
   A network can comprise of a single subnetwork OR multiple subnetworks. For a single subnetwork, the subnetwork can be read either in serial or parallel. For a multiple subnetworks,
   each subnetwork topology needs to be set on a unique rank and the communicator size needs to be at least equal to the number of subnetworks.
 
@@ -191,9 +193,6 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
   PetscBT        table;
 
   PetscFunctionBegin;
-  for (i=0; i<ne; i++) {
-    if (edgelist[2*i] == edgelist[2*i+1]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Edge %D has the same vertex %D at each endpoint",i,edgelist[2*i]);
-  }
   /* Get global total Nvtx = max(edgelist[])+1 for this subnet */
   nvtx = -1; i = 0;
   for (j=0; j<ne; j++) {
@@ -814,11 +813,13 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 - edge - local edges of the subnetwork
 
   Notes:
-  Cannot call this routine before DMNetworkLayoutSetup()
+    Cannot call this routine before DMNetworkLayoutSetup()
+
+    Pass the vtx values into DMNetworkGetGlobalVecOffset() or DMNetworkGetLocalVecOffset() to determine the location in the vectors specific to the vertices and edges
 
   Level: intermediate
 
-.seealso: DMNetworkCreate(), DMNetworkAddSubnetwork(), DMNetworkLayoutSetUp()
+.seealso: DMNetworkCreate(), DMNetworkAddSubnetwork(), DMNetworkLayoutSetUp(), DMNetworkGetLocalVecOffset(), DMNetworkGetGlobalVecOffset()
 @*/
 PetscErrorCode DMNetworkGetSubnetwork(DM dm,PetscInt netnum,PetscInt *nv,PetscInt *ne,const PetscInt **vtx,const PetscInt **edge)
 {
@@ -1130,7 +1131,7 @@ PetscErrorCode DMNetworkGetNumComponents(DM dm,PetscInt p,PetscInt *numcomponent
 - compnum - component number; use ALL_COMPONENTS if no specific component is requested
 
   Output Parameters:
-. offset - the local offset
+. offset - the offset into the local vector
 
   Level: intermediate
 
@@ -1167,7 +1168,7 @@ PetscErrorCode DMNetworkGetLocalVecOffset(DM dm,PetscInt p,PetscInt compnum,Pets
 - compnum - component number; use ALL_COMPONENTS if no specific component is requested
 
   Output Parameters:
-. offsetg - the global offset
+. offsetg - the offset into the global vector
 
   Level: intermediate
 
@@ -1557,7 +1558,7 @@ static PetscErrorCode DMNetworkSetSubMap_private(PetscInt pstart, PetscInt pend,
 }
 
 /*@
-  DMNetworkAssembleGraphStructures - Assembles vertex and edge data structures. Must be called after DMNetworkDistribute
+  DMNetworkAssembleGraphStructures - Assembles vertex and edge data structures. Must be called after DMNetworkDistribute()
 
   Collective on dm
 
@@ -1660,16 +1661,16 @@ PETSC_STATIC_INLINE PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt
 @*/
 PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 {
-  MPI_Comm       comm;
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  DM_Network     *oldDMnetwork = (DM_Network*)((*dm)->data);
-  DM_Network     *newDMnetwork;
-  PetscSF        pointsf=NULL;
-  DM             newDM;
-  PetscInt       j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
-  PetscInt       to_net,from_net,*svto;
-  PetscBT        btable;
+  MPI_Comm                 comm;
+  PetscErrorCode           ierr;
+  PetscMPIInt              size;
+  DM_Network               *oldDMnetwork = (DM_Network*)((*dm)->data);
+  DM_Network               *newDMnetwork;
+  PetscSF                  pointsf = NULL;
+  DM                       newDM;
+  PetscInt                 j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
+  PetscInt                 to_net,from_net,*svto;
+  PetscBT                  btable;
   PetscPartitioner         part;
   DMNetworkComponentHeader header;
 
@@ -1680,7 +1681,8 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 
   if (overlap) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %D != 0 is not supported yet",overlap);
 
-  /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
+  /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data
+     to the appropriate processors and returns a new DataSection and new componentdataarray. */
   ierr = DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM);CHKERRQ(ierr);
   newDMnetwork = (DM_Network*)newDM->data;
   newDMnetwork->max_comps_registered = oldDMnetwork->max_comps_registered;
@@ -1702,7 +1704,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   ierr = DMPlexDistributeData(newDMnetwork->plex,pointsf,oldDMnetwork->DataSection,MPIU_INT,(void*)oldDMnetwork->componentdataarray,newDMnetwork->DataSection,(void**)&newDMnetwork->componentdataarray);CHKERRQ(ierr);
 
   ierr = PetscSectionGetChart(newDMnetwork->DataSection,&newDMnetwork->pStart,&newDMnetwork->pEnd);CHKERRQ(ierr);
-  ierr = DMPlexGetHeightStratum(newDMnetwork->plex,0, &newDMnetwork->eStart,&newDMnetwork->eEnd);CHKERRQ(ierr);
+  ierr = DMPlexGetHeightStratum(newDMnetwork->plex,0,&newDMnetwork->eStart,&newDMnetwork->eEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(newDMnetwork->plex,1,&newDMnetwork->vStart,&newDMnetwork->vEnd);CHKERRQ(ierr);
   newDMnetwork->nEdges    = newDMnetwork->eEnd - newDMnetwork->eStart;
   newDMnetwork->nVertices = newDMnetwork->vEnd - newDMnetwork->vStart;
@@ -1960,10 +1962,6 @@ PetscErrorCode DMNetworkGetSupportingEdges(DM dm,PetscInt vertex,PetscInt *nedge
 . vertices - vertices connected to this edge
 
   Level: beginner
-
-  Fortran Notes:
-  Since it returns an array, this routine is only available in Fortran 90, and you must
-  include petsc.h90 in your code.
 
 .seealso: DMNetworkCreate(), DMNetworkGetSupportingEdges()
 @*/

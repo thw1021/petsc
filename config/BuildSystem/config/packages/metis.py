@@ -36,6 +36,8 @@ class Configure(config.package.CMakePackage):
       args.append('-DSHARED=1')
     if self.compilerFlags.debugging:
       args.append('-DDEBUG=1')
+      args.append('-DASSERT=1')
+      args.append('-DASSERT2=1')
     if self.getDefaultIndexSize() == 64:
       args.append('-DMETIS_USE_LONGINDEX=1')
     if self.framework.argDB['download-metis-use-doubleprecision']:

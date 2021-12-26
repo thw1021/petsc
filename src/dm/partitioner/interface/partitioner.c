@@ -331,14 +331,6 @@ PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts,
 
   ierr = PetscSectionReset(partSection);CHKERRQ(ierr);
   ierr = PetscSectionSetChart(partSection, 0, nparts);CHKERRQ(ierr);
-  if (nparts == 1) { /* quick */
-    ierr = PetscSectionSetDof(partSection, 0, numVertices);CHKERRQ(ierr);
-    ierr = ISCreateStride(PetscObjectComm((PetscObject)part),numVertices,0,1,partition);CHKERRQ(ierr);
-  } else {
-    if (!part->ops->partition) SETERRQ1(PetscObjectComm((PetscObject) part), PETSC_ERR_SUP, "PetscPartitioner %s has no partitioning method", ((PetscObject)part)->type_name);
-    ierr = (*part->ops->partition)(part, nparts, numVertices, start, adjacency, vertexSection, targetSection, partSection, partition);CHKERRQ(ierr);
-  }
-  ierr = PetscSectionSetUp(partSection);CHKERRQ(ierr);
   if (part->viewerGraph) {
     PetscViewer viewer = part->viewerGraph;
     PetscBool   isascii;
@@ -362,6 +354,14 @@ PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts,
       ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
     }
   }
+  if (nparts == 1) { /* quick */
+    ierr = PetscSectionSetDof(partSection, 0, numVertices);CHKERRQ(ierr);
+    ierr = ISCreateStride(PetscObjectComm((PetscObject)part),numVertices,0,1,partition);CHKERRQ(ierr);
+  } else {
+    if (!part->ops->partition) SETERRQ1(PetscObjectComm((PetscObject) part), PETSC_ERR_SUP, "PetscPartitioner %s has no partitioning method", ((PetscObject)part)->type_name);
+    ierr = (*part->ops->partition)(part, nparts, numVertices, start, adjacency, vertexSection, targetSection, partSection, partition);CHKERRQ(ierr);
+  }
+  ierr = PetscSectionSetUp(partSection);CHKERRQ(ierr);
   if (part->viewer) {
     ierr = PetscPartitionerView(part,part->viewer);CHKERRQ(ierr);
   }
