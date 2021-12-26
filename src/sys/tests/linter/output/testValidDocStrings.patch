@@ -54,14 +54,14 @@
 -  Beginner
 +  beginner
  
-   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-@@ -57,5 +57,4 @@
+   Developer Notes:
+@@ -71,5 +71,4 @@
  .seealso: testNonExistentFunction(), testNonExistentType
  @*/
 -
  PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
  {
-@@ -66,9 +66,4 @@
+@@ -80,9 +80,4 @@
    Not Collective, Synchronous
  
 -  inpt parms:
@@ -71,63 +71,79 @@
 -+ bar -
  
    References:
-@@ -74,4 +74,5 @@
+@@ -88,5 +88,5 @@
    References:
    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-+
- .seealso: testNonExistentFunction(), testNonExistentType
+-   .seealso: testNonExistentFunction(), testNonExistentType
++.seealso: testNonExistentFunction(), testNonExistentType
  */
-@@ -82,5 +82,5 @@
+ PetscErrorCode testIllFormedMinimalDocString(void)
+@@ -96,5 +96,5 @@
  
  /*@C
 -  testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
 +  testTerribleSpellingDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
    eiusmod tempor incididunt ut labore et dolore magna aliqua.
  
-@@ -85,5 +85,5 @@
+@@ -99,5 +99,5 @@
    eiusmod tempor incididunt ut labore et dolore magna aliqua.
  
 -  input prametirs:
 +  Input Parameter:
  + viewer - a PetsViewer
  - x - a PetscInt
-@@ -87,5 +87,5 @@
+@@ -101,5 +101,5 @@
    input prametirs:
  + viewer - a PetsViewer
 -- x - a PetscInt
 +- x      - a PetscInt
  
    output Psrammmetrs:
-@@ -89,5 +89,5 @@
+@@ -103,5 +103,5 @@
  - x - a PetscInt
  
 -  output Psrammmetrs:
 +  Output Parameter:
  . y - a PetscScalar pointer
  
-@@ -92,5 +92,5 @@
+@@ -106,5 +106,5 @@
  . y - a PetscScalar pointer
  
+-  optnS dtaaSE:
++  Options Database:
+ - -option_a     - foo
+ - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+@@ -107,5 +107,5 @@
+ 
+   optnS dtaaSE:
+-- -option_a     - foo
+++ -option_a                                        - foo
+ - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+   lvl: itnmediate
+@@ -109,5 +109,6 @@
+ - -option_a     - foo
+ - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 -  lvl: itnmediate
++
 +  Level: intermediate
  
  .zeeakso: testNonExistentFunction(), testNonExistentType
-@@ -94,5 +94,5 @@
+@@ -111,5 +111,5 @@
    lvl: itnmediate
  
 -.zeeakso: testNonExistentFunction(), testNonExistentType
 +.seealso: testNonExistentFunction(), testNonExistentType
  C@*/
  PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-@@ -102,5 +102,6 @@
- 
+@@ -118,5 +118,6 @@
+ }
  
 -/*@ asdadsadasdas
 +/*@C 
 +  asdadsadasdas
    testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
  
-@@ -106,5 +106,5 @@
+@@ -122,5 +122,5 @@
  
    Input Parameters:
 -+ string -  a char pointer
