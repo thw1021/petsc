@@ -19,7 +19,7 @@ import multiprocessing.queues
 import petscClangLinterUtil as pclu
 from petscClangLinterUtil import (
   Scope,PetscSourceLocation,PetscSourceRange,PetscCXCursorAndRangeVisitor,
-  CXCursorAndRangeVisitorCallBackProto,PetscPath
+  CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError
 )
 try:
   import clang.cindex as clx
@@ -214,17 +214,6 @@ excludeDirSuffixes  = (".dSYM",".DS_Store")
 # file extensions to process, case sensitve
 allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc",".h",".hpp")
 
-class ParsingError(Exception):
-  __doc__="""
-  Mostly to just have a custom "something went wrong when trying to perform a check" to except
-  for rather than using a built-in type. These are errors that are meant to be caught and logged
-  rather than stopping execution alltogether.
-
-  This should make it so that actual errors aren't hidden.
-  """
-  pass
-
-
 class PetscDocString(object):
   __doc__="""
   Container to encapsulate a sowing docstring and retrieve various objects for it.
@@ -294,17 +283,14 @@ class PetscDocString(object):
         return
 
       seen = collections.defaultdict(list)
-      for srcloc,line in self.lines:
-        if ":" in line:
-          possibleHeader = line.split(":")[0].strip()
+      for loc,line in self.lines:
+        if self.isHeading(line):
+          possibleHeader = line.split(":",maxsplit=1)[0].strip()
           seen[possibleHeader.casefold()].append(
-            docstring.makeSourceRange(possibleHeader,line,srcloc.start.line)
+            docstring.makeSourceRange(possibleHeader,line,loc.start.line)
           )
         # let each section type determine if this line is useful
-        inspectLine(srcloc,line)
-        # if valid:
-      #     items.append((docstring.makeSourceRange(item,line,srcloc.start.line),item.strip()))
-      # self.items = tuple(items)
+        inspectLine(loc,line)
       for heading,where in seen.items():
         if len(where) <= 1:
           continue
@@ -331,12 +317,17 @@ class PetscDocString(object):
       elif isinstance(item,str):
         text = item
       else:
-        raise NotImplementedError
-      return ":" in text and not text.lstrip().startswith(("+",".","-"))
+        raise NotImplementedError(type(item))
+      text = text.strip()
+      return (": " in text or text.endswith(":")) and not text.startswith(("+",".","-"))
 
     @staticmethod
     def transform(text):
       return text.istitle(),text.title()
+
+    @staticmethod
+    def checkIndentAllowed():
+      return True
 
 
   class Synopsis(DefaultSection):
@@ -359,30 +350,49 @@ class PetscDocString(object):
       return
 
   class ParameterList(DefaultSection):
-    @classmethod
-    def arglen(cls,text):
-      # we don't want the leading dash
-      offset     = text.find("-")+1 if text.lstrip().startswith("-") else 0
-      sub        = text[offset:] if offset else text
-      descrbegin = sub.split(" - ",maxsplit=1)[0]
-      # sub may be missing proper description, ie. ' blabla    -' or ' blabla'
-      if len(descrbegin) == len(sub) and descrbegin.endswith("-"):
-        descrbegin = descrbegin[:-1]
-      return len(descrbegin.rstrip())+offset
+    @staticmethod
+    def splitParam(text):
+      stripped = text.strip()
+      prefix   = stripped[0]
+      assert prefix in (".","-","+")
+      rest          = stripped[1:]
+      arg,sep,descr = rest.partition(" - ")
+      if not sep and rest[-1] == "-":
+        arg = rest[:-1]
+      return prefix,arg.strip(),descr.lstrip()
 
     @staticmethod
-    def checkAlignedDescriptions(ds,group,maxArgLen=None):
+    def leadingDashOffset(text):
+      return text.find("-")+1 if text.lstrip().startswith("-") else 0
+
+    @classmethod
+    def arglen(cls,text):
+      # we don't want the leading dash if there is one
+      offset  = cls.leadingDashOffset(text)
+      sub     = text[offset:] if offset else text
+      argonly = sub.split(" - ",maxsplit=1)[0]
+      # sub may be missing proper description, ie. ' blabla    -' or ' blabla'
+      if len(argonly) == len(sub) and argonly[-1] == "-":
+        argonly = argonly[:-1]
+      return len(argonly.rstrip())+offset
+
+    @classmethod
+    def checkAlignedDescriptions(cls,ds,group,maxArgLen=None):
       if maxArgLen is None:
         maxArgLen = max(alen for _,_,alen in group)
       for loc,text,alen in group:
-        pos = text[1:].find(" - ")
+        offset = cls.leadingDashOffset(text)
+        pos    = text[offset:].find(" - ")
         if pos == -1:
           if not text or text.isspace():
             continue
           import ipdb; ipdb.set_trace()
-        pos += 1
+        pos += offset
         if pos != maxArgLen:
           endline = loc.end.line
+          # fmtstr  = "{} {:{}}- {}"
+          # spl     = clx.splitParam(text)
+          # fixed   = fmtstr.format(spl[0],spl[1],maxArgLen,spl[2])
           fixed   = "{:{}}{}".format(text[:alen],maxArgLen,text[pos:])[alen:]
           floc    = ds.makeSourceRange(text[alen:],text,endline)
           eloc    = ds.makeSourceRange(text[pos:pos+3],text,endline)
@@ -398,8 +408,9 @@ class PetscDocString(object):
 
       def checkOptStartsWith(item,descr,char):
         loc,line,_ = item
-        if not line.startswith(char):
-          eloc = ds.makeSourceRange(line[0],line,loc.start.line)
+        pre,_,_    = self.splitParam(line)
+        if pre != char:
+          eloc = ds.makeSourceRange(pre,line,loc.start.line)
           mess = "{} parameter list entry must start with '{}'".format(descr,char)
           ds.addErrorFromSourceRange(mess,eloc,patch=Patch(eloc,char))
         return
@@ -412,7 +423,8 @@ class PetscDocString(object):
           subheading += 1
         lstrip = line.lstrip()
         if lstrip.startswith(("+",".","-")):
-          opt,dash,rest = lstrip[1:].partition("-")
+          offset        = self.leadingDashOffset(lstrip)
+          opt,dash,rest = lstrip[offset:].partition("-")
           if not dash or not rest.strip():
             ds.addErrorFromSourceRange("Parameter-list entry missing a description. Expected '{} - a very useful description'".format(opt.split()[0].strip()),loc)
           groups[subheading].append((loc,line,self.arglen(line)))
@@ -435,17 +447,39 @@ class PetscDocString(object):
           checkOptStartsWith(opts[-1],"Last multi","-")
       return
 
+  class Prose(DefaultSection):
+    def setup(self,ds,*args,**kwargs):
+      subheading = 0
+      self.items = {}
+
+      def inspector(loc,line):
+        if self.isHeading(line):
+          head,_,rest = line.partition(":")
+          hdea        = head.strip()
+          if not head:
+            import ipdb; ipdb.set_trace()
+          if self.items.keys():
+            nonlocal subheading
+            subheading += 1
+          startLine = loc.start.line
+          self.items[subheading] = (
+            (ds.makeSourceRange(head,line,startLine),head),
+            [(ds.makeSourceRange(rest,line,startLine),rest)] if rest else []
+          )
+        elif line:
+          self.items[subheading][1].append((loc,line))
+        return
+
+      super().setup(ds,*args,inspectLine=inspector,**kwargs)
+      return
+
   class InlineList(DefaultSection):
     def setup(self,ds,*args,**kwargs):
       items = []
 
       def inspector(loc,line):
-        item   = None
         lstrip = line.lstrip()
-        if ":" in lstrip:
-          item = lstrip.split(":")[1].strip()
-        else:
-          item = lstrip.rstrip()
+        item   = lstrip.split(":")[1].strip() if ":" in lstrip else lstrip.rstrip()
         if item:
           items.append((ds.makeSourceRange(item,line,loc.start.line),item))
         return
@@ -454,17 +488,27 @@ class PetscDocString(object):
       self.items = tuple(items)
       return
 
+
   class Sections(object):
     __slots__ = "_sections"
 
-    def __init__(self):
-      self._sections = collections.OrderedDict()
+    def __init__(self,*args):
+      assert len({s.name for s in args}) == len(args)
+      sections = collections.OrderedDict()
+      for section in args:
+        sections[section.name] = section
+      self._sections = sections
       return
 
     def __getattr__(self,attr):
+      sections = self._sections
       try:
-        return self._sections[attr]
+        return sections[attr]
       except KeyError as ke:
+        try:
+          return sections[attr.replace("_"," ")]
+        except KeyError:
+          pass
         raise AttributeError from ke
 
     def __iter__(self):
@@ -474,22 +518,26 @@ class PetscDocString(object):
       return self.registered(section)
 
     def find(self,heading):
-      for head,section in self._sections.items():
-        if head in heading:
-          return section
-      sectionNames   = self._sections.keys()
-      closestMatches = difflib.get_close_matches(heading,sectionNames,n=1)
-      if not len(closestMatches):
+      sections     = self._sections
+      sectionNames = sections.keys()
+      try:
+        match = difflib.get_close_matches(heading,sectionNames,n=1)[0]
+      except IndexError:
+        match = None
         # try if we can find a sub-word
         for head in heading.split():
-          closestMatches = difflib.get_close_matches(head,sectionNames,n=1)
-          if len(closestMatches):
-            break
-      if len(closestMatches):
-        print(80*"*","CLOSEST MATCHES FOUND {} FOR {}".format(closestMatches,heading),80*"*",sep="\n")
-        return self._sections[closestMatches[0]]
-      import ipdb; ipdb.set_trace()
-      raise ValueError(heading)
+          try:
+            match = difflib.get_close_matches(head,sectionNames,n=1)[0]
+          except IndexError:
+            continue
+          break
+      if match:
+        print(
+          "**** CLOSEST MATCH FOUND {:{}} FOR {}".format(match,max(map(len,sectionNames)),heading)
+        )
+        return sections[match]
+      print(80*"*","UNHANDLED HEADING {}".format(heading),80*"*",sep="\n")
+      return self._sections["UNKNOWN"]
 
     def registered(self,section):
       if isinstance(section,PetscDocString.DefaultSection):
@@ -507,8 +555,18 @@ class PetscDocString(object):
       return (keyword for section in self for keyword in section.keywords)
 
 
-  sections        = Sections()
-  registered      = False
+  sections        = Sections(
+    DefaultSection("UNKNOWN",keywords=("__UNKNOWN_SECTION__",)),
+    Synopsis("synopsis",required=True),
+    ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
+    ParameterList("options",keywords=("Options Database",)),
+    Prose("notes"),
+    Prose("fortran notes"),
+    Prose("developer notes"),
+    DefaultSection("references"),
+    InlineList("level",required=True),
+    InlineList("seealso",keywords=(".seealso",),required=True)
+  )
   sowingTypes     = {"@","S","E"}
   clxToSowingType = {
     clx.TypeKind.FUNCTIONPROTO : ("@","functions")
@@ -518,24 +576,6 @@ class PetscDocString(object):
   @classmethod
   def registerSection(cls,section):
     return cls.sections.addSection(section)
-
-  @classmethod
-  def registerDefaultSections(cls):
-    if cls.registered:
-      return
-    defaultHeadings = (
-      cls.Synopsis("synopsis",required=True),
-      cls.ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
-      cls.ParameterList("options",keywords=("Options Database",)),
-      cls.DefaultSection("notes"),
-      cls.InlineList("seealso",keywords=(".seealso",),required=True),
-      cls.InlineList("level",required=True),
-      cls.DefaultSection("references")
-    )
-    for section in defaultHeadings:
-      cls.registerSection(section)
-    cls.registered = True
-    return
 
   @classmethod
   def fromCursor(cls,linter,cursor):
@@ -560,7 +600,6 @@ class PetscDocString(object):
 
   def __init__(self,linter,cursor,raw,extent,indent=2):
     assert isinstance(linter,PetscLinter)
-    self.registerDefaultSections()
     if not self.isValidDocstring(cursor,raw):
       raise ParsingError("Not a docstring")
 
@@ -572,7 +611,7 @@ class PetscDocString(object):
 
     has,linkageCursorName,linkageCursor = self.cursor.hasInternalLinkage()
     if has:
-      mess = "A sowing docstring for a function without external linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),self.cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
+      mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),self.cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
       # TODO: could have a fixit here to simply delete the docstring
       self._linter.addErrorFromCursor(cursor,mess)
       raise ParsingError("Internal linkage")
@@ -589,9 +628,9 @@ class PetscDocString(object):
     end      = self.makeSourceLocation(lineno,colEnd)
     return PetscSourceRange.fromLocations(begin,end)
 
-  def addErrorFromSourceRange(self,error,crange,patch=None,**kwargs):
+  def addErrorFromSourceRange(self,error,crange,patch=None,numContext=2,**kwargs):
     assert isinstance(error,str)
-    error = ":\n".join([error,crange.formatted(numContext=kwargs.pop("numContext",2),**kwargs)])
+    error = ":\n".join([error,crange.formatted(numContext=numContext,**kwargs)])
     self._linter.addErrorFromCursor(self.cursor,error,patch=patch)
     return
 
@@ -656,18 +695,7 @@ class PetscDocString(object):
       )
     return
 
-  def _reset(self):
-    for s in self.sections:
-      s.clear()
-    return
-
-  def parse(self):
-    def smartIndent(line):
-      lstrip = line.lstrip()
-      if lstrip.startswith(("+",".","-")):
-        return lstrip
-      return self.indent*" "+lstrip
-
+  def _checkValidIndentation(self,lineno,line,lstrip):
     def expectedIndent(line):
       __doc__="""
       get the expected indent for the line
@@ -676,40 +704,60 @@ class PetscDocString(object):
         return self.indent
       return 0
 
+    # if the line is regular (not empty, or a parameter list), check that line is
+    # indented correctly
+    indent      = len(line)-len(lstrip)
+    expectedInd = expectedIndent(lstrip)
+    if indent != expectedInd:
+      loc  = self.makeSourceRange(" "*indent,line,lineno)
+      mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
+      self.addErrorFromSourceRange(mess,loc,patch=Patch(loc," "*expectedInd))
+    return
+
+  def _checkValidSectionSpacing(self,prevline,lineno):
+    if prevline and not prevline.isspace():
+      mess = "Missing empty line between sections, must have one before this section"
+      loc  = self.makeSourceRange("","",lineno)
+      self.addErrorFromSourceRange(mess,loc,highlight=False,patch=Patch(loc,"\n"))
+    return
+
+  def _reset(self):
+    for s in self.sections:
+      s.clear()
+    return
+
+  def parse(self):
     self._reset()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
-    rawData        = []
-    section        = self.sections.synopsis
-    invalidIndents = []
+    rawData     = []
+    section     = self.sections.synopsis
+    checkIndent = section.checkIndentAllowed()
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
         continue
 
-      lrange = self.makeSourceRange(line,line,lineno)
-      # if the line is regular (not empty, or a parameter list), check that line is
-      # indented correctly
-      indent      = len(line)-len(lstrip)
-      expectedInd = expectedIndent(lstrip)
-      if indent != expectedInd:
-        mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
-        loc  = self.makeSourceRange(" "*indent,line,lineno)
-        self.addErrorFromSourceRange(mess,loc,patch=Patch(loc," "*expectedInd))
+      # we shouldn't be checking indentation in verbatim blocks
+      if lstrip.startswith(".vb"):
+        checkIndent = False
+      elif lstrip.startswith(".ve"):
+        assert checkIndent is False
+        checkIndent = True # note we don't need to check indentation of line with .ve
+      elif lstrip.startswith("$"):
+        pass # inline verbatim don't modify check flag but dont check indentation either
+      elif checkIndent:
+        self._checkValidIndentation(lineno,line,lstrip)
+
       if ": " in lstrip or lstrip.endswith(":"):
-        prevline = rawData[-1][1] if len(rawData) else None
-        if prevline and not prevline.isspace():
-          loc = self.makeSourceRange("","",lineno)
-          self.addErrorFromSourceRange(
-            "Missing empty line between sections, must have one before this section",
-            loc,highlight=False,patch=Patch(loc,"\n")
-          )
+        self._checkValidSectionSpacing(rawData[-1][1] if len(rawData) else None,lineno)
         newSection = self.sections.find(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
           section.fill(rawData)
-          rawData = []
-          section = newSection
-      rawData.append((lrange,line))
+          rawData     = []
+          section     = newSection
+          checkIndent = newSection.checkIndentAllowed()
+      rawData.append((self.makeSourceRange(line,line,lineno),line))
 
     section.fill(rawData)
     for section in self.sections:
@@ -732,31 +780,32 @@ class PetscDocString(object):
     if transform is None:
       transform = section.transform
 
+    keywords = section.keywords
     for loc,text in headings:
       before,sep,_ = text.partition(delim)
       assert sep
       heading = before.strip()
-      if any(k in heading for k in section.keywords):
+      if any(k in heading for k in keywords):
         continue
 
       headingLoc       = self.makeSourceRange(heading,text,loc.start.line)
       wasValid,correct = transform(heading)
-      if not wasValid and any(k in correct for k in section.keywords):
+      if not wasValid and any(k in correct for k in keywords):
         self.addErrorFromSourceRange(
           "Invalid header formatting. Expected '{}' found '{}'".format(correct,heading),
           headingLoc,patch=Patch(headingLoc,correct)
         )
         continue
 
-      closest = difflib.get_close_matches(correct,section.keywords,n=1)
-      if len(closest):
-        match = closest[0]
+      try:
+        match = difflib.get_close_matches(correct,keywords,n=1)[0]
+      except IndexError:
+        import ipdb; ipdb.set_trace()
+      else:
         self.addErrorFromSourceRange(
           "Unknown section header '{}', assuming you meant '{}'".format(heading,match),
           headingLoc,patch=Patch(headingLoc,match)
         )
-      else:
-        import ipdb; ipdb.set_trace()
     return
 
 
@@ -1251,11 +1300,11 @@ class Patch(object):
          tempfile.NamedTemporaryFile(delete=True) as theirfd, \
          tempfile.NamedTemporaryFile(delete=True) as commonfd:
       minep = PetscPath(minefd.name).resolve()
-      minep.write_text(smart_split(self.collapse()))
+      minep.write_text(smart_split(mine.collapse()))
       otherp = PetscPath(theirfd.name).resolve()
       otherp.write_text(smart_split(other.collapse()))
-      commonp = PetscPath(comfd.name).resolve()
-      commonp.write_text(smart_split(self._makeSource()))
+      commonp = PetscPath(commonfd.name).resolve()
+      commonp.write_text(smart_split(mine._makeSource()))
       try:
         output = subprocessRun(
           ["diff3","-a","-m",str(minep),str(commonp),str(otherp)],
@@ -1264,7 +1313,10 @@ class Patch(object):
       except RuntimeError as re:
         # if we are here it means diff3 failed to merge!
         print(re)
+        combined = mine.deltas+other.deltas
+        argsort = sorted(range(len(combined)),key=lambda x: combined.__getitem__(x).extent)
         import ipdb; ipdb.set_trace()
+        blablabla = 2
       else:
         # being here does not imply unqualified success, output may be wrong!
         merged = "".join(
@@ -1281,8 +1333,8 @@ class Patch(object):
           # pointless
           left.discard()
           return right
-        import ipdb; ipdb.set_trace()
-        merged = Patch.mergeDiff3(left,right)
+        # import ipdb; ipdb.set_trace()
+        # merged = Patch.mergeDiff3(left,right)
       return None
 
     if not isinstance(other,type(self)):
@@ -1328,6 +1380,7 @@ class Patch(object):
       newSrc      = newSrcTemp
     self.fixDepth = len(self.deltas)
     self.fixed    = newSrc
+    assert self.fixed != self.src,"Patch did not seem to do anything!"
     return self.fixed
 
 
@@ -1335,7 +1388,10 @@ class PetscLinter(object):
   __doc__="""
   Object to manage the collection and processing of errors during a lint run.
   """
-  __slots__ = "flags","clangOpts","prefix","verbose","werror","lock","errPrefix","warnPrefix","errors","warnings","patches","index"
+  __slots__ = (
+    "flags","clangOpts","prefix","verbose","werror","lock","errPrefix","warnPrefix","errors",
+    "warnings","patches","index"
+  )
 
   class weaklist(list):
     __slots__ = "__weakref__"
@@ -1706,7 +1762,7 @@ class WorkerPool(mp.queues.JoinableQueue):
     ERRORS_FIXED = enum.auto()
     EXIT_QUEUE   = enum.auto()
 
-  def __init__(self,numWorkers=-1,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
+  def __init__(self,numWorkers,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
     if numWorkers < 0:
       numWorkers = max(mp.cpu_count()-1,1)
     super().__init__(numWorkers,**kwargs,ctx=mp.get_context())
@@ -1766,7 +1822,7 @@ class WorkerPool(mp.queues.JoinableQueue):
         dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
         for filename in (os.path.join(root,f) for f in files if f.endswith(allowFileSuff)):
           self.put(filename)
-    return
+    return self
 
   def put(self,filename,*args):
     if self.parallel:
@@ -1847,15 +1903,15 @@ class WorkerPool(mp.queues.JoinableQueue):
 
 """
 TODO:
+
 - make a test for all function parameters undocumented
-- align the options database key dashes
 - make an object to hold all the PetscLinter diagnostics per file
 - make PetscLinter.diagnostics() be the one-stop shop
 - make warnings into a list with filename
 - integrate warnings into the test output as well
-- implement fixits for stuff we can fix
 - figure out how to handle overwriting fixits...
 - figure out how to handle in-out parameters
+- fix indentation check when indenting overflowing parameter list descriptions, should be indented to the dash not 2 columns
 """
 """utilities for checking docstrings"""
 def checkDocValidSynopsis(linter,cursor,docstring):
@@ -1890,21 +1946,17 @@ def checkDocValidSynopsis(linter,cursor,docstring):
 
 def checkDocValidFunctionParameters(linter,cursor,docstring):
   fnargs = linter.getArgumentCursors(cursor)
-  try:
-    params = docstring.sections.parameters
-  except AttributeError:
+  params = docstring.sections.parameters
+  if not params:
     import ipdb; ipdb.set_trace()
     linter.addErrorFromCursor(cursor,"Function parameters are all undocumented")
     return
-    raise RuntimeError("no params, but function has args; this should be handled")
 
   if len(fnargs) == 0:
     # check we've got no parameter docstrings, if so, we can delete them
     if len(params.items.values()):
       loc  = params.extent
-      mess = "Found parameter docstring(s), but {}() has no arguments".format(
-        PetscCursor.getNameFromCursor(cursor)
-      )
+      mess = "Found parameter docstring(s) but '{}' has no arguments".format(cursor.displayname)
       docstring.addErrorFromSourceRange(mess,loc,highlight=False,patch=Patch(loc,""))
     return
 
@@ -1961,19 +2013,18 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
 
   fnargsleft = [name for seen,name in zip(fnargseen,fnargnames) if not seen]
   if notfound:
-    fnargsleft2 = fnargsleft.copy()
     for arg,loc in notfound:
       message = "Extra docstring parameter '{}' not found in function arguments:\n{}".format(
         arg,loc.formatted(numContext=2)
       )
       try:
-        match = difflib.get_close_matches(arg,fnargsleft2,n=1)[0]
+        match = difflib.get_close_matches(arg,fnargsleft,n=1)[0]
       except IndexError:
         pass
       else:
         argcursor = [c for c in fnargs if c.name == match][0]
         message  += "\n\nmaybe you meant {}".format(argcursor.getFormattedBlurb())
-        fnargsleft2.remove(match)
+        fnargsleft.remove(match)
       linter.addErrorFromCursor(cursor,message)
 
   for mess in map("Undocumented parameter '{}' not found in parameter section".format,fnargsleft):
@@ -1984,6 +2035,10 @@ def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
   options = docstring.sections.options
   if not options:
     return
+
+  headings = [l for l in options.lines if options.isHeading(l)]
+  docstring.checkValidSectionHeaderSpelling(options,headings)
+  docstring.checkValidSolitarySectionHeadings(options,headings)
 
   for _,group in sorted(options.items.items()):
     options.checkAlignedDescriptions(docstring,group)
@@ -1999,7 +2054,6 @@ def checkDocValidLevel(linter,cursor,docstring):
 
   validLevels = ("beginner","intermediate","advanced","developer","deprecated")
   expected    = ", or ".join([", ".join(validLevels[:-1]),validLevels[-1]])
-  newLineWithProperIndent = ":\n"+docstring.indent*" "
   for loc,levelName in level.items:
     if levelName not in validLevels:
       locase = levelName.casefold()
@@ -2055,14 +2109,14 @@ def checkDocValidLevel(linter,cursor,docstring):
 def checkDocValidSeealso(linter,cursor,docstring):
   seealso = docstring.sections.seealso
   if not seealso:
-    import ipdb; ipdb.set_trace()
     return
 
   def transform(text):
     return text.islower(),text.lower()
 
   def isHeading(line):
-    return ":" in line[1] and line[1].startswith(".")
+    text = line[1]
+    return ":" in text and text.startswith(".")
 
   docstring.checkValidSectionHeaderSpelling(
     seealso,list(filter(isHeading,seealso.lines)),transform=transform
@@ -2690,29 +2744,32 @@ def tryToFindLibclangDir():
 
       if platform.system().casefold() == "darwin":
         try:
-          output = subprocessRun(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
+          output = subprocessRun(
+            ["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True
+          )
           xcodeDir = output.stdout.strip()
           if xcodeDir == "/Applications/Xcode.app/Contents/Developer": # default Xcode path
-            llvmLibDir = PetscPath(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
+            llvmLibDir = "/".join([xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib"])
           elif xcodeDir == "/Library/Developer/CommandLineTools":      # CLT path
-            llvmLibDir = PetscPath(xcodeDir,"usr","lib")
+            llvmLibDir = "/".join([xcodeDir,"usr","lib"])
         except FileNotFoundError:
           # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
           pass
-  return llvmLibDir
+  return PetscPath(llvmLibDir).resolve() if llvmLibDir else llvmLibDir
 
 def initializeLibclang(clangDir=None,clangLib=None):
   __doc__="""
   Set the required library file or directory path to initialize libclang
   """
-  if not clx.conf.loaded:
-    clx.conf.set_compatibility_check(True)
+  clxconf = clx.conf
+  if not clxconf.loaded:
+    clxconf.set_compatibility_check(True)
     if clangLib:
       clangLib = PetscPath(clangLib).resolve()
-      clx.conf.set_library_file(clangLib)
+      clxconf.set_library_file(clangLib)
     elif clangDir:
       clangDir = PetscPath(clangDir).resolve()
-      clx.conf.set_library_path(clangDir)
+      clxconf.set_library_path(clangDir)
     else:
       raise RuntimeError("Must supply either clang directory path or clang library path")
   return clangDir,clangLib
@@ -2747,15 +2804,15 @@ def getPetscExtraIncludes(petscDir,petscArch):
     cxxflg = re.compile("^CXX_FLAGS\s*=")
     for line in pv:
       if ccinc.search(line):
-        petscIncludes.append(line.split("=",1)[1])
+        petscIncludes.append(line.split("=",maxsplit=1)[1])
       elif mpiinc.search(line) or shoinc.search(line):
-        mpiIncludes.append(line.split("=",1)[1])
+        mpiIncludes.append(line.split("=",maxsplit=1)[1])
       elif cxxflg.search(line):
-        cxxflags.append(line.split("=",1)[1])
-  cxxflags      = [l.strip().split(" ") for l in cxxflags if l]
+        cxxflags.append(line.split("=",maxsplit=1)[1])
+  cxxflags      = [l.strip().split() for l in cxxflags if l]
   cxxflags      = [flag for flags in cxxflags for flag in flags if flag.startswith("-std=")]
   cxxflags      = [cxxflags[-1]] if cxxflags else [] # take only the last one
-  extraIncludes = [l.strip().split(" ") for l in petscIncludes+mpiIncludes if l]
+  extraIncludes = [l.strip().split() for l in petscIncludes+mpiIncludes if l]
   extraIncludes = [item for sublist in extraIncludes for item in sublist if item.startswith("-I")]
   seen          = set()
   extraIncludes = [item for item in extraIncludes if not item in seen and not seen.add(item)]
@@ -2773,16 +2830,16 @@ def getClangSysIncludes():
   )
   # goes to stderr because of /dev/null
   includes = output.stderr.split("#include <...> search starts here:\n")[1]
-  includes = includes.split("End of search list.")[0].replace("(framework directory)","")
-  includes = includes.splitlines()
-  includes = ["".join(["-I",str(PetscPath(i.strip()).resolve())]) for i in includes if i]
-  return includes
+  includes = includes.split("End of search list.",maxsplit=1)[0].replace(
+    "(framework directory)",""
+  ).splitlines()
+  return ["".join(["-I",str(PetscPath(i.strip()).resolve())]) for i in includes if i]
 
 def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,printPrefix="[ROOT]"):
   __doc__="""
   build the baseline set of compiler flags, these are passed to all translation unit parse attempts
   """
-  miscFlags        = [
+  miscFlags = [
     "-DPETSC_CLANG_STATIC_ANALYZER",
     "-xc++",
     "-Wno-empty-body",
@@ -2791,10 +2848,9 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
     "-Wno-nullability-completeness",
     "-fparse-all-comments",
   ]
-  sysincludes      = getClangSysIncludes()
-  petscIncludes    = getPetscExtraIncludes(petscDir,petscArch)
-  compilerFlags    = sysincludes+miscFlags+petscIncludes+extraCompilerFlags
-  if verbose: print("\n".join([printPrefix+" Compile flags:",*compilerFlags]))
+  petscIncludes = getPetscExtraIncludes(petscDir,petscArch)
+  compilerFlags = getClangSysIncludes()+miscFlags+petscIncludes+extraCompilerFlags
+  if verbose: print("\n".join([" ".join([printPrefix,"Compile flags:"]),*compilerFlags]))
   return compilerFlags
 
 def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=basePCHClangOptions):
@@ -2901,13 +2957,17 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
   class TemporaryCopy(object):
     def __init__(self,fname):
       self.fname = PetscPath(fname).resolve()
-      assert self.fname.exists()
+      if not self.fname.exists():
+        mess = "Filename {} does not appear to exist".format(self.fname)
+        raise RuntimeError(mess)
       return
 
     def __enter__(self):
       self.tmp     = tempfile.NamedTemporaryFile(delete=True,suffix=self.fname.suffix)
       self.tmpPath = PetscPath(self.tmp.name).resolve()
-      assert self.tmpPath.exists()
+      if not self.tmpPath.exists():
+        mess = "tmpPath {} does not appear to exist".format(self.tmpPath)
+        raise RuntimeError(mess)
       shutil.copy2(str(self.fname),str(self.tmpPath))
       return self
 
@@ -2940,15 +3000,11 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
 
   # sanitize the output so that it will be equal across systems
   def sanitizeOutputFile(text):
-    if text is None:
-      return []
-    return [l.replace(str(petscDir),".") for l in text.splitlines(True)]
+    return [] if text is None else [l.replace(str(petscDir),".") for l in text.splitlines(True)]
 
   def sanitizePatchFile(text):
-    if text is None:
-      return []
     # skip the diff header with file names
-    return text.splitlines(True)[2:]
+    return [] if text is None else text.splitlines(True)[2:]
 
   def renamePatchFileTarget(text,newPath):
     lines    = text.splitlines(True)
@@ -3020,7 +3076,8 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
 
 def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,verbose,werror,errorQueue,returnQueue,fileQueue,lock):
   __doc__="""
-  main function for worker processes in the queue, does pretty much the same thing the main process would do in their place
+  main function for worker processes in the queue, does pretty much the same thing the
+  main process would do in their place
   """
   def updateGlobals(updatedCheckFunctionMap,updatedClassIdMap):
     global checkFunctionMap,classIdMap # in a function so the "globalness" doesn't leak
@@ -3037,15 +3094,16 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
   # in case errors are thrown before setup is complete
   errorPrefix = "[UNKNOWN_CHILD]"
   filename    = "QUEUE SETUP"
+  printbar    = 15*"="
   try:
     updateGlobals(checkFunctionMapU,classIdMapU)
     proc        = mp.current_process().name
     printPrefix = proc+" --"[:len("[ROOT]")-len(proc)]
     errorPrefix = " ".join([printPrefix,"Exception detected while processing"])
-    lockPrint(printPrefix,15*"=","Performing setup",15*"=")
+    lockPrint(printPrefix,printbar,"Performing setup",printbar)
     initializeLibclang(clangLib=clangLib)
     linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,werror=werror,lock=lock)
-    lockPrint(printPrefix,15*"=","Entering queue  ",15*"=")
+    lockPrint(printPrefix,printbar,"Entering queue  ",printbar)
     while True:
       filename = fileQueue.get()
       if filename == WorkerPool.QueueSignal.EXIT_QUEUE:
@@ -3057,8 +3115,8 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
       returnQueue.put((WorkerPool.QueueSignal.ERRORS_FIXED,errFixed))
       returnQueue.put((WorkerPool.QueueSignal.WARNING     ,warnings))
       fileQueue.task_done()
-    lockPrint(printPrefix,15*"=","Exiting queue   ",15*"=")
-  except:
+    lockPrint(printPrefix,printbar,"Exiting queue   ",printbar)
+  except Exception:
     try:
       # attempt to send the traceback back to parent
       import traceback
@@ -3076,8 +3134,11 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
         # task_done() called more times than get(), means we threw before getting the
         # filename
         pass
-  errorQueue.close()
-  returnQueue.close()
+  try:
+    errorQueue.close()
+    returnQueue.close()
+  except Exception:
+    pass
   return
 
 def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testOutputDir=None,replaceTests=False,werror=False):
@@ -3117,26 +3178,41 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
     elif srcPath.is_file():
       testOutputDir = srcPath.parent/"output"
     else:
-      raise RuntimeError("Got neither a directory or file as srcPath",srcPath)
+      mess = "Got neither a directory or file as srcPath {}".format(srcPath)
+      raise RuntimeError(mess)
 
-  if testOutputDir is not None:
-    assert testOutputDir.exists(), "Test Output Directory {} does not appear to exist".format(testOutputDir)
+  if testOutputDir is not None and not testOutputDir.exists():
+    mess = "Test Output Directory {} does not appear to exist".format(testOutputDir)
+    raise RuntimeError(mess)
 
   filterCheckFunctionMap(checkFunctionFilter)
   rootPrintPrefix   = "[ROOT]"
   compilerFlags     = buildCompilerFlags(
-    petscDir,petscArch,
-    extraCompilerFlags=extraCompilerFlags,verbose=verbose,printPrefix=rootPrintPrefix
-  )
-  precompiledHeader = buildPrecompiledHeader(
-    petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose
+    petscDir,petscArch,extraCompilerFlags=extraCompilerFlags,verbose=verbose
   )
 
-  pool = WorkerPool(numWorkers=workers,verbose=verbose)
-  pool.setup(compilerFlags,werror=werror).walk(srcPath)
-  warnings,errorsLeft,errorsFixed,patches = pool.finalize()
-  if verbose: print(rootPrintPrefix,"Deleting precompiled header",precompiledHeader)
-  precompiledHeader.unlink()
+  class PrecompiledHeader(object):
+    __slots__ = "pch"
+
+    def __init__(self,*args,**kwargs):
+      self.pch = buildPrecompiledHeader(*args,**kwargs)
+      return
+
+    def __enter__(self):
+      return self
+
+    def __exit__(self,*args,**kwargs):
+      if verbose: print(rootPrintPrefix,"Deleting precompiled header",self.pch)
+      self.pch.unlink()
+      return
+
+  with PrecompiledHeader(
+      petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose
+  ):
+    warnings,errorsLeft,errorsFixed,patches = WorkerPool(
+      workers,verbose=verbose
+    ).setup(compilerFlags,werror=werror).walk(srcPath).finalize()
+
   if testOutputDir is not None:
     return testMain(
       petscDir,srcPath,testOutputDir,patches,errorsFixed,errorsLeft,
@@ -3203,7 +3279,8 @@ if __name__ == "__main__":
     elif v in {"no","false","f","n","0",""}:
       return False
     else:
-      raise argparse.ArgumentTypeError("Boolean value expected, got '{}'".format(v))
+      mess = "Boolean value expected, got '{}'".format(v)
+      raise argparse.ArgumentTypeError(mess)
 
   clangDir = tryToFindLibclangDir()
   try:
@@ -3218,13 +3295,16 @@ if __name__ == "__main__":
     petscArch = None
 
   parser = argparse.ArgumentParser(description="set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
   grouplibclang = parser.add_argument_group(title="libclang location settings")
   group = grouplibclang.add_mutually_exclusive_group(required=False)
   group.add_argument("--clang_dir",nargs="?",help="directory containing libclang.[so|dylib|dll], if not given attempts to automatically detect it via llvm-config",default=clangDir,dest="clangdir")
   group.add_argument("--clang_lib",nargs="?",help="direct location of libclang.[so|dylib|dll], overrides clang directory if set",dest="clanglib")
+
   grouppetsc = parser.add_argument_group(title="petsc location settings")
   grouppetsc.add_argument("--PETSC_DIR",required=False,default=petscDir,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
   grouppetsc.add_argument("--PETSC_ARCH",required=False,default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
+
   parser.add_argument("-s","--src-dir",required=False,default=defaultSrcDir,help="Alternate base directory of source tree (e.g. $SLEPC_DIR/src)",dest="src")
   parser.add_argument("-v","--verbose",required=False,type=str2bool,nargs="?",const=True,default=False,help="verbose progress printed to screen")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
@@ -3236,6 +3316,7 @@ if __name__ == "__main__":
   parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
   parser.add_argument("--replace",required=False,type=str2bool,nargs="?",const=True,default=False,help="replace output files in test directory with patches generated")
   parser.add_argument("--werror",required=False,type=str2bool,nargs="?",const=True,default=False,help="treat all warnings as errors")
+
   args = parser.parse_args()
 
   if args.petscdir is None:
