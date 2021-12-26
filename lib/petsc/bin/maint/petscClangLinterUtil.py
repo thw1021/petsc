@@ -8,6 +8,7 @@ Created on Tue Mar 23 17:56:06 2021
 import pathlib
 import ctypes
 import functools
+import re
 import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
@@ -581,3 +582,53 @@ class ParsingError(Exception):
   This should make it so that actual errors aren't hidden.
   """
   pass
+
+
+class DiagnosticsManager(object):
+  __slots__ = "disabled","disabledRegex"
+
+  def __init__(self):
+    self.disabled      = {}
+    self.disabledRegex = []
+    return
+
+  def _disabledRE(self,flag):
+    rematch = re.match
+    return any(rematch(regex,flag) in self.disabledRegex)
+
+  def disable(self,flag):
+    import ipdb; ipdb.set_trace()
+    return
+
+  def disabledFor(self,flag):
+    assert isinstance(flag,str)
+    return flag in self.disabled or self._disabledRE(flag)
+
+  def enabledFor(self,flag):
+    return not self.disabledFor(flag)
+
+
+class Diagnostic(object):
+  __slots__ = "flag","message","patch"
+
+  def __init__(self,flag,message,patch=None):
+    if not isinstance(flag,str):
+      flag = "-".join(flag)
+    self.flag    = flag
+    self.message = str(message)
+    self.patch   = patch
+    return
+
+  def formatMessage(self):
+    message   = self.message
+    flagdescr = self.flag.join((" [-f","]"))
+    pos       = message.find(":")
+    if pos == -1:
+      ret = message+flagdescr
+    else:
+      assert not message[pos-1].isdigit()
+      ret = message.replace(":",flagdescr+":",1)
+    return ret
+
+  def disabled(flag):
+    return False

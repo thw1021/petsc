@@ -9,7 +9,7 @@ ERROR 0: ./src/sys/tests/linter/testValidLogicalCollective.c:36:8
   9 : PetscValidLogicalCollectiveEnum(v,e,3);
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
 
-Incorrect use of PetscValidLogicalCollectiveInt(), use PetscValidLogicalCollectiveBool() instead
+Incorrect use of PetscValidLogicalCollectiveInt(), use PetscValidLogicalCollectiveBool() instead [-fincompatible-function]
 
 ERROR 1: ./src/sys/tests/linter/testValidLogicalCollective.c:38:8
 '2' of derived type 'int', canonical type 'int'
@@ -20,7 +20,7 @@ ERROR 1: ./src/sys/tests/linter/testValidLogicalCollective.c:38:8
   9 : PetscValidLogicalCollectiveEnum(v,e,3);
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
 
-Argument number doesn't match for 'd'. Found '2' expected '4' from
+Argument number doesn't match for 'd'. Found '2' expected '4' from [-fmatchin-arg-num]:
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                               ^^^^^^^^^^^
 
@@ -33,7 +33,7 @@ ERROR 2: ./src/sys/tests/linter/testValidLogicalCollective.c:37:9
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
   11: PetscValidLogicalCollectiveScalar(v,a,5);
 
-Incorrect use of PetscValidLogicalCollectiveEnum(), use PetscValidLogicalCollectiveScalar() instead
+Incorrect use of PetscValidLogicalCollectiveEnum(), use PetscValidLogicalCollectiveScalar() instead [-fincompatible-function]
 
 ERROR 3: ./src/sys/tests/linter/testValidLogicalCollective.c:39:9
 '3' of derived type 'int', canonical type 'int'
@@ -44,7 +44,7 @@ ERROR 3: ./src/sys/tests/linter/testValidLogicalCollective.c:39:9
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
   11: PetscValidLogicalCollectiveScalar(v,a,5);
 
-Argument number doesn't match for 'e'. Found '3' expected '5' from
+Argument number doesn't match for 'e'. Found '3' expected '5' from [-fmatchin-arg-num]:
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                            ^^^^^^^^^^^^^
 
@@ -57,7 +57,7 @@ ERROR 4: ./src/sys/tests/linter/testValidLogicalCollective.c:39:10
   11: PetscValidLogicalCollectiveScalar(v,a,5);
   12: PetscValidLogicalCollectiveReal(v,b,6);
 
-Incorrect use of PetscValidLogicalCollectiveMPIInt(), use PetscValidLogicalCollectiveReal() instead
+Incorrect use of PetscValidLogicalCollectiveMPIInt(), use PetscValidLogicalCollectiveReal() instead [-fincompatible-function]
 
 ERROR 5: ./src/sys/tests/linter/testValidLogicalCollective.c:41:10
 '4' of derived type 'int', canonical type 'int'
@@ -68,7 +68,7 @@ ERROR 5: ./src/sys/tests/linter/testValidLogicalCollective.c:41:10
   11: PetscValidLogicalCollectiveScalar(v,a,5);
   12: PetscValidLogicalCollectiveReal(v,b,6);
 
-Argument number doesn't match for 'f'. Found '4' expected '6' from
+Argument number doesn't match for 'f'. Found '4' expected '6' from [-fmatchin-arg-num]:
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                                           ^^^^^^^^^^^
 
@@ -81,7 +81,7 @@ ERROR 6: ./src/sys/tests/linter/testValidLogicalCollective.c:39:11
   12: PetscValidLogicalCollectiveReal(v,b,6);
   13: PetscValidLogicalCollectiveEnum(v,c,7);
 
-Incorrect use of PetscValidLogicalCollectiveScalar(), use PetscValidLogicalCollectiveInt() instead
+Incorrect use of PetscValidLogicalCollectiveScalar(), use PetscValidLogicalCollectiveInt() instead [-fincompatible-function]
 
 ERROR 7: ./src/sys/tests/linter/testValidLogicalCollective.c:41:11
 '5' of derived type 'int', canonical type 'int'
@@ -92,7 +92,7 @@ ERROR 7: ./src/sys/tests/linter/testValidLogicalCollective.c:41:11
   12: PetscValidLogicalCollectiveReal(v,b,6);
   13: PetscValidLogicalCollectiveEnum(v,c,7);
 
-Argument number doesn't match for 'a'. Found '5' expected '1' from
+Argument number doesn't match for 'a'. Found '5' expected '1' from [-fmatchin-arg-num]:
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                      ^^^^^^^^^^
 
@@ -105,7 +105,7 @@ ERROR 8: ./src/sys/tests/linter/testValidLogicalCollective.c:37:12
   13: PetscValidLogicalCollectiveEnum(v,c,7);
   14: 
 
-Incorrect use of PetscValidLogicalCollectiveReal(), use PetscValidLogicalCollectiveMPIInt() instead
+Incorrect use of PetscValidLogicalCollectiveReal(), use PetscValidLogicalCollectiveMPIInt() instead [-fincompatible-function]
 
 ERROR 9: ./src/sys/tests/linter/testValidLogicalCollective.c:39:12
 '6' of derived type 'int', canonical type 'int'
@@ -116,7 +116,7 @@ ERROR 9: ./src/sys/tests/linter/testValidLogicalCollective.c:39:12
   13: PetscValidLogicalCollectiveEnum(v,c,7);
   14: 
 
-Argument number doesn't match for 'b'. Found '6' expected '2' from
+Argument number doesn't match for 'b'. Found '6' expected '2' from [-fmatchin-arg-num]:
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                  ^^^^^^^^^^^^^
 
@@ -129,7 +129,7 @@ ERROR 10: ./src/sys/tests/linter/testValidLogicalCollective.c:37:13
   14: 
   15: /* correct */
 
-Incorrect use of PetscValidLogicalCollectiveEnum(), use PetscValidLogicalCollectiveInt() instead
+Incorrect use of PetscValidLogicalCollectiveEnum(), use PetscValidLogicalCollectiveInt() instead [-fincompatible-function]
 
 ERROR 11: ./src/sys/tests/linter/testValidLogicalCollective.c:39:13
 '7' of derived type 'int', canonical type 'int'
@@ -140,7 +140,7 @@ ERROR 11: ./src/sys/tests/linter/testValidLogicalCollective.c:39:13
   14: 
   15: /* correct */
 
-Argument number doesn't match for 'c'. Found '7' expected '3' from
+Argument number doesn't match for 'c'. Found '7' expected '3' from [-fmatchin-arg-num]:
 > 3: void testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                 ^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------

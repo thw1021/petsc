@@ -9,7 +9,7 @@ ERROR 0: ./src/sys/tests/linter/testValidPointers.c:25:6
   7:   PetscValidIntPointer(b,3);
   8:   PetscValidBoolPointer(c,4);
 
-Incorrect use of PetscValidCharPointer(), use PetscValidPointer() instead
+Incorrect use of PetscValidCharPointer(), use PetscValidPointer() instead [-fincompatible-function]
 
 ERROR 1: ./src/sys/tests/linter/testValidPointers.c:27:6
 '2' of derived type 'int', canonical type 'int'
@@ -20,7 +20,7 @@ ERROR 1: ./src/sys/tests/linter/testValidPointers.c:27:6
   7:   PetscValidIntPointer(b,3);
   8:   PetscValidBoolPointer(c,4);
 
-Argument number doesn't match for 'a'. Found '2' expected '1' from
+Argument number doesn't match for 'a'. Found '2' expected '1' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                             ^^^^^^^
 
@@ -33,7 +33,7 @@ ERROR 2: ./src/sys/tests/linter/testValidPointers.c:24:7
   8: PetscValidBoolPointer(c,4);
   9: PetscValidRealPointer(d,5);
 
-Incorrect use of PetscValidIntPointer(), use PetscValidCharPointer() instead
+Incorrect use of PetscValidIntPointer(), use PetscValidCharPointer() instead [-fincompatible-function]
 
 ERROR 3: ./src/sys/tests/linter/testValidPointers.c:26:7
 '3' of derived type 'int', canonical type 'int'
@@ -44,7 +44,7 @@ ERROR 3: ./src/sys/tests/linter/testValidPointers.c:26:7
   8: PetscValidBoolPointer(c,4);
   9: PetscValidRealPointer(d,5);
 
-Argument number doesn't match for 'b'. Found '3' expected '2' from
+Argument number doesn't match for 'b'. Found '3' expected '2' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                      ^^^^^^^
 
@@ -57,7 +57,7 @@ ERROR 4: ./src/sys/tests/linter/testValidPointers.c:25:8
   9 : PetscValidRealPointer(d,5);
   10: PetscValidScalarPointer(e,6);
 
-Incorrect use of PetscValidBoolPointer(), use PetscValidIntPointer() instead
+Incorrect use of PetscValidBoolPointer(), use PetscValidIntPointer() instead [-fincompatible-function]
 
 ERROR 5: ./src/sys/tests/linter/testValidPointers.c:27:8
 '4' of derived type 'int', canonical type 'int'
@@ -68,7 +68,7 @@ ERROR 5: ./src/sys/tests/linter/testValidPointers.c:27:8
   9 : PetscValidRealPointer(d,5);
   10: PetscValidScalarPointer(e,6);
 
-Argument number doesn't match for 'c'. Found '4' expected '3' from
+Argument number doesn't match for 'c'. Found '4' expected '3' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                               ^^^^^^^^^^^
 
@@ -81,7 +81,7 @@ ERROR 6: ./src/sys/tests/linter/testValidPointers.c:25:9
   10: PetscValidScalarPointer(e,6);
   11: PetscValidIntPointer(f,7);
 
-Incorrect use of PetscValidRealPointer(), use PetscValidIntPointer() instead
+Incorrect use of PetscValidRealPointer(), use PetscValidIntPointer() instead [-fincompatible-function]
 
 ERROR 7: ./src/sys/tests/linter/testValidPointers.c:27:9
 '5' of derived type 'int', canonical type 'int'
@@ -92,7 +92,7 @@ ERROR 7: ./src/sys/tests/linter/testValidPointers.c:27:9
   10: PetscValidScalarPointer(e,6);
   11: PetscValidIntPointer(f,7);
 
-Argument number doesn't match for 'd'. Found '5' expected '4' from
+Argument number doesn't match for 'd'. Found '5' expected '4' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                            ^^^^^^^^^^^^^^
 
@@ -105,7 +105,7 @@ ERROR 8: ./src/sys/tests/linter/testValidPointers.c:27:10
   11: PetscValidIntPointer(f,7);
   12: PetscValidRealPointer(g,8);
 
-Incorrect use of PetscValidScalarPointer(), use PetscValidIntPointer() instead
+Incorrect use of PetscValidScalarPointer(), use PetscValidIntPointer() instead [-fincompatible-function]
 
 ERROR 9: ./src/sys/tests/linter/testValidPointers.c:29:10
 '6' of derived type 'int', canonical type 'int'
@@ -116,7 +116,7 @@ ERROR 9: ./src/sys/tests/linter/testValidPointers.c:29:10
   11: PetscValidIntPointer(f,7);
   12: PetscValidRealPointer(g,8);
 
-Argument number doesn't match for 'e'. Found '6' expected '5' from
+Argument number doesn't match for 'e'. Found '6' expected '5' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                            ^^^^^^^^^^^^^
 
@@ -129,7 +129,7 @@ ERROR 10: ./src/sys/tests/linter/testValidPointers.c:24:11
   12: PetscValidRealPointer(g,8);
   13: PetscValidScalarPointer(h,9);
 
-Incorrect use of PetscValidIntPointer(), use PetscValidBoolPointer() instead
+Incorrect use of PetscValidIntPointer(), use PetscValidBoolPointer() instead [-fincompatible-function]
 
 ERROR 11: ./src/sys/tests/linter/testValidPointers.c:26:11
 '7' of derived type 'int', canonical type 'int'
@@ -140,7 +140,7 @@ ERROR 11: ./src/sys/tests/linter/testValidPointers.c:26:11
   12: PetscValidRealPointer(g,8);
   13: PetscValidScalarPointer(h,9);
 
-Argument number doesn't match for 'f'. Found '7' expected '6' from
+Argument number doesn't match for 'f'. Found '7' expected '6' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                                           ^^^^^^^^^^^^
 
@@ -153,7 +153,7 @@ ERROR 12: ./src/sys/tests/linter/testValidPointers.c:25:12
   13: PetscValidScalarPointer(h,9);
   14: 
 
-Incorrect use of PetscValidRealPointer(), use PetscValidScalarPointer() instead
+Incorrect use of PetscValidRealPointer(), use PetscValidScalarPointer() instead [-fincompatible-function]
 
 ERROR 13: ./src/sys/tests/linter/testValidPointers.c:27:12
 '8' of derived type 'int', canonical type 'int'
@@ -164,7 +164,7 @@ ERROR 13: ./src/sys/tests/linter/testValidPointers.c:27:12
   13: PetscValidScalarPointer(h,9);
   14: 
 
-Argument number doesn't match for 'g'. Found '8' expected '7' from
+Argument number doesn't match for 'g'. Found '8' expected '7' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                                                         ^^^^^^^^^^^^^^
 
@@ -177,7 +177,7 @@ ERROR 14: ./src/sys/tests/linter/testValidPointers.c:27:13
   14: 
   15: /* correct */
 
-Incorrect use of PetscValidScalarPointer(), use PetscValidRealPointer() instead
+Incorrect use of PetscValidScalarPointer(), use PetscValidRealPointer() instead [-fincompatible-function]
 
 ERROR 15: ./src/sys/tests/linter/testValidPointers.c:29:13
 '9' of derived type 'int', canonical type 'int'
@@ -188,7 +188,7 @@ ERROR 15: ./src/sys/tests/linter/testValidPointers.c:29:13
   14: 
   15: /* correct */
 
-Argument number doesn't match for 'h'. Found '9' expected '8' from
+Argument number doesn't match for 'h'. Found '9' expected '8' from [-fmatchin-arg-num]:
 > 3: void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
                                                                                                                         ^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------
