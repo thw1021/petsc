@@ -49,6 +49,20 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
   Level:
   Beginner
 
+  Developer Notes:
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+  labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
+  qui officia deserunt mollit anim id est laborum.
+
+  Notes: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+  incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident,
+  sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+  Fortran Notes:
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+  labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
+  qui officia deserunt mollit anim id est laborum.
+
   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 .seealso: testNonExistentFunction(), testNonExistentType
@@ -99,7 +113,6 @@ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, Pet
 {
   return 0;
 }
-
 
 /*@ asdadsadasdas
   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit

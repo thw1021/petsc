@@ -303,25 +303,22 @@ class PetscSourceLocation(object):
       return other.sourceLocation
     raise NotImplementedError(type(other))
 
-  def __eq__(self,other):
-    return self.sourceLocation.__eq__(self.asClangSourceLocation(other))
+  def __eq__(self,right):
+    return self.sourceLocation.__eq__(self.asClangSourceLocation(right))
 
-  def __lt__(self,other):
-    other = self.asClangSourceLocation(other)
-    myfname,ofname = self.file.name,other.file.name
-    if myfname is None and ofname is None:
+  def __lt__(self,right):
+    assert isinstance(right,(clx.SourceLocation,type(self)))
+    lfile,rfile = self.file,right.file
+    if lfile is None and rfile is None:
       pass
-    elif myfname != ofname:
-      return False
-    myline,oline = self.line,other.line
-    if myline < oline:
+    elif lfile.name != rfile.name:
+      raise ValueError("Source locations from different files")
+    lline,rline = self.line,right.line
+    if lline < rline:
       return True
-    if myline == oline:
-      return self.column < other.column
-    return False
-
-  def __contains__(self,other):
-    return self.sourceLocation.__contains__(self.asClangSourceLocation(other))
+    if lline == rline:
+      return self.column < right.column
+    return False # lline > rline
 
 
 @functools.total_ordering
@@ -347,16 +344,14 @@ class PetscSourceRange(object):
   def __eq__(self,other):
     return self.sourceRange.__eq__(self.asClangSourceRange(other))
 
-  def __lt__(self,other):
-    if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
-      return other < PetscSourceLocation.cast(self.start)
-    if isinstance(other,(clx.SourceRange,type(self))):
-      if other.end < PetscSourceLocation.cast(self.start):
-        return False
-      if other.start > PetscSourceLocation.cast(self.end):
-        return True
-      raise NotImplementedError("can't handle < for overlapping ranges")
-    raise NotImplementedError(type(other))
+  def __lt__(self,right):
+    if isinstance(right,(clx.SourceRange,type(self))):
+      right = right.start
+    elif isinstance(right,(clx.SourceLocation,PetscSourceLocation)):
+      pass
+    else:
+      raise NotImplementedError(type(right))
+    return PetscSourceLocation.cast(self.end) <= right
 
   def __contains__(self,other):
     def contains(loc):
@@ -366,13 +361,13 @@ class PetscSourceRange(object):
       if loc.file is None and start.file is None:
         pass
       elif start.file.name != loc.file.name or loc.file.name != end.file.name:
-        return False
+        raise ValueError("Filenames do not match!")
       cast = PetscSourceLocation.cast
       return cast(start) <= cast(loc) <= cast(end)
 
 
     if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
-      return contains(PetscSourceLocation.asClangSourceLocation(other))
+      return contains(other)
     if isinstance(other,(clx.SourceRange,type(self))):
       return contains(other.start) and contains(other.end)
     raise NotImplementedError(type(other))
@@ -400,10 +395,8 @@ class PetscSourceRange(object):
 
   @classmethod
   def fromPositions(cls,tu,lineLeft,colLeft,lineRight,colRight):
-    return cls.fromLocations(
-      PetscSourceLocation.fromPosition(tu,lineLeft,colLeft),
-      PetscSourceLocation.fromPosition(tu,lineRight,colRight),
-    )
+    fromPos = PetscSourceLocation.fromPosition
+    return cls.fromLocations(fromPos(tu,lineLeft,colLeft),fromPos(tu,lineRight,colRight))
 
   @classmethod
   def asClangSourceRange(cls,other):
@@ -419,17 +412,20 @@ class PetscSourceRange(object):
     right = cls.cast(right)
     if left in right:
       return right
-    if right in left:
+    elif right in left:
       return left
-    begin = min(PetscSourceLocation.cast(left.start),PetscSourceLocation.cast(right.start))
-    end   = max(PetscSourceLocation.cast(left.end),PetscSourceLocation.cast(right.end))
-    return cls.fromLocations(begin.sourceLocation,end.sourceLocation)
+    cast = PetscSourceLocation.cast
+    return cls.fromLocations(
+      min(cast(left.start),cast(right.start)),
+      max(cast(left.end),cast(right.end))
+    )
 
   def mergeWith(self,other):
     return self.merge(self,other)
 
   def overlaps(self,other):
-    return (self.start in other) or (self.end in other) or (other.start in self) or (other.end in self)
+    cast = PetscSourceLocation.cast
+    return cast(self.end) >= cast(other.start) and cast(other.end) >= cast(self.start)
 
   def raw(self,**kwargs):
     return getRawSourceFromSourceRange(self,**kwargs)
@@ -574,3 +570,14 @@ class PetscPath(type(pathlib.Path())):
 
   def append_name(self,name):
     return self.with_name("".join((self.stem,str(name))))
+
+
+class ParsingError(Exception):
+  __doc__="""
+  Mostly to just have a custom "something went wrong when trying to perform a check" to except
+  for rather than using a built-in type. These are errors that are meant to be caught and logged
+  rather than stopping execution alltogether.
+
+  This should make it so that actual errors aren't hidden.
+  """
+  pass
