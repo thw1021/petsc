@@ -1122,6 +1122,11 @@ implicit time-stepping solvers ``TSTHETA``, ``TSARKIMEX``, and
 
 .. _sec_tchem:
 
+Explicit Integrators with Finite Element Mass Matrices
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the user specifies only the RHS function for an explicit integration, the IJacobian is not present to provide a mass matrix for the problem. We have added ``DMTSCreateRHSMassMatrix()`` and ``DMTSCreateRHSMassMatrixLumped()`` to automatically create the mass matrix associated with a ``PetscFE`` discretization for the given ``DM``. The functions also create a solver for inversion of the mass matrix, and the inverse will be applied to the RHS function at each call.
+
 Using TChem from PETSc
 ~~~~~~~~~~~~~~~~~~~~~~
 
