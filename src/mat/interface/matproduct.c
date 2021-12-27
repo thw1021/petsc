@@ -1215,7 +1215,7 @@ PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
    Input Parameter:
 .  mat - the matrix
 
-   Output Parameters:
+   Output Parameter:
 .  mtype - the MatProduct type
 
    Level: intermediate
