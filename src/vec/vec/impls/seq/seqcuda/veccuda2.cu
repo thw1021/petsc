@@ -11,9 +11,10 @@
 
 #include <cuda_runtime.h>
 #include <thrust/device_ptr.h>
-#include <thrust/transform.h>
 #include <thrust/functional.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <thrust/reduce.h>
+#include <thrust/transform.h>
 
 /*
     Allocates space for the vector array on the GPU if it does not exist.
@@ -200,7 +201,12 @@ PetscErrorCode VecPointwiseDivide_SeqCUDA(Vec win, Vec xin, Vec yin)
     wptr = thrust::device_pointer_cast(warray);
     xptr = thrust::device_pointer_cast(xarray);
     yptr = thrust::device_pointer_cast(yarray);
+    #if THRUST_VERSION >= 101600
+    auto nosync = thrust::cuda::par_nosync.on(((Vec_CUDA*)win->spptr)->stream);
+    thrust::transform(nosync,xptr,xptr+n,yptr,wptr,thrust::divides<PetscScalar>());
+    #else
     thrust::transform(xptr,xptr+n,yptr,wptr,thrust::divides<PetscScalar>());
+    #endif
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
@@ -708,7 +714,12 @@ PetscErrorCode VecReciprocal_SeqCUDA(Vec v)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   try {
     auto xptr = thrust::device_pointer_cast(x);
+    #if THRUST_VERSION >= 101600
+    auto nosync = thrust::cuda::par_nosync.on(((Vec_CUDA*)v->spptr)->stream);
+    thrust::transform(nosync,xptr,xptr+n,xptr,PetscScalarReciprocal());
+    #else
     thrust::transform(xptr,xptr+n,xptr,PetscScalarReciprocal());
+    #endif
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
@@ -947,7 +958,12 @@ PetscErrorCode VecPointwiseMult_SeqCUDA(Vec win,Vec xin,Vec yin)
     wptr = thrust::device_pointer_cast(warray);
     xptr = thrust::device_pointer_cast(xarray);
     yptr = thrust::device_pointer_cast(yarray);
+#if THRUST_VERSION >= 101600
+    auto nosync = thrust::cuda::par_nosync.on(((Vec_CUDA*)win->spptr)->stream);
+    thrust::transform(nosync,xptr,xptr+n,yptr,wptr,thrust::multiplies<PetscScalar>());
+#else
     thrust::transform(xptr,xptr+n,yptr,wptr,thrust::multiplies<PetscScalar>());
+#endif
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
@@ -1070,7 +1086,12 @@ PetscErrorCode VecConjugate_SeqCUDA(Vec xin)
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   try {
     xptr = thrust::device_pointer_cast(xarray);
+    #if THRUST_VERSION >= 101600
+    auto nosync = thrust::cuda::par_nosync.on(((Vec_CUDA*)xin->spptr)->stream);
+    thrust::transform(nosync,xptr,xptr+n,xptr,conjugate());
+    #else
     thrust::transform(xptr,xptr+n,xptr,conjugate());
+    #endif
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }
@@ -1401,7 +1422,12 @@ PetscErrorCode VecShift_SeqCUDA(Vec v,PetscScalar shift)
   dptr = thrust::device_pointer_cast(a);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   try {
+    #if THRUST_VERSION >= 101600
+    auto nosync = thrust::cuda::par_nosync.on(((Vec_CUDA*)v->spptr)->stream);
+    thrust::transform(nosync,dptr,dptr+n,dptr,petscshift(shift)); /* in-place transform */
+    #else
     thrust::transform(dptr,dptr+n,dptr,petscshift(shift)); /* in-place transform */
+    #endif
   } catch (char *ex) {
     SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s", ex);
   }

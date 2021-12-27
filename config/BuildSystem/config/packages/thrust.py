@@ -10,7 +10,7 @@ class Configure(config.package.GNUPackage):
     self.minversion       = '1.9.8'
     self.versionname      = 'THRUST_VERSION'
     self.versioninclude   = 'thrust/version.h'
-    self.gitcommit        = '1.10.0'
+    self.gitcommit        = 'a462ff612acfb099e78e35b57644612370969fb0'
     self.download         = ['git://https://github.com/NVIDIA/thrust.git']
     self.includes         = ['thrust/version.h']
     self.precisions       = ['single','double']
