@@ -723,6 +723,12 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
         self.compilers.LIBS += ' '+flag+'/usr/ucblib'
     return
 
+  def configureDarwin(self):
+    '''Log brew configuration for Apple systems'''
+    self.executeShellCommand('brew config', log = self.log)
+    self.executeShellCommand('brew info gcc', log = self.log)
+    return
+
   def configureLinux(self):
     '''Linux specific stuff'''
     # TODO: Test for this by mallocing an odd number of floats and checking the address
@@ -960,6 +966,7 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     self.executeTest(self.configureIntptrt)
     self.executeTest(self.configureSolaris)
     self.executeTest(self.configureLinux)
+    self.executeTest(self.configureDarwin)    
     self.executeTest(self.configureWin32)
     self.executeTest(self.configureCygwinBrokenPipe)
     self.executeTest(self.configureDefaultArch)
