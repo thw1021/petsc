@@ -4129,7 +4129,8 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   } else if (isCV) {
     ierr = DMPlexCreateCellVertexFromFile(comm, filename, interpolate, dm);CHKERRQ(ierr);
   } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot load file %s: unrecognized extension", filename);
-  ierr = PetscObjectSetName((PetscObject)(*dm), plexname);CHKERRQ(ierr);
+  ierr = PetscStrlen(plexname, &len);CHKERRQ(ierr);
+  if (len) {ierr = PetscObjectSetName((PetscObject)(*dm), plexname);CHKERRQ(ierr);}
   ierr = PetscLogEventEnd(DMPLEX_CreateFromFile,0,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
