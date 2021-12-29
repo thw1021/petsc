@@ -614,10 +614,10 @@ PetscErrorCode DMLabelCompare(MPI_Comm comm, DMLabel l0, DMLabel l1, PetscBool *
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(l0, DMLABEL_CLASSID, 1);
-  PetscValidHeaderSpecific(l1, DMLABEL_CLASSID, 2);
-  if (equal) PetscValidBoolPointer(equal, 3);
-  if (message) PetscValidPointer(message, 4);
+  PetscValidHeaderSpecific(l0, DMLABEL_CLASSID, 2);
+  PetscValidHeaderSpecific(l1, DMLABEL_CLASSID, 3);
+  if (equal) PetscValidBoolPointer(equal, 4);
+  if (message) PetscValidPointer(message, 5);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
   ierr = PetscObjectGetName((PetscObject)l0, &name0);CHKERRQ(ierr);
   ierr = PetscObjectGetName((PetscObject)l1, &name1);CHKERRQ(ierr);
