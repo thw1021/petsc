@@ -808,6 +808,7 @@ typedef struct {
     PetscStackSAWsGrantAccess();                                        \
   } while (0)
 
+/* Fixed error check since it seems "unknown" can be in different static strings */
 #define PetscStackPopNoCheck(funct)                    do {             \
     PetscStackSAWsTakeAccess();                                         \
     if (PetscUnlikely(petscstack.currentsize <= 0)) {                   \
@@ -822,8 +823,11 @@ typedef struct {
               petscstack.petscroutine[petscstack.currentsize] &&        \
               (petscstack.function[petscstack.currentsize]    !=        \
                (const char*)funct))) {                                  \
-          printf("Invalid stack: push from %s, pop from %s\n",          \
-                 petscstack.function[petscstack.currentsize],funct);    \
+          if (petscstack.function[petscstack.currentsize][0] != funct[0] || \
+              petscstack.function[petscstack.currentsize][1] != funct[1] || \
+              petscstack.function[petscstack.currentsize][2] != funct[2]) \
+            printf("Invalid stack: push from %s, pop from %s\n",        \
+                   petscstack.function[petscstack.currentsize],funct);  \
         }                                                               \
         petscstack.function[petscstack.currentsize] = PETSC_NULLPTR;    \
         petscstack.file[petscstack.currentsize]     = PETSC_NULLPTR;    \
