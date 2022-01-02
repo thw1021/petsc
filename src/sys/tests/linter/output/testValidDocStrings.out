@@ -276,7 +276,7 @@ ERROR 0: ./src/sys/tests/linter/testValidDocStrings.c:16:71
   72: {
   73:   return 0;
 
-Multiple 'Level' subheadings. Much like Highlanders, there can only be one [-fdoc-unique-subheadings]:
+Multiple 'Level' subheadings. Much like Highlanders, there can only be one [-fdoc-inline-list-section-header-unique]:
   45: . z - a nonexistent parameter
   46: 
 > 47:   level: Lorem ipsum dolor sit amet
@@ -375,7 +375,7 @@ Parameter-list entry missing a description. Expected '+ - a very useful descript
   84: 
   85:   References:
 
-Required heading(s) 'Level' not found in docstring [-fdoc-section-header-missing]:
+Required heading(s) 'Level' not found in docstring [-fdoc-inline-list-section-header-missing]:
   74: }
   75: 
 > 76: /*
@@ -394,7 +394,7 @@ Required heading(s) 'Level' not found in docstring [-fdoc-section-header-missing
   89: PetscErrorCode testIllFormedMinimalDocString(void)
   90: {
 
-Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very useful description' [-fdoc-synopsis-missing]:
+Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very useful description' [-fdoc-synopsis-missing-description]:
   75: 
   76: /*
 > 77:   Not Collective, Synchronous
