@@ -1,6 +1,6 @@
 <--- FIXED --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidDocStrings.c:16:71
+ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *, PetscBool)', canonical type 'int (_p_PetscViewer *, int, double *, PetscBool)'
   69: @*/
   70: 
@@ -88,7 +88,7 @@ Level subheading must be lowercase, expected 'beginner' found 'Beginner' [-fdoc-
   51: 
   52: Developer Notes:
 
-ERROR 1: ./src/sys/tests/linter/testValidDocStrings.c:16:89
+ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:89
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   87:    .seealso: testNonExistentFunction(), testNonExistentType
   88: */
@@ -117,7 +117,7 @@ Found parameter docstring(s) but 'testIllFormedMinimalDocString()' has no argume
   85:   References:
   86:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-ERROR 2: ./src/sys/tests/linter/testValidDocStrings.c:16:112
+ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:112
 'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
   110: .zeeakso: testNonExistentFunction(), testNonExistentType
   111: C@*/
@@ -213,7 +213,7 @@ Unknown section header '.zeeakso', assuming you meant '.seealso' [-fdoc-section-
   111: C@*/
   112: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 
-ERROR 3: ./src/sys/tests/linter/testValidDocStrings.c:16:128
+ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:128
 'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *******, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *******, int (*)(int))'
   126: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
   127: @*/
@@ -248,14 +248,14 @@ Dashes must be aligned to largest column (15) within argument list [-fdoc-param-
   122: - function_ptr - a function pointer
   123: 
 
-ERROR 6: ./src/sys/tests/linter/testValidDocStrings.c:16:169
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   167: .seealso: foo()
   168: @*/
 > 169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   170: {
-  171:   return 0;
+  171:   return testStaticFunction();
 
 Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-fdoc-inline-list-level-spelling]:
   163:   testAllParamsUndocumented - lorem
@@ -267,7 +267,7 @@ Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidDocStrings.c:16:71
+ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *, PetscBool)', canonical type 'int (_p_PetscViewer *, int, double *, PetscBool)'
   69: @*/
   70: 
@@ -342,7 +342,7 @@ Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner,
   48: 
   49:   Level:
 
-ERROR 1: ./src/sys/tests/linter/testValidDocStrings.c:16:89
+ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:89
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   87:    .seealso: testNonExistentFunction(), testNonExistentType
   88: */
@@ -402,7 +402,7 @@ Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very use
   79:   inpt parms:
   80: . foo
 
-ERROR 4: ./src/sys/tests/linter/testValidDocStrings.c:16:145
+ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:145
 'testInternFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   143: .seealso: function()
   144: @*/
@@ -424,7 +424,7 @@ A sowing docstring for a function with internal linkage is pointless! [-fdoc-int
   145: PetscErrorCode testInternFunction()
   146: {
 
-Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidDocStrings.c:1:136
+Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:1:136
 'hidden' of derived type '', canonical type ''
   134: void function() { }
   135: 
@@ -434,7 +434,7 @@ Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter
   138: /*@
 
 
-ERROR 5: ./src/sys/tests/linter/testValidDocStrings.c:23:157
+ERROR 5: ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:157
 'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   155: .seealso: function()
   156: @*/
@@ -456,7 +456,7 @@ A sowing docstring for a function with internal linkage is pointless! [-fdoc-int
   157: static PetscErrorCode testStaticFunction()
   158: {
 
-Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidDocStrings.c:23:157
+Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:157
 'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   155: .seealso: function()
   156: @*/
@@ -466,14 +466,14 @@ Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testV
   159:   return 0;
 
 
-ERROR 6: ./src/sys/tests/linter/testValidDocStrings.c:16:169
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   167: .seealso: foo()
   168: @*/
 > 169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   170: {
-  171:   return 0;
+  171:   return testStaticFunction();
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
 [ROOT] -------------------------------------------------------------------------------------
