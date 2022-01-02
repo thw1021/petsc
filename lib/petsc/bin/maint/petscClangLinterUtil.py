@@ -584,40 +584,80 @@ class ParsingError(Exception):
   pass
 
 
-class DiagnosticsManager(object):
-  __slots__ = "disabled","disabledRegex"
+class _DiagnosticsManager(object):
+  __slots__ = "disabled"
 
   def __init__(self):
-    self.disabled      = {}
-    self.disabledRegex = []
+    self.disabled = set()
     return
-
-  def _disabledRE(self,flag):
-    rematch = re.match
-    return any(rematch(regex,flag) in self.disabledRegex)
 
   def disable(self,flag):
-    import ipdb; ipdb.set_trace()
+    assert isinstance(flag,str)
+    self.disabled.add(flag)
     return
+
+  def enable(self,flag):
+    assert isinstance(flag,str)
+    self.disabled.discard(flag)
+    return
+
+  def set(self,flag,value):
+    return self.enable(flag) if value else self.disable(flag)
 
   def disabledFor(self,flag):
     assert isinstance(flag,str)
-    return flag in self.disabled or self._disabledRE(flag)
+    return flag in self.disabled
 
   def enabledFor(self,flag):
     return not self.disabledFor(flag)
 
+DiagnosticsManager = _DiagnosticsManager()
+
+class DiagnosticMap(object):
+  __slots__ = "_diags"
+
+  def __init__(self,dlist):
+    self._diags = {attr.replace("-","_") : attr for attr in dlist}
+    return
+
+  def __getattr__(self,attr):
+    diags = self._diags
+    try:
+      return diags[attr]
+    except KeyError:
+      ret = [v for k,v in diags.items() if k.endswith(attr)]
+      if len(ret):
+        return ret[0]
+    raise AttributeError(attr)
+
 
 class Diagnostic(object):
-  __slots__ = "flag","message","patch"
+  _registered = {}
+  __slots__   = "flag","message","patch"
 
   def __init__(self,flag,message,patch=None):
-    if not isinstance(flag,str):
-      flag = "-".join(flag)
+    flag = self.expandFlag(flag)
+    if flag not in self._registered:
+      mess = "Flag {} not found in registrar {}".format(flag,self._registered)
+      raise RuntimeError(mess)
     self.flag    = flag
     self.message = str(message)
     self.patch   = patch
     return
+
+  def __repr__(self):
+    return "\n".join([
+      "flag:  {}".format(self.flag.join((" [-f","]"))),
+      "patch: {}".format(self.patch),
+      "message:\n{}".format(self.message)
+    ])
+
+  def __getattr__(self,attr):
+    if isinstance(attr,str):
+      newattr = attr.replace("_","-")
+      if newattr in self._registered:
+        return newattr
+    return getattr(object,attr)
 
   def formatMessage(self):
     message   = self.message
@@ -630,5 +670,34 @@ class Diagnostic(object):
       ret = message.replace(":",flagdescr+":",1)
     return ret
 
-  def disabled(flag):
-    return False
+  def disabled(self):
+    return DiagnosticsManager.disabledFor(self.flag.replace("_","-"))
+
+  @staticmethod
+  def expandFlag(flag):
+    if not isinstance(flag,str):
+      flag = "-".join(flag)
+    return flag
+
+  @classmethod
+  def register(cls,*args):
+    def decorator(func):
+      @functools.wraps(func)
+      def wrapper(*args,**kwargs):
+        return func(*args,**kwargs)
+
+      wrapper.diags = DiagnosticMap(d for d,_ in diags)
+      return wrapper
+
+    diags = [(cls.expandFlag(d),h.casefold()) for d,h in args]
+    cls._registered.update(diags)
+    return decorator
+
+  @classmethod
+  def register_class(cls,*regargs):
+    def decorator(classname):
+      diagList = [(cls.expandFlag(classname.diagnostic(f)),h.casefold()) for f,h in regargs]
+      cls._registered.update(diagList)
+      classname.diags = DiagnosticMap(d for d,_ in diagList)
+      return classname
+    return decorator
