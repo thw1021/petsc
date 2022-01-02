@@ -168,5 +168,5 @@ static PetscErrorCode testStaticFunction()
 @*/
 PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 {
-  return 0;
+  return testStaticFunction();
 }
