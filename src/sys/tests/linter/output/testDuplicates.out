@@ -20,7 +20,7 @@ ERROR 1: ./src/sys/tests/linter/testDuplicates.c:26:10
   11: /* ~should~ be removed but won't be */
   12: PetscValidScalarPointer(b,7);
 
-Argument number doesn't match for 'b'. Found '5' expected '2' from [-fmatchin-arg-num]:
+Argument number doesn't match for 'b'. Found '5' expected '2' from [-fmatching-arg-num]:
 > 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
                                                  ^^^^^^^^^^^^^^
 
@@ -33,7 +33,7 @@ ERROR 2: ./src/sys/tests/linter/testDuplicates.c:29:12
   13: PetscValidScalarPointer(b,3);
   14: return;
 
-Argument number doesn't match for 'b'. Found '7' expected '2' from [-fmatchin-arg-num]:
+Argument number doesn't match for 'b'. Found '7' expected '2' from [-fmatching-arg-num]:
 > 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
                                                  ^^^^^^^^^^^^^^
 
@@ -46,7 +46,7 @@ ERROR 3: ./src/sys/tests/linter/testDuplicates.c:29:13
   14:   return;
   15: }
 
-Argument number doesn't match for 'b'. Found '3' expected '2' from [-fmatchin-arg-num]:
+Argument number doesn't match for 'b'. Found '3' expected '2' from [-fmatching-arg-num]:
 > 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
                                                  ^^^^^^^^^^^^^^
 
