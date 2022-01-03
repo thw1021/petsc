@@ -605,14 +605,13 @@ PetscErrorCode  ISGeneralSetIndices_General(IS is,PetscInt n,const PetscInt idx[
 +  is - the index set
 .  rstart - the range start index (inclusive)
 .  rend - the range end index (exclusive)
--  mask - the boolean mas of length rend-rstart
+-  mask - the boolean mask array of length rend-rstart, indices will be set for each PETSC_TRUE value in the array
 
    Notes:
-   This stores indices of mask values that are PETSC_TRUE, adding rstart.
-   The mask is not taken over and should be freed by user.
+   The mask array may be freed by the user after this call.
 
    Example:
-$  PetscBool mask[] = {0, 1, 0, 0, 1};
+$  PetscBool mask[] = {PETSC_FALSE, PETSC_TRUE, PETSC_FALSE, PETSC_FALSE, PETSC_TRUE};
 $  ISGeneralSetIndicesFromMask(is,10,15,mask);
    will feed the IS with indices
 $  {11, 14}
@@ -648,8 +647,7 @@ PetscErrorCode ISGeneralSetIndicesFromMask_General(IS is,PetscInt rstart,PetscIn
       nidx++;
     }
   }
-  ierr = ISGeneralSetIndices_General(is,nidx,idx,PETSC_COPY_VALUES);CHKERRQ(ierr);
-  ierr = PetscFree(idx);CHKERRQ(ierr);
+  ierr = ISGeneralSetIndices_General(is,nidx,idx,PETSC_OWN_VALUES);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
