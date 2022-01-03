@@ -378,100 +378,146 @@ class PetscDocString(PetscDocStringBase):
       found = False
       items = []
 
-      def inspector(loc,line):
+      def genericInspector(loc,line):
         nonlocal found
         if found: return
-        pre,dash,rest = line.partition(" - ")
+        pre,dash,rest = line.partition("-")
         if dash and rest:
           item = pre.strip()
           items.append((ds.makeSourceRange(item,line,loc.start.line),item))
           found = True
         return
 
-      super().setup(ds,*args,inspectLine=inspector,**kwargs)
-      self.items = tuple(items)
+      def enumInspector(loc,line):
+        genericInspector(loc,line) # find the symbol name
+        lstr = line.lstrip()
+        if lstr.startswith("$"):
+          if not len(items):
+            import ipdb; ipdb.set_trace()
+            assert len(items) # we should have already found the symbol name
+          name = lstr[1:].split(maxsplit=1)[0].strip()
+          items.append((ds.makeSourceRange(name,line,loc.start.line),line))
+        return
+
+
+      isEnum = ds.cursor.type.kind in enumTypes
+      super().setup(ds,*args,inspectLine=enumInspector if isEnum else genericInspector,**kwargs)
+
+      if isEnum:
+        def checkEnumStartsWithDollar(ds,items):
+          checkOptStartsWith = PetscDocString.ParameterList.checkOptStartsWith
+          for key,opts in sorted(items.items()):
+            if len(opts) < 1:
+              mess = "number of options {} < 1, key: {}, items: {}".format(len(opts),key,items)
+              raise RuntimeError(mess)
+            else:
+              for opt in opts:
+                checkOptStartsWith(ds,opt,"Enum","$")
+            return items
+
+
+        params = PetscDocString.ParameterList("enum params",prefixes=("$"))
+        params.fill(items[1:])
+        params.setup(ds,*args,parameterListPrefixCheck=checkEnumStartsWithDollar,**kwargs)
+        # shuffle the enum values up
+        params.items = {k+1 : v for k,v in params.items.items()}
+        # reinsert the heading
+        params.items[0] = items[0]
+        self.items      = params
+      else:
+        self.items = tuple(items)
       return
 
   @Diagnostic.register_class(
     ("section-header-missing",""),
     ("section-header-unique",""),
-    ("aligned","Verify that parameter list descriptions are aligned"),
+    ("formatting","Verify that parameter list entries are correctly white-space formatted"),
     ("prefix","Verify that parameter list entries begin with the correct prefix"),
     ("missing-description","Verify that parameter list entries have a description"),
   )
   class ParameterList(SectionBase):
+    __slots__ = "prefixes"
+
+    def __init__(self,*args,prefixes=("+",".","-"),**kwargs):
+      self.prefixes = prefixes
+      super().__init__(*args,**kwargs)
+      return
+
     @staticmethod
     def diagnostic(flag):
       return PetscDocStringBase.diagnosticFlag(flag,prefix="param-list")
 
     @staticmethod
     def splitParam(text):
+      """
+      retrieve groups '(+)\s*([A-z,-]+)- (.*)'
+      """
       stripped = text.strip()
       prefix   = stripped[0]
-      assert prefix in (".","-","+")
-      rest          = stripped[1:]
+      rest     = stripped[1:]
       arg,sep,descr = rest.partition(" - ")
-      if not sep and rest[-1] == "-":
-        arg = rest[:-1]
+      if not sep:
+        if rest.endswith("-"):
+          arg = rest[:-1]
+        elif "- " in rest:
+          arg,_,descr = rest.partition("- ")
+        # if we hit neither then there is no "-" in text, possible case of "[prefix] foo"?
       return prefix,arg.strip(),descr.lstrip()
 
     @staticmethod
-    def leadingDashOffset(text):
-      return text.find("-")+1 if text.lstrip().startswith("-") else 0
+    def prefixOffset(text,char="-"):
+      stripped = text.lstrip()
+      return text.find(char)+1 if stripped.startswith(char) else 0
 
     @classmethod
-    def arglen(cls,text):
-      # we don't want the leading dash if there is one
-      offset  = cls.leadingDashOffset(text)
-      sub     = text[offset:] if offset else text
-      argonly = sub.split(" - ",maxsplit=1)[0]
-      # sub may be missing proper description, ie. ' blabla    -' or ' blabla'
-      if len(argonly) == len(sub) and argonly[-1] == "-":
-        argonly = argonly[:-1]
-      return len(argonly.rstrip())+offset
+    def arglen(cls,text,char="-"):
+      """
+      return a length l such that text[:l] returns all text up until the end of the arg name
+      """
+      _,param,_ = cls.splitParam(text)
+      assert param, "Could not identify a parameter in {}".format(text)
+      return sum(map(len,text.partition(param)[:2]))
 
     @classmethod
-    def checkAlignedDescriptions(cls,ds,group,maxArgLen=None):
+    def checkAlignedDescriptions(cls,ds,group,maxArgLen=None,**kwargs):
+      """
+      Verify that the position of the '-' before the description for each argument is aligned
+      to maxArgLen+1 columns
+      """
       if maxArgLen is None:
-        maxArgLen = max(alen for _,_,alen in group) if group else 0
-      assert maxArgLen >= 0
-      alignDiag = cls.diags.aligned
-      for loc,text,alen in group:
-        offset = cls.leadingDashOffset(text)
-        pos    = text[offset:].find(" - ")
-        if pos == -1:
-          if not text or text.isspace():
-            continue
-          import ipdb; ipdb.set_trace()
-        pos += offset
-        if pos != maxArgLen:
-          endline = loc.end.line
-          # fmtstr  = "{} {:{}}- {}"
-          # spl     = cls.splitParam(text)
-          # fixed   = fmtstr.format(spl[0],spl[1],maxArgLen,spl[2])
-          fixed   = "{:{}}{}".format(text[:alen],maxArgLen,text[pos:])[alen:]
-          floc    = ds.makeSourceRange(text[alen:],text,endline)
-          eloc    = ds.makeSourceRange(text[pos:pos+3],text,endline)
-          mess    = "Dashes must be aligned to largest column ({}) within argument list".format(
-            maxArgLen+1
-          )
-          ds.addErrorFromSourceRange(alignDiag,mess,eloc,patch=Patch(floc,fixed))
+        maxArgLen = max(len(cls.splitParam(text)[1]) for _,text,_ in group) if group else 0
+      assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
+
+      errorMessage = "Argument list entry must be formatted as follows ^(\S) (.*) - (.*)"
+      alignDiag    = cls.diags.formatting
+      splitParam   = cls.splitParam
+
+      for loc,text,_ in group:
+        fixed = "{} {:{width}} - {}".format(*splitParam(text),width=maxArgLen)
+        try:
+          diffIndex = [i for i,(a1,a2) in enumerate(zip(text,fixed)) if a1 != a2][0]
+        except IndexError:
+          assert text == fixed # equal
+          continue
+
+        eloc = ds.makeSourceRange(text[diffIndex:],text,loc.end.line)
+        ds.addErrorFromSourceRange(alignDiag,errorMessage,eloc,patch=Patch(eloc,fixed[diffIndex:]))
       return
 
-    def setup(self,ds,*args,**kwargs):
+    @classmethod
+    def checkOptStartsWith(cls,ds,item,descr,char):
+      loc,line,_ = item
+      pre,_,_    = cls.splitParam(line)
+      if pre != char:
+        eloc = ds.makeSourceRange(pre,line,loc.start.line)
+        mess = "{} parameter list entry must start with '{}'".format(descr,char)
+        ds.addErrorFromSourceRange(cls.diags.prefix,mess,eloc,patch=Patch(eloc,char))
+      return
+
+    def setup(self,ds,*args,parameterListPrefixCheck=None,**kwargs):
       subheading       = 0
       groups           = collections.defaultdict(list)
-      prefixDiag       = self.diags.prefix
       missingDescrDiag = self.diags.missing_description
-
-      def checkOptStartsWith(item,descr,char):
-        loc,line,_ = item
-        pre,_,_    = self.splitParam(line)
-        if pre != char:
-          eloc = ds.makeSourceRange(pre,line,loc.start.line)
-          mess = "{} parameter list entry must start with '{}'".format(descr,char)
-          ds.addErrorFromSourceRange(prefixDiag,mess,eloc,patch=Patch(eloc,char))
-        return
 
       def inspector(loc,line):
         if not line or line.isspace():
@@ -480,32 +526,39 @@ class PetscDocString(PetscDocStringBase):
           nonlocal subheading
           subheading += 1
         lstrip = line.lstrip()
-        if lstrip.startswith(("+",".","-")):
-          opt,dash,rest = lstrip[self.leadingDashOffset(lstrip):].partition("-")
-          if not dash or not rest.strip():
+        if lstrip.startswith(self.prefixes):
+          opt,sep,rest = lstrip[self.prefixOffset(lstrip):].partition("-")
+          if not sep or not rest or rest.isspace():
             mess = "Parameter-list entry missing a description. Expected '{} - a very useful description'".format(opt.split(maxsplit=1)[0].strip())
             ds.addErrorFromSourceRange(missingDescrDiag,mess,loc)
           groups[subheading].append((loc,line,self.arglen(line)))
         return
 
+      def parameterListDefaultPrefixCheck(ds,items):
+        checkOptStartsWith = self.checkOptStartsWith
+        for key,opts in sorted(items.items()):
+          lopts = len(opts)
+          if lopts < 1:
+            mess = "number of options {} < 1, key: {}, items: {}".format(lopts,key,items)
+            raise RuntimeError(mess)
+          elif lopts == 1:
+            # only 1 option, should start with '.'
+            checkOptStartsWith(ds,opts[0],"Solitary",".")
+          else:
+            # more than 1, should be "+", then however many ".", then last is "-"
+            checkOptStartsWith(ds,opts[0],"First multi","+")
+            for opt in opts[1:-1]:
+              checkOptStartsWith(ds,opt,"Multi",".")
+            checkOptStartsWith(ds,opts[-1],"Last multi","-")
+        return items
+
+
+      if parameterListPrefixCheck is None:
+        parameterListPrefixCheck = parameterListDefaultPrefixCheck
 
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
 
-      self.items = dict(groups)
-      for key,opts in sorted(self.items.items()):
-        lopts = len(opts)
-        if lopts < 1:
-          mess = "number of options {} < 1, key: {}, items: {}".format(lopts,key,self.items)
-          raise RuntimeError(mess)
-        elif lopts == 1:
-          # only 1 option, should start with '.'
-          checkOptStartsWith(opts[0],"Solitary",".")
-        else:
-          # more than 1, should be "+", then however many ".", then last is "-"
-          checkOptStartsWith(opts[0],"First multi","+")
-          for opt in opts[1:-1]:
-            checkOptStartsWith(opt,"Multi",".")
-          checkOptStartsWith(opts[-1],"Last multi","-")
+      self.items = parameterListPrefixCheck(ds,dict(groups))
       return
 
   @Diagnostic.register_class(("section-header-missing",""),("section-header-unique",""))
@@ -641,6 +694,7 @@ class PetscDocString(PetscDocStringBase):
   sowingTypes     = {"@","S","E"}
   clxToSowingType = {
     clx.TypeKind.FUNCTIONPROTO : ("@","functions"),
+    clx.TypeKind.ENUM          : ("E","enums"),
   }
   __slots__ = "_linter","cursor","raw","extent","indent"
 
@@ -673,6 +727,7 @@ class PetscDocString(PetscDocStringBase):
   def diagnostic(cls,flag):
     return super().diagnosticFlag(flag)
 
+
   def __init__(self,linter,cursor,raw,extent,indent=2):
     assert isinstance(linter,PetscLinter)
     if not self.isValidDocstring(cursor,raw):
@@ -689,8 +744,7 @@ class PetscDocString(PetscDocStringBase):
     if has and not self.cursor.translation_unit.spelling.endswith((".h",".hpp")):
       mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),self.cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
       # TODO: could have a fixit here to simply delete the docstring
-      diag = Diagnostic(self.diags.internal_linkage,mess)
-      self._linter.addErrorFromCursor(cursor,diag)
+      self._linter.addErrorFromCursor(cursor,Diagnostic(self.diags.internal_linkage,mess))
       raise ParsingError("Internal linkage")
     return
 
@@ -801,19 +855,16 @@ class PetscDocString(PetscDocStringBase):
       self.addErrorFromSourceRange(diag,mess,loc,highlight=False,patch=Patch(loc,"\n"))
     return
 
-  def _reset(self):
-    for s in self.sections:
-      s.clear()
-    return
 
   def parse(self):
-    self._reset()
+    for s in self.sections:
+      s.clear()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
     rawData     = []
     section     = self.sections.synopsis
     checkIndent = section.checkIndentAllowed()
-    isHeading   = self.SectionBase.isHeading
+    isHeading   = section.isHeading
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
@@ -838,6 +889,7 @@ class PetscDocString(PetscDocStringBase):
           rawData     = []
           section     = newSection
           checkIndent = newSection.checkIndentAllowed()
+          isHeading   = newSection.isHeading
       rawData.append((self.makeSourceRange(line,line,lineno),line))
 
     section.fill(rawData)
@@ -1008,6 +1060,11 @@ class PetscCursor(object):
         pointees = [c for c in pointees if c.kind not in mathCursors]
       if len(pointees) == 1:
         name = cls.getNameFromCursor(pointees[0])
+    elif cursor.kind == clx.CursorKind.ENUM_DECL:
+      # have a
+      # typedef enum { ... } Foo;
+      # so the "name" of the cursor is actually the name of the type itself
+      name = cursor.type.get_canonical().spelling
     if not name:
       # Catchall last attempt, we become the very thing we swore to destroy and parse the
       # tokens ourselves
@@ -1216,11 +1273,16 @@ class PetscCursor(object):
 
   @classmethod
   def getCommentAndRangeFromCursor(cls,cursor):
-    cursor = cls.cast(cursor)
-    func   = cls.getOrRegisterClangFunction(
+    func = cls.getOrRegisterClangFunction(
       "clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange
     )
-    return cursor.raw_comment,func(cursor.clangCursor())
+    if isinstance(cursor,clx.Cursor):
+      cursorRange = func(cursor)
+    elif isinstance(cursor,cls):
+      cursorRange = func(cursor.clangCursor())
+    else:
+      raise ValueError(type(cursor))
+    return cursor.raw_comment,cursorRange
 
   def getCommentAndRange(self):
     return self.getCommentAndRangeFromCursor(self)
@@ -1592,11 +1654,12 @@ class PetscLinter(object):
           # same scope
           yield from walkScope(child,scope=scope)
 
-    cursor   = tu.cursor
-    filename = cursor.spelling
+    lintableKinds = funcCallCursors|{clx.CursorKind.ENUM_DECL}
+    cursor        = tu.cursor
+    filename      = cursor.spelling
     for possibleParent in cursor.get_children():
       # getting filename is for some reason stupidly expensive, so we do this check first
-      if possibleParent.kind not in funcCallCursors: continue
+      if possibleParent.kind not in lintableKinds: continue
       try:
         if possibleParent.location.file.name != filename: continue
       except AttributeError:
@@ -1997,6 +2060,13 @@ TODO:
 - figure out how to handle in-out parameters
 - fix indentation check when indenting overflowing parameter list descriptions, should be indented to the dash not 2 columns
 """
+def alwaysTrue(*args,**kwargs):
+  return True
+
+def alwaysFalse(*args,**kwargs):
+  return False
+
+
 """utilities for checking docstrings"""
 def checkDocValidSynopsis(linter,cursor,docstring):
   synopsis = docstring.sections.synopsis
@@ -2010,7 +2080,11 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   cursorName      = PetscCursor.getNameFromCursor(cursor)
   for lineLoc,line in synopsis.lines:
     symbol,dash,rest = line.partition("-")
-    if len(dash) and len(rest):
+    if symbol.lstrip().startswith("$"):
+      # This is special treatment for enums since they don't usually have a
+      # clearly-defined "begin"
+      break
+    elif len(dash) and len(rest):
       foundSynopsis = True
       symbol        = symbol.strip()
       if symbol != cursorName:
@@ -2031,101 +2105,6 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     )
     diag = synopsis.diags.missing_description
     docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
-  return
-
-@Diagnostic.register(
-  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that function parameters are documented"),
-  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented function parameters exist"),
-  (PetscDocString.ParameterList.diagnostic("fortran-interface"),"Verify that functions needing a custom fortran interface have the correct sowing indentifiers"),
-)
-def checkDocValidFunctionParameters(linter,cursor,docstring):
-  fnargs         = linter.getArgumentCursors(cursor)
-  params         = docstring.sections.parameters
-  undocParamDiag = checkDocValidFunctionParameters.diags.undocumented_parameter
-  extraParamDiag = checkDocValidFunctionParameters.diags.extra_parameter
-  fortrInterDiag = checkDocValidFunctionParameters.diags.fortran_interface
-  if fnargs and not params:
-    linter.addErrorFromCursor(
-      cursor,Diagnostic(undocParamDiag,"Function parameters are all undocumented")
-    )
-    return
-  elif not fnargs:
-    # check we've got no parameter docstrings, if so, we can delete them
-    if len(params.items.values()):
-      sr   = params.extent
-      mess = "Found parameter docstring(s) but '{}' has no arguments".format(cursor.displayname)
-      docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
-    return
-
-  headings = [l for l in params.lines if params.isHeading(l)]
-  docstring.checkValidSectionHeaderSpelling(params,headings)
-  docstring.checkValidSolitarySectionHeadings(params,headings)
-
-  requiresC    = []
-  POINTER_KIND = clx.TypeKind.POINTER
-  for arg in fnargs:
-    canon = arg.type.get_canonical()
-    kind  = canon.kind
-    it    = 0
-    while kind == POINTER_KIND:
-      if it >= 100:
-        # there is no chance that someone has a variable over 100 pointers deep, so
-        # clearly something is wrong
-        emess = "Ran for {} iterations (>= 100) trying to get pointer type for\n{}\n".format(
-          it,arg.errorViewFromCursor(arg),"\n".join(pclu.viewAstFromCursor(arg))
-        )
-        raise RuntimError(emess)
-      canon = canon.get_pointee()
-      kind  = canon.kind
-      it   += 1
-    if kind in charTypes:
-      requiresC.append((arg,"char"))
-    elif kind in functionTypes:
-      requiresC.append((arg,"function"))
-
-  if len(requiresC) and not docstring.raw.startswith("/*@C"):
-    line   = docstring.raw.split(maxsplit=1)[0]
-    crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
-    blame  = "\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))
-    mess   = "Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format(blame)
-    docstring.addErrorFromSourceRange(fortrInterDiag,mess,crange,patch=Patch(crange,line+"C"))
-
-  fnargnames = [a.name for a in fnargs]
-  fnargseen  = [False]*len(fnargs)
-  notfound   = []
-  for _,group in sorted(params.items.items()):
-    indices = []
-    remove  = set()
-    for i,(loc,text,_) in enumerate(group):
-      arg = text.split()[1].strip()
-      try:
-        idx = fnargnames.index(arg)
-      except ValueError:
-        notfound.append((arg,loc))
-        remove.add(i)
-      else:
-        fnargseen[idx] = True
-        indices.append(idx)
-    params.checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove])
-
-  fnargsleft = [name for seen,name in zip(fnargseen,fnargnames) if not seen]
-  if notfound:
-    for arg,loc in notfound:
-      message = "Extra docstring parameter '{}' not found in function arguments:\n{}".format(
-        arg,loc.formatted(numContext=2)
-      )
-      try:
-        match = difflib.get_close_matches(arg,fnargsleft,n=1)[0]
-      except IndexError:
-        pass
-      else:
-        argcursor = [c for c in fnargs if c.name == match][0]
-        message  += "\n\nmaybe you meant {}".format(argcursor.getFormattedBlurb())
-        fnargsleft.remove(match)
-      linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
-
-  for mess in map("Undocumented parameter '{}' not found in parameter section".format,fnargsleft):
-    docstring.addErrorFromSourceRange(undocParamDiag,mess,params.extent,highlight=False)
   return
 
 def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
@@ -2226,6 +2205,135 @@ def checkDocValidSeealso(linter,cursor,docstring):
   return
 
 
+"""utilities for checking specific types of docstrings"""
+@Diagnostic.register(
+  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that function parameters are documented"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented function parameters exist"),
+)
+def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,**kwargs):
+  checkAlignedDescriptions = params.checkAlignedDescriptions
+  splitParam = params.splitParam
+  cursorList = list(map(PetscCursor.cast,cursorList))
+  argNames   = [a.name for a in cursorList]
+  argSeen    = [False]*len(argNames)
+  notFound   = []
+  for k,group in sorted(params.items.items()):
+    if skipGroup(k,group):
+      continue
+    indices = []
+    remove  = set()
+    for i,(loc,text,_) in enumerate(group):
+      _,arg,_ = splitParam(text)
+      #arg = text.split()[1].strip()
+      try:
+        idx = argNames.index(arg)
+      except ValueError:
+        notFound.append((arg,loc))
+        remove.add(i)
+      else:
+        argSeen[idx] = True
+        indices.append(idx)
+    checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove],**kwargs)
+
+  argsLeft = [name for seen,name in zip(argSeen,argNames) if not seen]
+  if notFound:
+    extraParamDiag    = checkDocValidParameterList.diags.extra_parameter
+    get_close_matches = difflib.get_close_matches
+    baseMessage       = "Extra docstring parameter '{}' not found in function arguments:\n{}"
+    cursor            = docstring.cursor
+    for arg,loc in notFound:
+      message = baseMessage.format(arg,loc.formatted(numContext=2))
+      try:
+        match = get_close_matches(arg,argsLeft,n=1)[0]
+      except IndexError:
+        pass
+      else:
+        matchCursor = [c for c in cursorList if c.name == match][0]
+        message    += "\n\nmaybe you meant {}".format(matchCursor.getFormattedBlurb())
+        argsLeft.remove(match)
+      linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
+
+  undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
+  for mess in map("Undocumented parameter '{}' not found in parameter section".format,argsLeft):
+    docstring.addErrorFromSourceRange(undocParamDiag,mess,params.extent,highlight=False)
+  return
+
+@Diagnostic.register(
+  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that function parameters are documented"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented function parameters exist"),
+  (PetscDocString.ParameterList.diagnostic("fortran-interface"),"Verify that functions needing a custom fortran interface have the correct sowing indentifiers"),
+)
+def checkDocValidFunctionParameters(linter,cursor,docstring):
+  fnargs = linter.getArgumentCursors(cursor)
+  params = docstring.sections.parameters
+
+  if fnargs and not params:
+    undocParamDiag = checkDocValidFunctionParameters.diags.undocumented_parameter
+    linter.addErrorFromCursor(
+      cursor,Diagnostic(undocParamDiag,"Function parameters are all undocumented")
+    )
+    return
+  elif not fnargs:
+    # check we've got no parameter docstrings, if so, we can delete them
+    if len(params.items.values()):
+      sr   = params.extent
+      mess = "Found parameter docstring(s) but '{}' has no arguments".format(cursor.displayname)
+      extraParamDiag = checkDocValidFunctionParameters.diags.extra_parameter
+      docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
+    return
+
+  headings = [l for l in params.lines if params.isHeading(l)]
+  docstring.checkValidSectionHeaderSpelling(params,headings)
+  docstring.checkValidSolitarySectionHeadings(params,headings)
+
+  requiresC    = []
+  POINTER_KIND = clx.TypeKind.POINTER
+  for arg in fnargs:
+    canon = arg.type.get_canonical()
+    kind  = canon.kind
+    it    = 0
+    while kind == POINTER_KIND:
+      if it >= 100:
+        # there is no chance that someone has a variable over 100 pointers deep, so
+        # clearly something is wrong
+        emess = "Ran for {} iterations (>= 100) trying to get pointer type for\n{}\n".format(
+          it,arg.errorViewFromCursor(arg),"\n".join(pclu.viewAstFromCursor(arg))
+        )
+        raise RuntimError(emess)
+      canon = canon.get_pointee()
+      kind  = canon.kind
+      it   += 1
+    if kind in charTypes:
+      requiresC.append((arg,"char"))
+    elif kind in functionTypes:
+      requiresC.append((arg,"function"))
+
+  if len(requiresC) and not docstring.raw.startswith("/*@C"):
+    line   = docstring.raw.split(maxsplit=1)[0]
+    crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
+    blame  = "\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))
+    mess   = "Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format(blame)
+    fortrInterDiag = checkDocValidFunctionParameters.diags.fortran_interface
+    docstring.addErrorFromSourceRange(fortrInterDiag,mess,crange,patch=Patch(crange,line+"C"))
+
+  checkDocValidParameterList(linter,docstring,params,fnargs)
+  return
+
+def checkDocValidEnumParameters(linter,cursor,docstring):
+  synopsis = docstring.sections.synopsis
+  if not synopsis:
+    import ipdb; ipdb.set_trace()
+    # wtf
+    return
+
+  def skipGroup(k,*args,**kwargs):
+    return k == 0
+
+  enumParams = list(map(PetscCursor,cursor.get_children()))
+  params     = synopsis.items
+  checkDocValidParameterList(linter,docstring,params,enumParams,skipGroup=skipGroup,char="$")
+  return
+
 """Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,function):
   try:
@@ -2240,19 +2348,25 @@ def checkPetscFunctionDocString(linter,function):
   checkDocValidSeealso(linter,function,docstring)
   return
 
+def checkPetscEnumDocString(linter,enumCursor):
+  try:
+    docstring = PetscDocString.fromCursor(linter,enumCursor).parse()
+  except ParsingError:
+    return # error already logged with linter
+
+  checkDocValidSynopsis(linter,enumCursor,docstring)
+  checkDocValidEnumParameters(linter,enumCursor,docstring)
+  checkDocValidLevel(linter,enumCursor,docstring)
+  checkDocValidSeealso(linter,enumCursor,docstring)
+  return
+
 
 checkDocMap = {
   clx.CursorKind.FUNCTION_DECL : checkPetscFunctionDocString,
+  clx.CursorKind.ENUM_DECL     : checkPetscEnumDocString,
 }
 
 """utilities for checking functions"""
-def alwaysTrue(*args,**kwargs):
-  return True
-
-def alwaysFalse(*args,**kwargs):
-  return False
-
-
 @Diagnostic.register(
   ("incompatible-function","Verify that the correct function was used for a type")
 )
