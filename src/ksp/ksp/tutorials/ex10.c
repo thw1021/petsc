@@ -129,7 +129,10 @@ PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhs
     ierr = ISDestroy(&colperm);CHKERRQ(ierr);
   }
 
-  *b_out=b;*x_out=x;*A_out=A;*rowperm_out=rowperm;
+  *b_out = b;
+  *x_out = x;
+  *A_out = A;
+  *rowperm_out = rowperm;
 
   PetscFunctionReturn(0);
 }
