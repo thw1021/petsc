@@ -89,7 +89,6 @@ typedef struct {
   PetscBool      gpu_assembly;
   MPI_Comm       comm; /* global communicator to use for errors and diagnostics */
   double         times[LANDAU_NUM_TIMERS];
-  PetscBool      initialized;
   PetscBool      use_matrix_mass;
   /* FE */
   PetscFE        fe[LANDAU_MAX_SPECIES];
