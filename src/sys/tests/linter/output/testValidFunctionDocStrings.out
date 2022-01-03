@@ -64,11 +64,11 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
   46: 
   47:   level: Lorem ipsum dolor sit amet
 
-Dashes must be aligned to largest column (4) within argument list [-fdoc-param-list-aligned]:
+Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
   41: 
   42:   Output Parameter:
 > 43: - y          - a pointer
-                  ^^^
+          ^^^^^^^^^^^^^^^^^^^^
   44: + cnd           - a boolean
   45: . z - a nonexistent parameter
 
@@ -165,11 +165,11 @@ Unknown section header 'output Psrammmetrs', assuming you meant 'Output Paramete
   103: . y - a PetscScalar pointer
   104: 
 
-Dashes must be aligned to largest column (9) within argument list [-fdoc-param-list-aligned]:
+Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
   98 :   input prametirs:
   99 : + viewer - a PetsViewer
 > 100: - x - a PetscInt
-          ^^^
+           ^^^^^^^^^^^^
   101: 
   102:   output Psrammmetrs:
 
@@ -181,11 +181,11 @@ Unknown section header 'optnS dtaaSE', assuming you meant 'Options Database' [-f
   106: - -option_a     - foo
   107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 
-Dashes must be aligned to largest column (51) within argument list [-fdoc-param-list-aligned]:
+Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
   104: 
   105:   optnS dtaaSE:
 > 106: - -option_a     - foo
-                      ^^^
+                       ^^^^^
   107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
   108:   lvl: itnmediate
 
@@ -240,11 +240,11 @@ Function requires custom fortran interface but missing 'C' from docstring header
   118:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
   119: 
 
-Dashes must be aligned to largest column (15) within argument list [-fdoc-param-list-aligned]:
+Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
   119: 
   120:   Input Parameters:
 > 121: + string -  a char pointer
-               ^^^
+                ^^^^^^^^^^^^^^^^^
   122: - function_ptr - a function pointer
   123: 
 

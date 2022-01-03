@@ -147,7 +147,7 @@
  
    Input Parameters:
 -+ string -  a char pointer
-++ string       -  a char pointer
+++ string       - a char pointer
  - function_ptr - a function pointer
  
 @@ -166,5 +166,5 @@
