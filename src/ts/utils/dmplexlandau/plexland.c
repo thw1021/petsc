@@ -1188,7 +1188,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscFunctionBegin;
   ierr = DMCreate(ctx->comm,&dummy);CHKERRQ(ierr);
   /* get options - initialize context */
-  ctx->verbose = 1;
+  ctx->verbose = 1; // should be 0 for silent compliance
 #if defined(PETSC_HAVE_THREADSAFETY)
   ctx->batch_sz = PetscNumOMPThreads;
 #else
