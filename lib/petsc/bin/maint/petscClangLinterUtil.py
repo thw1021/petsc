@@ -5,11 +5,11 @@ Created on Tue Mar 23 17:56:06 2021
 
 @author: jacobfaibussowitsch
 """
+import enum
 import pathlib
 import ctypes
 import functools
 import inspect
-import re
 import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
@@ -73,7 +73,6 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
     for c in cursor.get_children():
       retList.extend(viewAstFromCursor(c,pred=pred,level=level+1,**kwargs))
   return retList
-
 
 
 def getRawSourceFromCursor(cursor,**kwargs):
@@ -178,8 +177,33 @@ def static_variables(**static_attrs):
     return wrapper
   return decorator
 
+
+class CXTranslationUnit(enum.IntFlag):
+  """
+  clang.cindex.TranslationUnit does not have all latest flags
+
+  see: https://clang.llvm.org/doxygen/group__CINDEX__TRANSLATION__UNIT.html#gab1e4965c1ebe8e41d71e90203a723fe9
+  """
+  NONE                                 = 0x0
+  DetailedPreprocessingRecord          = 0x01
+  Incomplete                           = 0x02
+  PrecompiledPreamble                  = 0x04
+  CacheCompletionResults               = 0x08
+  ForSerialization                     = 0x10
+  SkipFunctionBodies                   = 0x40
+  IncludeBriefCommentsInCodeCompletion = 0x80
+  CreatePreambleOnFirstParse           = 0x100
+  KeepGoing                            = 0x200
+  SingleFileParse                      = 0x400
+  LimitSkipFunctionBodiesToPreamble    = 0x800
+  IncludeAttributedTypes               = 0x1000
+  VisitImplicitAttributes              = 0x2000
+  IgnoreNonErrorsFromIncludedFiles     = 0x4000
+  RetainExcludedConditionalBlocks      = 0x8000
+
+
 class Scope(object):
-  __doc__="""
+  """
   Scope encompasses both the logical and lexical reach of a callsite, and is used to
   determine if two function calls may be occur in chronological order. Scopes may be
   approximated by incrementing or decrementing a counter every time a pair of '{}' are
@@ -258,13 +282,13 @@ class Scope(object):
     return not (self == other)
 
   def sub(self):
-    __doc__="""spawn sub-scope"""
+    """spawn sub-scope"""
     child = Scope(self)
     self.children.append(child)
     return child
 
   def isParentOf(self,other):
-    __doc__="""self is parent of other"""
+    """self is parent of other"""
     if self == other:
       return False
     for child in self.children:
@@ -273,13 +297,16 @@ class Scope(object):
     return False
 
   def isChildOf(self,other):
-    __doc__="""self is child of other, or other is parent of self"""
+    """self is child of other, or other is parent of self"""
     return other.isParentOf(self)
 
 
 @functools.total_ordering
 class PetscSourceLocation(object):
-  """A simple wrapper class to add comparison operators to clx.SourceLocations since they only implement equal"""
+  """
+  A simple wrapper class to add comparison operators to clx.SourceLocations since they only
+  implement __eq__()
+  """
   __slots__ = "sourceLocation","translation_unit"
 
   def __init__(self,sourceLoc,tu=None):
@@ -295,9 +322,27 @@ class PetscSourceLocation(object):
       "Source Location:  {}".format(self.sourceLocation)
     ])
 
-
   def __getattr__(self,attr):
     return getattr(self.sourceLocation,attr)
+
+  def __eq__(self,right):
+    return self.sourceLocation.__eq__(self.asClangSourceLocation(right))
+
+  def __lt__(self,right):
+    if not isinstance(right,(clx.SourceLocation,type(self))):
+      raise ValueError(type(right))
+    lfile,rfile = self.file,right.file
+    if lfile is None and rfile is None:
+      pass
+    elif lfile.name != rfile.name:
+      raise ValueError("Source locations from different files")
+    lline,rline = self.line,right.line
+    if lline < rline:
+      return True
+    if lline == rline:
+      return self.column < right.column
+    return False # lline > rline
+
 
   @classmethod
   def cast(cls,other):
@@ -318,23 +363,6 @@ class PetscSourceLocation(object):
     if isinstance(other,cls):
       return other.sourceLocation
     raise NotImplementedError(type(other))
-
-  def __eq__(self,right):
-    return self.sourceLocation.__eq__(self.asClangSourceLocation(right))
-
-  def __lt__(self,right):
-    assert isinstance(right,(clx.SourceLocation,type(self)))
-    lfile,rfile = self.file,right.file
-    if lfile is None and rfile is None:
-      pass
-    elif lfile.name != rfile.name:
-      raise ValueError("Source locations from different files")
-    lline,rline = self.line,right.line
-    if lline < rline:
-      return True
-    if lline == rline:
-      return self.column < right.column
-    return False # lline > rline
 
 
 @functools.total_ordering
@@ -391,21 +419,22 @@ class PetscSourceRange(object):
   def __len__(self):
     return self.end.offset-self.start.offset
 
+
   @classmethod
-  def cast(cls,other):
+  def cast(cls,other,**kwargs):
     if isinstance(other,cls):
       return other
     if isinstance(other,clx.SourceRange):
-      return cls(other)
+      return cls(other,**kwargs)
     raise NotImplementedError(type(other))
 
   @classmethod
   def fromLocations(cls,left,right):
-    tu = getattr(left,"translation_unit",getattr(right,"translation_unit",None))
-    return cls(clx.SourceRange.from_locations(
-      PetscSourceLocation.asClangSourceLocation(left),
-      PetscSourceLocation.asClangSourceLocation(right)
-    ),tu=tu)
+    tu = getattr(left,"translation_unit",None)
+    if tu is None:
+      tu = getattr(right,"translation_unit",None)
+    asClangSL = PetscSourceLocation.asClangSourceLocation
+    return cls(clx.SourceRange.from_locations(asClangSL(left),asClangSL(right)),tu=tu)
 
   @classmethod
   def fromPositions(cls,tu,lineLeft,colLeft,lineRight,colRight):
@@ -429,10 +458,10 @@ class PetscSourceRange(object):
     elif right in left:
       return left
     cast = PetscSourceLocation.cast
-    return cls.fromLocations(
-      min(cast(left.start),cast(right.start)),
-      max(cast(left.end),cast(right.end))
-    )
+    start = min(cast(left.start),cast(right.start))
+    end   = max(cast(left.end),cast(right.end))
+    return cls.fromLocations(start,end)
+
 
   def mergeWith(self,other):
     return self.merge(self,other)
@@ -441,18 +470,26 @@ class PetscSourceRange(object):
     cast = PetscSourceLocation.cast
     return cast(self.end) >= cast(other.start) and cast(other.end) >= cast(self.start)
 
-  def extend(self,lback=0,lforward=0,cback=-1,cforward=-1):
+  def resized(self,lbegin=0,lend=0,cbegin=0,cend=0):
+    """
+    return a resized PetscSourceRange, if the sourceRange was resized it is a new object
+
+    lbegin - number of lines to increment or decrement self.start.lines by
+    lend   - number of lines to increment or decrement self.end.lines by
+    cbegin - number of columns to increment or decrement self.start.colummn by, None for BOL
+    cend   - number of columns to increment or decrement self.end.colummn by, None for EOL
+    """
     start,end = self.start,self.end
-    if cback < 0:
-      cback = start.column-1
-    if lback+lforward+cback == 0 and cforward < 0:
-      ret = self # nothing to do
-    else:
-      endcol = -1 if cforward < 0 else end.column+cforward
-      ret    = self.fromPositions(
-        self.translation_unit,start.line-lback,start.column-cback,end.line+lforward,endcol
-      )
-    return ret
+    if cbegin is None:
+      cbegin = -start.column+1
+    if lbegin+lend+cbegin == 0 and cend == 0:
+      return self # nothing to do
+
+    endcol = -1 if cend is None else end.column+cend # -1 is EOL
+    return self.fromPositions(
+      self.translation_unit,start.line+lbegin,start.column+cbegin,end.line+lend,endcol
+    )
+
 
   def raw(self,**kwargs):
     return getRawSourceFromSourceRange(self,**kwargs)
@@ -461,7 +498,8 @@ class PetscSourceRange(object):
     return getFormattedSourceFromSourceRange(self,**kwargs)
 
   def view(self,**kwargs):
-    return print(self.formatted(numContext=5,**kwargs))
+    kwargs.setdefault("numContext",5)
+    return print(self.formatted(**kwargs))
 
 
 CXCursorAndRangeVisitorCallBackProto = ctypes.CFUNCTYPE(
@@ -485,7 +523,7 @@ class PetscCXCursorAndRangeVisitor(ctypes.Structure):
 
 
 class Scope(object):
-  __doc__="""
+  """
   Scope encompasses both the logical and lexical reach of a callsite, and is used to
   determine if two function calls may be occur in chronological order. Scopes may be
   approximated by incrementing or decrementing a counter every time a pair of '{}' are
@@ -568,13 +606,13 @@ class Scope(object):
     return not (self == other)
 
   def sub(self):
-    __doc__="""spawn sub-scope"""
+    """spawn sub-scope"""
     child = Scope(self)
     self.children.append(child)
     return child
 
   def isParentOf(self,other):
-    __doc__="""self is parent of other"""
+    """self is parent of other"""
     if self == other:
       return False
     for child in self.children:
@@ -583,7 +621,7 @@ class Scope(object):
     return False
 
   def isChildOf(self,other):
-    __doc__="""self is child of other, or other is parent of self"""
+    """self is child of other, or other is parent of self"""
     return other.isParentOf(self)
 
 
@@ -600,7 +638,7 @@ class PetscPath(type(pathlib.Path())):
 
 
 class ParsingError(Exception):
-  __doc__="""
+  """
   Mostly to just have a custom "something went wrong when trying to perform a check" to except
   for rather than using a built-in type. These are errors that are meant to be caught and logged
   rather than stopping execution alltogether.
@@ -610,51 +648,31 @@ class ParsingError(Exception):
   pass
 
 
-class DiagnosticMap(object):
-  __slots__ = "_diags"
-
-  def __init__(self,dlist):
-    self._diags = {attr.replace("-","_") : attr for attr in dlist}
-    return
-
-  def __getattr__(self,attr):
-    diags = self._diags
-    try:
-      return diags[attr]
-    except KeyError:
-      ret = [v for k,v in diags.items() if k.endswith(attr)]
-      if len(ret):
-        return ret[0]
-    raise AttributeError(attr)
-
-
 class _DiagnosticsManager(object):
+  class DiagnosticMap(object):
+    """
+    A dict-like object that allows 'DiagnosticMap.my_diagnostic_name' to return 'my-diagnostic-name'
+    """
+    __slots__ = "_diags"
+
+    def __init__(self,dlist):
+      self._diags = {attr.replace("-","_") : attr for attr in dlist}
+      return
+
+    def __getattr__(self,attr):
+      diags = self._diags
+      try:
+        return diags[attr]
+      except KeyError:
+        try:
+          return [v for k,v in diags.items() if k.endswith(attr)][0]
+        except IndexError:
+          pass
+        raise AttributeError(attr)
+
+
   _registered = {}
   __slots__   = "disabled"
-
-  def __init__(self):
-    self.disabled = set()
-    return
-
-  def disable(self,flag):
-    assert isinstance(flag,str)
-    self.disabled.add(flag)
-    return
-
-  def enable(self,flag):
-    assert isinstance(flag,str)
-    self.disabled.discard(flag)
-    return
-
-  def set(self,flag,value):
-    return self.enable(flag) if value else self.disable(flag)
-
-  def disabledFor(self,flag):
-    assert isinstance(flag,str)
-    return flag in self.disabled
-
-  def enabledFor(self,flag):
-    return not self.disabledFor(flag)
 
   @classmethod
   def registered(cls):
@@ -679,10 +697,45 @@ class _DiagnosticsManager(object):
 
         diagList = [(cls.expandFlag(d),h.casefold()) for d,h in args]
 
-      wrapper.diags = DiagnosticMap(d for d,_ in diagList)
+      wrapper.diags = cls.DiagnosticMap(d for d,_ in diagList)
       cls._registered.update(diagList)
       return wrapper
     return decorator
+
+
+  @classmethod
+  def __checkFlag(cls,flag):
+    if not isinstance(flag,str):
+      raise ValueError(type(flag))
+    if flag not in cls._registered:
+      mess = "Flag '{}' is not registered with {}".format(flag,cls)
+      raise ValueError(mess)
+    return
+
+  def __init__(self):
+    self.disabled = set()
+    return
+
+
+  def disable(self,flag):
+    self.__checkFlag(flag)
+    self.disabled.add(flag)
+    return
+
+  def enable(self,flag):
+    self.__checkFlag(flag)
+    self.disabled.discard(flag)
+    return
+
+  def set(self,flag,value):
+    return self.enable(flag) if value else self.disable(flag)
+
+  def disabledFor(self,flag):
+    self.__checkFlag(flag)
+    return flag in self.disabled
+
+  def enabledFor(self,flag):
+    return not self.disabledFor(flag)
 
 
 DiagnosticManager = _DiagnosticsManager()
@@ -708,14 +761,14 @@ class Diagnostic(object):
     ])
 
   def formatMessage(self):
-    message   = self.message
-    flagdescr = self.flag.join((" [-f","]"))
-    pos       = message.find(":")
+    message = self.message
+    pos     = message.find(":")
     if pos == -1:
-      ret = message+flagdescr
+      ret = "".join((message," [-f",self.flag,"]"))
     else:
-      assert not message[pos-1].isdigit()
-      ret = message.replace(":",flagdescr+":",1)
+      if message[pos-1].isdigit():
+        import ipdb; ipdb.set_trace()
+      ret = message.replace(":",self.flag.join((" [-f","]:")),1)
     return ret
 
   def disabled(self):
