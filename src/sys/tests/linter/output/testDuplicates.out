@@ -21,8 +21,8 @@ ERROR 1: ./src/sys/tests/linter/testDuplicates.c:26:10
   12: PetscValidScalarPointer(b,7);
 
 Argument number doesn't match for 'b'. Found '5' expected '2' from [-fmatching-arg-num]:
-> 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
-                                                 ^^^^^^^^^^^^^^
+> 3: PetscErrorCode testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
+                                                           ^^^^^^^^^^^^^^
 
 ERROR 2: ./src/sys/tests/linter/testDuplicates.c:29:12
 '7' of derived type 'int', canonical type 'int'
@@ -31,11 +31,11 @@ ERROR 2: ./src/sys/tests/linter/testDuplicates.c:29:12
 > 12: PetscValidScalarPointer(b,7);
                                 ^
   13: PetscValidScalarPointer(b,3);
-  14: return;
+  14: return 0;
 
 Argument number doesn't match for 'b'. Found '7' expected '2' from [-fmatching-arg-num]:
-> 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
-                                                 ^^^^^^^^^^^^^^
+> 3: PetscErrorCode testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
+                                                           ^^^^^^^^^^^^^^
 
 ERROR 3: ./src/sys/tests/linter/testDuplicates.c:29:13
 '3' of derived type 'int', canonical type 'int'
@@ -43,12 +43,12 @@ ERROR 3: ./src/sys/tests/linter/testDuplicates.c:29:13
   12:   PetscValidScalarPointer(b,7);
 > 13:   PetscValidScalarPointer(b,3);
                                   ^
-  14:   return;
+  14:   return 0;
   15: }
 
 Argument number doesn't match for 'b'. Found '3' expected '2' from [-fmatching-arg-num]:
-> 3: void testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
-                                                 ^^^^^^^^^^^^^^
+> 3: PetscErrorCode testDuplicatesWithChanges(PetscInt *a, PetscScalar *b)
+                                                           ^^^^^^^^^^^^^^
 
 ERROR 4: ./src/sys/tests/linter/testDuplicates.c:3:8
 'PetscValidIntPointer' of derived type 'void', canonical type 'void'
@@ -132,7 +132,7 @@ ERROR 8: ./src/sys/tests/linter/testDuplicates.c:5:28
 > 28:   PetscValidScalarPointer(b,2);
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   29: }
-  30: return;
+  30: return 0;
 
 Duplicate function found previous identical usage [-fduplicate-function]:
   19: /* no remove */
@@ -261,7 +261,7 @@ ERROR 14: ./src/sys/tests/linter/testDuplicates.c:5:49
 > 49:   PetscValidScalarPointer(b,2);
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   50: }
-  51: return;
+  51: return 0;
 
 Duplicate function found previous identical usage [-fduplicate-function]:
   35: /* no remove */
@@ -439,7 +439,7 @@ ERROR 22: ./src/sys/tests/linter/testDuplicates.c:5:117
 > 117:   PetscValidScalarPointer(b,2);
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   118: }
-  119: return;
+  119: return 0;
 
 Duplicate function found previous identical usage [-fduplicate-function]:
   107: /* no remove */
