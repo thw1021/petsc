@@ -10,8 +10,8 @@ ERROR 0: ./src/sys/tests/linter/testTypes.c:20:6
   8:   PetscCheckSameComm(o,-2,f,-2);
 
 Argument number doesn't match for 'r'. Found '-1' expected '1' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                    ^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                              ^^^^^^^^^^^^^
 
 ERROR 1: ./src/sys/tests/linter/testTypes.c:24:7
 '-1' of derived type 'int', canonical type 'int'
@@ -23,8 +23,8 @@ ERROR 1: ./src/sys/tests/linter/testTypes.c:24:7
   9: PetscCheckSameTypeAndComm(r,-3,f,-3);
 
 Argument number doesn't match for 'r'. Found '-1' expected '1' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                    ^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                              ^^^^^^^^^^^^^
 
 ERROR 2: ./src/sys/tests/linter/testTypes.c:29:7
 '-1' of derived type 'int', canonical type 'int'
@@ -36,8 +36,8 @@ ERROR 2: ./src/sys/tests/linter/testTypes.c:29:7
   9: PetscCheckSameTypeAndComm(r,-3,f,-3);
 
 Argument number doesn't match for 'v'. Found '-1' expected '2' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                                   ^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                             ^^^^^^^^^^^^^
 
 ERROR 3: ./src/sys/tests/linter/testTypes.c:24:8
 '-2' of derived type 'int', canonical type 'int'
@@ -49,8 +49,8 @@ ERROR 3: ./src/sys/tests/linter/testTypes.c:24:8
   10: 
 
 Argument number doesn't match for 'o'. Found '-2' expected '3' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                                                  ^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                                            ^^^^^^^^^^^^^
 
 ERROR 4: ./src/sys/tests/linter/testTypes.c:29:8
 '-2' of derived type 'int', canonical type 'int'
@@ -62,8 +62,8 @@ ERROR 4: ./src/sys/tests/linter/testTypes.c:29:8
   10: 
 
 Argument number doesn't match for 'f'. Found '-2' expected '4' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                                                                 ^^^^^^^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                                                           ^^^^^^^^^^^^^^^^^^^
 
 ERROR 5: ./src/sys/tests/linter/testTypes.c:31:9
 '-3' of derived type 'int', canonical type 'int'
@@ -75,8 +75,8 @@ ERROR 5: ./src/sys/tests/linter/testTypes.c:31:9
   11: /* correct */
 
 Argument number doesn't match for 'r'. Found '-3' expected '1' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                    ^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                              ^^^^^^^^^^^^^
 
 ERROR 6: ./src/sys/tests/linter/testTypes.c:36:9
 '-3' of derived type 'int', canonical type 'int'
@@ -88,7 +88,7 @@ ERROR 6: ./src/sys/tests/linter/testTypes.c:36:9
   11: /* correct */
 
 Argument number doesn't match for 'f'. Found '-3' expected '4' from [-fmatching-arg-num]:
-> 3: void testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
-                                                                 ^^^^^^^^^^^^^^^^^^^
+> 3: PetscErrorCode testTypes(PetscRandom r, PetscViewer v, PetscObject o, PetscFunctionList f)
+                                                                           ^^^^^^^^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
