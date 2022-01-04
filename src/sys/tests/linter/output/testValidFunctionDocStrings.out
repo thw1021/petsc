@@ -295,7 +295,7 @@ Docstring name 'someOtherFunctionName' does not match symbol name 'testIllFormed
   34:   eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
   35:   non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-Extra docstring parameter 'cnd' not found in function arguments [-fdoc-param-list-extra-parameter]:
+Extra docstring parameter 'cnd' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
   42:   Output Parameter:
   43: - y          - a pointer
 > 44: + cnd           - a boolean
@@ -312,7 +312,7 @@ maybe you meant 'cond' of derived type 'PetscBool', canonical type 'PetscBool'
   73:   return 0;
 
 
-Extra docstring parameter 'z' not found in function arguments [-fdoc-param-list-extra-parameter]:
+Extra docstring parameter 'z' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
   43: - y          - a pointer
   44: + cnd           - a boolean
 > 45: . z - a nonexistent parameter
@@ -320,19 +320,14 @@ Extra docstring parameter 'z' not found in function arguments [-fdoc-param-list-
   46: 
   47:   level: Lorem ipsum dolor sit amet
 
-Undocumented parameter 'x' not found in parameter section [-fdoc-param-list-undocumented-parameter]:
-  37:   Not Collective, Synchronous
-  38: 
-> 39:    Input Parameters:
-> 40: + viewer - a PetscViewer
-> 41: 
-> 42:   Output Parameter:
-> 43: - y          - a pointer
-> 44: + cnd           - a boolean
-> 45: . z - a nonexistent parameter
-> 46: 
-  47:   level: Lorem ipsum dolor sit amet
-  48: 
+maybe you meant 'x' of derived type 'PetscInt', canonical type 'int'
+  69: @*/
+  70: 
+> 71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+                                                                        ^^^^^^^^^^
+  72: {
+  73:   return 0;
+
 
 Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
   45: . z - a nonexistent parameter
@@ -359,7 +354,7 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*@' f
   77:   Not Collective, Synchronous
   78: 
 
-Parameter-list entry missing a description. Expected '. - a very useful description' [-fdoc-param-list-missing-description]:
+Parameter-list entry missing a description. Expected 'foo - a very useful description' [-fdoc-param-list-missing-description]:
   78: 
   79:   inpt parms:
 > 80: . foo
@@ -367,7 +362,7 @@ Parameter-list entry missing a description. Expected '. - a very useful descript
   81: 
   82:   Output params:
 
-Parameter-list entry missing a description. Expected '+ - a very useful description' [-fdoc-param-list-missing-description]:
+Parameter-list entry missing a description. Expected 'bar - a very useful description' [-fdoc-param-list-missing-description]:
   81: 
   82:   Output params:
 > 83: + bar -

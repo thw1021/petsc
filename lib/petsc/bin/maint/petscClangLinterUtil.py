@@ -163,6 +163,20 @@ def viewCursorFull(cursor):
   return
 
 
+def static_variables(**static_attrs):
+  """
+  Set attributes in the decorated function, at definition time. Only accepts keyword arguments.
+  """
+  def decorator(func):
+    @functools.wraps(func)
+    def wrapper(*args,**kwargs):
+      return func(*args,**kwargs)
+
+    for attr,value in static_attrs.items():
+      setattr(wrapper,attr,value)
+    return wrapper
+  return decorator
+
 class Scope(object):
   __doc__="""
   Scope encompasses both the logical and lexical reach of a callsite, and is used to
@@ -386,9 +400,7 @@ class PetscSourceRange(object):
 
   @classmethod
   def fromLocations(cls,left,right):
-    tu = getattr(left,"translation_unit",None)
-    if tu is None:
-      tu = getattr(right,"translation_unit",None)
+    tu = getattr(left,"translation_unit",getattr(right,"translation_unit",None))
     return cls(clx.SourceRange.from_locations(
       PetscSourceLocation.asClangSourceLocation(left),
       PetscSourceLocation.asClangSourceLocation(right)
@@ -427,6 +439,19 @@ class PetscSourceRange(object):
   def overlaps(self,other):
     cast = PetscSourceLocation.cast
     return cast(self.end) >= cast(other.start) and cast(other.end) >= cast(self.start)
+
+  def extend(self,lback=0,lforward=0,cback=-1,cforward=-1):
+    start,end = self.start,self.end
+    if cback < 0:
+      cback = start.column-1
+    if lback+lforward+cback == 0 and cforward < 0:
+      ret = self # nothing to do
+    else:
+      endcol = -1 if cforward < 0 else end.column+cforward
+      ret    = self.fromPositions(
+        self.translation_unit,start.line-lback,start.column-cback,end.line+lforward,endcol
+      )
+    return ret
 
   def raw(self,**kwargs):
     return getRawSourceFromSourceRange(self,**kwargs)
