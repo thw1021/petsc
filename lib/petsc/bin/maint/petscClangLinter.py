@@ -5,6 +5,13 @@ Created on Mon Mar 22 17:05:39 2021
 
 @author: jacobfaibussowitsch
 """
+try:
+  import clang.cindex as clx
+except ModuleNotFoundError as mnfe:
+  if mnfe.name == "clang":
+    raise RuntimeError("Must run e.g. 'python -m pip install clang' to use linter") from mnfe
+  raise mnfe # whatever it is they should know about it
+
 import os
 import sys
 import enum
@@ -18,52 +25,24 @@ import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil as pclu
 from petscClangLinterUtil import (
-  static_variables,Scope,PetscSourceLocation,PetscSourceRange,PetscCXCursorAndRangeVisitor,
-  CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,Diagnostic,DiagnosticManager
+  static_variables,CXTranslationUnit,Scope,PetscSourceLocation,PetscSourceRange,
+  PetscCXCursorAndRangeVisitor,CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,
+  Diagnostic,DiagnosticManager
 )
-try:
-  import clang.cindex as clx
-except ModuleNotFoundError as mnfe:
-  if mnfe.name == "clang":
-    raise RuntimeError("Must run e.g. 'python -m pip install clang' to use linter") from mnfe
-  raise # whatever it is they should know about it
-
-"""
-clang.cindex.TranslationUnit does not have all latest flags, but we prefix
-with P_ just in case
-
-see: https://clang.llvm.org/doxygen/group__CINDEX__TRANSLATION__UNIT.html#gab1e4965c1ebe8e41d71e90203a723fe9
-"""
-P_CXTranslationUnit_None                                 = 0x0
-P_CXTranslationUnit_DetailedPreprocessingRecord          = 0x01
-P_CXTranslationUnit_Incomplete                           = 0x02
-P_CXTranslationUnit_PrecompiledPreamble                  = 0x04
-P_CXTranslationUnit_CacheCompletionResults               = 0x08
-P_CXTranslationUnit_ForSerialization                     = 0x10
-P_CXTranslationUnit_SkipFunctionBodies                   = 0x40
-P_CXTranslationUnit_IncludeBriefCommentsInCodeCompletion = 0x80
-P_CXTranslationUnit_CreatePreambleOnFirstParse           = 0x100
-P_CXTranslationUnit_KeepGoing                            = 0x200
-P_CXTranslationUnit_SingleFileParse                      = 0x400
-P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble    = 0x800
-P_CXTranslationUnit_IncludeAttributedTypes               = 0x1000
-P_CXTranslationUnit_VisitImplicitAttributes              = 0x2000
-P_CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles     = 0x4000
-P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
 
 # clang options used for parsing files
 baseClangOptions = (
-  P_CXTranslationUnit_PrecompiledPreamble |
-  P_CXTranslationUnit_SkipFunctionBodies  |
-  P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble
+  CXTranslationUnit.PrecompiledPreamble |
+  CXTranslationUnit.SkipFunctionBodies  |
+  CXTranslationUnit.LimitSkipFunctionBodiesToPreamble
 )
 
 # clang options for creating the precompiled megaheader
 basePCHClangOptions = (
-  P_CXTranslationUnit_CreatePreambleOnFirstParse |
-  P_CXTranslationUnit_Incomplete                 |
-  P_CXTranslationUnit_ForSerialization           |
-  P_CXTranslationUnit_KeepGoing
+  CXTranslationUnit.CreatePreambleOnFirstParse |
+  CXTranslationUnit.Incomplete                 |
+  CXTranslationUnit.ForSerialization           |
+  CXTranslationUnit.KeepGoing
 )
 
 # Cursors that may be attached to function-like usage
@@ -245,22 +224,25 @@ class PetscDocString(PetscDocStringBase):
     """Container for a single section of the docstring, has members:
     'name'     - the name of this section
     'required' - is this section required in the docstring
-    'keywords' - keyword header-titles, i.e. "Input Parameter", or "Level", must be correctly cased
+    'titles'   - header-titles, i.e. "Input Parameter", or "Level", must be spelled correctly
+    'keywords' - keywords to help match an unknown title to a section
     'raw'      - the raw text in the section
     'extent'   - the SourceRange for the whole section
     'lines'    - a tuple of each line of text and its SourceRange in the section
     'items'    - a tuple of extracted tokens of interest, e.g. the level value, options parameters,
                  function parameters, etc.
     """
-    __slots__ = "name","required","keywords","raw","extent","lines","items"
+    __slots__ = "name","required","titles","keywords","raw","extent","lines","items"
 
-    def __init__(self,name,required=False,keywords=None):
+    def __init__(self,name,required=False,keywords=None,titles=None):
       assert isinstance(name,str)
+      if titles is None:
+        titles = (name.title(),)
       if keywords is None:
         keywords = (name.title(),)
-      assert isinstance(keywords,(list,tuple))
       self.name     = name
       self.required = required
+      self.titles   = tuple(titles)
       self.keywords = tuple(keywords)
       self.clear()
       return
@@ -276,16 +258,14 @@ class PetscDocString(PetscDocStringBase):
       return bool(self.raw) or bool(self.lines) or bool(self.extent)
 
     def clear(self):
-      self.raw    = None
+      self.raw    = ""
       self.extent = None
-      self.lines  = None
+      self.lines  = []
       return
 
     def fill(self,data):
       assert len(data)
-      if self:
-        import ipdb; ipdb.set_trace()
-      self.lines  = tuple(data)
+      self.lines.extend(list(data))
       self.raw    = "\n".join(s for _,s in self.lines)
       self.extent = PetscSourceRange.fromLocations(self.lines[0][0].start,self.lines[-1][0].end)
       return
@@ -352,13 +332,15 @@ class PetscDocString(PetscDocStringBase):
       return True
 
     @staticmethod
-    def diagnostic(flag):
-      return PetscDocStringBase.diagnosticFlag(flag)
+    def diagnostic(flag,prefix):
+      return PetscDocStringBase.diagnosticFlag(flag,prefix=prefix)
 
 
   @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class DefaultSection(SectionBase):
-    pass
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"")
 
   @DiagnosticManager.register(
     ("section-header-missing",""),
@@ -367,9 +349,9 @@ class PetscDocString(PetscDocStringBase):
     ("missing-description","Verify that a synopsis has a description"),
   )
   class Synopsis(SectionBase):
-    @staticmethod
-    def diagnostic(flag):
-      return PetscDocStringBase.diagnosticFlag(flag,prefix="synopsis")
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"synopsis")
 
     def setup(self,ds,*args,**kwargs):
       found = False
@@ -444,9 +426,13 @@ class PetscDocString(PetscDocStringBase):
       super().__init__(*args,**kwargs)
       return
 
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"param-list")
+
     @staticmethod
-    def diagnostic(flag):
-      return PetscDocStringBase.diagnosticFlag(flag,prefix="param-list")
+    def checkIndentAllowed():
+      return False
 
     @staticmethod
     def splitParam(text):
@@ -485,24 +471,38 @@ class PetscDocString(PetscDocStringBase):
       Verify that the position of the '-' before the description for each argument is aligned
       to maxArgLen+1 columns
       """
-      errorMessage = "Argument list entry must be formatted as follows ^(\S) (.*) - (.*)"
-      alignDiag    = cls.diags.formatting
-      splitParam   = cls.splitParam
+      baseMess   = "Argument list entry must be formatted as ^(\S) (.*) - (.*),"
+      alignDiag  = cls.diags.formatting
+      splitParam = cls.splitParam
 
       if maxArgLen is None:
         maxArgLen = max(len(splitParam(text)[1]) for _,text,_ in group) if group else 0
       assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
 
       for loc,text,_ in group:
-        fixed = "{} {:{width}} - {}".format(*splitParam(text),width=maxArgLen)
+        pre,arg,descr = splitParam(text)
+        fixed         = "{} {:{width}} - {}".format(pre,arg,descr,width=maxArgLen)
         try:
           diffIndex = [i for i,(a1,a2) in enumerate(zip(text,fixed)) if a1 != a2][0]
         except IndexError:
           assert text == fixed # equal
           continue
 
+        if diffIndex <= text.find(pre):
+          mess = " ".join([
+            baseMess,"prefix ('{}') is not indented to column (1)".format(pre)
+          ])
+        elif diffIndex <= text.find(arg):
+          mess = " ".join([
+            baseMess,"argument ('{}') must be 1 space from prefix ('{}')".format(arg,pre)
+          ])
+        else:
+          mess = " ".join([
+            baseMess,"description ('{}') must be 1 space from argument ('{}')".format(descr,arg)
+          ])
+
         eloc = ds.makeSourceRange(text[diffIndex:],text,loc.end.line)
-        ds.addErrorFromSourceRange(alignDiag,errorMessage,eloc,patch=Patch(eloc,fixed[diffIndex:]))
+        ds.addErrorFromSourceRange(alignDiag,mess,eloc,patch=Patch(eloc,fixed[diffIndex:]))
       return
 
     @classmethod
@@ -526,9 +526,9 @@ class PetscDocString(PetscDocStringBase):
         elif self.isHeading(line) and len(groups.keys()):
           nonlocal subheading
           subheading += 1
-        lstrip = line.lstrip()
-        if lstrip.startswith(self.prefixes):
-          _,arg,descr = self.splitParam(lstrip)
+        lstp = line.lstrip()
+        if lstp.startswith(self.prefixes):
+          _,arg,descr = self.splitParam(lstp)
           if not descr:
             mess = "Parameter-list entry missing a description. Expected '{} - a very useful description'".format(arg)
             ds.addErrorFromSourceRange(missingDescrDiag,mess,loc)
@@ -564,13 +564,13 @@ class PetscDocString(PetscDocStringBase):
 
   @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class Prose(SectionBase):
-    @staticmethod
-    def diagnostic(flag):
-      return PetscDocStringBase.diagnosticFlag(flag,prefix="prose")
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"prose")
 
     def setup(self,ds,*args,**kwargs):
       subheading = 0
-      items = {}
+      items      = {}
 
       def inspector(loc,line):
         if self.isHeading(line):
@@ -606,9 +606,9 @@ class PetscDocString(PetscDocStringBase):
       self.foundEmptyLine = False
       return
 
-    @staticmethod
-    def diagnostic(flag):
-      return PetscDocStringBase.diagnosticFlag(flag,prefix="inline-list")
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"inline-list")
 
     def clear(self,*args,**kwargs):
       super().clear(*args,**kwargs)
@@ -658,23 +658,30 @@ class PetscDocString(PetscDocStringBase):
     def __contains__(self,section):
       return self.registered(section)
 
+
     def find(self,heading):
       sections     = self._sections
       sectionNames = sections.keys()
+      get_matches  = difflib.get_close_matches
       try:
-        match = difflib.get_close_matches(heading,sectionNames,n=1)[0]
+        match = get_matches(heading,sectionNames,n=1)[0]
       except IndexError:
-        # try if we can find a sub-word
-        match = None
-        headSplit = heading.split(maxsplit=4)
-        # if heading splits into more than 3 params, then chances are its being mislabeled
-        # as a heading anyways
-        for head in headSplit[:min(3,len(headSplit))]:
-          try:
-            match = difflib.get_close_matches(head,sectionNames,n=1)[0]
-          except IndexError:
-            continue
-          break
+        keywords = [(kw,s.name) for kw,s in self.keywords(sections=True)]
+        match    = get_matches(heading,(k for k,_ in keywords),n=1)
+        if match:
+          match = match[0]
+          match = next(filter(lambda item: item[0] == match,keywords))[1]
+        else:
+          # try if we can find a sub-word
+          headSplit = heading.split(maxsplit=4)
+          # if heading splits into more than 3 params, then chances are its being mislabeled
+          # as a heading anyways
+          for head in headSplit[:min(3,len(headSplit))]:
+            try:
+              match = get_matches(head,sectionNames,n=1)[0]
+            except IndexError:
+              continue
+            break
       if match:
         print(
           "**** CLOSEST MATCH FOUND {:{}} FOR {}".format(match,max(map(len,sectionNames)),heading)
@@ -685,9 +692,7 @@ class PetscDocString(PetscDocStringBase):
         # this should be handled
         return self._sections["UNKNOWN"]
       # when in doubt, it's probably notes
-      import ipdb; ipdb.set_trace()
       return self._sections["notes"]
-
 
     def registered(self,section):
       if isinstance(section,PetscDocString.SectionBase):
@@ -701,21 +706,27 @@ class PetscDocString(PetscDocStringBase):
       self._sections[section.name] = section
       return
 
-    def keywords(self):
+    def titles(self,sections=False):
+      if sections:
+        return ((title,section) for section in self for title in section.titles)
+      return (title for section in self for title in section.titles)
+
+    def keywords(self,sections=False):
+      if sections:
+        return ((keyword,section) for section in self for keyword in section.keywords)
       return (keyword for section in self for keyword in section.keywords)
 
-
   sections = Sections(
-    Synopsis("synopsis",required=True),
-    ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
-    ParameterList("options",keywords=("Options Database",)),
+    Synopsis("synopsis",required=True,keywords=("Synopsis","Not Collective")),
+    ParameterList("parameters",titles=("Input Parameter","Output Parameter")),
+    ParameterList("options",titles=("Options Database",)),
     Prose("notes"),
-    Prose("fortran notes"),
+    Prose("fortran notes",keywords=("Fortran",)),
     Prose("developer notes"),
     Prose("references"),
     InlineList("level",required=True),
-    InlineList("seealso",keywords=(".seealso",),required=True),
-    DefaultSection("UNKNOWN",keywords=("__UNKNOWN_SECTION__",)),
+    InlineList("seealso",titles=(".seealso",),required=True),
+    DefaultSection("UNKNOWN",titles=("__UNKNOWN_SECTION__",)),
   )
   sowingTypes     = {"@","S","E"}
   clxToSowingType = {
@@ -724,13 +735,23 @@ class PetscDocString(PetscDocStringBase):
   }
   __slots__ = "_linter","cursor","raw","extent","indent"
 
+  def __init__(self,linter,cursor,indent=2):
+    if not isinstance(linter,PetscLinter):
+      raise ValueError(type(linter))
+    self._linter         = linter
+    self.cursor          = PetscCursor.cast(cursor)
+    self.raw,self.extent = self._getSanitizedCommentAndRangeFromCursor(self.cursor)
+    self.indent          = indent
+    return
+
+
+  @classmethod
+  def diagnostic(cls,flag):
+    return super().diagnosticFlag(flag)
+
   @classmethod
   def registerSection(cls,section):
     return cls.sections.addSection(section)
-
-  @classmethod
-  def fromCursor(cls,linter,cursor):
-    return cls(linter,cursor,*PetscCursor.getCommentAndRangeFromCursor(cursor))
 
   @classmethod
   def isValidDocstring(cls,cursor,raw):
@@ -738,41 +759,43 @@ class PetscDocString(PetscDocStringBase):
       return False
 
     # if we find sowing chars, its probably a docstring
-    if raw.lstrip().startswith("/*@") or raw.rstrip().endswith("@*/"):
-      return True
+    rsw,rew = raw.lstrip().startswith,raw.rstrip().endswith
+    for char in cls.sowingTypes:
+      if rsw("/*"+char) or rew(char+"*/"):
+        return True
 
-    # if we find these keywords, likely this is a docstring
-    if any(keyword.casefold() in raw.casefold() for keyword in cls.sections.keywords()):
+    # if we find these titles, likely this is a docstring
+    if any(title.casefold() in raw.casefold() for title in cls.sections.titles()):
       # if it doesn't end with _private or _internal then its very likely a docstring
       if PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
         import ipdb; ipdb.set_trace()
+        return False
       return True
     return False
 
   @classmethod
-  def diagnostic(cls,flag):
-    return super().diagnosticFlag(flag)
+  def _getSanitizedCommentAndRangeFromCursor(cls,cursor):
+    assert isinstance(cursor,PetscCursor)
+    raw,extent = cursor.getCommentAndRange()
 
-
-  def __init__(self,linter,cursor,raw,extent,indent=2):
-    assert isinstance(linter,PetscLinter)
-    if not self.isValidDocstring(cursor,raw):
+    if not cls.isValidDocstring(cursor,raw):
       raise ParsingError("Not a docstring")
 
-    self._linter = linter
-    self.cursor  = PetscCursor.cast(cursor)
-    self.extent  = PetscSourceRange.cast(extent)
-    self.raw     = raw
-    self.indent  = indent
-
-    # TODO, this should probably also check that the header the cursor is defined in is public
-    has,linkageCursorName,linkageCursor = self.cursor.hasInternalLinkage()
-    if has and not self.cursor.translation_unit.spelling.endswith((".h",".hpp")):
-      mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),self.cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
-      # TODO: could have a fixit here to simply delete the docstring
-      self._linter.addErrorFromCursor(cursor,Diagnostic(self.diags.internal_linkage,mess))
-      raise ParsingError("Internal linkage")
-    return
+    rawlines = raw.splitlines()
+    comments = [i for i,line in enumerate(rawlines) if line.lstrip().startswith("/*")]
+    extent   = PetscSourceRange.cast(extent,tu=cursor.translation_unit)
+    if len(comments) > 1:
+      # this handles the following case:
+      #
+      # /* a dummy comment that is attributed to the symbol */
+      # /*
+      #   the real docstring comment, note no empty line between this and the previous!
+      # */
+      # <the symbol>
+      offset = comments[-1]
+      raw    = "\n".join(rawlines[offset:])
+      extent = extent.resized(lbegin=offset,cbegin=None,cend=None)
+    return raw,extent
 
 
   def makeSourceLocation(self,lineno,col):
@@ -792,6 +815,16 @@ class PetscDocString(PetscDocStringBase):
     self._linter.addErrorFromCursor(self.cursor,diag)
     return
 
+
+  def _checkValidCursorLinkage(self):
+    cursor = self.cursor
+    # TODO, this should probably also check that the header the cursor is defined in is public
+    hasExtLinkage,linkageCursorName,linkageCursor = cursor.hasInternalLinkage()
+    if hasExtLinkage and not cursor.translation_unit.spelling.endswith((".h",".hpp")):
+      mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
+      # TODO: could have a fixit here to simply delete the docstring
+      self._linter.addErrorFromCursor(cursor,Diagnostic(self.diags.internal_linkage,mess))
+    return
 
   def _checkValidSowingChars(self):
     sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
@@ -885,6 +918,7 @@ class PetscDocString(PetscDocStringBase):
   def parse(self):
     for s in self.sections:
       s.clear()
+    self._checkValidCursorLinkage()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
     rawData     = []
@@ -940,26 +974,26 @@ class PetscDocString(PetscDocStringBase):
     if transform is None:
       transform = section.transform
 
-    diag     = self.diags.section_header_spelling
-    keywords = section.keywords
+    diag   = self.diags.section_header_spelling
+    titles = section.titles
     for loc,text in headings:
       before,sep,_ = text.partition(delim)
       if not sep:
         import ipdb; ipdb.set_trace()
       assert sep
       heading = before.strip()
-      if any(k in heading for k in keywords):
+      if any(t in heading for t in titles):
         continue
 
       headingLoc       = self.makeSourceRange(heading,text,loc.start.line)
       wasValid,correct = transform(heading)
-      if not wasValid and any(k in correct for k in keywords):
-        mess = "Invalid header formatting. Expected '{}' found '{}'".format(correct,heading)
+      if not wasValid and any(t in correct for t in titles):
+        mess = "Invalid header spelling. Expected '{}' found '{}'".format(correct,heading)
         self.addErrorFromSourceRange(diag,mess,headingLoc,patch=Patch(headingLoc,correct))
         continue
 
       try:
-        match = difflib.get_close_matches(correct,keywords,n=1)[0]
+        match = difflib.get_close_matches(correct,titles,n=1)[0]
       except IndexError:
         self._linter.addWarningFromCursor(
           self.cursor,Diagnostic(diag,"Unknown section '{}'".format(heading))
@@ -972,9 +1006,11 @@ class PetscDocString(PetscDocStringBase):
 
 class PetscCursor(object):
   """
-  A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties (such as demangled names) from a cursor easier.
-  Also provides a host of utility functions that get and (optionally format) the source code around a particular cursor. As it is a wrapper any
-  operation done on a clang Cursor may be performed directly on a PetscCursor (although this object does not pass the isinstance() check).
+  A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties
+  (such as demangled names) from a cursor easier.
+  Also provides a host of utility functions that get and (optionally format) the source code
+  around a particular cursor. As it is a wrapper any operation done on a clang Cursor may be
+  performed directly on a PetscCursor (although this object does not pass the isinstance() check).
 
   See __getattr__ below for more info.
   """
@@ -1001,8 +1037,10 @@ class PetscCursor(object):
   @classmethod
   def cast(cls,cursor):
     """like numpy.asanyarray but for PetscCursors"""
-    assert isinstance(cursor,(clx.Cursor,cls))
-    return cls(cursor) if isinstance(cursor,clx.Cursor) else cursor
+    clxCursor = clx.Cursor
+    if not isinstance(cursor,(clxCursor,cls)):
+      raise ValueError(type(cursor))
+    return cls(cursor) if isinstance(cursor,clxCursor) else cursor
 
   def clangCursor(self):
     """return the internal clang cursor"""
@@ -1134,8 +1172,10 @@ class PetscCursor(object):
     clsInstance = isinstance(cursor,cls)
     if clsInstance:
       cacheEntry = "name"
-      if cacheEntry in cursor._cache:
+      try:
         return cursor._cache[cacheEntry]
+      except KeyError:
+        pass
     name = "".join(t.spelling for t in cursor.get_tokens())
     if not name:
       try:
@@ -1181,8 +1221,8 @@ class PetscCursor(object):
     """
     return cursor.type.spelling
 
-  @staticmethod
-  def hasInternalLinkageFromCursor(cursor):
+  @classmethod
+  def hasInternalLinkageFromCursor(cls,cursor):
     if cursor.linkage == clx.LinkageKind.INTERNAL:
       # is a static function or variable
       return True,cursor.storage_class.name,cursor.get_definition()
@@ -2124,20 +2164,20 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     # wtf
     return
 
-  foundSynopsis   = False
-  matchSymbolDiag = synopsis.diags.matching_symbol_name
-  cursorName      = PetscCursor.getNameFromCursor(cursor)
+  foundSynopsis = False
+  cursorName    = PetscCursor.getNameFromCursor(cursor)
   for lineLoc,line in synopsis.lines:
     symbol,dash,rest = line.partition("-")
     if symbol.lstrip().startswith("$"):
       # This is special treatment for enums since they don't usually have a
       # clearly-defined "begin"
       break
-    elif len(dash) and len(rest):
+    elif dash and rest:
       foundSynopsis = True
       symbol        = symbol.strip()
       if symbol != cursorName:
-        loc = docstring.makeSourceRange(symbol,line,lineLoc.start.line)
+        diag = synopsis.diags.matching_symbol_name
+        loc  = docstring.makeSourceRange(symbol,line,lineLoc.start.line)
         if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
           mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
             symbol,cursorName
@@ -2146,9 +2186,9 @@ def checkDocValidSynopsis(linter,cursor,docstring):
         else:
           mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
           patch = None
-        docstring.addErrorFromSourceRange(matchSymbolDiag,mess,loc,patch=patch)
+        docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
       break
-  if foundSynopsis is False:
+  if not foundSynopsis:
     mess = "Docstring missing synopsis. Expected '{} - a very useful description'".format(
       cursorName
     )
@@ -2157,9 +2197,10 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   return
 
 @DiagnosticManager.register(
-  (PetscDocString.ParameterList.diagnostic("parameter-order"),"Verify that documentation for parameters is in order of appearance"),
+  (PetscDocString.ParameterList.diagnostic("order"),"Verify that documentation for parameters is in order of appearance"),
   (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
-  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented parameters exist for a symbol"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all parameters that are documented actually exist"),
+  (PetscDocString.ParameterList.diagnostic("solitary-parameter"),"Verify that each parameter has its own entry"),
 )
 def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,checkIndices=False,**kwargs):
   if cursorList and not params:
@@ -2177,6 +2218,7 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
       docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
     return
 
+  solitaryParamDiag        = checkDocValidParameterList.diags.solitary_parameter
   checkAlignedDescriptions = params.checkAlignedDescriptions
   splitParam = params.splitParam
   cursorList = list(map(PetscCursor.cast,cursorList))
@@ -2191,14 +2233,20 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
     remove  = set()
     for i,(loc,text,_) in enumerate(group):
       _,arg,_ = splitParam(text)
-      try:
-        idx = argNames.index(arg)
-      except ValueError:
-        notFound.append((arg,loc))
-        remove.add(i)
-      else:
-        argSeen[idx] = True
-        indices.append(idx)
+      asplit  = arg.split(",")
+      if len(asplit) > 1:
+        mess = "Each parameter entry must be documented separately on its own line"
+        eloc = docstring.makeSourceRange(arg,text,loc.start.line)
+        docstring.addErrorFromSourceRange(solitaryParamDiag,mess,eloc)
+      for subarg in asplit:
+        try:
+          idx = argNames.index(subarg)
+        except ValueError:
+          notFound.append((subarg,loc))
+          remove.add(i)
+        else:
+          argSeen[idx] = True
+          indices.append(idx)
     checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove],**kwargs)
     if 0 and checkIndices:
       # TODO what to do if the lines we swap are imperfect? This might be the straw
@@ -2427,29 +2475,29 @@ def checkDocValidEnumParameters(linter,cursor,docstring):
   return
 
 """Specific 'driver' function to test a particular docstring archetype"""
-def checkPetscFunctionDocString(linter,function):
+def checkPetscFunctionDocString(linter,cursor):
   try:
-    docstring = PetscDocString.fromCursor(linter,function).parse()
-  except ParsingError:
+    docstring = PetscDocString(linter,cursor).parse()
+  except ParsingError as pe:
     return # error already logged with linter
 
-  checkDocValidSynopsis(linter,function,docstring)
-  checkDocValidFunctionParameters(linter,function,docstring)
-  checkDocValidOptionsDatabaseKeys(linter,function,docstring)
-  checkDocValidLevel(linter,function,docstring)
-  checkDocValidSeealso(linter,function,docstring)
+  checkDocValidSynopsis(linter,cursor,docstring)
+  checkDocValidFunctionParameters(linter,cursor,docstring)
+  checkDocValidOptionsDatabaseKeys(linter,cursor,docstring)
+  checkDocValidLevel(linter,cursor,docstring)
+  checkDocValidSeealso(linter,cursor,docstring)
   return
 
-def checkPetscEnumDocString(linter,enumCursor):
+def checkPetscEnumDocString(linter,cursor):
   try:
-    docstring = PetscDocString.fromCursor(linter,enumCursor).parse()
+    docstring = PetscDocString(linter,cursor).parse()
   except ParsingError:
     return # error already logged with linter
 
-  checkDocValidSynopsis(linter,enumCursor,docstring)
-  checkDocValidEnumParameters(linter,enumCursor,docstring)
-  checkDocValidLevel(linter,enumCursor,docstring)
-  checkDocValidSeealso(linter,enumCursor,docstring)
+  checkDocValidSynopsis(linter,cursor,docstring)
+  checkDocValidEnumParameters(linter,cursor,docstring)
+  checkDocValidLevel(linter,cursor,docstring)
+  checkDocValidSeealso(linter,cursor,docstring)
   return
 
 
