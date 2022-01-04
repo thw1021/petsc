@@ -1146,10 +1146,15 @@ char     *ver = "petscpkgver(" PetscXstr_({y}) ")";
         version = i.split('(')[1].split(')')[0]
         break
     if not version:
-      self.log.write('For '+self.package+' unable to find version information: output below, skipping version check\n')
+      self.log.write('For '+self.package+' unable to auto-detect version information: output below, skipping version check\n')
       self.log.write(output)
       if self.requiresversion:
-        raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to, please send configure.log to petsc-maint@mcs.anl.gov')
+        knownversion = self.argDB['known-'+self.package+'-version']
+        if knownversion:
+          version = knownversion
+          self.log.write('Use known version number {x} for {y}\n'.format(x=knownversion,y=self.package))
+        else:
+          raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to. If you knew it, you could provide it by --known-'+self.package+'-version=<version>. Otherwise, please send configure.log to petsc-maint@mcs.anl.gov')
       return
     try:
       self.foundversion = self.versionToStandardForm(version)
