@@ -1091,10 +1091,10 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     flagsArg = self.getPreprocessorFlagsArg()
     oldFlags = getattr(self.compilers, flagsArg)
     if self.language[-1] == 'HIP':
-      extraFlags = ' -o - ' # Force 'hipcc -E' to output to stdout, instead of *.cui files (as of hip-4.0. hip-4.1+ does not need it, but does not get hurt either).
+      extraFlags = ' -o -' # Force 'hipcc -E' to output to stdout, instead of *.cui files (as of hip-4.0. hip-4.1+ does not need it, but does not get hurt either).
     else:
       extraFlags = ''
-    setattr(self.compilers, flagsArg, oldFlags+' '+extraFlags+self.headers.toString(self.include))
+    setattr(self.compilers, flagsArg, oldFlags+extraFlags+' '+self.headers.toString(self.include))
     self.compilers.saveLog()
 
     # X.py uses a weird list of two headers.
