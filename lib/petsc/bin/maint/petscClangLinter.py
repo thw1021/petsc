@@ -18,7 +18,7 @@ import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil as pclu
 from petscClangLinterUtil import (
-  Scope,PetscSourceLocation,PetscSourceRange,PetscCXCursorAndRangeVisitor,
+  static_variables,Scope,PetscSourceLocation,PetscSourceRange,PetscCXCursorAndRangeVisitor,
   CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,Diagnostic,DiagnosticsManager
 )
 try:
@@ -283,11 +283,8 @@ class PetscDocString(PetscDocStringBase):
 
     def fill(self,data):
       assert len(data)
-      try:
-        assert not self, "Refilling section!"
-      except AssertionError:
+      if self:
         import ipdb; ipdb.set_trace()
-      self.clear()
       self.lines  = tuple(data)
       self.raw    = "\n".join(s for _,s in self.lines)
       self.extent = PetscSourceRange.fromLocations(self.lines[0][0].start,self.lines[-1][0].end)
@@ -391,10 +388,10 @@ class PetscDocString(PetscDocStringBase):
       def enumInspector(loc,line):
         genericInspector(loc,line) # find the symbol name
         lstr = line.lstrip()
-        if lstr.startswith("$"):
-          if not len(items):
-            import ipdb; ipdb.set_trace()
-            assert len(items) # we should have already found the symbol name
+        # check that "-" is in the line since some people like to use entire blocks of $'s
+        # to describe a single enum value...
+        if lstr.startswith("$") and "-" in lstr:
+          assert len(items) # we should have already found the symbol name
           name = lstr[1:].split(maxsplit=1)[0].strip()
           items.append((ds.makeSourceRange(name,line,loc.start.line),line))
         return
@@ -417,7 +414,11 @@ class PetscDocString(PetscDocStringBase):
 
 
         params = PetscDocString.ParameterList("enum params",prefixes=("$"))
-        params.fill(items[1:])
+        paramLines = items[1:]
+        if not paramLines: # enum has no explicit descriptions
+          self.items = None
+          return
+        params.fill(paramLines)
         params.setup(ds,*args,parameterListPrefixCheck=checkEnumStartsWithDollar,**kwargs)
         # shuffle the enum values up
         params.items = {k+1 : v for k,v in params.items.items()}
@@ -484,13 +485,13 @@ class PetscDocString(PetscDocStringBase):
       Verify that the position of the '-' before the description for each argument is aligned
       to maxArgLen+1 columns
       """
-      if maxArgLen is None:
-        maxArgLen = max(len(cls.splitParam(text)[1]) for _,text,_ in group) if group else 0
-      assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
-
       errorMessage = "Argument list entry must be formatted as follows ^(\S) (.*) - (.*)"
       alignDiag    = cls.diags.formatting
       splitParam   = cls.splitParam
+
+      if maxArgLen is None:
+        maxArgLen = max(len(splitParam(text)[1]) for _,text,_ in group) if group else 0
+      assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
 
       for loc,text,_ in group:
         fixed = "{} {:{width}} - {}".format(*splitParam(text),width=maxArgLen)
@@ -527,9 +528,9 @@ class PetscDocString(PetscDocStringBase):
           subheading += 1
         lstrip = line.lstrip()
         if lstrip.startswith(self.prefixes):
-          opt,sep,rest = lstrip[self.prefixOffset(lstrip):].partition("-")
-          if not sep or not rest or rest.isspace():
-            mess = "Parameter-list entry missing a description. Expected '{} - a very useful description'".format(opt.split(maxsplit=1)[0].strip())
+          _,arg,descr = self.splitParam(lstrip)
+          if not descr:
+            mess = "Parameter-list entry missing a description. Expected '{} - a very useful description'".format(arg)
             ds.addErrorFromSourceRange(missingDescrDiag,mess,loc)
           groups[subheading].append((loc,line,self.arglen(line)))
         return
@@ -569,7 +570,7 @@ class PetscDocString(PetscDocStringBase):
 
     def setup(self,ds,*args,**kwargs):
       subheading = 0
-      self.items = {}
+      items = {}
 
       def inspector(loc,line):
         if self.isHeading(line):
@@ -577,26 +578,42 @@ class PetscDocString(PetscDocStringBase):
           head        = head.strip()
           if not head:
             import ipdb; ipdb.set_trace()
-          if self.items.keys():
+          if items.keys():
             nonlocal subheading
             subheading += 1
           startLine = loc.start.line
-          self.items[subheading] = (
+          items[subheading] = (
             (ds.makeSourceRange(head,line,startLine),head),
             [(ds.makeSourceRange(rest,line,startLine),rest)] if rest else []
           )
         elif line:
-          self.items[subheading][1].append((loc,line))
+          try:
+            items[subheading][1].append((loc,line))
+          except KeyError:
+            import ipdb; ipdb.set_trace()
         return
 
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
+      self.items = items
       return
 
   @Diagnostic.register_class(("section-header-missing",""),("section-header-unique",""))
   class InlineList(SectionBase):
+    __slots__ = "foundEmptyLine"
+
+    def __init__(self,*args,**kwargs):
+      super().__init__(*args,**kwargs)
+      self.foundEmptyLine = False
+      return
+
     @staticmethod
     def diagnostic(flag):
       return PetscDocStringBase.diagnosticFlag(flag,prefix="inline-list")
+
+    def clear(self,*args,**kwargs):
+      super().clear(*args,**kwargs)
+      self.foundEmptyLine = False
+      return
 
     def setup(self,ds,*args,**kwargs):
       items = []
@@ -647,9 +664,12 @@ class PetscDocString(PetscDocStringBase):
       try:
         match = difflib.get_close_matches(heading,sectionNames,n=1)[0]
       except IndexError:
-        match = None
         # try if we can find a sub-word
-        for head in heading.split():
+        match = None
+        headSplit = heading.split(maxsplit=4)
+        # if heading splits into more than 3 params, then chances are its being mislabeled
+        # as a heading anyways
+        for head in headSplit[:min(3,len(headSplit))]:
           try:
             match = difflib.get_close_matches(head,sectionNames,n=1)[0]
           except IndexError:
@@ -660,15 +680,21 @@ class PetscDocString(PetscDocStringBase):
           "**** CLOSEST MATCH FOUND {:{}} FOR {}".format(match,max(map(len,sectionNames)),heading)
         )
         return sections[match]
-      print(80*"*","UNHANDLED HEADING {}".format(heading),80*"*",sep="\n")
-      return self._sections["UNKNOWN"]
+      if heading.endswith(":") or ": " in heading:
+        print(80*"*","UNHANDLED HEADING {}".format(heading),80*"*",sep="\n")
+        # this should be handled
+        return self._sections["UNKNOWN"]
+      # when in doubt, it's probably notes
+      import ipdb; ipdb.set_trace()
+      return self._sections["notes"]
+
 
     def registered(self,section):
       if isinstance(section,PetscDocString.SectionBase):
         return section.name in self._sections
       elif isinstance(section,str):
         return section in self._sections
-      raise NotImplementedError(section)
+      raise NotImplementedError(type(section))
 
     def addSection(self,section):
       assert not self.registered(section),"overwriting section"
@@ -680,16 +706,16 @@ class PetscDocString(PetscDocStringBase):
 
 
   sections = Sections(
-    DefaultSection("UNKNOWN",keywords=("__UNKNOWN_SECTION__",)),
     Synopsis("synopsis",required=True),
     ParameterList("parameters",keywords=("Input Parameter","Output Parameter")),
     ParameterList("options",keywords=("Options Database",)),
     Prose("notes"),
     Prose("fortran notes"),
     Prose("developer notes"),
-    DefaultSection("references"),
+    Prose("references"),
     InlineList("level",required=True),
-    InlineList("seealso",keywords=(".seealso",),required=True)
+    InlineList("seealso",keywords=(".seealso",),required=True),
+    DefaultSection("UNKNOWN",keywords=("__UNKNOWN_SECTION__",)),
   )
   sowingTypes     = {"@","S","E"}
   clxToSowingType = {
@@ -884,6 +910,8 @@ class PetscDocString(PetscDocStringBase):
       if isHeading(lstrip):
         self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
         newSection = self.sections.find(lstrip.split(":",maxsplit=1)[0].strip().casefold())
+        # TODO: find a way to return to a previous section using context hints rather than
+        # a specific title name
         if newSection != section:
           section.fill(rawData)
           rawData     = []
@@ -916,6 +944,8 @@ class PetscDocString(PetscDocStringBase):
     keywords = section.keywords
     for loc,text in headings:
       before,sep,_ = text.partition(delim)
+      if not sep:
+        import ipdb; ipdb.set_trace()
       assert sep
       heading = before.strip()
       if any(k in heading for k in keywords):
@@ -1302,9 +1332,16 @@ class Patch(object):
     def deleter(self):
       return bool(self.value == "")
 
-  __slots__ = "extent","filename","ctxlines","src","deltas","fixed","fixDepth","weakData"
+    def view(self):
+      before = self.extent.formatted(numContext=3,highlight=False).splitlines(True)
+      after  = before.copy()
+      after[3] = before[3].replace(self.extent.raw(tight=True),self.value)
+      print("".join(difflib.unified_diff(before,after,fromfile="Original",tofile="Modified")))
+      return
 
-  def __init__(self,srcRange,value,contextlines=2):
+  __slots__ = "combine","extent","filename","ctxlines","src","deltas","fixed","fixDepth","weakData"
+
+  def __init__(self,srcRange,value,contextlines=2,combineable=True):
     def validrange(srcRange):
       assert isinstance(srcRange,(clx.SourceRange,PetscSourceRange))
       start,end = srcRange.start,srcRange.end
@@ -1313,6 +1350,7 @@ class Patch(object):
         assert start.column <= end.column, "start col {} < end col {}, ill-formed source fix".format(start.column,end.column)
       return PetscSourceRange.cast(srcRange)
 
+    self.combine  = combineable
     self.extent   = validrange(srcRange)
     self.filename = PetscPath(self.extent.start.file.name).resolve()
     self.ctxlines = contextlines
@@ -1377,7 +1415,7 @@ class Patch(object):
       elif tag == "insert":
         res.append(b[j1:j2])
       elif tag == "replace":
-        mine = a[i1:i2]
+        mine   = a[i1:i2]
         theirs = b[j1:j2]
         print("mine","'"+mine+"'","theirs","'"+theirs+"'")
         if mine in adelta:
@@ -1474,6 +1512,11 @@ class Patch(object):
           # pointless
           left.discard()
           return right
+        if not left.combine: # TODO this is a hack, we are just throwing our hands up here
+          print("LEFT CANNOT COMBINE, MUST BE DISCARDED")
+          import ipdb; ipdb.set_trace()
+          left.discard()
+          return right
         # import ipdb; ipdb.set_trace()
         # merged = Patch.mergeDiff3(left,right)
       return None
@@ -1523,6 +1566,12 @@ class Patch(object):
     self.fixed    = newSrc
     assert self.fixed != self.src,"Patch did not seem to do anything!"
     return self.fixed
+
+  def view(self):
+    for i,delta in enumerate(self.deltas):
+      print("Delta:",i,"({})".format(delta))
+      delta.view()
+    return
 
 
 class PetscLinter(object):
@@ -2107,6 +2156,100 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
   return
 
+@Diagnostic.register(
+  (PetscDocString.ParameterList.diagnostic("parameter-order"),"Verify that documentation for parameters is in order of appearance"),
+  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented parameters exist for a symbol"),
+)
+def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,checkIndices=False,**kwargs):
+  if cursorList and not params:
+    undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
+    linter.addErrorFromCursor(
+      docstring.cursor,Diagnostic(undocParamDiag,"Symbol parameters are all undocumented")
+    )
+    return
+  elif not cursorList:
+    # check we've got no parameter docstrings, if so, we can delete them
+    if params and len(params.items.values()):
+      sr   = params.extent
+      mess = "Found parameter docstring(s) but '{}' has no parameters".format(cursor.displayname)
+      extraParamDiag = checkDocValidParameterList.diags.extra_parameter
+      docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
+    return
+
+  checkAlignedDescriptions = params.checkAlignedDescriptions
+  splitParam = params.splitParam
+  cursorList = list(map(PetscCursor.cast,cursorList))
+  argNames   = [a.name for a in cursorList]
+  argSeen    = [False]*len(argNames)
+  notFound   = []
+
+  for k,group in sorted(params.items.items()):
+    if skipGroup(k,group):
+      continue
+    indices = []
+    remove  = set()
+    for i,(loc,text,_) in enumerate(group):
+      _,arg,_ = splitParam(text)
+      try:
+        idx = argNames.index(arg)
+      except ValueError:
+        notFound.append((arg,loc))
+        remove.add(i)
+      else:
+        argSeen[idx] = True
+        indices.append(idx)
+    checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove],**kwargs)
+    if 0 and checkIndices:
+      # TODO what to do if the lines we swap are imperfect? This might be the straw
+      # breaking the camels back, since I don't see a way to do this without 2 passes
+      done = set()
+      for mine,correct in zip(indices,sorted(indices)):
+        if mine == correct or mine in done or correct in done:
+          continue
+        mloc,mtext,_ = group[mine]
+        cloc,ctext,_ = group[correct]
+        mloc  = mloc.extend()
+        cloc  = cloc.extend()
+        patch1 = Patch(mloc,ctext,combineable=False)
+        print(patch1.collapse())
+        patch2 = Patch(cloc,mtext,combineable=False)
+        print(patch2.collapse())
+        diag  = checkDocValidParameterList.diags.parameter_order
+        mess  = "Parameters out of order"
+        import ipdb; ipdb.set_trace()
+        docstring.addErrorFromSourceRange(diag,mess,mloc,patch=patch1)
+        docstring.addErrorFromSourceRange(diag,mess,cloc,patch=patch2)
+        done.update({mine,correct})
+
+  argsLeft = [name for seen,name in zip(argSeen,argNames) if not seen]
+  if notFound:
+    extraParamDiag    = checkDocValidParameterList.diags.extra_parameter
+    get_close_matches = difflib.get_close_matches
+    baseMessage       = "Extra docstring parameter '{}' not found in symbol parameter list:\n{}"
+    cursor            = docstring.cursor
+    for i,(arg,loc) in enumerate(notFound):
+      message = baseMessage.format(arg,loc.formatted(numContext=2))
+      try:
+        if (len(argsLeft) == 1) and (i == len(notFound)-1):
+          # if we only have 1 arg left and 1 wasn't found, chances are they are meant to
+          # be the same
+          match = argsLeft[-1]
+        else:
+          match = get_close_matches(arg,argsLeft,n=1)[0]
+      except IndexError:
+        pass
+      else:
+        matchCursor = [c for c in cursorList if c.name == match][0]
+        message    += "\n\nmaybe you meant {}".format(matchCursor.getFormattedBlurb())
+        argsLeft.remove(match)
+      linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
+
+  undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
+  for mess in map("Undocumented parameter '{}' not found in parameter section".format,argsLeft):
+    docstring.addErrorFromSourceRange(undocParamDiag,mess,params.extent,highlight=False)
+  return
+
 def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
   options = docstring.sections.options
   if not options:
@@ -2207,60 +2350,8 @@ def checkDocValidSeealso(linter,cursor,docstring):
 
 """utilities for checking specific types of docstrings"""
 @Diagnostic.register(
-  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that function parameters are documented"),
-  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented function parameters exist"),
-)
-def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,**kwargs):
-  checkAlignedDescriptions = params.checkAlignedDescriptions
-  splitParam = params.splitParam
-  cursorList = list(map(PetscCursor.cast,cursorList))
-  argNames   = [a.name for a in cursorList]
-  argSeen    = [False]*len(argNames)
-  notFound   = []
-  for k,group in sorted(params.items.items()):
-    if skipGroup(k,group):
-      continue
-    indices = []
-    remove  = set()
-    for i,(loc,text,_) in enumerate(group):
-      _,arg,_ = splitParam(text)
-      #arg = text.split()[1].strip()
-      try:
-        idx = argNames.index(arg)
-      except ValueError:
-        notFound.append((arg,loc))
-        remove.add(i)
-      else:
-        argSeen[idx] = True
-        indices.append(idx)
-    checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove],**kwargs)
-
-  argsLeft = [name for seen,name in zip(argSeen,argNames) if not seen]
-  if notFound:
-    extraParamDiag    = checkDocValidParameterList.diags.extra_parameter
-    get_close_matches = difflib.get_close_matches
-    baseMessage       = "Extra docstring parameter '{}' not found in function arguments:\n{}"
-    cursor            = docstring.cursor
-    for arg,loc in notFound:
-      message = baseMessage.format(arg,loc.formatted(numContext=2))
-      try:
-        match = get_close_matches(arg,argsLeft,n=1)[0]
-      except IndexError:
-        pass
-      else:
-        matchCursor = [c for c in cursorList if c.name == match][0]
-        message    += "\n\nmaybe you meant {}".format(matchCursor.getFormattedBlurb())
-        argsLeft.remove(match)
-      linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
-
-  undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
-  for mess in map("Undocumented parameter '{}' not found in parameter section".format,argsLeft):
-    docstring.addErrorFromSourceRange(undocParamDiag,mess,params.extent,highlight=False)
-  return
-
-@Diagnostic.register(
-  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that function parameters are documented"),
-  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented function parameters exist"),
+  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented parameters exist for a symbol"),
   (PetscDocString.ParameterList.diagnostic("fortran-interface"),"Verify that functions needing a custom fortran interface have the correct sowing indentifiers"),
 )
 def checkDocValidFunctionParameters(linter,cursor,docstring):
@@ -2330,8 +2421,9 @@ def checkDocValidEnumParameters(linter,cursor,docstring):
     return k == 0
 
   enumParams = list(map(PetscCursor,cursor.get_children()))
-  params     = synopsis.items
-  checkDocValidParameterList(linter,docstring,params,enumParams,skipGroup=skipGroup,char="$")
+  checkDocValidParameterList(
+    linter,docstring,synopsis.items,enumParams,skipGroup=skipGroup,checkIndices=True,char="$"
+  )
   return
 
 """Specific 'driver' function to test a particular docstring archetype"""
@@ -3298,21 +3390,21 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
     # no point in checking the patch, we have already replaced
     if not replace:
       # make sure the patch can be applied
-      with TemporaryCopy(testFile) as tmpSrc:
-        with tempfile.NamedTemporaryFile(delete=True,suffix=".patch") as tmpPatch:
-          tmpPatchPath = PetscPath(tmpPatch.name).resolve()
-          tmpPatchPath.write_text(renamePatchFileTarget(patches.get(testFile),tmpSrc.tmpPath))
-          try:
-            patchOutput = subprocessRun(
-              ["patch",rootDir,"--strip=0","--unified","--input={}".format(tmpPatchPath)],
-              check=True,universal_newlines=True,capture_output=True
-            )
-          except RuntimeError as re:
-            emess = "Application of patch based on {} failed:\n{}\n".format(testFile,str(re))
-            rej   = tmpSrc.rejFile()
-            if rej.exists():
-              emess += "\n{}:\n{}".format(rej,rej.read_text())
-            outputErrors.append(emess)
+      with TemporaryCopy(testFile) as tmpSrc, \
+           tempfile.NamedTemporaryFile(delete=True,suffix=".patch") as tmpPatch:
+        tmpPatchPath = PetscPath(tmpPatch.name).resolve()
+        tmpPatchPath.write_text(renamePatchFileTarget(patches.get(testFile),tmpSrc.tmpPath))
+        try:
+          patchOutput = subprocessRun(
+            ["patch",rootDir,"--strip=0","--unified","--input={}".format(tmpPatchPath)],
+            check=True,universal_newlines=True,capture_output=True
+          )
+        except RuntimeError as re:
+          emess = "Application of patch based on {} failed:\n{}\n".format(testFile,str(re))
+          rej   = tmpSrc.rejFile()
+          if rej.exists():
+            emess += "\n{}:\n{}".format(rej,rej.read_text())
+          outputErrors.append(emess)
 
     outputErrors = [e for e in outputErrors if e]
     if outputErrors:
@@ -3492,7 +3584,7 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
       for patchFile in patchDir.glob("*"+manglePostfix):
         if verbose: print(rootPrintPrefix,"Applying patch",patchFile)
         output = subprocessRun(
-          ["patch",rootDir,"--strip=0","--unified","--input=".format(patchFile)],
+          ["patch",rootDir,"--strip=0","--unified","--input={}".format(patchFile)],
           check=True,universal_newlines=True,capture_output=True
         )
         if verbose: print(output.stdout)
