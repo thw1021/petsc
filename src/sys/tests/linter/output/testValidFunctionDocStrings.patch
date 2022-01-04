@@ -157,3 +157,31 @@
 +  Level: developer
  
  .seealso: foo()
+@@ -178,5 +178,5 @@
+   testParameterGrouping - ipsum
+ 
+-  Input parameters:
++  Input Parameters:
+ - a,b - some params
+ + nonExistentParam - this param does not exist
+@@ -179,5 +179,5 @@
+ 
+   Input parameters:
+-- a,b - some params
+++ a,b - some params
+ + nonExistentParam - this param does not exist
+ 
+@@ -180,5 +180,5 @@
+   Input parameters:
+ - a,b - some params
+-+ nonExistentParam - this param does not exist
++- nonExistentParam - this param does not exist
+ 
+   Level: dev
+@@ -184,5 +184,5 @@
+   Level: dev
+ 
+-.see also: testStaticFunction()
++.seealso: testStaticFunction()
+ @*/
+ PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)

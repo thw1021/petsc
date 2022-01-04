@@ -27,7 +27,7 @@ Missing empty line between sections, must have one before this section [-fdoc-se
   28: E*/
   29: typedef enum {
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('A sit') must be 1 space from argument ('SIT') [-fdoc-param-list-formatting]:
   21:   IllFormedEnum -
   22: 
 > 23: $ SIT- A sit
@@ -35,7 +35,7 @@ Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-
   24: $ CONSECTETUR - A consectetur
   25:  $ AMET - An amet
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), prefix ('$') is not indented to column (1) [-fdoc-param-list-formatting]:
   23: $ SIT- A sit
   24: $ CONSECTETUR - A consectetur
 > 25:  $ AMET - An amet
@@ -43,7 +43,7 @@ Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-
   26: $ADAPISCING - an adapiscing
   27: Level: advanced
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), argument ('ADAPISCING') must be 1 space from prefix ('$') [-fdoc-param-list-formatting]:
   24: $ CONSECTETUR - A consectetur
   25:  $ AMET - An amet
 > 26: $ADAPISCING - an adapiscing
