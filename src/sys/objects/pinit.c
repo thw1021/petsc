@@ -1650,11 +1650,7 @@ PetscErrorCode  PetscFinalize(void)
   PetscGlobalArgs = NULL;
 
 #if defined(PETSC_HAVE_KOKKOS)
-  if (PetscBeganKokkos) {
-    ierr = PetscKokkosFinalize_Private();CHKERRQ(ierr);
-    PetscBeganKokkos = PETSC_FALSE;
-    PetscKokkosInitialized = PETSC_FALSE;
-  }
+  ierr = PetscKokkosFinalize_Private();CHKERRQ(ierr);
 #endif
 
 #if defined(PETSC_HAVE_NVSHMEM)

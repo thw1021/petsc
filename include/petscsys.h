@@ -95,8 +95,6 @@ M*/
 #  endif
 #endif
 
-#include <petscsystypes.h>
-
 /* ========================================================================== */
 /*
    This facilitates using the C version of PETSc from C++ and the C++ version from C.
@@ -206,6 +204,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR_17
 #endif
 
+#include <petscsystypes.h>
 #include <petscversion.h>
 #define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://petsc.org/\n"
 
@@ -627,10 +626,6 @@ PETSC_EXTERN PetscBool PetscViennaCLSynchronize;
 PETSC_EXTERN PetscErrorCode PetscSetHelpVersionFunctions(PetscErrorCode (*)(MPI_Comm),PetscErrorCode (*)(MPI_Comm));
 PETSC_EXTERN PetscErrorCode PetscCommDuplicate(MPI_Comm,MPI_Comm*,int*);
 PETSC_EXTERN PetscErrorCode PetscCommDestroy(MPI_Comm*);
-
-#if defined(PETSC_HAVE_KOKKOS)
-PETSC_EXTERN PetscErrorCode PetscKokkosInitializeCheck(void);  /* Initialize Kokkos if not yet. */
-#endif
 
 #if defined(PETSC_HAVE_NVSHMEM)
 PETSC_EXTERN PetscBool      PetscBeganNvshmem;
@@ -1675,6 +1670,8 @@ PETSC_EXTERN PetscErrorCode PetscBarrier(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscMPIDump(FILE*);
 PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm,PetscInt[2],PetscInt[2]);
 PETSC_EXTERN PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm,PetscReal[2],PetscReal[2]);
+PETSC_EXTERN PetscErrorCode PetscObjectStateGet(PetscObject,PetscObjectState*);
+PETSC_EXTERN PetscErrorCode PetscObjectStateSet(PetscObject,PetscObjectState);
 
 /*MC
     PetscNot - negates a logical type value and returns result as a PetscBool
@@ -1766,7 +1763,7 @@ PETSC_EXTERN PetscErrorCode PetscStartMatlab(MPI_Comm,const char[],const char[],
 PETSC_EXTERN PetscErrorCode PetscStartJava(MPI_Comm,const char[],const char[],FILE**);
 PETSC_EXTERN PetscErrorCode PetscGetPetscDir(const char*[]);
 
-PETSC_EXTERN PetscClassId PETSC_CONTAINER_CLASSID;
+PETSC_EXTERN PetscClassId   PETSC_CONTAINER_CLASSID;
 PETSC_EXTERN PetscErrorCode PetscContainerGetPointer(PetscContainer,void**);
 PETSC_EXTERN PetscErrorCode PetscContainerSetPointer(PetscContainer,void*);
 PETSC_EXTERN PetscErrorCode PetscContainerDestroy(PetscContainer*);
@@ -1777,8 +1774,8 @@ PETSC_EXTERN PetscErrorCode PetscContainerUserDestroyDefault(void*);
 /*
    For use in debuggers
 */
-PETSC_EXTERN PetscMPIInt PetscGlobalRank;
-PETSC_EXTERN PetscMPIInt PetscGlobalSize;
+PETSC_EXTERN PetscMPIInt    PetscGlobalRank;
+PETSC_EXTERN PetscMPIInt    PetscGlobalSize;
 PETSC_EXTERN PetscErrorCode PetscIntView(PetscInt,const PetscInt[],PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscRealView(PetscInt,const PetscReal[],PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt,const PetscScalar[],PetscViewer);
@@ -2646,8 +2643,7 @@ PETSC_EXTERN PetscClassId PETSC_RANDOM_CLASSID;
 PETSC_EXTERN PetscErrorCode PetscRandomInitializePackage(void);
 
 /* Dynamic creation and loading functions */
-PETSC_EXTERN PetscFunctionList PetscRandomList;
-
+PETSC_EXTERN PetscErrorCode PetscRandomRegisterAll(void);
 PETSC_EXTERN PetscErrorCode PetscRandomRegister(const char[],PetscErrorCode (*)(PetscRandom));
 PETSC_EXTERN PetscErrorCode PetscRandomSetType(PetscRandom,PetscRandomType);
 PETSC_EXTERN PetscErrorCode PetscRandomSetFromOptions(PetscRandom);
@@ -2678,7 +2674,11 @@ PETSC_EXTERN PetscErrorCode PetscMkdir(const char[]);
 PETSC_EXTERN PetscErrorCode PetscMkdtemp(char[]);
 PETSC_EXTERN PetscErrorCode PetscRMTree(const char[]);
 
-PETSC_STATIC_INLINE PetscBool PetscBinaryBigEndian(void) {long _petsc_v = 1; return ((char*)&_petsc_v)[0] ? PETSC_FALSE : PETSC_TRUE;}
+PETSC_STATIC_INLINE PetscBool PetscBinaryBigEndian(void)
+{
+  long _petsc_v = 1;
+  return ((char*)&_petsc_v)[0] ? PETSC_FALSE : PETSC_TRUE;
+}
 
 PETSC_EXTERN PetscErrorCode PetscBinaryRead(int,void*,PetscInt,PetscInt*,PetscDataType);
 PETSC_EXTERN PetscErrorCode PetscBinarySynchronizedRead(MPI_Comm,int,void*,PetscInt,PetscInt*,PetscDataType);
@@ -2730,24 +2730,9 @@ PETSC_EXTERN PetscErrorCode PetscCommBuildTwoSidedGetType(MPI_Comm,PetscBuildTwo
 
 PETSC_EXTERN PetscErrorCode PetscSSEIsEnabled(MPI_Comm,PetscBool*,PetscBool*);
 
-PETSC_EXTERN MPI_Comm PetscObjectComm(PetscObject);
+PETSC_EXTERN MPI_Comm       PetscObjectComm(PetscObject);
 
-PETSC_EXTERN const char *const PetscSubcommTypes[];
-
-struct _n_PetscSubcomm {
-  MPI_Comm         parent;           /* parent communicator */
-  MPI_Comm         dupparent;        /* duplicate parent communicator, under which the processors of this subcomm have contiguous rank */
-  MPI_Comm         child;            /* the sub-communicator */
-  PetscMPIInt      n;                /* num of subcommunicators under the parent communicator */
-  PetscMPIInt      color;            /* color of processors belong to this communicator */
-  PetscMPIInt      *subsize;         /* size of subcommunicator[color] */
-  PetscSubcommType type;
-  char             *subcommprefix;
-};
-
-PETSC_STATIC_INLINE MPI_Comm PetscSubcommParent(PetscSubcomm scomm) {return scomm->parent;}
-PETSC_STATIC_INLINE MPI_Comm PetscSubcommChild(PetscSubcomm scomm) {return scomm->child;}
-PETSC_STATIC_INLINE MPI_Comm PetscSubcommContiguousParent(PetscSubcomm scomm) {return scomm->dupparent;}
+/* PetscSubcomm */
 PETSC_EXTERN PetscErrorCode PetscSubcommCreate(MPI_Comm,PetscSubcomm*);
 PETSC_EXTERN PetscErrorCode PetscSubcommDestroy(PetscSubcomm*);
 PETSC_EXTERN PetscErrorCode PetscSubcommSetNumber(PetscSubcomm,PetscInt);
@@ -2759,6 +2744,7 @@ PETSC_EXTERN PetscErrorCode PetscSubcommSetOptionsPrefix(PetscSubcomm,const char
 PETSC_EXTERN PetscErrorCode PetscSubcommGetParent(PetscSubcomm,MPI_Comm*);
 PETSC_EXTERN PetscErrorCode PetscSubcommGetContiguousParent(PetscSubcomm,MPI_Comm*);
 PETSC_EXTERN PetscErrorCode PetscSubcommGetChild(PetscSubcomm,MPI_Comm*);
+PETSC_EXTERN PetscErrorCode PetscSubcommGetColor(PetscSubcomm,PetscMPIInt*);
 
 PETSC_EXTERN PetscErrorCode PetscHeapCreate(PetscInt,PetscHeap*);
 PETSC_EXTERN PetscErrorCode PetscHeapAdd(PetscHeap,PetscInt,PetscInt);

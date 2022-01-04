@@ -71,9 +71,14 @@ int main(int argc,char **args)
     ierr = PetscSubcommSetType(psubcomm,PETSC_SUBCOMM_CONTIGUOUS);CHKERRQ(ierr);
   } else if (type == PETSC_SUBCOMM_INTERLACED) {
     ierr = PetscSubcommSetType(psubcomm,PETSC_SUBCOMM_INTERLACED);CHKERRQ(ierr);
-  } else SETERRQ1(psubcomm->parent,PETSC_ERR_SUP,"PetscSubcommType %D is not supported yet",type);
+  } else {
+    MPI_Comm parent;
+
+    ierr = PetscSubcommGetParent(psubcomm,&parent);CHKERRQ(ierr);
+    SETERRQ1(parent,PETSC_ERR_SUP,"PetscSubcommType %D is not supported yet",type);
+  }
   ierr = PetscSubcommSetFromOptions(psubcomm);CHKERRQ(ierr);
-  subcomm = PetscSubcommChild(psubcomm);
+  ierr = PetscSubcommGetChild(psubcomm,&subcomm);CHKERRQ(ierr);
 
   /* Test MatCreateRedundantMatrix() */
   if (size > 1) {
