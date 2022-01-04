@@ -1176,11 +1176,11 @@ or
 
 .. code-block::
 
-   VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,PetscInt *ghosts,PetscScalar *array,Vec *vv)
+   VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,PetscInt *ghosts,PetscInt nextra,PetscScalar *array,Vec *vv)
 
 Here ``n`` is the number of local vector entries, ``N`` is the number of
-global entries (or ``NULL``) and ``nghost`` is the number of ghost
-entries. The array ``ghosts`` is of size ``nghost`` and contains the
+global entries (or ``NULL``), ``nghost`` is the number of ghost
+entries, and ``nextra`` is the number of extra locations that the end of the array. The array ``ghosts`` is of size ``nghost`` and contains the
 global vector location for each local ghost location. Using
 ``VecDuplicate()`` or ``VecDuplicateVecs()`` on a ghosted vector will
 generate additional ghosted vectors.

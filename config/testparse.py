@@ -4,7 +4,7 @@ Parse the test file and return a dictionary.
 
 Quick usage::
 
-  lib/petsc/bin/maint/testparse.py -t src/ksp/ksp/tutorials/ex1.c
+  config/testparse.py -t src/ksp/ksp/tutorials/ex1.c
 
 From the command line, it prints out the dictionary.  
 This is meant to be used by other scripts, but it is 
@@ -423,7 +423,7 @@ def parseTest(testStr,srcfile,verbosity):
     indentcount=lsplit[0].count(" ")
     var=lsplit[0].strip()
     val=line[line.find(':')+1:].strip()
-    if not var in acceptedkeys: raise Exception("Keyword: "+var+" from: "+line+" is not valid")
+    if not var in acceptedkeys: raise Exception("Keyword: "+var+" from: "+line+" is not valid.\n   In "+srcfile)
     # Start by seeing if we are in a subtest
     if line.startswith(" "):
       if var in subdict[subtestname]:

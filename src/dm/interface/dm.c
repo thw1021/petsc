@@ -278,7 +278,8 @@ PetscErrorCode VecGetDM(Vec v, DM *dm)
 + v - The Vec
 - dm - The DM
 
-  Note: This is NOT the same as DMCreateGlobalVector() since it does not change the view methods or perform other customization, but merely sets the DM member.
+  Note:
+    This is NOT the same as DMCreateGlobalVector() since it does not change the view methods or perform other customization, but merely sets the DM member.
 
   Level: intermediate
 
@@ -413,8 +414,8 @@ PetscErrorCode  DMGetMatType(DM dm,MatType *ctype)
 
   Level: intermediate
 
-  Developer Note: Since the Mat class doesn't know about the DM class the DM object is associated with
-                  the Mat through a PetscObjectCompose() operation
+  Developer Note:
+    Since the Mat class doesn't know about the DM class the DM object is associated with the Mat through a PetscObjectCompose() operation
 
 .seealso: MatSetDM(), DMCreateMatrix(), DMSetMatType()
 @*/
@@ -440,8 +441,8 @@ PetscErrorCode MatGetDM(Mat A, DM *dm)
 
   Level: intermediate
 
-  Developer Note: Since the Mat class doesn't know about the DM class the DM object is associated with
-                  the Mat through a PetscObjectCompose() operation
+  Developer Note:
+    Since the Mat class doesn't know about the DM class the DM object is associated with the Mat through a PetscObjectCompose() operation
 
 .seealso: MatGetDM(), DMCreateMatrix(), DMSetMatType()
 @*/
@@ -1961,7 +1962,8 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
 + is - The global indices for the subproblem
 - subdm - The DM for the subproblem
 
-  Note: You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
+  Note:
+    You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
 
   Level: intermediate
 
@@ -1994,7 +1996,8 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
 + is - The global indices for the subproblem, or NULL
 - superdm - The DM for the superproblem
 
-  Note: You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
+  Note:
+    You need to call DMPlexSetMigrationSF() on the original DM if you want the Global-To-Natural map to be automatically constructed
 
   Level: intermediate
 
@@ -2134,7 +2137,8 @@ PetscErrorCode DMCreateDomainDecompositionScatters(DM dm,PetscInt n,DM *subdms,V
   Options Database Keys:
 . -dm_plex_cell_refiner <strategy> - chooses the refinement strategy, e.g. regular, tohex
 
-  Note: If no refinement was done, the return value is NULL
+  Note:
+    If no refinement was done, the return value is NULL
 
   Level: developer
 
@@ -2310,10 +2314,11 @@ PetscErrorCode DMInterpolate(DM coarse,Mat interp,DM fine)
 
    Level: developer
 
-   Note: This function exists because the interpolation of a solution vector between meshes is not always a linear
-   map.  For example, if a boundary value problem has an inhomogeneous Dirichlet boundary condition that is compressed
-   out of the solution vector.  Or if interpolation is inherently a nonlinear operation, such as a method using
-   slope-limiting reconstruction.
+   Note:
+     This function exists because the interpolation of a solution vector between meshes is not always a linear
+     map.  For example, if a boundary value problem has an inhomogeneous Dirichlet boundary condition that is compressed
+     out of the solution vector.  Or if interpolation is inherently a nonlinear operation, such as a method using
+     slope-limiting reconstruction.
 
 .seealso DMInterpolate(), DMCreateInterpolation()
 @*/
@@ -2398,7 +2403,8 @@ PetscErrorCode  DMSetRefineLevel(DM dm,PetscInt level)
   Output Parameter:
 . dme - the extruded DM, or NULL
 
-  Note: If no extrusion was done, the return value is NULL
+  Note:
+    If no extrusion was done, the return value is NULL
 
   Level: developer
 
@@ -4086,7 +4092,8 @@ PetscErrorCode  DMLoad(DM newdm, PetscViewer viewer)
 
   Level: beginner
 
-  Note: If the DM is a DMDA and has no coordinates, the index bounds are returned instead.
+  Note:
+    If the DM is a DMDA and has no coordinates, the index bounds are returned instead.
 
 .seealso: DMGetCoordinates(), DMGetCoordinatesLocal(), DMGetBoundingBox()
 @*/
@@ -4237,9 +4244,9 @@ PetscErrorCode DMPrintLocalVec(DM dm, const char name[], PetscReal tol, Vec X)
   Level: advanced
 
   Notes:
-  Use DMGetLocalSection() in new code.
+    Use DMGetLocalSection() in new code.
 
-  This gets a borrowed reference, so the user should not destroy this PetscSection.
+    This gets a borrowed reference, so the user should not destroy this PetscSection.
 
 .seealso: DMGetLocalSection(), DMSetLocalSection(), DMGetGlobalSection()
 @*/
@@ -4253,7 +4260,7 @@ PetscErrorCode DMGetSection(DM dm, PetscSection *section)
 }
 
 /*@
-  DMGetLocalSection - Get the PetscSection encoding the local data layout for the DM.
+  DMGetLocalSection - Get the PetscSection encoding the local vector data layout for the DM.
 
   Input Parameter:
 . dm - The DM
@@ -4266,7 +4273,10 @@ PetscErrorCode DMGetSection(DM dm, PetscSection *section)
 
   Level: intermediate
 
-  Note: This gets a borrowed reference, so the user should not destroy this PetscSection.
+  Note:
+    This gets a borrowed reference, so the user should not destroy this PetscSection.
+
+    This must be called after DMAddField() and DMSetDS() or the section will be empty
 
 .seealso: DMSetLocalSection(), DMGetGlobalSection()
 @*/
@@ -4339,7 +4349,8 @@ PetscErrorCode DMSetSection(DM dm, PetscSection section)
 
   Level: intermediate
 
-  Note: Any existing Section will be destroyed
+  Note:
+    Any existing local or global Section will be destroyed
 
 .seealso: DMGetLocalSection(), DMSetGlobalSection()
 @*/
@@ -4386,7 +4397,8 @@ PetscErrorCode DMSetLocalSection(DM dm, PetscSection section)
 
   Level: advanced
 
-  Note: This gets borrowed references, so the user should not destroy the PetscSection or the Mat.
+  Note:
+   This gets borrowed references, so the user should not destroy the PetscSection or the Mat.
 
 .seealso: DMSetDefaultConstraints()
 @*/
@@ -4418,7 +4430,8 @@ PetscErrorCode DMGetDefaultConstraints(DM dm, PetscSection *section, Mat *mat)
 
   Level: advanced
 
-  Note: This increments the references of the PetscSection and the Mat, so they user can destroy them
+  Note:
+    This increments the references of the PetscSection and the Mat, so they user can destroy them
 
 .seealso: DMGetDefaultConstraints()
 @*/
@@ -4518,7 +4531,7 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 #endif
 
 /*@
-  DMGetGlobalSection - Get the PetscSection encoding the global data layout for the DM.
+  DMGetGlobalSection - Get the PetscSection encoding the global vector data layout for the DM.
 
   Collective on dm
 
@@ -4530,7 +4543,10 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
 
   Level: intermediate
 
-  Note: This gets a borrowed reference, so the user should not destroy this PetscSection.
+  Note:
+    This gets a borrowed reference, so the user should not destroy this PetscSection.
+
+    This must be called after DMAddField() and DMSetDS() or the section will be empty
 
 .seealso: DMSetLocalSection(), DMGetLocalSection()
 @*/
@@ -4565,7 +4581,8 @@ PetscErrorCode DMGetGlobalSection(DM dm, PetscSection *section)
 
   Level: intermediate
 
-  Note: Any existing Section will be destroyed
+  Note:
+    Any existing global Section will be destroyed
 
 .seealso: DMGetGlobalSection(), DMSetLocalSection()
 @*/
@@ -4597,7 +4614,8 @@ PetscErrorCode DMSetGlobalSection(DM dm, PetscSection section)
 
   Level: intermediate
 
-  Note: This gets a borrowed reference, so the user should not destroy this PetscSF.
+  Note:
+    This gets a borrowed reference, so the user should not destroy this PetscSF.
 
 .seealso: DMSetSectionSF(), DMCreateSectionSF()
 @*/
@@ -4638,7 +4656,8 @@ PetscErrorCode DMGetSectionSF(DM dm, PetscSF *sf)
 
   Level: intermediate
 
-  Note: Any previous SF is destroyed
+  Note:
+    Any previous SF is destroyed
 
 .seealso: DMGetSectionSF(), DMCreateSectionSF()
 @*/
@@ -7752,6 +7771,10 @@ PetscErrorCode DMGetStratumSize(DM dm, const char name[], PetscInt value, PetscI
 
   Level: beginner
 
+  Notes:
+  The output IS should be destroyed when no longer needed.
+  Returns NULL if the stratum is empty.
+
 .seealso: DMLabelGetStratumIS(), DMGetStratumSize()
 @*/
 PetscErrorCode DMGetStratumIS(DM dm, const char name[], PetscInt value, IS *points)
@@ -10128,3 +10151,183 @@ PetscErrorCode DMPolytopeInCellTest(DMPolytopeType ct, const PetscReal point[], 
   }
   PetscFunctionReturn(0);
 }
+
+/*@
+  DMGlobalUpdateLocalBegin - returns a local vector associated with a global vector with the values from the global vector
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+-  g - the global vector
+
+  Output Parameter:
+. l - the local vector, not valid until DMGlobalUpdateLocalEnd() is called.
+
+  Level: beginner
+
+  Usage pattern:
+$      DMGlobalUpdateLocalBegin(dm,gi,&li);
+$      DMGlobalUpdateLocalEnd(dm,gi,&li);          -- get gi values into li --
+$      DMGlobalGetLocal(dm,gf,&lf);
+$      VecSet(lf,0.0);
+$      -- fill the values in lf using computations that use values in li --
+$      DMGlobalRestoreLocal(dm,gf,&lf);        -- commmunicate the values in lf into gf --
+$      DMGlobalRestoreLocal(dm,gi,&li);        -- return li so it can be reused later for other purposes --
+
+  Notes:
+    The resulting local vector, after DMGlobalUpdateLocalEnd(), will contain the values in the global vector, suitably communicated
+
+    The usage pattern indicated above may be more efficient for DMPLEX then the pattern
+$      DMGetLocalVector(dm,&li);
+$      DMGlobalUpdateLocalBegin(dm,gi,INSERT_VALUES,li);
+$      DMGlobalUpdateLocalEnd(dm,gi,INSERT_VALUES,li);          -- get gi values into li --
+$      DMGetLocalVector(dm,&lf);
+$      VecSet(lf,0.0);
+$      -- fill the values in lf using computations that use values in li --
+$      DMLocalToGlobalBegin(dm,lf,ADD_VALUES,gf);        -- commmunicate the values in lf into gf --
+$      DMLocalToGlobalEnd(dm,lf,ADD_VALUES,gf);
+$      DMRestoreLocalVector(dm,&lf);        -- return li so it can be reused later for other purposes --
+$      DMRestoreLocalVector(dm,&li);        -- return li so it can be reused later for other purposes --
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalUpdateLocalEnd(), DMGlobalRestoreLocal(), DMLocalGetGlobal()
+@*/
+PetscErrorCode DMGlobalUpdateLocalBegin(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  PetscBool      isghost;
+
+  PetscFunctionBegin;
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
+    ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+    ierr = DMGlobalToLocalBegin(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  } else {
+    ierr = VecGhostUpdateBegin(g,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalUpdateLocalEnd - gets a local vector associated with a global vector with the values from the global vector
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+-  g - the global vector
+
+  Output Parameter:
+. l - the local vector
+
+  Level: beginner
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalUpdateLocalBegin(), DMGlobalRestoreLocalEnd(), DMLocalGetGlobal()
+@*/
+PetscErrorCode DMGlobalUpdateLocalEnd(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  PetscBool      isghost;
+
+  PetscFunctionBegin;
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
+    ierr = DMGlobalToLocalEnd(dm,g,INSERT_VALUES,*l);CHKERRQ(ierr);
+  } else {
+    ierr = VecGhostUpdateEnd(g,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecGhostGetLocalForm(g,l);CHKERRQ(ierr);
+  }
+  if (*l != g) {ierr = PetscObjectCompose((PetscObject)*l,"HasDataFromGlobalPartner",(PetscObject)g);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalGetLocal - obtains a local vector obtained with a global DM vector, with invalid entries
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+-  g - the global vector
+
+  Output Parameter:
+.  l - the local vector
+
+  Level: beginner
+
+  Notes:
+     No communication is performed in this operation, the local vector has invalid values in its array
+
+     Use DMGlobalUpdateLocalBegin()/DMGlobalUpdateLocalEnd() to perform a copy of the global values into the local values
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalUpdateLocalBegin(), DMGlobalUpdateLocalEnd(), DMLocalRestoreGlobal()
+@*/
+PetscErrorCode DMGlobalGetLocal(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  PetscBool      isghost;
+
+  PetscFunctionBegin;
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!isghost) {
+    ierr = DMGetLocalVector(dm,l);CHKERRQ(ierr);
+  } else {
+    ierr = VecGhostGetLocalForm(g,l);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMGlobalRestoreLocal - restores a local vector obtained with DMGlobalUpdateLocalBegin()/DMGlobalUpdateLocalEnd() or DMGlobalGetLocal()
+
+  Collective
+
+  Input Parameter:
++  dm - the DM
+.  g - the global vector
+- l - the local vector
+
+  Level: beginner
+
+  Notes:
+    If the local vector was obtained with DMGlobalUpdateLocalBegin()/DMGlobalUpdateLocalEnd() then no communication is done from this vector.
+    its values are discarded
+
+    If the local vector was obtained with DMGlobalGetLocal() then the values are accumulated back into the global vector.
+
+.seealso: DMDA, DMSLICED, DMCOMPOSITE, DMPLEX, DMMOAB, DMNETWORK, DMGlobalUpdateLocalBegin(), DMGlobalUpdateLocalEnd(), DMLocalGetGlobal()
+@*/
+PetscErrorCode DMGlobalRestoreLocal(DM dm,Vec g,Vec *l)
+{
+  PetscErrorCode ierr;
+  PetscBool      isghost;
+  Vec            gp;
+
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)*l,"HasDataFromGlobalPartner",(PetscObject*)&gp);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)*l,"HasDataFromGlobalPartner",NULL);CHKERRQ(ierr);
+  ierr = VecGhostHasLocalForm(g,&isghost);CHKERRQ(ierr);
+  if (!gp) {
+    if (!isghost) {
+      ierr = DMLocalToGlobalBegin(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+      ierr = DMLocalToGlobalEnd(dm,*l,ADD_VALUES,g);CHKERRQ(ierr);
+      ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
+    } else {
+      PetscBool isform;
+
+      ierr = VecGhostIsLocalForm(g,*l,&isform);CHKERRQ(ierr);
+      if (!isform) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local vector passed in is not the local form of the global ghost vector");
+      ierr = VecGhostRestoreLocalForm(g,l);CHKERRQ(ierr);
+      ierr = VecGhostUpdateBegin(g,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+      ierr = VecGhostUpdateEnd(g,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    }
+  } else {
+    if (!isghost) {
+      ierr = DMRestoreLocalVector(dm,l);CHKERRQ(ierr);
+    } else {
+      ierr = VecGhostRestoreLocalForm(g,l);CHKERRQ(ierr);
+    }
+  }
+  PetscFunctionReturn(0);
+}
+

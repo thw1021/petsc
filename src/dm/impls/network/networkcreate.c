@@ -209,24 +209,25 @@ PetscErrorCode VecView_Network(Vec v,PetscViewer viewer)
 {
   DM             dm;
   PetscErrorCode ierr;
-  PetscBool      isseq;
   PetscBool      iascii;
+  PetscMPIInt    size;
 
   PetscFunctionBegin;
   ierr = VecGetDM(v,&dm);CHKERRQ(ierr);
   if (!dm) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"Vector not generated from a DM");
   ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)v,VECSEQ,&isseq);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)v),&size);CHKERRMPI(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
 
   /* Use VecView_Network if the viewer is ASCII; use VecView_Seq/MPI for other viewer formats */
   if (iascii) {
-    if (isseq) {
+    if (size == 1) {
       ierr = VecView_Network_Seq(dm,v,viewer);CHKERRQ(ierr);
     } else {
       ierr = VecView_Network_MPI(dm,v,viewer);CHKERRQ(ierr);
     }
-  } else {
-    if (isseq) {
+  } else { /* this code is wrong because the vector may not be a seq or mpi vector */
+    if (size ==1) {
       ierr = VecView_Seq(v,viewer);CHKERRQ(ierr);
     } else {
       ierr = VecView_MPI(v,viewer);CHKERRQ(ierr);
@@ -305,15 +306,26 @@ PetscErrorCode DMClone_Network(DM dm, DM *newdm)
 }
 
 /*MC
-  DMNETWORK = "network" - A DM object that encapsulates an unstructured network. The implementation is based on the DM object
-                          DMPlex that manages unstructured grids. Distributed networks use a non-overlapping partitioning of
-                          the edges. In the local representation, Vecs contain all unknowns in the interior and shared boundary.
-                          This is specified by a PetscSection object. Ownership in the global representation is determined by
-                          ownership of the underlying DMPlex points. This is specified by another PetscSection object.
+  DMNETWORK = "network" - A DM object that encapsulates an unstructured network.
 
   Level: intermediate
 
-.seealso: DMType, DMNetworkCreate(), DMCreate(), DMSetType()
+  Notes:
+     Distributed networks use a non-overlapping partitioning of the edges and overlapping of the vertices. In the local representation, Vecs contain all unknowns in the interior and shared vertices.
+
+  Typical Usage Pattern:
+$     DMNetworkCreate()
+$     DMNetworkSetNumSubNetworks()
+$     DMNetworkAddSubnetwork()
+$     DMNetworkLayoutSetUp()
+$     DMNetworkDistribute()
+$
+
+  Developer Notes:
+    The implementation is based on the DM object DMPlex that manages unstructured grids.
+    Ownership in the global representation is determined by ownership of the underlying DMPlex points.
+
+.seealso: DMType, DMNetworkCreate(), DMCreate(), DMSetType(), DMNetworkAddSubnetwork()
 M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
@@ -353,7 +365,9 @@ PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
   Output Parameter:
 . network  - The DMNetwork object
 
-  Level: beginner
+  Level: intermediate
+
+.seealso: DMType, DMNetworkCreate(), DMCreate(), DMSetType(), DMNetworkAddSubnetwork(), DMNETWORK
 
 @*/
 PetscErrorCode DMNetworkCreate(MPI_Comm comm, DM *network)

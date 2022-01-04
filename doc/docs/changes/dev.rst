@@ -64,6 +64,10 @@ Changes: Development
 -  Add ``VecSetBindingPropagates()``
 -  Add ``VecGetBindingPropagates()``
 -  For CUDA and ViennaCL and HIP GPU vectors, ``VecCreate()`` no longer allocates the array on CPU eagerly, it is only allocated if it is needed
+-  Add ``nextra`` argument to ``VecCreateGhost()``, ``VecCreateGhostWithArray()``, ``VecCreateGhostBlock()``, ``VecCreateGhostBlockWithArray()``
+-  Refactor ``VecGhost`` so it can also work with sequential vectors
+-  Add ``VecGhostHasLocalForm()``
+-  Add ``VecSetGhost()`` to cause a vector (of any type including GPU) to be created as a ghosted vector
 
 .. rubric:: PetscSection:
 
@@ -104,6 +108,10 @@ Changes: Development
 -  Add ``DMCompareLabels()`` comparing ``DMLabel``\s of two ``DM``\s
 -  ``DMCopyLabels()`` now takes DMCopyLabelsMode argument determining duplicity handling
 -  Add ``-dm_bind_below`` option for specifying size threshold below which GPU is not used for ``Vec`` and ``Mat`` objects associated with a DM
+-  Add ``DMPlexCreateVecGhost()``
+-  Add ``DMGlobalUpdateLocalBegin()``, ``DMGlobalUpdateLocalEnd()``, ``DMGlobalGetLocal()``, ``DMGlobalRestoreLocal()`` to provide a local representation for a global vector that may be a ghosted local representation of the global vector.
+-  Add ``-dm_plex_use_vec_ghost_permutation`` to have DMPLEX use VecGhost and thus have a shared global and local vector that does not need to copy to copy the local part of the vector in global to local and local to global operations
+-  Change DMNETWORK to always DMPlexSetUseVecGhostPermutation(), this will decrease the time for many DMNETWORK computations since local copies from global to local and local to global communication will be eliminated
 
 .. rubric:: DMSwarm:
 

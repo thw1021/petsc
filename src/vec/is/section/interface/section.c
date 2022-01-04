@@ -795,11 +795,11 @@ PetscErrorCode PetscSectionSetIncludesConstraints(PetscSection s, PetscBool incl
 - point - the point
 
   Output Parameter:
-. numDof - the number of dof
+. numDof - the number of dof if on this rank, if (numDof < -1) then there are -(numDof+1) values are on a different rank, WHAT does -1 indicate?
 
   Level: intermediate
 
-.seealso: PetscSectionSetDof(), PetscSectionCreate()
+.seealso: PetscSectionSetDof(), PetscSectionCreate(), PetscSectionGetOffset()
 @*/
 PetscErrorCode PetscSectionGetDof(PetscSection s, PetscInt point, PetscInt *numDof)
 {
@@ -1225,7 +1225,7 @@ PetscErrorCode PetscSectionGetMaxDof(PetscSection s, PetscInt *maxDof)
 }
 
 /*@
-  PetscSectionGetStorageSize - Return the size of an array or local Vec capable of holding all the degrees of freedom.
+  PetscSectionGetStorageSize - Return the size of an array of a local Vec capable of holding all the degrees of freedom.
 
   Not collective
 
@@ -1598,11 +1598,12 @@ PetscErrorCode PetscSectionGetValueLayout(MPI_Comm comm, PetscSection s, PetscLa
 - point - the point
 
   Output Parameter:
-. offset - the offset
+. offset - if the values are local (indicated by a positive dof returned by PetscSectionGetDof()), then this is the offset into the array,
+           if they are on another rank this is the global index (across all ranks) of the value
 
   Level: intermediate
 
-.seealso: PetscSectionGetFieldOffset(), PetscSectionCreate()
+.seealso: PetscSectionGetFieldOffset(), PetscSectionCreate(), PetscSectionGetDof()
 @*/
 PetscErrorCode PetscSectionGetOffset(PetscSection s, PetscInt point, PetscInt *offset)
 {

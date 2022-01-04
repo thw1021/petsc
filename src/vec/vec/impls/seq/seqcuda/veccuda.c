@@ -233,6 +233,8 @@ PetscErrorCode VecDuplicate_SeqCUDA(Vec win,Vec *V)
   ierr = PetscObjectListDuplicate(((PetscObject)win)->olist,&((PetscObject)(*V))->olist);CHKERRQ(ierr);
   ierr = PetscFunctionListDuplicate(((PetscObject)win)->qlist,&((PetscObject)(*V))->qlist);CHKERRQ(ierr);
   (*V)->stash.ignorenegidx = win->stash.ignorenegidx;
+  (*V)->isghost   = win->isghost;
+  (*V)->ops->view = win->ops->view;
   PetscFunctionReturn(0);
 }
 

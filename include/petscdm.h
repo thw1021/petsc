@@ -1051,4 +1051,9 @@ PETSC_EXTERN PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType, const Petsc
 PETSC_EXTERN PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType, const PetscInt[], const PetscInt[], PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPolytopeInCellTest(DMPolytopeType, const PetscReal[], PetscBool *);
 
+PETSC_EXTERN PetscErrorCode DMGlobalUpdateLocalBegin(DM,Vec,Vec*);
+PETSC_EXTERN PetscErrorCode DMGlobalUpdateLocalEnd(DM,Vec,Vec*);
+PETSC_EXTERN PetscErrorCode DMGlobalGetLocal(DM,Vec,Vec*);
+PETSC_EXTERN PetscErrorCode DMGlobalRestoreLocal(DM,Vec,Vec*);
+
 #endif

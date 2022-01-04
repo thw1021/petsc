@@ -191,9 +191,6 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
   PetscBT        table;
 
   PetscFunctionBegin;
-  for (i=0; i<ne; i++) {
-    if (edgelist[2*i] == edgelist[2*i+1]) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Edge %D has the same vertex %D at each endpoint",i,edgelist[2*i]);
-  }
   /* Get global total Nvtx = max(edgelist[])+1 for this subnet */
   nvtx = -1; i = 0;
   for (j=0; j<ne; j++) {
@@ -533,6 +530,7 @@ static PetscErrorCode DMNetworkLayoutSetUp_Coupling(DM dm)
   /* (3) Create network->plex */
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
+  ierr = DMPlexSetUseVecGhostPermutation(network->plex);CHKERRQ(ierr);
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
   if (size == 1) {
     ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices-nmerged,2,edges);CHKERRQ(ierr);
@@ -696,6 +694,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   /* Create network->plex; One dimensional network, numCorners=2 */
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
   ierr = DMSetType(network->plex,DMPLEX);CHKERRQ(ierr);
+  ierr = DMPlexSetUseVecGhostPermutation(network->plex);CHKERRQ(ierr);
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
   if (size == 1) {
     ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,2,edges);CHKERRQ(ierr);
@@ -1660,18 +1659,19 @@ PETSC_STATIC_INLINE PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt
 @*/
 PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 {
-  MPI_Comm       comm;
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  DM_Network     *oldDMnetwork = (DM_Network*)((*dm)->data);
-  DM_Network     *newDMnetwork;
-  PetscSF        pointsf=NULL;
-  DM             newDM;
-  PetscInt       j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
-  PetscInt       to_net,from_net,*svto;
-  PetscBT        btable;
+  MPI_Comm                 comm;
+  PetscErrorCode           ierr;
+  PetscMPIInt              size;
+  DM_Network               *oldDMnetwork = (DM_Network*)((*dm)->data);
+  DM_Network               *newDMnetwork;
+  PetscSF                  pointsf = NULL;
+  DM                       newDM;
+  PetscInt                 j,e,v,offset,*subnetvtx,*subnetedge,Nsubnet,gidx,svtx_idx,nv;
+  PetscInt                 to_net,from_net,*svto;
+  PetscBT                  btable;
   PetscPartitioner         part;
   DMNetworkComponentHeader header;
+  DM_Plex                  *plex;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)*dm,&comm);CHKERRQ(ierr);
@@ -1680,7 +1680,6 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
 
   if (overlap) SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %D != 0 is not supported yet",overlap);
 
-  /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
   ierr = DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM);CHKERRQ(ierr);
   newDMnetwork = (DM_Network*)newDM->data;
   newDMnetwork->max_comps_registered = oldDMnetwork->max_comps_registered;
@@ -1693,12 +1692,23 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   /* Distribute plex dm */
   ierr = DMPlexDistribute(oldDMnetwork->plex,overlap,&pointsf,&newDMnetwork->plex);CHKERRQ(ierr);
 
+  /* Permute the new plex entities to put the ghost locations at the end */
+  ierr = DMPlexSetUseVecGhostPermutation(newDMnetwork->plex);CHKERRQ(ierr);
+  ierr = DMPlexSetUpVecGhostPermutation(newDMnetwork->plex);CHKERRQ(ierr);
+  plex = (DM_Plex*)newDMnetwork->plex->data;
+
   /* Distribute dof section */
   ierr = PetscSectionCreate(comm,&newDMnetwork->DofSection);CHKERRQ(ierr);
+  ierr = PetscSectionSetPermutation(newDMnetwork->DofSection, plex->vecghostperm);CHKERRQ(ierr);
   ierr = PetscSFDistributeSection(pointsf,oldDMnetwork->DofSection,NULL,newDMnetwork->DofSection);CHKERRQ(ierr);
+  PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"Original section\n");
+  PetscSectionView(oldDMnetwork->DofSection,PETSC_VIEWER_STDOUT_WORLD);
+  PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"Distributed section\n");
+  PetscSectionView(newDMnetwork->DofSection,PETSC_VIEWER_STDOUT_WORLD);
 
   /* Distribute data and associated section */
   ierr = PetscSectionCreate(comm,&newDMnetwork->DataSection);CHKERRQ(ierr);
+  ierr = PetscSectionSetPermutation(newDMnetwork->DataSection, plex->vecghostperm);CHKERRQ(ierr);
   ierr = DMPlexDistributeData(newDMnetwork->plex,pointsf,oldDMnetwork->DataSection,MPIU_INT,(void*)oldDMnetwork->componentdataarray,newDMnetwork->DataSection,(void**)&newDMnetwork->componentdataarray);CHKERRQ(ierr);
 
   ierr = PetscSectionGetChart(newDMnetwork->DataSection,&newDMnetwork->pStart,&newDMnetwork->pEnd);CHKERRQ(ierr);

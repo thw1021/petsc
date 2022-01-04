@@ -20,7 +20,7 @@
       implicit none
 
       PetscMPIInt rank,mySize
-      PetscInt nlocal,nghost,ifrom(2)
+      PetscInt nlocal,nghost,ifrom(2),nextra
       PetscErrorCode ierr
       PetscInt i,rstart,rend,ione
       PetscBool   flag
@@ -30,6 +30,7 @@
 
       nlocal = 6
       nghost = 2
+      nextra = 0
 
       call PetscInitialize(PETSC_NULL_CHARACTER,ierr)
       if (ierr /= 0) then
@@ -77,10 +78,10 @@
      &                         '-allocate',flag,ierr)
       if (flag) then
         call VecCreateGhostWithArray(PETSC_COMM_WORLD,nlocal,            &
-     &        PETSC_DECIDE,nghost,ifrom,tarray,gxs,ierr)
+     &        PETSC_DECIDE,nghost,ifrom,nextra,tarray,gxs,ierr)
       else
         call VecCreateGhost(PETSC_COMM_WORLD,nlocal,PETSC_DECIDE,        &
-     &       nghost,ifrom,gxs,ierr)
+     &       nghost,ifrom,nextra,gxs,ierr)
       endif
 
 !      Test VecDuplicate

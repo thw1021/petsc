@@ -711,6 +711,11 @@ PetscErrorCode VecDestroy_Seq(Vec v)
 #if defined(PETSC_USE_LOG)
   PetscLogObjectState((PetscObject)v,"Length=%" PetscInt_FMT "",v->map->n);
 #endif
+  /* Destroy local representation of vector if it exists */
+  if (v->localrep) {
+    ierr = VecDestroy(&v->localrep);CHKERRQ(ierr);
+    ierr = VecScatterDestroy(&v->localupdate);CHKERRQ(ierr);
+  }
   if (vs) { ierr = PetscFree(vs->array_allocated);CHKERRQ(ierr); }
   ierr = PetscFree(v->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -732,6 +737,23 @@ PetscErrorCode VecDuplicate_Seq(Vec win,Vec *V)
   ierr = VecSetSizes(*V,win->map->n,win->map->n);CHKERRQ(ierr);
   ierr = VecSetType(*V,((PetscObject)win)->type_name);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*V)->map);CHKERRQ(ierr);
+
+  /* save local representation of the vector (and scatter) if it exists */
+  if (win->localrep) {
+    PetscScalar *array;
+    ierr = VecGetArray(*V,&array);CHKERRQ(ierr);
+    ierr = VecCreateSeqWithArray(PETSC_COMM_SELF,PetscAbs(win->map->bs),win->map->n+win->nghost+win->nextra,array,&(*V)->localrep);CHKERRQ(ierr);
+    ierr = PetscMemcpy((*V)->localrep->ops,win->localrep->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
+    ierr = VecRestoreArray(*V,&array);CHKERRQ(ierr);
+    ierr = PetscLogObjectParent((PetscObject)*V,(PetscObject)(*V)->localrep);CHKERRQ(ierr);
+
+    (*V)->localupdate = win->localupdate;
+    if ((*V)->localupdate) {
+      ierr = PetscObjectReference((PetscObject)(*V)->localupdate);CHKERRQ(ierr);
+    }
+  }
+  (*V)->isghost = win->isghost;
+
   ierr = PetscObjectListDuplicate(((PetscObject)win)->olist,&((PetscObject)(*V))->olist);CHKERRQ(ierr);
   ierr = PetscFunctionListDuplicate(((PetscObject)win)->qlist,&((PetscObject)(*V))->qlist);CHKERRQ(ierr);
 
@@ -808,7 +830,7 @@ static struct _VecOps DvOps = {VecDuplicate_Seq, /* 1 */
                                NULL,
                                VecStrideSubSetGather_Default,
                                VecStrideSubSetScatter_Default,
-                               NULL,
+                               VecView_Seq,
                                NULL,
                                NULL
 };

@@ -802,7 +802,7 @@ $      if (loc(ilocal) == loc(PETSC_NULL_INTEGER)) then
 
    Level: intermediate
 
-.seealso: PetscSFCreate(), PetscSFView(), PetscSFSetGraph()
+.seealso: PetscSFCreate(), PetscSFView(), PetscSFSetGraph(), PetscSFGetRootRanks(), PetscSFGetLeafRanks()
 @*/
 PetscErrorCode PetscSFGetGraph(PetscSF sf,PetscInt *nroots,PetscInt *nleaves,const PetscInt **ilocal,const PetscSFNode **iremote)
 {

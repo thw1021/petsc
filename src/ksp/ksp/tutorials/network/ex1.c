@@ -1,4 +1,4 @@
-static char help[] = "This example demonstrates the use of DMNetwork interface for solving a simple electric circuit. \n\
+static char help[] = "This example demonstrates the use of DMNetwork interface for solving a simple linear electric circuit. \n\
                       The example can be found in p.150 of 'Strang, Gilbert. Computational Science and Engineering. Wellesley, MA'.\n\n";
 
 /* T
@@ -36,7 +36,7 @@ static char help[] = "This example demonstrates the use of DMNetwork interface f
 
 /*
   Structures containing physical data of circuit.
-  Note that no topology is defined
+  Note that no geometry is defined
 */
 
 typedef struct {
@@ -280,6 +280,11 @@ int main(int argc,char ** argv)
 
   /* Network partitioning and distribution of data */
   ierr = DMSetUp(dmnetwork);CHKERRQ(ierr);
+    ierr = DMCreateMatrix(dmnetwork,&A);CHKERRQ(ierr);
+  DMView(dmnetwork,PETSC_VIEWER_STDOUT_WORLD);
+  MatView(A,PETSC_VIEWER_STDOUT_WORLD);
+  MatDestroy(&A);
+
   ierr = DMNetworkDistribute(&dmnetwork,0);CHKERRQ(ierr);
 
   /* We do not use these data structures anymore since they have been copied to dmnetwork */
@@ -292,6 +297,8 @@ int main(int argc,char ** argv)
   ierr = DMCreateGlobalVector(dmnetwork,&x);CHKERRQ(ierr);
   ierr = VecDuplicate(x,&b);CHKERRQ(ierr);
   ierr = DMCreateMatrix(dmnetwork,&A);CHKERRQ(ierr);
+  DMView(dmnetwork,PETSC_VIEWER_STDOUT_WORLD);
+  MatView(A,PETSC_VIEWER_STDOUT_WORLD);
 
   /* Assembly system of equations */
   ierr = FormOperator(dmnetwork,A,b);CHKERRQ(ierr);
