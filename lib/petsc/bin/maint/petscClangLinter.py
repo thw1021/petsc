@@ -19,7 +19,7 @@ import multiprocessing.queues
 import petscClangLinterUtil as pclu
 from petscClangLinterUtil import (
   static_variables,Scope,PetscSourceLocation,PetscSourceRange,PetscCXCursorAndRangeVisitor,
-  CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,Diagnostic,DiagnosticsManager
+  CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,Diagnostic,DiagnosticManager
 )
 try:
   import clang.cindex as clx
@@ -226,7 +226,7 @@ class PetscDocStringBase(object):
     return text
 
 
-@Diagnostic.register_class(
+@DiagnosticManager.register(
   ("internal-linkage","Verify that symbols with internal linkage don't have docstrings"),
   ("sowing-chars","Verify that sowing begin and end indicators match the symbol type"),
   ("spacing","Verify that dosctrings occur immediately above that which they describe"),
@@ -356,11 +356,11 @@ class PetscDocString(PetscDocStringBase):
       return PetscDocStringBase.diagnosticFlag(flag)
 
 
-  @Diagnostic.register_class(("section-header-missing",""),("section-header-unique",""))
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class DefaultSection(SectionBase):
     pass
 
-  @Diagnostic.register_class(
+  @DiagnosticManager.register(
     ("section-header-missing",""),
     ("section-header-unique",""),
     ("matching-symbol-name","Verify that description matches the symbol name"),
@@ -429,7 +429,7 @@ class PetscDocString(PetscDocStringBase):
         self.items = tuple(items)
       return
 
-  @Diagnostic.register_class(
+  @DiagnosticManager.register(
     ("section-header-missing",""),
     ("section-header-unique",""),
     ("formatting","Verify that parameter list entries are correctly white-space formatted"),
@@ -562,7 +562,7 @@ class PetscDocString(PetscDocStringBase):
       self.items = parameterListPrefixCheck(ds,dict(groups))
       return
 
-  @Diagnostic.register_class(("section-header-missing",""),("section-header-unique",""))
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class Prose(SectionBase):
     @staticmethod
     def diagnostic(flag):
@@ -597,7 +597,7 @@ class PetscDocString(PetscDocStringBase):
       self.items = items
       return
 
-  @Diagnostic.register_class(("section-header-missing",""),("section-header-unique",""))
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class InlineList(SectionBase):
     __slots__ = "foundEmptyLine"
 
@@ -1742,7 +1742,7 @@ class PetscLinter(object):
     self.process(tu)
     return self
 
-  @Diagnostic.register(
+  @DiagnosticManager.register(
     ("duplicate-function","Check for duplicate function-calls on the same execution path"),
     ("parsing-error","Generic parsing errors")
   )
@@ -1995,7 +1995,7 @@ class WorkerPool(mp.queues.JoinableQueue):
       commonKwArgs = {
         "target" : queueMain,
         "args"   : (
-          clangLib,checkFunctionMap,classIdMap,DiagnosticsManager,compilerFlags,clangOptions,
+          clangLib,checkFunctionMap,classIdMap,DiagnosticManager,compilerFlags,clangOptions,
           self.verbose,werror,self.errorQueue,self.returnQueue,self,self.lock
         ),
         "daemon" : True
@@ -2156,7 +2156,7 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
   return
 
-@Diagnostic.register(
+@DiagnosticManager.register(
   (PetscDocString.ParameterList.diagnostic("parameter-order"),"Verify that documentation for parameters is in order of appearance"),
   (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
   (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented parameters exist for a symbol"),
@@ -2263,7 +2263,7 @@ def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
     options.checkAlignedDescriptions(docstring,group)
   return
 
-@Diagnostic.register(
+@DiagnosticManager.register(
   (PetscDocString.InlineList.diagnostic("level-casefold"),"Verify that level subheadings are lower-case"),
   (PetscDocString.InlineList.diagnostic("level-spelling"),"Verify that level subheadings are correctly spelled"),
 )
@@ -2349,7 +2349,7 @@ def checkDocValidSeealso(linter,cursor,docstring):
 
 
 """utilities for checking specific types of docstrings"""
-@Diagnostic.register(
+@DiagnosticManager.register(
   (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
   (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented parameters exist for a symbol"),
   (PetscDocString.ParameterList.diagnostic("fortran-interface"),"Verify that functions needing a custom fortran interface have the correct sowing indentifiers"),
@@ -2459,7 +2459,7 @@ checkDocMap = {
 }
 
 """utilities for checking functions"""
-@Diagnostic.register(
+@DiagnosticManager.register(
   ("incompatible-function","Verify that the correct function was used for a type")
 )
 def addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName):
@@ -2529,7 +2529,7 @@ def convertToCorrectPetscValidXXXPointer(linter,obj,objType,funcCursor=None,**kw
     return True
   return False
 
-@Diagnostic.register(
+@DiagnosticManager.register(
   ("incompatible-type","Verify that a particular type matches the expected type")
 )
 def checkIsTypeXAndNotTypeY(typeX,typeY,linter,obj,objType,funcCursor=None,validFunc=None):
@@ -2576,7 +2576,7 @@ def checkIntIsNotPetscBool(linter,obj,*args,**kwargs):
 def checkMPIIntIsNotPetscInt(linter,obj,*args,**kwargs):
   return checkIsNotType("PetscInt",linter,obj,**kwargs)
 
-@Diagnostic.register(
+@DiagnosticManager.register(
   ("incompatible-function","Verify that the correct function was used for a type")
 )
 def checkIsPetscBool(linter,obj,*args,funcCursor=None,**kwargs):
@@ -2587,7 +2587,7 @@ def checkIsPetscBool(linter,obj,*args,funcCursor=None,**kwargs):
     linter.addErrorFromCursor(obj,Diagnostic(diag,mess))
   return True
 
-@Diagnostic.register(("incompatible-type-petscobject","Verify that a symbol is a PetscObject"))
+@DiagnosticManager.register(("incompatible-type-petscobject","Verify that a symbol is a PetscObject"))
 def checkIsPetscObject(linter,obj):
   """
   Returns True if obj is a valid PetscObject, otherwise False. Automatically adds the error to the linter. Raises RuntimeError if obj is a PetscObject that isn't registered in the classIdMap.
@@ -2623,7 +2623,7 @@ def checkIsPetscObject(linter,obj):
       linter.addErrorFromCursor(obj,Diagnostic(diagnosticFlag,mess))
   return validObject
 
-@Diagnostic.register(
+@DiagnosticManager.register(
   ("incompatible-classid","Verify that the given classid matches the PetscObject type")
 )
 def checkMatchingClassid(linter,obj,objClassid):
@@ -2765,7 +2765,7 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     loc = checkTraceableToParentArgs(parent,parentArgNames)
   return loc
 
-@Diagnostic.register(("matching-arg-num","Verify that the given argument number matches"))
+@DiagnosticManager.register(("matching-arg-num","Verify that the given argument number matches"))
 def checkMatchingArgNum(linter,obj,idx,parentArgs):
   """
   Is the Arg # correct w.r.t. the function arguments
@@ -2817,7 +2817,7 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
     linter.addErrorFromCursor(idx,Diagnostic(diagName,errMess,patch=Patch.fromCursor(idx,expIdx)))
   return
 
-@Diagnostic.register(
+@DiagnosticManager.register(
   ("incompatible-type","Verify that a particular type matches the expected type")
 )
 def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=alwaysFalse,**kwargs):
@@ -3427,10 +3427,11 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,diagMapU,compilerFlags,clan
   """
   def updateGlobals(updatedCheckFunctionMap,updatedClassIdMap,updatedDiagnosticsMngr):
     # in a function so the "globalness" doesn't leak
-    global checkFunctionMap,classIdMap,DiagnosticsManager
+    global checkFunctionMap,classIdMap,DiagnosticManager
     checkFunctionMap = updatedCheckFunctionMap
     classIdMap       = updatedClassIdMap
-    DiagnosticsManager.disabled = updatedDiagnosticsMngr.disabled
+    DiagnosticManager.disabled    = updatedDiagnosticsMngr.disabled
+    DiagnosticManager._registered = updatedDiagnosticsMngr._registered
     return
 
   def lockPrint(*args,**kwargs):
@@ -3667,12 +3668,12 @@ if __name__ == "__main__":
 
   class CheckFilter(argparse.Action):
     def __call__(self,parser,namespace,values,option_string=None):
-      DiagnosticsManager.set(self.dest[1:].replace("_","-"),values)
+      DiagnosticManager.set(self.dest[1:].replace("_","-"),values)
       setattr(namespace,self.dest,values)
       return
 
   groupdiag = parser.add_argument_group(title="diagnostics")
-  for diag,helpstr in sorted(Diagnostic._registered.items()):
+  for diag,helpstr in sorted(DiagnosticManager.registered().items()):
     groupdiag.add_argument("-f"+diag,metavar="",type=str2bool,nargs="?",const=True,default=True,action=CheckFilter,help=helpstr)
 
   args = parser.parse_args()
