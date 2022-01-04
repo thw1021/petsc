@@ -3430,8 +3430,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,diagMapU,compilerFlags,clan
     global checkFunctionMap,classIdMap,DiagnosticManager
     checkFunctionMap = updatedCheckFunctionMap
     classIdMap       = updatedClassIdMap
-    DiagnosticManager.disabled    = updatedDiagnosticsMngr.disabled
-    DiagnosticManager._registered = updatedDiagnosticsMngr._registered
+    DiagnosticManager.disabled = updatedDiagnosticsMngr.disabled
     return
 
   def lockPrint(*args,**kwargs):

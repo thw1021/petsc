@@ -10,7 +10,7 @@ ERROR 0: ./src/sys/tests/linter/testDisabled.c:51:6
   8:   /* correct by being disabled */
 
 Argument number doesn't match for 'r'. Found '2' expected '1' from [-fmatching-arg-num]:
-> 3: void testDisabled(PetscRandom r)
-                       ^^^^^^^^^^^^^
+> 3: PetscErrorCode testDisabled(PetscRandom r)
+                                 ^^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->

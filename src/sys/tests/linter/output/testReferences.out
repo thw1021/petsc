@@ -10,8 +10,8 @@ ERROR 0: ./src/sys/tests/linter/testReferences.c:25:18
   20: PetscValidPointer(baz,-3);
 
 Argument number doesn't match for 'foo'. Found '-1' expected '1' from [-fmatching-arg-num]:
-> 7: void testOutOfLineReference(PetscViewer v, PetscViewer v2)
-                                 ^^^^^^^^^^^^^
+> 7: PetscErrorCode testOutOfLineReference(PetscViewer v, PetscViewer v2)
+                                           ^^^^^^^^^^^^^
 
 ERROR 1: ./src/sys/tests/linter/testReferences.c:25:19
 '-2' of derived type 'int', canonical type 'int'
@@ -23,8 +23,8 @@ ERROR 1: ./src/sys/tests/linter/testReferences.c:25:19
   21: PetscValidPointer((void *)v->data,-4);
 
 Argument number doesn't match for 'bar'. Found '-2' expected '1' from [-fmatching-arg-num]:
-> 7: void testOutOfLineReference(PetscViewer v, PetscViewer v2)
-                                 ^^^^^^^^^^^^^
+> 7: PetscErrorCode testOutOfLineReference(PetscViewer v, PetscViewer v2)
+                                           ^^^^^^^^^^^^^
 
 ERROR 2: ./src/sys/tests/linter/testReferences.c:25:20
 '-3' of derived type 'int', canonical type 'int'
@@ -36,8 +36,8 @@ ERROR 2: ./src/sys/tests/linter/testReferences.c:25:20
   22: PetscValidPointer(*blip,-5);
 
 Argument number doesn't match for 'baz'. Found '-3' expected '1' from [-fmatching-arg-num]:
-> 7: void testOutOfLineReference(PetscViewer v, PetscViewer v2)
-                                 ^^^^^^^^^^^^^
+> 7: PetscErrorCode testOutOfLineReference(PetscViewer v, PetscViewer v2)
+                                           ^^^^^^^^^^^^^
 
 ERROR 3: ./src/sys/tests/linter/testReferences.c:37:21
 '-4' of derived type 'int', canonical type 'int'
@@ -49,8 +49,8 @@ ERROR 3: ./src/sys/tests/linter/testReferences.c:37:21
   23: PetscValidPointer(blop,-6);
 
 Argument number doesn't match for 'data'. Found '-4' expected '1' from [-fmatching-arg-num]:
-> 7: void testOutOfLineReference(PetscViewer v, PetscViewer v2)
-                                 ^^^^^^^^^^^^^
+> 7: PetscErrorCode testOutOfLineReference(PetscViewer v, PetscViewer v2)
+                                           ^^^^^^^^^^^^^
 
 ERROR 4: ./src/sys/tests/linter/testReferences.c:27:22
 '-5' of derived type 'int', canonical type 'int'
@@ -62,8 +62,8 @@ ERROR 4: ./src/sys/tests/linter/testReferences.c:27:22
   24: 
 
 Argument number doesn't match for 'blip'. Found '-5' expected '1' from [-fmatching-arg-num]:
-> 7: void testOutOfLineReference(PetscViewer v, PetscViewer v2)
-                                 ^^^^^^^^^^^^^
+> 7: PetscErrorCode testOutOfLineReference(PetscViewer v, PetscViewer v2)
+                                           ^^^^^^^^^^^^^
 
 ERROR 5: ./src/sys/tests/linter/testReferences.c:26:23
 '-6' of derived type 'int', canonical type 'int'
@@ -75,7 +75,7 @@ ERROR 5: ./src/sys/tests/linter/testReferences.c:26:23
   25: /* correct */
 
 Argument number doesn't match for 'blop'. Found '-6' expected '1' from [-fmatching-arg-num]:
-> 7: void testOutOfLineReference(PetscViewer v, PetscViewer v2)
-                                 ^^^^^^^^^^^^^
+> 7: PetscErrorCode testOutOfLineReference(PetscViewer v, PetscViewer v2)
+                                           ^^^^^^^^^^^^^
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
