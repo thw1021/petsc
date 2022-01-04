@@ -18,13 +18,13 @@
 -  PetscValidScalarPointer(b,7);
 +  PetscValidScalarPointer(b,2);
    PetscValidScalarPointer(b,3);
-   return;
+   return 0;
 @@ -14,5 +14,5 @@
    /* ~should~ be removed but won't be */
    PetscValidScalarPointer(b,7);
 -  PetscValidScalarPointer(b,3);
 +  PetscValidScalarPointer(b,2);
-   return;
+   return 0;
  }
 @@ -24,5 +24,5 @@
    PetscValidScalarPointer(b,2);
@@ -53,7 +53,7 @@
 -    PetscValidScalarPointer(b,2);
 +    
    }
-   return;
+   return 0;
 @@ -40,5 +40,5 @@
    PetscValidScalarPointer(b,2);
    /* remove */
@@ -95,7 +95,7 @@
 -    PetscValidScalarPointer(b,2);
 +    
    }
-   return;
+   return 0;
 @@ -80,5 +80,5 @@
    case PETSC_TRUE:
      /* remove */
@@ -151,4 +151,4 @@
 -    PetscValidScalarPointer(b,2);
 +    
    }
-   return;
+   return 0;
