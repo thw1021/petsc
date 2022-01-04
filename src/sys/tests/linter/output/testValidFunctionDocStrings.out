@@ -64,7 +64,7 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
   46: 
   47:   level: Lorem ipsum dolor sit amet
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a pointer') must be 1 space from argument ('y') [-fdoc-param-list-formatting]:
   41: 
   42:   Output Parameter:
 > 43: - y          - a pointer
@@ -72,7 +72,7 @@ Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-
   44: + cnd           - a boolean
   45: . z - a nonexistent parameter
 
-Invalid header formatting. Expected 'Level' found 'level' [-fdoc-section-header-spelling]:
+Invalid header spelling. Expected 'Level' found 'level' [-fdoc-section-header-spelling]:
   45: . z - a nonexistent parameter
   46: 
 > 47:   level: Lorem ipsum dolor sit amet
@@ -165,7 +165,7 @@ Unknown section header 'output Psrammmetrs', assuming you meant 'Output Paramete
   103: . y - a PetscScalar pointer
   104: 
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a PetscInt') must be 1 space from argument ('x') [-fdoc-param-list-formatting]:
   98 :   input prametirs:
   99 : + viewer - a PetsViewer
 > 100: - x - a PetscInt
@@ -181,7 +181,7 @@ Unknown section header 'optnS dtaaSE', assuming you meant 'Options Database' [-f
   106: - -option_a     - foo
   107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('foo') must be 1 space from argument ('-option_a') [-fdoc-param-list-formatting]:
   104: 
   105:   optnS dtaaSE:
 > 106: - -option_a     - foo
@@ -240,7 +240,7 @@ Function requires custom fortran interface but missing 'C' from docstring header
   118:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
   119: 
 
-Argument list entry must be formatted as follows ^(\S) (.*) - (.*) [-fdoc-param-list-formatting]:
+Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a char pointer') must be 1 space from argument ('string') [-fdoc-param-list-formatting]:
   119: 
   120:   Input Parameters:
 > 121: + string -  a char pointer
@@ -264,6 +264,47 @@ Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-
                 ^^^^^^^^^^^^^^^^^^
   166: 
   167: .seealso: foo()
+
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:185
+'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
+  183: .see also: testStaticFunction()
+  184: @*/
+> 185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  186: {
+  187:   return 0;
+
+First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
+  176: 
+  177:   Input parameters:
+> 178: - a,b - some params
+       ^
+  179: + nonExistentParam - this param does not exist
+  180: 
+
+Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
+  177:   Input parameters:
+  178: - a,b - some params
+> 179: + nonExistentParam - this param does not exist
+       ^
+  180: 
+  181:   Level: dev
+
+Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-fdoc-section-header-spelling]:
+  175:   testParameterGrouping - ipsum
+  176: 
+> 177:   Input parameters:
+         ^^^^^^^^^^^^^^^^
+  178: - a,b - some params
+  179: + nonExistentParam - this param does not exist
+
+Unknown section header '.see also', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
+  181:   Level: dev
+  182: 
+> 183: .see also: testStaticFunction()
+       ^^^^^^^^^
+  184: @*/
+  185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -471,4 +512,37 @@ ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
   171:   return testStaticFunction();
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
+
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:185
+'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
+  183: .see also: testStaticFunction()
+  184: @*/
+> 185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  186: {
+  187:   return 0;
+
+Each parameter entry must be documented separately on its own line [-fdoc-param-list-solitary-parameter]:
+  176: 
+  177:   Input parameters:
+> 178: - a,b - some params
+         ^^^
+  179: + nonExistentParam - this param does not exist
+  180: 
+
+Extra docstring parameter 'nonExistentParam' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
+  177:   Input parameters:
+  178: - a,b - some params
+> 179: + nonExistentParam - this param does not exist
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  180: 
+  181:   Level: dev
+
+Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
+  179: + nonExistentParam - this param does not exist
+  180: 
+> 181:   Level: dev
+                ^^^
+  182: 
+  183: .see also: testStaticFunction()
 [ROOT] -------------------------------------------------------------------------------------
