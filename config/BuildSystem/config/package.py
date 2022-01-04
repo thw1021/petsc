@@ -1090,7 +1090,11 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
     self.pushLanguage(self.buildLanguages[0]) # default is to use the first language in checking
     flagsArg = self.getPreprocessorFlagsArg()
     oldFlags = getattr(self.compilers, flagsArg)
-    setattr(self.compilers, flagsArg, oldFlags+' '+self.headers.toString(self.include))
+    if self.language[-1] == 'HIP':
+      extraFlags = ' -o - ' # Force 'hipcc -E' to output to stdout, instead of *.cui files (as of hip-4.0. hip-4.1+ does not need it, but does not get hurt either).
+    else:
+      extraFlags = ''
+    setattr(self.compilers, flagsArg, oldFlags+' '+extraFlags+self.headers.toString(self.include))
     self.compilers.saveLog()
 
     # X.py uses a weird list of two headers.
@@ -1146,10 +1150,15 @@ char     *ver = "petscpkgver(" PetscXstr_({y}) ")";
         version = i.split('(')[1].split(')')[0]
         break
     if not version:
-      self.log.write('For '+self.package+' unable to find version information: output below, skipping version check\n')
+      self.log.write('For '+self.package+' unable to auto-detect version information: output below, skipping version check\n')
       self.log.write(output)
       if self.requiresversion:
-        raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to, please send configure.log to petsc-maint@mcs.anl.gov')
+        knownversion = self.argDB['known-'+self.package+'-version']
+        if knownversion:
+          version = knownversion
+          self.log.write('Use known version number {x} for {y}\n'.format(x=knownversion,y=self.package))
+        else:
+          raise RuntimeError('Configure must be able to determined the version information for '+self.name+'. It was unable to. If you knew it, you could provide it by --known-'+self.package+'-version=<version>. Otherwise, please send configure.log to petsc-maint@mcs.anl.gov')
       return
     try:
       self.foundversion = self.versionToStandardForm(version)
