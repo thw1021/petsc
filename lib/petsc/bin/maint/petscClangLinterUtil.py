@@ -8,6 +8,7 @@ Created on Tue Mar 23 17:56:06 2021
 import pathlib
 import ctypes
 import functools
+import inspect
 import re
 import clang.cindex as clx
 
@@ -609,8 +610,27 @@ class ParsingError(Exception):
   pass
 
 
+class DiagnosticMap(object):
+  __slots__ = "_diags"
+
+  def __init__(self,dlist):
+    self._diags = {attr.replace("-","_") : attr for attr in dlist}
+    return
+
+  def __getattr__(self,attr):
+    diags = self._diags
+    try:
+      return diags[attr]
+    except KeyError:
+      ret = [v for k,v in diags.items() if k.endswith(attr)]
+      if len(ret):
+        return ret[0]
+    raise AttributeError(attr)
+
+
 class _DiagnosticsManager(object):
-  __slots__ = "disabled"
+  _registered = {}
+  __slots__   = "disabled"
 
   def __init__(self):
     self.disabled = set()
@@ -636,34 +656,44 @@ class _DiagnosticsManager(object):
   def enabledFor(self,flag):
     return not self.disabledFor(flag)
 
-DiagnosticsManager = _DiagnosticsManager()
+  @classmethod
+  def registered(cls):
+    return cls._registered
 
-class DiagnosticMap(object):
-  __slots__ = "_diags"
+  @staticmethod
+  def expandFlag(flag):
+    if not isinstance(flag,str):
+      flag = "-".join(flag)
+    return flag
 
-  def __init__(self,dlist):
-    self._diags = {attr.replace("-","_") : attr for attr in dlist}
-    return
+  @classmethod
+  def register(cls,*args):
+    def decorator(symbol):
+      if inspect.isclass(symbol):
+        diagList = [(cls.expandFlag(symbol.diagnostic(f)),h.casefold()) for f,h in args]
+        wrapper  = symbol
+      else:
+        @functools.wraps(symbol)
+        def wrapper(*args,**kwargs):
+          return symbol(*args,**kwargs)
 
-  def __getattr__(self,attr):
-    diags = self._diags
-    try:
-      return diags[attr]
-    except KeyError:
-      ret = [v for k,v in diags.items() if k.endswith(attr)]
-      if len(ret):
-        return ret[0]
-    raise AttributeError(attr)
+        diagList = [(cls.expandFlag(d),h.casefold()) for d,h in args]
 
+      wrapper.diags = DiagnosticMap(d for d,_ in diagList)
+      cls._registered.update(diagList)
+      return wrapper
+    return decorator
+
+
+DiagnosticManager = _DiagnosticsManager()
 
 class Diagnostic(object):
-  _registered = {}
-  __slots__   = "flag","message","patch"
+  __slots__ = "flag","message","patch"
 
   def __init__(self,flag,message,patch=None):
-    flag = self.expandFlag(flag)
-    if flag not in self._registered:
-      mess = "Flag {} not found in registrar {}".format(flag,self._registered)
+    flag = DiagnosticManager.expandFlag(flag)
+    if flag not in DiagnosticManager._registered:
+      mess = "Flag {} not found in registrar {}".format(flag,DiagnosticManager._registered)
       raise RuntimeError(mess)
     self.flag    = flag
     self.message = str(message)
@@ -677,13 +707,6 @@ class Diagnostic(object):
       "message:\n{}".format(self.message)
     ])
 
-  def __getattr__(self,attr):
-    if isinstance(attr,str):
-      newattr = attr.replace("_","-")
-      if newattr in self._registered:
-        return newattr
-    return getattr(object,attr)
-
   def formatMessage(self):
     message   = self.message
     flagdescr = self.flag.join((" [-f","]"))
@@ -696,33 +719,4 @@ class Diagnostic(object):
     return ret
 
   def disabled(self):
-    return DiagnosticsManager.disabledFor(self.flag.replace("_","-"))
-
-  @staticmethod
-  def expandFlag(flag):
-    if not isinstance(flag,str):
-      flag = "-".join(flag)
-    return flag
-
-  @classmethod
-  def register(cls,*args):
-    def decorator(func):
-      @functools.wraps(func)
-      def wrapper(*args,**kwargs):
-        return func(*args,**kwargs)
-
-      wrapper.diags = DiagnosticMap(d for d,_ in diags)
-      return wrapper
-
-    diags = [(cls.expandFlag(d),h.casefold()) for d,h in args]
-    cls._registered.update(diags)
-    return decorator
-
-  @classmethod
-  def register_class(cls,*regargs):
-    def decorator(classname):
-      diagList = [(cls.expandFlag(classname.diagnostic(f)),h.casefold()) for f,h in regargs]
-      cls._registered.update(diagList)
-      classname.diags = DiagnosticMap(d for d,_ in diagList)
-      return classname
-    return decorator
+    return DiagnosticManager.disabledFor(self.flag.replace("_","-"))
