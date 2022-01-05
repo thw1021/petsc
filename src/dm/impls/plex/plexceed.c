@@ -1,6 +1,27 @@
 #include <petsc/private/dmpleximpl.h>           /*I      "petscdmplex.h"          I*/
 
-/* Alocate and populate array of shape [num_elem, elem_size] defining offsets for each value (elem, node) for local vector of dm field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array. */
+/*@C
+  DMPlexGetLocalOffsets - Allocate and populate array of local offsets.
+
+  Alocate and populate array of shape [num_elem, elem_size] defining offsets for each value (elem, node) for local vector of dm field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array.
+
+  Input Parameters:
+  dm - The DMPlex object
+  domain_label - label for DMPlex domain
+  label_value - Stratum value
+  height - Height of DMPlex topology
+  dm_field - Index of DMPlex field
+
+  Output Parameters:
+  num_elem - Number of local elements
+  elem_size - Number of nodes per local element
+  num_comp - Number of components per node
+  l_size - Size of local vector
+  offsets - Allocated offsets array for elements
+
+  Level: developer
+
+@*/
 PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_elem, PetscInt *elem_size, PetscInt *num_comp, PetscInt *l_size, PetscInt **offsets)
 {
   PetscErrorCode ierr;
