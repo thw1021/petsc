@@ -5,6 +5,18 @@
 #if !defined(PETSCSYS_H)
 #define PETSCSYS_H
 
+#if defined(__STDC__) && defined(__STDC_VERSION__)
+#  if __STDC_VERSION__ < 199901L /* C99 */
+#    error "PETSc requires a C compiler that defines __STDC__VERSION__ >= 199901L (C99)"
+#  endif
+#elif defined(__cplusplus)
+#  if __cplusplus < 201103L /* C++11 */
+#    error "PETSc requires a C++ compiler that defines __cplusplus__ >= 201103L (C++11)"
+#  endif
+#else /* ??? */
+#  error "PETSc requires either a C compiler that defines __STDC__VERSION__ >= 199901L (C99) or a C++ compiler that defines __cplusplus__ >= 201103L (C++11)"
+#endif
+
 /* ========================================================================== */
 /*
    petscconf.h is contained in ${PETSC_ARCH}/include/petscconf.h it is
@@ -120,16 +132,10 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #if defined(__cplusplus)
 #  define PETSC_RESTRICT PETSC_CXX_RESTRICT
 #else
-#  define PETSC_RESTRICT PETSC_C_RESTRICT
+#  define PETSC_RESTRICT restrict
 #endif
 
-#if defined(__cplusplus)
-#  define PETSC_INLINE PETSC_CXX_INLINE
-#else
-#  define PETSC_INLINE PETSC_C_INLINE
-#endif
-
-#define PETSC_STATIC_INLINE static PETSC_INLINE
+#define PETSC_STATIC_INLINE static inline
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES) /* For Win32 shared libraries */
 #  define PETSC_DLLEXPORT __declspec(dllexport)
@@ -177,7 +183,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #endif
 
 /* C++11 features */
-#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#if defined(__cplusplus)
 #  define PETSC_NULLPTR             nullptr
 #  define PETSC_CONSTEXPR           constexpr
 #  define PETSC_NOEXCEPT            noexcept
@@ -187,7 +193,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR
 #  define PETSC_NOEXCEPT
 #  define PETSC_NOEXCEPT_ARG(cond_)
-#endif /* __cplusplus && PETSC_HAVE_CXX_DIALECT_CXX11 */
+#endif /* __cplusplus */
 
 /* C++14 features */
 #if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
