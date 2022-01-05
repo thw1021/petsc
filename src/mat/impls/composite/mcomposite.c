@@ -906,7 +906,7 @@ static PetscErrorCode MatCompositeGetMat_Composite(Mat mat,PetscInt i,Mat *Ai)
   PetscInt          k;
 
   PetscFunctionBegin;
-  if (i >= shell->nmat) SETERRQ2(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"index out of range: %d >= %d",i,shell->nmat);
+  if (i >= shell->nmat) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"index out of range: %d >= %d",i,shell->nmat);
   ilink = shell->head;
   for (k=0; k<i; k++) {
     ilink = ilink->next;

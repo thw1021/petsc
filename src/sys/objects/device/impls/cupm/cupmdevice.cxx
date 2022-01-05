@@ -98,7 +98,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",_id);
+  if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",_id);
   // why on EARTH nvidia insists on making otherwise informational states into
   // fully-fledged error codes is beyond me. Why couldn't a pointer to bool argument have
   // sufficed?!?!?!
@@ -118,7 +118,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::view(PetscViewer viewer) const
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",_id);
+  if (PetscUnlikelyDebug(!_devInitialized)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",_id);
   ierr = PetscObjectTypeCompare(reinterpret_cast<PetscObject>(viewer),PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   ierr = PetscObjectGetComm(reinterpret_cast<PetscObject>(viewer),&comm);CHKERRQ(ierr);
   if (PetscUnlikely(!iascii)) SETERRQ(comm,PETSC_ERR_SUP,"Only PetscViewer of type PETSCVIEWERASCII is supported");
@@ -295,7 +295,7 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
       const auto name    = cupmGetErrorName(cerr);
       const auto desc    = cupmGetErrorString(cerr);
       const auto backend = cupmName();
-      SETERRQ5(comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize %s, as doing so results in %s error %d (%s) : %s",backend,backend,static_cast<PetscErrorCode>(cerr),name,desc);
+      SETERRQ(comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize %s, as doing so results in %s error %d (%s) : %s",backend,backend,static_cast<PetscErrorCode>(cerr),name,desc);
     }
     id   = -cerr;
     cerr = cupmGetLastError(); // reset error
@@ -347,15 +347,15 @@ PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice device, PetscInt id) const n
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(_defaultDevice < 0)) {
-    if (_defaultDevice == PETSC_CUPM_DEVICE_NONE) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a %s PetscDevice when it has been disabled",cupmName());
+    if (_defaultDevice == PETSC_CUPM_DEVICE_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a %s PetscDevice when it has been disabled",cupmName());
     const auto cerr = static_cast<cupmError_t>(-_defaultDevice);
 
-    SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"Cannot lazily initialize PetscDevice: %s error %d (%s) : %s",cupmName(),static_cast<PetscErrorCode>(cerr),cupmGetErrorName(cerr),cupmGetErrorString(cerr));
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"Cannot lazily initialize PetscDevice: %s error %d (%s) : %s",cupmName(),static_cast<PetscErrorCode>(cerr),cupmGetErrorName(cerr),cupmGetErrorString(cerr));
   }
   if (id == PETSC_DECIDE) id = _defaultDevice;
-  if (PetscUnlikelyDebug(static_cast<std::size_t>(id) >= _devices.size())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %" PetscInt_FMT,_devices.size(),id);
+  if (PetscUnlikelyDebug(static_cast<std::size_t>(id) >= _devices.size())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %" PetscInt_FMT,_devices.size(),id);
   if (_devices[id]) {
-    if (PetscUnlikelyDebug(id != _devices[id]->id())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Entry %" PetscInt_FMT " contains device with mismatching id %d",id,_devices[id]->id());
+    if (PetscUnlikelyDebug(id != _devices[id]->id())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Entry %" PetscInt_FMT " contains device with mismatching id %d",id,_devices[id]->id());
   } else _devices[id] = CUPMDeviceInternal::makeDevice(id);
   ierr = _devices[id]->initialize();CHKERRQ(ierr);
   device->deviceId           = _devices[id]->id(); // technically id = _devices[id]->_id here
