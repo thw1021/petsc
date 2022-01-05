@@ -24,16 +24,10 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #if defined(__cplusplus)
 #  define PETSC_RESTRICT PETSC_CXX_RESTRICT
 #else
-#  define PETSC_RESTRICT PETSC_C_RESTRICT
+#  define PETSC_RESTRICT restrict
 #endif
 
-#if defined(__cplusplus)
-#  define PETSC_INLINE PETSC_CXX_INLINE
-#else
-#  define PETSC_INLINE PETSC_C_INLINE
-#endif
-
-#define PETSC_STATIC_INLINE static PETSC_INLINE
+#define PETSC_STATIC_INLINE static inline
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES) /* For Win32 shared libraries */
 #  define PETSC_DLLEXPORT __declspec(dllexport)
@@ -308,7 +302,7 @@ MC*/
 MC*/
 
 /* C++11 features */
-#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#if defined(__cplusplus)
 #  define PETSC_NULLPTR             nullptr
 #  define PETSC_CONSTEXPR           constexpr
 #  define PETSC_NOEXCEPT            noexcept
