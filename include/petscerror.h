@@ -808,7 +808,6 @@ typedef struct {
     PetscStackSAWsGrantAccess();                                        \
   } while (0)
 
-/* Fixed error check since it seems "unknown" can be in different static strings */
 #define PetscStackPopNoCheck(funct)                    do {             \
     PetscStackSAWsTakeAccess();                                         \
     if (PetscUnlikely(petscstack.currentsize <= 0)) {                   \
