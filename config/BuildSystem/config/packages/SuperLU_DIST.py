@@ -44,7 +44,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DTPL_ENABLE_CUDALIB=TRUE')
       args.append('-DTPL_CUDA_LIBRARIES="'+self.libraries.toString(self.cuda.dlib)+'"')
       args.append('-DCUDA_ARCH_FLAGS="-arch=sm_'+self.cuda.cudaArch+'"')
-      with self.Language('CUDA')
+      with self.Language('CUDA'):
         args.append('-DCMAKE_CUDA_FLAGS="'+self.getCompilerFlags()+' '+self.mpi.includepaths+' '+self.headers.toString(self.cuda.include)+' -DDEBUGlevel=0 -DPRNTlevel=0"')
     args.append('-DUSE_XSDK_DEFAULTS=YES')
     args.append('-DTPL_BLAS_LIBRARIES="'+self.libraries.toString(self.blasLapack.dlib)+'"')
