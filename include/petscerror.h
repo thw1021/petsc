@@ -4,6 +4,8 @@
 #if !defined(PETSCERROR_H)
 #define PETSCERROR_H
 
+#include <petscconf.h>
+
 /*
      These are the generic error codes. These error codes are used
      many different places in the PETSc source code. The string versions are
@@ -67,6 +69,16 @@
 
 #define PetscStringize_(...) #__VA_ARGS__
 #define PetscStringize(...) PetscStringize_(__VA_ARGS__)
+
+#define SETERRQ1(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ2(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ3(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ4(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ5(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ6(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ7(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ8(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
+#define SETERRQ9(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use SETERRQ() (since version 3.17)\"") SETERRQ(__VA_ARGS__)
 
 /*MC
    SETERRQ - Macro to be called when an error has been detected,
