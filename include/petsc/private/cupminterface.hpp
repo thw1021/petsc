@@ -39,7 +39,7 @@ static constexpr const char *const CUPMDeviceTypes[] = {
       const auto name    = cupmGetErrorName(_cerr__);                   \
       const auto desc    = cupmGetErrorString(_cerr__);                 \
       const auto backend = cupmName();                                  \
-      SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
                backend,static_cast<PetscErrorCode>(_cerr__),name,desc); \
     }                                                                   \
   } while (0)
