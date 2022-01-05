@@ -46,7 +46,7 @@ Changes: Development
 - Add ``PetscHasAttribute()`` macro to query for existence of an ``__attribute__`` specifier
 - Add ``PetscCommGetComm()`` and ``PetscCommRestoreComm()`` to allow reuse of MPI communicator with external packages, as some MPI implementations have  broken ``MPI_Comm_free()``
 - Add ``PetscExpand()``, ``PetscConcat()``, ``PetscCompl()``, and ``PetscExpandToNothing()``
-- Add ``PETSC_CONSTEXPR``, ``PETSC_CONSTEXPR_14``, ``PETSC_NOEXCEPT``, ``PETSC_NULLPTR``, and ``PETSC_NODISCARD``
+- Add ``PETSC_CONSTEXPR_14``, ``PETSC_NULLPTR``, and ``PETSC_NODISCARD``
 
 .. rubric:: PetscViewer:
 
