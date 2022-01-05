@@ -71,11 +71,12 @@
 -+ bar -
  
    References:
-@@ -88,5 +88,5 @@
+@@ -88,5 +88,6 @@
    References:
    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 -   .seealso: testNonExistentFunction(), testNonExistentType
-+.seealso: testNonExistentFunction(), testNonExistentType
++
++  .seealso: testNonExistentFunction(), testNonExistentType
  */
  PetscErrorCode testIllFormedMinimalDocString(void)
 @@ -96,5 +96,5 @@
