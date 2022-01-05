@@ -3,8 +3,6 @@
 /*@C
   DMPlexGetLocalOffsets - Allocate and populate array of local offsets.
 
-  Allocate and populate array of shape [num_elem, elem_size] defining offsets for each value (elem, node) for local vector of dm field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array.
-
   Input Parameters:
   dm - The DMPlex object
   domain_label - label for DMPlex domain
@@ -13,16 +11,18 @@
   dm_field - Index of DMPlex field
 
   Output Parameters:
-  num_elem - Number of local elements
-  elem_size - Number of dofs per local element
+  num_cells - Number of local cells
+  cell_size - Size of each cell, given by cell_size * num_comp = num_dof
   num_comp - Number of components per dof
   l_size - Size of local vector
-  offsets - Allocated offsets array for elements
+  offsets - Allocated offsets array for cells
+
+  Notes: Allocate and populate array of shape [num_cells, cell_size] defining offsets for each value (cell, node) for local vector of the DMPlex field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array.
 
   Level: developer
 
 @*/
-PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_elem, PetscInt *elem_size, PetscInt *num_comp, PetscInt *l_size, PetscInt **offsets)
+PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_cells, PetscInt *cell_size, PetscInt *num_comp, PetscInt *l_size, PetscInt **offsets)
 {
   PetscErrorCode ierr;
 
@@ -82,10 +82,10 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
       iter_is = depth_is;
     }
     if (iter_is) {
-      ierr = ISGetLocalSize(iter_is, num_elem);CHKERRQ(ierr);
+      ierr = ISGetLocalSize(iter_is, num_cells);CHKERRQ(ierr);
       ierr = ISGetIndices(iter_is, &iter_indices);CHKERRQ(ierr);
     } else {
-      *num_elem = 0;
+      *num_cells = 0;
       iter_indices = NULL;
     }
   }
@@ -98,25 +98,25 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     ierr = PetscDualSpaceGetDimension(dual_space, &num_dual_basis_vectors);CHKERRQ(ierr);
     ierr = PetscDualSpaceGetNumComponents(dual_space, num_comp);CHKERRQ(ierr);
     if (num_dual_basis_vectors % *num_comp != 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for number of dual basis vectors %D not divisible by %D components", num_dual_basis_vectors, *num_comp);
-    *elem_size = num_dual_basis_vectors / *num_comp;
+    *cell_size = num_dual_basis_vectors / *num_comp;
   }
-  PetscInt restr_size = (*num_elem)*(*elem_size);
+  PetscInt restr_size = (*num_cells)*(*cell_size);
   ierr = PetscMalloc1(restr_size, &restr_indices);CHKERRQ(ierr);
-  PetscInt elem_offset = 0;
-  for (PetscInt p = 0; p < *num_elem; p++) {
+  PetscInt cell_offset = 0;
+  for (PetscInt p = 0; p < *num_cells; p++) {
     PetscInt c = iter_indices[p];
     PetscInt num_indices, *indices;
     PetscInt field_offsets[17]; // max number of fields plus 1
     ierr = DMPlexGetClosureIndices(dm, section, section, c, PETSC_TRUE, &num_indices, &indices, field_offsets, NULL);CHKERRQ(ierr);
 
-    for (PetscInt i = 0; i < *elem_size; i++) {
+    for (PetscInt i = 0; i < *cell_size; i++) {
       // Essential boundary conditions are encoded as -(loc+1), but we don't care so we decode.
       PetscInt loc = indices[field_offsets[dm_field] + i*(*num_comp)];
-      restr_indices[elem_offset++] = loc >= 0 ? loc : -(loc +1);
+      restr_indices[cell_offset++] = loc >= 0 ? loc : -(loc +1);
     }
     ierr = DMPlexRestoreClosureIndices(dm, section, section, c, PETSC_TRUE, &num_indices, &indices, field_offsets, NULL);CHKERRQ(ierr);
   }
-  if (elem_offset != restr_size) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_elem, (*elem_size), elem_offset);
+  if (cell_offset != restr_size) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_cells, (*cell_size), cell_offset);
   if (iter_is) { ierr = ISRestoreIndices(iter_is, &iter_indices);CHKERRQ(ierr); }
   ierr = ISDestroy(&iter_is); CHKERRQ(ierr);
 
@@ -128,7 +128,22 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
 #if defined(PETSC_HAVE_LIBCEED)
 #include <petscdmplexceed.h>
 
-/* Define the map from the local vector (Lvector) to the cells (Evector) */
+/*@C
+  DMPlexGetCeedRestriction - Define the libCEED map from the local vector (Lvector) to the cells (Evector)
+
+  Input Parameters:
+  dm - The DMPlex object
+  domain_label - label for DMPlex domain
+  label_value - Stratum value
+  height - Height of target cells in DMPlex topology
+  dm_field - Index of DMPlex field
+
+  Output Parameters:
+  ERestrict - libCEED restriction from local vector to to the cells
+
+  Level: developer
+
+@*/
 PetscErrorCode DMPlexGetCeedRestriction(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, CeedElemRestriction *ERestrict)
 {
   PetscErrorCode ierr;
@@ -137,14 +152,14 @@ PetscErrorCode DMPlexGetCeedRestriction(DM dm, DMLabel domain_label, PetscInt la
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(ERestrict, 2);
   if (!dm->ceedERestrict) {
-    PetscInt     num_elem, elem_size, num_comp, lvec_size, *restr_indices;
+    PetscInt     num_cells, cell_size, num_comp, lvec_size, *restr_indices;
     CeedElemRestriction elem_restr;
     Ceed         ceed;
 
-    ierr = DMPlexGetLocalOffsets(dm, domain_label, label_value, height, dm_field, &num_elem, &elem_size, &num_comp, &lvec_size, &restr_indices); CHKERRQ(ierr);
+    ierr = DMPlexGetLocalOffsets(dm, domain_label, label_value, height, dm_field, &num_cells, &cell_size, &num_comp, &lvec_size, &restr_indices); CHKERRQ(ierr);
 
     ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
-    ierr = CeedElemRestrictionCreate(ceed, num_elem, elem_size, num_comp, 1, lvec_size, CEED_MEM_HOST, CEED_COPY_VALUES, restr_indices, &elem_restr);CHKERRQ_CEED(ierr);
+    ierr = CeedElemRestrictionCreate(ceed, num_cells, cell_size, num_comp, 1, lvec_size, CEED_MEM_HOST, CEED_COPY_VALUES, restr_indices, &elem_restr);CHKERRQ_CEED(ierr);
     ierr = PetscFree(restr_indices);CHKERRQ(ierr);
   }
   *ERestrict = dm->ceedERestrict;
