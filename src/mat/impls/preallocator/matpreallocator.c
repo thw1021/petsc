@@ -169,7 +169,7 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
       rowstarts[i+1] = rowstarts[i] + p->dnz[i] + p->onz[i];
       maxrow = PetscMax(maxrow, p->dnz[i] + p->onz[i]);
     }
-    if (rowstarts[rEnd-rStart] != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash claims %D entries, but dnz+onz counts %D",n,rowstarts[rEnd-rStart]);
+    if (rowstarts[rEnd-rStart] != n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash claims %D entries, but dnz+onz counts %D",n,rowstarts[rEnd-rStart]);
 
     PetscHashIterBegin(p->ht,hi);
     for (PetscInt i=0; !PetscHashIterAtEnd(p->ht,hi); i++) {
