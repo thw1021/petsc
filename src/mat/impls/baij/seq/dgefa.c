@@ -51,7 +51,7 @@ PETSC_INTERN PetscErrorCode PetscLINPACKgefa(MatScalar *a,PetscInt n,PetscInt *i
         PetscErrorCode ierr;
         ierr = PetscInfo1(NULL,"Zero pivot, row %D\n",k-1);CHKERRQ(ierr);
         if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
-      } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",k-1);
+      } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",k-1);
     }
 
     /* interchange if necessary */
@@ -88,7 +88,7 @@ PETSC_INTERN PetscErrorCode PetscLINPACKgefa(MatScalar *a,PetscInt n,PetscInt *i
       PetscErrorCode ierr;
       ierr = PetscInfo1(NULL,"Zero pivot, row %D\n",n-1);CHKERRQ(ierr);
       if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",n-1);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",n-1);
   }
   PetscFunctionReturn(0);
 }
