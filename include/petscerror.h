@@ -823,6 +823,7 @@ typedef struct {
               petscstack.petscroutine[petscstack.currentsize] &&        \
               (petscstack.function[petscstack.currentsize]    !=        \
                (const char*)funct))) {                                  \
+          /* We need this string comparison because "unknown" can be defined in different static strings: */
           PetscBool _cmpflg;                                            \
           const char *_funct = petscstack.function[petscstack.currentsize]; \
           PetscStrcmp(_funct,funct,&_cmpflg);                           \
