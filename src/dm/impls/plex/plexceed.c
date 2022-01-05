@@ -3,19 +3,19 @@
 /*@C
   DMPlexGetLocalOffsets - Allocate and populate array of local offsets.
 
-  Alocate and populate array of shape [num_elem, elem_size] defining offsets for each value (elem, node) for local vector of dm field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array.
+  Allocate and populate array of shape [num_elem, elem_size] defining offsets for each value (elem, node) for local vector of dm field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array.
 
   Input Parameters:
   dm - The DMPlex object
   domain_label - label for DMPlex domain
   label_value - Stratum value
-  height - Height of DMPlex topology
+  height - Height of target cells in DMPlex topology
   dm_field - Index of DMPlex field
 
   Output Parameters:
   num_elem - Number of local elements
-  elem_size - Number of nodes per local element
-  num_comp - Number of components per node
+  elem_size - Number of dofs per local element
+  num_comp - Number of components per dof
   l_size - Size of local vector
   offsets - Allocated offsets array for elements
 
