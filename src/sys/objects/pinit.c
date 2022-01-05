@@ -1604,7 +1604,7 @@ PetscErrorCode  PetscFinalize(void)
     if (flg1 && fname[0]) {
 
       PetscSNPrintf(sname,sizeof(sname),"%s_%d",fname,rank);
-      fd   = fopen(sname,"w"); if (!fd) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
+      fd   = fopen(sname,"w"); if (!fd) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
       ierr = PetscMallocDump(fd);CHKERRQ(ierr);
       err  = fclose(fd);
       if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file");
@@ -1622,7 +1622,7 @@ PetscErrorCode  PetscFinalize(void)
     if (flg1 && fname[0]) {
 
       PetscSNPrintf(sname,sizeof(sname),"%s_%d",fname,rank);
-      fd   = fopen(sname,"w"); if (!fd) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
+      fd   = fopen(sname,"w"); if (!fd) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
       ierr = PetscMallocView(fd);CHKERRQ(ierr);
       err  = fclose(fd);
       if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file");
