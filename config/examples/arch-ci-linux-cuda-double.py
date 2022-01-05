@@ -21,6 +21,7 @@ if __name__ == '__main__':
     '--with-cuda=1',
     '--with-precision=double',
     '--with-clanguage=c',
+    '--download-superlu_dist',
     '--download-kokkos',
     '--download-kokkos-kernels',
     '--download-hwloc',
