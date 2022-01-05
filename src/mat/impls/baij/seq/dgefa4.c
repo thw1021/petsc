@@ -48,7 +48,7 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_4(MatScalar *a,PetscRea
           PetscErrorCode ierr;
           ierr = PetscInfo1(NULL,"Zero pivot, row %D\n",k-1);CHKERRQ(ierr);
           if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
-        } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",k-1);
+        } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",k-1);
       } else {
         /* SHIFT is applied to SINGLE diagonal entry; does this make any sense? */
         a[l + k3] = shift;
@@ -89,7 +89,7 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_4(MatScalar *a,PetscRea
       PetscErrorCode ierr;
       ierr = PetscInfo1(NULL,"Zero pivot, row %D\n",3);CHKERRQ(ierr);
       if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",3);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %D",3);
   }
 
   /* Now form the inverse */
