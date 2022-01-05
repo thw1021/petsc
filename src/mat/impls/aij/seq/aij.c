@@ -5396,12 +5396,23 @@ PetscErrorCode  MatSeqAIJRegisterAll(void)
 #endif
 
 /* Change these macros so can be used in void function */
+
+/* Change these macros so can be used in void function */
+/* Identical to CHKERRV, except it assigns to *_ierr */
 #undef CHKERRQ
-#define CHKERRQ(err) CHKERRABORT(PetscObjectComm((PetscObject)A),err)
-#undef SETERRQ2
-#define SETERRQ(comm,err,b,c,d) CHKERRABORT(comm,err)
-#undef SETERRQ3
-#define SETERRQ(comm,err,b,c,d,e) CHKERRABORT(comm,err)
+#define CHKERRQ(ierr) do {                                                                     \
+    PetscErrorCode ierr_msv_mpiaij = (ierr);                                                   \
+    if (PetscUnlikely(ierr_msv_mpiaij)) {                                                      \
+      *_ierr = PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr_msv_mpiaij,PETSC_ERROR_REPEAT," "); \
+      return;                                                                                  \
+    }                                                                                          \
+  } while (0)
+
+#undef SETERRQ
+#define SETERRQ(comm,ierr,...) do {                                                            \
+    *_ierr = PetscError(comm,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr,PETSC_ERROR_INITIAL,__VA_ARGS__); \
+    return;                                                                                    \
+  } while (0)
 
 PETSC_EXTERN void matsetvaluesseqaij_(Mat *AA,PetscInt *mm,const PetscInt im[],PetscInt *nn,const PetscInt in[],const PetscScalar v[],InsertMode *isis, PetscErrorCode *_ierr)
 {
@@ -5478,3 +5489,8 @@ noinsert:;
   }
   PetscFunctionReturnVoid();
 }
+/* Undefining these here since they were redefined from their original definition above! No
+ * other PETSc functions should be defined past this point, as it is impossible to recover the
+ * original definitions */
+#undef CHKERRQ
+#undef SETERRQ
