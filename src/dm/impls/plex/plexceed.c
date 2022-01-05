@@ -97,8 +97,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     ierr = PetscFEGetDualSpace(fe, &dual_space);CHKERRQ(ierr);
     ierr = PetscDualSpaceGetDimension(dual_space, &num_dual_basis_vectors);CHKERRQ(ierr);
     ierr = PetscDualSpaceGetNumComponents(dual_space, num_comp);CHKERRQ(ierr);
-    if (num_dual_basis_vectors % *num_comp != 0)
-      SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for number of dual basis vectors %D not divisible by %D components", num_dual_basis_vectors, *num_comp);
+    if (num_dual_basis_vectors % *num_comp != 0) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for number of dual basis vectors %D not divisible by %D components", num_dual_basis_vectors, *num_comp);
     *elem_size = num_dual_basis_vectors / *num_comp;
   }
   PetscInt restr_size = (*num_elem)*(*elem_size);
@@ -117,8 +116,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     }
     ierr = DMPlexRestoreClosureIndices(dm, section, section, c, PETSC_TRUE, &num_indices, &indices, field_offsets, NULL);CHKERRQ(ierr);
   }
-  if (elem_offset != restr_size)
-    SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_elem, (*elem_size), elem_offset);
+  if (elem_offset != restr_size) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_elem, (*elem_size), elem_offset);
   if (iter_is) { ierr = ISRestoreIndices(iter_is, &iter_indices);CHKERRQ(ierr); }
   ierr = ISDestroy(&iter_is); CHKERRQ(ierr);
 
