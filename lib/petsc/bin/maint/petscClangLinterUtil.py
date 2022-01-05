@@ -10,6 +10,7 @@ import pathlib
 import ctypes
 import functools
 import inspect
+import weakref
 import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
@@ -75,9 +76,6 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
   return retList
 
 
-def getRawSourceFromCursor(cursor,**kwargs):
-  return getRawSourceFromSourceRange(cursor.extent,**kwargs)
-
 def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False,tight=False):
   numBeforeContext = numBeforeContext if numBeforeContext else numContext
   numAfterContext  = numAfterContext  if numAfterContext  else numContext
@@ -102,9 +100,9 @@ def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0
     return "\n".join([s[minSpaces:].rstrip() for s in lineList])
   return "".join(lineList)
 
+def getRawSourceFromCursor(cursor,**kwargs):
+  return getRawSourceFromSourceRange(cursor.extent,**kwargs)
 
-def getFormattedSourceFromCursor(cursor,**kwargs):
-  return getFormattedSourceFromSourceRange(cursor.extent,**kwargs)
 
 def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,view=False,highlight=True,trim=True):
   numBeforeContext  = numBeforeContext if numBeforeContext else numContext
@@ -142,6 +140,9 @@ def getFormattedSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterCon
     print(srcStr)
   return srcStr
 
+def getFormattedSourceFromCursor(cursor,**kwargs):
+  return getFormattedSourceFromSourceRange(cursor.extent,**kwargs)
+
 
 def viewCursorFull(cursor):
   try:
@@ -161,21 +162,6 @@ def viewCursorFull(cursor):
   print("AST View:\n")
   print("\n".join(viewAstFromCursor(cursor)))
   return
-
-
-def static_variables(**static_attrs):
-  """
-  Set attributes in the decorated function, at definition time. Only accepts keyword arguments.
-  """
-  def decorator(func):
-    @functools.wraps(func)
-    def wrapper(*args,**kwargs):
-      return func(*args,**kwargs)
-
-    for attr,value in static_attrs.items():
-      setattr(wrapper,attr,value)
-    return wrapper
-  return decorator
 
 
 class CXTranslationUnit(enum.IntFlag):
@@ -307,12 +293,27 @@ class PetscSourceLocation(object):
   A simple wrapper class to add comparison operators to clx.SourceLocations since they only
   implement __eq__()
   """
-  __slots__ = "sourceLocation","translation_unit"
+
+  class ClangFileNameCache(weakref.WeakKeyDictionary):
+    """
+    It is for whatever reason stupidly expensive to create these file objects, and clang does it
+    every time you access a tu's file. So we cache them here
+    """
+    def getname(self,tu):
+      return self.setdefault(tu,tu.get_file(tu.spelling))
+
+
+  __filecache = ClangFileNameCache()
+  __slots__   = "sourceLocation","translation_unit","_cache"
+
+  def getCached(self,attr,func,*args,**kwargs):
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
 
   def __init__(self,sourceLoc,tu=None):
-    assert sourceLoc.line >= 1, "startline {} < 1".format(sourceLoc.line)
     self.sourceLocation   = sourceLoc
     self.translation_unit = tu # store a reference to guard against GC
+    self._cache           = {}
     return
 
   def __repr__(self):
@@ -323,7 +324,7 @@ class PetscSourceLocation(object):
     ])
 
   def __getattr__(self,attr):
-    return getattr(self.sourceLocation,attr)
+    return self.getCached(attr,getattr,self.sourceLocation,attr)
 
   def __eq__(self,right):
     return self.sourceLocation.__eq__(self.asClangSourceLocation(right))
@@ -331,11 +332,6 @@ class PetscSourceLocation(object):
   def __lt__(self,right):
     if not isinstance(right,(clx.SourceLocation,type(self))):
       raise ValueError(type(right))
-    lfile,rfile = self.file,right.file
-    if lfile is None and rfile is None:
-      pass
-    elif lfile.name != rfile.name:
-      raise ValueError("Source locations from different files")
     lline,rline = self.line,right.line
     if lline < rline:
       return True
@@ -348,19 +344,23 @@ class PetscSourceLocation(object):
   def cast(cls,other):
     if isinstance(other,cls):
       return other
-    if isinstance(other,clx.SourceLocation):
+    elif isinstance(other,clx.SourceLocation):
       return cls(other)
     raise NotImplementedError(type(other))
 
   @classmethod
+  def getFilenameFromTU(cls,tu):
+    return cls.__filecache.getname(tu)
+
+  @classmethod
   def fromPosition(cls,tu,line,col):
-    return cls(clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),line,col),tu=tu)
+    return cls(clx.SourceLocation.from_position(tu,cls.getFilenameFromTU(tu),line,col),tu=tu)
 
   @classmethod
   def asClangSourceLocation(cls,other):
     if isinstance(other,clx.SourceLocation):
       return other
-    if isinstance(other,cls):
+    elif isinstance(other,cls):
       return other.sourceLocation
     raise NotImplementedError(type(other))
 
@@ -368,11 +368,12 @@ class PetscSourceLocation(object):
 @functools.total_ordering
 class PetscSourceRange(object):
   """Like PetscSourceLocation but for clx.SourceRanges"""
-  __slots__ = "sourceRange","translation_unit"
+  __slots__ = "sourceRange","translation_unit","_cache"
 
   def __init__(self,sourceRange,tu=None):
     self.sourceRange      = sourceRange
     self.translation_unit = tu # store a reference to guard against GC
+    self._cache           = {}
     return
 
   def __repr__(self):
@@ -382,8 +383,12 @@ class PetscSourceRange(object):
       "Source Range:     {}".format(self.sourceRange)
     ])
 
+  def getCached(self,attr,func,*args,**kwargs):
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
+
   def __getattr__(self,attr):
-    return getattr(self.sourceRange,attr)
+    return self.getCached(attr,getattr,self.sourceRange,attr)
 
   def __eq__(self,other):
     return self.sourceRange.__eq__(self.asClangSourceRange(other))
@@ -400,16 +405,11 @@ class PetscSourceRange(object):
   def __contains__(self,other):
     def contains(loc):
       # reimplement clx.SourceRange.__contains__() as it has a bug
-      start = self.sourceRange.start
-      end   = self.sourceRange.end
-      if loc.file is None and start.file is None:
-        pass
-      elif start.file.name != loc.file.name or loc.file.name != end.file.name:
-        raise ValueError("Filenames do not match!")
-      cast = PetscSourceLocation.cast
-      return cast(start) <= cast(loc) <= cast(end)
+      return cacheStart <= cast(loc) <= cacheEnd
 
-
+    cast       = PetscSourceLocation.cast
+    cacheEnd   = self._cache.setdefault("PetscSourceLocationEnd",cast(self.end))
+    cacheStart = self._cache.setdefault("PetscSourceLocationStart",cast(self.start))
     if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
       return contains(other)
     if isinstance(other,(clx.SourceRange,type(self))):
@@ -418,7 +418,6 @@ class PetscSourceRange(object):
 
   def __len__(self):
     return self.end.offset-self.start.offset
-
 
   @classmethod
   def cast(cls,other,**kwargs):
@@ -429,17 +428,21 @@ class PetscSourceRange(object):
     raise NotImplementedError(type(other))
 
   @classmethod
-  def fromLocations(cls,left,right):
-    tu = getattr(left,"translation_unit",None)
+  def fromLocations(cls,left,right,tu=None):
     if tu is None:
-      tu = getattr(right,"translation_unit",None)
+      tu = getattr(left,"translation_unit",None)
+      if tu is None:
+        tu = getattr(right,"translation_unit",None)
     asClangSL = PetscSourceLocation.asClangSourceLocation
     return cls(clx.SourceRange.from_locations(asClangSL(left),asClangSL(right)),tu=tu)
 
   @classmethod
   def fromPositions(cls,tu,lineLeft,colLeft,lineRight,colRight):
-    fromPos = PetscSourceLocation.fromPosition
-    return cls.fromLocations(fromPos(tu,lineLeft,colLeft),fromPos(tu,lineRight,colRight))
+    filename = PetscSourceLocation.getFilenameFromTU(tu)
+    fromPos  = clx.SourceLocation.from_position
+    begin    = fromPos(tu,filename,lineLeft,colLeft)
+    end      = fromPos(tu,filename,lineRight,colRight)
+    return cls(clx.SourceRange.from_locations(begin,end),tu=tu)
 
   @classmethod
   def asClangSourceRange(cls,other):
@@ -450,25 +453,22 @@ class PetscSourceRange(object):
     raise NotImplementedError(type(other))
 
   @classmethod
-  def merge(cls,left,right):
-    left  = cls.cast(left)
-    right = cls.cast(right)
-    if left in right:
-      return right
-    elif right in left:
-      return left
+  def merge(cls,left,right,**kwargs):
     cast = PetscSourceLocation.cast
     start = min(cast(left.start),cast(right.start))
     end   = max(cast(left.end),cast(right.end))
-    return cls.fromLocations(start,end)
+    return cls.fromLocations(start,end,**kwargs)
 
 
   def mergeWith(self,other):
-    return self.merge(self,other)
+    return self.merge(self,other,tu=self.translation_unit)
+
 
   def overlaps(self,other):
-    cast = PetscSourceLocation.cast
-    return cast(self.end) >= cast(other.start) and cast(other.end) >= cast(self.start)
+    cast      = PetscSourceLocation.cast
+    getCached = self.getCached
+    return (getCached("PetscSourceLocationEnd",cast,self.end) >= cast(other.start)) and \
+      (cast(other.end) >= getCached("PetscSourceLocationStart",cast,self.start))
 
   def resized(self,lbegin=0,lend=0,cbegin=0,cend=0):
     """

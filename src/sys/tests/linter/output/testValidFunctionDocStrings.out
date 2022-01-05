@@ -105,6 +105,13 @@ Invalid indentation (3), all regular (non-empty, non-parameter, non-seealso) tex
   88: */
   89: PetscErrorCode testIllFormedMinimalDocString(void)
 
+Missing empty line between sections, must have one before this section [-fdoc-section-spacing]:
+  85:   References:
+  86:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 87:    .seealso: testNonExistentFunction(), testNonExistentType
+  88: */
+  89: PetscErrorCode testIllFormedMinimalDocString(void)
+
 Found parameter docstring(s) but 'testIllFormedMinimalDocString()' has no arguments [-fdoc-param-list-extra-parameter]:
   77:   Not Collective, Synchronous
   78: 
