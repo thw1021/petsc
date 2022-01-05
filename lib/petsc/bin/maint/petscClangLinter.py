@@ -25,7 +25,7 @@ import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil as pclu
 from petscClangLinterUtil import (
-  static_variables,CXTranslationUnit,Scope,PetscSourceLocation,PetscSourceRange,
+  CXTranslationUnit,Scope,PetscSourceLocation,PetscSourceRange,
   PetscCXCursorAndRangeVisitor,CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,
   Diagnostic,DiagnosticManager
 )
@@ -321,7 +321,15 @@ class PetscDocString(PetscDocStringBase):
       text = text.strip()
       if text.startswith(("+ ",". ","- ")):
         return False
-      return (": " in text and " :" not in text) or text.endswith(":")
+      if text.endswith(":"):
+        return True
+      elif ": " in text and " :" not in text:
+        # check that all subsequent items after a ":" are letters, this ought to catch out
+        # instances of ":" in random code snippets or text...
+        return all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:])
+      return False
+
+
 
     @staticmethod
     def transform(text):
@@ -673,7 +681,7 @@ class PetscDocString(PetscDocStringBase):
           match = next(filter(lambda item: item[0] == match,keywords))[1]
         else:
           # try if we can find a sub-word
-          headSplit = heading.split(maxsplit=4)
+          headSplit = heading.split()
           # if heading splits into more than 3 params, then chances are its being mislabeled
           # as a heading anyways
           for head in headSplit[:min(3,len(headSplit))]:
@@ -728,7 +736,7 @@ class PetscDocString(PetscDocStringBase):
     InlineList("seealso",titles=(".seealso",),required=True),
     DefaultSection("UNKNOWN",titles=("__UNKNOWN_SECTION__",)),
   )
-  sowingTypes     = {"@","S","E"}
+  sowingTypes     = {"@","S","E","M"}
   clxToSowingType = {
     clx.TypeKind.FUNCTIONPROTO : ("@","functions"),
     clx.TypeKind.ENUM          : ("E","enums"),
@@ -766,11 +774,11 @@ class PetscDocString(PetscDocStringBase):
 
     # if we find these titles, likely this is a docstring
     if any(title.casefold() in raw.casefold() for title in cls.sections.titles()):
-      # if it doesn't end with _private or _internal then its very likely a docstring
-      if PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
-        import ipdb; ipdb.set_trace()
-        return False
       return True
+    print(raw)
+    # if it doesn't end with _private or _internal then its very likely a docstring
+    if PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
+      print("==========","FOUND PRIVATE/INTERNAL FUNCTION",cursor.name)
     return False
 
   @classmethod
@@ -804,9 +812,8 @@ class PetscDocString(PetscDocStringBase):
   def makeSourceRange(self,token,string,lineno):
     colBegin = string.index(token)+1
     colEnd   = colBegin+len(token)
-    begin    = self.makeSourceLocation(lineno,colBegin)
-    end      = self.makeSourceLocation(lineno,colEnd)
-    return PetscSourceRange.fromLocations(begin,end)
+    tu       = self.cursor.translation_unit
+    return PetscSourceRange.fromPositions(tu,lineno,colBegin,lineno,colEnd)
 
   def addErrorFromSourceRange(self,flag,error,crange,patch=None,numContext=2,**kwargs):
     assert isinstance(error,str)
@@ -819,8 +826,8 @@ class PetscDocString(PetscDocStringBase):
   def _checkValidCursorLinkage(self):
     cursor = self.cursor
     # TODO, this should probably also check that the header the cursor is defined in is public
-    hasExtLinkage,linkageCursorName,linkageCursor = cursor.hasInternalLinkage()
-    if hasExtLinkage and not cursor.translation_unit.spelling.endswith((".h",".hpp")):
+    hasIntLinkage,linkageCursorName,linkageCursor = cursor.hasInternalLinkage()
+    if hasIntLinkage and not cursor.translation_unit.spelling.endswith((".h",".hpp")):
       mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
       # TODO: could have a fixit here to simply delete the docstring
       self._linter.addErrorFromCursor(cursor,Diagnostic(self.diags.internal_linkage,mess))
@@ -886,24 +893,20 @@ class PetscDocString(PetscDocStringBase):
       self.addErrorFromSourceRange(diag,mess,eloc,highlight=False,patch=Patch(floc,""))
     return
 
-  def _checkValidIndentation(self,lineno,line,lstrip):
-    def expectedIndent(line):
-      """
-      get the expected indent for the line
-      """
-      if line and not line.startswith((".","+","-")):
-        return self.indent
-      return 0
-
-    # if the line is regular (not empty, or a parameter list), check that line is
-    # indented correctly
-    indent      = len(line)-len(lstrip)
-    expectedInd = expectedIndent(lstrip)
-    if indent != expectedInd:
-      diag = self.diags.indentation
-      loc  = self.makeSourceRange(" "*indent,line,lineno)
-      mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
-      self.addErrorFromSourceRange(diag,mess,loc,patch=Patch(loc," "*expectedInd))
+  def _checkValidIndentation(self,lineno,line,lstripped):
+    """
+    if the line is regular (not empty, or a parameter list), check that line is
+    indented correctly
+    """
+    linelen = len(line)
+    if linelen:
+      indent      = linelen-len(lstripped)
+      expectedInd = 0 if line.startswith((".","+","-","$")) else self.indent
+      if indent != expectedInd:
+        diag = self.diags.indentation
+        loc  = self.makeSourceRange(" "*indent,line,lineno)
+        mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
+        self.addErrorFromSourceRange(diag,mess,loc,patch=Patch(loc," "*expectedInd))
     return
 
   def _checkValidSectionSpacing(self,prevline,lineno):
@@ -1017,7 +1020,6 @@ class PetscCursor(object):
   __slots__ = "__cursor","name","typename","derivedtypename","argidx","_cache"
 
   def __init__(self,cursor,idx=-12345):
-    assert isinstance(cursor,(clx.Cursor,PetscCursor))
     if isinstance(cursor,PetscCursor):
       self.__cursor        = cursor.clangCursor()
       self.name            = cursor.name
@@ -1025,13 +1027,15 @@ class PetscCursor(object):
       self.derivedtypename = cursor.derivedtypename
       self.argidx          = cursor.argidx if idx == -12345 else idx
       self._cache          = cursor._cache
-    else:
+    elif isinstance(cursor,clx.Cursor):
       self.__cursor        = cursor
       self.name            = self.getNameFromCursor(cursor)
       self.typename        = self.getTypenameFromCursor(cursor)
       self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
       self.argidx          = idx
       self._cache          = {}
+    else:
+      raise ValueError(type(cursor))
     return
 
   @classmethod
@@ -1293,15 +1297,16 @@ class PetscCursor(object):
 
   @staticmethod
   def getOrRegisterClangFunction(funcName,argtypes,rettype):
+    cxlib = clx.conf.lib
     try:
-      func = getattr(clx.conf.lib,funcName)
+      func = getattr(cxlib,funcName)
       if (func.argtypes is None) and (func.errcheck is None):
         # if this hasn't been registered before these will be none
         raise AttributeError
     except AttributeError:
       # have to do the book-keeping ourselves since it may not be properly hooked up
-      clx.register_function(clx.conf.lib,(funcName,argtypes,rettype),False)
-      func = getattr(clx.conf.lib,funcName)
+      clx.register_function(cxlib,(funcName,argtypes,rettype),False)
+      func = getattr(cxlib,funcName)
     return func
 
   @classmethod
@@ -1392,7 +1397,6 @@ class Patch(object):
 
     self.combine  = combineable
     self.extent   = validrange(srcRange)
-    self.filename = PetscPath(self.extent.start.file.name).resolve()
     self.ctxlines = contextlines
     self.src      = self._makeSource()
     self.deltas   = [self.Delta(value,self.extent,self.ctxlines)]
@@ -1743,9 +1747,10 @@ class PetscLinter(object):
           # same scope
           yield from walkScope(child,scope=scope)
 
+
     lintableKinds = funcCallCursors|{clx.CursorKind.ENUM_DECL}
     cursor        = tu.cursor
-    filename      = cursor.spelling
+    filename      = tu.spelling
     for possibleParent in cursor.get_children():
       # getting filename is for some reason stupidly expensive, so we do this check first
       if possibleParent.kind not in lintableKinds: continue
@@ -1837,38 +1842,44 @@ class PetscLinter(object):
     """
     if diagnostic.disabled():
       return
+
     cursor   = PetscCursor.cast(cursor)
     filename = PetscPath(cursor.location.file.name)
-    if filename not in self.errors:
-      self.errors[filename] = collections.OrderedDict()
+    errors   = self.errors
+
+    if filename not in errors:
+      errors[filename] = collections.OrderedDict()
+
     cursorId = cursor.hash
-    if cursorId not in self.errors[filename]:
-      header = "\nERROR {}: {}\n".format(len(self.errors[filename]),str(cursor))
-      self.errors[filename][cursorId] = self.weaklist([header,[],[]])
-    cursorIdErrors = self.errors[filename][cursorId]
-    errorMessage = diagnostic.formatMessage()
-    patch        = diagnostic.patch
-    cursorIdErrors[1].append(errorMessage)
-    cursorIdErrors[2].append(patch is not None)
-    if patch is not None:
-      patch.attach(weakref.ref(cursorIdErrors),len(cursorIdErrors[1])-1)
+    if cursorId not in errors[filename]:
+      header = "\nERROR {}: {}\n".format(len(errors[filename]),str(cursor))
+      errors[filename][cursorId] = self.weaklist([header,[],[]])
+
+    patch          = diagnostic.patch
+    havePatch      = patch is not None
+    cursorIdErrors = errors[filename][cursorId]
+    cursorIdErrors[1].append(diagnostic.formatMessage())
+    cursorIdErrors[2].append(havePatch)
+
+    if not havePatch:
+      return # bail early
+
+    patch.attach(weakref.ref(cursorIdErrors),len(cursorIdErrors[1])-1)
+    patches = self.patches
     try:
-      assert filename == patch.filename
-      self.patches[patch.filename].append(patch)
+      patches[filename].append(patch)
     except KeyError:
-      self.patches[patch.filename] = [patch]
+      patches[filename] = [patch]
       return
-    except AttributeError:
-      assert patch is None
-      # patch = None, return
-      return
+
     # check if this is a compound error, i.e. an additional error on the same line
     # in which case we need to combine with previous patch
-    pex = patch.extent
-    patchList = self.patches[patch.filename]
+    pex       = patch.extent
+    pexstart  = pex.start.line
+    patchList = patches[filename]
     for i,prevPatch in enumerate(patchList[:-1]):
       prepex = prevPatch.extent
-      if pex.overlaps(prepex) or pex.start.line == prepex.start.line:
+      if pexstart == prepex.start.line or pex.overlaps(prepex):
         # this should now be the previous patch on the same line
         patchList[i] = prevPatch.merge(patchList.pop())
         break
