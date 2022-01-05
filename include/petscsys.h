@@ -5,6 +5,18 @@
 #if !defined(PETSCSYS_H)
 #define PETSCSYS_H
 
+#if defined(__STDC__) && defined(__STDC_VERSION__)
+#  if __STDC_VERSION__ < 199901L /* C99 */
+#    error "PETSc requires a C compiler that defines __STDC__VERSION__ >= 199901L (C99)"
+#  endif
+#elif defined(__cplusplus)
+#  if __cplusplus < 201103L /* C++11 */
+#    error "PETSc requires a C++ compiler that defines __cplusplus__ >= 201103L (C++11)"
+#  endif
+#else /* ??? */
+#  error "PETSc requires either a C compiler that defines __STDC__VERSION__ >= 199901L (C99) or a C++ compiler that defines __cplusplus__ >= 201103L (C++11)"
+#endif
+
 /* ========================================================================== */
 /*
    petscconf.h is contained in ${PETSC_ARCH}/include/petscconf.h it is
@@ -47,7 +59,6 @@
 #include <petscsystypes.h>
 
 /* ========================================================================== */
-
 /*
     Defines the interface to MPI allowing the use of all MPI functions.
 
