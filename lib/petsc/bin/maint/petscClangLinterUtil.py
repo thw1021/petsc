@@ -101,7 +101,7 @@ def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen
   if trim:
-    minSpaces = min([len(s)-len(s.lstrip(' ')) for s in lineList if s.replace("\n","")])
+    minSpaces = min(len(s)-len(s.lstrip()) for s in lineList if s.replace("\n",""))
     return "\n".join([s[minSpaces:].rstrip() for s in lineList])
   return "".join(lineList)
 
@@ -672,108 +672,111 @@ class _DiagnosticsManager(object):
         try:
           return [v for k,v in diags.items() if k.endswith(attr)][0]
         except IndexError:
-          pass
-        raise AttributeError(attr)
+          print("USING DICT GETATTR FOR ATTR",attr)
+          return getattr(diags,attr)
 
 
   _registered = {}
-  __slots__   = "disabled"
+  __slots__   = "disabled","flagprefix"
 
   @classmethod
   def registered(cls):
     return cls._registered
 
   @staticmethod
-  def expandFlag(flag):
+  def __expandFlag(flag):
     if not isinstance(flag,str):
-      flag = "-".join(flag)
+      try:
+        flag = "-".join(flag)
+      except Exception as ex:
+        raise ValueError(type(flag)) from ex
+    return flag
+
+  @classmethod
+  def checkFlag(cls,flag):
+    flag = cls.__expandFlag(flag)
+    if flag not in cls._registered:
+      mess = "Flag '{}' is not registered with {}".format(flag,cls)
+      raise ValueError(mess)
     return flag
 
   @classmethod
   def register(cls,*args):
     def decorator(symbol):
+      expandFlag = cls.__expandFlag
+
       if inspect.isclass(symbol):
-        diagList = [(cls.expandFlag(symbol.diagnostic(f)),h.casefold()) for f,h in args]
+        diagList = [(expandFlag(symbol.diagnostic(f)),h.casefold()) for f,h in args]
         wrapper  = symbol
       else:
         @functools.wraps(symbol)
         def wrapper(*args,**kwargs):
           return symbol(*args,**kwargs)
 
-        diagList = [(cls.expandFlag(d),h.casefold()) for d,h in args]
+        diagList = [(expandFlag(d),h.casefold()) for d,h in args]
 
+      assert not hasattr(wrapper,"diags"),"Object {} already has a diags attribute".format(wrapper)
       wrapper.diags = cls.DiagnosticMap(d for d,_ in diagList)
       cls._registered.update(diagList)
       return wrapper
     return decorator
 
 
-  @classmethod
-  def __checkFlag(cls,flag):
-    if not isinstance(flag,str):
-      raise ValueError(type(flag))
-    if flag not in cls._registered:
-      mess = "Flag '{}' is not registered with {}".format(flag,cls)
-      raise ValueError(mess)
-    return
-
-  def __init__(self):
-    self.disabled = set()
+  def __init__(self,flagprefix="-f"):
+    self.disabled   = set()
+    self.flagprefix = flagprefix if flagprefix.startswith("-") else "-"+flagprefix
     return
 
 
   def disable(self,flag):
-    self.__checkFlag(flag)
-    self.disabled.add(flag)
+    self.disabled.add(self.checkFlag(flag))
     return
 
   def enable(self,flag):
-    self.__checkFlag(flag)
-    self.disabled.discard(flag)
+    self.disabled.discard(self.checkFlag(flag))
     return
 
   def set(self,flag,value):
     return self.enable(flag) if value else self.disable(flag)
 
   def disabledFor(self,flag):
-    self.__checkFlag(flag)
-    return flag in self.disabled
+    return self.checkFlag(flag) in self.disabled
 
   def enabledFor(self,flag):
     return not self.disabledFor(flag)
+
+  def makeCommandLineFlag(self,flag):
+    return self.flagprefix+self.checkFlag(flag)
 
 
 DiagnosticManager = _DiagnosticsManager()
 
 class Diagnostic(object):
-  __slots__ = "flag","message","patch"
+  __slots__ = "flag","message","patch","clflag"
 
   def __init__(self,flag,message,patch=None):
-    flag = DiagnosticManager.expandFlag(flag)
-    if flag not in DiagnosticManager._registered:
-      mess = "Flag {} not found in registrar {}".format(flag,DiagnosticManager._registered)
-      raise RuntimeError(mess)
-    self.flag    = flag
+    self.flag    = DiagnosticManager.checkFlag(flag)
     self.message = str(message)
     self.patch   = patch
+    self.clflag  = DiagnosticManager.makeCommandLineFlag(self.flag).join((" [","]"))
     return
 
   def __repr__(self):
-    return "\n".join([
-      "flag:  {}".format(self.flag.join((" [-f","]"))),
+    return "\n".join((
+      "flag:  {}".format(self.clflag),
       "patch: {}".format(self.patch),
       "message:\n{}".format(self.message)
-    ])
+    ))
 
   def formatMessage(self):
     message = self.message
     pos     = message.find(":")
     if pos == -1:
-      ret = "".join((message," [-f",self.flag,"]"))
+      ret = "".join((message,self.clflag))
     else:
       if message[pos-1].isdigit():
         import ipdb; ipdb.set_trace()
-      ret = message.replace(":",self.flag.join((" [-f","]:")),1)
+      ret = message.replace(":",self.clflag+":",1)
     return ret
 
   def disabled(self):
