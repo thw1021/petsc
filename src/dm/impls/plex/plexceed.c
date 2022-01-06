@@ -5,7 +5,7 @@
 
   Input Parameters:
   dm - The DMPlex object
-  domain_label - label for DMPlex domain
+  domain_label - label for DMPlex domain, or NULL for whole domain
   label_value - Stratum value
   height - Height of target cells in DMPlex topology
   dm_field - Index of DMPlex field
@@ -17,9 +17,11 @@
   l_size - Size of local vector
   offsets - Allocated offsets array for cells
 
-  Notes: Allocate and populate array of shape [num_cells, cell_size] defining offsets for each value (cell, node) for local vector of the DMPlex field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array.
+  Notes: Allocate and populate array of shape [num_cells, cell_size] defining offsets for each value (cell, node) for local vector of the DMPlex field. All offsets are in the range [0, l_size - 1]. Caller is responsible for freeing the offsets array using PetscFree().
 
   Level: developer
+
+.seealso: DMPlexGetClosureIndices(), DMPlexSetClosurePermutationTensor(), DMPlexGetCeedRestriction()
 
 @*/
 PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_cells, PetscInt *cell_size, PetscInt *num_comp, PetscInt *l_size, PetscInt **offsets)
@@ -133,7 +135,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
 
   Input Parameters:
   dm - The DMPlex object
-  domain_label - label for DMPlex domain
+  domain_label - label for DMPlex domain, or NULL for the whole domain
   label_value - Stratum value
   height - Height of target cells in DMPlex topology
   dm_field - Index of DMPlex field
