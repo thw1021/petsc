@@ -79,19 +79,24 @@ def viewAstFromCursor(cursor,pred=verbosePrint,level=Level(),**kwargs):
 def getRawSourceFromSourceRange(sourceRange,numBeforeContext=0,numAfterContext=0,numContext=0,trim=False,tight=False):
   numBeforeContext = numBeforeContext if numBeforeContext else numContext
   numAfterContext  = numAfterContext  if numAfterContext  else numContext
-  lineBegin = sourceRange.start.line
-  lineEnd   = sourceRange.end.line
-  lobound   = max(1,lineBegin-numBeforeContext)
-  hibound   = lineEnd+numAfterContext
-  with open(sourceRange.start.file.name,"r") as fd:
-    lineList = [l for i,l in enumerate(fd,start=1) if (lobound <= i <= hibound)]
+  rstart,rend = sourceRange.start,sourceRange.end
+  lineBegin   = rstart.line
+  lineEnd     = rend.line
+  lobound     = max(1,lineBegin-numBeforeContext)
+  hibound     = lineEnd+numAfterContext
+  with open(rstart.file.name,"r") as fd:
+    lineList = [l for i,l in enumerate(fd,start=1) if lobound <= i <= hibound]
   if tight:
     assert lineBegin == lineEnd
     # index into lineList where our actual line starts if we have context
-    loidx           = lineBegin-lobound
-    lineList[loidx] = lineList[loidx][sourceRange.start.column-1:]
-    hiidx           = hibound-lineBegin
-    lineList[hiidx] = lineList[hiidx][:sourceRange.end.column-1]
+    loidx,hiidx = lineBegin-lobound,hibound-lineBegin
+    cbegin,cend = rstart.column-1,rend.column-1
+    if loidx == hiidx:
+      # same line, then we need to do it in 1 step to keep the indexing correct
+      lineList[loidx] = lineList[loidx][cbegin:cend]
+    else:
+      lineList[loidx] = lineList[loidx][cbegin:]
+      lineList[hiidx] = lineList[hiidx][:cend]
   # Find number of spaces to remove from beginning of line based on lowest.
   # This keeps indentation between lines, but doesn't start the string halfway
   # across the screeen

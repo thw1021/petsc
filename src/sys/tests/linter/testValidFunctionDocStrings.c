@@ -65,7 +65,7 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
 
   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-.seealso: testNonExistentFunction(), testNonExistentType
+.seealso:                                                  testNonExistentFunction(), testNonExistentType
 @*/
 
 PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
