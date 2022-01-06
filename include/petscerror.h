@@ -4,6 +4,7 @@
 #if !defined(PETSCERROR_H)
 #define PETSCERROR_H
 
+#include <petsccompilerguard.h>
 #include <petscconf.h>
 
 /*
