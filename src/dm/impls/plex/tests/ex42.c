@@ -229,8 +229,8 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 static PetscErrorCode SetupDiscretization(DM dm)
 {
   DM             cdm;
-  PetscFE        fe;
-  PetscInt       dim;
+  PetscFE        fe, cfe;
+  PetscInt       dim, cnc;
   PetscBool      simplex;
   PetscErrorCode ierr;
 
@@ -243,6 +243,9 @@ static PetscErrorCode SetupDiscretization(DM dm)
   ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   ierr = DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL);CHKERRQ(ierr);
+  ierr = DMGetCoordinateDim(dm, &cnc);CHKERRQ(ierr);
+  ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, cnc, simplex, NULL, PETSC_DETERMINE, &cfe);CHKERRQ(ierr);
+  ierr = DMProjectCoordinates(dm, cfe);CHKERRQ(ierr);
   ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
   ierr = DMPlexSetClosurePermutationTensor(cdm, PETSC_DETERMINE, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -281,8 +284,8 @@ static PetscErrorCode LibCeedSetupByDegree(DM dm, AppCtx *ctx, CeedData *data)
   ierr = PetscDSGetDiscretization(ds, 0, (PetscObject *) &cfe);CHKERRQ(ierr);
   ierr = PetscFEGetCeedBasis(cfe, &basisx);CHKERRQ(ierr);
 
-  ierr = DMPlexGetCeedRestriction(cdm, &Erestrictx);CHKERRQ(ierr);
-  ierr = DMPlexGetCeedRestriction(dm,  &Erestrictu);CHKERRQ(ierr);
+  ierr = DMPlexGetCeedRestriction(cdm, NULL, 0, 0, 0, &Erestrictx);CHKERRQ(ierr);
+  ierr = DMPlexGetCeedRestriction(dm,  NULL, 0, 0, 0, &Erestrictu);CHKERRQ(ierr);
   ierr = CeedBasisGetNumQuadraturePoints(basisu, &nqpts);CHKERRQ(ierr);
   ierr = CeedBasisGetNumQuadraturePoints(basisx, &nqptsx);CHKERRQ(ierr);
   if (nqptsx != nqpts) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %D != %D Number of qpoints for x", nqpts, nqptsx);
@@ -341,7 +344,7 @@ int main(int argc, char **argv)
   DM             dm;
   AppCtx         ctx;
   Vec            U, Uloc, V, Vloc;
-  PetscScalar   *v;
+  PetscScalar    *v;
   PetscScalar    area;
   CeedData       ceeddata;
   PetscErrorCode ierr;
@@ -360,6 +363,7 @@ int main(int argc, char **argv)
   ierr = VecDuplicate(Uloc, &Vloc);CHKERRQ(ierr);
 
   /**/
+  ierr = VecSet(Uloc, 1.);CHKERRQ(ierr);
   ierr = VecZeroEntries(V);CHKERRQ(ierr);
   ierr = VecZeroEntries(Vloc);CHKERRQ(ierr);
   ierr = VecGetArray(Vloc, &v);CHKERRQ(ierr);
@@ -381,7 +385,7 @@ int main(int argc, char **argv)
     if (error > tol) {
       ierr = PetscPrintf(comm, "Area error                 : % .14g\n", (double) error);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(comm, "Area verifies!\n", (double) error);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "Area verifies!\n");CHKERRQ(ierr);
     }
   }
 
@@ -400,8 +404,7 @@ int main(int argc, char **argv)
     requires: libceed
 
   testset:
-    args: -dm_plex_simplex 0 -dm_distribute -petscspace_degree 3 -dm_view -dm_petscds_view \
-          -petscfe_default_quadrature_order 4 -coord_dm_default_quadrature_order 4
+    args: -dm_plex_simplex 0 -dm_distribute -petscspace_degree 3 -dm_view -dm_petscds_view -petscfe_default_quadrature_order 4 -coord_dm_default_quadrature_order 4
 
     test:
       suffix: cube_3
