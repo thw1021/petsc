@@ -62,7 +62,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     }
   }
   if (ds_field == -1) SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Could not find dm_field %D in DS", dm_field);
-  
+
   {
     PetscInt depth;
     DMLabel depth_label;
@@ -120,7 +120,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
   }
   if (cell_offset != restr_size) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_cells, (*cell_size), cell_offset);
   if (iter_is) { ierr = ISRestoreIndices(iter_is, &iter_indices);CHKERRQ(ierr); }
-  ierr = ISDestroy(&iter_is); CHKERRQ(ierr);
+  ierr = ISDestroy(&iter_is);CHKERRQ(ierr);
 
   *offsets = restr_indices;
   ierr = PetscSectionGetStorageSize(section, l_size);CHKERRQ(ierr);
@@ -158,7 +158,7 @@ PetscErrorCode DMPlexGetCeedRestriction(DM dm, DMLabel domain_label, PetscInt la
     CeedElemRestriction elem_restr;
     Ceed         ceed;
 
-    ierr = DMPlexGetLocalOffsets(dm, domain_label, label_value, height, dm_field, &num_cells, &cell_size, &num_comp, &lvec_size, &restr_indices); CHKERRQ(ierr);
+    ierr = DMPlexGetLocalOffsets(dm, domain_label, label_value, height, dm_field, &num_cells, &cell_size, &num_comp, &lvec_size, &restr_indices);CHKERRQ(ierr);
 
     ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
     ierr = CeedElemRestrictionCreate(ceed, num_cells, cell_size, num_comp, 1, lvec_size, CEED_MEM_HOST, CEED_COPY_VALUES, restr_indices, &elem_restr);CHKERRQ_CEED(ierr);
