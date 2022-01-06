@@ -605,7 +605,10 @@ class PetscDocString(PetscDocStringBase):
       self.items = items
       return
 
-  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
+  @DiagnosticManager.register(
+    ("section-header-missing",""),("section-header-unique",""),
+    ("formatting","Verify that inline lists are correctly white-space formatted")
+  )
   class InlineList(SectionBase):
     __slots__ = "foundEmptyLine"
 
@@ -624,13 +627,35 @@ class PetscDocString(PetscDocStringBase):
       return
 
     def setup(self,ds,*args,**kwargs):
-      items = []
+      items         = []
+      formatDiag    = self.diags.formatting
+      alignMessBase = "".join([
+        self.name.title()," values must be (1) space away from colon not ({})"
+      ])
+
 
       def inspector(loc,line):
-        lstrip = line.lstrip()
-        item   = lstrip.split(":")[1].strip() if ":" in lstrip else lstrip.rstrip()
+        item = (line.split(":",maxsplit=2)[1] if ":" in line else line).strip()
         if item:
           items.append((ds.makeSourceRange(item,line,loc.start.line),item))
+          colonIdx = line.find(":")
+          if colonIdx >= 0:
+            correctOffset = colonIdx+2
+            itemIdx       = line.find(item)
+            if itemIdx != correctOffset:
+              nspaces = itemIdx-correctOffset
+              if itemIdx > correctOffset:
+                sub    = " "*nspaces
+                offset = correctOffset
+                fix    = ""
+              else:
+                sub    = ":"
+                offset = 0
+                fix    = " "
+                import ipdb; ipdb.set_trace()
+              mess = alignMessBase.format(nspaces)
+              floc = ds.makeSourceRange(sub,line,loc.start.line,offset=offset)
+              ds.addErrorFromSourceRange(formatDiag,mess,floc,patch=Patch(floc,fix))
         return
 
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
@@ -809,8 +834,8 @@ class PetscDocString(PetscDocStringBase):
   def makeSourceLocation(self,lineno,col):
     return PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
 
-  def makeSourceRange(self,token,string,lineno):
-    colBegin = string.index(token)+1
+  def makeSourceRange(self,token,string,lineno,offset=0):
+    colBegin = string.index(token,offset)+1
     colEnd   = colBegin+len(token)
     tu       = self.cursor.translation_unit
     return PetscSourceRange.fromPositions(tu,lineno,colBegin,lineno,colEnd)
