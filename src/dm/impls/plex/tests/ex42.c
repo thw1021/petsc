@@ -385,7 +385,7 @@ int main(int argc, char **argv)
     if (error > tol) {
       ierr = PetscPrintf(comm, "Area error                 : % .14g\n", (double) error);CHKERRQ(ierr);
     } else {
-      ierr = PetscPrintf(comm, "Area verifies!\n", (double) error);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "Area verifies!\n");CHKERRQ(ierr);
     }
   }
 
@@ -404,8 +404,7 @@ int main(int argc, char **argv)
     requires: libceed
 
   testset:
-    args: -dm_plex_simplex 0 -dm_distribute -petscspace_degree 3 -dm_view -dm_petscds_view \
-          -petscfe_default_quadrature_order 4 -coord_dm_default_quadrature_order 4
+    args: -dm_plex_simplex 0 -dm_distribute -petscspace_degree 3 -dm_view -dm_petscds_view -petscfe_default_quadrature_order 4 -coord_dm_default_quadrature_order 4
 
     test:
       suffix: cube_3
