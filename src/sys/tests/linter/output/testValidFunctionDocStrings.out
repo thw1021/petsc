@@ -10,7 +10,7 @@ ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
   73:   return 0;
 
 Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target [-fdoc-spacing]:
-  68: .seealso: testNonExistentFunction(), testNonExistentType
+  68: .seealso:                                                  testNonExistentFunction(), testNonExistentType
   69: @*/
 > 70: 
   71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
@@ -63,6 +63,14 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
       ^
   46: 
   47:   level: Lorem ipsum dolor sit amet
+
+Seealso values must be (1) space away from colon not (49) [-fdoc-inline-list-formatting]:
+  66:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  67: 
+> 68: .seealso:                                                  testNonExistentFunction(), testNonExistentType
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: @*/
+  70: 
 
 Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a pointer') must be 1 space from argument ('y') [-fdoc-param-list-formatting]:
   41: 
