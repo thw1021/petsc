@@ -229,8 +229,8 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 static PetscErrorCode SetupDiscretization(DM dm)
 {
   DM             cdm;
-  PetscFE        fe;
-  PetscInt       dim;
+  PetscFE        fe, cfe;
+  PetscInt       dim, cnc;
   PetscBool      simplex;
   PetscErrorCode ierr;
 
@@ -243,6 +243,10 @@ static PetscErrorCode SetupDiscretization(DM dm)
   ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
   ierr = DMCreateDS(dm);CHKERRQ(ierr);
   ierr = DMPlexSetClosurePermutationTensor(dm, PETSC_DETERMINE, NULL);CHKERRQ(ierr);
+  ierr = DMGetCoordinateDim(dm, &cnc);CHKERRQ(ierr);
+  ierr = PetscFECreateDefault(PETSC_COMM_SELF, dim, cnc, simplex, NULL, PETSC_DETERMINE, &cfe);CHKERRQ(ierr);
+  ierr = DMProjectCoordinates(dm, cfe);CHKERRQ(ierr);
+  ierr = PetscFEDestroy(&cfe);CHKERRQ(ierr);
   ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
   ierr = DMPlexSetClosurePermutationTensor(cdm, PETSC_DETERMINE, NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
