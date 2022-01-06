@@ -163,6 +163,7 @@ PetscErrorCode DMPlexGetCeedRestriction(DM dm, DMLabel domain_label, PetscInt la
     ierr = DMGetCeed(dm, &ceed);CHKERRQ(ierr);
     ierr = CeedElemRestrictionCreate(ceed, num_cells, cell_size, num_comp, 1, lvec_size, CEED_MEM_HOST, CEED_COPY_VALUES, restr_indices, &elem_restr);CHKERRQ_CEED(ierr);
     ierr = PetscFree(restr_indices);CHKERRQ(ierr);
+    dm->ceedERestrict = elem_restr;
   }
   *ERestrict = dm->ceedERestrict;
   PetscFunctionReturn(0);
