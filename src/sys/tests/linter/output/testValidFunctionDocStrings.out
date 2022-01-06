@@ -1,20 +1,20 @@
 <--- FIXED --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
+ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:72
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *, PetscBool)', canonical type 'int (_p_PetscViewer *, int, double *, PetscBool)'
-  69: @*/
-  70: 
-> 71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+  70: @*/
+  71: 
+> 72: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  72: {
-  73:   return 0;
+  73: {
+  74:   return 0;
 
 Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target [-fdoc-spacing]:
-  68: .seealso:                                                  testNonExistentFunction(), testNonExistentType
-  69: @*/
-> 70: 
-  71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
-  72: {
+  69: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+  70: @*/
+> 71: 
+  72: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+  73: {
 
 Invalid comment begin line, must only contain '/*' and sowing identifier [-fdoc-sowing-chars]:
   30: }
@@ -67,10 +67,10 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
 Seealso values must be (1) space away from colon not (49) [-fdoc-inline-list-formatting]:
   66:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
   67: 
-> 68: .seealso:                                                  testNonExistentFunction(), testNonExistentType
+> 68: .seealso:                                                  testNonExistentFunction(), testNonExistentType,
                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  69: @*/
-  70: 
+  69: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+  70: @*/
 
 Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a pointer') must be 1 space from argument ('y') [-fdoc-param-list-formatting]:
   41: 
@@ -96,241 +96,277 @@ Level subheading must be lowercase, expected 'beginner' found 'Beginner' [-fdoc-
   51: 
   52: Developer Notes:
 
-ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:89
+Found self-referential seealso entry 'testIllFormedFunctionDocString()'; your documentation may be good but it's not *that* good [-fdoc-inline-list-seealso-self-reference]:
+  67: 
+  68: .seealso:                                                  testNonExistentFunction(), testNonExistentType,
+> 69: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  70: @*/
+  71: 
+
+Seealso entry 'testNonExistentFunction()' is duplicate [-fdoc-inline-list-seealso-duplicate]:
+  67: 
+  68: .seealso:                                                  testNonExistentFunction(), testNonExistentType,
+> 69: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  70: @*/
+  71: 
+
+Note first instance found here:
+  67: 
+> 68: .seealso:                                                  testNonExistentFunction(), testNonExistentType,
+                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+  69: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+
+ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:90
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  87:    .seealso: testNonExistentFunction(), testNonExistentType
-  88: */
-> 89: PetscErrorCode testIllFormedMinimalDocString(void)
+  88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
+  89: */
+> 90: PetscErrorCode testIllFormedMinimalDocString(void)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  90: {
-  91:   return 0;
+  91: {
+  92:   return 0;
 
 Invalid indentation (3), all regular (non-empty, non-parameter, non-seealso) text must be indented to 2 columns [-fdoc-indentation]:
-  85:   References:
-  86:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-> 87:    .seealso: testNonExistentFunction(), testNonExistentType
+  86:   References:
+  87:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
       ^^^
-  88: */
-  89: PetscErrorCode testIllFormedMinimalDocString(void)
+  89: */
+  90: PetscErrorCode testIllFormedMinimalDocString(void)
 
 Missing empty line between sections, must have one before this section [-fdoc-section-spacing]:
-  85:   References:
-  86:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-> 87:    .seealso: testNonExistentFunction(), testNonExistentType
-  88: */
-  89: PetscErrorCode testIllFormedMinimalDocString(void)
+  86:   References:
+  87:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
+  89: */
+  90: PetscErrorCode testIllFormedMinimalDocString(void)
 
 Found parameter docstring(s) but 'testIllFormedMinimalDocString()' has no arguments [-fdoc-param-list-extra-parameter]:
-  77:   Not Collective, Synchronous
-  78: 
-> 79:   inpt parms:
-> 80: . foo
-> 81: 
-> 82:   Output params:
-> 83: + bar -
-> 84: 
-  85:   References:
-  86:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  78:   Not Collective, Synchronous
+  79: 
+> 80:   inpt parms:
+> 81: . foo
+> 82: 
+> 83:   Output params:
+> 84: + bar -
+> 85: 
+  86:   References:
+  87:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:112
+Seealso entry 'testNonExistentFunction()' is duplicate [-fdoc-inline-list-seealso-duplicate]:
+  86:   References:
+  87:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
+                                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  89: */
+  90: PetscErrorCode testIllFormedMinimalDocString(void)
+
+Note first instance found here:
+  87:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+  89: */
+
+ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:113
 'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
-  110: .zeeakso: testNonExistentFunction(), testNonExistentType
-  111: C@*/
-> 112: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+  111: .zeeakso: testNonExistentFunction(), testNonExistentType
+  112: C@*/
+> 113: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  113: {
-  114:   return 0;
+  114: {
+  115:   return 0;
 
 Missing empty line between sections, must have one before this section [-fdoc-section-spacing]:
-  106: - -option_a     - foo
-  107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
-> 108:   lvl: itnmediate
-  109: 
-  110: .zeeakso: testNonExistentFunction(), testNonExistentType
+  107: - -option_a     - foo
+  108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+> 109:   lvl: itnmediate
+  110: 
+  111: .zeeakso: testNonExistentFunction(), testNonExistentType
 
 First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
-  104: 
-  105:   optnS dtaaSE:
-> 106: - -option_a     - foo
+  105: 
+  106:   optnS dtaaSE:
+> 107: - -option_a     - foo
        ^
-  107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
-  108:   lvl: itnmediate
+  108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+  109:   lvl: itnmediate
 
 Docstring name 'testTerbleSpelingDocstring' does not match symbol. Assuming you meant 'testTerribleSpellingDocString' [-fdoc-synopsis-matching-symbol-name]:
-  93: 
-  94: /*@C
-> 95:   testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  94: 
+  95: /*@C
+> 96:   testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  96:   eiusmod tempor incididunt ut labore et dolore magna aliqua.
-  97: 
+  97:   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+  98: 
 
 Unknown section header 'input prametirs', assuming you meant 'Input Parameter' [-fdoc-section-header-spelling]:
-  96 :   eiusmod tempor incididunt ut labore et dolore magna aliqua.
-  97 : 
-> 98 :   input prametirs:
+  97 :   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+  98 : 
+> 99 :   input prametirs:
          ^^^^^^^^^^^^^^^
-  99 : + viewer - a PetsViewer
-  100: - x - a PetscInt
+  100: + viewer - a PetsViewer
+  101: - x - a PetscInt
 
 Unknown section header 'output Psrammmetrs', assuming you meant 'Output Parameter' [-fdoc-section-header-spelling]:
-  100: - x - a PetscInt
-  101: 
-> 102:   output Psrammmetrs:
+  101: - x - a PetscInt
+  102: 
+> 103:   output Psrammmetrs:
          ^^^^^^^^^^^^^^^^^^
-  103: . y - a PetscScalar pointer
-  104: 
+  104: . y - a PetscScalar pointer
+  105: 
 
 Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a PetscInt') must be 1 space from argument ('x') [-fdoc-param-list-formatting]:
-  98 :   input prametirs:
-  99 : + viewer - a PetsViewer
-> 100: - x - a PetscInt
+  99 :   input prametirs:
+  100: + viewer - a PetsViewer
+> 101: - x - a PetscInt
            ^^^^^^^^^^^^
-  101: 
-  102:   output Psrammmetrs:
+  102: 
+  103:   output Psrammmetrs:
 
 Unknown section header 'optnS dtaaSE', assuming you meant 'Options Database' [-fdoc-section-header-spelling]:
-  103: . y - a PetscScalar pointer
-  104: 
-> 105:   optnS dtaaSE:
+  104: . y - a PetscScalar pointer
+  105: 
+> 106:   optnS dtaaSE:
          ^^^^^^^^^^^^
-  106: - -option_a     - foo
-  107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+  107: - -option_a     - foo
+  108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 
 Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('foo') must be 1 space from argument ('-option_a') [-fdoc-param-list-formatting]:
-  104: 
-  105:   optnS dtaaSE:
-> 106: - -option_a     - foo
+  105: 
+  106:   optnS dtaaSE:
+> 107: - -option_a     - foo
                        ^^^^^
-  107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
-  108:   lvl: itnmediate
+  108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+  109:   lvl: itnmediate
 
 Unknown section header 'lvl', assuming you meant 'Level' [-fdoc-section-header-spelling]:
-  106: - -option_a     - foo
-  107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
-> 108:   lvl: itnmediate
+  107: - -option_a     - foo
+  108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+> 109:   lvl: itnmediate
          ^^^
-  109: 
-  110: .zeeakso: testNonExistentFunction(), testNonExistentType
+  110: 
+  111: .zeeakso: testNonExistentFunction(), testNonExistentType
 
 Unknown Level subheading 'itnmediate', assuming you meant 'intermediate' [-fdoc-inline-list-level-spelling]:
-  106: - -option_a     - foo
-  107: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
-> 108:   lvl: itnmediate
+  107: - -option_a     - foo
+  108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+> 109:   lvl: itnmediate
               ^^^^^^^^^^
-  109: 
-  110: .zeeakso: testNonExistentFunction(), testNonExistentType
+  110: 
+  111: .zeeakso: testNonExistentFunction(), testNonExistentType
 
 Unknown section header '.zeeakso', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
-  108:   lvl: itnmediate
-  109: 
-> 110: .zeeakso: testNonExistentFunction(), testNonExistentType
+  109:   lvl: itnmediate
+  110: 
+> 111: .zeeakso: testNonExistentFunction(), testNonExistentType
        ^^^^^^^^
-  111: C@*/
-  112: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+  112: C@*/
+  113: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 
-ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:128
+ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:129
 'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *******, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *******, int (*)(int))'
-  126: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
-  127: @*/
-> 128: PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErrorCode (*function_ptr)(PetscInt))
+  127: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
+  128: @*/
+> 129: PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErrorCode (*function_ptr)(PetscInt))
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  129: {
-  130:   return 0;
+  130: {
+  131:   return 0;
 
 Invalid comment begin line, must only contain '/*' and sowing identifier [-fdoc-sowing-chars]:
-  115: }
-  116: 
-> 117: /*@ asdadsadasdas
+  116: }
+  117: 
+> 118: /*@ asdadsadasdas
            ^^^^^^^^^^^^^
-  118:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  119: 
+  119:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  120: 
 
 Function requires custom fortran interface but missing 'C' from docstring header. Due to
   1. 'string' of derived type 'char *******' (is a char pointer)
   2. 'function_ptr' of derived type 'PetscErrorCode (*)(PetscInt)' (is a function pointer) [-fdoc-param-list-fortran-interface]:
-  115: }
-  116: 
-> 117: /*@ asdadsadasdas
+  116: }
+  117: 
+> 118: /*@ asdadsadasdas
        ^^^
-  118:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  119: 
+  119:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  120: 
 
 Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a char pointer') must be 1 space from argument ('string') [-fdoc-param-list-formatting]:
-  119: 
-  120:   Input Parameters:
-> 121: + string -  a char pointer
+  120: 
+  121:   Input Parameters:
+> 122: + string -  a char pointer
                 ^^^^^^^^^^^^^^^^^
-  122: - function_ptr - a function pointer
-  123: 
+  123: - function_ptr - a function pointer
+  124: 
 
-ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:170
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  167: .seealso: foo()
-  168: @*/
-> 169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
+  168: .seealso: foo()
+  169: @*/
+> 170: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  170: {
-  171:   return testStaticFunction();
+  171: {
+  172:   return testStaticFunction();
 
 Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-fdoc-inline-list-level-spelling]:
-  163:   testAllParamsUndocumented - lorem
-  164: 
-> 165:   Level: beginner developer
+  164:   testAllParamsUndocumented - lorem
+  165: 
+> 166:   Level: beginner developer
                 ^^^^^^^^^^^^^^^^^^
-  166: 
-  167: .seealso: foo()
+  167: 
+  168: .seealso: foo()
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:185
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  183: .see also: testStaticFunction()
-  184: @*/
-> 185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+  184: .see also: testStaticFunction()
+  185: @*/
+> 186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  186: {
-  187:   return 0;
+  187: {
+  188:   return 0;
 
 First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
-  176: 
-  177:   Input parameters:
-> 178: - a,b - some params
+  177: 
+  178:   Input parameters:
+> 179: - a,b - some params
        ^
-  179: + nonExistentParam - this param does not exist
-  180: 
+  180: + nonExistentParam - this param does not exist
+  181: 
 
 Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
-  177:   Input parameters:
-  178: - a,b - some params
-> 179: + nonExistentParam - this param does not exist
+  178:   Input parameters:
+  179: - a,b - some params
+> 180: + nonExistentParam - this param does not exist
        ^
-  180: 
-  181:   Level: dev
+  181: 
+  182:   Level: dev
 
 Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-fdoc-section-header-spelling]:
-  175:   testParameterGrouping - ipsum
-  176: 
-> 177:   Input parameters:
+  176:   testParameterGrouping - ipsum
+  177: 
+> 178:   Input parameters:
          ^^^^^^^^^^^^^^^^
-  178: - a,b - some params
-  179: + nonExistentParam - this param does not exist
+  179: - a,b - some params
+  180: + nonExistentParam - this param does not exist
 
 Unknown section header '.see also', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
-  181:   Level: dev
-  182: 
-> 183: .see also: testStaticFunction()
+  182:   Level: dev
+  183: 
+> 184: .see also: testStaticFunction()
        ^^^^^^^^^
-  184: @*/
-  185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+  185: @*/
+  186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
+ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:72
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *, PetscBool)', canonical type 'int (_p_PetscViewer *, int, double *, PetscBool)'
-  69: @*/
-  70: 
-> 71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+  70: @*/
+  71: 
+> 72: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  72: {
-  73:   return 0;
+  73: {
+  74:   return 0;
 
 Multiple 'Level' subheadings. Much like Highlanders, there can only be one [-fdoc-inline-list-section-header-unique]:
   45: . z - a nonexistent parameter
@@ -360,12 +396,12 @@ Extra docstring parameter 'cnd' not found in symbol parameter list [-fdoc-param-
   46: 
 
 maybe you meant 'cond' of derived type 'PetscBool', canonical type 'PetscBool'
-  69: @*/
-  70: 
-> 71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+  70: @*/
+  71: 
+> 72: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
                                                                                                     ^^^^^^^^^^^^^^
-  72: {
-  73:   return 0;
+  73: {
+  74:   return 0;
 
 
 Extra docstring parameter 'z' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
@@ -377,12 +413,12 @@ Extra docstring parameter 'z' not found in symbol parameter list [-fdoc-param-li
   47:   level: Lorem ipsum dolor sit amet
 
 maybe you meant 'x' of derived type 'PetscInt', canonical type 'int'
-  69: @*/
-  70: 
-> 71: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+  70: @*/
+  71: 
+> 72: PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
                                                                         ^^^^^^^^^^
-  72: {
-  73:   return 0;
+  73: {
+  74:   return 0;
 
 
 Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
@@ -393,171 +429,171 @@ Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner,
   48: 
   49:   Level:
 
-ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:89
+ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:90
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  87:    .seealso: testNonExistentFunction(), testNonExistentType
-  88: */
-> 89: PetscErrorCode testIllFormedMinimalDocString(void)
+  88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
+  89: */
+> 90: PetscErrorCode testIllFormedMinimalDocString(void)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  90: {
-  91:   return 0;
+  91: {
+  92:   return 0;
 
 Invalid comment begin line, does not contain sowing identifier. Expected '/*@' for functions [-fdoc-sowing-chars]:
-  74: }
-  75: 
-> 76: /*
+  75: }
+  76: 
+> 77: /*
       ^^
-  77:   Not Collective, Synchronous
-  78: 
+  78:   Not Collective, Synchronous
+  79: 
 
 Parameter-list entry missing a description. Expected 'foo - a very useful description' [-fdoc-param-list-missing-description]:
-  78: 
-  79:   inpt parms:
-> 80: . foo
+  79: 
+  80:   inpt parms:
+> 81: . foo
       ^^^^^
-  81: 
-  82:   Output params:
+  82: 
+  83:   Output params:
 
 Parameter-list entry missing a description. Expected 'bar - a very useful description' [-fdoc-param-list-missing-description]:
-  81: 
-  82:   Output params:
-> 83: + bar -
+  82: 
+  83:   Output params:
+> 84: + bar -
       ^^^^^^^
-  84: 
-  85:   References:
+  85: 
+  86:   References:
 
 Required heading(s) 'Level' not found in docstring [-fdoc-inline-list-section-header-missing]:
-  74: }
-  75: 
-> 76: /*
-> 77:   Not Collective, Synchronous
-> 78: 
-> 79:   inpt parms:
-> 80: . foo
-> 81: 
-> 82:   Output params:
-> 83: + bar -
-> 84: 
-> 85:   References:
-> 86:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-> 87:    .seealso: testNonExistentFunction(), testNonExistentType
-> 88: */
-  89: PetscErrorCode testIllFormedMinimalDocString(void)
-  90: {
+  75: }
+  76: 
+> 77: /*
+> 78:   Not Collective, Synchronous
+> 79: 
+> 80:   inpt parms:
+> 81: . foo
+> 82: 
+> 83:   Output params:
+> 84: + bar -
+> 85: 
+> 86:   References:
+> 87:   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+> 88:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
+> 89: */
+  90: PetscErrorCode testIllFormedMinimalDocString(void)
+  91: {
 
 Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very useful description' [-fdoc-synopsis-missing-description]:
-  75: 
-  76: /*
-> 77:   Not Collective, Synchronous
-> 78: 
-  79:   inpt parms:
-  80: . foo
+  76: 
+  77: /*
+> 78:   Not Collective, Synchronous
+> 79: 
+  80:   inpt parms:
+  81: . foo
 
-ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:145
+ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:146
 'testInternFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  143: .seealso: function()
-  144: @*/
-> 145: PetscErrorCode testInternFunction()
+  144: .seealso: function()
+  145: @*/
+> 146: PetscErrorCode testInternFunction()
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  146: {
-  147:   return 0;
+  147: {
+  148:   return 0;
 
 A sowing docstring for a function with internal linkage is pointless! [-fdoc-internal-linkage]:
-  136: PETSC_INTERN PetscErrorCode testInternFunction();
-  137: 
-> 138: /*@
-> 139:   testInternFunction - an internal function
-> 140: 
-> 141:   Level: developer
-> 142: 
-> 143: .seealso: function()
-> 144: @*/
-  145: PetscErrorCode testInternFunction()
-  146: {
+  137: PETSC_INTERN PetscErrorCode testInternFunction();
+  138: 
+> 139: /*@
+> 140:   testInternFunction - an internal function
+> 141: 
+> 142:   Level: developer
+> 143: 
+> 144: .seealso: function()
+> 145: @*/
+  146: PetscErrorCode testInternFunction()
+  147: {
 
-Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:1:136
+Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:1:137
 'hidden' of derived type '', canonical type ''
-  134: void function() { }
-  135: 
-> 136: PETSC_INTERN PetscErrorCode testInternFunction();
+  135: void function() { }
+  136: 
+> 137: PETSC_INTERN PetscErrorCode testInternFunction();
        ^^^^^^^^^^^^
-  137: 
-  138: /*@
+  138: 
+  139: /*@
 
 
-ERROR 5: ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:157
+ERROR 5: ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:158
 'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  155: .seealso: function()
-  156: @*/
-> 157: static PetscErrorCode testStaticFunction()
+  156: .seealso: function()
+  157: @*/
+> 158: static PetscErrorCode testStaticFunction()
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  158: {
-  159:   return 0;
+  159: {
+  160:   return 0;
 
 A sowing docstring for a function with internal linkage is pointless! [-fdoc-internal-linkage]:
-  148: }
-  149: 
-> 150: /*@
-> 151:   testStaticFunction - an internal function
-> 152: 
-> 153:   Level: developer
-> 154: 
-> 155: .seealso: function()
-> 156: @*/
-  157: static PetscErrorCode testStaticFunction()
-  158: {
+  149: }
+  150: 
+> 151: /*@
+> 152:   testStaticFunction - an internal function
+> 153: 
+> 154:   Level: developer
+> 155: 
+> 156: .seealso: function()
+> 157: @*/
+  158: static PetscErrorCode testStaticFunction()
+  159: {
 
-Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:157
+Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:158
 'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
-  155: .seealso: function()
-  156: @*/
-> 157: static PetscErrorCode testStaticFunction()
+  156: .seealso: function()
+  157: @*/
+> 158: static PetscErrorCode testStaticFunction()
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  158: {
-  159:   return 0;
+  159: {
+  160:   return 0;
 
 
-ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:170
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  167: .seealso: foo()
-  168: @*/
-> 169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
+  168: .seealso: foo()
+  169: @*/
+> 170: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  170: {
-  171:   return testStaticFunction();
+  171: {
+  172:   return testStaticFunction();
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:185
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  183: .see also: testStaticFunction()
-  184: @*/
-> 185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+  184: .see also: testStaticFunction()
+  185: @*/
+> 186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  186: {
-  187:   return 0;
+  187: {
+  188:   return 0;
 
 Each parameter entry must be documented separately on its own line [-fdoc-param-list-solitary-parameter]:
-  176: 
-  177:   Input parameters:
-> 178: - a,b - some params
+  177: 
+  178:   Input parameters:
+> 179: - a,b - some params
          ^^^
-  179: + nonExistentParam - this param does not exist
-  180: 
+  180: + nonExistentParam - this param does not exist
+  181: 
 
 Extra docstring parameter 'nonExistentParam' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
-  177:   Input parameters:
-  178: - a,b - some params
-> 179: + nonExistentParam - this param does not exist
+  178:   Input parameters:
+  179: - a,b - some params
+> 180: + nonExistentParam - this param does not exist
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  180: 
-  181:   Level: dev
+  181: 
+  182:   Level: dev
 
 Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
-  179: + nonExistentParam - this param does not exist
-  180: 
-> 181:   Level: dev
+  180: + nonExistentParam - this param does not exist
+  181: 
+> 182:   Level: dev
                 ^^^
-  182: 
-  183: .see also: testStaticFunction()
+  183: 
+  184: .see also: testStaticFunction()
 [ROOT] -------------------------------------------------------------------------------------

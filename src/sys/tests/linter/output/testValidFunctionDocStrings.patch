@@ -58,17 +58,24 @@
 @@ -69,5 +69,5 @@
    References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
  
--.seealso:                                                  testNonExistentFunction(), testNonExistentType
-+.seealso: testNonExistentFunction(), testNonExistentType
+-.seealso:                                                  testNonExistentFunction(), testNonExistentType,
++.seealso: testNonExistentFunction(), testNonExistentType,
+ testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+ @*/
+@@ -70,5 +70,5 @@
+ 
+ .seealso:                                                  testNonExistentFunction(), testNonExistentType,
+-testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
++testIllFormedMinimalDocString()
  @*/
  
-@@ -71,5 +71,4 @@
- .seealso:                                                  testNonExistentFunction(), testNonExistentType
+@@ -72,5 +72,4 @@
+ testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
  @*/
 -
  PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
  {
-@@ -80,9 +80,4 @@
+@@ -81,9 +81,4 @@
    Not Collective, Synchronous
  
 -  inpt parms:
@@ -78,57 +85,57 @@
 -+ bar -
  
    References:
-@@ -88,5 +88,6 @@
+@@ -89,5 +89,6 @@
    References:
    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
--   .seealso: testNonExistentFunction(), testNonExistentType
+-   .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
 +
 +  .seealso: testNonExistentFunction(), testNonExistentType
  */
  PetscErrorCode testIllFormedMinimalDocString(void)
-@@ -96,5 +96,5 @@
+@@ -97,5 +97,5 @@
  
  /*@C
 -  testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
 +  testTerribleSpellingDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
    eiusmod tempor incididunt ut labore et dolore magna aliqua.
  
-@@ -99,5 +99,5 @@
+@@ -100,5 +100,5 @@
    eiusmod tempor incididunt ut labore et dolore magna aliqua.
  
 -  input prametirs:
 +  Input Parameter:
  + viewer - a PetsViewer
  - x - a PetscInt
-@@ -101,5 +101,5 @@
+@@ -102,5 +102,5 @@
    input prametirs:
  + viewer - a PetsViewer
 -- x - a PetscInt
 +- x      - a PetscInt
  
    output Psrammmetrs:
-@@ -103,5 +103,5 @@
+@@ -104,5 +104,5 @@
  - x - a PetscInt
  
 -  output Psrammmetrs:
 +  Output Parameter:
  . y - a PetscScalar pointer
  
-@@ -106,5 +106,5 @@
+@@ -107,5 +107,5 @@
  . y - a PetscScalar pointer
  
 -  optnS dtaaSE:
 +  Options Database:
  - -option_a     - foo
  - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
-@@ -107,5 +107,5 @@
+@@ -108,5 +108,5 @@
  
    optnS dtaaSE:
 -- -option_a     - foo
 ++ -option_a                                        - foo
  - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
    lvl: itnmediate
-@@ -109,5 +109,6 @@
+@@ -110,5 +110,6 @@
  - -option_a     - foo
  - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 -  lvl: itnmediate
@@ -136,14 +143,14 @@
 +  Level: intermediate
  
  .zeeakso: testNonExistentFunction(), testNonExistentType
-@@ -111,5 +111,5 @@
+@@ -112,5 +112,5 @@
    lvl: itnmediate
  
 -.zeeakso: testNonExistentFunction(), testNonExistentType
 +.seealso: testNonExistentFunction(), testNonExistentType
  C@*/
  PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
-@@ -118,5 +118,6 @@
+@@ -119,5 +119,6 @@
  }
  
 -/*@ asdadsadasdas
@@ -151,42 +158,42 @@
 +  asdadsadasdas
    testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
  
-@@ -122,5 +122,5 @@
+@@ -123,5 +123,5 @@
  
    Input Parameters:
 -+ string -  a char pointer
 ++ string       - a char pointer
  - function_ptr - a function pointer
  
-@@ -166,5 +166,5 @@
+@@ -167,5 +167,5 @@
    testAllParamsUndocumented - lorem
  
 -  Level: beginner developer
 +  Level: developer
  
  .seealso: foo()
-@@ -178,5 +178,5 @@
+@@ -179,5 +179,5 @@
    testParameterGrouping - ipsum
  
 -  Input parameters:
 +  Input Parameters:
  - a,b - some params
  + nonExistentParam - this param does not exist
-@@ -179,5 +179,5 @@
+@@ -180,5 +180,5 @@
  
    Input parameters:
 -- a,b - some params
 ++ a,b - some params
  + nonExistentParam - this param does not exist
  
-@@ -180,5 +180,5 @@
+@@ -181,5 +181,5 @@
    Input parameters:
  - a,b - some params
 -+ nonExistentParam - this param does not exist
 +- nonExistentParam - this param does not exist
  
    Level: dev
-@@ -184,5 +184,5 @@
+@@ -185,5 +185,5 @@
    Level: dev
  
 -.see also: testStaticFunction()

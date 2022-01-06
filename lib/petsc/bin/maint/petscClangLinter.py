@@ -627,24 +627,30 @@ class PetscDocString(PetscDocStringBase):
       return
 
     def setup(self,ds,*args,**kwargs):
-      items         = []
-      formatDiag    = self.diags.formatting
-      alignMessBase = "".join([
+      items           = []
+      formatDiag      = self.diags.formatting
+      makeSourceRange = ds.makeSourceRange
+      alignMessBase   = "".join([
         self.name.title()," values must be (1) space away from colon not ({})"
       ])
 
-
       def inspector(loc,line):
-        item = (line.split(":",maxsplit=2)[1] if ":" in line else line).strip()
-        if item:
-          items.append((ds.makeSourceRange(item,line,loc.start.line),item))
+        rest = (line.split(":",maxsplit=2)[1] if ":" in line else line).strip()
+        if rest:
+          startline = loc.start.line
+          offset    = 0
+          for sub in map(lambda string: string.strip(),rest.split(",")):
+            subloc = makeSourceRange(sub,line,startline,offset=offset)
+            offset = subloc.end.column-1
+            items.append((subloc,sub))
+
           colonIdx = line.find(":")
           if colonIdx >= 0:
             correctOffset = colonIdx+2
-            itemIdx       = line.find(item)
-            if itemIdx != correctOffset:
-              nspaces = itemIdx-correctOffset
-              if itemIdx > correctOffset:
+            restIdx       = line.find(rest)
+            if restIdx != correctOffset:
+              nspaces = restIdx-correctOffset
+              if restIdx > correctOffset:
                 sub    = " "*nspaces
                 offset = correctOffset
                 fix    = ""
@@ -654,9 +660,10 @@ class PetscDocString(PetscDocStringBase):
                 fix    = " "
                 import ipdb; ipdb.set_trace()
               mess = alignMessBase.format(nspaces)
-              floc = ds.makeSourceRange(sub,line,loc.start.line,offset=offset)
+              floc = makeSourceRange(sub,line,startline,offset=offset)
               ds.addErrorFromSourceRange(formatDiag,mess,floc,patch=Patch(floc,fix))
         return
+
 
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
       self.items = tuple(items)
@@ -702,8 +709,7 @@ class PetscDocString(PetscDocStringBase):
         keywords = [(kw,s.name) for kw,s in self.keywords(sections=True)]
         match    = get_matches(heading,(k for k,_ in keywords),n=1)
         if match:
-          match = match[0]
-          match = next(filter(lambda item: item[0] == match,keywords))[1]
+          match = next(filter(lambda item: item[0] == match[0],keywords))[1]
         else:
           # try if we can find a sub-word
           headSplit = heading.split()
@@ -830,6 +836,9 @@ class PetscDocString(PetscDocStringBase):
       extent = extent.resized(lbegin=offset,cbegin=None,cend=None)
     return raw,extent
 
+  @staticmethod
+  def makeErrorMessage(message,crange,numContext=2,**kwargs):
+    return ":\n".join([message,crange.formatted(numContext=numContext,**kwargs)])
 
   def makeSourceLocation(self,lineno,col):
     return PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
@@ -840,10 +849,8 @@ class PetscDocString(PetscDocStringBase):
     tu       = self.cursor.translation_unit
     return PetscSourceRange.fromPositions(tu,lineno,colBegin,lineno,colEnd)
 
-  def addErrorFromSourceRange(self,flag,error,crange,patch=None,numContext=2,**kwargs):
-    assert isinstance(error,str)
-    error = ":\n".join([error,crange.formatted(numContext=numContext,**kwargs)])
-    diag  = Diagnostic(flag,error,patch=patch)
+  def addErrorFromSourceRange(self,flag,error,crange,patch=None,**kwargs):
+    diag = Diagnostic(flag,self.makeErrorMessage(error,crange,**kwargs),patch=patch)
     self._linter.addErrorFromCursor(self.cursor,diag)
     return
 
@@ -2415,6 +2422,10 @@ def checkDocValidLevel(linter,cursor,docstring):
     prevline = line
   return
 
+@DiagnosticManager.register(
+  (PetscDocString.InlineList.diagnostic("seealso-duplicate"),"Verify that there are no duplicate entries in seealso lists"),
+  (PetscDocString.InlineList.diagnostic("seealso-self-reference"),"Verify that seealso lists don't contain the current symbol name"),
+)
 def checkDocValidSeealso(linter,cursor,docstring):
   seealso = docstring.sections.seealso
   if not seealso:
@@ -2425,10 +2436,65 @@ def checkDocValidSeealso(linter,cursor,docstring):
 
   def isHeading(line):
     text = line[1]
-    return ":" in text and text.startswith(".")
+    return text and ":" in text and text.startswith(".")
 
   headings = list(filter(isHeading,seealso.lines))
   docstring.checkValidSectionHeaderSpelling(seealso,headings,transform=transform)
+
+  def makeDeletionPatch(loc,text,lookBehind):
+    """
+    first(),    second(),      third
+
+    Extend source range of 'second' so that deleting it yields
+
+    first(), third
+    """
+    raw = loc.raw().rstrip("\n")
+    col = loc.start.column-1
+    # str.partition won't work here since it returns the first instance of 'sep', which in
+    # our case might be the first instance of the value rather than the duplicate we just
+    # found
+    post = raw[col+len(text):]
+    # get the number of characters between us and next alphabetical character
+    cend = len(post)-len(post.lstrip(", "))
+    if lookBehind:
+      # look to remove comma and space the entry behind us
+      pre    = raw[:col]
+      cbegin = len(pre.rstrip(", "))-len(pre) # note intentionally negative value
+      assert cbegin < 0
+    else:
+      cbegin = 0
+    return Patch(loc.resized(cbegin=cbegin,cend=cend),"")
+
+  items       = seealso.items
+  lastItem    = len(items)-1
+  itemRemain  = []
+  selfRefDiag = checkDocValidSeealso.diags.seealso_self_reference
+  symbolName  = PetscCursor.getNameFromCursor(cursor)
+  for i,(loc,text) in enumerate(items):
+    if text.rstrip("()") == symbolName:
+      mess = "Found self-referential seealso entry '{}'; your documentation may be good but it's not *that* good".format(text)
+      docstring.addErrorFromSourceRange(
+        selfRefDiag,mess,loc,patch=makeDeletionPatch(loc,text,i == lastItem)
+      )
+    else:
+      itemRemain.append((loc,text))
+
+  seen     = {}
+  lastItem = len(itemRemain)-1
+  dupDiag  = checkDocValidSeealso.diags.seealso_duplicate
+  for i,(loc,text) in enumerate(itemRemain):
+    if text not in seen:
+      seen[text] = (loc,text)
+      continue
+
+    mess = "\n\n".join((
+      docstring.makeErrorMessage("Seealso entry '{}' is duplicate".format(text),loc),
+      docstring.makeErrorMessage("Note first instance found here",seen[text][0],numContext=1)
+    ))
+    linter.addErrorFromCursor(
+      cursor,Diagnostic(dupDiag,mess,patch=makeDeletionPatch(loc,text,i == lastItem))
+    )
   return
 
 
@@ -3750,12 +3816,18 @@ if __name__ == "__main__":
   parser.add_argument("--werror",type=str2bool,nargs="?",const=True,default=False,help="treat all warnings as errors")
 
   class CheckFilter(argparse.Action):
-    def __call__(self,parser,namespace,values,option_string=None):
-      DiagnosticManager.set(self.dest[1:].replace("_","-"),values)
-      setattr(namespace,self.dest,values)
+    def __call__(self,parser,namespace,values,*args,**kwargs):
+      flag = self.dest.replace(DiagnosticManager.flagprefix[1:],"",1).replace("_","-")
+      if flag == "diagnostics-all":
+        for diag,_ in DiagnosticManager.registered().items():
+          DiagnosticManager.set(diag,values)
+      else:
+        DiagnosticManager.set(flag,values)
+      setattr(namespace,flag,values)
       return
 
   groupdiag = parser.add_argument_group(title="diagnostics")
+  groupdiag.add_argument("-fdiagnostics-all",type=str2bool,nargs="?",const=True,default=True,action=CheckFilter,help="disable all diagnostics")
   for diag,helpstr in sorted(DiagnosticManager.registered().items()):
     groupdiag.add_argument("-f"+diag,metavar="",type=str2bool,nargs="?",const=True,default=True,action=CheckFilter,help=helpstr)
 
