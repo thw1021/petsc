@@ -57,5 +57,6 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_3d(DM);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM,PetscReal,PetscReal);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_2d(DM,PetscReal,PetscReal,PetscReal,PetscReal);
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_3d(DM,PetscReal,PetscReal,PetscReal,PetscReal,PetscReal,PetscReal);
+PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_1D_AIJ(DM,Mat*);
 
 #endif
