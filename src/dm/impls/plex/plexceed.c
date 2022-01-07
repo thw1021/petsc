@@ -43,7 +43,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
   // Translate dm_field to ds_field
   PetscInt ds_field = -1;
   for (PetscInt i=0; i<dm->Nds; i++) {
-    if (!domain_label && !dm->probs[i].label) {
+    if (!domain_label || domain_label == dm->probs[i].label) {
       ds = dm->probs[i].ds;
     }
     if (ds == dm->probs[i].ds) {
