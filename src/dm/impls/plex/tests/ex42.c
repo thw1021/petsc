@@ -345,7 +345,7 @@ int main(int argc, char **argv)
   DM             dm;
   AppCtx         ctx;
   Vec            U, Uloc, V, Vloc;
-  PetscScalar    *v;
+  PetscScalar   *v;
   PetscScalar    area;
   CeedData       ceeddata;
   PetscErrorCode ierr;
