@@ -1412,7 +1412,7 @@ class Patch(object):
     def view(self):
       before = self.extent.formatted(numContext=3,highlight=False).splitlines(True)
       after  = before.copy()
-      after[3] = before[3].replace(self.extent.raw(tight=True),self.value)
+      after[3] = before[3].replace(self.extent.raw(tight=True),self.value,1)
       print("".join(difflib.unified_diff(before,after,fromfile="Original",tofile="Modified")))
       return
 
@@ -2467,23 +2467,22 @@ def checkDocValidSeealso(linter,cursor,docstring):
     return Patch(loc.resized(cbegin=cbegin,cend=cend),"")
 
   items       = seealso.items
-  lastItem    = len(items)-1
+  lastLoc     = items[-1][0]
   itemRemain  = []
   selfRefDiag = checkDocValidSeealso.diags.seealso_self_reference
   symbolName  = PetscCursor.getNameFromCursor(cursor)
-  for i,(loc,text) in enumerate(items):
+  for loc,text in items:
     if text.rstrip("()") == symbolName:
       mess = "Found self-referential seealso entry '{}'; your documentation may be good but it's not *that* good".format(text)
       docstring.addErrorFromSourceRange(
-        selfRefDiag,mess,loc,patch=makeDeletionPatch(loc,text,i == lastItem)
+        selfRefDiag,mess,loc,patch=makeDeletionPatch(loc,text,loc == lastLoc)
       )
     else:
       itemRemain.append((loc,text))
 
-  seen     = {}
-  lastItem = len(itemRemain)-1
-  dupDiag  = checkDocValidSeealso.diags.seealso_duplicate
-  for i,(loc,text) in enumerate(itemRemain):
+  seen    = {}
+  dupDiag = checkDocValidSeealso.diags.seealso_duplicate
+  for loc,text in itemRemain:
     if text not in seen:
       seen[text] = (loc,text)
       continue
@@ -2493,7 +2492,7 @@ def checkDocValidSeealso(linter,cursor,docstring):
       docstring.makeErrorMessage("Note first instance found here",seen[text][0],numContext=1)
     ))
     linter.addErrorFromCursor(
-      cursor,Diagnostic(dupDiag,mess,patch=makeDeletionPatch(loc,text,i == lastItem))
+      cursor,Diagnostic(dupDiag,mess,patch=makeDeletionPatch(loc,text,loc == lastLoc))
     )
   return
 
