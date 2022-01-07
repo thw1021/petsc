@@ -1280,3 +1280,55 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_2d(DM dm)
   }
   PetscFunctionReturn(0);
 }
+
+PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_2D_AIJ(DM dm,Mat *mat)
+{
+  PetscErrorCode         ierr;
+  PetscInt               entries,dof[DMSTAG_MAX_STRATA],epe,stencil_width,max_nz_per_row,N[2],start[2],n[2],n_extra[2];
+  DMStagStencilType      stencil_type;
+  ISLocalToGlobalMapping ltogmap;
+  DMBoundaryType         boundary_type[2];
+
+  /* This implementation gives a very dense stencil, which is likely unsuitable for
+     (typical) applications which have fewer couplings */
+  PetscFunctionBegin;
+  ierr = DMStagGetDOF(dm,&dof[0],&dof[1],&dof[2],NULL);CHKERRQ(ierr);
+  ierr = DMStagGetStencilType(dm,&stencil_type);CHKERRQ(ierr);
+  ierr = DMStagGetStencilWidth(dm,&stencil_width);CHKERRQ(ierr);
+  ierr = DMStagGetEntries(dm,&entries);CHKERRQ(ierr);
+  ierr = DMStagGetEntriesPerElement(dm,&epe);CHKERRQ(ierr);
+  ierr = DMStagGetCorners(dm,&start[0],&start[1],NULL,&n[0],&n[1],NULL,&n_extra[0],&n_extra[1],NULL);CHKERRQ(ierr);
+  ierr = DMStagGetGlobalSizes(dm,&N[0],&N[1],NULL);CHKERRQ(ierr);
+  ierr = DMStagGetBoundaryTypes(dm,&boundary_type[0],&boundary_type[1],NULL);CHKERRQ(ierr);
+
+  if (stencil_type == DMSTAG_STENCIL_NONE) {
+    max_nz_per_row = PetscMax(PetscMax(dof[0],dof[1]),dof[2]);CHKERRQ(ierr);
+  } else if (stencil_type == DMSTAG_STENCIL_STAR) {
+    max_nz_per_row = (1 + 4 * stencil_width) * epe;
+  } else if (stencil_type == DMSTAG_STENCIL_BOX) {
+    const PetscInt box_size = 1 + 2 * stencil_width;
+    max_nz_per_row = box_size * box_size * epe;
+  } else SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported stencil type %s",DMStagStencilTypes[stencil_type]);
+  ierr = MatCreateAIJ(PetscObjectComm((PetscObject)dm),entries,entries,PETSC_DETERMINE,PETSC_DETERMINE,max_nz_per_row,NULL,max_nz_per_row,NULL,mat);CHKERRQ(ierr);
+  ierr = DMGetLocalToGlobalMapping(dm,&ltogmap);CHKERRQ(ierr);
+  ierr = MatSetLocalToGlobalMapping(*mat,ltogmap,ltogmap);CHKERRQ(ierr);
+  ierr = MatSetDM(*mat,dm);CHKERRQ(ierr);
+  ierr = MatSetFromOptions(*mat);CHKERRQ(ierr);
+
+  // TODO
+#if 0
+  if (!dm->prealloc_only) {
+    if (stencil_type == DMSTAG_STENCIL_NONE) {
+      /* Couple all DOF at each location to each other */
+      // TODO
+    } else if (stencil_type == DMSTAG_STENCIL_STAR || stencil_type == DMSTAG_STENCIL_BOX) {
+      // TODO
+    } else SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported stencil type %s",DMStagStencilTypes[stencil_type]);
+    ierr = MatAssemblyBegin(*mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(*mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+
+    // FIXME: may need to include some CPU/GPU logic e.g. at the end of DMCreateMatrix_DA_1d_MPIAIJ
+  }
+#endif
+  PetscFunctionReturn(0);
+}
