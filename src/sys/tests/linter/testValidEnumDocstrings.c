@@ -32,3 +32,19 @@ typedef enum {
   CONSECTETUR,
   ADAPISCING
 } IllFormedEnum;
+
+/*E
+  bdSpllingenUm - Lorem ipsum dolor
+
+  Not Collective
+
+$ FOO - a foo
+
+  Notes:
+  a note
+
+.seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+*/
+typedef enum {
+  FOO
+} BadSpellingEnum;
