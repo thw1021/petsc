@@ -381,10 +381,10 @@ int main(int argc, char **argv)
     PetscReal error = PetscAbsReal(area - ctx.areaExact);
     PetscReal tol   = PETSC_SMALL;
 
-    ierr = PetscPrintf(comm,   "Exact mesh surface area    : % .14g\n", (double) ctx.areaExact);CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,   "Computed mesh surface area : % .14g\n", (double) area);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,   "Exact mesh surface area    : % .*f\n", fabs(ctx.areaExact - round(ctx.areaExact)) > 1E-15 ? 14 : 1, (double) ctx.areaExact);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,   "Computed mesh surface area : % .*f\n", fabs(area          - round(area))          > 1E-15 ? 14 : 1, (double) area);CHKERRQ(ierr);
     if (error > tol) {
-      ierr = PetscPrintf(comm, "Area error                 : % .14g\n", (double) error);CHKERRQ(ierr);
+      ierr = PetscPrintf(comm, "Area error                 : % .14f\n", (double) error);CHKERRQ(ierr);
     } else {
       ierr = PetscPrintf(comm, "Area verifies!\n", (double) error);CHKERRQ(ierr);
     }
