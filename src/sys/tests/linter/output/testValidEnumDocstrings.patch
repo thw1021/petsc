@@ -27,3 +27,17 @@
 +  Level: advanced
  E*/
  typedef enum {
+@@ -38,5 +38,5 @@
+ 
+ /*E
+-  bdSpllingenUm - Lorem ipsum dolor
++  BadSpellingEnum - Lorem ipsum dolor
+ 
+   Not Collective
+@@ -47,5 +47,5 @@
+   a note
+ 
+-.seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
++.seealso: IllFormedEnum,WellFormedEnum
+ */
+ typedef enum {

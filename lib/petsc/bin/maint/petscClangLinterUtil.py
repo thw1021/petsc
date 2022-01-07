@@ -305,7 +305,7 @@ class PetscSourceLocation(object):
     every time you access a tu's file. So we cache them here
     """
     def getname(self,tu):
-      return self.setdefault(tu,tu.get_file(tu.spelling))
+      return self[tu] if tu in self else self.setdefault(tu,tu.get_file(tu.spelling))
 
 
   __filecache = ClangFileNameCache()
@@ -396,7 +396,7 @@ class PetscSourceRange(object):
     return self.getCached(attr,getattr,self.sourceRange,attr)
 
   def __eq__(self,other):
-    return self.sourceRange.__eq__(self.asClangSourceRange(other))
+    return (self is other) or self.sourceRange.__eq__(self.asClangSourceRange(other))
 
   def __lt__(self,right):
     if isinstance(right,(clx.SourceRange,type(self))):
