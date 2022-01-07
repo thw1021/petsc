@@ -11,6 +11,8 @@ ERROR 0: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:29
 > 32:   CONSECTETUR,
 > 33:   ADAPISCING
 > 34: } IllFormedEnum;
+  35: 
+  36: /*E
 
 Invalid indentation (0), all regular (non-empty, non-parameter, non-seealso) text must be indented to 2 columns [-fdoc-indentation]:
   25:  $ AMET - An amet
@@ -50,6 +52,75 @@ Argument list entry must be formatted as ^(\S) (.*) - (.*), argument ('ADAPISCIN
        ^^^^^^^^^^^^^^^^^^^^^^^^^^
   27: Level: advanced
   28: E*/
+
+ERROR 1: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:48
+'BadSpellingEnum' of derived type 'BadSpellingEnum', canonical type 'BadSpellingEnum'
+  46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+  47: */
+> 48: typedef enum {
+              ^^^^^^^
+> 49:   FOO
+> 50: } BadSpellingEnum;
+
+Seealso values must be (1) space away from colon not (24) [-fdoc-inline-list-formatting]:
+  44:   a note
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+  47: */
+  48: typedef enum {
+
+Docstring name 'bdSpllingenUm' does not match symbol. Assuming you meant 'BadSpellingEnum' [-fdoc-synopsis-matching-symbol-name]:
+  35: 
+  36: /*E
+> 37:   bdSpllingenUm - Lorem ipsum dolor
+        ^^^^^^^^^^^^^
+  38: 
+  39:   Not Collective
+
+Found self-referential seealso entry 'BadSpellingEnum'; your documentation may be good but it's not *that* good [-fdoc-inline-list-seealso-self-reference]:
+  44:   a note
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                                                                                                   ^^^^^^^^^^^^^^^
+  47: */
+  48: typedef enum {
+
+Found self-referential seealso entry 'BadSpellingEnum'; your documentation may be good but it's not *that* good [-fdoc-inline-list-seealso-self-reference]:
+  44:   a note
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                                                                                                                   ^^^^^^^^^^^^^^^
+  47: */
+  48: typedef enum {
+
+Seealso entry 'WellFormedEnum' is duplicate [-fdoc-inline-list-seealso-duplicate]:
+  44:   a note
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                                                                     ^^^^^^^^^^^^^^
+  47: */
+  48: typedef enum {
+
+Note first instance found here:
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                                                      ^^^^^^^^^^^^^^
+  47: */
+
+Seealso entry 'WellFormedEnum' is duplicate [-fdoc-inline-list-seealso-duplicate]:
+  44:   a note
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                                                                                    ^^^^^^^^^^^^^^
+  47: */
+  48: typedef enum {
+
+Note first instance found here:
+  45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+                                                      ^^^^^^^^^^^^^^
+  47: */
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -64,6 +135,8 @@ ERROR 0: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:29
 > 32:   CONSECTETUR,
 > 33:   ADAPISCING
 > 34: } IllFormedEnum;
+  35: 
+  36: /*E
 
 Invalid comment begin line, does not contain sowing identifier. Expected '/*E' for enums [-fdoc-sowing-chars]:
   18: } WellFormedEnum;
@@ -99,4 +172,31 @@ Docstring missing synopsis. Expected 'IllFormedEnum - a very useful description'
 > 26: $ADAPISCING - an adapiscing
   27: Level: advanced
   28: E*/
+
+ERROR 1: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:48
+'BadSpellingEnum' of derived type 'BadSpellingEnum', canonical type 'BadSpellingEnum'
+  46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+  47: */
+> 48: typedef enum {
+              ^^^^^^^
+> 49:   FOO
+> 50: } BadSpellingEnum;
+
+Required heading(s) 'Level' not found in docstring [-fdoc-inline-list-section-header-missing]:
+  34: } IllFormedEnum;
+  35: 
+> 36: /*E
+> 37:   bdSpllingenUm - Lorem ipsum dolor
+> 38: 
+> 39:   Not Collective
+> 40: 
+> 41: $ FOO - a foo
+> 42: 
+> 43:   Notes:
+> 44:   a note
+> 45: 
+> 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
+> 47: */
+  48: typedef enum {
+  49:   FOO
 [ROOT] -------------------------------------------------------------------------------------
