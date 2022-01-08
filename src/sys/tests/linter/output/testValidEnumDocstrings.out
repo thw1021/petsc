@@ -62,7 +62,7 @@ ERROR 1: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:48
 > 49:   FOO
 > 50: } BadSpellingEnum;
 
-Seealso values must be (1) space away from colon not (24) [-fdoc-inline-list-formatting]:
+Seealso values must be (1) space away from colon not (25) [-fdoc-inline-list-formatting]:
   44:   a note
   45: 
 > 46: .seealso:                         IllFormedEnum,WellFormedEnum,WellFormedEnum,WellFormedEnum,BadSpellingEnum,BadSpellingEnum
@@ -146,7 +146,7 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*E' f
   21:   IllFormedEnum -
   22: 
 
-Required heading(s) 'Seealso' not found in docstring [-fdoc-inline-list-section-header-missing]:
+Required section '.seealso' not found [-fdoc-inline-list-section-header-missing]:
   18: } WellFormedEnum;
   19: 
 > 20: /*
@@ -182,7 +182,7 @@ ERROR 1: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:48
 > 49:   FOO
 > 50: } BadSpellingEnum;
 
-Required heading(s) 'Level' not found in docstring [-fdoc-inline-list-section-header-missing]:
+Required section 'Level' not found [-fdoc-inline-list-section-header-missing]:
   34: } IllFormedEnum;
   35: 
 > 36: /*E
