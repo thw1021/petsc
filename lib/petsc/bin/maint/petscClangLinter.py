@@ -213,6 +213,8 @@ class PetscDocStringBase(object):
   ("section-spacing","Verify that there section headers are separated by at least 1 empty line"),
   ("section-header-solitary","Verify that qualifying section headers are alone on their line"),
   ("section-header-spelling","Verify section headers are correctly spelled"),
+  ("section-header-maybe-header","Check for lines that seem like they are supposed to be headers"),
+  ("section-header-fishy-header","Check for headers that seem like they should not be headers")
 )
 class PetscDocString(PetscDocStringBase):
   """
@@ -243,7 +245,7 @@ class PetscDocString(PetscDocStringBase):
       self.name     = name
       self.required = required
       self.titles   = tuple(titles)
-      self.keywords = tuple(keywords)
+      self.keywords = tuple(set(tuple(keywords)+self.titles))
       self.clear()
       return
 
@@ -255,7 +257,7 @@ class PetscDocString(PetscDocStringBase):
       ])
 
     def __bool__(self):
-      return bool(self.raw) or bool(self.lines) or bool(self.extent)
+      return bool(self.lines)
 
     def clear(self):
       self.raw    = ""
@@ -271,24 +273,25 @@ class PetscDocString(PetscDocStringBase):
       return
 
     def setup(self,docstring,inspectLine=lambda *args:None):
-      missingHeadDiag = self.diags.section_header_missing
-      uniqueHeadDiag  = self.diags.section_header_unique
-
-      if not self.lines:
+      if not self:
         if self.required:
-          name = self.transform(self.name)[1]
-          mess = "Required heading(s) '{}' not found in docstring".format(name)
-          docstring.addErrorFromSourceRange(missingHeadDiag,mess,docstring.extent,highlight=False)
+          diag = self.diags.section_header_missing
+          mess = "Required section '{}' not found".format(self.titles[0])
+          docstring.addErrorFromSourceRange(diag,mess,docstring.extent,highlight=False)
         return
 
-      seen = collections.defaultdict(list)
+      isHeading = docstring._getIsHeading(self)
+      seen      = collections.defaultdict(list)
       for loc,line in self.lines:
-        if self.isHeading(line):
-          possibleHeader = line.split(":",maxsplit=1)[0].strip()
-          eloc           = docstring.makeSourceRange(possibleHeader,line,loc.start.line)
-          seen[possibleHeader.casefold()].append(eloc)
+        if isHeading(line):
+          possibleHeader = line.split(":" if ":" in line else None,maxsplit=1)[0].strip()
+          seen[possibleHeader.casefold()].append(
+            docstring.makeSourceRange(possibleHeader,line,loc.start.line)
+          )
         # let each section type determine if this line is useful
         inspectLine(loc,line)
+
+      uniqueHeadDiag = self.diags.section_header_unique
       for heading,where in seen.items():
         if len(where) <= 1:
           continue
@@ -304,36 +307,14 @@ class PetscDocString(PetscDocStringBase):
               nafter = 2
           srclist.append(loc.formatted(numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
           prevLineBegin = startline
-        mess = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n{}".format(self.transform(self.name)[1],"\n".join(srclist))
+        mess = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n{}".format(self.transform(self.name),"\n".join(srclist))
         docstring._linter.addErrorFromCursor(docstring.cursor,Diagnostic(uniqueHeadDiag,mess))
       return
-
-    @staticmethod
-    def isHeading(item):
-      if isinstance(item,tuple):
-        assert len(item) == 2
-        assert isinstance(item[0],PetscSourceRange) and isinstance(item[1],str)
-        text = item[1]
-      elif isinstance(item,str):
-        text = item
-      else:
-        raise NotImplementedError(type(item))
-      text = text.strip()
-      if text.startswith(("+ ",". ","- ")):
-        return False
-      if text.endswith(":"):
-        return True
-      elif ": " in text and " :" not in text:
-        # check that all subsequent items after a ":" are letters, this ought to catch out
-        # instances of ":" in random code snippets or text...
-        return all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:])
-      return False
-
 
 
     @staticmethod
     def transform(text):
-      return text.istitle(),text.title()
+      return text.title()
 
     @staticmethod
     def checkIndentAllowed():
@@ -527,18 +508,19 @@ class PetscDocString(PetscDocStringBase):
       subheading       = 0
       groups           = collections.defaultdict(list)
       missingDescrDiag = self.diags.missing_description
+      isHeading        = ds._getIsHeading(self)
 
       def inspector(loc,line):
         if not line or line.isspace():
           return
-        elif self.isHeading(line) and len(groups.keys()):
+        elif isHeading(line) and len(groups.keys()):
           nonlocal subheading
           subheading += 1
         lstp = line.lstrip()
         if lstp.startswith(self.prefixes):
           _,arg,descr = self.splitParam(lstp)
           if not descr:
-            mess = "Parameter-list entry missing a description. Expected '{} - a very useful description'".format(arg)
+            mess = "Parameter list entry missing a description. Expected '{} - a very useful description'".format(arg)
             ds.addErrorFromSourceRange(missingDescrDiag,mess,loc)
           groups[subheading].append((loc,line,self.arglen(line)))
         return
@@ -577,11 +559,12 @@ class PetscDocString(PetscDocStringBase):
       return super().diagnostic(flag,"prose")
 
     def setup(self,ds,*args,**kwargs):
+      isHeading  = ds._getIsHeading(self)
       subheading = 0
       items      = {}
 
       def inspector(loc,line):
-        if self.isHeading(line):
+        if isHeading(line):
           head,_,rest = line.partition(":")
           head        = head.strip()
           if not head:
@@ -603,6 +586,49 @@ class PetscDocString(PetscDocStringBase):
 
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
       self.items = items
+      return
+
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
+  class SourceCode(SectionBase):
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"source-code")
+
+    def setup(self,ds,*args,**kwargs):
+      items = {}
+      if self:
+        startline  = self.extent.start.line
+        subheading = -1
+        dollars    = False
+
+      def inspector(loc,line):
+        nonlocal subheading,dollars
+        lstrp = line.lstrip()
+        if line.startswith((".vb","$")):
+          if line.startswith("$"):
+            dollars = True
+          else:
+            assert not dollars, "Mixing verbatim blocks and dollars?"
+          subheading += 1
+          items[subheading] = [dollars,loc.start.line-startline]
+        elif line.startswith(".ve"):
+          assert len(items[subheading]) == 2
+          items[subheading].append(loc.start.line-startline+1)
+        elif dollars:
+          items[subheading].append(loc.start.line-startline)
+          dollars = False
+        return
+
+      super().setup(ds,*args,**kwargs,inspectLine=inspector)
+
+      self.items = items
+      if 0: # TODO, think of checks to do for source code
+        for blockno,(dollars,begin,end) in self.items.items():
+          first,*interior,last = self.lines[begin:end]
+          if dollars:
+            pass
+          else:
+            pass
       return
 
   @DiagnosticManager.register(
@@ -633,13 +659,22 @@ class PetscDocString(PetscDocStringBase):
       alignMessBase   = "".join([
         self.name.title()," values must be (1) space away from colon not ({})"
       ])
+      titles = set(t.casefold() for t in self.titles)
 
       def inspector(loc,line):
         rest = (line.split(":",maxsplit=2)[1] if ":" in line else line).strip()
         if rest:
+          if ":" not in rest:
+            # try and see if this is one of the bad-egg lines where the heading is missing
+            # the colon
+            badTitle = next(filter(lambda t:t.casefold() in titles,rest.split()),None)
+            if badTitle:
+              # kind of a hack, we just erase the bad heading with whitespace so it isnt
+              # picked up below in the item detection
+              rest = rest.replace(badTitle," "*len(badTitle))
           startline = loc.start.line
           offset    = 0
-          for sub in map(lambda string: string.strip(),rest.split(",")):
+          for sub in filter(bool,map(lambda string: string.strip(),rest.split(","))):
             subloc = makeSourceRange(sub,line,startline,offset=offset)
             offset = subloc.end.column-1
             items.append((subloc,sub))
@@ -659,7 +694,7 @@ class PetscDocString(PetscDocStringBase):
                 offset = 0
                 fix    = " "
                 import ipdb; ipdb.set_trace()
-              mess = alignMessBase.format(nspaces)
+              mess = alignMessBase.format(nspaces+1)
               floc = makeSourceRange(sub,line,startline,offset=offset)
               ds.addErrorFromSourceRange(formatDiag,mess,floc,patch=Patch(floc,fix))
         return
@@ -671,7 +706,7 @@ class PetscDocString(PetscDocStringBase):
 
 
   class Sections(object):
-    __slots__ = "_sections"
+    __slots__ = "_sections","_findcache","_cachekey"
 
     def __init__(self,*args):
       assert len({s.name for s in args}) == len(args)
@@ -679,6 +714,7 @@ class PetscDocString(PetscDocStringBase):
       for section in args:
         sections[section.name] = section
       self._sections = sections
+      self._resetCache()
       return
 
     def __getattr__(self,attr):
@@ -699,39 +735,64 @@ class PetscDocString(PetscDocStringBase):
       return self.registered(section)
 
 
+    def _resetCache(self):
+      self._cachekey  = tuple(self._sections.keys())
+      self._findcache = {self._cachekey : {}}
+      return
+
+
+    def guessHeading(self,heading):
+      return guess
+
     def find(self,heading):
-      sections     = self._sections
+      sections = self._sections
+      cache    = self._findcache[self._cachekey]
+      try:
+        return sections[cache[heading]]
+      except KeyError:
+        pass
       sectionNames = sections.keys()
       get_matches  = difflib.get_close_matches
       try:
         match = get_matches(heading,sectionNames,n=1)[0]
+        reason = "name" # delete me
       except IndexError:
         keywords = [(kw,s.name) for kw,s in self.keywords(sections=True)]
-        match    = get_matches(heading,(k for k,_ in keywords),n=1)
-        if match:
-          match = next(filter(lambda item: item[0] == match[0],keywords))[1]
-        else:
+        kwOnly   = [k for k,_ in keywords]
+        try:
+          match = get_matches(heading,kwOnly,n=1)[0]
+          reason = "keyword" # delete me
+        except IndexError:
           # try if we can find a sub-word
-          headSplit = heading.split()
+          match = None
           # if heading splits into more than 3 params, then chances are its being mislabeled
           # as a heading anyways
-          for head in headSplit[:min(3,len(headSplit))]:
+          for head in heading.split(maxsplit=3):
             try:
-              match = get_matches(head,sectionNames,n=1)[0]
+              # higher cutoff, we have to be pretty sure of a match when using subwords,
+              # because it's a lot easier for false positives
+              match = get_matches(head,kwOnly,n=1,cutoff=0.8)[0]
             except IndexError:
               continue
+            reason = "subword" # delete me
             break
+        match = next(filter(lambda item: item[0] == match,keywords))[1] if match else None
       if match:
         print(
-          "**** CLOSEST MATCH FOUND {:{}} FOR {}".format(match,max(map(len,sectionNames)),heading)
+          "**** CLOSEST MATCH FOUND {:{}} FROM {:{}} FOR {}".format(match,max(map(len,sectionNames)),reason,len("not found"),heading)
         )
-        return sections[match]
-      if heading.endswith(":") or ": " in heading:
+      elif heading.endswith(":") or ": " in heading:
         print(80*"*","UNHANDLED HEADING {}".format(heading),80*"*",sep="\n")
         # this should be handled
-        return self._sections["UNKNOWN"]
-      # when in doubt, it's probably notes
-      return self._sections["notes"]
+        match = "UNKNOWN"
+      else:
+        reason = "not found"
+        print(
+          "*********** DEFAULTED TO {:{}} FROM {} FOR {}".format("NOTES",max(map(len,sectionNames)),reason,heading)
+        )
+        # when in doubt, it's probably notes
+        match = "notes"
+      return sections[cache.setdefault(heading,match)]
 
     def registered(self,section):
       if isinstance(section,PetscDocString.SectionBase):
@@ -743,6 +804,7 @@ class PetscDocString(PetscDocStringBase):
     def addSection(self,section):
       assert not self.registered(section),"overwriting section"
       self._sections[section.name] = section
+      self._resetCache()
       return
 
     def titles(self,sections=False):
@@ -755,12 +817,46 @@ class PetscDocString(PetscDocStringBase):
         return ((keyword,section) for section in self for keyword in section.keywords)
       return (keyword for section in self for keyword in section.keywords)
 
+    def isHeading(self,item):
+      if isinstance(item,tuple):
+        assert len(item) == 2
+        assert isinstance(item[0],PetscSourceRange) and isinstance(item[1],str)
+        text = item[1]
+      elif isinstance(item,str):
+        text = item
+      else:
+        raise NotImplementedError(type(item))
+      IS_HEADING_BUT_PROBABLY_SHOULDNT_BE = -1
+      NOT_HEADING   = 0
+      IS_HEADING    = 1
+      MAYBE_HEADING = 2
+      text = text.strip()
+      if not text or text.startswith(("+ ",". ","- ")):
+        return NOT_HEADING
+      if text.endswith(":"):
+        if text.endswith(("follows:","following:","example:","instance:","one of:")):
+          return IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+        return IS_HEADING
+      if ": " in text and " :" not in text:
+        # check that all subsequent items after a ":" are letters, this ought to catch out
+        # instances of ":" in random code snippets or text...
+        return int(all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:]))
+      try:
+        found = next(filter(text.casefold().startswith,(t.casefold() for t in self.titles())))
+      except StopIteration:
+        return NOT_HEADING
+      else:
+        return MAYBE_HEADING
+
+
+
   sections = Sections(
     Synopsis("synopsis",required=True,keywords=("Synopsis","Not Collective")),
     ParameterList("parameters",titles=("Input Parameter","Output Parameter")),
     ParameterList("options",titles=("Options Database",)),
     Prose("notes"),
     Prose("fortran notes",keywords=("Fortran",)),
+    SourceCode("code",titles=("Example Usage",),keywords=("Example","Usage","Sample Usage",)),
     Prose("developer notes"),
     Prose("references"),
     InlineList("level",required=True),
@@ -814,7 +910,9 @@ class PetscDocString(PetscDocStringBase):
 
   @classmethod
   def _getSanitizedCommentAndRangeFromCursor(cls,cursor):
-    assert isinstance(cursor,PetscCursor)
+    if not isinstance(cursor,PetscCursor):
+      raise ValueError(type(cursor))
+
     raw,extent = cursor.getCommentAndRange()
 
     if not cls.isValidDocstring(cursor,raw):
@@ -836,6 +934,16 @@ class PetscDocString(PetscDocStringBase):
       extent = extent.resized(lbegin=offset,cbegin=None,cend=None)
     return raw,extent
 
+  @classmethod
+  def isHeading(cls,*args,**kwargs):
+    return cls.sections.isHeading(*args,**kwargs)
+
+  @classmethod
+  def _getIsHeading(cls,section):
+    return getattr(section,"isHeading",cls.sections.isHeading)
+
+
+
   @staticmethod
   def makeErrorMessage(message,crange,numContext=2,**kwargs):
     return ":\n".join([message,crange.formatted(numContext=numContext,**kwargs)])
@@ -856,12 +964,15 @@ class PetscDocString(PetscDocStringBase):
 
 
   def _checkValidCursorLinkage(self):
+    """
+    check that a cursor has external linkage, there is no point producing a manpage for function
+    that is impossible to call
+    """
     cursor = self.cursor
     # TODO, this should probably also check that the header the cursor is defined in is public
     hasIntLinkage,linkageCursorName,linkageCursor = cursor.hasInternalLinkage()
     if hasIntLinkage and not cursor.translation_unit.spelling.endswith((".h",".hpp")):
       mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
-      # TODO: could have a fixit here to simply delete the docstring
       self._linter.addErrorFromCursor(cursor,Diagnostic(self.diags.internal_linkage,mess))
     return
 
@@ -949,22 +1060,45 @@ class PetscDocString(PetscDocStringBase):
       self.addErrorFromSourceRange(diag,mess,loc,highlight=False,patch=Patch(loc,"\n"))
     return
 
+  def _checkSectionHeaderTypo(self,line,lineno):
+    assert ":" not in line, "':' in line that is ambiguously a header: {}".format(line)
+    name  = line.lstrip().split(maxsplit=1)[0].rstrip()
+    match = difflib.get_close_matches(name,self.sections.find(name.casefold()).titles,n=1)[0]
+    mess  = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
+    diag  = self.diags.section_header_maybe_header
+    self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(name,line,lineno))
+    return
+
+  def _checkSectionHeaderThatProbablyShouldNotBeOne(self,line,lineno):
+    def smartTruncate(content,length=35,suffix=" [...]"):
+      if len(content) <= length:
+        return content
+      return content[:length].rsplit(maxsplit=1)[0]+suffix
+
+    eloc = self.makeSourceRange(":",line,lineno,offset=line.rfind(":"))
+    mess = "Sowing treats all lines ending with ':' as header, are you sure '{}' qualifies? Use '\:' to escape the colon if not".format(smartTruncate(line.strip()))
+    self.addErrorFromSourceRange(self.diags.section_header_fishy_header,mess,eloc)
+    return
 
   def parse(self):
-    for s in self.sections:
+    sections = self.sections
+    for s in sections:
       s.clear()
     self._checkValidCursorLinkage()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
+
     rawData     = []
-    section     = self.sections.synopsis
+    section     = sections.synopsis
+    findSection = sections.find
     checkIndent = section.checkIndentAllowed()
-    isHeading   = section.isHeading
+    isHeading   = self._getIsHeading(section)
     for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
       lstrip = line.lstrip()
       if lstrip.startswith("/*") or lstrip.endswith("*/"):
         continue
 
+      # TODO remove this, the current active section should be deciding what to do here instead
       # we shouldn't be checking indentation in verbatim blocks
       if lstrip.startswith(".vb"):
         checkIndent = False
@@ -976,26 +1110,36 @@ class PetscDocString(PetscDocStringBase):
       elif checkIndent:
         self._checkValidIndentation(lineno,line,lstrip)
 
-      if isHeading(lstrip):
+      heading = isHeading(lstrip)
+      if heading > 0:
+        if heading == 2:
+          self._checkSectionHeaderTypo(line,lineno)
         self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
-        newSection = self.sections.find(lstrip.split(":",maxsplit=1)[0].strip().casefold())
-        # TODO: find a way to return to a previous section using context hints rather than
-        # a specific title name
+        newSection = findSection(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
           section.fill(rawData)
           rawData     = []
           section     = newSection
           checkIndent = newSection.checkIndentAllowed()
-          isHeading   = newSection.isHeading
+          isHeading   = self._getIsHeading(section)
+      elif heading < 0:
+        self._checkSectionHeaderThatProbablyShouldNotBeOne(line,lineno)
       rawData.append((self.makeSourceRange(line,line,lineno),line))
 
-    section.fill(rawData)
-    for section in self.sections:
-      section.setup(self)
+    if rawData:
+      section.fill(rawData)
+    for s in sections:
+      s.setup(self)
     return self
 
 
-  def checkValidSolitarySectionHeadings(self,section,headings,delim=":"):
+  def getSectionHeadings(self,section):
+    return list(filter(self._getIsHeading(section),section.lines))
+
+  def checkValidSolitarySectionHeadings(self,section,headings=None,delim=":"):
+    if headings is None:
+      headings = self.getSectionHeadings(section)
+
     for loc,text in headings:
       _,sep,after = text.partition(delim)
       assert sep
@@ -1005,7 +1149,10 @@ class PetscDocString(PetscDocStringBase):
         self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(after,text,loc.start.line))
     return
 
-  def checkValidSectionHeaderSpelling(self,section,headings,transform=None,delim=":"):
+  def checkValidSectionHeaderSpelling(self,section,headings=None,transform=None,delim=":"):
+    if headings is None:
+      headings = self.getSectionHeadings(section)
+
     if transform is None:
       transform = section.transform
 
@@ -1014,15 +1161,15 @@ class PetscDocString(PetscDocStringBase):
     for loc,text in headings:
       before,sep,_ = text.partition(delim)
       if not sep:
-        import ipdb; ipdb.set_trace()
+        before,sep = text.split(maxsplit=1)
       assert sep
       heading = before.strip()
       if any(t in heading for t in titles):
         continue
 
-      headingLoc       = self.makeSourceRange(heading,text,loc.start.line)
-      wasValid,correct = transform(heading)
-      if not wasValid and any(t in correct for t in titles):
+      headingLoc = self.makeSourceRange(heading,text,loc.start.line)
+      correct    = transform(heading)
+      if heading != correct and any(t in correct for t in titles):
         mess = "Invalid header spelling. Expected '{}' found '{}'".format(correct,heading)
         self.addErrorFromSourceRange(diag,mess,headingLoc,patch=Patch(headingLoc,correct))
         continue
@@ -1431,7 +1578,7 @@ class Patch(object):
     self.extent   = validrange(srcRange)
     self.ctxlines = contextlines
     self.src      = self._makeSource()
-    self.deltas   = [self.Delta(value,self.extent,self.ctxlines)]
+    self.deltas   = (self.Delta(value,self.extent,self.ctxlines),)
     self.fixed    = None
     self.fixDepth = 0
     return
@@ -1442,6 +1589,15 @@ class Patch(object):
 
   def _makeSource(self):
     return self.extent.raw(numContext=self.ctxlines)
+
+  def _contiguousExtent(self):
+    """
+    does my extent (which is the union of the extents of my all my deltas) have no holes?
+    """
+    deltas = self.deltas
+    if len(deltas) == 1:
+      return True
+    return all(p.extent.overlaps(c.extent) for p,c in zip(deltas[:-1],deltas[1:]))
 
   def discard(self):
     """
@@ -1579,42 +1735,39 @@ class Patch(object):
         )[:-1] # remove final newline
     return merged
 
-  def merge(self,other):
-    def checkOverlapping(left,right):
-      lextent = left.extent
-      if lextent in right.extent:
-        if any(d.deleter() and lextent in d.extent for d in right.deltas):
-          # if right envelops left and deletes all of left's changes then left is
-          # pointless
-          left.discard()
-          return right
-        if not left.combine: # TODO this is a hack, we are just throwing our hands up here
-          print("LEFT CANNOT COMBINE, MUST BE DISCARDED")
-          import ipdb; ipdb.set_trace()
-          left.discard()
-          return right
-        # import ipdb; ipdb.set_trace()
-        # merged = Patch.mergeDiff3(left,right)
-      return None
+  def isDeletionSupersetOf(self,other):
+    """
+    determine if any of self's deltas delete all of other's extent, in which case other is a
+    pointless patch and its error messages can be discarded
+    """
+    oextent = other.extent
+    if oextent in self.extent:
+      deltas = self.deltas
+      # first check if any one delta deletes all of other, then check if all deltas are deleters,
+      return any(d.deleter() and oextent in d.extent for d in deltas) or \
+        (self._contiguousExtent() and all(d.deleter() for d in deltas))
+    return False
 
+  def merge(self,other):
     if not isinstance(other,type(self)):
       raise ValueError(type(other))
 
-    ret = checkOverlapping(self,other)
-    if ret is not None:
-      return ret
-
-    ret = checkOverlapping(other,self)
-    if ret is not None:
-      return ret
+    if self.isDeletionSupersetOf(other):
+      other.discard()
+      return self
+    elif other.isDeletionSupersetOf(self):
+      self.discard()
+      return other
 
     assert self.src == other.src,"Need to update offset calculation to handle arbitrary src"
 
     self.extent = self.extent.mergeWith(other.extent)
+    # uncomment when it handles arbitrary source
+    # self.src    = self._makeSource()
     # fixes and ranges must be applied in order
     combined    = self.deltas+other.deltas
-    argsort     = sorted(range(len(combined)),key=lambda x: combined.__getitem__(x).extent)
-    self.deltas = [combined[i] for i in argsort]
+    argsort     = sorted(range(len(combined)),key=lambda x: combined[x].extent)
+    self.deltas = tuple(combined[i] for i in argsort)
     return self
 
   def collapse(self):
@@ -2191,6 +2344,7 @@ TODO:
 - figure out how to handle overwriting fixits...
 - figure out how to handle in-out parameters
 - fix indentation check when indenting overflowing parameter list descriptions, should be indented to the dash not 2 columns
+- think of checks to do for SourceCode sections
 """
 def alwaysTrue(*args,**kwargs):
   return True
@@ -2276,7 +2430,7 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
     remove  = set()
     for i,(loc,text,_) in enumerate(group):
       _,arg,_ = splitParam(text)
-      asplit  = arg.split(",")
+      asplit  = [a.strip() for a in arg.split(",")]
       if len(asplit) > 1:
         mess = "Each parameter entry must be documented separately on its own line"
         eloc = docstring.makeSourceRange(arg,text,loc.start.line)
@@ -2332,7 +2486,7 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
         pass
       else:
         matchCursor = [c for c in cursorList if c.name == match][0]
-        message    += "\n\nmaybe you meant {}".format(matchCursor.getFormattedBlurb())
+        message    += "\n\nmaybe you meant {}?".format(matchCursor.getFormattedBlurb())
         argsLeft.remove(match)
       linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
 
@@ -2346,12 +2500,12 @@ def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
   if not options:
     return
 
-  headings = [l for l in options.lines if options.isHeading(l)]
-  docstring.checkValidSectionHeaderSpelling(options,headings)
-  docstring.checkValidSolitarySectionHeadings(options,headings)
+  docstring.checkValidSectionHeaderSpelling(options)
+  docstring.checkValidSolitarySectionHeadings(options)
 
+  check = options.checkAlignedDescriptions
   for _,group in sorted(options.items.items()):
-    options.checkAlignedDescriptions(docstring,group)
+    check(docstring,group)
   return
 
 @DiagnosticManager.register(
@@ -2364,12 +2518,12 @@ def checkDocValidLevel(linter,cursor,docstring):
     # if no level, nothing to check here, error will already have been logged
     return
 
+  docstring.checkValidSectionHeaderSpelling(level)
+
   casefoldDiag = checkDocValidLevel.diags.level_casefold
   spellingDiag = checkDocValidLevel.diags.level_spelling
-  docstring.checkValidSectionHeaderSpelling(level,[l for l in level.lines if level.isHeading(l)])
-
-  validLevels = ("beginner","intermediate","advanced","developer","deprecated")
-  expected    = ", or ".join([", ".join(validLevels[:-1]),validLevels[-1]])
+  validLevels  = ("beginner","intermediate","advanced","developer","deprecated")
+  expected     = ", or ".join([", ".join(validLevels[:-1]),validLevels[-1]])
   for loc,levelName in level.items:
     if levelName not in validLevels:
       locase = levelName.casefold()
@@ -2379,9 +2533,9 @@ def checkDocValidLevel(linter,cursor,docstring):
         )
         docstring.addErrorFromSourceRange(casefoldDiag,mess,loc,patch=Patch(loc,locase))
       else:
-        closeMatches = difflib.get_close_matches(locase,validLevels,n=1)
-        if closeMatches:
-          match = closeMatches[0]
+        match = difflib.get_close_matches(locase,validLevels,n=1)
+        if match:
+          match = match[0]
           mess  = "Unknown Level subheading '{}', assuming you meant '{}'".format(levelName,match)
           patch = Patch(loc,match)
         else:
@@ -2417,7 +2571,9 @@ def checkDocValidLevel(linter,cursor,docstring):
       #                 |
       #              delrange
       # delete delrange from it to get '  Level: blabla'
-      linter.addErrorFromCursor(cursor,errorMessage,patch=Patch(delrange,""))
+      # TODO: make a real diagnostic here
+      diag = Diagnostic(spellingDiag,errorMessage,patch=Patch(delrange,""))
+      linter.addErrorFromCursor(cursor,diag)
     prevloc  = loc
     prevline = line
   return
@@ -2432,14 +2588,9 @@ def checkDocValidSeealso(linter,cursor,docstring):
     return
 
   def transform(text):
-    return text.islower(),text.lower()
+    return text.lower()
 
-  def isHeading(line):
-    text = line[1]
-    return text and ":" in text and text.startswith(".")
-
-  headings = list(filter(isHeading,seealso.lines))
-  docstring.checkValidSectionHeaderSpelling(seealso,headings,transform=transform)
+  docstring.checkValidSectionHeaderSpelling(seealso,transform=transform)
 
   def makeDeletionPatch(loc,text,lookBehind):
     """
@@ -2466,6 +2617,7 @@ def checkDocValidSeealso(linter,cursor,docstring):
       cbegin = 0
     return Patch(loc.resized(cbegin=cbegin,cend=cend),"")
 
+
   items       = seealso.items
   lastLoc     = items[-1][0]
   itemRemain  = []
@@ -2487,6 +2639,8 @@ def checkDocValidSeealso(linter,cursor,docstring):
       seen[text] = (loc,text)
       continue
 
+    if not text:
+      import ipdb; ipdb.set_trace()
     mess = "\n\n".join((
       docstring.makeErrorMessage("Seealso entry '{}' is duplicate".format(text),loc),
       docstring.makeErrorMessage("Note first instance found here",seen[text][0],numContext=1)
@@ -2522,9 +2676,8 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
       docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
     return
 
-  headings = [l for l in params.lines if params.isHeading(l)]
-  docstring.checkValidSectionHeaderSpelling(params,headings)
-  docstring.checkValidSolitarySectionHeadings(params,headings)
+  docstring.checkValidSectionHeaderSpelling(params)
+  docstring.checkValidSolitarySectionHeadings(params)
 
   requiresC    = []
   POINTER_KIND = clx.TypeKind.POINTER
@@ -2574,6 +2727,7 @@ def checkDocValidEnumParameters(linter,cursor,docstring):
     linter,docstring,synopsis.items,enumParams,skipGroup=skipGroup,checkIndices=True,char="$"
   )
   return
+
 
 """Specific 'driver' function to test a particular docstring archetype"""
 def checkPetscFunctionDocString(linter,cursor):
