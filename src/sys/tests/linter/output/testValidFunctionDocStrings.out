@@ -64,7 +64,7 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
   46: 
   47:   level: Lorem ipsum dolor sit amet
 
-Seealso values must be (1) space away from colon not (49) [-fdoc-inline-list-formatting]:
+Seealso values must be (1) space away from colon not (50) [-fdoc-inline-list-formatting]:
   66:   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
   67: 
 > 68: .seealso:                                                  testNonExistentFunction(), testNonExistentType,
@@ -145,7 +145,7 @@ Missing empty line between sections, must have one before this section [-fdoc-se
 Found parameter docstring(s) but 'testIllFormedMinimalDocString()' has no arguments [-fdoc-param-list-extra-parameter]:
   78:   Not Collective, Synchronous
   79: 
-> 80:   inpt parms:
+> 80:   input parms:
 > 81: . foo
 > 82: 
 > 83:   Output params:
@@ -339,7 +339,7 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
 > 180: + nonExistentParam - this param does not exist
        ^
   181: 
-  182:   Level: dev
+  182:   Level dev
 
 Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-fdoc-section-header-spelling]:
   176:   testParameterGrouping - ipsum
@@ -350,7 +350,7 @@ Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-
   180: + nonExistentParam - this param does not exist
 
 Unknown section header '.see also', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
-  182:   Level: dev
+  182:   Level dev
   183: 
 > 184: .see also: testStaticFunction()
        ^^^^^^^^^
@@ -367,6 +367,30 @@ ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:72
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   73: {
   74:   return 0;
+
+Sowing treats all lines ending with ':' as header, are you sure 'qui officia deserunt mollit anim [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
+  53: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+  54: labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
+> 55: qui officia deserunt mollit anim id est laborum as follows:
+                                                                ^
+  56: 
+  57: Notes Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+
+Line seems to be a section header but missing ':', did you mean 'Notes:'? [-fdoc-section-header-maybe-header]:
+  55: qui officia deserunt mollit anim id est laborum as follows:
+  56: 
+> 57: Notes Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+      ^^^^^
+  58: incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident,
+  59: sunt in culpa qui officia deserunt mollit anim id est laborum example.
+
+Sowing treats all lines ending with ':' as header, are you sure 'qui officia deserunt mollit anim [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
+  62: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+  63: labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
+> 64: qui officia deserunt mollit anim id est laborum instance:
+                                                              ^
+  65: 
+  66: References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
 Multiple 'Level' subheadings. Much like Highlanders, there can only be one [-fdoc-inline-list-section-header-unique]:
   45: . z - a nonexistent parameter
@@ -402,7 +426,7 @@ maybe you meant 'cond' of derived type 'PetscBool', canonical type 'PetscBool'
                                                                                                     ^^^^^^^^^^^^^^
   73: {
   74:   return 0;
-
+?
 
 Extra docstring parameter 'z' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
   43: - y          - a pointer
@@ -419,7 +443,7 @@ maybe you meant 'x' of derived type 'PetscInt', canonical type 'int'
                                                                         ^^^^^^^^^^
   73: {
   74:   return 0;
-
+?
 
 Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
   45: . z - a nonexistent parameter
@@ -446,15 +470,15 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*@' f
   78:   Not Collective, Synchronous
   79: 
 
-Parameter-list entry missing a description. Expected 'foo - a very useful description' [-fdoc-param-list-missing-description]:
+Parameter list entry missing a description. Expected 'foo - a very useful description' [-fdoc-param-list-missing-description]:
   79: 
-  80:   inpt parms:
+  80:   input parms:
 > 81: . foo
       ^^^^^
   82: 
   83:   Output params:
 
-Parameter-list entry missing a description. Expected 'bar - a very useful description' [-fdoc-param-list-missing-description]:
+Parameter list entry missing a description. Expected 'bar - a very useful description' [-fdoc-param-list-missing-description]:
   82: 
   83:   Output params:
 > 84: + bar -
@@ -462,13 +486,13 @@ Parameter-list entry missing a description. Expected 'bar - a very useful descri
   85: 
   86:   References:
 
-Required heading(s) 'Level' not found in docstring [-fdoc-inline-list-section-header-missing]:
+Required section 'Level' not found [-fdoc-inline-list-section-header-missing]:
   75: }
   76: 
 > 77: /*
 > 78:   Not Collective, Synchronous
 > 79: 
-> 80:   inpt parms:
+> 80:   input parms:
 > 81: . foo
 > 82: 
 > 83:   Output params:
@@ -486,7 +510,7 @@ Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very use
   77: /*
 > 78:   Not Collective, Synchronous
 > 79: 
-  80:   inpt parms:
+  80:   input parms:
   81: . foo
 
 ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:146
@@ -573,6 +597,14 @@ ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
   187: {
   188:   return 0;
 
+Line seems to be a section header but missing ':', did you mean 'Level:'? [-fdoc-section-header-maybe-header]:
+  180: + nonExistentParam - this param does not exist
+  181: 
+> 182:   Level dev
+         ^^^^^
+  183: 
+  184: .see also: testStaticFunction()
+
 Each parameter entry must be documented separately on its own line [-fdoc-param-list-solitary-parameter]:
   177: 
   178:   Input parameters:
@@ -587,13 +619,13 @@ Extra docstring parameter 'nonExistentParam' not found in symbol parameter list 
 > 180: + nonExistentParam - this param does not exist
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   181: 
-  182:   Level: dev
+  182:   Level dev
 
 Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
   180: + nonExistentParam - this param does not exist
   181: 
-> 182:   Level: dev
-                ^^^
+> 182:   Level dev
+               ^^^
   183: 
   184: .see also: testStaticFunction()
 [ROOT] -------------------------------------------------------------------------------------
