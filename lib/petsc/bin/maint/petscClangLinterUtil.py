@@ -769,14 +769,15 @@ class Diagnostic(object):
     ))
 
   def formatMessage(self):
+    sub     = ":\n"
     message = self.message
-    pos     = message.find(":")
+    pos     = message.find(sub)
     if pos == -1:
       ret = "".join((message,self.clflag))
     else:
       if message[pos-1].isdigit():
         import ipdb; ipdb.set_trace()
-      ret = message.replace(":",self.clflag+":",1)
+      ret = message.replace(sub,self.clflag+sub,1)
     return ret
 
   def disabled(self):

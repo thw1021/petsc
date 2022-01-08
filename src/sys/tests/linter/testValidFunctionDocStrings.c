@@ -52,16 +52,16 @@ PetscErrorCode testWellFormedFunctionDocString(PetscViewer viewer, PetscInt x, P
   Developer Notes:
   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
   labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
-  qui officia deserunt mollit anim id est laborum.
+  qui officia deserunt mollit anim id est laborum as follows:
 
-  Notes: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+  Notes Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
   incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident,
-  sunt in culpa qui officia deserunt mollit anim id est laborum.
+  sunt in culpa qui officia deserunt mollit anim id est laborum example.
 
   Fortran Notes:
   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
   labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
-  qui officia deserunt mollit anim id est laborum.
+  qui officia deserunt mollit anim id est laborum instance:
 
   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
@@ -77,7 +77,7 @@ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, Pe
 /*
   Not Collective, Synchronous
 
-  inpt parms:
+  input parms:
 . foo
 
   Output params:
@@ -179,7 +179,7 @@ PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 - a,b - some params
 + nonExistentParam - this param does not exist
 
-  Level: dev
+  Level dev
 
 .see also: testStaticFunction()
 @*/
