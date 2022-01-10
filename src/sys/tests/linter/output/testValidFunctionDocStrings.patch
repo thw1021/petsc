@@ -142,12 +142,12 @@
 +
 +  Level: intermediate
  
- .zeeakso: testNonExistentFunction(), testNonExistentType
+ .zeeakso:
 @@ -112,5 +112,5 @@
    lvl: itnmediate
  
--.zeeakso: testNonExistentFunction(), testNonExistentType
-+.seealso: testNonExistentFunction(), testNonExistentType
+-.zeeakso:
++.seealso:
  C@*/
  PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 @@ -119,5 +119,6 @@
@@ -171,7 +171,7 @@
 -  Level: beginner developer
 +  Level: developer
  
- .seealso: foo()
+ .seealso:
 @@ -179,5 +179,5 @@
    testParameterGrouping - ipsum
  
