@@ -146,6 +146,14 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*E' f
   21:   IllFormedEnum -
   22: 
 
+Synopsis missing a description, expected 'SYMBOL NAME - a very useful description [-fdoc-synopsis-missing-description]:
+  19: 
+  20: /*
+> 21:   IllFormedEnum -
+      ^^^^^^^^^^^^^^^^^
+  22: 
+  23: $ SIT- A sit
+
 Required section '.seealso' not found [-fdoc-inline-list-section-header-missing]:
   18: } WellFormedEnum;
   19: 
@@ -160,18 +168,6 @@ Required section '.seealso' not found [-fdoc-inline-list-section-header-missing]
 > 28: E*/
   29: typedef enum {
   30:   SIT,
-
-Docstring missing synopsis. Expected 'IllFormedEnum - a very useful description' [-fdoc-synopsis-missing-description]:
-  19: 
-  20: /*
-> 21:   IllFormedEnum -
-> 22: 
-> 23: $ SIT- A sit
-> 24: $ CONSECTETUR - A consectetur
-> 25:  $ AMET - An amet
-> 26: $ADAPISCING - an adapiscing
-  27: Level: advanced
-  28: E*/
 
 ERROR 1: ./src/sys/tests/linter/testValidEnumDocstrings.c:9:48
 'BadSpellingEnum' of derived type 'BadSpellingEnum', canonical type 'BadSpellingEnum'
