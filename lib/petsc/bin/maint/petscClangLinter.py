@@ -217,7 +217,8 @@ class PetscDocStringBase(object):
   ("section-header-solitary","Verify that qualifying section headers are alone on their line"),
   ("section-header-spelling","Verify section headers are correctly spelled"),
   ("section-header-maybe-header","Check for lines that seem like they are supposed to be headers"),
-  ("section-header-fishy-header","Check for headers that seem like they should not be headers")
+  ("section-header-fishy-header","Check for headers that seem like they should not be headers"),
+  ("section-barren","Check for sections containing a title and nothing else")
 )
 class PetscDocString(PetscDocStringBase):
   """
@@ -267,6 +268,7 @@ class PetscDocString(PetscDocStringBase):
       self.raw    = ""
       self.extent = None
       self.lines  = []
+      self.items  = None
       return
 
     def fill(self,data):
@@ -318,6 +320,9 @@ class PetscDocString(PetscDocStringBase):
         docstring._linter.addErrorFromCursor(docstring.cursor,Diagnostic(uniqueHeadDiag,mess))
       return
 
+    def barren(self):
+      lines = self.lines
+      return not self.items and sum(not line.strip() for _,line in lines) == len(lines)-1
 
     @staticmethod
     def transform(text):
@@ -348,6 +353,9 @@ class PetscDocString(PetscDocStringBase):
     @classmethod
     def diagnostic(cls,flag):
       return super().diagnostic(flag,"synopsis")
+
+    def barren(self):
+      return False # synoposis is never barren
 
     def setup(self,ds,*args,**kwargs):
       found = False
@@ -580,7 +588,7 @@ class PetscDocString(PetscDocStringBase):
             (ds.makeSourceRange(head,line,startLine),head),
             [(ds.makeSourceRange(rest,line,startLine),rest)] if rest else []
           )
-        elif line:
+        elif line.strip():
           try:
             items[subheading][1].append((loc,line))
           except KeyError:
@@ -1079,6 +1087,9 @@ class PetscDocString(PetscDocStringBase):
     return
 
   def _checkSectionHeaderTypo(self,line,lineno):
+    """
+    check that a section header that looks like a section header is one
+    """
     assert ":" not in line, "':' in line that is ambiguously a header: {}".format(line)
     name,match = self.sections.guessHeading(line)
     mess = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
@@ -1087,9 +1098,22 @@ class PetscDocString(PetscDocStringBase):
     return
 
   def _checkSectionHeaderThatProbablyShouldNotBeOne(self,line,lineno):
+    """
+    check that a section header that ends with ':' is not really a header
+    """
     eloc = self.makeSourceRange(":",line,lineno,offset=line.rfind(":"))
     mess = "Sowing treats all lines ending with ':' as header, are you sure '{}' qualifies? Use '\:' to escape the colon if not".format(textwrap.shorten(line.strip(),width=35))
     self.addErrorFromSourceRange(self.diags.section_header_fishy_header,mess,eloc)
+    return
+
+  def _checkSectionIsNotBarren(self,section):
+    """
+    check that a section isn't just a solitary header out on its own
+    """
+    if section and section.barren():
+      diag = self.diags.section_barren
+      mess = "Section appears to be empty; while I'm all for a good mystery, you should probably elaborate here"
+      self.addErrorFromSourceRange(diag,mess,section.extent,highlight=not (len(section.lines)-1))
     return
 
 
@@ -1144,6 +1168,7 @@ class PetscDocString(PetscDocStringBase):
       section.fill(rawData)
     for s in sections:
       s.setup(self)
+      self._checkSectionIsNotBarren(s)
     return self
 
 
@@ -1192,7 +1217,7 @@ class PetscDocString(PetscDocStringBase):
         # missing colon, but if we are at this point then we were pretty it is a header,
         # so we assume the first word is the header
         before,_ = self.sections.guessHeading(text)
-      assert before
+
       heading = before.strip()
       if any(t in heading for t in titles):
         continue
@@ -2418,14 +2443,9 @@ def alwaysFalse(*args,**kwargs):
 
 """utilities for checking docstrings"""
 def checkDocValidSynopsis(linter,cursor,docstring):
-  synopsis = docstring.sections.synopsis
-  if not synopsis:
-    import ipdb; ipdb.set_trace()
-    # wtf
-    return
-
-  foundSynopsis = False
   cursorName    = PetscCursor.getNameFromCursor(cursor)
+  synopsis      = docstring.sections.synopsis
+  foundSynopsis = False
   for lineLoc,line in synopsis.lines:
     symbol,dash,rest = line.partition("-")
     if symbol.lstrip().startswith("$"):
@@ -2650,11 +2670,6 @@ def checkDocValidSeealso(linter,cursor,docstring):
   if not seealso:
     return
 
-  def transform(text):
-    return text.lower()
-
-  docstring.checkValidSectionHeaderSpelling(seealso,transform=transform)
-
   def makeDeletionPatch(loc,text,lookBehind):
     """
     first(),    second(),      third
@@ -2680,6 +2695,10 @@ def checkDocValidSeealso(linter,cursor,docstring):
       cbegin = 0
     return Patch(loc.resized(cbegin=cbegin,cend=cend),"")
 
+
+  docstring.checkValidSectionHeaderSpelling(seealso,transform=str.casefold)
+  if seealso.barren():
+    return # barren
 
   items       = seealso.items
   lastLoc     = items[-1][0]
