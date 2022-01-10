@@ -21,7 +21,9 @@ import ctypes
 import difflib
 import re
 import weakref
-import operator
+import textwrap
+if sys.version_info < (3,4):
+  raise RuntimError("Need python 3.4 for textwrap.shorten()")
 import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil as pclu
@@ -460,18 +462,20 @@ class PetscDocString(PetscDocStringBase):
       return sum(map(len,text.partition(param)[:2]))
 
     @classmethod
-    def checkAlignedDescriptions(cls,ds,group,maxArgLen=None,**kwargs):
+    def checkAlignedDescriptions(cls,ds,group,maxArgLen=None):
       """
       Verify that the position of the '-' before the description for each argument is aligned
       to maxArgLen+1 columns
       """
-      baseMess   = "Argument list entry must be formatted as ^(\S) (.*) - (.*),"
       alignDiag  = cls.diags.formatting
       splitParam = cls.splitParam
+      groupArgs  = [splitParam(text)[1] for _,text,_ in group]
+      lens       = list(map(len,groupArgs))
 
       if maxArgLen is None:
-        maxArgLen = max(len(splitParam(text)[1]) for _,text,_ in group) if group else 0
+        maxArgLen = max(lens) if lens else 0
       assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
+      longestArg = groupArgs[lens.index(maxArgLen)] if lens else "NO ARGS"
 
       for loc,text,_ in group:
         pre,arg,descr = splitParam(text)
@@ -483,17 +487,11 @@ class PetscDocString(PetscDocStringBase):
           continue
 
         if diffIndex <= text.find(pre):
-          mess = " ".join([
-            baseMess,"prefix ('{}') is not indented to column (1)".format(pre)
-          ])
+          mess = "Prefix '{}' must be indented to column (1)".format(pre)
         elif diffIndex <= text.find(arg):
-          mess = " ".join([
-            baseMess,"argument ('{}') must be 1 space from prefix ('{}')".format(arg,pre)
-          ])
+          mess = "Argument '{}' must be 1 space from prefix '{}'".format(arg,pre)
         else:
-          mess = " ".join([
-            baseMess,"description ('{}') must be 1 space from argument ('{}')".format(descr,arg)
-          ])
+          mess = "Description '{}' must be aligned to 1 space from longest (valid) argument '{}'".format(textwrap.shorten(descr,width=35),longestArg)
 
         eloc = ds.makeSourceRange(text[diffIndex:],text,loc.end.line)
         ds.addErrorFromSourceRange(alignDiag,mess,eloc,patch=Patch(eloc,fixed[diffIndex:]))
@@ -750,14 +748,12 @@ class PetscDocString(PetscDocStringBase):
       return
 
 
-    def guessHeading(self,heading):
-      return guess
-
     def find(self,heading):
+      lohead   = heading.casefold()
       sections = self._sections
       cache    = self._findcache[self._cachekey]
       try:
-        return sections[cache[heading]]
+        return sections[cache[lohead]]
       except KeyError:
         pass
       sectionNames = sections.keys()
@@ -801,7 +797,9 @@ class PetscDocString(PetscDocStringBase):
         )
         # when in doubt, it's probably notes
         match = "notes"
-      return sections[cache.setdefault(heading,match)]
+        if heading == "output":
+          import ipdb; ipdb.set_trace()
+      return sections[cache.setdefault(lohead,match)]
 
     def registered(self,section):
       if isinstance(section,PetscDocString.SectionBase):
@@ -843,7 +841,7 @@ class PetscDocString(PetscDocStringBase):
       if not text or text.startswith(("+ ",". ","- ")):
         return NOT_HEADING
       if text.endswith(":"):
-        if text.endswith(("follows:","following:","example:","instance:","one of:")):
+        if text.endswith(("follows:","following:","example:","instance:","one of:"," is:")):
           return IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
         return IS_HEADING
       if ": " in text and " :" not in text:
@@ -851,22 +849,37 @@ class PetscDocString(PetscDocStringBase):
         # instances of ":" in random code snippets or text...
         return int(all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:]))
       try:
-        found = next(filter(text.casefold().startswith,(t.casefold() for t in self.titles())))
+        found = next(filter(text.casefold().startswith,map(str.casefold,self.titles())))
       except StopIteration:
         return NOT_HEADING
       else:
         return MAYBE_HEADING
 
+    def guessHeading(self,line):
+      def guess(item):
+        titles = self.find(item).titles
+        if len(titles) == 1:
+          return titles
+        return difflib.get_close_matches(item,titles,n=1)
+
+      strp     = line.split(":",maxsplit=1)[0].strip()
+      attempts = (strp,strp.split(maxsplit=1)[0].strip())
+
+      for attempt,match in zip(attempts,map(guess,attempts)):
+        if match:
+          return attempt,match[0]
+      import ipdb; ipdb.set_trace()
+      raise ValueError(line)
 
 
   sections = Sections(
     Synopsis("synopsis",required=True,keywords=("Synopsis","Not Collective")),
-    ParameterList("parameters",titles=("Input Parameter","Output Parameter")),
+    ParameterList("parameters",titles=("Input Parameter","Output Parameter"),keywords=("Input","Output")),
     ParameterList("options",titles=("Options Database",)),
     Prose("notes"),
     Prose("fortran notes",keywords=("Fortran",)),
     SourceCode("code",titles=("Example Usage",),keywords=("Example","Usage","Sample Usage",)),
-    Prose("developer notes"),
+    Prose("developer notes",keywords=("Developer",)),
     Prose("references"),
     InlineList("level",required=True),
     InlineList("seealso",titles=(".seealso",),required=True),
@@ -908,14 +921,11 @@ class PetscDocString(PetscDocStringBase):
       if rsw("/*"+char) or rew(char+"*/"):
         return True
 
-    # if we find these titles, likely this is a docstring
-    if any(title.casefold() in raw.casefold() for title in cls.sections.titles()):
-      return True
-    print(raw)
-    # if it doesn't end with _private or _internal then its very likely a docstring
-    if PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal")):
-      print("==========","FOUND PRIVATE/INTERNAL FUNCTION",cursor.name)
-    return False
+    # if we find these titles, likely this is a docstring, unless it ends in one of the
+    # internal suffixes
+    rawlo = raw.casefold()
+    return any(title in rawlo for title in map(str.casefold,cls.sections.titles())) and not \
+      PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal"))
 
   @classmethod
   def _getSanitizedCommentAndRangeFromCursor(cls,cursor):
@@ -1070,21 +1080,15 @@ class PetscDocString(PetscDocStringBase):
 
   def _checkSectionHeaderTypo(self,line,lineno):
     assert ":" not in line, "':' in line that is ambiguously a header: {}".format(line)
-    name  = line.lstrip().split(maxsplit=1)[0].rstrip()
-    match = difflib.get_close_matches(name,self.sections.find(name.casefold()).titles,n=1)[0]
-    mess  = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
-    diag  = self.diags.section_header_maybe_header
+    name,match = self.sections.guessHeading(line)
+    mess = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
+    diag = self.diags.section_header_maybe_header
     self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(name,line,lineno))
     return
 
   def _checkSectionHeaderThatProbablyShouldNotBeOne(self,line,lineno):
-    def smartTruncate(content,length=35,suffix=" [...]"):
-      if len(content) <= length:
-        return content
-      return content[:length].rsplit(maxsplit=1)[0]+suffix
-
     eloc = self.makeSourceRange(":",line,lineno,offset=line.rfind(":"))
-    mess = "Sowing treats all lines ending with ':' as header, are you sure '{}' qualifies? Use '\:' to escape the colon if not".format(smartTruncate(line.strip()))
+    mess = "Sowing treats all lines ending with ':' as header, are you sure '{}' qualifies? Use '\:' to escape the colon if not".format(textwrap.shorten(line.strip(),width=35))
     self.addErrorFromSourceRange(self.diags.section_header_fishy_header,mess,eloc)
     return
 
@@ -1157,7 +1161,10 @@ class PetscDocString(PetscDocStringBase):
     diag = self.diags.section_header_solitary
     for loc,text in headings:
       _,sep,after = text.partition(":")
-      assert sep
+      if not sep:
+        head,_ = self.sections.guessHeading(text)
+        _,sep,after = text.partition(head)
+        assert sep
       if after.strip():
         mess = "Heading must appear alone on a line, any content must be on the next line"
         self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(after,text,loc.start.line))
@@ -1177,12 +1184,15 @@ class PetscDocString(PetscDocStringBase):
     diag   = self.diags.section_header_spelling
     titles = section.titles
     for loc,text in headings:
+      beforeguess,_ = self.sections.guessHeading(text)
       before,sep,_ = text.partition(":")
+      if sep:
+        assert beforeguess == before.strip()
       if not sep:
         # missing colon, but if we are at this point then we were pretty it is a header,
         # so we assume the first word is the header
-        before,sep = text.split(maxsplit=1)
-      assert sep
+        before,_ = self.sections.guessHeading(text)
+      assert before
       heading = before.strip()
       if any(t in heading for t in titles):
         continue
@@ -2452,7 +2462,7 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all parameters that are documented actually exist"),
   (PetscDocString.ParameterList.diagnostic("solitary-parameter"),"Verify that each parameter has its own entry"),
 )
-def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,checkIndices=False,**kwargs):
+def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,checkIndices=False):
   if cursorList and not params:
     undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
     linter.addErrorFromCursor(
@@ -2497,7 +2507,7 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
         else:
           argSeen[idx] = True
           indices.append(idx)
-    checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove],**kwargs)
+    checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove])
     if 0 and checkIndices:
       # TODO what to do if the lines we swap are imperfect? This might be the straw
       # breaking the camels back, since I don't see a way to do this without 2 passes
@@ -2777,7 +2787,7 @@ def checkDocValidEnumParameters(linter,cursor,docstring):
 
   enumParams = list(map(PetscCursor,cursor.get_children()))
   checkDocValidParameterList(
-    linter,docstring,synopsis.items,enumParams,skipGroup=skipGroup,checkIndices=True,char="$"
+    linter,docstring,synopsis.items,enumParams,skipGroup=skipGroup,checkIndices=True
   )
   return
 
