@@ -108,7 +108,7 @@ PetscErrorCode testIllFormedMinimalDocString(void)
 - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
   lvl: itnmediate
 
-.zeeakso: testNonExistentFunction(), testNonExistentType
+.zeeakso:
 C@*/
 PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 {
@@ -122,7 +122,7 @@ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, Pet
 + string -  a char pointer
 - function_ptr - a function pointer
 
-  Level: beginner
+  Level:
 
 .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
 @*/
@@ -165,7 +165,7 @@ static PetscErrorCode testStaticFunction()
 
   Level: beginner developer
 
-.seealso: foo()
+.seealso:
 @*/
 PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 {
