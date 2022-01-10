@@ -11,6 +11,7 @@ import ctypes
 import functools
 import inspect
 import weakref
+import operator
 import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
@@ -292,6 +293,15 @@ class Scope(object):
     return other.isParentOf(self)
 
 
+class ClangFileNameCache(weakref.WeakKeyDictionary):
+  """
+  It is for whatever reason stupidly expensive to create these file objects, and clang does it
+  every time you access a tu's file. So we cache them here
+  """
+  def getname(self,tu):
+    return self[tu] if tu in self else self.setdefault(tu,tu.get_file(tu.spelling))
+
+
 @functools.total_ordering
 class PetscSourceLocation(object):
   """
@@ -299,21 +309,8 @@ class PetscSourceLocation(object):
   implement __eq__()
   """
 
-  class ClangFileNameCache(weakref.WeakKeyDictionary):
-    """
-    It is for whatever reason stupidly expensive to create these file objects, and clang does it
-    every time you access a tu's file. So we cache them here
-    """
-    def getname(self,tu):
-      return self[tu] if tu in self else self.setdefault(tu,tu.get_file(tu.spelling))
-
-
   __filecache = ClangFileNameCache()
   __slots__   = "sourceLocation","translation_unit","_cache"
-
-  def getCached(self,attr,func,*args,**kwargs):
-    cache = self._cache
-    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
 
   def __init__(self,sourceLoc,tu=None):
     self.sourceLocation   = sourceLoc
@@ -329,21 +326,28 @@ class PetscSourceLocation(object):
     ])
 
   def __getattr__(self,attr):
-    return self.getCached(attr,getattr,self.sourceLocation,attr)
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(
+      attr,getattr(self.sourceLocation,attr)
+    )
 
-  def __eq__(self,right):
-    return self.sourceLocation.__eq__(self.asClangSourceLocation(right))
+  def __eq__(self,other):
+    return self is other or self.sourceLocation.__eq__(self.asClangSourceLocation(other))
 
-  def __lt__(self,right):
-    if not isinstance(right,(clx.SourceLocation,type(self))):
-      raise ValueError(type(right))
-    lline,rline = self.line,right.line
-    if lline < rline:
-      return True
-    if lline == rline:
-      return self.column < right.column
-    return False # lline > rline
+  def __compare(self,other,operator):
+    if not isinstance(other,(type(self),clx.SourceLocation)):
+      raise ValueError(type(other))
+    return operator(self.offset,other.offset)
 
+  def __lt__(self,other):
+    if not isinstance(other,(type(self),clx.SourceLocation)):
+      raise ValueError(type(other))
+    return self.offset < other.offset
+
+  def __ge__(self,other):
+    if not isinstance(other,(type(self),clx.SourceLocation)):
+      raise ValueError(type(other))
+    return self.offset >= other.offset
 
   @classmethod
   def cast(cls,other):
@@ -363,22 +367,24 @@ class PetscSourceLocation(object):
 
   @classmethod
   def asClangSourceLocation(cls,other):
-    if isinstance(other,clx.SourceLocation):
-      return other
-    elif isinstance(other,cls):
+    if isinstance(other,cls):
       return other.sourceLocation
+    elif isinstance(other,clx.SourceLocation):
+      return other
     raise NotImplementedError(type(other))
 
 
 @functools.total_ordering
 class PetscSourceRange(object):
   """Like PetscSourceLocation but for clx.SourceRanges"""
-  __slots__ = "sourceRange","translation_unit","_cache"
+  __slots__ = "sourceRange","translation_unit","_cache","_end","_start"
 
   def __init__(self,sourceRange,tu=None):
     self.sourceRange      = sourceRange
     self.translation_unit = tu # store a reference to guard against GC
     self._cache           = {}
+    self._start           = None
+    self._end             = None
     return
 
   def __repr__(self):
@@ -388,41 +394,58 @@ class PetscSourceRange(object):
       "Source Range:     {}".format(self.sourceRange)
     ])
 
-  def getCached(self,attr,func,*args,**kwargs):
-    cache = self._cache
-    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
-
   def __getattr__(self,attr):
-    return self.getCached(attr,getattr,self.sourceRange,attr)
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,getattr(self.sourceRange,attr))
 
   def __eq__(self,other):
-    return (self is other) or self.sourceRange.__eq__(self.asClangSourceRange(other))
+    return self is other or self.sourceRange.__eq__(self.asClangSourceRange(other))
 
-  def __lt__(self,right):
-    if isinstance(right,(clx.SourceRange,type(self))):
-      right = right.start
-    elif isinstance(right,(clx.SourceLocation,PetscSourceLocation)):
+  def __lt__(self,other):
+    # if all this nonsense seems like a micro-optimization, it kinda is but also kinda
+    # isn't. for regular usage this is way overkill, but all this __start() and __end()
+    # caching and skipping the cast saves roughly 20 s in a 100 s run when overlap() is
+    # called over 3 million times!
+    if isinstance(other,type(self)):
+      other = other.__start()
+    elif isinstance(other,clx.SourceRange):
+      other = other.start
+    elif isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
       pass
     else:
-      raise NotImplementedError(type(right))
-    return PetscSourceLocation.cast(self.end) <= right
+      raise NotImplementedError(type(other))
+    return self.__end() < other
 
   def __contains__(self,other):
     def contains(loc):
       # reimplement clx.SourceRange.__contains__() as it has a bug
-      return cacheStart <= cast(loc) <= cacheEnd
+      return start <= loc <= self.__end()
 
-    cast       = PetscSourceLocation.cast
-    cacheEnd   = self._cache.setdefault("PetscSourceLocationEnd",cast(self.end))
-    cacheStart = self._cache.setdefault("PetscSourceLocationStart",cast(self.start))
-    if isinstance(other,(clx.SourceLocation,PetscSourceLocation)):
+    start = self.__start()
+    if isinstance(other,type(self)):
+      return contains(other.__start()) and contains(other.__end())
+    cast = PetscSourceLocation.cast
+    if isinstance(other,clx.SourceRange):
+      return contains(cast(other.start)) and contains(cast(other.end))
+    elif isinstance(other,PetscSourceLocation):
       return contains(other)
-    if isinstance(other,(clx.SourceRange,type(self))):
-      return contains(other.start) and contains(other.end)
+    elif isinstance(other,clx.SourceLocation):
+      return contains(cast(other))
     raise NotImplementedError(type(other))
 
   def __len__(self):
-    return self.end.offset-self.start.offset
+    return self.__end().offset-self.__start().offset
+
+
+  def __start(self):
+    if self._start is None:
+      self._start = PetscSourceLocation.cast(self.start)
+    return self._start
+
+  def __end(self):
+    if self._end is None:
+      self._end = PetscSourceLocation.cast(self.end)
+    return self._end
 
   @classmethod
   def cast(cls,other,**kwargs):
@@ -435,9 +458,10 @@ class PetscSourceRange(object):
   @classmethod
   def fromLocations(cls,left,right,tu=None):
     if tu is None:
-      tu = getattr(left,"translation_unit",None)
+      attr = "translation_unit"
+      tu   = getattr(left,attr,None)
       if tu is None:
-        tu = getattr(right,"translation_unit",None)
+        tu = getattr(right,attr,None)
     asClangSL = PetscSourceLocation.asClangSourceLocation
     return cls(clx.SourceRange.from_locations(asClangSL(left),asClangSL(right)),tu=tu)
 
@@ -451,15 +475,15 @@ class PetscSourceRange(object):
 
   @classmethod
   def asClangSourceRange(cls,other):
-    if isinstance(other,clx.SourceRange):
-      return other
     if isinstance(other,cls):
       return other.sourceRange
+    if isinstance(other,clx.SourceRange):
+      return other
     raise NotImplementedError(type(other))
 
   @classmethod
   def merge(cls,left,right,**kwargs):
-    cast = PetscSourceLocation.cast
+    cast  = PetscSourceLocation.cast
     start = min(cast(left.start),cast(right.start))
     end   = max(cast(left.end),cast(right.end))
     return cls.fromLocations(start,end,**kwargs)
@@ -470,10 +494,12 @@ class PetscSourceRange(object):
 
 
   def overlaps(self,other):
-    cast      = PetscSourceLocation.cast
-    getCached = self.getCached
-    return (getCached("PetscSourceLocationEnd",cast,self.end) >= cast(other.start)) and \
-      (cast(other.end) >= getCached("PetscSourceLocationStart",cast,self.start))
+    end = self.__end()
+    if isinstance(other,type(self)):
+      return end >= other.__start() and other.__end() >= self.__start()
+    else:
+      cast = PetscSourceLocation.cast
+      return end >= cast(other.start) and cast(other.end) >= self.__start()
 
   def resized(self,lbegin=0,lend=0,cbegin=0,cend=0):
     """

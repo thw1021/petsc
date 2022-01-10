@@ -19,14 +19,12 @@
 +$ ADAPISCING  - an adapiscing
  Level: advanced
  E*/
-@@ -28,5 +28,6 @@
+@@ -28,4 +28,5 @@
   $ AMET - An amet
  $ADAPISCING - an adapiscing
--Level: advanced
-+
-+  Level: advanced
++  
+ Level: advanced
  E*/
- typedef enum {
 @@ -38,5 +38,5 @@
  
  /*E
