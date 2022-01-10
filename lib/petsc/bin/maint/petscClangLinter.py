@@ -348,6 +348,7 @@ class PetscDocString(PetscDocStringBase):
     ("section-header-unique",""),
     ("matching-symbol-name","Verify that description matches the symbol name"),
     ("missing-description","Verify that a synopsis has a description"),
+    ("verbose-description","Verify that synopsis descriptions don't drone on and on")
   )
   class Synopsis(SectionBase):
     @classmethod
@@ -365,9 +366,13 @@ class PetscDocString(PetscDocStringBase):
         nonlocal found
         if found: return
         pre,dash,rest = line.partition("-")
-        if dash and rest:
+        if dash:
           item = pre.strip()
           items.append((ds.makeSourceRange(item,line,loc.start.line),item))
+          if not rest or rest.isspace():
+            diag = self.diags.missing_description
+            mess = "Synopsis missing a description, expected 'SYMBOL NAME - a very useful description"
+            ds.addErrorFromSourceRange(diag,mess,loc)
           found = True
         return
 
@@ -420,7 +425,7 @@ class PetscDocString(PetscDocStringBase):
     ("section-header-unique",""),
     ("formatting","Verify that parameter list entries are correctly white-space formatted"),
     ("prefix","Verify that parameter list entries begin with the correct prefix"),
-    ("missing-description","Verify that parameter list entries have a description"),
+    ("missing-description","Verify that parameter list entries have a description")
   )
   class ParameterList(SectionBase):
     __slots__ = "prefixes"
@@ -804,9 +809,9 @@ class PetscDocString(PetscDocStringBase):
           "*********** DEFAULTED TO {:{}} FROM {} FOR {}".format("NOTES",max(map(len,sectionNames)),reason,heading)
         )
         # when in doubt, it's probably notes
-        match = "notes"
-        if heading == "output":
+        if "(X-Y-Z)" in heading:
           import ipdb; ipdb.set_trace()
+        match = "notes"
       return sections[cache.setdefault(lohead,match)]
 
     def registered(self,section):
@@ -841,15 +846,22 @@ class PetscDocString(PetscDocStringBase):
         text = item
       else:
         raise NotImplementedError(type(item))
+
       IS_HEADING_BUT_PROBABLY_SHOULDNT_BE = -1
       NOT_HEADING   = 0
       IS_HEADING    = 1
       MAYBE_HEADING = 2
+
       text = text.strip()
       if not text or text.startswith(("+ ",". ","- ")):
         return NOT_HEADING
+
       if text.endswith(":"):
-        if text.endswith(("follows:","following:","example:","instance:","one of:"," is:")):
+        expressions = (
+          "follows","following.*","example","instance","one of.*","calling sequence.*is"
+        )
+        regex = "|".join(":".join((expr,"$")) for expr in expressions)
+        if re.search(regex,text) is not None:
           return IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
         return IS_HEADING
       if ": " in text and " :" not in text:
@@ -931,9 +943,11 @@ class PetscDocString(PetscDocStringBase):
 
     # if we find these titles, likely this is a docstring, unless it ends in one of the
     # internal suffixes
-    rawlo = raw.casefold()
-    return any(title in rawlo for title in map(str.casefold,cls.sections.titles())) and not \
-      PetscCursor.getNameFromCursor(cursor).casefold().endswith(("_private","_internal"))
+    rawlo     = raw.casefold()
+    haveTitle = any(title in rawlo for title in map(str.casefold,cls.sections.titles()))
+    return haveTitle and not PetscCursor.getNameFromCursor(cursor).casefold().endswith(
+      ("_private","_internal")
+    )
 
   @classmethod
   def _getSanitizedCommentAndRangeFromCursor(cls,cursor):
@@ -1173,7 +1187,8 @@ class PetscDocString(PetscDocStringBase):
 
 
   def getSectionHeadings(self,section):
-    return list(filter(self._getIsHeading(section),section.lines))
+    isHeading = self._getIsHeading(section)
+    return [l for l in section.lines if isHeading(l) > 0]
 
   def checkValidSolitarySectionHeadings(self,section,headings=None):
     """
@@ -2443,37 +2458,81 @@ def alwaysFalse(*args,**kwargs):
 
 """utilities for checking docstrings"""
 def checkDocValidSynopsis(linter,cursor,docstring):
-  cursorName    = PetscCursor.getNameFromCursor(cursor)
-  synopsis      = docstring.sections.synopsis
-  foundSynopsis = False
-  for lineLoc,line in synopsis.lines:
-    symbol,dash,rest = line.partition("-")
-    if symbol.lstrip().startswith("$"):
-      # This is special treatment for enums since they don't usually have a
-      # clearly-defined "begin"
-      break
-    elif dash and rest:
-      foundSynopsis = True
-      symbol        = symbol.strip()
-      if symbol != cursorName:
-        diag = synopsis.diags.matching_symbol_name
-        loc  = docstring.makeSourceRange(symbol,line,lineLoc.start.line)
-        if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
-          mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
-            symbol,cursorName
-          )
-          patch = Patch(loc,cursorName)
-        else:
-          mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
-          patch = None
-        docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
-      break
-  if not foundSynopsis:
+  cursorName = PetscCursor.getNameFromCursor(cursor)
+  synopsis   = docstring.sections.synopsis
+  items      = synopsis.items
+  if items:
+    if isinstance(items,tuple):
+      loc,symbol = items[0]
+    elif isinstance(items,PetscDocString.ParameterList):
+      loc,symbol = items.items[0]
+    else:
+      raise ValueError(type(items))
+    if symbol != cursorName:
+      diag = synopsis.diags.matching_symbol_name
+      if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
+        mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
+          symbol,cursorName
+        )
+        patch = Patch(loc,cursorName)
+      else:
+        mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
+        patch = None
+      docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
+
+    symbolLine = loc.start.line
+    wordCount  = 0
+    charCount  = 0
+    for idx,(loc,line) in enumerate(synopsis.lines):
+      if loc.start.line == symbolLine:
+        rest       = line.split(symbol,maxsplit=1)[1].replace("-"," ",1).strip()
+        wordCount += len(rest.split())
+        charCount += len(rest)
+        break
+
+    for _,line in synopsis.lines[idx:]:
+      if not line or line.isspace():
+        break
+      line       = line.strip()
+      wordCount += len(line.split())
+      charCount += len(line)
+
+    maxCharCount = 250
+    maxWordCount = 40
+    if charCount > maxCharCount and wordCount > maxWordCount:
+      diag = synopsis.diags.verbose_description
+      mess = "Synopsis for '{}' is too long (must be at most {} characters or {} words), consider moving it to Notes. If you can't explain it simply, then you don't understand it well enough!".format(cursorName,maxCharCount,maxWordCount)
+      docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
+  else:
     mess = "Docstring missing synopsis. Expected '{} - a very useful description'".format(
       cursorName
     )
     diag = synopsis.diags.missing_description
     docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
+
+  # for lineLoc,line in synopsis.lines:
+  #   symbol,dash,rest = line.partition("-")
+  #   if symbol.lstrip().startswith("$"):
+  #     # This is special treatment for enums since they don't usually have a
+  #     # clearly-defined "begin"
+  #     break
+  #   elif dash and rest:
+  #     foundSynopsis = True
+  #     symbol        = symbol.strip()
+  #     if symbol != cursorName:
+  #       diag = synopsis.diags.matching_symbol_name
+  #       loc  = docstring.makeSourceRange(symbol,line,lineLoc.start.line)
+  #       if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
+  #         mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
+  #           symbol,cursorName
+  #         )
+  #         patch = Patch(loc,cursorName)
+  #       else:
+  #         mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
+  #         patch = None
+  #       docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
+  #     import ipdb; ipdb.set_trace()
+  #     break
   return
 
 @DiagnosticManager.register(
