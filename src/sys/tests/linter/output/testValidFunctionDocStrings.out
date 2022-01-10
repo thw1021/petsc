@@ -72,7 +72,7 @@ Seealso values must be (1) space away from colon not (50) [-fdoc-inline-list-for
   69: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
   70: @*/
 
-Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a pointer') must be 1 space from argument ('y') [-fdoc-param-list-formatting]:
+Description 'a pointer' must be aligned to 1 space from longest (valid) argument 'y' [-fdoc-param-list-formatting]:
   41: 
   42:   Output Parameter:
 > 43: - y          - a pointer
@@ -216,7 +216,7 @@ Unknown section header 'output Psrammmetrs', assuming you meant 'Output Paramete
   104: . y - a PetscScalar pointer
   105: 
 
-Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a PetscInt') must be 1 space from argument ('x') [-fdoc-param-list-formatting]:
+Description 'a PetscInt' must be aligned to 1 space from longest (valid) argument 'viewer' [-fdoc-param-list-formatting]:
   99 :   input prametirs:
   100: + viewer - a PetsViewer
 > 101: - x - a PetscInt
@@ -232,7 +232,7 @@ Unknown section header 'optnS dtaaSE', assuming you meant 'Options Database' [-f
   107: - -option_a     - foo
   108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 
-Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('foo') must be 1 space from argument ('-option_a') [-fdoc-param-list-formatting]:
+Description 'foo' must be aligned to 1 space from longest (valid) argument '-option_b [filename][:[~]<foo,bar,baz>[:[~]bop]]' [-fdoc-param-list-formatting]:
   105: 
   106:   optnS dtaaSE:
 > 107: - -option_a     - foo
@@ -291,7 +291,7 @@ Function requires custom fortran interface but missing 'C' from docstring header
   119:   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
   120: 
 
-Argument list entry must be formatted as ^(\S) (.*) - (.*), description ('a char pointer') must be 1 space from argument ('string') [-fdoc-param-list-formatting]:
+Description 'a char pointer' must be aligned to 1 space from longest (valid) argument 'function_ptr' [-fdoc-param-list-formatting]:
   120: 
   121:   Input Parameters:
 > 122: + string -  a char pointer
@@ -368,7 +368,7 @@ ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:72
   73: {
   74:   return 0;
 
-Sowing treats all lines ending with ':' as header, are you sure 'qui officia deserunt mollit anim [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
+Sowing treats all lines ending with ':' as header, are you sure 'qui officia deserunt mollit [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
   53: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
   54: labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
 > 55: qui officia deserunt mollit anim id est laborum as follows:
@@ -380,11 +380,11 @@ Line seems to be a section header but missing ':', did you mean 'Notes:'? [-fdoc
   55: qui officia deserunt mollit anim id est laborum as follows:
   56: 
 > 57: Notes Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-      ^^^^^
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   58: incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident,
   59: sunt in culpa qui officia deserunt mollit anim id est laborum example.
 
-Sowing treats all lines ending with ':' as header, are you sure 'qui officia deserunt mollit anim [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
+Sowing treats all lines ending with ':' as header, are you sure 'qui officia deserunt mollit [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
   62: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
   63: labore et dolore magna aliqua. Excepteur sint occaecat cupidatat non proident, sunt in culpa
 > 64: qui officia deserunt mollit anim id est laborum instance:
@@ -601,7 +601,7 @@ Line seems to be a section header but missing ':', did you mean 'Level:'? [-fdoc
   180: + nonExistentParam - this param does not exist
   181: 
 > 182:   Level dev
-         ^^^^^
+         ^^^^^^^^^
   183: 
   184: .see also: testStaticFunction()
 
