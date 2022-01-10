@@ -170,7 +170,7 @@ Note first instance found here:
 
 ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:113
 'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
-  111: .zeeakso: testNonExistentFunction(), testNonExistentType
+  111: .zeeakso:
   112: C@*/
 > 113: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -182,7 +182,7 @@ Missing empty line between sections, must have one before this section [-fdoc-se
   108: - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
 > 109:   lvl: itnmediate
   110: 
-  111: .zeeakso: testNonExistentFunction(), testNonExistentType
+  111: .zeeakso:
 
 First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
   105: 
@@ -246,7 +246,7 @@ Unknown section header 'lvl', assuming you meant 'Level' [-fdoc-section-header-s
 > 109:   lvl: itnmediate
          ^^^
   110: 
-  111: .zeeakso: testNonExistentFunction(), testNonExistentType
+  111: .zeeakso:
 
 Unknown Level subheading 'itnmediate', assuming you meant 'intermediate' [-fdoc-inline-list-level-spelling]:
   107: - -option_a     - foo
@@ -254,12 +254,12 @@ Unknown Level subheading 'itnmediate', assuming you meant 'intermediate' [-fdoc-
 > 109:   lvl: itnmediate
               ^^^^^^^^^^
   110: 
-  111: .zeeakso: testNonExistentFunction(), testNonExistentType
+  111: .zeeakso:
 
 Unknown section header '.zeeakso', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
   109:   lvl: itnmediate
   110: 
-> 111: .zeeakso: testNonExistentFunction(), testNonExistentType
+> 111: .zeeakso:
        ^^^^^^^^
   112: C@*/
   113: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
@@ -301,7 +301,7 @@ Description 'a char pointer' must be aligned to 1 space from longest (valid) arg
 
 ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:170
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  168: .seealso: foo()
+  168: .seealso:
   169: @*/
 > 170: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -314,7 +314,7 @@ Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-
 > 166:   Level: beginner developer
                 ^^^^^^^^^^^^^^^^^^
   167: 
-  168: .seealso: foo()
+  168: .seealso:
 
 ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
@@ -513,6 +513,40 @@ Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very use
   80:   input parms:
   81: . foo
 
+ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:113
+'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
+  111: .zeeakso:
+  112: C@*/
+> 113: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  114: {
+  115:   return 0;
+
+Section appears to be empty; while I'm all for a good mystery, you should probably elaborate here [-fdoc-section-barren]:
+  109:   lvl: itnmediate
+  110: 
+> 111: .zeeakso:
+       ^^^^^^^^^
+  112: C@*/
+  113: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+
+ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:129
+'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *******, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *******, int (*)(int))'
+  127: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
+  128: @*/
+> 129: PetscErrorCode testCustomFortranInterfaceDocString(char *******string, PetscErrorCode (*function_ptr)(PetscInt))
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  130: {
+  131:   return 0;
+
+Section appears to be empty; while I'm all for a good mystery, you should probably elaborate here [-fdoc-section-barren]:
+  123: - function_ptr - a function pointer
+  124: 
+> 125:   Level:
+> 126: 
+  127: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
+  128: @*/
+
 ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:146
 'testInternFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   144: .seealso: function()
@@ -579,12 +613,20 @@ Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testV
 
 ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:170
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  168: .seealso: foo()
+  168: .seealso:
   169: @*/
 > 170: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   171: {
   172:   return testStaticFunction();
+
+Section appears to be empty; while I'm all for a good mystery, you should probably elaborate here [-fdoc-section-barren]:
+  166:   Level: beginner developer
+  167: 
+> 168: .seealso:
+       ^^^^^^^^^
+  169: @*/
+  170: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
 
