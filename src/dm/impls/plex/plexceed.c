@@ -38,10 +38,10 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
   IS           iter_is;
 
   ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
-  if (domain_label) {ierr = DMGetFirstLabelEntry_Internal(dm, dm, domain_label, 1, &label_value, height, NULL, &ds);CHKERRQ(ierr);}
+  if (domain_label) {ierr = DMGetFirstLabelEntry_Internal(dm, dm, domain_label, 1, &label_value, 3, NULL, &ds);CHKERRQ(ierr);}
 
   // Translate dm_field to ds_field
-  PetscInt ds_field = -1;
+  PetscInt ds_field = !!domain_label ? 1 : -1;
   for (PetscInt i=0; i<dm->Nds; i++) {
     if (!domain_label || domain_label == dm->probs[i].label) {
       ds = dm->probs[i].ds;
@@ -96,6 +96,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     PetscDualSpace dual_space;
     PetscInt num_dual_basis_vectors;
     ierr = PetscDSGetDiscretization(ds, ds_field, (PetscObject*)&fe);CHKERRQ(ierr);
+    ierr = PetscFEGetHeightSubspace(fe, height, &fe);CHKERRQ(ierr);
     ierr = PetscFEGetDualSpace(fe, &dual_space);CHKERRQ(ierr);
     ierr = PetscDualSpaceGetDimension(dual_space, &num_dual_basis_vectors);CHKERRQ(ierr);
     ierr = PetscDualSpaceGetNumComponents(dual_space, num_comp);CHKERRQ(ierr);
