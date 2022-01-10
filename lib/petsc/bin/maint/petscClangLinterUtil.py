@@ -11,7 +11,6 @@ import ctypes
 import functools
 import inspect
 import weakref
-import operator
 import clang.cindex as clx
 
 def verbosePrint(*args,**kwargs):
@@ -333,11 +332,6 @@ class PetscSourceLocation(object):
 
   def __eq__(self,other):
     return self is other or self.sourceLocation.__eq__(self.asClangSourceLocation(other))
-
-  def __compare(self,other,operator):
-    if not isinstance(other,(type(self),clx.SourceLocation)):
-      raise ValueError(type(other))
-    return operator(self.offset,other.offset)
 
   def __lt__(self,other):
     if not isinstance(other,(type(self),clx.SourceLocation)):
