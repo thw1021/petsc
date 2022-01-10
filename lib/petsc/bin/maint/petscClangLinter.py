@@ -21,6 +21,7 @@ import ctypes
 import difflib
 import re
 import weakref
+import operator
 import multiprocessing as mp
 import multiprocessing.queues
 import petscClangLinterUtil as pclu
@@ -259,6 +260,7 @@ class PetscDocString(PetscDocStringBase):
     def __bool__(self):
       return bool(self.lines)
 
+
     def clear(self):
       self.raw    = ""
       self.extent = None
@@ -272,7 +274,7 @@ class PetscDocString(PetscDocStringBase):
       self.extent = PetscSourceRange.fromLocations(self.lines[0][0].start,self.lines[-1][0].end)
       return
 
-    def setup(self,docstring,inspectLine=lambda *args:None):
+    def setup(self,docstring,inspectLine=None):
       if not self:
         if self.required:
           diag = self.diags.section_header_missing
@@ -280,16 +282,19 @@ class PetscDocString(PetscDocStringBase):
           docstring.addErrorFromSourceRange(diag,mess,docstring.extent,highlight=False)
         return
 
+      inspect   = inspectLine is not None
       isHeading = docstring._getIsHeading(self)
       seen      = collections.defaultdict(list)
+
       for loc,line in self.lines:
         if isHeading(line):
           possibleHeader = line.split(":" if ":" in line else None,maxsplit=1)[0].strip()
           seen[possibleHeader.casefold()].append(
             docstring.makeSourceRange(possibleHeader,line,loc.start.line)
           )
-        # let each section type determine if this line is useful
-        inspectLine(loc,line)
+        if inspect:
+          # let each section type determine if this line is useful
+          inspectLine(loc,line)
 
       uniqueHeadDiag = self.diags.section_header_unique
       for heading,where in seen.items():
@@ -647,6 +652,10 @@ class PetscDocString(PetscDocStringBase):
     def diagnostic(cls,flag):
       return super().diagnostic(flag,"inline-list")
 
+    @staticmethod
+    def checkIndentAllowed():
+      return False
+
     def clear(self,*args,**kwargs):
       super().clear(*args,**kwargs)
       self.foundEmptyLine = False
@@ -656,9 +665,9 @@ class PetscDocString(PetscDocStringBase):
       items           = []
       formatDiag      = self.diags.formatting
       makeSourceRange = ds.makeSourceRange
-      alignMessBase   = "".join([
-        self.name.title()," values must be (1) space away from colon not ({})"
-      ])
+      alignMessBase   = "".join((
+        self.transform(self.name)," values must be (1) space away from colon not ({})"
+      ))
       titles = set(t.casefold() for t in self.titles)
 
       def inspector(loc,line):
@@ -943,7 +952,6 @@ class PetscDocString(PetscDocStringBase):
     return getattr(section,"isHeading",cls.sections.isHeading)
 
 
-
   @staticmethod
   def makeErrorMessage(message,crange,numContext=2,**kwargs):
     return ":\n".join([message,crange.formatted(numContext=numContext,**kwargs)])
@@ -1080,6 +1088,7 @@ class PetscDocString(PetscDocStringBase):
     self.addErrorFromSourceRange(self.diags.section_header_fishy_header,mess,eloc)
     return
 
+
   def parse(self):
     sections = self.sections
     for s in sections:
@@ -1117,7 +1126,8 @@ class PetscDocString(PetscDocStringBase):
         self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
         newSection = findSection(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
-          section.fill(rawData)
+          if rawData:
+            section.fill(rawData)
           rawData     = []
           section     = newSection
           checkIndent = newSection.checkIndentAllowed()
@@ -1136,20 +1146,28 @@ class PetscDocString(PetscDocStringBase):
   def getSectionHeadings(self,section):
     return list(filter(self._getIsHeading(section),section.lines))
 
-  def checkValidSolitarySectionHeadings(self,section,headings=None,delim=":"):
+  def checkValidSolitarySectionHeadings(self,section,headings=None):
+    """
+    Check that a section appears solitarily on its line, i.e. that there is no other text after
+    ':'
+    """
     if headings is None:
       headings = self.getSectionHeadings(section)
 
+    diag = self.diags.section_header_solitary
     for loc,text in headings:
-      _,sep,after = text.partition(delim)
+      _,sep,after = text.partition(":")
       assert sep
-      if after.rstrip():
+      if after.strip():
         mess = "Heading must appear alone on a line, any content must be on the next line"
-        diag = self.diags.section_header_solitary
         self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(after,text,loc.start.line))
     return
 
-  def checkValidSectionHeaderSpelling(self,section,headings=None,transform=None,delim=":"):
+  def checkValidSectionHeaderSpelling(self,section,headings=None,transform=None):
+    """
+    Check that a seciton header is correctly spelled and formatted. Sections may be found
+    through fuzzy matching so this check asserts that a particular heading is actually correct
+    """
     if headings is None:
       headings = self.getSectionHeadings(section)
 
@@ -1159,8 +1177,10 @@ class PetscDocString(PetscDocStringBase):
     diag   = self.diags.section_header_spelling
     titles = section.titles
     for loc,text in headings:
-      before,sep,_ = text.partition(delim)
+      before,sep,_ = text.partition(":")
       if not sep:
+        # missing colon, but if we are at this point then we were pretty it is a header,
+        # so we assume the first word is the header
         before,sep = text.split(maxsplit=1)
       assert sep
       heading = before.strip()
@@ -1217,18 +1237,6 @@ class PetscCursor(object):
       raise ValueError(type(cursor))
     return
 
-  @classmethod
-  def cast(cls,cursor):
-    """like numpy.asanyarray but for PetscCursors"""
-    clxCursor = clx.Cursor
-    if not isinstance(cursor,(clxCursor,cls)):
-      raise ValueError(type(cursor))
-    return cls(cursor) if isinstance(cursor,clxCursor) else cursor
-
-  def clangCursor(self):
-    """return the internal clang cursor"""
-    return self.__cursor
-
   def __getattr__(self,attr):
     """
     Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
@@ -1240,6 +1248,19 @@ class PetscCursor(object):
 
   def __str__(self):
     return "\n".join([self.getFormattedLocationString(),self.getFormattedBlurb()])
+
+
+  def _getCached(self,attr,func,*args,**kwargs):
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
+
+  @classmethod
+  def cast(cls,cursor):
+    """like numpy.asanyarray but for PetscCursors"""
+    clxCursor = clx.Cursor
+    if not isinstance(cursor,(clxCursor,cls)):
+      raise ValueError(type(cursor))
+    return cls(cursor) if isinstance(cursor,clxCursor) else cursor
 
   @classmethod
   def errorViewFromCursor(cls,cursor):
@@ -1389,13 +1410,11 @@ class PetscCursor(object):
     """
     if isinstance(cursor,cls):
       return cursor.typename
-    type    = cursor.type
-    pointee = type.get_pointee()
-    if pointee.spelling:
-      pointeeCanonSpelling = pointee.get_canonical().spelling
-      return pointeeCanonSpelling if pointeeCanonSpelling else pointee.spelling
-    canonSpelling = type.get_canonical().spelling
-    return canonSpelling if canonSpelling else type.spelling
+    type          = cursor.type
+    pointee       = type.get_pointee()
+    typeCursor    = pointee if pointee.spelling else type
+    canonSpelling = typeCursor.get_canonical().spelling
+    return canonSpelling if canonSpelling else typeCursor.spelling
 
   @staticmethod
   def getDerivedTypenameFromCursor(cursor):
@@ -1419,7 +1438,7 @@ class PetscCursor(object):
     return False,None,None
 
   def hasInternalLinkage(self):
-    return self._cache.setdefault("internal_linkage",self.hasInternalLinkageFromCursor(self))
+    return self._getCached("internal_linkage",self.hasInternalLinkageFromCursor,self)
 
   @staticmethod
   def getRawSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,trim=False):
@@ -1530,16 +1549,35 @@ class PetscCursor(object):
     func = cls.getOrRegisterClangFunction(
       "clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange
     )
-    if isinstance(cursor,clx.Cursor):
-      cursorRange = func(cursor)
-    elif isinstance(cursor,cls):
+    if isinstance(cursor,cls):
       cursorRange = func(cursor.clangCursor())
+    elif isinstance(cursor,clx.Cursor):
+      cursorRange = func(cursor)
     else:
       raise ValueError(type(cursor))
     return cursor.raw_comment,cursorRange
 
   def getCommentAndRange(self):
     return self.getCommentAndRangeFromCursor(self)
+
+  @classmethod
+  def getFileFromCursor(cls,cursor):
+    if isinstance(cursor,cls):
+      ret = cursor._getCached("file",lambda c: c.location.file.name,cursor)
+    elif isinstance(cursor,clx.Cursor):
+      ret = cursor.location.file.name
+    elif isinstance(cursor,clx.TranslationUnit):
+      ret = cursor.spelling
+    else:
+      raise ValueError(type(cursor))
+    return PetscPath(ret)
+
+  def getFile(self):
+    return self.getFileFromCursor(self)
+
+  def clangCursor(self):
+    """return the internal clang cursor"""
+    return self.__cursor
 
 
 class Patch(object):
@@ -1563,24 +1601,16 @@ class Patch(object):
       print("".join(difflib.unified_diff(before,after,fromfile="Original",tofile="Modified")))
       return
 
-  __slots__ = "combine","extent","filename","ctxlines","src","deltas","fixed","fixDepth","weakData"
 
-  def __init__(self,srcRange,value,contextlines=2,combineable=True):
-    def validrange(srcRange):
-      assert isinstance(srcRange,(clx.SourceRange,PetscSourceRange))
-      start,end = srcRange.start,srcRange.end
-      assert start.line <= end.line, "end line {} > begin line {}, ill-formed source fix".format(end.line,start.line)
-      if start.line == end.line:
-        assert start.column <= end.column, "start col {} < end col {}, ill-formed source fix".format(start.column,end.column)
-      return PetscSourceRange.cast(srcRange)
+  __slots__ = "extent","filename","ctxlines","src","deltas","weakData","_cache"
 
-    self.combine  = combineable
-    self.extent   = validrange(srcRange)
+  def __init__(self,srcRange,value,contextlines=2):
+    self.extent   = PetscSourceRange.cast(srcRange)
     self.ctxlines = contextlines
     self.src      = self._makeSource()
     self.deltas   = (self.Delta(value,self.extent,self.ctxlines),)
-    self.fixed    = None
-    self.fixDepth = 0
+    self.weakData = []
+    self._cache   = {}
     return
 
   @classmethod
@@ -1590,31 +1620,39 @@ class Patch(object):
   def _makeSource(self):
     return self.extent.raw(numContext=self.ctxlines)
 
+  def _getCached(self,attr,func,*args,**kwargs):
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
+
   def _contiguousExtent(self):
     """
     does my extent (which is the union of the extents of my all my deltas) have no holes?
     """
-    deltas = self.deltas
+    cacheEntry = "contiguous"
+    deltas     = self.deltas
     if len(deltas) == 1:
-      return True
-    return all(p.extent.overlaps(c.extent) for p,c in zip(deltas[:-1],deltas[1:]))
+      return self._cache.setdefault(cacheEntry,True)
+    return self._getCached(
+      cacheEntry,all,(p.extent.overlaps(c.extent) for p,c in zip(deltas[:-1],deltas[1:]))
+    )
+
 
   def discard(self):
     """
     drops the error messages corresponding to this patch from the linter
     """
-    weakElist,idx = self.weakData
-    elist         = weakElist()
-    if elist is not None:
-      del elist[1][idx] # delete the error message
-      del elist[2][idx] # delete the patch indicator
+    for weakElist,idx in self.weakData:
+      elist = weakElist()
+      if elist is not None:
+        del elist[1][idx] # delete the error message
+        del elist[2][idx] # delete the patch indicator
     return
 
-  def attach(self,linterErrorList,index):
+  def attach(self,*args):
     """
     attach the list and index into the linter error list corresponding to this patch
     """
-    self.weakData = (linterErrorList,index)
+    self.weakData.append(args)
     return
 
   def dofix(self,n=1):
@@ -1760,14 +1798,17 @@ class Patch(object):
       return other
 
     assert self.src == other.src,"Need to update offset calculation to handle arbitrary src"
+    assert self.ctxlines == other.ctxlines,"Need to update ctxlines to handle arbitrary src"
 
     self.extent = self.extent.mergeWith(other.extent)
     # uncomment when it handles arbitrary source
     # self.src    = self._makeSource()
     # fixes and ranges must be applied in order
     combined    = self.deltas+other.deltas
-    argsort     = sorted(range(len(combined)),key=lambda x: combined[x].extent)
+    argsort     = sorted(range(len(combined)),key=lambda x: combined.__getitem__(x).extent)
     self.deltas = tuple(combined[i] for i in argsort)
+    self._cache = {}
+    self.weakData.extend(other.weakData)
     return self
 
   def collapse(self):
@@ -1775,11 +1816,9 @@ class Patch(object):
     # Fixes probably should not overwrite each other (for now), so we error out, but this
     # is arguably a completely valid case. I just have not seen an example of it that I
     # can use to debug with yet.
-    if self.fixDepth == len(self.deltas): # already collapsed, no need to do it again
-      assert self.fixed, "Fix depth {} = number of deltas {} but no fixed string exists".format(
-        self.fixDepth,len(self.deltas)
-      )
-      return self.fixed
+    cacheEntry = "fixed"
+    if cacheEntry in self._cache:
+      return self._cache[cacheEntry]
 
     idxDelta = 0
     newSrc   = self.src = self._makeSource()
@@ -1791,10 +1830,9 @@ class Patch(object):
       newSrcTemp  = "".join([newSrc[:beginoffset],delta.value,newSrc[endoffset:]])
       idxDelta   += len(newSrcTemp)-len(newSrc)
       newSrc      = newSrcTemp
-    self.fixDepth = len(self.deltas)
-    self.fixed    = newSrc
-    assert self.fixed != self.src,"Patch did not seem to do anything!"
-    return self.fixed
+    assert newSrc != self.src,"Patch did not seem to do anything!"
+    self._cache[cacheEntry] = newSrc
+    return newSrc
 
   def view(self):
     for i,delta in enumerate(self.deltas):
@@ -1825,12 +1863,8 @@ class PetscLinter(object):
     self.lock       = lock
     self.errPrefix  = " ".join([prefix,85*"-"])
     self.warnPrefix = " ".join([prefix,85*"%"])
-    self.errors     = collections.OrderedDict()
-    self.warnings   = []
-    # This can actually just be a straight list, since each linter object only ever
-    # handles a single file, but use dict nonetheless
-    self.patches    = {}
     self.index      = clx.Index.create()
+    self.clear()
     return
 
   def __str__(self):
@@ -1865,6 +1899,36 @@ class PetscLinter(object):
         print(*args,**kwargs)
     else:
       print(*args,**kwargs)
+    return
+
+
+  @DiagnosticManager.register(
+    ("duplicate-function","Check for duplicate function-calls on the same execution path"),
+  )
+  def _checkDuplicateFunctionCalls(self,processedFuncs):
+    dupDiag = self._checkDuplicateFunctionCalls.diags.duplicate_function
+    for pname,functionList in processedFuncs.items():
+      seen = {}
+      for func,scope in functionList:
+        combo = [func.displayname]
+        try:
+          combo.extend(map(PetscCursor.getRawNameFromCursor,func.get_arguments()))
+        except ParsingError:
+          continue
+        combo = tuple(combo)
+        if combo not in seen:
+          seen[combo] = (func,scope)
+        elif scope >= seen[combo][1]:
+          seenStart = seen[combo][0].extent.start.line
+          start     = func.extent.start
+          startline = start.line
+          tu        = func.translation_unit
+          end       = clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),startline,-1)
+          patch     = Patch(PetscSourceRange.fromLocations(start,end),"")
+          message   = "Duplicate function found previous identical usage:\n{}".format(
+            seen[combo][0].formatted(nbefore=2,nafter=startline-seenStart)
+          )
+          self.addErrorFromCursor(func,Diagnostic(dupDiag,message,patch=patch))
     return
 
   @staticmethod
@@ -1950,6 +2014,14 @@ class PetscLinter(object):
       # then yield any children matching our function calls
       yield from walkScope(possibleParent)
 
+  @staticmethod
+  def getArgumentCursors(funcCursor):
+    """
+    given a cursor representing a function, return a tuple of PetscCursor's of its arguments
+    """
+    return tuple([PetscCursor(a,i) for i,a in enumerate(funcCursor.get_arguments(),start=1)])
+
+
   def clear(self):
     """
     Resets the linter error, warning, and patch buffers.
@@ -1957,6 +2029,8 @@ class PetscLinter(object):
     """
     self.errors   = collections.OrderedDict()
     self.warnings = []
+    # This can actually just be a straight list, since each linter object only ever
+    # handles a single file, but use dict nonetheless
     self.patches  = {}
     return
 
@@ -1968,18 +2042,15 @@ class PetscLinter(object):
     if self.verbose: self.__print(self.prefix,"Processing file     ",filename)
     tu = self.index.parse(str(filename),args=self.flags,options=self.clangOpts)
     if self.verbose and tu.diagnostics:
-      self.__print("\n".join({" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}))
+      self.__print("\n".join({" ".join((self.prefix,d)) for d in map(str,tu.diagnostics)}))
     self.process(tu)
     return self
 
-  @DiagnosticManager.register(
-    ("duplicate-function","Check for duplicate function-calls on the same execution path"),
-    ("parsing-error","Generic parsing errors")
-  )
+  @DiagnosticManager.register(("parsing-error","Generic parsing errors"))
   def process(self,tu):
     """process a translation unit for errors"""
-    dupDiag,parsingDiag = self.process.diags.duplicate_function,self.process.diags.parsing_error
-    processedFuncs      = collections.defaultdict(list)
+    parsingDiag    = self.process.diags.parsing_error
+    processedFuncs = collections.defaultdict(list)
     for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
       if isinstance(results,clx.Cursor):
         checkDocMap[results.kind](self,results)
@@ -1990,36 +2061,9 @@ class PetscLinter(object):
       except ParsingError as pe:
         self.addWarning(tu.cursor.spelling,Diagnostic(parsingDiag,str(pe)))
       processedFuncs[PetscCursor.getNameFromCursor(parent)].append((PetscCursor.cast(func),scope))
-    for pname,functionList in processedFuncs.items():
-      seen = {}
-      for func,scope in functionList:
-        combo = [func.displayname]
-        try:
-          combo.extend(PetscCursor.getRawNameFromCursor(a) for a in func.get_arguments())
-        except ParsingError:
-          continue
-        combo = tuple(combo)
-        if combo not in seen:
-          seen[combo] = (func,scope)
-        elif scope >= seen[combo][1]:
-          seenStart = seen[combo][0].extent.start.line
-          start     = func.extent.start
-          startline = start.line
-          tu        = func.translation_unit
-          end       = clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),startline,-1)
-          patch     = Patch(PetscSourceRange.fromLocations(start,end),"")
-          message   = "Duplicate function found previous identical usage:\n{}".format(
-            seen[combo][0].formatted(nbefore=2,nafter=startline-seenStart)
-          )
-          self.addErrorFromCursor(func,Diagnostic(dupDiag,message,patch=patch))
+    self._checkDuplicateFunctionCalls(processedFuncs)
     return
 
-  @staticmethod
-  def getArgumentCursors(funcCursor):
-    """
-    given a cursor representing a function, return a tuple of PetscCursor's of its arguments
-    """
-    return tuple([PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments())])
 
   def addErrorFromCursor(self,cursor,diagnostic):
     """
@@ -2029,7 +2073,7 @@ class PetscLinter(object):
       return
 
     cursor   = PetscCursor.cast(cursor)
-    filename = PetscPath(cursor.location.file.name)
+    filename = cursor.getFile()
     errors   = self.errors
 
     if filename not in errors:
@@ -2051,9 +2095,8 @@ class PetscLinter(object):
 
     patch.attach(weakref.ref(cursorIdErrors),len(cursorIdErrors[1])-1)
     patches = self.patches
-    try:
-      patches[filename].append(patch)
-    except KeyError:
+
+    if filename not in patches:
       patches[filename] = [patch]
       return
 
@@ -2062,12 +2105,14 @@ class PetscLinter(object):
     pex       = patch.extent
     pexstart  = pex.start.line
     patchList = patches[filename]
-    for i,prevPatch in enumerate(patchList[:-1]):
+    for i,prevPatch in enumerate(patchList):
       prepex = prevPatch.extent
       if pexstart == prepex.start.line or pex.overlaps(prepex):
         # this should now be the previous patch on the same line
-        patchList[i] = prevPatch.merge(patchList.pop())
-        break
+        patchList[i] = prevPatch.merge(patch)
+        return
+
+    patchList.append(patch) # didn't find any overlap, just append
     return
 
   def addWarning(self,filename,diag):
@@ -2094,10 +2139,11 @@ class PetscLinter(object):
     """
     if self.werror:
       return self.addErrorFromCursor(cursor,diag)
-    warnFile = cursor.location.file.name
+    cursor   = PetscCursor.cast(cursor)
     warnStr  = "".join(["\nWARNING {}: ".format(len(self.warnings)),str(cursor),"\n",warnMsg])
-    self.warnings.append((warnFile,warnStr))
+    self.warnings.append((cursor.getFile(),warnStr))
     return
+
 
   def getAllErrors(self):
     """
@@ -2115,6 +2161,7 @@ class PetscLinter(object):
       if string:
         localList.append("".join((header,string)))
       return
+
 
     allUnresolved,allResolved = [],[]
     for path,errors in self.errors.items():
@@ -2146,6 +2193,7 @@ class PetscLinter(object):
 
     class Addline(object):
       __slots__ = "offset"
+
       def __init__(self,offset):
         self.offset = offset
         return
@@ -2155,22 +2203,23 @@ class PetscLinter(object):
         rl,rr = match.group(2).split(",")
         return "@@ -{},{} +{},{} @@".format(self.offset+int(ll),lr,self.offset+int(rl),rr)
 
-    combinedPatches = []
-    for filename,patches in self.patches.items():
+
+    def combine(filename,patches):
       fstr  = str(filename)
       diffs = []
       for p in sorted(patches,key=lambda x: x.extent.start.line):
-        p.collapse()
         rn  = datetime.datetime.now().ctime()
         tmp = list(difflib.unified_diff(
-          p.src.splitlines(True),p.fixed.splitlines(True),
+          p._makeSource().splitlines(True),p.collapse().splitlines(True),
           fromfile=fstr,tofile=fstr,fromfiledate=rn,tofiledate=rn,n=p.ctxlines
         ))
         tmp[2] = re.sub(r"^@@ -([0-9,]+) \+([0-9,]+) @@",Addline(p.extent.start.line),tmp[2])
         # only the first diff should get the file heading
-        diffs.append("".join(tmp[2:] if len(diffs) else tmp))
-      combinedPatches.append((filename,"".join(diffs)))
-    return combinedPatches
+        diffs.append(tmp[2:] if len(diffs) else tmp)
+      return filename,"".join(itertools.chain.from_iterable(diffs))
+
+    return list(itertools.starmap(combine,self.patches.items()))
+
 
   def diagnostics(self):
     errorsLeft,errorsFixed = self.getAllErrors()
@@ -2345,6 +2394,10 @@ TODO:
 - figure out how to handle in-out parameters
 - fix indentation check when indenting overflowing parameter list descriptions, should be indented to the dash not 2 columns
 - think of checks to do for SourceCode sections
+- handle stable combination of patches on single-character ranges, i.e.
+patch1: insert ' ' in (1,1)
+patch2: insert '\n' in (1,1)
+which order should these go in?
 """
 def alwaysTrue(*args,**kwargs):
   return True
