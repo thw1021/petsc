@@ -164,6 +164,13 @@ static PetscErrorCode testStaticFunction()
 
   Level: beginner developer
 
+  Example Usage:
+.vb
+  int a;
+  double multiline;
+  char codeBlock;
+.ve
+
 .seealso:
 @*/
 PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
@@ -184,6 +191,25 @@ PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 .see also: testStaticFunction()
 @*/
 PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+{
+  return 0;
+}
+
+/*@
+  testScatteredVerbatimBlocks - bla
+
+  Input Parameters:
++ alpha - an alpha
+.vb
+  int a_code_block;
+.ve
+- beta - a beta
+
+  Level: beginner
+
+.seealso: Foo()
+@*/
+PetscErrorCode testScatteredVerbatimBlocks(PetscInt alpha, PetscInt beta)
 {
   return 0;
 }
