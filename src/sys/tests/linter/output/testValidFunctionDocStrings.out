@@ -299,79 +299,96 @@ Description 'a char pointer' must be aligned to 1 space from longest (valid) arg
   122: - function_ptr - a function pointer
   123: 
 
-ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:176
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  167: .seealso:
-  168: @*/
-> 169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
+  174: .seealso:
+  175: @*/
+> 176: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  170: {
-  171:   return testStaticFunction();
+  177: {
+  178:   return testStaticFunction();
 
 Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-fdoc-inline-list-level-spelling]:
-  163:   testAllParamsUndocumented - lorem
+  163: testAllParamsUndocumented - lorem
   164: 
-> 165:   Level: beginner developer
-                ^^^^^^^^^^^^^^^^^^
+> 165: Level: beginner developer
+              ^^^^^^^^^^^^^^^^^^
   166: 
-  167: .seealso:
+  167: Example Usage:
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:193
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt, ...)', canonical type 'int (int, int, ...)'
-  184: .see also: testStaticFunction()
-  185: @*/
-> 186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+  191: .see also: testStaticFunction()
+  192: @*/
+> 193: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  187: {
-  188:   return 0;
+  194: {
+  195:   return 0;
 
 First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
-  176: 
-  177:   Input parameters:
-> 178: - a,b - some params
+  183: 
+  184:   Input parameters:
+> 185: - a,b - some params
        ^
-  179: + nonExistentParam - this param does not exist
-  180: . ... - variadic arguments
+  186: + nonExistentParam - this param does not exist
+  187: . ... - variadic arguments
 
 Multi parameter list entry must start with '.' [-fdoc-param-list-prefix]:
-  177:   Input parameters:
-  178: - a,b - some params
-> 179: + nonExistentParam - this param does not exist
+  184:   Input parameters:
+  185: - a,b - some params
+> 186: + nonExistentParam - this param does not exist
        ^
-  180: . ... - variadic arguments
-  181: 
+  187: . ... - variadic arguments
+  188: 
 
 Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
-  178: - a,b - some params
-  179: + nonExistentParam - this param does not exist
-> 180: . ... - variadic arguments
+  185: - a,b - some params
+  186: + nonExistentParam - this param does not exist
+> 187: . ... - variadic arguments
        ^
-  181: 
-  182:   Level dev
+  188: 
+  189:   Level dev
 
 Synopsis missing '-' between the symbol name and description [-fdoc-synopsis-missing-description-separator]:
-  173: 
-  174: /*@
-> 175:   testParameterGrouping ipsum
+  180: 
+  181: /*@
+> 182:   testParameterGrouping ipsum
                               ^
-  176: 
-  177:   Input parameters:
+  183: 
+  184:   Input parameters:
 
 Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-fdoc-section-header-spelling]:
-  175:   testParameterGrouping ipsum
-  176: 
-> 177:   Input parameters:
+  182:   testParameterGrouping ipsum
+  183: 
+> 184:   Input parameters:
          ^^^^^^^^^^^^^^^^
-  178: - a,b - some params
-  179: + nonExistentParam - this param does not exist
+  185: - a,b - some params
+  186: + nonExistentParam - this param does not exist
 
 Unknown section header '.see also', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
-  182:   Level dev
-  183: 
-> 184: .see also: testStaticFunction()
+  189:   Level dev
+  190: 
+> 191: .see also: testStaticFunction()
        ^^^^^^^^^
-  185: @*/
-  186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+  192: @*/
+  193: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+
+ERROR 8: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:212
+'testScatteredVerbatimBlocks' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
+  210: .seealso: Foo()
+  211: @*/
+> 212: PetscErrorCode testScatteredVerbatimBlocks(PetscInt alpha, PetscInt beta)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  213: {
+  214:   return 0;
+
+Description 'a beta' must be aligned to 1 space from longest (valid) argument 'alpha' [-fdoc-param-list-formatting]:
+  204:   int a_code_block;
+  205: .ve
+> 206: - beta - a beta
+              ^^^^^^^^
+  207: 
+  208:   Level: beginner
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -639,71 +656,71 @@ Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testV
   159:   return 0;
 
 
-ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:169
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:176
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  167: .seealso:
-  168: @*/
-> 169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
+  174: .seealso:
+  175: @*/
+> 176: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  170: {
-  171:   return testStaticFunction();
+  177: {
+  178:   return testStaticFunction();
 
 Section appears to be empty; while I'm all for a good mystery, you should probably elaborate here [-fdoc-section-barren]:
-  165:   Level: beginner developer
-  166: 
-> 167: .seealso:
+  172: .ve
+  173: 
+> 174: .seealso:
        ^^^^^^^^^
-  168: @*/
-  169: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
+  175: @*/
+  176: PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:193
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt, ...)', canonical type 'int (int, int, ...)'
-  184: .see also: testStaticFunction()
-  185: @*/
-> 186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+  191: .see also: testStaticFunction()
+  192: @*/
+> 193: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  187: {
-  188:   return 0;
+  194: {
+  195:   return 0;
 
 Line seems to be a section header but missing ':', did you mean 'Level:'? [-fdoc-section-header-maybe-header]:
-  180: . ... - variadic arguments
-  181: 
-> 182:   Level dev
+  187: . ... - variadic arguments
+  188: 
+> 189:   Level dev
          ^^^^^^^^^
-  183: 
-  184: .see also: testStaticFunction()
+  190: 
+  191: .see also: testStaticFunction()
 
 Each parameter entry must be documented separately on its own line (note variable argument lists should be documented in notes) [-fdoc-param-list-solitary-parameter]:
-  176: 
-  177:   Input parameters:
-> 178: - a,b - some params
+  183: 
+  184:   Input parameters:
+> 185: - a,b - some params
          ^^^
-  179: + nonExistentParam - this param does not exist
-  180: . ... - variadic arguments
+  186: + nonExistentParam - this param does not exist
+  187: . ... - variadic arguments
 
 Extra docstring parameter 'nonExistentParam' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
-  177:   Input parameters:
-  178: - a,b - some params
-> 179: + nonExistentParam - this param does not exist
+  184:   Input parameters:
+  185: - a,b - some params
+> 186: + nonExistentParam - this param does not exist
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  180: . ... - variadic arguments
-  181: 
+  187: . ... - variadic arguments
+  188: 
 
 Extra docstring parameter '...' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
-  178: - a,b - some params
-  179: + nonExistentParam - this param does not exist
-> 180: . ... - variadic arguments
+  185: - a,b - some params
+  186: + nonExistentParam - this param does not exist
+> 187: . ... - variadic arguments
        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  181: 
-  182:   Level dev
+  188: 
+  189:   Level dev
 
 Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
-  180: . ... - variadic arguments
-  181: 
-> 182:   Level dev
+  187: . ... - variadic arguments
+  188: 
+> 189:   Level dev
                ^^^
-  183: 
-  184: .see also: testStaticFunction()
+  190: 
+  191: .see also: testStaticFunction()
 [ROOT] -------------------------------------------------------------------------------------
