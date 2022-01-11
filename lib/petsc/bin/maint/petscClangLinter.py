@@ -883,13 +883,14 @@ class PetscDocString(PetscDocStringBase):
         expressions = (
           "follows","following.*","example","instance","one of.*","calling sequence.*",
           "available.*include","supports.*approaches.*","see.*users.*manual",
-          "y. saad, iterative methods.*philadelphia"
+          "y. saad, iterative methods.*philadelphia","default"
         )
         regex = "|".join(":".join((expr,anchor)) for expr in expressions)
         if re.search(regex,line.casefold()) is None:
           return PetscDocString.Verdict.IS_HEADING
-        return PetscDocString.Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
-
+        elif anchor == "$":
+          return PetscDocString.Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+        return PetscDocString.Verdict.NOT_HEADING
 
       text = text.strip()
       if not text or text.startswith(("+ ",". ","- ","$ ",".vb",".ve")):
@@ -909,6 +910,7 @@ class PetscDocString(PetscDocStringBase):
               cache[text] = verdict
               print(text)
               print(verdict)
+              #import ipdb; ipdb.set_trace()
           return verdict
         return PetscDocString.Verdict.NOT_HEADING
       try:
