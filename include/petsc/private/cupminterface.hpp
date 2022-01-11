@@ -5,9 +5,6 @@
 #include <petsc/private/traithelpers.hpp>
 
 #if defined(__cplusplus)
-#if !PetscDefined(HAVE_CXX_DIALECT_CXX11)
-#error CUPMInterface requires c++11
-#endif // PetscDefined(HAVE_CXX_DIALECT_CXX11)
 
 namespace Petsc
 {
