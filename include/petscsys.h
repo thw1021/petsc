@@ -48,7 +48,6 @@
 
 #include <petscsystypes.h>
 
-/* ========================================================================== */
 /*
     Defines the interface to MPI allowing the use of all MPI functions.
 
