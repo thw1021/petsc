@@ -202,6 +202,13 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR_17
 #endif
 
+/* designated initializers since C99 and C++20 */
+#if defined(__cplusplus) && !defined(PETSC_HAVE_CXX_DIALECT_CXX20)
+#  define PetscDesignatedInitializer(name,value) value
+#else
+#  define PetscDesignatedInitializer(name,value) .name = value
+#endif
+
 #include <petscversion.h>
 #define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://petsc.org/\n"
 

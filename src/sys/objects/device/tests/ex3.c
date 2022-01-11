@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
 /*TEST
 
-  build:
+ build:
    requires: defined(PETSC_HAVE_CXX)
 
  testset:
