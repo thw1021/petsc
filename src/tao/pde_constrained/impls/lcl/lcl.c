@@ -344,16 +344,16 @@ static PetscErrorCode TaoSolve_LCL(Tao tao)
       if (lclP->verbose) {
         ierr = PetscPrintf(PETSC_COMM_WORLD," Newton direction not descent for augmented Lagrangian: %g",(double)aldescent);CHKERRQ(ierr);
       }
-      ierr = PetscInfo1(tao,"Newton direction not descent for augmented Lagrangian: %g\n",(double)aldescent);CHKERRQ(ierr);
+      ierr = PetscInfo(tao,"Newton direction not descent for augmented Lagrangian: %g\n",(double)aldescent);CHKERRQ(ierr);
       lclP->rho =  (rGL_U - adec)/rWU;
       if (lclP->rho > lclP->rhomax) {
         lclP->rho = lclP->rhomax;
-        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"rho=%g > rhomax, case not implemented.  Increase rhomax (-tao_lcl_rhomax)",(double)lclP->rho);
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"rho=%g > rhomax, case not implemented.  Increase rhomax (-tao_lcl_rhomax)",(double)lclP->rho);
       }
       if (lclP->verbose) {
         ierr = PetscPrintf(PETSC_COMM_WORLD,"  Increasing penalty parameter to %g\n",(double)lclP->rho);CHKERRQ(ierr);
       }
-      ierr = PetscInfo1(tao,"  Increasing penalty parameter to %g\n",(double)lclP->rho);CHKERRQ(ierr);
+      ierr = PetscInfo(tao,"  Increasing penalty parameter to %g\n",(double)lclP->rho);CHKERRQ(ierr);
     }
 
     ierr = LCLComputeAugmentedLagrangianAndGradient(tao->linesearch,tao->solution,&lclP->aug,lclP->GAugL,tao);CHKERRQ(ierr);

@@ -38,7 +38,7 @@ class CaseInsensitiveDefaultDict(defaultdict):
     return self[key]
 
 def default_cxx_dialect_ranges():
-  return ('c++03','c++17')
+  return ('c++11','c++17')
 
 class Configure(config.base.Configure):
   def __init__(self, framework):
@@ -53,7 +53,6 @@ class Configure(config.base.Configure):
     self.cxxlibs                 = []
     self.skipdefaultpaths        = []
     self.cxxCompileC             = False
-    self.cRestrict               = ' '
     self.cxxRestrict             = ' '
     self.c99flag                 = None
     self.cxxDialectRange         = CaseInsensitiveDefaultDict(default_cxx_dialect_ranges)
@@ -78,7 +77,7 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-with-fortranlib-autodetect=<bool>',     nargs.ArgBool(None, 1, 'Autodetect Fortran compiler libraries'))
     help.addArgument('Compilers', '-with-cxxlib-autodetect=<bool>',         nargs.ArgBool(None, 1, 'Autodetect C++ compiler libraries'))
     help.addArgument('Compilers', '-with-dependencies=<bool>',              nargs.ArgBool(None, 1, 'Compile with -MMD or equivalent flag if possible'))
-    help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources. Pass \'c++17\' to use \'-std=c++17\', \'gnu++17\' to use \'-std=gnu++17\' or pass just the numer (e.g. \'17\') to have PETSc auto-detect gnu extensions. Pass \'auto\' to let PETSc auto-detect everything or \'0\' to use the compiler\'s default. Available: (03, 11, 14, 17, auto, 0)'))
+    help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources. Pass \'c++17\' to use \'-std=c++17\', \'gnu++17\' to use \'-std=gnu++17\' or pass just the numer (e.g. \'17\') to have PETSc auto-detect gnu extensions. Pass \'auto\' to let PETSc auto-detect everything or \'0\' to use the compiler\'s default. Available: (11, 14, 17, auto, 0)'))
     help.addArgument('Compilers', '-with-hip-dialect=<dialect>',            nargs.Arg(None, 'auto', 'Dialect under which to compile HIP sources. If set should probably be equivalent to c++ dialect (see --with-cxx-dialect)'))
     help.addArgument('Compilers', '-with-cuda-dialect=<dialect>',           nargs.Arg(None, 'auto', 'Dialect under which to compile CUDA sources. If set should probably be equivalent to c++ dialect (see --with-cxx-dialect)'))
     help.addArgument('Compilers', '-with-sycl-dialect=<dialect>',           nargs.Arg(None, 'auto', 'Dialect under which to compile SYCL sources. If set should probably be equivalent to c++ dialect (see --with-cxx-dialect)'))
@@ -151,42 +150,8 @@ class Configure(config.base.Configure):
     config.base.Configure.__setattr__(self, name, value)
     return
 
-  # THIS SHOULD BE REWRITTEN AS checkDeclModifier()
-  # checkCInline & checkCxxInline are pretty much the same code right now.
-  # but they could be different (later) - and they also check/set different flags - hence
-  # code duplication.
-  def checkCInline(self):
-    '''Check for C inline keyword'''
-    self.cInlineKeyword = ' '
-    self.pushLanguage('C')
-    for kw in ['inline', '__inline', '__inline__']:
-      if self.checkCompile('static %s int foo(int a) {return a;}' % kw, 'foo(1);'):
-        self.cInlineKeyword = kw
-        self.logPrint('Set C Inline keyword to '+self.cInlineKeyword , 4, 'compilers')
-        break
-    self.popLanguage()
-    if self.cInlineKeyword == ' ':
-      self.logPrint('No C Inline keyword. Using static function', 4, 'compilers')
-    self.addDefine('C_INLINE', self.cInlineKeyword)
-    return
-
-  def checkCxxInline(self):
-    '''Check for C++ inline keyword'''
-    self.cxxInlineKeyword = ' '
-    self.pushLanguage('C++')
-    for kw in ['inline', '__inline', '__inline__']:
-      if self.checkCompile('static %s int foo(int a) {return a;}' % kw, 'foo(1);'):
-        self.cxxInlineKeyword = kw
-        self.logPrint('Set Cxx Inline keyword to '+self.cxxInlineKeyword , 4, 'compilers')
-        break
-    self.popLanguage()
-    if self.cxxInlineKeyword == ' ':
-      self.logPrint('No Cxx Inline keyword. Using static function', 4, 'compilers')
-    self.addDefine('CXX_INLINE', self.cxxInlineKeyword)
-    return
-
   def checkRestrict(self,language):
-    '''Check for the C/CXX restrict keyword'''
+    '''Check for the CXX restrict keyword'''
     # Try keywords equivalent to C99 restrict.  Note that many C
     # compilers require special cflags, such as -std=c99 or -restrict to
     # recognize the "restrict" keyword and it is not always practical to
@@ -195,28 +160,29 @@ class Configure(config.base.Configure):
     # without special options.  Glibc uses __restrict, presumably for
     # this reason.  Note that __restrict is not standardized while
     # "restrict" is, but implementation realities favor __restrict.
+    define = language.upper()+'_RESTRICT'
     if config.setCompilers.Configure.isPGI(self.setCompilers.CC, self.log):
-      self.addDefine(language.upper()+'_RESTRICT', ' ')
-      self.logPrint('PGI restrict word is broken cannot handle [restrict] '+str(language)+' restrict keyword', 4, 'compilers')
+      self.addDefine(define, ' ')
+      self.logPrint(' '.join(('PGI restrict word is broken cannot handle [restrict]',language,'restrict keyword')), 4, 'compilers')
       return
-    self.pushLanguage(language)
-    for kw in ['__restrict', ' __restrict__', 'restrict']:
-      if self.checkCompile('', 'float * '+kw+' x;'):
-        if language.lower() == 'c':
-          self.cRestrict = kw
-        elif language.lower() == 'cxx':
-          self.cxxRestrict = kw
-        else:
-          raise RuntimeError('Unknown Language :' + str(language))
-        self.logPrint('Set '+str(language)+' restrict keyword to '+kw, 4, 'compilers')
-        # Define to equivalent of C99 restrict keyword, or to nothing if this is not supported.
-        self.addDefine(language.upper()+'_RESTRICT', kw)
-        self.popLanguage()
-        return
-    # did not find restrict
-    self.addDefine(language.upper()+'_RESTRICT', ' ')
-    self.logPrint('No '+str(language)+' restrict keyword', 4, 'compilers')
-    self.popLanguage()
+    lang = language.lower()
+    if lang == 'c':
+      return # restrict since C99
+    if lang != 'cxx':
+      mess = 'Unknown Language : '+language
+      raise RuntimeError(mess)
+    with self.Language(language):
+      # Define to equivalent of C99 restrict keyword, or to nothing if this is not supported
+      for kw in ['__restrict', ' __restrict__', 'restrict', ' ']:
+        if self.checkCompile('', 'float * '+kw+' x;'):
+          self.cxxRestrict = kw # is this used anywhere?
+          break
+
+    logMessage = ' '.join(
+      ['Set',language,'restrict keyword to',kw] if kw else ['No',language,'restrict keyword']
+    )
+    self.logPrint(logMessage, 4, 'compilers')
+    self.addDefine(define, kw)
     return
 
   def checkCrossLink(self, func1, func2, language1 = 'C', language2='FC',extraObjs = []):
@@ -539,14 +505,14 @@ class Configure(config.base.Configure):
 
     On return this function sets the following values:
     - if needed, appends the relevant CXX dialect flag to <lang> compiler flags
-    - self.cxxDialectRange = (minSupportedDialect,maxSupportedDialect) (e.g. ('c++03','c++14'))
+    - self.cxxDialectRange = (minSupportedDialect,maxSupportedDialect) (e.g. ('c++11','c++14'))
     - self.addDefine('HAVE_{LANG}_DIALECT_CXX{DIALECT_NUM}',1) for every supported dialect
     - self.lang+'dialect' = 'c++'+maxDialectNumber (e.g. 'c++14') but ONLY if the user specifically requests a dialect version, otherwise this is not set
 
     or raises a RuntimeException if either:
     - The user has set both the --with-dialect=[...] configure options and -std=[...] in their compiler flags
     - The combination of specifically requested packages cannnot all be compiled with the same flag
-    - The compiler does not support at minimum -std=c++03
+    - The compiler does not support at minimum -std=c++11
     """
     DialectFlags = namedtuple('DialectFlags',['standard','gnu'])
     BaseFlags    = DialectFlags(standard='-std=c++',gnu='-std=gnu++')
@@ -606,8 +572,12 @@ class Configure(config.base.Configure):
         'configure to have PETSc automatically detect the most appropriate flag for you'
       ]).format(opt=configureArg))
 
-    includes03 = """
-    // c++03 includes
+    includes11 = """
+    // c++11 includes
+    #include <memory>
+    #include <random>
+    #include <complex>
+
     #include <iostream>
 
     template<class T> void ignore(const T&) { } // silence unused variable warnings
@@ -618,21 +588,6 @@ class Configure(config.base.Configure):
       valClass() { i = 3; }
       valClass(int x) : i(x) { }
     };
-    """
-    # this really just tests whether we have a working c++ compiler, c++03 only introduced
-    # value initialization
-    body03 = """
-    // c++03 body
-    valClass cls = valClass(); // value initialization
-    int i = cls.i;             // i is not declared const
-    const int& rci = i;        // but rci is
-    const_cast<int&>(rci) = 4;
-    """
-    includes11 = includes03+"""
-    // c++11 includes
-    #include <memory>
-    #include <random>
-    #include <complex>
 
     class MoveSemantics
     {
@@ -648,8 +603,13 @@ class Configure(config.base.Configure):
     template<class ... Types> struct Tuple { };
     using PetscErrorCode = int;
     """
-    body11 = body03+"""
+    body11 = """
     // c++11 body
+    valClass cls = valClass(); // value initialization
+    int i = cls.i;             // i is not declared const
+    const int& rci = i;        // but rci is
+    const_cast<int&>(rci) = 4;
+
     constexpr int big_value = 1234;
     decltype(big_value) ierr = big_value;
     auto ret = trailing(ierr);
@@ -719,7 +679,6 @@ class Configure(config.base.Configure):
     """
     Dialect  = namedtuple('Dialect',['num','includes','body'])
     dialects = (
-      Dialect(num='03',includes=includes03,body=body03),
       Dialect(num='11',includes=includes11,body=body11),
       Dialect(num='14',includes=includes14,body=body14),
       Dialect(num='17',includes=includes17,body=body17),
@@ -741,8 +700,11 @@ class Configure(config.base.Configure):
         break
 
     if maxDialect == -1:
-      if withLangDialect.endswith('98'):
-        raise RuntimeError('PETSc requires at least c++03, how old is your compiler?')
+      ver    = int(withLangDialect[-2:])
+      minver = int(dialects[0].num)
+      if ver > 89 or ver < minver:
+        mess = 'PETSc requires at least c++{}, how old is your compiler?'.format(minver)
+        raise RuntimeError(mess)
       errorMessage = 'Unknown c++ dialect: {val}'.format(val=withLangDialect)
       raise RuntimeError(errorMessage)
     self.logPrint('checkCxxDialect: user has {expl} selected dialect {dlct} for {lang}'.format(expl='EXPLICITLY' if explicit else 'NOT explicitly',dlct=withLangDialect,lang=LANG))
@@ -848,7 +810,7 @@ class Configure(config.base.Configure):
           )
           if flag.endswith(dialects[0].num):
             # it's the compilers fault we can't try the next dialect
-            errorMessage = baseMessage.format(dlct='c++03')
+            errorMessage = baseMessage.format(dlct=dialects[0].num)
             raise RuntimeError(errorMessage)
           if withLangDialect in ('NONE','AUTO'):
             # it's a packages fault we can't try the next dialect
@@ -1871,7 +1833,6 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       self.executeTest(self.checkC99Flag)
       self.executeTest(self.checkRestrict,['C'])
       self.executeTest(self.checkCFormatting)
-      self.executeTest(self.checkCInline)
       self.executeTest(self.checkDynamicLoadFlag)
       if self.argDB['with-clib-autodetect']:
         self.executeTest(self.checkCLibraries)
@@ -1892,7 +1853,6 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       isClang = config.setCompilers.Configure.isClang(self.setCompilers.CXX,self.log)
       self.executeTest(self.checkCxxDialect,['Cxx',self.isGCXX or isClang])
       self.executeTest(self.checkCxxOptionalExtensions)
-      self.executeTest(self.checkCxxInline)
       self.executeTest(self.checkCxxComplexFix)
       if self.argDB['with-cxxlib-autodetect']:
         self.executeTest(self.checkCxxLibraries)
