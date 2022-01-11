@@ -282,6 +282,13 @@ MC*/
 #include <petscversion.h>
 #define PETSC_AUTHOR_INFO  "       The PETSc Team\n    petsc-maint@mcs.anl.gov\n https://petsc.org/\n"
 
+/* designated initializers since C99 and C++20 */
+#if defined(__cplusplus) && !defined(PETSC_HAVE_CXX_DIALECT_CXX20)
+#  define PetscDesignatedInitializer(name,value) value
+#else
+#  define PetscDesignatedInitializer(name,value) .name = value
+#endif
+
 /*MC
   PetscUnlikely - Hints the compiler that the given condition is usually FALSE
 
