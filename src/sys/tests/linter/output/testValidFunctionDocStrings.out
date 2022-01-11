@@ -723,4 +723,62 @@ Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced
                ^^^
   190: 
   191: .see also: testStaticFunction()
+
+ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:228
+'testBadParamListDescrSep' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
+  226: .seealso: Foo()
+  227: @*/
+> 228: PetscErrorCode testBadParamListDescrSep(PetscInt alpha, PetscInt beta)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  229: {
+  230:   return 0;
+
+Parameter list seems to be missing a description; I suspect you may be using ',' as a separator instead of '-'. Expected 'alpha - an alpha' [-fdoc-param-list-wrong-description-separator]:
+  219: 
+  220:   Input Parameters:
+> 221: + alpha, an alpha
+       ^^^^^^^^^^^^^^^^^
+  222: - beta = a beta
+  223: 
+
+Parameter list seems to be missing a description; I suspect you may be using '=' as a separator instead of '-'. Expected 'beta - a beta' [-fdoc-param-list-wrong-description-separator]:
+  220:   Input Parameters:
+  221: + alpha, an alpha
+> 222: - beta = a beta
+       ^^^^^^^^^^^^^^^
+  223: 
+  224:   Level: beginner
+
+Each parameter entry must be documented separately on its own line [-fdoc-param-list-solitary-parameter]:
+  219: 
+  220:   Input Parameters:
+> 221: + alpha, an alpha
+         ^^^^^^^^^^^^^^^
+  222: - beta = a beta
+  223: 
+
+Extra docstring parameter 'an alpha' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
+  219: 
+  220:   Input Parameters:
+> 221: + alpha, an alpha
+       ^^^^^^^^^^^^^^^^^
+  222: - beta = a beta
+  223: 
+
+Extra docstring parameter 'beta = a beta' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
+  220:   Input Parameters:
+  221: + alpha, an alpha
+> 222: - beta = a beta
+       ^^^^^^^^^^^^^^^
+  223: 
+  224:   Level: beginner
+
+maybe you meant 'beta' of derived type 'PetscInt', canonical type 'int'
+  226: .seealso: Foo()
+  227: @*/
+> 228: PetscErrorCode testBadParamListDescrSep(PetscInt alpha, PetscInt beta)
+                                                               ^^^^^^^^^^^^^
+  229: {
+  230:   return 0;
+?
 [ROOT] -------------------------------------------------------------------------------------

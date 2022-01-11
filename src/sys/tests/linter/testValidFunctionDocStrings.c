@@ -213,3 +213,19 @@ PetscErrorCode testScatteredVerbatimBlocks(PetscInt alpha, PetscInt beta)
 {
   return 0;
 }
+
+/*@
+  testBadParamListDescrSep - foo
+
+  Input Parameters:
++ alpha, an alpha
+- beta = a beta
+
+  Level: beginner
+
+.seealso: Foo()
+@*/
+PetscErrorCode testBadParamListDescrSep(PetscInt alpha, PetscInt beta)
+{
+  return 0;
+}
