@@ -160,10 +160,10 @@ class Configure(config.base.Configure):
     # without special options.  Glibc uses __restrict, presumably for
     # this reason.  Note that __restrict is not standardized while
     # "restrict" is, but implementation realities favor __restrict.
-    define = langauge.upper()+'_RESTRICT'
+    define = language.upper()+'_RESTRICT'
     if config.setCompilers.Configure.isPGI(self.setCompilers.CC, self.log):
       self.addDefine(define, ' ')
-      self.logPrint('PGI restrict word is broken cannot handle [restrict] '+str(language)+' restrict keyword', 4, 'compilers')
+      self.logPrint(' '.join(('PGI restrict word is broken cannot handle [restrict]',language,'restrict keyword')), 4, 'compilers')
       return
     lang = language.lower()
     if lang == 'c':
