@@ -343,6 +343,7 @@ class PetscDocString(PetscDocStringBase):
     def diagnostic(cls,flag):
       return super().diagnostic(flag,"")
 
+
   @DiagnosticManager.register(
     ("section-header-missing",""),
     ("section-header-unique",""),
@@ -427,6 +428,7 @@ class PetscDocString(PetscDocStringBase):
       else:
         self.items = tuple(items)
       return
+
 
   @DiagnosticManager.register(
     ("section-header-missing",""),
@@ -541,7 +543,8 @@ class PetscDocString(PetscDocStringBase):
           nonlocal subheading
           subheading += 1
         lstp = line.lstrip()
-        if lstp.startswith(self.prefixes):
+        # .ve and .vb might trip up the prefix detection since they start with '.'
+        if lstp.startswith(self.prefixes) and not line.startswith((".vb",".ve")):
           _,arg,descr = self.splitParam(lstp)
           if not descr:
             mess = "Parameter list entry missing a description. Expected '{} - a very useful description'".format(arg)
@@ -575,6 +578,7 @@ class PetscDocString(PetscDocStringBase):
 
       self.items = parameterListPrefixCheck(ds,dict(groups))
       return
+
 
   @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class Prose(SectionBase):
@@ -612,6 +616,7 @@ class PetscDocString(PetscDocStringBase):
       self.items = items
       return
 
+
   @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
   class SourceCode(SectionBase):
     @classmethod
@@ -620,40 +625,36 @@ class PetscDocString(PetscDocStringBase):
 
     def setup(self,ds,*args,**kwargs):
       items = {}
-      if self:
-        startline  = self.extent.start.line
-        subheading = -1
-        dollars    = False
 
-      def inspector(loc,line):
-        nonlocal subheading,dollars
-        lstrp = line.lstrip()
-        if line.startswith((".vb","$")):
-          if line.startswith("$"):
-            dollars = True
-          else:
-            assert not dollars, "Mixing verbatim blocks and dollars?"
-          subheading += 1
-          items[subheading] = [dollars,loc.start.line-startline]
-        elif line.startswith(".ve"):
-          assert len(items[subheading]) == 2
-          items[subheading].append(loc.start.line-startline+1)
-        elif dollars:
-          items[subheading].append(loc.start.line-startline)
-          dollars = False
-        return
+      class Inspector(object):
+        __slots__ = "subheading","startline"
 
-      super().setup(ds,*args,**kwargs,inspectLine=inspector)
+        def __init__(self,obj):
+          self.subheading = 0
+          self.startline  = obj.extent.start.line if obj else 0
+          return
+
+        def __call__(self,loc,line):
+          sub   = self.subheading
+          lstrp = line.lstrip()
+          if lstrp.startswith(".vb"):
+            items[sub] = [loc.start.line-self.startline]
+          elif lstrp.startswith(".ve"):
+            assert len(items[self.subheading]) == 1
+            items[sub].append(loc.start.line-self.startline+1)
+            self.subheading += 1
+          return
+
+
+      super().setup(ds,*args,**kwargs,inspectLine=Inspector(self))
 
       self.items = items
       if 0: # TODO, think of checks to do for source code
-        for blockno,(dollars,begin,end) in self.items.items():
+        for blockno,(begin,end) in self.items.items():
           first,*interior,last = self.lines[begin:end]
-          if dollars:
-            pass
-          else:
-            pass
+          import ipdb; ipdb.set_trace()
       return
+
 
   @DiagnosticManager.register(
     ("section-header-missing",""),("section-header-unique",""),
@@ -861,7 +862,7 @@ class PetscDocString(PetscDocStringBase):
       MAYBE_HEADING = 2
 
       text = text.strip()
-      if not text or text.startswith(("+ ",". ","- ","$ ")):
+      if not text or text.startswith(("+ ",". ","- ","$ ",".vb",".ve")):
         return NOT_HEADING
 
       if text.endswith(":"):
@@ -873,6 +874,7 @@ class PetscDocString(PetscDocStringBase):
         if re.search(regex,text) is not None:
           return IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
         return IS_HEADING
+
       if ": " in text and " :" not in text:
         # check that all subsequent items after a ":" are letters, this ought to catch out
         # instances of ":" in random code snippets or text...
@@ -950,11 +952,11 @@ class PetscDocString(PetscDocStringBase):
       if rsw("/*"+char) or rew(char+"*/"):
         return True
 
-    # if we find these titles, likely this is a docstring, unless it ends in one of the
-    # internal suffixes
+    # if we find at least 2 titles, likely this is a docstring, unless it ends in one of
+    # the internal suffixes
     rawlo     = raw.casefold()
-    haveTitle = any(title in rawlo for title in map(str.casefold,cls.sections.titles()))
-    return haveTitle and not PetscCursor.getNameFromCursor(cursor).casefold().endswith(
+    haveTitle = sum(title+":" in rawlo for title in map(str.casefold,cls.sections.titles()))
+    return haveTitle >= 2 and not PetscCursor.getNameFromCursor(cursor).casefold().endswith(
       ("_private","_internal")
     )
 

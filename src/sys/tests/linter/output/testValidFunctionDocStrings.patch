@@ -171,46 +171,53 @@
 -  Level: beginner developer
 +  Level: developer
  
- .seealso:
-@@ -176,5 +176,5 @@
+   Example Usage:
+@@ -183,5 +183,5 @@
  
  /*@
 -  testParameterGrouping ipsum
 +  testParameterGrouping - ipsum
  
    Input parameters:
-@@ -178,5 +178,5 @@
+@@ -185,5 +185,5 @@
    testParameterGrouping ipsum
  
 -  Input parameters:
 +  Input Parameters:
  - a,b - some params
  + nonExistentParam - this param does not exist
-@@ -179,5 +179,5 @@
+@@ -186,5 +186,5 @@
  
    Input parameters:
 -- a,b - some params
 ++ a,b - some params
  + nonExistentParam - this param does not exist
  . ... - variadic arguments
-@@ -180,5 +180,5 @@
+@@ -187,5 +187,5 @@
    Input parameters:
  - a,b - some params
 -+ nonExistentParam - this param does not exist
 +. nonExistentParam - this param does not exist
  . ... - variadic arguments
  
-@@ -181,5 +181,5 @@
+@@ -188,5 +188,5 @@
  - a,b - some params
  + nonExistentParam - this param does not exist
 -. ... - variadic arguments
 +- ... - variadic arguments
  
    Level dev
-@@ -185,5 +185,5 @@
+@@ -192,5 +192,5 @@
    Level dev
  
 -.see also: testStaticFunction()
 +.seealso: testStaticFunction()
  @*/
  PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+@@ -207,5 +207,5 @@
+   int a_code_block;
+ .ve
+-- beta - a beta
++- beta  - a beta
+ 
+   Level: beginner
