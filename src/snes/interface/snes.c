@@ -569,7 +569,7 @@ static PetscErrorCode (*othersetfromoptions[MAXSETFROMOPTIONS])(SNES);
 PetscErrorCode  SNESAddOptionsChecker(PetscErrorCode (*snescheck)(SNES))
 {
   PetscFunctionBegin;
-  if (numberofsetfromoptions >= MAXSETFROMOPTIONS) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Too many options checkers, only %D allowed", MAXSETFROMOPTIONS);
+  if (numberofsetfromoptions >= MAXSETFROMOPTIONS) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Too many options checkers, only %D allowed", MAXSETFROMOPTIONS);
   othersetfromoptions[numberofsetfromoptions++] = snescheck;
   PetscFunctionReturn(0);
 }
@@ -611,7 +611,7 @@ static PetscErrorCode SNESSetUpMatrixFree_Private(SNES snes, PetscBool hasOperat
     }
   }
 
-  ierr = PetscInfo1(snes,"Setting default matrix-free operator routines (version %D)\n", version);CHKERRQ(ierr);
+  ierr = PetscInfo(snes,"Setting default matrix-free operator routines (version %D)\n", version);CHKERRQ(ierr);
   if (hasOperator) {
 
     /* This version replaces the user provided Jacobian matrix with a
@@ -655,7 +655,7 @@ static PetscErrorCode DMRestrictHook_SNESVecSol(DM dmfine,Mat Restrict,Vec Rscal
     ierr = DMGetCoarsenLevel(dmfine,&fineclevel);CHKERRQ(ierr);
     ierr = DMGetRefineLevel(dmcoarse,&coarselevel);CHKERRQ(ierr);
     ierr = DMGetCoarsenLevel(dmcoarse,&coarseclevel);CHKERRQ(ierr);
-    ierr = PetscInfo4(dmfine,"Restricting SNES solution vector from level %D-%D to level %D-%D\n",finelevel,fineclevel,coarselevel,coarseclevel);CHKERRQ(ierr);
+    ierr = PetscInfo(dmfine,"Restricting SNES solution vector from level %D-%D to level %D-%D\n",finelevel,fineclevel,coarselevel,coarseclevel);CHKERRQ(ierr);
   }
   if (dmfine == snes->dm) Xfine = snes->vec_sol;
   else {
@@ -2844,7 +2844,7 @@ PetscErrorCode  SNESComputeJacobian(SNES snes,Vec X,Mat A,Mat B)
     }
     PetscFunctionReturn(0);
   } else if (snes->lagjacobian > 1 && (snes->iter + snes->jac_iter) % snes->lagjacobian) {
-    ierr = PetscInfo2(snes,"Reusing Jacobian/preconditioner because lag is %D and SNES iteration is %D\n",snes->lagjacobian,snes->iter);CHKERRQ(ierr);
+    ierr = PetscInfo(snes,"Reusing Jacobian/preconditioner because lag is %D and SNES iteration is %D\n",snes->lagjacobian,snes->iter);CHKERRQ(ierr);
     ierr = PetscObjectTypeCompare((PetscObject)A,MATMFFD,&flag);CHKERRQ(ierr);
     if (flag) {
       ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
@@ -2879,7 +2879,7 @@ PetscErrorCode  SNESComputeJacobian(SNES snes,Vec X,Mat A,Mat B)
     ierr = PetscInfo(snes,"Reusing preconditioner because lag is -1\n");CHKERRQ(ierr);
     ierr = KSPSetReusePreconditioner(snes->ksp,PETSC_TRUE);CHKERRQ(ierr);
   } else if (snes->lagpreconditioner > 1 && (snes->iter + snes->pre_iter) % snes->lagpreconditioner) {
-    ierr = PetscInfo2(snes,"Reusing preconditioner because lag is %D and SNES iteration is %D\n",snes->lagpreconditioner,snes->iter);CHKERRQ(ierr);
+    ierr = PetscInfo(snes,"Reusing preconditioner because lag is %D and SNES iteration is %D\n",snes->lagpreconditioner,snes->iter);CHKERRQ(ierr);
     ierr = KSPSetReusePreconditioner(snes->ksp,PETSC_TRUE);CHKERRQ(ierr);
   } else {
     ierr = PetscInfo(snes,"Rebuilding preconditioner\n");CHKERRQ(ierr);
@@ -3826,23 +3826,23 @@ PetscErrorCode  SNESSetTolerances(SNES snes,PetscReal abstol,PetscReal rtol,Pets
   PetscValidLogicalCollectiveInt(snes,maxf,6);
 
   if (abstol != PETSC_DEFAULT) {
-    if (abstol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %g must be non-negative",(double)abstol);
+    if (abstol < 0.0) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %g must be non-negative",(double)abstol);
     snes->abstol = abstol;
   }
   if (rtol != PETSC_DEFAULT) {
-    if (rtol < 0.0 || 1.0 <= rtol) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Relative tolerance %g must be non-negative and less than 1.0",(double)rtol);
+    if (rtol < 0.0 || 1.0 <= rtol) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Relative tolerance %g must be non-negative and less than 1.0",(double)rtol);
     snes->rtol = rtol;
   }
   if (stol != PETSC_DEFAULT) {
-    if (stol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Step tolerance %g must be non-negative",(double)stol);
+    if (stol < 0.0) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Step tolerance %g must be non-negative",(double)stol);
     snes->stol = stol;
   }
   if (maxit != PETSC_DEFAULT) {
-    if (maxit < 0) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %D must be non-negative",maxit);
+    if (maxit < 0) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %D must be non-negative",maxit);
     snes->max_its = maxit;
   }
   if (maxf != PETSC_DEFAULT) {
-    if (maxf < -1) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of function evaluations %D must be -1 or nonnegative",maxf);
+    if (maxf < -1) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of function evaluations %D must be -1 or nonnegative",maxf);
     snes->max_funcs = maxf;
   }
   snes->tolerancesset = PETSC_TRUE;
@@ -4908,7 +4908,7 @@ PetscErrorCode  SNESSetType(SNES snes,SNESType type)
   if (match) PetscFunctionReturn(0);
 
   ierr = PetscFunctionListFind(SNESList,type,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested SNES type %s",type);
+  if (!r) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested SNES type %s",type);
   /* Destroy the previous private SNES context */
   if (snes->ops->destroy) {
     ierr               = (*(snes)->ops->destroy)(snes);CHKERRQ(ierr);
@@ -5417,12 +5417,12 @@ PetscErrorCode  SNESKSPSetParametersEW(SNES snes,PetscInt version,PetscReal rtol
   if (alpha2 != PETSC_DEFAULT)    kctx->alpha2    = alpha2;
   if (threshold != PETSC_DEFAULT) kctx->threshold = threshold;
 
-  if (kctx->version < 1 || kctx->version > 3) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only versions 1, 2 and 3 are supported: %D",kctx->version);
-  if (kctx->rtol_0 < 0.0 || kctx->rtol_0 >= 1.0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 <= rtol_0 < 1.0: %g",(double)kctx->rtol_0);
-  if (kctx->rtol_max < 0.0 || kctx->rtol_max >= 1.0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 <= rtol_max (%g) < 1.0\n",(double)kctx->rtol_max);
-  if (kctx->gamma < 0.0 || kctx->gamma > 1.0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 <= gamma (%g) <= 1.0\n",(double)kctx->gamma);
-  if (kctx->alpha <= 1.0 || kctx->alpha > 2.0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"1.0 < alpha (%g) <= 2.0\n",(double)kctx->alpha);
-  if (kctx->threshold <= 0.0 || kctx->threshold >= 1.0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 < threshold (%g) < 1.0\n",(double)kctx->threshold);
+  if (kctx->version < 1 || kctx->version > 3) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only versions 1, 2 and 3 are supported: %D",kctx->version);
+  if (kctx->rtol_0 < 0.0 || kctx->rtol_0 >= 1.0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 <= rtol_0 < 1.0: %g",(double)kctx->rtol_0);
+  if (kctx->rtol_max < 0.0 || kctx->rtol_max >= 1.0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 <= rtol_max (%g) < 1.0\n",(double)kctx->rtol_max);
+  if (kctx->gamma < 0.0 || kctx->gamma > 1.0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 <= gamma (%g) <= 1.0\n",(double)kctx->gamma);
+  if (kctx->alpha <= 1.0 || kctx->alpha > 2.0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"1.0 < alpha (%g) <= 2.0\n",(double)kctx->alpha);
+  if (kctx->threshold <= 0.0 || kctx->threshold >= 1.0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"0.0 < threshold (%g) < 1.0\n",(double)kctx->threshold);
   PetscFunctionReturn(0);
 }
 
@@ -5499,12 +5499,12 @@ PetscErrorCode  SNESKSPGetParametersEW(SNES snes,PetscInt *version,PetscReal *rt
       stol = kctx->gamma*(kctx->norm_first*snes->rtol)/snes->norm;
       stol = PetscMax(rtol,stol);
       rtol = PetscMin(kctx->rtol_0,stol);
-    } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only versions 1, 2 or 3 are supported: %D",kctx->version);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only versions 1, 2 or 3 are supported: %D",kctx->version);
   }
   /* safeguard: avoid rtol greater than one */
   rtol = PetscMin(rtol,kctx->rtol_max);
   ierr = KSPSetTolerances(ksp,rtol,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
-  ierr = PetscInfo3(snes,"iter %D, Eisenstat-Walker (version %D) KSP rtol=%g\n",snes->iter,kctx->version,(double)rtol);CHKERRQ(ierr);
+  ierr = PetscInfo(snes,"iter %D, Eisenstat-Walker (version %D) KSP rtol=%g\n",snes->iter,kctx->version,(double)rtol);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

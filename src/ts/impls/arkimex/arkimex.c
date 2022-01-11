@@ -676,7 +676,7 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX(TS ts,PetscInt order,Vec X,PetscBoo
   }
 unavailable:
   if (done) *done = PETSC_FALSE;
-  else SETERRQ3(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ARKIMEX '%s' of order %D cannot evaluate step at order %D. Consider using -ts_adapt_type none or a different method that has an embedded estimate.",tab->name,tab->order,order);
+  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ARKIMEX '%s' of order %D cannot evaluate step at order %D. Consider using -ts_adapt_type none or a different method that has an embedded estimate.",tab->name,tab->order,order);
   PetscFunctionReturn(0);
 }
 
@@ -701,7 +701,7 @@ static PetscErrorCode TSARKIMEXTestMassIdentity(TS ts,PetscBool *id)
     *id = PETSC_TRUE;
   } else {
     *id = PETSC_FALSE;
-    ierr = PetscInfo1((PetscObject)ts,"IFunction(Udot = random) - IFunction(Udot = 0) is not near Udot, %g, suspect mass matrix implied in IFunction() is not the identity as required\n",(double)norm);CHKERRQ(ierr);
+    ierr = PetscInfo((PetscObject)ts,"IFunction(Udot = random) - IFunction(Udot = 0) is not near Udot, %g, suspect mass matrix implied in IFunction() is not the identity as required\n",(double)norm);CHKERRQ(ierr);
   }
   ierr = VecDestroy(&Udot);CHKERRQ(ierr);
   ierr = VecDestroy(&Y1);CHKERRQ(ierr);
@@ -857,7 +857,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
       }
       if (ts->equation_type >= TS_EQ_IMPLICIT) {
         if (i==0 && tab->explicit_first_stage) {
-          if (!tab->stiffly_accurate) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",ark->tableau->name);
+          if (!tab->stiffly_accurate) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",ark->tableau->name);
           ierr = VecCopy(Ydot0,YdotI[0]);CHKERRQ(ierr);                                      /* YdotI = YdotI(tn-1) */
         } else {
           ierr = VecAXPBYPCZ(YdotI[i],-ark->scoeff/h,ark->scoeff/h,0,Z,Y[i]);CHKERRQ(ierr);  /* YdotI = shift*(X-Z) */
@@ -901,7 +901,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      ierr = PetscInfo2(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections);CHKERRQ(ierr);
+      ierr = PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections);CHKERRQ(ierr);
     }
   }
   PetscFunctionReturn(0);
@@ -918,7 +918,7 @@ static PetscErrorCode TSInterpolate_ARKIMEX(TS ts,PetscReal itime,Vec X)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  if (!Bt || !B) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
+  if (!Bt || !B) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
   switch (ark->status) {
   case TS_STEP_INCOMPLETE:
   case TS_STEP_PENDING:
@@ -956,7 +956,7 @@ static PetscErrorCode TSExtrapolate_ARKIMEX(TS ts,PetscReal c,Vec X)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  if (!Bt || !B) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
+  if (!Bt || !B) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
   ierr = PetscCalloc2(s,&bt,s,&b);CHKERRQ(ierr);
   h = ts->time_step;
   h_prev = ts->ptime - ts->ptime_prev;
@@ -1385,7 +1385,7 @@ static PetscErrorCode  TSARKIMEXSetType_ARKIMEX(TS ts,TSARKIMEXType arktype)
       PetscFunctionReturn(0);
     }
   }
-  SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_UNKNOWN_TYPE,"Could not find '%s'",arktype);
+  SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_UNKNOWN_TYPE,"Could not find '%s'",arktype);
 }
 
 static PetscErrorCode  TSARKIMEXSetFullyImplicit_ARKIMEX(TS ts,PetscBool flg)

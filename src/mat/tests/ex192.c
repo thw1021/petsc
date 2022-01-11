@@ -66,7 +66,7 @@ int main(int argc,char **args)
   ierr = MatLoad(A,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
   ierr = MatGetSize(A,&m,&n);CHKERRQ(ierr);
-  if (m != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%d, %d)", m, n);
+  if (m != n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%d, %d)", m, n);
 
   /* Create dense matrix C and X; C holds true solution with identical columns */
   nrhs = 2;
@@ -119,7 +119,7 @@ int main(int argc,char **args)
 
   ierr = PetscOptionsGetReal(NULL,NULL,"-schur_ratio",&sratio,NULL);CHKERRQ(ierr);
   if (sratio < 0. || sratio > 1.) {
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "Invalid ratio for schur degrees of freedom %f", sratio);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "Invalid ratio for schur degrees of freedom %f", sratio);
   }
   size_schur = (PetscInt)(sratio*m);
 

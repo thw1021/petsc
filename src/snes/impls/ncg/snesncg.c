@@ -272,7 +272,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   SNESConvergedReason  reason;
 
   PetscFunctionBegin;
-  if (snes->xl || snes->xu || snes->ops->computevariablebounds) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  if (snes->xl || snes->xu || snes->ops->computevariablebounds) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   ierr = PetscCitationsRegister(SNESCitation,&SNEScite);CHKERRQ(ierr);
   snes->reason = SNES_CONVERGED_ITERATING;
@@ -448,7 +448,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
     }
     ierr = VecAYPX(lX, beta, dX);CHKERRQ(ierr);
   }
-  ierr = PetscInfo1(snes, "Maximum number of iterations has been reached: %D\n", maxits);CHKERRQ(ierr);
+  ierr = PetscInfo(snes, "Maximum number of iterations has been reached: %D\n", maxits);CHKERRQ(ierr);
   if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   PetscFunctionReturn(0);
 }

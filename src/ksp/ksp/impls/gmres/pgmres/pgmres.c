@@ -114,7 +114,7 @@ static PetscErrorCode KSPPGMRESCycle(PetscInt *itcount,KSP ksp)
       if (ksp->reason) break;
       /* Catch error in happy breakdown and signal convergence and break from loop */
       if (hapend) {
-        if (ksp->errorifnotconverged) SETERRQ1(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"You reached the happy break down, but convergence was not indicated. Residual norm = %g",(double)res);
+        if (ksp->errorifnotconverged) SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"You reached the happy break down, but convergence was not indicated. Residual norm = %g",(double)res);
         else {
           ksp->reason = KSP_DIVERGED_BREAKDOWN;
           break;
@@ -331,7 +331,7 @@ static PetscErrorCode KSPPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool *h
   /* check for the happy breakdown */
   hapbnd = PetscMin(PetscAbsScalar(hh[it+1] / rs[it]),pgmres->haptol);
   if (PetscAbsScalar(hh[it+1]) < hapbnd) {
-    ierr    = PetscInfo4(ksp,"Detected happy breakdown, current hapbnd = %14.12e H(%D,%D) = %14.12e\n",(double)hapbnd,it+1,it,(double)PetscAbsScalar(*HH(it+1,it)));CHKERRQ(ierr);
+    ierr    = PetscInfo(ksp,"Detected happy breakdown, current hapbnd = %14.12e H(%D,%D) = %14.12e\n",(double)hapbnd,it+1,it,(double)PetscAbsScalar(*HH(it+1,it)));CHKERRQ(ierr);
     *hapend = PETSC_TRUE;
   }
 

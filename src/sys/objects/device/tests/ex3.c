@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
 
 /*TEST
 
- build:
-   requires: defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+  build:
+   requires: defined(PETSC_HAVE_CXX)
 
  testset:
    requires: !device

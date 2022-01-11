@@ -40,7 +40,7 @@ static_assert(
 );
 
 #define PETSC_DEVICE_DEFAULT_CASE(comm,type)                            \
-  SETERRQ1((comm),PETSC_ERR_PLIB,                                       \
+  SETERRQ((comm),PETSC_ERR_PLIB,                                       \
            "PETSc was seemingly configured for PetscDeviceType %s but " \
            "we've fallen through all cases in a switch",                \
            PetscDeviceTypes[type])
@@ -269,7 +269,7 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type,
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
   if (PetscLikely(PetscDeviceInitialized(type))) PetscFunctionReturn(0);
-  if (PetscUnlikelyDebug(defaultDevices[type])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
+  if (PetscUnlikelyDebug(defaultDevices[type])) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
   ierr = PetscDeviceCreate(type,defaultDeviceId,&defaultDevices[type]);CHKERRQ(ierr);
   ierr = PetscDeviceConfigure(defaultDevices[type]);CHKERRQ(ierr);
   /* the default devices are all automatically "referenced" at least once, otherwise the
@@ -289,11 +289,11 @@ static PetscErrorCode PetscDeviceInitializeTypeFromOptions_Private(MPI_Comm comm
 
   PetscFunctionBegin;
   if (!PetscDeviceConfiguredFor_Internal(type)) {
-    ierr = PetscInfo1(PETSC_NULLPTR,"PetscDeviceType %s not supported\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
+    ierr = PetscInfo(PETSC_NULLPTR,"PetscDeviceType %s not supported\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
     defaultDevices[type] = PETSC_NULLPTR;
     PetscFunctionReturn(0);
   }
-  ierr = PetscInfo1(PETSC_NULLPTR,"PetscDeviceType %s supported, initializing\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
+  ierr = PetscInfo(PETSC_NULLPTR,"PetscDeviceType %s supported, initializing\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
   /* ugly switch needed to pick the right global variable... could maybe do this as a union? */
   switch (type) {
     PETSC_DEVICE_CASE_IF_PETSC_DEFINED(CUDA,initialize,comm,&defaultDeviceId,defaultInitType);
@@ -306,7 +306,7 @@ static PetscErrorCode PetscDeviceInitializeTypeFromOptions_Private(MPI_Comm comm
   /* defaultInitType and defaultDeviceId now represent what the individual TYPES have decided
    * to initialize as */
   if (*defaultInitType == PETSC_DEVICE_INIT_EAGER) {
-    ierr = PetscInfo1(PETSC_NULLPTR,"Greedily initializing %s PetscDevice\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
+    ierr = PetscInfo(PETSC_NULLPTR,"Greedily initializing %s PetscDevice\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
     ierr = PetscDeviceInitializeDefaultDevice_Internal(type,defaultDeviceId);CHKERRQ(ierr);
     if (defaultView) {
       PetscViewer vwr;
@@ -328,7 +328,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
     PETSC_CONSTEXPR_17 auto PetscDeviceCheckAllDestroyedAfterFinalize = [](){
       PetscFunctionBegin;
       for (const auto &device : defaultDevices) {
-        if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of type '%s' had reference count %" PetscInt_FMT " and was not fully destroyed during PetscFinalize()",PetscDeviceTypes[device->type],device->refcnt);
+        if (PetscUnlikely(device)) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of type '%s' had reference count %" PetscInt_FMT " and was not fully destroyed during PetscFinalize()",PetscDeviceTypes[device->type],device->refcnt);
       }
       PetscFunctionReturn(0);
     };
@@ -390,7 +390,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
       int  len; /* unused */
 
       ierr = MPI_Comm_get_name(comm,name,&len);CHKERRMPI(ierr);
-      SETERRQ1(comm,PETSC_ERR_MPI,"Default devices being initialized on MPI_Comm '%s' not PETSC_COMM_WORLD",name);
+      SETERRQ(comm,PETSC_ERR_MPI,"Default devices being initialized on MPI_Comm '%s' not PETSC_COMM_WORLD",name);
     }
   }
   comm = PETSC_COMM_WORLD; /* from this point on we assume we're on PETSC_COMM_WORLD */
@@ -433,7 +433,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 
     /* somewhat inefficient here as the device context is potentially fully set up twice (once
      * when retrieved then the second time if setfromoptions makes changes) */
-    ierr = PetscInfo1(PETSC_NULLPTR,"Eagerly initializing PetscDeviceContext with %s device\n",PetscDeviceTypes[deviceContextInitDevice]);CHKERRQ(ierr);
+    ierr = PetscInfo(PETSC_NULLPTR,"Eagerly initializing PetscDeviceContext with %s device\n",PetscDeviceTypes[deviceContextInitDevice]);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetRootDeviceType_Internal(deviceContextInitDevice);CHKERRQ(ierr);
     ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetFromOptions(comm,"root_",dctx);CHKERRQ(ierr);
