@@ -188,7 +188,7 @@ inline PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dctx) noexcept
     cerr = cupmStreamCreateWithFlags(&dci->stream,cupmStreamNonBlocking);CHKERRCUPM(cerr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[static_cast<int>(dctx->streamType)]);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[static_cast<int>(dctx->streamType)]);
     break;
   }
   if (!dci->event) {
