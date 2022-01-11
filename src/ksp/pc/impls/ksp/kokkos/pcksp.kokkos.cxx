@@ -6,6 +6,8 @@
 #include <petscdmcomposite.h>
 #include <Kokkos_Core.hpp>
 
+// Batch solver KSP/PC
+
 typedef Kokkos::TeamPolicy<>::member_type team_member;
 
 #include <../src/mat/impls/aij/seq/aij.h>
