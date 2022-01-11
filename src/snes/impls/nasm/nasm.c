@@ -756,7 +756,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
 
   PetscFunctionBegin;
 
-  if (snes->xl || snes->xu || snes->ops->computevariablebounds) SETERRQ1(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  if (snes->xl || snes->xu || snes->ops->computevariablebounds) SETERRQ(PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   ierr = PetscCitationsRegister(SNESCitation,&SNEScite);CHKERRQ(ierr);
   X = snes->vec_sol;
@@ -827,7 +827,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   }
   if (normschedule == SNES_NORM_ALWAYS) {
     if (i == snes->max_its) {
-      ierr = PetscInfo1(snes,"Maximum number of iterations has been reached: %D\n",snes->max_its);CHKERRQ(ierr);
+      ierr = PetscInfo(snes,"Maximum number of iterations has been reached: %D\n",snes->max_its);CHKERRQ(ierr);
       if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
     }
   } else if (!snes->reason) snes->reason = SNES_CONVERGED_ITS; /* NASM is meant to be used as a preconditioner */

@@ -550,7 +550,7 @@ PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
     ierr = ISGetLocalSize(is, &n);CHKERRQ(ierr);
     ierr = VecGetLocalSize(vreduced, &m);CHKERRQ(ierr);
     ierr = VecGetOwnershipRange(vfull, &rstart, &rend);CHKERRQ(ierr);
-    if (m != n) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT "", n, m);
+    if (m != n) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT "", n, m);
     if (mode == SCATTER_FORWARD) {
       PetscScalar       *y;
       const PetscScalar *x;
@@ -835,16 +835,16 @@ PetscErrorCode VecStepBoundInfo(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *boundm
 
   if (boundmin) {
     ierr = MPIU_Allreduce(&localmin,boundmin,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
-    ierr = PetscInfo1(X,"Step Bound Info: Closest Bound: %20.19e\n",(double)*boundmin);CHKERRQ(ierr);
+    ierr = PetscInfo(X,"Step Bound Info: Closest Bound: %20.19e\n",(double)*boundmin);CHKERRQ(ierr);
   }
   if (wolfemin) {
     ierr = MPIU_Allreduce(&localwolfemin,wolfemin,1,MPIU_REAL,MPIU_MIN,comm);CHKERRMPI(ierr);
-    ierr = PetscInfo1(X,"Step Bound Info: Wolfe: %20.19e\n",(double)*wolfemin);CHKERRQ(ierr);
+    ierr = PetscInfo(X,"Step Bound Info: Wolfe: %20.19e\n",(double)*wolfemin);CHKERRQ(ierr);
   }
   if (boundmax) {
     ierr = MPIU_Allreduce(&localmax,boundmax,1,MPIU_REAL,MPIU_MAX,comm);CHKERRMPI(ierr);
     if (*boundmax < 0) *boundmax=PETSC_INFINITY;
-    ierr = PetscInfo1(X,"Step Bound Info: Max: %20.19e\n",(double)*boundmax);CHKERRQ(ierr);
+    ierr = PetscInfo(X,"Step Bound Info: Max: %20.19e\n",(double)*boundmax);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

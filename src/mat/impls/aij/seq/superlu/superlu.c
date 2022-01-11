@@ -200,7 +200,7 @@ PetscErrorCode MatSolve_SuperLU_Private(Mat A,Vec b,Vec x)
     } else {
       ierr = PetscPrintf(PETSC_COMM_SELF,"  Warning: gssvx() returns info %D\n",info);
     }
-  } else if (info < 0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %D, the %D-th argument in gssvx() had an illegal value", info,-info);
+  } else if (info < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %D, the %D-th argument in gssvx() had an illegal value", info,-info);
 
   if (lu->options.PrintStat) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"MatSolve__SuperLU():\n");
@@ -348,13 +348,13 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU(Mat F,Mat A,const MatFactorInfo
     }
   } else if (sinfo > 0) {
     if (A->erroriffailure) {
-      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %D",sinfo);
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %D",sinfo);
     } else {
       if (sinfo <= lu->A.ncol) {
         if (lu->options.ILU_FillTol == 0.0) {
           F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
         }
-        ierr = PetscInfo2(F,"Number of zero pivots %D, ILU_FillTol %g\n",sinfo,lu->options.ILU_FillTol);CHKERRQ(ierr);
+        ierr = PetscInfo(F,"Number of zero pivots %D, ILU_FillTol %g\n",sinfo,lu->options.ILU_FillTol);CHKERRQ(ierr);
       } else if (sinfo == lu->A.ncol + 1) {
         /*
          U is nonsingular, but RCOND is less than machine
@@ -364,13 +364,13 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU(Mat F,Mat A,const MatFactorInfo
                       of situations where the computed solution can be more
                       accurate than the value of RCOND would suggest.
          */
-        ierr = PetscInfo1(F,"Matrix factor U is nonsingular, but is singular to working precision. The solution is computed. info %D",sinfo);CHKERRQ(ierr);
+        ierr = PetscInfo(F,"Matrix factor U is nonsingular, but is singular to working precision. The solution is computed. info %D",sinfo);CHKERRQ(ierr);
       } else { /* sinfo > lu->A.ncol + 1 */
         F->factorerrortype = MAT_FACTOR_OUTMEMORY;
-        ierr = PetscInfo1(F,"Number of bytes allocated when memory allocation fails %D\n",sinfo);CHKERRQ(ierr);
+        ierr = PetscInfo(F,"Number of bytes allocated when memory allocation fails %D\n",sinfo);CHKERRQ(ierr);
       }
     }
-  } else SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %D, the %D-th argument in gssvx() had an illegal value", sinfo,-sinfo);
+  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %D, the %D-th argument in gssvx() had an illegal value", sinfo,-sinfo);
 
   if (lu->options.PrintStat) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"MatLUFactorNumeric_SuperLU():\n");CHKERRQ(ierr);

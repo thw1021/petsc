@@ -647,7 +647,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
   if (ctype == IS_COLORING_LOCAL) {
     ierr = ISLocalToGlobalMappingRestoreIndices(map,&ltog);CHKERRQ(ierr);
   }
-  ierr = PetscInfo3(c,"ncolors %D, brows %D and bcols %D are used.\n",c->ncolors,c->brows,c->bcols);CHKERRQ(ierr);
+  ierr = PetscInfo(c,"ncolors %D, brows %D and bcols %D are used.\n",c->ncolors,c->brows,c->bcols);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
