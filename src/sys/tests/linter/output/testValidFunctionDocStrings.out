@@ -316,14 +316,14 @@ Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-
   166: 
   167: .seealso:
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:185
-'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  183: .see also: testStaticFunction()
-  184: @*/
-> 185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  186: {
-  187:   return 0;
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
+'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt, ...)', canonical type 'int (int, int, ...)'
+  184: .see also: testStaticFunction()
+  185: @*/
+> 186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  187: {
+  188:   return 0;
 
 First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
   176: 
@@ -331,18 +331,34 @@ First multi parameter list entry must start with '+' [-fdoc-param-list-prefix]:
 > 178: - a,b - some params
        ^
   179: + nonExistentParam - this param does not exist
-  180: 
+  180: . ... - variadic arguments
 
-Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
+Multi parameter list entry must start with '.' [-fdoc-param-list-prefix]:
   177:   Input parameters:
   178: - a,b - some params
 > 179: + nonExistentParam - this param does not exist
        ^
-  180: 
-  181:   Level dev
+  180: . ... - variadic arguments
+  181: 
+
+Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
+  178: - a,b - some params
+  179: + nonExistentParam - this param does not exist
+> 180: . ... - variadic arguments
+       ^
+  181: 
+  182:   Level dev
+
+Synopsis missing '-' between the symbol name and description [-fdoc-synopsis-missing-description-separator]:
+  173: 
+  174: /*@
+> 175:   testParameterGrouping ipsum
+                              ^
+  176: 
+  177:   Input parameters:
 
 Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-fdoc-section-header-spelling]:
-  175:   testParameterGrouping - ipsum
+  175:   testParameterGrouping ipsum
   176: 
 > 177:   Input parameters:
          ^^^^^^^^^^^^^^^^
@@ -350,12 +366,12 @@ Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-
   179: + nonExistentParam - this param does not exist
 
 Unknown section header '.see also', assuming you meant '.seealso' [-fdoc-section-header-spelling]:
-  181:   Level dev
-  182: 
-> 183: .see also: testStaticFunction()
+  182:   Level dev
+  183: 
+> 184: .see also: testStaticFunction()
        ^^^^^^^^^
-  184: @*/
-  185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+  185: @*/
+  186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -642,44 +658,52 @@ Section appears to be empty; while I'm all for a good mystery, you should probab
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:185
-'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
-  183: .see also: testStaticFunction()
-  184: @*/
-> 185: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  186: {
-  187:   return 0;
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:186
+'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt, ...)', canonical type 'int (int, int, ...)'
+  184: .see also: testStaticFunction()
+  185: @*/
+> 186: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  187: {
+  188:   return 0;
 
 Line seems to be a section header but missing ':', did you mean 'Level:'? [-fdoc-section-header-maybe-header]:
-  179: + nonExistentParam - this param does not exist
-  180: 
-> 181:   Level dev
+  180: . ... - variadic arguments
+  181: 
+> 182:   Level dev
          ^^^^^^^^^
-  182: 
-  183: .see also: testStaticFunction()
+  183: 
+  184: .see also: testStaticFunction()
 
-Each parameter entry must be documented separately on its own line [-fdoc-param-list-solitary-parameter]:
+Each parameter entry must be documented separately on its own line (note variable argument lists should be documented in notes) [-fdoc-param-list-solitary-parameter]:
   176: 
   177:   Input parameters:
 > 178: - a,b - some params
          ^^^
   179: + nonExistentParam - this param does not exist
-  180: 
+  180: . ... - variadic arguments
 
 Extra docstring parameter 'nonExistentParam' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
   177:   Input parameters:
   178: - a,b - some params
 > 179: + nonExistentParam - this param does not exist
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  180: 
-  181:   Level dev
+  180: . ... - variadic arguments
+  181: 
+
+Extra docstring parameter '...' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
+  178: - a,b - some params
+  179: + nonExistentParam - this param does not exist
+> 180: . ... - variadic arguments
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  181: 
+  182:   Level dev
 
 Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
-  179: + nonExistentParam - this param does not exist
-  180: 
-> 181:   Level dev
+  180: . ... - variadic arguments
+  181: 
+> 182:   Level dev
                ^^^
-  182: 
-  183: .see also: testStaticFunction()
+  183: 
+  184: .see also: testStaticFunction()
 [ROOT] -------------------------------------------------------------------------------------

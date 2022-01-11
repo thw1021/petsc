@@ -172,17 +172,18 @@ PetscErrorCode testAllParamsUndocumented(PetscInt a, PetscInt b)
 }
 
 /*@
-  testParameterGrouping - ipsum
+  testParameterGrouping ipsum
 
   Input parameters:
 - a,b - some params
 + nonExistentParam - this param does not exist
+. ... - variadic arguments
 
   Level dev
 
 .see also: testStaticFunction()
 @*/
-PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b)
+PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
 {
   return 0;
 }

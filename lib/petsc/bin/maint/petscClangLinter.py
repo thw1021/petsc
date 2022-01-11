@@ -348,6 +348,7 @@ class PetscDocString(PetscDocStringBase):
     ("section-header-unique",""),
     ("matching-symbol-name","Verify that description matches the symbol name"),
     ("missing-description","Verify that a synopsis has a description"),
+    ("missing-description-separator","Verify that a synopsis description is separated by '-'"),
     ("verbose-description","Verify that synopsis descriptions don't drone on and on")
   )
   class Synopsis(SectionBase):
@@ -359,21 +360,28 @@ class PetscDocString(PetscDocStringBase):
       return False # synoposis is never barren
 
     def setup(self,ds,*args,**kwargs):
-      found = False
-      items = []
+      cursorName = PetscCursor.getNameFromCursor(ds.cursor)
+      loName     = cursorName.casefold()
+      found      = False
+      items      = []
 
       def genericInspector(loc,line):
         nonlocal found
         if found: return
         pre,dash,rest = line.partition("-")
         if dash:
+          found = True
+        elif loName in line.casefold():
+          found = True
+          pre   = cursorName
+          rest  = line.split(cursorName,maxsplit=1)[1].strip()
+        if found:
           item = pre.strip()
           items.append((ds.makeSourceRange(item,line,loc.start.line),item))
           if not rest or rest.isspace():
             diag = self.diags.missing_description
             mess = "Synopsis missing a description, expected 'SYMBOL NAME - a very useful description"
             ds.addErrorFromSourceRange(diag,mess,loc)
-          found = True
         return
 
       def enumInspector(loc,line):
@@ -853,12 +861,13 @@ class PetscDocString(PetscDocStringBase):
       MAYBE_HEADING = 2
 
       text = text.strip()
-      if not text or text.startswith(("+ ",". ","- ")):
+      if not text or text.startswith(("+ ",". ","- ","$ ")):
         return NOT_HEADING
 
       if text.endswith(":"):
         expressions = (
-          "follows","following.*","example","instance","one of.*","calling sequence.*is"
+          "follows","following.*","example","instance","one of.*","calling sequence.*",
+          "available.*include"
         )
         regex = "|".join(":".join((expr,"$")) for expr in expressions)
         if re.search(regex,text) is not None:
@@ -1104,9 +1113,12 @@ class PetscDocString(PetscDocStringBase):
     """
     check that a section header that looks like a section header is one
     """
-    assert ":" not in line, "':' in line that is ambiguously a header: {}".format(line)
     name,match = self.sections.guessHeading(line)
-    mess = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
+    if ":" in line:
+      import ipdb; ipdb.set_trace()
+      mess = "Line seeams to be a section header, doesn't directly end with with ':'"
+    else:
+      mess = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
     diag = self.diags.section_header_maybe_header
     self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(name,line,lineno))
     return
@@ -1624,6 +1636,15 @@ class PetscCursor(object):
 
   def getFile(self):
     return self.getFileFromCursor(self)
+
+  @classmethod
+  def cursorIsVariadicFunction(cls,cursor):
+    if cursor.kind == clx.CursorKind.FUNCTION_DECL:
+      return cursor.displayname.split(",")[-1].replace(")","").split()[0] == "..."
+    return False
+
+  def isVariadicFunction(self):
+    return self.cursorIsVariadicFunction(self)
 
   def clangCursor(self):
     """return the internal clang cursor"""
@@ -2448,6 +2469,7 @@ TODO:
 patch1: insert ' ' in (1,1)
 patch2: insert '\n' in (1,1)
 which order should these go in?
+- elide some checks for symbol params missing for variadic arguments
 """
 def alwaysTrue(*args,**kwargs):
   return True
@@ -2468,7 +2490,8 @@ def checkDocValidSynopsis(linter,cursor,docstring):
       loc,symbol = items.items[0]
     else:
       raise ValueError(type(items))
-    if symbol != cursorName:
+    # chances are that if it is a macro then the name won't match
+    if symbol != cursorName and "M" not in docstring.raw.splitlines()[0]:
       diag = synopsis.diags.matching_symbol_name
       if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
         mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
@@ -2485,6 +2508,13 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     charCount  = 0
     for idx,(loc,line) in enumerate(synopsis.lines):
       if loc.start.line == symbolLine:
+        if "-" not in line:
+          diag = synopsis.diags.missing_description_separator
+          mess = "Synopsis missing '-' between the symbol name and description"
+          eloc = docstring.makeSourceRange(
+            " ",line,symbolLine,offset=line.find(symbol)+len(symbol)
+          )
+          docstring.addErrorFromSourceRange(diag,mess,eloc,patch=Patch(eloc," - "))
         rest       = line.split(symbol,maxsplit=1)[1].replace("-"," ",1).strip()
         wordCount += len(rest.split())
         charCount += len(rest)
@@ -2575,6 +2605,8 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
       asplit  = [a.strip() for a in arg.split(",")]
       if len(asplit) > 1:
         mess = "Each parameter entry must be documented separately on its own line"
+        if docstring.cursor.isVariadicFunction():
+          mess += " (note variable argument lists should be documented in notes)"
         eloc = docstring.makeSourceRange(arg,text,loc.start.line)
         docstring.addErrorFromSourceRange(solitaryParamDiag,mess,eloc)
       for subarg in asplit:
@@ -2842,7 +2874,7 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
     elif kind in functionTypes:
       requiresC.append((arg,"function"))
 
-  if len(requiresC) and not docstring.raw.startswith("/*@C"):
+  if len(requiresC) and "C" not in docstring.raw.splitlines()[0]:
     line   = docstring.raw.split(maxsplit=1)[0]
     crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
     blame  = "\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))
