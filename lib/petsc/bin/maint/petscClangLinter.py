@@ -225,6 +225,12 @@ class PetscDocString(PetscDocStringBase):
   Container to encapsulate a sowing docstring and retrieve various objects for it.
   Essentially a PetscCursor for comments.
   """
+  class Verdict(enum.IntEnum):
+    IS_HEADING_BUT_PROBABLY_SHOULDNT_BE = -1
+    NOT_HEADING                         = 0
+    IS_HEADING                          = 1
+    MAYBE_HEADING                       = 2
+
 
   class SectionBase(object):
     """Container for a single section of the docstring, has members:
@@ -435,7 +441,8 @@ class PetscDocString(PetscDocStringBase):
     ("section-header-unique",""),
     ("formatting","Verify that parameter list entries are correctly white-space formatted"),
     ("prefix","Verify that parameter list entries begin with the correct prefix"),
-    ("missing-description","Verify that parameter list entries have a description")
+    ("missing-description","Verify that parameter list entries have a description"),
+    ("wrong-description-separator","Verify that parameter list entries use the right description separator")
   )
   class ParameterList(SectionBase):
     __slots__ = "prefixes"
@@ -531,10 +538,11 @@ class PetscDocString(PetscDocStringBase):
       return
 
     def setup(self,ds,*args,parameterListPrefixCheck=None,**kwargs):
-      subheading       = 0
-      groups           = collections.defaultdict(list)
-      missingDescrDiag = self.diags.missing_description
-      isHeading        = ds._getIsHeading(self)
+      subheading        = 0
+      groups            = collections.defaultdict(list)
+      missingDescrDiag  = self.diags.missing_description
+      wrongDescrSepDiag = self.diags.wrong_description_separator
+      isHeading         = ds._getIsHeading(self)
 
       def inspector(loc,line):
         if not line or line.isspace():
@@ -547,8 +555,20 @@ class PetscDocString(PetscDocStringBase):
         if lstp.startswith(self.prefixes) and not line.startswith((".vb",".ve")):
           _,arg,descr = self.splitParam(lstp)
           if not descr:
+            diag = missingDescrDiag
             mess = "Parameter list entry missing a description. Expected '{} - a very useful description'".format(arg)
-            ds.addErrorFromSourceRange(missingDescrDiag,mess,loc)
+            for sep in (",","="):
+              if sep in arg:
+                asplit   = arg.split(sep,maxsplit=1)
+                maybeArg = asplit[0].split()
+                if len(maybeArg) == 1:
+                  diag = wrongDescrSepDiag
+                  mess = " ".join((
+                    "Parameter list seems to be missing a description; I suspect you may be using '{}' as a separator instead of '-'.".format(sep),
+                    "Expected '{} - {}'".format(maybeArg[0],sep.join(asplit[1:]).strip())
+                  ))
+                break
+            ds.addErrorFromSourceRange(diag,mess,loc)
           groups[subheading].append((loc,line,self.arglen(line)))
         return
 
@@ -856,35 +876,47 @@ class PetscDocString(PetscDocStringBase):
       else:
         raise NotImplementedError(type(item))
 
-      IS_HEADING_BUT_PROBABLY_SHOULDNT_BE = -1
-      NOT_HEADING   = 0
-      IS_HEADING    = 1
-      MAYBE_HEADING = 2
+      def isMasqueradingAsHeading(line,anchor="$"):
+        match = tuple(filter(line.startswith,self.titles()))
+        if match and line.startswith(match[0]+":"):
+          return PetscDocString.Verdict.IS_HEADING
+        expressions = (
+          "follows","following.*","example","instance","one of.*","calling sequence.*",
+          "available.*include","supports.*approaches.*","see.*users.*manual",
+          "y. saad, iterative methods.*philadelphia"
+        )
+        regex = "|".join(":".join((expr,anchor)) for expr in expressions)
+        if re.search(regex,line.casefold()) is None:
+          return PetscDocString.Verdict.IS_HEADING
+        return PetscDocString.Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+
 
       text = text.strip()
       if not text or text.startswith(("+ ",". ","- ","$ ",".vb",".ve")):
-        return NOT_HEADING
+        return PetscDocString.Verdict.NOT_HEADING
 
       if text.endswith(":"):
-        expressions = (
-          "follows","following.*","example","instance","one of.*","calling sequence.*",
-          "available.*include"
-        )
-        regex = "|".join(":".join((expr,"$")) for expr in expressions)
-        if re.search(regex,text) is not None:
-          return IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
-        return IS_HEADING
+        return isMasqueradingAsHeading(text)
 
       if ": " in text and " :" not in text:
         # check that all subsequent items after a ":" are letters, this ought to catch out
         # instances of ":" in random code snippets or text...
-        return int(all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:]))
+        if all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:]):
+          verdict = isMasqueradingAsHeading(text,anchor=" ")
+          if "level" not in text.casefold() and "seealso" not in text.casefold():
+            cache = self._findcache[self._cachekey].setdefault("__isheading",{})
+            if text not in cache:
+              cache[text] = verdict
+              print(text)
+              print(verdict)
+          return verdict
+        return PetscDocString.Verdict.NOT_HEADING
       try:
         found = next(filter(text.casefold().startswith,map(str.casefold,self.titles())))
       except StopIteration:
-        return NOT_HEADING
+        return PetscDocString.Verdict.NOT_HEADING
       else:
-        return MAYBE_HEADING
+        return PetscDocString.Verdict.MAYBE_HEADING
 
     def guessHeading(self,line):
       def guess(item):
@@ -1179,6 +1211,8 @@ class PetscDocString(PetscDocStringBase):
       if heading > 0:
         if heading == 2:
           self._checkSectionHeaderTypo(line,lineno)
+        if "(approximate) Jacobians" in line:
+          import ipdb; ipdb.set_trace()
         self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
         newSection = findSection(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
