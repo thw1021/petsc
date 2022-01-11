@@ -1174,7 +1174,8 @@ PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
     The owning rank and any other ranks that have this point as a ghost location must call this routine to add a component and number of variables at the given point.
 
     DMNetworkLayoutSetUp() must be called before this routine.
-
+  Developer Notes:
+     The requirement that all the ranks with access to a vertex (as owner or as ghost) add all the components comes from a limitation of the underlying implementation based on DMPLEX.
   Level: beginner
 
 .seealso: DMNetworkGetComponent(), DMNetworkGetSubnetwork(), DMNetworkIsGhostVertex(), DMNetworkLayoutSetUp()
