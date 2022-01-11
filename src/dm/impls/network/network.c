@@ -531,7 +531,7 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerg
 /*@
   DMNetworkLayoutSetUp - Sets up the bare layout (graph) for the network
 
-  Collective on dm
+  Not Collective
 
   Input Parameters:
 . dm - the dmnetwork object
