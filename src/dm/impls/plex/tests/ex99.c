@@ -33,7 +33,7 @@ static PetscErrorCode CreateFE(DM dm)
 
   PetscFunctionBeginUser;
   ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
-  ierr = DMGetField(cdm, 0, NULL, (PetscObject*) &fe);
+  ierr = DMGetField(cdm, 0, NULL, (PetscObject*) &fe);CHKERRQ(ierr);
   ierr = PetscFEGetBasisSpace(fe, &P);CHKERRQ(ierr);
   ierr = PetscFEGetDualSpace(fe, &Q);CHKERRQ(ierr);
   ierr = PetscDualSpaceGetDM(Q,&K);CHKERRQ(ierr);
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
   ierr = PetscPOpen(PETSC_COMM_SELF, NULL, cmd, "r", &fp);CHKERRQ(ierr);
   ierr = PetscPClose(PETSC_COMM_SELF, fp);CHKERRQ(ierr);
 
-  ierr = DMPlexCreateFromFile(PETSC_COMM_SELF, out, PETSC_TRUE, &dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromFile(PETSC_COMM_SELF, out, "ex99_plex", PETSC_TRUE, &dm);CHKERRQ(ierr);
   ierr = PetscSNPrintf(tag, sizeof(tag), "mesh-%s", mshlist[msh]);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)dm, tag);CHKERRQ(ierr);
   ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
@@ -165,10 +165,10 @@ finish:
 /*TEST
 
   build:
-    requires: define(PETSC_HAVE_POPEN)
+    requires: defined(PETSC_HAVE_POPEN)
 
   test:
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -msh {{vtx}separate_output}
     args: -order 1
@@ -180,7 +180,7 @@ finish:
     args: -dm_plex_gmsh_spacedim 3
 
   test:
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -msh {{seg tri qua tet wed hex}separate_output}
     args: -order {{1 2 3 7}}
@@ -192,7 +192,7 @@ finish:
 
   testset:
     suffix: B2 # 2D ball
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -msh {{B2tri B2qua}}
     args: -dim 2 -integral 3.141592653589793 # pi
@@ -200,7 +200,7 @@ finish:
 
   testset:
     suffix: B2_bnd # 2D ball boundary
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -dm_plex_gmsh_spacedim 2
     args: -msh {{B2tri B2qua}}
@@ -209,7 +209,7 @@ finish:
 
   testset:
     suffix: B3 # 3D ball
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -msh {{B3tet B3hex}}
     args: -dim 3 -integral 4.1887902047863905 # 4/3*pi
@@ -217,7 +217,7 @@ finish:
 
   testset:
     suffix: B3_bnd # 3D ball boundary
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -dm_plex_gmsh_spacedim 3
     args: -msh {{B3tet B3hex}}
@@ -226,7 +226,7 @@ finish:
 
   testset:
     suffix: B_lin # linear discretizations
-    requires: define(PETSC_GMSH_EXE)
+    requires: defined(PETSC_GMSH_EXE)
     args: -dir ${wPETSC_DIR}/share/petsc/datafiles/meshes
     args: -dm_plex_gmsh_highorder true
     args: -dm_plex_gmsh_project true

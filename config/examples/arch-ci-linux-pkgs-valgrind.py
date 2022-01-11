@@ -28,10 +28,13 @@ configure_options = [
   #'--download-moab=1',
   '--download-chaco=1',
   '--download-revolve=1',
+  '--download-cams=1',
   '--download-codipack=1',
   '--download-adblaslapack=1',
   '--download-p4est=1',
   '--download-zlib=1',
+  '--download-h2opus=1',
+  '--download-thrust=1',
   ]
 
 if __name__ == '__main__':

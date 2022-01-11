@@ -342,7 +342,7 @@ static PetscErrorCode MatGetColumnIJ_SeqAIJ_Inode(Mat A,PetscInt oshift,PetscBoo
   if (!blockcompressed) {
     ierr = MatGetColumnIJ_SeqAIJ(A,oshift,symmetric,blockcompressed,n,ia,ja,done);CHKERRQ(ierr);
   } else if (symmetric) {
-    /* Since the indices are symmetric it does'nt matter */
+    /* Since the indices are symmetric it doesn't matter */
     ierr = MatGetRowIJ_SeqAIJ_Inode_Symmetric(A,ia,ja,0,oshift);CHKERRQ(ierr);
   } else {
     ierr = MatGetColumnIJ_SeqAIJ_Inode_Nonsymmetric(A,ia,ja,0,oshift);CHKERRQ(ierr);
@@ -1306,7 +1306,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_Inode(Mat B,Mat A,const MatFactorInfo *
         ierr    = MatPivotCheck(B,A,info,&sctx,i);CHKERRQ(ierr);
         if (sctx.newshift) break;
 
-        /* Mark diagonal and invert diagonal for simplier triangular solves */
+        /* Mark diagonal and invert diagonal for simpler triangular solves */
         pv  = b->a + bdiag[i];
         *pv = 1.0/sctx.pv; /* sctx.pv = rtmp1[i]+shiftamount if shifttype==MAT_SHIFT_INBLOCKS */
         break;
@@ -4349,7 +4349,7 @@ PetscErrorCode  MatInodeAdjustForInodes_SeqAIJ_Inode(Mat A,IS *rperm,IS *cperm)
    Input Parameter:
 .  A - the Inode matrix or matrix derived from the Inode class -- e.g., SeqAIJ
 
-   Output Parameter:
+   Output Parameters:
 +  node_count - no of inodes present in the matrix.
 .  sizes      - an array of size node_count,with sizes of each inode.
 -  limit      - the max size used to generate the inodes.

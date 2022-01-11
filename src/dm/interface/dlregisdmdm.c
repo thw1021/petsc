@@ -3,6 +3,7 @@
 #include <petsc/private/dmlabelimpl.h>
 #include <petsc/private/dmfieldimpl.h>
 #include <petsc/private/dmpleximpl.h>
+#include <petsc/private/dmplextransformimpl.h>
 #include <petsc/private/petscdsimpl.h>
 #include <petsc/private/petscfeimpl.h>
 #include <petsc/private/petscfvimpl.h>
@@ -42,7 +43,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRESStruct(Mat);
 
 .seealso: PetscInitialize()
 @*/
-PetscErrorCode  DMInitializePackage(void)
+PetscErrorCode DMInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
@@ -56,6 +57,7 @@ PetscErrorCode  DMInitializePackage(void)
   ierr = PetscClassIdRegister("Distributed Mesh",&DM_CLASSID);CHKERRQ(ierr);
   ierr = PetscClassIdRegister("DM Label",&DMLABEL_CLASSID);CHKERRQ(ierr);
   ierr = PetscClassIdRegister("Quadrature",&PETSCQUADRATURE_CLASSID);CHKERRQ(ierr);
+  ierr = PetscClassIdRegister("Mesh Transform",&DMPLEXTRANSFORM_CLASSID);CHKERRQ(ierr);
 
 #if defined(PETSC_HAVE_HYPRE)
   ierr = MatRegister(MATHYPRESTRUCT, MatCreate_HYPREStruct);CHKERRQ(ierr);
@@ -112,6 +114,18 @@ PetscErrorCode  DMInitializePackage(void)
   ierr = PetscLogEventRegister("DMPlexIntegralFEM",      DM_CLASSID,&DMPLEX_IntegralFEM);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("DMPlexRebalance",        DM_CLASSID,&DMPLEX_RebalanceSharedPoints);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("DMPlexLocatePoints",     DM_CLASSID,&DMPLEX_LocatePoints);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexTopologyView",     DM_CLASSID,&DMPLEX_TopologyView);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexLabelsView",       DM_CLASSID,&DMPLEX_LabelsView);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexCoordinatesView",  DM_CLASSID,&DMPLEX_CoordinatesView);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexSectionView",      DM_CLASSID,&DMPLEX_SectionView);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexGlobalVectorView", DM_CLASSID,&DMPLEX_GlobalVectorView);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexLocalVectorView",  DM_CLASSID,&DMPLEX_LocalVectorView);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexTopologyLoad",     DM_CLASSID,&DMPLEX_TopologyLoad);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexLabelsLoad",       DM_CLASSID,&DMPLEX_LabelsLoad);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexCoordinatesLoad",  DM_CLASSID,&DMPLEX_CoordinatesLoad);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexSectionLoad",      DM_CLASSID,&DMPLEX_SectionLoad);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexGlobalVectorLoad", DM_CLASSID,&DMPLEX_GlobalVectorLoad);CHKERRQ(ierr);
+  ierr = PetscLogEventRegister("DMPlexLocalVectorLoad",  DM_CLASSID,&DMPLEX_LocalVectorLoad);CHKERRQ(ierr);
 
   ierr = PetscLogEventRegister("DMSwarmMigrate",         DM_CLASSID,&DMSWARM_Migrate);CHKERRQ(ierr);
   ierr = PetscLogEventRegister("DMSwarmDETSetup",        DM_CLASSID,&DMSWARM_DataExchangerTopologySetup);CHKERRQ(ierr);
@@ -138,8 +152,10 @@ PetscErrorCode  DMInitializePackage(void)
     if (pkg) {ierr = PetscLogEventExcludeClass(DM_CLASSID);CHKERRQ(ierr);}
   }
 
-  ierr = DMPlexGenerateRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(DMPlexGenerateRegisterDestroy);CHKERRQ(ierr);
+  ierr = DMGenerateRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(DMGenerateRegisterDestroy);CHKERRQ(ierr);
+  ierr = DMPlexTransformRegisterAll();CHKERRQ(ierr);
+  ierr = PetscRegisterFinalize(DMPlexTransformRegisterDestroy);CHKERRQ(ierr);
   ierr = PetscRegisterFinalize(DMFinalizePackage);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

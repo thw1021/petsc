@@ -27,6 +27,7 @@ PETSC_EXTERN PetscErrorCode TSARKIMEXRegisterAll(void);
 PETSC_EXTERN PetscErrorCode TSRosWRegisterAll(void);
 PETSC_EXTERN PetscErrorCode TSGLLERegisterAll(void);
 PETSC_EXTERN PetscErrorCode TSGLLEAdaptRegisterAll(void);
+PETSC_EXTERN PetscErrorCode TSIRKRegisterAll(void);
 
 typedef struct _TSOps *TSOps;
 
@@ -46,7 +47,7 @@ struct _TSOps {
   PetscErrorCode (*linearstability)(TS,PetscReal,PetscReal,PetscReal*,PetscReal*);
   PetscErrorCode (*load)(TS,PetscViewer);
   PetscErrorCode (*rollback)(TS);
-  PetscErrorCode (*getstages)(TS,PetscInt*,Vec**);
+  PetscErrorCode (*getstages)(TS,PetscInt*,Vec*[]);
   PetscErrorCode (*adjointstep)(TS);
   PetscErrorCode (*adjointsetup)(TS);
   PetscErrorCode (*adjointreset)(TS);
@@ -55,7 +56,7 @@ struct _TSOps {
   PetscErrorCode (*forwardreset)(TS);
   PetscErrorCode (*forwardstep)(TS);
   PetscErrorCode (*forwardintegral)(TS);
-  PetscErrorCode (*forwardgetstages)(TS,PetscInt*,Mat**);
+  PetscErrorCode (*forwardgetstages)(TS,PetscInt*,Mat*[]);
   PetscErrorCode (*getsolutioncomponents)(TS,PetscInt*,Vec*);
   PetscErrorCode (*getauxsolution)(TS,Vec*);
   PetscErrorCode (*gettimeerror)(TS,PetscInt,Vec*);
@@ -282,6 +283,7 @@ struct _p_TS {
   PetscReal ptime_prev;             /* time at the start of the previous step */
   PetscReal ptime_prev_rollback;    /* time at the start of the 2nd previous step to recover from rollback */
   PetscReal solvetime;              /* time at the conclusion of TSSolve() */
+  PetscBool stifflyaccurate;        /* flag to indicate that the method is stiffly accurate */
 
   TSConvergedReason reason;
   PetscBool errorifstepfailed;
@@ -437,7 +439,7 @@ struct _n_TSEvent {
     PetscInt  ctr;        /* recorder counter */
     PetscReal *time;      /* Event times */
     PetscInt  *stepnum;   /* Step numbers */
-    PetscInt  *nevents;   /* Number of events occuring at the event times */
+    PetscInt  *nevents;   /* Number of events occurring at the event times */
     PetscInt  **eventidx; /* Local indices of the events in the event list */
   } recorder;
   PetscInt  recsize; /* Size of recorder stack */
@@ -477,9 +479,11 @@ struct _n_TSMonitorLGCtx {
 };
 
 struct _n_TSMonitorSPCtx{
-  PetscDrawSP    sp;
-  PetscInt       howoften; /* when > 0 uses step % howoften, when negative only final solution plotted */
-  PetscInt       ksp_its, snes_its;
+  PetscDrawSP sp;
+  PetscInt    howoften; /* when > 0 uses step % howoften, when negative only final solution plotted */
+  PetscInt    retain;   /* Retain n points plotted to show trajectories, or -1 for all points */
+  PetscBool   phase;    /* Plot in phase space rather than coordinate space */
+  PetscInt    ksp_its, snes_its;
 };
 
 struct _n_TSMonitorEnvelopeCtx {
@@ -512,6 +516,7 @@ PETSC_INTERN PetscErrorCode TSTrajectorySetUp_Basic(TSTrajectory,TS);
 PETSC_EXTERN PetscLogEvent TSTrajectory_Set;
 PETSC_EXTERN PetscLogEvent TSTrajectory_Get;
 PETSC_EXTERN PetscLogEvent TSTrajectory_GetVecs;
+PETSC_EXTERN PetscLogEvent TSTrajectory_SetUp;
 PETSC_EXTERN PetscLogEvent TSTrajectory_DiskWrite;
 PETSC_EXTERN PetscLogEvent TSTrajectory_DiskRead;
 

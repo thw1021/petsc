@@ -1035,7 +1035,7 @@ static PetscErrorCode MatView_MPIBAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer vi
     /* Here we are creating a temporary matrix, so will assume MPIBAIJ is acceptable */
     /* Perhaps this should be the type of mat? */
     ierr = MatCreate(PetscObjectComm((PetscObject)mat),&A);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatSetSizes(A,M,N,M,N);CHKERRQ(ierr);
     } else {
       ierr = MatSetSizes(A,0,0,M,N);CHKERRQ(ierr);
@@ -1084,7 +1084,7 @@ static PetscErrorCode MatView_MPIBAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer vi
     */
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     ierr = PetscObjectGetName((PetscObject)mat,&matname);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscObjectSetName((PetscObject)((Mat_MPIBAIJ*)(A->data))->A,matname);CHKERRQ(ierr);
       ierr = MatView_SeqBAIJ(((Mat_MPIBAIJ*)(A->data))->A,sviewer);CHKERRQ(ierr);
     }
@@ -1880,7 +1880,7 @@ PetscErrorCode MatAXPY_MPIBAIJ(Mat Y,PetscScalar a,Mat X,MatStructure str)
     ierr = MatMPIBAIJSetPreallocation(B,bs,0,nnz_d,0,nnz_o);CHKERRQ(ierr);
     /* MatAXPY_BasicWithPreallocation() for BAIJ matrix is much slower than AIJ, even for bs=1 ! */
     ierr = MatAXPY_BasicWithPreallocation(B,Y,a,X,str);CHKERRQ(ierr);
-    ierr = MatHeaderReplace(Y,&B);CHKERRQ(ierr);
+    ierr = MatHeaderMerge(Y,&B);CHKERRQ(ierr);
     ierr = PetscFree(nnz_d);CHKERRQ(ierr);
     ierr = PetscFree(nnz_o);CHKERRQ(ierr);
   }
@@ -2322,11 +2322,11 @@ PetscErrorCode MatSOR_MPIBAIJ(Mat matin,Vec bb,PetscReal omega,MatSORType flag,P
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatGetColumnNorms_MPIBAIJ(Mat A,NormType type,PetscReal *norms)
+PetscErrorCode MatGetColumnReductions_MPIBAIJ(Mat A,PetscInt type,PetscReal *reductions)
 {
   PetscErrorCode ierr;
   Mat_MPIBAIJ    *aij = (Mat_MPIBAIJ*)A->data;
-  PetscInt       N,i,*garray = aij->garray;
+  PetscInt       m,N,i,*garray = aij->garray;
   PetscInt       ib,jb,bs = A->rmap->bs;
   Mat_SeqBAIJ    *a_aij = (Mat_SeqBAIJ*) aij->A->data;
   MatScalar      *a_val = a_aij->a;
@@ -2335,7 +2335,7 @@ PetscErrorCode MatGetColumnNorms_MPIBAIJ(Mat A,NormType type,PetscReal *norms)
   PetscReal      *work;
 
   PetscFunctionBegin;
-  ierr = MatGetSize(A,NULL,&N);CHKERRQ(ierr);
+  ierr = MatGetSize(A,&m,&N);CHKERRQ(ierr);
   ierr = PetscCalloc1(N,&work);CHKERRQ(ierr);
   if (type == NORM_2) {
     for (i=a_aij->i[0]; i<a_aij->i[aij->A->rmap->n/bs]; i++) {
@@ -2390,15 +2390,51 @@ PetscErrorCode MatGetColumnNorms_MPIBAIJ(Mat A,NormType type,PetscReal *norms)
         }
       }
     }
-  } else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Unknown NormType");
+  } else if (type == REDUCTION_SUM_REALPART || type == REDUCTION_MEAN_REALPART) {
+    for (i=a_aij->i[0]; i<a_aij->i[aij->A->rmap->n/bs]; i++) {
+      for (jb=0; jb<bs; jb++) {
+        for (ib=0; ib<bs; ib++) {
+          work[A->cmap->rstart + a_aij->j[i] * bs + jb] += PetscRealPart(*a_val);
+          a_val++;
+        }
+      }
+    }
+    for (i=b_aij->i[0]; i<b_aij->i[aij->B->rmap->n/bs]; i++) {
+      for (jb=0; jb<bs; jb++) {
+       for (ib=0; ib<bs; ib++) {
+          work[garray[b_aij->j[i]] * bs + jb] += PetscRealPart(*b_val);
+          b_val++;
+        }
+      }
+    }
+  } else if (type == REDUCTION_SUM_IMAGINARYPART || type == REDUCTION_MEAN_IMAGINARYPART) {
+    for (i=a_aij->i[0]; i<a_aij->i[aij->A->rmap->n/bs]; i++) {
+      for (jb=0; jb<bs; jb++) {
+        for (ib=0; ib<bs; ib++) {
+          work[A->cmap->rstart + a_aij->j[i] * bs + jb] += PetscImaginaryPart(*a_val);
+          a_val++;
+        }
+      }
+    }
+    for (i=b_aij->i[0]; i<b_aij->i[aij->B->rmap->n/bs]; i++) {
+      for (jb=0; jb<bs; jb++) {
+       for (ib=0; ib<bs; ib++) {
+          work[garray[b_aij->j[i]] * bs + jb] += PetscImaginaryPart(*b_val);
+          b_val++;
+        }
+      }
+    }
+  } else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Unknown reduction type");
   if (type == NORM_INFINITY) {
-    ierr = MPIU_Allreduce(work,norms,N,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
+    ierr = MPIU_Allreduce(work,reductions,N,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
   } else {
-    ierr = MPIU_Allreduce(work,norms,N,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
+    ierr = MPIU_Allreduce(work,reductions,N,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)A));CHKERRMPI(ierr);
   }
   ierr = PetscFree(work);CHKERRQ(ierr);
   if (type == NORM_2) {
-    for (i=0; i<N; i++) norms[i] = PetscSqrtReal(norms[i]);
+    for (i=0; i<N; i++) reductions[i] = PetscSqrtReal(reductions[i]);
+  } else if (type == REDUCTION_MEAN_REALPART || type == REDUCTION_MEAN_IMAGINARYPART) {
+    for (i=0; i<N; i++) reductions[i] /= m;
   }
   PetscFunctionReturn(0);
 }
@@ -2584,7 +2620,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPIBAIJ,
                                        NULL,
                                        MatGetMultiProcBlock_MPIBAIJ,
                                 /*124*/NULL,
-                                       MatGetColumnNorms_MPIBAIJ,
+                                       MatGetColumnReductions_MPIBAIJ,
                                        MatInvertBlockDiagonal_MPIBAIJ,
                                        NULL,
                                        NULL,
@@ -3321,8 +3357,8 @@ PetscErrorCode MatLoad_MPIBAIJ_Binary(Mat mat,PetscViewer viewer)
   if (M != rows || N != cols) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Matrix in file of different sizes (%D, %D) than the input matrix (%D, %D)",M,N,rows,cols);
   ierr = MatGetBlockSize(mat,&bs);CHKERRQ(ierr);
   ierr = MatGetLocalSize(mat,&m,&n);CHKERRQ(ierr);
-  ierr = PetscLayoutGetRange(mat->rmap,&rs,NULL);
-  ierr = PetscLayoutGetRange(mat->cmap,&cs,&ce);
+  ierr = PetscLayoutGetRange(mat->rmap,&rs,NULL);CHKERRQ(ierr);
+  ierr = PetscLayoutGetRange(mat->cmap,&cs,&ce);CHKERRQ(ierr);
   mbs = m/bs; nbs = n/bs;
 
   /* read in row lengths and build row indices */
@@ -3663,7 +3699,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIBAIJ(MPI_Comm comm,Mat inmat,
     ierr = MatGetBlockSizes(inmat,&bs,&cbs);CHKERRQ(ierr);
     mbs = m/bs; Nbs = N/cbs;
     if (n == PETSC_DECIDE) {
-      ierr = PetscSplitOwnershipBlock(comm,cbs,&n,&N);
+      ierr = PetscSplitOwnershipBlock(comm,cbs,&n,&N);CHKERRQ(ierr);
     }
     nbs = n/cbs;
 

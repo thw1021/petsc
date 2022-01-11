@@ -42,7 +42,7 @@ static PetscErrorCode PCView_ASM(PC pc,PetscViewer viewer)
         ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
         ierr = PetscViewerASCIIPrintf(viewer,"  Use -%sksp_view ::ascii_info_detail to display information for all blocks\n",prefix?prefix:"");CHKERRQ(ierr);
         ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
-        if (!rank) {
+        if (rank == 0) {
           ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
           ierr = KSPView(osm->ksp[0],sviewer);CHKERRQ(ierr);
           ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -552,17 +552,17 @@ static PetscErrorCode PCMatApply_ASM(PC pc,Mat X,Mat Y)
     ierr = VecSet(osm->ly, 0.0);CHKERRQ(ierr);
 
     for (i = 0; i < N; ++i) {
-      ierr = MatDenseGetColumnVecRead(X, i, &x);
+      ierr = MatDenseGetColumnVecRead(X, i, &x);CHKERRQ(ierr);
       /* copy the global RHS to local RHS including the ghost nodes */
       ierr = VecScatterBegin(osm->restriction, x, osm->lx, INSERT_VALUES, forward);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->restriction, x, osm->lx, INSERT_VALUES, forward);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecRead(X, i, &x);
+      ierr = MatDenseRestoreColumnVecRead(X, i, &x);CHKERRQ(ierr);
 
-      ierr = MatDenseGetColumnVecWrite(Z, i, &x);
+      ierr = MatDenseGetColumnVecWrite(Z, i, &x);CHKERRQ(ierr);
       /* restrict local RHS to the overlapping 0-block RHS */
       ierr = VecScatterBegin(osm->lrestriction[0], osm->lx, x, INSERT_VALUES, forward);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->lrestriction[0], osm->lx, x, INSERT_VALUES, forward);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecWrite(Z, i, &x);
+      ierr = MatDenseRestoreColumnVecWrite(Z, i, &x);CHKERRQ(ierr);
     }
     ierr = MatCreateSeqDense(PETSC_COMM_SELF, m, N, NULL, &W);CHKERRQ(ierr);
     /* solve the overlapping 0-block */
@@ -574,7 +574,7 @@ static PetscErrorCode PCMatApply_ASM(PC pc,Mat X,Mat Y)
 
     for (i = 0; i < N; ++i) {
       ierr = VecSet(osm->ly, 0.0);CHKERRQ(ierr);
-      ierr = MatDenseGetColumnVecRead(W, i, &x);
+      ierr = MatDenseGetColumnVecRead(W, i, &x);CHKERRQ(ierr);
       if (osm->lprolongation) { /* interpolate the non-overlapping 0-block solution to the local solution (only for restrictive additive) */
         ierr = VecScatterBegin(osm->lprolongation[0], x, osm->ly, ADD_VALUES, forward);CHKERRQ(ierr);
         ierr = VecScatterEnd(osm->lprolongation[0], x, osm->ly, ADD_VALUES, forward);CHKERRQ(ierr);
@@ -582,13 +582,13 @@ static PetscErrorCode PCMatApply_ASM(PC pc,Mat X,Mat Y)
         ierr = VecScatterBegin(osm->lrestriction[0], x, osm->ly, ADD_VALUES, reverse);CHKERRQ(ierr);
         ierr = VecScatterEnd(osm->lrestriction[0], x, osm->ly, ADD_VALUES, reverse);CHKERRQ(ierr);
       }
-      ierr = MatDenseRestoreColumnVecRead(W, i, &x);
+      ierr = MatDenseRestoreColumnVecRead(W, i, &x);CHKERRQ(ierr);
 
-      ierr = MatDenseGetColumnVecWrite(Y, i, &x);
+      ierr = MatDenseGetColumnVecWrite(Y, i, &x);CHKERRQ(ierr);
       /* add the local solution to the global solution including the ghost nodes */
       ierr = VecScatterBegin(osm->restriction, osm->ly, x, ADD_VALUES, reverse);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->restriction, osm->ly, x, ADD_VALUES, reverse);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecWrite(Y, i, &x);
+      ierr = MatDenseRestoreColumnVecWrite(Y, i, &x);CHKERRQ(ierr);
     }
     ierr = MatDestroy(&W);CHKERRQ(ierr);
   } else SETERRQ1(PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Invalid local composition type: %s", PCCompositeTypes[osm->loctype]);
@@ -1616,8 +1616,10 @@ PetscErrorCode  PCASMDestroySubdomains(PetscInt n, IS is[], IS is_local[])
    Not Collective
 
    Input Parameters:
-+  m, n - the number of mesh points in the x and y directions
-.  M, N - the number of subdomains in the x and y directions
++  m   - the number of mesh points in the x direction
+.  n   - the number of mesh points in the y direction
+.  M   - the number of subdomains in the x direction
+.  N   - the number of subdomains in the y direction
 .  dof - degrees of freedom per node
 -  overlap - overlap in mesh lines
 
@@ -1783,7 +1785,7 @@ PetscErrorCode  PCASMGetLocalSubmatrices(PC pc,PetscInt *n,Mat *mat[])
 
     Logically Collective
 
-    Input Parameter:
+    Input Parameters:
 +   pc  - the preconditioner
 -   flg - boolean indicating whether to use subdomains defined by the DM
 

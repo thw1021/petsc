@@ -244,7 +244,7 @@ PetscErrorCode  PetscSortedInt(PetscInt n,const PetscInt X[],PetscBool *sorted)
 
    Notes:
    This function serves as an alternative to PetscIntSortSemiOrdered(), and may perform faster especially if the array
-   is completely random. There are exceptions to this and so it is __highly__ recomended that the user benchmark their
+   is completely random. There are exceptions to this and so it is __highly__ recommended that the user benchmark their
    code to see which routine is fastest.
 
    Level: intermediate
@@ -536,7 +536,7 @@ PetscErrorCode  PetscSortedMPIInt(PetscInt n,const PetscMPIInt X[],PetscBool *so
 
    Notes:
    This function serves as an alternative to PetscMPIIntSortSemiOrdered(), and may perform faster especially if the array
-   is completely random. There are exceptions to this and so it is __highly__ recomended that the user benchmark their
+   is completely random. There are exceptions to this and so it is __highly__ recommended that the user benchmark their
    code to see which routine is fastest.
 
 .seealso: PetscMPIIntSortSemiOrdered(), PetscSortReal(), PetscSortIntWithPermutation()
@@ -1029,7 +1029,7 @@ PetscErrorCode PetscParallelSortedInt(MPI_Comm comm, PetscInt n, const PetscInt 
   prevmax = PETSC_MIN_INT;
   ierr = MPI_Exscan(&max, &prevmax, 1, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  if (!rank) prevmax = PETSC_MIN_INT;
+  if (rank == 0) prevmax = PETSC_MIN_INT;
   if (prevmax > min) sorted = PETSC_FALSE;
   ierr = MPI_Allreduce(&sorted, is_sorted, 1, MPIU_BOOL, MPI_LAND, comm);CHKERRMPI(ierr);
   PetscFunctionReturn(0);

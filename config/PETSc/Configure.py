@@ -10,7 +10,8 @@ class Configure(config.base.Configure):
     config.base.Configure.__init__(self, framework)
     self.headerPrefix = 'PETSC'
     self.substPrefix  = 'PETSC'
-    self.installed = 0 # 1 indicates that Configure itself has already compiled and installed PETSc
+    self.installed    = 0 # 1 indicates that Configure itself has already compiled and installed PETSc
+    self.found        = 1
     return
 
   def __str2__(self):
@@ -35,7 +36,6 @@ class Configure(config.base.Configure):
     help.addArgument('PETSc','-with-single-library=<bool>',                  nargs.ArgBool(None, 1,'Put all PETSc code into the single -lpetsc library'))
     help.addArgument('PETSc','-with-fortran-bindings=<bool>',                nargs.ArgBool(None, 1,'Build PETSc fortran bindings in the library and corresponding module files'))
     help.addArgument('PETSc', '-with-ios=<bool>',                            nargs.ArgBool(None, 0, 'Build an iPhone/iPad version of PETSc library'))
-    help.addArgument('PETSc', '-with-xsdk-defaults',                         nargs.ArgBool(None, 0, 'Set the following as defaults for the xSDK standard: --enable-debug=1, --enable-shared=1, --with-precision=double, --with-index-size=32, locate blas/lapack automatically'))
     help.addArgument('PETSc', '-with-display=<x11display>',                  nargs.Arg(None, '', 'Specifiy DISPLAY env variable for use with matlab test)'))
     help.addArgument('PETSc', '-with-package-scripts=<pyscripts>',           nargs.ArgFileList(None,None,'Specify configure package scripts for user provided packages'))
     return
@@ -213,7 +213,7 @@ class Configure(config.base.Configure):
 
 proc ModulesHelp { } {
     puts stderr "This module sets the path and environment variables for petsc-%s"
-    puts stderr "     see https://www.mcs.anl.gov/petsc/ for more information      "
+    puts stderr "     see https://petsc.org/ for more information      "
     puts stderr ""
 }
 module-whatis "PETSc - Portable, Extensible Toolkit for Scientific Computation"
@@ -253,7 +253,7 @@ prepend-path PATH "%s"
       try:
         output   = self.executeShellCommand(compiler + ' -show', log = self.log)[0]
         compiler = output.split(' ')[0]
-        self.addDefine('MPICC_SHOW','"'+output.strip().replace('\n','\\\\n')+'"')
+        self.addDefine('MPICC_SHOW','"'+output.strip().replace('\n','\\\\n').replace('"','')+'"')
       except:
         self.addDefine('MPICC_SHOW','"Unavailable"')
     else:
@@ -284,12 +284,6 @@ prepend-path PATH "%s"
     self.setCompilers.pushLanguage(self.languages.clanguage)
     self.addMakeMacro('PCC',self.setCompilers.getCompiler())
     self.addMakeMacro('PCC_FLAGS',self.setCompilers.getCompilerFlags())
-    self.addMakeMacro('PCPP_FLAGS',getattr(self.setCompilers,self.languages.clanguage.upper()+'PPFLAGS'))
-    self.addMakeMacro('PFLAGS','${'+self.languages.clanguage.upper()+'FLAGS}')
-    self.addMakeMacro('PPPFLAGS','${'+self.languages.clanguage.upper()+'PPFLAGS}')
-    # ugly work-around for python3 distutils parse_makefile() issue with the above 2 lines
-    self.addMakeMacro('PY_'+self.languages.clanguage.upper()+'FLAGS','')
-    self.addMakeMacro('PY_'+self.languages.clanguage.upper()+'PPFLAGS','')
     self.setCompilers.popLanguage()
     # .o or .obj
     self.addMakeMacro('CC_SUFFIX','o')
@@ -340,6 +334,7 @@ prepend-path PATH "%s"
     if hasattr(self.compilers, 'CUDAC'):
       self.setCompilers.pushLanguage('CUDA')
       self.addMakeMacro('CUDAC_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('CUDAPP_FLAGS',self.setCompilers.CUDAPPFLAGS)
       self.setCompilers.popLanguage()
 
     if hasattr(self.compilers, 'HIPC'):
@@ -348,9 +343,10 @@ prepend-path PATH "%s"
       self.addMakeMacro('HIPPP_FLAGS',self.setCompilers.HIPPPFLAGS)
       self.setCompilers.popLanguage()
 
-    if hasattr(self.compilers, 'SYCLCXX'):
+    if hasattr(self.compilers, 'SYCLC'):
       self.setCompilers.pushLanguage('SYCL')
-      self.addMakeMacro('SYCLCXX_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('SYCLC_FLAGS',self.setCompilers.getCompilerFlags())
+      self.addMakeMacro('SYCLPP_FLAGS',self.setCompilers.SYCLPPFLAGS)
       self.setCompilers.popLanguage()
 
     # shared library linker values
@@ -395,6 +391,8 @@ prepend-path PATH "%s"
     self.packagelibs = []
     for i in self.framework.packages:
       if not i.required:
+        if i.devicePackage:
+          self.addDefine('HAVE_DEVICE',1)
         self.addDefine('HAVE_'+i.PACKAGE.replace('-','_'), 1)  # ONLY list package if it is used directly by PETSc (and not only by another package)
       if not isinstance(i.lib, list):
         i.lib = [i.lib]

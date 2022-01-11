@@ -145,7 +145,7 @@ static PetscErrorCode MatMult_ML(Mat A,Vec x,Vec y)
   PetscInt          x_length,y_length;
 
   PetscFunctionBegin;
-  ierr     = MatShellGetContext(A,(void**)&shell);CHKERRQ(ierr);
+  ierr     = MatShellGetContext(A,&shell);CHKERRQ(ierr);
   ierr     = VecGetArrayRead(x,&xarray);CHKERRQ(ierr);
   ierr     = VecGetArray(y,&yarray);CHKERRQ(ierr);
   x_length = shell->mlmat->invec_leng;
@@ -229,7 +229,7 @@ static PetscErrorCode MatDestroy_ML(Mat A)
   Mat_MLShell    *shell;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,(void**)&shell);CHKERRQ(ierr);
+  ierr = MatShellGetContext(A,&shell);CHKERRQ(ierr);
   ierr = PetscFree(shell);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -252,7 +252,7 @@ static PetscErrorCode MatWrapML_SeqAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *ne
       aij->a = ml_vals;
     } else {
       /* sort ml_cols and ml_vals */
-      ierr = PetscMalloc1(m+1,&nnz);
+      ierr = PetscMalloc1(m+1,&nnz);CHKERRQ(ierr);
       for (i=0; i<m; i++) nnz[i] = ml_rowptr[i+1] - ml_rowptr[i];
       aj = ml_cols; aa = ml_vals;
       for (i=0; i<m; i++) {
@@ -308,7 +308,7 @@ static PetscErrorCode MatWrapML_SHELL(ML_Operator *mlmat,MatReuse reuse,Mat *new
   n = mlmat->invec_leng;
 
   if (reuse) {
-    ierr            = MatShellGetContext(*newmat,(void**)&shellctx);CHKERRQ(ierr);
+    ierr            = MatShellGetContext(*newmat,&shellctx);CHKERRQ(ierr);
     shellctx->mlmat = mlmat;
     PetscFunctionReturn(0);
   }
@@ -368,7 +368,7 @@ static PetscErrorCode MatWrapML_MPIAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *ne
       nnzB[row] = nnz[i] - nnzA[row];
     }
     ierr = MatMPIAIJSetPreallocation(A,0,nnzA,0,nnzB);CHKERRQ(ierr);
-    ierr = PetscFree3(nnzA,nnzB,nnz);
+    ierr = PetscFree3(nnzA,nnzB,nnz);CHKERRQ(ierr);
   }
   for (i=0; i<m; i++) {
     PetscInt ncols;
@@ -1027,7 +1027,7 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
     this context, but ML doesn't provide a way to find out which ones.
    */
   ierr = PetscOptionsBool("-pc_ml_OldHierarchy","Use old routine to generate hierarchy","None",pc_ml->OldHierarchy,&pc_ml->OldHierarchy,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-pc_ml_repartition", "Allow ML to repartition levels of the heirarchy","ML_Repartition_Activate",pc_ml->Repartition,&pc_ml->Repartition,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-pc_ml_repartition", "Allow ML to repartition levels of the hierarchy","ML_Repartition_Activate",pc_ml->Repartition,&pc_ml->Repartition,NULL);CHKERRQ(ierr);
   if (pc_ml->Repartition) {
     ierr = PetscOptionsReal("-pc_ml_repartitionMaxMinRatio", "Acceptable ratio of repartitioned sizes","ML_Repartition_Set_LargestMinMaxRatio",pc_ml->MaxMinRatio,&pc_ml->MaxMinRatio,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsInt("-pc_ml_repartitionMinPerProc", "Smallest repartitioned size","ML_Repartition_Set_MinPerProc",pc_ml->MinPerProc,&pc_ml->MinPerProc,NULL);CHKERRQ(ierr);
@@ -1089,7 +1089,7 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
 .  -pc_ml_DampingFactor <1.33333> - P damping factor (ML_Aggregate_Set_DampingFactor)
 .  -pc_ml_Threshold <0> - Smoother drop tol (ML_Aggregate_Set_Threshold)
 .  -pc_ml_SpectralNormScheme_Anorm <false> - Method used for estimating spectral radius (ML_Set_SpectralNormScheme_Anorm)
-.  -pc_ml_repartition <false> - Allow ML to repartition levels of the heirarchy (ML_Repartition_Activate)
+.  -pc_ml_repartition <false> - Allow ML to repartition levels of the hierarchy (ML_Repartition_Activate)
 .  -pc_ml_repartitionMaxMinRatio <1.3> - Acceptable ratio of repartitioned sizes (ML_Repartition_Set_LargestMinMaxRatio)
 .  -pc_ml_repartitionMinPerProc <512>: Smallest repartitioned size (ML_Repartition_Set_MinPerProc)
 .  -pc_ml_repartitionPutOnSingleProc <5000> - Problem size automatically repartitioned to one processor (ML_Repartition_Set_PutOnSingleProc)

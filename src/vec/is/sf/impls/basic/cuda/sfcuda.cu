@@ -1,6 +1,4 @@
 #include <../src/vec/is/sf/impls/basic/sfpack.h>
-#include <cuda_runtime.h>
-#include <petsccublas.h> /* For CHKERRCUDA */
 
 /* Map a thread id to an index in root/leaf space through a series of 3D subdomains. See PetscSFPackOpt. */
 __device__ static inline PetscInt MapTidToIndex(const PetscInt *opt,PetscInt tid)
@@ -897,8 +895,8 @@ PetscErrorCode PetscSFMalloc_CUDA(PetscMemType mtype,size_t size,void** ptr)
   PetscFunctionBegin;
   if (PetscMemTypeHost(mtype)) {PetscErrorCode ierr = PetscMalloc(size,ptr);CHKERRQ(ierr);}
   else if (PetscMemTypeDevice(mtype)) {
-    if (!PetscCUDAInitialized) {PetscErrorCode ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);}
-    cudaError_t err = cudaMalloc(ptr,size);CHKERRCUDA(err);
+    PetscErrorCode ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
+    cudaError_t    err  = cudaMalloc(ptr,size);CHKERRCUDA(err);
   } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong PetscMemType %d", (int)mtype);
   PetscFunctionReturn(0);
 }

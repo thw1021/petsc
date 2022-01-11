@@ -1785,14 +1785,17 @@ PetscErrorCode PetscSetMUMPSFromOptions(Mat F, Mat A)
     ierr = MatMumpsResetSchur_Private(mumps);CHKERRQ(ierr);
   }
 
-  /* MPICH Fortran MPI_IN_PLACE binding has a bug that prevents the use of 'mpi4py + mpich + mumps', e.g., by Firedrake.
-     So we turn off distributed RHS for MPICH. See https://bitbucket.org/mpi4py/mpi4py/issues/162/mpi4py-initialization-breaks-fortran
+  /* Two MPICH Fortran MPI_IN_PLACE binding bugs prevented the use of 'mpich + mumps'. One happened with "mpi4py + mpich + mumps",
+     and was reported by Firedrake. See https://bitbucket.org/mpi4py/mpi4py/issues/162/mpi4py-initialization-breaks-fortran
      and a petsc-maint mailing list thread with subject 'MUMPS segfaults in parallel because of ...'
+     This bug was fixed by https://github.com/pmodels/mpich/pull/4149. But the fix brought a new bug,
+     see https://github.com/pmodels/mpich/issues/5589. This bug was fixed by https://github.com/pmodels/mpich/pull/5590.
+     In short, we could not use distributed RHS with MPICH until v4.0b1.
    */
-#if PETSC_PKG_MUMPS_VERSION_GE(5,3,0) && defined(PETSC_HAVE_OMPI_MAJOR_VERSION)
-  mumps->ICNTL20 = 10; /* Distributed dense RHS*/
-#else
+#if PETSC_PKG_MUMPS_VERSION_LT(5,3,0) || (defined(PETSC_HAVE_MPICH_NUMVERSION) && (PETSC_HAVE_MPICH_NUMVERSION < 40000101))
   mumps->ICNTL20 = 0;  /* Centralized dense RHS*/
+#else
+  mumps->ICNTL20 = 10; /* Distributed dense RHS*/
 #endif
   ierr = PetscOptionsMUMPSInt("-mat_mumps_icntl_20","ICNTL(20): give mumps centralized (0) or distributed (10) dense right-hand sides","None",mumps->ICNTL20,&mumps->ICNTL20,&flg);CHKERRQ(ierr);
   if (flg && mumps->ICNTL20 != 10 && mumps->ICNTL20 != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"ICNTL(20)=%d is not supported by the PETSc/MUMPS interface. Allowed values are 0, 10\n",(int)mumps->ICNTL20);
@@ -1856,15 +1859,15 @@ PetscErrorCode PetscInitializeMUMPS(Mat A,Mat_MUMPS *mumps)
   ierr = MPI_Comm_size(mumps->petsc_comm,&mumps->petsc_size);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(mumps->petsc_comm,&mumps->myid);CHKERRMPI(ierr);/* "if (!myid)" still works even if mumps_comm is different */
 
-  ierr = PetscOptionsHasName(NULL,NULL,"-mat_mumps_use_omp_threads",&mumps->use_petsc_omp_support);CHKERRQ(ierr);
+  ierr = PetscOptionsHasName(NULL,((PetscObject)A)->prefix,"-mat_mumps_use_omp_threads",&mumps->use_petsc_omp_support);CHKERRQ(ierr);
   if (mumps->use_petsc_omp_support) nthreads = -1; /* -1 will let PetscOmpCtrlCreate() guess a proper value when user did not supply one */
-  ierr = PetscOptionsGetInt(NULL,NULL,"-mat_mumps_use_omp_threads",&nthreads,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetInt(NULL,((PetscObject)A)->prefix,"-mat_mumps_use_omp_threads",&nthreads,NULL);CHKERRQ(ierr);
   if (mumps->use_petsc_omp_support) {
 #if defined(PETSC_HAVE_OPENMP_SUPPORT)
     ierr = PetscOmpCtrlCreate(mumps->petsc_comm,nthreads,&mumps->omp_ctrl);CHKERRQ(ierr);
     ierr = PetscOmpCtrlGetOmpComms(mumps->omp_ctrl,&mumps->omp_comm,&mumps->mumps_comm,&mumps->is_omp_master);CHKERRQ(ierr);
 #else
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"the system does not have PETSc OpenMP support but you added the -mat_mumps_use_omp_threads option. Configure PETSc with --with-openmp --download-hwloc (or --with-hwloc) to enable it, see more in MATSOLVERMUMPS manual\n");
+    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"the system does not have PETSc OpenMP support but you added the -%smat_mumps_use_omp_threads option. Configure PETSc with --with-openmp --download-hwloc (or --with-hwloc) to enable it, see more in MATSOLVERMUMPS manual\n",((PetscObject)A)->prefix?((PetscObject)A)->prefix:"");
 #endif
   } else {
     mumps->omp_comm      = PETSC_COMM_SELF;
@@ -2194,7 +2197,7 @@ PetscErrorCode MatView_MUMPS(Mat A,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"  CNTL(5) (fixation for null pivots):         %g \n",mumps->id.CNTL(5));CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(viewer,"  CNTL(7) (dropping parameter for BLR):       %g \n",mumps->id.CNTL(7));CHKERRQ(ierr);
 
-      /* infomation local to each processor */
+      /* information local to each processor */
       ierr = PetscViewerASCIIPrintf(viewer, "  RINFO(1) (local estimated flops for the elimination after analysis): \n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"    [%d] %g \n",mumps->myid,mumps->id.RINFO(1));CHKERRQ(ierr);
@@ -2986,7 +2989,7 @@ $     if a compute node has 32 cores and you run on two nodes, you may use "mpir
 +   1. - Heroux, Michael A., R. Brightwell, and Michael M. Wolf. "Bi-modal MPI and MPI+ threads computing on scalable multicore systems." IJHPCA (Submitted) (2011).
 -   2. - Gutierrez, Samuel K., et al. "Accommodating Thread-Level Heterogeneity in Coupled Parallel Applications." Parallel and Distributed Processing Symposium (IPDPS), 2017 IEEE International. IEEE, 2017.
 
-.seealso: PCFactorSetMatSolverType(), MatSolverType, MatMumpsSetIcntl(), MatMumpsGetIcntl(), MatMumpsSetCntl(), MatMumpsGetCntl(), MatMumpsGetInfo(), MatMumpsGetInfog(), MatMumpsGetRinfo(), MatMumpsGetRinfog(), KSPGetPC(), PCGetFactor(), PCFactorGetMatrix()
+.seealso: PCFactorSetMatSolverType(), MatSolverType, MatMumpsSetIcntl(), MatMumpsGetIcntl(), MatMumpsSetCntl(), MatMumpsGetCntl(), MatMumpsGetInfo(), MatMumpsGetInfog(), MatMumpsGetRinfo(), MatMumpsGetRinfog(), KSPGetPC(), PCFactorGetMatrix()
 
 M*/
 

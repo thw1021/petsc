@@ -918,7 +918,7 @@ static PetscErrorCode MatView_MPISBAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer v
 
     /* Should this be the same type as mat? */
     ierr = MatCreate(PetscObjectComm((PetscObject)mat),&A);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatSetSizes(A,M,N,M,N);CHKERRQ(ierr);
     } else {
       ierr = MatSetSizes(A,0,0,M,N);CHKERRQ(ierr);
@@ -970,7 +970,7 @@ static PetscErrorCode MatView_MPISBAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer v
     */
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     ierr = PetscObjectGetName((PetscObject)mat,&matname);CHKERRQ(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscObjectSetName((PetscObject)((Mat_MPISBAIJ*)(A->data))->A,matname);CHKERRQ(ierr);
       ierr = MatView_SeqSBAIJ(((Mat_MPISBAIJ*)(A->data))->A,sviewer);CHKERRQ(ierr);
     }
@@ -1732,7 +1732,7 @@ PetscErrorCode MatAXPY_MPISBAIJ(Mat Y,PetscScalar a,Mat X,MatStructure str)
     ierr = MatAXPYGetPreallocation_MPIBAIJ(yy->B,yy->garray,xx->B,xx->garray,nnz_o);CHKERRQ(ierr);
     ierr = MatMPISBAIJSetPreallocation(B,bs,0,nnz_d,0,nnz_o);CHKERRQ(ierr);
     ierr = MatAXPY_BasicWithPreallocation(B,Y,a,X,str);CHKERRQ(ierr);
-    ierr = MatHeaderReplace(Y,&B);CHKERRQ(ierr);
+    ierr = MatHeaderMerge(Y,&B);CHKERRQ(ierr);
     ierr = PetscFree(nnz_d);CHKERRQ(ierr);
     ierr = PetscFree(nnz_o);CHKERRQ(ierr);
     ierr = MatRestoreRowUpperTriangular(X);CHKERRQ(ierr);
@@ -2238,7 +2238,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
 
   Level: beginner
 
-.seealso: MatCreateMPISBAIJ, MATSEQSBAIJ, MATMPISBAIJ
+.seealso: MatCreateSBAIJ, MATSEQSBAIJ, MATMPISBAIJ
 M*/
 
 /*@C
@@ -2907,7 +2907,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPISBAIJ(MPI_Comm comm,Mat inmat
     ierr = MatGetBlockSizes(inmat,&bs,&cbs);CHKERRQ(ierr);
     mbs = m/bs; Nbs = N/cbs;
     if (n == PETSC_DECIDE) {
-      ierr = PetscSplitOwnershipBlock(comm,cbs,&n,&N);
+      ierr = PetscSplitOwnershipBlock(comm,cbs,&n,&N);CHKERRQ(ierr);
     }
     nbs = n/cbs;
 

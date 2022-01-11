@@ -4,10 +4,7 @@
 #include <petscpkg_version.h>
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
-#include <petsccublas.h>
-
-/* cublas definitions are here */
-#include <petsc/private/cudavecimpl.h>
+#include <petsc/private/cudavecimpl.h> /* cublas definitions are here */
 
 #if defined(PETSC_USE_COMPLEX)
 #if defined(PETSC_USE_REAL_SINGLE)
@@ -1307,8 +1304,6 @@ PetscErrorCode MatDuplicate_SeqDenseCUDA(Mat A,MatDuplicateOption cpvalues,Mat *
   PetscFunctionReturn(0);
 }
 
-#include <petsc/private/vecimpl.h>
-
 static PetscErrorCode MatGetColumnVector_SeqDenseCUDA(Mat A,Vec v,PetscInt col)
 {
   Mat_SeqDense     *a = (Mat_SeqDense*)A->data;
@@ -1663,7 +1658,7 @@ PetscErrorCode MatConvert_SeqDense_SeqDenseCUDA(Mat M,MatType type,MatReuse reus
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   if (reuse == MAT_REUSE_MATRIX || reuse == MAT_INITIAL_MATRIX) {
     /* TODO these cases should be optimized */
     ierr = MatConvert_Basic(M,type,reuse,newmat);CHKERRQ(ierr);
@@ -1746,7 +1741,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqDenseCUDA(Mat B)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   ierr = MatCreate_SeqDense(B);CHKERRQ(ierr);
   ierr = MatConvert_SeqDense_SeqDenseCUDA(B,MATSEQDENSECUDA,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
   PetscFunctionReturn(0);

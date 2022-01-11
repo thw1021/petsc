@@ -58,7 +58,6 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm comm,PetscIn
   for (ii=0; ii<m; ii++) {
     aij->ilen[ii] = aij->imax[ii] = i[ii+1] - i[ii];
   }
-
   PetscFunctionReturn(0);
 }
 
@@ -1068,8 +1067,8 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_RowMerge(Mat A,Mat B,PetscReal f
   /* set MatInfo */
   afill = (PetscReal)ci[am]/(ai[am]+bi[bm]) + 1.e-5;
   if (afill < 1.0) afill = 1.0;
-  c->maxnz                     = ci[am];
-  c->nz                        = ci[am];
+  c->maxnz                  = ci[am];
+  c->nz                     = ci[am];
   C->info.mallocs           = ndouble;
   C->info.fill_ratio_given  = fill;
   C->info.fill_ratio_needed = afill;
@@ -1227,7 +1226,7 @@ PetscErrorCode MatMatTransposeMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal f
   ierr = MatProductSetAlgorithm(C,alg);CHKERRQ(ierr); /* resume original algorithm for ABt product */
   ierr = PetscFree(alg);CHKERRQ(ierr);
 
-  /* create a supporting struct for reuse intermidiate dense matrices with matcoloring */
+  /* create a supporting struct for reuse intermediate dense matrices with matcoloring */
   ierr = PetscNew(&abt);CHKERRQ(ierr);
 
   product->data    = abt;
@@ -2101,11 +2100,11 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJ_PtAP(Mat C)
   PetscBool      flg = PETSC_FALSE;
   PetscInt       alg = 0; /* default algorithm -- alg=1 should be default!!! */
 #if !defined(PETSC_HAVE_HYPRE)
-  const char      *algTypes[2] = {"scalable","rap"};
-  PetscInt        nalg = 2;
+  const char     *algTypes[2] = {"scalable","rap"};
+  PetscInt       nalg = 2;
 #else
-  const char      *algTypes[3] = {"scalable","rap","hypre"};
-  PetscInt        nalg = 3;
+  const char     *algTypes[3] = {"scalable","rap","hypre"};
+  PetscInt       nalg = 3;
 #endif
 
   PetscFunctionBegin;

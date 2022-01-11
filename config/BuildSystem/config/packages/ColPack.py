@@ -8,8 +8,8 @@ class Configure(config.package.CMakePackage):
     self.includes      = ['ColPack/ColPackHeaders.h']
     self.liblist       = [['libColPack.a']]
     self.functionsCxx  = [1,'void current_time();','current_time()']
-    self.requirescxx11 = 1
-    self.cxx           = 1
+    self.minCxxVersion = 'c++11'
+    self.buildLanguages= ['Cxx']
     self.precisions    = ['double']
     self.complex       = 0
     self.cmakelistsdir = 'build/cmake'

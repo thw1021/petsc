@@ -208,7 +208,7 @@ int main(int argc,char **args)
       args: -mat_type mpiaijcusparse -vec_type cuda
       args: -sf_type {{basic neighbor}}
       output_file: output/ex5_23.out
-      requires: cuda define(PETSC_HAVE_MPI_GPU_AWARE)
+      requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
 
    test:
       suffix: 31
@@ -253,7 +253,7 @@ int main(int argc,char **args)
       args: -mat_type mpiaijkokkos -vec_type kokkos -test_diagonalscale
       filter: grep -v type
       output_file: output/ex5_33.out
-      requires: kokkos_kernels
+      requires: !sycl kokkos_kernels
 
    test:
       suffix: aijcusparse_1

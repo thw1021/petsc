@@ -138,7 +138,7 @@ M*/
 /*MC
      TSRK7VR - Seventh order robust Verner RK scheme with sixth order embedded method.
 
-     This method has ten stages with the First Same As Last (FSAL) property.
+     This method has ten stages.
 
      Options database:
 .     -ts_rk_type 7vr
@@ -152,7 +152,7 @@ M*/
 /*MC
      TSRK8VR - Eigth order robust Verner RK scheme with seventh order embedded method.
 
-     This method has thirteen stages with the First Same As Last (FSAL) property.
+     This method has thirteen stages.
 
      Options database:
 .     -ts_rk_type 8vr
@@ -483,7 +483,7 @@ PetscErrorCode TSRKGetTableau_RK(TS ts, PetscInt *s, const PetscReal **A, const 
 
    Not Collective
 
-   Input Parameters:
+   Input Parameter:
 .  ts - timestepping context
 
    Output Parameters:
@@ -1284,7 +1284,7 @@ PetscErrorCode TSRKGetOrder(TS ts,PetscInt *order)
 
   Logically collective
 
-  Input Parameter:
+  Input Parameters:
 +  ts - timestepping context
 -  rktype - type of RK-scheme
 
@@ -1444,7 +1444,7 @@ static PetscErrorCode SNESTSFormJacobian_RK(SNES snes,Vec x,Mat A,Mat B,TS ts)
 
   Logically collective
 
-  Input Parameter:
+  Input Parameters:
 +  ts - timestepping context
 -  use_multirate - PETSC_TRUE enables the multirate RK method, sets the basic method to be RK2A and sets the ratio between slow stepsize and fast stepsize to be 2
 

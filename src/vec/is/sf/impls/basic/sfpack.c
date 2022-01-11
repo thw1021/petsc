@@ -4,14 +4,6 @@
 
 /* This is a C file that contains packing facilities, with dispatches to device if enabled. */
 
-#if defined(PETSC_HAVE_CUDA)
-#include <cuda_runtime.h>
-#include <petsccublas.h>
-#endif
-#if defined(PETSC_HAVE_HIP)
-#include <hip/hip_runtime.h>
-#include <petschipblas.h>
-#endif
 /*
  * MPI_Reduce_local is not really useful because it can't handle sparse data and it vectorizes "in the wrong direction",
  * therefore we pack data types manually. This file defines packing routines for the standard data types.
@@ -948,7 +940,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkLogFlopsAfterUnpackLeafData(PetscS
 }
 
 /* When SF could not find a proper UnpackAndOp() from link, it falls back to MPI_Reduce_local.
-  Input Arguments:
+  Input Parameters:
   +sf      - The StarForest
   .link    - The link
   .count   - Number of entries to unpack
@@ -957,7 +949,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkLogFlopsAfterUnpackLeafData(PetscS
   .buf     - A contiguous buffer to unpack from
   -op      - Operation after unpack
 
-  Output Arguments:
+  Output Parameters:
   .data    - The data to unpack to
 */
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkUnpackDataWithMPIReduceLocal(PetscSF sf,PetscSFLink link,PetscInt count,PetscInt start,const PetscInt *indices,void *data,const void *buf,MPI_Op op)
@@ -1011,7 +1003,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkScatterDataWithMPIReduceLocal(Pets
  ============================================================================*/
 
 /* Pack rootdata to rootbuf
-  Input Arguments:
+  Input Parameters:
   + sf       - The SF this packing works on.
   . link     - It gives the memtype of the roots and also provides root buffer.
   . scope    - PETSCSF_LOCAL or PETSCSF_REMOTE. Note SF has the ability to do local and remote communications separately.
@@ -1166,7 +1158,7 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
-  if (sf->leafbuflen[scope]) {ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);}
+  if (sf->leafbuflen[scope]) {ierr = PetscSFLinkUnpackLeafData_Private(sf,link,scope,leafdata,op);CHKERRQ(ierr);}
   ierr = PetscLogEventEnd(PETSCSF_Unpack,sf,0,0,0);CHKERRQ(ierr);
   if (scope == PETSCSF_REMOTE) {
     if (link->PostUnpack) {ierr = (*link->PostUnpack)(sf,link,PETSCSF_ROOT2LEAF);CHKERRQ(ierr);}  /* Used by SF nvshmem */

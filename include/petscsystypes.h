@@ -102,6 +102,19 @@ M*/
    typedef int PetscInt;
 #endif
 
+#if defined(PETSC_HAVE_STDINT_H) && defined(PETSC_HAVE_INTTYPES_H) && defined(PETSC_HAVE_MPI_INT64_T) /* MPI_INT64_T is not guaranteed to be a macro */
+#  define MPIU_INT64     MPI_INT64_T
+#  define PetscInt64_FMT PRId64
+#elif (PETSC_SIZEOF_LONG_LONG == 8)
+#  define MPIU_INT64     MPI_LONG_LONG_INT
+#  define PetscInt64_FMT "lld"
+#elif defined(PETSC_HAVE___INT64)
+#  define MPIU_INT64     MPI_INT64_T
+#  define PetscInt64_FMT "ld"
+#else
+#  error "cannot determine PetscInt64 type"
+#endif
+
 /*MC
    PetscBLASInt - datatype used to represent 'int' parameters to BLAS/LAPACK functions.
 
@@ -135,8 +148,10 @@ M*/
 
 M*/
 #if defined(PETSC_HAVE_64BIT_BLAS_INDICES)
+#  define PetscBLASInt_FMT PetscInt64_FMT
    typedef PetscInt64 PetscBLASInt;
 #else
+#  define PetscBLASInt_FMT "d"
    typedef int PetscBLASInt;
 #endif
 
@@ -215,7 +230,6 @@ M*/
 
           Complex numbers are automatically available if PETSc was able to find a working complex implementation
 
-
     Petsc has a 'fix' for complex numbers to support expressions such as std::complex<PetscReal> + PetscInt, which are not supported by the standard
     C++ library, but are convenient for petsc users. If the C++ compiler is able to compile code in petsccxxcomplexfix.h (This is checked by
     configure), we include petsccxxcomplexfix.h to provide this convenience.
@@ -235,6 +249,8 @@ M*/
 #      elif !defined(__cplusplus) && defined(PETSC_HAVE_C99_COMPLEX) && defined(PETSC_HAVE_CXX_COMPLEX)  /* User code only - conditional on libary code complex support */
 #        define PETSC_HAVE_COMPLEX 1
 #      endif
+#    elif defined(PETSC_USE_REAL___FLOAT128) && defined(PETSC_HAVE_C99_COMPLEX)
+#        define PETSC_HAVE_COMPLEX 1
 #    endif
 #  else /* !PETSC_CLANGUAGE_CXX */
 #    if !defined(PETSC_USE_REAL___FP16)
@@ -253,9 +269,11 @@ M*/
     #if defined(PETSC_DESIRE_KOKKOS_COMPLEX) /* Defined in petscvec_kokkos.hpp for *.kokkos.cxx files */
       #define petsccomplexlib Kokkos
       #include <Kokkos_Complex.hpp>
-    #elif defined(PETSC_HAVE_CUDA)
+    #elif defined(__CUDACC__) || defined(__HIPCC__)
       #define petsccomplexlib thrust
       #include <thrust/complex.h>
+    #elif defined(PETSC_USE_REAL___FLOAT128)
+      #include <complex.h>
     #else
       #define petsccomplexlib std
       #include <complex>
@@ -267,7 +285,7 @@ M*/
     #elif defined(PETSC_USE_REAL_DOUBLE)
       typedef petsccomplexlib::complex<double> PetscComplex;
     #elif defined(PETSC_USE_REAL___FLOAT128)
-      typedef petsccomplexlib::complex<__float128> PetscComplex; /* Notstandard and not expected to work, use __complex128 */
+      typedef __complex128 PetscComplex;
     #endif
 
     /* Include a PETSc C++ complex 'fix'. Check PetscComplex manual page for details */
@@ -678,32 +696,4 @@ S*/
 typedef struct _n_PetscSegBuffer *PetscSegBuffer;
 
 typedef struct _n_PetscOptionsHelpPrinted *PetscOptionsHelpPrinted;
-
-/*E
-  PetscMemType - Memory type of a pointer
-
-  Level: beginner
-
-  Developer Note:
-   Encoding of the bitmask in binary: xxxxyyyz
-   z = 0:                Host memory
-   z = 1:                Device memory
-   yyy = 000:            CUDA-related memory
-   yyy = 001:            HIP-related memory
-   xxxxyyy1 = 0000,0001: CUDA memory
-   xxxxyyy1 = 0001,0001: CUDA NVSHMEM memory
-   xxxxyyy1 = 0000,0011: HIP memory
-
-  Other types of memory, e.g., CUDA managed memory, can be added when needed.
-
-.seealso: VecGetArrayAndMemType(), PetscSFBcastWithMemTypeBegin(), PetscSFReduceWithMemTypeBegin()
-E*/
-typedef enum {PETSC_MEMTYPE_HOST=0, PETSC_MEMTYPE_DEVICE=0x01, PETSC_MEMTYPE_CUDA=0x01, PETSC_MEMTYPE_NVSHMEM=0x11,PETSC_MEMTYPE_HIP=0x03} PetscMemType;
-
-#define PetscMemTypeHost(m)    (((m) & 0x1) == PETSC_MEMTYPE_HOST)
-#define PetscMemTypeDevice(m)  (((m) & 0x1) == PETSC_MEMTYPE_DEVICE)
-#define PetscMemTypeCUDA(m)    (((m) & 0xF) == PETSC_MEMTYPE_CUDA)
-#define PetscMemTypeHIP(m)     (((m) & 0xF) == PETSC_MEMTYPE_HIP)
-#define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
-
 #endif

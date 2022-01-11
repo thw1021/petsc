@@ -250,6 +250,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       DM refTree, ncdm = NULL;
 
       ierr = DMPlexCreateDefaultReferenceTree(comm,dim,simplex,&refTree);CHKERRQ(ierr);
+      ierr = DMViewFromOptions(refTree,NULL,"-reftree_dm_view");CHKERRQ(ierr);
       ierr = DMPlexSetReferenceTree(*dm,refTree);CHKERRQ(ierr);
       ierr = DMDestroy(&refTree);CHKERRQ(ierr);
       ierr = DMPlexTreeRefineCell(*dm,user->treeCell,&ncdm);CHKERRQ(ierr);
@@ -258,7 +259,9 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
         *dm = ncdm;
         ierr = DMPlexSetRefinementUniform(*dm, PETSC_FALSE);CHKERRQ(ierr);
       }
-      ierr = DMViewFromOptions(*dm,NULL,"-tree_dm_view");CHKERRQ(ierr);
+      ierr = PetscObjectSetOptionsPrefix((PetscObject) *dm, "tree_");CHKERRQ(ierr);
+      ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
+      ierr = DMViewFromOptions(*dm,NULL,"-dm_view");CHKERRQ(ierr);
     } else {
       ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
     }
@@ -520,7 +523,7 @@ static PetscErrorCode TestInjector(DM dm, AppCtx *user)
     ierr = DMPlexComputeInjectorReferenceTree(refTree,&inj);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)inj,"Reference Tree Injector");CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatView(inj,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
     }
     ierr = MatDestroy(&inj);CHKERRQ(ierr);
@@ -876,6 +879,7 @@ int main(int argc, char **argv)
     ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
     ierr = DMPlexIsSimplex(dm, &simplex);CHKERRQ(ierr);
   }
+  ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
   user.numComponents = user.numComponents < 0 ? dim : user.numComponents;
   ierr = PetscFECreateDefault(PETSC_COMM_WORLD, dim, user.numComponents, simplex, NULL, user.qorder, &user.fe);CHKERRQ(ierr);
   ierr = SetupSection(dm, &user);CHKERRQ(ierr);
@@ -924,7 +928,6 @@ int main(int argc, char **argv)
     suffix: p1_2d_3
     requires: triangle pragmatic
     args: -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -convergence -conv_refine 0
-    filter: grep -v DEBUG
   test:
     suffix: p1_2d_4
     requires: triangle pragmatic
@@ -951,7 +954,6 @@ int main(int argc, char **argv)
     suffix: p1_3d_3
     requires: ctetgen pragmatic
     args: -dm_plex_dim 3 -petscspace_degree 1 -qorder 1 -dm_plex_hash_location -convergence -conv_refine 0
-    filter: grep -v DEBUG
   test:
     suffix: p1_3d_4
     requires: ctetgen pragmatic
@@ -978,7 +980,6 @@ int main(int argc, char **argv)
     suffix: p2_2d_3
     requires: triangle pragmatic
     args: -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -convergence -conv_refine 0
-    filter: grep -v DEBUG
   test:
     suffix: p2_2d_4
     requires: triangle pragmatic
@@ -1005,7 +1006,6 @@ int main(int argc, char **argv)
     suffix: p2_3d_3
     requires: ctetgen pragmatic
     args: -dm_plex_dim 3 -petscspace_degree 2 -qorder 2 -dm_plex_hash_location -convergence -conv_refine 0
-    filter: grep -v DEBUG
   test:
     suffix: p2_3d_4
     requires: ctetgen pragmatic
@@ -1109,7 +1109,6 @@ int main(int argc, char **argv)
     suffix: p3_2d_4
     requires: triangle pragmatic
     args: -petscspace_degree 3 -qorder 3 -dm_plex_hash_location -convergence -conv_refine 0
-    filter: grep -v DEBUG
   test:
     suffix: p3_2d_5
     requires: triangle pragmatic

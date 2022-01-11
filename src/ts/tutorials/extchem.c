@@ -19,7 +19,7 @@ static const char help[] = "Integrate chemistry using TChem.\n";
 
     See also h2_10sp.inp for another example
 
-    Determine sensitivity of final tempature on each variables initial conditions
+    Determine sensitivity of final temperature on each variables initial conditions
     -ts_dt 1.e-5 -ts_type cn -ts_adjoint_solve -ts_adjoint_view_solution draw
 
     The solution for component i = 0 is the temperature.
@@ -59,7 +59,7 @@ static PetscErrorCode ComputeMassConservation(Vec,PetscReal*,void*);
 static PetscErrorCode MonitorMassConservation(TS,PetscInt,PetscReal,Vec,void*);
 static PetscErrorCode MonitorTempature(TS,PetscInt,PetscReal,Vec,void*);
 
-#define TCCHKERRQ(ierr) do {if (ierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in TChem library, return code %d",ierr);} while (0)
+#define CHKERRTC(ierr) do {if (ierr) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in TChem library, return code %d",ierr);} while (0)
 
 int main(int argc,char **argv)
 {
@@ -92,14 +92,14 @@ int main(int argc,char **argv)
   user.Tini = 1000;             /* Kelvin */
   ierr = PetscOptionsReal("-Tini","Initial temperature [K]","",user.Tini,&user.Tini,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-monitor_mass","Monitor the total mass at each timestep","",flg,&flg,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-monitor_temp","Monitor the tempature each timestep","",tflg,&tflg,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-monitor_temp","Monitor the temperature each timestep","",tflg,&tflg,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   /* tchem requires periodic table in current directory */
   ierr = PetscFileRetrieve(PETSC_COMM_WORLD,periodic,lperiodic,PETSC_MAX_PATH_LEN,&found);CHKERRQ(ierr);
   if (!found) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_FILE_OPEN,"Cannot located required periodic table %s or local version %s",periodic,lperiodic);
 
-  ierr = TC_initChem(lchemfile, lthermofile, 0, 1.0);TCCHKERRQ(ierr);
+  ierr = TC_initChem(lchemfile, lthermofile, 0, 1.0);CHKERRTC(ierr);
   TC_setThermoPres(user.pressure);
   user.Nspec = TC_getNspec();
   user.Nreac = TC_getNreac();
@@ -108,7 +108,7 @@ int main(int argc,char **argv)
   */
   ierr = PetscMalloc1((user.Nspec+1)*LENGTHOFSPECNAME,&names);CHKERRQ(ierr);
   ierr = PetscStrcpy(names,"Temp");CHKERRQ(ierr);
-  TC_getSnames(user.Nspec,names+LENGTHOFSPECNAME);CHKERRQ(ierr);
+  TC_getSnames(user.Nspec,names+LENGTHOFSPECNAME);
   ierr = PetscMalloc1((user.Nspec+2),&snames);CHKERRQ(ierr);
   for (i=0; i<user.Nspec+1; i++) snames[i] = names+i*LENGTHOFSPECNAME;
   snames[user.Nspec+1] = NULL;
@@ -238,7 +238,7 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 
   ierr = PetscArraycpy(user->tchemwork,x,user->Nspec+1);CHKERRQ(ierr);
   user->tchemwork[0] *= user->Tini; /* Dimensionalize */
-  ierr = TC_getSrc(user->tchemwork,user->Nspec+1,f);TCCHKERRQ(ierr);
+  ierr = TC_getSrc(user->tchemwork,user->Nspec+1,f);CHKERRTC(ierr);
   f[0] /= user->Tini;           /* Non-dimensionalize */
 
   ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
@@ -311,7 +311,7 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
     ierr = PetscFree(names[i]);CHKERRQ(ierr);
   }
   ierr = VecRestoreArray(X,&x);CHKERRQ(ierr);
-  /* PrintSpecies((User)ctx,X);CHKERRQ(ierr); */
+  /* ierr = PrintSpecies((User)ctx,X);CHKERRQ(ierr); */
   ierr = MoleFractionToMassFraction((User)ctx,X,&y);CHKERRQ(ierr);
   ierr = VecCopy(y,X);CHKERRQ(ierr);
   ierr = VecDestroy(&y);CHKERRQ(ierr);
@@ -390,7 +390,7 @@ PetscErrorCode MonitorTempature(TS ts,PetscInt step,PetscReal time,Vec x,void* c
 
   PetscFunctionBegin;
   ierr = VecGetArrayRead(x,&T);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %D time %g tempature %g\n",step,(double)time,(double)T[0]*user->Tini);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD,"Timestep %D time %g temperature %g\n",step,(double)time,(double)T[0]*user->Tini);CHKERRQ(ierr);
   ierr = VecRestoreArrayRead(x,&T);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

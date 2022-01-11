@@ -73,7 +73,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsInt("-benchmark_it", "Solve the benchmark problem this many times", "ex13.c", options->nit, &options->nit, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-strong", "Do not integrate the Laplacian by parts", "ex13.c", options->strong, &options->strong, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
   test:
     suffix: kokkos_comp
     nsize: 4
-    requires: kokkos_kernels
+    requires: !sycl kokkos_kernels
     output_file: output/ex13_comparison.out
     args: -dm_plex_dim 2 -dm_plex_box_faces 4,4 -dm_refine 3 -petscpartitioner_simple_process_grid 2,2 \
       -petscpartitioner_simple_node_grid 1,1 -potential_petscspace_degree 2 -dm_distribute -petscpartitioner_type simple \
@@ -253,7 +253,7 @@ int main(int argc, char **argv)
 
   test:
     nsize: 4
-    requires: kokkos_kernels
+    requires: !sycl kokkos_kernels
     suffix: kokkos
     args: -dm_plex_dim 2 -dm_plex_box_faces 2,8 -dm_distribute -petscpartitioner_type simple -petscpartitioner_simple_process_grid 2,1 \
           -petscpartitioner_simple_node_grid 2,1 -dm_plex_simplex 0 -potential_petscspace_degree 1 -dm_refine 1 -ksp_type cg -pc_type gamg -ksp_norm_type unpreconditioned \

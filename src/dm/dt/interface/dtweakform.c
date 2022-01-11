@@ -287,9 +287,9 @@ PetscErrorCode PetscWeakFormClear(PetscWeakForm wf)
 
 static PetscErrorCode PetscWeakFormRewriteKeys_Internal(PetscWeakForm wf, PetscHMapForm hmap, DMLabel label, PetscInt Nv, const PetscInt values[])
 {
-  PetscFormKey *keys;
-  PetscInt          n, i, v, off = 0;
-  PetscErrorCode    ierr;
+  PetscFormKey  *keys;
+  PetscInt       n, i, v, off = 0;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscHMapFormGetSize(hmap, &n);CHKERRQ(ierr);
@@ -328,7 +328,7 @@ static PetscErrorCode PetscWeakFormRewriteKeys_Internal(PetscWeakForm wf, PetscH
 
   Level: intermediate
 
-.seealso: PetscWeakFormCreate(), PetscWeakFormDestroy()
+.seealso: PetscWeakFormReplaceLabel(), PetscWeakFormCreate(), PetscWeakFormDestroy()
 @*/
 PetscErrorCode PetscWeakFormRewriteKeys(PetscWeakForm wf, DMLabel label, PetscInt Nv, const PetscInt values[])
 {
@@ -337,6 +337,83 @@ PetscErrorCode PetscWeakFormRewriteKeys(PetscWeakForm wf, DMLabel label, PetscIn
 
   PetscFunctionBegin;
   for (f = 0; f < PETSC_NUM_WF; ++f) {ierr = PetscWeakFormRewriteKeys_Internal(wf, wf->form[f], label, Nv, values);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscWeakFormReplaceLabel_Internal(PetscWeakForm wf, PetscHMapForm hmap, DMLabel label)
+{
+  PetscFormKey  *keys;
+  PetscInt       n, i, off = 0, maxFuncs = 0;
+  void       (**tmpf)();
+  const char    *name = NULL;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (label) {ierr = PetscObjectGetName((PetscObject) label, &name);CHKERRQ(ierr);}
+  ierr = PetscHMapFormGetSize(hmap, &n);CHKERRQ(ierr);
+  ierr = PetscMalloc1(n, &keys);CHKERRQ(ierr);
+  ierr = PetscHMapFormGetKeys(hmap, &off, keys);CHKERRQ(ierr);
+  for (i = 0; i < n; ++i) {
+    PetscBool   match = PETSC_FALSE;
+    const char *lname = NULL;
+
+    if (label == keys[i].label) continue;
+    if (keys[i].label) {ierr = PetscObjectGetName((PetscObject) keys[i].label, &lname);CHKERRQ(ierr);}
+    ierr = PetscStrcmp(name, lname, &match);CHKERRQ(ierr);
+    if ((!name && !lname) || match) {
+      void  (**funcs)();
+      PetscInt Nf;
+
+      ierr = PetscWeakFormGetFunction_Private(wf, hmap, keys[i].label, keys[i].value, keys[i].field, keys[i].part, &Nf, &funcs);CHKERRQ(ierr);
+      maxFuncs = PetscMax(maxFuncs, Nf);
+    }
+  }
+  /* Need temp space because chunk buffer can be reallocated in SetFunction() call */
+  ierr = PetscMalloc1(maxFuncs, &tmpf);CHKERRQ(ierr);
+  for (i = 0; i < n; ++i) {
+    PetscBool   match = PETSC_FALSE;
+    const char *lname = NULL;
+
+    if (label == keys[i].label) continue;
+    if (keys[i].label) {ierr = PetscObjectGetName((PetscObject) keys[i].label, &lname);CHKERRQ(ierr);}
+    ierr = PetscStrcmp(name, lname, &match);CHKERRQ(ierr);
+    if ((!name && !lname) || match) {
+      void  (**funcs)();
+      PetscInt Nf, j;
+
+      ierr = PetscWeakFormGetFunction_Private(wf, hmap, keys[i].label, keys[i].value, keys[i].field, keys[i].part, &Nf, &funcs);CHKERRQ(ierr);
+      for (j = 0; j < Nf; ++j) tmpf[j] = funcs[j];
+      ierr = PetscWeakFormSetFunction_Private(wf, hmap, label,         keys[i].value, keys[i].field, keys[i].part,  Nf,  tmpf);CHKERRQ(ierr);
+      ierr = PetscWeakFormSetFunction_Private(wf, hmap, keys[i].label, keys[i].value, keys[i].field, keys[i].part,  0,   NULL);CHKERRQ(ierr);
+    }
+  }
+  ierr = PetscFree(tmpf);CHKERRQ(ierr);
+  ierr = PetscFree(keys);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscWeakFormReplaceLabel - Change any key on a label of the same name to use the new label
+
+  Not Collective
+
+  Input Parameters:
++ wf    - The original PetscWeakForm
+- label - The label to change keys for
+
+  Note: This is used internally when meshes are modified
+
+  Level: intermediate
+
+.seealso: PetscWeakFormRewriteKeys(), PetscWeakFormCreate(), PetscWeakFormDestroy()
+@*/
+PetscErrorCode PetscWeakFormReplaceLabel(PetscWeakForm wf, DMLabel label)
+{
+  PetscInt       f;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  for (f = 0; f < PETSC_NUM_WF; ++f) {ierr = PetscWeakFormReplaceLabel_Internal(wf, wf->form[f], label);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -1331,7 +1408,7 @@ PetscErrorCode PetscWeakFormSetIndexRiemannSolver(PetscWeakForm wf, DMLabel labe
 . wf - The PetscWeakForm object
 
   Output Parameter:
-. Nf - The nubmer of fields
+. Nf - The number of fields
 
   Level: beginner
 
@@ -1406,37 +1483,71 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
   ierr = PetscHMapFormGetSize(map, &Nk);CHKERRQ(ierr);
   if (Nk) {
     PetscFormKey *keys;
-    void           (**funcs)(void);
-    const char       *name;
-    PetscInt          off = 0, n, i;
+    void       (**funcs)(void);
+    const char  **names;
+    PetscInt     *values, *idx1, *idx2, *idx;
+    PetscBool     showPart = PETSC_FALSE, showPointer = PETSC_FALSE;
+    PetscInt      off = 0;
 
-    ierr = PetscMalloc1(Nk, &keys);CHKERRQ(ierr);
+    ierr = PetscMalloc6(Nk, &keys, Nk, &names, Nk, &values, Nk, &idx1, Nk, &idx2, Nk, &idx);CHKERRQ(ierr);
     ierr = PetscHMapFormGetKeys(map, &off, keys);CHKERRQ(ierr);
+    /* Sort keys by label name and value */
+    {
+      /* First sort values */
+      for (k = 0; k < Nk; ++k) {values[k] = keys[k].value; idx1[k] = k;}
+      ierr = PetscSortIntWithPermutation(Nk, values, idx1);CHKERRQ(ierr);
+      /* If the string sort is stable, it will be sorted correctly overall */
+      for (k = 0; k < Nk; ++k) {
+        if (keys[idx1[k]].label) {ierr = PetscObjectGetName((PetscObject) keys[idx1[k]].label, &names[k]);CHKERRQ(ierr);}
+        else                     {names[k] = "";}
+        idx2[k] = k;
+      }
+      ierr = PetscSortStrWithPermutation(Nk, names, idx2);CHKERRQ(ierr);
+      for (k = 0; k < Nk; ++k) {
+        if (keys[k].label) {ierr = PetscObjectGetName((PetscObject) keys[k].label, &names[k]);CHKERRQ(ierr);}
+        else               {names[k] = "";}
+        idx[k] = idx1[idx2[k]];
+      }
+    }
     ierr = PetscViewerASCIIPrintf(viewer, "%s\n", tableName);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
     for (k = 0; k < Nk; ++k) {
-      if (keys[k].label) {
-        ierr = PetscObjectGetName((PetscObject) keys[k].label, &name);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPrintf(viewer, "(%s, %D) ", name, keys[k].value);CHKERRQ(ierr);
+      if (keys[k].part != 0) showPart = PETSC_TRUE;
+    }
+    for (k = 0; k < Nk; ++k) {
+      const PetscInt i = idx[k];
+      PetscInt       n, f;
+
+      if (keys[i].label) {
+        if (showPointer) {ierr = PetscViewerASCIIPrintf(viewer, "(%s:%p, %D) ", names[i], keys[i].label, keys[i].value);CHKERRQ(ierr);}
+        else             {ierr = PetscViewerASCIIPrintf(viewer, "(%s, %D) ", names[i], keys[i].value);CHKERRQ(ierr);}
       } else {ierr = PetscViewerASCIIPrintf(viewer, "");CHKERRQ(ierr);}
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_FALSE);CHKERRQ(ierr);
-      if (splitField) {ierr = PetscViewerASCIIPrintf(viewer, "(%D, %D) ", keys[k].field/Nf, keys[k].field%Nf);CHKERRQ(ierr);}
-      else            {ierr = PetscViewerASCIIPrintf(viewer, "(%D) ", keys[k].field);CHKERRQ(ierr);}
-      ierr = PetscWeakFormGetFunction_Private(wf, map, keys[k].label, keys[k].value, keys[k].field, keys[k].part, &n, &funcs);CHKERRQ(ierr);
-      for (i = 0; i < n; ++i) {
-        char *fname;
+      if (splitField) {ierr = PetscViewerASCIIPrintf(viewer, "(%D, %D) ", keys[i].field/Nf, keys[i].field%Nf);CHKERRQ(ierr);}
+      else            {ierr = PetscViewerASCIIPrintf(viewer, "(%D) ", keys[i].field);CHKERRQ(ierr);}
+      if (showPart)   {ierr = PetscViewerASCIIPrintf(viewer, "(%D) ", keys[i].part);CHKERRQ(ierr);}
+      ierr = PetscWeakFormGetFunction_Private(wf, map, keys[i].label, keys[i].value, keys[i].field, keys[i].part, &n, &funcs);CHKERRQ(ierr);
+      for (f = 0; f < n; ++f) {
+        char  *fname;
+        size_t len, l;
 
-        if (i > 0) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
-        ierr = PetscDLAddr(funcs[i], &fname);CHKERRQ(ierr);
-        if (fname) {ierr = PetscViewerASCIIPrintf(viewer, "%s", fname);CHKERRQ(ierr);}
-        else       {ierr = PetscViewerASCIIPrintf(viewer, "%p", funcs[i]);CHKERRQ(ierr);}
+        if (f > 0) {ierr = PetscViewerASCIIPrintf(viewer, ", ");CHKERRQ(ierr);}
+        ierr = PetscDLAddr(funcs[f], &fname);CHKERRQ(ierr);
+        if (fname) {
+          /* Eliminate argument types */
+          ierr = PetscStrlen(fname, &len);CHKERRQ(ierr);
+          for (l = 0; l < len; ++l) if (fname[l] == '(') {fname[l] = '\0'; break;}
+          ierr = PetscViewerASCIIPrintf(viewer, "%s", fname);CHKERRQ(ierr);
+        } else if (showPointer) {
+          ierr = PetscViewerASCIIPrintf(viewer, "%p", funcs[f]);CHKERRQ(ierr);
+        }
         ierr = PetscFree(fname);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIIPrintf(viewer, "\n");CHKERRQ(ierr);
       ierr = PetscViewerASCIIUseTabs(viewer, PETSC_TRUE);CHKERRQ(ierr);
     }
     ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
-    ierr = PetscFree(keys);CHKERRQ(ierr);
+    ierr = PetscFree6(keys, names, values, idx1, idx2, idx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1452,7 +1563,7 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
   ierr = PetscViewerASCIIPrintf(viewer, "Weak Form System with %d fields\n", wf->Nf);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
   for (f = 0; f < PETSC_NUM_WF; ++f) {
-    ierr = PetscWeakFormViewTable_Ascii(wf, viewer, PETSC_FALSE, PetscWeakFormKinds[f], wf->form[f]);CHKERRQ(ierr);
+    ierr = PetscWeakFormViewTable_Ascii(wf, viewer, PETSC_TRUE, PetscWeakFormKinds[f], wf->form[f]);CHKERRQ(ierr);
   }
   ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1463,7 +1574,7 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
 
   Collective on wf
 
-  Input Parameter:
+  Input Parameters:
 + wf - the PetscWeakForm object to view
 - v  - the viewer
 

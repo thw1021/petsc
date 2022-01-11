@@ -1,4 +1,3 @@
-
 #include <../src/mat/impls/baij/seq/baij.h>
 #include <../src/mat/impls/dense/seq/dense.h>
 #include <petsc/private/kernels/blockinvert.h>
@@ -242,16 +241,22 @@ PetscErrorCode MatDestroySubMatrices_SeqBAIJ(PetscInt n,Mat *mat[])
     c       = (Mat_SeqBAIJ*)C->data;
     submatj = c->submatis1;
     if (submatj) {
-      ierr = (*submatj->destroy)(C);CHKERRQ(ierr);
-      ierr = MatDestroySubMatrix_Private(submatj);CHKERRQ(ierr);
-      ierr = PetscFree(C->defaultvectype);CHKERRQ(ierr);
-      ierr = PetscLayoutDestroy(&C->rmap);CHKERRQ(ierr);
-      ierr = PetscLayoutDestroy(&C->cmap);CHKERRQ(ierr);
-      ierr = PetscHeaderDestroy(&C);CHKERRQ(ierr);
+      if (--((PetscObject)C)->refct <= 0) {
+        ierr = (*submatj->destroy)(C);CHKERRQ(ierr);
+        ierr = MatDestroySubMatrix_Private(submatj);CHKERRQ(ierr);
+        ierr = PetscFree(C->defaultvectype);CHKERRQ(ierr);
+        ierr = PetscLayoutDestroy(&C->rmap);CHKERRQ(ierr);
+        ierr = PetscLayoutDestroy(&C->cmap);CHKERRQ(ierr);
+        ierr = PetscHeaderDestroy(&C);CHKERRQ(ierr);
+      }
     } else {
       ierr = MatDestroy(&C);CHKERRQ(ierr);
     }
   }
+
+  /* Destroy Dummy submatrices created for reuse */
+  ierr = MatDestroySubMatrices_Dummy(n,mat);CHKERRQ(ierr);
+
   ierr = PetscFree(*mat);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2322,7 +2327,7 @@ PetscErrorCode MatMultAdd_SeqBAIJ_11(Mat A,Vec xx,Vec yy,Vec zz)
       v    += 121;
     }
     z[0] = sum1; z[1] = sum2; z[2] = sum3; z[3] = sum4; z[4] = sum5; z[5] = sum6; z[6] = sum7;
-    z[7] = sum6; z[8] = sum7; z[9] = sum8; z[10] = sum9; z[11] = sum10;
+    z[7] = sum8; z[8] = sum9; z[9] = sum10; z[10] = sum11;
     if (!usecprow) {
       z += 11; y += 11;
     }
@@ -3208,19 +3213,19 @@ PetscErrorCode MatMatMultNumeric_SeqBAIJ_SeqDense(Mat A,Mat B,Mat C)
   ierr = MatDenseGetArray(C,&c);CHKERRQ(ierr);
   switch (bs) {
   case 1:
-    ierr = MatMatMult_SeqBAIJ_1_Private(A, b, bm, c, cm, cn);
+    ierr = MatMatMult_SeqBAIJ_1_Private(A, b, bm, c, cm, cn);CHKERRQ(ierr);
     break;
   case 2:
-    ierr = MatMatMult_SeqBAIJ_2_Private(A, b, bm, c, cm, cn);
+    ierr = MatMatMult_SeqBAIJ_2_Private(A, b, bm, c, cm, cn);CHKERRQ(ierr);
     break;
   case 3:
-    ierr = MatMatMult_SeqBAIJ_3_Private(A, b, bm, c, cm, cn);
+    ierr = MatMatMult_SeqBAIJ_3_Private(A, b, bm, c, cm, cn);CHKERRQ(ierr);
     break;
   case 4:
-    ierr = MatMatMult_SeqBAIJ_4_Private(A, b, bm, c, cm, cn);
+    ierr = MatMatMult_SeqBAIJ_4_Private(A, b, bm, c, cm, cn);CHKERRQ(ierr);
     break;
   case 5:
-    ierr = MatMatMult_SeqBAIJ_5_Private(A, b, bm, c, cm, cn);
+    ierr = MatMatMult_SeqBAIJ_5_Private(A, b, bm, c, cm, cn);CHKERRQ(ierr);
     break;
   default: /* block sizes larger than 5 by 5 are handled by BLAS */
     ierr = PetscBLASIntCast(bs,&bbs);CHKERRQ(ierr);

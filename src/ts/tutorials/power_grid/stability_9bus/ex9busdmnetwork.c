@@ -489,16 +489,16 @@ PetscErrorCode ri2dq(PetscScalar Fr,PetscScalar Fi,PetscScalar delta,PetscScalar
 /* Computes F(t,U,U_t) where F() = 0 is the DAE to be solved. */
 PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *user)
 {
-  PetscErrorCode                     ierr;
-  DM                                 networkdm;
-  Vec                                localX,localXdot,localF;
-  PetscInt                           vfrom,vto,offsetfrom,offsetto;
-  PetscInt                           v,vStart,vEnd,e;
-  PetscScalar                        *farr;
-  PetscScalar                        Vd,Vq,SE;
-  const PetscScalar                  *xarr,*xdotarr;
-  void*                              component;
-  PetscScalar                        Vr=0, Vi=0;
+  PetscErrorCode    ierr;
+  DM                networkdm;
+  Vec               localX,localXdot,localF;
+  PetscInt          vfrom,vto,offsetfrom,offsetto;
+  PetscInt          v,vStart,vEnd,e;
+  PetscScalar       *farr;
+  PetscScalar       Vd=0,Vq=0,SE;
+  const PetscScalar *xarr,*xdotarr;
+  void*             component;
+  PetscScalar       Vr=0, Vi=0;
 
   PetscFunctionBegin;
   ierr = VecSet(F,0.0);CHKERRQ(ierr);
@@ -979,7 +979,7 @@ int main(int argc,char ** argv)
   Userctx        user;
   KSP            ksp;
   PC             pc;
-  PetscInt       numEdges = 0,numVertices = 0;
+  PetscInt       numEdges = 0;
 
   ierr = PetscInitialize(&argc,&argv,"ex9busnetworkops",help);if (ierr) return ierr;
   ierr = PetscOptionsGetInt(NULL,NULL,"-nc",&nc,NULL);CHKERRQ(ierr);
@@ -987,7 +987,7 @@ int main(int argc,char ** argv)
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
 
   /* Read initial voltage vector and Ybus */
-  if (!rank) {
+  if (rank == 0) {
     ierr = read_data(nc,&gen,&exc,&load,&bus,&branch,&edgelist);CHKERRQ(ierr);
   }
 
@@ -1001,22 +1001,20 @@ int main(int argc,char ** argv)
   ierr = PetscLogStageRegister("Create network",&stage1);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage1);CHKERRQ(ierr);
 
-  /* Set local number of nodes and edges and edge connectivity */
-  if (!rank) {
-    numVertices = NBUS*nc; numEdges = NBRANCH*nc+(nc-1);
-  }
+  /* Set local number of edges and edge connectivity */
+  if (rank == 0) numEdges = NBRANCH*nc+(nc-1);
   ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,NULL,numVertices,numEdges,edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,NULL,numEdges,edgelist,NULL);CHKERRQ(ierr);
 
   /* Set up the network layout */
   ierr = DMNetworkLayoutSetUp(networkdm);CHKERRQ(ierr);
 
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscFree(edgelist);CHKERRQ(ierr);
   }
 
    /* Add network components (physical parameters of nodes and branches) and number of variables */
-  if (!rank) {
+  if (rank == 0) {
      ierr = DMNetworkGetEdgeRange(networkdm,&eStart,&eEnd);CHKERRQ(ierr);
      genj=0; loadj=0; excj=0;
      for (i = eStart; i < eEnd; i++) {
@@ -1045,7 +1043,7 @@ int main(int argc,char ** argv)
 
   ierr = DMSetUp(networkdm);CHKERRQ(ierr);
 
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscFree5(bus,gen,load,branch,exc);CHKERRQ(ierr);
   }
 
@@ -1102,7 +1100,7 @@ int main(int argc,char ** argv)
   user.alg_flg = PETSC_FALSE;
 
   /* Prefault period */
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"... (1) Prefault period ... \n");CHKERRQ(ierr);
   }
 
@@ -1125,7 +1123,7 @@ int main(int argc,char ** argv)
   user.alg_flg = PETSC_TRUE;
 
   /* Solve the algebraic equations */
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (2) Apply disturbance, solve algebraic equations ... \n");CHKERRQ(ierr);
   }
   ierr = SNESSolve(snes_alg,NULL,X);CHKERRQ(ierr);
@@ -1137,7 +1135,7 @@ int main(int argc,char ** argv)
   ierr = TSSetIFunction(ts,NULL,(TSIFunction) FormIFunction,&user);CHKERRQ(ierr);
 
   user.alg_flg = PETSC_TRUE;
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (3) Disturbance period ... \n");CHKERRQ(ierr);
   }
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
@@ -1147,7 +1145,7 @@ int main(int argc,char ** argv)
 
   user.alg_flg = PETSC_FALSE;
   /* Solve the algebraic equations */
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (4) Remove fault, solve algebraic equations ... \n");CHKERRQ(ierr);
   }
   ierr = SNESSolve(snes_alg,NULL,X);CHKERRQ(ierr);
@@ -1160,7 +1158,7 @@ int main(int argc,char ** argv)
   ierr = TSSetIFunction(ts,NULL,(TSIFunction) FormIFunction,&user);CHKERRQ(ierr);
 
   user.alg_flg = PETSC_FALSE;
-  if (!rank) {
+  if (rank == 0) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"\n... (5) Post-disturbance period ... \n");CHKERRQ(ierr);
   }
   ierr = TSSolve(ts,X);CHKERRQ(ierr);
@@ -1177,7 +1175,7 @@ int main(int argc,char ** argv)
 /*TEST
 
    build:
-      requires: double !complex !define(PETSC_USE_64BIT_INDICES)
+      requires: double !complex !defined(PETSC_USE_64BIT_INDICES)
 
    test:
       args: -ts_monitor -snes_converged_reason -alg_snes_converged_reason

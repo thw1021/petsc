@@ -483,7 +483,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   ierr = MatCreate(PetscObjectComm((PetscObject)A),&B);CHKERRQ(ierr);
   ierr = MatSetSizes(B,A->rmap->n,A->cmap->n,M,N);CHKERRQ(ierr);
   ierr = MatSetType(B,((PetscObject)A)->type_name);CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(B,0,NULL);
+  ierr = MatSeqAIJSetPreallocation(B,0,NULL);CHKERRQ(ierr);
   ierr = MatMPIAIJSetPreallocation(B,0,NULL,0,NULL);CHKERRQ(ierr);
   B->trivialsymbolic = PETSC_TRUE;
   if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU) {
@@ -505,7 +505,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   ierr     = PetscNewLog(B,&S);CHKERRQ(ierr);
   B->spptr = S;
 
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flg);
+  ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flg);CHKERRQ(ierr);
   iface = flg ? STRUMPACK_MT : STRUMPACK_MPI_DIST;
 
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"STRUMPACK Options","Mat");CHKERRQ(ierr);
@@ -540,7 +540,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   if (set) PetscStackCall("STRUMPACK_set_HSS_leaf_size",STRUMPACK_set_HSS_leaf_size(*S,(int)leaf_size));
 
   PetscStackCall("STRUMPACK_reordering_method",ndcurrent = STRUMPACK_reordering_method(*S));
-  PetscOptionsEnum("-mat_strumpack_reordering","Sparsity reducing matrix reordering","None",STRUMPACKNDTypes,(PetscEnum)ndcurrent,(PetscEnum*)&ndvalue,&set);CHKERRQ(ierr);
+  ierr = PetscOptionsEnum("-mat_strumpack_reordering","Sparsity reducing matrix reordering","None",STRUMPACKNDTypes,(PetscEnum)ndcurrent,(PetscEnum*)&ndvalue,&set);CHKERRQ(ierr);
   if (set) PetscStackCall("STRUMPACK_set_reordering_method",STRUMPACK_set_reordering_method(*S,ndvalue));
 
   if (ftype == MAT_FACTOR_ILU) {
@@ -557,7 +557,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   PetscStackCall("STRUMPACK_set_Krylov_solver", STRUMPACK_set_Krylov_solver(*S, STRUMPACK_DIRECT));
 
   PetscStackCall("STRUMPACK_Krylov_solver",itcurrent = STRUMPACK_Krylov_solver(*S));
-  PetscOptionsEnum("-mat_strumpack_iterative_solver","Select iterative solver from STRUMPACK","None",SolverTypes,(PetscEnum)itcurrent,(PetscEnum*)&itsolver,&set);CHKERRQ(ierr);
+  ierr = PetscOptionsEnum("-mat_strumpack_iterative_solver","Select iterative solver from STRUMPACK","None",SolverTypes,(PetscEnum)itcurrent,(PetscEnum*)&itsolver,&set);CHKERRQ(ierr);
   if (set) PetscStackCall("STRUMPACK_set_Krylov_solver",STRUMPACK_set_Krylov_solver(*S,itsolver));
 
   PetscOptionsEnd();

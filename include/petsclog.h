@@ -8,7 +8,7 @@
 #include <petsctime.h>
 
 /* General logging of information; different from event logging */
-PETSC_EXTERN PetscErrorCode PetscInfo_Private(const char[],PetscObject,const char[],...);
+PETSC_EXTERN PetscErrorCode PetscInfo_Private(const char[],PetscObject,const char[],...) PETSC_ATTRIBUTE_FORMAT(3,4);
 #if defined(PETSC_USE_INFO)
 #define PetscInfo(A,S)                             PetscInfo_Private(PETSC_FUNCTION_NAME,((PetscObject)A),S)
 #define PetscInfo1(A,S,a1)                         PetscInfo_Private(PETSC_FUNCTION_NAME,((PetscObject)A),S,a1)
@@ -255,8 +255,8 @@ PETSC_EXTERN PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog,int,Petsc
 /*@
        PetscLogFlops - Log how many flops are performed in a calculation
 
-   Input Paramters:
-    flops - the number of flops
+   Input Parameter:
+.   flops - the number of flops
 
    Notes:
      To limit the chance of integer overflow when multiplying by a constant, represent the constant as a double,
@@ -283,6 +283,10 @@ PETSC_EXTERN PetscLogDouble petsc_ctog_ct;
 PETSC_EXTERN PetscLogDouble petsc_gtoc_ct;
 PETSC_EXTERN PetscLogDouble petsc_ctog_sz;
 PETSC_EXTERN PetscLogDouble petsc_gtoc_sz;
+PETSC_EXTERN PetscLogDouble petsc_ctog_ct_scalar;
+PETSC_EXTERN PetscLogDouble petsc_gtoc_ct_scalar;
+PETSC_EXTERN PetscLogDouble petsc_ctog_sz_scalar;
+PETSC_EXTERN PetscLogDouble petsc_gtoc_sz_scalar;
 PETSC_EXTERN PetscLogDouble petsc_gflops;
 PETSC_EXTERN PetscLogDouble petsc_gtime;
 #if defined(PETSC_USE_DEBUG)
@@ -305,11 +309,27 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuToCpu(PetscLogDouble size)
   PetscFunctionReturn(0);
 }
 
+PETSC_STATIC_INLINE PetscErrorCode PetscLogCpuToGpuScalar(PetscLogDouble size)
+{
+  PetscFunctionBegin;
+  petsc_ctog_ct_scalar += 1;
+  petsc_ctog_sz_scalar += size;
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuToCpuScalar(PetscLogDouble size)
+{
+  PetscFunctionBegin;
+  petsc_gtoc_ct_scalar += 1;
+  petsc_gtoc_sz_scalar += size;
+  PetscFunctionReturn(0);
+}
+
 /*@
        PetscLogGpuFlops - Log how many flops are performed in a calculation on the device
 
-   Input Paramters:
-    flops - the number of flops
+   Input Parameter:
+.   flops - the number of flops
 
    Notes:
      To limit the chance of integer overflow when multiplying by a constant, represent the constant as a double,
@@ -356,7 +376,7 @@ PETSC_EXTERN PetscErrorCode (*PetscLogPHD)(PetscObject);
 #define PetscLogObjectParents(p,n,d)  0;do{int _i; for (_i=0; _i<(n); _i++) {ierr = PetscLogObjectParent((PetscObject)(p),(PetscObject)(d)[_i]);CHKERRQ(ierr);}}while (0)
 #define PetscLogObjectCreate(h)      ((PetscLogPHC) ? (*PetscLogPHC)((PetscObject)(h)) : 0)
 #define PetscLogObjectDestroy(h)     ((PetscLogPHD) ? (*PetscLogPHD)((PetscObject)(h)) : 0)
-PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject, const char[], ...);
+PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject, const char[], ...) PETSC_ATTRIBUTE_FORMAT(2,3);
 
 /* Initialization functions */
 PETSC_EXTERN PetscErrorCode PetscLogDefaultBegin(void);
@@ -655,7 +675,7 @@ PETSC_STATIC_INLINE int PetscMPIParallelComm(MPI_Comm comm)
 #define PetscLogObjectParents(p,n,c)       0
 #define PetscLogObjectCreate(h)            0
 #define PetscLogObjectDestroy(h)           0
-PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject,const char[],...);
+PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject,const char[],...) PETSC_ATTRIBUTE_FORMAT(2,3);
 
 #define PetscLogDefaultBegin()             0
 #define PetscLogAllBegin()                 0
@@ -677,6 +697,8 @@ PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject,const char[],...);
 #if defined(PETSC_HAVE_DEVICE)
 #define PetscLogCpuToGpu(a)                0
 #define PetscLogGpuToCpu(a)                0
+#define PetscLogCpuToGpuScalar(a)          0
+#define PetscLogGpuToCpuScalar(a)          0
 #define PetscLogGpuFlops(a)                0
 #define PetscLogGpuTimeBegin()             0
 #define PetscLogGpuTimeEnd()               0

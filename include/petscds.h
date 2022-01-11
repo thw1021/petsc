@@ -18,6 +18,7 @@ PETSC_EXTERN PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm, PetscInt *)
 PETSC_EXTERN PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscFormKeySort(PetscInt, PetscFormKey[]);
 PETSC_EXTERN PetscErrorCode PetscWeakFormRewriteKeys(PetscWeakForm, DMLabel, PetscInt, const PetscInt[]);
+PETSC_EXTERN PetscErrorCode PetscWeakFormReplaceLabel(PetscWeakForm, DMLabel);
 PETSC_EXTERN PetscErrorCode PetscWeakFormClearIndex(PetscWeakForm, DMLabel, PetscInt, PetscInt, PetscInt, PetscWeakFormKind, PetscInt);
 
 PETSC_EXTERN PetscErrorCode PetscWeakFormGetObjective(PetscWeakForm, DMLabel, PetscInt, PetscInt, PetscInt, PetscInt *,
@@ -596,19 +597,24 @@ PETSC_EXTERN PetscErrorCode PetscDSGetHeightSubspace(PetscDS, PetscInt, PetscDS 
 PETSC_EXTERN PetscErrorCode PetscDSGetSpatialDimension(PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetCoordinateDimension(PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSSetCoordinateDimension(PetscDS, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscDSGetHybrid(PetscDS, PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscDSSetHybrid(PetscDS, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscDSIsCohesive(PetscDS, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscDSGetNumCohesive(PetscDS, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscDSGetCohesive(PetscDS, PetscInt, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscDSSetCohesive(PetscDS, PetscInt, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscDSGetNumFields(PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetTotalDimension(PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetTotalComponents(PetscDS, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetFieldIndex(PetscDS, PetscObject, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetFieldSize(PetscDS, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetFieldOffset(PetscDS, PetscInt, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscDSGetFieldOffsetCohesive(PetscDS, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetDimensions(PetscDS, PetscInt *[]);
 PETSC_EXTERN PetscErrorCode PetscDSGetComponents(PetscDS, PetscInt *[]);
 PETSC_EXTERN PetscErrorCode PetscDSGetComponentOffset(PetscDS, PetscInt, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscDSGetComponentOffsets(PetscDS, PetscInt *[]);
 PETSC_EXTERN PetscErrorCode PetscDSGetComponentDerivativeOffsets(PetscDS, PetscInt *[]);
+PETSC_EXTERN PetscErrorCode PetscDSGetComponentOffsetsCohesive(PetscDS, PetscInt, PetscInt *[]);
+PETSC_EXTERN PetscErrorCode PetscDSGetComponentDerivativeOffsetsCohesive(PetscDS, PetscInt, PetscInt *[]);
 
 PETSC_EXTERN PetscErrorCode PetscDSGetWeakForm(PetscDS, PetscWeakForm *);
 PETSC_EXTERN PetscErrorCode PetscDSSetWeakForm(PetscDS, PetscWeakForm);
@@ -770,7 +776,7 @@ PETSC_EXTERN PetscErrorCode PetscDSSetUpdate(PetscDS, PetscInt,
                                                       const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                       const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                       PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]));
-PETSC_EXTERN PetscErrorCode PetscDSGetContext(PetscDS, PetscInt, void **);
+PETSC_EXTERN PetscErrorCode PetscDSGetContext(PetscDS, PetscInt, void *);
 PETSC_EXTERN PetscErrorCode PetscDSSetContext(PetscDS, PetscInt, void *);
 PETSC_EXTERN PetscErrorCode PetscDSGetBdResidual(PetscDS, PetscInt,
                                                  void (**)(PetscInt, PetscInt, PetscInt,

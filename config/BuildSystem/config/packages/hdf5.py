@@ -6,8 +6,8 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.__init__(self, framework)
     self.minversion       = '1.8'
     self.versionname      = 'H5_VERSION'
-    self.download         = ['https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.bz2',
-                             'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/hdf5-1.12.0.tar.bz2']
+    self.download         = ['https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.1/src/hdf5-1.12.1.tar.bz2',
+                             'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/hdf5-1.12.1.tar.bz2']
     self.download_solaris = ['https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.6/src/hdf5-1.10.6.tar.bz2']
 # David Moulton reports that HDF5 configure can fail on NERSC systems and this can be worked around by removing the
 #   getpwuid from the test for ac_func in gethostname getpwuid getrusage lstat
@@ -27,7 +27,7 @@ class Configure(config.package.GNUPackage):
     # Not all dependencies for Fortran bindings are given in the makefiles, hence a parallel build can fail
     # when it starts a Fortran file before all its needed modules are finished.
     # Barry has reported this to them and they acknowledged it.
-    help.addArgument('HDF5', '-download-hdf5-fortran-bindings', nargs.ArgBool(None, 0, 'Build HDF5 Fortran interface (PETsc does not need it)'))
+    help.addArgument('HDF5', '-with-hdf5-fortran-bindings', nargs.ArgBool(None, 0, 'Use/build HDF5 Fortran interface (PETsc does not need it)'))
     #  Apple using Intel Fortran compiler errors when using shared libraries, ironically when you turn off building shared libraries it builds them correctly
     help.addArgument('HDF5', '-download-hdf5-shared-libraries', nargs.ArgBool(None, 1, 'Build HDF5 shared libraries'))
 
@@ -71,7 +71,7 @@ class Configure(config.package.GNUPackage):
       args.append('--enable-parallel')
     if not self.argDB['download-hdf5-shared-libraries']:
       args.append('--enable-shared=0')
-    if hasattr(self.compilers, 'FC') and self.argDB['download-hdf5-fortran-bindings']:
+    if hasattr(self.compilers, 'FC') and self.argDB['with-hdf5-fortran-bindings']:
       args.append('--enable-fortran')
     if self.zlib.found:
       args.append('--with-zlib=yes')
@@ -86,7 +86,7 @@ class Configure(config.package.GNUPackage):
     return args
 
   def configureLibrary(self):
-    if hasattr(self.compilers, 'FC') and self.argDB['download-hdf5-fortran-bindings']:
+    if hasattr(self.compilers, 'FC') and self.argDB['with-hdf5-fortran-bindings']:
       # PETSc does not need the Fortran interface, but some users will call the Fortran interface
       # and expect our standard linking to be sufficient.  Thus we try to link the Fortran
       # libraries, but fall back to linking only C.

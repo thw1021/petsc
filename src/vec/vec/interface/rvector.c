@@ -32,9 +32,9 @@ PETSC_EXTERN PetscErrorCode VecValidValues(Vec vec,PetscInt argnum,PetscBool beg
     ierr = VecGetArrayRead(vec,&x);CHKERRQ(ierr);
     for (i=0; i<n; i++) {
       if (begin) {
-        if (PetscIsInfOrNanScalar(x[i])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %D is not-a-number or infinite at beginning of function: Parameter number %D",i,argnum);
+        if (PetscIsInfOrNanScalar(x[i])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %" PetscInt_FMT " is not-a-number or infinite at beginning of function: Parameter number %" PetscInt_FMT "",i,argnum);
       } else {
-        if (PetscIsInfOrNanScalar(x[i])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %D is not-a-number or infinite at end of function: Parameter number %D",i,argnum);
+        if (PetscIsInfOrNanScalar(x[i])) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %" PetscInt_FMT " is not-a-number or infinite at end of function: Parameter number %" PetscInt_FMT "",i,argnum);
       }
     }
     ierr = VecRestoreArrayRead(vec,&x);CHKERRQ(ierr);
@@ -94,7 +94,7 @@ PetscErrorCode  VecMaxPointwiseDivide(Vec x,Vec y,PetscReal *max)
    Performance Issues:
 $    per-processor memory bandwidth
 $    interprocessor latency
-$    work load inbalance that causes certain processes to arrive much earlier than others
+$    work load imbalance that causes certain processes to arrive much earlier than others
 
    Notes for Users of Complex Numbers:
    For complex vectors, VecDot() computes
@@ -144,7 +144,7 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
    Performance Issues:
 $    per-processor memory bandwidth
 $    interprocessor latency
-$    work load inbalance that causes certain processes to arrive much earlier than others
+$    work load imbalance that causes certain processes to arrive much earlier than others
 
    Notes for Users of Complex Numbers:
      See VecDot() for more details on the definition of the dot product for complex numbers
@@ -200,7 +200,7 @@ $     NORM_INFINITY denotes max_i |x_i|
    Performance Issues:
 $    per-processor memory bandwidth
 $    interprocessor latency
-$    work load inbalance that causes certain processes to arrive much earlier than others
+$    work load imbalance that causes certain processes to arrive much earlier than others
 
 .seealso: VecDot(), VecTDot(), VecNorm(), VecDotBegin(), VecDotEnd(), VecNormAvailable(),
           VecNormBegin(), VecNormEnd()
@@ -244,7 +244,7 @@ PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
           NORM_1_AND_2, which computes both norms and stores them
           in a two element array.
 
-   Output Parameter:
+   Output Parameters:
 +  available - PETSC_TRUE if the val returned is valid
 -  val - the norm
 
@@ -258,7 +258,7 @@ $     NORM_INFINITY denotes max_i |x_i|
    Performance Issues:
 $    per-processor memory bandwidth
 $    interprocessor latency
-$    work load inbalance that causes certain processes to arrive much earlier than others
+$    work load imbalance that causes certain processes to arrive much earlier than others
 
    Compile Option:
    PETSC_HAVE_SLOW_BLAS_NORM2 will cause a C (loop unrolled) version of the norm to be used, rather
@@ -290,12 +290,11 @@ PetscErrorCode  VecNormAvailable(Vec x,NormType type,PetscBool  *available,Petsc
 
    Collective on Vec
 
-   Input Parameters:
-+  x - the vector
+   Input Parameter:
+.  x - the vector
 
    Output Parameter:
-.  x - the normalized vector
--  val - the vector norm before normalization
+.  val - the vector norm before normalization
 
    Level: intermediate
 
@@ -360,10 +359,10 @@ PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
 
    Collective on Vec
 
-   Input Parameters:
+   Input Parameter:
 .  x - the vector
 
-   Output Parameter:
+   Output Parameters:
 +  p - the location of val (pass NULL if you don't want this location)
 -  val - the minimum component
 
@@ -442,9 +441,6 @@ PetscErrorCode  VecTDot(Vec x,Vec y,PetscScalar *val)
    Input Parameters:
 +  x - the vector
 -  alpha - the scalar
-
-   Output Parameter:
-.  x - the scaled vector
 
    Note:
    For a vector with n components, VecScale() computes
@@ -584,7 +580,7 @@ PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
   PetscValidType(x,3);
   PetscValidType(y,1);
   PetscCheckSameTypeAndComm(x,3,y,1);
-  VecCheckSameSize(x,1,y,3);
+  VecCheckSameSize(x,3,y,1);
   if (x == y) SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
   PetscValidLogicalCollectiveScalar(y,alpha,2);
   if (alpha == (PetscScalar)0.0) PetscFunctionReturn(0);
@@ -1141,7 +1137,7 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(x,nv,2);
   if (!nv) PetscFunctionReturn(0);
-  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %D) cannot be negative",nv);
+  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
   PetscValidPointer(y,3);
   PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
   PetscValidScalarPointer(val,4);
@@ -1184,7 +1180,7 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
   PetscValidHeaderSpecific(y,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(y,nv,2);
   if (!nv) PetscFunctionReturn(0);
-  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %D) cannot be negative",nv);
+  if (nv < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
   PetscValidScalarPointer(alpha,3);
   PetscValidPointer(x,4);
   PetscValidHeaderSpecific(*x,VEC_CLASSID,4);
@@ -1210,11 +1206,11 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
 
    Collective on X
 
-   Input Arguments:
+   Input Parameters:
 +  nx   - number of vectors to be concatenated
 -  X    - array containing the vectors to be concatenated in the order of concatenation
 
-   Output Arguments:
+   Output Parameters:
 +  Y    - concatenated vector
 -  x_is - array of index sets corresponding to the concatenated components of Y (NULL if not needed)
 
@@ -1249,17 +1245,17 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
 
   if ((*X)->ops->concatenate) {
     /* use the dedicated concatenation function if available */
-    ierr = (*(*X)->ops->concatenate)(nx,X,Y,x_is);
+    ierr = (*(*X)->ops->concatenate)(nx,X,Y,x_is);CHKERRQ(ierr);
   } else {
     /* loop over vectors and start creating IS */
     comm = PetscObjectComm((PetscObject)(*X));
     ierr = VecGetType(*X, &vec_type);CHKERRQ(ierr);
-    ierr = PetscMalloc1(nx, &is_tmp);
+    ierr = PetscMalloc1(nx, &is_tmp);CHKERRQ(ierr);
     for (i=0; i<nx; i++) {
       ierr = VecGetSize(X[i], &Xng);CHKERRQ(ierr);
       ierr = VecGetLocalSize(X[i], &Xnl);CHKERRQ(ierr);
       ierr = VecGetOwnershipRange(X[i], &Xbegin, NULL);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm, Xnl, shift + Xbegin, 1, &is_tmp[i]);
+      ierr = ISCreateStride(comm, Xnl, shift + Xbegin, 1, &is_tmp[i]);CHKERRQ(ierr);
       shift += Xng;
     }
     /* create the concatenated vector */
@@ -1291,11 +1287,11 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
 
    Collective on X and IS
 
-   Input Arguments:
+   Input Parameters:
 + X - vector from which to extract a subvector
 - is - index set representing portion of X to extract
 
-   Output Arguments:
+   Output Parameter:
 . Y - subvector corresponding to is
 
    Level: advanced
@@ -1443,7 +1439,7 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
 
    Collective on IS
 
-   Input Arguments:
+   Input Parameters:
 + X - vector from which subvector was obtained
 . is - index set representing the subset of X
 - Y - subvector being restored
@@ -1511,9 +1507,8 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
             }
             break;
           case PETSC_OFFLOAD_UNALLOCATED:
-          case PETSC_OFFLOAD_VECKOKKOS:
+          case PETSC_OFFLOAD_KOKKOS:
             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"This should not happen");
-            break;
           }
 #endif
         } else if (iship) {
@@ -1542,9 +1537,8 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
             }
             break;
           case PETSC_OFFLOAD_UNALLOCATED:
-          case PETSC_OFFLOAD_VECKOKKOS:
+          case PETSC_OFFLOAD_KOKKOS:
             SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"This should not happen");
-            break;
           }
 #endif
         } else {
@@ -1977,7 +1971,7 @@ PetscErrorCode  VecGetArrays(const Vec x[],PetscInt n,PetscScalar **a[])
   PetscValidPointer(x,1);
   PetscValidHeaderSpecific(*x,VEC_CLASSID,1);
   PetscValidPointer(a,3);
-  if (n <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must get at least one array n = %D",n);
+  if (n <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must get at least one array n = %" PetscInt_FMT "",n);
   ierr = PetscMalloc1(n,&q);CHKERRQ(ierr);
   for (i=0; i<n; ++i) {
     ierr = VecGetArray(x[i],&q[i]);CHKERRQ(ierr);
@@ -2029,9 +2023,10 @@ PetscErrorCode  VecRestoreArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 }
 
 /*@C
-   VecGetArrayAndMemType - Like VecGetArray(), but if this is a GPU vector and it is currently offloaded to GPU,
-   the returned pointer will be a GPU pointer to the GPU memory that contains this processor's portion of the
-   vector data. Otherwise, it functions as VecGetArray().
+   VecGetArrayAndMemType - Like VecGetArray(), but if this is a device vector (e.g., VECCUDA) and the device has up-to-date data,
+   the returned pointer will be a device pointer to the device memory that contains this processor's portion of the vector data.
+   Otherwise, when this is a host vector (e.g., VECMPI), or a device vector with the host having newer data than device,
+   it functions as VecGetArray() and returns a host pointer.
 
    Logically Collective on Vec
 
@@ -2293,7 +2288,7 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
    vector data on the host side with for instance VecGetArray() incurs a
    data transfer.
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  a - the CUDA device pointer.  This pointer is invalid after
        VecCUDARestoreArray() returns.
@@ -2365,7 +2360,7 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec v,const PetscScalar** a)
    Accessing data on the host side e.g. with VecGetArray() does not
    incur a device to host data transfer.
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  a - the CUDA device pointer.  This pointer is invalid after
        VecCUDARestoreArrayRead() returns.
@@ -2434,7 +2429,7 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
    the data on the host side e.g. with VecGetArray() will incur a device
    to host data transfer.
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  a - the CUDA device pointer.  This pointer is invalid after
        VecCUDARestoreArrayWrite() returns.
@@ -2627,7 +2622,7 @@ PETSC_EXTERN PetscErrorCode VecHIPGetArray(Vec v, PetscScalar **a)
    vector data on the host side with for instance VecGetArray() incurs a
    data transfer.
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  a - the HIP device pointer.  This pointer is invalid after
        VecHIPRestoreArray() returns.
@@ -2708,7 +2703,7 @@ PETSC_EXTERN PetscErrorCode VecHIPGetArrayRead(Vec v, const PetscScalar **a)
    Accessing data on the host side e.g. with VecGetArray() does not
    incur a device to host data transfer.
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  a - the HIP device pointer.  This pointer is invalid after
        VecHIPRestoreArrayRead() returns.
@@ -2779,7 +2774,7 @@ PETSC_EXTERN PetscErrorCode VecHIPGetArrayWrite(Vec v, PetscScalar **a)
    the data on the host side e.g. with VecGetArray() will incur a device
    to host data transfer.
 
-   Input Parameter:
+   Input Parameters:
 +  v - the vector
 -  a - the HIP device pointer.  This pointer is invalid after
        VecHIPRestoreArrayWrite() returns.
@@ -3134,7 +3129,7 @@ M*/
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of two dimensional array
 .  n - second dimension of two dimensional array
@@ -3169,7 +3164,7 @@ PetscErrorCode  VecGetArray2d(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscI
   PetscValidPointer(a,6);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n != N) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 2d array dimensions %D by %D",N,m,n);
+  if (m*n != N) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 2d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n);
   ierr = VecGetArray(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m,a);CHKERRQ(ierr);
@@ -3185,7 +3180,7 @@ PetscErrorCode  VecGetArray2d(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscI
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of two dimensional array
 .  n - second dimension of two dimensional array
@@ -3222,7 +3217,7 @@ PetscErrorCode  VecGetArray2dWrite(Vec x,PetscInt m,PetscInt n,PetscInt mstart,P
   PetscValidPointer(a,6);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n != N) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 2d array dimensions %D by %D",N,m,n);
+  if (m*n != N) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 2d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n);
   ierr = VecGetArrayWrite(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m,a);CHKERRQ(ierr);
@@ -3322,7 +3317,7 @@ PetscErrorCode  VecRestoreArray2dWrite(Vec x,PetscInt m,PetscInt n,PetscInt msta
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of two dimensional array
 -  mstart - first index you will use in first coordinate direction (often 0)
@@ -3353,7 +3348,7 @@ PetscErrorCode  VecGetArray1d(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
   PetscValidPointer(a,4);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local array size %D does not match 1d array dimensions %D",N,m);
+  if (m != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local array size %" PetscInt_FMT " does not match 1d array dimensions %" PetscInt_FMT "",N,m);
   ierr = VecGetArray(x,a);CHKERRQ(ierr);
   *a  -= mstart;
   PetscFunctionReturn(0);
@@ -3366,7 +3361,7 @@ PetscErrorCode  VecGetArray1d(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of two dimensional array
 -  mstart - first index you will use in first coordinate direction (often 0)
@@ -3397,7 +3392,7 @@ PetscErrorCode  VecGetArray1dWrite(Vec x,PetscInt m,PetscInt mstart,PetscScalar 
   PetscValidPointer(a,4);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local array size %D does not match 1d array dimensions %D",N,m);
+  if (m != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local array size %" PetscInt_FMT " does not match 1d array dimensions %" PetscInt_FMT "",N,m);
   ierr = VecGetArrayWrite(x,a);CHKERRQ(ierr);
   *a  -= mstart;
   PetscFunctionReturn(0);
@@ -3484,7 +3479,7 @@ PetscErrorCode  VecRestoreArray1dWrite(Vec x,PetscInt m,PetscInt mstart,PetscSca
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of three dimensional array
 .  n - second dimension of three dimensional array
@@ -3521,7 +3516,7 @@ PetscErrorCode  VecGetArray3d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt ms
   PetscValidPointer(a,8);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n*p != N) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 3d array dimensions %D by %D by %D",N,m,n,p);
+  if (m*n*p != N) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 3d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n,p);
   ierr = VecGetArray(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m*sizeof(PetscScalar**)+m*n,a);CHKERRQ(ierr);
@@ -3542,7 +3537,7 @@ PetscErrorCode  VecGetArray3d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt ms
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of three dimensional array
 .  n - second dimension of three dimensional array
@@ -3581,7 +3576,7 @@ PetscErrorCode  VecGetArray3dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscI
   PetscValidPointer(a,8);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n*p != N) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 3d array dimensions %D by %D by %D",N,m,n,p);
+  if (m*n*p != N) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 3d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n,p);
   ierr = VecGetArrayWrite(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m*sizeof(PetscScalar**)+m*n,a);CHKERRQ(ierr);
@@ -3690,7 +3685,7 @@ PetscErrorCode  VecRestoreArray3dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,Pe
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of four dimensional array
 .  n - second dimension of four dimensional array
@@ -3729,7 +3724,7 @@ PetscErrorCode  VecGetArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,
   PetscValidPointer(a,10);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n*p*q != N) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 4d array dimensions %D by %D by %D by %D",N,m,n,p,q);
+  if (m*n*p*q != N) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 4d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n,p,q);
   ierr = VecGetArray(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m*sizeof(PetscScalar***)+m*n*sizeof(PetscScalar**)+m*n*p,a);CHKERRQ(ierr);
@@ -3754,7 +3749,7 @@ PetscErrorCode  VecGetArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of four dimensional array
 .  n - second dimension of four dimensional array
@@ -3795,7 +3790,7 @@ PetscErrorCode  VecGetArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscI
   PetscValidPointer(a,10);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n*p*q != N) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 4d array dimensions %D by %D by %D by %D",N,m,n,p,q);
+  if (m*n*p*q != N) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 4d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n,p,q);
   ierr = VecGetArrayWrite(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m*sizeof(PetscScalar***)+m*n*sizeof(PetscScalar**)+m*n*p,a);CHKERRQ(ierr);
@@ -3912,7 +3907,7 @@ PetscErrorCode  VecRestoreArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,Pe
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of two dimensional array
 .  n - second dimension of two dimensional array
@@ -3947,7 +3942,7 @@ PetscErrorCode  VecGetArray2dRead(Vec x,PetscInt m,PetscInt n,PetscInt mstart,Pe
   PetscValidPointer(a,6);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n != N) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 2d array dimensions %D by %D",N,m,n);
+  if (m*n != N) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 2d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n);
   ierr = VecGetArrayRead(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m,a);CHKERRQ(ierr);
@@ -4005,7 +4000,7 @@ PetscErrorCode  VecRestoreArray2dRead(Vec x,PetscInt m,PetscInt n,PetscInt mstar
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of two dimensional array
 -  mstart - first index you will use in first coordinate direction (often 0)
@@ -4036,7 +4031,7 @@ PetscErrorCode  VecGetArray1dRead(Vec x,PetscInt m,PetscInt mstart,PetscScalar *
   PetscValidPointer(a,4);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local array size %D does not match 1d array dimensions %D",N,m);
+  if (m != N) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local array size %" PetscInt_FMT " does not match 1d array dimensions %" PetscInt_FMT "",N,m);
   ierr = VecGetArrayRead(x,(const PetscScalar**)a);CHKERRQ(ierr);
   *a  -= mstart;
   PetscFunctionReturn(0);
@@ -4085,7 +4080,7 @@ PetscErrorCode  VecRestoreArray1dRead(Vec x,PetscInt m,PetscInt mstart,PetscScal
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of three dimensional array
 .  n - second dimension of three dimensional array
@@ -4123,7 +4118,7 @@ PetscErrorCode  VecGetArray3dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
   PetscValidPointer(a,8);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n*p != N) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 3d array dimensions %D by %D by %D",N,m,n,p);
+  if (m*n*p != N) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 3d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n,p);
   ierr = VecGetArrayRead(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m*sizeof(PetscScalar**)+m*n,a);CHKERRQ(ierr);
@@ -4188,7 +4183,7 @@ PetscErrorCode  VecRestoreArray3dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,Pet
 
    Logically Collective
 
-   Input Parameter:
+   Input Parameters:
 +  x - the vector
 .  m - first dimension of four dimensional array
 .  n - second dimension of four dimensional array
@@ -4228,7 +4223,7 @@ PetscErrorCode  VecGetArray4dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
   PetscValidPointer(a,10);
   PetscValidType(x,1);
   ierr = VecGetLocalSize(x,&N);CHKERRQ(ierr);
-  if (m*n*p*q != N) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %D does not match 4d array dimensions %D by %D by %D by %D",N,m,n,p,q);
+  if (m*n*p*q != N) SETERRQ5(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local array size %" PetscInt_FMT " does not match 4d array dimensions %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT " by %" PetscInt_FMT "",N,m,n,p,q);
   ierr = VecGetArrayRead(x,&aa);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(m*sizeof(PetscScalar***)+m*n*sizeof(PetscScalar**)+m*n*p,a);CHKERRQ(ierr);
@@ -4371,7 +4366,7 @@ PetscErrorCode VecLockReadPop(Vec x)
 
    Logically Collective on Vec
 
-   Input Parameter:
+   Input Parameters:
 +  x   - the vector
 -  flg - PETSC_TRUE to lock the vector for writing; PETSC_FALSE to unlock it.
 

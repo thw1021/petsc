@@ -35,7 +35,7 @@ PetscErrorCode  PetscDLLibraryPrintPath(PetscDLLibrary libs)
 +   comm - processors that are opening the library
 -   libname - name of the library, can be relative or absolute
 
-   Output Parameter:
+   Output Parameters:
 +   name - actual name of file on local filesystem if found
 .   llen - length of the name buffer
 -   found - true if the file exists
@@ -46,7 +46,7 @@ PetscErrorCode  PetscDLLibraryPrintPath(PetscDLLibrary libs)
    [[<http,ftp>://hostname]/directoryname/]filename[.so.1.0]
 
    ${PETSC_ARCH}, ${PETSC_DIR}, ${PETSC_LIB_DIR}, or ${any environmental variable}
-   occuring in directoryname and filename will be replaced with appropriate values.
+   occurring in directoryname and filename will be replaced with appropriate values.
 @*/
 PetscErrorCode  PetscDLLibraryRetrieve(MPI_Comm comm,const char libname[],char *lname,size_t llen,PetscBool  *found)
 {
@@ -60,7 +60,7 @@ PetscErrorCode  PetscDLLibraryRetrieve(MPI_Comm comm,const char libname[],char *
      so we can add to the end of it to look for something like .so.1.0 etc.
   */
   ierr = PetscStrlen(libname,&len);CHKERRQ(ierr);
-  len  = PetscMax(4*len,PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  len  = PetscMax(4*len,PETSC_MAX_PATH_LEN);
   ierr = PetscMalloc1(len,&buf);CHKERRQ(ierr);
   par2 = buf;
   ierr = PetscStrreplace(comm,libname,par2,len);CHKERRQ(ierr);
@@ -116,7 +116,7 @@ PetscErrorCode  PetscDLLibraryRetrieve(MPI_Comm comm,const char libname[],char *
    If the library has the symbol PetscDLLibraryRegister_basename() in it then that function is automatically run
    when the library is opened.
 
-   ${PETSC_ARCH} occuring in directoryname and filename
+   ${PETSC_ARCH} occurring in directoryname and filename
    will be replaced with the appropriate value.
 
 .seealso: PetscLoadDynamicLibrary(), PetscDLLibraryAppend()
@@ -195,7 +195,7 @@ PetscErrorCode  PetscDLLibraryOpen(MPI_Comm comm,const char path[],PetscDLLibrar
 
    Collective
 
-   Input Parameter:
+   Input Parameters:
 +  comm - communicator that will open the library
 .  outlist - list of already open libraries that may contain symbol (can be NULL and only the executable is searched for the function)
 .  path     - optional complete library name (if provided checks here before checking outlist)

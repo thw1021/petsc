@@ -200,7 +200,7 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"  Use -%sksp_view ::ascii_info_detail to display information for all blocks\n",prefix?prefix:"");CHKERRQ(ierr);
       if (jac->ksp && !jac->psubcomm) {
         ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
-        if (!rank) {
+        if (rank == 0) {
           ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
           ierr = KSPView(jac->ksp[0],sviewer);CHKERRQ(ierr);
           ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
@@ -631,7 +631,7 @@ static PetscErrorCode PCApply_BJacobi_Singleblock(PC pc,Vec x,Vec y)
   PetscFunctionBegin;
   ierr = VecGetLocalVectorRead(x, bjac->x);CHKERRQ(ierr);
   ierr = VecGetLocalVector(y, bjac->y);CHKERRQ(ierr);
- /* Since the inner KSP matrix may point directly to the diagonal block of an MPI matrix the inner
+  /* Since the inner KSP matrix may point directly to the diagonal block of an MPI matrix the inner
      matrix may change even if the outer KSP/PC has not updated the preconditioner, this will trigger a rebuild
      of the inner preconditioner automatically unless we pass down the outer preconditioners reuse flag.*/
   ierr = KSPSetReusePreconditioner(jac->ksp[0],pc->reusepreconditioner);CHKERRQ(ierr);
@@ -649,7 +649,7 @@ static PetscErrorCode PCMatApply_BJacobi_Singleblock(PC pc,Mat X,Mat Y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
- /* Since the inner KSP matrix may point directly to the diagonal block of an MPI matrix the inner
+  /* Since the inner KSP matrix may point directly to the diagonal block of an MPI matrix the inner
      matrix may change even if the outer KSP/PC has not updated the preconditioner, this will trigger a rebuild
      of the inner preconditioner automatically unless we pass down the outer preconditioners reuse flag.*/
   ierr = KSPSetReusePreconditioner(jac->ksp[0],pc->reusepreconditioner);CHKERRQ(ierr);
@@ -763,7 +763,6 @@ static PetscErrorCode PCSetUp_BJacobi_Singleblock(PC pc,Mat mat,Mat pmat)
 
   PetscFunctionBegin;
   if (!pc->setupcalled) {
-
     if (!jac->ksp) {
       wasSetup = PETSC_FALSE;
 

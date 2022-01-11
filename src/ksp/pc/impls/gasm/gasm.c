@@ -700,12 +700,12 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
     ierr = VecGetSize(osm->pcx,&M);CHKERRQ(ierr);
     ierr = MatCreateDense(PetscObjectComm((PetscObject)osm->ois[0]),m,PETSC_DECIDE,M,N,NULL,&O);CHKERRQ(ierr);
     for (i = 0; i < N; ++i) {
-      ierr = MatDenseGetColumnVecRead(Xin,i,&x);
-      ierr = MatDenseGetColumnVecWrite(O,i,&y);
+      ierr = MatDenseGetColumnVecRead(Xin,i,&x);CHKERRQ(ierr);
+      ierr = MatDenseGetColumnVecWrite(O,i,&y);CHKERRQ(ierr);
       ierr = VecScatterBegin(osm->pctoouter,x,y,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->pctoouter,x,y,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecWrite(O,i,&y);
-      ierr = MatDenseRestoreColumnVecRead(Xin,i,&x);
+      ierr = MatDenseRestoreColumnVecWrite(O,i,&y);CHKERRQ(ierr);
+      ierr = MatDenseRestoreColumnVecRead(Xin,i,&x);CHKERRQ(ierr);
     }
     X = Y = O;
   } else {
@@ -720,8 +720,8 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
   ierr = VecGetSize(osm->x[0],&M);CHKERRQ(ierr);
   ierr = MatCreateDense(PetscObjectComm((PetscObject)osm->ois[0]),m,PETSC_DECIDE,M,N,NULL,&Z);CHKERRQ(ierr);
   for (i = 0; i < N; ++i) {
-    ierr = MatDenseGetColumnVecRead(X,i,&x);
-    ierr = MatDenseGetColumnVecWrite(Z,i,&y);
+    ierr = MatDenseGetColumnVecRead(X,i,&x);CHKERRQ(ierr);
+    ierr = MatDenseGetColumnVecWrite(Z,i,&y);CHKERRQ(ierr);
     if (!(osm->type & PC_GASM_RESTRICT)) {
       /* have to zero the work RHS since scatter may leave some slots empty */
       ierr = VecZeroEntries(y);CHKERRQ(ierr);
@@ -731,8 +731,8 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
       ierr = VecScatterBegin(osm->gorestriction,x,y,INSERT_VALUES,forward);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->gorestriction,x,y,INSERT_VALUES,forward);CHKERRQ(ierr);
     }
-    ierr = MatDenseRestoreColumnVecWrite(Z,i,&y);
-    ierr = MatDenseRestoreColumnVecRead(X,i,&x);
+    ierr = MatDenseRestoreColumnVecWrite(Z,i,&y);CHKERRQ(ierr);
+    ierr = MatDenseRestoreColumnVecRead(X,i,&x);CHKERRQ(ierr);
   }
   ierr = MatCreateDense(PetscObjectComm((PetscObject)osm->ois[0]),m,PETSC_DECIDE,M,N,NULL,&W);CHKERRQ(ierr);
   ierr = MatSetOption(Z,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
@@ -745,8 +745,8 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
   /* do we need to zero y? */
   ierr = MatZeroEntries(Y);CHKERRQ(ierr);
   for (i = 0; i < N; ++i) {
-    ierr = MatDenseGetColumnVecWrite(Y,i,&y);
-    ierr = MatDenseGetColumnVecRead(W,i,&x);
+    ierr = MatDenseGetColumnVecWrite(Y,i,&y);CHKERRQ(ierr);
+    ierr = MatDenseGetColumnVecRead(W,i,&x);CHKERRQ(ierr);
     if (!(osm->type & PC_GASM_INTERPOLATE)) {
       ierr = VecScatterBegin(osm->girestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->girestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
@@ -754,14 +754,14 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
       ierr = VecScatterBegin(osm->gorestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->gorestriction,x,y,ADD_VALUES,reverse);CHKERRQ(ierr);
     }
-    ierr = MatDenseRestoreColumnVecRead(W,i,&x);
+    ierr = MatDenseRestoreColumnVecRead(W,i,&x);CHKERRQ(ierr);
     if (osm->pctoouter) {
-      ierr = MatDenseGetColumnVecWrite(Yout,i,&x);
+      ierr = MatDenseGetColumnVecWrite(Yout,i,&x);CHKERRQ(ierr);
       ierr = VecScatterBegin(osm->pctoouter,y,x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
       ierr = VecScatterEnd(osm->pctoouter,y,x,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecRead(Yout,i,&x);
+      ierr = MatDenseRestoreColumnVecRead(Yout,i,&x);CHKERRQ(ierr);
     }
-    ierr = MatDenseRestoreColumnVecWrite(Y,i,&y);
+    ierr = MatDenseRestoreColumnVecWrite(Y,i,&y);CHKERRQ(ierr);
   }
   ierr = MatDestroy(&W);CHKERRQ(ierr);
   ierr = MatDestroy(&O);CHKERRQ(ierr);
@@ -1668,10 +1668,13 @@ PetscErrorCode  PCGASMDestroySubdomains(PetscInt n,IS **iis,IS **ois)
    Collective
 
    Input Parameters:
-+  M, N               - the global number of grid points in the x and y directions
-.  Mdomains, Ndomains - the global number of subdomains in the x and y directions
-.  dof                - degrees of freedom per node
--  overlap            - overlap in mesh lines
++  pc       - the preconditioner context
+.  M        - the global number of grid points in the x direction
+.  N        - the global number of grid points in the y direction
+.  Mdomains - the global number of subdomains in the x direction
+.  Ndomains - the global number of subdomains in the y direction
+.  dof      - degrees of freedom per node
+-  overlap  - overlap in mesh lines
 
    Output Parameters:
 +  Nsub - the number of local subdomains created
@@ -1930,7 +1933,7 @@ PetscErrorCode  PCGASMGetSubmatrices(PC pc,PetscInt *n,Mat *mat[])
     PCGASMSetUseDMSubdomains - Indicates whether to use DMCreateDomainDecomposition() to define the subdomains, whenever possible.
     Logically Collective
 
-    Input Parameter:
+    Input Parameters:
 +   pc  - the preconditioner
 -   flg - boolean indicating whether to use subdomains defined by the DM
 

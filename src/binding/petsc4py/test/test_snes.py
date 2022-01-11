@@ -3,6 +3,7 @@
 from petsc4py import PETSc
 import unittest
 from sys import getrefcount
+import numpy
 
 # --------------------------------------------------------------------
 
@@ -120,8 +121,8 @@ class BaseTestSNES(object):
         x, y = r.duplicate(), r.duplicate()
         x[0], x[1] = [1, 2]
         self.snes.computeFunction(x, y)
-        self.assertAlmostEqual(abs(y[0]), 0.0)
-        self.assertAlmostEqual(abs(y[1]), 0.0)
+        self.assertAlmostEqual(abs(y[0]), 0.0, places=5)
+        self.assertAlmostEqual(abs(y[1]), 0.0, places=5)
 
     def testGetSetJac(self):
         A, P, jac = self.snes.getJacobian()
@@ -210,11 +211,18 @@ class BaseTestSNES(object):
         rh, ih = self.snes.getConvergenceHistory()
         self.assertEqual(len(rh), 0)
         self.assertEqual(len(ih), 0)
-        self.assertAlmostEqual(abs(x[0]), 1.0)
-        self.assertAlmostEqual(abs(x[1]), 2.0)
+        self.assertAlmostEqual(abs(x[0]), 1.0, places=5)
+        self.assertAlmostEqual(abs(x[1]), 2.0, places=5)
         # XXX this test should not be here !
         reason = self.snes.callConvergenceTest(1, 0, 0, 0)
         self.assertTrue(reason > 0)
+
+        # test interface
+        x = self.snes.getSolution()
+        x.setArray([2,3])
+        self.snes.solve()
+        self.assertAlmostEqual(abs(x[0]), 1.0, places=5)
+        self.assertAlmostEqual(abs(x[1]), 2.0, places=5)
 
     def testResetAndSolve(self):
         self.snes.reset()
@@ -233,7 +241,7 @@ class BaseTestSNES(object):
         self.testSolve()
         self.assertTrue(len(reshist) > 0)
         reshist = {}
-        self.snes.cancelMonitor()
+        self.snes.monitorCancel()
         self.assertEqual(getrefcount(monitor), refcnt)
         self.testSolve()
         self.assertTrue(len(reshist) == 0)
@@ -317,8 +325,8 @@ class BaseTestSNES(object):
         x.setArray([2,3])
         b.set(0)
         self.snes.solve(b, x)
-        self.assertAlmostEqual(abs(x[0]), 1.0)
-        self.assertAlmostEqual(abs(x[1]), 2.0)
+        self.assertAlmostEqual(abs(x[0]), 1.0, places=5)
+        self.assertAlmostEqual(abs(x[1]), 2.0, places=5)
 
     def testFDColor(self):
         J = PETSc.Mat().create(PETSc.COMM_SELF)
@@ -342,8 +350,8 @@ class BaseTestSNES(object):
         x.setArray([2,3])
         b.set(0)
         self.snes.solve(b, x)
-        self.assertAlmostEqual(abs(x[0]), 1.0)
-        self.assertAlmostEqual(abs(x[1]), 2.0)
+        self.assertAlmostEqual(abs(x[0]), 1.0, places=5)
+        self.assertAlmostEqual(abs(x[1]), 2.0, places=5)
 
 # --------------------------------------------------------------------
 

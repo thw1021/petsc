@@ -80,7 +80,7 @@ PetscErrorCode  PetscObjectGetComm(PetscObject obj,MPI_Comm *comm)
 
     Notes:
     this is used to manage the output from options that are imbedded in other objects. For example
-      the KSP object inside a SNES object. By indenting each lower level further the heirarchy of objects
+      the KSP object inside a SNES object. By indenting each lower level further the hierarchy of objects
       is very clear.
 
 .seealso:  PetscObjectIncrementTabLevel()
@@ -109,7 +109,7 @@ PetscErrorCode  PetscObjectGetTabLevel(PetscObject obj,PetscInt *tab)
 
     Notes:
     this is used to manage the output from options that are imbedded in other objects. For example
-      the KSP object inside a SNES object. By indenting each lower level further the heirarchy of objects
+      the KSP object inside a SNES object. By indenting each lower level further the hierarchy of objects
       is very clear.
 
 .seealso:  PetscObjectIncrementTabLevel()
@@ -128,7 +128,7 @@ PetscErrorCode  PetscObjectSetTabLevel(PetscObject obj,PetscInt tab)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  obj - any PETSc object where we are changing the tab
 .  oldobj - the object providing the tab
 -  tab - the increment that is added to the old objects tab
@@ -137,7 +137,7 @@ PetscErrorCode  PetscObjectSetTabLevel(PetscObject obj,PetscInt tab)
 
     Notes:
     this is used to manage the output from options that are imbedded in other objects. For example
-      the KSP object inside a SNES object. By indenting each lower level further the heirarchy of objects
+      the KSP object inside a SNES object. By indenting each lower level further the hierarchy of objects
       is very clear.
 
 .seealso:   PetscObjectSetTabLevel(),  PetscObjectGetTabLevel()

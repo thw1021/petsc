@@ -1,11 +1,11 @@
 #include <petsc/private/matimpl.h>          /*I "petscmat.h" I*/
 
 /*@C
-   MatPythonSetType - Initalize a Mat object implemented in Python.
+   MatPythonSetType - Initialize a Mat object implemented in Python.
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  mat - the matrix (Mat) object.
 -  pyname - full dotted Python name [package].module[.{class|function}]
 

@@ -55,7 +55,7 @@ PetscErrorCode TSSetRHSJacobianP(TS ts,Mat Amat,PetscErrorCode (*func)(TS,PetscR
 
   Logically Collective on TS
 
-  Input Parameters:
+  Input Parameter:
 . ts - TS context obtained from TSCreate()
 
   Output Parameters:
@@ -263,7 +263,7 @@ PetscErrorCode TSSetCostIntegrand(TS ts,PetscInt numcost,Vec costintegral,PetscE
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   if (costintegral) PetscValidHeaderSpecific(costintegral,VEC_CLASSID,3);
-  if (ts->numcost && ts->numcost!=numcost) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2rd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostGradients() or TSForwardSetIntegralGradients()");
+  if (ts->numcost && ts->numcost!=numcost) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2nd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostGradients() or TSForwardSetIntegralGradients()");
   if (!ts->numcost) ts->numcost=numcost;
 
   if (costintegral) {
@@ -845,7 +845,7 @@ PetscErrorCode TSSetCostGradients(TS ts,PetscInt numcost,Vec *lambda,Vec *mu)
   PetscValidPointer(lambda,3);
   ts->vecs_sensi  = lambda;
   ts->vecs_sensip = mu;
-  if (ts->numcost && ts->numcost!=numcost) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2rd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostIntegrand");
+  if (ts->numcost && ts->numcost!=numcost) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2nd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostIntegrand");
   ts->numcost  = numcost;
   PetscFunctionReturn(0);
 }
@@ -858,8 +858,9 @@ PetscErrorCode TSSetCostGradients(TS ts,PetscInt numcost,Vec *lambda,Vec *mu)
    Input Parameter:
 .  ts - the TS context obtained from TSCreate()
 
-   Output Parameter:
-+  lambda - vectors containing the gradients of the cost functions with respect to the ODE/DAE solution variables
+   Output Parameters:
++  numcost - size of returned arrays
+.  lambda - vectors containing the gradients of the cost functions with respect to the ODE/DAE solution variables
 -  mu - vectors containing the gradients of the cost functions with respect to the problem parameters
 
    Level: intermediate
@@ -904,7 +905,7 @@ PetscErrorCode TSSetCostHessianProducts(TS ts,PetscInt numcost,Vec *lambda2,Vec 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  if (ts->numcost && ts->numcost!=numcost) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2rd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostIntegrand");
+  if (ts->numcost && ts->numcost!=numcost) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2nd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostIntegrand");
   ts->numcost       = numcost;
   ts->vecs_sensi2   = lambda2;
   ts->vecs_sensi2p  = mu2;
@@ -920,7 +921,7 @@ PetscErrorCode TSSetCostHessianProducts(TS ts,PetscInt numcost,Vec *lambda2,Vec 
    Input Parameter:
 .  ts - the TS context obtained from TSCreate()
 
-   Output Parameter:
+   Output Parameters:
 +  numcost - number of cost functions
 .  lambda2 - Hessian-vector product with respect to the initial condition variables, the dimension and parallel layout of these vectors is the same as the ODE solution vector
 .  mu2 - Hessian-vector product with respect to the parameters, the number of entries in these vectors is the same as the number of parameters
@@ -1579,8 +1580,10 @@ PetscErrorCode TSAdjointSolve(TS ts)
       ierr = TSAdjointCostIntegral(ts);CHKERRQ(ierr);
     }
   }
-  ierr = TSTrajectoryGet(ts->trajectory,ts,ts->steps,&ts->ptime);CHKERRQ(ierr);
-  ierr = TSAdjointMonitor(ts,ts->steps,ts->ptime,ts->vec_sol,ts->numcost,ts->vecs_sensi,ts->vecs_sensip);CHKERRQ(ierr);
+  if (!ts->steps) {
+    ierr = TSTrajectoryGet(ts->trajectory,ts,ts->steps,&ts->ptime);CHKERRQ(ierr);
+    ierr = TSAdjointMonitor(ts,ts->steps,ts->ptime,ts->vec_sol,ts->numcost,ts->vecs_sensi,ts->vecs_sensip);CHKERRQ(ierr);
+  }
   ts->solvetime = ts->ptime;
   ierr = TSTrajectoryViewFromOptions(ts->trajectory,NULL,"-ts_trajectory_view");CHKERRQ(ierr);
   ierr = VecViewFromOptions(ts->vecs_sensi[0],(PetscObject) ts, "-ts_adjoint_view_solution");CHKERRQ(ierr);
@@ -1633,7 +1636,7 @@ PetscErrorCode TSAdjointMonitor(TS ts,PetscInt step,PetscReal ptime,Vec u,PetscI
 
  Collective on TS
 
- Input Arguments:
+ Input Parameter:
  .  ts - time stepping context
 
  Level: advanced
@@ -1718,7 +1721,7 @@ PetscErrorCode TSForwardReset(TS ts)
 /*@
   TSForwardSetIntegralGradients - Set the vectors holding forward sensitivities of the integral term.
 
-  Input Parameter:
+  Input Parameters:
 + ts- the TS context obtained from TSCreate()
 . numfwdint- number of integrals
 - vp = the vectors containing the gradients for each integral w.r.t. parameters
@@ -1731,7 +1734,7 @@ PetscErrorCode TSForwardSetIntegralGradients(TS ts,PetscInt numfwdint,Vec *vp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  if (ts->numcost && ts->numcost!=numfwdint) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2rd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostIntegrand()");
+  if (ts->numcost && ts->numcost!=numfwdint) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"The number of cost functions (2nd parameter of TSSetCostIntegrand()) is inconsistent with the one set by TSSetCostIntegrand()");
   if (!ts->numcost) ts->numcost = numfwdint;
 
   ts->vecs_integral_sensip = vp;
@@ -1766,7 +1769,7 @@ PetscErrorCode TSForwardGetIntegralGradients(TS ts,PetscInt *numfwdint,Vec **vp)
 
   Collective on TS
 
-  Input Arguments:
+  Input Parameter:
 . ts - time stepping context
 
   Level: advanced
@@ -1831,7 +1834,7 @@ PetscErrorCode TSForwardSetSensitivities(TS ts,PetscInt nump,Mat Smat)
 
   Not Collective, but Vec returned is parallel if TS is parallel
 
-  Output Parameter:
+  Output Parameters:
 + ts - the TS context obtained from TSCreate()
 . nump - number of parameters
 - Smat - sensitivities with respect to the parameters, the number of entries in these vectors is the same as the number of parameters
@@ -1854,7 +1857,7 @@ PetscErrorCode TSForwardGetSensitivities(TS ts,PetscInt *nump,Mat *Smat)
 
    Collective on TS
 
-   Input Arguments:
+   Input Parameter:
 .  ts - time stepping context
 
    Level: advanced
@@ -1880,7 +1883,7 @@ PetscErrorCode TSForwardCostIntegral(TS ts)
 
   Collective on TS
 
-  Input Parameter:
+  Input Parameters:
 + ts - the TS context obtained from TSCreate()
 - didp - parametric sensitivities of the initial condition
 
@@ -1933,7 +1936,7 @@ PetscErrorCode TSForwardGetStages(TS ts,PetscInt *ns,Mat **S)
 /*@
    TSCreateQuadratureTS - Create a sub-TS that evaluates integrals over time
 
-   Input Parameter:
+   Input Parameters:
 +  ts - the TS context obtained from TSCreate()
 -  fwd - flag indicating whether to evaluate cost integral in the forward run or the adjoint run
 

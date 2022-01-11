@@ -1224,10 +1224,10 @@ PetscErrorCode MatNestGetSubMats_Nest(Mat A,PetscInt *M,PetscInt *N,Mat ***mat)
 
  Not collective
 
- Input Parameters:
+ Input Parameter:
 .   A  - nest matrix
 
- Output Parameter:
+ Output Parameters:
 +   M - number of rows in the nest matrix
 .   N - number of cols in the nest matrix
 -   mat - 2d array of matrices
@@ -1269,10 +1269,10 @@ PetscErrorCode  MatNestGetSize_Nest(Mat A,PetscInt *M,PetscInt *N)
 
  Not collective
 
- Input Parameters:
+ Input Parameter:
 .   A  - nest matrix
 
- Output Parameter:
+ Output Parameters:
 +   M - number of rows in the nested mat
 -   N - number of cols in the nested mat
 
@@ -1308,10 +1308,10 @@ static PetscErrorCode MatNestGetISs_Nest(Mat A,IS rows[],IS cols[])
 
  Not collective
 
- Input Parameters:
+ Input Parameter:
 .   A  - nest matrix
 
- Output Parameter:
+ Output Parameters:
 +   rows - array of row index sets
 -   cols - array of column index sets
 
@@ -1349,10 +1349,10 @@ static PetscErrorCode MatNestGetLocalISs_Nest(Mat A,IS rows[],IS cols[])
 
  Not collective
 
- Input Parameters:
+ Input Parameter:
 .   A  - nest matrix
 
- Output Parameter:
+ Output Parameters:
 +   rows - array of row index sets (or NULL to ignore)
 -   cols - array of column index sets (or NULL to ignore)
 
@@ -1416,7 +1416,8 @@ PetscErrorCode MatNestSetSubMats_Nest(Mat A,PetscInt nr,const IS is_row[],PetscI
   Mat_Nest       *s = (Mat_Nest*)A->data;
   PetscInt       i,j,m,n,M,N;
   PetscErrorCode ierr;
-  PetscBool      cong;
+  PetscBool      cong,isstd,sametype=PETSC_FALSE;
+  VecType        vtype,type;
 
   PetscFunctionBegin;
   ierr = MatReset_Nest(A);CHKERRQ(ierr);
@@ -1435,6 +1436,28 @@ PetscErrorCode MatNestSetSubMats_Nest(Mat A,PetscInt nr,const IS is_row[],PetscI
       if (a[i*nc+j]) {
         ierr = PetscObjectReference((PetscObject)a[i*nc+j]);CHKERRQ(ierr);
       }
+    }
+  }
+  ierr = MatGetVecType(A,&vtype);CHKERRQ(ierr);
+  ierr = PetscStrcmp(vtype,VECSTANDARD,&isstd);CHKERRQ(ierr);
+  if (isstd) {
+    /* check if all blocks have the same vectype */
+    vtype = NULL;
+    for (i=0; i<nr; i++) {
+      for (j=0; j<nc; j++) {
+        if (a[i*nc+j]) {
+          if (!vtype) {  /* first visited block */
+            ierr = MatGetVecType(a[i*nc+j],&vtype);CHKERRQ(ierr);
+            sametype = PETSC_TRUE;
+          } else if (sametype) {
+            ierr = MatGetVecType(a[i*nc+j],&type);CHKERRQ(ierr);
+            ierr = PetscStrcmp(vtype,type,&sametype);CHKERRQ(ierr);
+          }
+        }
+      }
+    }
+    if (sametype) {  /* propagate vectype */
+      ierr = MatSetVecType(A,vtype);CHKERRQ(ierr);
     }
   }
 
@@ -1491,7 +1514,7 @@ PetscErrorCode MatNestSetSubMats_Nest(Mat A,PetscInt nr,const IS is_row[],PetscI
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  A - nested matrix
 .  nr - number of nested row blocks
 .  is_row - index sets for each nested row block, or NULL to make contiguous
@@ -1641,7 +1664,7 @@ static PetscErrorCode MatSetUp_NestIS_Private(Mat A,PetscInt nr,const IS is_row[
   ierr = PetscMalloc1(nr,&vs->isglobal.row);CHKERRQ(ierr);
   ierr = PetscMalloc1(nc,&vs->isglobal.col);CHKERRQ(ierr);
   if (is_row) { /* valid IS is passed in */
-    /* refs on is[] are incremeneted */
+    /* refs on is[] are incremented */
     for (i=0; i<vs->nr; i++) {
       ierr = PetscObjectReference((PetscObject)is_row[i]);CHKERRQ(ierr);
 
@@ -1669,7 +1692,7 @@ static PetscErrorCode MatSetUp_NestIS_Private(Mat A,PetscInt nr,const IS is_row[
   }
 
   if (is_col) { /* valid IS is passed in */
-    /* refs on is[] are incremeneted */
+    /* refs on is[] are incremented */
     for (j=0; j<vs->nc; j++) {
       ierr = PetscObjectReference((PetscObject)is_col[j]);CHKERRQ(ierr);
 
@@ -1780,7 +1803,7 @@ static PetscErrorCode MatSetUp_NestIS_Private(Mat A,PetscInt nr,const IS is_row[
 
    Collective on Mat
 
-   Input Parameter:
+   Input Parameters:
 +  comm - Communicator for the new Mat
 .  nr - number of nested row blocks
 .  is_row - index sets for each nested row block, or NULL to make contiguous
@@ -2027,7 +2050,7 @@ PETSC_INTERN PetscErrorCode MatAXPY_Dense_Nest(Mat Y,PetscScalar a,Mat X)
         ierr = PetscFree(cols);CHKERRQ(ierr);
       }
       if (D) {
-        ierr = MatDestroy(&D);
+        ierr = MatDestroy(&D);CHKERRQ(ierr);
       }
       ierr = ISRestoreIndices(nest->isglobal.row[i],&bmindices);CHKERRQ(ierr);
     }
@@ -2110,17 +2133,11 @@ PetscErrorCode MatConvert_Nest_AIJ(Mat A,MatType newtype,MatReuse reuse,Mat *new
   ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
   ierr = MatGetOwnershipRangeColumn(A,&cstart,&cend);CHKERRQ(ierr);
-  switch (reuse) {
-  case MAT_INITIAL_MATRIX:
-    ierr    = MatCreate(PetscObjectComm((PetscObject)A),&C);CHKERRQ(ierr);
-    ierr    = MatSetType(C,newtype);CHKERRQ(ierr);
-    ierr    = MatSetSizes(C,m,n,M,N);CHKERRQ(ierr);
-    *newmat = C;
-    break;
-  case MAT_REUSE_MATRIX:
-    C = *newmat;
-    break;
-  default: SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatReuse");
+  if (reuse == MAT_REUSE_MATRIX) C = *newmat;
+  else {
+    ierr = MatCreate(PetscObjectComm((PetscObject)A),&C);CHKERRQ(ierr);
+    ierr = MatSetType(C,newtype);CHKERRQ(ierr);
+    ierr = MatSetSizes(C,m,n,M,N);CHKERRQ(ierr);
   }
   ierr = PetscMalloc1(2*m,&dnnz);CHKERRQ(ierr);
   onnz = dnnz + m;
@@ -2203,6 +2220,9 @@ PetscErrorCode MatConvert_Nest_AIJ(Mat A,MatType newtype,MatReuse reuse,Mat *new
   ierr = MatMPIAIJSetPreallocation(C,0,dnnz,0,onnz);CHKERRQ(ierr);
   ierr = PetscFree(dnnz);CHKERRQ(ierr);
   ierr = MatAXPY_Dense_Nest(C,1.0,A);CHKERRQ(ierr);
+  if (reuse == MAT_INPLACE_MATRIX) {
+    ierr = MatHeaderReplace(A,&C);CHKERRQ(ierr);
+  } else *newmat = C;
   PetscFunctionReturn(0);
 }
 

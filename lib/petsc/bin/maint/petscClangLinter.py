@@ -79,6 +79,7 @@ arrayTypes      = {clx.TypeKind.INCOMPLETEARRAY,clx.TypeKind.CONSTANTARRAY,clx.T
 
 # Specific types
 enumTypes   = {clx.TypeKind.ENUM}
+# because PetscBool is an enum...
 boolTypes   = enumTypes|{clx.TypeKind.BOOL}
 charTypes   = {clx.TypeKind.CHAR_S,clx.TypeKind.UCHAR}
 mpiIntTypes = {clx.TypeKind.INT}
@@ -86,6 +87,25 @@ intTypes    = enumTypes|mpiIntTypes|{clx.TypeKind.USHORT,clx.TypeKind.SHORT,clx.
 realTypes   = {clx.TypeKind.FLOAT,clx.TypeKind.DOUBLE,clx.TypeKind.LONGDOUBLE,clx.TypeKind.FLOAT128}
 scalarTypes = realTypes|{clx.TypeKind.COMPLEX}
 
+"""
+Adding new classes
+------------------
+
+You must register new instances of PETSc classes in the classIdMap which expects its
+contents to be in the form:
+
+"CaseSensitiveNameOfPrivateStruct *" : "CaseSensitiveNameOfCorrespondingClassId",
+
+See below for examples.
+
+* please add your new class in alphabetical order and preserve the alignment! *
+
+The automated way to do it (in emacs) is to slap it in the first entry then highlight
+the the contents (i.e. excluding "classIdMap = {" and the closing "}") and do:
+
+1. M-x sort-fields RET
+2. M-x align-regexp RET : RET
+"""
 classIdMap = {
   "_p_AO *"                     : "AO_CLASSID",
   "_p_Characteristic *"         : "CHARACTERISTIC_CLASSID",
@@ -94,7 +114,7 @@ classIdMap = {
   "_p_DMField *"                : "DMFIELD_CLASSID",
   "_p_DMKSP *"                  : "DMKSP_CLASSID",
   "_p_DMLabel *"                : "DMLABEL_CLASSID",
-  "_p_DMPlexCellRefiner *"      : "DM_CLASSID",
+  "_p_DMPlexTransform *"        : "DMPLEXTRANSFORM_CLASSID",
   "_p_DMSNES *"                 : "DMSNES_CLASSID",
   "_p_DMTS *"                   : "DMTS_CLASSID",
   "_p_IS *"                     : "IS_CLASSID",
@@ -231,7 +251,7 @@ class PetscCursor(object):
     elif (cursor.type.get_canonical().kind == clx.TypeKind.POINTER) or (cursor.kind == clx.CursorKind.UNEXPOSED_EXPR):
       pointees = []
       if cursor.type.get_pointee().kind  == clx.TypeKind.CHAR_S:
-        # For some reason preprocessor macros that contain strings don't propogate
+        # For some reason preprocessor macros that contain strings don't propagate
         # their spelling up to the primary cursor, so we need to plumb through
         # the various sub-cursors to find it.
         pointees = [c for c in cursor.walk_preorder() if c.kind in literalCursors]
@@ -242,8 +262,11 @@ class PetscCursor(object):
           # wasn't a pure array, so we try pointer
           pointees = [c for c in cursor.walk_preorder() if c.type.kind == clx.TypeKind.POINTER]
       pointees = list({p.spelling: p for p in pointees}.values())
+      if len(pointees) > 1:
+        # sometimes array subscripts can creep in
+        pointees = [c for c in pointees if c.kind not in mathCursors]
       if len(pointees) == 1:
-          name = PetscCursor.getNameFromCursor(pointees[0])
+        name = PetscCursor.getNameFromCursor(pointees[0])
     if not name:
       # Catchall last attempt, we become the very thing we swore to destroy and parse the
       # tokens ourselves
@@ -362,8 +385,10 @@ class PetscCursor(object):
   @staticmethod
   def findCursorReferencesFromCursor(cursor):
     __doc__="""
-    Brute force find and collect all references in a file that pertain to a particular cursor. Essentially refers to finding every cursor that contains the symbol
-    that the cursor represents, so this function is only useful for first-class symbols (i.e. variables, functions)
+    Brute force find and collect all references in a file that pertain to a particular
+    cursor. Essentially refers to finding every reference to the symbol that the cursor
+    represents, so this function is only useful for first-class symbols (i.e. variables,
+    functions)
     """
     import ctypes
 
@@ -395,6 +420,11 @@ class PetscCursor(object):
           foundCursors.append(cursor)
         except ParsingError:
           pass
+        except RuntimeError as re:
+          string = "Full error full error message below:"
+          print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
+          print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",re,sep="")
+          print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
         return 1 # continue
 
     if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
@@ -445,13 +475,11 @@ class SourceFix(object):
     self.filename  = filename
     self.src       = src
     self.startLine = startline
-    if self.startLine < 1:
-      raise RuntimeError("startline {} < 1".format(self.startLine))
-    if end <= begin:
-      raise RuntimeError("end <= begin, ill-formed source fix")
+    assert self.startLine >= 1, "startline {} < 1".format(self.startLine)
+    assert end > begin, "end {} <= begin {}, ill-formed source fix".format(end,begin)
     self.begins    = [begin]
     self.ends      = [end]
-    value,replace  = str(value),self.src[begin:end]
+    value, replace = str(value),self.src[begin:end]
     # this is an error, since previous detection should not have created a fix
     assert value != replace, "trying to replace {} with itself".format(replace)
     self.replace   = [replace]
@@ -559,57 +587,13 @@ class SourceFix(object):
             for line in groupB[j1:j2]:
                 yield "+"+line
 
-class FilterFunctor(object):
-  def __init__(self,expected,funcCursor,pointer=False,notPointerHook=None,pointerHook=None,successHook=None,failureHook=None,**kwargs):
-    self.expectedTypeKinds            = expected
-    self.funcCursor                   = funcCursor
-    self.pointer                      = pointer
-    self.unexpectedNotPointerFunction = notPointerHook
-    self.unexpectedPointerFunction    = pointerHook
-    self.successFunction              = successHook
-    self.failureFunction              = failureHook
-    self.extraArgs                    = kwargs
-    return
-
-  def unexpectedNotPointerHook(self,linter,obj,objType):
-    try:
-      self.unexpectedNotPointerFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      linter.addErrorFromCursor(obj,"Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,self.expectedTypeKinds))
-    return
-
-  def unexpectedPointerHook(self,linter,obj,objType):
-    try:
-      self.unexpectedPointerFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      linter.addErrorFromCursor(obj,"Object of clang type {} is a pointer when it should not be".format(objType.kind))
-    return
-
-  def successHook(self,linter,obj,objType):
-    try:
-      self.successFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      pass
-    return
-
-  def failureHook(self,linter,obj,objType):
-    try:
-      # must return whether they handled the failure, this can mean either determining
-      # that the object was correct all along, or that a more helpful error message was
-      # logged and/or that a fix was created.
-      handled = self.failureFunction(linter,obj,objType,**vars(self))
-    except TypeError:
-      handled = False
-    if not handled:
-      linter.addErrorFromCursor(obj,"Object of clang type {} is not in expected types: {}".format(objType.kind,self.expectedTypeKinds))
-    return
-
 class PetscLinter(object):
-  def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,lock=None):
+  def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,werror=False,lock=None):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
     self.prefix     = prefix
     self.verbose    = verbose
+    self.werror     = werror
     self.lock       = lock
     self.errPrefix  = " ".join([prefix,85*"-"])
     self.warnPrefix = " ".join([prefix,85*"%"])
@@ -630,7 +614,7 @@ class PetscLinter(object):
     printList = [prefixStr,flagStr,clangStr,lockStr,showStr]
     errorStr  = self.getAllErrors()
     if errorStr: printList.append(errorStr)
-    warnStr   = self.getAllWarnings()
+    warnStr   = self.getAllWarnings(joinToString=True)
     if warnStr: printList.append(warnStr)
     return "\n".join(printList)
 
@@ -640,7 +624,7 @@ class PetscLinter(object):
   def __exit__(self,excType,*args):
     if not excType:
       if self.verbose:
-        self.__print(self.getAllWarnings())
+        self.__print(self.getAllWarnings(joinToString=True))
       self.__print(self.getAllErrors())
     return
 
@@ -834,18 +818,27 @@ class PetscLinter(object):
     if tu.diagnostics and self.verbose:
       diags = {" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}
       self.__print("\n".join(diags))
-    self.processRemoveDuplicates(tu)
+    self.processRemoveDuplicates(filename,tu)
     return
 
-  def process(self,tu):
+  def getArgumentCursors(self,funcCursor):
+    return tuple(PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments()))
+
+  def process(self,filename,tu):
     for func,parent,_ in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
-      checkFunctionMap[func.spelling](self,func,parent)
+      try:
+        checkFunctionMap[func.spelling](self,func,parent)
+      except ParsingError as pe:
+        self.addWarning(filename,str(pe))
     return
 
-  def processRemoveDuplicates(self,tu):
+  def processRemoveDuplicates(self,filename,tu):
     processedFuncs = {}
     for func,parent,scope in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
-      checkFunctionMap[func.spelling](self,func,parent)
+      try:
+        checkFunctionMap[func.spelling](self,func,parent)
+      except ParsingError as pe:
+        self.addWarning(filename,str(pe))
       func  = PetscCursor(func)
       pname = PetscCursor.getNameFromCursor(parent)
       try:
@@ -871,9 +864,8 @@ class PetscLinter(object):
           self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
     return
 
-  def addErrorFromCursor(self,locCursor,errMsg,patch=None):
-    errPrefix = str(locCursor)
-    errMess   = "".join(["\nERROR {}: ".format(len(self.errors)),errPrefix,"\n",errMsg])
+  def addErrorFromCursor(self,cursor,errorMessage,patch=None):
+    errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
     self.errors.append((errMess,patch != None))
     try:
       self.patches[patch.filename].append(patch)
@@ -908,26 +900,40 @@ class PetscLinter(object):
       errFixedStr = "\n".join([self.errPrefix,"\n".join(errFixed)[1:],self.errPrefix])
     return errLeftStr,errFixedStr
 
-  def addWarning(self,warnMsg):
-    try:
-      if warnMsg in self.warnings[-1]:
-        # we just had the exact same warning, we can ignore it. This happens very often
-        # for warnings occuring deep within a macro
-        return
-    except IndexError:
-      pass
-    self.warnings.append("".join(["\nWARNING {}: ".format(len(self.warnings)),warnMsg]))
+  def addWarning(self,filename,warnMsg):
+    if self.werror:
+      self.addErrorFromCursor(filename,warnMsg)
+    else:
+      try:
+        if warnMsg in self.warnings[-1][1]:
+          # we just had the exact same warning, we can ignore it. This happens very often
+          # for warnings occurring deep within a macro
+          return
+      except IndexError:
+        pass
+      warnStr = "".join(["\nWARNING {}: ".format(len(self.warnings)),warnMsg])
+      self.warnings.append((filename,warnStr))
     return
 
   def addWarningFromCursor(self,locCursor,warnMsg):
-    warnPrefix = str(locCursor)
-    self.warnings.append("".join(["\nWARNING {}: ".format(len(self.warnings)),warnPrefix,"\n",warnMsg]))
+    if self.werror:
+      self.addErrorFromCursor(locCursor,warnMsg)
+    else:
+      warnPrefix = str(locCursor)
+      warnFile   = locCursor.location.file.name
+      warnStr    = "".join(["\nWARNING {}: ".format(len(self.warnings)),warnPrefix,"\n",warnMsg])
+      self.warnings.append((warnFile,warnStr))
     return
 
-  def getAllWarnings(self):
-    if self.warnings:
-      return "\n".join([self.warnPrefix,"\n".join(self.warnings)[1:],self.warnPrefix])
-    return
+  def getAllWarnings(self,joinToString=False):
+    if joinToString:
+      if len(self.warnings):
+        warnings = "\n".join([self.warnPrefix,"\n".join(s for _,s in self.warnings)[1:],self.warnPrefix])
+      else:
+        warnings = ""
+    else:
+      warnings = self.warnings
+    return warnings
 
   def coalescePatches(self):
     combinedPatches = []
@@ -968,29 +974,32 @@ class WorkerPool(mp.queues.JoinableQueue):
     self.patches     = []
     return
 
-  def setup(self,compilerFlags,clangLib=None,clangOptions=baseClangOptions):
+  def setup(self,compilerFlags,clangLib=None,clangOptions=baseClangOptions,werror=False):
     if clangLib is None:
       assert clx.conf.loaded, "Must initialize libClang first"
       clangLib = clx.conf.get_filename()
     if self.parallel:
-      workerArgs = (clangLib,checkFunctionMap,classIdMap,compilerFlags,clangOptions,self.verbose,self.errorQueue,self.returnQueue,self,self.lock)
+      workerArgs = (clangLib,checkFunctionMap,classIdMap,compilerFlags,clangOptions,self.verbose,werror,self.errorQueue,self.returnQueue,self,self.lock)
       for i in range(self.numWorkers):
         workerName = "[{}]".format(i)
         worker     = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
         worker.start()
         self.workers.append(worker)
     else:
-      self.linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=self.prefix,verbose=self.verbose)
+      self.linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=self.prefix,verbose=self.verbose,werror=werror)
     return
 
-  def walk(self,srcDir,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
-    for root,dirs,files in os.walk(srcDir):
-      if self.verbose: print(self.prefix,"Processing directory",root)
-      dirs[:] = [d for d in dirs if d not in excludeDirs]
-      dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
-      files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
-      for filename in files:
-        self.put(filename)
+  def walk(self,srcLoc,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
+    if os.path.isfile(srcLoc):
+      self.put(srcLoc)
+    else:
+      for root,dirs,files in os.walk(srcLoc):
+        if self.verbose: print(self.prefix,"Processing directory",root)
+        dirs[:] = [d for d in dirs if d not in excludeDirs]
+        dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
+        files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
+        for filename in files:
+          self.put(filename)
     return
 
   def put(self,filename,*args):
@@ -1073,6 +1082,12 @@ class WorkerPool(mp.queues.JoinableQueue):
 
 
 """Generic test and utility functions"""
+def alwaysTrue(*args,**kwargs):
+  return True
+
+def alwaysFalse(*args,**kwargs):
+  return False
+
 def addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName):
   __doc__="""
   shorthand for extracting a fix from a function cursor
@@ -1139,45 +1154,45 @@ def convertToCorrectPetscValidXXXPointer(linter,obj,objType,**kwargs):
   return False
 
 def checkIsPetscScalarAndNotPetscReal(linter,obj,objType,**kwargs):
-  """
-  used as a success hook, since a scalar may (depending on how petsc was configured) pass the type check for reals, so we must double check the name
+  __doc__="""
+  Used as a success hook, since a scalar may (depending on how petsc was configured) pass the type check for reals, so we must double check the name
   """
   if "PetscScalar" not in obj.derivedtypename:
     funcCursor = kwargs["funcCursor"]
     if "PetscReal" in obj.derivedtypename:
-      validFunc = kwargs["extraArgs"]["validFunc"]
+      validFunc = kwargs["validFunc"]
       addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
     else:
       linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
-  return
+  return True
 
 def checkIsPetscRealAndNotPetscScalar(linter,obj,objType,**kwargs):
   if "PetscReal" not in obj.derivedtypename:
     funcCursor = kwargs["funcCursor"]
     if "PetscScalar" in obj.derivedtypename:
-      validFunc = kwargs["extraArgs"]["validFunc"]
+      validFunc = kwargs["validFunc"]
       addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
     else:
       linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
-  return
+  return True
 
 def checkIntIsNotPetscBool(linter,obj,objType,**kwargs):
   if "PetscBool" in obj.derivedtypename:
-    funcCursor,validFunc = kwargs["funcCursor"],kwargs["extraArgs"]["validFunc"]
+    funcCursor,validFunc = kwargs["funcCursor"],kwargs["validFunc"]
     addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
-  return
+  return True
 
 def checkMPIIntIsNotPetscInt(linter,obj,objType,**kwargs):
   if "PetscInt" in obj.derivedtypename:
-    funcCursor,validFunc = kwargs["funcCursor"],kwargs["extraArgs"]["validFunc"]
+    funcCursor,validFunc = kwargs["funcCursor"],kwargs["validFunc"]
     addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
-  return
+  return True
 
 def checkIsPetscBool(linter,obj,objType,**kwargs):
   if ("PetscBool" not in obj.derivedtypename) and ("bool" not in obj.typename):
     funcCursor = kwargs["funcCursor"]
     linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname))
-  return
+  return True
 
 def checkIsPetscObject(linter,obj):
   __doc__="""
@@ -1189,27 +1204,24 @@ def checkIsPetscObject(linter,obj):
   elif obj.typename not in classIdMap:
     # Raise exception here since this isn't a bad source, moreso a failure of
     # this script since it should know about all petsc classes
-    raise RuntimeError("Unkown or invalid class "+str(obj))
+    errorMessage = "{}\nUnknown or invalid PETSc class '{}'. If you are introducing a new class, you must register it with this linter! See {} and search for 'Adding new classes' for more information\n".format(obj,obj.derivedtypename,osResolvePath(__file__))
+    raise RuntimeError(errorMessage)
   validObject = True
-  pObjType = obj.type.get_canonical().get_pointee()
+  pObjType    = obj.type.get_canonical().get_pointee()
   # Must have a struct here, e.g. _p_Vec
-  assert pObjType.kind == clx.TypeKind.RECORD
-  objFields = list(pObjType.get_fields())
+  assert pObjType.kind == clx.TypeKind.RECORD,"Symbol does not appear to be a struct!"
+  objFields = [f for f in pObjType.get_fields()]
   if len(objFields) >= 2:
-    petscHeader = objFields[0]
-    if PetscCursor.getTypenameFromCursor(petscHeader) != "_p_PetscObject":
-      validObject = False
-    petscOps = objFields[1]
-    if PetscCursor.getNameFromCursor(petscOps) != "ops":
+    if (PetscCursor.getTypenameFromCursor(objFields[0]) != "_p_PetscObject"):
       validObject = False
   else:
     validObject = False
   if not validObject:
     objDecl = PetscCursor(pObjType.get_declaration())
     if len(objFields) == 0:
-      linter.addWarningFromCursor(obj,"Object '{}' of derived type '{}', canonical type '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.name,objDecl.derivedtypename,objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+      linter.addWarningFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
     else:
-      linter.addErrorFromCursor(obj,"Object '{}' of derived type '{}', canonical type '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER:\n\n{}\n{}".format(objDecl.name,objDecl.derivedtypename,objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+      linter.addErrorFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
   return validObject
 
 def checkMatchingClassid(linter,obj,objClassid):
@@ -1287,10 +1299,16 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     # we just tried those and they didn't work, also more importantly weeds out the
     # instantiation line if this is an intermediate cursor in a recursive call to this
     # function
-    refsAll = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
-    assert len(refsAll), "Could not determine the origin of cursor {}".format(obj)
+    argRefs = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
+    if not len(argRefs):
+      # it's not traceable to a function argument, so maybe its a global static variable
+      if len([r for r in refsAll if r.storage_class in {clx.StorageClass.STATIC}]):
+        # a global variable is not a function argumment, so this is unhandleable
+        raise ParsingError("PETSC_CLANG_STATIC_ANALYZER_IGNORE")
+
+    assert len(argRefs), "Could not determine the origin of cursor {}".format(obj)
     # take the first, as this is the earliest
-    firstRef  = refsAll[0]
+    firstRef  = argRefs[0]
     tu,loc    = firstRef.translation_unit,firstRef.location
     srcLen    = len(firstRef.getRawSource())
     # why the following song and dance? Because you cannot walk the AST backwards, and
@@ -1348,7 +1366,7 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
   Is the Arg # correct w.r.t. the function arguments
   """
   if idx.canonical.kind not in mathCursors:
-    # sometimes it is impossible to tell if the index is correct so this is a warnning not
+    # sometimes it is impossible to tell if the index is correct so this is a warning not
     # an error. For example in the case of a loop:
     # for (i = 0; i < n; ++i) PetscValidIntPointer(arr+i,i);
     linter.addWarningFromCursor(idx,"Index value is of unexpected type '{}'".format(idx.canonical.kind))
@@ -1364,12 +1382,21 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
   except ValueError:
     try:
       matchLoc = checkTraceableToParentArgs(obj,parentArgNames)
-    except ParsingError:
+    except ParsingError as pe:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
       # anything here but emit a warning
-      parentFunc = PetscCursor(parentArgs[0].semantic_parent)
-      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}()' seemingly does not contain the object:\n\n{}".format(parentFunc.name,parentFunc.getFormattedSource()))
+      if "PETSC_CLANG_STATIC_ANALYZER_IGNORE" in pe.args:
+        return
+      if len(parentArgs):
+        parentFunc = PetscCursor(parentArgs[0].semantic_parent)
+        parentFuncName = parentFunc.name+"()"
+        parentFuncSrc  = parentFunc.getFormattedSource()
+      else:
+        # parent function has no arguments (very likely that "obj" is a global variable)
+        parentFuncName = "UNKNOWN FUNCTION"
+        parentFuncSrc  = "  <could not determine parent function signature from arguments>"
+      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n\n{}".format(parentFuncName,parentFuncSrc))
       return
   if idxNum != parentArgs[matchLoc].argidx:
     errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n\n{}".format(obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].getFormattedSource())
@@ -1377,14 +1404,31 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
     linter.addErrorFromCursor(idx,errMess,patch=fix)
   return
 
-def checkMatchingSpecificType(linter,obj,filterFunctor):
-  """
+def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=alwaysFalse,**kwargs):
+  __doc__="""
   Checks that obj is of a particular kind, for example char. Can optionally handle pointers too.
+
+  Nonstandard arguments:
+
+  expectedTypeKinds            - the base type that you want obj to be, e.g. clx.TypeKind.ENUM
+                                 for PetscBool
+  pointer                      - should obj be a pointer to your type?
+  unexpectedNotPointerFunction - pointer is TRUE, the object matches the base type but IS NOT
+                                 a pointer
+  unexpectedPointerFunction    - pointer is FALSE, the object matches the base type but IS a
+                                 pointer
+  successFunction              - the object matches the type and pointer specification
+  failureFunction              - the object does NOT match the base type
+
+  The hooks must return whether they handled the failure, this can mean either determining
+  that the object was correct all along, or that a more helpful error message was logged
+  and/or that a fix was created.
   """
   objType = obj.canonical.type.get_canonical()
-  if filterFunctor.pointer:
-    if objType.kind in filterFunctor.expectedTypeKinds:
-      filterFunctor.unexpectedNotPointerHook(linter,obj,objType)
+  if pointer:
+    if objType.kind in expectedTypeKinds:
+      if not unexpectedNotPointerFunction(linter,obj,objType,**kwargs):
+        linter.addErrorFromCursor(obj,"Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,expectedTypeKinds))
       return
     if objType.kind == clx.TypeKind.INCOMPLETEARRAY:
       objType = objType.element_type
@@ -1398,12 +1442,17 @@ def checkMatchingSpecificType(linter,obj,filterFunctor):
         objType = objType.get_pointee()
   else:
     if objType.kind in arrayTypes or objType.kind == clx.TypeKind.POINTER:
-      filterFunctor.unexpectedPointerHook(linter,obj,objType)
+      if not unexpectedPointerFunction(linter,obj,objType,**kwargs):
+        linter.addErrorFromCursor(obj,"Object of clang type {} is a pointer when it should not be".format(objType.kind))
       return
-  if objType.kind in filterFunctor.expectedTypeKinds:
-    filterFunctor.successHook(linter,obj,objType)
+  if objType.kind in expectedTypeKinds:
+    handled = successFunction(linter,obj,objType,**kwargs)
+    if not handled:
+      errorMessage = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value '{}' indicating unhandled error!".format(obj,objType.kind,'\n- '.join(map(str,expectedTypeKinds)),successFunction,handled,expectedTypeKinds,objType.kind)
+      raise RuntimeError(errorMessage)
   else:
-    filterFunctor.failureHook(linter,obj,objType)
+    if not failureFunction(linter,obj,objType,**kwargs):
+      linter.addErrorFromCursor(obj,"Object of clang type {} is not in expected types: {}".format(objType.kind,expectedTypeKinds))
   return
 
 
@@ -1412,13 +1461,9 @@ def checkObjIdxGenericN(linter,func,parent):
   __doc__="""
   For generic checks where the form is func(obj1,idx1,...,objN,idxN)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    # add warning since it isn't a source error but rather a parsing failure
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   for obj,idx in zip(funcArgs[::2],funcArgs[1::2]):
     checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
@@ -1427,12 +1472,9 @@ def checkPetscValidHeaderSpecificType(linter,func,parent):
   __doc__="""
   Specific check for PetscValidHeaderSpecificType(obj,classid,idx,type)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   # Don't need the type
   obj,classid,idx,_ = funcArgs
   checkMatchingClassid(linter,obj,classid)
@@ -1443,30 +1485,29 @@ def checkPetscValidHeaderSpecific(linter,func,parent):
   __doc__="""
   Specific check for PetscValidHeaderSpecific(obj,classid,idx)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   obj,classid,idx = funcArgs
   checkMatchingClassid(linter,obj,classid)
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
-def checkPetscValidPointerAndType(linter,func,parent,filterFunctor):
+def checkPetscValidPointerAndType(linter,func,parent,expectedTypes,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=convertToCorrectPetscValidXXXPointer,**kwargs):
   __doc__="""
   Generic check for PetscValidXXXPointer(obj,idx)
   """
-  try:
-    funcArgs   = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   obj,idx = funcArgs
-  assert filterFunctor.pointer == True
-  checkMatchingSpecificType(linter,obj,filterFunctor)
+  checkMatchingSpecificType(linter,obj,expectedTypes,True,
+                            unexpectedNotPointerFunction=unexpectedNotPointerFunction,
+                            unexpectedPointerFunction=unexpectedPointerFunction,
+                            successFunction=successFunction,
+                            failureFunction=failureFunction,
+                            funcCursor=func,
+                            **kwargs)
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
@@ -1474,56 +1515,53 @@ def checkPetscValidCharPointer(linter,func,parent):
   __doc__="""
   Specific check for PetscValidCharPointer(obj,idx)
   """
-  charFilter = FilterFunctor(charTypes,func,pointer=True,failureHook=convertToCorrectPetscValidXXXPointer)
-  checkPetscValidPointerAndType(linter,func,parent,charFilter)
+  checkPetscValidPointerAndType(linter,func,parent,charTypes)
   return
 
 def checkPetscValidIntPointer(linter,func,parent):
   __doc__="""
   Specific check for PetscValidIntPointer(obj,idx)
   """
-  intFilter = FilterFunctor(intTypes,func,pointer=True,successHook=checkIntIsNotPetscBool,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidBoolPointer")
-  checkPetscValidPointerAndType(linter,func,parent,intFilter)
+  checkPetscValidPointerAndType(linter,func,parent,intTypes,successFunction=checkIntIsNotPetscBool,validFunc="PetscValidBoolPointer")
   return
 
 def checkPetscValidBoolPointer(linter,func,parent):
   __doc__="""
   Specific check for PetscValidBoolPointer(obj,idx)
   """
-  boolFilter = FilterFunctor(boolTypes,func,pointer=True,successHook=checkIsPetscBool,failureHook=convertToCorrectPetscValidXXXPointer)
-  checkPetscValidPointerAndType(linter,func,parent,boolFilter)
+  checkPetscValidPointerAndType(linter,func,parent,boolTypes,successFunction=checkIsPetscBool)
   return
 
 def checkPetscValidScalarPointer(linter,func,parent):
   __doc__="""
   Specific check for PetscValidScalarPointer(obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,func,pointer=True,successHook=checkIsPetscScalarAndNotPetscReal,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidRealPointer")
-  checkPetscValidPointerAndType(linter,func,parent,scalarFilter)
+  checkPetscValidPointerAndType(linter,func,parent,scalarTypes,successFunction=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidRealPointer")
   return
 
 def checkPetscValidRealPointer(linter,func,parent):
   __doc__="""
   Specific check for PetscValidRealPointer(obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,func,pointer=True,successHook=checkIsPetscRealAndNotPetscScalar,failureHook=convertToCorrectPetscValidXXXPointer,validFunc="PetscValidScalarPointer")
-  checkPetscValidPointerAndType(linter,func,parent,realFilter)
+  checkPetscValidPointerAndType(linter,func,parent,realTypes,successFunction=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidScalarPointer")
   return
 
-def checkPetscValidLogicalCollective(linter,func,parent,filterFunctor):
+def checkPetscValidLogicalCollective(linter,func,parent,expectedTypes,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=convertToCorrectPetscValidLogicalCollectiveXXX,**kwargs):
   __doc__="""
   Generic check for PetscValidLogicalCollectiveXXX(pobj,obj,idx)
   """
-  try:
-    funcArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(func.get_arguments()))
-    parentArgs = tuple(PetscCursor(a,i+1) for i,a in enumerate(parent.get_arguments()))
-  except ParsingError as pe:
-    linter.addWarning(str(pe))
-    return
+  funcArgs   = linter.getArgumentCursors(func)
+  parentArgs = linter.getArgumentCursors(parent)
+
   # dont need the petsc object, nothing to check there
   _,obj,idx = funcArgs
-  assert filterFunctor.pointer == False
-  checkMatchingSpecificType(linter,obj,filterFunctor)
+  checkMatchingSpecificType(linter,obj,expectedTypes,False,
+                            unexpectedNotPointerFunction=unexpectedNotPointerFunction,
+                            unexpectedPointerFunction=unexpectedPointerFunction,
+                            successFunction=successFunction,
+                            failureFunction=failureFunction,
+                            funcCursor=func,
+                            **kwargs)
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
@@ -1531,77 +1569,76 @@ def checkPetscValidLogicalCollectiveScalar(linter,func,parent):
   __doc__="""
   Specific check for PetscValidLogicalCollectiveScalar(pobj,obj,idx)
   """
-  scalarFilter = FilterFunctor(scalarTypes,func,successHook=checkIsPetscScalarAndNotPetscReal,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveReal")
-  checkPetscValidLogicalCollective(linter,func,parent,scalarFilter)
+  checkPetscValidLogicalCollective(linter,func,parent,scalarTypes,successFunction=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidLogicalCollectiveReal")
   return
 
 def checkPetscValidLogicalCollectiveReal(linter,func,parent):
   __doc__="""
   Specific check for PetscValidLogicalCollectiveReal(pobj,obj,idx)
   """
-  realFilter = FilterFunctor(realTypes,func,successHook=checkIsPetscRealAndNotPetscScalar,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveScalar")
-  checkPetscValidLogicalCollective(linter,func,parent,realFilter)
+  checkPetscValidLogicalCollective(linter,func,parent,realTypes,successFunction=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidLogicalCollectiveScalar")
   return
 
 def checkPetscValidLogicalCollectiveInt(linter,func,parent):
   __doc__="""
   Specific check for PetscValidLogicalCollectiveInt(pobj,obj,idx)
   """
-  intFilter = FilterFunctor(intTypes,func,successHook=checkIntIsNotPetscBool,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveBool")
-  checkPetscValidLogicalCollective(linter,func,parent,intFilter)
+  checkPetscValidLogicalCollective(linter,func,parent,intTypes,successFunction=checkIntIsNotPetscBool,validFunc="PetscValidLogicalCollectiveBool")
   return
 
 def checkPetscValidLogicalCollectiveMPIInt(linter,func,parent):
   __doc__="""
   Specific check for PetscValidLogicalCollectiveMPIInt(pobj,obj,idx)
   """
-  mpiIntFilter = FilterFunctor(mpiIntTypes,func,successHook=checkMPIIntIsNotPetscInt,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX,validFunc="PetscValidLogicalCollectiveInt")
-  checkPetscValidLogicalCollective(linter,func,parent,mpiIntFilter)
+  checkPetscValidLogicalCollective(linter,func,parent,mpiIntTypes,successFunction=checkMPIIntIsNotPetscInt,validFunc="PetscValidLogicalCollectiveInt")
   return
 
 def checkPetscValidLogicalCollectiveBool(linter,func,parent):
   __doc__="""
   Specific check for PetscValidLogicalCollectiveBool(pobj,obj,idx)
   """
-  boolFilter = FilterFunctor(boolTypes,func,successHook=checkIsPetscBool,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX)
-  checkPetscValidLogicalCollective(linter,func,parent,boolFilter)
+  checkPetscValidLogicalCollective(linter,func,parent,boolTypes,successFunction=checkIsPetscBool)
   return
 
 def checkPetscValidLogicalCollectiveEnum(linter,func,parent):
   __doc__="""
   Specific check for PetscValidLogicalCollectiveEnum(pobj,obj,idx)
   """
-  enumFilter = FilterFunctor(enumTypes,func,failureHook=convertToCorrectPetscValidLogicalCollectiveXXX)
-  checkPetscValidLogicalCollective(linter,func,parent,enumFilter)
+  checkPetscValidLogicalCollective(linter,func,parent,enumTypes)
   return
 
 
 checkFunctionMap = {
-  "PetscValidHeaderSpecificType"      : checkPetscValidHeaderSpecificType,
-  "PetscValidHeaderSpecific"          : checkPetscValidHeaderSpecific,
-  "PetscValidHeader"                  : checkObjIdxGenericN,
-  "PetscValidPointer"                 : checkObjIdxGenericN,
-  "PetscValidCharPointer"             : checkPetscValidCharPointer,
-  "PetscValidIntPointer"              : checkPetscValidIntPointer,
-  "PetscValidBoolPointer"             : checkPetscValidBoolPointer,
-  "PetscValidScalarPointer"           : checkPetscValidScalarPointer,
-  "PetscValidRealPointer"             : checkPetscValidRealPointer,
-  "PetscCheckSameType"                : checkObjIdxGenericN,
-  "PetscValidType"                    : checkObjIdxGenericN,
-  "PetscCheckSameComm"                : checkObjIdxGenericN,
-  "PetscCheckSameTypeAndComm"         : checkObjIdxGenericN,
-  "PetscValidLogicalCollectiveScalar" : checkPetscValidLogicalCollectiveScalar,
-  "PetscValidLogicalCollectiveReal"   : checkPetscValidLogicalCollectiveReal,
-  "PetscValidLogicalCollectiveInt"    : checkPetscValidLogicalCollectiveInt,
-  "PetscValidLogicalCollectiveMPIInt" : checkPetscValidLogicalCollectiveMPIInt,
-  "PetscValidLogicalCollectiveBool"   : checkPetscValidLogicalCollectiveBool,
-  "PetscValidLogicalCollectiveEnum"   : checkPetscValidLogicalCollectiveEnum,
-  "VecNestCheckCompatible2"           : checkObjIdxGenericN,
-  "VecNestCheckCompatible3"           : checkObjIdxGenericN,
-  "MatCheckPreallocated"              : checkObjIdxGenericN,
-  "MatCheckProduect"                  : checkObjIdxGenericN,
-  "MatCheckSameLocalSize"             : checkObjIdxGenericN,
-  "MatCheckSameSize"                  : checkObjIdxGenericN,
+  "PetscValidHeaderSpecificType"       : checkPetscValidHeaderSpecificType,
+  "PetscValidHeaderSpecific"           : checkPetscValidHeaderSpecific,
+  "PetscValidHeader"                   : checkObjIdxGenericN,
+  "PetscValidPointer"                  : checkObjIdxGenericN,
+  "PetscValidCharPointer"              : checkPetscValidCharPointer,
+  "PetscValidIntPointer"               : checkPetscValidIntPointer,
+  "PetscValidBoolPointer"              : checkPetscValidBoolPointer,
+  "PetscValidScalarPointer"            : checkPetscValidScalarPointer,
+  "PetscValidRealPointer"              : checkPetscValidRealPointer,
+  "PetscCheckSameType"                 : checkObjIdxGenericN,
+  "PetscValidType"                     : checkObjIdxGenericN,
+  "PetscCheckSameComm"                 : checkObjIdxGenericN,
+  "PetscCheckSameTypeAndComm"          : checkObjIdxGenericN,
+  "PetscValidLogicalCollectiveScalar"  : checkPetscValidLogicalCollectiveScalar,
+  "PetscValidLogicalCollectiveReal"    : checkPetscValidLogicalCollectiveReal,
+  "PetscValidLogicalCollectiveInt"     : checkPetscValidLogicalCollectiveInt,
+  "PetscValidLogicalCollectiveMPIInt"  : checkPetscValidLogicalCollectiveMPIInt,
+  "PetscValidLogicalCollectiveBool"    : checkPetscValidLogicalCollectiveBool,
+  "PetscValidLogicalCollectiveEnum"    : checkPetscValidLogicalCollectiveEnum,
+  "VecNestCheckCompatible2"            : checkObjIdxGenericN,
+  "VecNestCheckCompatible3"            : checkObjIdxGenericN,
+  "MatCheckPreallocated"               : checkObjIdxGenericN,
+  "MatCheckProduect"                   : checkObjIdxGenericN,
+  "MatCheckSameLocalSize"              : checkObjIdxGenericN,
+  "MatCheckSameSize"                   : checkObjIdxGenericN,
+  "PetscValidDevice"                   : checkObjIdxGenericN,
+  "PetscCheckCompatibleDevices"        : checkObjIdxGenericN,
+  "PetscValidDeviceContext"            : checkObjIdxGenericN,
+  "PetscCheckCompatibleDeviceContexts" : checkObjIdxGenericN,
+  "PetscSFCheckGraphSet"               : checkObjIdxGenericN,
 }
 
 """Utility and pre-check setup"""
@@ -1709,22 +1746,29 @@ def getPetscExtraIncludes(petscDir,petscArch):
   # a bug report for python believing that cdll.load() was not deterministic...
   petscIncludes = []
   mpiIncludes   = []
+  cxxflags      = []
   with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
     ccinc  = re.compile("^PETSC_CC_INCLUDES\s*=")
     mpiinc = re.compile("^MPI_INCLUDE\s*=")
     shoinc = re.compile("^MPICC_SHOW\s*=")
+    cxxflg = re.compile("^CXX_FLAGS\s*=")
     line   = pv.readline()
     while line:
       if ccinc.search(line):
         petscIncludes.append(line.split("=",1)[1])
       elif mpiinc.search(line) or shoinc.search(line):
         mpiIncludes.append(line.split("=",1)[1])
+      elif cxxflg.search(line):
+        cxxflags.append(line.split("=",1)[1])
       line = pv.readline()
+  cxxflags      = [l.strip().split(" ") for l in cxxflags if l]
+  cxxflags      = [flag for flags in cxxflags for flag in flags if flag.startswith("-std=")]
+  cxxflags      = [cxxflags[-1]] if cxxflags else [] # take only the last one
   extraIncludes = [l.strip().split(" ") for l in petscIncludes+mpiIncludes if l]
   extraIncludes = [item for sublist in extraIncludes for item in sublist if item.startswith("-I")]
   seen          = set()
   extraIncludes = [item for item in extraIncludes if not item in seen and not seen.add(item)]
-  return extraIncludes
+  return cxxflags+extraIncludes
 
 def getClangSysIncludes():
   __doc__="""
@@ -1833,44 +1877,51 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
 
 
 """Main functions for root and queue processes"""
-def testMain(petscDir,testDir,patches,replace=False,verbose=False):
+def testMain(petscDir,srcDir,outputDir,patches,replace=False,verbose=False):
   import glob,itertools,difflib
 
+  class TestException(Exception):
+    pass
+
   if not patches:
-    raise RuntimeError("testDir {} provided but no patches generated".format(testDir))
+    raise RuntimeError("outputDir {} provided but no patches generated".format(outputDir))
   returncode = 0
-  testGlob   = "".join([testDir,os.path.sep,"*.patch"])
-  testFiles  = {os.path.basename(f):f for f in glob.glob(testGlob)}
   patchError = {}
-  for filename,patch in patches:
-    shortName   = filename.replace(petscDir+os.path.sep,"")
-    mangledFile = os.path.splitext(filename)[0]+".patch"
-    mangledBase = os.path.basename(mangledFile)
+  patches    = dict(patches)
+  fileList   = []
+  for ext in ('c','cxx','cpp','cc','CC'):
+    fileList.extend(glob.glob("".join([srcDir,os.path.sep,"*."+ext])))
+  for testFile in fileList:
+    basename   = os.path.basename(os.path.splitext(testFile)[0])
+    outputFile = os.path.join(outputDir,basename+".patch")
+    shortName  = testFile.replace(petscDir+os.path.sep,"")
+
     print("\tTEST   ",shortName)
-    if replace:
-      print("\tREPLACE",shortName)
-      replaceFile = os.path.join(testDir,mangledBase)
-      patch = "".join(patch.splitlines(True)[2:])
-      with open(replaceFile,"w") as fd:
-        fd.write(patch)
-      continue
     try:
-      testFile = testFiles[mangledBase]
-    except KeyError:
-      print("\tNOT OK ",shortName)
-      patchError[filename] = "File had no corresponding test: '{}'\n".format(os.path.join(testDir,mangledBase))
-      continue
-    # skip header lines containing date, the output files shouldn't contain them
-    patchLines = patch.splitlines(True)[2:]
-    with open(testFile,"r") as fd:
-      fileLines = fd.readlines()
-      diffs     = list(difflib.unified_diff(fileLines,patchLines,fromfile=testFile,tofile=mangledFile,n=0))
-      if diffs:
-        patchError[filename] = "".join(diffs)
-    if filename in patchError:
-      print("\tNOT OK ",shortName)
-    else:
+      try:
+        patch = patches[testFile]
+      except KeyError:
+        raise TestException("File had no corresponding patch: '{}'\n".format(testFile))
+      if replace:
+        print("\tREPLACE",shortName)
+        patch = "".join(patch.splitlines(True)[2:])
+        with open(outputFile,"w") as fd:
+          fd.write(patch)
+        continue
+      elif not os.path.exists(outputFile):
+        raise TestException("File had no corresponding output: '{}'\n".format(testFile))
+
+      with open(outputFile,"r") as fd:
+        fileLines  = fd.readlines()
+        # skip header lines containing date, the output files shouldn't contain them
+        patchLines = patch.splitlines(True)[2:]
+        diffs      = list(difflib.unified_diff(fileLines,patchLines,n=0))
+        if diffs:
+          raise TestException("".join(diffs))
       print("\tOK     ",shortName)
+    except TestException as te:
+      print("\tNOT OK ",shortName)
+      patchError[testFile] = str(te)
   if patchError:
     returncode = 21
     errBars    = "".join(["[ERROR]",85*"-","[ERROR]"])
@@ -1879,7 +1930,7 @@ def testMain(petscDir,testDir,patches,replace=False,verbose=False):
       print(patchError[errFile].join(errBars))
   return returncode
 
-def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,verbose,errorQueue,returnQueue,fileQueue,lock):
+def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,verbose,werror,errorQueue,returnQueue,fileQueue,lock):
   __doc__="""
   main function for worker processes in the queue, does pretty much the same thing the main process would do in their place
   """
@@ -1905,8 +1956,8 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
     errorPrefix = " ".join([printPrefix,"Exception detected while processing"])
     lockPrint(printPrefix,15*"=","Performing setup",15*"=")
     initializeLibclang(clangLib=clangLib)
-    linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,lock=lock)
-    lockPrint(printPrefix,15*"=","Entering queue",15*"=")
+    linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,werror=werror,lock=lock)
+    lockPrint(printPrefix,15*"=","Entering queue  ",15*"=")
     while True:
       filename = fileQueue.get()
       if filename == QueueSignal.EXIT_QUEUE:
@@ -1920,7 +1971,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
       returnQueue.put((QueueSignal.WARNING     ,linter.getAllWarnings()))
       linter.clear()
       fileQueue.task_done()
-    lockPrint(printPrefix,15*"=","Exiting queue",15*"=")
+    lockPrint(printPrefix,15*"=","Exiting queue   ",15*"=")
   except:
     try:
       # attempt to send the traceback back to parent
@@ -1943,7 +1994,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
   returnQueue.close()
   return
 
-def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testDir=None,replaceTests=False):
+def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testDir=None,replaceTests=False,werror=False):
   __doc__="""
   entry point for linter
 
@@ -1964,6 +2015,7 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   extraHeaderIncludes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path. Use extraCompilerFlags to make any other search path additions. For example ["#include <slepc/private/epsimpl.h>"] (default: None)
   testDir             -- directory containing test output to compare patches against, use special keyword '__at_src__' to use srcDir/output (default: None)
   replaceTests        -- replace output files in testDir with patches generated (default: False)
+  werror              -- treat all linter-generated warnings as errors (default: False)
   """
 
   # pre-processing setup
@@ -1988,13 +2040,13 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   filterCheckFunctionMap(checkFunctionFilter)
 
   pool = WorkerPool(numWorkers=workers,verbose=verbose)
-  pool.setup(compilerFlags)
+  pool.setup(compilerFlags,werror=werror)
   pool.walk(srcDir)
   warnings,errorsLeft,errorsFixed,patches = pool.finalize()
   if verbose: print(rootPrintPrefix,"Deleting precompiled header",precompiledHeader)
   osRemoveSilent(precompiledHeader)
   if testDir is not None:
-    return testMain(petscDir,testDir,patches,replace=replaceTests,verbose=verbose)
+    return testMain(petscDir,srcDir,testDir,patches,replace=replaceTests,verbose=verbose)
   if patches:
     import time
 
@@ -2023,7 +2075,7 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   returnCode = 0
   if warnings and verbose:
     print("\n"+rootPrintPrefix,30*"=","Found warnings      ",33*"=")
-    print("\n".join(warnings))
+    print("\n".join(s for tup in warnings for _,s in tup))
     print(rootPrintPrefix,30*"=","End warnings        ",33*"=")
   if errorsFixed and verbose:
     print("\n"+rootPrintPrefix,30*"=","Fixed Errors        ",33*"=")
@@ -2090,6 +2142,7 @@ if __name__ == "__main__":
   parser.add_argument("--CXXFLAGS",required=False,nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
   parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
   parser.add_argument("--replace",required=False,type=str2bool,nargs="?",const=True,default=False,help="replace output files in test directory with patches generated")
+  parser.add_argument("--werror",required=False,type=str2bool,nargs="?",const=True,default=False,help="treat all warnings as errors")
   args = parser.parse_args()
 
   if args.petscdir is None:
@@ -2103,5 +2156,5 @@ if __name__ == "__main__":
   if args.src == "$PETSC_DIR/src":
     args.src = os.path.join(petscDir,"src")
 
-  ret = main(args.petscdir,args.petscarch,srcDir=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testDir=args.test,replaceTests=args.replace)
+  ret = main(args.petscdir,args.petscarch,srcDir=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testDir=args.test,replaceTests=args.replace,werror=args.werror)
   sys.exit(ret)

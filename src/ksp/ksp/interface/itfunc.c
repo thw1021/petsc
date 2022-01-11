@@ -6,6 +6,9 @@
 #include <petsc/private/matimpl.h>   /*I "petscmat.h" I*/
 #include <petscdm.h>
 
+/* number of nested levels of KSPSetUp/Solve(). This is used to determine if KSP_DIVERGED_ITS should be fatal. */
+static PetscInt level = 0;
+
 PETSC_STATIC_INLINE PetscErrorCode ObjectView(PetscObject obj, PetscViewer viewer, PetscViewerFormat format)
 {
   PetscErrorCode ierr;
@@ -29,7 +32,7 @@ PETSC_STATIC_INLINE PetscErrorCode ObjectView(PetscObject obj, PetscViewer viewe
 .  emin, emax - extreme singular values
 
    Options Database Keys:
-.  -ksp_view_singularvalues - compute extreme singular values and print when KSPSolve completes.
+.  -ksp_view_singularvalues - compute extreme singular values and print when KSPSolve() completes.
 
    Notes:
    One must call KSPSetComputeSingularValues() before calling KSPSetUp()
@@ -141,12 +144,14 @@ PetscErrorCode  KSPComputeEigenvalues(KSP ksp,PetscInt n,PetscReal r[],PetscReal
    Input Parameters:
 +  ksp   - iterative context obtained from KSPCreate()
 .  ritz  - PETSC_TRUE or PETSC_FALSE for ritz pairs or harmonic Ritz pairs, respectively
-.  small - PETSC_TRUE or PETSC_FALSE for smallest or largest (harmonic) Ritz values, respectively
--  nrit  - number of (harmonic) Ritz pairs to compute
+-  small - PETSC_TRUE or PETSC_FALSE for smallest or largest (harmonic) Ritz values, respectively
+
+   Input/Output Parameter:
+.  nrit  - number of (harmonic) Ritz pairs to compute; on output,
+           actual number of computed (harmonic) Ritz pairs
 
    Output Parameters:
-+  nrit  - actual number of computed (harmonic) Ritz pairs
-.  S     - multidimensional vector with Ritz vectors
++  S     - multidimensional vector with Ritz vectors
 .  tetar - real part of the Ritz values
 -  tetai - imaginary part of the Ritz values
 
@@ -210,10 +215,12 @@ PetscErrorCode  KSPSetUpOnBlocks(KSP ksp)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  level++;
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCSetUpOnBlocks(pc);CHKERRQ(ierr);
   ierr = PCGetFailedReasonRank(pc,&pcreason);CHKERRQ(ierr);
-  /* TODO: this code was wrong and is still wrong, there is no way to propogate the failure to all processes; their is no code to handle a ksp->reason on only some ranks */
+  level--;
+  /* TODO: this code was wrong and is still wrong, there is no way to propagate the failure to all processes; there is no code to handle a ksp->reason on only some ranks */
   if (pcreason) {
     ksp->reason = KSP_DIVERGED_PC_FAILED;
   }
@@ -318,6 +325,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  level++;
 
   /* reset the convergence flag from the previous solves */
   ksp->reason = KSP_CONVERGED_ITERATING;
@@ -357,7 +365,10 @@ PetscErrorCode KSPSetUp(KSP ksp)
     }
   }
 
-  if (ksp->setupstage == KSP_SETUP_NEWRHS) PetscFunctionReturn(0);
+  if (ksp->setupstage == KSP_SETUP_NEWRHS) {
+    level--;
+    PetscFunctionReturn(0);
+  }
   ierr = PetscLogEventBegin(KSP_SetUp,ksp,ksp->vec_rhs,ksp->vec_sol,0);CHKERRQ(ierr);
 
   switch (ksp->setupstage) {
@@ -405,7 +416,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
   ierr = PCSetErrorIfFailure(ksp->pc,ksp->errorifnotconverged);CHKERRQ(ierr);
   ierr = PCSetUp(ksp->pc);CHKERRQ(ierr);
   ierr = PCGetFailedReasonRank(ksp->pc,&pcreason);CHKERRQ(ierr);
-  /* TODO: this code was wrong and is still wrong, there is no way to propogate the failure to all processes; their is no code to handle a ksp->reason on only some ranks */
+  /* TODO: this code was wrong and is still wrong, there is no way to propagate the failure to all processes; their is no code to handle a ksp->reason on only some ranks */
   if (pcreason) {
     ksp->reason = KSP_DIVERGED_PC_FAILED;
   }
@@ -419,6 +430,7 @@ PetscErrorCode KSPSetUp(KSP ksp)
     }
   }
   ksp->setupstage = KSP_SETUP_NEWRHS;
+  level--;
   PetscFunctionReturn(0);
 }
 
@@ -697,7 +709,7 @@ static PetscErrorCode KSPViewEigenvalues_Internal(KSP ksp, PetscBool isExplicit,
       if (c[i] >= 0.0) {ierr = PetscViewerASCIIPrintf(viewer, "%g + %gi\n", (double) r[i],  (double) c[i]);CHKERRQ(ierr);}
       else             {ierr = PetscViewerASCIIPrintf(viewer, "%g - %gi\n", (double) r[i], -(double) c[i]);CHKERRQ(ierr);}
     }
-  } else if (isdraw && !rank) {
+  } else if (isdraw && rank == 0) {
     PetscDraw   draw;
     PetscDrawSP drawsp;
 
@@ -798,14 +810,15 @@ static PetscErrorCode KSPMonitorPauseFinal_Internal(KSP ksp)
 
 static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
 {
-  PetscErrorCode ierr;
-  PetscBool      flg = PETSC_FALSE,inXisinB=PETSC_FALSE,guess_zero;
-  Mat            mat,pmat;
-  MPI_Comm       comm;
-  MatNullSpace   nullsp;
-  Vec            btmp,vec_rhs=NULL;
+  PetscErrorCode  ierr;
+  PetscBool       flg = PETSC_FALSE,inXisinB = PETSC_FALSE,guess_zero;
+  Mat             mat,pmat;
+  MPI_Comm        comm;
+  MatNullSpace    nullsp;
+  Vec             btmp,vec_rhs = NULL;
 
   PetscFunctionBegin;
+  level++;
   comm = PetscObjectComm((PetscObject)ksp);
   if (x && x == b) {
     if (!ksp->guess_zero) SETERRQ(comm,PETSC_ERR_ARG_INCOMP,"Cannot use x == b with nonzero initial guess");
@@ -996,13 +1009,14 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
     ierr = VecDestroy(&x);CHKERRQ(ierr);
   }
   ierr = PetscObjectSAWsBlock((PetscObject)ksp);CHKERRQ(ierr);
-  if (ksp->errorifnotconverged && ksp->reason < 0 && ksp->reason != KSP_DIVERGED_ITS) {
+  if (ksp->errorifnotconverged && ksp->reason < 0 && ((level == 1) || (ksp->reason != KSP_DIVERGED_ITS))) {
     if (ksp->reason == KSP_DIVERGED_PC_FAILED) {
       PCFailedReason reason;
       ierr = PCGetFailedReason(ksp->pc,&reason);CHKERRQ(ierr);
       SETERRQ2(comm,PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged, reason %s PC failed due to %s",KSPConvergedReasons[ksp->reason],PCFailedReasons[reason]);
     } else SETERRQ1(comm,PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged, reason %s",KSPConvergedReasons[ksp->reason]);
   }
+  level--;
   PetscFunctionReturn(0);
 }
 
@@ -1028,6 +1042,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
 .  -ksp_view_preconditioned_operator_explicit - computes the product of the preconditioner and matrix as an explicit matrix and views it
 .  -ksp_converged_reason - print reason for converged or diverged, also prints number of iterations
 .  -ksp_view_final_residual - print 2-norm of true linear system residual at the end of the solution process
+.  -ksp_error_if_not_converged - stop the program as soon as an error is detected in a KSPSolve()
 -  -ksp_view - print the ksp data structure at the end of the system solution
 
    Notes:
@@ -1036,8 +1051,12 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
 
    The operator is specified with KSPSetOperators().
 
-   Call KSPGetConvergedReason() to determine if the solver converged or failed and
-   why. The number of iterations can be obtained from KSPGetIterationNumber().
+   KSPSolve() will normally return without generating an error regardless of whether the linear system was solved or if constructing the preconditioner failed.
+   Call KSPGetConvergedReason() to determine if the solver converged or failed and why. The option -ksp_error_if_not_converged or function KSPSetErrorIfNotConverged()
+   will cause KSPSolve() to error as soon as an error occurs in the linear solver.  In inner KSPSolves() KSP_DIVERGED_ITS is not treated as an error because when using nested solvers
+   it may be fine that inner solvers in the preconditioner do not converge during the solution process.
+
+   The number of iterations can be obtained from KSPGetIterationNumber().
 
    If you provide a matrix that has a MatSetNullSpace() and MatSetTransposeNullSpace() this will use that information to solve singular systems
    in the least squares sense with a norm minimizing solution.
@@ -1070,7 +1089,7 @@ $    If nullspace(A) != nullspace(A') then left preconditioning will work but ri
 
 .seealso: KSPCreate(), KSPSetUp(), KSPDestroy(), KSPSetTolerances(), KSPConvergedDefault(),
           KSPSolveTranspose(), KSPGetIterationNumber(), MatNullSpaceCreate(), MatSetNullSpace(), MatSetTransposeNullSpace(), KSP,
-          KSPConvergedReasonView()
+          KSPConvergedReasonView(), KSPCheckSolve(), KSPSetErrorIfNotConverged()
 @*/
 PetscErrorCode KSPSolve(KSP ksp,Vec b,Vec x)
 {
@@ -1154,8 +1173,8 @@ static PetscErrorCode KSPViewFinalMatResidual_Internal(KSP ksp, Mat B, Mat X, Pe
   if (flg) {
     ierr = PCGetOperators(ksp->pc, &A, NULL);CHKERRQ(ierr);
     ierr = MatMatMult(A, X, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &R);CHKERRQ(ierr);
-    ierr = MatAYPX(R, -1.0, B, SAME_NONZERO_PATTERN);
-    ierr = MatGetSize(R, NULL, &N);
+    ierr = MatAYPX(R, -1.0, B, SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+    ierr = MatGetSize(R, NULL, &N);CHKERRQ(ierr);
     ierr = PetscMalloc1(N, &norms);CHKERRQ(ierr);
     ierr = MatGetColumnNorms(R, NORM_2, norms);CHKERRQ(ierr);
     ierr = MatDestroy(&R);CHKERRQ(ierr);
@@ -1188,7 +1207,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 {
   Mat            A, P, vB, vX;
   Vec            cb, cx;
-  PetscInt       m1, M1, m2, M2, n1, N1, n2, N2, Bbn = PETSC_DECIDE;
+  PetscInt       n1, N1, n2, N2, Bbn = PETSC_DECIDE;
   PetscBool      match;
   PetscErrorCode ierr;
 
@@ -1207,14 +1226,11 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
   }
   if (B == X) SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_IDN, "B and X must be different matrices");
   ierr = KSPGetOperators(ksp, &A, &P);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A, &m1, NULL);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(B, &m2, &n2);CHKERRQ(ierr);
-  ierr = MatGetSize(A, &M1, NULL);CHKERRQ(ierr);
-  ierr = MatGetSize(B, &M2, &N2);CHKERRQ(ierr);
-  if (m1 != m2 || M1 != M2) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Cannot use a block of right-hand sides with (m2,M2) = (%D,%D) for a linear system with (m1,M1) = (%D,%D)", m2, M2, m1, M1);
-  ierr = MatGetLocalSize(X, &m1, &n1);CHKERRQ(ierr);
-  ierr = MatGetSize(X, &M1, &N1);CHKERRQ(ierr);
-  if (m1 != m2 || M1 != M2 || n1 != n2 || N1 != N2) SETERRQ8(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible block of right-hand sides (m2,M2)x(n2,N2) = (%D,%D)x(%D,%D) and solutions (m1,M1)x(n1,N1) = (%D,%D)x(%D,%D)", m2, M2, n2, N2, m1, M1, n1, N1);
+  ierr = MatGetLocalSize(B, NULL, &n2);CHKERRQ(ierr);
+  ierr = MatGetLocalSize(X, NULL, &n1);CHKERRQ(ierr);
+  ierr = MatGetSize(B, NULL, &N2);CHKERRQ(ierr);
+  ierr = MatGetSize(X, NULL, &N1);CHKERRQ(ierr);
+  if (n1 != n2 || N1 != N2) SETERRQ4(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible number of columns between block of right-hand sides (n,N) = (%D,%D) and block of solutions (n,N) = (%D,%D)", n2, N2, n1, N1);
   ierr = PetscObjectBaseTypeCompareAny((PetscObject)B, &match, MATSEQDENSE, MATMPIDENSE, "");CHKERRQ(ierr);
   if (!match) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Provided block of right-hand sides not stored in a dense Mat");
   ierr = PetscObjectBaseTypeCompareAny((PetscObject)X, &match, MATSEQDENSE, MATMPIDENSE, "");CHKERRQ(ierr);
@@ -1229,8 +1245,8 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
     ierr = KSPGetMatSolveBatchSize(ksp, &Bbn);CHKERRQ(ierr);
     /* by default, do a single solve with all columns */
     if (Bbn == PETSC_DECIDE) Bbn = N2;
-    else if (Bbn < 1) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() block size %D must be positive", Bbn);
-    ierr = PetscInfo2(ksp, "KSP type %s solving using blocks of width at most %D\n", ((PetscObject)ksp)->type_name, Bbn);CHKERRQ(ierr);
+    else if (Bbn < 1) SETERRQ1(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() batch size %D must be positive", Bbn);
+    ierr = PetscInfo2(ksp, "KSP type %s solving using batches of width at most %D\n", ((PetscObject)ksp)->type_name, Bbn);CHKERRQ(ierr);
     /* if -ksp_matsolve_batch_size is greater than the actual number of columns, do a single solve with all columns */
     if (Bbn >= N2) {
       ierr = (*ksp->ops->matsolve)(ksp, B, X);CHKERRQ(ierr);
@@ -1293,7 +1309,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
 
    Input Parameters:
 +     ksp - iterative context
--     bs - block size
+-     bs - batch size
 
    Level: advanced
 
@@ -1315,7 +1331,7 @@ PetscErrorCode KSPSetMatSolveBatchSize(KSP ksp, PetscInt bs)
 .     ksp - iterative context
 
    Output Parameter:
-.     bs - block size
+.     bs - batch size
 
    Level: advanced
 
@@ -1717,6 +1733,8 @@ PetscErrorCode  KSPGetInitialGuessNonzero(KSP ksp,PetscBool  *flag)
    Notes:
     Normally PETSc continues if a linear solver fails to converge, you can call KSPGetConvergedReason() after a KSPSolve()
     to determine if it has converged.
+
+   A KSP_DIVERGED_ITS will not generate an error in a KSPSolve() inside a nested linear solver
 
 .seealso: KSPGetErrorIfNotConverged(), KSP
 @*/
@@ -2225,11 +2243,11 @@ PetscErrorCode  KSPMonitorCancel(KSP ksp)
 
 .seealso: KSPMonitorResidual(), KSP
 @*/
-PetscErrorCode  KSPGetMonitorContext(KSP ksp,void **ctx)
+PetscErrorCode  KSPGetMonitorContext(KSP ksp,void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  *ctx =      (ksp->monitorcontext[0]);
+  *(void**)ctx = ksp->monitorcontext[0];
   PetscFunctionReturn(0);
 }
 
@@ -2536,7 +2554,7 @@ PetscErrorCode  KSPSetConvergenceTest(KSP ksp,PetscErrorCode (*converge)(KSP,Pet
    Input Parameter:
 .   ksp - iterative context obtained from KSPCreate()
 
-   Output Parameter:
+   Output Parameters:
 +  converge - pointer to convergence test function
 .  cctx    - context for private data for the convergence routine (may be null)
 -  destroy - a routine for destroying the context (may be null)
@@ -2572,7 +2590,7 @@ PetscErrorCode  KSPGetConvergenceTest(KSP ksp,PetscErrorCode (**converge)(KSP,Pe
    Input Parameter:
 .   ksp - iterative context obtained from KSPCreate()
 
-   Output Parameter:
+   Output Parameters:
 +  converge - pointer to convergence test function
 .  cctx    - context for private data for the convergence routine
 -  destroy - a routine for destroying the context
@@ -2623,11 +2641,11 @@ PetscErrorCode  KSPGetAndClearConvergenceTest(KSP ksp,PetscErrorCode (**converge
 
 .seealso: KSPConvergedDefault(), KSPSetConvergenceTest(), KSP
 @*/
-PetscErrorCode  KSPGetConvergenceContext(KSP ksp,void **ctx)
+PetscErrorCode  KSPGetConvergenceContext(KSP ksp,void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  *ctx = ksp->cnvP;
+  *(void**)ctx = ksp->cnvP;
   PetscFunctionReturn(0);
 }
 
@@ -2728,7 +2746,7 @@ PetscErrorCode  KSPBuildResidual(KSP ksp,Vec t,Vec v,Vec *V)
 
    Logically Collective on ksp
 
-   Input Parameter:
+   Input Parameters:
 +  ksp - the KSP context
 -  scale - PETSC_TRUE or PETSC_FALSE
 
@@ -2800,7 +2818,7 @@ PetscErrorCode  KSPGetDiagonalScale(KSP ksp,PetscBool  *scale)
 
    Logically Collective on ksp
 
-   Input Parameter:
+   Input Parameters:
 +  ksp - the KSP context
 -  fix - PETSC_TRUE to scale back after the system solve, PETSC_FALSE to not
          rescale (default)
@@ -2865,7 +2883,7 @@ PetscErrorCode  KSPGetDiagonalScaleFix(KSP ksp,PetscBool  *fix)
 
    Logically Collective
 
-   Input Arguments:
+   Input Parameters:
 +  ksp - the KSP context
 .  func - function to compute the operators
 -  ctx - optional context
@@ -2906,7 +2924,7 @@ PetscErrorCode KSPSetComputeOperators(KSP ksp,PetscErrorCode (*func)(KSP,Mat,Mat
 
    Logically Collective
 
-   Input Arguments:
+   Input Parameters:
 +  ksp - the KSP context
 .  func - function to compute the right hand side
 -  ctx - optional context
@@ -2942,7 +2960,7 @@ PetscErrorCode KSPSetComputeRHS(KSP ksp,PetscErrorCode (*func)(KSP,Vec,void*),vo
 
    Logically Collective
 
-   Input Arguments:
+   Input Parameters:
 +  ksp - the KSP context
 .  func - function to compute the initial guess
 -  ctx - optional context

@@ -144,7 +144,7 @@ PETSC_EXTERN PetscErrorCode KSPGetPC(KSP,PC*);
 PETSC_EXTERN PetscErrorCode KSPMonitor(KSP,PetscInt,PetscReal);
 PETSC_EXTERN PetscErrorCode KSPMonitorSet(KSP,PetscErrorCode (*)(KSP,PetscInt,PetscReal,void*),void*,PetscErrorCode (*)(void**));
 PETSC_EXTERN PetscErrorCode KSPMonitorCancel(KSP);
-PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP,void**);
+PETSC_EXTERN PetscErrorCode KSPGetMonitorContext(KSP,void*);
 PETSC_EXTERN PetscErrorCode KSPGetResidualHistory(KSP,const PetscReal*[],PetscInt*);
 PETSC_EXTERN PetscErrorCode KSPSetResidualHistory(KSP,PetscReal[],PetscInt,PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetErrorHistory(KSP,const PetscReal*[],PetscInt*);
@@ -681,7 +681,7 @@ M*/
 PETSC_EXTERN PetscErrorCode KSPSetConvergenceTest(KSP,PetscErrorCode (*)(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*),void*,PetscErrorCode (*)(void*));
 PETSC_EXTERN PetscErrorCode KSPGetConvergenceTest(KSP,PetscErrorCode (**)(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*),void**,PetscErrorCode (**)(void*));
 PETSC_EXTERN PetscErrorCode KSPGetAndClearConvergenceTest(KSP,PetscErrorCode (**)(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*),void**,PetscErrorCode (**)(void*));
-PETSC_EXTERN PetscErrorCode KSPGetConvergenceContext(KSP,void**);
+PETSC_EXTERN PetscErrorCode KSPGetConvergenceContext(KSP,void*);
 PETSC_EXTERN PetscErrorCode KSPConvergedDefault(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*);
 PETSC_EXTERN PetscErrorCode KSPLSQRConvergedDefault(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*);
 PETSC_EXTERN PetscErrorCode KSPConvergedDefaultDestroy(void*);
@@ -734,6 +734,7 @@ PETSC_DEPRECATED_FUNCTION("Use KSPGLTRGetLambda (since v3.12)") PETSC_STATIC_INL
 
 PETSC_EXTERN PetscErrorCode KSPPythonSetType(KSP,const char[]);
 
+PETSC_EXTERN PetscErrorCode PCSetPreSolve(PC,PetscErrorCode (*)(PC,KSP));
 PETSC_EXTERN PetscErrorCode PCPreSolve(PC,KSP);
 PETSC_EXTERN PetscErrorCode PCPostSolve(PC,KSP);
 

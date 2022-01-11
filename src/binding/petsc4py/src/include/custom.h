@@ -172,10 +172,10 @@ VecStrideSum(Vec v, PetscInt start, PetscScalar *a)
   PetscValidScalarPointer(a,2);
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
   if (start <  0)  SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                            "Negative start %D",start);
+                            "Negative start %" PetscInt_FMT,start);
   if (start >= bs) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,
-                            "Start of stride subvector (%D) is too large "
-                            "for block size (%D)",start,bs);
+                            "Start of stride subvector (%" PetscInt_FMT ") is too large "
+                            "for block size (%" PetscInt_FMT ")",start,bs);
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
   sum = (PetscScalar)0.0;
@@ -199,7 +199,7 @@ PetscErrorCode MatIsPreallocated(Mat A,PetscBool *flag)
 }
 
 PETSC_STATIC_INLINE
-PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,PetscBool *sbaij)
+PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,PetscBool *sbaij,PetscBool *is)
 {
   void (*f)(void) = 0;
   PetscErrorCode ierr;
@@ -209,7 +209,8 @@ PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,Petsc
   PetscValidPointer(aij,2);
   PetscValidPointer(baij,3);
   PetscValidPointer(sbaij,4);
-  *aij = *baij = *sbaij = PETSC_FALSE;
+  PetscValidPointer(is,5);
+  *aij = *baij = *sbaij = *is = PETSC_FALSE;
   if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatMPIAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
   if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatSeqAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
   if (f)  {*aij = PETSC_TRUE; goto done;};
@@ -219,6 +220,8 @@ PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,Petsc
   if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatMPISBAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
   if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatSeqSBAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
   if (f)  {*sbaij = PETSC_TRUE; goto done;};
+  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatISSetPreallocation_C",&f);CHKERRQ(ierr);}
+  if (f)  {*is = PETSC_TRUE; goto done;};
  done:
   PetscFunctionReturn(0);
 }
@@ -436,7 +439,7 @@ SNESSetUseFDColoring(SNES snes,PetscBool flag)
   if (!flg && !flag) PetscFunctionReturn(0);
   if (flg  && !flag) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,
-            "cannot change colored finite diferences once it is set");
+            "cannot change colored finite differences once it is set");
     PetscFunctionReturn(PETSC_ERR_ARG_WRONGSTATE);
   }
 

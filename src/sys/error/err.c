@@ -30,17 +30,16 @@ PetscErrorCode PetscAbortFindSourceFile_Private(const char* filepath, PetscInt *
   PetscErrorCode  ierr;
   PetscInt        i,n = sizeof(PetscAbortSourceFiles)/sizeof(PetscAbortSourceFiles[0]);
   PetscBool       match;
-  char            subpath[256];
+  char            subpath[PETSC_MAX_PATH_LEN];
 
-  PetscFunctionBegin;
-  PetscValidIntPointer(idx,2);
+  ierr = PetscStackView(stderr);if (ierr) return ierr;
   *idx = 1;
   for (i=2; i<n; i++) {
-    ierr = PetscFixFilename(PetscAbortSourceFiles[i],subpath);CHKERRQ(ierr);
-    ierr = PetscStrendswith(filepath,subpath,&match);CHKERRQ(ierr);
+    ierr = PetscFixFilename(PetscAbortSourceFiles[i],subpath);if (ierr) return ierr;
+    ierr = PetscStrendswith(filepath,subpath,&match);if (ierr) return ierr;
     if (match) {*idx = i; break;}
   }
-  PetscFunctionReturn(0);
+  return 0;
 }
 
 typedef struct _EH *EH;
@@ -54,12 +53,12 @@ static EH eh = NULL;
 
 /*@C
    PetscEmacsClientErrorHandler - Error handler that uses the emacsclient program to
-    load the file where the error occured. Then calls the "previous" error handler.
+    load the file where the error occurred. Then calls the "previous" error handler.
 
    Not Collective
 
    Input Parameters:
-+  comm - communicator over which error occured
++  comm - communicator over which error occurred
 .  line - the line number of the error (indicated by __LINE__)
 .  file - the file in which the error was detected (indicated by __FILE__)
 .  mess - an error text string, usually just printed to the screen
@@ -119,7 +118,7 @@ PetscErrorCode  PetscEmacsClientErrorHandler(MPI_Comm comm,int line,const char *
    Calling sequence of handler:
 $    int handler(MPI_Comm comm,int line,char *func,char *file,PetscErrorCode n,int p,char *mess,void *ctx);
 
-+  comm - communicator over which error occured
++  comm - communicator over which error occurred
 .  line - the line number of the error (indicated by __LINE__)
 .  file - the file in which the error was detected (indicated by __FILE__)
 .  n - the generic error number (see list defined in include/petscerror.h)
@@ -230,35 +229,35 @@ static const char *PetscErrorStrings[] = {
           "Argument aliasing not permitted",
           "Invalid argument",
   /*63 */ "Argument out of range",
-          "Corrupt argument: https://www.mcs.anl.gov/petsc/documentation/faq.html#valgrind",
+          "Corrupt argument: https://petsc.org/release/faq/#valgrind",
           "Unable to open file",
           "Read from file failed",
           "Write to file failed",
           "Invalid pointer",
   /*69 */ "Arguments must have same type",
   /*70 */ "Attempt to use a pointer that does not point to a valid accessible location",
-  /*71 */ "Zero pivot in LU factorization: https://www.mcs.anl.gov/petsc/documentation/faq.html#zeropivot",
+  /*71 */ "Zero pivot in LU factorization: https://petsc.org/release/faq/#zeropivot",
   /*72 */ "Floating point exception",
   /*73 */ "Object is in wrong state",
           "Corrupted Petsc object",
           "Arguments are incompatible",
           "Error in external library",
   /*77 */ "Petsc has generated inconsistent data",
-          "Memory corruption: https://www.mcs.anl.gov/petsc/documentation/installation.html#valgrind",
+          "Memory corruption: https://petsc.org/release/faq/#valgrind",
           "Unexpected data in file",
   /*80 */ "Arguments must have same communicators",
-  /*81 */ "Zero pivot in Cholesky factorization: https://www.mcs.anl.gov/petsc/documentation/faq.html#zeropivot",
+  /*81 */ "Zero pivot in Cholesky factorization: https://petsc.org/release/faq/#zeropivot",
           "  ",
           "  ",
-          "Overflow in integer operation: https://www.mcs.anl.gov/petsc/documentation/faq.html#64-bit-indices",
+          "Overflow in integer operation: https://petsc.org/release/faq/#64-bit-indices",
   /*85 */ "Null argument, when expecting valid pointer",
-  /*86 */ "Unknown type. Check for miss-spelling or missing package: https://www.mcs.anl.gov/petsc/documentation/installation.html#external",
+  /*86 */ "Unknown type. Check for miss-spelling or missing package: https://petsc.org/release/install/install/#external-packages",
   /*87 */ "MPI library at runtime is not compatible with MPI used at compile time",
   /*88 */ "Error in system call",
-  /*89 */ "Object Type not set: https://www.mcs.anl.gov/petsc/documentation/faq.html#objecttypenotset",
+  /*89 */ "Object Type not set: https://petsc.org/release/faq/#object-type-not-set",
   /*90 */ "  ",
   /*   */ "  ",
-  /*92 */ "See https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html for possible LU and Cholesky solvers",
+  /*92 */ "See https://petsc.org/release/overview/linear_solve_table/ for possible LU and Cholesky solvers",
   /*93 */ "You cannot overwrite this option since that will conflict with other previously set options",
   /*94 */ "Example/application run with number of MPI ranks it does not support",
   /*95 */ "Missing or incorrect user input ",
@@ -275,7 +274,7 @@ static const char *PetscErrorStrings[] = {
    Input Parameter:
 .   errnum - the error code
 
-   Output Parameter:
+   Output Parameters:
 +  text - the error message (NULL if not desired)
 -  specific - the specific error message that was set with SETERRxxx() or PetscError().  (NULL if not desired)
 
@@ -459,22 +458,22 @@ PetscErrorCode  PetscIntView(PetscInt N,const PetscInt idx[],PetscViewer viewer)
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
     for (i=0; i<n; i++) {
       if (size > 1) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %D:", rank, 20*i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %" PetscInt_FMT ":", rank, 20*i);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%D:",20*i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT ":",20*i);CHKERRQ(ierr);
       }
       for (j=0; j<20; j++) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer," %D",idx[i*20+j]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT,idx[i*20+j]);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
     }
     if (p) {
       if (size > 1) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %D:",rank ,20*n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %" PetscInt_FMT ":",rank ,20*n);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%D:",20*n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%" PetscInt_FMT ":",20*n);CHKERRQ(ierr);
       }
-      for (i=0; i<p; i++) { ierr = PetscViewerASCIISynchronizedPrintf(viewer," %D",idx[20*n+i]);CHKERRQ(ierr);}
+      for (i=0; i<p; i++) { ierr = PetscViewerASCIISynchronizedPrintf(viewer," %" PetscInt_FMT,idx[20*n+i]);CHKERRQ(ierr);}
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
     }
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
@@ -560,9 +559,9 @@ PetscErrorCode  PetscRealView(PetscInt N,const PetscReal idx[],PetscViewer viewe
     for (i=0; i<n; i++) {
       ierr = PetscViewerASCIISetTab(viewer, tab);CHKERRQ(ierr);
       if (size > 1) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2d:",rank ,(int)5*i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2" PetscInt_FMT ":",rank ,5*i);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2d:",(int)5*i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2" PetscInt_FMT ":",5*i);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIISetTab(viewer, 0);CHKERRQ(ierr);
       for (j=0; j<5; j++) {
@@ -573,12 +572,12 @@ PetscErrorCode  PetscRealView(PetscInt N,const PetscReal idx[],PetscViewer viewe
     if (p) {
       ierr = PetscViewerASCIISetTab(viewer, tab);CHKERRQ(ierr);
       if (size > 1) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2d:",rank ,(int)5*n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2" PetscInt_FMT ":",rank ,5*n);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2d:",(int)5*n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2" PetscInt_FMT ":",5*n);CHKERRQ(ierr);
       }
       ierr = PetscViewerASCIISetTab(viewer, 0);CHKERRQ(ierr);
-      for (i=0; i<p; i++) { PetscViewerASCIISynchronizedPrintf(viewer," %12.4e",(double)idx[5*n+i]);CHKERRQ(ierr);}
+      for (i=0; i<p; i++) {ierr = PetscViewerASCIISynchronizedPrintf(viewer," %12.4e",(double)idx[5*n+i]);CHKERRQ(ierr);}
       ierr = PetscViewerASCIISynchronizedPrintf(viewer,"\n");CHKERRQ(ierr);
     }
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
@@ -661,9 +660,9 @@ PetscErrorCode  PetscScalarView(PetscInt N,const PetscScalar idx[],PetscViewer v
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
     for (i=0; i<n; i++) {
       if (size > 1) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2d:",rank ,3*i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2" PetscInt_FMT ":",rank ,3*i);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2d:",3*i);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2" PetscInt_FMT ":",3*i);CHKERRQ(ierr);
       }
       for (j=0; j<3; j++) {
 #if defined(PETSC_USE_COMPLEX)
@@ -676,9 +675,9 @@ PetscErrorCode  PetscScalarView(PetscInt N,const PetscScalar idx[],PetscViewer v
     }
     if (p) {
       if (size > 1) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2d:",rank ,3*n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] %2" PetscInt_FMT ":",rank ,3*n);CHKERRQ(ierr);
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2d:",3*n);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%2" PetscInt_FMT ":",3*n);CHKERRQ(ierr);
       }
       for (i=0; i<p; i++) {
 #if defined(PETSC_USE_COMPLEX)
@@ -730,7 +729,7 @@ PetscErrorCode  PetscScalarView(PetscInt N,const PetscScalar idx[],PetscViewer v
 }
 
 #if defined(PETSC_HAVE_CUDA)
-#include <petsccublas.h>
+#include <petscdevice.h>
 PETSC_EXTERN const char* PetscCUBLASGetErrorName(cublasStatus_t status)
 {
   switch(status) {
@@ -758,14 +757,46 @@ PETSC_EXTERN const char* PetscCUSolverGetErrorName(cusolverStatus_t status)
     case CUSOLVER_STATUS_INVALID_VALUE:    return "CUSOLVER_STATUS_INVALID_VALUE";
     case CUSOLVER_STATUS_ARCH_MISMATCH:    return "CUSOLVER_STATUS_ARCH_MISMATCH";
     case CUSOLVER_STATUS_INTERNAL_ERROR:   return "CUSOLVER_STATUS_INTERNAL_ERROR";
+#if (CUDART_VERSION >= 9000) /* CUDA 9.0 had these defined on June 2021 */
+    case CUSOLVER_STATUS_ALLOC_FAILED:     return "CUSOLVER_STATUS_ALLOC_FAILED";
+    case CUSOLVER_STATUS_MAPPING_ERROR:    return "CUSOLVER_STATUS_MAPPING_ERROR";
+    case CUSOLVER_STATUS_EXECUTION_FAILED: return "CUSOLVER_STATUS_EXECUTION_FAILED";
+    case CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED: return "CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED";
+    case CUSOLVER_STATUS_NOT_SUPPORTED :  return "CUSOLVER_STATUS_NOT_SUPPORTED ";
+    case CUSOLVER_STATUS_ZERO_PIVOT:      return "CUSOLVER_STATUS_ZERO_PIVOT";
+    case CUSOLVER_STATUS_INVALID_LICENSE: return "CUSOLVER_STATUS_INVALID_LICENSE";
+#endif
 #endif
     default:                             return "unknown error";
   }
 }
+PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult result)
+{
+ switch (result) {
+ case CUFFT_SUCCESS:                   return "CUFFT_SUCCESS";
+ case CUFFT_INVALID_PLAN:              return "CUFFT_INVALID_PLAN";
+ case CUFFT_ALLOC_FAILED:              return "CUFFT_ALLOC_FAILED";
+ case CUFFT_INVALID_TYPE:              return "CUFFT_INVALID_TYPE";
+ case CUFFT_INVALID_VALUE:             return "CUFFT_INVALID_VALUE";
+ case CUFFT_INTERNAL_ERROR:            return "CUFFT_INTERNAL_ERROR";
+ case CUFFT_EXEC_FAILED:               return "CUFFT_EXEC_FAILED";
+ case CUFFT_SETUP_FAILED:              return "CUFFT_SETUP_FAILED";
+ case CUFFT_INVALID_SIZE:              return "CUFFT_INVALID_SIZE";
+ case CUFFT_UNALIGNED_DATA:            return "CUFFT_UNALIGNED_DATA";
+ case CUFFT_INCOMPLETE_PARAMETER_LIST: return "CUFFT_INCOMPLETE_PARAMETER_LIST";
+ case CUFFT_INVALID_DEVICE:            return "CUFFT_INVALID_DEVICE";
+ case CUFFT_PARSE_ERROR:               return "CUFFT_PARSE_ERROR";
+ case CUFFT_NO_WORKSPACE:              return "CUFFT_NO_WORKSPACE";
+ case CUFFT_NOT_IMPLEMENTED:           return "CUFFT_NOT_IMPLEMENTED";
+ case CUFFT_LICENSE_ERROR:             return "CUFFT_LICENSE_ERROR";
+ case CUFFT_NOT_SUPPORTED:             return "CUFFT_NOT_SUPPORTED";
+ default:                              return "unknown error";
+ }
+}
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-#include <petschipblas.h>
+#include <petscdevice.h>
 PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t status)
 {
   switch(status) {

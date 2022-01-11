@@ -116,7 +116,7 @@ Fortran notes
 -------------
 
 PETSc provides interfaces and modules for Fortran 90; see
-:doc:`/documentation/manual/fortran`.
+:doc:`/docs/manual/fortran`.
 
 When passing floating point numbers into Fortran subroutines, always
 make sure you have them marked as double precision (e.g., pass in ``10.d0``
@@ -125,4 +125,4 @@ instead of ``10.0`` or declare them as PETSc variables, e.g.
 precision number, which can cause crashes or other mysterious problems.
 Make sure to declare all variables (do not use the implicit feature of
 Fortran). In fact, we **highly** recommend using the **implicit none**
-option at the begining of each Fortran subroutine you write.
+option at the beginning of each Fortran subroutine you write.

@@ -85,12 +85,12 @@ PetscLogDouble petsc_ctog_ct         = 0.0;  /* The total number of CPU to GPU c
 PetscLogDouble petsc_gtoc_ct         = 0.0;  /* The total number of GPU to CPU copies */
 PetscLogDouble petsc_ctog_sz         = 0.0;  /* The total size of CPU to GPU copies */
 PetscLogDouble petsc_gtoc_sz         = 0.0;  /* The total size of GPU to CPU copies */
+PetscLogDouble petsc_ctog_ct_scalar  = 0.0;  /* The total number of CPU to GPU copies */
+PetscLogDouble petsc_gtoc_ct_scalar  = 0.0;  /* The total number of GPU to CPU copies */
+PetscLogDouble petsc_ctog_sz_scalar  = 0.0;  /* The total size of CPU to GPU copies */
+PetscLogDouble petsc_gtoc_sz_scalar  = 0.0;  /* The total size of GPU to CPU copies */
 PetscLogDouble petsc_gflops          = 0.0;  /* The flops done on a GPU */
 PetscLogDouble petsc_gtime           = 0.0;  /* The time spent on a GPU */
-
-#if defined(PETSC_USE_DEBUG)
-PetscBool petsc_gtime_inuse = PETSC_FALSE;
-#endif
 #endif
 
 /* Logging functions */
@@ -631,7 +631,7 @@ PetscErrorCode  PetscLogStageGetId(const char name[], PetscLogStage *stage)
 
   Not Collective
 
-  Input Parameter:
+  Input Parameters:
 + name   - The name associated with the event
 - classid - The classid associated to the class for this event, obtain either with
            PetscClassIdRegister() or use a predefined one such as KSP_CLASSID, SNES_CLASSID, the predefined ones
@@ -704,7 +704,7 @@ PetscErrorCode  PetscLogEventRegister(const char name[],PetscClassId classid,Pet
 
   Not Collective
 
-  Input Parameter:
+  Input Parameters:
 + event - The event id
 - collective - Bolean flag indicating whether a particular event is collective
 
@@ -1194,7 +1194,7 @@ PetscErrorCode  PetscLogDump(const char sname[])
   else sprintf(file, "Log.%d", rank);
   ierr = PetscFixFilename(file, fname);CHKERRQ(ierr);
   ierr = PetscFOpen(PETSC_COMM_WORLD, fname, "w", &fd);CHKERRQ(ierr);
-  if ((!rank) && (!fd)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN, "Cannot open file: %s", fname);
+  if ((rank == 0) && (!fd)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN, "Cannot open file: %s", fname);
   /* Output totals */
   ierr = PetscFPrintf(PETSC_COMM_WORLD, fd, "Total Flop %14e %16.8e\n", petsc_TotalFlops, _TotalTime);CHKERRQ(ierr);
   ierr = PetscFPrintf(PETSC_COMM_WORLD, fd, "Clock Resolution %g\n", 0.0);CHKERRQ(ierr);
@@ -1297,7 +1297,7 @@ PetscErrorCode  PetscLogView_Detailed(PetscViewer viewer)
     ierr = MPI_Allreduce(&stageLog->stageInfo[stage].eventLog->numEvents, &numEvents, 1, MPI_INT, MPI_MAX, comm);CHKERRMPI(ierr);
     for (event = 0; event < numEvents; event++) {
       eventInfo = &stageLog->stageInfo[stage].eventLog->eventInfo[event];
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Stages[\"%s\"][\"%s\"][%d] = {\"count\" : %D, \"time\" : %g, \"syncTime\" : %g, \"numMessages\" : %g, \"messageLength\" : %g, \"numReductions\" : %g, \"flop\" : %g",
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"Stages[\"%s\"][\"%s\"][%d] = {\"count\" : %d, \"time\" : %g, \"syncTime\" : %g, \"numMessages\" : %g, \"messageLength\" : %g, \"numReductions\" : %g, \"flop\" : %g",
                                                 stageLog->stageInfo[stage].name,stageLog->eventLog->eventInfo[event].name,rank,
                                                 eventInfo->count,eventInfo->time,eventInfo->syncTime,eventInfo->numMessages,eventInfo->messageLength,eventInfo->numReductions,eventInfo->flops);CHKERRQ(ierr);
       if (eventInfo->dof[0] >= 0.) {
@@ -1347,18 +1347,18 @@ PetscErrorCode  PetscLogView_CSV(PetscViewer viewer)
   ierr = MPI_Allreduce(&stageLog->numStages, &numStages, 1, MPI_INT, MPI_MAX, comm);CHKERRMPI(ierr);
   ierr = PetscMallocGetMaximumUsage(&maxMem);CHKERRQ(ierr);
   ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"Stage Name,Event Name,Rank,Time,Num Messages,Message Length,Num Reductions,FLOP,dof0,dof1,dof2,dof3,dof4,dof5,dof6,dof7,e0,e1,e2,e3,e4,e5,e6,e7,%d\n", size);
+  ierr = PetscViewerASCIIPrintf(viewer,"Stage Name,Event Name,Rank,Count,Time,Num Messages,Message Length,Num Reductions,FLOP,dof0,dof1,dof2,dof3,dof4,dof5,dof6,dof7,e0,e1,e2,e3,e4,e5,e6,e7,%d\n", size);
   ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
   for (stage=0; stage<numStages; stage++) {
     PetscEventPerfInfo *stageInfo = &stageLog->stageInfo[stage].perfInfo;
 
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s,summary,%d,%g,%g,%g,%g,%g\n",
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s,summary,%d,1,%g,%g,%g,%g,%g\n",
                                               stageLog->stageInfo[stage].name,rank,stageInfo->time,stageInfo->numMessages,stageInfo->messageLength,stageInfo->numReductions,stageInfo->flops);CHKERRQ(ierr);
     ierr = MPI_Allreduce(&stageLog->stageInfo[stage].eventLog->numEvents, &numEvents, 1, MPI_INT, MPI_MAX, comm);CHKERRMPI(ierr);
     for (event = 0; event < numEvents; event++) {
       eventInfo = &stageLog->stageInfo[stage].eventLog->eventInfo[event];
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s,%s,%d,%g,%g,%g,%g,%g",stageLog->stageInfo[stage].name,
-                                                stageLog->eventLog->eventInfo[event].name,rank,eventInfo->time,eventInfo->numMessages,
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"%s,%s,%d,%d,%g,%g,%g,%g,%g",stageLog->stageInfo[stage].name,
+                                                stageLog->eventLog->eventInfo[event].name,rank,eventInfo->count,eventInfo->time,eventInfo->numMessages,
                                                 eventInfo->messageLength,eventInfo->numReductions,eventInfo->flops);CHKERRQ(ierr);
       if (eventInfo->dof[0] >= 0.) {
         PetscInt d, e;
@@ -1424,7 +1424,7 @@ static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(MPI_Comm comm,FILE *fd)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (use_gpu_aware_mpi || !PetscCreatedGpuObjects) PetscFunctionReturn(0);
+  if (use_gpu_aware_mpi) PetscFunctionReturn(0);
   ierr = PetscFPrintf(comm, fd, "\n\n");CHKERRQ(ierr);
   ierr = PetscFPrintf(comm, fd, "      ##########################################################\n");CHKERRQ(ierr);
   ierr = PetscFPrintf(comm, fd, "      #                                                        #\n");CHKERRQ(ierr);
@@ -1441,10 +1441,6 @@ static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(MPI_Comm comm,FILE *fd)
   return 0;
 #endif
 }
-
-#if defined(PETSC_HAVE_OPENMP)
-extern PetscInt PetscNumOMPThreads;
-#endif
 
 PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
 {
@@ -1504,7 +1500,7 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
     ierr = PetscFPrintf(comm,fd,"%s on a %s named %s with %d processors, by %s %s\n", pname, arch, hostname, size, username, date);CHKERRQ(ierr);
   }
 #if defined(PETSC_HAVE_OPENMP)
-  ierr = PetscFPrintf(comm,fd,"Using %D OpenMP threads\n", PetscNumOMPThreads);CHKERRQ(ierr);
+  ierr = PetscFPrintf(comm,fd,"Using %" PetscInt_FMT " OpenMP threads\n", PetscNumOMPThreads);CHKERRQ(ierr);
 #endif
   ierr = PetscFPrintf(comm, fd, "Using %s\n", version);CHKERRQ(ierr);
 
@@ -1822,7 +1818,7 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
         if (red           != 0.0) fracStageRed     = totr/red;                   else fracStageRed     = 0.0;
         if (totm          != 0.0) totml           /= totm;                       else totml            = 0.0;
         if (maxt          != 0.0) flopr            = totf/maxt;                  else flopr            = 0.0;
-        if (fracStageTime > 1.00)  ierr = PetscFPrintf(comm, fd,"Warning -- total time of event greater than time of entire stage -- something is wrong with the timer\n");CHKERRQ(ierr);
+        if (fracStageTime > 1.00) {ierr = PetscFPrintf(comm, fd,"Warning -- total time of event greater than time of entire stage -- something is wrong with the timer\n");CHKERRQ(ierr);}
         ierr = PetscFPrintf(comm, fd,
                             "%-16s %7d%4.1f %5.4e%4.1f %3.2e%4.1f %2.1e %2.1e %2.1e%3.0f%3.0f%3.0f%3.0f%3.0f %3.0f%3.0f%3.0f%3.0f%3.0f %5.0f",
                             name, maxC, ratC, maxt, ratt, maxf, ratf, totm, totml, totr,
@@ -2150,7 +2146,7 @@ M*/
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +   flag - PETSC_TRUE to run twice, PETSC_FALSE to run once, may be overridden
            with command line option -preload true or -preload false
 -   name - name of first stage (lines of code timed separately with -log_view) to
@@ -2238,21 +2234,8 @@ M*/
 
 M*/
 
-#if defined(PETSC_HAVE_DEVICE)
-
-#if defined(PETSC_HAVE_CUDA)
-#include <cuda_runtime.h>
-#include <petsccublas.h>
-PETSC_EXTERN cudaEvent_t petsc_gputimer_begin;
-PETSC_EXTERN cudaEvent_t petsc_gputimer_end;
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-#include <hip/hip_runtime.h>
-#include <petschipblas.h>
-PETSC_EXTERN hipEvent_t petsc_gputimer_begin;
-PETSC_EXTERN hipEvent_t petsc_gputimer_end;
-#endif
+#if PetscDefined(HAVE_DEVICE)
+#include <petsc/private/deviceimpl.h>
 
 /*-------------------------------------------- GPU event Functions ----------------------------------------------*/
 /*@C
@@ -2276,25 +2259,18 @@ PETSC_EXTERN hipEvent_t petsc_gputimer_end;
 @*/
 PetscErrorCode PetscLogGpuTimeBegin(void)
 {
-#if defined(PETSC_HAVE_CUDA)
-  cudaError_t    cerr;
-#elif defined(PETSC_HAVE_HIP)
-  hipError_t     cerr;
-#else
   PetscErrorCode ierr;
-#endif
+
   PetscFunctionBegin;
-#if defined(PETSC_USE_DEBUG)
-  if (petsc_gtime_inuse) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
-  petsc_gtime_inuse = PETSC_TRUE;
-#endif
-#if defined(PETSC_HAVE_CUDA)
-  cerr = cudaEventRecord(petsc_gputimer_begin,PetscDefaultCudaStream);CHKERRCUDA(cerr);
-#elif defined(PETSC_HAVE_HIP)
-  cerr = hipEventRecord(petsc_gputimer_begin,PetscDefaultHipStream);CHKERRHIP(cerr);
-#else
-  ierr = PetscTimeSubtract(&petsc_gtime);CHKERRQ(ierr);
-#endif
+  if (!PetscLogPLB) PetscFunctionReturn(0);
+  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
+    PetscDeviceContext dctx;
+
+    ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextBeginTimer_Internal(dctx);CHKERRQ(ierr);
+  } else {
+    ierr = PetscTimeSubtract(&petsc_gtime);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -2307,33 +2283,20 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
 @*/
 PetscErrorCode PetscLogGpuTimeEnd(void)
 {
-#if defined(PETSC_HAVE_CUDA)
-  float          gtime;
-  cudaError_t    cerr;
-#elif defined(PETSC_HAVE_HIP)
-  float          gtime;
-  hipError_t     cerr;
-#else
   PetscErrorCode ierr;
-#endif
+
   PetscFunctionBegin;
-#if defined(PETSC_USE_DEBUG)
-  if (!petsc_gtime_inuse) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeBegin()?");
-  petsc_gtime_inuse = PETSC_FALSE;
-#endif
-#if defined(PETSC_HAVE_CUDA)
-  cerr = cudaEventRecord(petsc_gputimer_end,PetscDefaultCudaStream);CHKERRCUDA(cerr);
-  cerr = cudaEventSynchronize(petsc_gputimer_end);CHKERRCUDA(cerr);
-  cerr = cudaEventElapsedTime(&gtime,petsc_gputimer_begin,petsc_gputimer_end);CHKERRCUDA(cerr);
-  petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
-#elif defined(PETSC_HAVE_HIP)
-  cerr = hipEventRecord(petsc_gputimer_end,PetscDefaultHipStream);CHKERRHIP(cerr);
-  cerr = hipEventSynchronize(petsc_gputimer_end);CHKERRHIP(cerr);
-  cerr = hipEventElapsedTime(&gtime,petsc_gputimer_begin,petsc_gputimer_end);CHKERRHIP(cerr);
-  petsc_gtime += (PetscLogDouble)gtime/1000.0; /* convert milliseconds to seconds */
-#else
-  ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
-#endif
+  if (!PetscLogPLE) PetscFunctionReturn(0);
+  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
+    PetscDeviceContext dctx;
+    PetscLogDouble     elapsed;
+
+    ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextEndTimer_Internal(dctx,&elapsed);CHKERRQ(ierr);
+    petsc_gtime += (elapsed/1000.0);
+  } else {
+    ierr = PetscTimeAdd(&petsc_gtime);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 #endif /* end of PETSC_HAVE_DEVICE */

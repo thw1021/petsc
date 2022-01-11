@@ -72,7 +72,7 @@ PetscErrorCode proj_mult(Mat S, Vec X, Vec Y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(S,(void**)&userdata);CHKERRQ(ierr);
+  ierr = MatShellGetContext(S,&userdata);CHKERRQ(ierr);
   if (!userdata) SETERRQ(PetscObjectComm((PetscObject)S),PETSC_ERR_PLIB,"Missing userdata");
   A = userdata->A;
   R = userdata->R;
@@ -115,7 +115,7 @@ PetscErrorCode MyPtShellPMultSymbolic(Mat S, Mat P, Mat PtAP, void** ctx)
 
   PetscFunctionBegin;
   ierr = PetscNew(&userdata);CHKERRQ(ierr);
-  ierr = MatShellSetContext(PtAP,(void*)userdata);CHKERRQ(ierr);
+  ierr = MatShellSetContext(PtAP,userdata);CHKERRQ(ierr);
   *ctx = (void *)userdata;
   PetscFunctionReturn(0);
 }
@@ -127,7 +127,7 @@ PetscErrorCode MyPtShellPMultNumeric(Mat S, Mat P, Mat PtAP, void *ctx)
   proj_data      *userdata = (proj_data*)ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(S,(void**)&A);CHKERRQ(ierr);
+  ierr = MatShellGetContext(S,&A);CHKERRQ(ierr);
   ierr = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
   ierr = PetscObjectReference((PetscObject)P);CHKERRQ(ierr);
   ierr = MatDestroy(&userdata->A);CHKERRQ(ierr);
@@ -149,7 +149,7 @@ PetscErrorCode MyRShellRtMultSymbolic(Mat S, Mat R, Mat RARt, void **ctx)
 
   PetscFunctionBegin;
   ierr = PetscNew(&userdata);CHKERRQ(ierr);
-  ierr = MatShellSetContext(RARt,(void*)userdata);CHKERRQ(ierr);
+  ierr = MatShellSetContext(RARt,userdata);CHKERRQ(ierr);
   *ctx = (void *)userdata;
   PetscFunctionReturn(0);
 }
@@ -161,7 +161,7 @@ PetscErrorCode MyRShellRtMultNumeric(Mat S, Mat R, Mat RARt, void *ctx)
   proj_data      *userdata = (proj_data*)ctx;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(S,(void**)&A);CHKERRQ(ierr);
+  ierr = MatShellGetContext(S,&A);CHKERRQ(ierr);
   ierr = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
   ierr = PetscObjectReference((PetscObject)R);CHKERRQ(ierr);
   ierr = MatDestroy(&userdata->A);CHKERRQ(ierr);
@@ -182,7 +182,7 @@ PetscErrorCode MyMatShellMatMultNumeric(Mat S, Mat B, Mat C, void *ctx)
   Mat            A;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(S,(void**)&A);CHKERRQ(ierr);
+  ierr = MatShellGetContext(S,&A);CHKERRQ(ierr);
   ierr = MatMatMult(A,B,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -193,7 +193,7 @@ PetscErrorCode MyMatTransposeShellMatMultNumeric(Mat S, Mat B, Mat C, void *ctx)
   Mat            A;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(S,(void**)&A);CHKERRQ(ierr);
+  ierr = MatShellGetContext(S,&A);CHKERRQ(ierr);
   ierr = MatTransposeMatMult(A,B,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -204,7 +204,7 @@ PetscErrorCode MyMatShellMatTransposeMultNumeric(Mat S, Mat B, Mat C, void *ctx)
   Mat            A;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(S,(void**)&A);CHKERRQ(ierr);
+  ierr = MatShellGetContext(S,&A);CHKERRQ(ierr);
   ierr = MatMatTransposeMult(A,B,MAT_REUSE_MATRIX,PETSC_DEFAULT,&C);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -615,13 +615,9 @@ int main(int argc,char **args)
   ierr = MatDestroy(&T2);CHKERRQ(ierr);
 
   if (testnest) { /* test with MatNest */
-    Mat        NA;
-    const char *vtype;
+    Mat NA;
 
     ierr = MatCreateNest(PETSC_COMM_WORLD,1,NULL,1,NULL,&A,&NA);CHKERRQ(ierr);
-    /* needed to test against CUSPARSE matrices */
-    ierr = MatGetVecType(A,&vtype);CHKERRQ(ierr);
-    ierr = MatSetVecType(NA,vtype);CHKERRQ(ierr);
     ierr = MatViewFromOptions(NA,NULL,"-NA_view");CHKERRQ(ierr);
     ierr = MatMatMult(NA,B,MAT_REUSE_MATRIX,PETSC_DEFAULT,&X);CHKERRQ(ierr);
     ierr = CheckLocal(B,X,aB,aX);CHKERRQ(ierr);

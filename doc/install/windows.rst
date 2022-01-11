@@ -1,5 +1,3 @@
-.. include:: <isonum.txt>
-
 .. _doc_windows:
 
 *************************************
@@ -83,7 +81,7 @@ interface to Microsoft/Intel compilers).
 
    .. code-block:: console
 
-      > mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
+      $ mv /usr/bin/link.exe /usr/bin/link-cygwin.exe
 
 #. Setup Cygwin terminal/bash-shell with Working Compilers:
 
@@ -91,15 +89,15 @@ interface to Microsoft/Intel compilers).
    ``cl foo.c or ``ifort foo.f`` works from this shell. For example - if using VS2005 C
    and Intel 10 Fortran one can do:
 
-   #. Start |rarr| Programs |rarr| Intel Software Development Tools |rarr| Intel Fortran
-      Compiler 10 |rarr| Visual Fortran Build Enviornment (32bit or 64bit depending on
+   #. Start > Programs > Intel Software Development Tools > Intel Fortran
+      Compiler 10 > Visual Fortran Build Enviornment (32bit or 64bit depending on
       your usage). This should start a "dos cmd" shell.
 
    #. Within this shell - run Cygwin terminal/bash-shell ``mintty.exe`` as:
 
       .. code-block:: console
 
-         > C:\cygwin\bin\mintty.exe
+         $ C:\cygwin\bin\mintty.exe
 
    #. Verify if the compilers are useable (by running cl, ifort in this Cygwin
       terminal/bash-shell).
@@ -114,13 +112,13 @@ Use ``configure`` with VC2005 C and Intel Fortran 10 (without MPI):
 
 .. code-block:: console
 
-   > ./configure --with-cc='win32fe cl' --with-fc='win32fe ifort' --with-cxx='win32fe cl' --with-mpi=0 --download-fblaslapack
+   $ ./configure --with-cc='win32fe cl' --with-fc='win32fe ifort' --with-cxx='win32fe cl' --with-mpi=0 --download-fblaslapack
 
 If fortran, c++ usage is not required, use:
 
 .. code-block:: console
 
-   > ./configure --with-cc='win32fe cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
+   $ ./configure --with-cc='win32fe cl' --with-fc=0 --with-cxx=0 --download-f2cblaslapack
 
 Using MPI
 ^^^^^^^^^
@@ -139,16 +137,16 @@ do not use it). For example usages, check ``$PETSC_DIR/config/examples/arch-mswi
 
    .. code-block:: console
 
-      > cygpath -u `cygpath -ms '/cygdrive/c/Program Files (x86)/Microsoft SDKs/MPI'`
+      $ cygpath -u `cygpath -ms '/cygdrive/c/Program Files (x86)/Microsoft SDKs/MPI'`
       /cygdrive/c/PROGRA~2/MICROS~2/MPI
-      > cygpath -u `cygpath -ms '/cygdrive/c/Program Files (x86)/IntelSWTools/compilers_and_libraries/windows/mkl/lib/intel64'`
+      $ cygpath -u `cygpath -ms '/cygdrive/c/Program Files (x86)/IntelSWTools/compilers_and_libraries/windows/mkl/lib/intel64'`
       /cygdrive/c/PROGRA~2/INTELS~1/COMPIL~2/windows/mkl/lib/intel64
 
    The use in ``configure`` as follows:
 
    .. code-block:: console
 
-      > ./configure --with-cc='win32fe cl' --with-fc='win32fe ifort' --with-cxx='win32fe cl' \
+      $ ./configure --with-cc='win32fe cl' --with-fc='win32fe ifort' --with-cxx='win32fe cl' \
       --with-shared-libraries=0 \
       --with-mpi-include='[/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include,/cygdrive/c/PROGRA~2/MICROS~2/MPI/Include/x64]' \
       --with-mpi-lib='-L/cygdrive/c/PROGRA~2/MICROS~2/MPI/lib/x64 msmpifec.lib msmpi.lib' \
@@ -177,8 +175,8 @@ please do the following.
 
    .. code-block:: console
 
-      > cd $PETSC_DIR/src/ksp/ksp/tutorials
-      > make ex2
+      $ cd $PETSC_DIR/src/ksp/ksp/tutorials
+      $ make ex2
 
 #. If the above works - then make sure all the compiler/linker options used by ``make``
    are also present in the project file in the correct notation.
@@ -193,25 +191,25 @@ Running PETSc probrams with ``-start_in_debugger`` is not supported on this plat
 
 .. code-block:: console
 
-   > msdev ex1.exe
+   $ msdev ex1.exe
 
 Microsoft Visual Studio .NET:
 
 .. code-block:: console
 
-   > devenv ex1.exe
+   $ devenv ex1.exe
 
 Intel Enhanced Debugger:
 
 .. code-block:: console
 
-   > edb ex1.exe
+   $ edb ex1.exe
 
 or GNU Debugger
 
 .. code-block:: console
 
-   > gdb ex1.exe
+   $ gdb ex1.exe
 
 Using MinGW With Microsoft/Intel Windows Compilers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -20,35 +20,10 @@
 !   These values for __float128 are handled in the common block (below)
 !     and transmitted from the C code
 !
-#if !defined(PETSC_USE_REAL___FLOAT128)
-#if defined (PETSC_USE_REAL_SINGLE)
-      integer4, parameter :: MPIU_REAL = MPI_REAL
-#else
-      integer4, parameter :: MPIU_REAL = MPI_DOUBLE_PRECISION
-#endif
-
-      integer4, parameter :: MPIU_SUM = MPI_SUM
-
-#if defined(PETSC_USE_COMPLEX)
-#if defined (PETSC_USE_REAL_SINGLE)
-      integer4, parameter :: MPIU_SCALAR = MPI_COMPLEX
-#else
-      integer4, parameter :: MPIU_SCALAR = MPI_DOUBLE_COMPLEX
-#endif
-#else
-#if defined (PETSC_USE_REAL_SINGLE)
-      integer4, parameter :: MPIU_SCALAR = MPI_REAL
-#else
-      integer4, parameter :: MPIU_SCALAR = MPI_DOUBLE_PRECISION
-#endif
-#endif
-#endif
-
-#if defined(PETSC_USE_64BIT_INDICES)
-      integer4, parameter :: MPIU_INTEGER = MPI_INTEGER8
-#else
-      integer4, parameter :: MPIU_INTEGER = MPI_INTEGER
-#endif
+      integer4 :: MPIU_REAL
+      integer4 :: MPIU_SUM
+      integer4 :: MPIU_SCALAR
+      integer4 :: MPIU_INTEGER
 
       MPI_Comm::PETSC_COMM_WORLD=0
       MPI_Comm::PETSC_COMM_SELF=0
@@ -315,7 +290,7 @@
 !DEC$ ATTRIBUTES DLLEXPORT::petscrandomequals
 #endif
         module petscsys
-        use iso_c_binding
+        use,intrinsic :: iso_c_binding
         use petscsysdef
         PetscChar(80) PETSC_NULL_CHARACTER = ''
         PetscInt PETSC_NULL_INTEGER(1)
@@ -358,11 +333,10 @@
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_REAL
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_BOOL
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_NULL_MPI_COMM
-#if defined(PETSC_USE_REAL___FLOAT128)
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_REAL
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_SCALAR
 !DEC$ ATTRIBUTES DLLEXPORT::MPIU_SUM
-#endif
+!DEC$ ATTRIBUTES DLLEXPORT::MPIU_INTEGER
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_PI
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_MAX_REAL
 !DEC$ ATTRIBUTES DLLEXPORT::PETSC_MIN_REAL
@@ -380,9 +354,10 @@
           PetscErrorCode             :: ierr
 
           if (filename .ne. PETSC_NULL_CHARACTER) then
-             filename = trim(filename)
+             call PetscInitializeF(trim(filename),help,PETSC_TRUE,ierr)
+          else
+             call PetscInitializeF(filename,help,PETSC_TRUE,ierr)
           endif
-          call PetscInitializeF(filename,help,PETSC_TRUE,ierr)
         end subroutine PetscInitializeWithHelp
 
         subroutine PetscInitializeNoHelp(filename,ierr)
@@ -390,9 +365,10 @@
           PetscErrorCode             :: ierr
 
           if (filename .ne. PETSC_NULL_CHARACTER) then
-             filename = trim(filename)
+             call PetscInitializeF(trim(filename),PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
+          else
+             call PetscInitializeF(filename,PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
           endif
-          call PetscInitializeF(filename,PETSC_NULL_CHARACTER,PETSC_TRUE,ierr)
         end subroutine PetscInitializeNoHelp
 
         subroutine PetscInitializeNoArguments(ierr)
@@ -436,19 +412,19 @@
         return
         end
 
-#if defined(PETSC_USE_REAL___FLOAT128)
-        subroutine PetscSetModuleBlockMPI(freal,fscalar,fsum)
-        use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR
+        subroutine PetscSetModuleBlockMPI(freal,fscalar,fsum,finteger)
+        use petscmpi, only: MPIU_REAL,MPIU_SUM,MPIU_SCALAR,MPIU_INTEGER
         implicit none
 
-        integer freal,fscalar,fsum
+        integer4 freal,fscalar,fsum,finteger
 
-        MPIU_REAL   = freal
-        MPIU_SCALAR = fscalar
-        MPIU_SUM    = fsum
+        MPIU_REAL    = freal
+        MPIU_SCALAR  = fscalar
+        MPIU_SUM     = fsum
+        MPIU_INTEGER = finteger
+
         return
         end
-#endif
 
         subroutine PetscSetModuleBlockNumeric(pi,maxreal,minreal,eps,       &
      &     seps,small,pinf,pninf)

@@ -112,6 +112,7 @@ PETSC_EXTERN PetscErrorCode MatSNESMFGetReuseBase(Mat,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatMFFDComputeJacobian(SNES,Vec,Mat,Mat,void*);
 
 PETSC_EXTERN PetscErrorCode SNESGetType(SNES,SNESType*);
+PETSC_EXTERN PetscErrorCode SNESMonitorDefaultSetUp(SNES,PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode SNESMonitorDefault(SNES,PetscInt,PetscReal,PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode SNESMonitorScaling(SNES,PetscInt,PetscReal,PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode SNESMonitorRange(SNES,PetscInt,PetscReal,PetscViewerAndFormat *);
@@ -510,7 +511,7 @@ PETSC_EXTERN PetscErrorCode SNESNGSGetTolerances(SNES,PetscReal*,PetscReal*,Pets
 PETSC_EXTERN PetscErrorCode SNESSetAlwaysComputesFinalResidual(SNES,PetscBool);
 PETSC_EXTERN PetscErrorCode SNESGetAlwaysComputesFinalResidual(SNES,PetscBool*);
 
-PETSC_EXTERN PetscErrorCode SNESShellGetContext(SNES,void**);
+PETSC_EXTERN PetscErrorCode SNESShellGetContext(SNES,void*);
 PETSC_EXTERN PetscErrorCode SNESShellSetContext(SNES,void*);
 PETSC_EXTERN PetscErrorCode SNESShellSetSolve(SNES,PetscErrorCode (*)(SNES,Vec));
 

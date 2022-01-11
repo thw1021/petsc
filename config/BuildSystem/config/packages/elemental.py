@@ -8,8 +8,9 @@ class Configure(config.package.CMakePackage):
     self.liblist          = [['libEl.a','libElSuiteSparse.a','libpmrrr.a']]
     self.includes         = ['El.hpp']
     self.precisions       = ['single','double']
-    self.cxx              = 1
-    self.requirescxx11    = 1
+    self.buildLanguages   = ['Cxx']
+    self.minCxxVersion    = 'c++11'
+    self.maxCxxVersion    = 'c++14'
     self.downloadonWindows= 0
     self.hastests         = 1
     self.hastestsdatafiles= 1

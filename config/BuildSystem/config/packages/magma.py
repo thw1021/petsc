@@ -1,5 +1,6 @@
 import config.package
 import os
+import sys
 
 #class Configure(config.package.CMakePackage):
 #  def __init__(self, framework):
@@ -8,40 +9,31 @@ class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
     # disable version check
-    #self.version          = '2.5.2'
-    #self.minversion       = '2.5.2'
+    self.version          = '2.6.1'
+    #self.minversion       = '2.6.0'
     #self.versionname      = ???
-    #self.gitcommit        = 'v'+self.version
-    #version               = '2.5.4'
-    #self.gitcommit        = 'v'+version
-    self.gitcommit        = '7847870ac700d13e00740c01651cf85e7db15fe1' # master on Jun 2, 2021
+    self.gitcommit        = 'v'+self.version
     self.download         = ['git://https://bitbucket.org/icl/magma']
-    # This is broken with HIP because they do not provide any configuration specific include file
-    # and they always default to CUDA when including the magma header.
-    # One should know in advance if magma has been compiled with CUDA or HIP support
-    # and define either HAVE_CUBLAS or HAVE_HIP (without namespacing.... what a shame)
-    # before including magma_v2.h. This is disgusting
-    #self.functions        = ['magma_init']
-    #self.includes         = ['magma_v2.h']
-    #self.liblist          = [['libmagma_sparse.a','libmagma.a'],
-    #                         ['libmagma_sparse.a','libmagma.a','libpthread.a'],
-    #                         ['libmagma.a'],
-    #                         ['libmagma.a','libpthread.a']]
-    self.liblist          = [['libmagma.a']]
+    self.functions        = ['magma_init']
+    self.includes         = ['magma_config.h']
+    self.liblist          = [['libmagma_sparse.a','libmagma.a'],
+                             ['libmagma_sparse.a','libmagma.a','libpthread.a'],
+                             ['libmagma.a'],
+                             ['libmagma.a','libpthread.a']]
     self.hastests         = 0
     self.hastestsdatafiles= 0
     self.requirec99flag   = 1 #From CMakeLists.txt -> some code may not compile
     self.precisions       = ['single','double']
-    self.cxx              = 1
-    self.requirescxx11    = 1 #From CMakeLists.txt -> some code may not compile
-    self.makerulename     = 'lib sparse-lib'
+    self.buildLanguages   = ['Cxx']
+    self.minCxxVersion    = 'c++11' #From CMakeLists.txt -> some code may not compile
+    self.makerulename     = ' lib ' #make sparse-lib is broken in many ways
     return
 
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('MAGMA', '-with-magma-gputarget', nargs.ArgString(None, '', 'GPU_TARGET make variable'))
-    help.addArgument('MAGMA', '-with-magma-fortran-bindings', nargs.ArgBool(None, 1, 'Compile MAGMA Fortran bindings'))
+    help.addArgument('MAGMA', '-with-magma-gputarget=<string>', nargs.ArgString(None, '', 'GPU_TARGET make variable'))
+    help.addArgument('MAGMA', '-with-magma-fortran-bindings=<bool>', nargs.ArgBool(None, 0, 'Compile MAGMA Fortran bindings'))
     return
 
   def setupDependencies(self, framework):
@@ -66,7 +58,6 @@ class Configure(config.package.Package):
     usecuda = False
     if self.hip.found:
       usehip = True
-      self.makerulename = 'lib' #make sparse-lib is broken in many ways
     else:
       usecuda = True
 
@@ -134,9 +125,9 @@ class Configure(config.package.Package):
     if self.blasLapack.mangling == 'underscore':
       mangle = ' -DADD_'
     elif self.blasLapack.mangling == 'caps':
-      mangle = ' -DUPCASE_'
+      mangle = ' -DUPCASE'
     else:
-      mangle = ' -DNOCHANGE_'
+      mangle = ' -DNOCHANGE'
     cflags += mangle
     cxxflags += mangle
     fcflags += mangle
@@ -151,8 +142,10 @@ class Configure(config.package.Package):
       gputarget = ''
       if self.argDB['with-magma-gputarget']:
         gputarget = self.argDB['with-magma-gputarget']
-      elif self.cuda.found and hasattr(self.cuda,'gencodearch') and self.cuda.gencodearch:
-        gputarget = 'sm_'+self.cuda.gencodearch
+      elif self.cuda.found and hasattr(self.cuda,'cudaArch') and self.cuda.cudaArch:
+        gputarget = 'sm_'+self.cuda.cudaArch
+      elif self.hip.found and hasattr(self.hip,'hipArch') and self.hip.hipArch:
+        gputarget = self.hip.hipArch
       g.write('CC = '+cc+'\n')
       g.write('CFLAGS = '+cflags+'\n')
       g.write('CXX = '+cxx+'\n')
@@ -161,13 +154,11 @@ class Configure(config.package.Package):
         g.write('BACKEND = cuda\n')
         g.write('NVCC = '+nvcc+'\n')
         g.write('DEVCC = '+nvcc+'\n')
-        #g.write('NVCCFLAGS = '+nvccflags+'\n')
         g.write('DEVCCFLAGS = '+nvccflags+'\n')
       if usehip:
         g.write('BACKEND = hip\n')
         g.write('HIPCC = '+hipcc+'\n')
         g.write('DEVCC = '+hipcc+'\n')
-        g.write('HIPCCFLAGS = '+hipccflags+'\n')
         g.write('DEVCCFLAGS = '+hipccflags+'\n')
       if fcbindings:
         g.write('FORT = '+fc+'\n')
@@ -175,9 +166,8 @@ class Configure(config.package.Package):
         g.write('F90LAGS = '+fcflags+'\n')
       if gputarget:
         g.write('GPU_TARGET = '+gputarget+'\n')
-      if self.cuda.found and hasattr(self.cuda,'gencodearch') and self.cuda.gencodearch:
-        # g.write('NVCCFLAGS += -gencode arch=compute_'+self.cuda.gencodearch+',code=sm_'+self.cuda.gencodearch+'\n')
-        g.write('MIN_ARCH = '+self.cuda.gencodearch+'0\n')
+      if self.cuda.found and hasattr(self.cuda,'cudaArch') and self.cuda.cudaArch:
+        g.write('MIN_ARCH = '+self.cuda.cudaArch+'0\n')
 
       g.write('ARCH = '+self.setCompilers.AR+'\n')
       g.write('ARCHFLAGS = '+self.setCompilers.AR_FLAGS+'\n')
@@ -199,33 +189,54 @@ class Configure(config.package.Package):
 
     if self.installNeeded('make.inc'):
       try:
-        output1,err1,ret1  = config.package.Package.executeShellCommand('make cleanall', cwd=self.packageDir, timeout=60, log = self.log)
+        output1,err1,ret1  = config.package.Package.executeShellCommand('make clean', cwd=self.packageDir, timeout=60, log = self.log)
       except RuntimeError as e:
         self.logPrint('Error running make clean on MAGMA: '+str(e))
         raise RuntimeError('Error running make clean on MAGMA')
       try:
         self.logPrintBox('Compiling MAGMA; this may take several minutes')
-        output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp + ' ' + self.makerulename, cwd=self.packageDir, timeout=2500, log = self.log)
+        codegen = ' codegen="' + sys.executable + ' tools/codegen.py"' # as of 2.6.1 they use /usr/bin/env python inside tools/codegen.py
+        output2,err2,ret2 = config.package.Package.executeShellCommand(self.make.make_jnp + self.makerulename + codegen, cwd=self.packageDir, timeout=2500, log = self.log)
         # magma install is broken when fortran bindings are not requested
         dummymod = os.path.join(self.packageDir,'include','magma_petsc_dummy.mod')
         if not fcbindings and not os.path.isfile(dummymod):
           self.executeShellCommand('echo "!dummy mod" > '+dummymod,cwd=self.packageDir,log=self.log)
         self.logPrintBox('Installing MAGMA; this may take several minutes')
-        self.installDirProvider.printSudoPasswordMessage()
         # make install is broken if we are not building the sparse library
         # copy files directly instead of invoking the rule
         if 'sparse-lib' not in self.makerulename:
           incDir = os.path.join(self.installDir,'include')
           libDir = os.path.join(self.installDir,'lib')
-          output,err,ret = config.package.Package.executeShellCommand(self.installSudo+' '+self.make.make + ' install_dirs', cwd=self.packageDir, timeout=2500, log = self.log)
-          output,err,ret = config.package.Package.executeShellCommand(self.installSudo+' '+self.make.make + ' pkgconfig', cwd=self.packageDir, timeout=2500, log = self.log)
-          output,err,ret = config.package.Package.executeShellCommand(self.installSudo+' cp '+os.path.join(self.packageDir,'include','*.h')+' '+incDir, timeout=100, log=self.log)
-          output,err,ret = config.package.Package.executeShellCommand(self.installSudo+' cp '+os.path.join(self.packageDir,'include','*.mod')+' '+incDir, timeout=100, log=self.log)
-          output,err,ret = config.package.Package.executeShellCommand(self.installSudo+' cp '+os.path.join(self.packageDir,'lib','libmagma.*')+' '+libDir, timeout=100, log=self.log)
+          output,err,ret = config.package.Package.executeShellCommand(self.make.make + ' install_dirs', cwd=self.packageDir, timeout=2500, log = self.log)
+          output,err,ret = config.package.Package.executeShellCommand(self.make.make + ' pkgconfig', cwd=self.packageDir, timeout=2500, log = self.log)
+          output,err,ret = config.package.Package.executeShellCommand('cp '+os.path.join(self.packageDir,'include','*.h')+' '+incDir, timeout=100, log=self.log)
+          output,err,ret = config.package.Package.executeShellCommand('cp '+os.path.join(self.packageDir,'include','*.mod')+' '+incDir, timeout=100, log=self.log)
+          output,err,ret = config.package.Package.executeShellCommand('cp '+os.path.join(self.packageDir,'lib','libmagma.*')+' '+libDir, timeout=100, log=self.log)
         else:
-          output,err,ret = config.package.Package.executeShellCommand(self.installSudo+' '+self.make.make + ' install', cwd=self.packageDir, timeout=2500, log = self.log)
+          output,err,ret = config.package.Package.executeShellCommand(self.make.make + ' install', cwd=self.packageDir, timeout=2500, log = self.log)
       except RuntimeError as e:
         self.logPrint('Error running make on MAGMA: '+str(e))
         raise RuntimeError('Error running make on MAGMA')
       self.postInstall(output1+err1+output2+err2,'make.inc')
     return self.installDir
+
+  def configureLibrary(self):
+    d = None
+    if 'with-'+self.package+'-include' in self.argDB:
+      inc = self.argDB['with-'+self.package+'-include']
+      if inc:
+        d = os.path.dirname(inc[0])
+    elif 'with-'+self.package+'-dir' in self.argDB:
+      d = os.path.join(self.argDB['with-'+self.package+'-dir'],'include')
+    if d:
+      usecuda = False
+      usehip  = False
+      with open(os.path.join(d,self.includes[0])) as f:
+        magmaconfig = f.read()
+        if '#define MAGMA_HAVE_CUDA' in magmaconfig: usecuda = True
+        if '#define MAGMA_HAVE_HIP'  in magmaconfig: usehip  = True
+      if self.cuda.found and not usecuda:
+        raise RuntimeError('Must enable CUDA to use MAGMA built with CUDA')
+      if self.hip.found and not usehip:
+        raise RuntimeError('Must enable HIP to use MAGMA built with HIP')
+    config.package.Package.configureLibrary(self)

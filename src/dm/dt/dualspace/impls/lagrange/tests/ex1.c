@@ -68,15 +68,15 @@ static PetscErrorCode ExpectedNumDofs_Total(PetscInt dim, PetscInt order, PetscI
       PetscInt rpowk, rp1pownmk;
 
       ierr = PetscDTBinomialInt(dim, formDegree, &nchoosek);CHKERRQ(ierr);
-      rpowk = PetscPowInt(order, formDegree);CHKERRQ(ierr);
-      rp1pownmk = PetscPowInt(order + 1, dim - formDegree);CHKERRQ(ierr);
+      rpowk = PetscPowInt(order, formDegree);
+      rp1pownmk = PetscPowInt(order + 1, dim - formDegree);
       *nDofs = nchoosek * rpowk * rp1pownmk * nCopies;
     } else {
       PetscInt nchoosek;
       PetscInt rp1pown;
 
       ierr = PetscDTBinomialInt(dim, formDegree, &nchoosek);CHKERRQ(ierr);
-      rp1pown = PetscPowInt(order + 1, dim);CHKERRQ(ierr);
+      rp1pown = PetscPowInt(order + 1, dim);
       *nDofs = nchoosek * rp1pown * nCopies;
     }
   } else { /* prism */
@@ -267,10 +267,10 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
 
       ierr = PetscDualSpaceGetInteriorData(sp, &intNodes, &intMat);CHKERRQ(ierr);
       if (intMat && intMat != allMat) {
-        PetscInt intNodeIdxDim, intNodeVecDim, intNnodes;
-        const PetscInt *intNodeIdx;
+        PetscInt        intNodeIdxDim, intNodeVecDim, intNnodes;
+        const PetscInt  *intNodeIdx;
         const PetscReal *intNodeVec;
-        PetscBool same;
+        PetscBool       same;
 
         ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior nodes:\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
@@ -293,10 +293,15 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       }
     }
     if (dim <= 2 && spintdim) {
-      PetscInt coneSize, o;
+      PetscInt numFaces, o;
 
-      ierr = DMPlexGetConeSize(K, 0, &coneSize);CHKERRQ(ierr);
-      for (o = -coneSize; o < coneSize; o++) {
+      {
+        DMPolytopeType ct;
+        /* The number of arrangements is no longer based on the number of faces */
+        ierr = DMPlexGetCellType(K, 0, &ct);CHKERRQ(ierr);
+        numFaces = DMPolytopeTypeGetNumArrangments(ct) / 2;
+      }
+      for (o = -numFaces; o < numFaces; ++o) {
         Mat symMat;
 
         ierr = PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(sp, o, &symMat);CHKERRQ(ierr);
@@ -334,7 +339,7 @@ int main (int argc, char **argv)
   ierr = PetscOptionsRangeInt("-tensor", "(0) simplex (1) hypercube (2) wedge","ex1.c",tensorCell,&tensorCell,NULL,0,2);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-continuous", "Whether the dual space has continuity","ex1.c",continuous,&continuous,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-trimmed", "Whether the dual space matches a trimmed polynomial space","ex1.c",trimmed,&trimmed,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   ierr = PetscHashLagCreate(&lagTable);CHKERRQ(ierr);
 
   if (tensorCell < 2) {

@@ -53,6 +53,9 @@ cdef extern from "petsc.h":
     struct _p_Mat
     ctypedef _p_Mat* PetscMat "Mat"
 
+    struct _p_MatPartitioning
+    ctypedef _p_Mat* PetscMatPartitioning "MatPartitioning"
+
     struct _p_MatNullSpace
     ctypedef _p_MatNullSpace* PetscNullSpace "MatNullSpace"
 
@@ -174,6 +177,12 @@ ctypedef public api class Mat(Object) [
     ]:
     cdef PetscMat mat
 
+ctypedef public api class MatPartitioning(Object) [
+    type   PyPetscMatPartitioning_Type,
+    object PyPetscMatPartitioningObject,
+    ]:
+    cdef PetscMatPartitioning part
+
 ctypedef public api class NullSpace(Object) [
     type   PyPetscNullSpace_Type,
     object PyPetscNullSpaceObject,
@@ -239,6 +248,7 @@ ctypedef public api class DMLabel(Object) [
     object PyPetscDMLabelObject,
     ]:
     cdef PetscDMLabel dmlabel
+
 # --------------------------------------------------------------------
 
 cdef MPI_Comm GetComm(object, MPI_Comm) except *

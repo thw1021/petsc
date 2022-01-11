@@ -2,7 +2,7 @@
 /*
    This file contains routines for sorting doubles.  Values are sorted in place.
    These are provided because the general sort routines incur a great deal
-   of overhead in calling the comparision routines.
+   of overhead in calling the comparison routines.
 
  */
 #include <petscsys.h>                /*I  "petscsys.h"  I*/
@@ -69,7 +69,7 @@ static PetscErrorCode PetscSortReal_Private(PetscReal *v,PetscInt right)
 
    Notes:
    This function serves as an alternative to PetscRealSortSemiOrdered(), and may perform faster especially if the array
-   is completely random. There are exceptions to this and so it is __highly__ recomended that the user benchmark their
+   is completely random. There are exceptions to this and so it is __highly__ recommended that the user benchmark their
    code to see which routine is fastest.
 
    Level: intermediate
@@ -239,15 +239,13 @@ PetscErrorCode  PetscSortRemoveDupsReal(PetscInt *n,PetscReal v[])
 
    Input Parameters:
 +  ncut  - splitig index
-.  n     - number of values to sort
-.  a     - array of values
--  idx   - index for array a
+-  n     - number of values to sort
 
-   Output Parameters:
-+  a     - permuted array of values such that its elements satisfy:
+   Input/Output Parameters:
++  a     - array of values, on output the values are permuted such that its elements satisfy:
            abs(a[i]) >= abs(a[ncut-1]) for i < ncut and
            abs(a[i]) <= abs(a[ncut-1]) for i >= ncut
--  idx   - permuted index of array a
+-  idx   - index for array a, on output permuted accordingly
 
    Level: intermediate
 
@@ -300,15 +298,13 @@ PetscErrorCode  PetscSortSplit(PetscInt ncut,PetscInt n,PetscScalar a[],PetscInt
 
    Input Parameters:
 +  ncut  - splitig index
-.  n     - number of values to sort
-.  a     - array of values in PetscReal
--  idx   - index for array a
+-  n     - number of values to sort
 
-   Output Parameters:
-+  a     - permuted array of real values such that its elements satisfy:
+   Input/Output Parameters:
++  a     - array of values, on output the values are permuted such that its elements satisfy:
            abs(a[i]) >= abs(a[ncut-1]) for i < ncut and
            abs(a[i]) <= abs(a[ncut-1]) for i >= ncut
--  idx   - permuted index of array a
+-  idx   - index for array a, on output permuted accordingly
 
    Level: intermediate
 

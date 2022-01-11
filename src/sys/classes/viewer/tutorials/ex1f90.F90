@@ -3,7 +3,7 @@
 
 #include <petsc/finclude/petscsys.h>
       use petscsys
-      use iso_c_binding
+      use,intrinsic :: iso_c_binding
       implicit none
 
       PetscViewer viewer
@@ -21,7 +21,7 @@
 !/*TEST
 !
 !   build:
-!      requires: define(PETSC_USING_F2003) define(PETSC_USING_F90FREEFORM)
+!      requires: defined(PETSC_USING_F2003) defined(PETSC_USING_F90FREEFORM)
 !
 !   test:
 !      output_file: output/ex1_1.out

@@ -18,7 +18,7 @@ PetscLogEvent PC_HPDDM_Next;
 PetscLogEvent PC_HPDDM_SetUp[PETSC_HPDDM_MAXLEVELS];
 PetscLogEvent PC_HPDDM_Solve[PETSC_HPDDM_MAXLEVELS];
 
-const char *const PCHPDDMCoarseCorrectionTypes[] = { "deflated", "additive", "balanced" };
+const char *const PCHPDDMCoarseCorrectionTypes[] = { "DEFLATED", "ADDITIVE", "BALANCED", "PCHPDDMCoarseCorrectionType", "PC_HPDDM_COARSE_CORRECTION_", NULL };
 
 static PetscErrorCode PCReset_HPDDM(PC pc)
 {
@@ -93,7 +93,7 @@ static PetscErrorCode PCHPDDMSetAuxiliaryMat_HPDDM(PC pc, IS is, Mat A, PetscErr
 }
 
 /*@
-     PCHPDDMSetAuxiliaryMat - Sets the auxiliary matrix used by PCHPDDM for the concurrent GenEO eigenproblems at the finest level. As an example, in a finite element context with nonoverlapping subdomains plus (overlapping) ghost elements, this could be the unassembled (Neumann) local overlapping operator. As opposed to the assembled (Dirichlet) local overlapping operator obtained by summing neighborhood contributions at the interface of ghost elements.
+     PCHPDDMSetAuxiliaryMat - Sets the auxiliary matrix used by PCHPDDM for the concurrent GenEO problems at the finest level. As an example, in a finite element context with nonoverlapping subdomains plus (overlapping) ghost elements, this could be the unassembled (Neumann) local overlapping operator. As opposed to the assembled (Dirichlet) local overlapping operator obtained by summing neighborhood contributions at the interface of ghost elements.
 
    Input Parameters:
 +     pc - preconditioner context
@@ -165,7 +165,7 @@ static PetscErrorCode PCHPDDMSetRHSMat_HPDDM(PC pc, Mat B)
 }
 
 /*@
-     PCHPDDMSetRHSMat - Sets the right-hand side matrix used by PCHPDDM for the concurrent GenEO eigenproblems at the finest level. Must be used in conjuction with PCHPDDMSetAuxiliaryMat(N), so that Nv = lambda Bv is solved using EPSSetOperators(N, B). It is assumed that N and B are provided using the same numbering. This provides a means to try more advanced methods such as GenEO-II or H-GenEO.
+     PCHPDDMSetRHSMat - Sets the right-hand side matrix used by PCHPDDM for the concurrent GenEO problems at the finest level. Must be used in conjuction with PCHPDDMSetAuxiliaryMat(N), so that Nv = lambda Bv is solved using EPSSetOperators(N, B). It is assumed that N and B are provided using the same numbering. This provides a means to try more advanced methods such as GenEO-II or H-GenEO.
 
    Input Parameters:
 +     pc - preconditioner context
@@ -190,14 +190,15 @@ PetscErrorCode PCHPDDMSetRHSMat(PC pc, Mat B)
 
 static PetscErrorCode PCSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObject, PC pc)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PC_HPDDM_Level **levels = data->levels;
-  char           prefix[256];
-  int            i = 1;
-  PetscMPIInt    size, previous;
-  PetscInt       n;
-  PetscBool      flg = PETSC_TRUE;
-  PetscErrorCode ierr;
+  PC_HPDDM                    *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM_Level              **levels = data->levels;
+  char                        prefix[256];
+  int                         i = 1;
+  PetscMPIInt                 size, previous;
+  PetscInt                    n;
+  PCHPDDMCoarseCorrectionType type;
+  PetscBool                   flg = PETSC_TRUE;
+  PetscErrorCode              ierr;
 
   PetscFunctionBegin;
   if (!data->levels) {
@@ -250,8 +251,30 @@ static PetscErrorCode PCSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObjec
   if (i > 1) {
     ierr = PetscSNPrintf(prefix, sizeof(prefix), "-pc_hpddm_coarse_p");CHKERRQ(ierr);
     ierr = PetscOptionsRangeInt(prefix, "Number of processes used to assemble the coarsest operator", "none", n, &n, NULL, 1, PetscMax(1, previous / 2));CHKERRQ(ierr);
-    ierr = PetscOptionsEList("-pc_hpddm_coarse_correction", "Type of coarse correction applied each iteration", "PCHPDDMSetCoarseCorrectionType", PCHPDDMCoarseCorrectionTypes, 3, PCHPDDMCoarseCorrectionTypes[PC_HPDDM_COARSE_CORRECTION_DEFLATED], &n, &flg);CHKERRQ(ierr);
-    if (flg) data->correction = PCHPDDMCoarseCorrectionType(n);
+#if defined(PETSC_HAVE_MUMPS)
+    ierr = PetscSNPrintf(prefix, sizeof(prefix), "pc_hpddm_coarse_");CHKERRQ(ierr);
+    ierr = PetscOptionsHasName(NULL, prefix, "-mat_mumps_use_omp_threads", &flg);CHKERRQ(ierr);
+    if (flg) {
+      char type[64]; /* same size as in src/ksp/pc/impls/factor/factimpl.c */
+      if (n == 1) { /* default solver for a sequential Mat */
+        ierr = PetscStrcpy(type, MATSOLVERPETSC);CHKERRQ(ierr);
+      }
+      ierr = PetscOptionsGetString(NULL, prefix, "-pc_factor_mat_solver_type", type, sizeof(type), &flg);CHKERRQ(ierr);
+      if (flg) {
+        ierr = PetscStrcmp(type, MATSOLVERMUMPS, &flg);CHKERRQ(ierr);
+      }
+      if (!flg) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "-%smat_mumps_use_omp_threads and -%spc_factor_mat_solver_type != %s", prefix, prefix, MATSOLVERMUMPS);
+      size = n;
+      n = -1;
+      ierr = PetscOptionsGetInt(NULL, prefix, "-mat_mumps_use_omp_threads", &n, NULL);CHKERRQ(ierr);
+      if (n < 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Need to specify a positive integer for -%smat_mumps_use_omp_threads", prefix);
+      if (n * size > previous) SETERRQ6(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "%d MPI process%s x %d OpenMP thread%s greater than %d available MPI process%s for the coarsest operator", (int)size, size > 1 ? "es" : "", (int)n, n > 1 ? "s" : "", (int)previous, previous > 1 ? "es" : "");
+    }
+#endif
+    ierr = PetscOptionsEnum("-pc_hpddm_coarse_correction", "Type of coarse correction applied each iteration", "PCHPDDMSetCoarseCorrectionType", PCHPDDMCoarseCorrectionTypes, (PetscEnum)data->correction, (PetscEnum*)&type, &flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = PCHPDDMSetCoarseCorrectionType(pc, type);CHKERRQ(ierr);
+    }
     ierr = PetscSNPrintf(prefix, sizeof(prefix), "-pc_hpddm_has_neumann");CHKERRQ(ierr);
     ierr = PetscOptionsBool(prefix, "Is the auxiliary Mat the local Neumann matrix?", "PCHPDDMHasNeumannMat", data->Neumann, &data->Neumann, NULL);CHKERRQ(ierr);
     data->log_separate = PETSC_FALSE;
@@ -437,7 +460,7 @@ static PetscErrorCode PCHPDDMShellSetUp(PC pc)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc, (void**)&ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   ierr = KSPGetOptionsPrefix(ctx->ksp, &pcpre);CHKERRQ(ierr);
   ierr = KSPGetOperators(ctx->ksp, &A, &P);CHKERRQ(ierr);
   /* smoother */
@@ -464,7 +487,7 @@ PETSC_STATIC_INLINE PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type x, Type y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc, (void**)&ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   /* going from PETSc to HPDDM numbering */
   ierr = VecScatterBegin(ctx->scatter, x, ctx->v[0][0], INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
   ierr = VecScatterEnd(ctx->scatter, x, ctx->v[0][0], INSERT_VALUES, SCATTER_FORWARD);CHKERRQ(ierr);
@@ -487,7 +510,7 @@ PETSC_STATIC_INLINE PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type X, Type Y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc, (void**)&ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   ierr = MatGetSize(X, NULL, &N);CHKERRQ(ierr);
   /* going from PETSc to HPDDM numbering */
   for (i = 0; i < N; ++i) {
@@ -547,7 +570,7 @@ static PetscErrorCode PCHPDDMShellApply(PC pc, Vec x, Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc, (void**)&ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   if (ctx->P) {
     ierr = KSPGetOperators(ctx->ksp, &A, NULL);CHKERRQ(ierr);
     ierr = PCHPDDMDeflate_Private(pc, x, y);CHKERRQ(ierr);                    /* y = Q x                          */
@@ -599,43 +622,63 @@ static PetscErrorCode PCHPDDMShellApply(PC pc, Vec x, Vec y)
 static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
 {
   PC_HPDDM_Level *ctx;
-  Mat            A;
+  Mat            A, *ptr;
+  PetscContainer container = NULL;
   PetscScalar    *array;
   PetscInt       m, M, N, prev = 0;
+  PetscBool      reset = PETSC_FALSE;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc, (void**)&ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   if (ctx->P) {
     ierr = MatGetSize(X, NULL, &N);CHKERRQ(ierr);
-    if (ctx->V[0]) {
-      ierr = MatGetSize(ctx->V[0], NULL, &prev);CHKERRQ(ierr);
-    }
     ierr = KSPGetOperators(ctx->ksp, &A, NULL);CHKERRQ(ierr);
-    if (N != prev) {
+    ierr = PetscObjectQuery((PetscObject)A, "_HPDDM_MatProduct", (PetscObject*)&container);CHKERRQ(ierr);
+    if (container) { /* MatProduct container already attached */
+      ierr = PetscContainerGetPointer(container, (void**)&ptr);CHKERRQ(ierr);
+      if (ptr[1] != ctx->V[2]) /* Mat has changed or may have been set first in KSPHPDDM */
+        for (m = 0; m < 2; ++m) {
+          ierr = MatDestroy(ctx->V + m + 1);CHKERRQ(ierr);
+          ctx->V[m + 1] = ptr[m];
+          ierr = PetscObjectReference((PetscObject)ctx->V[m + 1]);CHKERRQ(ierr);
+        }
+    }
+    if (ctx->V[1]) {
+      ierr = MatGetSize(ctx->V[1], NULL, &prev);CHKERRQ(ierr);
+    }
+    if (N != prev || !ctx->V[0]) {
       ierr = MatDestroy(ctx->V);CHKERRQ(ierr);
-      ierr = MatDestroy(ctx->V + 1);CHKERRQ(ierr);
-      ierr = MatDestroy(ctx->V + 2);CHKERRQ(ierr);
       ierr = VecGetLocalSize(ctx->v[0][0], &m);CHKERRQ(ierr);
       ierr = MatCreateDense(PetscObjectComm((PetscObject)pc), m, PETSC_DECIDE, PETSC_DECIDE, N, NULL, ctx->V);CHKERRQ(ierr);
-      ierr = MatGetLocalSize(X, &m, NULL);CHKERRQ(ierr);
-      ierr = MatGetSize(X, &M, NULL);CHKERRQ(ierr);
-      if (ctx->parent->correction != PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-        ierr = MatDenseGetArrayWrite(ctx->V[0], &array);CHKERRQ(ierr);
-      } else array = NULL;
-      ierr = MatCreateDense(PetscObjectComm((PetscObject)pc), m, PETSC_DECIDE, M, N, array, ctx->V + 1);CHKERRQ(ierr);
-      if (ctx->parent->correction != PC_HPDDM_COARSE_CORRECTION_BALANCED) {
-        ierr = MatDenseRestoreArrayWrite(ctx->V[0], &array);CHKERRQ(ierr);
+      if (N != prev) {
+        ierr = MatDestroy(ctx->V + 1);CHKERRQ(ierr);
+        ierr = MatDestroy(ctx->V + 2);CHKERRQ(ierr);
+        ierr = MatGetLocalSize(X, &m, NULL);CHKERRQ(ierr);
+        ierr = MatGetSize(X, &M, NULL);CHKERRQ(ierr);
+        if (ctx->parent->correction != PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+          ierr = MatDenseGetArrayWrite(ctx->V[0], &array);CHKERRQ(ierr);
+        } else array = NULL;
+        ierr = MatCreateDense(PetscObjectComm((PetscObject)pc), m, PETSC_DECIDE, M, N, array, ctx->V + 1);CHKERRQ(ierr);
+        if (ctx->parent->correction != PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+          ierr = MatDenseRestoreArrayWrite(ctx->V[0], &array);CHKERRQ(ierr);
+        } else {
+          ierr = MatAssemblyBegin(ctx->V[1], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+          ierr = MatAssemblyEnd(ctx->V[1], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+        }
+        ierr = MatCreateDense(PetscObjectComm((PetscObject)pc), m, PETSC_DECIDE, M, N, NULL, ctx->V + 2);CHKERRQ(ierr);
+        ierr = MatAssemblyBegin(ctx->V[2], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+        ierr = MatAssemblyEnd(ctx->V[2], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+        ierr = MatProductCreateWithMat(A, Y, NULL, ctx->V[1]);CHKERRQ(ierr);
+        ierr = MatProductSetType(ctx->V[1], MATPRODUCT_AB);CHKERRQ(ierr);
+        ierr = MatProductSetFromOptions(ctx->V[1]);CHKERRQ(ierr);
+        ierr = MatProductSymbolic(ctx->V[1]);CHKERRQ(ierr);
+        if (!container) { /* no MatProduct container attached, create one to be queried in KSPHPDDM or at the next call to PCMatApply() */
+          ierr = PetscContainerCreate(PetscObjectComm((PetscObject)A), &container);CHKERRQ(ierr);
+          ierr = PetscObjectCompose((PetscObject)A, "_HPDDM_MatProduct", (PetscObject)container);CHKERRQ(ierr);
+        }
+        ierr = PetscContainerSetPointer(container, ctx->V + 1);CHKERRQ(ierr); /* need to compose B and D from MatProductCreateWithMath(A, B, NULL, D), which are stored in the contiguous array ctx->V */
       }
-      ierr = MatCreateDense(PetscObjectComm((PetscObject)pc), m, PETSC_DECIDE, M, N, NULL, ctx->V + 2);CHKERRQ(ierr);
-      ierr = MatAssemblyBegin(ctx->V[1], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-      ierr = MatAssemblyEnd(ctx->V[1], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-      ierr = MatAssemblyBegin(ctx->V[2], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-      ierr = MatAssemblyEnd(ctx->V[2], MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-      ierr = MatProductCreateWithMat(A, Y, NULL, ctx->V[1]);CHKERRQ(ierr);
-      ierr = MatProductSetType(ctx->V[1], MATPRODUCT_AB);CHKERRQ(ierr);
-      ierr = MatProductSetFromOptions(ctx->V[1]);CHKERRQ(ierr);
-      ierr = MatProductSymbolic(ctx->V[1]);CHKERRQ(ierr);
       if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
         ierr = MatProductCreateWithMat(A, ctx->V[1], NULL, ctx->V[2]);CHKERRQ(ierr);
         ierr = MatProductSetType(ctx->V[2], MATPRODUCT_AtB);CHKERRQ(ierr);
@@ -643,8 +686,15 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
         ierr = MatProductSymbolic(ctx->V[2]);CHKERRQ(ierr);
       }
       ctx->P->start(N);
-    } else {
+    }
+    if (N == prev || container) { /* when MatProduct container is attached, always need to MatProductReplaceMats() since KSPHPDDM may have replaced the Mat as well */
       ierr = MatProductReplaceMats(NULL, Y, NULL, ctx->V[1]);CHKERRQ(ierr);
+      if (container && ctx->parent->correction != PC_HPDDM_COARSE_CORRECTION_BALANCED) {
+        ierr = MatDenseGetArrayWrite(ctx->V[0], &array);CHKERRQ(ierr);
+        ierr = MatDensePlaceArray(ctx->V[1], array);CHKERRQ(ierr);
+        ierr = MatDenseRestoreArrayWrite(ctx->V[0], &array);CHKERRQ(ierr);
+        reset = PETSC_TRUE;
+      }
     }
     ierr = PCHPDDMDeflate_Private(pc, X, Y);CHKERRQ(ierr);
     if (ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_DEFLATED || ctx->parent->correction == PC_HPDDM_COARSE_CORRECTION_BALANCED) {
@@ -662,6 +712,9 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
       ierr = PCMatApply(ctx->pc, X, ctx->V[1]);CHKERRQ(ierr);
       ierr = MatAXPY(Y, 1.0, ctx->V[1], SAME_NONZERO_PATTERN);CHKERRQ(ierr);
     } else SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with an unknown PCHPDDMCoarseCorrectionType %d", ctx->parent->correction);
+    if (reset) {
+      ierr = MatDenseResetArray(ctx->V[1]);CHKERRQ(ierr);
+    }
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCSHELL from PCHPDDM called with no HPDDM object");
   PetscFunctionReturn(0);
 }
@@ -669,13 +722,17 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
 static PetscErrorCode PCHPDDMShellDestroy(PC pc)
 {
   PC_HPDDM_Level *ctx;
+  PetscContainer container;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCShellGetContext(pc, (void**)&ctx);CHKERRQ(ierr);
+  ierr = PCShellGetContext(pc, &ctx);CHKERRQ(ierr);
   ierr = HPDDM::Schwarz<PetscScalar>::destroy(ctx, PETSC_TRUE);CHKERRQ(ierr);
   ierr = VecDestroyVecs(1, &ctx->v[0]);CHKERRQ(ierr);
   ierr = VecDestroyVecs(2, &ctx->v[1]);CHKERRQ(ierr);
+  ierr = PetscObjectQuery((PetscObject)(ctx->pc)->mat, "_HPDDM_MatProduct", (PetscObject*)&container);CHKERRQ(ierr);
+  ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
+  ierr = PetscObjectCompose((PetscObject)(ctx->pc)->mat, "_HPDDM_MatProduct", NULL);CHKERRQ(ierr);
   ierr = MatDestroy(ctx->V);CHKERRQ(ierr);
   ierr = MatDestroy(ctx->V + 1);CHKERRQ(ierr);
   ierr = MatDestroy(ctx->V + 2);CHKERRQ(ierr);
@@ -742,6 +799,144 @@ static PetscErrorCode PCHPDDMSetUpNeumannOverlap_Private(PC pc)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PCHPDDMCreateSubMatrices_Private(Mat mat, PetscInt n, const IS*, const IS*, MatReuse scall, Mat *submat[])
+{
+  Mat            A;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (n != 1) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "MatCreateSubMatrices() called to extract %D submatrices, which is different than 1", n);
+  /* previously composed Mat */
+  ierr = PetscObjectQuery((PetscObject)mat, "_PCHPDDM_SubMatrices", (PetscObject*)&A);CHKERRQ(ierr);
+  if (!A) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "SubMatrices not found in Mat");
+  if (scall == MAT_INITIAL_MATRIX) {
+    ierr = PetscCalloc1(1, submat);CHKERRQ(ierr);
+    ierr = MatDuplicate(A, MAT_COPY_VALUES, *submat);CHKERRQ(ierr);
+  } else {
+    ierr = MatCopy(A, (*submat)[0], SAME_NONZERO_PATTERN);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCHPDDMPermute_Private(IS is, IS in_is, IS *out_is, Mat in_C, Mat *out_C)
+{
+  IS                           perm;
+  const PetscInt               *ptr;
+  PetscInt                     *concatenate, size, n;
+  std::map<PetscInt, PetscInt> order;
+  PetscBool                    sorted;
+  PetscErrorCode               ierr;
+
+  PetscFunctionBegin;
+  ierr = ISSorted(is, &sorted);CHKERRQ(ierr);
+  if (!sorted) {
+    ierr = ISGetLocalSize(is, &size);CHKERRQ(ierr);
+    ierr = ISGetIndices(is, &ptr);CHKERRQ(ierr);
+    /* MatCreateSubMatrices(), called by PCASM, follows the global numbering of Pmat */
+    for (n = 0; n < size; ++n)
+      order.insert(std::make_pair(ptr[n], n));
+    ierr = ISRestoreIndices(is, &ptr);CHKERRQ(ierr);
+    if (out_C) {
+      ierr = PetscMalloc1(size, &concatenate);CHKERRQ(ierr);
+      for (const std::pair<const PetscInt, PetscInt>& i : order)
+        *concatenate++ = i.second;
+      concatenate -= size;
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)in_C), size, concatenate, PETSC_OWN_POINTER, &perm);CHKERRQ(ierr);
+      ierr = ISSetPermutation(perm);CHKERRQ(ierr);
+      /* permute user-provided Mat so that it matches with MatCreateSubMatrices() numbering */
+      ierr = MatPermute(in_C, perm, perm, out_C);CHKERRQ(ierr);
+      ierr = ISDestroy(&perm);CHKERRQ(ierr);
+    }
+    if (out_is) {
+      ierr = PetscMalloc1(size, &concatenate);CHKERRQ(ierr);
+      for (const std::pair<const PetscInt, PetscInt>& i : order)
+        *concatenate++ = i.first;
+      concatenate -= size;
+      /* permute user-provided IS so that it matches with MatCreateSubMatrices() numbering */
+      ierr = ISCreateGeneral(PetscObjectComm((PetscObject)in_is), size, concatenate, PETSC_OWN_POINTER, out_is);CHKERRQ(ierr);
+    }
+  } else { /* input IS is sorted, nothing to permute, simply duplicate inputs when needed */
+    if (out_C) {
+      ierr = MatDuplicate(in_C, MAT_COPY_VALUES, out_C);CHKERRQ(ierr);
+    }
+    if (out_is) {
+      ierr = ISDuplicate(in_is, out_is);CHKERRQ(ierr);
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool algebraic, Mat *sub)
+{
+  IS             is;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!flg) {
+    if (algebraic) {
+      ierr = PetscObjectQuery((PetscObject)sub[0], "_PCHPDDM_Embed", (PetscObject*)&is);CHKERRQ(ierr);
+      ierr = ISDestroy(&is);CHKERRQ(ierr);
+      ierr = PetscObjectCompose((PetscObject)sub[0], "_PCHPDDM_Embed", NULL);CHKERRQ(ierr);
+      ierr = PetscObjectCompose((PetscObject)sub[0], "_PCHPDDM_Compact", NULL);CHKERRQ(ierr);
+    }
+    ierr = MatDestroySubMatrices(algebraic ? 2 : 1, &sub);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PCHPDDMAlgebraicAuxiliaryMat_Private(Mat P, IS *is, Mat *sub[])
+{
+  IS             icol[3], irow[2];
+  Mat            *M, Q = NULL;
+  PetscReal      *ptr;
+  PetscInt       *idx, p = 0, n;
+  PetscBool      flg;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = ISCreateStride(PETSC_COMM_SELF, P->cmap->N, 0, 1, icol + 2);CHKERRQ(ierr);
+  ierr = ISSetIdentity(icol[2]);CHKERRQ(ierr);
+  ierr = PetscObjectTypeCompare((PetscObject)P, MATMPISBAIJ, &flg);CHKERRQ(ierr);
+  if (flg) {
+    /* MatCreateSubMatrices() does not handle MATMPISBAIJ properly when iscol != isrow, so convert first to MATMPIBAIJ */
+    ierr = MatConvert(P, MATMPIBAIJ, MAT_INITIAL_MATRIX, &Q);CHKERRQ(ierr);
+    std::swap(P, Q);
+  }
+  ierr = MatCreateSubMatrices(P, 1, is, icol + 2, MAT_INITIAL_MATRIX, &M);CHKERRQ(ierr);
+  if (flg) {
+    std::swap(P, Q);
+    ierr = MatDestroy(&Q);CHKERRQ(ierr);
+  }
+  ierr = ISDestroy(icol + 2);CHKERRQ(ierr);
+  ierr = PetscMalloc2(P->cmap->N, &ptr, P->cmap->N, &idx);CHKERRQ(ierr);
+  ierr = MatGetColumnNorms(M[0], NORM_INFINITY, ptr);CHKERRQ(ierr);
+  /* check for nonzero columns so that M[0] may be expressed in compact form */
+  for (n = 0; n < P->cmap->N; n += P->cmap->bs)
+    if (std::find_if(ptr + n, ptr + n + P->cmap->bs, [](PetscReal v) { return v > PETSC_MACHINE_EPSILON; }) != ptr + n + P->cmap->bs) {
+      std::iota(idx + p, idx + p + P->cmap->bs, n);
+      p += P->cmap->bs;
+    }
+  ierr = ISCreateGeneral(PETSC_COMM_SELF, p, idx, PETSC_USE_POINTER, icol + 1);CHKERRQ(ierr);
+  ierr = ISSetBlockSize(icol[1], P->cmap->bs);CHKERRQ(ierr);
+  ierr = ISSetInfo(icol[1], IS_SORTED, IS_GLOBAL, PETSC_TRUE, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = ISEmbed(*is, icol[1], PETSC_FALSE, icol + 2);CHKERRQ(ierr);
+  ierr = ISCreateStride(PETSC_COMM_SELF, M[0]->rmap->N, 0, 1, irow);CHKERRQ(ierr);
+  ierr = ISSetInfo(irow[0], IS_SORTED, IS_GLOBAL, PETSC_TRUE, PETSC_TRUE);CHKERRQ(ierr);
+  irow[1] = irow[0];
+  /* first Mat will be used in PCASM (if it is used as a PC on this level) and as the left-hand side of GenEO */
+  icol[0] = is[0];
+  ierr = MatCreateSubMatrices(M[0], 2, irow, icol, MAT_INITIAL_MATRIX, sub);CHKERRQ(ierr);
+  ierr = ISDestroy(irow);CHKERRQ(ierr);
+  ierr = ISDestroy(icol + 1);CHKERRQ(ierr);
+  ierr = MatDestroySubMatrices(1, &M);CHKERRQ(ierr);
+  ierr = PetscFree2(ptr, idx);CHKERRQ(ierr);
+  /* IS used to go back and forth between the augmented and the original local linear system, see eq. (3.4) of [2021c] */
+  ierr = PetscObjectCompose((PetscObject)(*sub)[0], "_PCHPDDM_Embed", (PetscObject)icol[2]);CHKERRQ(ierr);
+  /* Mat used in eq. (3.1) of [2021c] */
+  ierr = PetscObjectCompose((PetscObject)(*sub)[0], "_PCHPDDM_Compact", (PetscObject)(*sub)[1]);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PCSetUp_HPDDM(PC pc)
 {
   PC_HPDDM                 *data = (PC_HPDDM*)pc->data;
@@ -756,7 +951,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
   const char               *pcpre;
   const PetscScalar *const *ev;
   PetscInt                 n, requested = data->N, reused = 0;
-  PetscBool                subdomains = PETSC_FALSE, flag = PETSC_FALSE, ismatis;
+  PetscBool                subdomains = PETSC_FALSE, flg = PETSC_FALSE, ismatis, swap = PETSC_FALSE, algebraic = PETSC_FALSE;
   DM                       dm;
   PetscErrorCode           ierr;
 
@@ -864,6 +1059,19 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
 
   if (!ismatis) {
     ierr = PCHPDDMSetUpNeumannOverlap_Private(pc);CHKERRQ(ierr);
+    if (!data->is && data->N > 1) {
+      char type[256]; /* same size as in src/ksp/pc/interface/pcset.c */
+      ierr = PetscOptionsGetString(NULL, pcpre, "-pc_hpddm_levels_1_st_pc_type", type, sizeof(type), NULL);CHKERRQ(ierr);
+      ierr = PetscStrcmp(type, PCMAT, &algebraic);CHKERRQ(ierr);
+      if (algebraic) {
+        ierr = ISCreateStride(PETSC_COMM_SELF, P->rmap->n, P->rmap->rstart, 1, &data->is);CHKERRQ(ierr);
+        ierr = MatIncreaseOverlap(P, 1, &data->is, 1);CHKERRQ(ierr);
+        ierr = ISSort(data->is);CHKERRQ(ierr);
+        ierr = ISSetInfo(data->is, IS_SORTED, IS_GLOBAL, PETSC_TRUE, PETSC_TRUE);CHKERRQ(ierr);
+      } else {
+        ierr = PetscInfo1(pc, "Cannot assemble a fully-algebraic coarse operator with an assembled Pmat and -%spc_hpddm_levels_1_st_pc_type != mat\n", pcpre ? pcpre : "");CHKERRQ(ierr);
+      }
+    }
   }
 
   if (data->is || (ismatis && data->N > 1)) {
@@ -899,9 +1107,10 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       is[0] = data->is;
       ierr = PetscOptionsGetBool(NULL, pcpre, "-pc_hpddm_define_subdomains", &subdomains, NULL);CHKERRQ(ierr);
       ierr = PetscOptionsGetBool(NULL, pcpre, "-pc_hpddm_has_neumann", &data->Neumann, NULL);CHKERRQ(ierr);
+      if (algebraic && data->Neumann) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "-pc_hpddm_levels_1_st_pc_type mat and -pc_hpddm_has_neumann");
       ierr = ISCreateStride(PetscObjectComm((PetscObject)data->is), P->rmap->n, P->rmap->rstart, 1, &loc);CHKERRQ(ierr);
     }
-    if (data->N > 1 && (data->aux || ismatis)) {
+    if (data->N > 1 && (data->aux || ismatis || algebraic)) {
       if (!loadedSym) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "HPDDM library not loaded, cannot use more than one level");
       ierr = MatSetOption(P, MAT_SUBMAT_SINGLEIS, PETSC_TRUE);CHKERRQ(ierr);
       if (ismatis) {
@@ -919,17 +1128,20 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
           ierr = ISDestroy(&intersect);CHKERRQ(ierr);
           if (!equal) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "IS of the auxiliary Mat does not include all local rows of A");
         }
-        if (!data->Neumann) {
-          ierr = PetscObjectTypeCompare((PetscObject)P, MATMPISBAIJ, &flag);CHKERRQ(ierr);
-          if (flag) {
+        ierr = PetscObjectComposeFunction((PetscObject)pc->pmat, "PCHPDDMAlgebraicAuxiliaryMat_Private_C", PCHPDDMAlgebraicAuxiliaryMat_Private);CHKERRQ(ierr);
+        if (!data->Neumann && !algebraic) {
+          ierr = PetscObjectTypeCompare((PetscObject)P, MATMPISBAIJ, &flg);CHKERRQ(ierr);
+          if (flg) {
             /* maybe better to ISSort(is[0]), MatCreateSubMatrices(), and then MatPermute() */
             /* but there is no MatPermute_SeqSBAIJ(), so as before, just use MATMPIBAIJ     */
             ierr = MatConvert(P, MATMPIBAIJ, MAT_INITIAL_MATRIX, &uaux);CHKERRQ(ierr);
-            flag = PETSC_FALSE;
+            flg = PETSC_FALSE;
           }
         }
       }
-      if (!uaux) {
+      if (algebraic) {
+        ierr = PetscUseMethod(pc->pmat, "PCHPDDMAlgebraicAuxiliaryMat_Private_C", (Mat, IS*, Mat*[]), (P, is, &sub));CHKERRQ(ierr);
+      } else if (!uaux) {
         if (data->Neumann) sub = &data->aux;
         else {
           ierr = MatCreateSubMatrices(P, 1, is, is, MAT_INITIAL_MATRIX, &sub);CHKERRQ(ierr);
@@ -946,32 +1158,8 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       }
       /* it is possible to share the PC only given specific conditions, otherwise there is not warranty that the matrices have the same nonzero pattern */
       if (!ismatis && sub == &data->aux && !data->B && subdomains && data->share) {
-        IS             perm;
-        PetscInt       size;
-        const PetscInt *ptr;
-        PetscInt       *concatenate;
-        ierr = ISGetLocalSize(*is, &size);CHKERRQ(ierr);
-        ierr = ISGetIndices(*is, &ptr);CHKERRQ(ierr);
-        std::map<PetscInt, PetscInt> order;
-        /* MatCreateSubMatrices(), called by PCASM, follows the global numbering of Pmat */
-        for (n = 0; n < size; ++n)
-            order.insert(std::make_pair(ptr[n], n));
-        ierr = ISRestoreIndices(*is, &ptr);CHKERRQ(ierr);
-        ierr = PetscMalloc1(size, &concatenate);CHKERRQ(ierr);
-        for (const std::pair<const PetscInt, PetscInt>& i : order)
-          *concatenate++ = i.second;
-        concatenate -= size;
-        ierr = ISCreateGeneral(PETSC_COMM_SELF, size, concatenate, PETSC_OWN_POINTER, &perm);CHKERRQ(ierr);
-        ierr = ISSetPermutation(perm);CHKERRQ(ierr);
-        /* permute user-provided Mat so that it matches with MatCreateSubMatrices() numbering */
-        ierr = MatPermute(data->aux, perm, perm, &C);CHKERRQ(ierr);
-        ierr = ISDestroy(&perm);CHKERRQ(ierr);
-        ierr = PetscMalloc1(size, &concatenate);CHKERRQ(ierr);
-        for (const std::pair<const PetscInt, PetscInt>& i : order)
-          *concatenate++ = i.first;
-        concatenate -= size;
-        /* permute user-provided IS so that it matches with MatCreateSubMatrices() numbering */
-        ierr = ISCreateGeneral(PetscObjectComm((PetscObject)data->is), size, concatenate, PETSC_OWN_POINTER, &uis);CHKERRQ(ierr);
+        PetscInt size = -1;
+        ierr = PCHPDDMPermute_Private(*is, data->is, &uis, data->aux, &C);CHKERRQ(ierr);
         if (!data->levels[0]->pc) {
           ierr = PetscSNPrintf(prefix, sizeof(prefix), "%spc_hpddm_levels_1_", pcpre ? pcpre : "");CHKERRQ(ierr);
           ierr = PCCreate(PetscObjectComm((PetscObject)pc), &data->levels[0]->pc);CHKERRQ(ierr);
@@ -984,7 +1172,6 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         }
         ierr = PCSetFromOptions(data->levels[0]->pc);CHKERRQ(ierr);
         ierr = PCSetUp(data->levels[0]->pc);CHKERRQ(ierr);
-        size = -1;
         ierr = PetscTryMethod(data->levels[0]->pc, "PCASMGetSubKSP_C", (PC, PetscInt*, PetscInt*, KSP**), (data->levels[0]->pc, &size, NULL, &ksp));CHKERRQ(ierr);
         if (size != 1) {
           ierr = PCDestroy(&data->levels[0]->pc);CHKERRQ(ierr);
@@ -997,17 +1184,29 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         } else {
           Mat        D;
           const char *matpre;
+          PetscBool  cmp[2];
           ierr = KSPGetOperators(ksp[0], subA, subA + 1);CHKERRQ(ierr);
           ierr = MatDuplicate(subA[1], MAT_SHARE_NONZERO_PATTERN, &D);CHKERRQ(ierr);
           ierr = MatGetOptionsPrefix(subA[1], &matpre);CHKERRQ(ierr);
           ierr = MatSetOptionsPrefix(D, matpre);CHKERRQ(ierr);
-          ierr = MatAXPY(D, 1.0, C, SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+          ierr = PetscObjectTypeCompare((PetscObject)D, MATNORMAL, cmp);CHKERRQ(ierr);
+          ierr = PetscObjectTypeCompare((PetscObject)C, MATNORMAL, cmp + 1);CHKERRQ(ierr);
+          if (!cmp[0] != !cmp[1]) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "-pc_hpddm_levels_1_pc_asm_sub_mat_type %s and auxiliary Mat of type %s",((PetscObject)D)->type_name,((PetscObject)C)->type_name);
+          if (!cmp[0]) {
+            ierr = MatAXPY(D, 1.0, C, SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+          } else {
+            Mat mat[2];
+            ierr = MatNormalGetMat(D, mat);CHKERRQ(ierr);
+            ierr = MatNormalGetMat(C, mat + 1);CHKERRQ(ierr);
+            ierr = MatAXPY(mat[0], 1.0, mat[1], SUBSET_NONZERO_PATTERN);CHKERRQ(ierr);
+          }
           ierr = MatPropagateSymmetryOptions(C, D);CHKERRQ(ierr);
           ierr = MatDestroy(&C);CHKERRQ(ierr);
           C = D;
           /* swap pointers so that variables stay consistent throughout PCSetUp() */
           std::swap(C, data->aux);
           std::swap(uis, data->is);
+          swap = PETSC_TRUE;
         }
       } else if (data->share) {
         ierr = PetscInfo(pc, "Cannot share PC between ST and subdomain solver\n");CHKERRQ(ierr);
@@ -1039,13 +1238,21 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       /* matrix pencil of the generalized eigenvalue problem on the overlap (GenEO) */
       if (!data->B) {
         ierr = MatDuplicate(sub[0], MAT_COPY_VALUES, &weighted);CHKERRQ(ierr);
-        ierr = MatDiagonalScale(weighted, data->levels[0]->D, data->levels[0]->D);CHKERRQ(ierr);
+        ierr = PetscObjectTypeCompare((PetscObject)weighted, MATNORMAL, &flg);CHKERRQ(ierr);
+        if (!flg) {
+          ierr = MatDiagonalScale(weighted, data->levels[0]->D, data->levels[0]->D);CHKERRQ(ierr);
+        } else { /* MATNORMAL applies MatDiagonalScale() in a matrix-free fashion, not what is needed since this won't be passed to SLEPc during the eigensolve */
+          ierr = MatNormalGetMat(weighted, &data->B);CHKERRQ(ierr);
+          ierr = MatDiagonalScale(data->B, NULL, data->levels[0]->D);CHKERRQ(ierr);
+          data->B = NULL;
+          flg = PETSC_FALSE;
+        }
         /* neither MatDuplicate() nor MatDiagonaleScale() handles the symmetry options, so propagate the options explicitly */
         /* only useful for -mat_type baij -pc_hpddm_levels_1_st_pc_type cholesky (no problem with MATAIJ or MATSBAIJ)       */
         ierr = MatPropagateSymmetryOptions(sub[0], weighted);CHKERRQ(ierr);
       } else weighted = data->B;
       /* SLEPc is used inside the loaded symbol */
-      ierr = (*loadedSym)(data->levels[0]->P, data->is, ismatis ? C : data->aux, weighted, data->B, initial, data->levels);CHKERRQ(ierr);
+      ierr = (*loadedSym)(data->levels[0]->P, data->is, ismatis ? C : (algebraic ? sub[0] : data->aux), weighted, data->B, initial, data->levels);CHKERRQ(ierr);
       if (data->share) {
         Mat st[2];
         ierr = KSPGetOperators(ksp[0], st, st + 1);CHKERRQ(ierr);
@@ -1067,14 +1274,16 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
           ierr = PetscLogEventBegin(PC_HPDDM_SetUp[n], data->levels[n]->ksp, 0, 0, 0);CHKERRQ(ierr);
         }
         /* method composed in the loaded symbol since there, SLEPc is used as well */
-        ierr = PetscUseMethod(data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", (Mat*, Mat*, PetscInt, PetscInt* const, PC_HPDDM_Level** const), (&P, &N, n, &data->N, data->levels));CHKERRQ(ierr);
+        ierr = PetscTryMethod(data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", (Mat*, Mat*, PetscInt, PetscInt* const, PC_HPDDM_Level** const), (&P, &N, n, &data->N, data->levels));CHKERRQ(ierr);
         if (data->log_separate) {
           ierr = PetscLogEventEnd(PC_HPDDM_SetUp[n], data->levels[n]->ksp, 0, 0, 0);CHKERRQ(ierr);
         }
       }
       /* reset to NULL to avoid any faulty use */
       ierr = PetscObjectComposeFunction((PetscObject)data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", NULL);CHKERRQ(ierr);
-      if (ismatis) {
+      if (!ismatis) {
+        ierr = PetscObjectComposeFunction((PetscObject)pc->pmat, "PCHPDDMAlgebraicAuxiliaryMat_C", NULL);CHKERRQ(ierr);
+      } else {
         /* matching PetscObjectReference() above */
         ierr = PetscObjectDereference((PetscObject)C);CHKERRQ(ierr);
       }
@@ -1084,8 +1293,8 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
           data->levels[n]->P->setBuffer();
           data->levels[n]->P->super::start();
         }
-      if (!data->Neumann) {
-        ierr = MatDestroySubMatrices(1, &sub);CHKERRQ(ierr);
+      if (ismatis || !subdomains) {
+        ierr = PCHPDDMDestroySubMatrices_Private(data->Neumann, algebraic, sub);CHKERRQ(ierr);
       }
       if (ismatis) data->is = NULL;
       for (n = 0; n < data->N - 1 + (reused > 0); ++n) {
@@ -1111,17 +1320,27 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
           ierr = PCSetUp(spc);CHKERRQ(ierr);
         }
       }
-    } else flag = reused ? PETSC_FALSE : PETSC_TRUE;
+    } else flg = reused ? PETSC_FALSE : PETSC_TRUE;
     if (!ismatis && subdomains) {
-      if (flag) {
+      if (flg) {
         ierr = KSPGetPC(data->levels[0]->ksp, &inner);CHKERRQ(ierr);
       } else inner = data->levels[0]->pc;
       if (inner) {
         ierr = PCSetType(inner, PCASM);CHKERRQ(ierr);
         if (!inner->setupcalled) {
           ierr = PCASMSetLocalSubdomains(inner, 1, is, &loc);CHKERRQ(ierr);
+          if (!data->Neumann) { /* subdomain matrices are already created for the eigenproblem, reuse them for the fine-level PC */
+            ierr = PCHPDDMPermute_Private(*is, NULL, NULL, sub[0], &C);CHKERRQ(ierr);
+            ierr = PetscObjectCompose((PetscObject)inner->pmat, "_PCHPDDM_SubMatrices", (PetscObject)C);CHKERRQ(ierr);
+            ierr = MatSetOperation(inner->pmat, MATOP_CREATE_SUBMATRICES, (void(*)(void))PCHPDDMCreateSubMatrices_Private);CHKERRQ(ierr);
+            ierr = PCSetUp(inner);CHKERRQ(ierr);
+            ierr = MatSetOperation(inner->pmat, MATOP_CREATE_SUBMATRICES, (void(*)(void))MatCreateSubMatrices);CHKERRQ(ierr);
+            ierr = MatDestroy(&C);CHKERRQ(ierr);
+            ierr = PetscObjectCompose((PetscObject)inner->pmat, "_PCHPDDM_SubMatrices", NULL);CHKERRQ(ierr);
+          }
         }
       }
+      ierr = PCHPDDMDestroySubMatrices_Private(data->Neumann, algebraic, sub);CHKERRQ(ierr);
     }
     ierr = ISDestroy(&loc);CHKERRQ(ierr);
   } else data->N = 1 + reused; /* enforce this value to 1 + reused if there is no way to build another level */
@@ -1162,7 +1381,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
     pc->setfromoptionscalled = 0;
   }
   data->N += reused;
-  if (data->share) {
+  if (data->share && swap) {
     /* swap back pointers so that variables follow the user-provided numbering */
     std::swap(C, data->aux);
     std::swap(uis, data->is);
@@ -1192,6 +1411,7 @@ PetscErrorCode PCHPDDMSetCoarseCorrectionType(PC pc, PCHPDDMCoarseCorrectionType
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(pc, type, 2);
   ierr = PetscTryMethod(pc, "PCHPDDMSetCoarseCorrectionType_C", (PC, PCHPDDMCoarseCorrectionType), (pc, type));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1215,13 +1435,16 @@ PetscErrorCode PCHPDDMGetCoarseCorrectionType(PC pc, PCHPDDMCoarseCorrectionType
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  ierr = PetscUseMethod(pc, "PCHPDDMGetCoarseCorrectionType_C", (PC, PCHPDDMCoarseCorrectionType*), (pc, type));CHKERRQ(ierr);
+  if (type) {
+    PetscValidPointer(type, 2);
+    ierr = PetscUseMethod(pc, "PCHPDDMGetCoarseCorrectionType_C", (PC, PCHPDDMCoarseCorrectionType*), (pc, type));CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCHPDDMSetCoarseCorrectionType_HPDDM(PC pc, PCHPDDMCoarseCorrectionType type)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   if (type < 0 || type > 2) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown PCHPDDMCoarseCorrectionType %d", type);
@@ -1260,7 +1483,10 @@ PetscErrorCode PCHPDDMGetSTShareSubKSP(PC pc, PetscBool *share)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  ierr = PetscUseMethod(pc, "PCHPDDMGetSTShareSubKSP_C", (PC, PetscBool*), (pc, share));CHKERRQ(ierr);
+  if (share) {
+    PetscValidPointer(share, 2);
+    ierr = PetscUseMethod(pc, "PCHPDDMGetSTShareSubKSP_C", (PC, PetscBool*), (pc, share));CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1303,12 +1529,12 @@ PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
 /*MC
      PCHPDDM - Interface with the HPDDM library.
 
-   This PC may be used to build multilevel spectral domain decomposition methods based on the GenEO framework [2011, 2019]. It may be viewed as an alternative to spectral AMGe or PCBDDC with adaptive selection of constraints. A chronological bibliography of relevant publications linked with PC available in HPDDM through PCHPDDM may be found below. The interface is explained in details in [2021].
+   This PC may be used to build multilevel spectral domain decomposition methods based on the GenEO framework [2011, 2019]. It may be viewed as an alternative to spectral AMGe or PCBDDC with adaptive selection of constraints. A chronological bibliography of relevant publications linked with PC available in HPDDM through PCHPDDM may be found below. The interface is explained in details in [2021a].
 
-   The matrix to be preconditioned (Pmat) may be unassembled (MATIS), assembled (MATMPIAIJ, MATMPIBAIJ, or MATMPISBAIJ), or hierarchical (MATHTOOL). For multilevel preconditioning, when using an assembled or hierarchical Pmat, one must provide an auxiliary local Mat (unassembled local operator for GenEO) using PCHPDDMSetAuxiliaryMat(). Calling this routine is not needed when using a MATIS Pmat, assembly done internally using MatConvert().
+   The matrix to be preconditioned (Pmat) may be unassembled (MATIS), assembled (MATMPIAIJ, MATMPIBAIJ, or MATMPISBAIJ), hierarchical (MATHTOOL), or MATNORMAL. For multilevel preconditioning, when using an assembled or hierarchical Pmat, one must provide an auxiliary local Mat (unassembled local operator for GenEO) using PCHPDDMSetAuxiliaryMat(). Calling this routine is not needed when using a MATIS Pmat, assembly done internally using MatConvert().
 
    Options Database Keys:
-+   -pc_hpddm_define_subdomains <true, default=false> - on the finest level, calls PCASMSetLocalSubdomains() with the IS supplied in PCHPDDMSetAuxiliaryMat() (only relevant with an assembled Pmat)
++   -pc_hpddm_define_subdomains <true, default=false> - on the finest level, calls PCASMSetLocalSubdomains() with the IS supplied in PCHPDDMSetAuxiliaryMat() (not relevant with an unassembled Pmat)
 .   -pc_hpddm_has_neumann <true, default=false> - on the finest level, informs the PC that the local Neumann matrix is supplied in PCHPDDMSetAuxiliaryMat()
 -   -pc_hpddm_coarse_correction <type, default=deflated> - determines the PCHPDDMCoarseCorrectionType when calling PCApply
 
@@ -1331,10 +1557,12 @@ PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
 
    References:
 +   2011 - A robust two-level domain decomposition preconditioner for systems of PDEs. Spillane, Dolean, Hauret, Nataf, Pechstein, and Scheichl. Comptes Rendus Mathematique.
-.   2013 - Scalable Domain Decomposition Preconditioners For Heterogeneous Elliptic Problems. Jolivet, Hecht, Nataf, and Prud'homme. SC13.
-.   2015 - An Introduction to Domain Decomposition Methods: Algorithms, Theory, and Parallel Implementation. Dolean, Jolivet, and Nataf. SIAM.
-.   2019 - A Multilevel Schwarz Preconditioner Based on a Hierarchy of Robust Coarse Spaces. Al Daas, Grigori, Jolivet, and Tournier.
--   2021 - KSPHPDDM and PCHPDDM: extending PETSc with advanced Krylov methods and robust multilevel overlapping Schwarz preconditioners. Jolivet, Roman, and Zampini. Computer & Mathematics with Applications.
+.   2013 - Scalable domain decomposition preconditioners for heterogeneous elliptic problems. Jolivet, Hecht, Nataf, and Prud'homme. SC13.
+.   2015 - An introduction to domain decomposition methods: algorithms, theory, and parallel implementation. Dolean, Jolivet, and Nataf. SIAM.
+.   2019 - A multilevel Schwarz preconditioner based on a hierarchy of robust coarse spaces. Al Daas, Grigori, Jolivet, and Tournier. SIAM Journal on Scientific Computing.
+.   2021a - KSPHPDDM and PCHPDDM: extending PETSc with advanced Krylov methods and robust multilevel overlapping Schwarz preconditioners. Jolivet, Roman, and Zampini. Computer & Mathematics with Applications.
+.   2021b - A robust algebraic domain decomposition preconditioner for sparse normal equations. Al Daas, Jolivet, and Scott.
+-   2021c - A robust algebraic multilevel domain decomposition preconditioner for sparse symmetric positive definite matrices. Al Daas and Jolivet.
 
    Level: intermediate
 
@@ -1355,18 +1583,15 @@ PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC pc)
   }
   if (!loadedSym) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "PCHPDDM_Internal symbol not found in loaded libhpddm_petsc");
   ierr = PetscNewLog(pc, &data);CHKERRQ(ierr);
-  pc->data                     = data;
-  pc->ops->reset               = PCReset_HPDDM;
-  pc->ops->destroy             = PCDestroy_HPDDM;
-  pc->ops->setfromoptions      = PCSetFromOptions_HPDDM;
-  pc->ops->setup               = PCSetUp_HPDDM;
-  pc->ops->apply               = PCApply_HPDDM;
-  pc->ops->matapply            = PCMatApply_HPDDM;
-  pc->ops->view                = PCView_HPDDM;
-  pc->ops->applytranspose      = 0;
-  pc->ops->applysymmetricleft  = 0;
-  pc->ops->applysymmetricright = 0;
-  pc->ops->presolve            = PCPreSolve_HPDDM;
+  pc->data                = data;
+  pc->ops->reset          = PCReset_HPDDM;
+  pc->ops->destroy        = PCDestroy_HPDDM;
+  pc->ops->setfromoptions = PCSetFromOptions_HPDDM;
+  pc->ops->setup          = PCSetUp_HPDDM;
+  pc->ops->apply          = PCApply_HPDDM;
+  pc->ops->matapply       = PCMatApply_HPDDM;
+  pc->ops->view           = PCView_HPDDM;
+  pc->ops->presolve       = PCPreSolve_HPDDM;
   ierr = PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetAuxiliaryMat_C", PCHPDDMSetAuxiliaryMat_HPDDM);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMHasNeumannMat_C", PCHPDDMHasNeumannMat_HPDDM);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc, "PCHPDDMSetRHSMat_C", PCHPDDMSetRHSMat_HPDDM);CHKERRQ(ierr);

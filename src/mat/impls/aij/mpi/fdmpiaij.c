@@ -176,8 +176,10 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
   MatEntry          *Jentry=coloring->matentry;
   MatEntry2         *Jentry2=coloring->matentry2;
   const PetscInt    ncolors=coloring->ncolors,*ncolumns=coloring->ncolumns,*nrows=coloring->nrows;
+  PetscBool         alreadyboundtocpu;
 
   PetscFunctionBegin;
+  ierr = VecBoundToCPU(x1,&alreadyboundtocpu);CHKERRQ(ierr);
   ierr = VecBindToCPU(x1,PETSC_TRUE);CHKERRQ(ierr);
   if ((ctype == IS_COLORING_LOCAL) && (J->ops->fdcoloringapply == MatFDColoringApply_AIJ)) SETERRQ(PetscObjectComm((PetscObject)J),PETSC_ERR_SUP,"Must call MatColoringUseDM() with IS_COLORING_LOCAL");
   /* (1) Set w1 = F(x1) */
@@ -284,13 +286,27 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
 
       if (coloring->htype[0] == 'w') {
         for (l=0; l<nrows_k; l++) {
-          row                      = Jentry2[nz].row;   /* local row index */
-          *(Jentry2[nz++].valaddr) = dy[row]*dx;
+          row  = Jentry2[nz].row;   /* local row index */
+          /* The 'useless' ifdef is due to a bug in NVIDIA nvc 21.11, which triggers a segfault on this line. We write it in
+             another way, and it seems work. See https://lists.mcs.anl.gov/pipermail/petsc-users/2021-December/045158.html
+           */
+         #if defined(PETSC_USE_COMPLEX)
+          PetscScalar *tmp = Jentry2[nz].valaddr;
+          *tmp = dy[row]*dx;
+         #else
+          *(Jentry2[nz].valaddr) = dy[row]*dx;
+         #endif
+          nz++;
         }
       } else { /* htype == 'ds' */
         for (l=0; l<nrows_k; l++) {
-          row                   = Jentry[nz].row;   /* local row index */
+          row = Jentry[nz].row;   /* local row index */
+         #if defined(PETSC_USE_COMPLEX) /* See https://lists.mcs.anl.gov/pipermail/petsc-users/2021-December/045158.html */
+          PetscScalar *tmp = Jentry[nz].valaddr;
+          *tmp = dy[row]*vscale_array[Jentry[nz].col];
+         #else
           *(Jentry[nz].valaddr) = dy[row]*vscale_array[Jentry[nz].col];
+         #endif
           nz++;
         }
       }
@@ -338,13 +354,24 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
       ierr = VecGetArray(w2,&y);CHKERRQ(ierr);
       if (coloring->htype[0] == 'w') {
         for (l=0; l<nrows_k; l++) {
-          row                      = Jentry2[nz].row;   /* local row index */
-          *(Jentry2[nz++].valaddr) = y[row]*dx;
+          row  = Jentry2[nz].row;   /* local row index */
+         #if defined(PETSC_USE_COMPLEX) /* See https://lists.mcs.anl.gov/pipermail/petsc-users/2021-December/045158.html */
+          PetscScalar *tmp = Jentry2[nz].valaddr;
+          *tmp = y[row]*dx;
+         #else
+          *(Jentry2[nz].valaddr) = y[row]*dx;
+         #endif
+          nz++;
         }
       } else { /* htype == 'ds' */
         for (l=0; l<nrows_k; l++) {
-          row                   = Jentry[nz].row;   /* local row index */
+          row  = Jentry[nz].row;   /* local row index */
+         #if defined(PETSC_USE_COMPLEX) /* See https://lists.mcs.anl.gov/pipermail/petsc-users/2021-December/045158.html */
+          PetscScalar *tmp = Jentry[nz].valaddr;
+          *tmp = y[row]*vscale_array[Jentry[nz].col];
+         #else
           *(Jentry[nz].valaddr) = y[row]*vscale_array[Jentry[nz].col];
+         #endif
           nz++;
         }
       }
@@ -361,7 +388,7 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
     ierr = VecRestoreArray(vscale,&vscale_array);CHKERRQ(ierr);
   }
   coloring->currentcolor = -1;
-  ierr = VecBindToCPU(x1,PETSC_FALSE);CHKERRQ(ierr);
+  if (!alreadyboundtocpu) {ierr = VecBindToCPU(x1,PETSC_FALSE);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 

@@ -4,16 +4,15 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '54e4213ca028163a76639d23b1204b213203bc79' # develop of 2021-04-28
+    self.gitcommit        = '6c786cd6900b977e7b3b19a1f88c0c433a49cbcc' # develop of 2021-12-20
     self.versionname      = 'KOKKOS_KERNELS_VERSION'  # It looks kokkos-kernels does not yet have a macro for version number
     self.download         = ['git://https://github.com/kokkos/kokkos-kernels.git']
-    # cannot test includes with standard approaches since that requires Kokkos nvcc_wapper that we do not handle in configure
-    #self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
+    self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
     self.liblist          = [['libkokkoskernels.a']]
     self.functions        = ['']
     # I don't know how to make it work since all KK routines are templated and always need Kokkos::View. So I cheat here and use functionCxx from Kokkos.
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
-    self.cxx              = 1
+    self.buildLanguages   = ['Cxx']
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
@@ -38,7 +37,8 @@ class Configure(config.package.CMakePackage):
     self.deps                = [self.kokkos]
     self.cuda                = framework.require('config.packages.cuda',self)
     self.hip                 = framework.require('config.packages.hip',self)
-    self.odeps               = [self.cuda,self.hip]
+    self.sycl                = framework.require('config.packages.sycl',self)
+    self.odeps               = [self.cuda,self.hip,self.sycl]
     return
 
   def versionToStandardForm(self,ver):
@@ -69,9 +69,8 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
       args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
     if self.cuda.found:
-      self.system = 'CUDA'
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
-      args.append('-DCMAKE_CXX_COMPILER='+os.path.join(KokkosRoot,'bin','nvcc_wrapper'))
+      args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('Cxx')) # use the host CXX compiler, let Kokkos handle the nvcc_wrapper business
       # as of version 3.2.00 Cuda 11 is not supported, e.g., identifier "cusparseXcsrgemmNnz" is undefined
       if not self.argDB['with-kokkos-kernels-tpl'] or self.cuda.version_tuple >= (11,0):
         args.append('-DKokkosKernels_ENABLE_TPL_CUBLAS=OFF')
@@ -80,12 +79,24 @@ class Configure(config.package.CMakePackage):
       self.system = 'HIP'
       with self.Language('HIP'):
         petscHipc = self.getCompiler()
-        hipFlags = self.updatePackageCFlags(self.getCompilerFlags())
-      self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
+        self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
       if not hasattr(self,'systemHipc'):
         raise RuntimeError('HIP error: could not find path of hipc')
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
-      args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
-      args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
+    elif self.sycl.found:
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
+      args.append('-DCMAKE_CXX_COMPILER='+self.kokkos.systemSyclc)
+
+    # These options will be taken from Kokkos configuration
+    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_FLAGS')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_C_COMPILER=')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_C_FLAGS')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_AR')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_RANLIB')
     return args
+
+  def configureLibrary(self):
+    self.buildLanguages= self.kokkos.buildLanguages
+    config.package.CMakePackage.configureLibrary(self)

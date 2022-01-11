@@ -51,7 +51,7 @@ import os
 import re
 import sys
 import platform
-# workarround for python2.2 which does not have pathsep
+# workaround for python2.2 which does not have pathsep
 if not hasattr(os.path,'pathsep'): os.path.pathsep=':'
 
 import pickle
@@ -214,6 +214,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     buf = 'Environmental variables'
     for key,val in os.environ.items():
       buf += '\n'+str(key)+'='+str(val)
+    buf = buf.encode('ascii', 'ignore').decode()
     self.logPrint(buf)
     def logPrintFilesInPath(path):
       for d in path:
@@ -519,6 +520,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = output.splitlines()
       if self.argDB['ignoreWarnings']:
         lines = [s for s in lines if not self.warningRE.search(s)]
+      #Intel
+      lines = [s for s in lines if s.find(": command line warning #10121: overriding") < 0]
       # PGI: Ignore warning about temporary license
       lines = [s for s in lines if s.find('license.dat') < 0]
       # Cray XT3
@@ -552,6 +555,14 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find(' was built for newer macOS version') < 0]
       lines = [s for s in lines if s.find(' was built for newer OSX version') < 0]
       lines = [s for s in lines if s.find(' stack subq instruction is too different from dwarf stack size') < 0]
+      # Nvidia linker
+      lines = [s for s in lines if s.find('nvhpc.ld contains output sections') < 0]
+      # Intel dpcpp linker
+      # Ex. clang-offload-bundler: error: '/home/jczhang/mpich/lib': Is a directory
+      lines = [s for s in lines if s.find('clang-offload-bundler: error:') < 0]
+      lines = [s for s in lines if s.find('Compilation from IR - skipping loading of FCL') < 0]
+      lines = [s for s in lines if s.find('Build succeeded') < 0]
+
       if lines: output = '\n'.join(lines)
       else: output = ''
       self.log.write("Linker output after filtering:\n"+output+":\n")
@@ -849,9 +860,14 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     self.outputMakeMacros(f, self)
     for child in self.childGraph.vertices:
       self.outputMakeMacros(f, child)
+    # The testoptions are provided in packages/
+    testoptions = ''
+    for child in self.childGraph.vertices:
+        if hasattr(child,'found') and child.found and hasattr(child,'testoptions') and child.testoptions:
+          testoptions += ' '+child.testoptions
+    f.write('PETSC_TEST_OPTIONS = '+testoptions+'\n')
     if not hasattr(name, 'close'):
       f.close()
-    return
 
   def outputMakeRuleHeader(self, name):
     '''Write the make configuration header (bmake file)'''
@@ -1258,44 +1274,86 @@ class Framework(config.base.Configure, script.LanguageProcessor):
   def serialEvaluation(self, depGraph):
     import graph
 
-    ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
-    for child in ndepGraph:
-      if hasattr(child,'setCompilers'): setCompilers = child.setCompilers
+    def findModule(dependencyGraph,moduleType):
+      moduleList = [c for c in dependencyGraph if isinstance(c,moduleType)]
+      if len(moduleList) != 1:
+        if len(moduleList) < 1:
+          errorMessage = 'Did not find module {} in graph'.format(moduleType)
+        else:
+          errorMessage = 'Found multiple instances of module {} in graph'.format(moduleType)
+        raise RuntimeError(errorMessage)
+      return moduleList[0]
 
-    ndepGraph = graph.DirectedGraph.topologicalSort(depGraph)
+
+    ndepGraph     = list(graph.DirectedGraph.topologicalSort(depGraph))
+    setCompilers  = findModule(ndepGraph,config.setCompilers.Configure)
+    compilers     = findModule(ndepGraph,config.compilers.Configure)
+    minCxx,maxCxx = compilers.cxxDialectRange['Cxx']
+    self.logPrint('serialEvaluation: initial cxxDialectRanges {rng}'.format(rng=compilers.cxxDialectRange['Cxx']))
+    minCxxVersionBlameList = {}
+    maxCxxVersionBlameList = {}
     for child in ndepGraph:
       if (self.argDB['with-batch'] and
           hasattr(child,'package') and
           'download-'+child.package in self.framework.clArgDB and
           self.argDB['download-'+child.package] and not
-          (hasattr(setCompilers,'cross_cc') or child.installwithbatch)): raise RuntimeError('--download-'+child.package+' cannot be used on this batch systems\n')
+          (hasattr(setCompilers,'cross_cc') or child.installwithbatch)):
+        errorMessage = '--download-'+child.package+' cannot be used on this batch systems'
+        raise RuntimeError(errorMessage)
 
       # note, only classes derived from package.py have this attribute
       if hasattr(child,'deps'):
         found = 0
         if child.required or child.lookforbydefault: found = 1
-        if 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
-        if 'with-'+child.package in self.framework.clArgDB and self.argDB['with-'+child.package]: found = 1
-        if 'with-'+child.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+child.package+'-lib']: found = 1
-        if 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
+        elif 'download-'+child.package in self.framework.clArgDB and self.argDB['download-'+child.package]: found = 1
+        elif 'with-'+child.package in self.framework.clArgDB and self.argDB['with-'+child.package]: found = 1
+        elif 'with-'+child.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+child.package+'-lib']: found = 1
+        elif 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
         if not found: continue
         msg = ''
+        if child.minCxxVersion > minCxx:
+          minCxx = child.minCxxVersion
+          self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
+          try:
+            minCxxVersionBlameList[minCxx].add([child.name])
+          except KeyError:
+            minCxxVersionBlameList[minCxx] = set([child.name])
+        if child.maxCxxVersion < maxCxx:
+          maxCxx = child.maxCxxVersion
+          self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
+          try:
+            maxCxxVersionBlameList[maxCxx].add([child.name])
+          except KeyError:
+            maxCxxVersionBlameList[maxCxx] = set([child.name])
         for dep in child.deps:
-          found = 0
-          if dep.required or dep.lookforbydefault: found = 1
-          if 'download-'+dep.package in self.framework.clArgDB and self.argDB['download-'+dep.package]: found = 1
-          if 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]: found = 1
-          if 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']: found = 1
-          if 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']: found = 1
-          if not found:
-            if dep.download: emsg = '--download-'+dep.package+' or '
-            else: emsg = ''
-            msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
+          if dep.required or dep.lookforbydefault:
+            continue
+          elif 'download-'+dep.package in self.framework.clArgDB and self.argDB['download-'+dep.package]:
+            continue
+          elif 'with-'+dep.package in self.framework.clArgDB and self.argDB['with-'+dep.package]:
+            continue
+          elif 'with-'+dep.package+'-lib' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-lib']:
+            continue
+          elif 'with-'+dep.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+dep.package+'-dir']:
+            continue
+          elif dep.download:
+            emsg = '--download-'+dep.package+' or '
+          else:
+            emsg = ''
+          msg += 'Package '+child.package+' requested but dependency '+dep.package+' not requested. \n  Perhaps you want '+emsg+'--with-'+dep.package+'-dir=directory or --with-'+dep.package+'-lib=libraries and --with-'+dep.package+'-include=directory\n'
         if msg: raise RuntimeError(msg)
-        if child.cxx and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
-        if child.fc and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
+        if 'Cxx' in child.buildLanguages and ('with-cxx' in self.framework.clArgDB) and (self.argDB['with-cxx'] == '0'): raise RuntimeError('Package '+child.package+' requested requires C++ but compiler turned off.')
+        if 'FC'  in child.buildLanguages and ('with-fc' in self.framework.clArgDB) and (self.argDB['with-fc'] == '0'): raise RuntimeError('Package '+child.package+' requested requires Fortran but compiler turned off.')
 
-    depGraph = graph.DirectedGraph.topologicalSort(depGraph)
+    if maxCxx < minCxx:
+      # low water mark
+      loPack = ', '.join(minCxxVersionBlameList[minCxx])
+      # high water mark
+      hiPack = ', '.join(maxCxxVersionBlameList[maxCxx])
+      raise RuntimeError('Requested package(s) have incompatible C++ requirements. Package(s) {loPacks} require at least {mincxx} but package(s) {hiPack} require at most {maxcxx}'.format(loPack=loPack,mincxx=minCxx,hiPack=hiPack,maxcxx=maxCxx))
+    compilers.cxxDialectPackageRanges = (minCxxVersionBlameList,maxCxxVersionBlameList)
+    self.logPrint('serialEvaluation: new cxxDialectRanges {rng}'.format(rng=(minCxx,maxCxx)))
+    depGraph  = graph.DirectedGraph.topologicalSort(depGraph)
     totaltime = 0
     starttime = time.time()
     for child in depGraph:
@@ -1307,7 +1365,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       child._configured = 1
       ctime = time.time()-start
       totaltime = totaltime + ctime
-      self.logPrint('child %s %f' % (child.__class__.__module__,ctime))
+      self.logPrint('child %s took %f seconds' % (child.__class__.__module__,ctime))
     self.logPrint('child sum %f' % (totaltime))
     self.logPrint('child total %f' % (time.time()-starttime))
     # use grep child configure.log | sort -k3 -g

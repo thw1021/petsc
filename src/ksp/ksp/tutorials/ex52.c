@@ -339,12 +339,12 @@ int main(int argc,char **args)
     ierr = MatMumpsGetCntl(F,icntl,&cntl);CHKERRQ(ierr);
 
     /* compute determinant */
-    if (!rank) {
+    if (rank == 0) {
       ierr = MatMumpsGetInfog(F,34,&infog34);CHKERRQ(ierr);
       ierr = MatMumpsGetRinfog(F,12,&rinfo12);CHKERRQ(ierr);
       ierr = MatMumpsGetRinfog(F,13,&rinfo13);CHKERRQ(ierr);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps row pivot threshold = %g\n",cntl);
-      ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps determinant = (%g, %g) * 2^%D \n",(double)rinfo12,(double)rinfo13,infog34);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps row pivot threshold = %g\n",cntl);CHKERRQ(ierr);
+      ierr = PetscPrintf(PETSC_COMM_SELF,"  Mumps determinant = (%g, %g) * 2^%D \n",(double)rinfo12,(double)rinfo13,infog34);CHKERRQ(ierr);
     }
   }
 #endif
@@ -420,14 +420,14 @@ int main(int argc,char **args)
    test:
       suffix: mumps_omp_2
       nsize: 4
-      requires: mumps hwloc openmp pthread define(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
+      requires: mumps hwloc openmp pthread defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
       args: -use_mumps_lu -mat_mumps_use_omp_threads 2
       output_file: output/ex52_1.out
 
    test:
       suffix: mumps_omp_3
       nsize: 4
-      requires: mumps hwloc openmp pthread define(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
+      requires: mumps hwloc openmp pthread defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
       args: -use_mumps_ch -mat_mumps_use_omp_threads 3
       # Ignore the warning since we are intentionally testing the imbalanced case
       filter: grep -v "Warning: number of OpenMP threads"
@@ -436,7 +436,7 @@ int main(int argc,char **args)
    test:
       suffix: mumps_omp_4
       nsize: 4
-      requires: mumps hwloc openmp pthread define(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
+      requires: mumps hwloc openmp pthread defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
       # let petsc guess a proper number for threads
       args: -use_mumps_ch -mat_type sbaij -mat_mumps_use_omp_threads
       output_file: output/ex52_1.out

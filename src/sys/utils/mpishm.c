@@ -28,13 +28,34 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm comm,Petsc
   PetscFunctionReturn(MPI_SUCCESS);
 }
 
+#ifdef PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY
+/* Data structures to support freeing comms created in PetscShmCommGet().
+  Since we predict communicators passed to PetscShmCommGet() are very likely
+  either a petsc inner communicator or an MPI communicator with a linked petsc
+  inner communicator, we use a simple static array to store dupped communicators
+  on rare cases otherwise.
+ */
+#define MAX_SHMCOMM_DUPPED_COMMS 16
+static PetscInt       num_dupped_comms=0;
+static MPI_Comm       shmcomm_dupped_comms[MAX_SHMCOMM_DUPPED_COMMS];
+static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
+{
+  PetscErrorCode   ierr;
+  PetscInt         i;
+  PetscFunctionBegin;
+  for (i=0; i<num_dupped_comms; i++) {ierr = PetscCommDestroy(&shmcomm_dupped_comms[i]);CHKERRQ(ierr);}
+  num_dupped_comms = 0; /* reset so that PETSc can be reinitialized */
+  PetscFunctionReturn(0);
+}
+#endif
+
 /*@C
-    PetscShmCommGet - Given a PETSc communicator returns a communicator of all ranks that share a common memory
+    PetscShmCommGet - Given a communicator returns a sub-communicator of all ranks that share a common memory
 
     Collective.
 
     Input Parameter:
-.   globcomm - MPI_Comm
+.   globcomm - MPI_Comm, which can be a user MPI_Comm or a PETSc inner MPI_Comm
 
     Output Parameter:
 .   pshmcomm - the PETSc shared memory communicator object
@@ -42,9 +63,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm comm,Petsc
     Level: developer
 
     Notes:
-    This should be called only with an PetscCommDuplicate() communictor
-
-           When used with MPICH, MPICH must be configured with --download-mpich-device=ch3:nemesis
+       When used with MPICH, MPICH must be configured with --download-mpich-device=ch3:nemesis
 
 @*/
 PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
@@ -56,9 +75,28 @@ PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
   PetscCommCounter *counter;
 
   PetscFunctionBegin;
+  PetscValidPointer(pshmcomm,2);
+  /* Get a petsc inner comm, since we always want to stash pshmcomm on petsc inner comms */
   ierr = MPI_Comm_get_attr(globcomm,Petsc_Counter_keyval,&counter,&flg);CHKERRMPI(ierr);
-  if (!flg) SETERRQ(globcomm,PETSC_ERR_ARG_CORRUPT,"Bad MPI communicator supplied; must be a PETSc communicator");
+  if (!flg) { /* globcomm is not a petsc comm */
+    union {MPI_Comm comm; void *ptr;} ucomm;
+    /* check if globcomm already has a linked petsc inner comm */
+    ierr = MPI_Comm_get_attr(globcomm,Petsc_InnerComm_keyval,&ucomm,&flg);CHKERRMPI(ierr);
+    if (!flg) {
+      /* globcomm does not have a linked petsc inner comm, so we create one and replace globcomm with it */
+      if (num_dupped_comms >= MAX_SHMCOMM_DUPPED_COMMS) SETERRQ1(globcomm,PETSC_ERR_PLIB,"PetscShmCommGet() is trying to dup more than %d MPI_Comms",MAX_SHMCOMM_DUPPED_COMMS);
+      ierr = PetscCommDuplicate(globcomm,&globcomm,NULL);CHKERRQ(ierr);
+      /* Register a function to free the dupped petsc comms at PetscFinalize at the first time */
+      if (num_dupped_comms == 0) {ierr = PetscRegisterFinalize(PetscShmCommDestroyDuppedComms);CHKERRQ(ierr);}
+      shmcomm_dupped_comms[num_dupped_comms] = globcomm;
+      num_dupped_comms++;
+    } else {
+      /* otherwise, we pull out the inner comm and use it as globcomm */
+      globcomm = ucomm.comm;
+    }
+  }
 
+  /* Check if globcomm already has an attached pshmcomm. If no, create one */
   ierr = MPI_Comm_get_attr(globcomm,Petsc_ShmComm_keyval,pshmcomm,&flg);CHKERRMPI(ierr);
   if (flg) PetscFunctionReturn(0);
 
@@ -113,6 +151,8 @@ PetscErrorCode PetscShmCommGlobalToLocal(PetscShmComm pshmcomm,PetscMPIInt grank
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  PetscValidPointer(pshmcomm,1);
+  PetscValidPointer(lrank,3);
   *lrank = MPI_PROC_NULL;
   if (grank < pshmcomm->globranks[0]) PetscFunctionReturn(0);
   if (grank > pshmcomm->globranks[pshmcomm->shmsize-1]) PetscFunctionReturn(0);
@@ -151,7 +191,9 @@ PetscErrorCode PetscShmCommGlobalToLocal(PetscShmComm pshmcomm,PetscMPIInt grank
 PetscErrorCode PetscShmCommLocalToGlobal(PetscShmComm pshmcomm,PetscMPIInt lrank,PetscMPIInt *grank)
 {
   PetscFunctionBegin;
-  if (lrank < 0 || lrank >= pshmcomm->shmsize) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No rank %D in the shared memory communicator",lrank);
+  PetscValidPointer(pshmcomm,1);
+  PetscValidPointer(grank,3);
+  if (PetscUnlikely((lrank < 0) || (lrank >= pshmcomm->shmsize))) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No rank %d in the shared memory communicator",lrank);
   *grank = pshmcomm->globranks[lrank];
   PetscFunctionReturn(0);
 }
@@ -171,6 +213,8 @@ PetscErrorCode PetscShmCommLocalToGlobal(PetscShmComm pshmcomm,PetscMPIInt lrank
 PetscErrorCode PetscShmCommGetMpiShmComm(PetscShmComm pshmcomm,MPI_Comm *comm)
 {
   PetscFunctionBegin;
+  PetscValidPointer(pshmcomm,1);
+  PetscValidPointer(comm,2);
   *comm = pshmcomm->shmcomm;
   PetscFunctionReturn(0);
 }
@@ -291,7 +335,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscOmpCtrlDestroyBarrier(PetscOmpCtrl ctrl)
 /*@C
     PetscOmpCtrlCreate - create a PETSc OpenMP controller, which manages PETSc's interaction with third party libraries using OpenMP
 
-    Input Parameter:
+    Input Parameters:
 +   petsc_comm - a communicator some PETSc object (for example, a matrix) lives in
 -   nthreads   - number of threads per MPI rank to spawn in a library using OpenMP. If nthreads = -1, let PETSc decide a suitable value
 
@@ -351,8 +395,8 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
     if (nthreads > shm_comm_size) nthreads = shm_comm_size;
   }
 
-  if (nthreads < 1 || nthreads > shm_comm_size) SETERRQ2(petsc_comm,PETSC_ERR_ARG_OUTOFRANGE,"number of OpenMP threads %D can not be < 1 or > the MPI shared memory communicator size %d\n",nthreads,shm_comm_size);
-  if (shm_comm_size % nthreads) { ierr = PetscPrintf(petsc_comm,"Warning: number of OpenMP threads %D is not a factor of the MPI shared memory communicator size %d, which may cause load-imbalance!\n",nthreads,shm_comm_size);CHKERRQ(ierr); }
+  if (nthreads < 1 || nthreads > shm_comm_size) SETERRQ2(petsc_comm,PETSC_ERR_ARG_OUTOFRANGE,"number of OpenMP threads %" PetscInt_FMT " can not be < 1 or > the MPI shared memory communicator size %d\n",nthreads,shm_comm_size);
+  if (shm_comm_size % nthreads) { ierr = PetscPrintf(petsc_comm,"Warning: number of OpenMP threads %" PetscInt_FMT " is not a factor of the MPI shared memory communicator size %d, which may cause load-imbalance!\n",nthreads,shm_comm_size);CHKERRQ(ierr); }
 
   /* split shm_comm into a set of omp_comms with each of size nthreads. Ex., if
      shm_comm_size=16, nthreads=8, then ranks 0~7 get color 0 and ranks 8~15 get
@@ -458,7 +502,7 @@ PetscErrorCode PetscOmpCtrlDestroy(PetscOmpCtrl *pctrl)
     Input Parameter:
 .   ctrl - a PETSc OMP controller
 
-    Output Parameter:
+    Output Parameters:
 +   omp_comm         - a communicator that includes a master rank and slave ranks where master spawns threads
 .   omp_master_comm  - on master ranks, return a communicator that include master ranks of each omp_comm;
                        on slave ranks, MPI_COMM_NULL will be return in reality.
@@ -507,7 +551,7 @@ PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 
   PetscFunctionBegin;
   err = pthread_barrier_wait(ctrl->barrier);
-  if (err && err != PTHREAD_BARRIER_SERIAL_THREAD) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"pthread_barrier_wait failed within PetscOmpCtrlBarrier with return code %D\n", err);
+  if (err && err != PTHREAD_BARRIER_SERIAL_THREAD) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"pthread_barrier_wait failed within PetscOmpCtrlBarrier with return code %" PetscInt_FMT "\n", err);
   PetscFunctionReturn(0);
 }
 

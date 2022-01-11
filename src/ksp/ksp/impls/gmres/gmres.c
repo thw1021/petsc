@@ -120,17 +120,17 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
 
   PetscFunctionBegin;
   if (itcount) *itcount = 0;
-  ierr    = VecNormalize(VEC_VV(0),&res);CHKERRQ(ierr);
+  ierr = VecNormalize(VEC_VV(0),&res);CHKERRQ(ierr);
   KSPCheckNorm(ksp,res);
 
   /* the constant .1 is arbitrary, just some measure at how incorrect the residuals are */
   if ((ksp->rnorm > 0.0) && (PetscAbsReal(res-ksp->rnorm) > gmres->breakdowntol*gmres->rnorm0)) {
-      if (ksp->errorifnotconverged) SETERRQ3(PetscObjectComm((PetscObject)ksp),PETSC_ERR_CONV_FAILED,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);
-      else {
-        ierr = PetscInfo3(ksp,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);
-        ksp->reason =  KSP_DIVERGED_BREAKDOWN;
-        PetscFunctionReturn(0);
-      }
+    if (ksp->errorifnotconverged) SETERRQ3(PetscObjectComm((PetscObject)ksp),PETSC_ERR_CONV_FAILED,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);
+    else {
+      ierr = PetscInfo3(ksp,"Residual norm computed by GMRES recursion formula %g is far from the computed residual norm %g at restart, residual norm at start of cycle %g",(double)ksp->rnorm,(double)res,(double)gmres->rnorm0);CHKERRQ(ierr);
+      ksp->reason =  KSP_DIVERGED_BREAKDOWN;
+      PetscFunctionReturn(0);
+    }
   }
   *GRS(0) = gmres->rnorm0 = res;
 
@@ -243,8 +243,8 @@ PetscErrorCode KSPSolve_GMRES(KSP ksp)
   ksp->reason = KSP_CONVERGED_ITERATING;
   ksp->rnorm  = -1.0; /* special marker for KSPGMRESCycle() */
   while (!ksp->reason) {
-    ierr     = KSPInitialResidual(ksp,ksp->vec_sol,VEC_TEMP,VEC_TEMP_MATOP,VEC_VV(0),ksp->vec_rhs);CHKERRQ(ierr);
-    ierr     = KSPGMRESCycle(&its,ksp);CHKERRQ(ierr);
+    ierr = KSPInitialResidual(ksp,ksp->vec_sol,VEC_TEMP,VEC_TEMP_MATOP,VEC_VV(0),ksp->vec_rhs);CHKERRQ(ierr);
+    ierr = KSPGMRESCycle(&its,ksp);CHKERRQ(ierr);
     /* Store the Hessenberg matrix and the basis vectors of the Krylov subspace
     if the cycle is complete for the computation of the Ritz pairs */
     if (its == gmres->max_k) {
@@ -434,7 +434,7 @@ static PetscErrorCode KSPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool hap
     *hh        = PetscConj(*cc) * *hh + *ss * *(hh+1);
     *res       = PetscAbsScalar(*GRS(it+1));
   } else {
-    /* happy breakdown: HH(it+1, it) = 0, therfore we don't need to apply
+    /* happy breakdown: HH(it+1, it) = 0, therefore we don't need to apply
             another rotation matrix (so RH doesn't change).  The new residual is
             always the new sine term times the residual from last time (GRS(it)),
             but now the new sine rotation would be zero...so the residual should

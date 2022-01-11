@@ -562,7 +562,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha2(TS ts)
     \alpha_m = (2-\rho)/(1+\rho)
     \alpha_f = 1/(1+\rho)
 
-  Input Parameter:
+  Input Parameters:
 +  ts - timestepping context
 -  radius - the desired spectral radius
 
@@ -597,12 +597,12 @@ PetscErrorCode TSAlpha2SetRadius(TS ts,PetscReal radius)
   Unconditional stability requires:
     \alpha_m >= \alpha_f >= 1/2
 
-  Input Parameter:
+  Input Parameters:
 + ts - timestepping context
-. \alpha_m - algorithmic paramenter
-. \alpha_f - algorithmic paramenter
-. \gamma   - algorithmic paramenter
-- \beta    - algorithmic paramenter
+. \alpha_m - algorithmic parameter
+. \alpha_f - algorithmic parameter
+. \gamma   - algorithmic parameter
+- \beta    - algorithmic parameter
 
   Options Database:
 + -ts_alpha_alpha_m <alpha_m>

@@ -337,7 +337,7 @@ int main(int argc,char **args)
 
   ierr = PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsFList("-dm_type","Convert DMPlex to another format (should not be Plex!)","ex56.c",DMList,DMPLEX,convType,256,&flg);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   if (flg) {
     DM newdm;
     ierr = DMConvert(dm,convType,&newdm);CHKERRQ(ierr);
@@ -472,7 +472,7 @@ int main(int argc,char **args)
     /* test BCs */
     ierr = VecZeroEntries(xx);CHKERRQ(ierr);
     if (test_nonzero_cols) {
-      if (!rank) {
+      if (rank == 0) {
         ierr = VecSetValue(xx,0,1.0,INSERT_VALUES);CHKERRQ(ierr);
       }
       ierr = VecAssemblyBegin(xx);CHKERRQ(ierr);
@@ -534,7 +534,7 @@ int main(int argc,char **args)
   # HYPRE PtAP broken with complex numbers
   test:
     suffix: hypre
-    requires: hypre !single !complex
+    requires: hypre !single !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
     nsize: 4
     args: -cells 2,2,1 -max_conv_its 2 -lx 1. -alpha .01 -petscspace_degree 2 -ksp_type cg -ksp_monitor_short -ksp_rtol 1.e-8 -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_no_CF true -pc_hypre_boomeramg_agg_nl 1 -pc_hypre_boomeramg_coarsen_type HMIS -pc_hypre_boomeramg_interp_type ext+i -ksp_converged_reason -use_mat_nearnullspace true -petscpartitioner_type simple
 
@@ -546,7 +546,7 @@ int main(int argc,char **args)
 
   test:
     suffix: hpddm
-    requires: hpddm slepc !single define(PETSC_HAVE_DYNAMIC_LIBRARIES) define(PETSC_USE_SHARED_LIBRARIES)
+    requires: hpddm slepc !single defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
     nsize: 4
     args: -cells 2,2,1 -max_conv_its 2 -lx 1. -alpha .01 -petscspace_degree 2 -ksp_type fgmres -ksp_monitor_short -ksp_converged_reason -ksp_rtol 1.e-8 -pc_type hpddm -petscpartitioner_type simple -pc_hpddm_levels_1_sub_pc_type lu -pc_hpddm_levels_1_eps_nev 6 -pc_hpddm_coarse_p 1 -pc_hpddm_coarse_pc_type svd
 
@@ -571,7 +571,7 @@ int main(int argc,char **args)
       args: -pc_bddc_switch_static -prefix_push pc_bddc_dirichlet_ -approximate -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -prefix_pop -prefix_push pc_bddc_neumann_ -approximate -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -prefix_pop
     # HYPRE PtAP broken with complex numbers
     test:
-      requires: hypre !complex
+      requires: hypre !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
       suffix: bddc_approx_hypre
       args: -pc_bddc_switch_static -prefix_push pc_bddc_dirichlet_ -pc_type hypre -pc_hypre_boomeramg_no_CF true -pc_hypre_boomeramg_strong_threshold 0.75 -pc_hypre_boomeramg_agg_nl 1 -pc_hypre_boomeramg_coarsen_type HMIS -pc_hypre_boomeramg_interp_type ext+i -prefix_pop -prefix_push pc_bddc_neumann_ -pc_type hypre -pc_hypre_boomeramg_no_CF true -pc_hypre_boomeramg_strong_threshold 0.75 -pc_hypre_boomeramg_agg_nl 1 -pc_hypre_boomeramg_coarsen_type HMIS -pc_hypre_boomeramg_interp_type ext+i -prefix_pop
     test:
@@ -615,21 +615,21 @@ int main(int argc,char **args)
 
     test:
       suffix: kokkos
-      requires: kokkos_kernels
+      requires: !sycl kokkos_kernels
       args: -ex56_dm_mat_type aijkokkos -ex56_dm_vec_type kokkos
   # Don't run AIJMKL caes with complex scalars because of convergence issues.
   # Note that we need to test both single and multiple MPI rank cases, because these use different sparse MKL routines to implement the PtAP operation.
   test:
     suffix: seqaijmkl
     nsize: 1
-    requires: define(PETSC_HAVE_MKL_SPARSE_OPTIMIZE) !single !complex
+    requires: defined(PETSC_HAVE_MKL_SPARSE_OPTIMIZE) !single !complex
     args: -cells 2,2,1 -max_conv_its 2 -petscspace_degree 2 -snes_max_it 2 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-11 -ksp_norm_type unpreconditioned -snes_rtol 1.e-10 -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 1000 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -ksp_converged_reason -snes_monitor_short -ksp_monitor_short -snes_converged_reason -use_mat_nearnullspace true -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.1 -mg_levels_pc_type jacobi -petscpartitioner_type simple -mat_block_size 3 -ex56_dm_view -run_type 1 -mat_seqaij_type seqaijmkl
     timeoutfactor: 2
 
   test:
     suffix: mpiaijmkl
     nsize: 2
-    requires: define(PETSC_HAVE_MKL_SPARSE_OPTIMIZE) !single !complex
+    requires: defined(PETSC_HAVE_MKL_SPARSE_OPTIMIZE) !single !complex
     args: -cells 2,2,1 -max_conv_its 2 -petscspace_degree 2 -snes_max_it 2 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-11 -ksp_norm_type unpreconditioned -snes_rtol 1.e-10 -pc_type gamg -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 1000 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -ksp_converged_reason -snes_monitor_short -ksp_monitor_short -snes_converged_reason -use_mat_nearnullspace true -mg_levels_ksp_max_it 1 -mg_levels_ksp_type chebyshev -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.1 -mg_levels_pc_type jacobi -petscpartitioner_type simple -mat_block_size 3 -ex56_dm_view -run_type 1 -mat_seqaij_type seqaijmkl
     timeoutfactor: 2
 

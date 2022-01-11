@@ -59,7 +59,7 @@ int main(int argc,char ** argv)
 
   /* Set numbers of nodes and edges */
   ierr = DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(networkdm,"",waterdata->nvertex,waterdata->nedge,edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork(networkdm,"",waterdata->nedge,edgelist,NULL);CHKERRQ(ierr);
   if (!crank) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"water nvertices %D, nedges %D\n",waterdata->nvertex,waterdata->nedge);CHKERRQ(ierr);
   }
@@ -127,13 +127,13 @@ int main(int argc,char ** argv)
 
    build:
       depends: waterreaddata.c waterfunctions.c
-      requires: !complex double define(PETSC_HAVE_ATTRIBUTEALIGNED)
+      requires: !complex double defined(PETSC_HAVE_ATTRIBUTEALIGNED)
 
    test:
       args: -water_snes_converged_reason -options_left no
       localrunfiles: wateroptions sample1.inp
       output_file: output/water.out
-      requires: double !complex define(PETSC_HAVE_ATTRIBUTEALIGNED)
+      requires: double !complex defined(PETSC_HAVE_ATTRIBUTEALIGNED)
 
    test:
       suffix: 2
@@ -141,6 +141,6 @@ int main(int argc,char ** argv)
       args: -water_snes_converged_reason -options_left no
       localrunfiles: wateroptions sample1.inp
       output_file: output/water.out
-      requires: double !complex define(PETSC_HAVE_ATTRIBUTEALIGNED)
+      requires: double !complex defined(PETSC_HAVE_ATTRIBUTEALIGNED)
 
 TEST*/

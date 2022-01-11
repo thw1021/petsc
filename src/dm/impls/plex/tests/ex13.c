@@ -19,7 +19,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");CHKERRQ(ierr);
   ierr = PetscOptionsBool("-test_partition", "Use a fixed partition for testing", "ex13.c", options->testPartition, &options->testPartition, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-test_num", "The test partition number", "ex13.c", options->testNum, &options->testNum, NULL,0);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -44,7 +44,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
     ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
     ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       if (dim == 2 && simplex && size == 2) {
         switch (user->testNum) {
         case 0: {
@@ -107,7 +107,7 @@ static PetscErrorCode ScrambleOrientation(DM dm, AppCtx *user)
   ierr = DMPlexGetHeightStratum(dm, h, &cStart, &cEnd);CHKERRQ(ierr);
   for (c = cStart; c < cEnd; ++c) {
     /* Could use PetscRand instead */
-    if (c%2) {ierr = DMPlexReverseCell(dm, c);CHKERRQ(ierr);}
+    if (c%2) {ierr = DMPlexOrientPoint(dm, c, -1);CHKERRQ(ierr);}
   }
   PetscFunctionReturn(0);
 }

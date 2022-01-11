@@ -16,7 +16,7 @@ PetscLogEvent IS_Load;
 
    Collective on IS
 
-   Input Parmeters:
+   Input Parameters:
 +  subset - the index set
 -  subset_mult - the multiplcity of each entry in subset (optional, can be NULL)
 
@@ -42,14 +42,14 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(subset,IS_CLASSID,1);
-  if (subset_mult) {
-    PetscValidHeaderSpecific(subset_mult,IS_CLASSID,2);
-  }
-  if (!N && !subset_n) PetscFunctionReturn(0);
+  if (subset_mult) PetscValidHeaderSpecific(subset_mult,IS_CLASSID,2);
+  if (N) PetscValidIntPointer(N,3);
+  else if (!subset_n) PetscFunctionReturn(0);
+  PetscValidPointer(subset_n,4);
   ierr = ISGetLocalSize(subset,&n);CHKERRQ(ierr);
   if (subset_mult) {
     ierr = ISGetLocalSize(subset_mult,&i);CHKERRQ(ierr);
-    if (i != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Local subset and multiplicity sizes don't match! %d != %d",n,i);
+    if (PetscUnlikely(i != n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Local subset and multiplicity sizes don't match! %" PetscInt_FMT " != %" PetscInt_FMT,n,i);
   }
   /* create workspace layout for computing global indices of subset */
   ierr = ISGetIndices(subset,&idxs);CHKERRQ(ierr);
@@ -177,7 +177,7 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
 
    Collective on IS
 
-   Input Parmeters:
+   Input Parameters:
 +  is - the index set
 -  comps - which components we will extract from is
 
@@ -817,7 +817,7 @@ static PetscErrorCode ISCopyInfo(IS source, IS dest)
 
    Collective on IS
 
-   Input Parmeters:
+   Input Parameters:
 .  is - the index set
 
    Output Parameters:
@@ -849,7 +849,7 @@ PetscErrorCode  ISIdentity(IS is,PetscBool  *ident)
 
    Logically Collective on IS
 
-   Input Parmeters:
+   Input Parameter:
 .  is - the index set
 
    Level: intermediate
@@ -875,7 +875,7 @@ PetscErrorCode  ISSetIdentity(IS is)
 
    Not Collective
 
-   Input Parmeters:
+   Input Parameters:
 +  is - the index set
 .  gstart - global start
 -  gend - global end
@@ -910,10 +910,10 @@ PetscErrorCode  ISContiguousLocal(IS is,PetscInt gstart,PetscInt gend,PetscInt *
 
    Logically Collective on IS
 
-   Input Parmeters:
+   Input Parameter:
 .  is - the index set
 
-   Output Parameters:
+   Output Parameter:
 .  perm - PETSC_TRUE if a permutation, else PETSC_FALSE
 
    Level: intermediate
@@ -942,7 +942,7 @@ PetscErrorCode  ISPermutation(IS is,PetscBool  *perm)
 
    Logically Collective on IS
 
-   Input Parmeters:
+   Input Parameter:
 .  is - the index set
 
    Level: intermediate
@@ -1029,7 +1029,7 @@ PetscErrorCode  ISDestroy(IS *is)
 
    Collective on IS
 
-   Input Parameter:
+   Input Parameters:
 +  is - the index set
 -  nlocal - number of indices on this processor in result (ignored for 1 proccessor) or
             use PETSC_DECIDE
@@ -1125,10 +1125,10 @@ PetscErrorCode  ISGetLocalSize(IS is,PetscInt *size)
 
    Not Collective
 
-   Input Arguments:
+   Input Parameter:
 .  is - the index set
 
-   Output Arguments:
+   Output Parameter:
 .  map - the layout
 
    Level: developer
@@ -1204,7 +1204,7 @@ PetscErrorCode  ISGetIndices(IS is,const PetscInt *ptr[])
    Input Parameter:
 .  is - the index set
 
-   Output Parameter:
+   Output Parameters:
 +   min - the minimum value
 -   max - the maximum value
 
@@ -1230,7 +1230,7 @@ PetscErrorCode  ISGetMinMax(IS is,PetscInt *min,PetscInt *max)
 
   Not Collective
 
-  Input Parameter:
+  Input Parameters:
 + is - the index set
 - key - the search key
 
@@ -1400,7 +1400,7 @@ PetscErrorCode ISGetTotalIndices(IS is, const PetscInt *indices[])
 
    Not Collective.
 
-   Input Parameter:
+   Input Parameters:
 +  is - the index set
 -  indices - index array; must be the array obtained with ISGetTotalIndices()
 
@@ -1474,11 +1474,11 @@ PetscErrorCode  ISGetNonlocalIndices(IS is, const PetscInt *indices[])
 }
 
 /*@C
-   ISRestoreTotalIndices - Restore the index array obtained with ISGetNonlocalIndices().
+   ISRestoreNonlocalIndices - Restore the index array obtained with ISGetNonlocalIndices().
 
    Not Collective.
 
-   Input Parameter:
+   Input Parameters:
 +  is - the index set
 -  indices - index array; must be the array obtained with ISGetNonlocalIndices()
 
@@ -1546,7 +1546,7 @@ PetscErrorCode  ISGetNonlocalIS(IS is, IS *complement)
 
    Not collective.
 
-   Input Parameter:
+   Input Parameters:
 +  is         - the index set
 -  complement - index set of is's nonlocal indices
 
@@ -1768,10 +1768,10 @@ PetscErrorCode  ISSorted(IS is,PetscBool  *flg)
 
    Collective on IS
 
-   Input Parmeters:
+   Input Parameter:
 .  is - the index set
 
-   Output Parameters:
+   Output Parameter:
 .  isnew - the copy of the index set
 
    Level: beginner
@@ -1795,10 +1795,10 @@ PetscErrorCode  ISDuplicate(IS is,IS *newIS)
 
    Collective on IS
 
-   Input Parmeters:
+   Input Parameter:
 .  is - the index set
 
-   Output Parameters:
+   Output Parameter:
 .  isy - the copy of the index set
 
    Level: beginner
@@ -1826,12 +1826,12 @@ PetscErrorCode  ISCopy(IS is,IS isy)
 
    Collective on IS
 
-   Input Arguments:
+   Input Parameters:
 + is - index set
 . comm - communicator for new index set
 - mode - copy semantics, PETSC_USE_POINTER for no-copy if possible, otherwise PETSC_COPY_VALUES
 
-   Output Arguments:
+   Output Parameter:
 . newis - new IS on comm
 
    Level: advanced
@@ -1867,7 +1867,7 @@ PetscErrorCode  ISOnComm(IS is,MPI_Comm comm,PetscCopyMode mode,IS *newis)
 
    Logicall Collective on IS
 
-   Input Arguments:
+   Input Parameters:
 + is - index set
 - bs - block size
 
@@ -1888,7 +1888,7 @@ PetscErrorCode  ISSetBlockSize(IS is,PetscInt bs)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidLogicalCollectiveInt(is,bs,2);
-  if (bs < 1) SETERRQ1(PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %D, must be positive",bs);
+  if (bs < 1) SETERRQ1(PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %" PetscInt_FMT ", must be positive",bs);
   ierr = (*is->ops->setblocksize)(is,bs);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

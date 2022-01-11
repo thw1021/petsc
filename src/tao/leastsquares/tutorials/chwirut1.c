@@ -2,7 +2,7 @@
    Include "petsctao.h" so that we can use TAO solvers.  Note that this
    file automatically includes libraries such as:
      petsc.h       - base PETSc routines   petscvec.h - vectors
-     petscsys.h    - sysem routines        petscmat.h - matrices
+     petscsys.h    - system routines        petscmat.h - matrices
      petscis.h     - index sets            petscksp.h - Krylov subspace methods
      petscviewer.h - viewers               petscpc.h  - preconditioners
 
@@ -177,7 +177,7 @@ PetscErrorCode FormStartingPoint(Vec X)
   x[0] = 0.15;
   x[1] = 0.008;
   x[2] = 0.010;
-  VecRestoreArray(X,&x);CHKERRQ(ierr);
+  ierr = VecRestoreArray(X,&x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

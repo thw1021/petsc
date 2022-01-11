@@ -382,7 +382,7 @@ PetscErrorCode DMForestGetBaseCoordinateMapping(DM dm, PetscErrorCode (**func) (
 
   Logically collective on dm
 
-  Input Parameter:
+  Input Parameters:
 + dm - the new forest, which will be constructed from adapt
 - adapt - the old forest
 
@@ -800,7 +800,7 @@ PetscErrorCode DMForestSetInitialRefinement(DM dm, PetscInt initRefinement)
   Input Parameter:
 . dm - the forest
 
-  Output Paramater:
+  Output Parameter:
 . initRefinement - default PETSC_DEFAULT (interpreted by the subtype of DMForest)
 
   Level: intermediate
@@ -1637,7 +1637,7 @@ PetscErrorCode DMCoarsen_Forest(DM dm, MPI_Comm comm, DM *dmCoarsened)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMAdaptLabel_Forest(DM dm, DMLabel label, DM *adaptedDM)
+PetscErrorCode DMAdaptLabel_Forest(DM dm, PETSC_UNUSED Vec metric, DMLabel label, PETSC_UNUSED DMLabel rgLabel, DM *adaptedDM)
 {
   PetscBool      success;
   PetscErrorCode ierr;
@@ -1667,7 +1667,6 @@ static PetscErrorCode DMInitialize_Forest(DM dm)
   dm->ops->createsubdm    = DMCreateSubDM_Forest;
   dm->ops->refine         = DMRefine_Forest;
   dm->ops->coarsen        = DMCoarsen_Forest;
-  dm->ops->adaptlabel     = DMAdaptLabel_Forest;
   PetscFunctionReturn(0);
 }
 

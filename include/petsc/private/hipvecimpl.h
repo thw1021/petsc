@@ -2,7 +2,7 @@
 #define __HIPVECIMPL
 
 #include <petscvec.h>
-#include <petschipblas.h>
+#include <petsc/private/deviceimpl.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
@@ -46,6 +46,8 @@ PETSC_INTERN PetscErrorCode VecAYPX_SeqHIP(Vec,PetscScalar,Vec);
 PETSC_INTERN PetscErrorCode VecSetRandom_SeqHIP(Vec,PetscRandom);
 PETSC_INTERN PetscErrorCode VecGetLocalVector_SeqHIP(Vec,Vec);
 PETSC_INTERN PetscErrorCode VecRestoreLocalVector_SeqHIP(Vec,Vec);
+PETSC_INTERN PetscErrorCode VecGetLocalVectorRead_SeqHIP(Vec,Vec);
+PETSC_INTERN PetscErrorCode VecRestoreLocalVectorRead_SeqHIP(Vec,Vec);
 PETSC_INTERN PetscErrorCode VecGetArrayWrite_SeqHIP(Vec,PetscScalar**);
 PETSC_INTERN PetscErrorCode VecGetArray_SeqHIP(Vec,PetscScalar**);
 PETSC_INTERN PetscErrorCode VecRestoreArray_SeqHIP(Vec,PetscScalar**);
@@ -57,6 +59,8 @@ PETSC_INTERN PetscErrorCode VecResetArray_SeqHIP_Private(Vec);
 PETSC_INTERN PetscErrorCode VecMax_SeqHIP(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecMin_SeqHIP(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecReciprocal_SeqHIP(Vec);
+PETSC_INTERN PetscErrorCode VecSum_SeqHIP(Vec,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecShift_SeqHIP(Vec,PetscScalar);
 
 /* complex single */
 #if defined(PETSC_USE_COMPLEX)

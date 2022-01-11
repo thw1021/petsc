@@ -2,7 +2,7 @@
 #define __CUDAVECIMPL
 
 #include <petscvec.h>
-#include <petsccublas.h>
+#include <petsc/private/deviceimpl.h>
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
@@ -47,6 +47,8 @@ PETSC_INTERN PetscErrorCode VecAYPX_SeqCUDA(Vec,PetscScalar,Vec);
 PETSC_INTERN PetscErrorCode VecSetRandom_SeqCUDA(Vec,PetscRandom);
 PETSC_INTERN PetscErrorCode VecGetLocalVector_SeqCUDA(Vec,Vec);
 PETSC_INTERN PetscErrorCode VecRestoreLocalVector_SeqCUDA(Vec,Vec);
+PETSC_INTERN PetscErrorCode VecGetLocalVectorRead_SeqCUDA(Vec,Vec);
+PETSC_INTERN PetscErrorCode VecRestoreLocalVectorRead_SeqCUDA(Vec,Vec);
 PETSC_INTERN PetscErrorCode VecGetArrayWrite_SeqCUDA(Vec,PetscScalar**);
 PETSC_INTERN PetscErrorCode VecGetArray_SeqCUDA(Vec,PetscScalar**);
 PETSC_INTERN PetscErrorCode VecRestoreArray_SeqCUDA(Vec,PetscScalar**);
@@ -58,6 +60,8 @@ PETSC_INTERN PetscErrorCode VecResetArray_SeqCUDA_Private(Vec);
 PETSC_INTERN PetscErrorCode VecMax_SeqCUDA(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecMin_SeqCUDA(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecReciprocal_SeqCUDA(Vec);
+PETSC_INTERN PetscErrorCode VecSum_SeqCUDA(Vec,PetscScalar*);
+PETSC_INTERN PetscErrorCode VecShift_SeqCUDA(Vec,PetscScalar);
 
 #if defined(PETSC_HAVE_NVSHMEM)
 PETSC_EXTERN PetscErrorCode PetscNvshmemInitializeCheck(void);

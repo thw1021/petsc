@@ -358,7 +358,10 @@ PetscErrorCode KSPHPDDMGetDeflationSpace(KSP ksp, Mat *U)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  ierr = PetscUseMethod(ksp, "KSPHPDDMGetDeflationSpace_C", (KSP, Mat*), (ksp, U));CHKERRQ(ierr);
+  if (U) {
+    PetscValidPointer(U, 2);
+    ierr = PetscUseMethod(ksp, "KSPHPDDMGetDeflationSpace_C", (KSP, Mat*), (ksp, U));CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -436,6 +439,7 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
   PetscErrorCode       ierr;
 
   PetscFunctionBegin;
+  ierr = PetscCitationsRegister(HPDDMCitation, &HPDDMCite);CHKERRQ(ierr);
   if (!op) {
     ierr = KSPSetUp(ksp);CHKERRQ(ierr);
     op = data->op;
@@ -500,8 +504,10 @@ PetscErrorCode KSPHPDDMGetType(KSP ksp, KSPHPDDMType *type)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscValidPointer(type, 2);
-  ierr = PetscUseMethod(ksp, "KSPHPDDMGetType_C", (KSP, KSPHPDDMType*), (ksp, type));CHKERRQ(ierr);
+  if (type) {
+    PetscValidPointer(type, 2);
+    ierr = PetscUseMethod(ksp, "KSPHPDDMGetType_C", (KSP, KSPHPDDMType*), (ksp, type));CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -555,10 +561,10 @@ static PetscErrorCode KSPHPDDMGetType_HPDDM(KSP ksp, KSPHPDDMType *type)
 -   -ksp_hpddm_recycle_symmetric <true, default=false> - symmetric generalized eigenproblems in BGCRODR, useful to switch to distributed solvers like EPSELEMENTAL or EPSSCALAPACK (only relevant when PETSc is compiled with SLEPc)
 
    References:
-+   1980 - The Block Conjugate Gradient Algorithm and Related Methods. O'Leary. Linear Algebra and its Applications.
-.   2006 - Recycling Krylov Subspaces for Sequences of Linear Systems. Parks, de Sturler, Mackey, Johnson, and Maiti. SIAM Journal on Scientific Computing
-.   2013 - A Modified Block Flexible GMRES Method with Deflation at Each Iteration for the Solution of Non-Hermitian Linear Systems with Multiple Right-Hand Sides. Calandra, Gratton, Lago, Vasseur, and Carvalho. SIAM Journal on Scientific Computing.
-.   2016 - Block Iterative Methods and Recycling for Improved Scalability of Linear Solvers. Jolivet and Tournier. SC16.
++   1980 - The block conjugate gradient algorithm and related methods. O'Leary. Linear Algebra and its Applications.
+.   2006 - Recycling Krylov subspaces for sequences of linear systems. Parks, de Sturler, Mackey, Johnson, and Maiti. SIAM Journal on Scientific Computing
+.   2013 - A modified block flexible GMRES method with deflation at each iteration for the solution of non-Hermitian linear systems with multiple right-hand sides. Calandra, Gratton, Lago, Vasseur, and Carvalho. SIAM Journal on Scientific Computing.
+.   2016 - Block iterative methods and recycling for improved scalability of linear solvers. Jolivet and Tournier. SC16.
 .   2017 - A breakdown-free block conjugate gradient method. Ji and Li. BIT Numerical Mathematics.
 -   2021 - KSPHPDDM and PCHPDDM: extending PETSc with advanced Krylov methods and robust multilevel overlapping Schwarz preconditioners. Jolivet, Roman, and Zampini. Computer & Mathematics with Applications.
 

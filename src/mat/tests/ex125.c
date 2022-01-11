@@ -27,14 +27,24 @@ int main(int argc,char **args)
 
   /* Determine file from which we read the matrix A */
   ierr = PetscOptionsGetString(NULL,NULL,"-f",file,sizeof(file),&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Must indicate binary file with the -f option");
-
-  /* Load matrix A */
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&fd);CHKERRQ(ierr);
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatLoad(A,fd);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
+  if (flg) { /* Load matrix A */
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,file,FILE_MODE_READ,&fd);CHKERRQ(ierr);
+    ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
+    ierr = MatSetFromOptions(A);CHKERRQ(ierr);
+    ierr = MatLoad(A,fd);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
+  } else {
+    n = 13;
+    ierr = PetscOptionsGetInt(NULL,NULL,"-n",&n,NULL);CHKERRQ(ierr);
+    ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
+    ierr = MatSetType(A,MATAIJ);CHKERRQ(ierr);
+    ierr = MatSetFromOptions(A);CHKERRQ(ierr);
+    ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);
+    ierr = MatSetUp(A);CHKERRQ(ierr);
+    ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatShift(A,1.0);CHKERRQ(ierr);
+  }
   ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
   if (m != n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%D, %D)", m, n);
 
@@ -43,7 +53,7 @@ int main(int argc,char **args)
 
   ierr = MatViewFromOptions(A,NULL,"-A_view");CHKERRQ(ierr);
 
-  /* Create dense matrix C and X; C holds true solution with identical colums */
+  /* Create dense matrix C and X; C holds true solution with identical columns */
   nrhs = 2;
   ierr = PetscOptionsGetInt(NULL,NULL,"-nrhs",&nrhs,NULL);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"ex125: nrhs %D\n",nrhs);CHKERRQ(ierr);
@@ -293,50 +303,87 @@ int main(int argc,char **args)
 /*TEST
 
    test:
-      requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type 10
       output_file: output/ex125.out
 
    test:
+      suffix: 2
+      args: -mat_solver_type 10
+      output_file: output/ex125.out
+
+   test:
       suffix: mkl_pardiso
-      requires: mkl_pardiso datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: mkl_pardiso datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type 3
 
    test:
+      suffix: mkl_pardiso_2
+      requires: mkl_pardiso
+      args: -mat_solver_type 3
+      output_file: output/ex125_mkl_pardiso.out
+
+   test:
       suffix: mumps
-      requires: mumps datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type 2
       output_file: output/ex125_mumps_seq.out
 
    test:
       suffix: mumps_2
       nsize: 3
-      requires: mumps datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: mumps datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type 2
       output_file: output/ex125_mumps_par.out
 
    test:
+      suffix: mumps_3
+      requires: mumps
+      args: -mat_solver_type 2
+      output_file: output/ex125_mumps_seq.out
+
+   test:
+      suffix: mumps_4
+      nsize: 3
+      requires: mumps
+      args: -mat_solver_type 2
+      output_file: output/ex125_mumps_par.out
+
+   test:
       suffix: superlu_dist
-      requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES) superlu_dist
+      nsize: {{1 3}}
+      requires: datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES) superlu_dist
       args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
 
    test:
       suffix: superlu_dist_2
-      nsize: 3
-      requires: datafilespath !complex double !define(PETSC_USE_64BIT_INDICES) superlu_dist
-      args: -f ${DATAFILESPATH}/matrices/small -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
+      nsize: {{1 3}}
+      requires: superlu_dist !complex
+      args: -n 36 -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
       output_file: output/ex125_superlu_dist.out
 
    test:
       suffix: superlu_dist_complex
       nsize: 3
-      requires: datafilespath superlu_dist complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: datafilespath superlu_dist complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -f ${DATAFILESPATH}/matrices/farzad_B_rhs -mat_solver_type 1
       output_file: output/ex125_superlu_dist_complex.out
 
    test:
+      suffix: superlu_dist_complex_2
+      nsize: 3
+      requires: superlu_dist complex
+      args: -mat_solver_type 1
+      output_file: output/ex125_superlu_dist_complex.out
+
+   test:
       suffix: cusparse
-      requires: cuda datafilespath !complex double !define(PETSC_USE_64BIT_INDICES)
+      requires: cuda datafilespath !complex double !defined(PETSC_USE_64BIT_INDICES)
       args: -mat_type aijcusparse -f ${DATAFILESPATH}/matrices/small -mat_solver_type 4 -cholesky {{0 1}separate output}
+
+   test:
+      suffix: cusparse_2
+      requires: cuda
+      args: -mat_type aijcusparse -mat_solver_type 4 -cholesky {{0 1}separate output}
 
 TEST*/

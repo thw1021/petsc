@@ -52,7 +52,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsBool("-test_redundant", "Use a redundant partition for testing", "ex12.c", options->testRedundant, &options->testRedundant, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-load_balance", "Perform parallel load balancing in a second distribution step", "ex12.c", options->loadBalance, &options->loadBalance, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-partition_balance", "Balance the ownership of shared points", "ex12.c", options->partitionBalance, &options->partitionBalance, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   ierr = PetscLogStageRegister("MeshLoad",         &options->stages[STAGE_LOAD]);CHKERRQ(ierr);
   ierr = PetscLogStageRegister("MeshDistribute",   &options->stages[STAGE_DISTRIBUTE]);CHKERRQ(ierr);
@@ -102,7 +102,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       const PetscInt *sizes = NULL;
       const PetscInt *points = NULL;
 
-      if (!rank) {
+      if (rank == 0) {
         if (dim == 2 && simplex && size == 2) {
           sizes = triSizes_n2; points = triPoints_n2;
         } else if (dim == 2 && simplex && size == 3) {

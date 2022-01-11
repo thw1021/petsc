@@ -30,7 +30,7 @@ PetscLogEvent SNES_Solve, SNES_Setup, SNES_FunctionEval, SNES_JacobianEval, SNES
     Normally PETSc continues if a linear solver fails to converge, you can call SNESGetConvergedReason() after a SNESSolve()
     to determine if it has converged.
 
-.seealso: SNESGetErrorIfNotConverged(), KSPGetErrorIfNotConverged(), KSPSetErrorIFNotConverged()
+.seealso: SNESGetErrorIfNotConverged(), KSPGetErrorIfNotConverged(), KSPSetErrorIfNotConverged()
 @*/
 PetscErrorCode  SNESSetErrorIfNotConverged(SNES snes,PetscBool flg)
 {
@@ -54,7 +54,7 @@ PetscErrorCode  SNESSetErrorIfNotConverged(SNES snes,PetscBool flg)
 
    Level: intermediate
 
-.seealso:  SNESSetErrorIfNotConverged(), KSPGetErrorIfNotConverged(), KSPSetErrorIFNotConverged()
+.seealso:  SNESSetErrorIfNotConverged(), KSPGetErrorIfNotConverged(), KSPSetErrorIfNotConverged()
 @*/
 PetscErrorCode  SNESGetErrorIfNotConverged(SNES snes,PetscBool  *flag)
 {
@@ -458,7 +458,7 @@ PetscErrorCode  SNESView(SNES snes,PetscViewer viewer)
         ierr = PetscViewerASCIIPrintf(viewer,"  %sJacobian is built using a DMDA local Jacobian\n",pre);CHKERRQ(ierr);
       }
     } else if (snes->mf) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  Jacobian is applied matrix-free with differencing, no explict Jacobian\n");CHKERRQ(ierr);
+      ierr = PetscViewerASCIIPrintf(viewer,"  Jacobian is applied matrix-free with differencing, no explicit Jacobian\n");CHKERRQ(ierr);
     }
   } else if (isstring) {
     const char *type;
@@ -473,7 +473,7 @@ PetscErrorCode  SNESView(SNES snes,PetscViewer viewer)
 
     ierr = PetscObjectGetComm((PetscObject)snes,&comm);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-    if (!rank) {
+    if (rank == 0) {
       ierr = PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT);CHKERRQ(ierr);
       ierr = PetscStrncpy(type,((PetscObject)snes)->type_name,sizeof(type));CHKERRQ(ierr);
       ierr = PetscViewerBinaryWrite(viewer,type,sizeof(type),PETSC_CHAR);CHKERRQ(ierr);
@@ -503,7 +503,7 @@ PetscErrorCode  SNESView(SNES snes,PetscViewer viewer)
 
     ierr = PetscObjectGetName((PetscObject)snes,&name);CHKERRQ(ierr);
     ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
-    if (!((PetscObject)snes)->amsmem && !rank) {
+    if (!((PetscObject)snes)->amsmem && rank == 0) {
       char       dir[1024];
 
       ierr = PetscObjectViewSAWs((PetscObject)snes,viewer);CHKERRQ(ierr);
@@ -733,7 +733,7 @@ static PetscErrorCode KSPComputeOperators_SNES(KSP ksp,Mat A,Mat B,void *ctx)
 
    Collective
 
-   Input Arguments:
+   Input Parameter:
 .  snes - snes to configure
 
    Level: developer
@@ -788,6 +788,44 @@ PetscErrorCode SNESSetUpMatrices(SNES snes)
     ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
     ierr = KSPSetComputeOperators(ksp,KSPComputeOperators_SNES,snes);CHKERRQ(ierr);
     ierr = DMCoarsenHookAdd(snes->dm,DMCoarsenHook_SNESVecSol,DMRestrictHook_SNESVecSol,snes);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode SNESMonitorPauseFinal_Internal(SNES snes)
+{
+  PetscInt       i;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!snes->pauseFinal) PetscFunctionReturn(0);
+  for (i = 0; i < snes->numbermonitors; ++i) {
+    PetscViewerAndFormat *vf = (PetscViewerAndFormat *) snes->monitorcontext[i];
+    PetscDraw             draw;
+    PetscReal             lpause;
+
+    if (!vf) continue;
+    if (vf->lg) {
+      if (!PetscCheckPointer(vf->lg, PETSC_OBJECT)) continue;
+      if (((PetscObject) vf->lg)->classid != PETSC_DRAWLG_CLASSID) continue;
+      ierr = PetscDrawLGGetDraw(vf->lg, &draw);CHKERRQ(ierr);
+      ierr = PetscDrawGetPause(draw, &lpause);CHKERRQ(ierr);
+      ierr = PetscDrawSetPause(draw, -1.0);CHKERRQ(ierr);
+      ierr = PetscDrawPause(draw);CHKERRQ(ierr);
+      ierr = PetscDrawSetPause(draw, lpause);CHKERRQ(ierr);
+    } else {
+      PetscBool isdraw;
+
+      if (!PetscCheckPointer(vf->viewer, PETSC_OBJECT)) continue;
+      if (((PetscObject) vf->viewer)->classid != PETSC_VIEWER_CLASSID) continue;
+      ierr = PetscObjectTypeCompare((PetscObject) vf->viewer, PETSCVIEWERDRAW, &isdraw);CHKERRQ(ierr);
+      if (!isdraw) continue;
+      ierr = PetscViewerDrawGetDraw(vf->viewer, 0, &draw);CHKERRQ(ierr);
+      ierr = PetscDrawGetPause(draw, &lpause);CHKERRQ(ierr);
+      ierr = PetscDrawSetPause(draw, -1.0);CHKERRQ(ierr);
+      ierr = PetscDrawPause(draw);CHKERRQ(ierr);
+      ierr = PetscDrawSetPause(draw, lpause);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -871,6 +909,7 @@ PetscErrorCode  SNESMonitorSetFromOptions(SNES snes,const char name[],const char
 .  -snes_monitor_solution_update [ascii binary draw][:filename][:viewer format] - plots update to solution at each iteration
 .  -snes_monitor_lg_residualnorm - plots residual norm at each iteration
 .  -snes_monitor_lg_range - plots residual norm at each iteration
+.  -snes_monitor_pause_final - Pauses all monitor drawing after the solver ends
 .  -snes_fd - use finite differences to compute Jacobian; very slow, only for testing
 .  -snes_fd_color - use finite differences with coloring to compute Jacobian
 .  -snes_mf_ksp_monitor - if using matrix-free multiply then print h at each KSP iteration
@@ -893,7 +932,7 @@ PetscErrorCode  SNESMonitorSetFromOptions(SNES snes,const char name[],const char
    To see all options, run your program with the -help option or consult the users manual
 
    Notes:
-      SNES supports three approaches for computing (approximate) Jacobians: user provided via SNESSetJacobian(), matrix free, and computing explictly with
+      SNES supports three approaches for computing (approximate) Jacobians: user provided via SNESSetJacobian(), matrix free, and computing explicitly with
       finite differences and coloring using MatFDColoring. It is also possible to use automatic differentiation and the MatFDColoring object.
 
    Level: beginner
@@ -991,7 +1030,7 @@ PetscErrorCode  SNESSetFromOptions(SNES snes)
   ierr = PetscOptionsBool("-snes_monitor_cancel","Remove all monitors","SNESMonitorCancel",flg,&flg,&set);CHKERRQ(ierr);
   if (set && flg) {ierr = SNESMonitorCancel(snes);CHKERRQ(ierr);}
 
-  ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor","Monitor norm of function","SNESMonitorDefault",SNESMonitorDefault,NULL);CHKERRQ(ierr);
+  ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor","Monitor norm of function","SNESMonitorDefault",SNESMonitorDefault,SNESMonitorDefaultSetUp);CHKERRQ(ierr);
   ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor_short","Monitor norm of function with fewer digits","SNESMonitorDefaultShort",SNESMonitorDefaultShort,NULL);CHKERRQ(ierr);
   ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor_range","Monitor range of elements of function","SNESMonitorRange",SNESMonitorRange,NULL);CHKERRQ(ierr);
 
@@ -1002,6 +1041,7 @@ PetscErrorCode  SNESSetFromOptions(SNES snes)
   ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor_residual","View residual at each iteration","SNESMonitorResidual",SNESMonitorResidual,NULL);CHKERRQ(ierr);
   ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor_jacupdate_spectrum","Print the change in the spectrum of the Jacobian","SNESMonitorJacUpdateSpectrum",SNESMonitorJacUpdateSpectrum,NULL);CHKERRQ(ierr);
   ierr = SNESMonitorSetFromOptions(snes,"-snes_monitor_fields","Monitor norm of function per field","SNESMonitorSet",SNESMonitorFields,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-snes_monitor_pause_final", "Pauses all draw monitors at the final iterate", "SNESMonitorPauseFinal_Internal", PETSC_FALSE, &snes->pauseFinal, NULL);CHKERRQ(ierr);
 
   ierr = PetscOptionsString("-snes_monitor_python","Use Python function","SNESMonitorSet",NULL,monfilename,sizeof(monfilename),&flg);CHKERRQ(ierr);
   if (flg) {ierr = PetscPythonMonitorSet((PetscObject)snes,monfilename);CHKERRQ(ierr);}
@@ -1252,7 +1292,7 @@ PetscErrorCode  SNESGetApplicationContext(SNES snes,void *usrP)
    Level: intermediate
 
    Notes:
-      SNES supports three approaches for computing (approximate) Jacobians: user provided via SNESSetJacobian(), matrix free, and computing explictly with
+      SNES supports three approaches for computing (approximate) Jacobians: user provided via SNESSetJacobian(), matrix free, and computing explicitly with
       finite differences and coloring using MatFDColoring. It is also possible to use automatic differentiation and the MatFDColoring object.
 
 .seealso:   SNESGetUseMatrixFree(), MatCreateSNESMF(), SNESComputeJacobianDefaultColor()
@@ -1343,7 +1383,7 @@ PetscErrorCode  SNESGetIterationNumber(SNES snes,PetscInt *iter)
 
    Not Collective
 
-   Input Parameter:
+   Input Parameters:
 +  snes - SNES context
 -  iter - iteration number
 
@@ -1595,7 +1635,7 @@ PetscErrorCode  SNESGetLinearSolveIterations(SNES snes,PetscInt *lits)
 
    Logically Collective on SNES
 
-   Input Parameter:
+   Input Parameters:
 +  snes - SNES context
 -  reset - whether to reset the counters or not
 
@@ -1903,7 +1943,7 @@ PetscErrorCode  SNESSetInitialFunction(SNES snes, Vec f)
 }
 
 /*@
-   SNESSetNormSchedule - Sets the SNESNormSchedule used in covergence and monitoring
+   SNESSetNormSchedule - Sets the SNESNormSchedule used in convergence and monitoring
    of the SNES method.
 
    Logically Collective on SNES
@@ -1913,13 +1953,13 @@ PetscErrorCode  SNESSetInitialFunction(SNES snes, Vec f)
 -  normschedule - the frequency of norm computation
 
    Options Database Key:
-.  -snes_norm_schedule <none, always, initialonly, finalonly, initalfinalonly>
+.  -snes_norm_schedule <none, always, initialonly, finalonly, initialfinalonly>
 
    Notes:
    Only certain SNES methods support certain SNESNormSchedules.  Most require evaluation
    of the nonlinear function and the taking of its norm at every iteration to
    even ensure convergence at all.  However, methods such as custom Gauss-Seidel methods
-   (SNESNGS) and the like do not require the norm of the function to be computed, and therfore
+   (SNESNGS) and the like do not require the norm of the function to be computed, and therefore
    may either be monitored for convergence or not.  As these are often used as nonlinear
    preconditioners, monitoring the norm of their error is not a useful enterprise within
    their solution.
@@ -1937,7 +1977,7 @@ PetscErrorCode  SNESSetNormSchedule(SNES snes, SNESNormSchedule normschedule)
 }
 
 /*@
-   SNESGetNormSchedule - Gets the SNESNormSchedule used in covergence and monitoring
+   SNESGetNormSchedule - Gets the SNESNormSchedule used in convergence and monitoring
    of the SNES method.
 
    Logically Collective on SNES
@@ -2053,7 +2093,7 @@ PetscErrorCode SNESGetSolutionNorm(SNES snes, PetscReal *xnorm)
 }
 
 /*@C
-   SNESSetFunctionType - Sets the SNESNormSchedule used in covergence and monitoring
+   SNESSetFunctionType - Sets the SNESNormSchedule used in convergence and monitoring
    of the SNES method.
 
    Logically Collective on SNES
@@ -2066,7 +2106,7 @@ PetscErrorCode SNESGetSolutionNorm(SNES snes, PetscReal *xnorm)
    Only certain SNES methods support certain SNESNormSchedules.  Most require evaluation
    of the nonlinear function and the taking of its norm at every iteration to
    even ensure convergence at all.  However, methods such as custom Gauss-Seidel methods
-   (SNESNGS) and the like do not require the norm of the function to be computed, and therfore
+   (SNESNGS) and the like do not require the norm of the function to be computed, and therefore
    may either be monitored for convergence or not.  As these are often used as nonlinear
    preconditioners, monitoring the norm of their error is not a useful enterprise within
    their solution.
@@ -2084,7 +2124,7 @@ PetscErrorCode  SNESSetFunctionType(SNES snes, SNESFunctionType type)
 }
 
 /*@C
-   SNESGetFunctionType - Gets the SNESNormSchedule used in covergence and monitoring
+   SNESGetFunctionType - Gets the SNESNormSchedule used in convergence and monitoring
    of the SNES method.
 
    Logically Collective on SNES
@@ -2302,7 +2342,7 @@ PetscErrorCode  SNESSetPicard(SNES snes,Vec r,PetscErrorCode (*bp)(SNES,Vec,Vec,
    Input Parameter:
 .  snes - the SNES context
 
-   Output Parameter:
+   Output Parameters:
 +  r - the function (or NULL)
 .  f - the function (or NULL); see SNESFunction for calling sequence details
 .  Amat - the matrix used to defined the operation A(x) x - b(x) (or NULL)
@@ -2752,12 +2792,12 @@ PetscErrorCode SNESTestJacobian(SNES snes)
 .    -snes_compare_explicit_contour  - Compare the computed Jacobian to the finite difference Jacobian and draw a contour plot with the result
 .    -snes_compare_operator  - Make the comparison options above use the operator instead of the preconditioning matrix
 .    -snes_compare_coloring - Compute the finite difference Jacobian using coloring and display norms of difference
-.    -snes_compare_coloring_display - Compute the finite differece Jacobian using coloring and display verbose differences
+.    -snes_compare_coloring_display - Compute the finite difference Jacobian using coloring and display verbose differences
 .    -snes_compare_coloring_threshold - Display only those matrix entries that differ by more than a given threshold
 .    -snes_compare_coloring_threshold_atol - Absolute tolerance for difference in matrix entries to be displayed by -snes_compare_coloring_threshold
 .    -snes_compare_coloring_threshold_rtol - Relative tolerance for difference in matrix entries to be displayed by -snes_compare_coloring_threshold
-.    -snes_compare_coloring_draw - Compute the finite differece Jacobian using coloring and draw differences
--    -snes_compare_coloring_draw_contour - Compute the finite differece Jacobian using coloring and show contours of matrices and differences
+.    -snes_compare_coloring_draw - Compute the finite difference Jacobian using coloring and draw differences
+-    -snes_compare_coloring_draw_contour - Compute the finite difference Jacobian using coloring and show contours of matrices and differences
 
    Notes:
    Most users should not need to explicitly call this routine, as it
@@ -3634,7 +3674,7 @@ PetscErrorCode  SNESGetLagJacobian(SNES snes,PetscInt *lag)
 
    Logically collective on SNES
 
-   Input Parameter:
+   Input Parameters:
 +  snes - the SNES context
 -   flg - jacobian lagging persists if true
 
@@ -3668,7 +3708,7 @@ PetscErrorCode  SNESSetLagJacobianPersists(SNES snes,PetscBool flg)
 
    Logically Collective on SNES
 
-   Input Parameter:
+   Input Parameters:
 +  snes - the SNES context
 -   flg - preconditioner lagging persists if true
 
@@ -4725,6 +4765,7 @@ PetscErrorCode  SNESSolve(SNES snes,Vec b,Vec x)
       }
     }
   }
+  if (!x) { x = snes->vec_sol; }
   if (!x) {
     ierr = SNESGetDM(snes,&dm);CHKERRQ(ierr);
     ierr = DMCreateGlobalVector(dm,&xcreated);CHKERRQ(ierr);
@@ -4805,6 +4846,7 @@ PetscErrorCode  SNESSolve(SNES snes,Vec b,Vec x)
   ierr = SNESViewFromOptions(snes,NULL,"-snes_view");CHKERRQ(ierr);
   ierr = VecViewFromOptions(snes->vec_sol,(PetscObject)snes,"-snes_view_solution");CHKERRQ(ierr);
   ierr = DMMonitor(snes->dm);CHKERRQ(ierr);
+  ierr = SNESMonitorPauseFinal_Internal(snes);CHKERRQ(ierr);
 
   ierr = VecDestroy(&xcreated);CHKERRQ(ierr);
   ierr = PetscObjectSAWsBlock((PetscObject)snes);CHKERRQ(ierr);
@@ -5003,7 +5045,7 @@ PetscErrorCode  SNESGetSolutionUpdate(SNES snes,Vec *x)
    Input Parameter:
 .  snes - the SNES context
 
-   Output Parameter:
+   Output Parameters:
 +  r - the vector that is used to store residuals (or NULL if you don't want it)
 .  f - the function (or NULL if you don't want it); see SNESFunction for calling sequence details
 -  ctx - the function context (or NULL if you don't want it)
@@ -5044,7 +5086,7 @@ PetscErrorCode  SNESGetFunction(SNES snes,Vec *r,PetscErrorCode (**f)(SNES,Vec,V
    Input Parameter:
 .  snes - the SNES context
 
-   Output Parameter:
+   Output Parameters:
 +  f - the function (or NULL) see SNESNGSFunction for details
 -  ctx    - the function context (or NULL)
 
@@ -5071,7 +5113,7 @@ PetscErrorCode SNESGetNGS (SNES snes, PetscErrorCode (**f)(SNES, Vec, Vec, void*
 
    Logically Collective on SNES
 
-   Input Parameter:
+   Input Parameters:
 +  snes - the SNES context
 -  prefix - the prefix to prepend to all option names
 
@@ -5391,8 +5433,8 @@ PetscErrorCode  SNESKSPSetParametersEW(SNES snes,PetscInt version,PetscReal rtol
 
    Not Collective
 
-   Input Parameters:
-     snes - SNES context
+   Input Parameter:
+.    snes - SNES context
 
    Output Parameters:
 +    version - version 1, 2 (default is 2) or 3
@@ -5739,7 +5781,7 @@ PetscErrorCode SNESHasNPC(SNES snes, PetscBool *has_npc)
 .ve
 
     Options Database Keys:
-.   -snes_pc_side <right,left>
+.   -snes_npc_side <right,left>
 
     Notes:
     SNESNRICHARDSON and SNESNCG only support left preconditioning.

@@ -216,8 +216,7 @@ PetscErrorCode MatAXPY_Basic(Mat Y,PetscScalar a,Mat X,MatStructure str)
 
     ierr = MatAXPY_Basic_Preallocate(Y,X,&B);CHKERRQ(ierr);
     ierr = MatAXPY_BasicWithPreallocation(B,Y,a,X,str);CHKERRQ(ierr);
-    /* TODO mat_tests-ex37_nsize-1_mat_type-baij_mat_block_size-2 fails with MatHeaderMerge */
-    ierr = MatHeaderReplace(Y,&B);CHKERRQ(ierr);
+    ierr = MatHeaderMerge(Y,&B);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -402,12 +401,12 @@ PetscErrorCode  MatAYPX(Mat Y,PetscScalar a,Mat X,MatStructure str)
 
     Collective on Mat
 
-    Input Parameter:
+    Input Parameters:
 +   inmat - the matrix
 -   mattype - the matrix type for the explicit operator
 
     Output Parameter:
-.   mat - the explict  operator
+.   mat - the explicit  operator
 
     Notes:
     This computation is done by applying the operators to columns of the identity matrix.
@@ -434,11 +433,12 @@ PetscErrorCode  MatComputeOperator(Mat inmat,MatType mattype,Mat *mat)
 
     Collective on Mat
 
-    Input Parameter:
-.   inmat - the matrix
+    Input Parameters:
++   inmat - the matrix
+-   mattype - the matrix type for the explicit operator
 
     Output Parameter:
-.   mat - the explict  operator transposed
+.   mat - the explicit  operator transposed
 
     Notes:
     This computation is done by applying the transpose of the operator to columns of the identity matrix.

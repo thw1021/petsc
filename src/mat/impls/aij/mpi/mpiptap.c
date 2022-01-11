@@ -230,7 +230,8 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A,Mat P,PetscReal fill
   PetscMPIInt         tagi,tagj,*len_si,*len_s,*len_ri,nrecv;
   PETSC_UNUSED PetscMPIInt icompleted=0;
   PetscInt            **buf_rj,**buf_ri,**buf_ri_k;
-  PetscInt            len,proc,*dnz,*onz,*owners,nzi,nspacedouble;
+  const PetscInt      *owners;
+  PetscInt            len,proc,*dnz,*onz,nzi,nspacedouble;
   PetscInt            nrows,*buf_s,*buf_si,*buf_si_i,**nextrow,**nextci;
   MPI_Request         *swaits,*rwaits;
   MPI_Status          *sstatus,rstatus;
@@ -387,10 +388,10 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A,Mat P,PetscReal fill
   /* ------------------------------------------ */
   /* determine row ownership */
   ierr = PetscLayoutCreate(comm,&rowmap);CHKERRQ(ierr);
-  rowmap->n  = pn;
-  rowmap->bs = 1;
-  ierr   = PetscLayoutSetUp(rowmap);CHKERRQ(ierr);
-  owners = rowmap->range;
+  ierr = PetscLayoutSetLocalSize(rowmap, pn);CHKERRQ(ierr);
+  ierr = PetscLayoutSetBlockSize(rowmap, 1);CHKERRQ(ierr);
+  ierr = PetscLayoutSetUp(rowmap);CHKERRQ(ierr);
+  ierr = PetscLayoutGetRanges(rowmap,&owners);CHKERRQ(ierr);
 
   /* determine the number of messages to send, their lengths */
   ierr = PetscMalloc4(size,&len_s,size,&len_si,size,&sstatus,size+2,&owners_co);CHKERRQ(ierr);
@@ -519,7 +520,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A,Mat P,PetscReal fill
     buf_ri_k[k] = buf_ri[k]; /* beginning of k-th recved i-structure */
     nrows       = *buf_ri_k[k];
     nextrow[k]  = buf_ri_k[k] + 1;  /* next row number of k-th recved i-structure */
-    nextci[k]   = buf_ri_k[k] + (nrows + 1); /* poins to the next i-structure of k-th recved i-structure  */
+    nextci[k]   = buf_ri_k[k] + (nrows + 1); /* points to the next i-structure of k-th recved i-structure  */
   }
 
   ierr = MatPreallocateInitialize(comm,pn,pn,dnz,onz);CHKERRQ(ierr);
@@ -1696,8 +1697,8 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A,Mat P,PetscReal fill,Mat Cmpi
   }
   /* Allocate space for apj and apv, initialize apj, and */
   /* destroy list of free space and other temporary array(s) */
-  ierr   = PetscMalloc2(api[am],&apj,api[am],&apv);CHKERRQ(ierr);
-  ierr   = PetscFreeSpaceContiguous(&free_space,apj);CHKERRQ(ierr);
+  ierr = PetscMalloc2(api[am],&apj,api[am],&apv);CHKERRQ(ierr);
+  ierr = PetscFreeSpaceContiguous(&free_space,apj);CHKERRQ(ierr);
   ierr = PetscLLDestroy(lnk,lnkbt);CHKERRQ(ierr);
 
   /* Create AP_loc for reuse */
@@ -1871,7 +1872,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A,Mat P,PetscReal fill,Mat Cmpi
     buf_ri_k[k] = buf_ri[k]; /* beginning of k-th recved i-structure */
     nrows       = *buf_ri_k[k];
     nextrow[k]  = buf_ri_k[k] + 1;  /* next row number of k-th recved i-structure */
-    nextci[k]   = buf_ri_k[k] + (nrows + 1); /* poins to the next i-structure of k-th recved i-structure  */
+    nextci[k]   = buf_ri_k[k] + (nrows + 1); /* points to the next i-structure of k-th recved i-structure  */
   }
 
   ierr = MatPreallocateInitialize(comm,pn,pn,dnz,onz);CHKERRQ(ierr);
@@ -1994,8 +1995,8 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ(Mat A,Mat P,Mat C)
   ierr = PetscObjectStateIncrease((PetscObject)AP_loc);CHKERRQ(ierr);
 
   /* 3) C_loc = Rd*AP_loc, C_oth = Ro*AP_loc */
-  ierr = ((ptap->C_loc)->ops->matmultnumeric)(ptap->Rd,AP_loc,ptap->C_loc);CHKERRQ(ierr);
-  ierr = ((ptap->C_oth)->ops->matmultnumeric)(ptap->Ro,AP_loc,ptap->C_oth);CHKERRQ(ierr);
+  ierr = MatProductNumeric(ptap->C_loc);CHKERRQ(ierr);
+  ierr = MatProductNumeric(ptap->C_oth);CHKERRQ(ierr);
   C_loc = ptap->C_loc;
   C_oth = ptap->C_oth;
 

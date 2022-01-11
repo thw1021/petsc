@@ -273,7 +273,7 @@ PetscErrorCode EXOGetVarIndex_Internal(int exoid, ex_entity_type obj_type, const
     for (j = 0; j < num_suffix; ++j) {
       ierr = PetscStrncpy(ext_name, name, MAX_STR_LENGTH);CHKERRQ(ierr);
       ierr = PetscStrlcat(ext_name, suffix[j], MAX_STR_LENGTH);CHKERRQ(ierr);
-      ierr = PetscStrcasecmp(ext_name, var_name, &flg);
+      ierr = PetscStrcasecmp(ext_name, var_name, &flg);CHKERRQ(ierr);
       if (flg) {
         *varIndex = i+1;
       }
@@ -609,7 +609,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       ierr = DMGetCoordinatesLocalNoncollective(dm, &coord);CHKERRQ(ierr);
       ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
       for (p = pStart; p < pEnd; ++p) {
-        ierr = PetscSectionGetDof(coordSection, p, &hasDof);
+        ierr = PetscSectionGetDof(coordSection, p, &hasDof);CHKERRQ(ierr);
         if (hasDof) {
           PetscInt closureSize = 24, j;
 
@@ -642,7 +642,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         ierr = DMLabelGetStratumIS(vsLabel, vsIdx[vs], &stratumIS);CHKERRQ(ierr);
         ierr = ISGetIndices(stratumIS, &vertices);CHKERRQ(ierr);
         ierr = ISGetSize(stratumIS, &vsSize);CHKERRQ(ierr);
-        ierr = PetscMalloc1(vsSize, &nodeList);
+        ierr = PetscMalloc1(vsSize, &nodeList);CHKERRQ(ierr);
         for (i=0; i<vsSize; ++i) {
           nodeList[i] = vertices[i] - skipCells + 1;
         }
@@ -1056,7 +1056,7 @@ PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
      exodus stores each component of a vector-valued field as a separate variable.
      We assume that they are stored sequentially
      Zonal variables are accessed one element block at a time, so we loop through the cell sets,
-     but once the vector has been reordered to natural size, we cannot use the label informations
+     but once the vector has been reordered to natural size, we cannot use the label information
      to figure out what to save where. */
   numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
   ierr = PetscMalloc2(numCS, &csID, numCS, &csSize);CHKERRQ(ierr);
@@ -1149,7 +1149,7 @@ PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
      exodus stores each component of a vector-valued field as a separate variable.
      We assume that they are stored sequentially
      Zonal variables are accessed one element block at a time, so we loop through the cell sets,
-     but once the vector has been reordered to natural size, we cannot use the label informations
+     but once the vector has been reordered to natural size, we cannot use the label information
      to figure out what to save where. */
   numCS = ex_inquire_int(exoid, EX_INQ_ELEM_BLK);
   ierr = PetscMalloc2(numCS, &csID, numCS, &csSize);CHKERRQ(ierr);
@@ -1208,7 +1208,7 @@ PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
 .  viewer - the PetscViewer
 
   Output Parameter:
--  exoid - The ExodusII file id
+.  exoid - The ExodusII file id
 
   Level: intermediate
 
@@ -1345,12 +1345,12 @@ PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], 
   PetscValidCharPointer(filename, 2);
   ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
 #if defined(PETSC_HAVE_EXODUSII)
-  if (!rank) {
+  if (rank == 0) {
     exoid = ex_open(filename, EX_READ, &CPU_word_size, &IO_word_size, &version);
     if (exoid <= 0) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
   }
   ierr = DMPlexCreateExodus(comm, exoid, interpolate, dm);CHKERRQ(ierr);
-  if (!rank) {PetscStackCallStandard(ex_close,(exoid));}
+  if (rank == 0) {PetscStackCallStandard(ex_close,(exoid));}
   PetscFunctionReturn(0);
 #else
   SETERRQ(comm, PETSC_ERR_SUP, "This method requires ExodusII support. Reconfigure using --download-exodusii");
@@ -1432,8 +1432,8 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   ierr = MPI_Comm_size(comm, &num_proc);CHKERRMPI(ierr);
   ierr = DMCreate(comm, dm);CHKERRQ(ierr);
   ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
-  /* Open EXODUS II file and read basic informations on rank 0, then broadcast to all processors */
-  if (!rank) {
+  /* Open EXODUS II file and read basic information on rank 0, then broadcast to all processors */
+  if (rank == 0) {
     ierr = PetscMemzero(title,PETSC_MAX_PATH_LEN+1);CHKERRQ(ierr);
     PetscStackCallStandard(ex_get_init,(exoid, title, &dimEmbed, &numVertices, &numCells, &num_cs, &num_vs, &num_fs));
     if (!num_cs) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Exodus file does not contain any cell set\n");
@@ -1446,7 +1446,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   ierr = DMCreateLabel(*dm, "celltype");CHKERRQ(ierr);
 
   /* Read cell sets information */
-  if (!rank) {
+  if (rank == 0) {
     PetscInt *cone;
     int      c, cs, ncs, c_loc, v, v_loc;
     /* Read from ex_get_elem_blk_ids() */
@@ -1541,7 +1541,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   }
 
   /* Create vertex set label */
-  if (!rank && (num_vs > 0)) {
+  if (rank == 0 && (num_vs > 0)) {
     int vs, v;
     /* Read from ex_get_node_set_ids() */
     int *vs_id;
@@ -1581,7 +1581,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   ierr = VecSetBlockSize(coordinates, dimEmbed);CHKERRQ(ierr);
   ierr = VecSetType(coordinates,VECSTANDARD);CHKERRQ(ierr);
   ierr = VecGetArray(coordinates, &coords);CHKERRQ(ierr);
-  if (!rank) {
+  if (rank == 0) {
     PetscReal *x, *y, *z;
 
     ierr = PetscMalloc3(numVertices,&x,numVertices,&y,numVertices,&z);CHKERRQ(ierr);
@@ -1602,7 +1602,7 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   ierr = VecDestroy(&coordinates);CHKERRQ(ierr);
 
   /* Create side set label */
-  if (!rank && interpolate && (num_fs > 0)) {
+  if (rank == 0 && interpolate && (num_fs > 0)) {
     int fs, f, voff;
     /* Read from ex_get_side_set_ids() */
     int *fs_id;
