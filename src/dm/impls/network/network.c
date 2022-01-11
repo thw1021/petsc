@@ -1171,7 +1171,7 @@ PetscErrorCode DMNetworkGetVertexOffset(DM dm,PetscInt p,PetscInt *offset)
 - nvar - number of variables for the component at the vertex/edge point, zero if the component does not introduce any degrees of freedom at the point
 
   Notes:
-    The owning rank and all ghost ranks must call this routine to add a component and number of variables at the given point.
+    The owning rank and any other ranks that have this point as a ghost location must call this routine to add a component and number of variables at the given point.
 
     DMNetworkLayoutSetUp() must be called before this routine.
 
