@@ -73,6 +73,9 @@ int main(int argc, char *argv[])
 
 /*TEST
 
+  build:
+   requires: defined(PETSC_HAVE_CXX)
+
  test:
    requires: !device
    suffix: no_device
