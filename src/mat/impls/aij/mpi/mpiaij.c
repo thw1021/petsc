@@ -6944,7 +6944,6 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat mat)
   PetscFunctionReturn(0);
 }
 
-
 /*
     Special version for direct calls from Fortran
 */
