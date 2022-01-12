@@ -939,7 +939,10 @@ class PetscDocString(PetscDocStringBase):
 
   sections = Sections(
     Synopsis("synopsis",required=True,keywords=("Synopsis","Not Collective")),
-    ParameterList("parameters",titles=("Input Parameter","Output Parameter"),keywords=("Input","Output")),
+    ParameterList(
+      "parameters",titles=("Input Parameter","Output Parameter"),
+      keywords=("Input","Output")
+    ),
     ParameterList("options",titles=("Options Database",)),
     Prose("notes"),
     Prose("fortran notes",keywords=("Fortran",)),
@@ -1037,6 +1040,8 @@ class PetscDocString(PetscDocStringBase):
     return PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
 
   def makeSourceRange(self,token,string,lineno,offset=0):
+    if token not in string[offset:]:
+      import ipdb; ipdb.set_trace()
     colBegin = string.index(token,offset)+1
     colEnd   = colBegin+len(token)
     tu       = self.cursor.translation_unit
@@ -1152,11 +1157,11 @@ class PetscDocString(PetscDocStringBase):
     name,match = self.sections.guessHeading(line)
     if ":" in line:
       import ipdb; ipdb.set_trace()
-      mess = "Line seeams to be a section header, doesn't directly end with with ':'"
+      mess = "Line seeams to be a section header but doesn't directly end with with ':', did you mean '{}'?"
     else:
-      mess = "Line seems to be a section header but missing ':', did you mean '{}:'?".format(match)
+      mess = "Line seems to be a section header but missing ':', did you mean '{}:'?"
     diag = self.diags.section_header_maybe_header
-    self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(name,line,lineno))
+    self.addErrorFromSourceRange(diag,mess.format(match),self.makeSourceRange(name,line,lineno))
     return
 
   def _checkSectionHeaderThatProbablyShouldNotBeOne(self,line,lineno):
@@ -2228,8 +2233,11 @@ class PetscLinter(object):
     """
     add a generic warning given a filename
     """
-    if self.werror:
+    if diag.disabled():
+      return
+    elif self.werror:
       return self.addErrorFromCursor(filename,diag)
+
     warnMsg = diag.formatMessage()
     try:
       if warnMsg in self.warnings[-1][1]:
@@ -2246,10 +2254,15 @@ class PetscLinter(object):
     """
     given a cursor attach a diagnostic warning message to it
     """
-    if self.werror:
+    if diag.disabled():
+      return
+    elif self.werror:
       return self.addErrorFromCursor(cursor,diag)
+
     cursor   = PetscCursor.cast(cursor)
-    warnStr  = "".join(["\nWARNING {}: ".format(len(self.warnings)),str(cursor),"\n",warnMsg])
+    warnStr  = "".join((
+      "\nWARNING {}: ".format(len(self.warnings)),str(cursor),"\n",diag.formatMessage()
+    ))
     self.warnings.append((cursor.getFile(),warnStr))
     return
 
@@ -2547,12 +2560,19 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     for idx,(loc,line) in enumerate(synopsis.lines):
       if loc.start.line == symbolLine:
         if "-" not in line:
-          diag = synopsis.diags.missing_description_separator
-          mess = "Synopsis missing '-' between the symbol name and description"
-          eloc = docstring.makeSourceRange(
-            " ",line,symbolLine,offset=line.find(symbol)+len(symbol)
-          )
-          docstring.addErrorFromSourceRange(diag,mess,eloc,patch=Patch(eloc," - "))
+          pre,_,descr = line.partition(symbol)
+          descr = descr.strip()
+          if descr:
+            diag  = synopsis.diags.missing_description_separator
+            mess  = "Synopsis missing '-' between the symbol name and description"
+            eloc  = docstring.makeSourceRange(" ",line,symbolLine,offset=len(pre)+len(symbol))
+            patch = Patch(eloc," - ")
+          else:
+            diag  = synopsis.diags.missing_description
+            mess  = "Synopsis missing description"
+            eloc  = docstring.makeSourceRange(symbol,line,symbolLine)
+            patch = None
+          docstring.addErrorFromSourceRange(diag,mess,eloc,patch=patch)
         rest       = line.split(symbol,maxsplit=1)[1].replace("-"," ",1).strip()
         wordCount += len(rest.split())
         charCount += len(rest)
@@ -2577,30 +2597,6 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     )
     diag = synopsis.diags.missing_description
     docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
-
-  # for lineLoc,line in synopsis.lines:
-  #   symbol,dash,rest = line.partition("-")
-  #   if symbol.lstrip().startswith("$"):
-  #     # This is special treatment for enums since they don't usually have a
-  #     # clearly-defined "begin"
-  #     break
-  #   elif dash and rest:
-  #     foundSynopsis = True
-  #     symbol        = symbol.strip()
-  #     if symbol != cursorName:
-  #       diag = synopsis.diags.matching_symbol_name
-  #       loc  = docstring.makeSourceRange(symbol,line,lineLoc.start.line)
-  #       if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
-  #         mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
-  #           symbol,cursorName
-  #         )
-  #         patch = Patch(loc,cursorName)
-  #       else:
-  #         mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
-  #         patch = None
-  #       docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
-  #     import ipdb; ipdb.set_trace()
-  #     break
   return
 
 @DiagnosticManager.register(
@@ -2751,6 +2747,8 @@ def checkDocValidLevel(linter,cursor,docstring):
           mess  = "Unknown Level subheading '{}', assuming you meant '{}'".format(levelName,match)
           patch = Patch(loc,match)
         else:
+          if "level" not in loc.raw().casefold():
+            continue # TODO fix this with the below
           mess  = "Unknown Level subheading '{}', expected one of {}".format(levelName,expected)
           patch = None
         docstring.addErrorFromSourceRange(spellingDiag,mess,loc,patch=patch)
