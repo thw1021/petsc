@@ -13,6 +13,12 @@
 namespace Petsc
 {
 
+namespace Device
+{
+
+namespace CUPM
+{
+
 namespace Impl
 {
 
@@ -25,10 +31,10 @@ template <typename T> struct HandleTag { using type = T; };
 } // namespace detail
 
 // Forward declare
-template <CUPMDeviceType T> class PETSC_VISIBILITY_INTERNAL CUPMContext;
+template <DeviceType T> class PETSC_VISIBILITY_INTERNAL DeviceContext;
 
-template <CUPMDeviceType T>
-class CUPMContext : CUPMBlasInterface<T>
+template <DeviceType T>
+class DeviceContext : Impl::BlasInterface<T>
 {
 public:
   PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
@@ -169,8 +175,8 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*));
 };
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::destroy(PetscDeviceContext dctx))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContext dctx))
 {
   cupmError_t    cerr;
   PetscErrorCode ierr;
@@ -185,8 +191,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::destroy(PetscDeviceContext 
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::changeStreamType(PetscDeviceContext dctx, PETSC_UNUSED PetscStreamType stype))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::changeStreamType(PetscDeviceContext dctx, PETSC_UNUSED PetscStreamType stype))
 {
   auto dci = impls_cast_(dctx);
 
@@ -201,8 +207,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::changeStreamType(PetscDevic
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dctx))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
   cupmError_t    cerr;
@@ -235,8 +241,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dc
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::query(PetscDeviceContext dctx, PetscBool *idle))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext dctx, PetscBool *idle))
 {
   cupmError_t cerr;
 
@@ -251,8 +257,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::query(PetscDeviceContext dc
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb))
 {
   cupmError_t cerr;
   auto        dcib = impls_cast_(dctxb);
@@ -263,8 +269,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::waitForContext(PetscDeviceC
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::synchronize(PetscDeviceContext dctx))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::synchronize(PetscDeviceContext dctx))
 {
   cupmError_t cerr;
   auto        dci = impls_cast_(dctx);
@@ -276,17 +282,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::synchronize(PetscDeviceCont
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
+template <DeviceType T>
 template <typename handle_t>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
 {
   PetscFunctionBegin;
   *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t());
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::beginTimer(PetscDeviceContext dctx))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceContext dctx))
 {
   auto        dci = impls_cast_(dctx);
   cupmError_t cerr;
@@ -304,8 +310,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::beginTimer(PetscDeviceConte
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext dctx, PetscLogDouble *elapsed))
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceContext dctx, PetscLogDouble *elapsed))
 {
   cupmError_t cerr;
   float       gtime;
@@ -324,24 +330,27 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode CUPMContext<T>::endTimer(PetscDeviceContext
 }
 
 // initialize the static member variables
-template <CUPMDeviceType T> bool CUPMContext<T>::initialized_ = false;
+template <DeviceType T> bool DeviceContext<T>::initialized_ = false;
 
-template <CUPMDeviceType T>
-std::array<typename CUPMContext<T>::cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   CUPMContext<T>::blashandles_ = {};
+template <DeviceType T>
+std::array<typename DeviceContext<T>::cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   DeviceContext<T>::blashandles_ = {};
 
-template <CUPMDeviceType T>
-std::array<typename CUPMContext<T>::cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> CUPMContext<T>::solverhandles_ = {};
-
-// shorten this one up a bit (and instantiate the templates)
-using CUPMContextCuda = CUPMContext<CUPMDeviceType::CUDA>;
-using CUPMContextHip  = CUPMContext<CUPMDeviceType::HIP>;
+template <DeviceType T>
+std::array<typename DeviceContext<T>::cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> DeviceContext<T>::solverhandles_ = {};
 
 } // namespace Impl
 
-} // namespace Petsc
+// shorten this one up a bit (and instantiate the templates)
+using CUPMContextCuda = Impl::DeviceContext<DeviceType::CUDA>;
+using CUPMContextHip  = Impl::DeviceContext<DeviceType::HIP>;
 
 // shorthand for what is an EXTREMELY long name
-#define PetscDeviceContext_(IMPLS)                                      \
-  Petsc::Impl::CUPMContext<Petsc::CUPMDeviceType::IMPLS>::PetscDeviceContext_IMPLS
+#define PetscDeviceContext_(IMPLS) Petsc::Device::CUPM::Impl::DeviceContext<Petsc::Device::CUPM::DeviceType::IMPLS>::PetscDeviceContext_IMPLS
+
+} // namespace CUPM
+
+} // namespace Device
+
+} // namespace Petsc
 
 #endif // PETSCDEVICECONTEXTCUDA_HPP
