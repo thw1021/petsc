@@ -40,7 +40,7 @@ static_assert(
 );
 
 #define PETSC_DEVICE_DEFAULT_CASE(comm,type)                            \
-  SETERRQ1((comm),PETSC_ERR_PLIB,                                       \
+  SETERRQ((comm),PETSC_ERR_PLIB,                                       \
            "PETSc was seemingly configured for PetscDeviceType %s but " \
            "we've fallen through all cases in a switch",                \
            PetscDeviceTypes[type])
@@ -269,7 +269,7 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type,
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
   if (PetscLikely(PetscDeviceInitialized(type))) PetscFunctionReturn(0);
-  if (PetscUnlikelyDebug(defaultDevices[type])) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
+  if (PetscUnlikelyDebug(defaultDevices[type])) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
   ierr = PetscDeviceCreate(type,defaultDeviceId,&defaultDevices[type]);CHKERRQ(ierr);
   ierr = PetscDeviceConfigure(defaultDevices[type]);CHKERRQ(ierr);
   /* the default devices are all automatically "referenced" at least once, otherwise the
@@ -328,7 +328,7 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
     PETSC_CONSTEXPR_17 auto PetscDeviceCheckAllDestroyedAfterFinalize = [](){
       PetscFunctionBegin;
       for (const auto &device : defaultDevices) {
-        if (PetscUnlikely(device)) SETERRQ2(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of type '%s' had reference count %" PetscInt_FMT " and was not fully destroyed during PetscFinalize()",PetscDeviceTypes[device->type],device->refcnt);
+        if (PetscUnlikely(device)) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_COR,"Device of type '%s' had reference count %" PetscInt_FMT " and was not fully destroyed during PetscFinalize()",PetscDeviceTypes[device->type],device->refcnt);
       }
       PetscFunctionReturn(0);
     };
@@ -390,7 +390,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
       int  len; /* unused */
 
       ierr = MPI_Comm_get_name(comm,name,&len);CHKERRMPI(ierr);
-      SETERRQ1(comm,PETSC_ERR_MPI,"Default devices being initialized on MPI_Comm '%s' not PETSC_COMM_WORLD",name);
+      SETERRQ(comm,PETSC_ERR_MPI,"Default devices being initialized on MPI_Comm '%s' not PETSC_COMM_WORLD",name);
     }
   }
   comm = PETSC_COMM_WORLD; /* from this point on we assume we're on PETSC_COMM_WORLD */
