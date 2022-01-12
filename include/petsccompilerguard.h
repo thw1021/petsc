@@ -9,6 +9,13 @@
 #  if __cplusplus < 201103L /* C++11 */
 #    error "PETSc requires a C++ compiler that defines __cplusplus >= 201103L (C++11)"
 #  endif
+/* Visual Studio C compiler does not define __STDC__ unless it is in C89 mode, even though it
+ * may support an acceptable subset of C99. So it gets special treatment here.
+ */
+#elif defined(_MSC_VER)
+#  if _MSC_VER < 1900
+#    error "PETSc requires a Visual Studio C compiler that defines _MSC_VER >= 1900 (Visual Studio 2015)"
+#  endif
 #elif defined(__STDC__)
 #  if defined(__STDC_VERSION__) /* __STDC_VERSION__ since C94 */
 #    if (__STDC__ != 1) || (__STDC_VERSION__ < 199901L) /* C99 */
@@ -19,4 +26,4 @@
 #  endif
 #endif
 
-#endif /* PETSCCOMPILERGUARD_H */
+#endif /* PETSC_COMPILER_GUARD_H */
