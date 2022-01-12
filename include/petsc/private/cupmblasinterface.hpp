@@ -18,10 +18,13 @@
 namespace Petsc
 {
 
-namespace Impl
+namespace Device
 {
 
-namespace detail
+namespace CUPM
+{
+
+namespace Impl
 {
 
 #define CHKERRCUPMBLAS(...) do {                                        \
@@ -252,29 +255,27 @@ namespace detail
 #define PETSC_CUPMBLAS_ALIAS_FUNCTION(suffix)                           \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,suffix,PETSC_CUPMBLAS_PREFIX,suffix)
 
-template <CUPMDeviceType T>
-struct CUPMBlasInterfaceBase : CUPMInterface<T>
+template <DeviceType T>
+struct BlasInterfaceBase : Interface<T>
 {
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* cupmBlasName())
   {
     switch (T) {
-    case CUPMDeviceType::CUDA: return "cuBLAS";
-    case CUPMDeviceType::HIP:  return "hipBLAS";
+    case DeviceType::CUDA: return "cuBLAS";
+    case DeviceType::HIP:  return "hipBLAS";
     }
     PetscUnreachable();
     return "invalid";
   }
 };
 
-#define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE)                      \
-  using base_type = Petsc::Impl::detail::CUPMBlasInterfaceBase<DEV_TYPE>; \
-  using base_type::cupmBlasName;                                        \
-  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE); \
+#define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE)                                             \
+  using base_type = Petsc::Device::CUPM::Impl::BlasInterfaceBase<DEV_TYPE>;                    \
+  using base_type::cupmBlasName;                                                               \
+  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE);                        \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,PetscConcat(Petsc,PETSC_CUPMBLAS_PREFIX_U),GetErrorName)
 
-} // namespace detail
-
-template <CUPMDeviceType T> struct CUPMBlasInterface;
+template <DeviceType T> struct BlasInterface;
 
 #if PetscDefined(HAVE_CUDA)
 #define PETSC_CUPMBLAS_PREFIX         cublas
@@ -283,10 +284,9 @@ template <CUPMDeviceType T> struct CUPMBlasInterface;
 #define PETSC_CUPMBLAS_FP_INPUT_TYPE  PETSC_CUPMBLAS_FP_INPUT_TYPE_U
 #define PETSC_CUPMBLAS_FP_RETURN_TYPE PETSC_CUPMBLAS_FP_RETURN_TYPE_L
 template <>
-struct CUPMBlasInterface<CUPMDeviceType::CUDA>
-  : detail::CUPMBlasInterfaceBase<CUPMDeviceType::CUDA>
+struct BlasInterface<DeviceType::CUDA> : BlasInterfaceBase<DeviceType::CUDA>
 {
-  PETSC_CUPMBLAS_BASE_CLASS_HEADER(CUPMDeviceType::CUDA);
+  PETSC_CUPMBLAS_BASE_CLASS_HEADER(DeviceType::CUDA);
 
   // typedefs
   using cupmBlasHandle_t   = cublasHandle_t;
@@ -377,9 +377,9 @@ struct CUPMBlasInterface<CUPMDeviceType::CUDA>
 #define PETSC_CUPMBLAS_FP_INPUT_TYPE  PETSC_CUPMBLAS_FP_INPUT_TYPE_U
 #define PETSC_CUPMBLAS_FP_RETURN_TYPE PETSC_CUPMBLAS_FP_RETURN_TYPE_L
 template <>
-struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CUPMDeviceType::HIP>
+struct BlasInterface<DeviceType::HIP> : BlasInterfaceBase<DeviceType::HIP>
 {
-  PETSC_CUPMBLAS_BASE_CLASS_HEADER(CUPMDeviceType::HIP);
+  PETSC_CUPMBLAS_BASE_CLASS_HEADER(DeviceType::HIP);
 
   // typedefs
   using cupmBlasHandle_t   = hipblasHandle_t;
@@ -455,11 +455,9 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CU
 
 #undef PETSC_CUPMBLAS_BASE_CLASS_HEADER
 
-} // namespace Impl
-
 #define PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,Tp)   \
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,Tp);      \
-  using base_name = Petsc::Impl::CUPMBlasInterface<Tp>;                 \
+  using base_name = Petsc::Device::CUPM::Impl::BlasInterface<Tp>;       \
   /* introspection */                                                   \
   using base_name::cupmBlasName;                                        \
   using base_name::cupmBlasGetErrorName;                                \
@@ -493,6 +491,12 @@ struct CUPMBlasInterface<CUPMDeviceType::HIP> : detail::CUPMBlasInterfaceBase<CU
   using base_name::cupmBlasXgemm;                                       \
   /* BLAS extensions */                                                 \
   using base_name::cupmBlasXgeam
+
+} // namespace Impl
+
+} // namespace CUPM
+
+} // namespace Device
 
 } // namespace Petsc
 

@@ -11,24 +11,27 @@
 namespace Petsc
 {
 
+namespace Device
+{
+
+namespace CUPM
+{
+
 #if defined(PETSC_CUPM_DEVICE_NONE)
 #  error redefinition of PETSC_CUPM_DEVICE_NONE
 #endif
 
 #define PETSC_CUPM_DEVICE_NONE -3
 
-namespace Impl
-{
-
-template <CUPMDeviceType T>
-class CUPMDevice : CUPMInterface<T>
+template <DeviceType T>
+class Device : Impl::Interface<T>
 {
 public:
   using createContextFunction_t = PetscErrorCode (*)(PetscDeviceContext);
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
 
   // default constructor
-  explicit CUPMDevice(createContextFunction_t func) noexcept : create_(func) { }
+  explicit Device(createContextFunction_t func) noexcept : create_(func) { }
 
   PETSC_NODISCARD static PetscErrorCode initialize(MPI_Comm,PetscInt*,PetscDeviceInitType*) noexcept;
 
@@ -40,10 +43,10 @@ public:
 
 private:
   // opaque class representing a single device
-  class CUPMDeviceInternal;
+  class DeviceInternal;
 
   // all known devices
-  static std::array<std::unique_ptr<CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES> devices_;
+  static std::array<std::unique_ptr<DeviceInternal>,PETSC_DEVICE_MAX_DEVICES> devices_;
 
   // this ranks default device, if < 0  then devices are specifically disabled
   static int defaultDevice_;
@@ -60,15 +63,17 @@ private:
 };
 
 // define static variables
-template <CUPMDeviceType T> bool CUPMDevice<T>::initialized_ = false;
+template <DeviceType T> bool Device<T>::initialized_ = false;
 
-template <CUPMDeviceType T>
-std::array<std::unique_ptr<typename CUPMDevice<T>::CUPMDeviceInternal>,PETSC_DEVICE_MAX_DEVICES>
-CUPMDevice<T>::devices_ = { };
+template <DeviceType T>
+std::array<std::unique_ptr<typename Device<T>::DeviceInternal>,PETSC_DEVICE_MAX_DEVICES>
+Device<T>::devices_ = { };
 
-template <CUPMDeviceType T> int CUPMDevice<T>::defaultDevice_ = PETSC_CUPM_DEVICE_NONE;
+template <DeviceType T> int Device<T>::defaultDevice_ = PETSC_CUPM_DEVICE_NONE;
 
-} // namespace Impl
+} // namespace CUPM
+
+} // namespace Device
 
 } // namespace Petsc
 

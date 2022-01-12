@@ -4,7 +4,16 @@
 namespace Petsc
 {
 
-class SyclContext
+namespace Device
+{
+
+namespace SYCL
+{
+
+namespace Impl
+{
+
+class DeviceContext
 {
 public:
   struct PetscDeviceContext_IMPLS {
@@ -26,7 +35,7 @@ private:
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode initialize_(PetscInt id, SyclContext *dci) noexcept
+  PETSC_NODISCARD static PetscErrorCode initialize_(PetscInt id, DeviceContext *dci) noexcept
   {
     PetscErrorCode ierr;
 
@@ -55,7 +64,7 @@ public:
   };
 
   // default constructor
-  SyclContext() noexcept = default;
+  DeviceContext() noexcept = default;
 
   // All of these functions MUST be static in order to be callable from C, otherwise they
   // get the implicit 'this' pointer tacked on
@@ -78,15 +87,23 @@ public:
   PETSC_NODISCARD static PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
 };
 
+} // namespace Impl
+
+} // namespace SYCL
+
+} // namespace Device
+
 } // namespace Petsc
 
 PetscErrorCode PetscDeviceContextCreate_SYCL(PetscDeviceContext dctx)
 {
-  PetscErrorCode                      ierr;
-  static const Petsc::SyclContext     syclctx;
+  using namespace Petsc::Device::SYCL::Impl;
+
+  PetscErrorCode             ierr;
+  static const DeviceContext syclctx;
 
   PetscFunctionBegin;
-  dctx->data = new Petsc::SyclContext::PetscDeviceContext_IMPLS();
+  dctx->data = new DeviceContext::PetscDeviceContext_IMPLS();
   ierr = PetscMemcpy(dctx->ops,&syclctx.ops,sizeof(syclctx.ops));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

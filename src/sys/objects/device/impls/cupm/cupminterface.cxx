@@ -8,17 +8,23 @@
 namespace Petsc
 {
 
+namespace Device
+{
+
+namespace CUPM
+{
+
 namespace Impl
 {
 
-#define PETSC_CUPM_STATIC_VARIABLE_DEFN(theirs,DEVICE,ours) \
-  const decltype(theirs) CUPMInterface<CUPMDeviceType::DEVICE>::ours;
+#define PETSC_CUPM_STATIC_VARIABLE_DEFN(theirs,DEVICE,ours)     \
+  const decltype(theirs) Interface<DeviceType::DEVICE>::ours;
 
 // in case either one or the other don't agree on a name, you can specify all three here:
 //
 // PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cudaSuccess, hipAllGood, cupmSuccess) ->
-// const decltype(cudaSuccess) CUPMInterface<CUPMDeviceType::CUDA>::cupmSuccess;
-// const decltype(hipAllGood)  CUPMInterface<CUPMDeviceType::HIP>::cupmSuccess;
+// const decltype(cudaSuccess) Interface<DeviceType::CUDA>::cupmSuccess;
+// const decltype(hipAllGood)  Interface<DeviceType::HIP>::cupmSuccess;
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cuoriginal,hiporiginal,ours) \
   PetscIfPetscDefined(HAVE_CUDA,PETSC_CUPM_STATIC_VARIABLE_DEFN,PetscExpandToNothing)(cuoriginal,CUDA,ours) \
   PetscIfPetscDefined(HAVE_HIP,PETSC_CUPM_STATIC_VARIABLE_DEFN,PetscExpandToNothing)(hiporiginal,HIP,ours)
@@ -26,8 +32,8 @@ namespace Impl
 // if both cuda and hip agree on the same naming scheme i.e. cudaSuccess and hipSuccess:
 //
 // PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(Success) ->
-// const decltype(cudaSuccess) CUPMInterface<CUPMDeviceType::CUDA>::cupmSuccess;
-// const decltype(hipSuccess)  CUPMInterface<CUPMDeviceType::HIP>::cupmSuccess;
+// const decltype(cudaSuccess) Interface<DeviceType::CUDA>::cupmSuccess;
+// const decltype(hipSuccess)  Interface<DeviceType::HIP>::cupmSuccess;
 #define PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(suffix)         \
   PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(PetscConcat(cuda,suffix),PetscConcat(hip,suffix),PetscConcat(cupm,suffix))
 
@@ -63,5 +69,9 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyHostToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDefault)
 
 } // namespace Impl
+
+} // namespace CUPM
+
+} // namespace Device
 
 } // namespace Petsc
