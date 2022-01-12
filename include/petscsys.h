@@ -5,6 +5,8 @@
 #if !defined(PETSCSYS_H)
 #define PETSCSYS_H
 
+#include <petsccompilerguard.h>
+
 /* ========================================================================== */
 /*
    petscconf.h is contained in ${PETSC_ARCH}/include/petscconf.h it is
@@ -120,16 +122,10 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #if defined(__cplusplus)
 #  define PETSC_RESTRICT PETSC_CXX_RESTRICT
 #else
-#  define PETSC_RESTRICT PETSC_C_RESTRICT
+#  define PETSC_RESTRICT restrict
 #endif
 
-#if defined(__cplusplus)
-#  define PETSC_INLINE PETSC_CXX_INLINE
-#else
-#  define PETSC_INLINE PETSC_C_INLINE
-#endif
-
-#define PETSC_STATIC_INLINE static PETSC_INLINE
+#define PETSC_STATIC_INLINE static inline
 
 #if defined(_WIN32) && defined(PETSC_USE_SHARED_LIBRARIES) /* For Win32 shared libraries */
 #  define PETSC_DLLEXPORT __declspec(dllexport)
@@ -177,7 +173,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #endif
 
 /* C++11 features */
-#if defined(__cplusplus) && defined(PETSC_HAVE_CXX_DIALECT_CXX11)
+#if defined(__cplusplus)
 #  define PETSC_NULLPTR             nullptr
 #  define PETSC_CONSTEXPR           constexpr
 #  define PETSC_NOEXCEPT            noexcept
@@ -187,7 +183,7 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR
 #  define PETSC_NOEXCEPT
 #  define PETSC_NOEXCEPT_ARG(cond_)
-#endif /* __cplusplus && PETSC_HAVE_CXX_DIALECT_CXX11 */
+#endif /* __cplusplus */
 
 /* C++14 features */
 #if defined(PETSC_HAVE_CXX_DIALECT_CXX14)
@@ -204,6 +200,13 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #else
 #  define PETSC_NODISCARD
 #  define PETSC_CONSTEXPR_17
+#endif
+
+/* designated initializers since C99 and C++20 */
+#if defined(__cplusplus) && !defined(PETSC_HAVE_CXX_DIALECT_CXX20)
+#  define PetscDesignatedInitializer(name,value) value
+#else
+#  define PetscDesignatedInitializer(name,value) .name = value
 #endif
 
 #include <petscversion.h>
@@ -1886,7 +1889,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscMemcpy(void *a,const void *b,size_t n)
 #endif
   if (a != b && n > 0) {
 #if defined(PETSC_USE_DEBUG)
-    if ((al > bl && (al - bl) < nl) || (bl - al) < nl)  SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Memory regions overlap: either use PetscMemmov()\n\
+    if ((al > bl && (al - bl) < nl) || (bl - al) < nl)  SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Memory regions overlap: either use PetscMemmov()\n\
               or make sure your copy regions and lengths are correct. \n\
               Length (bytes) %ld first address %ld second address %ld",nl,al,bl);
 #endif
@@ -1941,7 +1944,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscMemzero(void *a,size_t n)
 {
   if (n > 0) {
 #if defined(PETSC_USE_DEBUG)
-    if (!a) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Trying to zero at a null pointer with %zu bytes",n);
+    if (!a) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Trying to zero at a null pointer with %zu bytes",n);
 #endif
 #if defined(PETSC_PREFER_ZERO_FOR_MEMZERO)
     if (!(((long) a) % sizeof(PetscScalar)) && !(n % sizeof(PetscScalar))) {
@@ -2242,7 +2245,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntCast(PetscInt64 a,PetscInt *b)
 #if !defined(PETSC_USE_64BIT_INDICES)
   if (a > PETSC_MAX_INT) {
     *b = 0;
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt64_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices",a);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt64_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices",a);
   }
 #endif
   *b = (PetscInt)(a);
@@ -2273,7 +2276,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscBLASIntCast(PetscInt a,PetscBLASInt *b)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES) && !defined(PETSC_HAVE_64BIT_BLAS_INDICES)
-  if (a > PETSC_BLAS_INT_MAX) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for BLAS/LAPACK, which is restricted to 32 bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with -with-64-bit-blas-indices for the case you are running",a); }
+  if (a > PETSC_BLAS_INT_MAX) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for BLAS/LAPACK, which is restricted to 32 bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with -with-64-bit-blas-indices for the case you are running",a); }
 #endif
   if (a < 0) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to BLAS/LAPACK routine"); }
   *b = (PetscBLASInt)(a);
@@ -2302,7 +2305,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscCuBLASIntCast(PetscInt a,PetscCuBLASInt 
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
-  if (a > PETSC_CUBLAS_INT_MAX) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for cuBLAS, which is restricted to 32 bit integers.",a); }
+  if (a > PETSC_CUBLAS_INT_MAX) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for cuBLAS, which is restricted to 32 bit integers.",a); }
 #endif
   if (a < 0) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to cuBLAS routine"); }
   *b = (PetscCuBLASInt)(a);
@@ -2331,7 +2334,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscMPIIntCast(PetscInt a,PetscMPIInt *b)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
-  if (a > PETSC_MPI_INT_MAX) { *b = 0; SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for MPI buffer length. We currently only support 32 bit integers",a); }
+  if (a > PETSC_MPI_INT_MAX) { *b = 0; SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for MPI buffer length. We currently only support 32 bit integers",a); }
 #endif
   *b = (PetscMPIInt)(a);
   PetscFunctionReturn(0);
@@ -2477,7 +2480,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntMultError(PetscInt a,PetscInt b,Petsc
   PetscFunctionBegin;
   r  =  PetscInt64Mult(a,b);
 #if !defined(PETSC_USE_64BIT_INDICES)
-  if (r > PETSC_MAX_INT) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"Product of two integers %d %d overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running",a,b);
+  if (r > PETSC_MAX_INT) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Product of two integers %d %d overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running",a,b);
 #endif
   if (result) *result = (PetscInt) r;
   PetscFunctionReturn(0);
@@ -2512,7 +2515,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscIntSumError(PetscInt a,PetscInt b,PetscI
   PetscFunctionBegin;
   r  =  ((PetscInt64)a) + ((PetscInt64)b);
 #if !defined(PETSC_USE_64BIT_INDICES)
-  if (r > PETSC_MAX_INT) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_SUP,"Sum of two integers %d %d overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running",a,b);
+  if (r > PETSC_MAX_INT) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Sum of two integers %d %d overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running",a,b);
 #endif
   if (result) *result = (PetscInt) r;
   PetscFunctionReturn(0);
@@ -2906,7 +2909,7 @@ M*/
   _4_ierr = MPI_Allreduce(a_b1,a_b2,6,MPI_INT,MPI_MAX,fcomm);CHKERRMPI(_4_ierr);\
   if (-a_b2[0] != a_b2[1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (code lines) on different processors");\
   if (-a_b2[2] != a_b2[3]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called in different locations (functions) on different processors");\
-  if (-a_b2[4] != a_b2[5]) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",_mpiu_allreduce_c_int); \
+  if (-a_b2[4] != a_b2[5]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_Allreduce() called with different counts %d on different processors",_mpiu_allreduce_c_int); \
   _4_ierr = MPI_Allreduce((a),(b),(c),d,e,(fcomm));CHKERRMPI(_4_ierr);\
   } while (0)
 #else

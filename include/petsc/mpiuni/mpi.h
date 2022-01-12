@@ -94,6 +94,7 @@
 #if !defined(MPIUNI_H)
 #define MPIUNI_H
 
+#include <petsccompilerguard.h>
 /* Required by abort() in mpi.c & for win64 */
 #include <petscconf.h>
 #include <stddef.h>
