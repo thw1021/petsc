@@ -37,29 +37,32 @@
 namespace Petsc
 {
 
+namespace Device
+{
+
+namespace CUPM
+{
+
 // enum describing available cupm devices, this is used as the template parameter to any
-// class subclassing the CUPMInterface or using it as a member variable
-enum class CUPMDeviceType : int {
+// class subclassing the Interface or using it as a member variable
+enum class DeviceType : int {
   CUDA,
   HIP
 };
 
-static constexpr std::array<const char*const,5> CUPMDeviceTypes = {
+static constexpr std::array<const char*const,5> DeviceTypes = {
   "cuda",
   "hip",
-  "CUPMDeviceType",
-  "CUPMDeviceType::",
+  "Petsc::Device::CUPM::CUPMDeviceType",
+  "Petsc::Device::CUPM::CUPMDeviceType::",
   nullptr
 };
 
 namespace Impl
 {
 
-namespace detail
-{
-
 // A backend agnostic CHKERRCUPM() function, this will only work inside the member
-// functions of a class inheriting from CUPMInterface. Can use it in the usual trailing
+// functions of a class inheriting from CUPM::Interface. Can use it in the usual trailing
 // CHKERRQ() form:
 //
 // auto cerr = foo();CHKERRCUPM(cerr);
@@ -266,23 +269,23 @@ namespace detail
 
 // Base class that holds functions and variables that don't require CUDA or HIP to be present
 // on the system
-template <CUPMDeviceType T>
-struct CUPMInterfaceBase
+template <DeviceType T>
+struct InterfaceBase
 {
-  static const CUPMDeviceType type = T;
+  static const DeviceType type = T;
 
   PETSC_CXX_COMPAT_DECL(constexpr const char* cupmName())
   {
-    static_assert(util::integral_value(CUPMDeviceType::CUDA) == 0,"");
-    static_assert(util::integral_value(CUPMDeviceType::HIP)  == 1,"");
-    return std::get<util::integral_value(T)>(CUPMDeviceTypes);
+    static_assert(util::integral_value(DeviceType::CUDA) == 0,"");
+    static_assert(util::integral_value(DeviceType::HIP)  == 1,"");
+    return std::get<util::integral_value(T)>(DeviceTypes);
   }
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscDeviceType cupmDeviceTypeToPetscDeviceType())
   {
     switch (T) {
-    case CUPMDeviceType::CUDA: return PETSC_DEVICE_CUDA;
-    case CUPMDeviceType::HIP:  return PETSC_DEVICE_HIP;
+    case DeviceType::CUDA: return PETSC_DEVICE_CUDA;
+    case DeviceType::HIP:  return PETSC_DEVICE_HIP;
     }
     PetscUnreachable();
     return PETSC_DEVICE_INVALID;
@@ -291,8 +294,8 @@ struct CUPMInterfaceBase
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscMemType cupmDeviceTypeToPetscMemType())
   {
     switch (T) {
-    case CUPMDeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
-    case CUPMDeviceType::HIP:  return PETSC_MEMTYPE_HIP;
+    case DeviceType::CUDA: return PETSC_MEMTYPE_CUDA;
+    case DeviceType::HIP:  return PETSC_MEMTYPE_HIP;
     }
     PetscUnreachable();
     return PETSC_MEMTYPE_HOST;
@@ -300,29 +303,27 @@ struct CUPMInterfaceBase
 };
 
 // declare the base class static member variables
-template <CUPMDeviceType T> const CUPMDeviceType CUPMInterfaceBase<T>::type;
+template <DeviceType T> const DeviceType InterfaceBase<T>::type;
 
-#define PETSC_CUPM_BASE_CLASS_HEADER(DEVICE_TYPE)                       \
-  using base_type = detail::CUPMInterfaceBase<DEVICE_TYPE>;             \
-  using base_type::type;                                                \
-  using base_type::cupmName;                                            \
-  using base_type::cupmDeviceTypeToPetscDeviceType;                     \
+#define PETSC_CUPM_BASE_CLASS_HEADER(DEVICE_TYPE)                               \
+  using base_type = Petsc::Device::CUPM::Impl::InterfaceBase<DEVICE_TYPE>;      \
+  using base_type::type;                                                        \
+  using base_type::cupmName;                                                    \
+  using base_type::cupmDeviceTypeToPetscDeviceType;                             \
   using base_type::cupmDeviceTypeToPetscMemType
-
-} // namespace detail
 
 // A templated C++ struct that defines the entire CUPM interface. Use of templating vs
 // preprocessor macros allows us to use both interfaces simultaneously as well as easily
 // import them into classes.
-template <CUPMDeviceType T> struct CUPMInterface;
+template <DeviceType T> struct Interface;
 
 #if PetscDefined(HAVE_CUDA)
 #define PETSC_CUPM_PREFIX_L cuda
 #define PETSC_CUPM_PREFIX_U CUDA
 template <>
-struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDeviceType::CUDA>
+struct Interface<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
 {
-  PETSC_CUPM_BASE_CLASS_HEADER(CUPMDeviceType::CUDA);
+  PETSC_CUPM_BASE_CLASS_HEADER(DeviceType::CUDA);
 
   // typedefs
   using cupmError_t        = cudaError_t;
@@ -411,9 +412,9 @@ struct CUPMInterface<CUPMDeviceType::CUDA> : detail::CUPMInterfaceBase<CUPMDevic
 #define PETSC_CUPM_PREFIX_L hip
 #define PETSC_CUPM_PREFIX_U HIP
 template <>
-struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDeviceType::HIP>
+struct Interface<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
 {
-  PETSC_CUPM_BASE_CLASS_HEADER(CUPMDeviceType::HIP);
+  PETSC_CUPM_BASE_CLASS_HEADER(DeviceType::HIP);
 
   // typedefs
   using cupmError_t        = hipError_t;
@@ -490,14 +491,10 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
 
 #undef PETSC_CUPM_BASE_CLASS_HEADER
 
-} // namespace Impl
-
-} // namespace Petsc
-
-// shorthand for bringing all of the typedefs from the base CUPMInterface class into your own,
+// shorthand for bringing all of the typedefs from the base Interface class into your own,
 // it's annoying that c++ doesn't have a way to do this automatically
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
-  using base_name = Petsc::Impl::CUPMInterface<T>;                      \
+  using base_name = Petsc::Device::CUPM::Impl::Interface<T>;            \
   /* introspection */                                                   \
   using base_name::type;                                                \
   using base_name::cupmName;                                            \
@@ -555,6 +552,14 @@ struct CUPMInterface<CUPMDeviceType::HIP> : detail::CUPMInterfaceBase<CUPMDevice
   using base_name::cupmFreeHost;                                        \
   using base_name::cupmMemsetAsync;                                     \
   using base_name::cupmLaunchKernel
+
+} // namespace Impl
+
+} // namespace CUPM
+
+} // namespace Device
+
+} // namespace Petsc
 
 #endif /* __cplusplus */
 

@@ -14,12 +14,15 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 namespace Petsc
 {
 
-namespace Impl
+namespace Device
+{
+
+namespace CUPM
 {
 
 // internal "impls" class for CUPMDevice. Each instance represents a single cupm device
-template <CUPMDeviceType T>
-class PETSC_NODISCARD CUPMDevice<T>::CUPMDeviceInternal
+template <DeviceType T>
+class PETSC_NODISCARD Device<T>::DeviceInternal
 {
   const int        id_;
   bool             devInitialized_ = false;
@@ -30,7 +33,7 @@ class PETSC_NODISCARD CUPMDevice<T>::CUPMDeviceInternal
 
 public:
   // default constructor
-  explicit constexpr CUPMDeviceInternal(int dev) noexcept : id_(dev) { }
+  explicit constexpr DeviceInternal(int dev) noexcept : id_(dev) { }
 
   // gather all relevant information for a particular device, a cupmDeviceProp_t is
   // usually sufficient here
@@ -44,17 +47,17 @@ public:
   PETSC_NODISCARD auto prop()        const -> const decltype(dprop_)&   { return dprop_;          }
 
   // factory
-  PETSC_CXX_COMPAT_DECL(std::unique_ptr<CUPMDeviceInternal> makeDevice(int i))
+  PETSC_CXX_COMPAT_DECL(std::unique_ptr<DeviceInternal> makeDevice(int i))
   {
-    return std::unique_ptr<CUPMDeviceInternal>(new CUPMDeviceInternal(i));
+    return std::unique_ptr<DeviceInternal>(new DeviceInternal(i));
   }
 };
 
 // the goal here is simply to get the cupm backend to create its context, not to do any type of
 // modification of it, or create objects (since these may be affected by subsequent
 // configuration changes)
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::DeviceInternal::initialize() noexcept
 {
   cupmError_t cerr;
 
@@ -94,8 +97,8 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::initialize() noexcept
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::DeviceInternal::configure() noexcept
 {
   cupmError_t    cerr;
   PetscErrorCode ierr;
@@ -112,8 +115,8 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::view(PetscViewer viewer) const noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::DeviceInternal::view(PetscViewer viewer) const noexcept
 {
   PetscBool      iascii;
   PetscErrorCode ierr;
@@ -168,8 +171,8 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
 
 #define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false;
 
-template <CUPMDeviceType T>
-PETSC_CXX_COMPAT_DEFN(bool CUPMDevice<T>::CUPMDeviceInternal::CUPMAwareMPI_())
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
 {
   constexpr int  bufSize = 2;
   constexpr int  hbuf[bufSize] = {1,0};
@@ -217,16 +220,16 @@ PETSC_CXX_COMPAT_DEFN(bool CUPMDevice<T>::CUPMDeviceInternal::CUPMAwareMPI_())
   PetscFunctionReturn(awareness);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::finalize() noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::DeviceInternal::finalize() noexcept
 {
   PetscFunctionBegin;
   devInitialized_ = false;
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::finalize_() noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::finalize_() noexcept
 {
   PetscFunctionBegin;
   if (!initialized_) PetscFunctionReturn(0);
@@ -243,44 +246,44 @@ PetscErrorCode CUPMDevice<T>::finalize_() noexcept
 
 // these functions should be named identically to the option they produce where "CUPMTYPE" and
 // "cupmtype" are the uppercase and lowercase string versions of the cupm backend respectively
-template <CUPMDeviceType T>
+template <DeviceType T>
 PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* PetscDevice_CUPMTYPE_Options())
 {
   switch (T) {
-  case CUPMDeviceType::CUDA: return "PetscDevice CUDA Options";
-  case CUPMDeviceType::HIP:  return "PetscDevice HIP Options";
+  case DeviceType::CUDA: return "PetscDevice CUDA Options";
+  case DeviceType::HIP:  return "PetscDevice HIP Options";
   }
 }
 
-template <CUPMDeviceType T>
+template <DeviceType T>
 PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_enable_cupmtype())
 {
   switch (T) {
-  case CUPMDeviceType::CUDA: return "-device_enable_cuda";
-  case CUPMDeviceType::HIP:  return "-device_enable_hip";
+  case DeviceType::CUDA: return "-device_enable_cuda";
+  case DeviceType::HIP:  return "-device_enable_hip";
   }
 }
 
-template <CUPMDeviceType T>
+template <DeviceType T>
 PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_select_cupmtype())
 {
   switch (T) {
-  case CUPMDeviceType::CUDA: return "-device_select_cuda";
-  case CUPMDeviceType::HIP:  return "-device_select_hip";
+  case DeviceType::CUDA: return "-device_select_cuda";
+  case DeviceType::HIP:  return "-device_select_hip";
   }
 }
 
-template <CUPMDeviceType T>
+template <DeviceType T>
 PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_view_cupmtype())
 {
   switch (T) {
-  case CUPMDeviceType::CUDA: return "-device_view_cuda";
-  case CUPMDeviceType::HIP:  return "-device_view_hip";
+  case DeviceType::CUDA: return "-device_view_cuda";
+  case DeviceType::HIP:  return "-device_view_hip";
   }
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
   PetscInt       initTypeCUPM = *defaultInitType,id = *defaultDeviceId;
   PetscBool      view = PETSC_FALSE,flg;
@@ -336,7 +339,7 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
   // id is PetscInt, _defaultDevice is int
   ierr = PetscMPIIntCast(id,&defaultDevice_);CHKERRQ(ierr);
   if (initTypeCUPM == PETSC_DEVICE_INIT_EAGER) {
-    devices_[defaultDevice_] = CUPMDeviceInternal::makeDevice(defaultDevice_);
+    devices_[defaultDevice_] = DeviceInternal::makeDevice(defaultDevice_);
     ierr = devices_[defaultDevice_]->initialize();CHKERRQ(ierr);
     ierr = devices_[defaultDevice_]->configure();CHKERRQ(ierr);
     if (view) {
@@ -354,8 +357,8 @@ PetscErrorCode CUPMDevice<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceI
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice device, PetscInt id) const noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexcept
 {
   PetscErrorCode ierr;
 
@@ -370,7 +373,7 @@ PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice device, PetscInt id) const n
   if (PetscUnlikelyDebug(static_cast<std::size_t>(id) >= devices_.size())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %" PetscInt_FMT,devices_.size(),id);
   if (devices_[id]) {
     if (PetscUnlikelyDebug(id != devices_[id]->id())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Entry %" PetscInt_FMT " contains device with mismatching id %d",id,devices_[id]->id());
-  } else devices_[id] = CUPMDeviceInternal::makeDevice(id);
+  } else devices_[id] = DeviceInternal::makeDevice(id);
   ierr = devices_[id]->initialize();CHKERRQ(ierr);
   device->deviceId           = devices_[id]->id(); // technically id = _devices[id]->_id here
   device->ops->createcontext = create_;
@@ -379,8 +382,8 @@ PetscErrorCode CUPMDevice<T>::getDevice(PetscDevice device, PetscInt id) const n
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::configureDevice(PetscDevice device) noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::configureDevice(PetscDevice device) noexcept
 {
   PetscErrorCode ierr;
 
@@ -389,8 +392,8 @@ PetscErrorCode CUPMDevice<T>::configureDevice(PetscDevice device) noexcept
   PetscFunctionReturn(0);
 }
 
-template <CUPMDeviceType T>
-PetscErrorCode CUPMDevice<T>::viewDevice(PetscDevice device, PetscViewer viewer) noexcept
+template <DeviceType T>
+PetscErrorCode Device<T>::viewDevice(PetscDevice device, PetscViewer viewer) noexcept
 {
   PetscErrorCode ierr;
 
@@ -404,12 +407,14 @@ PetscErrorCode CUPMDevice<T>::viewDevice(PetscDevice device, PetscViewer viewer)
 
 // explicitly instantiate the classes
 #if PetscDefined(HAVE_CUDA)
-template class CUPMDevice<CUPMDeviceType::CUDA>;
+template class Device<DeviceType::CUDA>;
 #endif
 #if PetscDefined(HAVE_HIP)
-template class CUPMDevice<CUPMDeviceType::HIP>;
+template class Device<DeviceType::HIP>;
 #endif
 
-} // namespace Impl
+} // namespace CUPM
+
+} // namespace Device
 
 } // namespace Petsc

@@ -1,26 +1,26 @@
 #include "cupmdevice.hpp" /* I "petscdevice.h" */
 #include <petsc/private/petscadvancedmacros.h>
 
-using namespace Petsc;
+using namespace Petsc::Device;
 
 /* note to anyone adding more classes, the name must be ALL_CAPS_SHORT_NAME + Device exactly to
  * be picked up by the switch-case macros below. */
 #if PetscDefined(HAVE_CUDA)
-static Impl::CUPMDevice<CUPMDeviceType::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA);
+static CUPM::Device<CUPM::DeviceType::CUDA> CUDADevice(PetscDeviceContextCreate_CUDA);
 #endif
 #if PetscDefined(HAVE_HIP)
-static Impl::CUPMDevice<CUPMDeviceType::HIP>  HIPDevice(PetscDeviceContextCreate_HIP);
+static CUPM::Device<CUPM::DeviceType::HIP>  HIPDevice(PetscDeviceContextCreate_HIP);
 #endif
 #if PetscDefined(HAVE_SYCL)
 #include "sycldevice.hpp"
-static SyclDevice                       SYCLDevice(PetscDeviceContextCreate_SYCL);
+static SYCL::Device                         SYCLDevice(PetscDeviceContextCreate_SYCL);
 #endif
 
-static_assert(util::integral_value(PETSC_DEVICE_INVALID) == 0,"");
-static_assert(util::integral_value(PETSC_DEVICE_CUDA)    == 1,"");
-static_assert(util::integral_value(PETSC_DEVICE_HIP)     == 2,"");
-static_assert(util::integral_value(PETSC_DEVICE_SYCL)    == 3,"");
-static_assert(util::integral_value(PETSC_DEVICE_MAX)     == 4,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_INVALID) == 0,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_CUDA)    == 1,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_HIP)     == 2,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_SYCL)    == 3,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_MAX)     == 4,"");
 const char *const PetscDeviceTypes[] = {
   "invalid",
   "cuda",
@@ -32,9 +32,9 @@ const char *const PetscDeviceTypes[] = {
   PETSC_NULLPTR
 };
 
-static_assert(util::integral_value(PETSC_DEVICE_INIT_NONE)  == 0,"");
-static_assert(util::integral_value(PETSC_DEVICE_INIT_LAZY)  == 1,"");
-static_assert(util::integral_value(PETSC_DEVICE_INIT_EAGER) == 2,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_INIT_NONE)  == 0,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_INIT_LAZY)  == 1,"");
+static_assert(Petsc::util::integral_value(PETSC_DEVICE_INIT_EAGER) == 2,"");
 const char *const PetscDeviceInitTypes[] = {
   "none",
   "lazy",
