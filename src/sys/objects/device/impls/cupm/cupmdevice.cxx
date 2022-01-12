@@ -105,7 +105,7 @@ PetscErrorCode CUPMDevice<T>::CUPMDeviceInternal::configure() noexcept
   if (cupmSetDevice(_id) != cupmErrorDeviceAlreadyInUse) CHKERRCUPM(cupmGetLastError());
   // need to update the device properties
   cerr = cupmGetDeviceProperties(&_dprop,_id);CHKERRCUPM(cerr);
-  ierr = PetscInfo1(nullptr,"Configured device %d\n",_id);CHKERRQ(ierr);
+  ierr = PetscInfo(nullptr,"Configured device %d\n",_id);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
