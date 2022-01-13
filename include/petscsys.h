@@ -202,11 +202,11 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_CONSTEXPR_17
 #endif
 
-/* designated initializers since C99 and C++20 */
-#if defined(__cplusplus) && !defined(PETSC_HAVE_CXX_DIALECT_CXX20)
-#  define PetscDesignatedInitializer(name,value) value
+/* designated initializers since C99 and C++20, MSVC never supports them though */
+#if defined(_MSC_VER) || (defined(__cplusplus) && (__cplusplus < 202002L))
+#  define PetscDesignatedInitializer(name,...) __VA_ARGS__
 #else
-#  define PetscDesignatedInitializer(name,value) .name = value
+#  define PetscDesignatedInitializer(name,...) .name = __VA_ARGS__
 #endif
 
 #include <petscversion.h>
