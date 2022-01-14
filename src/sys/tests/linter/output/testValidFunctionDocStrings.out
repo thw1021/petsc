@@ -349,14 +349,6 @@ Last multi parameter list entry must start with '-' [-fdoc-param-list-prefix]:
   188: 
   189:   Level dev
 
-Synopsis missing '-' between the symbol name and description [-fdoc-synopsis-missing-description-separator]:
-  180: 
-  181: /*@
-> 182:   testParameterGrouping ipsum
-                              ^
-  183: 
-  184:   Input parameters:
-
 Invalid header spelling. Expected 'Input Parameters' found 'Input parameters' [-fdoc-section-header-spelling]:
   182:   testParameterGrouping ipsum
   183: 
@@ -389,6 +381,31 @@ Description 'a beta' must be aligned to 1 space from longest (valid) argument 'a
               ^^^^^^^^
   207: 
   208:   Level: beginner
+
+ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:228
+'testBadParamListDescrSep' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
+  226: .seealso: Foo()
+  227: @*/
+> 228: PetscErrorCode testBadParamListDescrSep(PetscInt alpha, PetscInt beta)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  229: {
+  230:   return 0;
+
+Description 'an alpha' must be aligned to 1 space from longest (valid) argument 'alpha' [-fdoc-param-list-formatting]:
+  219: 
+  220:   Input Parameters:
+> 221: + alpha, an alpha
+              ^^^^^^^^^^
+  222: - beta = a beta
+  223: 
+
+Description 'a beta' must be aligned to 1 space from longest (valid) argument 'alpha' [-fdoc-param-list-formatting]:
+  220:   Input Parameters:
+  221: + alpha, an alpha
+> 222: - beta = a beta
+              ^^^^^^^^
+  223: 
+  224:   Level: beginner
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
@@ -471,7 +488,7 @@ maybe you meant 'cond' of derived type 'PetscBool', canonical type 'PetscBool'
                                                                                                     ^^^^^^^^^^^^^^
   72: {
   73:   return 0;
-?
+
 
 Extra docstring parameter 'z' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
   42: - y          - a pointer
@@ -488,7 +505,7 @@ maybe you meant 'x' of derived type 'PetscInt', canonical type 'int'
                                                                         ^^^^^^^^^^
   72: {
   73:   return 0;
-?
+
 
 Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner, intermediate, advanced, developer, or deprecated [-fdoc-inline-list-level-spelling]:
   44: . z - a nonexistent parameter
@@ -514,22 +531,6 @@ Invalid comment begin line, does not contain sowing identifier. Expected '/*@' f
       ^^
   77:   Not Collective, Synchronous
   78: 
-
-Parameter list entry missing a description. Expected 'foo - a very useful description' [-fdoc-param-list-missing-description]:
-  78: 
-  79:   input parms:
-> 80: . foo
-      ^^^^^
-  81: 
-  82:   Output params:
-
-Parameter list entry missing a description. Expected 'bar - a very useful description' [-fdoc-param-list-missing-description]:
-  81: 
-  82:   Output params:
-> 83: + bar -
-      ^^^^^^^
-  84: 
-  85:   References:
 
 Required section 'Level' not found [-fdoc-inline-list-section-header-missing]:
   74: }
@@ -692,6 +693,14 @@ Line seems to be a section header but missing ':', did you mean 'Level:'? [-fdoc
   190: 
   191: .see also: testStaticFunction()
 
+Synopsis seems to be missing a description separator; I suspect you may be using ' ' as a separator instead of '-'. Expected 'testParameterGrouping - ipsum' [-fdoc-synopsis-wrong-description-separator]:
+  180: 
+  181: /*@
+> 182:   testParameterGrouping ipsum
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  183: 
+  184:   Input parameters:
+
 Each parameter entry must be documented separately on its own line (note variable argument lists should be documented in notes) [-fdoc-param-list-solitary-parameter]:
   183: 
   184:   Input parameters:
@@ -733,7 +742,7 @@ ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:228
   229: {
   230:   return 0;
 
-Parameter list seems to be missing a description; I suspect you may be using ',' as a separator instead of '-'. Expected 'alpha - an alpha' [-fdoc-param-list-wrong-description-separator]:
+Parameters seems to be missing a description separator; I suspect you may be using ',' as a separator instead of '-'. Expected 'alpha - an alpha' [-fdoc-param-list-wrong-description-separator]:
   219: 
   220:   Input Parameters:
 > 221: + alpha, an alpha
@@ -741,7 +750,7 @@ Parameter list seems to be missing a description; I suspect you may be using ','
   222: - beta = a beta
   223: 
 
-Parameter list seems to be missing a description; I suspect you may be using '=' as a separator instead of '-'. Expected 'beta - a beta' [-fdoc-param-list-wrong-description-separator]:
+Parameters seems to be missing a description separator; I suspect you may be using '=' as a separator instead of '-'. Expected 'beta - a beta' [-fdoc-param-list-wrong-description-separator]:
   220:   Input Parameters:
   221: + alpha, an alpha
 > 222: - beta = a beta
@@ -749,36 +758,28 @@ Parameter list seems to be missing a description; I suspect you may be using '='
   223: 
   224:   Level: beginner
 
-Each parameter entry must be documented separately on its own line [-fdoc-param-list-solitary-parameter]:
-  219: 
-  220:   Input Parameters:
-> 221: + alpha, an alpha
-         ^^^^^^^^^^^^^^^
-  222: - beta = a beta
-  223: 
+ERROR 10: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:245
+'testBadMidSentenceColons' of derived type 'PetscErrorCode ()', canonical type 'int ()'
+  243: .seealso: Foo()
+  244: @*/
+> 245: PetscErrorCode testBadMidSentenceColons(void)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  246: {
+  247:   return 0;
 
-Extra docstring parameter 'an alpha' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
-  219: 
-  220:   Input Parameters:
-> 221: + alpha, an alpha
-       ^^^^^^^^^^^^^^^^^
-  222: - beta = a beta
-  223: 
+Sowing treats all lines ending with ':' as header, are you sure 'testBadMidSentenceColons - Lorem:' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
+  232: 
+  233: /*@
+> 234:   testBadMidSentenceColons - Lorem:
+                                         ^
+  235: 
+  236:   Notes:
 
-Extra docstring parameter 'beta = a beta' not found in symbol parameter list [-fdoc-param-list-extra-parameter]:
-  220:   Input Parameters:
-  221: + alpha, an alpha
-> 222: - beta = a beta
-       ^^^^^^^^^^^^^^^
-  223: 
-  224:   Level: beginner
-
-maybe you meant 'beta' of derived type 'PetscInt', canonical type 'int'
-  226: .seealso: Foo()
-  227: @*/
-> 228: PetscErrorCode testBadParamListDescrSep(PetscInt alpha, PetscInt beta)
-                                                               ^^^^^^^^^^^^^
-  229: {
-  230:   return 0;
-?
+Sowing treats all lines ending with ':' as header, are you sure 'qui officia: deserunt mollit: [...]' qualifies? Use '\:' to escape the colon if not [-fdoc-section-header-fishy-header]:
+  237: Lorem ipsum dolor sit amet:, consectetur adipiscing elit: sed do: eiusmod tempor: incididunt ut
+  238: labore et dolore: magna aliqua: Excepteur: sint occaecat cupidatat non proident, sunt: in culpa
+> 239: qui officia: deserunt mollit: anim id est: laborum as follows:
+                                                                    ^
+  240: 
+  241: Level: beginner
 [ROOT] -------------------------------------------------------------------------------------

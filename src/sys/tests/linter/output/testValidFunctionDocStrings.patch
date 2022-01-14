@@ -172,13 +172,6 @@
 +  Level: developer
  
    Example Usage:
-@@ -183,5 +183,5 @@
- 
- /*@
--  testParameterGrouping ipsum
-+  testParameterGrouping - ipsum
- 
-   Input parameters:
 @@ -185,5 +185,5 @@
    testParameterGrouping ipsum
  
@@ -218,6 +211,20 @@
    int a_code_block;
  .ve
 -- beta - a beta
++- beta  - a beta
+ 
+   Level: beginner
+@@ -222,5 +222,5 @@
+ 
+   Input Parameters:
+-+ alpha, an alpha
+++ alpha - an alpha
+ - beta = a beta
+ 
+@@ -223,5 +223,5 @@
+   Input Parameters:
+ + alpha, an alpha
+-- beta = a beta
 +- beta  - a beta
  
    Level: beginner
