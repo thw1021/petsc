@@ -179,6 +179,9 @@ def build_finished_handler(app, exception):
     _copy_classic_docs(app, exception)
     _fix_links(app, exception)
     _add_version_header(app, exception)
+    print("==========================================================================")
+    print("    open _build/html/index.html in your browser to view the documentation ")
+    print("==========================================================================")
 
 
 def setup(app):
