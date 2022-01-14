@@ -21,6 +21,7 @@ import ctypes
 import difflib
 import re
 import weakref
+import functools
 import textwrap
 if sys.version_info < (3,4):
   raise RuntimError("Need python 3.4 for textwrap.shorten()")
@@ -208,6 +209,68 @@ class PetscDocStringBase(object):
     return text
 
 
+class DescribableItem(object):
+  __slots__ = "text","prefix","arg","description","sep"
+
+  def __init__(self,raw,prefixes=None,sep="-"):
+    text = raw.strip()
+    prefix,arg,descr = self.splitParam(text,prefixes,sep)
+    if not descr:
+      found = False
+      for sep in (",","="):
+        _,arg,descr = self.splitParam(text,prefixes,sep)
+        if descr:
+          found = True
+          break
+      if not found:
+        sep = " "
+        if prefix:
+          arg = text.split(prefix,maxsplit=1)[1].strip()
+        else:
+          arg,descr = text.split(maxsplit=1)
+    self.text        = raw
+    self.prefix      = prefix
+    self.sep         = sep
+    self.arg         = arg
+    self.description = descr
+    return
+
+  @staticmethod
+  def splitParam(text,prefixes,char):
+    """
+    retrieve groups '([\.+-$])\s*([A-z,-]+) - (.*)'
+    """
+    stripped = text.strip()
+    if prefixes is None:
+      prefix = ""
+      rest   = stripped
+    else:
+      try:
+        prefix = next(filter(stripped.startswith,prefixes))
+      except StopIteration:
+        prefix = ""
+        rest   = stripped
+      else:
+        rest = stripped.split(prefix,maxsplit=1)[1].strip()
+      assert len(prefix) >= 1
+      assert rest
+    arg,sep,descr = rest.partition(char.join((" "," ")))
+    if not sep:
+      if rest.endswith(char):
+        arg = rest[:-1]
+      elif char+" " in rest:
+        arg,_,descr = rest.partition(char+" ")
+      # if we hit neither then there is no "-" in text, possible case of "[prefix] foo"?
+    return prefix,arg.strip(),descr.lstrip()
+
+  def arglen(self):
+    """
+    return a length l such that text[:l] returns all text up until the end of the arg name
+    """
+    arg = self.arg
+    return self.text.find(arg)+len(arg)
+
+
 @DiagnosticManager.register(
   ("internal-linkage","Verify that symbols with internal linkage don't have docstrings"),
   ("sowing-chars","Verify that sowing begin and end indicators match the symbol type"),
@@ -355,7 +418,7 @@ class PetscDocString(PetscDocStringBase):
     ("section-header-unique",""),
     ("matching-symbol-name","Verify that description matches the symbol name"),
     ("missing-description","Verify that a synopsis has a description"),
-    ("missing-description-separator","Verify that a synopsis description is separated by '-'"),
+    ("wrong-description-separator","Verify that synopsis uses the right description separator"),
     ("verbose-description","Verify that synopsis descriptions don't drone on and on")
   )
   class Synopsis(SectionBase):
@@ -369,59 +432,89 @@ class PetscDocString(PetscDocStringBase):
     def setup(self,ds,*args,**kwargs):
       cursorName = PetscCursor.getNameFromCursor(ds.cursor)
       loName     = cursorName.casefold()
-      found      = False
-      items      = []
+      items      = [{"name" : (None,None), "synopsis" : []}]
 
-      def genericInspector(loc,line):
-        nonlocal found
-        if found: return
-        pre,dash,rest = line.partition("-")
-        if dash:
-          found = True
-        elif loName in line.casefold():
-          found = True
-          pre   = cursorName
-          rest  = line.split(cursorName,maxsplit=1)[1].strip()
-        if found:
+      class Inspector(object):
+        __slots__ = "foundDescription","foundSynopsis","isEnum","capturing"
+        def __init__(self,isEnum):
+          self.foundDescription = False
+          self.foundSynopsis    = False
+          self.isEnum           = isEnum
+          self.capturing        = False
+          return
+
+        def __call__(self,*args,**kwargs):
+          if not self.foundDescription:
+            self.description(*args,**kwargs)
+          if self.isEnum:
+            self.enum(*args,**kwargs)
+          elif not self.foundSynopsis:
+            self.synopsis(*args,**kwargs)
+          return
+
+        def description(self,loc,line):
+          """
+          Look for the "<NAME> - description" block in a synopsis
+          """
+          pre,dash,rest = line.partition("-")
+          if dash:
+            pass
+          elif loName in line.casefold():
+            pre  = cursorName
+            rest = line.split(cursorName,maxsplit=1)[1].strip()
+          else:
+            return
+          assert len(items) == 1
           item = pre.strip()
-          items.append((ds.makeSourceRange(item,line,loc.start.line),item))
-          if not rest or rest.isspace():
-            diag = self.diags.missing_description
-            mess = "Synopsis missing a description, expected 'SYMBOL NAME - a very useful description"
-            ds.addErrorFromSourceRange(diag,mess,loc)
-        return
+          items[0]["name"] = (ds.makeSourceRange(item,line,loc.start.line),item)
+          self.foundDescription = True
+          return
 
-      def enumInspector(loc,line):
-        genericInspector(loc,line) # find the symbol name
-        lstr = line.lstrip()
-        # check that "-" is in the line since some people like to use entire blocks of $'s
-        # to describe a single enum value...
-        if lstr.startswith("$") and "-" in lstr:
-          assert len(items) # we should have already found the symbol name
-          name = lstr[1:].split(maxsplit=1)[0].strip()
-          items.append((ds.makeSourceRange(name,line,loc.start.line),line))
-        return
+        def synopsis(self,loc,line):
+          """
+          Look for the Synopsis: heading and block in a synopsis
+          """
+          lstrp = line.strip()
+          if "synopsis:" in lstrp.casefold():
+            self.capturing = True
+          if self.capturing:
+            # reached the end of the synopsis block
+            if not lstrp:
+              self.foundSynopsis = True
+              self.capturing     = False
+              return
+            items[0]["synopsis"].append((ds.makeSourceRange(lstrp,line,loc.start.line),line))
+          return
+
+        def enum(self,loc,line):
+          lstr = line.lstrip()
+          # check that "-" is in the line since some people like to use entire blocks of $'s
+          # to describe a single enum value...
+          if lstr.startswith("$") and "-" in lstr:
+            assert len(items) # we should have already found the symbol name
+            name = lstr[1:].split(maxsplit=1)[0].strip()
+            items.append((ds.makeSourceRange(name,line,loc.start.line),line))
+          return
 
 
-      isEnum = ds.cursor.type.kind in enumTypes
-      super().setup(ds,*args,inspectLine=enumInspector if isEnum else genericInspector,**kwargs)
+      inspector = Inspector(ds.cursor.type.kind in enumTypes)
+      super().setup(ds,*args,inspectLine=inspector,**kwargs)
 
-      if isEnum:
-        def checkEnumStartsWithDollar(ds,items):
-          checkOptStartsWith = PetscDocString.ParameterList.checkOptStartsWith
+      if inspector.isEnum:
+        def checkEnumStartsWithDollar(self,ds,items):
           for key,opts in sorted(items.items()):
             if len(opts) < 1:
               mess = "number of options {} < 1, key: {}, items: {}".format(len(opts),key,items)
               raise RuntimeError(mess)
-            else:
-              for opt in opts:
-                checkOptStartsWith(ds,opt,"Enum","$")
+            for opt in opts:
+              self.checkOptStartsWith(ds,opt,"Enum","$")
             return items
 
 
-        params = PetscDocString.ParameterList("enum params",prefixes=("$"))
+        params     = PetscDocString.ParameterList("enum params",prefixes=("$"))
         paramLines = items[1:]
         if not paramLines: # enum has no explicit descriptions
+          import ipdb; ipdb.set_trace() # how will checkDocValidSynopsis handle this???
           self.items = None
           return
         params.fill(paramLines)
@@ -442,12 +535,16 @@ class PetscDocString(PetscDocStringBase):
     ("formatting","Verify that parameter list entries are correctly white-space formatted"),
     ("prefix","Verify that parameter list entries begin with the correct prefix"),
     ("missing-description","Verify that parameter list entries have a description"),
+    ("missing-description-separator","Verify that a parameter list entry has a separator before the description"),
     ("wrong-description-separator","Verify that parameter list entries use the right description separator")
   )
   class ParameterList(SectionBase):
     __slots__ = "prefixes"
 
-    def __init__(self,*args,prefixes=("+",".","-"),**kwargs):
+    def __init__(self,*args,prefixes=None,**kwargs):
+      if prefixes is None:
+        prefixes = ("+",".","-")
+
       self.prefixes = prefixes
       super().__init__(*args,**kwargs)
       return
@@ -460,59 +557,31 @@ class PetscDocString(PetscDocStringBase):
     def checkIndentAllowed():
       return False
 
-    @staticmethod
-    def splitParam(text):
-      """
-      retrieve groups '(+)\s*([A-z,-]+)- (.*)'
-      """
-      stripped = text.strip()
-      prefix   = stripped[0]
-      rest     = stripped[1:]
-      arg,sep,descr = rest.partition(" - ")
-      if not sep:
-        if rest.endswith("-"):
-          arg = rest[:-1]
-        elif "- " in rest:
-          arg,_,descr = rest.partition("- ")
-        # if we hit neither then there is no "-" in text, possible case of "[prefix] foo"?
-      return prefix,arg.strip(),descr.lstrip()
-
-    @staticmethod
-    def prefixOffset(text,char="-"):
-      stripped = text.lstrip()
-      return text.find(char)+1 if stripped.startswith(char) else 0
-
-    @classmethod
-    def arglen(cls,text,char="-"):
-      """
-      return a length l such that text[:l] returns all text up until the end of the arg name
-      """
-      _,param,_ = cls.splitParam(text)
-      assert param, "Could not identify a parameter in {}".format(text)
-      return sum(map(len,text.partition(param)[:2]))
-
-    @classmethod
-    def checkAlignedDescriptions(cls,ds,group,maxArgLen=None):
+    def checkAlignedDescriptions(self,ds,group,maxArgLen=None):
       """
       Verify that the position of the '-' before the description for each argument is aligned
       to maxArgLen+1 columns
       """
-      alignDiag  = cls.diags.formatting
-      splitParam = cls.splitParam
-      groupArgs  = [splitParam(text)[1] for _,text,_ in group]
-      lens       = list(map(len,groupArgs))
+      alignDiag = self.diags.formatting
+      groupArgs = [item.arg for _,item,_ in group]
+      lens      = list(map(len,groupArgs))
 
       if maxArgLen is None:
         maxArgLen = max(lens) if lens else 0
       assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
       longestArg = groupArgs[lens.index(maxArgLen)] if lens else "NO ARGS"
 
-      for loc,text,_ in group:
-        pre,arg,descr = splitParam(text)
-        fixed         = "{} {:{width}} - {}".format(pre,arg,descr,width=maxArgLen)
+      for loc,item,_ in group:
+        pre   = item.prefix
+        arg   = item.arg
+        descr = item.description
+        text  = item.text
+        fixed = "{} {:{width}} - {}".format(pre,arg,descr,width=maxArgLen)
         try:
-          diffIndex = [i for i,(a1,a2) in enumerate(zip(text,fixed)) if a1 != a2][0]
-        except IndexError:
+          diffIndex = next(
+            i for i,(a1,a2) in enumerate(itertools.zip_longest(text,fixed)) if a1 != a2
+          )
+        except StopIteration:
           assert text == fixed # equal
           continue
 
@@ -527,22 +596,19 @@ class PetscDocString(PetscDocStringBase):
         ds.addErrorFromSourceRange(alignDiag,mess,eloc,patch=Patch(eloc,fixed[diffIndex:]))
       return
 
-    @classmethod
-    def checkOptStartsWith(cls,ds,item,descr,char):
+    def checkOptStartsWith(self,ds,item,descr,char):
       loc,line,_ = item
-      pre,_,_    = cls.splitParam(line)
+      pre        = line.prefix
       if pre != char:
-        eloc = ds.makeSourceRange(pre,line,loc.start.line)
+        eloc = ds.makeSourceRange(pre,line.text,loc.start.line)
         mess = "{} parameter list entry must start with '{}'".format(descr,char)
-        ds.addErrorFromSourceRange(cls.diags.prefix,mess,eloc,patch=Patch(eloc,char))
+        ds.addErrorFromSourceRange(self.diags.prefix,mess,eloc,patch=Patch(eloc,char))
       return
 
     def setup(self,ds,*args,parameterListPrefixCheck=None,**kwargs):
-      subheading        = 0
-      groups            = collections.defaultdict(list)
-      missingDescrDiag  = self.diags.missing_description
-      wrongDescrSepDiag = self.diags.wrong_description_separator
-      isHeading         = ds._getIsHeading(self)
+      subheading = 0
+      groups     = collections.defaultdict(list)
+      isHeading  = ds._getIsHeading(self)
 
       def inspector(loc,line):
         if not line or line.isspace():
@@ -552,27 +618,12 @@ class PetscDocString(PetscDocStringBase):
           subheading += 1
         lstp = line.lstrip()
         # .ve and .vb might trip up the prefix detection since they start with '.'
-        if lstp.startswith(self.prefixes) and not line.startswith((".vb",".ve")):
-          _,arg,descr = self.splitParam(lstp)
-          if not descr:
-            diag = missingDescrDiag
-            mess = "Parameter list entry missing a description. Expected '{} - a very useful description'".format(arg)
-            for sep in (",","="):
-              if sep in arg:
-                asplit   = arg.split(sep,maxsplit=1)
-                maybeArg = asplit[0].split()
-                if len(maybeArg) == 1:
-                  diag = wrongDescrSepDiag
-                  mess = " ".join((
-                    "Parameter list seems to be missing a description; I suspect you may be using '{}' as a separator instead of '-'.".format(sep),
-                    "Expected '{} - {}'".format(maybeArg[0],sep.join(asplit[1:]).strip())
-                  ))
-                break
-            ds.addErrorFromSourceRange(diag,mess,loc)
-          groups[subheading].append((loc,line,self.arglen(line)))
+        if lstp.startswith(self.prefixes) and not lstp.startswith((".vb",".ve")):
+          item = DescribableItem(line,prefixes=self.prefixes)
+          groups[subheading].append((loc,item,item.arglen()))
         return
 
-      def parameterListDefaultPrefixCheck(ds,items):
+      def parameterListDefaultPrefixCheck(self,ds,items):
         checkOptStartsWith = self.checkOptStartsWith
         for key,opts in sorted(items.items()):
           lopts = len(opts)
@@ -596,7 +647,7 @@ class PetscDocString(PetscDocStringBase):
 
       super().setup(ds,*args,inspectLine=inspector,**kwargs)
 
-      self.items = parameterListPrefixCheck(ds,dict(groups))
+      self.items = parameterListPrefixCheck(self,ds,dict(groups))
       return
 
 
@@ -755,6 +806,9 @@ class PetscDocString(PetscDocStringBase):
 
 
   class Sections(object):
+    class SectionNotFoundError(Exception):
+      pass
+
     __slots__ = "_sections","_findcache","_cachekey"
 
     def __init__(self,*args):
@@ -790,7 +844,7 @@ class PetscDocString(PetscDocStringBase):
       return
 
 
-    def find(self,heading):
+    def find(self,heading,cacheResult=True,strict=False):
       lohead   = heading.casefold()
       sections = self._sections
       cache    = self._findcache[self._cachekey]
@@ -828,20 +882,24 @@ class PetscDocString(PetscDocStringBase):
         print(
           "**** CLOSEST MATCH FOUND {:{}} FROM {:{}} FOR {}".format(match,max(map(len,sectionNames)),reason,len("not found"),heading)
         )
-      elif heading.endswith(":") or ": " in heading:
-        print(80*"*","UNHANDLED HEADING {}".format(heading),80*"*",sep="\n")
-        # this should be handled
-        match = "UNKNOWN"
       else:
-        reason = "not found"
         print(
-          "*********** DEFAULTED TO {:{}} FROM {} FOR {}".format("NOTES",max(map(len,sectionNames)),reason,heading)
+          80*"*",
+          f"UNHANDLED POSSIBLE HEADING! (strict = {strict}, cached = {cacheResult})",
+          heading,
+          80*"*",
+          sep="\n"
         )
+        if strict:
+          raise self.SectionNotFoundError(heading)
+        # this should be handled
         # when in doubt, it's probably notes
-        if "(X-Y-Z)" in heading:
-          import ipdb; ipdb.set_trace()
-        match = "notes"
-      return sections[cache.setdefault(lohead,match)]
+        reason = "not found"
+        match  = "notes"
+        maxlen = max(map(len,sectionNames))
+        string = "*********** DEFAULTED TO {:{}} FROM {} FOR {}"
+        print(string.format(f"NOTES (strict = {strict})",maxlen,reason,heading))
+      return sections[cache.setdefault(lohead,match) if cacheResult else match]
 
     def registered(self,section):
       if isinstance(section,PetscDocString.SectionBase):
@@ -876,56 +934,51 @@ class PetscDocString(PetscDocStringBase):
       else:
         raise NotImplementedError(type(item))
 
-      def isMasqueradingAsHeading(line,anchor="$"):
-        match = tuple(filter(line.startswith,self.titles()))
-        if match and line.startswith(match[0]+":"):
-          return PetscDocString.Verdict.IS_HEADING
-        expressions = (
-          "follows","following.*","example","instance","one of.*","calling sequence.*",
-          "available.*include","supports.*approaches.*","see.*users.*manual",
-          "y. saad, iterative methods.*philadelphia","default"
-        )
-        regex = "|".join(":".join((expr,anchor)) for expr in expressions)
-        if re.search(regex,line.casefold()) is None:
-          return PetscDocString.Verdict.IS_HEADING
-        elif anchor == "$":
-          return PetscDocString.Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
-        return PetscDocString.Verdict.NOT_HEADING
+      Verdict = PetscDocString.Verdict
+
+      def handleHeaderWithColon(text):
+        if any(map(text.casefold().startswith,(t.casefold()+":" for t in self.titles()))):
+          return Verdict.IS_HEADING
+
+        if text.endswith(":"):
+          if any(map(text.__contains__,(" - ","=","(",")","%","$","@","#","!","^","&","+"))):
+            return Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+
+          expressions = (
+            "follows","following.*","example","instance","one of.*","calling sequence.*",
+            "available.*include","supports.*approaches.*","see.*user.*manual",
+            "y. saad, iterative methods.*philadelphia","default"
+          )
+          regex = "|".join(":".join((expr,"$")) for expr in expressions)
+          if re.search(regex,text.casefold()) is None:
+            return Verdict.IS_HEADING
+          return Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+        try:
+          guessed = self.guessHeading(text,cacheResult=False,strict=True)
+        except self.SectionNotFoundError:
+          guessed = False
+        return Verdict.IS_HEADING if guessed else Verdict.NOT_HEADING
+
+      def handleHeaderWithoutColon(text):
+        try:
+          _ = next(filter(text.casefold().startswith,map(str.casefold,self.titles())))
+        except StopIteration:
+          return Verdict.NOT_HEADING
+        else:
+          return Verdict.MAYBE_HEADING
+
 
       text = text.strip()
-      if not text or text.startswith(("+ ",". ","- ","$ ",".vb",".ve")):
-        return PetscDocString.Verdict.NOT_HEADING
+      if not text or text.startswith(("+ ",". ","- ","$",".vb",".ve")):
+        return Verdict.NOT_HEADING
+      elif ":" in text:
+        return handleHeaderWithColon(text)
+      return handleHeaderWithoutColon(text)
 
-      if text.endswith(":"):
-        return isMasqueradingAsHeading(text)
-
-      if ": " in text and " :" not in text:
-        # check that all subsequent items after a ":" are letters, this ought to catch out
-        # instances of ":" in random code snippets or text...
-        if all(t.lstrip()[:1].isalpha() for t in text.split(":")[1:]):
-          verdict = isMasqueradingAsHeading(text,anchor=" ")
-          if "level" not in text.casefold() and "seealso" not in text.casefold():
-            cache = self._findcache[self._cachekey].setdefault("__isheading",{})
-            if text not in cache:
-              cache[text] = verdict
-              print(text)
-              print(verdict)
-              #import ipdb; ipdb.set_trace()
-          return verdict
-        return PetscDocString.Verdict.NOT_HEADING
-      try:
-        found = next(filter(text.casefold().startswith,map(str.casefold,self.titles())))
-      except StopIteration:
-        return PetscDocString.Verdict.NOT_HEADING
-      else:
-        return PetscDocString.Verdict.MAYBE_HEADING
-
-    def guessHeading(self,line):
+    def guessHeading(self,line,**kwargs):
       def guess(item):
-        titles = self.find(item).titles
-        if len(titles) == 1:
-          return titles
-        return difflib.get_close_matches(item,titles,n=1)
+        titles = self.find(item,**kwargs).titles
+        return titles if len(titles) == 1 else difflib.get_close_matches(item,titles,n=1)
 
       strp     = line.split(":",maxsplit=1)[0].strip()
       attempts = (strp,strp.split(maxsplit=1)[0].strip())
@@ -934,7 +987,7 @@ class PetscDocString(PetscDocStringBase):
         if match:
           return attempt,match[0]
       import ipdb; ipdb.set_trace()
-      raise ValueError(line)
+      return None,None
 
 
   sections = Sections(
@@ -1040,8 +1093,6 @@ class PetscDocString(PetscDocStringBase):
     return PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
 
   def makeSourceRange(self,token,string,lineno,offset=0):
-    if token not in string[offset:]:
-      import ipdb; ipdb.set_trace()
     colBegin = string.index(token,offset)+1
     colEnd   = colBegin+len(token)
     tu       = self.cursor.translation_unit
@@ -1156,7 +1207,6 @@ class PetscDocString(PetscDocStringBase):
     """
     name,match = self.sections.guessHeading(line)
     if ":" in line:
-      import ipdb; ipdb.set_trace()
       mess = "Line seeams to be a section header but doesn't directly end with with ':', did you mean '{}'?"
     else:
       mess = "Line seems to be a section header but missing ':', did you mean '{}:'?"
@@ -1218,8 +1268,6 @@ class PetscDocString(PetscDocStringBase):
       if heading > 0:
         if heading == 2:
           self._checkSectionHeaderTypo(line,lineno)
-        if "(approximate) Jacobians" in line:
-          import ipdb; ipdb.set_trace()
         self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
         newSection = findSection(lstrip.split(":",maxsplit=1)[0].strip().casefold())
         if newSection != section:
@@ -2521,6 +2569,7 @@ patch1: insert ' ' in (1,1)
 patch2: insert '\n' in (1,1)
 which order should these go in?
 - elide some checks for symbol params missing for variadic arguments
+- continue unifying the description separator check below
 """
 def alwaysTrue(*args,**kwargs):
   return True
@@ -2530,17 +2579,39 @@ def alwaysFalse(*args,**kwargs):
 
 
 """utilities for checking docstrings"""
+def checkDocLineHasValidDescription(docstring,section,item,expectedSepChar="-"):
+  loc,line = item
+  if not isinstance(line,DescribableItem):
+    line = DescribableItem(line,sep=expectedSepChar)
+  sep   = line.sep
+  descr = line.description
+  arg   = line.arg
+  name  = section.transform(section.name)
+  if sep != expectedSepChar:
+    diag  = section.diags.wrong_description_separator
+    mess  = "{} seems to be missing a description separator; I suspect you may be using '{}' as a separator instead of '{}'. Expected '{} {} {}'".format(name,sep,expectedSepChar,arg,expectedSepChar,descr)
+  elif not descr:
+    diag = section.diags.missing_description
+    mess = "{} missing a description. Expected '{} {} a very useful description'".format(name,arg,expectedSepChar)
+  else:
+    return # ok?
+  docstring.addErrorFromSourceRange(diag,mess,loc)
+  return
+
 def checkDocValidSynopsis(linter,cursor,docstring):
   cursorName = PetscCursor.getNameFromCursor(cursor)
   synopsis   = docstring.sections.synopsis
   items      = synopsis.items
-  if items:
-    if isinstance(items,tuple):
-      loc,symbol = items[0]
-    elif isinstance(items,PetscDocString.ParameterList):
-      loc,symbol = items.items[0]
-    else:
-      raise ValueError(type(items))
+  if isinstance(items,tuple):
+    loc,symbol = items[0]["name"] # normal synopsis
+  elif isinstance(items,PetscDocString.ParameterList):
+    loc,symbol = items.items[0]["name"] # enum synopsis
+  else:
+    raise ValueError(type(items))
+  if symbol:
+    assert loc is not None
+    if "M" in docstring.raw.splitlines()[0]:
+      import ipdb; ipdb.set_trace()
     # chances are that if it is a macro then the name won't match
     if symbol != cursorName and "M" not in docstring.raw.splitlines()[0]:
       diag = synopsis.diags.matching_symbol_name
@@ -2559,20 +2630,7 @@ def checkDocValidSynopsis(linter,cursor,docstring):
     charCount  = 0
     for idx,(loc,line) in enumerate(synopsis.lines):
       if loc.start.line == symbolLine:
-        if "-" not in line:
-          pre,_,descr = line.partition(symbol)
-          descr = descr.strip()
-          if descr:
-            diag  = synopsis.diags.missing_description_separator
-            mess  = "Synopsis missing '-' between the symbol name and description"
-            eloc  = docstring.makeSourceRange(" ",line,symbolLine,offset=len(pre)+len(symbol))
-            patch = Patch(eloc," - ")
-          else:
-            diag  = synopsis.diags.missing_description
-            mess  = "Synopsis missing description"
-            eloc  = docstring.makeSourceRange(symbol,line,symbolLine)
-            patch = None
-          docstring.addErrorFromSourceRange(diag,mess,eloc,patch=patch)
+        checkDocLineHasValidDescription(docstring,synopsis,(loc,line))
         rest       = line.split(symbol,maxsplit=1)[1].replace("-"," ",1).strip()
         wordCount += len(rest.split())
         charCount += len(rest)
@@ -2592,6 +2650,8 @@ def checkDocValidSynopsis(linter,cursor,docstring):
       mess = "Synopsis for '{}' is too long (must be at most {} characters or {} words), consider moving it to Notes. If you can't explain it simply, then you don't understand it well enough!".format(cursorName,maxCharCount,maxWordCount)
       docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
   else:
+    assert loc is None
+    assert symbol is None
     mess = "Docstring missing synopsis. Expected '{} - a very useful description'".format(
       cursorName
     )
@@ -2621,9 +2681,7 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
       docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
     return
 
-  solitaryParamDiag        = checkDocValidParameterList.diags.solitary_parameter
-  checkAlignedDescriptions = params.checkAlignedDescriptions
-  splitParam = params.splitParam
+  solitaryParamDiag = checkDocValidParameterList.diags.solitary_parameter
   cursorList = list(map(PetscCursor.cast,cursorList))
   argNames   = [a.name for a in cursorList]
   argSeen    = [False]*len(argNames)
@@ -2634,25 +2692,33 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
       continue
     indices = []
     remove  = set()
-    for i,(loc,text,_) in enumerate(group):
-      _,arg,_ = splitParam(text)
-      asplit  = [a.strip() for a in arg.split(",")]
-      if len(asplit) > 1:
-        mess = "Each parameter entry must be documented separately on its own line"
-        if docstring.cursor.isVariadicFunction():
-          mess += " (note variable argument lists should be documented in notes)"
-        eloc = docstring.makeSourceRange(arg,text,loc.start.line)
-        docstring.addErrorFromSourceRange(solitaryParamDiag,mess,eloc)
-      for subarg in asplit:
+    for i,(loc,line,_) in enumerate(group):
+      arg,sep = line.arg,line.sep
+      if sep == "," or "," in arg:
+        subargs = list(map(str.strip,arg.split(",")))
+        if len(subargs) > 1:
+          mess = "Each parameter entry must be documented separately on its own line"
+          if docstring.cursor.isVariadicFunction():
+            mess += " (note variable argument lists should be documented in notes)"
+          eloc = docstring.makeSourceRange(arg,line.text,loc.start.line)
+          docstring.addErrorFromSourceRange(solitaryParamDiag,mess,eloc)
+      elif sep == "=":
+        subargs = list(map(str.strip,arg.split(" = ")))
+        if len(subargs) > 1:
+          subargs = (subargs[0],) # case of bad separator, only the first entry is valid
+      else:
+        subargs = (arg,)
+      for sub in subargs:
         try:
-          idx = argNames.index(subarg)
+          idx = argNames.index(sub)
         except ValueError:
-          notFound.append((subarg,loc))
+          notFound.append((sub,loc))
           remove.add(i)
         else:
           argSeen[idx] = True
           indices.append(idx)
-    checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove])
+          checkDocLineHasValidDescription(docstring,params,(loc,line))
+    params.checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove])
     if 0 and checkIndices:
       # TODO what to do if the lines we swap are imperfect? This might be the straw
       # breaking the camels back, since I don't see a way to do this without 2 passes
@@ -2677,10 +2743,8 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
 
   argsLeft = [name for seen,name in zip(argSeen,argNames) if not seen]
   if notFound:
-    extraParamDiag    = checkDocValidParameterList.diags.extra_parameter
-    get_close_matches = difflib.get_close_matches
-    baseMessage       = "Extra docstring parameter '{}' not found in symbol parameter list:\n{}"
-    cursor            = docstring.cursor
+    diag        = checkDocValidParameterList.diags.extra_parameter
+    baseMessage = "Extra docstring parameter '{}' not found in symbol parameter list:\n{}"
     for i,(arg,loc) in enumerate(notFound):
       message = baseMessage.format(arg,loc.formatted(numContext=2))
       try:
@@ -2689,14 +2753,14 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
           # be the same
           match = argsLeft[-1]
         else:
-          match = get_close_matches(arg,argsLeft,n=1)[0]
+          match = difflib.get_close_matches(arg,argsLeft,n=1)[0]
       except IndexError:
         pass
       else:
         matchCursor = [c for c in cursorList if c.name == match][0]
-        message    += "\n\nmaybe you meant {}?".format(matchCursor.getFormattedBlurb())
+        message    += "\n\nmaybe you meant {}".format(matchCursor.getFormattedBlurb())
         argsLeft.remove(match)
-      linter.addErrorFromCursor(cursor,Diagnostic(extraParamDiag,message))
+      linter.addErrorFromCursor(docstring.cursor,Diagnostic(diag,message))
 
   undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
   for mess in map("Undocumented parameter '{}' not found in parameter section".format,argsLeft):
@@ -2848,8 +2912,7 @@ def checkDocValidSeealso(linter,cursor,docstring):
       seen[text] = (loc,text)
       continue
 
-    if not text:
-      import ipdb; ipdb.set_trace()
+    assert text
     mess = "\n\n".join((
       docstring.makeErrorMessage("Seealso entry '{}' is duplicate".format(text),loc),
       docstring.makeErrorMessage("Note first instance found here",seen[text][0],numContext=1)
@@ -2871,10 +2934,8 @@ def checkDocValidFunctionParameters(linter,cursor,docstring):
   params = docstring.sections.parameters
 
   if fnargs and not params:
-    undocParamDiag = checkDocValidFunctionParameters.diags.undocumented_parameter
-    linter.addErrorFromCursor(
-      cursor,Diagnostic(undocParamDiag,"Function parameters are all undocumented")
-    )
+    diag = checkDocValidFunctionParameters.diags.undocumented_parameter
+    linter.addErrorFromCursor(cursor,Diagnostic(diag,"Function parameters are all undocumented"))
     return
   elif not fnargs:
     # check we've got no parameter docstrings, if so, we can delete them
