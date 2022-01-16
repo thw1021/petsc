@@ -1410,7 +1410,7 @@ PetscErrorCode MatMPISELLSetPreallocation(Mat B,PetscInt d_nz,const PetscInt d_n
    based on the sliced Ellpack format
 
    Options Database Keys:
-. -mat_type sell - sets the matrix type to "seqsell" during a call to MatSetFromOptions()
+. -mat_type mpisell - sets the matrix type to "mpisell" during a call to MatSetFromOptions()
 
    Level: beginner
 
