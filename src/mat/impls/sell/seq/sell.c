@@ -2139,7 +2139,7 @@ M*/
         (9 9 |)             (2 3 |)
 
     The data for 2 contiguous rows of the matrix are stored together (in column-major format) (with any left-over rows handled as a special case).
-    Any of the rows in a slice fewer columns than the rest of the slice (row 1 above) are padded with a previous valid column in their "extra" colidx[] locations and
+    Any of the rows in a slice with fewer columns than the rest of the slice (row 1 above) are padded with a previous valid column in their "extra" colidx[] locations and
     zeros in their "extra" v locations so that the matrix operations do not need special code to handle different length rows within the 2 rows in a slice.
 
     The one-dimensional representation of v used in the code is (2 5 3 6 4 0 7 9 8 9)  and for colidx is (0 0 2 2 3 2 2 2 3 3)
