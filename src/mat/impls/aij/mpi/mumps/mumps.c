@@ -1703,7 +1703,7 @@ PetscErrorCode MatFactorNumeric_MUMPS(Mat F,Mat A,const MatFactorInfo *info)
   if (!mumps->myid && mumps->id.ICNTL(16) > 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"  mumps->id.ICNTL(16):=%d",mumps->id.INFOG(16));
 
   F->assembled    = PETSC_TRUE;
-  mumps->matstruc = SAME_NONZERO_PATTERN;
+  /* mumps->matstruc = SAME_NONZERO_PATTERN; --rm!!! */
   if (F->schur) { /* reset Schur status to unfactored */
 #if defined(PETSC_HAVE_CUDA)
     F->schur->offloadmask = PETSC_OFFLOAD_CPU;
@@ -1954,7 +1954,11 @@ PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F,Mat A,IS r,IS c,const MatFacto
   const PetscInt M = A->rmap->N;
 
   PetscFunctionBegin;
-  mumps->matstruc = DIFFERENT_NONZERO_PATTERN;
+  /* mumps->matstruc = DIFFERENT_NONZERO_PATTERN; --rm!!! */
+  if (mumps->matstruc == SAME_NONZERO_PATTERN) {
+    /* printf("SAME_NONZERO_PATTER, skip MatLUFactorSymbolic_AIJMUMPS\n"); */
+    PetscFunctionReturn(0);
+  }
 
   /* Set MUMPS options from the options database */
   ierr = PetscSetMUMPSFromOptions(F,A);CHKERRQ(ierr);
@@ -2007,6 +2011,8 @@ PetscErrorCode MatLUFactorSymbolic_AIJMUMPS(Mat F,Mat A,IS r,IS c,const MatFacto
   F->ops->solvetranspose  = MatSolveTranspose_MUMPS;
   F->ops->matsolve        = MatMatSolve_MUMPS;
   F->ops->mattransposesolve = MatMatTransposeSolve_MUMPS;
+
+  mumps->matstruc = SAME_NONZERO_PATTERN;
   PetscFunctionReturn(0);
 }
 
@@ -3072,6 +3078,7 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A,MatFactorType ftype,Mat *F)
   ierr = PetscInitializeMUMPS(A,mumps);CHKERRQ(ierr);
 
   *F = B;
+  mumps->matstruc = DIFFERENT_NONZERO_PATTERN;
   PetscFunctionReturn(0);
 }
 

@@ -9,6 +9,22 @@ Input parameters include:\n\
 
 #include <petscksp.h>
 
+#if defined(PETSC_HAVE_MUMPS)
+/* Subroutine contributed by Varun Hiremath */
+PetscErrorCode printMumpsMemoryInfo(Mat F)
+{
+  PetscInt       maxMem, sumMem;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = MatMumpsGetInfog(F,16,&maxMem);CHKERRQ(ierr);
+  ierr = MatMumpsGetInfog(F,17,&sumMem);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n MUMPS INFOG(16) :: Max memory in MB = %d", maxMem);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD, "\n MUMPS INFOG(17) :: Sum memory in MB = %d \n", sumMem);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+#endif
+
 int main(int argc,char **args)
 {
   Vec            x,b,u;    /* approx solution, RHS, exact solution */
@@ -176,6 +192,19 @@ int main(int argc,char **args)
     ierr = PCFactorSetMatSolverType(pc,MATSOLVERMUMPS);CHKERRQ(ierr);
     ierr = PCFactorSetUpMatSolverType(pc);CHKERRQ(ierr); /* call MatGetFactor() to create F */
     ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
+
+    if (flg_mumps) {
+      /* Get memory estimates from MUMPS' MatLUFactorSymbolic(), e.g. INFOG(16), INFOG(17).
+         KSPSetUp() below will do nothing inside MatLUFactorSymbolic() */
+      IS            perm,iperm;
+      MatFactorInfo info;
+      ierr = MatGetOrdering(A,MATORDERINGEXTERNAL,&perm,&iperm);CHKERRQ(ierr);
+      ierr = MatLUFactorSymbolic(F,A,perm,iperm,&info);CHKERRQ(ierr);
+      ierr = PetscOptionsGetBool(NULL,NULL,"-print_mumps_memory",&flg,NULL);CHKERRQ(ierr);
+      if (flg) {
+        ierr = printMumpsMemoryInfo(F);CHKERRQ(ierr);
+      }
+    }
 
     /* sequential ordering */
     icntl = 7; ival = 2;
