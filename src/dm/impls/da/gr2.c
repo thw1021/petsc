@@ -326,7 +326,7 @@ static PetscErrorCode VecGetHDF5ChunkSize(DM_DA *da, Vec xin, PetscInt dimension
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)xin), &comm_size);CHKERRMPI(ierr);
   avg_local_vec_size = (hsize_t) PetscCeilInt(vec_size,comm_size);      /* we will attempt to use this as the chunk size */
 
-  target_size = (hsize_t) PetscMin(vec_size,PetscMin(max_chunk_size,PetscMax(avg_local_vec_size,PetscMax(PetscCeilInt(vec_size,max_chunks),min_size))));
+  target_size = (hsize_t) PetscMin((PetscInt64)vec_size,PetscMin((PetscInt64)max_chunk_size,PetscMax((PetscInt64)avg_local_vec_size,PetscMax(PetscCeilInt64(vec_size,max_chunks),(PetscInt64)min_size))));
   /* following line uses sizeof(PetscReal) instead of sizeof(PetscScalar) because the last dimension of chunkDims[] captures the 2* when complex numbers are being used */
   chunk_size = (hsize_t) PetscMax(1,chunkDims[0])*PetscMax(1,chunkDims[1])*PetscMax(1,chunkDims[2])*PetscMax(1,chunkDims[3])*PetscMax(1,chunkDims[4])*PetscMax(1,chunkDims[5])*sizeof(PetscReal);
 

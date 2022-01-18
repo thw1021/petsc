@@ -957,5 +957,7 @@ M*/
 M*/
 #define PetscCeilInt(x,y)  ((((PetscInt)(x))/((PetscInt)(y))) +  ((((PetscInt)(x)) % ((PetscInt)(y))) ? 1 : 0))
 
+#define PetscCeilInt64(x,y)  ((((PetscInt64)(x))/((PetscInt64)(y))) +  ((((PetscInt64)(x)) % ((PetscInt64)(y))) ? 1 : 0))
+
 PETSC_EXTERN PetscErrorCode PetscLinearRegression(PetscInt,const PetscReal[],const PetscReal[],PetscReal*,PetscReal*);
 #endif
