@@ -196,10 +196,8 @@ int main(int argc,char **args)
     if (flg_mumps) {
       /* Get memory estimates from MUMPS' MatLUFactorSymbolic(), e.g. INFOG(16), INFOG(17).
          KSPSetUp() below will do nothing inside MatLUFactorSymbolic() */
-      IS            perm,iperm;
       MatFactorInfo info;
-      ierr = MatGetOrdering(A,MATORDERINGEXTERNAL,&perm,&iperm);CHKERRQ(ierr);
-      ierr = MatLUFactorSymbolic(F,A,perm,iperm,&info);CHKERRQ(ierr);
+      ierr = MatLUFactorSymbolic(F,A,NULL,NULL,&info);CHKERRQ(ierr);
       ierr = PetscOptionsGetBool(NULL,NULL,"-print_mumps_memory",&flg,NULL);CHKERRQ(ierr);
       if (flg) {
         ierr = printMumpsMemoryInfo(F);CHKERRQ(ierr);
