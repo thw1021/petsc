@@ -206,12 +206,14 @@ int main(int argc,char **args)
 
 #if defined(PETSC_HAVE_MUMPS)
     /* mumps interface allows repeated call of MatCholeskyFactorSymbolic(), while the succession calls do nothing */
-    if (chol) {
-      ierr = MatCholeskyFactorSymbolic(F,A,NULL,&info);CHKERRQ(ierr);
-      ierr = MatCholeskyFactorNumeric(F,A,&info);CHKERRQ(ierr);
-    } else {
-      ierr = MatLUFactorSymbolic(F,A,NULL,NULL,&info);CHKERRQ(ierr);
-      ierr = MatLUFactorNumeric(F,A,&info);CHKERRQ(ierr);
+    if (ipack == 2) {
+      if (chol) {
+        ierr = MatCholeskyFactorSymbolic(F,A,perm,&info);CHKERRQ(ierr);
+        ierr = MatCholeskyFactorNumeric(F,A,&info);CHKERRQ(ierr);
+      } else {
+        ierr = MatLUFactorSymbolic(F,A,perm,iperm,&info);CHKERRQ(ierr);
+        ierr = MatLUFactorNumeric(F,A,&info);CHKERRQ(ierr);
+      }
     }
 #endif
 
