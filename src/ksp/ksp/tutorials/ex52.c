@@ -198,6 +198,7 @@ int main(int argc,char **args)
          KSPSetUp() below will do nothing inside MatLUFactorSymbolic() */
       MatFactorInfo info;
       ierr = MatLUFactorSymbolic(F,A,NULL,NULL,&info);CHKERRQ(ierr);
+      flg = PETSC_FALSE;
       ierr = PetscOptionsGetBool(NULL,NULL,"-print_mumps_memory",&flg,NULL);CHKERRQ(ierr);
       if (flg) {
         ierr = printMumpsMemoryInfo(F);CHKERRQ(ierr);
