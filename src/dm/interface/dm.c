@@ -1368,7 +1368,7 @@ PetscErrorCode DMCreateMassMatrix(DM dmc, DM dmf, Mat *mat)
 /*@
   DMCreateMassMatrixLumped - Gets the lumped mass matrix for a given DM
 
-  Collective on dac
+  Collective on dm
 
   Input Parameter:
 . dm - the DM object
