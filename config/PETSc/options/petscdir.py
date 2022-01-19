@@ -26,6 +26,8 @@ class Configure(config.base.Configure):
       self.dir = os.path.normpath(self.framework.argDB['PETSC_DIR'])
       if self.dir == 'pwd':
         raise RuntimeError('You have set -PETSC_DIR=pwd, you need to use back quotes around the pwd\n  like -PETSC_DIR=`pwd`')
+      if self.dir == '.':
+        self.dir = os.getcwd()
       if not os.path.isdir(self.dir):
         raise RuntimeError('The value you set with -PETSC_DIR='+self.dir+' is not a directory')
     elif 'PETSC_DIR' in os.environ:
