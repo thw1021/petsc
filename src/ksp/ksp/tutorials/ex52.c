@@ -446,6 +446,13 @@ int main(int argc,char **args)
       output_file: output/ex52_1.out
 
    test:
+      suffix: mumps_4
+      nsize: 3
+      requires: mumps !complex !single
+      args: -use_mumps_lu -m 50 -n 50 -use_mumps_lu -print_mumps_memory
+      output_file: output/ex52_4.out
+
+   test:
       suffix: mumps_omp_2
       nsize: 4
       requires: mumps hwloc openmp pthread defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
