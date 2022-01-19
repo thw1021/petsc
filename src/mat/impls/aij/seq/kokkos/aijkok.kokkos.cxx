@@ -769,7 +769,8 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   /* TODO: add command line options to select spgemm algorithms */
   auto spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_KK;
 #if defined(PETSC_HAVE_CUDA)
-  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+  /* As of 2022-01-19, KK does not support CUDA-11.x spgemm */
+  #if PETSC_PKG_CUDA_VERSION_GT(10,2,0) && PETSC_PKG_CUDA_VERSION_LT(11,0,0)
     /* This algorithm + cuda-10.2 sometimes gave wrong results (invalid device pointers in csrmatC) and failed snes/tutorials/ex56.c */
     spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_CUSPARSE;
   #endif
