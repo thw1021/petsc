@@ -48,6 +48,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_a_b_Private(DM dmc,DM 
   PetscErrorCode ierr;
   PetscInt       exf,startexf,nexf,nextraxf,startexc;
   PetscInt       dof[2];
+  const PetscInt dim = 1;
 
   PetscFunctionBegin;
   ierr = DMStagGetDOF(dmc,&dof[0],&dof[1],NULL,NULL);CHKERRQ(ierr);
@@ -72,8 +73,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_a_b_Private(DM dmc,DM 
 
       rowf.i = exf; rowf.c = 0; rowf.loc = DMSTAG_LEFT;
       colc.i = exc; colc.c = 0; colc.loc = DMSTAG_LEFT;
-      ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-      ierr = DMStagStencilToIndexLocal(dmc,1,&colc,&ic);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmc,dim,1,&colc,&ic);CHKERRQ(ierr);
       ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&one,INSERT_VALUES);CHKERRQ(ierr);
     } else {
       DMStagStencil     rowf,colc[2];
@@ -83,8 +84,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_a_b_Private(DM dmc,DM 
       rowf.i    = exf; rowf.c    = 0; rowf.loc    = DMSTAG_LEFT;
       colc[0].i = exc; colc[0].c = 0; colc[0].loc = DMSTAG_LEFT;
       colc[1].i = exc; colc[1].c = 0; colc[1].loc = DMSTAG_RIGHT;
-      ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-      ierr = DMStagStencilToIndexLocal(dmc,2, colc, ic);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmc,dim,2, colc, ic);CHKERRQ(ierr);
       ierr = MatSetValuesLocal(A,1,&ir,2,ic,weight,INSERT_VALUES);CHKERRQ(ierr);
     }
     /* Elements (excluding "extra" dummies) */
@@ -95,8 +96,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation1d_a_b_Private(DM dmc,DM 
 
       rowf.i = exf;  rowf.c = 0; rowf.loc = DMSTAG_ELEMENT; /* Note that this assumes only 1 dof */
       colc.i = exc;  colc.c = 0; colc.loc = DMSTAG_ELEMENT;
-      ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-      ierr = DMStagStencilToIndexLocal(dmc,1,&colc,&ic);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmc,dim,1,&colc,&ic);CHKERRQ(ierr);
       ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
     }
   }
@@ -108,6 +109,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_a_b_Private(DM dmc,D
   PetscErrorCode ierr;
   PetscInt       exf,eyf,startexf,starteyf,nexf,neyf,nextraxf,nextrayf,startexc,starteyc,Nexf,Neyf;
   PetscInt       dof[3];
+  const PetscInt dim = 2;
 
   PetscFunctionBegin;
   ierr = DMStagGetDOF(dmc,&dof[0],&dof[1],&dof[2],NULL);CHKERRQ(ierr);
@@ -169,8 +171,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_a_b_Private(DM dmc,D
             }
           }
         }
-        ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-        ierr = DMStagStencilToIndexLocal(dmc,nweight,colc,ic);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,colc,ic);CHKERRQ(ierr);
         ierr = MatSetValuesLocal(A,1,&ir,nweight,ic,weight,INSERT_VALUES);CHKERRQ(ierr);
       }
       /* Down edges (excluding right "extra" dummy col) */
@@ -211,8 +213,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_a_b_Private(DM dmc,D
             }
           }
         }
-        ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-        ierr = DMStagStencilToIndexLocal(dmc,nweight,colc,ic);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,colc,ic);CHKERRQ(ierr);
         ierr = MatSetValuesLocal(A,1,&ir,nweight,ic,weight,INSERT_VALUES);CHKERRQ(ierr);
       }
       /* Elements (excluding "extra" dummy) */
@@ -223,8 +225,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation2d_0_a_b_Private(DM dmc,D
 
         rowf.i = exf; rowf.j = eyf; rowf.c = 0; rowf.loc = DMSTAG_ELEMENT;
         colc.i = exc; colc.j = eyc; colc.c = 0; colc.loc = DMSTAG_ELEMENT;
-        ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-        ierr = DMStagStencilToIndexLocal(dmc,1,&colc,&ic);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmc,dim,1,&colc,&ic);CHKERRQ(ierr);
         ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
@@ -237,6 +239,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation3d_0_0_a_b_Private(DM dmc
   PetscErrorCode ierr;
   PetscInt       exf,eyf,ezf,startexf,starteyf,startezf,nexf,neyf,nezf,nextraxf,nextrayf,nextrazf,startexc,starteyc,startezc,Nexf,Neyf,Nezf;
   PetscInt       dof[4];
+  const PetscInt dim = 3;
 
   PetscFunctionBegin;
 
@@ -334,8 +337,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation3d_0_0_a_b_Private(DM dmc
               }
             }
           }
-          ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmc,nweight,colc,ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,colc,ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,1,&ir,nweight,ic,weight,INSERT_VALUES);CHKERRQ(ierr);
         }
 
@@ -407,8 +410,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation3d_0_0_a_b_Private(DM dmc
               }
             }
           }
-          ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmc,nweight,colc,ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,colc,ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,1,&ir,nweight,ic,weight,INSERT_VALUES);CHKERRQ(ierr);
         }
 
@@ -480,8 +483,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation3d_0_0_a_b_Private(DM dmc
               }
             }
           }
-          ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmc,nweight,colc,ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,colc,ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,1,&ir,nweight,ic,weight,INSERT_VALUES);CHKERRQ(ierr);
         }
         /* Elements */
@@ -492,8 +495,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateInterpolation3d_0_0_a_b_Private(DM dmc
 
           rowf.i = exf; rowf.j = eyf; rowf.k = ezf; rowf.c = 0; rowf.loc = DMSTAG_ELEMENT;
           colc.i = exc; colc.j = eyc; colc.k = ezc; colc.c = 0; colc.loc = DMSTAG_ELEMENT;
-          ierr = DMStagStencilToIndexLocal(dmf,1,&rowf,&ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmc,1,&colc,&ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&rowf,&ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,1,&colc,&ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
         }
       }
@@ -507,6 +510,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_a_b_Private(DM dmc,DM dm
   PetscErrorCode ierr;
   PetscInt       exf,startexf,nexf,nextraxf,startexc,Nexf;
   PetscInt       dof[2];
+  const PetscInt dim = 1;
 
   PetscFunctionBegin;
   ierr = DMStagGetDOF(dmc,&dof[0],&dof[1],NULL,NULL);CHKERRQ(ierr);
@@ -533,8 +537,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_a_b_Private(DM dmc,DM dm
 
       colf.i = exf; colf.c = 0; colf.loc = DMSTAG_LEFT;
       rowc.i = exc; rowc.c = 0; rowc.loc = DMSTAG_LEFT;
-      ierr = DMStagStencilToIndexLocal(dmc,1,&rowc,&ir);CHKERRQ(ierr);
-      ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmc,dim,1,&rowc,&ir);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
       weight = (exf == Nexf || exf == 0) ? 0.75 : 0.5; /* Assume a Neuman-type condition */
       ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
     } else {
@@ -545,8 +549,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_a_b_Private(DM dmc,DM dm
       colf.i    = exf;  colf.c    = 0; colf.loc    = DMSTAG_LEFT;
       rowc[0].i = exc;  rowc[0].c = 0; rowc[0].loc = DMSTAG_LEFT;
       rowc[1].i = exc;  rowc[1].c = 0; rowc[1].loc = DMSTAG_RIGHT;
-      ierr = DMStagStencilToIndexLocal(dmc,2, rowc, ir);CHKERRQ(ierr);
-      ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmc,dim,2, rowc, ir);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
       ierr = MatSetValuesLocal(A,2,ir,1,&ic,weight,INSERT_VALUES);CHKERRQ(ierr);
     }
     if (dof[1] > 0 && exf < startexf+nexf) {
@@ -556,8 +560,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction1d_a_b_Private(DM dmc,DM dm
 
       rowc.i = exc; rowc.c = 0; rowc.loc = DMSTAG_ELEMENT;
       colf.i = exf; colf.c = 0; colf.loc = DMSTAG_ELEMENT;
-      ierr = DMStagStencilToIndexLocal(dmc,1,&rowc,&ir);CHKERRQ(ierr);
-      ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmc,dim,1,&rowc,&ir);CHKERRQ(ierr);
+      ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
       ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
     }
   }
@@ -569,6 +573,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction2d_0_a_b_Private(DM dmc,DM 
   PetscErrorCode ierr;
   PetscInt       exf,eyf,startexf,starteyf,nexf,neyf,nextraxf,nextrayf,startexc,starteyc,Nexf,Neyf;
   PetscInt       dof[3];
+  const PetscInt dim = 2;
 
   PetscFunctionBegin;
   ierr = DMStagGetDOF(dmc,&dof[0],&dof[1],&dof[2],NULL);CHKERRQ(ierr);
@@ -613,8 +618,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction2d_0_a_b_Private(DM dmc,DM 
           rowc[1].i = exc; rowc[1].j = eyc; rowc[1].c = 0; rowc[1].loc = DMSTAG_RIGHT;
           weight[0] = 0.125; weight[1] = 0.125;
         }
-        ierr = DMStagStencilToIndexLocal(dmc,nweight,rowc,ir);CHKERRQ(ierr);
-        ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,rowc,ir);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
         ierr = MatSetValuesLocal(A,nweight,ir,1,&ic,weight,INSERT_VALUES);CHKERRQ(ierr);
       }
       /* Down edges (excluding right "extra" dummy col) */
@@ -639,8 +644,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction2d_0_a_b_Private(DM dmc,DM 
           rowc[1].i = exc; rowc[1].j = eyc; rowc[1].c = 0; rowc[1].loc = DMSTAG_UP;
           weight[0] = 0.125; weight[1] = 0.125;
         }
-        ierr = DMStagStencilToIndexLocal(dmc,nweight,rowc,ir);CHKERRQ(ierr);
-        ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,rowc,ir);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
         ierr = MatSetValuesLocal(A,nweight,ir,1,&ic,weight,INSERT_VALUES);CHKERRQ(ierr);
       }
       /* Elements (excluding "extra" dummies) */
@@ -651,8 +656,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction2d_0_a_b_Private(DM dmc,DM 
 
         rowc.i = exc; rowc.j = eyc; rowc.c = 0; rowc.loc = DMSTAG_ELEMENT;
         colf.i = exf; colf.j = eyf; colf.c = 0; colf.loc = DMSTAG_ELEMENT;
-        ierr = DMStagStencilToIndexLocal(dmc,1,&rowc,&ir);CHKERRQ(ierr);
-        ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmc,dim,1,&rowc,&ir);CHKERRQ(ierr);
+        ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
         ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&cellScale,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
@@ -665,6 +670,7 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction3d_0_0_a_b_Private(DM dmc,D
   PetscErrorCode ierr;
   PetscInt       exf,eyf,ezf,startexf,starteyf,startezf,nexf,neyf,nezf,nextraxf,nextrayf,nextrazf,startexc,starteyc,startezc,Nexf,Neyf,Nezf;
   PetscInt       dof[4];
+  const PetscInt dim = 3;
 
   PetscFunctionBegin;
 
@@ -715,8 +721,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction3d_0_0_a_b_Private(DM dmc,D
             rowc[1].i = exc; rowc[1].j = eyc; rowc[1].k = ezc; rowc[1].c = 0; rowc[1].loc = DMSTAG_RIGHT;
             weight[0] = 0.0625; weight[1] = 0.0625;
           }
-          ierr = DMStagStencilToIndexLocal(dmc,nweight,rowc,ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,rowc,ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,nweight,ir,1,&ic,weight,INSERT_VALUES);CHKERRQ(ierr);
         }
 
@@ -742,8 +748,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction3d_0_0_a_b_Private(DM dmc,D
             rowc[1].i = exc; rowc[1].j = eyc; rowc[1].k = ezc; rowc[1].c = 0; rowc[1].loc = DMSTAG_UP;
             weight[0] = 0.0625; weight[1] = 0.0625;
           }
-          ierr = DMStagStencilToIndexLocal(dmc,nweight,rowc,ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,rowc,ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,nweight,ir,1,&ic,weight,INSERT_VALUES);CHKERRQ(ierr);
         }
 
@@ -769,8 +775,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction3d_0_0_a_b_Private(DM dmc,D
             rowc[1].i = exc; rowc[1].j = eyc; rowc[1].k = ezc; rowc[1].c = 0; rowc[1].loc = DMSTAG_FRONT;
             weight[0] = 0.0625; weight[1] = 0.0625;
           }
-          ierr = DMStagStencilToIndexLocal(dmc,nweight,rowc,ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,nweight,rowc,ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,nweight,ir,1,&ic,weight,INSERT_VALUES);CHKERRQ(ierr);
         }
         /* Elements */
@@ -781,8 +787,8 @@ PETSC_INTERN PetscErrorCode DMStagPopulateRestriction3d_0_0_a_b_Private(DM dmc,D
 
           colf.i = exf; colf.j = eyf; colf.k = ezf; colf.c = 0; colf.loc = DMSTAG_ELEMENT;
           rowc.i = exc; rowc.j = eyc; rowc.k = ezc; rowc.c = 0; rowc.loc = DMSTAG_ELEMENT;
-          ierr = DMStagStencilToIndexLocal(dmc,1,&rowc,&ir);CHKERRQ(ierr);
-          ierr = DMStagStencilToIndexLocal(dmf,1,&colf,&ic);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmc,dim,1,&rowc,&ir);CHKERRQ(ierr);
+          ierr = DMStagStencilToIndexLocal(dmf,dim,1,&colf,&ic);CHKERRQ(ierr);
           ierr = MatSetValuesLocal(A,1,&ir,1,&ic,&weight,INSERT_VALUES);CHKERRQ(ierr);
         }
       }
