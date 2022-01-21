@@ -168,7 +168,6 @@ adj_p[1][0] = 0
 adj_p[1].assemble()
 
 ts.setCostGradients(adj_u,adj_p)
-
 ts.adjointSolve()
 
 adj_u[0].view()
