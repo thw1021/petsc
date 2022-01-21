@@ -4,10 +4,6 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupminterface.hpp>
 
-#if !defined(PETSC_HAVE_CXX_DIALECT_CXX11)
-#error PetscDeviceContext backends for CUDA and HIP requires C++11
-#endif
-
 #include <array>
 
 namespace Petsc
@@ -188,7 +184,7 @@ inline PetscErrorCode CUPMContext<T>::setUp(PetscDeviceContext dctx) noexcept
     cerr = cupmStreamCreateWithFlags(&dci->stream,cupmStreamNonBlocking);CHKERRCUPM(cerr);
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[static_cast<int>(dctx->streamType)]);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[static_cast<int>(dctx->streamType)]);
     break;
   }
   if (!dci->event) {

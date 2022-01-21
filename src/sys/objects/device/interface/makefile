@@ -1,4 +1,3 @@
-#requiresdefine 'PETSC_HAVE_CXX_DIALECT_CXX11'
 ALL: lib
 
 CFLAGS    =
