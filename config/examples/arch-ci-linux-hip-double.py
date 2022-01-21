@@ -28,10 +28,8 @@ if __name__ == '__main__':
     '--download-kokkos-kernels',
     '--download-hypre',
     '--download-hypre-configure-arguments=--enable-unified-memory',
-    '--with-hypre-gpuarch=gfx908',
     '--download-magma',
     '--with-magma-fortran-bindings=0',
-    '--with-magma-gputarget=gfx908',
   ]
 
   configure.petsc_configure(configure_options)
