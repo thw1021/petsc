@@ -4099,12 +4099,12 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
       ierr = MatCreateSeqDense(PETSC_COMM_SELF,n_B,n_constraints,NULL,&pcbddc->local_auxmat2);CHKERRQ(ierr);
       for (i=0;i<n_constraints;i++) {
         Vec r, b;
+        ierr = MatDenseGetColumnVecRead(local_auxmat2_R,i,&r);CHKERRQ(ierr);
         ierr = MatDenseGetColumnVec(pcbddc->local_auxmat2,i,&b);CHKERRQ(ierr);
-        ierr = MatDenseGetColumnVec(local_auxmat2_R,i,&r);CHKERRQ(ierr);
         ierr = VecScatterBegin(pcbddc->R_to_B,r,b,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
         ierr = VecScatterEnd(pcbddc->R_to_B,r,b,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
         ierr = MatDenseRestoreColumnVec(pcbddc->local_auxmat2,i,&b);CHKERRQ(ierr);
-        ierr = MatDenseRestoreColumnVec(local_auxmat2_R,i,&r);CHKERRQ(ierr);
+        ierr = MatDenseRestoreColumnVecRead(local_auxmat2_R,i,&r);CHKERRQ(ierr);
       }
       ierr = MatMatMult(C_B,pcbddc->local_auxmat2,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&M3);CHKERRQ(ierr);
     } else {
