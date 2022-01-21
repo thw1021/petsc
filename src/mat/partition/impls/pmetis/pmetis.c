@@ -3,7 +3,7 @@
 
 /*
    Currently using ParMetis-4.0.2
-*/OA
+*/
 
 #include <parmetis.h>
 
