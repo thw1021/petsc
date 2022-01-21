@@ -27,7 +27,7 @@ class Configure(config.base.Configure):
       if self.dir == 'pwd':
         raise RuntimeError('You have set -PETSC_DIR=pwd, you need to use back quotes around the pwd\n  like -PETSC_DIR=`pwd`')
       elif not os.path.isabs(self.dir):
-        raise RuntimeError('The value you set with -PETSC_DIR='+self.dir+' is relative path. Use absolute path')
+        raise RuntimeError('The value you set with -PETSC_DIR='+self.dir+' is a relative path. Use absolute path PETSC_DIR='+os.path.abspath(self.dir))
       elif not os.path.isdir(self.dir):
         raise RuntimeError('The value you set with -PETSC_DIR='+self.dir+' is not a directory')
     elif 'PETSC_DIR' in os.environ:
@@ -38,7 +38,7 @@ The environmental variable PETSC_DIR is set incorrectly. Please use the followin
   For sh/bash  : PETSC_DIR=`pwd`; export PETSC_DIR
   for csh/tcsh : setenv PETSC_DIR `pwd`''')
       elif not os.path.isabs(self.dir):
-        raise RuntimeError('The environmental variable PETSC_DIR '+self.dir+' is a relative path. Use absolute path')
+        raise RuntimeError('The environmental variable PETSC_DIR '+self.dir+' is a relative path. Use absolute path PETSC_DIR='+os.path.abspath(self.dir))
       elif not os.path.isdir(self.dir):
         raise RuntimeError('The environmental variable PETSC_DIR '+self.dir+' is not a directory')
     else:
