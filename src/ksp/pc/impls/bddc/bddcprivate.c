@@ -4700,7 +4700,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
         ierr = MatDenseGetColumnVec(pcbddc->coarse_psi_D,i,&v);CHKERRQ(ierr);
         ierr = VecScatterBegin(pcbddc->R_to_D,pcbddc->vec1_R,v,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
         ierr = VecScatterEnd(pcbddc->R_to_D,pcbddc->vec1_R,v,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-        ierr = MatDenseRestoreColumnVector(pcbddc->coarse_psi_D,i,&v);CHKERRQ(ierr);
+        ierr = MatDenseRestoreColumnVec(pcbddc->coarse_psi_D,i,&v);CHKERRQ(ierr);
       }
       ierr = VecResetArray(pcbddc->vec1_R);CHKERRQ(ierr);
     }
