@@ -265,9 +265,9 @@ static PetscErrorCode VecAssemblyBegin_MPI_BTS(Vec X)
   {
     PetscInt nstash,reallocs;
     ierr = VecStashGetInfo_Private(&X->stash,&nstash,&reallocs);CHKERRQ(ierr);
-    ierr = PetscInfo2(X,"Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n",nstash,reallocs);CHKERRQ(ierr);
+    ierr = PetscInfo(X,"Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n",nstash,reallocs);CHKERRQ(ierr);
     ierr = VecStashGetInfo_Private(&X->bstash,&nstash,&reallocs);CHKERRQ(ierr);
-    ierr = PetscInfo2(X,"Block-Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n",nstash,reallocs);CHKERRQ(ierr);
+    ierr = PetscInfo(X,"Block-Stash has %" PetscInt_FMT " entries, uses %" PetscInt_FMT " mallocs.\n",nstash,reallocs);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -317,7 +317,7 @@ static PetscErrorCode VecAssemblyEnd_MPI_BTS(Vec X)
         } else count = x->recvhdr[i].count;
         for (j=0,recvint=frame[i].ints,recvscalar=frame[i].scalars; j<count; j++,recvint++) {
           PetscInt loc = *recvint - X->map->rstart;
-          if (*recvint < X->map->rstart || X->map->rend <= *recvint) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Received vector entry %" PetscInt_FMT " out of local range [%" PetscInt_FMT ",%" PetscInt_FMT ")]",*recvint,X->map->rstart,X->map->rend);
+          if (*recvint < X->map->rstart || X->map->rend <= *recvint) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Received vector entry %" PetscInt_FMT " out of local range [%" PetscInt_FMT ",%" PetscInt_FMT ")]",*recvint,X->map->rstart,X->map->rend);
           switch (imode) {
           case ADD_VALUES:
             xarray[loc] += *recvscalar++;
@@ -325,7 +325,7 @@ static PetscErrorCode VecAssemblyEnd_MPI_BTS(Vec X)
           case INSERT_VALUES:
             xarray[loc] = *recvscalar++;
             break;
-          default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Insert mode not supported 0x%x",imode);
+          default: SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Insert mode not supported 0x%x",imode);
           }
         }
       } else {                  /* Block stash */
@@ -344,7 +344,7 @@ static PetscErrorCode VecAssemblyEnd_MPI_BTS(Vec X)
           case INSERT_VALUES:
             for (k=loc; k<loc+bs; k++) xarray[k] = *recvscalar++;
             break;
-          default: SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"Insert mode not supported 0x%x",imode);
+          default: SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Insert mode not supported 0x%x",imode);
           }
         }
       }
@@ -409,77 +409,78 @@ static PetscErrorCode VecSetFromOptions_MPI(PetscOptionItems *PetscOptionsObject
   PetscFunctionReturn(0);
 }
 
-static struct _VecOps DvOps = { VecDuplicate_MPI, /* 1 */
-                                VecDuplicateVecs_Default,
-                                VecDestroyVecs_Default,
-                                VecDot_MPI,
-                                VecMDot_MPI,
-                                VecNorm_MPI,
-                                VecTDot_MPI,
-                                VecMTDot_MPI,
-                                VecScale_Seq,
-                                VecCopy_Seq, /* 10 */
-                                VecSet_Seq,
-                                VecSwap_Seq,
-                                VecAXPY_Seq,
-                                VecAXPBY_Seq,
-                                VecMAXPY_Seq,
-                                VecAYPX_Seq,
-                                VecWAXPY_Seq,
-                                VecAXPBYPCZ_Seq,
-                                VecPointwiseMult_Seq,
-                                VecPointwiseDivide_Seq,
-                                VecSetValues_MPI, /* 20 */
-                                VecAssemblyBegin_MPI_BTS,
-                                VecAssemblyEnd_MPI_BTS,
-                                NULL,
-                                VecGetSize_MPI,
-                                VecGetSize_Seq,
-                                NULL,
-                                VecMax_MPI,
-                                VecMin_MPI,
-                                VecSetRandom_Seq,
-                                VecSetOption_MPI,
-                                VecSetValuesBlocked_MPI,
-                                VecDestroy_MPI,
-                                VecView_MPI,
-                                VecPlaceArray_MPI,
-                                VecReplaceArray_Seq,
-                                VecDot_Seq,
-                                VecTDot_Seq,
-                                VecNorm_Seq,
-                                VecMDot_Seq,
-                                VecMTDot_Seq,
-                                VecLoad_Default,
-                                VecReciprocal_Default,
-                                VecConjugate_Seq,
-                                NULL,
-                                NULL,
-                                VecResetArray_MPI,
-                                VecSetFromOptions_MPI,/*set from options */
-                                VecMaxPointwiseDivide_Seq,
-                                VecPointwiseMax_Seq,
-                                VecPointwiseMaxAbs_Seq,
-                                VecPointwiseMin_Seq,
-                                VecGetValues_MPI,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                VecStrideGather_Default,
-                                VecStrideScatter_Default,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                NULL,
-                                VecStrideSubSetGather_Default,
-                                VecStrideSubSetScatter_Default,
-                                NULL,
-                                NULL,
-                                NULL
+static struct _VecOps DvOps = {
+  PetscDesignatedInitializer(duplicate,VecDuplicate_MPI), /* 1 */
+  PetscDesignatedInitializer(duplicatevecs,VecDuplicateVecs_Default),
+  PetscDesignatedInitializer(destroyvecs,VecDestroyVecs_Default),
+  PetscDesignatedInitializer(dot,VecDot_MPI),
+  PetscDesignatedInitializer(mdot,VecMDot_MPI),
+  PetscDesignatedInitializer(norm,VecNorm_MPI),
+  PetscDesignatedInitializer(tdot,VecTDot_MPI),
+  PetscDesignatedInitializer(mtdot,VecMTDot_MPI),
+  PetscDesignatedInitializer(scale,VecScale_Seq),
+  PetscDesignatedInitializer(copy,VecCopy_Seq), /* 10 */
+  PetscDesignatedInitializer(set,VecSet_Seq),
+  PetscDesignatedInitializer(swap,VecSwap_Seq),
+  PetscDesignatedInitializer(axpy,VecAXPY_Seq),
+  PetscDesignatedInitializer(axpby,VecAXPBY_Seq),
+  PetscDesignatedInitializer(maxpy,VecMAXPY_Seq),
+  PetscDesignatedInitializer(aypx,VecAYPX_Seq),
+  PetscDesignatedInitializer(waxpy,VecWAXPY_Seq),
+  PetscDesignatedInitializer(axpbypcz,VecAXPBYPCZ_Seq),
+  PetscDesignatedInitializer(pointwisemult,VecPointwiseMult_Seq),
+  PetscDesignatedInitializer(pointwisedivide,VecPointwiseDivide_Seq),
+  PetscDesignatedInitializer(setvalues,VecSetValues_MPI), /* 20 */
+  PetscDesignatedInitializer(assemblybegin,VecAssemblyBegin_MPI_BTS),
+  PetscDesignatedInitializer(assemblyend,VecAssemblyEnd_MPI_BTS),
+  PetscDesignatedInitializer(getarray,NULL),
+  PetscDesignatedInitializer(getsize,VecGetSize_MPI),
+  PetscDesignatedInitializer(getlocalsize,VecGetSize_Seq),
+  PetscDesignatedInitializer(restorearray,NULL),
+  PetscDesignatedInitializer(max,VecMax_MPI),
+  PetscDesignatedInitializer(min,VecMin_MPI),
+  PetscDesignatedInitializer(setrandom,VecSetRandom_Seq),
+  PetscDesignatedInitializer(setoption,VecSetOption_MPI),
+  PetscDesignatedInitializer(setvaluesblocked,VecSetValuesBlocked_MPI),
+  PetscDesignatedInitializer(destroy,VecDestroy_MPI),
+  PetscDesignatedInitializer(view,VecView_MPI),
+  PetscDesignatedInitializer(placearray,VecPlaceArray_MPI),
+  PetscDesignatedInitializer(replacearray,VecReplaceArray_Seq),
+  PetscDesignatedInitializer(dot_local,VecDot_Seq),
+  PetscDesignatedInitializer(tdot_local,VecTDot_Seq),
+  PetscDesignatedInitializer(norm_local,VecNorm_Seq),
+  PetscDesignatedInitializer(mdot_local,VecMDot_Seq),
+  PetscDesignatedInitializer(mtdot_local,VecMTDot_Seq),
+  PetscDesignatedInitializer(load,VecLoad_Default),
+  PetscDesignatedInitializer(reciprocal,VecReciprocal_Default),
+  PetscDesignatedInitializer(conjugate,VecConjugate_Seq),
+  PetscDesignatedInitializer(setlocaltoglobalmapping,NULL),
+  PetscDesignatedInitializer(setvalueslocal,NULL),
+  PetscDesignatedInitializer(resetarray,VecResetArray_MPI),
+  PetscDesignatedInitializer(setfromoptions,VecSetFromOptions_MPI),/*set from options */
+  PetscDesignatedInitializer(maxpointwisedivide,VecMaxPointwiseDivide_Seq),
+  PetscDesignatedInitializer(pointwisemax,VecPointwiseMax_Seq),
+  PetscDesignatedInitializer(pointwisemaxabs,VecPointwiseMaxAbs_Seq),
+  PetscDesignatedInitializer(pointwisemin,VecPointwiseMin_Seq),
+  PetscDesignatedInitializer(getvalues,VecGetValues_MPI),
+  PetscDesignatedInitializer(sqrt,NULL),
+  PetscDesignatedInitializer(abs,NULL),
+  PetscDesignatedInitializer(exp,NULL),
+  PetscDesignatedInitializer(log,NULL),
+  PetscDesignatedInitializer(shift,NULL),
+  PetscDesignatedInitializer(create,NULL), /* really? */
+  PetscDesignatedInitializer(stridegather,VecStrideGather_Default),
+  PetscDesignatedInitializer(stridescatter,VecStrideScatter_Default),
+  PetscDesignatedInitializer(dotnorm2,NULL),
+  PetscDesignatedInitializer(getsubvector,NULL),
+  PetscDesignatedInitializer(restoresubvector,NULL),
+  PetscDesignatedInitializer(getarrayread,NULL),
+  PetscDesignatedInitializer(restorearrayread,NULL),
+  PetscDesignatedInitializer(stridesubsetgather,VecStrideSubSetGather_Default),
+  PetscDesignatedInitializer(stridesubsetscatter,VecStrideSubSetScatter_Default),
+  PetscDesignatedInitializer(viewnative,NULL),
+  PetscDesignatedInitializer(loadnative,NULL),
+  PetscDesignatedInitializer(getlocalvector,NULL),
 };
 
 /*

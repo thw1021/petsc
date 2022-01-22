@@ -1,7 +1,9 @@
 #if !defined(PETSCSYSTYPES_H)
 #define PETSCSYSTYPES_H
 
+#include <petsccompilerguard.h>
 #include <petscconf.h>
+#include <petscconf_poison.h>
 #include <petscfix.h>
 
 /*MC

@@ -50,7 +50,7 @@ static PetscErrorCode pounders_feval(Tao tao, Vec x, Vec F, PetscReal *fsum)
   } else {
     ierr = VecDot(F,F,fsum);CHKERRQ(ierr);
   }
-  ierr = PetscInfo1(tao,"Least-squares residual norm: %20.19e\n",(double)*fsum);CHKERRQ(ierr);
+  ierr = PetscInfo(tao,"Least-squares residual norm: %20.19e\n",(double)*fsum);CHKERRQ(ierr);
   if (PetscIsInfOrNanReal(*fsum)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
   PetscFunctionReturn(0);
 }
@@ -288,7 +288,7 @@ static PetscErrorCode getquadpounders(TAO_POUNDERS *mfqP)
 
     /* factor M */
   PetscStackCallBLAS("LAPACKgetrf",LAPACKgetrf_(&blasnplus1,&blasnp,mfqP->M,&blasnplus1,mfqP->npmaxiwork,&info));
-  if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine getrf returned with value %d",info);
+  if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine getrf returned with value %d",info);
 
   if (np == mfqP->n+1) {
     for (i=0;i<mfqP->npmax-mfqP->n-1;i++) {
@@ -303,7 +303,7 @@ static PetscErrorCode getquadpounders(TAO_POUNDERS *mfqP)
 
     /* factor Ltmp */
     PetscStackCallBLAS("LAPACKpotrf",LAPACKpotrf_("L",&blasint2,mfqP->L_tmp,&blasint,&info));
-    if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine potrf returned with value %d",info);
+    if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine potrf returned with value %d",info);
   }
 
   for (k=0;k<mfqP->m;k++) {
@@ -311,7 +311,7 @@ static PetscErrorCode getquadpounders(TAO_POUNDERS *mfqP)
       /* Solve L'*L*Omega = Z' * RESk*/
       PetscStackCallBLAS("BLASgemv",BLASgemv_("T",&blasnp,&blasint2,&one,mfqP->Z,&blasnpmax,&mfqP->RES[mfqP->npmax*k],&ione,&zero,mfqP->omega,&ione));
       PetscStackCallBLAS("LAPACKpotrs",LAPACKpotrs_("L",&blasint2,&ione,mfqP->L_tmp,&blasint,mfqP->omega,&blasint2,&info));
-      if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine potrs returned with value %d",info);
+      if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine potrs returned with value %d",info);
 
       /* Beta = L*Omega */
       PetscStackCallBLAS("BLASgemv",BLASgemv_("N",&blasint,&blasint2,&one,&mfqP->L[(mfqP->n+1)*blasint],&blasint,mfqP->omega,&ione,&zero,mfqP->beta,&ione));
@@ -320,7 +320,7 @@ static PetscErrorCode getquadpounders(TAO_POUNDERS *mfqP)
     /* solve M'*Alpha = RESk - N'*Beta */
     PetscStackCallBLAS("BLASgemv",BLASgemv_("T",&blasint,&blasnp,&negone,mfqP->N,&blasint,mfqP->beta,&ione,&one,&mfqP->RES[mfqP->npmax*k],&ione));
     PetscStackCallBLAS("LAPACKgetrs",LAPACKgetrs_("T",&blasnplus1,&ione,mfqP->M,&blasnplus1,mfqP->npmaxiwork,&mfqP->RES[mfqP->npmax*k],&blasnplus1,&info));
-    if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine getrs returned with value %d",info);
+    if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine getrs returned with value %d",info);
 
     /* Gdel(:,k) = Alpha(2:n+1) */
     for (i=0;i<mfqP->n;i++) {
@@ -416,7 +416,7 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
     /* Q_tmp,R = qr(M') */
     blasmaxmn=PetscMax(mfqP->m,mfqP->n+1);
     PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&blasnp,&blasnplus1,mfqP->Q_tmp,&blasnpmax,mfqP->tau_tmp,mfqP->mwork,&blasmaxmn,&info));
-    if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine geqrf returned with value %d",info);
+    if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine geqrf returned with value %d",info);
 
     /* Reject if min(svd(N*Q(:,n+2:np+1)) <= theta2 */
     /* L = N*Qtmp */
@@ -429,7 +429,7 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
 
     /* L_tmp = N*Qtmp' */
     PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("R","N",&blasint2,&blasnp,&blasnplus1,mfqP->Q_tmp,&blasnpmax,mfqP->tau_tmp,mfqP->L_tmp,&blasint2,mfqP->npmaxwork,&blasnmax,&info));
-    if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine ormqr returned with value %d",info);
+    if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine ormqr returned with value %d",info);
 
     /* Copy L_tmp to L_save */
     for (i=0;i<mfqP->npmax * mfqP->n*(mfqP->n+1)/2;i++) {
@@ -441,7 +441,7 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
     ierr = PetscFPTrapPush(PETSC_FP_TRAP_OFF);CHKERRQ(ierr);
     PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("N","N",&blasint2,&blasint,&mfqP->L_tmp[(mfqP->n+1)*blasint2],&blasint2,mfqP->beta,mfqP->work,&blasn,mfqP->work,&blasn,mfqP->npmaxwork,&blasnmax,&info));
     ierr = PetscFPTrapPop();CHKERRQ(ierr);
-    if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine gesvd returned with value %d",info);
+    if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine gesvd returned with value %d",info);
 
     if (mfqP->beta[PetscMin(blasint,blasint2)-1] > mfqP->theta2) {
       /* accept point */
@@ -476,7 +476,7 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
 
   /* Q_tmp = I * Q */
   PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("R","N",&blasnp,&blasnp,&blasnplus1,mfqP->Q,&blasnpmax,mfqP->tau,mfqP->Q_tmp,&blasnpmax,mfqP->npmaxwork,&blasnmax,&info));
-  if (info != 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine ormqr returned with value %d",info);
+  if (info != 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"LAPACK routine ormqr returned with value %d",info);
 
   /* Copy Q_tmp(:,n+2:np) to Z) */
   offset = mfqP->npmax * (mfqP->n+1);
@@ -601,7 +601,7 @@ static PetscErrorCode affpoints(TAO_POUNDERS *mfqP, PetscReal *xmin,PetscReal c)
         /* project D onto null */
         blask=(mfqP->nmodelpoints);
         PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("R","N",&ione,&blasn,&blask,mfqP->Q,&blasnpmax,mfqP->tau,mfqP->work2,&ione,mfqP->mwork,&blasm,&info));
-        if (info < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"ormqr returned value %d",info);
+        if (info < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"ormqr returned value %d",info);
       }
       PetscStackCallBLAS("BLASnrm2",proj = BLASnrm2_(&blasj,&mfqP->work2[mfqP->nmodelpoints],&ione));
 
@@ -614,7 +614,7 @@ static PetscErrorCode affpoints(TAO_POUNDERS *mfqP, PetscReal *xmin,PetscReal c)
         blask = mfqP->nmodelpoints;
         blasmaxmn = PetscMax(mfqP->m,mfqP->n);
         PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&blasn,&blask,mfqP->Q,&blasnpmax,mfqP->tau,mfqP->mwork,&blasmaxmn,&info));
-        if (info < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"geqrf returned value %d",info);
+        if (info < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"geqrf returned value %d",info);
         mfqP->q_is_I = 0;
       }
       if (mfqP->nmodelpoints == mfqP->n)  {
@@ -693,7 +693,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* This provides enough information to approximate the gradient of the objective */
   /* using a forward difference scheme. */
 
-  ierr = PetscInfo1(tao,"Initialize simplex; delta = %10.9e\n",(double)mfqP->delta);CHKERRQ(ierr);
+  ierr = PetscInfo(tao,"Initialize simplex; delta = %10.9e\n",(double)mfqP->delta);CHKERRQ(ierr);
   ierr = pounders_feval(tao,mfqP->Xhist[0],mfqP->Fhist[0],&mfqP->Fres[0]);CHKERRQ(ierr);
   mfqP->minindex = 0;
   minnorm = mfqP->Fres[0];
@@ -716,7 +716,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   }
   ierr = VecCopy(mfqP->Xhist[mfqP->minindex],tao->solution);CHKERRQ(ierr);
   ierr = VecCopy(mfqP->Fhist[mfqP->minindex],tao->ls_res);CHKERRQ(ierr);
-  ierr = PetscInfo1(tao,"Finalize simplex; minnorm = %10.9e\n",(double)minnorm);CHKERRQ(ierr);
+  ierr = PetscInfo(tao,"Finalize simplex; minnorm = %10.9e\n",(double)minnorm);CHKERRQ(ierr);
 
   /* Gather mpi vecs to one big local vec */
 
@@ -727,7 +727,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* (Column oriented for blas calls) */
   ii=0;
 
-  ierr = PetscInfo1(tao,"Build matrix: %D\n",(PetscInt)mfqP->size);CHKERRQ(ierr);
+  ierr = PetscInfo(tao,"Build matrix: %D\n",(PetscInt)mfqP->size);CHKERRQ(ierr);
   if (1 == mfqP->size) {
     ierr = VecGetArrayRead(mfqP->Xhist[mfqP->minindex],&xmint);CHKERRQ(ierr);
     for (i=0;i<mfqP->n;i++) mfqP->xmin[i] = xmint[i];
@@ -798,7 +798,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* D (nxn) Fdiff (nxm)  => G (nxm) */
   blasncopy = blasn;
   PetscStackCallBLAS("LAPACKgesv",LAPACKgesv_(&blasn,&blasm,mfqP->Disp,&blasnpmax,mfqP->iwork,mfqP->Fdiff,&blasncopy,&info));
-  ierr = PetscInfo1(tao,"Linear solve return: %D\n",(PetscInt)info);CHKERRQ(ierr);
+  ierr = PetscInfo(tao,"Linear solve return: %D\n",(PetscInt)info);CHKERRQ(ierr);
 
   ierr = pounders_update_res(tao);CHKERRQ(ierr);
 
@@ -818,7 +818,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
 
   mfqP->nHist = mfqP->n+1;
   mfqP->nmodelpoints = mfqP->n+1;
-  ierr = PetscInfo1(tao,"Initial gradient: %20.19e\n",(double)gnorm);CHKERRQ(ierr);
+  ierr = PetscInfo(tao,"Initial gradient: %20.19e\n",(double)gnorm);CHKERRQ(ierr);
 
   while (tao->reason == TAO_CONTINUE_ITERATING) {
     PetscReal gnm = 1e-4;
@@ -910,13 +910,13 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
     /* Compute the next interpolation set */
     mfqP->q_is_I = 1;
     mfqP->nmodelpoints=0;
-    ierr = PetscInfo2(tao,"Affine Points: xmin = %20.19e, c1 = %20.19e\n",(double)*mfqP->xmin,(double)mfqP->c1);CHKERRQ(ierr);
+    ierr = PetscInfo(tao,"Affine Points: xmin = %20.19e, c1 = %20.19e\n",(double)*mfqP->xmin,(double)mfqP->c1);CHKERRQ(ierr);
     ierr = affpoints(mfqP,mfqP->xmin,mfqP->c1);CHKERRQ(ierr);
     if (mfqP->nmodelpoints == mfqP->n) {
       valid = PETSC_TRUE;
     } else {
       valid = PETSC_FALSE;
-      ierr = PetscInfo2(tao,"Affine Points: xmin = %20.19e, c2 = %20.19e\n",(double)*mfqP->xmin,(double)mfqP->c2);CHKERRQ(ierr);
+      ierr = PetscInfo(tao,"Affine Points: xmin = %20.19e, c2 = %20.19e\n",(double)*mfqP->xmin,(double)mfqP->c2);CHKERRQ(ierr);
       ierr = affpoints(mfqP,mfqP->xmin,mfqP->c2);CHKERRQ(ierr);
       if (mfqP->n > mfqP->nmodelpoints) {
         ierr = PetscInfo(tao,"Model not valid -- adding geometry points\n");CHKERRQ(ierr);
@@ -949,7 +949,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
     }
 
     /* Update the quadratic model */
-    ierr = PetscInfo2(tao,"Get Quad, size: %D, points: %D\n",mfqP->n,mfqP->nmodelpoints);CHKERRQ(ierr);
+    ierr = PetscInfo(tao,"Get Quad, size: %D, points: %D\n",mfqP->n,mfqP->nmodelpoints);CHKERRQ(ierr);
     ierr = getquadpounders(mfqP);CHKERRQ(ierr);
     ierr = VecGetArrayRead(mfqP->Fhist[mfqP->minindex],&fmin);CHKERRQ(ierr);
     PetscStackCallBLAS("BLAScopy",BLAScopy_(&blasm,fmin,&ione,mfqP->C,&ione));
