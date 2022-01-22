@@ -168,7 +168,7 @@ static PetscErrorCode ISInvertPermutation_General(IS is,PetscInt nlocal,IS *isou
       PetscMPIInt rank;
       ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)is),&rank);CHKERRMPI(ierr);
       ierr = PetscLayoutGetSize(is->map, &N);CHKERRQ(ierr);
-      if (PetscUnlikely((rank == size-1)) && (nstart != N)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of nlocal lengths %" PetscInt_FMT " != total IS length %" PetscInt_FMT,nstart,N);
+      if (PetscUnlikely((rank == size-1)) && (nstart != N)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of nlocal lengths %" PetscInt_FMT " != total IS length %" PetscInt_FMT,nstart,N);
     }
     nstart -= nlocal;
     ierr    = ISGetIndices(nistmp,&idx);CHKERRQ(ierr);
@@ -329,7 +329,7 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
   if (timestepping) {
     ierr = PetscViewerHDF5WriteObjectAttribute(viewer,(PetscObject)is,"timestepping",PETSC_BOOL,&timestepping);CHKERRQ(ierr);
   }
-  ierr = PetscInfo1(is, "Wrote IS object with name %s\n", isname);CHKERRQ(ierr);
+  ierr = PetscInfo(is, "Wrote IS object with name %s\n", isname);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 #endif

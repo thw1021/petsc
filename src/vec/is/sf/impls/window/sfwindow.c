@@ -436,11 +436,11 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
         winok = PETSC_TRUE;
       }
       break;
-    default: SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for flavor %s",PetscSFWindowFlavorTypes[w->flavor]);
+    default: SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for flavor %s",PetscSFWindowFlavorTypes[w->flavor]);
     }
     if (winok) {
       *win = link->win;
-      ierr = PetscInfo3(sf,"Reusing window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
+      ierr = PetscInfo(sf,"Reusing window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
       goto found;
     }
   }
@@ -496,9 +496,9 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
     link->paddr = array;
     break;
 #endif
-  default: SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for flavor %s",PetscSFWindowFlavorTypes[w->flavor]);
+  default: SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for flavor %s",PetscSFWindowFlavorTypes[w->flavor]);
   }
-  ierr = PetscInfo3(sf,"New window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
+  ierr = PetscInfo(sf,"New window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
   *win = link->win;
 
 found:
@@ -578,7 +578,7 @@ static PetscErrorCode PetscSFFindWindow(PetscSF sf,MPI_Datatype unit,const void 
   for (link=w->wins; link; link=link->next) {
     if (array == link->paddr) {
 
-      ierr = PetscInfo3(sf,"Window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
+      ierr = PetscInfo(sf,"Window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
       *win = link->win;
       *reqs = link->reqs;
       PetscFunctionReturn(0);
@@ -635,7 +635,7 @@ static PetscErrorCode PetscSFRestoreWindow(PetscSF sf,MPI_Datatype unit,void *ar
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Requested window not in use");
 
 found:
-  ierr = PetscInfo3(sf,"Window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
+  ierr = PetscInfo(sf,"Window %" PETSC_MPI_WIN_FMT " of flavor %d for comm %" PETSC_MPI_COMM_FMT "\n",link->win,link->flavor,PetscObjectComm((PetscObject)sf));CHKERRQ(ierr);
   if (epoch) {
     switch (sync) {
     case PETSCSF_WINDOW_SYNC_FENCE:
@@ -750,7 +750,7 @@ static PetscErrorCode PetscSFReset_Window(PetscSF sf)
   w->link = NULL;
   for (wlink=w->wins; wlink; wlink=wnext) {
     wnext = wlink->next;
-    if (wlink->inuse) SETERRQ1(PetscObjectComm((PetscObject)sf),PETSC_ERR_ARG_WRONGSTATE,"Window still in use with address %p",(void*)wlink->addr);
+    if (wlink->inuse) SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_ARG_WRONGSTATE,"Window still in use with address %p",(void*)wlink->addr);
     ierr = PetscFree(wlink->dyn_target_addr);CHKERRQ(ierr);
     ierr = PetscFree(wlink->reqs);CHKERRQ(ierr);
     ierr = MPI_Win_free(&wlink->win);CHKERRMPI(ierr);
@@ -804,7 +804,7 @@ static PetscErrorCode PetscSFView_Window(PetscSF sf,PetscViewer viewer)
 
           ierr = MPI_Info_get_nthkey(w->info,k,key);CHKERRMPI(ierr);
           ierr = MPI_Info_get(w->info,key,MPI_MAX_INFO_VAL,value,&flag);CHKERRMPI(ierr);
-          if (!flag) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing key %s",key);
+          if (!flag) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing key %s",key);
           ierr = PetscViewerASCIIPrintf(viewer,"      %s = %s\n",key,value);CHKERRQ(ierr);
         }
       } else {
