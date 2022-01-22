@@ -1316,7 +1316,7 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
   PetscValidHeaderSpecific(is,IS_CLASSID,2);
   PetscCheckSameComm(X,1,is,2);
   PetscValidPointer(Y,3);
-  if (X->ops->getsubvector) {
+  if (X->ops->getsubvector) { /* VECKOKKOS has its own implementation to not clog the code here more */
     ierr = (*X->ops->getsubvector)(X,is,&Z);CHKERRQ(ierr);
   } else { /* Default implementation currently does no caching */
     PetscInt  gstart,gend,start;
@@ -1450,7 +1450,9 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
 @*/
 PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
 {
-  PetscErrorCode ierr;
+  PetscErrorCode                ierr;
+  PETSC_UNUSED PetscObjectState dummystate = 0;
+  PetscBool                     unchanged;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(X,VEC_CLASSID,1);
@@ -1458,14 +1460,12 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
   PetscCheckSameComm(X,1,is,2);
   PetscValidPointer(Y,3);
   PetscValidHeaderSpecific(*Y,VEC_CLASSID,3);
-  if (X->ops->restoresubvector) {
-    ierr = (*X->ops->restoresubvector)(X,is,Y);CHKERRQ(ierr);
-  } else {
-    PETSC_UNUSED PetscObjectState dummystate = 0;
-    PetscBool valid;
 
-    ierr = PetscObjectComposedDataGetInt((PetscObject)*Y,VecGetSubVectorSavedStateId,dummystate,valid);CHKERRQ(ierr);
-    if (!valid) {
+  ierr = PetscObjectComposedDataGetInt((PetscObject)*Y,VecGetSubVectorSavedStateId,dummystate,unchanged);CHKERRQ(ierr);
+  if (!unchanged) { /* Y's state has changed since VecGetSubVector(), so we need to write Y's newer data back to X */
+    if (X->ops->restoresubvector) {
+      ierr = (*X->ops->restoresubvector)(X,is,Y);CHKERRQ(ierr);
+    } else {
       VecScatter scatter;
       PetscInt   state;
 
@@ -1486,8 +1486,8 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
           PetscOffloadMask ymask = (*Y)->offloadmask;
 
           /* The offloadmask of X dictates where to move memory
-             If X GPU data is valid, then move Y data on GPU if needed
-             Otherwise, move back to the CPU */
+              If X GPU data is valid, then move Y data on GPU if needed
+              Otherwise, move back to the CPU */
           switch (X->offloadmask) {
           case PETSC_OFFLOAD_BOTH:
             if (ymask == PETSC_OFFLOAD_CPU) {
@@ -1516,8 +1516,8 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
           PetscOffloadMask ymask = (*Y)->offloadmask;
 
           /* The offloadmask of X dictates where to move memory
-             If X GPU data is valid, then move Y data on GPU if needed
-             Otherwise, move back to the CPU */
+              If X GPU data is valid, then move Y data on GPU if needed
+              Otherwise, move back to the CPU */
           switch (X->offloadmask) {
           case PETSC_OFFLOAD_BOTH:
             if (ymask == PETSC_OFFLOAD_CPU) {
@@ -1548,8 +1548,8 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
         ierr = PetscObjectStateIncrease((PetscObject)X);CHKERRQ(ierr);
       }
     }
-    ierr = VecDestroy(Y);CHKERRQ(ierr);
   }
+  ierr = VecDestroy(Y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
