@@ -74,6 +74,9 @@ cdef extern from "petsc.h":
     struct _p_TS
     ctypedef _p_TS* PetscTS "TS"
 
+    struct _p_TSTrajectory
+    ctypedef _p_TSTrajectory* PetscTSTrajectory "TSTrajectory"
+
     struct _p_TAO "_p_Tao"
     ctypedef _p_TAO* PetscTAO "Tao"
 
