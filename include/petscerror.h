@@ -227,12 +227,12 @@ M*/
 
 .seealso: SETERRABORT(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, CHKERRMPI()
 M*/
-#if !defined(PETSC_CLANG_STATIC_ANALYZER)
-#define CHKERRABORT(comm,ierr) do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");MPI_Abort(comm,ierr);}} while (0)
-#define CHKERRCONTINUE(ierr)   do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");}} while (0)
-#else
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
 #define CHKERRABORT(comm,ierr)
 #define CHKERRCONTINUE(ierr)
+#else
+#define CHKERRABORT(comm,ierr) do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");MPI_Abort(comm,ierr);}} while (0)
+#define CHKERRCONTINUE(ierr)   do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) {PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");}} while (0)
 #endif
 
 PETSC_EXTERN PetscErrorCode PetscAbortFindSourceFile_Private(const char*,PetscInt*);
@@ -296,7 +296,9 @@ M*/
 
 .seealso: SETERRMPI(), CHKERRQ(), SETERRQ(), SETERRABORT(), CHKERRABORT(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKMEMQ
 M*/
-#if !defined(PETSC_CLANG_STATIC_ANALYZER)
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#define CHKERRMPI(ierr)
+#else
 #define CHKERRMPI(ierr) \
 do { \
   PetscErrorCode _7_errorcode = (ierr); \
@@ -307,8 +309,6 @@ do { \
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s",(int)_7_errorcode,_7_errorstring); \
   } \
 } while (0)
-#else
-#define CHKERRMPI(ierr)
 #endif
 
 #ifdef PETSC_CLANGUAGE_CXX
@@ -388,13 +388,12 @@ M*/
 
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), PetscMallocValidate()
 M*/
-#if !defined(PETSC_CLANG_STATIC_ANALYZER)
-#define CHKMEMQ do {PetscErrorCode _7_ierr = PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_7_ierr);} while (0)
-
-#define CHKMEMA PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__)
-#else
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
 #define CHKMEMQ
 #define CHKMEMA
+#else
+#define CHKMEMQ do {PetscErrorCode _7_ierr = PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_7_ierr);} while (0)
+#define CHKMEMA PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__)
 #endif
 /*E
   PetscErrorType - passed to the PETSc error handling routines indicating if this is the first or a later call to the error handlers
@@ -516,9 +515,18 @@ typedef struct {
 #define PetscRegister__FUNCT__()
 #endif
 
-#if !defined(PETSC_CLANG_STATIC_ANALYZER)
-#if defined(PETSC_USE_DEBUG)
-
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#define PetscStackPushNoCheck(funct,petsc_routine,hot)
+#define PetscStackPopNoCheck
+#define PetscStackClearTop
+#define PetscFunctionBegin
+#define PetscFunctionBeginUser
+#define PetscFunctionBeginHot
+#define PetscFunctionReturn(a)    return a
+#define PetscFunctionReturnVoid() return
+#define PetscStackPop
+#define PetscStackPush(f)
+#elif defined(PETSC_USE_DEBUG)
 /* Stack handling is based on the following two "NoCheck" macros.  These should only be called directly by other error
  * handling macros.  We record the line of the call, which may or may not be the location of the definition.  But is at
  * least more useful than "unknown" because it can distinguish multiple calls from the same function.
@@ -721,7 +729,6 @@ M*/
     return;                                     \
   } while (0)
 #else /* PETSC_USE_DEBUG */
-
 #define PetscStackPushNoCheck(funct,petsc_routine,hot)
 #define PetscStackPopNoCheck
 #define PetscStackClearTop
@@ -732,9 +739,12 @@ M*/
 #define PetscFunctionReturnVoid() return
 #define PetscStackPop             CHKMEMQ
 #define PetscStackPush(f)         CHKMEMQ
-
 #endif /* PETSC_USE_DEBUG */
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#define PetscStackCall(name,routine)
+#define PetscStackCallStandard(name,routine)
+#else
 /*
     PetscStackCall - Calls an external library routine or user function after pushing the name of the routine on the stack.
 
@@ -769,20 +779,6 @@ M*/
     PetscStackPop;                                                                                        \
     if (__ierr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in %s(): error code %d",#func,(int)__ierr); \
   } while (0)
-
-#else /* !PETSC_CLANG_STATIC_ANALYZER */
-#define PetscStackPushNoCheck(funct,petsc_routine,hot)
-#define PetscStackPopNoCheck
-#define PetscStackClearTop
-#define PetscFunctionBegin
-#define PetscFunctionBeginUser
-#define PetscFunctionBeginHot
-#define PetscFunctionReturn(a)    return a
-#define PetscFunctionReturnVoid() return
-#define PetscStackPop
-#define PetscStackPush(f)
-#define PetscStackCall(name,routine)
-#define PetscStackCallStandard(name,routine)
-#endif /* !PETSC_CLANG_STATIC_ANALYZER */
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 #endif
