@@ -235,6 +235,7 @@ cdef extern from * nogil:
     int TSAdjointSetSteps(PetscTS,PetscInt)
     int TSAdjointStep(PetscTS)
     int TSAdjointSetUp(PetscTS)
+    int TSAdjointReset(PetscTS)
     int TSAdjointComputeDRDPFunction(PetscTS,PetscReal,PetscVec,PetscVec*)
     int TSAdjointComputeDRDYFunction(PetscTS,PetscReal,PetscVec,PetscVec*)
     int TSAdjointCostIntegral(PetscTS)

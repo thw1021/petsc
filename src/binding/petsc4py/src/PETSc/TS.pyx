@@ -859,6 +859,8 @@ cdef class TS(Object):
     def adjointStep(self):
         CHKERR(TSAdjointStep(self.ts))
 
+    def adjointReset(self):
+        CHKERR(TSAdjointReset(self.ts))
 
     # --- Python ---
 
