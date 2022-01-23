@@ -2165,6 +2165,67 @@ PetscErrorCode VecRestoreArrayReadAndMemType(Vec x,const PetscScalar **a)
   PetscFunctionReturn(0);
 }
 
+/*@C
+   VecGetArrayWriteAndMemType - Like VecGetArrayWrite(), but if this is a device vector it will aways return
+    a device pointer to the device memory that contains this processor's portion of the vector data.
+
+   Not Collective
+
+   Input Parameter:
+.  x - the vector
+
+   Output Parameters:
++  a - the array
+-  mtype - memory type of the array
+
+   Level: beginner
+
+   Notes:
+   The array must be returned using a matching call to VecRestoreArrayWriteAndMemType().
+
+.seealso: VecRestoreArrayWriteAndMemType(), VecGetArray(), VecRestoreArray(), VecGetArrayPair(), VecRestoreArrayPair(), VecGetArrayAndMemType()
+@*/
+PetscErrorCode VecGetArrayWriteAndMemType(Vec x,const PetscScalar **a,PetscMemType *mtype)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  if (x->ops->getarraywriteandmemtype) { /* VECCUDA, VECHIP, VECKOKKOS etc, though they are also petscnative */
+    ierr = (*x->ops->getarrayandmemtype)(x,(PetscScalar**)a,mtype);CHKERRQ(ierr);
+  } else if (x->ops->getarraywrite) { /* VECNEST, VECVIENNACL */
+    ierr = (*x->ops->getarraywrite)(x,(PetscScalar**)a);CHKERRQ(ierr);
+    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
+  } else if (x->petscnative) { /* VECSTANDARD */
+    *a = *((PetscScalar**)x->data);
+    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
+  } else SETERRQ1(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+   VecRestoreArrayWriteAndMemType - Restore array obtained with VecGetArrayWriteAndMemType()
+
+   Not Collective
+
+   Input Parameters:
++  vec - the vector
+-  array - the array
+
+   Level: beginner
+
+.seealso: VecGetArrayWriteAndMemType(), VecRestoreArrayAndMemType(), VecGetArray(), VecRestoreArray(), VecGetArrayPair(), VecRestoreArrayPair()
+@*/
+PetscErrorCode VecRestoreArrayWriteAndMemType(Vec x,PetscScalar **a)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecRestoreArrayAndMemType(x,a);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecPlaceArray - Allows one to replace the array in a vector with an
    array provided by the user. This is useful to avoid copying an array
