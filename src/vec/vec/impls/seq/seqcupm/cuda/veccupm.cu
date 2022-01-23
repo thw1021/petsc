@@ -1,8 +1,8 @@
 #include  "../veccupm.hpp" /*I "petscvec.h" I*/
 
-using namespace Petsc;
+using namespace Petsc::Vec::CUPM::Impl;
 
-static constexpr auto VecSeqCUDA = Impl::VecSeq_CUPM<CUPMDeviceType::CUDA>();
+static constexpr auto VecSeqCUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>();
 
 PetscErrorCode VecCreate_SeqCUDA(Vec v)
 {
@@ -18,7 +18,7 @@ PetscErrorCode VecCreate_SeqCUDA(Vec v)
 
   Collective, Possibly Synchronous
 
-  Input Parameter:
+  Input Parameters:
 + comm - the communicator, must be PETSC_COMM_SELF
 - n    - the vector length
 
@@ -47,51 +47,8 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
 }
 
 /*@C
-  VecCreateSeqCUDAWithArray - Creates a CUDA sequential array-style vector,
-  where the user provides the array space to store the vector values. The array
-  provided must be a GPU array.
-
-  Collective, Possibly Synchronous
-
-  Input Parameters:
-+ comm     - the communicator, must be PETSC_COMM_SELF
-. bs       - the block size
-. n        - the vector length
-- gpuarray - GPU memory where the vector elements are to be stored.
-
-  Output Parameter:
-. v - the vector
-
-  Notes:
-  Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an
-  existing vector.
-
-  If the user-provided array is NULL, then VecCUDAPlaceArray() can be used at a later stage to
-  SET the array for storing the vector values.
-
-  PETSc does NOT free the array when the vector is destroyed via VecDestroy(). The user should
-  not free the array until the vector is destroyed.
-
-  This function may initialize PetscDevice, which may incur a device synchronization.
-
-  Level: intermediate
-
-.seealso: PetscDeviceInitialize(), VecCreate(), VecCreateSeq(), VecCreateSeqWithArray(),
-VecCreateSeqCUDA(), VecCreateMPICUDAWithArray(), VecDuplicate(), VecDuplicateVecs(),
-VecCreateGhost(), VecCUDAPlaceArray(), VecCreateMPIWithArray()
-@*/
-PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar gpuarray[], Vec *v)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = VecCreateSeqCUDAWithArrays(comm,bs,n,nullptr,gpuarray,v);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-/*@C
   VecCreateSeqCUDAWithArrays - Creates a CUDA sequential array-style vector, where the user
-  provides the array space to store the vector values.
+  provides the complete array space to store the vector values.
 
   Collective, Possibly Synchronous
 
@@ -99,19 +56,22 @@ PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n,
 + comm     - the communicator, must be PETSC_COMM_SELF
 . bs       - the block size
 . n        - the local vector length
-. cpuarray - CPU memory where the vector elements are to be stored.
-- gpuarray - GPU memory where the vector elements are to be stored.
+. cpuarray - CPU memory where the vector elements are to be stored (or NULL)
+- gpuarray - GPU memory where the vector elements are to be stored (or NULL)
 
   Output Parameter:
 . v - the vector
 
   Notes:
+  If the user-provided array is NULL, then VecCUDAPlaceArray() can be used at a later stage to
+  SET the array for storing the vector values. Otherwise, the array must be allocated on the
+  device.
+
   If both cpuarray and gpuarray are provided, the provided arrays must have identical
   values. This is checked on debug builds but blindly assumed when debugging is disabled.
 
-  PETSc does NOT free the provided arrays when the vector is destroyed via VecDestroy(). The
-  user is instead responsible for freeing them, although they should not do so before calling
-  VecDestroy() on the vector.
+  The arrays are NOT freed when the vector is destroyed via VecDestroy(). The user must free
+  them themselves, but not until the vector is destroyed.
 
   This function may initialize PetscDevice, which may incur a device synchronization.
 
@@ -120,7 +80,7 @@ PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n,
 .seealso: PetscDeviceInitialize(), VecCreate(), VecCreateSeqWithArray(), VecCreateSeqCUDA(),
 VecCreateSeqCUDAWithArray(), VecCreateMPICUDA(), VecCreateMPICUDAWithArray(),
 VecCreateMPICUDAWithArrays(), VecCUDAPlaceArray()
-@*/
+C@*/
 PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const PetscScalar gpuarray[], Vec *v)
 {
   PetscErrorCode ierr;
@@ -133,7 +93,50 @@ PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
 }
 
 /*@C
-  VecCUDAGetArray - Provides access to the CUDA buffer inside a vector.
+  VecCreateSeqCUDAWithArray - Creates a CUDA sequential array-style vector,
+  where the user provides the device array space to store the vector values.
+
+    Collective, Possibly Synchronous
+
+  Input Parameters:
++ comm     - the communicator, must be PETSC_COMM_SELF
+. bs       - the block size
+. n        - the vector length
+- gpuarray - GPU memory where the vector elements are to be stored (or NULL)
+
+  Output Parameter:
+. v - the vector
+
+  Notes:
+  If the user-provided array is NULL, then VecCUDAPlaceArray() can be used at a later stage to
+  SET the array for storing the vector values. Otherwise, the array must be allocated on the
+  device.
+
+  The array is NOT freed when the vector is destroyed via VecDestroy(). The user must free the
+  array themselves, but not until the vector is destroyed.
+
+  Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an
+  existing vector.
+
+  This function may initialize PetscDevice, which may incur a device synchronization.
+
+  Level: intermediate
+
+.seealso: PetscDeviceInitialize(), VecCreate(), VecCreateSeq(), VecCreateSeqWithArray(),
+VecCreateMPIWithArray(), VecCreateSeqCUDA(), VecCreateMPICUDAWithArray(), VecCUDAPlaceArray(),
+VecDuplicate(), VecDuplicateVecs(), VecCreateGhost()
+@*/
+PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar gpuarray[], Vec *v)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecCreateSeqCUDAWithArrays(comm,bs,n,nullptr,gpuarray,v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  VecCUDAGetArray - Provides access to the device buffer inside a vector
 
   Asynchronous
 
@@ -141,30 +144,32 @@ PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
 . v - the vector
 
   Output Parameter:
-. a - the CUDA device pointer
+. a - the device buffer
 
   Notes:
-  This function has semantics similar to VecGetArray(); the pointer returned by this function
-  points to a consistent view of the vector data. This may involve a copy operation of data
-  from the host to the device if the data on the device is out of date.
+  This routine has semantics similar to VecGetArray(); the returned buffer points to a
+  consistent view of the vector data. This may involve copying data from the host to the device
+  if the data on the device is out of date. It is also assumed that the returned buffer is
+  immediately modified, marking the host data out of date. This is similar to intent(inout) in
+  fortran.
 
-  It is assumed that the user will modify the returned array; and any data on the host is
-  immediately marked as out of date. This is similar to intent(inout) in fortran.
+  If the user does require strong memory guarantees, they are encocuraged to use
+  VecCUDAGetArrayRead() and/or VecCUDAGetArrayWrite() instead.
 
   Fortran note:
   This function is not currently available from Fortran.
 
   Developer Notes:
   If the device memory hasn't been allocated previously it will be allocated as part of this
-  function call.
+  routine.
 
   Level: intermediate
 
-.seealso: VecCUDARestoreArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
+.seealso: VecCUDARestoreArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(),
+VecGetArrayRead(), VecGetArrayWrite()
 @*/
 PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
 {
-  using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -175,13 +180,13 @@ PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
 }
 
 /*@C
-  VecCUDARestoreArray - Restore a CUDA device pointer previously acquired with VecCUDAGetArray().
+  VecCUDARestoreArray - Restore a device buffer previously acquired with VecCUDAGetArray().
 
   Asynchronous
 
   Input Parameters:
 + v - the vector
-- a - the CUDA device pointer
+- a - the device buffer
 
   Notes:
   The restored pointer is invalid after this function returns. This function also marks the
@@ -193,11 +198,11 @@ PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
 
   Level: intermediate
 
-.seealso: VecCUDAGetArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(), VecRestoreArray(), VecGetArrayRead()
+.seealso: VecCUDAGetArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(),
+VecRestoreArray(), VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
 {
-  using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -234,11 +239,11 @@ PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
 
   Level: intermediate
 
-.seealso: VecCUDARestoreArrayRead(), VecCUDAGetArray(), VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
+.seealso: VecCUDARestoreArrayRead(), VecCUDAGetArray(), VecCUDAGetArrayWrite(), VecGetArray(),
+VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDAGetArrayRead(Vec v, const PetscScalar **a)
 {
-  using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -247,29 +252,27 @@ PetscErrorCode VecCUDAGetArrayRead(Vec v, const PetscScalar **a)
 }
 
 /*@C
-  VecCUDARestoreArrayRead - Restore a CUDA device pointer previously acquired with VecCUDAGetArrayRead().
+  VecCUDARestoreArrayRead - Restore a CUDA device pointer previously acquired with
+  VecCUDAGetArrayRead().
 
   Input Parameters:
 + v - the vector
 - a - the CUDA device pointer
 
   Notes:
-  The pointer is invalid after this function returns.
-
-  If the data on the host side was previously up to date it will remain so, i.e. data on both
-  the device and the host is up to date. Accessing data on the host side e.g. with
-  VecGetArray() does not incur a device to host data transfer.
+  This routine does not modify the corresponding array on the host in any way. The pointer is
+  invalid after this function returns.
 
   Fortran note:
   This function is not currently available from Fortran.
 
   Level: intermediate
 
-.seealso: VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecCUDAGetArray(), VecGetArray(), VecRestoreArray(), VecGetArrayRead()
+.seealso: VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecCUDAGetArray(), VecGetArray(),
+VecRestoreArray(), VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDARestoreArrayRead(Vec v, const PetscScalar **a)
 {
-  using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -290,7 +293,7 @@ PetscErrorCode VecCUDARestoreArrayRead(Vec v, const PetscScalar **a)
 
   Notes:
   The data pointed to by the device pointer is uninitialized. The user may not read from this
-  data.  Furthermore, the entire array needs to be filled by the user to obtain well-defined
+  data. Furthermore, the entire array needs to be filled by the user to obtain well-defined
   behaviour. The device memory will be allocated by this function if it hasn't been allocated
   previously. This is analogous to intent(out) in Fortran.
 
@@ -298,16 +301,16 @@ PetscErrorCode VecCUDARestoreArrayRead(Vec v, const PetscScalar **a)
   released the host data of the vector is marked as out of data. Subsequent access of the host
   data with e.g. VecGetArray() incurs a device to host data transfer.
 
-  Fortran note:
+  Fortran Note:
   This function is not currently available from Fortran.
 
   Level: advanced
 
-.seealso: VecCUDARestoreArrayWrite(), VecCUDAGetArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
+.seealso: VecCUDARestoreArrayWrite(), VecCUDAGetArray(), VecCUDAGetArrayRead(),
+VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
 {
-  using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -318,8 +321,8 @@ PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
 }
 
 /*@C
- VecCUDARestoreArrayWrite - Restore a CUDA device pointer previously acquired with
- VecCUDAGetArrayWrite().
+  VecCUDARestoreArrayWrite - Restore a CUDA device pointer previously acquired with
+  VecCUDAGetArrayWrite().
 
   Input Parameters:
 + v - the vector
@@ -329,16 +332,16 @@ PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
   Data on the host will be marked as out of date. Subsequent access of the data on the host
   side e.g. with VecGetArray() will incur a device to host data transfer.
 
-  Fortran note:
+  Fortran Note:
   This function is not currently available from Fortran.
 
   Level: intermediate
 
-.seealso: VecCUDAGetArrayWrite(), VecCUDAGetArray(), VecCUDAGetArrayRead(), VecCUDAGetArrayWrite(), VecGetArray(), VecRestoreArray(), VecGetArrayRead()
+.seealso: VecCUDAGetArrayWrite(), VecCUDAGetArray(), VecCUDAGetArrayRead(),
+VecCUDAGetArrayWrite(), VecGetArray(), VecRestoreArray(), VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 {
-  using Impl::detail::MemoryAccess;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -366,8 +369,8 @@ PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 
    Level: developer
 
-.seealso: VecPlaceArray(), VecGetArray(), VecRestoreArray(), VecReplaceArray(), VecResetArray(), VecCUDAResetArray(), VecCUDAReplaceArray()
-
+.seealso: VecPlaceArray(), VecGetArray(), VecRestoreArray(), VecReplaceArray(),
+VecResetArray(), VecCUDAResetArray(), VecCUDAReplaceArray()
 @*/
 PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
 {
@@ -380,29 +383,29 @@ PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
 }
 
 /*@C
-   VecCUDAReplaceArray - Allows one to replace the GPU array in a vector
-   with a GPU array provided by the user. This is useful to avoid copying
-   a GPU array into a vector.
+   VecCUDAReplaceArray - Permanently replace the GPU array in a vector
+   with a GPU array provided by the user.
 
    Not Collective
 
    Input Parameters:
-+  vec - the vector
++  vec   - the vector
 -  array - the GPU array
 
    Notes:
-   This permanently replaces the GPU array and frees the memory associated
-   with the old GPU array.
+   This is useful to avoid copying a GPU array into a vector.
 
-   The memory passed in CANNOT be freed by the user. It will be freed
-   when the vector is destroyed.
+   This frees the memory associated with the old GPU array. The vector takes ownership of the
+   passed array so it CANNOT be freed by the user. It will be freed when the vector is
+   destroyed.
 
+   Fortran Notes:
    Not supported from Fortran
 
    Level: developer
 
-.seealso: VecGetArray(), VecRestoreArray(), VecPlaceArray(), VecResetArray(), VecCUDAResetArray(), VecCUDAPlaceArray(), VecReplaceArray()
-
+.seealso: VecGetArray(), VecRestoreArray(), VecPlaceArray(), VecResetArray(),
+VecCUDAResetArray(), VecCUDAPlaceArray(), VecReplaceArray()
 @*/
 PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
 {
@@ -425,7 +428,8 @@ PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
 
    Level: developer
 
-.seealso: VecGetArray(), VecRestoreArray(), VecReplaceArray(), VecPlaceArray(), VecResetArray(), VecCUDAPlaceArray(), VecCUDAReplaceArray()
+.seealso: VecGetArray(), VecRestoreArray(), VecReplaceArray(), VecPlaceArray(),
+VecResetArray(), VecCUDAPlaceArray(), VecCUDAReplaceArray()
 @*/
 PetscErrorCode VecCUDAResetArray(Vec vin)
 {
