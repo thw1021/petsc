@@ -25,7 +25,6 @@
 // - refactor the AXPY's for code reuse
 // - figure out how to template which thrust namespace to use so we can do
 //   thrust::<backend>::par.on(stream)
-// - finish the blas wrappers
 // - maybe reintroduce PetscDeviceMalloc()?
 // - There is also an overloaded version of cudaMallocAsync that takes the same arguments as
 //   cudaMallocFromPoolAsync
@@ -748,16 +747,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createwithbotharrays_async(
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::duplicate_async(Vec v, Vec *y))
 {
-  Vec            ytmp;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = createseqcupm_async(PetscObjectComm(PetscObjectCast(v)),v->map->n,&ytmp);CHKERRQ(ierr);
-  ierr = PetscLayoutReference(v->map,&ytmp->map);CHKERRQ(ierr);
-  ierr = PetscObjectListDuplicate(PetscObjectCast(v)->olist,&(PetscObjectCast(ytmp)->olist));CHKERRQ(ierr);
-  ierr = PetscFunctionListDuplicate(PetscObjectCast(v)->qlist,&(PetscObjectCast(ytmp)->qlist));CHKERRQ(ierr);
-  ytmp->stash.ignorenegidx = v->stash.ignorenegidx;
-  *y = ytmp;
+  ierr = createseqcupm_async(PetscObjectComm(PetscObjectCast(v)),v->map->n,y);CHKERRQ(ierr);
+  ierr = PetscLayoutReference(v->map,&(*y)->map);CHKERRQ(ierr);
+  ierr = PetscObjectListDuplicate(PetscObjectCast(v)->olist,&(PetscObjectCast(*y)->olist));CHKERRQ(ierr);
+  ierr = PetscFunctionListDuplicate(PetscObjectCast(v)->qlist,&(PetscObjectCast(*y)->qlist));CHKERRQ(ierr);
+  (*y)->stash.ignorenegidx = v->stash.ignorenegidx;
   PetscFunctionReturn(0);
 }
 
@@ -1846,13 +1843,15 @@ struct min_tuple
 {
   using tuple_type = thrust::tuple<PetscReal,PetscInt>;
 
-  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
+  PETSC_HOSTDEVICE_DECL
+  constexpr tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
-    if ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) {
-      return thrust::make_tuple(x.get<0>(),x.get<1>());
-    } else {
-      return thrust::make_tuple(y.get<0>(),y.get<1>());
-    }
+    return ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
+    // if ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) {
+    //   return thrust::make_tuple(x.get<0>(),x.get<1>());
+    // } else {
+    //   return thrust::make_tuple(y.get<0>(),y.get<1>());
+    // }
   }
 };
 
@@ -1860,12 +1859,12 @@ struct min_tuple
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::min_async(Vec v, PetscInt *p, PetscReal *m))
 {
-  using tuple_ftr = detail::min_tuple;
-  using unary_ftr = thrust::minimum<util::remove_pointer_t<decltype(m)>>;
+  using tuple_functor = detail::min_tuple;
+  using unary_functor = thrust::minimum<util::remove_pointer_t<decltype(m)>>;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = minmax_async_(tuple_ftr(),unary_ftr(),PETSC_MAX_REAL,v,p,m);CHKERRQ(ierr);
+  ierr = minmax_async_(tuple_functor(),unary_functor(),PETSC_MAX_REAL,v,p,m);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1930,6 +1929,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, Pets
     ierr = PetscRandomGetValues(rand,n,HostArrayWrite(dctx,v));CHKERRQ(ierr);
   }
   // REVIEW ME: flops????
+  // REVIEW ME: Timing???
   PetscFunctionReturn(0);
 }
 
@@ -1953,6 +1953,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
     // REVIEW ME: hip seemingly has no equivalent?
     ierr = PetscStrallocpy(PETSCCURAND,&v->defaultrandtype);CHKERRQ(ierr);
   }
+  // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
   v->ops->dot                    = v->ops->dot_local   = usehost ? VecDot_Seq   : dot_async;
   v->ops->norm                   = v->ops->norm_local  = usehost ? VecNorm_Seq  : norm_async;
   v->ops->tdot                   = v->ops->tdot_local  = usehost ? VecTDot_Seq  : tdot_async;
