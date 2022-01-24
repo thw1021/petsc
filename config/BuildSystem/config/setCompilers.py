@@ -1094,12 +1094,6 @@ class Configure(config.base.Configure):
         msg = 'Cannot compile {} with {}.'.format(language,compiler)
         raise RuntimeError(msg)
 
-      LANGUAGE = language.upper()
-      if LANGUAGE in {'CXX','C++','CUDA','HIP','SYCL','HC'}:
-        # a C++ enabled compiler
-
-        isGNUish = self.isGNU(compiler,self.log) or self.isClang(compiler,self.log)
-        self.checkCxxDialect(language,isGNUish=isGNUish)
       if language.upper() in {'CUDA','HIP','SYCL'}:
         # do not check CUDA/HIP/SYCL linker since it is never used (assumed for now)
         return
