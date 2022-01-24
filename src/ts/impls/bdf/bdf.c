@@ -80,8 +80,8 @@ static PetscErrorCode TSBDF_RestoreVecs(TS ts,DM dm,Vec *Xdot,Vec *Ydot)
     ierr = DMRestoreNamedGlobalVector(dm,"TSBDF_Vec_Xdot",Xdot);CHKERRQ(ierr);
     ierr = DMRestoreNamedGlobalVector(dm,"TSBDF_Vec_Ydot",Ydot);CHKERRQ(ierr);
   } else {
-    if (*Xdot != bdf->vec_dot) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Vec does not match the cache");
-    if (*Ydot != bdf->vec_wrk) SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Vec does not match the cache");
+    PetscAssert(*Xdot != bdf->vec_dot,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Vec does not match the cache");
+    PetscAssert(*Ydot != bdf->vec_wrk,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"Vec does not match the cache");
     *Xdot = NULL;
     *Ydot = NULL;
   }
@@ -299,7 +299,7 @@ static PetscErrorCode TSStep_BDF(TS ts)
   reject_step:
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
-      ierr = PetscInfo2(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections);CHKERRQ(ierr);
+      ierr = PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections);CHKERRQ(ierr);
       ts->reason = TS_DIVERGED_STEP_REJECTED;
     }
   }
@@ -494,7 +494,7 @@ static PetscErrorCode TSBDFSetOrder_BDF(TS ts,PetscInt order)
 
   PetscFunctionBegin;
   if (order == bdf->order) PetscFunctionReturn(0);
-  if (order < 1 || order > 6) SETERRQ1(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"BDF Order %D not implemented",order);
+  PetscAssert(order < 1 || order > 6,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"BDF Order %D not implemented",order);
   bdf->order = order;
   PetscFunctionReturn(0);
 }
