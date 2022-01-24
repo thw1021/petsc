@@ -4,7 +4,7 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.download         = ['https://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz',
+    self.download         = ['https://www.mpich.org/static/downloads/4.0/mpich-4.0.tar.gz',
                              'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-3.4.2.tar.gz']
     self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
