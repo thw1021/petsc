@@ -689,7 +689,10 @@ class Configure(config.base.Configure):
     return
 
   def checkCxxDialect(self, language, isGNUish=False):
-    """Determine the CXX dialect supported by the compiler(language) [and correspoding compiler option - if any].
+    """
+    Determine the CXX dialect supported by the compiler (language) [and correspoding compiler
+    option - if any].
+
     isGNUish indicates if the compiler is gnu compliant (i.e. clang).
     -with-<lang>-dialect can take options:
       auto: use highest supported dialect configure can determine
@@ -703,14 +706,19 @@ class Configure(config.base.Configure):
     - if needed, appends the relevant CXX dialect flag to <lang> compiler flags
     - self.cxxDialectRange = (minSupportedDialect,maxSupportedDialect) (e.g. ('c++11','c++14'))
     - self.addDefine('HAVE_{LANG}_DIALECT_CXX{DIALECT_NUM}',1) for every supported dialect
-    - self.lang+'dialect' = 'c++'+maxDialectNumber (e.g. 'c++14') but ONLY if the user specifically requests a dialect version, otherwise this is not set
+    - self.lang+'dialect' = 'c++'+maxDialectNumber (e.g. 'c++14') but ONLY if the user
+      specifically requests a dialect version, otherwise this is not set
 
-    Raises a config.base.ConfigureSetupError if either:
-    - The user has set both the --with-dialect=[...] configure options and -std=[...] in their compiler flags
+    Raises a config.base.ConfigureSetupError if:
+    - The user has set both the --with-dialect=[...] configure options and -std=[...] in their
+      compiler flags
     - The combination of specifically requested packages cannnot all be compiled with the same flag
     - An unknown C++ dialect is provided
 
-    Raises a RuntimeError if:
+    The config.base.ConfigureSetupErrors are NOT meant to be caught, as they are fatal errors
+    on part of the user
+
+    Raises a RuntimeError (which may be caught) if:
     - The compiler does not support at minimum -std=c++11
     """
     from config.base import ConfigureSetupError
@@ -1094,12 +1102,6 @@ class Configure(config.base.Configure):
         msg = 'Cannot compile {} with {}.'.format(language,compiler)
         raise RuntimeError(msg)
 
-      LANGUAGE = language.upper()
-      if LANGUAGE in {'CXX','C++','CUDA','HIP','SYCL','HC'}:
-        # a C++ enabled compiler
-
-        isGNUish = self.isGNU(compiler,self.log) or self.isClang(compiler,self.log)
-        self.checkCxxDialect(language,isGNUish=isGNUish)
       if language.upper() in {'CUDA','HIP','SYCL'}:
         # do not check CUDA/HIP/SYCL linker since it is never used (assumed for now)
         return
@@ -1295,16 +1297,15 @@ class Configure(config.base.Configure):
 
   def checkCPreprocessor(self):
     '''Locate a functional C preprocessor'''
-    for compiler in self.generateCPreprocessorGuesses():
-      try:
-        if self.getExecutable(compiler, resultName = 'CPP'):
-          self.pushLanguage('C')
-          if not self.checkPreprocess('#include <stdlib.h>\n'):
-            raise RuntimeError('Cannot preprocess C with '+self.CPP+'.')
-          self.popLanguage()
-          return
-      except RuntimeError as e:
-        self.popLanguage()
+    with self.Language('C'):
+      for compiler in self.generateCPreprocessorGuesses():
+        try:
+          if self.getExecutable(compiler, resultName = 'CPP'):
+            if not self.checkPreprocess('#include <stdlib.h>\n'):
+              raise RuntimeError('Cannot preprocess C with '+self.CPP+'.')
+            return
+        except RuntimeError as e:
+          self.logPrint(str(e))
     raise RuntimeError('Cannot find a C preprocessor')
     return
 
@@ -1368,16 +1369,15 @@ class Configure(config.base.Configure):
 
   def checkCUDAPreprocessor(self):
     '''Locate a functional CUDA preprocessor'''
-    for compiler in self.generateCUDAPreprocessorGuesses():
-      try:
-        if self.getExecutable(compiler, resultName = 'CUDAPP'):
-          self.pushLanguage('CUDA')
-          if not self.checkPreprocess('#include <stdlib.h>\n__global__ void testFunction() {return;};'):
-            raise RuntimeError('Cannot preprocess CUDA with '+self.CUDAPP+'.')
-          self.popLanguage()
-          return
-      except RuntimeError as e:
-        self.popLanguage()
+    with self.Language('CUDA'):
+      for compiler in self.generateCUDAPreprocessorGuesses():
+        try:
+          if self.getExecutable(compiler, resultName = 'CUDAPP'):
+            if not self.checkPreprocess('#include <stdlib.h>\n__global__ void testFunction() {return;};'):
+              raise RuntimeError('Cannot preprocess CUDA with '+self.CUDAPP+'.')
+            return
+        except RuntimeError as e:
+          self.logPrint(str(e))
     return
 
 
@@ -1442,16 +1442,15 @@ class Configure(config.base.Configure):
 
   def checkHIPPreprocessor(self):
     '''Locate a functional HIP preprocessor'''
-    for compiler in self.generateHIPPreprocessorGuesses():
-      try:
-        if self.getExecutable(compiler, resultName = 'HIPPP'):
-          self.pushLanguage('HIP')
-          if not self.checkPreprocess('#include <stdlib.h>\n__global__ void testFunction() {return;};'):
-            raise RuntimeError('Cannot preprocess HIP with '+self.HIPPP+'.')
-          self.popLanguage()
-          return
-      except RuntimeError as e:
-        self.popLanguage()
+    with self.Language('HIP'):
+      for compiler in self.generateHIPPreprocessorGuesses():
+        try:
+          if self.getExecutable(compiler, resultName = 'HIPPP'):
+            if not self.checkPreprocess('#include <stdlib.h>\n__global__ void testFunction() {return;};'):
+              raise RuntimeError('Cannot preprocess HIP with '+self.HIPPP+'.')
+            return
+        except RuntimeError as e:
+          self.logPrint(str(e))
     return
 
 
@@ -1503,16 +1502,15 @@ class Configure(config.base.Configure):
 
   def checkSYCLPreprocessor(self):
     '''Locate a functional SYCL preprocessor'''
-    for compiler in self.generateSYCLPreprocessorGuesses():
-      try:
-        if self.getExecutable(compiler, resultName = 'SYCLPP'):
-          self.pushLanguage('SYCL')
-          if not self.checkPreprocess('#include <CL/sycl.hpp>\n void testFunction() {return;};'):
-            raise RuntimeError('Cannot preprocess SYCL with '+self.SYCLPP+'.')
-          self.popLanguage()
-          return
-      except RuntimeError as e:
-        self.popLanguage()
+    with self.Language('SYCL'):
+      for compiler in self.generateSYCLPreprocessorGuesses():
+        try:
+          if self.getExecutable(compiler, resultName = 'SYCLPP'):
+            if not self.checkPreprocess('#include <CL/sycl.hpp>\n void testFunction() {return;};'):
+              raise RuntimeError('Cannot preprocess SYCL with '+self.SYCLPP+'.')
+            return
+        except RuntimeError as e:
+          self.logPrint(str(e))
     return
 
 
@@ -1642,23 +1640,21 @@ class Configure(config.base.Configure):
 
   def checkCxxPreprocessor(self):
     '''Locate a functional Cxx preprocessor'''
-    if not hasattr(self, 'CXX'):
+    if not hasattr(self,'CXX'): # pointless, it is checked already
       return
-    for compiler in self.generateCxxPreprocessorGuesses():
-      try:
-        if self.getExecutable(compiler, resultName = 'CXXPP'):
-          self.pushLanguage('Cxx')
-          if not self.checkPreprocess('#include <cstdlib>\n'):
-            raise RuntimeError('Cannot preprocess Cxx with '+self.CXXPP+'.')
-          self.popLanguage()
-          break
-      except RuntimeError as e:
-
-        if os.path.basename(self.CXXPP) in ['mpicxx', 'mpiCC']:
-          self.logPrint('MPI installation '+self.getCompiler()+' is likely incorrect.\n  Use --with-mpi-dir to indicate an alternate MPI')
-        self.popLanguage()
-        self.delMakeMacro('CXXPP')
-        del self.CXXPP
+    with self.Language('Cxx'):
+      for compiler in self.generateCxxPreprocessorGuesses():
+        try:
+          if self.getExecutable(compiler, resultName = 'CXXPP'):
+            if not self.checkPreprocess('#include <cstdlib>\n'):
+              raise RuntimeError('Cannot preprocess Cxx with '+self.CXXPP+'.')
+            break
+        except RuntimeError as e:
+          self.logPrint(str(e))
+          if os.path.basename(self.CXXPP) in ['mpicxx', 'mpiCC']:
+            self.logPrint('MPI installation '+self.getCompiler()+' is likely incorrect.\n  Use --with-mpi-dir to indicate an alternate MPI')
+          self.delMakeMacro('CXXPP')
+          del self.CXXPP
     return
 
 
@@ -1785,21 +1781,19 @@ class Configure(config.base.Configure):
     '''Locate a functional Fortran preprocessor'''
     if not hasattr(self, 'FC'):
       return
-    for compiler in self.generateFortranPreprocessorGuesses():
-      try:
-        if self.getExecutable(compiler, resultName = 'FPP'):
-          self.pushLanguage('FC')
-          if not self.checkPreprocess('#define foo 10\n'):
-            raise RuntimeError('Cannot preprocess Fortran with '+self.FPP+'.')
-          self.popLanguage()
-          break
-      except RuntimeError as e:
-
-        if os.path.basename(self.FPP) in ['mpif90']:
-          self.logPrint('MPI installation '+self.getCompiler()+' is likely incorrect.\n  Use --with-mpi-dir to indicate an alternate MPI')
-        self.popLanguage()
-        self.delMakeMacro('FPP')
-        del self.FPP
+    with self.Language('FC'):
+      for compiler in self.generateFortranPreprocessorGuesses():
+        try:
+          if self.getExecutable(compiler, resultName = 'FPP'):
+            if not self.checkPreprocess('#define foo 10\n'):
+              raise RuntimeError('Cannot preprocess Fortran with '+self.FPP+'.')
+            break
+        except RuntimeError as e:
+          self.logPrint(str(e))
+          if os.path.basename(self.FPP) in ['mpif90']:
+            self.logPrint('MPI installation '+self.getCompiler()+' is likely incorrect.\n  Use --with-mpi-dir to indicate an alternate MPI')
+          self.delMakeMacro('FPP')
+          del self.FPP
     return
 
   def checkFortranComments(self):
@@ -2644,7 +2638,7 @@ if (dlclose(handle)) {
             self.executeTest(self.checkCxxDialect,args=[LANG],kargs={'isGNUish':isGNUish})
           except RuntimeError as e:
             self.mesg = str(e)
-            self.logPrint(' '.join(('Error testing',LANG,'compiler:',e)))
+            self.logPrint(' '.join(('Error testing',LANG,'compiler:',self.mesg)))
             self.delMakeMacro(compilerName)
             delattr(self,compilerName)
           else:
