@@ -4,8 +4,7 @@
 #if !defined(PETSCERROR_H)
 #define PETSCERROR_H
 
-#include <petsccompilerguard.h>
-#include <petscconf.h>
+#include <petscmacros.h>
 
 /*
      These are the generic error codes. These error codes are used
@@ -105,7 +104,7 @@
       SETERRQ() may be called from Fortran subroutines but SETERRA() must be called from the
       Fortran main program.
 
-.seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKERRQ(), CHKMEMQ, CHKERRMPI()
+.seealso: PetscAssert(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKERRQ(), CHKMEMQ, CHKERRMPI()
 M*/
 #define SETERRQ(comm,ierr,...) return PetscError(comm,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr,PETSC_ERROR_INITIAL,__VA_ARGS__)
 
@@ -168,6 +167,27 @@ M*/
   } while (0)
 
 /*MC
+  PetscAssert - Assert that a particular condition is true
+
+  Synopsis:
+  #include <petscerror.h>
+  void PetscAssert(bool cond, MPI_Comm comm, PetscErrorCode ierr, const char *message, ...)
+
+  Collective
+
+  Input Parameters:
++ cond    - The boolean condition
+. comm    - The communicator on which the check can be collective on
+. ierr    - A nonzero error code, see include/petscerror.h for the complete list
+- message - Error message in printf format
+
+  Level: beginner
+
+.seealso: SETERRQ(), PetscError(), CHKERRQ()
+MC*/
+#define PetscAssert(cond,comm,ierr,...) if (PetscUnlikely(cond)) SETERRQ(comm,ierr,__VA_ARGS__)
+
+/*MC
    CHKERRQ - Checks error code returned from PETSc function, if non-zero it calls the error handler and then returns. Use CHKERRMPI() for checking errors from MPI calls
 
    Synopsis:
@@ -201,7 +221,7 @@ M*/
       CHKERRQ() may be called from Fortran subroutines but CHKERRA() must be called from the
       Fortran main program.
 
-.seealso: SETERRQ(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKMEMQ
+.seealso: SETERRQ(), PetscAssert(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKMEMQ
 M*/
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 #define CHKERRQ(ierr)          do {PetscErrorCode ierr__ = (ierr); if (PetscUnlikely(ierr__)) return PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr__,PETSC_ERROR_REPEAT," ");} while (0)
@@ -777,7 +797,7 @@ M*/
     PetscStackPush(#func);                                                                                \
     __ierr = func args;                                                                                   \
     PetscStackPop;                                                                                        \
-    if (__ierr) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in %s(): error code %d",#func,(int)__ierr); \
+    PetscAssert(__ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in %s(): error code %d",#func,(int)__ierr); \
   } while (0)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
 

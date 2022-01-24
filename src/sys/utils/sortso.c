@@ -1003,7 +1003,7 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
     ierr = PetscInfo(NULL, "minrun = %" PetscInt_FMT "\n", minrun);CHKERRQ(ierr);
     if (n < 64) {
       ierr = PetscInfo(NULL, "n %" PetscInt_FMT " < 64, consider using PetscSortInt() instead\n", n);CHKERRQ(ierr);
-    } else if ((minrun < 32) || (minrun > 65)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %" PetscInt_FMT " not in range (32,65)",minrun);
+    } else PetscAssert((minrun < 32) || (minrun > 65),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %" PetscInt_FMT " not in range (32,65)",minrun);
   }
   ierr = PetscMalloc1((size_t) minrun*size, &buff.ptr);CHKERRQ(ierr);
   buff.size = (size_t) minrun*size;
@@ -1130,7 +1130,7 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
   }
   if (PetscDefined(USE_DEBUG)) {
     ierr = PetscInfo(NULL, "minrun = %" PetscInt_FMT "\n", minrun);CHKERRQ(ierr);
-    if ((n >= 64) && ((minrun < 32) || (minrun > 65))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %" PetscInt_FMT " not in range (32,65)",minrun);
+    PetscAssert((n >= 64) && ((minrun < 32) || (minrun > 65)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Calculated minrun %" PetscInt_FMT " not in range (32,65)",minrun);
   }
   ierr = PetscMalloc1((size_t) minrun*asize, &abuff.ptr);CHKERRQ(ierr);
   abuff.size = (size_t) minrun*asize;
