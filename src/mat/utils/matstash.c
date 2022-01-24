@@ -480,7 +480,7 @@ static PetscErrorCode MatStashScatterBegin_Ref(Mat mat,MatStash *stash,PetscInt 
   {                             /* make sure all processors are either in INSERTMODE or ADDMODE */
     InsertMode addv;
     ierr = MPIU_Allreduce((PetscEnum*)&mat->insertmode,(PetscEnum*)&addv,1,MPIU_ENUM,MPI_BOR,PetscObjectComm((PetscObject)mat));CHKERRMPI(ierr);
-    if (addv == (ADD_VALUES|INSERT_VALUES)) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Some processors inserted others added");
+    PetscAssert(addv == (ADD_VALUES|INSERT_VALUES),PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Some processors inserted others added");
     mat->insertmode = addv; /* in case this processor had no cache */
   }
 
@@ -666,7 +666,7 @@ PETSC_INTERN PetscErrorCode MatStashScatterGetMesg_Ref(MatStash *stash,PetscMPII
     } else {
       ierr = MPI_Waitany(2*stash->nrecvs,stash->recv_waits,&i,&recv_status);CHKERRMPI(ierr);
     }
-    if (recv_status.MPI_SOURCE < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Negative MPI source!");
+    PetscAssert(recv_status.MPI_SOURCE < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Negative MPI source!");
 
     /* Now pack the received message into a structure which is usable by others */
     if (i % 2) {
@@ -723,7 +723,7 @@ static PetscErrorCode MatStashSortCompress_Private(MatStash *stash,InsertMode in
       cnt++;
     }
   }
-  if (cnt != n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatStash n %" PetscInt_FMT ", but counted %" PetscInt_FMT " entries",n,cnt);
+  PetscAssert(cnt != n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatStash n %" PetscInt_FMT ", but counted %" PetscInt_FMT " entries",n,cnt);
   ierr = PetscSortIntWithArrayPair(n,row,col,perm);CHKERRQ(ierr);
   /* Scan through the rows, sorting each one, combining duplicates, and packing send buffers */
   for (rowstart=0,cnt=0,i=1; i<=n; i++) {
@@ -813,7 +813,7 @@ static PetscErrorCode MatStashBTSSend_Private(MPI_Comm comm,const PetscMPIInt ta
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (rank != stash->sendranks[rankid]) SETERRQ(comm,PETSC_ERR_PLIB,"BTS Send rank %d does not match sendranks[%d] %d",rank,rankid,stash->sendranks[rankid]);
+  PetscAssert(rank != stash->sendranks[rankid],comm,PETSC_ERR_PLIB,"BTS Send rank %d does not match sendranks[%d] %d",rank,rankid,stash->sendranks[rankid]);
   ierr = MPI_Isend(stash->sendframes[rankid].buffer,hdr->count,stash->blocktype,rank,tag[0],comm,&req[0]);CHKERRMPI(ierr);
   stash->sendframes[rankid].count = hdr->count;
   stash->sendframes[rankid].pending = 1;
@@ -852,7 +852,7 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat,MatStash *stash,PetscInt 
   if (PetscDefined(USE_DEBUG)) { /* make sure all processors are either in INSERTMODE or ADDMODE */
     InsertMode addv;
     ierr = MPIU_Allreduce((PetscEnum*)&mat->insertmode,(PetscEnum*)&addv,1,MPIU_ENUM,MPI_BOR,PetscObjectComm((PetscObject)mat));CHKERRMPI(ierr);
-    if (addv == (ADD_VALUES|INSERT_VALUES)) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Some processors inserted others added");
+    PetscAssert(addv == (ADD_VALUES|INSERT_VALUES),PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Some processors inserted others added");
   }
 
   ierr = MatStashBlockTypeSetUp(stash);CHKERRQ(ierr);

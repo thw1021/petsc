@@ -364,7 +364,7 @@ PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexc
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(defaultDevice_ < 0)) {
-    if (defaultDevice_ == PETSC_CUPM_DEVICE_NONE) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a %s PetscDevice when it has been disabled",cupmName());
+    PetscAssert(defaultDevice_ == PETSC_CUPM_DEVICE_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a %s PetscDevice when it has been disabled",cupmName());
     const auto cerr = static_cast<cupmError_t>(-defaultDevice_);
 
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"Cannot lazily initialize PetscDevice: %s error %d (%s) : %s",cupmName(),static_cast<PetscErrorCode>(cerr),cupmGetErrorName(cerr),cupmGetErrorString(cerr));

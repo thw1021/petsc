@@ -41,7 +41,7 @@ static PetscErrorCode ISCopy_General(IS is,IS isy)
   ierr = PetscLayoutGetSize(is->map, &N);CHKERRQ(ierr);
   ierr = PetscLayoutGetLocalSize(isy->map, &ny);CHKERRQ(ierr);
   ierr = PetscLayoutGetSize(isy->map, &Ny);CHKERRQ(ierr);
-  if (n != ny || N != Ny) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets incompatible");
+  PetscAssert(n != ny || N != Ny,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets incompatible");
   ierr = PetscArraycpy(isy_general->idx,is_general->idx,n);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -53,7 +53,7 @@ static PetscErrorCode ISOnComm_General(IS is,MPI_Comm comm,PetscCopyMode mode,IS
   PetscInt       n;
 
   PetscFunctionBegin;
-  if (mode == PETSC_OWN_POINTER) SETERRQ(comm,PETSC_ERR_ARG_WRONG,"Cannot use PETSC_OWN_POINTER");
+  PetscAssert(mode == PETSC_OWN_POINTER,comm,PETSC_ERR_ARG_WRONG,"Cannot use PETSC_OWN_POINTER");
   ierr = PetscLayoutGetLocalSize(is->map, &n);CHKERRQ(ierr);
   ierr = ISCreateGeneral(comm,n,sub->idx,mode,newis);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -133,7 +133,7 @@ static PetscErrorCode ISRestoreIndices_General(IS in,const PetscInt *idx[])
 
   PetscFunctionBegin;
    /* F90Array1dCreate() inside ISRestoreArrayF90() does not keep array when zero length array */
-  if (in->map->n > 0  && *idx != sub->idx) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from ISGetIndices()");
+  PetscAssert(in->map->n > 0  && *idx != sub->idx,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from ISGetIndices()");
   PetscFunctionReturn(0);
 }
 
@@ -585,7 +585,7 @@ PetscErrorCode  ISGeneralSetIndices_General(IS is,PetscInt n,const PetscInt idx[
   IS_General     *sub = (IS_General*)is->data;
 
   PetscFunctionBegin;
-  if (n < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
+  PetscAssert(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
   if (n) PetscValidIntPointer(idx,3);
 
   ierr = PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)is),n,PETSC_DECIDE,is->map->bs,&map);CHKERRQ(ierr);

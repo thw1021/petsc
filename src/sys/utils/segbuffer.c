@@ -160,7 +160,7 @@ PetscErrorCode PetscSegBufferExtractTo(PetscSegBuffer seg,void *contig)
     ierr = PetscFree(t);CHKERRQ(ierr);
     t    = tail;
   }
-  if (ptr != contig) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Tail count does not match");
+  PetscAssert(ptr != contig,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Tail count does not match");
   s->used             = 0;
   s->tailused         = 0;
   s->tail             = NULL;

@@ -171,7 +171,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
 {
   Mat_SeqAIJ                   *b = (Mat_SeqAIJ*)B->data;
   Mat_SeqAIJCUSPARSETriFactors *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)B->spptr;
-  if (!cusparseTriFactors) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparseTriFactors");
+  PetscAssert(!cusparseTriFactors,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparseTriFactors");
   Mat_SeqAIJCUSPARSE           *cusparsestructA = (Mat_SeqAIJCUSPARSE*)A->spptr;
   Mat_SeqAIJCUSPARSEMultStruct *matstructA;
   CsrMatrix                    *matrixA;
@@ -190,11 +190,11 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     PetscFunctionReturn(0);
   }
   // cusparse setup
-  if (!cusparsestructA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparsestructA");
+  PetscAssert(!cusparsestructA,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cusparsestructA");
   matstructA = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestructA->mat; //  matstruct->cprowIndices
-  if (!matstructA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing mat struct");
+  PetscAssert(!matstructA,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing mat struct");
   matrixA = (CsrMatrix*)matstructA->mat;
-  if (!matrixA) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing matrix cusparsestructA->mat->mat");
+  PetscAssert(!matrixA,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing matrix cusparsestructA->mat->mat");
 
   // factor: get Nf if available
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
@@ -204,7 +204,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
     Nf = (*pNf)%1000;
     if ((*pNf)/1000>0) nconcurrent = (*pNf)/1000; // number of SMs to use
   } else Nf = 1;
-  if (n%Nf) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n %% Nf != 0 %d %d",n,Nf);
+  PetscAssert(n%Nf,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n %% Nf != 0 %d %d",n,Nf);
 
   // get data
   ic      = thrust::raw_pointer_cast(cusparseTriFactors->cpermIndices->data());
@@ -288,12 +288,12 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   PetscContainer               container;
 
   PetscFunctionBegin;
-  if (A->rmap->N != A->cmap->N) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
+  PetscAssert(A->rmap->N != A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
   ierr = MatMissingDiagonal(A,&missing,&i);CHKERRQ(ierr);
-  if (missing) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
-  if (!cusparseTriFactors) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"!cusparseTriFactors");
+  PetscAssert(missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
+  PetscAssert(!cusparseTriFactors,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"!cusparseTriFactors");
   ierr = MatGetOption(A,MAT_STRUCTURALLY_SYMMETRIC,&missing);CHKERRQ(ierr);
-  if (!missing) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only structrally symmetric matrices supported");
+  PetscAssert(!missing,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"only structrally symmetric matrices supported");
 
    // factor: get Nf if available
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
@@ -309,7 +309,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
     ierr = PetscObjectCompose((PetscObject)B, "Nf", (PetscObject) container);CHKERRQ(ierr);
     ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
   } else Nf = 1;
-  if (n%Nf) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n %% Nf != 0 %" PetscInt_FMT " %" PetscInt_FMT,n,Nf);
+  PetscAssert(n%Nf,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n %% Nf != 0 %" PetscInt_FMT " %" PetscInt_FMT,n,Nf);
 
   ierr = ISInvertPermutation(iscol,PETSC_DECIDE,&isicol);CHKERRQ(ierr);
   ierr = ISGetIndices(isicol,&ic);CHKERRQ(ierr);
@@ -333,7 +333,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   }
   ierr = ISRestoreIndices(isicol,&ic);CHKERRQ(ierr);
   /* only support structurally symmetric, but it might work */
-  if (bwL!=bwU) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%" PetscInt_FMT " W_U=%" PetscInt_FMT,bwL,bwU);
+  PetscAssert(bwL!=bwU,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%" PetscInt_FMT " W_U=%" PetscInt_FMT,bwL,bwU);
   ierr = MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors);CHKERRQ(ierr);
   nzBcsr = n + (2*n-1)*bwU - bwU*bwU;
   b->maxnz = b->nz = nzBcsr;
@@ -573,7 +573,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
     ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
     Nf = (*pNf)%1000;
   } else Nf = 1;
-  if (n%Nf) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n(%" PetscInt_FMT ") %% Nf(%" PetscInt_FMT ") != 0",n,Nf);
+  PetscAssert(n%Nf,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n(%" PetscInt_FMT ") %% Nf(%" PetscInt_FMT ") != 0",n,Nf);
 
   /* Get the GPU pointers */
   ierr = VecCUDAGetArrayWrite(xx,&xarray);CHKERRQ(ierr);

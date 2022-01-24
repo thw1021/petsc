@@ -86,7 +86,7 @@ PetscErrorCode VecTaggerSetType(VecTagger tagger,VecTaggerType type)
   if (match) PetscFunctionReturn(0);
 
   ierr = PetscFunctionListFind(VecTaggerList,type,&r);CHKERRQ(ierr);
-  if (!r) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested VecTagger type %s",type);
+  PetscAssert(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested VecTagger type %s",type);
   /* Destroy the previous private VecTagger context */
   if (tagger->ops->destroy) {
     ierr = (*(tagger)->ops->destroy)(tagger);CHKERRQ(ierr);
@@ -457,7 +457,7 @@ PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger tagger, Vec vec, IS *is,Pe
   numTagged = 0;
   offset = 0;
   tagged = NULL;
-  if (n % bs) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"blocksize %" PetscInt_FMT " does not divide vector length %" PetscInt_FMT, bs, n);
+  PetscAssert(n % bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"blocksize %" PetscInt_FMT " does not divide vector length %" PetscInt_FMT, bs, n);
   n /= bs;
   for (i = 0; i < 2; i++) {
     if (i) {

@@ -279,7 +279,7 @@ PetscErrorCode DMStagVecGetValuesStencil(DM dm, Vec vec,PetscInt n,const DMStagS
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = VecGetLocalSize(vec,&nLocal);CHKERRQ(ierr);
-  if (nLocal != stag->entriesGhost) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector should be a local vector. Local size %d does not match expected %d",nLocal,stag->entriesGhost);
+  PetscAssert(nLocal != stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector should be a local vector. Local size %d does not match expected %d",nLocal,stag->entriesGhost);
   ierr = PetscMalloc1(n,&ix);CHKERRQ(ierr);
   ierr = DMStagStencilToIndexLocal(dm,dim,n,pos,ix);CHKERRQ(ierr);
   ierr = VecGetArrayRead(vec,&arr);CHKERRQ(ierr);
@@ -324,7 +324,7 @@ PetscErrorCode DMStagVecSetValuesStencil(DM dm,Vec vec,PetscInt n,const DMStagSt
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = VecGetLocalSize(vec,&nLocal);CHKERRQ(ierr);
-  if (nLocal != stag->entries) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Provided vec has a different number of local entries (%D) than expected (%D). It should be a global vector",nLocal,stag->entries);
+  PetscAssert(nLocal != stag->entries,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Provided vec has a different number of local entries (%D) than expected (%D). It should be a global vector",nLocal,stag->entries);
   ierr = PetscMalloc1(n,&ix);CHKERRQ(ierr);
   ierr = DMStagStencilToIndexLocal(dm,dim,n,pos,ix);CHKERRQ(ierr);
   ierr = VecSetValuesLocal(vec,n,ix,val,insertMode);CHKERRQ(ierr);
