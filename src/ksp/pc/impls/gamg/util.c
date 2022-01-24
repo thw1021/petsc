@@ -217,7 +217,7 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
     PetscBool isaij,ismpiaij;
     ierr = PetscObjectBaseTypeCompare((PetscObject)Gmat,MATSEQAIJ,&isaij);CHKERRQ(ierr);
     ierr = PetscObjectBaseTypeCompare((PetscObject)Gmat,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
-    if (!isaij && !ismpiaij) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Require (MPI)AIJ matrix type");
+    PetscAssert(!isaij && !ismpiaij,PETSC_COMM_WORLD,PETSC_ERR_USER,"Require (MPI)AIJ matrix type");
     if (isaij) {
       ierr = MatGetInfo(Gmat,MAT_LOCAL,&info);CHKERRQ(ierr);
       ierr = MatSeqAIJGetArray(Gmat,&avals);CHKERRQ(ierr);
@@ -304,7 +304,7 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
 #if defined(PETSC_USE_INFO)
   {
     double t1 = (!nnz0) ? 1. : 100.*(double)nnz1/(double)nnz0, t2 = (!nloc) ? 1. : (double)nnz0/(double)nloc;
-    ierr = PetscInfo4(*a_Gmat,"\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%D)\n",t1,vfilter,t2,MM);CHKERRQ(ierr);
+    ierr = PetscInfo(*a_Gmat,"\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%D)\n",t1,vfilter,t2,MM);CHKERRQ(ierr);
   }
 #endif
   ierr    = MatDestroy(&Gmat);CHKERRQ(ierr);
@@ -393,7 +393,7 @@ PetscErrorCode PCGAMGHashTableAdd(PCGAMGHashTable *a_tab, PetscInt a_key, PetscI
   PetscInt kk,idx;
 
   PetscFunctionBegin;
-  if (a_key<0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_USER,"Negative key %D.",a_key);
+  PetscAssert(a_key<0,PETSC_COMM_SELF,PETSC_ERR_USER,"Negative key %D.",a_key);
   for (kk = 0, idx = GAMG_HASH(a_key); kk < a_tab->size; kk++, idx = (idx==(a_tab->size-1)) ? 0 : idx + 1) {
     if (a_tab->table[idx] == a_key) {
       /* exists */

@@ -42,9 +42,9 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTableAdd(PetscTable ta,PetscInt key,Pets
   PetscInt       hashstep = (PetscInt)PetscHashStep(ta,(unsigned long)key);
 
   PetscFunctionBegin;
-  if (key <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key <= 0");
-  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
-  if (!data) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Null data");
+  PetscAssert(key <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key <= 0");
+  PetscAssert(key > ta->maxkey,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
+  PetscAssert(!data,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Null data");
 
   for (i=0; i<ta->tablesize; i++) {
     if (ta->keytable[hash] == key) {
@@ -92,8 +92,8 @@ PETSC_STATIC_INLINE PetscErrorCode  PetscTableAddCount(PetscTable ta,PetscInt ke
   PetscInt       hashstep = (PetscInt)PetscHashStep(ta,(unsigned long)key);
 
   PetscFunctionBegin;
-  if (key <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key <= 0");
-  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
+  PetscAssert(key <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key <= 0");
+  PetscAssert(key > ta->maxkey,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
 
   for (i=0; i<ta->tablesize; i++) {
     if (ta->keytable[hash] == key) {
@@ -128,8 +128,8 @@ PETSC_STATIC_INLINE PetscErrorCode  PetscTableFind(PetscTable ta,PetscInt key,Pe
 
   PetscFunctionBegin;
   *data = 0;
-  if (key <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Key <= 0");
-  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
+  PetscAssert(key <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Key <= 0");
+  PetscAssert(key > ta->maxkey,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
 
   while (ii++ < ta->tablesize) {
     if (!ta->keytable[hash]) break;

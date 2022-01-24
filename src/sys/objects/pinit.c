@@ -320,7 +320,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Counter_Attr_Delete_Fn(MPI_Comm comm,Petsc
   struct PetscCommStash *comms = counter->comms, *pcomm;
 
   PetscFunctionBegin;
-  ierr = PetscInfo1(NULL,"Deleting counter data in an MPI_Comm %ld\n",(long)comm);CHKERRMPI(ierr);
+  ierr = PetscInfo(NULL,"Deleting counter data in an MPI_Comm %ld\n",(long)comm);CHKERRMPI(ierr);
   ierr = PetscFree(counter->iflags);CHKERRMPI(ierr);
   while (comms) {
     ierr  = MPI_Comm_free(&comms->comm);CHKERRMPI(ierr);
@@ -360,7 +360,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_InnerComm_Attr_Delete_Fn(MPI_Comm comm,Pet
     if (ocomm.comm != comm) SETERRMPI(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Inner comm's OuterComm attribute does not point to outer PETSc comm");
   }
   ierr = MPI_Comm_delete_attr(icomm.comm,Petsc_OuterComm_keyval);CHKERRMPI(ierr);
-  ierr = PetscInfo2(NULL,"User MPI_Comm %ld is being unlinked from inner PETSc comm %ld\n",(long)comm,(long)icomm.comm);CHKERRMPI(ierr);
+  ierr = PetscInfo(NULL,"User MPI_Comm %ld is being unlinked from inner PETSc comm %ld\n",(long)comm,(long)icomm.comm);CHKERRMPI(ierr);
   PetscFunctionReturn(MPI_SUCCESS);
 }
 
@@ -372,7 +372,7 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_OuterComm_Attr_Delete_Fn(MPI_Comm comm,Pet
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscInfo1(NULL,"Removing reference to PETSc communicator embedded in a user MPI_Comm %ld\n",(long)comm);CHKERRMPI(ierr);
+  ierr = PetscInfo(NULL,"Removing reference to PETSc communicator embedded in a user MPI_Comm %ld\n",(long)comm);CHKERRMPI(ierr);
   PetscFunctionReturn(MPI_SUCCESS);
 }
 
@@ -585,10 +585,10 @@ PETSC_INTERN PetscErrorCode PetscInitializeSAWs(const char help[])
     ierr = PetscOptionsHasName(NULL,NULL,"-saws_local",&flg2);CHKERRQ(ierr);
     if (flg2) {
       char jsdir[PETSC_MAX_PATH_LEN];
-      if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"-saws_local option requires -saws_root option");
+      PetscAssert(!flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"-saws_local option requires -saws_root option");
       ierr = PetscSNPrintf(jsdir,sizeof(jsdir),"%s/js",root);CHKERRQ(ierr);
       ierr = PetscTestDirectory(jsdir,'r',&flg);CHKERRQ(ierr);
-      if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"-saws_local option requires js directory in root directory");
+      PetscAssert(!flg,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"-saws_local option requires js directory in root directory");
       PetscStackCallSAWs(SAWs_Push_Local_Header,());
     }
     ierr = PetscGetProgramName(programname,sizeof(programname));CHKERRQ(ierr);
@@ -756,7 +756,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
         }
       }
       if (!flg) {
-        PetscInfo1(NULL,"PETSc warning --- MPICH library version \n%s does not match what PETSc was compiled with %.\n",mpilibraryversion,MPICH_VESION);
+        PetscInfo(NULL,"PETSc warning --- MPICH library version \n%s does not match what PETSc was compiled with %.\n",mpilibraryversion,MPICH_VESION);
         flg = PETSC_TRUE;
       }
     }
@@ -782,7 +782,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
         }
       }
       if (!flg) {
-        PetscInfo3(NULL,"PETSc warning --- Open MPI library version \n%s does not match what PETSc was compiled with %d.%d.\n",mpilibraryversion,OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
+        PetscInfo(NULL,"PETSc warning --- Open MPI library version \n%s does not match what PETSc was compiled with %d.%d.\n",mpilibraryversion,OMPI_MAJOR_VERSION,OMPI_MINOR_VERSION);
         flg = PETSC_TRUE;
       }
     }
@@ -997,27 +997,27 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
   ierr = PetscInitialize_DynamicLibraries();CHKERRQ(ierr);
 
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
-  ierr = PetscInfo1(NULL,"PETSc successfully started: number of processors = %d\n",size);CHKERRQ(ierr);
+  ierr = PetscInfo(NULL,"PETSc successfully started: number of processors = %d\n",size);CHKERRQ(ierr);
   ierr = PetscGetHostName(hostname,256);CHKERRQ(ierr);
-  ierr = PetscInfo1(NULL,"Running on machine: %s\n",hostname);CHKERRQ(ierr);
+  ierr = PetscInfo(NULL,"Running on machine: %s\n",hostname);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_OPENMP)
   {
     PetscBool omp_view_flag;
     char      *threads = getenv("OMP_NUM_THREADS");
 
     if (threads) {
-      ierr = PetscInfo1(NULL,"Number of OpenMP threads %s (as given by OMP_NUM_THREADS)\n",threads);CHKERRQ(ierr);
+      ierr = PetscInfo(NULL,"Number of OpenMP threads %s (as given by OMP_NUM_THREADS)\n",threads);CHKERRQ(ierr);
       (void) sscanf(threads, "%" PetscInt_FMT,&PetscNumOMPThreads);
     } else {
       PetscNumOMPThreads = (PetscInt) omp_get_max_threads();
-      ierr = PetscInfo1(NULL,"Number of OpenMP threads %" PetscInt_FMT " (as given by omp_get_max_threads())\n",PetscNumOMPThreads);CHKERRQ(ierr);
+      ierr = PetscInfo(NULL,"Number of OpenMP threads %" PetscInt_FMT " (as given by omp_get_max_threads())\n",PetscNumOMPThreads);CHKERRQ(ierr);
     }
     ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"OpenMP options","Sys");CHKERRQ(ierr);
     ierr = PetscOptionsInt("-omp_num_threads","Number of OpenMP threads to use (can also use environmental variable OMP_NUM_THREADS","None",PetscNumOMPThreads,&PetscNumOMPThreads,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsName("-omp_view","Display OpenMP number of threads",NULL,&omp_view_flag);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
     if (flg) {
-      ierr = PetscInfo1(NULL,"Number of OpenMP theads %" PetscInt_FMT " (given by -omp_num_threads)\n",PetscNumOMPThreads);CHKERRQ(ierr);
+      ierr = PetscInfo(NULL,"Number of OpenMP theads %" PetscInt_FMT " (given by -omp_num_threads)\n",PetscNumOMPThreads);CHKERRQ(ierr);
       omp_set_num_threads((int)PetscNumOMPThreads);
     }
     if (omp_view_flag) {
@@ -1217,7 +1217,7 @@ PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const c
   if (PetscInitializeCalled) PetscFunctionReturn(0);
   ierr = MPI_Initialized(&flag);CHKERRMPI(ierr);
   if (!flag) {
-    if (PETSC_COMM_WORLD != MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"You cannot set PETSC_COMM_WORLD if you have not initialized MPI first");
+    PetscAssert(PETSC_COMM_WORLD != MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_SUP,"You cannot set PETSC_COMM_WORLD if you have not initialized MPI first");
     ierr = PetscPreMPIInit_Private();CHKERRQ(ierr);
 #if defined(PETSC_HAVE_MPI_INIT_THREAD)
     {
@@ -1382,7 +1382,7 @@ PetscErrorCode  PetscFinalize(void)
     ierr = PetscMalloc1(2,&buffs);CHKERRQ(ierr);
     ierr = PetscOptionsGetStringArray(NULL,NULL,"-tellmycell",buffs,&nmax,&flg1);CHKERRQ(ierr);
     if (flg1) {
-      if (!nmax) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"-tellmycell requires either the phone number or number,\"message\"");
+      PetscAssert(!nmax,PETSC_COMM_WORLD,PETSC_ERR_USER,"-tellmycell requires either the phone number or number,\"message\"");
       if (nmax == 1) {
         ierr = PetscMalloc1(128,&buffs[1]);CHKERRQ(ierr);
         ierr = PetscGetProgramName(buffs[1],32);CHKERRQ(ierr);
@@ -1611,10 +1611,10 @@ PetscErrorCode  PetscFinalize(void)
     if (flg1 && fname[0]) {
 
       PetscSNPrintf(sname,sizeof(sname),"%s_%d",fname,rank);
-      fd   = fopen(sname,"w"); if (!fd) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
+      fd   = fopen(sname,"w"); PetscAssert(!fd,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
       ierr = PetscMallocDump(fd);CHKERRQ(ierr);
       err  = fclose(fd);
-      if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file");
+      PetscAssert(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file");
     } else if (flg1 || flg2 || flg3) {
       MPI_Comm local_comm;
 
@@ -1629,10 +1629,10 @@ PetscErrorCode  PetscFinalize(void)
     if (flg1 && fname[0]) {
 
       PetscSNPrintf(sname,sizeof(sname),"%s_%d",fname,rank);
-      fd   = fopen(sname,"w"); if (!fd) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
+      fd   = fopen(sname,"w"); PetscAssert(!fd,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open log file: %s",sname);
       ierr = PetscMallocView(fd);CHKERRQ(ierr);
       err  = fclose(fd);
-      if (err) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file");
+      PetscAssert(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fclose() failed on file");
     } else if (flg1) {
       MPI_Comm local_comm;
 
