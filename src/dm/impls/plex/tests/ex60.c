@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
     ierr = VecNorm(metricComb, NORM_2, &errornorm);CHKERRQ(ierr);
     errornorm /= norm;
     ierr = PetscPrintf(comm, "Metric average L2 error: %.4f%%\n", 100*errornorm);CHKERRQ(ierr);
-    if (errornorm > tol) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric average test failed");
+    PetscAssert(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric average test failed");
     ierr = VecDestroy(&metricComb);CHKERRQ(ierr);
 
     /* Test metric intersection */
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
       ierr = VecNorm(metricComb, NORM_2, &errornorm);CHKERRQ(ierr);
       errornorm /= norm;
       ierr = PetscPrintf(comm, "Metric intersection L2 error: %.4f%%\n", 100*errornorm);CHKERRQ(ierr);
-      if (errornorm > tol) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric intersection test failed");
+      PetscAssert(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric intersection test failed");
     }
     ierr = VecDestroy(&metric1);CHKERRQ(ierr);
     ierr = VecDestroy(&metric2);CHKERRQ(ierr);
@@ -203,12 +203,12 @@ int main(int argc, char **argv) {
       ierr = VecDestroy(&err);CHKERRQ(ierr);
       errornorm /= norm;
       ierr = PetscPrintf(comm, "Metric determinant L2 error: %.4f%%\n", 100*errornorm);CHKERRQ(ierr);
-      if (errornorm > tol) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Determinant is not unit");
+      PetscAssert(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Determinant is not unit");
       ierr = VecAXPY(metric1, -1, metric);CHKERRQ(ierr);
       ierr = VecNorm(metric1, NORM_2, &errornorm);CHKERRQ(ierr);
       errornorm /= norm;
       ierr = PetscPrintf(comm, "Metric SPD enforcement L2 error: %.4f%%\n", 100*errornorm);CHKERRQ(ierr);
-      if (errornorm > tol) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric SPD enforcement test failed");
+      PetscAssert(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric SPD enforcement test failed");
     }
     ierr = VecDestroy(&metric1);CHKERRQ(ierr);
     ierr = VecGetDM(determinant, &dmDet);CHKERRQ(ierr);
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
       ierr = VecNorm(metric2, NORM_2, &errornorm);CHKERRQ(ierr);
       errornorm /= norm;
       ierr = PetscPrintf(comm, "Metric normalization L2 error: %.4f%%\n", 100*errornorm);CHKERRQ(ierr);
-      if (errornorm > tol) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric normalization test failed");
+      PetscAssert(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric normalization test failed");
     }
     ierr = VecCopy(metric1, metric);CHKERRQ(ierr);
     ierr = VecDestroy(&metric2);CHKERRQ(ierr);
@@ -248,19 +248,19 @@ int main(int argc, char **argv) {
 
     ierr = DMGetLabel(dmAdapt, "Face Sets", &bdLabel);CHKERRQ(ierr);
     ierr = DMLabelHasStratum(bdLabel, 1, &hasTag);CHKERRQ(ierr);
-    if (!hasTag) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have face tag 1");
+    PetscAssert(!hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have face tag 1");
     ierr = DMLabelHasStratum(bdLabel, 2, &hasTag);CHKERRQ(ierr);
-    if (!hasTag) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have face tag 2");
+    PetscAssert(!hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have face tag 2");
     ierr = DMLabelGetNumValues(bdLabel, &size);CHKERRQ(ierr);
-    if (size != 2) SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of face tags (got %d, expected 2)", size);
+    PetscAssert(size != 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of face tags (got %d, expected 2)", size);
 
     ierr = DMGetLabel(dmAdapt, "Cell Sets", &rgLabel);CHKERRQ(ierr);
     ierr = DMLabelHasStratum(rgLabel, 3, &hasTag);CHKERRQ(ierr);
-    if (!hasTag) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have cell tag 3");
+    PetscAssert(!hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have cell tag 3");
     ierr = DMLabelHasStratum(rgLabel, 4, &hasTag);CHKERRQ(ierr);
-    if (!hasTag) SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have cell tag 4");
+    PetscAssert(!hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have cell tag 4");
     ierr = DMLabelGetNumValues(rgLabel, &size);CHKERRQ(ierr);
-    if (size != 2) SETERRQ1(comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of cell tags (got %d, expected 2)", size);
+    PetscAssert(size != 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of cell tags (got %d, expected 2)", size);
   }
 
   /* Clean up */

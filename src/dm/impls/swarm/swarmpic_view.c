@@ -110,7 +110,7 @@ PetscErrorCode private_DMSwarmView_XDMF(DM dm,PetscViewer viewer)
   } else SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Valid to find attached data XDMFViewerContext");
 
   ierr = PetscObjectTypeCompare((PetscObject)dm,DMSWARM,&isswarm);CHKERRQ(ierr);
-  if (!isswarm) SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Only valid for DMSwarm");
+  PetscAssert(!isswarm,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Only valid for DMSwarm");
 
   ierr = PetscObjectCompose((PetscObject)viewer,"DMSwarm",(PetscObject)dm);CHKERRQ(ierr);
 
