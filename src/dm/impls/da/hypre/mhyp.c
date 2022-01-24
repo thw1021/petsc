@@ -33,7 +33,7 @@ PetscErrorCode  MatSetValuesLocal_HYPREStruct_3d(Mat mat,PetscInt nrow,const Pet
   Mat_HYPREStruct *ex     = (Mat_HYPREStruct*) mat->data;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(ncol > 7)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"ncol %D > 7 too large",ncol);
+  if (PetscUnlikely(ncol > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"ncol %D > 7 too large",ncol);
   for (i=0; i<nrow; i++) {
     for (j=0; j<ncol; j++) {
       stencil = icol[j] - irow[i];
@@ -51,7 +51,7 @@ PetscErrorCode  MatSetValuesLocal_HYPREStruct_3d(Mat mat,PetscInt nrow,const Pet
         entries[j] = 0;
       } else if (stencil == ex->gnxgny) {
         entries[j] = 6;
-      } else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local row %D local column %D have bad stencil %D",irow[i],icol[j],stencil);
+      } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local row %D local column %D have bad stencil %D",irow[i],icol[j],stencil);
     }
     row      = ex->gindices[irow[i]] - ex->rstart;
     index[0] = (HYPRE_Int)(ex->xs + (row % ex->nx));
@@ -76,7 +76,7 @@ PetscErrorCode  MatZeroRowsLocal_HYPREStruct_3d(Mat mat,PetscInt nrow,const Pets
   Mat_HYPREStruct *ex = (Mat_HYPREStruct*) mat->data;
 
   PetscFunctionBegin;
-  if (x && b) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"No support");
+  PetscAssert(x && b,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"No support");
   ierr = PetscArrayzero(values,7);CHKERRQ(ierr);
   ierr = PetscHYPREScalarCast(d,&values[3]);CHKERRQ(ierr);
   for (i=0; i<nrow; i++) {
@@ -142,8 +142,8 @@ static PetscErrorCode  MatSetUp_HYPREStruct(Mat mat)
   ex->hbox.imax[2] = hupper[2];
 
   /* create the hypre grid object and set its information */
-  if (dof > 1) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Currently only support for scalar problems");
-  if (px || py || pz) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add periodic support by calling HYPRE_StructGridSetPeriodic()");
+  PetscAssert(dof > 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Currently only support for scalar problems");
+  PetscAssert(px || py || pz,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add periodic support by calling HYPRE_StructGridSetPeriodic()");
   PetscStackCallStandard(HYPRE_StructGridCreate,(ex->hcomm,dim,&ex->hgrid));
   PetscStackCallStandard(HYPRE_StructGridSetExtents,(ex->hgrid,hlower,hupper));
   PetscStackCallStandard(HYPRE_StructGridAssemble,(ex->hgrid));
@@ -152,8 +152,8 @@ static PetscErrorCode  MatSetUp_HYPREStruct(Mat mat)
   PetscStackCallStandard(HYPRE_StructGridSetNumGhost,(ex->hgrid,sw));
 
   /* create the hypre stencil object and set its information */
-  if (sw[0] > 1) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for wider stencils");
-  if (st == DMDA_STENCIL_BOX) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for box stencils");
+  PetscAssert(sw[0] > 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for wider stencils");
+  PetscAssert(st == DMDA_STENCIL_BOX,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for box stencils");
   if (dim == 1) {
     HYPRE_Int offsets[3][1] = {{-1},{0},{1}};
     ssize = 3;
@@ -382,7 +382,7 @@ PetscErrorCode  MatSetValuesLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const Pe
           entries[j] += 0;
         } else if (stencil == ex->gnxgny) {
           entries[j] += 6;
-        } else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local row %D local column %D have bad stencil %D",irow[i],icol[j],stencil);
+        } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local row %D local column %D have bad stencil %D",irow[i],icol[j],stencil);
       }
 
       row      = ex->gindices[grid_rank] - ex->rstart;
@@ -424,7 +424,7 @@ PetscErrorCode  MatSetValuesLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const Pe
           entries[j] += 0;
         } else if (stencil == ex->gnxgny) {
           entries[j] += 6;
-        } else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local row %D local column %D have bad stencil %D",irow[i],icol[j],stencil);
+        } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local row %D local column %D have bad stencil %D",irow[i],icol[j],stencil);
       }
 
       row      = ex->gindices[grid_rank] - ex->rstart;
@@ -460,7 +460,7 @@ PetscErrorCode  MatZeroRowsLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const Pet
   PetscInt         row;
 
   PetscFunctionBegin;
-  if (x && b) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"No support");
+  PetscAssert(x && b,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"No support");
   ierr = PetscMalloc1(7*nvars,&entries);CHKERRQ(ierr);
 
   ierr = PetscMalloc1(nvars,&values);CHKERRQ(ierr);
@@ -575,7 +575,7 @@ static PetscErrorCode  MatSetUp_HYPRESStruct(Mat mat)
   ex->nvars= dof;
 
   /* create the hypre grid object and set its information */
-  if (px || py || pz) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add periodic support by calling HYPRE_SStructGridSetPeriodic()");
+  PetscAssert(px || py || pz,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add periodic support by calling HYPRE_SStructGridSetPeriodic()");
   PetscStackCallStandard(HYPRE_SStructGridCreate,(ex->hcomm,dim,nparts,&ex->ss_grid));
   PetscStackCallStandard(HYPRE_SStructGridSetExtents,(ex->ss_grid,part,ex->hbox.imin,ex->hbox.imax));
   {
@@ -592,8 +592,8 @@ static PetscErrorCode  MatSetUp_HYPRESStruct(Mat mat)
   /* PetscStackCallStandard(HYPRE_SStructGridSetNumGhost,(ex->ss_grid,sw)); */
 
   /* create the hypre stencil object and set its information */
-  if (sw[0] > 1) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for wider stencils");
-  if (st == DMDA_STENCIL_BOX) SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for box stencils");
+  PetscAssert(sw[0] > 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for wider stencils");
+  PetscAssert(st == DMDA_STENCIL_BOX,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Ask us to add support for box stencils");
 
   if (dim == 1) {
     HYPRE_Int offsets[3][1] = {{-1},{0},{1}};
