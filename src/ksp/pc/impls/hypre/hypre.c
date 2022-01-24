@@ -442,7 +442,7 @@ static PetscErrorCode PCApply_HYPRE(PC pc,Vec b,Vec x)
   PetscStackCallStandard(HYPRE_IJVectorGetObject,(hjac->b->ij,(void**)&jbv));
   PetscStackCallStandard(HYPRE_IJVectorGetObject,(hjac->x->ij,(void**)&jxv));
   PetscStackCall("Hypre solve",hierr = (*jac->solve)(jac->hsolver,hmat,jbv,jxv);
-  if (hierr && hierr != HYPRE_ERROR_CONV) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
+  if (hierr && hierr != HYPRE_ERROR_CONV) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
   if (hierr) hypre__global_error = 0;);
 
   if (jac->setup == HYPRE_AMSSetup && jac->ams_beta_is_zero_part) {
@@ -632,7 +632,7 @@ static PetscErrorCode PCApplyTranspose_HYPRE_BoomerAMG(PC pc,Vec b,Vec x)
 
   hierr = HYPRE_BoomerAMGSolveT(jac->hsolver,hmat,jxv,jbv);
   /* error code of 1 in BoomerAMG merely means convergence not achieved */
-  if (hierr && (hierr != 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
+  if (hierr && (hierr != 1)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
   if (hierr) hypre__global_error = 0;
 
   ierr = VecHYPRE_IJVectorPopVec(hjac->x);CHKERRQ(ierr);
@@ -674,17 +674,17 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   }
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_max_levels","Number of levels (of grids) allowed","None",jac->maxlevels,&jac->maxlevels,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->maxlevels < 2) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of levels %d must be at least two",jac->maxlevels);
+    if (jac->maxlevels < 2) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of levels %d must be at least two",jac->maxlevels);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxLevels,(jac->hsolver,jac->maxlevels));
   }
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_max_iter","Maximum iterations used PER hypre call","None",jac->maxiter,&jac->maxiter,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->maxiter < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of iterations %d must be at least one",jac->maxiter);
+    if (jac->maxiter < 1) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of iterations %d must be at least one",jac->maxiter);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxIter,(jac->hsolver,jac->maxiter));
   }
   ierr = PetscOptionsReal("-pc_hypre_boomeramg_tol","Convergence tolerance PER hypre call (0.0 = use a fixed number of iterations)","None",jac->tol,&jac->tol,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->tol < 0.0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance %g must be greater than or equal to zero",(double)jac->tol);
+    if (jac->tol < 0.0) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance %g must be greater than or equal to zero",(double)jac->tol);
     PetscStackCallStandard(HYPRE_BoomerAMGSetTol,(jac->hsolver,jac->tol));
   }
   bs = 1;
@@ -698,13 +698,13 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 
   ierr = PetscOptionsReal("-pc_hypre_boomeramg_truncfactor","Truncation factor for interpolation (0=no truncation)","None",jac->truncfactor,&jac->truncfactor,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->truncfactor < 0.0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Truncation factor %g must be great than or equal zero",(double)jac->truncfactor);
+    if (jac->truncfactor < 0.0) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Truncation factor %g must be great than or equal zero",(double)jac->truncfactor);
     PetscStackCallStandard(HYPRE_BoomerAMGSetTruncFactor,(jac->hsolver,jac->truncfactor));
   }
 
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_P_max","Max elements per row for interpolation operator (0=unlimited)","None",jac->pmax,&jac->pmax,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->pmax < 0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"P_max %D must be greater than or equal to zero",jac->pmax);
+    if (jac->pmax < 0) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"P_max %D must be greater than or equal to zero",jac->pmax);
     PetscStackCallStandard(HYPRE_BoomerAMGSetPMaxElmts,(jac->hsolver,jac->pmax));
   }
 
@@ -713,19 +713,19 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_agg_num_paths","Number of paths for aggressive coarsening","None",jac->agg_num_paths,&jac->agg_num_paths,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->agg_num_paths < 1) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of paths %D must be greater than or equal to 1",jac->agg_num_paths);
+    if (jac->agg_num_paths < 1) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of paths %D must be greater than or equal to 1",jac->agg_num_paths);
     PetscStackCallStandard(HYPRE_BoomerAMGSetNumPaths,(jac->hsolver,jac->agg_num_paths));
   }
 
   ierr = PetscOptionsReal("-pc_hypre_boomeramg_strong_threshold","Threshold for being strongly connected","None",jac->strongthreshold,&jac->strongthreshold,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->strongthreshold < 0.0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Strong threshold %g must be great than or equal zero",(double)jac->strongthreshold);
+    if (jac->strongthreshold < 0.0) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Strong threshold %g must be great than or equal zero",(double)jac->strongthreshold);
     PetscStackCallStandard(HYPRE_BoomerAMGSetStrongThreshold,(jac->hsolver,jac->strongthreshold));
   }
   ierr = PetscOptionsReal("-pc_hypre_boomeramg_max_row_sum","Maximum row sum","None",jac->maxrowsum,&jac->maxrowsum,&flg);CHKERRQ(ierr);
   if (flg) {
-    if (jac->maxrowsum < 0.0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Maximum row sum %g must be greater than zero",(double)jac->maxrowsum);
-    if (jac->maxrowsum > 1.0) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Maximum row sum %g must be less than or equal one",(double)jac->maxrowsum);
+    if (jac->maxrowsum < 0.0) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Maximum row sum %g must be greater than zero",(double)jac->maxrowsum);
+    if (jac->maxrowsum > 1.0) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Maximum row sum %g must be less than or equal one",(double)jac->maxrowsum);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxRowSum,(jac->hsolver,jac->maxrowsum));
   }
 
@@ -856,7 +856,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
     if (n == 2) {
       indx =  (int)PetscAbsReal(twodbl[1]);
       PetscStackCallStandard(HYPRE_BoomerAMGSetLevelRelaxWt,(jac->hsolver,twodbl[0],indx));
-    } else SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight level: you must provide 2 values separated by a comma (and no space), you provided %d",n);
+    } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight level: you must provide 2 values separated by a comma (and no space), you provided %d",n);
   }
 
   /* Outer relaxation Weight */
@@ -873,7 +873,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
     if (n == 2) {
       indx =  (int)PetscAbsReal(twodbl[1]);
       PetscStackCallStandard(HYPRE_BoomerAMGSetLevelOuterWt,(jac->hsolver, twodbl[0], indx));
-    } else SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight outer level: You must provide 2 values separated by a comma (and no space), you provided %d",n);
+    } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight outer level: You must provide 2 values separated by a comma (and no space), you provided %d",n);
   }
 
   /* the Relax Order */
@@ -926,7 +926,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 #endif
 
 #if PETSC_PKG_HYPRE_VERSION_LE(9,9,9)
-  if (jac->Rtype && jac->agg_nl) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"-pc_hypre_boomeramg_restriction_type (%D) and -pc_hypre_boomeramg_agg_nl (%D)",jac->Rtype,jac->agg_nl);
+  if (jac->Rtype && jac->agg_nl) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"-pc_hypre_boomeramg_restriction_type (%D) and -pc_hypre_boomeramg_agg_nl (%D)",jac->Rtype,jac->agg_nl);
 #endif
 
   /* new 3/07 */
@@ -1137,7 +1137,7 @@ static PetscErrorCode PCView_HYPRE_ParaSails(PC pc,PetscViewer viewer)
     if (!jac->symt) symt = "nonsymmetric matrix and preconditioner";
     else if (jac->symt == 1) symt = "SPD matrix and preconditioner";
     else if (jac->symt == 2) symt = "nonsymmetric matrix but SPD preconditioner";
-    else SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Unknown HYPRE ParaSails symmetric option %d",jac->symt);
+    else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Unknown HYPRE ParaSails symmetric option %d",jac->symt);
     ierr = PetscViewerASCIIPrintf(viewer,"    %s\n",symt);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -2062,7 +2062,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
   ierr = PetscFree(jac->hypre_type);CHKERRQ(ierr);
 
   jac->hypre_type = NULL;
-  SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown HYPRE preconditioner %s; Choices are euclid, pilut, parasails, boomeramg, ams",name);
+  SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown HYPRE preconditioner %s; Choices are euclid, pilut, parasails, boomeramg, ams",name);
 }
 
 /*

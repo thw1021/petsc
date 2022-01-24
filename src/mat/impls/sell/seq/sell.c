@@ -112,11 +112,11 @@ PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat B,PetscInt maxallocrow,con
 
   /* FIXME: if one preallocates more space than needed, the matrix does not shrink automatically, but for best performance it should */
   if (maxallocrow == PETSC_DEFAULT || maxallocrow == PETSC_DECIDE) maxallocrow = 5;
-  if (maxallocrow < 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"maxallocrow cannot be less than 0: value %" PetscInt_FMT,maxallocrow);
+  if (maxallocrow < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"maxallocrow cannot be less than 0: value %" PetscInt_FMT,maxallocrow);
   if (rlen) {
     for (i=0; i<B->rmap->n; i++) {
-      if (rlen[i] < 0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"rlen cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT,i,rlen[i]);
-      if (rlen[i] > B->cmap->n) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"rlen cannot be greater than row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT,i,rlen[i],B->cmap->n);
+      if (rlen[i] < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"rlen cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT,i,rlen[i]);
+      if (rlen[i] > B->cmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"rlen cannot be greater than row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT,i,rlen[i],B->cmap->n);
     }
   }
 
@@ -127,7 +127,7 @@ PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat B,PetscInt maxallocrow,con
   totalslices = PetscCeilInt(B->rmap->n,8);
   b->totalslices = totalslices;
   if (!skipallocation) {
-    if (B->rmap->n & 0x07) {ierr = PetscInfo1(B,"Padding rows to the SEQSELL matrix because the number of rows is not the multiple of 8 (value %" PetscInt_FMT ")\n",B->rmap->n);CHKERRQ(ierr);}
+    if (B->rmap->n & 0x07) {ierr = PetscInfo(B,"Padding rows to the SEQSELL matrix because the number of rows is not the multiple of 8 (value %" PetscInt_FMT ")\n",B->rmap->n);CHKERRQ(ierr);}
 
     if (!b->sliidx) { /* sliidx gives the starting index of each slice, the last element is the total space allocated */
       ierr = PetscMalloc1(totalslices+1,&b->sliidx);CHKERRQ(ierr);
@@ -190,7 +190,7 @@ PetscErrorCode MatGetRow_SeqSELL(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,
   PetscInt    shift;
 
   PetscFunctionBegin;
-  if (row < 0 || row >= A->rmap->n) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " out of range",row);
+  if (row < 0 || row >= A->rmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " out of range",row);
   if (nz) *nz = a->rlen[row];
   shift = a->sliidx[row>>3]+(row&0x07);
   if (!a->getrowcols) {
@@ -761,7 +761,7 @@ PetscErrorCode MatMissingDiagonal_SeqSELL(Mat A,PetscBool  *missing,PetscInt *d)
       if (diag[i] == -1) {
         *missing = PETSC_TRUE;
         if (d) *d = i;
-        ierr = PetscInfo1(A,"Matrix is missing diagonal number %" PetscInt_FMT "\n",i);CHKERRQ(ierr);
+        ierr = PetscInfo(A,"Matrix is missing diagonal number %" PetscInt_FMT "\n",i);CHKERRQ(ierr);
         break;
       }
     }
@@ -822,11 +822,11 @@ PetscErrorCode MatInvertDiagonal_SeqSELL(Mat A,PetscScalar omega,PetscScalar fsh
       mdiag[i] = val[diag[i]];
       if (!PetscAbsScalar(mdiag[i])) { /* zero diagonal */
         if (PetscRealPart(fshift)) {
-          ierr = PetscInfo1(A,"Zero diagonal on row %" PetscInt_FMT "\n",i);CHKERRQ(ierr);
+          ierr = PetscInfo(A,"Zero diagonal on row %" PetscInt_FMT "\n",i);CHKERRQ(ierr);
           A->factorerrortype             = MAT_FACTOR_NUMERIC_ZEROPIVOT;
           A->factorerror_zeropivot_value = 0.0;
           A->factorerror_zeropivot_row   = i;
-        } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Zero diagonal on row %" PetscInt_FMT,i);
+        } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Zero diagonal on row %" PetscInt_FMT,i);
       }
       idiag[i] = 1.0/val[diag[i]];
     }
@@ -912,7 +912,7 @@ PetscErrorCode MatSetOption_SeqSELL(Mat A,MatOption op,PetscBool flg)
   case MAT_IGNORE_OFF_PROC_ENTRIES:
   case MAT_USE_HASH_TABLE:
   case MAT_SORTED_FULL:
-    ierr = PetscInfo1(A,"Option %s ignored\n",MatOptions[op]);CHKERRQ(ierr);
+    ierr = PetscInfo(A,"Option %s ignored\n",MatOptions[op]);CHKERRQ(ierr);
     break;
   case MAT_SPD:
   case MAT_SYMMETRIC:
@@ -922,7 +922,7 @@ PetscErrorCode MatSetOption_SeqSELL(Mat A,MatOption op,PetscBool flg)
     /* These options are handled directly by MatSetOption() */
     break;
   default:
-    SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"unknown option %d",op);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"unknown option %d",op);
   }
   PetscFunctionReturn(0);
 }
@@ -1023,14 +1023,14 @@ PetscErrorCode MatGetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
   for (k=0; k<m; k++) { /* loop over requested rows */
     row = im[k];
     if (row<0) continue;
-    if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,row,A->rmap->n-1);
+    if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,row,A->rmap->n-1);
     shift = a->sliidx[row>>3]+(row&0x07); /* starting index of the row */
     cp = a->colidx+shift; /* pointer to the row */
     vp = a->val+shift; /* pointer to the row */
     for (l=0; l<n; l++) { /* loop over requested columns */
       col = in[l];
       if (col<0) continue;
-      if (PetscUnlikelyDebug(col >= A->cmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: row %" PetscInt_FMT " max %" PetscInt_FMT,col,A->cmap->n-1);
+      if (PetscUnlikelyDebug(col >= A->cmap->n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column too large: row %" PetscInt_FMT " max %" PetscInt_FMT,col,A->cmap->n-1);
       high = a->rlen[row]; low = 0; /* assume unsorted */
       while (high-low > 5) {
         t = (low+high)/2;
@@ -1411,9 +1411,9 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
   if (mode == MAT_FLUSH_ASSEMBLY) PetscFunctionReturn(0);
   /* To do: compress out the unused elements */
   ierr = MatMarkDiagonal_SeqSELL(A);CHKERRQ(ierr);
-  ierr = PetscInfo6(A,"Matrix size: %" PetscInt_FMT " X %" PetscInt_FMT "; storage space: %" PetscInt_FMT " allocated %" PetscInt_FMT " used (%" PetscInt_FMT " nonzeros+%" PetscInt_FMT " paddedzeros)\n",A->rmap->n,A->cmap->n,a->maxallocmat,a->sliidx[a->totalslices],a->nz,a->sliidx[a->totalslices]-a->nz);CHKERRQ(ierr);
-  ierr = PetscInfo1(A,"Number of mallocs during MatSetValues() is %" PetscInt_FMT "\n",a->reallocs);CHKERRQ(ierr);
-  ierr = PetscInfo1(A,"Maximum nonzeros in any row is %" PetscInt_FMT "\n",a->rlenmax);CHKERRQ(ierr);
+  ierr = PetscInfo(A,"Matrix size: %" PetscInt_FMT " X %" PetscInt_FMT "; storage space: %" PetscInt_FMT " allocated %" PetscInt_FMT " used (%" PetscInt_FMT " nonzeros+%" PetscInt_FMT " paddedzeros)\n",A->rmap->n,A->cmap->n,a->maxallocmat,a->sliidx[a->totalslices],a->nz,a->sliidx[a->totalslices]-a->nz);CHKERRQ(ierr);
+  ierr = PetscInfo(A,"Number of mallocs during MatSetValues() is %" PetscInt_FMT "\n",a->reallocs);CHKERRQ(ierr);
+  ierr = PetscInfo(A,"Maximum nonzeros in any row is %" PetscInt_FMT "\n",a->rlenmax);CHKERRQ(ierr);
   /* Set unused slots for column indices to last valid column index. Set unused slots for values to zero. This allows for a use of unmasked intrinsics -> higher performance */
   for (i=0; i<a->totalslices; ++i) {
     shift = a->sliidx[i];    /* starting index of the slice */
@@ -1490,7 +1490,7 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
-    if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,row,A->rmap->n-1);
+    if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,row,A->rmap->n-1);
     shift = a->sliidx[row>>3]+(row&0x07); /* starting index of the row */
     cp    = a->colidx+shift; /* pointer to the row */
     vp    = a->val+shift; /* pointer to the row */
@@ -1501,7 +1501,7 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
     for (l=0; l<n; l++) { /* loop over added columns */
       col = in[l];
       if (col<0) continue;
-      if (PetscUnlikelyDebug(col >= A->cmap->n)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Col too large: row %" PetscInt_FMT " max %" PetscInt_FMT,col,A->cmap->n-1);
+      if (PetscUnlikelyDebug(col >= A->cmap->n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Col too large: row %" PetscInt_FMT " max %" PetscInt_FMT,col,A->cmap->n-1);
       if (a->roworiented) {
         value = v[l+k*n];
       } else {
@@ -1529,7 +1529,7 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
       }
       if (value == 0.0 && a->ignorezeroentries) goto noinsert;
       if (nonew == 1) goto noinsert;
-      if (nonew == -1) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
+      if (nonew == -1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
       /* If the current row length exceeds the slice width (e.g. nrow==slice_width), allocate a new space, otherwise do nothing */
       MatSeqXSELLReallocateSELL(A,A->rmap->n,1,nrow,a->sliidx,row/8,row,col,a->colidx,a->val,cp,vp,nonew,MatScalar);
       /* add the new nonzero to the high position, shift the remaining elements in current row to the right by one slot */
