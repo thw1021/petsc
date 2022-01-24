@@ -2023,9 +2023,9 @@ PetscErrorCode  VecRestoreArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 }
 
 /*@C
-   VecGetArrayAndMemType - Like VecGetArray(), but if this is a device vector (e.g., VECCUDA), the returned pointer will be a device
+   VecGetArrayAndMemType - Like VecGetArray(), but if this is a standard device vector (e.g., VECCUDA), the returned pointer will be a device
    pointer to the device memory that contains this processor's portion of the vector data. Device data is guaranteed to have the latest value.
-   Otherwise, when this is a host vector (e.g., VECMPI), it functions as VecGetArray() and returns a host pointer.
+   Otherwise, when this is a host vector (e.g., VECMPI), in that case their routine functions the same as VecGetArray() and returns a host pointer.
 
    For VECKOKKOS, if Kokkos is configured without device (e.g., use serial or openmp), per this function, the vector works like VECSEQ/VECMPI;
    otherwise, it works like VECCUDA or VECHIP etc.
