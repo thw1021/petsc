@@ -159,7 +159,7 @@ PetscErrorCode MatConvertToCSC(Mat A,PetscBool valOnly,PetscInt *n,PetscInt **co
             }
           }
           /* data structure of sparse matrix has changed */
-          if (k == (*colptr)[colidx + 1] - base) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"overflow on k %" PetscInt_FMT,k);
+          PetscAssert(k == (*colptr)[colidx + 1] - base,PETSC_COMM_SELF,PETSC_ERR_PLIB,"overflow on k %" PetscInt_FMT,k);
         }
       }
     }
@@ -531,7 +531,7 @@ static PetscErrorCode MatGetFactor_seqaij_pastix(Mat A,MatFactorType ftype,Mat *
   Mat_Pastix     *pastix;
 
   PetscFunctionBegin;
-  if (ftype != MAT_FACTOR_LU) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
+  PetscAssert(ftype != MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
   /* Create the factorization matrix */
   ierr = MatCreate(PetscObjectComm((PetscObject)A),&B);CHKERRQ(ierr);
   ierr = MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N);CHKERRQ(ierr);
@@ -571,7 +571,7 @@ static PetscErrorCode MatGetFactor_mpiaij_pastix(Mat A,MatFactorType ftype,Mat *
   Mat_Pastix     *pastix;
 
   PetscFunctionBegin;
-  if (ftype != MAT_FACTOR_LU) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
+  PetscAssert(ftype != MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
   /* Create the factorization matrix */
   ierr = MatCreate(PetscObjectComm((PetscObject)A),&B);CHKERRQ(ierr);
   ierr = MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N);CHKERRQ(ierr);
@@ -610,7 +610,7 @@ static PetscErrorCode MatGetFactor_seqsbaij_pastix(Mat A,MatFactorType ftype,Mat
   Mat_Pastix     *pastix;
 
   PetscFunctionBegin;
-  if (ftype != MAT_FACTOR_CHOLESKY) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
+  PetscAssert(ftype != MAT_FACTOR_CHOLESKY,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
   /* Create the factorization matrix */
   ierr = MatCreate(PetscObjectComm((PetscObject)A),&B);CHKERRQ(ierr);
   ierr = MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N);CHKERRQ(ierr);
@@ -648,7 +648,7 @@ static PetscErrorCode MatGetFactor_mpisbaij_pastix(Mat A,MatFactorType ftype,Mat
   Mat_Pastix     *pastix;
 
   PetscFunctionBegin;
-  if (ftype != MAT_FACTOR_CHOLESKY) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
+  PetscAssert(ftype != MAT_FACTOR_CHOLESKY,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
 
   /* Create the factorization matrix */
   ierr = MatCreate(PetscObjectComm((PetscObject)A),&B);CHKERRQ(ierr);
