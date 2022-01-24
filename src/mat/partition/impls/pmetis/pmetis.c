@@ -76,7 +76,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       ierr = MatGetOwnershipRange(pmat,&rstart,NULL);CHKERRQ(ierr);
       for (i=0; i<pmat->rmap->n; i++) {
         for (j=xadj[i]; j<xadj[i+1]; j++) {
-          if (adjncy[j] == i+rstart) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Row %" PetscInt_FMT " has diagonal entry; Parmetis forbids diagonal entry",i+rstart);
+          PetscAssert(adjncy[j] == i+rstart,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Row %" PetscInt_FMT " has diagonal entry; Parmetis forbids diagonal entry",i+rstart);
         }
       }
     }
@@ -475,7 +475,7 @@ PetscErrorCode MatMeshToCellGraph(Mat mesh,PetscInt ncommonnodes,Mat *dual)
 
   PetscFunctionBegin;
   ierr = PetscObjectTypeCompare((PetscObject)mesh,MATMPIADJ,&flg);CHKERRQ(ierr);
-  if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use MPIAdj matrix type");
+  PetscAssert(!flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use MPIAdj matrix type");
 
   ierr = PetscObjectGetComm((PetscObject)mesh,&comm);CHKERRQ(ierr);
   PetscStackCallParmetis(ParMETIS_V3_Mesh2Dual,((idx_t*)mesh->rmap->range,(idx_t*)adj->i,(idx_t*)adj->j,(idx_t*)&numflag,(idx_t*)&ncommonnodes,(idx_t**)&newxadj,(idx_t**)&newadjncy,&comm));

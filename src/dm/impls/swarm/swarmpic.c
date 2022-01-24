@@ -11,9 +11,9 @@
 #define DMSWARMPICVALID(dm) \
 { \
   DM_Swarm *_swarm = (DM_Swarm*)(dm)->data; \
-  if (_swarm->swarm_type != DMSWARM_PIC) SETERRQ(PetscObjectComm((PetscObject)(dm)),PETSC_ERR_SUP,"Only valid for DMSwarm-PIC. You must call DMSwarmSetType(dm,DMSWARM_PIC)"); \
+  PetscAssert(_swarm->swarm_type != DMSWARM_PIC,PetscObjectComm((PetscObject)(dm)),PETSC_ERR_SUP,"Only valid for DMSwarm-PIC. You must call DMSwarmSetType(dm,DMSWARM_PIC)"); \
   else \
-    if (!_swarm->dmcell) SETERRQ(PetscObjectComm((PetscObject)(dm)),PETSC_ERR_SUP,"Only valid for DMSwarmPIC if the cell DM is set. You must call DMSwarmSetCellDM(dm,celldm)"); \
+    PetscAssert(!_swarm->dmcell,PetscObjectComm((PetscObject)(dm)),PETSC_ERR_SUP,"Only valid for DMSwarmPIC if the cell DM is set. You must call DMSwarmSetCellDM(dm,celldm)"); \
 }
 
 /* Coordinate insertition/addition API */
@@ -439,7 +439,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinatesCellwise(DM dm,PetscInt np
   ierr = DMSwarmGetCellDM(dm,&celldm);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)celldm,DMDA,&isDA);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompare((PetscObject)celldm,DMPLEX,&isPLEX);CHKERRQ(ierr);
-  if (isDA) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Only supported for cell DMs of type DMPLEX. Recommended you use DMSwarmInsertPointsUsingCellDM()");
+  PetscAssert(isDA,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Only supported for cell DMs of type DMPLEX. Recommended you use DMSwarmInsertPointsUsingCellDM()");
   else if (isPLEX) {
     ierr = private_DMSwarmSetPointCoordinatesCellwise_PLEX(dm,celldm,npoints,xi);CHKERRQ(ierr);
   } else SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Only supported for cell DMs of type DMDA and DMPLEX");
@@ -503,8 +503,8 @@ PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM dm,PetscInt nfields,const ch
   nvecs = 0;
   for (f=0; f<nfields; f++) {
     ierr = DMSwarmDataBucketGetDMSwarmDataFieldByName(swarm->db,fieldnames[f],&gfield[f]);CHKERRQ(ierr);
-    if (gfield[f]->petsc_type != PETSC_REAL) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Projection only valid for fields using a data type = PETSC_REAL");
-    if (gfield[f]->bs != 1) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Projection only valid for fields with block size = 1");
+    PetscAssert(gfield[f]->petsc_type != PETSC_REAL,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Projection only valid for fields using a data type = PETSC_REAL");
+    PetscAssert(gfield[f]->bs != 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Projection only valid for fields with block size = 1");
     nvecs += gfield[f]->bs;
   }
   if (!reuse) {
