@@ -257,12 +257,21 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 }
 
 /*
-  SetUp a single svtx struct. See SVtx defined in dmnetworkimpl.h
-  Set gidx and type if input v=(net,idx) is a from_vertex;
-  Get gid, type and index in the svtx array if input v=(net,idx) is a to_vertex.
+  Setup svtx struct array from an input (net,idx). See SVtx defined in dmnetworkimpl.h
 
-  Input:  Nsvtx, svtx, net, idx, gidx
-  Output: gidx, svtype, svtx_idx
+  Input Parameters:
++ Nsvtx - global num of shared vertices
+. svtx - array of shared vertices
+. (net,idx) - subnet number and local index for a vertex
+- *gidx - global index if (net,idx) is a from_vertex
+
+  Output Parameters:
++ gidx - global index of (net,idx)
+. svtype -
+- svtx_idx - ordering in the svtx array
+
+  If (net,idx) is a from_vertex: set its gidx, svtype, and index in the svtx array
+  elseif (net,idx) is a to_vertx: get its gidx; set its svtype and index in the svtx array
  */
 static PetscErrorCode SVtxSetUp(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt idx,PetscInt *gidx,SVtxType *svtype,PetscInt *svtx_idx)
 {
@@ -423,6 +432,20 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
   PetscFunctionReturn(0);
 }
 
+/*
+  Get an integrated edgelist for dmplex from user-provided subnet[].edgelist when subnets are coupled by shared vertices
+
+  Input Parameters:
+. dm - the dmnetwork object
+
+   Output Parameters:
++  edges - the integrated edgelist for dmplex
+.  nmerged_ptr - num of vertices being merged
+.  Nsv_ptr - global num of shared vertices
+-  svtx_ptr - pionter array of global shared vertices; lengh = Nsv_ptr;
+
+*/
+//static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerged_ptr,PetscInt *Nsv_ptr,SVtx **svtx_ptr)
 static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerged_ptr,PetscInt *Nsv_ptr,SVtx **svtx_ptr)
 {
   PetscErrorCode ierr;
@@ -454,9 +477,7 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerg
 
   vrange[0] = 0;
   ierr = MPI_Allgatherv(&network->nVertices,1,MPIU_INT,vrange+1,recvcounts,displs,MPIU_INT,comm);CHKERRMPI(ierr);
-  for (i=2; i<size+1; i++) {
-    vrange[i] += vrange[i-1];
-  }
+  for (i=2; i<size+1; i++) vrange[i] += vrange[i-1];
 
   /* (2.2) Create vidxlTog: maps UN-MERGED local vertex index i to global index gidx (plex, excluding ghost vertices) */
   ierr = PetscMalloc1(network->nVertices,&vidxlTog);CHKERRQ(ierr);
@@ -481,6 +502,7 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerg
         }
       } else {
         if (svtype == SVFROM) {
+          if (sv_idx != 0) printf("sv_idx %d != 0\n",sv_idx);
           if (network->subnet[net].nvtx) {
             /* this proc owns this v_from, a new local coupling vertex */
             network->nsvtx++;
@@ -577,7 +599,13 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = PetscCalloc1(2*network->nEdges,&edges);CHKERRQ(ierr);
 
   if (network->Nsvtx) { /* subnetworks are coupled via shared vertices */
-    ierr = GetEdgelist_Coupling(dm,edges,&nmerged,&Nsv,&svtx);CHKERRMPI(ierr);
+    ierr = GetEdgelist_Coupling(dm,edges,&nmerged,&Nsv,&svtx);CHKERRQ(ierr);
+#if 0
+    /* TODO: update network->nVertices! */
+    for (net=0; net<network->Nsubnet; net++) {
+      printf("[%d] Before update: net %d: nvtx %d\n",rank,net,network->subnet[net].nvtx);
+    }
+#endif
   } else { /* subnetworks are not coupled */
     ctr = 0;
     for (i=0; i < Nsubnet; i++) {
@@ -1620,12 +1648,12 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
       ierr = SetSubnetIdLookupBT(newDM,v,Nsubnet,btable);CHKERRQ(ierr);
 
       from_net = newDMnetwork->svtx[svtx_idx].sv[0];
-      if (PetscBTLookup(btable,from_net)) newDMnetwork->subnet[from_net].nvtx++; /* sv is on from_net */
+      if (PetscBTLookup(btable,from_net)) newDMnetwork->subnet[from_net].nvtx++; /* sv is on from_net owned by this process */
 
       for (j=1; j<newDMnetwork->svtx[svtx_idx].n; j++) {
         svto   = newDMnetwork->svtx[svtx_idx].sv + 2*j;
         to_net = svto[0];
-        if (PetscBTLookup(btable,to_net)) newDMnetwork->subnet[to_net].nvtx++; /* sv is on to_net */
+        if (PetscBTLookup(btable,to_net)) newDMnetwork->subnet[to_net].nvtx++; /* sv is on to_net owned by this proces */
       }
     }
   }
