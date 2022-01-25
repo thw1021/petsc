@@ -257,48 +257,47 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 }
 
 /*
-  Setup svtx struct array from an input (net,idx). See SVtx defined in dmnetworkimpl.h
+  Get info of an input vertex=(net,idx)
 
   Input Parameters:
 + Nsvtx - global num of shared vertices
 . svtx - array of shared vertices
-. (net,idx) - subnet number and local index for a vertex
-- *gidx - global index if (net,idx) is a from_vertex
+- (net,idx) - subnet number and local index for a vertex
 
   Output Parameters:
 + gidx - global index of (net,idx)
-. svtype -
+. svtype - see petsc/private/dmnetworkimpl.h
 - svtx_idx - ordering in the svtx array
-
-  If (net,idx) is a from_vertex: set its gidx, svtype, and index in the svtx array
-  elseif (net,idx) is a to_vertx: get its gidx; set its svtype and index in the svtx array
- */
-static PetscErrorCode SVtxSetUp(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt idx,PetscInt *gidx,SVtxType *svtype,PetscInt *svtx_idx)
+*/
+static PetscErrorCode VtxGetInfo(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt idx,PetscInt *gidx,SVtxType *svtype,PetscInt *svtx_idx)
 {
-  PetscInt i,j,*svto;
+  PetscInt i,j,*svto,g_idx;
   SVtxType vtype;
 
   PetscFunctionBegin;
   if (!Nsvtx) PetscFunctionReturn(0);
 
+  i     = -1;
+  g_idx = -1;
   vtype = SVNONE;
+
   for (i=0; i<Nsvtx; i++) {
     if (net == svtx[i].sv[0] && idx == svtx[i].sv[1]) {
-      /* (1) input vertex net.idx is a shared from_vertex, set its global index and output its svtype */
-      svtx[i].gidx = *gidx; /* set gidx */
-      vtype        = SVFROM;
+      g_idx = svtx[i].gidx;
+      vtype = SVFROM;
     } else { /* loop over svtx[i].n */
       for (j=1; j<svtx[i].n; j++) {
         svto = svtx[i].sv + 2*j;
         if (net == svto[0] && idx == svto[1]) {
           /* input vertex net.idx is a shared to_vertex, output its global index and its svtype */
-          *gidx = svtx[i].gidx; /* output gidx for to_vertex */
+          g_idx = svtx[i].gidx; /* output gidx for to_vertex */
           vtype = SVTO;
         }
       }
     }
     if (vtype != SVNONE) break;
   }
+  if (gidx)     *gidx     = g_idx;
   if (svtype)   *svtype   = vtype;
   if (svtx_idx) *svtx_idx = i;
   PetscFunctionReturn(0);
@@ -340,10 +339,10 @@ static PetscErrorCode TableAddSVtx(DM_Network *network,PetscInt *sedgelist,Petsc
         and net[0] < net[1] < ... < net[n-1]
         where sv[0] has SVFROM type, sv[i], i>0, has SVTO type.
  */
-static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,PetscInt *Nsvtx,SVtx **svtx)
+static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,PetscInt *Nsvtx,SVtx **svtx_ptr)
 {
   PetscErrorCode ierr;
-  SVtx           *sedges = NULL;
+  SVtx           *svtx = NULL;
   PetscInt       *sv,k,j,nsv,*tdata,**ta2sv;
   PetscTable     *svtas;
   PetscInt       gidx,net,idx,i,nta,ita,idx_from,idx_to,n;
@@ -401,26 +400,28 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
     k += 4;
   }
 
-  /* (2) Construct sedges from svtas
-     sedges: edges connect vertex sv[0]=(net[0],idx[0]) to vertices sv[k], k=1,...,n-1;
+  /* (2) Construct svtx from svtas
+     svtx: array of SVtx: sv[0]=(net[0],idx[0]) to vertices sv[k], k=1,...,n-1;
      net[k], k=0, ...,n-1, are in ascending order */
-  ierr = PetscMalloc1(nta,&sedges);CHKERRQ(ierr);
+  ierr = PetscMalloc1(nta,&svtx);CHKERRQ(ierr);
   for (nsv = 0; nsv < nta; nsv++) {
     /* for a single svtx, put shared vertices in ascending order of gidx */
     ierr = PetscTableGetCount(svtas[nsv],&n);CHKERRQ(ierr);
     ierr = PetscCalloc1(2*n,&sv);CHKERRQ(ierr);
-    sedges[nsv].sv   = sv;
-    sedges[nsv].n    = n;
-    sedges[nsv].gidx = -1; /* initialization */
+    svtx[nsv].sv   = sv;
+    svtx[nsv].n    = n;
+    svtx[nsv].gidx = network->NVertices; /* initialization */
 
     ierr = PetscTableGetHeadPosition(svtas[nsv],&ppos);CHKERRQ(ierr);
     for (k=0; k<n; k++) { /* gidx is sorted in ascending order */
       ierr = PetscTableGetNext(svtas[nsv],&ppos,&gidx,&i);CHKERRQ(ierr);
       gidx--; i--;
 
+      if (svtx[nsv].gidx > gidx) svtx[nsv].gidx = gidx; /*svtx[nsv].gidx = min(gidx) */
+
       j = ta2sv[nsv][i]; /* maps i to index of sedgelist */
-      sv[2*k]   = sedgelist[j];
-      sv[2*k+1] = sedgelist[j+1];
+      sv[2*k]   = sedgelist[j];   /* subnet number */
+      sv[2*k+1] = sedgelist[j+1]; /* index on the subnet */
     }
   }
 
@@ -430,8 +431,8 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
   }
   ierr = PetscFree3(svtas,tdata,ta2sv);CHKERRQ(ierr);
 
-  *Nsvtx = nta;
-  *svtx  = sedges;
+  *Nsvtx    = nta;
+  *svtx_ptr = svtx;
   PetscFunctionReturn(0);
 }
 
@@ -448,7 +449,6 @@ static PetscErrorCode SVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist,P
 -  svtx_ptr - pionter array of global shared vertices; lengh = Nsv_ptr;
 
 */
-//static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerged_ptr,PetscInt *Nsv_ptr,SVtx **svtx_ptr)
 static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerged_ptr,PetscInt *Nsv_ptr,SVtx **svtx_ptr)
 {
   PetscErrorCode ierr;
@@ -485,28 +485,25 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerg
   /* (2.2) Create vidxlTog: maps UN-MERGED local vertex index i to global index gidx (plex, excluding ghost vertices) */
   ierr = PetscMalloc1(network->nVertices,&vidxlTog);CHKERRQ(ierr);
   i = 0; gidx = 0;
-  nmerged = 0; /* local num of merged vertices */
+  nmerged        = 0; /* local num of merged vertices */
   network->nsvtx = 0;
   for (net=0; net<Nsubnet; net++) {
     for (idx=0; idx<network->subnet[net].Nvtx; idx++) {
-      gidx_from = gidx;
-      sv_idx    = -1;
-
-      ierr = SVtxSetUp(Nsv,svtx,net,idx,&gidx_from,&svtype,&sv_idx);CHKERRQ(ierr);
+      ierr = VtxGetInfo(Nsv,svtx,net,idx,&gidx_from,&svtype,&sv_idx);CHKERRQ(ierr);
       if (svtype == SVTO) {
         if (network->subnet[net].nvtx) {/* this proc owns sv_to */
           net_from = svtx[sv_idx].sv[0]; /* subnet num of its shared vertex */
           if (network->subnet[net_from].nvtx == 0) {
-            /* this proc does not own v_from, thus a new local coupling vertex */
+            /* this proc does not own v_from, thus a new local  vertex */
             network->nsvtx++;
           }
           vidxlTog[i++] = gidx_from;
-          nmerged++; /* a coupling vertex -- merged */
+          nmerged++; /* a shared vertex -- merged */
         }
       } else {
         if (svtype == SVFROM) {
           if (network->subnet[net].nvtx) {
-            /* this proc owns this v_from, a new local coupling vertex */
+            /* this proc owns this v_from, a new local shared vertex */
             network->nsvtx++;
           }
         }
@@ -546,8 +543,12 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerg
   ierr = PetscFree(vidxlTog);CHKERRQ(ierr);
 
   *nmerged_ptr = nmerged;
+#if 0
   *Nsv_ptr     = Nsv;
   *svtx_ptr    = svtx;
+#endif
+  network->svtx  = svtx;
+  network->Nsvtx = Nsv;
   ierr = PetscFree(sedgelist);CHKERRQ(ierr); /* created in DMNetworkAddSharedVertices() */
   PetscFunctionReturn(0);
 }
@@ -618,8 +619,10 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       }
     }
   }
+#if 0
   network->svtx  = svtx;
   network->Nsvtx = Nsv;
+#endif
 
   /* Create network->plex; One dimensional network, numCorners=2 */
   ierr = DMCreate(comm,&network->plex);CHKERRQ(ierr);
