@@ -51,7 +51,10 @@ class Configure(config.package.GNUPackage):
     args.append('--with-pm='+self.argDB['download-mpich-pm'])
     args.append('--disable-java')
     if self.hwloc.found:
-      args.append('--with-hwloc-prefix="'+self.hwloc.directory+'"')
+      if not config.setCompilers.Configure.isSolaris(self.log):
+        args.append('--with-hwloc="'+self.hwloc.directory+'"')
+      else:
+        args.append('--with-hwloc-prefix="'+self.hwloc.directory+'"')
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")

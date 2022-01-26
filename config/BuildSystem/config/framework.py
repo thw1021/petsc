@@ -551,7 +551,6 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       lines = [s for s in lines if s.find('skipping incompatible') < 0]
       # Multiple gfortran libraries present
       lines = [s for s in lines if s.find('may conflict with libgfortran') < 0]
-      lines = [s for s in lines if s.find('may conflict with libhwloc') < 0]
       # MacOS libraries built for different MacOS versions
       lines = [s for s in lines if s.find(' was built for newer macOS version') < 0]
       lines = [s for s in lines if s.find(' was built for newer OSX version') < 0]
