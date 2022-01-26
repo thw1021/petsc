@@ -70,6 +70,8 @@ cdef extern from * nogil:
     int TaoGetConstraintTolerances(PetscTAO,PetscReal*,PetscReal*)
 
     int TaoSetFunctionLowerBound(PetscTAO,PetscReal)
+    int TaoSetMaximumIterations(PetscTAO,PetscInt)
+    int TaoGetMaximumIterations(PetscTAO,PetscInt*)
     int TaoSetMaximumFunctionEvaluations(PetscTAO,PetscInt)
     int TaoGetMaximumFunctionEvaluations(PetscTAO,PetscInt*)
 
@@ -178,6 +180,12 @@ cdef extern from * nogil:
     int TaoBRGNSetL1SmoothEpsilon(PetscTAO,PetscReal)
     int TaoBRGNSetDictionaryMatrix(PetscTAO,PetscMat)
     int TaoBRGNGetDampingVector(PetscTAO,PetscVec*)
+
+cdef extern from "libpetsc4py.h":
+    PetscTAOType TAOPYTHON
+    int TaoPythonSetContext(PetscTAO,void*)
+    int TaoPythonGetContext(PetscTAO,void**)
+    int TaoPythonSetType(PetscTAO,char[])
 
 # --------------------------------------------------------------------
 
@@ -291,9 +299,9 @@ cdef int TAO_VarBounds(PetscTAO _tao,
     return 0
 
 cdef int TAO_Hessian(PetscTAO _tao,
-                     PetscVec  _x,
-                     PetscMat  _H,
-                     PetscMat  _P,
+                     PetscVec _x,
+                     PetscMat _H,
+                     PetscMat _P,
                      void* ctx) except PETSC_ERR_PYTHON with gil:
     cdef TAO tao = ref_TAO(_tao)
     cdef Vec x   = ref_Vec(_x)
