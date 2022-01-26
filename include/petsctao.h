@@ -156,6 +156,7 @@ typedef const char *TaoType;
 #define TAOSHELL    "shell"
 #define TAOADMM     "admm"
 #define TAOALMM     "almm"
+#define TAOPYTHON   "python"
 
 PETSC_EXTERN PetscClassId TAO_CLASSID;
 PETSC_EXTERN PetscFunctionList TaoList;
@@ -248,6 +249,8 @@ PETSC_EXTERN PetscErrorCode TaoSetJacobianStateRoutine(Tao,Mat,Mat,Mat,PetscErro
 PETSC_EXTERN PetscErrorCode TaoSetJacobianDesignRoutine(Tao,Mat,PetscErrorCode(*)(Tao,Vec,Mat,void*),void*);
 PETSC_EXTERN PetscErrorCode TaoSetJacobianInequalityRoutine(Tao,Mat,Mat,PetscErrorCode(*)(Tao,Vec,Mat,Mat,void*),void*);
 PETSC_EXTERN PetscErrorCode TaoSetJacobianEqualityRoutine(Tao,Mat,Mat,PetscErrorCode(*)(Tao,Vec,Mat,Mat,void*),void*);
+
+PETSC_EXTERN PetscErrorCode TaoPythonSetType(Tao,const char[]);
 
 PETSC_EXTERN PetscErrorCode TaoShellSetSolve(Tao,PetscErrorCode(*)(Tao));
 PETSC_EXTERN PetscErrorCode TaoShellSetContext(Tao,void*);
