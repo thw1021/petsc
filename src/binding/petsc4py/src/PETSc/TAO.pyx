@@ -36,6 +36,7 @@ class TAOType:
     SHELL    = S_(TAOSHELL)
     ADMM     = S_(TAOADMM)
     ALMM     = S_(TAOALMM)
+    PYTHON   = S_(TAOPYTHON)
 
 class TAOConvergedReason:
     """
@@ -418,6 +419,19 @@ cdef class TAO(Object):
         CHKERR( TaoGetTolerances(self.tao, &_gatol, &_grtol, &_gttol) )
         return (toReal(_gatol), toReal(_grtol), toReal(_gttol))
 
+    def setMaximumIterations(self, mit):
+        """
+        """
+        cdef PetscInt _mit = asInt(mit)
+        CHKERR( TaoSetMaximumIterations(self.tao, _mit) )
+
+    def getMaximumIterations(self):
+        """
+        """
+        cdef PetscInt _mit = PETSC_DEFAULT
+        CHKERR( TaoGetMaximumIterations(self.tao, &_mit) )
+        return toInt(_mit)
+
     def setMaximumFunctionEvaluations(self, mit):
         """
         """
@@ -672,6 +686,29 @@ cdef class TAO(Object):
         CHKERR( TaoBRGNGetDampingVector(self.tao, &damp.vec) )
         PetscINCREF(damp.obj)
         return damp
+
+    def createPython(self, context=None, comm=None):
+        cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+        cdef PetscTAO tao = NULL
+        CHKERR( TaoCreate(ccomm, &tao) )
+        PetscCLEAR(self.obj); self.tao = tao
+        CHKERR( TaoSetType(self.tao, TAOPYTHON) )
+        CHKERR( TaoPythonSetContext(self.tao, <void*>context) )
+        return self
+
+    def setPythonContext(self, context):
+        CHKERR( TaoPythonSetContext(self.tao, <void*>context) )
+
+    def getPythonContext(self):
+        cdef void *context = NULL
+        CHKERR( TaoPythonGetContext(self.tao, &context) )
+        if context == NULL: return None
+        else: return <object> context
+
+    def setPythonType(self, py_type):
+        cdef const char *cval = NULL
+        py_type = str2bytes(py_type, &cval)
+        CHKERR( TaoPythonSetType(self.tao, cval) )
 
     # --- application context ---
 
