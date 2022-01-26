@@ -118,6 +118,8 @@ int main(int argc,char **argv)
     ierr = MatViewFromOptions(D,NULL,"-D_view");CHKERRQ(ierr);
     ierr = MatMultEqual(A,D,10,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Ax != Dx");
+    ierr = MatMultHermitianTransposeEqual(A,D,10,&flg);CHKERRQ(ierr);
+    if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"A^Hx != D^Hx");
     ierr = MatMultAddEqual(A,D,10,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"y+Ax != y+Dx");
     ierr = MatGetOwnershipRange(B,&begin,NULL);CHKERRQ(ierr);
@@ -144,6 +146,10 @@ int main(int argc,char **argv)
     ierr = MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatMatMultEqual(A,B,P,10,&flg);CHKERRQ(ierr);
     if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"ABx != Px");
+    if (!PetscDefined(USE_COMPLEX)) { /* TODO: missing MATPRODUCT_AhB */
+      ierr = MatTransposeMatMultEqual(A,B,P,10,&flg);CHKERRQ(ierr);
+      if (!flg) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"A^HBx != P^Hx");
+    }
     ierr = MatDestroy(&B);CHKERRQ(ierr);
     ierr = MatDestroy(&P);CHKERRQ(ierr);
     if (n) {
