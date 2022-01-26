@@ -54,7 +54,7 @@ template <bool b> struct UseComplexTag { };
 } // namespace detail
 
 template <Device::CUPM::DeviceType T>
-struct VecSeq_CUPM : Vec_CUPMBase<T>
+struct VecSeq_CUPM : Vec_CUPMBase<T,VecSeq_CUPM<T>>
 {
   PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T);
 
@@ -62,6 +62,14 @@ private:
   PETSC_CXX_COMPAT_DECL(constexpr Vec_Seq* VecSeqCast_(Vec v))
   {
     return static_cast<Vec_Seq*>(v->data);
+  }
+
+  PETSC_CXX_COMPAT_DECL(constexpr VecType VECTYPE_())
+  {
+    switch (T) {
+    case Device::CUPM::DeviceType::CUDA: return VECSEQCUDA;
+    case Device::CUPM::DeviceType::HIP:  return VECSEQHIP;
+    }
   }
 
   PETSC_CXX_COMPAT_DEFN(PetscErrorCode HostAllocateCheck_(PetscDeviceContext,Vec));
@@ -317,9 +325,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async(MPI_Com
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreate(comm,v);CHKERRQ(ierr);
-  ierr = VecSetSizes(*v,n,n);CHKERRQ(ierr);
-  ierr = VecSetType(*v,VECSEQCUPM());CHKERRQ(ierr);
+  ierr = create_async_base(comm,n,n,v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
