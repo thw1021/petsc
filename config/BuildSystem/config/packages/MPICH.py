@@ -6,7 +6,7 @@ class Configure(config.package.GNUPackage):
     config.package.GNUPackage.__init__(self, framework)
     self.download         = ['https://www.mpich.org/static/downloads/4.0/mpich-4.0.tar.gz',
                              'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-4.0.tar.gz']
-    self.download_342     = ['https://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz',
+    self.download_solaris = ['https://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz',
                              'http://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-3.4.2.tar.gz']
     self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
@@ -83,7 +83,5 @@ class Configure(config.package.GNUPackage):
     return installDir
 
   def configure(self):
-    if config.setCompilers.Configure.isSolaris(self.log):
-      self.download = self.download_342
     return config.package.Package.configure(self)
 
