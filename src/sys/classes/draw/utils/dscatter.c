@@ -165,7 +165,7 @@ PetscErrorCode  PetscDrawSPDestroy(PetscDrawSP *sp)
 
    Input Parameters:
 +  sp - the scatter plot data structure
--  x, y - two arrays of length dim (where dim is the number of curves passed to PetscDrawSPCreate) containing the new x and y coordinate values for each of the curves.
+-  x, y - two arrays of length dim containing the new x and y coordinate values for each of the curves. Here  dim is the number of curves passed to PetscDrawSPCreate()
 
    Level: intermediate
 
