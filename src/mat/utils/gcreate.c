@@ -580,7 +580,15 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscInt ncoo,const PetscInt c
 
    Level: beginner
 
-   Notes: Entries can be repeated, see MatSetValuesCOO(). Currently optimized for cuSPARSE matrices only.
+   Notes:
+    Entries can be repeated, see MatSetValuesCOO(). Currently optimized for cuSPARSE matrices only.
+
+    The values of coo_i and coo_j are copied so the user may free that immediately after calling this function
+
+    Currently one can only pass local row_indices in the coo_i indices
+
+   Developers Note:
+    We need to support remote row indices ASAP.
 
 .seealso: MatSetValuesCOO(), MatSeqAIJSetPreallocation(), MatMPIAIJSetPreallocation(), MatSeqBAIJSetPreallocation(), MatMPIBAIJSetPreallocation(), MatSeqSBAIJSetPreallocation(), MatMPISBAIJSetPreallocation()
 @*/
@@ -626,11 +634,16 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscInt ncoo,const PetscInt coo_i[]
 
    Level: beginner
 
-   Notes: The values must follow the order of the indices prescribed with MatSetPreallocationCOO().
-          When repeated entries are specified in the COO indices the coo_v values are first properly summed.
-          The imode flag indicates if coo_v must be added to the current values of the matrix (ADD_VALUES) or overwritten (INSERT_VALUES).
-          Currently optimized for cuSPARSE matrices only.
-          Passing coo_v == NULL is equivalent to passing an array of zeros.
+   Notes:
+     The values must follow the order of the indices prescribed with MatSetPreallocationCOO() which must have been previously called.
+
+     When repeated entries are specified in the COO indices the coo_v values are properly summed internally by the matrix.
+
+     The imode flag indicates if coo_v must be added to the current values of the matrix (ADD_VALUES) or overwritten (INSERT_VALUES).
+
+     Passing coo_v == NULL is equivalent to passing an array of zeros.
+
+     Currently optimized for cuSPARSE matrices only.
 
 .seealso: MatSetPreallocationCOO(), InsertMode, INSERT_VALUES, ADD_VALUES
 @*/
