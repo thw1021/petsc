@@ -7,11 +7,10 @@
 #define taopythonsettype_            taopythonsettype
 #endif
 
-PETSC_EXTERN void taopythonsettype_(TAO *tao, char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
+PETSC_EXTERN void taopythonsettype_(Tao *tao, char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
 {
   char *t;
   FIXCHAR(name,len,t);
   *ierr = TaoPythonSetType(*tao,t);if (*ierr) return;
   FREECHAR(name,t);
 }
-
