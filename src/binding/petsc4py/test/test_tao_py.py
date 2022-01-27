@@ -83,14 +83,14 @@ class TestTaoPython(unittest.TestCase):
         y1 = x.duplicate()
         y2 = x.duplicate()
         tao.setObjective(Objective())
-        tao.setGradient(Gradient())
+        tao.setGradient(Gradient(),None)
         tao.setMonitor(ctx.monitor)
         tao.setFromOptions()
         tao.setMaximumIterations(3)
+        tao.setSolution(x)
 
         # Call the solve method of MyTAO
         x.set(0.5)
-        tao.setInitial(x)
         tao.solve()
         n = tao.getIterationNumber()
         self.assertTrue(n == 0)
@@ -98,7 +98,6 @@ class TestTaoPython(unittest.TestCase):
         # Call the default solve method and use step of MyTAO
         ctx.solve = None
         x.set(0.5)
-        tao.setInitial(x)
         tao.solve()
         n = tao.getIterationNumber()
         self.assertTrue(n == 3)
@@ -107,7 +106,6 @@ class TestTaoPython(unittest.TestCase):
         # Call the default solve method with the default step method
         ctx.step = None
         x.set(0.5)
-        tao.setInitial(x)
         tao.solve()
         n = tao.getIterationNumber()
         self.assertTrue(n == 3)
@@ -123,6 +121,10 @@ class TestTaoPython(unittest.TestCase):
         self.assertTrue(ctx.log['step'] == n)
 
 # --------------------------------------------------------------------
+
+import numpy
+if numpy.iscomplexobj(PETSc.ScalarType()):
+    del TestTaoPython
 
 if __name__ == '__main__':
     unittest.main()
