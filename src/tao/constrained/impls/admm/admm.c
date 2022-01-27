@@ -371,7 +371,7 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
   ierr  = VecGetSize(tempL,&N);CHKERRQ(ierr);
 
   if (am->Hx && am->ops->misfithess) {
-    ierr = TaoSetHessianRoutine(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao);CHKERRQ(ierr);
+    ierr = TaoSetHessian(am->subsolverX, am->Hx, am->Hx, SubHessianUpdate, tao);CHKERRQ(ierr);
   }
 
   if (!am->zJI) {
@@ -397,10 +397,10 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
       break;
     }
     if (am->ops->regobjgrad) {
-      ierr = TaoSetObjectiveAndGradientRoutine(am->subsolverZ, RegObjGradUpdate, tao);CHKERRQ(ierr);
+      ierr = TaoSetObjectiveAndGradient(am->subsolverZ, NULL, RegObjGradUpdate, tao);CHKERRQ(ierr);
     }
     if (am->Hz && am->ops->reghess) {
-      ierr = TaoSetHessianRoutine(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao);CHKERRQ(ierr);
+      ierr = TaoSetHessian(am->subsolverZ, am->Hz, am->Hzpre, RegHessianUpdate, tao);CHKERRQ(ierr);
     }
   }
 
@@ -603,12 +603,12 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
   if (!tao->gradient) {
     ierr = VecDuplicate(tao->solution,&tao->gradient);CHKERRQ(ierr);
   }
-  ierr = TaoSetInitialVector(am->subsolverX, tao->solution);CHKERRQ(ierr);
+  ierr = TaoSetSolution(am->subsolverX, tao->solution);CHKERRQ(ierr);
   if (!am->z) {
     ierr = VecDuplicate(tao->solution,&am->z);CHKERRQ(ierr);
     ierr = VecSet(am->z,0.0);CHKERRQ(ierr);
   }
-  ierr = TaoSetInitialVector(am->subsolverZ, am->z);CHKERRQ(ierr);
+  ierr = TaoSetSolution(am->subsolverZ, am->z);CHKERRQ(ierr);
   if (!am->workLeft) {
     ierr = VecDuplicate(tao->solution,&am->workLeft);CHKERRQ(ierr);
   }
@@ -670,7 +670,7 @@ static PetscErrorCode TaoSetUp_ADMM(Tao tao)
   }
 
   /*Update spectral and dual elements to X subsolver */
-  ierr = TaoSetObjectiveAndGradientRoutine(am->subsolverX, SubObjGradUpdate, tao);CHKERRQ(ierr);
+  ierr = TaoSetObjectiveAndGradient(am->subsolverX, NULL, SubObjGradUpdate, tao);CHKERRQ(ierr);
   ierr = TaoSetJacobianEqualityRoutine(am->subsolverX,am->JA,am->JApre, am->ops->misfitjac, am->misfitjacobianP);CHKERRQ(ierr);
   ierr = TaoSetJacobianEqualityRoutine(am->subsolverZ,am->JB,am->JBpre, am->ops->regjac, am->regjacobianP);CHKERRQ(ierr);
   PetscFunctionReturn(0);

@@ -108,6 +108,20 @@ PetscErrorCode SNESConverged(SNES snes,
 }
 
 PETSC_STATIC_INLINE
+PetscErrorCode TaoRegisterCustom(const char sname[], PetscErrorCode (*function)(Tao))
+{
+#if !defined(PETSC_USE_COMPLEX)
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = TaoRegister(sname, function);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+#else
+  PetscFunctionBegin;
+  PetscFunctionReturn(0);
+#endif
+}
+
+PETSC_STATIC_INLINE
 PetscErrorCode TaoConverged(Tao tao)
 {
   PetscErrorCode ierr;
