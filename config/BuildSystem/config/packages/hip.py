@@ -47,9 +47,9 @@ class Configure(config.package.Package):
     self.popLanguage()
     self.getExecutable(petscHip,getFullPath=1,resultName='systemHipc')
     if hasattr(self,'systemHipc'):
-      hipcDir = os.path.dirname(self.systemHipc)
-      hipDir = os.path.split(hipcDir)[0]
-      yield hipDir
+      hipcDir = os.path.dirname(self.systemHipc) # /opt/rocm/bin
+      self.hipDir = os.path.split(hipcDir)[0] # /opt/rocm
+      yield self.hipDir
     return
 
   def checkSizeofVoidP(self):
