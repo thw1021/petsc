@@ -580,7 +580,10 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscInt ncoo,const PetscInt c
 
    Level: beginner
 
-   Notes: Entries can be repeated, see MatSetValuesCOO().
+   Notes:
+    Entries can be repeated, see MatSetValuesCOO().
+
+    The arrays coo_i and coo_j may be freed immediately after calling this function.
 
    If the matrix type is not AIJ or AIJKOKKOS, then the entries must be owned by the local part
    of the matrix and no row or column indices are allowed to be negative.
@@ -644,7 +647,8 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscInt ncoo,const PetscInt coo_i[]
    called prior to this function.
 
    The indices coo_i and coo_j may be modified within this function. They might be translated to corresponding global
-   indices, but the caller should not rely on them having any specific value after this function returns.
+   indices, but the caller should not rely on them having any specific value after this function returns. The arrays
+   can be freed or reused immediately after this function returns.
 
    If the matrix type is not AIJ or AIJKOKKOS, then the entries must be owned by the local part
    of the matrix and no row or column indices are allowed to be negative.
@@ -688,10 +692,8 @@ PetscErrorCode MatSetPreallocationCOOLocal(Mat A,PetscInt ncoo,PetscInt coo_i[],
    Level: beginner
 
    Notes: The values must follow the order of the indices prescribed with MatSetPreallocationCOO() or MatSetPreallocationCOOLocal().
-          When repeated entries are specified in the COO indices the coo_v values are first properly summed.
+          When repeated entries are specified in the COO indices the coo_v values are first properly summed, regardless of the value of imode.
           The imode flag indicates if coo_v must be added to the current values of the matrix (ADD_VALUES) or overwritten (INSERT_VALUES).
-          Currently optimized for AIJCUSPARSE and AIJKOKKOS matrices only.
-          Passing coo_v == NULL is equivalent to passing an array of zeros.
 
 .seealso: MatSetPreallocationCOO(), MatSetPreallocationCOOLocal(), InsertMode, INSERT_VALUES, ADD_VALUES
 @*/
