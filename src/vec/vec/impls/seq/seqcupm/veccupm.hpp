@@ -11,12 +11,14 @@
 #  error "VecSeq_CUPM requires C++11"
 #endif
 
+#if 0
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/reduce.h>
 #include <thrust/functional.h>
 #include <thrust/iterator/counting_iterator.h>
+#endif
 
 // TODO
 // - refactor the AXPY's for code reuse
@@ -56,24 +58,12 @@ template <bool b> struct UseComplexTag { };
 template <Device::CUPM::DeviceType T>
 struct VecSeq_CUPM : Vec_CUPMBase<T,VecSeq_CUPM<T>>
 {
-  PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T);
+  PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T,VecSeq_CUPM<T>);
+
+protected:
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 VecType VECTYPE_()) { return VECSEQCUPM(); }
 
 private:
-  PETSC_CXX_COMPAT_DECL(constexpr Vec_Seq* VecSeqCast_(Vec v))
-  {
-    return static_cast<Vec_Seq*>(v->data);
-  }
-
-  PETSC_CXX_COMPAT_DECL(constexpr VecType VECTYPE_())
-  {
-    switch (T) {
-    case Device::CUPM::DeviceType::CUDA: return VECSEQCUDA;
-    case Device::CUPM::DeviceType::HIP:  return VECSEQHIP;
-    }
-  }
-
-  PETSC_CXX_COMPAT_DEFN(PetscErrorCode HostAllocateCheck_(PetscDeviceContext,Vec));
-
   // common core for min and max
   template <typename TupleFuncT, typename UnaryFuncT>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(TupleFuncT&&,UnaryFuncT&&,PetscReal,Vec,PetscInt*,PetscReal*));
@@ -90,13 +80,13 @@ private:
   template <int N>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_kernel_dispatch_(PetscDeviceContext,cupmStream_t,const PetscScalar*,const Vec[],PetscInt,PetscScalar*,PetscInt*));
   // common core for the various create routines
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async_(Vec,PetscScalar*/*device_ptr*/=nullptr));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupm_async_(Vec,PetscScalar*/*host_ptr*/=nullptr,PetscScalar*/*device_ptr*/=nullptr));
 
 public:
   // callable directly via a bespoke function
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupm_async(MPI_Comm,PetscInt,Vec*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode createwithbotharrays_async(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupm_async(MPI_Comm,PetscInt,PetscInt,Vec*,PetscBool));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupmwithbotharrays_async(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
 
   template <PetscMemType mtype>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode resetarray_async(Vec));
@@ -141,14 +131,6 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode bindtocpu_async(Vec,PetscBool));
 };
 
-template <Device::CUPM::DeviceType T> template <PetscMemType MT, MemoryAccess MA>
-const PetscMemType VecSeq_CUPM<T>::vector_array<MT,MA>::memory_type;
-
-template <Device::CUPM::DeviceType T> template <PetscMemType MT, MemoryAccess MA>
-const MemoryAccess VecSeq_CUPM<T>::vector_array<MT,MA>::access_type;
-
-#undef PETSC_VEC_CUPM_BASE_CLASS_HEADER
-
 // ================================================================================== //
 //                                                                                    //
 //                                  utility methods                                   //
@@ -166,31 +148,13 @@ const MemoryAccess VecSeq_CUPM<T>::vector_array<MT,MA>::access_type;
     }                                                                           \
   } while (0)
 
-#define STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype) \
-  static_assert((mtype == PETSC_MEMTYPE_HOST) || (mtype == PETSC_MEMTYPE_DEVICE),"Only comparisons between purely host and device memory are valid")
-
-template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::HostAllocateCheck_(PetscDeviceContext dctx, Vec v))
-{
-  PetscErrorCode ierr;
-  auto           vseq = VecSeqCast_(v);
-
-  PetscFunctionBegin;
-  if (!vseq) {
-    ierr = PetscNewLog(PetscObjectCast(v),&vseq);CHKERRQ(ierr);
-    v->data = vseq;
-  }
-  ierr = HostAllocateCheckBase_(dctx,v);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 // v->ops->getarrayandmemtype
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getarrayandmemtype_async(Vec v, PetscScalar **a, PetscMemType *mtype))
 {
   PetscFunctionBegin;
   if (v->offloadmask & PETSC_OFFLOAD_GPU) {
-    const auto vcu = CUPMCast_(v);
+    const auto vcu = VecCUPMCast(v);
     // return device pointer when device has up-to-date data, such as when offloadmask is
     // PETSC_OFFLOAD_BOTH
     *a = vcu->device_array;
@@ -216,31 +180,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorearrayandmemtype_asyn
   PetscFunctionBegin;
   *a             = nullptr;
   v->offloadmask = (v->offloadmask & PETSC_OFFLOAD_GPU) ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
-  PetscFunctionReturn(0);
-}
-
-template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::create_async_(Vec v, PetscScalar *device_array))
-{
-  PetscMPIInt    size;
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm(PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  if (PetscUnlikely(size > 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
-  ierr = PetscDeviceInitialize(cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
-  ierr = VecCreate_Seq_Private(v,nullptr);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName(PetscObjectCast(v),VECSEQCUPM());CHKERRQ(ierr);
-  ierr = bindtocpu_async(v,PETSC_FALSE);CHKERRQ(ierr);
-
-  // Later, functions check for the Vec_CUPM structure existence, so do not create it without an
-  // array attached
-  if (device_array) {
-    PetscDeviceContext dctx;
-
-    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = DeviceAllocateCheck_(dctx,v,device_array);CHKERRQ(ierr);
-  }
   PetscFunctionReturn(0);
 }
 
@@ -296,6 +235,22 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(Unary
   PetscFunctionReturn(0);
 }
 
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async_(Vec v, PetscScalar *host_array, PetscScalar *device_array))
+{
+  PetscMPIInt    size;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = MPI_Comm_size(PetscObjectComm(PetscObjectCast(v)),&size);CHKERRMPI(ierr);
+  if (PetscUnlikely(size > 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
+  // REVIEW ME: remove me
+  if (PetscUnlikely(VecIMPLCast(v))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
+  ierr = VecCreate_Seq_Private(v,host_array);CHKERRQ(ierr);
+  ierr = Initialize_CUPMBase_(v,PETSC_FALSE,host_array,device_array);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 // ================================================================================== //
 //                                                                                    //
 //                                  public methods                                    //
@@ -303,7 +258,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(Unary
 // ================================================================================== //
 
 // ================================================================================== //
-//                                   constructors                                     //
+//                             constructors/destructors                               //
 
 // v->ops->create
 template <Device::CUPM::DeviceType T>
@@ -312,70 +267,32 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::create_async(Vec v))
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLayoutSetUp(v->map);CHKERRQ(ierr);
-  ierr = create_async_(v);CHKERRQ(ierr);
-  ierr = set_async(v,0);CHKERRQ(ierr);
+  ierr = createseqcupm_async_(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 // VecCreateSeqCUPM()
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async(MPI_Comm comm, PetscInt n, Vec *v))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async(MPI_Comm comm, PetscInt bs, PetscInt n, Vec *v, PetscBool call_set_type))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = create_async_base(comm,n,n,v);CHKERRQ(ierr);
+  ierr = Create_CUPMBase_(comm,bs,n,n,v,call_set_type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 // VecCreateSeqCUPMWithArrays()
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createwithbotharrays_async(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar host_array[], const PetscScalar device_array[], Vec *v))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupmwithbotharrays_async(MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar host_array[], const PetscScalar device_array[], Vec *v))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreate(comm,v);CHKERRQ(ierr);
-  ierr = VecSetSizes(*v,n,n);CHKERRQ(ierr);
-  // REVIEW ME: why doesn't this set type?
-  ierr = VecSetBlockSize(*v,bs);CHKERRQ(ierr);
-  // REVIEW ME: why no PetscLayoutSetUp()????
-  // set v's device array to be device_array, do not allocate memory on host yet.
-  ierr = create_async_(*v,PetscRemoveConstCast(device_array));CHKERRQ(ierr);
-  if (host_array) {
-    VecSeqCast_(*v)->array = PetscRemoveConstCast(host_array);
-    (*v)->offloadmask = device_array ? PETSC_OFFLOAD_BOTH : PETSC_OFFLOAD_CPU;
-  } else {
-    (*v)->offloadmask = device_array ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_UNALLOCATED;
-  }
-
-  // REVIEW ME: should this check exist? It is to assert the following from createwitharrays
-  // docstrings, but doing so is potentially ridiculously expensive:
-  // "If both cpuarray and gpuarray are provided, the provided arrays must have identical
-  // values."
-  if (PetscDefined(USE_DEBUG) && device_array && host_array) {
-    constexpr auto      atol   = PetscReal(1e-08),rtol = PetscReal(1e-05);
-    const auto          nscal  = n*bs; // REVIEW ME: is this correct for total length of array?
-    const auto          nbytes = nscal*sizeof(*device_array);
-    PetscDeviceContext  dctx;
-    cupmError_t         cerr;
-    cupmStream_t        stream;
-    PetscScalar        *debug_array;
-
-    ierr = PetscMalloc1(n,&debug_array);CHKERRQ(ierr);
-    ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
-    cerr = cupmMemcpyAsync(debug_array,device_array,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
-    ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
-    for (PetscInt i = 0; i < nscal; ++i) {
-      const auto hreal = PetscRealPart(host_array[i]),  himag = PetscImaginaryPart(host_array[i]);
-      const auto dreal = PetscRealPart(debug_array[i]), dimag = PetscImaginaryPart(debug_array[i]);
-      const auto close = PetscIsCloseAtTol(hreal,dreal,rtol,atol) && PetscIsCloseAtTol(himag,dimag,rtol,atol);
-
-      if (PetscUnlikely(!close)) SETERRQ6(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Host and device arrays do not match: host[%" PetscInt_FMT "] %g+i%g != device[%" PetscInt_FMT "] %g+i%g",i,hreal,himag,i,dreal,dimag);
-    }
-    ierr = PetscFree(debug_array);CHKERRQ(ierr);
-  }
+  // do NOT call VecSetType(), otherwise ops->create() -> create_async() ->
+  // createseqcupm_async_() is called!
+  ierr = createseqcupm_async(comm,bs,n,N,v,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = createseqcupm_async_(*v,PetscRemoveConstCast(host_array),PetscRemoveConstCast(device_array));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -386,11 +303,105 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::duplicate_async(Vec v, Vec 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = createseqcupm_async(PetscObjectComm(PetscObjectCast(v)),v->map->n,y);CHKERRQ(ierr);
-  ierr = PetscLayoutReference(v->map,&(*y)->map);CHKERRQ(ierr);
-  ierr = PetscObjectListDuplicate(PetscObjectCast(v)->olist,&(PetscObjectCast(*y)->olist));CHKERRQ(ierr);
-  ierr = PetscFunctionListDuplicate(PetscObjectCast(v)->qlist,&(PetscObjectCast(*y)->qlist));CHKERRQ(ierr);
-  (*y)->stash.ignorenegidx = v->stash.ignorenegidx;
+  // call VecSetType()
+  ierr = Duplicate_CUPMBase_(v,y,PETSC_TRUE);CHKERRQ(ierr);
+  // in case the user has done some VecSetOps() tomfoolery
+  ierr = PetscMemcpy((*y)->ops,v->ops,sizeof(*v->ops));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+// v->ops->destroy
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = Destroy_CUPMBase_(v);CHKERRQ(ierr);
+  {
+    const auto useit = UseCUPMHostAlloc(v->pinned_memory);
+    ierr = VecDestroy_Seq(v);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+// VecCUPMBindToCPU()
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, PetscBool usehost))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (v->boundtocpu) PetscFunctionReturn(0);
+  v->boundtocpu = usehost;
+  // default random number generator
+  ierr = PetscFree(v->defaultrandtype);CHKERRQ(ierr);
+  if (usehost) {
+    PetscDeviceContext dctx;
+
+    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(PETSCRANDER48,&v->defaultrandtype);CHKERRQ(ierr);
+  } else {
+    // REVIEW ME: hip seemingly has no equivalent?
+    ierr = PetscStrallocpy(PETSCCURAND,&v->defaultrandtype);CHKERRQ(ierr);
+  }
+  // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
+  v->ops->dot                    = v->ops->dot_local   = usehost ? VecDot_Seq   : dot_async;
+  v->ops->norm                   = v->ops->norm_local  = usehost ? VecNorm_Seq  : norm_async;
+  v->ops->tdot                   = v->ops->tdot_local  = usehost ? VecTDot_Seq  : tdot_async;
+  v->ops->mdot                   = v->ops->mdot_local  = usehost ? VecMDot_Seq  : mdot_async;
+  v->ops->mtdot                  = v->ops->mtdot_local = usehost ? VecMTDot_Seq : nullptr;
+  v->ops->scale                  = usehost ? VecScale_Seq : scale_async;
+  v->ops->copy                   = usehost ? VecCopy_Seq : copy_async;
+  v->ops->set                    = usehost ? VecSet_Seq : set_async;
+  v->ops->swap                   = usehost ? VecSwap_Seq : swap_async;
+  v->ops->axpy                   = usehost ? VecAXPY_Seq : axpy_async;
+  v->ops->axpby                  = usehost ? VecAXPBY_Seq : axpby_async;
+  v->ops->axpbypcz               = usehost ? VecAXPBYPCZ_Seq : axpbypcz_async;
+  v->ops->pointwisemult          = usehost ? VecPointwiseMult_Seq : pointwisemult_async;
+  v->ops->pointwisedivide        = usehost ? VecPointwiseDivide_Seq : pointwisedivide_async;
+  v->ops->setrandom              = usehost ? VecSetRandom_Seq : setrandom_async;
+  v->ops->maxpy                  = usehost ? VecMAXPY_Seq : maxpy_async;
+  v->ops->aypx                   = usehost ? VecAYPX_Seq : aypx_async;
+  v->ops->waxpy                  = usehost ? VecWAXPY_Seq : waxpy_async;
+  v->ops->dotnorm2               = usehost ? nullptr : dotnorm2_async;
+  v->ops->conjugate              = usehost ? VecConjugate_Seq : conjugate_async;
+  v->ops->max                    = usehost ? VecMax_Seq : max_async;
+  v->ops->min                    = usehost ? VecMin_Seq : min_async;
+  v->ops->reciprocal             = usehost ? VecReciprocal_Default : reciprocal_async;
+  v->ops->sum                    = usehost ? nullptr : sum_async;
+  v->ops->shift                  = usehost ? nullptr : shift_async;
+
+  v->ops->placearray             = usehost ? VecPlaceArray_Seq : placearray_async<PETSC_MEMTYPE_HOST>;
+  v->ops->replacearray           = replacearray_async<PETSC_MEMTYPE_HOST>;
+  v->ops->resetarray             = usehost ? VecResetArray_Seq : resetarray_async<PETSC_MEMTYPE_HOST>;
+
+  v->ops->duplicate              = usehost ? VecDuplicate_Seq : duplicate_async;
+  v->ops->getlocalvector         = usehost ? nullptr : &getlocalvector_async</*read = */false>;
+  v->ops->getlocalvectorread     = usehost ? nullptr : &getlocalvector_async</*read = */true>;
+  v->ops->restorelocalvector     = usehost ? nullptr : &restorelocalvector_async</*read = */false>;
+  v->ops->restorelocalvectorread = usehost ? nullptr : &restorelocalvector_async</*read = */true>;
+
+  v->ops->bindtocpu              = bindtocpu_async;
+  v->ops->destroy                = destroy_async;
+  v->ops->getarrayandmemtype     = getarrayandmemtype_async;
+  v->ops->restorearrayandmemtype = restorearrayandmemtype_async;
+  v->ops->getarray               = getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>;
+  v->ops->restorearray           = restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>;
+  v->ops->getarraywrite          = usehost ? nullptr : &getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>;
+  v->ops->restorearraywrite      = usehost ? nullptr : &restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>;
+  // can't do ternary operator here because:
+  // 1. signature of getarray/restorearray have PetscScalar** not const PetscScalar** -> use a
+  //    lambda to convert the types
+  // 2. each lambda is a unique type, which isn't convertible to std::nullptr_t
+  if (usehost) {
+    v->ops->getarrayread         = nullptr;
+    v->ops->restorearrayread     = nullptr;
+  } else {
+    v->ops->getarrayread         = [](Vec v, const PetscScalar **a){ return getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a)); };
+  v->ops->restorearrayread       = [](Vec v, const PetscScalar **a){ return restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a)); };
+  }
   PetscFunctionReturn(0);
 }
 
@@ -420,11 +431,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::resetarray_async(Vec v))
     ierr = VecResetArray_Seq(v);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_CPU;
   } else {
-    const auto vseq = VecSeqCast_(v);
+    const auto vseq = VecIMPLCast(v);
 
     ierr = CopyToDevice_(dctx,v);CHKERRQ(ierr);
     ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
-    CUPMCast_(v)->device_array = vseq->unplacedarray;
+    VecCUPMCast(v)->device_array = vseq->unplacedarray;
     vseq->unplacedarray        = nullptr;
     v->offloadmask             = PETSC_OFFLOAD_GPU;
   }
@@ -448,12 +459,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, con
     ierr = VecPlaceArray_Seq(v,a);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_CPU;
   } else {
-    const auto vseq = VecSeqCast_(v);
+    const auto vseq = VecIMPLCast(v);
 
     if (PetscUnlikely(vseq->unplacedarray)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
     ierr = getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>(v,&vseq->unplacedarray);CHKERRQ(ierr);
     ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
-    CUPMCast_(v)->device_array = const_cast<PetscScalar*>(a);
+    VecCUPMCast(v)->device_array = const_cast<PetscScalar*>(a);
     // offload mask set by getarray
   }
   PetscFunctionReturn(0);
@@ -470,7 +481,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   if (PetscMemTypeHost(mtype)) {
-    const auto vseq = VecSeqCast_(v);
+    const auto vseq = VecIMPLCast(v);
 
     if (vseq->array != vseq->array_allocated) {
       PetscDeviceContext dctx;
@@ -487,7 +498,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
     v->pinned_memory      = PETSC_FALSE; // REVIEW ME: we can determine this
     v->offloadmask        = PETSC_OFFLOAD_CPU;
   } else {
-    const auto vcu = CUPMCast_(v);
+    const auto vcu = VecCUPMCast(v);
 
     switch (vcu->ptr_ownership) {
     case PETSC_COPY_VALUES:
@@ -525,7 +536,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUPM(),&wisseqcupm);CHKERRQ(ierr);
   if (wisseqcupm) {
-    if (const auto vseq = VecSeqCast_(w)) {
+    if (const auto vseq = VecIMPLCast(w)) {
       if (vseq->array_allocated) {
         const auto useit = UseCUPMHostAlloc(w->pinned_memory);
 
@@ -535,7 +546,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
       vseq->array         = nullptr;
       vseq->unplacedarray = nullptr;
     }
-    if (const auto vcu = CUPMCast_(w)) {
+    if (const auto vcu = VecCUPMCast(w)) {
       if (vcu->device_array) {
         cupmStream_t stream;
         cupmError_t  cerr;
@@ -554,7 +565,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
     w->spptr         = v->spptr;
     ierr = PetscObjectStateIncrease(PetscObjectCast(w));CHKERRQ(ierr);
   } else {
-    const auto arrayptr = &VecSeqCast_(w)->array;
+    const auto arrayptr = &VecIMPLCast(w)->array;
     if (read) {
       ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(arrayptr));CHKERRQ(ierr);
     } else {
@@ -591,7 +602,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
     w->offloadmask   = PETSC_OFFLOAD_UNALLOCATED;
     w->spptr         = nullptr;
   } else {
-    auto array = &VecSeqCast_(w)->array;
+    auto array = &VecIMPLCast(w)->array;
     if (read) {
       ierr = VecRestoreArrayRead(v,const_cast<const PetscScalar**>(array));CHKERRQ(ierr);
     } else {
@@ -602,7 +613,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
       cupmError_t  cerr;
 
       ierr = GetHandles_(&stream);CHKERRQ(ierr);
-      cerr = cupmFreeAsync(CUPMCast_(w)->device_array,stream);CHKERRCUPM(cerr);
+      cerr = cupmFreeAsync(VecCUPMCast(w)->device_array,stream);CHKERRCUPM(cerr);
       ierr = PetscFree(w->spptr);CHKERRQ(ierr);
     }
   }
@@ -889,7 +900,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(detail::UseComp
 {
   const auto          n      = xin->map->n;
   const auto          nv1    = ((nv % 4) == 1) ? nv-1 : nv;
-  const auto          nbytes = nv1*MDOT_WORKGROUP_NUM*sizeof(*VecSeqCast_(xin)->array);
+  const auto          nbytes = nv1*MDOT_WORKGROUP_NUM*sizeof(*VecIMPLCast(xin)->array);
   PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
@@ -1084,11 +1095,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::tdot_async(Vec xin, Vec yin
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin))
-{
+{y
   PetscFunctionBegin;
   if (xin != yin) {
     const auto         n = xin->map->n;
-    const auto         nbytes = n*sizeof(*VecSeqCast_(xin)->array);
+    const auto         nbytes = n*sizeof(*VecIMPLCast(xin)->array);
     auto               yiscupm = PETSC_TRUE,xondevice = PETSC_TRUE; // assume we start on device
     cupmMemcpyKind_t   mode;
     PetscDeviceContext dctx;
@@ -1308,20 +1319,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dotnorm2_async(Vec s, Vec t
   PetscFunctionReturn(0);
 }
 
-template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = destroy_async_base(v);CHKERRQ(ierr);
-  {
-    const auto useit = UseCUPMHostAlloc(v->pinned_memory);
-    ierr = VecDestroy_Seq(v);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
 namespace detail
 {
 
@@ -1534,85 +1531,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, Pets
   }
   // REVIEW ME: flops????
   // REVIEW ME: Timing???
-  PetscFunctionReturn(0);
-}
-
-template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, PetscBool usehost))
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  if (v->boundtocpu) PetscFunctionReturn(0);
-  v->boundtocpu = usehost;
-  // default random number generator
-  ierr = PetscFree(v->defaultrandtype);CHKERRQ(ierr);
-  if (usehost) {
-    PetscDeviceContext dctx;
-
-    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(PETSCRANDER48,&v->defaultrandtype);CHKERRQ(ierr);
-  } else {
-    // REVIEW ME: hip seemingly has no equivalent?
-    ierr = PetscStrallocpy(PETSCCURAND,&v->defaultrandtype);CHKERRQ(ierr);
-  }
-  // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
-  v->ops->dot                    = v->ops->dot_local   = usehost ? VecDot_Seq   : dot_async;
-  v->ops->norm                   = v->ops->norm_local  = usehost ? VecNorm_Seq  : norm_async;
-  v->ops->tdot                   = v->ops->tdot_local  = usehost ? VecTDot_Seq  : tdot_async;
-  v->ops->mdot                   = v->ops->mdot_local  = usehost ? VecMDot_Seq  : mdot_async;
-  v->ops->mtdot                  = v->ops->mtdot_local = usehost ? VecMTDot_Seq : nullptr;
-  v->ops->scale                  = usehost ? VecScale_Seq : scale_async;
-  v->ops->copy                   = usehost ? VecCopy_Seq : copy_async;
-  v->ops->set                    = usehost ? VecSet_Seq : set_async;
-  v->ops->swap                   = usehost ? VecSwap_Seq : swap_async;
-  v->ops->axpy                   = usehost ? VecAXPY_Seq : axpy_async;
-  v->ops->axpby                  = usehost ? VecAXPBY_Seq : axpby_async;
-  v->ops->axpbypcz               = usehost ? VecAXPBYPCZ_Seq : axpbypcz_async;
-  v->ops->pointwisemult          = usehost ? VecPointwiseMult_Seq : pointwisemult_async;
-  v->ops->pointwisedivide        = usehost ? VecPointwiseDivide_Seq : pointwisedivide_async;
-  v->ops->setrandom              = usehost ? VecSetRandom_Seq : setrandom_async;
-  v->ops->maxpy                  = usehost ? VecMAXPY_Seq : maxpy_async;
-  v->ops->aypx                   = usehost ? VecAYPX_Seq : aypx_async;
-  v->ops->waxpy                  = usehost ? VecWAXPY_Seq : waxpy_async;
-  v->ops->dotnorm2               = usehost ? nullptr : dotnorm2_async;
-  v->ops->conjugate              = usehost ? VecConjugate_Seq : conjugate_async;
-  v->ops->max                    = usehost ? VecMax_Seq : max_async;
-  v->ops->min                    = usehost ? VecMin_Seq : min_async;
-  v->ops->reciprocal             = usehost ? VecReciprocal_Default : reciprocal_async;
-  v->ops->sum                    = usehost ? nullptr : sum_async;
-  v->ops->shift                  = usehost ? nullptr : shift_async;
-
-  v->ops->placearray             = usehost ? VecPlaceArray_Seq : placearray_async<PETSC_MEMTYPE_HOST>;
-  v->ops->replacearray           = replacearray_async<PETSC_MEMTYPE_HOST>;
-  v->ops->resetarray             = usehost ? VecResetArray_Seq : resetarray_async<PETSC_MEMTYPE_HOST>;
-
-  v->ops->duplicate              = usehost ? VecDuplicate_Seq : duplicate_async;
-  v->ops->getlocalvector         = usehost ? nullptr : &getlocalvector_async</*read = */false>;
-  v->ops->getlocalvectorread     = usehost ? nullptr : &getlocalvector_async</*read = */true>;
-  v->ops->restorelocalvector     = usehost ? nullptr : &restorelocalvector_async</*read = */false>;
-  v->ops->restorelocalvectorread = usehost ? nullptr : &restorelocalvector_async</*read = */true>;
-
-  v->ops->bindtocpu              = bindtocpu_async;
-  v->ops->destroy                = destroy_async;
-  v->ops->getarrayandmemtype     = getarrayandmemtype_async;
-  v->ops->restorearrayandmemtype = restorearrayandmemtype_async;
-  v->ops->getarray               = getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>;
-  v->ops->restorearray           = restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>;
-  v->ops->getarraywrite          = usehost ? nullptr : &getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>;
-  v->ops->restorearraywrite      = usehost ? nullptr : &restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>;
-  // can't do ternary operator here because:
-  // 1. signature of getarray/restorearray have PetscScalar** not const PetscScalar** -> use a
-  //    lambda to convert the types
-  // 2. each lambda is a unique type, which isn't convertible to std::nullptr_t
-  if (usehost) {
-    v->ops->getarrayread         = nullptr;
-    v->ops->restorearrayread     = nullptr;
-  } else {
-    v->ops->getarrayread         = [](Vec v, const PetscScalar **a){ return getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a)); };
-  v->ops->restorearrayread       = [](Vec v, const PetscScalar **a){ return restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a)); };
-  }
   PetscFunctionReturn(0);
 }
 
