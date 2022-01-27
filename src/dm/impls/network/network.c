@@ -256,30 +256,36 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
   PetscFunctionReturn(0);
 }
 
-/*
+/*@C
   Get info of a shared vertex struct, see petsc/private/dmnetworkimpl.h
 
+  Not collective
+
   Input Parameters:
-+ dm
-- svtx_idx - number on the svtx array
++ dm - the DM object
+- i - index in the svtx array obtained from DMNetworkGetSharedVertices(dm,&nsv,&svtx);
 
   Output Parameters:
-+ gidx - global index the shared vertex
-. n -
-- sv -
-*/
-static PetscErrorCode SharedVtxGetInfo(DM dm,PetscInt svtx_idx,PetscInt *gidx,PetscInt *n,PetscInt **sv)
++ gidx - global index of the shared vertices in dmplex
+. n - number of subnetworks that share the common DMNetwork vertex
+- sv - array of size n: sv[2*i,2*i+1]=(net[i], idx[i]), i=0,...,n-1
+
+  Level: intermediate
+
+.seealso: DMNetworkGetSharedVertices()
+@*/
+PetscErrorCode DMNetworkSharedVertexGetInfo(DM dm,PetscInt i,PetscInt *gidx,PetscInt *n,const PetscInt **sv)
 {
   DM_Network *network = (DM_Network*)dm->data;
   SVtx       *svtx = network->svtx;
   PetscInt   nsvtx = network->nsvtx;
 
   PetscFunctionBegin;
-  if (svtx_idx < 0 ||svtx_idx >= nsvtx) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"input svtx_idx %D must be >=0 and < nsvtx %D",svtx_idx,nsvtx);
+  if (i < 0 || i >= nsvtx) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"input i %D must be >=0 and < nsvtx %D",i,nsvtx);
 
-  if (gidx) *gidx = svtx[svtx_idx].gidx;
-  if (n)    *n    = svtx[svtx_idx].n;
-  if (sv)   *sv   = svtx[svtx_idx].sv;
+  if (gidx) *gidx = svtx[i].gidx;
+  if (n)    *n    = svtx[i].n;
+  if (sv)   *sv   = svtx[i].sv;
   PetscFunctionReturn(0);
 }
 
@@ -754,8 +760,10 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   {
   /* Update network->subnet[net].nvtx for ghoted subnetworks */
   PetscBT        table;
-  PetscInt       nsv,gidx,ns;
-  PetscInt       *sv;
+  PetscInt       nsv,gidx,ns=0;
+  const PetscInt *sv=NULL;
+
+  /* Create and setup table to keep track subnetworks that this processor ownes */
   ierr = PetscBTCreate(Nsubnet,&table);CHKERRQ(ierr);
   ierr = PetscBTMemzero(Nsubnet,table);CHKERRQ(ierr);
   for (net=0; net<Nsubnet; net++) {
@@ -763,10 +771,10 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       ierr = PetscBTSet(table,net);CHKERRQ(ierr);
     }
   }
-
+  /* Add number of shared vertices to network->subnet[net].nvtx for none-owning subnetworks */
   ierr = DMNetworkGetSharedVertices(dm,&nsv,NULL);CHKERRQ(ierr);
   for (v=0; v<nsv; v++) {
-    ierr = SharedVtxGetInfo(dm,v,&gidx,&ns,&sv);CHKERRQ(ierr);
+    ierr = DMNetworkSharedVertexGetInfo(dm,v,&gidx,&ns,&sv);CHKERRQ(ierr);
     for (i=0; i<ns; i++) {
       net = sv[2*i];
       if (!PetscBTLookup(table,net)) network->subnet[net].nvtx++;
