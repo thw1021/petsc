@@ -490,7 +490,7 @@ PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_1D_AIJ(DM dm,Mat *mat)
   ierr = DMGetLocalToGlobalMapping(dm,&ltogmap);CHKERRQ(ierr);
 
   ierr = MatCreate(PetscObjectComm((PetscObject)dm),mat);CHKERRQ(ierr);
-  ierr = MatSetType(*mat,MATAIJ);CHKERRQ(ierr);
+  ierr = MatSetType(*mat,dm->mattype);CHKERRQ(ierr);
   ierr = MatSetSizes(*mat,entries,entries,PETSC_DECIDE,PETSC_DECIDE);CHKERRQ(ierr);
   ierr = MatSetLocalToGlobalMapping(*mat,ltogmap,ltogmap);CHKERRQ(ierr);
   ierr = MatSetLocalToGlobalMapping(*mat,ltogmap,ltogmap);CHKERRQ(ierr);
