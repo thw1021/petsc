@@ -105,24 +105,17 @@ cdef extern from * nogil:
     int TaoComputeHessian (PetscTAO,PetscVec,PetscMat,PetscMat)
     int TaoComputeJacobian(PetscTAO,PetscVec,PetscMat,PetscMat)
 
-    int TaoSetInitialVector(PetscTAO,PetscVec)
+    int TaoSetSolution(PetscTAO,PetscVec)
     int TaoSetConstraintsVec(PetscTAO,PetscVec)
     int TaoSetVariableBounds(PetscTAO,PetscVec,PetscVec)
-    int TaoSetHessianMat(PetscTAO,PetscMat,PetscMat)
-    int TaoSetJacobianMat(PetscTAO,PetscMat,PetscMat)
 
-    int TaoGetSolutionVector(PetscTAO,PetscVec*)
-    int TaoGetGradientVector(PetscTAO,PetscVec*)
+    int TaoGetSolution(PetscTAO,PetscVec*)
     int TaoSetGradientNorm(PetscTAO,PetscMat)
     int TaoGetGradientNorm(PetscTAO,PetscMat*)
     int TaoLMVMSetH0(PetscTAO,PetscMat)
     int TaoLMVMGetH0(PetscTAO,PetscMat*)
     int TaoLMVMGetH0KSP(PetscTAO,PetscKSP*)
     int TaoGetVariableBounds(PetscTAO,PetscVec*,PetscVec*)
-    #int TaoGetConstraintsVec(PetscTAO,PetscVec*)
-    #int TaoGetVariableBoundVecs(PetscTAO,PetscVec*,PetscVec*)
-    #int TaoGetHessianMat(PetscTAO,PetscMat*,PetscMat*)
-    #int TaoGetJacobianMat(PetscTAO,PetscMat*,PetscMat*)
 
     ctypedef int TaoObjective(PetscTAO,PetscVec,PetscReal*,void*) except PETSC_ERR_PYTHON
     ctypedef int TaoResidual(PetscTAO,PetscVec,PetscVec,void*) except PETSC_ERR_PYTHON
@@ -152,13 +145,17 @@ cdef extern from * nogil:
                                      PetscMat,PetscMat,
                                      void*) except PETSC_ERR_PYTHON
 
-    int TaoSetObjectiveRoutine(PetscTAO,TaoObjective*,void*)
+    int TaoSetObjective(PetscTAO,TaoObjective*,void*)
+    int TaoSetGradient(PetscTAO,PetscVec,TaoGradient*,void*)
+    int TaoSetObjectiveAndGradient(PetscTAO,PetscVec,TaoObjGrad*,void*)
+    int TaoSetHessian(PetscTAO,PetscMat,PetscMat,TaoHessian*,void*)
+    int TaoGetObjective(PetscTAO,TaoObjective**,void**)
+    int TaoGetGradient(PetscTAO,PetscVec*,TaoGradient**,void**)
+    int TaoGetObjectiveAndGradient(PetscTAO,PetscVec*,TaoObjGrad**,void**)
+    int TaoGetHessian(PetscTAO,PetscMat*,PetscMat*,TaoHessian**,void**)
     int TaoSetResidualRoutine(PetscTAO,PetscVec,TaoResidual,void*)
-    int TaoSetGradientRoutine(PetscTAO,TaoGradient*,void*)
-    int TaoSetObjectiveAndGradientRoutine(PetscTAO,TaoObjGrad*,void*)
     int TaoSetVariableBoundsRoutine(PetscTAO,TaoVarBounds*,void*)
     int TaoSetConstraintsRoutine(PetscTAO,PetscVec,TaoConstraints*,void*)
-    int TaoSetHessianRoutine(PetscTAO,PetscMat,PetscMat,TaoHessian*,void*)
     int TaoSetJacobianRoutine(PetscTAO,PetscMat,PetscMat,TaoJacobian*,void*)
     int TaoSetJacobianResidualRoutine(PetscTAO,PetscMat,PetscMat,TaoJacobianResidual*,void*)
 

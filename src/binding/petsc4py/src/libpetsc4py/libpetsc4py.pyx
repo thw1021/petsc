@@ -2839,7 +2839,7 @@ cdef extern from * nogil:
         PetscTAOLineSearch linesearch
 
 cdef extern from * nogil:
-    PetscErrorCode TaoGetSolutionVector(PetscTAO,PetscVec*)
+    PetscErrorCode TaoGetSolution(PetscTAO,PetscVec*)
     PetscErrorCode TaoComputeObjective(PetscTAO,PetscVec,PetscReal*)
     PetscErrorCode TaoComputeGradient(PetscTAO,PetscVec,PetscVec)
     PetscErrorCode TaoComputeObjectiveAndGradient(PetscTAO,PetscVec,PetscReal*,PetscVec)
@@ -3162,7 +3162,9 @@ cdef extern from * nogil:
   PetscErrorCode KSPRegister  (const char[],KSPCreateFunction* )
   PetscErrorCode SNESRegister (const char[],SNESCreateFunction*)
   PetscErrorCode TSRegister   (const char[],TSCreateFunction*  )
-  PetscErrorCode TaoRegister  (const char[],TaoCreateFunction* )
+
+  # Tao registration not available with complex numbers
+  PetscErrorCode TaoRegisterCustom (const char[],TaoCreateFunction* )
 
   PetscErrorCode (*PetscPythonMonitorSet_C) \
       (PetscObject, const char[]) except IERR
@@ -3177,7 +3179,9 @@ cdef public PetscErrorCode PetscPythonRegisterAll() except IERR:
     CHKERR( KSPRegister ( KSPPYTHON,  KSPCreate_Python  ) )
     CHKERR( SNESRegister( SNESPYTHON, SNESCreate_Python ) )
     CHKERR( TSRegister  ( TSPYTHON,   TSCreate_Python   ) )
-    CHKERR( TaoRegister ( TAOPYTHON,  TaoCreate_Python  ) )
+
+    # No preprocessor in cython
+    CHKERR( TaoRegisterCustom ( TAOPYTHON, TaoCreate_Python ) )
 
     # Python monitors
     global PetscPythonMonitorSet_C
