@@ -257,6 +257,33 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 }
 
 /*
+  Get info of a shared vertex struct, see petsc/private/dmnetworkimpl.h
+
+  Input Parameters:
++ dm
+- svtx_idx - number on the svtx array
+
+  Output Parameters:
++ gidx - global index the shared vertex
+. n -
+- sv -
+*/
+static PetscErrorCode SharedVtxGetInfo(DM dm,PetscInt svtx_idx,PetscInt *gidx,PetscInt *n,PetscInt **sv)
+{
+  DM_Network *network = (DM_Network*)dm->data;
+  SVtx       *svtx = network->svtx;
+  PetscInt   nsvtx = network->nsvtx;
+
+  PetscFunctionBegin;
+  if (svtx_idx < 0 ||svtx_idx >= nsvtx) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"input svtx_idx %D must be >=0 and < nsvtx %D",svtx_idx,nsvtx);
+
+  if (gidx) *gidx = svtx[svtx_idx].gidx;
+  if (n)    *n    = svtx[svtx_idx].n;
+  if (sv)   *sv   = svtx[svtx_idx].sv;
+  PetscFunctionReturn(0);
+}
+
+/*
   Get info of an input vertex=(net,idx)
 
   Input Parameters:
@@ -574,7 +601,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   PetscInt       nmerged=0;
 
   PetscFunctionBegin;
-  PetscCheckFalse(network->nsubnet != network->Nsubnet,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Must call DMNetworkAddSubnetwork() %D times",network->Nsubnet);
+  PetscCheckFalse(network->nsubnet != Nsubnet,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Must call DMNetworkAddSubnetwork() %D times",Nsubnet);
 
   /* This implementation requires user input each subnet by a single processor when Nsubnet>1, thus subnet[net].nvtx=subnet[net].Nvtx when net>0 */
   for (net=1; net<Nsubnet; net++) {
@@ -592,7 +619,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
     ierr = GetEdgelist_Coupling(dm,edges,&nmerged);CHKERRQ(ierr);
 #if 0
     /* TODO: update network->nVertices! */
-    for (net=0; net<network->Nsubnet; net++) {
+    for (net=0; net<Nsubnet; net++) {
       printf("[%d] Before update: net %d: nvtx %d\n",rank,net,network->subnet[net].nvtx);
     }
 #endif
@@ -644,7 +671,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = PetscCalloc2(network->nEdges,&subnetedge,network->nVertices+network->nsvtx,&subnetvtx);CHKERRQ(ierr); /* Maps local edge/vertex to local subnetwork's edge/vertex */
   network->subnetedge = subnetedge;
   network->subnetvtx  = subnetvtx;
-  for (j=0; j < network->Nsubnet; j++) {
+  for (j=0; j < Nsubnet; j++) {
     network->subnet[j].edges = subnetedge;
     subnetedge              += network->subnet[j].nedge;
 
@@ -722,6 +749,32 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   /* Create a global section to be used by DMNetworkIsGhostVertex() which is a non-collective routine */
   /* see snes_tutorials_network-ex1_4 */
   ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
+
+#if 1
+  {
+  /* Update network->subnet[net].nvtx for ghoted subnetworks */
+  PetscBT        table;
+  PetscInt       nsv,gidx,ns;
+  PetscInt       *sv;
+  ierr = PetscBTCreate(Nsubnet,&table);CHKERRQ(ierr);
+  ierr = PetscBTMemzero(Nsubnet,table);CHKERRQ(ierr);
+  for (net=0; net<Nsubnet; net++) {
+    if (network->subnet[net].nvtx) {
+      ierr = PetscBTSet(table,net);CHKERRQ(ierr);
+    }
+  }
+
+  ierr = DMNetworkGetSharedVertices(dm,&nsv,NULL);CHKERRQ(ierr);
+  for (v=0; v<nsv; v++) {
+    ierr = SharedVtxGetInfo(dm,v,&gidx,&ns,&sv);CHKERRQ(ierr);
+    for (i=0; i<ns; i++) {
+      net = sv[2*i];
+      if (!PetscBTLookup(table,net)) network->subnet[net].nvtx++;
+    }
+  }
+  ierr = PetscBTDestroy(&table);CHKERRQ(ierr);
+  }
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -828,6 +881,9 @@ PetscErrorCode DMNetworkGetSharedVertices(DM dm,PetscInt *nsv,const PetscInt **s
   DM_Network *net = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
+  if (nsv)  *nsv  = net->nsvtx;
+  if (svtx) *svtx = net->svertices;
+#if 0
   if (net->Nsvtx) {
     *nsv  = net->nsvtx;
     *svtx = net->svertices;
@@ -835,6 +891,7 @@ PetscErrorCode DMNetworkGetSharedVertices(DM dm,PetscInt *nsv,const PetscInt **s
     *nsv  = 0;
     *svtx = NULL;
   }
+#endif
   PetscFunctionReturn(0);
 }
 
