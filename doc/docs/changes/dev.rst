@@ -51,6 +51,12 @@ Changes: Development
 - Add ``PetscCommGetComm()`` and ``PetscCommRestoreComm()`` to allow reuse of MPI communicator with external packages, as some MPI implementations have  broken ``MPI_Comm_free()``
 - Add ``PetscExpand()``, ``PetscConcat()``, ``PetscCompl()``, and ``PetscExpandToNothing()``
 - Add ``PETSC_CONSTEXPR_14``, ``PETSC_NULLPTR``, and ``PETSC_NODISCARD``
+- Deprecate ``SETERRQ1()`` - ``SETERRQ9()`` in favor of ``SETERRQ()`` which is now variadic
+- Deprecate ``PetscInfo1()`` - ``PetscInfo9()`` in favor of ``PetscInfo()`` which is now variadic
+- Deprecate ``PETSC_INLINE``, ``inline`` is a standard keyword since C99 and C++11
+- Remove ``PETSC_C_RESTRICT``, ``restrict`` is a standard keyword since C99
+- Change ``SETERRMPI()`` to be variadic
+- Change ``SETERRABORT()`` to be variadic
 
 .. rubric:: PetscViewer:
 
