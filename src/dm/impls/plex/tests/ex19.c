@@ -154,7 +154,7 @@ static PetscErrorCode ComputeMetric(DM dm, AppCtx *user, Vec *metric)
         h = user->hmax*PetscAbsReal(((PetscReal) 1.0)-PetscExpReal(-PetscAbsScalar(vcoords[0]-(PetscReal)0.5))) + user->hmin;
         break;
       default:
-        SETERRQ1(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "metOpt = 0, 1 or 2, cannot be %d", user->metOpt);
+        SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "metOpt = 0, 1 or 2, cannot be %d", user->metOpt);
       }
       lambda = 1/(h*h);
       ierr = DMPlexPointLocalRef(dm, v, met, &pmet);CHKERRQ(ierr);
