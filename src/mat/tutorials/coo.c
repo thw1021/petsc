@@ -13,15 +13,7 @@ static char help[] = "Demonstrates the use of the COO interface to PETSc matrice
 */
 
 #include <petscmat.h>
-
-typedef struct {
-  PetscInt Nv;           /* number of vertices */
-  PetscInt Ne;           /* number of elements */
-  PetscInt n;            /* dimension of the resulting linear system; size of the Jacobian */
-  PetscInt *vertices;    /* list of vertices for each element */
-  PetscInt *coo;         /* offset into the matrices COO array for the start of each element stiffness */
-} FEStruct;
-
+#include "coo.h"
 
 static PetscErrorCode CreateFEStruct(FEStruct *fe)
 {
@@ -138,6 +130,7 @@ int main(int argc, char **args)
   PetscErrorCode  ierr;
   FEStruct        fe;
   PetscMPIInt     size;
+  PetscBool       is_kokkos;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
@@ -153,6 +146,12 @@ int main(int argc, char **args)
   ierr = FillMatrixCPUCOO(&fe,A);CHKERRQ(ierr);
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATAIJKOKKOS,&is_kokkos);CHKERRQ(ierr);
+  if (is_kokkos) {
+    ierr = FillMatrixKokkosCOO(&fe,A);CHKERRQ(ierr);
+    ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+  }
+
   ierr = MatDestroy(&A);CHKERRQ(ierr);
   ierr = DestroyFEStruct(&fe);CHKERRQ(ierr);
   ierr = PetscFinalize();
@@ -161,7 +160,14 @@ int main(int argc, char **args)
 
 /*TEST
 
+   build:
+     depends: cook.kokkos.cxx
+
    test:
+
+   test:
+     suffix: kokkos_1
+     args: -mat_type aijkokkos
 
 
 TEST*/
