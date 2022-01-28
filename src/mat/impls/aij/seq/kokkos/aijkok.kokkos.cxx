@@ -587,7 +587,7 @@ PetscErrorCode MatSeqAIJKokkosMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
   PetscValidPointer(C,4);
   PetscCheckTypeName(A,MATSEQAIJKOKKOS);
   PetscCheckTypeName(B,MATSEQAIJKOKKOS);
-  if (A->rmap->n != B->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,A->rmap->n,B->rmap->n);
+  if (A->rmap->n != B->rmap->n) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,A->rmap->n,B->rmap->n);
   if (reuse == MAT_INPLACE_MATRIX) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_INPLACE_MATRIX not supported");
 
   ierr = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr);
@@ -692,7 +692,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos(Mat C)
     case MATPRODUCT_AtB: transA = true;  transB = false; break;
     case MATPRODUCT_ABt: transA = false; transB = true;  break;
     default:
-      SETERRQ1(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
+      SETERRQ(PetscObjectComm((PetscObject)C),PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
   }
 
   A     = product->A;
@@ -767,7 +767,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
     case MATPRODUCT_AtB: transA = true;  transB = false; break;
     case MATPRODUCT_ABt: transA = false; transB = true;  break;
     default:
-      SETERRQ1(comm,PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
+      SETERRQ(comm,PETSC_ERR_PLIB,"Unsupported product type %s",MatProductTypes[product->type]);
   }
 
   product->data = pdata = new MatProductData_SeqAIJKokkos();
@@ -1216,7 +1216,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOSDEVICE(Mat B,Mat A,const Ma
   PetscContainer     container;
 
   PetscFunctionBegin;
-  if (A->rmap->n != n) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"square matrices only supported %" PetscInt_FMT " %" PetscInt_FMT,A->rmap->n,n);
+  if (A->rmap->n != n) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"square matrices only supported %" PetscInt_FMT " %" PetscInt_FMT,A->rmap->n,n);
   ierr = MatGetOption(A,MAT_STRUCTURALLY_SYMMETRIC,&row_identity);CHKERRQ(ierr);
   if (!row_identity) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"structurally symmetric matrices only supported");
   ierr = PetscObjectQuery((PetscObject) A, "Nf", (PetscObject *) &container);CHKERRQ(ierr);
@@ -1227,7 +1227,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJKOKKOSDEVICE(Mat B,Mat A,const Ma
     nv = (*pNf)/1000;
     if (nv>0) nVec = nv;
   } else Nf = 1;
-  if (n%Nf) SETERRQ2(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %" PetscInt_FMT " %" PetscInt_FMT,n,Nf);
+  if (n%Nf) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"n % Nf != 0 %" PetscInt_FMT " %" PetscInt_FMT,n,Nf);
   ierr = ISGetIndices(isrow,&r_h);CHKERRQ(ierr);
   ierr = ISGetIndices(isicol,&ic_h);CHKERRQ(ierr);
   ierr = ISGetSize(isicol,&nc);CHKERRQ(ierr);
@@ -1703,7 +1703,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_SeqAIJKokkos_Kokkos(Mat A,MatFactorType
     ierr = MatSetBlockSizesFromMats(*B,A,A);CHKERRQ(ierr);
     (*B)->canuseordering         = PETSC_FALSE;
     (*B)->ops->ilufactorsymbolic = MatILUFactorSymbolic_SeqAIJKokkos;
-  } else SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatFactorType %s is not supported by MatType SeqAIJKokkos", MatFactorTypes[ftype]);
+  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatFactorType %s is not supported by MatType SeqAIJKokkos", MatFactorTypes[ftype]);
 
   ierr = MatSeqAIJSetPreallocation(*B,MAT_SKIP_ALLOCATION,NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)(*B),"MatFactorGetSolverType_C",MatFactorGetSolverType_SeqAIJKokkos);CHKERRQ(ierr);
