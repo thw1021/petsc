@@ -627,9 +627,6 @@ PETSC_EXTERN PetscLogDouble petsc_ctog_sz_scalar;
 PETSC_EXTERN PetscLogDouble petsc_gtoc_sz_scalar;
 PETSC_EXTERN PetscLogDouble petsc_gflops;
 PETSC_EXTERN PetscLogDouble petsc_gtime;
-#if defined(PETSC_USE_DEBUG)
-PETSC_EXTERN PetscBool      petsc_gtime_inuse;
-#endif
 
 PETSC_STATIC_INLINE PetscErrorCode PetscLogCpuToGpu(PetscLogDouble size)
 {
@@ -680,9 +677,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuToCpuScalar(PetscLogDouble size)
 PETSC_STATIC_INLINE PetscErrorCode PetscLogGpuFlops(PetscLogDouble n)
 {
   PetscFunctionBegin;
-#if defined(PETSC_USE_DEBUG)
-  if (n < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot log negative flops");
-#endif
+  if (PetscUnlikelyDebug(n < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot log negative flops");
   petsc_TotalFlops += PETSC_FLOPS_PER_OP*n;
   petsc_gflops += PETSC_FLOPS_PER_OP*n;
   PetscFunctionReturn(0);
