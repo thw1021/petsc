@@ -64,15 +64,19 @@ PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
 #if (CUSPARSE_VER_MAJOR > 10 || CUSPARSE_VER_MAJOR == 10 && CUSPARSE_VER_MINOR >= 2) /* According to cuda/10.1.168 on OLCF Summit */
 #define CHKERRCUSPARSE(stat)\
 do {\
-  if (PetscUnlikely(stat)) {\
-    const char *name  = cusparseGetErrorName(stat);\
-    const char *descr = cusparseGetErrorString(stat);\
-    if ((stat == CUSPARSE_STATUS_NOT_INITIALIZED) || (stat == CUSPARSE_STATUS_ALLOC_FAILED)) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE errorcode %d (%s) : %s. Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name,descr); \
-    else SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d (%s) : %s",(int)stat,name,descr);\
+  const cusparseStatus_t _p_cusparse_stat__ = stat;\
+  if (PetscUnlikely(_p_cusparse_stat__)) {\
+    const char *name  = cusparseGetErrorName(_p_cusparse_stat__);\
+    const char *descr = cusparseGetErrorString(_p_cusparse_stat__);\
+    if ((_p_cusparse_stat__ == CUSPARSE_STATUS_NOT_INITIALIZED) || (_p_cusparse_stat__ == CUSPARSE_STATUS_ALLOC_FAILED)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE errorcode %d (%s) : %s. Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)_p_cusparse_stat__,name,descr); \
+    else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d (%s) : %s",(int)_p_cusparse_stat__,name,descr);\
   }\
 } while (0)
 #else  /* (CUSPARSE_VER_MAJOR > 10 || CUSPARSE_VER_MAJOR == 10 && CUSPARSE_VER_MINOR >= 2) */
-#define CHKERRCUSPARSE(stat) do {if (PetscUnlikely(stat)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d",(int)stat);} while (0)
+#define CHKERRCUSPARSE(stat) do { \
+  const cusparseStatus_t _p_cusparse_stat__ = stat; \
+  PetscAssert(_p_cusparse_stat__ == CUSPARSE_STATUS_SUCCESS,PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d",(PetscErrorCode)_p_cusparse_stat__); \
+  } while (0)
 #endif /* (CUSPARSE_VER_MAJOR > 10 || CUSPARSE_VER_MAJOR == 10 && CUSPARSE_VER_MINOR >= 2) */
 
 #define CHKERRCUSOLVER(stat) do {                                       \
