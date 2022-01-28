@@ -76,6 +76,7 @@ typedef struct {
   PetscInt  interptype;
   PetscInt  maxc;
   PetscInt  minc;
+  PetscInt  use_tpl_spgemm; // this is a global parameter but is closely associated with BoomerAMG
 
   /* GPU */
   PetscBool keeptranspose;
@@ -902,6 +903,11 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_min_coarse_size", "Minimum size of coarsest grid", "None", jac->minc, &jac->minc, &flg);CHKERRQ(ierr);
   if (flg) {
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
+  }
+  // SetSpGemmUseCusparse is a global parameter but is closely associated with BoomerAMG
+  ierr = PetscOptionsInt("-pc_hypre_use_tpl_spgemm", "Use third party spGEMM", "None", jac->use_tpl_spgemm, &jac->use_tpl_spgemm, &flg);CHKERRQ(ierr);
+  if (flg) {
+    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
   }
 
   /* AIR */
@@ -1876,6 +1882,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     jac->agg_num_paths    = 1;
     jac->maxc             = 9;
     jac->minc             = 1;
+    jac->use_tpl_spgemm   = 1;
 
     jac->nodal_coarsening      = 0;
     jac->nodal_coarsening_diag = 0;
@@ -1922,6 +1929,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     PetscStackCallStandard(HYPRE_BoomerAMGSetNumSweeps,(jac->hsolver, jac->gridsweeps[0])); /* defaults coarse to 1 */
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxCoarseSize,(jac->hsolver, jac->maxc));
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
+    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
 
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2,18,0)
