@@ -471,22 +471,13 @@ static PetscErrorCode DMCreateMatrix_Stag_1D_AIJ_Assemble(DM,Mat);
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_1D_AIJ(DM dm,Mat *mat)
 {
   PetscErrorCode         ierr;
-  PetscInt               entries,dof[DMSTAG_MAX_STRATA],epe,stencil_width,N,start,n,n_extra;
-  DMStagStencilType      stencil_type;
+  PetscInt               entries;
   ISLocalToGlobalMapping ltogmap;
-  DMBoundaryType         boundary_type_x;
 
   /* This implementation gives a very dense stencil, which is likely unsuitable for
      (typical) applications which have fewer couplings */
   PetscFunctionBegin;
-  ierr = DMStagGetDOF(dm,&dof[0],&dof[1],NULL,NULL);CHKERRQ(ierr);
-  ierr = DMStagGetStencilType(dm,&stencil_type);CHKERRQ(ierr);
-  ierr = DMStagGetStencilWidth(dm,&stencil_width);CHKERRQ(ierr);
   ierr = DMStagGetEntries(dm,&entries);CHKERRQ(ierr);
-  ierr = DMStagGetEntriesPerElement(dm,&epe);CHKERRQ(ierr);
-  ierr = DMStagGetCorners(dm,&start,NULL,NULL,&n,NULL,NULL,&n_extra,NULL,NULL);CHKERRQ(ierr);
-  ierr = DMStagGetGlobalSizes(dm,&N,NULL,NULL);CHKERRQ(ierr);
-  ierr = DMStagGetBoundaryTypes(dm,&boundary_type_x,NULL,NULL);CHKERRQ(ierr);
   ierr = DMGetLocalToGlobalMapping(dm,&ltogmap);CHKERRQ(ierr);
 
   ierr = MatCreate(PetscObjectComm((PetscObject)dm),mat);CHKERRQ(ierr);
