@@ -26,7 +26,7 @@ PetscErrorCode MatCreateLaplacian(Mat A, PetscReal tol, PetscBool weighted, Mat 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (weighted) SETERRQ(PetscObjectComm((PetscObject) A), PETSC_ERR_SUP, "Will get to this soon");
+  PetscAssertFalse(weighted,PetscObjectComm((PetscObject) A), PETSC_ERR_SUP, "Will get to this soon");
   ierr = MatCreate(PetscObjectComm((PetscObject) A), L);CHKERRQ(ierr);
   ierr = MatGetSize(A, &M, &N);CHKERRQ(ierr);
   ierr = MatGetLocalSize(A, &m, &n);CHKERRQ(ierr);
@@ -78,7 +78,7 @@ PetscErrorCode MatCreateLaplacian(Mat A, PetscReal tol, PetscBool weighted, Mat 
         newVals[newcols] = -1.0;
         ++newcols;
       }
-      if (newcols > colMax) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Overran work space");
+      PetscAssertFalse(newcols > colMax,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Overran work space");
     }
     if (!hasdiag) {
       newCols[newcols] = r;
