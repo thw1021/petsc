@@ -24,7 +24,7 @@ do {\
   if (PetscUnlikely(stat)) {\
     const char *name  = cusparseGetErrorName(stat);\
     const char *descr = cusparseGetErrorString(stat);\
-    if ((stat == CUSPARSE_STATUS_NOT_INITIALIZED) || (stat == CUSPARSE_STATUS_ALLOC_FAILED)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE errorcode %d (%s) : %s. Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name,descr); \
+    PetscAssertFalse((stat == CUSPARSE_STATUS_NOT_INITIALIZED) || (stat == CUSPARSE_STATUS_ALLOC_FAILED),PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"cuSPARSE errorcode %d (%s) : %s. Reports not initialized or alloc failed; this indicates the GPU has run out resources",(int)stat,name,descr); \
     else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d (%s) : %s",(int)stat,name,descr);\
   }\
 } while (0)
