@@ -533,7 +533,7 @@ static PetscErrorCode DMCreateCoordinateDM_Stag(DM dm,DM *dmc)
 
   PetscFunctionBegin;
 
-  if (!stag->coordinateDMType) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Before creating a coordinate DM, a type must be specified with DMStagSetCoordinateDMType()");
+  PetscAssertFalse(!stag->coordinateDMType,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Before creating a coordinate DM, a type must be specified with DMStagSetCoordinateDMType()");
 
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = PetscStrcmp(stag->coordinateDMType,DMSTAG,&isstag);CHKERRQ(ierr);
@@ -727,7 +727,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM dm)
   stag->coordinateDMType                              = NULL;
 
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
-  if (dim != 1 && dim != 2 && dim != 3) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"DMSetDimension() must be called to set a dimension with value 1, 2, or 3");
+  PetscAssertFalse(dim != 1 && dim != 2 && dim != 3,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"DMSetDimension() must be called to set a dimension with value 1, 2, or 3");
 
   ierr = PetscMemzero(dm->ops,sizeof(*(dm->ops)));CHKERRQ(ierr);
   dm->ops->createcoordinatedm       = DMCreateCoordinateDM_Stag;
