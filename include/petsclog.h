@@ -263,7 +263,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscLogFlops(PetscLogDouble n)
 {
   PetscFunctionBegin;
 #if defined(PETSC_USE_DEBUG)
-  if (n < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot log negative flops");
+  PetscAssertFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot log negative flops");
 #endif
   petsc_TotalFlops += PETSC_FLOPS_PER_OP*n;
   PetscFunctionReturn(0);
