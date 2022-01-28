@@ -5,6 +5,7 @@
 #include <petscconf_poison.h>
 #include <petscfix.h>
 
+#include <stdbool.h>
 /*MC
     PetscErrorCode - datatype used for return error code from almost all PETSc functions
 
