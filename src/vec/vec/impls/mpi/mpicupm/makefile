@@ -1,14 +1,14 @@
-#requirespackage 'PETSC_HAVE_CUDA'
+#requirespackage 'PETSC_HAVE_CUPM'
 ALL: lib
 
 CFLAGS   =
 FFLAGS   =
-SOURCECU = vecseqcupm.cu
 SOURCEF  =
+SOURCEH  = vecmpicupm.hpp
 LIBBASE  = libpetscvec
+DIRS     = cuda hip
 MANSEC   = Vec
-LOCDIR   = src/vec/vec/impls/seq/seqcupm/cuda/
-DIRS     =
+LOCDIR   = src/vec/vec/impls/mpi/mpicupm/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

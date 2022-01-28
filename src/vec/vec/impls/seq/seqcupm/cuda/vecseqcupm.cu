@@ -1,4 +1,4 @@
-#include  "../veccupm.hpp" /*I "petscvec.h" I*/
+#include  "../vecseqcupm.hpp" /*I "petscvec.h" I*/
 
 using namespace Petsc::Vec::CUPM::Impl;
 
