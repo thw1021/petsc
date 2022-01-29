@@ -76,8 +76,9 @@ typedef struct {
   PetscInt  interptype;
   PetscInt  maxc;
   PetscInt  minc;
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
   PetscInt  use_tpl_spgemm; // this is a global parameter but is closely associated with BoomerAMG
-
+#endif
   /* GPU */
   PetscBool keeptranspose;
   PetscInt  rap2;
@@ -1883,8 +1884,9 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     jac->agg_num_paths    = 1;
     jac->maxc             = 9;
     jac->minc             = 1;
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
     jac->use_tpl_spgemm   = 1;
-
+#endif
     jac->nodal_coarsening      = 0;
     jac->nodal_coarsening_diag = 0;
     jac->vec_interp_variant    = 0;
@@ -1930,8 +1932,9 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     PetscStackCallStandard(HYPRE_BoomerAMGSetNumSweeps,(jac->hsolver, jac->gridsweeps[0])); /* defaults coarse to 1 */
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxCoarseSize,(jac->hsolver, jac->maxc));
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
     PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
-
+#endif
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2,18,0)
     PetscStackCallStandard(HYPRE_BoomerAMGSetKeepTranspose,(jac->hsolver,jac->keeptranspose ? 1 : 0));
