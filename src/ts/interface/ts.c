@@ -3257,7 +3257,7 @@ PetscErrorCode  TSPreStep(TS ts)
 
     ierr = TSGetSolution(ts,&U);CHKERRQ(ierr);
     ierr = PetscObjectStateGet((PetscObject)U,&sprev);CHKERRQ(ierr);
-    PetscStackCallStandard((*ts->prestep),(ts));
+    PetscStackCallStandard((*ts->prestep),ts);
     ierr = PetscObjectStateGet((PetscObject)U,&spost);CHKERRQ(ierr);
     if (sprev != spost) {ierr = TSRestartStep(ts);CHKERRQ(ierr);}
   }
@@ -3378,7 +3378,7 @@ PetscErrorCode  TSPreStage(TS ts, PetscReal stagetime)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   if (ts->prestage) {
-    PetscStackCallStandard((*ts->prestage),(ts,stagetime));
+    PetscStackCallStandard((*ts->prestage),ts,stagetime);
   }
   PetscFunctionReturn(0);
 }
@@ -3408,7 +3408,7 @@ PetscErrorCode  TSPostStage(TS ts, PetscReal stagetime, PetscInt stageindex, Vec
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   if (ts->poststage) {
-    PetscStackCallStandard((*ts->poststage),(ts,stagetime,stageindex,Y));
+    PetscStackCallStandard((*ts->poststage),ts,stagetime,stageindex,Y);
   }
   PetscFunctionReturn(0);
 }
@@ -3441,7 +3441,7 @@ PetscErrorCode  TSPostEvaluate(TS ts)
 
     ierr = TSGetSolution(ts,&U);CHKERRQ(ierr);
     ierr = PetscObjectStateGet((PetscObject)U,&sprev);CHKERRQ(ierr);
-    PetscStackCallStandard((*ts->postevaluate),(ts));
+    PetscStackCallStandard((*ts->postevaluate),ts);
     ierr = PetscObjectStateGet((PetscObject)U,&spost);CHKERRQ(ierr);
     if (sprev != spost) {ierr = TSRestartStep(ts);CHKERRQ(ierr);}
   }
@@ -3505,7 +3505,7 @@ PetscErrorCode  TSPostStep(TS ts)
 
     ierr = TSGetSolution(ts,&U);CHKERRQ(ierr);
     ierr = PetscObjectStateGet((PetscObject)U,&sprev);CHKERRQ(ierr);
-    PetscStackCallStandard((*ts->poststep),(ts));
+    PetscStackCallStandard((*ts->poststep),ts);
     ierr = PetscObjectStateGet((PetscObject)U,&spost);CHKERRQ(ierr);
     if (sprev != spost) {ierr = TSRestartStep(ts);CHKERRQ(ierr);}
   }
@@ -6088,7 +6088,7 @@ PetscErrorCode TSFunctionDomainError(TS ts,PetscReal stagetime,Vec Y,PetscBool* 
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   *accept = PETSC_TRUE;
   if (ts->functiondomainerror) {
-    PetscStackCallStandard((*ts->functiondomainerror),(ts,stagetime,Y,accept));
+    PetscStackCallStandard((*ts->functiondomainerror),ts,stagetime,Y,accept);
   }
   PetscFunctionReturn(0);
 }
