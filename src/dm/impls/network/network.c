@@ -531,10 +531,6 @@ static PetscErrorCode GetEdgelist_Coupling(DM dm,PetscInt *edges,PetscInt *nmerg
           if (network->subnet[net_from].nvtx == 0) {
             /* this proc does not own v_from, thus a ghost local vertex */
             network->nsvtx++;
-#if 0
-            /* network->subnet[net_from].nvtx++ ???? */
-            printf("[%d] has ghost sv from net %d\n",rank,net_from);
-#endif
           }
           vidxlTog[i++] = gidx_from;
           nmerged++; /* a shared vertex -- merged */
@@ -619,7 +615,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
   /* Create LOCAL edgelist in global vertex ordering for the network by concatenating local input edgelists of the subnetworks */
-  ierr = PetscMalloc2(2*network->nEdges,&edges,size+1,&eowners);CHKERRQ(ierr);
+  ierr = PetscCalloc2(2*network->nEdges,&edges,size+1,&eowners);CHKERRQ(ierr);
 
   if (network->Nsvtx) { /* subnetworks are coupled via shared vertices */
     ierr = GetEdgelist_Coupling(dm,edges,&nmerged);CHKERRQ(ierr);
@@ -729,7 +725,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
       e++; ctr++;
     }
   }
-  ierr = PetscFree2(eowners,edges);CHKERRQ(ierr);
+  ierr = PetscFree2(edges,eowners);CHKERRQ(ierr);
 
   /* Set local vertex array for the subnetworks */
   j = 0;
