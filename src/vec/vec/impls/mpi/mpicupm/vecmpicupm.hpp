@@ -1,16 +1,10 @@
-#include <../src/vec/vec/impls/mpi/pvecimpl.h>
+#ifndef PETSCVECMPICUPM_HPP
+#define PETSCVECMPICUPM_HPP
+
+#include <petsc/private/veccupmbase.hpp>  /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp>
-
-/*MC
-   VECCUDA - VECCUDA = "cuda" - A VECSEQCUDA on a single-process communicator, and VECMPICUDA otherwise.
-
-   Options Database Keys:
-. -vec_type cuda - sets the vector type to VECCUDA during a call to VecSetFromOptions()
-
-  Level: beginner
-
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECSEQCUDA, VECMPICUDA, VECSTANDARD, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
-M*/
+#include <../src/vec/vec/impls/mpi/pvecimpl.h>
+#include <petsc/private/sfimpl.h> // for _p_VecScatter
 
 namespace Petsc
 {
@@ -28,20 +22,18 @@ template <Device::CUPM::DeviceType T>
 struct VecMPI_CUPM : Vec_CUPMBase<T,VecMPI_CUPM<T>>
 {
   PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T,VecMPI_CUPM<T>);
+  using VecSeq_T = VecSeq_CUPM<T>;
 
-protected:
+private:
   PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_MPI*>(v->data))
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_RETURNS(VECMPICUPM())
 
-private:
-  using VecSeq_T = VecSeq_CUPM<T>;
-
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async_(Vec,PetscBool/*allocate_missing*/=PETSC_TRUE,PetscInt/*nghost*/=0,PetscScalar*/*host_array*/=nullptr,PetscScalar*/*device_array*/=nullptr));
-
   template <typename SeqFunction>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(Vec,PetscInt*,PetscReal*,SeqFunction,MPI_Op,MPI_Op));
 
 public:
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createcupm_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async(MPI_Comm,PetscInt,PetscInt,PetscInt,Vec*,PetscBool));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupmwitharrays_async(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
@@ -66,7 +58,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async_(Vec v,
   PetscFunctionBegin;
   // REVIEW ME: remove me
   if (PetscUnlikely(VecIMPLCast(v))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
-  ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,host_array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,nullptr);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,allocate_missing,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -91,31 +83,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::create_async(Vec v))
   PetscFunctionReturn(0);
 }
 
-/*@
- VecCreateMPICUDA - Creates a standard, parallel array-style vector for CUDA devices.
-
- Collective
-
- Input Parameters:
- +  comm - the MPI communicator to use
- .  n - local vector length (or PETSC_DECIDE to have calculated if N is given)
- -  N - global vector length (or PETSC_DETERMINE to have calculated if n is given)
-
-    Output Parameter:
- .  v - the vector
-
-    Notes:
-    Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the
-    same type as an existing vector.
-
-    Level: intermediate
-
- .seealso: VecCreateMPICUDAWithArray(), VecCreateMPICUDAWithArrays(), VecCreateSeqCUDA(), VecCreateSeq(),
-           VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
-
- @*/
-
 // VecCreateMPICUPM()
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, Vec *v, PetscBool call_set_type))
@@ -126,40 +93,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async(MPI_Com
   ierr = Create_CUPMBase_(comm,bs,n,N,v,call_set_type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-/*@C
-   VecCreateMPICUDAWithArray - Creates a parallel, array-style vector,
-   where the user provides the GPU array space to store the vector values.
-
-   Collective
-
-   Input Parameters:
-+  comm  - the MPI communicator to use
-.  bs    - block size, same meaning as VecSetBlockSize()
-.  n     - local vector length, cannot be PETSC_DECIDE
-.  N     - global vector length (or PETSC_DECIDE to have calculated)
--  array - the user provided GPU array to store the vector values
-
-   Output Parameter:
-.  vv - the vector
-
-   Notes:
-   Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the
-   same type as an existing vector.
-
-   If the user-provided array is NULL, then VecCUDAPlaceArray() can be used
-   at a later stage to SET the array for storing the vector values.
-
-   PETSc does NOT free the array when the vector is destroyed via VecDestroy().
-   The user should not free the array until the vector is destroyed.
-
-   Level: intermediate
-
-.seealso: VecCreateMPICUDA(), VecCreateSeqCUDAWithArray(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
-          VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPI(), VecCreateGhostWithArray(), VecPlaceArray()
-
-@*/
 
 // VecCreateMPICUPMWithArray[s]()
 template <Device::CUPM::DeviceType T>
@@ -175,6 +108,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupmwitharrays_asy
   PetscFunctionReturn(0);
 }
 
+// v->ops->duplicate
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::duplicate_async(Vec v, Vec *y))
 {
@@ -220,8 +154,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::destroy_async(Vec v))
   PetscFunctionReturn(0);
 }
 
-#define VecSetOp_CUPM(op_name,op_host,...) v->ops->op_name = usehost ? op_host : __VA_ARGS__
-
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::bindtocpu_async(Vec v, PetscBool usehost))
 {
@@ -250,29 +182,23 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::bindtocpu_async(Vec v, Pets
   VecSetOp_CUPM(max,VecMax_MPI,max_async);
   VecSetOp_CUPM(min,VecMin_MPI,min_async);
   VecSetOp_CUPM(setrandom,VecSetRandom_Seq,VecSeq_T::setrandom_async);
-  VecSetOp_CUPM(placearray,VecPlaceArray_Seq,VecSeq_T::placearray_async<PETSC_MEMTYPE_HOST>);
-  v->ops->replacearray = VecSeq_T::replacearray_async<PETSC_MEMTYPE_HOST>;
+  VecSetOp_CUPM(placearray,VecPlaceArray_Seq,VecSeq_T::template placearray_async<PETSC_MEMTYPE_HOST>);
+  v->ops->replacearray = VecSeq_T::template replacearray_async<PETSC_MEMTYPE_HOST>;
   VecSetOp_CUPM(dot_local,VecDot_Seq,VecSeq_T::dot_async);
   VecSetOp_CUPM(tdot_local,VecTDot_Seq,VecSeq_T::tdot_async);
   VecSetOp_CUPM(norm_local,VecNorm_Seq,VecSeq_T::norm_async);
   VecSetOp_CUPM(mdot_local,VecMDot_Seq,VecSeq_T::mdot_async);
   VecSetOp_CUPM(reciprocal,VecReciprocal_Default,VecSeq_T::reciprocal_async);
-  VecSetOp_CUPM(resetarray,VecResetArray_Seq,VecSeq_T::resetarray_async<PETSC_MEMTYPE_HOST>);
+  VecSetOp_CUPM(resetarray,VecResetArray_Seq,VecSeq_T::template resetarray_async<PETSC_MEMTYPE_HOST>);
   VecSetOp_CUPM(shift,nullptr,VecSeq_T::shift_async);
   VecSetOp_CUPM(dotnorm2,nullptr,dotnorm2_async);
-  VecSetOp_CUPM(getlocalvector,nullptr,VecSeq_T::getlocalvector_async</*read = */false>);
-  VecSetOp_CUPM(restorelocalvector,nullptr,VecSeq_T::restorelocalvector_async</*read = */false>);
-  VecSetOp_CUPM(getlocalvectorread,nullptr,VecSeq_T::getlocalvector_async</*read = */true>);
-  VecSetOp_CUPM(restorelocalvectorread,nullptr,VecSeq_T::restorelocalvector_async</*read = */true>);
-  // REVIEW ME: get/restorearrayread()?
-  VecSetOp_CUPM(getarraywrite,nullptr,getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>);
-  // REVIEW ME: this was missing??
-  //VecSetOp_CUPM(restorearraywrite,nullptr,restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>);
+  VecSetOp_CUPM(getlocalvector,nullptr,VecSeq_T::template getlocalvector_async</*read = */false>);
+  VecSetOp_CUPM(restorelocalvector,nullptr,VecSeq_T::template restorelocalvector_async</*read = */false>);
+  VecSetOp_CUPM(getlocalvectorread,nullptr,VecSeq_T::template getlocalvector_async</*read = */true>);
+  VecSetOp_CUPM(restorelocalvectorread,nullptr,VecSeq_T::template restorelocalvector_async</*read = */true>);
   VecSetOp_CUPM(sum,nullptr,VecSeq_T::sum_async);
   PetscFunctionReturn(0);
 }
-
-#undef VecSetOp_CUPM
 
 // ================================================================================== //
 //                                   compute methods                                  //
@@ -404,27 +330,4 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::min_async(Vec x, PetscInt *
 
 } // namespace Petsc
 
-/*MC
-   VECMPICUDA - VECMPICUDA = "mpicuda" - The basic parallel vector, modified to use CUDA
-
-   Options Database Keys:
-. -vec_type mpicuda - sets the vector type to VECMPICUDA during a call to VecSetFromOptions()
-
-  Level: beginner
-
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
-M*/
-PetscErrorCode VecCreate_CUDA(Vec v)
-{
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-
-  PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm(Petsc::PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  if (size == 1) {
-    ierr = VecSetType(v,VECSEQCUDA);CHKERRQ(ierr);
-  } else {
-    ierr = VecSetType(v,VECMPICUDA);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
+#endif // PETSCVECMPICUPM_HPP
