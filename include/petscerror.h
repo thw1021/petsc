@@ -167,9 +167,10 @@ M*/
     MPI_Abort(comm,ierr);                                                                      \
   } while (0)
 
-/* SETERRFUNC must be one of the SETERR<T> variants */
-#define PetscAssertEq_Internal(left,right,SETERRFUNC,...)       \
-  if (PetscUnlikely((left) != (right))) SETERRFUNC(__VA_ARGS__)
+/* SETERRFUNC must be one of the SETERR<T> variants, can't make this variadic because
+   Microsofts preprocessor is busted */
+#define PetscAssertEq_Internal(left,right,SETERRFUNC,SETERR_ARGS)       \
+  if (PetscUnlikely((left) != (right))) SETERRFUNC SETERR_ARGS
 
 /*MC
   PetscAssert - Assert that a particular condition is true
@@ -194,7 +195,7 @@ M*/
 
 .seealso: SETERRQ(), PetscError(), CHKERRQ()
 MC*/
-#define PetscAssert(cond,comm,ierr,...) PetscAssertEq_Internal((bool)(cond),true,SETERRQ,comm,ierr,__VA_ARGS__)
+#define PetscAssert(cond,comm,ierr,...) PetscAssertEq_Internal((bool)(cond),true,SETERRQ,(comm,ierr,__VA_ARGS__))
 
 /*MC
   PetscAssertFalse - Assert that a particular condition is false
@@ -220,7 +221,7 @@ MC*/
 
 .seealso: PetscAssert()
 MC*/
-#define PetscAssertFalse(cond,comm,ierr,...) PetscAssertEq_Internal((bool)(cond),false,SETERRQ,comm,ierr,__VA_ARGS__)
+#define PetscAssertFalse(cond,comm,ierr,...) PetscAssertEq_Internal((bool)(cond),false,SETERRQ,(comm,ierr,__VA_ARGS__))
 
 /*MC
    CHKERRQ - Checks error code returned from PETSc function, if non-zero it calls the error handler and then returns. Use CHKERRMPI() for checking errors from MPI calls
