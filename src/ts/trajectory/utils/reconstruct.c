@@ -57,7 +57,7 @@ PetscErrorCode TSTrajectoryReconstruct_Private(TSTrajectory tj,TS ts,PetscReal t
   if (id == -1 || id == -tshn - 1) {
     PetscReal t0 = tshn ? tshhist[0]      : 0.0;
     PetscReal tf = tshn ? tshhist[tshn-1] : 0.0;
-    SETERRQ4(PetscObjectComm((PetscObject)tj),PETSC_ERR_PLIB,"Requested time %g is outside the history interval [%g, %g] (%d)",(double)t,(double)t0,(double)tf,tshn);
+    SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_PLIB,"Requested time %g is outside the history interval [%g, %g] (%d)",(double)t,(double)t0,(double)tf,tshn);
   }
   if (tj->monitor) {
     ierr = PetscViewerASCIIPrintf(tj->monitor,"Reconstructing at time %g, order %D\n",(double)t,tj->lag.order);CHKERRQ(ierr);
@@ -102,7 +102,7 @@ PetscErrorCode TSTrajectoryReconstruct_Private(TSTrajectory tj,TS ts,PetscReal t
 
       if (tj->lag.TT[tj->lag.order+1 + s-low]) continue;
       tid = LagrangeGetId(t,tj->lag.order+1,tj->lag.T,tj->lag.TT);
-      if (tid >= 0) SETERRQ(PetscObjectComm((PetscObject)tj),PETSC_ERR_PLIB,"This should not happen");
+      PetscAssertFalse(tid >= 0,PetscObjectComm((PetscObject)tj),PETSC_ERR_PLIB,"This should not happen");
       tid = -tid-1;
       if (tj->monitor) {
         if (tj->lag.T[tid] < PETSC_MAX_REAL) {
