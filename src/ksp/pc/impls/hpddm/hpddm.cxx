@@ -345,15 +345,23 @@ static PetscErrorCode PCHPDDMGetComplexities(PC pc, PetscReal *gc, PetscReal *oc
   MatInfo        info;
   PetscInt       n, m;
   PetscLogDouble accumulate[2] { }, nnz1 = 1.0, m1 = 1.0;
+  PetscBool      flg;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (n = 0, *gc = 0, *oc = 0; n < data->N; ++n) {
     if (data->levels[n]->ksp) {
-      Mat P;
+      Mat P, A;
       ierr = KSPGetOperators(data->levels[n]->ksp, NULL, &P);CHKERRQ(ierr);
       ierr = MatGetSize(P, &m, NULL);CHKERRQ(ierr);
       accumulate[0] += m;
+      if (n == 0) {
+        ierr = PetscObjectTypeCompare((PetscObject)P, MATNORMAL, &flg);CHKERRQ(ierr);
+        if (flg) {
+          ierr = MatConvert(P, MATAIJ, MAT_INITIAL_MATRIX, &A);CHKERRQ(ierr);
+          P = A;
+        }
+      }
       if (P->ops->getinfo) {
         ierr = MatGetInfo(P, MAT_GLOBAL_SUM, &info);CHKERRQ(ierr);
         accumulate[1] += info.nz_used;
@@ -361,6 +369,9 @@ static PetscErrorCode PCHPDDMGetComplexities(PC pc, PetscReal *gc, PetscReal *oc
       if (n == 0) {
         m1 = m;
         if (P->ops->getinfo) nnz1 = info.nz_used;
+        if (flg) {
+          ierr = MatDestroy(&P);CHKERRQ(ierr);
+        }
       }
     }
   }
