@@ -171,7 +171,6 @@ M*/
 #define PetscAssertEq_Internal(left,right,SETERRFUNC,...)       \
   if (PetscUnlikely((left) != (right))) SETERRFUNC(__VA_ARGS__)
 
-
 /*MC
   PetscAssert - Assert that a particular condition is true
 
