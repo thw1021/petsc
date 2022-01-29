@@ -101,16 +101,16 @@ PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 . tao - the Tao context
 
   Notes:
-  The user must set up the Tao with calls to TaoSetInitialVector(),
-  TaoSetObjectiveRoutine(),
-  TaoSetGradientRoutine(), and (if using 2nd order method) TaoSetHessianRoutine().
+  The user must set up the Tao with calls to TaoSetSolution(),
+  TaoSetObjective(),
+  TaoSetGradient(), and (if using 2nd order method) TaoSetHessian().
 
   You should call TaoGetConvergedReason() or run with -tao_converged_reason to determine if the optimization algorithm actually succeeded or
   why it failed.
 
   Level: beginner
 
-.seealso: TaoCreate(), TaoSetObjectiveRoutine(), TaoSetGradientRoutine(), TaoSetHessianRoutine(), TaoGetConvergedReason()
+.seealso: TaoCreate(), TaoSetObjective(), TaoSetGradient(), TaoSetHessian(), TaoGetConvergedReason()
  @*/
 PetscErrorCode TaoSolve(Tao tao)
 {
@@ -178,7 +178,7 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID,1);
   if (tao->setupcalled) PetscFunctionReturn(0);
-  if (!tao->solution) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetInitialVector");
+  if (!tao->solution) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetSolution");
   if (tao->ops->setup) {
     ierr = (*tao->ops->setup)(tao);CHKERRQ(ierr);
   }
@@ -440,7 +440,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     flg = PETSC_FALSE;
     ierr = PetscOptionsBool("-tao_fd_gradient","compute gradient using finite differences","TaoDefaultComputeGradient",flg,&flg,NULL);CHKERRQ(ierr);
     if (flg) {
-      ierr = TaoSetGradientRoutine(tao,TaoDefaultComputeGradient,NULL);CHKERRQ(ierr);
+      ierr = TaoSetGradient(tao,NULL,TaoDefaultComputeGradient,NULL);CHKERRQ(ierr);
     }
     flg = PETSC_FALSE;
     ierr = PetscOptionsBool("-tao_fd_hessian","compute hessian using finite differences","TaoDefaultComputeHessian",flg,&flg,NULL);CHKERRQ(ierr);
@@ -449,7 +449,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
       ierr = MatCreate(PetscObjectComm((PetscObject)tao),&H);CHKERRQ(ierr);
       ierr = MatSetType(H,MATAIJ);CHKERRQ(ierr);
-      ierr = TaoSetHessianRoutine(tao,H,H,TaoDefaultComputeHessian,NULL);CHKERRQ(ierr);
+      ierr = TaoSetHessian(tao,H,H,TaoDefaultComputeHessian,NULL);CHKERRQ(ierr);
       ierr = MatDestroy(&H);CHKERRQ(ierr);
     }
     flg = PETSC_FALSE;
@@ -458,7 +458,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
       Mat H;
 
       ierr = MatCreate(PetscObjectComm((PetscObject)tao),&H);CHKERRQ(ierr);
-      ierr = TaoSetHessianRoutine(tao,H,H,TaoDefaultComputeHessianMFFD,NULL);CHKERRQ(ierr);
+      ierr = TaoSetHessian(tao,H,H,TaoDefaultComputeHessianMFFD,NULL);CHKERRQ(ierr);
       ierr = MatDestroy(&H);CHKERRQ(ierr);
     }
     flg = PETSC_FALSE;
@@ -1284,7 +1284,7 @@ PetscErrorCode TaoAddLineSearchCounts(Tao tao)
 }
 
 /*@
-  TaoGetSolutionVector - Returns the vector with the current TAO solution
+  TaoGetSolution - Returns the vector with the current TAO solution
 
   Not Collective
 
@@ -1296,36 +1296,14 @@ PetscErrorCode TaoAddLineSearchCounts(Tao tao)
 
   Level: intermediate
 
-  Note:  The returned vector will be the same object that was passed into TaoSetInitialVector()
+  Note:  The returned vector will be the same object that was passed into TaoSetSolution()
 @*/
-PetscErrorCode TaoGetSolutionVector(Tao tao, Vec *X)
+PetscErrorCode TaoGetSolution(Tao tao, Vec *X)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidPointer(X,2);
   *X = tao->solution;
-  PetscFunctionReturn(0);
-}
-
-/*@
-  TaoGetGradientVector - Returns the vector with the current TAO gradient
-
-  Not Collective
-
-  Input Parameter:
-. tao - the Tao context
-
-  Output Parameter:
-. G - the current solution
-
-  Level: intermediate
-@*/
-PetscErrorCode TaoGetGradientVector(Tao tao, Vec *G)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  PetscValidPointer(G,2);
-  *G = tao->gradient;
   PetscFunctionReturn(0);
 }
 
@@ -2222,7 +2200,7 @@ PetscErrorCode TaoRegister(const char sname[], PetscErrorCode (*func)(Tao))
 
   PetscFunctionBegin;
   ierr = TaoInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&TaoList,sname, (void (*)(void))func);CHKERRQ(ierr);
+  ierr = PetscFunctionListAdd(&TaoList,sname,(void (*)(void))func);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2275,31 +2253,6 @@ PetscErrorCode  TaoGetIterationNumber(Tao tao,PetscInt *iter)
 }
 
 /*@
-   TaoGetObjective - Gets the current value of the objective function
-   at this time.
-
-   Not Collective
-
-   Input Parameter:
-.  tao - Tao context
-
-   Output Parameter:
-.  value - the current value
-
-   Level: intermediate
-
-.seealso:   TaoGetLinearSolveIterations(), TaoGetIterationNumber(), TaoGetResidualNorm()
-@*/
-PetscErrorCode  TaoGetObjective(Tao tao,PetscReal *value)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  PetscValidRealPointer(value,2);
-  *value = tao->fc;
-  PetscFunctionReturn(0);
-}
-
-/*@
    TaoGetResidualNorm - Gets the current value of the norm of the residual
    at this time.
 
@@ -2318,7 +2271,7 @@ PetscErrorCode  TaoGetObjective(Tao tao,PetscReal *value)
 
 .seealso:   TaoGetLinearSolveIterations(), TaoGetIterationNumber(), TaoGetObjective()
 @*/
-PetscErrorCode  TaoGetResidualNorm(Tao tao,PetscReal *value)
+PetscErrorCode TaoGetResidualNorm(Tao tao,PetscReal *value)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2492,10 +2445,10 @@ PetscErrorCode TaoGetConvergedReason(Tao tao, TaoConvergedReason *reason)
 }
 
 /*@
-  TaoGetSolutionStatus - Get the current iterate, objective value,
-  residual, infeasibility, and termination
+   TaoGetSolutionStatus - Get the current iterate, objective value,
+   residual, infeasibility, and termination
 
-  Not Collective
+   Not Collective
 
    Input Parameter:
 .  tao - the Tao context
