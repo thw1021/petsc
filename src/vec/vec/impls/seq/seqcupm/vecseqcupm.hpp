@@ -3,13 +3,9 @@
 
 #define PETSC_SKIP_SPINLOCK // REVIEW ME: why
 
-#include "veccupmbase.hpp"
+#include <petsc/private/veccupmbase.hpp>   /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/dvecimpl.h> // for Vec_Seq
-#include <petsc/private/randomimpl.h> // for _p_PetscRandom
-
-#if !defined(__cplusplus) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
-#  error "VecSeq_CUPM requires C++11"
-#endif
+#include <petsc/private/randomimpl.h>      // for _p_PetscRandom
 
 #if 0
 #include <thrust/device_ptr.h>
@@ -51,7 +47,7 @@ namespace Impl
 namespace
 {
 
-template <bool b> struct UseComplexTag { };
+template <bool> struct UseComplexTag { };
 
 } // anonymous namespace
 
@@ -61,7 +57,8 @@ struct VecSeq_CUPM : Vec_CUPMBase<T,VecSeq_CUPM<T>>
   PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T,VecSeq_CUPM<T>);
 
 protected:
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 VecType VECTYPE_()) { return VECSEQCUPM(); }
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_Seq*>(v->data))
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_RETURNS(VECSEQCUPM())
 
 private:
   // common core for min and max
@@ -173,7 +170,6 @@ template <Device::CUPM::DeviceType T>
 template <typename UnaryFuncT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(UnaryFuncT&& unary, Vec xin, Vec yin))
 {
-  const auto         inplace = yin ? xin == yin : false;
   const auto         n = xin->map->n;
   PetscDeviceContext dctx;
   PetscErrorCode     ierr;
@@ -182,7 +178,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(Unary
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   CHKERRTHRUST(
-    if (inplace) {
+    if (xin == yin) { // in-place
       auto xptr = thrust::device_pointer_cast(DeviceArrayReadWrite(dctx,xin).ptr);
 
       thrust::transform(xptr,xptr+n,xptr,std::forward<UnaryFuncT>(unary));
@@ -254,7 +250,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupmwithbotharrays
   PetscFunctionBegin;
   // do NOT call VecSetType(), otherwise ops->create() -> create_async() ->
   // createseqcupm_async_() is called!
-  ierr = createseqcupm_async(comm,bs,n,N,v,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = createseqcupm_async(comm,bs,n,v,PETSC_FALSE);CHKERRQ(ierr);
   ierr = createseqcupm_async_(*v,PetscRemoveConstCast(host_array),PetscRemoveConstCast(device_array));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -586,7 +582,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
       if (alphaIsOne) {
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&alpha,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
       } else {
-        constexpr PetscScalar sone = 1.0;
+        constexpr auto sone = PetscScalar(1.0);
 
         cberr = cupmBlasXscal(cupmBlasHandle,n,&alpha,yarray,1);CHKERRCUPMBLAS(cberr);
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&sone,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
@@ -659,8 +655,8 @@ namespace detail
 
 struct reciprocal
 {
-  PETSC_HOSTDEVICE_DECL
-  constexpr PetscScalar operator()(PetscScalar s) const { return s ? PetscScalar(1.0)/s : s; }
+  PETSC_HOSTDEVICE_DECL constexpr
+  auto operator()(PetscScalar s) const PETSC_DECLTYPE_RETURNS(s ? PetscScalar(1.0)/s : s);
 };
 
 } // namespace detail
@@ -765,7 +761,6 @@ template <int N>
 PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar *PETSC_RESTRICT y[PETSC_RESTRICT N], PetscInt size, PetscScalar *PETSC_RESTRICT results)
 {
   static_assert(N > 0,"");
-  using iter_type = decltype(N);
   PETSC_SHAREDMEM_DECL PetscScalar shmem[N*MDOT_WORKGROUP_SIZE];
   const auto tx       = threadIdx.x,bx = blockIdx.x;
   const auto bdx      = blockDim.x,gdx = gridDim.x;
@@ -919,6 +914,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
   {
     auto xptr = DeviceArrayRead(dctx,xin);
 
+    // can fork-join here
     for (decltype(nv) i = 0; i < nv; ++i) {
       auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin+i),1,xptr,1,z+i);CHKERRCUPMBLAS(cberr);
     }
