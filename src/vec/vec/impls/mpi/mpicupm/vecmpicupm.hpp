@@ -30,23 +30,25 @@ struct VecMPI_CUPM : Vec_CUPMBase<T,VecMPI_CUPM<T>>
   PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T,VecMPI_CUPM<T>);
 
 protected:
-  PETSC_CXX_COMPAT_DECL(constexpr Vec_MPI* VecIMPLCast_(Vec v))
-  {
-    return static_cast<Vec_MPI*>(v->data);
-  }
-
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 VecType VECTYPE_()) { return VECMPICUPM(); }
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_MPI*>(v->data))
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_RETURNS(VECMPICUPM())
 
 private:
+  using VecSeq_T = VecSeq_CUPM<T>;
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async_(Vec,PetscBool/*allocate_missing*/=PETSC_TRUE,PetscInt/*nghost*/=0,PetscScalar*/*host_array*/=nullptr,PetscScalar*/*device_array*/=nullptr));
+
   template <typename SeqFunction>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(Vec,PetscInt*,PetscReal*,SeqFunction,MPI_Op,MPI_Op));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async_(Vec,PetscBool/*allocate_missing*/=PETSC_TRUE,PetscInt/*nghost*/=0,PetscScalar*/*host_array*/=nullptr,PetscScalar*/*device_array*/=nullptr));
 
 public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async(MPI_Comm,PetscInt,PetscInt,PetscInt,Vec*,PetscBool));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupmwitharrays_async(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy_async(Vec));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode duplicate_async(Vec,Vec*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode bindtocpu_async(Vec,PetscBool));
+
   PETSC_CXX_COMPAT_DECL(PetscErrorCode norm_async(Vec,NormType,PetscReal*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dot_async(Vec,Vec,PetscScalar*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode tdot_async(Vec,Vec,PetscScalar*));
@@ -54,8 +56,6 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dotnorm2_async(Vec,Vec,PetscScalar*,PetscScalar*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode max_async(Vec,PetscInt*,PetscReal*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode min_async(Vec,PetscInt*,PetscReal*));
-
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode duplicate_async(Vec,Vec*));
 };
 
 template <Device::CUPM::DeviceType T>
@@ -64,6 +64,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async_(Vec v,
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  // REVIEW ME: remove me
+  if (PetscUnlikely(VecIMPLCast(v))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
   ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,host_array);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,allocate_missing,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -166,7 +168,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupmwitharrays_asy
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  // don't call VecSetType()
+  // do NOT call VecSetType(), otherwise ops->create() -> create_async() ->
+  // creatempicupm_async_() is called!
   ierr = creatempicupm_async(comm,bs,n,N,v,PETSC_FALSE);CHKERRQ(ierr);
   ierr = creatempicupm_async_(*v,PETSC_FALSE,0,PetscRemoveConstCast(host_array),PetscRemoveConstCast(device_array));CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -175,17 +178,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupmwitharrays_asy
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::duplicate_async(Vec v, Vec *y))
 {
-  const auto     vimpl = VecIMPLCast(v);
-  const auto     nghost = vimpl->nghost;
+  const auto     vimpl   = VecIMPLCast(v);
+  const auto     nghost  = vimpl->nghost;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  // don't call VecSetType(), we don't want to set up the data structures yet
-  ierr = Duplicate_CUPMBase_(v,y,PETSC_FALSE);CHKERRQ(ierr);
-  // now we do
-  ierr = creatempicupm_async_(*y,PETSC_FALSE,nghost);CHKERRQ(ierr);
-  // in case the user has done some VecSetOps() tomfoolery
-  ierr = PetscMemcpy((*y)->ops,v->ops,sizeof(*v->ops));CHKERRQ(ierr);
+  // does not call VecSetType(), we set up the data structures ourselves
+  ierr = Duplicate_CUPMBase_(v,y,[=](Vec z){return creatempicupm_async_(z,PETSC_FALSE,nghost);});CHKERRQ(ierr);
 
   /* save local representation of the parallel vector (and scatter) if it exists */
   if (const auto locrep = vimpl->localrep) {
@@ -221,10 +220,63 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::destroy_async(Vec v))
   PetscFunctionReturn(0);
 }
 
+#define VecSetOp_CUPM(op_name,op_host,...) v->ops->op_name = usehost ? op_host : __VA_ARGS__
+
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::bindtocpu_async(Vec v, PetscBool usehost))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (v->boundtocpu == usehost) PetscFunctionReturn(0);
+  ierr = BindToCPU_CUPMBase_(v,usehost);CHKERRQ(ierr);
+
+  VecSetOp_CUPM(dot,VecDot_MPI,dot_async);
+  VecSetOp_CUPM(mdot,VecMDot_MPI,mdot_async);
+  VecSetOp_CUPM(norm,VecNorm_MPI,norm_async);
+  VecSetOp_CUPM(tdot,VecTDot_MPI,tdot_async);
+  VecSetOp_CUPM(scale,VecScale_Seq,VecSeq_T::scale_async);
+  VecSetOp_CUPM(copy,VecCopy_Seq,VecSeq_T::copy_async);
+  VecSetOp_CUPM(set,VecSet_Seq,VecSeq_T::set_async);
+  VecSetOp_CUPM(swap,VecSwap_Seq,VecSeq_T::swap_async);
+  VecSetOp_CUPM(axpy,VecAXPY_Seq,VecSeq_T::axpy_async);
+  VecSetOp_CUPM(axpby,VecAXPBY_Seq,VecSeq_T::axpby_async);
+  VecSetOp_CUPM(maxpy,VecMAXPY_Seq,VecSeq_T::maxpy_async);
+  VecSetOp_CUPM(aypx,VecAYPX_Seq,VecSeq_T::aypx_async);
+  VecSetOp_CUPM(waxpy,VecWAXPY_Seq,VecSeq_T::waxpy_async);
+  VecSetOp_CUPM(axpbypcz,VecAXPBYPCZ_Seq,VecSeq_T::axpbypcz_async);
+  VecSetOp_CUPM(pointwisemult,VecPointwiseMult_Seq,VecSeq_T::pointwisemult_async);
+  VecSetOp_CUPM(pointwisedivide,VecPointwiseDivide_Seq,VecSeq_T::pointwisedivide_async);
+  VecSetOp_CUPM(max,VecMax_MPI,max_async);
+  VecSetOp_CUPM(min,VecMin_MPI,min_async);
+  VecSetOp_CUPM(setrandom,VecSetRandom_Seq,VecSeq_T::setrandom_async);
+  VecSetOp_CUPM(placearray,VecPlaceArray_Seq,VecSeq_T::placearray_async<PETSC_MEMTYPE_HOST>);
+  v->ops->replacearray = VecSeq_T::replacearray_async<PETSC_MEMTYPE_HOST>;
+  VecSetOp_CUPM(dot_local,VecDot_Seq,VecSeq_T::dot_async);
+  VecSetOp_CUPM(tdot_local,VecTDot_Seq,VecSeq_T::tdot_async);
+  VecSetOp_CUPM(norm_local,VecNorm_Seq,VecSeq_T::norm_async);
+  VecSetOp_CUPM(mdot_local,VecMDot_Seq,VecSeq_T::mdot_async);
+  VecSetOp_CUPM(reciprocal,VecReciprocal_Default,VecSeq_T::reciprocal_async);
+  VecSetOp_CUPM(resetarray,VecResetArray_Seq,VecSeq_T::resetarray_async<PETSC_MEMTYPE_HOST>);
+  VecSetOp_CUPM(shift,nullptr,VecSeq_T::shift_async);
+  VecSetOp_CUPM(dotnorm2,nullptr,dotnorm2_async);
+  VecSetOp_CUPM(getlocalvector,nullptr,VecSeq_T::getlocalvector_async</*read = */false>);
+  VecSetOp_CUPM(restorelocalvector,nullptr,VecSeq_T::restorelocalvector_async</*read = */false>);
+  VecSetOp_CUPM(getlocalvectorread,nullptr,VecSeq_T::getlocalvector_async</*read = */true>);
+  VecSetOp_CUPM(restorelocalvectorread,nullptr,VecSeq_T::restorelocalvector_async</*read = */true>);
+  // REVIEW ME: get/restorearrayread()?
+  VecSetOp_CUPM(getarraywrite,nullptr,getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>);
+  // REVIEW ME: this was missing??
+  //VecSetOp_CUPM(restorearraywrite,nullptr,restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>);
+  VecSetOp_CUPM(sum,nullptr,VecSeq_T::sum_async);
+  PetscFunctionReturn(0);
+}
+
+#undef VecSetOp_CUPM
+
 // ================================================================================== //
 //                                   compute methods                                  //
 
-// v->ops->norm
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::norm_async(Vec v, NormType type, PetscReal *z))
 {
@@ -236,14 +288,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::norm_async(Vec v, NormType 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSeq_CUPM<T>::norm_async(v,type,work);CHKERRQ(ierr);
+  ierr = VecSeq_T::norm_async(v,type,work);CHKERRQ(ierr);
   if (norm2) work[bothNorm] *= work[bothNorm];
   ierr = MPIU_Allreduce(work,z,count,MPIU_REAL,op,PetscObjectComm(PetscObjectCast(v)));CHKERRMPI(ierr);
   if (norm2) z[bothNorm] = PetscSqrtReal(z[bothNorm]);
   PetscFunctionReturn(0);
 }
 
-// v->ops->dot
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dot_async(Vec x, Vec y, PetscScalar *z))
 {
@@ -251,12 +302,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dot_async(Vec x, Vec y, Pet
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSeq_CUPM<T>::dot_async(x,y,&work);CHKERRQ(ierr);
+  ierr = VecSeq_T::dot_async(x,y,&work);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,z,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x)));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
-// v->ops->tdot
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::tdot_async(Vec x, Vec y, PetscScalar *z))
 {
@@ -264,7 +314,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::tdot_async(Vec x, Vec y, Pe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSeq_CUPM<T>::tdot_async(x,y,&work);CHKERRQ(ierr);
+  ierr = VecSeq_T::tdot_async(x,y,&work);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,z,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x)));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
@@ -279,7 +329,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::mdot_async(Vec x, PetscInt 
 
   PetscFunctionBegin;
   if (allocate) {ierr = PetscMalloc1(nv,&work);CHKERRQ(ierr);}
-  ierr = VecSeq_CUPM<T>::mdot_async(x,nv,y,work);CHKERRQ(ierr);
+  ierr = VecSeq_T::mdot_async(x,nv,y,work);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x)));CHKERRMPI(ierr);
   if (allocate) {ierr = PetscFree(work);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
@@ -292,7 +342,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dotnorm2_async(Vec x, Vec y
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSeq_CUPM<T>::dotnorm2_async(x,y,work,work+1);CHKERRQ(ierr);
+  ierr = VecSeq_T::dotnorm2_async(x,y,work,work+1);CHKERRQ(ierr);
   ierr = MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x)));CHKERRMPI(ierr);
   *dp  = sum[0];
   *nm  = sum[1];
@@ -332,7 +382,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::max_async(Vec x, PetscInt *
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = minmax_async_(x,idx,z,VecSeq_CUPM<T>::max_async,MPIU_MAXLOC,MPIU_MAX);CHKERRQ(ierr);
+  ierr = minmax_async_(x,idx,z,VecSeq_T::max_async,MPIU_MAXLOC,MPIU_MAX);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -342,7 +392,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::min_async(Vec x, PetscInt *
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = minmax_async_(x,idx,z,VecSeq_CUPM<T>::min_async,MPIU_MINLOC,MPIU_MIN);CHKERRQ(ierr);
+  ierr = minmax_async_(x,idx,z,VecSeq_T::min_async,MPIU_MINLOC,MPIU_MIN);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -364,7 +414,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::min_async(Vec x, PetscInt *
 
 .seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
 M*/
-
 PetscErrorCode VecCreate_CUDA(Vec v)
 {
   PetscErrorCode ierr;
@@ -376,102 +425,6 @@ PetscErrorCode VecCreate_CUDA(Vec v)
     ierr = VecSetType(v,VECSEQCUDA);CHKERRQ(ierr);
   } else {
     ierr = VecSetType(v,VECMPICUDA);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool pin)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  V->boundtocpu = pin;
-  if (pin) {
-    ierr = VecCUDACopyFromGPU(V);CHKERRQ(ierr);
-    V->offloadmask = PETSC_OFFLOAD_CPU; /* since the CPU code will likely change values in the vector */
-    V->ops->dotnorm2               = NULL;
-    V->ops->waxpy                  = VecWAXPY_Seq;
-    V->ops->dot                    = VecDot_MPI;
-    V->ops->mdot                   = VecMDot_MPI;
-    V->ops->tdot                   = VecTDot_MPI;
-    V->ops->norm                   = VecNorm_MPI;
-    V->ops->scale                  = VecScale_Seq;
-    V->ops->copy                   = VecCopy_Seq;
-    V->ops->set                    = VecSet_Seq;
-    V->ops->swap                   = VecSwap_Seq;
-    V->ops->axpy                   = VecAXPY_Seq;
-    V->ops->axpby                  = VecAXPBY_Seq;
-    V->ops->maxpy                  = VecMAXPY_Seq;
-    V->ops->aypx                   = VecAYPX_Seq;
-    V->ops->axpbypcz               = VecAXPBYPCZ_Seq;
-    V->ops->pointwisemult          = VecPointwiseMult_Seq;
-    V->ops->setrandom              = VecSetRandom_Seq;
-    V->ops->placearray             = VecPlaceArray_Seq;
-    V->ops->replacearray           = VecReplaceArray_SeqCUDA;
-    V->ops->resetarray             = VecResetArray_Seq;
-    V->ops->dot_local              = VecDot_Seq;
-    V->ops->tdot_local             = VecTDot_Seq;
-    V->ops->norm_local             = VecNorm_Seq;
-    V->ops->mdot_local             = VecMDot_Seq;
-    V->ops->pointwisedivide        = VecPointwiseDivide_Seq;
-    V->ops->getlocalvector         = NULL;
-    V->ops->restorelocalvector     = NULL;
-    V->ops->getlocalvectorread     = NULL;
-    V->ops->restorelocalvectorread = NULL;
-    V->ops->getarraywrite          = NULL;
-    V->ops->max                    = VecMax_MPI;
-    V->ops->min                    = VecMin_MPI;
-    V->ops->reciprocal             = VecReciprocal_Default;
-    V->ops->sum                    = NULL;
-    V->ops->shift                  = NULL;
-    /* default random number generator */
-    ierr = PetscFree(V->defaultrandtype);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(PETSCRANDER48,&V->defaultrandtype);CHKERRQ(ierr);
-  } else {
-    V->ops->dotnorm2               = VecDotNorm2_MPICUDA;
-    V->ops->waxpy                  = VecWAXPY_SeqCUDA;
-    V->ops->duplicate              = VecDuplicate_MPICUDA;
-    V->ops->dot                    = VecDot_MPICUDA;
-    V->ops->mdot                   = VecMDot_MPICUDA;
-    V->ops->tdot                   = VecTDot_MPICUDA;
-    V->ops->norm                   = VecNorm_MPICUDA;
-    V->ops->scale                  = VecScale_SeqCUDA;
-    V->ops->copy                   = VecCopy_SeqCUDA;
-    V->ops->set                    = VecSet_SeqCUDA;
-    V->ops->swap                   = VecSwap_SeqCUDA;
-    V->ops->axpy                   = VecAXPY_SeqCUDA;
-    V->ops->axpby                  = VecAXPBY_SeqCUDA;
-    V->ops->maxpy                  = VecMAXPY_SeqCUDA;
-    V->ops->aypx                   = VecAYPX_SeqCUDA;
-    V->ops->axpbypcz               = VecAXPBYPCZ_SeqCUDA;
-    V->ops->pointwisemult          = VecPointwiseMult_SeqCUDA;
-    V->ops->setrandom              = VecSetRandom_SeqCUDA;
-    V->ops->placearray             = VecPlaceArray_SeqCUDA;
-    V->ops->replacearray           = VecReplaceArray_SeqCUDA;
-    V->ops->resetarray             = VecResetArray_SeqCUDA;
-    V->ops->dot_local              = VecDot_SeqCUDA;
-    V->ops->tdot_local             = VecTDot_SeqCUDA;
-    V->ops->norm_local             = VecNorm_SeqCUDA;
-    V->ops->mdot_local             = VecMDot_SeqCUDA;
-    V->ops->destroy                = VecDestroy_MPICUDA;
-    V->ops->pointwisedivide        = VecPointwiseDivide_SeqCUDA;
-    V->ops->getlocalvector         = VecGetLocalVector_SeqCUDA;
-    V->ops->restorelocalvector     = VecRestoreLocalVector_SeqCUDA;
-    V->ops->getlocalvectorread     = VecGetLocalVectorRead_SeqCUDA;
-    V->ops->restorelocalvectorread = VecRestoreLocalVectorRead_SeqCUDA;
-    V->ops->getarraywrite          = VecGetArrayWrite_SeqCUDA;
-    V->ops->getarray               = VecGetArray_SeqCUDA;
-    V->ops->restorearray           = VecRestoreArray_SeqCUDA;
-    V->ops->getarrayandmemtype     = VecGetArrayAndMemType_SeqCUDA;
-    V->ops->restorearrayandmemtype = VecRestoreArrayAndMemType_SeqCUDA;
-    V->ops->max                    = VecMax_MPICUDA;
-    V->ops->min                    = VecMin_MPICUDA;
-    V->ops->reciprocal             = VecReciprocal_SeqCUDA;
-    V->ops->sum                    = VecSum_SeqCUDA;
-    V->ops->shift                  = VecShift_SeqCUDA;
-    /* default random number generator */
-    ierr = PetscFree(V->defaultrandtype);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(PETSCCURAND,&V->defaultrandtype);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
