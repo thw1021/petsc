@@ -1,15 +1,15 @@
-#include  "../vecseqcupm.hpp" /*I "petscvec.h" I*/
+#include  "../vecseqcupm.hpp" /*I <petscvec.h> I*/
 
-using namespace Petsc::Vec::CUPM::Impl;
+using namespace Petsc::Vector::CUPM::Impl;
 
-static constexpr auto VecSeqCUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>();
+using VecSeq_CUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 PetscErrorCode VecCreate_SeqCUDA(Vec v)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSeqCUDA.create_async(v);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::create_async(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -42,7 +42,7 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
 
   PetscFunctionBegin;
   PetscValidPointer(v,3);
-  ierr = VecSeqCUDA.createseqcupm_async(comm,n,v);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::createseqcupm_async(comm,n,0,v,PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -88,7 +88,7 @@ PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
   PetscFunctionBegin;
   if (n) PetscValidScalarPointer(cpuarray,4);
   PetscValidPointer(v,6);
-  ierr = VecSeqCUDA.createwithbotharrays_async(comm,bs,n,cpuarray,gpuarray,v);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::createseqcupmwithbotharrays_async(comm,bs,n,cpuarray,gpuarray,v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -175,7 +175,7 @@ PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(a,2);
-  ierr = VecSeqCUDA.getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>(v,a);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>(v,a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -208,7 +208,7 @@ PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(a,2);
-  ierr = VecSeqCUDA.restorearray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>(v,a);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::restorearray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>(v,a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -247,7 +247,7 @@ PetscErrorCode VecCUDAGetArrayRead(Vec v, const PetscScalar **a)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSeqCUDA.getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -278,7 +278,7 @@ PetscErrorCode VecCUDARestoreArrayRead(Vec v, const PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(a,2);
-  ierr = VecSeqCUDA.restorearray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::restorearray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -316,7 +316,7 @@ PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(a,2);
-  ierr = VecSeqCUDA.getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>(v,a);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::getarray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>(v,a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -347,7 +347,7 @@ PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(a,2);
-  ierr = VecSeqCUDA.restorearray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>(v,a);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::restorearray_async<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>(v,a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -378,7 +378,7 @@ PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vin,VEC_CLASSID,1);
-  ierr = VecSeqCUDA.placearray_async<PETSC_MEMTYPE_DEVICE>(vin,a);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::placearray_async<PETSC_MEMTYPE_DEVICE>(vin,a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -413,7 +413,7 @@ PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vin,VEC_CLASSID,1);
-  ierr = VecSeqCUDA.replacearray_async<PETSC_MEMTYPE_DEVICE>(vin,a);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::replacearray_async<PETSC_MEMTYPE_DEVICE>(vin,a);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -437,6 +437,6 @@ PetscErrorCode VecCUDAResetArray(Vec vin)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vin,VEC_CLASSID,1);
-  ierr = VecSeqCUDA.resetarray_async<PETSC_MEMTYPE_DEVICE>(vin);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::resetarray_async<PETSC_MEMTYPE_DEVICE>(vin);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

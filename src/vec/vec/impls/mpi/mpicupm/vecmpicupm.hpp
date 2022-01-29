@@ -1,16 +1,9 @@
-#include <../src/vec/vec/impls/mpi/pvecimpl.h>
+#ifndef PETSCVECMPICUPM_HPP
+#define PETSCVECMPICUPM_HPP
+
+#include <petsc/private/veccupmbase.hpp>  /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp>
-
-/*MC
-   VECCUDA - VECCUDA = "cuda" - A VECSEQCUDA on a single-process communicator, and VECMPICUDA otherwise.
-
-   Options Database Keys:
-. -vec_type cuda - sets the vector type to VECCUDA during a call to VecSetFromOptions()
-
-  Level: beginner
-
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECSEQCUDA, VECMPICUDA, VECSTANDARD, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
-M*/
+#include <../src/vec/vec/impls/mpi/pvecimpl.h>
 
 namespace Petsc
 {
@@ -42,6 +35,7 @@ private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(Vec,PetscInt*,PetscReal*,SeqFunction,MPI_Op,MPI_Op));
 
 public:
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createcupm_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async(MPI_Comm,PetscInt,PetscInt,PetscInt,Vec*,PetscBool));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupmwitharrays_async(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
@@ -66,7 +60,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async_(Vec v,
   PetscFunctionBegin;
   // REVIEW ME: remove me
   if (PetscUnlikely(VecIMPLCast(v))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
-  ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,host_array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,nullptr);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,allocate_missing,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -91,31 +85,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::create_async(Vec v))
   PetscFunctionReturn(0);
 }
 
-/*@
- VecCreateMPICUDA - Creates a standard, parallel array-style vector for CUDA devices.
-
- Collective
-
- Input Parameters:
- +  comm - the MPI communicator to use
- .  n - local vector length (or PETSC_DECIDE to have calculated if N is given)
- -  N - global vector length (or PETSC_DETERMINE to have calculated if n is given)
-
-    Output Parameter:
- .  v - the vector
-
-    Notes:
-    Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the
-    same type as an existing vector.
-
-    Level: intermediate
-
- .seealso: VecCreateMPICUDAWithArray(), VecCreateMPICUDAWithArrays(), VecCreateSeqCUDA(), VecCreateSeq(),
-           VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
-
- @*/
-
 // VecCreateMPICUPM()
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, Vec *v, PetscBool call_set_type))
@@ -126,40 +95,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async(MPI_Com
   ierr = Create_CUPMBase_(comm,bs,n,N,v,call_set_type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-
-/*@C
-   VecCreateMPICUDAWithArray - Creates a parallel, array-style vector,
-   where the user provides the GPU array space to store the vector values.
-
-   Collective
-
-   Input Parameters:
-+  comm  - the MPI communicator to use
-.  bs    - block size, same meaning as VecSetBlockSize()
-.  n     - local vector length, cannot be PETSC_DECIDE
-.  N     - global vector length (or PETSC_DECIDE to have calculated)
--  array - the user provided GPU array to store the vector values
-
-   Output Parameter:
-.  vv - the vector
-
-   Notes:
-   Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the
-   same type as an existing vector.
-
-   If the user-provided array is NULL, then VecCUDAPlaceArray() can be used
-   at a later stage to SET the array for storing the vector values.
-
-   PETSc does NOT free the array when the vector is destroyed via VecDestroy().
-   The user should not free the array until the vector is destroyed.
-
-   Level: intermediate
-
-.seealso: VecCreateMPICUDA(), VecCreateSeqCUDAWithArray(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
-          VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPI(), VecCreateGhostWithArray(), VecPlaceArray()
-
-@*/
 
 // VecCreateMPICUPMWithArray[s]()
 template <Device::CUPM::DeviceType T>
@@ -175,6 +110,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupmwitharrays_asy
   PetscFunctionReturn(0);
 }
 
+// v->ops->duplicate
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::duplicate_async(Vec v, Vec *y))
 {
@@ -404,27 +340,4 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::min_async(Vec x, PetscInt *
 
 } // namespace Petsc
 
-/*MC
-   VECMPICUDA - VECMPICUDA = "mpicuda" - The basic parallel vector, modified to use CUDA
-
-   Options Database Keys:
-. -vec_type mpicuda - sets the vector type to VECMPICUDA during a call to VecSetFromOptions()
-
-  Level: beginner
-
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
-M*/
-PetscErrorCode VecCreate_CUDA(Vec v)
-{
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-
-  PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm(Petsc::PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  if (size == 1) {
-    ierr = VecSetType(v,VECSEQCUDA);CHKERRQ(ierr);
-  } else {
-    ierr = VecSetType(v,VECMPICUDA);CHKERRQ(ierr);
-  }
-  PetscFunctionReturn(0);
-}
+#endif // PETSCVECMPICUPM_HPP
