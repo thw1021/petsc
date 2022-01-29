@@ -76,6 +76,7 @@ typedef struct {
   PetscInt  interptype;
   PetscInt  maxc;
   PetscInt  minc;
+  PetscInt  use_tpl_spgemm; // this is a global parameter but is closely associated with BoomerAMG
 
   /* GPU */
   PetscBool keeptranspose;
@@ -903,7 +904,13 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   if (flg) {
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
   }
-
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
+  // SetSpGemmUseCusparse is a global parameter but is closely associated with BoomerAMG
+  ierr = PetscOptionsInt("-pc_hypre_set_spgemm_use_cusparse", "Use third party spGEMM", "None", jac->use_tpl_spgemm, &jac->use_tpl_spgemm, &flg);CHKERRQ(ierr);
+  if (flg) {
+    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
+  }
+#endif
   /* AIR */
 #if PETSC_PKG_HYPRE_VERSION_GE(2,18,0)
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_restriction_type", "Type of AIR method (distance 1 or 2, 0 means no AIR)", "None", jac->Rtype, &jac->Rtype, NULL);CHKERRQ(ierr);
@@ -1876,6 +1883,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     jac->agg_num_paths    = 1;
     jac->maxc             = 9;
     jac->minc             = 1;
+    jac->use_tpl_spgemm   = 1;
 
     jac->nodal_coarsening      = 0;
     jac->nodal_coarsening_diag = 0;
@@ -1922,6 +1930,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     PetscStackCallStandard(HYPRE_BoomerAMGSetNumSweeps,(jac->hsolver, jac->gridsweeps[0])); /* defaults coarse to 1 */
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxCoarseSize,(jac->hsolver, jac->maxc));
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
+    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
 
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2,18,0)
