@@ -739,7 +739,7 @@ int main(int argc, char **argv)
   ierr = PetscLogStageRegister("Solve", &stage);CHKERRQ(ierr);
   ctx->stage = 0; // lets not use this stage
 #if defined(PETSC_HAVE_THREADSAFETY)
-  ctx->stage = 1; // not set with thread safty
+  ctx->stage = 1; // not set with thread safety
 #endif
   ierr = TSSetSolution(ts,X);CHKERRQ(ierr);
   ierr = PetscLogStagePush(stage);CHKERRQ(ierr);
