@@ -904,12 +904,13 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   if (flg) {
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
   }
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
   // SetSpGemmUseCusparse is a global parameter but is closely associated with BoomerAMG
   ierr = PetscOptionsInt("-pc_hypre_set_spgemm_use_cusparse", "Use third party spGEMM", "None", jac->use_tpl_spgemm, &jac->use_tpl_spgemm, &flg);CHKERRQ(ierr);
   if (flg) {
     PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
   }
-
+#endif
   /* AIR */
 #if PETSC_PKG_HYPRE_VERSION_GE(2,18,0)
   ierr = PetscOptionsInt("-pc_hypre_boomeramg_restriction_type", "Type of AIR method (distance 1 or 2, 0 means no AIR)", "None", jac->Rtype, &jac->Rtype, NULL);CHKERRQ(ierr);
