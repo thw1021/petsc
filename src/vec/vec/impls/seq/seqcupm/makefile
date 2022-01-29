@@ -1,12 +1,11 @@
-#requiresdefine 'PETSC_HAVE_CXX_DIALECT_CXX11'
+#requiresdefine 'PETSC_HAVE_CUPM'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 SOURCEC   =
-SOURCECXX = veccupm.cxx
 SOURCEF   =
-SOURCEH   = veccupmbase.hpp vecseqcupm.hpp
+SOURCEH   = vecseqcupm.hpp
 LIBBASE   = libpetscvec
 MANSEC    = Vec
 LOCDIR    = src/vec/vec/impls/seq/seqcupm/
