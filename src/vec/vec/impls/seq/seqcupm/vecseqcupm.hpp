@@ -3,22 +3,16 @@
 
 #define PETSC_SKIP_SPINLOCK // REVIEW ME: why
 
-#include "veccupmbase.hpp"
+#include <petsc/private/veccupmbase.hpp>   /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/dvecimpl.h> // for Vec_Seq
-#include <petsc/private/randomimpl.h> // for _p_PetscRandom
+#include <petsc/private/randomimpl.h>      // for _p_PetscRandom
 
-#if !defined(__cplusplus) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
-#  error "VecSeq_CUPM requires C++11"
-#endif
-
-#if 0
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/reduce.h>
 #include <thrust/functional.h>
 #include <thrust/iterator/counting_iterator.h>
-#endif
 
 // TODO
 // - refactor the AXPY's for code reuse
@@ -51,7 +45,7 @@ namespace Impl
 namespace
 {
 
-template <bool b> struct UseComplexTag { };
+template <bool> struct UseComplexTag { };
 
 } // anonymous namespace
 
@@ -60,10 +54,10 @@ struct VecSeq_CUPM : Vec_CUPMBase<T,VecSeq_CUPM<T>>
 {
   PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T,VecSeq_CUPM<T>);
 
-protected:
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 VecType VECTYPE_()) { return VECSEQCUPM(); }
-
 private:
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_Seq*>(v->data))
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_RETURNS(VECSEQCUPM())
+
   // common core for min and max
   template <typename TupleFuncT, typename UnaryFuncT>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(TupleFuncT&&,UnaryFuncT&&,PetscReal,Vec,PetscInt*,PetscReal*));
@@ -173,7 +167,6 @@ template <Device::CUPM::DeviceType T>
 template <typename UnaryFuncT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(UnaryFuncT&& unary, Vec xin, Vec yin))
 {
-  const auto         inplace = yin ? xin == yin : false;
   const auto         n = xin->map->n;
   PetscDeviceContext dctx;
   PetscErrorCode     ierr;
@@ -182,7 +175,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(Unary
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   CHKERRTHRUST(
-    if (inplace) {
+    if (xin == yin) { // in-place
       auto xptr = thrust::device_pointer_cast(DeviceArrayReadWrite(dctx,xin).ptr);
 
       thrust::transform(xptr,xptr+n,xptr,std::forward<UnaryFuncT>(unary));
@@ -254,7 +247,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupmwithbotharrays
   PetscFunctionBegin;
   // do NOT call VecSetType(), otherwise ops->create() -> create_async() ->
   // createseqcupm_async_() is called!
-  ierr = createseqcupm_async(comm,bs,n,N,v,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = createseqcupm_async(comm,bs,n,v,PETSC_FALSE);CHKERRQ(ierr);
   ierr = createseqcupm_async_(*v,PetscRemoveConstCast(host_array),PetscRemoveConstCast(device_array));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -285,9 +278,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
   PetscFunctionReturn(0);
 }
 
-#define VecSetOp_CUPM(op_name,op_host,...)  v->ops->op_name = usehost ? op_host : __VA_ARGS__
-
-// VecCUPMBindToCPU()
+// v->ops->bindtocpu
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, PetscBool usehost))
 {
@@ -326,16 +317,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   VecSetOp_CUPM(placearray,VecPlaceArray_Seq,placearray_async<PETSC_MEMTYPE_HOST>);
   v->ops->replacearray = replacearray_async<PETSC_MEMTYPE_HOST>;
   VecSetOp_CUPM(resetarray,VecResetArray_Seq,resetarray_async<PETSC_MEMTYPE_HOST>);
-
-  VecSetOp_CUPM(duplicate,VecDuplicate_Seq,duplicate_async);
   VecSetOp_CUPM(getlocalvector,nullptr,&getlocalvector_async</*read = */false>);
   VecSetOp_CUPM(getlocalvectorread,nullptr,&getlocalvector_async</*read = */true>);
   VecSetOp_CUPM(restorelocalvector,nullptr,&restorelocalvector_async</*read = */false>);
   VecSetOp_CUPM(restorelocalvectorread,nullptr,&restorelocalvector_async</*read = */true>);
   PetscFunctionReturn(0);
 }
-
-#undef VecSetOp_CUPM
 
 // ================================================================================== //
 //                                    mutatators                                      //
@@ -586,7 +573,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
       if (alphaIsOne) {
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&alpha,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
       } else {
-        constexpr PetscScalar sone = 1.0;
+        constexpr auto sone = PetscScalar(1.0);
 
         cberr = cupmBlasXscal(cupmBlasHandle,n,&alpha,yarray,1);CHKERRCUPMBLAS(cberr);
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&sone,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
@@ -660,7 +647,7 @@ namespace detail
 struct reciprocal
 {
   PETSC_HOSTDEVICE_DECL
-  constexpr PetscScalar operator()(PetscScalar s) const { return s ? PetscScalar(1.0)/s : s; }
+  constexpr PetscScalar operator()(PetscScalar s) const { return s == 0 ? s : PetscScalar(1.0)/s; }
 };
 
 } // namespace detail
@@ -765,7 +752,6 @@ template <int N>
 PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar *PETSC_RESTRICT y[PETSC_RESTRICT N], PetscInt size, PetscScalar *PETSC_RESTRICT results)
 {
   static_assert(N > 0,"");
-  using iter_type = decltype(N);
   PETSC_SHAREDMEM_DECL PetscScalar shmem[N*MDOT_WORKGROUP_SIZE];
   const auto tx       = threadIdx.x,bx = blockIdx.x;
   const auto bdx      = blockDim.x,gdx = gridDim.x;
@@ -919,6 +905,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
   {
     auto xptr = DeviceArrayRead(dctx,xin);
 
+    // can fork-join here
     for (decltype(nv) i = 0; i < nv; ++i) {
       auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin+i),1,xptr,1,z+i);CHKERRCUPMBLAS(cberr);
     }
@@ -937,7 +924,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(nv <= 0)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nv);
+  if (PetscUnlikely(nv <= 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nv);
   else if (PetscUnlikely(nv == 1)) {
     ierr = dot_async(xin,PetscRemoveConstCast(yin[0]),z);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -1376,8 +1363,7 @@ struct min_tuple
 {
   using tuple_type = thrust::tuple<PetscReal,PetscInt>;
 
-  PETSC_HOSTDEVICE_DECL
-  constexpr tuple_type operator()(const tuple_type& x, const tuple_type& y) const
+  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
     return ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
     // if ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) {
