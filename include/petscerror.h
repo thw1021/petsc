@@ -833,7 +833,7 @@ M*/
     PetscStackPush(#func);                                                                                \
     __ierr = func args;                                                                                   \
     PetscStackPop;                                                                                        \
-    PetscAssert(__ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in %s(): error code %d",#func,(int)__ierr); \
+    PetscAssert(!__ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in %s(): error code %d",#func,(int)__ierr); \
   } while (0)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
 
