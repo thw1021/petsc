@@ -52,8 +52,6 @@ struct no_op
 
 } // anonymous namespace
 
-#define PETSC_DECLTYPE_RETURNS(...) -> decltype(__VA_ARGS__) { return __VA_ARGS__; }
-
 // Base class for the VecSeq and VecMPI CUPM implementations. On top of the usual DeviceType
 // template parameter it also uses CRTP to be able to use values/calls specific to either
 // VecSeq or VecMPI. This is in effect "inside-out" polymorphism.
@@ -74,15 +72,15 @@ protected:
                                  // Mvctx->lvec in nvshmem
   };
 
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecCUPMCast(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_CUPM*>(v->spptr))
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecCUPMCast(Vec v)) PETSC_DECLTYPE_AUTO(static_cast<Vec_CUPM*>(v->spptr))
   // This is a trick to get around the fact that in CRTP the derived class is not yet fully
   // defined because Base<Derived> must necessarily be instantiated before Derived is
   // complete. By using a dummy template parameter we make the type "dependent" and so will
   // only be determined when the derived class is instantiated (and therefore fully defined)
   template <typename U = Derived>
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast(Vec v)) PETSC_DECLTYPE_RETURNS(U::VecIMPLCast_(v));
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast(Vec v)) PETSC_DECLTYPE_AUTO(U::VecIMPLCast_(v));
   template <typename U = Derived>
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE()) PETSC_DECLTYPE_RETURNS(U::VECTYPE_());
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE()) PETSC_DECLTYPE_AUTO(U::VECTYPE_());
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscLogEvent VEC_CUPMCopyToGPU())
   {
@@ -245,7 +243,7 @@ protected:
       }
     }
 
-    PETSC_NODISCARD auto value() const noexcept PETSC_DECLTYPE_RETURNS(this->v)
+    PETSC_NODISCARD auto value() const noexcept PETSC_DECLTYPE_AUTO(this->v)
 
     ~UseCUPMHostAlloc() noexcept
     {

@@ -273,7 +273,7 @@ struct BlasInterfaceBase : Interface<T>
 
 #define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE)                                             \
   using base_type = Petsc::Device::CUPM::Impl::BlasInterfaceBase<DEV_TYPE>;                    \
-  using tyename base_type::cupmBlasReal_t;                                                     \
+  using typename base_type::cupmBlasReal_t;                                                    \
   using base_type::cupmBlasName;                                                               \
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE);                        \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,PetscConcat(Petsc,PETSC_CUPMBLAS_PREFIX_U),GetErrorName)
@@ -473,7 +473,7 @@ struct BlasInterface<DeviceType::HIP> : BlasInterfaceBase<DeviceType::HIP>
   using typename base_name::cupmBlasInt_t;                              \
   using typename base_name::cupmBlasReal_t;                             \
   using typename base_name::cupmBlasComplex_t;                          \
-  using cumpBlasScalar_t = util::conditional_t<                         \
+  using cupmBlasScalar_t = util::conditional_t<                         \
     PetscDefined(USE_COMPLEX),cupmBlasComplex_t,cupmBlasReal_t          \
   >;                                                                    \
   using typename base_name::cupmSolverHandle_t;                         \
