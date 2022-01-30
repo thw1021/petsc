@@ -799,7 +799,7 @@ M*/
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 #define PetscStackCall(name,routine)
-#define PetscStackCallStandard(name,routine)
+#define PetscStackCallStandard(name,...)
 #else
 /*
     PetscStackCall - Calls an external library routine or user function after pushing the name of the routine on the stack.
