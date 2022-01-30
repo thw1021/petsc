@@ -136,6 +136,11 @@ class MatStructure(object):
     DIFFERENT = DIFFERENT_NZ = DIFFERENT_NONZERO_PATTERN
     UNKNOWN   = UNKNOWN_NZ   = UNKNOWN_NONZERO_PATTERN
 
+class MatDuplicateOption(object):
+    DO_NOT_COPY_VALUES    = MAT_DO_NOT_COPY_VALUES
+    COPY_VALUES           = MAT_COPY_VALUES
+    SHARE_NONZERO_PATTERN = MAT_SHARE_NONZERO_PATTERN
+
 class MatOrderingType(object):
     NATURAL     = S_(MATORDERINGNATURAL)
     ND          = S_(MATORDERINGND)
@@ -201,6 +206,7 @@ cdef class Mat(Object):
     AssemblyType    = MatAssemblyType
     InfoType        = MatInfoType
     Structure       = MatStructure
+    DuplicateOption = MatDuplicateOption
     OrderingType    = MatOrderingType
     SolverType      = MatSolverType
     FactorShiftType = MatFactorShiftType
@@ -1887,6 +1893,7 @@ del MatOption
 del MatAssemblyType
 del MatInfoType
 del MatStructure
+del MatDuplicateOption
 del MatOrderingType
 del MatSolverType
 del MatFactorShiftType
