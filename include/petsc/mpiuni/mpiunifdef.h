@@ -1,6 +1,7 @@
 #if !defined (MPIUNIFDEF_H)
 #define MPIUNIFDEF_H
 
+#include <petsccompilerguard.h>
 #include "petscconf.h"
 #if (PETSC_SIZEOF_INT == 4)
 #define MPIUNI_FInt integer(kind=selected_int_kind(5))
