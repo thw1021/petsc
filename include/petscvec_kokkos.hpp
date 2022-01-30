@@ -1,6 +1,7 @@
 #if !defined(PETSCVEC_KOKKOS_HPP)
 #define PETSCVEC_KOKKOS_HPP
 
+#include <petsccompilerguard.h>
 #include <petscconf.h>
 
 #if defined(PETSC_HAVE_KOKKOS)
