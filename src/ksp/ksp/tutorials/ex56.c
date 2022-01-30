@@ -115,6 +115,9 @@ int main(int argc,char **args)
     ierr = MatSetFromOptions(Amat);CHKERRQ(ierr);
     ierr = MatSeqAIJSetPreallocation(Amat,0,d_nnz);CHKERRQ(ierr);
     ierr = MatMPIAIJSetPreallocation(Amat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
+#if defined(PETSC_HAVE_HYPRE)
+  ierr = MatHYPRESetPreallocation(Amat,18,NULL,18,NULL);CHKERRQ(ierr);
+#endif
 
     ierr = PetscFree(d_nnz);CHKERRQ(ierr);
     ierr = PetscFree(o_nnz);CHKERRQ(ierr);
@@ -993,5 +996,12 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
       nsize: 8
       requires: mkl_sparse
       args: -ne 9 -alpha 1.e-3 -ksp_type cg -pc_type gamg -pc_gamg_agg_nsmooths 1 -pc_gamg_reuse_interpolation true -two_solves -ksp_converged_reason -use_mat_nearnullspace -pc_gamg_square_graph 1 -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.05 -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_threshold 0.01 -pc_gamg_coarse_eq_limit 2000 -pc_gamg_process_eq_limit 200 -pc_gamg_repartition false -pc_mg_cycle_type v -ksp_monitor_short -mat_seqaij_type seqaijmkl
+
+   # command line options match GPU defaults -- this can use 8 processor also
+   test:
+      suffix: hypre_device
+      nsize: 1
+      requires: hypre !complex
+      args: -mat_type hypre -ksp_view -ne 9 -ksp_type cg -pc_type hypre -ksp_monitor_short
 
 TEST*/
