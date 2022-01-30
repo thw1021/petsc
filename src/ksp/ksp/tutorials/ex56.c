@@ -1002,6 +1002,6 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
       suffix: hypre_device
       nsize: 1
       requires: hypre !complex
-      args: -mat_type hypre -ksp_view -ne 9 -ksp_type cg -pc_type hypre -ksp_monitor_short
+      args: -mat_type hypre -ksp_type cg -pc_type hypre -ksp_monitor_short -ne 5
 
 TEST*/
