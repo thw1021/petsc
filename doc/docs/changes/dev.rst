@@ -18,6 +18,7 @@ Changes: Development
 
 .. rubric:: Configure/Build:
 
+- Change minimum value of ``--with-cxx-dialect`` argument from "03" to "11"
 - C++ dialect will now also be inferred from compiler flags, although users will be warned that they should let PETSc auto-detect the flag when setting the dialect this way
 - Change C++ dialect flag option to be consistent with compiler flags;  ``--with-cxx-dialect=gnu++14`` means you want ``-std=gnu++14``, no more, no less
 - Fix for requesting no C++ dialect flag via ``--with-cxx-dialect=0``. Previously ``configure`` would bail out immediately without running the tests and therefore wouldn't set any of the capability defines. ``configure`` now runs all tests, just doesn't add the flag in the end
@@ -51,6 +52,12 @@ Changes: Development
 - Add ``PetscCommGetComm()`` and ``PetscCommRestoreComm()`` to allow reuse of MPI communicator with external packages, as some MPI implementations have  broken ``MPI_Comm_free()``
 - Add ``PetscExpand()``, ``PetscConcat()``, ``PetscCompl()``, and ``PetscExpandToNothing()``
 - Add ``PETSC_CONSTEXPR_14``, ``PETSC_NULLPTR``, and ``PETSC_NODISCARD``
+- Deprecate ``SETERRQ1()`` - ``SETERRQ9()`` in favor of ``SETERRQ()`` which is now variadic
+- Deprecate ``PetscInfo1()`` - ``PetscInfo9()`` in favor of ``PetscInfo()`` which is now variadic
+- Deprecate ``PETSC_INLINE``, ``inline`` is a standard keyword since C99 and C++11
+- Remove ``PETSC_C_RESTRICT``, ``restrict`` is a standard keyword since C99
+- Change ``SETERRMPI()`` to be variadic
+- Change ``SETERRABORT()`` to be variadic
 
 .. rubric:: PetscViewer:
 
