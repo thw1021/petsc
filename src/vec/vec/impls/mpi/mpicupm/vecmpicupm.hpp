@@ -25,8 +25,8 @@ struct VecMPI_CUPM : Vec_CUPMBase<T,VecMPI_CUPM<T>>
   using VecSeq_T = VecSeq_CUPM<T>;
 
 private:
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_MPI*>(v->data))
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_RETURNS(VECMPICUPM())
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_AUTO(static_cast<Vec_MPI*>(v->data))
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_AUTO(VECMPICUPM())
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async_(Vec,PetscBool/*allocate_missing*/=PETSC_TRUE,PetscInt/*nghost*/=0,PetscScalar*/*host_array*/=nullptr,PetscScalar*/*device_array*/=nullptr));
   template <typename SeqFunction>

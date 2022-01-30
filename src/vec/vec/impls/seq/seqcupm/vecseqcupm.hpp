@@ -54,8 +54,8 @@ struct VecSeq_CUPM : Vec_CUPMBase<T,VecSeq_CUPM<T>>
   PETSC_VEC_CUPM_BASE_CLASS_HEADER(base_type,T,VecSeq_CUPM<T>);
 
 private:
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_RETURNS(static_cast<Vec_Seq*>(v->data))
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_RETURNS(VECSEQCUPM())
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_AUTO(static_cast<Vec_Seq*>(v->data))
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_AUTO(VECSEQCUPM())
 
   // common core for min and max
   template <typename TupleFuncT, typename UnaryFuncT>
