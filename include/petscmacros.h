@@ -1,6 +1,7 @@
 #ifndef PETSC_PREPROCESSOR_MACROS_H
 #define PETSC_PREPROCESSOR_MACROS_H
 
+#include <petsccompilerguard.h>
 #include <petscconf.h>
 #include <petscconf_poison.h> /* for PetscDefined() error checking */
 
