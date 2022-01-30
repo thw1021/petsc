@@ -21,6 +21,7 @@
 #if !defined(_BLASLAPACK_H)
 #define _BLASLAPACK_H
 
+#include <petsccompilerguard.h>
 #include <petscconf.h>
 #if defined(__cplusplus)
 #define BLAS_EXTERN extern "C"
