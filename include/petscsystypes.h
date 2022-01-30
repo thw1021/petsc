@@ -1,9 +1,12 @@
 #if !defined(PETSCSYSTYPES_H)
 #define PETSCSYSTYPES_H
 
+#include <petsccompilerguard.h>
 #include <petscconf.h>
+#include <petscconf_poison.h>
 #include <petscfix.h>
 
+#include <stdbool.h>
 /*MC
     PetscErrorCode - datatype used for return error code from almost all PETSc functions
 

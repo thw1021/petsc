@@ -135,7 +135,7 @@ int main(int argc,char **argv)
     ierr = PetscOptionsName("-picard","Solve with defect-correction Picard iteration","",&user.picard);CHKERRQ(ierr);
     if (user.picard) {
       user.jtype = JAC_PICARD;
-      if (user.p != 3) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Picard iteration is only supported for p == 3");
+      PetscAssertFalse(user.p != 3,PETSC_COMM_WORLD,PETSC_ERR_SUP,"Picard iteration is only supported for p == 3");
       /* the Picard linearization only requires a 5 point stencil, while the Newton linearization requires a 9 point stencil */
       /* hence allocating the 5 point stencil gives the same convergence as the 9 point stencil since the extra stencil points are not used */
       ierr = PetscOptionsBool("-alloc_star","Allocate for STAR stencil (5-point)","",alloc_star,&alloc_star,NULL);CHKERRQ(ierr);
@@ -617,7 +617,7 @@ static PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat 
           ierr     = MatSetValuesStencil(B,1,&row,9,col,v,INSERT_VALUES);CHKERRQ(ierr);
           break;
         default:
-          SETERRQ1(PetscObjectComm((PetscObject)info->da),PETSC_ERR_SUP,"Jacobian type %d not implemented",user->jtype);
+          SETERRQ(PetscObjectComm((PetscObject)info->da),PETSC_ERR_SUP,"Jacobian type %d not implemented",user->jtype);
         }
       }
     }
