@@ -26,7 +26,7 @@ using std::index_sequence;
 using std::make_index_sequence;
 using std::decay_t;
 using std::tuple_element_t;
-#if (__cplusplus >= 201703L)
+#if (__cplusplus >= 201703L) // C++17
 using std::void_t;
 #else // C++17
 template <class... T> using void_t = void;
@@ -120,6 +120,16 @@ PETSC_STATIC_INLINE constexpr can_call<F,A...> is_callable_with(F&&) noexcept
 
 template <typename... T> struct always_false : std::false_type { };
 
+// type identity
+template <typename T> struct identity { using type = T; };
+
+template <typename T>
+struct remove_all_pointers
+  : conditional_t<std::is_pointer<T>::value,remove_all_pointers<remove_pointer_t<T>>,identity<T>>
+{ };
+
+template <typename T> using remove_all_pointers_t = typename remove_all_pointers<T>::type;
+
 } // namespace util
 
 template <typename T>
@@ -138,6 +148,12 @@ template <typename T>
 PETSC_STATIC_INLINE constexpr T*& PetscRemoveConstCast(const T*& object) noexcept
 {
   return const_cast<T*&>(object);
+}
+
+template <typename T>
+PETSC_STATIC_INLINE constexpr T& PetscRemoveAllConstCast(T& object) noexcept
+{
+
 }
 
 template <typename T>

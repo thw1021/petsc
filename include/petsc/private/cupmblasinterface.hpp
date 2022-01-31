@@ -258,8 +258,6 @@ namespace Impl
 template <DeviceType T>
 struct BlasInterfaceBase : Interface<T>
 {
-  using cupmBlasReal_t = util::conditional_t<PetscDefined(USE_REAL_SINGLE),float,double>;
-
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* cupmBlasName())
   {
     switch (T) {
@@ -273,7 +271,6 @@ struct BlasInterfaceBase : Interface<T>
 
 #define PETSC_CUPMBLAS_BASE_CLASS_HEADER(DEV_TYPE)                                             \
   using base_type = Petsc::Device::CUPM::Impl::BlasInterfaceBase<DEV_TYPE>;                    \
-  using typename base_type::cupmBlasReal_t;                                                    \
   using base_type::cupmBlasName;                                                               \
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,DEV_TYPE);                        \
   PETSC_CUPM_ALIAS_FUNCTION_EXACT(cupmBlas,GetErrorName,PetscConcat(Petsc,PETSC_CUPMBLAS_PREFIX_U),GetErrorName)
@@ -295,10 +292,8 @@ struct BlasInterface<DeviceType::CUDA> : BlasInterfaceBase<DeviceType::CUDA>
   using cupmBlasHandle_t   = cublasHandle_t;
   using cupmBlasError_t    = cublasStatus_t;
   using cupmBlasInt_t      = int;
-  using cupmBlasComplex_t  = util::conditional_t<PetscDefined(USE_REAL_SINGLE),cuComplex,cuDoubleComplex>;
   using cupmSolverHandle_t = cusolverDnHandle_t;
   using cupmSolverError_t  = cusolverStatus_t;
-
 
   // values
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE(_STATUS_SUCCESS);
@@ -390,7 +385,6 @@ struct BlasInterface<DeviceType::HIP> : BlasInterfaceBase<DeviceType::HIP>
   using cupmBlasHandle_t   = hipblasHandle_t;
   using cupmBlasError_t    = hipblasStatus_t;
   using cupmBlasInt_t      = int; // rocblas will have its own
-  using cupmBlasComplex_t  = util::conditional_t<PetscDefined(USE_REAL_SINGLE),hipComplex,hipDoubleComplex>;
   using cupmSolverHandle_t = hipsolverHandle_t;
   using cupmSolverError_t  = hipsolverStatus_t;
 
@@ -471,11 +465,6 @@ struct BlasInterface<DeviceType::HIP> : BlasInterfaceBase<DeviceType::HIP>
   using typename base_name::cupmBlasHandle_t;                           \
   using typename base_name::cupmBlasError_t;                            \
   using typename base_name::cupmBlasInt_t;                              \
-  using typename base_name::cupmBlasReal_t;                             \
-  using typename base_name::cupmBlasComplex_t;                          \
-  using cupmBlasScalar_t = util::conditional_t<                         \
-    PetscDefined(USE_COMPLEX),cupmBlasComplex_t,cupmBlasReal_t          \
-  >;                                                                    \
   using typename base_name::cupmSolverHandle_t;                         \
   using typename base_name::cupmSolverError_t;                          \
   /* values */                                                          \

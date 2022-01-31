@@ -174,21 +174,22 @@ protected:
     static const auto memory_type = MT;
     static const auto access_type = MA;
 
-    // PetscScalar
-    using value_type         = PetscScalar;
     // PetscScalar*
-    using pointer_type       = PetscScalar*;//util::add_pointer_t<value_type>;
-    // const PetscScalar
-    using const_value_type   = util::add_const_t<value_type>;
-    // const PetscScalar*
-    using const_pointer_type = util::add_pointer_t<const_value_type>;
-    using cupmblas_pointer_type = util::add_pointer_t<cupmBlasScalar_t>;
+    using pointer_type            = decltype(VecIMPLCast({})->array);
+    // PetscScalar
+    using value_type              = util::remove_pointer_t<pointer_type>;
+    // cupmScalar_t*
+    using cupmscalar_pointer_type = util::add_pointer_t<cupmScalar_t>;
 
     // PetscScalar *const
     const pointer_type ptr;
 
-    operator cupmblas_pointer_type() const noexcept { return reinterpret_cast<cupmblas_pointer_type>(const_cast<pointer_type>(this->ptr)); }
-    operator pointer_type()     const noexcept { return const_cast<pointer_type>(this->ptr);     }
+    operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
+
+    operator cupmscalar_pointer_type() const noexcept
+    {
+      return cupmScalarCast(this->operator pointer_type());
+    }
 
     vector_array(PetscDeviceContext, Vec v) noexcept : ptr(initialize_(v)), v_(v) { }
 
@@ -273,9 +274,9 @@ protected:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode CopyToHost_(PetscDeviceContext,Vec));
 
   // accessors
-  template <PetscMemType mtype, MemoryAccess access>
+  template <PetscMemType,MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getarray_async(Vec,PetscScalar**));
-  template <PetscMemType mtype, MemoryAccess access>
+  template <PetscMemType,MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearray_async(Vec,PetscScalar**));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getarrayandmemtype_async(Vec,PetscScalar**,PetscMemType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearrayandmemtype_async(Vec,PetscScalar**));
@@ -289,12 +290,15 @@ protected:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase_(Vec,PetscBool));
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM_(Vec));
-  PETSC_NODISCARD static auto DeviceArrayRead(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{dctx,v});
-  PETSC_NODISCARD static auto DeviceArrayWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{dctx,v});
-  PETSC_NODISCARD static auto DeviceArrayReadWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{dctx,v});
-  PETSC_NODISCARD static auto HostArrayRead(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{dctx,v});
-  PETSC_NODISCARD static auto HostArrayWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{dctx,v});
-  PETSC_NODISCARD static auto HostArrayReadWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{dctx,v});
+
+  // need functions to create the vector arrays, otherwise usng them as an unnamed temporary
+  // leads to most vexing parse
+  PETSC_CXX_COMPAT_DECL(auto DeviceArrayRead(PetscDeviceContext dctx, Vec v))      PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto DeviceArrayWrite(PetscDeviceContext dctx, Vec v))     PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto DeviceArrayReadWrite(PetscDeviceContext dctx, Vec v)) PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto HostArrayRead(PetscDeviceContext dctx, Vec v))        PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto HostArrayWrite(PetscDeviceContext dctx, Vec v))       PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto HostArrayReadWrite(PetscDeviceContext dctx, Vec v))   PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{dctx,v});
 };
 
 template <Device::CUPM::DeviceType T, typename D> template <PetscMemType MT, MemoryAccess MA>
@@ -302,15 +306,6 @@ const PetscMemType Vec_CUPMBase<T,D>::vector_array<MT,MA>::memory_type;
 
 template <Device::CUPM::DeviceType T, typename D> template <PetscMemType MT, MemoryAccess MA>
 const MemoryAccess Vec_CUPMBase<T,D>::vector_array<MT,MA>::access_type;
-
-// These need to also capture the args, otherwise this is a case of The Most Vexing Parse if
-// used as an unnamed temporary
-// #define DeviceArrayRead(...)      vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{__VA_ARGS__}
-// #define DeviceArrayWrite(...)     vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{__VA_ARGS__}
-// #define DeviceArrayReadWrite(...) vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{__VA_ARGS__}
-// #define HostArrayRead(...)        vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{__VA_ARGS__}
-// #define HostArrayWrite(...)       vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{__VA_ARGS__}
-// #define HostArrayReadWrite(...)   vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{__VA_ARGS__}
 
 PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v))
 {
