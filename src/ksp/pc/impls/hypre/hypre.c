@@ -1076,7 +1076,7 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"    Using nodal relaxation via Schwarz smoothing on levels %D\n",jac->nodal_relax_levels);CHKERRQ(ierr);
     }
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
-    ierr = PetscViewerASCIIPrintf(viewer,"    SpGEMM type         %s\n",jac->use_tpl_spgemm ? "cuSparse" : "Hypre");CHKERRQ(ierr);
+    //ierr = PetscViewerASCIIPrintf(viewer,"    SpGEMM type         %s\n",jac->use_tpl_spgemm ? "cuSparse" : "Hypre");CHKERRQ(ierr);
 #endif
     /* AIR */
     if (jac->Rtype) {
