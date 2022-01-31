@@ -428,21 +428,6 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using cupmDeviceProp_t = hipDeviceProp_t;
   using cupmMemcpyKind_t = hipMemcpyKind;
   using cupmComplex_t    = PetscIfPetscDefined(USE_REAL_SINGLE,hipComplex,hipDoubleComplex);
-  using cupmScalar_t     = PetscIfPetscDefined(USE_COMPLEX,cupmComplex_t,cupmReal_t);
-
-  PETSC_CXX_COMPAT_DECL(cupmScalar_t makeCupmScalar(PetscScalar s))
-  {
-#if PetscDefined(USE_COMPLEX)
-    return cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)};
-#else
-    return static_cast<cupmBlasReal_t>(s);
-#endif
-  }
-
-  PETSC_CXX_COMPAT_DECL(constexpr cupmScalar_t* cupmScalarCast(PetscScalar *s))
-  {
-    return reinterpret_cast<cupmScalar_t>(s);
-  }
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -598,9 +583,19 @@ struct Interface : InterfaceImpl<T>
     return reinterpret_cast<cupmScalar_t*>(s);
   }
 
+  PETSC_CXX_COMPAT_DECL(constexpr const cupmScalar_t* cupmScalarCast(const PetscScalar *s))
+  {
+    return reinterpret_cast<const cupmScalar_t*>(s);
+  }
+
   PETSC_CXX_COMPAT_DECL(constexpr cupmReal_t* cupmRealCast(PetscScalar *s))
   {
     return reinterpret_cast<cupmReal_t*>(s);
+  }
+
+  PETSC_CXX_COMPAT_DECL(constexpr const cupmReal_t* cupmRealCast(const PetscScalar *s))
+  {
+    return reinterpret_cast<const cupmReal_t*>(s);
   }
 };
 
