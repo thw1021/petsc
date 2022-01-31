@@ -550,7 +550,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
 
   PetscFunctionBegin;
   if (alpha == PetscScalar(0.0)) {
-    const auto   nbytes = n*sizeof(typename DeviceArrayRead::value_type);
+    const auto   nbytes = n*sizeof(PetscScalar);
     cupmError_t  cerr;
     cupmStream_t stream;
 
@@ -566,15 +566,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     {
       cupmBlasError_t cberr;
+      const auto      calpha = cupmScalar_t{PetscRealPart(alpha),PetscImaginaryPart(alpha)};
       auto            yarray = DeviceArrayWrite(dctx,yin);
       auto            xarray = DeviceArrayRead(dctx,xin);
 
       if (alphaIsOne) {
-        cberr = cupmBlasXaxpy(cupmBlasHandle,n,&alpha,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
+        cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
       } else {
         constexpr auto sone = PetscScalar(1.0);
 
-        cberr = cupmBlasXscal(cupmBlasHandle,n,&alpha,yarray,1);CHKERRCUPMBLAS(cberr);
+        cberr = cupmBlasXscal(cupmBlasHandle,n,&calpha,yarray,1);CHKERRCUPMBLAS(cberr);
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&sone,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
       }
     }
@@ -602,7 +603,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscSc
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cupmBlasXaxpy(cupmBlasHandle,n,&alpha,DeviceArrayRead(dctx,xin),1,DeviceArrayWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasXaxpy(cupmBlasHandle,n,reinterpret_cast<cupmBlasScalar_t*>(&alpha),DeviceArrayRead(dctx,xin),1,DeviceArrayWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2*n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar(sizeof(alpha));CHKERRQ(ierr);
@@ -727,7 +728,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dot_async(Vec xin, Vec yin,
   // arguments y, x are reversed because BLAS complex conjugates the first argument, PETSc the
   // second
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin),1,DeviceArrayRead(dctx,xin),1,z);CHKERRCUPMBLAS(cberr);
+  cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin),1,DeviceArrayRead(dctx,xin),1,(cupmBlasScalar_t*)z);CHKERRCUPMBLAS(cberr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(PetscMax(2*(n-1),0));CHKERRQ(ierr);
   ierr = PetscLogGpuToCpuScalar(sizeof(*z));CHKERRQ(ierr);
@@ -906,7 +907,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
 
     // can fork-join here
     for (decltype(nv) i = 0; i < nv; ++i) {
-      auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin+i),1,xptr,1,z+i);CHKERRCUPMBLAS(cberr);
+      auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,reinterpret_cast<cupmBlasScalar_t*>(z+i));CHKERRCUPMBLAS(cberr);
     }
   }
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
@@ -946,7 +947,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscSca
 
   PetscFunctionBegin;
   if (alpha == PetscScalar(0)) {
-    const auto   nbytes = n*sizeof(typename DeviceArrayWrite::value_type);
+    const auto   nbytes = n*sizeof(PetscScalar);
     cupmStream_t stream;
     cupmError_t  cerr;
 
@@ -984,7 +985,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::scale_async(Vec xin, PetscS
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cupmBlasXscal(cupmBlasHandle,n,&alpha,DeviceArrayWrite(dctx,xin),1);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasXscal(cupmBlasHandle,n,reinterpret_cast<cupmBlasScalar_t*>(&alpha),DeviceArrayWrite(dctx,xin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar(sizeof(alpha));CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
@@ -1004,7 +1005,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::tdot_async(Vec xin, Vec yin
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  cberr = cupmBlasXdotu(cupmBlasHandle,n,DeviceArrayRead(dctx,xin),1,DeviceArrayRead(dctx,yin),1,z);CHKERRCUPMBLAS(cberr);
+  cberr = cupmBlasXdotu(cupmBlasHandle,n,DeviceArrayRead(dctx,xin),1,DeviceArrayRead(dctx,yin),1,(cupmBlasScalar_t*)z);CHKERRCUPMBLAS(cberr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   ierr = PetscLogGpuFlops(PetscMax(2*n-1,0));CHKERRQ(ierr);
   ierr = PetscLogGpuToCpuScalar(sizeof(*z));CHKERRQ(ierr);
@@ -1013,7 +1014,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::tdot_async(Vec xin, Vec yin
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin))
-{y
+{
   PetscFunctionBegin;
   if (xin != yin) {
     const auto         n = xin->map->n;

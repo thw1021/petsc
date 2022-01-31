@@ -184,9 +184,9 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
 #define PETSC_DECLTYPE_NOEXCEPT_RETURNS(...) noexcept(noexcept(__VA_ARGS__)) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
 
 #define PETSC_ALIAS_FUNCTION_(alias,original,dispatch)                                  \
-  template <typename... Args> static inline auto dispatch(int,Args&&... args)           \
+  template <typename... Args> static inline auto dispatch(int,Args... args)             \
     PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::forward<Args>(args)...));             \
-  template <typename... Args> static inline int dispatch(char,Args&&...)                \
+  template <typename... Args> static inline int dispatch(char,Args...)                  \
   {                                                                                     \
     using namespace Petsc::util;                                                        \
     static_assert(                                                                      \
@@ -199,7 +199,7 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
     PETSC_DECLTYPE_NOEXCEPT_RETURNS(dispatch(0,std::forward<Args>(args)...))
 
 // makes prefix_lineno_name
-#define PETSC_ALIAS_UNIQUE_NAME_INTERNAL(prefix,name) PetscConcat(PetscConcat(PetscConcat(PetscConcat(prefix,_),__LINE__),_),orignal)
+#define PETSC_ALIAS_UNIQUE_NAME_INTERNAL(prefix,name) PetscConcat(PetscConcat(PetscConcat(PetscConcat(prefix,_),__LINE__),_),name)
 
 // PETSC_ALIAS_FUNCTION() - Alias a function
 //

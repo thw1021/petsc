@@ -8,6 +8,8 @@
 #  error "Vec_CUPM requires C++11"
 #endif
 
+#include <limits> // numeric_limits
+
 #if PetscDefined(HAVE_NVSHMEM)
 PETSC_INTERN PetscErrorCode PetscNvshmemInitializeCheck(void);
 PETSC_INTERN PetscErrorCode PetscNvshmemMalloc(size_t,void**);
@@ -88,6 +90,8 @@ protected:
     case Device::CUPM::DeviceType::CUDA: return VEC_CUDACopyToGPU;
     case Device::CUPM::DeviceType::HIP:  return VEC_HIPCopyToGPU;
     }
+    PetscUnreachable();
+    return PETSC_LARGEST_EVENT;
   }
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscLogEvent VEC_CUPMCopyFromGPU())
@@ -96,6 +100,8 @@ protected:
     case Device::CUPM::DeviceType::CUDA: return VEC_CUDACopyFromGPU;
     case Device::CUPM::DeviceType::HIP:  return VEC_HIPCopyFromGPU;
     }
+    PetscUnreachable();
+    return PETSC_LARGEST_EVENT;
   }
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 VecType VECSEQCUPM())
@@ -104,6 +110,8 @@ protected:
     case Device::CUPM::DeviceType::CUDA: return VECSEQCUDA;
     case Device::CUPM::DeviceType::HIP:  return VECSEQHIP;
     }
+    PetscUnreachable();
+    return "invalid";
   }
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 VecType VECMPICUPM())
@@ -112,6 +120,8 @@ protected:
     case Device::CUPM::DeviceType::CUDA: return VECMPICUDA;
     case Device::CUPM::DeviceType::HIP:  return VECMPIHIP;
     }
+    PetscUnreachable();
+    return "invalid";
   }
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode CUPMBlasIntCast_(PetscInt x, cupmBlasInt_t *y))
@@ -167,16 +177,17 @@ protected:
     // PetscScalar
     using value_type         = PetscScalar;
     // PetscScalar*
-    using pointer_type       = util::add_pointer_t<value_type>;
+    using pointer_type       = PetscScalar*;//util::add_pointer_t<value_type>;
     // const PetscScalar
     using const_value_type   = util::add_const_t<value_type>;
     // const PetscScalar*
     using const_pointer_type = util::add_pointer_t<const_value_type>;
+    using cupmblas_pointer_type = util::add_pointer_t<cupmBlasScalar_t>;
 
     // PetscScalar *const
     const pointer_type ptr;
 
-    operator cupmBlasScalar_t() const noexcept { return const_cast<cupmBlasScalar_t>(this->ptr); }
+    operator cupmblas_pointer_type() const noexcept { return reinterpret_cast<cupmblas_pointer_type>(const_cast<pointer_type>(this->ptr)); }
     operator pointer_type()     const noexcept { return const_cast<pointer_type>(this->ptr);     }
 
     vector_array(PetscDeviceContext, Vec v) noexcept : ptr(initialize_(v)), v_(v) { }
@@ -278,6 +289,12 @@ protected:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase_(Vec,PetscBool));
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM_(Vec));
+  PETSC_NODISCARD static auto DeviceArrayRead(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{dctx,v});
+  PETSC_NODISCARD static auto DeviceArrayWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{dctx,v});
+  PETSC_NODISCARD static auto DeviceArrayReadWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{dctx,v});
+  PETSC_NODISCARD static auto HostArrayRead(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{dctx,v});
+  PETSC_NODISCARD static auto HostArrayWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{dctx,v});
+  PETSC_NODISCARD static auto HostArrayReadWrite(PetscDeviceContext dctx, Vec v) PETSC_DECLTYPE_NOEXCEPT_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{dctx,v});
 };
 
 template <Device::CUPM::DeviceType T, typename D> template <PetscMemType MT, MemoryAccess MA>
@@ -286,12 +303,14 @@ const PetscMemType Vec_CUPMBase<T,D>::vector_array<MT,MA>::memory_type;
 template <Device::CUPM::DeviceType T, typename D> template <PetscMemType MT, MemoryAccess MA>
 const MemoryAccess Vec_CUPMBase<T,D>::vector_array<MT,MA>::access_type;
 
-#define DeviceArrayRead      vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>
-#define DeviceArrayWrite     vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>
-#define DeviceArrayReadWrite vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>
-#define HostArrayRead        vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>
-#define HostArrayWrite       vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>
-#define HostArrayReadWrite   vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>
+// These need to also capture the args, otherwise this is a case of The Most Vexing Parse if
+// used as an unnamed temporary
+// #define DeviceArrayRead(...)      vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{__VA_ARGS__}
+// #define DeviceArrayWrite(...)     vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{__VA_ARGS__}
+// #define DeviceArrayReadWrite(...) vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{__VA_ARGS__}
+// #define HostArrayRead(...)        vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{__VA_ARGS__}
+// #define HostArrayWrite(...)       vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{__VA_ARGS__}
+// #define HostArrayReadWrite(...)   vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{__VA_ARGS__}
 
 PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v))
 {
@@ -715,6 +734,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPM_(Vec v))
   using name::Duplicate_CUPMBase_;                                              \
   using name::BindToCPU_CUPMBase_;                                              \
   using name::Create_CUPM_;                                                     \
+  using name::DeviceArrayRead;                                                  \
+  using name::DeviceArrayWrite;                                                 \
+  using name::DeviceArrayReadWrite;                                             \
+  using name::HostArrayRead;                                                    \
+  using name::HostArrayWrite;                                                   \
+  using name::HostArrayReadWrite;                                               \
   /* blas interface */                                                          \
   PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,Tp)
 
