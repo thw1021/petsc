@@ -175,7 +175,7 @@ protected:
     static const auto access_type = MA;
 
     // PetscScalar*
-    using pointer_type            = decltype(VecIMPLCast({})->array);
+    using pointer_type            = decltype(VecIMPLCast(Vec{})->array);
     // PetscScalar
     using value_type              = util::remove_pointer_t<pointer_type>;
     // cupmScalar_t*
