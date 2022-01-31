@@ -36,6 +36,7 @@ PETSC_EXTERN const char *const PCExoticTypes[];
 PETSC_EXTERN const char *const PCPatchConstructTypes[];
 PETSC_EXTERN const char *const PCDeflationTypes[];
 PETSC_EXTERN const char *const *const PCFailedReasons;
+PETSC_EXTERN const char *const PCHYPRESpgemmTypes[];
 
 PETSC_EXTERN PetscErrorCode PCCreate(MPI_Comm,PC*);
 PETSC_EXTERN PetscErrorCode PCSetType(PC,PCType);
@@ -246,6 +247,8 @@ PETSC_EXTERN PetscErrorCode PCHYPRESetInterpolations(PC,PetscInt,Mat,Mat[],Mat,M
 PETSC_EXTERN PetscErrorCode PCHYPRESetEdgeConstantVectors(PC,Vec,Vec,Vec);
 PETSC_EXTERN PetscErrorCode PCHYPRESetAlphaPoissonMatrix(PC,Mat);
 PETSC_EXTERN PetscErrorCode PCHYPRESetBetaPoissonMatrix(PC,Mat);
+PETSC_EXTERN PetscErrorCode PCHYPRESetSpgemmType(PC,PCHYPRESpgemmType);
+PETSC_EXTERN PetscErrorCode PCHYPREGetSpgemmType(PC,PCHYPRESpgemmType);
 
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetFields(PC,const char[],PetscInt,const PetscInt*,const PetscInt*);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetType(PC,PCCompositeType);
