@@ -168,16 +168,15 @@ protected:
 
   // RAII versions of the get/restore array routines. Determines constness of the pointer type,
   // holds the pointer itself provides the implicit conversion operator
-  template <PetscMemType MT, MemoryAccess MA>
+  template <PetscMemType MT, MemoryAccess MA, typename VT = PetscScalar>
   struct vector_array
   {
     static const auto memory_type = MT;
     static const auto access_type = MA;
 
+    using value_type              = VT;
     // PetscScalar*
-    using pointer_type            = decltype(VecIMPLCast(Vec{})->array);
-    // PetscScalar
-    using value_type              = util::remove_pointer_t<pointer_type>;
+    using pointer_type            = util::add_pointer_t<value_type>;
     // cupmScalar_t*
     using cupmscalar_pointer_type = util::add_pointer_t<cupmScalar_t>;
 
@@ -255,6 +254,8 @@ protected:
       }
     }
 
+    explicit UseCUPMHostAlloc(PetscBool b) noexcept : UseCUPMHostAlloc(static_cast<bool>(b)) { }
+
     PETSC_NODISCARD auto value() const noexcept PETSC_DECLTYPE_AUTO(this->v)
 
     ~UseCUPMHostAlloc() noexcept
@@ -301,11 +302,13 @@ protected:
   PETSC_CXX_COMPAT_DECL(auto HostArrayReadWrite(PetscDeviceContext dctx, Vec v))   PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{dctx,v});
 };
 
-template <Device::CUPM::DeviceType T, typename D> template <PetscMemType MT, MemoryAccess MA>
-const PetscMemType Vec_CUPMBase<T,D>::vector_array<MT,MA>::memory_type;
+template <Device::CUPM::DeviceType T, typename D>
+template <PetscMemType MT, MemoryAccess MA, typename VT>
+const PetscMemType Vec_CUPMBase<T,D>::vector_array<MT,MA,VT>::memory_type;
 
-template <Device::CUPM::DeviceType T, typename D> template <PetscMemType MT, MemoryAccess MA>
-const MemoryAccess Vec_CUPMBase<T,D>::vector_array<MT,MA>::access_type;
+template <Device::CUPM::DeviceType T, typename D>
+template <PetscMemType MT, MemoryAccess MA, typename VT>
+const MemoryAccess Vec_CUPMBase<T,D>::vector_array<MT,MA,VT>::access_type;
 
 PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v))
 {
