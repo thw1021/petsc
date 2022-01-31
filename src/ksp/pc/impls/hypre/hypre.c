@@ -20,6 +20,8 @@
 static PetscBool cite = PETSC_FALSE;
 static const char hypreCitation[] = "@manual{hypre-web-page,\n  title  = {{\\sl hypre}: High Performance Preconditioners},\n  organization = {Lawrence Livermore National Laboratory},\n  note  = {\\url{https://computation.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods}}\n}\n";
 
+const char *const PCHYPRESpgemmTypes[] = {"cusparse","hypre","PCHYPRESetSpgemmType","PC_HYPRE_SPGEMM",NULL};
+
 /*
    Private context (data structure) for the  preconditioner.
 */
@@ -77,7 +79,7 @@ typedef struct {
   PetscInt  maxc;
   PetscInt  minc;
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
-  PetscInt  use_tpl_spgemm; // this is a global parameter but is closely associated with BoomerAMG
+  PCHYPRESpgemmType spgemm_type; // this is a global hypre parameter but is closely associated with BoomerAMG
 #endif
   /* GPU */
   PetscBool keeptranspose;
@@ -907,9 +909,9 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   }
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
   // SetSpGemmUseCusparse is a global parameter but is closely associated with BoomerAMG
-  ierr = PetscOptionsInt("-pc_hypre_set_spgemm_use_cusparse", "Use third party spGEMM", "None", jac->use_tpl_spgemm, &jac->use_tpl_spgemm, &flg);CHKERRQ(ierr);
+  ierr = PetscOptionsEnum("-pc_hypre_mat_spgemm_type","Type of SpGEMM to use","PCHYPRESetSpgemmType",PCHYPRESpgemmTypes,(PetscEnum)jac->spgemm_type,(PetscEnum*)&jac->spgemm_type,&flg);CHKERRQ(ierr);
   if (flg) {
-    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
+    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->spgemm_type==PC_HYPRE_SPGEMM_CUSPARSE ? 1 : 0));
   }
 #endif
   /* AIR */
@@ -1076,7 +1078,7 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc,PetscViewer viewer)
       ierr = PetscViewerASCIIPrintf(viewer,"    Using nodal relaxation via Schwarz smoothing on levels %D\n",jac->nodal_relax_levels);CHKERRQ(ierr);
     }
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
-    //ierr = PetscViewerASCIIPrintf(viewer,"    SpGEMM type         %s\n",jac->use_tpl_spgemm ? "cuSparse" : "Hypre");CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer,"    SpGEMM type         %s\n",jac->spgemm_type==PC_HYPRE_SPGEMM_CUSPARSE ? "cuSparse" : "Hypre");CHKERRQ(ierr);
 #endif
     /* AIR */
     if (jac->Rtype) {
@@ -1887,7 +1889,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     jac->maxc             = 9;
     jac->minc             = 1;
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
-    jac->use_tpl_spgemm   = 1;
+    jac->spgemm_type      = PC_HYPRE_SPGEMM_CUSPARSE; // hypre's default
 #endif
     jac->nodal_coarsening      = 0;
     jac->nodal_coarsening_diag = 0;
@@ -1935,7 +1937,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxCoarseSize,(jac->hsolver, jac->maxc));
     PetscStackCallStandard(HYPRE_BoomerAMGSetMinCoarseSize,(jac->hsolver, jac->minc));
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
-    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->use_tpl_spgemm));
+    PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->spgemm_type==PC_HYPRE_SPGEMM_CUSPARSE ? 1 : 0)); // could be overriding hypre's default
 #endif
     /* GPU */
 #if PETSC_PKG_HYPRE_VERSION_GE(2,18,0)
@@ -2158,6 +2160,76 @@ PetscErrorCode  PCHYPREGetType(PC pc,const char *name[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PCHYPRESetSpgemmType_HYPRE(PC pc,PCHYPRESpgemmType use)
+{
+  PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
+
+  PetscFunctionBegin;
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
+  jac->spgemm_type = use;
+#endif
+  PetscFunctionReturn(0);
+}
+
+/*@
+   PCHYPRESetSpgemm - Set type of SpGEMM for hypre to use
+
+   Logically Collective on PC
+
+   Input Parameters:
++  pc - the multigrid context
+-  use - one of PC_HYPRE_SPGEMM_CUSPARSE or PC_HYPRE_SPGEMM_HYPRE
+
+   Options Database Key:
+.  -pc_mg_spgemm <both,pmat,mat,none>
+
+   Level: intermediate
+
+   Notes:
+    Some codes that use PCHYPRE such as PCGAMG use Spgemm internally while constructing the hierarchy and thus do not
+     use the PCHYPRE construction of the coarser grids.
+
+.seealso: PCHYPREGetSpgemm(), PCHYPRESpgemmType
+
+@*/
+PetscErrorCode PCHYPRESetSpgemm(PC pc,PCHYPRESpgemmType use)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+  ierr = PetscTryMethod(pc,"PCHYPRESetSpgemm_C",(PC,PCHYPRESpgemmType),(pc,use));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*@
+   PCHYPREGetSpgemm - Get type of SpGEMM for hypre in use
+
+   Not Collective
+
+   Input Parameter:
+.  pc - the multigrid context
+
+   Output Parameter:
+.  spgemm - one of PC_HYPRE_SPGEMM_CUSPARSE or PC_HYPRE_SPGEMM_HYPRE
+
+   Level: intermediate
+
+.seealso: PCHYPRESetSpgemm(), PCHYPRESpgemmType
+
+@*/
+PetscErrorCode  PCHYPREGetSpgemm(PC pc,PCHYPRESpgemmType *spgemm)
+{
+  PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
+  *spgemm = jac->spgemm_type;
+#endif
+  PetscFunctionReturn(0);
+}
+
 /*MC
      PCHYPRE - Allows you to use the matrix element based preconditioners in the LLNL package hypre
 
@@ -2230,6 +2302,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetInterpolations_C",PCHYPRESetInterpolations_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetEdgeConstantVectors_C",PCHYPRESetEdgeConstantVectors_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetPoissonMatrix_C",PCHYPRESetPoissonMatrix_HYPRE);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetSpgemm_C",PCHYPRESetSpgemm);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPREGetSpgemm_C",PCHYPREGetSpgemm);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
 #if defined(HYPRE_USING_HIP)
   ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
