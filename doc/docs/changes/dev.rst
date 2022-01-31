@@ -95,8 +95,9 @@ Changes: Development
 -  Add ``MatMultHermitianTransposeEqual()`` and ``MatMultHermitianTransposeAddEqual()``
 -  Add support of ``MatSetValuesCOO()`` and ``MatSetPreallocationCOO()`` for matrix type AIJKOKKOS. Additionally, for AIJKOKKOS, they support negative indices and remote entries
 -  Add ``MatSetPreallocationCOOLocal()`` to set preallocation for matrices using a coordinate format of the entries with local indices
-- Change ``MatStructures`` enumeration to avoid spaces and match capitalization of other enumerations
+-  Change ``MatStructures`` enumeration to avoid spaces and match capitalization of other enumerations
 -  Change size argument of ``MatSetPreallocationCOO()`` to ``PetscCount``
+-  Add ``-mat_superlu_dist_3d`` and ``-mat_superlu_dist_d <n>`` to support using SuperLU_DIST's version 7.2 3d decomposition algorithms
 
 .. rubric:: PC:
 
