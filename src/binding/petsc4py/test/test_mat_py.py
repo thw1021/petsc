@@ -452,6 +452,9 @@ class TestScaledIdentity(TestMatrix):
         AA = self.A.getPythonContext()
         AA.multTranspose = AA.mult
 
+        # need symmetric matrix for LR update
+        self.A.setOption(PETSc.Mat.Option.SYMMETRIC, True)
+
         # without coordinates
         h.createH2OpusFromMat(self.A,leafsize=2)
         h.assemble()
@@ -461,6 +464,17 @@ class TestScaledIdentity(TestMatrix):
         coords = numpy.linspace((1,2,3),(10,20,30),self.A.getSize()[0],dtype=PETSc.RealType)
         h.createH2OpusFromMat(self.A,coords,leafsize=2)
         h.assemble()
+
+        # API
+        h.H2OpusOrthogonalize()
+        h.H2OpusCompress(1.e-1)
+        U = PETSc.Mat()
+        U.createDense(h.getSizes(),comm=h.getComm())
+        U.setUp()
+        U.setRandom()
+        h.H2OpusLowRankUpdate(U)
+        U.destroy()
+
         h.destroy()
 
         del AA.multTranspose

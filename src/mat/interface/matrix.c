@@ -5616,7 +5616,7 @@ PetscErrorCode MatAssemblyBegin(Mat mat,MatAssemblyType type)
 
 .seealso: MatAssemblyEnd(), MatSetValues(), MatAssemblyBegin()
 @*/
-PetscErrorCode MatAssembled(Mat mat,PetscBool  *assembled)
+PetscErrorCode MatAssembled(Mat mat,PetscBool *assembled)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
