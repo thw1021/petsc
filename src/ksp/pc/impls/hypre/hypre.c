@@ -2172,7 +2172,7 @@ PetscErrorCode PCHYPRESetSpgemmType_HYPRE(PC pc,PCHYPRESpgemmType use)
 }
 
 /*@
-   PCHYPRESetSpgemm - Set type of SpGEMM for hypre to use
+   PCHYPRESetSpgemmType - Set type of SpGEMM for hypre to use
 
    Logically Collective on PC
 
@@ -2189,21 +2189,21 @@ PetscErrorCode PCHYPRESetSpgemmType_HYPRE(PC pc,PCHYPRESpgemmType use)
     Some codes that use PCHYPRE such as PCGAMG use Spgemm internally while constructing the hierarchy and thus do not
      use the PCHYPRE construction of the coarser grids.
 
-.seealso: PCHYPREGetSpgemm(), PCHYPRESpgemmType
+.seealso: PCHYPREGetSpgemmType(), PCHYPRESpgemmType
 
 @*/
-PetscErrorCode PCHYPRESetSpgemm(PC pc,PCHYPRESpgemmType use)
+PetscErrorCode PCHYPRESetSpgemmType(PC pc,PCHYPRESpgemmType use)
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  ierr = PetscTryMethod(pc,"PCHYPRESetSpgemm_C",(PC,PCHYPRESpgemmType),(pc,use));CHKERRQ(ierr);
+  ierr = PetscTryMethod(pc,"PCHYPRESetSpgemmType_C",(PC,PCHYPRESpgemmType),(pc,use));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@
-   PCHYPREGetSpgemm - Get type of SpGEMM for hypre in use
+   PCHYPREGetSpgemmType - Get type of SpGEMM for hypre in use
 
    Not Collective
 
@@ -2215,10 +2215,10 @@ PetscErrorCode PCHYPRESetSpgemm(PC pc,PCHYPRESpgemmType use)
 
    Level: intermediate
 
-.seealso: PCHYPRESetSpgemm(), PCHYPRESpgemmType
+.seealso: PCHYPRESetSpgemmType(), PCHYPRESpgemmType
 
 @*/
-PetscErrorCode  PCHYPREGetSpgemm(PC pc,PCHYPRESpgemmType *spgemm)
+PetscErrorCode PCHYPREGetSpgemmType(PC pc,PCHYPRESpgemmType *spgemm)
 {
   PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
 
@@ -2302,8 +2302,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetInterpolations_C",PCHYPRESetInterpolations_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetEdgeConstantVectors_C",PCHYPRESetEdgeConstantVectors_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetPoissonMatrix_C",PCHYPRESetPoissonMatrix_HYPRE);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetSpgemm_C",PCHYPRESetSpgemm);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPREGetSpgemm_C",PCHYPREGetSpgemm);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetSpgemmType_C",PCHYPRESetSpgemmType);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPREGetSpgemmType_C",PCHYPREGetSpgemmType);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
 #if defined(HYPRE_USING_HIP)
   ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
