@@ -266,8 +266,6 @@ struct InterfaceBase
 {
   static const DeviceType type = T;
 
-  using cupmReal_t = util::conditional_t<PetscDefined(USE_REAL_SINGLE),float,double>;
-
   PETSC_CXX_COMPAT_DECL(constexpr const char* cupmName())
   {
     static_assert(util::integral_value(DeviceType::CUDA) == 0,"");
@@ -301,7 +299,6 @@ template <DeviceType T> const DeviceType InterfaceBase<T>::type;
 
 #define PETSC_CUPM_BASE_CLASS_HEADER(DEVICE_TYPE)                               \
   using base_type = Petsc::Device::CUPM::Impl::InterfaceBase<DEVICE_TYPE>;      \
-  using typename base_type::cupmReal_t;                                         \
   using base_type::type;                                                        \
   using base_type::cupmName;                                                    \
   using base_type::cupmDeviceTypeToPetscDeviceType;                             \
@@ -326,7 +323,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   using cupmStream_t     = cudaStream_t;
   using cupmDeviceProp_t = cudaDeviceProp;
   using cupmMemcpyKind_t = cudaMemcpyKind;
-  using cupmComplex_t    = PetscIfPetscDefined(USE_REAL_SINGLE,cuComplex,cuDoubleComplex);
+  using cupmComplex_t    = util::conditional_t<PetscDefined(USE_REAL_SINGLE),cuComplex,cuDoubleComplex>;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -418,7 +415,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using cupmStream_t     = hipStream_t;
   using cupmDeviceProp_t = hipDeviceProp_t;
   using cupmMemcpyKind_t = hipMemcpyKind;
-  using cupmComplex_t    = PetscIfPetscDefined(USE_REAL_SINGLE,hipComplex,hipDoubleComplex);
+  using cupmComplex_t    = util::conditional_t<PetscDefined(USE_REAL_SINGLE),hipComplex,hipDoubleComplex>;
 
   // values
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(Success);
@@ -498,7 +495,6 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmDeviceTypeToPetscDeviceType;                     \
   using base_name::cupmDeviceTypeToPetscMemType;                        \
   /* types */                                                           \
-  using typename base_name::cupmReal_t;                                 \
   using typename base_name::cupmComplex_t;                              \
   using typename base_name::cupmError_t;                                \
   using typename base_name::cupmEvent_t;                                \
@@ -558,16 +554,11 @@ struct Interface : InterfaceImpl<T>
 {
   PETSC_CUPM_IMPL_CLASS_HEADER(interface_type,T);
 
-  using cupmScalar_t = PetscIfPetscDefined(USE_COMPLEX,cupmComplex_t,cupmReal_t);
+  using cupmReal_t   = util::conditional_t<PetscDefined(USE_REAL_SINGLE),float,double>;
+  using cupmScalar_t = util::conditional_t<PetscDefined(USE_COMPLEX),cupmComplex_t,cupmReal_t>;
 
-  PETSC_CXX_COMPAT_DECL(constexpr cupmScalar_t makeCupmScalar(PetscScalar s))
-  {
-#if PetscDefined(USE_COMPLEX)
-    return cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)};
-#else
-    return static_cast<cupmReal_t>(s);
-#endif
-  }
+  PETSC_NODISCARD static constexpr auto makeCupmScalar(PetscScalar s)
+  PETSC_DECLTYPE_NOEXCEPT_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)))
 
   PETSC_CXX_COMPAT_DECL(constexpr cupmScalar_t* cupmScalarCast(PetscScalar *s))
   {
@@ -593,6 +584,7 @@ struct Interface : InterfaceImpl<T>
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
   PETSC_CUPM_IMPL_CLASS_HEADER(PetscConcat(base_name,_impl),T);         \
   using base_name = Petsc::Device::CUPM::Impl::Interface<T>;            \
+  using typename base_name::cupmReal_t;                                 \
   using typename base_name::cupmScalar_t;                               \
   using base_name::makeCupmScalar;                                      \
   using base_name::cupmScalarCast;                                      \
