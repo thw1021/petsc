@@ -853,7 +853,6 @@ class Configure(config.base.Configure):
         """
       )))
 
-
     DialectFlags = namedtuple('DialectFlags',['standard','gnu'])
     BaseFlags    = DialectFlags(standard='-std=c++',gnu='-std=gnu++')
     isGNUish     = bool(isGNUish)
