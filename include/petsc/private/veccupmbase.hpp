@@ -233,26 +233,26 @@ protected:
     static const auto memory_type = MT;
     static const auto access_type = MA;
 
-    using value_type              = ValueType;
+    using value_type        = ValueType;
     // PetscScalar*
-    using pointer_type            = util::add_pointer_t<value_type>;
+    using pointer_type      = util::add_pointer_t<value_type>;
     // cupmScalar_t*
-    using cupmscalar_pointer_type = util::add_pointer_t<cupmScalar_t>;
+    using cupm_pointer_type = util::add_pointer_t<cupmScalar_t>;
 
     // PetscScalar *const
     const pointer_type ptr;
 
     operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
 
-    // in case PetscScalar == cupmScalar_t we don't want this overload to exist, so we make a
-    // dummy template parameter to allow SFINAE to nix it for us
+    // in case pointer_type == cupmscalar_pointer_type we don't want this overload to exist, so
+    // we make a dummy template parameter to allow SFINAE to nix it for us
     template <
       typename U = pointer_type,
-      typename = util::enable_if_t<!std::is_same<U,cupmscalar_pointer_type>::value>
+      typename = util::enable_if_t<!std::is_same<U,cupm_pointer_type>::value>
     >
-    operator cupmscalar_pointer_type() const noexcept
+    operator cupm_pointer_type() const noexcept
     {
-      return cupmScalarCast(this->operator pointer_type());
+      return cupmScalarCast(static_cast<pointer_type>(this));
     }
 
     vector_array(PetscDeviceContext, Vec v) noexcept : ptr(initialize_(v)), v_(v) { }
