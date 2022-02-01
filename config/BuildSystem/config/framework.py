@@ -1284,6 +1284,22 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         raise RuntimeError(errorMessage)
       return moduleList[0]
 
+    def checkChildCxxDialectBounds(child,minCxx,maxCxx):
+      if child.minCxxVersion > minCxx:
+        minCxx = child.minCxxVersion
+        self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
+        try:
+          minCxxVersionBlameList[minCxx].add([child.name])
+        except KeyError:
+          minCxxVersionBlameList[minCxx] = set([child.name])
+      if child.maxCxxVersion < maxCxx:
+        maxCxx = child.maxCxxVersion
+        self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
+        try:
+          maxCxxVersionBlameList[maxCxx].add([child.name])
+        except KeyError:
+          maxCxxVersionBlameList[maxCxx] = set([child.name])
+      return minCxx,maxCxx
 
     ndepGraph     = list(graph.DirectedGraph.topologicalSort(depGraph))
     setCompilers  = findModule(ndepGraph,config.setCompilers.Configure)
@@ -1310,20 +1326,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
         elif 'with-'+child.package+'-dir' in self.framework.clArgDB and self.argDB['with-'+child.package+'-dir']: found = 1
         if not found: continue
         msg = ''
-        if child.minCxxVersion > minCxx:
-          minCxx = child.minCxxVersion
-          self.logPrint('serialEvaluation: child {child} raised minimum cxx dialect version to {minver}'.format(child=child.name,minver=minCxx))
-          try:
-            minCxxVersionBlameList[minCxx].add([child.name])
-          except KeyError:
-            minCxxVersionBlameList[minCxx] = set([child.name])
-        if child.maxCxxVersion < maxCxx:
-          maxCxx = child.maxCxxVersion
-          self.logPrint('serialEvaluation: child {child} decreased maximum cxx dialect version to {maxver}'.format(child=child.name,maxver=maxCxx))
-          try:
-            maxCxxVersionBlameList[maxCxx].add([child.name])
-          except KeyError:
-            maxCxxVersionBlameList[maxCxx] = set([child.name])
+        minCxx,maxCxx = checkChildCxxDialectBounds(child,minCxx,maxCxx)
         for dep in child.deps:
           if dep.required or dep.lookforbydefault:
             continue
