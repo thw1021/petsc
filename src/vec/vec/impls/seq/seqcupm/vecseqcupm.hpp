@@ -764,8 +764,8 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
   const auto worksize = EntriesPerGroup(size);
   const auto begin    = tx+bx*worksize;
   const auto end      = min((bx+1)*worksize,size);
-  PetscScalar sumlocal[N];
-  PetscScalar *ylocal[N];
+  const PetscScalar *ylocal[N];
+  PetscScalar       sumlocal[N];
 
 #pragma unroll
   for (auto i = 0; i < N; ++i) {

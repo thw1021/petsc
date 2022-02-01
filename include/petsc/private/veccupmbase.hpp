@@ -41,7 +41,7 @@ namespace Impl
 // a simple RAII helper for PetscMallocSet[CUDA|HIP]Host(). it exists because integrating the
 // regular versions would be an enormous pain to square with the templated types...
 template <Device::CUPM::DeviceType T>
-struct UseCUPMHostAlloc_ :  Device::CUPM::Impl::Interface<T>
+struct UseCUPMHostAlloc_ : Device::CUPM::Impl::Interface<T>
 {
   PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,T);
 private:
@@ -227,13 +227,13 @@ protected:
 
   // RAII versions of the get/restore array routines. Determines constness of the pointer type,
   // holds the pointer itself provides the implicit conversion operator
-  template <PetscMemType MT, MemoryAccess MA, typename VT = PetscScalar>
+  template <PetscMemType MT, MemoryAccess MA, typename ValueType = PetscScalar>
   struct vector_array
   {
     static const auto memory_type = MT;
     static const auto access_type = MA;
 
-    using value_type              = VT;
+    using value_type              = ValueType;
     // PetscScalar*
     using pointer_type            = util::add_pointer_t<value_type>;
     // cupmScalar_t*
@@ -244,6 +244,12 @@ protected:
 
     operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
 
+    // in case PetscScalar == cupmScalar_t we don't want this overload to exist, so we make a
+    // dummy template parameter to allow SFINAE to nix it for us
+    template <
+      typename U = pointer_type,
+      typename = util::enable_if_t<!std::is_same<U,cupmscalar_pointer_type>::value>
+    >
     operator cupmscalar_pointer_type() const noexcept
     {
       return cupmScalarCast(this->operator pointer_type());
