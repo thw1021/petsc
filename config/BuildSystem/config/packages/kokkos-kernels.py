@@ -73,33 +73,16 @@ class Configure(config.package.CMakePackage):
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
       args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('Cxx')) # use the host CXX compiler, let Kokkos handle the nvcc_wrapper business
     elif self.hip.found:
-      self.system = 'HIP'
-      with self.Language('HIP'):
-        petscHipc = self.getCompiler()
-        self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
-      if not hasattr(self,'systemHipc'):
-        raise RuntimeError('HIP error: could not find path of hipc')
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
-      args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
+      args.append('-DCMAKE_CXX_COMPILER='+self.hip.systemHipcc)
       # TPL
-      # In hip.py, we already validated librocblas.a and librocsparse.a and recorded the directory. We should use that first, so
-      # that we can hanle a weird (but valid) case --with-hipcc=/opt/rocm-4.5.2/hip/bin/hipcc --with-hip-dir=/opt/rocm-4.5.2 (which
-      # should be better written as --with-hipcc=/opt/rocm-4.5.2/bin/hipcc --with-hip-dir=/opt/rocm-4.5.2 or simply
-      # --with-hip-dir=/opt/rocm-4.5.2)
-      if self.hip.directory:
-        rocBlasDir   = self.hip.directory
-        rocSparseDir = self.hip.directory
-      else: # directory is '', indicating we are using the compiler's default, so the last resort is to guess the dir from hipcc
-        hipDir       = os.path.dirname(os.path.dirname(self.systemHipc)) # Ex. peel /opt/rocm-4.5.2/bin/hipcc twice
-        rocBlasDir   = hipDir
-        rocSparseDir = hipDir
-      if self.argDB['with-kokkos-kernels-tpl'] and os.path.isdir(rocBlasDir) and os.path.isdir(rocSparseDir): # TPL is required either by default or by users
+      if self.argDB['with-kokkos-kernels-tpl'] and os.path.isdir(self.hip.rocBlasDir) and os.path.isdir(self.hip.rocSparseDir): # TPL is required either by default or by users
         args.append('-DKokkosKernels_ENABLE_TPL_ROCBLAS=ON')
         args.append('-DKokkosKernels_ENABLE_TPL_ROCSPARSE=ON')
-        args.append('-DKokkosKernels_ROCBLAS_ROOT='+rocBlasDir)
-        args.append('-DKokkosKernels_ROCSPARSE_ROOT='+rocSparseDir)
+        args.append('-DKokkosKernels_ROCBLAS_ROOT='+self.hip.rocBlasDir)
+        args.append('-DKokkosKernels_ROCSPARSE_ROOT='+self.hip.rocSparseDir)
       elif 'with-kokkos-kernels-tpl' in self.framework.clArgDB and self.argDB['with-kokkos-kernels-tpl']: # TPL is explicitly required by users
-        raise RuntimeError('Kokkos-Kernels TPL is required but {x} and {y} do not exist! If not needed, use --with-kokkos-kernels-tpl=0'.format(x=rocBlasDir,y=rocSparseDir))
+        raise RuntimeError('Kokkos-Kernels TPL is required but {x} and {y} do not exist! If not needed, use --with-kokkos-kernels-tpl=0'.format(x=self.hip.rocBlasDir,y=self.hip.rocSparseDir))
       else: # Users turned it off or because rocBlas/rocSparse dirs not found
         args.append('-DKokkosKernels_ENABLE_TPL_ROCBLAS=OFF')
         args.append('-DKokkosKernels_ENABLE_TPL_ROCSPARSE=OFF')
