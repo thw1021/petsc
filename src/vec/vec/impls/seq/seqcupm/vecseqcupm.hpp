@@ -1027,7 +1027,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin
     const auto         n = xin->map->n;
     const auto         nbytes = n*sizeof(*VecIMPLCast(xin)->array);
     auto               yiscupm = PETSC_TRUE,xondevice = PETSC_TRUE; // assume we start on device
-    cupmMemcpyKind_t   mode;
+    // silence buggy gcc warning: ‘mode’ may be used uninitialized in this function
+    cupmMemcpyKind_t   mode = cupmMemcpyDeviceToDevice;
     PetscDeviceContext dctx;
     cupmStream_t       stream;
     cupmError_t        cerr;
@@ -1312,21 +1313,24 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& 
         thrust::make_tuple(vptr,thrust::make_counting_iterator(PetscInt{0}))
       );
 
-      if (PetscDefined(USE_COMPLEX)) {
-        // tup = thrust::transform_reduce(
-        //   zip,zip+n,detail::real_part(),tup,std::forward<TupleFuncT>(tuple_ftr)
-        // );
-      } else {
-        //tup = thrust::reduce(zip,zip+n,tup,std::forward<TupleFuncT>(tuple_ftr));
-      }
+      // need to use preprocessor conditionals since otherwise thrust complains about not being
+      // able to convert a thrust::device_reference<PetscScalar> to a PetscReal on complex
+      // builds...
+#if PetscDefined(USE_COMPLEX)
+      thrust::tie(*m,*p) = thrust::transform_reduce(
+        zip,zip+n,detail::real_part(),tup,std::forward<TupleFuncT>(tuple_ftr)
+      );
+#else
+      thrust::tie(*m,*p) = thrust::reduce(zip,zip+n,tup,std::forward<TupleFuncT>(tuple_ftr));
+#endif
     } else {
-      if (PetscDefined(USE_COMPLEX)) {
-        // *m = thrust::transform_reduce(
-        //   vptr,vptr+n,detail::real_part(),initval,std::forward<UnaryFuncT>(unary_ftr)
-        // );
-      } else {
-        //*m = thrust::reduce(vptr,vptr+n,initval,std::forward<UnaryFuncT>(unary_ftr));
-      }
+#if PetscDefined(USE_COMPLEX)
+      *m = thrust::transform_reduce(
+        vptr,vptr+n,detail::real_part(),initval,std::forward<UnaryFuncT>(unary_ftr)
+      );
+#else
+      *m = thrust::reduce(vptr,vptr+n,initval,std::forward<UnaryFuncT>(unary_ftr));
+#endif
     }
   );
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
@@ -1343,12 +1347,12 @@ struct max_tuple
 
   PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
-    //return ((x.get<0>() > y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
-    if ((x.get<0>() > y.get<0>()) || (x.get<1>() < y.get<1>())) {
-      return thrust::make_tuple(x.get<0>(),x.get<1>());
-    } else {
-      return thrust::make_tuple(y.get<0>(),y.get<1>());
-    }
+    return ((x.get<0>() > y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
+    // if ((x.get<0>() > y.get<0>()) || (x.get<1>() < y.get<1>())) {
+    //   return thrust::make_tuple(x.get<0>(),x.get<1>());
+    // } else {
+    //   return thrust::make_tuple(y.get<0>(),y.get<1>());
+    // }
   }
 };
 
@@ -1374,7 +1378,7 @@ struct min_tuple
 {
   using tuple_type = thrust::tuple<PetscReal,PetscInt>;
 
-  tuple_type operator()(const tuple_type& x, const tuple_type& y) const
+  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
     return ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
     // if ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) {

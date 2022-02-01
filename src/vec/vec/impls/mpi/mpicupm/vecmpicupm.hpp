@@ -249,7 +249,8 @@ template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::mdot_async(Vec x, PetscInt nv, const Vec y[], PetscScalar *z))
 {
   auto           stackwork = std::array<PetscScalar,128>{};
-  const auto     allocate  = stackwork.size() < nv;
+  // needed to silence warning: comparison between signed and unsigned integer expressions
+  const auto     allocate  = stackwork.size() < static_cast<decltype(stackwork.size())>(nv);
   auto           *work     = stackwork.data();
   PetscErrorCode ierr;
 

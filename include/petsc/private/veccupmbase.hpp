@@ -38,6 +38,65 @@ namespace CUPM
 namespace Impl
 {
 
+// a simple RAII helper for PetscMallocSet[CUDA|HIP]Host(). it exists because integrating the
+// regular versions would be an enormous pain to square with the templated types...
+template <Device::CUPM::DeviceType T>
+struct UseCUPMHostAlloc_ :  Device::CUPM::Impl::Interface<T>
+{
+  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(interface_type,T);
+private:
+  // would have loved to just do
+  //
+  // const auto oldmalloc = PetscTrMalloc;
+  //
+  // but in order to use auto the member needs to be static; in order to be static it must
+  // also be constexpr -- which in turn requires an initializer (also implicitly required by
+  // auto). But constexpr needs a constant expression initializer, so we can't initialize it
+  // with global (mutable) variables...
+#define DECLTYPE_AUTO(left,right) decltype(right) left = right
+  const DECLTYPE_AUTO(oldmalloc_,PetscTrMalloc);
+  const DECLTYPE_AUTO(oldfree_,PetscTrFree);
+  const DECLTYPE_AUTO(oldrealloc_,PetscTrRealloc);
+#undef DECLTYPE_AUTO
+  const bool v_;
+
+public:
+  UseCUPMHostAlloc_(bool useit) noexcept : v_(useit)
+  {
+    if (useit) {
+      // all unused arguments are un-named, this saves having to add PETSC_UNUSED to them all
+      PetscTrMalloc  = [](size_t sz,PetscBool,int,const char*,const char*,void **ptr)
+      {
+        PetscFunctionBegin;
+        CHKERRCUPM(cupmMallocHost(ptr,sz));
+        PetscFunctionReturn(0);
+      };
+      PetscTrFree    = [](void *ptr,int,const char*,const char*)
+      {
+        PetscFunctionBegin;
+        CHKERRCUPM(cupmFreeHost(ptr));
+        PetscFunctionReturn(0);
+      };
+      PetscTrRealloc = [](size_t,int,const char*,const char*,void**)
+      {
+        // REVIEW ME: can be implemented by malloc->copy->free?
+        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s has no realloc()",cupmName());
+      };
+    }
+  }
+
+  PETSC_NODISCARD auto value() const PETSC_DECLTYPE_NOEXCEPT_RETURNS(v_);
+
+  ~UseCUPMHostAlloc_() noexcept
+  {
+    if (v_) {
+      PetscTrMalloc  = oldmalloc_;
+      PetscTrFree    = oldfree_;
+      PetscTrRealloc = oldrealloc_;
+    }
+  }
+};
+
 enum class MemoryAccess : unsigned {
   READ       = 1 << 0,
   WRITE      = 1 << 1,
@@ -156,14 +215,14 @@ protected:
     return GetHandleDispatch_(dctx,handle,stream);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext *dctx, cupmStream_t *handle))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext *dctx, cupmStream_t *stream))
   {
-    return GetHandles_(dctx,nullptr,handle); // other overload
+    return GetHandles_(dctx,nullptr,stream); // other overload
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(cupmStream_t *handle))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(cupmStream_t *stream))
   {
-    return GetHandles_(nullptr,nullptr,handle); // other overload
+    return GetHandles_(nullptr,nullptr,stream); // other overload
   }
 
   // RAII versions of the get/restore array routines. Determines constness of the pointer type,
@@ -203,68 +262,9 @@ protected:
 
     PETSC_CXX_COMPAT_DECL(pointer_type initialize_(Vec v))
     {
-      pointer_type array;
+      pointer_type array = nullptr;
       auto ierr = getarray_async<MT,MA>(v,&array);CHKERRABORT(PETSC_COMM_SELF,ierr);
       return array;
-    }
-  };
-
-  // a simple RAII helper for PetscMallocSet[CUDA|HIP]Host(). it exists because integrating the
-  // regular versions would be an enormous pain to square with the templated types...
-  struct UseCUPMHostAlloc
-  {
-  private:
-    // would have loved to just do
-    //
-    // const auto oldmalloc = PetscTrMalloc;
-    //
-    // but in order to use auto the member needs to be static; in order to be static it must
-    // also be constexpr -- which in turn requires an initializer (also implicitly required by
-    // auto). But constexpr needs a constant expression initializer, so we can't initialize it
-    // with global (mutable) variables...
-#define DECLTYPE_AUTO(left,right) decltype(right) left = right
-    const DECLTYPE_AUTO(oldmalloc_,PetscTrMalloc);
-    const DECLTYPE_AUTO(oldfree_,PetscTrFree);
-    const DECLTYPE_AUTO(oldrealloc_,PetscTrRealloc);
-#undef DECLTYPE_AUTO
-    const bool v_;
-
-  public:
-    UseCUPMHostAlloc(bool useit) noexcept : v_(useit)
-    {
-      if (useit) {
-        // all unused arguments are un-named, this saves having to add PETSC_UNUSED to them all
-        PetscTrMalloc  = [](size_t sz,PetscBool,int,const char*,const char*,void **ptr)
-        {
-          PetscFunctionBegin;
-          CHKERRCUPM(cupmMallocHost(ptr,sz));
-          PetscFunctionReturn(0);
-        };
-        PetscTrFree    = [](void *ptr,int,const char*,const char*)
-        {
-          PetscFunctionBegin;
-          CHKERRCUPM(cupmFreeHost(ptr));
-          PetscFunctionReturn(0);
-        };
-        PetscTrRealloc = [](size_t,int,const char*,const char*,void**)
-        {
-          // REVIEW ME: can be implemented by malloc->copy->free?
-          SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s has no realloc()",cupmName());
-        };
-      }
-    }
-
-    explicit UseCUPMHostAlloc(PetscBool b) noexcept : UseCUPMHostAlloc(static_cast<bool>(b)) { }
-
-    PETSC_NODISCARD auto value() const PETSC_DECLTYPE_NOEXCEPT_RETURNS(v_)
-
-    ~UseCUPMHostAlloc() noexcept
-    {
-      if (v_) {
-        PetscTrMalloc  = oldmalloc_;
-        PetscTrFree    = oldfree_;
-        PetscTrRealloc = oldrealloc_;
-      }
     }
   };
 
@@ -291,6 +291,9 @@ protected:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase_(Vec,PetscBool));
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM_(Vec));
+
+  PETSC_NODISCARD static auto UseCUPMHostAlloc(bool b)      PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc_<T>(b));
+  PETSC_NODISCARD static auto UseCUPMHostAlloc(PetscBool b) PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc(static_cast<bool>(b)));
 
   // need functions to create the vector arrays, otherwise usng them as an unnamed temporary
   // leads to most vexing parse
@@ -452,7 +455,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
 {
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   constexpr auto     hostmem = PetscMemTypeHost(mtype);
-  PetscDeviceContext dctx;
+  // silence buggy gcc warning: ‘dctx’ may be used uninitialized in this function
+  PetscDeviceContext dctx = nullptr;
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
@@ -549,7 +553,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPMBase_(MPI_Com
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase_(Vec v, PetscBool allocate_missing, PetscScalar *host_array, PetscScalar *device_array))
 {
-  PetscDeviceContext dctx;
+  // silence buggy gcc warning: ‘dctx’ may be used uninitialized in this function
+  PetscDeviceContext dctx = nullptr;
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
