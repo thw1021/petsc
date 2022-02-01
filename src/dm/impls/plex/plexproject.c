@@ -483,20 +483,27 @@ PetscErrorCode DMGetFirstLabelEntry_Internal(DM dm, DM odm, DMLabel label, Petsc
   ierr = DMPlexGetDepthLabel(plex, &depthLabel);CHKERRQ(ierr);
   cdepth = dim - height;
   for (i = 0; i < numIds; ++i) {
-    IS              pointIS;
-    const PetscInt *points;
-    PetscInt        pdepth, point;
-
-    ierr = DMLabelGetStratumIS(label, ids[i], &pointIS);CHKERRQ(ierr);
-    if (!pointIS) continue; /* No points with that id on this process */
-    ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
-    ierr = DMGetEnclosurePoint(dm, odm, enc, points[0], &point);CHKERRQ(ierr);
-    ierr = DMLabelGetValue(depthLabel, point, &pdepth);CHKERRQ(ierr);
-    if (pdepth == cdepth) {
-      ls = point;
-      if (ds) {ierr = DMGetCellDS(dm, ls, ds);CHKERRQ(ierr);}
+    IS       labelIS, depthIS, pointIS;
+    PetscInt num_points;
+    ierr = DMLabelGetStratumIS(label, ids[i], &labelIS);CHKERRQ(ierr);
+    if (!labelIS) continue; /* No points with that id on this process */
+    ierr = DMLabelGetStratumIS(depthLabel, cdepth, &depthIS);CHKERRQ(ierr);
+    ierr = ISIntersect(labelIS, depthIS, &pointIS);CHKERRQ(ierr);
+    ierr = ISDestroy(&labelIS);CHKERRQ(ierr);
+    ierr = ISDestroy(&depthIS);CHKERRQ(ierr);
+    ierr = ISGetSize(pointIS, &num_points);CHKERRQ(ierr);
+    if (num_points) {
+      const PetscInt *points;
+      PetscInt        pdepth, point;
+      ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
+      ierr = DMGetEnclosurePoint(dm, odm, enc, points[0], &point);CHKERRQ(ierr);
+      ierr = DMLabelGetValue(depthLabel, point, &pdepth);CHKERRQ(ierr);
+      if (pdepth == cdepth) {
+        ls = point;
+        if (ds) {ierr = DMGetCellDS(dm, ls, ds);CHKERRQ(ierr);}
+      }
+      ierr = ISRestoreIndices(pointIS, &points);CHKERRQ(ierr);
     }
-    ierr = ISRestoreIndices(pointIS, &points);CHKERRQ(ierr);
     ierr = ISDestroy(&pointIS);CHKERRQ(ierr);
     if (ls >= 0) break;
   }
