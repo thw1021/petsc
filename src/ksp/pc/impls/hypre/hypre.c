@@ -909,7 +909,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   }
 #if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
   // SetSpGemmUseCusparse is a global parameter but is closely associated with BoomerAMG
-  ierr = PetscOptionsEnum("-pc_hypre_mat_spgemm_type","Type of SpGEMM to use","PCHYPRESetSpgemmType",PCHYPRESpgemmTypes,(PetscEnum)jac->spgemm_type,(PetscEnum*)&jac->spgemm_type,&flg);CHKERRQ(ierr);
+  ierr = PetscOptionsEnum("-pc_hypre_spgemm_type","Type of SpGEMM to use","PCHYPRESetSpgemmType",PCHYPRESpgemmTypes,(PetscEnum)jac->spgemm_type,(PetscEnum*)&jac->spgemm_type,&flg);CHKERRQ(ierr);
   if (flg) {
     PetscStackCallStandard(HYPRE_SetSpGemmUseCusparse,(jac->spgemm_type==PC_HYPRE_SPGEMM_CUSPARSE ? 1 : 0));
   }
