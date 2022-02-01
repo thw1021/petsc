@@ -91,6 +91,8 @@ Changes: Development
 
 .. rubric:: PC:
 
+- Add HYPRE option ``-pc_hypre_spgemm_type [cusparse|hypre]`` and ``PCHYPRESetSpgemmType()`` to use cuSparse or hypre's SpGEMM for AMG matrix triple products
+
 .. rubric:: KSP:
 
 -  Outer most ``KSPSolve()`` will error if KSP_DIVERGED_ITS and ```KSPSetErrorIfNotConverged()`` is used
