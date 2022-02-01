@@ -19,7 +19,7 @@ static PetscErrorCode MatDestroy_STRUMPACK(Mat A)
   /* Deallocate STRUMPACK storage */
   PetscStackCall("STRUMPACK_destroy",STRUMPACK_destroy(S));
   ierr = PetscFree(A->spptr);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flg);CHKERRQ(ierr);
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJ,&flg);CHKERRQ(ierr);
   if (flg) {
     ierr = MatDestroy_SeqAIJ(A);CHKERRQ(ierr);
   } else {
@@ -703,23 +703,52 @@ static PetscErrorCode MatLUFactorNumeric_STRUMPACK(Mat F,Mat A,const MatFactorIn
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
   STRUMPACK_RETURN_CODE  sp_err;
-  Mat_SeqAIJ             *A_d,*A_o;
-  Mat_MPIAIJ             *mat;
+  /* Mat_SeqAIJ             *A_d,*A_o; */
+  /* Mat_MPIAIJ             *mat; */
+  Mat                    Aloc;
+  const PetscScalar      *av;
+  const PetscInt         *ai=NULL,*aj=NULL;
   PetscErrorCode         ierr;
-  PetscInt               M=A->rmap->N,m=A->rmap->n;
-  PetscBool              flg;
+  PetscInt               M=A->rmap->N,m=A->rmap->n,dummy;
+  PetscBool              ismpiaij,isseqaij,flg;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATMPIAIJ,&flg);CHKERRQ(ierr);
-  if (flg) { /* A is MATMPIAIJ */
-    mat = (Mat_MPIAIJ*)A->data;
-    A_d = (Mat_SeqAIJ*)(mat->A)->data;
-    A_o = (Mat_SeqAIJ*)(mat->B)->data;
-    PetscStackCall("STRUMPACK_set_MPIAIJ_matrix",STRUMPACK_set_MPIAIJ_matrix(*S,&m,A_d->i,A_d->j,A_d->a,A_o->i,A_o->j,A_o->a,mat->garray));
-  } else { /* A is MATSEQAIJ */
-    A_d = (Mat_SeqAIJ*)A->data;
-    PetscStackCall("STRUMPACK_set_csr_matrix",STRUMPACK_set_csr_matrix(*S,&M,A_d->i,A_d->j,A_d->a,0));
-  }
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJ,&isseqaij);CHKERRQ(ierr);
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
+  if (ismpiaij) {
+    ierr = MatMPIAIJGetLocalMat(A,MAT_INITIAL_MATRIX,&Aloc);CHKERRQ(ierr);
+  } else if (isseqaij) {
+    ierr = PetscObjectReference((PetscObject)A);CHKERRQ(ierr);
+    Aloc = A;
+  } else SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for type %s",((PetscObject)A)->type_name);
+
+  ierr = MatGetRowIJ(Aloc,0,PETSC_FALSE,PETSC_FALSE,&dummy,&ai,&aj,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"GetRowIJ failed");
+  ierr = MatSeqAIJGetArrayRead(Aloc,&av);CHKERRQ(ierr);
+
+  if (ismpiaij) {
+    MPI_Comm    comm;
+    PetscMPIInt P,rank,p;
+    PetscInt    *dist=NULL;
+    ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
+    ierr = MPI_Comm_size(comm,&P);CHKERRMPI(ierr);
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+    ierr = PetscMalloc1(P+1,&dist);CHKERRQ(ierr);
+    ierr = MPI_Allgather(&m,1,MPIU_INT,dist+1,1,MPIU_INT,PETSC_COMM_WORLD);CHKERRMPI(ierr);
+    dist[0] = 0;
+    for (p=0; p<P; p++) {
+      dist[p+1] += dist[p];
+    }
+    PetscStackCall("STRUMPACK_set_distributed_csr_matrix",STRUMPACK_set_distributed_csr_matrix(*S,&m,ai,aj,av,dist,0));
+    ierr = PetscFree(dist);CHKERRQ(ierr);
+  } else if (isseqaij) {
+    PetscStackCall("STRUMPACK_set_csr_matrix",STRUMPACK_set_csr_matrix(*S,&M,ai,aj,av,0));
+  } else SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for type %s",((PetscObject)A)->type_name);
+
+  ierr = MatRestoreRowIJ(Aloc,0,PETSC_FALSE,PETSC_FALSE,&dummy,&ai,&aj,&flg);CHKERRQ(ierr);
+  if (!flg) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"RestoreRowIJ failed");
+  ierr = MatSeqAIJRestoreArrayRead(Aloc,&av);CHKERRQ(ierr);
+  ierr = MatDestroy(&Aloc);CHKERRQ(ierr);
 
   /* Reorder and Factor the matrix. */
   /* TODO figure out how to avoid reorder if the matrix values changed, but the pattern remains the same. */
@@ -863,7 +892,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   ierr     = PetscNewLog(B,&S);CHKERRQ(ierr);
   B->spptr = S;
 
-  ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flg);CHKERRQ(ierr);
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJ,&flg);CHKERRQ(ierr);
   iface = flg ? STRUMPACK_MT : STRUMPACK_MPI_DIST;
 
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"STRUMPACK Options","Mat");CHKERRQ(ierr);
