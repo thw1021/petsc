@@ -837,7 +837,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   cerr = cupmMallocAsync(reinterpret_cast<void**>(&d_results),nbytes,stream);CHKERRCUPM(cerr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
-    auto yidx = 0;
+    auto yidx = PetscInt{0};
     auto xptr = DeviceArrayRead(dctx,xin);
 
     // REVIEW ME: Can fork-join here
@@ -870,8 +870,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   // copy results to CPU
   {
     std::array<PetscScalar,PETSC_MAX_PATH_LEN> stackarray;
-    const auto allocate   = nv1*MDOT_WORKGROUP_NUM > stackarray.size();
-    auto       h_results  = stackarray.data();
+    const auto allocate  = static_cast<decltype(stackarray.size())>(nv1)*MDOT_WORKGROUP_NUM > stackarray.size();
+    auto       h_results = stackarray.data();
 
     if (allocate) {ierr = PetscMalloc1(nv1*MDOT_WORKGROUP_NUM,&h_results);CHKERRQ(ierr);}
     cerr = cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
@@ -886,7 +886,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     // REVIEW ME: it is likely faster to do this in a micro kernel rather than do it on the
     // host which that requires synchronization
     // sum group results into z
-    for (auto j = decltype(nv1)(0); j < nv1; ++j) {
+    for (auto j = PetscInt{0}; j < nv1; ++j) {
       for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) z[j] += h_results[i];
     }
     if (allocate) {ierr = PetscFree(h_results);CHKERRQ(ierr);}
@@ -912,7 +912,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
     auto xptr = DeviceArrayRead(dctx,xin);
 
     // can fork-join here
-    for (decltype(nv) i = 0; i < nv; ++i) {
+    for (auto i = PetscInt{0}; i < nv; ++i) {
       auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,cupmScalarCast(z+i));CHKERRCUPMBLAS(cberr);
     }
   }
