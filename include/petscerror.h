@@ -416,6 +416,32 @@ M*/
 #define SETERRQ9(comm,ierr,s,a1,a2,a3,a4,a5,a6,a7,a8,a9) return PetscError(comm,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr,PETSC_ERROR_INITIAL,s,a1,a2,a3,a4,a5,a6,a7,a8,a9)
 
 /*MC
+   SETERRA - Fortran-only macro that can be called when an error has been detected
+
+   Synopsis:
+   #include <petscsys.h>
+   PetscErrorCode SETERRA(MPI_Comm comm,PetscErrorCode ierr,char *message)
+
+   Collective
+
+   Input Parameters:
++  comm - A communicator, so that the error can be collective
+.  ierr - nonzero error code, see the list of standard error codes in include/petscerror.h
+-  message - error message in the printf format
+
+  Level: beginner
+
+   Notes:
+    This should only be used with Fortran. In C/C++, use SETERRQ() or SETERRABORT().
+
+   Fortran Notes:
+    This function calls MPIU_Abort().
+
+.seealso: SETERRQ(), SETERRABORT(), CHKERRQ(), CHKERRA(), CHKERRABORT()
+M*/
+#define SETERRA #error("Use SETERRQ() or SETERRABORT() instead")
+
+/*MC
    SETERRABORT - Macro that can be called when an error has been detected,
 
    Synopsis:
@@ -433,6 +459,9 @@ M*/
 
    Notes:
     This function just calls MPI_Abort().
+
+   Fortran Notes:
+    Use SETERRA() instead.
 
 .seealso: PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKERRQ(), CHKMEMQ, SETERRQ1(), SETERRQ2()
 M*/
@@ -483,6 +512,32 @@ M*/
 #endif
 
 /*MC
+   CHKERRA - Fortran-only replacement for CHKERRQ which aborts immediately
+
+   Synopsis:
+   #include <petscsys.h>
+   PetscErrorCode CHKERRA(PetscErrorCode ierr)
+
+   Not Collective
+
+   Input Parameters:
+.  ierr - nonzero error code, see the list of standard error codes in include/petscerror.h
+
+  Level: beginner
+
+   Notes:
+      This should only be used with Fortran. With C/C++, use CHKERRQ() in normal usage,
+      or CHKERRABORT() if wanting to abort immediately on error.
+
+   Fortran Notes:
+      CHKERRQ() may be called from Fortran subroutines but CHKERRA() must be called from the
+      Fortran main program.
+
+.seealso: CHKERRQ(), CHKERRABORT(), SETERRA(), SETERRQ(), SETERRABORT()
+M*/
+#define CHKERRA #error("Use CHKERRQ() or CHKERRABORT() instead")
+
+/*MC
    CHKERRABORT - Checks error code returned from PETSc function. If non-zero it aborts immediately.
 
    Synopsis:
@@ -493,6 +548,9 @@ M*/
 
    Input Parameters:
 .  ierr - nonzero error code, see the list of standard error codes in include/petscerror.h
+
+   Fortran Notes:
+   Use CHKERRA() instead.
 
   Level: intermediate
 
