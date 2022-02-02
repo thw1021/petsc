@@ -517,7 +517,7 @@ PetscErrorCode MatConvertToTriples_seqsbaij_seqsbaij(Mat A,PetscInt shift,MatReu
         nz++;
       }
     }
-    if (PetscUnlikely(nz != aa->nz)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Different numbers of nonzeros %" PetscInt64_FMT " != %" PetscInt_FMT,nz,aa->nz);
+    PetscAssertFalse(nz != aa->nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Different numbers of nonzeros %" PetscInt64_FMT " != %" PetscInt_FMT,nz,aa->nz);
   }
   if (reuse == MAT_INITIAL_MATRIX) mumps->nnz = nz;
   PetscFunctionReturn(0);
@@ -1835,11 +1835,11 @@ PetscErrorCode PetscSetMUMPSFromOptions(Mat F, Mat A)
 
   ierr = PetscOptionsIntArray("-mat_mumps_view_info","request INFO local to each processor","",info,&ninfo,NULL);CHKERRQ(ierr);
   if (ninfo) {
-    if (PetscUnlikely(ninfo > 80)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"number of INFO %" PetscInt_FMT " must <= 80",ninfo);
+    PetscAssertFalse(ninfo > 80,PETSC_COMM_SELF,PETSC_ERR_USER,"number of INFO %" PetscInt_FMT " must <= 80",ninfo);
     ierr = PetscMalloc1(ninfo,&mumps->info);CHKERRQ(ierr);
     mumps->ninfo = ninfo;
     for (i=0; i<ninfo; i++) {
-      if (PetscUnlikely(info[i] < 0 || info[i]>80)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"index of INFO %" PetscInt_FMT " must between 1 and 80",ninfo);
+      PetscAssertFalse(info[i] < 0 || info[i]>80,PETSC_COMM_SELF,PETSC_ERR_USER,"index of INFO %" PetscInt_FMT " must between 1 and 80",ninfo);
       else  mumps->info[i] = info[i];
     }
   }

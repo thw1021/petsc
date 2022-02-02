@@ -3518,7 +3518,7 @@ PetscErrorCode PetscSectionExtractDofsFromArray(PetscSection origSection, MPI_Da
   ierr = PetscSectionCreate(PETSC_COMM_SELF, &s);CHKERRQ(ierr);
   ierr = PetscSectionSetChart(s, 0, npoints);CHKERRQ(ierr);
   for (i=0; i<npoints; i++) {
-    if (PetscUnlikely(points_[i] < pStart || points_[i] >= pEnd)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "point %" PetscInt_FMT " (index %" PetscInt_FMT ") in input IS out of input section's chart", points_[i], i);
+    PetscAssertFalse(points_[i] < pStart || points_[i] >= pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "point %" PetscInt_FMT " (index %" PetscInt_FMT ") in input IS out of input section's chart", points_[i], i);
     ierr = PetscSectionGetDof(origSection, points_[i], &n);CHKERRQ(ierr);
     ierr = PetscSectionSetDof(s, i, n);CHKERRQ(ierr);
   }

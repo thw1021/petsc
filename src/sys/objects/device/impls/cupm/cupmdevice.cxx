@@ -104,7 +104,7 @@ PetscErrorCode Device<T>::DeviceInternal::configure() noexcept
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!devInitialized_)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",id_);
+  PetscAssertFalseDebug(!devInitialized_,PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",id_);
   // why on EARTH nvidia insists on making otherwise informational states into
   // fully-fledged error codes is beyond me. Why couldn't a pointer to bool argument have
   // sufficed?!?!?!
@@ -122,7 +122,7 @@ PetscErrorCode Device<T>::DeviceInternal::view(PetscViewer viewer) const noexcep
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikelyDebug(!devInitialized_)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",id_);
+  PetscAssertFalseDebug(!devInitialized_,PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",id_);
   ierr = PetscObjectTypeCompare(PetscObjectCast(viewer),PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
   if (iascii) {
     MPI_Comm    comm;

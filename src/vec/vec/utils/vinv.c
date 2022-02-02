@@ -125,8 +125,8 @@ PetscErrorCode  VecStrideNorm(Vec v,PetscInt start,NormType ntype,PetscReal *nrm
   PetscValidRealPointer(nrm,4);
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
-  if (PetscUnlikely(start < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
-  else if (PetscUnlikely(start >= bs)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Start of stride subvector (%" PetscInt_FMT ") is too large for stride\n Have you set the vector blocksize (%" PetscInt_FMT ") correctly with VecSetBlockSize()?",start,bs);
+  PetscAssertFalse(start < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
+  else PetscAssertFalse(start >= bs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Start of stride subvector (%" PetscInt_FMT ") is too large for stride\n Have you set the vector blocksize (%" PetscInt_FMT ") correctly with VecSetBlockSize()?",start,bs);
   ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
   if (ntype == NORM_2) {
     PetscScalar sum = 0.0;
@@ -190,8 +190,8 @@ PetscErrorCode  VecStrideMax(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
   PetscValidRealPointer(nrm,4);
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
-  if (PetscUnlikely(start < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
-  else if (PetscUnlikely(start >= bs)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Start of stride subvector (%" PetscInt_FMT ") is too large for stride\n Have you set the vector blocksize (%" PetscInt_FMT ") correctly with VecSetBlockSize()?",start,bs);
+  PetscAssertFalse(start < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
+  else PetscAssertFalse(start >= bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Start of stride subvector (%" PetscInt_FMT ") is too large for stride\n Have you set the vector blocksize (%" PetscInt_FMT ") correctly with VecSetBlockSize()?",start,bs);
   ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
   for (i=start; i<n; i+=bs) {
     if (PetscRealPart(x[i]) > max) { max = PetscRealPart(x[i]); id = i;}
@@ -259,8 +259,8 @@ PetscErrorCode  VecStrideMin(Vec v,PetscInt start,PetscInt *idex,PetscReal *nrm)
   PetscValidRealPointer(nrm,4);
   ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
-  if (PetscUnlikely(start < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
-  else if (PetscUnlikely(start >= bs)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Start of stride subvector (%" PetscInt_FMT ") is too large for stride\nHave you set the vector blocksize (%" PetscInt_FMT ") correctly with VecSetBlockSize()?",start,bs);
+  PetscAssertFalse(start < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
+  else PetscAssertFalse(start >= bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Start of stride subvector (%" PetscInt_FMT ") is too large for stride\nHave you set the vector blocksize (%" PetscInt_FMT ") correctly with VecSetBlockSize()?",start,bs);
   ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
   for (i=start; i<n; i+=bs) {
     if (PetscRealPart(x[i]) < min) { min = PetscRealPart(x[i]); id = i;}

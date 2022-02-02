@@ -389,7 +389,7 @@ PetscErrorCode VecTaggerComputeBoxes(VecTagger tagger,Vec vec,PetscInt *numBoxes
   PetscValidPointer(boxes,4);
   ierr = VecGetLocalSize(vec,&vls);CHKERRQ(ierr);
   ierr = VecTaggerGetBlockSize(tagger,&tbs);CHKERRQ(ierr);
-  if (PetscUnlikely(vls % tbs)) SETERRQ(PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
+  PetscAssertFalse(vls % tbs,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
   if (tagger->ops->computeboxes) {
     *listed = PETSC_TRUE;
     ierr    = (*tagger->ops->computeboxes) (tagger,vec,numBoxes,boxes,listed);CHKERRQ(ierr);
@@ -425,7 +425,7 @@ PetscErrorCode VecTaggerComputeIS(VecTagger tagger,Vec vec,IS *is,PetscBool *lis
   PetscValidPointer(is,3);
   ierr = VecGetLocalSize(vec,&vls);CHKERRQ(ierr);
   ierr = VecTaggerGetBlockSize(tagger,&tbs);CHKERRQ(ierr);
-  if (PetscUnlikely(vls % tbs)) SETERRQ(PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
+  PetscAssertFalse(vls % tbs,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
   if (tagger->ops->computeis) {
     ierr = (*tagger->ops->computeis) (tagger,vec,is,listed);CHKERRQ(ierr);
   } else if (listed) *listed = PETSC_FALSE;

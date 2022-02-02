@@ -681,13 +681,13 @@ PetscErrorCode DMPlexOrientInterface_Internal(DM dm)
         /* Find index of rank leavesRanks[p][c] among remote ranks */
         /* No need for PetscMPIIntCast because these integers were originally cast from PetscMPIInt. */
         ierr = PetscFindMPIInt((PetscMPIInt) leavesRanks[p][c], nranks, ranks, &r);CHKERRQ(ierr);
-        if (PetscUnlikely(r < 0)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %D cone[%D]=%D root (%d,%D) leaf (%d,%D): leaf rank not found among remote ranks", p, c, cone[c], rootsRanks[p][c], roots[p][c], leavesRanks[p][c], leaves[p][c]);
-        if (PetscUnlikely(ranks[r] < 0 || ranks[r] >= size)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "p=%D c=%D commsize=%d: ranks[%D] = %d makes no sense", p, c, size, r, ranks[r]);
+        PetscAssertFalse(r < 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %D cone[%D]=%D root (%d,%D) leaf (%d,%D): leaf rank not found among remote ranks", p, c, cone[c], rootsRanks[p][c], roots[p][c], leavesRanks[p][c], leaves[p][c]);
+        PetscAssertFalse(ranks[r] < 0 || ranks[r] >= size,PETSC_COMM_SELF, PETSC_ERR_PLIB, "p=%D c=%D commsize=%d: ranks[%D] = %d makes no sense", p, c, size, r, ranks[r]);
         /* Find point leaves[p][c] among remote points aimed at rank leavesRanks[p][c] */
         rS = roffset[r];
         rN = roffset[r+1] - rS;
         ierr = PetscFindInt(leaves[p][c], rN, &rremote1[rS], &ind0);CHKERRQ(ierr);
-        if (PetscUnlikely(ind0 < 0)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %D cone[%D]=%D root (%d,%D) leave (%d,%D): corresponding remote point not found - it seems there is missing connection in point SF!", p, c, cone[c], rootsRanks[p][c], roots[p][c], leavesRanks[p][c], leaves[p][c]);
+        PetscAssertFalse(ind0 < 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point %D cone[%D]=%D root (%d,%D) leave (%d,%D): corresponding remote point not found - it seems there is missing connection in point SF!", p, c, cone[c], rootsRanks[p][c], roots[p][c], leavesRanks[p][c], leaves[p][c]);
         /* Get the corresponding local point */
         mainCone[c] = rmine1[rS + ind0];CHKERRQ(ierr);
       }

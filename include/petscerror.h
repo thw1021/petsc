@@ -220,7 +220,7 @@ M*/
 
   Level: beginner
 
-.seealso: SETERRQ(), PetscError(), CHKERRQ()
+.seealso: PetscAssertDebug(), SETERRQ(), PetscError(), CHKERRQ()
 MC*/
 #define PetscAssert(cond,comm,ierr,...) PetscAssertEq_Internal((bool)(cond),true,SETERRQ,(comm,ierr,__VA_ARGS__))
 
@@ -249,6 +249,64 @@ MC*/
 .seealso: PetscAssert()
 MC*/
 #define PetscAssertFalse(cond,comm,ierr,...) PetscAssertEq_Internal((bool)(cond),false,SETERRQ,(comm,ierr,__VA_ARGS__))
+
+/*MC
+  PetscAssertDebug - Assert that a particular condition is true only when debugging is enabled
+
+  Synopsis:
+  #include <petscerror.h>
+  void PetscAssertDebug(bool cond, MPI_Comm comm, PetscErrorCode ierr, const char *message, ...)
+
+  Collective
+
+  Input Parameters:
++ cond    - The boolean condition
+. comm    - The communicator on which the check can be collective on
+. ierr    - A nonzero error code, see include/petscerror.h for the complete list
+- message - Error message in printf format
+
+  Notes:
+  See PetscAssert() for usage and behaviour.
+
+  Level: beginner
+
+.seealso: PetscAssert(), SETERRQ(), PetscError()
+MC*/
+#if PetscDefined(USE_DEBUG)
+#  define PetscAssertDebug(cond,comm,ierr,...) PetscAssert(cond,comm,ierr,__VA_ARGS__)
+#else
+#  define PetscAssertDebug(cond,comm,ierr,...) if (0) ((void)0)
+#endif
+
+/*MC
+  PetscAssertFalseDebug - Assert that a particular condition is false only when debugging is enabled
+
+  Synopsis:
+  #include <petscerror.h>
+  void PetscAssertFalseDebug(bool cond, MPI_Comm comm, PetscErrorCode ierr, const char *message, ...)
+
+  Collective
+
+  Input Parameters:
++ cond    - The boolean condition
+. comm    - The communicator on which the check can be collective on
+. ierr    - A nonzero error code, see include/petscerror.h for the complete list
+- message - Error message in printf format
+
+  Notes:
+  Invert your boolean condition and use PetscAssertDebug() instead. This macro is a temporary
+  stopgap to converting to PetscAssertDebug() and is subject to removal without deprecation in
+  a future release.
+
+  Level: deprecated
+
+.seealso: PetscAssertDebug()
+MC*/
+#if PetscDefined(USE_DEBUG)
+#  define PetscAssertFalseDebug(cond,comm,ierr,...) PetscAssertFalse(cond,comm,ierr,__VA_ARGS__)
+#else
+#  define PetscAssertFalseDebug(cond,comm,ierr,...) if (0) ((void)0)
+#endif
 
 /*MC
    CHKERRQ - Checks error code returned from PETSc function, if non-zero it calls the error handler and then returns. Use CHKERRMPI() for checking errors from MPI calls

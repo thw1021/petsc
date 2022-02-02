@@ -269,7 +269,7 @@ PetscErrorCode PetscBagRegisterInt64(PetscBag bag,void *addr,PetscInt64 mdefault
   ierr         = PetscNew(&item);CHKERRQ(ierr);
   item->dtype  = PETSC_INT;
   item->offset = ((char*)addr) - ((char*)bag);
-  if (PetscUnlikely(item->offset > bag->bagsize)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Registered item %s %s is not in bag memory space",name,help);
+  PetscAssertFalse(item->offset > bag->bagsize,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Registered item %s %s is not in bag memory space",name,help);
   item->next       = NULL;
   item->msize      = 1;
   *(PetscInt64*)addr = mdefault;

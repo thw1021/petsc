@@ -61,7 +61,7 @@ PETSC_EXTERN PetscErrorCode MatColoringTest(MatColoring mc,ISColoring coloring)
           }
           statecol[i]=0.;
         }
-        if (PetscUnlikely(idx != nentries)) SETERRQ(PetscObjectComm((PetscObject)mc),PETSC_ERR_NOT_CONVERGED,"Bad number of entries %" PetscInt_FMT " vs %" PetscInt_FMT,idx,nentries);
+        PetscAssertFalse(idx != nentries,PetscObjectComm((PetscObject)mc),PETSC_ERR_NOT_CONVERGED,"Bad number of entries %" PetscInt_FMT " vs %" PetscInt_FMT,idx,nentries);
         ierr = PetscLogEventBegin(MATCOLORING_Comm,mc,0,0,0);CHKERRQ(ierr);
         ierr = PetscSFReduceBegin(etoc,itype,stateleafrow,statecol,MPI_MAX);CHKERRQ(ierr);
         ierr = PetscSFReduceEnd(etoc,itype,stateleafrow,statecol,MPI_MAX);CHKERRQ(ierr);
@@ -82,7 +82,7 @@ PETSC_EXTERN PetscErrorCode MatColoringTest(MatColoring mc,ISColoring coloring)
           }
           staterow[i]=0.;
         }
-        if (PetscUnlikely(idx != nentries)) SETERRQ(PetscObjectComm((PetscObject)mc),PETSC_ERR_NOT_CONVERGED,"Bad number of entries %" PetscInt_FMT " vs %" PetscInt_FMT,idx,nentries);
+        PetscAssertFalse(idx != nentries,PetscObjectComm((PetscObject)mc),PETSC_ERR_NOT_CONVERGED,"Bad number of entries %" PetscInt_FMT " vs %" PetscInt_FMT,idx,nentries);
         ierr = PetscLogEventBegin(MATCOLORING_Comm,mc,0,0,0);CHKERRQ(ierr);
         ierr = PetscSFReduceBegin(etor,itype,stateleafcol,staterow,MPI_MAX);CHKERRQ(ierr);
         ierr = PetscSFReduceEnd(etor,itype,stateleafcol,staterow,MPI_MAX);CHKERRQ(ierr);

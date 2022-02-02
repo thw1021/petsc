@@ -33,7 +33,7 @@ PetscErrorCode  MatSetValuesLocal_HYPREStruct_3d(Mat mat,PetscInt nrow,const Pet
   Mat_HYPREStruct *ex     = (Mat_HYPREStruct*) mat->data;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(ncol > 7)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"ncol %D > 7 too large",ncol);
+  PetscAssertFalse(ncol > 7,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"ncol %D > 7 too large",ncol);
   for (i=0; i<nrow; i++) {
     for (j=0; j<ncol; j++) {
       stencil = icol[j] - irow[i];

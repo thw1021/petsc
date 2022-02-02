@@ -111,7 +111,7 @@ PetscErrorCode MatViennaCLCopyFromGPU(Mat A, const ViennaCLAIJMatrix *Agpu)
       PetscAssertFalse(a->compressedrow.use,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "ViennaCL: Cannot handle row compression for GPU matrices");
       else {
 
-        if (PetscUnlikely((PetscInt)Agpu->size1() != m)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "GPU matrix has %lu rows, should be %" PetscInt_FMT, Agpu->size1(), m);
+        PetscAssertFalse(PetscUnlikely((PetscInt)Agpu->size1() != m),PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "GPU matrix has %lu rows, should be %" PetscInt_FMT, Agpu->size1(), m);
         a->nz           = Agpu->nnz();
         a->maxnz        = a->nz; /* Since we allocate exactly the right amount */
         A->preallocated = PETSC_TRUE;

@@ -322,7 +322,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
     if (!hasState) outputState = 0;
     ierr = PetscObjectGetName((PetscObject) xin, &name);CHKERRQ(ierr);
     ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
-    if (PetscUnlikely((bs < 1) || (bs > 3))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
+    PetscAssertFalse(PetscUnlikely((bs < 1) || (bs > 3)),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
     if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED) {
       if (outputState == 0) {
         outputState = 1;
@@ -332,7 +332,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
         outputState = 3;
         doOutput = 1;
       } else if (outputState == 3) doOutput = 0;
-      else if (PetscUnlikely(outputState == 4)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
+      else PetscAssertFalse(outputState == 4,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
 
       if (doOutput) {
         ierr = PetscViewerASCIIPrintf(viewer, "POINT_DATA %" PetscInt_FMT "\n", n/bs);CHKERRQ(ierr);
@@ -345,7 +345,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
         outputState = 4;
         doOutput = 1;
       } else if (outputState == 2) doOutput = 0;
-      else if (PetscUnlikely(outputState == 3)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
+      else PetscAssertFalse(outputState == 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
       else if (outputState == 4) doOutput = 0;
 
       if (doOutput) {
@@ -380,7 +380,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
     PetscInt bs, b;
 
     ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
-    if (PetscUnlikely((bs < 1) || (bs > 3))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
+    PetscAssertFalse(PetscUnlikely((bs < 1) || (bs > 3)),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
     for (i=0; i<n/bs; i++) {
       for (b=0; b<bs; b++) {
         if (b > 0) {
@@ -399,7 +399,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
     PetscInt bs, b;
 
     ierr = VecGetBlockSize(xin, &bs);CHKERRQ(ierr);
-    if (PetscUnlikely((bs < 1) || (bs > 3))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "PCICE can only handle up to 3D objects, but vector dimension is %" PetscInt_FMT, bs);
+    PetscAssertFalse(PetscUnlikely((bs < 1) || (bs > 3)),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "PCICE can only handle up to 3D objects, but vector dimension is %" PetscInt_FMT, bs);
     ierr = PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT "\n", xin->map->N/bs);CHKERRQ(ierr);
     for (i=0; i<n/bs; i++) {
       ierr = PetscViewerASCIIPrintf(viewer,"%7" PetscInt_FMT "   ", i+1);CHKERRQ(ierr);
@@ -687,14 +687,14 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec xin,PetscInt ni,const PetscInt ix[],c
     for (i=0; i<ni; i++, y+=bs) {
       start = bs*ix[i];
       if (start < 0) continue;
-      if (PetscUnlikelyDebug(start >= xin->map->n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT,start,xin->map->n);
+      PetscAssertFalseDebug(start >= xin->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT,start,xin->map->n);
       for (j=0; j<bs; j++) xx[start+j] = y[j];
     }
   } else {
     for (i=0; i<ni; i++, y+=bs) {
       start = bs*ix[i];
       if (start < 0) continue;
-      if (PetscUnlikelyDebug(start >= xin->map->n)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT,start,xin->map->n);
+      PetscAssertFalseDebug(start >= xin->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT,start,xin->map->n);
       for (j=0; j<bs; j++) xx[start+j] += y[j];
     }
   }

@@ -143,7 +143,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchLeft_Private(const char *arr
 
   PetscFunctionBegin;
   *m = l;
-  if (PetscUnlikelyDebug(r < l)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"r %" PetscInt_FMT " < l %" PetscInt_FMT " in PetscGallopSearchLeft",r,l);
+  PetscAssertFalseDebug(r < l,PETSC_COMM_SELF,PETSC_ERR_PLIB,"r %" PetscInt_FMT " < l %" PetscInt_FMT " in PetscGallopSearchLeft",r,l);
   if ((*cmp)(x, arr+r*size, ctx) >= 0) {*m = r; PetscFunctionReturn(0);}
   if ((*cmp)(x, (arr)+l*size, ctx) < 0 || PetscUnlikely(!(r-l))) PetscFunctionReturn(0);
   while (PETSC_TRUE) {
@@ -174,7 +174,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscGallopSearchRight_Private(const char *ar
 
   PetscFunctionBegin;
   *m = r;
-  if (PetscUnlikelyDebug(r < l)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"r %" PetscInt_FMT " < l %" PetscInt_FMT " in PetscGallopSearchRight",r,l);
+  PetscAssertFalseDebug(r < l,PETSC_COMM_SELF,PETSC_ERR_PLIB,"r %" PetscInt_FMT " < l %" PetscInt_FMT " in PetscGallopSearchRight",r,l);
   if ((*cmp)(x, arr+l*size, ctx) <= 0) {*m = l; PetscFunctionReturn(0);}
   if ((*cmp)(x, (arr)+r*size, ctx) > 0 || PetscUnlikely(!(r-l))) PetscFunctionReturn(0);
   while (PETSC_TRUE) {

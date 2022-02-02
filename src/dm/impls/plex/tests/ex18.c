@@ -1117,7 +1117,7 @@ static PetscErrorCode DMPlexSetOrientInterface_Private(DM dm, PetscBool enable)
   }
   if (PetscDefined(USE_DEBUG)) {
     ierr = PetscOptionsGetBool(options, prefix, opt, &flg, &set);CHKERRQ(ierr);
-    if (PetscUnlikely(set && flg != enable)) SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "PetscOptionsSetValue did not have the desired effect");
+    PetscAssertFalse(set && flg != enable,PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "PetscOptionsSetValue did not have the desired effect");
   }
   PetscFunctionReturn(0);
 }
@@ -1331,7 +1331,7 @@ static PetscErrorCode PointSFGetInterfacePoints_Private(PetscSF pointSF, IS *is)
   PetscFunctionReturn(0);
 }
 
-#define CHKERRMY(ierr) do {if (PetscUnlikely(ierr)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "PointSF is wrong. Unable to show details!");} while (0)
+#define CHKERRMY(ierr) do {PetscAssertFalse(ierr,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PointSF is wrong. Unable to show details!");} while (0)
 
 static PetscErrorCode ViewPointsWithType_Internal(DM dm, IS pointsIS, PetscViewer v)
 {
