@@ -1102,7 +1102,7 @@ class Configure(config.base.Configure):
         raise RuntimeError(msg)
 
       if language.upper() in {'CUDA','HIP','SYCL'}:
-        # do not check CUDA/HIP/SYCL linker since it is never used (assumed for now)
+        # do not check CUDA/HIP/SYCL linkers since they are never used (assumed for now)
         return
       if not self.checkLink(linkLanguage=linkLanguage,includes=includes,body=body):
         msg = 'Cannot compile/link {} with {}.'.format(language,compiler)
