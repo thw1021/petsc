@@ -357,7 +357,7 @@ PetscErrorCode VecMTDot_SeqKokkos(Vec xin,PetscInt nv,const Vec yin[],PetscScala
 PetscErrorCode VecSet_SeqKokkos(Vec xin,PetscScalar alpha)
 {
   PetscErrorCode            ierr;
-  PetscScalarKokkosView     xv;
+  PetscScalarKokkosViewHost xv;
 
   PetscFunctionBegin;
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
