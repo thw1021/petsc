@@ -6,7 +6,7 @@
  headerfile is defined as any headerfile that directly includes petscconf.h
 */
 
-#if defined(__cplusplus)
+#if defined(__cplusplus) && defined(PETSC_HAVE_CXX)
 /*
  This is a 2-part problem:
  1. Intel compilers define __cplusplus to 1 instead of the C++ version (?????????????????)
