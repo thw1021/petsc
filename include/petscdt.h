@@ -95,12 +95,14 @@ PETSC_EXTERN PetscErrorCode PetscGaussLobattoLegendreElementMassDestroy(PetscInt
 PETSC_EXTERN PetscErrorCode PetscDTAltVApply(PetscInt, PetscInt, const PetscReal *, const PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVWedge(PetscInt, PetscInt, PetscInt, const PetscReal *, const PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVWedgeMatrix(PetscInt, PetscInt, PetscInt, const PetscReal *, PetscReal *);
+PETSC_EXTERN PetscErrorCode PetscDTAltVWedgePattern(PetscInt, PetscInt, PetscInt, PetscInt (*)[3]);
 PETSC_EXTERN PetscErrorCode PetscDTAltVPullback(PetscInt, PetscInt, const PetscReal *, PetscInt, const PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVPullbackMatrix(PetscInt, PetscInt, const PetscReal *, PetscInt, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVInterior(PetscInt, PetscInt, const PetscReal *, const PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVInteriorMatrix(PetscInt, PetscInt, const PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode PetscDTAltVInteriorPattern(PetscInt, PetscInt, PetscInt (*)[3]);
 PETSC_EXTERN PetscErrorCode PetscDTAltVStar(PetscInt, PetscInt, PetscInt, const PetscReal *, PetscReal *);
+PETSC_EXTERN PetscErrorCode PetscDTAltVDifferentialPattern(PetscInt, PetscInt, PetscInt, PetscInt (*)[3]);
 
 PETSC_EXTERN PetscErrorCode PetscDTBaryToIndex(PetscInt,PetscInt,const PetscInt[],PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscDTIndexToBary(PetscInt,PetscInt,PetscInt,PetscInt[]);
