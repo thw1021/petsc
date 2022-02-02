@@ -158,7 +158,7 @@ C++ Exceptions
 
 In PETSc code, when one calls C++ functions that do not return with an error code but might
 instead throw C++ exceptions, one can use ``CHKERRCXX(func)``, which catches the exceptions
-in *func* and then calls ``SETERRQ1()``.  The macro ``CHKERRCXX(func)`` is given by
+in *func* and then calls ``SETERRQ()``.  The macro ``CHKERRCXX(func)`` is given by
 
 .. literalinclude:: /../include/petscerror.h
    :language: c

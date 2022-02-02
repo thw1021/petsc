@@ -368,7 +368,7 @@ static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
         case 3:
           ierr = DMCreateMatrix_Stag_3D_AIJ_Assemble(dm,*mat);CHKERRQ(ierr);
           break;
-        default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %" PetscInt_FMT,dim);
+        default: SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %" PetscInt_FMT,dim);
       }
     }
     /* Note: GPU-related logic, e.g. at the end of DMCreateMatrix_DA_1d_MPIAIJ, is not included here
