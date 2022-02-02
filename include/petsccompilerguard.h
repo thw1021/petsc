@@ -5,7 +5,7 @@
  This header must be the first inclusion to any top-level PETSc headerfile. A top-level
  headerfile is defined as any headerfile that directly includes petscconf.h
 */
-
+#if !defined(__sun) || !defined(sun) || !defined(__sun__) || !defined(PETSC_HAVE_SUN_CXX)
 #if defined(__cplusplus) && defined(PETSC_HAVE_CXX)
 /*
  This is a 2-part problem:
@@ -46,5 +46,5 @@
 #    error "PETSc requires a C compiler that defines __STDC__ = 1 and __STDC__VERSION__ >= 199901L (C99)"
 #  endif
 #endif
-
+#endif // temporary solaris workaround
 #endif /* PETSC_COMPILER_GUARD_H */
