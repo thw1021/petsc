@@ -65,7 +65,7 @@ PetscErrorCode DMPlexFindVertices(DM dm, Vec coordinates, PetscReal eps, IS *poi
     ierr = DMGetCoordinateSection(dm, &cs);CHKERRQ(ierr);
     for (p = vStart; p < vEnd; p++) {
       ierr = PetscSectionGetDof(cs, p, &ndof);CHKERRQ(ierr);
-      if (PetscUnlikely(ndof != cdim)) SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "point %D: ndof = %D != %D = cdim", p, ndof, cdim);
+      PetscAssertFalse(ndof != cdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "point %D: ndof = %D != %D = cdim", p, ndof, cdim);
     }
   }
   ierr = PetscMalloc1(npoints, &dagPoints);CHKERRQ(ierr);
@@ -716,7 +716,7 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
             PetscReal segB[6] = {0.,0.,0.,0.,0.,0.};
             PetscReal segC[6] = {0.,0.,0.,0.,0.,0.};
 
-            if (PetscUnlikely(dim > 3)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected dim %d > 3",dim);
+            PetscAssertFalse(dim > 3,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected dim %d > 3",dim);
             for (d = 0; d < dim*2; ++d) segA[d] = PetscRealPart(edgeCoords[edge*dim*2+d]);
             /* 1D: (x) -- (x+h)               0 -- 1
                2D: (x,   y)   -- (x,   y+h)   (0, 0) -- (0, 1)
@@ -2058,7 +2058,7 @@ static PetscErrorCode DMPlexComputeGeometryFVM_3D_Internal(DM dm, PetscInt dim, 
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(dim > 3)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No support for dim %D > 3",dim);
+  PetscAssertFalse(dim > 3,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No support for dim %D > 3",dim);
   /* Must check for hybrid cells because prisms have a different orientation scheme */
   ierr = DMPlexGetCellType(dm, cell, &ct);CHKERRQ(ierr);
   switch (ct) {

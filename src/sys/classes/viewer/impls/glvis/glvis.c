@@ -400,12 +400,12 @@ PetscErrorCode PetscViewerGLVisGetWindow_Private(PetscViewer viewer,PetscInt wid
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(viewer,wid,2);
   PetscValidPointer(view,3);
-  if (PetscUnlikely((wid < 0) || (wid > socket->nwindow-1))) SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_USER,"Cannot get window id %" PetscInt_FMT ": allowed range [0,%" PetscInt_FMT ")",wid,socket->nwindow-1);
+  PetscAssertFalse(PetscUnlikely((wid < 0) || (wid > socket->nwindow-1)),PetscObjectComm((PetscObject)viewer),PETSC_ERR_USER,"Cannot get window id %" PetscInt_FMT ": allowed range [0,%" PetscInt_FMT ")",wid,socket->nwindow-1);
   status = socket->status;
-  if (PetscUnlikely((socket->type == PETSC_VIEWER_GLVIS_DUMP) && (socket->window[wid]))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Window %" PetscInt_FMT " is already in use",wid);
+  PetscAssertFalse(PetscUnlikely((socket->type == PETSC_VIEWER_GLVIS_DUMP) && (socket->window[wid])),PETSC_COMM_SELF,PETSC_ERR_USER,"Window %" PetscInt_FMT " is already in use",wid);
   switch (status) {
     case PETSCVIEWERGLVIS_DISCONNECTED:
-      if (PetscUnlikely(socket->window[wid])) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"This should not happen");
+      PetscAssertFalse(socket->window[wid],PETSC_COMM_SELF,PETSC_ERR_USER,"This should not happen");
       else if (socket->type == PETSC_VIEWER_GLVIS_DUMP) {
         size_t    len;
         PetscBool isstdout;
@@ -824,7 +824,7 @@ static PetscErrorCode PetscViewerASCIISocketOpen(MPI_Comm comm,const char* hostn
     ierr = PetscInfo(NULL,"%s",msg);CHKERRQ(ierr);
   }
   stream = fdopen(fd,"w"); /* Not possible on Windows */
-  if (PetscUnlikely(!stream)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"Cannot open stream from socket %s:%" PetscInt_FMT,hostname,port);
+  PetscAssertFalse(!stream,PETSC_COMM_SELF,PETSC_ERR_SYS,"Cannot open stream from socket %s:%" PetscInt_FMT,hostname,port);
   ierr = PetscViewerASCIIOpenWithFILE(PETSC_COMM_SELF,stream,viewer);CHKERRQ(ierr);
   PetscViewerDestroy_ASCII = (*viewer)->ops->destroy;
   (*viewer)->ops->destroy = PetscViewerDestroy_ASCII_Socket;

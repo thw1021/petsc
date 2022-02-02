@@ -193,7 +193,7 @@ PetscErrorCode PetscShmCommLocalToGlobal(PetscShmComm pshmcomm,PetscMPIInt lrank
   PetscFunctionBegin;
   PetscValidPointer(pshmcomm,1);
   PetscValidPointer(grank,3);
-  if (PetscUnlikely((lrank < 0) || (lrank >= pshmcomm->shmsize))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No rank %d in the shared memory communicator",lrank);
+  PetscAssertFalse(PetscUnlikely((lrank < 0) || (lrank >= pshmcomm->shmsize)),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No rank %d in the shared memory communicator",lrank);
   *grank = pshmcomm->globranks[lrank];
   PetscFunctionReturn(0);
 }

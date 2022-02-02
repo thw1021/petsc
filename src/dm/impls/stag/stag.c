@@ -280,7 +280,7 @@ static PetscErrorCode DMCreateGlobalVector_Stag(DM dm,Vec *vec)
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(!dm->setupcalled)) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"This function must be called after DMSetUp()");
+  PetscAssertFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"This function must be called after DMSetUp()");
   ierr = VecCreateMPI(PetscObjectComm((PetscObject)dm),stag->entries,PETSC_DECIDE,vec);CHKERRQ(ierr);
   ierr = VecSetDM(*vec,dm);CHKERRQ(ierr);
   /* Could set some ops, as DMDA does */
@@ -294,7 +294,7 @@ static PetscErrorCode DMCreateLocalVector_Stag(DM dm,Vec *vec)
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(!dm->setupcalled)) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"This function must be called after DMSetUp()");
+  PetscAssertFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"This function must be called after DMSetUp()");
   ierr = VecCreateSeq(PETSC_COMM_SELF,stag->entriesGhost,vec);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vec,stag->entriesPerElement);CHKERRQ(ierr);
   ierr = VecSetDM(*vec,dm);CHKERRQ(ierr);
@@ -310,7 +310,7 @@ static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
   ISLocalToGlobalMapping ltogmap;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(!dm->setupcalled)) SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"This function must be called after DMSetUp()");
+  PetscAssertFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"This function must be called after DMSetUp()");
   ierr = DMGetDimension(dm,&dim);CHKERRQ(ierr);
   ierr = DMGetMatType(dm,&mat_type);CHKERRQ(ierr);
   ierr = DMStagGetEntries(dm,&entries);CHKERRQ(ierr);

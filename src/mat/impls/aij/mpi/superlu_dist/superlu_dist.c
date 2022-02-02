@@ -281,15 +281,15 @@ static PetscErrorCode MatGetInertia_SuperLU_DIST(Mat F,PetscInt *nneg,PetscInt *
   PetscReal        r;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(!F->assembled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Matrix factor F is not assembled");
-  if (PetscUnlikely(lu->options.RowPerm != NOROWPERM)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must set NOROWPERM");
+  PetscAssertFalse(!F->assembled,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Matrix factor F is not assembled");
+  PetscAssertFalse(lu->options.RowPerm != NOROWPERM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must set NOROWPERM");
   ierr = MatGetSize(F,&M,NULL);CHKERRQ(ierr);
   ierr = PetscMalloc1(M,&diagU);CHKERRQ(ierr);
   ierr = MatSuperluDistGetDiagU(F,diagU);CHKERRQ(ierr);
   for (i=0; i<M; i++) {
 #if defined(PETSC_USE_COMPLEX)
     r = PetscImaginaryPart(diagU[i])/10.0;
-    if (PetscUnlikely(r< -PETSC_MACHINE_EPSILON || r>PETSC_MACHINE_EPSILON)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"diagU[%" PetscInt_FMT "]=%g + i %g is non-real",i,(double)PetscRealPart(diagU[i]),(double)(r*10.0));
+    PetscAssertFalse(r< -PETSC_MACHINE_EPSILON || r>PETSC_MACHINE_EPSILON,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"diagU[%" PetscInt_FMT "]=%g + i %g is non-real",i,(double)PetscRealPart(diagU[i]),(double)(r*10.0));
     r = PetscRealPart(diagU[i]);
 #else
     r = diagU[i];
@@ -389,7 +389,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
 #endif
 
   if (sinfo > 0) {
-    if (PetscUnlikely(A->erroriffailure)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %d",sinfo);
+    PetscAssertFalse(A->erroriffailure,PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot in row %d",sinfo);
     else {
       if (sinfo <= lu->A_sup.ncol) {
         F->factorerrortype = MAT_FACTOR_NUMERIC_ZEROPIVOT;
@@ -403,7 +403,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
         ierr = PetscInfo(F,"Number of bytes allocated when memory allocation fails %d\n",sinfo);CHKERRQ(ierr);
       }
     }
-  } else if (PetscUnlikely(sinfo < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %d, argument in p*gssvx() had an illegal value", sinfo);
+  } else PetscAssertFalse(sinfo < 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %d, argument in p*gssvx() had an illegal value", sinfo);
 
   if (lu->options.PrintStat) {
     PetscStackCall("SuperLU_DIST:PStatPrint",PStatPrint(&lu->options, &stat, &lu->grid));  /* Print the statistics. */
@@ -632,7 +632,7 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A,MatFactorType ftype,Ma
       ierr = PetscOptionsInt("-mat_superlu_dist_r","Number rows in processor partition","None",lu->nprow,(PetscInt*)&lu->nprow,NULL);CHKERRQ(ierr);
       ierr = PetscOptionsInt("-mat_superlu_dist_c","Number columns in processor partition","None",lu->npcol,(PetscInt*)&lu->npcol,NULL);CHKERRQ(ierr);
       ierr = PetscOptionsEnd();CHKERRQ(ierr);
-      if (PetscUnlikely(size != lu->nprow * lu->npcol)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of processes %d must equal to nprow %lld * npcol %lld",size,(long long)lu->nprow,(long long)lu->npcol);
+      PetscAssertFalse(size != lu->nprow * lu->npcol,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of processes %d must equal to nprow %lld * npcol %lld",size,(long long)lu->nprow,(long long)lu->npcol);
       PetscStackCall("SuperLU_DIST:superlu_gridinit",superlu_gridinit(context ? context->comm : lu->comm_superlu, lu->nprow, lu->npcol, &lu->grid));
       if (context) context->grid = lu->grid;
       ierr = PetscInfo(NULL,"Duplicating a communicator for SuperLU_DIST and calling superlu_gridinit()\n");CHKERRQ(ierr);

@@ -16,7 +16,7 @@
 #define CHKERRCGNS(ierr) \
 do { \
   int _cgns_ier = (ierr); \
-  if (PetscUnlikely(_cgns_ier)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"CGNS error %d %s",_cgns_ier,cg_get_error()); \
+  PetscAssertFalse(_cgns_ier,PETSC_COMM_SELF,PETSC_ERR_LIB,"CGNS error %d %s",_cgns_ier,cg_get_error()); \
 } while (0)
 
 /*@C

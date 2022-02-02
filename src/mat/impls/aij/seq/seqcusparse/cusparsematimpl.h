@@ -29,7 +29,7 @@ do {\
   }\
 } while (0)
 #else
-#define CHKERRCUSPARSE(stat) do {if (PetscUnlikely(stat)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d",(int)stat);} while (0)
+#define CHKERRCUSPARSE(stat) do {PetscAssertFalse(stat,PETSC_COMM_SELF,PETSC_ERR_GPU,"cuSPARSE errorcode %d",(int)stat);} while (0)
 #endif
 
 #define PetscStackCallThrust(body) do {                                     \

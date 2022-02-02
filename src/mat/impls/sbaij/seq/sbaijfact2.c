@@ -2084,7 +2084,7 @@ PetscErrorCode MatForwardSolve_SeqSBAIJ_1_NaturalOrdering(Mat A,Vec bb,Vec xx)
     nz = ai[k+1] - ai[k] - 1;     /* exclude diag[k] */
     while (nz--) x[*vj++] += (*v++) * x[k];
     diagk = PetscRealPart(aa[adiag[k]]); /* note: aa[adiag[k]] = 1/D(k) */
-    if (PetscUnlikely(PetscImaginaryPart(aa[adiag[k]]) || (diagk < 0))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Diagonal (%g,%g) must be real and nonnegative",(double)PetscRealPart(aa[adiag[k]]),(double)PetscImaginaryPart(aa[adiag[k]]));
+    PetscAssertFalse(PetscUnlikely(PetscImaginaryPart(aa[adiag[k]]) || (diagk < 0)),PETSC_COMM_SELF,PETSC_ERR_SUP,"Diagonal (%g,%g) must be real and nonnegative",(double)PetscRealPart(aa[adiag[k]]),(double)PetscImaginaryPart(aa[adiag[k]]));
     x[k] *= PetscSqrtReal(diagk);
   }
   ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
@@ -2115,7 +2115,7 @@ PetscErrorCode MatForwardSolve_SeqSBAIJ_1_NaturalOrdering_inplace(Mat A,Vec bb,V
     nz = ai[k+1] - ai[k] - 1;     /* exclude diag[k] */
     while (nz--) x[*vj++] += (*v++) * x[k];
     diagk = PetscRealPart(aa[ai[k]]); /* note: aa[diag[k]] = 1/D(k) */
-    if (PetscUnlikely(PetscImaginaryPart(aa[ai[k]]) || (diagk < 0))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Diagonal (%g,%g) must be real and nonnegative",(double)PetscRealPart(aa[ai[k]]),(double)PetscImaginaryPart(aa[ai[k]]));
+    PetscAssertFalse(PetscUnlikely(PetscImaginaryPart(aa[ai[k]]) || (diagk < 0)),PETSC_COMM_SELF,PETSC_ERR_SUP,"Diagonal (%g,%g) must be real and nonnegative",(double)PetscRealPart(aa[ai[k]]),(double)PetscImaginaryPart(aa[ai[k]]));
     x[k] *= PetscSqrtReal(diagk);
   }
   ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);

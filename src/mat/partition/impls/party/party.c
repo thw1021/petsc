@@ -105,7 +105,7 @@ static PetscErrorCode MatPartitioningApply_Party(MatPartitioning part,IS *partit
 
 #if defined(PETSC_HAVE_UNISTD_H)
   err = fflush(stdout);
-  if (PetscUnlikely(err)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on stdout");
+  PetscAssertFalse(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on stdout");
   count = read(fd_pipe[0],mesg_log,(SIZE_LOG-1)*sizeof(char));
   if (count<0) count = 0;
   mesg_log[count] = 0;
@@ -119,7 +119,7 @@ static PetscErrorCode MatPartitioningApply_Party(MatPartitioning part,IS *partit
   }
   ierr = PetscFree(mesg_log);CHKERRQ(ierr);
 #endif
-  if (PetscUnlikely(ierr)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Party failed");
+  PetscAssertFalse(ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Party failed");
 
   ierr = PetscMalloc1(mat->rmap->N,&parttab);CHKERRQ(ierr);
   for (i=0; i<mat->rmap->N; i++) parttab[i] = part_party[i];
