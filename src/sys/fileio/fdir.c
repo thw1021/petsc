@@ -89,7 +89,7 @@ PetscErrorCode PetscMkdtemp(char dir[])
   }
 #else
   dir = mkdtemp(dir);
-  if (PetscUnlikely(!dir)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not create temporary dir");
+  PetscAssertFalse(!dir,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not create temporary dir");
 #endif
   PetscFunctionReturn(0);
 }

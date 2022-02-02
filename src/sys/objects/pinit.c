@@ -465,7 +465,7 @@ PetscErrorCode  PetscGetProgramName(char name[],size_t len)
 PetscErrorCode  PetscGetArgs(int *argc,char ***args)
 {
   PetscFunctionBegin;
-  if (PetscUnlikely(!PetscInitializeCalled && PetscFinalizeCalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
+  PetscAssertFalse(!PetscInitializeCalled && PetscFinalizeCalled,PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
   *argc = PetscGlobalArgc;
   *args = PetscGlobalArgs;
   PetscFunctionReturn(0);
@@ -494,7 +494,7 @@ PetscErrorCode  PetscGetArguments(char ***args)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(!PetscInitializeCalled && PetscFinalizeCalled)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
+  PetscAssertFalse(!PetscInitializeCalled && PetscFinalizeCalled,PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
   if (!argc) {*args = NULL; PetscFunctionReturn(0);}
   ierr = PetscMalloc1(argc,args);CHKERRQ(ierr);
   for (i=0; i<argc-1; i++) {
@@ -1364,7 +1364,7 @@ PetscErrorCode  PetscFinalize(void)
     ierr = PetscMalloc1(2,&buffs);CHKERRQ(ierr);
     ierr = PetscOptionsGetStringArray(NULL,NULL,"-textbelt",buffs,&nmax,&flg1);CHKERRQ(ierr);
     if (flg1) {
-      if (PetscUnlikely(!nmax)) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"-textbelt requires either the phone number or number,\"message\"");
+      PetscAssertFalse(!nmax,PETSC_COMM_WORLD,PETSC_ERR_USER,"-textbelt requires either the phone number or number,\"message\"");
       if (nmax == 1) {
         ierr = PetscMalloc1(128,&buffs[1]);CHKERRQ(ierr);
         ierr = PetscGetProgramName(buffs[1],32);CHKERRQ(ierr);
@@ -1689,7 +1689,7 @@ PetscErrorCode  PetscFinalize(void)
     if (flg) {
       icomm = ucomm.comm;
       ierr = MPI_Comm_get_attr(icomm,Petsc_Counter_keyval,&counter,&flg);CHKERRMPI(ierr);
-      if (PetscUnlikely(!flg)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
+      PetscAssertFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
 
       ierr = MPI_Comm_delete_attr(PETSC_COMM_SELF,Petsc_InnerComm_keyval);CHKERRMPI(ierr);
       ierr = MPI_Comm_delete_attr(icomm,Petsc_Counter_keyval);CHKERRMPI(ierr);
@@ -1699,7 +1699,7 @@ PetscErrorCode  PetscFinalize(void)
     if (flg) {
       icomm = ucomm.comm;
       ierr = MPI_Comm_get_attr(icomm,Petsc_Counter_keyval,&counter,&flg);CHKERRMPI(ierr);
-      if (PetscUnlikely(!flg)) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
+      PetscAssertFalse(!flg,PETSC_COMM_WORLD,PETSC_ERR_ARG_CORRUPT,"Inner MPI_Comm does not have expected tag/name counter, problem with corrupted memory");
 
       ierr = MPI_Comm_delete_attr(PETSC_COMM_WORLD,Petsc_InnerComm_keyval);CHKERRMPI(ierr);
       ierr = MPI_Comm_delete_attr(icomm,Petsc_Counter_keyval);CHKERRMPI(ierr);
@@ -1721,7 +1721,7 @@ PetscErrorCode  PetscFinalize(void)
 #if defined(PETSC_HAVE_MPI_FINALIZED)
     PetscMPIInt flag;
     ierr = MPI_Finalized(&flag);CHKERRMPI(ierr);
-    if (PetscUnlikely(flag)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI_Finalize() has already been called, even though MPI_Init() was called by PetscInitialize()");
+    PetscAssertFalse(flag,PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI_Finalize() has already been called, even though MPI_Init() was called by PetscInitialize()");
 #endif
     ierr = MPI_Finalize();CHKERRMPI(ierr);
   }

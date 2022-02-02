@@ -20,9 +20,9 @@ typedef struct {
 } MatPartitioning_Parmetis;
 
 #define CHKERRQPARMETIS(n,func) do { \
-    if (PetscUnlikely(n == METIS_ERROR_INPUT)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to wrong inputs and/or options for %s",func); \
-    else if (PetscUnlikely(n == METIS_ERROR_MEMORY)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to insufficient memory in %s",func); \
-    else if (PetscUnlikely(n == METIS_ERROR)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS general error in %s",func); \
+    PetscAssertFalse(n == METIS_ERROR_INPUT,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to wrong inputs and/or options for %s",func); \
+    else PetscAssertFalse(n == METIS_ERROR_MEMORY,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to insufficient memory in %s",func); \
+    else PetscAssertFalse(n == METIS_ERROR,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS general error in %s",func); \
   } while (0)
 
 #define PetscStackCallParmetis_(name,func,args) do {    \

@@ -1380,8 +1380,8 @@ PetscErrorCode PetscOptionsFindPair(PetscOptions options,const char pre[],const 
 
   PetscFunctionBegin;
   options = options ? options : defaultoptions;
-  if (pre && PetscUnlikely(pre[0] == '-')) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Prefix cannot begin with '-': Instead %s",pre);
-  if (PetscUnlikely(name[0] != '-')) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Name must begin with '-': Instead %s",name);
+  PetscAssertFalse(pre && PetscUnlikely(pre[0] == '-'),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Prefix cannot begin with '-': Instead %s",pre);
+  PetscAssertFalse(name[0] != '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Name must begin with '-': Instead %s",name);
 
   name++; /* skip starting dash */
 
@@ -1407,12 +1407,12 @@ PetscErrorCode PetscOptionsFindPair(PetscOptions options,const char pre[],const 
     khiter_t it;
     khash_t(HO) *ht;
     ht = kh_init(HO);
-    if (PetscUnlikely(!ht)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
+    PetscAssertFalse(!ht,PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
     ret = kh_resize(HO,ht,options->N*2); /* twice the required size to reduce risk of collisions */
-    if (PetscUnlikely(ret)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
+    PetscAssertFalse(ret,PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
     for (i=0; i<options->N; i++) {
       it = kh_put(HO,ht,options->names[i],&ret);
-      if (PetscUnlikely(ret != 1)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
+      PetscAssertFalse(ret != 1,PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
       kh_val(ht,it) = i;
     }
     options->ht = ht;
