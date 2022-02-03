@@ -286,8 +286,23 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAware
 {
   PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
+  PetscMPIInt     rank;
+  static PetscInt gcol = 0;
+  PetscInt        cstart,cend;
 
   PetscFunctionBegin;
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)sf),&rank);CHKERRMPI(ierr);
+
+  if (PetscEnableCIDebug) {
+    if (rank == 0) {
+      cstart = 0; cend = 3;
+    } else if (rank == 1) {
+      cstart = 3; cend = 5;
+    } else if (rank == 2) {
+      cstart = 5; cend = 7;
+    }
+  }
+
   /* rootdata is on device but we use regular MPI for communication */
   if (PetscMemTypeDevice(link->rootmtype) && PetscMemTypeHost(link->rootmtype_mpi) && bas->rootbuflen[PETSCSF_REMOTE]) {
     void  *h_buf = link->rootbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
@@ -295,6 +310,16 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAware
     size_t count = bas->rootbuflen[PETSCSF_REMOTE]*link->unitbytes;
     if (device2host) {
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_HOST,h_buf,PETSC_MEMTYPE_DEVICE,d_buf,count);CHKERRQ(ierr);
+
+      if (PetscEnableCIDebug) {
+        if (gcol >= cstart && gcol < cend) {
+          PetscScalar sum = 0, *lvec = (PetscScalar*)h_buf;
+          PetscInt    n = bas->rootbuflen[PETSCSF_REMOTE];
+          for (PetscInt i = 0; i < n; i++) sum += lvec[i];
+          if (sum != 2.0) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sum %g != 2.0 when sending global column %d with %d entries",(double)sum,gcol,n);
+        }
+        gcol++;
+      }
       ierr = PetscLogGpuToCpu(count);CHKERRQ(ierr);
     } else {
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_DEVICE,d_buf,PETSC_MEMTYPE_HOST,h_buf,count);CHKERRQ(ierr);
