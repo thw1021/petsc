@@ -320,14 +320,34 @@ int main(int argc,char **argv)
       requires: cuda
       filter: grep -v type | grep -v "MPI processes"
 
-   test:
-      suffix: 2_aijkokkos_2
+   testset:
       nsize: 3
       args: -mat_type mpiaijkokkos
       output_file: output/ex2_23.out
       requires: !sycl kokkos_kernels
       filter: grep -v type | grep -v "MPI processes"
 
+      test:
+        suffix: debug1
+      test:
+        suffix: debug2
+      test:
+        suffix: debug3
+      test:
+        suffix: debug4
+      test:
+        suffix: debug5
+      test:
+        suffix: debug6
+      test:
+        suffix: debug7
+      test:
+        suffix: debug8
+      test:
+        suffix: debug9
+      test:
+        suffix: debug10
+        
    test:
       suffix: 3
       nsize: 2
