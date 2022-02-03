@@ -67,7 +67,9 @@ static PetscErrorCode TransposeAXPY(Mat C,PetscScalar alpha,Mat mat,PetscErrorCo
   ierr = f(C,&D);CHKERRQ(ierr);
   ierr = f(D,&E);CHKERRQ(ierr);
   /* XXX cannot use MAT_INPLACE_MATRIX, it leaks mat */
+  PetscEnableCIDebug = PETSC_TRUE;
   ierr = MatConvert(E,mtype,MAT_INITIAL_MATRIX,&F);CHKERRQ(ierr);
+  PetscEnableCIDebug = PETSC_FALSE;
   ierr = MatAXPY(F,alpha,mat,SAME_NONZERO_PATTERN);CHKERRQ(ierr);
   ierr = MatView(F,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   ierr = MatDestroy(&F);CHKERRQ(ierr);
@@ -160,7 +162,7 @@ int main(int argc,char **argv)
     ierr  = MatView(C,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     ierr  = MatDestroy(&C);CHKERRQ(ierr);
     ierr  = TransposeAXPY(C,alpha,mat,MatCreateTranspose);CHKERRQ(ierr);
-    ierr  = TransposeAXPY(C,alpha,mat,MatCreateHermitianTranspose);CHKERRQ(ierr);
+    // ierr  = TransposeAXPY(C,alpha,mat,MatCreateHermitianTranspose);CHKERRQ(ierr);
   }
 
   {
@@ -347,7 +349,7 @@ int main(int argc,char **argv)
         suffix: debug9
       test:
         suffix: debug10
-        
+
    test:
       suffix: 3
       nsize: 2
