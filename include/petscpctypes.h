@@ -404,14 +404,4 @@ typedef enum {PC_SETUP_ERROR = -1,PC_NOERROR,PC_FACTOR_STRUCT_ZEROPIVOT,PC_FACTO
 E*/
 typedef enum {PCGAMG_LAYOUT_COMPACT,PCGAMG_LAYOUT_SPREAD} PCGAMGLayoutType;
 
-/*E
-    PCHYPRESpgemmType - Types of SpGEMM used by hypre -- this should be PCSpgemmType
-
-    Level: intermediate
-
-.seealso: PCHYPRESetSpgemmType()
-    Any additions/changes here MUST also be made in include/petsc/finclude/petscpc.h
-E*/
-typedef enum {PC_HYPRE_SPGEMM_CUSPARSE,PC_HYPRE_SPGEMM_HYPRE} PCHYPRESpgemmType;
-
 #endif
