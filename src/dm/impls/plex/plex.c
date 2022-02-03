@@ -8946,7 +8946,7 @@ PetscErrorCode DMPlexComputeOrthogonalQuality(DM dm, PetscFV fv, PetscReal atol,
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   if (fv) {PetscValidHeaderSpecific(fv, PETSCFV_CLASSID, 2);}
   PetscValidPointer(OrthQual, 4);
-  if (PetscUnlikelyDebug(atol < 0.0 || atol > 1.0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %g not in [0,1]",(double)atol);
+  PetscAssertFalseDebug(atol < 0.0 || atol > 1.0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %g not in [0,1]",(double)atol);
   ierr = PetscObjectGetComm((PetscObject) dm, &comm);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &nc);CHKERRQ(ierr);
   PetscAssertFalse(nc < 2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "DM must have dimension >= 2 (current %D)", nc);
