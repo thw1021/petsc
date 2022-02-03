@@ -6,6 +6,8 @@
 #include <petsc/private/isimpl.h>
 #include <petsc/private/vecimpl.h>
 
+PetscBool PetscEnableCIDebug = PETSC_FALSE;
+
 /* Logging support */
 PetscClassId MAT_CLASSID;
 PetscClassId MAT_COLORING_CLASSID;

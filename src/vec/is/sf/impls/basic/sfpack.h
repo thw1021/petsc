@@ -1,6 +1,8 @@
 #if !defined(__SFPACK_H)
 #define __SFPACK_H
 
+#include <petscmat.h>
+
 #include <../src/vec/is/sf/impls/basic/sfbasic.h>
 #if defined(PETSC_HAVE_CUDA)
   #include <petscdevice.h>
@@ -305,8 +307,23 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAware
 PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(PetscSF sf,PetscSFLink link,PetscBool device2host)
 {
   PetscErrorCode ierr;
+  PetscMPIInt     rank;
+  static PetscInt gcol = 0;
+  PetscInt        cstart,cend;
 
   PetscFunctionBegin;
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)sf),&rank);CHKERRMPI(ierr);
+
+  if (PetscEnableCIDebug) {
+    if (rank == 0) {
+      cstart = 0; cend = 3;
+    } else if (rank == 1) {
+      cstart = 3; cend = 5;
+    } else if (rank == 2) {
+      cstart = 5; cend = 7;
+    }
+  }
+
   if (PetscMemTypeDevice(link->leafmtype) && PetscMemTypeHost(link->leafmtype_mpi) && sf->leafbuflen[PETSCSF_REMOTE]) {
     void  *h_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_HOST];
     void  *d_buf = link->leafbuf[PETSCSF_REMOTE][PETSC_MEMTYPE_DEVICE];
@@ -315,6 +332,15 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_HOST,h_buf,PETSC_MEMTYPE_DEVICE,d_buf,count);CHKERRQ(ierr);
       ierr = PetscLogGpuToCpu(count);CHKERRQ(ierr);
     } else {
+      if (PetscEnableCIDebug) {
+        if (gcol < cstart || gcol >= cend) {
+          PetscScalar sum = 0, *lvec = (PetscScalar*)h_buf;
+          PetscInt    n = sf->leafbuflen[PETSCSF_REMOTE];
+          for (PetscInt i = 0; i < n; i++) sum += lvec[i];
+          if (sum != 1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sum %g != 1.0 when processing %d column",(double)sum,gcol);
+        }
+        gcol++;
+      }
       ierr = (*link->Memcpy)(link,PETSC_MEMTYPE_DEVICE,d_buf,PETSC_MEMTYPE_HOST,h_buf,count);CHKERRQ(ierr);
       ierr = PetscLogCpuToGpu(count);CHKERRQ(ierr);
     }
