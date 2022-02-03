@@ -195,7 +195,33 @@ PETSC_EXTERN const char *const MatProductTypes[];
 .seealso: MatSetType(), Mat, MatSolverType, MatRegister(), MatProductSetAlgorithm(), MatProductType
 J*/
 typedef const char* MatProductAlgorithm;
-#define MATPRODUCTALGORITHM_DEFAULT "default"
+#define MATPRODUCTALGORITHMDEFAULT "default"
+
+#define MATPRODUCTALGORITHMSORTED "sorted"
+#define MATPRODUCTALGORITHMSCALABLE "scalable"
+#define MATPRODUCTALGORITHMSCALABLEFAST "scalable_fast"
+#define MATPRODUCTALGORITHMHEAP "heap"
+#define MATPRODUCTALGORITHMBHEAP "btheap"
+#define MATPRODUCTALGORITHMLLCONDENSED "llcondensed"
+#define MATPRODUCTALGORITHMROWMERGE "rowmerge"
+#define MATPRODUCTALGORITHMOUTERPRODUCT "outerproduct"
+#define MATPRODUCTALGORITHMATB "at*b"
+#define MATPRODUCTALGORITHMRAP "rap"
+#define MATPRODUCTALGORITHMNONSCALABLE "nonscalable"
+#define MATPRODUCTALGORITHMSEQMPI "seqmpi"
+#define MATPRODUCTALGORITHMBACKEND "backend"
+#define MATPRODUCTALGORITHMOVERLAPPING "overlapping"
+#define MATPRODUCTALGORITHMMERGED "merged"
+
+#define MATPRODUCTALGORITHMALLATONCE "allatonce"
+#define MATPRODUCTALGORITHMALLATONCE_MERGED "allatonce_merged"
+
+#define MATPRODUCTALGORITHMALLGATHERV "allgatherv"
+#define MATPRODUCTALGORITHMCYCLIC "cyclic"
+
+#if defined(PETSC_HAVE_HYPRE)
+#define MATPRODUCTALGORITHMHYPRE "hypre"
+#endif
 
 PETSC_EXTERN PetscErrorCode MatProductCreate(Mat,Mat,Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatProductCreateWithMat(Mat,Mat,Mat,Mat);
