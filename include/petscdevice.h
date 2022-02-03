@@ -35,12 +35,11 @@ PETSC_EXTERN const char* PetscCUFFTGetErrorName(cufftResult);
     }                                                                   \
   } while (0)
 #else /* PETSC_PKG_CUDA_VERSION_GE(8,0,0) */
-#define CHKERRCUDA(cerr) do {                                                                  \
-    const cudaError_t _p_cuda_err__ = cerr;                                                    \
-    if (PetscUnlikely(_p_cuda_err__ != cudaSuccess)) {                                         \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d",(PetscErrorCode)_p_cuda_err__);    \
-    }                                                                                          \
-  } while (0)
+#define CHKERRCUDA(cerr) do { \
+  const cudaError_t _p_cuda_err__ = cerr; \
+  PetscAssert(_p_cuda_err__ == cudaSuccess,PETSC_COMM_SELF,PETSC_ERR_GPU,"cuda error %d",(PetscErrorCode)_p_cuda_err__);
+} while (0)
+
 #endif /* PETSC_PKG_CUDA_VERSION_GE(8,0,0) */
 
 #define CHKERRCUBLAS(stat)   do {                                       \
@@ -159,12 +158,9 @@ PETSC_EXTERN const char* PetscHIPBLASGetErrorName(hipblasStatus_t); /* PETSC_EXT
   } while (0)
 
 /* TODO: SEK:  Need to figure out the hipsolver issues */
-#define CHKERRHIPSOLVER(stat) do {                                              \
-    const hipsolverStatus_t _p_hipsolver_stat__ = stat;                         \
-    if (PetscUnlikely(_p_hipsolver_stat__ /* != HIPSOLVER_STATUS_SUCCESS */)) { \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"HIPSOLVER error %d",               \
-              (PetscErrorCode)_p_hipsolver_stat__);                             \
-    }                                                                           \
+#define CHKERRHIPSOLVER(stat) do { \
+    const hipsolverStatus_t _p_hipsolver_stat__ = stat; \
+    PetscAssert(!_p_hipsolver_stat__,PETSC_COMM_SELF,PETSC_ERR_GPU,"HIPSOLVER error %d",(PetscErrorCode)_p_hipsolver_stat__); \
   } while (0)
 
 /* hipSolver does not exist yet so we work around it
