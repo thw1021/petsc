@@ -94,7 +94,7 @@ Changes: Development
 
 .. rubric:: PC:
 
-- Add HYPRE option ``-pc_hypre_spgemm_type [cusparse|hypre]`` and ``PCHYPRESetSpgemmType()`` to use cuSparse or hypre's SpGEMM for AMG matrix triple products
+- Add MG option ``-pc_mg_galerkin_mat_product_algorithm [cusparse|hypre]`` and ``PCMGGalerkinMatProductSetAlgorithm()`` to use cuSparse or hypre's SpGEMM for Galerkin products in hypre
 
 .. rubric:: KSP:
 
