@@ -432,7 +432,8 @@ static PetscErrorCode PetscSFLinkMemcpy_Kokkos(PetscSFLink PETSC_UNUSED link,Pet
     } else if (PetscMemTypeHost(dstmtype) && PetscMemTypeDevice(srcmtype)) {
       HostBuffer_t         dbuf(static_cast<char*>(dst),n);
       deviceConstBuffer_t  sbuf(static_cast<const char*>(src),n);
-      Kokkos::deep_copy(exec,dbuf,sbuf);
+      // Kokkos::deep_copy(exec,dbuf,sbuf);
+      Kokkos::deep_copy(dbuf,sbuf);
       PetscErrorCode ierr = PetscLogGpuToCpu(n);CHKERRQ(ierr);
     } else if (PetscMemTypeDevice(dstmtype) && PetscMemTypeDevice(srcmtype)) {
       deviceBuffer_t       dbuf(static_cast<char*>(dst),n);

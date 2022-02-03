@@ -337,7 +337,7 @@ PETSC_STATIC_INLINE PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAware
           PetscScalar sum = 0, *lvec = (PetscScalar*)h_buf;
           PetscInt    n = sf->leafbuflen[PETSCSF_REMOTE];
           for (PetscInt i = 0; i < n; i++) sum += lvec[i];
-          if (sum != 1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sum %g != 1.0 when processing %d column",(double)sum,gcol);
+          if (sum != 1.0) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"sum %g != 1.0 when processing global column %d",(double)sum,gcol);
         }
         gcol++;
       }
