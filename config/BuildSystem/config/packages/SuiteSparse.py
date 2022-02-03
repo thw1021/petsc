@@ -67,7 +67,10 @@ class Configure(config.package.Package):
     # CHOLMOD may build the shared library with CXX
     if hasattr(self.setCompilers,'CXX'):
       with self.Language('Cxx'):
-        args.append(self.getCompiler().join(('CXX="','"')))
+        cxxCompiler = self.getCompiler().join(('"','"'))
+    else:
+      cxxCompiler = 'no'
+    args.append('CXX='+cxxCompiler)
 
     args.append('MAKE="'+self.make.make+'"')
     args.append('RANLIB="'+self.setCompilers.RANLIB+'"')
