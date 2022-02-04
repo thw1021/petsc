@@ -1,6 +1,9 @@
 /* Additional functions in the DMStag API, which are not part of the general DM API. */
 #include <petsc/private/dmstagimpl.h>
 #include <petscdmproduct.h>
+
+PetscErrorCode DMRestrictHook_Coordinates(DM,DM,void*);
+
 /*@C
   DMStagGetBoundaryTypes - get boundary types
 
@@ -1363,6 +1366,7 @@ PetscErrorCode DMStagSetUniformCoordinatesExplicit(DM dm,PetscReal xmin,PetscRea
     case 3: ierr = DMStagSetUniformCoordinatesExplicit_3d(dm,xmin,xmax,ymin,ymax,zmin,zmax);CHKERRQ(ierr); break;
     default: SETERRQ1(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %D",dim);
   }
+  ierr = DMCoarsenHookRemove(dm,DMRestrictHook_Coordinates,NULL,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1448,6 +1452,7 @@ PetscErrorCode DMStagSetUniformCoordinatesProduct(DM dm,PetscReal xmin,PetscReal
     ierr = DMDestroy(&subdm);CHKERRQ(ierr);
     ierr = MPI_Comm_free(&subcomm);CHKERRMPI(ierr);
   }
+  ierr = DMCoarsenHookRemove(dm,DMRestrictHook_Coordinates,NULL,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
