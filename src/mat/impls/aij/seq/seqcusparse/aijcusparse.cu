@@ -3074,8 +3074,8 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
   PetscFunctionBegin;
   if (herm && !trans) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_GPU,"Hermitian and not transpose not supported");
   if (!a->nonzerorowcnt) {
-    if (!yy) {ierr = VecSet_SeqCUDA(zz,0);CHKERRQ(ierr);}
-    else {ierr = VecCopy_SeqCUDA(yy,zz);CHKERRQ(ierr);}
+    if (!yy) {ierr = VecSeq_CUDA::set_async(zz,0);CHKERRQ(ierr);}
+    else {ierr = VecSeq_CUDA::copy_async(yy,zz);CHKERRQ(ierr);}
     PetscFunctionReturn(0);
   }
   /* The line below is necessary due to the operations that modify the matrix on the CPU (axpy, scale, etc) */
@@ -3202,12 +3202,12 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
     if (opA == CUSPARSE_OPERATION_NON_TRANSPOSE) {
       if (yy) { /* MatMultAdd: zz = A*xx + yy */
         if (compressed) { /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
-          ierr = VecCopy_SeqCUDA(yy,zz);CHKERRQ(ierr); /* zz = yy */
+          ierr = VecSeq_CUDA::copy_async(yy,zz);CHKERRQ(ierr); /* zz = yy */
         } else if (zz != yy) { /* A is not compressed. zz already contains A*xx, and we just need to add yy */
-          ierr = VecAXPY_SeqCUDA(zz,1.0,yy);CHKERRQ(ierr); /* zz += yy */
+          ierr = VecSeq_CUDA::axpy_async(zz,1.0,yy);CHKERRQ(ierr); /* zz += yy */
         }
       } else if (compressed) { /* MatMult: zz = A*xx. A is compressed, so we zero zz first, then ScatterAdd the work vector to zz */
-        ierr = VecSet_SeqCUDA(zz,0);CHKERRQ(ierr);
+        ierr = VecSeq_CUDA::set_async(zz,0);CHKERRQ(ierr);
       }
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
@@ -3231,7 +3231,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
       }
     } else {
       if (yy && yy != zz) {
-        ierr = VecAXPY_SeqCUDA(zz,1.0,yy);CHKERRQ(ierr); /* zz += yy */
+        ierr = VecSeq_CUDA::axpy_async(zz,1.0,yy);CHKERRQ(ierr); /* zz += yy */
       }
     }
     ierr = VecCUDARestoreArrayRead(xx,(const PetscScalar**)&xarray);CHKERRQ(ierr);
