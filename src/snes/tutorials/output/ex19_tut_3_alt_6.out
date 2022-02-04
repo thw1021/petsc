@@ -72,7 +72,7 @@ SNES Object: 4 MPI processes
         Measure type        local
         Coarsen type        Falgout
         Interpolation type  classical
-        SpGEMM type         cuSparse
+        SpGEMM type         (null)
     linear system matrix = precond matrix:
     Mat Object: 4 MPI processes
       type: mpiaij
