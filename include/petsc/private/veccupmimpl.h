@@ -9,19 +9,6 @@ PETSC_INTERN PetscErrorCode VecCreate_CUDA(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_MPICUDA(Vec);
 PETSC_INTERN PetscErrorCode VecCUDAGetArrays_Private(Vec,const PetscScalar**,const PetscScalar**, PetscOffloadMask*);
-
-PETSC_INTERN PetscErrorCode VecCreateSeqCUDA(MPI_Comm,PetscInt,Vec*);
-PETSC_INTERN PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*);
-PETSC_INTERN PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],Vec*);
-PETSC_INTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecCUDAGetArrayRead(Vec,const PetscScalar**);
-PETSC_INTERN PetscErrorCode VecCUDARestoreArrayRead(Vec,const PetscScalar**);
-PETSC_INTERN PetscErrorCode VecCUDAGetArrayWrite(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecCUDAPlaceArray(Vec,const PetscScalar[]);
-PETSC_INTERN PetscErrorCode VecCUDAReplaceArray(Vec,const PetscScalar[]);
-PETSC_INTERN PetscErrorCode VecCUDAResetArray(Vec);
 #endif
 
 #if PetscDefined(HAVE_HIP)
@@ -29,19 +16,6 @@ PETSC_INTERN PetscErrorCode VecCreate_HIP(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_SeqHIP(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_MPIHIP(Vec);
 PETSC_INTERN PetscErrorCode VecHIPGetArrays_Private(Vec,const PetscScalar**,const PetscScalar**, PetscOffloadMask*);
-
-PETSC_INTERN PetscErrorCode VecCreateSeqHIP(MPI_Comm,PetscInt,Vec*);
-PETSC_INTERN PetscErrorCode VecCreateSeqHIPWithArrays(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*);
-PETSC_INTERN PetscErrorCode VecCreateSeqHIPWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],Vec*);
-PETSC_INTERN PetscErrorCode VecHIPGetArray(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecHIPRestoreArray(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecHIPGetArrayRead(Vec,const PetscScalar**);
-PETSC_INTERN PetscErrorCode VecHIPRestoreArrayRead(Vec,const PetscScalar**);
-PETSC_INTERN PetscErrorCode VecHIPGetArrayWrite(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecHIPRestoreArrayWrite(Vec,PetscScalar**);
-PETSC_INTERN PetscErrorCode VecHIPPlaceArray(Vec,const PetscScalar[]);
-PETSC_INTERN PetscErrorCode VecHIPReplaceArray(Vec,const PetscScalar[]);
-PETSC_INTERN PetscErrorCode VecHIPResetArray(Vec);
 #endif
 
 #if PetscDefined(HAVE_NVSHMEM)
