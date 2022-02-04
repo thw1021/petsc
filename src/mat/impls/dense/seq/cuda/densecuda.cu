@@ -4,7 +4,8 @@
 #include <petscpkg_version.h>
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
-#include <petsc/private/cudavecimpl.h> /* cublas definitions are here */
+#include <petsc/private/veccupmimpl.h>
+#include <petsc/private/legacycublasapi.h> /* cublas definitions are here */
 
 #if defined(PETSC_USE_COMPLEX)
 #if defined(PETSC_USE_REAL_SINGLE)

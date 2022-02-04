@@ -1,14 +1,48 @@
-#ifndef PETSCVECCUPMBASE_HPP
-#define PETSCVECCUPMBASE_HPP
+#ifndef PETSCVECCUPMIMPL_H
+#define PETSCVECCUPMIMPL_H
 
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/cupmblasinterface.hpp>
 
-#if !defined(__cplusplus) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
-#  error "Vec_CUPM requires C++11"
+#if PetscDefined(HAVE_CUDA)
+PETSC_INTERN PetscErrorCode VecCreate_CUDA(Vec);
+PETSC_INTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
+PETSC_INTERN PetscErrorCode VecCreate_MPICUDA(Vec);
+PETSC_INTERN PetscErrorCode VecCUDAGetArrays_Private(Vec,const PetscScalar**,const PetscScalar**, PetscOffloadMask*);
+
+PETSC_INTERN PetscErrorCode VecCreateSeqCUDA(MPI_Comm,PetscInt,Vec*);
+PETSC_INTERN PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*);
+PETSC_INTERN PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],Vec*);
+PETSC_INTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecCUDAGetArrayRead(Vec,const PetscScalar**);
+PETSC_INTERN PetscErrorCode VecCUDARestoreArrayRead(Vec,const PetscScalar**);
+PETSC_INTERN PetscErrorCode VecCUDAGetArrayWrite(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecCUDAPlaceArray(Vec,const PetscScalar[]);
+PETSC_INTERN PetscErrorCode VecCUDAReplaceArray(Vec,const PetscScalar[]);
+PETSC_INTERN PetscErrorCode VecCUDAResetArray(Vec);
 #endif
 
-#include <limits> // numeric_limits
+#if PetscDefined(HAVE_HIP)
+PETSC_INTERN PetscErrorCode VecCreate_HIP(Vec);
+PETSC_INTERN PetscErrorCode VecCreate_SeqHIP(Vec);
+PETSC_INTERN PetscErrorCode VecCreate_MPIHIP(Vec);
+PETSC_INTERN PetscErrorCode VecHIPGetArrays_Private(Vec,const PetscScalar**,const PetscScalar**, PetscOffloadMask*);
+
+PETSC_INTERN PetscErrorCode VecCreateSeqHIP(MPI_Comm,PetscInt,Vec*);
+PETSC_INTERN PetscErrorCode VecCreateSeqHIPWithArrays(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*);
+PETSC_INTERN PetscErrorCode VecCreateSeqHIPWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],Vec*);
+PETSC_INTERN PetscErrorCode VecHIPGetArray(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecHIPRestoreArray(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecHIPGetArrayRead(Vec,const PetscScalar**);
+PETSC_INTERN PetscErrorCode VecHIPRestoreArrayRead(Vec,const PetscScalar**);
+PETSC_INTERN PetscErrorCode VecHIPGetArrayWrite(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecHIPRestoreArrayWrite(Vec,PetscScalar**);
+PETSC_INTERN PetscErrorCode VecHIPPlaceArray(Vec,const PetscScalar[]);
+PETSC_INTERN PetscErrorCode VecHIPReplaceArray(Vec,const PetscScalar[]);
+PETSC_INTERN PetscErrorCode VecHIPResetArray(Vec);
+#endif
 
 #if PetscDefined(HAVE_NVSHMEM)
 PETSC_INTERN PetscErrorCode PetscNvshmemInitializeCheck(void);
@@ -23,6 +57,14 @@ PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
 #else
 #  define PetscNvshmemFree(ptr) 0
 #endif
+
+#if defined(__cplusplus)
+
+#if (__cplusplus < 201103L) || !PetscDefined(HAVE_CXX_DIALECT_CXX11)
+#  error "Vec_CUPM requires C++11"
+#endif
+
+#include <limits> // numeric_limits
 
 namespace Petsc
 {
@@ -295,6 +337,7 @@ protected:
   template <typename SetupFunctionT = no_op>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Duplicate_CUPMBase_(Vec,Vec*,SetupFunctionT&& = SetupFunctionT()));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase_(Vec,PetscBool));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetArrays_CUPMBase_(Vec,const PetscScalar**,const PetscScalar**,PetscOffloadMask*));
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM_(Vec));
 
@@ -701,6 +744,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase_(Vec 
   PetscFunctionReturn(0);
 }
 
+// Called from VecGetSubVector()
+template <Device::CUPM::DeviceType T, typename D>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase_(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask))
+{
+  PetscFunctionBegin;
+  if (host_array)   *host_array   = VecIMLCast(v)->array;
+  if (device_array) *device_array = VecCUPMCast(v)->device_array;
+  if (mask)         *mask         = v->offloadmask;
+  PetscFunctionReturn(0);
+}
+
 // VecCreate_CUPM()
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPM_(Vec v))
@@ -760,4 +814,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPM_(Vec v))
 
 } // namespace Petsc
 
-#endif // PETSCVECCUPMBASE_HPP
+#endif // __cplusplus
+
+#endif // PETSCVECCUPMIMPL_H
