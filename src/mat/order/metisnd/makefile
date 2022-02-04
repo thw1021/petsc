@@ -1,5 +1,5 @@
 -include ../../../../petscdir.mk
-#requirespackage   'PETSC_HAVE_SUITESPARSE'
+#requirespackage   'PETSC_HAVE_METIS'
 
 ALL: lib
 

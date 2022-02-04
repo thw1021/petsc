@@ -51,8 +51,8 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_METISND(Mat mat,MatOrderingType type,
   xadj[iptr] = 0;
   for(j=0; j<nrow; j++){
     for(i=ia[j]; i<ia[j+1]; i++){
-       if(ja[i] != j)
-          adjncy[iptr++] = ja[i];
+      if(ja[i] != j)
+        adjncy[iptr++] = ja[i];
     }
     xadj[j+1] = iptr;
   }
@@ -61,9 +61,9 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_METISND(Mat mat,MatOrderingType type,
   switch (status) {
   case METIS_OK: break;
   case METIS_ERROR:
-    SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"METIS returned with an unspecified error");
+    SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_LIB,"METIS returned with an unspecified error");
   case METIS_ERROR_INPUT:
-    SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"METIS received an invalid input");
+    SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_LIB,"METIS received an invalid input");
   case METIS_ERROR_MEMORY:
     SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_MEM,"METIS could not compute ordering");
   default:
