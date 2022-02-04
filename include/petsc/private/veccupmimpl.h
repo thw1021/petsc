@@ -268,7 +268,7 @@ protected:
     >
     operator cupm_pointer_type() const noexcept
     {
-      return cupmScalarCast(static_cast<pointer_type>(this));
+      return cupmScalarCast(const_cast<pointer_type>(this->ptr));
     }
 
     vector_array(PetscDeviceContext, Vec v) noexcept : ptr(initialize_(v)), v_(v) { }
