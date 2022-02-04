@@ -146,12 +146,13 @@ public:
 #  define THRUST_ASYNC_T par
 #endif
 
-#define THRUST_CALL(thrust_func,stream,...) do {                        \
-    /* lets hope barry doesn't notice these */                          \
-    CHKERRQ(PetscLogGpuTimeBegin());                                    \
-    thrust_func(thrust::cuda::THRUST_ASYNC_T.on(stream),__VA_ARGS__);   \
-    CHKERRQ(PetscLogGpuTimeEnd());                                      \
-  } while (0)
+#define THRUST_CALL(thrust_func,stream,...) [&]{                                   \
+    /* lets hope barry doesn't notice these */                                     \
+    CHKERRABORT(PetscLogGpuTimeBegin());                                           \
+    auto ret = thrust_func(thrust::cuda::THRUST_ASYNC_T.on(stream),__VA_ARGS__);   \
+    CHKERRABORT(PetscLogGpuTimeEnd());                                             \
+    return ret;                                                                    \
+  }()
 
 template <Device::CUPM::DeviceType T>
 template <typename BinaryFuncT>
@@ -186,18 +187,20 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(Unary
 
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
-  CHKERRTHRUST(
-    if (xin == yin) { // in-place
+  if (xin == yin) { // in-place
+    CHKERRTHRUST(
       auto xptr = thrust::device_pointer_cast(DeviceArrayReadWrite(dctx,xin).ptr);
 
       THRUST_CALL(thrust::transform,stream,xptr,xptr+n,xptr,std::forward<UnaryFuncT>(unary));
-    } else {
+    );
+  } else {
+    CHKERRTHRUST(
       auto xptr = thrust::device_pointer_cast(DeviceArrayRead(dctx,xin).ptr);
       auto yptr = thrust::device_pointer_cast(DeviceArrayWrite(dctx,yin).ptr);
 
       THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,std::forward<UnaryFuncT>(unary));
-    }
-  );
+    );
+  }
   ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
