@@ -95,6 +95,8 @@ Changes: Development
 
 .. rubric:: PC:
 
+-  Add support for ``-pc_type hypre:subtype`` and ``PCSetType(pc,"hypre:subtype")`` as a synonym for ``-pc_type hypre -pc_hypre_type subtype``
+
 .. rubric:: KSP:
 
 -  Outer most ``KSPSolve()`` will error if KSP_DIVERGED_ITS and ```KSPSetErrorIfNotConverged()`` is used

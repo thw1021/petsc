@@ -1178,4 +1178,10 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       requires: hypre !single !complex !defined(PETSC_HAVE_HYPRE_MIXEDINT) !defined(PETSC_HAVE_HYPRE_DEVICE)
       args: -da_refine 2 -ksp_monitor -snes_monitor -snes_view -pc_type hypre -pc_hypre_type euclid -pc_hypre_euclid_droptolerance .1
 
+   test:
+      suffix: hypre_pilut
+      nsize: 1
+      requires: hypre !single !complex !defined(PETSC_HAVE_HYPRE_MIXEDINT) !defined(PETSC_HAVE_HYPRE_DEVICE)
+      args: -snes_view -pc_type hypre:pilut
+
 TEST*/

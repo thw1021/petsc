@@ -19,7 +19,7 @@ PetscFunctionList PCList = NULL;
 
    Input Parameters:
 +  pc - the preconditioner context.
--  type - a known method
+-  type - a known method, may be of the form hypre:pilut to indicate the subtype as well
 
    Options Database Key:
 .  -pc_type <type> - Sets PC type
@@ -55,6 +55,8 @@ PetscErrorCode  PCSetType(PC pc,PCType type)
 {
   PetscErrorCode ierr,(*r)(PC);
   PetscBool      match;
+  PetscToken     tk;
+  char           *stype;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -62,6 +64,10 @@ PetscErrorCode  PCSetType(PC pc,PCType type)
 
   ierr = PetscObjectTypeCompare((PetscObject)pc,type,&match);CHKERRQ(ierr);
   if (match) PetscFunctionReturn(0);
+
+  ierr = PetscTokenCreate(type,':',&tk);CHKERRQ(ierr);
+  ierr = PetscTokenFind(tk,(char**)&type);CHKERRQ(ierr);
+  ierr = PetscTokenFind(tk,&stype);CHKERRQ(ierr);
 
   ierr =  PetscFunctionListFind(PCList,type,&r);CHKERRQ(ierr);
   if (!r) SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested PC type %s",type);
@@ -82,6 +88,16 @@ PetscErrorCode  PCSetType(PC pc,PCType type)
 
   ierr = PetscObjectChangeTypeName((PetscObject)pc,type);CHKERRQ(ierr);
   ierr = (*r)(pc);CHKERRQ(ierr);
+  if (stype) {
+    char f[1024];
+
+    ierr = PetscStrncpy(f,"PC",sizeof(f));CHKERRQ(ierr);
+    ierr = PetscStrtoupper((char*)type);CHKERRQ(ierr);
+    ierr = PetscStrlcat(f,type,sizeof(f));CHKERRQ(ierr);
+    ierr = PetscStrlcat(f,"SetType_C",sizeof(f));CHKERRQ(ierr);
+    ierr = PetscUseMethod(pc,f,(PC,const char *),(pc,stype));CHKERRQ(ierr);
+  }
+  ierr = PetscTokenDestroy(&tk);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
