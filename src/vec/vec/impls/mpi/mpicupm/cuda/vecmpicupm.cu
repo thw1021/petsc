@@ -1,8 +1,9 @@
 #include "../vecmpicupm.hpp" /*I <petscvec.h> I*/
 
 using namespace Petsc::Vector::CUPM::Impl;
+using Petsc::Device::CUPM::DeviceType;
 
-using VecMPI_CUDA = VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
+static const auto VecMPI_CUDA = VecMPI_CUPM<DeviceType::CUDA>{};
 
 /*MC
   VECCUDA - VECCUDA = "cuda" - A VECSEQCUDA on a single-process communicator, and VECMPICUDA
@@ -35,6 +36,16 @@ PetscErrorCode VecCreate_CUDA(Vec v)
 
   PetscFunctionBegin;
   ierr = VecMPI_CUDA::Create_CUPM_(v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecCUDAGetArrays_Private(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  ierr = VecMPI_CUDA::GetArrays_CUPMBase_(v,host_array,device_array,mask);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

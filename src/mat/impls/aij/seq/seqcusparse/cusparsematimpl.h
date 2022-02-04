@@ -2,7 +2,8 @@
 #define CUSPARSEMATIMPL
 
 #include <petscpkg_version.h>
-#include <petsc/private/cudavecimpl.h>
+#include <petsc/private/veccupmimpl.h>
+#include <petsc/private/legacycublasapi.h>
 #include <petscaijdevice.h>
 
 #include <cusparse_v2.h>
