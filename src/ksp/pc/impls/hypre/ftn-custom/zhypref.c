@@ -12,6 +12,7 @@
 PETSC_EXTERN void pchypresettype_(PC *pc, char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
 {
   char *t;
+
   FIXCHAR(name,len,t);
   *ierr = PCHYPRESetType(*pc,t);if (*ierr) return;
   FREECHAR(name,t);
@@ -22,6 +23,25 @@ PETSC_EXTERN void pchypregettype_(PC *pc,char* name,PetscErrorCode *ierr,PETSC_F
   const char *tname;
 
   *ierr = PCHYPREGetType(*pc,&tname);
+  *ierr = PetscStrncpy(name,tname,len);if (*ierr) return;
+  FIXRETURNCHAR(PETSC_TRUE,name,len);
+
+}
+
+PETSC_EXTERN void pcmggalerkinmatproductsetalgorithm_(PC *pc, char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
+{
+  char *t;
+
+  FIXCHAR(name,len,t);
+  *ierr = PCMGGalerkinMatProductSetAlgorithm(*pc,t);if (*ierr) return;
+  FREECHAR(name,t);
+}
+
+PETSC_EXTERN void pcmggalerkinmatproductgetalgorithm_(PC *pc,char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
+{
+  const char *tname;
+
+  *ierr = PCMGGalerkinMatProductGetAlgorithm(*pc,&tname);
   *ierr = PetscStrncpy(name,tname,len);if (*ierr) return;
   FIXRETURNCHAR(PETSC_TRUE,name,len);
 

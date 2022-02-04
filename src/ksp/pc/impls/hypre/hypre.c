@@ -651,7 +651,7 @@ static PetscErrorCode PCApplyTranspose_HYPRE_BoomerAMG(PC pc,Vec b,Vec x)
 /* static array length */
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
-PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_Hypre_BoomerAMG(PC pc,const char name[])
+PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_HYPRE_BoomerAMG(PC pc,const char name[])
 {
   PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
   PetscErrorCode ierr;
@@ -681,7 +681,7 @@ PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_Hypre_BoomerAMG(PC pc,const ch
 #endif
 }
 
-PetscErrorCode PCMGGalerkinMatProductGetAlgorithm_Hypre_BoomerAMG(PC pc, const char *spgemm[])
+PetscErrorCode PCMGGalerkinMatProductGetAlgorithm_HYPRE_BoomerAMG(PC pc, const char *spgemm[])
 {
   PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
 
@@ -958,7 +958,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   // global parameter but is closely associated with BoomerAMG
   ierr = PetscOptionsEList("-pc_mg_galerkin_mat_product_algorithm","Type of SpGEMM to use in hypre (only for now)","None",PCHYPRESpgemmTypes,ALEN(PCHYPRESpgemmTypes),PCHYPRESpgemmTypes[0],&indx,&flg);CHKERRQ(ierr);
   if (flg) {
-    ierr = PCMGGalerkinMatProductSetAlgorithm_Hypre_BoomerAMG(pc,PCHYPRESpgemmTypes[indx]);CHKERRQ(ierr);
+    ierr = PCMGGalerkinMatProductSetAlgorithm_HYPRE_BoomerAMG(pc,PCHYPRESpgemmTypes[indx]);CHKERRQ(ierr);
   }
 #endif
   /* AIR */
@@ -2244,7 +2244,7 @@ PetscErrorCode PCMGGalerkinMatProductSetAlgorithm(PC pc,const char name[])
 .seealso: PCMGGalerkinMatProductSetAlgorithm()
 
 @*/
-PetscErrorCode PCMGGalerkinMatProductGetAlgorithm(PC pc, const char *name[])
+PetscErrorCode PCMGGalerkinMatProductGetAlgorithm(PC pc,const char *name[])
 {
   PetscErrorCode ierr;
 
@@ -2326,8 +2326,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetInterpolations_C",PCHYPRESetInterpolations_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetEdgeConstantVectors_C",PCHYPRESetEdgeConstantVectors_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetPoissonMatrix_C",PCHYPRESetPoissonMatrix_HYPRE);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductSetAlgorithm_C",PCMGGalerkinMatProductSetAlgorithm_Hypre_BoomerAMG);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductGetAlgorithm_C",PCMGGalerkinMatProductGetAlgorithm_Hypre_BoomerAMG);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductSetAlgorithm_C",PCMGGalerkinMatProductSetAlgorithm_HYPRE_BoomerAMG);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductGetAlgorithm_C",PCMGGalerkinMatProductGetAlgorithm_HYPRE_BoomerAMG);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
 #if defined(HYPRE_USING_HIP)
   ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
