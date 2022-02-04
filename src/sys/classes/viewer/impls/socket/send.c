@@ -242,7 +242,7 @@ PETSC_INTERN PetscErrorCode PetscSocketListen(int listenport,int *t)
   PetscFunctionBegin;
   /* wait for someone to try to connect */
   i = sizeof(struct sockaddr_in);
-  if ((*t = accept(listenport,(struct sockaddr*)&isa,(socklen_t*)&i)) < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"error from accept()\n");
+  if ((*t = accept(listenport,(struct sockaddr*)&isa,(socklen_t*)&i)) < 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SYS,"error from accept()");
   PetscFunctionReturn(0);
 }
 
@@ -420,9 +420,12 @@ PetscErrorCode  PetscViewerSocketSetConnection(PetscViewer v,const char machine[
   PetscMPIInt        rank;
   char               mach[256];
   PetscBool          tflg;
-  PetscViewer_Socket *vmatlab = (PetscViewer_Socket*)v->data;
+  PetscViewer_Socket *vmatlab;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,PETSC_VIEWER_CLASSID,1);
+  if (machine) PetscValidCharPointer(machine,2);
+  vmatlab = (PetscViewer_Socket*)v->data;
   /* PetscValidLogicalCollectiveInt(v,port,3); not a PetscInt */
   if (port <= 0) {
     char portn[16];
@@ -447,12 +450,12 @@ PetscErrorCode  PetscViewerSocketSetConnection(PetscViewer v,const char machine[
     ierr = PetscStrcmp(mach,"server",&tflg);CHKERRQ(ierr);
     if (tflg) {
       int listenport;
-      ierr = PetscInfo1(v,"Waiting for connection from socket process on port %D\n",port);CHKERRQ(ierr);
+      ierr = PetscInfo1(v,"Waiting for connection from socket process on port %d\n",port);CHKERRQ(ierr);
       ierr = PetscSocketEstablish(port,&listenport);CHKERRQ(ierr);
       ierr = PetscSocketListen(listenport,&vmatlab->port);CHKERRQ(ierr);
       close(listenport);
     } else {
-      ierr = PetscInfo2(v,"Connecting to socket process on port %D machine %s\n",port,mach);CHKERRQ(ierr);
+      ierr = PetscInfo2(v,"Connecting to socket process on port %d machine %s\n",port,mach);CHKERRQ(ierr);
       ierr = PetscOpenSocket(mach,port,&vmatlab->port);CHKERRQ(ierr);
     }
   }

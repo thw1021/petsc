@@ -42,8 +42,8 @@ PETSC_STATIC_INLINE PetscErrorCode PetscTableAdd(PetscTable ta,PetscInt key,Pets
   PetscInt       hashstep = (PetscInt)PetscHashStep(ta,(unsigned long)key);
 
   PetscFunctionBegin;
-  if (key <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key <= 0");
-  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %D is greater than largest key allowed %D",key,ta->maxkey);
+  if (key <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key (value %" PetscInt_FMT ") <= 0",key);
+  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
   if (!data) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Null data");
 
   for (i=0; i<ta->tablesize; i++) {
@@ -92,8 +92,8 @@ PETSC_STATIC_INLINE PetscErrorCode  PetscTableAddCount(PetscTable ta,PetscInt ke
   PetscInt       hashstep = (PetscInt)PetscHashStep(ta,(unsigned long)key);
 
   PetscFunctionBegin;
-  if (key <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key <= 0");
-  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %D is greater than largest key allowed %D",key,ta->maxkey);
+  if (key <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key (value %" PetscInt_FMT ") <= 0",key);
+  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
 
   for (i=0; i<ta->tablesize; i++) {
     if (ta->keytable[hash] == key) {
@@ -115,10 +115,7 @@ PETSC_STATIC_INLINE PetscErrorCode  PetscTableAddCount(PetscTable ta,PetscInt ke
 }
 
 /*
-    PetscTableFind - checks if a key is in the table
-
-    If data==0, then no table entry exists.
-
+    PetscTableFind - finds data in table from a given key, if the key is valid but not in the table returns 0
 */
 PETSC_STATIC_INLINE PetscErrorCode  PetscTableFind(PetscTable ta,PetscInt key,PetscInt *data)
 {
@@ -128,8 +125,8 @@ PETSC_STATIC_INLINE PetscErrorCode  PetscTableFind(PetscTable ta,PetscInt key,Pe
 
   PetscFunctionBegin;
   *data = 0;
-  if (key <= 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Key <= 0");
-  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %D is greater than largest key allowed %D",key,ta->maxkey);
+  if (key <= 0) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key (value %" PetscInt_FMT ") <= 0",key);
+  if (key > ta->maxkey) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"key %" PetscInt_FMT " is greater than largest key allowed %" PetscInt_FMT,key,ta->maxkey);
 
   while (ii++ < ta->tablesize) {
     if (!ta->keytable[hash]) break;

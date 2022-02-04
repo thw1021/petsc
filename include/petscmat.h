@@ -208,6 +208,8 @@ PETSC_EXTERN PetscErrorCode MatProductNumeric(Mat);
 PETSC_EXTERN PetscErrorCode MatProductReplaceMats(Mat,Mat,Mat,Mat);
 PETSC_EXTERN PetscErrorCode MatProductClear(Mat);
 PETSC_EXTERN PetscErrorCode MatProductView(Mat,PetscViewer);
+PETSC_EXTERN PetscErrorCode MatProductGetType(Mat,MatProductType*);
+PETSC_EXTERN PetscErrorCode MatProductGetMats(Mat,Mat*,Mat*,Mat*);
 
 /* Logging support */
 #define    MAT_FILE_CLASSID 1211216    /* used to indicate matrices in binary files */
@@ -311,6 +313,7 @@ PETSC_EXTERN PetscErrorCode MatCreateBAIJ(MPI_Comm,PetscInt,PetscInt,PetscInt,Pe
 PETSC_EXTERN PetscErrorCode MatCreateMPIBAIJWithArrays(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],const PetscInt[],const PetscScalar[],Mat*);
 
 PETSC_EXTERN PetscErrorCode MatSetPreallocationCOO(Mat,PetscInt,const PetscInt[],const PetscInt[]);
+PETSC_EXTERN PetscErrorCode MatSetPreallocationCOOLocal(Mat,PetscInt,PetscInt[],PetscInt[]);
 PETSC_EXTERN PetscErrorCode MatSetValuesCOO(Mat,const PetscScalar[],InsertMode);
 
 PETSC_EXTERN PetscErrorCode MatCreateMPIAdj(MPI_Comm,PetscInt,PetscInt,PetscInt[],PetscInt[],PetscInt[],Mat*);
@@ -484,8 +487,10 @@ PETSC_EXTERN PetscErrorCode MatRestoreRowUpperTriangular(Mat);
 PETSC_EXTERN PetscErrorCode MatGetColumnVector(Mat,Vec,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetArray(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetArrayRead(Mat,const PetscScalar *[]);
+PETSC_EXTERN PetscErrorCode MatSeqAIJGetArrayWrite(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArray(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArrayRead(Mat,const PetscScalar *[]);
+PETSC_EXTERN PetscErrorCode MatSeqAIJRestoreArrayWrite(Mat,PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode MatSeqAIJGetMaxRowNonzeros(Mat,PetscInt*);
 PETSC_EXTERN PetscErrorCode MatSeqAIJSetValuesLocalFast(Mat,PetscInt,const PetscInt[],PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 PETSC_EXTERN PetscErrorCode MatSeqAIJSetType(Mat,MatType);
@@ -631,6 +636,8 @@ PETSC_EXTERN PetscErrorCode MatMultEqual(Mat,Mat,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatMultAddEqual(Mat,Mat,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatMultTransposeEqual(Mat,Mat,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatMultTransposeAddEqual(Mat,Mat,PetscInt,PetscBool*);
+PETSC_EXTERN PetscErrorCode MatMultHermitianTransposeEqual(Mat,Mat,PetscInt,PetscBool*);
+PETSC_EXTERN PetscErrorCode MatMultHermitianTransposeAddEqual(Mat,Mat,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatMatMultEqual(Mat,Mat,Mat,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatTransposeMatMultEqual(Mat,Mat,Mat,PetscInt,PetscBool*);
 PETSC_EXTERN PetscErrorCode MatMatTransposeMultEqual(Mat,Mat,Mat,PetscInt,PetscBool*);
@@ -1042,8 +1049,8 @@ do {\
 M*/
 #define MatPreallocateSet(row,nc,cols,dnz,onz) 0;\
 do { PetscInt __i; \
-  if (row < __rstart) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to set preallocation for row %D less than first local row %D",row,__rstart);\
-  if (row >= __rstart+__nrows) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to set preallocation for row %D greater than last local row %D",row,__rstart+__nrows-1);\
+  if (PetscUnlikely(row < __rstart)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to set preallocation for row %" PetscInt_FMT " less than first local row %" PetscInt_FMT,row,__rstart); \
+  if (PetscUnlikely(row >= __rstart+__nrows)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to set preallocation for row %" PetscInt_FMT " greater than last local row %" PetscInt_FMT,row,__rstart+__nrows-1); \
   for (__i=0; __i<nc; __i++) {\
     if ((cols)[__i] < __start || (cols)[__i] >= __end) onz[row - __rstart]++; \
     else if (dnz[row - __rstart] < __ncols) dnz[row - __rstart]++;\
@@ -1575,8 +1582,8 @@ PETSC_EXTERN PetscErrorCode MatMeshToVertexGraph(Mat,PetscInt,Mat*);
 PETSC_EXTERN PetscErrorCode MatMeshToCellGraph(Mat,PetscInt,Mat*);
 
 /*
-    If you add entries here you must also add them to include/petscmat.h
-    and src/mat/f90-mod/petscmat.h
+    If you add entries here you must also add them to src/mat/f90-mod/petscmat.h
+    If any of the enum values are changed, also update dMatOps dict at src/binding/petsc4py/src/libpetsc4py/libpetsc4py.pyx
 */
 typedef enum { MATOP_SET_VALUES=0,
                MATOP_GET_ROW=1,
@@ -1997,6 +2004,8 @@ PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatBindToCPU(Mat,PetscBool);
 PETSC_EXTERN PetscErrorCode MatBoundToCPU(Mat,PetscBool*);
 PETSC_DEPRECATED_FUNCTION("Use MatBindToCPU (since v3.13)") PETSC_STATIC_INLINE PetscErrorCode MatPinToCPU(Mat A,PetscBool flg) {return MatBindToCPU(A,flg);}
+PETSC_EXTERN PetscErrorCode MatSetBindingPropagates(Mat,PetscBool);
+PETSC_EXTERN PetscErrorCode MatGetBindingPropagates(Mat,PetscBool *);
 
 typedef struct _n_SplitCSRMat *PetscSplitCSRDataStructure;
 PETSC_EXTERN PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat,PetscSplitCSRDataStructure*);
@@ -2050,6 +2059,7 @@ typedef enum {MAT_CUSPARSE_MULT_DIAG, MAT_CUSPARSE_MULT_OFFDIAG, MAT_CUSPARSE_MU
 PETSC_EXTERN PetscErrorCode MatCreateSeqAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCreateAIJCUSPARSE(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[],Mat*);
 PETSC_EXTERN PetscErrorCode MatCUSPARSESetFormat(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat);
+PETSC_EXTERN PetscErrorCode MatCUSPARSESetUseCPUSolve(Mat,PetscBool);
 typedef struct Mat_SeqAIJCUSPARSETriFactors* Mat_SeqAIJCUSPARSETriFactors_p;
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSEGetIJ(Mat,PetscBool,const int**,const int**);
 PETSC_EXTERN PetscErrorCode MatSeqAIJCUSPARSERestoreIJ(Mat,PetscBool,const int**,const int**);

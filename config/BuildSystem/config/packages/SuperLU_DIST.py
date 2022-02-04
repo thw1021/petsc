@@ -5,7 +5,7 @@ class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
     self.minversion       = '6.1.1'
-    self.version          = '7.1.1'
+    self.version          = '7.2.0'
     self.versionname      = 'SUPERLU_DIST_MAJOR_VERSION.SUPERLU_DIST_MINOR_VERSION.SUPERLU_DIST_PATCH_VERSION'
     self.gitcommit        = 'v'+self.version
     self.download         = ['git://https://github.com/xiaoyeli/superlu_dist','https://github.com/xiaoyeli/superlu_dist/archive/'+self.gitcommit+'.tar.gz']
@@ -18,7 +18,7 @@ class Configure(config.package.CMakePackage):
     self.hastests         = 1
     self.hastestsdatafiles= 1
     self.precisions       = ['double']
-    self.cxx              = 1
+    self.buildLanguages   = ['Cxx']
     self.minCxxVersion    = 'c++11'
     return
 

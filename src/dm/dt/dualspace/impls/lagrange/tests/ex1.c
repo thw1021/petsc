@@ -68,15 +68,15 @@ static PetscErrorCode ExpectedNumDofs_Total(PetscInt dim, PetscInt order, PetscI
       PetscInt rpowk, rp1pownmk;
 
       ierr = PetscDTBinomialInt(dim, formDegree, &nchoosek);CHKERRQ(ierr);
-      rpowk = PetscPowInt(order, formDegree);CHKERRQ(ierr);
-      rp1pownmk = PetscPowInt(order + 1, dim - formDegree);CHKERRQ(ierr);
+      rpowk = PetscPowInt(order, formDegree);
+      rp1pownmk = PetscPowInt(order + 1, dim - formDegree);
       *nDofs = nchoosek * rpowk * rp1pownmk * nCopies;
     } else {
       PetscInt nchoosek;
       PetscInt rp1pown;
 
       ierr = PetscDTBinomialInt(dim, formDegree, &nchoosek);CHKERRQ(ierr);
-      rp1pown = PetscPowInt(order + 1, dim);CHKERRQ(ierr);
+      rp1pown = PetscPowInt(order + 1, dim);
       *nDofs = nchoosek * rp1pown * nCopies;
     }
   } else { /* prism */
@@ -206,8 +206,8 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   ierr = PetscDualSpaceSetUp(sp);CHKERRQ(ierr);
   ierr = PetscDualSpaceGetDimension(sp, &spdim);CHKERRQ(ierr);
   ierr = PetscDualSpaceGetInteriorDimension(sp, &spintdim);CHKERRQ(ierr);
-  if (spdim != exspdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %D, got %D\n", exspdim, spdim);
-  if (spintdim != exspintdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %D, got %D\n", exspintdim, spintdim);
+  if (spdim != exspdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %D, got %D", exspdim, spdim);
+  if (spintdim != exspintdim) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %D, got %D", exspintdim, spintdim);
   key.dim = dim;
   key.formDegree = formDegree;
   ierr = PetscDualSpaceGetOrder(sp, &key.order);CHKERRQ(ierr);
@@ -267,10 +267,10 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
 
       ierr = PetscDualSpaceGetInteriorData(sp, &intNodes, &intMat);CHKERRQ(ierr);
       if (intMat && intMat != allMat) {
-        PetscInt intNodeIdxDim, intNodeVecDim, intNnodes;
-        const PetscInt *intNodeIdx;
+        PetscInt        intNodeIdxDim, intNodeVecDim, intNnodes;
+        const PetscInt  *intNodeIdx;
         const PetscReal *intNodeVec;
-        PetscBool same;
+        PetscBool       same;
 
         ierr = PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior nodes:\n");CHKERRQ(ierr);
         ierr = PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);

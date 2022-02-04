@@ -1519,7 +1519,7 @@ static PetscErrorCode  MatDenseSetLDA_SeqDenseCUDA(Mat A,PetscInt lda)
   PetscFunctionBegin;
   data = (PetscBool)((A->rmap->n > 0 && A->cmap->n > 0) ? (dA->d_v ? PETSC_TRUE : PETSC_FALSE) : PETSC_FALSE);
   if (!dA->user_alloc && data && cA->lda!=lda) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ORDER,"LDA cannot be changed after allocation of internal storage");
-  if (lda < A->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"LDA %D must be at least matrix dimension %D",lda,A->rmap->n);
+  if (lda < A->rmap->n) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"LDA %" PetscInt_FMT " must be at least matrix dimension %" PetscInt_FMT,lda,A->rmap->n);
   cA->lda = lda;
   PetscFunctionReturn(0);
 }
@@ -1661,7 +1661,7 @@ PetscErrorCode MatConvert_SeqDense_SeqDenseCUDA(Mat M,MatType type,MatReuse reus
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   if (reuse == MAT_REUSE_MATRIX || reuse == MAT_INITIAL_MATRIX) {
     /* TODO these cases should be optimized */
     ierr = MatConvert_Basic(M,type,reuse,newmat);CHKERRQ(ierr);
@@ -1745,7 +1745,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqDenseCUDA(Mat B)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
   ierr = MatCreate_SeqDense(B);CHKERRQ(ierr);
   ierr = MatConvert_SeqDense_SeqDenseCUDA(B,MATSEQDENSECUDA,MAT_INPLACE_MATRIX,&B);CHKERRQ(ierr);
   PetscFunctionReturn(0);

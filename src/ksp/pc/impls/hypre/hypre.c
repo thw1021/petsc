@@ -13,6 +13,10 @@
 #include <_hypre_parcsr_ls.h>
 #include <petscmathypre.h>
 
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+#include <petsc/private/deviceimpl.h>
+#endif
+
 static PetscBool cite = PETSC_FALSE;
 static const char hypreCitation[] = "@manual{hypre-web-page,\n  title  = {{\\sl hypre}: High Performance Preconditioners},\n  organization = {Lawrence Livermore National Laboratory},\n  note  = {\\url{https://computation.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods}}\n}\n";
 
@@ -161,7 +165,7 @@ static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc,PetscInt *nlevels,Mat
 
   PetscFunctionBegin;
   ierr = PetscStrcmp(jac->hypre_type,"boomeramg",&same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG \n");
+  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG ");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData*) (jac->hsolver));
   ierr = PetscMalloc1(num_levels,&mattmp);CHKERRQ(ierr);
   A_array    = hypre_ParAMGDataAArray((hypre_ParAMGData*) (jac->hsolver));
@@ -191,7 +195,7 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc,PetscInt *nlevels,Mat 
 
   PetscFunctionBegin;
   ierr = PetscStrcmp(jac->hypre_type,"boomeramg",&same);CHKERRQ(ierr);
-  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG \n");
+  if (!same) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG ");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData*) (jac->hsolver));
   ierr = PetscMalloc1(num_levels,&mattmp);CHKERRQ(ierr);
   P_array  = hypre_ParAMGDataPArray((hypre_ParAMGData*) (jac->hsolver));
@@ -489,7 +493,7 @@ static PetscErrorCode PCDestroy_HYPRE(PC pc)
   ierr = PCReset_HYPRE(pc);CHKERRQ(ierr);
   if (jac->destroy) PetscStackCallStandard(jac->destroy,(jac->hsolver));
   ierr = PetscFree(jac->hypre_type);CHKERRQ(ierr);
-  if (jac->comm_hypre != MPI_COMM_NULL) {ierr = MPI_Comm_free(&(jac->comm_hypre));CHKERRMPI(ierr);}
+  if (jac->comm_hypre != MPI_COMM_NULL) {ierr = PetscCommRestoreComm(PetscObjectComm((PetscObject)pc),&jac->comm_hypre);CHKERRQ(ierr);}
   ierr = PetscFree(pc->data);CHKERRQ(ierr);
 
   ierr = PetscObjectChangeTypeName((PetscObject)pc,0);CHKERRQ(ierr);
@@ -1772,7 +1776,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
 
   ierr = PetscStrcmp("pilut",jac->hypre_type,&flag);CHKERRQ(ierr);
   if (flag) {
-    ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(jac->comm_hypre));CHKERRMPI(ierr);
+    ierr = PetscCommGetComm(PetscObjectComm((PetscObject)pc),&jac->comm_hypre);CHKERRQ(ierr);
     PetscStackCallStandard(HYPRE_ParCSRPilutCreate,(jac->comm_hypre,&jac->hsolver));
     pc->ops->setfromoptions = PCSetFromOptions_HYPRE_Pilut;
     pc->ops->view           = PCView_HYPRE_Pilut;
@@ -1787,7 +1791,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
 #if defined(PETSC_HAVE_64BIT_INDICES)
     SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Hypre Euclid not support with 64 bit indices");
 #endif
-    ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(jac->comm_hypre));CHKERRMPI(ierr);
+    ierr = PetscCommGetComm(PetscObjectComm((PetscObject)pc),&jac->comm_hypre);CHKERRQ(ierr);
     PetscStackCallStandard(HYPRE_EuclidCreate,(jac->comm_hypre,&jac->hsolver));
     pc->ops->setfromoptions = PCSetFromOptions_HYPRE_Euclid;
     pc->ops->view           = PCView_HYPRE_Euclid;
@@ -1800,7 +1804,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
   }
   ierr = PetscStrcmp("parasails",jac->hypre_type,&flag);CHKERRQ(ierr);
   if (flag) {
-    ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(jac->comm_hypre));CHKERRMPI(ierr);
+    ierr = PetscCommGetComm(PetscObjectComm((PetscObject)pc),&jac->comm_hypre);CHKERRQ(ierr);
     PetscStackCallStandard(HYPRE_ParaSailsCreate,(jac->comm_hypre,&jac->hsolver));
     pc->ops->setfromoptions = PCSetFromOptions_HYPRE_ParaSails;
     pc->ops->view           = PCView_HYPRE_ParaSails;
@@ -2214,10 +2218,10 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetPoissonMatrix_C",PCHYPRESetPoissonMatrix_HYPRE);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
 #if defined(HYPRE_USING_HIP)
-  ierr = PetscHIPInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
 #endif
 #if defined(HYPRE_USING_CUDA)
-  ierr = PetscCUDAInitializeCheck();CHKERRQ(ierr);
+  ierr = PetscDeviceInitialize(PETSC_DEVICE_CUDA);CHKERRQ(ierr);
 #endif
 #endif
   PetscFunctionReturn(0);
@@ -2245,7 +2249,7 @@ PetscErrorCode PCDestroy_PFMG(PC pc)
 
   PetscFunctionBegin;
   if (ex->hsolver) PetscStackCallStandard(HYPRE_StructPFMGDestroy,(ex->hsolver));
-  ierr = MPI_Comm_free(&ex->hcomm);CHKERRMPI(ierr);
+  ierr = PetscCommRestoreComm(PetscObjectComm((PetscObject)pc),&ex->hcomm);CHKERRQ(ierr);
   ierr = PetscFree(pc->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2430,7 +2434,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_PFMG(PC pc)
   pc->ops->applyrichardson = PCApplyRichardson_PFMG;
   pc->ops->setup           = PCSetUp_PFMG;
 
-  ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(ex->hcomm));CHKERRMPI(ierr);
+  ierr = PetscCommGetComm(PetscObjectComm((PetscObject)pc),&ex->hcomm);CHKERRQ(ierr);
   PetscStackCallStandard(HYPRE_StructPFMGCreate,(ex->hcomm,&ex->hsolver));
   PetscFunctionReturn(0);
 }
@@ -2456,7 +2460,7 @@ PetscErrorCode PCDestroy_SysPFMG(PC pc)
 
   PetscFunctionBegin;
   if (ex->ss_solver) PetscStackCallStandard(HYPRE_SStructSysPFMGDestroy,(ex->ss_solver));
-  ierr = MPI_Comm_free(&ex->hcomm);CHKERRMPI(ierr);
+  ierr = PetscCommRestoreComm(PetscObjectComm((PetscObject)pc),&ex->hcomm);CHKERRQ(ierr);
   ierr = PetscFree(pc->data);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -2669,7 +2673,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_SysPFMG(PC pc)
   pc->ops->applyrichardson = PCApplyRichardson_SysPFMG;
   pc->ops->setup           = PCSetUp_SysPFMG;
 
-  ierr = MPI_Comm_dup(PetscObjectComm((PetscObject)pc),&(ex->hcomm));CHKERRMPI(ierr);
+  ierr = PetscCommGetComm(PetscObjectComm((PetscObject)pc),&ex->hcomm);CHKERRQ(ierr);
   PetscStackCallStandard(HYPRE_SStructSysPFMGCreate,(ex->hcomm,&ex->ss_solver));
   PetscFunctionReturn(0);
 }

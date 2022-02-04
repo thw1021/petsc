@@ -151,6 +151,7 @@ struct _p_Vec {
 #if defined(PETSC_HAVE_DEVICE)
   void                   *spptr; /* this is the special pointer to the array on the GPU */
   PetscBool              boundtocpu;
+  PetscBool              bindingpropagates;
   size_t                 minimum_bytes_pinned_memory; /* minimum data size in bytes for which pinned memory will be allocated */
   PetscBool              pinned_memory; /* PETSC_TRUE if the current host allocation has been made from pinned memory. */
 #endif
@@ -230,12 +231,15 @@ PETSC_INTERN PetscErrorCode VecLockWriteSet_Private(Vec,PetscBool);
 #define VecLockWriteSet_Private(x,flg) 0
 #endif
 
+/* Get Root type of vector. e.g. VECSEQ -> VECSTANDARD, VECMPICUDA -> VECCUDA */
+PETSC_EXTERN PetscErrorCode VecGetRootType_Private(Vec,VecType*);
+
 /* Default obtain and release vectors; can be used by any implementation */
-PETSC_EXTERN PetscErrorCode VecDuplicateVecs_Default(Vec,PetscInt,Vec *[]);
-PETSC_EXTERN PetscErrorCode VecDestroyVecs_Default(PetscInt,Vec []);
-PETSC_EXTERN PetscErrorCode VecView_Binary(Vec, PetscViewer);
-PETSC_EXTERN PetscErrorCode VecLoad_Binary(Vec, PetscViewer);
-PETSC_EXTERN PetscErrorCode VecLoad_Default(Vec, PetscViewer);
+PETSC_EXTERN PetscErrorCode VecDuplicateVecs_Default(Vec,PetscInt,Vec*[]);
+PETSC_EXTERN PetscErrorCode VecDestroyVecs_Default(PetscInt,Vec[]);
+PETSC_EXTERN PetscErrorCode VecView_Binary(Vec,PetscViewer);
+PETSC_EXTERN PetscErrorCode VecLoad_Binary(Vec,PetscViewer);
+PETSC_EXTERN PetscErrorCode VecLoad_Default(Vec,PetscViewer);
 
 PETSC_EXTERN PetscInt  NormIds[7];  /* map from NormType to IDs used to cache/retreive values of norms */
 
@@ -308,22 +312,22 @@ PETSC_EXTERN PetscErrorCode VecMatlabEngineGet_Default(PetscObject,void*);
 PETSC_EXTERN PetscErrorCode PetscSectionGetField_Internal(PetscSection, PetscSection, Vec, PetscInt, PetscInt, PetscInt, IS *, Vec *);
 PETSC_EXTERN PetscErrorCode PetscSectionRestoreField_Internal(PetscSection, PetscSection, Vec, PetscInt, PetscInt, PetscInt, IS *, Vec *);
 
-#define VecCheckSameLocalSize(x,ar1,y,ar2) do { \
-    if ((x)->map->n != (y)->map->n) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector local lengths parameter # %d local size %D != parameter # %d local size %D", ar1,(x)->map->n, ar2,(y)->map->n); \
+#define VecCheckSameLocalSize(x,ar1,y,ar2) do {                         \
+    if (PetscUnlikely((x)->map->n != (y)->map->n)) SETERRQ4(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector local lengths parameter # %d local size %" PetscInt_FMT " != parameter # %d local size %" PetscInt_FMT,ar1,(x)->map->n, ar2,(y)->map->n); \
   } while (0)
 
-#define VecCheckSameSize(x,ar1,y,ar2) do { \
-    if ((x)->map->N != (y)->map->N) SETERRQ4(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_INCOMP,"Incompatible vector global lengths parameter # %d global size %D != parameter # %d global size %D", ar1,(x)->map->N, ar2,(y)->map->N); \
-    VecCheckSameLocalSize(x,ar1,y,ar2); \
+#define VecCheckSameSize(x,ar1,y,ar2) do {                              \
+    if (PetscUnlikely((x)->map->N != (y)->map->N)) SETERRQ4(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_INCOMP,"Incompatible vector global lengths parameter # %d global size %" PetscInt_FMT " != parameter # %d global size %" PetscInt_FMT,ar1,(x)->map->N,ar2,(y)->map->N); \
+    VecCheckSameLocalSize(x,ar1,y,ar2);                                 \
   } while (0)
 
-#define VecCheckLocalSize(x,ar1,n) do { \
-    if ((x)->map->n != n) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incorrect vector local size: parameter # %d local size %D != %D",ar1,(x)->map->n,n); \
+#define VecCheckLocalSize(x,ar1,n) do {                                 \
+    if (PetscUnlikely((x)->map->n != (n))) SETERRQ3(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incorrect vector local size: parameter # %d local size %" PetscInt_FMT " != %" PetscInt_FMT,ar1,(x)->map->n,n); \
   } while (0)
 
-#define VecCheckSize(x,ar1,n,N) do { \
-    if ((x)->map->N != N) SETERRQ3(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_INCOMP,"Incorrect vector global size: parameter # %d global size %D != %D",ar1,(x)->map->N, N); \
-    VecCheckLocalSize(x,ar1,n); \
+#define VecCheckSize(x,ar1,n,N) do {                                    \
+    if (PetscUnlikely((x)->map->N != (N))) SETERRQ3(PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_INCOMP,"Incorrect vector global size: parameter # %d global size %" PetscInt_FMT " != %" PetscInt_FMT,ar1,(x)->map->N,N); \
+    VecCheckLocalSize(x,ar1,n);                                         \
   } while (0)
 
 typedef struct _VecTaggerOps *VecTaggerOps;
@@ -333,8 +337,8 @@ struct _VecTaggerOps {
   PetscErrorCode (*setfromoptions) (PetscOptionItems*,VecTagger);
   PetscErrorCode (*setup) (VecTagger);
   PetscErrorCode (*view) (VecTagger,PetscViewer);
-  PetscErrorCode (*computeboxes) (VecTagger,Vec,PetscInt *,VecTaggerBox **);
-  PetscErrorCode (*computeis) (VecTagger,Vec,IS *);
+  PetscErrorCode (*computeboxes) (VecTagger,Vec,PetscInt *,VecTaggerBox **,PetscBool *);
+  PetscErrorCode (*computeis) (VecTagger,Vec,IS *,PetscBool *);
 };
 struct _p_VecTagger {
   PETSCHEADER(struct _VecTaggerOps);
@@ -346,7 +350,7 @@ struct _p_VecTagger {
 
 PETSC_EXTERN PetscBool      VecTaggerRegisterAllCalled;
 PETSC_EXTERN PetscErrorCode VecTaggerRegisterAll(void);
-PETSC_EXTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger,Vec,IS*);
+PETSC_EXTERN PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger,Vec,IS*,PetscBool*);
 PETSC_EXTERN PetscMPIInt Petsc_Reduction_keyval;
 
-#endif
+#endif /* __VECIMPL_H */

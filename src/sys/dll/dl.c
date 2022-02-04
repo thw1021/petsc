@@ -60,7 +60,7 @@ PetscErrorCode  PetscDLLibraryRetrieve(MPI_Comm comm,const char libname[],char *
      so we can add to the end of it to look for something like .so.1.0 etc.
   */
   ierr = PetscStrlen(libname,&len);CHKERRQ(ierr);
-  len  = PetscMax(4*len,PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  len  = PetscMax(4*len,PETSC_MAX_PATH_LEN);
   ierr = PetscMalloc1(len,&buf);CHKERRQ(ierr);
   par2 = buf;
   ierr = PetscStrreplace(comm,libname,par2,len);CHKERRQ(ierr);
@@ -139,12 +139,12 @@ PetscErrorCode  PetscDLLibraryOpen(MPI_Comm comm,const char path[],PetscDLLibrar
   /* retrieve the library */
   ierr = PetscInfo1(NULL,"Retrieving %s\n",path);CHKERRQ(ierr);
   ierr = PetscDLLibraryRetrieve(comm,path,par2,PETSC_MAX_PATH_LEN,&foundlibrary);CHKERRQ(ierr);
-  if (!foundlibrary) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate dynamic library:\n  %s\n",path);
+  if (!foundlibrary) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to locate dynamic library:\n  %s",path);
   /* Eventually ./configure should determine if the system needs an executable dynamic library */
 #define PETSC_USE_NONEXECUTABLE_SO
 #if !defined(PETSC_USE_NONEXECUTABLE_SO)
   ierr = PetscTestFile(par2,'x',&foundlibrary);CHKERRQ(ierr);
-  if (!foundlibrary) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Dynamic library is not executable:\n  %s\n  %s\n",path,par2);
+  if (!foundlibrary) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Dynamic library is not executable:\n  %s\n  %s",path,par2);
 #endif
 
   /* copy path and setup shared library suffix  */

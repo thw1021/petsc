@@ -45,16 +45,18 @@ PETSC_EXTERN PetscLogEvent DMPLEX_CreateFromFile;
 PETSC_EXTERN PetscLogEvent DMPLEX_BuildFromCellList;
 PETSC_EXTERN PetscLogEvent DMPLEX_BuildCoordinatesFromCellList;
 PETSC_EXTERN PetscLogEvent DMPLEX_LocatePoints;
-
-typedef struct _n_PlexGeneratorFunctionList *PlexGeneratorFunctionList;
-struct _n_PlexGeneratorFunctionList {
-  PetscErrorCode    (*generate)(DM, PetscBool, DM*);
-  PetscErrorCode    (*refine)(DM, PetscReal*, DM*);
-  PetscErrorCode    (*adaptlabel)(DM, DMLabel, DM*);
-  char              *name;
-  PetscInt          dim;
-  PlexGeneratorFunctionList next;
-};
+PETSC_EXTERN PetscLogEvent DMPLEX_TopologyView;
+PETSC_EXTERN PetscLogEvent DMPLEX_LabelsView;
+PETSC_EXTERN PetscLogEvent DMPLEX_CoordinatesView;
+PETSC_EXTERN PetscLogEvent DMPLEX_SectionView;
+PETSC_EXTERN PetscLogEvent DMPLEX_GlobalVectorView;
+PETSC_EXTERN PetscLogEvent DMPLEX_LocalVectorView;
+PETSC_EXTERN PetscLogEvent DMPLEX_TopologyLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_LabelsLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_CoordinatesLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_SectionLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_GlobalVectorLoad;
+PETSC_EXTERN PetscLogEvent DMPLEX_LocalVectorLoad;
 
 /* Utility struct to store the contents of a Fluent file in memory */
 typedef struct {
@@ -78,6 +80,22 @@ struct _PetscGridHash {
   IS           cells;       /* List of cells in each subbox */
   DMLabel      cellsSparse; /* Sparse storage for cell map */
 };
+
+typedef struct {
+  PetscBool isotropic;                    /* Is the metric isotropic? */
+  PetscBool uniform;                      /* Is the metric uniform? */
+  PetscBool restrictAnisotropyFirst;      /* Should anisotropy or normalization come first? */
+  PetscBool noInsert;                     /* Should node insertion/deletion be turned off? */
+  PetscBool noSwap;                       /* Should facet swapping be turned off? */
+  PetscBool noMove;                       /* Should node movement be turned off? */
+  PetscReal h_min, h_max;                 /* Minimum/maximum tolerated metric magnitudes */
+  PetscReal a_max;                        /* Maximum tolerated anisotropy */
+  PetscReal targetComplexity;             /* Target metric complexity */
+  PetscReal p;                            /* Degree for L-p normalization methods */
+  PetscReal gradationFactor;              /* Maximum tolerated length ratio for adjacent edges */
+  PetscInt  numIter;                      /* Number of ParMmg mesh adaptation iterations */
+  PetscInt  verbosity;                    /* Level of verbosity for remesher (-1 = no output, 10 = maximum) */
+} DMPlexMetricCtx;
 
 /* Point Numbering in Plex:
 
@@ -176,6 +194,9 @@ typedef struct {
   /* Neighbors */
   PetscMPIInt*         neighbors;
 
+  /* Metric */
+  DMPlexMetricCtx     *metricCtx;
+
   /* Debugging */
   PetscBool            printSetValues;
   PetscInt             printFEM;
@@ -208,8 +229,8 @@ PETSC_INTERN PetscErrorCode DMPlexSectionView_HDF5_Internal(DM, PetscViewer, DM)
 PETSC_INTERN PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM, PetscViewer, DM, Vec);
 PETSC_INTERN PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM, PetscViewer, DM, Vec);
 PETSC_INTERN PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM, PetscViewer, PetscSF*);
-PETSC_INTERN PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM, PetscViewer);
-PETSC_INTERN PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM, PetscViewer);
+PETSC_INTERN PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM, PetscViewer, PetscSF);
+PETSC_INTERN PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM, PetscViewer, PetscSF);
 PETSC_INTERN PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM, PetscViewer, DM, PetscSF, PetscSF*, PetscSF*);
 PETSC_INTERN PetscErrorCode DMPlexVecLoad_HDF5_Internal(DM, PetscViewer, DM, PetscSF, Vec);
 PETSC_INTERN PetscErrorCode DMPlexView_HDF5_Internal(DM, PetscViewer);
@@ -229,8 +250,8 @@ PETSC_INTERN PetscErrorCode DMCoarsen_Plex(DM, MPI_Comm, DM *);
 PETSC_INTERN PetscErrorCode DMCoarsenHierarchy_Plex(DM, PetscInt, DM []);
 PETSC_INTERN PetscErrorCode DMRefine_Plex(DM, MPI_Comm, DM *);
 PETSC_INTERN PetscErrorCode DMRefineHierarchy_Plex(DM, PetscInt, DM []);
-PETSC_INTERN PetscErrorCode DMAdaptLabel_Plex(DM, DMLabel, DM *);
-PETSC_INTERN PetscErrorCode DMAdaptMetric_Plex(DM, Vec, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMAdaptLabel_Plex(DM, Vec, DMLabel, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMExtrude_Plex(DM, PetscInt, DM *);
 PETSC_INTERN PetscErrorCode DMPlexInsertBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode DMPlexInsertTimeDerivativeBoundaryValues_Plex(DM, PetscBool, Vec, PetscReal, Vec, Vec, Vec);
 PETSC_INTERN PetscErrorCode DMProjectFunctionLocal_Plex(DM,PetscReal,PetscErrorCode(**)(PetscInt,PetscReal,const PetscReal[],PetscInt,PetscScalar *,void *),void **,InsertMode,Vec);
@@ -258,7 +279,6 @@ PETSC_INTERN PetscErrorCode DMPlexGetAdjacency_Internal(DM,PetscInt,PetscBool,Pe
 PETSC_INTERN PetscErrorCode DMPlexGetRawFaces_Internal(DM,DMPolytopeType,const PetscInt[],PetscInt*,const DMPolytopeType*[],const PetscInt*[],const PetscInt*[]);
 PETSC_INTERN PetscErrorCode DMPlexRestoreRawFaces_Internal(DM,DMPolytopeType,const PetscInt[],PetscInt*,const DMPolytopeType*[],const PetscInt*[],const PetscInt*[]);
 PETSC_INTERN PetscErrorCode DMPlexComputeCellType_Internal(DM, PetscInt, PetscInt, DMPolytopeType *);
-PETSC_INTERN PetscErrorCode DMPlexCreateCellTypeOrder_Internal(DMPolytopeType, PetscInt *[], PetscInt *[]);
 PETSC_INTERN PetscErrorCode DMPlexVecSetFieldClosure_Internal(DM, PetscSection, Vec, PetscBool[], PetscInt, PetscInt, const PetscInt[], DMLabel, PetscInt, const PetscScalar[], InsertMode);
 PETSC_INTERN PetscErrorCode DMPlexProjectConstraints_Internal(DM, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMPlexCreateReferenceTree_SetTree(DM, PetscSection, PetscInt[], PetscInt[]);
@@ -277,8 +297,8 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateNumbering_Plex(DM, PetscInt, PetscInt, P
 
 PETSC_INTERN PetscErrorCode DMPlexCreateCellNumbering_Internal(DM, PetscBool, IS *);
 PETSC_INTERN PetscErrorCode DMPlexCreateVertexNumbering_Internal(DM, PetscBool, IS *);
-PETSC_INTERN PetscErrorCode DMPlexRefine_Internal(DM, DMLabel, DM *);
-PETSC_INTERN PetscErrorCode DMPlexCoarsen_Internal(DM, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMPlexRefine_Internal(DM, Vec, DMLabel, DMLabel, DM *);
+PETSC_INTERN PetscErrorCode DMPlexCoarsen_Internal(DM, Vec, DMLabel, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Plex(DM, Mat*);
 
 PETSC_INTERN PetscErrorCode DMPlexGetOverlap_Plex(DM, PetscInt *);
@@ -668,11 +688,13 @@ PETSC_EXTERN PetscErrorCode DMPlexBasisTransformPointTensor_Internal(DM, DM, Vec
 PETSC_INTERN PetscErrorCode DMPlexBasisTransformApplyReal_Internal(DM, const PetscReal[], PetscBool, PetscInt, const PetscReal *, PetscReal *, void *);
 PETSC_INTERN PetscErrorCode DMPlexBasisTransformApply_Internal(DM, const PetscReal[], PetscBool, PetscInt, const PetscScalar *, PetscScalar *, void *);
 PETSC_INTERN PetscErrorCode DMCreateNeumannOverlap_Plex(DM, IS*, Mat*, PetscErrorCode (**)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void **);
+PETSC_INTERN PetscErrorCode DMGetFirstLabelEntry_Internal(DM dm, DM odm, DMLabel label, PetscInt numIds, const PetscInt ids[], PetscInt height, PetscInt *lStart, PetscDS *);
 
 /* Functions in the vtable */
 PETSC_INTERN PetscErrorCode DMCreateInterpolation_Plex(DM dmCoarse, DM dmFine, Mat *interpolation, Vec *scaling);
 PETSC_INTERN PetscErrorCode DMCreateInjection_Plex(DM dmCoarse, DM dmFine, Mat *mat);
 PETSC_INTERN PetscErrorCode DMCreateMassMatrix_Plex(DM dmCoarse, DM dmFine, Mat *mat);
+PETSC_INTERN PetscErrorCode DMCreateMassMatrixLumped_Plex(DM dmCoarse, Vec *lm);
 PETSC_INTERN PetscErrorCode DMCreateLocalSection_Plex(DM dm);
 PETSC_INTERN PetscErrorCode DMCreateDefaultConstraints_Plex(DM dm);
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Plex(DM dm,  Mat *J);

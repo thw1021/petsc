@@ -176,8 +176,10 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
   MatEntry          *Jentry=coloring->matentry;
   MatEntry2         *Jentry2=coloring->matentry2;
   const PetscInt    ncolors=coloring->ncolors,*ncolumns=coloring->ncolumns,*nrows=coloring->nrows;
+  PetscBool         alreadyboundtocpu;
 
   PetscFunctionBegin;
+  ierr = VecBoundToCPU(x1,&alreadyboundtocpu);CHKERRQ(ierr);
   ierr = VecBindToCPU(x1,PETSC_TRUE);CHKERRQ(ierr);
   if ((ctype == IS_COLORING_LOCAL) && (J->ops->fdcoloringapply == MatFDColoringApply_AIJ)) SETERRQ(PetscObjectComm((PetscObject)J),PETSC_ERR_SUP,"Must call MatColoringUseDM() with IS_COLORING_LOCAL");
   /* (1) Set w1 = F(x1) */
@@ -386,7 +388,7 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
     ierr = VecRestoreArray(vscale,&vscale_array);CHKERRQ(ierr);
   }
   coloring->currentcolor = -1;
-  ierr = VecBindToCPU(x1,PETSC_FALSE);CHKERRQ(ierr);
+  if (!alreadyboundtocpu) {ierr = VecBindToCPU(x1,PETSC_FALSE);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -645,7 +647,7 @@ PetscErrorCode MatFDColoringSetUp_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCol
   if (ctype == IS_COLORING_LOCAL) {
     ierr = ISLocalToGlobalMappingRestoreIndices(map,&ltog);CHKERRQ(ierr);
   }
-  ierr = PetscInfo3(c,"ncolors %D, brows %D and bcols %D are used.\n",c->ncolors,c->brows,c->bcols);CHKERRQ(ierr);
+  ierr = PetscInfo3(c,"ncolors %" PetscInt_FMT ", brows %" PetscInt_FMT " and bcols %" PetscInt_FMT " are used.\n",c->ncolors,c->brows,c->bcols);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

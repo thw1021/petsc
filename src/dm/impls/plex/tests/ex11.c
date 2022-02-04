@@ -175,7 +175,7 @@ static PetscErrorCode TestEmptyStrata(MPI_Comm comm)
     ierr = VecGetSize(v, &N);CHKERRQ(ierr);
     if (N != 2) {
       ierr = DMView(dm, PETSC_VIEWER_STDOUT_(comm));CHKERRQ(ierr);
-      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "FAIL: Vector size %d != 2\n", N);
+      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "FAIL: Vector size %d != 2", N);
     }
     ierr = VecDestroy(&v);CHKERRQ(ierr);
   }
@@ -200,7 +200,7 @@ static PetscErrorCode TestDistribution(MPI_Comm comm)
   ierr = PetscOptionsGetString(NULL, NULL, "-filename", filename, sizeof(filename), &flg);CHKERRQ(ierr);
   if (!flg) PetscFunctionReturn(0);
   ierr = PetscOptionsGetInt(NULL, NULL, "-overlap", &overlap, NULL);CHKERRQ(ierr);
-  ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, &dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromFile(comm, filename, "ex11_plex", PETSC_TRUE, &dm);CHKERRQ(ierr);
   ierr = DMSetBasicAdjacency(dm, PETSC_TRUE, PETSC_FALSE);CHKERRQ(ierr);
   ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
   ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
@@ -242,7 +242,7 @@ static PetscErrorCode TestUniversalLabel(MPI_Comm comm)
 
   ierr = PetscOptionsGetString(NULL, NULL, "-filename", filename, sizeof(filename), &flg);CHKERRQ(ierr);
   if (flg) {
-    ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, &dm1);CHKERRQ(ierr);
+    ierr = DMPlexCreateFromFile(comm, filename, "ex11_plex", PETSC_TRUE, &dm1);CHKERRQ(ierr);
   } else {
     ierr = DMCreate(comm, &dm1);CHKERRQ(ierr);
     ierr = DMSetType(dm1, DMPLEX);CHKERRQ(ierr);

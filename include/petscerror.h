@@ -65,9 +65,6 @@
 #define PETSC_ERR_MPI              98  /* general MPI error */
 #define PETSC_ERR_MAX_VALUE        99  /* this is always the one more than the largest error code */
 
-#define PetscStringizeArg(a) #a
-#define PetscStringize(a) PetscStringizeArg(a)
-
 /*MC
    SETERRQ - Macro to be called when an error has been detected,
 
@@ -685,7 +682,7 @@ typedef enum {PETSC_ERROR_INITIAL=0,PETSC_ERROR_REPEAT=1,PETSC_ERROR_IN_CXX = 2}
 #if defined(__clang_analyzer__)
 __attribute__((analyzer_noreturn))
 #endif
-PETSC_EXTERN PetscErrorCode PetscError(MPI_Comm,int,const char*,const char*,PetscErrorCode,PetscErrorType,const char*,...);
+PETSC_EXTERN PetscErrorCode PetscError(MPI_Comm,int,const char*,const char*,PetscErrorCode,PetscErrorType,const char*,...) PETSC_ATTRIBUTE_FORMAT(7,8);
 
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfInitialize(void);
 PETSC_EXTERN PetscErrorCode PetscErrorMessage(int,const char*[],char **);
@@ -741,7 +738,7 @@ $     PetscErrorPrintf = PetscErrorPrintfDefault; to turn it back on or you can 
 
 .seealso: PetscFPrintf(), PetscSynchronizedPrintf(), PetscHelpPrintf(), PetscPrintf(), PetscPushErrorHandler(), PetscVFPrintf(), PetscHelpPrintf()
 M*/
-PETSC_EXTERN PetscErrorCode (*PetscErrorPrintf)(const char[],...);
+PETSC_EXTERN PetscErrorCode (*PetscErrorPrintf)(const char[],...) PETSC_ATTRIBUTE_FORMAT(1,2);
 
 typedef enum {PETSC_FP_TRAP_OFF=0,PETSC_FP_TRAP_ON=1} PetscFPTrap;
 PETSC_EXTERN PetscErrorCode PetscSetFPTrap(PetscFPTrap);
@@ -822,8 +819,12 @@ typedef struct {
               petscstack.petscroutine[petscstack.currentsize] &&        \
               (petscstack.function[petscstack.currentsize]    !=        \
                (const char*)funct))) {                                  \
-          printf("Invalid stack: push from %s, pop from %s\n",          \
-                 petscstack.function[petscstack.currentsize],funct);    \
+          /* We need this string comparison because "unknown" can be defined in different static strings: */ \
+          PetscBool _cmpflg;                                            \
+          const char *_funct = petscstack.function[petscstack.currentsize]; \
+          PetscStrcmp(_funct,funct,&_cmpflg);                           \
+          if (!_cmpflg)                                                 \
+            printf("Invalid stack: push from %s, pop from %s\n", _funct,funct); \
         }                                                               \
         petscstack.function[petscstack.currentsize] = PETSC_NULLPTR;    \
         petscstack.file[petscstack.currentsize]     = PETSC_NULLPTR;    \

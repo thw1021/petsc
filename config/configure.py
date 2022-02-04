@@ -2,8 +2,9 @@
 from __future__ import print_function
 import os, sys
 
-extraLogs = []
-petsc_arch = ''
+extraLogs     = []
+petsc_arch    = ''
+banner_length = 93
 
 # Use en_US as language so that BuildSystem parses compiler messages in english
 def fixLang(lang):
@@ -158,6 +159,7 @@ def chksynonyms():
     name = name.replace('with-mpich','with-mpi')
     name = name.replace('with-blas-lapack','with-blaslapack')
     name = name.replace('with-cuda-gencodearch','with-cuda-arch')
+    name = name.replace('download-hdf5-fortran-bindings','with-hdf5-fortran-bindings')
 
     if name.find('with-debug=') >= 0 or name.endswith('with-debug'):
       if name.find('=') == -1:
@@ -381,24 +383,19 @@ def print_final_timestamp(framework):
   return
 
 def petsc_configure(configure_options):
-  if 'PETSC_DIR' in os.environ:
-    petscdir = os.environ['PETSC_DIR']
-    if petscdir.find(' ') > -1:
-      raise RuntimeError('Your PETSC_DIR '+petscdir+' has spaces in it; this is not allowed.\n Change the directory with PETSc to not have spaces in it')
-    if not os.path.isabs(petscdir):
-      raise RuntimeError('PETSC_DIR ("'+petscdir+'") is set as a relative path. It must be set as an absolute path.')
-
-    try:
-      sys.path.append(os.path.join(petscdir,'lib','petsc','bin'))
-      import petscnagupgrade
-      file     = os.path.join(petscdir,'.nagged')
-      if not petscnagupgrade.naggedtoday(file):
-        petscnagupgrade.currentversion(petscdir)
-    except:
-      pass
-  print('=============================================================================================')
-  print('                      Configuring PETSc to compile on your system                            ')
-  print('=============================================================================================')
+  petscdir = os.getcwd()
+  try:
+    sys.path.append(os.path.join(petscdir,'lib','petsc','bin'))
+    import petscnagupgrade
+    file     = os.path.join(petscdir,'.nagged')
+    if not petscnagupgrade.naggedtoday(file):
+      petscnagupgrade.currentversion(petscdir)
+  except:
+    pass
+  banner_line = banner_length*'='
+  print(banner_line)
+  print('Configuring PETSc to compile on your system'.center(banner_length))
+  print(banner_line)
 
   try:
     # Command line arguments take precedence (but don't destroy argv[0])
@@ -408,10 +405,15 @@ def petsc_configure(configure_options):
   except (TypeError, ValueError) as e:
     emsg = str(e)
     if not emsg.endswith('\n'): emsg = emsg+'\n'
-    msg ='*******************************************************************************\n'\
-    +'                ERROR in COMMAND LINE ARGUMENT to ./configure \n' \
-    +'-------------------------------------------------------------------------------\n'  \
-    +emsg+'*******************************************************************************\n'
+    banner_line = banner_length*'*'
+    msg = '\n'.join([
+      banner_line,
+      'ERROR in COMMAND LINE ARGUMENT to ./configure'.center(banner_length),
+      banner_length*'-',
+      emsg,
+      banner_line,
+      '' # to add an additional newline at the end
+    ])
     sys.exit(msg)
   # check PETSC_ARCH
   check_for_unsupported_combinations(sys.argv)

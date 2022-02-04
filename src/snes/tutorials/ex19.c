@@ -700,6 +700,18 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       requires: x !single
 
    test:
+      suffix: 19
+      nsize: 2
+      args: -da_refine 3 -snes_monitor_short -pc_type mg -ksp_type fgmres -pc_mg_type full -snes_type newtontrdc
+      requires: !single
+
+   test:
+      suffix: 20
+      nsize: 2
+      args: -da_refine 3 -snes_monitor_short -pc_type mg -ksp_type fgmres -pc_mg_type full -snes_type newtontrdc -snes_trdc_use_cauchy false
+      requires: !single
+
+   test:
       suffix: 2
       nsize: 4
       args: -da_refine 3 -snes_converged_reason -pc_type mg -mat_fd_type ds
@@ -1101,6 +1113,20 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
       nsize: 3
       requires: cuda !single
       args: -snes_monitor -dm_mat_type mpiaijcusparse -dm_vec_type mpicuda -pc_type gamg -ksp_monitor  -mg_levels_ksp_max_it 3
+
+   test:
+      suffix: cuda_dm_bind_below
+      nsize: 2
+      requires: cuda
+      args: -dm_mat_type aijcusparse -dm_vec_type cuda -da_refine 3 -pc_type mg -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -log_view -pc_mg_log -dm_bind_below 10000
+      filter: awk "/Level/ {print \$24}"
+
+   test:
+      suffix: viennacl_dm_bind_below
+      nsize: 2
+      requires: viennacl
+      args: -dm_mat_type aijviennacl -dm_vec_type viennacl -da_refine 3 -pc_type mg -mg_levels_ksp_type chebyshev -mg_levels_pc_type jacobi -log_view -pc_mg_log -dm_bind_below 10000
+      filter: awk "/Level/ {print \$24}"
 
    test:
       suffix: seqbaijmkl

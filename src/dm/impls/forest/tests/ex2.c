@@ -107,7 +107,7 @@ static PetscErrorCode IdentifyBadPoints (DM dm, Vec vec, PetscReal tol)
     ierr = VecGetValuesSection(vecLocal, section, p, &values);CHKERRQ(ierr);
     ierr = PetscSectionGetDof(section, p, &cSize);CHKERRQ(ierr);
     for (c = 0; c < cSize; c++) {
-      PetscReal absDiff = PetscAbsScalar(values[c]);CHKERRQ(ierr);
+      PetscReal absDiff = PetscAbsScalar(values[c]);
       if (absDiff > tol) {bad = PETSC_TRUE; break;}
     }
     if (!bad) continue;
@@ -128,7 +128,7 @@ static PetscErrorCode IdentifyBadPoints (DM dm, Vec vec, PetscReal tol)
     }
     ierr = DMPlexRestoreTransitiveClosure(dmplex, p, PETSC_TRUE, &closureSize, &closure);CHKERRQ(ierr);
     for (c = 0; c < cSize; c++) {
-      PetscReal absDiff = PetscAbsScalar(values[c]);CHKERRQ(ierr);
+      PetscReal absDiff = PetscAbsScalar(values[c]);
       if (absDiff > tol) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "  Bad dof %D\n", c);CHKERRQ(ierr);
       }
@@ -322,7 +322,7 @@ int main(int argc, char **argv)
     if (!transfer_from_base[1]) {
       ierr = DMForestSetAdaptivityForest(postForest,NULL);CHKERRQ(ierr);
       ierr = PetscObjectGetReference((PetscObject)preForest,&postCount);CHKERRQ(ierr);
-      if (postCount != preCount) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Adaptation not memory neutral: reference count increase from %d to %d\n",preCount,postCount);
+      if (postCount != preCount) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Adaptation not memory neutral: reference count increase from %d to %d",preCount,postCount);
     }
 
     if (conv) {

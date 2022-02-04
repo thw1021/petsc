@@ -5,6 +5,16 @@
 #include <petsc/private/matimpl.h>
 #include <petscctable.h>
 
+/* Operations provided by MATSEQAIJ and its subclasses */
+typedef struct {
+  PetscErrorCode (*getarray)(Mat,PetscScalar **);
+  PetscErrorCode (*restorearray)(Mat,PetscScalar **);
+  PetscErrorCode (*getarrayread)(Mat,const PetscScalar **);
+  PetscErrorCode (*restorearrayread)(Mat,const PetscScalar **);
+  PetscErrorCode (*getarraywrite)(Mat,PetscScalar **);
+  PetscErrorCode (*restorearraywrite)(Mat,PetscScalar **);
+} Mat_SeqAIJOps;
+
 /*
     Struct header shared by SeqAIJ, SeqBAIJ and SeqSBAIJ matrix formats
 */
@@ -38,7 +48,8 @@
   PetscBool         pivotinblocks;    /* pivot inside factorization of each diagonal block */ \
   Mat               parent;           /* set if this matrix was formed with MatDuplicate(...,MAT_SHARE_NONZERO_PATTERN,....); \
                                          means that this shares some data structures with the parent including diag, ilen, imax, i, j */\
-  Mat_SubSppt       *submatis1         /* used by MatCreateSubMatrices_MPIXAIJ_Local */
+  Mat_SubSppt       *submatis1;       /* used by MatCreateSubMatrices_MPIXAIJ_Local */    \
+  Mat_SeqAIJOps     ops[1]            /* operations for SeqAIJ and its subclasses */
 
 typedef struct {
   MatTransposeColoring matcoloring;
@@ -151,7 +162,7 @@ PETSC_STATIC_INLINE PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscI
     PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_i=NULL,*new_j=NULL; \
     datatype *new_a; \
  \
-    if (NONEW == -2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%D,%D) caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
+    if (NONEW == -2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
     /* malloc new storage space */ \
     ierr = PetscMalloc3(BS2*new_nz,&new_a,new_nz,&new_j,AM+1,&new_i);CHKERRQ(ierr); \
  \
@@ -183,7 +194,7 @@ PETSC_STATIC_INLINE PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscI
     /* there is no extra room in row, therefore enlarge */ \
     PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_i=NULL,*new_j=NULL; \
  \
-    if (NONEW == -2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%D,%D) caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
+    if (NONEW == -2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
     /* malloc new storage space */ \
     ierr = PetscMalloc1(new_nz,&new_j);CHKERRQ(ierr); \
     ierr = PetscMalloc1(AM+1,&new_i);CHKERRQ(ierr);\

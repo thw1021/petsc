@@ -7,7 +7,7 @@ class Configure(config.package.Package):
     self.download               = ['git://https://github.com/ecrc/h2opus']
     self.precisions             = ['single','double']
     self.skippackagewithoptions = 1
-    self.cxx                    = 1
+    self.buildLanguages         = ['Cxx']
     self.requirescxx14          = 1
     self.liblist                = [['libh2opus.a']]
     self.includes               = ['h2opusconf.h']
@@ -97,6 +97,7 @@ class Configure(config.package.Package):
         g.write('H2OPUS_USE_FLAME = 1\n')
       if config.setCompilers.Configure.isNEC(cxx, self.log):
         g.write('H2OPUS_USE_NEC = 1\n')
+        g.write('H2OPUS_DISABLE_SHARED = 1\n')
       if config.setCompilers.Configure.isNVC(cxx, self.log):
         g.write('H2OPUS_USE_NVOMP = 1\n')
       cppfixes = ''

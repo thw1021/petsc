@@ -19,6 +19,7 @@ asterix*/*
 linux*/*
 darwin*/*
 arch-*/*
+*-arch-*/*
 petsc-install/*
 batch-test
 c_test
@@ -28,13 +29,16 @@ TAGS*
 bmake/*/*
 lib/petsc/conf/petscvariables
 configure.log*
+reconfigure-*.py
 externalpackages/*
+petscLintPatches/
 ftn-auto
 ftn-auto-interfaces
 make_log_*
 test_log_*
 src/python/*
 *.o
+*.pch
 *.pyc
 *~
 *.orig
@@ -171,6 +175,7 @@ horse.ply
 /docs/
 **/f90module*.f90
 compile_commands.json
+.clang-format
 .clangd/
 .cache/
 .vscode/
