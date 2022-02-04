@@ -4,9 +4,13 @@
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
 #define pchypresettype_            PCHYPRESETTYPE
 #define pchypregettype_            PCHYPREGETTYPE
+#define pcmggalerkinmatproductsetalgorithm_ PCMGGALERKINMATPRODUCTSETALGORITHM
+#define pcmggalerkinmatproductgetalgorithm_ PCMGGALERKINMATPRODUCTGETALGORITHM
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
 #define pchypresettype_            pchypresettype
 #define pchypregettype_            pchypregettype
+#define pcmggalerkinmatproductsetalgorithm_ pcmggalerkinmatproductsetalgorithm
+#define pcmggalerkinmatproductgetalgorithm_ pcmggalerkinmatproductgetalgorithm
 #endif
 
 PETSC_EXTERN void pchypresettype_(PC *pc, char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
@@ -25,7 +29,6 @@ PETSC_EXTERN void pchypregettype_(PC *pc,char* name,PetscErrorCode *ierr,PETSC_F
   *ierr = PCHYPREGetType(*pc,&tname);
   *ierr = PetscStrncpy(name,tname,len);if (*ierr) return;
   FIXRETURNCHAR(PETSC_TRUE,name,len);
-
 }
 
 PETSC_EXTERN void pcmggalerkinmatproductsetalgorithm_(PC *pc, char* name,PetscErrorCode *ierr,PETSC_FORTRAN_CHARLEN_T len)
@@ -44,6 +47,5 @@ PETSC_EXTERN void pcmggalerkinmatproductgetalgorithm_(PC *pc,char* name,PetscErr
   *ierr = PCMGGalerkinMatProductGetAlgorithm(*pc,&tname);
   *ierr = PetscStrncpy(name,tname,len);if (*ierr) return;
   FIXRETURNCHAR(PETSC_TRUE,name,len);
-
 }
 
