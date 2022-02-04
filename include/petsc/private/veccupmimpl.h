@@ -478,7 +478,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
 {
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   constexpr auto     hostmem = PetscMemTypeHost(mtype);
-  // silence buggy gcc warning: ‘dctx’ may be used uninitialized in this function
+  // silence buggy gcc warning: "dctx" may be used uninitialized in this function
   PetscDeviceContext dctx = nullptr;
   PetscErrorCode     ierr;
 
@@ -576,7 +576,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPMBase_(MPI_Com
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase_(Vec v, PetscBool allocate_missing, PetscScalar *host_array, PetscScalar *device_array))
 {
-  // silence buggy gcc warning: ‘dctx’ may be used uninitialized in this function
+  // silence buggy gcc warning: "dctx" may be used uninitialized in this function
   PetscDeviceContext dctx = nullptr;
   PetscErrorCode     ierr;
 
