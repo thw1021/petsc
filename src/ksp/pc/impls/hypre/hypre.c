@@ -495,7 +495,9 @@ static PetscErrorCode PCDestroy_HYPRE(PC pc)
   ierr = PCReset_HYPRE(pc);CHKERRQ(ierr);
   if (jac->destroy) PetscStackCallStandard(jac->destroy,(jac->hsolver));
   ierr = PetscFree(jac->hypre_type);CHKERRQ(ierr);
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
   ierr = PetscFree(jac->spgemm_type);CHKERRQ(ierr);
+#endif
   if (jac->comm_hypre != MPI_COMM_NULL) {ierr = PetscCommRestoreComm(PetscObjectComm((PetscObject)pc),&jac->comm_hypre);CHKERRQ(ierr);}
   ierr = PetscFree(pc->data);CHKERRQ(ierr);
 
@@ -511,6 +513,7 @@ static PetscErrorCode PCDestroy_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGetInterpolations_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGetCoarseOperators_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductSetAlgorithm_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductGetAlgorithm_C",NULL);CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }
@@ -676,6 +679,18 @@ PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_Hypre_BoomerAMG(PC pc,const ch
   jac->spgemm_type = NULL;
   SETERRQ1(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown HYPRE SpGEM type %s; Choices are cusparse, hypre",name);
 #endif
+}
+
+PetscErrorCode PCMGGalerkinMatProductGetAlgorithm_Hypre_BoomerAMG(PC pc, const char *spgemm[])
+{
+  PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
+  *spgemm = jac->spgemm_type;
+#endif
+  PetscFunctionReturn(0);
 }
 
 static const char *HYPREBoomerAMGCycleType[]   = {"","V","W"};
@@ -2222,22 +2237,20 @@ PetscErrorCode PCMGGalerkinMatProductSetAlgorithm(PC pc,const char name[])
 .  pc - the multigrid context
 
    Output Parameter:
-.  spgemm - one of 'cusparse', 'hypre'
+.  name - one of 'cusparse', 'hypre'
 
    Level: intermediate
 
 .seealso: PCMGGalerkinMatProductSetAlgorithm()
 
 @*/
-PetscErrorCode PCMGGalerkinMatProductGetAlgorithm(PC pc, const char *spgemm[])
+PetscErrorCode PCMGGalerkinMatProductGetAlgorithm(PC pc, const char *name[])
 {
-  PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-#if PETSC_PKG_HYPRE_VERSION_GE(2,23,0)
-  *spgemm = jac->spgemm_type;
-#endif
+  ierr = PetscTryMethod(pc,"PCMGGalerkinMatProductGetAlgorithm_C",(PC,const char*[]),(pc,name));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -2314,6 +2327,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetEdgeConstantVectors_C",PCHYPRESetEdgeConstantVectors_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetPoissonMatrix_C",PCHYPRESetPoissonMatrix_HYPRE);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductSetAlgorithm_C",PCMGGalerkinMatProductSetAlgorithm_Hypre_BoomerAMG);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductGetAlgorithm_C",PCMGGalerkinMatProductGetAlgorithm_Hypre_BoomerAMG);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
 #if defined(HYPRE_USING_HIP)
   ierr = PetscDeviceInitialize(PETSC_DEVICE_HIP);CHKERRQ(ierr);
