@@ -723,7 +723,8 @@ template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase_(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask))
 {
   PetscFunctionBegin;
-  if (host_array)   *host_array   = VecIMLCast(v)->array;
+  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  if (host_array)   *host_array   = VecIMPLCast(v)->array;
   if (device_array) *device_array = VecCUPMCast(v)->device_array;
   if (mask)         *mask         = v->offloadmask;
   PetscFunctionReturn(0);
