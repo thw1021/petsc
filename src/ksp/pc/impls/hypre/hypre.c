@@ -651,7 +651,7 @@ static PetscErrorCode PCApplyTranspose_HYPRE_BoomerAMG(PC pc,Vec b,Vec x)
 /* static array length */
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
-PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_HYPRE_BoomerAMG(PC pc,const char name[])
+static PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_HYPRE_BoomerAMG(PC pc,const char name[])
 {
   PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
   PetscErrorCode ierr;
@@ -681,7 +681,7 @@ PetscErrorCode PCMGGalerkinMatProductSetAlgorithm_HYPRE_BoomerAMG(PC pc,const ch
 #endif
 }
 
-PetscErrorCode PCMGGalerkinMatProductGetAlgorithm_HYPRE_BoomerAMG(PC pc, const char *spgemm[])
+static PetscErrorCode PCMGGalerkinMatProductGetAlgorithm_HYPRE_BoomerAMG(PC pc, const char *spgemm[])
 {
   PC_HYPRE *jac  = (PC_HYPRE*)pc->data;
 
