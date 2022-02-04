@@ -1,9 +1,8 @@
 #include "../vecmpicupm.hpp" /*I <petscvec.h> I*/
 
 using namespace Petsc::Vector::CUPM::Impl;
-using Petsc::Device::CUPM::DeviceType;
 
-static const auto VecMPI_CUDA = VecMPI_CUPM<DeviceType::CUDA>{};
+using VecMPI_CUDA = VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>{};
 
 /*MC
   VECCUDA - VECCUDA = "cuda" - A VECSEQCUDA on a single-process communicator, and VECMPICUDA
