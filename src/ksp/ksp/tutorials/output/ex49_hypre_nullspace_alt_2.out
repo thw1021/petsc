@@ -45,7 +45,7 @@ PC Object: (elas_) 1 MPI processes
       HYPRE_BoomerAMGSetInterpVecVariant() 3
       HYPRE_BoomerAMGSetInterpVecQMax() 0
       HYPRE_BoomerAMGSetSmoothInterpVectors() 0
-      SpGEMM type         cuSparse
+      SpGEMM type         (null)
   linear system matrix = precond matrix:
   Mat Object: 1 MPI processes
     type: seqaij
