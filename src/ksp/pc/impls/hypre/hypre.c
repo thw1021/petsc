@@ -2201,7 +2201,7 @@ PetscErrorCode  PCHYPREGetType(PC pc,const char *name[])
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    PCMGGalerkinMatProductSetAlgorithm - Set type of SpGEMM for hypre to use
 
    Logically Collective on PC
@@ -2228,7 +2228,7 @@ PetscErrorCode PCMGGalerkinMatProductSetAlgorithm(PC pc,const char name[])
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    PCMGGalerkinMatProductGetAlgorithm - Get type of SpGEMM for hypre
 
    Not Collective
