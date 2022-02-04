@@ -1,7 +1,7 @@
 #ifndef PETSCVECMPICUPM_HPP
 #define PETSCVECMPICUPM_HPP
 
-#include <petsc/private/veccupmbase.hpp>  /*I <petscvec.h> I*/
+#include <petsc/private/veccupmimpl.h>  /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp>
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>
 #include <petsc/private/sfimpl.h> // for _p_VecScatter
