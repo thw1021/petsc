@@ -515,7 +515,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v
     auto ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
     v->offloadmask = PetscMemTypeHost(mtype) ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;
   }
-  *a = nullptr;
+  if (a) *a = nullptr;
   PetscFunctionReturn(0);
 }
 
@@ -549,7 +549,7 @@ template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearrayandmemtype_async(Vec v, PetscScalar **a))
 {
   PetscFunctionBegin;
-  *a             = nullptr;
+  if (a) *a      = nullptr;
   v->offloadmask = (v->offloadmask & PETSC_OFFLOAD_GPU) ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
   PetscFunctionReturn(0);
 }
