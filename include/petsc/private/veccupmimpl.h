@@ -258,7 +258,7 @@ protected:
     // PetscScalar *const
     const pointer_type ptr;
 
-    operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
+    operator pointer_type() const noexcept { return as_<pointer_type>(); }
 
     // in case pointer_type == cupmscalar_pointer_type we don't want this overload to exist, so
     // we make a dummy template parameter to allow SFINAE to nix it for us
@@ -268,7 +268,7 @@ protected:
     >
     operator cupm_pointer_type() const noexcept
     {
-      return cupmScalarCast(static_cast<pointer_type>(this));
+      return cupmScalarCast(as_<pointer_type>());
     }
 
     vector_array(PetscDeviceContext, Vec v) noexcept : ptr(initialize_(v)), v_(v) { }
@@ -288,6 +288,9 @@ protected:
       auto ierr = getarray_async<MT,MA>(v,&array);CHKERRABORT(PETSC_COMM_SELF,ierr);
       return array;
     }
+
+    template <typename C>
+    PETSC_NODISCARD constexpr auto as_() PETSC_DECLTYPE_NOEXCEPT_RETURNS(static_cast<C>(const_cast<pointer_type>(this->ptr)))
   };
 
   // data movement
