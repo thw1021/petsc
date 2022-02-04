@@ -83,7 +83,7 @@ class Configure(config.package.Package):
     yield os.path.dirname(os.path.dirname(self.fullPathHIPC)) # yield /opt/rocm from /opt/rocm/bin/hipcc
     if 'ROCM_PATH' in os.environ:
       yield os.environ.get('ROCM_PATH')
-    yield dir
+    yield ''
 
   def configureLibrary(self):
     self.setFullPathHIPC()
