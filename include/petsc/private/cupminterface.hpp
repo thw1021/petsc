@@ -566,8 +566,7 @@ struct Interface : InterfaceImpl<T>
   using cupmReal_t   = util::conditional_t<PetscDefined(USE_REAL_SINGLE),float,double>;
   using cupmScalar_t = util::conditional_t<PetscDefined(USE_COMPLEX),cupmComplex_t,cupmReal_t>;
 
-  PETSC_NODISCARD static constexpr auto makeCupmScalar(PetscScalar s)
-  PETSC_DECLTYPE_NOEXCEPT_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)))
+  PETSC_NODISCARD static constexpr auto makeCupmScalar(PetscScalar s) PETSC_DECLTYPE_NOEXCEPT_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)))
 
   PETSC_CXX_COMPAT_DECL(constexpr cupmScalar_t* cupmScalarCast(PetscScalar *s))
   {
