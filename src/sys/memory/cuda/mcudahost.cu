@@ -5,6 +5,7 @@ static PetscErrorCode PetscCUDAHostMalloc(size_t a,PetscBool clear,int lineno,co
 {
   cudaError_t ierr;
   ierr = cudaMallocHost(result,a);CHKERRCUDA(ierr);
+  printf("cuda allocated %p\n",*result);
   return 0;
 }
 

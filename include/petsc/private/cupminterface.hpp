@@ -393,8 +393,8 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   template <typename FunctionT, typename... KernelArgsT>
   PETSC_CXX_COMPAT_DECL(cudaError_t cupmLaunchKernel(FunctionT func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs))
   {
-    void* args[] = {&kernelArgs...};
-    return cudaLaunchKernel(&func,gridDim,blockDim,args,sharedMem,stream);
+    void* args[] = {(void*)&kernelArgs...};
+    return cudaLaunchKernel((void*)func,gridDim,blockDim,args,sharedMem,stream);
   }
 };
 #undef PETSC_CUPM_PREFIX_L
