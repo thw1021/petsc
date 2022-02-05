@@ -3719,13 +3719,13 @@ static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat_SeqAIJCUSPARSE **cusparsestr
 static PetscErrorCode CsrMatrix_Destroy(CsrMatrix **mat)
 {
   PetscFunctionBegin;
-  if (*mat) {
+  if (*mat) CHKERRCXX(
     delete (*mat)->values;
     delete (*mat)->column_indices;
     delete (*mat)->row_offsets;
     delete *mat;
-    *mat = 0;
-  }
+    *mat = nullptr;
+  );
   PetscFunctionReturn(0);
 }
 
