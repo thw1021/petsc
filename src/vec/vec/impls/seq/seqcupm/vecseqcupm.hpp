@@ -151,6 +151,7 @@ namespace
 
 struct PetscLogGpuTime_
 {
+  /* lets hope barry doesn't notice these */
   PetscLogGpuTime_()  noexcept { CHKERRABORT(PETSC_COMM_SELF,PetscLogGpuTimeBegin()); }
   ~PetscLogGpuTime_() noexcept { CHKERRABORT(PETSC_COMM_SELF,PetscLogGpuTimeEnd());   }
 };
@@ -158,7 +159,6 @@ struct PetscLogGpuTime_
 } // anonymous namespace
 
 #define THRUST_CALL(thrust_func,stream,...) [&]{                                   \
-    /* lets hope barry doesn't notice these */                                     \
     const auto timer = PetscLogGpuTime_{};                                         \
     return thrust_func(thrust::cuda::THRUST_ASYNC_T.on(stream),__VA_ARGS__);       \
   }()
@@ -196,7 +196,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(Unary
 
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
-  if (xin == yin) { // in-place
+  if (xin == yin || !yin) { // in-place
     CHKERRTHRUST(
       auto xptr = thrust::device_pointer_cast(DeviceArrayReadWrite(dctx,xin).ptr);
 
@@ -295,7 +295,22 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
   PetscFunctionBegin;
   ierr = Destroy_CUPMBase_(v);CHKERRQ(ierr);
   {
-    const auto useit = UseCUPMHostAlloc(v->pinned_memory);
+#if defined(PETSC_USE_LOG)
+    ierr = PetscLogObjectState(PetscObjectCast(v),"Length=%" PetscInt_FMT,v->map->n);CHKERRQ(ierr);
+#endif
+    if (const auto vimpl = VecIMPLCast(v)) {
+      const auto useit = UseCUPMHostAlloc(v);
+
+      printf("%s use cudaFreeHost() for %p\n",useit.value() ? "will" : "will NOT",vimpl->array_allocated);
+      ierr = PetscFree(vimpl->array_allocated);CHKERRQ(ierr);
+    }
+    // unless allocated by us, default to false
+    v->pinned_memory = PETSC_FALSE;
+    // this is pretty much the same thing VecDestroy_Seq() does but we need to do it ourselves
+    // since we may want to free vimpl->array_allocated with cupmFreeHost(), but not
+    // v->data. call VecDestroy_Seq() after the fact anyways in case it does something more in
+    // v->the future
+    ierr = PetscFree(v->data);CHKERRQ(ierr);
     ierr = VecDestroy_Seq(v);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -833,13 +848,20 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(Petsc
   static_assert(N > 0,"");
   const auto   yidxt = *yidx;
   const auto   yint  = yin+yidxt;
-  PetscScalar *device_y[N];
+  PetscScalar **device_y;
+  PetscScalar *host_y[N];
   cupmError_t  cerr;
 
   PetscFunctionBegin;
-  for (auto i = 0; i < N; ++i) device_y[i] = DeviceArrayRead(dctx,yint[i]);
+  for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yint[i]);
+  // REVIEW ME: this is really, really stupid. We need to allocate one of these tiny array of
+  // pointers dynamically for each of these calls as it is possible that multiple streams can
+  // be calling this function simultaneously, there must be a better system.
+  cerr = cupmMallocAsync(&device_y,N*sizeof(*device_y),stream);CHKERRCUPM(cerr);
+  cerr = cupmMemcpyAsync(device_y,host_y,N*sizeof(*host_y),cupmMemcpyHostToDevice,stream);CHKERRCUPM(cerr);
   cerr = cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xarr,device_y,size,results+(yidxt*MDOT_WORKGROUP_NUM));CHKERRCUPM(cerr);
   *yidx += N;
+  cerr = cupmFreeAsync(device_y,stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -848,7 +870,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
 {
   const auto          n      = xin->map->n;
   const auto          nv1    = ((nv % 4) == 1) ? nv-1 : nv;
-  const auto          nbytes = nv1*MDOT_WORKGROUP_NUM*sizeof(*VecIMPLCast(xin)->array);
+  const auto          nwork  = nv1*MDOT_WORKGROUP_NUM;
+  const auto          nbytes = nwork*sizeof(PetscScalar);
   PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
@@ -858,7 +881,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
   // allocate scratchpad memory for the results of individual work groups
-  cerr = cupmMallocAsync(reinterpret_cast<void**>(&d_results),nbytes,stream);CHKERRCUPM(cerr);
+  cerr = cupmMallocAsync(&d_results,nbytes,stream);CHKERRCUPM(cerr);
   {
     auto yidx = PetscInt{0};
     auto xptr = DeviceArrayRead(dctx,xin);
@@ -893,15 +916,15 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   }
   // copy results to CPU
   {
-    std::array<PetscScalar,PETSC_MAX_PATH_LEN> stackarray;
-    const auto allocate  = static_cast<decltype(stackarray.size())>(nv1)*MDOT_WORKGROUP_NUM > stackarray.size();
-    auto       h_results = stackarray.data();
+    auto       stackarray = std::array<PetscScalar,PETSC_MAX_PATH_LEN>{};
+    const auto allocate   = static_cast<decltype(stackarray.size())>(nwork) > stackarray.size();
+    auto       h_results  = stackarray.data();
 
-    if (allocate) {ierr = PetscMalloc1(nv1*MDOT_WORKGROUP_NUM,&h_results);CHKERRQ(ierr);}
+    if (allocate) {ierr = PetscMalloc1(nwork,&h_results);CHKERRQ(ierr);}
     cerr = cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
     // REVIEW ME: double count of flops??
     // do these now while memcpy is in flight
-    ierr = PetscLogFlops(nv1*MDOT_WORKGROUP_NUM);CHKERRQ(ierr);
+    ierr = PetscLogFlops(nwork);CHKERRQ(ierr);
     ierr = PetscLogGpuToCpuScalar(nbytes);CHKERRQ(ierr);
     // for systems without async free this will synchronize implicitly
     cerr = cupmFreeAsync(d_results,stream);CHKERRCUPM(cerr);

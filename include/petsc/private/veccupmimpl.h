@@ -38,7 +38,8 @@ PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
 #  error "Vec_CUPM requires C++11"
 #endif
 
-#include <limits> // numeric_limits
+#include <limits>  // std::numeric_limits
+#include <cstring> // std::memset
 
 namespace Petsc
 {
@@ -81,15 +82,17 @@ public:
   {
     if (useit) {
       // all unused arguments are un-named, this saves having to add PETSC_UNUSED to them all
-      PetscTrMalloc  = [](size_t sz,PetscBool,int,const char*,const char*,void **ptr)
+      PetscTrMalloc  = [](size_t sz,PetscBool clear,int,const char*,const char*,void **ptr)
       {
         PetscFunctionBegin;
         CHKERRCUPM(cupmMallocHost(ptr,sz));
+        if (clear) std::memset(*ptr,0,sz);
         PetscFunctionReturn(0);
       };
       PetscTrFree    = [](void *ptr,int,const char*,const char*)
       {
         PetscFunctionBegin;
+        printf("freeing %p\n",ptr);
         CHKERRCUPM(cupmFreeHost(ptr));
         PetscFunctionReturn(0);
       };
@@ -317,6 +320,7 @@ public:
 
   PETSC_NODISCARD static auto UseCUPMHostAlloc(bool b)      PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc_<T>(b));
   PETSC_NODISCARD static auto UseCUPMHostAlloc(PetscBool b) PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc(static_cast<bool>(b)));
+  PETSC_NODISCARD static auto UseCUPMHostAlloc(Vec v)       PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc(v->pinned_memory == PETSC_TRUE));
 
   // need functions to create the vector arrays, otherwise usng them as an unnamed temporary
   // leads to most vexing parse
@@ -369,8 +373,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(Petsc
     {
       const auto useit = UseCUPMHostAlloc(nbytes > v->minimum_bytes_pinned_memory);
 
-      if (useit.value()) v->pinned_memory = PETSC_TRUE;
+      v->pinned_memory = static_cast<PetscBool>(useit.value());
       ierr = PetscMalloc1(n,&vimpl->array_allocated);CHKERRQ(ierr);
+      printf("%s cudaHostMalloc() for %p\n",useit.value() ? "used" : "did NOT use",vimpl->array_allocated);
     }
     ierr = PetscLogObjectMemory(PetscObjectCast(v),nbytes);CHKERRQ(ierr);
     vimpl->array = vimpl->array_allocated;
