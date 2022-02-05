@@ -91,7 +91,7 @@ static PetscErrorCode FillMatrixCPU(FEStruct *fe,Mat A)
   for (PetscInt e=0; e<fe->Ne; e++) {
     for (PetscInt vi=0; vi<3; vi++) {
       for (PetscInt vj=0; vj<3; vj++) {
-        s[3*vi+vj] = vi+vj;
+        s[3*vi+vj] = vi+2*vj;
       }
     }
     ierr = MatSetValues(A,3,fe->vertices + 3*e,3, fe->vertices + 3*e,s,ADD_VALUES);CHKERRQ(ierr);
@@ -104,7 +104,7 @@ static PetscErrorCode FillMatrixCPU(FEStruct *fe,Mat A)
 static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
 {
   PetscErrorCode ierr;
-  PetscReal      *v,*s;
+  PetscScalar    *v,*s;
 
   PetscFunctionBeginUser;
   /* simulation of CPU based finite assembly process with COO */
@@ -113,12 +113,34 @@ static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
     s = v + fe->coo[e]; /* point to location in COO of current element stiffness */
     for (PetscInt vi=0; vi<3; vi++) {
       for (PetscInt vj=0; vj<3; vj++) {
-        s[3*vi+vj] = vi+vj;
+        s[3*vi+vj] = vi+2*vj;
       }
     }
   }
   ierr = MatSetValuesCOO(A,v,ADD_VALUES);CHKERRQ(ierr);
   ierr = PetscFree(v);CHKERRQ(ierr);
+  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode FillMatrixCPUCOO3d(FEStruct *fe,Mat A)
+{
+  PetscErrorCode ierr;
+  PetscScalar    (*s)[3][3];
+
+  PetscFunctionBeginUser;
+  /* simulation of CPU based finite assembly process with COO */
+  ierr = PetscMalloc1(fe->Ne,&s);CHKERRQ(ierr);
+  for (PetscInt e=0; e<fe->Ne; e++) {
+    for (PetscInt vi=0; vi<3; vi++) {
+      for (PetscInt vj=0; vj<3; vj++) {
+        s[e][vi][vj] = vi+2*vj;
+      }
+    }
+  }
+  ierr = MatSetValuesCOO(A,(PetscScalar*)s,ADD_VALUES);CHKERRQ(ierr);
+  ierr = PetscFree(s);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -144,6 +166,10 @@ int main(int argc, char **args)
 
   ierr = MatZeroEntries(A);CHKERRQ(ierr);
   ierr = FillMatrixCPUCOO(&fe,A);CHKERRQ(ierr);
+  ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+
+  ierr = MatZeroEntries(A);CHKERRQ(ierr);
+  ierr = FillMatrixCPUCOO3d(&fe,A);CHKERRQ(ierr);
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATAIJKOKKOS,&is_kokkos);CHKERRQ(ierr);

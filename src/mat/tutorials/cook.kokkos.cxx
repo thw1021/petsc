@@ -22,7 +22,7 @@ PETSC_EXTERN PetscErrorCode FillMatrixKokkosCOO(FEStruct *fe,Mat A)
       PetscScalar *s = &v[3*3*i];
       for (PetscInt vi=0; vi<3; vi++) {
         for (PetscInt vj=0; vj<3; vj++) {
-          s[vi*3+vj] = vi+vj;
+          s[vi*3+vj] = vi+2*vj;
         }
       }
     });
