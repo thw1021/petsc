@@ -2,9 +2,7 @@
 #include <petscmat.h>
 #include "Kokkos_Core_fwd.hpp"
 #include "coo.h"
-#include "petscdevicetypes.h"
-#include "petscerror.h"
-#include "petscsys.h"
+#include <petscdevicetypes.h>
 
 PETSC_EXTERN PetscErrorCode FillMatrixKokkosCOO(FEStruct *fe,Mat A)
 {
@@ -14,8 +12,10 @@ PETSC_EXTERN PetscErrorCode FillMatrixKokkosCOO(FEStruct *fe,Mat A)
   PetscMemType   mem_type;
 
   PetscFunctionBeginUser;
-  /* simulation of GPU based finite assembly process with COO */
+  // Simulation of GPU based finite assembly process with COO
+  // Uses a vector to provide the needed buffer space for convenience since it's memory will live naturally on the device; one could also allocate the memory explicitly
   ierr = VecCreateSeqKokkos(PETSC_COMM_SELF, 3*3*fe->Ne, &values);CHKERRQ(ierr);
+  // Could use VecGetKokkosView() instead of VecGetArrayAndMemType()
   ierr = VecGetArrayAndMemType(values, &v, &mem_type);CHKERRQ(ierr);
   if (!PetscMemTypeDevice(mem_type)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Expected device pointer but got MemType %d",(int)mem_type);
   Kokkos::parallel_for("AssembleElementMatrices", fe->Ne, KOKKOS_LAMBDA (PetscInt i) {
