@@ -512,8 +512,8 @@ static PetscErrorCode PCDestroy_HYPRE(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCHYPRESetPoissonMatrix_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGetInterpolations_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCGetCoarseOperators_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductSetAlgorithm_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinMatProductGetAlgorithm_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinSetMatProductAlgorithm_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCMGGalerkinGetMatProductAlgorithm_C",NULL);CHKERRQ(ierr);
 
   PetscFunctionReturn(0);
 }
