@@ -70,7 +70,7 @@ typedef size_t PetscSizeT;
     Notes:
     This is equivalent to ptrdiff_t, but defined for consistency with Fortran, which lacks a native equivalent of ptrdiff_t.
 
-    Use PetscCount_FMT for printing.
+    Use PetscCount_FMT to format with PetscPrintf(), printf(), and related functions.
 
 .seealso: PetscInt, PetscInt64, PetscSizeT
 
