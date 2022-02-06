@@ -649,15 +649,6 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatrixNfDestroy(void *ptr)
-{
-  PetscInt *nf = (PetscInt *)ptr;
-  PetscErrorCode  ierr;
-  PetscFunctionBegin;
-  ierr = PetscFree(nf);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
 int main(int argc, char **argv)
 {
   DM             pack;
@@ -676,7 +667,6 @@ int main(int argc, char **argv)
 #if defined(PETSC_HAVE_THREADSAFETY)
   double         starttime, endtime;
 #endif
-  PetscContainer container;
   ierr = PetscInitialize(&argc, &argv, NULL,help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD, &rank);CHKERRMPI(ierr);
   if (rank) { /* turn off output stuff for duplicate runs */
@@ -697,7 +687,7 @@ int main(int argc, char **argv)
   ierr = PetscMalloc(sizeof(*XsubArray)*nDMs, &XsubArray);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)X, "f");CHKERRQ(ierr);
-  ierr = LandauCreateMassMatrix(pack, NULL);CHKERRQ(ierr);
+  //ierr = LandauCreateMassMatrix(pack, NULL);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(pack, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(pack);CHKERRQ(ierr);
   /* context */
@@ -725,16 +715,6 @@ int main(int argc, char **argv)
   ierr = TSSetApplicationContext(ts, ctx);CHKERRQ(ierr);
   ierr = TSMonitorSet(ts,Monitor,ctx,NULL);CHKERRQ(ierr);
   ierr = TSSetPreStep(ts,PreStep);CHKERRQ(ierr);
-  {
-    PetscInt *pNf;
-    ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
-    ierr = PetscMalloc(sizeof(*pNf), &pNf);CHKERRQ(ierr);
-    *pNf = ctx->batch_sz + 100000*ctx->numConcurrency;
-    ierr = PetscContainerSetPointer(container, (void *)pNf);CHKERRQ(ierr);
-    ierr = PetscContainerSetUserDestroy(container, MatrixNfDestroy);CHKERRQ(ierr);
-    ierr = PetscObjectCompose((PetscObject)ctx->J, "batch size", (PetscObject) container);CHKERRQ(ierr);
-    ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
-  }
   rectx->Ez_initial = ctx->Ez;       /* cache for induction caclulation - applied E field */
   if (1) { /* warm up an test just LandauIJacobian */
     Vec           vec;
@@ -782,7 +762,6 @@ int main(int argc, char **argv)
   ierr = TSDestroy(&ts);CHKERRQ(ierr);
   ierr = VecDestroy(&X);CHKERRQ(ierr);
   ierr = PetscFree(rectx);CHKERRQ(ierr);
-  ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
 }

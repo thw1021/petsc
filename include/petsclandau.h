@@ -130,6 +130,15 @@ typedef struct {
   PetscInt       num_grids;
   PetscInt       species_offset[LANDAU_MAX_GRIDS+1]; // for each grid, but same for all batched vertices
   PetscInt       mat_offset[LANDAU_MAX_GRIDS+1]; // for each grid, but same for all batched vertices
+  // batching
+  VecScatter     plex_batch;
+  Vec            work_vec;
+  IS             batch_is;
+  IS             batch_is_inv[LANDAU_MAX_GRIDS];
+  PetscErrorCode (*seqaij_mult)(Mat,Vec,Vec);
+  PetscErrorCode (*seqaij_solve)(Mat,Vec,Vec);
+  PetscErrorCode (*seqaij_getdiagonal)(Mat,Vec);
+  //
   /* cache */
   Mat              J;
   Mat              M;
@@ -139,7 +148,6 @@ typedef struct {
   /* computing */
   LandauDeviceType deviceType;
   PetscInt         subThreadBlockSize;
-  PetscInt         numConcurrency; /* number of SMs in Cuda to use */
   DM               pack;
   DM               plex[LANDAU_MAX_GRIDS];
   LandauStaticData SData_d; /* static geometric data on device */
