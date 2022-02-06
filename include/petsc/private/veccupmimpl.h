@@ -86,6 +86,7 @@ public:
       {
         PetscFunctionBegin;
         CHKERRCUPM(cupmMallocHost(ptr,sz));
+        printf("%s allocated %p\n",__func__,*ptr);
         if (clear) std::memset(*ptr,0,sz);
         PetscFunctionReturn(0);
       };
@@ -365,7 +366,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(Petsc
     ierr = PetscNewLog(PetscObjectCast(v),&vimpl);CHKERRQ(ierr);
     v->data = vimpl;
   }
-  if (!vimpl->array) {
+  if (!vimpl->array_allocated) {
     const auto n      = v->map->n;
     const auto nbytes = n*sizeof(*vimpl->array_allocated);
 
@@ -375,7 +376,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(Petsc
 
       v->pinned_memory = static_cast<PetscBool>(useit.value());
       ierr = PetscMalloc1(n,&vimpl->array_allocated);CHKERRQ(ierr);
-      printf("%s cudaHostMalloc() for %p\n",useit.value() ? "used" : "did NOT use",vimpl->array_allocated);
     }
     ierr = PetscLogObjectMemory(PetscObjectCast(v),nbytes);CHKERRQ(ierr);
     vimpl->array = vimpl->array_allocated;
@@ -636,6 +636,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase_(Vec v)
         cupmError_t  cerr;
 
         ierr = GetHandles_(&stream);CHKERRQ(ierr);
+        printf("%s freeing %p\n",__func__,vcu->device_array);
         cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
       }
     case PETSC_USE_POINTER:
