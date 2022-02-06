@@ -301,7 +301,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
     if (const auto vimpl = VecIMPLCast(v)) {
       const auto useit = UseCUPMHostAlloc(v);
 
-      printf("%s use cudaFreeHost() for %p\n",useit.value() ? "will" : "will NOT",vimpl->array_allocated);
+      printf("%s use cudaFreeHost() for %p (%p)\n",useit.value() ? "will" : "will NOT",vimpl->array_allocated,vimpl->array);
       ierr = PetscFree(vimpl->array_allocated);CHKERRQ(ierr);
     }
     // unless allocated by us, default to false
@@ -411,6 +411,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, con
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+  printf("--------- %s placing %p\n",__func__,a);
   if (PetscMemTypeHost(mtype)) {
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
     ierr = VecPlaceArray_Seq(v,a);CHKERRQ(ierr);
@@ -437,6 +438,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  printf("--------- %s replacing %p\n",__func__,a);
   if (PetscMemTypeHost(mtype)) {
     const auto vseq = VecIMPLCast(v);
 
@@ -448,7 +450,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
       ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
     }
     if (vseq->array_allocated) {
-      const auto useit = UseCUPMHostAlloc(v->pinned_memory);
+      const auto useit = UseCUPMHostAlloc(v);
       ierr = PetscFree(vseq->array_allocated);CHKERRQ(ierr);
     }
     vseq->array_allocated = vseq->array = PetscRemoveConstCast(a);
@@ -493,25 +495,24 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUPM(),&wisseqcupm);CHKERRQ(ierr);
   if (wisseqcupm) {
-    if (const auto vseq = VecIMPLCast(w)) {
-      if (vseq->array_allocated) {
-        const auto useit = UseCUPMHostAlloc(w->pinned_memory);
+    if (const auto wseq = VecIMPLCast(w)) {
+      if (wseq->array_allocated) {
+        const auto useit = UseCUPMHostAlloc(w);
 
-        ierr = PetscFree(vseq->array_allocated);CHKERRQ(ierr);
-        if (useit.value()) w->pinned_memory = PETSC_FALSE;
+        ierr = PetscFree(wseq->array_allocated);CHKERRQ(ierr);
+        w->pinned_memory = PETSC_FALSE;
       }
-      vseq->array         = nullptr;
-      vseq->unplacedarray = nullptr;
+      wseq->array = wseq->unplacedarray = nullptr;
     }
-    if (const auto vcu = VecCUPMCast(w)) {
-      if (vcu->device_array) {
+    if (const auto wcu = VecCUPMCast(w)) {
+      if (auto device_array = wcu->device_array) {
         cupmStream_t stream;
         cupmError_t  cerr;
 
         ierr = GetHandles_(&stream);CHKERRQ(ierr);
-        cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
+        cerr = cupmFreeAsync(device_array,stream);CHKERRCUPM(cerr);
       }
-      ierr = PetscFree(w->spptr /* vcu */);CHKERRQ(ierr);
+      ierr = PetscFree(w->spptr /* wcu */);CHKERRQ(ierr);
     }
   }
   if (v->petscnative && wisseqcupm) {
@@ -788,7 +789,7 @@ namespace kernels
 
 PETSC_HOSTDEVICE_DECL static PetscInt EntriesPerGroup(PetscInt size)
 {
-  const auto group_entries = (size-1)/(MDOT_WORKGROUP_SIZE+1);
+  const auto group_entries = (size-1)/gridDim.x+1;
   // for very small vectors, a group should still do some work
   return group_entries ? group_entries : 1;
 }
@@ -796,7 +797,7 @@ PETSC_HOSTDEVICE_DECL static PetscInt EntriesPerGroup(PetscInt size)
 template <int N>
 PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, const PetscScalar *PETSC_RESTRICT y[N], PetscInt size, PetscScalar *PETSC_RESTRICT results)
 {
-  static_assert(N > 0,"");
+  static_assert(N > 1,"");
   PETSC_SHAREDMEM_DECL PetscScalar shmem[N*MDOT_WORKGROUP_SIZE];
   const auto tx       = threadIdx.x,bx = blockIdx.x;
   const auto bdx      = blockDim.x,gdx = gridDim.x;
@@ -829,7 +830,8 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
     __syncthreads();
     if (tx < stride) {
 #pragma unroll
-      for (auto i = tx; i < N; i += MDOT_WORKGROUP_SIZE) shmem[i] += shmem[i+stride];
+      //for (auto i = tx; i < N; i += MDOT_WORKGROUP_SIZE) shmem[i] += shmem[i+stride];
+      for (auto i = 0; i < N; ++i) shmem[tx+i*MDOT_WORKGROUP_SIZE] += shmem[tx+stride+i*MDOT_WORKGROUP_SIZE];
     }
   }
   // bottom N threads per block write to global memory
@@ -845,7 +847,6 @@ template <Device::CUPM::DeviceType T>
 template <int N>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(PetscDeviceContext dctx, cupmStream_t stream, const PetscScalar *xarr, const Vec yin[], PetscInt size, PetscScalar *results, PetscInt *yidx))
 {
-  static_assert(N > 0,"");
   const auto   yidxt = *yidx;
   const auto   yint  = yin+yidxt;
   PetscScalar **device_y;
@@ -875,11 +876,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
+  cupmBlasHandle_t    handle;
   cupmError_t         cerr;
   PetscErrorCode      ierr;
 
   PetscFunctionBegin;
-  ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
+  ierr = GetHandles_(&dctx,&handle,&stream);CHKERRQ(ierr);
   // allocate scratchpad memory for the results of individual work groups
   cerr = cupmMallocAsync(&d_results,nbytes,stream);CHKERRCUPM(cerr);
   {
@@ -903,8 +905,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
       case 2:
         ierr = mdot_kernel_dispatch_<2>(dctx,stream,xptr,yin,n,d_results,&yidx);CHKERRQ(ierr);
         break;
-      case 1:
-        ierr = mdot_kernel_dispatch_<1>(dctx,stream,xptr,yin,n,d_results,&yidx);CHKERRQ(ierr);
+      case 1: {
+        const auto bn   = static_cast<cupmBlasInt_t>(n);
+        const auto yptr = DeviceArrayRead(dctx,yin[yidx]);
+
+        auto cberr = cupmBlasXdot(handle,bn,yptr,1,xptr,1,cupmScalarCast(z+yidx));CHKERRCUPMBLAS(cberr);
+        ++yidx;
+      }
       case 0:
         break;
       default: // 8 or more
