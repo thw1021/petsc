@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'cd09022' # Sep 30 2021, VMM handling
+    self.gitcommit              = '4b9250a' # Feb 3 2022
     self.download               = ['git://https://github.com/ecrc/h2opus']
     self.precisions             = ['single','double']
     self.skippackagewithoptions = 1
