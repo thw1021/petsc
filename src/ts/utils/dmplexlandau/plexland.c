@@ -1882,7 +1882,7 @@ static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, Vec *Xsub,
 {
   PetscErrorCode ierr;
   PetscInt       *idxs;
-  Mat            subM[LANDAU_MAX_GRIDS];;
+  Mat            subM[LANDAU_MAX_GRIDS];
 
   PetscFunctionBegin;
   if (!ctx->gpu_assembly) { /* we need GPU object with GPU assembly */
