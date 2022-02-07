@@ -3373,6 +3373,16 @@ static PetscErrorCode MatDuplicate_SeqAIJCUSPARSE(Mat A,MatDuplicateOption cpval
   PetscFunctionReturn(0);
 }
 
+template <typename T>
+__global__ void touch_mem(const T *ptr, PetscInt size, T *sumg)
+{
+  if (threadIdx.x == 0) {
+    T sum = 0;
+    for (PetscInt i = 0; i < size; ++i) sum += ptr[i];
+    *sumg = sum;
+  }
+}
+
 static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
   PetscErrorCode     ierr;
@@ -3437,10 +3447,33 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
     cerr = cudaFree(buffer);CHKERRCUDA(cerr);
 #else
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+    CHKERRCUDA(cudaDeviceSynchronize());
+#define PRINT_VAR(var) printf(PetscStringize(var) " = %d\n",var)
+#define TOUCH_MEM(var,size) do {                                        \
+      std::decay_t<decltype(*var)> *tmp;                                \
+      static_assert(std::is_pointer<decltype(tmp)>::value,"");          \
+      PRINT_VAR(size);                                                  \
+      CHKERRCUDA(cudaMalloc(&tmp,sizeof(*tmp)));                        \
+      CHKERRCUDA(cudaDeviceSynchronize());                              \
+      touch_mem<<<1,1>>>(var,size,tmp);                                 \
+      CHKERRCUDA(cudaDeviceSynchronize());                              \
+      CHKERRCUDA(cudaFree(tmp));                                        \
+      puts(PetscStringize(var) " OK");                                  \
+    } while (0)
+#define TOUCH_VAR(var) TOUCH_MEM((var)->data().get(),(var)->size())
+
+    TOUCH_MEM(ax,x->nz);
+    TOUCH_VAR(csrx->row_offsets);
+    TOUCH_VAR(csrx->column_indices);
+
+    TOUCH_MEM(ay,y->nz);
+    TOUCH_VAR(csry->row_offsets);
+    TOUCH_VAR(csry->column_indices);
     stat = cusparse_csr_spgeam(cy->handle,Y->rmap->n,Y->cmap->n,
                                &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
                                &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
                                   cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get());CHKERRCUSPARSE(stat);
+    CHKERRCUDA(cudaDeviceSynchronize());
     ierr = PetscLogGpuFlops(x->nz + y->nz);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
 #endif
