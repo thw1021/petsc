@@ -39,6 +39,7 @@ if __name__ == '__main__':
     '--CXXOPTFLAGS=-g -O2',
     '--CXXPPFLAGS=-std=c++17',
     '--SYCLOPTFLAGS=-g -O2',
+    '--SYCLPPFLAGS=-Wno-tautological-constant-compare',
     # use prebuilt Kokkos and KK as it takes a long time to build them from source
     '--with-kokkos-dir=/nfs/gce/projects/petsc/soft/kokkos',
     '--with-kokkos-kernels-dir=/nfs/gce/projects/petsc/soft/kokkos',
