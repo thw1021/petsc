@@ -1849,7 +1849,6 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim,  LandauCtx *ctx)
   PetscFunctionReturn(0);
 }
 
-
 /* < v, u > */
 static void g0_1(PetscInt dim, PetscInt Nf, PetscInt NfAux,
                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
