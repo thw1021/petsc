@@ -86,14 +86,12 @@ public:
       {
         PetscFunctionBegin;
         CHKERRCUPM(cupmMallocHost(ptr,sz));
-        printf("%s allocated %p\n",__func__,*ptr);
         if (clear) std::memset(*ptr,0,sz);
         PetscFunctionReturn(0);
       };
       PetscTrFree    = [](void *ptr,int,const char*,const char*)
       {
         PetscFunctionBegin;
-        printf("freeing %p\n",ptr);
         CHKERRCUPM(cupmFreeHost(ptr));
         PetscFunctionReturn(0);
       };
@@ -491,11 +489,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (access == MemoryAccess::WRITE) {
-    ierr = (hostmem ? HostAllocateCheck_(dctx,v) : DeviceAllocateCheck_(dctx,v));CHKERRQ(ierr);
+    ierr = (hostmem ? HostAllocateCheck_ : DeviceAllocateCheck_)(dctx,v);CHKERRQ(ierr);
   } else {
     // READ or READ_WRITE
     ierr = (hostmem ? CopyToHost_ : CopyToDevice_)(dctx,v);CHKERRQ(ierr);
   }
+  printf("%s %p before %d\n",__func__,v,v->offloadmask);
   if (access != MemoryAccess::READ) {
     // not read-only so immediately assume modified
     // REVIEW ME: this should probably also call PetscObjectStateInrease() since we assume it
@@ -515,6 +514,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  printf("%s %p after %d\n",__func__,v,v->offloadmask);
   if (access != MemoryAccess::READ) {
     // WRITE or READ_WRITE
     auto ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
@@ -529,6 +529,7 @@ template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async(Vec v, PetscScalar **a, PetscMemType *mtype))
 {
   PetscFunctionBegin;
+  printf("%s %p before %d\n",__func__,v,v->offloadmask);
   if (v->offloadmask & PETSC_OFFLOAD_GPU) {
     const auto vcu = VecCUPMCast(v);
     // return device pointer when device has up-to-date data, such as when offloadmask is
@@ -536,13 +537,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async
     *a = vcu->device_array;
     // change the mask once GPU gets write access, don't wait until restore array
     v->offloadmask = PETSC_OFFLOAD_GPU;
-    if (mtype) *mtype = vcu->nvshmem ? PETSC_MEMTYPE_NVSHMEM : cupmDeviceTypeToPetscMemType();
+    if (mtype) *mtype = (PetscDefined(HAVE_NVSHMEM) && vcu->nvshmem) ? PETSC_MEMTYPE_NVSHMEM : cupmDeviceTypeToPetscMemType();
   } else {
     PetscDeviceContext dctx;
     PetscErrorCode     ierr;
 
     ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
+    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
     *a   = *static_cast<decltype(a)>(v->data); // REVIEW ME: what kind of deep magic is this?
     if (mtype) *mtype = PETSC_MEMTYPE_HOST;
   }
@@ -555,6 +556,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearrayandmemtype_a
 {
   PetscFunctionBegin;
   if (a) *a      = nullptr;
+  printf("%s %p after %d\n",__func__,v,v->offloadmask);
   v->offloadmask = (v->offloadmask & PETSC_OFFLOAD_GPU) ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
   PetscFunctionReturn(0);
 }
@@ -636,7 +638,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase_(Vec v)
         cupmError_t  cerr;
 
         ierr = GetHandles_(&stream);CHKERRQ(ierr);
-        printf("%s freeing %p\n",__func__,vcu->device_array);
         cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
       }
     case PETSC_USE_POINTER:
@@ -645,6 +646,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase_(Vec v)
     ierr = PetscFree(v->spptr);CHKERRQ(ierr);
   }
   ierr = PetscObjectSAWsViewOff(v);CHKERRQ(ierr);
+  if (const auto vimpl = VecIMPLCast(v)) {
+    const auto useit = UseCUPMHostAlloc(v);
+
+    // do this ourselves since we may want to use the cupm functions
+    ierr = PetscFree(vimpl->array_allocated);CHKERRQ(ierr);
+  }
+  v->pinned_memory = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
 
@@ -664,7 +672,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase_(Vec 
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
   ierr = Create_CUPMBase_(PetscObjectComm(vobj),bs,map->n,map->N,y,call_set_type,map);CHKERRQ(ierr);
   // Derived class can set up the remainder of the data structures here
-  ierr = DerivedCreateIMPLCUPM_Async(v);CHKERRQ(ierr);
+  ierr = DerivedCreateIMPLCUPM_Async(*y);CHKERRQ(ierr);
   // in case the user has done some VecSetOps() tomfoolery
   ierr = PetscMemcpy((*y)->ops,v->ops,sizeof(*v->ops));CHKERRQ(ierr);
   {
