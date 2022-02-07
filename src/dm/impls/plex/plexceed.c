@@ -36,6 +36,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
   PetscInt    *restr_indices;
   const PetscInt *iter_indices;
   IS           iter_is;
+  PetscBool    is_simplex;
 
   ierr = DMGetLocalSection(dm, &section);CHKERRQ(ierr);
   ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
@@ -101,7 +102,8 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
   ierr = PetscMalloc1(restr_size, &restr_indices);CHKERRQ(ierr);
   PetscInt cell_offset = 0;
 
-  PetscInt P = (PetscInt) pow(*cell_size, 1.0 / (dim - height));
+  ierr = DMPlexIsSimplex(dm, &is_simplex);CHKERRQ(ierr);
+  PetscInt P = is_simplex ? *cell_size : (PetscInt) round(pow(*cell_size, 1.0 / (dim - height)));
   for (PetscInt p = 0; p < *num_cells; p++) {
     PetscBool flip = PETSC_FALSE;
     PetscInt c = iter_indices[p];
