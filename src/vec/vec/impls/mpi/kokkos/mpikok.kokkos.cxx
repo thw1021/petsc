@@ -193,7 +193,7 @@ PetscErrorCode VecDotNorm2_MPIKokkos(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecGetSubVector_MPIKokkos(Vec x,IS is,Vec *y)
+static PetscErrorCode VecGetSubVector_MPIKokkos(Vec x,IS is,Vec *y)
 {
   PetscErrorCode ierr;
 

@@ -894,7 +894,7 @@ PetscErrorCode VecRestoreArrayAndMemType_SeqKokkos(Vec v,PetscScalar** a)
 }
 
 /* Copy xin's sync state to y */
-PetscErrorCode VecCopySyncState_Kokkos_Private(Vec xin,Vec yout)
+static PetscErrorCode VecCopySyncState_Kokkos_Private(Vec xin,Vec yout)
 {
   Vec_Kokkos   *xkok = static_cast<Vec_Kokkos*>(xin->spptr);
   Vec_Kokkos   *ykok = static_cast<Vec_Kokkos*>(yout->spptr);
