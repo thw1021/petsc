@@ -318,7 +318,7 @@ int main(int argc,char **argv)
       nsize: 3
       args: -mat_type aijkokkos
       output_file: output/ex2_23.out
-      requires: !sycl kokkos_kernels
+      requires: kokkos_kernels
       filter: grep -v type | grep -v "MPI processes"
 
    test:
