@@ -147,10 +147,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::destroy_async(Vec v))
 
   PetscFunctionBegin;
   ierr = Destroy_CUPMBase_(v);CHKERRQ(ierr);
-  {
-    const auto useit = UseCUPMHostAlloc(v->pinned_memory);
-    ierr = VecDestroy_MPI(v);CHKERRQ(ierr);
-  }
+  ierr = VecDestroy_MPI(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -251,12 +248,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::mdot_async(Vec x, PetscInt 
   auto           stackwork = std::array<PetscScalar,128>{};
   // needed to silence warning: comparison between signed and unsigned integer expressions
   const auto     allocate  = stackwork.size() < static_cast<decltype(stackwork.size())>(nv);
-  auto           *work     = stackwork.data();
+  auto           work      = stackwork.data();
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (allocate) {ierr = PetscMalloc1(nv,&work);CHKERRQ(ierr);}
   ierr = VecSeq_T::mdot_async(x,nv,y,work);CHKERRQ(ierr);
+  {
+    PetscDeviceContext dctx;
+
+    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+  }
   ierr = MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x)));CHKERRMPI(ierr);
   if (allocate) {ierr = PetscFree(work);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
@@ -270,6 +273,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dotnorm2_async(Vec x, Vec y
 
   PetscFunctionBegin;
   ierr = VecSeq_T::dotnorm2_async(x,y,work,work+1);CHKERRQ(ierr);
+  {
+    PetscDeviceContext dctx;
+
+    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+  }
   ierr = MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x)));CHKERRMPI(ierr);
   *dp  = sum[0];
   *nm  = sum[1];
@@ -285,6 +294,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::minmax_async_(Vec x, PetscI
 
   PetscFunctionBegin;
   ierr = seqfn(x,idx,&work);CHKERRQ(ierr);
+  {
+    PetscDeviceContext dctx;
+
+    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+  }
   if (PetscDefined(HAVE_MPIUNI)) {
     *z = work;
   } else {

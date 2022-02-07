@@ -294,25 +294,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
 
   PetscFunctionBegin;
   ierr = Destroy_CUPMBase_(v);CHKERRQ(ierr);
-  {
-#if defined(PETSC_USE_LOG)
-    ierr = PetscLogObjectState(PetscObjectCast(v),"Length=%" PetscInt_FMT,v->map->n);CHKERRQ(ierr);
-#endif
-    if (const auto vimpl = VecIMPLCast(v)) {
-      const auto useit = UseCUPMHostAlloc(v);
-
-      printf("%s use cudaFreeHost() for %p (%p)\n",useit.value() ? "will" : "will NOT",vimpl->array_allocated,vimpl->array);
-      ierr = PetscFree(vimpl->array_allocated);CHKERRQ(ierr);
-    }
-    // unless allocated by us, default to false
-    v->pinned_memory = PETSC_FALSE;
-    // this is pretty much the same thing VecDestroy_Seq() does but we need to do it ourselves
-    // since we may want to free vimpl->array_allocated with cupmFreeHost(), but not
-    // v->data. call VecDestroy_Seq() after the fact anyways in case it does something more in
-    // v->the future
-    ierr = PetscFree(v->data);CHKERRQ(ierr);
-    ierr = VecDestroy_Seq(v);CHKERRQ(ierr);
-  }
+  ierr = VecDestroy_Seq(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -331,7 +313,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   v->ops->norm  = VecSetOp_CUPM(norm_local,VecNorm_Seq,norm_async);
   v->ops->tdot  = VecSetOp_CUPM(tdot_local,VecTDot_Seq,tdot_async);
   v->ops->mdot  = VecSetOp_CUPM(mdot_local,VecMDot_Seq,mdot_async);
-  v->ops->mtdot = VecSetOp_CUPM(mtdot_local,VecMTDot_Seq,nullptr);
+  v->ops->mtdot = v->ops->mtdot_local = VecMTDot_Seq;
   VecSetOp_CUPM(scale,VecScale_Seq,scale_async);
   VecSetOp_CUPM(copy,VecCopy_Seq,copy_async);
   VecSetOp_CUPM(set,VecSet_Seq,set_async);
@@ -411,7 +393,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, con
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-  printf("--------- %s placing %p\n",__func__,a);
   if (PetscMemTypeHost(mtype)) {
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
     ierr = VecPlaceArray_Seq(v,a);CHKERRQ(ierr);
@@ -438,7 +419,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  printf("--------- %s replacing %p\n",__func__,a);
   if (PetscMemTypeHost(mtype)) {
     const auto vseq = VecIMPLCast(v);
 
@@ -854,12 +834,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(Petsc
   cupmError_t  cerr;
 
   PetscFunctionBegin;
-  for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yint[i]);
   // REVIEW ME: this is really, really stupid. We need to allocate one of these tiny array of
   // pointers dynamically for each of these calls as it is possible that multiple streams can
   // be calling this function simultaneously, there must be a better system.
   cerr = cupmMallocAsync(&device_y,N*sizeof(*device_y),stream);CHKERRCUPM(cerr);
-  cerr = cupmMemcpyAsync(device_y,host_y,N*sizeof(*host_y),cupmMemcpyHostToDevice,stream);CHKERRCUPM(cerr);
+  for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yint[i]);
+  cerr = cupmMemcpyAsync(device_y,host_y,N*sizeof(*device_y),cupmMemcpyHostToDevice,stream);CHKERRCUPM(cerr);
   cerr = cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xarr,device_y,size,results+(yidxt*MDOT_WORKGROUP_NUM));CHKERRCUPM(cerr);
   *yidx += N;
   cerr = cupmFreeAsync(device_y,stream);CHKERRCUPM(cerr);
@@ -992,9 +972,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   // z will always need to be zeroed first, either for a quick return or for summing later on
   ierr = PetscArrayzero(z,nv);CHKERRQ(ierr);
   // nothing to do if x has no entries
-  if (!n) PetscFunctionReturn(0);
-  ierr = mdot_async_(complex_tag(),xin,nv,yin,z);CHKERRQ(ierr);
-  ierr = PetscLogGpuFlops(PetscMax(nv*(2.0*n-1),0.0));CHKERRQ(ierr);
+  if (n) {
+    ierr = mdot_async_(complex_tag(),xin,nv,yin,z);CHKERRQ(ierr);
+    ierr = PetscLogGpuFlops(PetscMax(nv*(2.0*n-1),0.0));CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 

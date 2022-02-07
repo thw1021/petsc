@@ -22,17 +22,21 @@ PetscErrorCode  PetscRandomGetValuesReal_CURAND(PetscRandom r, PetscInt n, Petsc
 {
   curandStatus_t     cerr;
   PetscRandom_CURAND *curand = (PetscRandom_CURAND*)r->data;
+  PetscDeviceContext dctx;
+  cudaStream_t       stream;
   size_t             nn = n < 0 ? (size_t)(-2*n) : n; /* handle complex case */
+  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
+  ierr = PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx,PETSC_DEVICE_CUDA);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,&stream);CHKERRQ(ierr);
+  cerr = curandSetStream(curand->gen,stream);CHKERRCURAND(cerr);
 #if defined(PETSC_USE_REAL_SINGLE)
   cerr = curandGenerateUniform(curand->gen,val,nn);CHKERRCURAND(cerr);
 #else
   cerr = curandGenerateUniformDouble(curand->gen,val,nn);CHKERRCURAND(cerr);
 #endif
-  if (r->iset) {
-    PetscErrorCode ierr = PetscRandomCurandScale_Private(r,nn,val,(PetscBool)(n<0));CHKERRQ(ierr);
-  }
+  if (r->iset) {ierr = PetscRandomCurandScale_Private(r,nn,val,(PetscBool)(n<0));CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
