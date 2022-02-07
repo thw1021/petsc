@@ -460,21 +460,24 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
     ierr = PetscMalloc1(dnnz,&djj);CHKERRQ(ierr);
     ierr = PetscMalloc1(dnnz,&da);CHKERRQ(ierr);
   } else if (reuse == MAT_REUSE_MATRIX) {
-    PetscInt  nr;
+    PetscInt  nr,nz;
     PetscBool done;
     if (size > 1) {
       Mat_MPIAIJ *b = (Mat_MPIAIJ*)((*B)->data);
 
-      ierr = MatGetRowIJ(b->A,0,PETSC_FALSE,PETSC_FALSE,&nr,(const PetscInt**)&dii,(const PetscInt**)&djj,&done);CHKERRQ(ierr);
+      ierr = MatGetRowIJ(b->A,0,PETSC_FALSE,PETSC_FALSE,&nr,(const PetscInt**)&dii,NULL,&done);CHKERRQ(ierr);
       if (nr != m) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot reuse mat: invalid number of local rows in diag part! %" PetscInt_FMT " != %" PetscInt_FMT,nr,m);
       if (dii[nr] < dnnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot reuse mat: invalid number of nonzeros in diag part! reuse %" PetscInt_FMT " hypre %" PetscInt_FMT,dii[nr],dnnz);
       ierr = MatSeqAIJGetArray(b->A,&da);CHKERRQ(ierr);
+      ierr = MatSeqAIJGetMaxRowNonzeros(b->A,&nz);CHKERRQ(ierr);
     } else {
-      ierr = MatGetRowIJ(*B,0,PETSC_FALSE,PETSC_FALSE,&nr,(const PetscInt**)&dii,(const PetscInt**)&djj,&done);CHKERRQ(ierr);
+      ierr = MatGetRowIJ(*B,0,PETSC_FALSE,PETSC_FALSE,&nr,(const PetscInt**)&dii,NULL,&done);CHKERRQ(ierr);
       if (nr != m) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot reuse mat: invalid number of local rows! %" PetscInt_FMT " != %" PetscInt_FMT,nr,m);
       if (dii[nr] < dnnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot reuse mat: invalid number of nonzeros! reuse %" PetscInt_FMT " hypre %" PetscInt_FMT,dii[nr],dnnz);
       ierr = MatSeqAIJGetArray(*B,&da);CHKERRQ(ierr);
+      ierr = MatSeqAIJGetMaxRowNonzeros(*B,&nz);CHKERRQ(ierr);
     }
+    ierr = PetscMalloc1(nz,&djj);CHKERRQ(ierr);
   } else { /* MAT_INPLACE_MATRIX */
     if (!sameint) {
       ierr = PetscMalloc1(m+1,&dii);CHKERRQ(ierr);
@@ -486,21 +489,35 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
     da = (PetscScalar*)hypre_CSRMatrixData(hdiag);
   }
 
-  if (!sameint) {
-    for (i=0;i<m+1;i++)  dii[i] = (PetscInt)(hypre_CSRMatrixI(hdiag)[i]);
-    for (i=0;i<dnnz;i++) djj[i] = (PetscInt)(hypre_CSRMatrixJ(hdiag)[i]);
-  } else {
-    ierr = PetscArraycpy(dii,hypre_CSRMatrixI(hdiag),m+1);CHKERRQ(ierr);
-    ierr = PetscArraycpy(djj,hypre_CSRMatrixJ(hdiag),dnnz);CHKERRQ(ierr);
-  }
   ierr = PetscArraycpy(da,hypre_CSRMatrixData(hdiag),dnnz);CHKERRQ(ierr);
-  iptr = djj;
   aptr = da;
-  for (i=0; i<m; i++) {
-    PetscInt nc = dii[i+1]-dii[i];
-    ierr = PetscSortIntWithScalarArray(nc,iptr,aptr);CHKERRQ(ierr);
-    iptr += nc;
-    aptr += nc;
+  if (reuse == MAT_INITIAL_MATRIX || reuse == MAT_INPLACE_MATRIX) {
+    if (!sameint) {
+      for (i=0;i<m+1;i++)  dii[i] = (PetscInt)(hypre_CSRMatrixI(hdiag)[i]);
+      for (i=0;i<dnnz;i++) djj[i] = (PetscInt)(hypre_CSRMatrixJ(hdiag)[i]);
+    } else {
+      ierr = PetscArraycpy(dii,hypre_CSRMatrixI(hdiag),m+1);CHKERRQ(ierr);
+      ierr = PetscArraycpy(djj,hypre_CSRMatrixJ(hdiag),dnnz);CHKERRQ(ierr);
+    }
+    iptr = djj;
+    for (i=0; i<m; i++) {
+      PetscInt nc = dii[i+1]-dii[i];
+      ierr = PetscSortIntWithScalarArray(nc,iptr,aptr);CHKERRQ(ierr);
+      iptr += nc;
+      aptr += nc;
+    }
+  } else if (reuse == MAT_REUSE_MATRIX) {
+    for (i=0; i<m; i++) {
+      PetscInt j,nc = dii[i+1]-dii[i];
+      if (!sameint) {
+        for (j=0;j<nc;j++) djj[j] = (PetscInt)(hypre_CSRMatrixJ(hdiag)[j+dii[i]]);
+      } else {
+        ierr = PetscArraycpy(djj,hypre_CSRMatrixJ(hdiag)+dii[i],nc);CHKERRQ(ierr);
+      }
+      ierr = PetscSortIntWithScalarArray(nc,djj,aptr);CHKERRQ(ierr);
+      aptr += nc;
+    }
+    ierr = PetscFree(djj);CHKERRQ(ierr);
   }
   if (size > 1) {
     HYPRE_BigInt *coffd;
@@ -512,13 +529,15 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       ierr = PetscMalloc1(onnz,&oa);CHKERRQ(ierr);
     } else if (reuse == MAT_REUSE_MATRIX) {
       Mat_MPIAIJ *b = (Mat_MPIAIJ*)((*B)->data);
-      PetscInt   nr,hr = hypre_CSRMatrixNumRows(hoffd);
+      PetscInt   nr,hr = hypre_CSRMatrixNumRows(hoffd),nz;
       PetscBool  done;
 
-      ierr = MatGetRowIJ(b->B,0,PETSC_FALSE,PETSC_FALSE,&nr,(const PetscInt**)&oii,(const PetscInt**)&ojj,&done);CHKERRQ(ierr);
+      ierr = MatGetRowIJ(b->B,0,PETSC_FALSE,PETSC_FALSE,&nr,(const PetscInt**)&oii,NULL,&done);CHKERRQ(ierr);
       if (nr != hr) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot reuse mat: invalid number of local rows in offdiag part! %" PetscInt_FMT " != %" PetscInt_FMT,nr,hr);
       if (oii[nr] < onnz) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot reuse mat: invalid number of nonzeros in offdiag part! reuse %" PetscInt_FMT " hypre %" PetscInt_FMT,oii[nr],onnz);
       ierr = MatSeqAIJGetArray(b->B,&oa);CHKERRQ(ierr);
+      ierr = MatSeqAIJGetMaxRowNonzeros(b->B,&nz);CHKERRQ(ierr);
+      ierr = PetscMalloc1(nz,&ojj);CHKERRQ(ierr);
     } else { /* MAT_INPLACE_MATRIX */
       if (!sameint) {
         ierr = PetscMalloc1(m+1,&oii);CHKERRQ(ierr);
@@ -529,56 +548,66 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       }
       oa = (PetscScalar*)hypre_CSRMatrixData(hoffd);
     }
-    if (!sameint) {
-      for (i=0;i<m+1;i++) oii[i] = (PetscInt)(hypre_CSRMatrixI(hoffd)[i]);
-    } else {
-      ierr = PetscArraycpy(oii,hypre_CSRMatrixI(hoffd),m+1);CHKERRQ(ierr);
-    }
     offdj = hypre_CSRMatrixJ(hoffd);
     coffd = hypre_ParCSRMatrixColMapOffd(parcsr);
-    for (i=0; i<onnz; i++) ojj[i] = coffd[offdj[i]];
     ierr = PetscArraycpy(oa,hypre_CSRMatrixData(hoffd),onnz);CHKERRQ(ierr);
-    iptr = ojj;
     aptr = oa;
-    for (i=0; i<m; i++) {
-       PetscInt nc = oii[i+1]-oii[i];
-       ierr = PetscSortIntWithScalarArray(nc,iptr,aptr);CHKERRQ(ierr);
-       iptr += nc;
-       aptr += nc;
-    }
-    if (reuse == MAT_INITIAL_MATRIX) {
-      Mat_MPIAIJ *b;
-      Mat_SeqAIJ *d,*o;
-
-      ierr = MatCreateMPIAIJWithSplitArrays(comm,m,n,PETSC_DECIDE,PETSC_DECIDE,dii,djj,da,oii,ojj,oa,B);CHKERRQ(ierr);
-      /* hack MPIAIJ */
-      b          = (Mat_MPIAIJ*)((*B)->data);
-      d          = (Mat_SeqAIJ*)b->A->data;
-      o          = (Mat_SeqAIJ*)b->B->data;
-      d->free_a  = PETSC_TRUE;
-      d->free_ij = PETSC_TRUE;
-      o->free_a  = PETSC_TRUE;
-      o->free_ij = PETSC_TRUE;
-    } else if (reuse == MAT_INPLACE_MATRIX) {
-      Mat T;
-
-      ierr = MatCreateMPIAIJWithSplitArrays(comm,m,n,PETSC_DECIDE,PETSC_DECIDE,dii,djj,da,oii,ojj,oa,&T);CHKERRQ(ierr);
-      if (sameint) { /* ownership of CSR pointers is transferred to PETSc */
-        hypre_CSRMatrixI(hdiag) = NULL;
-        hypre_CSRMatrixJ(hdiag) = NULL;
-        hypre_CSRMatrixI(hoffd) = NULL;
-        hypre_CSRMatrixJ(hoffd) = NULL;
-      } else { /* Hack MPIAIJ -> free ij but not a */
-        Mat_MPIAIJ *b = (Mat_MPIAIJ*)(T->data);
-        Mat_SeqAIJ *d = (Mat_SeqAIJ*)(b->A->data);
-        Mat_SeqAIJ *o = (Mat_SeqAIJ*)(b->B->data);
-
-        d->free_ij = PETSC_TRUE;
-        o->free_ij = PETSC_TRUE;
+    if (reuse == MAT_INITIAL_MATRIX || reuse == MAT_INPLACE_MATRIX) {
+      if (!sameint) {
+        for (i=0;i<m+1;i++) oii[i] = (PetscInt)(hypre_CSRMatrixI(hoffd)[i]);
+      } else {
+        ierr = PetscArraycpy(oii,hypre_CSRMatrixI(hoffd),m+1);CHKERRQ(ierr);
       }
-      hypre_CSRMatrixData(hdiag) = NULL;
-      hypre_CSRMatrixData(hoffd) = NULL;
-      ierr = MatHeaderReplace(A,&T);CHKERRQ(ierr);
+      for (i=0; i<onnz; i++) ojj[i] = coffd[offdj[i]];
+      iptr = ojj;
+      for (i=0; i<m; i++) {
+         PetscInt nc = oii[i+1]-oii[i];
+         ierr = PetscSortIntWithScalarArray(nc,iptr,aptr);CHKERRQ(ierr);
+         iptr += nc;
+         aptr += nc;
+      }
+      if (reuse == MAT_INITIAL_MATRIX) {
+        Mat_MPIAIJ *b;
+        Mat_SeqAIJ *d,*o;
+
+        ierr = MatCreateMPIAIJWithSplitArrays(comm,m,n,PETSC_DECIDE,PETSC_DECIDE,dii,djj,da,oii,ojj,oa,B);CHKERRQ(ierr);
+        /* hack MPIAIJ */
+        b          = (Mat_MPIAIJ*)((*B)->data);
+        d          = (Mat_SeqAIJ*)b->A->data;
+        o          = (Mat_SeqAIJ*)b->B->data;
+        d->free_a  = PETSC_TRUE;
+        d->free_ij = PETSC_TRUE;
+        o->free_a  = PETSC_TRUE;
+        o->free_ij = PETSC_TRUE;
+      } else if (reuse == MAT_INPLACE_MATRIX) {
+        Mat T;
+
+        ierr = MatCreateMPIAIJWithSplitArrays(comm,m,n,PETSC_DECIDE,PETSC_DECIDE,dii,djj,da,oii,ojj,oa,&T);CHKERRQ(ierr);
+        if (sameint) { /* ownership of CSR pointers is transferred to PETSc */
+          hypre_CSRMatrixI(hdiag) = NULL;
+          hypre_CSRMatrixJ(hdiag) = NULL;
+          hypre_CSRMatrixI(hoffd) = NULL;
+          hypre_CSRMatrixJ(hoffd) = NULL;
+        } else { /* Hack MPIAIJ -> free ij but not a */
+          Mat_MPIAIJ *b = (Mat_MPIAIJ*)(T->data);
+          Mat_SeqAIJ *d = (Mat_SeqAIJ*)(b->A->data);
+          Mat_SeqAIJ *o = (Mat_SeqAIJ*)(b->B->data);
+
+          d->free_ij = PETSC_TRUE;
+          o->free_ij = PETSC_TRUE;
+        }
+        hypre_CSRMatrixData(hdiag) = NULL;
+        hypre_CSRMatrixData(hoffd) = NULL;
+        ierr = MatHeaderReplace(A,&T);CHKERRQ(ierr);
+      }
+    } else if (reuse == MAT_REUSE_MATRIX) {
+      for (i=0; i<m; i++) {
+        PetscInt j,nc = oii[i+1]-oii[i];
+        for (j=0;j<nc;j++) ojj[j] = coffd[offdj[j+oii[i]]];
+        ierr = PetscSortIntWithScalarArray(nc,ojj,aptr);CHKERRQ(ierr);
+        aptr += nc;
+      }
+      ierr = PetscFree(ojj);CHKERRQ(ierr);
     }
   } else {
     oii  = NULL;
