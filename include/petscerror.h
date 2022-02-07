@@ -97,8 +97,6 @@
    Notes:
     Once the error handler is called the calling function is then returned from with the given error code.
 
-    See SETERRQ(), SETERRQ(), SETERRQ() for versions that take arguments
-
     Experienced users can set the error handler with PetscPushErrorHandler().
 
    Fortran Notes:
