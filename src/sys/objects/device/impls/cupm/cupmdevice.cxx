@@ -370,9 +370,9 @@ PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexc
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"Cannot lazily initialize PetscDevice: %s error %d (%s) : %s",cupmName(),static_cast<PetscErrorCode>(cerr),cupmGetErrorName(cerr),cupmGetErrorString(cerr));
   }
   if (id == PETSC_DECIDE) id = defaultDevice_;
-  if (PetscUnlikelyDebug(static_cast<std::size_t>(id) >= devices_.size())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %" PetscInt_FMT,devices_.size(),id);
+  PetscAssertDebug(static_cast<std::size_t>(id) < devices_.size(),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only supports %zu number of devices but trying to get device with id %" PetscInt_FMT,devices_.size(),id);
   if (devices_[id]) {
-    if (PetscUnlikelyDebug(id != devices_[id]->id())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Entry %" PetscInt_FMT " contains device with mismatching id %d",id,devices_[id]->id());
+    PetscAssertDebug(id == devices_[id]->id(),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Entry %" PetscInt_FMT " contains device with mismatching id %d",id,devices_[id]->id());
   } else devices_[id] = DeviceInternal::makeDevice(id);
   ierr = devices_[id]->initialize();CHKERRQ(ierr);
   device->deviceId           = devices_[id]->id(); // technically id = _devices[id]->_id here
