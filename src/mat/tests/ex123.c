@@ -240,7 +240,7 @@ int main(int argc,char **args)
      output_file: output/ex123_4.out
 
    test:
-     requires: !sycl kokkos_kernels
+     requires: kokkos_kernels
      suffix: 3_kokkos
      nsize: 3
      filter: grep -v type
@@ -249,7 +249,7 @@ int main(int argc,char **args)
      output_file: output/ex123_3.out
 
    test:
-     requires: !sycl kokkos_kernels
+     requires: kokkos_kernels
      suffix: 4_kokkos
      nsize: 4
      filter: grep -v type
