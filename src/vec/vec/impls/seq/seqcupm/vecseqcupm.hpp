@@ -110,9 +110,9 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dotnorm2_async(Vec,Vec,PetscScalar*,PetscScalar*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode conjugate_async(Vec));
-  template <bool>
+  template <MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getlocalvector_async(Vec,Vec));
-  template <bool>
+  template <MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorelocalvector_async(Vec,Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode max_async(Vec,PetscInt*,PetscReal*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode min_async(Vec,PetscInt*,PetscReal*));
@@ -337,10 +337,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   VecSetOp_CUPM(placearray,VecPlaceArray_Seq,placearray_async<PETSC_MEMTYPE_HOST>);
   v->ops->replacearray = replacearray_async<PETSC_MEMTYPE_HOST>;
   VecSetOp_CUPM(resetarray,VecResetArray_Seq,resetarray_async<PETSC_MEMTYPE_HOST>);
-  VecSetOp_CUPM(getlocalvector,nullptr,&getlocalvector_async</*read = */false>);
-  VecSetOp_CUPM(getlocalvectorread,nullptr,&getlocalvector_async</*read = */true>);
-  VecSetOp_CUPM(restorelocalvector,nullptr,&restorelocalvector_async</*read = */false>);
-  VecSetOp_CUPM(restorelocalvectorread,nullptr,&restorelocalvector_async</*read = */true>);
+  VecSetOp_CUPM(getlocalvector,nullptr,&getlocalvector_async<MemoryAccess::READ_WRITE>);
+  VecSetOp_CUPM(getlocalvectorread,nullptr,&getlocalvector_async<MemoryAccess::READ>);
+  VecSetOp_CUPM(restorelocalvector,nullptr,&restorelocalvector_async<MemoryAccess::READ_WRITE>);
+  VecSetOp_CUPM(restorelocalvectorread,nullptr,&restorelocalvector_async<MemoryAccess::READ>);
   PetscFunctionReturn(0);
 }
 
@@ -465,7 +465,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
 
 // v->ops->getlocalvector or v->ops->getlocalvectorread
 template <Device::CUPM::DeviceType T>
-template <bool read>
+template <MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v, Vec w))
 {
   PetscErrorCode ierr;
@@ -504,7 +504,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
     ierr = PetscObjectStateIncrease(PetscObjectCast(w));CHKERRQ(ierr);
   } else {
     const auto arrayptr = &VecIMPLCast(w)->array;
-    if (read) {
+    if (access == MemoryAccess::READ) {
       ierr = VecGetArrayRead(v,const_cast<const PetscScalar**>(arrayptr));CHKERRQ(ierr);
     } else {
       ierr = VecGetArray(v,arrayptr);CHKERRQ(ierr);
@@ -522,7 +522,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
 
 // v->ops->restorelocalvector or v->ops->restorelocalvectorread
 template <Device::CUPM::DeviceType T>
-template <bool read>
+template <MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Vec v, Vec w))
 {
   PetscErrorCode ierr;
@@ -540,7 +540,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
     w->offloadmask   = PETSC_OFFLOAD_UNALLOCATED;
   } else {
     auto array = &VecIMPLCast(w)->array;
-    if (read) {
+    if (access == MemoryAccess::READ) {
       ierr = VecRestoreArrayRead(v,const_cast<const PetscScalar**>(array));CHKERRQ(ierr);
     } else {
       ierr = VecRestoreArray(v,array);CHKERRQ(ierr);
