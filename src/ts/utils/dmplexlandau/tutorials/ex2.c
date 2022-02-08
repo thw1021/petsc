@@ -783,5 +783,9 @@ int main(int argc, char **argv)
       suffix: cuda
       requires: cuda
       args: -dm_landau_device_type cuda -dm_mat_type aijcusparse -dm_vec_type cuda -mat_cusparse_use_cpu_solve
+    test:
+      suffix: kokkos_batch
+      requires: kokkos_kernels
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -pc_type jacobi -ksp_type gmres -ksp_rtol 1e-12 -dm_landau_jacobian_field_major_order
 
 TEST*/
