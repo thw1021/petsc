@@ -303,7 +303,9 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getarray_async(Vec,PetscScalar**));
   template <PetscMemType,MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearray_async(Vec,PetscScalar**));
+  template <MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getarrayandmemtype_async(Vec,PetscScalar**,PetscMemType*));
+  template <MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearrayandmemtype_async(Vec,PetscScalar**));
 
   // common ops shared between Seq and MPI
@@ -526,38 +528,28 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v
 
 // v->ops->getarrayandmemtype
 template <Device::CUPM::DeviceType T, typename D>
+template <MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async(Vec v, PetscScalar **a, PetscMemType *mtype))
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   printf("%s %p before %d\n",__func__,v,v->offloadmask);
-  if (v->offloadmask & PETSC_OFFLOAD_GPU) {
-    const auto vcu = VecCUPMCast(v);
-    // return device pointer when device has up-to-date data, such as when offloadmask is
-    // PETSC_OFFLOAD_BOTH
-    *a = vcu->device_array;
-    // change the mask once GPU gets write access, don't wait until restore array
-    v->offloadmask = PETSC_OFFLOAD_GPU;
-    if (mtype) *mtype = (PetscDefined(HAVE_NVSHMEM) && vcu->nvshmem) ? PETSC_MEMTYPE_NVSHMEM : cupmDeviceTypeToPetscMemType();
-  } else {
-    PetscDeviceContext dctx;
-    PetscErrorCode     ierr;
-
-    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    *a   = *static_cast<decltype(a)>(v->data); // REVIEW ME: what kind of deep magic is this?
-    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
-  }
+  ierr = getarray_async<PETSC_MEMTYPE_DEVICE,access>(v,a);CHKERRQ(ierr);
+  if (mtype) *mtype = (PetscDefined(HAVE_NVSHMEM) && VecCUPMCast(v)->nvshmem) ? PETSC_MEMTYPE_NVSHMEM : cupmDeviceTypeToPetscMemType();
   PetscFunctionReturn(0);
 }
 
 // v->ops->restorearrayandmemtype
 template <Device::CUPM::DeviceType T, typename D>
+template <MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearrayandmemtype_async(Vec v, PetscScalar **a))
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
-  if (a) *a      = nullptr;
+  ierr = restorearray_async<PETSC_MEMTYPE_DEVICE,access>(v,a);CHKERRQ(ierr);
   printf("%s %p after %d\n",__func__,v,v->offloadmask);
-  v->offloadmask = (v->offloadmask & PETSC_OFFLOAD_GPU) ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
   PetscFunctionReturn(0);
 }
 
@@ -685,7 +677,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase_(Vec 
   PetscFunctionReturn(0);
 }
 
-#define VecSetOp_CUPM(op_name,op_host,...) v->ops->op_name = usehost ? op_host : __VA_ARGS__
+#define VecSetOp_CUPM(op_name,op_host,...) do { \
+    if (usehost) {                              \
+      v->ops->op_name = op_host;                \
+    } else {                                    \
+      v->ops->op_name = __VA_ARGS__;            \
+    }                                           \
+  } while (0)
 
 // v->ops->duplicate
 template <Device::CUPM::DeviceType T, typename D>
@@ -720,15 +718,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase_(Vec 
   // 1. signature of getarray/restorearray have PetscScalar** not const PetscScalar** -> use a
   //    lambda to convert the types
   // 2. each lambda is a unique type, which isn't convertible to std::nullptr_t
-  if (usehost) {
-    v->ops->getarrayread     = nullptr;
-    v->ops->restorearrayread = nullptr;
-  } else {
-    v->ops->getarrayread     = [](Vec v, const PetscScalar **a){ return getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a)); };
-    v->ops->restorearrayread = [](Vec v, const PetscScalar **a){ return restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a)); };
-  }
-  v->ops->getarrayandmemtype     = getarrayandmemtype_async;
-  v->ops->restorearrayandmemtype = restorearrayandmemtype_async;
+  VecSetOp_CUPM(getarrayread,nullptr,[](Vec v, const PetscScalar **a)
+  {
+    return getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));
+  });
+  VecSetOp_CUPM(restorearrayread,nullptr,[](Vec v, const PetscScalar **a)
+  {
+    return restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));
+  });
+  VecSetOp_CUPM(getarrayandmemtype,nullptr,&getarrayandmemtype_async<MemoryAccess::READ_WRITE>);
+  VecSetOp_CUPM(restorearrayandmemtype,nullptr,&restorearrayandmemtype_async<MemoryAccess::READ_WRITE>);
+  VecSetOp_CUPM(getarraywriteandmemtype,nullptr,&getarrayandmemtype_async<MemoryAccess::WRITE>);
+  VecSetOp_CUPM(restorearraywriteandmemtype,nullptr,&restorearrayandmemtype_async<MemoryAccess::WRITE>);
   PetscFunctionReturn(0);
 }
 
