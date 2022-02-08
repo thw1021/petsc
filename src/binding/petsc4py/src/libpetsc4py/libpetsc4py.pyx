@@ -2849,7 +2849,6 @@ cdef extern from * nogil:
     PetscErrorCode VecCopy(PetscVec,PetscVec)
     PetscErrorCode VecScale(PetscVec,PetscReal)
     PetscErrorCode KSPSetFromOptions(PetscKSP)
-    PetscErrorCode TaoLineSearchSetFromOptions(PetscTAOLineSearch)
 
     # custom.h
     PetscErrorCode TaoGetVecs(PetscTAO,PetscVec*,PetscVec*,PetscVec*)
@@ -2979,7 +2978,6 @@ cdef PetscErrorCode TaoSetFromOptions_Python(
     if setFromOptions is not None:
         setFromOptions(TAO_(tao))
     CHKERR( KSPSetFromOptions(tao.ksp) )
-    CHKERR( TaoLineSearchSetFromOptions(tao.linesearch) )
     return FunctionEnd()
 
 cdef PetscErrorCode TaoView_Python(

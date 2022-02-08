@@ -1215,7 +1215,7 @@ PetscErrorCode TaoSetFromOptions_BNK(PetscOptionItems *PetscOptionsObject,Tao ta
   ierr = PetscOptionsTail();CHKERRQ(ierr);
 
   ierr = TaoSetOptionsPrefix(bnk->bncg,((PetscObject)(tao))->prefix);CHKERRQ(ierr);
-  ierr = TaoAppendOptionsPrefix(bnk->bncg,"tao_bnk_");CHKERRQ(ierr);
+  ierr = TaoAppendOptionsPrefix(bnk->bncg,"tao_bnk_cg_");CHKERRQ(ierr);
   ierr = TaoSetFromOptions(bnk->bncg);CHKERRQ(ierr);
 
   ierr = KSPSetOptionsPrefix(tao->ksp,((PetscObject)(tao))->prefix);CHKERRQ(ierr);

@@ -329,10 +329,7 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 
   ierr = PetscObjectOptionsBegin((PetscObject)tao);CHKERRQ(ierr);
   {
-    ierr = TaoRegisterAll();CHKERRQ(ierr);
-    if (((PetscObject)tao)->type_name) {
-      default_type = ((PetscObject)tao)->type_name;
-    }
+    if (((PetscObject)tao)->type_name) default_type = ((PetscObject)tao)->type_name;
     /* Check for type from options */
     ierr = PetscOptionsFList("-tao_type","Tao Solver type","TaoSetType",TaoList,default_type,type,256,&flg);CHKERRQ(ierr);
     if (flg) {
@@ -464,9 +461,13 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
     flg = PETSC_FALSE;
     ierr = PetscOptionsBool("-tao_recycle_history","enable recycling/re-using information from the previous TaoSolve() call for some algorithms","TaoSetRecycleHistory",flg,&flg,NULL);CHKERRQ(ierr);
     if (flg) {
-      ierr = TaoSetRecycleHistory(tao, PETSC_TRUE);CHKERRQ(ierr);
+      ierr = TaoSetRecycleHistory(tao,PETSC_TRUE);CHKERRQ(ierr);
     }
     ierr = PetscOptionsEnum("-tao_subset_type","subset type","",TaoSubSetTypes,(PetscEnum)tao->subset_type,(PetscEnum*)&tao->subset_type,NULL);CHKERRQ(ierr);
+
+    if (tao->linesearch) {
+      ierr = TaoLineSearchSetFromOptions(tao->linesearch);CHKERRQ(ierr);
+    }
 
     if (tao->ops->setfromoptions) {
       ierr = (*tao->ops->setfromoptions)(PetscOptionsObject,tao);CHKERRQ(ierr);
