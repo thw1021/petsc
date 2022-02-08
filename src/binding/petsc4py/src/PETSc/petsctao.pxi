@@ -55,8 +55,9 @@ cdef extern from * nogil:
     int TaoView(PetscTAO,PetscViewer)
     int TaoDestroy(PetscTAO*)
     int TaoCreate(MPI_Comm,PetscTAO*)
-    int TaoSetOptionsPrefix(PetscTAO, char[])
-    int TaoGetOptionsPrefix(PetscTAO, char*[])
+    int TaoSetOptionsPrefix(PetscTAO,char[])
+    int TaoAppendOptionsPrefix(PetscTAO,char[])
+    int TaoGetOptionsPrefix(PetscTAO,char*[])
     int TaoSetFromOptions(PetscTAO)
     int TaoSetType(PetscTAO,PetscTAOType)
     int TaoGetType(PetscTAO,PetscTAOType*)
@@ -70,6 +71,8 @@ cdef extern from * nogil:
     int TaoGetConstraintTolerances(PetscTAO,PetscReal*,PetscReal*)
 
     int TaoSetFunctionLowerBound(PetscTAO,PetscReal)
+    int TaoSetMaximumIterations(PetscTAO,PetscInt)
+    int TaoGetMaximumIterations(PetscTAO,PetscInt*)
     int TaoSetMaximumFunctionEvaluations(PetscTAO,PetscInt)
     int TaoGetMaximumFunctionEvaluations(PetscTAO,PetscInt*)
 
@@ -79,7 +82,7 @@ cdef extern from * nogil:
     int TaoSetTrustRegionRadius(PetscTAO,PetscReal)
 
     ctypedef int TaoConvergenceTest(PetscTAO,void*) except PETSC_ERR_PYTHON
-    int TaoDefaultConvergenceTest(PetscTAO tao,void *dummy) except PETSC_ERR_PYTHON
+    int TaoDefaultConvergenceTest(PetscTAO,void*) except PETSC_ERR_PYTHON
     int TaoSetConvergenceTest(PetscTAO, TaoConvergenceTest*, void*)
     int TaoSetConvergedReason(PetscTAO,PetscTAOConvergedReason)
     int TaoGetConvergedReason(PetscTAO,PetscTAOConvergedReason*)
@@ -103,24 +106,17 @@ cdef extern from * nogil:
     int TaoComputeHessian (PetscTAO,PetscVec,PetscMat,PetscMat)
     int TaoComputeJacobian(PetscTAO,PetscVec,PetscMat,PetscMat)
 
-    int TaoSetInitialVector(PetscTAO,PetscVec)
+    int TaoSetSolution(PetscTAO,PetscVec)
     int TaoSetConstraintsVec(PetscTAO,PetscVec)
     int TaoSetVariableBounds(PetscTAO,PetscVec,PetscVec)
-    int TaoSetHessianMat(PetscTAO,PetscMat,PetscMat)
-    int TaoSetJacobianMat(PetscTAO,PetscMat,PetscMat)
 
-    int TaoGetSolutionVector(PetscTAO,PetscVec*)
-    int TaoGetGradientVector(PetscTAO,PetscVec*)
+    int TaoGetSolution(PetscTAO,PetscVec*)
     int TaoSetGradientNorm(PetscTAO,PetscMat)
     int TaoGetGradientNorm(PetscTAO,PetscMat*)
     int TaoLMVMSetH0(PetscTAO,PetscMat)
     int TaoLMVMGetH0(PetscTAO,PetscMat*)
     int TaoLMVMGetH0KSP(PetscTAO,PetscKSP*)
     int TaoGetVariableBounds(PetscTAO,PetscVec*,PetscVec*)
-    #int TaoGetConstraintsVec(PetscTAO,PetscVec*)
-    #int TaoGetVariableBoundVecs(PetscTAO,PetscVec*,PetscVec*)
-    #int TaoGetHessianMat(PetscTAO,PetscMat*,PetscMat*)
-    #int TaoGetJacobianMat(PetscTAO,PetscMat*,PetscMat*)
 
     ctypedef int TaoObjective(PetscTAO,PetscVec,PetscReal*,void*) except PETSC_ERR_PYTHON
     ctypedef int TaoResidual(PetscTAO,PetscVec,PetscVec,void*) except PETSC_ERR_PYTHON
@@ -150,13 +146,17 @@ cdef extern from * nogil:
                                      PetscMat,PetscMat,
                                      void*) except PETSC_ERR_PYTHON
 
-    int TaoSetObjectiveRoutine(PetscTAO,TaoObjective*,void*)
+    int TaoSetObjective(PetscTAO,TaoObjective*,void*)
+    int TaoSetGradient(PetscTAO,PetscVec,TaoGradient*,void*)
+    int TaoSetObjectiveAndGradient(PetscTAO,PetscVec,TaoObjGrad*,void*)
+    int TaoSetHessian(PetscTAO,PetscMat,PetscMat,TaoHessian*,void*)
+    int TaoGetObjective(PetscTAO,TaoObjective**,void**)
+    int TaoGetGradient(PetscTAO,PetscVec*,TaoGradient**,void**)
+    int TaoGetObjectiveAndGradient(PetscTAO,PetscVec*,TaoObjGrad**,void**)
+    int TaoGetHessian(PetscTAO,PetscMat*,PetscMat*,TaoHessian**,void**)
     int TaoSetResidualRoutine(PetscTAO,PetscVec,TaoResidual,void*)
-    int TaoSetGradientRoutine(PetscTAO,TaoGradient*,void*)
-    int TaoSetObjectiveAndGradientRoutine(PetscTAO,TaoObjGrad*,void*)
     int TaoSetVariableBoundsRoutine(PetscTAO,TaoVarBounds*,void*)
     int TaoSetConstraintsRoutine(PetscTAO,PetscVec,TaoConstraints*,void*)
-    int TaoSetHessianRoutine(PetscTAO,PetscMat,PetscMat,TaoHessian*,void*)
     int TaoSetJacobianRoutine(PetscTAO,PetscMat,PetscMat,TaoJacobian*,void*)
     int TaoSetJacobianResidualRoutine(PetscTAO,PetscMat,PetscMat,TaoJacobianResidual*,void*)
 
@@ -178,6 +178,12 @@ cdef extern from * nogil:
     int TaoBRGNSetL1SmoothEpsilon(PetscTAO,PetscReal)
     int TaoBRGNSetDictionaryMatrix(PetscTAO,PetscMat)
     int TaoBRGNGetDampingVector(PetscTAO,PetscVec*)
+
+cdef extern from "libpetsc4py.h":
+    PetscTAOType TAOPYTHON
+    int TaoPythonSetContext(PetscTAO,void*)
+    int TaoPythonGetContext(PetscTAO,void**)
+    int TaoPythonSetType(PetscTAO,char[])
 
 # --------------------------------------------------------------------
 
@@ -291,9 +297,9 @@ cdef int TAO_VarBounds(PetscTAO _tao,
     return 0
 
 cdef int TAO_Hessian(PetscTAO _tao,
-                     PetscVec  _x,
-                     PetscMat  _H,
-                     PetscMat  _P,
+                     PetscVec _x,
+                     PetscMat _H,
+                     PetscMat _P,
                      void* ctx) except PETSC_ERR_PYTHON with gil:
     cdef TAO tao = ref_TAO(_tao)
     cdef Vec x   = ref_Vec(_x)

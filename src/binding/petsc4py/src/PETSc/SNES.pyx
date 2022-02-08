@@ -112,6 +112,11 @@ cdef class SNES(Object):
         CHKERR( SNESGetOptionsPrefix(self.snes, &cval) )
         return bytes2str(cval)
 
+    def appendOptionsPrefix(self, prefix):
+        cdef const char *cval = NULL
+        prefix = str2bytes(prefix, &cval)
+        CHKERR( SNESAppendOptionsPrefix(self.snes, cval) )
+
     def setFromOptions(self):
         CHKERR( SNESSetFromOptions(self.snes) )
 
@@ -137,6 +142,7 @@ cdef class SNES(Object):
         CHKERR( SNESSetDM(self.snes, dm.dm) )
 
     # --- FAS ---
+
     def setFASInterpolation(self, level, Mat mat):
         cdef PetscInt clevel = asInt(level)
         CHKERR( SNESFASSetInterpolation(self.snes, clevel, mat.mat) )
@@ -229,6 +235,7 @@ cdef class SNES(Object):
         CHKERR( SNESFASGetSmootherUp(self.snes, clevel, &smooth.snes) )
         PetscINCREF(smooth.obj)
         return smooth
+
     # --- nonlinear preconditioner ---
 
     def getNPC(self):
@@ -249,7 +256,7 @@ cdef class SNES(Object):
 
     def setLineSearchPreCheck(self, precheck, args=None, kargs=None):
         cdef PetscSNESLineSearch snesls = NULL
-        SNESGetLineSearch(self.snes, &snesls)
+        CHKERR( SNESGetLineSearch(self.snes, &snesls) )
         if precheck is not None:
             if args  is None: args  = ()
             if kargs is None: kargs = {}
