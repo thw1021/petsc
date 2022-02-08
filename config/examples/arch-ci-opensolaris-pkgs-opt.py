@@ -32,7 +32,8 @@ configure_options = [
   #'--download-hdf5',
   #'--download-sundials2=1', breaks when built via ssh - but not on terminal?
   '--download-hypre=1',
-  '--download-suitesparse=1',
+  # requires C++11 apparently
+  #'--download-suitesparse=1',
   '--download-chaco=1',
   '--download-spai=1',
   '--with-mpi-f90module-visibility=0',
