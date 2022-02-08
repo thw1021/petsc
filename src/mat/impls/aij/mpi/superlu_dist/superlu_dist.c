@@ -10,7 +10,6 @@ EXTERN_C_BEGIN
 #if defined(PETSC_USE_COMPLEX)
 #define CASTDOUBLECOMPLEX (doublecomplex*)
 #include <superlu_zdefs.h>
-#if PETSC_PKG_SUPERLU_DIST_VERSION_GE(6,3,0)
 #define LUstructInit zLUstructInit
 #define ScalePermstructInit zScalePermstructInit
 #define ScalePermstructFree zScalePermstructFree
@@ -25,7 +24,6 @@ EXTERN_C_BEGIN
 #define pGetDiagU pzGetDiagU
 #define allocateA_dist zallocateA_dist
 #define SLU_ZD SLU_Z
-#endif
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(7,2,0)
 #define DeAllocLlu_3d zDeAllocLlu_3d
 #define DeAllocGlu_3d zDeAllocGlu_3d
@@ -35,7 +33,6 @@ EXTERN_C_BEGIN
 #else
 #define CASTDOUBLECOMPLEX
 #include <superlu_ddefs.h>
-#if PETSC_PKG_SUPERLU_DIST_VERSION_GE(6,3,0)
 #define LUstructInit dLUstructInit
 #define ScalePermstructInit dScalePermstructInit
 #define ScalePermstructFree dScalePermstructFree
@@ -50,7 +47,6 @@ EXTERN_C_BEGIN
 #define pGetDiagU pdGetDiagU
 #define allocateA_dist dallocateA_dist
 #define SLU_ZD SLU_D
-#endif
 #if PETSC_PKG_SUPERLU_DIST_VERSION_GE(7,2,0)
 #define DeAllocLlu_3d dDeAllocLlu_3d
 #define DeAllocGlu_3d dDeAllocGlu_3d
