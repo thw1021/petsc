@@ -131,11 +131,12 @@ typedef struct {
   PetscInt       species_offset[LANDAU_MAX_GRIDS+1]; // for each grid, but same for all batched vertices
   PetscInt       mat_offset[LANDAU_MAX_GRIDS+1]; // for each grid, but same for all batched vertices
   // batching
+  PetscBool      jacobian_field_major_order; // this could be a type but lets not get pedantic
   VecScatter     plex_batch;
   Vec            work_vec;
   IS             batch_is;
-  IS             batch_is_inv[LANDAU_MAX_GRIDS];
   PetscErrorCode (*seqaij_mult)(Mat,Vec,Vec);
+  PetscErrorCode (*seqaij_multtranspose)(Mat,Vec,Vec);
   PetscErrorCode (*seqaij_solve)(Mat,Vec,Vec);
   PetscErrorCode (*seqaij_getdiagonal)(Mat,Vec);
   //
