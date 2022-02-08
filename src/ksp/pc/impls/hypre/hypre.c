@@ -304,10 +304,10 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
     }
     if (jac->constants[0]) {
       HYPRE_ParVector ozz,zoz,zzo = NULL;
-      PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->constants[0]->ij,void**)(&ozz);
-      PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->constants[1]->ij,void**)(&zoz);
+      PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->constants[0]->ij,(void**)(&ozz));
+      PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->constants[1]->ij,(void**)(&zoz));
       if (jac->constants[2]) {
-        PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->constants[2]->ij,void**)(&zzo);
+        PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->constants[2]->ij,(void**)(&zzo));
       }
       PetscStackCallStandard(HYPRE_AMSSetEdgeConstantVectors,jac->hsolver,ozz,zoz,zzo);
     }
@@ -316,25 +316,25 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       coords[0] = NULL;
       coords[1] = NULL;
       coords[2] = NULL;
-      if (jac->coords[0]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[0]->ij,void**)(&coords[0]);
-      if (jac->coords[1]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[1]->ij,void**)(&coords[1]);
-      if (jac->coords[2]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[2]->ij,void**)(&coords[2]);
+      if (jac->coords[0]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[0]->ij,(void**)(&coords[0]));
+      if (jac->coords[1]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[1]->ij,(void**)(&coords[1]));
+      if (jac->coords[2]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[2]->ij,(void**)(&coords[2]));
       PetscStackCallStandard(HYPRE_AMSSetCoordinateVectors,jac->hsolver,coords[0],coords[1],coords[2]);
     }
     PetscAssertFalse(!jac->G,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE AMS preconditioner needs the discrete gradient operator via PCHYPRESetDiscreteGradient");
     hm = (Mat_HYPRE*)(jac->G->data);
-    PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&parcsr);
+    PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&parcsr));
     PetscStackCallStandard(HYPRE_AMSSetDiscreteGradient,jac->hsolver,parcsr);
     if (jac->alpha_Poisson) {
       hm = (Mat_HYPRE*)(jac->alpha_Poisson->data);
-      PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&parcsr);
+      PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&parcsr));
       PetscStackCallStandard(HYPRE_AMSSetAlphaPoissonMatrix,jac->hsolver,parcsr);
     }
     if (jac->ams_beta_is_zero) {
       PetscStackCallStandard(HYPRE_AMSSetBetaPoissonMatrix,jac->hsolver,NULL);
     } else if (jac->beta_Poisson) {
       hm = (Mat_HYPRE*)(jac->beta_Poisson->data);
-      PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&parcsr);
+      PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&parcsr));
       PetscStackCallStandard(HYPRE_AMSSetBetaPoissonMatrix,jac->hsolver,parcsr);
     }
     if (jac->ND_PiFull || (jac->ND_Pi[0] && jac->ND_Pi[1])) {
@@ -342,14 +342,14 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       HYPRE_ParCSRMatrix nd_parcsrfull, nd_parcsr[3];
       if (jac->ND_PiFull) {
         hm = (Mat_HYPRE*)(jac->ND_PiFull->data);
-        PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&nd_parcsrfull);
+        PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&nd_parcsrfull));
       } else {
         nd_parcsrfull = NULL;
       }
       for (i=0;i<3;++i) {
         if (jac->ND_Pi[i]) {
           hm = (Mat_HYPRE*)(jac->ND_Pi[i]->data);
-          PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&nd_parcsr[i]);
+          PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&nd_parcsr[i]));
         } else {
           nd_parcsr[i] = NULL;
         }
@@ -372,16 +372,16 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       coords[0] = NULL;
       coords[1] = NULL;
       coords[2] = NULL;
-      if (jac->coords[0]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[0]->ij,void**)(&coords[0]);
-      if (jac->coords[1]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[1]->ij,void**)(&coords[1]);
-      if (jac->coords[2]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[2]->ij,void**)(&coords[2]);
+      if (jac->coords[0]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[0]->ij,(void**)(&coords[0]));
+      if (jac->coords[1]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[1]->ij,(void**)(&coords[1]));
+      if (jac->coords[2]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[2]->ij,(void**)(&coords[2]));
       PetscStackCallStandard(HYPRE_ADSSetCoordinateVectors,jac->hsolver,coords[0],coords[1],coords[2]);
     }
     hm = (Mat_HYPRE*)(jac->G->data);
-    PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&parcsr);
+    PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&parcsr));
     PetscStackCallStandard(HYPRE_ADSSetDiscreteGradient,jac->hsolver,parcsr);
     hm = (Mat_HYPRE*)(jac->C->data);
-    PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&parcsr);
+    PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&parcsr));
     PetscStackCallStandard(HYPRE_ADSSetDiscreteCurl,jac->hsolver,parcsr);
     if ((jac->RT_PiFull || (jac->RT_Pi[0] && jac->RT_Pi[1])) && (jac->ND_PiFull || (jac->ND_Pi[0] && jac->ND_Pi[1]))) {
       PetscInt           i;
@@ -389,28 +389,28 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       HYPRE_ParCSRMatrix nd_parcsrfull, nd_parcsr[3];
       if (jac->RT_PiFull) {
         hm = (Mat_HYPRE*)(jac->RT_PiFull->data);
-        PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&rt_parcsrfull);
+        PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&rt_parcsrfull));
       } else {
         rt_parcsrfull = NULL;
       }
       for (i=0;i<3;++i) {
         if (jac->RT_Pi[i]) {
           hm = (Mat_HYPRE*)(jac->RT_Pi[i]->data);
-          PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&rt_parcsr[i]);
+          PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&rt_parcsr[i]));
         } else {
           rt_parcsr[i] = NULL;
         }
       }
       if (jac->ND_PiFull) {
         hm = (Mat_HYPRE*)(jac->ND_PiFull->data);
-        PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&nd_parcsrfull);
+        PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&nd_parcsrfull));
       } else {
         nd_parcsrfull = NULL;
       }
       for (i=0;i<3;++i) {
         if (jac->ND_Pi[i]) {
           hm = (Mat_HYPRE*)(jac->ND_Pi[i]->data);
-          PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,void**)(&nd_parcsr[i]);
+          PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&nd_parcsr[i]));
         } else {
           nd_parcsr[i] = NULL;
         }
@@ -2659,7 +2659,7 @@ PetscErrorCode PCApply_SysPFMG(PC pc,Vec x,Vec y)
   if (ordering) {
     PetscStackCallStandard(HYPRE_SStructVectorSetConstantValues,mx->ss_b,0.0);
     ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorSetBoxValues,mx->ss_b,part,hlower,hupper,i,HYPRE_Complex*)(xx+(size*i));
+    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorSetBoxValues,mx->ss_b,part,hlower,hupper,i,(HYPRE_Complex*)(xx+(size*i)));
     ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
     PetscStackCallStandard(HYPRE_SStructVectorAssemble,mx->ss_b);
     PetscStackCallStandard(HYPRE_SStructMatrixMatvec,1.0,mx->ss_mat,mx->ss_b,0.0,mx->ss_x);
@@ -2667,7 +2667,7 @@ PetscErrorCode PCApply_SysPFMG(PC pc,Vec x,Vec y)
 
     /* copy solution values back to PETSc */
     ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
-    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorGetBoxValues,mx->ss_x,part,hlower,hupper,i,HYPRE_Complex*)(yy+(size*i));
+    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorGetBoxValues,mx->ss_x,part,hlower,hupper,i,(HYPRE_Complex*)(yy+(size*i)));
     ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
   } else {      /* nodal ordering must be mapped to variable ordering for sys_pfmg */
     PetscScalar *z;
@@ -2682,14 +2682,14 @@ PetscErrorCode PCApply_SysPFMG(PC pc,Vec x,Vec y)
       k= i*nvars;
       for (j= 0; j< nvars; j++) z[j*size+i]= xx[k+j];
     }
-    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorSetBoxValues,mx->ss_b,part,hlower,hupper,i,HYPRE_Complex*)(z+(size*i));
+    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorSetBoxValues,mx->ss_b,part,hlower,hupper,i,(HYPRE_Complex*)(z+(size*i)));
     ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
     PetscStackCallStandard(HYPRE_SStructVectorAssemble,mx->ss_b);
     PetscStackCallStandard(HYPRE_SStructSysPFMGSolve,ex->ss_solver,mx->ss_mat,mx->ss_b,mx->ss_x);
 
     /* copy solution values back to PETSc */
     ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
-    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorGetBoxValues,mx->ss_x,part,hlower,hupper,i,HYPRE_Complex*)(z+(size*i));
+    for (i= 0; i< nvars; i++) PetscStackCallStandard(HYPRE_SStructVectorGetBoxValues,mx->ss_x,part,hlower,hupper,i,(HYPRE_Complex*)(z+(size*i)));
     /* transform hypre's variable ordering for sys_pfmg to nodal ordering */
     for (i= 0; i< size; i++) {
       k= i*nvars;

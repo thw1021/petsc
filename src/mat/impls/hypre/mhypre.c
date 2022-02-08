@@ -2004,7 +2004,7 @@ static PetscErrorCode MatGetValues_HYPRE(Mat A,PetscInt m,const PetscInt idxm[],
   for (i=0; i<m; i++) {
     if (idxm[i] >= 0) {
       HYPRE_Int hn = (HYPRE_Int)n;
-      PetscStackCallStandard(HYPRE_IJMatrixGetValues,hA->ij,1,&hn,HYPRE_BigInt*)&idxm[i],(HYPRE_BigInt*)idxn,(HYPRE_Complex*)(v + i*n);
+      PetscStackCallStandard(HYPRE_IJMatrixGetValues,hA->ij,1,&hn,(HYPRE_BigInt*)&idxm[i],(HYPRE_BigInt*)idxn,(HYPRE_Complex*)(v + i*n));
     }
   }
   PetscFunctionReturn(0);
