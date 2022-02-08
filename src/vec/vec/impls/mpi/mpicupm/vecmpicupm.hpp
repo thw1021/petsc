@@ -189,10 +189,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::bindtocpu_async(Vec v, Pets
   VecSetOp_CUPM(resetarray,VecResetArray_Seq,VecSeq_T::template resetarray_async<PETSC_MEMTYPE_HOST>);
   VecSetOp_CUPM(shift,nullptr,VecSeq_T::shift_async);
   VecSetOp_CUPM(dotnorm2,nullptr,dotnorm2_async);
-  VecSetOp_CUPM(getlocalvector,nullptr,VecSeq_T::template getlocalvector_async</*read = */false>);
-  VecSetOp_CUPM(restorelocalvector,nullptr,VecSeq_T::template restorelocalvector_async</*read = */false>);
-  VecSetOp_CUPM(getlocalvectorread,nullptr,VecSeq_T::template getlocalvector_async</*read = */true>);
-  VecSetOp_CUPM(restorelocalvectorread,nullptr,VecSeq_T::template restorelocalvector_async</*read = */true>);
+  VecSetOp_CUPM(getlocalvector,nullptr,VecSeq_T::template getlocalvector_async<MemoryAccess::READ_WRITE>);
+  VecSetOp_CUPM(restorelocalvector,nullptr,VecSeq_T::template restorelocalvector_async<MemoryAccess::READ_WRITE>);
+  VecSetOp_CUPM(getlocalvectorread,nullptr,VecSeq_T::template getlocalvector_async<MemoryAccess::READ>);
+  VecSetOp_CUPM(restorelocalvectorread,nullptr,VecSeq_T::template restorelocalvector_async<MemoryAccess::READ>);
   VecSetOp_CUPM(sum,nullptr,VecSeq_T::sum_async);
   PetscFunctionReturn(0);
 }
