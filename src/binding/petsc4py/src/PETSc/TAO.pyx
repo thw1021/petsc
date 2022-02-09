@@ -369,6 +369,18 @@ cdef class TAO(Object):
         CHKERR( TaoSetJacobianEqualityRoutine(self.tao, Jmat, Pmat,
                                               TAO_JacobianEquality, <void*>context) )
 
+    def setUpdate(self, update, args=None, kargs=None):
+        """
+        """
+        if update is not None:
+            if args  is None: args  = ()
+            if kargs is None: kargs = {}
+            context = (update, args, kargs)
+            self.set_attr('__update__', context)
+            CHKERR( TaoSetUpdate(self.tao, TAO_Update, NULL) )
+        else:
+            self.set_attr('__update__', None)
+            CHKERR( TaoSetUpdate(self.tao, NULL, NULL) )
 
     # --------------
 

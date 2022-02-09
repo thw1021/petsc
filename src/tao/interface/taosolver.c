@@ -1365,7 +1365,7 @@ $ func (Tao tao, PetscInt step);
 
 .seealso TaoSolve()
 @*/
-PetscErrorCode  TaoSetUpdate(Tao tao, PetscErrorCode (*func)(Tao, PetscInt,void*), void *ctx)
+PetscErrorCode TaoSetUpdate(Tao tao, PetscErrorCode (*func)(Tao, PetscInt, void*), void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID,1);
@@ -1400,7 +1400,7 @@ $   PetscErrorCode conv(Tao tao, void *ctx)
 .seealso: TaoSetConvergedReason(), TaoGetSolutionStatus(), TaoGetTolerances(), TaoSetMonitor
 
 @*/
-PetscErrorCode TaoSetConvergenceTest(Tao tao, PetscErrorCode (*conv)(Tao,void*), void *ctx)
+PetscErrorCode TaoSetConvergenceTest(Tao tao, PetscErrorCode (*conv)(Tao, void*), void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);

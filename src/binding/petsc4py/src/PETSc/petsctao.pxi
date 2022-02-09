@@ -103,7 +103,7 @@ cdef extern from * nogil:
     int TaoComputeConstraints(PetscTAO,PetscVec,PetscVec)
     int TaoComputeDualVariables(PetscTAO,PetscVec,PetscVec)
     int TaoComputeVariableBounds(PetscTAO)
-    int TaoComputeHessian (PetscTAO,PetscVec,PetscMat,PetscMat)
+    int TaoComputeHessian(PetscTAO,PetscVec,PetscMat,PetscMat)
     int TaoComputeJacobian(PetscTAO,PetscVec,PetscMat,PetscMat)
 
     int TaoSetSolution(PetscTAO,PetscVec)
@@ -145,6 +145,8 @@ cdef extern from * nogil:
     ctypedef int TaoJacobianEquality(PetscTAO,PetscVec,
                                      PetscMat,PetscMat,
                                      void*) except PETSC_ERR_PYTHON
+    ctypedef int TaoUpdateFunction(PetscTAO,PetscInt,
+                                   void*) except PETSC_ERR_PYTHON
 
     int TaoSetObjective(PetscTAO,TaoObjective*,void*)
     int TaoSetGradient(PetscTAO,PetscVec,TaoGradient*,void*)
@@ -166,6 +168,7 @@ cdef extern from * nogil:
 
     int TaoSetEqualityConstraintsRoutine(PetscTAO,PetscVec,TaoEqualityConstraints*,void*)
     int TaoSetJacobianEqualityRoutine(PetscTAO,PetscMat,PetscMat,TaoJacobianEquality*,void*)
+    int TaoSetUpdate(PetscTAO,TaoUpdateFunction*,void*)
 
     int TaoSetInitialTrustRegionRadius(PetscTAO,PetscReal)
 
@@ -418,6 +421,18 @@ cdef int TAO_JacobianEquality(PetscTAO _tao,
     assert context is not None and type(context) is tuple # sanity check
     (jacobian, args, kargs) = context
     jacobian(tao, x, J, P, *args, **kargs)
+    return 0
+
+# ctx is unused
+cdef int TAO_Update(
+    PetscTAO _tao,
+    PetscInt its,
+    void* ctx) except PETSC_ERR_PYTHON with gil:
+    cdef TAO tao = ref_TAO(_tao)
+    cdef object context = tao.get_attr('__update__')
+    assert context is not None and type(context) is tuple # sanity check
+    (update, args, kargs) = context
+    update(tao, toInt(its), *args, **kargs)
     return 0
 
 

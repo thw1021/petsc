@@ -195,10 +195,21 @@ PetscErrorCode TaoHasHessianRoutine(Tao tao, PetscBool* flg)
 #endif
 
 PETSC_STATIC_INLINE
+PetscErrorCode TaoComputeUpdate(Tao tao)
+{
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  if (tao->ops->update) {
+    ierr = (*tao->ops->update)(tao,tao->niter,tao->user_update);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_STATIC_INLINE
 PetscErrorCode TaoGetVecs(Tao tao, Vec *X, Vec *G, Vec *S)
 {
   PetscBool has_g;
-
   PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);

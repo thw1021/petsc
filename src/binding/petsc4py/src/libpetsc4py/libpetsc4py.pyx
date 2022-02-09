@@ -2854,6 +2854,7 @@ cdef extern from * nogil:
     PetscErrorCode TaoGetVecs(PetscTAO,PetscVec*,PetscVec*,PetscVec*)
     PetscErrorCode TaoCheckReals(PetscTAO,PetscReal,PetscReal)
     PetscErrorCode TaoConverged(PetscTAO)
+    PetscErrorCode TaoComputeUpdate(PetscTAO)
     PetscErrorCode TaoCreateDefaultLineSearch(PetscTAO)
     PetscErrorCode TaoCreateDefaultKSP(PetscTAO)
     PetscErrorCode TaoApplyLineSearch(PetscTAO,PetscReal*,PetscReal*)
@@ -3040,6 +3041,8 @@ cdef PetscErrorCode TaoSolve_Python_default(
     cdef PetscInt its = 0
     for its from 0 <= its < tao.max_it:
         if tao.reason: break
+        CHKERR( TaoComputeUpdate(tao) )
+
         TaoPreStep_Python(tao)
         #
         tao.ksp_its = 0
