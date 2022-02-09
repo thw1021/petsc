@@ -147,7 +147,7 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  if (p->used) SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"MatPreallocatorPreallocate() can only be used once for a give MatPreallocator object. Consider using MatDuplicate() after preallocation.");
+  PetscAssert(!p->used,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"MatPreallocatorPreallocate() can only be used once for a give MatPreallocator object. Consider using MatDuplicate() after preallocation.");
   p->used = PETSC_TRUE;
   if (!fill) {ierr = PetscHSetIJDestroy(&p->ht);CHKERRQ(ierr);}
   ierr = MatGetBlockSize(mat, &bs);CHKERRQ(ierr);
