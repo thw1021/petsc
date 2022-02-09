@@ -216,7 +216,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   v = ctx->n_0*ctx->v_0*PetscRealPart(tt[0])/n_e;   /* remove number density to get velocity */
   v2 = PetscSqr(v);                                    /* use real space: m^2 / s^2 */
   Te_kev = (v2*ctx->masses[0]*PETSC_PI/8)*kev_joul;    /* temperature in kev */
-  //Te_kev = ctx->thermal_temps[0]/1.1604525e7;
   spit_eta = Spitzer(ctx->masses[0],-ctx->charges[0],Z,ctx->epsilon0,ctx->lnLam,Te_kev/kev_joul); /* kev --> J (kT) */
   if (0) {
     ierr = DMGetDS(plexe, &prob);CHKERRQ(ierr);
@@ -237,8 +236,6 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
 
   ratio = E/J/spit_eta;
   if (stepi>10 && !rectx->use_spitzer_eta && (
-        //(old_ratio-ratio < 1.e-3 && ratio > 0.99 && ratio < 1.01) ||
-        //(old_ratio-ratio < 1.e-4 && ratio > 0.98 && ratio < 1.02) ||
         (old_ratio-ratio < 1.e-6))) {
     rectx->pulse_start = time + 0.98*dt;
     rectx->use_spitzer_eta = PETSC_TRUE;
@@ -687,7 +684,6 @@ int main(int argc, char **argv)
   ierr = PetscMalloc(sizeof(*XsubArray)*nDMs, &XsubArray);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)J, "Jacobian");CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject)X, "f");CHKERRQ(ierr);
-  //ierr = LandauCreateMassMatrix(pack, NULL);CHKERRQ(ierr);
   ierr = DMGetApplicationContext(pack, &ctx);CHKERRQ(ierr);
   ierr = DMSetUp(pack);CHKERRQ(ierr);
   /* context */
