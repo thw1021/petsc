@@ -1952,7 +1952,7 @@ static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_ba
       const PetscScalar *vals;
       for (int i=0 ; i<nloc ; i++) {
         ierr = MatGetRow(B,i,&nzl,&cols,&vals);CHKERRQ(ierr);
-        if (nzl>1024) SETERRQ1(comm, PETSC_ERR_PLIB, "Row too big: %D",nzl);
+        if (nzl>1024) SETERRQ(comm, PETSC_ERR_PLIB, "Row too big: %D",nzl);
         for (int j=0; j<nzl; j++) colbuf[j] = cols[j] + moffset;
         row = i + moffset;
         ierr = MatSetValues(ctx->J,1,&row,nzl,colbuf,vals,INSERT_VALUES);CHKERRQ(ierr);

@@ -2198,7 +2198,7 @@ PetscErrorCode VecGetArrayWriteAndMemType(Vec x,PetscScalar **a,PetscMemType *mt
   } else if (x->petscnative) { /* VECSTANDARD */
     *a = *((PetscScalar**)x->data);
     if (mtype) *mtype = PETSC_MEMTYPE_HOST;
-  } else SETERRQ1(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
   PetscFunctionReturn(0);
 }
 
