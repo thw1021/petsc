@@ -1,5 +1,5 @@
-#ifndef PETSC_BIT_ARRAY_H
-#define PETSC_BIT_ARRAY_H
+#ifndef PETSCBT_H
+#define PETSCBT_H
 
 #include <petscviewer.h>
 
@@ -112,4 +112,4 @@ static inline PetscErrorCode PetscBTView(PetscInt m, const PetscBT bt, PetscView
   ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-#endif /* PETSC_BIT_ARRAY_H */
+#endif /* PETSCBT_H */
