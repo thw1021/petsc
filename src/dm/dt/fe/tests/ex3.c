@@ -45,11 +45,26 @@ static void trig(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   for (PetscInt c = 0; c < Nc; ++c) f0[c] += PetscCosReal(2.*PETSC_PI*x[c]);
 }
 
-static const char    *names[]     = {"constant", "linear", "quadratic", "trig"};
-static PetscPointFunc functions[] = { constant,   linear,   quadratic,   trig};
+/*
+ The prime basis for the Wheeler-Yotov-Xue prism.
+ */
+static void prime(PetscInt dim, PetscInt Nf, PetscInt NfAux,
+                  const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[],
+                  const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[],
+                  PetscReal t, const PetscReal X[], PetscInt numConstants, const PetscScalar constants[], PetscScalar f0[])
+{
+  PetscReal x = X[0], y = X[1], z = X[2], b = 1 + x + y + z;
+  f0[0] += b + 2.0*x*z + 2.0*y*z + x*y + x*x;
+  f0[1] += b + 2.0*x*z + 2.0*y*z + x*y + y*y;
+  f0[2] += b - 3.0*x*z - 3.0*y*z -   2.0*z*z;
+}
+
+static const char    *names[]     = {"constant", "linear", "quadratic", "trig", "prime"};
+static PetscPointFunc functions[] = { constant,   linear,   quadratic,   trig,   prime };
 
 typedef struct {
   PetscPointFunc exactSol;
+  PetscReal shear,flatten;
 } AppCtx;
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
@@ -60,9 +75,13 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
   PetscFunctionBeginUser;
   options->exactSol = NULL;
+  options->shear    = 0.;
+  options->flatten  = 1.;
 
   ierr = PetscOptionsBegin(comm, "", "FE Test Options", "PETSCFE");CHKERRQ(ierr);
   ierr = PetscOptionsString("-func", "Function to project into space", "", name, name, PETSC_MAX_PATH_LEN, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-shear", "Factor by which to shear along the x-direction", "", options->shear, &(options->shear), NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsReal("-flatten", "Factor by which to flatten", "", options->flatten, &(options->flatten), NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   for (i = 0; i < Nfunc; ++i) {
@@ -79,7 +98,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode exactSolution(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   AppCtx  *user    = (AppCtx *) ctx;
-  PetscInt uOff[2] = {0., Nc};
+  PetscInt uOff[2] = {0, Nc};
 
   user->exactSol(dim, 1, 0, uOff, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, time, x, 0, NULL, u);
   for (PetscInt c = 0; c < Nc; ++c) u[c] *= -1.;
@@ -202,6 +221,27 @@ static PetscErrorCode CheckL2Projection(DM dm, AppCtx *user)
   PetscFunctionReturn(0);
 }
 
+/* Distorts the mesh by shearing in the x-direction and flattening, factors provided in the options. */
+static PetscErrorCode DistortMesh(DM dm, AppCtx *user)
+{
+  PetscInt       i,dim,n;
+  Vec            c;
+  PetscScalar   *ca;
+  PetscErrorCode ierr;
+
+  PetscFunctionBeginUser;
+  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  ierr = DMGetCoordinates(dm, &c);CHKERRQ(ierr);
+  ierr = VecGetSize(c, &n);CHKERRQ(ierr);
+  ierr = VecGetArray(c,&ca);CHKERRQ(ierr);
+  for (i = 0; i < (n/dim); i++) {
+    ca[i*dim+2] += user->shear*ca[i*dim+0];
+    ca[i*dim+2] *= user->flatten;
+  }
+  ierr = VecRestoreArray(c,&ca);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char **argv)
 {
   DM             dm;
@@ -216,6 +256,7 @@ int main(int argc, char **argv)
   ierr = DMCreate(PETSC_COMM_WORLD, &dm);CHKERRQ(ierr);
   ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
   ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
+  ierr = DistortMesh(dm,&user);CHKERRQ(ierr);
   ierr = SetupDiscretization(dm, NULL, &user);CHKERRQ(ierr);
 
   ierr = CheckInterpolation(dm, &user);CHKERRQ(ierr);
@@ -243,6 +284,7 @@ int main(int argc, char **argv)
             -snes_convergence_estimate -convest_num_refine 2
 
   testset:
+    requires: real double
     args: -dm_plex_reference_cell_domain -dm_plex_cell triangular_prism \
             -petscspace_type sum \
             -petscspace_variables 3 \
@@ -267,5 +309,13 @@ int main(int argc, char **argv)
     test:
       suffix: wxy_1
       args: -func linear
+
+    test:
+      suffix: wxy_2
+      args: -func prime
+
+    test:
+      suffix: wxy_3
+      args: -func linear -shear 1 -flatten 1e-5
 
 TEST*/
