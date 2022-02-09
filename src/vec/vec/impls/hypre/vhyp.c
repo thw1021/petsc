@@ -94,7 +94,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_Memo
       *res = (PetscErrorCode(*)(Vec,PetscScalar**))VecRestoreArrayRead;
     } else {
       ierr = VecGetArrayReadAndMemType(v,(const PetscScalar**)ptr,&mtype);CHKERRQ(ierr);
-      if (!PetscMemTypeDevice(mtype)) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"HYPRE_MEMORY_DEVICE expects a device vector");
+      if (!PetscMemTypeDevice(mtype)) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"HYPRE_MEMORY_DEVICE expects a device vector. You need to enable PETSc device support, ex. -vec_type cuda");
       *res = (PetscErrorCode(*)(Vec,PetscScalar**))VecRestoreArrayReadAndMemType;
     }
     break;
@@ -104,7 +104,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_Memo
       *res = VecRestoreArrayWrite;
     } else {
       ierr = VecGetArrayWriteAndMemType(v,(PetscScalar**)ptr,&mtype);CHKERRQ(ierr);
-      if (!PetscMemTypeDevice(mtype)) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"HYPRE_MEMORY_DEVICE expects a device vector");
+      if (!PetscMemTypeDevice(mtype)) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"HYPRE_MEMORY_DEVICE expects a device vector. You need to enable PETSc device support, ex. -vec_type cuda");
       *res = VecRestoreArrayWriteAndMemType;
     }
     break;
@@ -114,7 +114,7 @@ PETSC_STATIC_INLINE PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_Memo
       *res = VecRestoreArray;
     } else {
       ierr = VecGetArrayAndMemType(v,(PetscScalar**)ptr,&mtype);CHKERRQ(ierr);
-      if (!PetscMemTypeDevice(mtype)) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"HYPRE_MEMORY_DEVICE expects a device vector");
+      if (!PetscMemTypeDevice(mtype)) SETERRQ(PetscObjectComm((PetscObject)v),PETSC_ERR_ARG_WRONG,"HYPRE_MEMORY_DEVICE expects a device vector. You need to enable PETSc device support, ex. -vec_type cuda");
       *res = VecRestoreArrayAndMemType;
     }
     break;
