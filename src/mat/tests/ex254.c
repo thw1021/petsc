@@ -1,4 +1,4 @@
-static char help[] = "Test MatSetValuesCOO for MPIAIJKOKKOS mat \n\n";
+static char help[] = "Test MatSetValuesCOO for MPIAIJ and its subclasses \n\n";
 
 #include <petscmat.h>
 int main(int argc,char **args)
@@ -72,11 +72,18 @@ int main(int argc,char **args)
 
 /*TEST
 
-  test:
-    nsize: {{1 2 3}}
-    requires: kokkos_kernels
-    args: -mat_type aijkokkos
+  testset:
     output_file: output/ex254_1.out
+    nsize: {{1 2 3}}
+
+    test:
+      suffix: kokkos
+      requires: kokkos_kernels
+      args: -mat_type aijkokkos
+
+    test:
+      suffix: 1
+      args: -mat_type aij
 
 TEST*/
 
