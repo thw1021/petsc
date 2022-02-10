@@ -151,6 +151,36 @@ public:
                                  // Mvctx->lvec in nvshmem
   };
 
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode VecView_Debug(Vec v, const char* message = ""))
+  {
+    static_assert(PETSC_OFFLOAD_UNALLOCATED == 0,"");
+    static_assert(PETSC_OFFLOAD_CPU == 1,"");
+    static_assert(PETSC_OFFLOAD_GPU == 2,"");
+    static_assert(PETSC_OFFLOAD_BOTH == 3,"");
+    const char* PetscOffloadMasks[] = {
+      "PETSC_OFFLOAD_UNALLOCATED",
+      "PETSC_OFFLOAD_CPU",
+      "PETSC_OFFLOAD_GPU",
+      "PETSC_OFFLOAD_BOTH",
+    };
+    const auto     pobj = PetscObjectCast(v);
+    const char     *name;
+    MPI_Comm       comm;
+    PetscErrorCode ierr;
+
+    PetscFunctionBegin;
+    ierr = PetscObjectGetComm(pobj,&comm);CHKERRQ(ierr);
+    ierr = PetscObjectGetName(pobj,&name);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"---------- %s ----------\n",message);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Vec                  %s\n",name);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Size:                %" PetscInt_FMT "\n",v->map->n);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Offload mask:        %s\n",PetscOffloadMasks[v->offloadmask]);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Host ptr:            %p\n",VecIMPLCast(v)->array);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Device ptr:          %p\n",VecCUPMCast(v)->device_array);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Device ptr ownership %s\n",PetscCopyModes[VecCUPMCast(v)->ptr_ownership]);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+
   PETSC_CXX_COMPAT_DECL(constexpr auto VecCUPMCast(Vec v)) PETSC_DECLTYPE_AUTO(static_cast<Vec_CUPM*>(v->spptr))
   // This is a trick to get around the fact that in CRTP the derived class is not yet fully
   // defined because Base<Derived> must necessarily be instantiated before Derived is
@@ -778,6 +808,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPM_(Vec v))
   using name::VECMPICUPM;                                                       \
   /* utility */                                                                 \
   using name::Vec_CUPM;                                                         \
+  using name::VecView_Debug;                                                    \
   using name::vector_array;                                                     \
   using name::UseCUPMHostAlloc;                                                 \
   using name::GetHandles_;                                                      \
