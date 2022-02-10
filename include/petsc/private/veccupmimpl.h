@@ -118,7 +118,7 @@ public:
 enum class MemoryAccess : unsigned {
   READ       = 1 << 0,
   WRITE      = 1 << 1,
-  READ_WRITE = READ & WRITE
+  READ_WRITE = READ | WRITE
 };
 
 namespace
@@ -278,7 +278,9 @@ public:
     ~vector_array() noexcept
     {
       // could just as well CHKERRABORT() here
+      PetscFunctionBegin;
       auto ierr = restorearray_async<MT,MA>(PetscRemoveConstCast(v_),&PetscRemoveConstCast(this->ptr));CHKERRCONTINUE(ierr);
+      PetscFunctionReturnVoid();
     }
 
   private:
@@ -287,8 +289,10 @@ public:
     PETSC_CXX_COMPAT_DECL(pointer_type initialize_(Vec v))
     {
       pointer_type array = nullptr;
+
+      PetscFunctionBegin;
       auto ierr = getarray_async<MT,MA>(v,&array);CHKERRABORT(PETSC_COMM_SELF,ierr);
-      return array;
+      PetscFunctionReturn(array);
     }
   };
 
@@ -494,9 +498,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
     ierr = (hostmem ? HostAllocateCheck_ : DeviceAllocateCheck_)(dctx,v);CHKERRQ(ierr);
   } else {
     // READ or READ_WRITE
-    ierr = (hostmem ? CopyToHost_ : CopyToDevice_)(dctx,v);CHKERRQ(ierr);
+    if (hostmem) {
+      ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
+      // REVIEW ME: if we have a clearly defined async api then this sync is not necessary!
+      // Otherwise we have to assume every pointer returned to host memory is immediately
+      // dereferenced by the host, and must therefore hard-sync every time...
+      ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+    } else {ierr = CopyToDevice_(dctx,v);CHKERRQ(ierr);}
   }
-  printf("%s %p before %d\n",__func__,v,v->offloadmask);
   if (access != MemoryAccess::READ) {
     // not read-only so immediately assume modified
     // REVIEW ME: this should probably also call PetscObjectStateInrease() since we assume it
@@ -516,7 +525,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  printf("%s %p after %d\n",__func__,v,v->offloadmask);
   if (access != MemoryAccess::READ) {
     // WRITE or READ_WRITE
     auto ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
@@ -534,7 +542,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  printf("%s %p before %d\n",__func__,v,v->offloadmask);
   ierr = getarray_async<PETSC_MEMTYPE_DEVICE,access>(v,a);CHKERRQ(ierr);
   if (mtype) *mtype = (PetscDefined(HAVE_NVSHMEM) && VecCUPMCast(v)->nvshmem) ? PETSC_MEMTYPE_NVSHMEM : cupmDeviceTypeToPetscMemType();
   PetscFunctionReturn(0);
@@ -549,7 +556,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearrayandmemtype_a
 
   PetscFunctionBegin;
   ierr = restorearray_async<PETSC_MEMTYPE_DEVICE,access>(v,a);CHKERRQ(ierr);
-  printf("%s %p after %d\n",__func__,v,v->offloadmask);
   PetscFunctionReturn(0);
 }
 
@@ -729,7 +735,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase_(Vec 
   VecSetOp_CUPM(getarrayandmemtype,nullptr,&getarrayandmemtype_async<MemoryAccess::READ_WRITE>);
   VecSetOp_CUPM(restorearrayandmemtype,nullptr,&restorearrayandmemtype_async<MemoryAccess::READ_WRITE>);
   VecSetOp_CUPM(getarraywriteandmemtype,nullptr,&getarrayandmemtype_async<MemoryAccess::WRITE>);
-  VecSetOp_CUPM(restorearraywriteandmemtype,nullptr,&restorearrayandmemtype_async<MemoryAccess::WRITE>);
+  VecSetOp_CUPM(restorearraywriteandmemtype,nullptr,[](Vec v,PetscScalar **a,PetscMemType*)
+  {
+    return restorearrayandmemtype_async<MemoryAccess::WRITE>(v,a);
+  });
   PetscFunctionReturn(0);
 }
 
