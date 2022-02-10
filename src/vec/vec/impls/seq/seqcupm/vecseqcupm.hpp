@@ -309,10 +309,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   ierr = BindToCPU_CUPMBase_(v,usehost);CHKERRQ(ierr);
 
   // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
-  v->ops->dot   = VecSetOp_CUPM(dot_local,VecDot_Seq,dot_async);
-  v->ops->norm  = VecSetOp_CUPM(norm_local,VecNorm_Seq,norm_async);
-  v->ops->tdot  = VecSetOp_CUPM(tdot_local,VecTDot_Seq,tdot_async);
-  v->ops->mdot  = VecSetOp_CUPM(mdot_local,VecMDot_Seq,mdot_async);
+  VecSetOp_CUPM(dot_local  = v->ops->dot,VecDot_Seq,dot_async);
+  VecSetOp_CUPM(norm_local = v->ops->norm,VecNorm_Seq,norm_async);
+  VecSetOp_CUPM(tdot_local = v->ops->tdot,VecTDot_Seq,tdot_async);
+  VecSetOp_CUPM(mdot_local = v->ops->mdot,VecMDot_Seq,mdot_async);
   v->ops->mtdot = v->ops->mtdot_local = VecMTDot_Seq;
   VecSetOp_CUPM(scale,VecScale_Seq,scale_async);
   VecSetOp_CUPM(copy,VecCopy_Seq,copy_async);
@@ -585,8 +585,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
     {
       cupmBlasError_t cberr;
       const auto      calpha = makeCupmScalar(alpha);
-      auto            yarray = DeviceArrayWrite(dctx,yin);
-      auto            xarray = DeviceArrayRead(dctx,xin);
+      const auto      yarray = DeviceArrayReadWrite(dctx,yin);
+      const auto      xarray = DeviceArrayRead(dctx,xin);
 
       ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       if (alphaIsOne) {
@@ -623,7 +623,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscSc
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,DeviceArrayWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,DeviceArrayReadWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2*n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar(sizeof(alpha));CHKERRQ(ierr);
@@ -705,9 +705,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscS
     ierr = GetHandles_(&dctx,&cupmBlasHandle,&stream);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     {
-      auto warray = DeviceArrayWrite(dctx,win);
-      auto cerr   = cupmMemcpyAsync(warray.ptr,DeviceArrayRead(dctx,yin).ptr,n*sizeof(typename decltype(warray)::value_type),cupmMemcpyDeviceToDevice,stream);CHKERRCUPM(cerr);
-      auto cberr  = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,warray,1);CHKERRCUPMBLAS(cberr);
+      const auto warray = DeviceArrayWrite(dctx,win);
+      const auto cerr   = cupmMemcpyAsync(warray.ptr,DeviceArrayRead(dctx,yin).ptr,n*sizeof(typename decltype(warray)::value_type),cupmMemcpyDeviceToDevice,stream);CHKERRCUPM(cerr);
+      const auto cberr  = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,warray,1);CHKERRCUPMBLAS(cberr);
     }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2*n);CHKERRQ(ierr);
@@ -727,7 +727,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::maxpy_async(Vec xin, PetscI
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
   {
-    auto xarray = DeviceArrayWrite(dctx,xin);
+    const auto xarray = DeviceArrayReadWrite(dctx,xin);
 
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     for (decltype(nv) j = 0; j < nv; ++j) {
@@ -1020,8 +1020,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::scale_async(Vec xin, PetscS
     PetscErrorCode     ierr;
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
+    CHKERRCUPMBLAS(cublasSetPointerMode(cupmBlasHandle,CUBLAS_POINTER_MODE_HOST));
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cupmBlasXscal(cupmBlasHandle,n,&calpha,DeviceArrayWrite(dctx,xin),1);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasXscal(cupmBlasHandle,n,&calpha,DeviceArrayReadWrite(dctx,xin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar(sizeof(calpha));CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
@@ -1143,7 +1144,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::swap_async(Vec xin, Vec yin
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cupmBlasXswap(cupmBlasHandle,n,DeviceArrayWrite(dctx,xin),1,DeviceArrayWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasXswap(cupmBlasHandle,n,DeviceArrayReadWrite(dctx,xin),1,DeviceArrayReadWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
   }
@@ -1169,15 +1170,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscS
     PetscDeviceContext dctx;
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
-    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     {
       cupmBlasError_t cberr;
       const auto      calpha = makeCupmScalar(alpha);
-      const auto      yarray = DeviceArrayWrite(dctx,yin);
       const auto      xarray = DeviceArrayRead(dctx,xin);
 
+      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       if (betaIsZero) {
-        const auto   nbytes = n*sizeof(typename decltype(yarray)::value_type);
+        // here we can get away with purely write-only as we memcpy into it first
+        const auto   yarray = DeviceArrayWrite(dctx,yin);
+        const auto   nbytes = n*sizeof(PetscScalar);
         cupmStream_t stream;
         cupmError_t  cerr;
 
@@ -1185,13 +1187,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscS
         cerr = cupmMemcpyAsync(yarray.ptr,xarray.ptr,nbytes,cupmMemcpyDeviceToDevice,stream);CHKERRCUPM(cerr);
         cberr = cupmBlasXscal(cupmBlasHandle,n,&calpha,yarray,1);CHKERRCUPMBLAS(cberr);
       } else {
-        const auto cbeta = makeCupmScalar(beta);
+        const auto cbeta  = makeCupmScalar(beta);
+        const auto yarray = DeviceArrayReadWrite(dctx,yin);
 
         cberr = cupmBlasXscal(cupmBlasHandle,n,&cbeta,yarray,1);CHKERRCUPMBLAS(cberr);
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
       }
+      ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     }
-    ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops((betaIsZero ? 1 : 3)*n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar((betaIsZero ? 1 : 2)*sizeof(alpha));CHKERRQ(ierr);
   }
