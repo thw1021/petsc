@@ -48,6 +48,7 @@ struct KSP_HPDDM {
   int                  icntl[2];
   unsigned short       scntl[2];
   char                 cntl [5];
+  KSPHPDDMPrecision   precision;
 };
 
 PETSC_INTERN const char HPDDMCitation[];
