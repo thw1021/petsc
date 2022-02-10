@@ -9,7 +9,7 @@
 typedef Kokkos::TeamPolicy<>::member_type team_member;
 
 #include <../src/mat/impls/aij/seq/aij.h>
-#include <../src/mat/impls/aij/seq/kokkos/aijkokkosimpl.hpp>
+#include <../src/mat/impls/aij/seq/kokkos/aijkok.hpp>
 
 #define PCBJKOKKOS_SHARED_LEVEL 1
 #define PCBJKOKKOS_VEC_SIZE 16
@@ -219,7 +219,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
 static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
 {
   PetscErrorCode      ierr;
-  PC_PCBJKOKKOS        *jac = (PC_PCBJKOKKOS*)pc->data;
+  PC_PCBJKOKKOS       *jac = (PC_PCBJKOKKOS*)pc->data;
   Mat                 A = pc->pmat;
   Mat_SeqAIJKokkos    *aijkok;
 
@@ -229,7 +229,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
   else {
     using scr_mem_t  = Kokkos::DefaultExecutionSpace::scratch_memory_space;
     using vect2D_scr_t = Kokkos::View<PetscScalar**, Kokkos::LayoutLeft, scr_mem_t>;
-    PetscInt          *d_bid_eqOffset, maxit = jac->ksp->max_it, scr_bytes_team, stride, global_buff_size, team_and_vector_size=0;
+    PetscInt          *d_bid_eqOffset, maxit = jac->ksp->max_it, scr_bytes_team, stride, global_buff_size;
     const PetscInt    conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp==0 && PCBJKOKKOS_VEC_SIZE != 1) ? PCBJKOKKOS_TEAM_SIZE : 1;
     const PetscInt    nwork = jac->nwork, nBlk = jac->nBlocks;
     PetscScalar       *glb_xdata=NULL;
@@ -257,8 +257,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
     if (container) {
       PetscInt *pNf=NULL;
       ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
-      batch_sz = (*pNf)%100000;
-      team_and_vector_size = (*pNf)/100000; // number of SMs to use - not used
+      batch_sz = *pNf;
     } else batch_sz = 1;
     if (nBlk%batch_sz) SETERRQ2(PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"batch_sz = %D, nBlk = %D",batch_sz,nBlk);
     d_bid_eqOffset = jac->d_bid_eqOffset_k->data();
@@ -274,10 +273,10 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
     }
     Kokkos::View<PetscScalar*, Kokkos::DefaultExecutionSpace> d_work_vecs_k("workvectors", global_buff_size); // global work vectors
     PetscInfo7(pc,"\tn = %D. %d shared mem words/team. %D global mem words, rtol=%e, num blocks %D, team_size=%D, %D vector threads\n",jac->n,scr_bytes_team/sizeof(PetscScalar),global_buff_size,rtol,nBlk,
-               team_and_vector_size==0 ? team_size : team_and_vector_size, team_and_vector_size==0 ? PCBJKOKKOS_VEC_SIZE : team_and_vector_size);
+               team_size, PCBJKOKKOS_VEC_SIZE);
     PetscScalar  *d_work_vecs = scr_bytes_team ? NULL : d_work_vecs_k.data();
     const PetscInt *d_isicol = jac->d_isicol_k->data(), *d_isrow = jac->d_isrow_k->data();
-    Kokkos::parallel_for("Solve", Kokkos::TeamPolicy<>(nBlk, team_and_vector_size==0 ? team_size : team_and_vector_size, team_and_vector_size==0 ? PCBJKOKKOS_VEC_SIZE : team_and_vector_size).set_scratch_size(PCBJKOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes_team)),
+    Kokkos::parallel_for("Solve", Kokkos::TeamPolicy<>(nBlk, team_size, PCBJKOKKOS_VEC_SIZE).set_scratch_size(PCBJKOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes_team)),
         KOKKOS_LAMBDA (const team_member team) {
         const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID+1];
         vect2D_scr_t work_vecs(team.team_scratch(PCBJKOKKOS_SHARED_LEVEL), scr_bytes_team ? (end-start) : 0, nwork);
@@ -301,37 +300,51 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
     Kokkos::fence();
     Kokkos::deep_copy (h_metadata, d_metadata);
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 3
+#if PCBJKOKKOS_VERBOSE_LEVEL >= 4
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"Iterations\n");CHKERRQ(ierr);
+#endif
     // assume species major
-    PetscInt nits[10];
-    for (PetscInt grid=0, s=0, head=0 ; grid < jac->num_dms; grid += batch_sz) {
-      for (PetscInt f=0, idx=head ; f < jac->dm_Nf[grid] ; f++,s++,idx++) {
+    for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
+      for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
+#if PCBJKOKKOS_VERBOSE_LEVEL >= 4
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"%2D:", s);CHKERRQ(ierr);
+        for (int bid=0 ; bid<batch_sz ; bid++ ) {
+         ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D ", h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its);CHKERRQ(ierr);
+        }
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
+#else
         PetscInt count=0;
         for (int bid=0 ; bid<batch_sz ; bid++ ) {
-          //PetscPrintf(PETSC_COMM_WORLD,"%2D ", h_metadata[idx + bid*jac->dm_Nf[grid]].its);
-          if (bid==0) nits[s] = h_metadata[idx + bid*jac->dm_Nf[grid]].its;
-          else if (h_metadata[idx + bid*jac->dm_Nf[grid]].its != nits[s]) {
-            if (!count++) PetscPrintf(PETSC_COMM_WORLD,"%d.%d %d) ",grid/batch_sz,f,s);
-            PetscPrintf(PETSC_COMM_WORLD,"%2D != %D; ", h_metadata[idx + bid*jac->dm_Nf[grid]].its, nits[s]);
-          }
+          if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
         }
-        if (count) PetscPrintf(PETSC_COMM_WORLD,"\n");
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D: %D max iterations\n", s, count);CHKERRQ(ierr);
+#endif
       }
-      head += batch_sz*jac->dm_Nf[grid];
+      head += batch_sz*jac->dm_Nf[dmIdx];
     }
-#else
+#elif PCBJKOKKOS_VERBOSE_LEVEL >= 2
+    PetscInt count=0;
+    for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
+      for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
+        if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
+      }
+    }
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"%D max iterations", count);CHKERRQ(ierr);
+#endif
+#if PCBJKOKKOS_VERBOSE_LEVEL > 0
     for (int blkID=0;blkID<nBlk;blkID++) {
 #if PCBJKOKKOS_VERBOSE_LEVEL <= 2
       if (blkID==0) {PetscInfo3(pc,"%d) Solver reason %d, %d iterations\n",blkID, h_metadata[blkID].reason, h_metadata[blkID].its);}
 #else
-      PetscInfo3(pc,"%d) Solver reason %d, %d iterations\n",blkID, h_metadata[blkID].reason, h_metadata[blkID].its);
+      ierr = PetscInfo3(pc,"%d) Solver reason %d, %d iterations\n",blkID, h_metadata[blkID].reason, h_metadata[blkID].its);CHKERRQ(ierr);
 #endif
       ierr = PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops);CHKERRQ(ierr);
-#if PCBJKOKKOS_VERBOSE_LEVEL > 3
-      printf("    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);
-#elif  PCBJKOKKOS_VERBOSE_LEVEL > 2
-      if (h_metadata[blkID].its > 100 || blkID%batch_sz==0) printf("    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);
+#if PCBJKOKKOS_VERBOSE_LEVEL > 4
+      ierr = PetscPrintf(PETSC_COMM_SELF,"    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);CHKERRQ(ierr);
 #elif  PCBJKOKKOS_VERBOSE_LEVEL > 1
-      if (h_metadata[blkID].its > 100) printf("    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);
+      if (h_metadata[blkID].its > 100) {
+        ierr = PetscPrintf(PETSC_COMM_SELF,"    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);CHKERRQ(ierr);
+      }
 #endif
       if (h_metadata[blkID].reason < 0) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%D, its=%D. species %D, batch %D, %D species\n",

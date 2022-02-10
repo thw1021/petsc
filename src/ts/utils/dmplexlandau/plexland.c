@@ -1881,6 +1881,16 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux,
   g0[0] = 2.*PETSC_PI*x[0];
 }
 
+static PetscErrorCode MatrixNfDestroy(void *ptr)
+{
+  PetscInt *nf = (PetscInt *)ptr;
+  PetscErrorCode  ierr;
+  PetscFunctionBegin;
+  ierr = PetscFree(nf);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+
 static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_batch_is_inv[LANDAU_MAX_GRIDS], LandauCtx *ctx)
 {
   PetscErrorCode ierr;
@@ -1972,10 +1982,12 @@ static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_ba
     ierr = MatCreateSubMatrix(ctx->J,ctx->batch_is,ctx->batch_is,MAT_INITIAL_MATRIX,&mat_block_order);CHKERRQ(ierr); // use MatPermute
     ierr = MatDestroy(&ctx->J);CHKERRQ(ierr);
     ctx->J = mat_block_order;
+    //
     ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
     ierr = PetscContainerSetPointer(container, (void *)ctx);CHKERRQ(ierr);
     ierr = PetscObjectCompose((PetscObject) ctx->J, "LandauCtx", (PetscObject) container);CHKERRQ(ierr);
     ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
+    //
     ctx->seqaij_mult = mat_block_order->ops->mult;
     mat_block_order->ops->mult = LandauMatMult;
     mat_block_order->ops->multadd = LandauMatMultAdd;
@@ -1986,6 +1998,17 @@ static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_ba
     mat_block_order->ops->multtranspose = LandauMatMultTranspose;
     ierr = VecDuplicate(X,&ctx->work_vec);CHKERRQ(ierr);
     ierr = VecScatterCreate(X, ctx->batch_is, ctx->work_vec, NULL, &ctx->plex_batch);CHKERRQ(ierr);
+  }
+  {
+    PetscContainer  container;
+    PetscInt        *pNf;
+    ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
+    ierr = PetscMalloc(sizeof(*pNf), &pNf);CHKERRQ(ierr);
+    *pNf = ctx->batch_sz;
+    ierr = PetscContainerSetPointer(container, (void *)pNf);CHKERRQ(ierr);
+    ierr = PetscContainerSetUserDestroy(container, MatrixNfDestroy);CHKERRQ(ierr);
+    ierr = PetscObjectCompose((PetscObject)ctx->J, "batch size", (PetscObject) container);CHKERRQ(ierr);
+    ierr = PetscContainerDestroy(&container);CHKERRQ(ierr);
   }
 
   PetscFunctionReturn(0);
