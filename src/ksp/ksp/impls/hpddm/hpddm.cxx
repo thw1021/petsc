@@ -1,9 +1,15 @@
+#define HPDDM_MIXED_PRECISION 1
+#define KSPHPDDM_DEFAULT_PRECISION (PetscDefined(USE_REAL_SINGLE) ? KSP_HPDDM_PRECISION_SINGLE : \
+                                    (PetscDefined(USE_REAL_DOUBLE) ? KSP_HPDDM_PRECISION_DOUBLE : \
+                                     (PetscDefined(USE_REAL___FLOAT128) ? KSP_HPDDM_PRECISION_QUADRUPLE : \
+                                      KSP_HPDDM_PRECISION_HALF)))
 #include <petsc/private/petschpddm.h> /*I "petscksp.h" I*/
 
 /* static array length */
 #define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
 const char *const KSPHPDDMTypes[]          = { KSPGMRES, "bgmres", KSPCG, "bcg", "gcrodr", "bgcrodr", "bfbcg", KSPPREONLY };
+const char *const KSPHPDDMPrecisionTypes[] = { "HALF", "SINGLE", "DOUBLE", "QUADRUPLE", "KSPHPDDMPrecisionType", "KSP_HPDDM_PRECISION_", NULL };
 const char *const HPDDMOrthogonalization[] = { "cgs", "mgs" };
 const char *const HPDDMQR[]                = { "cholqr", "cgs", "mgs" };
 const char *const HPDDMVariant[]           = { "left", "right", "flexible" };
@@ -40,6 +46,8 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObje
   if (i == ALEN(KSPHPDDMTypes) - 1)
     i = HPDDM_KRYLOV_METHOD_NONE; /* need to shift the value since HPDDM_KRYLOV_METHOD_RICHARDSON is not registered in PETSc */
   data->cntl[0] = i;
+  ierr = PetscOptionsEnum("-ksp_hpddm_precision", "Precision in which Krylov bases are stored", "KSPHPDDM", KSPHPDDMPrecisionTypes, (PetscEnum)data->precision, (PetscEnum*)&data->precision, NULL);CHKERRQ(ierr);
+  PetscCheck(data->precision == KSP_HPDDM_PRECISION_SINGLE || data->precision == KSP_HPDDM_PRECISION_DOUBLE, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unhandled %s precision", KSPHPDDMPrecisionTypes[data->precision]);
   if (data->cntl[0] != HPDDM_KRYLOV_METHOD_NONE) {
     if (data->cntl[0] != HPDDM_KRYLOV_METHOD_BCG && data->cntl[0] != HPDDM_KRYLOV_METHOD_BFBCG) {
       i = (data->cntl[1] == static_cast<char>(PETSC_DECIDE) ? HPDDM_VARIANT_LEFT : data->cntl[1]);
@@ -83,6 +91,7 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObje
         ierr = PetscOptionsEList("-ksp_hpddm_recycle_target", "Criterion to select harmonic Ritz vectors", "KSPHPDDM", HPDDMRecycleTarget, ALEN(HPDDMRecycleTarget), HPDDMRecycleTarget[HPDDM_RECYCLE_TARGET_SM], &i, NULL);CHKERRQ(ierr);
         data->cntl[3] = i;
       } else {
+        PetscCheck(data->precision == KSPHPDDM_DEFAULT_PRECISION, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Cannot use SLEPc with a different precision than PETSc for harmonic Ritz eigensolves");
         ierr = MPI_Comm_size(PetscObjectComm((PetscObject)ksp), &size);CHKERRMPI(ierr);
         i = (data->cntl[3] == static_cast<char>(PETSC_DECIDE) ? 1 : data->cntl[3]);
         ierr = PetscOptionsRangeInt("-ksp_hpddm_recycle_redistribute", "Number of processes used to solve eigenvalue problems when recycling in BGCRODR", "KSPHPDDM", i, &i, NULL, 1, PetscMin(size, 192));CHKERRQ(ierr);
@@ -114,6 +123,7 @@ static PetscErrorCode KSPView_HPDDM(KSP ksp, PetscViewer viewer)
   ierr = PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &ascii);CHKERRQ(ierr);
   if (op && ascii) {
     ierr = PetscViewerASCIIPrintf(viewer, "HPDDM type: %s\n", KSPHPDDMTypes[std::min(static_cast<PetscInt>(data->cntl[0]), static_cast<PetscInt>(ALEN(KSPHPDDMTypes) - 1))]);CHKERRQ(ierr);
+    ierr = PetscViewerASCIIPrintf(viewer, "precision: %s\n", KSPHPDDMPrecisionTypes[data->precision]);CHKERRQ(ierr);
     if (data->cntl[0] == HPDDM_KRYLOV_METHOD_BGMRES || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BFBCG) {
       if (std::abs(data->rcntl[0] - static_cast<PetscReal>(PETSC_DECIDE)) < PETSC_SMALL) {
         ierr = PetscViewerASCIIPrintf(viewer, "no deflation at restarts\n", PetscBools[array ? PETSC_TRUE : PETSC_FALSE]);CHKERRQ(ierr);
@@ -201,6 +211,7 @@ static inline PetscErrorCode KSPHPDDMReset_Private(KSP ksp)
   std::fill_n(data->icntl, ALEN(data->icntl), static_cast<int>(PETSC_DECIDE));
   std::fill_n(data->scntl, ALEN(data->scntl), static_cast<unsigned short>(PETSC_DECIDE));
   std::fill_n(data->cntl , ALEN(data->cntl) , static_cast<char>(PETSC_DECIDE));
+  data->precision = KSPHPDDM_DEFAULT_PRECISION;
   PetscFunctionReturn(0);
 }
 
@@ -234,10 +245,13 @@ static PetscErrorCode KSPDestroy_HPDDM(KSP ksp)
 
 static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *b, PetscScalar *x, PetscInt n)
 {
-  KSP_HPDDM              *data = (KSP_HPDDM*)ksp->data;
-  KSPConvergedDefaultCtx *ctx = (KSPConvergedDefaultCtx*)ksp->cnvP;
-  PetscBool              scale;
-  PetscErrorCode         ierr;
+  KSP_HPDDM                           *data = (KSP_HPDDM*)ksp->data;
+  KSPConvergedDefaultCtx              *ctx = (KSPConvergedDefaultCtx*)ksp->cnvP;
+  HPDDM::upscaled_type<PetscScalar>   *dbl[2];
+  HPDDM::downscaled_type<PetscScalar> *sgl[2];
+  const PetscInt                      N = data->op->getDof() * n;
+  PetscBool                           scale;
+  PetscErrorCode                      ierr;
 
   PetscFunctionBegin;
   ierr = PCGetDiagonalScale(ksp->pc, &scale);CHKERRQ(ierr);
@@ -257,7 +271,24 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
   if ((data->cntl[0] == HPDDM_KRYLOV_METHOD_GCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR) && data->op->storage()) ksp->guess_zero = PETSC_FALSE;
   ksp->its = 0;
   ksp->reason = KSP_CONVERGED_ITERATING;
-  ierr = static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp)));CHKERRQ(ierr);
+  if (data->precision == KSP_HPDDM_PRECISION_DOUBLE && PetscDefined(USE_REAL_SINGLE)) {
+    ierr = PetscMalloc2(N, dbl, N, dbl + 1);CHKERRQ(ierr);
+    std::copy_n(b, N, dbl[0]);
+    std::copy_n(x, N, dbl[1]);
+    ierr = static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, dbl[0], dbl[1], n, PetscObjectComm((PetscObject)ksp)));CHKERRQ(ierr);
+    std::copy_n(dbl[1], N, x);
+    ierr = PetscFree2(dbl[0], dbl[1]);CHKERRQ(ierr);
+  } else if (data->precision == KSP_HPDDM_PRECISION_SINGLE && PetscDefined(USE_REAL_DOUBLE)) {
+    ierr = PetscMalloc1(N, sgl);CHKERRQ(ierr);
+    sgl[1] = reinterpret_cast<HPDDM::downscaled_type<PetscScalar>*>(x);
+    std::copy_n(b, N, sgl[0]);
+    for (PetscInt i = 0; i < N; ++i) sgl[1][i] = x[i];
+    ierr = static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, sgl[0], sgl[1], n, PetscObjectComm((PetscObject)ksp)));CHKERRQ(ierr);
+    ierr = PetscFree(sgl[0]);CHKERRQ(ierr);
+    std::copy_backward(sgl[1], sgl[1] + N, x + N);
+  } else {
+    ierr = static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp)));CHKERRQ(ierr);
+  }
   if (!ksp->reason) { /* KSPConvergedDefault() is still returning 0 (= KSP_CONVERGED_ITERATING) */
     if (ksp->its >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
     else ksp->reason = KSP_CONVERGED_RTOL; /* early exit by HPDDM, which only happens on breakdowns or convergence */
@@ -612,5 +643,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP ksp)
     ierr = HPDDMLoadDL_Private(&loadedDL);CHKERRQ(ierr);
   }
 #endif
+  data->precision = KSPHPDDM_DEFAULT_PRECISION;
   PetscFunctionReturn(0);
 }
