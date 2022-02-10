@@ -289,31 +289,31 @@ template <Device::CUPM::DeviceType T>
 template <typename SeqFunction>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::minmax_async_(Vec x, PetscInt *idx, PetscReal *z, SeqFunction seqfn, MPI_Op idxOp, MPI_Op noIdxOp))
 {
-  PetscReal      work;
-  PetscErrorCode ierr;
+  PetscReal          work[1];
+  PetscDeviceContext dctx;
+  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = seqfn(x,idx,&work);CHKERRQ(ierr);
-  {
-    PetscDeviceContext dctx;
-
-    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
-  }
+  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+  ierr = seqfn(x,idx,work);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
+  printf("%g\n",*work);
   if (PetscDefined(HAVE_MPIUNI)) {
-    *z = work;
+    *z = *work;
   } else {
     const auto comm = PetscObjectComm(PetscObjectCast(x));
 
     if (idx) {
       struct { PetscReal v; PetscInt i; } in,out;
 
-      in.v  = work;
+      puts("here");
+      in.v  = *work;
       in.i  = *idx + x->map->rstart;
       ierr  = MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,idxOp,comm);CHKERRMPI(ierr);
       *z    = out.v;
       *idx  = out.i;
-    } else {ierr = MPIU_Allreduce(&work,z,1,MPIU_REAL,noIdxOp,comm);CHKERRMPI(ierr);}
+    } else {ierr = MPIU_Allreduce(work,z,1,MPIU_REAL,noIdxOp,comm);CHKERRMPI(ierr);}
   }
   PetscFunctionReturn(0);
 }
