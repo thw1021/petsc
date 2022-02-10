@@ -1320,8 +1320,9 @@ struct real_part
 
 template <Device::CUPM::DeviceType T>
 template <typename TupleFuncT, typename UnaryFuncT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& tuple_ftr, UnaryFuncT&& unary_ftr, PetscReal initval, Vec v, PetscInt *p, PetscReal *m))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& tuple_ftr, UnaryFuncT&& unary_ftr, PetscReal init_val, Vec v, PetscInt *p, PetscReal *m))
 {
+  constexpr auto     init_ptr = PetscInt{-1};
   const auto         n = v->map->n;
   PetscDeviceContext dctx;
   cupmStream_t       stream;
@@ -1330,17 +1331,19 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   if (!n) {
-    *m = initval;
-    if (p) *p = -1;
+    *m = init_val;
+    if (p) *p = init_ptr;
     PetscFunctionReturn(0);
   }
+  printf("---------- %g\n",*m);
   ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
+  ierr = VecView_Debug(v,"before");CHKERRQ(ierr);
   // REVIEW ME: why not cupmBlasIXamin()/cupmBlasIXamax()?
   CHKERRTHRUST(
     auto vptr = thrust::device_pointer_cast<PetscScalar>(DeviceArrayRead(dctx,v));
 
     if (p) {
-      auto tup = thrust::make_tuple(initval,PetscInt{-1});
+      auto tup = thrust::make_tuple(init_val,init_ptr);
       auto zip = thrust::make_zip_iterator(
         thrust::make_tuple(vptr,thrust::make_counting_iterator(PetscInt{0}))
       );
@@ -1351,20 +1354,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& 
 #if PetscDefined(USE_COMPLEX)
       thrust::tie(*m,*p) = THRUST_CALL(thrust::transform_reduce,stream,zip,zip+n,detail::real_part(),tup,std::forward<TupleFuncT>(tuple_ftr));
 #else
-      thrust::tie(*m,*p) = THRUST_CALL(
-        thrust::reduce,stream,zip,zip+n,tup,std::forward<TupleFuncT>(tuple_ftr)
-      );
+      thrust::tie(*m,*p) = THRUST_CALL(thrust::reduce,stream,zip,zip+n,tup,std::forward<TupleFuncT>(tuple_ftr));
 #endif
     } else {
 #if PetscDefined(USE_COMPLEX)
-      *m = THRUST_CALL(thrust::transform_reduce,stream,vptr,vptr+n,detail::real_part(),initval,std::forward<UnaryFuncT>(unary_ftr));
+      *m = THRUST_CALL(thrust::transform_reduce,stream,vptr,vptr+n,detail::real_part(),init_val,std::forward<UnaryFuncT>(unary_ftr));
 #else
-      *m = THRUST_CALL(
-        thrust::reduce,stream,vptr,vptr+n,initval,std::forward<UnaryFuncT>(unary_ftr)
-      );
+      *m = THRUST_CALL(thrust::reduce,stream,vptr,vptr+n,init_val,std::forward<UnaryFuncT>(unary_ftr));
 #endif
     }
   );
+  ierr = VecView_Debug(v,"after");CHKERRQ(ierr);
+  printf("---------- %g\n",*m);
   // REVIEW ME: flops?
   PetscFunctionReturn(0);
 }
@@ -1378,12 +1379,8 @@ struct max_tuple
 
   PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
-    return ((x.get<0>() > y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
-    // if ((x.get<0>() > y.get<0>()) || (x.get<1>() < y.get<1>())) {
-    //   return thrust::make_tuple(x.get<0>(),x.get<1>());
-    // } else {
-    //   return thrust::make_tuple(y.get<0>(),y.get<1>());
-    // }
+    // REVIEW ME: massively simplified the boolean logic, but may have made mistake doing so
+    return ((x.get<0>() <= y.get<0>()) || (x.get<1>() >= y.get<1>())) ? y : x;
   }
 };
 
@@ -1411,16 +1408,15 @@ struct min_tuple
 
   PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
-    return ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) ? x : y;
-    // if ((x.get<0>() < y.get<0>()) || (x.get<1>() < y.get<1>())) {
-    //   return thrust::make_tuple(x.get<0>(),x.get<1>());
-    // } else {
-    //   return thrust::make_tuple(y.get<0>(),y.get<1>());
-    // }
+    if (x.get<0>() > y.get<0>())       return y;
+    else if (x.get<0>() != y.get<0>()) return x;
+    else if (x.get<1>() < y.get<1>())  return x;
+    else                               return y;
   }
 };
 
 } // namespace detail
+
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::min_async(Vec v, PetscInt *p, PetscReal *m))
 {
