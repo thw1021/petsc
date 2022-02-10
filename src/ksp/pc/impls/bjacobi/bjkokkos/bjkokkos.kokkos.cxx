@@ -144,6 +144,9 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
     beta = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += Zr[idx]*PetscConj(Rl[idx]);}, beta);
     team.team_barrier();
+#if PCBJKOKKOS_VERBOSE_LEVEL >= 6
+    Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d beta = Z.R = %22.14e \n",i,(double)beta);});
+#endif
     if (!i) {
       if (beta == 0.0) {
         metad->reason = KSP_DIVERGED_BREAKDOWN_BICG;
@@ -215,8 +218,8 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
   return 0;
 }
 
-// KSP solver solve Ax = b; x is zeroed out (think)
-static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
+// KSP solver solve Ax = b; x is output, bin is input
+static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 {
   PetscErrorCode      ierr;
   PC_PCBJKOKKOS       *jac = (PC_PCBJKOKKOS*)pc->data;
@@ -243,12 +246,25 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
     PetscMemType      mtype;
     PetscContainer    container;
     PetscInt          batch_sz;
+    VecScatter        plex_batch=NULL;
+    Vec               bvec;
 
-    ierr = VecGetArrayAndMemType(x,&glb_xdata,&mtype);CHKERRQ(ierr);
+    // get field major is to map plex IO to/from block/field major
+    ierr = PetscObjectQuery((PetscObject) A, "plex_batch_is", (PetscObject *) &container);CHKERRQ(ierr);
+    ierr = VecDuplicate(bin,&bvec);CHKERRQ(ierr);
+    if (container) {
+      ierr = PetscContainerGetPointer(container, (void **) &plex_batch);CHKERRQ(ierr);
+      ierr = VecScatterBegin(plex_batch,bin,bvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+      ierr = VecScatterEnd(plex_batch,bin,bvec,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    } else {
+      ierr = VecCopy(bin, bvec);CHKERRQ(ierr);
+    }
+    // get x
+    ierr = VecGetArrayAndMemType(xout,&glb_xdata,&mtype);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     if (mtype!=PETSC_MEMTYPE_DEVICE) SETERRQ2(PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"No GPU data for x %D != %D",mtype,PETSC_MEMTYPE_DEVICE);
 #endif
-    ierr = VecGetArrayReadAndMemType(b,&glb_bdata,&mtype);CHKERRQ(ierr);
+    ierr = VecGetArrayReadAndMemType(bvec,&glb_bdata,&mtype);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_CUDA)
     if (mtype!=PETSC_MEMTYPE_DEVICE) SETERRQ(PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"No GPU data for b");
 #endif
@@ -304,6 +320,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"Iterations\n");CHKERRQ(ierr);
 #endif
     // assume species major
+#if PCBJKOKKOS_VERBOSE_LEVEL < 4
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"max iterations per species:");CHKERRQ(ierr);
+#endif
     for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
       for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
@@ -317,11 +336,14 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
         for (int bid=0 ; bid<batch_sz ; bid++ ) {
           if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
         }
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D: %D max iterations\n", s, count);CHKERRQ(ierr);
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D ", count);CHKERRQ(ierr);
 #endif
       }
       head += batch_sz*jac->dm_Nf[dmIdx];
     }
+#if PCBJKOKKOS_VERBOSE_LEVEL < 4
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
+#endif
 #elif PCBJKOKKOS_VERBOSE_LEVEL >= 2
     PetscInt count=0;
     for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
@@ -353,8 +375,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
       }
     }
 #endif
-    ierr = VecRestoreArrayAndMemType(x,&glb_xdata);CHKERRQ(ierr);
-    ierr = VecRestoreArrayReadAndMemType(b,&glb_bdata);CHKERRQ(ierr);
+    ierr = VecRestoreArrayAndMemType(xout,&glb_xdata);CHKERRQ(ierr);
+    ierr = VecRestoreArrayReadAndMemType(bvec,&glb_bdata);CHKERRQ(ierr);
     {
       int errsum = 0;
       Kokkos::parallel_reduce(nBlk, KOKKOS_LAMBDA (const int idx, int& lsum) {
@@ -367,14 +389,22 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec b,Vec x)
     if (pcreason) PetscInfo1(pc,"PCSetFailedReason %d\n",pcreason);
 #endif
     ierr = PCSetFailedReason(pc,pcreason);CHKERRQ(ierr);
+    // map back to Plex space
+    if (plex_batch) {
+      ierr = VecCopy(xout, bvec);CHKERRQ(ierr);
+      ierr = VecScatterBegin(plex_batch,bvec,xout,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+      ierr = VecScatterEnd(plex_batch,bvec,xout,INSERT_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    }
+    ierr = VecDestroy(&bvec);CHKERRQ(ierr);
   }
+
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 {
   PetscErrorCode    ierr;
-  PC_PCBJKOKKOS      *jac = (PC_PCBJKOKKOS*)pc->data;
+  PC_PCBJKOKKOS     *jac = (PC_PCBJKOKKOS*)pc->data;
   Mat               A = pc->pmat;
   Mat_SeqAIJKokkos  *aijkok;
   PetscBool         flg;
@@ -390,10 +420,15 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       Vec               *subX;
       DM                pack,*subDM;
       PetscInt          nDMs, n;
+      PetscContainer    container;
+      ierr = PetscObjectQuery((PetscObject) A, "plex_batch_is", (PetscObject *) &container);CHKERRQ(ierr);
       { // Permute the matrix to get a block diagonal system: d_isrow_k, d_isicol_k
         MatOrderingType   rtype = MATORDERINGRCM;
         IS                isrow,isicol;
         const PetscInt    *rowindices,*icolindices;
+
+        if (container) rtype = MATORDERINGNATURAL; // if we have a vecscatter then don't reorder here (all the reorder stuff goes away in future)
+        else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"-dm_landau_jacobian_field_major_order should be used with gpu assembly");
         // get permutation. Not what I expect so inverted here
         ierr = MatGetOrdering(A,rtype,&isrow,&isicol);CHKERRQ(ierr);
         ierr = ISDestroy(&isrow);CHKERRQ(ierr);
