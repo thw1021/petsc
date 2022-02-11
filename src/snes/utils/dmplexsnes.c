@@ -726,7 +726,7 @@ static inline PetscErrorCode DMInterpolate_Quad_Private(DMInterpolationInfo ctx,
     if (4*dof != xSize) {
       PetscInt d;
 
-      if (!fem) SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "Cannot have a higher order interpolant if the discretization is not PetscFE");
+      PetscAssert(fem, ctx->comm, PETSC_ERR_ARG_WRONG, "Cannot have a higher order interpolant if the discretization is not PetscFE");
       xir[0] = 2.0*xir[0] - 1.0; xir[1] = 2.0*xir[1] - 1.0;
       ierr = PetscFEComputeTabulation(fem, 1, xir, 0, T);CHKERRQ(ierr);
       for (comp = 0; comp < dof; ++comp) {
