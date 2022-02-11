@@ -49,7 +49,7 @@ static inline void PetscDrawXiSetPixVal(PetscDraw_X *W,PetscDrawXiPixVal pix)
 
 #if defined(PETSC_USE_DEBUG)
 #define PetscDrawXiValidColor(W,color) \
-  do { PetscAssertFalse(PetscUnlikely((color)<0||(color)>=PETSC_DRAW_MAXCOLOR),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Color value %" PetscInt_FMT " out of range [0..%d]",(PetscInt)(color),PETSC_DRAW_MAXCOLOR-1); } while (0)
+  do { PetscCheckFalse(PetscUnlikely((color)<0||(color)>=PETSC_DRAW_MAXCOLOR),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Color value %" PetscInt_FMT " out of range [0..%d]",(PetscInt)(color),PETSC_DRAW_MAXCOLOR-1); } while (0)
 #else
 #define PetscDrawXiValidColor(W,color) do {} while (0)
 #endif
