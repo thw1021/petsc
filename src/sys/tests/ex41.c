@@ -4,7 +4,7 @@ static char help[] = "Test PETSc integer hash set.\n\n";
 #include <petscsys.h>
 
 #define PetscCheck(expr) do {            \
-  PetscAssertFalse(PetscUnlikely(!(expr)),PETSC_COMM_SELF,PETSC_ERR_LIB, "Assertion: `%s' failed.", PetscStringize(expr));  \
+  PetscCheckFalse(PetscUnlikely(!(expr)),PETSC_COMM_SELF,PETSC_ERR_LIB, "Assertion: `%s' failed.", PetscStringize(expr));  \
 } while (0)
 
 int main(int argc,char **argv)
