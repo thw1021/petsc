@@ -430,7 +430,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
          const PetscReal   *invJe = &invJ_a[(ip_offset[grid] + loc_elem*Nq)*dim*dim];
         ierr = PetscMalloc1(elemMatSize, &elemMat);CHKERRQ(ierr);
         ierr = PetscMemzero(elemMat, elemMatSize*sizeof(*elemMat));CHKERRQ(ierr);
-        ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
+        if (shift==0.0) { // Jacobian
+          ierr = PetscLogEventBegin(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
+        } else {
+          ierr = PetscLogEventBegin(ctx->events[16],0,0,0,0);CHKERRQ(ierr);
+        }
         for (PetscInt qj = 0; qj < Nq; ++qj) {
           const PetscInt   jpidx_glb = ip_offset[grid] + qj + loc_elem * Nq;
           PetscReal        g0[LANDAU_MAX_SPECIES], g2[LANDAU_MAX_SPECIES][LANDAU_DIM], g3[LANDAU_MAX_SPECIES][LANDAU_DIM][LANDAU_DIM]; // could make a LANDAU_MAX_SPECIES_GRID ~ number of ions - 1
@@ -569,7 +573,11 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
             }
           }
         } /* qj loop */
-        ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
+        if (shift==0.0) { // Jacobian
+          ierr = PetscLogEventEnd(ctx->events[4],0,0,0,0);CHKERRQ(ierr);
+        } else {
+          ierr = PetscLogEventEnd(ctx->events[16],0,0,0,0);CHKERRQ(ierr);
+        }
 #if defined(PETSC_HAVE_THREADSAFETY)
         endtime = MPI_Wtime();
         if (ctx->stage) ctx->times[LANDAU_KERNEL] += (endtime - starttime);
@@ -1495,6 +1503,10 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = MPI_Comm_rank(ctx->comm, &rank);CHKERRMPI(ierr);
     ctx->stage = 0;
     ierr = PetscLogEventRegister("Landau Create", DM_CLASSID, &ctx->events[13]);CHKERRQ(ierr); /* 13 */
+    ierr = PetscLogEventRegister(" GPU ass. setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
+    ierr = PetscLogEventRegister(" Field maj setup", DM_CLASSID, &ctx->events[12]);CHKERRQ(ierr); /* 12 */
+    ierr = PetscLogEventRegister(" Assembly maps", DM_CLASSID, &ctx->events[15]);CHKERRQ(ierr); /* 15 */
+    ierr = PetscLogEventRegister("Landau Mass mat", DM_CLASSID, &ctx->events[14]);CHKERRQ(ierr); /* 14 */
     ierr = PetscLogEventRegister("Landau Operator", DM_CLASSID, &ctx->events[11]);CHKERRQ(ierr); /* 11 */
     ierr = PetscLogEventRegister("Landau Jacobian", DM_CLASSID, &ctx->events[0]);CHKERRQ(ierr); /* 0 */
     ierr = PetscLogEventRegister("Landau Mass", DM_CLASSID, &ctx->events[9]);CHKERRQ(ierr); /* 9 */
@@ -1503,13 +1515,10 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscLogEventRegister(" dynamic IP-Jac", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
     ierr = PetscLogEventRegister(" Kernel-init", DM_CLASSID, &ctx->events[3]);CHKERRQ(ierr); /* 3 */
     ierr = PetscLogEventRegister(" Jac-f-df (GPU)", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
-    ierr = PetscLogEventRegister(" Kernel (GPU)", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
+    ierr = PetscLogEventRegister(" M Kernel (GPU)", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
+    ierr = PetscLogEventRegister(" J Kernel (GPU)", DM_CLASSID, &ctx->events[16]);CHKERRQ(ierr); /* 16 */
     ierr = PetscLogEventRegister(" Copy to CPU", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
     ierr = PetscLogEventRegister(" CPU assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
-    ierr = PetscLogEventRegister(" GPU ass. setup", DM_CLASSID, &ctx->events[2]);CHKERRQ(ierr); /* 2 */
-    ierr = PetscLogEventRegister(" Field maj setup", DM_CLASSID, &ctx->events[12]);CHKERRQ(ierr); /* 12 */
-    ierr = PetscLogEventRegister(" Assembly maps", DM_CLASSID, &ctx->events[15]);CHKERRQ(ierr); /* 15 */
-    ierr = PetscLogEventRegister("Landau Mass mat", DM_CLASSID, &ctx->events[14]);CHKERRQ(ierr); /* 14 */
 
     if (rank) { /* turn off output stuff for duplicate runs - do we need to add the prefix to all this? */
       ierr = PetscOptionsClearValue(NULL,"-snes_converged_reason");CHKERRQ(ierr);
@@ -1517,6 +1526,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       ierr = PetscOptionsClearValue(NULL,"-snes_monitor");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ksp_monitor");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ts_monitor");CHKERRQ(ierr);
+      ierr = PetscOptionsClearValue(NULL,"-ts_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-ts_adapt_monitor");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-dm_landau_amr_dm_view");CHKERRQ(ierr);
       ierr = PetscOptionsClearValue(NULL,"-dm_landau_amr_vec_view");CHKERRQ(ierr);
