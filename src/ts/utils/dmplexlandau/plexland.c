@@ -1515,8 +1515,8 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ierr = PetscLogEventRegister(" dynamic IP-Jac", DM_CLASSID, &ctx->events[1]);CHKERRQ(ierr); /* 1 */
     ierr = PetscLogEventRegister(" Kernel-init", DM_CLASSID, &ctx->events[3]);CHKERRQ(ierr); /* 3 */
     ierr = PetscLogEventRegister(" Jac-f-df (GPU)", DM_CLASSID, &ctx->events[8]);CHKERRQ(ierr); /* 8 */
-    ierr = PetscLogEventRegister(" M Kernel (GPU)", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
-    ierr = PetscLogEventRegister(" J Kernel (GPU)", DM_CLASSID, &ctx->events[16]);CHKERRQ(ierr); /* 16 */
+    ierr = PetscLogEventRegister(" J Kernel (GPU)", DM_CLASSID, &ctx->events[4]);CHKERRQ(ierr); /* 4 */
+    ierr = PetscLogEventRegister(" M Kernel (GPU)", DM_CLASSID, &ctx->events[16]);CHKERRQ(ierr); /* 16 */
     ierr = PetscLogEventRegister(" Copy to CPU", DM_CLASSID, &ctx->events[5]);CHKERRQ(ierr); /* 5 */
     ierr = PetscLogEventRegister(" CPU assemble", DM_CLASSID, &ctx->events[6]);CHKERRQ(ierr); /* 6 */
 
