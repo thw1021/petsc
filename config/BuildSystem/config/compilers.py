@@ -118,31 +118,15 @@ class Configure(config.base.Configure):
     config.base.Configure.__setattr__(self, name, value)
     return
 
-  def checkRestrict(self,language):
-    '''Check for the CXX restrict keyword'''
-    # Try keywords equivalent to C99 restrict.  Note that many C
-    # compilers require special cflags, such as -std=c99 or -restrict to
-    # recognize the "restrict" keyword and it is not always practical to
-    # expect that every user provides matching options.  Meanwhile,
-    # compilers like Intel and MSVC (reportedly) support __restrict
-    # without special options.  Glibc uses __restrict, presumably for
-    # this reason.  Note that __restrict is not standardized while
-    # "restrict" is, but implementation realities favor __restrict.
-    if language.lower() != 'cxx':
-      mess = 'Unknown Language : '+language
-      raise RuntimeError(mess)
-    with self.Language(language):
-      # Define to equivalent of C99 restrict keyword, or to nothing if this is not supported
+  def checkCxxRestrict(self):
+    '''Check for the CXX restrict keyword equivalent to C99 restrict'''
+    with self.Language('Cxx'):
       for kw in ['__restrict', ' __restrict__', 'restrict', ' ']:
         if self.checkCompile('', 'float * '+kw+' x;'):
-          self.cxxRestrict = kw # is this used anywhere?
+          self.cxxRestrict = kw
           break
-
-    logMessage = ' '.join(
-      ['Set',language,'restrict keyword to',kw] if kw else ['No',language,'restrict keyword']
-    )
-    self.logPrint(logMessage,4,'compilers')
-    self.addDefine(language.upper()+'_RESTRICT',kw)
+    self.logPrint('Set Cxx restrict keyword to : '+self.cxxRestrict, 4, 'compilers')
+    self.addDefine('CXX_RESTRICT', self.cxxRestrict)
     return
 
   def checkCrossLink(self, func1, func2, language1 = 'C', language2='FC',extraObjs = []):
@@ -1433,7 +1417,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
 
     if hasattr(self.setCompilers, 'CXX'):
       self.isGCXX = config.setCompilers.Configure.isGNU(self.setCompilers.CXX, self.log)
-      self.executeTest(self.checkRestrict,['Cxx'])
+      self.executeTest(self.checkCxxRestrict)
       self.executeTest(self.checkCxxOptionalExtensions)
       self.executeTest(self.checkCxxComplexFix)
       if self.argDB['with-cxxlib-autodetect']:
