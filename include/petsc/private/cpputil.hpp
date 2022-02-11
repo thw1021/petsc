@@ -153,12 +153,6 @@ PETSC_STATIC_INLINE constexpr T*& PetscRemoveConstCast(const T*& object) noexcep
 }
 
 template <typename T>
-PETSC_STATIC_INLINE constexpr T& PetscRemoveAllConstCast(T& object) noexcept
-{
-
-}
-
-template <typename T>
 PETSC_STATIC_INLINE constexpr util::add_const_t<T>& PetscAddConstCast(T& object) noexcept
 {
   return const_cast<util::add_const_t<T>&>(std::forward<T>(object));
