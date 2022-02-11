@@ -227,8 +227,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
   Mat_SeqAIJKokkos    *aijkok;
 
   PetscFunctionBegin;
-  if (!jac->vec_diag || !A) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Not setup???? %p %p",jac->vec_diag,A);
-  if (!(aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr))) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"No aijkok");
+  if (!jac->vec_diag || !A) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Not setup???? %p %p",jac->vec_diag,A);
+  if (!(aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr))) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No aijkok");
   else {
     using scr_mem_t  = Kokkos::DefaultExecutionSpace::scratch_memory_space;
     using vect2D_scr_t = Kokkos::View<PetscScalar**, Kokkos::LayoutLeft, scr_mem_t>;
@@ -371,7 +371,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       if (h_metadata[blkID].reason < 0) {
         ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%D, its=%D. species %D, batch %D, %D species\n",
                            h_metadata[blkID].reason,h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz,nBlk/batch_sz);CHKERRQ(ierr);
-        SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"");
+        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"");
       }
     }
 #endif
@@ -411,10 +411,10 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 
   PetscFunctionBegin;
   if (pc->useAmat) SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"No support for using 'use_amat'");
-  if (!A) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"No matrix - A is used above");
+  if (!A) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"No matrix - A is used above");
   ierr = PetscObjectTypeCompareAny((PetscObject)A,&flg,MATSEQAIJKOKKOS,MATMPIAIJKOKKOS,MATAIJKOKKOS,"");CHKERRQ(ierr);
   if (!flg) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"must use '-dm_mat_type aijkokkos -dm_vec_type kokkos' for -pc_type bjkokkos");
-  if (!(aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr))) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"No aijkok");
+  if (!(aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr))) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"No aijkok");
   else {
     if (!jac->vec_diag) {
       Vec               *subX;
@@ -428,7 +428,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         const PetscInt    *rowindices,*icolindices;
 
         if (container) rtype = MATORDERINGNATURAL; // if we have a vecscatter then don't reorder here (all the reorder stuff goes away in future)
-        else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"-dm_landau_jacobian_field_major_order should be used with gpu assembly");
+        else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"-dm_landau_jacobian_field_major_order should be used with gpu assembly");
         // get permutation. Not what I expect so inverted here
         ierr = MatGetOrdering(A,rtype,&isrow,&isicol);CHKERRQ(ierr);
         ierr = ISDestroy(&isrow);CHKERRQ(ierr);
@@ -450,7 +450,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       }
       // get block sizes
       ierr = PCGetDM(pc, &pack);CHKERRQ(ierr);
-      if (!pack) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"no DM. Requires a composite DM");
+      if (!pack) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"no DM. Requires a composite DM");
       ierr = PetscObjectTypeCompare((PetscObject)pack,DMCOMPOSITE,&flg);CHKERRQ(ierr);
       if (!flg) SETERRQ1(PetscObjectComm((PetscObject)pack),PETSC_ERR_USER,"Not for type %s",((PetscObject)pack)->type_name);
       ierr = DMCreateGlobalVector(pack, &jac->vec_diag);CHKERRQ(ierr);
@@ -494,7 +494,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
           PetscInt nloc,nblk;
           ierr = VecGetSize(subX[ii],&nloc);CHKERRQ(ierr);
           nblk = nloc/jac->dm_Nf[ii];
-          if (nloc%jac->dm_Nf[ii]) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"nloc%jac->dm_Nf[ii] DMs",nloc,jac->dm_Nf[ii]);
+          if (nloc%jac->dm_Nf[ii]) SETERRQ2(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"nloc%jac->dm_Nf[ii] DMs",nloc,jac->dm_Nf[ii]);
           for (PetscInt jj=0;jj<jac->dm_Nf[ii];jj++, idx++) {
             h_block_offsets[idx+1] = h_block_offsets[idx] + nblk;
 #if PCBJKOKKOS_VERBOSE_LEVEL <= 2
