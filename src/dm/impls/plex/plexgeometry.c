@@ -812,13 +812,18 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
       }
     }
   }
-  /* define domain bounding box */
+  /* Decide which domain bounding box to use */
   {
-    Vec coorglobal;
+    Vec         coordinates;
+    MPI_Comm    vcomm;
+    PetscMPIInt comp;
 
-    PetscCall(DMGetCoordinates(dm,&coorglobal));
-    PetscCall(VecStrideMaxAll(coorglobal,NULL,gmax));
-    PetscCall(VecStrideMinAll(coorglobal,NULL,gmin));
+    PetscCall(PetscObjectGetComm((PetscObject) v, &vcomm));
+    PetscCallMPI(MPI_Comm_compare(vcomm, PETSC_COMM_SELF, &comp));
+    if (comp == MPI_UNEQUAL) PetscCall(DMGetCoordinates(dm, &coordinates));
+    else                     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+    PetscCall(VecStrideMaxAll(coordinates, NULL, gmax));
+    PetscCall(VecStrideMinAll(coordinates, NULL, gmin));
   }
   if (hash) {
     if (!mesh->lbox) {PetscCall(PetscInfo(dm, "Initializing grid hashing"));PetscCall(DMPlexComputeGridHash_Internal(dm, &mesh->lbox));}
