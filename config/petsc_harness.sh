@@ -281,12 +281,15 @@ function petsc_testend() {
 }
 
 function petsc_mpiexec_cudamemcheck() {
+  echo "first $1"
   _mpiexec=$1;shift
+  echo "second $1"
   npopt=$1;shift
+  echo "third $1"
   np=$1;shift
+  echo "rest $*"
 
   cudamemchk="cuda-memcheck"
-
   $_mpiexec $npopt $np $cudamemchk $*
 }
 

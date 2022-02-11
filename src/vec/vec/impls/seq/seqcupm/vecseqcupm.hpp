@@ -1335,6 +1335,26 @@ struct real_part
   PETSC_HOSTDEVICE_DECL PetscReal operator()(PetscScalar x) const { return PetscRealPart(x); }
 };
 
+template <typename Operator>
+struct tuple_compare
+{
+  using tuple_type = thrust::tuple<PetscReal,PetscInt>;
+
+  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
+  {
+    if (Operator{}(y.get<0>(),x.get<0>())) {
+      // if y is strictly greater/less than x, return y
+      return y;
+    } else if (y.get<0>() == x.get<0>()) {
+      // if equal, prefer lower index
+      return y.get<1>() < x.get<1>() ? y : x;
+    } else {
+      // otherwise return x
+      return x;
+    }
+  }
+};
+
 } // namespace detail
 
 template <Device::CUPM::DeviceType T>
@@ -1385,27 +1405,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& 
   PetscFunctionReturn(0);
 }
 
-namespace detail
-{
-
-struct max_tuple
-{
-  using tuple_type = thrust::tuple<PetscReal,PetscInt>;
-
-  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
-  {
-    // REVIEW ME: massively simplified the boolean logic, but may have made mistake doing so
-    return ((x.get<0>() <= y.get<0>()) || (x.get<1>() >= y.get<1>())) ? y : x;
-  }
-};
-
-} // namespace detail
-
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::max_async(Vec v, PetscInt *p, PetscReal *m))
 {
-  using tuple_ftr = detail::max_tuple;
-  using unary_ftr = thrust::maximum<util::remove_pointer_t<decltype(m)>>;
+  using value_type = util::remove_pointer_t<decltype(m)>;
+  using tuple_ftr  = detail::tuple_compare<thrust::greater<value_type>>;
+  using unary_ftr  = thrust::maximum<value_type>;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -1414,29 +1419,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::max_async(Vec v, PetscInt *
   PetscFunctionReturn(0);
 }
 
-namespace detail
-{
-
-struct min_tuple
-{
-  using tuple_type = thrust::tuple<PetscReal,PetscInt>;
-
-  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
-  {
-    if (x.get<0>() > y.get<0>())       return y;
-    else if (x.get<0>() != y.get<0>()) return x;
-    else if (x.get<1>() < y.get<1>())  return x;
-    else                               return y;
-  }
-};
-
-} // namespace detail
-
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::min_async(Vec v, PetscInt *p, PetscReal *m))
 {
-  using tuple_functor = detail::min_tuple;
-  using unary_functor = thrust::minimum<util::remove_pointer_t<decltype(m)>>;
+  using value_type    = util::remove_pointer_t<decltype(m)>;
+  using tuple_functor = detail::tuple_compare<thrust::less<value_type>>;
+  using unary_functor = thrust::minimum<value_type>;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
