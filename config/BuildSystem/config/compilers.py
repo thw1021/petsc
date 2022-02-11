@@ -128,15 +128,7 @@ class Configure(config.base.Configure):
     # without special options.  Glibc uses __restrict, presumably for
     # this reason.  Note that __restrict is not standardized while
     # "restrict" is, but implementation realities favor __restrict.
-    define = language.upper()+'_RESTRICT'
-    if config.setCompilers.Configure.isPGI(self.setCompilers.CC, self.log):
-      self.addDefine(define, ' ')
-      self.logPrint(' '.join(('PGI restrict word is broken cannot handle [restrict]',language,'restrict keyword')), 4, 'compilers')
-      return
-    lang = language.lower()
-    if lang == 'c':
-      return # restrict since C99
-    if lang != 'cxx':
+    if language.lower() != 'cxx':
       mess = 'Unknown Language : '+language
       raise RuntimeError(mess)
     with self.Language(language):
@@ -149,8 +141,8 @@ class Configure(config.base.Configure):
     logMessage = ' '.join(
       ['Set',language,'restrict keyword to',kw] if kw else ['No',language,'restrict keyword']
     )
-    self.logPrint(logMessage, 4, 'compilers')
-    self.addDefine(define, kw)
+    self.logPrint(logMessage,4,'compilers')
+    self.addDefine(language.upper()+'_RESTRICT',kw)
     return
 
   def checkCrossLink(self, func1, func2, language1 = 'C', language2='FC',extraObjs = []):
@@ -1431,7 +1423,6 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     if hasattr(self.setCompilers, 'CC'):
       self.isGCC = config.setCompilers.Configure.isGNU(self.setCompilers.CC, self.log)
       self.executeTest(self.checkC99Flag)
-      self.executeTest(self.checkRestrict,['C'])
       self.executeTest(self.checkCFormatting)
       self.executeTest(self.checkDynamicLoadFlag)
       if self.argDB['with-clib-autodetect']:
