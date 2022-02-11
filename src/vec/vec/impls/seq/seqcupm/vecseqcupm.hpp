@@ -588,6 +588,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
       const auto      yarray = DeviceArrayReadWrite(dctx,yin);
       const auto      xarray = DeviceArrayRead(dctx,xin);
 
+      cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
       ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       if (alphaIsOne) {
         cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,xarray,1,yarray,1);CHKERRCUPMBLAS(cberr);
@@ -622,6 +623,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscSc
     PetscDeviceContext dctx;
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
+    cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,DeviceArrayReadWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
@@ -699,15 +701,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscS
     const auto         n = win->map->n;
     const auto         calpha = makeCupmScalar(alpha);
     PetscDeviceContext dctx;
+    cupmBlasError_t    cberr;
     cupmBlasHandle_t   cupmBlasHandle;
     cupmStream_t       stream;
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle,&stream);CHKERRQ(ierr);
+    cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     {
       const auto warray = DeviceArrayWrite(dctx,win);
       const auto cerr   = cupmMemcpyAsync(warray.ptr,DeviceArrayRead(dctx,yin).ptr,n*sizeof(typename decltype(warray)::value_type),cupmMemcpyDeviceToDevice,stream);CHKERRCUPM(cerr);
-      const auto cberr  = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,warray,1);CHKERRCUPMBLAS(cberr);
+      cberr  = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,warray,1);CHKERRCUPMBLAS(cberr);
     }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2*n);CHKERRQ(ierr);
@@ -729,6 +733,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::maxpy_async(Vec xin, PetscI
   {
     const auto xarray = DeviceArrayReadWrite(dctx,xin);
 
+    ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,alpha);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     for (decltype(nv) j = 0; j < nv; ++j) {
       auto cberr = cupmBlasXaxpy(cupmBlasHandle,n,cupmScalarCast(alpha+j),DeviceArrayRead(dctx,y[j]),1,xarray,1);CHKERRCUPMBLAS(cberr);
@@ -753,6 +758,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dot_async(Vec xin, Vec yin,
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
   // arguments y, x are reversed because BLAS complex conjugates the first argument, PETSc the
   // second
+  ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,z);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin),1,DeviceArrayRead(dctx,xin),1,cupmScalarCast(z));CHKERRCUPMBLAS(cberr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
@@ -853,6 +859,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   const auto          nv1    = ((nv % 4) == 1) ? nv-1 : nv;
   const auto          nwork  = nv1*MDOT_WORKGROUP_NUM;
   const auto          nbytes = nwork*sizeof(PetscScalar);
+  PetscBool           device_mem;
   PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
@@ -889,6 +896,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
         const auto bn   = static_cast<cupmBlasInt_t>(n);
         const auto yptr = DeviceArrayRead(dctx,yin[yidx]);
 
+        ierr       = cupmBlasSetPointerModeFromPointer(handle,z);CHKERRQ(ierr);
         auto cberr = cupmBlasXdot(handle,bn,yptr,1,xptr,1,cupmScalarCast(z+yidx));CHKERRCUPMBLAS(cberr);
         ++yidx;
       }
@@ -901,8 +909,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   }
+  ierr = cupmIsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
   // copy results to CPU
-  {
+  if (device_mem) {
+    // REVIEW ME: TODO
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Device memory MDOT implementation pending");
+  } else {
     auto       stackarray = std::array<PetscScalar,PETSC_MAX_PATH_LEN>{};
     const auto allocate   = static_cast<decltype(stackarray.size())>(nwork) > stackarray.size();
     auto       h_results  = stackarray.data();
@@ -941,16 +953,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
 
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
-  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
     auto xptr = DeviceArrayRead(dctx,xin);
 
     // can fork-join here
+    ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,z);CHKERRQ(ierr);
+    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     for (auto i = PetscInt{0}; i < nv; ++i) {
       auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,cupmScalarCast(z+i));CHKERRCUPMBLAS(cberr);
     }
+    ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   }
-  ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   // REVIEW ME: flops?????
   ierr = PetscLogGpuToCpuScalar(nv*sizeof(*z));CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -1019,13 +1032,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::scale_async(Vec xin, PetscS
     cupmBlasError_t    cberr;
     PetscErrorCode     ierr;
 
-    ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
-    CHKERRCUPMBLAS(cublasSetPointerMode(cupmBlasHandle,CUBLAS_POINTER_MODE_HOST));
-    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+    ierr  = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
+    cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
+    ierr  = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     cberr = cupmBlasXscal(cupmBlasHandle,n,&calpha,DeviceArrayReadWrite(dctx,xin),1);CHKERRCUPMBLAS(cberr);
-    ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscLogCpuToGpuScalar(sizeof(calpha));CHKERRQ(ierr);
-    ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
+    ierr  = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+    ierr  = PetscLogCpuToGpuScalar(sizeof(calpha));CHKERRQ(ierr);
+    ierr  = PetscLogGpuFlops(n);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1041,6 +1054,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::tdot_async(Vec xin, Vec yin
 
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
+  ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,z);CHKERRQ(ierr);
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   cberr = cupmBlasXdotu(cupmBlasHandle,n,DeviceArrayRead(dctx,xin),1,DeviceArrayRead(dctx,yin),1,cupmScalarCast(z));CHKERRCUPMBLAS(cberr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
@@ -1175,7 +1189,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscS
       const auto      calpha = makeCupmScalar(alpha);
       const auto      xarray = DeviceArrayRead(dctx,xin);
 
-      ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+      cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
+      ierr  = PetscLogGpuTimeBegin();CHKERRQ(ierr);
       if (betaIsZero) {
         // here we can get away with purely write-only as we memcpy into it first
         const auto   yarray = DeviceArrayWrite(dctx,yin);
@@ -1233,21 +1248,23 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
     PetscFunctionReturn(0);
   }
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
-  ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   {
     cupmBlasError_t cberr;
     auto            xarray = DeviceArrayRead(dctx,xin);
 
+    // in case NORM_INFINITY we may technically undo this, but cleaner this way
+    ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,z);CHKERRQ(ierr);
+    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     switch (type) {
     case NORM_1_AND_2:
     case NORM_1:
-      cberr = cupmBlasXasum(cupmBlasHandle,n,xarray,1,z);CHKERRCUPMBLAS(cberr);
+      cberr = cupmBlasXasum(cupmBlasHandle,n,xarray,1,cupmRealCast(z));CHKERRCUPMBLAS(cberr);
       flopCount = PetscMax(n-1,0);
       if (type == NORM_1) break;
       ++z; // fall-through
     case NORM_2:
     case NORM_FROBENIUS:
-      cberr = cupmBlasXnrm2(cupmBlasHandle,n,xarray,1,z);CHKERRCUPMBLAS(cberr);
+      cberr = cupmBlasXnrm2(cupmBlasHandle,n,xarray,1,cupmRealCast(z));CHKERRCUPMBLAS(cberr);
       flopCount += PetscMax(2*n-1,0); // +=  in case we've fallen through from NORM_1_AND_2
       break;
     case NORM_INFINITY: {
@@ -1257,9 +1274,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
       cupmBlasInt_t i;
 
       // REVIEW ME: this needs to be redone by hand
+      cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
       cberr = cupmBlasXamax(cupmBlasHandle,n,xarray,1,&i);CHKERRCUPMBLAS(cberr);
       ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,&stream);CHKERRQ(ierr);
       cerr = cupmMemcpyAsync(&zs,xarray.ptr+i-1,sizeof(zs),cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
+      ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
       *z   = PetscAbsScalar(zs);
       // REVIEW ME: flopCount = ???
     } break;
@@ -1335,9 +1354,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& 
     if (p) *p = init_ptr;
     PetscFunctionReturn(0);
   }
-  printf("---------- %g\n",*m);
   ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
-  ierr = VecView_Debug(v,"before");CHKERRQ(ierr);
   // REVIEW ME: why not cupmBlasIXamin()/cupmBlasIXamax()?
   CHKERRTHRUST(
     auto vptr = thrust::device_pointer_cast<PetscScalar>(DeviceArrayRead(dctx,v));
@@ -1364,8 +1381,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::minmax_async_(TupleFuncT&& 
 #endif
     }
   );
-  ierr = VecView_Debug(v,"after");CHKERRQ(ierr);
-  printf("---------- %g\n",*m);
   // REVIEW ME: flops?
   PetscFunctionReturn(0);
 }

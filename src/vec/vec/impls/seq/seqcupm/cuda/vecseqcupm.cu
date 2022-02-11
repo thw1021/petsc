@@ -86,7 +86,7 @@ PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (n) PetscValidScalarPointer(cpuarray,4);
+  if (n && cpuarray) PetscValidScalarPointer(cpuarray,4);
   PetscValidPointer(v,6);
   ierr = VecSeq_CUDA::createseqcupmwithbotharrays_async(comm,bs,n,cpuarray,gpuarray,v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
