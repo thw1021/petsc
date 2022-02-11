@@ -13,6 +13,21 @@ static int *GmshLexOrder_##T##_##p(void)                           \
   return lex;                                                      \
 }
 
+static int *GmshLexOrder_QUA_2_Serendipity(void)
+{
+  static int Gmsh_LexOrder_QUA_2_Serendipity[9] = {-1};
+  int *lex = Gmsh_LexOrder_QUA_2_Serendipity;
+  if (lex[0] == -1) {
+    /* Vertices */
+    lex[0] = 0; lex[2] = 1; lex[8] = 2; lex[6] = 3;
+    /* Edges */
+    lex[1] = 4; lex[5] = 5; lex[7] = 6; lex[3] = 7;
+    /* Cell */
+    lex[4] = -8;
+  }
+  return lex;
+}
+
 #define GMSH_LEXORDER_LIST(T) \
 GMSH_LEXORDER_ITEM(T,  1)     \
 GMSH_LEXORDER_ITEM(T,  2)     \
@@ -89,6 +104,7 @@ static const GmshCellInfo GmshCellTable[] = {
 
   GmshCellEntry(  3, QUA, 2,  1),
   GmshCellEntry( 10, QUA, 2,  2),
+  {16, GMSH_QUA, 2, 2, 4, 8, GmshLexOrder_QUA_2_Serendipity},
   GmshCellEntry( 36, QUA, 2,  3),
   GmshCellEntry( 37, QUA, 2,  4),
   GmshCellEntry( 38, QUA, 2,  5),
@@ -144,7 +160,6 @@ static const GmshCellInfo GmshCellTable[] = {
 
 #if 0
   {20, GMSH_TRI, 2, 3, 3,  9, NULL},
-  {16, GMSH_QUA, 2, 2, 4,  8, NULL},
   {17, GMSH_HEX, 3, 2, 8, 20, NULL},
   {18, GMSH_PRI, 3, 2, 6, 15, NULL},
   {19, GMSH_PYR, 3, 2, 5, 13, NULL},
@@ -1795,10 +1810,23 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
     for (cell = 0; cell < numCells; ++cell) {
       GmshElement *elem = mesh->elements + cell;
       const int *lexorder = GmshCellMap[elem->cellType].lexorder();
+      int s = 0;
       for (n = 0; n < elem->numNodes; ++n) {
-        const PetscInt node = elem->nodes[lexorder[n]];
-        for (d = 0; d < coordDim; ++d)
-          cellCoords[n*coordDim+d] = (PetscReal) coords[node*3+d];
+        if (lexorder[n] < 0) ++s;
+        const PetscInt node = elem->nodes[lexorder[n+s]];
+        for (d = 0; d < coordDim; ++d) cellCoords[(n+s)*coordDim+d] = (PetscReal) coords[node*3+d];
+      }
+      if (s) {
+        PetscReal weights[9] = {-0.25, 0.5, -0.25, 0.5, 0.0, 0.5, -0.25, 0.5, -0.25};
+        /* Missing entry in serendipity cell, only works for 8-node quad now
+           For the coordinate mapping we weight vertices by -1/4 and edges by 1/2, which we get from Q_2 interpolation */
+        for (n = 0; n < elem->numNodes; ++n) if (lexorder[n] < 0) break;
+        for (d = 0; d < coordDim; ++d) cellCoords[n*coordDim+d] = 0.0;
+        for (int bn = 0; bn < elem->numNodes+1; ++bn) {
+          if (lexorder[bn] < 0) continue;
+          const PetscInt bnode = elem->nodes[lexorder[bn]];
+          for (d = 0; d < coordDim; ++d) cellCoords[n*coordDim+d] += weights[bn] * (PetscReal) coords[bnode*3+d];
+        }
       }
       ierr = DMPlexVecSetClosure(cdm, section, coordinates, cell, cellCoords, INSERT_VALUES);CHKERRQ(ierr);
     }
