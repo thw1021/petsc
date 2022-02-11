@@ -17,7 +17,7 @@ typedef Kokkos::TeamPolicy<>::member_type team_member;
 #define PCBJKOKKOS_VERBOSE_LEVEL 3
 //#define PCBJKOKKOS_MONITOR
 
-typedef enum {BICG_IDX,NUM_KSP_IDX} KSPIndex;
+typedef enum {BATCH_KSP_BICG_IDX=0,BATCH_KSP_TFQMR_IDX=1,NUM_BATCH_TYPES} KSPIndex;
 typedef struct {
   Vec                                              vec_diag;
   PetscInt                                         nBlocks; /* total number of blocks */
@@ -101,7 +101,164 @@ typedef struct Batch_MetaData_TAG
   KSPConvergedReason reason;
 }Batch_MetaData;
 
-// Solve Ax = y with biCG stabilized
+// Solve A(BB^-1)x = y with TFQMR. Right preconditioned to get un-preconditioned residual
+KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space, const PetscInt stride, PetscReal rtol, PetscReal atol, PetscReal dtol,PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x)
+{
+  using Kokkos::parallel_reduce;
+  using Kokkos::parallel_for;
+  int               Nblk = end-start, i,m;
+  PetscReal         dp,dpold,w,dpest,tau,psi,cm,r0;
+  PetscScalar       *ptr = work_space, rho,rhoold,a,s,b,eta,etaold,psiold,cf,dpi;
+  const PetscScalar *Diag = &glb_idiag[start];
+  PetscScalar       *XX = ptr; ptr += stride;
+  PetscScalar       *R = ptr; ptr += stride;
+  PetscScalar       *RP = ptr; ptr += stride;
+  PetscScalar       *V = ptr; ptr += stride;
+  PetscScalar       *T = ptr; ptr += stride;
+  PetscScalar       *Q = ptr; ptr += stride;
+  PetscScalar       *P = ptr; ptr += stride;
+  PetscScalar       *U = ptr; ptr += stride;
+  PetscScalar       *D = ptr; ptr += stride;
+  PetscScalar       *AUQ = V;
+
+  // init: get b, zero x
+  parallel_for(Kokkos::TeamVectorRange(team, start, end), [=] (int rowb) {
+      int rowa = ic[rowb];
+      R[rowb-start] = glb_b[rowa];
+      XX[rowb-start] = 0;
+    });
+  // ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
+  dpi = 0;
+  parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += R[idx]*PetscConj(R[idx]);}, dpi);
+  r0 = dp = PetscSqrtReal(PetscRealPart(dpi));
+  // diagnostics
+#if defined(PCBJKOKKOS_MONITOR)
+  if (start==0) Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d BJ Residual norm %22.14e \n",0,(double)dp);});
+#endif
+  if (dp < atol) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; return 0;}
+  if (0 == maxit) {metad->reason = KSP_DIVERGED_ITS; return 0;}
+
+  /* Make the initial Rp = R */
+  //ierr = VecCopy(R,RP);CHKERRQ(ierr);
+  parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {RP[idx] = R[idx];});
+
+  /* Set the initial conditions */
+  etaold = 0.0;
+  psiold = 0.0;
+  tau    = dp;
+  dpold  = dp;
+
+  //ierr = VecDot(R,RP,&rhoold);CHKERRQ(ierr);       /* rhoold = (r,rp)     */
+  rhoold = 0;
+  parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += R[idx]*PetscConj(RP[idx]);}, rhoold);
+  team.team_barrier();
+  //ierr = VecCopy(R,U);CHKERRQ(ierr);
+  //ierr = VecCopy(R,P);CHKERRQ(ierr);
+  parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {U[idx] = R[idx]; P[idx] = R[idx];});
+  //ierr = KSP_PCApplyBAorAB(ksp,P,V,T);CHKERRQ(ierr);
+  //ierr = VecSet(D,0.0);CHKERRQ(ierr);
+  team.team_barrier();
+  parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {T[idx] = Diag[idx]*P[idx]; D[idx] = 0; });
+  MatMult         (team,glb_Aai,glb_Aaj,glb_Aaa,r,ic,start,end,T,V);
+
+  i=0;
+  do {
+    //ierr = VecDot(V,RP,&s);CHKERRQ(ierr);          /* s <- (v,rp)          */
+    s = 0;
+    parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += V[idx]*PetscConj(RP[idx]);}, s);
+    team.team_barrier();
+
+    a    = rhoold / s;                              /* a <- rho / s         */
+    //ierr = VecWAXPY(Q,-a,V,U);CHKERRQ(ierr);  /* q <- u - a v    VecWAXPY(w,alpha,x,y): w = alpha x + y.     */
+    //ierr = VecWAXPY(T,1.0,U,Q);CHKERRQ(ierr);     /* t <- u + q           */
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {Q[idx] = U[idx] - a*V[idx]; T[idx] = U[idx] + Q[idx];});
+    team.team_barrier();
+    //ierr = KSP_PCApplyBAorAB(ksp,T,AUQ,T1);CHKERRQ(ierr);
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {T[idx] = Diag[idx]*T[idx]; });
+    MatMult         (team,glb_Aai,glb_Aaj,glb_Aaa,r,ic,start,end,T,AUQ);
+    //ierr = VecAXPY(R,-a,AUQ);CHKERRQ(ierr);      /* r <- r - a K (u + q) */
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {R[idx] = R[idx] - a*AUQ[idx]; });
+    //ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
+    dpi = 0;
+    parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += R[idx]*PetscConj(R[idx]);}, dpi);
+    dp = PetscSqrtReal(PetscRealPart(dpi));
+    for (m=0; m<2; m++) {
+      if (!m) w = PetscSqrtReal(dp*dpold);
+      else w = dp;
+      psi = w / tau;
+      cm  = 1.0 / PetscSqrtReal(1.0 + psi * psi);
+      tau = tau * psi * cm;
+      eta = cm * cm * a;
+      cf  = psiold * psiold * etaold / a;
+      if (!m) {
+        //ierr = VecAYPX(D,cf,U);CHKERRQ(ierr); /* D = U + cf D */
+        parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {D[idx] = U[idx] + cf*D[idx]; });
+      } else {
+        //ierr = VecAYPX(D,cf,Q);CHKERRQ(ierr); /* D = Q + cf D */
+        parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {D[idx] = Q[idx] + cf*D[idx]; });
+      }
+      //ierr = VecAXPY(X,eta,D);CHKERRQ(ierr);
+      parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {XX[idx] = XX[idx] + eta*D[idx]; });
+      dpest = PetscSqrtReal(2*i + m + 2.0) * tau;
+      //if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dpest;
+#if defined(PCBJKOKKOS_MONITOR)
+      if (start==0) Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d BJ Residual norm %22.14e \n",i+1,(double)dpest);});
+#endif
+      if (dpest < atol) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; goto done;}
+      if (dpest/r0 < rtol) {metad->reason = KSP_CONVERGED_RTOL_NORMAL; goto done;}
+#if defined(PETSC_USE_DEBUG) || 1
+      if (dpest/r0 > dtol) {metad->reason = KSP_DIVERGED_DTOL; Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("ERROR block %d diverged: %d it, res=%e, r_0=%e\n",team.league_rank(),i,dpest,r0);}); goto done;}
+#else
+      if (dpest/r0 > dtol) {metad->reason = KSP_DIVERGED_DTOL; goto done;}
+#endif
+      if (i+1 == maxit) {metad->reason = KSP_DIVERGED_ITS; goto done;}
+
+      etaold = eta;
+      psiold = psi;
+    }
+
+    //ierr = VecDot(R,RP,&rho);CHKERRQ(ierr);        /* rho <- (r,rp)       */
+    rho = 0;
+    parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += R[idx]*PetscConj(RP[idx]);}, rho);
+    team.team_barrier();
+    b    = rho / rhoold;                            /* b <- rho / rhoold   */
+    //ierr = VecWAXPY(U,b,Q,R);CHKERRQ(ierr);       /* u <- r + b q        */
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {U[idx] = R[idx] + b*Q[idx];});
+    //ierr = VecAXPY(Q,b,P);CHKERRQ(ierr);
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {Q[idx] = Q[idx] + b*P[idx]; });
+    //ierr = VecWAXPY(P,b,Q,U);CHKERRQ(ierr);       /* p <- u + b(q + b p) */
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {P[idx] = U[idx] + b*Q[idx];});
+    //ierr = KSP_PCApplyBAorAB(ksp,P,V,Q);CHKERRQ(ierr); /* v <- K p  */
+    team.team_barrier();
+    parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {T[idx] = Diag[idx]*P[idx]; });
+    MatMult         (team,glb_Aai,glb_Aaj,glb_Aaa,r,ic,start,end,T,V);
+
+    rhoold = rho;
+    dpold  = dp;
+
+    i++;
+    team.team_barrier();
+  } while (i<maxit);
+  done:
+  //ierr = KSPUnwindPreconditioner(ksp,X,T);CHKERRQ(ierr);
+  parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {XX[idx] = Diag[idx]*XX[idx]; });
+
+  parallel_for(Kokkos::TeamVectorRange(team, start, end), [=] (int rowb) {
+      int rowa = ic[rowb];
+      glb_x[rowa] = XX[rowb-start];
+    });
+  metad->its = i+1;
+  if (1) {
+    int nnz = 0;
+    parallel_reduce(Kokkos::TeamVectorRange (team, start, end), [=] (const int idx, int& lsum) {lsum += (glb_Aai[idx+1] - glb_Aai[idx]);}, nnz);
+    metad->flops = 2*(metad->its*(10*Nblk + 2*nnz) + 5*Nblk);
+  } else {
+    metad->flops = 2*(metad->its*(10*Nblk + 2*50*Nblk) + 5*Nblk); // guess
+  }
+  return 0;
+}
+
+// Solve Ax = y with biCG
 KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space, const PetscInt stride, PetscReal rtol, PetscReal atol, PetscReal dtol,PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x)
 {
   using Kokkos::parallel_reduce;
@@ -130,7 +287,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
   //ierr = KSP_PCApplyHermitianTranspose(ksp,Rl,Zl);CHKERRQ(ierr);
   parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {Zr[idx] = Di[idx]*Rr[idx]; Zl[idx] = Di[idx]*Rl[idx]; });
   //ierr = VecNorm(Rr,NORM_2,&dp);CHKERRQ(ierr);  /*    dp <- r'*r       */
-  dp = 0;
+  dpi = 0;
   parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += Rr[idx]*PetscConj(Rr[idx]);}, dpi);
   r0 = dp = PetscSqrtReal(PetscRealPart(dpi));
 #if defined(PCBJKOKKOS_MONITOR)
@@ -181,8 +338,8 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
     //ierr    = VecAXPY(Rl,mac,Zl);CHKERRQ(ierr);
     parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {XX[idx] = XX[idx] + a*Pr[idx]; Rr[idx] = Rr[idx] + ma*Zr[idx]; Rl[idx] = Rl[idx] + mac*Zl[idx];});team.team_barrier();
     //ierr = VecNorm(Rr,NORM_2,&dp);CHKERRQ(ierr);  /*    dp <- r'*r       */
-    dp = 0;
     team.team_barrier();
+    dpi = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum +=  Rr[idx]*PetscConj(Rr[idx]);}, dpi);
     dp = PetscSqrtReal(PetscRealPart(dpi));
 #if defined(PCBJKOKKOS_MONITOR)
@@ -298,8 +455,11 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
         vect2D_scr_t work_vecs(team.team_scratch(PCBJKOKKOS_SHARED_LEVEL), scr_bytes_team ? (end-start) : 0, nwork);
         PetscScalar *work_buff = (scr_bytes_team) ? work_vecs.data() : &d_work_vecs[start];
         switch (ksp_type_idx) {
-        case BICG_IDX:
+        case BATCH_KSP_BICG_IDX:
           BJSolve_BICG(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata);
+          break;
+        case BATCH_KSP_TFQMR_IDX:
+          BJSolve_TFQMR(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata);
           break;
         default:
 #if defined(PETSC_USE_DEBUG)
@@ -321,7 +481,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 #endif
     // assume species major
 #if PCBJKOKKOS_VERBOSE_LEVEL < 4
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"max iterations per species:");CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"max iterations per species (%s) :",ksp_type_idx==BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr");CHKERRQ(ierr);
 #endif
     for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
       for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
@@ -460,8 +620,12 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       ierr = PCBJKOKKOSCreateKSP_BJKOKKOS(pc);CHKERRQ(ierr);
       ierr = KSPSetFromOptions(jac->ksp);CHKERRQ(ierr);
       ierr = PetscObjectTypeCompareAny((PetscObject)jac->ksp,&flg,KSPBICG,"");CHKERRQ(ierr);
-      if (flg) {jac->ksp_type_idx = BICG_IDX; jac->nwork = 7;}
-      else SETERRQ1(PetscObjectComm((PetscObject)jac->ksp),PETSC_ERR_ARG_WRONG,"unsupported type %s", ((PetscObject)jac->ksp)->type_name);
+      if (flg) {jac->ksp_type_idx = BATCH_KSP_BICG_IDX; jac->nwork = 7;}
+      else {
+        ierr = PetscObjectTypeCompareAny((PetscObject)jac->ksp,&flg,KSPTFQMR,"");CHKERRQ(ierr);
+        if (flg) {jac->ksp_type_idx = BATCH_KSP_TFQMR_IDX; jac->nwork = 10;}
+        else SETERRQ1(PetscObjectComm((PetscObject)jac->ksp),PETSC_ERR_ARG_WRONG,"unsupported type %s", ((PetscObject)jac->ksp)->type_name);
+      }
       // get blocks - jac->d_bid_eqOffset_k
       ierr = DMCompositeGetNumberDM(pack,&nDMs);CHKERRQ(ierr);
       ierr = PetscMalloc(sizeof(*subX)*nDMs, &subX);CHKERRQ(ierr);
