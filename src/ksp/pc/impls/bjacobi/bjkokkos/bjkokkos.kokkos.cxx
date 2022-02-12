@@ -64,7 +64,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode MatMult(const team_member team,  const Pet
       int n = glb_Aai[rowa+1] - glb_Aai[rowa];
       const PetscInt    *aj  = glb_Aaj + glb_Aai[rowa];
       const PetscScalar *aa  = glb_Aaa + glb_Aai[rowa];
-      PetscScalar sum = 0;
+      PetscScalar sum;
       Kokkos::parallel_reduce(Kokkos::ThreadVectorRange (team, n), [=] (const int i, PetscScalar& lsum) {
           lsum += aa[i] * x_loc[r[aj[i]]-start];
         }, sum);
@@ -129,7 +129,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
     });
   team.team_barrier();
   // ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
-  dpi = 0;
   parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += R[idx]*PetscConj(R[idx]);}, dpi);
   team.team_barrier();
   r0 = dp = PetscSqrtReal(PetscRealPart(dpi));
@@ -151,7 +150,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
   dpold  = dp;
 
   //ierr = VecDot(R,RP,&rhoold);CHKERRQ(ierr);       /* rhoold = (r,rp)     */
-  rhoold = 0;
   parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += R[idx]*PetscConj(RP[idx]);}, rhoold);
   team.team_barrier();
   //ierr = VecCopy(R,U);CHKERRQ(ierr);
@@ -165,7 +163,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
   i=0;
   do {
     //ierr = VecDot(V,RP,&s);CHKERRQ(ierr);          /* s <- (v,rp)          */
-    s = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += V[idx]*PetscConj(RP[idx]);}, s);
     team.team_barrier();
     a    = rhoold / s;                              /* a <- rho / s         */
@@ -181,7 +178,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
     parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {R[idx] = R[idx] - a*AUQ[idx]; });
     team.team_barrier();
     //ierr = VecNorm(R,NORM_2,&dp);CHKERRQ(ierr);
-    dpi = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += R[idx]*PetscConj(R[idx]);}, dpi);
     team.team_barrier();
     dp = PetscSqrtReal(PetscRealPart(dpi));
@@ -223,7 +219,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
     }
 
     //ierr = VecDot(R,RP,&rho);CHKERRQ(ierr);        /* rho <- (r,rp)       */
-    rho = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += R[idx]*PetscConj(RP[idx]);}, rho);
     team.team_barrier();
     b    = rho / rhoold;                            /* b <- rho / rhoold   */
@@ -252,7 +247,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
     });
   metad->its = i+1;
   if (1) {
-    int nnz = 0;
+    int nnz;
     parallel_reduce(Kokkos::TeamVectorRange (team, start, end), [=] (const int idx, int& lsum) {lsum += (glb_Aai[idx+1] - glb_Aai[idx]);}, nnz);
     metad->flops = 2*(metad->its*(10*Nblk + 2*nnz) + 5*Nblk);
   } else {
@@ -291,7 +286,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
   parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {Zr[idx] = Di[idx]*Rr[idx]; Zl[idx] = Di[idx]*Rl[idx]; });
   team.team_barrier();
   //ierr = VecNorm(Rr,NORM_2,&dp);CHKERRQ(ierr);  /*    dp <- r'*r       */
-  dpi = 0;
   parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += Rr[idx]*PetscConj(Rr[idx]);}, dpi);
   team.team_barrier();
   r0 = dp = PetscSqrtReal(PetscRealPart(dpi));
@@ -303,7 +297,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
   i = 0;
   do {
     //ierr = VecDot(Zr,Rl,&beta);CHKERRQ(ierr);       /*     beta <- r'z     */
-    beta = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& dot) {dot += Zr[idx]*PetscConj(Rl[idx]);}, beta);
     team.team_barrier();
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 6
@@ -331,7 +324,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
     //ierr    = KSP_MatMultHermitianTranspose(ksp,Amat,Pl,Zl);CHKERRQ(ierr);
     MatMultTranspose(team,glb_Aai,glb_Aaj,glb_Aaa,r,ic,start,end,Pl,Zl);
     //ierr    = VecDot(Zr,Pl,&dpi);CHKERRQ(ierr);            /*     dpi <- z'p      */
-    dpi = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += Zr[idx]*PetscConj(Pl[idx]);}, dpi);
     team.team_barrier();
     //
@@ -344,7 +336,6 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
     parallel_for(Kokkos::TeamVectorRange(team,Nblk), [=] (int idx) {XX[idx] = XX[idx] + a*Pr[idx]; Rr[idx] = Rr[idx] + ma*Zr[idx]; Rl[idx] = Rl[idx] + mac*Zl[idx];});team.team_barrier();
     team.team_barrier();
     //ierr = VecNorm(Rr,NORM_2,&dp);CHKERRQ(ierr);  /*    dp <- r'*r       */
-    dpi = 0;
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum +=  Rr[idx]*PetscConj(Rr[idx]);}, dpi);
     team.team_barrier();
     dp = PetscSqrtReal(PetscRealPart(dpi));
@@ -372,7 +363,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
     });
   metad->its = i+1;
   if (1) {
-    int nnz = 0;
+    int nnz;
     parallel_reduce(Kokkos::TeamVectorRange (team, start, end), [=] (const int idx, int& lsum) {lsum += (glb_Aai[idx+1] - glb_Aai[idx]);}, nnz);
     metad->flops = 2*(metad->its*(10*Nblk + 2*nnz) + 5*Nblk);
   } else {
@@ -544,7 +535,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     ierr = VecRestoreArrayAndMemType(xout,&glb_xdata);CHKERRQ(ierr);
     ierr = VecRestoreArrayReadAndMemType(bvec,&glb_bdata);CHKERRQ(ierr);
     {
-      int errsum = 0;
+      int errsum;
       Kokkos::parallel_reduce(nBlk, KOKKOS_LAMBDA (const int idx, int& lsum) {
           if (d_metadata[idx].reason < 0 && d_metadata[idx].reason != KSP_DIVERGED_ITS && d_metadata[idx].reason != KSP_CONVERGED_ITS) lsum += 1;
         }, errsum);
@@ -697,7 +688,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
                const PetscInt    rowa = ic[rowb], ai = d_ai[rowa], *aj = d_aj + ai; // grab original data
                const PetscScalar *aa  = d_aa + ai;
                const PetscInt    nrow = d_ai[rowa + 1] - ai;
-               int found = 0;
+               int found;
                Kokkos::parallel_reduce
                  (Kokkos::ThreadVectorRange (team, nrow),
                   [=] (const int& j, int &count) {
