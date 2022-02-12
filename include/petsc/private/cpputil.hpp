@@ -196,7 +196,7 @@ PETSC_STATIC_INLINE constexpr PetscObject& PetscObjectCast(const T& object) noex
 #define PETSC_DECLTYPE_NOEXCEPT_RETURNS(...) noexcept(noexcept(__VA_ARGS__)) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
 
 #define PETSC_ALIAS_FUNCTION_(alias,original,dispatch)                                  \
-  template <typename... Args> static inline auto dispatch(int,Args... args)             \
+  template <typename... Args> static inline auto dispatch(int,Args&&... args)           \
     PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::forward<Args>(args)...));             \
   template <typename... Args> static inline int dispatch(char,Args...)                  \
   {                                                                                     \
