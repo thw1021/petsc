@@ -832,6 +832,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
   }
   if (x) {
     ierr         = PetscObjectReference((PetscObject)x);CHKERRQ(ierr);
+    printf("KSPSolve_Private() %p\n",ksp->vec_sol);
     ierr         = VecDestroy(&ksp->vec_sol);CHKERRQ(ierr);
     ksp->vec_sol = x;
   }
@@ -891,7 +892,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
   }
   ierr = PCPreSolve(ksp->pc,ksp);CHKERRQ(ierr);
 
-  if (ksp->guess_zero) { ierr = VecSet(ksp->vec_sol,0.0);CHKERRQ(ierr);}
+  if (ksp->guess_zero) { ierr = VecSet(ksp->vec_sol,0.0);CHKERRQ(ierr); }
   if (ksp->guess_knoll) { /* The Knoll trick is independent on the KSPGuess specified */
     ierr            = PCApply(ksp->pc,ksp->vec_rhs,ksp->vec_sol);CHKERRQ(ierr);
     ierr            = KSP_RemoveNullSpace(ksp,ksp->vec_sol);CHKERRQ(ierr);

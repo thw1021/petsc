@@ -158,25 +158,29 @@ public:
     static_assert(PETSC_OFFLOAD_GPU == 2,"");
     static_assert(PETSC_OFFLOAD_BOTH == 3,"");
     const char* PetscOffloadMasks[] = {
-      "PETSC_OFFLOAD_UNALLOCATED",
-      "PETSC_OFFLOAD_CPU",
-      "PETSC_OFFLOAD_GPU",
-      "PETSC_OFFLOAD_BOTH",
+      "OFFLOAD_UNALLOCATED",
+      "OFFLOAD_CPU",
+      "OFFLOAD_GPU",
+      "OFFLOAD_BOTH",
     };
     const auto     pobj = PetscObjectCast(v);
-    const char     *name;
+    PetscBool      device_mem;
     MPI_Comm       comm;
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
     ierr = PetscObjectGetComm(pobj,&comm);CHKERRQ(ierr);
-    ierr = PetscObjectGetName(pobj,&name);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"---------- %s ----------\n",message);CHKERRQ(ierr);
-    ierr = PetscPrintf(comm,"Vec                  %s\n",name);CHKERRQ(ierr);
+    ierr = PetscObjectPrintClassNamePrefixType(pobj,PETSC_VIEWER_STDOUT_(comm));CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Address:             %p\n",v);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Size:                %" PetscInt_FMT "\n",v->map->n);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Offload mask:        %s\n",PetscOffloadMasks[v->offloadmask]);CHKERRQ(ierr);
+    PetscValidPointer(VecIMPLCast(v),1);
     ierr = PetscPrintf(comm,"Host ptr:            %p\n",VecIMPLCast(v)->array);CHKERRQ(ierr);
+    PetscValidPointer(VecCUPMCast(v),1);
     ierr = PetscPrintf(comm,"Device ptr:          %p\n",VecCUPMCast(v)->device_array);CHKERRQ(ierr);
+    ierr = cupmIsDeviceMemory(VecCUPMCast(v)->device_array,&device_mem);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"dptr is device mem?  %s\n",device_mem ? "yes" : "no");CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Device ptr ownership %s\n",PetscCopyModes[VecCUPMCast(v)->ptr_ownership]);CHKERRQ(ierr);
     PetscFunctionReturn(0);
   }
@@ -309,7 +313,7 @@ public:
     {
       // could just as well CHKERRABORT() here
       PetscFunctionBegin;
-      auto ierr = restorearray_async<MT,MA>(PetscRemoveConstCast(v_),&PetscRemoveConstCast(this->ptr));CHKERRCONTINUE(ierr);
+      auto ierr = restorearray_async<MT,MA>(PetscRemoveConstCast(v_),nullptr);CHKERRCONTINUE(ierr);
       PetscFunctionReturnVoid();
     }
 
@@ -318,7 +322,7 @@ public:
 
     PETSC_CXX_COMPAT_DECL(pointer_type initialize_(Vec v))
     {
-      pointer_type array = nullptr;
+      pointer_type array;
 
       PetscFunctionBegin;
       auto ierr = getarray_async<MT,MA>(v,&array);CHKERRABORT(PETSC_COMM_SELF,ierr);
@@ -447,6 +451,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
   PetscFunctionBegin;
   ierr = VecCUPMAllocateCheck_(v);CHKERRQ(ierr);
   const auto vcu = VecCUPMCast(v);
+  printf("vec %p has %p\n",v,vcu->device_array);
   if (vcu->device_array) PetscFunctionReturn(0);
   else {
     cupmStream_t stream;
@@ -454,6 +459,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
 
     ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,&stream);CHKERRQ(ierr);
     cerr = cupmMallocAsync(reinterpret_cast<void**>(&vcu->device_array),v->map->n*sizeof(*vcu->device_array),stream);CHKERRCUPM(cerr);
+    printf("vec %p alloced %p\n",v,vcu->device_array);
     vcu->ptr_ownership = PETSC_OWN_POINTER;
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
       const auto vimp = VecIMPLCast(v);
@@ -666,6 +672,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase_(Vec v)
         cupmError_t  cerr;
 
         ierr = GetHandles_(&stream);CHKERRQ(ierr);
+        printf("freeing %p\n",vcu->device_array);
         cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
       }
     case PETSC_USE_POINTER:
@@ -793,7 +800,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPM_(Vec v))
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm(PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  ierr = VecSetType(v,size == 1 ? VECSEQCUPM() : VECMPICUPM());CHKERRQ(ierr);
+  ierr = VecSetType(v,size > 1 ? VECMPICUPM() : VECSEQCUPM());CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
