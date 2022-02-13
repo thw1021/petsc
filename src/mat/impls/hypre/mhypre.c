@@ -487,10 +487,10 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
   }
 
   if (!sameint) {
-    for (i=0;i<m+1;i++)  dii[i] = (PetscInt)(hypre_CSRMatrixI(hdiag)[i]);
+    if (reuse != MAT_REUSE_MATRIX) { for (i=0;i<m+1;i++)  dii[i] = (PetscInt)(hypre_CSRMatrixI(hdiag)[i]); }
     for (i=0;i<dnnz;i++) djj[i] = (PetscInt)(hypre_CSRMatrixJ(hdiag)[i]);
   } else {
-    ierr = PetscArraycpy(dii,hypre_CSRMatrixI(hdiag),m+1);CHKERRQ(ierr);
+    if (reuse != MAT_REUSE_MATRIX) { ierr = PetscArraycpy(dii,hypre_CSRMatrixI(hdiag),m+1);CHKERRQ(ierr); }
     ierr = PetscArraycpy(djj,hypre_CSRMatrixJ(hdiag),dnnz);CHKERRQ(ierr);
   }
   ierr = PetscArraycpy(da,hypre_CSRMatrixData(hdiag),dnnz);CHKERRQ(ierr);
@@ -529,13 +529,19 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       }
       oa = (PetscScalar*)hypre_CSRMatrixData(hoffd);
     }
-    if (!sameint) {
-      for (i=0;i<m+1;i++) oii[i] = (PetscInt)(hypre_CSRMatrixI(hoffd)[i]);
-    } else {
-      ierr = PetscArraycpy(oii,hypre_CSRMatrixI(hoffd),m+1);CHKERRQ(ierr);
+    if (reuse != MAT_REUSE_MATRIX) {
+      if (!sameint) {
+        for (i=0;i<m+1;i++) oii[i] = (PetscInt)(hypre_CSRMatrixI(hoffd)[i]);
+      } else {
+        ierr = PetscArraycpy(oii,hypre_CSRMatrixI(hoffd),m+1);CHKERRQ(ierr);
+      }
     }
     offdj = hypre_CSRMatrixJ(hoffd);
     coffd = hypre_ParCSRMatrixColMapOffd(parcsr);
+    /* we only need the permutation to be computed properly, I don't know if HYPRE
+       messes up with the ordering. Just in case, allocate some memory and free it
+       later */
+    if (reuse == MAT_REUSE_MATRIX) { ierr = PetscMalloc1(onnz,&ojj);CHKERRQ(ierr); }
     for (i=0; i<onnz; i++) ojj[i] = coffd[offdj[i]];
     ierr = PetscArraycpy(oa,hypre_CSRMatrixData(hoffd),onnz);CHKERRQ(ierr);
     iptr = ojj;
@@ -546,6 +552,7 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
        iptr += nc;
        aptr += nc;
     }
+    if (reuse == MAT_REUSE_MATRIX) { ierr = PetscFree(ojj);CHKERRQ(ierr); }
     if (reuse == MAT_INITIAL_MATRIX) {
       Mat_MPIAIJ *b;
       Mat_SeqAIJ *d,*o;

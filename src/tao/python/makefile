@@ -1,14 +1,15 @@
+-include ../../../../petscdir.mk
 ALL: lib
 
 CFLAGS   =
 FFLAGS   =
-SOURCEC  = taosolver.c taosolver_fg.c taosolverregi.c taosolver_hj.c taosolver_bounds.c dlregistao.c fdiff.c
+SOURCEC  = pythontao.c
 SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetsctao
-MANSEC   = Tao
-LOCDIR   = src/tao/interface/
-
+DIRS     =
+LOCDIR   = src/tao/python/
+MANSEC   = TAO
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
