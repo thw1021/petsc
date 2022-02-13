@@ -49,8 +49,6 @@ class Configure(config.package.GNUPackage):
   def formGNUConfigureArgs(self):
     self.packageDir = os.path.join(self.packageDir,'src')
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
-    if not hasattr(self.compilers, 'CXX'):
-      raise RuntimeError('Error: Hypre requires C++ compiler. None specified')
     if not hasattr(self.compilers, 'FC'):
       args.append('--disable-fortran')
     if self.mpi.include:
