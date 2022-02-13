@@ -2713,7 +2713,7 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
   char              oname[256];
   PetscReal         volume = -1.0;
   PetscInt          prerefine = 0, refine = 0, r, coarsen = 0, overlap = 0, extLayers = 0, dim;
-  PetscBool         uniformOrig, created = PETSC_FALSE, uniform = PETSC_TRUE, distribute = PETSC_FALSE, interpolate = PETSC_TRUE, coordSpace = PETSC_TRUE, remap = PETSC_TRUE, ghostCells = PETSC_FALSE, isHierarchy, ignoreModel = PETSC_FALSE, flg;
+  PetscBool         uniformOrig, created = PETSC_FALSE, uniform = PETSC_TRUE, distribute, interpolate = PETSC_TRUE, coordSpace = PETSC_TRUE, remap = PETSC_TRUE, ghostCells = PETSC_FALSE, isHierarchy, ignoreModel = PETSC_FALSE, flg;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
@@ -2793,6 +2793,7 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
     ierr = DMSetFromOptions_NonRefinement_Plex(PetscOptionsObject, dm);CHKERRQ(ierr);
   }
   /* Handle DMPlex distribution */
+  ierr = DMPlexDistributeGetDefault(dm, &distribute);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-dm_distribute", "Flag to redistribute a mesh among processes", "DMCreate", distribute, &distribute, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBoundedInt("-dm_distribute_overlap", "The size of the overlap halo", "DMCreate", overlap, &overlap, NULL, 0);CHKERRQ(ierr);
   if (distribute) {
@@ -3062,6 +3063,8 @@ static PetscErrorCode DMInitialize_Plex(DM dm)
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",DMSetUpGLVisViewer_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMCreateNeumannOverlap_C",DMCreateNeumannOverlap_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexGetOverlap_C",DMPlexGetOverlap_Plex);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexDistributeGetDefault_C",DMPlexDistributeGetDefault_Plex);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMPlexDistributeSetDefault_C",DMPlexDistributeSetDefault_Plex);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)dm,"DMInterpolateSolution_C",DMInterpolateSolution_Plex);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -3133,6 +3136,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Plex(DM dm)
   mesh->supports          = NULL;
   mesh->refinementUniform = PETSC_TRUE;
   mesh->refinementLimit   = -1.0;
+  mesh->distDefault       = PETSC_TRUE;
   mesh->interpolated      = DMPLEX_INTERPOLATED_INVALID;
   mesh->interpolatedCollective = DMPLEX_INTERPOLATED_INVALID;
 

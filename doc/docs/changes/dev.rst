@@ -192,6 +192,7 @@ Changes: Development
 - Change ``DMGenerateRegister`` so that it registers routines that take an additional argument for cell tags
 - Change ``DMPlexFindVertices()`` to take ``Vec`` and ``IS`` arguments instead of arrays
 - Add ``DMPlexTSComputeRHSFunctionFEM()`` to support explicit timestepping
+- Add ``DMPlexDistributeGetDefault()`` and ``DMPlexDistributeSetDefault()`` to determine the default for Plex distribution
 
 .. rubric:: FE/FV:
 
