@@ -101,6 +101,8 @@ static PetscErrorCode FillMatrixCPU(FEStruct *fe,Mat A)
   PetscFunctionReturn(0);
 }
 
+// This shows an example of tracking element offsets explicitly, which allows for
+// mixed-topology meshes and combining both volume and surface parts into the weak form.
 static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
 {
   PetscErrorCode ierr;
