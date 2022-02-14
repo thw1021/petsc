@@ -4,7 +4,7 @@
 #include "coo.h"
 #include <petscdevicetypes.h>
 
-PETSC_EXTERN PetscErrorCode FillMatrixKokkosCOO(FEStruct *fe,Mat A)
+PetscErrorCode FillMatrixKokkosCOO(FEStruct *fe,Mat A)
 {
   PetscErrorCode ierr;
   PetscScalar    *v;
