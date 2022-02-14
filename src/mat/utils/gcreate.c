@@ -579,7 +579,10 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscCount ncoo,const PetscInt
 
    Level: beginner
 
-   Notes: Entries can be repeated, see MatSetValuesCOO().
+   Notes:
+    Entries can be repeated, see MatSetValuesCOO().
+
+    The arrays coo_i and coo_j may be freed immediately after calling this function.
 
    If the matrix type is not AIJ or AIJKOKKOS, then the entries must be owned by the local part
    of the matrix and no row or column indices are allowed to be negative.
@@ -642,7 +645,8 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscCount ncoo,const PetscInt coo_i
    called prior to this function.
 
    The indices coo_i and coo_j may be modified within this function. They might be translated to corresponding global
-   indices, but the caller should not rely on them having any specific value after this function returns.
+   indices, but the caller should not rely on them having any specific value after this function returns. The arrays
+   can be freed or reused immediately after this function returns.
 
    If the matrix type is not AIJ or AIJKOKKOS, then the entries must be owned by the local part
    of the matrix and no row or column indices are allowed to be negative.
