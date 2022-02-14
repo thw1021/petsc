@@ -31,16 +31,6 @@ FCPPFLAGS	= ${PETSC_FCPPFLAGS}
 C_SH_LIB_PATH	= ${PETSC_C_SH_LIB_PATH}
 F_SH_LIB_PATH	= ${PETSC_F_SH_LIB_PATH}
 #
-# The following variables define PETSc compile procedures
-#
-PETSC_COMPILE_SINGLE    = ${PCC} -o $*.o -c ${PCC_FLAGS} ${${CLANGUAGE}FLAGS} ${CCPPFLAGS}
-PETSC_CCOMPILE_SINGLE   = ${CC} -o $*.o -c ${CC_FLAGS} ${FLAGS} ${CPPFLAGS}
-PETSC_CXXCOMPILE_SINGLE = ${CXX} -o $*.o -c ${CXX_FLAGS} ${CXXFLAGS} ${CXXCPPFLAGS}
-PETSC_FCOMPILE_SINGLE   = ${FC} -o $*.o -c ${FC_FLAGS} ${FFLAGS} ${FCPPFLAGS}
-PETSC_CUCOMPILE_SINGLE  = ${CUDAC} -o $*.o $(MPICXX_INCLUDES) ${CUDAC_FLAGS} ${CUFLAGS} -c --compiler-options="${PETSC_CCPPFLAGS} ${PETSC_CC_INCLUDES} ${CUDA_CXXFLAGS}"
-PETSC_HIPCOMPILE_SINGLE = ${HIPC} -o $*.o $(MPICXX_INCLUDES) -c $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPFLAGS) $(HIPPPFLAGS) $(HIPOPTFLAGS) $(HIPC_DEPFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(CXX_DEPFLAGS)
-PETSC_SYCLCOMPILE_SINGLE = ${SYCLC} -o $*.o $(MPICXX_INCLUDES) -c $(SYCLC_FLAGS) $(SYCLPP_FLAGS) $(SYCLFLAGS) $(SYCLPPFLAGS) $(SYCLOPTFLAGS) $(SYCLC_DEPFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS)
-#
 # The following additional variables are used by PETSc targets and should not be redefined
 #
 # LIBNAME    - library name
@@ -101,3 +91,26 @@ SHLIBS   = libpetscsys libpetscmat libpetscvec libpetscdm libpetscksp libpetscsn
 # options.
 #
 include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables
+#
+# The following variables define PETSc compile procedures
+#
+PETSC_COMPILE_SINGLE    = ${PCC} -o $*.o -c ${PCC_FLAGS} ${${CLANGUAGE}FLAGS} ${CCPPFLAGS}
+PETSC_CCOMPILE_SINGLE   = ${CC} -o $*.o -c ${CC_FLAGS} ${FLAGS} ${CPPFLAGS}
+PETSC_CXXCOMPILE_SINGLE = ${CXX} -o $*.o -c ${CXX_FLAGS} ${CXXFLAGS} ${CXXCPPFLAGS}
+PETSC_FCOMPILE_SINGLE   = ${FC} -o $*.o -c ${FC_FLAGS} ${FFLAGS} ${FCPPFLAGS}
+PETSC_CUCOMPILE_SINGLE  = ${CUDAC} -o $*.o $(MPICXX_INCLUDES) ${CUDAC_FLAGS} ${CUFLAGS} -c --compiler-options="${PETSC_CCPPFLAGS} ${PETSC_CC_INCLUDES} ${CUDA_CXXFLAGS}"
+PETSC_HIPCOMPILE_SINGLE = ${HIPC} -o $*.o $(MPICXX_INCLUDES) -c $(HIPC_FLAGS) $(HIPPP_FLAGS) $(HIPFLAGS) $(HIPPPFLAGS) $(HIPOPTFLAGS) $(HIPC_DEPFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS) $(CXX_DEPFLAGS)
+PETSC_SYCLCOMPILE_SINGLE = ${SYCLC} -o $*.o $(MPICXX_INCLUDES) -c $(SYCLC_FLAGS) $(SYCLPP_FLAGS) $(SYCLFLAGS) $(SYCLPPFLAGS) $(SYCLOPTFLAGS) $(SYCLC_DEPFLAGS) $(CXXFLAGS) $(CXXCPPFLAGS)
+#
+# The make macros KOKKOS_USE_CUDA_COMPILER etc are defined in `${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables`
+ifneq ($(KOKKOS_USE_CUDA_COMPILER),)
+  # We prefer to use the Kokkos nvcc_wrapper compiler wrapper for compiling Kokkos files. The command is adapted from PETSC_COMPILE.kokkos.cxx
+  # in gmakefile.test, with additional "-o $*.o" to generate intended foo.o intead of foo.kokkos.o
+	PETSC_KOKKOSCOMPILE_SINGLE = PATH=`dirname $(CUDAC)`:$(PATH) NVCC_WRAPPER_DEFAULT_COMPILER="$(CUDA_CXX)" $(KOKKOS_BIN)/nvcc_wrapper --expt-extended-lambda -c $(CUDAC_FLAGS) ${PETSC_CCPPFLAGS} $(CUDACPPFLAGS) $(CUDA_CXXFLAGS) $(MPICXX_INCLUDES) -o $*.o
+else ifneq ($(KOKKOS_USE_HIP_COMPILER),)
+  PETSC_KOKKOSCOMPILE_SINGLE = ${PETSC_HIPCOMPILE_SINGLE}
+else ifneq ($(KOKKOS_USE_SYCL_COMPILER),)
+  PETSC_KOKKOSCOMPILE_SINGLE = ${PETSC_SYCLCOMPILE_SINGLE}
+else
+  PETSC_KOKKOSCOMPILE_SINGLE = ${PETSC_CXXCOMPILE_SINGLE}
+endif
