@@ -135,7 +135,7 @@ public:
     try {                                                                       \
       __VA_ARGS__;                                                              \
     } catch (const thrust::system_error& ex) {                                  \
-      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s",ex.what());     \
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s",ex.what());     \
     }                                                                           \
   } while (0)
 
@@ -222,9 +222,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async_(Vec v,
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm(PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  if (PetscUnlikely(size > 1)) SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
+  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
   // REVIEW ME: remove me
-  if (PetscUnlikely(VecIMPLCast(v))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
+  PetscCheckFalse(PetscUnlikely(VecIMPLCast(v)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
   ierr = PetscPrintf(PetscObjectComm(PetscObjectCast(v)),"Creating %p\n",v);CHKERRQ(ierr);
   static int count = 0;
   if (++count > 13) {
@@ -411,7 +411,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, con
   } else {
     const auto vseq = VecIMPLCast(v);
 
-    if (PetscUnlikely(vseq->unplacedarray)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
+    PetscCheckFalse(vseq->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
     ierr = base_type::template getarray_async<mtype,MemoryAccess::READ_WRITE>(v,&vseq->unplacedarray);CHKERRQ(ierr);
     ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
     VecCUPMCast(v)->device_array = const_cast<PetscScalar*>(a);
@@ -989,7 +989,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (PetscUnlikely(nv <= 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nv);
+  PetscCheckFalse(nv <= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nv);
   else if (PetscUnlikely(nv == 1)) {
     ierr = dot_async(xin,PetscRemoveConstCast(yin[0]),z);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -1183,7 +1183,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin
       ierr = VecRestoreArrayWrite(yin,&yarray);CHKERRQ(ierr);
     } break;
     default:
-      SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_GPU,"Unknown cupmMemcpyKind %d",mode);
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"Unknown cupmMemcpyKind %d",mode);
     }
   }
   PetscFunctionReturn(0);
