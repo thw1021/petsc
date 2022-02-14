@@ -57,7 +57,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async_(Vec v,
 
   PetscFunctionBegin;
   // REVIEW ME: remove me
-  if (PetscUnlikely(VecIMPLCast(v))) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
+  PetscCheckFalse(PetscUnlikely(VecIMPLCast(v)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
   ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,nullptr);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,allocate_missing,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
