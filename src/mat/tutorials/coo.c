@@ -126,6 +126,8 @@ static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
   PetscFunctionReturn(0);
 }
 
+// This uses a multi-dimensional indexing technique that works for homogeneous meshes
+// such as single-topology with volume integral only.
 static PetscErrorCode FillMatrixCPUCOO3d(FEStruct *fe,Mat A)
 {
   PetscErrorCode ierr;
