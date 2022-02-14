@@ -17,7 +17,7 @@ static PetscErrorCode PetscCUPMValidate(void)
   PetscMPIInt size;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRQ(ierr);
+  ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
   if (size > 1 && use_gpu_aware_mpi) {
     /* For OpenMPI, we could do a compile time check with "defined(PETSC_HAVE_OMPI_MAJOR_VERSION) && defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT"
        to see if it is CUDA-aware. However, recent versions of IBM Spectrum MPI (e.g., 10.3.1) on Summit meet above conditions, but one has to use
