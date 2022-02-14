@@ -14,7 +14,7 @@ static char help[] = "Demonstrates the use of the COO interface to PETSc matrice
 */
 
 #include <petscmat.h>
-#include "coo.h"
+#include "ex18coo.h"
 
 static PetscErrorCode CreateFEStruct(FEStruct *fe)
 {
@@ -161,7 +161,7 @@ int main(int argc, char **args)
   PetscErrorCode  ierr;
   FEStruct        fe;
   PetscMPIInt     size;
-  PetscBool       is_kokkos;
+  PetscBool       is_cpu,is_kokkos,is_cuda;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
@@ -182,11 +182,17 @@ int main(int argc, char **args)
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = MatZeroEntries(A);CHKERRQ(ierr);
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATAIJ,&is_cpu);CHKERRQ(ierr);
   ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATAIJKOKKOS,&is_kokkos);CHKERRQ(ierr);
-  if (is_kokkos) {
-    ierr = FillMatrixKokkosCOO(&fe,A);CHKERRQ(ierr);
-    ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  }
+  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATAIJCUSPARSE,&is_cuda);CHKERRQ(ierr);
+  if (is_cpu) {ierr = FillMatrixCOO_CPU(&fe,A);CHKERRQ(ierr);}
+ #if defined(PETSC_HAVE_KOKKOS)
+  else if (is_kokkos) {ierr = FillMatrixCOO_Kokkos(&fe,A);CHKERRQ(ierr);}
+ #elif defined(PETSC_HAVE_CUDA)
+  else if (is_cuda) {ierr = FillMatrixCOO_Cuda(&fe,A);CHKERRQ(ierr);}
+ #endif
+
+  ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = MatDestroy(&A);CHKERRQ(ierr);
   ierr = DestroyFEStruct(&fe);CHKERRQ(ierr);
@@ -195,15 +201,24 @@ int main(int argc, char **args)
 }
 
 /*TEST
+  build:
+    depends:  ex18cpu.c ex18kok.kokkos.cxx ex18cu.cu
 
-   build:
-     requires: kokkos_kernels
-     depends: cook.kokkos.cxx
+  testset:
+    filter: grep -v "type"
+    output_file: output/ex18coo_1.out
 
-   test:
+    test:
+      suffix: cpu
 
-   test:
-     suffix: kokkos_1
-     args: -mat_type aijkokkos
+    test:
+      suffix: kok
+      requires: kokkos_kernels
+      args: -mat_type aijkokkos
+
+    test:
+      suffix: cuda
+      requires: cuda
+      args: -mat_type aijcusparse
 
 TEST*/
