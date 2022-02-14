@@ -16,7 +16,6 @@ int main(int argc,char **argv)
   PetscErrorCode               ierr;
   Mat                          A;
   PetscInt                     N=11, nz=3, Istart, Iend, num_threads = 128;
-  PetscBool                    coo = PETSC_FALSE;
   PetscSplitCSRDataStructure   d_mat;
   PetscLogEvent                event;
   Vec                          x,y;
@@ -28,7 +27,6 @@ int main(int argc,char **argv)
   ierr = PetscOptionsGetInt(NULL,NULL, "-nz_row", &nz, NULL);CHKERRQ(ierr); // for debugging, will be wrong if nz<3
   ierr = PetscOptionsGetInt(NULL,NULL, "-n", &N, NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetInt(NULL,NULL, "-num_threads", &num_threads, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL, "-coo", &coo, NULL);CHKERRQ(ierr);
   if (nz>N+1) {
     PetscPrintf(PETSC_COMM_WORLD,"warning decreasing nz\n");
     nz=N+1;
@@ -41,8 +39,8 @@ int main(int argc,char **argv)
   ierr = MatSetType(A, MATAIJKOKKOS);CHKERRQ(ierr);
   ierr = MatSeqAIJSetPreallocation(A, nz, NULL);CHKERRQ(ierr);
   ierr = MatMPIAIJSetPreallocation(A, nz,NULL,nz-1, NULL);CHKERRQ(ierr);
-  ierr = MatSetOption(A,MAT_IGNORE_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatSetFromOptions(A);CHKERRQ(ierr);
+  ierr = MatSetOption(A,MAT_IGNORE_OFF_PROC_ENTRIES,PETSC_TRUE);CHKERRQ(ierr);
   ierr = MatCreateVecs(A,&x,&y);CHKERRQ(ierr);
   ierr = MatGetOwnershipRange(A,&Istart,&Iend);CHKERRQ(ierr);
 
@@ -61,52 +59,16 @@ int main(int argc,char **argv)
   ierr = VecViewFromOptions(y,NULL,"-ex5_vec_view");CHKERRQ(ierr);
 
   // assemble on GPU
-  if (coo) {
-    PetscInt nelem = Iend - Istart + (Iend == N);
-    PetscInt *rows, *cols;
-    Vec values;
-    PetscScalar *v;
-    // We'll assemble with off-process entries here because they are correctly
-    // handled by the COO interfaces.
-    ierr = MatSetOption(A,MAT_IGNORE_OFF_PROC_ENTRIES,PETSC_FALSE);CHKERRQ(ierr);
-    // COO-style preallocation replaced both the Mat*SetPreallocation functions
-    // called above, as well as all the index handling during numeric assembly.
-    ierr = PetscMalloc2(nelem*4, &rows, nelem*4, &cols);CHKERRQ(ierr);
-    for (PetscInt i=0; i<nelem; i++) {
-      PetscInt ii = Istart + i;
-      for (PetscInt j=0; j<2; j++) {
-        for (PetscInt k=0; k<2; k++) {
-          rows[4*i+j*2+k] = (ii + j) % (N + 1) - 1;
-          cols[4*i+j*2+k] = (ii + k) % (N + 1) - 1;
-        }
-      }
-    }
-    ierr = MatSetPreallocationCOO(A,4*nelem,rows,cols);CHKERRQ(ierr);
-    ierr = PetscFree2(rows,cols);CHKERRQ(ierr);
-    // All the index handling is done. The following code can be used any number
-    // of times to update the numeric values within the same matrix structure.
-    // We use VecCreateSeqKokkos to ensure the allocation is in device memory,
-    // but we could work with Kokkos views or row device arrays instead.
-    ierr = VecCreateSeqKokkos(PETSC_COMM_SELF, 4*nelem, &values);CHKERRQ(ierr);
-    ierr = VecGetArrayAndMemType(values,&v,NULL);CHKERRQ(ierr);
-    Kokkos::parallel_for("AssembleElementMatrices",nelem,KOKKOS_LAMBDA(PetscInt i) {
-        for (PetscInt j=0; j<4; j++) v[4*i+j] = 1.;
-      });
-    ierr = MatSetValuesCOO(A,v,ADD_VALUES);CHKERRQ(ierr);
-    ierr = VecRestoreArrayAndMemType(values,&v);CHKERRQ(ierr);
-    ierr = VecDestroy(&values);CHKERRQ(ierr);
-  } else {
-    if (Iend<N) Iend++; // elements, ignore off processor entries so do redundent
-    ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
-    ierr = MatKokkosGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
-    Kokkos::fence();
-    Kokkos::parallel_for (Kokkos::RangePolicy<> (Istart,Iend+1), KOKKOS_LAMBDA (int i) {
-        PetscScalar  values[] = {1,1,1,1};
-        PetscInt     js[] = {i-1, i}, nn = (i==N) ? 1 : 2;
-        MatSetValuesDevice(d_mat,nn,js,nn,js,values,ADD_VALUES);
-      });
-    Kokkos::fence();
-  }
+  if (Iend<N) Iend++; // elements, ignore off processor entries so do redundant
+  ierr = PetscLogEventBegin(event,0,0,0,0);CHKERRQ(ierr);
+  ierr = MatKokkosGetDeviceMatWrite(A,&d_mat);CHKERRQ(ierr);
+  Kokkos::fence();
+  Kokkos::parallel_for (Kokkos::RangePolicy<> (Istart,Iend+1), KOKKOS_LAMBDA (int i) {
+      PetscScalar  values[] = {1,1,1,1};
+      PetscInt     js[] = {i-1, i}, nn = (i==N) ? 1 : 2;
+      MatSetValuesDevice(d_mat,nn,js,nn,js,values,ADD_VALUES);
+    });
+  Kokkos::fence();
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
