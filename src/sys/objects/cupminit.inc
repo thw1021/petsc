@@ -13,8 +13,9 @@ cupmEvent_t petsc_gputimer_end   = NULL; /* The GPU event for end */
 /* Device validation after it is lazily initialized */
 static PetscErrorCode PetscCUPMValidate(void)
 {
-  PetscBool   mpi_gpu_awareness;
-  PetscMPIInt size;
+  PetscErrorCode ierr;
+  PetscBool      mpi_gpu_awareness;
+  PetscMPIInt    size;
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PETSC_COMM_WORLD, &size);CHKERRMPI(ierr);
