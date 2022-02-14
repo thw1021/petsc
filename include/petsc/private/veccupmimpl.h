@@ -98,7 +98,7 @@ public:
       PetscTrRealloc = [](size_t,int,const char*,const char*,void**)
       {
         // REVIEW ME: can be implemented by malloc->copy->free?
-        SETERRQ1(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s has no realloc()",cupmName());
+        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s has no realloc()",cupmName());
       };
     }
   }
@@ -242,9 +242,9 @@ public:
 
     PetscFunctionBegin;
     if (!std::is_same<petsc_type,blas_type>::value) {
-      if (PetscUnlikely(x > std::numeric_limits<blas_type>::max())) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for %s, which may be restricted to 32 bit integers",x,cupmBlasName());
+      if (PetscUnlikely(x > std::numeric_limits<blas_type>::max())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for %s, which may be restricted to 32 bit integers",x,cupmBlasName());
     }
-    if (PetscUnlikely(x < 0)) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to %s routine: %" PetscInt_FMT,cupmBlasName(),x);
+    if (PetscUnlikely(x < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to %s routine: %" PetscInt_FMT,cupmBlasName(),x);
     *y = static_cast<blas_type>(x);
     PetscFunctionReturn(0);
   }
