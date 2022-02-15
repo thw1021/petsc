@@ -1945,7 +1945,6 @@ static PetscErrorCode LandauCreateMatrix(MPI_Comm comm, Vec X, IS grid_batch_is_
       IS              isrow,isicol;
       ierr = MatGetOrdering(gMat,rtype,&isrow,&isicol);CHKERRQ(ierr);
       ierr = ISInvertPermutation(isrow,PETSC_DECIDE,&grid_batch_is_inv[grid]);CHKERRQ(ierr);
-      //ierr = ISView(grid_batch_is_inv[grid],PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
       ierr = ISGetIndices(isrow, &values);CHKERRQ(ierr);
       for (PetscInt b_id=0 ; b_id < ctx->batch_sz ; b_id++) { // add batch size DMs for this species grid
 #if !defined(LANDAU_SPECIES_MAJOR)
@@ -1995,7 +1994,6 @@ static PetscErrorCode LandauCreateMatrix(MPI_Comm comm, Vec X, IS grid_batch_is_
     ierr = MatCreateSubMatrix(ctx->J,ctx->batch_is,ctx->batch_is,MAT_INITIAL_MATRIX,&mat_block_order);CHKERRQ(ierr); // use MatPermute
     ierr = MatDestroy(&ctx->J);CHKERRQ(ierr);
     ctx->J = mat_block_order;
-    ierr = MatViewFromOptions(ctx->J, NULL, "-grid_mat_view");CHKERRQ(ierr);
     // cache ctx for KSP with batch/field major Jacobian ordering -ksp_type gmres/etc -dm_landau_jacobian_field_major_order
     ierr = PetscContainerCreate(PETSC_COMM_SELF, &container);CHKERRQ(ierr);
     ierr = PetscContainerSetPointer(container, (void *)ctx);CHKERRQ(ierr);
