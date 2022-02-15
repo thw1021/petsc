@@ -484,13 +484,13 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
         ierr = PetscPrintf(PETSC_COMM_WORLD,"%2D:", s);CHKERRQ(ierr);
-        for (int bid=0 ; bid<batch_sz ; bid++ ) {
+        for (int bid=0 ; bid<batch_sz ; bid++) {
          ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D ", h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its);CHKERRQ(ierr);
         }
         ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
 #else
         PetscInt count=0;
-        for (int bid=0 ; bid<batch_sz ; bid++ ) {
+        for (int bid=0 ; bid<batch_sz ; bid++) {
           if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
         }
         ierr = PetscPrintf(PETSC_COMM_WORLD,"%3D ", count);CHKERRQ(ierr);
