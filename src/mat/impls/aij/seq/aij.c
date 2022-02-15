@@ -4810,9 +4810,9 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJ(Mat A,const PetscScalar v[],InsertM
   PetscScalar                 *Aa;
 
   PetscFunctionBegin;
-  if (imode == INSERT_VALUES) {ierr = MatZeroEntries(A);CHKERRQ(ierr);}
   ierr = MatSeqAIJGetArray(A,&Aa);CHKERRQ(ierr);
   for (i=0; i<Annz; i++) {
+    if (imode == INSERT_VALUES) Aa[i] = 0.0;
     for (j=jmap[i]; j<jmap[i+1]; j++) Aa[i] += v[perm[j]];
   }
   ierr = MatSeqAIJRestoreArray(A,&Aa);CHKERRQ(ierr);

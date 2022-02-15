@@ -1070,12 +1070,12 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A,const PetscScalar v[],I
 
   if (imode == INSERT_VALUES) {
     ierr = MatSeqAIJGetKokkosViewWrite(A,&Aa);CHKERRQ(ierr); /* write matrix values */
-    Kokkos::deep_copy(Aa,0.0); /* Zero matrix values since INSERT_VALUES still requires summing replicated values in v[] */
   } else { /* ADD_VALUES */
     ierr = MatSeqAIJGetKokkosView(A,&Aa);CHKERRQ(ierr); /* read & write matrix values */
   }
 
   Kokkos::parallel_for(Annz,KOKKOS_LAMBDA(const PetscCount i) {
+    if (imode == INSERT_VALUES) Aa(i) = 0.0;
     for (PetscCount k=jmap(i); k<jmap(i+1); k++) Aa(i) += kv(perm(k));
   });
 
