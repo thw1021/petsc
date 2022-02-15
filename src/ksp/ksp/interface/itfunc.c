@@ -832,7 +832,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
   }
   if (x) {
     ierr         = PetscObjectReference((PetscObject)x);CHKERRQ(ierr);
-    printf("KSPSolve_Private() %p\n",ksp->vec_sol);
     ierr         = VecDestroy(&ksp->vec_sol);CHKERRQ(ierr);
     ksp->vec_sol = x;
   }

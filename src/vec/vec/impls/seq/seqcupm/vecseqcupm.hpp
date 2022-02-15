@@ -225,16 +225,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async_(Vec v,
   PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
   // REVIEW ME: remove me
   PetscCheckFalse(PetscUnlikely(VecIMPLCast(v)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
-  ierr = PetscPrintf(PetscObjectComm(PetscObjectCast(v)),"Creating %p\n",v);CHKERRQ(ierr);
-  static int count = 0;
-  if (++count > 13) {
-    static bool print = true;
-    if (print) {
-      ierr = PetscStackView(PETSC_STDOUT);CHKERRQ(ierr);
-      print = false;
-    }
-
-  }
   ierr = VecCreate_Seq_Private(v,host_array);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,PETSC_FALSE,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -403,7 +393,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, con
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-  printf("---------------- Vec %p getting array %p of type %s\n",v,a,PetscMemTypeHost(mtype) ? "host" : "device");
   if (PetscMemTypeHost(mtype)) {
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
     ierr = VecPlaceArray_Seq(v,a);CHKERRQ(ierr);
@@ -430,7 +419,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, c
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  printf("---------------- Vec %p REPLACE array %p of type %s\n",v,a,PetscMemTypeHost(mtype) ? "host" : "device");
   if (PetscMemTypeHost(mtype)) {
     const auto vseq = VecIMPLCast(v);
 
@@ -549,6 +537,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
     v->pinned_memory = w->pinned_memory;
     v->spptr         = w->spptr;
     w->data          = nullptr;
+    w->spptr         = nullptr;
     w->offloadmask   = PETSC_OFFLOAD_UNALLOCATED;
   } else {
     auto array = &VecIMPLCast(w)->array;
@@ -1004,18 +993,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   PetscFunctionReturn(0);
 }
 
-static inline __global__ void check_ptr(const PetscScalar *array, PetscInt n, PetscScalar *sum)
-{
-  PetscScalar sum_l = 0;
-  for (auto i = 0; i < n; ++i) {
-    __syncthreads();
-    printf("%d\n",i);
-    __syncthreads();
-    sum_l += array[i];
-  }
-  *sum = sum_l;
-}
-
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscScalar alpha))
 {
@@ -1027,27 +1004,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscSca
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
   if (alpha == PetscScalar(0)) {
-    puts("start");
-    auto xptr = DeviceArrayWrite(dctx,xin);
-    PetscScalar *sum;
-
-    // Error is as follows. Another vector co-owns this vectors array, but not sure how it is
-    // getting it.
-    CHKERRCUPM(cupmDeviceSynchronize());
-    CHKERRCUPM(cupmMalloc((void**)&sum,n*sizeof(*sum)));
-    check_ptr<<<1,1>>>(xptr.ptr,n,sum);
-    CHKERRCUPM(cupmDeviceSynchronize());
-    CHKERRCUPM(cupmFree(sum));
-    CHKERRCUPM(cupmDeviceSynchronize());
-    printf("%p\n",xptr.ptr);
-    CHKERRCUPM(cupmDeviceSynchronize());
-    auto cerr = cupmMemsetAsync(xptr.ptr,0,n*sizeof(*xptr.ptr),stream);
-    CHKERRCUPM(cupmDeviceSynchronize());
-    if (cerr) {
-      //ierr = VecView_Debug(xin);CHKERRQ(ierr);
-    }
-    CHKERRCUPM(cerr);
-    puts("end");
+    auto cerr = cupmMemsetAsync(DeviceArrayWrite(dctx,xin).ptr,0,n*sizeof(PetscScalar),stream);CHKERRCUPM(cerr);
   } else {
     CHKERRTHRUST(
       auto xptr = thrust::device_pointer_cast(DeviceArrayWrite(dctx,xin).ptr);
