@@ -526,6 +526,14 @@ struct BlasInterface : BlasInterfaceImpl<T>
   using base_name = Petsc::Device::CUPM::Impl::BlasInterface<T>;       \
   using base_name::cupmBlasSetPointerModeFromPointer
 
+#if PetscDefined(HAVE_CUDA)
+extern template struct BlasInterface<DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+extern template struct BlasInterface<DeviceType::HIP>;
+#endif
+
 } // namespace Impl
 
 } // namespace CUPM
