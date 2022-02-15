@@ -580,12 +580,12 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       PetscContainer    container;
       ierr = PetscObjectQuery((PetscObject) A, "plex_batch_is", (PetscObject *) &container);CHKERRQ(ierr);
       { // Permute the matrix to get a block diagonal system: d_isrow_k, d_isicol_k
-        MatOrderingType   rtype = MATORDERINGRCM;
+        MatOrderingType   rtype;
         IS                isrow,isicol;
         const PetscInt    *rowindices,*icolindices;
 
         if (container) rtype = MATORDERINGNATURAL; // if we have a vecscatter then don't reorder here (all the reorder stuff goes away in future)
-        else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"-dm_landau_jacobian_field_major_order should be used with gpu assembly");
+        else rtype = MATORDERINGRCM; // SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"-dm_landau_jacobian_field_major_order should be used with gpu assembly");
         // get permutation. Not what I expect so inverted here
         ierr = MatGetOrdering(A,rtype,&isrow,&isicol);CHKERRQ(ierr);
         ierr = ISDestroy(&isrow);CHKERRQ(ierr);
