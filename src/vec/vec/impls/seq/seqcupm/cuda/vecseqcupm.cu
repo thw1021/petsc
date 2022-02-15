@@ -42,7 +42,7 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
 
   PetscFunctionBegin;
   PetscValidPointer(v,3);
-  ierr = VecSeq_CUDA::createseqcupm_async(comm,n,0,v,PETSC_TRUE);CHKERRQ(ierr);
+  ierr = VecSeq_CUDA::createseqcupm_async(comm,0,n,v,PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

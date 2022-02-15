@@ -451,7 +451,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
   PetscFunctionBegin;
   ierr = VecCUPMAllocateCheck_(v);CHKERRQ(ierr);
   const auto vcu = VecCUPMCast(v);
-  printf("vec %p has %p\n",v,vcu->device_array);
   if (vcu->device_array) PetscFunctionReturn(0);
   else {
     cupmStream_t stream;
@@ -459,7 +458,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
 
     ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,&stream);CHKERRQ(ierr);
     cerr = cupmMallocAsync(reinterpret_cast<void**>(&vcu->device_array),v->map->n*sizeof(*vcu->device_array),stream);CHKERRCUPM(cerr);
-    printf("vec %p alloced %p\n",v,vcu->device_array);
     vcu->ptr_ownership = PETSC_OWN_POINTER;
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
       const auto vimp = VecIMPLCast(v);
@@ -544,7 +542,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
   }
   if (access != MemoryAccess::READ) {
     // not read-only so immediately assume modified
-    // REVIEW ME: this should probably also call PetscObjectStateInrease() since we assume it
+    // REVIEW ME: this should probably also call PetscObjectStateIncrease() since we assume it
     // is immediately modified
     v->offloadmask = hostmem ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;
   }
@@ -608,7 +606,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPMBase_(MPI_Com
   ierr = VecCreate(comm,v);CHKERRQ(ierr);
   if (reference) {ierr = PetscLayoutReference(reference,&(*v)->map);CHKERRQ(ierr);}
   ierr = VecSetSizes(*v,n,N);CHKERRQ(ierr);
-  ierr = VecSetBlockSize(*v,bs);CHKERRQ(ierr);
+  if (bs) {ierr = VecSetBlockSize(*v,bs);CHKERRQ(ierr);}
   if (call_set_type) {ierr = VecSetType(*v,VECTYPE());CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
@@ -672,7 +670,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase_(Vec v)
         cupmError_t  cerr;
 
         ierr = GetHandles_(&stream);CHKERRQ(ierr);
-        printf("freeing %p\n",vcu->device_array);
         cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
       }
     case PETSC_USE_POINTER:
