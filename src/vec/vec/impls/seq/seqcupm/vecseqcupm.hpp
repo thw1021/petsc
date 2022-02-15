@@ -71,7 +71,7 @@ private:
   // dispatcher for the actual kernels for mdot when NOT configured for complex, called by
   // mdot_async_(use_complex_tag<false>,...)
   template <int>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_kernel_dispatch_(PetscDeviceContext,cupmStream_t,const PetscScalar*,const Vec[],PetscInt,PetscScalar*,PetscInt*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_kernel_dispatch_(PetscDeviceContext,cupmStream_t,const PetscScalar*,const Vec[],PetscInt,PetscScalar**,PetscScalar*,PetscInt*));
   // common core for the various create routines
   PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupm_async_(Vec,PetscScalar*/*host_ptr*/=nullptr,PetscScalar*/*device_ptr*/=nullptr));
 
@@ -135,7 +135,7 @@ public:
     try {                                                                       \
       __VA_ARGS__;                                                              \
     } catch (const thrust::system_error& ex) {                                  \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s",ex.what());     \
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s",ex.what());      \
     }                                                                           \
   } while (0)
 
@@ -222,9 +222,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async_(Vec v,
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm(PetscObjectCast(v)),&size);CHKERRMPI(ierr);
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
   // REVIEW ME: remove me
-  PetscCheckFalse(PetscUnlikely(VecIMPLCast(v)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
+  PetscCheck(!VecIMPLCast(v),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
   ierr = VecCreate_Seq_Private(v,host_array);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,PETSC_FALSE,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -400,7 +400,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, con
   } else {
     const auto vseq = VecIMPLCast(v);
 
-    PetscCheckFalse(vseq->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
+    PetscCheck(!vseq->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
     ierr = base_type::template getarray_async<mtype,MemoryAccess::READ_WRITE>(v,&vseq->unplacedarray);CHKERRQ(ierr);
     ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
     VecCUPMCast(v)->device_array = const_cast<PetscScalar*>(a);
@@ -832,24 +832,18 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
 
 template <Device::CUPM::DeviceType T>
 template <int N>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(PetscDeviceContext dctx, cupmStream_t stream, const PetscScalar *xarr, const Vec yin[], PetscInt size, PetscScalar *results, PetscInt *yidx))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(PetscDeviceContext dctx, cupmStream_t stream, const PetscScalar *xarr, const Vec yin[], PetscInt size, PetscScalar **device_y, PetscScalar *results, PetscInt *yidx))
 {
   const auto   yidxt = *yidx;
   const auto   yint  = yin+yidxt;
-  PetscScalar **device_y;
   PetscScalar *host_y[N];
   cupmError_t  cerr;
 
   PetscFunctionBegin;
-  // REVIEW ME: this is really, really stupid. We need to allocate one of these tiny array of
-  // pointers dynamically for each of these calls as it is possible that multiple streams can
-  // be calling this function simultaneously, there must be a better system.
-  cerr = cupmMallocAsync(&device_y,N*sizeof(*device_y),stream);CHKERRCUPM(cerr);
   for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yint[i]);
   cerr = cupmMemcpyAsync(device_y,host_y,N*sizeof(*device_y),cupmMemcpyHostToDevice,stream);CHKERRCUPM(cerr);
   cerr = cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xarr,device_y,size,results+(yidxt*MDOT_WORKGROUP_NUM));CHKERRCUPM(cerr);
   *yidx += N;
-  cerr = cupmFreeAsync(device_y,stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -861,6 +855,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   const auto          nwork  = nv1*MDOT_WORKGROUP_NUM;
   const auto          nbytes = nwork*sizeof(PetscScalar);
   PetscBool           device_mem;
+  PetscScalar         **d_y;
   PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
@@ -870,6 +865,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
 
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&handle,&stream);CHKERRQ(ierr);
+  // will hold all the device y pointers
+  cerr = cupmMallocAsync(&d_y,8*sizeof(*d_y),stream);CHKERRCUPM(cerr);
   // allocate scratchpad memory for the results of individual work groups
   cerr = cupmMallocAsync(&d_results,nbytes,stream);CHKERRCUPM(cerr);
   {
@@ -885,13 +882,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
       case 6:
       case 5:
       case 4:
-        ierr = mdot_kernel_dispatch_<4>(dctx,stream,xptr,yin,n,d_results,&yidx);CHKERRQ(ierr);
+        ierr = mdot_kernel_dispatch_<4>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx);CHKERRQ(ierr);
         break;
       case 3:
-        ierr = mdot_kernel_dispatch_<3>(dctx,stream,xptr,yin,n,d_results,&yidx);CHKERRQ(ierr);
+        ierr = mdot_kernel_dispatch_<3>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx);CHKERRQ(ierr);
         break;
       case 2:
-        ierr = mdot_kernel_dispatch_<2>(dctx,stream,xptr,yin,n,d_results,&yidx);CHKERRQ(ierr);
+        ierr = mdot_kernel_dispatch_<2>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx);CHKERRQ(ierr);
         break;
       case 1: {
         const auto bn   = static_cast<cupmBlasInt_t>(n);
@@ -904,7 +901,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
       case 0:
         break;
       default: // 8 or more
-        ierr = mdot_kernel_dispatch_<8>(dctx,stream,xptr,yin,n,d_results,&yidx);CHKERRQ(ierr);
+        ierr = mdot_kernel_dispatch_<8>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx);CHKERRQ(ierr);
         break;
       }
     }
@@ -926,18 +923,19 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     // do these now while memcpy is in flight
     ierr = PetscLogFlops(nwork);CHKERRQ(ierr);
     ierr = PetscLogGpuToCpuScalar(nbytes);CHKERRQ(ierr);
-    // for systems without async free this will synchronize implicitly
-    cerr = cupmFreeAsync(d_results,stream);CHKERRCUPM(cerr);
     // REVIEW ME: need to hard sync here...
     ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
     // REVIEW ME: it is likely faster to do this in a micro kernel rather than do it on the
-    // host which that requires synchronization
+    // host which requires synchronization and possibly an addition allocation
     // sum group results into z
     for (auto j = PetscInt{0}; j < nv1; ++j) {
       for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) z[j] += h_results[i];
     }
     if (allocate) {ierr = PetscFree(h_results);CHKERRQ(ierr);}
   }
+  // free these here, we will already have synchronized
+  cerr = cupmFreeAsync(d_results,stream);CHKERRCUPM(cerr);
+  cerr = cupmFreeAsync(d_y,stream);CHKERRCUPM(cerr);
   PetscFunctionReturn(0);
 }
 
@@ -978,7 +976,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(nv <= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nv);
+  PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nv);
   else if (PetscUnlikely(nv == 1)) {
     ierr = dot_async(xin,PetscRemoveConstCast(yin[0]),z);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -1236,16 +1234,27 @@ template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormType type, PetscReal *z))
 {
   const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
+  PetscBool          device_mem;
   PetscInt           flopCount = 0;
   cupmBlasHandle_t   cupmBlasHandle;
   PetscDeviceContext dctx;
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
+  ierr = cupmIsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
   if (!n) {
-    z[0] = 0.0;
-    // yes this technically sets z[0] = 0 again half the time
-    z[type == NORM_1_AND_2] = 0.0;
+    const auto norm1and2 = type == NORM_1_AND_2;
+
+    if (device_mem) {
+      cupmStream_t stream;
+
+      ierr = GetHandles_(&stream);CHKERRQ(ierr);
+      auto cerr = cupmMemsetAsync(z,0,(1+norm1and2)*sizeof(*z),stream);CHKERRCUPM(cerr);
+    } else {
+      z[0] = 0.0;
+      // yes this technically sets z[0] = 0 again half the time
+      z[norm1and2] = 0.0;
+    }
     PetscFunctionReturn(0);
   }
   ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
@@ -1254,7 +1263,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
     auto            xarray = DeviceArrayRead(dctx,xin);
 
     // in case NORM_INFINITY we may technically undo this, but cleaner this way
-    ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,z);CHKERRQ(ierr);
+    cberr = cupmBlasSetPointerMode(cupmBlasHandle,device_mem ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     switch (type) {
     case NORM_1_AND_2:
@@ -1266,7 +1275,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
     case NORM_2:
     case NORM_FROBENIUS:
       cberr = cupmBlasXnrm2(cupmBlasHandle,n,xarray,1,cupmRealCast(z));CHKERRCUPMBLAS(cberr);
-      flopCount += PetscMax(2*n-1,0); // +=  in case we've fallen through from NORM_1_AND_2
+      flopCount += PetscMax(2*n-1,0); // += in case we've fallen through from NORM_1_AND_2
       break;
     case NORM_INFINITY: {
       cupmError_t   cerr;
@@ -1274,6 +1283,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
       PetscScalar   zs;
       cupmBlasInt_t i;
 
+      PetscCheck(!device_mem,PETSC_COMM_SELF,PETSC_ERR_SUP,"Device memory norm pending implementation");
       // REVIEW ME: this needs to be redone by hand
       cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
       cberr = cupmBlasXamax(cupmBlasHandle,n,xarray,1,&i);CHKERRCUPMBLAS(cberr);
@@ -1497,6 +1507,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, Pets
   // REVIEW ME: Timing???
   PetscFunctionReturn(0);
 }
+
+// declare the extern templates, each is explicitly instantiated in the respective
+// implementation directories
+#if PetscDefined(HAVE_CUDA)
+extern template struct VecSeq_CUPM<Device::CUPM::DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+extern template struct VecSeq_CUPM<Device::CUPM::DeviceType::HIP>;
+#endif
 
 } // namespace Impl
 

@@ -2,6 +2,9 @@
 
 using namespace Petsc::Vector::CUPM::Impl;
 
+// explicitly instantiate, derivate headers will contain extern template declarations
+template struct VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
+
 using VecMPI_CUDA = VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 /*MC

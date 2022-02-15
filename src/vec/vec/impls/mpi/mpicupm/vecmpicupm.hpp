@@ -57,7 +57,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async_(Vec v,
 
   PetscFunctionBegin;
   // REVIEW ME: remove me
-  PetscCheckFalse(PetscUnlikely(VecIMPLCast(v)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
+  PetscCheck(!VecIMPLCast(v),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
   ierr = VecCreate_MPI_Private(v,PETSC_FALSE,nghost,nullptr);CHKERRQ(ierr);
   ierr = Initialize_CUPMBase_(v,allocate_missing,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -334,6 +334,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::min_async(Vec x, PetscInt *
   ierr = minmax_async_(x,idx,z,VecSeq_T::min_async,MPIU_MINLOC,MPIU_MIN);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+// declare the extern templates, each is explicitly instantiated in the respective
+// implementation directories
+#if PetscDefined(HAVE_CUDA)
+extern template struct VecMPI_CUPM<Device::CUPM::DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+extern template struct VecMPI_CUPM<Device::CUPM::DeviceType::HIP>;
+#endif
 
 } // namespace Impl
 
