@@ -2,6 +2,8 @@
 
 using namespace Petsc::Vector::CUPM::Impl;
 
+template struct VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
+
 using VecSeq_CUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 PetscErrorCode VecCreate_SeqCUDA(Vec v)

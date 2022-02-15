@@ -572,6 +572,7 @@ struct Interface : InterfaceImpl<T>
   using cupmReal_t   = util::conditional_t<PetscDefined(USE_REAL_SINGLE),float,double>;
   using cupmScalar_t = util::conditional_t<PetscDefined(USE_COMPLEX),cupmComplex_t,cupmReal_t>;
 
+  // REVIEW ME: this needs to be cleaned up, it is unreadable
   PETSC_NODISCARD static constexpr auto makeCupmScalar(PetscScalar s) PETSC_DECLTYPE_NOEXCEPT_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)))
 
   PETSC_CXX_COMPAT_DECL(constexpr cupmScalar_t* cupmScalarCast(PetscScalar *s))
@@ -594,6 +595,10 @@ struct Interface : InterfaceImpl<T>
     return reinterpret_cast<const cupmReal_t*>(s);
   }
 
+#if !defined(PETSC_PKG_CUDA_VERSION_GE)
+#  define PETSC_PKG_CUDA_VERSION_GE(...) 0
+#  define DEFINED_PETSC_PKG_CUDA_VERSION_GE
+#endif
   PETSC_CXX_COMPAT_DECL(PetscErrorCode cupmIsDeviceMemory(const void *data, PetscBool *device_mem))
   {
     cupmPointerAttributes_t attr;
@@ -602,17 +607,21 @@ struct Interface : InterfaceImpl<T>
     PetscValidBoolPointer(device_mem,2);
     // Do not check error, instead reset it via GetLastError() since before CUDA 11.0, passing
     // a host pointer returns cudaErrorInvalidValue
-    const auto cerr   = cupmPointerGetAttributes(&attr,data);
-    const auto unused = cupmGetLastError();
+    const auto cerr = cupmPointerGetAttributes(&attr,data);
+    const auto PETSC_UNUSED unused = cupmGetLastError();
     // HIP seems to always have used memoryType though
 #if (defined(CUDART_VERSION) && (CUDART_VERSION < 10000)) || defined(__HIP_PLATFORM_HCC__)
     const auto mtype = attr.memoryType;
 #else
+    if (PetscDefined(HAVE_CUDA) && PETSC_PKG_CUDA_VERSION_GE(11,0,0)) CHKERRCUPM(cerr);
     const auto mtype = attr.type;
-#endif
+#endif // CUDART_VERSION && CUDART_VERSION < 10000 || __HIP_PLATFORM_HCC__
     *device_mem = static_cast<PetscBool>((cerr == cupmSuccess) && (mtype == cupmMemoryTypeDevice));
     PetscFunctionReturn(0);
   }
+#if defined(DEFINED_PETSC_PKG_CUDA_VERSION_GE)
+#  undef PETSC_PKG_CUDA_VERSION_GE
+#endif
 };
 
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
@@ -624,6 +633,14 @@ struct Interface : InterfaceImpl<T>
   using base_name::cupmScalarCast;                                      \
   using base_name::cupmRealCast;                                        \
   using base_name::cupmIsDeviceMemory
+
+#if PetscDefined(HAVE_CUDA)
+extern template struct Interface<DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+extern template struct Interface<DeviceType::HIP>;
+#endif
 
 } // namespace Impl
 
