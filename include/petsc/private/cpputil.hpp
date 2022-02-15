@@ -190,22 +190,30 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
   return PetscObjectCast(PetscRemoveConstCast(object));
 }
 
-#define PETSC_DECLTYPE_AUTO(...)             -> decltype(__VA_ARGS__) { return __VA_ARGS__; }
-#define PETSC_DECLTYPE_NOEXCEPT_RETURNS(...) noexcept(noexcept(__VA_ARGS__)) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
+#define PETSC_DECLTYPE_AUTO(...)             -> decltype(__VA_ARGS__)
+#define PETSC_NOEXCEPT_AUTO(...)             noexcept(noexcept(__VA_ARGS__))
+#define PETSC_DECLTYPE_NOEXCEPT_AUTO(...)    PETSC_DECLTYPE_AUTO(__VA_ARGS__) PETSC_NOEXCEPT_AUTO(__VA_ARGS__)
+#define PETSC_DECLTYPE_NOEXCEPT_RETURNS(...) PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) { return __VA_ARGS__; }
 
-#define PETSC_ALIAS_FUNCTION_WITH_PROLOGUE_AND_EPILOGUE_(alias,original,dispatch)       \
-  template <typename... Args> static inline auto dispatch(int,Args&&... args)           \
-    PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::forward<Args>(args)...));             \
-  template <typename... Args> static inline int dispatch(char,Args...)                  \
-  {                                                                                     \
-    using namespace Petsc::util;                                                        \
-    static_assert(                                                                      \
-      is_callable_with<Args...>(original) && always_false<Args...>::value,              \
-      "function " PetscStringize(original) "() is not callable with given arguments"    \
-    );                                                                                  \
-    return EXIT_FAILURE;                                                                \
-  }                                                                                     \
-  template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args)                \
+#define PETSC_ALIAS_FUNCTION_WITH_PROLOGUE_AND_EPILOGUE_(alias,original,dispatch,prologue,epilogue) \
+  template <typename... Args> static inline auto dispatch(int,Args&&... args)                  \
+    PETSC_DECLTYPE_NOEXCEPT_AUTO(original(std::forward<Args>(args)...));                       \
+  {                                                                                            \
+    prologue;                                                                                  \
+    auto ret = original(std::forward<Args>(args)...);                                          \
+    epilogue;                                                                                  \
+    return ret;                                                                                \
+  }                                                                                            \
+  template <typename... Args> static inline int dispatch(char,Args...)                         \
+  {                                                                                            \
+    using namespace Petsc::util;                                                               \
+    static_assert(                                                                             \
+      is_callable_with<Args...>(original) && always_false<Args...>::value,                     \
+      "function " PetscStringize(original) "() is not callable with given arguments"           \
+    );                                                                                         \
+    return EXIT_FAILURE;                                                                       \
+  }                                                                                            \
+  template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args)                       \
     PETSC_DECLTYPE_NOEXCEPT_RETURNS(dispatch(0,std::forward<Args>(args)...))
 
 #define PETSC_ALIAS_FUNCTION_(alias,original,dispatch)                                  \
