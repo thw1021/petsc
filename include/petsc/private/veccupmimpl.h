@@ -185,15 +185,15 @@ public:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecCUPMCast(Vec v)) PETSC_DECLTYPE_AUTO(static_cast<Vec_CUPM*>(v->spptr))
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecCUPMCast(Vec v)) PETSC_DECLTYPE_AUTO_RETURNS(static_cast<Vec_CUPM*>(v->spptr));
   // This is a trick to get around the fact that in CRTP the derived class is not yet fully
   // defined because Base<Derived> must necessarily be instantiated before Derived is
   // complete. By using a dummy template parameter we make the type "dependent" and so will
   // only be determined when the derived class is instantiated (and therefore fully defined)
   template <typename U = Derived>
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast(Vec v)) PETSC_DECLTYPE_AUTO(U::VecIMPLCast_(v));
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast(Vec v)) PETSC_DECLTYPE_AUTO_RETURNS(U::VecIMPLCast_(v));
   template <typename U = Derived>
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE()) PETSC_DECLTYPE_AUTO(U::VECTYPE_());
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE()) PETSC_DECLTYPE_AUTO_RETURNS(U::VECTYPE_());
 
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscLogEvent VEC_CUPMCopyToGPU())
   {
@@ -363,12 +363,18 @@ public:
 
   // need functions to create the vector arrays, otherwise usng them as an unnamed temporary
   // leads to most vexing parse
-  PETSC_CXX_COMPAT_DECL(auto DeviceArrayRead(PetscDeviceContext dctx, Vec v))      PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{dctx,v});
-  PETSC_CXX_COMPAT_DECL(auto DeviceArrayWrite(PetscDeviceContext dctx, Vec v))     PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{dctx,v});
-  PETSC_CXX_COMPAT_DECL(auto DeviceArrayReadWrite(PetscDeviceContext dctx, Vec v)) PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{dctx,v});
-  PETSC_CXX_COMPAT_DECL(auto HostArrayRead(PetscDeviceContext dctx, Vec v))        PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{dctx,v});
-  PETSC_CXX_COMPAT_DECL(auto HostArrayWrite(PetscDeviceContext dctx, Vec v))       PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{dctx,v});
-  PETSC_CXX_COMPAT_DECL(auto HostArrayReadWrite(PetscDeviceContext dctx, Vec v))   PETSC_DECLTYPE_AUTO(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto DeviceArrayRead(PetscDeviceContext dctx, Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto DeviceArrayWrite(PetscDeviceContext dctx, Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto DeviceArrayReadWrite(PetscDeviceContext dctx, Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(vector_array<PETSC_MEMTYPE_DEVICE,MemoryAccess::READ_WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto HostArrayRead(PetscDeviceContext dctx, Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto HostArrayWrite(PetscDeviceContext dctx, Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>{dctx,v});
+  PETSC_CXX_COMPAT_DECL(auto HostArrayReadWrite(PetscDeviceContext dctx, Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(vector_array<PETSC_MEMTYPE_HOST,MemoryAccess::READ_WRITE>{dctx,v});
 };
 
 template <Device::CUPM::DeviceType T, typename D>
@@ -400,11 +406,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(Petsc
   auto           vimpl = VecIMPLCast(v);
 
   PetscFunctionBegin;
-  if (!vimpl) {
+  if (PetscUnlikely(!vimpl)) {
     ierr = PetscNewLog(PetscObjectCast(v),&vimpl);CHKERRQ(ierr);
     v->data = vimpl;
   }
-  if (!vimpl->array_allocated) {
+  if (PetscUnlikely(!vimpl->array_allocated)) {
     const auto n      = v->map->n;
     const auto nbytes = n*sizeof(*vimpl->array_allocated);
 
@@ -433,7 +439,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecCUPMAllocateCheck_(Ve
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (vcu) PetscFunctionReturn(0);
+  if (PetscLikely(vcu)) PetscFunctionReturn(0);
   ierr = PetscNewLog(PetscObjectCast(v),&vcu);CHKERRQ(ierr);
   v->spptr = vcu;
   // do a cast to blasint check because if blasint cant hold the size, then any subsequent
@@ -451,7 +457,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
   PetscFunctionBegin;
   ierr = VecCUPMAllocateCheck_(v);CHKERRQ(ierr);
   const auto vcu = VecCUPMCast(v);
-  if (vcu->device_array) PetscFunctionReturn(0);
+  if (PetscLikely(vcu->device_array)) PetscFunctionReturn(0);
   else {
     cupmStream_t stream;
     cupmError_t  cerr;
@@ -780,11 +786,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase_(Vec 
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase_(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask))
 {
+  PetscDeviceContext dctx;
+  PetscErrorCode     ierr;
+
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  if (host_array)   *host_array   = VecIMPLCast(v)->array;
-  if (device_array) *device_array = VecCUPMCast(v)->device_array;
-  if (mask)         *mask         = v->offloadmask;
+  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+  if (host_array)   {
+    ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
+    *host_array = VecIMPLCast(v)->array;
+  }
+  if (device_array) {
+    ierr = DeviceAllocateCheck_(dctx,v);CHKERRQ(ierr);
+    *device_array = VecCUPMCast(v)->device_array;
+  }
+  if (mask) *mask = v->offloadmask;
   PetscFunctionReturn(0);
 }
 
