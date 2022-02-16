@@ -5,6 +5,10 @@
 #include <petsc/private/cpputil.hpp>
 #include <petsc/private/petscadvancedmacros.h>
 
+#if PetscDefined(HAVE_HIP)
+#  include <hip/hip_complex.h> // for hipComplex, hipDoubleComplex
+#endif
+
 #if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
 #  define PETSC_HAVE_CUPM 1
 #endif
