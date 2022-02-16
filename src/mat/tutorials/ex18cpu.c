@@ -17,7 +17,5 @@ PetscErrorCode FillMatrixCOO_CPU(FEStruct *fe,Mat A)
   }
   ierr = MatSetValuesCOO(A,v,INSERT_VALUES);CHKERRQ(ierr);
   ierr = PetscFree(v);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

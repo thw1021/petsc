@@ -20,7 +20,5 @@ PetscErrorCode FillMatrixCOO_Kokkos(FEStruct *fe,Mat A)
       }
     });
   ierr = MatSetValuesCOO(A,v.data(),INSERT_VALUES);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

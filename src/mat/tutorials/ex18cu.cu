@@ -27,7 +27,5 @@ PetscErrorCode FillMatrixCOO_CUDA(FEStruct *fe,Mat A)
   FillValues<<<(fe->Ne+255)/256,256>>>(fe->Ne,v);
   ierr = MatSetValuesCOO(A,v,INSERT_VALUES);CHKERRQ(ierr);
   cerr = cudaFree(v);CHKERRCUDA(cerr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
