@@ -389,7 +389,7 @@ struct BlasInterfaceImpl<DeviceType::HIP> : BlasInterfaceBase<DeviceType::HIP>
   using cupmBlasInt_t         = int; // rocblas will have its own
   using cupmSolverHandle_t    = hipsolverHandle_t;
   using cupmSolverError_t     = hipsolverStatus_t;
-  using cupmBlasPointerMode_t = cublasPointerMode_t;
+  using cupmBlasPointerMode_t = hipblasPointerMode_t;
 
   // values
   PETSC_CUPMBLAS_ALIAS_INTEGRAL_VALUE(_STATUS_SUCCESS);
