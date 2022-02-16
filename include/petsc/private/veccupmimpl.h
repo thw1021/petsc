@@ -141,6 +141,19 @@ struct Vec_CUPMBase : Device::CUPM::Impl::BlasInterface<T>
 
 private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMAllocateCheck_(Vec));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode VecIMPLAllocateCheck_(Vec));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandleDispatch_(PetscDeviceContext *dctx, cupmBlasHandle_t *handle, cupmStream_t *stream))
+  {
+    PetscDeviceContext dctx_;
+    PetscErrorCode     ierr;
+
+    PetscFunctionBegin;
+    ierr = PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx_,cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
+    if (handle) {ierr = PetscDeviceContextGetBLASHandle_Internal(dctx_,handle);CHKERRQ(ierr);}
+    if (stream) {ierr = PetscDeviceContextGetStreamHandle_Internal(dctx_,stream);CHKERRQ(ierr);}
+    if (dctx) *dctx = dctx_;
+    PetscFunctionReturn(0);
+  }
 
 public:
   struct Vec_CUPM
@@ -163,23 +176,25 @@ public:
       "OFFLOAD_GPU",
       "OFFLOAD_BOTH",
     };
-    const auto     pobj = PetscObjectCast(v);
+    const auto     pobj  = PetscObjectCast(v);
+    const auto     vimpl = VecIMPLCast(v);
+    const auto     vcu   = VecCUPMCast(v);
     PetscBool      device_mem;
     MPI_Comm       comm;
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
+    PetscValidPointer(vimpl,1);
+    PetscValidPointer(vcu,1);
     ierr = PetscObjectGetComm(pobj,&comm);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"---------- %s ----------\n",message);CHKERRQ(ierr);
     ierr = PetscObjectPrintClassNamePrefixType(pobj,PETSC_VIEWER_STDOUT_(comm));CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Address:             %p\n",v);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Size:                %" PetscInt_FMT "\n",v->map->n);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Offload mask:        %s\n",PetscOffloadMasks[v->offloadmask]);CHKERRQ(ierr);
-    PetscValidPointer(VecIMPLCast(v),1);
-    ierr = PetscPrintf(comm,"Host ptr:            %p\n",VecIMPLCast(v)->array);CHKERRQ(ierr);
-    PetscValidPointer(VecCUPMCast(v),1);
-    ierr = PetscPrintf(comm,"Device ptr:          %p\n",VecCUPMCast(v)->device_array);CHKERRQ(ierr);
-    ierr = cupmIsDeviceMemory(VecCUPMCast(v)->device_array,&device_mem);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Host ptr:            %p\n",vimpl->array);CHKERRQ(ierr);
+    ierr = PetscPrintf(comm,"Device ptr:          %p\n",vcu->device_array);CHKERRQ(ierr);
+    ierr = cupmIsDeviceMemory(vcu->device_array,&device_mem);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"dptr is device mem?  %s\n",device_mem ? "yes" : "no");CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Device ptr ownership %s\n",PetscCopyModes[VecCUPMCast(v)->ptr_ownership]);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -249,19 +264,6 @@ public:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandleDispatch_(PetscDeviceContext *dctx, cupmBlasHandle_t *handle, cupmStream_t *stream))
-  {
-    PetscDeviceContext dctx_;
-    PetscErrorCode     ierr;
-
-    PetscFunctionBegin;
-    ierr = PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx_,cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
-    if (handle) {ierr = PetscDeviceContextGetBLASHandle_Internal(dctx_,handle);CHKERRQ(ierr);}
-    if (stream) {ierr = PetscDeviceContextGetStreamHandle_Internal(dctx_,stream);CHKERRQ(ierr);}
-    if (dctx) *dctx = dctx_;
-    PetscFunctionReturn(0);
-  }
-
   PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext *dctx, cupmBlasHandle_t *handle = nullptr, cupmStream_t *stream = nullptr))
   {
     return GetHandleDispatch_(dctx,handle,stream);
@@ -313,7 +315,7 @@ public:
     {
       // could just as well CHKERRABORT() here
       PetscFunctionBegin;
-      auto ierr = restorearray_async<MT,MA>(PetscRemoveConstCast(v_),nullptr);CHKERRCONTINUE(ierr);
+      CHKERRCONTINUE((restorearray_async<MT,MA>(PetscRemoveConstCast(v_),nullptr)));
       PetscFunctionReturnVoid();
     }
 
@@ -325,7 +327,7 @@ public:
       pointer_type array;
 
       PetscFunctionBegin;
-      auto ierr = getarray_async<MT,MA>(v,&array);CHKERRABORT(PETSC_COMM_SELF,ierr);
+      CHKERRABORT(PETSC_COMM_SELF,(getarray_async<MT,MA>(v,&array)));
       PetscFunctionReturn(array);
     }
   };
@@ -357,9 +359,12 @@ public:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM_(Vec));
 
-  PETSC_NODISCARD static auto UseCUPMHostAlloc(bool b)      PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc_<T>(b));
-  PETSC_NODISCARD static auto UseCUPMHostAlloc(PetscBool b) PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc(static_cast<bool>(b)));
-  PETSC_NODISCARD static auto UseCUPMHostAlloc(Vec v)       PETSC_DECLTYPE_NOEXCEPT_RETURNS(UseCUPMHostAlloc(v->pinned_memory == PETSC_TRUE));
+  PETSC_CXX_COMPAT_DECL(auto UseCUPMHostAlloc(bool b))
+  PETSC_DECLTYPE_AUTO_RETURNS(UseCUPMHostAlloc_<T>(b));
+  PETSC_CXX_COMPAT_DECL(auto UseCUPMHostAlloc(PetscBool b))
+  PETSC_DECLTYPE_AUTO_RETURNS(UseCUPMHostAlloc(static_cast<bool>(b)));
+  PETSC_CXX_COMPAT_DECL(auto UseCUPMHostAlloc(Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(UseCUPMHostAlloc(v->pinned_memory == PETSC_TRUE));
 
   // need functions to create the vector arrays, otherwise usng them as an unnamed temporary
   // leads to most vexing parse
@@ -400,17 +405,33 @@ PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Ve
 }
 
 template <Device::CUPM::DeviceType T, typename D>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecIMPLAllocateCheck_(Vec v))
+{
+  auto           vimpl = VecIMPLCast(v);
+  cupmBlasInt_t  bn;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (PetscLikely(vimpl)) PetscFunctionReturn(0);
+  ierr = PetscNewLog(PetscObjectCast(v),&vimpl);CHKERRQ(ierr);
+  v->data = vimpl;
+  // do a cast to blasint check because if blasint cant hold the size, then any subsequent
+  // cupmblas calls can't use it either. Doing this now this means we don't have to check
+  // during every function
+  ierr = CUPMBlasIntCast_(v->map->n,&bn);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(PetscDeviceContext, Vec v))
 {
   PetscErrorCode ierr;
-  auto           vimpl = VecIMPLCast(v);
 
   PetscFunctionBegin;
-  if (PetscUnlikely(!vimpl)) {
-    ierr = PetscNewLog(PetscObjectCast(v),&vimpl);CHKERRQ(ierr);
-    v->data = vimpl;
-  }
-  if (PetscUnlikely(!vimpl->array_allocated)) {
+  ierr = VecIMPLAllocateCheck_(v);CHKERRQ(ierr);
+  const auto vimpl = VecIMPLCast(v);
+  if (PetscLikely(vimpl->array_allocated)) PetscFunctionReturn(0);
+  else {
     const auto n      = v->map->n;
     const auto nbytes = n*sizeof(*vimpl->array_allocated);
 
@@ -418,11 +439,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(Petsc
     {
       const auto useit = UseCUPMHostAlloc(nbytes > v->minimum_bytes_pinned_memory);
 
-      v->pinned_memory = static_cast<PetscBool>(useit.value());
+      v->pinned_memory = static_cast<decltype(v->pinned_memory)>(useit.value());
       ierr = PetscMalloc1(n,&vimpl->array_allocated);CHKERRQ(ierr);
     }
     ierr = PetscLogObjectMemory(PetscObjectCast(v),nbytes);CHKERRQ(ierr);
-    vimpl->array = vimpl->array_allocated;
+    if (!vimpl->array) vimpl->array = vimpl->array_allocated;
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) v->offloadmask = PETSC_OFFLOAD_CPU;
   }
   PetscFunctionReturn(0);

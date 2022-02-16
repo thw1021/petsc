@@ -866,9 +866,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx,&handle,&stream);CHKERRQ(ierr);
   // will hold all the device y pointers
-  cerr = cupmMallocAsync(&d_y,8*sizeof(*d_y),stream);CHKERRCUPM(cerr);
+  cerr = cupmMallocAsync(reinterpret_cast<void**>(&d_y),8*sizeof(*d_y),stream);CHKERRCUPM(cerr);
   // allocate scratchpad memory for the results of individual work groups
-  cerr = cupmMallocAsync(&d_results,nbytes,stream);CHKERRCUPM(cerr);
+  cerr = cupmMallocAsync(reinterpret_cast<void**>(&d_results),nbytes,stream);CHKERRCUPM(cerr);
   {
     auto yidx = PetscInt{0};
     auto xptr = DeviceArrayRead(dctx,xin);
@@ -971,7 +971,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
 {
-  using complex_tag = UseComplexTag<PetscDefined(USE_COMPLEX)>;
   const auto     n = xin->map->n;
   PetscErrorCode ierr;
 
@@ -985,7 +984,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   ierr = PetscArrayzero(z,nv);CHKERRQ(ierr);
   // nothing to do if x has no entries
   if (n) {
-    ierr = mdot_async_(complex_tag(),xin,nv,yin,z);CHKERRQ(ierr);
+    ierr = mdot_async_(UseComplexTag<PetscDefined(USE_COMPLEX)>{},xin,nv,yin,z);CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(PetscMax(nv*(2.0*n-1),0.0));CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -1508,21 +1507,29 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, Pets
   PetscFunctionReturn(0);
 }
 
+// REVIEW ME: TODO figure out a way around gcc 9.3.1 linker bug to get these to
+// work. Everything compiles but get linker error in optimized build for mdot_async_(). I think
+// this is because it is overloaded function and since we __always__ only call one overload,
+// compiler doesn't generate the object code for the other overload...
+// /usr/bin/ld: arch-linux-c-opt/lib/libpetsc.so: undefined reference to
+// `Petsc::Vector::CUPM::Impl::VecSeq_CUPM<(Petsc::Device::CUPM::DeviceType)0>::mdot_async_(Petsc::Vector::CUPM::Impl::(anonymousnamespace)::UseComplexTag<false>,
+// _p_Vec*, int, _p_Vec* const*, double*)'
+
 // declare the extern templates, each is explicitly instantiated in the respective
 // implementation directories
 #if PetscDefined(HAVE_CUDA)
-extern template struct VecSeq_CUPM<Device::CUPM::DeviceType::CUDA>;
+//extern template struct VecSeq_CUPM<Device::CUPM::DeviceType::CUDA>;
 #endif
 
 #if PetscDefined(HAVE_HIP)
-extern template struct VecSeq_CUPM<Device::CUPM::DeviceType::HIP>;
+//extern template struct VecSeq_CUPM<Device::CUPM::DeviceType::HIP>;
 #endif
 
 } // namespace Impl
 
 } // namespace CUPM
 
-} // namespace Vec
+} // namespace Vector
 
 } // namespace Petsc
 
