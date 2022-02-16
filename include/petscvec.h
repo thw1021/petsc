@@ -706,14 +706,14 @@ PETSC_EXTERN PetscErrorCode VecScatterFinalizeForGPU(VecScatter);
 #if defined(PETSC_HAVE_CUDA)
 #  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN FUNC_DECL
 #else
-#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) PETSC_STATIC_INLINE FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(cuda); }
+#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) static inline FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(cuda); }
 #endif /* PETSC_HAVE_CUDA */
 
 /* extra underscore here to make it line up with the cuda versions */
-#if defined(PETSC_HAVE_CUDA)
+#if defined(PETSC_HAVE_HIP)
 #  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN FUNC_DECL
 #else
-#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) PETSC_STATIC_INLINE FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(hip); }
+#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) static inline FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(hip); }
 #endif /* PETSC_HAVE_HIP */
 
 VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateSeqCUDA(MPI_Comm a,PetscInt b,Vec*c));
