@@ -4,7 +4,7 @@
 
 using DefaultMemorySpace = Kokkos::DefaultExecutionSpace::memory_space;
 
-PetscErrorCode FillMatrixCOO_Kokkos(FEStruct *fe,Mat A)
+PetscErrorCode FillMatrixKokkosCOO(FEStruct *fe,Mat A)
 {
   PetscErrorCode                                ierr;
   Kokkos::View<PetscScalar*,DefaultMemorySpace> v("v",3*3*fe->Ne);

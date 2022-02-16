@@ -16,7 +16,7 @@ __global__ void FillValues(PetscInt n, PetscScalar *v)
   }
 }
 
-PetscErrorCode FillMatrixCOO_CUDA(FEStruct *fe,Mat A)
+PetscErrorCode FillMatrixCUDACOO(FEStruct *fe,Mat A)
 {
   PetscErrorCode             ierr;
   cudaError_t                cerr;

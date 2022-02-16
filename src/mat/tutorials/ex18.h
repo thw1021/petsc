@@ -11,8 +11,7 @@ typedef struct {
   PetscInt *coo;         /* offset into the matrices COO array for the start of each element stiffness */
 } FEStruct;
 
-PETSC_EXTERN PetscErrorCode FillMatrixCOO_CPU(FEStruct *,Mat);
-PETSC_EXTERN PetscErrorCode FillMatrixCOO_Kokkos(FEStruct *,Mat);
-PETSC_EXTERN PetscErrorCode FillMatrixCOO_CUDA(FEStruct *,Mat);
+PETSC_EXTERN PetscErrorCode FillMatrixKokkosCOO(FEStruct *,Mat);
+PETSC_EXTERN PetscErrorCode FillMatrixCUDACOO(FEStruct *,Mat);
 
 #endif // EX18_H_

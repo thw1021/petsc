@@ -124,8 +124,6 @@ static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
   }
   ierr = MatSetValuesCOO(A,v,ADD_VALUES);CHKERRQ(ierr);
   ierr = PetscFree(v);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -150,8 +148,6 @@ static PetscErrorCode FillMatrixCPUCOO3d(FEStruct *fe,Mat A)
   }
   ierr = MatSetValuesCOO(A,(PetscScalar*)s,INSERT_VALUES);CHKERRQ(ierr);
   ierr = PetscFree(s);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -161,7 +157,7 @@ int main(int argc, char **args)
   PetscErrorCode  ierr;
   FEStruct        fe;
   PetscMPIInt     size;
-  PetscBool       is_cpu,is_kokkos,is_cuda;
+  PetscBool       is_kokkos,is_cuda;
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
@@ -182,15 +178,13 @@ int main(int argc, char **args)
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
   ierr = MatZeroEntries(A);CHKERRQ(ierr);
-  ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJ,&is_cpu);CHKERRQ(ierr);
   ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJKOKKOS,&is_kokkos);CHKERRQ(ierr);
   ierr = PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&is_cuda);CHKERRQ(ierr);
-  if (is_cpu) {ierr = FillMatrixCOO_CPU(&fe,A);CHKERRQ(ierr);}
  #if defined(PETSC_HAVE_KOKKOS)
-  else if (is_kokkos) {ierr = FillMatrixCOO_Kokkos(&fe,A);CHKERRQ(ierr);}
+  if (is_kokkos) {ierr = FillMatrixKokkosCOO(&fe,A);CHKERRQ(ierr);}
  #endif
  #if defined(PETSC_HAVE_CUDA)
-  else if (is_cuda) {ierr = FillMatrixCOO_CUDA(&fe,A);CHKERRQ(ierr);}
+  if (is_cuda) {ierr = FillMatrixCUDACOO(&fe,A);CHKERRQ(ierr);}
  #endif
   ierr = MatView(A,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 
@@ -203,15 +197,11 @@ int main(int argc, char **args)
 /*TEST
   build:
     requires: cuda kokkos_kernels
-    depends: ex18cpu.c ex18cu.cu ex18kok.kokkos.cxx
+    depends: ex18cu.cu ex18kok.kokkos.cxx
 
   testset:
     filter: grep -v "type"
     output_file: output/ex18_1.out
-
-    test:
-      suffix: cpu
-      args: -mat_type aij
 
     test:
       suffix: kok
