@@ -126,7 +126,7 @@ namespace
 
 struct no_op
 {
-  template<typename...T> constexpr PetscErrorCode operator()(T&&...) const { return 0; }
+  template <typename...T> constexpr PetscErrorCode operator()(T&&...) const noexcept { return 0; }
 };
 
 } // anonymous namespace
@@ -257,9 +257,9 @@ public:
 
     PetscFunctionBegin;
     if (!std::is_same<petsc_type,blas_type>::value) {
-      if (PetscUnlikely(x > std::numeric_limits<blas_type>::max())) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for %s, which may be restricted to 32 bit integers",x,cupmBlasName());
+      PetscCheck(x <= std::numeric_limits<blas_type>::max(),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"%" PetscInt_FMT " is too big for %s, which may be restricted to 32 bit integers",x,cupmBlasName());
     }
-    if (PetscUnlikely(x < 0)) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to %s routine: %" PetscInt_FMT,cupmBlasName(),x);
+    PetscCheck(x >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Passing negative integer to %s routine: %" PetscInt_FMT,cupmBlasName(),x);
     *y = static_cast<blas_type>(x);
     PetscFunctionReturn(0);
   }
@@ -313,7 +313,7 @@ public:
 
     ~vector_array() noexcept
     {
-      // could just as well CHKERRABORT() here
+      // REVIEW ME: could just as well CHKERRABORT() here
       PetscFunctionBegin;
       CHKERRCONTINUE((restorearray_async<MT,MA>(PetscRemoveConstCast(v_),nullptr)));
       PetscFunctionReturnVoid();
