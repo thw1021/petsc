@@ -5,7 +5,7 @@ static char help[] = "Demonstrates the use of the COO interface to PETSc matrice
    well on both CPUs and GPUs. It is an alternative to using MatSetValues()
 
      This example is intended for people who are NOT using DMPLEX or libCEED or any other higher-level infrastructure for finite elements;
-   it is only to demonstrate the concepts in a simple way for those people who are interested and for thos people who are using PETSc for
+   it is only to demonstrate the concepts in a simple way for those people who are interested and for those people who are using PETSc for
    linear algebra solvers but are managing their own finite element process.
 
      Please do NOT use this example as a starting point to writing your own finite element code from scratch!
