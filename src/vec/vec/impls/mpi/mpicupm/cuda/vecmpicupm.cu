@@ -37,16 +37,7 @@ PetscErrorCode VecCreate_CUDA(Vec v)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecMPI_CUDA::Create_CUPM_(v);CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecCUDAGetArrays_Private(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  ierr = VecMPI_CUDA::GetArrays_CUPMBase_(v,host_array,device_array,mask);CHKERRQ(ierr);
+  ierr = VecMPI_CUDA::Create_CUPM(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -56,6 +47,15 @@ PetscErrorCode VecCreate_MPICUDA(Vec v)
 
   PetscFunctionBegin;
   ierr = VecMPI_CUDA::create_async(v);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecCUDAGetArrays_Private(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecMPI_CUDA::GetArrays_CUPMBase(v,host_array,device_array,mask);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

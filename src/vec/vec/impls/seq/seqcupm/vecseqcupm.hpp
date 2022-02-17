@@ -106,6 +106,10 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getlocalvector_async(Vec,Vec));
   template <MemoryAccess>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorelocalvector_async(Vec,Vec));
+  template <PetscMemType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode resetarray_async(Vec));
+  template <PetscMemType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode placearray_async(Vec,const PetscScalar*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode max_async(Vec,PetscInt*,PetscReal*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode min_async(Vec,PetscInt*,PetscReal*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode sum_async(Vec,PetscScalar*));
@@ -218,7 +222,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async_(Vec v,
   // REVIEW ME: remove me
   PetscCheck(!VecIMPLCast(v),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
   ierr = VecCreate_Seq_Private(v,host_array);CHKERRQ(ierr);
-  ierr = Initialize_CUPMBase_(v,PETSC_FALSE,host_array,device_array);CHKERRQ(ierr);
+  ierr = Initialize_CUPMBase(v,PETSC_FALSE,host_array,device_array);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -249,7 +253,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async(MPI_Com
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = Create_CUPMBase_(comm,bs,n,n,v,call_set_type);CHKERRQ(ierr);
+  ierr = Create_CUPMBase(comm,bs,n,n,v,call_set_type);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -274,7 +278,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::duplicate_async(Vec v, Vec 
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = Duplicate_CUPMBase_(v,y);CHKERRQ(ierr);
+  ierr = Duplicate_CUPMBase(v,y);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -285,7 +289,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v))
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = Destroy_CUPMBase_(v);CHKERRQ(ierr);
+  ierr = Destroy_CUPMBase(v);CHKERRQ(ierr);
   ierr = VecDestroy_Seq(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -297,13 +301,15 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = BindToCPU_CUPMBase_(v,usehost);CHKERRQ(ierr);
+  ierr = BindToCPU_CUPMBase(v,usehost);CHKERRQ(ierr);
 
   // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
   VecSetOp_CUPM(dot,VecDot_Seq,dot_async);
   VecSetOp_CUPM(norm,VecNorm_Seq,norm_async);
   VecSetOp_CUPM(tdot,VecTDot_Seq,tdot_async);
   VecSetOp_CUPM(mdot,VecMDot_Seq,mdot_async);
+  VecSetOp_CUPM(resetarray,VecResetArray_Seq,resetarray_async<PETSC_MEMTYPE_HOST>);
+  VecSetOp_CUPM(placearray,VecPlaceArray_Seq,placearray_async<PETSC_MEMTYPE_HOST>);
   v->ops->mtdot = v->ops->mtdot_local = VecMTDot_Seq;
   VecSetOp_CUPM(conjugate,VecConjugate_Seq,conjugate_async);
   VecSetOp_CUPM(max,VecMax_Seq,max_async);
@@ -406,6 +412,30 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
       ierr = PetscFree(w->spptr);CHKERRQ(ierr);
     }
   }
+  PetscFunctionReturn(0);
+}
+
+// v->ops->resetarray or VecCUPMResetArray()
+template <Device::CUPM::DeviceType T>
+template <PetscMemType mtype>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::resetarray_async(Vec v))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = base_type::template ResetArray_CUPMBase<mtype>(v,VecResetArray_Seq);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+// v->ops->placearray or VecCUPMPlaceArray()
+template <Device::CUPM::DeviceType T>
+template <PetscMemType mtype>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, const PetscScalar *a))
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = base_type::template PlaceArray_CUPMBase<mtype>(v,a,VecPlaceArray_Seq);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
