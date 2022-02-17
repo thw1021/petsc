@@ -4,7 +4,6 @@
 #define PETSC_SKIP_SPINLOCK // REVIEW ME: why
 
 #include <petsc/private/veccupmimpl.h>   /*I <petscvec.h> I*/
-#include <../src/vec/vec/impls/dvecimpl.h> // for Vec_Seq
 #include <petsc/private/randomimpl.h>      // for _p_PetscRandom
 
 #include <thrust/device_ptr.h>
@@ -80,13 +79,6 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupm_async(MPI_Comm,PetscInt,PetscInt,Vec*,PetscBool));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode createseqcupmwithbotharrays_async(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
-
-  template <PetscMemType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode resetarray_async(Vec));
-  template <PetscMemType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode placearray_async(Vec,const PetscScalar*));
-  template <PetscMemType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode replacearray_async(Vec,const PetscScalar*));
 
   // callable indirectly via function pointers
   PETSC_CXX_COMPAT_DECL(PetscErrorCode duplicate_async(Vec,Vec*));
@@ -305,163 +297,22 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (v->boundtocpu == usehost) PetscFunctionReturn(0);
   ierr = BindToCPU_CUPMBase_(v,usehost);CHKERRQ(ierr);
 
   // REVIEW ME: this absolutely should be some sort of bulk mempcy rather than this mess
-  VecSetOp_CUPM(dot_local  = v->ops->dot,VecDot_Seq,dot_async);
-  VecSetOp_CUPM(norm_local = v->ops->norm,VecNorm_Seq,norm_async);
-  VecSetOp_CUPM(tdot_local = v->ops->tdot,VecTDot_Seq,tdot_async);
-  VecSetOp_CUPM(mdot_local = v->ops->mdot,VecMDot_Seq,mdot_async);
+  VecSetOp_CUPM(dot,VecDot_Seq,dot_async);
+  VecSetOp_CUPM(norm,VecNorm_Seq,norm_async);
+  VecSetOp_CUPM(tdot,VecTDot_Seq,tdot_async);
+  VecSetOp_CUPM(mdot,VecMDot_Seq,mdot_async);
   v->ops->mtdot = v->ops->mtdot_local = VecMTDot_Seq;
-  VecSetOp_CUPM(scale,VecScale_Seq,scale_async);
-  VecSetOp_CUPM(copy,VecCopy_Seq,copy_async);
-  VecSetOp_CUPM(set,VecSet_Seq,set_async);
-  VecSetOp_CUPM(swap,VecSwap_Seq,swap_async);
-  VecSetOp_CUPM(axpy,VecAXPY_Seq,axpy_async);
-  VecSetOp_CUPM(axpby,VecAXPBY_Seq,axpby_async);
-  VecSetOp_CUPM(axpbypcz,VecAXPBYPCZ_Seq,axpbypcz_async);
-  VecSetOp_CUPM(pointwisemult,VecPointwiseMult_Seq,pointwisemult_async);
-  VecSetOp_CUPM(pointwisedivide,VecPointwiseDivide_Seq,pointwisedivide_async);
-  VecSetOp_CUPM(setrandom,VecSetRandom_Seq,setrandom_async);
-  VecSetOp_CUPM(maxpy,VecMAXPY_Seq,maxpy_async);
-  VecSetOp_CUPM(aypx,VecAYPX_Seq,aypx_async);
-  VecSetOp_CUPM(waxpy,VecWAXPY_Seq,waxpy_async);
-  VecSetOp_CUPM(dotnorm2,nullptr,dotnorm2_async);
   VecSetOp_CUPM(conjugate,VecConjugate_Seq,conjugate_async);
   VecSetOp_CUPM(max,VecMax_Seq,max_async);
   VecSetOp_CUPM(min,VecMin_Seq,min_async);
-  VecSetOp_CUPM(reciprocal,VecReciprocal_Default,reciprocal_async);
-  VecSetOp_CUPM(sum,nullptr,sum_async);
-  VecSetOp_CUPM(shift,nullptr,shift_async);
-  VecSetOp_CUPM(placearray,VecPlaceArray_Seq,placearray_async<PETSC_MEMTYPE_HOST>);
-  v->ops->replacearray = replacearray_async<PETSC_MEMTYPE_HOST>;
-  VecSetOp_CUPM(resetarray,VecResetArray_Seq,resetarray_async<PETSC_MEMTYPE_HOST>);
-  VecSetOp_CUPM(getlocalvector,nullptr,&getlocalvector_async<MemoryAccess::READ_WRITE>);
-  VecSetOp_CUPM(getlocalvectorread,nullptr,&getlocalvector_async<MemoryAccess::READ>);
-  VecSetOp_CUPM(restorelocalvector,nullptr,&restorelocalvector_async<MemoryAccess::READ_WRITE>);
-  VecSetOp_CUPM(restorelocalvectorread,nullptr,&restorelocalvector_async<MemoryAccess::READ>);
   PetscFunctionReturn(0);
 }
 
 // ================================================================================== //
 //                                    mutatators                                      //
-
-// v->ops->resetarray or VecCUPMResetArray()
-template <Device::CUPM::DeviceType T>
-template <PetscMemType mtype>
-// yes (probably Jed :)), ideal world these should be arguments not template parameters. But I
-// need to assign this function to a C compatible function pointer, so something like default
-// arguments don't work no? Stubs seem like overkill too...
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::resetarray_async(Vec v))
-{
-  PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
-
-  PetscFunctionBegin;
-  STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
-  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-  // REVIEW ME:
-  // this is wildly inefficient but must be done if we assume that the placed array must have
-  // correct values
-  if (PetscMemTypeHost(mtype)) {
-    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    ierr = VecResetArray_Seq(v);CHKERRQ(ierr);
-    v->offloadmask = PETSC_OFFLOAD_CPU;
-  } else {
-    const auto vseq = VecIMPLCast(v);
-
-    ierr = CopyToDevice_(dctx,v);CHKERRQ(ierr);
-    ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
-    VecCUPMCast(v)->device_array = vseq->unplacedarray;
-    vseq->unplacedarray          = nullptr;
-    v->offloadmask               = PETSC_OFFLOAD_GPU;
-  }
-  PetscFunctionReturn(0);
-}
-
-// v->ops->placearray or VecCUPMPlaceArray()
-template <Device::CUPM::DeviceType T>
-template <PetscMemType mtype>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::placearray_async(Vec v, const PetscScalar *a))
-{
-  PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
-
-  PetscFunctionBegin;
-  STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
-  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-  if (PetscMemTypeHost(mtype)) {
-    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    ierr = VecPlaceArray_Seq(v,a);CHKERRQ(ierr);
-    v->offloadmask = PETSC_OFFLOAD_CPU;
-  } else {
-    const auto vseq = VecIMPLCast(v);
-
-    PetscCheck(!vseq->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
-    ierr = base_type::template getarray_async<mtype,MemoryAccess::READ_WRITE>(v,&vseq->unplacedarray);CHKERRQ(ierr);
-    ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
-    VecCUPMCast(v)->device_array = const_cast<PetscScalar*>(a);
-    // offload mask set by getarray
-  }
-  PetscFunctionReturn(0);
-}
-
-// v->ops->replacearray or VecCUPMReplaceArray()
-template <Device::CUPM::DeviceType T>
-template <PetscMemType mtype>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::replacearray_async(Vec v, const PetscScalar *a))
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
-  PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  if (PetscMemTypeHost(mtype)) {
-    const auto vseq = VecIMPLCast(v);
-
-    if (vseq->array != vseq->array_allocated) {
-      PetscDeviceContext dctx;
-      // make sure the users array has the latest values.
-      // REVIEW ME: why? we're about to free it
-      ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-      ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    }
-    if (vseq->array_allocated) {
-      const auto useit = UseCUPMHostAlloc(v);
-      ierr = PetscFree(vseq->array_allocated);CHKERRQ(ierr);
-    }
-    vseq->array_allocated = vseq->array = PetscRemoveConstCast(a);
-    v->pinned_memory      = PETSC_FALSE; // REVIEW ME: we can determine this
-    v->offloadmask        = PETSC_OFFLOAD_CPU;
-  } else {
-    const auto vcu = VecCUPMCast(v);
-
-    switch (vcu->ptr_ownership) {
-    case PETSC_COPY_VALUES:
-    case PETSC_OWN_POINTER:
-      if (PetscDefined(HAVE_NVSHMEM) && vcu->nvshmem) {
-        ierr = PetscNvshmemFree(vcu->device_array);CHKERRQ(ierr);
-      } else {
-        cupmStream_t stream;
-        cupmError_t  cerr;
-
-        ierr = GetHandles_(&stream);CHKERRQ(ierr);
-        cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
-      }
-    case PETSC_USE_POINTER:
-      vcu->device_array = PetscRemoveConstCast(a);
-      break;
-    }
-    ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
-    v->offloadmask = PETSC_OFFLOAD_GPU;
-  }
-  PetscFunctionReturn(0);
-}
-
-#undef STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED
 
 // v->ops->getlocalvector or v->ops->getlocalvectorread
 template <Device::CUPM::DeviceType T>

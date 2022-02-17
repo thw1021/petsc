@@ -33,10 +33,11 @@ private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(Vec,PetscInt*,PetscReal*,SeqFunction,MPI_Op,MPI_Op));
 
 public:
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode createcupm_async(Vec));
+  // callable directly via a bespoke function
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async(MPI_Comm,PetscInt,PetscInt,PetscInt,Vec*,PetscBool));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupmwitharrays_async(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar[],const PetscScalar[],Vec*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode create_async(Vec));
+
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy_async(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode duplicate_async(Vec,Vec*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode bindtocpu_async(Vec,PetscBool));
@@ -157,43 +158,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::bindtocpu_async(Vec v, Pets
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (v->boundtocpu == usehost) PetscFunctionReturn(0);
   ierr = BindToCPU_CUPMBase_(v,usehost);CHKERRQ(ierr);
 
   VecSetOp_CUPM(dot,VecDot_MPI,dot_async);
   VecSetOp_CUPM(mdot,VecMDot_MPI,mdot_async);
   VecSetOp_CUPM(norm,VecNorm_MPI,norm_async);
   VecSetOp_CUPM(tdot,VecTDot_MPI,tdot_async);
-  VecSetOp_CUPM(scale,VecScale_Seq,VecSeq_T::scale_async);
-  VecSetOp_CUPM(copy,VecCopy_Seq,VecSeq_T::copy_async);
-  VecSetOp_CUPM(set,VecSet_Seq,VecSeq_T::set_async);
-  VecSetOp_CUPM(swap,VecSwap_Seq,VecSeq_T::swap_async);
-  VecSetOp_CUPM(axpy,VecAXPY_Seq,VecSeq_T::axpy_async);
-  VecSetOp_CUPM(axpby,VecAXPBY_Seq,VecSeq_T::axpby_async);
-  VecSetOp_CUPM(maxpy,VecMAXPY_Seq,VecSeq_T::maxpy_async);
-  VecSetOp_CUPM(aypx,VecAYPX_Seq,VecSeq_T::aypx_async);
-  VecSetOp_CUPM(waxpy,VecWAXPY_Seq,VecSeq_T::waxpy_async);
-  VecSetOp_CUPM(axpbypcz,VecAXPBYPCZ_Seq,VecSeq_T::axpbypcz_async);
-  VecSetOp_CUPM(pointwisemult,VecPointwiseMult_Seq,VecSeq_T::pointwisemult_async);
-  VecSetOp_CUPM(pointwisedivide,VecPointwiseDivide_Seq,VecSeq_T::pointwisedivide_async);
   VecSetOp_CUPM(max,VecMax_MPI,max_async);
   VecSetOp_CUPM(min,VecMin_MPI,min_async);
-  VecSetOp_CUPM(setrandom,VecSetRandom_Seq,VecSeq_T::setrandom_async);
-  VecSetOp_CUPM(placearray,VecPlaceArray_Seq,VecSeq_T::template placearray_async<PETSC_MEMTYPE_HOST>);
-  v->ops->replacearray = VecSeq_T::template replacearray_async<PETSC_MEMTYPE_HOST>;
-  VecSetOp_CUPM(dot_local,VecDot_Seq,VecSeq_T::dot_async);
-  VecSetOp_CUPM(tdot_local,VecTDot_Seq,VecSeq_T::tdot_async);
-  VecSetOp_CUPM(norm_local,VecNorm_Seq,VecSeq_T::norm_async);
-  VecSetOp_CUPM(mdot_local,VecMDot_Seq,VecSeq_T::mdot_async);
-  VecSetOp_CUPM(reciprocal,VecReciprocal_Default,VecSeq_T::reciprocal_async);
-  VecSetOp_CUPM(resetarray,VecResetArray_Seq,VecSeq_T::template resetarray_async<PETSC_MEMTYPE_HOST>);
-  VecSetOp_CUPM(shift,nullptr,VecSeq_T::shift_async);
-  VecSetOp_CUPM(dotnorm2,nullptr,dotnorm2_async);
-  VecSetOp_CUPM(getlocalvector,nullptr,VecSeq_T::template getlocalvector_async<MemoryAccess::READ_WRITE>);
-  VecSetOp_CUPM(restorelocalvector,nullptr,VecSeq_T::template restorelocalvector_async<MemoryAccess::READ_WRITE>);
-  VecSetOp_CUPM(getlocalvectorread,nullptr,VecSeq_T::template getlocalvector_async<MemoryAccess::READ>);
-  VecSetOp_CUPM(restorelocalvectorread,nullptr,VecSeq_T::template restorelocalvector_async<MemoryAccess::READ>);
-  VecSetOp_CUPM(sum,nullptr,VecSeq_T::sum_async);
   PetscFunctionReturn(0);
 }
 
