@@ -577,27 +577,20 @@ struct Interface : InterfaceImpl<T>
   using cupmScalar_t = util::conditional_t<PetscDefined(USE_COMPLEX),cupmComplex_t,cupmReal_t>;
 
   // REVIEW ME: this needs to be cleaned up, it is unreadable
-  PETSC_NODISCARD static constexpr auto makeCupmScalar(PetscScalar s) PETSC_DECLTYPE_NOEXCEPT_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)))
+  PETSC_CXX_COMPAT_DECL(constexpr auto makeCupmScalar(PetscScalar s))
+  PETSC_DECLTYPE_AUTO_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)));
 
-  PETSC_CXX_COMPAT_DECL(constexpr cupmScalar_t* cupmScalarCast(PetscScalar *s))
-  {
-    return reinterpret_cast<cupmScalar_t*>(s);
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmScalarCast(const PetscScalar *s))
+  PETSC_DECLTYPE_AUTO_RETURNS(reinterpret_cast<const cupmScalar_t*>(s));
 
-  PETSC_CXX_COMPAT_DECL(constexpr const cupmScalar_t* cupmScalarCast(const PetscScalar *s))
-  {
-    return reinterpret_cast<const cupmScalar_t*>(s);
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmScalarCast(PetscScalar *s))
+  PETSC_DECLTYPE_AUTO_RETURNS(reinterpret_cast<cupmScalar_t*>(s));
 
-  PETSC_CXX_COMPAT_DECL(constexpr cupmReal_t* cupmRealCast(PetscScalar *s))
-  {
-    return reinterpret_cast<cupmReal_t*>(s);
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmRealCast(PetscReal *s))
+  PETSC_DECLTYPE_AUTO_RETURNS(reinterpret_cast<cupmReal_t*>(s));
 
-  PETSC_CXX_COMPAT_DECL(constexpr const cupmReal_t* cupmRealCast(const PetscScalar *s))
-  {
-    return reinterpret_cast<const cupmReal_t*>(s);
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmRealCast(const PetscReal *s))
+  PETSC_DECLTYPE_AUTO_RETURNS(reinterpret_cast<const cupmReal_t*>(s));
 
 #if !defined(PETSC_PKG_CUDA_VERSION_GE)
 #  define PETSC_PKG_CUDA_VERSION_GE(...) 0
