@@ -10,53 +10,31 @@ Using default Plex order for all matrices
   0) species-1: charge density=  1.6021654335867e+01 z-momentum=  1.2851498235082e-17 energy=  1.2007706778963e+05
 	  0) Total: charge density=  3.5527136788005e-15, momentum=  1.2943756561815e-17, energy=  2.4015413557925e+05 (m_i[0]/m_e = 3670.94, 14 cells on electron grid)
     0 SNES Function norm 3.383247894417e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 13
     1 SNES Function norm 2.418180653943e-04 
-    Linear solve converged due to CONVERGED_RTOL iterations 13
     2 SNES Function norm 7.218143330396e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     3 SNES Function norm 7.488365599943e-07 
-    Linear solve converged due to CONVERGED_RTOL iterations 16
     4 SNES Function norm 9.122859758679e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 15
     5 SNES Function norm 1.130052338684e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     6 SNES Function norm 1.402076874685e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     7 SNES Function norm 1.742040272475e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 19
     8 SNES Function norm 2.166018191293e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     9 SNES Function norm 2.693223781223e-12 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
     0 SNES Function norm 1.590992203209e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     1 SNES Function norm 5.862940835815e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     2 SNES Function norm 1.355699734006e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     3 SNES Function norm 5.210423531716e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     4 SNES Function norm 2.803643993032e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     5 SNES Function norm 1.756126114264e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     6 SNES Function norm 1.185988491836e-11 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
     0 SNES Function norm 1.887658909955e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     1 SNES Function norm 6.758481430783e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     2 SNES Function norm 1.577382085365e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     3 SNES Function norm 6.996302889600e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 12
     4 SNES Function norm 4.408239469210e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     5 SNES Function norm 3.023096871950e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     6 SNES Function norm 2.127131223170e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     7 SNES Function norm 1.510994394015e-12 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
 1 TS dt 0.0948434 time 0.1
@@ -68,104 +46,60 @@ Using default Plex order for all matrices
   0) species-1: charge density=  1.6021654335867e+01 z-momentum=  1.2851498235082e-17 energy=  1.2007706778963e+05
 	  0) Total: charge density=  3.5527136788005e-15, momentum=  1.2943756561815e-17, energy=  2.4015413557925e+05 (m_i[0]/m_e = 3670.94, 14 cells on electron grid)
     0 SNES Function norm 3.383247894417e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 13
     1 SNES Function norm 2.418180653943e-04 
-    Linear solve converged due to CONVERGED_RTOL iterations 13
     2 SNES Function norm 7.218143330396e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     3 SNES Function norm 7.488365599943e-07 
-    Linear solve converged due to CONVERGED_RTOL iterations 16
     4 SNES Function norm 9.122859758679e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 15
     5 SNES Function norm 1.130052338684e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     6 SNES Function norm 1.402076874685e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     7 SNES Function norm 1.742040272475e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 19
     8 SNES Function norm 2.166018191293e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     9 SNES Function norm 2.693223781223e-12 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 9
     0 SNES Function norm 1.590992203209e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     1 SNES Function norm 5.862940835815e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     2 SNES Function norm 1.355699734006e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     3 SNES Function norm 5.210423531716e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     4 SNES Function norm 2.803643993032e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     5 SNES Function norm 1.756126114264e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     6 SNES Function norm 1.185988491836e-11 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
     0 SNES Function norm 1.887658909955e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     1 SNES Function norm 6.758481430783e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     2 SNES Function norm 1.577382085365e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     3 SNES Function norm 6.996302889600e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 12
     4 SNES Function norm 4.408239469210e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     5 SNES Function norm 3.023096871950e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     6 SNES Function norm 2.127131223170e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     7 SNES Function norm 1.510994394015e-12 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
 1 TS dt 0.0948434 time 0.1
     0 SNES Function norm 1.511538016769e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 16
     1 SNES Function norm 9.936446539743e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     2 SNES Function norm 4.157897752133e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 15
     3 SNES Function norm 2.786119381022e-07 
-    Linear solve converged due to CONVERGED_RTOL iterations 15
     4 SNES Function norm 2.382899246725e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 15
     5 SNES Function norm 2.430095240252e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 15
     6 SNES Function norm 2.738777365702e-10 
-    Linear solve converged due to CONVERGED_RTOL iterations 13
     7 SNES Function norm 3.209230801691e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 14
     8 SNES Function norm 3.811315437699e-12 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 8
     0 SNES Function norm 1.163305491271e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     1 SNES Function norm 4.782936639492e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     2 SNES Function norm 1.067964972713e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     3 SNES Function norm 3.648482037054e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     4 SNES Function norm 1.394247192548e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 12
     5 SNES Function norm 5.702767601631e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     6 SNES Function norm 2.690807375034e-12 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     7 SNES Function norm 1.469438910782e-13 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
     0 SNES Function norm 1.295467376528e-02 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     1 SNES Function norm 4.971728577822e-05 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     2 SNES Function norm 1.093006635438e-06 
-    Linear solve converged due to CONVERGED_RTOL iterations 11
     3 SNES Function norm 3.671370682488e-08 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     4 SNES Function norm 1.381135200041e-09 
-    Linear solve converged due to CONVERGED_RTOL iterations 12
     5 SNES Function norm 5.372008015071e-11 
-    Linear solve converged due to CONVERGED_RTOL iterations 12
     6 SNES Function norm 2.242797212011e-12 
-    Linear solve converged due to CONVERGED_RTOL iterations 10
     7 SNES Function norm 1.076930805292e-13 
   Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 7
 2 TS dt 0.118554 time 0.194843
