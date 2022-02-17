@@ -1008,8 +1008,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscSca
 
       THRUST_CALL(thrust::fill,stream,xptr,xptr+n,alpha);
     );
-    // only log flops if we call thrust
-    ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar(sizeof(alpha));CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
@@ -1158,7 +1156,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::swap_async(Vec xin, Vec yin
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     cberr = cupmBlasXswap(cupmBlasHandle,n,DeviceArrayReadWrite(dctx,xin),1,DeviceArrayReadWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscLogGpuFlops(n);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
