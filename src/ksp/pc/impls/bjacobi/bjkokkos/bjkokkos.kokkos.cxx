@@ -14,7 +14,7 @@ typedef Kokkos::TeamPolicy<>::member_type team_member;
 #define PCBJKOKKOS_SHARED_LEVEL 1
 #define PCBJKOKKOS_VEC_SIZE 16
 #define PCBJKOKKOS_TEAM_SIZE 16
-#define PCBJKOKKOS_VERBOSE_LEVEL 3
+#define PCBJKOKKOS_VERBOSE_LEVEL 0
 //#define PCBJKOKKOS_MONITOR
 
 typedef enum {BATCH_KSP_BICG_IDX=0,BATCH_KSP_TFQMR_IDX=1,NUM_BATCH_TYPES} KSPIndex;
@@ -32,6 +32,10 @@ typedef struct {
   PetscInt                                         const_block_size; // used to decide to use shared memory for work vectors
   PetscInt                                         *dm_Nf;  // Number of fields in each DM
   PetscInt                                         num_dms;
+  // diagnostics
+  PetscBool                                        reason;
+  PetscBool                                        monitor;
+  PetscInt                                         batch_target;
 } PC_PCBJKOKKOS;
 
 static PetscErrorCode  PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
@@ -53,6 +57,10 @@ static PetscErrorCode  PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
     ierr = KSPSetDM(jac->ksp, dm);CHKERRQ(ierr);
     ierr = KSPSetDMActive(jac->ksp, PETSC_FALSE);CHKERRQ(ierr);
   }
+  jac->reason = PETSC_FALSE;
+  jac->monitor = PETSC_FALSE;
+  jac->batch_target = 0;
+
   PetscFunctionReturn(0);
 }
 
@@ -102,7 +110,7 @@ typedef struct Batch_MetaData_TAG
 }Batch_MetaData;
 
 // Solve A(BB^-1)x = y with TFQMR. Right preconditioned to get un-preconditioned residual
-KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space, const PetscInt stride, PetscReal rtol, PetscReal atol, PetscReal dtol,PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x)
+KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space, const PetscInt stride, PetscReal rtol, PetscReal atol, PetscReal dtol,PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor)
 {
   using Kokkos::parallel_reduce;
   using Kokkos::parallel_for;
@@ -133,9 +141,8 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
   team.team_barrier();
   r0 = dp = PetscSqrtReal(PetscRealPart(dpi));
   // diagnostics
-#if defined(PCBJKOKKOS_MONITOR)
-  if (start==0) Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d BJ Residual norm %22.14e \n",0,(double)dp);});
-#endif
+  if (monitor) Kokkos::single (Kokkos::PerTeam (team), [=] () { printf("%3d KSP Residual norm %14.12e \n", 0, (double)dp);});
+
   if (dp < atol) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; return 0;}
   if (0 == maxit) {metad->reason = KSP_DIVERGED_ITS; return 0;}
 
@@ -202,9 +209,8 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
       team.team_barrier();
       dpest = PetscSqrtReal(2*i + m + 2.0) * tau;
       //if (ksp->normtype != KSP_NORM_NONE) ksp->rnorm = dpest;
-#if defined(PCBJKOKKOS_MONITOR)
-      if (start==0) Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d BJ Residual norm %22.14e \n",i+1,(double)dpest);});
-#endif
+      if (monitor) Kokkos::single (Kokkos::PerTeam (team), [=] () { printf("%3d KSP Residual norm %14.12e \n", i+1, (double)dpest);});
+
       if (dpest < atol) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; goto done;}
       if (dpest/r0 < rtol) {metad->reason = KSP_CONVERGED_RTOL_NORMAL; goto done;}
 #if defined(PETSC_USE_DEBUG) || 1
@@ -257,7 +263,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
 }
 
 // Solve Ax = y with biCG
-KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space, const PetscInt stride, PetscReal rtol, PetscReal atol, PetscReal dtol,PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x)
+KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt *r, const PetscInt *ic, PetscScalar *work_space, const PetscInt stride, PetscReal rtol, PetscReal atol, PetscReal dtol,PetscInt maxit, Batch_MetaData *metad, const PetscInt start, const PetscInt end, const PetscScalar glb_idiag[], const PetscScalar *glb_b, PetscScalar *glb_x, bool monitor)
 {
   using Kokkos::parallel_reduce;
   using Kokkos::parallel_for;
@@ -289,9 +295,8 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
   parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum += Rr[idx]*PetscConj(Rr[idx]);}, dpi);
   team.team_barrier();
   r0 = dp = PetscSqrtReal(PetscRealPart(dpi));
-#if defined(PCBJKOKKOS_MONITOR)
-  if (start==0) Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d BJ Residual norm %22.14e \n",0,(double)dp);});
-#endif
+  if (monitor) Kokkos::single (Kokkos::PerTeam (team), [=] () { printf("%3d KSP Residual norm %14.12e \n", 0, (double)dp);});
+
   if (dp < atol) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; return 0;}
   if (0 == maxit) {metad->reason = KSP_DIVERGED_ITS; return 0;}
   i = 0;
@@ -339,9 +344,8 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
     parallel_reduce(Kokkos::TeamVectorRange (team, Nblk), [=] (const int idx, PetscScalar& lsum) {lsum +=  Rr[idx]*PetscConj(Rr[idx]);}, dpi);
     team.team_barrier();
     dp = PetscSqrtReal(PetscRealPart(dpi));
-#if defined(PCBJKOKKOS_MONITOR)
-    if (start==0) Kokkos::single (Kokkos::PerTeam (team), [=] () {printf("%7d BJ Residual norm %22.14e \n",i+1,(double)dp);});
-#endif
+    if (monitor) Kokkos::single (Kokkos::PerTeam (team), [=] () { printf("%3d KSP Residual norm %14.12e \n", i+1, (double)dp);});
+
     if (dp < atol) {metad->reason = KSP_CONVERGED_ATOL_NORMAL; goto done;}
     if (dp/r0 < rtol) {metad->reason = KSP_CONVERGED_RTOL_NORMAL; goto done;}
 #if defined(PETSC_USE_DEBUG) || 1
@@ -402,7 +406,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     PetscInt          batch_sz;
     VecScatter        plex_batch=NULL;
     Vec               bvec;
-
+    PetscBool         monitor = jac->monitor; // captured
+    PetscInt          view_bid = jac->batch_target;
     // get field major is to map plex IO to/from block/field major
     ierr = PetscObjectQuery((PetscObject) A, "plex_batch_is", (PetscObject *) &container);CHKERRQ(ierr);
     ierr = VecDuplicate(bin,&bvec);CHKERRQ(ierr);
@@ -448,15 +453,16 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     const PetscInt *d_isicol = jac->d_isicol_k->data(), *d_isrow = jac->d_isrow_k->data();
     Kokkos::parallel_for("Solve", Kokkos::TeamPolicy<>(nBlk, team_size, PCBJKOKKOS_VEC_SIZE).set_scratch_size(PCBJKOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes_team)),
         KOKKOS_LAMBDA (const team_member team) {
-        const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID+1];
+        const int    blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID+1];
         vect2D_scr_t work_vecs(team.team_scratch(PCBJKOKKOS_SHARED_LEVEL), scr_bytes_team ? (end-start) : 0, nwork);
         PetscScalar *work_buff = (scr_bytes_team) ? work_vecs.data() : &d_work_vecs[start];
+        bool        print = monitor && (blkID==view_bid);
         switch (ksp_type_idx) {
         case BATCH_KSP_BICG_IDX:
-          BJSolve_BICG(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata);
+          BJSolve_BICG(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata, print);
           break;
         case BATCH_KSP_TFQMR_IDX:
-          BJSolve_TFQMR(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata);
+          BJSolve_TFQMR(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata, print);
           break;
         default:
 #if defined(PETSC_USE_DEBUG)
@@ -510,28 +516,18 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     }
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%D max iterations", count);CHKERRQ(ierr);
 #endif
-#if PCBJKOKKOS_VERBOSE_LEVEL > 0
     for (int blkID=0;blkID<nBlk;blkID++) {
-#if PCBJKOKKOS_VERBOSE_LEVEL <= 2
-      if (blkID==0) {PetscInfo(pc,"%d) Solver reason %d, %d iterations\n",blkID, h_metadata[blkID].reason, h_metadata[blkID].its);}
-#else
-      ierr = PetscInfo(pc,"%d) Solver reason %d, %d iterations\n",blkID, h_metadata[blkID].reason, h_metadata[blkID].its);CHKERRQ(ierr);
-#endif
       ierr = PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops);CHKERRQ(ierr);
-#if PCBJKOKKOS_VERBOSE_LEVEL > 4
-      ierr = PetscPrintf(PETSC_COMM_SELF,"    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);CHKERRQ(ierr);
-#elif  PCBJKOKKOS_VERBOSE_LEVEL > 1
-      if (h_metadata[blkID].its > 100) {
-        ierr = PetscPrintf(PETSC_COMM_SELF,"    Linear solve converged due to CONVERGED_RTOL iterations %d\n", h_metadata[blkID].its);CHKERRQ(ierr);
-      }
-#endif
-      if (h_metadata[blkID].reason < 0) {
-        ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%D, its=%D. species %D, batch %D, %D species\n",
-                           h_metadata[blkID].reason,h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz,nBlk/batch_sz);CHKERRQ(ierr);
-        SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"");
+      if (jac->reason) {
+        if (jac->batch_target==blkID || (jac->batch_target==-1 && h_metadata[blkID].its > 100)) {
+          ierr = PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its);CHKERRQ(ierr);
+        }
+        if (jac->batch_target==-1 && h_metadata[blkID].reason < 0) {
+          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D, %D species\n",
+                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz,nBlk/batch_sz);CHKERRQ(ierr);
+        }
       }
     }
-#endif
     ierr = VecRestoreArrayAndMemType(xout,&glb_xdata);CHKERRQ(ierr);
     ierr = VecRestoreArrayReadAndMemType(bvec,&glb_bdata);CHKERRQ(ierr);
     {
@@ -542,9 +538,6 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       if (!errsum) pcreason = PC_NOERROR;
       else pcreason = PC_SUBPC_ERROR;
     }
-#if PCBJKOKKOS_VERBOSE_LEVEL > 1
-    if (pcreason) PetscInfo(pc,"PCSetFailedReason %d\n",pcreason);
-#endif
     ierr = PCSetFailedReason(pc,pcreason);CHKERRQ(ierr);
     // map back to Plex space
     if (plex_batch) {
@@ -610,10 +603,13 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       if (!pack) SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"no DM. Requires a composite DM");
       ierr = PetscObjectTypeCompare((PetscObject)pack,DMCOMPOSITE,&flg);CHKERRQ(ierr);
       if (!flg) SETERRQ(PetscObjectComm((PetscObject)pack),PETSC_ERR_USER,"Not for type %s",((PetscObject)pack)->type_name);
+      ierr = DMCompositeGetNumberDM(pack,&nDMs);CHKERRQ(ierr);
+      jac->num_dms = nDMs;
       ierr = DMCreateGlobalVector(pack, &jac->vec_diag);CHKERRQ(ierr);
       ierr = VecGetLocalSize(jac->vec_diag,&n);CHKERRQ(ierr);
       jac->n = n;
       jac->d_idiag_k = new Kokkos::View<PetscScalar*, Kokkos::LayoutRight>("idiag", n);
+      // options
       ierr = PCBJKOKKOSCreateKSP_BJKOKKOS(pc);CHKERRQ(ierr);
       ierr = KSPSetFromOptions(jac->ksp);CHKERRQ(ierr);
       ierr = PetscObjectTypeCompareAny((PetscObject)jac->ksp,&flg,KSPBICG,"");CHKERRQ(ierr);
@@ -623,12 +619,23 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         if (flg) {jac->ksp_type_idx = BATCH_KSP_TFQMR_IDX; jac->nwork = 10;}
         else SETERRQ(PetscObjectComm((PetscObject)jac->ksp),PETSC_ERR_ARG_WRONG,"unsupported type %s", ((PetscObject)jac->ksp)->type_name);
       }
+      {
+        PetscViewer       viewer;
+        PetscBool         flg;
+        PetscViewerFormat format;
+        ierr   = PetscOptionsGetViewer(PetscObjectComm((PetscObject)jac->ksp),((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_converged_reason",&viewer,&format,&flg);CHKERRQ(ierr);
+        jac->reason = flg;
+        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+        ierr   = PetscOptionsGetViewer(PetscObjectComm((PetscObject)jac->ksp),((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_monitor",&viewer,&format,&flg);CHKERRQ(ierr);
+        jac->monitor = flg;
+        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+        ierr = PetscOptionsGetInt(((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_batch_target",&jac->batch_target,NULL);CHKERRQ(ierr);
+        PetscCheckFalse(jac->batch_target >= jac->num_dms,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-ksp_batch_target (%D) >= number of DMs (%D)",jac->batch_target,jac->num_dms);
+      }
       // get blocks - jac->d_bid_eqOffset_k
-      ierr = DMCompositeGetNumberDM(pack,&nDMs);CHKERRQ(ierr);
       ierr = PetscMalloc(sizeof(*subX)*nDMs, &subX);CHKERRQ(ierr);
       ierr = PetscMalloc(sizeof(*subDM)*nDMs, &subDM);CHKERRQ(ierr);
       ierr = PetscMalloc(sizeof(*jac->dm_Nf)*nDMs, &jac->dm_Nf);CHKERRQ(ierr);
-      jac->num_dms = nDMs;
       ierr = PetscInfo(pc, "Have %D DMs, n=%D rtol=%g type = %s\n", nDMs, n, jac->ksp->rtol, ((PetscObject)jac->ksp)->type_name);CHKERRQ(ierr);
       ierr = DMCompositeGetEntriesArray(pack,subDM);CHKERRQ(ierr);
       jac->nBlocks = 0;
@@ -760,6 +767,7 @@ static PetscErrorCode PCView_BJKOKKOS(PC pc,PetscViewer viewer)
 static PetscErrorCode PCSetFromOptions_BJKOKKOS(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PetscErrorCode ierr;
+  PC_PCBJKOKKOS   *jac = (PC_PCBJKOKKOS*)pc->data;
 
   PetscFunctionBegin;
   ierr = PetscOptionsHead(PetscOptionsObject,"PC BJKOKKOS options");CHKERRQ(ierr);
