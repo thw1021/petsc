@@ -70,6 +70,12 @@ cdef extern from * nogil:
     int VecRestoreArray(PetscVec,PetscScalar*[])
     int VecPlaceArray(PetscVec,PetscScalar[])
     int VecResetArray(PetscVec)
+    int VecGetArrayWriteAndMemType(PetscVec,PetscScalar*[],PetscMemType*)
+    int VecRestoreArrayWriteAndMemType(PetscVec,PetscScalar*[])
+    int VecGetArrayReadAndMemType(PetscVec,const PetscScalar*[],PetscMemType*)
+    int VecRestoreArrayReadAndMemType(PetscVec,const PetscScalar*[])
+    int VecGetArrayAndMemType(PetscVec,PetscScalar*[],PetscMemType*)
+    int VecRestoreArrayAndMemType(PetscVec,PetscScalar*[])
 
     int VecEqual(PetscVec,PetscVec,PetscBool*)
     int VecLoad(PetscVec,PetscViewer)
@@ -144,7 +150,6 @@ cdef extern from * nogil:
     int VecSqrtAbs(PetscVec)
     int VecAbs(PetscVec)
 
-    int VecStrideSum(PetscVec,PetscInt,PetscScalar*)
     int VecStrideMin(PetscVec,PetscInt,PetscInt*,PetscReal*)
     int VecStrideMax(PetscVec,PetscInt,PetscInt*,PetscReal*)
     int VecStrideScale(PetscVec,PetscInt,PetscScalar)
@@ -196,6 +201,10 @@ cdef extern from * nogil:
     int VecCreateMPICUDAWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
     int VecCreateSeqHIPWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
     int VecCreateMPIHIPWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
+
+cdef extern from "custom.h" nogil:
+    int VecStrideSum(PetscVec,PetscInt,PetscScalar*)
+    int VecGetCurrentMemType(PetscVec,PetscMemType*)
 
 # --------------------------------------------------------------------
 
@@ -593,6 +602,8 @@ cdef class _Vec_LocalForm:
 
 # --------------------------------------------------------------------
 
+# DLPack interface
+
 cdef extern from "Python.h":
     ctypedef void (*PyCapsule_Destructor)(object)
     bint PyCapsule_IsValid(object, const char*)
@@ -602,12 +613,12 @@ cdef extern from "Python.h":
     int PyCapsule_CheckExact(object)
 
 cdef extern from "stdlib.h" nogil:
-   ctypedef signed long int64_t
-   ctypedef unsigned long long uint64_t
-   ctypedef unsigned char uint8_t
-   ctypedef unsigned short uint16_t
-   void free(void* ptr)
-   void* malloc(size_t size)
+    ctypedef signed long int64_t
+    ctypedef unsigned long long uint64_t
+    ctypedef unsigned char uint8_t
+    ctypedef unsigned short uint16_t
+    void free(void* ptr)
+    void* malloc(size_t size)
 
 cdef struct DLDataType:
     uint8_t code
@@ -626,6 +637,7 @@ cdef enum PetscDLDeviceType:
     kDLROCMHost = <unsigned int>11
     #kDLExtDev = <unsigned int>12
     kDLCUDAManaged = <unsigned int>13
+    #kDLOneAPI = <unsigned int>14
 
 ctypedef struct DLContext:
     PetscDLDeviceType device_type
