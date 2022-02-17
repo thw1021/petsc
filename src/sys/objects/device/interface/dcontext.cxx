@@ -463,7 +463,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(dsub,3);
-  PetscAssertFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts requested %" PetscInt_FMT " < 0",n);
+  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts requested %" PetscInt_FMT " < 0",n);
 #if PETSC_USE_DEBUG_AND_INFO
   /* reserve 4 chars per id, 2 for number and 2 for ', ' separator */
   idList.reserve(4*n);
@@ -583,7 +583,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
   PetscFunctionBegin;
   /* validity of dctx is checked in the wait-for loop */
   PetscValidPointer(dsub,4);
-  PetscAssertFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts merged %" PetscInt_FMT " < 0",n);
+  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts merged %" PetscInt_FMT " < 0",n);
 #if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
   /* reserve 4 chars per id, 2 for number and 2 for ', ' separator */
   idList.reserve(4*n);

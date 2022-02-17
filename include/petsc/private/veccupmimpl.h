@@ -801,9 +801,19 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase(Vec v
 
   PetscFunctionBegin;
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
-  ierr = Create_CUPMBase_(PetscObjectComm(vobj),bs,map->n,map->N,y,call_set_type,map);CHKERRQ(ierr);
+  ierr = Create_CUPMBase(PetscObjectComm(vobj),bs,map->n,map->N,y,call_set_type,map);CHKERRQ(ierr);
   // Derived class can set up the remainder of the data structures here
   ierr = DerivedCreateIMPLCUPM_Async(*y);CHKERRQ(ierr);
+  // If the other vector is bound to CPU then the memcpy of the ops struct will give the
+  // duplicated vector the host "getarray" function which does not lazily allocate the array
+  // (as it is assumed to always exist). So we force allocation here, before we overwrite the
+  // ops
+  if (v->boundtocpu) {
+    PetscDeviceContext dctx;
+
+    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+    ierr = HostAllocateCheck_(dctx,*y);CHKERRQ(ierr);
+  }
   // in case the user has done some VecSetOps() tomfoolery
   ierr = PetscMemcpy((*y)->ops,v->ops,sizeof(*v->ops));CHKERRQ(ierr);
   {
@@ -887,7 +897,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::PlaceArray_CUPMBase(Vec 
     }                                           \
   } while (0)
 
-// v->ops->duplicate
+// v->ops->bindtocpu
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v, PetscBool usehost))
 {
