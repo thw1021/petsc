@@ -763,7 +763,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dot_async(Vec xin, Vec yin,
   ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
   cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin),1,DeviceArrayRead(dctx,xin),1,cupmScalarCast(z));CHKERRCUPMBLAS(cberr);
   ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-  ierr = PetscLogGpuFlops(PetscMax(2*(n-1),0));CHKERRQ(ierr);
+  ierr = PetscLogGpuFlops(PetscMax(2*n-1,0));CHKERRQ(ierr);
   ierr = PetscLogGpuToCpuScalar(sizeof(*z));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -919,7 +919,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
 
     if (allocate) {ierr = PetscMalloc1(nwork,&h_results);CHKERRQ(ierr);}
     cerr = cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream);CHKERRCUPM(cerr);
-    // REVIEW ME: double count of flops??
     // do these now while memcpy is in flight
     ierr = PetscLogFlops(nwork);CHKERRQ(ierr);
     ierr = PetscLogGpuToCpuScalar(nbytes);CHKERRQ(ierr);
@@ -985,6 +984,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
   // nothing to do if x has no entries
   if (n) {
     ierr = mdot_async_(UseComplexTag<PetscDefined(USE_COMPLEX)>{},xin,nv,yin,z);CHKERRQ(ierr);
+    // REVIEW ME: double count of flops??
     ierr = PetscLogGpuFlops(PetscMax(nv*(2.0*n-1),0.0));CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
