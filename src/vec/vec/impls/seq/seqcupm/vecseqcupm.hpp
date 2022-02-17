@@ -740,12 +740,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   PetscScalar         *d_results;
   PetscDeviceContext  dctx;
   cupmStream_t        stream;
-  cupmBlasHandle_t    handle;
   cupmError_t         cerr;
   PetscErrorCode      ierr;
 
   PetscFunctionBegin;
-  ierr = GetHandles_(&dctx,&handle,&stream);CHKERRQ(ierr);
+  ierr = GetHandles_(&dctx,&stream);CHKERRQ(ierr);
   // will hold all the device y pointers
   cerr = cupmMallocAsync(reinterpret_cast<void**>(&d_y),8*sizeof(*d_y),stream);CHKERRCUPM(cerr);
   // allocate scratchpad memory for the results of individual work groups
@@ -755,7 +754,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     auto xptr = DeviceArrayRead(dctx,xin);
 
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    // REVIEW ME: Can fork-join here
+    // REVIEW ME: Can fork-join here, but should probably only have a single-sized kernel then
     while (yidx < nv)
     {
       switch (nv-yidx) {
@@ -772,11 +771,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
         ierr = mdot_kernel_dispatch_<2>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx);CHKERRQ(ierr);
         break;
       case 1: {
-        const auto bn   = static_cast<cupmBlasInt_t>(n);
-        const auto yptr = DeviceArrayRead(dctx,yin[yidx]);
+        cupmBlasHandle_t handle;
+        cupmBlasError_t  cberr;
 
-        ierr       = cupmBlasSetPointerModeFromPointer(handle,z);CHKERRQ(ierr);
-        auto cberr = cupmBlasXdot(handle,bn,yptr,1,xptr,1,cupmScalarCast(z+yidx));CHKERRCUPMBLAS(cberr);
+        ierr  = PetscDeviceContextGetBLASHandle_Internal(dctx,&handle);CHKERRQ(ierr);
+        ierr  = cupmBlasSetPointerModeFromPointer(handle,z);CHKERRQ(ierr);
+        cberr = cupmBlasXdot(handle,n,DeviceArrayRead(dctx,yin[yidx]),1,xptr,1,cupmScalarCast(z+yidx));CHKERRCUPMBLAS(cberr);
         ++yidx;
       }
       case 0:
@@ -806,7 +806,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     // REVIEW ME: need to hard sync here...
     ierr = PetscDeviceContextSynchronize(dctx);CHKERRQ(ierr);
     // REVIEW ME: it is likely faster to do this in a micro kernel rather than do it on the
-    // host which requires synchronization and possibly an addition allocation
+    // host which requires synchronization and possibly an additional allocation
     // sum group results into z
     for (auto j = PetscInt{0}; j < nv1; ++j) {
       for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) z[j] += h_results[i];
@@ -826,22 +826,31 @@ template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<true>, Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z))
 {
   const auto         n = static_cast<cupmBlasInt_t>(xin->map->n);
+  PetscBool          device_mem;
   PetscDeviceContext dctx;
-  cupmBlasHandle_t   cupmBlasHandle;
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
+  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
+  ierr = cupmIsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
   {
-    auto xptr = DeviceArrayRead(dctx,xin);
+    const auto         xptr = DeviceArrayRead(dctx,xin);
+    const auto         mode = device_mem ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST;
+    // probably not worth it to run more than 8 of these at a time?
+    const auto         n_sub = PetscMin(nv,8);
+    PetscDeviceContext *subctx;
 
-    // can fork-join here
-    ierr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,z);CHKERRQ(ierr);
+    ierr = PetscDeviceContextFork(dctx,n_sub,&subctx);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     for (auto i = PetscInt{0}; i < nv; ++i) {
-      auto cberr = cupmBlasXdot(cupmBlasHandle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,cupmScalarCast(z+i));CHKERRCUPMBLAS(cberr);
+      cupmBlasHandle_t handle;
+
+      ierr = PetscDeviceContextGetBLASHandle_Internal(subctx[i%n_sub],&handle);CHKERRQ(ierr);
+      ierr = cupmBlasSetPointerMode(handle,mode);CHKERRQ(ierr);
+      auto cberr = cupmBlasXdot(handle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,cupmScalarCast(z+i));CHKERRCUPMBLAS(cberr);
     }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+    ierr = PetscDeviceContextJoin(dctx,n_sub,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subctx);CHKERRQ(ierr);
   }
   // REVIEW ME: flops?????
   ierr = PetscLogGpuToCpuScalar(nv*sizeof(*z));CHKERRQ(ierr);

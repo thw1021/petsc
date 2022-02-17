@@ -178,10 +178,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::bindtocpu_async(Vec v, Pets
 // ================================================================================== //
 //                                    mutatators                                      //
 
-
-// ================================================================================== //
-//                                   compute methods                                  //
-
 // v->ops->resetarray or VecCUPMResetArray()
 template <Device::CUPM::DeviceType T>
 template <PetscMemType mtype>
@@ -205,6 +201,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::placearray_async(Vec v, con
   ierr = base_type::template PlaceArray_CUPMBase<mtype>(v,a,VecPlaceArray_MPI);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+// ================================================================================== //
+//                                   compute methods                                  //
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::norm_async(Vec v, NormType type, PetscReal *z))
