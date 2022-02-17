@@ -38,8 +38,8 @@ PetscErrorCode MatGetRootType_Private(Mat mat, MatType *rootType)
   ierr = MatGetType(mat,&inType);CHKERRQ(ierr);
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size);CHKERRMPI(ierr);
   while (names) {
-    if (size > 1) {ierr = PetscStrcmp(inType,names->mname,&found);CHKERRQ(ierr);}
-    else {ierr = PetscStrcmp(inType,names->sname,&found);CHKERRQ(ierr);}
+    if (size > 1) { ierr = PetscStrcmp(inType,names->mname,&found);CHKERRQ(ierr); }
+    else { ierr = PetscStrcmp(inType,names->sname,&found);CHKERRQ(ierr);}
     if (found) {
       found     = PETSC_TRUE;
       *rootType = names->rname;
