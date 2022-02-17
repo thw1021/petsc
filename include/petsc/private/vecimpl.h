@@ -111,6 +111,8 @@ struct _VecOps {
     The stash is used to temporarily store inserted vec values that
   belong to another processor. During the assembly phase the stashed
   values are moved to the correct processor and
+
+  ...and what?
 */
 
 typedef struct {
@@ -196,12 +198,8 @@ PETSC_EXTERN PetscLogEvent VEC_ViennaCLCopyToGPU;
 PETSC_EXTERN PetscLogEvent VEC_ViennaCLCopyFromGPU;
 PETSC_EXTERN PetscLogEvent VEC_CUDACopyToGPU;
 PETSC_EXTERN PetscLogEvent VEC_CUDACopyFromGPU;
-PETSC_EXTERN PetscLogEvent VEC_CUDACopyToGPUSome;
-PETSC_EXTERN PetscLogEvent VEC_CUDACopyFromGPUSome;
 PETSC_EXTERN PetscLogEvent VEC_HIPCopyToGPU;
 PETSC_EXTERN PetscLogEvent VEC_HIPCopyFromGPU;
-PETSC_EXTERN PetscLogEvent VEC_HIPCopyToGPUSome;
-PETSC_EXTERN PetscLogEvent VEC_HIPCopyFromGPUSome;
 
 PETSC_EXTERN PetscErrorCode VecView_Seq(Vec,PetscViewer);
 #if defined(PETSC_HAVE_VIENNACL)
