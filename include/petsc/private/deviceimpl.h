@@ -4,6 +4,18 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
+#if defined(__NVCC__) || defined(__CUDACC__)
+#  define PETSC_USING_NVCC 1
+#endif
+
+#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
+#  define PETSC_USING_HCC 1
+#endif
+
+#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
+#  error using both nvcc and hipcc at the same time?
+#endif
+
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 template <typename T> void PetscValidDeviceType(T,int);
 template <typename T> void PetscValidDevice(T,int);
