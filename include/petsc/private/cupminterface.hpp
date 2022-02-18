@@ -491,7 +491,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
   // kernel launching
-  PETSC_CUPM_ALIAS_FUNCTION(LaunchKernel);
+  PETSC_CUPM_ALIAS_FUNCTION_COMMON(LaunchKernel,LaunchKernelGGL);
 };
 #undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U

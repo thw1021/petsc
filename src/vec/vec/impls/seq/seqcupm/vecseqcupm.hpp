@@ -672,8 +672,12 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
 {
   static_assert(N > 1,"");
   PETSC_SHAREDMEM_DECL PetscScalar shmem[N*MDOT_WORKGROUP_SIZE];
-  const auto tx       = threadIdx.x,bx = blockIdx.x;
-  const auto bdx      = blockDim.x,gdx = gridDim.x;
+  // HIP -- for whatever reason -- has threadIdx, blockIdx, blockDim, and gridDim as separate
+  // types, so each of these go on separate lines...
+  const auto tx       = threadIdx.x;
+  const auto bx       = blockIdx.x;
+  const auto bdx      = blockDim.x;
+  const auto gdx      = gridDim.x;
   const auto worksize = EntriesPerGroup(size);
   const auto begin    = tx+bx*worksize;
   const auto end      = min((bx+1)*worksize,size);
