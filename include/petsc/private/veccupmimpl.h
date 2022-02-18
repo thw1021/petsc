@@ -128,13 +128,14 @@ struct no_op
 
 PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* PetscMemTypes(PetscMemType mtype))
 {
+  static_assert(PETSC_MEMTYPE_CUDA == PETSC_MEMTYPE_DEVICE,"");
   switch (mtype)
   {
 #define CASE_RETURN(val) case val: return PetscStringize(val)
     CASE_RETURN(PETSC_MEMTYPE_HOST);
-    CASE_RETURN(PETSC_MEMTYPE_DEVICE);
+    // CASE_RETURN(PETSC_MEMTYPE_DEVICE); same as PETSC_MEMTYPE_CUDA
     CASE_RETURN(PETSC_MEMTYPE_CUDA);
-    CASE_RETURN(PETSC_MEMTYPE_NVHSMEM);
+    CASE_RETURN(PETSC_MEMTYPE_NVSHMEM);
     CASE_RETURN(PETSC_MEMTYPE_HIP);
     CASE_RETURN(PETSC_MEMTYPE_SYCL);
 #undef CASE_RETURN
@@ -179,7 +180,7 @@ private:
       PetscBool device_mem;
 
       CHKERRQ(cupmIsDeviceMemory(ptr,&device_mem));
-      if (PetscMemtypeHost(mtype)) {
+      if (PetscMemTypeHost(mtype)) {
         PetscCheck(!device_mem,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was allocated on the device",PetscMemTypes(mtype));
       } else PetscCheck(device_mem,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was not allocated on the device",PetscMemTypes(mtype));
     }
