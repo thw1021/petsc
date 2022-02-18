@@ -1086,7 +1086,7 @@ PetscErrorCode VecCreate_SeqKokkos(Vec v)
   ierr = PetscObjectChangeTypeName((PetscObject)v,VECSEQKOKKOS);CHKERRQ(ierr);
   ierr = VecSetOps_SeqKokkos(v);CHKERRQ(ierr);
 
-  PetscCheckFalse(v->spptr,PETSC_COMM_SELF,PETSC_ERR_PLIB,"v->spptr not NULL");
+  PetscCheck(!v->spptr,PETSC_COMM_SELF,PETSC_ERR_PLIB,"v->spptr not NULL");
   vecseq   = static_cast<Vec_Seq*>(v->data);
   veckok   = new Vec_Kokkos(v->map->n,vecseq->array,NULL); /* Let host claim it has the latest data (zero) */
   v->spptr = static_cast<void*>(veckok);
