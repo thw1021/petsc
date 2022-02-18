@@ -126,6 +126,23 @@ struct no_op
   template <typename...T> constexpr PetscErrorCode operator()(T&&...) const noexcept { return 0; }
 };
 
+PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* PetscMemTypes(PetscMemType mtype))
+{
+  switch (mtype)
+  {
+#define CASE_RETURN(val) case val: return PetscStringize(val)
+    CASE_RETURN(PETSC_MEMTYPE_HOST);
+    CASE_RETURN(PETSC_MEMTYPE_DEVICE);
+    CASE_RETURN(PETSC_MEMTYPE_CUDA);
+    CASE_RETURN(PETSC_MEMTYPE_NVHSMEM);
+    CASE_RETURN(PETSC_MEMTYPE_HIP);
+    CASE_RETURN(PETSC_MEMTYPE_SYCL);
+#undef CASE_RETURN
+  }
+  PetscUnreachable();
+  return "invalid";
+}
+
 } // anonymous namespace
 
 // forward declarations
@@ -153,6 +170,19 @@ private:
     if (handle) {ierr = PetscDeviceContextGetBLASHandle_Internal(dctx_,handle);CHKERRQ(ierr);}
     if (stream) {ierr = PetscDeviceContextGetStreamHandle_Internal(dctx_,stream);CHKERRQ(ierr);}
     if (dctx) *dctx = dctx_;
+    PetscFunctionReturn(0);
+  }
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode CheckPointerMatchesMemType_(const void *ptr, PetscMemType mtype))
+  {
+    PetscFunctionBegin;
+    if (PetscDefined(USE_DEBUG) && ptr /* don't check if no pointer */) {
+      PetscBool device_mem;
+
+      CHKERRQ(cupmIsDeviceMemory(ptr,&device_mem));
+      if (PetscMemtypeHost(mtype)) {
+        PetscCheck(!device_mem,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was allocated on the device",PetscMemTypes(mtype));
+      } else PetscCheck(device_mem,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was not allocated on the device",PetscMemTypes(mtype));
+    }
     PetscFunctionReturn(0);
   }
 
@@ -590,15 +620,19 @@ template <PetscMemType mtype, MemoryAccess access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v, PetscScalar **a))
 {
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   if (access != MemoryAccess::READ) {
     // WRITE or READ_WRITE
-    auto ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
+    ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
     v->offloadmask = PetscMemTypeHost(mtype) ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;
   }
-  if (a) *a = nullptr;
+  if (a) {
+    ierr = CheckPointerMatchesMemType_(*a,mtype);CHKERRQ(ierr);
+    *a = nullptr;
+  }
   PetscFunctionReturn(0);
 }
 
@@ -637,6 +671,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  ierr = CheckPointerMatchesMemType_(a,mtype);CHKERRQ(ierr);
   if (PetscMemTypeHost(mtype)) {
     const auto vimpl = VecIMPLCast(v);
 
@@ -723,13 +758,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase(Vec 
   ierr = PetscObjectChangeTypeName(PetscObjectCast(v),VECTYPE());CHKERRQ(ierr);
   ierr = D::bindtocpu_async(v,PETSC_FALSE);CHKERRQ(ierr);
   if (device_array) {
-    // array is being placed from the user
+    ierr = CheckPointerMatchesMemType_(device_array,cupmDeviceTypeToPetscMemType());CHKERRQ(ierr);
     ierr = VecCUPMAllocateCheck_(v);CHKERRQ(ierr);
     VecCUPMCast(v)->device_array  = device_array;
     VecCUPMCast(v)->ptr_ownership = PETSC_USE_POINTER;
   }
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (host_array) {
+    ierr = CheckPointerMatchesMemType_(host_array,PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
     ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
     VecIMPLCast(v)->array = host_array;
   }
@@ -871,6 +907,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::PlaceArray_CUPMBase(Vec 
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
+  ierr = CheckPointerMatchesMemType_(a,mtype);CHKERRQ(ierr);
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (PetscMemTypeHost(mtype)) {
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
@@ -1006,10 +1043,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase(Vec v
   using name::VECTYPE;                                                          \
   using name::VECSEQCUPM;                                                       \
   using name::VECMPICUPM;                                                       \
-  /* utility */                                                                 \
-  using name::Vec_CUPM;                                                         \
   using name::VecView_Debug;                                                    \
-  using name::vector_array;                                                     \
+  /* utility */                                                                 \
+  using typename name::Vec_CUPM;                                                \
   using name::UseCUPMHostAlloc;                                                 \
   using name::GetHandles_;                                                      \
   using name::HostAllocateCheck_;                                               \

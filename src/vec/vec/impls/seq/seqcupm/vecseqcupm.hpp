@@ -500,7 +500,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscSc
   PetscBool      xiscupm;
 
   PetscFunctionBegin;
-  if (alpha == PetscScalar(0.0)) PetscFunctionReturn(0);
+  if (PetscUnlikely(alpha == PetscScalar(0.0))) PetscFunctionReturn(0);
   ierr = PetscObjectTypeCompareAny(PetscObjectCast(xin),&xiscupm,VECSEQCUPM(),VECMPICUPM(),"");CHKERRQ(ierr);
   if (xiscupm) {
     const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
