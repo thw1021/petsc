@@ -349,8 +349,10 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemcpyDeviceToDevice);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemcpyHostToHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemcpyDefault);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeUnregistered);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeDevice);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeManaged);
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(GetErrorName);
@@ -396,9 +398,8 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
-  // specific wrapper for device launch function to mimic the HIP API since it has the superior
-  // interface here, and it's not worth it to write another macro just for this specific
-  // use-case
+  // specific wrapper for device launch function, as the actual form is a C routine and doesn't
+  // have variable arguments
   template <typename... KernelArgsT, typename FunctionT = void(*)(KernelArgsT...)>
   PETSC_CXX_COMPAT_DECL(cudaError_t cupmLaunchKernel(FunctionT func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs))
   {
@@ -444,8 +445,10 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemcpyDeviceToDevice);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemcpyHostToHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemcpyDefault);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeUnregistered);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeDevice);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeManaged);
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(GetErrorName);
@@ -491,7 +494,12 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
   // kernel launching
-  PETSC_CUPM_ALIAS_FUNCTION_COMMON(LaunchKernel,LaunchKernelGGL);
+  template <typename... KernelArgsT, typename FunctionT = void(*)(KernelArgsT...)>
+  PETSC_CXX_COMPAT_DECL(hipError_t cupmLaunchKernel(FunctionT func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, hipStream_t stream, KernelArgsT&&... kernelArgs))
+  {
+    void* args[] = {(void*)&kernelArgs...};
+    return hipLaunchKernel((void*)func,gridDim,blockDim,args,sharedMem,stream);
+  }
 };
 #undef PETSC_CUPM_PREFIX_L
 #undef PETSC_CUPM_PREFIX_U
@@ -531,8 +539,10 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmMemcpyDeviceToDevice;                            \
   using base_name::cupmMemcpyHostToHost;                                \
   using base_name::cupmMemcpyDefault;                                   \
+  using base_name::cupmMemoryTypeUnregistered;                          \
   using base_name::cupmMemoryTypeHost;                                  \
   using base_name::cupmMemoryTypeDevice;                                \
+  using base_name::cupmMemoryTypeManaged;                               \
   /* functions */                                                       \
   using base_name::cupmGetErrorName;                                    \
   using base_name::cupmGetErrorString;                                  \
