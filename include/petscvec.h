@@ -94,7 +94,7 @@ typedef const char* VecType;
 #define VECCUDA        "cuda"       /* seqcuda on one process and mpicuda on several */
 #define VECSEQHIP      "seqhip"
 #define VECMPIHIP      "mpihip"
-#define VECHIP         "hip"       /* seqcuda on one process and mpicuda on several */
+#define VECHIP         "hip"       /* seqhip on one process and mpihip on several */
 #define VECNEST        "nest"
 #define VECSEQKOKKOS   "seqkokkos"
 #define VECMPIKOKKOS   "mpikokkos"

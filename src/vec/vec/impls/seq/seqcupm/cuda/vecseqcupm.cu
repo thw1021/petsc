@@ -20,7 +20,7 @@ PetscErrorCode VecCreate_SeqCUDA(Vec v)
 }
 
 /*@
-  VecCreateSeqCUDA - Creates a standard, sequential array-style vector.
+  VecCreateSeqCUDA - Creates a standard, sequential, array-style vector.
 
   Collective, Possibly Synchronous
 
@@ -53,8 +53,8 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
 }
 
 /*@C
-  VecCreateSeqCUDAWithArrays - Creates a CUDA sequential array-style vector, where the user
-  provides the complete array space to store the vector values.
+  VecCreateSeqCUDAWithArrays - Creates a sequential, array-style vector using CUDA, where the
+  user provides the complete array space to store the vector values.
 
   Collective, Possibly Synchronous
 
@@ -74,7 +74,7 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
   device.
 
   If both cpuarray and gpuarray are provided, the provided arrays must have identical
-  values. This is checked on debug builds but blindly assumed when debugging is disabled.
+  values.
 
   The arrays are NOT freed when the vector is destroyed via VecDestroy(). The user must free
   them themselves, but not until the vector is destroyed.
@@ -99,10 +99,10 @@ PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
 }
 
 /*@C
-  VecCreateSeqCUDAWithArray - Creates a CUDA sequential array-style vector,
-  where the user provides the device array space to store the vector values.
+  VecCreateSeqCUDAWithArray - Creates a sequential, array-style vector using CUDA, where the
+  user provides the device array space to store the vector values.
 
-    Collective, Possibly Synchronous
+  Collective, Possibly Synchronous
 
   Input Parameters:
 + comm     - the communicator, must be PETSC_COMM_SELF
@@ -161,6 +161,8 @@ PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm comm, PetscInt bs, PetscInt n,
 
   If the user does require strong memory guarantees, they are encocuraged to use
   VecCUDAGetArrayRead() and/or VecCUDAGetArrayWrite() instead.
+
+  The user must call VecCUDARestoreArray() when they are finished using the array.
 
   Fortran note:
   This function is not currently available from Fortran.
@@ -358,22 +360,23 @@ PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 }
 
 /*@C
-   VecCUDAPlaceArray - Allows one to replace the GPU array in a vector with a
-   GPU array provided by the user. This is useful to avoid copying an
-   array into a vector.
+  VecCUDAPlaceArray - Allows one to replace the GPU array in a vector with a GPU array provided
+  by the user.
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  vec - the vector
--  array - the GPU array
+  Input Parameters:
++ vec - the vector
+- array - the GPU array
 
-   Notes:
-   You can return to the original GPU array with a call to VecCUDAResetArray()
-   It is not possible to use VecCUDAPlaceArray() and VecPlaceArray() at the
-   same time on the same vector.
+  Notes:
+  This routine is useful to avoid copying an array into a vector, though you can return to the
+  original GPU array with a call to VecCUDAResetArray().
 
-   Level: developer
+  It is not possible to use VecCUDAPlaceArray() and VecPlaceArray() at the same time on the
+  same vector.
+
+  Level: advanced
 
 .seealso: VecPlaceArray(), VecGetArray(), VecRestoreArray(), VecReplaceArray(),
 VecResetArray(), VecCUDAResetArray(), VecCUDAReplaceArray()
@@ -389,26 +392,26 @@ PetscErrorCode VecCUDAPlaceArray(Vec vin, const PetscScalar a[])
 }
 
 /*@C
-   VecCUDAReplaceArray - Permanently replace the GPU array in a vector
-   with a GPU array provided by the user.
+  VecCUDAReplaceArray - Permanently replace the GPU array in a vector with a GPU array provided
+  by the user.
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-+  vec   - the vector
--  array - the GPU array
+  Input Parameters:
++ vec   - the vector
+- array - the GPU array
 
-   Notes:
-   This is useful to avoid copying a GPU array into a vector.
+  Notes:
+  This is useful to avoid copying a GPU array into a vector.
 
-   This frees the memory associated with the old GPU array. The vector takes ownership of the
-   passed array so it CANNOT be freed by the user. It will be freed when the vector is
-   destroyed.
+  This frees the memory associated with the old GPU array. The vector takes ownership of the
+  passed array so it CANNOT be freed by the user. It will be freed when the vector is
+  destroyed.
 
-   Fortran Notes:
-   Not supported from Fortran
+  Fortran Notes:
+  Not supported from Fortran
 
-   Level: developer
+  Level: advanced
 
 .seealso: VecGetArray(), VecRestoreArray(), VecPlaceArray(), VecResetArray(),
 VecCUDAResetArray(), VecCUDAPlaceArray(), VecReplaceArray()
@@ -424,15 +427,17 @@ PetscErrorCode VecCUDAReplaceArray(Vec vin, const PetscScalar a[])
 }
 
 /*@C
-   VecCUDAResetArray - Resets a vector to use its default memory. Call this
-   after the use of VecCUDAPlaceArray().
+  VecCUDAResetArray - Resets a vector to use its default memory.
 
-   Not Collective
+  Not Collective
 
-   Input Parameters:
-.  vec - the vector
+  Input Parameters:
+. vec - the vector
 
-   Level: developer
+  Notes:
+  Call this after the use of VecCUDAPlaceArray().
+
+  Level: advanced
 
 .seealso: VecGetArray(), VecRestoreArray(), VecReplaceArray(), VecPlaceArray(),
 VecResetArray(), VecCUDAPlaceArray(), VecCUDAReplaceArray()

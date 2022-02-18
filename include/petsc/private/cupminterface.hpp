@@ -399,7 +399,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   // specific wrapper for device launch function to mimic the HIP API since it has the superior
   // interface here, and it's not worth it to write another macro just for this specific
   // use-case
-  template <typename FunctionT, typename... KernelArgsT>
+  template <typename... KernelArgsT, typename FunctionT = void(*)(KernelArgsT...)>
   PETSC_CXX_COMPAT_DECL(cudaError_t cupmLaunchKernel(FunctionT func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, cudaStream_t stream, KernelArgsT&&... kernelArgs))
   {
     void* args[] = {(void*)&kernelArgs...};

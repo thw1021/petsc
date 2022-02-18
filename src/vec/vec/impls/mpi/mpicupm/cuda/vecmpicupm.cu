@@ -1,11 +1,12 @@
 #include "../vecmpicupm.hpp" /*I <petscvec.h> I*/
 
-using namespace Petsc::Vector::CUPM::Impl;
+namespace Petsc { namespace Vector { namespace CUPM { namespace Impl {
 
-// explicitly instantiate, derivate headers will contain extern template declarations
 template struct VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
-using VecMPI_CUDA = VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
+}}}} // namespace Petsc::Vector::CUPM::Impl
+
+static const auto VecMPI_CUDA = Petsc::Vector::CUPM::Impl::VecMPI_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>{};
 
 /*MC
   VECCUDA - VECCUDA = "cuda" - A VECSEQCUDA on a single-process communicator, and VECMPICUDA
@@ -37,7 +38,7 @@ PetscErrorCode VecCreate_CUDA(Vec v)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecMPI_CUDA::Create_CUPM(v);CHKERRQ(ierr);
+  ierr = VecMPI_CUDA.Create_CUPM(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -46,7 +47,7 @@ PetscErrorCode VecCreate_MPICUDA(Vec v)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecMPI_CUDA::create_async(v);CHKERRQ(ierr);
+  ierr = VecMPI_CUDA.create_async(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -55,14 +56,15 @@ PetscErrorCode VecCUDAGetArrays_Private(Vec v, const PetscScalar **host_array, c
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecMPI_CUDA::GetArrays_CUPMBase(v,host_array,device_array,mask);CHKERRQ(ierr);
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  ierr = VecMPI_CUDA.GetArrays_CUPMBase(v,host_array,device_array,mask);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@
-  VecCreateMPICUDA - Creates a standard, parallel array-style vector for CUDA devices.
+  VecCreateMPICUDA - Creates a standard, parallel, array-style vector for CUDA devices.
 
-  Collective
+  Collective, Possibly Synchronous
 
   Input Parameters:
 + comm - the MPI communicator to use
@@ -76,6 +78,8 @@ PetscErrorCode VecCUDAGetArrays_Private(Vec v, const PetscScalar **host_array, c
   Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an
   existing vector.
 
+  This function may initialize PetscDevice, which may incur a device synchronization.
+
   Level: intermediate
 
 .seealso: VecCreateMPICUDAWithArray(), VecCreateMPICUDAWithArrays(), VecCreateSeqCUDA(),
@@ -88,43 +92,34 @@ PetscErrorCode VecCreateMPICUDA(MPI_Comm comm, PetscInt n, PetscInt N, Vec *v)
 
   PetscFunctionBegin;
   PetscValidPointer(v,4);
-  ierr = VecMPI_CUDA::creatempicupm_async(comm,0,n,N,v,PETSC_TRUE);CHKERRQ(ierr);
+  ierr = VecMPI_CUDA.creatempicupm_async(comm,0,n,N,v,PETSC_TRUE);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@C
-  VecCreateMPICUDAWithArrays - Creates a parallel, array-style vector, where the user provides
-  the CPU and GPU array space to store the vector values.
+  VecCreateMPICUDAWithArrays - Creates a parallel, array-style vector using CUDA, where the
+  user provides the complete array space to store the vector values.
 
-  Collective
+  Collective, Possibly Synchronous
 
   Input Parameters:
-+ comm  - the MPI communicator to use
-. bs    - block size, same meaning as VecSetBlockSize()
-. n     - local vector length, cannot be PETSC_DECIDE
-. N     - global vector length (or PETSC_DECIDE to have calculated)
-. cpuarray - the user provided CPU array to store the vector values
-- gpuarray - the user provided GPU array to store the vector values
++ comm     - the MPI communicator to use
+. bs       - block size, same meaning as VecSetBlockSize()
+. n        - local vector length, cannot be PETSC_DECIDE
+. N        - global vector length (or PETSC_DECIDE to have calculated)
+. cpuarray - CPU memory where the vector elements are to be stored (or NULL)
+- gpuarray - GPU memory where the vector elements are to be stored (or NULL)
 
   Output Parameter:
 . v - the vector
 
   Notes:
-  If both cpuarray and gpuarray are provided, the caller must ensure that the provided arrays
-  have identical values.
-
-  Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an
-  existing vector.
-
-  If the user-provided arrays are NULL, then VecCUDAPlaceArray() can be used at a later stage to
-  SET the array for storing the vector values.
-
-  PETSc does NOT free the array when the vector is destroyed via VecDestroy(). The user should
-  not free the array until the vector is destroyed.
+  See VecCreateSeqCUDAWithArrays() for further discussion, this routine shares identical
+  semantics.
 
   Level: intermediate
 
-.seealso: VecCreateMPICUDA(), VecCreateSeqCUDAWithArray(), VecCreateMPIWithArray(),
+.seealso: VecCreateMPICUDA(), VecCreateSeqCUDAWithArrays(), VecCreateMPIWithArray(),
 VecCreateSeqWithArray(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
 VecCreateMPI(), VecCreateGhostWithArray(), VecPlaceArray()
 @*/
@@ -135,14 +130,13 @@ PetscErrorCode VecCreateMPICUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
   PetscFunctionBegin;
   if (n && cpuarray) PetscValidScalarPointer(cpuarray,5);
   PetscValidPointer(v,7);
-  ierr = VecMPI_CUDA::creatempicupmwitharrays_async(comm,bs,n,N,cpuarray,gpuarray,v);CHKERRQ(ierr);
+  ierr = VecMPI_CUDA.creatempicupmwitharrays_async(comm,bs,n,N,cpuarray,gpuarray,v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 /*@C
-  VecCreateMPICUDAWithArray - Creates a parallel, array-style vector, where the user provides
-  the GPU array space to store the vector values.
-
+  VecCreateMPICUDAWithArray - Creates a parallel, array-style vector using CUDA, where the
+  user provides the device array space to store the vector values.
   Collective
 
   Input Parameters:
@@ -156,14 +150,8 @@ PetscErrorCode VecCreateMPICUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
 . v - the vector
 
   Notes:
-  Use VecDuplicate() or VecDuplicateVecs() to form additional vectors of the same type as an
-  existing vector.
-
-  If the user-provided array is NULL, then VecCUDAPlaceArray() can be used at a later stage to
-  SET the array for storing the vector values.
-
-  PETSc does NOT free the array when the vector is destroyed via VecDestroy(). The user should
-  not free the array until the vector is destroyed.
+  See VecCreateSeqCUDAWithArray() for further discussion, this routine shares identical
+  semantics.
 
   Level: intermediate
 
