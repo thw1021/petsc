@@ -57,7 +57,7 @@ private:
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_AUTO_RETURNS(VECSEQCUPM());
 
   // common core for min and max
-  template <typename TupleFuncT, typename UnaryFuncT>
+  template <typename TupleFuncT,typename UnaryFuncT>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(TupleFuncT&&,UnaryFuncT&&,PetscReal,Vec,PetscInt*,PetscReal*));
   // common core for pointwise binary and pointwise unary thrust functions
   template <typename BinaryFuncT>
@@ -135,13 +135,6 @@ public:
     }                                                                           \
   } while (0)
 
-// rocThrust has no par_nosync
-#if defined(__NVCC__) && !PetscDefined(USE_DEBUG) && (THRUST_VERSION >= 101600)
-#  define THRUST_ASYNC_T par_nosync
-#else
-#  define THRUST_ASYNC_T par
-#endif
-
 namespace
 {
 
@@ -154,9 +147,21 @@ struct PetscLogGpuTime_
 
 } // anonymous namespace
 
-#define THRUST_CALL(thrust_func,stream,...) [&]{                                   \
-    const auto timer = PetscLogGpuTime_{};                                         \
-    return thrust_func(thrust::cuda::THRUST_ASYNC_T.on(stream),__VA_ARGS__);       \
+#if PetscDefined(USING_NVCC)
+#  if !PetscDefined(USE_DEBUG) && (THRUST_VERSION >= 101600)
+#    define thrust_call_par_on(func,s,...) func(thrust::cuda::par_nosync.on(s),__VA_ARGS__)
+#  else
+#    define thrust_call_par_on(func,s,...) func(thrust::cuda::par.on(s),__VA_ARGS__)
+#  endif
+#elif PetscDefined(USING_HCC) // rocThrust has no par_nosync
+#  define thrust_call_par_on(func,s,...)   func(thrust::hip::par.on(s),__VA_ARGS__)
+#else
+#  define thrust_call_par_on(func,s,...)   func(__VA_ARGS__)
+#endif
+
+#define THRUST_CALL(...) [&]{                   \
+    const auto timer = PetscLogGpuTime_{};      \
+    return thrust_call_par_on(__VA_ARGS__);     \
   }()
 
 template <Device::CUPM::DeviceType T>

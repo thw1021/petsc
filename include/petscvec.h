@@ -703,63 +703,63 @@ PETSC_EXTERN PetscErrorCode VecScatterFinalizeForGPU(VecScatter);
 #endif
 
 #define VEC_CUPM_NOT_CONFIGURED(impl) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"Must configure PETSc with " PetscStringize(impl) " support to use this routine")
-#if defined(PETSC_HAVE_CUDA)
-#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN FUNC_DECL
+#if PetscDefined(HAVE_CUDA)
+#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN PetscErrorCode FUNC_DECL;
 #else
-#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) static inline FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(cuda); }
+#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) static inline PetscErrorCode FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(cuda); }
 #endif /* PETSC_HAVE_CUDA */
 
 /* extra underscore here to make it line up with the cuda versions */
-#if defined(PETSC_HAVE_HIP)
-#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN FUNC_DECL
+#if PetscDefined(HAVE_HIP)
+#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN PetscErrorCode FUNC_DECL;
 #else
-#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) static inline FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(hip); }
+#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) static inline PetscErrorCode FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(hip); }
 #endif /* PETSC_HAVE_HIP */
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateSeqCUDA(MPI_Comm a,PetscInt b,Vec*c));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecCreateSeqHIP (MPI_Comm a,PetscInt b,Vec*c));
+VEC_CUDA_DECL_OR_STUB(VecCreateSeqCUDA(MPI_Comm a,PetscInt b,Vec*c))
+VEC_HIP__DECL_OR_STUB(VecCreateSeqHIP (MPI_Comm a,PetscInt b,Vec*c))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,Vec*e));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecCreateSeqHIPWithArray (MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,Vec*e));
+VEC_CUDA_DECL_OR_STUB(VecCreateSeqCUDAWithArray(MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,Vec*e))
+VEC_HIP__DECL_OR_STUB(VecCreateSeqHIPWithArray (MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,Vec*e))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,const PetscScalar*e,Vec*f));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecCreateSeqHIPWithArrays (MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,const PetscScalar*e,Vec*f));
+VEC_CUDA_DECL_OR_STUB(VecCreateSeqCUDAWithArrays(MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,const PetscScalar*e,Vec*f))
+VEC_HIP__DECL_OR_STUB(VecCreateSeqHIPWithArrays (MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,const PetscScalar*e,Vec*f))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateMPICUDA(MPI_Comm a,PetscInt b,PetscInt c,Vec*d));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecCreateMPIHIP (MPI_Comm a,PetscInt b,PetscInt c,Vec*d));
+VEC_CUDA_DECL_OR_STUB(VecCreateMPICUDA(MPI_Comm a,PetscInt b,PetscInt c,Vec*d))
+VEC_HIP__DECL_OR_STUB(VecCreateMPIHIP (MPI_Comm a,PetscInt b,PetscInt c,Vec*d))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateMPICUDAWithArray(MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,Vec*f));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecCreateMPIHIPWithArray (MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,Vec*f));
+VEC_CUDA_DECL_OR_STUB(VecCreateMPICUDAWithArray(MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,Vec*f))
+VEC_HIP__DECL_OR_STUB(VecCreateMPIHIPWithArray (MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,Vec*f))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCreateMPICUDAWithArrays(MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,const PetscScalar*f,Vec*g));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecCreateMPIHIPWithArrays (MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,const PetscScalar*f,Vec*g));
+VEC_CUDA_DECL_OR_STUB(VecCreateMPICUDAWithArrays(MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,const PetscScalar*f,Vec*g))
+VEC_HIP__DECL_OR_STUB(VecCreateMPIHIPWithArrays (MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,const PetscScalar*f,Vec*g))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAGetArray(Vec a,PetscScalar**b));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPGetArray (Vec a,PetscScalar**b));
+VEC_CUDA_DECL_OR_STUB(VecCUDAGetArray(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPGetArray (Vec a,PetscScalar**b))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDARestoreArray(Vec a,PetscScalar**b));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPRestoreArray (Vec a,PetscScalar**b));
+VEC_CUDA_DECL_OR_STUB(VecCUDARestoreArray(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPRestoreArray (Vec a,PetscScalar**b))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAGetArrayRead(Vec a,const PetscScalar**b));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPGetArrayRead (Vec a,const PetscScalar**b));
+VEC_CUDA_DECL_OR_STUB(VecCUDAGetArrayRead(Vec a,const PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPGetArrayRead (Vec a,const PetscScalar**b))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDARestoreArrayRead(Vec a,const PetscScalar**b));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPRestoreArrayRead (Vec a,const PetscScalar**b));
+VEC_CUDA_DECL_OR_STUB(VecCUDARestoreArrayRead(Vec a,const PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPRestoreArrayRead (Vec a,const PetscScalar**b))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAGetArrayWrite(Vec a,PetscScalar**b));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPGetArrayWrite (Vec a,PetscScalar**b));
+VEC_CUDA_DECL_OR_STUB(VecCUDAGetArrayWrite(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPGetArrayWrite (Vec a,PetscScalar**b))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDARestoreArrayWrite(Vec a,PetscScalar**b));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPRestoreArrayWrite (Vec a,PetscScalar**b));
+VEC_CUDA_DECL_OR_STUB(VecCUDARestoreArrayWrite(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPRestoreArrayWrite (Vec a,PetscScalar**b))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAPlaceArray(Vec a,const PetscScalar b[]));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPPlaceArray (Vec a,const PetscScalar b[]));
+VEC_CUDA_DECL_OR_STUB(VecCUDAPlaceArray(Vec a,const PetscScalar b[]))
+VEC_HIP__DECL_OR_STUB(VecHIPPlaceArray (Vec a,const PetscScalar b[]))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAReplaceArray(Vec a,const PetscScalar b[]));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPReplaceArray (Vec a,const PetscScalar b[]));
+VEC_CUDA_DECL_OR_STUB(VecCUDAReplaceArray(Vec a,const PetscScalar b[]))
+VEC_HIP__DECL_OR_STUB(VecHIPReplaceArray (Vec a,const PetscScalar b[]))
 
-VEC_CUDA_DECL_OR_STUB(PetscErrorCode VecCUDAResetArray(Vec a));
-VEC_HIP__DECL_OR_STUB(PetscErrorCode VecHIPResetArray (Vec a));
+VEC_CUDA_DECL_OR_STUB(VecCUDAResetArray(Vec a))
+VEC_HIP__DECL_OR_STUB(VecHIPResetArray (Vec a))
 
 #undef VEC_CUPM_NOT_CONFIGURED
 #undef VEC_CUDA_DECL_OR_STUB
