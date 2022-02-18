@@ -36,8 +36,10 @@ cdef extern from * nogil:
     PetscMatType MATSHELL
     PetscMatType MATDENSE
     PetscMatType   MATSEQDENSE
-    PetscMatType   MATSEQDENSECUDA
     PetscMatType   MATMPIDENSE
+    PetscMatType MATDENSECUDA
+    PetscMatType   MATSEQDENSECUDA
+    PetscMatType   MATMPIDENSECUDA
     PetscMatType MATELEMENTAL
     PetscMatType MATBAIJ
     PetscMatType   MATSEQBAIJ
@@ -370,6 +372,9 @@ cdef extern from * nogil:
     int MatMultHermitian"MatMultHermitianTranspose"(PetscMat,PetscVec,PetscVec)
     int MatMultHermitianAdd"MatMultHermitianTransposeAdd"(PetscMat,PetscVec,PetscVec,PetscVec)
 
+    int MatBindToCPU(PetscMat,PetscBool)
+    int MatBoundToCPU(PetscMat,PetscBool*)
+
     int MatSOR(PetscMat,PetscVec,PetscReal,PetscMatSORType,PetscReal,PetscInt,PetscInt,PetscVec)
 
     int MatGetOrdering(PetscMat,PetscMatOrderingType,PetscIS*,PetscIS*)
@@ -449,11 +454,30 @@ cdef extern from * nogil:
     int MatScaleSystem(PetscMat,PetscVec,PetscVec)
     int MatUnScaleSystem(PetscMat,PetscVec,PetscVec)
 
+    int MatDenseSetLDA(PetscMat,PetscInt)
+    int MatDenseGetLDA(PetscMat,PetscInt*)
     int MatDenseGetLocalMatrix(PetscMat,PetscMat*)
     int MatDenseGetArray(PetscMat,PetscScalar*[])
     int MatDenseRestoreArray(PetscMat,PetscScalar*[])
+    int MatDenseGetArrayWrite(PetscMat,PetscScalar*[])
+    int MatDenseRestoreArrayWrite(PetscMat,PetscScalar*[])
+    int MatDenseGetArrayRead(PetscMat,const PetscScalar*[])
+    int MatDenseRestoreArrayRead(PetscMat,const PetscScalar*[])
+    int MatDenseGetColumnVec(PetscMat,PetscInt,PetscVec*)
+    int MatDenseRestoreColumnVec(PetscMat,PetscInt,PetscVec*)
+    int MatDenseGetColumnVecRead(PetscMat,PetscInt,PetscVec*)
+    int MatDenseRestoreColumnVecRead(PetscMat,PetscInt,PetscVec*)
+    int MatDenseGetColumnVecWrite(PetscMat,PetscInt,PetscVec*)
+    int MatDenseRestoreColumnVecWrite(PetscMat,PetscInt,PetscVec*)
+    int MatDenseCUDAGetArray(PetscMat,PetscScalar*[])
+    int MatDenseCUDARestoreArray(PetscMat,PetscScalar*[])
+    int MatDenseCUDAGetArrayWrite(PetscMat,PetscScalar*[])
+    int MatDenseCUDARestoreArrayWrite(PetscMat,PetscScalar*[])
+    int MatDenseCUDAGetArrayRead(PetscMat,const PetscScalar*[])
+    int MatDenseCUDARestoreArrayRead(PetscMat,const PetscScalar*[])
 
 cdef extern from "custom.h" nogil:
+    int MatGetCurrentMemType(PetscMat,PetscMemType*)
     int MatIsPreallocated(PetscMat,PetscBool*)
     int MatHasPreallocationAIJ(PetscMat,PetscBool*,PetscBool*,PetscBool*,PetscBool*)
 
