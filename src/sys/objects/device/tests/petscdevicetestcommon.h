@@ -108,6 +108,24 @@
     );                                                                                         \
   } while (0)
 
+#define CHKERRDEVICE(ierr) do {                                                                \
+    PetscErrorCode device_ierr_;                                                               \
+    if (PetscDefined(USE_DEBUG)) {                                                             \
+      PetscBool ismain = PETSC_TRUE;                                                           \
+      device_ierr_ = PetscStrcmp(PETSC_FUNCTION_NAME,"main",&ismain);CHKERRQ(device_ierr_);    \
+      PetscCheck(ismain,PETSC_COMM_SELF,PETSC_ERR_PLIB,"CHKERRDEVICE() should only be used from main() not %s",PETSC_FUNCTION_NAME); \
+    }                                                                                          \
+    device_ierr_ = ierr;                                                                       \
+    if (PetscDefined(HAVE_DEVICE)) CHKERRQ(device_ierr_);                                      \
+    else if (PetscUnlikely(device_ierr_)) {                                                    \
+      /* don't use PETSC_FUNCTION_NAME, if PetscError() gets "main" it calls MPI_Abort() */    \
+      PetscError(PETSC_COMM_SELF,__LINE__,"MAIN",__FILE__,device_ierr_,PETSC_ERROR_REPEAT," "); \
+      /* must at least try to shut down MPI first though */                                    \
+      MPI_Finalize();                                                                          \
+      return 0;                                                                                \
+    }                                                                                          \
+  } while (0)
+
 /*  This header file should NEVER #include another file and should be the last thing included
  *  in the test file. This is to guard against ill-formed PetscDevice header files!
  */
