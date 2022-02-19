@@ -796,8 +796,8 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
     for (PetscInt grid=0;grid<ctx->num_grids;grid++) {
       PetscReal radius = ctx->radius[grid];
       if (!ctx->sphere) {
-        PetscInt       cells[] = {2,2,2};
-        PetscReal      lo[] = {-radius,-radius,-radius}, hi[] = {radius,radius,radius};
+        PetscInt       cells[] = {1,1,1};
+        PetscReal      lo[] = {0,0,0}, hi[] = {radius,radius,radius};
         DMBoundaryType periodicity[3] = {DM_BOUNDARY_NONE, dim==2 ? DM_BOUNDARY_NONE : DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
         if (dim==2) { lo[0] = 0; cells[0] /* = cells[1] */ = 1; }
         ierr = DMPlexCreateBoxMesh(comm_self, dim, PETSC_FALSE, cells, lo, hi, periodicity, PETSC_TRUE, &ctx->plex[grid]);CHKERRQ(ierr); // todo: make composite and create dm[grid] here
@@ -1626,7 +1626,8 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim, IS grid_batch_is_inv[], 
                   PetscReal sum = 0;
                   const PetscInt ff = f;
                   maps[grid].gIdx[eidx][fieldA][q] = -maps[grid].num_reduced - 1; // store (-)index: id = -(idx+1): idx = -id - 1
-                  do {  // constraints are continous in Plex - exploit that here
+
+                  do {  // constraints are continuous in Plex - exploit that here
                     int ii; // get 'scale'
                     for (ii = 0, pointMaps[maps[grid].num_reduced][jj].scale = 0; ii < maps[grid].num_face; ii++) { // sum row of outer product to recover vector value
                       if (ff + ii < numindices) { // 3D has Q and Q^2 interps so might run off end. We could test that elMat[f*numindices + ff + ii] > 0, and break if not
@@ -1644,9 +1645,10 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim, IS grid_batch_is_inv[], 
                       }
                     }
                   } while (++jj < maps[grid].num_face && ++f < numindices); // jj is incremented if we hit the end
-                  while (jj++ < maps[grid].num_face) {
+                  while (jj < maps[grid].num_face) {
                     pointMaps[maps[grid].num_reduced][jj].scale = 0;
                     pointMaps[maps[grid].num_reduced][jj].gid = -1;
+                    jj++;
                   }
                   if (PetscAbs(sum-1.0) > 10*PETSC_MACHINE_EPSILON) { // debug
                     int       d,f;
