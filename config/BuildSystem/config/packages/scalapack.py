@@ -3,8 +3,8 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit        = 'v2.1.0-p2'  # modification to avoid calling zdotc, zladiv on MacOS
-    self.download         = ['git://https://bitbucket.org/petsc/pkg-scalapack','https://bitbucket.org/petsc/pkg-scalapack/get/'+self.gitcommit+'.tar.gz']
+    self.gitcommit        = '0e9a4b19d1e928f2c9df6e1042f5304e476e5e56'  # modification to avoid calling zdotc, zladiv on MacOS
+    self.download         = ['git://https://bitbucket.org/prj-/pkg-scalapack','https://bitbucket.org/prj-/pkg-scalapack/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames = ['petsc-pkg-scalapack','scalapack']
     self.includes         = []
     self.liblist          = [['libscalapack.a'],
