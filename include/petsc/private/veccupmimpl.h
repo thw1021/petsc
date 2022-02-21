@@ -100,7 +100,7 @@ public:
     }
   }
 
-  PETSC_NODISCARD auto value() const PETSC_DECLTYPE_NOEXCEPT_RETURNS(v_);
+  PETSC_NODISCARD auto value() const PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(v_);
 
   ~UseCUPMHostAlloc_() noexcept
   {

@@ -361,6 +361,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeHost);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeDevice);
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE(MemoryTypeManaged);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(EventDisableTiming);
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(GetErrorName);
@@ -458,6 +459,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   // see
   // https://github.com/ROCm-Developer-Tools/HIP/blob/develop/include/hip/hip_runtime_api.h#L156
   PETSC_CUPM_ALIAS_INTEGRAL_VALUE_COMMON(MemoryTypeManaged,MemoryTypeUnified);
+  PETSC_CUPM_ALIAS_INTEGRAL_VALUE(EventDisableTiming);
 
   // error functions
   PETSC_CUPM_ALIAS_FUNCTION(GetErrorName);
@@ -551,6 +553,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmMemoryTypeHost;                                  \
   using base_name::cupmMemoryTypeDevice;                                \
   using base_name::cupmMemoryTypeManaged;                               \
+  using base_name::cupmEventDisableTiming;                              \
   /* functions */                                                       \
   using base_name::cupmGetErrorName;                                    \
   using base_name::cupmGetErrorString;                                  \

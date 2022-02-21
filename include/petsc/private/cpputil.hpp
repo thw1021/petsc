@@ -195,11 +195,11 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 #define PETSC_DECLTYPE_AUTO_RETURNS(...)     PETSC_DECLTYPE_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
 #define PETSC_NOEXCEPT_AUTO(...)             noexcept(noexcept(__VA_ARGS__))
 #define PETSC_DECLTYPE_NOEXCEPT_AUTO(...)    PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
-#define PETSC_DECLTYPE_NOEXCEPT_RETURNS(...) PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+#define PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(...) PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
 
 #define PETSC_ALIAS_FUNCTION_WITH_PROLOGUE_AND_EPILOGUE_(alias,original,dispatch,prologue,epilogue) \
   template <typename... Args> static inline auto dispatch(int,Args&&... args)                  \
-    PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::forward<Args>(args)...));                    \
+    PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(original(std::forward<Args>(args)...));               \
   template <typename... Args> static inline int dispatch(char,Args...)                         \
   {                                                                                            \
     using namespace Petsc::util;                                                               \
@@ -265,9 +265,9 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
   static_assert(std::is_integral<decltype(N)>::value && ((N) >= 0),"");                        \
   template <typename TupleT, std::size_t... idx>                                               \
   static inline auto gobblefn(TupleT&& tuple, Petsc::util::index_sequence<idx...>)             \
-    PETSC_DECLTYPE_NOEXCEPT_RETURNS(original(std::get<idx>(tuple)...));                        \
+    PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(original(std::get<idx>(tuple)...));                   \
   template <typename... Args> PETSC_NODISCARD auto alias(Args&&... args)                       \
-    PETSC_DECLTYPE_NOEXCEPT_RETURNS(                                                           \
+    PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(                                                      \
       gobblefn(                                                                                \
         std::forward_as_tuple(args...),Petsc::util::make_index_sequence<sizeof...(Args)-(N)>{} \
       )                                                                                        \

@@ -852,11 +852,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
     ierr = PetscDeviceContextFork(dctx,n_sub,&subctx);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
     for (auto i = PetscInt{0}; i < nv; ++i) {
+      cupmBlasError_t  cberr;
       cupmBlasHandle_t handle;
 
-      ierr = PetscDeviceContextGetBLASHandle_Internal(subctx[i%n_sub],&handle);CHKERRQ(ierr);
-      ierr = cupmBlasSetPointerMode(handle,mode);CHKERRQ(ierr);
-      auto cberr = cupmBlasXdot(handle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,cupmScalarCast(z+i));CHKERRCUPMBLAS(cberr);
+      ierr  = PetscDeviceContextGetBLASHandle_Internal(subctx[i%n_sub],&handle);CHKERRQ(ierr);
+      cberr = cupmBlasSetPointerMode(handle,mode);CHKERRCUPMBLAS(cberr);
+      cberr = cupmBlasXdot(handle,n,DeviceArrayRead(dctx,yin[i]),1,xptr,1,cupmScalarCast(z+i));CHKERRCUPMBLAS(cberr);
     }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscDeviceContextJoin(dctx,n_sub,PETSC_DEVICE_CONTEXT_JOIN_DESTROY,&subctx);CHKERRQ(ierr);
