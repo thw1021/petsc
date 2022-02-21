@@ -379,6 +379,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
+  PETSC_CUPM_ALIAS_FUNCTION(EventCreateWithFlags);
   PETSC_CUPM_ALIAS_FUNCTION(EventDestroy);
   PETSC_CUPM_ALIAS_FUNCTION(EventRecord);
   PETSC_CUPM_ALIAS_FUNCTION(EventSynchronize);
@@ -477,6 +478,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
 
   // stream management
   PETSC_CUPM_ALIAS_FUNCTION(EventCreate);
+  PETSC_CUPM_ALIAS_FUNCTION(EventCreateWithFlags);
   PETSC_CUPM_ALIAS_FUNCTION(EventDestroy);
   PETSC_CUPM_ALIAS_FUNCTION(EventRecord);
   PETSC_CUPM_ALIAS_FUNCTION(EventSynchronize);
@@ -566,6 +568,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmSetDeviceFlags;                                  \
   using base_name::cupmPointerGetAttributes;                            \
   using base_name::cupmEventCreate;                                     \
+  using base_name::cupmEventCreateWithFlags;                            \
   using base_name::cupmEventDestroy;                                    \
   using base_name::cupmEventRecord;                                     \
   using base_name::cupmEventSynchronize;                                \

@@ -163,7 +163,7 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode query(PetscDeviceContext,PetscBool*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode waitForContext(PetscDeviceContext,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode synchronize(PetscDeviceContext));
-  template <typename>
+  template <typename Handle_t>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getHandle(PetscDeviceContext,void*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode beginTimer(PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*));
@@ -227,7 +227,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[util::integral_value(dctx->streamType)]);
     break;
   }
-  if (!dci->event) {cerr = cupmEventCreate(&dci->event,cupmEventDisableTiming);CHKERRCUPM(cerr);}
+  if (!dci->event) {
+    cerr = cupmEventCreateWithFlags(&dci->event,cupmEventDisableTiming);CHKERRCUPM(cerr);
+  }
 #if PetscDefined(USE_DEBUG)
   dci->timerInUse = PETSC_FALSE;
 #endif
