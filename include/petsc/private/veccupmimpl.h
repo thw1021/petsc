@@ -283,6 +283,16 @@ public:
     return "invalid";
   }
 
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 PetscRandomType PETSCDEVICERAND())
+  {
+    switch (T) {
+    case Device::CUPM::DeviceType::CUDA: return PETSCCURAND;
+    case Device::CUPM::DeviceType::HIP:  return PETSCRANDER48; // REVIEW ME: HIP default rng?
+    }
+    PetscUnreachable();
+    return "invalid";
+  }
+
   PETSC_CXX_COMPAT_DECL(PetscErrorCode CUPMBlasIntCast(PetscInt x, cupmBlasInt_t *y))
   {
     using petsc_type = decltype(x);
@@ -935,6 +945,23 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::PlaceArray_CUPMBase(Vec 
     }                                           \
   } while (0)
 
+namespace
+{
+
+PETSC_CXX_COMPAT_DECL(PetscErrorCode ChangeDefaultRandType(PetscRandomType target, char **ptr))
+{
+  PetscFunctionBegin;
+  if (std::strcmp(target,*ptr)) {
+    PetscErrorCode ierr;
+
+    ierr = PetscFree(*ptr);CHKERRQ(ierr);
+    ierr = PetscStrallocpy(target,ptr);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+} // anonymous namespace
+
 // v->ops->bindtocpu
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v, PetscBool usehost))
@@ -943,18 +970,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v
 
   PetscFunctionBegin;
   v->boundtocpu = usehost;
-  /* default random number generator */
-  if (v->defaultrandtype) {ierr = PetscFree(v->defaultrandtype);CHKERRQ(ierr);}
   if (usehost) {
     PetscDeviceContext dctx;
 
     ierr = GetHandles_(&dctx);CHKERRQ(ierr);
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(PETSCRANDER48,&v->defaultrandtype);CHKERRQ(ierr);
-  } else {
-    // REVIEW ME: HIP default rng?
-    ierr = PetscStrallocpy(PETSCCURAND,&v->defaultrandtype);CHKERRQ(ierr);
   }
+  ierr = ChangeDefaultRandType<T>(usehost ? PETSCRANDER48 : PETSCDEVICERAND(),&v->defaultrandtype);CHKERRQ(ierr);
   // set the base functions that are guaranteed to be the same for both
   v->ops->duplicate    = D::duplicate_async;
   v->ops->create       = D::create_async;
