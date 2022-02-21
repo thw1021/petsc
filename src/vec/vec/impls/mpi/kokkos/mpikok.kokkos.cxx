@@ -382,7 +382,7 @@ PetscErrorCode  VecCreateMPIKokkosWithArrays_Private(MPI_Comm comm,PetscInt bs,P
   PetscFunctionBegin;
   ierr = PetscKokkosInitializeCheck();CHKERRQ(ierr);
   if (n) {
-    PetscCheck(harray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"harray cannot be NULL");
+    PetscValidScalarPointer(harray,5);
     PetscCheck(darray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"darray cannot be NULL");
   }
   if (std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) PetscCheck(harray == darray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"harray and darray must be the same");
