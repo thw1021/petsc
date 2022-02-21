@@ -1202,7 +1202,7 @@ PetscErrorCode  VecCreateSeqKokkosWithArrays_Private(MPI_Comm comm,PetscInt bs,P
   ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
   PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQKOKKOS on more than one process");
   if (n) {
-    PetscCheck(harray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"harray cannot be NULL");
+    PetscValidScalarPointer(harray,4);
     PetscCheck(darray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"darray cannot be NULL");
   }
   if (std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) PetscCheck(harray == darray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"harray and darray must be the same");
