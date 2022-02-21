@@ -18,6 +18,11 @@ struct _PC_FieldSplitLink {
   IS                is,is_col;
   PC_FieldSplitLink next,previous;
   PetscLogEvent     event;
+
+  /* Used only when setting coordinates with PCSetCoordinates */
+  PetscInt dim;
+  PetscInt ndofs;
+  PetscReal *coords;
 };
 
 typedef struct {
@@ -62,6 +67,7 @@ typedef struct {
   PetscBool                 diag_use_amat;          /* Whether to extract diagonal matrix blocks from Amat, rather than Pmat (weaker than -pc_use_amat) */
   PetscBool                 offdiag_use_amat;       /* Whether to extract off-diagonal matrix blocks from Amat, rather than Pmat (weaker than -pc_use_amat) */
   PetscBool                 detect;                 /* Whether to form 2-way split by finding zero diagonal entries */
+  PetscBool                 coordinates_set;        /* Whether PCSetCoordinates has been called */
 } PC_FieldSplit;
 
 /*
@@ -1090,6 +1096,35 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       if (!jac->suboptionsset) {ierr = KSPSetFromOptions(ilink->ksp);CHKERRQ(ierr);}
       i++;
       ilink = ilink->next;
+    }
+  }
+
+  /* Set coordinates to the sub PC objects whenever these are set */
+  if(jac->coordinates_set)
+  {
+    PC pc_coords;
+    if(jac->type == PC_COMPOSITE_SCHUR)
+    {
+      // Head is first block.
+      ierr = KSPGetPC(jac->head->ksp, &pc_coords);CHKERRQ(ierr);
+      ierr = PCSetCoordinates(pc_coords, jac->head->dim, jac->head->ndofs, jac->head->coords);CHKERRQ(ierr);
+      // Second one is Schur block, but its KSP object is in kspschur.
+      ierr = KSPGetPC(jac->kspschur, &pc_coords);CHKERRQ(ierr);
+      ierr = PCSetCoordinates(pc_coords, jac->head->next->dim, jac->head->next->ndofs, jac->head->next->coords);CHKERRQ(ierr);
+    }
+    else if(jac->type == PC_COMPOSITE_GKB)
+    {
+      PetscPrintf(MPI_COMM_WORLD, "Warning: Setting coordinates does nothing for the GKB Fieldpslit preconditioner");
+    }
+    else
+    {
+      ilink = jac->head;
+      while (ilink)
+      {
+        ierr = KSPGetPC(ilink->ksp, &pc_coords);CHKERRQ(ierr);
+        ierr = PCSetCoordinates(pc_coords, ilink->dim, ilink->ndofs, ilink->coords);CHKERRQ(ierr);
+        ilink = ilink->next;
+      }
     }
   }
 
@@ -2821,6 +2856,66 @@ static PetscErrorCode  PCFieldSplitSetBlockSize_FieldSplit(PC pc,PetscInt bs)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt nloc, PetscReal coords[])
+{
+  PetscErrorCode ierr;
+  PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
+  PC_FieldSplitLink ilink_current = jac->head;
+  PetscInt nmin, nmax, ii, ndofs;
+  PetscInt *owned_dofs; // Indexes owned by this processor
+  IS is_owned;
+
+  PetscFunctionBegin;
+
+  // Internal flag
+  jac->coordinates_set = PETSC_TRUE;
+  // Extract matrix ownership range to then compute subindexes for coordinates. This results in an IS object (is_owned).
+  // TODO: This would be simpler with a general MatGetOwnershipIS (currently supported only by Elemental and BLAS matrices).
+  ierr = MatGetOwnershipRange(pc->mat,&nmin,&nmax);CHKERRQ(ierr);
+  ndofs = nmax - nmin;
+  ierr = PetscMalloc1(ndofs, &owned_dofs); CHKERRQ(ierr);
+  for(PetscInt i=nmin;i<ndofs;++i)
+    owned_dofs[i] = nmin + i;
+  ierr = ISCreateGeneral(MPI_COMM_WORLD, ndofs, owned_dofs, PETSC_OWN_POINTER, &is_owned); CHKERRQ(ierr);
+
+  // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
+  ii=0;
+  while(ilink_current)
+  {
+    // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
+    IS is_coords;
+    PetscInt ndofs_block;
+    // Numbering of the dofs relevant to the current block
+    const PetscInt *block_dofs_enumeration;
+
+    // Setting drop to true for safety. It should make no difference.
+    ierr = ISEmbed(ilink_current->is, is_owned, PETSC_TRUE, &is_coords); CHKERRQ(ierr);
+    ierr = ISGetLocalSize(is_coords, &ndofs_block); CHKERRQ(ierr);
+
+    // Coordinates to be given to the current PC
+    PetscReal coords_block[dim*ndofs_block];
+    ierr = ISGetIndices(is_coords, &block_dofs_enumeration); CHKERRQ(ierr);
+
+    // Having the indices computed and the memory allocated, we can copy the relevant coords and set them to the subPC.
+    for(PetscInt dof=0;dof<ndofs_block;++dof)
+      for(PetscInt d=0;d<dim;++d)
+        {
+          coords_block[dim*dof + d] = coords[dim * block_dofs_enumeration[dof] + d];
+        }
+    ilink_current->dim = dim;
+    ilink_current->ndofs = ndofs_block;
+    ierr = PetscMalloc1(ndofs_block * dim, &(ilink_current->coords));
+    ierr = PetscArraycpy(ilink_current->coords, coords_block, ndofs_block * dim);CHKERRQ(ierr);
+    ierr = ISRestoreIndices(is_coords, &block_dofs_enumeration); CHKERRQ(ierr);
+    ierr = ISDestroy(&is_coords); CHKERRQ(ierr);
+    ilink_current = ilink_current->next;
+    ++ii;
+  }
+  // owned_dofs gets destroyed here as well due to PETSC_OWN_POINTER.
+  ierr = ISDestroy(&is_owned); CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    PCFieldSplitSetType - Sets the type of fieldsplit preconditioner.
 
@@ -3114,6 +3209,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_FieldSplit(PC pc)
   jac->gkbnu              = 1;
   jac->gkbmaxit           = 100;
   jac->gkbmonitor         = PETSC_FALSE;
+  jac->coordinates_set    = PETSC_FALSE;
 
   pc->data = (void*)jac;
 
@@ -3133,5 +3229,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_FieldSplit(PC pc)
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSetType_C",PCFieldSplitSetType_FieldSplit);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitSetBlockSize_C",PCFieldSplitSetBlockSize_FieldSplit);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)pc,"PCFieldSplitRestrictIS_C",PCFieldSplitRestrictIS_FieldSplit);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)pc,"PCSetCoordinates_C",PCSetCoordinates_FieldSplit);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
