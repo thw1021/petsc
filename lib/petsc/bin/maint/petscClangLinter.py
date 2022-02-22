@@ -5,66 +5,75 @@ Created on Mon Mar 22 17:05:39 2021
 
 @author: jacobfaibussowitsch
 """
-import os,sys,enum
-import multiprocessing as mp
-import multiprocessing.queues
 try:
   import clang.cindex as clx
-  import petscClangLinterUtil
 except ModuleNotFoundError as mnfe:
   if mnfe.name == "clang":
     raise RuntimeError("Must run e.g. 'python -m pip install clang' to use linter") from mnfe
-  elif mnfe.name == "petscClangLinterUtil":
-    raise RuntimeError("Must run the linter from ${PETSC_DIR}/lib/petsc/bin/maint/") from mnfe
+  raise mnfe # whatever it is they should know about it
 
-"""
-clang.cindex.TranslationUnit does not have all latest flags, but we prefix
-with P_ just in case
-
-see: https://clang.llvm.org/doxygen/group__CINDEX__TRANSLATION__UNIT.html#gab1e4965c1ebe8e41d71e90203a723fe9
-"""
-P_CXTranslationUnit_None                                 = 0x0
-P_CXTranslationUnit_DetailedPreprocessingRecord          = 0x01
-P_CXTranslationUnit_Incomplete                           = 0x02
-P_CXTranslationUnit_PrecompiledPreamble                  = 0x04
-P_CXTranslationUnit_CacheCompletionResults               = 0x08
-P_CXTranslationUnit_ForSerialization                     = 0x10
-P_CXTranslationUnit_SkipFunctionBodies                   = 0x40
-P_CXTranslationUnit_IncludeBriefCommentsInCodeCompletion = 0x80
-P_CXTranslationUnit_CreatePreambleOnFirstParse           = 0x100
-P_CXTranslationUnit_KeepGoing                            = 0x200
-P_CXTranslationUnit_SingleFileParse                      = 0x400
-P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble    = 0x800
-P_CXTranslationUnit_IncludeAttributedTypes               = 0x1000
-P_CXTranslationUnit_VisitImplicitAttributes              = 0x2000
-P_CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles     = 0x4000
-P_CXTranslationUnit_RetainExcludedConditionalBlocks      = 0x8000
+import os
+import sys
+import enum
+import itertools
+import collections
+import ctypes
+import difflib
+import re
+import weakref
+import functools
+import textwrap
+if sys.version_info < (3,4):
+  raise RuntimError("Need python 3.4 for textwrap.shorten()")
+import multiprocessing as mp
+import multiprocessing.queues
+import petscClangLinterUtil as pclu
+from petscClangLinterUtil import (
+  CXTranslationUnit,Scope,PetscSourceLocation,PetscSourceRange,
+  PetscCXCursorAndRangeVisitor,CXCursorAndRangeVisitorCallBackProto,PetscPath,ParsingError,
+  Diagnostic,DiagnosticManager
+)
 
 # clang options used for parsing files
-baseClangOptions = (P_CXTranslationUnit_PrecompiledPreamble |
-                    P_CXTranslationUnit_SkipFunctionBodies |
-                    P_CXTranslationUnit_LimitSkipFunctionBodiesToPreamble)
+baseClangOptions = (
+  CXTranslationUnit.PrecompiledPreamble |
+  CXTranslationUnit.SkipFunctionBodies  |
+  CXTranslationUnit.LimitSkipFunctionBodiesToPreamble
+)
 
 # clang options for creating the precompiled megaheader
-basePCHClangOptions  = (P_CXTranslationUnit_CreatePreambleOnFirstParse |
-                        P_CXTranslationUnit_Incomplete |
-                        P_CXTranslationUnit_ForSerialization |
-                        P_CXTranslationUnit_KeepGoing)
+basePCHClangOptions = (
+  CXTranslationUnit.CreatePreambleOnFirstParse |
+  CXTranslationUnit.Incomplete                 |
+  CXTranslationUnit.ForSerialization           |
+  CXTranslationUnit.KeepGoing
+)
 
 # Cursors that may be attached to function-like usage
 funcCallCursors = {clx.CursorKind.FUNCTION_DECL,clx.CursorKind.CALL_EXPR}
 
-# Cursors that indicate change of logical scope
-scopeCursors    = {clx.CursorKind.COMPOUND_STMT}
-
 # Cursors that may be attached to mathemateical operations or types
-mathCursors     = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.UNARY_OPERATOR,clx.CursorKind.BINARY_OPERATOR}
+mathCursors     = {
+  clx.CursorKind.INTEGER_LITERAL,
+  clx.CursorKind.UNARY_OPERATOR,
+  clx.CursorKind.BINARY_OPERATOR
+}
 
 # Cursors that contain base literal types
-literalCursors  = {clx.CursorKind.INTEGER_LITERAL,clx.CursorKind.STRING_LITERAL}
+literalCursors  = {
+  clx.CursorKind.INTEGER_LITERAL,
+  clx.CursorKind.STRING_LITERAL
+}
 
 # Cursors that may be attached to casting
-castCursors     = {clx.CursorKind.CSTYLE_CAST_EXPR,clx.CursorKind.CXX_STATIC_CAST_EXPR,clx.CursorKind.CXX_DYNAMIC_CAST_EXPR,clx.CursorKind.CXX_REINTERPRET_CAST_EXPR,clx.CursorKind.CXX_CONST_CAST_EXPR,clx.CursorKind.CXX_FUNCTIONAL_CAST_EXPR}
+castCursors     = {
+  clx.CursorKind.CSTYLE_CAST_EXPR,
+  clx.CursorKind.CXX_STATIC_CAST_EXPR,
+  clx.CursorKind.CXX_DYNAMIC_CAST_EXPR,
+  clx.CursorKind.CXX_REINTERPRET_CAST_EXPR,
+  clx.CursorKind.CXX_CONST_CAST_EXPR,
+  clx.CursorKind.CXX_FUNCTIONAL_CAST_EXPR
+}
 
 # Cursors that may be attached when types are converted
 convertCursors  = castCursors|{clx.CursorKind.UNEXPOSED_EXPR}
@@ -75,7 +84,11 @@ functionTypes   = {clx.TypeKind.FUNCTIONPROTO,clx.TypeKind.FUNCTIONNOPROTO}
 
 # General Array types, note this doesn't contain the pointer type since that is usually handled
 # differently
-arrayTypes      = {clx.TypeKind.INCOMPLETEARRAY,clx.TypeKind.CONSTANTARRAY,clx.TypeKind.VARIABLEARRAY}
+arrayTypes      = {
+  clx.TypeKind.INCOMPLETEARRAY,
+  clx.TypeKind.CONSTANTARRAY,
+  clx.TypeKind.VARIABLEARRAY
+}
 
 # Specific types
 enumTypes   = {clx.TypeKind.ENUM}
@@ -83,8 +96,20 @@ enumTypes   = {clx.TypeKind.ENUM}
 boolTypes   = enumTypes|{clx.TypeKind.BOOL}
 charTypes   = {clx.TypeKind.CHAR_S,clx.TypeKind.UCHAR}
 mpiIntTypes = {clx.TypeKind.INT}
-intTypes    = enumTypes|mpiIntTypes|{clx.TypeKind.USHORT,clx.TypeKind.SHORT,clx.TypeKind.UINT,clx.TypeKind.LONG,clx.TypeKind.LONGLONG,clx.TypeKind.ULONGLONG}
-realTypes   = {clx.TypeKind.FLOAT,clx.TypeKind.DOUBLE,clx.TypeKind.LONGDOUBLE,clx.TypeKind.FLOAT128}
+intTypes    = enumTypes|mpiIntTypes|{
+  clx.TypeKind.USHORT,
+  clx.TypeKind.SHORT,
+  clx.TypeKind.UINT,
+  clx.TypeKind.LONG,
+  clx.TypeKind.LONGLONG,
+  clx.TypeKind.ULONGLONG
+}
+realTypes   = {
+  clx.TypeKind.FLOAT,
+  clx.TypeKind.DOUBLE,
+  clx.TypeKind.LONGDOUBLE,
+  clx.TypeKind.FLOAT128
+}
 scalarTypes = realTypes|{clx.TypeKind.COMPLEX}
 
 """
@@ -166,43 +191,1233 @@ classIdMap = {
 }
 
 # directory names to exclude from processing, case sensitive
-excludeDirNames     = {"tests","tutorials","f90-mod","f90-src","f90-custom","output","input","python","fsrc","ftn-auto","ftn-custom","f2003-src","ftn-kernels","benchmarks","docs"}
+excludeDirNames     = {"tests","tutorials","output","input","python","fsrc","f90-mod","f90-src","f90-custom","ftn-auto","ftn-custom","f2003-src","ftn-kernels","benchmarks","docs","binding","contrib"}
 # directory suffixes to exclude from processing, case sensitive
-excludeDirSuffixes  = (".dSYM",)
+excludeDirSuffixes  = (".dSYM",".DS_Store")
 # file extensions to process, case sensitve
-allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc")
+allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc",".h",".hpp")
 
-class QueueSignal(enum.IntEnum):
-  __doc__="""
-  Various signals to indicate return type on the data queue from child processes
+class PetscDocStringBase(object):
+  @staticmethod
+  def diagnosticFlag(text,prefix="doc"):
+    if isinstance(text,str):
+      return collections.deque((prefix,text) if prefix == "doc" else ("doc",prefix,text))
+    if not isinstance(text,collections.deque):
+      text = collections.deque(text)
+    if not text[0].startswith(prefix):
+      text.appendleft(prefix)
+    return text
+
+
+class DescribableItem(object):
+  __slots__ = "text","prefix","arg","description","sep"
+
+  def __init__(self,raw,prefixes=None,sep="-"):
+    text = raw.strip()
+    prefix,arg,descr = self.splitParam(text,prefixes,sep)
+    if not descr:
+      found = False
+      for sep in (",","="):
+        _,arg,descr = self.splitParam(text,prefixes,sep)
+        if descr:
+          found = True
+          break
+      if not found:
+        sep = " "
+        if prefix:
+          arg = text.split(prefix,maxsplit=1)[1].strip()
+        else:
+          arg,descr = text.split(maxsplit=1)
+    self.text        = raw
+    self.prefix      = prefix
+    self.sep         = sep
+    self.arg         = arg
+    self.description = descr
+    return
+
+  @staticmethod
+  def splitParam(text,prefixes,char):
+    """
+    retrieve groups '([\.+-$])\s*([A-z,-]+) - (.*)'
+    """
+    stripped = text.strip()
+    if prefixes is None:
+      prefix = ""
+      rest   = stripped
+    else:
+      try:
+        prefix = next(filter(stripped.startswith,prefixes))
+      except StopIteration:
+        prefix = ""
+        rest   = stripped
+      else:
+        rest = stripped.split(prefix,maxsplit=1)[1].strip()
+      assert len(prefix) >= 1
+      assert rest
+    arg,sep,descr = rest.partition(char.join((" "," ")))
+    if not sep:
+      if rest.endswith(char):
+        arg = rest[:-1]
+      elif char+" " in rest:
+        arg,_,descr = rest.partition(char+" ")
+      # if we hit neither then there is no "-" in text, possible case of "[prefix] foo"?
+    return prefix,arg.strip(),descr.lstrip()
+
+  def arglen(self):
+    """
+    return a length l such that text[:l] returns all text up until the end of the arg name
+    """
+    arg = self.arg
+    return self.text.find(arg)+len(arg)
+
+
+@DiagnosticManager.register(
+  ("internal-linkage","Verify that symbols with internal linkage don't have docstrings"),
+  ("sowing-chars","Verify that sowing begin and end indicators match the symbol type"),
+  ("spacing","Verify that dosctrings occur immediately above that which they describe"),
+  ("indentation","Verify that docstring text is correctly indented"),
+  ("section-spacing","Verify that there section headers are separated by at least 1 empty line"),
+  ("section-header-solitary","Verify that qualifying section headers are alone on their line"),
+  ("section-header-spelling","Verify section headers are correctly spelled"),
+  ("section-header-maybe-header","Check for lines that seem like they are supposed to be headers"),
+  ("section-header-fishy-header","Check for headers that seem like they should not be headers"),
+  ("section-barren","Check for sections containing a title and nothing else")
+)
+class PetscDocString(PetscDocStringBase):
   """
-  WARNING      = enum.auto()
-  UNIFIED_DIFF = enum.auto()
-  ERRORS_LEFT  = enum.auto()
-  ERRORS_FIXED = enum.auto()
-  EXIT_QUEUE   = enum.auto()
-
-class ParsingError(Exception):
-  __doc__="""
-  Mostly to just have a custom "something went wrong when trying to perform a check" to except
-  for rather than using a built-in type. These are errors that are meant to be caught and logged
-  rather than stopping execution alltogether.
-
-  This should make it so that actual errors aren't hidden.
+  Container to encapsulate a sowing docstring and retrieve various objects for it.
+  Essentially a PetscCursor for comments.
   """
-  pass
+  class Verdict(enum.IntEnum):
+    IS_HEADING_BUT_PROBABLY_SHOULDNT_BE = -1
+    NOT_HEADING                         = 0
+    IS_HEADING                          = 1
+    MAYBE_HEADING                       = 2
+
+
+  class SectionBase(object):
+    """Container for a single section of the docstring, has members:
+    'name'     - the name of this section
+    'required' - is this section required in the docstring
+    'titles'   - header-titles, i.e. "Input Parameter", or "Level", must be spelled correctly
+    'keywords' - keywords to help match an unknown title to a section
+    'raw'      - the raw text in the section
+    'extent'   - the SourceRange for the whole section
+    'lines'    - a tuple of each line of text and its SourceRange in the section
+    'items'    - a tuple of extracted tokens of interest, e.g. the level value, options parameters,
+                 function parameters, etc.
+    """
+    __slots__ = "name","required","titles","keywords","raw","extent","lines","items"
+
+    def __init__(self,name,required=False,keywords=None,titles=None):
+      assert isinstance(name,str)
+      if titles is None:
+        titles = (name.title(),)
+      if keywords is None:
+        keywords = (name.title(),)
+      self.name     = name
+      self.required = required
+      self.titles   = tuple(titles)
+      self.keywords = tuple(set(tuple(keywords)+self.titles))
+      self.clear()
+      return
+
+    def __str__(self):
+      return "\n".join([
+        "Type:   {}".format(type(self)),
+        "Name:   {}".format(self.name),
+        "Extent: {}".format(self.extent),
+      ])
+
+    def __bool__(self):
+      return bool(self.lines)
+
+
+    def clear(self):
+      self.raw    = ""
+      self.extent = None
+      self.lines  = []
+      self.items  = None
+      return
+
+    def fill(self,data):
+      assert len(data)
+      self.lines.extend(list(data))
+      self.raw    = "\n".join(s for _,s in self.lines)
+      self.extent = PetscSourceRange.fromLocations(self.lines[0][0].start,self.lines[-1][0].end)
+      return
+
+    def setup(self,docstring,inspectLine=None):
+      if not self:
+        if self.required:
+          diag = self.diags.section_header_missing
+          mess = "Required section '{}' not found".format(self.titles[0])
+          docstring.addErrorFromSourceRange(diag,mess,docstring.extent,highlight=False)
+        return
+
+      inspect   = inspectLine is not None
+      isHeading = docstring._getIsHeading(self)
+      seen      = collections.defaultdict(list)
+
+      for loc,line in self.lines:
+        if isHeading(line):
+          possibleHeader = line.split(":" if ":" in line else None,maxsplit=1)[0].strip()
+          seen[possibleHeader.casefold()].append(
+            docstring.makeSourceRange(possibleHeader,line,loc.start.line)
+          )
+        if inspect:
+          # let each section type determine if this line is useful
+          inspectLine(loc,line)
+
+      uniqueHeadDiag = self.diags.section_header_unique
+      for heading,where in seen.items():
+        if len(where) <= 1:
+          continue
+        lasti   = len(where)-1
+        srclist = []
+        nbefore = 2
+        nafter  = 0
+        for i,loc in enumerate(where):
+          startline = loc.start.line
+          if i:
+            nbefore = startline-prevLineBegin-1
+            if i == lasti:
+              nafter = 2
+          srclist.append(loc.formatted(numBeforeContext=nbefore,numAfterContext=nafter,trim=False))
+          prevLineBegin = startline
+        mess = "Multiple '{}' subheadings. Much like Highlanders, there can only be one:\n{}".format(self.transform(self.name),"\n".join(srclist))
+        docstring._linter.addErrorFromCursor(docstring.cursor,Diagnostic(uniqueHeadDiag,mess))
+      return
+
+    def barren(self):
+      lines = self.lines
+      return not self.items and sum(not line.strip() for _,line in lines) == len(lines)-1
+
+    @staticmethod
+    def transform(text):
+      return text.title()
+
+    @staticmethod
+    def checkIndentAllowed():
+      return True
+
+    @staticmethod
+    def diagnostic(flag,prefix):
+      return PetscDocStringBase.diagnosticFlag(flag,prefix=prefix)
+
+
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
+  class DefaultSection(SectionBase):
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"")
+
+
+  @DiagnosticManager.register(
+    ("section-header-missing",""),
+    ("section-header-unique",""),
+    ("matching-symbol-name","Verify that description matches the symbol name"),
+    ("missing-description","Verify that a synopsis has a description"),
+    ("wrong-description-separator","Verify that synopsis uses the right description separator"),
+    ("verbose-description","Verify that synopsis descriptions don't drone on and on")
+  )
+  class Synopsis(SectionBase):
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"synopsis")
+
+    def barren(self):
+      return False # synoposis is never barren
+
+    def setup(self,ds,*args,**kwargs):
+      cursorName = PetscCursor.getNameFromCursor(ds.cursor)
+      loName     = cursorName.casefold()
+      items      = [{"name" : (None,None), "synopsis" : []}]
+
+      class Inspector(object):
+        __slots__ = "foundDescription","foundSynopsis","isEnum","capturing"
+        def __init__(self,isEnum):
+          self.foundDescription = False
+          self.foundSynopsis    = False
+          self.isEnum           = isEnum
+          self.capturing        = False
+          return
+
+        def __call__(self,*args,**kwargs):
+          if not self.foundDescription:
+            self.description(*args,**kwargs)
+          if self.isEnum:
+            self.enum(*args,**kwargs)
+          elif not self.foundSynopsis:
+            self.synopsis(*args,**kwargs)
+          return
+
+        def description(self,loc,line):
+          """
+          Look for the "<NAME> - description" block in a synopsis
+          """
+          pre,dash,rest = line.partition("-")
+          if dash:
+            pass
+          elif loName in line.casefold():
+            pre  = cursorName
+            rest = line.split(cursorName,maxsplit=1)[1].strip()
+          else:
+            return
+          assert len(items) == 1
+          item = pre.strip()
+          items[0]["name"] = (ds.makeSourceRange(item,line,loc.start.line),item)
+          self.foundDescription = True
+          return
+
+        def synopsis(self,loc,line):
+          """
+          Look for the Synopsis: heading and block in a synopsis
+          """
+          lstrp = line.strip()
+          if "synopsis:" in lstrp.casefold():
+            self.capturing = True
+          if self.capturing:
+            # reached the end of the synopsis block
+            if not lstrp:
+              self.foundSynopsis = True
+              self.capturing     = False
+              return
+            items[0]["synopsis"].append((ds.makeSourceRange(lstrp,line,loc.start.line),line))
+          return
+
+        def enum(self,loc,line):
+          lstr = line.lstrip()
+          # check that "-" is in the line since some people like to use entire blocks of $'s
+          # to describe a single enum value...
+          if lstr.startswith("$") and "-" in lstr:
+            assert len(items) # we should have already found the symbol name
+            name = lstr[1:].split(maxsplit=1)[0].strip()
+            items.append((ds.makeSourceRange(name,line,loc.start.line),line))
+          return
+
+
+      inspector = Inspector(ds.cursor.type.kind in enumTypes)
+      super().setup(ds,*args,inspectLine=inspector,**kwargs)
+
+      if inspector.isEnum:
+        def checkEnumStartsWithDollar(self,ds,items):
+          for key,opts in sorted(items.items()):
+            if len(opts) < 1:
+              mess = "number of options {} < 1, key: {}, items: {}".format(len(opts),key,items)
+              raise RuntimeError(mess)
+            for opt in opts:
+              self.checkOptStartsWith(ds,opt,"Enum","$")
+            return items
+
+
+        params     = PetscDocString.ParameterList("enum params",prefixes=("$"))
+        paramLines = items[1:]
+        if not paramLines: # enum has no explicit descriptions
+          import ipdb; ipdb.set_trace() # how will checkDocValidSynopsis handle this???
+          self.items = None
+          return
+        params.fill(paramLines)
+        params.setup(ds,*args,parameterListPrefixCheck=checkEnumStartsWithDollar,**kwargs)
+        # shuffle the enum values up
+        params.items = {k+1 : v for k,v in params.items.items()}
+        # reinsert the heading
+        params.items[0] = items[0]
+        self.items      = params
+      else:
+        self.items = tuple(items)
+      return
+
+
+  @DiagnosticManager.register(
+    ("section-header-missing",""),
+    ("section-header-unique",""),
+    ("formatting","Verify that parameter list entries are correctly white-space formatted"),
+    ("prefix","Verify that parameter list entries begin with the correct prefix"),
+    ("missing-description","Verify that parameter list entries have a description"),
+    ("missing-description-separator","Verify that a parameter list entry has a separator before the description"),
+    ("wrong-description-separator","Verify that parameter list entries use the right description separator")
+  )
+  class ParameterList(SectionBase):
+    __slots__ = "prefixes"
+
+    def __init__(self,*args,prefixes=None,**kwargs):
+      if prefixes is None:
+        prefixes = ("+",".","-")
+
+      self.prefixes = prefixes
+      super().__init__(*args,**kwargs)
+      return
+
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"param-list")
+
+    @staticmethod
+    def checkIndentAllowed():
+      return False
+
+    def checkAlignedDescriptions(self,ds,group,maxArgLen=None):
+      """
+      Verify that the position of the '-' before the description for each argument is aligned
+      to maxArgLen+1 columns
+      """
+      alignDiag = self.diags.formatting
+      groupArgs = [item.arg for _,item,_ in group]
+      lens      = list(map(len,groupArgs))
+
+      if maxArgLen is None:
+        maxArgLen = max(lens) if lens else 0
+      assert maxArgLen >= 0, "Negative maximum argument length {}".format(maxArgLen)
+      longestArg = groupArgs[lens.index(maxArgLen)] if lens else "NO ARGS"
+
+      for loc,item,_ in group:
+        pre   = item.prefix
+        arg   = item.arg
+        descr = item.description
+        text  = item.text
+        fixed = "{} {:{width}} - {}".format(pre,arg,descr,width=maxArgLen)
+        try:
+          diffIndex = next(
+            i for i,(a1,a2) in enumerate(itertools.zip_longest(text,fixed)) if a1 != a2
+          )
+        except StopIteration:
+          assert text == fixed # equal
+          continue
+
+        if diffIndex <= text.find(pre):
+          mess = "Prefix '{}' must be indented to column (1)".format(pre)
+        elif diffIndex <= text.find(arg):
+          mess = "Argument '{}' must be 1 space from prefix '{}'".format(arg,pre)
+        else:
+          mess = "Description '{}' must be aligned to 1 space from longest (valid) argument '{}'".format(textwrap.shorten(descr,width=35),longestArg)
+
+        eloc = ds.makeSourceRange(text[diffIndex:],text,loc.end.line)
+        ds.addErrorFromSourceRange(alignDiag,mess,eloc,patch=Patch(eloc,fixed[diffIndex:]))
+      return
+
+    def checkOptStartsWith(self,ds,item,descr,char):
+      loc,line,_ = item
+      pre        = line.prefix
+      if pre != char:
+        eloc = ds.makeSourceRange(pre,line.text,loc.start.line)
+        mess = "{} parameter list entry must start with '{}'".format(descr,char)
+        ds.addErrorFromSourceRange(self.diags.prefix,mess,eloc,patch=Patch(eloc,char))
+      return
+
+    def setup(self,ds,*args,parameterListPrefixCheck=None,**kwargs):
+      subheading = 0
+      groups     = collections.defaultdict(list)
+      isHeading  = ds._getIsHeading(self)
+
+      def inspector(loc,line):
+        if not line or line.isspace():
+          return
+        elif isHeading(line) and len(groups.keys()):
+          nonlocal subheading
+          subheading += 1
+        lstp = line.lstrip()
+        # .ve and .vb might trip up the prefix detection since they start with '.'
+        if lstp.startswith(self.prefixes) and not lstp.startswith((".vb",".ve")):
+          item = DescribableItem(line,prefixes=self.prefixes)
+          groups[subheading].append((loc,item,item.arglen()))
+        return
+
+      def parameterListDefaultPrefixCheck(self,ds,items):
+        checkOptStartsWith = self.checkOptStartsWith
+        for key,opts in sorted(items.items()):
+          lopts = len(opts)
+          if lopts < 1:
+            mess = "number of options {} < 1, key: {}, items: {}".format(lopts,key,items)
+            raise RuntimeError(mess)
+          elif lopts == 1:
+            # only 1 option, should start with '.'
+            checkOptStartsWith(ds,opts[0],"Solitary",".")
+          else:
+            # more than 1, should be "+", then however many ".", then last is "-"
+            checkOptStartsWith(ds,opts[0],"First multi","+")
+            for opt in opts[1:-1]:
+              checkOptStartsWith(ds,opt,"Multi",".")
+            checkOptStartsWith(ds,opts[-1],"Last multi","-")
+        return items
+
+
+      if parameterListPrefixCheck is None:
+        parameterListPrefixCheck = parameterListDefaultPrefixCheck
+
+      super().setup(ds,*args,inspectLine=inspector,**kwargs)
+
+      self.items = parameterListPrefixCheck(self,ds,dict(groups))
+      return
+
+
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
+  class Prose(SectionBase):
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"prose")
+
+    def setup(self,ds,*args,**kwargs):
+      isHeading  = ds._getIsHeading(self)
+      subheading = 0
+      items      = {}
+
+      def inspector(loc,line):
+        if isHeading(line):
+          head,_,rest = line.partition(":")
+          head        = head.strip()
+          if not head:
+            import ipdb; ipdb.set_trace()
+          if items.keys():
+            nonlocal subheading
+            subheading += 1
+          startLine = loc.start.line
+          items[subheading] = (
+            (ds.makeSourceRange(head,line,startLine),head),
+            [(ds.makeSourceRange(rest,line,startLine),rest)] if rest else []
+          )
+        elif line.strip():
+          try:
+            items[subheading][1].append((loc,line))
+          except KeyError:
+            import ipdb; ipdb.set_trace()
+        return
+
+      super().setup(ds,*args,inspectLine=inspector,**kwargs)
+      self.items = items
+      return
+
+
+  @DiagnosticManager.register(("section-header-missing",""),("section-header-unique",""))
+  class SourceCode(SectionBase):
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"source-code")
+
+    def setup(self,ds,*args,**kwargs):
+      items = {}
+
+      class Inspector(object):
+        __slots__ = "subheading","startline"
+
+        def __init__(self,obj):
+          self.subheading = 0
+          self.startline  = obj.extent.start.line if obj else 0
+          return
+
+        def __call__(self,loc,line):
+          sub   = self.subheading
+          lstrp = line.lstrip()
+          if lstrp.startswith(".vb"):
+            items[sub] = [loc.start.line-self.startline]
+          elif lstrp.startswith(".ve"):
+            assert len(items[self.subheading]) == 1
+            items[sub].append(loc.start.line-self.startline+1)
+            self.subheading += 1
+          return
+
+
+      super().setup(ds,*args,**kwargs,inspectLine=Inspector(self))
+
+      self.items = items
+      if 0: # TODO, think of checks to do for source code
+        for blockno,(begin,end) in self.items.items():
+          first,*interior,last = self.lines[begin:end]
+          import ipdb; ipdb.set_trace()
+      return
+
+
+  @DiagnosticManager.register(
+    ("section-header-missing",""),("section-header-unique",""),
+    ("formatting","Verify that inline lists are correctly white-space formatted")
+  )
+  class InlineList(SectionBase):
+    __slots__ = "foundEmptyLine"
+
+    def __init__(self,*args,**kwargs):
+      super().__init__(*args,**kwargs)
+      self.foundEmptyLine = False
+      return
+
+    @classmethod
+    def diagnostic(cls,flag):
+      return super().diagnostic(flag,"inline-list")
+
+    @staticmethod
+    def checkIndentAllowed():
+      return False
+
+    def clear(self,*args,**kwargs):
+      super().clear(*args,**kwargs)
+      self.foundEmptyLine = False
+      return
+
+    def setup(self,ds,*args,**kwargs):
+      items           = []
+      formatDiag      = self.diags.formatting
+      makeSourceRange = ds.makeSourceRange
+      alignMessBase   = "".join((
+        self.transform(self.name)," values must be (1) space away from colon not ({})"
+      ))
+      titles = set(t.casefold() for t in self.titles)
+
+      def inspector(loc,line):
+        rest = (line.split(":",maxsplit=2)[1] if ":" in line else line).strip()
+        if rest:
+          if ":" not in rest:
+            # try and see if this is one of the bad-egg lines where the heading is missing
+            # the colon
+            badTitle = next(filter(lambda t:t.casefold() in titles,rest.split()),None)
+            if badTitle:
+              # kind of a hack, we just erase the bad heading with whitespace so it isnt
+              # picked up below in the item detection
+              rest = rest.replace(badTitle," "*len(badTitle))
+          startline = loc.start.line
+          offset    = 0
+          for sub in filter(bool,map(lambda string: string.strip(),rest.split(","))):
+            subloc = makeSourceRange(sub,line,startline,offset=offset)
+            offset = subloc.end.column-1
+            items.append((subloc,sub))
+
+          colonIdx = line.find(":")
+          if colonIdx >= 0:
+            correctOffset = colonIdx+2
+            restIdx       = line.find(rest)
+            if restIdx != correctOffset:
+              nspaces = restIdx-correctOffset
+              if restIdx > correctOffset:
+                sub    = " "*nspaces
+                offset = correctOffset
+                fix    = ""
+              else:
+                sub    = ":"
+                offset = 0
+                fix    = " "
+                import ipdb; ipdb.set_trace()
+              mess = alignMessBase.format(nspaces+1)
+              floc = makeSourceRange(sub,line,startline,offset=offset)
+              ds.addErrorFromSourceRange(formatDiag,mess,floc,patch=Patch(floc,fix))
+        return
+
+
+      super().setup(ds,*args,inspectLine=inspector,**kwargs)
+      self.items = tuple(items)
+      return
+
+
+  class Sections(object):
+    class SectionNotFoundError(Exception):
+      pass
+
+    __slots__ = "_sections","_findcache","_cachekey"
+
+    def __init__(self,*args):
+      assert len({s.name for s in args}) == len(args)
+      sections = collections.OrderedDict()
+      for section in args:
+        sections[section.name] = section
+      self._sections = sections
+      self._resetCache()
+      return
+
+    def __getattr__(self,attr):
+      sections = self._sections
+      try:
+        return sections[attr]
+      except KeyError as ke:
+        try:
+          return sections[attr.replace("_"," ")]
+        except KeyError:
+          pass
+        raise AttributeError from ke
+
+    def __iter__(self):
+      yield from self._sections.values()
+
+    def __contains__(self,section):
+      return self.registered(section)
+
+
+    def _resetCache(self):
+      self._cachekey  = tuple(self._sections.keys())
+      self._findcache = {self._cachekey : {}}
+      return
+
+
+    def find(self,heading,cacheResult=True,strict=False):
+      lohead   = heading.casefold()
+      sections = self._sections
+      cache    = self._findcache[self._cachekey]
+      try:
+        return sections[cache[lohead]]
+      except KeyError:
+        pass
+      sectionNames = sections.keys()
+      get_matches  = difflib.get_close_matches
+      try:
+        match = get_matches(heading,sectionNames,n=1)[0]
+        reason = "name" # delete me
+      except IndexError:
+        keywords = [(kw,s.name) for kw,s in self.keywords(sections=True)]
+        kwOnly   = [k for k,_ in keywords]
+        try:
+          match = get_matches(heading,kwOnly,n=1)[0]
+          reason = "keyword" # delete me
+        except IndexError:
+          # try if we can find a sub-word
+          match = None
+          # if heading splits into more than 3 params, then chances are its being mislabeled
+          # as a heading anyways
+          for head in heading.split(maxsplit=3):
+            try:
+              # higher cutoff, we have to be pretty sure of a match when using subwords,
+              # because it's a lot easier for false positives
+              match = get_matches(head,kwOnly,n=1,cutoff=0.8)[0]
+            except IndexError:
+              continue
+            reason = "subword" # delete me
+            break
+        match = next(filter(lambda item: item[0] == match,keywords))[1] if match else None
+      if match:
+        print(
+          "**** CLOSEST MATCH FOUND {:{}} FROM {:{}} FOR {}".format(match,max(map(len,sectionNames)),reason,len("not found"),heading)
+        )
+      else:
+        print(
+          80*"*",
+          f"UNHANDLED POSSIBLE HEADING! (strict = {strict}, cached = {cacheResult})",
+          heading,
+          80*"*",
+          sep="\n"
+        )
+        if strict:
+          raise self.SectionNotFoundError(heading)
+        # this should be handled
+        # when in doubt, it's probably notes
+        reason = "not found"
+        match  = "notes"
+        maxlen = max(map(len,sectionNames))
+        string = "*********** DEFAULTED TO {:{}} FROM {} FOR {}"
+        print(string.format(f"NOTES (strict = {strict})",maxlen,reason,heading))
+      return sections[cache.setdefault(lohead,match) if cacheResult else match]
+
+    def registered(self,section):
+      if isinstance(section,PetscDocString.SectionBase):
+        return section.name in self._sections
+      elif isinstance(section,str):
+        return section in self._sections
+      raise NotImplementedError(type(section))
+
+    def addSection(self,section):
+      assert not self.registered(section),"overwriting section"
+      self._sections[section.name] = section
+      self._resetCache()
+      return
+
+    def titles(self,sections=False):
+      if sections:
+        return ((title,section) for section in self for title in section.titles)
+      return (title for section in self for title in section.titles)
+
+    def keywords(self,sections=False):
+      if sections:
+        return ((keyword,section) for section in self for keyword in section.keywords)
+      return (keyword for section in self for keyword in section.keywords)
+
+    def isHeading(self,item):
+      if isinstance(item,tuple):
+        assert len(item) == 2
+        assert isinstance(item[0],PetscSourceRange) and isinstance(item[1],str)
+        text = item[1]
+      elif isinstance(item,str):
+        text = item
+      else:
+        raise NotImplementedError(type(item))
+
+      Verdict = PetscDocString.Verdict
+
+      def handleHeaderWithColon(text):
+        if any(map(text.casefold().startswith,(t.casefold()+":" for t in self.titles()))):
+          return Verdict.IS_HEADING
+
+        if text.endswith(":"):
+          if any(map(text.__contains__,(" - ","=","(",")","%","$","@","#","!","^","&","+"))):
+            return Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+
+          expressions = (
+            "follows","following.*","example","instance","one of.*","calling sequence.*",
+            "available.*include","supports.*approaches.*","see.*user.*manual",
+            "y. saad, iterative methods.*philadelphia","default"
+          )
+          regex = "|".join(":".join((expr,"$")) for expr in expressions)
+          if re.search(regex,text.casefold()) is None:
+            return Verdict.IS_HEADING
+          return Verdict.IS_HEADING_BUT_PROBABLY_SHOULDNT_BE
+        try:
+          guessed = self.guessHeading(text,cacheResult=False,strict=True)
+        except self.SectionNotFoundError:
+          guessed = False
+        return Verdict.IS_HEADING if guessed else Verdict.NOT_HEADING
+
+      def handleHeaderWithoutColon(text):
+        try:
+          _ = next(filter(text.casefold().startswith,map(str.casefold,self.titles())))
+        except StopIteration:
+          return Verdict.NOT_HEADING
+        else:
+          return Verdict.MAYBE_HEADING
+
+
+      text = text.strip()
+      if not text or text.startswith(("+ ",". ","- ","$",".vb",".ve")):
+        return Verdict.NOT_HEADING
+      elif ":" in text:
+        return handleHeaderWithColon(text)
+      return handleHeaderWithoutColon(text)
+
+    def guessHeading(self,line,**kwargs):
+      def guess(item):
+        titles = self.find(item,**kwargs).titles
+        return titles if len(titles) == 1 else difflib.get_close_matches(item,titles,n=1)
+
+      strp     = line.split(":",maxsplit=1)[0].strip()
+      attempts = (strp,strp.split(maxsplit=1)[0].strip())
+
+      for attempt,match in zip(attempts,map(guess,attempts)):
+        if match:
+          return attempt,match[0]
+      import ipdb; ipdb.set_trace()
+      return None,None
+
+
+  sections = Sections(
+    Synopsis("synopsis",required=True,keywords=("Synopsis","Not Collective")),
+    ParameterList(
+      "parameters",titles=("Input Parameter","Output Parameter"),
+      keywords=("Input","Output")
+    ),
+    ParameterList("options",titles=("Options Database",)),
+    Prose("notes"),
+    Prose("fortran notes",keywords=("Fortran",)),
+    SourceCode("code",titles=("Example Usage",),keywords=("Example","Usage","Sample Usage",)),
+    Prose("developer notes",keywords=("Developer",)),
+    Prose("references"),
+    InlineList("level",required=True),
+    InlineList("seealso",titles=(".seealso",),required=True),
+    DefaultSection("UNKNOWN",titles=("__UNKNOWN_SECTION__",)),
+  )
+  sowingTypes     = {"@","S","E","M"}
+  clxToSowingType = {
+    clx.TypeKind.FUNCTIONPROTO : ("@","functions"),
+    clx.TypeKind.ENUM          : ("E","enums"),
+  }
+  __slots__ = "_linter","cursor","raw","extent","indent"
+
+  def __init__(self,linter,cursor,indent=2):
+    if not isinstance(linter,PetscLinter):
+      raise ValueError(type(linter))
+    self._linter         = linter
+    self.cursor          = PetscCursor.cast(cursor)
+    self.raw,self.extent = self._getSanitizedCommentAndRangeFromCursor(self.cursor)
+    self.indent          = indent
+    return
+
+
+  @classmethod
+  def diagnostic(cls,flag):
+    return super().diagnosticFlag(flag)
+
+  @classmethod
+  def registerSection(cls,section):
+    return cls.sections.addSection(section)
+
+  @classmethod
+  def isValidDocstring(cls,cursor,raw):
+    if not raw or not isinstance(raw,str):
+      return False
+
+    # if we find sowing chars, its probably a docstring
+    rsw,rew = raw.lstrip().startswith,raw.rstrip().endswith
+    for char in cls.sowingTypes:
+      if rsw("/*"+char) or rew(char+"*/"):
+        return True
+
+    # if we find at least 2 titles, likely this is a docstring, unless it ends in one of
+    # the internal suffixes
+    rawlo     = raw.casefold()
+    haveTitle = sum(title+":" in rawlo for title in map(str.casefold,cls.sections.titles()))
+    return haveTitle >= 2 and not PetscCursor.getNameFromCursor(cursor).casefold().endswith(
+      ("_private","_internal")
+    )
+
+  @classmethod
+  def _getSanitizedCommentAndRangeFromCursor(cls,cursor):
+    if not isinstance(cursor,PetscCursor):
+      raise ValueError(type(cursor))
+
+    raw,extent = cursor.getCommentAndRange()
+
+    if not cls.isValidDocstring(cursor,raw):
+      raise ParsingError("Not a docstring")
+
+    rawlines = raw.splitlines()
+    comments = [i for i,line in enumerate(rawlines) if line.lstrip().startswith("/*")]
+    extent   = PetscSourceRange.cast(extent,tu=cursor.translation_unit)
+    if len(comments) > 1:
+      # this handles the following case:
+      #
+      # /* a dummy comment that is attributed to the symbol */
+      # /*
+      #   the real docstring comment, note no empty line between this and the previous!
+      # */
+      # <the symbol>
+      offset = comments[-1]
+      raw    = "\n".join(rawlines[offset:])
+      extent = extent.resized(lbegin=offset,cbegin=None,cend=None)
+    return raw,extent
+
+  @classmethod
+  def isHeading(cls,*args,**kwargs):
+    return cls.sections.isHeading(*args,**kwargs)
+
+  @classmethod
+  def _getIsHeading(cls,section):
+    return getattr(section,"isHeading",cls.sections.isHeading)
+
+
+  @staticmethod
+  def makeErrorMessage(message,crange,numContext=2,**kwargs):
+    return ":\n".join([message,crange.formatted(numContext=numContext,**kwargs)])
+
+  def makeSourceLocation(self,lineno,col):
+    return PetscSourceLocation.fromPosition(self.cursor.translation_unit,lineno,col)
+
+  def makeSourceRange(self,token,string,lineno,offset=0):
+    colBegin = string.index(token,offset)+1
+    colEnd   = colBegin+len(token)
+    tu       = self.cursor.translation_unit
+    return PetscSourceRange.fromPositions(tu,lineno,colBegin,lineno,colEnd)
+
+  def addErrorFromSourceRange(self,flag,error,crange,patch=None,**kwargs):
+    diag = Diagnostic(flag,self.makeErrorMessage(error,crange,**kwargs),patch=patch)
+    self._linter.addErrorFromCursor(self.cursor,diag)
+    return
+
+
+  def _checkValidCursorLinkage(self):
+    """
+    check that a cursor has external linkage, there is no point producing a manpage for function
+    that is impossible to call
+    """
+    cursor = self.cursor
+    # TODO, this should probably also check that the header the cursor is defined in is public
+    hasIntLinkage,linkageCursorName,linkageCursor = cursor.hasInternalLinkage()
+    if hasIntLinkage and not cursor.translation_unit.spelling.endswith((".h",".hpp")):
+      mess = "A sowing docstring for a function with internal linkage is pointless!:\n{}\n\nNote '{}' is declared '{}' at {}".format(self.extent.formatted(numContext=2,highlight=False),cursor.displayname,linkageCursorName,PetscCursor.cast(linkageCursor))
+      self._linter.addErrorFromCursor(cursor,Diagnostic(self.diags.internal_linkage,mess))
+    return
+
+  def _checkValidSowingChars(self):
+    sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
+    # check the beginning
+    splitlines  = self.raw.splitlines()
+    line        = splitlines[0]
+    beginSowing = line.split("/*")[1].split()
+    diagName    = self.diags.sowing_chars
+    try:
+      beginSowing = beginSowing[0]
+    except IndexError:
+      mess = "Invalid comment begin line, does not contain sowing identifier. Expected '/*{}' for {}".format(sowingType,layType)
+      self.addErrorFromSourceRange(
+        diagName,mess,self.makeSourceRange(line,line,self.extent.start.line)
+      )
+      beginSowing = [sowingType]
+    if beginSowing[0] not in self.sowingTypes:
+      import ipdb; ipdb.set_trace()
+      raise ParsingError
+    beginSowing = "".join(beginSowing)
+    # check that nothing else is on the comment begin line
+    lsplit = line.strip().split(maxsplit=1)
+    if len(lsplit) != 1:
+      rest    = lsplit[1]
+      restloc = self.makeSourceRange(rest,line,self.extent.start.line)
+      mess    = "Invalid comment begin line, must only contain '/*' and sowing identifier"
+      self.addErrorFromSourceRange(
+        diagName,mess,restloc,patch=Patch(restloc,"\n"+(" "*self.indent)+rest)
+      )
+    # now check the end
+    line      = splitlines[-1]
+    endSowing = line.split("*/")[0].split()
+    try:
+      endSowing = endSowing[-1]
+    except IndexError:
+      pass
+    else:
+      if sorted(endSowing) != sorted(beginSowing) and 0:
+        # TODO: REVIEW: should this check exist?
+        correct = beginSowing[::-1]
+        endline = self.extent.end.line
+        mess    = "Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected '{}*/' found '{}*/'".format(correct,endSowing)
+        patch   = Patch(self.makeSourceRange(line,line,endline),line.replace(endSowing,correct))
+        self.addErrorFromSourceRange(
+          diagName,mess,self.makeSourceRange(endSowing,line,endline),patch=patch
+        )
+    return
+
+  def _checkValidDocstringSpacing(self):
+    endLine     = self.extent.end.line+1
+    cursorStart = self.cursor.extent.start
+    if endLine != cursorStart.line:
+      # there is at least 1 (probably empty) line between the comment end and whatever it
+      # is describing
+      floc = PetscSourceRange.fromLocations(self.makeSourceLocation(endLine,1),cursorStart)
+      mess = "Invalid line-spacing between docstring and the symbol it describes. The docstring must appear immediately above its target"
+      eloc = self.makeSourceRange("","",endLine)
+      diag = self.diags.spacing
+      self.addErrorFromSourceRange(diag,mess,eloc,highlight=False,patch=Patch(floc,""))
+    return
+
+  def _checkValidIndentation(self,lineno,line,lstripped):
+    """
+    if the line is regular (not empty, or a parameter list), check that line is
+    indented correctly
+    """
+    linelen = len(line)
+    if linelen:
+      indent      = linelen-len(lstripped)
+      expectedInd = 0 if line.startswith((".","+","-","$")) else self.indent
+      if indent != expectedInd:
+        diag = self.diags.indentation
+        loc  = self.makeSourceRange(" "*indent,line,lineno)
+        mess = "Invalid indentation ({}), all regular (non-empty, non-parameter, non-seealso) text must be indented to {} columns".format(indent,self.indent)
+        self.addErrorFromSourceRange(diag,mess,loc,patch=Patch(loc," "*expectedInd))
+    return
+
+  def _checkValidSectionSpacing(self,prevline,lineno):
+    if prevline and not prevline.isspace():
+      mess = "Missing empty line between sections, must have one before this section"
+      loc  = self.makeSourceRange("","",lineno)
+      diag = self.diags.section_spacing
+      self.addErrorFromSourceRange(diag,mess,loc,highlight=False,patch=Patch(loc,"\n"))
+    return
+
+  def _checkSectionHeaderTypo(self,line,lineno):
+    """
+    check that a section header that looks like a section header is one
+    """
+    name,match = self.sections.guessHeading(line)
+    if ":" in line:
+      mess = "Line seeams to be a section header but doesn't directly end with with ':', did you mean '{}'?"
+    else:
+      mess = "Line seems to be a section header but missing ':', did you mean '{}:'?"
+    diag = self.diags.section_header_maybe_header
+    self.addErrorFromSourceRange(diag,mess.format(match),self.makeSourceRange(name,line,lineno))
+    return
+
+  def _checkSectionHeaderThatProbablyShouldNotBeOne(self,line,lineno):
+    """
+    check that a section header that ends with ':' is not really a header
+    """
+    eloc = self.makeSourceRange(":",line,lineno,offset=line.rfind(":"))
+    mess = "Sowing treats all lines ending with ':' as header, are you sure '{}' qualifies? Use '\:' to escape the colon if not".format(textwrap.shorten(line.strip(),width=35))
+    self.addErrorFromSourceRange(self.diags.section_header_fishy_header,mess,eloc)
+    return
+
+  def _checkSectionIsNotBarren(self,section):
+    """
+    check that a section isn't just a solitary header out on its own
+    """
+    if section and section.barren():
+      diag = self.diags.section_barren
+      mess = "Section appears to be empty; while I'm all for a good mystery, you should probably elaborate here"
+      self.addErrorFromSourceRange(diag,mess,section.extent,highlight=not (len(section.lines)-1))
+    return
+
+
+  def parse(self):
+    sections = self.sections
+    for s in sections:
+      s.clear()
+    self._checkValidCursorLinkage()
+    self._checkValidDocstringSpacing()
+    self._checkValidSowingChars()
+
+    rawData     = []
+    section     = sections.synopsis
+    findSection = sections.find
+    checkIndent = section.checkIndentAllowed()
+    isHeading   = self._getIsHeading(section)
+    for lineno,line in enumerate(self.raw.splitlines(),start=self.extent.start.line):
+      lstrip = line.lstrip()
+      if lstrip.startswith("/*") or lstrip.endswith("*/"):
+        continue
+
+      # TODO remove this, the current active section should be deciding what to do here instead
+      # we shouldn't be checking indentation in verbatim blocks
+      if lstrip.startswith(".vb"):
+        checkIndent = False
+      elif lstrip.startswith(".ve"):
+        assert checkIndent is False
+        checkIndent = True # note we don't need to check indentation of line with .ve
+      elif lstrip.startswith("$"):
+        pass # inline verbatim don't modify check flag but dont check indentation either
+      elif checkIndent:
+        self._checkValidIndentation(lineno,line,lstrip)
+
+      heading = isHeading(lstrip)
+      if heading > 0:
+        if heading == 2:
+          self._checkSectionHeaderTypo(line,lineno)
+        self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
+        newSection = findSection(lstrip.split(":",maxsplit=1)[0].strip().casefold())
+        if newSection != section:
+          if rawData:
+            section.fill(rawData)
+          rawData     = []
+          section     = newSection
+          checkIndent = newSection.checkIndentAllowed()
+          isHeading   = self._getIsHeading(section)
+      elif heading < 0:
+        self._checkSectionHeaderThatProbablyShouldNotBeOne(line,lineno)
+      rawData.append((self.makeSourceRange(line,line,lineno),line))
+
+    if rawData:
+      section.fill(rawData)
+    for s in sections:
+      s.setup(self)
+      self._checkSectionIsNotBarren(s)
+    return self
+
+
+  def getSectionHeadings(self,section):
+    isHeading = self._getIsHeading(section)
+    return [l for l in section.lines if isHeading(l) > 0]
+
+  def checkValidSolitarySectionHeadings(self,section,headings=None):
+    """
+    Check that a section appears solitarily on its line, i.e. that there is no other text after
+    ':'
+    """
+    if headings is None:
+      headings = self.getSectionHeadings(section)
+
+    diag = self.diags.section_header_solitary
+    for loc,text in headings:
+      _,sep,after = text.partition(":")
+      if not sep:
+        head,_ = self.sections.guessHeading(text)
+        _,sep,after = text.partition(head)
+        assert sep
+      if after.strip():
+        mess = "Heading must appear alone on a line, any content must be on the next line"
+        self.addErrorFromSourceRange(diag,mess,self.makeSourceRange(after,text,loc.start.line))
+    return
+
+  def checkValidSectionHeaderSpelling(self,section,headings=None,transform=None):
+    """
+    Check that a seciton header is correctly spelled and formatted. Sections may be found
+    through fuzzy matching so this check asserts that a particular heading is actually correct
+    """
+    if headings is None:
+      headings = self.getSectionHeadings(section)
+
+    if transform is None:
+      transform = section.transform
+
+    diag   = self.diags.section_header_spelling
+    titles = section.titles
+    for loc,text in headings:
+      beforeguess,_ = self.sections.guessHeading(text)
+      before,sep,_ = text.partition(":")
+      if sep:
+        assert beforeguess == before.strip()
+      if not sep:
+        # missing colon, but if we are at this point then we were pretty it is a header,
+        # so we assume the first word is the header
+        before,_ = self.sections.guessHeading(text)
+
+      heading = before.strip()
+      if any(t in heading for t in titles):
+        continue
+
+      headingLoc = self.makeSourceRange(heading,text,loc.start.line)
+      correct    = transform(heading)
+      if heading != correct and any(t in correct for t in titles):
+        mess = "Invalid header spelling. Expected '{}' found '{}'".format(correct,heading)
+        self.addErrorFromSourceRange(diag,mess,headingLoc,patch=Patch(headingLoc,correct))
+        continue
+
+      try:
+        match = difflib.get_close_matches(correct,titles,n=1)[0]
+      except IndexError:
+        self._linter.addWarningFromCursor(
+          self.cursor,Diagnostic(diag,"Unknown section '{}'".format(heading))
+        )
+      else:
+        mess = "Unknown section header '{}', assuming you meant '{}'".format(heading,match)
+        self.addErrorFromSourceRange(diag,mess,headingLoc,patch=Patch(headingLoc,match))
+    return
+
 
 class PetscCursor(object):
-  __doc__="""
-  A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties (such as demangled names) from a cursor easier.
-  Also provides a host of utility functions that get and (optionally format) the source code around a particular cursor. As it is a wrapper any
-  operation done on a clang Cursor may be performed directly on a PetscCursor (although this object does not pass the isinstance() check).
+  """
+  A utility wrapper around clang.cindex.Cursor that makes retrieving certain useful properties
+  (such as demangled names) from a cursor easier.
+  Also provides a host of utility functions that get and (optionally format) the source code
+  around a particular cursor. As it is a wrapper any operation done on a clang Cursor may be
+  performed directly on a PetscCursor (although this object does not pass the isinstance() check).
 
   See __getattr__ below for more info.
   """
-  @staticmethod
-  def errorViewFromCursor(cursor):
-    __doc__="""
+  __slots__ = "__cursor","name","typename","derivedtypename","argidx","_cache"
+
+  def __init__(self,cursor,idx=-12345):
+    if isinstance(cursor,PetscCursor):
+      self.__cursor        = cursor.clangCursor()
+      self.name            = cursor.name
+      self.typename        = cursor.typename
+      self.derivedtypename = cursor.derivedtypename
+      self.argidx          = cursor.argidx if idx == -12345 else idx
+      self._cache          = cursor._cache
+    elif isinstance(cursor,clx.Cursor):
+      self.__cursor        = cursor
+      self.name            = self.getNameFromCursor(cursor)
+      self.typename        = self.getTypenameFromCursor(cursor)
+      self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
+      self.argidx          = idx
+      self._cache          = {}
+    else:
+      raise ValueError(type(cursor))
+    return
+
+  def __getattr__(self,attr):
+    """
+    Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
+    (i.e. the value wasn't found in self), then we try the cursor. So we can do things
+    like self.translation_unit, but keep all of our variables out of the cursors
+    namespace
+    """
+    return getattr(self.__cursor,attr)
+
+  def __str__(self):
+    return "\n".join([self.getFormattedLocationString(),self.getFormattedBlurb()])
+
+
+  def _getCached(self,attr,func,*args,**kwargs):
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
+
+  @classmethod
+  def cast(cls,cursor):
+    """like numpy.asanyarray but for PetscCursors"""
+    clxCursor = clx.Cursor
+    if not isinstance(cursor,(clxCursor,cls)):
+      raise ValueError(type(cursor))
+    return cls(cursor) if isinstance(cursor,clxCursor) else cursor
+
+  @classmethod
+  def errorViewFromCursor(cls,cursor):
+    """
     Something has gone wrong, and we try to extract as much information from the cursor as
     possible for the exception. Nothing is guaranteed to be useful here.
     """
@@ -215,26 +1430,28 @@ class PetscCursor(object):
       fname  = "UNKNOWN_FILE"
     locStr   = ":".join([fname,str(loc.column),str(loc.line)])
     # Does not yet raise exception so we can call it here
-    typename = PetscCursor.getTypenameFromCursor(cursor)
-    srcStr   = PetscCursor.getFormattedSourceFromCursor(cursor,nboth=2)
+    typename = cls.getTypenameFromCursor(cursor)
+    srcStr   = cls.getFormattedSourceFromCursor(cursor,nboth=2)
     return "'{}' of kind '{}' of type '{}' at {}:\n{}".format(name,kind,typename,locStr,srcStr)
 
-  @staticmethod
-  def getNameFromCursor(cursor):
-    __doc__="""
+  @classmethod
+  def getNameFromCursor(cls,cursor):
+    """
     Try to convert **&(PetscObject)obj[i]+73 to obj
     """
+    if isinstance(cursor,cls):
+      return cursor.name
     name = None
     if cursor.spelling:
       name = cursor.spelling
     elif cursor.kind in mathCursors:
-      if cursor.kind  == clx.CursorKind.BINARY_OPERATOR:
+      if cursor.kind == clx.CursorKind.BINARY_OPERATOR:
         # we arbitrarily use the first token here since we assume that it is the important
         # one.
-        operands = [c for c in cursor.get_children()]
+        operands = list(cursor.get_children())
         # its certainly funky when a binary operation doesn't have a binary system of
         # operands
-        assert len(operands) == 2, "Found {} operands for binary operator when only expecting 2 for cursor {}".format(len(operands),PetscCursor.errorViewFromCursor(cursor))
+        assert len(operands) == 2, "Found {} operands for binary operator when only expecting 2 for cursor {}".format(len(operands),cls.errorViewFromCursor(cursor))
         name = operands[0].spelling
       else:
         # just a plain old number or unary operator
@@ -244,12 +1461,11 @@ class PetscCursor(object):
       castee = [c for c in cursor.get_children() if c.kind == clx.CursorKind.UNEXPOSED_EXPR]
       # If we don't have 1 symbol left then we're in trouble, as we probably didn't
       # pick the right cursors above
-      assert len(castee) == 1, "Cannot determine castee from the caster for cursor {}".format(PetscCursor.errorViewFromCursor(cursor))
+      assert len(castee) == 1, "Cannot determine castee from the caster for cursor {}".format(cls.errorViewFromCursor(cursor))
       # Easer to do some mild recursion to figure out the naming for us than duplicate
       # the code. Perhaps this should have some sort of recursion check
-      name = PetscCursor.getNameFromCursor(castee[0])
+      name = cls.getNameFromCursor(castee[0])
     elif (cursor.type.get_canonical().kind == clx.TypeKind.POINTER) or (cursor.kind == clx.CursorKind.UNEXPOSED_EXPR):
-      pointees = []
       if cursor.type.get_pointee().kind  == clx.TypeKind.CHAR_S:
         # For some reason preprocessor macros that contain strings don't propagate
         # their spelling up to the primary cursor, so we need to plumb through
@@ -261,12 +1477,19 @@ class PetscCursor(object):
         if not pointees:
           # wasn't a pure array, so we try pointer
           pointees = [c for c in cursor.walk_preorder() if c.type.kind == clx.TypeKind.POINTER]
+      else:
+        pointees = []
       pointees = list({p.spelling: p for p in pointees}.values())
       if len(pointees) > 1:
         # sometimes array subscripts can creep in
         pointees = [c for c in pointees if c.kind not in mathCursors]
       if len(pointees) == 1:
-        name = PetscCursor.getNameFromCursor(pointees[0])
+        name = cls.getNameFromCursor(pointees[0])
+    elif cursor.kind == clx.CursorKind.ENUM_DECL:
+      # have a
+      # typedef enum { ... } Foo;
+      # so the "name" of the cursor is actually the name of the type itself
+      name = cursor.type.get_canonical().spelling
     if not name:
       # Catchall last attempt, we become the very thing we swore to destroy and parse the
       # tokens ourselves
@@ -280,91 +1503,123 @@ class PetscCursor(object):
         # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
         # children, no name, no tokens, and a completely incorrect SourceLocation.
         # They are for all intents and purposes uncheckable :)
-        srcstr = PetscCursor.getRawSourceFromCursor(cursor)
-        errstr = PetscCursor.errorViewFromCursor(cursor)
+        srcstr = cls.getRawSourceFromCursor(cursor)
+        errstr = cls.errorViewFromCursor(cursor)
         if "PETSC_HASH" in srcstr:
           if "_MAP" in srcstr:
             raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errstr))
           elif "_SET" in srcstr:
             raise ParsingError("Encountered unparsable PETSC_HASH_SET for cursor {}".format(errstr))
-          else:
-            raise RuntimeError("Unhandled unparsable PETSC_HASH_XXX for cursor {}".format(errstr))
+          raise RuntimeError("Unhandled unparsable PETSC_HASH_XXX for cursor {}".format(errstr))
         elif "PetscKernel_" in srcstr:
           raise ParsingError("Encountered unparsable PetscKernel_XXX for cursor {}".format(errstr))
         elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
           raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
-        else:
-          raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errstr))
+        raise RuntimeError("Unexpected number of tokens ({}) for cursor {}".format(len(tokenList),errstr))
       name = tokenList[0].spelling
-      assert name, "Cannot determine name of symbol from cursor {}".format(PetscCursor.errorViewFromCursor(cursor))
+      assert name, "Cannot determine name of symbol from cursor {}".format(cls.errorViewFromCursor(cursor))
     return name
 
-  @staticmethod
-  def getRawNameFromCursor(cursor):
-    __doc__="""
-    if getNameFromCursor tries to convert **&(PetscObject)obj[i]+73 to obj then this function tries to extract **&(PetscObject)obj[i]+73
-    in the cleanest way possible
+  @classmethod
+  def getRawNameFromCursor(cls,cursor):
     """
+    if getNameFromCursor tries to convert **&(PetscObject)obj[i]+73 to obj then this function
+    tries to extract **&(PetscObject)obj[i]+73 in the cleanest way possible
+    """
+    clsInstance = isinstance(cursor,cls)
+    if clsInstance:
+      cacheEntry = "name"
+      try:
+        return cursor._cache[cacheEntry]
+      except KeyError:
+        pass
     name = "".join(t.spelling for t in cursor.get_tokens())
     if not name:
       try:
         # now we try for the formatted name
-        name = PetscCursor.getNameFromCursor(cursor)
+        name = cls.getNameFromCursor(cursor)
       except ParsingError:
-        srcstr = PetscCursor.getRawSourceFromCursor(cursor)
-        errstr = PetscCursor.errorViewFromCursor(cursor)
+        srcstr = cls.getRawSourceFromCursor(cursor)
+        errstr = cls.errorViewFromCursor(cursor)
         if "PETSC_HASH" in srcstr:
           if "_MAP" in srcstr:
             raise ParsingError("Encountered unparsable PETSC_HASH_MAP for cursor {}".format(errstr))
           elif "_SET" in srcstr:
             raise ParsingError("Encountered unparsable PETSC_HASH_SET for cursor {}".format(errstr))
-          else:
-            raise RuntimeError("Unhandled unparsable PETSC_HASH_XXX for cursor {}".format(errstr))
+          raise RuntimeError("Unhandled unparsable PETSC_HASH_XXX for cursor {}".format(errstr))
         elif "PetscKernel_" in srcstr:
           raise ParsingError("Encountered unparsable PetscKernel_XXX for cursor {}".format(errstr))
         elif ("PetscOptions" in srcstr) or ("PetscObjectOptions" in srcstr):
           raise ParsingError("Encountered unparsable Petsc[Object]OptionsBegin for cursor {}".format(errstr))
-        else:
-          raise RuntimeError("Could not determine useful name for cursor {}".format(errstr))
+        raise RuntimeError("Could not determine useful name for cursor {}".format(errstr))
+    if clsInstance:
+      cursor._cache[cacheEntry] = name
     return name
 
-  @staticmethod
-  def getTypenameFromCursor(cursor):
-    __doc__="""
+  @classmethod
+  def getTypenameFromCursor(cls,cursor):
+    """
     Try to get the most canonical type from a cursor so DM -> _p_DM *
     """
-    if cursor.type.get_pointee().spelling:
-      ctemp = cursor.type.get_pointee()
-      if ctemp.get_canonical().spelling:
-        typename = ctemp.get_canonical().spelling
-      else:
-        typename = ctemp.spelling
-    elif cursor.type.get_canonical().spelling:
-      typename = cursor.type.get_canonical().spelling
-    else:
-      typename = cursor.type.spelling
-    return typename
+    if isinstance(cursor,cls):
+      return cursor.typename
+    type          = cursor.type
+    pointee       = type.get_pointee()
+    typeCursor    = pointee if pointee.spelling else type
+    canonSpelling = typeCursor.get_canonical().spelling
+    return canonSpelling if canonSpelling else typeCursor.spelling
 
   @staticmethod
   def getDerivedTypenameFromCursor(cursor):
-    __doc__="""
+    """
     Get the least canonical type form a cursor so DM -> DM
     """
     return cursor.type.spelling
 
+  @classmethod
+  def hasInternalLinkageFromCursor(cls,cursor):
+    if cursor.linkage == clx.LinkageKind.INTERNAL:
+      # is a static function or variable
+      return True,cursor.storage_class.name,cursor.get_definition()
+
+    hiddenVisibility = {"hidden","protected"}
+    VISIBILITY_ATTR  = clx.CursorKind.VISIBILITY_ATTR
+    for child in cursor.get_children():
+      if child.kind == VISIBILITY_ATTR and child.spelling in hiddenVisibility:
+        # is PETSC_INTERN
+        return True,PetscSourceRange(child.extent).raw(tight=True),child
+    return False,None,None
+
+  def hasInternalLinkage(self):
+    return self._getCached("internal_linkage",self.hasInternalLinkageFromCursor,self)
+
   @staticmethod
   def getRawSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,trim=False):
-    return petscClangLinterUtil.getRawSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
+    return pclu.getRawSourceFromCursor(
+      cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim
+    )
 
-  def getRawSource(self,nbefore=0,nafter=0,nboth=0,trim=False):
-    return petscClangLinterUtil.getRawSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,trim=trim)
+  def getRawSource(self,**kwargs):
+    return self.getRawSourceFromCursor(self,**kwargs)
 
   @staticmethod
-  def getFormattedSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,view=False):
-    return petscClangLinterUtil.getFormattedSourceFromCursor(cursor,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
+  def getFormattedSourceFromCursor(cursor,nbefore=0,nafter=0,nboth=0,view=False,**kwargs):
+    if cursor.kind == clx.CursorKind.FUNCTION_DECL:
+      begin  = cursor.extent.start
+      # -1 gives you EOL
+      fnline = PetscSourceLocation.fromPosition(cursor.translation_unit,begin.line,-1)
+      extent = PetscSourceRange.fromLocations(begin,fnline)
+    else:
+      extent = cursor.extent
+    return pclu.getFormattedSourceFromSourceRange(
+      extent,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view,**kwargs
+    )
 
-  def getFormattedSource(self,nbefore=0,nafter=0,nboth=0,view=False):
-    return petscClangLinterUtil.getFormattedSourceFromCursor(self,numBeforeContext=nbefore,numAfterContext=nafter,numContext=nboth,view=view)
+  def formatted(self,**kwargs):
+    return self.getFormattedSourceFromCursor(self,**kwargs)
+
+  def view(self):
+    return print(self.formatted(nboth=5))
 
   @staticmethod
   def getFormattedLocationStringFromCursor(cursor):
@@ -372,222 +1627,395 @@ class PetscCursor(object):
     return ":".join([loc.file.name,str(loc.column),str(loc.line)])
 
   def getFormattedLocationString(self):
-    loc = self.location
-    return ":".join([loc.file.name,str(loc.column),str(loc.line)])
+    return self.getFormattedLocationStringFromCursor(self)
+
+  @classmethod
+  def getFormattedBlurbFromCursor(cls,cursor):
+    cursor = cls.cast(cursor)
+    return "'{}' of derived type '{}', canonical type '{}'\n{}\n".format(
+      cursor.name,cursor.derivedtypename,cursor.typename,cursor.formatted(nboth=2)
+    )
+
+  def getFormattedBlurb(self):
+    return self.getFormattedBlurbFromCursor(self)
 
   @staticmethod
   def viewAstFromCursor(cursor):
-    return print("\n".join(petscClangLinterUtil.viewAstFromCursor(cursor)))
+    return print("\n".join(pclu.viewAstFromCursor(cursor)))
 
   def viewAst(self):
     return self.viewAstFromCursor(self)
 
   @staticmethod
-  def findCursorReferencesFromCursor(cursor):
-    __doc__="""
+  def getOrRegisterClangFunction(funcName,argtypes,rettype):
+    cxlib = clx.conf.lib
+    try:
+      func = getattr(cxlib,funcName)
+      if (func.argtypes is None) and (func.errcheck is None):
+        # if this hasn't been registered before these will be none
+        raise AttributeError
+    except AttributeError:
+      # have to do the book-keeping ourselves since it may not be properly hooked up
+      clx.register_function(cxlib,(funcName,argtypes,rettype),False)
+      func = getattr(cxlib,funcName)
+    return func
+
+  @classmethod
+  def findCursorReferencesFromCursor(cls,cursor):
+    """
     Brute force find and collect all references in a file that pertain to a particular
     cursor. Essentially refers to finding every reference to the symbol that the cursor
     represents, so this function is only useful for first-class symbols (i.e. variables,
     functions)
     """
-    import ctypes
+    foundCursors = []
+    def callBackFunc(ctx,cursor,srcRange):
+      # The "cursor" returned here is actually just a CXCursor, not the real
+      # clx.Cursor that we lead python to believe in our function prototype. Luckily we
+      # have all we need to remake the python object from scratch
+      cursor = clx.Cursor.from_location(ctx.translation_unit,srcRange.start)
+      try:
+        foundCursors.append(cls(cursor))
+      except ParsingError:
+        pass
+      except Exception as exc:
+        string = "Full error full error message below:"
+        print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
+        print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",exc,sep="")
+        print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
+      return 1 # continue
 
-    foundCursors  = []
-    callbackProto = ctypes.CFUNCTYPE(ctypes.c_uint,ctypes.c_void_p,clx.Cursor,clx.SourceRange)
-
-    class CXCursorAndRangeVisitor(ctypes.Structure):
-      # see https://clang.llvm.org/doxygen/structCXCursorAndRangeVisitor.html
-      #
-      # typedef struct CXCursorAndRangeVisitor {
-      #   void *context;
-      #   enum CXVisitorResult (*visit)(void *context, CXCursor, CXSourceRange);
-      # } CXCursorAndRangeVisitor;
-      #
-      # Note this is not a  strictly accurate recreation, as this struct expects a
-      # (void *) but since C lets anything be a (void *) we can pass in a (PyObject *)
-      _fields_ = [("context",ctypes.py_object),("visit",callbackProto)]
-
-      @staticmethod
-      def callBack(ctx,cursor,srcRange):
-        # convert to py_object then take value of the pointer, i.e. the original class
-        origCursor = ctypes.cast(ctx,ctypes.py_object).value
-        # The "cursor" returned here is actually just a CXCursor, not the real
-        # clx.Cursor that we lead python to believe in our function prototype. Luckily we
-        # have all we need to remake the python object from scratch
-        cursor = clx.Cursor.from_location(origCursor.translation_unit,srcRange.start)
-        try:
-          cursor = PetscCursor(cursor)
-          foundCursors.append(cursor)
-        except ParsingError:
-          pass
-        except RuntimeError as re:
-          string = "Full error full error message below:"
-          print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
-          print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",re,sep="")
-          print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
-        return 1 # continue
-
-    if not hasattr(clx.conf.lib,"clang_findReferencesInFile"):
-      item = ("clang_findReferencesInFile",[clx.Cursor,clx.File,CXCursorAndRangeVisitor],ctypes.c_uint)
-      clx.register_function(clx.conf.lib,item,False)
-
+    callBack   = CXCursorAndRangeVisitorCallBackProto(callBackFunc)
     pyCtx      = ctypes.py_object(cursor) # pyCtx = (PyObject *)cursor;
-    callBack   = callbackProto(CXCursorAndRangeVisitor.callBack)
-    cxCallback = CXCursorAndRangeVisitor(pyCtx,callBack)
-    clx.conf.lib.clang_findReferencesInFile(cursor._PetscCursor__cursor,cursor.location.file,cxCallback)
+    cxCallback = PetscCXCursorAndRangeVisitor(pyCtx,callBack)
+    func       = cls.getOrRegisterClangFunction(
+      "clang_findReferencesInFile",[clx.Cursor,clx.File,PetscCXCursorAndRangeVisitor],ctypes.c_uint
+    )
+    func(cursor.clangCursor(),cursor.location.file,cxCallback)
     return foundCursors
 
   def findCursorReferences(self):
-    return PetscCursor.findCursorReferencesFromCursor(self)
+    return self.findCursorReferencesFromCursor(self)
 
-  def __init__(self,cursor,idx=-12345):
-    assert isinstance(cursor,(clx.Cursor,PetscCursor))
-    if isinstance(cursor,PetscCursor):
-      self.__cursor        = cursor._PetscCursor__cursor
-      self.name            = cursor.name
-      self.typename        = cursor.typename
-      self.derivedtypename = cursor.derivedtypename
-      self.argidx          = cursor.argidx if idx == -12345 else idx
+  @classmethod
+  def getCommentAndRangeFromCursor(cls,cursor):
+    func = cls.getOrRegisterClangFunction(
+      "clang_Cursor_getCommentRange",[clx.Cursor],clx.SourceRange
+    )
+    if isinstance(cursor,cls):
+      cursorRange = func(cursor.clangCursor())
+    elif isinstance(cursor,clx.Cursor):
+      cursorRange = func(cursor)
     else:
-      self.__cursor        = cursor
-      self.name            = self.getNameFromCursor(cursor)
-      self.typename        = self.getTypenameFromCursor(cursor)
-      self.derivedtypename = self.getDerivedTypenameFromCursor(cursor)
-      self.argidx          = idx
-    return
+      raise ValueError(type(cursor))
+    return cursor.raw_comment,cursorRange
 
-  def __getattr__(self,attr):
-    __doc__="""
-    Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
-    (i.e. the value wasn't found in self), then we try the cursor. So we can do things
-    like self.translation_unit, but keep all of our variables out of the cursors
-    namespace
-    """
-    return getattr(self.__cursor,attr)
+  def getCommentAndRange(self):
+    return self.getCommentAndRangeFromCursor(self)
 
-  def __str__(self):
-    locStr = self.getFormattedLocationString()
-    srcStr = self.getFormattedSource(nboth=2)
-    return "{}\n'{}' of derived type '{}', canonical type '{}'\n{}\n".format(locStr,self.name,self.derivedtypename,self.typename,srcStr)
+  @classmethod
+  def getFileFromCursor(cls,cursor):
+    if isinstance(cursor,cls):
+      ret = cursor._getCached("file",lambda c: c.location.file.name,cursor)
+    elif isinstance(cursor,clx.Cursor):
+      ret = cursor.location.file.name
+    elif isinstance(cursor,clx.TranslationUnit):
+      ret = cursor.spelling
+    else:
+      raise ValueError(type(cursor))
+    return PetscPath(ret)
 
-class SourceFix(object):
-  def __init__(self,filename,src,startline,begin,end,value):
-    self.filename  = filename
-    self.src       = src
-    self.startLine = startline
-    assert self.startLine >= 1, "startline {} < 1".format(self.startLine)
-    assert end > begin, "end {} <= begin {}, ill-formed source fix".format(end,begin)
-    self.begins    = [begin]
-    self.ends      = [end]
-    value, replace = str(value),self.src[begin:end]
-    # this is an error, since previous detection should not have created a fix
-    assert value != replace, "trying to replace {} with itself".format(replace)
-    self.replace   = [replace]
-    self.deltas    = [value]
-    self.fixed     = None
-    self.fixDepth  = 0
+  def getFile(self):
+    return self.getFileFromCursor(self)
+
+  @classmethod
+  def cursorIsVariadicFunction(cls,cursor):
+    if cursor.kind == clx.CursorKind.FUNCTION_DECL:
+      return cursor.displayname.split(",")[-1].replace(")","").split()[0] == "..."
+    return False
+
+  def isVariadicFunction(self):
+    return self.cursorIsVariadicFunction(self)
+
+  def clangCursor(self):
+    """return the internal clang cursor"""
+    return self.__cursor
+
+
+class Patch(object):
+  class Delta(object):
+    __slots__ = "value","extent","offset"
+
+    def __init__(self,value,extent,ctxlines):
+      self.value  = str(value)
+      self.extent = extent
+      src,begin   = extent.raw(numContext=ctxlines).splitlines(True)[:ctxlines],extent.start
+      self.offset = begin.offset-begin.column-sum(map(len,src))+1
+      return
+
+    def deleter(self):
+      return bool(self.value == "")
+
+    def view(self):
+      before = self.extent.formatted(numContext=3,highlight=False).splitlines(True)
+      after  = before.copy()
+      after[3] = before[3].replace(self.extent.raw(tight=True),self.value,1)
+      print("".join(difflib.unified_diff(before,after,fromfile="Original",tofile="Modified")))
+      return
+
+
+  __slots__ = "extent","filename","ctxlines","src","deltas","weakData","_cache"
+
+  def __init__(self,srcRange,value,contextlines=2):
+    self.extent   = PetscSourceRange.cast(srcRange)
+    self.ctxlines = contextlines
+    self.src      = self._makeSource()
+    self.deltas   = (self.Delta(value,self.extent,self.ctxlines),)
+    self.weakData = []
+    self._cache   = {}
     return
 
   @classmethod
-  def fromCursor(cls,cursor,value):
-    fname     = cursor.location.file.name
-    src       = PetscCursor.getRawSourceFromCursor(cursor)
-    startline = cursor.extent.start.line
-    begin,end = cursor.extent.start.column-1,cursor.extent.end.column-1
-    return cls(fname,src,startline,begin,end,value)
+  def fromCursor(cls,cursor,value,**kwargs):
+    return cls(cursor.extent,value,**kwargs)
 
-  def appendFix(self,fix):
-    assert isinstance(fix,SourceFix)
-    assert self.src == fix.src, "Cannot combine fixes that do not share identical source!"
-    self.begins.extend(fix.begins)
-    self.ends.extend(fix.ends)
-    self.replace.extend(fix.replace)
-    self.deltas.extend(fix.deltas)
-    return
+  def _makeSource(self):
+    return self.extent.raw(numContext=self.ctxlines)
 
-  def collapse(self):
-    __doc__="""
-    Collapses a list of fixes and produces a fixed src line.
-    Fixes probably should not overwrite each other (for now), so we error out, but this
-    is arguably a completely valid case. I just have not seen an example of it that I
-    can use to debug with yet.
+  def _getCached(self,attr,func,*args,**kwargs):
+    cache = self._cache
+    return cache[attr] if attr in cache else cache.setdefault(attr,func(*args,**kwargs))
+
+  def _contiguousExtent(self):
     """
-    if self.fixDepth == len(self.deltas): # already collapsed, no need to do it again
-      assert self.fixed, "Fix depth {} = number of deltas {} but no fixed string exists".format(self.fixDepth,len(self.deltas))
-      return
-    idxDelta = 0
-    newSrc   = self.src
-    for begin,end,replace,delta in zip(self.begins,self.ends,self.replace,self.deltas):
-      assert replace in newSrc, "Target replacement '{}' not in src '{}' anymore, fix no longer relevant".format(replace,newSrc)
-      if (begin+idxDelta < 0) or (end+idxDelta > len(newSrc)):
-        raise RuntimeError("Idx out of bounds of src, fix not viable")
-      newSrcTemp = newSrc[:begin+idxDelta]+delta+newSrc[end+idxDelta:]
-      idxDelta   = len(newSrcTemp)-len(newSrc)
-      newSrc     = newSrcTemp
-    self.fixDepth = len(self.deltas)
-    self.fixed    = newSrc
+    does my extent (which is the union of the extents of my all my deltas) have no holes?
+    """
+    cacheEntry = "contiguous"
+    deltas     = self.deltas
+    if len(deltas) == 1:
+      return self._cache.setdefault(cacheEntry,True)
+    return self._getCached(
+      cacheEntry,all,(p.extent.overlaps(c.extent) for p,c in zip(deltas[:-1],deltas[1:]))
+    )
+
+
+  def discard(self):
+    """
+    drops the error messages corresponding to this patch from the linter
+    """
+    for weakElist,idx in self.weakData:
+      elist = weakElist()
+      if elist is not None:
+        del elist[1][idx] # delete the error message
+        del elist[2][idx] # delete the patch indicator
     return
+
+  def attach(self,*args):
+    """
+    attach the list and index into the linter error list corresponding to this patch
+    """
+    self.weakData.append(args)
+    return
+
+  def dofix(self,n=1):
+    newSrc   = self._makeSource()
+    idxDelta = 0
+    for rng,i in zip(sorted(self.deltas),range(n)):
+      begin       = rng.extent.start
+      end         = rng.extent.end
+      beginoffset = begin.offset-rng.offset
+      endoffset   = end.offset-rng.offset
+      delta       = rng.value
+      newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta,newSrc[endoffset+idxDelta:]])
+      idxDelta    = len(newSrcTemp)-len(newSrc)
+      newSrc      = newSrcTemp
+    print(newSrcTemp)
+    return newSrcTemp
 
   @staticmethod
-  def fastUnifiedDiff(listA,listB,fromfile="",tofile="",fromfiledate="",tofiledate="",n=0,lineterm="\n"):
-    __doc__="""
-    Optimized version of difflib.unified_diff. difflib.SequenceMatcher is unbelievably slow but we can aggresively cut corners since we know the general location of all of the differences. This function only really serves to format the changes into the unified diff format.
-    """
-    import difflib,itertools
-    def formatRangeUnified(pre,start,stop):
-      __doc__="""
-      Convert range to the 'ed' format
-      """
-      start += pre
-      stop += pre
-      # Per the diff spec at http://www.unix.org/single_unix_specification/
-      beginning = max(start,1)# lines start numbering with one
-      length = stop-start
-      if length == 1:
-        return "{}".format(beginning)
-      if not length:
-        beginning -= 1        # empty ranges begin at line just before the range
-      return "{},{}".format(beginning,length)
-
-    if not fromfiledate or not tofiledate:
-      import datetime
-      rn = datetime.datetime.now().ctime()
-      if not fromfiledate:
-        fromfiledate = rn
-      if not tofiledate:
-        tofiledate   = rn
-    fromdate = "\t{}".format(fromfiledate)
-    todate   = "\t{}".format(tofiledate)
-    yield "--- {}{}{}".format(fromfile,fromdate,lineterm)
-    yield "+++ {}{}{}".format(tofile,todate,lineterm)
-    deletes = {"replace","delete"}
-    inserts = {"replace","insert"}
-
-    # find consecutive streaks of values, do this by taking the difference between a value
-    # and its index. If the values are consecutive val-idx(val) will be equal.
-    for _,g in itertools.groupby(enumerate(val for _,val in listA),lambda x: x[0]-x[1]):
-      groupIdxs = list(g)
-      lineStart = min(l for _,l in groupIdxs)
-      groupA,groupB = [listA[i][0] for i,_ in groupIdxs],[listB[i][0] for i,_ in groupIdxs if listB[i][0]]
-      for group in difflib.SequenceMatcher(a=groupA,b=groupB).get_grouped_opcodes(n):
-        first,last  = group[0],group[-1]
-        file1_range = formatRangeUnified(lineStart,first[1],last[2])
-        file2_range = formatRangeUnified(lineStart,first[3],last[4])
-        yield "@@ -{} +{} @@{}".format(file1_range,file2_range,lineterm)
-
-        for tag,i1,i2,j1,j2 in group:
-          if tag == "equal":
-            for line in groupA[i1:i2]:
-              yield " "+line
+  def domerge(left,right):
+    a      = left.dofix()
+    b      = right.dofix()
+    res    = []
+    deltas = []
+    adelta = {d.value for d in left.deltas}
+    bdelta = {d.value for d in right.deltas}
+    for tag,i1,i2,j1,j2 in difflib.SequenceMatcher(None,a,b).get_opcodes():
+      print('{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'.format(tag,i1,i2,j1,j2,a[i1:i2],b[j1:j2]))
+      if tag == "equal":
+        res.append(a[i1:i2])
+      elif tag == "insert":
+        res.append(b[j1:j2])
+      elif tag == "replace":
+        mine   = a[i1:i2]
+        theirs = b[j1:j2]
+        print("mine","'"+mine+"'","theirs","'"+theirs+"'")
+        if mine in adelta:
+          print("mine was in self.deltas")
+          if theirs not in bdelta:
+            print("theirs was not in other.deltas, adding mine")
+            res.append(mine)
+            deltas.append(mine)
             continue
-          if tag in deletes:
-            for line in groupA[i1:i2]:
-              yield "-"+line
-          if tag in inserts:
-            for line in groupB[j1:j2]:
-                yield "+"+line
+        else:
+          print("mine was not in self.deltas")
+        if theirs in bdelta:
+          print("theirs was in other.deltas, adding theirs")
+          res.append(theirs)
+          deltas.append(theirs)
+          continue
+        print("was in neither, taking theirs?")
+        res.append(theirs)
+        deltas.append(theirs)
+    return res,deltas
+
+  @staticmethod
+  def mergeDiff3(mine,other):
+    """
+    Try to merge two "overlapping" patches using diff3 and a vile hack.
+
+    diff3 normally may not be able to handle overlap inside a hunk, but by splitting the source
+    into words (including newline and whitespace!) we can try to separate out the overlap.
+
+    I have no idea how robust this is, so this should be used as a last resort. Try first to
+    make the patches as minimal as possible. You don't have to handle complex overlap if there
+    is no overlap to begin with!
+    """
+    def smart_split(string):
+      """
+      split a string into words, keeping the separators
+      """
+      specials = {" ","\n","\r","\t"}
+      spaces   = 0
+      result   = []
+      was_word = False
+      for char in string:
+        if char in specials:
+          was_word = False
+          if char == " ":
+            spaces += 1
+          else:
+            result.append(char)
+        else:
+          if spaces:
+            result.append(" "*spaces)
+            spaces = 0
+          if not was_word:
+            result.append("")
+            was_word = True
+          result[-1] += char
+      return "\n".join(result)
+
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=True) as minefd,  \
+         tempfile.NamedTemporaryFile(delete=True) as theirfd, \
+         tempfile.NamedTemporaryFile(delete=True) as commonfd:
+      minep = PetscPath(minefd.name).resolve()
+      minep.write_text(smart_split(mine.collapse()))
+      otherp = PetscPath(theirfd.name).resolve()
+      otherp.write_text(smart_split(other.collapse()))
+      commonp = PetscPath(commonfd.name).resolve()
+      commonp.write_text(smart_split(mine._makeSource()))
+      try:
+        output = subprocessRun(
+          ["diff3","-a","-m",str(minep),str(commonp),str(otherp)],
+          capture_output=True,universal_newlines=True,check=True
+        )
+      except RuntimeError as re:
+        # if we are here it means diff3 failed to merge!
+        print(re)
+        combined = mine.deltas+other.deltas
+        argsort = sorted(range(len(combined)),key=lambda x: combined.__getitem__(x).extent)
+        import ipdb; ipdb.set_trace()
+        blablabla = 2
+      else:
+        # being here does not imply unqualified success, output may be wrong!
+        merged = "".join(
+          s.replace("\n","")+"\n" if s else "\n" for s in output.stdout.split("\n\n")
+        )[:-1] # remove final newline
+    return merged
+
+  def isDeletionSupersetOf(self,other):
+    """
+    determine if any of self's deltas delete all of other's extent, in which case other is a
+    pointless patch and its error messages can be discarded
+    """
+    oextent = other.extent
+    if oextent in self.extent:
+      deltas = self.deltas
+      # first check if any one delta deletes all of other, then check if all deltas are deleters,
+      return any(d.deleter() and oextent in d.extent for d in deltas) or \
+        (self._contiguousExtent() and all(d.deleter() for d in deltas))
+    return False
+
+  def merge(self,other):
+    if not isinstance(other,type(self)):
+      raise ValueError(type(other))
+
+    if self.isDeletionSupersetOf(other):
+      other.discard()
+      return self
+    elif other.isDeletionSupersetOf(self):
+      self.discard()
+      return other
+
+    assert self.src == other.src,"Need to update offset calculation to handle arbitrary src"
+    assert self.ctxlines == other.ctxlines,"Need to update ctxlines to handle arbitrary src"
+
+    self.extent = self.extent.mergeWith(other.extent)
+    # uncomment when it handles arbitrary source
+    # self.src    = self._makeSource()
+    # fixes and ranges must be applied in order
+    combined    = self.deltas+other.deltas
+    argsort     = sorted(range(len(combined)),key=lambda x: combined.__getitem__(x).extent)
+    self.deltas = tuple(combined[i] for i in argsort)
+    self._cache = {}
+    self.weakData.extend(other.weakData)
+    return self
+
+  def collapse(self):
+    """Collapses a the list of fixes and produces into a modified output"""
+    # Fixes probably should not overwrite each other (for now), so we error out, but this
+    # is arguably a completely valid case. I just have not seen an example of it that I
+    # can use to debug with yet.
+    cacheEntry = "fixed"
+    if cacheEntry in self._cache:
+      return self._cache[cacheEntry]
+
+    idxDelta = 0
+    newSrc   = self.src = self._makeSource()
+    for delta in self.deltas:
+      extent      = delta.extent
+      offset      = idxDelta-delta.offset
+      beginoffset = extent.start.offset+offset
+      endoffset   = extent.end.offset+offset
+      newSrcTemp  = "".join([newSrc[:beginoffset],delta.value,newSrc[endoffset:]])
+      idxDelta   += len(newSrcTemp)-len(newSrc)
+      newSrc      = newSrcTemp
+    assert newSrc != self.src,"Patch did not seem to do anything!"
+    self._cache[cacheEntry] = newSrc
+    return newSrc
+
+  def view(self):
+    for i,delta in enumerate(self.deltas):
+      print("Delta:",i,"({})".format(delta))
+      delta.view()
+    return
+
 
 class PetscLinter(object):
+  """
+  Object to manage the collection and processing of errors during a lint run.
+  """
+  __slots__ = (
+    "flags","clangOpts","prefix","verbose","werror","lock","errPrefix","warnPrefix","errors",
+    "warnings","patches","index"
+  )
+
+  class weaklist(list):
+    __slots__ = "__weakref__"
+
+
   def __init__(self,compilerFlags,clangOptions=baseClangOptions,prefix="[ROOT]",verbose=False,werror=False,lock=None):
     self.flags      = compilerFlags
     self.clangOpts  = clangOptions
@@ -597,19 +2025,15 @@ class PetscLinter(object):
     self.lock       = lock
     self.errPrefix  = " ".join([prefix,85*"-"])
     self.warnPrefix = " ".join([prefix,85*"%"])
-    self.errors     = []
-    self.warnings   = []
-    # This can actually just be a straight list, since each linter object only ever
-    # handles a single file, but use dict nonetheless
-    self.patches    = {}
     self.index      = clx.Index.create()
+    self.clear()
     return
 
   def __str__(self):
     prefixStr = "Prefix:        '{}'".format(self.prefix)
     flagStr   = "Compiler Flags: {}".format(self.flags)
     clangStr  = "Clang Options:  {}".format(self.clangOpts)
-    lockStr   = "Lock:           {}".format(self.lock!=None)
+    lockStr   = "Lock:           {}".format(self.lock is not None)
     showStr   = "Verbose:        {}".format(self.verbose)
     printList = [prefixStr,flagStr,clangStr,lockStr,showStr]
     errorStr  = self.getAllErrors()
@@ -629,7 +2053,7 @@ class PetscLinter(object):
     return
 
   def __print(self,*args,**kwargs):
-    args = tuple(a for a in args if a)
+    args = tuple([a for a in args if a])
     if not args and not kwargs:
       return
     if self.lock:
@@ -639,9 +2063,39 @@ class PetscLinter(object):
       print(*args,**kwargs)
     return
 
+
+  @DiagnosticManager.register(
+    ("duplicate-function","Check for duplicate function-calls on the same execution path"),
+  )
+  def _checkDuplicateFunctionCalls(self,processedFuncs):
+    dupDiag = self._checkDuplicateFunctionCalls.diags.duplicate_function
+    for pname,functionList in processedFuncs.items():
+      seen = {}
+      for func,scope in functionList:
+        combo = [func.displayname]
+        try:
+          combo.extend(map(PetscCursor.getRawNameFromCursor,func.get_arguments()))
+        except ParsingError:
+          continue
+        combo = tuple(combo)
+        if combo not in seen:
+          seen[combo] = (func,scope)
+        elif scope >= seen[combo][1]:
+          seenStart = seen[combo][0].extent.start.line
+          start     = func.extent.start
+          startline = start.line
+          tu        = func.translation_unit
+          end       = clx.SourceLocation.from_position(tu,tu.get_file(tu.spelling),startline,-1)
+          patch     = Patch(PetscSourceRange.fromLocations(start,end),"")
+          message   = "Duplicate function found previous identical usage:\n{}".format(
+            seen[combo][0].formatted(nbefore=2,nafter=startline-seenStart)
+          )
+          self.addErrorFromCursor(func,Diagnostic(dupDiag,message,patch=patch))
+    return
+
   @staticmethod
   def findFunctionCallExpr(tu,functionNames):
-    __doc__="""
+    """
     Finds all function call expressions in container functionNames.
 
     Note that if a particular function call is not 100% correctly defined (i.e. would the
@@ -652,318 +2106,332 @@ class PetscLinter(object):
     function definitions in the AST, making it impossible to map a macro invocation to
     its 'parent' function.
     """
-    class Scope(object):
-      __doc__="""
-      Scope encompasses both the logical and lexical reach of a callsite, and is used to
-      determine if two function calls may be occur in chronological order. Scopes may be
-      approximated by incrementing or decrementing a counter every time a pair of '{}' are
-      encountered however it is not that simple. In practice they behave almost identically
-      to sets. Every relation between scopes may be formed by the following axioms.
-
-      - Scope A is said to be greater than scope B if one is able to get to scope B from scope A
-      e.g.:
-      { // scope A
-        { // scope B < scope A
-          ...
-        }
-      }
-      - Scope A is said to be equivalent to scope B if and only if they are the same object.
-      e.g.:
-      { // scope A and scope B
-        ...
-      }
-
-      One notable exception are switch-case statements. Here every 'case' label acts as its
-      own scope, regardless of whether a "break" is inserted i.e.:
-
-      switch (cond) { // scope A
-      case 1: // scope B begin
-        ...
-        break; // scope B end
-      case 2: // scope C begin
-        ...
-      case 2:// scope C end, scope D begin
-        ...
-        break; // scope D end
-      }
-
-      Semantics here are weird, as:
-      - scope B, C, D < scope A
-      - scope B != scope C != scope D
-      """
-      __slots__ = ("gen","super","children")
-
-      def __init__(self,superScope=None):
-        if superScope:
-          assert isinstance(superScope,Scope)
-          self.gen      = superScope.gen+1
-        else:
-          self.gen      = 0
-        self.super      = superScope
-        self.children   = []
-        return
-
-      def __str__(self):
-        return "gen {} id {}".format(self.gen,id(self))
-
-      def __lt__(self,other):
-        assert isinstance(other,Scope)
-        return not (self >= other)
-
-      def __gt__(self,other):
-        assert isinstance(other,Scope)
-        return self.isChildOf(other)
-
-      def __le__(self,other):
-        assert isinstance(other,Scope)
-        return not (self > other)
-
-      def __ge__(self,other):
-        assert isinstance(other,Scope)
-        return (self > other) or (self == other)
-
-      def __eq__(self,other):
-        if other is not None:
-          assert isinstance(other,Scope)
-          return id(self) == id(other)
-        return False
-
-      def __ne__(self,other):
-        return not (self == other)
-
-      def sub(self):
-        __doc__="""spawn sub-scope"""
-        child = Scope(self)
-        self.children.append(child)
-        return child
-
-      def isParentOf(self,other):
-        __doc__="""self is parent of other"""
-        if self == other:
-          return False
-        for child in self.children:
-          if (other == child) or child.isParentOf(other):
-            return True
-        return False
-
-      def isChildOf(self,other):
-        __doc__="""self is child of other, or other is parent of self"""
-        return other.isParentOf(self)
-
     def walkScopeSwitch(parent,scope):
-      __doc__="""
+      """
       special treatment for switch-case since the AST setup for it is mind-boggingly stupid.
       The first node after a case statement is listed as the cases *child* whereas every other
       node (including the break!!) is the cases *sibling*
       """
+      CASE_KIND     = clx.CursorKind.CASE_STMT
+      COMPOUND_KIND = clx.CursorKind.COMPOUND_STMT
+      CALL_KIND     = clx.CursorKind.CALL_EXPR
       # in case we get here from a scope decrease within a case
       caseScope = scope
       for child in parent.get_children():
-        if child.kind == clx.CursorKind.CASE_STMT:
+        childKind = child.kind
+        if childKind == CASE_KIND:
           # create a new scope every time we encounter a case, this is now for all intents
           # and purposes the 'scope' going forward. We don't overwrite the original scope
           # since we still need each case scope to be the previous scopes sibling
           caseScope = scope.sub()
-          yield from walkScope(child,caseScope)
-        elif child.kind == clx.CursorKind.CALL_EXPR:
+          yield from walkScope(child,scope=caseScope)
+        elif childKind == CALL_KIND:
           if child.spelling in functionNames:
             yield (child,possibleParent,caseScope)
-        elif child.kind in scopeCursors:
+            # Cursors that indicate change of logical scope
+        elif childKind == COMPOUND_KIND:
           yield from walkScopeSwitch(child,caseScope.sub())
 
     def walkScope(parent,scope=Scope()):
-      __doc__="""
+      """
       walk the tree determining the scope of a node. here 'scope' refers not only
       to lexical scope but also to logical scope, see Scope object above
       """
+      SWITCH_KIND   = clx.CursorKind.SWITCH_STMT
+      COMPOUND_KIND = clx.CursorKind.COMPOUND_STMT
+      CALL_KIND     = clx.CursorKind.CALL_EXPR
       for child in parent.get_children():
-        if child.kind == clx.CursorKind.SWITCH_STMT:
+        childKind = child.kind
+        if childKind == SWITCH_KIND:
           # switch-case statements require special treatment, we skip to the compound
           # statement
-          switchChildren = [c for c in child.get_children() if c.kind == clx.CursorKind.COMPOUND_STMT]
+          switchChildren = [c for c in child.get_children() if c.kind == COMPOUND_KIND]
           assert len(switchChildren) == 1, "Switch statement has multiple '{' operators?"
           yield from walkScopeSwitch(switchChildren[0],scope.sub())
-        elif child.kind == clx.CursorKind.CALL_EXPR:
+        elif childKind == CALL_KIND:
           if child.spelling in functionNames:
             yield (child,possibleParent,scope)
-        elif child.kind in scopeCursors:
-          # scope has descreased
-          yield from walkScope(child,scope.sub())
+        elif childKind == COMPOUND_KIND:
+          # scope has decreased
+          yield from walkScope(child,scope=scope.sub())
         else:
           # same scope
-          yield from walkScope(child,scope)
+          yield from walkScope(child,scope=scope)
 
-    cursor,filename = tu.cursor,tu.cursor.spelling
+
+    lintableKinds = funcCallCursors|{clx.CursorKind.ENUM_DECL}
+    cursor        = tu.cursor
+    filename      = tu.spelling
     for possibleParent in cursor.get_children():
       # getting filename is for some reason stupidly expensive, so we do this check first
-      if possibleParent.kind not in funcCallCursors: continue
+      if possibleParent.kind not in lintableKinds: continue
       try:
         if possibleParent.location.file.name != filename: continue
       except AttributeError:
         # possibleParent.location.file is None
         continue
-      # if we've gotten this far we have found a function definition
+      # if we've gotten this far we have found a function definition, so first yield the
+      # parent
+      yield possibleParent
+      # then yield any children matching our function calls
       yield from walkScope(possibleParent)
 
+  @staticmethod
+  def getArgumentCursors(funcCursor):
+    """
+    given a cursor representing a function, return a tuple of PetscCursor's of its arguments
+    """
+    return tuple([PetscCursor(a,i) for i,a in enumerate(funcCursor.get_arguments(),start=1)])
+
+
   def clear(self):
-    self.errors   = []
+    """
+    Resets the linter error, warning, and patch buffers.
+    Called automatically before parsing a file
+    """
+    self.errors   = collections.OrderedDict()
     self.warnings = []
+    # This can actually just be a straight list, since each linter object only ever
+    # handles a single file, but use dict nonetheless
     self.patches  = {}
     return
 
   def parse(self,filename):
-    if self.verbose:
-      self.__print(self.prefix,"Processing file     ",filename)
-    tu = self.index.parse(filename,args=self.flags,options=self.clangOpts)
-    if tu.diagnostics and self.verbose:
-      diags = {" ".join([self.prefix,d]) for d in map(str,tu.diagnostics)}
-      self.__print("\n".join(diags))
-    self.processRemoveDuplicates(filename,tu)
-    return
+    """
+    parse a file for errors
+    """
+    self.clear()
+    if self.verbose: self.__print(self.prefix,"Processing file     ",filename)
+    tu = self.index.parse(str(filename),args=self.flags,options=self.clangOpts)
+    if self.verbose and tu.diagnostics:
+      self.__print("\n".join({" ".join((self.prefix,d)) for d in map(str,tu.diagnostics)}))
+    self.process(tu)
+    return self
 
-  def getArgumentCursors(self,funcCursor):
-    return tuple(PetscCursor(a,i+1) for i,a in enumerate(funcCursor.get_arguments()))
-
-  def process(self,filename,tu):
-    for func,parent,_ in self.findFunctionCallExpr(tu,checkFunctionMap.keys()):
+  @DiagnosticManager.register(("parsing-error","Generic parsing errors"))
+  def process(self,tu):
+    """process a translation unit for errors"""
+    parsingDiag    = self.process.diags.parsing_error
+    processedFuncs = collections.defaultdict(list)
+    for results in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
+      if isinstance(results,clx.Cursor):
+        checkDocMap[results.kind](self,results)
+        continue
+      func,parent,scope = results
       try:
         checkFunctionMap[func.spelling](self,func,parent)
       except ParsingError as pe:
-        self.addWarning(filename,str(pe))
+        self.addWarning(tu.cursor.spelling,Diagnostic(parsingDiag,str(pe)))
+      processedFuncs[PetscCursor.getNameFromCursor(parent)].append((PetscCursor.cast(func),scope))
+    self._checkDuplicateFunctionCalls(processedFuncs)
     return
 
-  def processRemoveDuplicates(self,filename,tu):
-    processedFuncs = {}
-    for func,parent,scope in self.findFunctionCallExpr(tu,set(checkFunctionMap.keys())):
-      try:
-        checkFunctionMap[func.spelling](self,func,parent)
-      except ParsingError as pe:
-        self.addWarning(filename,str(pe))
-      func  = PetscCursor(func)
-      pname = PetscCursor.getNameFromCursor(parent)
-      try:
-        processedFuncs[pname].append((func,scope))
-      except KeyError:
-        processedFuncs[pname] = [(func,scope)]
-    for pname,functionList in processedFuncs.items():
-      seen = {}
-      for func,scope in functionList:
-        try:
-          combo = tuple([func.displayname]+[PetscCursor.getRawNameFromCursor(a) for a in func.get_arguments()])
-        except ParsingError:
-          continue
-        if combo not in seen:
-          seen[combo] = (func,scope)
-        elif scope >= seen[combo][1]:
-          seenStart = seen[combo][0].extent.start.line
-          fname     = func.location.file.name
-          src       = func.getRawSource()
-          startline = func.extent.start.line
-          begin,end = 0,len(src)
-          patch     = SourceFix(fname,src,startline,begin,end,"")
-          self.addErrorFromCursor(func,"Duplicate function found previous identical usage:\n\n{}".format(seen[combo][0].getFormattedSource(nbefore=2,nafter=startline-seenStart)),patch=patch)
-    return
 
-  def addErrorFromCursor(self,cursor,errorMessage,patch=None):
-    errMess = "".join(["\nERROR {}: ".format(len(self.errors)),str(cursor),"\n",errorMessage])
-    self.errors.append((errMess,patch != None))
-    try:
-      self.patches[patch.filename].append(patch)
-    except KeyError:
-      self.patches[patch.filename] = [patch]
+  def addErrorFromCursor(self,cursor,diagnostic):
+    """
+    given a cursor attach a diagnostic error message to it, and optionally a fix
+    """
+    if diagnostic.disabled():
       return
-    except AttributeError:
-      # patch = None, return
+
+    cursor   = PetscCursor.cast(cursor)
+    filename = cursor.getFile()
+    errors   = self.errors
+
+    if filename not in errors:
+      errors[filename] = collections.OrderedDict()
+
+    cursorId = cursor.hash
+    if cursorId not in errors[filename]:
+      header = "\nERROR {}: {}\n".format(len(errors[filename]),str(cursor))
+      errors[filename][cursorId] = self.weaklist([header,[],[]])
+
+    patch          = diagnostic.patch
+    havePatch      = patch is not None
+    cursorIdErrors = errors[filename][cursorId]
+    cursorIdErrors[1].append(diagnostic.formatMessage())
+    cursorIdErrors[2].append(havePatch)
+
+    if not havePatch:
+      return # bail early
+
+    patch.attach(weakref.ref(cursorIdErrors),len(cursorIdErrors[1])-1)
+    patches = self.patches
+
+    if filename not in patches:
+      patches[filename] = [patch]
       return
+
     # check if this is a compound error, i.e. an additional error on the same line
     # in which case we need to combine with previous patch
-    for prevPatch in self.patches[patch.filename][:-1]:
-      if prevPatch.startLine == patch.startLine:
-        # remove ourselves from the list
-        patch = self.patches[patch.filename].pop()
-        # this should now be the previous patch on the same line, so we combine with it
-        prevPatch.appendFix(patch)
-        break
+    pex       = patch.extent
+    pexstart  = pex.start.line
+    patchList = patches[filename]
+    for i,prevPatch in enumerate(patchList):
+      prepex = prevPatch.extent
+      if pexstart == prepex.start.line or pex.overlaps(prepex):
+        # this should now be the previous patch on the same line
+        patchList[i] = prevPatch.merge(patch)
+        return
+
+    patchList.append(patch) # didn't find any overlap, just append
     return
+
+  def addWarning(self,filename,diag):
+    """
+    add a generic warning given a filename
+    """
+    if diag.disabled():
+      return
+    elif self.werror:
+      return self.addErrorFromCursor(filename,diag)
+
+    warnMsg = diag.formatMessage()
+    try:
+      if warnMsg in self.warnings[-1][1]:
+        # we just had the exact same warning, we can ignore it. This happens very often
+        # for warnings occurring deep within a macro
+        return
+    except IndexError:
+      pass
+    warnStr = "".join(["\nWARNING {}: ".format(len(self.warnings)),warnMsg])
+    self.warnings.append((filename,warnStr))
+    return
+
+  def addWarningFromCursor(self,cursor,diag):
+    """
+    given a cursor attach a diagnostic warning message to it
+    """
+    if diag.disabled():
+      return
+    elif self.werror:
+      return self.addErrorFromCursor(cursor,diag)
+
+    cursor   = PetscCursor.cast(cursor)
+    warnStr  = "".join((
+      "\nWARNING {}: ".format(len(self.warnings)),str(cursor),"\n",diag.formatMessage()
+    ))
+    self.warnings.append((cursor.getFile(),warnStr))
+    return
+
 
   def getAllErrors(self):
-    errLeftStr,errFixedStr = "",""
-    errLeft,errFixed       = [],[]
-    for err,fixed in self.errors:
-      if fixed:
-        errFixed.append(err)
-      else:
-        errLeft.append(err)
-    if errLeft:
-      errLeftStr = "\n".join([self.errPrefix,"\n".join(errLeft)[1:],self.errPrefix])
-    if errFixed:
-      errFixedStr = "\n".join([self.errPrefix,"\n".join(errFixed)[1:],self.errPrefix])
-    return errLeftStr,errFixedStr
+    """
+    return all errors collected so far in a tuple
+    """
+    def maybeAddToGlobalList(globalList,localList,path):
+      if len(localList):
+        globalList.append((
+          path,"{prefix}\n{}\n{prefix}".format("\n".join(localList)[1:],prefix=self.errPrefix)
+        ))
+      return
 
-  def addWarning(self,filename,warnMsg):
-    if self.werror:
-      self.addErrorFromCursor(filename,warnMsg)
-    else:
-      try:
-        if warnMsg in self.warnings[-1][1]:
-          # we just had the exact same warning, we can ignore it. This happens very often
-          # for warnings occurring deep within a macro
-          return
-      except IndexError:
-        pass
-      warnStr = "".join(["\nWARNING {}: ".format(len(self.warnings)),warnMsg])
-      self.warnings.append((filename,warnStr))
-    return
+    def maybeAddToLocalList(localList,thing,mask,header):
+      string = "\n\n".join(itertools.compress(thing,mask))
+      if string:
+        localList.append("".join((header,string)))
+      return
 
-  def addWarningFromCursor(self,locCursor,warnMsg):
-    if self.werror:
-      self.addErrorFromCursor(locCursor,warnMsg)
-    else:
-      warnPrefix = str(locCursor)
-      warnFile   = locCursor.location.file.name
-      warnStr    = "".join(["\nWARNING {}: ".format(len(self.warnings)),warnPrefix,"\n",warnMsg])
-      self.warnings.append((warnFile,warnStr))
-    return
+
+    allUnresolved,allResolved = [],[]
+    for path,errors in self.errors.items():
+      unresolved,resolved = [],[]
+      for header,errs,mask in errors.values():
+        maybeAddToLocalList(resolved,errs,mask,header)
+        maybeAddToLocalList(unresolved,errs,(not m for m in mask),header)
+      maybeAddToGlobalList(allUnresolved,unresolved,path)
+      maybeAddToGlobalList(allResolved,resolved,path)
+    return allUnresolved,allResolved
 
   def getAllWarnings(self,joinToString=False):
+    """
+    return all warnings collected so far, and optionally join them all as one string
+    """
     if joinToString:
       if len(self.warnings):
-        warnings = "\n".join([self.warnPrefix,"\n".join(s for _,s in self.warnings)[1:],self.warnPrefix])
-      else:
-        warnings = ""
-    else:
-      warnings = self.warnings
-    return warnings
+        return "\n".join([
+          self.warnPrefix,"\n".join(s for _,s in self.warnings)[1:],self.warnPrefix
+        ])
+      return ""
+    return self.warnings
 
   def coalescePatches(self):
-    combinedPatches = []
-    for filename,patches in self.patches.items():
-      for p in patches:
-        p.collapse()
-      srcList   = [(p.src,p.startLine) for p in patches]
-      fixedList = [(p.fixed,p.startLine) for p in patches]
-      unified   = "".join(SourceFix.fastUnifiedDiff(srcList,fixedList,fromfile=filename,tofile=filename))
-      combinedPatches.append((filename,unified))
-    return combinedPatches
+    """
+    given a set of patches, collapse all patches and return the minimal set of diffs required
+    """
+    import datetime
+
+    class Addline(object):
+      __slots__ = "offset"
+
+      def __init__(self,offset):
+        self.offset = offset
+        return
+
+      def __call__(self,match):
+        ll,lr = match.group(1).split(",")
+        rl,rr = match.group(2).split(",")
+        return "@@ -{},{} +{},{} @@".format(self.offset+int(ll),lr,self.offset+int(rl),rr)
+
+
+    def combine(filename,patches):
+      fstr  = str(filename)
+      diffs = []
+      for p in sorted(patches,key=lambda x: x.extent.start.line):
+        rn  = datetime.datetime.now().ctime()
+        tmp = list(difflib.unified_diff(
+          p._makeSource().splitlines(True),p.collapse().splitlines(True),
+          fromfile=fstr,tofile=fstr,fromfiledate=rn,tofiledate=rn,n=p.ctxlines
+        ))
+        tmp[2] = re.sub(r"^@@ -([0-9,]+) \+([0-9,]+) @@",Addline(p.extent.start.line),tmp[2])
+        # only the first diff should get the file heading
+        diffs.append(tmp[2:] if len(diffs) else tmp)
+      return filename,"".join(itertools.chain.from_iterable(diffs))
+
+    return list(itertools.starmap(combine,self.patches.items()))
+
+
+  def diagnostics(self):
+    errorsLeft,errorsFixed = self.getAllErrors()
+    warnings = self.getAllWarnings()
+    patches  = self.coalescePatches()
+    return errorsLeft,errorsFixed,warnings,patches
+
 
 class WorkerPool(mp.queues.JoinableQueue):
-  def __init__(self,numWorkers=-1,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
+  __slots__ = (
+    "parallel","errorQueue","returnQueue","lock","workers","numWorkers","timeout",
+    "verbose","prefix","warnings","errorsLeft","errorsFixed","patches","linter"
+  )
+
+  class QueueSignal(enum.IntEnum):
+    """
+    Various signals to indicate return type on the data queue from child processes
+    """
+    WARNING      = enum.auto()
+    UNIFIED_DIFF = enum.auto()
+    ERRORS_LEFT  = enum.auto()
+    ERRORS_FIXED = enum.auto()
+    EXIT_QUEUE   = enum.auto()
+
+  def __init__(self,numWorkers,timeout=2,verbose=False,prefix="[ROOT]",**kwargs):
     if numWorkers < 0:
       numWorkers = max(mp.cpu_count()-1,1)
-    super().__init__(3*numWorkers,**kwargs,ctx=mp.get_context())
+    super().__init__(numWorkers,**kwargs,ctx=mp.get_context())
     if numWorkers in {0,1}:
-      print(prefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(numWorkers))
+      if verbose:
+        print(prefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(numWorkers))
       self.parallel    = False
       self.errorQueue  = None
       self.returnQueue = None
       self.lock        = None
     else:
-      print(prefix,"Number of worker processes ({}) sufficient, enabling multiprocessing".format(numWorkers))
+      if verbose:
+        print(prefix,"Number of worker processes ({}) sufficient, enabling multiprocessing".format(numWorkers))
       self.parallel    = True
       self.errorQueue  = mp.Queue()
       self.returnQueue = mp.Queue()
       self.lock        = mp.Lock()
-    self.workers     = []
     self.numWorkers  = numWorkers
     self.timeout     = timeout
     self.verbose     = verbose
@@ -979,28 +2447,34 @@ class WorkerPool(mp.queues.JoinableQueue):
       assert clx.conf.loaded, "Must initialize libClang first"
       clangLib = clx.conf.get_filename()
     if self.parallel:
-      workerArgs = (clangLib,checkFunctionMap,classIdMap,compilerFlags,clangOptions,self.verbose,werror,self.errorQueue,self.returnQueue,self,self.lock)
-      for i in range(self.numWorkers):
-        workerName = "[{}]".format(i)
-        worker     = mp.Process(target=queueMain,args=workerArgs,name=workerName,daemon=True)
+      commonKwArgs = {
+        "target" : queueMain,
+        "args"   : (
+          clangLib,checkFunctionMap,classIdMap,DiagnosticManager,compilerFlags,clangOptions,
+          self.verbose,werror,self.errorQueue,self.returnQueue,self,self.lock
+        ),
+        "daemon" : True
+      }
+      self.workers = [
+        mp.Process(**commonKwArgs,name=n) for n in map("[{}]".format,range(self.numWorkers))
+      ]
+      for worker in self.workers:
         worker.start()
-        self.workers.append(worker)
     else:
       self.linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=self.prefix,verbose=self.verbose,werror=werror)
-    return
+    return self
 
-  def walk(self,srcLoc,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
-    if os.path.isfile(srcLoc):
-      self.put(srcLoc)
+  def walk(self,srcPath,excludeDirs=excludeDirNames,excludeDirSuff=excludeDirSuffixes,allowFileSuff=allowFileExtensions):
+    if srcPath.is_file():
+      self.put(srcPath)
     else:
-      for root,dirs,files in os.walk(srcLoc):
+      for root,dirs,files in os.walk(srcPath):
         if self.verbose: print(self.prefix,"Processing directory",root)
         dirs[:] = [d for d in dirs if d not in excludeDirs]
         dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
-        files   = [os.path.join(root,f) for f in files if f.endswith(allowFileSuff)]
-        for filename in files:
+        for filename in (os.path.join(root,f) for f in files if f.endswith(allowFileSuff)):
           self.put(filename)
-    return
+    return self
 
   def put(self,filename,*args):
     if self.parallel:
@@ -1016,13 +2490,11 @@ class WorkerPool(mp.queues.JoinableQueue):
           # we don't want to join here since a child may have encountered an error!
           self.check()
     else:
-      self.linter.parse(filename)
-      self.patches.extend(self.linter.coalescePatches())
-      errLeft,errFixed = self.linter.getAllErrors()
-      self.errorsLeft.append(errLeft)
-      self.errorsFixed.append(errFixed)
-      self.warnings.append(self.linter.getAllWarnings())
-      self.linter.clear()
+      errLeft,errFixed,warnings,patches = self.linter.parse(filename).diagnostics()
+      self.errorsLeft.extend(errLeft)
+      self.errorsFixed.extend(errFixed)
+      self.warnings.append(warnings)
+      self.patches.extend(patches)
     return
 
   def check(self,join=False):
@@ -1052,17 +2524,17 @@ class WorkerPool(mp.queues.JoinableQueue):
       self.check(join=True)
       self.errorQueue.close()
       # send stop-signal to child processes
-      for _ in range(self.numWorkers):
-        self.put(QueueSignal.EXIT_QUEUE)
+      for _ in self.workers:
+        self.put(self.QueueSignal.EXIT_QUEUE)
       while not self.returnQueue.empty():
         signal,returnData = self.returnQueue.get()
-        if signal == QueueSignal.ERRORS_LEFT:
-          self.errorsLeft.append(returnData)
-        elif signal == QueueSignal.ERRORS_FIXED:
-          self.errorsFixed.append(returnData)
-        elif signal == QueueSignal.UNIFIED_DIFF:
+        if signal == self.QueueSignal.ERRORS_LEFT:
+          self.errorsLeft.extend(returnData)
+        elif signal == self.QueueSignal.ERRORS_FIXED:
+          self.errorsFixed.extend(returnData)
+        elif signal == self.QueueSignal.UNIFIED_DIFF:
           self.patches.extend(returnData)
-        elif signal == QueueSignal.WARNING:
+        elif signal == self.QueueSignal.WARNING:
           self.warnings.append(returnData)
         else:
           raise ValueError("Unknown data returned by returnQueue {}, {}".format(signal,returnData))
@@ -1074,32 +2546,511 @@ class WorkerPool(mp.queues.JoinableQueue):
         worker.join()
         if sys.version_info >= (3,7):
           worker.close()
-    self.errorsLeft  = [e for e in self.errorsLeft if e] # remove any None's
+    self.errorsLeft  = [e for e in self.errorsLeft  if e] # remove any None's
     self.errorsFixed = [e for e in self.errorsFixed if e]
-    self.warnings    = [w for w in self.warnings if w]
-    self.patches     = [p for p in self.patches if p]
+    self.warnings    = [w for w in self.warnings    if w]
+    self.patches     = [p for p in self.patches     if p]
     return self.warnings,self.errorsLeft,self.errorsFixed,self.patches
 
 
-"""Generic test and utility functions"""
+"""
+TODO:
+
+- make an object to hold all the PetscLinter diagnostics per file
+- make PetscLinter.diagnostics() be the one-stop shop
+- make warnings into a list with filename
+- integrate warnings into the test output as well
+- figure out how to handle overwriting fixits...
+- figure out how to handle in-out parameters
+- fix indentation check when indenting overflowing parameter list descriptions, should be indented to the dash not 2 columns
+- think of checks to do for SourceCode sections
+- handle stable combination of patches on single-character ranges, i.e.
+patch1: insert ' ' in (1,1)
+patch2: insert '\n' in (1,1)
+which order should these go in?
+- elide some checks for symbol params missing for variadic arguments
+- continue unifying the description separator check below
+"""
 def alwaysTrue(*args,**kwargs):
   return True
 
 def alwaysFalse(*args,**kwargs):
   return False
 
-def addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName):
-  __doc__="""
-  shorthand for extracting a fix from a function cursor
-  """
-  call = [c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO]
-  assert len(call) == 1
-  fix = SourceFix.fromCursor(call[0],validFuncName)
-  linter.addErrorFromCursor(obj,"Incorrect use of {}(), use {}() instead".format(funcCursor.displayname,validFuncName),patch=fix)
+
+"""utilities for checking docstrings"""
+def checkDocLineHasValidDescription(docstring,section,item,expectedSepChar="-"):
+  loc,line = item
+  if not isinstance(line,DescribableItem):
+    line = DescribableItem(line,sep=expectedSepChar)
+  sep   = line.sep
+  descr = line.description
+  arg   = line.arg
+  name  = section.transform(section.name)
+  if sep != expectedSepChar:
+    diag  = section.diags.wrong_description_separator
+    mess  = "{} seems to be missing a description separator; I suspect you may be using '{}' as a separator instead of '{}'. Expected '{} {} {}'".format(name,sep,expectedSepChar,arg,expectedSepChar,descr)
+  elif not descr:
+    diag = section.diags.missing_description
+    mess = "{} missing a description. Expected '{} {} a very useful description'".format(name,arg,expectedSepChar)
+  else:
+    return # ok?
+  docstring.addErrorFromSourceRange(diag,mess,loc)
   return
 
-def convertToCorrectPetscValidLogicalCollectiveXXX(linter,obj,objType,**kwargs):
-  __doc__="""
+def checkDocValidSynopsis(linter,cursor,docstring):
+  cursorName = PetscCursor.getNameFromCursor(cursor)
+  synopsis   = docstring.sections.synopsis
+  items      = synopsis.items
+  if isinstance(items,tuple):
+    loc,symbol = items[0]["name"] # normal synopsis
+  elif isinstance(items,PetscDocString.ParameterList):
+    loc,symbol = items.items[0]["name"] # enum synopsis
+  else:
+    raise ValueError(type(items))
+  if symbol:
+    assert loc is not None
+    if "M" in docstring.raw.splitlines()[0]:
+      import ipdb; ipdb.set_trace()
+    # chances are that if it is a macro then the name won't match
+    if symbol != cursorName and "M" not in docstring.raw.splitlines()[0]:
+      diag = synopsis.diags.matching_symbol_name
+      if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
+        mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
+          symbol,cursorName
+        )
+        patch = Patch(loc,cursorName)
+      else:
+        mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
+        patch = None
+      docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
+
+    symbolLine = loc.start.line
+    wordCount  = 0
+    charCount  = 0
+    for idx,(loc,line) in enumerate(synopsis.lines):
+      if loc.start.line == symbolLine:
+        checkDocLineHasValidDescription(docstring,synopsis,(loc,line))
+        rest       = line.split(symbol,maxsplit=1)[1].replace("-"," ",1).strip()
+        wordCount += len(rest.split())
+        charCount += len(rest)
+        break
+
+    for _,line in synopsis.lines[idx:]:
+      if not line or line.isspace():
+        break
+      line       = line.strip()
+      wordCount += len(line.split())
+      charCount += len(line)
+
+    maxCharCount = 250
+    maxWordCount = 40
+    if charCount > maxCharCount and wordCount > maxWordCount:
+      diag = synopsis.diags.verbose_description
+      mess = "Synopsis for '{}' is too long (must be at most {} characters or {} words), consider moving it to Notes. If you can't explain it simply, then you don't understand it well enough!".format(cursorName,maxCharCount,maxWordCount)
+      docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
+  else:
+    assert loc is None
+    assert symbol is None
+    mess = "Docstring missing synopsis. Expected '{} - a very useful description'".format(
+      cursorName
+    )
+    diag = synopsis.diags.missing_description
+    docstring.addErrorFromSourceRange(diag,mess,synopsis.extent,highlight=False)
+  return
+
+@DiagnosticManager.register(
+  (PetscDocString.ParameterList.diagnostic("order"),"Verify that documentation for parameters is in order of appearance"),
+  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all parameters that are documented actually exist"),
+  (PetscDocString.ParameterList.diagnostic("solitary-parameter"),"Verify that each parameter has its own entry"),
+)
+def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwaysFalse,checkIndices=False):
+  if cursorList and not params:
+    undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
+    linter.addErrorFromCursor(
+      docstring.cursor,Diagnostic(undocParamDiag,"Symbol parameters are all undocumented")
+    )
+    return
+  elif not cursorList:
+    # check we've got no parameter docstrings, if so, we can delete them
+    if params and len(params.items.values()):
+      sr   = params.extent
+      mess = "Found parameter docstring(s) but '{}' has no parameters".format(cursor.displayname)
+      extraParamDiag = checkDocValidParameterList.diags.extra_parameter
+      docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
+    return
+
+  solitaryParamDiag = checkDocValidParameterList.diags.solitary_parameter
+  cursorList = list(map(PetscCursor.cast,cursorList))
+  argNames   = [a.name for a in cursorList]
+  argSeen    = [False]*len(argNames)
+  notFound   = []
+
+  for k,group in sorted(params.items.items()):
+    if skipGroup(k,group):
+      continue
+    indices = []
+    remove  = set()
+    for i,(loc,line,_) in enumerate(group):
+      arg,sep = line.arg,line.sep
+      if sep == "," or "," in arg:
+        subargs = list(map(str.strip,arg.split(",")))
+        if len(subargs) > 1:
+          mess = "Each parameter entry must be documented separately on its own line"
+          if docstring.cursor.isVariadicFunction():
+            mess += " (note variable argument lists should be documented in notes)"
+          eloc = docstring.makeSourceRange(arg,line.text,loc.start.line)
+          docstring.addErrorFromSourceRange(solitaryParamDiag,mess,eloc)
+      elif sep == "=":
+        subargs = list(map(str.strip,arg.split(" = ")))
+        if len(subargs) > 1:
+          subargs = (subargs[0],) # case of bad separator, only the first entry is valid
+      else:
+        subargs = (arg,)
+      for sub in subargs:
+        try:
+          idx = argNames.index(sub)
+        except ValueError:
+          notFound.append((sub,loc))
+          remove.add(i)
+        else:
+          argSeen[idx] = True
+          indices.append(idx)
+          checkDocLineHasValidDescription(docstring,params,(loc,line))
+    params.checkAlignedDescriptions(docstring,[g for i,g in enumerate(group) if i not in remove])
+    if 0 and checkIndices:
+      # TODO what to do if the lines we swap are imperfect? This might be the straw
+      # breaking the camels back, since I don't see a way to do this without 2 passes
+      done = set()
+      for mine,correct in zip(indices,sorted(indices)):
+        if mine == correct or mine in done or correct in done:
+          continue
+        mloc,mtext,_ = group[mine]
+        cloc,ctext,_ = group[correct]
+        mloc  = mloc.extend()
+        cloc  = cloc.extend()
+        patch1 = Patch(mloc,ctext,combineable=False)
+        print(patch1.collapse())
+        patch2 = Patch(cloc,mtext,combineable=False)
+        print(patch2.collapse())
+        diag  = checkDocValidParameterList.diags.parameter_order
+        mess  = "Parameters out of order"
+        import ipdb; ipdb.set_trace()
+        docstring.addErrorFromSourceRange(diag,mess,mloc,patch=patch1)
+        docstring.addErrorFromSourceRange(diag,mess,cloc,patch=patch2)
+        done.update({mine,correct})
+
+  argsLeft = [name for seen,name in zip(argSeen,argNames) if not seen]
+  if notFound:
+    diag        = checkDocValidParameterList.diags.extra_parameter
+    baseMessage = "Extra docstring parameter '{}' not found in symbol parameter list:\n{}"
+    for i,(arg,loc) in enumerate(notFound):
+      message = baseMessage.format(arg,loc.formatted(numContext=2))
+      try:
+        if (len(argsLeft) == 1) and (i == len(notFound)-1):
+          # if we only have 1 arg left and 1 wasn't found, chances are they are meant to
+          # be the same
+          match = argsLeft[-1]
+        else:
+          match = difflib.get_close_matches(arg,argsLeft,n=1)[0]
+      except IndexError:
+        pass
+      else:
+        matchCursor = [c for c in cursorList if c.name == match][0]
+        message    += "\n\nmaybe you meant {}".format(matchCursor.getFormattedBlurb())
+        argsLeft.remove(match)
+      linter.addErrorFromCursor(docstring.cursor,Diagnostic(diag,message))
+
+  undocParamDiag = checkDocValidParameterList.diags.undocumented_parameter
+  for mess in map("Undocumented parameter '{}' not found in parameter section".format,argsLeft):
+    docstring.addErrorFromSourceRange(undocParamDiag,mess,params.extent,highlight=False)
+  return
+
+def checkDocValidOptionsDatabaseKeys(linter,cursor,docstring):
+  options = docstring.sections.options
+  if not options:
+    return
+
+  docstring.checkValidSectionHeaderSpelling(options)
+  docstring.checkValidSolitarySectionHeadings(options)
+
+  check = options.checkAlignedDescriptions
+  for _,group in sorted(options.items.items()):
+    check(docstring,group)
+  return
+
+@DiagnosticManager.register(
+  (PetscDocString.InlineList.diagnostic("level-casefold"),"Verify that level subheadings are lower-case"),
+  (PetscDocString.InlineList.diagnostic("level-spelling"),"Verify that level subheadings are correctly spelled"),
+)
+def checkDocValidLevel(linter,cursor,docstring):
+  level = docstring.sections.level
+  if not level:
+    # if no level, nothing to check here, error will already have been logged
+    return
+
+  docstring.checkValidSectionHeaderSpelling(level)
+
+  casefoldDiag = checkDocValidLevel.diags.level_casefold
+  spellingDiag = checkDocValidLevel.diags.level_spelling
+  validLevels  = ("beginner","intermediate","advanced","developer","deprecated")
+  expected     = ", or ".join([", ".join(validLevels[:-1]),validLevels[-1]])
+  for loc,levelName in level.items:
+    if levelName not in validLevels:
+      locase = levelName.casefold()
+      if locase in validLevels:
+        mess = "Level subheading must be lowercase, expected '{}' found '{}'".format(
+          locase,levelName
+        )
+        docstring.addErrorFromSourceRange(casefoldDiag,mess,loc,patch=Patch(loc,locase))
+      else:
+        match = difflib.get_close_matches(locase,validLevels,n=1)
+        if match:
+          match = match[0]
+          mess  = "Unknown Level subheading '{}', assuming you meant '{}'".format(levelName,match)
+          patch = Patch(loc,match)
+        else:
+          if "level" not in loc.raw().casefold():
+            continue # TODO fix this with the below
+          mess  = "Unknown Level subheading '{}', expected one of {}".format(levelName,expected)
+          patch = None
+        docstring.addErrorFromSourceRange(spellingDiag,mess,loc,patch=patch)
+  for loc,line in level.lines:
+    continue # TODO FIX ME, need to be able to handle the below
+    if line and ":" not in line:
+      # if you get a "prevloc" and "prevline" not defined error here this means that we
+      # are erroring out on the first trip round this loop and somehow have a
+      # lone-standing 'beginner' or whatever without an explicit "Level:" line...
+      errorMessage = "Level values must be on the same line as the 'Level' heading, not on separate line:\n{}".format(prevloc.mergeWith(loc).formatted(numContext=2,highlight=False))
+      # This is a stupid hack to solve a multifaceted issue. Suppose you have
+      # Level:
+      # BLABLABLA
+      # The first fix above does a tolower() transformation
+      # Level:
+      # blabla
+      # while this fix would apply a join transformation
+      # Level: BLABLA
+      # See the issue already? Since we sort the transformations by line the second
+      # transformation would actually end up going *first*, meaning that the lowercase
+      # transformation is no longer valid for patch...
+
+      # create a range starting at newline of previous line going until the first
+      # non-space character on the next line
+      delrange = PetscSourceRange.fromPositions(
+        cursor.translation_unit,prevloc.end.line,-1,loc.start.line,len(line)-len(line.lstrip())
+      )
+      # given '  Level:\n  blabla'
+      #                ^^^
+      #                 |
+      #              delrange
+      # delete delrange from it to get '  Level: blabla'
+      # TODO: make a real diagnostic here
+      diag = Diagnostic(spellingDiag,errorMessage,patch=Patch(delrange,""))
+      linter.addErrorFromCursor(cursor,diag)
+    prevloc  = loc
+    prevline = line
+  return
+
+@DiagnosticManager.register(
+  (PetscDocString.InlineList.diagnostic("seealso-duplicate"),"Verify that there are no duplicate entries in seealso lists"),
+  (PetscDocString.InlineList.diagnostic("seealso-self-reference"),"Verify that seealso lists don't contain the current symbol name"),
+)
+def checkDocValidSeealso(linter,cursor,docstring):
+  seealso = docstring.sections.seealso
+  if not seealso:
+    return
+
+  def makeDeletionPatch(loc,text,lookBehind):
+    """
+    first(),    second(),      third
+
+    Extend source range of 'second' so that deleting it yields
+
+    first(), third
+    """
+    raw = loc.raw().rstrip("\n")
+    col = loc.start.column-1
+    # str.partition won't work here since it returns the first instance of 'sep', which in
+    # our case might be the first instance of the value rather than the duplicate we just
+    # found
+    post = raw[col+len(text):]
+    # get the number of characters between us and next alphabetical character
+    cend = len(post)-len(post.lstrip(", "))
+    if lookBehind:
+      # look to remove comma and space the entry behind us
+      pre    = raw[:col]
+      cbegin = len(pre.rstrip(", "))-len(pre) # note intentionally negative value
+      assert cbegin < 0
+    else:
+      cbegin = 0
+    return Patch(loc.resized(cbegin=cbegin,cend=cend),"")
+
+
+  docstring.checkValidSectionHeaderSpelling(seealso,transform=str.casefold)
+  if seealso.barren():
+    return # barren
+
+  items       = seealso.items
+  lastLoc     = items[-1][0]
+  itemRemain  = []
+  selfRefDiag = checkDocValidSeealso.diags.seealso_self_reference
+  symbolName  = PetscCursor.getNameFromCursor(cursor)
+  for loc,text in items:
+    if text.rstrip("()") == symbolName:
+      mess = "Found self-referential seealso entry '{}'; your documentation may be good but it's not *that* good".format(text)
+      docstring.addErrorFromSourceRange(
+        selfRefDiag,mess,loc,patch=makeDeletionPatch(loc,text,loc == lastLoc)
+      )
+    else:
+      itemRemain.append((loc,text))
+
+  seen    = {}
+  dupDiag = checkDocValidSeealso.diags.seealso_duplicate
+  for loc,text in itemRemain:
+    if text not in seen:
+      seen[text] = (loc,text)
+      continue
+
+    assert text
+    mess = "\n\n".join((
+      docstring.makeErrorMessage("Seealso entry '{}' is duplicate".format(text),loc),
+      docstring.makeErrorMessage("Note first instance found here",seen[text][0],numContext=1)
+    ))
+    linter.addErrorFromCursor(
+      cursor,Diagnostic(dupDiag,mess,patch=makeDeletionPatch(loc,text,loc == lastLoc))
+    )
+  return
+
+
+"""utilities for checking specific types of docstrings"""
+@DiagnosticManager.register(
+  (PetscDocString.ParameterList.diagnostic("undocumented-parameter"),"Verify that all parameters for a symbol are documented"),
+  (PetscDocString.ParameterList.diagnostic("extra-parameter"),"Verify that all documented parameters exist for a symbol"),
+  (PetscDocString.ParameterList.diagnostic("fortran-interface"),"Verify that functions needing a custom fortran interface have the correct sowing indentifiers"),
+)
+def checkDocValidFunctionParameters(linter,cursor,docstring):
+  fnargs = linter.getArgumentCursors(cursor)
+  params = docstring.sections.parameters
+
+  if fnargs and not params:
+    diag = checkDocValidFunctionParameters.diags.undocumented_parameter
+    linter.addErrorFromCursor(cursor,Diagnostic(diag,"Function parameters are all undocumented"))
+    return
+  elif not fnargs:
+    # check we've got no parameter docstrings, if so, we can delete them
+    if len(params.items.values()):
+      sr   = params.extent
+      mess = "Found parameter docstring(s) but '{}' has no arguments".format(cursor.displayname)
+      extraParamDiag = checkDocValidFunctionParameters.diags.extra_parameter
+      docstring.addErrorFromSourceRange(extraParamDiag,mess,sr,highlight=False,patch=Patch(sr,""))
+    return
+
+  docstring.checkValidSectionHeaderSpelling(params)
+  docstring.checkValidSolitarySectionHeadings(params)
+
+  requiresC    = []
+  POINTER_KIND = clx.TypeKind.POINTER
+  for arg in fnargs:
+    canon = arg.type.get_canonical()
+    kind  = canon.kind
+    it    = 0
+    while kind == POINTER_KIND:
+      if it >= 100:
+        # there is no chance that someone has a variable over 100 pointers deep, so
+        # clearly something is wrong
+        emess = "Ran for {} iterations (>= 100) trying to get pointer type for\n{}\n".format(
+          it,arg.errorViewFromCursor(arg),"\n".join(pclu.viewAstFromCursor(arg))
+        )
+        raise RuntimError(emess)
+      canon = canon.get_pointee()
+      kind  = canon.kind
+      it   += 1
+    if kind in charTypes:
+      requiresC.append((arg,"char"))
+    elif kind in functionTypes:
+      requiresC.append((arg,"function"))
+
+  if len(requiresC) and "C" not in docstring.raw.splitlines()[0]:
+    line   = docstring.raw.split(maxsplit=1)[0]
+    crange = docstring.makeSourceRange(line,line,docstring.extent.start.line)
+    blame  = "\n".join("  {}. '{}' of derived type '{}' (is a {} pointer)".format(i+1,a.name,a.derivedtypename,why) for i,(a,why) in enumerate(requiresC))
+    mess   = "Function requires custom fortran interface but missing 'C' from docstring header. Due to\n{}".format(blame)
+    fortrInterDiag = checkDocValidFunctionParameters.diags.fortran_interface
+    docstring.addErrorFromSourceRange(fortrInterDiag,mess,crange,patch=Patch(crange,line+"C"))
+
+  checkDocValidParameterList(linter,docstring,params,fnargs)
+  return
+
+def checkDocValidEnumParameters(linter,cursor,docstring):
+  synopsis = docstring.sections.synopsis
+  if not synopsis:
+    import ipdb; ipdb.set_trace()
+    # wtf
+    return
+
+  def skipGroup(k,*args,**kwargs):
+    return k == 0
+
+  enumParams = list(map(PetscCursor,cursor.get_children()))
+  checkDocValidParameterList(
+    linter,docstring,synopsis.items,enumParams,skipGroup=skipGroup,checkIndices=True
+  )
+  return
+
+
+"""Specific 'driver' function to test a particular docstring archetype"""
+def checkPetscFunctionDocString(linter,cursor):
+  try:
+    docstring = PetscDocString(linter,cursor).parse()
+  except ParsingError as pe:
+    return # error already logged with linter
+
+  checkDocValidSynopsis(linter,cursor,docstring)
+  checkDocValidFunctionParameters(linter,cursor,docstring)
+  checkDocValidOptionsDatabaseKeys(linter,cursor,docstring)
+  checkDocValidLevel(linter,cursor,docstring)
+  checkDocValidSeealso(linter,cursor,docstring)
+  return
+
+def checkPetscEnumDocString(linter,cursor):
+  try:
+    docstring = PetscDocString(linter,cursor).parse()
+  except ParsingError:
+    return # error already logged with linter
+
+  checkDocValidSynopsis(linter,cursor,docstring)
+  checkDocValidEnumParameters(linter,cursor,docstring)
+  checkDocValidLevel(linter,cursor,docstring)
+  checkDocValidSeealso(linter,cursor,docstring)
+  return
+
+
+checkDocMap = {
+  clx.CursorKind.FUNCTION_DECL : checkPetscFunctionDocString,
+  clx.CursorKind.ENUM_DECL     : checkPetscEnumDocString,
+}
+
+"""utilities for checking functions"""
+@DiagnosticManager.register(
+  ("incompatible-function","Verify that the correct function was used for a type")
+)
+def addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName):
+  """
+  shorthand for extracting a fix from a function cursor
+  """
+  call = [
+    c for c in funcCursor.get_children() if c.type.get_pointee().kind == clx.TypeKind.FUNCTIONPROTO
+  ]
+  assert len(call) == 1
+  patch = Patch.fromCursor(call[0],validFuncName)
+  mess  = "Incorrect use of {}(), use {}() instead".format(funcCursor.displayname,validFuncName)
+  diag  = addFunctionFixToBadSource.diags.incompatible_function
+  linter.addErrorFromCursor(obj,Diagnostic(diag,mess,patch=patch))
+  return
+
+def convertToCorrectPetscValidLogicalCollectiveXXX(linter,obj,objType,funcCursor=None,**kwargs):
+  """
   Try to glean the correct PetscValidLogicalCollectiveXXX from the type, used as a failure hook in the validlogicalcollective checks.
   """
   validFuncName = None
@@ -1120,13 +3071,12 @@ def convertToCorrectPetscValidLogicalCollectiveXXX(linter,obj,objType,**kwargs):
     elif "PetscMPIInt" in obj.derivedtypename:
       validFuncName = "PetscValidLogicalCollectiveMPIInt"
   if validFuncName:
-    funcCursor = kwargs["funcCursor"]
     addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName)
     return True
   return False
 
-def convertToCorrectPetscValidXXXPointer(linter,obj,objType,**kwargs):
-  __doc__="""
+def convertToCorrectPetscValidXXXPointer(linter,obj,objType,funcCursor=None,**kwargs):
+  """
   Try to glean the correct PetscValidLogicalXXXPointer from the type, used as a failure hook in the validpointer checks.
   """
   validFuncName = None
@@ -1148,63 +3098,83 @@ def convertToCorrectPetscValidXXXPointer(linter,obj,objType,**kwargs):
     if ("PetscInt" in obj.derivedtypename) or ("PetscMPIInt" in obj.derivedtypename):
       validFuncName = "PetscValidIntPointer"
   if validFuncName:
-    funcCursor = kwargs["funcCursor"]
     addFunctionFixToBadSource(linter,obj,funcCursor,validFuncName)
     return True
   return False
 
-def checkIsPetscScalarAndNotPetscReal(linter,obj,objType,**kwargs):
-  __doc__="""
-  Used as a success hook, since a scalar may (depending on how petsc was configured) pass the type check for reals, so we must double check the name
+@DiagnosticManager.register(
+  ("incompatible-type","Verify that a particular type matches the expected type")
+)
+def checkIsTypeXAndNotTypeY(typeX,typeY,linter,obj,objType,funcCursor=None,validFunc=None):
   """
-  if "PetscScalar" not in obj.derivedtypename:
-    funcCursor = kwargs["funcCursor"]
-    if "PetscReal" in obj.derivedtypename:
-      validFunc = kwargs["validFunc"]
+  Check that a cursor is at least some form of derived type X and not some form of type Y
+  i.e. for
+
+  myInt **********x;
+
+  you may check that 'x' is some form of 'myInt' instead of say 'PetscBool'
+  """
+  derivedname = obj.derivedtypename
+  if typeX not in derivedname:
+    if typeY in derivedname:
       addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
     else:
-      linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscScalars".format(funcName=funcCursor.displayname))
+      mess = "Incorrect use of {funcName}(), {funcName}() should only be used for {}".format(
+        typeX,funcName=funcCursor.displayname
+      )
+      diag = checkIsTypeXandNotTypeY.diags.incompatible_type
+      linter.addErrorFromCursor(obj,Diagnostic(diag,mess))
   return True
 
-def checkIsPetscRealAndNotPetscScalar(linter,obj,objType,**kwargs):
-  if "PetscReal" not in obj.derivedtypename:
-    funcCursor = kwargs["funcCursor"]
-    if "PetscScalar" in obj.derivedtypename:
-      validFunc = kwargs["validFunc"]
-      addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
-    else:
-      linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscReals".format(funcName=funcCursor.displayname))
-  return True
+def checkIsPetscScalarAndNotPetscReal(*args,**kwargs):
+  return checkIsTypeXAndNotTypeY("PetscScalar","PetscReal",*args,**kwargs)
 
-def checkIntIsNotPetscBool(linter,obj,objType,**kwargs):
-  if "PetscBool" in obj.derivedtypename:
-    funcCursor,validFunc = kwargs["funcCursor"],kwargs["validFunc"]
+def checkIsPetscRealAndNotPetscScalar(*args,**kwargs):
+  return checkIsTypeXAndNotTypeY("PetscReal","PetscScalar",*args,**kwargs)
+
+def checkIsNotType(typename,linter,obj,funcCursor=None,validFunc=None):
+  if isinstance(typename,str):
+    contains = typename in obj.derivedtypename
+  elif isinstance(typename,(tuple,list)):
+    contains = any(t in obj.derivedtypename for t in typename)
+  else:
+    raise ValueError(type(typename))
+  if contains:
     addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
   return True
 
-def checkMPIIntIsNotPetscInt(linter,obj,objType,**kwargs):
-  if "PetscInt" in obj.derivedtypename:
-    funcCursor,validFunc = kwargs["funcCursor"],kwargs["validFunc"]
-    addFunctionFixToBadSource(linter,obj,funcCursor,validFunc)
-  return True
+def checkIntIsNotPetscBool(linter,obj,*args,**kwargs):
+  return checkIsNotType("PetscBool",linter,obj,**kwargs)
 
-def checkIsPetscBool(linter,obj,objType,**kwargs):
+def checkMPIIntIsNotPetscInt(linter,obj,*args,**kwargs):
+  return checkIsNotType("PetscInt",linter,obj,**kwargs)
+
+@DiagnosticManager.register(
+  ("incompatible-function","Verify that the correct function was used for a type")
+)
+def checkIsPetscBool(linter,obj,*args,funcCursor=None,**kwargs):
+  #return checkIsNotType(("PetscBool","bool"),linter,obj,**kwargs)
   if ("PetscBool" not in obj.derivedtypename) and ("bool" not in obj.typename):
-    funcCursor = kwargs["funcCursor"]
-    linter.addErrorFromCursor(obj,"Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname))
+    mess = "Incorrect use of {funcName}(), {funcName}() should only be used for PetscBool or bool".format(funcName=funcCursor.displayname)
+    diag = checkIsPetscBool.diags.incompatible_function
+    linter.addErrorFromCursor(obj,Diagnostic(diag,mess))
   return True
 
+@DiagnosticManager.register(("incompatible-type-petscobject","Verify that a symbol is a PetscObject"))
 def checkIsPetscObject(linter,obj):
-  __doc__="""
+  """
   Returns True if obj is a valid PetscObject, otherwise False. Automatically adds the error to the linter. Raises RuntimeError if obj is a PetscObject that isn't registered in the classIdMap.
   """
+  diagName = checkIsPetscObject.diags.incompatible_type_petscobject
   if not obj.typename.startswith("_p_"):
-    linter.addErrorFromCursor(obj,"Non-PETSc type when PETSc object expected.")
+    linter.addErrorFromCursor(
+      obj,Diagnostic(diagnosticFlag,"Non-PETSc type when PETSc object expected")
+    )
     return False
   elif obj.typename not in classIdMap:
     # Raise exception here since this isn't a bad source, moreso a failure of
     # this script since it should know about all petsc classes
-    errorMessage = "{}\nUnknown or invalid PETSc class '{}'. If you are introducing a new class, you must register it with this linter! See {} and search for 'Adding new classes' for more information\n".format(obj,obj.derivedtypename,osResolvePath(__file__))
+    errorMessage = "{}\nUnknown or invalid PETSc class '{}'. If you are introducing a new class, you must register it with this linter! See {} and search for 'Adding new classes' for more information\n".format(obj,obj.derivedtypename,PetscPath(__file__).resolve())
     raise RuntimeError(errorMessage)
   validObject = True
   pObjType    = obj.type.get_canonical().get_pointee()
@@ -1217,26 +3187,34 @@ def checkIsPetscObject(linter,obj):
   else:
     validObject = False
   if not validObject:
-    objDecl = PetscCursor(pObjType.get_declaration())
+    objDecl = PetscCursor.cast(pObjType.get_declaration())
     if len(objFields) == 0:
-      linter.addWarningFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+      mess = "Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but cannot determine fields. Likely the header containing definition of the object is in a nonstandard place:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2))
+      linter.addWarningFromCursor(obj,Diagnostic(diagnosticFlag,mess))
     else:
-      linter.addErrorFromCursor(obj,"Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.getFormattedSource(nafter=2)))
+      mess = "Object '{}' is prefixed with '_p_' to indicate it is a PetscObject but its definition is missing a PETSCHEADER as the first struct member:\n{}\n{}".format(objDecl.typename,objDecl.getFormattedLocationString(),objDecl.formatted(nafter=2))
+      linter.addErrorFromCursor(obj,Diagnostic(diagnosticFlag,mess))
   return validObject
 
+@DiagnosticManager.register(
+  ("incompatible-classid","Verify that the given classid matches the PetscObject type")
+)
 def checkMatchingClassid(linter,obj,objClassid):
-  __doc__="""
+  """
   Does the classid match the particular PETSc type
   """
   checkIsPetscObject(linter,obj)
-  expectedClassid = classIdMap[obj.typename]
-  if objClassid.name != expectedClassid:
-    fix = SourceFix.fromCursor(objClassid,expectedClassid)
-    linter.addErrorFromCursor(obj,"Classid doesn't match. Expected '{}' found '{}'".format(expectedClassid,objClassid.name),patch=fix)
+  expected = classIdMap[obj.typename]
+  name     = objClassid.name
+  if name != expected:
+    mess     = "Classid doesn't match. Expected '{}' found '{}'".format(expected,name)
+    diagname = checkMatchingClassid.diags.incompatible_classid
+    diag     = Diagnostic(diagname,mess,patch=Patch.fromCursor(objClassid,expected))
+    linter.addErrorFromCursor(obj,diag)
   return
 
 def checkTraceableToParentArgs(obj,parentArgNames):
-  __doc__="""
+  """
   Try and see if the cursor can be linked to parent function arguments. If it can be successfully linked return the index of the matched object otherwise raises ParsingError.
 
   myFunction(barType bar)
@@ -1302,28 +3280,28 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     argRefs = [r for r in refsAll if r.kind not in {clx.CursorKind.VAR_DECL,clx.CursorKind.FIELD_DECL}]
     if not len(argRefs):
       # it's not traceable to a function argument, so maybe its a global static variable
-      if len([r for r in refsAll if r.storage_class in {clx.StorageClass.STATIC}]):
+      if len([r for r in refsAll if r.storage_class == clx.StorageClass.STATIC]):
         # a global variable is not a function argumment, so this is unhandleable
         raise ParsingError("PETSC_CLANG_STATIC_ANALYZER_IGNORE")
 
     assert len(argRefs), "Could not determine the origin of cursor {}".format(obj)
     # take the first, as this is the earliest
-    firstRef  = argRefs[0]
-    tu,loc    = firstRef.translation_unit,firstRef.location
-    srcLen    = len(firstRef.getRawSource())
+    firstRef = argRefs[0]
+    tu,line  = firstRef.translation_unit,firstRef.location.line
+    srcLen   = len(firstRef.getRawSource())
     # why the following song and dance? Because you cannot walk the AST backwards, and
     # in the case that the current cursor is in a function call we need to access
     # our co-arguments to the function, i.e. "adjacent" branches since they should link
     # to (or be) in the parent functions argument list. So we have to
     # essentially reparse this line to be able to start from the top.
-    lineStart = clx.SourceLocation.from_position(tu,loc.file,loc.line,1)
-    lineEnd   = clx.SourceLocation.from_position(tu,loc.file,loc.line,srcLen+1)
-    lineRange = clx.SourceRange.from_locations(lineStart,lineEnd)
+    lineStart = PetscSourceLocation.fromPosition(tu,line,1)
+    lineEnd   = PetscSourceLocation.fromPosition(tu,line,srcLen+1)
+    lineRange = PetscSourceRange.fromLocations(lineStart,lineEnd).sourceRange
     tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
-    funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
+    funcProto = [
+      i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes
+    ]
     if funcProto:
-      import itertools
-
       assert len(funcProto) == 1, "Could not determine unique function prototype from {} for provenance of {}".format("".join([t.spelling for t in tGroup]),obj)
       idx        = funcProto[0]
       lambdaExpr = lambda t: (t.spelling != ")") and t.kind in varTokens
@@ -1335,8 +3313,7 @@ def checkTraceableToParentArgs(obj,parentArgNames):
       # assert that the current obj is being assigned to
       assert PetscCursor.getNameFromCursor(tGroup[0].cursor) == obj.name
       # find the binary operator, it will contain the most comprehensive AST
-      eqLoc    = list(map(lambda x: x.spelling,tGroup)).index("=")
-      iterator = tGroup[eqLoc].cursor.walk_preorder()
+      iterator = tGroup[[x.spelling for x in tGroup].index("=")].cursor.walk_preorder()
       iterator = [c for c in iterator if c.kind == clx.CursorKind.DECL_REF_EXPR]
     altCursor = [c for c in iterator if PetscCursor.getNameFromCursor(c) != obj.name]
     potentialParents.extend(altCursor)
@@ -1351,7 +3328,7 @@ def checkTraceableToParentArgs(obj,parentArgNames):
   if parent.get_definition().kind == clx.CursorKind.PARM_DECL:
     name = PetscCursor.getNameFromCursor(parent)
     try:
-      loc  = parentArgNames.index(name)
+      loc = parentArgNames.index(name)
     except ValueError as ve:
       # name isn't in the parent arguments, so we raise parsing error from it
       raise ParsingError from ve
@@ -1361,27 +3338,33 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     loc = checkTraceableToParentArgs(parent,parentArgNames)
   return loc
 
+@DiagnosticManager.register(("matching-arg-num","Verify that the given argument number matches"))
 def checkMatchingArgNum(linter,obj,idx,parentArgs):
-  __doc__="""
+  """
   Is the Arg # correct w.r.t. the function arguments
   """
+  diagName = checkMatchingArgNum.diags.matching_arg_num
   if idx.canonical.kind not in mathCursors:
     # sometimes it is impossible to tell if the index is correct so this is a warning not
     # an error. For example in the case of a loop:
     # for (i = 0; i < n; ++i) PetscValidIntPointer(arr+i,i);
-    linter.addWarningFromCursor(idx,"Index value is of unexpected type '{}'".format(idx.canonical.kind))
+    linter.addWarningFromCursor(
+      idx,Diagnostic(diagName,"Index value is of unexpected type '{}'".format(idx.canonical.kind))
+    )
     return
   try:
     idxNum = int(idx.name)
   except ValueError:
-    linter.addWarningFromCursor(idx,"Potential argument mismatch, could not determine integer value")
+    linter.addWarningFromCursor(
+      idx,Diagnostic(diagName,"Potential argument mismatch, could not determine integer value")
+    )
     return
   parentArgNames = tuple(s.name for s in parentArgs)
   try:
-    matchLoc = parentArgNames.index(obj.name)
+    expected = parentArgs[parentArgNames.index(obj.name)]
   except ValueError:
     try:
-      matchLoc = checkTraceableToParentArgs(obj,parentArgNames)
+      expected = parentArgs[checkTraceableToParentArgs(obj,parentArgNames)]
     except ParsingError as pe:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
@@ -1391,21 +3374,27 @@ def checkMatchingArgNum(linter,obj,idx,parentArgs):
       if len(parentArgs):
         parentFunc = PetscCursor(parentArgs[0].semantic_parent)
         parentFuncName = parentFunc.name+"()"
-        parentFuncSrc  = parentFunc.getFormattedSource()
+        parentFuncSrc  = parentFunc.formatted()
       else:
         # parent function has no arguments (very likely that "obj" is a global variable)
         parentFuncName = "UNKNOWN FUNCTION"
         parentFuncSrc  = "  <could not determine parent function signature from arguments>"
-      linter.addWarningFromCursor(obj,"Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n\n{}".format(parentFuncName,parentFuncSrc))
+      mess = "Cannot determine index correctness, parent function '{}' seemingly does not contain the object:\n{}".format(parentFuncName,parentFuncSrc)
+      linter.addWarningFromCursor(obj,Diagnostic(diagName,mess))
       return
-  if idxNum != parentArgs[matchLoc].argidx:
-    errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from\n\n{}".format(obj.name,str(idxNum),str(parentArgs[matchLoc].argidx),parentArgs[matchLoc].getFormattedSource())
-    fix = SourceFix.fromCursor(idx,parentArgs[matchLoc].argidx)
-    linter.addErrorFromCursor(idx,errMess,patch=fix)
+  expIdx = expected.argidx
+  if idxNum != expIdx:
+    errMess = "Argument number doesn't match for '{}'. Found '{}' expected '{}' from:\n{}".format(
+      obj.name,str(idxNum),str(expIdx),expected.formatted()
+    )
+    linter.addErrorFromCursor(idx,Diagnostic(diagName,errMess,patch=Patch.fromCursor(idx,expIdx)))
   return
 
+@DiagnosticManager.register(
+  ("incompatible-type","Verify that a particular type matches the expected type")
+)
 def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=alwaysFalse,**kwargs):
-  __doc__="""
+  """
   Checks that obj is of a particular kind, for example char. Can optionally handle pointers too.
 
   Nonstandard arguments:
@@ -1424,11 +3413,13 @@ def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNot
   that the object was correct all along, or that a more helpful error message was logged
   and/or that a fix was created.
   """
-  objType = obj.canonical.type.get_canonical()
+  diagName = checkMatchingSpecificType.diags.incompatible_type
+  objType  = obj.canonical.type.get_canonical()
   if pointer:
     if objType.kind in expectedTypeKinds:
       if not unexpectedNotPointerFunction(linter,obj,objType,**kwargs):
-        linter.addErrorFromCursor(obj,"Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,expectedTypeKinds))
+        mess = "Object of clang type {} is not a pointer. Expected pointer of one of the following types: {}".format(objType.kind,expectedTypeKinds)
+        linter.addErrorFromCursor(obj,Diagnostic(diagName,mess))
       return
     if objType.kind == clx.TypeKind.INCOMPLETEARRAY:
       objType = objType.element_type
@@ -1443,22 +3434,23 @@ def checkMatchingSpecificType(linter,obj,expectedTypeKinds,pointer,unexpectedNot
   else:
     if objType.kind in arrayTypes or objType.kind == clx.TypeKind.POINTER:
       if not unexpectedPointerFunction(linter,obj,objType,**kwargs):
-        linter.addErrorFromCursor(obj,"Object of clang type {} is a pointer when it should not be".format(objType.kind))
+        mess = "Object of clang type {} is a pointer when it should not be".format(objType.kind)
+        linter.addErrorFromCursor(obj,Diagnostic(diagName,mess))
       return
   if objType.kind in expectedTypeKinds:
-    handled = successFunction(linter,obj,objType,**kwargs)
-    if not handled:
-      errorMessage = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value '{}' indicating unhandled error!".format(obj,objType.kind,'\n- '.join(map(str,expectedTypeKinds)),successFunction,handled,expectedTypeKinds,objType.kind)
+    if not successFunction(linter,obj,objType,**kwargs):
+      errorMessage = "{}\nType checker successfully matched object of type {} to (one of) expected types:\n- {}\n\nBut user supplied on-successful-match hook '{}' returned non-truthy value indicating unhandled error!".format(obj,objType.kind,'\n- '.join(map(str,expectedTypeKinds)),successFunction)
       raise RuntimeError(errorMessage)
   else:
     if not failureFunction(linter,obj,objType,**kwargs):
-      linter.addErrorFromCursor(obj,"Object of clang type {} is not in expected types: {}".format(objType.kind,expectedTypeKinds))
+      mess = "Object of clang type {} is not in expected types: {}".format(objType.kind,expectedTypeKinds)
+      linter.addErrorFromCursor(obj,Diagnostic(diagName,mess))
   return
 
 
-"""Specific 'driver' function to test a particular macro archetype"""
+"""Specific 'driver' function to test a particular function archetype"""
 def checkObjIdxGenericN(linter,func,parent):
-  __doc__="""
+  """
   For generic checks where the form is func(obj1,idx1,...,objN,idxN)
   """
   funcArgs   = linter.getArgumentCursors(func)
@@ -1469,7 +3461,7 @@ def checkObjIdxGenericN(linter,func,parent):
   return
 
 def checkPetscValidHeaderSpecificType(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidHeaderSpecificType(obj,classid,idx,type)
   """
   funcArgs   = linter.getArgumentCursors(func)
@@ -1482,7 +3474,7 @@ def checkPetscValidHeaderSpecificType(linter,func,parent):
   return
 
 def checkPetscValidHeaderSpecific(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidHeaderSpecific(obj,classid,idx)
   """
   funcArgs   = linter.getArgumentCursors(func)
@@ -1493,61 +3485,57 @@ def checkPetscValidHeaderSpecific(linter,func,parent):
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
-def checkPetscValidPointerAndType(linter,func,parent,expectedTypes,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=convertToCorrectPetscValidXXXPointer,**kwargs):
-  __doc__="""
+def checkPetscValidPointerAndType(linter,func,parent,expectedTypes,failureFunction=convertToCorrectPetscValidXXXPointer,**kwargs):
+  """
   Generic check for PetscValidXXXPointer(obj,idx)
   """
   funcArgs   = linter.getArgumentCursors(func)
   parentArgs = linter.getArgumentCursors(parent)
 
   obj,idx = funcArgs
-  checkMatchingSpecificType(linter,obj,expectedTypes,True,
-                            unexpectedNotPointerFunction=unexpectedNotPointerFunction,
-                            unexpectedPointerFunction=unexpectedPointerFunction,
-                            successFunction=successFunction,
-                            failureFunction=failureFunction,
-                            funcCursor=func,
-                            **kwargs)
+  checkMatchingSpecificType(
+    linter,obj,expectedTypes,True,failureFunction=failureFunction,funcCursor=func,**kwargs
+  )
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
 def checkPetscValidCharPointer(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidCharPointer(obj,idx)
   """
   checkPetscValidPointerAndType(linter,func,parent,charTypes)
   return
 
 def checkPetscValidIntPointer(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidIntPointer(obj,idx)
   """
   checkPetscValidPointerAndType(linter,func,parent,intTypes,successFunction=checkIntIsNotPetscBool,validFunc="PetscValidBoolPointer")
   return
 
 def checkPetscValidBoolPointer(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidBoolPointer(obj,idx)
   """
   checkPetscValidPointerAndType(linter,func,parent,boolTypes,successFunction=checkIsPetscBool)
   return
 
 def checkPetscValidScalarPointer(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidScalarPointer(obj,idx)
   """
   checkPetscValidPointerAndType(linter,func,parent,scalarTypes,successFunction=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidRealPointer")
   return
 
 def checkPetscValidRealPointer(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidRealPointer(obj,idx)
   """
   checkPetscValidPointerAndType(linter,func,parent,realTypes,successFunction=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidScalarPointer")
   return
 
-def checkPetscValidLogicalCollective(linter,func,parent,expectedTypes,unexpectedNotPointerFunction=alwaysFalse,unexpectedPointerFunction=alwaysFalse,successFunction=alwaysTrue,failureFunction=convertToCorrectPetscValidLogicalCollectiveXXX,**kwargs):
-  __doc__="""
+def checkPetscValidLogicalCollective(linter,func,parent,expectedTypes,failureFunction=convertToCorrectPetscValidLogicalCollectiveXXX,**kwargs):
+  """
   Generic check for PetscValidLogicalCollectiveXXX(pobj,obj,idx)
   """
   funcArgs   = linter.getArgumentCursors(func)
@@ -1555,53 +3543,49 @@ def checkPetscValidLogicalCollective(linter,func,parent,expectedTypes,unexpected
 
   # dont need the petsc object, nothing to check there
   _,obj,idx = funcArgs
-  checkMatchingSpecificType(linter,obj,expectedTypes,False,
-                            unexpectedNotPointerFunction=unexpectedNotPointerFunction,
-                            unexpectedPointerFunction=unexpectedPointerFunction,
-                            successFunction=successFunction,
-                            failureFunction=failureFunction,
-                            funcCursor=func,
-                            **kwargs)
+  checkMatchingSpecificType(
+    linter,obj,expectedTypes,False,failureFunction=failureFunction,funcCursor=func,**kwargs
+  )
   checkMatchingArgNum(linter,obj,idx,parentArgs)
   return
 
 def checkPetscValidLogicalCollectiveScalar(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidLogicalCollectiveScalar(pobj,obj,idx)
   """
   checkPetscValidLogicalCollective(linter,func,parent,scalarTypes,successFunction=checkIsPetscScalarAndNotPetscReal,validFunc="PetscValidLogicalCollectiveReal")
   return
 
 def checkPetscValidLogicalCollectiveReal(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidLogicalCollectiveReal(pobj,obj,idx)
   """
   checkPetscValidLogicalCollective(linter,func,parent,realTypes,successFunction=checkIsPetscRealAndNotPetscScalar,validFunc="PetscValidLogicalCollectiveScalar")
   return
 
 def checkPetscValidLogicalCollectiveInt(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidLogicalCollectiveInt(pobj,obj,idx)
   """
   checkPetscValidLogicalCollective(linter,func,parent,intTypes,successFunction=checkIntIsNotPetscBool,validFunc="PetscValidLogicalCollectiveBool")
   return
 
 def checkPetscValidLogicalCollectiveMPIInt(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidLogicalCollectiveMPIInt(pobj,obj,idx)
   """
   checkPetscValidLogicalCollective(linter,func,parent,mpiIntTypes,successFunction=checkMPIIntIsNotPetscInt,validFunc="PetscValidLogicalCollectiveInt")
   return
 
 def checkPetscValidLogicalCollectiveBool(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidLogicalCollectiveBool(pobj,obj,idx)
   """
   checkPetscValidLogicalCollective(linter,func,parent,boolTypes,successFunction=checkIsPetscBool)
   return
 
 def checkPetscValidLogicalCollectiveEnum(linter,func,parent):
-  __doc__="""
+  """
   Specific check for PetscValidLogicalCollectiveEnum(pobj,obj,idx)
   """
   checkPetscValidLogicalCollective(linter,func,parent,enumTypes)
@@ -1642,43 +3626,25 @@ checkFunctionMap = {
 }
 
 """Utility and pre-check setup"""
-def osResolvePath(path):
-  __doc__="""
-  Fully resolve a path, expanding any shell variables, the home variable and making an absolute path
-  """
-  if path:
-    path = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
-  return path
-
-def osRemoveSilent(filename):
-  __doc__="""
-  Silently remove a file, suppressing error if the file does not exist
-  """
-  try:
-    os.remove(filename)
-  except OSError as ose:
-    import errno
-    if ose.errno != errno.ENOENT: # no such file or directory
-      raise # re-raise exception if a different error occurred
-  return
-
 def subprocessRun(*args,**kwargs):
-  __doc__="""
-  lightweight wrapper to hoist the ugly version check out of the regular code
   """
-  import subprocess,sys
+  lightweight wrapper to hoist the ugly version check out of the regular code, turns a subprocess.CalledProcessError into a RuntimeError with more diagnostics
+  """
+  import subprocess
 
-  if sys.version_info >= (3,7):
-    output = subprocess.run(*args,**kwargs)
-  else:
+  if sys.version_info < (3,7):
     if kwargs.pop("capture_output",None):
       kwargs.setdefault("stdout",subprocess.PIPE)
       kwargs.setdefault("stderr",subprocess.PIPE)
+  try:
     output = subprocess.run(*args,**kwargs)
+  except subprocess.CalledProcessError as cpe:
+    emess = "Subprocess error:\nstderr:\n{}\nstdout:\n{}\n{}".format(cpe.stderr,cpe.stdout,cpe)
+    raise RuntimeError(emess) from cpe
   return output
 
 def tryToFindLibclangDir():
-  __doc__="""
+  """
   Crudely tries to find libclang directory first using ctypes.util.find_library(), then llvm-config, and then finally checks a few places on macos
   """
   import ctypes.util
@@ -1686,44 +3652,49 @@ def tryToFindLibclangDir():
   llvmLibDir = ctypes.util.find_library("clang")
   if not llvmLibDir:
     try:
-      output = subprocessRun(["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True)
+      output = subprocessRun(
+        ["llvm-config","--libdir"],capture_output=True,universal_newlines=True,check=True
+      )
       llvmLibDir = output.stdout.strip()
     except FileNotFoundError:
       # FileNotFoundError: [Errno 2] No such file or directory: 'llvm-config'
       # try to find llvmLibDir by hand
       import platform
 
-      if platform.system().lower() == "darwin":
+      if platform.system().casefold() == "darwin":
         try:
-          output = subprocessRun(["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True)
+          output = subprocessRun(
+            ["xcode-select","-p"],capture_output=True,universal_newlines=True,check=True
+          )
           xcodeDir = output.stdout.strip()
           if xcodeDir == "/Applications/Xcode.app/Contents/Developer": # default Xcode path
-            llvmLibDir = os.path.join(xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib")
+            llvmLibDir = "/".join([xcodeDir,"Toolchains","XcodeDefault.xctoolchain","usr","lib"])
           elif xcodeDir == "/Library/Developer/CommandLineTools":      # CLT path
-            llvmLibDir = os.path.join(xcodeDir,"usr","lib")
+            llvmLibDir = "/".join([xcodeDir,"usr","lib"])
         except FileNotFoundError:
           # FileNotFoundError: [Errno 2] No such file or directory: 'xcode-select'
           pass
-  return llvmLibDir
+  return PetscPath(llvmLibDir).resolve() if llvmLibDir else llvmLibDir
 
 def initializeLibclang(clangDir=None,clangLib=None):
-  __doc__="""
+  """
   Set the required library file or directory path to initialize libclang
   """
-  if not clx.conf.loaded:
-    clx.conf.set_compatibility_check(True)
+  clxconf = clx.conf
+  if not clxconf.loaded:
+    clxconf.set_compatibility_check(True)
     if clangLib:
-      clangLib = osResolvePath(clangLib)
-      clx.conf.set_library_file(clangLib)
+      clangLib = PetscPath(clangLib).resolve()
+      clxconf.set_library_file(clangLib)
     elif clangDir:
-      clangDir = osResolvePath(clangDir)
-      clx.conf.set_library_path(clangDir)
+      clangDir = PetscPath(clangDir).resolve()
+      clxconf.set_library_path(clangDir)
     else:
       raise RuntimeError("Must supply either clang directory path or clang library path")
-  return
+  return clangDir,clangLib
 
 def filterCheckFunctionMap(filterChecks):
-  __doc__="""
+  """
   Remove checks from checkFunctionMap if they are not in filterChecks
   """
   if filterChecks:
@@ -1736,8 +3707,6 @@ def filterCheckFunctionMap(filterChecks):
   return
 
 def getPetscExtraIncludes(petscDir,petscArch):
-  import re
-
   # keep these separate, since ORDER MATTERS HERE. Imagine that for example the
   # mpiInclude dir has copies of old petsc headers, you don't want these to come first
   # in the include search path and hence override those found in petsc/include.
@@ -1747,78 +3716,99 @@ def getPetscExtraIncludes(petscDir,petscArch):
   petscIncludes = []
   mpiIncludes   = []
   cxxflags      = []
-  with open(os.path.join(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
+  with open(PetscPath(petscDir,petscArch,"lib","petsc","conf","petscvariables"),"r") as pv:
     ccinc  = re.compile("^PETSC_CC_INCLUDES\s*=")
     mpiinc = re.compile("^MPI_INCLUDE\s*=")
     shoinc = re.compile("^MPICC_SHOW\s*=")
     cxxflg = re.compile("^CXX_FLAGS\s*=")
-    line   = pv.readline()
-    while line:
+    for line in pv:
       if ccinc.search(line):
-        petscIncludes.append(line.split("=",1)[1])
+        petscIncludes.append(line.split("=",maxsplit=1)[1])
       elif mpiinc.search(line) or shoinc.search(line):
-        mpiIncludes.append(line.split("=",1)[1])
+        mpiIncludes.append(line.split("=",maxsplit=1)[1])
       elif cxxflg.search(line):
-        cxxflags.append(line.split("=",1)[1])
-      line = pv.readline()
-  cxxflags      = [l.strip().split(" ") for l in cxxflags if l]
+        cxxflags.append(line.split("=",maxsplit=1)[1])
+  cxxflags      = [l.strip().split() for l in cxxflags if l]
   cxxflags      = [flag for flags in cxxflags for flag in flags if flag.startswith("-std=")]
   cxxflags      = [cxxflags[-1]] if cxxflags else [] # take only the last one
-  extraIncludes = [l.strip().split(" ") for l in petscIncludes+mpiIncludes if l]
+  extraIncludes = [l.strip().split() for l in petscIncludes+mpiIncludes if l]
   extraIncludes = [item for sublist in extraIncludes for item in sublist if item.startswith("-I")]
   seen          = set()
   extraIncludes = [item for item in extraIncludes if not item in seen and not seen.add(item)]
   return cxxflags+extraIncludes
 
 def getClangSysIncludes():
-  __doc__="""
+  """
   Get system clangs set of default include search directories.
 
   Because for some reason these are hardcoded by the compilers and so libclang does not have them.
   """
-  output = subprocessRun(["clang","-E","-x","c++","/dev/null","-v"],capture_output=True,check=True,universal_newlines=True)
+  output = subprocessRun(
+    ["clang","-E","-x","c++","/dev/null","-v"],
+    capture_output=True,check=True,universal_newlines=True
+  )
   # goes to stderr because of /dev/null
   includes = output.stderr.split("#include <...> search starts here:\n")[1]
-  includes = includes.split("End of search list.")[0].replace("(framework directory)","")
-  includes = includes.split("\n")
-  includes = ["-I"+os.path.abspath(i.strip()) for i in includes if i]
-  return includes
+  includes = includes.split("End of search list.",maxsplit=1)[0].replace(
+    "(framework directory)",""
+  ).splitlines()
+  return ["".join(["-I",str(PetscPath(i.strip()).resolve())]) for i in includes if i]
 
 def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,printPrefix="[ROOT]"):
-  __doc__="""
+  """
   build the baseline set of compiler flags, these are passed to all translation unit parse attempts
   """
-  miscFlags        = ["-D","PETSC_CLANG_STATIC_ANALYZER","-x","c++","-Wno-nullability-completeness"]
-  sysincludes      = getClangSysIncludes()
-  petscIncludes    = getPetscExtraIncludes(petscDir,petscArch)
-  compilerFlags    = sysincludes+miscFlags+petscIncludes+extraCompilerFlags
-  if verbose: print("\n".join([printPrefix+" Compile flags:",*compilerFlags]))
+  miscFlags = [
+    "-DPETSC_CLANG_STATIC_ANALYZER",
+    "-xc++",
+    "-Wno-empty-body",
+    "-Wno-writable-strings",
+    "-Wno-array-bounds",
+    "-Wno-nullability-completeness",
+    "-fparse-all-comments",
+  ]
+  petscIncludes = getPetscExtraIncludes(petscDir,petscArch)
+  compilerFlags = getClangSysIncludes()+miscFlags+petscIncludes+extraCompilerFlags
+  if verbose: print("\n".join([" ".join([printPrefix,"Compile flags:"]),*compilerFlags]))
   return compilerFlags
 
 def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=basePCHClangOptions):
-  __doc__="""
+  """
   create a precompiled header from petsc.h, and all of the private headers, this not only saves a lot of time, but is critical to finding struct definitions. Header contents are not parsed during the actual linting, since this balloons the parsing time as libclang provides no builtin auto header-precompilation like the normal compiler does.
 
   Including petsc.h first should define almost everything we need so no side effects from including headers in the wrong order below.
   """
+  if not isinstance(petscDir,PetscPath):
+    petscDir = PetscPath(petscDir).resolve()
+
   index             = clx.Index.create()
-  precompiledHeader = os.path.join(petscDir,"include","petsc_ast_precompile.pch")
-  megaHeaderLines   = [("petsc.h","#include <petsc.h>")]
-  privateDirName    = os.path.join(petscDir,"include","petsc","private")
+  precompiledHeader = petscDir/"include"/"petsc_ast_precompile.pch"
+  megaHeaderLines   = [
+    # Kokkos needs to go first since it mucks with complex
+    ("petscvec_kokkos.hpp","#include <petscvec_kokkos.hpp>"),
+    ("petsc.h","#include <petsc.h>")
+  ]
+  privateDirName    = petscDir/"include"/"petsc"/"private"
+  megaHeaderName    = "megaHeader.hpp"
+
   # build a megaheader from every header in private first
-  for headerFile in os.listdir(privateDirName):
-    if headerFile.endswith((".h",".hpp")):
-      megaHeaderLines.append((headerFile,"#include <petsc/private/{}>".format(headerFile)))
+  for header in privateDirName.iterdir():
+    if header.suffix in (".h",".hpp"):
+      megaHeaderLines.append((header.name,"#include <petsc/private/{}>".format(header.name)))
+
+  # loop until we get a completely clean compilation, any problematic headers are discarded
   while True:
-    # loop until we get a completely clean compilation, any problematic headers are simply
-    # discarded
     megaHeader = "\n".join(hfi for _,hfi in megaHeaderLines)+"\n"  # extra newline for last line
-    tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
+    tu = index.parse(
+      megaHeaderName,
+      args=compilerFlags,unsaved_files=[(megaHeaderName,megaHeader)],options=pchClangOptions
+    )
     diags = {}
     for diag in tu.diagnostics:
       try:
         filename = diag.location.file.name
       except AttributeError:
+        # file is None
         continue
       basename,filename = os.path.split(filename)
       if filename not in diags:
@@ -1843,16 +3833,17 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
           try:
             filename = child.location.file.name
           except AttributeError:
+            # file is None
             continue
           # filter out our fake header
-          if filename != "megaHeader.hpp":
+          if filename != megaHeaderName:
             # this will be include/petsc/private, headerA.h
             basename,filename = os.path.split(filename)
             if filename not in diags:
               diags[filename] = (basename,diag)
     if diags:
       diagerrs = "\n"+"\n".join(str(d) for _,d in diags.values())
-      print(printPrefix,"Included header has errors, removing",diagerrs)
+      if verbose: print(printPrefix,"Included header has errors, removing",diagerrs)
       megaHeaderLines = [(hdr,hfi) for hdr,hfi in megaHeaderLines if hdr not in diags]
     else:
       break
@@ -1860,84 +3851,159 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
     # now include the other headers but this time immediately crash on errors, let the
     # user figure out their own busted header files
     megaHeader = megaHeader+"\n".join(extraHeaderIncludes)
-    if verbose:
-      print("\n".join([printPrefix+" Mega header:",megaHeader]))
-    tu = index.parse("megaHeader.hpp",args=compilerFlags,unsaved_files=[("megaHeader.hpp",megaHeader)],options=pchClangOptions)
+    if verbose: print("\n".join([printPrefix+" Mega header:",megaHeader]))
+    tu = index.parse(
+      megaHeaderName,
+      args=compilerFlags,unsaved_files=[(megaHeaderName,megaHeader)],options=pchClangOptions
+    )
     if tu.diagnostics:
       print("\n".join(map(str,tu.diagnostics)))
       raise clx.LibclangError("\n\nWarnings or errors generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
   elif verbose:
     print("\n".join([printPrefix+" Mega header:",megaHeader]))
-  osRemoveSilent(precompiledHeader)
+  precompiledHeader.unlink(missing_ok=True)
   tu.save(precompiledHeader)
-  compilerFlags.extend(["-include-pch",precompiledHeader])
-  if verbose:
-    print(printPrefix,"Saving precompiled header",precompiledHeader)
+  compilerFlags.extend(["-include-pch",str(precompiledHeader)])
+  if verbose: print(printPrefix,"Saving precompiled header",precompiledHeader)
   return precompiledHeader
 
 
 """Main functions for root and queue processes"""
-def testMain(petscDir,srcDir,outputDir,patches,replace=False,verbose=False):
-  import glob,itertools,difflib
+def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=False,verbose=False):
+  import tempfile
+  import shutil
 
-  class TestException(Exception):
-    pass
+  class TemporaryCopy(object):
+    def __init__(self,fname):
+      self.fname = PetscPath(fname).resolve()
+      if not self.fname.exists():
+        mess = "Filename {} does not appear to exist".format(self.fname)
+        raise RuntimeError(mess)
+      return
 
-  if not patches:
-    raise RuntimeError("outputDir {} provided but no patches generated".format(outputDir))
-  returncode = 0
+    def __enter__(self):
+      self.tmp     = tempfile.NamedTemporaryFile(delete=True,suffix=self.fname.suffix)
+      self.tmpPath = PetscPath(self.tmp.name).resolve()
+      if not self.tmpPath.exists():
+        mess = "tmpPath {} does not appear to exist".format(self.tmpPath)
+        raise RuntimeError(mess)
+      shutil.copy2(str(self.fname),str(self.tmpPath))
+      return self
+
+    def __exit__(self,*args,**kwargs):
+      PetscPath.unlink(self.origFile(),missing_ok=True)
+      PetscPath.unlink(self.rejFile(),missing_ok=True)
+      del self.tmp
+      return
+
+    def origFile(self):
+      return self.tmpPath.append_suffix(".orig")
+
+    def rejFile(self):
+      return self.tmpPath.append_suffix(".rej")
+
+
+  def test(generatedOutput,referenceFile):
+    shortRefName = referenceFile.relative_to(petscDir)
+    if replace:
+      print("\tREPLACE",shortRefName)
+      referenceFile.write_text("".join(generatedOutput))
+      return
+    if not referenceFile.exists():
+      return "Missing reference file '{}'\n".format(referenceFile)
+    return "".join(difflib.unified_diff(
+      referenceFile.read_text().splitlines(True),generatedOutput,
+      fromfile=str(shortRefName),tofile="Generated Output",n=0
+    ))
+
+
+  # sanitize the output so that it will be equal across systems
+  def sanitizeOutputFile(text):
+    return [] if text is None else [l.replace(str(petscDir),".") for l in text.splitlines(True)]
+
+  def sanitizePatchFile(text):
+    # skip the diff header with file names
+    return [] if text is None else text.splitlines(True)[2:]
+
+  def renamePatchFileTarget(text,newPath):
+    lines    = text.splitlines(True)
+    outFile  = lines[0].split()[1]
+    lines[0] = lines[0].replace(outFile,str(newPath))
+    lines[1] = lines[1].replace(outFile,str(newPath))
+    return "".join(lines)
+
+
   patchError = {}
+  rootDir    = "--directory="+petscDir.anchor
   patches    = dict(patches)
-  fileList   = []
-  for ext in ('c','cxx','cpp','cc','CC'):
-    fileList.extend(glob.glob("".join([srcDir,os.path.sep,"*."+ext])))
+  output     = {p:["<--- FIXED --->",s,"<--- LEFT --->"] for p,s in errorsFixed}
+  for path,string in errorsLeft:
+    if path not in output:
+      output[path] = ["<--- FIXED --->\n<--- LEFT --->"]
+    output[path].append(string)
+  output = {key: "\n".join(val if len(val) == 4 else val+[""]) for key,val in output.items()}
+  if testPath.is_dir():
+    cSuffixes = ("*.c","*.cxx","*.cpp","*.cc","*.CC")
+    fileList  = [item for sublist in map(testPath.glob,cSuffixes) for item in sublist]
+  else:
+    fileList  = [testPath]
   for testFile in fileList:
-    basename   = os.path.basename(os.path.splitext(testFile)[0])
-    outputFile = os.path.join(outputDir,basename+".patch")
-    shortName  = testFile.replace(petscDir+os.path.sep,"")
+    outputBase = outputDir/testFile.stem
+    outputFile = outputBase.with_suffix(".out")
+    patchFile  = outputBase.with_suffix(".patch")
+    shortName  = testFile.relative_to(petscDir)
 
     print("\tTEST   ",shortName)
-    try:
-      try:
-        patch = patches[testFile]
-      except KeyError:
-        raise TestException("File had no corresponding patch: '{}'\n".format(testFile))
-      if replace:
-        print("\tREPLACE",shortName)
-        patch = "".join(patch.splitlines(True)[2:])
-        with open(outputFile,"w") as fd:
-          fd.write(patch)
-        continue
-      elif not os.path.exists(outputFile):
-        raise TestException("File had no corresponding output: '{}'\n".format(testFile))
 
-      with open(outputFile,"r") as fd:
-        fileLines  = fd.readlines()
-        # skip header lines containing date, the output files shouldn't contain them
-        patchLines = patch.splitlines(True)[2:]
-        diffs      = list(difflib.unified_diff(fileLines,patchLines,n=0))
-        if diffs:
-          raise TestException("".join(diffs))
-      print("\tOK     ",shortName)
-    except TestException as te:
+    outputErrors = [
+      test(sanitizeOutputFile(output.get(testFile)),outputFile),
+      test(sanitizePatchFile(patches.get(testFile)),patchFile)
+    ]
+
+    # no point in checking the patch, we have already replaced
+    if not replace:
+      # make sure the patch can be applied
+      with TemporaryCopy(testFile) as tmpSrc, \
+           tempfile.NamedTemporaryFile(delete=True,suffix=".patch") as tmpPatch:
+        tmpPatchPath = PetscPath(tmpPatch.name).resolve()
+        tmpPatchPath.write_text(renamePatchFileTarget(patches.get(testFile),tmpSrc.tmpPath))
+        try:
+          patchOutput = subprocessRun(
+            ["patch",rootDir,"--strip=0","--unified","--input={}".format(tmpPatchPath)],
+            check=True,universal_newlines=True,capture_output=True
+          )
+        except RuntimeError as re:
+          emess = "Application of patch based on {} failed:\n{}\n".format(testFile,str(re))
+          rej   = tmpSrc.rejFile()
+          if rej.exists():
+            emess += "\n{}:\n{}".format(rej,rej.read_text())
+          outputErrors.append(emess)
+
+    outputErrors = [e for e in outputErrors if e]
+    if outputErrors:
       print("\tNOT OK ",shortName)
-      patchError[testFile] = str(te)
+      patchError[testFile] = "\n".join(outputErrors)
+    else:
+      print("\tOK     ",shortName)
   if patchError:
-    returncode = 21
-    errBars    = "".join(["[ERROR]",85*"-","[ERROR]"])
-    errBars    = [errBars+"\n",errBars]
+    errBars = "".join(["[ERROR]",85*"-","[ERROR]"])
+    errBars = [errBars+"\n",errBars]
     for errFile in patchError:
       print(patchError[errFile].join(errBars))
-  return returncode
+    return 21
+  return 0
 
-def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,verbose,werror,errorQueue,returnQueue,fileQueue,lock):
-  __doc__="""
-  main function for worker processes in the queue, does pretty much the same thing the main process would do in their place
+def queueMain(clangLib,checkFunctionMapU,classIdMapU,diagMapU,compilerFlags,clangOptions,verbose,werror,errorQueue,returnQueue,fileQueue,lock):
   """
-  def updateGlobals(updatedCheckFunctionMap,updatedClassIdMap):
-    global checkFunctionMap,classIdMap # in a function so the "globalness" doesn't leak
+  main function for worker processes in the queue, does pretty much the same thing the
+  main process would do in their place
+  """
+  def updateGlobals(updatedCheckFunctionMap,updatedClassIdMap,updatedDiagnosticsMngr):
+    # in a function so the "globalness" doesn't leak
+    global checkFunctionMap,classIdMap,DiagnosticManager
     checkFunctionMap = updatedCheckFunctionMap
     classIdMap       = updatedClassIdMap
+    DiagnosticManager.disabled = updatedDiagnosticsMngr.disabled
     return
 
   def lockPrint(*args,**kwargs):
@@ -1949,38 +4015,37 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
   # in case errors are thrown before setup is complete
   errorPrefix = "[UNKNOWN_CHILD]"
   filename    = "QUEUE SETUP"
+  printbar    = 15*"="
   try:
-    updateGlobals(checkFunctionMapU,classIdMapU)
+    updateGlobals(checkFunctionMapU,classIdMapU,diagMapU)
     proc        = mp.current_process().name
     printPrefix = proc+" --"[:len("[ROOT]")-len(proc)]
     errorPrefix = " ".join([printPrefix,"Exception detected while processing"])
-    lockPrint(printPrefix,15*"=","Performing setup",15*"=")
+    lockPrint(printPrefix,printbar,"Performing setup",printbar)
     initializeLibclang(clangLib=clangLib)
     linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,werror=werror,lock=lock)
-    lockPrint(printPrefix,15*"=","Entering queue  ",15*"=")
+    lockPrint(printPrefix,printbar,"Entering queue  ",printbar)
     while True:
       filename = fileQueue.get()
-      if filename == QueueSignal.EXIT_QUEUE:
+      if filename == WorkerPool.QueueSignal.EXIT_QUEUE:
         fileQueue.task_done()
         break
-      linter.parse(filename)
-      returnQueue.put((QueueSignal.UNIFIED_DIFF,linter.coalescePatches()))
-      errLeft,errFixed = linter.getAllErrors()
-      returnQueue.put((QueueSignal.ERRORS_LEFT ,errLeft))
-      returnQueue.put((QueueSignal.ERRORS_FIXED,errFixed))
-      returnQueue.put((QueueSignal.WARNING     ,linter.getAllWarnings()))
-      linter.clear()
+      errLeft,errFixed,warnings,patches = linter.parse(filename).diagnostics()
+      returnQueue.put((WorkerPool.QueueSignal.UNIFIED_DIFF,patches))
+      returnQueue.put((WorkerPool.QueueSignal.ERRORS_LEFT ,errLeft))
+      returnQueue.put((WorkerPool.QueueSignal.ERRORS_FIXED,errFixed))
+      returnQueue.put((WorkerPool.QueueSignal.WARNING     ,warnings))
       fileQueue.task_done()
-    lockPrint(printPrefix,15*"=","Exiting queue   ",15*"=")
-  except:
+    lockPrint(printPrefix,printbar,"Exiting queue   ",printbar)
+  except Exception:
     try:
       # attempt to send the traceback back to parent
       import traceback
-      preamble = " ".join([errorPrefix,filename])
+      preamble = " ".join([errorPrefix,str(filename)])
       errorQueue.put("\n".join([preamble,traceback.format_exc()]))
-    except:
+    except Exception as e:
       # if this fails then I guess we really are screwed
-      errorQueue.put("[UNKNOWN CHILD] UNKNOWN ERROR")
+      errorQueue.put("[UNKNOWN CHILD] UNKNOWN ERROR\n{}\n".format(e))
     finally:
       try:
         # in case we had any work from the queue we need to release it but only after
@@ -1990,12 +4055,15 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,compilerFlags,clangOptions,
         # task_done() called more times than get(), means we threw before getting the
         # filename
         pass
-  errorQueue.close()
-  returnQueue.close()
+  try:
+    errorQueue.close()
+    returnQueue.close()
+  except Exception:
+    pass
   return
 
-def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testDir=None,replaceTests=False,werror=False):
-  __doc__="""
+def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=False,workers=-1,checkFunctionFilter=None,patchDir=None,applyPatches=False,extraCompilerFlags=[],extraHeaderIncludes=[],testOutputDir=None,replaceTests=False,werror=False):
+  """
   entry point for linter
 
   Positional arguments:
@@ -2003,7 +4071,7 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   petscArch -- $PETSC_ARCH
 
   Keyword arguments:
-  srcDir              -- alternative directory to use as src root (default: $PETSC_DIR/src)
+  srcPath             -- alternative directory (or single file) to use as src root (default: $PETSC_DIR/src)
   clangDir            -- directory containing libclang.[so|dylib|dll] (default: None)
   clangLib            -- direct path to libclang.[so|dylib|dll], overrrides clangDir if set (default: None)
   verbose             -- display debugging statements (default: False)
@@ -2013,90 +4081,112 @@ def main(petscDir,petscArch,srcDir=None,clangDir=None,clangLib=None,verbose=Fals
   applyPatches        -- automatically apply patch files to source if they are generated (default: False)
   extraCompilerFlags  -- list of extra compiler flags to append to petsc and system flags. For example ["-I/my/non/standard/include","-Wsome_warning"] (default: None)
   extraHeaderIncludes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path. Use extraCompilerFlags to make any other search path additions. For example ["#include <slepc/private/epsimpl.h>"] (default: None)
-  testDir             -- directory containing test output to compare patches against, use special keyword '__at_src__' to use srcDir/output (default: None)
-  replaceTests        -- replace output files in testDir with patches generated (default: False)
+  testOutputDir       -- directory containing test output to compare patches against, use special keyword '__at_src__' to use srcPath/output (default: None)
+  replaceTests        -- replace output files in testOutputDir with patches generated (default: False)
   werror              -- treat all linter-generated warnings as errors (default: False)
   """
 
   # pre-processing setup
-  if applyPatches and testDir:
+  if bool(applyPatches) and bool(testOutputDir):
     raise RuntimeError("Test directory and apply patches are both non-zero. It is probably not a good idea to apply patches over the test directory!")
-  initializeLibclang(clangDir=clangDir,clangLib=clangLib)
-  petscDir = osResolvePath(petscDir)
-  if srcDir is None:
-    srcDir = os.path.join(petscDir,"src")
-  else:
-    srcDir = osResolvePath(srcDir)
-  if patchDir is None:
-    patchDir = os.path.join(petscDir,"petscLintPatches")
-  else:
-    patchDir = osResolvePath(patchDir)
-  if testDir == "__at_src__":
-    testDir = os.path.join(srcDir,"output")
+  clangDir,clangLib = initializeLibclang(clangDir=clangDir,clangLib=clangLib)
+  petscDir = PetscPath(petscDir).resolve()
+  srcPath  = petscDir/"src" if srcPath is None else PetscPath(srcPath).resolve()
+  patchDir = petscDir/"petscLintPatches" if patchDir is None else PetscPath(patchDir).resolve()
+  if testOutputDir == "__at_src__":
+    if srcPath.is_dir():
+      testOutputDir = srcPath/"output"
+    elif srcPath.is_file():
+      testOutputDir = srcPath.parent/"output"
+    else:
+      mess = "Got neither a directory or file as srcPath {}".format(srcPath)
+      raise RuntimeError(mess)
 
-  rootPrintPrefix   = "[ROOT]"
-  compilerFlags     = buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=extraCompilerFlags,verbose=verbose)
-  precompiledHeader = buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose)
+  if testOutputDir is not None and not testOutputDir.exists():
+    mess = "Test Output Directory {} does not appear to exist".format(testOutputDir)
+    raise RuntimeError(mess)
+
   filterCheckFunctionMap(checkFunctionFilter)
+  rootPrintPrefix   = "[ROOT]"
+  compilerFlags     = buildCompilerFlags(
+    petscDir,petscArch,extraCompilerFlags=extraCompilerFlags,verbose=verbose
+  )
 
-  pool = WorkerPool(numWorkers=workers,verbose=verbose)
-  pool.setup(compilerFlags,werror=werror)
-  pool.walk(srcDir)
-  warnings,errorsLeft,errorsFixed,patches = pool.finalize()
-  if verbose: print(rootPrintPrefix,"Deleting precompiled header",precompiledHeader)
-  osRemoveSilent(precompiledHeader)
-  if testDir is not None:
-    return testMain(petscDir,srcDir,testDir,patches,replace=replaceTests,verbose=verbose)
-  if patches:
+  class PrecompiledHeader(object):
+    __slots__ = "pch"
+
+    def __init__(self,*args,**kwargs):
+      self.pch = buildPrecompiledHeader(*args,**kwargs)
+      return
+
+    def __enter__(self):
+      return self
+
+    def __exit__(self,*args,**kwargs):
+      if verbose: print(rootPrintPrefix,"Deleting precompiled header",self.pch)
+      self.pch.unlink()
+      return
+
+  with PrecompiledHeader(
+      petscDir,compilerFlags,extraHeaderIncludes=extraHeaderIncludes,verbose=verbose
+  ):
+    warnings,errorsLeft,errorsFixed,patches = WorkerPool(
+      workers,verbose=verbose
+    ).setup(compilerFlags,werror=werror).walk(srcPath).finalize()
+
+  if testOutputDir is not None:
+    return testMain(
+      petscDir,srcPath,testOutputDir,patches,errorsFixed,errorsLeft,
+      replace=replaceTests,verbose=verbose
+    )
+  elif patches:
     import time
 
-    try:
-      os.mkdir(patchDir)
-    except FileExistsError:
-      pass
+    patchDir.mkdir(exist_ok=True)
     manglePostfix = "".join(["_",str(int(time.time())),".patch"])
-    for filename,patch in patches:
-      filename    = filename.replace(srcDir,"").replace(os.path.sep,"_")[1:]
-      mangledFile = os.path.splitext(filename)[0]+manglePostfix
-      mangledFile = os.path.join(patchDir,mangledFile)
+    rootDir       = "--directory="+patchDir.anchor
+    for fname,patch in patches:
+      mangledRel = fname.append_name(manglePostfix)
+      if mangledRel.parent != srcPath.parent: # not in same directory
+        mangledRel = mangledRel.relative_to(srcPath)
+      mangledFile = patchDir/str(mangledRel).replace(os.path.sep,"_")
       if verbose: print(rootPrintPrefix,"Writing patch to file",mangledFile)
-      with open(mangledFile,"w") as fd:
-        fd.write(patch)
+      mangledFile.write_text(patch)
     if applyPatches:
-      import glob
-
       if verbose: print(rootPrintPrefix,"Applying patches from patch directory",patchDir)
-      rootDir   = "".join(["-d",os.path.abspath(os.path.sep)])
-      patchGlob = "".join([patchDir,os.path.sep,"*",manglePostfix])
-      for patchFile in glob.iglob(patchGlob):
+      for patchFile in patchDir.glob("*"+manglePostfix):
         if verbose: print(rootPrintPrefix,"Applying patch",patchFile)
-        output = subprocessRun(["patch",rootDir,"-p0","--unified","-i",patchFile],check=True,universal_newlines=True,capture_output=True)
+        output = subprocessRun(
+          ["patch",rootDir,"--strip=0","--unified","--input={}".format(patchFile)],
+          check=True,universal_newlines=True,capture_output=True
+        )
         if verbose: print(output.stdout)
-  returnCode = 0
+  ret       = 0
+  formatStr = " ".join([rootPrintPrefix,"{:=^85}"])
   if warnings and verbose:
-    print("\n"+rootPrintPrefix,30*"=","Found warnings      ",33*"=")
+    print(formatStr.format(" Found Warnings "))
     print("\n".join(s for tup in warnings for _,s in tup))
-    print(rootPrintPrefix,30*"=","End warnings        ",33*"=")
+    print(formatStr.format(" End warnings "))
   if errorsFixed and verbose:
-    print("\n"+rootPrintPrefix,30*"=","Fixed Errors        ",33*"=")
-    print("\n".join(errorsFixed))
-    print(rootPrintPrefix,30*"=","End fixed errors    ",33*"=")
+    print(formatStr.format(" Fixed Errors " if applyPatches else " Fixable Errors "))
+    print("\n".join(e for _,e in errorsFixed))
+    print(formatStr.format(" End Fixed Errors "))
   if errorsLeft:
-    print("\n"+rootPrintPrefix,30*"=","Unfixable Errors    ",33*"=")
-    print("\n".join(errorsLeft))
-    print(rootPrintPrefix,30*"=","End unfixable errors",33*"=")
-    returnCode = 11
-    print("Some errors or warnings could not be automatically corrected via the patch files, see above")
-  elif patches:
+    print(formatStr.format(" Unfixable Errors "))
+    print("\n".join(e for _,e in errorsLeft))
+    print(formatStr.format(" End Unfixable Errors "))
+    print("Some errors or warnings could not be automatically corrected via the patch files")
+    ret = 11
+  if patches:
     if applyPatches:
-      print("\nAll errors or warnings successfully patched")
+      print("All fixable errors or warnings successfully patched")
     else:
-      rootDir = "".join(["-d",os.path.abspath(os.path.sep)])
-      print("\nAll errors fixable via patch files written to",patchDir)
-      patchGlob = "*".join([patchDir+os.path.sep,manglePostfix])
-      print("Apply manually using:\n\tpatch {} -p0 --unified -i {}".format(rootDir,patchGlob))
-      returnCode = 12
-  return returnCode
+      print("Patch files written to",patchDir)
+      print("Apply manually using:")
+      print("  patch {} --strip=0 --unified --input={}".format(rootDir,patchDir/("*"+manglePostfix)))
+      if ret != 0:
+        ret = 12
+  return ret
 
 
 if __name__ == "__main__":
@@ -2104,18 +4194,19 @@ if __name__ == "__main__":
   def str2bool(v):
     if isinstance(v,bool):
       return v
-    v = v.lower()
+    v = v.casefold()
     if v in {"yes","true","t","y","1"}:
       return True
     elif v in {"no","false","f","n","0",""}:
       return False
     else:
-      raise argparse.ArgumentTypeError("Boolean value expected, got '{}'".format(v))
+      mess = "Boolean value expected, got '{}'".format(v)
+      raise argparse.ArgumentTypeError(mess)
 
   clangDir = tryToFindLibclangDir()
   try:
     petscDir      = os.environ["PETSC_DIR"]
-    defaultSrcDir = os.path.join(petscDir,"src")
+    defaultSrcDir = PetscPath(petscDir).resolve()/"src"
   except KeyError:
     petscDir      = None
     defaultSrcDir = "$PETSC_DIR/src"
@@ -2125,24 +4216,44 @@ if __name__ == "__main__":
     petscArch = None
 
   parser = argparse.ArgumentParser(description="set options for clang static analysis tool",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
   grouplibclang = parser.add_argument_group(title="libclang location settings")
   group = grouplibclang.add_mutually_exclusive_group(required=False)
   group.add_argument("--clang_dir",nargs="?",help="directory containing libclang.[so|dylib|dll], if not given attempts to automatically detect it via llvm-config",default=clangDir,dest="clangdir")
   group.add_argument("--clang_lib",nargs="?",help="direct location of libclang.[so|dylib|dll], overrides clang directory if set",dest="clanglib")
+
   grouppetsc = parser.add_argument_group(title="petsc location settings")
-  grouppetsc.add_argument("--PETSC_DIR",required=False,default=petscDir,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
-  grouppetsc.add_argument("--PETSC_ARCH",required=False,default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
-  parser.add_argument("-s","--src-dir",required=False,default=defaultSrcDir,help="Alternate base directory of source tree (e.g. $SLEPC_DIR/src)",dest="src")
-  parser.add_argument("-v","--verbose",required=False,type=str2bool,nargs="?",const=True,default=False,help="verbose progress printed to screen")
+  grouppetsc.add_argument("--PETSC_DIR",default=petscDir,help="if this option is unused defaults to environment variable $PETSC_DIR",dest="petscdir")
+  grouppetsc.add_argument("--PETSC_ARCH",default=petscArch,help="if this option is unused defaults to environment variable $PETSC_ARCH",dest="petscarch")
+
+  parser.add_argument("-s","--src-dir",default=defaultSrcDir,help="Alternate base directory of source tree (e.g. $SLEPC_DIR/src)",dest="src")
+  parser.add_argument("-v","--verbose",type=str2bool,nargs="?",const=True,default=False,help="verbose progress printed to screen")
   filterFuncChoices = ", ".join(list(checkFunctionMap.keys()))
-  parser.add_argument("-f","--functions",required=False,nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
-  parser.add_argument("-j","--jobs",required=False,type=int,const=-1,default=-1,nargs="?",help="number of multiprocessing jobs, -1 means number of processors on machine")
-  parser.add_argument("-p","--patch-dir",required=False,help="directory to store patches in if they are generated, defaults to SRC_DIR/../petscLintPatches",dest="patchdir")
-  parser.add_argument("-a","--apply-patches",required=False,type=str2bool,nargs="?",const=True,default=False,help="automatically apply patches that are saved to file",dest="apply")
-  parser.add_argument("--CXXFLAGS",required=False,nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
-  parser.add_argument("--test",required=False,nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
-  parser.add_argument("--replace",required=False,type=str2bool,nargs="?",const=True,default=False,help="replace output files in test directory with patches generated")
-  parser.add_argument("--werror",required=False,type=str2bool,nargs="?",const=True,default=False,help="treat all warnings as errors")
+  parser.add_argument("--functions",nargs="+",choices=list(checkFunctionMap.keys()),metavar="FUNCTIONNAME",help="filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: "+filterFuncChoices,dest="funcs")
+  parser.add_argument("-j","--jobs",type=int,const=-1,default=-1,nargs="?",help="number of multiprocessing jobs, -1 means number of processors on machine")
+  parser.add_argument("-p","--patch-dir",help="directory to store patches in if they are generated, defaults to SRC_DIR/../petscLintPatches",dest="patchdir")
+  parser.add_argument("-a","--apply-patches",type=str2bool,nargs="?",const=True,default=False,help="automatically apply patches that are saved to file",dest="apply")
+  parser.add_argument("--CXXFLAGS",nargs="+",default=[],help="extra flags to pass to CXX compiler",dest="cxxflags")
+  parser.add_argument("--test",nargs="?",const="__at_src__",help="test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out")
+  parser.add_argument("--replace",type=str2bool,nargs="?",const=True,default=False,help="replace output files in test directory with patches generated")
+  parser.add_argument("--werror",type=str2bool,nargs="?",const=True,default=False,help="treat all warnings as errors")
+
+  class CheckFilter(argparse.Action):
+    def __call__(self,parser,namespace,values,*args,**kwargs):
+      flag = self.dest.replace(DiagnosticManager.flagprefix[1:],"",1).replace("_","-")
+      if flag == "diagnostics-all":
+        for diag,_ in DiagnosticManager.registered().items():
+          DiagnosticManager.set(diag,values)
+      else:
+        DiagnosticManager.set(flag,values)
+      setattr(namespace,flag,values)
+      return
+
+  groupdiag = parser.add_argument_group(title="diagnostics")
+  groupdiag.add_argument("-fdiagnostics-all",type=str2bool,nargs="?",const=True,default=True,action=CheckFilter,help="disable all diagnostics")
+  for diag,helpstr in sorted(DiagnosticManager.registered().items()):
+    groupdiag.add_argument("-f"+diag,metavar="",type=str2bool,nargs="?",const=True,default=True,action=CheckFilter,help=helpstr)
+
   args = parser.parse_args()
 
   if args.petscdir is None:
@@ -2153,8 +4264,5 @@ if __name__ == "__main__":
   if args.clanglib:
     args.clangdir = None
 
-  if args.src == "$PETSC_DIR/src":
-    args.src = os.path.join(petscDir,"src")
-
-  ret = main(args.petscdir,args.petscarch,srcDir=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testDir=args.test,replaceTests=args.replace,werror=args.werror)
+  ret = main(args.petscdir,args.petscarch,srcPath=args.src,clangDir=args.clangdir,clangLib=args.clanglib,verbose=args.verbose,workers=args.jobs,checkFunctionFilter=args.funcs,patchDir=args.patchdir,applyPatches=args.apply,extraCompilerFlags=args.cxxflags,testOutputDir=args.test,replaceTests=args.replace,werror=args.werror)
   sys.exit(ret)
