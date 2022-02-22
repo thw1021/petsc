@@ -1100,11 +1100,9 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
   }
 
   /* Set coordinates to the sub PC objects whenever these are set */
-  if(jac->coordinates_set)
-  {
+  if(jac->coordinates_set) {
     PC pc_coords;
-    if(jac->type == PC_COMPOSITE_SCHUR)
-    {
+    if(jac->type == PC_COMPOSITE_SCHUR) {
       // Head is first block.
       ierr = KSPGetPC(jac->head->ksp, &pc_coords);CHKERRQ(ierr);
       ierr = PCSetCoordinates(pc_coords, jac->head->dim, jac->head->ndofs, jac->head->coords);CHKERRQ(ierr);
@@ -1112,15 +1110,12 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       ierr = KSPGetPC(jac->kspschur, &pc_coords);CHKERRQ(ierr);
       ierr = PCSetCoordinates(pc_coords, jac->head->next->dim, jac->head->next->ndofs, jac->head->next->coords);CHKERRQ(ierr);
     }
-    else if(jac->type == PC_COMPOSITE_GKB)
-    {
+    else if(jac->type == PC_COMPOSITE_GKB) {
       PetscPrintf(MPI_COMM_WORLD, "Warning: Setting coordinates does nothing for the GKB Fieldpslit preconditioner");
     }
-    else
-    {
+    else {
       ilink = jac->head;
-      while (ilink)
-      {
+      while (ilink) {
         ierr = KSPGetPC(ilink->ksp, &pc_coords);CHKERRQ(ierr);
         ierr = PCSetCoordinates(pc_coords, ilink->dim, ilink->ndofs, ilink->coords);CHKERRQ(ierr);
         ilink = ilink->next;
@@ -2880,8 +2875,7 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
 
   // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
   ii=0;
-  while(ilink_current)
-  {
+  while(ilink_current) {
     // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
     IS is_coords;
     PetscInt ndofs_block;
@@ -2899,9 +2893,7 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
     // Having the indices computed and the memory allocated, we can copy the relevant coords and set them to the subPC.
     for(PetscInt dof=0;dof<ndofs_block;++dof)
       for(PetscInt d=0;d<dim;++d)
-        {
           coords_block[dim*dof + d] = coords[dim * block_dofs_enumeration[dof] + d];
-        }
     ilink_current->dim = dim;
     ilink_current->ndofs = ndofs_block;
     ierr = PetscMalloc1(ndofs_block * dim, &(ilink_current->coords));
