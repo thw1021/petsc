@@ -195,3 +195,9 @@ int main(int argc, char **argv)
   ierr = PetscFinalize();
   return ierr;
 }
+
+/*TEST
+  test:
+    nsize: {{1 3}}
+    args: -nsfs {{1 3}} -n_leaves_per_rank {{1 5}} -leave_step {{1 3}} -share_roots {{true false}}
+TEST*/
