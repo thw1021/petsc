@@ -3,6 +3,34 @@ static char help[]= "Test PetscSFFCompose when the ilocal array is not the ident
 
 #include <petscsf.h>
 
+typedef struct {
+  MPI_Comm          comm;
+  PetscMPIInt       rank, size;
+  PetscInt          leaveStep, nsfs, nLeavesPerRank;
+  PetscBool         shareRoots, sparseLeaves;
+} AppCtx;
+
+static PetscErrorCode GetOptions(MPI_Comm comm, AppCtx *ctx)
+{
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  ctx->comm = comm;
+  ctx->nsfs = 3;
+  ctx->nLeavesPerRank = 4;
+  ctx->leaveStep = 1;
+  ctx->shareRoots = PETSC_FALSE;
+  ctx->sparseLeaves = PETSC_FALSE;
+  ierr = PetscOptionsGetInt(NULL, NULL, "-nsfs", &ctx->nsfs, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetInt(NULL, NULL, "-n_leaves_per_rank", &ctx->nLeavesPerRank, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetInt(NULL, NULL, "-leave_step", &ctx->leaveStep, NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsGetBool(NULL, NULL, "-share_roots", &ctx->shareRoots, NULL);CHKERRQ(ierr);
+  ctx->sparseLeaves = (PetscBool) (ctx->leaveStep != 1);
+  ierr = MPI_Comm_size(comm, &ctx->size);CHKERRMPI(ierr);
+  ierr = MPI_Comm_rank(comm, &ctx->rank);CHKERRMPI(ierr);
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PetscSFCheckEqual_Private(PetscSF sf0, PetscSF sf1)
 {
   PetscInt          nRoot, nLeave;
@@ -53,99 +81,115 @@ static PetscErrorCode PetscSFCheckEqual_Private(PetscSF sf0, PetscSF sf1)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode CreateReferenceSF(AppCtx *ctx, PetscSF *refSF)
+{
+  PetscInt          i, j, k, r;
+  PetscInt         *ilocal = NULL;
+  PetscSFNode      *iremote;
+  PetscInt          nLeaves = ctx->nsfs * ctx->nLeavesPerRank * ctx->size;
+  PetscInt          nroots  = ctx->nLeavesPerRank * ctx->nsfs;
+  PetscSF           sf;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  ilocal = NULL;
+  if (ctx->sparseLeaves) {
+    ierr = PetscCalloc1(nLeaves+1, &ilocal);CHKERRQ(ierr);
+  }
+  ierr = PetscMalloc1(nLeaves, &iremote);CHKERRQ(ierr);
+  ierr = PetscSFCreate(ctx->comm, &sf);CHKERRQ(ierr);
+  for (i=0, j=0; i<ctx->nsfs; i++) {
+    for (r=0; r<ctx->size; r++) {
+      for (k=0; k<ctx->nLeavesPerRank; k++, j++) {
+        if (ctx->sparseLeaves) {
+          ilocal[j+1] = ilocal[j] + ctx->leaveStep;
+        }
+        iremote[j].rank = r;
+        iremote[j].index = k + i * ctx->nLeavesPerRank;
+      }
+    }
+  }
+  ierr = PetscSFSetGraph(sf, nroots, nLeaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER);CHKERRQ(ierr);
+  *refSF = sf;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode CreateSFs(AppCtx *ctx, PetscSF *newSFs[], PetscInt *leafOffsets[])
+{
+  PetscInt          i;
+  PetscInt         *lOffsets = NULL;
+  PetscSF          *sfs;
+  PetscInt          nLeaves = ctx->nLeavesPerRank * ctx->size;
+  PetscInt          nroots  = ctx->shareRoots ? ctx->nLeavesPerRank * ctx->nsfs : ctx->nLeavesPerRank;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  if (ctx->sparseLeaves) {
+    ierr = PetscCalloc1(ctx->nsfs+1, &lOffsets);CHKERRQ(ierr);
+  }
+  ierr = PetscMalloc1(ctx->nsfs, &sfs);CHKERRQ(ierr);
+  for (i=0; i<ctx->nsfs; i++) {
+    PetscInt      j, k;
+    PetscMPIInt   r;
+    PetscInt     *ilocal = NULL;
+    PetscSFNode  *iremote;
+
+    if (ctx->sparseLeaves) {
+      ierr = PetscCalloc1(nLeaves+1, &ilocal);CHKERRQ(ierr);
+    }
+    ierr = PetscMalloc1(nLeaves, &iremote);CHKERRQ(ierr);
+    for (r=0, j=0; r<ctx->size; r++) {
+      for (k=0; k<ctx->nLeavesPerRank; k++, j++) {
+        if (ctx->sparseLeaves) {
+          ilocal[j+1] = ilocal[j] + ctx->leaveStep;
+        }
+        iremote[j].rank = r;
+        iremote[j].index = ctx->shareRoots ? k + i * ctx->nLeavesPerRank : k;
+      }
+    }
+    if (ctx->sparseLeaves) lOffsets[i+1] = lOffsets[i] + ilocal[j];
+
+    ierr = PetscSFCreate(ctx->comm, &sfs[i]);CHKERRQ(ierr);
+    ierr = PetscSFSetGraph(sfs[i], nroots, nLeaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER);CHKERRQ(ierr);
+  }
+  *newSFs = sfs;
+  *leafOffsets = lOffsets;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode DestroySFs(AppCtx *ctx, PetscSF *sfs[])
+{
+  PetscInt          i;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  for (i=0; i<ctx->nsfs; i++) {
+    ierr = PetscSFDestroy(&(*sfs)[i]);CHKERRQ(ierr);
+  }
+  ierr = PetscFree(*sfs);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char **argv)
 {
-  PetscInt          i, leaveStep = 1, nsfs = 3, nLeavesPerRank = 4;
-  PetscBool         shareRoots = PETSC_FALSE, sparseLeaves = PETSC_FALSE;
+  AppCtx            ctx;
   PetscSF           sf, sfRef;
+  PetscSF          *sfs;
+  PetscInt         *leafOffsets;
   MPI_Comm          comm;
-  PetscMPIInt       rank, size;
   PetscErrorCode    ierr;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  ierr = GetOptions(comm, &ctx);CHKERRQ(ierr);
 
-  ierr = PetscOptionsGetInt(NULL, NULL, "-nsfs", &nsfs, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL, NULL, "-n_leaves_per_rank", &nLeavesPerRank, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL, NULL, "-share_roots", &shareRoots, NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetInt(NULL, NULL, "-leave_step", &leaveStep, NULL);CHKERRQ(ierr);
-  if (leaveStep != 1) sparseLeaves = PETSC_TRUE;
-
-  {
-    PetscInt *leafOffsets = NULL;
-    PetscSF  *sfs;
-
-    if (sparseLeaves) {
-      ierr = PetscCalloc1(nsfs+1, &leafOffsets);CHKERRQ(ierr);
-    }
-    ierr = PetscMalloc1(nsfs, &sfs);CHKERRQ(ierr);
-    for (i=0; i<nsfs; i++) {
-      PetscInt      nLeaves = nLeavesPerRank * size;
-      PetscInt      nroots  = shareRoots ? nLeavesPerRank * nsfs : nLeavesPerRank;
-      PetscInt      j, k;
-      PetscMPIInt   r;
-      PetscInt     *ilocal = NULL;
-      PetscSFNode  *iremote;
-
-      if (sparseLeaves) {
-        ierr = PetscCalloc1(nLeaves+1, &ilocal);CHKERRQ(ierr);
-      }
-      ierr = PetscMalloc1(nLeaves, &iremote);CHKERRQ(ierr);
-      for (r=0, j=0; r<size; r++) {
-        for (k=0; k<nLeavesPerRank; k++, j++) {
-          if (sparseLeaves) {
-            ilocal[j+1] = ilocal[j] + leaveStep;
-          }
-          iremote[j].rank = r;
-          iremote[j].index = shareRoots ? k + i * nLeavesPerRank : k;
-        }
-      }
-      if (sparseLeaves) leafOffsets[i+1] = leafOffsets[i] + ilocal[j];
-
-      ierr = PetscSFCreate(comm, &sfs[i]);CHKERRQ(ierr);
-      ierr = PetscSFSetGraph(sfs[i], nroots, nLeaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER);CHKERRQ(ierr);
-    }
-
-    ierr = PetscSFConcatenate(comm, nsfs, sfs, shareRoots, leafOffsets, &sf);CHKERRQ(ierr);
-
-    ierr = PetscFree(leafOffsets);CHKERRQ(ierr);
-    for (i=0; i<nsfs; i++) {
-      ierr = PetscSFDestroy(&sfs[i]);CHKERRQ(ierr);
-    }
-    ierr = PetscFree(sfs);CHKERRQ(ierr);
-  }
-
-  {
-    PetscInt      j, k, r;
-    PetscInt     *ilocal = NULL;
-    PetscSFNode  *iremote;
-    PetscInt      nLeaves = nsfs * nLeavesPerRank * size;
-    PetscInt      nroots  = nLeavesPerRank * nsfs;
-
-    ilocal = NULL;
-    if (sparseLeaves) {
-      ierr = PetscCalloc1(nLeaves+1, &ilocal);CHKERRQ(ierr);
-    }
-    ierr = PetscMalloc1(nLeaves, &iremote);CHKERRQ(ierr);
-    ierr = PetscSFCreate(comm, &sfRef);CHKERRQ(ierr);
-    for (i=0, j=0; i<nsfs; i++) {
-      for (r=0; r<size; r++) {
-        for (k=0; k<nLeavesPerRank; k++, j++) {
-          if (sparseLeaves) {
-            ilocal[j+1] = ilocal[j] + leaveStep;
-          }
-          iremote[j].rank = r;
-          iremote[j].index = k + i * nLeavesPerRank;
-        }
-      }
-    }
-    ierr = PetscSFSetGraph(sfRef, nroots, nLeaves, ilocal, PETSC_OWN_POINTER, iremote, PETSC_OWN_POINTER);CHKERRQ(ierr);
-  }
-
+  ierr = CreateSFs(&ctx, &sfs, &leafOffsets);CHKERRQ(ierr);
+  ierr = PetscSFConcatenate(comm, ctx.nsfs, sfs, ctx.shareRoots, leafOffsets, &sf);CHKERRQ(ierr);
+  ierr = CreateReferenceSF(&ctx, &sfRef);CHKERRQ(ierr);
   ierr = PetscSFCheckEqual_Private(sf, sfRef);CHKERRQ(ierr);
 
+  ierr = DestroySFs(&ctx, &sfs);CHKERRQ(ierr);
+  ierr = PetscFree(leafOffsets);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sf);CHKERRQ(ierr);
   ierr = PetscSFDestroy(&sfRef);CHKERRQ(ierr);
   ierr = PetscFinalize();
