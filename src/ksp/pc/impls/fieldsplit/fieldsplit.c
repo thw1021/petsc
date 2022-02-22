@@ -1109,11 +1109,9 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       // Second one is Schur block, but its KSP object is in kspschur.
       ierr = KSPGetPC(jac->kspschur, &pc_coords);CHKERRQ(ierr);
       ierr = PCSetCoordinates(pc_coords, jac->head->next->dim, jac->head->next->ndofs, jac->head->next->coords);CHKERRQ(ierr);
-    }
-    else if(jac->type == PC_COMPOSITE_GKB) {
-      PetscPrintf(MPI_COMM_WORLD, "Warning: Setting coordinates does nothing for the GKB Fieldpslit preconditioner");
-    }
-    else {
+    } else if(jac->type == PC_COMPOSITE_GKB) {
+      PetscInfo(MPI_COMM_WORLD, "Warning: Setting coordinates does nothing for the GKB Fieldpslit preconditioner");
+    } else {
       ilink = jac->head;
       while (ilink) {
         ierr = KSPGetPC(ilink->ksp, &pc_coords);CHKERRQ(ierr);
@@ -2891,9 +2889,11 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
     ierr = ISGetIndices(is_coords, &block_dofs_enumeration); CHKERRQ(ierr);
 
     // Having the indices computed and the memory allocated, we can copy the relevant coords and set them to the subPC.
-    for(PetscInt dof=0;dof<ndofs_block;++dof)
-      for(PetscInt d=0;d<dim;++d)
-          coords_block[dim*dof + d] = coords[dim * block_dofs_enumeration[dof] + d];
+    for(PetscInt dof=0;dof<ndofs_block;++dof) {
+      for(PetscInt d=0;d<dim;++d) {
+        coords_block[dim*dof + d] = coords[dim * block_dofs_enumeration[dof] + d];
+      }
+    }
     ilink_current->dim = dim;
     ilink_current->ndofs = ndofs_block;
     ierr = PetscMalloc1(ndofs_block * dim, &(ilink_current->coords));
