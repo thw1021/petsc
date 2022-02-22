@@ -1,0 +1,16 @@
+<--- FIXED --->
+[ROOT] -------------------------------------------------------------------------------------
+ERROR 0: ./src/sys/tests/linter/testDisabled.c:51:6
+'2' of derived type 'int', canonical type 'int'
+  4: {
+  5:   /* incorrect */
+> 6:   PetscValidHeaderSpecific(r,PETSC_RANDOM_CLASSID,2);
+                                                       ^
+  7: 
+  8:   /* correct by being disabled */
+
+Argument number doesn't match for 'r'. Found '2' expected '1' from [-fmatching-arg-num]:
+> 3: PetscErrorCode testDisabled(PetscRandom r)
+                                 ^^^^^^^^^^^^^
+[ROOT] -------------------------------------------------------------------------------------
+<--- LEFT --->

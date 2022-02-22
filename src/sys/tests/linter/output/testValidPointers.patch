@@ -1,17 +1,56 @@
-@@ -6,8 +6,8 @@
+@@ -7,5 +7,5 @@
+ {
+   /* incorrect */
 -  PetscValidCharPointer(a,2);
--  PetscValidIntPointer(b,3);
--  PetscValidBoolPointer(c,4);
--  PetscValidRealPointer(d,5);
--  PetscValidScalarPointer(e,6);
--  PetscValidIntPointer(f,7);
--  PetscValidRealPointer(g,8);
--  PetscValidScalarPointer(h,9);
 +  PetscValidPointer(a,1);
+   PetscValidIntPointer(b,3);
+   PetscValidBoolPointer(c,4);
+@@ -8,5 +8,5 @@
+   /* incorrect */
+   PetscValidCharPointer(a,2);
+-  PetscValidIntPointer(b,3);
 +  PetscValidCharPointer(b,2);
+   PetscValidBoolPointer(c,4);
+   PetscValidRealPointer(d,5);
+@@ -9,5 +9,5 @@
+   PetscValidCharPointer(a,2);
+   PetscValidIntPointer(b,3);
+-  PetscValidBoolPointer(c,4);
 +  PetscValidIntPointer(c,3);
+   PetscValidRealPointer(d,5);
+   PetscValidScalarPointer(e,6);
+@@ -10,5 +10,5 @@
+   PetscValidIntPointer(b,3);
+   PetscValidBoolPointer(c,4);
+-  PetscValidRealPointer(d,5);
 +  PetscValidIntPointer(d,4);
+   PetscValidScalarPointer(e,6);
+   PetscValidIntPointer(f,7);
+@@ -11,5 +11,5 @@
+   PetscValidBoolPointer(c,4);
+   PetscValidRealPointer(d,5);
+-  PetscValidScalarPointer(e,6);
 +  PetscValidIntPointer(e,5);
+   PetscValidIntPointer(f,7);
+   PetscValidRealPointer(g,8);
+@@ -12,5 +12,5 @@
+   PetscValidRealPointer(d,5);
+   PetscValidScalarPointer(e,6);
+-  PetscValidIntPointer(f,7);
 +  PetscValidBoolPointer(f,6);
+   PetscValidRealPointer(g,8);
+   PetscValidScalarPointer(h,9);
+@@ -13,5 +13,5 @@
+   PetscValidScalarPointer(e,6);
+   PetscValidIntPointer(f,7);
+-  PetscValidRealPointer(g,8);
 +  PetscValidScalarPointer(g,7);
+   PetscValidScalarPointer(h,9);
+ 
+@@ -14,5 +14,5 @@
+   PetscValidIntPointer(f,7);
+   PetscValidRealPointer(g,8);
+-  PetscValidScalarPointer(h,9);
 +  PetscValidRealPointer(h,8);
+ 
+   /* correct */
