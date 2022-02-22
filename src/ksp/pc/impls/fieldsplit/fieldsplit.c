@@ -1100,9 +1100,9 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
   }
 
   /* Set coordinates to the sub PC objects whenever these are set */
-  if(jac->coordinates_set) {
+  if (jac->coordinates_set) {
     PC pc_coords;
-    if(jac->type == PC_COMPOSITE_SCHUR) {
+    if (jac->type == PC_COMPOSITE_SCHUR) {
       // Head is first block.
       ierr = KSPGetPC(jac->head->ksp, &pc_coords);CHKERRQ(ierr);
       ierr = PCSetCoordinates(pc_coords, jac->head->dim, jac->head->ndofs, jac->head->coords);CHKERRQ(ierr);
@@ -1110,7 +1110,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       ierr = KSPGetPC(jac->kspschur, &pc_coords);CHKERRQ(ierr);
       ierr = PCSetCoordinates(pc_coords, jac->head->next->dim, jac->head->next->ndofs, jac->head->next->coords);CHKERRQ(ierr);
     } else if(jac->type == PC_COMPOSITE_GKB) {
-      PetscInfo(MPI_COMM_WORLD, "Warning: Setting coordinates does nothing for the GKB Fieldpslit preconditioner");
+      PetscInfo(PetscObjectComm((PetscObject)pc), "Warning: Setting coordinates does nothing for the GKB Fieldpslit preconditioner");
     } else {
       ilink = jac->head;
       while (ilink) {
@@ -2851,12 +2851,12 @@ static PetscErrorCode  PCFieldSplitSetBlockSize_FieldSplit(PC pc,PetscInt bs)
 
 static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt nloc, PetscReal coords[])
 {
-  PetscErrorCode ierr;
-  PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
+  PetscErrorCode    ierr;
+  PC_FieldSplit *   jac = (PC_FieldSplit*)pc->data;
   PC_FieldSplitLink ilink_current = jac->head;
-  PetscInt nmin, nmax, ii, ndofs;
-  PetscInt *owned_dofs; // Indexes owned by this processor
-  IS is_owned;
+  PetscInt          nmin, nmax, ii, ndofs;
+  PetscInt *        owned_dofs; // Indexes owned by this processor
+  IS                is_owned;
 
   PetscFunctionBegin;
 
@@ -2867,18 +2867,16 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
   ierr = MatGetOwnershipRange(pc->mat,&nmin,&nmax);CHKERRQ(ierr);
   ndofs = nmax - nmin;
   ierr = PetscMalloc1(ndofs, &owned_dofs); CHKERRQ(ierr);
-  for(PetscInt i=nmin;i<ndofs;++i)
-    owned_dofs[i] = nmin + i;
+  for (PetscInt i=nmin;i<ndofs;++i) owned_dofs[i] = nmin + i;
   ierr = ISCreateGeneral(MPI_COMM_WORLD, ndofs, owned_dofs, PETSC_OWN_POINTER, &is_owned); CHKERRQ(ierr);
 
   // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
   ii=0;
-  while(ilink_current) {
+  while (ilink_current) {
     // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
-    IS is_coords;
-    PetscInt ndofs_block;
-    // Numbering of the dofs relevant to the current block
-    const PetscInt *block_dofs_enumeration;
+    IS        is_coords;
+    PetscInt  ndofs_block;
+    const PetscInt *block_dofs_enumeration; // Numbering of the dofs relevant to the current block
 
     // Setting drop to true for safety. It should make no difference.
     ierr = ISEmbed(ilink_current->is, is_owned, PETSC_TRUE, &is_coords); CHKERRQ(ierr);
@@ -2889,8 +2887,8 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
     ierr = ISGetIndices(is_coords, &block_dofs_enumeration); CHKERRQ(ierr);
 
     // Having the indices computed and the memory allocated, we can copy the relevant coords and set them to the subPC.
-    for(PetscInt dof=0;dof<ndofs_block;++dof) {
-      for(PetscInt d=0;d<dim;++d) {
+    for (PetscInt dof=0;dof<ndofs_block;++dof) {
+      for (PetscInt d=0;d<dim;++d) {
         coords_block[dim*dof + d] = coords[dim * block_dofs_enumeration[dof] + d];
       }
     }
