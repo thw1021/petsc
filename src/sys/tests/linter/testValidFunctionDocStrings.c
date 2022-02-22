@@ -246,3 +246,16 @@ PetscErrorCode testBadMidSentenceColons(void)
 {
   return 0;
 }
+
+/*MC
+  MYTYPE - MYTYPE = "mytype"
+
+  Level: developer
+
+.seealso: MATAIJ
+MC*/
+
+PetscErrorCode testFloatingDocstring(void)
+{
+  return 0;
+}

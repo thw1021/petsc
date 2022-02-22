@@ -197,6 +197,9 @@ excludeDirSuffixes  = (".dSYM",".DS_Store")
 # file extensions to process, case sensitve
 allowFileExtensions = (".c",".cpp",".cxx",".cu",".cc",".h",".hpp")
 
+# synchronized print function, should be used everywhere
+sync_print = print
+
 class PetscDocStringBase(object):
   @staticmethod
   def diagnosticFlag(text,prefix="doc"):
@@ -809,9 +812,10 @@ class PetscDocString(PetscDocStringBase):
     class SectionNotFoundError(Exception):
       pass
 
-    __slots__ = "_sections","_findcache","_cachekey"
+    __slots__ = "_verbose","_sections","_findcache","_cachekey"
 
-    def __init__(self,*args):
+    def __init__(self,*args,verbose=False):
+      self._verbose = verbose
       assert len({s.name for s in args}) == len(args)
       sections = collections.OrderedDict()
       for section in args:
@@ -843,6 +847,14 @@ class PetscDocString(PetscDocStringBase):
       self._findcache = {self._cachekey : {}}
       return
 
+    def _print(self,*args,**kwargs):
+      if self._verbose:
+        sync_print(*args,**kwargs)
+      return
+
+    def setVerbose(self,verbose):
+      self._verbose = verbose
+      return
 
     def find(self,heading,cacheResult=True,strict=False):
       lohead   = heading.casefold()
@@ -879,11 +891,9 @@ class PetscDocString(PetscDocStringBase):
             break
         match = next(filter(lambda item: item[0] == match,keywords))[1] if match else None
       if match:
-        print(
-          "**** CLOSEST MATCH FOUND {:{}} FROM {:{}} FOR {}".format(match,max(map(len,sectionNames)),reason,len("not found"),heading)
-        )
+        self._print("**** CLOSEST MATCH FOUND {:{}} FROM {:{}} FOR {}".format(match,max(map(len,sectionNames)),reason,len("not found"),heading))
       else:
-        print(
+        self._print(
           80*"*",
           f"UNHANDLED POSSIBLE HEADING! (strict = {strict}, cached = {cacheResult})",
           heading,
@@ -898,7 +908,7 @@ class PetscDocString(PetscDocStringBase):
         match  = "notes"
         maxlen = max(map(len,sectionNames))
         string = "*********** DEFAULTED TO {:{}} FROM {} FOR {}"
-        print(string.format(f"NOTES (strict = {strict})",maxlen,reason,heading))
+        self._print(string.format(f"NOTES (strict = {strict})",maxlen,reason,heading))
       return sections[cache.setdefault(lohead,match) if cacheResult else match]
 
     def registered(self,section):
@@ -947,7 +957,7 @@ class PetscDocString(PetscDocStringBase):
           expressions = (
             "follows","following.*","example","instance","one of.*","calling sequence.*",
             "available.*include","supports.*approaches.*","see.*user.*manual",
-            "y. saad, iterative methods.*philadelphia","default"
+            "y. saad, iterative methods.*philadelphia","default","in .* case.*","use the.*"
           )
           regex = "|".join(":".join((expr,"$")) for expr in expressions)
           if re.search(regex,text.casefold()) is None:
@@ -1011,17 +1021,25 @@ class PetscDocString(PetscDocStringBase):
     clx.TypeKind.FUNCTIONPROTO : ("@","functions"),
     clx.TypeKind.ENUM          : ("E","enums"),
   }
-  __slots__ = "_linter","cursor","raw","extent","indent"
+  __slots__ = "_linter","cursor","raw","extent","indent","_attr"
 
   def __init__(self,linter,cursor,indent=2):
     if not isinstance(linter,PetscLinter):
       raise ValueError(type(linter))
-    self._linter         = linter
-    self.cursor          = PetscCursor.cast(cursor)
-    self.raw,self.extent = self._getSanitizedCommentAndRangeFromCursor(self.cursor)
-    self.indent          = indent
+    self.sections._verbose = linter.verbose
+    self._linter           = linter
+    self.cursor            = PetscCursor.cast(cursor)
+    self.raw,self.extent   = self._getSanitizedCommentAndRangeFromCursor(self.cursor)
+    self.indent            = indent
+    self._attr             = self._defaultAttributes()
     return
 
+
+  @staticmethod
+  def _defaultAttributes():
+    return {
+      "floating" : False
+    }
 
   @classmethod
   def diagnostic(cls,flag):
@@ -1103,6 +1121,23 @@ class PetscDocString(PetscDocStringBase):
     self._linter.addErrorFromCursor(self.cursor,diag)
     return
 
+  def clear(self):
+    for s in self.sections:
+      s.clear()
+    self._attr = self._defaultAttributes()
+    return
+
+
+  def _checkFloating(self):
+    """
+    check that the docstring isn't a floating docstring, i.e. for a mansection or particular type
+    """
+    for line in self.raw.splitlines():
+      if line and not line.isspace() and not line.startswith(('/*','//')):
+        lsplit = line.split()
+        self._attr["floating"] = lsplit[0].isupper() and lsplit[1] == '-'
+        break
+    return
 
   def _checkValidCursorLinkage(self):
     """
@@ -1118,6 +1153,9 @@ class PetscDocString(PetscDocStringBase):
     return
 
   def _checkValidSowingChars(self):
+    """
+    check that the sowing prefix and postfix match the expected and are symmetric
+    """
     sowingType,layType = self.clxToSowingType[self.cursor.type.kind]
     # check the beginning
     splitlines  = self.raw.splitlines()
@@ -1165,6 +1203,8 @@ class PetscDocString(PetscDocStringBase):
     return
 
   def _checkValidDocstringSpacing(self):
+    if self._attr["floating"]:
+      return # floating docstring sections need not be checked for this
     endLine     = self.extent.end.line+1
     cursorStart = self.cursor.extent.start
     if endLine != cursorStart.line:
@@ -1207,7 +1247,7 @@ class PetscDocString(PetscDocStringBase):
     """
     name,match = self.sections.guessHeading(line)
     if ":" in line:
-      mess = "Line seeams to be a section header but doesn't directly end with with ':', did you mean '{}'?"
+      mess = "Line seems to be a section header but doesn't directly end with with ':', did you mean '{}'?"
     else:
       mess = "Line seems to be a section header but missing ':', did you mean '{}:'?"
     diag = self.diags.section_header_maybe_header
@@ -1235,14 +1275,14 @@ class PetscDocString(PetscDocStringBase):
 
 
   def parse(self):
-    sections = self.sections
-    for s in sections:
-      s.clear()
+    self.clear()
+    self._checkFloating()
     self._checkValidCursorLinkage()
     self._checkValidDocstringSpacing()
     self._checkValidSowingChars()
 
     rawData     = []
+    sections    = self.sections
     section     = sections.synopsis
     findSection = sections.find
     checkIndent = section.checkIndentAllowed()
@@ -1619,7 +1659,7 @@ class PetscCursor(object):
     return self.getFormattedSourceFromCursor(self,**kwargs)
 
   def view(self):
-    return print(self.formatted(nboth=5))
+    return sync_print(self.formatted(nboth=5))
 
   @staticmethod
   def getFormattedLocationStringFromCursor(cursor):
@@ -1641,7 +1681,7 @@ class PetscCursor(object):
 
   @staticmethod
   def viewAstFromCursor(cursor):
-    return print("\n".join(pclu.viewAstFromCursor(cursor)))
+    return sync_print("\n".join(pclu.viewAstFromCursor(cursor)))
 
   def viewAst(self):
     return self.viewAstFromCursor(self)
@@ -1680,9 +1720,9 @@ class PetscCursor(object):
         pass
       except Exception as exc:
         string = "Full error full error message below:"
-        print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
-        print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",exc,sep="")
-        print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
+        sync_print('='*30,"CXCursorAndRangeVisitor Error",'='*30)
+        sync_print("It is possible that this is a false positive! E.g. some 'unexpected number of tokens' errors are due to macro instantiation locations being misattributed.\n",string,"\n","-"*len(string),"\n",exc,sep="")
+        sync_print('='*30,"CXCursorAndRangeVisitor End Error",'='*26)
       return 1 # continue
 
     callBack   = CXCursorAndRangeVisitorCallBackProto(callBackFunc)
@@ -1760,7 +1800,7 @@ class Patch(object):
       before = self.extent.formatted(numContext=3,highlight=False).splitlines(True)
       after  = before.copy()
       after[3] = before[3].replace(self.extent.raw(tight=True),self.value,1)
-      print("".join(difflib.unified_diff(before,after,fromfile="Original",tofile="Modified")))
+      sync_print("".join(difflib.unified_diff(before,after,fromfile="Original",tofile="Modified")))
       return
 
 
@@ -1829,7 +1869,7 @@ class Patch(object):
       newSrcTemp  = "".join([newSrc[:beginoffset+idxDelta],delta,newSrc[endoffset+idxDelta:]])
       idxDelta    = len(newSrcTemp)-len(newSrc)
       newSrc      = newSrcTemp
-    print(newSrcTemp)
+    sync_print(newSrcTemp)
     return newSrcTemp
 
   @staticmethod
@@ -1841,7 +1881,7 @@ class Patch(object):
     adelta = {d.value for d in left.deltas}
     bdelta = {d.value for d in right.deltas}
     for tag,i1,i2,j1,j2 in difflib.SequenceMatcher(None,a,b).get_opcodes():
-      print('{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'.format(tag,i1,i2,j1,j2,a[i1:i2],b[j1:j2]))
+      sync_print('{:7}   a[{}:{}] --> b[{}:{}] {!r:>8} --> {!r}'.format(tag,i1,i2,j1,j2,a[i1:i2],b[j1:j2]))
       if tag == "equal":
         res.append(a[i1:i2])
       elif tag == "insert":
@@ -1849,22 +1889,22 @@ class Patch(object):
       elif tag == "replace":
         mine   = a[i1:i2]
         theirs = b[j1:j2]
-        print("mine","'"+mine+"'","theirs","'"+theirs+"'")
+        sync_print("mine","'"+mine+"'","theirs","'"+theirs+"'")
         if mine in adelta:
-          print("mine was in self.deltas")
+          sync_print("mine was in self.deltas")
           if theirs not in bdelta:
-            print("theirs was not in other.deltas, adding mine")
+            sync_print("theirs was not in other.deltas, adding mine")
             res.append(mine)
             deltas.append(mine)
             continue
         else:
-          print("mine was not in self.deltas")
+          sync_print("mine was not in self.deltas")
         if theirs in bdelta:
-          print("theirs was in other.deltas, adding theirs")
+          sync_print("theirs was in other.deltas, adding theirs")
           res.append(theirs)
           deltas.append(theirs)
           continue
-        print("was in neither, taking theirs?")
+        sync_print("was in neither, taking theirs?")
         res.append(theirs)
         deltas.append(theirs)
     return res,deltas
@@ -1923,7 +1963,7 @@ class Patch(object):
         )
       except RuntimeError as re:
         # if we are here it means diff3 failed to merge!
-        print(re)
+        sync_print(re)
         combined = mine.deltas+other.deltas
         argsort = sorted(range(len(combined)),key=lambda x: combined.__getitem__(x).extent)
         import ipdb; ipdb.set_trace()
@@ -1998,7 +2038,7 @@ class Patch(object):
 
   def view(self):
     for i,delta in enumerate(self.deltas):
-      print("Delta:",i,"({})".format(delta))
+      sync_print("Delta:",i,"({})".format(delta))
       delta.view()
     return
 
@@ -2058,9 +2098,9 @@ class PetscLinter(object):
       return
     if self.lock:
       with self.lock:
-        print(*args,**kwargs)
+        sync_print(*args,**kwargs)
     else:
-      print(*args,**kwargs)
+      sync_print(*args,**kwargs)
     return
 
 
@@ -2420,14 +2460,14 @@ class WorkerPool(mp.queues.JoinableQueue):
     super().__init__(numWorkers,**kwargs,ctx=mp.get_context())
     if numWorkers in {0,1}:
       if verbose:
-        print(prefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(numWorkers))
+        sync_print(prefix,"Number of worker processes ({}) too small, disabling multiprocessing".format(numWorkers))
       self.parallel    = False
       self.errorQueue  = None
       self.returnQueue = None
       self.lock        = None
     else:
       if verbose:
-        print(prefix,"Number of worker processes ({}) sufficient, enabling multiprocessing".format(numWorkers))
+        sync_print(prefix,"Number of worker processes ({}) sufficient, enabling multiprocessing".format(numWorkers))
       self.parallel    = True
       self.errorQueue  = mp.Queue()
       self.returnQueue = mp.Queue()
@@ -2469,7 +2509,7 @@ class WorkerPool(mp.queues.JoinableQueue):
       self.put(srcPath)
     else:
       for root,dirs,files in os.walk(srcPath):
-        if self.verbose: print(self.prefix,"Processing directory",root)
+        if self.verbose: sync_print(self.prefix,"Processing directory",root)
         dirs[:] = [d for d in dirs if d not in excludeDirs]
         dirs[:] = [d for d in dirs if not d.endswith(excludeDirSuff)]
         for filename in (os.path.join(root,f) for f in files if f.endswith(allowFileSuff)):
@@ -2611,7 +2651,10 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   if symbol:
     assert loc is not None
     if "M" in docstring.raw.splitlines()[0]:
-      import ipdb; ipdb.set_trace()
+      if docstring._attr["floating"]:
+        sync_print("FLOATING DOCSTRING",loc.raw())
+      else:
+        import ipdb; ipdb.set_trace()
     # chances are that if it is a macro then the name won't match
     if symbol != cursorName and "M" not in docstring.raw.splitlines()[0]:
       diag = synopsis.diags.matching_symbol_name
@@ -2731,9 +2774,9 @@ def checkDocValidParameterList(linter,docstring,params,cursorList,skipGroup=alwa
         mloc  = mloc.extend()
         cloc  = cloc.extend()
         patch1 = Patch(mloc,ctext,combineable=False)
-        print(patch1.collapse())
+        sync_print(patch1.collapse())
         patch2 = Patch(cloc,mtext,combineable=False)
-        print(patch2.collapse())
+        sync_print(patch2.collapse())
         diag  = checkDocValidParameterList.diags.parameter_order
         mess  = "Parameters out of order"
         import ipdb; ipdb.set_trace()
@@ -3626,6 +3669,13 @@ checkFunctionMap = {
 }
 
 """Utility and pre-check setup"""
+def set_sync_print(print_fn=None):
+  if print_fn is None:
+    print_fn = print
+  global sync_print
+  sync_print = print_fn
+  return
+
 def subprocessRun(*args,**kwargs):
   """
   lightweight wrapper to hoist the ugly version check out of the regular code, turns a subprocess.CalledProcessError into a RuntimeError with more diagnostics
@@ -3769,7 +3819,7 @@ def buildCompilerFlags(petscDir,petscArch,extraCompilerFlags=[],verbose=False,pr
   ]
   petscIncludes = getPetscExtraIncludes(petscDir,petscArch)
   compilerFlags = getClangSysIncludes()+miscFlags+petscIncludes+extraCompilerFlags
-  if verbose: print("\n".join([" ".join([printPrefix,"Compile flags:"]),*compilerFlags]))
+  if verbose: sync_print("\n".join([" ".join([printPrefix,"Compile flags:"]),*compilerFlags]))
   return compilerFlags
 
 def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose=False,printPrefix="[ROOT]",pchClangOptions=basePCHClangOptions):
@@ -3843,7 +3893,7 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
               diags[filename] = (basename,diag)
     if diags:
       diagerrs = "\n"+"\n".join(str(d) for _,d in diags.values())
-      if verbose: print(printPrefix,"Included header has errors, removing",diagerrs)
+      if verbose: sync_print(printPrefix,"Included header has errors, removing",diagerrs)
       megaHeaderLines = [(hdr,hfi) for hdr,hfi in megaHeaderLines if hdr not in diags]
     else:
       break
@@ -3851,20 +3901,20 @@ def buildPrecompiledHeader(petscDir,compilerFlags,extraHeaderIncludes=[],verbose
     # now include the other headers but this time immediately crash on errors, let the
     # user figure out their own busted header files
     megaHeader = megaHeader+"\n".join(extraHeaderIncludes)
-    if verbose: print("\n".join([printPrefix+" Mega header:",megaHeader]))
+    if verbose: sync_print("\n".join([printPrefix+" Mega header:",megaHeader]))
     tu = index.parse(
       megaHeaderName,
       args=compilerFlags,unsaved_files=[(megaHeaderName,megaHeader)],options=pchClangOptions
     )
     if tu.diagnostics:
-      print("\n".join(map(str,tu.diagnostics)))
+      sync_print("\n".join(map(str,tu.diagnostics)))
       raise clx.LibclangError("\n\nWarnings or errors generated when creating the precompiled header. This usually means that the provided libclang setup is faulty. If you used the auto-detection mechanism to find libclang then perhaps try specifying the location directly.")
   elif verbose:
-    print("\n".join([printPrefix+" Mega header:",megaHeader]))
+    sync_print("\n".join([printPrefix+" Mega header:",megaHeader]))
   precompiledHeader.unlink(missing_ok=True)
   tu.save(precompiledHeader)
   compilerFlags.extend(["-include-pch",str(precompiledHeader)])
-  if verbose: print(printPrefix,"Saving precompiled header",precompiledHeader)
+  if verbose: sync_print(printPrefix,"Saving precompiled header",precompiledHeader)
   return precompiledHeader
 
 
@@ -3874,19 +3924,15 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
   import shutil
 
   class TemporaryCopy(object):
+    __slots__ = "fname","tmp","tmpPath"
+
     def __init__(self,fname):
-      self.fname = PetscPath(fname).resolve()
-      if not self.fname.exists():
-        mess = "Filename {} does not appear to exist".format(self.fname)
-        raise RuntimeError(mess)
+      self.fname = self.resolvePath(fname)
       return
 
     def __enter__(self):
       self.tmp     = tempfile.NamedTemporaryFile(delete=True,suffix=self.fname.suffix)
-      self.tmpPath = PetscPath(self.tmp.name).resolve()
-      if not self.tmpPath.exists():
-        mess = "tmpPath {} does not appear to exist".format(self.tmpPath)
-        raise RuntimeError(mess)
+      self.tmpPath = self.resolvePath(self.tmp.name)
       shutil.copy2(str(self.fname),str(self.tmpPath))
       return self
 
@@ -3895,6 +3941,13 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
       PetscPath.unlink(self.rejFile(),missing_ok=True)
       del self.tmp
       return
+
+    @staticmethod
+    def resolvePath(pathname):
+      path = PetscPath(pathname).resolve()
+      if not path.exists():
+        raise RuntimeError("path {} does not appear to exist".format(path))
+      return path
 
     def origFile(self):
       return self.tmpPath.append_suffix(".orig")
@@ -3906,7 +3959,7 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
   def test(generatedOutput,referenceFile):
     shortRefName = referenceFile.relative_to(petscDir)
     if replace:
-      print("\tREPLACE",shortRefName)
+      sync_print("\tREPLACE",shortRefName)
       referenceFile.write_text("".join(generatedOutput))
       return
     if not referenceFile.exists():
@@ -3953,7 +4006,7 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
     patchFile  = outputBase.with_suffix(".patch")
     shortName  = testFile.relative_to(petscDir)
 
-    print("\tTEST   ",shortName)
+    sync_print("\tTEST   ",shortName)
 
     outputErrors = [
       test(sanitizeOutputFile(output.get(testFile)),outputFile),
@@ -3981,15 +4034,15 @@ def testMain(petscDir,testPath,outputDir,patches,errorsFixed,errorsLeft,replace=
 
     outputErrors = [e for e in outputErrors if e]
     if outputErrors:
-      print("\tNOT OK ",shortName)
+      sync_print("\tNOT OK ",shortName)
       patchError[testFile] = "\n".join(outputErrors)
     else:
-      print("\tOK     ",shortName)
+      sync_print("\tOK     ",shortName)
   if patchError:
     errBars = "".join(["[ERROR]",85*"-","[ERROR]"])
     errBars = [errBars+"\n",errBars]
     for errFile in patchError:
-      print(patchError[errFile].join(errBars))
+      sync_print(patchError[errFile].join(errBars))
     return 21
   return 0
 
@@ -4017,14 +4070,15 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,diagMapU,compilerFlags,clan
   filename    = "QUEUE SETUP"
   printbar    = 15*"="
   try:
+    set_sync_print(print_fn=lockPrint)
     updateGlobals(checkFunctionMapU,classIdMapU,diagMapU)
     proc        = mp.current_process().name
     printPrefix = proc+" --"[:len("[ROOT]")-len(proc)]
     errorPrefix = " ".join([printPrefix,"Exception detected while processing"])
-    lockPrint(printPrefix,printbar,"Performing setup",printbar)
+    sync_print(printPrefix,printbar,"Performing setup",printbar)
     initializeLibclang(clangLib=clangLib)
     linter = PetscLinter(compilerFlags,clangOptions=clangOptions,prefix=printPrefix,verbose=verbose,werror=werror,lock=lock)
-    lockPrint(printPrefix,printbar,"Entering queue  ",printbar)
+    sync_print(printPrefix,printbar,"Entering queue  ",printbar)
     while True:
       filename = fileQueue.get()
       if filename == WorkerPool.QueueSignal.EXIT_QUEUE:
@@ -4036,7 +4090,7 @@ def queueMain(clangLib,checkFunctionMapU,classIdMapU,diagMapU,compilerFlags,clan
       returnQueue.put((WorkerPool.QueueSignal.ERRORS_FIXED,errFixed))
       returnQueue.put((WorkerPool.QueueSignal.WARNING     ,warnings))
       fileQueue.task_done()
-    lockPrint(printPrefix,printbar,"Exiting queue   ",printbar)
+    sync_print(printPrefix,printbar,"Exiting queue   ",printbar)
   except Exception:
     try:
       # attempt to send the traceback back to parent
@@ -4123,7 +4177,7 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
       return self
 
     def __exit__(self,*args,**kwargs):
-      if verbose: print(rootPrintPrefix,"Deleting precompiled header",self.pch)
+      if verbose: sync_print(rootPrintPrefix,"Deleting precompiled header",self.pch)
       self.pch.unlink()
       return
 
@@ -4150,27 +4204,27 @@ def main(petscDir,petscArch,srcPath=None,clangDir=None,clangLib=None,verbose=Fal
       if mangledRel.parent != srcPath.parent: # not in same directory
         mangledRel = mangledRel.relative_to(srcPath)
       mangledFile = patchDir/str(mangledRel).replace(os.path.sep,"_")
-      if verbose: print(rootPrintPrefix,"Writing patch to file",mangledFile)
+      if verbose: sync_print(rootPrintPrefix,"Writing patch to file",mangledFile)
       mangledFile.write_text(patch)
     if applyPatches:
-      if verbose: print(rootPrintPrefix,"Applying patches from patch directory",patchDir)
+      if verbose: sync_print(rootPrintPrefix,"Applying patches from patch directory",patchDir)
       for patchFile in patchDir.glob("*"+manglePostfix):
-        if verbose: print(rootPrintPrefix,"Applying patch",patchFile)
+        if verbose: sync_print(rootPrintPrefix,"Applying patch",patchFile)
         output = subprocessRun(
           ["patch",rootDir,"--strip=0","--unified","--input={}".format(patchFile)],
           check=True,universal_newlines=True,capture_output=True
         )
-        if verbose: print(output.stdout)
+        if verbose: sync_print(output.stdout)
   ret       = 0
   formatStr = " ".join([rootPrintPrefix,"{:=^85}"])
   if warnings and verbose:
-    print(formatStr.format(" Found Warnings "))
-    print("\n".join(s for tup in warnings for _,s in tup))
-    print(formatStr.format(" End warnings "))
+    sync_print(formatStr.format(" Found Warnings "))
+    sync_print("\n".join(s for tup in warnings for _,s in tup))
+    sync_print(formatStr.format(" End warnings "))
   if errorsFixed and verbose:
-    print(formatStr.format(" Fixed Errors " if applyPatches else " Fixable Errors "))
-    print("\n".join(e for _,e in errorsFixed))
-    print(formatStr.format(" End Fixed Errors "))
+    sync_print(formatStr.format(" Fixed Errors " if applyPatches else " Fixable Errors "))
+    sync_print("\n".join(e for _,e in errorsFixed))
+    sync_print(formatStr.format(" End Fixed Errors "))
   if errorsLeft:
     print(formatStr.format(" Unfixable Errors "))
     print("\n".join(e for _,e in errorsLeft))
