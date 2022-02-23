@@ -694,6 +694,7 @@ PETSC_EXTERN PetscErrorCode PetscLogGpuTimeEnd(void);
 #define PetscLogGpuTimeAdd(a)              0
 #define PetscLogGpuTimeBegin()             0
 #define PetscLogGpuTimeEnd()               0
+#define PetscLogGpuTime()                  0
 
 #endif /* PETSC_USE_LOG && PETSC_HAVE_DEVICE */
 
