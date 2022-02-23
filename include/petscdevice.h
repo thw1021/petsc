@@ -5,7 +5,7 @@
 #include <petscdevicetypes.h>
 #include <petscpkg_version.h>
 
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -146,7 +146,7 @@ PETSC_EXTERN PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 #endif /* PETSC_HAVE_CUDA */
 
-#if defined(PETSC_HAVE_HIP)
+#if PetscDefined(HAVE_HIP)
 #include <hip/hip_runtime.h>
 #include <hipblas.h>
 #if defined(__HIP_PLATFORM_NVCC__)
@@ -254,7 +254,7 @@ PETSC_EXTERN PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t*);
 #endif /* PETSC_HAVE_HIP */
 
 /* Cannot use the device context api without C++ */
-#if defined(PETSC_HAVE_CXX)
+#if PetscDefined(HAVE_CXX)
 PETSC_EXTERN PetscErrorCode PetscDeviceInitializePackage(void);
 PETSC_EXTERN PetscErrorCode PetscDeviceFinalizePackage(void);
 

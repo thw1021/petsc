@@ -43,9 +43,9 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-l",&l,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-test",&test,NULL));
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-use_shell",&use_shell,NULL));
-  PetscCheckFalse(k < 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"k %" PetscInt_FMT " must be positive",k);
-  PetscCheckFalse(l < 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be positive",l);
-  PetscCheckFalse(l > k,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be smaller or equal than k %" PetscInt_FMT,l,k);
+  PetscCheck(k >= 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"k %" PetscInt_FMT " must be positive",k);
+  PetscCheck(l >= 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be positive",l);
+  PetscCheck(l <= k,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be smaller or equal than k %" PetscInt_FMT,l,k);
 
   /* sparse matrix */
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));
@@ -101,7 +101,6 @@ int main(int argc,char **argv)
     reset = PETSC_FALSE;
     break;
   }
-  PetscCall(VecCUDARestoreArray(v,&vv));
 
   /* Test MatMatMult */
   if (use_shell) {
@@ -146,11 +145,9 @@ int main(int argc,char **argv)
 
   /* finished using B */
   PetscCall(MatDenseCUDAGetArray(B,&aa));
-  PetscCheckFalse(vv != aa-l*nloc,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong array");
+  PetscCheck(vv == aa-l*nloc,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong array");
   PetscCall(MatDenseCUDARestoreArray(B,&aa));
-  if (reset) {
-    PetscCall(MatDenseCUDAResetArray(B));
-  }
+  if (reset) PetscCall(MatDenseCUDAResetArray(B));
   PetscCall(VecCUDARestoreArray(v,&vv));
 
   if (test == 1) {
