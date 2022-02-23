@@ -31,7 +31,7 @@ PetscErrorCode VecTDot_MPI(Vec xin,Vec yin,PetscScalar *z)
 
 extern PetscErrorCode VecView_MPI_Draw(Vec,PetscViewer);
 
-static PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
+PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
 {
   PetscErrorCode ierr;
   Vec_MPI        *v = (Vec_MPI*)vin->data;
@@ -109,7 +109,7 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecResetArray_MPI(Vec vin)
+PetscErrorCode VecResetArray_MPI(Vec vin)
 {
   Vec_MPI        *v = (Vec_MPI*)vin->data;
   PetscErrorCode ierr;

@@ -81,9 +81,9 @@ static Petsc::ObjectPool<PetscDeviceContext,PetscDeviceContextAllocator> context
 
   Notes:
   Unlike almost every other PETSc class it is advised that most users use
-  PetscDeviceContextDuplicate() rather than this routine to create new contexts. Contexts
-  of different types are incompatible with one another; using
-  PetscDeviceContextDuplicate() ensures compatible types.
+  PetscDeviceContextDuplicate() rather than this routine to create new contexts. Contexts of
+  different types are incompatible with one another; using PetscDeviceContextDuplicate()
+  ensures compatible types.
 
   Level: beginner
 
@@ -111,18 +111,19 @@ PetscErrorCode PetscDeviceContextCreate(PetscDeviceContext *dctx)
 . dctx - The PetscDeviceContext
 
   Notes:
-  No implicit synchronization occurs due to this routine, all resources are released completely asynchronously
-  w.r.t. the host. If one needs to guarantee access to the data produced on this contexts stream one should perform the
-  appropriate synchronization before calling this routine.
+  No implicit synchronization occurs due to this routine, all resources are released completely
+  asynchronously w.r.t. the host. If one needs to guarantee access to the data produced on this
+  contexts stream one should perform the appropriate synchronization before calling this routine.
 
   Developer Notes:
   The context is never actually "destroyed", only returned to an ever growing pool of
-  contexts. There are currently no safeguards on the size of the pool, this should perhaps
-  be implemented.
+  contexts. There are currently no safeguards on the size of the pool, this should perhaps be
+  implemented.
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextSetUp(), PetscDeviceContextSynchronize()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextSetUp(),
+PetscDeviceContextSynchronize()
 @*/
 PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 {
@@ -136,7 +137,8 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 }
 
 /*@C
-  PetscDeviceContextSetStreamType - Set the implementation type of the underlying stream for a PetscDeviceContext
+  PetscDeviceContextSetStreamType - Set the implementation type of the underlying stream for a
+  PetscDeviceContext
 
   Not Collective, Asynchronous
 
@@ -145,13 +147,14 @@ PetscErrorCode PetscDeviceContextDestroy(PetscDeviceContext *dctx)
 - type - The PetscStreamType
 
   Notes:
-  See PetscStreamType in include/petscdevicetypes.h for more information on the available
-  types and their interactions. If the PetscDeviceContext was previously set up and stream
-  type was changed, you must call PetscDeviceContextSetUp() again after this routine.
+  See PetscStreamType in include/petscdevicetypes.h for more information on the available types
+  and their interactions. If the PetscDeviceContext was previously set up and stream type was
+  changed, you must call PetscDeviceContextSetUp() again after this routine.
 
   Level: intermediate
 
-.seealso: PetscDeviceContextGetStreamType(), PetscDeviceContextCreate(), PetscDeviceContextSetUp(), PetscDeviceContextSetFromOptions()
+.seealso: PetscDeviceContextGetStreamType(), PetscDeviceContextCreate(),
+PetscDeviceContextSetUp(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStreamType type)
 {
@@ -170,7 +173,8 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
 }
 
 /*@C
-  PetscDeviceContextGetStreamType - Get the implementation type of the underlying stream for a PetscDeviceContext
+  PetscDeviceContextGetStreamType - Get the implementation type of the underlying stream for a
+  PetscDeviceContext
 
   Not Collective, Asynchronous
 
@@ -181,11 +185,13 @@ PetscErrorCode PetscDeviceContextSetStreamType(PetscDeviceContext dctx, PetscStr
 . type - The PetscStreamType
 
   Notes:
-  See PetscStreamType in include/petscdevicetypes.h for more information on the available types and their interactions
+  See PetscStreamType in include/petscdevicetypes.h for more information on the available types
+  and their interactions
 
   Level: intermediate
 
-.seealso: PetscDeviceContextSetStreamType(), PetscDeviceContextCreate(), PetscDeviceContextSetFromOptions()
+.seealso: PetscDeviceContextSetStreamType(), PetscDeviceContextCreate(),
+PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStreamType *type)
 {
@@ -206,10 +212,10 @@ PetscErrorCode PetscDeviceContextGetStreamType(PetscDeviceContext dctx, PetscStr
 - device - The PetscDevice
 
   Notes:
-  This routine is effectively PetscDeviceContext's "set-type" (so every PetscDeviceContext
-  must also have an attached PetscDevice). Unlike the usual set-type semantics, it is
-  not stricly necessary to set a contexts device to enable usage, any created device
-  contexts will always come equipped with the "default" device.
+  This routine is effectively PetscDeviceContext's "set-type" (so every PetscDeviceContext must
+  also have an attached PetscDevice). Unlike the usual set-type semantics, it is not stricly
+  necessary to set a contexts device to enable usage, any created device contexts will always
+  come equipped with the "default" device.
 
   This routine is a no-op if dctx is already attached to device.
 
@@ -277,12 +283,13 @@ PetscErrorCode PetscDeviceContextGetDevice(PetscDeviceContext dctx, PetscDevice 
 . dctx - The PetscDeviceContext
 
   Developer Notes:
-  This routine is usually the stage where a PetscDeviceContext acquires device-side data structures such as streams,
-  events, and (possibly) handles.
+  This routine is usually the stage where a PetscDeviceContext acquires device-side data
+  structures such as streams, events, and (possibly) handles.
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextDestroy(), PetscDeviceContextSetFromOptions()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(),
+PetscDeviceContextDestroy(), PetscDeviceContextSetFromOptions()
 @*/
 PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 {
@@ -312,28 +319,27 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 . dctxdup - The duplicated PetscDeviceContext
 
   Notes:
-  This is a shorthand method for creating a PetscDeviceContext with the exact same
-  settings as another. Note however that the duplicated PetscDeviceContext does not "share"
-  any of the underlying data with the original, (including its current stream-state) they
-  are completely separate objects.
+  This is a shorthand method for creating a PetscDeviceContext with the exact same settings as
+  another. Note however that the duplicated PetscDeviceContext does not "share" any of the
+  underlying data with the original, (including its current stream-state) they are completely
+  separate objects.
 
   Level: beginner
 
-.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextSetStreamType()
+.seealso: PetscDeviceContextCreate(), PetscDeviceContextSetDevice(),
+PetscDeviceContextSetStreamType()
 @*/
 PetscErrorCode PetscDeviceContextDuplicate(PetscDeviceContext dctx, PetscDeviceContext *dctxdup)
 {
-  PetscDeviceContext dup;
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(dctxdup,2);
-  ierr = PetscDeviceContextCreate(&dup);CHKERRQ(ierr);
-  ierr = PetscDeviceContextSetStreamType(dup,dctx->streamType);CHKERRQ(ierr);
-  if (dctx->device) {ierr = PetscDeviceContextSetDevice(dup,dctx->device);CHKERRQ(ierr);}
-  ierr = PetscDeviceContextSetUp(dup);CHKERRQ(ierr);
-  *dctxdup = dup;
+  ierr = PetscDeviceContextCreate(dctxdup);CHKERRQ(ierr);
+  ierr = PetscDeviceContextSetStreamType(*dctxdup,dctx->streamType);CHKERRQ(ierr);
+  if (dctx->device) {ierr = PetscDeviceContextSetDevice(*dctxdup,dctx->device);CHKERRQ(ierr);}
+  ierr = PetscDeviceContextSetUp(*dctxdup);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -379,8 +385,9 @@ PetscErrorCode PetscDeviceContextQueryIdle(PetscDeviceContext dctx, PetscBool *i
 - dctxb - The PetscDeviceContext object that is being waited on
 
   Notes:
-  Serializes two PetscDeviceContexts. This routine uses only the state of dctxb at the moment this routine was
-  called, so any future work queued will not affect dctxa. It is safe to pass the same context to both arguments.
+  Serializes two PetscDeviceContexts. This routine uses only the state of dctxb at the moment
+  this routine was called, so any future work queued will not affect dctxa. It is safe to pass
+  the same context to both arguments.
 
   Level: beginner
 
@@ -414,12 +421,14 @@ PetscErrorCode PetscDeviceContextWaitForContext(PetscDeviceContext dctxa, PetscD
 . dsub - The created child context(s)
 
   Notes:
-  This routine creates n edges of a DAG from a source node which are causally dependent on the source node, meaning
-  that work queued on child contexts will not start until the parent context finishes its work. This accounts for work
-  queued on the parent up until calling this function, any subsequent work enqueued on the parent has no effect on the children.
+  This routine creates n edges of a DAG from a source node which are causally dependent on the
+  source node, meaning that work queued on child contexts will not start until the parent
+  context finishes its work. This accounts for work queued on the parent up until calling this
+  function, any subsequent work enqueued on the parent has no effect on the children.
 
-  Any children created with this routine have their lifetimes bounded by the parent. That is, the parent context expects
-  to free all of it's children (and ONLY its children) before itself is freed.
+  Any children created with this routine have their lifetimes bounded by the parent. That is,
+  the parent context expects to free all of it's children (and ONLY its children) before itself
+  is freed.
 
   DAG representation:
 .vb
@@ -509,21 +518,20 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 - dsub         - The sub contexts to converge
 
   Notes:
-  If PetscDeviceContextFork() creates n edges from a source node which all depend on the
-  source node, then this routine is the exact mirror. That is, it creates a node
-  (represented in dctx) which recieves n edges (and optionally destroys them) which is
-  dependent on the completion of all incoming edges.
+  If PetscDeviceContextFork() creates n edges from a source node which all depend on the source
+  node, then this routine is the exact mirror. That is, it creates a node (represented in dctx)
+  which recieves n edges (and optionally destroys them) which is dependent on the completion of
+  all incoming edges.
 
-  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY all contexts in dsub will be destroyed
-  by this routine. Thus all sub contexts must have been created with the dctx passed to
-  this routine.
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY all contexts in dsub will be destroyed by
+  this routine. Thus all sub contexts must have been created with the dctx passed to this
+  routine.
 
-  if joinMode is PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC dctx waits for all sub contexts but the
-  sub contexts do not wait for one another afterwards.
+  if joinMode is PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC dctx waits for all sub contexts but the sub
+  contexts do not wait for one another afterwards.
 
-  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_SYNC all sub contexts will additionally
-  wait on dctx after converging. This has the effect of "synchronizing" the outgoing
-  edges.
+  If joinMode is PETSC_DEVICE_CONTEXT_JOIN_SYNC all sub contexts will additionally wait on dctx
+  after converging. This has the effect of "synchronizing" the outgoing edges.
 
   DAG representations:
   If joinMode is PETSC_DEVICE_CONTEXT_JOIN_DESTROY
@@ -560,7 +568,7 @@ PetscErrorCode PetscDeviceContextFork(PetscDeviceContext dctx, PetscInt n, Petsc
 @*/
 PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, PetscDeviceContextJoinMode joinMode, PetscDeviceContext **dsub)
 {
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
   static std::string idList;
 #endif
   PetscErrorCode     ierr;
@@ -569,7 +577,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
   /* validity of dctx is checked in the wait-for loop */
   PetscValidPointer(dsub,4);
   PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of contexts merged %" PetscInt_FMT " < 0",n);
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
   /* reserve 4 chars per id, 2 for number and 2 for ', ' separator */
   idList.reserve(4*n);
 #endif
@@ -577,7 +585,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
   for (PetscInt i = 0; i < n; ++i) {
     PetscCheckCompatibleDeviceContexts(dctx,1,(*dsub)[i],4);
     ierr = PetscDeviceContextWaitForContext(dctx,(*dsub)[i]);CHKERRQ(ierr);
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
     idList += std::to_string((*dsub)[i]->id);
     if (i+1 < n) idList += ", ";
 #endif
@@ -585,27 +593,26 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
 
   /* now we handle the aftermath */
   switch (joinMode) {
-  case PETSC_DEVICE_CONTEXT_JOIN_DESTROY:
-    {
-      PetscInt j = 0;
+  case PETSC_DEVICE_CONTEXT_JOIN_DESTROY: {
+    PetscInt j = 0;
 
-      PetscAssert(n <= dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %" PetscInt_FMT " children of a parent context that only has %" PetscInt_FMT " children, likely trying to restore to wrong parent",n,dctx->numChildren);
-      /* update child count while it's still fresh in memory */
-      dctx->numChildren -= n;
-      for (PetscInt i = 0; i < dctx->maxNumChildren; ++i) {
-        if (dctx->childIDs[i] && (dctx->childIDs[i] == (*dsub)[j]->id)) {
-          /* child is one of ours, can destroy it */
-          ierr = PetscDeviceContextDestroy((*dsub)+j);CHKERRQ(ierr);
-          /* reset the child slot */
-          dctx->childIDs[i] = 0;
-          if (++j == n) break;
-        }
+    PetscAssert(n <= dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %" PetscInt_FMT " children of a parent context that only has %" PetscInt_FMT " children, likely trying to restore to wrong parent",n,dctx->numChildren);
+    /* update child count while it's still fresh in memory */
+    dctx->numChildren -= n;
+    for (PetscInt i = 0; i < dctx->maxNumChildren; ++i) {
+      if (dctx->childIDs[i] && (dctx->childIDs[i] == (*dsub)[j]->id)) {
+        /* child is one of ours, can destroy it */
+        ierr = PetscDeviceContextDestroy((*dsub)+j);CHKERRQ(ierr);
+        /* reset the child slot */
+        dctx->childIDs[i] = 0;
+        if (++j == n) break;
       }
-      /* gone through the loop but did not find every child, if this triggers (or well, doesn't) on perf-builds we leak the remaining contexts memory */
-      PetscAssert(j == n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%" PetscInt_FMT " contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checked out out in.",n-j);
-      ierr = PetscFree(*dsub);CHKERRQ(ierr);
     }
-    break;
+    /* gone through the loop but did not find every child, if this triggers (or well,
+       doesn't) on perf-builds we leak the remaining contexts memory */
+    PetscAssert(j == n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%" PetscInt_FMT " contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checked out out in.",n-j);
+    ierr = PetscFree(*dsub);CHKERRQ(ierr);
+  } break;
   case PETSC_DEVICE_CONTEXT_JOIN_SYNC:
     for (PetscInt i = 0; i < n; ++i) {
       ierr = PetscDeviceContextWaitForContext((*dsub)[i],dctx);CHKERRQ(ierr);
@@ -616,7 +623,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Unknown PetscDeviceContextJoinMode given");
   }
 
-#if defined(PETSC_USE_DEBUG) && defined(PETSC_USE_INFO)
+#if PETSC_USE_DEBUG_AND_INFO
   ierr = PetscInfo(nullptr,"Joined %" PetscInt_FMT " ctxs to ctx %" PetscInt_FMT ", mode %s with IDs: %s\n",n,dctx->id,PetscDeviceContextJoinModes[joinMode],idList.c_str());CHKERRQ(ierr);
   idList.clear();
 #endif
@@ -624,7 +631,8 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
 }
 
 /*@C
-  PetscDeviceContextSynchronize - Block the host until all work queued on or associated with a PetscDeviceContext has finished
+  PetscDeviceContextSynchronize - Block the host until all work queued on or associated with a
+  PetscDeviceContext has finished
 
   Not Collective, Synchronous
 
@@ -687,7 +695,7 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
   };
 
   PetscFunctionBegin;
-  if (globalContext) PetscFunctionReturn(0);
+  if (PetscLikely(globalContext)) PetscFunctionReturn(0);
   /* this exists purely as a valid device check. */
   ierr = PetscDeviceInitializePackage();CHKERRQ(ierr);
   ierr = PetscRegisterFinalize(PetscDeviceContextFinalizer);CHKERRQ(ierr);
@@ -809,7 +817,7 @@ PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix
   if (flag) {
     ierr = PetscDeviceContextSetStreamType(dctx,static_cast<PetscStreamType>(stype));CHKERRQ(ierr);
   }
-  ierr = PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes+1,PETSC_DEVICE_MAX-1,dctx->device ? PetscDeviceTypes[dctx->device->type] : PetscDeviceTypes[PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE],&dtype,&flag);CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes+1,PETSC_DEVICE_MAX-1,PetscDeviceTypes[dctx->device ? dctx->device->type : PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE],&dtype,&flag);CHKERRQ(ierr);
   if (flag) {
     ierr = PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,static_cast<PetscDeviceType>(dtype+1));CHKERRQ(ierr);
   }
