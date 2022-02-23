@@ -30,7 +30,8 @@ PETSC_INTERN PetscErrorCode VecReplaceArray_Seq(Vec,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecDot_Seq(Vec,Vec,PetscScalar*);
 PETSC_INTERN PetscErrorCode VecTDot_Seq(Vec,Vec,PetscScalar*);
 PETSC_INTERN PetscErrorCode VecScale_Seq(Vec,PetscScalar);
-PETSC_INTERN PetscErrorCode VecAXPY_Seq(Vec,PetscScalar,Vec);
+// exposed by VecSeq_CUPM to MatAIJ_CUSPARSE
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecAXPY_Seq(Vec,PetscScalar,Vec);
 PETSC_INTERN PetscErrorCode VecAXPBY_Seq(Vec,PetscScalar,PetscScalar,Vec);
 PETSC_INTERN PetscErrorCode VecMax_Seq(Vec,PetscInt*,PetscReal*);
 PETSC_INTERN PetscErrorCode VecNorm_Seq(Vec,NormType,PetscReal*);
