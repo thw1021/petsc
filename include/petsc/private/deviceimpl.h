@@ -4,6 +4,18 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
+#if defined(__NVCC__) || defined(__CUDACC__)
+#  define PETSC_USING_NVCC 1
+#endif
+
+#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
+#  define PETSC_USING_HCC 1
+#endif
+
+#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
+#  error using both nvcc and hipcc at the same time?
+#endif
+
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 template <typename T> void PetscValidDeviceType(T,int);
 template <typename T> void PetscValidDevice(T,int);
@@ -17,7 +29,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 /* enums may be handled as unsigned by some compilers, NVHPC for example, the int cast
  * below is to prevent NVHPC from warning about meaningless comparison of unsigned with zero */
 #define PetscValidDeviceType(_p_dev_type__,_p_arg__) do {                                      \
-    PetscCheck(                                                                               \
+    PetscCheck(                                                                                \
       ((int)(_p_dev_type__) >= (int)PETSC_DEVICE_INVALID) && ((_p_dev_type__) <= PETSC_DEVICE_MAX), \
       PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscDeviceType '%d': Argument #%d", \
       (_p_dev_type__),(_p_arg__)                                                               \
@@ -47,11 +59,11 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #define PetscValidDevice(_p_dev__,_p_arg__)          do {                                      \
     PetscValidPointer(_p_dev__,_p_arg__);                                                      \
     PetscValidDeviceType((_p_dev__)->type,_p_arg__);                                           \
-    PetscCheck(                                                                               \
+    PetscCheck(                                                                                \
       (_p_dev__)->id >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,                                      \
       "Invalid PetscDevice: Argument #%d; id %" PetscInt_FMT " < 0",(_p_arg__),(_p_dev__)->id  \
     );                                                                                         \
-    PetscCheck(                                                                               \
+    PetscCheck(                                                                                \
       (_p_dev__)->refcnt >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,                                  \
       "Invalid PetscDevice: Argument #%d; negative reference count %" PetscInt_FMT,            \
       (_p_arg__),(_p_dev__)->refcnt                                                            \
@@ -63,7 +75,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #define PetscCheckCompatibleDevices(_p_dev1__,_p_arg1__,_p_dev2__,_p_arg2__) do {       \
     PetscValidDevice(_p_dev1__,_p_arg1__);                                              \
     PetscValidDevice(_p_dev2__,_p_arg2__);                                              \
-    PetscCheck(                                                                        \
+    PetscCheck(                                                                         \
       (_p_dev1__)->type == (_p_dev2__)->type,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,      \
       "PetscDevices are incompatible: Arguments #%d and #%d",(_p_arg1__),(_p_arg2__)    \
     );                                                                                  \
@@ -72,12 +84,12 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 /* enums may be handled as unsigned by some compilers, NVHPC for example, the int cast
  * below is to prevent NVHPC from warning about meaningless comparison of unsigned with zero */
 #define PetscValidStreamType(_p_strm_type__,_p_arg__)  do {                                    \
-    PetscCheck(                                                                               \
-      ((int)(_p_strm_type__) >= 0) && ((_p_strm_type__) <= PETSC_STREAM_MAX), \
+    PetscCheck(                                                                                \
+      ((int)(_p_strm_type__) >= 0) && ((_p_strm_type__) <= PETSC_STREAM_MAX),                  \
       PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown PetscStreamType '%d': Argument #%d", \
       (_p_strm_type__),(_p_arg__)                                                              \
     );                                                                                         \
-    PetscCheck(                                                                               \
+    PetscCheck(                                                                                \
       (_p_strm_type__) != PETSC_STREAM_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,               \
       "Invalid PetscStreamType '%s': Argument #%d",PetscStreamTypes[_p_strm_type__],(_p_arg__) \
     );                                                                                         \
@@ -87,17 +99,17 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     PetscValidPointer(_p_dev_ctx__,_p_arg__);                                                  \
     PetscValidStreamType((_p_dev_ctx__)->streamType,_p_arg__);                                 \
     if ((_p_dev_ctx__)->device) PetscValidDevice((_p_dev_ctx__)->device,_p_arg__);             \
-    else PetscCheck(                                                                          \
+    else PetscCheck(                                                                           \
       !((_p_dev_ctx__)->setup),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,                       \
       "Invalid PetscDeviceContext: Argument #%d; "                                             \
       "PetscDeviceContext is setup but has no PetscDevice",(_p_arg__)                          \
     );                                                                                         \
-    PetscCheck(                                                                               \
+    PetscCheck(                                                                                \
       (_p_dev_ctx__)->id >= 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,                                  \
       "Invalid PetscDeviceContext: Argument #%d; id %" PetscInt_FMT " < 1",                    \
       (_p_arg__),(_p_dev_ctx__)->id                                                            \
     );                                                                                         \
-    PetscCheck(                                                                               \
+    PetscCheck(                                                                                \
       (_p_dev_ctx__)->numChildren <= (_p_dev_ctx__)->maxNumChildren,PETSC_COMM_SELF,           \
       PETSC_ERR_ARG_CORRUPT,"Invalid PetscDeviceContext: Argument #%d; number of children %"   \
       PetscInt_FMT " > max number of children %" PetscInt_FMT,                                 \
