@@ -4,7 +4,10 @@
 #include <petscpkg_version.h>
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
-#include <petsc/private/cudavecimpl.h> /* cublas definitions are here */
+#include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp> /* for VecSeq_CUPM */
+#include <petsc/private/legacycublasapi.h> /* cublas definitions are here */
+
+using VecSeq_CUDA = Petsc::Vector::CUPM::Impl::VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 #if defined(PETSC_USE_COMPLEX)
 #if defined(PETSC_USE_REAL_SINGLE)
@@ -1078,11 +1081,11 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
 
   PetscFunctionBegin;
   if (yy && yy != zz) { /* mult add */
-    ierr = VecCopy_SeqCUDA(yy,zz);CHKERRQ(ierr);
+    ierr = VecSeq_CUDA::copy_async(yy,zz);CHKERRQ(ierr);
   }
   if (!A->rmap->n || !A->cmap->n) {
     if (!yy) { /* mult only */
-      ierr = VecSet_SeqCUDA(zz,0.0);CHKERRQ(ierr);
+      ierr = VecSeq_CUDA::set_async(zz,0.0);CHKERRQ(ierr);
     }
     PetscFunctionReturn(0);
   }
