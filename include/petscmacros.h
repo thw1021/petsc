@@ -73,6 +73,15 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 #  define PETSC_SINGLE_LIBRARY_INTERN PETSC_EXTERN
 #endif
 
+#define PETSC_TEMPLATE_VISIBILITY_PUBLIC   PETSC_VISIBILITY_PUBLIC
+#define PETSC_TEMPLATE_VISIBILITY_INTERNAL PETSC_VISIBILITY_INTERNAL
+
+#if defined(PETSC_USE_SINGLE_LIBRARY)
+#  define PETSC_TEMPLATE_VISIBILITY_SINGLE_LIBRARY_INTERNAL PETSC_TEMPLATE_VISIBILITY_INTERNAL
+#else
+#  define PETSC_TEMPLATE_VISIBILITY_SINGLE_LIBRARY_INTERNAL PETSC_TEMPLATE_VISIBILITY_PUBLIC
+#endif
+
 /*MC
   PetscHasAttribute - Determine whether a particular __attribute__ is supported by the compiler
 
@@ -535,7 +544,7 @@ $ #define PETSC_DONT_HAVE_FOO PetscCompl(PetscDefined(HAVE_FOO))
 
 .seealso: PetscConcat(), PetscDefined()
 MC*/
-#define PetscCompl(b) PetscConcat_(PETSC_INTERNAL_COMPL_,PetscExpand(b))
+#define PetscCompl(b) PetscConcat(PETSC_INTERNAL_COMPL_,PetscExpand(b))
 
 #if !defined(PETSC_SKIP_VARIADIC_MACROS)
 /*MC
