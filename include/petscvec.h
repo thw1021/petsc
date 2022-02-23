@@ -94,7 +94,7 @@ typedef const char* VecType;
 #define VECCUDA        "cuda"       /* seqcuda on one process and mpicuda on several */
 #define VECSEQHIP      "seqhip"
 #define VECMPIHIP      "mpihip"
-#define VECHIP         "hip"       /* seqcuda on one process and mpicuda on several */
+#define VECHIP         "hip"       /* seqhip on one process and mpihip on several */
 #define VECNEST        "nest"
 #define VECSEQKOKKOS   "seqkokkos"
 #define VECMPIKOKKOS   "mpikokkos"
@@ -437,32 +437,6 @@ PETSC_EXTERN PetscErrorCode VecGetOwnershipRanges(Vec,const PetscInt*[]);
 PETSC_EXTERN PetscErrorCode VecSetLocalToGlobalMapping(Vec,ISLocalToGlobalMapping);
 PETSC_EXTERN PetscErrorCode VecSetValuesLocal(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
 
-PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec,PetscScalar**);
-PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec,PetscScalar**);
-
-PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec,const PetscScalar**);
-PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayRead(Vec,const PetscScalar**);
-
-PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec,PetscScalar**);
-PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec,PetscScalar**);
-
-PETSC_EXTERN PetscErrorCode VecCUDAPlaceArray(Vec,const PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecCUDAReplaceArray(Vec,const PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecCUDAResetArray(Vec);
-
-PETSC_EXTERN PetscErrorCode VecHIPGetArray(Vec,PetscScalar**);
-PETSC_EXTERN PetscErrorCode VecHIPRestoreArray(Vec,PetscScalar**);
-
-PETSC_EXTERN PetscErrorCode VecHIPGetArrayRead(Vec,const PetscScalar**);
-PETSC_EXTERN PetscErrorCode VecHIPRestoreArrayRead(Vec,const PetscScalar**);
-
-PETSC_EXTERN PetscErrorCode VecHIPGetArrayWrite(Vec,PetscScalar**);
-PETSC_EXTERN PetscErrorCode VecHIPRestoreArrayWrite(Vec,PetscScalar**);
-
-PETSC_EXTERN PetscErrorCode VecHIPPlaceArray(Vec,const PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecHIPReplaceArray(Vec,const PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecHIPResetArray(Vec);
-
 PETSC_EXTERN PetscErrorCode VecViennaCLGetCLContext(Vec, PETSC_UINTPTR_T*);
 PETSC_EXTERN PetscErrorCode VecViennaCLGetCLQueue(Vec, PETSC_UINTPTR_T*);
 PETSC_EXTERN PetscErrorCode VecViennaCLGetCLMemRead(Vec, PETSC_UINTPTR_T*);
@@ -717,22 +691,70 @@ PETSC_EXTERN PetscErrorCode VecCreateMPIViennaCL(MPI_Comm,PetscInt,PetscInt,Vec*
 PETSC_EXTERN PetscErrorCode VecScatterInitializeForGPU(VecScatter,Vec);
 PETSC_EXTERN PetscErrorCode VecScatterFinalizeForGPU(VecScatter);
 #endif
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode VecCreateSeqCUDA(MPI_Comm,PetscInt,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateSeqCUDAWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,const PetscScalar*,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateMPICUDA(MPI_Comm,PetscInt,PetscInt,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateMPICUDAWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateMPICUDAWithArrays(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,const PetscScalar*,Vec*);
-#endif
-#if defined(PETSC_HAVE_HIP)
-PETSC_EXTERN PetscErrorCode VecCreateSeqHIP(MPI_Comm,PetscInt,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateSeqHIPWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateSeqHIPWithArrays(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,const PetscScalar*,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateMPIHIP(MPI_Comm,PetscInt,PetscInt,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateMPIHIPWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,Vec*);
-PETSC_EXTERN PetscErrorCode VecCreateMPIHIPWithArrays(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,const PetscScalar*,Vec*);
-#endif
+
+#define VEC_CUPM_NOT_CONFIGURED(impl) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"Must configure PETSc with " PetscStringize(impl) " support to use this routine")
+#if PetscDefined(HAVE_CUDA)
+#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN PetscErrorCode FUNC_DECL;
+#else
+#  define VEC_CUDA_DECL_OR_STUB(FUNC_DECL) static inline PetscErrorCode FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(cuda); }
+#endif /* PETSC_HAVE_CUDA */
+
+/* extra underscore here to make it line up with the cuda versions */
+#if PetscDefined(HAVE_HIP)
+#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) PETSC_EXTERN PetscErrorCode FUNC_DECL;
+#else
+#  define VEC_HIP__DECL_OR_STUB(FUNC_DECL) static inline PetscErrorCode FUNC_DECL { VEC_CUPM_NOT_CONFIGURED(hip); }
+#endif /* PETSC_HAVE_HIP */
+
+VEC_CUDA_DECL_OR_STUB(VecCreateSeqCUDA(MPI_Comm a,PetscInt b,Vec*c))
+VEC_HIP__DECL_OR_STUB(VecCreateSeqHIP (MPI_Comm a,PetscInt b,Vec*c))
+
+VEC_CUDA_DECL_OR_STUB(VecCreateSeqCUDAWithArray(MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,Vec*e))
+VEC_HIP__DECL_OR_STUB(VecCreateSeqHIPWithArray (MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,Vec*e))
+
+VEC_CUDA_DECL_OR_STUB(VecCreateSeqCUDAWithArrays(MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,const PetscScalar*e,Vec*f))
+VEC_HIP__DECL_OR_STUB(VecCreateSeqHIPWithArrays (MPI_Comm a,PetscInt b,PetscInt c,const PetscScalar*d,const PetscScalar*e,Vec*f))
+
+VEC_CUDA_DECL_OR_STUB(VecCreateMPICUDA(MPI_Comm a,PetscInt b,PetscInt c,Vec*d))
+VEC_HIP__DECL_OR_STUB(VecCreateMPIHIP (MPI_Comm a,PetscInt b,PetscInt c,Vec*d))
+
+VEC_CUDA_DECL_OR_STUB(VecCreateMPICUDAWithArray(MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,Vec*f))
+VEC_HIP__DECL_OR_STUB(VecCreateMPIHIPWithArray (MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,Vec*f))
+
+VEC_CUDA_DECL_OR_STUB(VecCreateMPICUDAWithArrays(MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,const PetscScalar*f,Vec*g))
+VEC_HIP__DECL_OR_STUB(VecCreateMPIHIPWithArrays (MPI_Comm a,PetscInt b,PetscInt c,PetscInt d,const PetscScalar*e,const PetscScalar*f,Vec*g))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDAGetArray(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPGetArray (Vec a,PetscScalar**b))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDARestoreArray(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPRestoreArray (Vec a,PetscScalar**b))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDAGetArrayRead(Vec a,const PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPGetArrayRead (Vec a,const PetscScalar**b))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDARestoreArrayRead(Vec a,const PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPRestoreArrayRead (Vec a,const PetscScalar**b))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDAGetArrayWrite(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPGetArrayWrite (Vec a,PetscScalar**b))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDARestoreArrayWrite(Vec a,PetscScalar**b))
+VEC_HIP__DECL_OR_STUB(VecHIPRestoreArrayWrite (Vec a,PetscScalar**b))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDAPlaceArray(Vec a,const PetscScalar b[]))
+VEC_HIP__DECL_OR_STUB(VecHIPPlaceArray (Vec a,const PetscScalar b[]))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDAReplaceArray(Vec a,const PetscScalar b[]))
+VEC_HIP__DECL_OR_STUB(VecHIPReplaceArray (Vec a,const PetscScalar b[]))
+
+VEC_CUDA_DECL_OR_STUB(VecCUDAResetArray(Vec a))
+VEC_HIP__DECL_OR_STUB(VecHIPResetArray (Vec a))
+
+#undef VEC_CUPM_NOT_CONFIGURED
+#undef VEC_CUDA_DECL_OR_STUB
+#undef VEC_HIP__DECL_OR_STUB
+
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
 PETSC_EXTERN PetscErrorCode VecCreateSeqKokkos(MPI_Comm,PetscInt,Vec*);
 PETSC_EXTERN PetscErrorCode VecCreateSeqKokkosWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,Vec*);
