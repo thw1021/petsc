@@ -90,6 +90,8 @@ private:
     PetscFunctionReturn(0);
   }
 
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(stream_tag,PetscDeviceContext)) { return 0; }
+
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_handle_(cupmBlasHandle_t &handle))
   {
     PetscFunctionBegin;
