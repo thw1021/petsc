@@ -276,12 +276,12 @@ PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSE
 
 static inline bool isCudaMem(const void *data)
 {
-  using namespace Petsc::Device::CUPM::Impl;
+  using namespace Petsc::Device::CUPM;
   PetscErrorCode ierr;
   PetscMemType   mtype;
 
   PetscFunctionBegin;
-  ierr = Interface<DeviceType::CUDA>::cupmGetMemType(data,&mtype);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  ierr = Impl::Interface<DeviceType::CUDA>::cupmGetMemType(data,&mtype);CHKERRABORT(PETSC_COMM_SELF,ierr);
   PetscFunctionReturn(PetscMemTypeDevice(mtype));
 }
 
