@@ -2,7 +2,6 @@
 #define __MPICUSPARSEMATIMPL
 
 #include <cusparse_v2.h>
-#include <petsc/private/cudavecimpl.h>
 
 struct Mat_MPIAIJCUSPARSE {
   /* The following are used by GPU capabilities to store matrix storage formats on the device */
