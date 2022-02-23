@@ -127,13 +127,7 @@ int main(int argc,char **argv)
       PetscCall(VecScatterBegin(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE));
       PetscCall(VecScatterEnd(vscat,yg,x,INSERT_VALUES,SCATTER_REVERSE));
       PetscCall(VecResetArray(yg));
-      if (iscuda) {
-        #if defined(PETSC_HAVE_CUDA)
-          PetscCall(VecCUDARestoreArray(y,&yvalue));
-        #endif
-      } else {
-        PetscCall(VecRestoreArray(y,&yvalue));
-      }
+      PetscCall(VecRestoreArray(y,&yvalue));
 
       PetscCall(VecDestroy(&y));
     } else {
