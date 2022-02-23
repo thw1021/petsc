@@ -2854,26 +2854,16 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
   PetscErrorCode    ierr;
   PC_FieldSplit *   jac = (PC_FieldSplit*)pc->data;
   PC_FieldSplitLink ilink_current = jac->head;
-  PetscInt          nmin, nmax, ii, ndofs;
-  PetscInt *        owned_dofs; // Indexes owned by this processor
+  PetscInt          ii;
   IS                is_owned;
 
   PetscFunctionBegin;
+  jac->coordinates_set = PETSC_TRUE; // Internal flag
+  ierr = MatGetOwnershipIS(pc->mat,&is_owned,PETSC_NULL);CHKERRQ(ierr);
 
-  // Internal flag
-  jac->coordinates_set = PETSC_TRUE;
-  // Extract matrix ownership range to then compute subindexes for coordinates. This results in an IS object (is_owned).
-  // TODO: This would be simpler with a general MatGetOwnershipIS (currently supported only by Elemental and BLAS matrices).
-  ierr = MatGetOwnershipRange(pc->mat,&nmin,&nmax);CHKERRQ(ierr);
-  ndofs = nmax - nmin;
-  ierr = PetscMalloc1(ndofs, &owned_dofs); CHKERRQ(ierr);
-  for (PetscInt i=nmin;i<ndofs;++i) owned_dofs[i] = nmin + i;
-  ierr = ISCreateGeneral(MPI_COMM_WORLD, ndofs, owned_dofs, PETSC_OWN_POINTER, &is_owned); CHKERRQ(ierr);
-
-  // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
   ii=0;
   while (ilink_current) {
-    // For each IS, embed it to get local coords indces and then set coordinates in the subPC.
+    // For each IS, embed it to get local coords indces
     IS        is_coords;
     PetscInt  ndofs_block;
     const PetscInt *block_dofs_enumeration; // Numbering of the dofs relevant to the current block
@@ -2901,7 +2891,6 @@ static PetscErrorCode PCSetCoordinates_FieldSplit(PC pc, PetscInt dim, PetscInt 
     ilink_current = ilink_current->next;
     ++ii;
   }
-  // owned_dofs gets destroyed here as well due to PETSC_OWN_POINTER.
   ierr = ISDestroy(&is_owned); CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
