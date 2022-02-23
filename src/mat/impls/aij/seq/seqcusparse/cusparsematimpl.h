@@ -2,7 +2,8 @@
 #define CUSPARSEMATIMPL
 
 #include <petscpkg_version.h>
-#include <petsc/private/cudavecimpl.h>
+#include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp>
+#include <petsc/private/legacycublasapi.h>
 #include <petscaijdevice.h>
 
 #include <cusparse_v2.h>
@@ -17,6 +18,8 @@
 #include <thrust/functional.h>
 #include <thrust/sequence.h>
 #include <thrust/system/system_error.h>
+
+using VecSeq_CUDA = Petsc::Vector::CUPM::Impl::VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 #define PetscStackCallThrust(body) do {                                     \
     try {                                                                   \
@@ -273,18 +276,13 @@ PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSE
 
 static inline bool isCudaMem(const void *data)
 {
-  cudaError_t                  cerr;
-  struct cudaPointerAttributes attr;
-  enum cudaMemoryType          mtype;
-  cerr = cudaPointerGetAttributes(&attr,data); /* Do not check error since before CUDA 11.0, passing a host pointer returns cudaErrorInvalidValue */
-  cudaGetLastError(); /* Reset the last error */
-  #if (CUDART_VERSION < 10000)
-    mtype = attr.memoryType;
-  #else
-    mtype = attr.type;
-  #endif
-  if (cerr == cudaSuccess && mtype == cudaMemoryTypeDevice) return true;
-  else return false;
+  using namespace Petsc::Device::CUPM::Impl;
+  PetscErrorCode ierr;
+  PetscBool      device_mem;
+
+  PetscFunctionBegin;
+  ierr = Interface<DeviceType::CUDA>::cupmIsDeviceMemory(data,&device_mem);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  PetscFunctionReturn(!!device_mem);
 }
 
 #endif

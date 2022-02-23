@@ -27,10 +27,10 @@ template <typename T> struct HandleTag { using type = T; };
 } // namespace detail
 
 // Forward declare
-template <DeviceType T> class PETSC_VISIBILITY_INTERNAL DeviceContext;
+template <DeviceType> class PETSC_TEMPLATE_VISIBILITY_INTERNAL DeviceContext;
 
 template <DeviceType T>
-class DeviceContext : Impl::BlasInterface<T>
+class DeviceContext : BlasInterface<T>
 {
 public:
   PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
@@ -58,9 +58,9 @@ public:
     cupmBlasHandle_t   blas;
     cupmSolverHandle_t solver;
 
-    PETSC_NODISCARD auto get(stream_tag) const -> decltype(this->stream) { return this->stream; }
-    PETSC_NODISCARD auto get(blas_tag)   const -> decltype(this->blas)   { return this->blas;   }
-    PETSC_NODISCARD auto get(solver_tag) const -> decltype(this->solver) { return this->solver; }
+    PETSC_NODISCARD auto get(stream_tag) const noexcept PETSC_DECLTYPE_AUTO_RETURNS(this->stream);
+    PETSC_NODISCARD auto get(blas_tag)   const noexcept PETSC_DECLTYPE_AUTO_RETURNS(this->blas);
+    PETSC_NODISCARD auto get(solver_tag) const noexcept PETSC_DECLTYPE_AUTO_RETURNS(this->solver);
   };
 
 private:
@@ -68,10 +68,8 @@ private:
   static std::array<cupmBlasHandle_t,PETSC_DEVICE_MAX_DEVICES>   blashandles_;
   static std::array<cupmSolverHandle_t,PETSC_DEVICE_MAX_DEVICES> solverhandles_;
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceContext_IMPLS* impls_cast_(PetscDeviceContext ptr))
-  {
-    return static_cast<PetscDeviceContext_IMPLS*>(ptr->data);
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto impls_cast_(PetscDeviceContext ptr))
+  PETSC_DECLTYPE_AUTO_RETURNS(static_cast<PetscDeviceContext_IMPLS*>(ptr->data));
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(cupmBlasHandle_t &handle))
   {
@@ -85,7 +83,7 @@ private:
         auto ierr = PetscSleep(3);CHKERRQ(ierr);
         continue;
       }
-      PetscCheckFalse(cberr != CUPMBLAS_STATUS_SUCCESS,PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize %s",cupmBlasName());
+      PetscCheck(cberr == CUPMBLAS_STATUS_SUCCESS,PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize %s",cupmBlasName());
     }
     PetscFunctionReturn(0);
   }
@@ -154,7 +152,7 @@ public:
     getHandle<solver_tag>,
     getHandle<stream_tag>,
     beginTimer,
-    endTimer,
+    endTimer
   };
 
   // All of these functions MUST be static in order to be callable from C, otherwise they
@@ -229,7 +227,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[util::integral_value(dctx->streamType)]);
     break;
   }
-  if (!dci->event) {cerr = cupmEventCreate(&dci->event);CHKERRCUPM(cerr);}
+  if (!dci->event) {
+    cerr = cupmEventCreateWithFlags(&dci->event,cupmEventDisableTiming);CHKERRCUPM(cerr);
+  }
 #if PetscDefined(USE_DEBUG)
   dci->timerInUse = PETSC_FALSE;
 #endif
@@ -283,7 +283,7 @@ template <typename handle_t>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
 {
   PetscFunctionBegin;
-  *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t());
+  *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t{});
   PetscFunctionReturn(0);
 }
 
@@ -295,7 +295,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceCon
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
-  PetscCheckFalse(dci->timerInUse,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
+  PetscCheck(!dci->timerInUse,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeEnd()?");
   dci->timerInUse = PETSC_TRUE;
 #endif
   if (!dci->begin) {
@@ -315,7 +315,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceConte
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
-  PetscCheckFalse(!dci->timerInUse,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeBegin()?");
+  PetscCheck(dci->timerInUse,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Forgot to call PetscLogGpuTimeBegin()?");
   dci->timerInUse = PETSC_FALSE;
 #endif
   cerr = cupmEventRecord(dci->end,dci->stream);CHKERRCUPM(cerr);
