@@ -2260,8 +2260,8 @@ PetscErrorCode PetscSFBcastToZero_Private(PetscSF sf,MPI_Datatype unit,const voi
 
   Notes:
   The communicator of all SFs in sfs must be comm.
-  The offsets in leafOffsets are added to the original leave indices.
-  If all input SFs use contiguous leave storage (ilocal = NULL), NULL is also passed as ilocal to the resulting SF
+  The offsets in leafOffsets are added to the original leaf indices.
+  If all input SFs use contiguous leaf storage (ilocal = NULL), NULL is also passed as ilocal to the resulting SF
   Only in that case, input leafOffsets can be NULL as well, otherwise leafOffsets is needed to distinguish leaves from different input SFs.
 
 .seealso: PetscSF, PetscSFCompose(), PetscSFGetGraph(), PetscSFSetGraph()
