@@ -204,7 +204,11 @@ PETSC_INTERN PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions,Petsc
 /* Code shared between C and Fortran */
 PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char*,const char*,const char*,PetscBool,PetscBool,PetscInt);
 
+#if PetscDefined(HAVE_SETJMP_H)
 PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
+#else
+#define PetscCheckPointer(ptr,data_type) (ptr ? PETSC_TRUE : PETSC_FALSE)
+#endif
 #if !defined(PETSC_CLANG_STATIC_ANALYZER)
 /*
     Macros to test if a PETSc object is valid and if pointers are valid
