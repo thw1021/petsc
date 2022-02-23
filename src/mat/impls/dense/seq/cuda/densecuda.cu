@@ -4,7 +4,10 @@
 #include <petscpkg_version.h>
 #define PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND 1
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
-#include <petsc/private/cudavecimpl.h> /* cublas definitions are here */
+#include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp> /* for VecSeq_CUPM */
+#include <petsc/private/legacycublasapi.h> /* cublas definitions are here */
+
+using VecSeq_CUDA = Petsc::Vector::CUPM::Impl::VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
 
 #if defined(PETSC_USE_COMPLEX)
 #if defined(PETSC_USE_REAL_SINGLE)
@@ -982,11 +985,9 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
   cublasStatus_t    berr;
 
   PetscFunctionBegin;
-   /* mult add */
-  if (yy && yy != zz) PetscCall(VecCopy_SeqCUDA(yy,zz));
+  if (yy && yy != zz) PetscCall(VecSeq_CUDA::copy_async(yy,zz)); /* mult add */
   if (!A->rmap->n || !A->cmap->n) {
-    /* mult only */
-    if (!yy) PetscCall(VecSet_SeqCUDA(zz,0.0));
+    if (!yy) PetscCall(VecSeq_CUDA::set_async(zz,0.0)); /* mult only */
     PetscFunctionReturn(0);
   }
   PetscCall(PetscInfo(A,"Matrix-vector product %d x %d on backend\n",A->rmap->n,A->cmap->n));
