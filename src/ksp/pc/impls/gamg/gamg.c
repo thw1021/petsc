@@ -399,8 +399,23 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     ierr = PetscLogEventBegin(petsc_gamg_setup_events[SET14],0,0,0,0);CHKERRQ(ierr);
     /* 'a_Amat_crs' output */
     {
-      Mat mat;
-      ierr        = MatCreateSubMatrix(Cmat, new_eq_indices, new_eq_indices, MAT_INITIAL_MATRIX, &mat);CHKERRQ(ierr);
+      Mat       mat;
+      PetscBool flg;
+      ierr = MatCreateSubMatrix(Cmat, new_eq_indices, new_eq_indices, MAT_INITIAL_MATRIX, &mat);CHKERRQ(ierr);
+      ierr = MatGetOption(Cmat, MAT_SPD, &flg);CHKERRQ(ierr);
+      if (flg) {
+        ierr = MatSetOption(mat, MAT_SPD,PETSC_TRUE);CHKERRQ(ierr);
+      } else {
+        ierr = MatGetOption(Cmat, MAT_HERMITIAN, &flg);CHKERRQ(ierr);
+        if (flg) {
+          ierr = MatSetOption(mat, MAT_HERMITIAN,PETSC_TRUE);CHKERRQ(ierr);
+        } else {
+          ierr = MatGetOption(Cmat, MAT_SYMMETRIC, &flg);CHKERRQ(ierr);
+          if (flg) {
+            ierr = MatSetOption(mat, MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
+          }
+        }
+      }
       *a_Amat_crs = mat;
     }
     ierr = MatDestroy(&Cmat);CHKERRQ(ierr);
