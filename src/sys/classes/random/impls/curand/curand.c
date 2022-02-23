@@ -20,17 +20,20 @@ PETSC_INTERN PetscErrorCode PetscRandomCurandScale_Private(PetscRandom,size_t,Pe
 PetscErrorCode  PetscRandomGetValuesReal_CURAND(PetscRandom r, PetscInt n, PetscReal *val)
 {
   PetscRandom_CURAND *curand = (PetscRandom_CURAND*)r->data;
+  PetscDeviceContext dctx;
+  cudaStream_t       stream;
   size_t             nn = n < 0 ? (size_t)(-2*n) : n; /* handle complex case */
 
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx,PETSC_DEVICE_CUDA));
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
+  PetscCallCURAND(curandSetStream(curand->gen,stream));
 #if defined(PETSC_USE_REAL_SINGLE)
   PetscCallCURAND(curandGenerateUniform(curand->gen,val,nn));
 #else
   PetscCallCURAND(curandGenerateUniformDouble(curand->gen,val,nn));
 #endif
-  if (r->iset) {
-    PetscCall(PetscRandomCurandScale_Private(r,nn,val,(PetscBool)(n<0)));
-  }
+  if (r->iset) {PetscCall(PetscRandomCurandScale_Private(r,nn,val,(PetscBool)(n<0)));}
   PetscFunctionReturn(0);
 }
 
