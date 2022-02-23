@@ -18,7 +18,7 @@ namespace Impl
 {
 
 #define PETSC_CUPM_STATIC_VARIABLE_DEFN(theirs,DEVICE,ours)     \
-  const decltype(theirs) Interface<DeviceType::DEVICE>::ours;
+  const decltype(theirs) InterfaceImpl<DeviceType::DEVICE>::ours;
 
 // in case either one or the other don't agree on a name, you can specify all three here:
 //
@@ -67,6 +67,18 @@ PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDeviceToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDeviceToDevice)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyHostToHost)
 PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemcpyDefault)
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemoryTypeHost)
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(MemoryTypeDevice)
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_EXACT(cudaMemoryTypeManaged,hipMemoryTypeUnified,cupmMemoryTypeManaged)
+PETSC_CUPM_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(EventDisableTiming)
+
+#if PetscDefined(HAVE_CUDA)
+template struct Interface<DeviceType::CUDA>;
+#endif
+
+#if PetscDefined(HAVE_HIP)
+template struct Interface<DeviceType::HIP>;
+#endif
 
 } // namespace Impl
 
