@@ -52,6 +52,9 @@ namespace CUPM
 namespace Impl
 {
 
+namespace
+{
+
 // a simple RAII helper for PetscMallocSet[CUDA|HIP]Host(). it exists because integrating the
 // regular versions would be an enormous pain to square with the templated types...
 template <Device::CUPM::DeviceType T>
@@ -112,14 +115,12 @@ public:
   }
 };
 
-enum class MemoryAccess : unsigned {
+enum class MemoryAccess : unsigned
+{
   READ       = 1 << 0,
   WRITE      = 1 << 1,
   READ_WRITE = READ | WRITE
 };
-
-namespace
-{
 
 struct no_op
 {
@@ -177,12 +178,16 @@ private:
   {
     PetscFunctionBegin;
     if (PetscDefined(USE_DEBUG) && ptr /* don't check if no pointer */) {
-      PetscBool device_mem;
+      PetscMemType ptr_mtype;
 
-      CHKERRQ(cupmIsDeviceMemory(ptr,&device_mem));
-      if (PetscMemTypeHost(mtype)) {
-        PetscCheck(!device_mem,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was allocated on the device",PetscMemTypes(mtype));
-      } else PetscCheck(device_mem,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was not allocated on the device",PetscMemTypes(mtype));
+      CHKERRQ(cupmGetMemType(ptr,&ptr_mtype));
+      if (mtype == PETSC_MEMTYPE_HOST) {
+        PetscCheck(PetscMemTypeHost(ptr_mtype),PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was allocated on the device",PetscMemTypes(mtype));
+      } else if (mtype == PETSC_MEMTYPE_DEVICE) {
+        // generic "device" memory should only care if the actual memtype is also generically
+        // "device"
+        PetscCheck(PetscMemTypeDevice(ptr_mtype),PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s was not allocated on the device",PetscMemTypes(mtype));
+      } else PetscCheck(mtype == ptr_mtype,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Pointer declared as %s does not match actual memtype %s",PetscMemTypes(mtype),PetscMemTypes(ptr_mtype));
     }
     PetscFunctionReturn(0);
   }
@@ -226,9 +231,20 @@ public:
     ierr = PetscPrintf(comm,"Offload mask:        %s\n",PetscOffloadMasks[v->offloadmask]);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Host ptr:            %p\n",vimpl->array);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Device ptr:          %p\n",vcu->device_array);CHKERRQ(ierr);
-    ierr = cupmIsDeviceMemory(vcu->device_array,&device_mem);CHKERRQ(ierr);
+    ierr = IsDeviceMemory_(vcu->device_array,&device_mem);CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"dptr is device mem?  %s\n",device_mem ? "yes" : "no");CHKERRQ(ierr);
     ierr = PetscPrintf(comm,"Device ptr ownership %s\n",PetscCopyModes[VecCUPMCast(v)->ptr_ownership]);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode IsDeviceMemory(const void *ptr, PetscBool *dmem))
+  {
+    PetscMemType mtype;
+
+    PetscFunctionBegin;
+    PetscValidBoolPointer(dmem,2);
+    CHKERRQ(cupmGetMemType(ptr,&mtype));
+    *dmem = static_cast<PetscBool>(PetscMemTypeDevice(mtype));
     PetscFunctionReturn(0);
   }
 
@@ -1069,6 +1085,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase(Vec v
   using name::VecView_Debug;                                                    \
   /* utility */                                                                 \
   using typename name::Vec_CUPM;                                                \
+  using name::IsDeviceMemory;                                                   \
   using name::UseCUPMHostAlloc;                                                 \
   using name::GetHandles_;                                                      \
   using name::HostAllocateCheck_;                                               \

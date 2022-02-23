@@ -647,7 +647,7 @@ struct Interface : InterfaceImpl<T>
   using base_name::makeCupmScalar;                                      \
   using base_name::cupmScalarCast;                                      \
   using base_name::cupmRealCast;                                        \
-  using base_name::cupmIsDeviceMemory
+  using base_name::cupmGetMemType
 
 #if PetscDefined(HAVE_CUDA)
 extern template struct Interface<DeviceType::CUDA>;

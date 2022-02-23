@@ -797,7 +797,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     }
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
   }
-  ierr = cupmIsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
+  ierr = IsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
   // copy results to CPU
   if (device_mem) {
     // REVIEW ME: TODO
@@ -841,7 +841,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
 
   PetscFunctionBegin;
   ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-  ierr = cupmIsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
+  ierr = IsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
   {
     const auto         xptr = DeviceArrayRead(dctx,xin);
     const auto         mode = device_mem ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST;
@@ -1137,7 +1137,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
   PetscErrorCode     ierr;
 
   PetscFunctionBegin;
-  ierr = cupmIsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
+  ierr = IsDeviceMemory(z,&device_mem);CHKERRQ(ierr);
   if (!n) {
     const auto norm1and2 = type == NORM_1_AND_2;
 

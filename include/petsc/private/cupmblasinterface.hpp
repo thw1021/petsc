@@ -514,11 +514,11 @@ struct BlasInterface : BlasInterfaceImpl<T>
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode cupmBlasSetPointerModeFromPointer(cupmBlasHandle_t handle, const void *ptr))
   {
-    PetscBool device_mem;
+    PetscMemType mtype;
 
     PetscFunctionBegin;
-    auto ierr  = cupmIsDeviceMemory(ptr,&device_mem);CHKERRQ(ierr);
-    auto cberr = cupmBlasSetPointerMode(handle,device_mem ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
+    CHKERRQ(cupmGetMemType(ptr,&mtype));
+    CHKERRCUPMBLAS(cupmBlasSetPointerMode(handle,PetscMemTypeDevice(mtype) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
     PetscFunctionReturn(0);
   }
 };

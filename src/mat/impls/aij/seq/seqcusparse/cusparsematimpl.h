@@ -278,11 +278,11 @@ static inline bool isCudaMem(const void *data)
 {
   using namespace Petsc::Device::CUPM::Impl;
   PetscErrorCode ierr;
-  PetscBool      device_mem;
+  PetscMemType   mtype;
 
   PetscFunctionBegin;
-  ierr = Interface<DeviceType::CUDA>::cupmIsDeviceMemory(data,&device_mem);CHKERRABORT(PETSC_COMM_SELF,ierr);
-  PetscFunctionReturn(!!device_mem);
+  ierr = Interface<DeviceType::CUDA>::cupmGetMemType(data,&mtype);CHKERRABORT(PETSC_COMM_SELF,ierr);
+  PetscFunctionReturn(PetscMemTypeDevice(mtype));
 }
 
 #endif
