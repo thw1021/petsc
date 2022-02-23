@@ -76,7 +76,8 @@ $ PETSC_DEVICE_INIT_EAGER - PetscDevice is initialized as soon as possible
 
   Level: beginner
 
-.seealso: PetscDevice, PetscDeviceType, PetscDeviceInitialize(), PetscDeviceInitialized(), PetscDeviceCreate()
+.seealso: PetscDevice, PetscDeviceType, PetscDeviceInitialize(), PetscDeviceInitialized(),
+PetscDeviceCreate()
 E*/
 typedef enum {
   PETSC_DEVICE_INIT_NONE,
@@ -96,7 +97,8 @@ $ PETSC_DEVICE_DEFAULT - Automatically select backend based on availability
 $ PETSC_DEVICE_MAX     - Always 1 greater than the largest valid PetscDeviceType, invalid type, do not use
 
   Notes:
-  PETSC_DEVICE_DEFAULT is selected in the following order: PETSC_DEVICE_HIP, PETSC_DEVICE_CUDA, PETSC_DEVICE_SYCL, PETSC_DEVICE_INVALID.
+  PETSC_DEVICE_DEFAULT is selected in the following order: PETSC_DEVICE_HIP, PETSC_DEVICE_CUDA,
+  PETSC_DEVICE_SYCL, PETSC_DEVICE_INVALID.
 
   Level: beginner
 
@@ -124,18 +126,21 @@ PETSC_EXTERN const char *const PetscDeviceTypes[];
   PetscDevice - Handle to an accelerator "device" (usually a GPU)
 
   Notes:
-  This object is used to house configuration and state of a device, but does not offer any ability to interact with or
-  drive device computation. This functionality is facilitated instead by the PetscDeviceContext object.
+  This object is used to house configuration and state of a device, but does not offer any
+  ability to interact with or drive device computation. This functionality is facilitated
+  instead by the PetscDeviceContext object.
 
   Level: beginner
 
-.seealso: PetscDeviceType, PetscDeviceInitType, PetscDeviceCreate(), PetscDeviceConfigure(), PetscDeviceDestroy(), PetscDeviceContext, PetscDeviceContextSetDevice(), PetscDeviceContextGetDevice()
+.seealso: PetscDeviceType, PetscDeviceInitType, PetscDeviceCreate(), PetscDeviceConfigure(),
+PetscDeviceDestroy(), PetscDeviceContext, PetscDeviceContextSetDevice(),
+PetscDeviceContextGetDevice()
 S*/
 typedef struct _n_PetscDevice *PetscDevice;
 
 /*E
-  PetscStreamType - Stream blocking mode, indicates how a stream implementation will interact with the default "NULL"
-  stream, which is usually blocking.
+  PetscStreamType - Stream blocking mode, indicates how a stream implementation will interact
+  with the default "NULL" stream, which is usually blocking.
 
 $ PETSC_STREAM_GLOBAL_BLOCKING    - Alias for NULL stream. Any stream of this type will block the host for all other streams to finish work before starting its operations.
 $ PETSC_STREAM_DEFAULT_BLOCKING   - Stream will act independent of other streams, but will still be blocked by actions on the NULL stream.
@@ -155,11 +160,12 @@ typedef enum {
 PETSC_EXTERN const char *const PetscStreamTypes[];
 
 /*E
-  PetscDeviceContextJoinMode - Describes the type of join operation to perform in PetscDeviceContextJoin()
+  PetscDeviceContextJoinMode - Describes the type of join operation to perform in
+  PetscDeviceContextJoin()
 
-$ PETSC_DEVICE_CONTEXT_DESTROY - Destroy all incoming sub-contexts after join.
-$ PETSC_CONTEXT_JOIN_SYNC      - Synchronize incoming sub-contexts after join.
-$ PETSC_CONTEXT_JOIN_NO_SYNC   - Do not synchronize incoming sub-contexts after join.
+$ PETSC_DEVICE_CONTEXT_DESTROY      - Destroy all incoming sub-contexts after join.
+$ PETSC_DEVICE_CONTEXT_JOIN_SYNC    - Synchronize incoming sub-contexts after join.
+$ PETSC_DEVICE_CONTEXT_JOIN_NO_SYNC - Do not synchronize incoming sub-contexts after join.
 
   Level: beginner
 
@@ -173,12 +179,13 @@ typedef enum {
 PETSC_EXTERN const char *const PetscDeviceContextJoinModes[];
 
 /*S
-  PetscDeviceContext - Container to manage stream dependencies and the various solver handles for asynchronous device compute.
+  PetscDeviceContext - Container to manage stream dependencies and the various solver handles
+  for asynchronous device compute.
 
   Level: beginner
 
-.seealso: PetscDevice, PetscDeviceContextCreate(), PetscDeviceContextSetDevice(), PetscDeviceContextDestroy(),
-PetscDeviceContextFork(), PetscDeviceContextJoin()
+.seealso: PetscDevice, PetscDeviceContextCreate(), PetscDeviceContextSetDevice(),
+PetscDeviceContextDestroy(), PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 #endif /* PETSCDEVICETYPES_H */
