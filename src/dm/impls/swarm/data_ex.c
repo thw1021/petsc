@@ -83,7 +83,6 @@ PETSC_EXTERN PetscLogEvent DMSWARM_DataExchangerPack;
 
 PetscErrorCode DMSwarmDataExCreate(MPI_Comm comm,const PetscInt count, DMSwarmDataEx *ex)
 {
-  PetscErrorCode ierr;
   DMSwarmDataEx  d;
 
   PetscFunctionBegin;
@@ -131,7 +130,6 @@ PetscErrorCode DMSwarmDataExCreate(MPI_Comm comm,const PetscInt count, DMSwarmDa
 PetscErrorCode DMSwarmDataExView(DMSwarmDataEx d)
 {
   PetscMPIInt    p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscPrintf( PETSC_COMM_WORLD, "DMSwarmDataEx: instance=%D\n",d->instance));
@@ -167,7 +165,6 @@ PetscErrorCode DMSwarmDataExView(DMSwarmDataEx d)
 
 PetscErrorCode DMSwarmDataExDestroy(DMSwarmDataEx d)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_free(&d->comm));
@@ -190,7 +187,6 @@ PetscErrorCode DMSwarmDataExDestroy(DMSwarmDataEx d)
 
 PetscErrorCode DMSwarmDataExTopologyInitialize(DMSwarmDataEx d)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   d->topology_status = DEOBJECT_INITIALIZED;
@@ -209,7 +205,6 @@ PetscErrorCode DMSwarmDataExTopologyAddNeighbour(DMSwarmDataEx d,const PetscMPII
 {
   PetscMPIInt    n,found;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(d->topology_status == DEOBJECT_FINALIZED,d->comm, PETSC_ERR_ARG_WRONGSTATE, "Topology has been finalized. To modify or update call DMSwarmDataExTopologyInitialize() first");
@@ -294,7 +289,6 @@ PetscErrorCode _DMSwarmDataExCompleteCommunicationMap(MPI_Comm comm,PetscMPIInt 
   const PetscInt    *cols;
   const PetscScalar *red_vals;
   PetscMPIInt       _n_new, *_proc_neighbours_new;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   n_ = n;
@@ -354,7 +348,6 @@ PetscErrorCode _DMSwarmDataExCompleteCommunicationMap(MPI_Comm comm,PetscMPIInt 
 PetscErrorCode DMSwarmDataExTopologyFinalize(DMSwarmDataEx d)
 {
   PetscMPIInt    symm_nn, *symm_procs, r0,n,st,rt, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(d->topology_status != DEOBJECT_INITIALIZED,d->comm, PETSC_ERR_ARG_WRONGSTATE, "Topology must be initialised. Call DMSwarmDataExTopologyInitialize() first");
@@ -410,7 +403,6 @@ PetscErrorCode _DMSwarmDataExConvertProcIdToLocalIndex(DMSwarmDataEx de,PetscMPI
 PetscErrorCode DMSwarmDataExInitializeSendCount(DMSwarmDataEx de)
 {
   PetscMPIInt    i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->topology_status != DEOBJECT_FINALIZED,de->comm, PETSC_ERR_ORDER, "Topology not finalized");
@@ -428,7 +420,6 @@ PetscErrorCode DMSwarmDataExInitializeSendCount(DMSwarmDataEx de)
 PetscErrorCode DMSwarmDataExAddToSendCount(DMSwarmDataEx de,const PetscMPIInt proc_id,const PetscInt count)
 {
   PetscMPIInt    local_val;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->message_lengths_status == DEOBJECT_FINALIZED, de->comm, PETSC_ERR_ORDER, "Message lengths have been defined. To modify these call DMSwarmDataExInitializeSendCount() first");
@@ -443,7 +434,6 @@ PetscErrorCode DMSwarmDataExAddToSendCount(DMSwarmDataEx de,const PetscMPIInt pr
 
 PetscErrorCode DMSwarmDataExFinalizeSendCount(DMSwarmDataEx de)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->message_lengths_status != DEOBJECT_INITIALIZED, de->comm, PETSC_ERR_ORDER, "Message lengths must be defined. Call DMSwarmDataExInitializeSendCount() first");
@@ -464,7 +454,6 @@ PetscErrorCode DMSwarmDataExFinalizeSendCount(DMSwarmDataEx de)
 PetscErrorCode _DMSwarmDataExInitializeTmpStorage(DMSwarmDataEx de)
 {
   PetscMPIInt    i, np;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   np = de->n_neighbour_procs;
@@ -487,7 +476,6 @@ PetscErrorCode DMSwarmDataExPackInitialize(DMSwarmDataEx de,size_t unit_message_
 {
   PetscMPIInt    i,np;
   PetscInt       total;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->topology_status != DEOBJECT_FINALIZED, de->comm, PETSC_ERR_ORDER, "Topology not finalized");
@@ -533,7 +521,6 @@ PetscErrorCode DMSwarmDataExPackData(DMSwarmDataEx de,PetscMPIInt proc_id,PetscI
   PetscMPIInt    local;
   PetscInt       insert_location;
   void           *dest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->packer_status == DEOBJECT_FINALIZED, de->comm, PETSC_ERR_ORDER, "Packed data have been defined. To modify these call DMSwarmDataExInitializeSendCount(), DMSwarmDataExAddToSendCount(), DMSwarmDataExPackInitialize() first");
@@ -561,7 +548,6 @@ PetscErrorCode DMSwarmDataExPackFinalize(DMSwarmDataEx de)
 {
   PetscMPIInt    i,np;
   PetscInt       total;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->packer_status != DEOBJECT_INITIALIZED, de->comm, PETSC_ERR_ORDER, "Packer has not been initialized. Must call DMSwarmDataExPackInitialize() first.");
@@ -604,7 +590,6 @@ PetscErrorCode DMSwarmDataExBegin(DMSwarmDataEx de)
   PetscMPIInt    i,np;
   void           *dest;
   PetscInt       length;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->topology_status != DEOBJECT_FINALIZED, de->comm, PETSC_ERR_ORDER, "Topology not finalized");
@@ -632,7 +617,6 @@ PetscErrorCode DMSwarmDataExEnd(DMSwarmDataEx de)
   PetscInt       *message_recv_offsets;
   void           *dest;
   PetscInt       length;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(de->communication_status != DEOBJECT_INITIALIZED, de->comm, PETSC_ERR_ORDER, "Communication has not been initialized. Must call DMSwarmDataExInitialize() first.");

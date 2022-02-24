@@ -197,7 +197,6 @@ PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 {
   PetscReal      hx = user->hx, hy = user->hy, temp;
   PetscReal      val;
-  PetscErrorCode ierr;
   PetscInt       i, j, k, nx = user->mx, ny = user->my;
 
   /* Compute initial guess */
@@ -230,7 +229,6 @@ PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 */
 PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f,Vec G,void *ptr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(FormFunction(tao,X,f,ptr));
@@ -257,7 +255,6 @@ PetscErrorCode FormFunction(Tao tao,Vec X,PetscReal *f,void *ptr)
   PetscReal         zero = 0.0, vb, vl, vr, vt, dvdx, dvdy, flin = 0.0, fquad = 0.0;
   PetscReal         v, cdiv3 = user->param/three;
   const PetscScalar *x;
-  PetscErrorCode    ierr;
   PetscInt          nx = user->mx, ny = user->my, i, j, k;
 
   PetscFunctionBeginUser;
@@ -325,7 +322,6 @@ PetscErrorCode FormGradient(Tao tao,Vec X,Vec G,void *ptr)
 {
   AppCtx            *user = (AppCtx *) ptr;
   PetscReal         zero=0.0, p5=0.5, three = 3.0, area, val;
-  PetscErrorCode    ierr;
   PetscInt          nx = user->mx, ny = user->my, ind, i, j, k;
   PetscReal         hx = user->hx, hy = user->hy;
   PetscReal         vb, vl, vr, vt, dvdx, dvdy;
@@ -428,7 +424,6 @@ PetscErrorCode FormGradient(Tao tao,Vec X,Vec G,void *ptr)
 PetscErrorCode FormHessian(Tao tao,Vec X,Mat H,Mat Hpre, void *ptr)
 {
   AppCtx         *user = (AppCtx *) ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j, ndim = user->ndim;
   PetscReal      *y, zero = 0.0, one = 1.0;
   PetscBool      assembled;
@@ -507,7 +502,6 @@ PetscErrorCode MatrixFreeHessian(Tao tao,Vec X,Mat H,Mat PrecH, void *ptr)
 PetscErrorCode HessianProductMat(Mat mat,Vec svec,Vec y)
 {
   void           *ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(mat,&ptr));
@@ -533,7 +527,6 @@ PetscErrorCode HessianProduct(void *ptr,Vec svec,Vec y)
   PetscReal         p5 = 0.5, zero = 0.0, one = 1.0, hx, hy, val, area;
   const PetscScalar *x, *s;
   PetscReal         v, vb, vl, vr, vt, hxhx, hyhy;
-  PetscErrorCode    ierr;
   PetscInt          nx, ny, i, j, k, ind;
 
   PetscFunctionBeginUser;

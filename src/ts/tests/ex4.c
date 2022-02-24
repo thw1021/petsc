@@ -204,7 +204,6 @@ PetscErrorCode Initial(Vec global,void *ctx)
   PetscReal      x,y,dx,dy;
   PetscScalar    *localptr;
   PetscInt       i,mybase,myend,locsize;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* make the local  copies of parameters */
@@ -237,7 +236,6 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec global,void *ctx)
   IS                from,to;
   PetscInt          i,n,*idx,nsteps,maxsteps;
   Vec               tmp_vec;
-  PetscErrorCode    ierr;
   const PetscScalar *tmp;
 
   PetscFunctionBeginUser;
@@ -280,7 +278,6 @@ PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec x,Mat A,Mat BB,void *ptr)
   Data           *data = (Data*)ptr;
   PetscScalar    v[5];
   PetscInt       idx[5],i,j,row;
-  PetscErrorCode ierr;
   PetscInt       m,n,mn;
   PetscReal      dx,dy,a,epsilon,xc,xl,xr,yl,yr;
 
@@ -370,7 +367,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ct
   PetscScalar       *outptr;
   const PetscScalar *inptr;
   PetscInt          i,j,len;
-  PetscErrorCode    ierr;
   IS                from,to;
   PetscInt          *idx;
   VecScatter        scatter;
@@ -456,7 +452,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ct
 
 PetscErrorCode PostStep(TS ts)
 {
-  PetscErrorCode ierr;
   PetscReal      t;
 
   PetscFunctionBeginUser;

@@ -25,7 +25,6 @@ PetscMemkindType previousmktype = PETSC_MK_HBW_PREFERRED;
 
 PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line,const char func[],const char file[],void **result)
 {
-  PetscErrorCode ierr;
 #if defined(PETSC_HAVE_MEMKIND)
   int            err;
 #endif
@@ -256,7 +255,6 @@ PetscErrorCode PetscMallocClear(void)
 
 PetscErrorCode PetscMemoryTrace(const char label[])
 {
-  PetscErrorCode        ierr;
   PetscLogDouble        mem,mal;
   static PetscLogDouble oldmem = 0,oldmal = 0;
 
@@ -393,7 +391,6 @@ PetscErrorCode PetscMallocSetCoalesce(PetscBool coalesce)
 @*/
 PetscErrorCode PetscMallocA(int n,PetscBool clear,int lineno,const char *function,const char *filename,size_t bytes0,void *ptr0,...)
 {
-  PetscErrorCode ierr;
   va_list        Argp;
   size_t         bytes[8],sumbytes;
   void           **ptr[8];
@@ -449,7 +446,6 @@ PetscErrorCode PetscMallocA(int n,PetscBool clear,int lineno,const char *functio
 @*/
 PetscErrorCode PetscFreeA(int n,int lineno,const char *function,const char *filename,void *ptr0,...)
 {
-  PetscErrorCode ierr;
   va_list        Argp;
   void           **ptr[8];
   int            i;

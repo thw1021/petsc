@@ -692,7 +692,6 @@ static PetscErrorCode SolKxSolution(const PetscReal pos[], PetscReal m, PetscInt
 static PetscErrorCode SolKxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], void *ctx)
 {
   Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SolKxSolution(x, s->m, s->n, s->B, v, NULL, NULL, NULL, NULL));
@@ -702,7 +701,6 @@ static PetscErrorCode SolKxSolutionVelocity(PetscInt dim, PetscReal time, const 
 static PetscErrorCode SolKxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], void *ctx)
 {
   Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SolKxSolution(x, s->m, s->n, s->B, NULL, p, NULL, NULL, NULL));
@@ -2995,7 +2993,6 @@ static PetscErrorCode SolCxSolution(const PetscReal pos[], PetscReal m, PetscInt
 static PetscErrorCode SolCxSolutionVelocity(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar v[], void *ctx)
 {
   Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SolCxSolution(x, s->m, s->n, s->xc, s->etaA, s->etaB, v, NULL, NULL, NULL, NULL));
@@ -3005,7 +3002,6 @@ static PetscErrorCode SolCxSolutionVelocity(PetscInt dim, PetscReal time, const 
 static PetscErrorCode SolCxSolutionPressure(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar p[], void *ctx)
 {
   Parameter     *s = (Parameter *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SolCxSolution(x, s->m, s->n, s->xc, s->etaA, s->etaB, NULL, p, NULL, NULL, NULL));
@@ -3032,7 +3028,6 @@ static PetscErrorCode SetUpParameters(AppCtx *user)
 {
   PetscBag       bag;
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -3068,7 +3063,6 @@ static PetscErrorCode CreateSplitLabels(DM dm)
   DMLabel        label;
   IS             is;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   for (f = 0; f < 4; ++f) {
@@ -3085,7 +3079,6 @@ static PetscErrorCode CreateSplitLabels(DM dm)
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
   DM             cdm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -3109,7 +3102,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   PetscInt       dim, comp;
   Parameter     *ctx;
   void          *data;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -3207,7 +3199,6 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt origField, PetscIn
 {
   Vec              vec;
   PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void* ctx) = {zero, one};
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   PetscCheckFalse(origField != 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Field %D should be 1 for pressure", origField);
@@ -3242,7 +3233,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   DMPolytopeType ct;
   PetscInt       dim, cStart;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -3296,7 +3286,6 @@ static PetscErrorCode CorrectDiscretePressure(DM dm, MatNullSpace nullspace, Vec
   const Vec     *nullvecs;
   PetscScalar    pintd, intc[2], intn[2];
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -3315,7 +3304,6 @@ static PetscErrorCode CorrectDiscretePressure(DM dm, MatNullSpace nullspace, Vec
 
 static PetscErrorCode SNESConvergenceCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(SNESConvergedDefault(snes, it, xnorm, gnorm, f, reason, user));

@@ -17,7 +17,6 @@ static char help[] = "Small ODE to test TS accuracy.\n";
 */
 static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *u;
 
@@ -38,7 +37,6 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec F, void *s)
 */
 static PetscErrorCode ExactSolution(PetscReal t, Vec U)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *u;
 
   PetscFunctionBegin;

@@ -147,7 +147,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -162,7 +161,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   PetscDS        ds;
   DMLabel        label;
   const PetscInt id = 1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -186,7 +184,6 @@ static PetscErrorCode SetupVelocity(DM dm, DM dmAux, AppCtx *user)
 {
   PetscSimplePointFunc funcs[1] = {velocity};
   Vec                  v;
-  PetscErrorCode       ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreateLocalVector(dmAux, &v));
@@ -199,7 +196,6 @@ static PetscErrorCode SetupVelocity(DM dm, DM dmAux, AppCtx *user)
 static PetscErrorCode SetupAuxDM(DM dm, PetscFE feAux, AppCtx *user)
 {
   DM             dmAux, coordDM;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* MUST call DMGetCoordinateDM() in order to get p4est setup if present */
@@ -221,7 +217,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx* ctx)
   MPI_Comm       comm;
   PetscInt       dim;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -252,7 +247,6 @@ static PetscErrorCode MonitorError(KSP ksp, PetscInt it, PetscReal rnorm, void *
   void                *ctxs[1];
   Vec                  u, r, error;
   PetscReal            time = 0.5, res;
-  PetscErrorCode       ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(KSPGetDM(ksp, &dm));
@@ -284,7 +278,6 @@ static PetscErrorCode MyTSMonitorError(TS ts, PetscInt step, PetscReal crtime, V
   PetscSimplePointFunc func[1];
   void                *ctxs[1];
   PetscReal            error;
-  PetscErrorCode       ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

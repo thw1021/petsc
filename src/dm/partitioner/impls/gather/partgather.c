@@ -6,7 +6,6 @@ typedef struct {
 
 static PetscErrorCode PetscPartitionerDestroy_Gather(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(part->data));
@@ -22,7 +21,6 @@ static PetscErrorCode PetscPartitionerView_Gather_ASCII(PetscPartitioner part, P
 static PetscErrorCode PetscPartitionerView_Gather(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -35,7 +33,6 @@ static PetscErrorCode PetscPartitionerView_Gather(PetscPartitioner part, PetscVi
 static PetscErrorCode PetscPartitionerPartition_Gather(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertSection, PetscSection targetSection, PetscSection partSection, IS *partition)
 {
   PetscInt       np;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateStride(PETSC_COMM_SELF, numVertices, 0, 1, partition));
@@ -65,7 +62,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Gather(PetscPartitioner part)
 {
   PetscPartitioner_Gather *p;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);

@@ -7,7 +7,6 @@ static PetscErrorCode TestNestedPetscDeviceContextForkJoin(PetscDeviceContext pa
 {
   const PetscInt      nsub = 4;
   PetscDeviceContext *subsub;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceContext(parCtx,1);
@@ -28,7 +27,6 @@ static PetscErrorCode TestPetscDeviceContextForkJoin(PetscDeviceContext dctx)
 {
   PetscDeviceContext *sub;
   const PetscInt      n = 10;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);

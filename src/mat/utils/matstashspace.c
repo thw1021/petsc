@@ -5,7 +5,6 @@
 PetscErrorCode PetscMatStashSpaceGet(PetscInt bs2,PetscInt n,PetscMatStashSpace *space)
 {
   PetscMatStashSpace a;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
@@ -32,7 +31,6 @@ PetscErrorCode PetscMatStashSpaceGet(PetscInt bs2,PetscInt n,PetscMatStashSpace 
 PetscErrorCode PetscMatStashSpaceContiguous(PetscInt bs2,PetscMatStashSpace *space,PetscScalar *val,PetscInt *idx,PetscInt *idy)
 {
   PetscMatStashSpace a;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   while ((*space)) {
@@ -54,7 +52,6 @@ PetscErrorCode PetscMatStashSpaceContiguous(PetscInt bs2,PetscMatStashSpace *spa
 PetscErrorCode PetscMatStashSpaceDestroy(PetscMatStashSpace *space)
 {
   PetscMatStashSpace a;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   while (*space) {

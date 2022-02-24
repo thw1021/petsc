@@ -14,7 +14,6 @@ static PetscErrorCode CheckSymmetry(PetscInt dim, PetscInt order, PetscBool tens
   const PetscInt    *numDofs;
   const PetscInt    ***perms = NULL;
   const PetscScalar ***flips = NULL;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceCreate(PETSC_COMM_SELF,&sp));

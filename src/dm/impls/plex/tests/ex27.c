@@ -5,7 +5,6 @@ static char help[] = "Test section ordering for FEM discretizations\n\n";
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -21,7 +20,6 @@ static PetscErrorCode TestLocalDofOrder(DM dm)
   PetscSection   s;
   PetscBool      simplex;
   PetscInt       dim, Nf, f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));

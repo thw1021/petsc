@@ -157,7 +157,6 @@ static PetscErrorCode testNone(TS ts, Vec X, PetscInt stepi, PetscReal time, Pet
 /*  */
 static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, PetscBool islast, LandauCtx *ctx, REctx *rectx)
 {
-  PetscErrorCode    ierr;
   PetscInt          ii,nDMs;
   PetscDS           prob;
   static PetscReal  old_ratio = 1e10;
@@ -286,7 +285,6 @@ static void f0_0_maxwellian_lp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 /*  */
 static PetscErrorCode testStable(TS ts, Vec X, PetscInt stepi, PetscReal time, PetscBool islast, LandauCtx *ctx, REctx *rectx)
 {
-  PetscErrorCode    ierr;
   PetscDS           prob;
   Vec               X2;
   PetscReal         ediff,idiff=0,lpm0,lpm1=1;
@@ -334,7 +332,6 @@ static PetscErrorCode testStable(TS ts, Vec X, PetscInt stepi, PetscReal time, P
 static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, LandauCtx *ctx, PetscReal *a_E)
 {
   REctx             *rectx = (REctx*)ctx->data;
-  PetscErrorCode    ierr;
   PetscInt          ii;
   DM                dm,plex;
   PetscScalar       tt[LANDAU_MAX_SPECIES], qv0[LANDAU_MAX_SPECIES];
@@ -390,7 +387,6 @@ static PetscErrorCode FormSource(TS ts, PetscReal ftime, Vec X_dummmy, Vec F, vo
   PetscReal      new_imp_rate;
   LandauCtx      *ctx;
   DM             pack;
-  PetscErrorCode ierr;
   REctx          *rectx;
 
   PetscFunctionBeginUser;
@@ -434,7 +430,6 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   DM                pack;
   Vec               globXArray[LANDAU_MAX_GRIDS*LANDAU_MAX_BATCH_SZ];
   TSConvergedReason reason;
-  PetscErrorCode    ierr;
   PetscFunctionBeginUser;
   CHKERRQ(VecGetDM(X, &pack));
   CHKERRQ(DMCompositeGetAccessArray(pack, X, ctx->num_grids*ctx->batch_sz, NULL, globXArray));
@@ -479,7 +474,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
         CHKERRQ(VecNorm(globXArray[ LAND_PACK_IDX(i,grid) ],NORM_2,&val));
         if (i==0) rval = val;
         else if ((val=PetscAbs(val-rval)/rval) > 1000*PETSC_MACHINE_EPSILON) {
-          PetscPrintf(PETSC_COMM_SELF, " [%D] Warning %D.%D) diff = %2.15e\n",rank,grid,i,val);CHKERRQ(ierr);
+          CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " [%D] Warning %D.%D) diff = %2.15e\n",rank,grid,i,val));
           nerrors++;
         }
       }
@@ -497,7 +492,6 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 
 PetscErrorCode PreStep(TS ts)
 {
-  PetscErrorCode ierr;
   LandauCtx      *ctx;
   REctx          *rectx;
   DM             dm;

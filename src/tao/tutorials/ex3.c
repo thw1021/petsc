@@ -185,7 +185,6 @@ PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt 
 
 PetscErrorCode CreateCtx(DM dm, AppCtx* user)
 {
-  PetscErrorCode ierr;
 
   DM             dm_mass;
   DM             dm_laplace;
@@ -290,7 +289,6 @@ PetscErrorCode CreateCtx(DM dm, AppCtx* user)
 
 PetscErrorCode DestroyCtx(AppCtx* user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
 
@@ -310,7 +308,6 @@ PetscErrorCode DestroyCtx(AppCtx* user)
 
 PetscErrorCode ReducedFunctionGradient(Tao tao, Vec u, PetscReal* func, Vec g, void* userv)
 {
-  PetscErrorCode ierr;
   AppCtx* user = (AppCtx*) userv;
   const PetscReal alpha = 1.0e-6; /* regularisation parameter */
   PetscReal inner;

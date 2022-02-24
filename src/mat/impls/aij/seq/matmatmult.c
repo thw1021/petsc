@@ -12,7 +12,6 @@
 
 PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (C->ops->matmultnumeric) {
@@ -27,7 +26,6 @@ PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C)
 /* Modified from MatCreateSeqAIJWithArrays() */
 PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt i[],PetscInt j[],PetscScalar a[],MatType mtype,Mat mat)
 {
-  PetscErrorCode ierr;
   PetscInt       ii;
   Mat_SeqAIJ     *aij;
   PetscBool      isseqaij;
@@ -63,7 +61,6 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm comm,PetscIn
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_Product         *product = C->product;
   MatProductAlgorithm alg;
   PetscBool           flg;
@@ -136,7 +133,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal fill,Mat C
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_LLCondensed(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   Mat_SeqAIJ         *a =(Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   PetscInt           *ai=a->i,*bi=b->i,*ci,*cj;
   PetscInt           am =A->rmap->N,bn=B->cmap->N,bm=B->rmap->N;
@@ -244,7 +240,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_LLCondensed(Mat A,Mat B,PetscRea
 
 PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode    ierr;
   PetscLogDouble    flops=0.0;
   Mat_SeqAIJ        *a   = (Mat_SeqAIJ*)A->data;
   Mat_SeqAIJ        *b   = (Mat_SeqAIJ*)B->data;
@@ -323,7 +318,6 @@ PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqAIJ_Scalable(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode    ierr;
   PetscLogDouble    flops=0.0;
   Mat_SeqAIJ        *a   = (Mat_SeqAIJ*)A->data;
   Mat_SeqAIJ        *b   = (Mat_SeqAIJ*)B->data;
@@ -383,7 +377,6 @@ PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqAIJ_Scalable(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Scalable_fast(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   Mat_SeqAIJ         *a  = (Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   PetscInt           *ai = a->i,*bi=b->i,*ci,*cj;
   PetscInt           am  = A->rmap->N,bn=B->cmap->N,bm=B->rmap->N;
@@ -492,7 +485,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Scalable_fast(Mat A,Mat B,PetscR
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Scalable(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   Mat_SeqAIJ         *a  = (Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   PetscInt           *ai = a->i,*bi=b->i,*ci,*cj;
   PetscInt           am  = A->rmap->N,bn=B->cmap->N,bm=B->rmap->N;
@@ -602,7 +594,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Scalable(Mat A,Mat B,PetscReal f
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Heap(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   const PetscInt     *ai=a->i,*bi=b->i,*aj=a->j,*bj=b->j;
   PetscInt           *ci,*cj,*bb;
@@ -708,7 +699,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Heap(Mat A,Mat B,PetscReal fill,
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_BTHeap(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   Mat_SeqAIJ         *a  = (Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   const PetscInt     *ai = a->i,*bi=b->i,*aj=a->j,*bj=b->j;
   PetscInt           *ci,*cj,*bb;
@@ -828,7 +818,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_BTHeap(Mat A,Mat B,PetscReal fil
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_RowMerge(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   Mat_SeqAIJ         *a=(Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   const PetscInt     *ai=a->i,*bi=b->i,*aj=a->j,*bj=b->j,*inputi,*inputj,*inputcol,*inputcol_L1;
   PetscInt           *ci,*cj,*outputj,worki_L1[9],worki_L2[9];
@@ -1092,7 +1081,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_RowMerge(Mat A,Mat B,PetscReal f
 /* concatenate unique entries and then sort */
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c;
   const PetscInt *ai = a->i,*bi=b->i,*aj=a->j,*bj=b->j;
   PetscInt       *ci,*cj,bcol;
@@ -1189,7 +1177,6 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_Sorted(Mat A,Mat B,PetscReal fil
 
 PetscErrorCode MatDestroy_SeqAIJ_MatMatMultTrans(void *data)
 {
-  PetscErrorCode      ierr;
   Mat_MatMatTransMult *abt=(Mat_MatMatTransMult *)data;
 
   PetscFunctionBegin;
@@ -1202,7 +1189,6 @@ PetscErrorCode MatDestroy_SeqAIJ_MatMatMultTrans(void *data)
 
 PetscErrorCode MatMatTransposeMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode      ierr;
   Mat                 Bt;
   PetscInt            *bti,*btj;
   Mat_MatMatTransMult *abt;
@@ -1290,7 +1276,6 @@ PetscErrorCode MatMatTransposeMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal f
 
 PetscErrorCode MatMatTransposeMultNumeric_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_SeqAIJ          *a   =(Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c=(Mat_SeqAIJ*)C->data;
   PetscInt            *ai  =a->i,*aj=a->j,*bi=b->i,*bj=b->j,anzi,bnzj,nexta,nextb,*acol,*bcol,brow;
   PetscInt            cm   =C->rmap->n,*ci=c->i,*cj=c->j,i,j,cnzi,*ccol;
@@ -1365,7 +1350,6 @@ PetscErrorCode MatMatTransposeMultNumeric_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatDestroy_SeqAIJ_MatTransMatMult(void *data)
 {
-  PetscErrorCode      ierr;
   Mat_MatTransMatMult *atb = (Mat_MatTransMatMult*)data;
 
   PetscFunctionBegin;
@@ -1379,7 +1363,6 @@ PetscErrorCode MatDestroy_SeqAIJ_MatTransMatMult(void *data)
 
 PetscErrorCode MatTransposeMatMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
   Mat            At = NULL;
   PetscInt       *ati,*atj;
   Mat_Product    *product = C->product;
@@ -1441,7 +1424,6 @@ PetscErrorCode MatTransposeMatMultSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat B,PetscReal f
 
 PetscErrorCode MatTransposeMatMultNumeric_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *a=(Mat_SeqAIJ*)A->data,*b=(Mat_SeqAIJ*)B->data,*c=(Mat_SeqAIJ*)C->data;
   PetscInt       am=A->rmap->n,anzi,*ai=a->i,*aj=a->j,*bi=b->i,*bj,bnzi,nextb;
   PetscInt       cm=C->rmap->n,*ci=c->i,*cj=c->j,crow,*cjj,i,j,k;
@@ -1491,7 +1473,6 @@ PetscErrorCode MatTransposeMatMultNumeric_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqDense(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMatMultSymbolic_SeqDense_SeqDense(A,B,0.0,C));
@@ -1504,7 +1485,6 @@ PETSC_INTERN PetscErrorCode MatMatMultNumericAdd_SeqAIJ_SeqDense(Mat A,Mat B,Mat
   Mat_SeqAIJ        *a=(Mat_SeqAIJ*)A->data;
   Mat_SeqDense      *bd=(Mat_SeqDense*)B->data;
   Mat_SeqDense      *cd=(Mat_SeqDense*)C->data;
-  PetscErrorCode    ierr;
   PetscScalar       *c,r1,r2,r3,r4,*c1,*c2,*c3,*c4;
   const PetscScalar *aa,*b,*b1,*b2,*b3,*b4,*av;
   const PetscInt    *aj;
@@ -1624,7 +1604,6 @@ PETSC_INTERN PetscErrorCode MatMatMultNumericAdd_SeqAIJ_SeqDense(Mat A,Mat B,Mat
 
 PetscErrorCode MatMatMultNumeric_SeqAIJ_SeqDense(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(B->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number columns in A %" PetscInt_FMT " not equal rows in B %" PetscInt_FMT,A->cmap->n,B->rmap->n);
@@ -1664,7 +1643,6 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense_ABt(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -1686,7 +1664,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat C)
 /* ------------------------------------------------------- */
 static PetscErrorCode MatProductSetFromOptions_SeqXBAIJ_SeqDense_AB(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A = product->A;
   PetscBool      baij;
@@ -1709,7 +1686,6 @@ static PetscErrorCode MatProductSetFromOptions_SeqXBAIJ_SeqDense_AB(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqXBAIJ_SeqDense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -1732,7 +1708,6 @@ static PetscErrorCode MatProductSetFromOptions_SeqDense_SeqAIJ_AB(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqDense_SeqAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -1745,7 +1720,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqDense_SeqAIJ(Mat C)
 
 PetscErrorCode  MatTransColoringApplySpToDen_SeqAIJ(MatTransposeColoring coloring,Mat B,Mat Btdense)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *b       = (Mat_SeqAIJ*)B->data;
   Mat_SeqDense   *btdense = (Mat_SeqDense*)Btdense->data;
   PetscInt       *bi      = b->i,*bj=b->j;
@@ -1775,7 +1749,6 @@ PetscErrorCode  MatTransColoringApplySpToDen_SeqAIJ(MatTransposeColoring colorin
 
 PetscErrorCode MatTransColoringApplyDenToSp_SeqAIJ(MatTransposeColoring matcoloring,Mat Cden,Mat Csp)
 {
-  PetscErrorCode    ierr;
   Mat_SeqAIJ        *csp = (Mat_SeqAIJ*)Csp->data;
   const PetscScalar *ca_den,*ca_den_ptr;
   PetscScalar       *ca=csp->a;
@@ -1839,7 +1812,6 @@ PetscErrorCode MatTransColoringApplyDenToSp_SeqAIJ(MatTransposeColoring matcolor
 
 PetscErrorCode MatTransposeColoringCreate_SeqAIJ(Mat mat,ISColoring iscoloring,MatTransposeColoring c)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n,nrows,Nbs,j,k,m,ncols,col,cm;
   const PetscInt *is,*ci,*cj,*row_idx;
   PetscInt       nis = iscoloring->n,*rowhit,bs = 1;
@@ -1950,7 +1922,6 @@ PetscErrorCode MatTransposeColoringCreate_SeqAIJ(Mat mat,ISColoring iscoloring,M
 /* --------------------------------------------------------------- */
 static PetscErrorCode MatProductNumeric_AtB_SeqAIJ_SeqAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A=product->A,B=product->B;
 
@@ -1976,7 +1947,6 @@ static PetscErrorCode MatProductNumeric_AtB_SeqAIJ_SeqAIJ(Mat C)
 
 static PetscErrorCode MatProductSymbolic_AtB_SeqAIJ_SeqAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A=product->A,B=product->B;
   PetscReal      fill=product->fill;
@@ -2204,7 +2174,6 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJ_ABC(Mat C)
 
 PetscErrorCode MatProductSetFromOptions_SeqAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;

@@ -23,7 +23,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *options, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -37,7 +36,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *options, DM *dm)
 static PetscErrorCode test0(DM dm, AppCtx *options)
 {
   Vec            locX;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetLocalVector(dm, &locX));
@@ -51,7 +49,6 @@ static PetscErrorCode test1(DM dm, AppCtx *options)
   IS             cells;
   Vec            locX, locX_t, locA;
   PetscScalar    *u, *u_t, *a;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateStride(PETSC_COMM_SELF, 0, 0, 1, &cells));
@@ -74,7 +71,6 @@ static PetscErrorCode test2(DM dm, AppCtx *options)
   Vec            locX, locX_t, locA;
   PetscScalar    *u, *u_t, *a;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
@@ -97,7 +93,6 @@ static PetscErrorCode test3(DM dm, AppCtx *options)
   PetscFE        fe;
   PetscInt       dim;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -115,7 +110,6 @@ static PetscErrorCode test4(DM dm, AppCtx *options)
   PetscFE        fe;
   PetscInt       dim;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -133,7 +127,6 @@ static PetscErrorCode test5(DM dm, AppCtx *options)
   IS             cells;
   Vec            locX, locX_t, locA;
   PetscScalar    *u, *u_t, *a;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   locX_t = NULL;
@@ -153,7 +146,6 @@ static PetscErrorCode test6(DM dm, AppCtx *options)
   Vec            locX, locX_t, locA;
   PetscScalar    *u, *u_t, *a;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
@@ -173,7 +165,6 @@ static PetscErrorCode test7(DM dm, AppCtx *options)
   PetscFE        fe;
   PetscInt       dim;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -191,7 +182,6 @@ static PetscErrorCode test8(DM dm, AppCtx *options)
   PetscFE        fe;
   PetscInt       dim;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));

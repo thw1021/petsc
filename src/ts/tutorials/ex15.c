@@ -155,7 +155,6 @@ int main(int argc,char **argv)
 */
 PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *user=(AppCtx*)ctx;
   DM             da   = (DM)user->da;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
@@ -245,7 +244,6 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx)
 */
 PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat J,Mat Jpre,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym,nc;
   AppCtx         *user = (AppCtx*)ctx;
   DM             da    = (DM)user->da;
@@ -308,7 +306,6 @@ PetscErrorCode FormInitialSolution(Vec U,void *ptr)
   AppCtx         *user=(AppCtx*)ptr;
   DM             da   =user->da;
   PetscReal      c    =user->c;
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   PetscScalar    **u;
   PetscReal      hx,hy,x,y,r;

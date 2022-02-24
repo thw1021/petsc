@@ -15,7 +15,6 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
   PetscInt       *cellidx;
   const PetscScalar *coor;
   PetscReal      dx,dy;
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -66,7 +65,6 @@ PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltyp
   PetscSFNode    *cells;
   PetscInt       p,bs,npoints,nfound;
   const PetscInt *boxCells;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(_DMLocatePoints_DMDARegular_IS(dm,pos,&iscell));
@@ -93,7 +91,6 @@ PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltyp
 PetscErrorCode DMGetNeighbors_DMDARegular(DM dm,PetscInt *nneighbors,const PetscMPIInt **neighbors)
 {
   DM             dmregular;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetApplicationContext(dm,&dmregular));
@@ -109,7 +106,6 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
   FILE           *fp;
   char           name[PETSC_MAX_PATH_LEN];
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -141,7 +137,6 @@ PetscErrorCode ex3_1(void)
   PetscReal      *array,dt;
   PetscInt       *iarray;
   PetscRandom    rand;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));

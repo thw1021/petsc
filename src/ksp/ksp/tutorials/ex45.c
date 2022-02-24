@@ -67,7 +67,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,mx,my,mz,xm,ym,zm,xs,ys,zs;
   DM             dm;
   PetscScalar    Hx,Hy,Hz,HxHydHz,HyHzdHx,HxHzdHy;
@@ -98,7 +97,6 @@ PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 
 PetscErrorCode ComputeInitialGuess(KSP ksp,Vec b,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecSet(b,0));
@@ -108,7 +106,6 @@ PetscErrorCode ComputeInitialGuess(KSP ksp,Vec b,void *ctx)
 PetscErrorCode ComputeMatrix(KSP ksp,Mat jac,Mat B,void *ctx)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,mx,my,mz,xm,ym,zm,xs,ys,zs;
   PetscScalar    v[7],Hx,Hy,Hz,HxHydHz,HyHzdHx,HxHzdHy;
   MatStencil     row,col[7];

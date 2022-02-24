@@ -265,7 +265,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -278,7 +277,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 {
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -310,7 +308,6 @@ static PetscErrorCode SetupEqn(DM dm, AppCtx *user)
   PetscDS          ds;
   DMLabel          label;
   const PetscInt   id = 1;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -369,7 +366,6 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt origField, PetscIn
 {
   Vec              vec;
   PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void* ctx) = {zero, one};
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   PetscCheckFalse(origField != 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Field %D should be 1 for pressure", origField);
@@ -405,7 +401,6 @@ static PetscErrorCode SetupProblem(DM dm, PetscErrorCode (*setupEqn)(DM, AppCtx 
   PetscInt        dim, Nf = 2, f, Nc[2];
   const char     *name[2]   = {"velocity", "pressure"};
   const char     *prefix[2] = {"vel_",     "pres_"};
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));

@@ -40,7 +40,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -103,7 +102,6 @@ static PetscErrorCode SetInitialCoordinates(DM dmSw)
   const PetscSFNode *cells;
   PetscInt          dim, d, c, Np, p;
   PetscMPIInt       rank;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetApplicationContext(dmSw, &ctx));
@@ -146,7 +144,6 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   AppCtx        *ctx;
   PetscScalar   *initialConditions;
   PetscInt       dim, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetApplicationContext(dmSw, &ctx));
@@ -169,7 +166,6 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
 static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt       dim, Np = user->particlesPerCircle;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -194,7 +190,6 @@ static PetscErrorCode RHSFunction1(TS ts, PetscReal t, Vec V, Vec Xres, void *ct
   const PetscScalar *v;
   PetscScalar       *xres;
   PetscInt          Np, p, dim, d;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* The DM is not currently pushed down to the splits */
@@ -219,7 +214,6 @@ static PetscErrorCode RHSFunction2(TS ts, PetscReal t, Vec X, Vec Vres, void *us
   const PetscScalar *x;
   PetscScalar       *vres;
   PetscInt          Np, p, dim;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* The DM is not currently pushed down to the splits */
@@ -245,7 +239,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t , Vec U, Vec R, vo
   const PetscScalar *u;
   PetscScalar       *r;
   PetscInt          Np, p, dim, d;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -269,7 +262,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
 {
   DM             dm;
   AppCtx        *user;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -288,7 +280,6 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
   PetscScalar       *e;
   PetscReal          t;
   PetscInt           dim, Np, p, c;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) ts, &comm));
@@ -314,7 +305,7 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
         e[(p*2+0)*dim+d] = x[d] - xe[d];
         e[(p*2+1)*dim+d] = v[d] - ve[d];
       }
-      if (ctx->error) {ierr = PetscPrintf(comm, "p%D error [%.2g %.2g] sol [(%.6lf %.6lf) (%.6lf %.6lf)] exact [(%.6lf %.6lf) (%.6lf %.6lf)] energy/exact energy %g / %g\n", p, (double) DMPlex_NormD_Internal(dim, &e[(p*2+0)*dim]), (double) DMPlex_NormD_Internal(dim, &e[(p*2+1)*dim]), (double) x[0], (double) x[1], (double) v[0], (double) v[1], (double) xe[0], (double) xe[1], (double) ve[0], (double) ve[1], 0.5*DMPlex_NormD_Internal(dim, v), (double) energy(ctx, c));}
+      if (ctx->error) CHKERRQ(PetscPrintf(comm, "p%D error [%.2g %.2g] sol [(%.6lf %.6lf) (%.6lf %.6lf)] exact [(%.6lf %.6lf) (%.6lf %.6lf)] energy/exact energy %g / %g\n", p, (double) DMPlex_NormD_Internal(dim, &e[(p*2+0)*dim]), (double) DMPlex_NormD_Internal(dim, &e[(p*2+1)*dim]), (double) x[0], (double) x[1], (double) v[0], (double) v[1], (double) xe[0], (double) xe[1], (double) ve[0], (double) ve[1], 0.5*DMPlex_NormD_Internal(dim, v), (double) energy(ctx, c)));
     }
   }
   CHKERRQ(DMSwarmRestoreField(sdm, DMSwarmPICField_coor, NULL, NULL, (void **) &coords));

@@ -5,7 +5,6 @@ static char help[] = "Tests DMDA ghost coordinates\n\n";
 
 static PetscErrorCode CompareGhostedCoords(Vec gc1,Vec gc2)
 {
-  PetscErrorCode ierr;
   PetscReal      nrm,gnrm;
   Vec            tmp;
 
@@ -24,7 +23,6 @@ static PetscErrorCode TestQ2Q1DA(void)
   DM             Q2_da,Q1_da,cda;
   PetscInt       mx,my,mz;
   Vec            coords,gcoords,gcoords2;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   mx   = 7;

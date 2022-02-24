@@ -5,7 +5,6 @@
 */
 PetscErrorCode TSEventInitialize(TSEvent event,TS ts,PetscReal t,Vec U)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!event) PetscFunctionReturn(0);
@@ -20,7 +19,6 @@ PetscErrorCode TSEventInitialize(TSEvent event,TS ts,PetscReal t,Vec U)
 
 PetscErrorCode TSEventDestroy(TSEvent *event)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -254,7 +252,6 @@ PetscErrorCode TSSetEventHandler(TS ts,PetscInt nevents,PetscInt direction[],Pet
 */
 static PetscErrorCode TSEventRecorderResize(TSEvent event)
 {
-  PetscErrorCode ierr;
   PetscReal      *time;
   PetscInt       *stepnum;
   PetscInt       *nevents;
@@ -306,7 +303,6 @@ static PetscErrorCode TSEventRecorderResize(TSEvent event)
 */
 static PetscErrorCode TSPostEvent(TS ts,PetscReal t,Vec U)
 {
-  PetscErrorCode ierr;
   TSEvent        event = ts->event;
   PetscBool      terminate = PETSC_FALSE;
   PetscBool      restart = PETSC_FALSE;
@@ -380,7 +376,6 @@ static inline PetscReal TSEventComputeStepSize(PetscReal tleft,PetscReal t,Petsc
 
 static PetscErrorCode TSEventDetection(TS ts)
 {
-  PetscErrorCode ierr;
   TSEvent        event = ts->event;
   PetscReal      t;
   PetscInt       i;
@@ -417,7 +412,6 @@ static PetscErrorCode TSEventDetection(TS ts)
 
 static PetscErrorCode TSEventLocation(TS ts,PetscReal *dt)
 {
-  PetscErrorCode ierr;
   TSEvent        event = ts->event;
   PetscInt       i;
   PetscReal      t;
@@ -488,7 +482,6 @@ static PetscErrorCode TSEventLocation(TS ts,PetscReal *dt)
 
 PetscErrorCode TSEventHandler(TS ts)
 {
-  PetscErrorCode ierr;
   TSEvent        event;
   PetscReal      t;
   Vec            U;
@@ -578,7 +571,6 @@ PetscErrorCode TSEventHandler(TS ts)
 
 PetscErrorCode TSAdjointEventHandler(TS ts)
 {
-  PetscErrorCode ierr;
   TSEvent        event;
   PetscReal      t;
   Vec            U;

@@ -15,7 +15,6 @@ static PetscErrorCode bowl(PetscInt dim, PetscReal time, const PetscReal x[], Pe
 static PetscErrorCode CreateIndicator(DM dm, Vec *indicator, DM *dmIndi)
 {
   MPI_Comm       comm;
-  PetscErrorCode ierr;
   PetscFE        fe;
   PetscInt       dim;
 

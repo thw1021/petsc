@@ -110,11 +110,10 @@ int main(int argc, char **argv)
 
 PetscErrorCode PostStep(TS ts)
 {
-  PetscErrorCode ierr;
-  Vec            X;
-  AppCtx         *user;
-  PetscReal      t;
-  PetscScalar    asum;
+  Vec          X;
+  AppCtx      *user;
+  PetscReal    t;
+  PetscScalar  asum;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetApplicationContext(ts,&user));
@@ -138,13 +137,12 @@ PetscErrorCode PostStep(TS ts)
 
 PetscErrorCode ini_bou(Vec X,AppCtx* user)
 {
-  PetscErrorCode ierr;
-  DM             cda;
-  DMDACoor2d     **coors;
-  PetscScalar    **p;
-  Vec            gc;
-  PetscInt       M,N,Ir,J;
-  PetscMPIInt    rank;
+  DM            cda;
+  DMDACoor2d  **coors;
+  PetscScalar **p;
+  Vec           gc;
+  PetscInt      M,N,Ir,J;
+  PetscMPIInt   rank;
 
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -224,16 +222,15 @@ PetscErrorCode diffuse(PetscScalar **p,PetscInt i,PetscInt j,PetscReal t,PetscSc
 
 PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
-  AppCtx         *user=(AppCtx*)ctx;
-  DM             cda;
-  DMDACoor2d     **coors;
-  PetscScalar    **p,**f,**pdot;
-  PetscInt       i,j;
-  PetscInt       xs,ys,xm,ym,M,N;
-  Vec            localX,gc,localXdot;
-  PetscScalar    p_adv1 = 0.0,p_adv2 = 0.0,p_diff = 0;
-  PetscScalar    diffuse1,gamma;
+  AppCtx       *user   = (AppCtx*)ctx;
+  DM            cda;
+  DMDACoor2d  **coors;
+  PetscScalar **p,**f,**pdot;
+  PetscInt      i,j;
+  PetscInt      xs,ys,xm,ym,M,N;
+  Vec           localX,gc,localXdot;
+  PetscScalar   p_adv1 = 0.0,p_adv2 = 0.0,p_diff = 0;
+  PetscScalar   diffuse1,gamma;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetInfo(user->da,NULL,&M,&N,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL));
@@ -279,7 +276,6 @@ PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 
 PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,Mat Jpre,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *user=(AppCtx*)ctx;
   DM             cda;
   DMDACoor2d     **coors;
@@ -330,11 +326,9 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,Mat 
 
 PetscErrorCode Parameter_settings(AppCtx *user)
 {
-  PetscErrorCode ierr;
-  PetscBool      flg;
+  PetscBool flg;
 
   PetscFunctionBeginUser;
-
   /* Set default parameters */
   user->ws     = 1.0;
   user->H      = 5.0;
@@ -365,9 +359,7 @@ PetscErrorCode Parameter_settings(AppCtx *user)
   CHKERRQ(PetscOptionsGetScalar(NULL,NULL,"-q",&user->q,&flg));
   CHKERRQ(PetscOptionsGetScalar(NULL,NULL,"-mux",&user->mux,&flg));
   CHKERRQ(PetscOptionsGetScalar(NULL,NULL,"-muy",&user->muy,&flg));
-  if (flg == 0) {
-    user->muy = user->ws;
-  }
+  if (flg == 0) user->muy = user->ws;
   CHKERRQ(PetscOptionsGetScalar(NULL,NULL,"-xmin",&user->xmin,&flg));
   CHKERRQ(PetscOptionsGetScalar(NULL,NULL,"-xmax",&user->xmax,&flg));
   CHKERRQ(PetscOptionsGetScalar(NULL,NULL,"-ymin",&user->ymin,&flg));

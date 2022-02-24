@@ -55,7 +55,6 @@ PetscScalar CCmplxIm(CCmplx a)
 
 PetscErrorCode DAApplyConformalMapping(DM da,PetscInt idx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n;
   PetscInt       sx,nx,sy,ny,sz,nz,dim;
   Vec            Gcoords;
@@ -198,7 +197,6 @@ PetscErrorCode DAApplyConformalMapping(DM da,PetscInt idx)
 
 PetscErrorCode DAApplyTrilinearMapping(DM da)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscInt       sx,nx,sy,ny,sz,nz;
   Vec            Gcoords;
@@ -254,7 +252,6 @@ PetscErrorCode DAApplyTrilinearMapping(DM da)
 
 PetscErrorCode DADefineXLinearField2D(DM da,Vec field)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscInt       sx,nx,sy,ny;
   Vec            Gcoords;
@@ -284,7 +281,6 @@ PetscErrorCode DADefineXLinearField2D(DM da,Vec field)
 
 PetscErrorCode DADefineXLinearField3D(DM da,Vec field)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscInt       sx,nx,sy,ny,sz,nz;
   Vec            Gcoords;
@@ -323,7 +319,6 @@ PetscErrorCode DADefineXLinearField3D(DM da,Vec field)
 
 PetscErrorCode da_test_RefineCoords1D(PetscInt mx)
 {
-  PetscErrorCode ierr;
   DM             dac,daf;
   PetscViewer    vv;
   Vec            ac,af;
@@ -404,7 +399,6 @@ PetscErrorCode da_test_RefineCoords1D(PetscInt mx)
 
 PetscErrorCode da_test_RefineCoords2D(PetscInt mx,PetscInt my)
 {
-  PetscErrorCode ierr;
   DM             dac,daf;
   PetscViewer    vv;
   Vec            ac,af;

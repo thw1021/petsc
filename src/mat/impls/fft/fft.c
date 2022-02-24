@@ -6,7 +6,6 @@
 
 PetscErrorCode MatDestroy_FFT(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_FFT        *fft = (Mat_FFT*)A->data;
 
   PetscFunctionBegin;

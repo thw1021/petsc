@@ -35,7 +35,6 @@ PetscErrorCode MatSolve_LMVMBFGS(Mat B, Vec F, Vec dX)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i;
   PetscReal         *alpha, beta;
   PetscScalar       stf, ytx;
@@ -102,7 +101,6 @@ PetscErrorCode MatMult_LMVMBFGS(Mat B, Vec X, Vec Z)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i, j;
   PetscScalar       sjtpi, yjtsi, ytx, stz, stp;
 
@@ -151,7 +149,6 @@ static PetscErrorCode MatUpdate_LMVMBFGS(Mat B, Vec X, Vec F)
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
   Mat_LMVM          *dbase;
   Mat_DiagBrdn      *dctx;
-  PetscErrorCode    ierr;
   PetscInt          old_k, i;
   PetscReal         curvtol;
   PetscScalar       curvature, ytytmp, ststmp;
@@ -245,7 +242,6 @@ static PetscErrorCode MatCopy_LMVMBFGS(Mat B, Mat M, MatStructure str)
   Mat_SymBrdn       *bctx = (Mat_SymBrdn*)bdata->ctx;
   Mat_LMVM          *mdata = (Mat_LMVM*)M->data;
   Mat_SymBrdn       *mctx = (Mat_SymBrdn*)mdata->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i;
 
   PetscFunctionBegin;
@@ -287,7 +283,6 @@ static PetscErrorCode MatReset_LMVMBFGS(Mat B, PetscBool destructive)
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
   Mat_LMVM          *dbase;
   Mat_DiagBrdn      *dctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   lbfgs->watchdog = 0;
@@ -334,7 +329,6 @@ static PetscErrorCode MatAllocate_LMVMBFGS(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAllocate_LMVM(B, X, F));
@@ -362,7 +356,6 @@ static PetscErrorCode MatDestroy_LMVMBFGS(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (lbfgs->allocated) {
@@ -383,7 +376,6 @@ static PetscErrorCode MatSetUp_LMVMBFGS(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lbfgs = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          n, N;
 
   PetscFunctionBegin;
@@ -414,7 +406,6 @@ static PetscErrorCode MatSetUp_LMVMBFGS(Mat B)
 
 static PetscErrorCode MatSetFromOptions_LMVMBFGS(PetscOptionItems *PetscOptionsObject, Mat B)
 {
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetFromOptions_LMVM(PetscOptionsObject, B));
@@ -430,7 +421,6 @@ PetscErrorCode MatCreate_LMVMBFGS(Mat B)
 {
   Mat_LMVM          *lmvm;
   Mat_SymBrdn       *lbfgs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate_LMVMSymBrdn(B));
@@ -498,7 +488,6 @@ PetscErrorCode MatCreate_LMVMBFGS(Mat B)
 @*/
 PetscErrorCode MatCreateLMVMBFGS(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm, B));

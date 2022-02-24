@@ -5,7 +5,6 @@ static PetscErrorCode VecTaggerDestroy_AndOr(VecTagger tagger)
 {
   VecTagger_AndOr *andOr = (VecTagger_AndOr *) tagger->data;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i = 0; i < andOr->nsubs; i++) {
@@ -39,7 +38,6 @@ PetscErrorCode VecTaggerSetSubs_AndOr(VecTagger tagger, PetscInt nsubs, VecTagge
 {
   PetscInt        i;
   VecTagger_AndOr *andOr = (VecTagger_AndOr *) tagger->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tagger,VEC_TAGGER_CLASSID,1);
@@ -103,7 +101,6 @@ static PetscErrorCode VecTaggerSetFromOptions_AndOr(PetscOptionItems *PetscOptio
   char           funcstring[BUFSIZ];
   char           descstring[BUFSIZ];
   VecTagger      *subs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetType((PetscObject)tagger,&name));
@@ -129,7 +126,6 @@ static PetscErrorCode VecTaggerSetUp_AndOr (VecTagger tagger)
 {
   PetscInt        nsubs, i;
   VecTagger       *subs;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerGetSubs_AndOr(tagger,&nsubs,&subs));
@@ -143,7 +139,6 @@ static PetscErrorCode VecTaggerSetUp_AndOr (VecTagger tagger)
 static PetscErrorCode VecTaggerView_AndOr(VecTagger tagger, PetscViewer viewer)
 {
   PetscBool       iascii;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -167,7 +162,6 @@ static PetscErrorCode VecTaggerView_AndOr(VecTagger tagger, PetscViewer viewer)
 PetscErrorCode VecTaggerCreate_AndOr(VecTagger tagger)
 {
   VecTagger_AndOr    *andOr;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   tagger->ops->destroy          = VecTaggerDestroy_AndOr;

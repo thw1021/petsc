@@ -103,7 +103,6 @@ static PetscErrorCode DMPlexGetAdjacency_Cone_Internal(DM dm, PetscInt p, PetscI
 {
   const PetscInt *cone = NULL;
   PetscInt        numAdj = 0, maxAdjSize = *adjSize, coneSize, c;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(DMPlexGetConeSize(dm, p, &coneSize));
@@ -130,7 +129,6 @@ static PetscErrorCode DMPlexGetAdjacency_Support_Internal(DM dm, PetscInt p, Pet
 {
   const PetscInt *support = NULL;
   PetscInt        numAdj   = 0, maxAdjSize = *adjSize, supportSize, s;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(DMPlexGetSupportSize(dm, p, &supportSize));
@@ -157,7 +155,6 @@ static PetscErrorCode DMPlexGetAdjacency_Transitive_Internal(DM dm, PetscInt p, 
 {
   PetscInt      *star = NULL;
   PetscInt       numAdj = 0, maxAdjSize = *adjSize, starSize, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(DMPlexGetTransitiveClosure(dm, p, useClosure, &starSize, &star));
@@ -189,7 +186,6 @@ PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone,
   IS aIS = NULL;
   const PetscInt *anchors;
   DM_Plex *mesh = (DM_Plex *)dm->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginHot;
   if (useAnchors) {
@@ -289,7 +285,6 @@ PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone,
 PetscErrorCode DMPlexGetAdjacency(DM dm, PetscInt p, PetscInt *adjSize, PetscInt *adj[])
 {
   PetscBool      useCone, useClosure, useAnchors;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -332,7 +327,6 @@ PetscErrorCode DMPlexCreateTwoSidedProcessSF(DM dm, PetscSF sfPoint, PetscSectio
   PetscBT            neighbors;
   PetscInt           pStart, pEnd, p, numLeaves, l, numNeighbors, n;
   PetscMPIInt        size, proc, rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -421,7 +415,6 @@ PetscErrorCode DMPlexDistributeOwnership(DM dm, PetscSection rootSection, IS *ro
   PetscInt       *myrank, *remoterank;
   PetscInt        pStart, pEnd, p, nedges;
   PetscMPIInt     rank;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -482,7 +475,6 @@ PetscErrorCode DMPlexCreateOverlapLabel(DM dm, PetscInt levels, PetscSection roo
   PetscInt           pStart, pEnd, p, sStart, sEnd, nleaves, l;
   PetscMPIInt        rank, size;
   PetscBool          flg;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   *ovLabel = NULL;
@@ -599,7 +591,6 @@ PetscErrorCode DMPlexCreateOverlapMigrationSF(DM dm, PetscSF overlapSF, PetscSF 
   PetscSF            pointSF;
   const PetscInt    *sharedLocal;
   const PetscSFNode *overlapRemote, *sharedRemote;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -710,7 +701,6 @@ PetscErrorCode DMPlexStratifyMigrationSF(DM dm, PetscSF sf, PetscSF *migrationSF
   PetscInt          *depthRecv, *depthShift, *depthIdx;
   PetscInt          *ctRecv,    *ctShift,    *ctIdx;
   const PetscSFNode *iremote;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -824,7 +814,6 @@ PetscErrorCode DMPlexDistributeField(DM dm, PetscSF pointSF, PetscSection origin
   PetscSF        fieldSF;
   PetscInt      *remoteOffsets, fieldSize;
   PetscScalar   *originalValues, *newValues;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_DistributeField,dm,0,0,0));
@@ -871,7 +860,6 @@ PetscErrorCode DMPlexDistributeFieldIS(DM dm, PetscSF pointSF, PetscSection orig
   PetscSF         fieldSF;
   PetscInt       *newValues, *remoteOffsets, fieldSize;
   const PetscInt *originalValues;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_DistributeField,dm,0,0,0));
@@ -917,7 +905,6 @@ PetscErrorCode DMPlexDistributeData(DM dm, PetscSF pointSF, PetscSection origina
   PetscSF        fieldSF;
   PetscInt      *remoteOffsets, fieldSize;
   PetscMPIInt    dataSize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_DistributeData,dm,0,0,0));
@@ -944,7 +931,6 @@ static PetscErrorCode DMPlexDistributeCones(DM dm, PetscSF migrationSF, ISLocalT
   PetscSection           originalConeSection, newConeSection;
   PetscInt              *remoteOffsets, *cones, *globCones, *newCones, newConesSize;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1040,7 +1026,6 @@ static PetscErrorCode DMPlexDistributeCoordinates(DM dm, PetscSF migrationSF, DM
   const char      *name;
   const PetscReal *maxCell, *L;
   const DMBoundaryType *bd;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1078,7 +1063,6 @@ static PetscErrorCode DMPlexDistributeLabels(DM dm, PetscSF migrationSF, DM dmPa
   PetscInt         depth, d, numLabels, numLocalLabels, l;
   PetscBool        hasLabels = PETSC_FALSE, lsendDepth, sendDepth;
   PetscObjectState depthState = -1;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1151,7 +1135,6 @@ static PetscErrorCode DMPlexDistributeSetupTree(DM dm, PetscSF migrationSF, ISLo
   PetscSection    origParentSection, newParentSection;
   PetscInt        *origParents, *origChildIDs;
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1223,7 +1206,6 @@ PETSC_UNUSED static PetscErrorCode DMPlexDistributeSF(DM dm, PetscSF migrationSF
 {
   PetscMPIInt            rank, size;
   MPI_Comm               comm;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1395,7 +1377,6 @@ PetscErrorCode DMPlexCreatePointSF(DM dm, PetscSF migrationSF, PetscBool ownersh
   const PetscScalar *shift = NULL;
   const PetscBool    shiftDebug = PETSC_FALSE;
   PetscBool          balance;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1520,7 +1501,6 @@ PetscErrorCode DMPlexMigrate(DM dm, PetscSF sf, DM targetDM)
   ISLocalToGlobalMapping ltogMigration;
   ISLocalToGlobalMapping ltogOriginal = NULL;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1607,7 +1587,6 @@ PetscErrorCode DMPlexDistribute(DM dm, PetscInt overlap, PetscSF *sf, DM *dmPara
   PetscSF                sfMigration, sfStratified, sfPoint;
   PetscBool              flg, balance;
   PetscMPIInt            rank, size;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1788,7 +1767,6 @@ PetscErrorCode DMPlexDistributeOverlap(DM dm, PetscInt overlap, PetscSF *sf, DM 
   DM                     dmCoord;
   DMLabel                lblOverlap;
   PetscSF                sfOverlap, sfStratified, sfPoint;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1870,7 +1848,6 @@ PetscErrorCode DMPlexGetOverlap_Plex(DM dm, PetscInt *overlap)
 @*/
 PetscErrorCode DMPlexGetOverlap(DM dm, PetscInt *overlap)
 {
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1902,7 +1879,6 @@ PetscErrorCode DMPlexDistributeSetDefault_Plex(DM dm, PetscBool dist)
 @*/
 PetscErrorCode DMPlexDistributeSetDefault(DM dm, PetscBool dist)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1937,7 +1913,6 @@ PetscErrorCode DMPlexDistributeGetDefault_Plex(DM dm, PetscBool *dist)
 @*/
 PetscErrorCode DMPlexDistributeGetDefault(DM dm, PetscBool *dist)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1968,7 +1943,6 @@ PetscErrorCode DMPlexGetGatherDM(DM dm, PetscSF *sf, DM *gatherMesh)
   MPI_Comm       comm;
   PetscMPIInt    size;
   PetscPartitioner oldPart, gatherPart;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -2016,7 +1990,6 @@ PetscErrorCode DMPlexGetRedundantDM(DM dm, PetscSF *sf, DM *redundantMesh)
   PetscSF        migrationSF, sfPoint, gatherSF;
   DM             gatherDM, dmCoord;
   PetscSFNode    *points;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -2091,7 +2064,6 @@ PetscErrorCode DMPlexIsDistributed(DM dm, PetscBool *distributed)
   PetscInt          pStart, pEnd, count;
   MPI_Comm          comm;
   PetscMPIInt       size;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

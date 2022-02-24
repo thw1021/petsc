@@ -125,7 +125,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
   PetscReal      two = 2.0,hx,hy,sx,sy;
   PetscScalar    u,uxx,uyy,**x,**f;
@@ -190,7 +189,6 @@ PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
 /* ------------------------------------------------------------------- */
 PetscErrorCode FormInitialSolution(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   PetscScalar    **u;
   PetscReal      hx,hy,x,y,r;
@@ -233,7 +231,6 @@ PetscErrorCode FormInitialSolution(DM da,Vec U)
 
 PetscErrorCode MyTSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec v,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscReal      norm;
   MPI_Comm       comm;
 
@@ -256,7 +253,6 @@ PetscErrorCode MyTSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec v,void *ctx)
  */
 PetscErrorCode MySNESMonitor(SNES snes,PetscInt its,PetscReal fnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(SNESMonitorDefaultShort(snes,its,fnorm,vf));

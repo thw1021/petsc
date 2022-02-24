@@ -49,7 +49,6 @@ struct _p_CellProperties {
 /* elements */
 PetscErrorCode CellPropertiesCreate(DM da_stokes,CellProperties *C)
 {
-  PetscErrorCode ierr;
   CellProperties cells;
   PetscInt       mx,my,mz,sex,sey,sez;
 
@@ -74,7 +73,6 @@ PetscErrorCode CellPropertiesCreate(DM da_stokes,CellProperties *C)
 
 PetscErrorCode CellPropertiesDestroy(CellProperties *C)
 {
-  PetscErrorCode ierr;
   CellProperties cells;
 
   PetscFunctionBeginUser;
@@ -760,7 +758,6 @@ static PetscErrorCode AssembleA_Stokes(Mat A,DM stokes_da,CellProperties cell_pr
   GaussPointCoefficients *props;
   PetscScalar            *prop_eta;
   PetscInt               n,M,N,P;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetInfo(stokes_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0));
@@ -848,7 +845,6 @@ static PetscErrorCode AssembleA_PCStokes(Mat A,DM stokes_da,CellProperties cell_
   GaussPointCoefficients *props;
   PetscScalar            *prop_eta;
   PetscInt               n,M,N,P;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetInfo(stokes_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0));
@@ -934,7 +930,6 @@ static PetscErrorCode AssembleF_Stokes(Vec F,DM stokes_da,CellProperties cell_pr
   Vec                    local_F;
   StokesDOF              ***ff;
   PetscInt               n,M,N,P;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetInfo(stokes_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0));
@@ -1136,7 +1131,6 @@ static PetscErrorCode DMDAIntegrateErrors3D(DM stokes_da,Vec X,Vec X_analytic)
   PetscScalar    tint_p_ms,tint_p,int_p_ms,int_p;
   PetscInt       M;
   PetscReal      xymin[NSD],xymax[NSD];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* define quadrature rule */
@@ -1299,7 +1293,6 @@ PetscErrorCode DAView_3DVTK_StructuredGrid_appended(DM da,Vec FIELD,const char f
   PetscScalar    *_L_FIELD;
   PetscInt       memory_offset;
   PetscScalar    *buffer;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
 
@@ -1410,7 +1403,6 @@ PetscErrorCode DAViewVTK_write_PieceExtend(FILE *vtk_fp,PetscInt indent_level,DM
   PetscInt       M,N,P,pM,pN,pP,sum,*olx,*oly,*olz;
   PetscInt       *osx,*osy,*osz,*oex,*oey,*oez;
   PetscInt       i,j,k,II,stencil;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* create file name */
@@ -1506,7 +1498,6 @@ PetscErrorCode DAView_3DVTK_PStructuredGrid(DM da,const char file_prefix[],const
   const char     *byte_order = PetscBinaryBigEndian() ? "BigEndian" : "LittleEndian";
   PetscInt       M,N,P,si,sj,sk,nx,ny,nz;
   PetscInt       i,dofs;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* only rank-0 generates this file */
@@ -1565,7 +1556,6 @@ PetscErrorCode DAView3DPVTS(DM da, Vec x,const char NAME[])
 {
   char           vts_filename[PETSC_MAX_PATH_LEN];
   char           pvts_filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscSNPrintf(vts_filename,sizeof(vts_filename),"%s-mesh",NAME));
@@ -1578,7 +1568,6 @@ PetscErrorCode DAView3DPVTS(DM da, Vec x,const char NAME[])
 
 PetscErrorCode KSPMonitorStokesBlocks(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
 {
-  PetscErrorCode ierr;
   PetscReal      norms[4];
   Vec            Br,v,w;
   Mat            A;
@@ -1607,7 +1596,6 @@ static PetscErrorCode PCMGSetupViaCoarsen(PC pc,DM da_fine)
   PETSC_UNUSED PetscInt finest;
   DM                    *da_list,*daclist;
   Mat                   R;
-  PetscErrorCode        ierr;
 
   PetscFunctionBeginUser;
   nlevels = 1;

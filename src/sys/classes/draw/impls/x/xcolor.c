@@ -75,7 +75,6 @@ PetscErrorCode PetscDrawSetUpColormap_Shared(Display *display,int screen,Visual 
   unsigned char  B[PETSC_DRAW_MAXCOLOR-PETSC_DRAW_BASIC_COLORS];
   XColor         colordef,ecolordef;
   PetscBool      fast = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (colormap) gColormap = colormap;
@@ -127,7 +126,6 @@ PetscErrorCode PetscDrawSetUpColormap_Private(Display *display,int screen,Visual
   Colormap       defaultmap = DefaultColormap(display,screen);
   XColor         colordef;
   PetscBool      fast = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (colormap) gColormap = colormap;
@@ -193,7 +191,6 @@ PetscErrorCode PetscDrawSetUpColormap_Private(Display *display,int screen,Visual
 
 PetscErrorCode PetscDrawSetUpColormap_X(Display *display,int screen,Visual *visual,Colormap colormap)
 {
-  PetscErrorCode ierr;
   PetscBool      sharedcolormap = PETSC_FALSE;
   XVisualInfo    vinfo;
 
@@ -224,7 +221,6 @@ PETSC_INTERN PetscErrorCode PetscDrawSetColormap_X(PetscDraw_X*,Colormap);
 PetscErrorCode PetscDrawSetColormap_X(PetscDraw_X *XiWin,Colormap colormap)
 {
   PetscBool      fast = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsGetBool(NULL,NULL,"-draw_fast",&fast,NULL));

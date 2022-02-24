@@ -7,7 +7,6 @@
 
 PetscErrorCode  VecDuplicate_MPI_DA(Vec g,Vec *gg)
 {
-  PetscErrorCode ierr;
   DM             da;
   PetscLayout    map;
 
@@ -21,7 +20,6 @@ PetscErrorCode  VecDuplicate_MPI_DA(Vec g,Vec *gg)
 
 PetscErrorCode  DMCreateGlobalVector_DA(DM da,Vec *g)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -71,7 +69,6 @@ PetscErrorCode  DMCreateGlobalVector_DA(DM da,Vec *g)
 @*/
 PetscErrorCode  DMDACreateNaturalVector(DM da,Vec *g)
 {
-  PetscErrorCode ierr;
   PetscInt       cnt;
   DM_DA          *dd = (DM_DA*)da->data;
 

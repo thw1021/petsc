@@ -5,7 +5,6 @@
 
 PetscErrorCode PCMGFCycle_Private(PC pc,PC_MG_Levels **mglevels,PetscBool transpose,PetscBool matapp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,l = mglevels[0]->levels;
 
   PetscFunctionBegin;
@@ -57,7 +56,6 @@ PetscErrorCode PCMGFCycle_Private(PC pc,PC_MG_Levels **mglevels,PetscBool transp
 
 PetscErrorCode PCMGKCycle_Private(PC pc,PC_MG_Levels **mglevels,PetscBool transpose,PetscBool matapp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,l = mglevels[0]->levels;
 
   PetscFunctionBegin;

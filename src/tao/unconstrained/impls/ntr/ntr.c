@@ -52,7 +52,6 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
   PetscReal          f, gnorm;
 
   PetscReal          norm_d;
-  PetscErrorCode     ierr;
   PetscInt           bfgsUpdates = 0;
   PetscInt           needH;
 
@@ -487,7 +486,6 @@ static PetscErrorCode TaoSolve_NTR(Tao tao)
 static PetscErrorCode TaoSetUp_NTR(Tao tao)
 {
   TAO_NTR *tr = (TAO_NTR *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->gradient) CHKERRQ(VecDuplicate(tao->solution, &tao->gradient));
@@ -503,7 +501,6 @@ static PetscErrorCode TaoSetUp_NTR(Tao tao)
 static PetscErrorCode TaoDestroy_NTR(Tao tao)
 {
   TAO_NTR        *tr = (TAO_NTR *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -517,7 +514,6 @@ static PetscErrorCode TaoDestroy_NTR(Tao tao)
 static PetscErrorCode TaoSetFromOptions_NTR(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_NTR        *tr = (TAO_NTR *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Newton trust region method for unconstrained optimization"));
@@ -597,7 +593,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_NTR(Tao tao)
 {
   TAO_NTR *tr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

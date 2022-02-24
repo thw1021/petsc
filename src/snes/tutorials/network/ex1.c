@@ -23,7 +23,6 @@ typedef struct{
 
 PetscErrorCode UserMonitor(SNES snes,PetscInt its,PetscReal fnorm ,void *appctx)
 {
-  PetscErrorCode ierr;
   UserCtx        *user = (UserCtx*)appctx;
   Vec            X,localXold = user->localXold;
   DM             networkdm;
@@ -52,7 +51,6 @@ PetscErrorCode UserMonitor(SNES snes,PetscInt its,PetscReal fnorm ,void *appctx)
 
 PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX;
   PetscInt       nv,ne,i,j,offset,nvar,row;
@@ -101,7 +99,6 @@ PetscErrorCode FormJacobian_subPower(SNES snes,Vec X, Mat J,Mat Jpre,void *appct
 /* Dummy equation localF(X) = localX - localXold */
 PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt nv,PetscInt ne,const PetscInt* vtx,const PetscInt* edges,void* appctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarr,*xoldarr;
   PetscScalar       *farr;
   PetscInt          i,j,offset,nvar;
@@ -133,7 +130,6 @@ PetscErrorCode FormFunction_Dummy(DM networkdm,Vec localX, Vec localF,PetscInt n
 
 PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX,localF;
   PetscInt       nv,ne,v;
@@ -237,7 +233,6 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
 
 PetscErrorCode SetInitialGuess(DM networkdm,Vec X,void* appctx)
 {
-  PetscErrorCode ierr;
   PetscInt       nv,ne,i,j,ncomp,offset,key;
   const PetscInt *vtx,*edges;
   UserCtx        *user = (UserCtx*)appctx;

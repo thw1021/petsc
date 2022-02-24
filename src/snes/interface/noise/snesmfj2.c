@@ -29,7 +29,6 @@ typedef struct {  /* default context for matrix-free SNES */
 
 PetscErrorCode SNESMatrixFreeDestroy2_Private(Mat mat)
 {
-  PetscErrorCode ierr;
   MFCtx_Private  *ctx;
 
   PetscFunctionBegin;
@@ -46,7 +45,6 @@ PetscErrorCode SNESMatrixFreeDestroy2_Private(Mat mat)
  */
 PetscErrorCode SNESMatrixFreeView2_Private(Mat J,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   MFCtx_Private  *ctx;
   PetscBool      iascii;
 
@@ -82,9 +80,9 @@ PetscErrorCode SNESMatrixFreeMult2_Private(Mat mat,Vec a,Vec y)
   PetscReal      h,norm,sum,umin,noise;
   PetscScalar    hs,dot;
   Vec            w,U,F;
-  PetscErrorCode ierr,(*eval_fct)(SNES,Vec,Vec);
   MPI_Comm       comm;
   PetscInt       iter;
+  PetscErrorCode (*eval_fct)(SNES,Vec,Vec);
 
   PetscFunctionBegin;
   /* We log matrix-free matrix-vector products separately, so that we can
@@ -207,7 +205,6 @@ PetscErrorCode  SNESDefaultMatrixFreeCreate2(SNES snes,Vec x,Mat *J)
 {
   MPI_Comm       comm;
   MFCtx_Private  *mfctx;
-  PetscErrorCode ierr;
   PetscInt       n,nloc;
   PetscBool      flg;
   char           p[64];
@@ -301,7 +298,6 @@ $
 PetscErrorCode  SNESDefaultMatrixFreeSetParameters2(Mat mat,PetscReal error,PetscReal umin,PetscReal h)
 {
   MFCtx_Private  *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(mat,&ctx));
@@ -319,7 +315,6 @@ PetscErrorCode  SNESDefaultMatrixFreeSetParameters2(Mat mat,PetscReal error,Pets
 PetscErrorCode  SNESUnSetMatrixFreeParameter(SNES snes)
 {
   MFCtx_Private  *ctx;
-  PetscErrorCode ierr;
   Mat            mat;
 
   PetscFunctionBegin;

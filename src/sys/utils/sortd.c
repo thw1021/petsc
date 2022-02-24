@@ -102,7 +102,6 @@ PetscErrorCode  PetscSortReal(PetscInt n,PetscReal v[])
 /* modified from PetscSortIntWithArray_Private */
 static PetscErrorCode PetscSortRealWithArrayInt_Private(PetscReal *v,PetscInt *V,PetscInt right)
 {
-  PetscErrorCode ierr;
   PetscInt       i,last,itmp;
   PetscReal      rvl,rtmp;
 
@@ -141,7 +140,6 @@ static PetscErrorCode PetscSortRealWithArrayInt_Private(PetscReal *v,PetscInt *V
 @*/
 PetscErrorCode  PetscSortRealWithArrayInt(PetscInt n,PetscReal r[],PetscInt Ii[])
 {
-  PetscErrorCode ierr;
   PetscInt       j,k,itmp;
   PetscReal      rk,rtmp;
 
@@ -218,7 +216,6 @@ PetscErrorCode PetscFindReal(PetscReal key, PetscInt n, const PetscReal t[], Pet
 @*/
 PetscErrorCode  PetscSortRemoveDupsReal(PetscInt *n,PetscReal v[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,s = 0,N = *n, b = 0;
 
   PetscFunctionBegin;

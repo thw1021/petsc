@@ -18,7 +18,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_15_NaturalOrdering(Mat B,Mat A,const M
 {
   Mat             C =B;
   Mat_SeqBAIJ     *a=(Mat_SeqBAIJ*)A->data,*b=(Mat_SeqBAIJ*)C->data;
-  PetscErrorCode  ierr;
   PetscInt        i,j,k,ipvt[15];
   const PetscInt  n=a->mbs,*ai=a->i,*aj=a->j,*bi=b->i,*bj=b->j,*ajtmp,*bjtmp,*bdiag=b->diag,*pj;
   PetscInt        nz,nzL,row;
@@ -129,7 +128,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_N(Mat B,Mat A,const MatFactorInfo *inf
   Mat            C     =B;
   Mat_SeqBAIJ    *a    =(Mat_SeqBAIJ*)A->data,*b=(Mat_SeqBAIJ*)C->data;
   IS             isrow = b->row,isicol = b->icol;
-  PetscErrorCode ierr;
   const PetscInt *r,*ic;
   PetscInt       i,j,k,n=a->mbs,*ai=a->i,*aj=a->j,*bi=b->i,*bj=b->j;
   PetscInt       *ajtmp,*bjtmp,nz,nzL,row,*bdiag=b->diag,*pj;
@@ -279,7 +277,6 @@ PetscErrorCode MatILUFactorSymbolic_SeqBAIJ_ilu0(Mat fact,Mat A,IS isrow,IS isco
 {
 
   Mat_SeqBAIJ    *a = (Mat_SeqBAIJ*)A->data,*b;
-  PetscErrorCode ierr;
   PetscInt       n=a->mbs,*ai=a->i,*aj,*adiag=a->diag,bs2 = a->bs2;
   PetscInt       i,j,nz,*bi,*bj,*bdiag,bi_temp;
 
@@ -555,7 +552,6 @@ PetscErrorCode MatILUFactorSymbolic_SeqBAIJ_inplace(Mat fact,Mat A,IS isrow,IS i
 {
   Mat_SeqBAIJ    *a = (Mat_SeqBAIJ*)A->data,*b;
   IS             isicol;
-  PetscErrorCode ierr;
   const PetscInt *r,*ic,*ai = a->i,*aj = a->j,*xi;
   PetscInt       prow,n = a->mbs,*ainew,*ajnew,jmax,*fill,nz,*im,*ajfill,*flev,*xitmp;
   PetscInt       *dloc,idx,row,m,fm,nzf,nzi,reallocate = 0,dcount = 0;

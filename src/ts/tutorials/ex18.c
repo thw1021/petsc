@@ -140,7 +140,6 @@ static PetscErrorCode FunctionalRegister(Functional *functionalRegistry, const c
 {
   Functional    *ptr, f;
   PetscInt       lastoffset = -1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   for (ptr = functionalRegistry; *ptr; ptr = &(*ptr)->next) lastoffset = (*ptr)->offset;
@@ -158,7 +157,6 @@ static PetscErrorCode FunctionalRegister(Functional *functionalRegistry, const c
 static PetscErrorCode FunctionalDestroy(Functional *link)
 {
   Functional     next, l;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!link) PetscFunctionReturn(0);
@@ -587,7 +585,6 @@ static PetscErrorCode ExactSolution(DM dm, PetscReal time, const PetscReal *x, P
 {
   AppCtx        *user = (AppCtx *) ctx;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -611,7 +608,6 @@ static PetscErrorCode Functional_Error(DM dm, PetscReal time, const PetscReal *x
 {
   AppCtx        *user = (AppCtx *) ctx;
   PetscScalar    yexact[3]={0,0,0};
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(ExactSolution(dm, time, x, yexact, ctx));
@@ -621,7 +617,6 @@ static PetscErrorCode Functional_Error(DM dm, PetscReal time, const PetscReal *x
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -648,7 +643,6 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
   PetscBool      check;
   PetscInt       dim, n = 3;
   const char    *prefix;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetOptionsPrefix((PetscObject) dm, &prefix));
@@ -738,7 +732,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   PetscDS        prob;
   PetscInt       n = 3;
   const char    *prefix;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetOptionsPrefix((PetscObject) dm, &prefix));
@@ -794,7 +787,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscFV         fv;
   MPI_Comm        comm;
   PetscInt        dim;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   /* Create finite element */
@@ -835,7 +827,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
 
 static PetscErrorCode CreateDM(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(CreateMesh(comm, user, dm));
@@ -868,7 +859,6 @@ static PetscErrorCode SetInitialConditionFVM(DM dm, Vec X, PetscInt field, Petsc
   const PetscScalar *cgeom;
   PetscScalar       *x;
   PetscInt           dim, Nf, cStart, cEnd, c;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &prob));
@@ -903,7 +893,6 @@ static PetscErrorCode MonitorFunctionals(TS ts, PetscInt stepnum, PetscReal time
   PetscScalar       *a;
   PetscReal         *xnorms;
   PetscInt           pStart, pEnd, p, Nf, f;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecViewFromOptions(X, (PetscObject) ts, "-view_solution"));

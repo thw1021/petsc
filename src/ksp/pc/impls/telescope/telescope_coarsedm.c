@@ -42,7 +42,6 @@ typedef struct {
 
 PetscErrorCode PCTelescopeSetUp_scatters_CoarseDM(PC pc,PC_Telescope sred,PC_Telescope_CoarseDMCtx *ctx)
 {
-  PetscErrorCode ierr;
   Vec            xred,yred,xtmp,x,xp;
   VecScatter     scatter;
   IS             isin;
@@ -91,7 +90,6 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc,PC_Telescope sred)
   DM                       dm,dm_coarse = NULL;
   MPI_Comm                 comm;
   PetscBool                has_perm,has_kspcomputeoperators,using_kspcomputeoperators;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscInfo(pc,"PCTelescope: setup (CoarseDM)\n"));
@@ -231,7 +229,6 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc,PC_Telescope sred)
 PetscErrorCode PCApply_Telescope_CoarseDM(PC pc,Vec x,Vec y)
 {
   PC_Telescope             sred = (PC_Telescope)pc->data;
-  PetscErrorCode           ierr;
   Vec                      xred,yred;
   PC_Telescope_CoarseDMCtx *ctx;
 
@@ -259,7 +256,6 @@ PetscErrorCode PCApply_Telescope_CoarseDM(PC pc,Vec x,Vec y)
 
 PetscErrorCode PCTelescopeSubNullSpaceCreate_CoarseDM(PC pc,PC_Telescope sred,MatNullSpace nullspace,MatNullSpace *sub_nullspace)
 {
-  PetscErrorCode           ierr;
   PetscBool                has_const;
   PetscInt                 k,n = 0;
   const Vec                *vecs;
@@ -294,7 +290,6 @@ PetscErrorCode PCTelescopeSubNullSpaceCreate_CoarseDM(PC pc,PC_Telescope sred,Ma
 
 PetscErrorCode PCTelescopeMatNullSpaceCreate_CoarseDM(PC pc,PC_Telescope sred,Mat sub_mat)
 {
-  PetscErrorCode           ierr;
   Mat                      B;
   PC_Telescope_CoarseDMCtx *ctx;
 
@@ -364,7 +359,6 @@ PetscErrorCode PCTelescopeMatNullSpaceCreate_CoarseDM(PC pc,PC_Telescope sred,Ma
 
 PetscErrorCode PCReset_Telescope_CoarseDM(PC pc)
 {
-  PetscErrorCode           ierr;
   PC_Telescope             sred = (PC_Telescope)pc->data;
   PC_Telescope_CoarseDMCtx *ctx;
 
@@ -384,7 +378,6 @@ PetscErrorCode PCReset_Telescope_CoarseDM(PC pc)
 PetscErrorCode PCApplyRichardson_Telescope_CoarseDM(PC pc,Vec x,Vec y,Vec w,PetscReal rtol,PetscReal abstol,PetscReal dtol,PetscInt its,PetscBool zeroguess,PetscInt *outits,PCRichardsonConvergedReason *reason)
 {
   PC_Telescope             sred = (PC_Telescope)pc->data;
-  PetscErrorCode           ierr;
   Vec                      yred = NULL;
   PetscBool                default_init_guess_value = PETSC_FALSE;
   PC_Telescope_CoarseDMCtx *ctx;

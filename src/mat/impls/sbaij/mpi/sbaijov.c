@@ -11,7 +11,6 @@ static PetscErrorCode MatIncreaseOverlap_MPISBAIJ_Local(Mat,PetscInt*,PetscInt,P
 
 PetscErrorCode MatIncreaseOverlap_MPISBAIJ(Mat C,PetscInt is_max,IS is[],PetscInt ov)
 {
-  PetscErrorCode ierr;
   PetscInt       i,N=C->cmap->N, bs=C->rmap->bs,M=C->rmap->N,Mbs=M/bs,*nidx,isz,iov;
   IS             *is_new,*is_row;
   Mat            *submats;
@@ -152,7 +151,6 @@ typedef enum {MINE,OTHER} WhoseOwner;
 static PetscErrorCode MatIncreaseOverlap_MPISBAIJ_Once(Mat C,PetscInt is_max,IS is[])
 {
   Mat_MPISBAIJ   *c = (Mat_MPISBAIJ*)C->data;
-  PetscErrorCode ierr;
   PetscMPIInt    size,rank,tag1,tag2,*len_s,nrqr,nrqs,*id_r1,*len_r1,flag,len,*iwork;
   const PetscInt *idx_i;
   PetscInt       idx,isz,col,*n,*data1,**data1_start,*data2,*data2_i,*data,*data_i;
@@ -467,7 +465,6 @@ static PetscErrorCode MatIncreaseOverlap_MPISBAIJ_Local(Mat C,PetscInt *data,Pet
   Mat_MPISBAIJ   *c = (Mat_MPISBAIJ*)C->data;
   Mat_SeqSBAIJ   *a = (Mat_SeqSBAIJ*)(c->A)->data;
   Mat_SeqBAIJ    *b = (Mat_SeqBAIJ*)(c->B)->data;
-  PetscErrorCode ierr;
   PetscInt       row,mbs,Mbs,*nidx_i,col,col_max,isz,isz0,*ai,*aj,*bi,*bj,*garray,rstart,l;
   PetscInt       a_start,a_end,b_start,b_end,i,j,k,is_max,*idx_i,n;
   PetscBT        table0;  /* mark the indices of input is[] for look up */

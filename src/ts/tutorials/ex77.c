@@ -362,7 +362,6 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 {
   PetscBag       bag;
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -378,7 +377,6 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -396,7 +394,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   DMLabel          label;
   Parameter       *ctx;
   PetscInt         id;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetLabel(dm, "marker", &label));
@@ -483,7 +480,6 @@ static PetscErrorCode FreeStreaming(TS ts, PetscReal t, Vec X, Vec F, void *ctx)
   PetscScalar        *f;
   PetscInt            vf[1] = {0};
   PetscInt            dim, Np;
-  PetscErrorCode      ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &sdm));
@@ -534,7 +530,6 @@ static PetscErrorCode SetInitialParticleConditions(TS ts, Vec u)
   PetscReal      x[3], dx[3];
   PetscInt       n[3];
   PetscInt       Np, dim, d, i, j, k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetApplicationContext(ts, &ctx));
@@ -598,7 +593,6 @@ static PetscErrorCode SetupDiscretization(DM dm, DM sdm, AppCtx *user)
   PetscInt        dim, d, cStart, cEnd, c, Np, p, i, j, k;
   PetscBool       simplex;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -715,7 +709,6 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt ofield, PetscInt n
 {
   Vec              vec;
   PetscErrorCode (*funcs[3])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = {zero, zero, zero};
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   PetscCheckFalse(ofield != 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index 1, not %D", ofield);
@@ -734,7 +727,6 @@ static PetscErrorCode RemoveDiscretePressureNullspace_Private(TS ts, Vec u)
 {
   DM             dm;
   MatNullSpace   nullsp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -748,7 +740,6 @@ static PetscErrorCode RemoveDiscretePressureNullspace_Private(TS ts, Vec u)
 static PetscErrorCode RemoveDiscretePressureNullspace(TS ts)
 {
   Vec            u;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetSolution(ts, &u));
@@ -760,7 +751,6 @@ static PetscErrorCode SetInitialConditions(TS ts, Vec u)
 {
   DM             dm;
   PetscReal      t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -779,7 +769,6 @@ static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u
   Vec              v;
   PetscReal        ferrors[3];
   PetscInt         tl, l, f;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -816,7 +805,6 @@ static PetscErrorCode ComputeParticleError(TS ts, Vec u, Vec e)
   PetscReal          time;
   PetscInt           dim, Np, p;
   MPI_Comm           comm;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetTime(ts, &time));
@@ -853,7 +841,6 @@ static PetscErrorCode MonitorParticleError(TS ts, PetscInt step, PetscReal time,
   PetscReal          error = 0.0;
   PetscInt           dim, tl, l, Np, p;
   MPI_Comm           comm;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscBagGetData(adv->ctx->bag, (void **) &param));
@@ -891,7 +878,6 @@ static PetscErrorCode AdvectParticles(TS ts)
   PetscReal      time;
   PetscBool      lreset, reset;
   PetscInt       dim, n, N, newn, newN;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectQuery((PetscObject) ts, "_SwarmTS",  (PetscObject *) &sts));

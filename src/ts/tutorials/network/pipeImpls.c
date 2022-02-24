@@ -9,7 +9,6 @@
 /* ----------------------------------- */
 PetscErrorCode PipeComputeSteadyState(Pipe pipe,PetscScalar Q0,PetscScalar H0)
 {
-  PetscErrorCode ierr;
   DM             cda;
   PipeField      *x;
   PetscInt       i,start,n;
@@ -60,7 +59,6 @@ static inline PetscScalar dhdx(PipeField *x,PetscInt i,PetscInt ilast,PetscReal 
 
 PetscErrorCode PipeIFunctionLocal_Lax(DMDALocalInfo *info,PetscReal ptime,PipeField *x,PipeField *xdot,PetscScalar *f,Pipe pipe)
 {
-  PetscErrorCode ierr;
   PetscInt       i,start,n,ilast;
   PetscReal      a=pipe->a,A=pipe->A,R=pipe->R,c=a*a/(GRAV*A);
   PetscReal      dx=pipe->length/(info->mx-1),dt=pipe->dt;

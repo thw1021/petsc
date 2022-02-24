@@ -146,7 +146,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,Mx,xs,xm;
   PetscReal      hx,sx;
   PetscScalar    *x,*f;
@@ -200,7 +199,6 @@ PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
 /* ------------------------------------------------------------------- */
 PetscErrorCode FormInitialSolution(DM da,Vec U)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,xs,xm,Mx,scale=1,N;
   PetscScalar       *u;
   const PetscScalar *f;
@@ -272,7 +270,6 @@ PetscErrorCode  MyMonitor(TS ts,PetscInt step,PetscReal time,Vec U,void *ptr)
 {
   UserCtx            *ctx = (UserCtx*)ptr;
   PetscDrawLG        lg;
-  PetscErrorCode     ierr;
   PetscScalar        *u;
   PetscInt           Mx,i,xs,xm,cnt;
   PetscReal          x,y,hx,pause,sx,len,max,xx[2],yy[2];
@@ -400,7 +397,6 @@ PetscErrorCode  MyMonitor(TS ts,PetscInt step,PetscReal time,Vec U,void *ptr)
 PetscErrorCode  MyDestroy(void **ptr)
 {
   UserCtx        *ctx = *(UserCtx**)ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawViewPortsDestroy(ctx->ports));

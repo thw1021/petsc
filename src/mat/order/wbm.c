@@ -37,7 +37,6 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
   PetscInt       job = 5;
   PetscInt       *perm, nrow, ncol, nnz, liw, *iw, ldw;
   PetscBool      done;
-  PetscErrorCode ierr;
 #if defined(PETSC_HAVE_SUPERLU_DIST)
   PetscInt       num, info[10], icntl[10], i;
 #endif
@@ -46,7 +45,7 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
   CHKERRQ(MatGetRowIJ(mat,1,PETSC_TRUE,PETSC_TRUE,&nrow,&ia,&ja,&done));
   ncol = nrow;
   nnz  = ia[nrow];
-  PetscCheckFalse(!done,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot get rows for matrix");
+  PetscCheck(done,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot get rows for matrix");
   CHKERRQ(MatSeqAIJGetArray(mat, &a));
   switch (job) {
   case 1: liw = 4*nrow +   ncol; ldw = 0;break;
@@ -58,14 +57,12 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
 
   CHKERRQ(PetscMalloc3(liw,&iw,ldw,&dw,nrow,&perm));
 #if defined(PETSC_HAVE_SUPERLU_DIST)
-  ierr = mc64id_dist(icntl);
-  PetscCheckFalse(ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"HSL mc64id_dist returned %d",ierr);
+  PetscStackCallStandard(mc64id_dist,icntl);
   icntl[0] = 0;              /* allow printing error messages (f2c'd code uses if non-negative, ignores value otherwise) */
   icntl[1] = -1;             /* suppress warnings */
   icntl[2] = -1;             /* ignore diagnostic output [default] */
   icntl[3] = 0;              /* perform consistency checks [default] */
-  ierr = mc64ad_dist(&job, &nrow, &nnz, ia, ja, a, &num, perm, &liw, iw, &ldw, dw, icntl, info);
-  PetscCheckFalse(ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"HSL mc64ad_dist returned %d",ierr);
+  PetscStackCallStandard(mc64ad_dist, &job, &nrow, &nnz, ia, ja, a, &num, perm, &liw, iw, &ldw, dw, icntl, info);
   CHKERRQ(MatRestoreRowIJ(mat, 1, PETSC_TRUE, PETSC_TRUE, NULL, &ia, &ja, &done));
   for (i = 0; i < nrow; ++i) perm[i]--;
   /* If job == 5, dw[0..ncols] contains the column scaling and dw[ncols..ncols+nrows] contains the row scaling */

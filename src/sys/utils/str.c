@@ -177,7 +177,6 @@ PetscErrorCode  PetscStrlen(const char s[],size_t *len)
 @*/
 PetscErrorCode  PetscStrallocpy(const char s[],char *t[])
 {
-  PetscErrorCode ierr;
   size_t         len;
   char           *tmp = NULL;
 
@@ -215,7 +214,6 @@ PetscErrorCode  PetscStrallocpy(const char s[],char *t[])
 @*/
 PetscErrorCode  PetscStrArrayallocpy(const char *const *list,char ***t)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n = 0;
 
   PetscFunctionBegin;
@@ -247,7 +245,6 @@ PetscErrorCode  PetscStrArrayallocpy(const char *const *list,char ***t)
 PetscErrorCode PetscStrArrayDestroy(char ***list)
 {
   PetscInt       n = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*list) PetscFunctionReturn(0);
@@ -281,7 +278,6 @@ PetscErrorCode PetscStrArrayDestroy(char ***list)
 @*/
 PetscErrorCode  PetscStrNArrayallocpy(PetscInt n,const char *const *list,char ***t)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -311,7 +307,6 @@ PetscErrorCode  PetscStrNArrayallocpy(PetscInt n,const char *const *list,char **
 @*/
 PetscErrorCode PetscStrNArrayDestroy(PetscInt n,char ***list)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -450,7 +445,6 @@ PetscErrorCode  PetscStrcat(char s[],const char t[])
 PetscErrorCode  PetscStrlcat(char s[],const char t[],size_t n)
 {
   size_t         len;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(t && !n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"String buffer length must be positive");
@@ -753,7 +747,6 @@ PetscErrorCode  PetscStrtoupper(char a[])
 PetscErrorCode  PetscStrendswith(const char a[],const char b[],PetscBool *flg)
 {
   char           *test;
-  PetscErrorCode ierr;
   size_t         na,nb;
 
   PetscFunctionBegin;
@@ -791,7 +784,6 @@ PetscErrorCode  PetscStrendswith(const char a[],const char b[],PetscBool *flg)
 PetscErrorCode  PetscStrbeginswith(const char a[],const char b[],PetscBool *flg)
 {
   char           *test;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *flg = PETSC_FALSE;
@@ -821,7 +813,6 @@ PetscErrorCode  PetscStrbeginswith(const char a[],const char b[],PetscBool *flg)
 PetscErrorCode  PetscStrendswithwhich(const char a[],const char *const *bs,PetscInt *cnt)
 {
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *cnt = 0;
@@ -971,7 +962,6 @@ PetscErrorCode  PetscTokenFind(PetscToken a,char *result[])
 @*/
 PetscErrorCode  PetscTokenCreate(const char a[],const char b,PetscToken *t)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(t));
@@ -999,7 +989,6 @@ PetscErrorCode  PetscTokenCreate(const char a[],const char b,PetscToken *t)
 @*/
 PetscErrorCode  PetscTokenDestroy(PetscToken *a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*a) PetscFunctionReturn(0);
@@ -1032,7 +1021,6 @@ PetscErrorCode PetscStrInList(const char str[],const char list[],char sep,PetscB
 {
   PetscToken     token;
   char           *item;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *found = PETSC_FALSE;
@@ -1094,7 +1082,6 @@ PetscErrorCode  PetscGetPetscDir(const char *dir[])
 @*/
 PetscErrorCode  PetscStrreplace(MPI_Comm comm,const char aa[],char b[],size_t len)
 {
-  PetscErrorCode ierr;
   int            i = 0;
   size_t         l,l1,l2,l3;
   char           *work,*par,*epar,env[1024],*tfree,*a = (char*)aa;
@@ -1204,7 +1191,6 @@ PetscErrorCode  PetscStrreplace(MPI_Comm comm,const char aa[],char b[],size_t le
 @*/
 PetscErrorCode PetscEListFind(PetscInt n,const char *const *list,const char *str,PetscInt *value,PetscBool *found)
 {
-  PetscErrorCode ierr;
   PetscBool matched;
   PetscInt i;
 
@@ -1241,7 +1227,6 @@ PetscErrorCode PetscEListFind(PetscInt n,const char *const *list,const char *str
 @*/
 PetscErrorCode PetscEnumFind(const char *const *enumlist,const char *str,PetscEnum *value,PetscBool *found)
 {
-  PetscErrorCode ierr;
   PetscInt n = 0,evalue;
   PetscBool efound;
 

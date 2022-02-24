@@ -101,7 +101,6 @@ PetscErrorCode PetscInfoSetFile(const char filename[], const char mode[])
 {
   char            fname[PETSC_MAX_PATH_LEN], tname[11];
   PetscMPIInt     rank;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!PetscInfoFile) PetscInfoFile = PETSC_STDOUT;
@@ -146,7 +145,6 @@ PetscErrorCode PetscInfoSetFile(const char filename[], const char mode[])
 @*/
 PetscErrorCode PetscInfoGetFile(char **filename, FILE **InfoFile)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(filename, 1);
@@ -185,7 +183,6 @@ PetscErrorCode PetscInfoGetFile(char **filename, FILE **InfoFile)
 @*/
 PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt N, const char *const *classnames)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(PetscInfoClassesLocked,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscInfoSetClasses() cannot be called after PetscInfoGetClass() or PetscInfoProcessClass()");
@@ -223,7 +220,6 @@ PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt N, const char *co
 PetscErrorCode PetscInfoGetClass(const char *classname, PetscBool *found)
 {
   PetscInt        idx;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(classname,1);
@@ -282,7 +278,6 @@ PetscErrorCode PetscInfoProcessClass(const char classname[], PetscInt numClassID
   PetscInt        i;
   PetscBool       enabled, exclude, found, opt, pkg;
   char            logList[256];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(classname, 1);
@@ -358,7 +353,6 @@ PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
   size_t             size_loc0_ = 0, size_loc1_ = 0, size_loc2_ = 0;
   int                nLoc1_ = 0;
   PetscInfoCommFlag  commSelfFlag = PETSC_INFO_COMM_ALL;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsDeprecated_Private(NULL,"-info_exclude", NULL, "3.13", "Use -info instead"));
@@ -425,7 +419,6 @@ PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
 @*/
 PetscErrorCode PetscInfoDestroy(void)
 {
-  PetscErrorCode  ierr;
   int             err;
   size_t          i;
 
@@ -573,7 +566,6 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   PetscClassId   classid;
   PetscBool      enabled = PETSC_FALSE, oldflag;
   char           string[8*1024];
-  PetscErrorCode ierr;
   size_t         fullLength,len;
   int            err;
 

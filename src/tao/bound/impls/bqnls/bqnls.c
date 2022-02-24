@@ -6,7 +6,6 @@ static PetscErrorCode TaoBQNLSComputeHessian(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscReal      gnorm2, delta;
 
   PetscFunctionBegin;
@@ -24,7 +23,6 @@ static PetscErrorCode TaoBQNLSComputeStep(Tao tao, PetscBool shift, KSPConverged
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscInt       nupdates;
 
   PetscFunctionBegin;
@@ -42,7 +40,6 @@ static PetscErrorCode TaoSetFromOptions_BQNLS(PetscOptionItems *PetscOptionsObje
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscBool      is_spd;
 
   PetscFunctionBegin;
@@ -86,7 +83,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BQNLS(Tao tao)
 {
   TAO_BNK        *bnk;
   TAO_BQNK       *bqnk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoCreate_BQNK(tao));

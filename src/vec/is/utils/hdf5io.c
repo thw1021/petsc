@@ -17,7 +17,6 @@ PetscErrorCode PetscViewerHDF5CheckTimestepping_Internal(PetscViewer viewer, con
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
   PetscBool        timestepping = PETSC_FALSE;
   const char       *group;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5GetGroup(viewer, &group));
@@ -30,7 +29,6 @@ static PetscErrorCode PetscViewerHDF5ReadInitialize_Private(PetscViewer viewer, 
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
   HDF5ReadCtx      h=NULL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5CheckTimestepping_Internal(viewer, name));
@@ -50,7 +48,6 @@ static PetscErrorCode PetscViewerHDF5ReadInitialize_Private(PetscViewer viewer, 
 static PetscErrorCode PetscViewerHDF5ReadFinalize_Private(PetscViewer viewer, HDF5ReadCtx *ctx)
 {
   HDF5ReadCtx    h;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   h = *ctx;
@@ -67,7 +64,6 @@ static PetscErrorCode PetscViewerHDF5ReadSizes_Private(PetscViewer viewer, HDF5R
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
   PetscInt         bs, len, N;
   PetscLayout      map;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (!(*map_)) {
@@ -142,7 +138,6 @@ static PetscErrorCode PetscViewerHDF5ReadSelectHyperslab_Private(PetscViewer vie
   hsize_t          *count, *offset;
   PetscInt         bs, n, low;
   int              i;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   /* Compute local size and ownership range */
@@ -216,7 +211,6 @@ PetscErrorCode PetscViewerHDF5Load(PetscViewer viewer, const char *name, PetscLa
   hid_t           memspace=0;
   size_t          unitsize;
   void            *arr;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5GetGroup(viewer, &group));
@@ -273,7 +267,6 @@ PetscErrorCode PetscViewerHDF5ReadSizes(PetscViewer viewer, const char name[], P
 {
   HDF5ReadCtx    h=NULL;
   PetscLayout    map=NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);

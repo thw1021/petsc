@@ -21,7 +21,6 @@
 @*/
 PetscErrorCode  DMDACreatePF(DM da,PF *pf)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;

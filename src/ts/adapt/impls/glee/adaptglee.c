@@ -8,7 +8,6 @@ typedef struct {
 static PetscErrorCode TSAdaptChoose_GLEE(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,PetscReal *next_h,PetscBool *accept,PetscReal *wlte,PetscReal *wltea,PetscReal *wlter)
 {
   TSAdapt_GLEE   *glee = (TSAdapt_GLEE*)adapt->data;
-  PetscErrorCode ierr;
   Vec            X,Y,E;
   PetscReal      enorm,enorma,enormr,hfac_lte,hfac_ltea,hfac_lter,h_lte,safety;
   PetscInt       order;
@@ -116,7 +115,6 @@ static PetscErrorCode TSAdaptChoose_GLEE(TSAdapt adapt,TS ts,PetscReal h,PetscIn
 static PetscErrorCode TSAdaptReset_GLEE(TSAdapt adapt)
 {
   TSAdapt_GLEE  *glee = (TSAdapt_GLEE*)adapt->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&glee->Y));
@@ -125,7 +123,6 @@ static PetscErrorCode TSAdaptReset_GLEE(TSAdapt adapt)
 
 static PetscErrorCode TSAdaptDestroy_GLEE(TSAdapt adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSAdaptReset_GLEE(adapt));
@@ -142,7 +139,6 @@ static PetscErrorCode TSAdaptDestroy_GLEE(TSAdapt adapt)
 M*/
 PETSC_EXTERN PetscErrorCode TSAdaptCreate_GLEE(TSAdapt adapt)
 {
-  PetscErrorCode ierr;
   TSAdapt_GLEE  *glee;
 
   PetscFunctionBegin;

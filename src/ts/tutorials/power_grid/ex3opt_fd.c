@@ -28,7 +28,6 @@ PetscErrorCode monitor(Tao tao,AppCtx *ctx)
   Vec                X,G;
   const PetscScalar  *x,*g;
   TaoConvergedReason reason;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TaoGetSolutionStatus(tao,&iterate,&f,&gnorm,&cnorm,&xdiff,&reason));
@@ -167,7 +166,6 @@ PetscErrorCode FormFunction(Tao tao,Vec P,PetscReal *f,void *ctx0)
   TS                ts,quadts;
   Vec               U;             /* solution will be stored here */
   Mat               A;             /* Jacobian matrix */
-  PetscErrorCode    ierr;
   PetscInt          n = 2;
   PetscReal         ftime;
   PetscInt          steps;

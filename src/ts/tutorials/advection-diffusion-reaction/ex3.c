@@ -156,7 +156,6 @@ int main(int argc,char **argv)
 PetscErrorCode InitialConditions(TS ts,Vec U,AppCtx *appctx)
 {
   PetscScalar    *u,h;
-  PetscErrorCode ierr;
   PetscInt       i,mstart,mend,xm,M;
   DM             da;
 
@@ -204,7 +203,6 @@ PetscErrorCode InitialConditions(TS ts,Vec U,AppCtx *appctx)
 PetscErrorCode Solution(TS ts,PetscReal t,Vec U,AppCtx *appctx)
 {
   PetscScalar    *u,ex1,ex2,sc1,sc2,h;
-  PetscErrorCode ierr;
   PetscInt       i,mstart,mend,xm,M;
   DM             da;
 
@@ -259,7 +257,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec U,Mat AA,Mat BB,void *ctx)
   Mat            A       = AA;                /* Jacobian matrix */
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
   PetscInt       mstart, mend;
-  PetscErrorCode ierr;
   PetscInt       i,idx[3],M,xm;
   PetscScalar    v[3],h;
   DM             da;

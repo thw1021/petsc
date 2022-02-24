@@ -15,7 +15,6 @@ typedef struct  {
 
 PetscErrorCode  DMCreateMatrix_Sliced(DM dm, Mat *J)
 {
-  PetscErrorCode         ierr;
   PetscInt               *globals,*sd_nnz,*so_nnz,rstart,bs,i;
   ISLocalToGlobalMapping lmap;
   void                   (*aij)(void) = NULL;
@@ -93,7 +92,6 @@ PetscErrorCode  DMCreateMatrix_Sliced(DM dm, Mat *J)
 @*/
 PetscErrorCode  DMSlicedSetGhosts(DM dm,PetscInt bs,PetscInt nlocal,PetscInt Nghosts,const PetscInt ghosts[])
 {
-  PetscErrorCode ierr;
   DM_Sliced      *slice = (DM_Sliced*)dm->data;
 
   PetscFunctionBegin;
@@ -150,7 +148,6 @@ PetscErrorCode  DMSlicedSetPreallocation(DM dm,PetscInt d_nz,const PetscInt d_nn
 
 static PetscErrorCode DMSlicedSetBlockFills_Private(PetscInt bs,const PetscInt *fill,DMSlicedBlockFills **inf)
 {
-  PetscErrorCode     ierr;
   PetscInt           i,j,nz,*fi,*fj;
   DMSlicedBlockFills *f;
 
@@ -195,7 +192,6 @@ static PetscErrorCode DMSlicedSetBlockFills_Private(PetscInt bs,const PetscInt *
 PetscErrorCode  DMSlicedSetBlockFills(DM dm,const PetscInt *dfill,const PetscInt *ofill)
 {
   DM_Sliced      *slice = (DM_Sliced*)dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -206,7 +202,6 @@ PetscErrorCode  DMSlicedSetBlockFills(DM dm,const PetscInt *dfill,const PetscInt
 
 static PetscErrorCode  DMDestroy_Sliced(DM dm)
 {
-  PetscErrorCode ierr;
   DM_Sliced      *slice = (DM_Sliced*)dm->data;
 
   PetscFunctionBegin;
@@ -220,7 +215,6 @@ static PetscErrorCode  DMDestroy_Sliced(DM dm)
 
 static PetscErrorCode  DMCreateGlobalVector_Sliced(DM dm,Vec *gvec)
 {
-  PetscErrorCode ierr;
   DM_Sliced      *slice = (DM_Sliced*)dm->data;
 
   PetscFunctionBegin;
@@ -234,7 +228,6 @@ static PetscErrorCode  DMCreateGlobalVector_Sliced(DM dm,Vec *gvec)
 
 static PetscErrorCode  DMGlobalToLocalBegin_Sliced(DM da,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -247,7 +240,6 @@ static PetscErrorCode  DMGlobalToLocalBegin_Sliced(DM da,Vec g,InsertMode mode,V
 
 static PetscErrorCode  DMGlobalToLocalEnd_Sliced(DM da,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -269,7 +261,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Sliced(DM p)
 {
-  PetscErrorCode ierr;
   DM_Sliced      *slice;
 
   PetscFunctionBegin;
@@ -316,7 +307,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Sliced(DM p)
 @*/
 PetscErrorCode  DMSlicedCreate(MPI_Comm comm,PetscInt bs,PetscInt nlocal,PetscInt Nghosts,const PetscInt ghosts[], const PetscInt d_nnz[],const PetscInt o_nnz[],DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(dm,8);

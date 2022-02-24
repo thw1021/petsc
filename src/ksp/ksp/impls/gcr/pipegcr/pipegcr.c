@@ -70,7 +70,6 @@ static PetscErrorCode KSPAllocateVectors_PIPEGCR(KSP ksp, PetscInt nvecsneeded, 
 static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
 {
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
-  PetscErrorCode ierr;
   Mat            A, B;
   Vec            x,r,b,z,w,m,n,p,s,q,t,*redux;
   PetscInt       i,j,k,idx,kdx,mi;
@@ -273,7 +272,6 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
 static PetscErrorCode KSPSolve_PIPEGCR(KSP ksp)
 {
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
-  PetscErrorCode ierr;
   Mat            A, B;
   Vec            x,b,r,z,w;
   PetscScalar    gamma;
@@ -351,7 +349,6 @@ static PetscErrorCode KSPSolve_PIPEGCR(KSP ksp)
 static PetscErrorCode KSPView_PIPEGCR(KSP ksp, PetscViewer viewer)
 {
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      isascii,isstring;
   const char     *truncstr;
 
@@ -424,7 +421,6 @@ static PetscErrorCode KSPSetUp_PIPEGCR(KSP ksp)
 
 static PetscErrorCode KSPReset_PIPEGCR(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
 
   PetscFunctionBegin;
@@ -436,7 +432,6 @@ static PetscErrorCode KSPReset_PIPEGCR(KSP ksp)
 
 static PetscErrorCode KSPDestroy_PIPEGCR(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
 
@@ -702,7 +697,6 @@ PetscErrorCode KSPPIPEGCRGetTruncationType(KSP ksp,KSPFCDTruncationType *truncst
 
 static PetscErrorCode KSPSetFromOptions_PIPEGCR(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEGCR    *pipegcr = (KSP_PIPEGCR*)ksp->data;
   PetscInt       mmax,nprealloc;
   PetscBool      flg;
@@ -764,7 +758,6 @@ static PetscErrorCode  KSPPIPEGCRSetModifyPC_PIPEGCR(KSP ksp,KSPPIPEGCRModifyPCF
  @*/
 PetscErrorCode  KSPPIPEGCRSetModifyPC(KSP ksp,PetscErrorCode (*function)(KSP,PetscInt,PetscReal,void*),void *data,PetscErrorCode (*destroy)(void*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(ksp,"KSPPIPEGCRSetModifyPC_C",(KSP,PetscErrorCode (*)(KSP,PetscInt,PetscReal,void*),void *data,PetscErrorCode (*)(void*)),(ksp,function,data,destroy)));
@@ -807,7 +800,6 @@ PetscErrorCode  KSPPIPEGCRSetModifyPC(KSP ksp,PetscErrorCode (*function)(KSP,Pet
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEGCR(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEGCR    *pipegcr;
 
   PetscFunctionBegin;

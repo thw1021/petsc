@@ -9,7 +9,6 @@ typedef struct {
 
 static PetscErrorCode DMDAGhostedDestroyGLVisViewerCtx_Private(void **vctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(*vctx));
@@ -23,7 +22,6 @@ typedef struct {
 static PetscErrorCode DMDAFieldDestroyGLVisViewerCtx_Private(void *vctx)
 {
   DMDAFieldGLVisViewerCtx *ctx = (DMDAFieldGLVisViewerCtx*)vctx;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&ctx->xlocal));
@@ -39,7 +37,6 @@ static PetscErrorCode DMDAGetNumElementsGhosted(DM da, PetscInt *nex, PetscInt *
 {
   DMDAGhostedGLVisViewerCtx *dactx;
   PetscInt                  sx,sy,sz,ien,jen,ken;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   /* Appease -Wmaybe-uninitialized */
@@ -74,7 +71,6 @@ static PetscErrorCode DMDAGetNumVerticesGhosted(DM da, PetscInt *nvx, PetscInt *
 {
   PetscInt       ien = 0,jen = 0,ken = 0,dim;
   PetscInt       tote;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(da,&dim));
@@ -100,7 +96,6 @@ static PetscErrorCode DMDASampleGLVisFields_Private(PetscObject oX, PetscInt nf,
   PetscScalar               **arrayf;
   PetscInt                  i,f,ii,ien,jen,ken,ie,je,ke,bs,*bss;
   PetscInt                  sx,sy,sz,gsx,gsy,gsz,ist,jst,kst,gm,gn,gp;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(ctx->xlocal,&da));
@@ -343,7 +338,6 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
   PetscInt          sx,sy,sz,ie,je,ke,ien,jen,ken,nel;
   PetscInt          gsx,gsy,gsz,gm,gn,gp,kst,jst,ist;
   PetscBool         enabled = PETSC_TRUE, isascii;
-  PetscErrorCode    ierr;
   const char        *fmt;
 
   PetscFunctionBegin;
@@ -510,7 +504,6 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
 
 PetscErrorCode DMView_DA_GLVis(DM dm, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(DMView_GLVis(dm,viewer,DMDAView_GLVis_ASCII));
   PetscFunctionReturn(0);

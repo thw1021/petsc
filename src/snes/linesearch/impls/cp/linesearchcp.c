@@ -4,7 +4,6 @@
 static PetscErrorCode SNESLineSearchApply_CP(SNESLineSearch linesearch)
 {
   PetscBool      changed_y, changed_w;
-  PetscErrorCode ierr;
   Vec            X, Y, F, W;
   SNES           snes;
   PetscReal      xnorm, ynorm, gnorm, steptol, atol, rtol, ltol, maxstep;

@@ -64,13 +64,12 @@ typedef struct {
 
 static int PetscML_getrow(ML_Operator *ML_data, int N_requested_rows, int requested_rows[],int allocated_space, int columns[], double values[], int row_lengths[])
 {
-  PetscErrorCode ierr;
   PetscInt       m,i,j,k=0,row,*aj;
   PetscScalar    *aa;
   FineGridCtx    *ml=(FineGridCtx*)ML_Get_MyGetrowData(ML_data);
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)ml->Aloc->data;
 
-  ierr = MatGetSize(ml->Aloc,&m,NULL); if (ierr) return(0);
+  if (MatGetSize(ml->Aloc,&m,NULL)) return(0);
   for (i = 0; i<N_requested_rows; i++) {
     row            = requested_rows[i];
     row_lengths[i] = a->ilen[row];
@@ -89,7 +88,6 @@ static int PetscML_getrow(ML_Operator *ML_data, int N_requested_rows, int reques
 
 static PetscErrorCode PetscML_comm(double p[],void *ML_data)
 {
-  PetscErrorCode    ierr;
   FineGridCtx       *ml = (FineGridCtx*)ML_data;
   Mat               A   = ml->A;
   Mat_MPIAIJ        *a  = (Mat_MPIAIJ*)A->data;
@@ -113,7 +111,6 @@ static PetscErrorCode PetscML_comm(double p[],void *ML_data)
 
 static int PetscML_matvec(ML_Operator *ML_data,int in_length,double p[],int out_length,double ap[])
 {
-  PetscErrorCode ierr;
   FineGridCtx    *ml = (FineGridCtx*)ML_Get_MyMatvecData(ML_data);
   Mat            A   = ml->A, Aloc=ml->Aloc;
   PetscMPIInt    size;
@@ -138,7 +135,6 @@ static int PetscML_matvec(ML_Operator *ML_data,int in_length,double p[],int out_
 
 static PetscErrorCode MatMult_ML(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   Mat_MLShell       *shell;
   PetscScalar       *yarray;
   const PetscScalar *xarray;
@@ -159,7 +155,6 @@ static PetscErrorCode MatMult_ML(Mat A,Vec x,Vec y)
 /* newtype is ignored since only handles one case */
 static PetscErrorCode MatConvert_MPIAIJ_ML(Mat A,MatType newtype,MatReuse scall,Mat *Aloc)
 {
-  PetscErrorCode ierr;
   Mat_MPIAIJ     *mpimat=(Mat_MPIAIJ*)A->data;
   Mat_SeqAIJ     *mat,*a=(Mat_SeqAIJ*)(mpimat->A)->data,*b=(Mat_SeqAIJ*)(mpimat->B)->data;
   PetscInt       *ai=a->i,*aj=a->j,*bi=b->i,*bj=b->j;
@@ -168,7 +163,7 @@ static PetscErrorCode MatConvert_MPIAIJ_ML(Mat A,MatType newtype,MatReuse scall,
   PetscInt       *ci,*cj,ncols;
 
   PetscFunctionBegin;
-  PetscCheckFalse(am != an,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"A must have a square diagonal portion, am: %d != an: %d",am,an);
+  PetscCheck(am == an,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"A must have a square diagonal portion, am: %d != an: %d",am,an);
   CHKERRQ(MatSeqAIJGetArrayRead(mpimat->A,(const PetscScalar**)&aa));
   CHKERRQ(MatSeqAIJGetArrayRead(mpimat->B,(const PetscScalar**)&ba));
   if (scall == MAT_INITIAL_MATRIX) {
@@ -193,7 +188,7 @@ static PetscErrorCode MatConvert_MPIAIJ_ML(Mat A,MatType newtype,MatReuse scall,
         ca[k++] = *ba++;
       }
     }
-    PetscCheckFalse(k != ci[am],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"k: %d != ci[am]: %d",k,ci[am]);
+    PetscCheck(k == ci[am],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"k: %d != ci[am]: %d",k,ci[am]);
 
     /* put together the new matrix */
     an   = mpimat->A->cmap->n+mpimat->B->cmap->n;
@@ -225,7 +220,6 @@ static PetscErrorCode MatConvert_MPIAIJ_ML(Mat A,MatType newtype,MatReuse scall,
 
 static PetscErrorCode MatDestroy_ML(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_MLShell    *shell;
 
   PetscFunctionBegin;
@@ -237,13 +231,12 @@ static PetscErrorCode MatDestroy_ML(Mat A)
 static PetscErrorCode MatWrapML_SeqAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *newmat)
 {
   struct ML_CSR_MSRdata *matdata = (struct ML_CSR_MSRdata*)mlmat->data;
-  PetscErrorCode        ierr;
   PetscInt              m       =mlmat->outvec_leng,n=mlmat->invec_leng,*nnz = NULL,nz_max;
   PetscInt              *ml_cols=matdata->columns,*ml_rowptr=matdata->rowptr,*aj,i;
   PetscScalar           *ml_vals=matdata->values,*aa;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
+  PetscCheck(mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
   if (m != n) { /* ML Pmat and Rmat are in CSR format. Pass array pointers into SeqAIJ matrix */
     if (reuse) {
       Mat_SeqAIJ *aij= (Mat_SeqAIJ*)(*newmat)->data;
@@ -298,7 +291,6 @@ static PetscErrorCode MatWrapML_SeqAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *ne
 
 static PetscErrorCode MatWrapML_SHELL(ML_Operator *mlmat,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode ierr;
   PetscInt       m,n;
   ML_Comm        *MLcomm;
   Mat_MLShell    *shellctx;
@@ -329,15 +321,14 @@ static PetscErrorCode MatWrapML_MPIAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *ne
 {
   PetscInt       *aj;
   PetscScalar    *aa;
-  PetscErrorCode ierr;
   PetscInt       i,j,*gordering;
   PetscInt       m=mlmat->outvec_leng,n,nz_max,row;
   Mat            A;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
+  PetscCheck(mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
   n = mlmat->invec_leng;
-  PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m %d must equal to n %d",m,n);
+  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m %d must equal to n %d",m,n);
 
   /* create global row numbering for a ML_Operator */
   PetscStackCall("ML_build_global_numbering",ML_build_global_numbering(mlmat,&gordering,"rows"));
@@ -398,7 +389,6 @@ static PetscErrorCode PCSetCoordinates_ML(PC pc, PetscInt ndm, PetscInt a_nloc, 
 {
   PC_MG          *mg    = (PC_MG*)pc->data;
   PC_ML          *pc_ml = (PC_ML*)mg->innerctx;
-  PetscErrorCode ierr;
   PetscInt       arrsz,oldarrsz,bs,my0,kk,ii,nloc,Iend,aloc;
   Mat            Amat = pc->pmat;
 
@@ -411,7 +401,7 @@ static PetscErrorCode PCSetCoordinates_ML(PC pc, PetscInt ndm, PetscInt a_nloc, 
   aloc = (Iend-my0);
   nloc = (Iend-my0)/bs;
 
-  PetscCheckFalse(nloc!=a_nloc && aloc != a_nloc,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of local blocks %D must be %D or %D.",a_nloc,nloc,aloc);
+  PetscCheck((nloc == a_nloc) || (aloc == a_nloc),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of local blocks %D must be %D or %D.",a_nloc,nloc,aloc);
 
   oldarrsz    = pc_ml->dim * pc_ml->nloc;
   pc_ml->dim  = ndm;
@@ -445,7 +435,6 @@ static PetscErrorCode PCSetCoordinates_ML(PC pc, PetscInt ndm, PetscInt a_nloc, 
 extern PetscErrorCode PCReset_MG(PC);
 PetscErrorCode PCReset_ML(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg    = (PC_MG*)pc->data;
   PC_ML          *pc_ml = (PC_ML*)mg->innerctx;
   PetscInt       level,fine_level=pc_ml->Nlevels-1,dim=pc_ml->dim;
@@ -688,7 +677,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
       PetscInt          i,j,mlocal,nvec,M;
       const Vec         *vecs;
 
-      PetscCheckFalse(!mnull,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Must provide explicit null space using MatSetNearNullSpace() to use user-specified null space");
+      PetscCheck(mnull,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Must provide explicit null space using MatSetNearNullSpace() to use user-specified null space");
       CHKERRQ(MatGetSize(A,&M,NULL));
       CHKERRQ(MatGetLocalSize(Aloc,&mlocal,NULL));
       CHKERRQ(MatNullSpaceGetVecs(mnull,&has_const,&nvec,&vecs));
@@ -733,7 +722,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
   agg_object->cheap_minimizing_energy   = (int)pc_ml->EnergyMinimizationCheap;
 
   if (pc_ml->Aux) {
-    PetscCheckFalse(!pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Auxiliary matrix requires coordinates");
+    PetscCheck(pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Auxiliary matrix requires coordinates");
     ml_object->Amat[0].aux_data->threshold = pc_ml->AuxThreshold;
     ml_object->Amat[0].aux_data->enable    = 1;
     ml_object->Amat[0].aux_data->max_level = 10;
@@ -784,7 +773,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
     if (!pc_ml->RepartitionType) {
       PetscInt i;
 
-      PetscCheckFalse(!pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"ML Zoltan repartitioning requires coordinates");
+      PetscCheck(pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"ML Zoltan repartitioning requires coordinates");
       PetscStackCall("ML_Repartition_Set_Partitioner",ML_Repartition_Set_Partitioner(ml_object,ML_USEZOLTAN));
       PetscStackCall("ML_Aggregate_Set_Dimensions",ML_Aggregate_Set_Dimensions(agg_object, pc_ml->dim));
 
@@ -806,7 +795,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
   } else {
     PetscStackCall("ML_Gen_MultiLevelHierarchy_UsingAggregation",Nlevels = ML_Gen_MultiLevelHierarchy_UsingAggregation(ml_object,0,ML_INCREASING,agg_object));
   }
-  PetscCheckFalse(Nlevels<=0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Nlevels %d must > 0",Nlevels);
+  PetscCheck(Nlevels>0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Nlevels %d must > 0",Nlevels);
   pc_ml->Nlevels = Nlevels;
   fine_level     = Nlevels - 1;
 
@@ -945,7 +934,6 @@ PetscErrorCode PCSetUp_ML(PC pc)
 */
 PetscErrorCode PCDestroy_ML(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg   = (PC_MG*)pc->data;
   PC_ML          *pc_ml= (PC_ML*)mg->innerctx;
 
@@ -959,7 +947,6 @@ PetscErrorCode PCDestroy_ML(PC pc)
 
 PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
   PetscInt       indx,PrintLevel,partindx;
   const char     *scheme[] = {"Uncoupled","Coupled","MIS","METIS"};
   const char     *part[]   = {"Zoltan","ParMETIS"};
@@ -1048,7 +1035,7 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
     partindx = 1;
     CHKERRQ(PetscOptionsEList("-pc_ml_repartitionType", "Repartitioning library to use","ML_Repartition_Set_Partitioner",part,2,part[1],&partindx,NULL));
     pc_ml->RepartitionType = partindx;
-    PetscCheckFalse(!partindx,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP_SYS,"ML not compiled with Zoltan");
+    PetscCheck(partindx,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP_SYS,"ML not compiled with Zoltan");
 #endif
     CHKERRQ(PetscOptionsBool("-pc_ml_Aux","Aggregate using auxiliary coordinate-based laplacian","None",pc_ml->Aux,&pc_ml->Aux,NULL));
     CHKERRQ(PetscOptionsReal("-pc_ml_AuxThreshold","Auxiliary smoother drop tol","None",pc_ml->AuxThreshold,&pc_ml->AuxThreshold,NULL));
@@ -1109,7 +1096,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_ML(PC pc)
 {
-  PetscErrorCode ierr;
   PC_ML          *pc_ml;
   PC_MG          *mg;
 

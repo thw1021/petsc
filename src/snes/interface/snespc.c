@@ -24,7 +24,6 @@
 @*/
 PetscErrorCode  SNESApplyNPC(SNES snes,Vec x,Vec f,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -51,7 +50,6 @@ PetscErrorCode SNESComputeFunctionDefaultNPC(SNES snes,Vec X,Vec F)
 {
 /* This is to be used as an argument to SNESMF -- NOT as a "function" */
   SNESConvergedReason reason;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   if (snes->npc) {
@@ -84,7 +82,6 @@ PetscErrorCode SNESComputeFunctionDefaultNPC(SNES snes,Vec X,Vec F)
 @*/
 PetscErrorCode SNESGetNPCFunction(SNES snes,Vec F,PetscReal *fnorm)
 {
-  PetscErrorCode   ierr;
   PCSide           npcside;
   SNESFunctionType functype;
   SNESNormSchedule normschedule;

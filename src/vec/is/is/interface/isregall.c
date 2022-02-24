@@ -15,7 +15,6 @@ PETSC_EXTERN PetscErrorCode ISCreate_Block(IS);
 @*/
 PetscErrorCode  ISRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ISRegisterAllCalled) PetscFunctionReturn(0);

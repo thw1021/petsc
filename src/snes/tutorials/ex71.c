@@ -190,7 +190,6 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 {
   PetscBag       bag;
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -206,7 +205,6 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 
 PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -248,7 +246,6 @@ PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   DMLabel        label;
   Parameter     *ctx;
   PetscInt       id, bd;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscBagGetData(user->bag, (void **) &ctx));
@@ -296,7 +293,6 @@ PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscBool      simplex;
   PetscInt       dim;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));

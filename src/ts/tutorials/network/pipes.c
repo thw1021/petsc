@@ -18,7 +18,6 @@ static char help[] = "This example demonstrates DMNetwork. It is used for testin
 */
 PetscErrorCode WashNetworkDistribute(MPI_Comm comm,Wash wash)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,tag=0;
   PetscInt       i,e,v,numEdges,numVertices,nedges,*eowners=NULL,estart,eend,*vtype=NULL,nvertices;
   PetscInt       *edgelist = wash->edgelist,*nvtx=NULL,*vtxDone=NULL;
@@ -100,7 +99,6 @@ PetscErrorCode WashNetworkDistribute(MPI_Comm comm,Wash wash)
 
 PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
 {
-  PetscErrorCode ierr;
   Wash           wash=(Wash)ctx;
   DM             networkdm;
   Vec            localX,localXdot,localF, localXold;
@@ -229,7 +227,6 @@ PetscErrorCode WASHIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void* ctx)
 
 PetscErrorCode WASHSetInitialSolution(DM networkdm,Vec X,Wash wash)
 {
-  PetscErrorCode ierr;
   PetscInt       k,nx,vkey,vfrom,vto,offsetfrom,offsetto;
   PetscInt       type,varoffset;
   PetscInt       e,eStart,eEnd;
@@ -298,7 +295,6 @@ PetscErrorCode WASHSetInitialSolution(DM networkdm,Vec X,Wash wash)
 
 PetscErrorCode TSDMNetworkMonitor(TS ts, PetscInt step, PetscReal t, Vec x, void *context)
 {
-  PetscErrorCode     ierr;
   DMNetworkMonitor   monitor;
 
   PetscFunctionBegin;
@@ -309,7 +305,6 @@ PetscErrorCode TSDMNetworkMonitor(TS ts, PetscInt step, PetscReal t, Vec x, void
 
 PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
 {
-  PetscErrorCode ierr;
   PetscInt       i,numkeys=1,*blocksize,*numselectedvariable,**selectedvariables,n;
   IS             isfrom_q,isfrom_h,isfrom;
   Vec            Xto;
@@ -398,7 +393,6 @@ PetscErrorCode PipesView(DM networkdm,PetscInt KeyPipe,Vec X)
 
 PetscErrorCode ISJunctionsView(DM networkdm,PetscInt KeyJunc)
 {
-  PetscErrorCode ierr;
   PetscInt       numkeys=1;
   IS             isfrom;
   MPI_Comm       comm;
@@ -426,7 +420,6 @@ PetscErrorCode ISJunctionsView(DM networkdm,PetscInt KeyJunc)
 
 PetscErrorCode WashNetworkCleanUp(Wash wash)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -441,7 +434,6 @@ PetscErrorCode WashNetworkCleanUp(Wash wash)
 
 PetscErrorCode WashNetworkCreate(MPI_Comm comm,PetscInt pipesCase,Wash *wash_ptr)
 {
-  PetscErrorCode ierr;
   PetscInt       npipes;
   PetscMPIInt    rank;
   Wash           wash=NULL;

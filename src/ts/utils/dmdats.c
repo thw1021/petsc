@@ -19,7 +19,6 @@ typedef struct {
 
 static PetscErrorCode DMTSDestroy_DMDA(DMTS sdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(sdm->data));
@@ -28,7 +27,6 @@ static PetscErrorCode DMTSDestroy_DMDA(DMTS sdm)
 
 static PetscErrorCode DMTSDuplicate_DMDA(DMTS oldsdm,DMTS sdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(sdm,(DMTS_DA**)&sdm->data));
@@ -38,7 +36,6 @@ static PetscErrorCode DMTSDuplicate_DMDA(DMTS oldsdm,DMTS sdm)
 
 static PetscErrorCode DMDATSGetContext(DM dm,DMTS sdm,DMTS_DA **dmdats)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *dmdats = NULL;
@@ -53,7 +50,6 @@ static PetscErrorCode DMDATSGetContext(DM dm,DMTS sdm,DMTS_DA **dmdats)
 
 static PetscErrorCode TSComputeIFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
   DMTS_DA        *dmdats = (DMTS_DA*)ctx;
   DMDALocalInfo  info;
@@ -108,7 +104,6 @@ static PetscErrorCode TSComputeIFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
 
 static PetscErrorCode TSComputeIJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xdot,PetscReal shift,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
   DMTS_DA        *dmdats = (DMTS_DA*)ctx;
   DMDALocalInfo  info;
@@ -143,7 +138,6 @@ static PetscErrorCode TSComputeIJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
 
 static PetscErrorCode TSComputeRHSFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
   DMTS_DA        *dmdats = (DMTS_DA*)ctx;
   DMDALocalInfo  info;
@@ -192,7 +186,6 @@ static PetscErrorCode TSComputeRHSFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec 
 
 static PetscErrorCode TSComputeRHSJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
   DMTS_DA        *dmdats = (DMTS_DA*)ctx;
   DMDALocalInfo  info;
@@ -250,7 +243,6 @@ $ func(DMDALocalInfo info,PetscReal t,void *x,void *f,void *ctx)
 @*/
 PetscErrorCode DMDATSSetRHSFunctionLocal(DM dm,InsertMode imode,DMDATSRHSFunctionLocal func,void *ctx)
 {
-  PetscErrorCode ierr;
   DMTS           sdm;
   DMTS_DA        *dmdats;
 
@@ -292,7 +284,6 @@ $ func(DMDALocalInfo* info,PetscReal t,void* x,Mat J,Mat B,void *ctx);
 @*/
 PetscErrorCode DMDATSSetRHSJacobianLocal(DM dm,DMDATSRHSJacobianLocal func,void *ctx)
 {
-  PetscErrorCode ierr;
   DMTS           sdm;
   DMTS_DA        *dmdats;
 
@@ -330,7 +321,6 @@ PetscErrorCode DMDATSSetRHSJacobianLocal(DM dm,DMDATSRHSJacobianLocal func,void 
 @*/
 PetscErrorCode DMDATSSetIFunctionLocal(DM dm,InsertMode imode,DMDATSIFunctionLocal func,void *ctx)
 {
-  PetscErrorCode ierr;
   DMTS           sdm;
   DMTS_DA        *dmdats;
 
@@ -374,7 +364,6 @@ $ func(DMDALocalInfo* info,PetscReal t,void* x,void *xdot,PetscScalar shift,Mat 
 @*/
 PetscErrorCode DMDATSSetIJacobianLocal(DM dm,DMDATSIJacobianLocal func,void *ctx)
 {
-  PetscErrorCode ierr;
   DMTS           sdm;
   DMTS_DA        *dmdats;
 
@@ -391,7 +380,6 @@ PetscErrorCode DMDATSSetIJacobianLocal(DM dm,DMDATSIJacobianLocal func,void *ctx
 PetscErrorCode TSMonitorDMDARayDestroy(void **mctx)
 {
   TSMonitorDMDARayCtx *rayctx = (TSMonitorDMDARayCtx *) *mctx;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   if (rayctx->lgctx) CHKERRQ(TSMonitorLGCtxDestroy(&rayctx->lgctx));
@@ -406,7 +394,6 @@ PetscErrorCode TSMonitorDMDARay(TS ts,PetscInt steps,PetscReal time,Vec u,void *
 {
   TSMonitorDMDARayCtx *rayctx = (TSMonitorDMDARayCtx*)mctx;
   Vec                 solution;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetSolution(ts,&solution));
@@ -425,7 +412,6 @@ PetscErrorCode  TSMonitorLGDMDARay(TS ts, PetscInt step, PetscReal ptime, Vec u,
   Vec                  v      = rayctx->ray;
   const PetscScalar   *a;
   PetscInt             dim;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecScatterBegin(rayctx->scatter, u, v, INSERT_VALUES, SCATTER_FORWARD));

@@ -223,7 +223,6 @@ static PetscErrorCode PetscDrawString_Image(PetscDraw draw,PetscReal x,PetscReal
   PetscImage     img = (PetscImage)draw->data;
   PetscToken     token;
   char           *subtext;
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscDrawValidColor(c);
   {
@@ -298,7 +297,6 @@ static PetscErrorCode PetscDrawSetDoubleBuffer_Image(PetscDraw draw)
 static PetscErrorCode PetscDrawGetPopup_Image(PetscDraw draw,PetscDraw *popup)
 {
   PetscBool      flg = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsGetBool(((PetscObject)draw)->options,((PetscObject)draw)->prefix,"-draw_popup",&flg,NULL));
@@ -330,7 +328,6 @@ static PetscErrorCode PetscDrawCheckResizedWindow_Image(PetscDraw draw)
 static PetscErrorCode PetscDrawResizeWindow_Image(PetscDraw draw,int w,int h)
 {
   PetscImage     img = (PetscImage)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (w == img->w && h == img->h) PetscFunctionReturn(0);
@@ -345,7 +342,6 @@ static PetscErrorCode PetscDrawResizeWindow_Image(PetscDraw draw,int w,int h)
 static PetscErrorCode PetscDrawDestroy_Image(PetscDraw draw)
 {
   PetscImage     img = (PetscImage)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawDestroy(&draw->popup));
@@ -403,7 +399,6 @@ static PetscErrorCode PetscDrawGetSingleton_Image(PetscDraw draw,PetscDraw *sdra
 {
   PetscImage     pimg = (PetscImage)draw->data;
   PetscImage     simg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawCreate(PETSC_COMM_SELF,NULL,NULL,0,0,draw->w,draw->h,sdraw));
@@ -418,7 +413,6 @@ static PetscErrorCode PetscDrawRestoreSingleton_Image(PetscDraw draw,PetscDraw *
 {
   PetscImage     pimg = (PetscImage)draw->data;
   PetscImage     simg = (PetscImage)(*sdraw)->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscArraycpy(pimg->buffer,simg->buffer,pimg->w*pimg->h));
@@ -439,7 +433,6 @@ static PetscErrorCode PetscDrawGetImage_Image(PetscDraw draw,unsigned char palet
   PetscImage     img = (PetscImage)draw->data;
   unsigned char  *buffer = NULL;
   PetscMPIInt    rank,size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (w) *w = (unsigned int)img->w;
@@ -553,7 +546,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Image(PetscDraw draw)
   int            w = draw->w, h = draw->h;
   PetscInt       size[2], nsize = 2;
   PetscBool      set;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   draw->pause   = 0;
@@ -619,7 +611,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Image(PetscDraw draw)
 @*/
 PetscErrorCode PetscDrawOpenImage(MPI_Comm comm,const char filename[],int w,int h,PetscDraw *draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawCreate(comm,NULL,NULL,0,0,w,h,draw));

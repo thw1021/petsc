@@ -97,7 +97,6 @@ static PetscErrorCode PhysicsCreate_Advect(FVCtx *ctx)
 
 PetscErrorCode FVSample_3WaySplit(FVCtx *ctx,DM da,PetscReal time,Vec U)
 {
-  PetscErrorCode  ierr;
   PetscScalar     *u,*uj,xj,xi;
   PetscInt        i,j,k,dof,xs,xm,Mx;
   const PetscInt  N = 200;
@@ -168,7 +167,6 @@ PetscErrorCode FVSample_3WaySplit(FVCtx *ctx,DM da,PetscReal time,Vec U)
 
 static PetscErrorCode SolutionErrorNorms_3WaySplit(FVCtx *ctx,DM da,PetscReal t,Vec X,PetscReal *nrm1)
 {
-  PetscErrorCode    ierr;
   Vec               Y;
   PetscInt          i,Mx;
   const PetscScalar *ptr_X,*ptr_Y;
@@ -197,7 +195,6 @@ static PetscErrorCode SolutionErrorNorms_3WaySplit(FVCtx *ctx,DM da,PetscReal t,
 PetscErrorCode FVRHSFunction_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,sm = ctx->sm,mf = ctx->mf,fm = ctx->fm,ms = ctx->ms;
   PetscReal      hxf,hxm,hxs,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -374,7 +371,6 @@ PetscErrorCode FVRHSFunction_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vc
 PetscErrorCode FVRHSFunctionslow_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,islow = 0,sm = ctx->sm,ms = ctx->ms,lsbwidth = ctx->lsbwidth,rsbwidth = ctx->rsbwidth;
   PetscReal      hxs,hxm,hxf,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -505,7 +501,6 @@ PetscErrorCode FVRHSFunctionslow_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void
 PetscErrorCode FVRHSFunctionslowbuffer_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,islowbuffer = 0,sm = ctx->sm,ms = ctx->ms,lsbwidth = ctx->lsbwidth,rsbwidth = ctx->rsbwidth;
   PetscReal      hxs,hxm,hxf;
   PetscScalar    *x,*f,*slope;
@@ -655,7 +650,6 @@ PetscErrorCode FVRHSFunctionslowbuffer_3WaySplit(TS ts,PetscReal time,Vec X,Vec 
 PetscErrorCode FVRHSFunctionmedium_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,imedium = 0,sm = ctx->sm,mf = ctx->mf,fm = ctx->fm,ms = ctx->ms,lmbwidth = ctx->lmbwidth,rmbwidth = ctx->rmbwidth;
   PetscReal      hxs,hxm,hxf;
   PetscScalar    *x,*f,*slope;
@@ -804,7 +798,6 @@ PetscErrorCode FVRHSFunctionmedium_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,vo
 PetscErrorCode FVRHSFunctionmediumbuffer_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,imediumbuffer = 0,mf = ctx->mf,fm = ctx->fm,lmbwidth = ctx->lmbwidth,rmbwidth = ctx->rmbwidth;
   PetscReal      hxs,hxm,hxf;
   PetscScalar    *x,*f,*slope;
@@ -954,7 +947,6 @@ PetscErrorCode FVRHSFunctionmediumbuffer_3WaySplit(TS ts,PetscReal time,Vec X,Ve
 PetscErrorCode FVRHSFunctionfast_3WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,ifast = 0,mf = ctx->mf,fm = ctx->fm;
   PetscReal      hxs,hxm,hxf;
   PetscScalar    *x,*f,*slope;

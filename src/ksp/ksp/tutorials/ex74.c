@@ -261,7 +261,6 @@ int main(int argc, char **argv)
 PetscErrorCode ExactSolution(Vec u,void *c,PetscReal t)
 {
   UserContext     *ctxt = (UserContext*) c;
-  PetscErrorCode  ierr;
   PetscInt        i,is,ie;
   PetscScalar     *uarr;
   PetscReal       x,dx,a=ctxt->a,pi=PETSC_PI;
@@ -289,7 +288,6 @@ PetscErrorCode ExactSolution(Vec u,void *c,PetscReal t)
 /* Arrays should be freed with PetscFree3(A,b,c) */
 static PetscErrorCode RKCreate_Gauss(PetscInt nstages,PetscScalar **gauss_A,PetscScalar **gauss_b,PetscReal **gauss_c)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *A,*G0,*G1;
   PetscReal         *b,*c;
   PetscInt          i,j;
@@ -327,7 +325,6 @@ static PetscErrorCode RKCreate_Gauss(PetscInt nstages,PetscScalar **gauss_A,Pets
 
 static PetscErrorCode Assemble_AdvDiff(MPI_Comm comm,UserContext *user,Mat *J)
 {
-  PetscErrorCode ierr;
   PetscInt       matis,matie,i;
   PetscReal      dx,dx2;
 

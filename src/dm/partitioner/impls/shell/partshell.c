@@ -9,7 +9,6 @@ typedef struct {
 static PetscErrorCode PetscPartitionerReset_Shell(PetscPartitioner part)
 {
   PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionDestroy(&p->section));
@@ -19,7 +18,6 @@ static PetscErrorCode PetscPartitionerReset_Shell(PetscPartitioner part)
 
 static PetscErrorCode PetscPartitionerDestroy_Shell(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscPartitionerReset_Shell(part));
@@ -30,7 +28,6 @@ static PetscErrorCode PetscPartitionerDestroy_Shell(PetscPartitioner part)
 static PetscErrorCode PetscPartitionerView_Shell_ASCII(PetscPartitioner part, PetscViewer viewer)
 {
   PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   if (p->random) {
@@ -44,7 +41,6 @@ static PetscErrorCode PetscPartitionerView_Shell_ASCII(PetscPartitioner part, Pe
 static PetscErrorCode PetscPartitionerView_Shell(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -57,7 +53,6 @@ static PetscErrorCode PetscPartitionerView_Shell(PetscPartitioner part, PetscVie
 static PetscErrorCode PetscPartitionerSetFromOptions_Shell(PetscOptionItems *PetscOptionsObject, PetscPartitioner part)
 {
   PetscBool      random = PETSC_FALSE, set;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "PetscPartitioner Shell Options"));
@@ -72,7 +67,6 @@ static PetscErrorCode PetscPartitionerPartition_Shell(PetscPartitioner part, Pet
 {
   PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
   PetscInt                np;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   if (p->random) {
@@ -139,7 +133,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Shell(PetscPartitioner part)
 {
   PetscPartitioner_Shell *p;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -173,7 +166,6 @@ PetscErrorCode PetscPartitionerShellSetPartition(PetscPartitioner part, PetscInt
 {
   PetscPartitioner_Shell *p = (PetscPartitioner_Shell *) part->data;
   PetscInt                proc, numPoints;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(part, PETSCPARTITIONER_CLASSID, 1, PETSCPARTITIONERSHELL);

@@ -14,7 +14,6 @@ PetscErrorCode MatGetColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool symm
   PetscInt       row,col;
   PetscInt       *cspidx;
   PetscBool      isnonzero;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *nn = n;
@@ -59,7 +58,6 @@ PetscErrorCode MatGetColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool symm
 
 PetscErrorCode MatRestoreColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool symmetric,PetscBool inodecompressed,PetscInt *n,const PetscInt *ia[],const PetscInt *ja[],PetscInt *spidx[],PetscBool *done)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

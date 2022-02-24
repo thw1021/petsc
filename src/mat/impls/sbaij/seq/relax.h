@@ -48,7 +48,6 @@ PetscErrorCode MatMult_SeqSBAIJ_1(Mat A,Vec xx,Vec zz)
   PetscScalar       *z,x1,sum;
   const MatScalar   *v;
   MatScalar         vj;
-  PetscErrorCode    ierr;
   PetscInt          mbs=a->mbs,i,j,nz;
   const PetscInt    *ai=a->i;
 #if defined(USESHORT)
@@ -121,7 +120,6 @@ PetscErrorCode MatSOR_SeqSBAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,Pets
   PetscScalar       *x,*t,sum;
   const PetscScalar *b;
   MatScalar         tmp;
-  PetscErrorCode    ierr;
   PetscInt          m  =a->mbs,bs=A->rmap->bs,j;
   const PetscInt    *ai=a->i;
 #if defined(USESHORT)

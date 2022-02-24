@@ -217,7 +217,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm,UserCtx * user)
 static PetscErrorCode PerturbMesh(DM *mesh,PetscScalar *coordVals,PetscInt npoints,PetscInt dim)
 {
   PetscInt       i,j,k;
-  PetscErrorCode ierr;
   PetscReal      minCoords[3],maxCoords[3],maxPert[3],randVal,amp;
   PetscRandom    ran;
 
@@ -250,7 +249,6 @@ static PetscErrorCode PerturbMesh(DM *mesh,PetscScalar *coordVals,PetscInt npoin
 static PetscErrorCode SkewMesh(DM * mesh,PetscScalar * coordVals,PetscInt npoints,PetscInt dim)
 {
   PetscInt       i,j,k,l;
-  PetscErrorCode ierr;
   PetscScalar    * transMat;
   PetscScalar    tmpcoord[3];
   PetscRandom    ran;
@@ -287,7 +285,6 @@ static PetscErrorCode SkewMesh(DM * mesh,PetscScalar * coordVals,PetscInt npoint
  * specified by the user options */
 static PetscErrorCode TransformMesh(UserCtx * user,DM * mesh)
 {
-  PetscErrorCode ierr;
   PetscInt       dim,npoints;
   PetscScalar    * coordVals;
   Vec            coords;
@@ -320,7 +317,6 @@ static PetscErrorCode TransformMesh(UserCtx * user,DM * mesh)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm,UserCtx * user,DM * mesh)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, mesh));
@@ -343,7 +339,6 @@ static PetscErrorCode SetupProblem(DM dm,UserCtx * user)
 {
   PetscDS        prob;
   DMLabel        label;
-  PetscErrorCode ierr;
   const PetscInt id=1;
 
   PetscFunctionBegin;

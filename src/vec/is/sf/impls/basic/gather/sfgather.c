@@ -6,7 +6,6 @@ typedef PetscSF_Allgatherv PetscSF_Gather;
 
 PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gather(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   PetscMPIInt          sendcount;
   MPI_Comm             comm;
@@ -27,7 +26,6 @@ PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gather(PetscSF sf,MPI_Datatype uni
 
 static PetscErrorCode PetscSFReduceBegin_Gather(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   PetscMPIInt          recvcount;
   MPI_Comm             comm;
@@ -48,7 +46,6 @@ static PetscErrorCode PetscSFReduceBegin_Gather(PetscSF sf,MPI_Datatype unit,Pet
 
 PETSC_INTERN PetscErrorCode PetscSFCreate_Gather(PetscSF sf)
 {
-  PetscErrorCode  ierr;
   PetscSF_Gather  *dat = (PetscSF_Gather*)sf->data;
 
   PetscFunctionBegin;

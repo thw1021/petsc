@@ -8,7 +8,6 @@ PetscErrorCode VecView_Shell(Vec v, PetscViewer viewer)
   PetscViewerFormat format;
   PetscBool         isglvis,isascii;
 
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer,&format));
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERGLVIS,&isglvis));
@@ -39,7 +38,6 @@ PetscErrorCode DMSetUpGLVisViewer_Shell(PetscObject odm, PetscViewer viewer)
   Vec            V;
   PetscInt       dim = 2;
   const char     *fec_type = { "testme" };
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreateGlobalVector(dm,&V));

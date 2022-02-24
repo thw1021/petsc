@@ -6,7 +6,6 @@ static char help[] = "Demonstration of creating and viewing DMFields objects.\n\
 
 static PetscErrorCode ViewResults(PetscViewer viewer, PetscInt N, PetscInt dim, PetscScalar *B, PetscScalar *D, PetscScalar *H, PetscReal *rB, PetscReal *rD, PetscReal *rH)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerASCIIPrintf(viewer,"B:\n"));
@@ -35,7 +34,6 @@ static PetscErrorCode TestEvaluate(DMField field, PetscInt n, PetscRandom rand)
   PetscScalar    *array;
   PetscViewer    viewer;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)field);
@@ -72,7 +70,6 @@ static PetscErrorCode TestEvaluateFE(DMField field, PetscInt n, PetscInt cStart,
   IS             cellIS;
   PetscViewer    viewer;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)field);
@@ -117,7 +114,6 @@ static PetscErrorCode TestEvaluateFV(DMField field, PetscInt n, PetscInt cStart,
   IS             cellIS;
   PetscViewer    viewer;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)field);
@@ -168,7 +164,6 @@ static PetscErrorCode TestShellEvaluate(DMField field, Vec points, PetscDataType
   PetscInt           dim;
   const PetscScalar *x;
   PetscInt           Nc, n, i, j, k, l;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMFieldGetNumComponents(field, &Nc));
@@ -215,7 +210,6 @@ static PetscErrorCode TestShellEvaluate(DMField field, Vec points, PetscDataType
 static PetscErrorCode TestShellDestroy(DMField field)
 {
   Vec                ctxVec = NULL;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMFieldShellGetContext(field, &ctxVec));

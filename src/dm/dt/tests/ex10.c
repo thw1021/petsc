@@ -108,7 +108,6 @@ typedef struct
 
 static PetscErrorCode CreateMesh(MPI_Comm comm,UserCtx *user,DM *mesh)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, mesh));
@@ -127,7 +126,6 @@ static PetscErrorCode SetupProblem(DM dm,UserCtx *user)
   PetscWeakForm  wf;
   const PetscInt id = 1;
   PetscInt       bd;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -155,7 +153,6 @@ static PetscErrorCode SetupDiscretization(DM mesh,DM mesh_sum,PetscErrorCode (*s
   PetscFE        u,divu,u_sum,divu_sum;
   PetscInt       dim;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(mesh, &dim));

@@ -122,7 +122,6 @@ int main(int argc, char **argv)
 */
 PetscErrorCode FormBounds(SNES snes, Vec xl, Vec xu)
 {
-  PetscErrorCode ierr;
   AppCtx         *ctx;
 
   PetscFunctionBeginUser;
@@ -147,7 +146,6 @@ PetscErrorCode FormBounds(SNES snes, Vec xl, Vec xu)
 PetscErrorCode FormGradient(SNES snes, Vec X, Vec G, void *ptr)
 {
   AppCtx      *user;
-  int         ierr;
   PetscInt    i,j;
   PetscInt    mx, my;
   PetscScalar hx,hy, hydhx, hxdhy;
@@ -274,7 +272,6 @@ PetscErrorCode FormGradient(SNES snes, Vec X, Vec G, void *ptr)
 PetscErrorCode FormJacobian(SNES snes, Vec X, Mat H, Mat tHPre, void *ptr)
 {
   AppCtx         *user;
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscInt       mx, my;
   MatStencil     row,col[7];
@@ -446,7 +443,6 @@ PetscErrorCode FormJacobian(SNES snes, Vec X, Mat H, Mat tHPre, void *ptr)
 */
 PetscErrorCode FormBoundaryConditions(SNES snes,AppCtx **ouser)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,limit=0,maxits=5;
   PetscInt       mx,my;
   PetscInt       bsize=0, lsize=0, tsize=0, rsize=0;
@@ -529,7 +525,6 @@ PetscErrorCode FormBoundaryConditions(SNES snes,AppCtx **ouser)
 
 PetscErrorCode DestroyBoundaryConditions(AppCtx **ouser)
 {
-  PetscErrorCode ierr;
   AppCtx         *user = *ouser;
 
   PetscFunctionBeginUser;
@@ -554,7 +549,6 @@ PetscErrorCode DestroyBoundaryConditions(AppCtx **ouser)
 */
 PetscErrorCode ComputeInitialGuess(SNES snes, Vec X,void *dummy)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,mx,my;
   DM             da;
   AppCtx         *user;

@@ -9,7 +9,6 @@ static PetscErrorCode KSPTestResidualMonitor(KSP ksp, PetscInt i, PetscReal r, v
 {
   Vec            *t,*v;
   PetscReal      err;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(KSPCreateVecs(ksp,2,&t,2,&v));

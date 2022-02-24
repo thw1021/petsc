@@ -4,7 +4,6 @@
 
 static PetscErrorCode DMView_DA_2d(DM da,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscBool      iascii,isdraw,isglvis,isbinary;
   DM_DA          *dd = (DM_DA*)da->data;
@@ -67,6 +66,7 @@ static PetscErrorCode DMView_DA_2d(DM da,PetscViewer viewer)
     const PetscInt *idx;
     char           node[10];
     PetscBool      isnull;
+    PetscErrorCode ierr;
 
     CHKERRQ(PetscViewerDrawGetDraw(viewer,0,&draw));
     CHKERRQ(PetscDrawIsNull(draw,&isnull));
@@ -76,7 +76,7 @@ static PetscErrorCode DMView_DA_2d(DM da,PetscViewer viewer)
     CHKERRQ(PetscDrawClear(draw));
     CHKERRQ(PetscDrawSetCoordinates(draw,xmin,ymin,xmax,ymax));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* first processor draw all node lines */
     if (rank == 0) {
       ymin = 0.0; ymax = dd->N - 1;
@@ -88,11 +88,11 @@ static PetscErrorCode DMView_DA_2d(DM da,PetscViewer viewer)
         CHKERRQ(PetscDrawLine(draw,xmin,ymin,xmax,ymin,PETSC_DRAW_BLACK));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* draw my box */
     xmin = dd->xs/dd->w; xmax =(dd->xe-1)/dd->w; ymin = dd->ys; ymax = dd->ye - 1;
     CHKERRQ(PetscDrawLine(draw,xmin,ymin,xmax,ymin,PETSC_DRAW_RED));
@@ -107,11 +107,11 @@ static PetscErrorCode DMView_DA_2d(DM da,PetscViewer viewer)
         CHKERRQ(PetscDrawString(draw,x,y,PETSC_DRAW_BLACK,node));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* overlay ghost numbers, useful for error checking */
     CHKERRQ(ISLocalToGlobalMappingGetBlockIndices(da->ltogmap,&idx));
     base = 0; xmin = dd->Xs; xmax = dd->Xe; ymin = dd->Ys; ymax = dd->Ye;
@@ -125,7 +125,7 @@ static PetscErrorCode DMView_DA_2d(DM da,PetscViewer viewer)
       }
     }
     CHKERRQ(ISLocalToGlobalMappingRestoreBlockIndices(da->ltogmap,&idx));
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
     CHKERRQ(PetscDrawSave(draw));
@@ -155,7 +155,6 @@ PetscErrorCode DMDAGetDiagonal_MFFD(DM da,Vec U,Vec a)
 {
   PetscScalar    h,*aa,*ww,v;
   PetscReal      epsilon = PETSC_SQRT_MACHINE_EPSILON,umin = 100.0*PETSC_SQRT_MACHINE_EPSILON;
-  PetscErrorCode ierr;
   PetscInt       gI,nI;
   MatStencil     stencil;
   DMDALocalInfo  info;
@@ -210,7 +209,6 @@ PetscErrorCode  DMSetUp_DA_2D(DM da)
   Vec              local,global;
   VecScatter       gtol;
   IS               to,from;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(stencil_type == DMDA_STENCIL_BOX && (bx == DM_BOUNDARY_MIRROR || by == DM_BOUNDARY_MIRROR),PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Mirror boundary and box stencil");
@@ -797,7 +795,6 @@ PetscErrorCode  DMSetUp_DA_2D(DM da)
 PetscErrorCode  DMDACreate2d(MPI_Comm comm,DMBoundaryType bx,DMBoundaryType by,DMDAStencilType stencil_type,
                              PetscInt M,PetscInt N,PetscInt m,PetscInt n,PetscInt dof,PetscInt s,const PetscInt lx[],const PetscInt ly[],DM *da)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDACreate(comm, da));

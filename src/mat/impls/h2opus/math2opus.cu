@@ -199,7 +199,6 @@ typedef struct {
 static PetscErrorCode MatDestroy_H2OPUS(Mat A)
 {
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(H2OPUS_USE_MPI)
@@ -237,7 +236,6 @@ PetscErrorCode MatH2OpusSetNativeMult(Mat A, PetscBool nm)
 {
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
   PetscBool      ish2opus;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -264,7 +262,6 @@ PetscErrorCode MatH2OpusGetNativeMult(Mat A, PetscBool *nm)
 {
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
   PetscBool      ish2opus;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -277,7 +274,6 @@ PetscErrorCode MatH2OpusGetNativeMult(Mat A, PetscBool *nm)
 
 PETSC_EXTERN PetscErrorCode MatNorm_H2OPUS(Mat A, NormType normtype, PetscReal* n)
 {
-  PetscErrorCode ierr;
   PetscBool      ish2opus;
   PetscInt       nmax = PETSC_DECIDE;
   Mat_H2OPUS     *a = NULL;
@@ -304,7 +300,6 @@ static PetscErrorCode MatH2OpusResizeBuffers_Private(Mat A, PetscInt xN, PetscIn
   Mat_H2OPUS     *h2opus = (Mat_H2OPUS*)A->data;
   PetscInt       n;
   PetscBool      boundtocpu = PETSC_TRUE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_H2OPUS_USE_GPU)
@@ -338,7 +333,6 @@ static PetscErrorCode MatMultNKernel_H2OPUS(Mat A, PetscBool transA, Mat B, Mat 
   PetscMPIInt    size;
   PetscSF        bsf,csf;
   PetscBool      usesf = (PetscBool)(h2opus->sf && !h2opus->nativemult);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   HLibProfile::clear();
@@ -457,7 +451,6 @@ static PetscErrorCode MatMultNKernel_H2OPUS(Mat A, PetscBool transA, Mat B, Mat 
 static PetscErrorCode MatProductNumeric_H2OPUS(Mat C)
 {
   Mat_Product    *product = C->product;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
@@ -476,7 +469,6 @@ static PetscErrorCode MatProductNumeric_H2OPUS(Mat C)
 
 static PetscErrorCode MatProductSymbolic_H2OPUS(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   PetscBool      cisdense;
   Mat            A,B;
@@ -531,7 +523,6 @@ static PetscErrorCode MatMultKernel_H2OPUS(Mat A, Vec x, PetscScalar sy, Vec y, 
   PetscScalar    *xx,*yy,*uxx,*uyy;
   PetscMPIInt    size;
   PetscBool      usesf = (PetscBool)(h2opus->sf && !h2opus->nativemult);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   HLibProfile::clear();
@@ -648,7 +639,6 @@ static PetscErrorCode MatMultKernel_H2OPUS(Mat A, Vec x, PetscScalar sy, Vec y, 
 static PetscErrorCode MatMultTranspose_H2OPUS(Mat A, Vec x, Vec y)
 {
   PetscBool      xiscuda,yiscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)x,&xiscuda,VECSEQCUDA,VECMPICUDA,""));
@@ -661,7 +651,6 @@ static PetscErrorCode MatMultTranspose_H2OPUS(Mat A, Vec x, Vec y)
 static PetscErrorCode MatMult_H2OPUS(Mat A, Vec x, Vec y)
 {
   PetscBool      xiscuda,yiscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)x,&xiscuda,VECSEQCUDA,VECMPICUDA,""));
@@ -674,7 +663,6 @@ static PetscErrorCode MatMult_H2OPUS(Mat A, Vec x, Vec y)
 static PetscErrorCode MatMultTransposeAdd_H2OPUS(Mat A, Vec x, Vec y, Vec z)
 {
   PetscBool      xiscuda,ziscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(y,z));
@@ -688,7 +676,6 @@ static PetscErrorCode MatMultTransposeAdd_H2OPUS(Mat A, Vec x, Vec y, Vec z)
 static PetscErrorCode MatMultAdd_H2OPUS(Mat A, Vec x, Vec y, Vec z)
 {
   PetscBool      xiscuda,ziscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(y,z));
@@ -711,7 +698,6 @@ static PetscErrorCode MatScale_H2OPUS(Mat A, PetscScalar s)
 static PetscErrorCode MatSetFromOptions_H2OPUS(PetscOptionItems *PetscOptionsObject,Mat A)
 {
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"H2OPUS options"));
@@ -736,7 +722,6 @@ static PetscErrorCode MatH2OpusInferCoordinates_Private(Mat A)
   Vec               c;
   PetscInt          spacedim;
   const PetscScalar *coords;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (a->ptcloud) PetscFunctionReturn(0);
@@ -761,7 +746,6 @@ static PetscErrorCode MatSetUpMultiply_H2OPUS(Mat A)
 {
   MPI_Comm       comm;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
   PetscInt       n = 0,*idx = NULL;
   int            *iidx = NULL;
@@ -860,7 +844,6 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
   PetscBool      samplingdone = PETSC_FALSE;
   MPI_Comm       comm;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
@@ -1012,7 +995,7 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
       n2A  = PetscMax(n2A,PETSC_SMALL);
       niA  = PetscMax(niA,PETSC_SMALL);
       CHKERRQ(MatSetOperation(Ae,MATOP_NORM,normfunc));
-      ierr = PetscPrintf(PetscObjectComm((PetscObject)A),"MATH2OPUS construction errors: NORM_1 %g, NORM_INFINITY %g, NORM_2 %g (%g %g %g)\n",(double)n1,(double)ni,(double)n2,(double)(n1/n1A),(double)(ni/niA),(double)(n2/n2A));
+      CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)A),"MATH2OPUS construction errors: NORM_1 %g, NORM_INFINITY %g, NORM_2 %g (%g %g %g)\n",(double)n1,(double)ni,(double)n2,(double)(n1/n1A),(double)(ni/niA),(double)(n2/n2A)));
       CHKERRQ(MatDestroy(&E));
     }
     a->sampler->SetSamplingMat(NULL);
@@ -1022,7 +1005,6 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
 
 static PetscErrorCode MatZeroEntries_H2OPUS(Mat A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
 
@@ -1047,7 +1029,6 @@ static PetscErrorCode MatDuplicate_H2OPUS(Mat B, MatDuplicateOption op, Mat *nA)
 #else
   PetscBool      iscpu = PETSC_TRUE;
 #endif
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -1117,7 +1098,6 @@ static PetscErrorCode MatView_H2OPUS(Mat A, PetscViewer view)
 {
   Mat_H2OPUS        *h2opus = (Mat_H2OPUS*)A->data;
   PetscBool         isascii;
-  PetscErrorCode    ierr;
   PetscMPIInt       size;
   PetscViewerFormat format;
 
@@ -1198,7 +1178,6 @@ static PetscErrorCode MatH2OpusSetCoords_H2OPUS(Mat A, PetscInt spacedim, const 
   MPI_Comm       comm;
   PetscMPIInt    size;
   PetscBool      cong;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetUp(A->rmap));
@@ -1238,7 +1217,6 @@ static PetscErrorCode MatBindToCPU_H2OPUS(Mat A, PetscBool flg)
 {
   PetscMPIInt    size;
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
@@ -1310,7 +1288,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
 {
   Mat_H2OPUS     *a;
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -1376,7 +1353,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
 */
 PetscErrorCode MatH2OpusOrthogonalize(Mat A)
 {
-  PetscErrorCode ierr;
   PetscBool      ish2opus;
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
   PetscMPIInt    size;
@@ -1461,7 +1437,6 @@ PetscErrorCode MatH2OpusOrthogonalize(Mat A)
 */
 PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
 {
-  PetscErrorCode ierr;
   PetscBool      ish2opus;
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
   PetscMPIInt    size;
@@ -1551,7 +1526,6 @@ PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
 PetscErrorCode MatH2OpusSetSamplingMat(Mat A, Mat B, PetscInt bs, PetscReal tol)
 {
   PetscBool      ish2opus;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1612,7 +1586,6 @@ PetscErrorCode MatCreateH2OpusFromKernel(MPI_Comm comm, PetscInt m, PetscInt n, 
 #else
   PetscBool      iscpu = PETSC_TRUE;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
@@ -1671,7 +1644,6 @@ PetscErrorCode MatCreateH2OpusFromMat(Mat B, PetscInt spacedim, const PetscReal 
   Mat_H2OPUS     *h2opus;
   MPI_Comm       comm;
   PetscBool      boundtocpu = PETSC_TRUE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
@@ -1741,7 +1713,6 @@ PetscErrorCode MatH2OpusGetIndexMap(Mat A, IS *indexmap)
 {
   PetscBool      ish2opus;
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1775,7 +1746,6 @@ PetscErrorCode MatH2OpusMapVec(Mat A, PetscBool nativetopetsc, Vec in, Vec* out)
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
   PetscScalar    *xin,*xout;
   PetscBool      nm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1825,7 +1795,6 @@ PetscErrorCode MatH2OpusMapVec(Mat A, PetscBool nativetopetsc, Vec in, Vec* out)
 */
 PetscErrorCode MatH2OpusLowRankUpdate(Mat A, Mat U, Mat V, PetscScalar s)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;

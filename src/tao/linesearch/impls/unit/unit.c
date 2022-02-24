@@ -3,7 +3,6 @@
 
 static PetscErrorCode TaoLineSearchDestroy_Unit(TaoLineSearch ls)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscFree(ls->data));
   PetscFunctionReturn(0);
@@ -11,7 +10,6 @@ static PetscErrorCode TaoLineSearchDestroy_Unit(TaoLineSearch ls)
 
 static PetscErrorCode TaoLineSearchSetFromOptions_Unit(PetscOptionItems *PetscOptionsObject,TaoLineSearch ls)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"No Unit line search options"));
   CHKERRQ(PetscOptionsTail());
@@ -20,7 +18,6 @@ static PetscErrorCode TaoLineSearchSetFromOptions_Unit(PetscOptionItems *PetscOp
 
 static PetscErrorCode TaoLineSearchView_Unit(TaoLineSearch ls,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isascii;
 
   PetscFunctionBegin;
@@ -33,7 +30,6 @@ static PetscErrorCode TaoLineSearchView_Unit(TaoLineSearch ls,PetscViewer viewer
 
 static PetscErrorCode TaoLineSearchApply_Unit(TaoLineSearch ls,Vec x,PetscReal *f,Vec g,Vec step_direction)
 {
-  PetscErrorCode ierr;
   PetscReal      ftry;
   PetscReal      startf = *f;
 

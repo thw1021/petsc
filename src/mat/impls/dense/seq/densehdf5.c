@@ -19,7 +19,6 @@ PetscErrorCode MatLoad_Dense_HDF5(Mat mat, PetscViewer viewer)
   const char          *mat_name = NULL;
   MPI_Comm            comm;
   PetscMPIInt         rank, size;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer, &format));

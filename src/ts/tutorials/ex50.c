@@ -267,7 +267,6 @@ PetscErrorCode TrueSolution(TS ts, PetscReal t, Vec u,AppCtx *appctx)
 {
   PetscScalar       *s;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i,xs,xn;
 
   CHKERRQ(DMDAVecGetArray(appctx->da,u,&s));
@@ -283,7 +282,6 @@ PetscErrorCode TrueSolution(TS ts, PetscReal t, Vec u,AppCtx *appctx)
 
 PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx          *appctx = (AppCtx*)ctx;
 
   PetscFunctionBegin;
@@ -304,7 +302,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ct
 */
 PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec globalin,Mat A, Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx = (AppCtx*)ctx;
   Vec            Gglobalin;
 
@@ -335,7 +332,6 @@ PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec globalin,Mat A, Mat B,void *ctx
 PetscErrorCode MatMult_Laplacian(Mat A,Vec x,Vec y)
 {
   AppCtx            *appctx;
-  PetscErrorCode    ierr;
   PetscReal         **temp,vv;
   PetscInt          i,j,xs,xn;
   Vec               xlocal,ylocal;
@@ -377,7 +373,6 @@ PetscErrorCode MatMult_Laplacian(Mat A,Vec x,Vec y)
 PetscErrorCode MatMult_Advection(Mat A,Vec x,Vec y)
 {
   AppCtx            *appctx;
-  PetscErrorCode    ierr;
   PetscReal         **temp;
   PetscInt          j,xs,xn;
   Vec               xlocal,ylocal;
@@ -434,7 +429,6 @@ PetscErrorCode RHSMatrixLaplaciangllDM(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void
   PetscReal      **temp;
   PetscReal      vv;
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       i,xs,xn,l,j;
   PetscInt       *rowsDM;
   PetscBool      flg = PETSC_FALSE;
@@ -508,7 +502,6 @@ PetscErrorCode RHSMatrixAdvectiongllDM(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void
 {
   PetscReal      **temp;
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       xs,xn,l,j;
   PetscInt       *rowsDM;
   PetscBool      flg = PETSC_FALSE;

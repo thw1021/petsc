@@ -14,7 +14,6 @@
 */
 PetscErrorCode PipeCreate(MPI_Comm comm,Pipe *pipe)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(pipe));
@@ -29,7 +28,6 @@ PetscErrorCode PipeCreate(MPI_Comm comm,Pipe *pipe)
 */
 PetscErrorCode PipeDestroy(Pipe *pipe)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*pipe) PetscFunctionReturn(0);
@@ -67,7 +65,6 @@ PetscErrorCode PipeSetParameters(Pipe pipe,PetscReal length,PetscReal D,PetscRea
 PetscErrorCode PipeSetUp(Pipe pipe)
 {
   DMDALocalInfo  info;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDACreate1d(PETSC_COMM_SELF, DM_BOUNDARY_GHOSTED, pipe->nnodes, 2, 1, NULL, &pipe->da));
@@ -102,7 +99,6 @@ PetscErrorCode PipeSetUp(Pipe pipe)
 */
 PetscErrorCode PipeCreateJacobian(Pipe pipe,Mat *Jin,Mat *J[])
 {
-  PetscErrorCode ierr;
   Mat            *Jpipe;
   PetscInt       M,rows[2],cols[2],*nz;
   PetscScalar    *aa;
@@ -158,7 +154,6 @@ PetscErrorCode PipeCreateJacobian(Pipe pipe,Mat *Jin,Mat *J[])
 
 PetscErrorCode PipeDestroyJacobian(Pipe pipe)
 {
-  PetscErrorCode ierr;
   Mat            *Jpipe = pipe->jacobian;
   PetscInt       i;
 
@@ -189,7 +184,6 @@ PetscErrorCode PipeDestroyJacobian(Pipe pipe)
 */
 PetscErrorCode JunctionCreateJacobian(DM dm,PetscInt v,Mat *Jin,Mat *J[])
 {
-  PetscErrorCode ierr;
   Mat            *Jv;
   PetscInt       nedges,e,i,M,N,*rows,*cols;
   PetscBool      isSelf;
@@ -263,7 +257,6 @@ PetscErrorCode JunctionCreateJacobian(DM dm,PetscInt v,Mat *Jin,Mat *J[])
 
 PetscErrorCode JunctionDestroyJacobian(DM dm,PetscInt v,Junction junc)
 {
-  PetscErrorCode ierr;
   Mat            *Jv=junc->jacobian;
   const PetscInt *edges;
   PetscInt       nedges,e;

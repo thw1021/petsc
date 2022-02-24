@@ -512,7 +512,6 @@ static PetscErrorCode CreateBCLabel(DM dm, const char name[])
 {
   DM             plex;
   DMLabel        label;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreateLabel(dm, name));
@@ -581,7 +580,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   const DMBoundaryType *periodicity;
   const PetscInt  id = 1;
   PetscInt        bd, dim;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -717,7 +715,6 @@ static PetscErrorCode SetupMaterial(DM dm, DM dmAux, AppCtx *user)
   PetscErrorCode (*matFuncs[1])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx) = {nu_2d};
   void            *ctx[1];
   Vec              nu;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   ctx[0] = user;
@@ -735,7 +732,6 @@ static PetscErrorCode SetupBC(DM dm, DM dmAux, AppCtx *user)
   PetscErrorCode (*bcFuncs[1])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
   Vec            uexact;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -751,7 +747,6 @@ static PetscErrorCode SetupBC(DM dm, DM dmAux, AppCtx *user)
 static PetscErrorCode SetupAuxDM(DM dm, PetscFE feAux, AppCtx *user)
 {
   DM             dmAux, coordDM;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* MUST call DMGetCoordinateDM() in order to get p4est setup if present */
@@ -774,7 +769,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscBool      simplex;
   PetscInt       dim;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));

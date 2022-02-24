@@ -12,10 +12,9 @@ static char help[] = "Demonstrates use of PetscDrawZoom()\n";
 
 PetscErrorCode zoomfunction(PetscDraw draw,void *dummy)
 {
-  int            i;
-  MPI_Comm       comm = PetscObjectComm((PetscObject)draw);
-  PetscMPIInt    size,rank;
-  PetscErrorCode ierr;
+  int         i;
+  MPI_Comm    comm = PetscObjectComm((PetscObject)draw);
+  PetscMPIInt size,rank;
 
   CHKERRMPI(MPI_Comm_size(comm,&size));
   CHKERRMPI(MPI_Comm_rank(comm,&rank));

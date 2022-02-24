@@ -53,7 +53,6 @@ void  PetscStackSAWsTakeAccess(void)
 PetscErrorCode PetscStackViewSAWs(void)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
   if (rank) return 0;

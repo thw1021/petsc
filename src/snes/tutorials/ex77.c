@@ -278,7 +278,6 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* TODO The P1 coordinate space gives wrong results when compared to the affine version. Track this down */
@@ -349,7 +348,6 @@ PetscErrorCode SetupProblem(DM dm, PetscInt dim, AppCtx *user)
   PetscWeakForm  wf;
   DMLabel        label;
   PetscInt       bd;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -374,7 +372,6 @@ PetscErrorCode SetupMaterial(DM dm, DM dmAux, AppCtx *user)
   PetscErrorCode (*matFuncs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar u[], void *ctx) = {elasticityMaterial, wallPressure};
   Vec            A;
   void          *ctxs[2];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ctxs[0] = user; ctxs[1] = user;
@@ -392,7 +389,6 @@ PetscErrorCode SetupNearNullSpace(DM dm, AppCtx *user)
   MatNullSpace   nearNullSpace;
   PetscInt       fields = 0;
   PetscObject    deformation;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreateSubDM(dm, 1, &fields, NULL, &subdm));
@@ -408,7 +404,6 @@ static PetscErrorCode SetupAuxDM(DM dm, PetscInt NfAux, PetscFE feAux[], AppCtx 
 {
   DM             dmAux, coordDM;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* MUST call DMGetCoordinateDM() in order to get p4est setup if present */
@@ -430,7 +425,6 @@ PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscBool       simplex;
   PetscInt        dim;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
