@@ -72,22 +72,21 @@ extern PetscErrorCode MatDuplicate_Pastix(Mat,MatDuplicateOption,Mat*);
  */
 PetscErrorCode MatConvertToCSC(Mat A,PetscBool valOnly,PetscInt *n,PetscInt **colptr,PetscInt **row,PetscScalar **values)
 {
-  Mat_SeqAIJ     *aa      = (Mat_SeqAIJ*)A->data;
-  PetscInt       *rowptr  = aa->i;
-  PetscInt       *col     = aa->j;
-  PetscScalar    *rvalues = aa->a;
-  PetscInt       m        = A->rmap->N;
-  PetscInt       nnz;
-  PetscInt       i,j, k;
-  PetscInt       base = 1;
-  PetscInt       idx;
-  PetscErrorCode ierr;
-  PetscInt       colidx;
-  PetscInt       *colcount;
-  PetscBool      isSBAIJ;
-  PetscBool      isSeqSBAIJ;
-  PetscBool      isMpiSBAIJ;
-  PetscBool      isSym;
+  Mat_SeqAIJ  *aa      = (Mat_SeqAIJ*)A->data;
+  PetscInt    *rowptr  = aa->i;
+  PetscInt    *col     = aa->j;
+  PetscScalar *rvalues = aa->a;
+  PetscInt     m       = A->rmap->N;
+  PetscInt     nnz;
+  PetscInt     i,j, k;
+  PetscInt     base    = 1;
+  PetscInt     idx;
+  PetscInt     colidx;
+  PetscInt    *colcount;
+  PetscBool    isSBAIJ;
+  PetscBool    isSeqSBAIJ;
+  PetscBool    isMpiSBAIJ;
+  PetscBool    isSym;
 
   PetscFunctionBegin;
   CHKERRQ(MatIsSymmetric(A,0.0,&isSym));
@@ -173,8 +172,7 @@ PetscErrorCode MatConvertToCSC(Mat A,PetscBool valOnly,PetscInt *n,PetscInt **co
  */
 PetscErrorCode MatDestroy_Pastix(Mat A)
 {
-  Mat_Pastix     *lu=(Mat_Pastix*)A->data;
-  PetscErrorCode ierr;
+  Mat_Pastix *lu = (Mat_Pastix*)A->data;
 
   PetscFunctionBegin;
   if (lu->CleanUpPastix) {
@@ -217,10 +215,9 @@ PetscErrorCode MatDestroy_Pastix(Mat A)
  */
 PetscErrorCode MatSolve_PaStiX(Mat A,Vec b,Vec x)
 {
-  Mat_Pastix     *lu=(Mat_Pastix*)A->data;
-  PetscScalar    *array;
-  Vec            x_seq;
-  PetscErrorCode ierr;
+  Mat_Pastix  *lu = (Mat_Pastix*)A->data;
+  PetscScalar *array;
+  Vec          x_seq;
 
   PetscFunctionBegin;
   lu->rhsnbr = 1;
@@ -282,7 +279,7 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
 {
   Mat_Pastix     *lu =(Mat_Pastix*)(F)->data;
   Mat            *tseq;
-  PetscErrorCode ierr = 0;
+  PetscErrorCode ierr;
   PetscInt       icntl;
   PetscInt       M=A->rmap->N;
   PetscBool      valOnly,flg, isSym;
@@ -337,7 +334,7 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
     if ((flg && icntl > 0)) {
       lu->iparm[IPARM_THREAD_NBR] = icntl;
     }
-    PetscOptionsEnd();
+    ierr = PetscOptionsEnd();CHKERRQ(ierr);
     valOnly = PETSC_FALSE;
   } else {
     if (isSeqAIJ || isMPIAIJ) {
@@ -453,7 +450,6 @@ PetscErrorCode MatCholeskyFactorSymbolic_SBAIJPASTIX(Mat F,Mat A,IS r,const MatF
 
 PetscErrorCode MatView_PaStiX(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -526,12 +522,11 @@ static PetscErrorCode MatFactorGetSolverType_pastix(Mat A,MatSolverType *type)
 */
 static PetscErrorCode MatGetFactor_seqaij_pastix(Mat A,MatFactorType ftype,Mat *F)
 {
-  Mat            B;
-  PetscErrorCode ierr;
-  Mat_Pastix     *pastix;
+  Mat         B;
+  Mat_Pastix *pastix;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ftype != MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
   /* Create the factorization matrix */
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&B));
   CHKERRQ(MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N));
@@ -566,12 +561,11 @@ static PetscErrorCode MatGetFactor_seqaij_pastix(Mat A,MatFactorType ftype,Mat *
 
 static PetscErrorCode MatGetFactor_mpiaij_pastix(Mat A,MatFactorType ftype,Mat *F)
 {
-  Mat            B;
-  PetscErrorCode ierr;
-  Mat_Pastix     *pastix;
+  Mat         B;
+  Mat_Pastix *pastix;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ftype != MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc AIJ matrices with PaStiX Cholesky, use SBAIJ matrix");
   /* Create the factorization matrix */
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&B));
   CHKERRQ(MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N));
@@ -605,12 +599,11 @@ static PetscErrorCode MatGetFactor_mpiaij_pastix(Mat A,MatFactorType ftype,Mat *
 
 static PetscErrorCode MatGetFactor_seqsbaij_pastix(Mat A,MatFactorType ftype,Mat *F)
 {
-  Mat            B;
-  PetscErrorCode ierr;
-  Mat_Pastix     *pastix;
+  Mat         B;
+  Mat_Pastix *pastix;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ftype != MAT_FACTOR_CHOLESKY,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_CHOLESKY,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
   /* Create the factorization matrix */
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&B));
   CHKERRQ(MatSetSizes(B,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N));
@@ -643,12 +636,11 @@ static PetscErrorCode MatGetFactor_seqsbaij_pastix(Mat A,MatFactorType ftype,Mat
 
 static PetscErrorCode MatGetFactor_mpisbaij_pastix(Mat A,MatFactorType ftype,Mat *F)
 {
-  Mat            B;
-  PetscErrorCode ierr;
-  Mat_Pastix     *pastix;
+  Mat         B;
+  Mat_Pastix *pastix;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ftype != MAT_FACTOR_CHOLESKY,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
+  PetscCheck(ftype == MAT_FACTOR_CHOLESKY,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use PETSc SBAIJ matrices with PaStiX LU, use AIJ matrix");
 
   /* Create the factorization matrix */
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&B));
@@ -681,8 +673,6 @@ static PetscErrorCode MatGetFactor_mpisbaij_pastix(Mat A,MatFactorType ftype,Mat
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Pastix(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERPASTIX,MATMPIAIJ,        MAT_FACTOR_LU,MatGetFactor_mpiaij_pastix));
   CHKERRQ(MatSolverTypeRegister(MATSOLVERPASTIX,MATSEQAIJ,        MAT_FACTOR_LU,MatGetFactor_seqaij_pastix));

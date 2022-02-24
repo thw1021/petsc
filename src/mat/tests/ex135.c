@@ -6,7 +6,6 @@ PetscErrorCode Assemble(MPI_Comm comm,PetscInt n,MatType mtype)
 {
   Mat            A;
   PetscInt       first,last,i;
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
 
   PetscFunctionBegin;

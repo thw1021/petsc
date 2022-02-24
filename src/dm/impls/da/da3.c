@@ -9,7 +9,6 @@
 #include <petscdraw.h>
 static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscBool      iascii,isdraw,isglvis,isbinary;
   DM_DA          *dd = (DM_DA*)da->data;
@@ -55,8 +54,8 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
       DMDALocalInfo info;
       CHKERRQ(DMDAGetLocalInfo(da,&info));
       CHKERRQ(PetscViewerASCIISynchronizedPrintf(viewer,"Processor [%d] M %D N %D P %D m %D n %D p %D w %D s %D\n",rank,dd->M,dd->N,dd->P,dd->m,dd->n,dd->p,dd->w,dd->s));
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"X range of indices: %D %D, Y range of indices: %D %D, Z range of indices: %D %D\n",
-                                                info.xs,info.xs+info.xm,info.ys,info.ys+info.ym,info.zs,info.zs+info.zm);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIISynchronizedPrintf(viewer,"X range of indices: %D %D, Y range of indices: %D %D, Z range of indices: %D %D\n",
+                                                 info.xs,info.xs+info.xm,info.ys,info.ys+info.ym,info.zs,info.zs+info.zm));
 #if !defined(PETSC_USE_COMPLEX)
       if (da->coordinates) {
         PetscInt        last;
@@ -83,6 +82,7 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
     const PetscInt *idx;
     char           node[10];
     PetscBool      isnull;
+    PetscErrorCode ierr;
 
     CHKERRQ(PetscViewerDrawGetDraw(viewer,0,&draw));
     CHKERRQ(PetscDrawIsNull(draw,&isnull));
@@ -92,7 +92,7 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
     CHKERRQ(PetscDrawClear(draw));
     CHKERRQ(PetscDrawSetCoordinates(draw,xmin,ymin,xmax,ymax));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* first processor draw all node lines */
     if (rank == 0) {
       for (k=0; k<dd->P; k++) {
@@ -106,11 +106,11 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
         }
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /*Go through and draw for each plane*/
     for (k=0; k<dd->P; k++) {
       if ((k >= dd->zs) && (k < dd->ze)) {
@@ -142,11 +142,11 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
 
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     for (k=0-dd->s; k<dd->P+dd->s; k++) {
       /* Go through and draw for each plane */
       if ((k >= dd->Zs) && (k < dd->Ze)) {
@@ -177,7 +177,7 @@ static PetscErrorCode DMView_DA_3d(DM da,PetscViewer viewer)
         CHKERRQ(ISLocalToGlobalMappingRestoreBlockIndices(da->ltogmap,&idx));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
     CHKERRQ(PetscDrawSave(draw));
@@ -226,7 +226,6 @@ PetscErrorCode  DMSetUp_DA_3D(DM da)
   VecScatter       gtol;
   IS               to,from;
   PetscBool        twod;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(stencil_type == DMDA_STENCIL_BOX && (bx == DM_BOUNDARY_MIRROR || by == DM_BOUNDARY_MIRROR || bz == DM_BOUNDARY_MIRROR),PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Mirror boundary and box stencil");
@@ -1433,7 +1432,6 @@ PetscErrorCode  DMSetUp_DA_3D(DM da)
 PetscErrorCode  DMDACreate3d(MPI_Comm comm,DMBoundaryType bx,DMBoundaryType by,DMBoundaryType bz,DMDAStencilType stencil_type,PetscInt M,
                PetscInt N,PetscInt P,PetscInt m,PetscInt n,PetscInt p,PetscInt dof,PetscInt s,const PetscInt lx[],const PetscInt ly[],const PetscInt lz[],DM *da)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDACreate(comm, da));

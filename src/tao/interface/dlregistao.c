@@ -12,7 +12,6 @@ static PetscBool TaoPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode TaoFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TaoList));
@@ -34,7 +33,6 @@ PetscErrorCode TaoInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TaoPackageInitialized) PetscFunctionReturn(0);
@@ -82,7 +80,6 @@ PetscErrorCode TaoInitializePackage(void)
 */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsctao(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoInitializePackage());

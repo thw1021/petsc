@@ -117,7 +117,6 @@ int main(int argc, char **argv)
 PetscErrorCode ExactSolution(Vec u,void *c,PetscReal t)
 {
   UserContext     *ctxt = (UserContext*) c;
-  PetscErrorCode  ierr;
   PetscInt        i,is,ie;
   PetscScalar     *uarr;
   PetscReal       x,dx,a=ctxt->a,pi=PETSC_PI;
@@ -147,7 +146,6 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *c
   UserContext    *user = (UserContext*) ctx;
   PetscInt       matis,matie,i;
   PetscReal      dx,dx2;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dx = (user->xmax - user->xmin)/((PetscReal)user->imax); dx2 = dx*dx;

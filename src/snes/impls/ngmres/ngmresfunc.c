@@ -6,7 +6,6 @@ PetscErrorCode SNESNGMRESUpdateSubspace_Private(SNES snes,PetscInt ivec,PetscInt
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
   Vec            *Fdot   = ngmres->Fdot;
   Vec            *Xdot   = ngmres->Xdot;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ivec > l,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE,"Cannot update vector %D with space size %D!",ivec,l);
@@ -26,7 +25,6 @@ PetscErrorCode SNESNGMRESFormCombinedSolution_Private(SNES snes,PetscInt ivec,Pe
   PetscScalar    *beta      = ngmres->beta;
   PetscScalar    *xi        = ngmres->xi;
   PetscScalar    alph_total = 0.;
-  PetscErrorCode ierr;
   PetscReal      nu;
   Vec            Y = snes->work[2];
   PetscBool      changed_y,changed_w;
@@ -104,7 +102,6 @@ PetscErrorCode SNESNGMRESFormCombinedSolution_Private(SNES snes,PetscInt ivec,Pe
 
 PetscErrorCode SNESNGMRESNorms_Private(SNES snes,PetscInt l,Vec X,Vec F,Vec XM,Vec FM,Vec XA,Vec FA,Vec D,PetscReal *dnorm,PetscReal *dminnorm,PetscReal *xMnorm,PetscReal *fMnorm,PetscReal *yMnorm, PetscReal *xAnorm,PetscReal *fAnorm,PetscReal *yAnorm)
 {
-  PetscErrorCode ierr;
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
   PetscReal      dcurnorm,dmin = -1.0;
   Vec            *Xdot = ngmres->Xdot;
@@ -166,7 +163,6 @@ PetscErrorCode SNESNGMRESNorms_Private(SNES snes,PetscInt l,Vec X,Vec F,Vec XM,V
 PetscErrorCode SNESNGMRESSelect_Private(SNES snes,PetscInt k_restart,Vec XM,Vec FM,PetscReal xMnorm,PetscReal fMnorm,PetscReal yMnorm,Vec XA,Vec FA,PetscReal xAnorm,PetscReal fAnorm,PetscReal yAnorm,PetscReal dnorm,PetscReal fminnorm,PetscReal dminnorm,Vec X,Vec F,Vec Y,PetscReal *xnorm,PetscReal *fnorm,PetscReal *ynorm)
 {
   SNES_NGMRES          *ngmres = (SNES_NGMRES*) snes->data;
-  PetscErrorCode       ierr;
   SNESLineSearchReason lssucceed;
   PetscBool            selectA;
 
@@ -238,7 +234,6 @@ PetscErrorCode SNESNGMRESSelect_Private(SNES snes,PetscInt k_restart,Vec XM,Vec 
 PetscErrorCode SNESNGMRESSelectRestart_Private(SNES snes,PetscInt l,PetscReal fMnorm, PetscReal fAnorm,PetscReal dnorm,PetscReal fminnorm,PetscReal dminnorm,PetscBool *selectRestart)
 {
   SNES_NGMRES    *ngmres = (SNES_NGMRES*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *selectRestart = PETSC_FALSE;

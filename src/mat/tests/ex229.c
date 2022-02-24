@@ -7,7 +7,6 @@ static PetscErrorCode myF(void* ctx,Vec x,Vec y)
   const PetscScalar *ax;
   PetscScalar       *ay;
   PetscInt          i,j,m,n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(x,&ax));

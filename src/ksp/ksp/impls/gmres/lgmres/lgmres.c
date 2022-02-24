@@ -10,7 +10,6 @@ static PetscErrorCode    KSPLGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 
 PetscErrorCode  KSPLGMRESSetAugDim(KSP ksp, PetscInt dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod((ksp),"KSPLGMRESSetAugDim_C",(KSP,PetscInt),(ksp,dim)));
@@ -19,7 +18,6 @@ PetscErrorCode  KSPLGMRESSetAugDim(KSP ksp, PetscInt dim)
 
 PetscErrorCode  KSPLGMRESSetConstant(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod((ksp),"KSPLGMRESSetConstant_C",(KSP),(ksp)));
@@ -35,7 +33,6 @@ PetscErrorCode  KSPLGMRESSetConstant(KSP ksp)
 */
 PetscErrorCode    KSPSetUp_LGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       max_k,k, aug_dim;
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
 
@@ -95,7 +92,6 @@ PetscErrorCode KSPLGMRESCycle(PetscInt *itcount,KSP ksp)
   PetscReal      hapbnd, tt;
   PetscScalar    tmp;
   PetscBool      hapend = PETSC_FALSE;  /* indicates happy breakdown ending */
-  PetscErrorCode ierr;
   PetscInt       loc_it;                /* local count of # of dir. in Krylov space */
   PetscInt       max_k  = lgmres->max_k; /* max approx space size */
   PetscInt       max_it = ksp->max_it;  /* max # of overall iterations for the method */
@@ -324,7 +320,6 @@ PetscErrorCode KSPLGMRESCycle(PetscInt *itcount,KSP ksp)
 
 PetscErrorCode KSPSolve_LGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       cycle_its; /* iterations done in a call to KSPLGMRESCycle */
   PetscInt       itcount;   /* running total of iterations, incl. those in restarts */
   KSP_LGMRES     *lgmres    = (KSP_LGMRES*)ksp->data;
@@ -371,7 +366,6 @@ PetscErrorCode KSPSolve_LGMRES(KSP ksp)
 PetscErrorCode KSPDestroy_LGMRES(KSP ksp)
 {
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(lgmres->augvecs));
@@ -401,7 +395,6 @@ PetscErrorCode KSPDestroy_LGMRES(KSP ksp)
 static PetscErrorCode KSPLGMRESBuildSoln(PetscScalar *nrs,Vec vguess,Vec vdest,KSP ksp,PetscInt it)
 {
   PetscScalar    tt;
-  PetscErrorCode ierr;
   PetscInt       ii,k,j;
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)(ksp->data);
   /*LGMRES_MOD */
@@ -579,7 +572,6 @@ static PetscErrorCode KSPLGMRESGetNewVectors(KSP ksp,PetscInt it)
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
   PetscInt       nwork   = lgmres->nwork_alloc; /* number of work vector chunks allocated */
   PetscInt       nalloc;                      /* number to allocate */
-  PetscErrorCode ierr;
   PetscInt       k;
 
   PetscFunctionBegin;
@@ -630,7 +622,6 @@ static PetscErrorCode KSPLGMRESGetNewVectors(KSP ksp,PetscInt it)
 PetscErrorCode KSPBuildSolution_LGMRES(KSP ksp,Vec ptr,Vec *result)
 {
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ptr) {
@@ -654,7 +645,6 @@ PetscErrorCode KSPBuildSolution_LGMRES(KSP ksp,Vec ptr,Vec *result)
 PetscErrorCode KSPView_LGMRES(KSP ksp,PetscViewer viewer)
 {
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -673,7 +663,6 @@ PetscErrorCode KSPView_LGMRES(KSP ksp,PetscViewer viewer)
 
 PetscErrorCode KSPSetFromOptions_LGMRES(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       aug;
   KSP_LGMRES     *lgmres = (KSP_LGMRES*) ksp->data;
   PetscBool      flg     = PETSC_FALSE;
@@ -756,7 +745,6 @@ M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_LGMRES(KSP ksp)
 {
   KSP_LGMRES     *lgmres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&lgmres));

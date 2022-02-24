@@ -6,7 +6,6 @@
 PetscErrorCode PFReadMatPowerData(PFDATA *pf,char *filename)
 {
   FILE           *fp;
-  PetscErrorCode ierr;
   VERTEX_Power   Bus;
   LOAD           Load;
   GEN            Gen;

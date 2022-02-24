@@ -11,7 +11,6 @@ static PetscBool CharacteristicPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode CharacteristicFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&CharacteristicList));
@@ -33,7 +32,6 @@ PetscErrorCode CharacteristicInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (CharacteristicPackageInitialized) PetscFunctionReturn(0);
@@ -80,7 +78,6 @@ PetscErrorCode CharacteristicInitializePackage(void)
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsccharacteristic(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(CharacteristicInitializePackage());

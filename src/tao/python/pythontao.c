@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode TaoPythonSetType(Tao tao, const char pyname[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);

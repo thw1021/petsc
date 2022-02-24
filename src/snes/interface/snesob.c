@@ -39,7 +39,6 @@ M*/
 @*/
 PetscErrorCode  SNESSetObjective(SNES snes,PetscErrorCode (*obj)(SNES,Vec,PetscReal*,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -67,7 +66,6 @@ PetscErrorCode  SNESSetObjective(SNES snes,PetscErrorCode (*obj)(SNES,Vec,PetscR
 @*/
 PetscErrorCode SNESGetObjective(SNES snes,PetscErrorCode (**obj)(SNES,Vec,PetscReal*,void*),void **ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -95,7 +93,6 @@ PetscErrorCode SNESGetObjective(SNES snes,PetscErrorCode (**obj)(SNES,Vec,PetscR
 @*/
 PetscErrorCode SNESComputeObjective(SNES snes,Vec X,PetscReal *ob)
 {
-  PetscErrorCode ierr;
   DM             dm;
   DMSNES         sdm;
 

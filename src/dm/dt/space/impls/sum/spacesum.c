@@ -14,7 +14,6 @@ Level: intermediate
 @*/
 PetscErrorCode PetscSpaceSumGetNumSubspaces(PetscSpace sp,PetscInt *numSumSpaces)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -36,7 +35,6 @@ Level: intermediate
 @*/
 PetscErrorCode PetscSpaceSumSetNumSubspaces(PetscSpace sp,PetscInt numSumSpaces)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -61,7 +59,6 @@ Level: intermediate
 @*/
 PetscErrorCode PetscSpaceSumGetConcatenate(PetscSpace sp,PetscBool *concatenate)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -83,7 +80,6 @@ Level: intermediate
 @*/
 PetscErrorCode PetscSpaceSumSetConcatenate(PetscSpace sp,PetscBool concatenate)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -107,7 +103,6 @@ Level: intermediate
 @*/
 PetscErrorCode PetscSpaceSumGetSubspace(PetscSpace sp,PetscInt s,PetscSpace *subsp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -130,7 +125,6 @@ Level: intermediate
 @*/
 PetscErrorCode PetscSpaceSumSetSubspace(PetscSpace sp,PetscInt s,PetscSpace subsp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -152,7 +146,6 @@ static PetscErrorCode PetscSpaceSumSetNumSubspaces_Sum(PetscSpace space,PetscInt
 {
   PetscSpace_Sum *sum = (PetscSpace_Sum*)space->data;
   PetscInt       Ns   = sum->numSumSpaces;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(sum->setupCalled,PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change number of subspaces after setup called");
@@ -207,7 +200,6 @@ static PetscErrorCode PetscSpaceSumSetSubspace_Sum(PetscSpace space,PetscInt s,P
 {
   PetscSpace_Sum *sum = (PetscSpace_Sum*)space->data;
   PetscInt       Ns   = sum->numSumSpaces;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(sum->setupCalled,PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change subspace after setup called");
@@ -278,7 +270,6 @@ static PetscErrorCode PetscSpaceSetUp_Sum(PetscSpace sp)
   PetscBool      uniform;
   PetscInt       Nv,Ns,Nc,i,sum_Nc = 0,deg = PETSC_MAX_INT,maxDeg = PETSC_MIN_INT;
   PetscInt       minNc,maxNc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (sum->setupCalled) PetscFunctionReturn(0);
@@ -349,7 +340,6 @@ static PetscErrorCode PetscSpaceSumView_Ascii(PetscSpace sp,PetscViewer v)
   PetscSpace_Sum *sum = (PetscSpace_Sum*)sp->data;
   PetscBool      concatenate = sum->concatenate;
   PetscInt       i,Ns         = sum->numSumSpaces;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (concatenate) {
@@ -368,7 +358,6 @@ static PetscErrorCode PetscSpaceSumView_Ascii(PetscSpace sp,PetscViewer v)
 static PetscErrorCode PetscSpaceView_Sum(PetscSpace sp,PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -382,7 +371,6 @@ static PetscErrorCode PetscSpaceDestroy_Sum(PetscSpace sp)
 {
   PetscSpace_Sum *sum = (PetscSpace_Sum*)sp->data;
   PetscInt       i,Ns   = sum->numSumSpaces;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<Ns; ++i) {
@@ -411,7 +399,6 @@ static PetscErrorCode PetscSpaceGetDimension_Sum(PetscSpace sp,PetscInt *dim)
 {
   PetscSpace_Sum *sum = (PetscSpace_Sum*)sp->data;
   PetscInt       i,d = 0,Ns = sum->numSumSpaces;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!sum->setupCalled) {
@@ -439,7 +426,6 @@ static PetscErrorCode PetscSpaceEvaluate_Sum(PetscSpace sp,PetscInt npoints,cons
   PetscInt       Nc = sp->Nc,Nv = sp->Nv,Ns = sum->numSumSpaces;
   PetscInt       i,s,offset,ncoffset,pdimfull,numelB,numelD,numelH;
   PetscReal      *sB = NULL,*sD = NULL,*sH = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!sum->setupCalled) {
@@ -538,7 +524,6 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Sum(PetscSpace sp, PetscInt he
   PetscSpace_Sum  *sum = (PetscSpace_Sum *) sp->data;
   PetscInt         Nc, dim, order;
   PetscBool        tensor;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceGetNumComponents(sp, &Nc));
@@ -578,7 +563,6 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Sum(PetscSpace sp, PetscInt he
 
 static PetscErrorCode PetscSpaceInitialize_Sum(PetscSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   sp->ops->setfromoptions    = PetscSpaceSetFromOptions_Sum;
@@ -611,7 +595,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Sum(PetscSpace sp)
 {
   PetscSpace_Sum *sum;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCSPACE_CLASSID,1);
@@ -625,7 +608,6 @@ PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Sum(PetscSpace sp)
 PETSC_EXTERN PetscErrorCode PetscSpaceCreateSum(PetscInt numSubspaces,const PetscSpace subspaces[],PetscBool concatenate,PetscSpace *sumSpace)
 {
   PetscInt       i,Nv,Nc = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (sumSpace) {

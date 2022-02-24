@@ -5,7 +5,6 @@ static char help[] = "Tests the different MatColoring implementatons and ISColor
 
 PetscErrorCode FormJacobian(Mat A)
 {
-  PetscErrorCode ierr;
   PetscInt       M,ownbegin,ownend,i,j;
   PetscScalar    dummy=0.0;
 

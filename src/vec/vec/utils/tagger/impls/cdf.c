@@ -46,7 +46,6 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF_Serial(VecTagger tagger,Vec vec,
 #if defined (PETSC_USE_COMPLEX)
   PetscReal        *cReal, *cImag;
 #endif
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetLocalSize(vec,&n));
@@ -108,7 +107,6 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF_Gather(VecTagger tagger,Vec vec,
   Vec            gVec = NULL;
   VecScatter     vScat;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecScatterCreateToZero(vec,&vScat,&gVec));
@@ -166,7 +164,6 @@ static PetscErrorCode VecTaggerComputeBox_CDF_SortedArray_Iterative(VecTagger ta
   PetscInt       offsets[2];
   PetscReal      intervalLen = cdfBox->max - cdfBox->min;
   PetscReal      rtol, atol;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   comm  = PetscObjectComm((PetscObject)tagger);
@@ -295,7 +292,6 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF_Iterative(VecTagger tagger,Vec v
   MPI_Comm         comm;
   MPI_Datatype     statType;
   MPI_Op           statReduce;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)vec);
@@ -368,7 +364,6 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF(VecTagger tagger,Vec vec,PetscIn
   PetscMPIInt    size;
   PetscInt       bs;
   VecTaggerBox   *bxs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerGetBlockSize(tagger,&bs));
@@ -400,7 +395,6 @@ static PetscErrorCode VecTaggerView_CDF(VecTagger tagger,PetscViewer viewer)
   VecTagger_CDF  *cuml = (VecTagger_CDF *) tagger->data;
   PetscBool      iascii;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerView_Simple(tagger,viewer));
@@ -422,7 +416,6 @@ static PetscErrorCode VecTaggerSetFromOptions_CDF(PetscOptionItems *PetscOptions
   VecTagger_CDF *cuml = (VecTagger_CDF *) tagger->data;
   PetscInt       method;
   PetscBool      set;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerSetFromOptions_Simple(PetscOptionsObject,tagger));
@@ -560,7 +553,6 @@ PetscErrorCode VecTaggerCDFIterativeGetTolerances(VecTagger tagger, PetscInt *ma
 @*/
 PetscErrorCode VecTaggerCDFSetBox(VecTagger tagger,VecTaggerBox *box)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerSetBox_Simple(tagger,box));
@@ -584,7 +576,6 @@ PetscErrorCode VecTaggerCDFSetBox(VecTagger tagger,VecTaggerBox *box)
 @*/
 PetscErrorCode VecTaggerCDFGetBox(VecTagger tagger,const VecTaggerBox **box)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerGetBox_Simple(tagger,box));
@@ -594,7 +585,6 @@ PetscErrorCode VecTaggerCDFGetBox(VecTagger tagger,const VecTaggerBox **box)
 PETSC_INTERN PetscErrorCode VecTaggerCreate_CDF(VecTagger tagger)
 {
   VecTagger_CDF  *cuml;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerCreate_Simple(tagger));

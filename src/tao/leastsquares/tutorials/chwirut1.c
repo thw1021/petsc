@@ -120,7 +120,6 @@ PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
   PetscInt       i;
   const PetscReal *x;
   PetscReal      *y=user->y,*f,*t=user->t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(X,&x));
@@ -144,7 +143,6 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
   const PetscReal *x;
   PetscReal      *t=user->t;
   PetscReal      base;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(X,&x));
@@ -170,7 +168,6 @@ PetscErrorCode EvaluateJacobian(Tao tao, Vec X, Mat J, Mat Jpre, void *ptr)
 PetscErrorCode FormStartingPoint(Vec X)
 {
   PetscReal      *x;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(X,&x));

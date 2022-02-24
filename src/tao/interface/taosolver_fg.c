@@ -14,7 +14,6 @@
 @*/
 PetscErrorCode TaoSetSolution(Tao tao, Vec x0)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -60,7 +59,7 @@ PetscErrorCode TaoTestGradient(Tao tao,Vec x,Vec g1)
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    of hand-coded and finite difference gradient entries greater than <threshold>.\n"));
   }
   if (!directionsprinted) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Gradient, if (for double precision runs) ||G - Gfd||/||G|| is\n");CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Gradient, if (for double precision runs) ||G - Gfd||/||G|| is\n"));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    O(1.e-8), the hand-coded Gradient is probably correct.\n"));
     directionsprinted = PETSC_TRUE;
   }
@@ -132,7 +131,6 @@ PetscErrorCode TaoTestGradient(Tao tao,Vec x,Vec g1)
 @*/
 PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
 {
-  PetscErrorCode ierr;
   PetscReal      dummy;
 
   PetscFunctionBegin;
@@ -185,7 +183,6 @@ PetscErrorCode TaoComputeGradient(Tao tao, Vec X, Vec G)
 @*/
 PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
 {
-  PetscErrorCode ierr;
   Vec            temp;
 
   PetscFunctionBegin;
@@ -239,7 +236,6 @@ PetscErrorCode TaoComputeObjective(Tao tao, Vec X, PetscReal *f)
 @*/
 PetscErrorCode TaoComputeObjectiveAndGradient(Tao tao, Vec X, PetscReal *f, Vec G)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -368,7 +364,6 @@ $      func (Tao tao, Vec x, Vec f, void *ctx);
 @*/
 PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Tao, Vec, Vec, void*),void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -405,7 +400,6 @@ PetscErrorCode TaoSetResidualRoutine(Tao tao, Vec res, PetscErrorCode (*func)(Ta
 @*/
 PetscErrorCode TaoSetResidualWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt *rows, PetscInt *cols, PetscReal *vals)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -457,7 +451,6 @@ PetscErrorCode TaoSetResidualWeights(Tao tao, Vec sigma_v, PetscInt n, PetscInt 
 @*/
 PetscErrorCode TaoComputeResidual(Tao tao, Vec X, Vec F)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -502,7 +495,6 @@ $      func (Tao tao, Vec x, Vec g, void *ctx);
 @*/
 PetscErrorCode TaoSetGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao, Vec, Vec, void*),void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -578,7 +570,6 @@ $      func (Tao tao, Vec x, PetscReal *f, Vec g, void *ctx);
 @*/
 PetscErrorCode TaoSetObjectiveAndGradient(Tao tao, Vec g, PetscErrorCode (*func)(Tao, Vec, PetscReal*, Vec, void*), void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);

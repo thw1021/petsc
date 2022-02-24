@@ -16,7 +16,6 @@ typedef struct {
 */
 PetscErrorCode AOView_Basic(AO ao,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       i;
   AO_Basic       *aobasic = (AO_Basic*)ao->data;
@@ -41,7 +40,6 @@ PetscErrorCode AOView_Basic(AO ao,PetscViewer viewer)
 PetscErrorCode AODestroy_Basic(AO ao)
 {
   AO_Basic       *aobasic = (AO_Basic*)ao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree2(aobasic->app,aobasic->petsc));
@@ -96,7 +94,6 @@ PetscErrorCode AOPetscToApplicationPermuteInt_Basic(AO ao, PetscInt block, Petsc
   AO_Basic       *aobasic = (AO_Basic*) ao->data;
   PetscInt       *temp;
   PetscInt       i, j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(ao->N*block, &temp));
@@ -113,7 +110,6 @@ PetscErrorCode AOApplicationToPetscPermuteInt_Basic(AO ao, PetscInt block, Petsc
   AO_Basic       *aobasic = (AO_Basic*) ao->data;
   PetscInt       *temp;
   PetscInt       i, j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(ao->N*block, &temp));
@@ -130,7 +126,6 @@ PetscErrorCode AOPetscToApplicationPermuteReal_Basic(AO ao, PetscInt block, Pets
   AO_Basic       *aobasic = (AO_Basic*) ao->data;
   PetscReal      *temp;
   PetscInt       i, j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(ao->N*block, &temp));
@@ -147,7 +142,6 @@ PetscErrorCode AOApplicationToPetscPermuteReal_Basic(AO ao, PetscInt block, Pets
   AO_Basic       *aobasic = (AO_Basic*) ao->data;
   PetscReal      *temp;
   PetscInt       i, j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(ao->N*block, &temp));
@@ -175,7 +169,6 @@ PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
   AO_Basic       *aobasic;
   PetscMPIInt    size,rank,count,*lens,*disp;
   PetscInt       napp,*allpetsc,*allapp,ip,ia,N,i,*petsc=NULL,start;
-  PetscErrorCode ierr;
   IS             isapp=ao->isapp,ispetsc=ao->ispetsc;
   MPI_Comm       comm;
   const PetscInt *myapp,*mypetsc=NULL;
@@ -301,7 +294,6 @@ PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
 @*/
 PetscErrorCode  AOCreateBasic(MPI_Comm comm,PetscInt napp,const PetscInt myapp[],const PetscInt mypetsc[],AO *aoout)
 {
-  PetscErrorCode ierr;
   IS             isapp,ispetsc;
   const PetscInt *app=myapp,*petsc=mypetsc;
 
@@ -343,7 +335,6 @@ PetscErrorCode  AOCreateBasic(MPI_Comm comm,PetscInt napp,const PetscInt myapp[]
 @*/
 PetscErrorCode AOCreateBasicIS(IS isapp,IS ispetsc,AO *aoout)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   AO             ao;
 

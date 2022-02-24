@@ -223,11 +223,11 @@ static void f_n(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
 static PetscErrorCode PostStep(TS ts)
 {
-  PetscErrorCode    ierr;
-  DM                dm;
-  AppCtx            *ctx;
-  PetscInt          stepi,num;
-  Vec               X;
+  DM        dm;
+  AppCtx   *ctx;
+  PetscInt  stepi,num;
+  Vec       X;
+
   PetscFunctionBegin;
   CHKERRQ(TSGetApplicationContext(ts, &ctx));
   if (ctx->debug<1) PetscFunctionReturn(0);
@@ -249,14 +249,13 @@ static PetscErrorCode PostStep(TS ts)
     CHKERRQ(DMPlexComputeIntegralFEM(plex,X,tt,ctx));
     den = tt[0];
     CHKERRQ(DMDestroy(&plex));
-    PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den));CHKERRQ(ierr);
+    CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
   }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -335,7 +334,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   PetscDS        ds;
   DMLabel        label;
   const PetscInt id = 1;
-  PetscErrorCode ierr, f;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetLabel(dm, "marker", &label));
@@ -350,7 +348,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   ctx->initialFuncs[2] = initialSolution_psi;
   ctx->initialFuncs[3] = initialSolution_phi;
   ctx->initialFuncs[4] = initialSolution_jz;
-  for (f = 0; f < 5; ++f) {
+  for (PetscInt f = 0; f < 5; ++f) {
     CHKERRQ(PetscDSSetImplicit(ds, f, ctx->implicit));
     CHKERRQ(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, f, 0, NULL, (void (*)(void)) ctx->initialFuncs[f], NULL, ctx, NULL));
   }
@@ -362,7 +360,6 @@ static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
 {
   PetscErrorCode (*eqFuncs[3])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *) = {log_n_0, Omega_0, psi_0};
   Vec            eq;
-  PetscErrorCode ierr;
   AppCtx *ctxarr[3];
 
   ctxarr[0] = ctxarr[1] = ctxarr[2] = ctx; /* each variable could have a different context */
@@ -414,7 +411,6 @@ static PetscErrorCode SetupAuxDM(DM dm, PetscInt NfAux, PetscFE feAux[], AppCtx 
 {
   DM             dmAux, coordDM;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* MUST call DMGetCoordinateDM() in order to get p4est setup if present */
@@ -436,7 +432,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *ctx)
   PetscInt        dim, Nf = 5, NfAux = 3, f;
   PetscBool       simplex;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   /* Create finite element */

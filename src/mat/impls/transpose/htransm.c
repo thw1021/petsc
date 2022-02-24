@@ -8,7 +8,6 @@ typedef struct {
 PetscErrorCode MatMult_HT(Mat N,Vec x,Vec y)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultHermitianTranspose(Na->A,x,y));
@@ -18,7 +17,6 @@ PetscErrorCode MatMult_HT(Mat N,Vec x,Vec y)
 PetscErrorCode MatMultAdd_HT(Mat N,Vec v1,Vec v2,Vec v3)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultHermitianTransposeAdd(Na->A,v1,v2,v3));
@@ -28,7 +26,6 @@ PetscErrorCode MatMultAdd_HT(Mat N,Vec v1,Vec v2,Vec v3)
 PetscErrorCode MatMultHermitianTranspose_HT(Mat N,Vec x,Vec y)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(Na->A,x,y));
@@ -38,7 +35,6 @@ PetscErrorCode MatMultHermitianTranspose_HT(Mat N,Vec x,Vec y)
 PetscErrorCode MatMultHermitianTransposeAdd_HT(Mat N,Vec v1,Vec v2,Vec v3)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultAdd(Na->A,v1,v2,v3));
@@ -48,7 +44,6 @@ PetscErrorCode MatMultHermitianTransposeAdd_HT(Mat N,Vec v1,Vec v2,Vec v3)
 PetscErrorCode MatDestroy_HT(Mat N)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&Na->A));
@@ -64,7 +59,6 @@ PetscErrorCode MatDestroy_HT(Mat N)
 PetscErrorCode MatDuplicate_HT(Mat N, MatDuplicateOption op, Mat* m)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (op == MAT_COPY_VALUES) {
@@ -79,7 +73,6 @@ PetscErrorCode MatDuplicate_HT(Mat N, MatDuplicateOption op, Mat* m)
 PetscErrorCode MatCreateVecs_HT(Mat N,Vec *r, Vec *l)
 {
   Mat_HT         *Na = (Mat_HT*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreateVecs(Na->A,l,r));
@@ -92,7 +85,6 @@ PetscErrorCode MatAXPY_HT(Mat Y,PetscScalar a,Mat X,MatStructure str)
   Mat_HT         *Xa = (Mat_HT*)X->data;
   Mat              M = Ya->A;
   Mat              N = Xa->A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAXPY(M,a,N,str));
@@ -126,7 +118,6 @@ PetscErrorCode MatHermitianTransposeGetMat_HT(Mat N,Mat *M)
 @*/
 PetscErrorCode MatHermitianTransposeGetMat(Mat A,Mat *M)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -141,7 +132,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_Transpose(Mat);
 PetscErrorCode MatGetDiagonal_HT(Mat A,Vec v)
 {
   Mat_HT         *Na = (Mat_HT*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetDiagonal(Na->A,v));
@@ -152,7 +142,6 @@ PetscErrorCode MatGetDiagonal_HT(Mat A,Vec v)
 PetscErrorCode MatConvert_HT(Mat A,MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat_HT         *Na = (Mat_HT*)A->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -196,7 +185,6 @@ PetscErrorCode MatConvert_HT(Mat A,MatType newtype,MatReuse reuse,Mat *newmat)
 @*/
 PetscErrorCode  MatCreateHermitianTranspose(Mat A,Mat *N)
 {
-  PetscErrorCode ierr;
   PetscInt       m,n;
   Mat_HT         *Na;
   VecType        vtype;

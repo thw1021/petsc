@@ -11,7 +11,6 @@ PetscErrorCode RunTest(void)
   Vec            b,x,r;
   KSP            ksp;
   PC             pc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

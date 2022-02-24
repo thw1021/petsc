@@ -88,7 +88,6 @@ static PetscErrorCode glvis_extract_eta(PetscObject oV,PetscInt nf, PetscObject 
   PetscInt               sex,sey,mx,my;
   PetscInt               ei,ej,p,cum;
   PetscScalar            *array;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetDM(Vf[0],&stokes_da));
@@ -222,7 +221,6 @@ static PetscErrorCode DMDAGetElementEqnums_up(MatStencil s_u[],MatStencil s_p[],
 
 static PetscErrorCode DMDAGetElementOwnershipRanges2d(DM da,PetscInt **_lx,PetscInt **_ly)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       proc_I,proc_J;
   PetscInt       cpu_x,cpu_y;
@@ -293,7 +291,6 @@ static PetscErrorCode DMDACoordViewGnuplot2d(DM da,const char prefix[])
   FILE           *fp;
   char           fname[PETSC_MAX_PATH_LEN];
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -333,7 +330,6 @@ static PetscErrorCode DMDAViewGnuplot2d(DM da,Vec fields,const char comment[],co
   PetscInt       si,sj,nx,ny,i,j;
   PetscInt       n_dofs,d;
   PetscScalar    *_fields;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -396,7 +392,6 @@ static PetscErrorCode DMDAViewCoefficientsGnuplot2d(DM da,Vec fields,const char 
   PetscInt               si,sj,nx,ny,i,j,p;
   PetscInt               n_dofs,d;
   GaussPointCoefficients **_coefficients;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -697,7 +692,6 @@ static PetscErrorCode AssembleA_Stokes(Mat A,DM stokes_da,DM properties_da,Vec p
   Vec                    local_properties;
   GaussPointCoefficients **props;
   PetscScalar            *prop_eta;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   /* setup for coords */
@@ -768,7 +762,6 @@ static PetscErrorCode AssembleA_PCStokes(Mat A,DM stokes_da,DM properties_da,Vec
   Vec                    local_properties;
   GaussPointCoefficients **props;
   PetscScalar            *prop_eta;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   /* setup for coords */
@@ -850,7 +843,6 @@ static PetscErrorCode AssembleF_Stokes(Vec F,DM stokes_da,DM properties_da,Vec p
   PetscScalar            *prop_fx,*prop_fy;
   Vec                    local_F;
   StokesDOF              **ff;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   /* setup for coords */
@@ -914,7 +906,6 @@ static PetscErrorCode DMDACreateSolCx(PetscReal eta0,PetscReal eta1,PetscReal xc
   Vec            coords;
   DMDACoor2d     **_coords;
   PetscInt       si,sj,ei,ej,i,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,mx+1,my+1,PETSC_DECIDE,PETSC_DECIDE,3,1,NULL,NULL,&da));
@@ -988,7 +979,6 @@ static PetscErrorCode DMDAIntegrateErrors(DM stokes_da,Vec X,Vec X_analytic)
   PetscScalar    h,p_e_L2,u_e_L2,u_e_H1,p_L2,u_L2,u_H1,tp_L2,tu_L2,tu_H1;
   PetscInt       M;
   PetscReal      xymin[2],xymax[2];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* define quadrature rule */
@@ -1097,7 +1087,6 @@ static PetscErrorCode solve_stokes_2d_coupled(PetscInt mx,PetscInt my)
   PetscInt               cpu_x,cpu_y,*lx = NULL,*ly = NULL;
   PetscBool              use_gp_coords = PETSC_FALSE,set,output_gnuplot = PETSC_FALSE,glvis = PETSC_FALSE,change = PETSC_FALSE;
   char                   filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
 
@@ -1627,7 +1616,6 @@ static PetscErrorCode BCApplyZero_EAST(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1688,7 +1676,6 @@ static PetscErrorCode BCApplyZero_WEST(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1750,7 +1737,6 @@ static PetscErrorCode BCApplyZero_NORTH(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1811,7 +1797,6 @@ static PetscErrorCode BCApplyZero_SOUTH(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1863,7 +1848,6 @@ static PetscErrorCode BCApplyZero_SOUTH(DM da,PetscInt d_idx,Mat A,Vec b)
 /* Impose free slip boundary conditions; u_{i} n_{i} = 0, tau_{ij} t_j = 0 */
 static PetscErrorCode DMDABCApplyFreeSlip(DM da_Stokes,Mat A,Vec f)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(BCApplyZero_NORTH(da_Stokes,1,A,f));

@@ -5,7 +5,6 @@ static char help[] = "Demonstrates PETSc error handlers.\n";
 
 int CreateError(int n)
 {
-  PetscErrorCode ierr;
   PetscCheckFalse(!n,PETSC_COMM_SELF,PETSC_ERR_USER,"Error Created");
   CHKERRQ(CreateError(n-1));
   return 0;

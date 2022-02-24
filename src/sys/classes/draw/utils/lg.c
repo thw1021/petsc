@@ -21,7 +21,6 @@
 @*/
 PetscErrorCode  PetscDrawLGAddCommonPoint(PetscDrawLG lg,const PetscReal x,const PetscReal *y)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -71,7 +70,6 @@ PetscErrorCode  PetscDrawLGAddCommonPoint(PetscDrawLG lg,const PetscReal x,const
 @*/
 PetscErrorCode  PetscDrawLGAddPoint(PetscDrawLG lg,const PetscReal *x,const PetscReal *y)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscReal      xx;
 
@@ -128,7 +126,6 @@ PetscErrorCode  PetscDrawLGAddPoint(PetscDrawLG lg,const PetscReal *x,const Pets
 @*/
 PetscErrorCode  PetscDrawLGAddPoints(PetscDrawLG lg,PetscInt n,PetscReal **xx,PetscReal **yy)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscReal      *x,*y;
 

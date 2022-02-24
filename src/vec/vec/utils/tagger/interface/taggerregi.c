@@ -19,7 +19,6 @@ PetscFunctionList VecTaggerList;
 @*/
 PetscErrorCode  VecTaggerRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (VecTaggerRegisterAllCalled) PetscFunctionReturn(0);
@@ -60,7 +59,6 @@ $     -snes_type my_solver
 @*/
 PetscErrorCode  VecTaggerRegister(const char sname[],PetscErrorCode (*function)(VecTagger))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&VecTaggerList,sname,function));

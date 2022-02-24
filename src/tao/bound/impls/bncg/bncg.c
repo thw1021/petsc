@@ -60,7 +60,6 @@ PetscErrorCode TaoBNCGEstimateActiveSet(Tao tao, PetscInt asType)
 
 PetscErrorCode TaoBNCGBoundStep(Tao tao, PetscInt asType, Vec step)
 {
-  PetscErrorCode               ierr;
   TAO_BNCG                     *cg = (TAO_BNCG *)tao->data;
 
   PetscFunctionBegin;
@@ -82,7 +81,6 @@ PetscErrorCode TaoBNCGBoundStep(Tao tao, PetscInt asType, Vec step)
 static PetscErrorCode TaoSolve_BNCG(Tao tao)
 {
   TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode               ierr;
   PetscReal                    step=1.0,gnorm,gnorm2, resnorm;
   PetscInt                     nDiff;
 
@@ -145,7 +143,6 @@ static PetscErrorCode TaoSolve_BNCG(Tao tao)
 static PetscErrorCode TaoSetUp_BNCG(Tao tao)
 {
   TAO_BNCG         *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->gradient) {
@@ -193,7 +190,6 @@ static PetscErrorCode TaoSetUp_BNCG(Tao tao)
 static PetscErrorCode TaoDestroy_BNCG(Tao tao)
 {
   TAO_BNCG       *cg = (TAO_BNCG*) tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -227,7 +223,6 @@ static PetscErrorCode TaoDestroy_BNCG(Tao tao)
 static PetscErrorCode TaoSetFromOptions_BNCG(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_BNCG       *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Nonlinear Conjugate Gradient method for unconstrained optimization"));
@@ -281,7 +276,6 @@ static PetscErrorCode TaoView_BNCG(Tao tao, PetscViewer viewer)
 {
   PetscBool      isascii;
   TAO_BNCG       *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
@@ -384,7 +378,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BNCG(Tao tao)
 {
   TAO_BNCG       *cg;
   const char     *morethuente_type = TAOLINESEARCHMT;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetUp_BNCG;
@@ -446,7 +439,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BNCG(Tao tao)
 PetscErrorCode TaoBNCGResetUpdate(Tao tao, PetscReal gnormsq)
 {
    TAO_BNCG          *cg = (TAO_BNCG*)tao->data;
-   PetscErrorCode    ierr;
    PetscReal         scaling;
 
    PetscFunctionBegin;
@@ -491,7 +483,6 @@ PetscErrorCode TaoBNCGCheckDynamicRestart(Tao tao, PetscReal stepsize, PetscReal
 PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2, PetscReal step, PetscReal fold, PetscReal gnorm2_old, PetscReal dnorm, PetscBool pcgd_fallback)
 {
   TAO_BNCG          *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode    ierr;
   PetscReal         gamma = 1.0, tau_k, beta;
   PetscReal         tmp = 1.0, ynorm, ynorm2 = 1.0, snorm = 1.0, dk_yk=1.0, gd;
   PetscReal         gkp1_yk, gd_old, tau_bfgs, tau_dfp, gkp1D_yk, gtDg;
@@ -938,7 +929,6 @@ PETSC_INTERN PetscErrorCode TaoBNCGStepDirectionUpdate(Tao tao, PetscReal gnorm2
 PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
 {
   TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode               ierr;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscReal                    step=1.0,gnorm2,gd,dnorm=0.0;
   PetscReal                    gnorm2_old,f_old,resnorm, gnorm_old;
@@ -1079,7 +1069,6 @@ PETSC_INTERN PetscErrorCode TaoBNCGConductIteration(Tao tao, PetscReal gnorm)
 PetscErrorCode TaoBNCGSetH0(Tao tao, Mat H0)
 {
   TAO_BNCG                     *cg = (TAO_BNCG*)tao->data;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)H0));

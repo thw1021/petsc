@@ -40,7 +40,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM);
 @*/
 PetscErrorCode  DMRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (DMRegisterAllCalled) PetscFunctionReturn(0);
@@ -92,19 +91,18 @@ PETSC_EXTERN PetscErrorCode PetscSpaceCreate_WXY(PetscSpace);
 @*/
 PetscErrorCode PetscSpaceRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscSpaceRegisterAllCalled) PetscFunctionReturn(0);
   PetscSpaceRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscSpaceRegister(PETSCSPACEPOLYNOMIAL, PetscSpaceCreate_Polynomial);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEPTRIMMED,   PetscSpaceCreate_Ptrimmed);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACETENSOR,     PetscSpaceCreate_Tensor);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACESUM,        PetscSpaceCreate_Sum);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEPOINT,      PetscSpaceCreate_Point);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACESUBSPACE,   PetscSpaceCreate_Subspace);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEWXY,        PetscSpaceCreate_WXY);CHKERRQ(ierr);
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEPOLYNOMIAL, PetscSpaceCreate_Polynomial));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEPTRIMMED,   PetscSpaceCreate_Ptrimmed));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACETENSOR,     PetscSpaceCreate_Tensor));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACESUM,        PetscSpaceCreate_Sum));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEPOINT,      PetscSpaceCreate_Point));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACESUBSPACE,   PetscSpaceCreate_Subspace));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEWXY,        PetscSpaceCreate_WXY));
   PetscFunctionReturn(0);
 }
 
@@ -127,7 +125,6 @@ PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Refined(PetscDualSpace);
 @*/
 PetscErrorCode PetscDualSpaceRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDualSpaceRegisterAllCalled) PetscFunctionReturn(0);
@@ -161,7 +158,6 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_OpenCL(PetscFE);
 @*/
 PetscErrorCode PetscFERegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscFERegisterAllCalled) PetscFunctionReturn(0);
@@ -199,7 +195,6 @@ PETSC_EXTERN PetscErrorCode PetscLimiterCreate_MC(PetscLimiter);
 @*/
 PetscErrorCode PetscLimiterRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscLimiterRegisterAllCalled) PetscFunctionReturn(0);
@@ -233,7 +228,6 @@ PETSC_EXTERN PetscErrorCode PetscFVCreate_LeastSquares(PetscFV);
 @*/
 PetscErrorCode PetscFVRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscFVRegisterAllCalled) PetscFunctionReturn(0);
@@ -261,7 +255,6 @@ PETSC_EXTERN PetscErrorCode PetscDSCreate_Basic(PetscDS);
 @*/
 PetscErrorCode PetscDSRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDSRegisterAllCalled) PetscFunctionReturn(0);

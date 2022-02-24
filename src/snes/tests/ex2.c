@@ -42,7 +42,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -58,7 +57,6 @@ static PetscErrorCode CreatePoints_Centroid(DM dm, PetscInt *Np, PetscReal **pco
   Vec            coordsLocal;
   PetscInt       spaceDim, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -96,7 +94,6 @@ static PetscErrorCode CreatePoints_Grid(DM dm, PetscInt *Np, PetscReal **pcoords
   PetscInt       N = 3, n = 0, dim, spaceDim, i, j, k, *ind, d;
   PetscReal      *h;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
@@ -145,7 +142,6 @@ static PetscErrorCode CreatePoints_GridReplicated(DM dm, PetscInt *Np, PetscReal
   PetscInt       N = 3, n = 0, dim, spaceDim, i, j, k, *ind, d;
   PetscReal      *h;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -182,7 +178,6 @@ static PetscErrorCode CreatePoints_GridReplicated(DM dm, PetscInt *Np, PetscReal
 
 static PetscErrorCode CreatePoints(DM dm, PetscInt *Np, PetscReal **pcoords, PetscBool *pointsAllProcs, AppCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *pointsAllProcs = PETSC_FALSE;

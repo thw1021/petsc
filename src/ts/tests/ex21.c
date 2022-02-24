@@ -73,7 +73,6 @@ static PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,PetscReal t,PetscSc
 */
 static PetscErrorCode FormIJacobianLocal(DMDALocalInfo *info,PetscReal t,PetscScalar **x,PetscScalar **xdot,PetscScalar shift,Mat jac,Mat jacpre,AppCtx *app)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   MatStencil     col[5],row;
   PetscScalar    v[5],lambda,hx,hy;

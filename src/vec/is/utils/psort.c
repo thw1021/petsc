@@ -7,7 +7,6 @@ static PetscErrorCode PetscParallelSortInt_Bitonic_Merge(MPI_Comm comm, PetscMPI
 {
   PetscInt       diff;
   PetscInt       split, mid, partner;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   diff = rankEnd - rankStart;
@@ -56,7 +55,6 @@ static PetscErrorCode PetscParallelSortInt_Bitonic_Recursive(MPI_Comm comm, Pets
 {
   PetscInt       diff;
   PetscInt       mid;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   diff = rankEnd - rankStart;
@@ -85,7 +83,6 @@ static PetscErrorCode PetscParallelSortInt_Bitonic(MPI_Comm comm, PetscInt n, Pe
 {
   PetscMPIInt size, rank, tag, mpin;
   PetscInt       *buffer;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidIntPointer(keys, 3);
@@ -105,7 +102,6 @@ static PetscErrorCode PetscParallelSampleSelect(PetscLayout mapin, PetscLayout m
   PetscInt       *pivots, *finalpivots, i;
   PetscInt       non_empty, my_first, count;
   PetscMPIInt    *keys_per, max_keys_per;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(mapin->comm, &size));
@@ -180,18 +176,16 @@ static PetscErrorCode PetscParallelSampleSelect(PetscLayout mapin, PetscLayout m
 
 static PetscErrorCode PetscParallelRedistribute(PetscLayout map, PetscInt n, PetscInt arrayin[], PetscInt arrayout[])
 {
-  PetscMPIInt    size, rank;
-  PetscInt       myOffset, nextOffset;
-  PetscInt       i;
-  PetscMPIInt    total, filled;
-  PetscMPIInt    sender, nfirst, nsecond;
-  PetscMPIInt    firsttag, secondtag;
-  MPI_Request    firstreqrcv;
-  MPI_Request    *firstreqs;
-  MPI_Request    *secondreqs;
-  MPI_Status     firststatus;
-
-  PetscErrorCode ierr;
+  PetscMPIInt  size, rank;
+  PetscInt     myOffset, nextOffset;
+  PetscInt     i;
+  PetscMPIInt  total, filled;
+  PetscMPIInt  sender, nfirst, nsecond;
+  PetscMPIInt  firsttag, secondtag;
+  MPI_Request  firstreqrcv;
+  MPI_Request *firstreqs;
+  MPI_Request *secondreqs;
+  MPI_Status   firststatus;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(map->comm, &size));
@@ -254,7 +248,6 @@ static PetscErrorCode PetscParallelSortInt_Samplesort(PetscLayout mapin, PetscLa
   PetscInt       *pivots = NULL, *buffer;
   PetscInt       i, j;
   PetscMPIInt    *keys_per_snd, *keys_per_rcv, *offsets_snd, *offsets_rcv, nrecv;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(mapin->comm, &size));
@@ -337,7 +330,6 @@ PetscErrorCode PetscParallelSortInt(PetscLayout mapin, PetscLayout mapout, Petsc
   PetscMPIInt    size;
   PetscMPIInt    result;
   PetscInt       *keysincopy = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(mapin, 1);

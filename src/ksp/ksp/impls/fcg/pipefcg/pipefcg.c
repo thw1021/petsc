@@ -26,7 +26,6 @@ static const char citation[] =
 
 static PetscErrorCode KSPAllocateVectors_PIPEFCG(KSP ksp, PetscInt nvecsneeded, PetscInt chunksize)
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
   KSP_PIPEFCG     *pipefcg;
   PetscInt        nnewvecs, nvecsprev;
@@ -95,7 +94,6 @@ static PetscErrorCode KSPSetUp_PIPEFCG(KSP ksp)
 
 static PetscErrorCode KSPSolve_PIPEFCG_cycle(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,idx,kdx,mi;
   KSP_PIPEFCG    *pipefcg;
   PetscScalar    alpha=0.0,gamma,*betas,*dots;
@@ -275,7 +273,6 @@ static PetscErrorCode KSPSolve_PIPEFCG_cycle(KSP ksp)
 
 static PetscErrorCode KSPSolve_PIPEFCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEFCG    *pipefcg;
   PetscScalar    gamma;
   PetscReal      dp=0.0;
@@ -347,7 +344,6 @@ static PetscErrorCode KSPSolve_PIPEFCG(KSP ksp)
 
 static PetscErrorCode KSPDestroy_PIPEFCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   KSP_PIPEFCG    *pipefcg;
 
@@ -583,7 +579,6 @@ PetscErrorCode KSPPIPEFCGGetTruncationType(KSP ksp,KSPFCDTruncationType *truncst
 
 static PetscErrorCode KSPSetFromOptions_PIPEFCG(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEFCG    *pipefcg=(KSP_PIPEFCG*)ksp->data;
   PetscInt       mmax,nprealloc;
   PetscBool      flg;
@@ -629,7 +624,6 @@ static PetscErrorCode KSPSetFromOptions_PIPEFCG(PetscOptionItems *PetscOptionsOb
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEFCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEFCG    *pipefcg;
 
   PetscFunctionBegin;

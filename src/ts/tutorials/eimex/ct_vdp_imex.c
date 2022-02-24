@@ -168,7 +168,6 @@ int main(int argc, char **argv)
 
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *x;
 
@@ -187,7 +186,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ptr
   User              user = (User)ptr;
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(X,&x));
@@ -203,7 +201,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ptr
 
 static PetscErrorCode IJacobian(TS  ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ptr)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ptr;
   PetscReal         mu = user->mu;
   PetscInt          rowcol[] = {0,1};

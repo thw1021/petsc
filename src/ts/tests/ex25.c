@@ -167,7 +167,6 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
   Field          *x,*xdot,*f;
   PetscReal      hx;
   Vec            Xloc;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts,&da));
@@ -219,7 +218,6 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
   PetscInt       i;
   PetscReal      hx;
   Field          *x,*f;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts,&da));
@@ -250,7 +248,6 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,Mat Jpre,void *ptr)
 {
   User           user = (User)ptr;
-  PetscErrorCode ierr;
   DMDALocalInfo  info;
   PetscInt       i;
   PetscReal      hx;
@@ -302,7 +299,6 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
   DMDALocalInfo  info;
   Field          *x;
   PetscReal      hx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts,&da));

@@ -9,7 +9,6 @@ static PetscErrorCode TestPetscDeviceContextDuplicate(PetscDeviceContext dctx)
   PetscDevice        origDevice;
   PetscStreamType    origStype;
   PetscDeviceContext ddup;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);

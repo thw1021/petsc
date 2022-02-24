@@ -16,7 +16,6 @@ PetscErrorCode SNESReset_NRichardson(SNES snes)
 */
 PetscErrorCode SNESDestroy_NRichardson(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_NRichardson(snes));
@@ -52,7 +51,6 @@ PetscErrorCode SNESSetUp_NRichardson(SNES snes)
 */
 static PetscErrorCode SNESSetFromOptions_NRichardson(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SNES Richardson options"));
@@ -72,7 +70,6 @@ static PetscErrorCode SNESSetFromOptions_NRichardson(PetscOptionItems *PetscOpti
 static PetscErrorCode SNESView_NRichardson(SNES snes, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -97,7 +94,6 @@ PetscErrorCode SNESSolve_NRichardson(SNES snes)
   Vec                  X, Y, F;
   PetscReal            xnorm, fnorm, ynorm;
   PetscInt             maxits, i;
-  PetscErrorCode       ierr;
   SNESLineSearchReason lsresult;
   SNESConvergedReason  reason;
 
@@ -248,7 +244,6 @@ PetscErrorCode SNESSolve_NRichardson(SNES snes)
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NRichardson(SNES snes)
 {
-  PetscErrorCode   ierr;
   SNES_NRichardson *neP;
   SNESLineSearch   linesearch;
 

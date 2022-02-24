@@ -31,7 +31,6 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObje
   KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
   PetscInt       i, j;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "KSPHPDDM options, cf. https://github.com/hpddm/hpddm"));
@@ -108,7 +107,6 @@ static PetscErrorCode KSPView_HPDDM(KSP ksp, PetscViewer viewer)
   HPDDM::PETScOperator *op = data->op;
   const PetscScalar    *array = op ? op->storage() : NULL;
   PetscBool            ascii;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &ascii));
@@ -142,7 +140,6 @@ static PetscErrorCode KSPSetUp_HPDDM(KSP ksp)
   Mat            A;
   PetscInt       n, bs;
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetOperators(ksp, &A, NULL));
@@ -207,7 +204,6 @@ static inline PetscErrorCode KSPHPDDMReset_Private(KSP ksp)
 static PetscErrorCode KSPReset_HPDDM(KSP ksp)
 {
   KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (data->op) {
@@ -220,8 +216,6 @@ static PetscErrorCode KSPReset_HPDDM(KSP ksp)
 
 static PetscErrorCode KSPDestroy_HPDDM(KSP ksp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(KSPReset_HPDDM(ksp));
   CHKERRQ(KSPDestroyDefault(ksp));
@@ -237,7 +231,6 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
   KSP_HPDDM              *data = (KSP_HPDDM*)ksp->data;
   KSPConvergedDefaultCtx *ctx = (KSPConvergedDefaultCtx*)ksp->cnvP;
   PetscBool              scale;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCGetDiagonalScale(ksp->pc, &scale));
@@ -274,7 +267,6 @@ static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
   const PetscScalar *b;
   PetscInt          i, j, n;
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HPDDMCitation, &HPDDMCite));
@@ -329,8 +321,6 @@ static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
 @*/
 PetscErrorCode KSPHPDDMSetDeflationSpace(KSP ksp, Mat U)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(U, MAT_CLASSID, 2);
@@ -354,8 +344,6 @@ PetscErrorCode KSPHPDDMSetDeflationSpace(KSP ksp, Mat U)
 @*/
 PetscErrorCode KSPHPDDMGetDeflationSpace(KSP ksp, Mat *U)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (U) {
@@ -374,7 +362,6 @@ static PetscErrorCode KSPHPDDMSetDeflationSpace_HPDDM(KSP ksp, Mat U)
   PetscScalar          *copy;
   PetscInt             m1, M1, m2, M2, n2, N2, ldu;
   PetscBool            match;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   if (!op) {
@@ -406,7 +393,6 @@ static PetscErrorCode KSPHPDDMGetDeflationSpace_HPDDM(KSP ksp, Mat *U)
   const PetscScalar    *array;
   PetscScalar          *copy;
   PetscInt             m1, M1, N2;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   if (!op) {
@@ -436,7 +422,6 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
   const PetscScalar    *b;
   PetscScalar          *x;
   PetscInt             n, lda;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HPDDMCitation, &HPDDMCite));
@@ -477,8 +462,6 @@ static PetscErrorCode KSPMatSolve_HPDDM(KSP ksp, Mat B, Mat X)
 @*/
 PetscErrorCode KSPHPDDMSetType(KSP ksp, KSPHPDDMType type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   CHKERRQ(PetscUseMethod(ksp, "KSPHPDDMSetType_C", (KSP, KSPHPDDMType), (ksp, type)));
@@ -500,8 +483,6 @@ PetscErrorCode KSPHPDDMSetType(KSP ksp, KSPHPDDMType type)
 @*/
 PetscErrorCode KSPHPDDMGetType(KSP ksp, KSPHPDDMType *type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (type) {
@@ -516,7 +497,6 @@ static PetscErrorCode KSPHPDDMSetType_HPDDM(KSP ksp, KSPHPDDMType type)
   KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
   PetscInt       i;
   PetscBool      flg = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i = 0; i < static_cast<PetscInt>(ALEN(KSPHPDDMTypes)); ++i) {
@@ -578,7 +558,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP ksp)
   PetscInt       i;
   const char     *common[] = { KSPGMRES, KSPCG, KSPPREONLY };
   PetscBool      flg = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp, &data));

@@ -88,7 +88,6 @@ int main(int argc,char **args)
 /* This is modified from MatGetOrdering_Natural() */
 PetscErrorCode MatGetOrdering_myordering(Mat mat,MatOrderingType type,IS *irow,IS *icol)
 {
-  PetscErrorCode ierr;
   PetscInt       n,i,*ii;
   PetscBool      done;
   MPI_Comm       comm;

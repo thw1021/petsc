@@ -28,7 +28,6 @@ PetscErrorCode  MatGetColumnVector(Mat A,Vec yy,PetscInt col)
 {
   PetscScalar       *y;
   const PetscScalar *v;
-  PetscErrorCode    ierr;
   PetscInt          i,j,nz,N,Rs,Re,rs,re;
   const PetscInt    *idx;
 
@@ -93,7 +92,6 @@ PetscErrorCode MatGetColumnNorms(Mat A,NormType type,PetscReal norms[])
   /* NOTE: MatGetColumnNorms() could simply be a macro that calls MatGetColumnReductions().
    * I've kept this as a function because it allows slightly more in the way of error checking,
    * erroring out if MatGetColumnNorms() is not called with a valid NormType. */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (type == NORM_2 || type == NORM_1 || type == NORM_FROBENIUS || type == NORM_INFINITY || type == NORM_1_AND_2) {
@@ -122,7 +120,6 @@ PetscErrorCode MatGetColumnNorms(Mat A,NormType type,PetscReal norms[])
 @*/
 PetscErrorCode MatGetColumnSumsRealPart(Mat A,PetscReal sums[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetColumnReductions(A,REDUCTION_SUM_REALPART,sums));
@@ -149,7 +146,6 @@ PetscErrorCode MatGetColumnSumsRealPart(Mat A,PetscReal sums[])
 @*/
 PetscErrorCode MatGetColumnSumsImaginaryPart(Mat A,PetscReal sums[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetColumnReductions(A,REDUCTION_SUM_IMAGINARYPART,sums));
@@ -176,7 +172,6 @@ PetscErrorCode MatGetColumnSumsImaginaryPart(Mat A,PetscReal sums[])
 @*/
 PetscErrorCode MatGetColumnSums(Mat A,PetscScalar sums[])
 {
-  PetscErrorCode ierr;
 #if defined(PETSC_USE_COMPLEX)
   PetscInt       i,n;
   PetscReal      *work;
@@ -219,7 +214,6 @@ PetscErrorCode MatGetColumnSums(Mat A,PetscScalar sums[])
 @*/
 PetscErrorCode MatGetColumnMeansRealPart(Mat A,PetscReal means[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetColumnReductions(A,REDUCTION_MEAN_REALPART,means));
@@ -246,7 +240,6 @@ PetscErrorCode MatGetColumnMeansRealPart(Mat A,PetscReal means[])
 @*/
 PetscErrorCode MatGetColumnMeansImaginaryPart(Mat A,PetscReal means[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetColumnReductions(A,REDUCTION_MEAN_IMAGINARYPART,means));
@@ -273,7 +266,6 @@ PetscErrorCode MatGetColumnMeansImaginaryPart(Mat A,PetscReal means[])
 @*/
 PetscErrorCode MatGetColumnMeans(Mat A,PetscScalar means[])
 {
-  PetscErrorCode ierr;
 #if defined(PETSC_USE_COMPLEX)
   PetscInt       i,n;
   PetscReal      *work;
@@ -322,7 +314,6 @@ PetscErrorCode MatGetColumnMeans(Mat A,PetscScalar means[])
 @*/
 PetscErrorCode MatGetColumnReductions(Mat A,PetscInt type,PetscReal reductions[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);

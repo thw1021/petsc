@@ -29,7 +29,6 @@ extern PetscErrorCode DMLocalToLocalCreate_DA(DM);
 @*/
 PetscErrorCode  DMDAGetScatter(DM da,VecScatter *gtol,VecScatter *ltol)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;

@@ -5,7 +5,6 @@ PetscErrorCode DMCreateGlobalVector_Section_Private(DM dm,Vec *vec)
 {
   PetscSection   gSection;
   PetscInt       localSize, bs, blockSize = -1, pStart, pEnd, p;
-  PetscErrorCode ierr;
   PetscInt       in[2],out[2];
 
   PetscFunctionBegin;
@@ -57,7 +56,6 @@ PetscErrorCode DMCreateLocalVector_Section_Private(DM dm,Vec *vec)
 {
   PetscSection   section;
   PetscInt       localSize, blockSize = -1, pStart, pEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetLocalSection(dm, &section));
@@ -107,7 +105,6 @@ PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fi
   PetscSection   section, sectionGlobal;
   PetscInt      *subIndices;
   PetscInt       subSize = 0, subOff = 0, Nf, f, pStart, pEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!numFields) PetscFunctionReturn(0);
@@ -316,7 +313,6 @@ PetscErrorCode DMCreateSectionSuperDM(DM dms[], PetscInt len, IS **is, DM *super
   PetscSection   supersection, *sections, *sectionGlobals;
   PetscInt      *Nfs, Nf = 0, f, supf, oldf = -1, nullf = -1, i;
   PetscBool      haveNull = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dms[0], &comm));

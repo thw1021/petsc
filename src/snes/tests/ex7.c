@@ -104,7 +104,6 @@ PetscErrorCode  FormFunction(SNES snes,Vec x,Vec f,void *dummy)
   const PetscScalar *xx,*FF;
   PetscScalar       *ff,d;
   PetscInt          i,n;
-  PetscErrorCode    ierr;
 
   CHKERRQ(VecGetArrayRead(x,&xx));
   CHKERRQ(VecGetArray(f,&ff));
@@ -125,7 +124,6 @@ PetscErrorCode  FormFunctioni(void *dummy,PetscInt i,Vec x,PetscScalar *s)
   const PetscScalar *xx,*FF;
   PetscScalar       d;
   PetscInt          n;
-  PetscErrorCode    ierr;
   SNES              snes = (SNES) dummy;
   Vec               F;
 
@@ -153,7 +151,6 @@ PetscErrorCode  FormFunctioni(void *dummy,PetscInt i,Vec x,PetscScalar *s)
 */
 PetscErrorCode  OtherFunctionForDifferencing(void *dummy,Vec x,Vec f)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(FormFunction(NULL,x,f,dummy));
   CHKERRQ(VecShift(f,1.0));
@@ -164,7 +161,6 @@ PetscErrorCode  OtherFunctionForDifferencing(void *dummy,Vec x,Vec f)
 
 PetscErrorCode  FormInitialGuess(SNES snes,Vec x)
 {
-  PetscErrorCode ierr;
   PetscScalar    pfive = .50;
   CHKERRQ(VecSet(x,pfive));
   return 0;
@@ -180,7 +176,6 @@ PetscErrorCode  FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
   const PetscScalar *xx;
   PetscScalar       A[3],d;
   PetscInt          i,n,j[3];
-  PetscErrorCode    ierr;
   AppCtx            *user = (AppCtx*) dummy;
 
   CHKERRQ(VecGetArrayRead(x,&xx));
@@ -210,7 +205,6 @@ PetscErrorCode  FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 
 PetscErrorCode  FormJacobianNoMatrix(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
-  PetscErrorCode    ierr;
   AppCtx            *user = (AppCtx*) dummy;
 
   if (user->variant) {
@@ -225,7 +219,6 @@ PetscErrorCode  FormJacobianNoMatrix(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 
 PetscErrorCode  Monitor(SNES snes,PetscInt its,PetscReal fnorm,void *dummy)
 {
-  PetscErrorCode ierr;
   MonitorCtx     *monP = (MonitorCtx*) dummy;
   Vec            x;
   MPI_Comm       comm;

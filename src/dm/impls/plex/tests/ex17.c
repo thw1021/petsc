@@ -5,7 +5,6 @@ static char help[] = "Tests for point location\n\n";
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -23,7 +22,6 @@ static PetscErrorCode TestLocation(DM dm)
   PetscScalar       *a;
   PetscInt           cdim, n;
   PetscInt           cStart, cEnd, c;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetCoordinateDim(dm, &cdim));

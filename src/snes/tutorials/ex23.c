@@ -71,7 +71,6 @@ static PetscErrorCode DivideDomain(DM dm, AppCtx *user)
   DMLabel        top, bottom;
   PetscReal      low[3], high[3], midy;
   PetscInt       cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreateLabel(dm, "top"));
@@ -94,7 +93,6 @@ static PetscErrorCode DivideDomain(DM dm, AppCtx *user)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -112,7 +110,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscWeakForm  wf;
   DMLabel        label;
   const PetscInt id = 1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetRegionNumDS(dm, 0, &label, NULL, &ds));
@@ -143,7 +140,6 @@ static PetscErrorCode SetupDiscretization(DM dm, const char name[], PetscErrorCo
   PetscBool       simplex;
   const char     *nameTop = "pressure";
   char            prefix[PETSC_MAX_PATH_LEN];
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));

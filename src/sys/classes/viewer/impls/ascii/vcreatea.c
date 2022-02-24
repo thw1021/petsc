@@ -29,7 +29,6 @@ PetscMPIInt Petsc_Viewer_Stdout_keyval = MPI_KEYVAL_INVALID;
 @*/
 PetscErrorCode  PetscViewerASCIIGetStdout(MPI_Comm comm,PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   MPI_Comm       ncomm;
 
@@ -109,7 +108,6 @@ PetscMPIInt Petsc_Viewer_Stderr_keyval = MPI_KEYVAL_INVALID;
 @*/
 PetscErrorCode  PetscViewerASCIIGetStderr(MPI_Comm comm,PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   MPI_Comm       ncomm;
 
@@ -170,7 +168,6 @@ PetscMPIInt Petsc_Viewer_keyval = MPI_KEYVAL_INVALID;
 */
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_DelViewer(MPI_Comm comm,PetscMPIInt keyval,void *attr_val,void *extra_state)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(PetscInfo(NULL,"Removing viewer data attribute in an MPI_Comm %ld\n",(long)comm));
@@ -216,7 +213,6 @@ $     PetscViewerFileSetName(lab,name);
 @*/
 PetscErrorCode  PetscViewerASCIIOpen(MPI_Comm comm,const char name[],PetscViewer *lab)
 {
-  PetscErrorCode  ierr;
   PetscViewerLink *vlink,*nv;
   PetscBool       flg,eq;
   size_t          len;
@@ -307,7 +303,6 @@ PetscErrorCode  PetscViewerASCIIOpen(MPI_Comm comm,const char name[],PetscViewer
 @*/
 PetscErrorCode  PetscViewerASCIIOpenWithFILE(MPI_Comm comm,FILE *fd,PetscViewer *lab)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,lab));

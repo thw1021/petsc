@@ -11,7 +11,6 @@ PetscErrorCode test_solve(void)
   Vec            tmp_x[2],*_tmp_x;
   PetscInt       n, np, i,j;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscPrintf(PETSC_COMM_WORLD, "%s \n", PETSC_FUNCTION_NAME));
@@ -132,7 +131,6 @@ PetscErrorCode test_solve_matgetvecs(void)
   PetscInt       n, np, i,j;
   Mat            tmp[2][2];
   Vec            *tmp_x;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscPrintf(PETSC_COMM_WORLD, "%s \n", PETSC_FUNCTION_NAME));

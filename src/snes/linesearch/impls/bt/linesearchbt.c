@@ -389,7 +389,6 @@ static PetscErrorCode  SNESLineSearchApply_BT(SNESLineSearch linesearch)
 
 PetscErrorCode SNESLineSearchView_BT(SNESLineSearch linesearch, PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   SNESLineSearch_BT *bt = (SNESLineSearch_BT*)linesearch->data;
 
@@ -408,7 +407,6 @@ PetscErrorCode SNESLineSearchView_BT(SNESLineSearch linesearch, PetscViewer view
 
 static PetscErrorCode SNESLineSearchDestroy_BT(SNESLineSearch linesearch)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(linesearch->data));
@@ -417,7 +415,6 @@ static PetscErrorCode SNESLineSearchDestroy_BT(SNESLineSearch linesearch)
 
 static PetscErrorCode SNESLineSearchSetFromOptions_BT(PetscOptionItems *PetscOptionsObject,SNESLineSearch linesearch)
 {
-  PetscErrorCode    ierr;
   SNESLineSearch_BT *bt = (SNESLineSearch_BT*)linesearch->data;
 
   PetscFunctionBegin;
@@ -457,7 +454,6 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_BT(SNESLineSearch linesearch)
 {
 
   SNESLineSearch_BT *bt;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   linesearch->ops->apply          = SNESLineSearchApply_BT;

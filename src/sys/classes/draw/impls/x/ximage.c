@@ -10,7 +10,6 @@ static inline PetscErrorCode PetscArgSortPixVal(const PetscDrawXiPixVal v[PETSC_
 {
   PetscDrawXiPixVal vl;
   int               i,last,tmp;
-  PetscErrorCode    ierr;
 # define            SWAP(a,b) {tmp=a;a=b;b=tmp;}
   PetscFunctionBegin;
   if (right <= 1) {
@@ -63,13 +62,13 @@ PetscErrorCode PetscDrawGetImage_X(PetscDraw draw,unsigned char palette[PETSC_DR
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)draw),&rank));
 
   /* make sure the X server processed requests from all processes */
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   XSync(Xwin->disp,True);
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   CHKERRMPI(MPI_Barrier(PetscObjectComm((PetscObject)draw)));
 
   /* only the first process return image data */
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (rank == 0) {
     Window        root;
     XImage        *ximage;
@@ -98,6 +97,6 @@ PetscErrorCode PetscDrawGetImage_X(PetscDraw draw,unsigned char palette[PETSC_DR
     *out_h      = h;
     *out_pixels = pixels;
   }
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

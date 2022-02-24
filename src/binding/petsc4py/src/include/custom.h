@@ -35,10 +35,10 @@ static PetscStageLog petsc_stageLog = NULL;
 static PetscErrorCode
 PetscLogStageFindId(const char name[], PetscLogStage *stageid)
 {
-  int            s;
-  PetscStageLog  stageLog = 0;
-  PetscBool      match = PETSC_FALSE;
-  PetscErrorCode ierr;
+  int           s;
+  PetscStageLog stageLog = 0;
+  PetscBool     match    = PETSC_FALSE;
+
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
   PetscValidIntPointer(stageid,2);
@@ -55,10 +55,10 @@ PetscLogStageFindId(const char name[], PetscLogStage *stageid)
 static PetscErrorCode
 PetscLogClassFindId(const char name[], PetscClassId *classid)
 {
-  int            c;
-  PetscStageLog  stageLog = 0;
-  PetscBool      match = PETSC_FALSE;
-  PetscErrorCode ierr;
+  int           c;
+  PetscStageLog stageLog = 0;
+  PetscBool     match    = PETSC_FALSE;
+
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
   PetscValidIntPointer(classid,2);
@@ -76,10 +76,10 @@ PetscLogClassFindId(const char name[], PetscClassId *classid)
 static PetscErrorCode
 PetscLogEventFindId(const char name[], PetscLogEvent *eventid)
 {
-  int            e;
-  PetscStageLog  stageLog = 0;
-  PetscBool      match = PETSC_FALSE;
-  PetscErrorCode ierr;
+  int           e;
+  PetscStageLog stageLog = 0;
+  PetscBool     match    = PETSC_FALSE;
+
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
   PetscValidIntPointer(eventid,2);
@@ -147,7 +147,6 @@ PetscLogEventFindName(PetscLogEvent eventid,
 static PetscErrorCode
 PetscLogEventGetPerfInfo(int stage,PetscLogEvent event,PetscEventPerfInfo *info)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidPointer(info,3);
   (void)stage; (void)event; /* unused */
@@ -161,21 +160,20 @@ PetscLogEventGetPerfInfo(int stage,PetscLogEvent event,PetscEventPerfInfo *info)
 static inline PetscErrorCode
 VecStrideSum(Vec v, PetscInt start, PetscScalar *a)
 {
-  PetscInt          i,n,bs;
+  PetscInt           i,n,bs;
   const PetscScalar *x;
-  PetscScalar       sum;
-  MPI_Comm          comm;
-  PetscErrorCode    ierr;
+  PetscScalar        sum;
+  MPI_Comm           comm;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidType(v,1);
   PetscValidScalarPointer(a,2);
   CHKERRQ(VecGetBlockSize(v,&bs));
-  PetscCheckFalse(start <  0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                            "Negative start %" PetscInt_FMT,start);
-  PetscCheckFalse(start >= bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,
-                            "Start of stride subvector (%" PetscInt_FMT ") is too large "
-                            "for block size (%" PetscInt_FMT ")",start,bs);
+  PetscCheck(start >=  0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative start %" PetscInt_FMT,start);
+  PetscCheck(start < bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,
+             "Start of stride subvector (%" PetscInt_FMT ") is too large "
+             "for block size (%" PetscInt_FMT ")",start,bs);
   CHKERRQ(VecGetLocalSize(v,&n));
   CHKERRQ(VecGetArrayRead(v,&x));
   sum = (PetscScalar)0.0;
@@ -202,7 +200,7 @@ static inline
 PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,PetscBool *sbaij,PetscBool *is)
 {
   void (*f)(void) = 0;
-  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidType(A,1);
@@ -236,7 +234,6 @@ static PetscErrorCode
 MatFactorInfoDefaults(PetscBool incomplete,PetscBool cholesky,
                       MatFactorInfo *info)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidPointer(info,2);
   CHKERRQ(MatFactorInfoInitialize(info));
@@ -276,8 +273,7 @@ KSPSetIterationNumber(KSP ksp, PetscInt its)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscCheckFalse(its < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                       "iteration number must be nonnegative");
+  PetscCheck(its >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"iteration number must be nonnegative");
   ksp->its = its;
   PetscFunctionReturn(0);
 }
@@ -287,8 +283,7 @@ KSPSetResidualNorm(KSP ksp, PetscReal rnorm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscCheckFalse(rnorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "residual norm must be nonnegative");
+  PetscCheck(rnorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"residual norm must be nonnegative");
   ksp->rnorm = rnorm;
   PetscFunctionReturn(0);
 }
@@ -296,14 +291,11 @@ KSPSetResidualNorm(KSP ksp, PetscReal rnorm)
 static PetscErrorCode
 KSPConvergenceTestCall(KSP ksp, PetscInt its, PetscReal rnorm, KSPConvergedReason *reason)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidPointer(reason,4);
-  PetscCheckFalse(its < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "iteration number must be nonnegative");
-  PetscCheckFalse(rnorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "residual norm must be nonnegative");
+  PetscCheck(its >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"iteration number must be nonnegative");
+  PetscCheck(rnorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"residual norm must be nonnegative");
   CHKERRQ((*ksp->converged)(ksp,its,rnorm,reason,ksp->cnvP));
   PetscFunctionReturn(0);
 }
@@ -324,18 +316,13 @@ SNESConvergenceTestCall(SNES snes, PetscInt its,
                         PetscReal xnorm, PetscReal ynorm, PetscReal fnorm,
                         SNESConvergedReason *reason)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidPointer(reason,4);
-  PetscCheckFalse(its < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "iteration number must be nonnegative");
-  PetscCheckFalse(xnorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "solution norm must be nonnegative");
-  PetscCheckFalse(ynorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "step norm must be nonnegative");
-  PetscCheckFalse(fnorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
-                         "function norm must be nonnegative");
+  PetscCheck(its >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"iteration number must be nonnegative");
+  PetscCheck(xnorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"solution norm must be nonnegative");
+  PetscCheck(ynorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"step norm must be nonnegative");
+  PetscCheck(fnorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"function norm must be nonnegative");
   CHKERRQ((*snes->ops->converged)(snes,its,xnorm,ynorm,fnorm,reason,snes->cnvP));
   PetscFunctionReturn(0);
 }
@@ -345,7 +332,7 @@ SNESGetUseMFFD(SNES snes,PetscBool *flag)
 {
   PetscErrorCode (*jac)(SNES,Vec,Mat,Mat,void*) = PETSC_NULL;
   Mat            J = PETSC_NULL;
-  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidPointer(flag,2);
@@ -359,13 +346,12 @@ SNESGetUseMFFD(SNES snes,PetscBool *flag)
 static PetscErrorCode
 SNESSetUseMFFD(SNES snes,PetscBool flag)
 {
-  const char*    prefix = PETSC_NULL;
-  PetscBool      flg = PETSC_FALSE;
-  Vec            r = PETSC_NULL;
-  Mat            A = PETSC_NULL,B = PETSC_NULL,J = PETSC_NULL;
-  void*          funP = PETSC_NULL;
-  void*          jacP = PETSC_NULL;
-  PetscErrorCode ierr;
+  const char* prefix = PETSC_NULL;
+  PetscBool   flg    = PETSC_FALSE;
+  Vec         r      = PETSC_NULL;
+  Mat         A      = PETSC_NULL,B = PETSC_NULL,J = PETSC_NULL;
+  void*       funP   = PETSC_NULL;
+  void*       jacP   = PETSC_NULL;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -411,7 +397,7 @@ static PetscErrorCode
 SNESGetUseFDColoring(SNES snes,PetscBool *flag)
 {
   PetscErrorCode (*jac)(SNES,Vec,Mat,Mat,void*) = PETSC_NULL;
-  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidPointer(flag,2);
@@ -430,7 +416,7 @@ SNESSetUseFDColoring(SNES snes,PetscBool flag)
   Mat            A = PETSC_NULL,B = PETSC_NULL;
   PetscErrorCode (*jac)(SNES,Vec,Mat,Mat,void*) = PETSC_NULL;
   void*          jacP = PETSC_NULL;
-  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
 
@@ -468,8 +454,8 @@ DMDACreateND(MPI_Comm comm,
              DMDAStencilType stencil_type,PetscInt stencil_width,
              DM *dm)
 {
-  DM             da;
-  PetscErrorCode ierr;
+  DM da;
+
   PetscFunctionBegin;
   PetscValidPointer(dm,18);
   CHKERRQ(DMDACreate(comm,&da));

@@ -2,7 +2,6 @@
 
 static PetscErrorCode PetscInitializePackageAll(void)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscSysInitializePackage());
   CHKERRQ(PetscDrawInitializePackage());

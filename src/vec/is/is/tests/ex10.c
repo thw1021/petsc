@@ -8,7 +8,6 @@ static PetscErrorCode CreateIS(MPI_Comm comm, PetscInt n, PetscInt first, PetscI
 {
   PetscInt       *idx, i, j;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm,&rank));

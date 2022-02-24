@@ -13,7 +13,6 @@ PETSC_EXTERN PetscErrorCode CharacteristicCreate_DA(Characteristic);
 @*/
 PetscErrorCode CharacteristicRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (CharacteristicRegisterAllCalled) PetscFunctionReturn(0);

@@ -16,7 +16,6 @@ static PetscBool TaoLineSearchPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode TaoLineSearchFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TaoLineSearchList));
@@ -36,7 +35,6 @@ PetscErrorCode TaoLineSearchFinalizePackage(void)
 @*/
 PetscErrorCode TaoLineSearchInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TaoLineSearchPackageInitialized) PetscFunctionReturn(0);

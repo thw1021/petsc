@@ -16,7 +16,6 @@ static char help[] = "This example demonstrates the use of DMNetwork interface f
 
 PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   UserCtx_Power  *User=(UserCtx_Power*)appctx;
   Vec            localX,localF;
@@ -46,7 +45,6 @@ PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
 
 PetscErrorCode SetInitialValues(DM networkdm,Vec X,void* appctx)
 {
-  PetscErrorCode ierr;
   PetscInt       vStart,vEnd,nv,ne;
   const PetscInt *vtx,*edges;
   Vec            localX;

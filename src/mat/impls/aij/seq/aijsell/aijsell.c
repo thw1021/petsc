@@ -18,7 +18,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJSELL_SeqAIJ(Mat A,MatType type,MatR
 {
   /* This routine is only called to convert a MATAIJSELL to its base PETSc type, */
   /* so we will ignore 'MatType type'. */
-  PetscErrorCode ierr;
   Mat            B        = *newmat;
   Mat_SeqAIJSELL *aijsell = (Mat_SeqAIJSELL*) A->spptr;
 
@@ -55,7 +54,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJSELL_SeqAIJ(Mat A,MatType type,MatR
 
 PetscErrorCode MatDestroy_SeqAIJSELL(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJSELL  *aijsell = (Mat_SeqAIJSELL*) A->spptr;
 
   PetscFunctionBegin;
@@ -82,7 +80,6 @@ PetscErrorCode MatDestroy_SeqAIJSELL(Mat A)
  * We track the ObjectState to determine when this needs to be done. */
 PETSC_INTERN PetscErrorCode MatSeqAIJSELL_build_shadow(Mat A)
 {
-  PetscErrorCode   ierr;
   Mat_SeqAIJSELL   *aijsell = (Mat_SeqAIJSELL*) A->spptr;
   PetscObjectState state;
 
@@ -109,7 +106,6 @@ PETSC_INTERN PetscErrorCode MatSeqAIJSELL_build_shadow(Mat A)
 
 PetscErrorCode MatDuplicate_SeqAIJSELL(Mat A, MatDuplicateOption op, Mat *M)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJSELL *aijsell;
   Mat_SeqAIJSELL *aijsell_dest;
 
@@ -128,7 +124,6 @@ PetscErrorCode MatDuplicate_SeqAIJSELL(Mat A, MatDuplicateOption op, Mat *M)
 
 PetscErrorCode MatAssemblyEnd_SeqAIJSELL(Mat A, MatAssemblyType mode)
 {
-  PetscErrorCode  ierr;
   Mat_SeqAIJ      *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqAIJSELL  *aijsell = (Mat_SeqAIJSELL*)A->spptr;
 
@@ -160,7 +155,6 @@ PetscErrorCode MatAssemblyEnd_SeqAIJSELL(Mat A, MatAssemblyType mode)
 PetscErrorCode MatMult_SeqAIJSELL(Mat A,Vec xx,Vec yy)
 {
   Mat_SeqAIJSELL    *aijsell = (Mat_SeqAIJSELL*)A->spptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqAIJSELL_build_shadow(A));
@@ -171,7 +165,6 @@ PetscErrorCode MatMult_SeqAIJSELL(Mat A,Vec xx,Vec yy)
 PetscErrorCode MatMultTranspose_SeqAIJSELL(Mat A,Vec xx,Vec yy)
 {
   Mat_SeqAIJSELL    *aijsell=(Mat_SeqAIJSELL*)A->spptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqAIJSELL_build_shadow(A));
@@ -182,7 +175,6 @@ PetscErrorCode MatMultTranspose_SeqAIJSELL(Mat A,Vec xx,Vec yy)
 PetscErrorCode MatMultAdd_SeqAIJSELL(Mat A,Vec xx,Vec yy,Vec zz)
 {
   Mat_SeqAIJSELL    *aijsell=(Mat_SeqAIJSELL*)A->spptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqAIJSELL_build_shadow(A));
@@ -193,7 +185,6 @@ PetscErrorCode MatMultAdd_SeqAIJSELL(Mat A,Vec xx,Vec yy,Vec zz)
 PetscErrorCode MatMultTransposeAdd_SeqAIJSELL(Mat A,Vec xx,Vec yy,Vec zz)
 {
   Mat_SeqAIJSELL    *aijsell=(Mat_SeqAIJSELL*)A->spptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqAIJSELL_build_shadow(A));
@@ -204,7 +195,6 @@ PetscErrorCode MatMultTransposeAdd_SeqAIJSELL(Mat A,Vec xx,Vec yy,Vec zz)
 PetscErrorCode MatSOR_SeqAIJSELL(Mat A,Vec bb,PetscReal omega,MatSORType flag,PetscReal fshift,PetscInt its,PetscInt lits,Vec xx)
 {
   Mat_SeqAIJSELL    *aijsell=(Mat_SeqAIJSELL*)A->spptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqAIJSELL_build_shadow(A));
@@ -309,7 +299,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJSELL(Mat A,MatType type,MatR
 @*/
 PetscErrorCode  MatCreateSeqAIJSELL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt nz,const PetscInt nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -321,7 +310,6 @@ PetscErrorCode  MatCreateSeqAIJSELL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt
 
 PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJSELL(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(A,MATSEQAIJ));

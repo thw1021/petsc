@@ -17,7 +17,6 @@ PetscBool DMFieldRegisterAllCalled;
 @*/
 PetscErrorCode DMFieldInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (DMFieldPackageInitialized) PetscFunctionReturn(0);
@@ -40,7 +39,6 @@ PetscErrorCode DMFieldInitializePackage(void)
 @*/
 PetscErrorCode DMFieldFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&DMFieldList));

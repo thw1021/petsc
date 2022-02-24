@@ -42,7 +42,6 @@ PetscScalar k1(AppCtx *ctx,PetscReal t)
 
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *u,*udot;
 
@@ -62,7 +61,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *c
 
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1,2,3};
   PetscScalar       J[4][4];
   const PetscScalar *u,*udot;
@@ -89,7 +87,6 @@ static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat
 
 static PetscErrorCode Solution(TS ts,PetscReal t,Vec U,AppCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(ctx->initialsolution,U));

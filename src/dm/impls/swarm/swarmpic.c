@@ -40,7 +40,6 @@
 @*/
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointsUniformCoordinates(DM dm,PetscReal min[],PetscReal max[],PetscInt npoints[],InsertMode mode)
 {
-  PetscErrorCode    ierr;
   PetscReal         gmin[] = {PETSC_MAX_REAL ,PETSC_MAX_REAL, PETSC_MAX_REAL};
   PetscReal         gmax[] = {PETSC_MIN_REAL, PETSC_MIN_REAL, PETSC_MIN_REAL};
   PetscInt          i,j,k,N,bs,b,n_estimate,n_curr,n_new_est,p,n_found;
@@ -209,7 +208,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointsUniformCoordinates(DM dm,PetscReal m
 @*/
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinates(DM dm,PetscInt npoints,PetscReal coor[],PetscBool redundant,InsertMode mode)
 {
-  PetscErrorCode    ierr;
   PetscReal         gmin[] = {PETSC_MAX_REAL ,PETSC_MAX_REAL, PETSC_MAX_REAL};
   PetscReal         gmax[] = {PETSC_MIN_REAL, PETSC_MIN_REAL, PETSC_MIN_REAL};
   PetscInt          i,N,bs,b,n_estimate,n_curr,n_new_est,p,n_found;
@@ -379,7 +377,6 @@ extern PetscErrorCode private_DMSwarmInsertPointsUsingCellDM_PLEX(DM,DM,DMSwarmP
 @*/
 PETSC_EXTERN PetscErrorCode DMSwarmInsertPointsUsingCellDM(DM dm,DMSwarmPICLayoutType layout_type,PetscInt fill_param)
 {
-  PetscErrorCode ierr;
   DM             celldm;
   PetscBool      isDA,isPLEX;
 
@@ -425,7 +422,6 @@ $    DMSwarmRestoreField(dm,DMSwarmPICField_coor,NULL,NULL,(void**)&coor);
 @*/
 PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinatesCellwise(DM dm,PetscInt npoints,PetscReal xi[])
 {
-  PetscErrorCode ierr;
   DM             celldm;
   PetscBool      isDA,isPLEX;
 
@@ -488,7 +484,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM dm,PetscInt nfields,const ch
   Vec              *vecs;
   PetscInt         f,nvecs;
   PetscInt         project_type = 0;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   DMSWARMPICVALID(dm);
@@ -547,7 +542,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmProjectFields(DM dm,PetscInt nfields,const ch
 @*/
 PETSC_EXTERN PetscErrorCode DMSwarmCreatePointPerCellCount(DM dm,PetscInt *ncells,PetscInt **count)
 {
-  PetscErrorCode ierr;
   PetscBool      isvalid;
   PetscInt       nel;
   PetscInt       *sum;

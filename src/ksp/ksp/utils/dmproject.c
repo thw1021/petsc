@@ -17,7 +17,6 @@ PetscErrorCode MatMult_GlobalToLocalNormal(Mat CtC, Vec x, Vec y)
   DM                    dm;
   Vec                   local, mask;
   projectConstraintsCtx *ctx;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(CtC,&ctx));
@@ -78,7 +77,6 @@ PetscErrorCode DMGlobalToLocalSolve(DM dm, Vec x, Vec y)
   PC                    pc;
   Vec                   global, mask=NULL;
   projectConstraintsCtx ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)dm,DMPLEX,&isPlex));
@@ -219,7 +217,6 @@ PetscErrorCode DMProjectField(DM dm, PetscReal time, Vec U,
 {
   Vec            localX, localU;
   DM             dmIn;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -262,7 +259,6 @@ PetscErrorCode DMAdaptInterpolator(DM dmc, DM dmf, Mat In, KSP smoother, PetscIn
   PetscBLASInt   M, N, one = 1, irank, lwrk, info;
   PetscInt       debug = 0, rStart, rEnd, r, maxcols = 0, k;
   PetscBool      allocVc = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DM_AdaptInterpolator,dmc,dmf,0,0));
@@ -421,7 +417,6 @@ PetscErrorCode DMCheckInterpolator(DM dmf, Mat In, PetscInt Nc, Vec vc[], Vec vf
   Vec            tmp;
   PetscReal      norminf, norm2, maxnorminf = 0.0, maxnorm2 = 0.0;
   PetscInt       k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetGlobalVector(dmf, &tmp));

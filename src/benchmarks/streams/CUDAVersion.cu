@@ -24,6 +24,7 @@ static char help[] = "Double-Precision STREAM Benchmark implementation in CUDA\n
 #include <petscconf.h>
 #include <petscsys.h>
 #include <petsctime.h>
+#include <petscdevice.h>
 
 #define N        10000000
 #define NTIMES   10
@@ -358,7 +359,7 @@ int main(int argc, char *argv[])
   const PetscBool cpuTiming = PETSC_TRUE; // must be true
   PetscErrorCode ierr;
 
-  CHKERRQ(cudaSetDeviceFlags(cudaDeviceBlockingSync));
+  CHKERRCUDA(cudaSetDeviceFlags(cudaDeviceBlockingSync));
 
   ierr = PetscInitialize(&argc, &argv, 0, help);if (ierr) return ierr;
 
@@ -436,9 +437,9 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
 
   PetscFunctionBegin;
   /* Allocate memory on device */
-  CHKERRQ(cudaMalloc((void**)&d_a, sizeof(float)*N));
-  CHKERRQ(cudaMalloc((void**)&d_b, sizeof(float)*N));
-  CHKERRQ(cudaMalloc((void**)&d_c, sizeof(float)*N));
+  CHKERRCUDA(cudaMalloc((void**)&d_a, sizeof(float)*N));
+  CHKERRCUDA(cudaMalloc((void**)&d_b, sizeof(float)*N));
+  CHKERRCUDA(cudaMalloc((void**)&d_c, sizeof(float)*N));
 
   /* Compute execution configuration */
 
@@ -492,17 +493,17 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
 
     cpuTimer = 0.0;
     PetscTimeSubtract(&cpuTimer);
-    // CHKERRQ(cudaEventRecord(start, 0));
+    // CHKERRCUDA(cudaEventRecord(start, 0));
     STREAM_Add<<<dimGrid,dimBlock>>>(d_a, d_b, d_c,  N);
     cudaStreamSynchronize(NULL);
     CHKERRMPI(MPI_Barrier(MPI_COMM_WORLD));
-    CHKERRQ(cudaEventRecord(stop, 0));
-    // CHKERRQ(cudaEventSynchronize(stop));
+    CHKERRCUDA(cudaEventRecord(stop, 0));
+    // CHKERRCUDA(cudaEventSynchronize(stop));
     //get the total elapsed time in ms
     PetscTimeAdd(&cpuTimer);
     if (bDontUseGPUTiming) times[4][k] = cpuTimer*1.e3;
     else {
-      // CHKERRQ(cudaEventElapsedTime(&times[4][k], start, stop));
+      // CHKERRCUDA(cudaEventElapsedTime(&times[4][k], start, stop));
     }
 
     cpuTimer = 0.0;
@@ -562,8 +563,8 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   set_array<<<dimGrid,dimBlock>>>(d_c, .5f, N);
 
   STREAM_Copy<<<dimGrid,dimBlock>>>(d_a, d_c, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Copy_verify(h_a, h_c, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Copy:\t\tError detected in device STREAM_Copy, exiting\n"));
@@ -576,8 +577,8 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   set_array<<<dimGrid,dimBlock>>>(d_c, .5f, N);
 
   STREAM_Copy_Optimized<<<dimGrid,dimBlock>>>(d_a, d_c, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Copy_verify(h_a, h_c, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Copy_Optimized:\tError detected in device STREAM_Copy_Optimized, exiting\n"));
@@ -590,8 +591,8 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   set_array<<<dimGrid,dimBlock>>>(d_c, .5f, N);
 
   STREAM_Scale<<<dimGrid,dimBlock>>>(d_b, d_c, scalar, N);
-  CHKERRQ(cudaMemcpy(h_b, d_b, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_b, d_b, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Scale_verify(h_b, h_c, scalar, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Scale:\t\tError detected in device STREAM_Scale, exiting\n"));
@@ -604,9 +605,9 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   set_array<<<dimGrid,dimBlock>>>(d_c, .5f, N);
 
   STREAM_Add<<<dimGrid,dimBlock>>>(d_a, d_b, d_c, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_b, d_b, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_b, d_b, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Add_verify(h_a, h_b, h_c, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Add:\t\tError detected in device STREAM_Add, exiting\n"));
@@ -619,9 +620,9 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   set_array<<<dimGrid,dimBlock>>>(d_c, .5f, N);
 
   STREAM_Triad<<<dimGrid,dimBlock>>>(d_b, d_c, d_a, scalar, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_b, d_b, sizeof(float) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_b, d_b, sizeof(float) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(float) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Triad_verify(h_b, h_c, h_a, scalar, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Triad:\t\tError detected in device STREAM_Triad, exiting\n"));
@@ -636,9 +637,9 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   printResultsReadable(times, sizeof(float));
 
   /* Free memory on device */
-  CHKERRQ(cudaFree(d_a));
-  CHKERRQ(cudaFree(d_b));
-  CHKERRQ(cudaFree(d_c));
+  CHKERRCUDA(cudaFree(d_a));
+  CHKERRCUDA(cudaFree(d_b));
+  CHKERRCUDA(cudaFree(d_c));
 
   PetscFunctionReturn(0);
 }
@@ -653,9 +654,9 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
 
   PetscFunctionBegin;
   /* Allocate memory on device */
-  CHKERRQ(cudaMalloc((void**)&d_a, sizeof(double)*N));
-  CHKERRQ(cudaMalloc((void**)&d_b, sizeof(double)*N));
-  CHKERRQ(cudaMalloc((void**)&d_c, sizeof(double)*N));
+  CHKERRCUDA(cudaMalloc((void**)&d_a, sizeof(double)*N));
+  CHKERRCUDA(cudaMalloc((void**)&d_b, sizeof(double)*N));
+  CHKERRCUDA(cudaMalloc((void**)&d_c, sizeof(double)*N));
 
   /* Compute execution configuration */
 
@@ -778,8 +779,8 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   set_array_double<<<dimGrid,dimBlock>>>(d_c, .5, N);
 
   STREAM_Copy_double<<<dimGrid,dimBlock>>>(d_a, d_c, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Copy_verify_double(h_a, h_c, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Copy:\t\tError detected in device STREAM_Copy, exiting\n"));
@@ -792,8 +793,8 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   set_array_double<<<dimGrid,dimBlock>>>(d_c, .5, N);
 
   STREAM_Copy_Optimized_double<<<dimGrid,dimBlock>>>(d_a, d_c, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Copy_verify_double(h_a, h_c, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Copy_Optimized:\tError detected in device STREAM_Copy_Optimized, exiting\n"));
@@ -805,8 +806,8 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   set_array_double<<<dimGrid,dimBlock>>>(d_c, .5, N);
 
   STREAM_Scale_double<<<dimGrid,dimBlock>>>(d_b, d_c, scalar, N);
-  CHKERRQ(cudaMemcpy(h_b, d_b, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_b, d_b, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Scale_verify_double(h_b, h_c, scalar, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Scale:\t\tError detected in device STREAM_Scale, exiting\n"));
@@ -819,9 +820,9 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   set_array_double<<<dimGrid,dimBlock>>>(d_c, .5, N);
 
   STREAM_Add_double<<<dimGrid,dimBlock>>>(d_a, d_b, d_c, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_b, d_b, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_b, d_b, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Add_verify_double(h_a, h_b, h_c, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Add:\t\tError detected in device STREAM_Add, exiting\n"));
@@ -834,9 +835,9 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   set_array_double<<<dimGrid,dimBlock>>>(d_c, .5, N);
 
   STREAM_Triad_double<<<dimGrid,dimBlock>>>(d_b, d_c, d_a, scalar, N);
-  CHKERRQ(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_b, d_b, sizeof(double) * N, cudaMemcpyDeviceToHost));
-  CHKERRQ(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_a, d_a, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_b, d_b, sizeof(double) * N, cudaMemcpyDeviceToHost));
+  CHKERRCUDA(cudaMemcpy(h_c, d_c, sizeof(double) * N, cudaMemcpyDeviceToHost));
   errorSTREAMkernel = STREAM_Triad_verify_double(h_b, h_c, h_a, scalar, N);
   if (errorSTREAMkernel) {
     CHKERRQ(PetscPrintf(PETSC_COMM_SELF, " device STREAM_Triad:\t\tError detected in device STREAM_Triad, exiting\n"));
@@ -851,9 +852,9 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   printResultsReadable(times,sizeof(double));
 
   /* Free memory on device */
-  CHKERRQ(cudaFree(d_a));
-  CHKERRQ(cudaFree(d_b));
-  CHKERRQ(cudaFree(d_c));
+  CHKERRCUDA(cudaFree(d_a));
+  CHKERRCUDA(cudaFree(d_b));
+  CHKERRCUDA(cudaFree(d_c));
 
   PetscFunctionReturn(0);
 }

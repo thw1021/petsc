@@ -12,7 +12,6 @@ static PetscBool PetscRandomPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscRandomFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscRandomList));
@@ -34,7 +33,6 @@ PetscErrorCode  PetscRandomInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscRandomPackageInitialized) PetscFunctionReturn(0);

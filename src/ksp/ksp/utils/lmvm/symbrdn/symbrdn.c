@@ -33,7 +33,6 @@ static PetscErrorCode MatSolve_LMVMSymBrdn(Mat B, Vec F, Vec dX)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i, j;
   PetscReal         numer;
   PetscScalar       sjtpi, yjtsi, wtsi, yjtqi, sjtyi, wtyi, ytx, stf, wtf, stp, ytq;
@@ -159,7 +158,6 @@ static PetscErrorCode MatMult_LMVMSymBrdn(Mat B, Vec X, Vec Z)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i, j;
   PetscScalar         sjtpi, yjtsi, wtsi, stz, ytx, wtx, stp;
 
@@ -228,7 +226,6 @@ static PetscErrorCode MatUpdate_LMVMSymBrdn(Mat B, Vec X, Vec F)
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
   Mat_LMVM          *dbase;
   Mat_DiagBrdn      *dctx;
-  PetscErrorCode    ierr;
   PetscInt          old_k, i;
   PetscReal         curvtol;
   PetscScalar       curvature, ytytmp, ststmp;
@@ -322,7 +319,6 @@ static PetscErrorCode MatCopy_LMVMSymBrdn(Mat B, Mat M, MatStructure str)
   Mat_SymBrdn       *blsb = (Mat_SymBrdn*)bdata->ctx;
   Mat_LMVM          *mdata = (Mat_LMVM*)M->data;
   Mat_SymBrdn       *mlsb = (Mat_SymBrdn*)mdata->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i;
 
   PetscFunctionBegin;
@@ -369,7 +365,6 @@ static PetscErrorCode MatReset_LMVMSymBrdn(Mat B, PetscBool destructive)
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
   Mat_LMVM          *dbase;
   Mat_DiagBrdn      *dctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   lsb->watchdog = 0;
@@ -419,7 +414,6 @@ static PetscErrorCode MatAllocate_LMVMSymBrdn(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAllocate_LMVM(B, X, F));
@@ -449,7 +443,6 @@ static PetscErrorCode MatDestroy_LMVMSymBrdn(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (lsb->allocated) {
@@ -472,7 +465,6 @@ static PetscErrorCode MatSetUp_LMVMSymBrdn(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          n, N;
 
   PetscFunctionBegin;
@@ -506,7 +498,6 @@ PetscErrorCode MatView_LMVMSymBrdn(Mat B, PetscViewer pv)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscBool         isascii;
 
   PetscFunctionBegin;
@@ -530,7 +521,6 @@ PetscErrorCode MatSetFromOptions_LMVMSymBrdn(PetscOptionItems *PetscOptionsObjec
 {
   Mat_LMVM                     *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn                  *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetFromOptions_LMVM(PetscOptionsObject, B));
@@ -550,7 +540,6 @@ PetscErrorCode MatSetFromOptions_LMVMSymBrdn_Private(PetscOptionItems *PetscOpti
   Mat_DiagBrdn                 *dctx;
   MatLMVMSymBroydenScaleType   stype = lsb->scale_type;
   PetscBool                    flg;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsReal("-mat_lmvm_beta","(developer) exponential factor in the diagonal J0 scaling","",lsb->beta,&lsb->beta,NULL));
@@ -584,7 +573,6 @@ PetscErrorCode MatCreate_LMVMSymBrdn(Mat B)
 {
   Mat_LMVM          *lmvm;
   Mat_SymBrdn       *lsb;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate_LMVM(B));
@@ -645,7 +633,6 @@ PetscErrorCode MatLMVMSymBroydenSetDelta(Mat B, PetscScalar delta)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscBool         is_bfgs, is_dfp, is_symbrdn, is_symbadbrdn;
 
   PetscFunctionBegin;
@@ -739,7 +726,6 @@ PetscErrorCode MatLMVMSymBroydenSetScaleType(Mat B, MatLMVMSymBroydenScaleType s
 @*/
 PetscErrorCode MatCreateLMVMSymBroyden(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm, B));
@@ -755,7 +741,6 @@ PetscErrorCode MatSymBrdnApplyJ0Fwd(Mat B, Vec X, Vec Z)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale) {
@@ -785,7 +770,6 @@ PetscErrorCode MatSymBrdnApplyJ0Inv(Mat B, Vec F, Vec dX)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_SymBrdn       *lsb = (Mat_SymBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (lmvm->J0 || lmvm->user_pc || lmvm->user_ksp || lmvm->user_scale) {

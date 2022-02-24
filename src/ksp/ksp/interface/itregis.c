@@ -60,7 +60,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP);
 @*/
 PetscErrorCode KSPRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (KSPRegisterAllCalled) PetscFunctionReturn(0);
@@ -128,7 +127,6 @@ PetscErrorCode KSPRegisterAll(void)
 @*/
 PetscErrorCode KSPMonitorRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (KSPMonitorRegisterAllCalled) PetscFunctionReturn(0);

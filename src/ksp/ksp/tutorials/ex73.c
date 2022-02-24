@@ -71,7 +71,6 @@ PetscErrorCode UserContextCreate(MPI_Comm comm,UserContext **ctx)
 PetscErrorCode CommCoarsen(MPI_Comm comm,PetscInt number,PetscSubcomm *p)
 {
   PetscSubcomm   psubcomm;
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   CHKERRQ(PetscSubcommCreate(comm,&psubcomm));
   CHKERRQ(PetscSubcommSetNumber(psubcomm,number));
@@ -84,7 +83,6 @@ PetscErrorCode CommHierarchyCreate(MPI_Comm comm,PetscInt n,PetscInt number[],Pe
 {
   PetscInt       k;
   PetscBool      view_hierarchy = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   for (k=0; k<n; k++) {
@@ -295,7 +293,6 @@ static PetscErrorCode DMDACreatePermutation_2d(DM dmrepart,DM dmf,Mat *mat)
 /* adapted from src/ksp/pc/impls/telescope/telescope_dmda.c */
 static PetscErrorCode PCTelescopeSetUp_dmda_scatters(DM dmf,DM dmc)
 {
-  PetscErrorCode ierr;
   Vec            xred,yred,xtmp,x,xp;
   VecScatter     scatter;
   IS             isin;
@@ -360,7 +357,6 @@ PetscErrorCode DMCreateMatrix_ShellDA(DM dm,Mat *A)
   PetscMPIInt    size;
   UserContext    *ctx = NULL;
   PetscInt       M,N;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMShellGetContext(dm,&da));
@@ -391,7 +387,6 @@ PetscErrorCode DMCreateMatrix_ShellDA(DM dm,Mat *A)
 PetscErrorCode DMCreateGlobalVector_ShellDA(DM dm,Vec *x)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   CHKERRQ(DMShellGetContext(dm,&da));
   CHKERRQ(DMCreateGlobalVector(da,x));
@@ -402,7 +397,6 @@ PetscErrorCode DMCreateGlobalVector_ShellDA(DM dm,Vec *x)
 PetscErrorCode DMCreateLocalVector_ShellDA(DM dm,Vec *x)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   CHKERRQ(DMShellGetContext(dm,&da));
   CHKERRQ(DMCreateLocalVector(da,x));
@@ -412,7 +406,6 @@ PetscErrorCode DMCreateLocalVector_ShellDA(DM dm,Vec *x)
 
 PetscErrorCode DMCoarsen_ShellDA(DM dm,MPI_Comm comm,DM *dmc)
 {
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   *dmc = NULL;
   CHKERRQ(DMGetCoarseDM(dm,dmc));
@@ -427,7 +420,6 @@ PetscErrorCode DMCoarsen_ShellDA(DM dm,MPI_Comm comm,DM *dmc)
 PetscErrorCode DMCreateInterpolation_ShellDA(DM dm1,DM dm2,Mat *mat,Vec *vec)
 {
   DM             da1,da2;
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   CHKERRQ(DMShellGetContext(dm1,&da1));
   CHKERRQ(DMShellGetContext(dm2,&da2));
@@ -437,7 +429,6 @@ PetscErrorCode DMCreateInterpolation_ShellDA(DM dm1,DM dm2,Mat *mat,Vec *vec)
 
 PetscErrorCode DMShellDASetUp_TelescopeDMScatter(DM dmf_shell,DM dmc_shell)
 {
-  PetscErrorCode ierr;
   Mat            P = NULL;
   DM             dmf = NULL,dmc = NULL;
 
@@ -456,7 +447,6 @@ PetscErrorCode DMShellDASetUp_TelescopeDMScatter(DM dmf_shell,DM dmc_shell)
 
 PetscErrorCode DMShellDAFieldScatter_Forward(DM dmf,Vec x,DM dmc,Vec xc)
 {
-  PetscErrorCode    ierr;
   Mat               P = NULL;
   Vec               xp = NULL,xtmp = NULL;
   VecScatter        scatter = NULL;
@@ -497,7 +487,6 @@ PetscErrorCode DMShellDAFieldScatter_Forward(DM dmf,Vec x,DM dmc,Vec xc)
 
 PetscErrorCode DMShellDAFieldScatter_Reverse(DM dmf,Vec y,DM dmc,Vec yc)
 {
-  PetscErrorCode ierr;
   Mat            P = NULL;
   Vec            xp = NULL,xtmp = NULL;
   VecScatter     scatter = NULL;
@@ -535,7 +524,6 @@ PetscErrorCode DMShellDAFieldScatter_Reverse(DM dmf,Vec y,DM dmc,Vec yc)
 
 PetscErrorCode DMFieldScatter_ShellDA(DM dmf_shell,Vec x,ScatterMode mode,DM dmc_shell,Vec xc)
 {
-  PetscErrorCode ierr;
   DM             dmf = NULL,dmc = NULL;
 
   PetscFunctionBeginUser;
@@ -554,7 +542,6 @@ PetscErrorCode DMFieldScatter_ShellDA(DM dmf_shell,Vec x,ScatterMode mode,DM dmc
 PetscErrorCode DMStateScatter_ShellDA(DM dmf_shell,ScatterMode mode,DM dmc_shell)
 {
   PetscMPIInt    size_f = 0,size_c = 0;
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dmf_shell),&size_f));
   if (dmc_shell) {
@@ -569,7 +556,6 @@ PetscErrorCode DMStateScatter_ShellDA(DM dmf_shell,ScatterMode mode,DM dmc_shell
 
 PetscErrorCode DMShellCreate_ShellDA(DM da,DM *dms)
 {
-  PetscErrorCode ierr;
   PetscFunctionBeginUser;
   if (da) {
     CHKERRQ(DMShellCreate(PetscObjectComm((PetscObject)da),dms));
@@ -587,7 +573,6 @@ PetscErrorCode DMShellCreate_ShellDA(DM da,DM *dms)
 
 PetscErrorCode DMDestroyShellDMDA(DM *_dm)
 {
-  PetscErrorCode ierr;
   DM             dm,da = NULL;
 
   PetscFunctionBeginUser;
@@ -628,7 +613,6 @@ PetscErrorCode DMDestroyShellDMDA(DM *_dm)
 
 PetscErrorCode HierarchyCreate_Basic(DM *dm_f,DM *dm_c,UserContext *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm,dmc,dm_shell,dmc_shell;
   PetscMPIInt    rank;
 
@@ -670,7 +654,6 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
   MPI_Comm       *commlist;
   DM             *dalist,*dmlist;
   PetscBool      set;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   ndecomps = 1;
@@ -832,7 +815,6 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
 
 PetscErrorCode test_hierarchy(void)
 {
-  PetscErrorCode ierr;
   PetscInt       d,k,nd,nref;
   MPI_Comm       *comms;
   DM             *dms;
@@ -879,7 +861,6 @@ PetscErrorCode test_hierarchy(void)
 
 PetscErrorCode test_basic(void)
 {
-  PetscErrorCode ierr;
   DM             dmF,dmdaF = NULL,dmC = NULL;
   Mat            A;
   Vec            x,b;
@@ -922,7 +903,6 @@ PetscErrorCode test_basic(void)
 
 PetscErrorCode test_mg(void)
 {
-  PetscErrorCode ierr;
   DM             dmF,dmdaF = NULL,*dms = NULL;
   Mat            A;
   Vec            x,b;
@@ -1018,7 +998,6 @@ int main(int argc,char **argv)
 PetscErrorCode ComputeRHS_DMDA(DM da,Vec b,void *ctx)
 {
   UserContext    *user = (UserContext*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,mx,my,xm,ym,xs,ys;
   PetscScalar    Hx,Hy;
   PetscScalar    **array;
@@ -1068,7 +1047,6 @@ PetscErrorCode ComputeMatrix_DMDA(DM da,Mat J,Mat jac,void *ctx)
 {
   UserContext    *user = (UserContext*)ctx;
   PetscReal      centerRho;
-  PetscErrorCode ierr;
   PetscInt       i,j,mx,my,xm,ym,xs,ys;
   PetscScalar    v[5];
   PetscReal      Hx,Hy,HydHx,HxdHy,rho;
@@ -1133,7 +1111,6 @@ PetscErrorCode ComputeMatrix_DMDA(DM da,Mat J,Mat jac,void *ctx)
 
 PetscErrorCode ComputeMatrix_ShellDA(KSP ksp,Mat J,Mat jac,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm,da;
   PetscFunctionBeginUser;
   CHKERRQ(KSPGetDM(ksp,&dm));

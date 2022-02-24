@@ -146,7 +146,6 @@ int main(int argc,char **argv)
 /* ------------------------------------------------------------------- */
 PetscErrorCode MyComputeFunction(SNES snes,Vec x,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   Mat            J;
   DM             dm;
 
@@ -167,7 +166,6 @@ PetscErrorCode MyComputeFunction(SNES snes,Vec x,Vec F,void *ctx)
 
 PetscErrorCode MyComputeJacobian(SNES snes,Vec x,Mat J,Mat Jp,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBeginUser;
@@ -178,7 +176,6 @@ PetscErrorCode MyComputeJacobian(SNES snes,Vec x,Mat J,Mat Jp,void *ctx)
 
 PetscErrorCode FormMatrix(DM da,Mat jac)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,nrows = 0;
   MatStencil     col[5],row,*rows;
   PetscScalar    v[5],hx,hy,hxdhy,hydhx;
@@ -248,7 +245,6 @@ PetscErrorCode FormMatrix(DM da,Mat jac)
 PetscErrorCode NonlinearGS(SNES snes,Vec X)
 {
   PetscInt       i,j,Mx,My,xs,ys,xm,ym,its,l;
-  PetscErrorCode ierr;
   PetscReal      hx,hy,hxdhy,hydhx;
   PetscScalar    **x,F,J,u,uxx,uyy;
   DM             da;

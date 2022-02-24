@@ -19,7 +19,6 @@
 @*/
 PETSC_EXTERN PetscErrorCode DMProductGetDM(DM dm,PetscInt slot,DM *subdm)
 {
-  PetscErrorCode ierr;
   DM_Product     *product = (DM_Product*)dm->data;
   PetscInt       dim;
 
@@ -50,7 +49,6 @@ PETSC_EXTERN PetscErrorCode DMProductGetDM(DM dm,PetscInt slot,DM *subdm)
 @*/
 PETSC_EXTERN PetscErrorCode DMProductSetDM(DM dm,PetscInt slot,DM subdm)
 {
-  PetscErrorCode ierr;
   DM_Product     *product = (DM_Product*)dm->data;
   PetscInt       dim;
 
@@ -80,7 +78,6 @@ PETSC_EXTERN PetscErrorCode DMProductSetDM(DM dm,PetscInt slot,DM subdm)
 @*/
 PETSC_EXTERN PetscErrorCode DMProductSetDimensionIndex(DM dm,PetscInt slot,PetscInt idx)
 {
-  PetscErrorCode ierr;
   DM_Product     *product = (DM_Product*)dm->data;
   PetscInt       dim;
 

@@ -15,7 +15,6 @@ typedef struct {
 
 static PetscErrorCode PCApply_Galerkin(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
 
   PetscFunctionBegin;
@@ -36,7 +35,6 @@ static PetscErrorCode PCApply_Galerkin(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCSetUp_Galerkin(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
   PetscBool      a;
   Vec            *xx,*yy;
@@ -72,7 +70,6 @@ static PetscErrorCode PCSetUp_Galerkin(PC pc)
 static PetscErrorCode PCReset_Galerkin(PC pc)
 {
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&jac->R));
@@ -86,7 +83,6 @@ static PetscErrorCode PCReset_Galerkin(PC pc)
 static PetscErrorCode PCDestroy_Galerkin(PC pc)
 {
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Galerkin(pc));
@@ -98,7 +94,6 @@ static PetscErrorCode PCDestroy_Galerkin(PC pc)
 static PetscErrorCode PCView_Galerkin(PC pc,PetscViewer viewer)
 {
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -123,7 +118,6 @@ static PetscErrorCode  PCGalerkinGetKSP_Galerkin(PC pc,KSP *ksp)
 static PetscErrorCode  PCGalerkinSetRestriction_Galerkin(PC pc,Mat R)
 {
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)R));
@@ -135,7 +129,6 @@ static PetscErrorCode  PCGalerkinSetRestriction_Galerkin(PC pc,Mat R)
 static PetscErrorCode  PCGalerkinSetInterpolation_Galerkin(PC pc,Mat P)
 {
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)P));
@@ -175,7 +168,6 @@ static PetscErrorCode  PCGalerkinSetComputeSubmatrix_Galerkin(PC pc,PetscErrorCo
 @*/
 PetscErrorCode  PCGalerkinSetRestriction(PC pc,Mat R)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -203,7 +195,6 @@ PetscErrorCode  PCGalerkinSetRestriction(PC pc,Mat R)
 @*/
 PetscErrorCode  PCGalerkinSetInterpolation(PC pc,Mat P)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -249,7 +240,6 @@ $    computeAsub(PC pc,Mat A, Mat Ap, Mat *cAP,void *ctx);
 @*/
 PetscErrorCode  PCGalerkinSetComputeSubmatrix(PC pc,PetscErrorCode (*computeAsub)(PC,Mat,Mat,Mat*,void*),void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -280,7 +270,6 @@ PetscErrorCode  PCGalerkinSetComputeSubmatrix(PC pc,PetscErrorCode (*computeAsub
 @*/
 PetscErrorCode  PCGalerkinGetKSP(PC pc,KSP *ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -292,7 +281,6 @@ PetscErrorCode  PCGalerkinGetKSP(PC pc,KSP *ksp)
 static PetscErrorCode PCSetFromOptions_Galerkin(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Galerkin    *jac = (PC_Galerkin*)pc->data;
-  PetscErrorCode ierr;
   const char     *prefix;
   PetscBool      flg;
 
@@ -335,7 +323,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Galerkin(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Galerkin    *jac;
 
   PetscFunctionBegin;

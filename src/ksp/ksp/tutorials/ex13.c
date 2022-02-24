@@ -135,7 +135,6 @@ int main(int argc,char **args)
 /* ------------------------------------------------------------------------*/
 PetscErrorCode UserInitializeLinearSolver(PetscInt m,PetscInt n,UserCtx *userctx)
 {
-  PetscErrorCode ierr;
   PetscInt       N;
 
   /*
@@ -180,7 +179,6 @@ PetscErrorCode UserInitializeLinearSolver(PetscInt m,PetscInt n,UserCtx *userctx
 /* ------------------------------------------------------------------------*/
 PetscErrorCode UserDoLinearSolver(PetscScalar *rho,UserCtx *userctx,PetscScalar *userb,PetscScalar *userx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,Ii,J,m = userctx->m,n = userctx->n;
   Mat            A = userctx->A;
   PC             pc;
@@ -291,7 +289,6 @@ PetscErrorCode UserDoLinearSolver(PetscScalar *rho,UserCtx *userctx,PetscScalar 
 /* ------------------------------------------------------------------------*/
 PetscErrorCode UserFinalizeLinearSolver(UserCtx *userctx)
 {
-  PetscErrorCode ierr;
   /*
      We are all done and don't need to solve any more linear systems, so
      we free the work space.  All PETSc objects should be destroyed when

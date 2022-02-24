@@ -128,7 +128,6 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *dummy)
 {
   const PetscScalar *xx;
   PetscScalar       *ff,*FF,d,d2;
-  PetscErrorCode    ierr;
   PetscInt          i,n;
 
   CHKERRQ(VecGetArrayRead(x,&xx));
@@ -154,7 +153,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat prejac,void *dummy)
   const PetscScalar *xx;
   PetscScalar       A[3],d,d2;
   PetscInt          i,n,j[3];
-  PetscErrorCode    ierr;
 
   CHKERRQ(VecGetSize(x,&n));
   CHKERRQ(VecGetArrayRead(x,&xx));

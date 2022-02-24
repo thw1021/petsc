@@ -117,7 +117,6 @@ int main(int argc,char **argv)
 PetscErrorCode InitialConditions(TS ts,Vec U,AppCtx *appctx)
 {
   PetscScalar    *u;
-  PetscErrorCode ierr;
   PetscInt       i,mstart,mend,um,M;
   DM             da;
   PetscReal      h;
@@ -166,7 +165,6 @@ PetscErrorCode Solution(TS ts,PetscReal t,Vec U,AppCtx *appctx)
 {
   PetscScalar    *u;
   PetscReal      a=appctx->a,h,PI6,PI2;
-  PetscErrorCode ierr;
   PetscInt       i,mstart,mend,um,M;
   DM             da;
 
@@ -199,7 +197,6 @@ PetscErrorCode Solution(TS ts,PetscReal t,Vec U,AppCtx *appctx)
  */
 PetscErrorCode IFunction_LaxFriedrichs(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void* ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx=(AppCtx*)ctx;
   PetscInt       mstart,mend,M,i,um;
   DM             da;
@@ -248,7 +245,6 @@ PetscErrorCode IFunction_LaxFriedrichs(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,vo
 */
 PetscErrorCode IFunction_LaxWendroff(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void* ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx=(AppCtx*)ctx;
   PetscInt       mstart,mend,M,i,um;
   DM             da;

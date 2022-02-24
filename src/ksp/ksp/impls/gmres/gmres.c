@@ -36,7 +36,6 @@ static PetscErrorCode KSPGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 PetscErrorCode    KSPSetUp_GMRES(KSP ksp)
 {
   PetscInt       hh,hes,rs,cc;
-  PetscErrorCode ierr;
   PetscInt       max_k,k;
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
 
@@ -114,7 +113,6 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)(ksp->data);
   PetscReal      res,hapbnd,tt;
-  PetscErrorCode ierr;
   PetscInt       it     = 0, max_k = gmres->max_k;
   PetscBool      hapend = PETSC_FALSE;
 
@@ -225,7 +223,6 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
 
 PetscErrorCode KSPSolve_GMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       its,itcount,i;
   KSP_GMRES      *gmres     = (KSP_GMRES*)ksp->data;
   PetscBool      guess_zero = ksp->guess_zero;
@@ -275,7 +272,6 @@ PetscErrorCode KSPSolve_GMRES(KSP ksp)
 PetscErrorCode KSPReset_GMRES(KSP ksp)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -309,7 +305,6 @@ PetscErrorCode KSPReset_GMRES(KSP ksp)
 
 PetscErrorCode KSPDestroy_GMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_GMRES(ksp));
@@ -341,7 +336,6 @@ PetscErrorCode KSPDestroy_GMRES(KSP ksp)
 static PetscErrorCode KSPGMRESBuildSoln(PetscScalar *nrs,Vec vs,Vec vdest,KSP ksp,PetscInt it)
 {
   PetscScalar    tt;
-  PetscErrorCode ierr;
   PetscInt       ii,k,j;
   KSP_GMRES      *gmres = (KSP_GMRES*)(ksp->data);
 
@@ -451,7 +445,6 @@ static PetscErrorCode KSPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool hap
 PetscErrorCode KSPGMRESGetNewVectors(KSP ksp,PetscInt it)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       nwork = gmres->nwork_alloc,k,nalloc;
 
   PetscFunctionBegin;
@@ -479,7 +472,6 @@ PetscErrorCode KSPGMRESGetNewVectors(KSP ksp,PetscInt it)
 PetscErrorCode KSPBuildSolution_GMRES(KSP ksp,Vec ptr,Vec *result)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ptr) {
@@ -504,7 +496,6 @@ PetscErrorCode KSPView_GMRES(KSP ksp,PetscViewer viewer)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
   const char     *cstr;
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring;
 
   PetscFunctionBegin;
@@ -562,7 +553,6 @@ PetscErrorCode  KSPGMRESMonitorKrylov(KSP ksp,PetscInt its,PetscReal fgnorm,void
 {
   PetscViewers   viewers = (PetscViewers)dummy;
   KSP_GMRES      *gmres  = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   Vec            x;
   PetscViewer    viewer;
   PetscBool      flg;
@@ -651,7 +641,6 @@ PetscErrorCode  KSPGMRESGetRestart_GMRES(KSP ksp,PetscInt *max_k)
 PetscErrorCode  KSPGMRESSetRestart_GMRES(KSP ksp,PetscInt max_k)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(max_k < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
@@ -728,7 +717,6 @@ PetscErrorCode  KSPGMRESGetCGSRefinementType_GMRES(KSP ksp,KSPGMRESCGSRefinement
 @*/
 PetscErrorCode  KSPGMRESSetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -759,7 +747,6 @@ PetscErrorCode  KSPGMRESSetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType t
 @*/
 PetscErrorCode  KSPGMRESGetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -787,7 +774,6 @@ PetscErrorCode  KSPGMRESGetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType *
 @*/
 PetscErrorCode  KSPGMRESSetRestart(KSP ksp, PetscInt restart)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(ksp,restart,2);
@@ -815,7 +801,6 @@ PetscErrorCode  KSPGMRESSetRestart(KSP ksp, PetscInt restart)
 @*/
 PetscErrorCode  KSPGMRESGetRestart(KSP ksp, PetscInt *restart)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(ksp,"KSPGMRESGetRestart_C",(KSP,PetscInt*),(ksp,restart)));
@@ -844,7 +829,6 @@ PetscErrorCode  KSPGMRESGetRestart(KSP ksp, PetscInt *restart)
 @*/
 PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
@@ -873,7 +857,6 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 @*/
 PetscErrorCode  KSPGMRESSetBreakdownTolerance(KSP ksp,PetscReal tol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
@@ -915,7 +898,6 @@ M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_GMRES(KSP ksp)
 {
   KSP_GMRES      *gmres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&gmres));

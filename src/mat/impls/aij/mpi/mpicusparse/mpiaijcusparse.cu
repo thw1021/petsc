@@ -26,7 +26,6 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE_Basic(Mat A, const PetscSca
   Mat_MPIAIJ         *a = (Mat_MPIAIJ*)A->data;
   Mat_MPIAIJCUSPARSE *cusp = (Mat_MPIAIJCUSPARSE*)a->spptr;
   PetscInt           n = cusp->coo_nd + cusp->coo_no;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (cusp->coo_p && v) {
@@ -105,13 +104,11 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic(Mat B, PetscCo
 {
   Mat_MPIAIJ             *b = (Mat_MPIAIJ*)B->data;
   Mat_MPIAIJCUSPARSE     *cusp = (Mat_MPIAIJCUSPARSE*)b->spptr;
-  PetscErrorCode         ierr;
   PetscInt               N,*jj;
   size_t                 noff = 0;
   THRUSTINTARRAY         d_i(n); /* on device, storing partitioned coo_i with diagonal first, and off-diag next */
   THRUSTINTARRAY         d_j(n);
   ISLocalToGlobalMapping l2g;
-  cudaError_t            cerr;
 
   PetscFunctionBegin;
   if (b->A) CHKERRQ(MatCUSPARSEClearHandle(b->A));
@@ -203,14 +200,12 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic(Mat B, PetscCo
 
 static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount coo_n, const PetscInt coo_i[], const PetscInt coo_j[])
 {
-  PetscErrorCode         ierr;
   Mat                    newmat;
   Mat_MPIAIJ             *mpiaij;
   Mat_MPIAIJCUSPARSE     *mpidev;
   PetscInt               coo_basic = 1;
   PetscMemType           mtype = PETSC_MEMTYPE_DEVICE;
   PetscInt               rstart,rend;
-  cudaError_t            cerr;
 
   PetscFunctionBegin;
   if (coo_i) {
@@ -229,19 +224,19 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount 
     CHKERRQ(MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic(mat,coo_n,coo_i,coo_j));
   } else {
     mpiaij = static_cast<Mat_MPIAIJ*>(mat->data);
-    ierr = MatCreate(PetscObjectComm((PetscObject)mat),&newmat);CHKERRQ(ierr);
-    ierr = MatSetSizes(newmat,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N);CHKERRQ(ierr);
-    ierr = MatSetType(newmat,MATMPIAIJ);CHKERRQ(ierr);
-    ierr = MatSetOption(newmat,MAT_IGNORE_OFF_PROC_ENTRIES,mpiaij->donotstash);CHKERRQ(ierr); /* Inherit the two options that we respect from mat */
-    ierr = MatSetOption(newmat,MAT_NO_OFF_PROC_ENTRIES,mat->nooffprocentries);CHKERRQ(ierr);
-    ierr = MatSetPreallocationCOO_MPIAIJ(newmat,coo_n,coo_i,coo_j);CHKERRQ(ierr);
-    ierr = MatConvert(newmat,MATMPIAIJCUSPARSE,MAT_INPLACE_MATRIX,&newmat);CHKERRQ(ierr);
-    ierr = MatHeaderMerge(mat,&newmat);CHKERRQ(ierr);
+    CHKERRQ(MatCreate(PetscObjectComm((PetscObject)mat),&newmat));
+    CHKERRQ(MatSetSizes(newmat,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N));
+    CHKERRQ(MatSetType(newmat,MATMPIAIJ));
+    CHKERRQ(MatSetOption(newmat,MAT_IGNORE_OFF_PROC_ENTRIES,mpiaij->donotstash)); /* Inherit the two options that we respect from mat */
+    CHKERRQ(MatSetOption(newmat,MAT_NO_OFF_PROC_ENTRIES,mat->nooffprocentries));
+    CHKERRQ(MatSetPreallocationCOO_MPIAIJ(newmat,coo_n,coo_i,coo_j));
+    CHKERRQ(MatConvert(newmat,MATMPIAIJCUSPARSE,MAT_INPLACE_MATRIX,&newmat));
+    CHKERRQ(MatHeaderMerge(mat,&newmat));
     mpiaij = static_cast<Mat_MPIAIJ*>(mat->data); /* mat->data was changed in MatHeaderReplace() */
     mpidev = static_cast<Mat_MPIAIJCUSPARSE*>(mpiaij->spptr);
-    ierr = MatSeqAIJCUSPARSECopyToGPU(mpiaij->A);CHKERRQ(ierr);
-    ierr = MatSeqAIJCUSPARSECopyToGPU(mpiaij->B);CHKERRQ(ierr);
-    ierr = MatZeroEntries(mat);CHKERRQ(ierr); /* Zero matrix on device */
+    CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(mpiaij->A));
+    CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(mpiaij->B));
+    CHKERRQ(MatZeroEntries(mat)); /* Zero matrix on device */
     mpidev->use_extended_coo = PETSC_TRUE;
 
     CHKERRCUDA(cudaMalloc((void**)&mpidev->Aimap1_d,mpiaij->Annz1*sizeof(PetscCount)));
@@ -301,8 +296,6 @@ __global__ void MatAddCOOValues(const PetscScalar kv[],PetscCount nnz,const Pets
 
 static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat mat,const PetscScalar v[],InsertMode imode)
 {
-  PetscErrorCode                 ierr;
-  cudaError_t                    cerr;
   Mat_MPIAIJ                     *mpiaij = static_cast<Mat_MPIAIJ*>(mat->data);
   Mat_MPIAIJCUSPARSE             *mpidev = static_cast<Mat_MPIAIJCUSPARSE*>(mpiaij->spptr);
   Mat                            A = mpiaij->A,B = mpiaij->B;
@@ -366,7 +359,6 @@ static PetscErrorCode MatMPIAIJGetLocalMatMerge_MPIAIJCUSPARSE(Mat A,MatReuse sc
 {
   Mat            Ad,Ao;
   const PetscInt *cmap;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMPIAIJGetSeqAIJ(A,&Ad,&Ao,&cmap));
@@ -389,7 +381,6 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B,PetscInt d_nz,cons
 {
   Mat_MPIAIJ         *b = (Mat_MPIAIJ*)B->data;
   Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE*)b->spptr;
-  PetscErrorCode     ierr;
   PetscInt           i;
 
   PetscFunctionBegin;
@@ -448,7 +439,6 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJCUSPARSE(Mat B,PetscInt d_nz,cons
 PetscErrorCode MatMult_MPIAIJCUSPARSE(Mat A,Vec xx,Vec yy)
 {
   Mat_MPIAIJ     *a = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
   PetscInt       nt;
 
   PetscFunctionBegin;
@@ -466,7 +456,6 @@ PetscErrorCode MatMult_MPIAIJCUSPARSE(Mat A,Vec xx,Vec yy)
 PetscErrorCode MatZeroEntries_MPIAIJCUSPARSE(Mat A)
 {
   Mat_MPIAIJ     *l = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroEntries(l->A));
@@ -477,7 +466,6 @@ PetscErrorCode MatZeroEntries_MPIAIJCUSPARSE(Mat A)
 PetscErrorCode MatMultAdd_MPIAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz)
 {
   Mat_MPIAIJ     *a = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
   PetscInt       nt;
 
   PetscFunctionBegin;
@@ -493,7 +481,6 @@ PetscErrorCode MatMultAdd_MPIAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz)
 PetscErrorCode MatMultTranspose_MPIAIJCUSPARSE(Mat A,Vec xx,Vec yy)
 {
   Mat_MPIAIJ     *a = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
   PetscInt       nt;
 
   PetscFunctionBegin;
@@ -562,7 +549,6 @@ PetscErrorCode MatSetFromOptions_MPIAIJCUSPARSE(PetscOptionItems *PetscOptionsOb
 
 PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
 {
-  PetscErrorCode     ierr;
   Mat_MPIAIJ         *mpiaij = (Mat_MPIAIJ*)A->data;
   Mat_MPIAIJCUSPARSE *cusp = (Mat_MPIAIJCUSPARSE*)mpiaij->spptr;
   PetscObjectState   onnz = A->nonzerostate;
@@ -572,7 +558,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
   if (mpiaij->lvec) CHKERRQ(VecSetType(mpiaij->lvec,VECSEQCUDA));
   if (onnz != A->nonzerostate && cusp->deviceMat) {
     PetscSplitCSRDataStructure d_mat = cusp->deviceMat, h_mat;
-    cudaError_t                cerr;
 
     CHKERRQ(PetscInfo(A,"Destroy device mat since nonzerostate changed\n"));
     CHKERRQ(PetscNew(&h_mat));
@@ -595,11 +580,8 @@ PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A,MatAssemblyType mode)
 
 PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
 {
-  PetscErrorCode     ierr;
-  cudaError_t        cerr;
   Mat_MPIAIJ         *aij            = (Mat_MPIAIJ*)A->data;
   Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE*)aij->spptr;
-  cusparseStatus_t   stat;
 
   PetscFunctionBegin;
   PetscCheckFalse(!cusparseStruct,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing spptr");
@@ -667,9 +649,7 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType mtype, MatReuse reuse, Mat* newmat)
 {
-  PetscErrorCode     ierr;
   Mat_MPIAIJ         *a;
-  cusparseStatus_t   stat;
   Mat                A;
 
   PetscFunctionBegin;
@@ -720,7 +700,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType mtyp
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCUSPARSE(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
@@ -778,7 +757,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCUSPARSE(Mat A)
 @*/
 PetscErrorCode  MatCreateAIJCUSPARSE(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -832,7 +810,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B
 {
   PetscSplitCSRDataStructure d_mat;
   PetscMPIInt                size;
-  PetscErrorCode             ierr;
   int                        *ai = NULL,*bi = NULL,*aj = NULL,*bj = NULL;
   PetscScalar                *aa = NULL,*ba = NULL;
   Mat_SeqAIJ                 *jaca = NULL, *jacb = NULL;
@@ -921,7 +898,6 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B
   aa = thrust::raw_pointer_cast(matrixA->values->data());
 
   if (!d_mat) {
-    cudaError_t                cerr;
     PetscSplitCSRDataStructure h_mat;
 
     // create and populate strucy on host and copy on device

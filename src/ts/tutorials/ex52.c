@@ -61,7 +61,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 */
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-    PetscErrorCode ierr;
 
     PetscFunctionBeginUser;
     CHKERRQ(DMCreate(comm, dm));
@@ -83,7 +82,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     across the processors. Unlike for FormFunction which depends on the neighbours */
 PetscErrorCode FormInitialSolution(DM da, Vec U)
 {
-    PetscErrorCode ierr;
     PetscScalar    *u;
     PetscInt       cell, cStart, cEnd;
     PetscReal      cellvol, centroid[3], normal[3];
@@ -107,7 +105,6 @@ PetscErrorCode FormInitialSolution(DM da, Vec U)
 
 PetscErrorCode MyTSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec v, void *ctx)
 {
-    PetscErrorCode ierr;
     PetscReal      norm;
     MPI_Comm       comm;
 
@@ -130,7 +127,6 @@ PetscErrorCode MyTSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec v, void *c
 */
 PetscErrorCode MySNESMonitor(SNES snes, PetscInt its, PetscReal fnorm, PetscViewerAndFormat *vf)
 {
-    PetscErrorCode ierr;
 
     PetscFunctionBeginUser;
     CHKERRQ(SNESMonitorDefaultShort(snes, its, fnorm, vf));
@@ -152,7 +148,6 @@ PetscErrorCode FormFunction(TS ts, PetscReal ftime, Vec X, Vec F, void *ctx)
 {
     AppCtx *user = (AppCtx *) ctx;
     DM da;
-    PetscErrorCode ierr;
     PetscScalar *x, *f;
     Vec localX;
     PetscInt fStart, fEnd, nF;

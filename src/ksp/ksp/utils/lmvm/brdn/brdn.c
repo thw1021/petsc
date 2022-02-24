@@ -24,7 +24,6 @@ static PetscErrorCode MatSolve_LMVMBrdn(Mat B, Vec F, Vec dX)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i, j;
   PetscScalar       sjtqi, stx, stq;
 
@@ -79,7 +78,6 @@ static PetscErrorCode MatMult_LMVMBrdn(Mat B, Vec X, Vec Z)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i, j;
   PetscScalar       sjtsi, stx;
 
@@ -113,7 +111,6 @@ static PetscErrorCode MatUpdate_LMVMBrdn(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          old_k, i;
   PetscScalar       sts;
 
@@ -151,7 +148,6 @@ static PetscErrorCode MatCopy_LMVMBrdn(Mat B, Mat M, MatStructure str)
   Mat_Brdn          *bctx = (Mat_Brdn*)bdata->ctx;
   Mat_LMVM          *mdata = (Mat_LMVM*)M->data;
   Mat_Brdn          *mctx = (Mat_Brdn*)mdata->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i;
 
   PetscFunctionBegin;
@@ -172,7 +168,6 @@ static PetscErrorCode MatReset_LMVMBrdn(Mat B, PetscBool destructive)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   lbrdn->needP = lbrdn->needQ = PETSC_TRUE;
@@ -192,7 +187,6 @@ static PetscErrorCode MatAllocate_LMVMBrdn(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAllocate_LMVM(B, X, F));
@@ -213,7 +207,6 @@ static PetscErrorCode MatDestroy_LMVMBrdn(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (lbrdn->allocated) {
@@ -233,7 +226,6 @@ static PetscErrorCode MatSetUp_LMVMBrdn(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_Brdn          *lbrdn = (Mat_Brdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetUp_LMVM(B));
@@ -254,7 +246,6 @@ PetscErrorCode MatCreate_LMVMBrdn(Mat B)
 {
   Mat_LMVM          *lmvm;
   Mat_Brdn          *lbrdn;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate_LMVM(B));
@@ -316,7 +307,6 @@ PetscErrorCode MatCreate_LMVMBrdn(Mat B)
 @*/
 PetscErrorCode MatCreateLMVMBroyden(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm, B));

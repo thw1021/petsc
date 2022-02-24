@@ -223,7 +223,6 @@ M*/
 @*/
 PetscErrorCode TSMPRKRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSMPRKRegisterAllCalled) PetscFunctionReturn(0);
@@ -393,7 +392,6 @@ PetscErrorCode TSMPRKRegisterAll(void)
 @*/
 PetscErrorCode TSMPRKRegisterDestroy(void)
 {
-  PetscErrorCode ierr;
   MPRKTableauLink link;
 
   PetscFunctionBegin;
@@ -423,7 +421,6 @@ PetscErrorCode TSMPRKRegisterDestroy(void)
 @*/
 PetscErrorCode TSMPRKInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSMPRKPackageInitialized) PetscFunctionReturn(0);
@@ -443,7 +440,6 @@ PetscErrorCode TSMPRKInitializePackage(void)
 @*/
 PetscErrorCode TSMPRKFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSMPRKPackageInitialized = PETSC_FALSE;
@@ -485,7 +481,6 @@ PetscErrorCode TSMPRKRegister(TSMPRKType name,PetscInt order,
   MPRKTableauLink link;
   MPRKTableau     t;
   PetscInt        s,i,j;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
@@ -578,7 +573,6 @@ static PetscErrorCode TSMPRKSetSplits(TS ts)
   TS_MPRK        *mprk = (TS_MPRK*)ts->data;
   MPRKTableau    tab = mprk->tableau;
   DM             dm,subdm,newdm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRHSSplitGetSubTS(ts,"slow",&mprk->subts_slow));
@@ -654,7 +648,6 @@ static PetscErrorCode TSEvaluateStep_MPRK(TS ts,PetscInt order,Vec X,PetscBool *
   PetscScalar    *wf = mprk->work_fast;
   PetscReal      h = ts->time_step;
   PetscInt       s = tab->s,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (j=0; j<s; j++) wf[j] = h*tab->bf[j];
@@ -674,7 +667,6 @@ static PetscErrorCode TSStep_MPRK(TS ts)
   PetscScalar     *wf = mprk->work_fast,*wsb = mprk->work_slowbuffer;
   PetscInt        i,j;
   PetscReal       next_time_step = ts->time_step,t = ts->ptime,h = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i=0; i<s; i++) {
@@ -769,7 +761,6 @@ static PetscErrorCode TSEvaluateStep_MPRKSPLIT(TS ts,PetscInt order,Vec X,PetscB
   PetscScalar    *wf = mprk->work_fast,*ws = mprk->work_slow,*wsb = mprk->work_slowbuffer;
   PetscReal      h = ts->time_step;
   PetscInt       s = tab->s,j,computedstages;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(ts->vec_sol,X));
@@ -841,7 +832,6 @@ static PetscErrorCode TSStep_MPRKSPLIT(TS ts)
   PetscScalar     *wf = mprk->work_fast,*ws = mprk->work_slow,*wsb = mprk->work_slowbuffer;
   PetscInt        i,j,computedstages;
   PetscReal       next_time_step = ts->time_step,t = ts->ptime,h = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i=0; i<s; i++) {
@@ -952,7 +942,6 @@ static PetscErrorCode TSMPRKTableauReset(TS ts)
 {
   TS_MPRK        *mprk = (TS_MPRK*)ts->data;
   MPRKTableau    tab = mprk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tab) PetscFunctionReturn(0);
@@ -987,7 +976,6 @@ static PetscErrorCode TSMPRKTableauReset(TS ts)
 
 static PetscErrorCode TSReset_MPRK(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSMPRKTableauReset(ts));
@@ -1023,7 +1011,6 @@ static PetscErrorCode TSMPRKTableauSetUp(TS ts)
   TS_MPRK        *mprk  = (TS_MPRK*)ts->data;
   MPRKTableau    tab = mprk->tableau;
   Vec            YdotRHS_slow,YdotRHS_slowbuffer,YdotRHS_medium,YdotRHS_mediumbuffer,YdotRHS_fast;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicateVecs(ts->vec_sol,tab->s,&mprk->Y));
@@ -1083,7 +1070,6 @@ static PetscErrorCode TSSetUp_MPRK(TS ts)
   TS_MPRK        *mprk = (TS_MPRK*)ts->data;
   MPRKTableau    tab = mprk->tableau;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRHSSplitGetIS(ts,"slow",&mprk->is_slow));
@@ -1125,7 +1111,6 @@ static PetscErrorCode TSSetUp_MPRK(TS ts)
 static PetscErrorCode TSSetFromOptions_MPRK(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_MPRK        *mprk = (TS_MPRK*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"PRK ODE solver options"));
@@ -1149,7 +1134,6 @@ static PetscErrorCode TSView_MPRK(TS ts,PetscViewer viewer)
 {
   TS_MPRK        *mprk = (TS_MPRK*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1201,7 +1185,6 @@ static PetscErrorCode TSView_MPRK(TS ts,PetscViewer viewer)
 
 static PetscErrorCode TSLoad_MPRK(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   TSAdapt        adapt;
 
   PetscFunctionBegin;
@@ -1228,7 +1211,6 @@ static PetscErrorCode TSLoad_MPRK(TS ts,PetscViewer viewer)
 @*/
 PetscErrorCode TSMPRKSetType(TS ts,TSMPRKType mprktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1254,7 +1236,6 @@ PetscErrorCode TSMPRKSetType(TS ts,TSMPRKType mprktype)
 @*/
 PetscErrorCode TSMPRKGetType(TS ts,TSMPRKType *mprktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1276,7 +1257,6 @@ static PetscErrorCode TSMPRKSetType_MPRK(TS ts,TSMPRKType mprktype)
   TS_MPRK         *mprk = (TS_MPRK*)ts->data;
   PetscBool       match;
   MPRKTableauLink link;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (mprk->tableau) {
@@ -1307,7 +1287,6 @@ static PetscErrorCode TSGetStages_MPRK(TS ts,PetscInt *ns,Vec **Y)
 
 static PetscErrorCode TSDestroy_MPRK(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_MPRK(ts));
@@ -1339,7 +1318,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_MPRK(TS ts)
 {
   TS_MPRK        *mprk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSMPRKInitializePackage());

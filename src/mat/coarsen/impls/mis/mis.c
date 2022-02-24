@@ -23,7 +23,6 @@
 */
 PetscErrorCode maxIndSetAgg(IS perm,Mat Gmat,PetscBool strict_aggs,PetscCoarsenData **a_locals_llist)
 {
-  PetscErrorCode   ierr;
   Mat_SeqAIJ       *matA,*matB=NULL;
   Mat_MPIAIJ       *mpimat=NULL;
   MPI_Comm         comm;
@@ -260,7 +259,6 @@ PetscErrorCode maxIndSetAgg(IS perm,Mat Gmat,PetscBool strict_aggs,PetscCoarsenD
 */
 static PetscErrorCode MatCoarsenApply_MIS(MatCoarsen coarse)
 {
-  PetscErrorCode ierr;
   Mat            mat = coarse->graph;
 
   PetscFunctionBegin;
@@ -282,7 +280,6 @@ static PetscErrorCode MatCoarsenApply_MIS(MatCoarsen coarse)
 
 PetscErrorCode MatCoarsenView_MIS(MatCoarsen coarse,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscBool      iascii;
 

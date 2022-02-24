@@ -17,7 +17,6 @@ PETSC_INTERN PetscErrorCode MatMatMultSymbolic_AIJ_AIJ_wHYPRE(Mat,Mat,PetscReal,
 
 PETSC_INTERN PetscErrorCode MatProductSymbolic_AB_MPIAIJ_MPIAIJ(Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_Product         *product = C->product;
   Mat                 A=product->A,B=product->B;
   MatProductAlgorithm alg=product->alg;
@@ -65,7 +64,6 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_AB_MPIAIJ_MPIAIJ(Mat C)
 
 PetscErrorCode MatDestroy_MPIAIJ_MatMatMult(void *data)
 {
-  PetscErrorCode ierr;
   Mat_APMPI      *ptap = (Mat_APMPI*)data;
 
   PetscFunctionBegin;
@@ -83,7 +81,6 @@ PetscErrorCode MatDestroy_MPIAIJ_MatMatMult(void *data)
 
 PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIAIJ_nonscalable(Mat A,Mat P,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *a  =(Mat_MPIAIJ*)A->data,*c=(Mat_MPIAIJ*)C->data;
   Mat_SeqAIJ        *ad =(Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data;
   Mat_SeqAIJ        *cd =(Mat_SeqAIJ*)(c->A)->data,*co=(Mat_SeqAIJ*)(c->B)->data;
@@ -360,7 +357,6 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIDense_AtB(Mat C)
 /* --------------------------------------------------------------------- */
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIDense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -389,7 +385,6 @@ typedef struct {
 PetscErrorCode MatMPIAIJ_MPIDenseDestroy(void *ctx)
 {
   MPIAIJ_MPIDense *contents = (MPIAIJ_MPIDense*)ctx;
-  PetscErrorCode  ierr;
   PetscInt        i;
 
   PetscFunctionBegin;
@@ -534,7 +529,6 @@ PETSC_INTERN PetscErrorCode MatMatMultNumericAdd_SeqAIJ_SeqDense(Mat,Mat,Mat,con
 PetscErrorCode MatMPIDenseScatter(Mat A,Mat B,PetscInt Bbidx,Mat C,Mat *outworkB)
 {
   Mat_MPIAIJ        *aij = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode    ierr;
   const PetscScalar *b;
   PetscScalar       *rvalues;
   VecScatter        ctx = aij->Mvctx;
@@ -595,7 +589,6 @@ PetscErrorCode MatMPIDenseScatter(Mat A,Mat B,PetscInt Bbidx,Mat C,Mat *outworkB
 
 static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode  ierr;
   Mat_MPIAIJ      *aij    = (Mat_MPIAIJ*)A->data;
   Mat_MPIDense    *bdense = (Mat_MPIDense*)B->data;
   Mat_MPIDense    *cdense = (Mat_MPIDense*)C->data;
@@ -640,7 +633,6 @@ static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIAIJ(Mat A,Mat P,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *a   = (Mat_MPIAIJ*)A->data,*c=(Mat_MPIAIJ*)C->data;
   Mat_SeqAIJ        *ad  = (Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data;
   Mat_SeqAIJ        *cd  = (Mat_SeqAIJ*)(c->A)->data,*co=(Mat_SeqAIJ*)(c->B)->data;
@@ -1244,7 +1236,6 @@ PetscErrorCode MatMatMultSymbolic_MPIAIJ_MPIAIJ_seqMPI(Mat A, Mat P, PetscReal f
 /* This routine only works when scall=MAT_REUSE_MATRIX! */
 PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ_matmatmult(Mat P,Mat A,Mat C)
 {
-  PetscErrorCode ierr;
   Mat_APMPI      *ptap;
   Mat            Pt;
 
@@ -1536,7 +1527,6 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A
 
 PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *p=(Mat_MPIAIJ*)P->data;
   Mat_SeqAIJ        *c_seq;
   Mat_APMPI         *ptap;
@@ -1607,7 +1597,6 @@ PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ_nonscalable(Mat P,Mat A,
 
 PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ(Mat P,Mat A,Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_Merge_SeqsToMPI *merge;
   Mat_MPIAIJ          *p =(Mat_MPIAIJ*)P->data;
   Mat_SeqAIJ          *pd=(Mat_SeqAIJ*)(p->A)->data,*po=(Mat_SeqAIJ*)(p->B)->data;
@@ -2120,7 +2109,6 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat P,Mat A,PetscReal f
 /* ---------------------------------------------------------------- */
 static PetscErrorCode MatProductSymbolic_AtB_MPIAIJ_MPIAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A=product->A,B=product->B;
   PetscReal      fill=product->fill;
@@ -2419,7 +2407,6 @@ static PetscErrorCode MatProductSetFromOptions_MPIAIJ_ABC(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;

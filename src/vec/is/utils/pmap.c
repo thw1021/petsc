@@ -47,7 +47,6 @@ $      PetscLayoutCreateFromSizes(comm,n,N,bs,&layout);
 @*/
 PetscErrorCode PetscLayoutCreate(MPI_Comm comm,PetscLayout *map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(map));
@@ -100,7 +99,6 @@ $ PetscLayoutCreateFromSizes(comm,n,N,bs,&layout);
 @*/
 PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt bs,PetscLayout *map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutCreate(comm, map));
@@ -131,7 +129,6 @@ PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm comm,PetscInt n,PetscInt N,Pe
 @*/
 PetscErrorCode PetscLayoutDestroy(PetscLayout *map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*map) PetscFunctionReturn(0);
@@ -168,7 +165,6 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm,const PetscInt range[],
 {
   PetscLayout    map;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -239,7 +235,6 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
 {
   PetscMPIInt    rank;
   PetscInt       p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(map->setupcalled && (map->n != map->oldn || map->N != map->oldN),map->comm,PETSC_ERR_ARG_WRONGSTATE,"Layout is already setup with (local=%" PetscInt_FMT ",global=%" PetscInt_FMT "), cannot call setup again with (local=%" PetscInt_FMT ",global=%" PetscInt_FMT ")", map->oldn, map->oldN, map->n, map->N);
@@ -297,7 +292,6 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
 @*/
 PetscErrorCode PetscLayoutDuplicate(PetscLayout in,PetscLayout *out)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm = in->comm;
 
   PetscFunctionBegin;
@@ -334,7 +328,6 @@ PetscErrorCode PetscLayoutDuplicate(PetscLayout in,PetscLayout *out)
 @*/
 PetscErrorCode PetscLayoutReference(PetscLayout in,PetscLayout *out)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   in->refcnt++;
@@ -363,7 +356,6 @@ PetscErrorCode PetscLayoutReference(PetscLayout in,PetscLayout *out)
 @*/
 PetscErrorCode PetscLayoutSetISLocalToGlobalMapping(PetscLayout in,ISLocalToGlobalMapping ltog)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ltog) {
@@ -507,7 +499,6 @@ PetscErrorCode PetscLayoutSetBlockSize(PetscLayout map,PetscInt bs)
   PetscCheckFalse(map->n > 0 && map->n % bs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %" PetscInt_FMT " not compatible with block size %" PetscInt_FMT,map->n,bs);
   if (map->mapping) {
     PetscInt       obs;
-    PetscErrorCode ierr;
 
     CHKERRQ(ISLocalToGlobalMappingGetBlockSize(map->mapping,&obs));
     if (obs > 1) {
@@ -624,7 +615,6 @@ PetscErrorCode  PetscLayoutGetRanges(PetscLayout map,const PetscInt *range[])
 @*/
 PetscErrorCode PetscLayoutCompare(PetscLayout mapa,PetscLayout mapb,PetscBool *congruent)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *congruent = PETSC_FALSE;

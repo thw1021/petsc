@@ -9,7 +9,6 @@
 */
 PetscErrorCode MatFDColoringCreate_SeqXAIJ(Mat mat,ISColoring iscoloring,MatFDColoring c)
 {
-  PetscErrorCode ierr;
   PetscInt       bs,nis=iscoloring->n,m=mat->rmap->n;
   PetscBool      isBAIJ,isSELL;
 
@@ -61,7 +60,6 @@ PetscErrorCode MatFDColoringCreate_SeqXAIJ(Mat mat,ISColoring iscoloring,MatFDCo
 */
 PetscErrorCode MatFDColoringSetUpBlocked_AIJ_Private(Mat mat,MatFDColoring c,PetscInt nz)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,nrows,nbcols,brows=c->brows,bcols=c->bcols,mbs=c->m,nis=c->ncolors;
   PetscInt       *color_start,*row_start,*nrows_new,nz_new,row_end;
 
@@ -173,7 +171,6 @@ PetscErrorCode MatFDColoringSetUpBlocked_AIJ_Private(Mat mat,MatFDColoring c,Pet
 
 PetscErrorCode MatFDColoringSetUp_SeqXAIJ(Mat mat,ISColoring iscoloring,MatFDColoring c)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,n,nrows,mbs=c->m,j,k,m,ncols,col,nis=iscoloring->n,*rowhit,bs,bs2,*spidx,nz,tmp;
   const PetscInt    *is,*row,*ci,*cj;
   PetscBool         isBAIJ,isSELL;

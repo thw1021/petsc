@@ -176,7 +176,6 @@ int main(int argc,char **argv)
 */
 PetscErrorCode FormInitialGuess(Vec x)
 {
-  PetscErrorCode ierr;
   PetscScalar    pfive = .50;
   CHKERRQ(VecSet(x,pfive));
   return 0;
@@ -205,7 +204,6 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
   Vec               g = (Vec)ctx;
   const PetscScalar *xx,*gg;
   PetscScalar       *ff,d;
-  PetscErrorCode    ierr;
   PetscInt          i,n;
 
   /*
@@ -255,7 +253,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
   const PetscScalar *xx;
   PetscScalar       A[3],d;
-  PetscErrorCode    ierr;
   PetscInt          i,n,j[3];
 
   /*

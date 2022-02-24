@@ -6,7 +6,6 @@ static char help[] = "Tests PetscGetFullPath().\n\n";
 /* for windows - fix up path - so that we can do diff test */
 PetscErrorCode  path_to_unix(char filein[])
 {
-  PetscErrorCode ierr;
   size_t         i,n;
 
   PetscFunctionBegin;

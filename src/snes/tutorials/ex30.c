@@ -217,7 +217,6 @@ PetscErrorCode UpdateSolution(SNES snes, AppCtx *user, PetscInt *nits)
   Parameter           *param   = user->param;
   PetscReal           cont_incr=0.3;
   PetscInt            its;
-  PetscErrorCode      ierr;
   PetscBool           q = PETSC_FALSE;
   DM                  dm;
 
@@ -769,9 +768,8 @@ static inline PetscScalar ZNormalStress(Field **x, PetscInt i, PetscInt j, Petsc
 PetscErrorCode SetParams(Parameter *param, GridInfo *grid)
 /*---------------------------------------------------------------------*/
 {
-  PetscErrorCode ierr, ierr_out=0;
-  PetscReal      SEC_PER_YR                    = 3600.00*24.00*365.2500;
-  PetscReal      alpha_g_on_cp_units_inverse_km=4.0e-5*9.8;
+  PetscReal SEC_PER_YR                     = 3600.00*24.00*365.2500;
+  PetscReal alpha_g_on_cp_units_inverse_km = 4.0e-5*9.8;
 
   /* domain geometry */
   param->slab_dip    = 45.0;
@@ -898,7 +896,7 @@ PetscErrorCode SetParams(Parameter *param, GridInfo *grid)
   param->skt     = PetscSqrtReal(param->kappa*param->slab_age*SEC_PER_YR);
   CHKERRQ(PetscOptionsGetReal(NULL,NULL,"-peclet",&(param->peclet),NULL));
 
-  return ierr_out;
+  return 0;
 }
 
 /*---------------------------------------------------------------------*/
@@ -906,7 +904,6 @@ PetscErrorCode SetParams(Parameter *param, GridInfo *grid)
 PetscErrorCode ReportParams(Parameter *param, GridInfo *grid)
 /*---------------------------------------------------------------------*/
 {
-  PetscErrorCode ierr, ierr_out=0;
   char           date[30];
 
   CHKERRQ(PetscGetDate(date,30));
@@ -940,7 +937,7 @@ PetscErrorCode ReportParams(Parameter *param, GridInfo *grid)
       CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"                          Viscosity range: %g--%g Pa-sec \n",(double)param->eta0,(double)(param->visc_cutoff*param->eta0)));
     } else {
       CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"                 Invalid! \n"));
-      ierr_out = 1;
+      return 1;
     }
 
     CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"Boundary condition:"));
@@ -952,7 +949,7 @@ PetscErrorCode ReportParams(Parameter *param, GridInfo *grid)
       CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"       Experimental boundary condition \n"));
     } else {
       CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"       Invalid! \n"));
-      ierr_out = 1;
+      return 1;
     }
 
     if (param->output_to_file) {
@@ -969,7 +966,7 @@ PetscErrorCode ReportParams(Parameter *param, GridInfo *grid)
     CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"---------------------END ex30 PARAM REPORT---------------------\n"));
   }
   if (param->param_test) PetscEnd();
-  return ierr_out;
+  return 0;
 }
 
 /* ------------------------------------------------------------------- */
@@ -982,7 +979,6 @@ PetscErrorCode Initialize(DM da)
   Parameter      *param;
   GridInfo       *grid;
   PetscInt       i,j,is,js,im,jm;
-  PetscErrorCode ierr;
   Field          **x;
   Vec            Xguess;
 
@@ -1027,7 +1023,6 @@ PetscErrorCode DoOutput(SNES snes, PetscInt its)
   Parameter      *param;
   GridInfo       *grid;
   PetscInt       ivt;
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscViewer    viewer;
   Vec            res, pars;
@@ -1119,7 +1114,6 @@ PetscErrorCode ViscosityField(DM da, Vec X, Vec V)
   Field          **v, **x;
   PetscReal      eps, /* dx,*/ dz, T, epsC, TC;
   PetscInt       i,j,is,js,im,jm,ilim,jlim,ivt;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetApplicationContext(da,&user));
@@ -1173,7 +1167,6 @@ PetscErrorCode StressField(DM da)
 {
   AppCtx         *user;
   PetscInt       i,j,is,js,im,jm;
-  PetscErrorCode ierr;
   Vec            locVec;
   Field          **x, **y;
 
@@ -1258,7 +1251,6 @@ PetscErrorCode SNESConverged_Interactive(SNES snes, PetscInt it,PetscReal xnorm,
   AppCtx         *user  = (AppCtx*) ctx;
   Parameter      *param = user->param;
   KSP            ksp;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (param->interrupted) {

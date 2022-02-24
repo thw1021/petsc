@@ -101,7 +101,6 @@ static const char *datasets[ns]  =
 static inline PetscErrorCode shouldExist(const char name[], PetscBool emptyExists, PetscBool *has)
 {
   size_t         len=0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrlen(name, &len));
@@ -116,7 +115,6 @@ static inline PetscErrorCode shouldExist(const char name[], PetscBool emptyExist
 
 static inline PetscErrorCode isPop(const char path[], PetscBool *has)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcmp(path, "<", has));
@@ -125,7 +123,6 @@ static inline PetscErrorCode isPop(const char path[], PetscBool *has)
 
 static inline PetscErrorCode isDot(const char path[], PetscBool *has)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcmp(path, ".", has));
@@ -135,7 +132,6 @@ static inline PetscErrorCode isDot(const char path[], PetscBool *has)
 static inline PetscErrorCode isRoot(const char path[], PetscBool *flg)
 {
   size_t         len;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrlen(path, &len));
@@ -148,7 +144,6 @@ static inline PetscErrorCode isRoot(const char path[], PetscBool *flg)
 
 static inline PetscErrorCode compare(PetscDataType dt, void *ptr0, void *ptr1, PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (dt) {
@@ -200,7 +195,6 @@ static inline PetscErrorCode compare(PetscDataType dt, void *ptr0, void *ptr1, P
 static inline PetscErrorCode alterString(const char oldstr[], char str[])
 {
   size_t          i,n;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcpy(str, oldstr));
@@ -219,7 +213,6 @@ static inline PetscErrorCode alterString(const char oldstr[], char str[])
 static PetscErrorCode hasGroupOrDataset(PetscViewer viewer, const char path[], int *flg)
 {
   PetscBool      has;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *flg = 0;
@@ -256,7 +249,6 @@ static PetscErrorCode CapsuleCreate(Capsule old, Capsule *newcapsule)
   PetscDataType  types[nt]    = {PETSC_BOOL,    PETSC_INT,    PETSC_REAL,    PETSC_STRING, PETSC_STRING};
   const char     *tNames[nt]  = {"bool",        "int",        "real",        "str",        "nonExisting"};
   PetscInt       t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&c));
@@ -288,7 +280,6 @@ static PetscErrorCode CapsuleWriteAttributes(Capsule c, PetscViewer v, const cha
 {
   PetscInt       t;
   PetscBool      flg=PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (t=0; t < c->ntypes; t++) {
@@ -306,7 +297,6 @@ static PetscErrorCode CapsuleReadAndCompareAttributes(Capsule c, PetscViewer v, 
   PetscInt       t;
   PetscBool      flg=PETSC_FALSE, hasAttr=PETSC_FALSE;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)v, &comm));
@@ -358,7 +348,6 @@ static PetscErrorCode CapsuleReadAndCompareAttributes(Capsule c, PetscViewer v, 
 static PetscErrorCode CapsuleDestroy(Capsule *c)
 {
   PetscInt              t;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   if (!*c) PetscFunctionReturn(0);
@@ -378,7 +367,6 @@ static PetscErrorCode testGroupsDatasets(PetscViewer viewer)
   PetscRandom    rand;
   const char    *filename;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer, &comm));
@@ -508,7 +496,6 @@ static PetscErrorCode testGroupsDatasets(PetscViewer viewer)
 static inline PetscErrorCode formPath(PetscBool relativize, const char path[], const char dataset[], char buf[], size_t bufsize)
 {
   PetscBool      isroot=PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(isRoot(path, &isroot));
@@ -533,7 +520,6 @@ static PetscErrorCode testAttributesAbsolutePath(PetscViewer viewer, const char 
   PetscInt       p,s;
   PetscBool      flg=PETSC_FALSE,flg1=PETSC_FALSE;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer, &comm));
@@ -632,7 +618,6 @@ static PetscErrorCode testAttributesPushedPath(PetscViewer viewer)
   int            gd;
   PetscBool      flg=PETSC_FALSE,flg1=PETSC_FALSE;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer, &comm));
@@ -710,7 +695,6 @@ static PetscErrorCode testObjectAttributes(PetscViewer viewer)
   PetscInt       p,s;
   PetscBool      flg=PETSC_FALSE,flg1=PETSC_FALSE;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer, &comm));
@@ -810,7 +794,6 @@ static PetscErrorCode testAttributesDefaultValue(PetscViewer viewer)
   PetscBool      flg;
   PetscInt       i;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer, &comm));

@@ -10,7 +10,6 @@ struct _n_User {
 static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -21,7 +20,6 @@ static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatCopy_User(Mat A,Mat B,MatStructure str)
 {
   User           userA,userB;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&userA));
@@ -36,7 +34,6 @@ static PetscErrorCode MatCopy_User(Mat A,Mat B,MatStructure str)
 static PetscErrorCode MatDestroy_User(Mat A)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A, &user));

@@ -31,7 +31,6 @@ PetscErrorCode VecSetType(Vec vec, VecType method)
   PetscErrorCode (*r)(Vec);
   PetscBool      match;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID,1);
@@ -112,7 +111,6 @@ PetscErrorCode VecSetType(Vec vec, VecType method)
 @*/
 PetscErrorCode VecGetType(Vec vec, VecType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID,1);
@@ -124,7 +122,6 @@ PetscErrorCode VecGetType(Vec vec, VecType *type)
 
 PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
 {
-  PetscErrorCode ierr;
   PetscBool      iscuda, iship, iskokkos, isvcl;
 
   PetscFunctionBegin;
@@ -177,7 +174,6 @@ PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
 @*/
 PetscErrorCode VecRegister(const char sname[], PetscErrorCode (*function)(Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecInitializePackage());

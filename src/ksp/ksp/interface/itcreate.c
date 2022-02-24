@@ -51,7 +51,6 @@ PetscBool         KSPMonitorRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isbinary;
   PetscInt       classid;
   char           type[256];
@@ -61,15 +60,13 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
   PetscValidHeaderSpecific(newdm,KSP_CLASSID,1);
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));
-  PetscCheckFalse(!isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+  PetscCheck(isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
 
   CHKERRQ(PetscViewerBinaryRead(viewer,&classid,1,NULL,PETSC_INT));
-  PetscCheckFalse(classid != KSP_FILE_CLASSID,PetscObjectComm((PetscObject)newdm),PETSC_ERR_ARG_WRONG,"Not KSP next in file");
+  PetscCheck(classid == KSP_FILE_CLASSID,PetscObjectComm((PetscObject)newdm),PETSC_ERR_ARG_WRONG,"Not KSP next in file");
   CHKERRQ(PetscViewerBinaryRead(viewer,type,256,NULL,PETSC_CHAR));
   CHKERRQ(KSPSetType(newdm, type));
-  if (newdm->ops->load) {
-    CHKERRQ((*newdm->ops->load)(newdm,viewer));
-  }
+  if (newdm->ops->load) CHKERRQ((*newdm->ops->load)(newdm,viewer));
   CHKERRQ(KSPGetPC(newdm,&pc));
   CHKERRQ(PCLoad(pc,viewer));
   PetscFunctionReturn(0);
@@ -114,7 +111,6 @@ PetscErrorCode  KSPLoad(KSP newdm, PetscViewer viewer)
 @*/
 PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii,isbinary,isdraw,isstring;
 #if defined(PETSC_HAVE_SAWS)
   PetscBool      issaws;
@@ -251,7 +247,6 @@ PetscErrorCode  KSPView(KSP ksp,PetscViewer viewer)
 @*/
 PetscErrorCode  KSPViewFromOptions(KSP A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,KSP_CLASSID,1);
@@ -396,7 +391,6 @@ PetscErrorCode KSPSetSupportedNorm(KSP ksp,KSPNormType normtype,PCSide pcside,Pe
 
 PetscErrorCode KSPNormSupportTableReset_Private(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMemzero(ksp->normsupporttable,sizeof(ksp->normsupporttable)));
@@ -421,9 +415,9 @@ PetscErrorCode KSPSetUpNorms_Private(KSP ksp,PetscBool errorifnotsupported,KSPNo
     }
   }
   if (best < 1 && errorifnotsupported) {
-    PetscCheckFalse(ksp->normtype == KSP_NORM_DEFAULT && ksp->pc_side == PC_SIDE_DEFAULT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"The %s KSP implementation did not call KSPSetSupportedNorm()",((PetscObject)ksp)->type_name);
-    PetscCheckFalse(ksp->normtype == KSP_NORM_DEFAULT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP %s does not support %s",((PetscObject)ksp)->type_name,PCSides[ksp->pc_side]);
-    PetscCheckFalse(ksp->pc_side == PC_SIDE_DEFAULT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP %s does not support %s",((PetscObject)ksp)->type_name,KSPNormTypes[ksp->normtype]);
+    PetscCheck(ksp->normtype != KSP_NORM_DEFAULT || ksp->pc_side != PC_SIDE_DEFAULT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"The %s KSP implementation did not call KSPSetSupportedNorm()",((PetscObject)ksp)->type_name);
+    PetscCheck(ksp->normtype != KSP_NORM_DEFAULT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP %s does not support %s",((PetscObject)ksp)->type_name,PCSides[ksp->pc_side]);
+    PetscCheck(ksp->pc_side != PC_SIDE_DEFAULT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP %s does not support %s",((PetscObject)ksp)->type_name,KSPNormTypes[ksp->normtype]);
     SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP %s does not support %s with %s",((PetscObject)ksp)->type_name,KSPNormTypes[ksp->normtype],PCSides[ksp->pc_side]);
   }
   if (normtype) *normtype = (KSPNormType)ibest;
@@ -448,7 +442,6 @@ PetscErrorCode KSPSetUpNorms_Private(KSP ksp,PetscBool errorifnotsupported,KSPNo
 @*/
 PetscErrorCode  KSPGetNormType(KSP ksp, KSPNormType *normtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -529,7 +522,6 @@ $           set size, type, etc of mat and pmat
 @*/
 PetscErrorCode  KSPSetOperators(KSP ksp,Mat Amat,Mat Pmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -565,7 +557,6 @@ PetscErrorCode  KSPSetOperators(KSP ksp,Mat Amat,Mat Pmat)
 @*/
 PetscErrorCode  KSPGetOperators(KSP ksp,Mat *Amat,Mat *Pmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -593,7 +584,6 @@ PetscErrorCode  KSPGetOperators(KSP ksp,Mat *Amat,Mat *Pmat)
 @*/
 PetscErrorCode  KSPGetOperatorsSet(KSP ksp,PetscBool  *mat,PetscBool  *pmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -686,7 +676,6 @@ PetscErrorCode  KSPSetPostSolve(KSP ksp,PetscErrorCode (*postsolve)(KSP,Vec,Vec,
 PetscErrorCode  KSPCreate(MPI_Comm comm,KSP *inksp)
 {
   KSP            ksp;
-  PetscErrorCode ierr;
   void           *ctx;
 
   PetscFunctionBegin;
@@ -786,8 +775,8 @@ PetscErrorCode  KSPCreate(MPI_Comm comm,KSP *inksp)
 @*/
 PetscErrorCode  KSPSetType(KSP ksp, KSPType type)
 {
-  PetscErrorCode ierr,(*r)(KSP);
   PetscBool      match;
+  PetscErrorCode (*r)(KSP);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -797,7 +786,7 @@ PetscErrorCode  KSPSetType(KSP ksp, KSPType type)
   if (match) PetscFunctionReturn(0);
 
   CHKERRQ(PetscFunctionListFind(KSPList,type,&r));
-  PetscCheckFalse(!r,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested KSP type %s",type);
+  PetscCheck(r,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested KSP type %s",type);
   /* Destroy the previous private KSP context */
   if (ksp->ops->destroy) {
     CHKERRQ((*ksp->ops->destroy)(ksp));
@@ -868,7 +857,6 @@ $     -ksp_type my_solver
 @*/
 PetscErrorCode  KSPRegister(const char sname[],PetscErrorCode (*function)(KSP))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPInitializePackage());
@@ -878,7 +866,6 @@ PetscErrorCode  KSPRegister(const char sname[],PetscErrorCode (*function)(KSP))
 
 PetscErrorCode KSPMonitorMakeKey_Internal(const char name[], PetscViewerType vtype, PetscViewerFormat format, char key[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(key, name, PETSC_MAX_PATH_LEN));
@@ -925,7 +912,6 @@ PetscErrorCode KSPMonitorRegister(const char name[], PetscViewerType vtype, Pets
                                   PetscErrorCode (*destroy)(PetscViewerAndFormat **))
 {
   char           key[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPInitializePackage());

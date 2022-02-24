@@ -96,8 +96,7 @@ PetscErrorCode MatSeqBAIJSetNumericFactorization_inplace(Mat inA,PetscBool natur
     case 4:
 #if defined(PETSC_USE_REAL_MAT_SINGLE)
       {
-        PetscBool      sse_enabled_local;
-        PetscErrorCode ierr;
+        PetscBool sse_enabled_local;
         CHKERRQ(PetscSSEIsEnabled(inA->comm,&sse_enabled_local,NULL));
         if (sse_enabled_local) {
 #  if defined(PETSC_HAVE_SSE)
@@ -190,7 +189,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqBAIJ(Mat B,Mat A,IS isrow,IS iscol,const M
   PetscInt           n  =a->mbs,bs = A->rmap->bs,bs2=a->bs2;
   PetscBool          row_identity,col_identity,both_identity;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic;
   PetscInt           i,*ai=a->i,*aj=a->j;
   PetscInt           *bi,*bj,*ajtmp;
@@ -350,7 +348,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqBAIJ_inplace(Mat B,Mat A,IS isrow,IS iscol
   PetscInt           n  =a->mbs,bs = A->rmap->bs,bs2=a->bs2;
   PetscBool          row_identity,col_identity,both_identity;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic;
   PetscInt           i,*ai=a->i,*aj=a->j;
   PetscInt           *bi,*bj,*ajtmp;

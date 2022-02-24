@@ -13,7 +13,6 @@ struct KSP_CG_PIPE_PR_s {
 */
 static PetscErrorCode KSPSetUp_PIPEPRCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get work vectors needed by PIPEPRCG */
@@ -26,7 +25,6 @@ static PetscErrorCode KSPSetFromOptions_PIPEPRCG(PetscOptionItems *PetscOptionsO
 {
   KSP_CG_PIPE_PR *prcg=(KSP_CG_PIPE_PR*)ksp->data;
   PetscBool      flag=PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"KSP PIPEPRCG options"));
@@ -41,7 +39,6 @@ static PetscErrorCode KSPSetFromOptions_PIPEPRCG(PetscOptionItems *PetscOptionsO
 */
 static PetscErrorCode  KSPSolve_PIPEPRCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   KSP_CG_PIPE_PR *prcg=(KSP_CG_PIPE_PR*)ksp->data;
   PetscScalar    alpha = 0.0, beta = 0.0, nu = 0.0, nu_old = 0.0, mudelgam[3], *mu_p, *delta_p, *gamma_p;
@@ -200,7 +197,6 @@ static PetscErrorCode  KSPSolve_PIPEPRCG(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEPRCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_CG_PIPE_PR *prcg=NULL;
   PetscBool      cite=PETSC_FALSE;
 

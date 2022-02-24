@@ -48,7 +48,6 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
   User              user = (User)ctx;
   const PetscScalar *x;
   PetscScalar       *vres;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(X,&x));
@@ -63,7 +62,6 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Xres,void *ctx)
 {
   const PetscScalar *v;
   PetscScalar       *xres;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArray(Xres,&xres));
@@ -79,7 +77,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec R,void *ctx)
   User              user = (User)ctx;
   const PetscScalar *u;
   PetscScalar       *r;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -94,7 +91,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec R,void *ctx)
 /* Monitor timesteps and use interpolation to output at integer multiples of 0.1 */
 static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec U,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *u;
   PetscReal         dt;
   PetscScalar       energy,menergy;

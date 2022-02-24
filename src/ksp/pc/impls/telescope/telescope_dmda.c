@@ -135,7 +135,6 @@ static PetscErrorCode _DMDADetermineGlobalS0(PetscInt dim,PetscMPIInt rank_re,Pe
 
 static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors2d(PC_Telescope sred,DM dm,DM subdm)
 {
-  PetscErrorCode ierr;
   DM             cdm;
   Vec            coor,coor_natural,perm_coors;
   PetscInt       i,j,si,sj,ni,nj,M,N,Ml,Nl,c,nidx;
@@ -231,7 +230,6 @@ static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors2d(PC_Telescope sred,DM 
 
 static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors3d(PC_Telescope sred,DM dm,DM subdm)
 {
-  PetscErrorCode ierr;
   DM             cdm;
   Vec            coor,coor_natural,perm_coors;
   PetscInt       i,j,k,si,sj,sk,ni,nj,nk,M,N,P,Ml,Nl,Pl,c,nidx;
@@ -340,7 +338,6 @@ static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors(PC pc,PC_Telescope sred
   PetscSubcomm   psubcomm;
   MPI_Comm       comm;
   Vec            coor;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCGetDM(pc,&dm));
@@ -366,7 +363,6 @@ static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors(PC pc,PC_Telescope sred
 /* setup repartitioned dm */
 PetscErrorCode PCTelescopeSetUp_dmda_repart(PC pc,PC_Telescope sred,PC_Telescope_DMDACtx *ctx)
 {
-  PetscErrorCode        ierr;
   DM                    dm;
   PetscInt              dim,nx,ny,nz,ndof,nsw,sum,k;
   DMBoundaryType        bx,by,bz;
@@ -650,7 +646,6 @@ PetscErrorCode PCTelescopeSetUp_dmda_permutation_2d(PC pc,PC_Telescope sred,PC_T
 
 PetscErrorCode PCTelescopeSetUp_dmda_scatters(PC pc,PC_Telescope sred,PC_Telescope_DMDACtx *ctx)
 {
-  PetscErrorCode ierr;
   Vec            xred,yred,xtmp,x,xp;
   VecScatter     scatter;
   IS             isin;
@@ -700,7 +695,6 @@ PetscErrorCode PCTelescopeSetUp_dmda(PC pc,PC_Telescope sred)
   PetscInt             dim;
   DM                   dm;
   MPI_Comm             comm;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscInfo(pc,"PCTelescope: setup (DMDA)\n"));
@@ -727,7 +721,6 @@ PetscErrorCode PCTelescopeSetUp_dmda(PC pc,PC_Telescope sred)
 
 PetscErrorCode PCTelescopeMatCreate_dmda_dmactivefalse(PC pc,PC_Telescope sred,MatReuse reuse,Mat *A)
 {
-  PetscErrorCode       ierr;
   PC_Telescope_DMDACtx *ctx;
   MPI_Comm             comm,subcomm;
   Mat                  Bperm,Bred,B,P;
@@ -772,7 +765,6 @@ PetscErrorCode PCTelescopeMatCreate_dmda_dmactivefalse(PC pc,PC_Telescope sred,M
 
 PetscErrorCode PCTelescopeMatCreate_dmda(PC pc,PC_Telescope sred,MatReuse reuse,Mat *A)
 {
-  PetscErrorCode ierr;
   DM             dm;
   PetscErrorCode (*dmksp_func)(KSP,Mat,Mat,void*);
   void           *dmksp_ctx;
@@ -807,7 +799,6 @@ PetscErrorCode PCTelescopeMatCreate_dmda(PC pc,PC_Telescope sred,MatReuse reuse,
 
 PetscErrorCode PCTelescopeSubNullSpaceCreate_dmda_Telescope(PC pc,PC_Telescope sred,MatNullSpace nullspace,MatNullSpace *sub_nullspace)
 {
-  PetscErrorCode       ierr;
   PetscBool            has_const;
   PetscInt             i,k,n = 0;
   const Vec            *vecs;
@@ -867,7 +858,6 @@ PetscErrorCode PCTelescopeSubNullSpaceCreate_dmda_Telescope(PC pc,PC_Telescope s
 
 PetscErrorCode PCTelescopeMatNullSpaceCreate_dmda(PC pc,PC_Telescope sred,Mat sub_mat)
 {
-  PetscErrorCode ierr;
   Mat            B;
 
   PetscFunctionBegin;
@@ -902,7 +892,6 @@ PetscErrorCode PCTelescopeMatNullSpaceCreate_dmda(PC pc,PC_Telescope sred,Mat su
 PetscErrorCode PCApply_Telescope_dmda(PC pc,Vec x,Vec y)
 {
   PC_Telescope         sred = (PC_Telescope)pc->data;
-  PetscErrorCode       ierr;
   Mat                  perm;
   Vec                  xtmp,xp,xred,yred;
   PetscInt             i,st,ed;
@@ -970,7 +959,6 @@ PetscErrorCode PCApply_Telescope_dmda(PC pc,Vec x,Vec y)
 PetscErrorCode PCApplyRichardson_Telescope_dmda(PC pc,Vec x,Vec y,Vec w,PetscReal rtol,PetscReal abstol, PetscReal dtol,PetscInt its,PetscBool zeroguess,PetscInt *outits,PCRichardsonConvergedReason *reason)
 {
   PC_Telescope         sred = (PC_Telescope)pc->data;
-  PetscErrorCode       ierr;
   Mat                  perm;
   Vec                  xtmp,xp,yred;
   PetscInt             i,st,ed;
@@ -1031,7 +1019,6 @@ PetscErrorCode PCApplyRichardson_Telescope_dmda(PC pc,Vec x,Vec y,Vec w,PetscRea
 
 PetscErrorCode PCReset_Telescope_dmda(PC pc)
 {
-  PetscErrorCode       ierr;
   PC_Telescope         sred = (PC_Telescope)pc->data;
   PC_Telescope_DMDACtx *ctx;
 
@@ -1051,7 +1038,6 @@ PetscErrorCode DMView_DA_Short_3d(DM dm,PetscViewer v)
   MPI_Comm       comm;
   PetscMPIInt    size;
   const char*    prefix;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm,&comm));
@@ -1070,7 +1056,6 @@ PetscErrorCode DMView_DA_Short_2d(DM dm,PetscViewer v)
   MPI_Comm       comm;
   PetscMPIInt    size;
   const char*    prefix;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm,&comm));
@@ -1085,7 +1070,6 @@ PetscErrorCode DMView_DA_Short_2d(DM dm,PetscViewer v)
 
 PetscErrorCode DMView_DA_Short(DM dm,PetscViewer v)
 {
-  PetscErrorCode ierr;
   PetscInt       dim;
 
   PetscFunctionBegin;
