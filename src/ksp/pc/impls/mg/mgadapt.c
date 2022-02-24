@@ -75,7 +75,6 @@ static PetscErrorCode PCMGCreateCoarseSpaceDefault_Private(PC pc, PetscInt level
   PetscErrorCode (**funcs)(PetscInt,PetscReal,const PetscReal[],PetscInt,PetscScalar*,void*);
   void            **ctxs;
   PetscInt          dim, d, Nf, f, k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinateDim(dm, &dim));
@@ -97,7 +96,6 @@ static PetscErrorCode PCMGCreateCoarseSpaceDefault_Private(PC pc, PetscInt level
 
 static PetscErrorCode PCMGCreateCoarseSpace_Polynomial(PC pc, PetscInt level, DM dm, KSP ksp, PetscInt Nc, const Vec initialGuess[], Vec **coarseSpace)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCMGCreateCoarseSpaceDefault_Private(pc, level, PCMG_POLYNOMIAL, dm, ksp, Nc, initialGuess, coarseSpace));
@@ -106,7 +104,6 @@ static PetscErrorCode PCMGCreateCoarseSpace_Polynomial(PC pc, PetscInt level, DM
 
 PetscErrorCode PCMGCreateCoarseSpace_Harmonic(PC pc, PetscInt level, DM dm, KSP ksp, PetscInt Nc, const Vec initialGuess[], Vec **coarseSpace)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCMGCreateCoarseSpaceDefault_Private(pc, level, PCMG_HARMONIC, dm, ksp, Nc, initialGuess, coarseSpace));
@@ -136,7 +133,6 @@ PetscErrorCode PCMGComputeCoarseSpace_Internal(PC pc, PetscInt l, PCMGCoarseSpac
   PetscErrorCode (*coarseConstructor)(PC, PetscInt, DM, KSP, PetscInt, const Vec[], Vec*[]);
   DM             dm;
   KSP            smooth;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (cstype) {
@@ -181,7 +177,6 @@ PetscErrorCode PCMGAdaptInterpolator_Internal(PC pc, PetscInt l, KSP csmooth, KS
   PC_MG         *mg = (PC_MG *) pc->data;
   DM             dm, cdm;
   Mat            Interp, InterpAdapt;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* There is no interpolator for the coarse level */
@@ -220,7 +215,6 @@ PetscErrorCode PCMGRecomputeLevelOperators_Internal(PC pc, PetscInt l)
   PetscBool        doA   = PETSC_FALSE;      /* Updates the system operator */
   PetscBool        doB   = PETSC_FALSE;      /* Updates the preconditioning operator (A == B, then update B) */
   PetscInt         n;                        /* The number of multigrid levels */
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCMGGetGalerkin(pc, &galerkin));

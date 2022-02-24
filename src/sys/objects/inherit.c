@@ -31,7 +31,6 @@ PetscErrorCode  PetscHeaderCreate_Private(PetscObject h,PetscClassId classid,con
                                           MPI_Comm comm,PetscObjectDestroyFunction destroy,PetscObjectViewFunction view)
 {
   static PetscInt idcnt = 1;
-  PetscErrorCode  ierr;
 #if defined(PETSC_USE_LOG)
   PetscObject     *newPetscObjects;
   PetscInt         newPetscObjectsMaxCounts,i;
@@ -96,7 +95,6 @@ PETSC_INTERN PetscLogDouble PetscMemoryMaximumUsage;
 */
 PetscErrorCode  PetscHeaderDestroy_Private(PetscObject h)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(h,1);
@@ -166,7 +164,6 @@ PetscErrorCode  PetscHeaderDestroy_Private(PetscObject h)
 @*/
 PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src,PetscObject dest)
 {
-  PetscErrorCode         ierr;
   PetscFortranCallbackId cbtype,numcb[PETSC_FORTRAN_CALLBACK_MAXTYPE];
 
   PetscFunctionBegin;
@@ -208,7 +205,6 @@ PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src,PetscObjec
 @*/
 PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj,PetscFortranCallbackType cbtype,PetscFortranCallbackId *cid,void (*func)(void),void *ctx)
 {
-  PetscErrorCode ierr;
   const char     *subtype = NULL;
 
   PetscFunctionBegin;
@@ -281,7 +277,6 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj,PetscFortranCallbac
 @*/
 PetscErrorCode  PetscObjectsDump(FILE *fd,PetscBool all)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 #if defined(PETSC_USE_DEBUG)
   PetscInt       j,k=0;
@@ -351,7 +346,6 @@ PetscErrorCode  PetscObjectsDump(FILE *fd,PetscBool all)
 @*/
 PetscErrorCode  PetscObjectsView(PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isascii;
   FILE           *fd;
 
@@ -381,7 +375,6 @@ PetscErrorCode  PetscObjectsView(PetscViewer viewer)
 @*/
 PetscErrorCode  PetscObjectsGetObject(const char *name,PetscObject *obj,char **classname)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscObject    h;
   PetscBool      flg;
@@ -443,7 +436,6 @@ PetscErrorCode PetscObjectSetPrintedOptions(PetscObject obj)
 @*/
 PetscErrorCode PetscObjectInheritPrintedOptions(PetscObject pobj,PetscObject obj)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    prank,size;
 
   PetscFunctionBegin;
@@ -496,7 +488,6 @@ PetscErrorCode PetscObjectAddOptionsHandler(PetscObject obj,PetscErrorCode (*han
 PetscErrorCode  PetscObjectProcessOptionsHandlers(PetscOptionItems *PetscOptionsObject,PetscObject obj)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,2);
@@ -522,7 +513,6 @@ PetscErrorCode  PetscObjectProcessOptionsHandlers(PetscOptionItems *PetscOptions
 PetscErrorCode  PetscObjectDestroyOptionsHandlers(PetscObject obj)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -605,7 +595,6 @@ PetscErrorCode  PetscObjectGetReference(PetscObject obj,PetscInt *cnt)
 @*/
 PetscErrorCode  PetscObjectDereference(PetscObject obj)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!obj) PetscFunctionReturn(0);
@@ -631,7 +620,6 @@ PetscErrorCode PetscObjectGetComm_Petsc(PetscObject obj,MPI_Comm *comm)
 
 PetscErrorCode PetscObjectRemoveReference(PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -641,7 +629,6 @@ PetscErrorCode PetscObjectRemoveReference(PetscObject obj,const char name[])
 
 PetscErrorCode PetscObjectCompose_Petsc(PetscObject obj,const char name[],PetscObject ptr)
 {
-  PetscErrorCode ierr;
   char           *tname;
   PetscBool      skipreference;
 
@@ -656,7 +643,6 @@ PetscErrorCode PetscObjectCompose_Petsc(PetscObject obj,const char name[],PetscO
 
 PetscErrorCode PetscObjectQuery_Petsc(PetscObject obj,const char name[],PetscObject *ptr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -666,7 +652,6 @@ PetscErrorCode PetscObjectQuery_Petsc(PetscObject obj,const char name[],PetscObj
 
 PetscErrorCode PetscObjectComposeFunction_Petsc(PetscObject obj,const char name[],void (*ptr)(void))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -676,7 +661,6 @@ PetscErrorCode PetscObjectComposeFunction_Petsc(PetscObject obj,const char name[
 
 PetscErrorCode PetscObjectQueryFunction_Petsc(PetscObject obj,const char name[],void (**ptr)(void))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -716,7 +700,6 @@ PetscErrorCode PetscObjectQueryFunction_Petsc(PetscObject obj,const char name[],
 @*/
 PetscErrorCode  PetscObjectCompose(PetscObject obj,const char name[],PetscObject ptr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -748,7 +731,6 @@ PetscErrorCode  PetscObjectCompose(PetscObject obj,const char name[],PetscObject
 @*/
 PetscErrorCode  PetscObjectQuery(PetscObject obj,const char name[],PetscObject *ptr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -787,7 +769,6 @@ M*/
 
 PetscErrorCode  PetscObjectComposeFunction_Private(PetscObject obj,const char name[],void (*fptr)(void))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -819,7 +800,6 @@ PetscErrorCode  PetscObjectComposeFunction_Private(PetscObject obj,const char na
 M*/
 PETSC_EXTERN PetscErrorCode PetscObjectQueryFunction_Private(PetscObject obj,const char name[],void (**ptr)(void))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -848,7 +828,6 @@ struct _p_PetscContainer {
 @*/
 PetscErrorCode PetscContainerUserDestroyDefault(void* ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(ctx));
@@ -917,7 +896,6 @@ PetscErrorCode  PetscContainerSetPointer(PetscContainer obj,void *ptr)
 @*/
 PetscErrorCode  PetscContainerDestroy(PetscContainer *obj)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*obj) PetscFunctionReturn(0);
@@ -974,7 +952,6 @@ PetscClassId PETSC_CONTAINER_CLASSID;
 @*/
 PetscErrorCode  PetscContainerCreate(MPI_Comm comm,PetscContainer *container)
 {
-  PetscErrorCode ierr;
   PetscContainer contain;
 
   PetscFunctionBegin;

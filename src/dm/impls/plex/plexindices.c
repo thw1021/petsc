@@ -22,7 +22,6 @@ PetscErrorCode DMPlexCreateClosureIndex(DM dm, PetscSection section)
   IS             closureIS;
   PetscInt      *clPoints;
   PetscInt       pStart, pEnd, sStart, sEnd, point, clSize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

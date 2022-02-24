@@ -40,7 +40,6 @@ PetscErrorCode  PetscGetDate(char date[],size_t len)
 #else
   struct timeval tp;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_TIME)

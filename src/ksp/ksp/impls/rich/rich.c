@@ -6,7 +6,6 @@
 
 PetscErrorCode KSPSetUp_Richardson(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_Richardson *richardsonP = (KSP_Richardson*)ksp->data;
 
   PetscFunctionBegin;
@@ -20,7 +19,6 @@ PetscErrorCode KSPSetUp_Richardson(KSP ksp)
 
 PetscErrorCode  KSPSolve_Richardson(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,maxit;
   PetscReal      rnorm = 0.0,abr;
   PetscScalar    scale,rdot;
@@ -156,7 +154,6 @@ PetscErrorCode  KSPSolve_Richardson(KSP ksp)
 PetscErrorCode KSPView_Richardson(KSP ksp,PetscViewer viewer)
 {
   KSP_Richardson *richardsonP = (KSP_Richardson*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -174,7 +171,6 @@ PetscErrorCode KSPView_Richardson(KSP ksp,PetscViewer viewer)
 PetscErrorCode KSPSetFromOptions_Richardson(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
   KSP_Richardson *rich = (KSP_Richardson*)ksp->data;
-  PetscErrorCode ierr;
   PetscReal      tmp;
   PetscBool      flg,flg2;
 
@@ -190,7 +186,6 @@ PetscErrorCode KSPSetFromOptions_Richardson(PetscOptionItems *PetscOptionsObject
 
 PetscErrorCode KSPDestroy_Richardson(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)ksp,"KSPRichardsonSetScale_C",NULL));
@@ -220,7 +215,6 @@ static PetscErrorCode  KSPRichardsonSetSelfScale_Richardson(KSP ksp,PetscBool se
 
 static PetscErrorCode KSPBuildResidual_Richardson(KSP ksp,Vec t,Vec v,Vec *V)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ksp->normtype == KSP_NORM_NONE) {
@@ -276,7 +270,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_Richardson(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_Richardson *richardsonP;
 
   PetscFunctionBegin;

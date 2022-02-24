@@ -27,7 +27,6 @@ PetscErrorCode  AOSetType(AO ao, AOType method)
 {
   PetscErrorCode (*r)(AO);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
@@ -63,7 +62,6 @@ PetscErrorCode  AOSetType(AO ao, AOType method)
 @*/
 PetscErrorCode  AOGetType(AO ao, AOType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
@@ -91,7 +89,6 @@ PetscErrorCode  AOGetType(AO ao, AOType *type)
 @*/
 PetscErrorCode  AORegister(const char sname[], PetscErrorCode (*function)(AO))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(AOInitializePackage());

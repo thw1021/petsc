@@ -608,7 +608,6 @@ PetscErrorCode DMPlexCreateEGADSLiteFromFile(MPI_Comm comm, const char filename[
   ego            context= NULL, model = NULL;
 #endif
   PetscBool      printModel = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(filename, 2);

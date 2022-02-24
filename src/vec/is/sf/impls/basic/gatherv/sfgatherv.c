@@ -8,7 +8,6 @@ typedef PetscSF_Allgatherv PetscSF_Gatherv;
 
 PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gatherv(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   PetscMPIInt          sendcount;
   MPI_Comm             comm;
@@ -30,7 +29,6 @@ PETSC_INTERN PetscErrorCode PetscSFBcastBegin_Gatherv(PetscSF sf,MPI_Datatype un
 
 static PetscErrorCode PetscSFReduceBegin_Gatherv(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   PetscMPIInt          recvcount;
   MPI_Comm             comm;
@@ -52,7 +50,6 @@ static PetscErrorCode PetscSFReduceBegin_Gatherv(PetscSF sf,MPI_Datatype unit,Pe
 
 PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Gatherv(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,void *rootdata,PetscMemType leafmtype,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   /* In Gatherv, each root only has one leaf. So we just need to bcast rootdata to leafupdate and then reduce leafdata to rootdata */
@@ -64,7 +61,6 @@ PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Gatherv(PetscSF sf,MPI_Dataty
 
 PETSC_INTERN PetscErrorCode PetscSFCreate_Gatherv(PetscSF sf)
 {
-  PetscErrorCode  ierr;
   PetscSF_Gatherv *dat = (PetscSF_Gatherv*)sf->data;
 
   PetscFunctionBegin;

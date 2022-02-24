@@ -27,7 +27,6 @@ PetscErrorCode DMSwarmSortApplyCellIndexSort(DMSwarmSort ctx)
 
 PetscErrorCode DMSwarmSortCreate(DMSwarmSort *_ctx)
 {
-  PetscErrorCode ierr;
   DMSwarmSort    ctx;
 
   PetscFunctionBegin;
@@ -46,7 +45,6 @@ PetscErrorCode DMSwarmSortSetup(DMSwarmSort ctx,DM dm,PetscInt ncells)
   PetscInt        *swarm_cellid;
   PetscInt        p,npoints;
   PetscInt        tmp,c,count;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!ctx) PetscFunctionReturn(0);
@@ -98,7 +96,6 @@ PetscErrorCode DMSwarmSortSetup(DMSwarmSort ctx,DM dm,PetscInt ncells)
 PetscErrorCode DMSwarmSortDestroy(DMSwarmSort *_ctx)
 {
   DMSwarmSort     ctx;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!_ctx) PetscFunctionReturn(0);
@@ -172,7 +169,6 @@ PetscErrorCode DMSwarmSortGetNumberOfPointsPerCell(DM dm,PetscInt e,PetscInt *np
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetPointsPerCell(DM dm,PetscInt e,PetscInt *npoints,PetscInt **pidlist)
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode ierr;
   PetscInt       points_per_cell;
   PetscInt       p,pid,pid_unsorted;
   PetscInt       *plist;
@@ -236,7 +232,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmSortGetPointsPerCell(DM dm,PetscInt e,PetscIn
 PETSC_EXTERN PetscErrorCode DMSwarmSortGetAccess(DM dm)
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode ierr;
   PetscInt       ncells;
   DM             celldm;
   PetscBool      isda,isplex,isshell;

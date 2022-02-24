@@ -72,7 +72,6 @@ M*/
 @*/
 PetscErrorCode PetscDTAltVApply(PetscInt N, PetscInt k, const PetscReal *w, const PetscReal *v, PetscReal *wv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(N < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimension");
@@ -151,7 +150,6 @@ PetscErrorCode PetscDTAltVApply(PetscInt N, PetscInt k, const PetscReal *w, cons
 PetscErrorCode PetscDTAltVWedge(PetscInt N, PetscInt j, PetscInt k, const PetscReal *a, const PetscReal *b, PetscReal *awedgeb)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(N < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimension");
@@ -230,7 +228,6 @@ PetscErrorCode PetscDTAltVWedge(PetscInt N, PetscInt j, PetscInt k, const PetscR
 PetscErrorCode PetscDTAltVWedgeMatrix(PetscInt N, PetscInt j, PetscInt k, const PetscReal *a, PetscReal *awedgeMat)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(N < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimension");
@@ -318,7 +315,6 @@ PetscErrorCode PetscDTAltVWedgeMatrix(PetscInt N, PetscInt j, PetscInt k, const 
 PetscErrorCode PetscDTAltVPullback(PetscInt N, PetscInt M, const PetscReal *L, PetscInt k, const PetscReal *w, PetscReal *Lstarw)
 {
   PetscInt         i, j, Nk, Mk;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(N < 0 || M < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimensions");
@@ -459,7 +455,6 @@ PetscErrorCode PetscDTAltVPullbackMatrix(PetscInt N, PetscInt M, const PetscReal
   PetscInt       *subsetw, *subsetv;
   PetscInt       *perm;
   PetscBool       negative = PETSC_FALSE;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(N < 0 || M < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid dimensions");
@@ -571,7 +566,6 @@ PetscErrorCode PetscDTAltVPullbackMatrix(PetscInt N, PetscInt M, const PetscReal
 PetscErrorCode PetscDTAltVInterior(PetscInt N, PetscInt k, const PetscReal *w, const PetscReal *v, PetscReal *wIntv)
 {
   PetscInt        i, Nk, Nkm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(k <= 0 || k > N,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid form degree");
@@ -639,7 +633,6 @@ PetscErrorCode PetscDTAltVInterior(PetscInt N, PetscInt k, const PetscReal *w, c
 PetscErrorCode PetscDTAltVInteriorMatrix(PetscInt N, PetscInt k, const PetscReal *v, PetscReal *intvMat)
 {
   PetscInt        i, Nk, Nkm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(k <= 0 || k > N,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid form degree");
@@ -703,7 +696,6 @@ PetscErrorCode PetscDTAltVInteriorMatrix(PetscInt N, PetscInt k, const PetscReal
 PetscErrorCode PetscDTAltVInteriorPattern(PetscInt N, PetscInt k, PetscInt (*indices)[3])
 {
   PetscInt        i, Nk, Nkm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(k <= 0 || k > N,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid form degree");
@@ -777,7 +769,6 @@ PetscErrorCode PetscDTAltVInteriorPattern(PetscInt N, PetscInt k, PetscInt (*ind
 PetscErrorCode PetscDTAltVStar(PetscInt N, PetscInt k, PetscInt pow, const PetscReal *w, PetscReal *starw)
 {
   PetscInt        Nk, i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(k < 0 || k > N,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "invalid form degree");

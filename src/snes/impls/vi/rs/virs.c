@@ -49,7 +49,6 @@ typedef struct {
 */
 PetscErrorCode  DMCreateGlobalVector_SNESVI(DM dm,Vec *vec)
 {
-  PetscErrorCode ierr;
   PetscContainer isnes;
   DM_SNESVI      *dmsnesvi;
 
@@ -68,7 +67,6 @@ PetscErrorCode  DMCreateGlobalVector_SNESVI(DM dm,Vec *vec)
 */
 PetscErrorCode  DMCreateInterpolation_SNESVI(DM dm1,DM dm2,Mat *mat,Vec *vec)
 {
-  PetscErrorCode ierr;
   PetscContainer isnes;
   DM_SNESVI      *dmsnesvi1,*dmsnesvi2;
   Mat            interp;
@@ -97,7 +95,6 @@ static PetscErrorCode DMDestroyVI(DM);
 */
 PetscErrorCode  DMCoarsen_SNESVI(DM dm1,MPI_Comm comm,DM *dm2)
 {
-  PetscErrorCode ierr;
   PetscContainer isnes;
   DM_SNESVI      *dmsnesvi1;
   Vec            finemarked,coarsemarked;
@@ -174,7 +171,6 @@ PetscErrorCode  DMCoarsen_SNESVI(DM dm1,MPI_Comm comm,DM *dm2)
 
 PetscErrorCode DMDestroy_SNESVI(DM_SNESVI *dmsnesvi)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* reset the base methods in the DM object that were changed when the DM_SNESVI was reset */
@@ -199,7 +195,6 @@ PetscErrorCode DMDestroy_SNESVI(DM_SNESVI *dmsnesvi)
 */
 static PetscErrorCode DMSetVI(DM dm,IS inactive)
 {
-  PetscErrorCode ierr;
   PetscContainer isnes;
   DM_SNESVI      *dmsnesvi;
 
@@ -245,7 +240,6 @@ static PetscErrorCode DMSetVI(DM dm,IS inactive)
 */
 static PetscErrorCode DMDestroyVI(DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dm) PetscFunctionReturn(0);
@@ -257,7 +251,6 @@ static PetscErrorCode DMDestroyVI(DM dm)
 
 PetscErrorCode SNESCreateIndexSets_VINEWTONRSLS(SNES snes,Vec X,Vec F,IS *ISact,IS *ISinact)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESVIGetActiveSetIS(snes,X,F,ISact));
@@ -268,7 +261,6 @@ PetscErrorCode SNESCreateIndexSets_VINEWTONRSLS(SNES snes,Vec X,Vec F,IS *ISact,
 /* Create active and inactive set vectors. The local size of this vector is set and petsc computes the global size */
 PetscErrorCode SNESCreateSubVectors_VINEWTONRSLS(SNES snes,PetscInt n,Vec *newv)
 {
-  PetscErrorCode ierr;
   Vec            v;
 
   PetscFunctionBegin;
@@ -282,7 +274,6 @@ PetscErrorCode SNESCreateSubVectors_VINEWTONRSLS(SNES snes,PetscInt n,Vec *newv)
 /* Resets the snes PC and KSP when the active set sizes change */
 PetscErrorCode SNESVIResetPCandKSP(SNES snes,Mat Amat,Mat Pmat)
 {
-  PetscErrorCode ierr;
   KSP            snesksp;
 
   PetscFunctionBegin;
@@ -319,7 +310,6 @@ PetscErrorCode SNESVIResetPCandKSP(SNES snes,Mat Amat,Mat Pmat)
 PetscErrorCode SNESSolve_VINEWTONRSLS(SNES snes)
 {
   SNES_VINEWTONRSLS    *vi = (SNES_VINEWTONRSLS*)snes->data;
-  PetscErrorCode       ierr;
   PetscInt             maxits,i,lits;
   SNESLineSearchReason lssucceed;
   PetscReal            fnorm,gnorm,xnorm=0,ynorm;
@@ -696,7 +686,6 @@ PetscErrorCode SNESVISetRedundancyCheckMatlab(SNES snes,const char *func,mxArray
  */
 PetscErrorCode SNESSetUp_VINEWTONRSLS(SNES snes)
 {
-  PetscErrorCode    ierr;
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS*) snes->data;
   PetscInt          *indices;
   PetscInt          i,n,rstart,rend;
@@ -725,7 +714,6 @@ PetscErrorCode SNESSetUp_VINEWTONRSLS(SNES snes)
 PetscErrorCode SNESReset_VINEWTONRSLS(SNES snes)
 {
   SNES_VINEWTONRSLS *vi = (SNES_VINEWTONRSLS*) snes->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_VI(snes));
@@ -752,7 +740,6 @@ PetscErrorCode SNESReset_VINEWTONRSLS(SNES snes)
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_VINEWTONRSLS(SNES snes)
 {
-  PetscErrorCode    ierr;
   SNES_VINEWTONRSLS *vi;
   SNESLineSearch    linesearch;
 

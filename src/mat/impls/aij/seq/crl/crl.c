@@ -13,7 +13,6 @@
 
 PetscErrorCode MatDestroy_SeqAIJCRL(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_AIJCRL     *aijcrl = (Mat_AIJCRL*) A->spptr;
 
   PetscFunctionBegin;
@@ -41,7 +40,6 @@ PetscErrorCode MatSeqAIJCRL_create_aijcrl(Mat A)
   PetscInt       i, j,rmax = a->rmax,*icols, *ilen = a->ilen;
   MatScalar      *aa = a->a;
   PetscScalar    *acols;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   aijcrl->nz   = a->nz;
@@ -68,7 +66,6 @@ PetscErrorCode MatSeqAIJCRL_create_aijcrl(Mat A)
 
 PetscErrorCode MatAssemblyEnd_SeqAIJCRL(Mat A, MatAssemblyType mode)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
 
   PetscFunctionBegin;
@@ -95,7 +92,6 @@ PetscErrorCode MatMult_AIJCRL(Mat A,Vec xx,Vec yy)
   PetscInt          m       = aijcrl->m; /* Number of rows in the matrix. */
   PetscInt          rmax    = aijcrl->rmax,*icols = aijcrl->icols;
   PetscScalar       *acols  = aijcrl->acols;
-  PetscErrorCode    ierr;
   PetscScalar       *y;
   const PetscScalar *x;
 #if !defined(PETSC_USE_FORTRAN_KERNEL_MULTCRL)
@@ -153,7 +149,6 @@ PetscErrorCode MatMult_AIJCRL(Mat A,Vec xx,Vec yy)
  * into a SeqAIJCRL one. */
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCRL(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat            B = *newmat;
   Mat_AIJCRL     *aijcrl;
   PetscBool      sametype;
@@ -216,7 +211,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJCRL(Mat A,MatType type,MatRe
 @*/
 PetscErrorCode  MatCreateSeqAIJCRL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt nz,const PetscInt nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -228,7 +222,6 @@ PetscErrorCode  MatCreateSeqAIJCRL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt 
 
 PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCRL(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(A,MATSEQAIJ));

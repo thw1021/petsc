@@ -23,7 +23,6 @@ PetscLogEvent TAOLINESEARCH_Eval;
 @*/
 PetscErrorCode TaoLineSearchViewFromOptions(TaoLineSearch A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,TAOLINESEARCH_CLASSID,1);
@@ -58,7 +57,6 @@ PetscErrorCode TaoLineSearchViewFromOptions(TaoLineSearch A,PetscObject obj,cons
 
 PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
 {
-  PetscErrorCode          ierr;
   PetscBool               isascii, isstring;
   TaoLineSearchType       type;
 
@@ -125,7 +123,6 @@ PetscErrorCode TaoLineSearchView(TaoLineSearch ls, PetscViewer viewer)
 
 PetscErrorCode TaoLineSearchCreate(MPI_Comm comm, TaoLineSearch *newls)
 {
-  PetscErrorCode ierr;
   TaoLineSearch  ls;
 
   PetscFunctionBegin;
@@ -191,7 +188,6 @@ PetscErrorCode TaoLineSearchCreate(MPI_Comm comm, TaoLineSearch *newls)
 
 PetscErrorCode TaoLineSearchSetUp(TaoLineSearch ls)
 {
-  PetscErrorCode ierr;
   const char     *default_type=TAOLINESEARCHMT;
   PetscBool      flg;
 
@@ -248,7 +244,6 @@ PetscErrorCode TaoLineSearchSetUp(TaoLineSearch ls)
 @*/
 PetscErrorCode TaoLineSearchReset(TaoLineSearch ls)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls,TAOLINESEARCH_CLASSID,1);
@@ -273,7 +268,6 @@ PetscErrorCode TaoLineSearchReset(TaoLineSearch ls)
 @*/
 PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*ls) PetscFunctionReturn(0);
@@ -339,7 +333,6 @@ PetscErrorCode TaoLineSearchDestroy(TaoLineSearch *ls)
 
 PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, Vec s, PetscReal *steplength, TaoLineSearchConvergedReason *reason)
 {
-  PetscErrorCode ierr;
   PetscInt       low1,low2,low3,high1,high2,high3;
 
   PetscFunctionBegin;
@@ -438,7 +431,6 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
 
 PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*r)(TaoLineSearch);
   PetscBool      flg;
 
@@ -497,7 +489,6 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 @*/
 PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
 {
-  PetscErrorCode ierr;
   PetscInt       tabs;
 
   PetscFunctionBegin;
@@ -881,7 +872,6 @@ PetscErrorCode TaoLineSearchUseTaoRoutines(TaoLineSearch ls, Tao ts)
 @*/
 PetscErrorCode TaoLineSearchComputeObjective(TaoLineSearch ls, Vec x, PetscReal *f)
 {
-  PetscErrorCode ierr;
   Vec            gdummy;
   PetscReal      gts;
 
@@ -935,7 +925,6 @@ PetscErrorCode TaoLineSearchComputeObjective(TaoLineSearch ls, Vec x, PetscReal 
 @*/
 PetscErrorCode TaoLineSearchComputeObjectiveAndGradient(TaoLineSearch ls, Vec x, PetscReal *f, Vec g)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls,TAOLINESEARCH_CLASSID,1);
@@ -991,7 +980,6 @@ PetscErrorCode TaoLineSearchComputeObjectiveAndGradient(TaoLineSearch ls, Vec x,
 @*/
 PetscErrorCode TaoLineSearchComputeGradient(TaoLineSearch ls, Vec x, Vec g)
 {
-  PetscErrorCode ierr;
   PetscReal      fdummy;
 
   PetscFunctionBegin;
@@ -1041,7 +1029,6 @@ PetscErrorCode TaoLineSearchComputeGradient(TaoLineSearch ls, Vec x, Vec g)
 @*/
 PetscErrorCode TaoLineSearchComputeObjectiveAndGTS(TaoLineSearch ls, Vec x, PetscReal *f, PetscReal *gts)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls,TAOLINESEARCH_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
@@ -1094,7 +1081,6 @@ PetscErrorCode TaoLineSearchComputeObjectiveAndGTS(TaoLineSearch ls, Vec x, Pets
 @*/
 PetscErrorCode TaoLineSearchGetSolution(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, PetscReal *steplength, TaoLineSearchConvergedReason *reason)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls,TAOLINESEARCH_CLASSID,1);
@@ -1199,7 +1185,6 @@ PetscErrorCode TaoLineSearchGetFullStepObjective(TaoLineSearch ls, PetscReal *f_
 @*/
 PetscErrorCode TaoLineSearchSetVariableBounds(TaoLineSearch ls,Vec xl, Vec xu)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls,TAOLINESEARCH_CLASSID,1);
@@ -1287,7 +1272,6 @@ $     -tao_ls_type my_linesearch
 @*/
 PetscErrorCode TaoLineSearchRegister(const char sname[], PetscErrorCode (*func)(TaoLineSearch))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoLineSearchInitializePackage());

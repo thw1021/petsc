@@ -6,7 +6,6 @@
 static PetscErrorCode PetscFEDestroy_Composite(PetscFE fem)
 {
   PetscFE_Composite *cmp = (PetscFE_Composite *) fem->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(cmp->embedding));
@@ -26,7 +25,6 @@ static PetscErrorCode PetscFESetUp_Composite(PetscFE fem)
   PetscScalar       *work, *invVscalar;
   PetscInt           dim, pdim, spdim, j, s;
   PetscSection       section;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   /* Get affine mapping from reference cell to each subcell */
@@ -116,7 +114,6 @@ static PetscErrorCode PetscFECreateTabulation_Composite(PetscFE fem, PetscInt np
   PetscReal         *H = K >= 2 ? T->T[2] : NULL;
   PetscReal         *tmpB = NULL, *tmpD = NULL, *tmpH = NULL, *subpoint;
   PetscInt           p, s, d, e, j, k;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceGetDM(fem->dualSpace, &dm));
@@ -226,7 +223,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscFECreate_Composite(PetscFE fem)
 {
   PetscFE_Composite *cmp;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);

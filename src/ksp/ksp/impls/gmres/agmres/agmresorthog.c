@@ -21,7 +21,6 @@ PetscErrorCode KSPAGMRESRoddecInitNeighboor(KSP ksp)
 {
   MPI_Comm       comm;
   KSP_AGMRES     *agmres = (KSP_AGMRES*)(ksp->data);
-  PetscErrorCode ierr;
   PetscMPIInt    First, Last, rank, size;
 
   PetscFunctionBegin;
@@ -119,7 +118,6 @@ PetscErrorCode KSPAGMRESRoddec(KSP ksp, PetscInt nvec)
   PetscScalar    *Qloc   = agmres->Qloc;
   PetscScalar    *sgn    = agmres->sgn;
   PetscScalar    *tloc   = agmres->tloc;
-  PetscErrorCode ierr;
   PetscReal      *wbufptr = agmres->wbufptr;
   PetscMPIInt    rank     = agmres->rank;
   PetscMPIInt    First    = agmres->First;
@@ -246,7 +244,6 @@ PetscErrorCode KSPAGMRESRodvec(KSP ksp, PetscInt nvec, PetscScalar *In, Vec Out)
   PetscMPIInt    First    = agmres->First, Last = agmres->Last;
   PetscMPIInt    Iright   = agmres->Iright, Ileft = agmres->Ileft;
   PetscScalar    *y, *zloc;
-  PetscErrorCode ierr;
   PetscInt       nloc,d, len, i, j;
   PetscBLASInt   bnvec,pas,blen;
   PetscInt       dpt;

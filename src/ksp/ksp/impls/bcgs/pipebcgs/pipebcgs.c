@@ -7,7 +7,6 @@
 
 static PetscErrorCode KSPSetUp_PIPEBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,15));
@@ -18,7 +17,6 @@ static PetscErrorCode KSPSetUp_PIPEBCGS(KSP ksp)
 #include <petsc/private/pcimpl.h>            /*I "petscksp.h" I*/
 static PetscErrorCode  KSPSolve_PIPEBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    rho,rhoold,alpha,beta,omega=0.0,d1,d2,d3;
   Vec            X,B,S,R,RP,Y,Q,P2,Q2,R2,S2,W,Z,W2,Z2,T,V;
@@ -243,7 +241,6 @@ static PetscErrorCode  KSPSolve_PIPEBCGS(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_BCGS       *bcgs;
 
   PetscFunctionBegin;

@@ -53,8 +53,8 @@ PetscFunctionList PCList = NULL;
 @*/
 PetscErrorCode  PCSetType(PC pc,PCType type)
 {
-  PetscErrorCode ierr,(*r)(PC);
   PetscBool      match;
+  PetscErrorCode (*r)(PC);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -64,7 +64,7 @@ PetscErrorCode  PCSetType(PC pc,PCType type)
   if (match) PetscFunctionReturn(0);
 
   CHKERRQ(PetscFunctionListFind(PCList,type,&r));
-  PetscCheckFalse(!r,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested PC type %s",type);
+  PetscCheck(r,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested PC type %s",type);
   /* Destroy the previous private PC context */
   if (pc->ops->destroy) {
     CHKERRQ((*pc->ops->destroy)(pc));
@@ -192,7 +192,6 @@ PetscErrorCode  PCSetFromOptions(PC pc)
 @*/
 PetscErrorCode  PCSetDM(PC pc,DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);

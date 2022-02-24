@@ -8,7 +8,6 @@ const char *const SNESNGMRESSelectTypes[] = {"NONE","DIFFERENCE","LINESEARCH","S
 PetscErrorCode SNESReset_NGMRES(SNES snes)
 {
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroyVecs(ngmres->msize,&ngmres->Fdot));
@@ -19,7 +18,6 @@ PetscErrorCode SNESReset_NGMRES(SNES snes)
 
 PetscErrorCode SNESDestroy_NGMRES(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_NGMRES    *ngmres = (SNES_NGMRES*)snes->data;
 
   PetscFunctionBegin;
@@ -39,7 +37,6 @@ PetscErrorCode SNESSetUp_NGMRES(SNES snes)
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
   const char     *optionsprefix;
   PetscInt       msize,hsize;
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -127,7 +124,6 @@ PetscErrorCode SNESView_NGMRES(SNES snes,PetscViewer viewer)
 {
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer,PETSCVIEWERASCII,&iascii));
@@ -167,7 +163,6 @@ PetscErrorCode SNESSolve_NGMRES(SNES snes)
 
   SNESConvergedReason  reason;
   SNESLineSearchReason lssucceed;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -351,7 +346,6 @@ PetscErrorCode SNESSolve_NGMRES(SNES snes)
 PetscErrorCode SNESNGMRESSetRestartFmRise(SNES snes,PetscBool flg)
 {
     PetscErrorCode (*f)(SNES,PetscBool);
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ(PetscObjectQueryFunction((PetscObject)snes,"SNESNGMRESSetRestartFmRise_C",&f));
@@ -371,7 +365,6 @@ PetscErrorCode SNESNGMRESSetRestartFmRise_NGMRES(SNES snes,PetscBool flg)
 PetscErrorCode SNESNGMRESGetRestartFmRise(SNES snes,PetscBool *flg)
 {
     PetscErrorCode (*f)(SNES,PetscBool*);
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ(PetscObjectQueryFunction((PetscObject)snes,"SNESNGMRESGetRestartFmRise_C",&f));
@@ -414,7 +407,6 @@ PetscErrorCode SNESNGMRESGetRestartFmRise_NGMRES(SNES snes,PetscBool *flg)
 @*/
 PetscErrorCode SNESNGMRESSetRestartType(SNES snes,SNESNGMRESRestartType rtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -448,7 +440,6 @@ PetscErrorCode SNESNGMRESSetRestartType(SNES snes,SNESNGMRESRestartType rtype)
 @*/
 PetscErrorCode SNESNGMRESSetSelectType(SNES snes,SNESNGMRESSelectType stype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -513,7 +504,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NGMRES(SNES snes)
 {
   SNES_NGMRES    *ngmres;
-  PetscErrorCode ierr;
   SNESLineSearch linesearch;
 
   PetscFunctionBegin;

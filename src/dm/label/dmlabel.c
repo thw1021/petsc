@@ -26,7 +26,6 @@
 @*/
 PetscErrorCode DMLabelCreate(MPI_Comm comm, const char name[], DMLabel *label)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(label,3);
@@ -69,7 +68,6 @@ static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
 {
   IS             is;
   PetscInt       off = 0, *pointArray, p;
-  PetscErrorCode ierr;
 
   if (PetscLikely(v >= 0 && v < label->numStrata) && label->validIS[v]) return 0;
   PetscFunctionBegin;
@@ -117,7 +115,6 @@ static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
 static PetscErrorCode DMLabelMakeAllValid_Private(DMLabel label)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (v = 0; v < label->numStrata; v++) {
@@ -146,7 +143,6 @@ static PetscErrorCode DMLabelMakeInvalid_Private(DMLabel label, PetscInt v)
 {
   PetscInt       p;
   const PetscInt *points;
-  PetscErrorCode ierr;
 
   if (PetscLikely(v >= 0 && v < label->numStrata) && !label->validIS[v]) return 0;
   PetscFunctionBegin;
@@ -170,7 +166,6 @@ static PetscErrorCode DMLabelMakeInvalid_Private(DMLabel label, PetscInt v)
 static inline PetscErrorCode DMLabelLookupStratum(DMLabel label, PetscInt value, PetscInt *index)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *index = -1;
@@ -204,7 +199,6 @@ static inline PetscErrorCode DMLabelNewStratum(DMLabel label, PetscInt value, Pe
   IS            *tmpP, is;
   PetscBool     *tmpB;
   PetscHMapI     hmap = label->hmap;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   v    = label->numStrata;
@@ -256,7 +250,6 @@ static inline PetscErrorCode DMLabelNewStratum(DMLabel label, PetscInt value, Pe
 
 static inline PetscErrorCode DMLabelLookupAddStratum(DMLabel label, PetscInt value, PetscInt *index)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(DMLabelLookupStratum(label, value, index));
   if (*index < 0) CHKERRQ(DMLabelNewStratum(label, value, index));
@@ -265,7 +258,6 @@ static inline PetscErrorCode DMLabelLookupAddStratum(DMLabel label, PetscInt val
 
 static inline PetscErrorCode DMLabelGetStratumSize_Private(DMLabel label, PetscInt v, PetscInt *size)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *size = 0;
@@ -292,7 +284,6 @@ static inline PetscErrorCode DMLabelGetStratumSize_Private(DMLabel label, PetscI
 PetscErrorCode DMLabelAddStratum(DMLabel label, PetscInt value)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -317,7 +308,6 @@ PetscErrorCode DMLabelAddStratum(DMLabel label, PetscInt value)
 PetscErrorCode DMLabelAddStrata(DMLabel label, PetscInt numStrata, const PetscInt stratumValues[])
 {
   PetscInt       *values, v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -381,7 +371,6 @@ PetscErrorCode DMLabelAddStrataIS(DMLabel label, IS valueIS)
 {
   PetscInt       numStrata;
   const PetscInt *stratumValues;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -396,7 +385,6 @@ static PetscErrorCode DMLabelView_Ascii(DMLabel label, PetscViewer viewer)
 {
   PetscInt       v;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
@@ -440,7 +428,6 @@ static PetscErrorCode DMLabelView_Ascii(DMLabel label, PetscViewer viewer)
 PetscErrorCode DMLabelView(DMLabel label, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -469,7 +456,6 @@ PetscErrorCode DMLabelView(DMLabel label, PetscViewer viewer)
 PetscErrorCode DMLabelReset(DMLabel label)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -509,7 +495,6 @@ PetscErrorCode DMLabelReset(DMLabel label)
 @*/
 PetscErrorCode DMLabelDestroy(DMLabel *label)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*label) PetscFunctionReturn(0);
@@ -540,7 +525,6 @@ PetscErrorCode DMLabelDuplicate(DMLabel label, DMLabel *labelnew)
 {
   const char    *name;
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -611,7 +595,6 @@ PetscErrorCode DMLabelCompare(MPI_Comm comm, DMLabel l0, DMLabel l1, PetscBool *
   char            msg[PETSC_MAX_PATH_LEN] = "";
   PetscBool       eq;
   PetscMPIInt     rank;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(l0, DMLABEL_CLASSID, 2);
@@ -704,7 +687,6 @@ finish:
 PetscErrorCode DMLabelComputeIndex(DMLabel label)
 {
   PetscInt       pStart = PETSC_MAX_INT, pEnd = -1, v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -745,7 +727,6 @@ PetscErrorCode DMLabelComputeIndex(DMLabel label)
 PetscErrorCode DMLabelCreateIndex(DMLabel label, PetscInt pStart, PetscInt pEnd)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -785,7 +766,6 @@ PetscErrorCode DMLabelCreateIndex(DMLabel label, PetscInt pStart, PetscInt pEnd)
 @*/
 PetscErrorCode DMLabelDestroyIndex(DMLabel label)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -815,7 +795,6 @@ PetscErrorCode DMLabelDestroyIndex(DMLabel label)
 @*/
 PetscErrorCode DMLabelGetBounds(DMLabel label, PetscInt *pStart, PetscInt *pEnd)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -850,7 +829,6 @@ PetscErrorCode DMLabelGetBounds(DMLabel label, PetscInt *pStart, PetscInt *pEnd)
 PetscErrorCode DMLabelHasValue(DMLabel label, PetscInt value, PetscBool *contains)
 {
   PetscInt v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -880,7 +858,6 @@ PetscErrorCode DMLabelHasValue(DMLabel label, PetscInt value, PetscBool *contain
 @*/
 PetscErrorCode DMLabelHasPoint(DMLabel label, PetscInt point, PetscBool *contains)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -914,7 +891,6 @@ PetscErrorCode DMLabelHasPoint(DMLabel label, PetscInt point, PetscBool *contain
 PetscErrorCode DMLabelStratumHasPoint(DMLabel label, PetscInt value, PetscInt point, PetscBool *contains)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1004,7 +980,6 @@ PetscErrorCode DMLabelSetDefaultValue(DMLabel label, PetscInt defaultValue)
 PetscErrorCode DMLabelGetValue(DMLabel label, PetscInt point, PetscInt *value)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1049,7 +1024,6 @@ PetscErrorCode DMLabelGetValue(DMLabel label, PetscInt point, PetscInt *value)
 PetscErrorCode DMLabelSetValue(DMLabel label, PetscInt point, PetscInt value)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1079,7 +1053,6 @@ PetscErrorCode DMLabelSetValue(DMLabel label, PetscInt point, PetscInt value)
 PetscErrorCode DMLabelClearValue(DMLabel label, PetscInt point, PetscInt value)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1116,7 +1089,6 @@ PetscErrorCode DMLabelInsertIS(DMLabel label, IS is, PetscInt value)
 {
   PetscInt        v, n, p;
   const PetscInt *points;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1179,7 +1151,6 @@ PetscErrorCode DMLabelGetNumValues(DMLabel label, PetscInt *numValues)
 @*/
 PetscErrorCode DMLabelGetValueIS(DMLabel label, IS *values)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1211,7 +1182,6 @@ PetscErrorCode DMLabelGetNonEmptyStratumValuesIS(DMLabel label, IS *values)
 {
   PetscInt        i, j;
   PetscInt       *valuesArr;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1281,7 +1251,6 @@ PetscErrorCode DMLabelGetValueIndex(DMLabel label, PetscInt value, PetscInt *ind
 PetscErrorCode DMLabelHasStratum(DMLabel label, PetscInt value, PetscBool *exists)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1310,7 +1279,6 @@ PetscErrorCode DMLabelHasStratum(DMLabel label, PetscInt value, PetscBool *exist
 PetscErrorCode DMLabelGetStratumSize(DMLabel label, PetscInt value, PetscInt *size)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1340,7 +1308,6 @@ PetscErrorCode DMLabelGetStratumSize(DMLabel label, PetscInt value, PetscInt *si
 PetscErrorCode DMLabelGetStratumBounds(DMLabel label, PetscInt value, PetscInt *start, PetscInt *end)
 {
   PetscInt       v, min, max;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1379,7 +1346,6 @@ PetscErrorCode DMLabelGetStratumBounds(DMLabel label, PetscInt value, PetscInt *
 PetscErrorCode DMLabelGetStratumIS(DMLabel label, PetscInt value, IS *points)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1410,7 +1376,6 @@ PetscErrorCode DMLabelGetStratumIS(DMLabel label, PetscInt value, IS *points)
 PetscErrorCode DMLabelSetStratumIS(DMLabel label, PetscInt value, IS is)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1455,7 +1420,6 @@ PetscErrorCode DMLabelSetStratumIS(DMLabel label, PetscInt value, IS is)
 PetscErrorCode DMLabelClearStratum(DMLabel label, PetscInt value)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1506,7 +1470,6 @@ PetscErrorCode DMLabelClearStratum(DMLabel label, PetscInt value)
 PetscErrorCode DMLabelSetStratumBounds(DMLabel label, PetscInt value, PetscInt pStart, PetscInt pEnd)
 {
   IS             pIS;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateStride(PETSC_COMM_SELF, pEnd - pStart, pStart, 1, &pIS));
@@ -1536,7 +1499,6 @@ PetscErrorCode DMLabelGetStratumPointIndex(DMLabel label, PetscInt value, PetscI
 {
   const PetscInt *indices;
   PetscInt        v;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1568,7 +1530,6 @@ PetscErrorCode DMLabelGetStratumPointIndex(DMLabel label, PetscInt value, PetscI
 PetscErrorCode DMLabelFilter(DMLabel label, PetscInt start, PetscInt end)
 {
   PetscInt       v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1601,7 +1562,6 @@ PetscErrorCode DMLabelPermute(DMLabel label, IS permutation, DMLabel *labelNew)
 {
   const PetscInt *perm;
   PetscInt        numValues, numPoints, v, q;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1650,7 +1610,6 @@ PetscErrorCode DMLabelDistribute_Internal(DMLabel label, PetscSF sf, PetscSectio
   PetscInt      *remoteOffsets, *rootStrata, *rootIdx;
   PetscSection   rootSection;
   PetscSF        labelSF;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (label) CHKERRQ(DMLabelMakeAllValid_Private(label));
@@ -1737,7 +1696,6 @@ PetscErrorCode DMLabelDistribute(DMLabel label, PetscSF sf, DMLabel *labelNew)
   PetscHSetI     stratumHash;
   size_t         len = 0;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 2);
@@ -1856,7 +1814,6 @@ PetscErrorCode DMLabelGather(DMLabel label, PetscSF sf, DMLabel *labelNew)
   PetscInt       nameSize;
   size_t         len = 0;
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -1936,7 +1893,6 @@ PetscErrorCode DMLabelConvertToSection(DMLabel label, PetscSection *section, IS 
   const PetscInt *values;
   PetscInt       *points;
   PetscInt        nV, vS = 0, vE = 0, v, N;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
@@ -2004,7 +1960,6 @@ PetscErrorCode PetscSectionCreateGlobalSectionLabel(PetscSection s, PetscSF sf, 
 {
   PetscInt      *neg = NULL, *tmpOff = NULL;
   PetscInt       pStart, pEnd, p, dof, cdof, off, globalOff = 0, nroots;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
@@ -2083,7 +2038,6 @@ static PetscErrorCode PetscSectionSymLabelReset(PetscSectionSym sym)
 {
   PetscInt              i, j;
   PetscSectionSym_Label *sl = (PetscSectionSym_Label *) sym->data;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   for (i = 0; i <= sl->numStrata; i++) {
@@ -2112,7 +2066,6 @@ static PetscErrorCode PetscSectionSymLabelReset(PetscSectionSym sym)
 
 static PetscErrorCode PetscSectionSymDestroy_Label(PetscSectionSym sym)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionSymLabelReset(sym));
@@ -2126,7 +2079,6 @@ static PetscErrorCode PetscSectionSymView_Label(PetscSectionSym sym, PetscViewer
   PetscBool             isAscii;
   DMLabel               label = sl->label;
   const char           *name;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isAscii));
@@ -2216,7 +2168,6 @@ static PetscErrorCode PetscSectionSymView_Label(PetscSectionSym sym, PetscViewer
 PetscErrorCode PetscSectionSymLabelSetLabel(PetscSectionSym sym, DMLabel label)
 {
   PetscSectionSym_Label *sl;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sym,PETSC_SECTION_SYM_CLASSID,1);
@@ -2260,7 +2211,6 @@ PetscErrorCode PetscSectionSymLabelSetStratum(PetscSectionSym sym, PetscInt stra
   PetscSectionSym_Label *sl;
   const char            *name;
   PetscInt               i, j, k;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sym,PETSC_SECTION_SYM_CLASSID,1);
@@ -2314,7 +2264,6 @@ static PetscErrorCode PetscSectionSymGetPoints_Label(PetscSectionSym sym, PetscS
   PetscInt              i, j, numStrata;
   PetscSectionSym_Label *sl;
   DMLabel               label;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   sl = (PetscSectionSym_Label *) sym->data;
@@ -2347,7 +2296,6 @@ static PetscErrorCode PetscSectionSymGetPoints_Label(PetscSectionSym sym, PetscS
 PetscErrorCode PetscSectionSymCreate_Label(PetscSectionSym sym)
 {
   PetscSectionSym_Label *sl;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(sym,&sl));
@@ -2376,7 +2324,6 @@ PetscErrorCode PetscSectionSymCreate_Label(PetscSectionSym sym)
 @*/
 PetscErrorCode PetscSectionSymCreateLabel(MPI_Comm comm, DMLabel label, PetscSectionSym *sym)
 {
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMInitializePackage());

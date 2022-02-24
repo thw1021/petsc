@@ -7,7 +7,6 @@ static PetscErrorCode PCBDDCNullSpaceCorrPreSolve(KSP ksp,Vec y,Vec x, void* ctx
 {
   NullSpaceCorrection_ctx corr_ctx = (NullSpaceCorrection_ctx)ctx;
   Mat                     K;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(corr_ctx->evapply,ksp,0,0,0));
@@ -30,7 +29,6 @@ static PetscErrorCode PCBDDCNullSpaceCorrPreSolve(KSP ksp,Vec y,Vec x, void* ctx
 static PetscErrorCode PCBDDCNullSpaceCorrPostSolve(KSP ksp,Vec y,Vec x, void* ctx)
 {
   NullSpaceCorrection_ctx corr_ctx = (NullSpaceCorrection_ctx)ctx;
-  PetscErrorCode          ierr;
   Mat                     K;
 
   PetscFunctionBegin;
@@ -55,7 +53,6 @@ static PetscErrorCode PCBDDCNullSpaceCorrPostSolve(KSP ksp,Vec y,Vec x, void* ct
 static PetscErrorCode PCBDDCNullSpaceCorrDestroy(void * ctx)
 {
   NullSpaceCorrection_ctx corr_ctx = (NullSpaceCorrection_ctx)ctx;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroyVecs(3,&corr_ctx->sw));
@@ -78,7 +75,6 @@ PetscErrorCode PCBDDCNullSpaceAssembleCorrection(PC pc, PetscBool isdir, PetscBo
   PetscInt                 basis_size;
   IS                       zerorows;
   PetscBool                iscusp;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   if (isdir) local_ksp = pcbddc->ksp_D; /* Dirichlet solver */

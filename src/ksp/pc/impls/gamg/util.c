@@ -14,7 +14,6 @@ static inline PetscErrorCode MatCollapseRow(Mat Amat,PetscInt row,PetscInt bs,Pe
 {
   PetscInt       cnt = -1,nidx,j;
   const PetscInt *idx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetRow(Amat,row,&nidx,&idx,NULL));
@@ -39,7 +38,6 @@ static inline PetscErrorCode MatCollapseRow(Mat Amat,PetscInt row,PetscInt bs,Pe
 static inline PetscErrorCode MatCollapseRows(Mat Amat,PetscInt start,PetscInt bs,PetscInt *w0,PetscInt *w1,PetscInt *w2,PetscInt *ncollapsed,PetscInt **collapsed)
 {
   PetscInt       i,nprev,*cprev = w0,ncur = 0,*ccur = w1,*merged = w2,*cprevtmp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCollapseRow(Amat,start,bs,&nprev,cprev));
@@ -64,7 +62,6 @@ static inline PetscErrorCode MatCollapseRows(Mat Amat,PetscInt start,PetscInt bs
  */
 PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
 {
-  PetscErrorCode ierr;
   PetscInt       Istart,Iend,Ii,jj,kk,ncols,nloc,NN,MM,bs;
   MPI_Comm       comm;
   Mat            Gmat;
@@ -195,7 +192,6 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
 @*/
 PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
 {
-  PetscErrorCode    ierr;
   PetscInt          Istart,Iend,Ii,jj,ncols,nnz0,nnz1, NN, MM, nloc;
   PetscMPIInt       rank;
   Mat               Gmat  = *a_Gmat, tGmat;
@@ -326,7 +322,6 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
 */
 PetscErrorCode PCGAMGGetDataWithGhosts(Mat Gmat,PetscInt data_sz,PetscReal data_in[],PetscInt *a_stride,PetscReal **a_data_out)
 {
-  PetscErrorCode ierr;
   Vec            tmp_crds;
   Mat_MPIAIJ     *mpimat = (Mat_MPIAIJ*)Gmat->data;
   PetscInt       nnodes,num_ghosts,dir,kk,jj,my0,Iend,nloc;
@@ -369,7 +364,6 @@ PetscErrorCode PCGAMGGetDataWithGhosts(Mat Gmat,PetscInt data_sz,PetscReal data_
 
 PetscErrorCode PCGAMGHashTableCreate(PetscInt a_size, PCGAMGHashTable *a_tab)
 {
-  PetscErrorCode ierr;
   PetscInt       kk;
 
   PetscFunctionBegin;
@@ -381,7 +375,6 @@ PetscErrorCode PCGAMGHashTableCreate(PetscInt a_size, PCGAMGHashTable *a_tab)
 
 PetscErrorCode PCGAMGHashTableDestroy(PCGAMGHashTable *a_tab)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree2(a_tab->table,a_tab->data));
@@ -409,7 +402,6 @@ PetscErrorCode PCGAMGHashTableAdd(PCGAMGHashTable *a_tab, PetscInt a_key, PetscI
   if (kk==a_tab->size) {
     /* this is not to efficient, waiting until completely full */
     PetscInt       oldsize = a_tab->size, new_size = 2*a_tab->size + 5, *oldtable = a_tab->table, *olddata = a_tab->data;
-    PetscErrorCode ierr;
 
     a_tab->size = new_size;
     CHKERRQ(PetscMalloc2(a_tab->size, &a_tab->table,a_tab->size, &a_tab->data));

@@ -10,7 +10,6 @@ static PetscErrorCode  pounders_fg(Tao subtao, Vec x, PetscReal *f, Vec g, void 
 {
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS*)ctx;
   PetscReal      d1,d2;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* g = A*x  (add b later)*/
@@ -28,7 +27,6 @@ static PetscErrorCode  pounders_fg(Tao subtao, Vec x, PetscReal *f, Vec g, void 
 
 static PetscErrorCode pounders_feval(Tao tao, Vec x, Vec F, PetscReal *fsum)
 {
-  PetscErrorCode ierr;
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS*)tao->data;
   PetscInt       i,row,col;
   PetscReal      fr,fc;
@@ -57,7 +55,6 @@ static PetscErrorCode pounders_feval(Tao tao, Vec x, Vec F, PetscReal *fsum)
 
 static PetscErrorCode gqtwrap(Tao tao,PetscReal *gnorm, PetscReal *qmin)
 {
-  PetscErrorCode ierr;
 #if defined(PETSC_USE_REAL_SINGLE)
   PetscReal      atol=1.0e-5;
 #else
@@ -155,7 +152,6 @@ static PetscErrorCode pounders_update_res(Tao tao)
   PetscInt       i,row,col;
   PetscBLASInt   blasn=mfqP->n,blasn2=blasn*blasn,blasm=mfqP->m,ione=1;
   PetscReal      zero=0.0,one=1.0,wii,factor;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0;i<mfqP->n;i++) {
@@ -355,7 +351,6 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
   PetscBLASInt    blasn=mfqP->n,blasnpmax=mfqP->npmax,blasnplus1=mfqP->n+1,info,blasnmax=mfqP->nmax,blasint,blasint2,blasnp,blasmaxmn;
   const PetscReal *x;
   PetscReal       normd;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Initialize M,N */
@@ -499,7 +494,6 @@ static PetscErrorCode morepoints(TAO_POUNDERS *mfqP)
 /* Only call from modelimprove, addpoint() needs ->Q_tmp and ->work to be set */
 static PetscErrorCode addpoint(Tao tao, TAO_POUNDERS *mfqP, PetscInt index)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Create new vector in history: X[newidx] = X[mfqP->index] + delta*X[index]*/
@@ -529,7 +523,6 @@ static PetscErrorCode addpoint(Tao tao, TAO_POUNDERS *mfqP, PetscInt index)
 static PetscErrorCode modelimprove(Tao tao, TAO_POUNDERS *mfqP, PetscInt addallpoints)
 {
   /* modeld = Q(:,np+1:n)' */
-  PetscErrorCode ierr;
   PetscInt       i,j,minindex=0;
   PetscReal      dp,half=0.5,one=1.0,minvalue=PETSC_INFINITY;
   PetscBLASInt   blasn=mfqP->n,  blasnpmax = mfqP->npmax, blask,info;
@@ -584,7 +577,6 @@ static PetscErrorCode affpoints(TAO_POUNDERS *mfqP, PetscReal *xmin,PetscReal c)
   PetscBLASInt    blasnpmax = mfqP->npmax,blasmaxmn;
   PetscReal       proj,normd;
   const PetscReal *x;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i=mfqP->nHist-1;i>=0;i--) {
@@ -1008,7 +1000,6 @@ static PetscErrorCode TaoSetUp_POUNDERS(Tao tao)
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS*)tao->data;
   PetscInt       i,j;
   IS             isfloc,isfglob,isxloc,isxglob;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->gradient) CHKERRQ(VecDuplicate(tao->solution,&tao->gradient));
@@ -1136,7 +1127,6 @@ static PetscErrorCode TaoDestroy_POUNDERS(Tao tao)
 {
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS*)tao->data;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!mfqP->usegqt) {
@@ -1208,7 +1198,6 @@ static PetscErrorCode TaoDestroy_POUNDERS(Tao tao)
 static PetscErrorCode TaoSetFromOptions_POUNDERS(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"POUNDERS method for least-squares optimization"));
@@ -1224,7 +1213,6 @@ static PetscErrorCode TaoView_POUNDERS(Tao tao, PetscViewer viewer)
 {
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS *)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -1255,7 +1243,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_POUNDERS(Tao tao)
 {
   TAO_POUNDERS   *mfqP = (TAO_POUNDERS*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetUp_POUNDERS;

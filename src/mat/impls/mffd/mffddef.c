@@ -63,7 +63,6 @@ static PetscErrorCode MatMFFDCompute_DS(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,P
   MatMFFD_DS     *hctx = (MatMFFD_DS*)ctx->hctx;
   PetscReal      nrm,sum,umin = hctx->umin;
   PetscScalar    dot;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!(ctx->count % ctx->recomputeperiod)) {
@@ -112,7 +111,6 @@ static PetscErrorCode MatMFFDCompute_DS(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,P
 static PetscErrorCode MatMFFDView_DS(MatMFFD ctx,PetscViewer viewer)
 {
   MatMFFD_DS     *hctx = (MatMFFD_DS*)ctx->hctx;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -138,7 +136,6 @@ static PetscErrorCode MatMFFDView_DS(MatMFFD ctx,PetscViewer viewer)
 */
 static PetscErrorCode MatMFFDSetFromOptions_DS(PetscOptionItems *PetscOptionsObject,MatMFFD ctx)
 {
-  PetscErrorCode ierr;
   MatMFFD_DS     *hctx = (MatMFFD_DS*)ctx->hctx;
 
   PetscFunctionBegin;
@@ -160,7 +157,6 @@ static PetscErrorCode MatMFFDSetFromOptions_DS(PetscOptionItems *PetscOptionsObj
 */
 static PetscErrorCode MatMFFDDestroy_DS(MatMFFD ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(ctx->hctx));
@@ -175,7 +171,6 @@ PetscErrorCode MatMFFDDSSetUmin_DS(Mat mat,PetscReal umin)
 {
   MatMFFD        ctx=NULL;
   MatMFFD_DS     *hctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(mat,&ctx));
@@ -205,7 +200,6 @@ PetscErrorCode MatMFFDDSSetUmin_DS(Mat mat,PetscReal umin)
 @*/
 PetscErrorCode  MatMFFDDSSetUmin(Mat A,PetscReal umin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -243,7 +237,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreateMFFD_DS(MatMFFD ctx)
 {
   MatMFFD_DS     *hctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* allocate my own private data structure */

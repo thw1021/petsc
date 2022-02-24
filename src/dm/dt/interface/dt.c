@@ -54,7 +54,6 @@ PetscClassId PETSCQUADRATURE_CLASSID = 0;
 @*/
 PetscErrorCode PetscQuadratureCreate(MPI_Comm comm, PetscQuadrature *q)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(q, 2);
@@ -89,7 +88,6 @@ PetscErrorCode PetscQuadratureDuplicate(PetscQuadrature q, PetscQuadrature *r)
   PetscInt         order, dim, Nc, Nq;
   const PetscReal *points, *weights;
   PetscReal       *p, *w;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(q, 1);
@@ -119,7 +117,6 @@ PetscErrorCode PetscQuadratureDuplicate(PetscQuadrature q, PetscQuadrature *r)
 @*/
 PetscErrorCode PetscQuadratureDestroy(PetscQuadrature *q)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*q) PetscFunctionReturn(0);
@@ -282,7 +279,6 @@ static PetscErrorCode PetscDTJacobianInverse_Internal(PetscInt m, PetscInt n, co
   PetscScalar    *Js, *Jinvs;
   PetscInt       i, j, k;
   PetscBLASInt   bm, bn, info;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!m || !n) PetscFunctionReturn(0);
@@ -405,7 +401,6 @@ PetscErrorCode PetscQuadraturePushForward(PetscQuadrature q, PetscInt imageDim, 
   PetscReal       *imagePoints, *imageWeights;
   PetscReal       *Jinv;
   PetscReal       *Jinvstar;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(q, PETSCQUADRATURE_CLASSID, 1);
@@ -490,7 +485,6 @@ static PetscErrorCode PetscQuadratureView_Ascii(PetscQuadrature quad, PetscViewe
 {
   PetscInt          q, d, c;
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (quad->Nc > 1) CHKERRQ(PetscViewerASCIIPrintf(v, "Quadrature of order %D on %D points (dim %D) with %D components\n", quad->order, quad->numPoints, quad->dim, quad->Nc));
@@ -533,7 +527,6 @@ static PetscErrorCode PetscQuadratureView_Ascii(PetscQuadrature quad, PetscViewe
 PetscErrorCode PetscQuadratureView(PetscQuadrature quad, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(quad, 1);
@@ -573,7 +566,6 @@ PetscErrorCode PetscQuadratureExpandComposite(PetscQuadrature q, PetscInt numSub
   const PetscReal *points,    *weights;
   PetscReal       *pointsRef, *weightsRef;
   PetscInt         dim, Nc, order, npoints, npointsRef, c, p, cp, d, e;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(q, PETSCQUADRATURE_CLASSID, 1);
@@ -771,7 +763,6 @@ PetscErrorCode PetscDTJacobiEvalJet(PetscReal alpha, PetscReal beta, PetscInt np
   PetscInt        i, j, l;
   PetscInt       *degrees;
   PetscReal      *psingle;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (degree == 0) {
@@ -823,7 +814,6 @@ PetscErrorCode PetscDTJacobiEvalJet(PetscReal alpha, PetscReal beta, PetscInt np
 @*/
 PetscErrorCode PetscDTJacobiEval(PetscInt npoints,PetscReal alpha, PetscReal beta, const PetscReal *points,PetscInt ndegree,const PetscInt *degrees,PetscReal *B,PetscReal *D,PetscReal *D2)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(alpha <= -1.,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"alpha must be > -1.");
@@ -857,7 +847,6 @@ PetscErrorCode PetscDTJacobiEval(PetscInt npoints,PetscReal alpha, PetscReal bet
 @*/
 PetscErrorCode PetscDTLegendreEval(PetscInt npoints,const PetscReal *points,PetscInt ndegree,const PetscInt *degrees,PetscReal *B,PetscReal *D,PetscReal *D2)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTJacobiEval(npoints, 0., 0., points, ndegree, degrees, B, D, D2));
@@ -1006,7 +995,6 @@ PetscErrorCode PetscDTPKDEvalJet(PetscInt dim, PetscInt npoints, const PetscReal
   PetscInt        Nk, Ndeg;
   PetscInt       *ktup, *degtup;
   PetscReal      *scales, initscale, scaleexp;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(PKDCitation, &PKDCite));
@@ -1157,7 +1145,6 @@ PetscErrorCode PetscDTPKDEvalJet(PetscInt dim, PetscInt npoints, const PetscReal
 PetscErrorCode PetscDTPTrimmedSize(PetscInt dim, PetscInt degree, PetscInt formDegree, PetscInt *size)
 {
   PetscInt       Nrk, Nbpt; // number of trimmed polynomials
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   formDegree = PetscAbsInt(formDegree);
@@ -1174,7 +1161,6 @@ static PetscErrorCode PetscDTPTrimmedEvalJet_Internal(PetscInt dim, PetscInt npo
 {
   PetscInt       formDegreeOrig = formDegree;
   PetscBool      formNegative = (formDegreeOrig < 0) ? PETSC_TRUE : PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   formDegree = PetscAbsInt(formDegreeOrig);
@@ -1325,7 +1311,6 @@ static PetscErrorCode PetscDTPTrimmedEvalJet_Internal(PetscInt dim, PetscInt npo
 @*/
 PetscErrorCode PetscDTPTrimmedEvalJet(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt degree, PetscInt formDegree, PetscInt jetDegree, PetscReal p[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTPTrimmedEvalJet_Internal(dim, npoints, points, degree, formDegree, jetDegree, p));
@@ -1352,7 +1337,6 @@ static PetscErrorCode PetscDTSymmetricTridiagonalEigensolve(PetscInt n, PetscRea
   PetscBLASInt *iwork;
   PetscBLASInt info;
   PetscReal *work = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if !defined(PETSCDTGAUSSIANQUADRATURE_EIG)
@@ -1459,7 +1443,6 @@ static inline PetscErrorCode PetscDTComputeJacobiDerivative(PetscReal a, PetscRe
 {
   PetscReal      nP;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *P = 0.0;
@@ -1476,7 +1459,6 @@ static PetscErrorCode PetscDTGaussJacobiQuadrature_Newton_Internal(PetscInt npoi
   PetscReal      eps     = PetscExpReal(0.75 * PetscLogReal(PETSC_MACHINE_EPSILON));
   PetscReal      a1, a6, gf;
   PetscInt       k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 
@@ -1554,7 +1536,6 @@ static PetscErrorCode PetscDTGaussJacobiQuadrature_GolubWelsch_Internal(PetscInt
   PetscReal mu0;
   PetscReal ga, gb, gab;
   PetscInt i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(GolubWelschCitation, &GolubWelschCite));
@@ -1620,7 +1601,6 @@ static PetscErrorCode PetscDTGaussJacobiQuadrature_GolubWelsch_Internal(PetscInt
 
 static PetscErrorCode PetscDTGaussJacobiQuadrature_Internal(PetscInt npoints,PetscReal alpha, PetscReal beta, PetscReal x[], PetscReal w[], PetscBool newton)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(npoints < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of points must be positive");
@@ -1674,7 +1654,6 @@ static PetscErrorCode PetscDTGaussJacobiQuadrature_Internal(PetscInt npoints,Pet
 PetscErrorCode PetscDTGaussJacobiQuadrature(PetscInt npoints,PetscReal a, PetscReal b, PetscReal alpha, PetscReal beta, PetscReal x[], PetscReal w[])
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTGaussJacobiQuadrature_Internal(npoints, alpha, beta, x, w, PetscDTGaussQuadratureNewton_Internal));
@@ -1690,7 +1669,6 @@ PetscErrorCode PetscDTGaussJacobiQuadrature(PetscInt npoints,PetscReal a, PetscR
 static PetscErrorCode PetscDTGaussLobattoJacobiQuadrature_Internal(PetscInt npoints,PetscReal alpha, PetscReal beta, PetscReal x[], PetscReal w[], PetscBool newton)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(npoints < 2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of points must be positive");
@@ -1734,7 +1712,6 @@ static PetscErrorCode PetscDTGaussLobattoJacobiQuadrature_Internal(PetscInt npoi
 PetscErrorCode PetscDTGaussLobattoJacobiQuadrature(PetscInt npoints,PetscReal a, PetscReal b, PetscReal alpha, PetscReal beta, PetscReal x[], PetscReal w[])
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTGaussLobattoJacobiQuadrature_Internal(npoints, alpha, beta, x, w, PetscDTGaussQuadratureNewton_Internal));
@@ -1771,7 +1748,6 @@ PetscErrorCode PetscDTGaussLobattoJacobiQuadrature(PetscInt npoints,PetscReal a,
 PetscErrorCode PetscDTGaussQuadrature(PetscInt npoints,PetscReal a,PetscReal b,PetscReal *x,PetscReal *w)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTGaussJacobiQuadrature_Internal(npoints, 0., 0., x, w, PetscDTGaussQuadratureNewton_Internal));
@@ -1814,7 +1790,6 @@ PetscErrorCode PetscDTGaussQuadrature(PetscInt npoints,PetscReal a,PetscReal b,P
 PetscErrorCode PetscDTGaussLobattoLegendreQuadrature(PetscInt npoints,PetscGaussLobattoLegendreCreateType type,PetscReal *x,PetscReal *w)
 {
   PetscBool      newton;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(npoints < 2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must provide at least 2 grid points per element");
@@ -1846,7 +1821,6 @@ PetscErrorCode PetscDTGaussTensorQuadrature(PetscInt dim, PetscInt Nc, PetscInt 
 {
   PetscInt       totpoints = dim > 1 ? dim > 2 ? npoints*PetscSqr(npoints) : PetscSqr(npoints) : npoints, i, j, k, c;
   PetscReal     *x, *w, *xw, *ww;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(totpoints*dim,&x));
@@ -1935,7 +1909,6 @@ PetscErrorCode PetscDTStroudConicalQuadrature(PetscInt dim, PetscInt Nc, PetscIn
   PetscReal     *p1, *w1;
   PetscReal     *x, *w;
   PetscInt       i, j, k, l, m, pt, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse((a != -1.0) || (b != 1.0),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must use default internal right now");
@@ -1998,7 +1971,6 @@ PetscErrorCode PetscDTTanhSinhTensorQuadrature(PetscInt dim, PetscInt level, Pet
   PetscReal       wk    = 0.5*PETSC_PI;              /* Quadrature weight at x_k */
   PetscReal      *x, *w;
   PetscInt        K, k, npoints;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(dim > 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Dimension %d not yet implemented", dim);
@@ -2220,7 +2192,6 @@ PetscErrorCode PetscDTTanhSinhIntegrateMPFR(void (*func)(PetscReal, PetscReal *)
  */
 static PetscErrorCode PetscDTPseudoInverseQR(PetscInt m,PetscInt mstride,PetscInt n,PetscReal *A_in,PetscReal *Ainv_out,PetscScalar *tau,PetscInt worksize,PetscScalar *work)
 {
-  PetscErrorCode ierr;
   PetscBLASInt   M,N,K,lda,ldb,ldwork,info;
   PetscScalar    *A,*Ainv,*R,*Q,Alpha;
 
@@ -2275,7 +2246,6 @@ static PetscErrorCode PetscDTPseudoInverseQR(PetscInt m,PetscInt mstride,PetscIn
 /* Computes integral of L_p' over intervals {(x0,x1),(x1,x2),...} */
 static PetscErrorCode PetscDTLegendreIntegrate(PetscInt ninterval,const PetscReal *x,PetscInt ndegree,const PetscInt *degrees,PetscBool Transpose,PetscReal *B)
 {
-  PetscErrorCode ierr;
   PetscReal      *Bv;
   PetscInt       i,j;
 
@@ -2315,7 +2285,6 @@ static PetscErrorCode PetscDTLegendreIntegrate(PetscInt ninterval,const PetscRea
 @*/
 PetscErrorCode PetscDTReconstructPoly(PetscInt degree,PetscInt nsource,const PetscReal *sourcex,PetscInt ntarget,const PetscReal *targetx,PetscReal *R)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,*bdegrees,worksize;
   PetscReal      xmin,xmax,center,hscale,*sourcey,*targety,*Bsource,*Bsinv,*Btarget;
   PetscScalar    *tau,*work;
@@ -2420,7 +2389,6 @@ PetscErrorCode PetscGaussLobattoLegendreIntegrate(PetscInt n,PetscReal *nodes,Pe
 PetscErrorCode PetscGaussLobattoLegendreElementLaplacianCreate(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA)
 {
   PetscReal        **A;
-  PetscErrorCode  ierr;
   const PetscReal  *gllnodes = nodes;
   const PetscInt   p = n-1;
   PetscReal        z0,z1,z2 = -1,x,Lpj,Lpr;
@@ -2509,7 +2477,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementLaplacianCreate(PetscInt n,PetscR
 @*/
 PetscErrorCode PetscGaussLobattoLegendreElementLaplacianDestroy(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree((*AA)[0]));
@@ -2545,7 +2512,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementLaplacianDestroy(PetscInt n,Petsc
 PetscErrorCode PetscGaussLobattoLegendreElementGradientCreate(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA,PetscReal ***AAT)
 {
   PetscReal        **A, **AT = NULL;
-  PetscErrorCode  ierr;
   const PetscReal  *gllnodes = nodes;
   const PetscInt   p = n-1;
   PetscReal        Li, Lj,d0;
@@ -2599,7 +2565,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementGradientCreate(PetscInt n,PetscRe
 @*/
 PetscErrorCode PetscGaussLobattoLegendreElementGradientDestroy(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA,PetscReal ***AAT)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree((*AA)[0]));
@@ -2641,7 +2606,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementGradientDestroy(PetscInt n,PetscR
 PetscErrorCode PetscGaussLobattoLegendreElementAdvectionCreate(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA)
 {
   PetscReal       **D;
-  PetscErrorCode  ierr;
   const PetscReal  *gllweights = weights;
   const PetscInt   glln = n;
   PetscInt         i,j;
@@ -2675,7 +2639,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementAdvectionCreate(PetscInt n,PetscR
 @*/
 PetscErrorCode PetscGaussLobattoLegendreElementAdvectionDestroy(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree((*AA)[0]));
@@ -2687,7 +2650,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementAdvectionDestroy(PetscInt n,Petsc
 PetscErrorCode PetscGaussLobattoLegendreElementMassCreate(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA)
 {
   PetscReal        **A;
-  PetscErrorCode  ierr;
   const PetscReal  *gllweights = weights;
   const PetscInt   glln = n;
   PetscInt         i,j;
@@ -2709,7 +2671,6 @@ PetscErrorCode PetscGaussLobattoLegendreElementMassCreate(PetscInt n,PetscReal *
 
 PetscErrorCode PetscGaussLobattoLegendreElementMassDestroy(PetscInt n,PetscReal *nodes,PetscReal *weights,PetscReal ***AA)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree((*AA)[0]));

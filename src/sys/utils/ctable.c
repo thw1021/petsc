@@ -56,7 +56,6 @@ static PetscErrorCode PetscTableCreateHashSize(PetscInt sz, PetscInt *hsz)
 PetscErrorCode  PetscTableCreate(const PetscInt n,PetscInt maxkey,PetscTable *rta)
 {
   PetscTable     ta;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"n < 0");
@@ -78,7 +77,6 @@ PetscErrorCode  PetscTableCreate(const PetscInt n,PetscInt maxkey,PetscTable *rt
  */
 PetscErrorCode  PetscTableCreateCopy(const PetscTable intable,PetscTable *rta)
 {
-  PetscErrorCode ierr;
   PetscTable     ta;
 
   PetscFunctionBegin;
@@ -107,7 +105,6 @@ PetscErrorCode  PetscTableCreateCopy(const PetscTable intable,PetscTable *rta)
  */
 PetscErrorCode  PetscTableDestroy(PetscTable *ta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*ta) PetscFunctionReturn(0);
@@ -141,7 +138,6 @@ PetscErrorCode  PetscTableIsEmpty(const PetscTable ta,PetscInt *flag)
 */
 PetscErrorCode  PetscTableAddExpand(PetscTable ta,PetscInt key,PetscInt data,InsertMode imode)
 {
-  PetscErrorCode ierr;
   PetscInt       ii      = 0;
   const PetscInt tsize   = ta->tablesize,tcount = ta->count;
   PetscInt       *oldtab = ta->table,*oldkt = ta->keytable,newk,ndata;
@@ -176,7 +172,6 @@ PetscErrorCode  PetscTableAddExpand(PetscTable ta,PetscInt key,PetscInt data,Ins
  */
 PetscErrorCode  PetscTableRemoveAll(PetscTable ta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ta->head = 0;
@@ -246,7 +241,6 @@ PetscErrorCode  PetscTableGetNext(PetscTable ta,PetscTablePosition *rPosition,Pe
 
 PetscErrorCode  PetscTableAddCountExpand(PetscTable ta,PetscInt key)
 {
-  PetscErrorCode ierr;
   PetscInt       ii      = 0,hash = PetscHash(ta,key);
   const PetscInt tsize   = ta->tablesize,tcount = ta->count;
   PetscInt       *oldtab = ta->table,*oldkt = ta->keytable,newk,ndata;

@@ -46,7 +46,6 @@
 @*/
 PetscErrorCode  MatKAIJGetAIJ(Mat A,Mat *B)
 {
-  PetscErrorCode ierr;
   PetscBool      ismpikaij,isseqkaij;
 
   PetscFunctionBegin;
@@ -141,7 +140,6 @@ PetscErrorCode MatKAIJGetSRead(Mat A,PetscInt *m,PetscInt *n,const PetscScalar *
 @*/
 PetscErrorCode MatKAIJRestoreS(Mat A,PetscScalar **S)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (S) *S = NULL;
@@ -250,7 +248,6 @@ PetscErrorCode MatKAIJGetTRead(Mat A,PetscInt *m,PetscInt *n,const PetscScalar *
 @*/
 PetscErrorCode MatKAIJRestoreT(Mat A,PetscScalar **T)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (T) *T = NULL;
@@ -301,7 +298,6 @@ PetscErrorCode MatKAIJRestoreTRead(Mat A,const PetscScalar **T)
 @*/
 PetscErrorCode MatKAIJSetAIJ(Mat A,Mat B)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscBool      flg;
 
@@ -340,7 +336,6 @@ PetscErrorCode MatKAIJSetAIJ(Mat A,Mat B)
 @*/
 PetscErrorCode MatKAIJSetS(Mat A,PetscInt p,PetscInt q,const PetscScalar S[])
 {
-  PetscErrorCode ierr;
   Mat_SeqKAIJ    *a = (Mat_SeqKAIJ*)A->data;
 
   PetscFunctionBegin;
@@ -416,7 +411,6 @@ PetscErrorCode MatKAIJGetScaledIdentity(Mat A,PetscBool* identity)
 @*/
 PetscErrorCode MatKAIJSetT(Mat A,PetscInt p,PetscInt q,const PetscScalar T[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   Mat_SeqKAIJ    *a = (Mat_SeqKAIJ*)A->data;
   PetscBool      isTI = PETSC_FALSE;
@@ -452,7 +446,6 @@ PetscErrorCode MatKAIJSetT(Mat A,PetscInt p,PetscInt q,const PetscScalar T[])
 
 PetscErrorCode MatDestroy_SeqKAIJ(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_SeqKAIJ    *b = (Mat_SeqKAIJ*)A->data;
 
   PetscFunctionBegin;
@@ -468,7 +461,6 @@ PetscErrorCode MatDestroy_SeqKAIJ(Mat A)
 
 PETSC_INTERN PetscErrorCode MatKAIJ_build_AIJ_OAIJ(Mat A)
 {
-  PetscErrorCode   ierr;
   Mat_MPIKAIJ      *a;
   Mat_MPIAIJ       *mpiaij;
   PetscScalar      *T;
@@ -512,7 +504,6 @@ PETSC_INTERN PetscErrorCode MatKAIJ_build_AIJ_OAIJ(Mat A)
 
 PetscErrorCode MatSetUp_KAIJ(Mat A)
 {
-  PetscErrorCode ierr;
   PetscInt       n;
   PetscMPIInt    size;
   Mat_SeqKAIJ    *seqkaij = (Mat_SeqKAIJ*)A->data;
@@ -572,7 +563,6 @@ PetscErrorCode MatView_KAIJ(Mat A,PetscViewer viewer)
   Mat_SeqKAIJ       *a = (Mat_SeqKAIJ*)A->data;
   Mat               B;
   PetscInt          i;
-  PetscErrorCode    ierr;
   PetscBool         ismpikaij;
 
   PetscFunctionBegin;
@@ -633,7 +623,6 @@ PetscErrorCode MatView_KAIJ(Mat A,PetscViewer viewer)
 
 PetscErrorCode MatDestroy_MPIKAIJ(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_MPIKAIJ    *b = (Mat_MPIKAIJ*)A->data;
 
   PetscFunctionBegin;
@@ -661,7 +650,6 @@ PetscErrorCode MatMultAdd_SeqKAIJ(Mat A,Vec xx,Vec yy,Vec zz)
   const PetscScalar *s = b->S, *t = b->T;
   const PetscScalar *x,*v,*bx;
   PetscScalar       *y,*sums;
-  PetscErrorCode    ierr;
   const PetscInt    m = b->AIJ->rmap->n,*idx,*ii;
   PetscInt          n,i,jrow,j,l,p=b->p,q=b->q,k;
 
@@ -732,7 +720,6 @@ PetscErrorCode MatMultAdd_SeqKAIJ(Mat A,Vec xx,Vec yy,Vec zz)
 
 PetscErrorCode MatMult_SeqKAIJ(Mat A,Vec xx,Vec yy)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(MatMultAdd_SeqKAIJ(A,xx,PETSC_NULL,yy));
   PetscFunctionReturn(0);
@@ -748,7 +735,6 @@ PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A,const PetscScalar **values)
   const PetscScalar *T  = b->T;
   const PetscScalar *v  = a->a;
   const PetscInt     p  = b->p, q = b->q, m = b->AIJ->rmap->n, *idx = a->j, *ii = a->i;
-  PetscErrorCode    ierr;
   PetscInt          i,j,*v_pivots,dof,dof2;
   PetscScalar       *diag,aval,*v_work;
 
@@ -811,7 +797,6 @@ static PetscErrorCode MatConvert_KAIJ_AIJ(Mat A,MatType newtype,MatReuse reuse,M
   PetscInt       *d_nnz,*o_nnz = NULL,nz,i,j,m,d;
   const PetscInt p = a->p,q = a->q;
   PetscBool      ismpikaij,missing;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse != MAT_REUSE_MATRIX) {
@@ -1149,7 +1134,6 @@ PetscErrorCode MatSOR_SeqKAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
 PetscErrorCode MatMultAdd_MPIKAIJ(Mat A,Vec xx,Vec yy,Vec zz)
 {
   Mat_MPIKAIJ    *b = (Mat_MPIKAIJ*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!yy) {
@@ -1168,7 +1152,6 @@ PetscErrorCode MatMultAdd_MPIKAIJ(Mat A,Vec xx,Vec yy,Vec zz)
 
 PetscErrorCode MatMult_MPIKAIJ(Mat A,Vec xx,Vec yy)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(MatMultAdd_MPIKAIJ(A,xx,PETSC_NULL,yy));
   PetscFunctionReturn(0);
@@ -1177,7 +1160,6 @@ PetscErrorCode MatMult_MPIKAIJ(Mat A,Vec xx,Vec yy)
 PetscErrorCode MatInvertBlockDiagonal_MPIKAIJ(Mat A,const PetscScalar **values)
 {
   Mat_MPIKAIJ     *b = (Mat_MPIKAIJ*)A->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ is up to date. */
@@ -1191,7 +1173,6 @@ PetscErrorCode MatGetRow_SeqKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
 {
   Mat_SeqKAIJ     *b   = (Mat_SeqKAIJ*) A->data;
   PetscErrorCode  diag = PETSC_FALSE;
-  PetscErrorCode  ierr;
   PetscInt        nzaij,nz,*colsaij,*idx,i,j,p=b->p,q=b->q,r=row/p,s=row%p,c;
   PetscScalar     *vaij,*v,*S=b->S,*T=b->T;
 
@@ -1261,7 +1242,6 @@ PetscErrorCode MatGetRow_SeqKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
 
 PetscErrorCode MatRestoreRow_SeqKAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nz) *nz = 0;
@@ -1276,7 +1256,6 @@ PetscErrorCode MatGetRow_MPIKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
   Mat             AIJ     = b->A;
   PetscBool       diag    = PETSC_FALSE;
   Mat             MatAIJ,MatOAIJ;
-  PetscErrorCode  ierr;
   const PetscInt  rstart=A->rmap->rstart,rend=A->rmap->rend,p=b->p,q=b->q,*garray;
   PetscInt        nz,*idx,ncolsaij = 0,ncolsoaij = 0,*colsaij,*colsoaij,r,s,c,i,j,lrow;
   PetscScalar     *v,*vals,*ovals,*S=b->S,*T=b->T;
@@ -1369,7 +1348,6 @@ PetscErrorCode MatGetRow_MPIKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
 
 PetscErrorCode MatRestoreRow_MPIKAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscFree2(*idx,*v));
   ((Mat_SeqKAIJ*)A->data)->getrowactive = PETSC_FALSE;
@@ -1378,7 +1356,6 @@ PetscErrorCode MatRestoreRow_MPIKAIJ(Mat A,PetscInt row,PetscInt *nz,PetscInt **
 
 PetscErrorCode  MatCreateSubMatrix_KAIJ(Mat mat,IS isrow,IS iscol,MatReuse cll,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;
@@ -1431,7 +1408,6 @@ PetscErrorCode  MatCreateSubMatrix_KAIJ(Mat mat,IS isrow,IS iscol,MatReuse cll,M
 @*/
 PetscErrorCode  MatCreateKAIJ(Mat A,PetscInt p,PetscInt q,const PetscScalar S[],const PetscScalar T[],Mat *kaij)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),kaij));
@@ -1466,7 +1442,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_KAIJ(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_MPIKAIJ    *b;
   PetscMPIInt    size;
 

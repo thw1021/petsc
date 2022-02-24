@@ -18,7 +18,6 @@ static PetscErrorCode solve(TAO_DF*);
 
 static PetscErrorCode make_grad_node(Vec X, Vec_Chain **p)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(p));
@@ -30,7 +29,6 @@ static PetscErrorCode make_grad_node(Vec X, Vec_Chain **p)
 
 static PetscErrorCode destroy_grad_list(Vec_Chain *head)
 {
-  PetscErrorCode ierr;
   Vec_Chain      *p = head->next, *q;
 
   PetscFunctionBegin;
@@ -46,7 +44,6 @@ static PetscErrorCode destroy_grad_list(Vec_Chain *head)
 
 static PetscErrorCode TaoSolve_BMRM(Tao tao)
 {
-  PetscErrorCode     ierr;
   TAO_DF             df;
   TAO_BMRM           *bmrm = (TAO_BMRM*)tao->data;
 
@@ -202,21 +199,15 @@ static PetscErrorCode TaoSolve_BMRM(Tao tao)
 
 static PetscErrorCode TaoSetup_BMRM(Tao tao)
 {
-
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   /* Allocate some arrays */
-  if (!tao->gradient) {
-    CHKERRQ(VecDuplicate(tao->solution, &tao->gradient));
-  }
+  if (!tao->gradient) CHKERRQ(VecDuplicate(tao->solution, &tao->gradient));
   PetscFunctionReturn(0);
 }
 
 /*------------------------------------------------------------*/
 static PetscErrorCode TaoDestroy_BMRM(Tao tao)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(tao->data));
@@ -225,7 +216,6 @@ static PetscErrorCode TaoDestroy_BMRM(Tao tao)
 
 static PetscErrorCode TaoSetFromOptions_BMRM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
-  PetscErrorCode ierr;
   TAO_BMRM*      bmrm = (TAO_BMRM*)tao->data;
 
   PetscFunctionBegin;
@@ -239,7 +229,6 @@ static PetscErrorCode TaoSetFromOptions_BMRM(PetscOptionItems *PetscOptionsObjec
 static PetscErrorCode TaoView_BMRM(Tao tao, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -263,7 +252,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BMRM(Tao tao)
 {
   TAO_BMRM       *bmrm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetup_BMRM;
@@ -288,7 +276,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BMRM(Tao tao)
 PetscErrorCode init_df_solver(TAO_DF *df)
 {
   PetscInt       i, n = INCRE_DIM;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* default values */
@@ -328,7 +315,6 @@ PetscErrorCode init_df_solver(TAO_DF *df)
 
 PetscErrorCode ensure_df_space(PetscInt dim, TAO_DF *df)
 {
-  PetscErrorCode ierr;
   PetscReal      *tmp, **tmp_Q;
   PetscInt       i, n, old_n;
 
@@ -421,7 +407,6 @@ PetscErrorCode ensure_df_space(PetscInt dim, TAO_DF *df)
 
 PetscErrorCode destroy_df_solver(TAO_DF *df)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -480,7 +465,6 @@ PetscInt project(PetscInt n,PetscReal *a,PetscReal b,PetscReal *c,PetscReal *l,P
   PetscReal      r, rl, ru, s;
   PetscInt       innerIter;
   PetscBool      nonNegativeSlack = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   *lam_ext = 0;
   lambda  = 0;
@@ -608,7 +592,6 @@ PetscInt project(PetscInt n,PetscReal *a,PetscReal b,PetscReal *c,PetscReal *l,P
 
 PetscErrorCode solve(TAO_DF *df)
 {
-  PetscErrorCode ierr;
   PetscInt       i, j, innerIter, it, it2, luv, info, lscount = 0;
   PetscReal      gd, max, ak, bk, akold, bkold, lamnew, alpha, kktlam=0.0, lam_ext;
   PetscReal      DELTAsv, ProdDELTAsv;

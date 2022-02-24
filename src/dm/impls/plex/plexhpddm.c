@@ -29,7 +29,6 @@ PetscErrorCode DMCreateNeumannOverlap_Plex(DM dm, IS *ovl, Mat *J, PetscErrorCod
   ISLocalToGlobalMapping l2g;
   const PetscInt         *idxs;
   PetscInt               n, mh;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   *setup     = NULL;

@@ -94,7 +94,6 @@ FILE *petsc_history = NULL;
 
 PetscErrorCode  PetscOpenHistoryFile(const char filename[],FILE **fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   char           pfile[PETSC_MAX_PATH_LEN],pname[PETSC_MAX_PATH_LEN],fname[PETSC_MAX_PATH_LEN],date[64];
   char           version[256];
@@ -134,7 +133,6 @@ PetscErrorCode  PetscOpenHistoryFile(const char filename[],FILE **fd)
 
 PETSC_INTERN PetscErrorCode PetscCloseHistoryFile(FILE **fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   char           date[64];
   int            err;

@@ -18,7 +18,6 @@ static PetscErrorCode DMFieldDestroy_DS(DMField field)
 {
   DMField_DS     *dsfield;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dsfield = (DMField_DS *) field->data;
@@ -36,7 +35,6 @@ static PetscErrorCode DMFieldView_DS(DMField field,PetscViewer viewer)
   DMField_DS     *dsfield = (DMField_DS *) field->data;
   PetscBool      iascii;
   PetscObject    disc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -57,7 +55,6 @@ static PetscErrorCode DMFieldView_DS(DMField field,PetscViewer viewer)
 static PetscErrorCode DMFieldDSGetHeightDisc(DMField field, PetscInt height, PetscObject *disc)
 {
   DMField_DS     *dsfield = (DMField_DS *) field->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dsfield->disc[height]) {
@@ -103,7 +100,6 @@ static PetscErrorCode DMFieldEvaluateFE_DS(DMField field, IS pointIS, PetscQuadr
   PetscBool       isStride;
   const PetscInt  *points = NULL;
   PetscInt        sfirst = -1, stride = -1;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginHot;
   dm   = field->dm;
@@ -200,7 +196,6 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
   PetscScalar       *cellBs = NULL, *cellDs = NULL, *cellHs = NULL;
   PetscReal         *cellBr = NULL, *cellDr = NULL, *cellHr = NULL;
   PetscReal         *v, *J, *invJ, *detJ;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   nc   = field->numComponents;
@@ -442,7 +437,6 @@ static PetscErrorCode DMFieldEvaluateFV_DS(DMField field, IS pointIS, PetscDataT
   MPI_Datatype     mpitype = type == PETSC_SCALAR ? MPIU_SCALAR : MPIU_REAL;
   PetscObject      disc;
   DMField          coordField;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   Nc = field->numComponents;
@@ -654,7 +648,6 @@ static PetscErrorCode DMFieldGetDegree_DS(DMField field, IS pointIS, PetscInt *m
   PetscObject    disc;
   PetscInt       h, imin, imax;
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dsfield = (DMField_DS *) field->data;
@@ -689,7 +682,6 @@ static PetscErrorCode DMFieldCreateDefaultQuadrature_DS(DMField field, IS pointI
   PetscObject    disc;
   PetscFE        fe;
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = field->dm;
@@ -724,7 +716,6 @@ static PetscErrorCode DMFieldComputeFaceData_DS(DMField field, IS pointIS, Petsc
   DMLabel         depthLabel;
   IS              cellIS;
   DM              dm = field->dm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   dim = geom->dim;
@@ -1053,7 +1044,6 @@ static PetscErrorCode DMFieldInitialize_DS(DMField field)
 PETSC_INTERN PetscErrorCode DMFieldCreate_DS(DMField field)
 {
   DMField_DS     *dsfield;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(field,&dsfield));
@@ -1071,7 +1061,6 @@ PetscErrorCode DMFieldCreateDS(DM dm, PetscInt fieldNum, Vec vec,DMField *field)
   PetscClassId   id = -1;
   PetscInt       numComponents = -1, dsNumFields;
   PetscSection   section;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetLocalSection(dm,&section));

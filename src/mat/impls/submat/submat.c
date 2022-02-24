@@ -12,7 +12,6 @@ typedef struct {
 static PetscErrorCode MatScale_SubMatrix(Mat N,PetscScalar a)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatScale(Na->A,a));
@@ -22,7 +21,6 @@ static PetscErrorCode MatScale_SubMatrix(Mat N,PetscScalar a)
 static PetscErrorCode MatShift_SubMatrix(Mat N,PetscScalar a)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShift(Na->A,a));
@@ -32,7 +30,6 @@ static PetscErrorCode MatShift_SubMatrix(Mat N,PetscScalar a)
 static PetscErrorCode MatDiagonalScale_SubMatrix(Mat N,Vec left,Vec right)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (right) {
@@ -52,7 +49,6 @@ static PetscErrorCode MatDiagonalScale_SubMatrix(Mat N,Vec left,Vec right)
 static PetscErrorCode MatGetDiagonal_SubMatrix(Mat N,Vec d)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetDiagonal(Na->A,Na->rwork));
@@ -64,7 +60,6 @@ static PetscErrorCode MatGetDiagonal_SubMatrix(Mat N,Vec d)
 static PetscErrorCode MatMult_SubMatrix(Mat N,Vec x,Vec y)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(Na->rwork));
@@ -79,7 +74,6 @@ static PetscErrorCode MatMult_SubMatrix(Mat N,Vec x,Vec y)
 static PetscErrorCode MatMultAdd_SubMatrix(Mat N,Vec v1,Vec v2,Vec v3)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(Na->rwork));
@@ -110,7 +104,6 @@ static PetscErrorCode MatMultAdd_SubMatrix(Mat N,Vec v1,Vec v2,Vec v3)
 static PetscErrorCode MatMultTranspose_SubMatrix(Mat N,Vec x,Vec y)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(Na->lwork));
@@ -125,7 +118,6 @@ static PetscErrorCode MatMultTranspose_SubMatrix(Mat N,Vec x,Vec y)
 static PetscErrorCode MatMultTransposeAdd_SubMatrix(Mat N,Vec v1,Vec v2,Vec v3)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(Na->lwork));
@@ -156,7 +148,6 @@ static PetscErrorCode MatMultTransposeAdd_SubMatrix(Mat N,Vec v1,Vec v2,Vec v3)
 static PetscErrorCode MatDestroy_SubMatrix(Mat N)
 {
   Mat_SubVirtual *Na = (Mat_SubVirtual*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISDestroy(&Na->isrow));
@@ -198,7 +189,6 @@ PetscErrorCode MatCreateSubMatrixVirtual(Mat A,IS isrow,IS iscol,Mat *newmat)
   PetscInt       m,n;
   Mat            N;
   Mat_SubVirtual *Na;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -275,7 +265,6 @@ PetscErrorCode MatCreateSubMatrixVirtual(Mat A,IS isrow,IS iscol,Mat *newmat)
 @*/
 PetscErrorCode  MatSubMatrixVirtualUpdate(Mat N,Mat A,IS isrow,IS iscol)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   Mat_SubVirtual *Na;
 

@@ -17,7 +17,6 @@ static PetscErrorCode MatMult_ADA(Mat mat,Vec a,Vec y)
 {
   TaoMatADACtx   ctx;
   PetscReal      one = 1.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(mat,&ctx));
@@ -35,7 +34,6 @@ static PetscErrorCode MatMult_ADA(Mat mat,Vec a,Vec y)
 
 static PetscErrorCode MatMultTranspose_ADA(Mat mat,Vec a,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult_ADA(mat,a,y));
@@ -46,7 +44,6 @@ static PetscErrorCode MatDiagonalSet_ADA(Mat M,Vec D, InsertMode mode)
 {
   TaoMatADACtx   ctx;
   PetscReal      zero=0.0,one = 1.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(mode == INSERT_VALUES,PetscObjectComm((PetscObject)M),PETSC_ERR_SUP,"Cannot insert diagonal entries of this matrix type, can only add");
@@ -61,7 +58,6 @@ static PetscErrorCode MatDiagonalSet_ADA(Mat M,Vec D, InsertMode mode)
 
 static PetscErrorCode MatDestroy_ADA(Mat mat)
 {
-  PetscErrorCode ierr;
   TaoMatADACtx   ctx;
 
   PetscFunctionBegin;
@@ -84,7 +80,6 @@ static PetscErrorCode MatView_ADA(Mat mat,PetscViewer viewer)
 
 static PetscErrorCode MatShift_ADA(Mat Y, PetscReal a)
 {
-  PetscErrorCode ierr;
   TaoMatADACtx   ctx;
 
   PetscFunctionBegin;
@@ -95,7 +90,6 @@ static PetscErrorCode MatShift_ADA(Mat Y, PetscReal a)
 
 static PetscErrorCode MatDuplicate_ADA(Mat mat,MatDuplicateOption op,Mat *M)
 {
-  PetscErrorCode    ierr;
   TaoMatADACtx      ctx;
   Mat               A2;
   Vec               D1b=NULL,D2b;
@@ -120,7 +114,6 @@ static PetscErrorCode MatDuplicate_ADA(Mat mat,MatDuplicateOption op,Mat *M)
 
 static PetscErrorCode MatEqual_ADA(Mat A,Mat B,PetscBool *flg)
 {
-  PetscErrorCode ierr;
   TaoMatADACtx   ctx1,ctx2;
 
   PetscFunctionBegin;
@@ -138,7 +131,6 @@ static PetscErrorCode MatEqual_ADA(Mat A,Mat B,PetscBool *flg)
 
 static PetscErrorCode MatScale_ADA(Mat mat, PetscReal a)
 {
-  PetscErrorCode ierr;
   TaoMatADACtx   ctx;
 
   PetscFunctionBegin;
@@ -152,7 +144,6 @@ static PetscErrorCode MatScale_ADA(Mat mat, PetscReal a)
 
 static PetscErrorCode MatTranspose_ADA(Mat mat,MatReuse reuse,Mat *B)
 {
-  PetscErrorCode ierr;
   TaoMatADACtx   ctx;
 
   PetscFunctionBegin;
@@ -167,7 +158,6 @@ static PetscErrorCode MatTranspose_ADA(Mat mat,MatReuse reuse,Mat *B)
 
 static PetscErrorCode MatADAComputeDiagonal(Mat mat)
 {
-  PetscErrorCode ierr;
   PetscInt       i,m,n,low,high;
   PetscScalar    *dtemp,*dptr;
   TaoMatADACtx   ctx;
@@ -198,7 +188,6 @@ static PetscErrorCode MatADAComputeDiagonal(Mat mat)
 
 static PetscErrorCode MatGetDiagonal_ADA(Mat mat,Vec v)
 {
-  PetscErrorCode  ierr;
   PetscReal       one=1.0;
   TaoMatADACtx    ctx;
 
@@ -214,7 +203,6 @@ static PetscErrorCode MatGetDiagonal_ADA(Mat mat,Vec v)
 
 static PetscErrorCode MatCreateSubMatrix_ADA(Mat mat,IS isrow,IS iscol,MatReuse cll, Mat *newmat)
 {
-  PetscErrorCode    ierr;
   PetscInt          low,high;
   IS                ISrow;
   Vec               D1,D2;
@@ -264,7 +252,6 @@ static PetscErrorCode MatCreateSubMatrix_ADA(Mat mat,IS isrow,IS iscol,MatReuse 
 
 static PetscErrorCode MatCreateSubMatrices_ADA(Mat A,PetscInt n, IS *irow,IS *icol,MatReuse scall,Mat **B)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -279,7 +266,6 @@ static PetscErrorCode MatCreateSubMatrices_ADA(Mat A,PetscInt n, IS *irow,IS *ic
 
 static PetscErrorCode MatGetColumnVector_ADA(Mat mat,Vec Y, PetscInt col)
 {
-  PetscErrorCode ierr;
   PetscInt       low,high;
   PetscScalar    zero=0.0,one=1.0;
 
@@ -297,7 +283,6 @@ static PetscErrorCode MatGetColumnVector_ADA(Mat mat,Vec Y, PetscInt col)
 
 PETSC_INTERN PetscErrorCode MatConvert_ADA(Mat mat,MatType newtype,Mat *NewMat)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscBool      sametype, issame, isdense, isseqdense;
   TaoMatADACtx   ctx;
@@ -361,7 +346,6 @@ PETSC_INTERN PetscErrorCode MatConvert_ADA(Mat mat,MatType newtype,Mat *NewMat)
 
 static PetscErrorCode MatNorm_ADA(Mat mat,NormType type,PetscReal *norm)
 {
-  PetscErrorCode ierr;
   TaoMatADACtx   ctx;
 
   PetscFunctionBegin;
@@ -399,7 +383,6 @@ PetscErrorCode MatCreateADA(Mat mat,Vec d1, Vec d2, Mat *J)
 {
   MPI_Comm       comm = PetscObjectComm((PetscObject)mat);
   TaoMatADACtx   ctx;
-  PetscErrorCode ierr;
   PetscInt       nloc,n;
 
   PetscFunctionBegin;

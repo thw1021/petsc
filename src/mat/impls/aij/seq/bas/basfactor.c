@@ -7,7 +7,6 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_Bas(Mat fact,Mat A,IS perm,const MatF
 {
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqSBAIJ   *b;
-  PetscErrorCode ierr;
   PetscBool      perm_identity,missing;
   PetscInt       reallocs=0,i,*ai=a->i,*aj=a->j,am=A->rmap->n,*ui;
   const PetscInt *rip,*riip;
@@ -187,7 +186,6 @@ PetscErrorCode MatFactorGetSolverType_seqaij_bas(Mat A,MatSolverType *type)
 PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_bas(Mat A,MatFactorType ftype,Mat *B)
 {
   PetscInt       n = A->rmap->n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),B));

@@ -112,7 +112,6 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceType type, PetscInt devid, PetscDevi
 {
   static PetscInt PetscDeviceCounter = 0;
   PetscDevice     dev;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
@@ -153,7 +152,6 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceType type, PetscInt devid, PetscDevi
 @*/
 PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*device) PetscFunctionReturn(0);
@@ -185,7 +183,6 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
 @*/
 PetscErrorCode PetscDeviceConfigure(PetscDevice device)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidDevice(device,1);
@@ -221,7 +218,6 @@ PetscErrorCode PetscDeviceConfigure(PetscDevice device)
 @*/
 PetscErrorCode PetscDeviceView(PetscDevice device, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidDevice(device,1);
@@ -252,7 +248,6 @@ static_assert(initializedDevice.size() == defaultDevices.size(),"");
 @*/
 PetscErrorCode PetscDeviceInitialize(PetscDeviceType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
@@ -291,7 +286,6 @@ PetscBool PetscDeviceInitialized(PetscDeviceType type)
 */
 PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type, PetscInt defaultDeviceId)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
@@ -311,7 +305,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
 
 static PetscErrorCode PetscDeviceInitializeTypeFromOptions_Private(MPI_Comm comm, PetscDeviceType type, PetscInt defaultDeviceId, PetscBool defaultView, PetscDeviceInitType *defaultInitType)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!PetscDeviceConfiguredFor_Internal(type)) {
@@ -349,7 +342,6 @@ static PetscErrorCode PetscDeviceInitializeTypeFromOptions_Private(MPI_Comm comm
 /* called from PetscFinalize() do not call yourself! */
 static PetscErrorCode PetscDeviceFinalize_Private(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
@@ -477,7 +469,6 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 /* Get the default PetscDevice for a particular type and constructs them if lazily initialized. */
 PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(device,2);

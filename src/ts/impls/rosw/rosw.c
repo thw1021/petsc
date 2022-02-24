@@ -301,7 +301,6 @@ M*/
 @*/
 PetscErrorCode TSRosWRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSRosWRegisterAllCalled) PetscFunctionReturn(0);
@@ -603,7 +602,6 @@ PetscErrorCode TSRosWRegisterAll(void)
 @*/
 PetscErrorCode TSRosWRegisterDestroy(void)
 {
-  PetscErrorCode  ierr;
   RosWTableauLink link;
 
   PetscFunctionBegin;
@@ -631,7 +629,6 @@ PetscErrorCode TSRosWRegisterDestroy(void)
 @*/
 PetscErrorCode TSRosWInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSRosWPackageInitialized) PetscFunctionReturn(0);
@@ -651,7 +648,6 @@ PetscErrorCode TSRosWInitializePackage(void)
 @*/
 PetscErrorCode TSRosWFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSRosWPackageInitialized = PETSC_FALSE;
@@ -685,7 +681,6 @@ PetscErrorCode TSRosWFinalizePackage(void)
 PetscErrorCode TSRosWRegister(TSRosWType name,PetscInt order,PetscInt s,const PetscReal A[],const PetscReal Gamma[],const PetscReal b[],const PetscReal bembed[],
                               PetscInt pinterp,const PetscReal binterpt[])
 {
-  PetscErrorCode  ierr;
   RosWTableauLink link;
   RosWTableau     t;
   PetscInt        i,j,k;
@@ -812,7 +807,6 @@ PetscErrorCode TSRosWRegister(TSRosWType name,PetscInt order,PetscInt s,const Pe
 @*/
 PetscErrorCode TSRosWRegisterRos4(TSRosWType name,PetscReal gamma,PetscReal a2,PetscReal a3,PetscReal b3,PetscReal e4)
 {
-  PetscErrorCode ierr;
   /* Declare numeric constants so they can be quad precision without being truncated at double */
   const PetscReal one = 1,two = 2,three = 3,four = 4,five = 5,six = 6,eight = 8,twelve = 12,twenty = 20,twentyfour = 24,
     p32 = one/six - gamma + gamma*gamma,
@@ -908,7 +902,6 @@ static PetscErrorCode TSEvaluateStep_RosW(TS ts,PetscInt order,Vec U,PetscBool *
   RosWTableau    tab  = ros->tableau;
   PetscScalar    *w   = ros->work;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (order == tab->order) {
@@ -942,7 +935,6 @@ static PetscErrorCode TSEvaluateStep_RosW(TS ts,PetscInt order,Vec U,PetscBool *
 static PetscErrorCode TSRollBack_RosW(TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(ros->vec_sol_prev,ts->vec_sol));
@@ -965,7 +957,6 @@ static PetscErrorCode TSStep_RosW(TS ts)
   PetscInt        rejections = 0;
   PetscBool       stageok,accept = PETSC_TRUE;
   PetscReal       next_time_step = ts->time_step;
-  PetscErrorCode  ierr;
   PetscInt        lag;
 
   PetscFunctionBegin;
@@ -1075,7 +1066,6 @@ static PetscErrorCode TSInterpolate_RosW(TS ts,PetscReal itime,Vec U)
   PetscReal       tt,t;
   PetscScalar     *bt;
   const PetscReal *Bt = ros->tableau->binterpt;
-  PetscErrorCode  ierr;
   const PetscReal *GammaInv = ros->tableau->GammaInv;
   PetscScalar     *w        = ros->work;
   Vec             *Y        = ros->Y;
@@ -1127,7 +1117,6 @@ static PetscErrorCode TSRosWTableauReset(TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
   RosWTableau    tab  = ros->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tab) PetscFunctionReturn(0);
@@ -1139,7 +1128,6 @@ static PetscErrorCode TSRosWTableauReset(TS ts)
 static PetscErrorCode TSReset_RosW(TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRosWTableauReset(ts));
@@ -1154,7 +1142,6 @@ static PetscErrorCode TSReset_RosW(TS ts)
 static PetscErrorCode TSRosWGetVecs(TS ts,DM dm,Vec *Ydot,Vec *Zdot,Vec *Ystage,Vec *Zstage)
 {
   TS_RosW        *rw = (TS_RosW*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Ydot) {
@@ -1182,7 +1169,6 @@ static PetscErrorCode TSRosWGetVecs(TS ts,DM dm,Vec *Ydot,Vec *Zdot,Vec *Ystage,
 
 static PetscErrorCode TSRosWRestoreVecs(TS ts,DM dm,Vec *Ydot,Vec *Zdot, Vec *Ystage, Vec *Zstage)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Ydot) {
@@ -1217,7 +1203,6 @@ static PetscErrorCode DMCoarsenHook_TSRosW(DM fine,DM coarse,void *ctx)
 static PetscErrorCode DMRestrictHook_TSRosW(DM fine,Mat restrct,Vec rscale,Mat inject,DM coarse,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            Ydot,Zdot,Ystage,Zstage;
   Vec            Ydotc,Zdotc,Ystagec,Zstagec;
 
@@ -1246,7 +1231,6 @@ static PetscErrorCode DMSubDomainHook_TSRosW(DM fine,DM coarse,void *ctx)
 static PetscErrorCode DMSubDomainRestrictHook_TSRosW(DM dm,VecScatter gscat,VecScatter lscat,DM subdm,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            Ydot,Zdot,Ystage,Zstage;
   Vec            Ydots,Zdots,Ystages,Zstages;
 
@@ -1278,7 +1262,6 @@ static PetscErrorCode DMSubDomainRestrictHook_TSRosW(DM dm,VecScatter gscat,VecS
 static PetscErrorCode SNESTSFormFunction_RosW(SNES snes,Vec U,Vec F,TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
-  PetscErrorCode ierr;
   Vec            Ydot,Zdot,Ystage,Zstage;
   PetscReal      shift = ros->scoeff / ts->time_step;
   DM             dm,dmsave;
@@ -1301,7 +1284,6 @@ static PetscErrorCode SNESTSFormJacobian_RosW(SNES snes,Vec U,Mat A,Mat B,TS ts)
   TS_RosW        *ros = (TS_RosW*)ts->data;
   Vec            Ydot,Zdot,Ystage,Zstage;
   PetscReal      shift = ros->scoeff / ts->time_step;
-  PetscErrorCode ierr;
   DM             dm,dmsave;
 
   PetscFunctionBegin;
@@ -1320,7 +1302,6 @@ static PetscErrorCode TSRosWTableauSetUp(TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
   RosWTableau    tab  = ros->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicateVecs(ts->vec_sol,tab->s,&ros->Y));
@@ -1331,7 +1312,6 @@ static PetscErrorCode TSRosWTableauSetUp(TS ts)
 static PetscErrorCode TSSetUp_RosW(TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
-  PetscErrorCode ierr;
   DM             dm;
   SNES           snes;
   TSRHSJacobian  rhsjacobian;
@@ -1380,7 +1360,6 @@ static PetscErrorCode TSSetUp_RosW(TS ts)
 static PetscErrorCode TSSetFromOptions_RosW(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
-  PetscErrorCode ierr;
   SNES           snes;
 
   PetscFunctionBegin;
@@ -1413,7 +1392,6 @@ static PetscErrorCode TSView_RosW(TS ts,PetscViewer viewer)
 {
   TS_RosW        *ros = (TS_RosW*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1436,7 +1414,6 @@ static PetscErrorCode TSView_RosW(TS ts,PetscViewer viewer)
 
 static PetscErrorCode TSLoad_RosW(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   TSAdapt        adapt;
 
@@ -1466,7 +1443,6 @@ static PetscErrorCode TSLoad_RosW(TS ts,PetscViewer viewer)
 @*/
 PetscErrorCode TSRosWSetType(TS ts,TSRosWType roswtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1492,7 +1468,6 @@ PetscErrorCode TSRosWSetType(TS ts,TSRosWType roswtype)
 @*/
 PetscErrorCode TSRosWGetType(TS ts,TSRosWType *rostype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1515,7 +1490,6 @@ PetscErrorCode TSRosWGetType(TS ts,TSRosWType *rostype)
 @*/
 PetscErrorCode TSRosWSetRecomputeJacobian(TS ts,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1535,7 +1509,6 @@ static PetscErrorCode  TSRosWGetType_RosW(TS ts,TSRosWType *rostype)
 static PetscErrorCode  TSRosWSetType_RosW(TS ts,TSRosWType rostype)
 {
   TS_RosW         *ros = (TS_RosW*)ts->data;
-  PetscErrorCode  ierr;
   PetscBool       match;
   RosWTableauLink link;
 
@@ -1568,7 +1541,6 @@ static PetscErrorCode  TSRosWSetRecomputeJacobian_RosW(TS ts,PetscBool flg)
 
 static PetscErrorCode TSDestroy_RosW(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_RosW(ts));
@@ -1650,7 +1622,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_RosW(TS ts)
 {
   TS_RosW        *ros;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRosWInitializePackage());

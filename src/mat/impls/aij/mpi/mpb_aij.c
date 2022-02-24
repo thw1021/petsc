@@ -2,7 +2,6 @@
 
 PetscErrorCode  MatGetMultiProcBlock_MPIAIJ(Mat mat, MPI_Comm subComm, MatReuse scall,Mat *subMat)
 {
-  PetscErrorCode ierr;
   Mat_MPIAIJ     *aij  = (Mat_MPIAIJ*)mat->data;
   Mat_SeqAIJ     *aijB = (Mat_SeqAIJ*)aij->B->data;
   PetscMPIInt    subCommSize,subCommRank;

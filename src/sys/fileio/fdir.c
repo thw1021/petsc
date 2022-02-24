@@ -16,7 +16,6 @@
 
 PetscErrorCode PetscPathJoin(const char dname[],const char fname[],size_t n,char fullname[])
 {
-  PetscErrorCode ierr;
   size_t         l1,l2;
   PetscFunctionBegin;
   CHKERRQ(PetscStrlen(dname,&l1));
@@ -31,7 +30,6 @@ PetscErrorCode PetscPathJoin(const char dname[],const char fname[],size_t n,char
 PetscErrorCode PetscMkdir(const char dir[])
 {
   int            err;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -138,7 +136,6 @@ PetscErrorCode PetscRMTree(const char dir[])
 #include <unistd.h>
 PetscErrorCode PetscRMTree(const char dir[])
 {
-  PetscErrorCode ierr;
   struct dirent *data;
   char loc[PETSC_MAX_PATH_LEN];
   PetscBool flg1, flg2;

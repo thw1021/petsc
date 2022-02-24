@@ -90,7 +90,6 @@
 
 PetscErrorCode TaoSolve_BNLS(Tao tao)
 {
-  PetscErrorCode               ierr;
   TAO_BNK                      *bnk = (TAO_BNK *)tao->data;
   KSPConvergedReason           ksp_reason;
   TaoLineSearchConvergedReason ls_reason;
@@ -188,7 +187,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BNLS(Tao tao)
 {
   TAO_BNK        *bnk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoCreate_BNK(tao));

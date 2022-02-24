@@ -27,7 +27,6 @@ PETSC_EXTERN PetscErrorCode MatCoarsenCreate_HEM(MatCoarsen);
  @*/
 PetscErrorCode  MatCoarsenRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (MatCoarsenRegisterAllCalled) PetscFunctionReturn(0);

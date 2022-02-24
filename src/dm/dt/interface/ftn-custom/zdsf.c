@@ -19,7 +19,6 @@ static PetscFortranCallbackId riemannsolver;
 // We can't use PetscObjectUseFortranCallback() because this function returns void
 static void ourriemannsolver(PetscInt dim,PetscInt Nf,const PetscReal x[],const PetscReal n[],const PetscScalar uL[],const PetscScalar uR[],PetscInt numConstants,const PetscScalar constants[],PetscScalar flux[],void *ctx)
 {
-  PetscErrorCode ierr;                                    \
   void (*func)(PetscInt *dim,PetscInt *Nf,const PetscReal x[],const PetscReal n[],const PetscScalar uL[],const PetscScalar uR[],const PetscInt *numConstants,const PetscScalar constants[],PetscScalar flux[],void *ctx);
   void *_ctx;
   CHKERRABORT(PETSC_COMM_SELF,PetscObjectGetFortranCallback((PetscObject)ctx,PETSC_FORTRAN_CALLBACK_CLASS,riemannsolver,(PetscVoidFunction*)&func,&_ctx));

@@ -41,7 +41,6 @@ PetscBool         PetscSpaceRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode PetscSpaceRegister(const char sname[], PetscErrorCode (*function)(PetscSpace))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&PetscSpaceList, sname, function));
@@ -68,7 +67,6 @@ PetscErrorCode PetscSpaceSetType(PetscSpace sp, PetscSpaceType name)
 {
   PetscErrorCode (*r)(PetscSpace);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -106,7 +104,6 @@ PetscErrorCode PetscSpaceSetType(PetscSpace sp, PetscSpaceType name)
 @*/
 PetscErrorCode PetscSpaceGetType(PetscSpace sp, PetscSpaceType *name)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -133,7 +130,6 @@ PetscErrorCode PetscSpaceGetType(PetscSpace sp, PetscSpaceType *name)
 @*/
 PetscErrorCode  PetscSpaceViewFromOptions(PetscSpace A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSCSPACE_CLASSID,1);
@@ -158,7 +154,6 @@ PetscErrorCode PetscSpaceView(PetscSpace sp, PetscViewer v)
 {
   PetscInt       pdim;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -245,7 +240,6 @@ PetscErrorCode PetscSpaceSetFromOptions(PetscSpace sp)
 @*/
 PetscErrorCode PetscSpaceSetUp(PetscSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -267,7 +261,6 @@ PetscErrorCode PetscSpaceSetUp(PetscSpace sp)
 @*/
 PetscErrorCode PetscSpaceDestroy(PetscSpace *sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*sp) PetscFunctionReturn(0);
@@ -300,7 +293,6 @@ PetscErrorCode PetscSpaceDestroy(PetscSpace *sp)
 PetscErrorCode PetscSpaceCreate(MPI_Comm comm, PetscSpace *sp)
 {
   PetscSpace     s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(sp, 2);
@@ -337,7 +329,6 @@ PetscErrorCode PetscSpaceCreate(MPI_Comm comm, PetscSpace *sp)
 @*/
 PetscErrorCode PetscSpaceGetDimension(PetscSpace sp, PetscInt *dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -501,7 +492,6 @@ PetscErrorCode PetscSpaceGetNumVariables(PetscSpace sp, PetscInt *n)
 @*/
 PetscErrorCode PetscSpaceEvaluate(PetscSpace sp, PetscInt npoints, const PetscReal points[], PetscReal B[], PetscReal D[], PetscReal H[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!npoints) PetscFunctionReturn(0);
@@ -538,7 +528,6 @@ PetscErrorCode PetscSpaceEvaluate(PetscSpace sp, PetscInt npoints, const PetscRe
 @*/
 PetscErrorCode PetscSpaceGetHeightSubspace(PetscSpace sp, PetscInt height, PetscSpace *subsp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);

@@ -28,7 +28,6 @@ $       call PetscGetArchType(str,ierr)
 @*/
 PetscErrorCode  PetscGetArchType(char str[],size_t slen)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_ARCH)

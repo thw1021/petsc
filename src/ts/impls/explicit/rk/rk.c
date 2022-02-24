@@ -187,7 +187,6 @@ M*/
 @*/
 PetscErrorCode TSRKRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSRKRegisterAllCalled) PetscFunctionReturn(0);
@@ -353,7 +352,6 @@ PetscErrorCode TSRKRegisterAll(void)
 @*/
 PetscErrorCode TSRKRegisterDestroy(void)
 {
-  PetscErrorCode ierr;
   RKTableauLink  link;
 
   PetscFunctionBegin;
@@ -380,7 +378,6 @@ PetscErrorCode TSRKRegisterDestroy(void)
 @*/
 PetscErrorCode TSRKInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSRKPackageInitialized) PetscFunctionReturn(0);
@@ -400,7 +397,6 @@ PetscErrorCode TSRKInitializePackage(void)
 @*/
 PetscErrorCode TSRKFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSRKPackageInitialized = PETSC_FALSE;
@@ -435,7 +431,6 @@ PetscErrorCode TSRKRegister(TSRKType name,PetscInt order,PetscInt s,
                             const PetscReal A[],const PetscReal b[],const PetscReal c[],
                             const PetscReal bembed[],PetscInt p,const PetscReal binterp[])
 {
-  PetscErrorCode  ierr;
   RKTableauLink   link;
   RKTableau       t;
   PetscInt        i,j;
@@ -554,7 +549,6 @@ static PetscErrorCode TSEvaluateStep_RK(TS ts,PetscInt order,Vec X,PetscBool *do
   PetscScalar    *w    = rk->work;
   PetscReal      h;
   PetscInt       s    = tab->s,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (rk->status) {
@@ -601,7 +595,6 @@ static PetscErrorCode TSForwardCostIntegral_RK(TS ts)
   const PetscReal *b = tab->b,*c = tab->c;
   Vec             *Y = rk->Y;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* No need to backup quadts->vec_sol since it can be reverted in TSRollBack_RK */
@@ -622,7 +615,6 @@ static PetscErrorCode TSAdjointCostIntegral_RK(TS ts)
   const PetscReal *b = tab->b,*c = tab->c;
   Vec             *Y = rk->Y;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i=s-1; i>=0; i--) {
@@ -644,7 +636,6 @@ static PetscErrorCode TSRollBack_RK(TS ts)
   Vec             *Y = rk->Y,*YdotRHS = rk->YdotRHS;
   PetscInt        j;
   PetscReal       h;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   switch (rk->status) {
@@ -678,7 +669,6 @@ static PetscErrorCode TSForwardStep_RK(TS ts)
   PetscInt        i,j;
   PetscReal       stage_time,h = ts->time_step;
   PetscBool       zero;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(ts->mat_sensip,rk->MatFwdSensip0,SAME_NONZERO_PATTERN));
@@ -741,7 +731,6 @@ static PetscErrorCode TSForwardSetUp_RK(TS ts)
   TS_RK          *rk = (TS_RK*)ts->data;
   RKTableau      tab  = rk->tableau;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* backup sensitivity results for roll-backs */
@@ -762,7 +751,6 @@ static PetscErrorCode TSForwardReset_RK(TS ts)
   TS_RK          *rk = (TS_RK*)ts->data;
   RKTableau      tab  = rk->tableau;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&rk->MatFwdSensip0));
@@ -796,7 +784,6 @@ static PetscErrorCode TSStep_RK(TS ts)
   PetscInt        rejections = 0;
   PetscBool       stageok,accept = PETSC_TRUE;
   PetscReal       next_time_step = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (ts->steprollback || ts->steprestart) FSAL = PETSC_FALSE;
@@ -858,7 +845,6 @@ static PetscErrorCode TSAdjointSetUp_RK(TS ts)
   TS_RK          *rk  = (TS_RK*)ts->data;
   RKTableau      tab = rk->tableau;
   PetscInt       s   = tab->s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ts->adjointsetupcalled++) PetscFunctionReturn(0);
@@ -896,7 +882,6 @@ static PetscErrorCode TSAdjointStep_RK(TS ts)
   PetscInt         i,j,nadj;
   PetscReal        t = ts->ptime;
   PetscReal        h = ts->time_step;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   rk->status = TS_STEP_INCOMPLETE;
@@ -1058,7 +1043,6 @@ static PetscErrorCode TSAdjointReset_RK(TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   RKTableau      tab = rk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroyVecs(tab->s*ts->numcost,&rk->VecsDeltaLam));
@@ -1078,7 +1062,6 @@ static PetscErrorCode TSInterpolate_RK(TS ts,PetscReal itime,Vec X)
   PetscReal        tt,t;
   PetscScalar      *b;
   const PetscReal  *B = rk->tableau->binterp;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
@@ -1114,7 +1097,6 @@ static PetscErrorCode TSRKTableauReset(TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   RKTableau      tab = rk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tab) PetscFunctionReturn(0);
@@ -1126,7 +1108,6 @@ static PetscErrorCode TSRKTableauReset(TS ts)
 
 static PetscErrorCode TSReset_RK(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRKTableauReset(ts));
@@ -1167,7 +1148,6 @@ static PetscErrorCode TSRKTableauSetUp(TS ts)
 {
   TS_RK          *rk  = (TS_RK*)ts->data;
   RKTableau      tab = rk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(tab->s,&rk->work));
@@ -1179,7 +1159,6 @@ static PetscErrorCode TSRKTableauSetUp(TS ts)
 static PetscErrorCode TSSetUp_RK(TS ts)
 {
   TS             quadts = ts->quadraturets;
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -1235,7 +1214,6 @@ static PetscErrorCode TSView_RK(TS ts,PetscViewer viewer)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1260,7 +1238,6 @@ static PetscErrorCode TSView_RK(TS ts,PetscViewer viewer)
 
 static PetscErrorCode TSLoad_RK(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   TSAdapt        adapt;
 
   PetscFunctionBegin;
@@ -1286,7 +1263,6 @@ static PetscErrorCode TSLoad_RK(TS ts,PetscViewer viewer)
 @*/
 PetscErrorCode TSRKGetOrder(TS ts,PetscInt *order)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1313,7 +1289,6 @@ PetscErrorCode TSRKGetOrder(TS ts,PetscInt *order)
 @*/
 PetscErrorCode TSRKSetType(TS ts,TSRKType rktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1339,7 +1314,6 @@ PetscErrorCode TSRKSetType(TS ts,TSRKType rktype)
 @*/
 PetscErrorCode TSRKGetType(TS ts,TSRKType *rktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1368,7 +1342,6 @@ static PetscErrorCode TSRKGetType_RK(TS ts,TSRKType *rktype)
 static PetscErrorCode TSRKSetType_RK(TS ts,TSRKType rktype)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
-  PetscErrorCode ierr;
   PetscBool      match;
   RKTableauLink  link;
 
@@ -1402,7 +1375,6 @@ static PetscErrorCode  TSGetStages_RK(TS ts,PetscInt *ns,Vec **Y)
 
 static PetscErrorCode TSDestroy_RK(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_RK(ts));
@@ -1428,7 +1400,6 @@ static PetscErrorCode SNESTSFormFunction_RK(SNES snes,Vec x,Vec y,TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   DM             dm,dmsave;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -1444,7 +1415,6 @@ static PetscErrorCode SNESTSFormJacobian_RK(SNES snes,Vec x,Mat A,Mat B,TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   DM             dm,dmsave;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -1476,7 +1446,6 @@ static PetscErrorCode SNESTSFormJacobian_RK(SNES snes,Vec x,Mat A,Mat B,TS ts)
 @*/
 PetscErrorCode TSRKSetMultirate(TS ts,PetscBool use_multirate)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSRKSetMultirate_C",(TS,PetscBool),(ts,use_multirate)));
@@ -1500,7 +1469,6 @@ PetscErrorCode TSRKSetMultirate(TS ts,PetscBool use_multirate)
 @*/
 PetscErrorCode TSRKGetMultirate(TS ts,PetscBool *use_multirate)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(ts,"TSRKGetMultirate_C",(TS,PetscBool*),(ts,use_multirate)));
@@ -1525,7 +1493,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_RK(TS ts)
 {
   TS_RK          *rk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRKInitializePackage());

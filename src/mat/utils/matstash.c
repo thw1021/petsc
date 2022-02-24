@@ -28,7 +28,6 @@ static PetscErrorCode MatStashScatterEnd_BTS(MatStash*);
 */
 PetscErrorCode MatStashCreate_Private(MPI_Comm comm,PetscInt bs,MatStash *stash)
 {
-  PetscErrorCode ierr;
   PetscInt       max,*opt,nopt,i;
   PetscBool      flg;
 
@@ -104,7 +103,6 @@ PetscErrorCode MatStashCreate_Private(MPI_Comm comm,PetscInt bs,MatStash *stash)
 */
 PetscErrorCode MatStashDestroy_Private(MatStash *stash)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMatStashSpaceDestroy(&stash->space_head));
@@ -126,7 +124,6 @@ PetscErrorCode MatStashDestroy_Private(MatStash *stash)
 */
 PetscErrorCode MatStashScatterEnd_Private(MatStash *stash)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ((*stash->ScatterEnd)(stash));
@@ -135,7 +132,6 @@ PetscErrorCode MatStashScatterEnd_Private(MatStash *stash)
 
 PETSC_INTERN PetscErrorCode MatStashScatterEnd_Ref(MatStash *stash)
 {
-  PetscErrorCode ierr;
   PetscInt       nsends=stash->nsends,bs2,oldnmax,i;
   MPI_Status     *send_status;
 
@@ -226,7 +222,6 @@ PetscErrorCode MatStashSetInitialSize_Private(MatStash *stash,PetscInt max)
  */
 static PetscErrorCode MatStashExpand_Private(MatStash *stash,PetscInt incr)
 {
-  PetscErrorCode ierr;
   PetscInt       newnmax,bs2= stash->bs*stash->bs;
 
   PetscFunctionBegin;
@@ -264,7 +259,6 @@ static PetscErrorCode MatStashExpand_Private(MatStash *stash,PetscInt incr)
 */
 PetscErrorCode MatStashValuesRow_Private(MatStash *stash,PetscInt row,PetscInt n,const PetscInt idxn[],const PetscScalar values[],PetscBool ignorezeroentries)
 {
-  PetscErrorCode     ierr;
   PetscInt           i,k,cnt = 0;
   PetscMatStashSpace space=stash->space;
 
@@ -305,7 +299,6 @@ PetscErrorCode MatStashValuesRow_Private(MatStash *stash,PetscInt row,PetscInt n
 */
 PetscErrorCode MatStashValuesCol_Private(MatStash *stash,PetscInt row,PetscInt n,const PetscInt idxn[],const PetscScalar values[],PetscInt stepval,PetscBool ignorezeroentries)
 {
-  PetscErrorCode     ierr;
   PetscInt           i,k,cnt = 0;
   PetscMatStashSpace space=stash->space;
 
@@ -350,7 +343,6 @@ PetscErrorCode MatStashValuesCol_Private(MatStash *stash,PetscInt row,PetscInt n
 */
 PetscErrorCode MatStashValuesRowBlocked_Private(MatStash *stash,PetscInt row,PetscInt n,const PetscInt idxn[],const PetscScalar values[],PetscInt rmax,PetscInt cmax,PetscInt idx)
 {
-  PetscErrorCode     ierr;
   PetscInt           i,j,k,bs2,bs=stash->bs,l;
   const PetscScalar  *vals;
   PetscScalar        *array;
@@ -404,7 +396,6 @@ PetscErrorCode MatStashValuesRowBlocked_Private(MatStash *stash,PetscInt row,Pet
 */
 PetscErrorCode MatStashValuesColBlocked_Private(MatStash *stash,PetscInt row,PetscInt n,const PetscInt idxn[],const PetscScalar values[],PetscInt rmax,PetscInt cmax,PetscInt idx)
 {
-  PetscErrorCode     ierr;
   PetscInt           i,j,k,bs2,bs=stash->bs,l;
   const PetscScalar  *vals;
   PetscScalar        *array;
@@ -455,7 +446,6 @@ PetscErrorCode MatStashValuesColBlocked_Private(MatStash *stash,PetscInt row,Pet
 */
 PetscErrorCode MatStashScatterBegin_Private(Mat mat,MatStash *stash,PetscInt *owners)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ((*stash->ScatterBegin)(mat,stash,owners));
@@ -466,7 +456,6 @@ static PetscErrorCode MatStashScatterBegin_Ref(Mat mat,MatStash *stash,PetscInt 
 {
   PetscInt           *owner,*startv,*starti,tag1=stash->tag1,tag2=stash->tag2,bs2;
   PetscInt           size=stash->size,nsends;
-  PetscErrorCode     ierr;
   PetscInt           count,*sindices,**rindices,i,j,idx,lastidx,l;
   PetscScalar        **rvalues,*svalues;
   MPI_Comm           comm = stash->comm;
@@ -636,7 +625,6 @@ static PetscErrorCode MatStashScatterBegin_Ref(Mat mat,MatStash *stash,PetscInt 
 */
 PetscErrorCode MatStashScatterGetMesg_Private(MatStash *stash,PetscMPIInt *nvals,PetscInt **rows,PetscInt **cols,PetscScalar **vals,PetscInt *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ((*stash->ScatterGetMesg)(stash,nvals,rows,cols,vals,flg));
@@ -645,7 +633,6 @@ PetscErrorCode MatStashScatterGetMesg_Private(MatStash *stash,PetscMPIInt *nvals
 
 PETSC_INTERN PetscErrorCode MatStashScatterGetMesg_Ref(MatStash *stash,PetscMPIInt *nvals,PetscInt **rows,PetscInt **cols,PetscScalar **vals,PetscInt *flg)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    i,*flg_v = stash->flg_v,i1,i2;
   PetscInt       bs2;
   MPI_Status     recv_status;
@@ -707,7 +694,6 @@ typedef struct {
 
 static PetscErrorCode MatStashSortCompress_Private(MatStash *stash,InsertMode insertmode)
 {
-  PetscErrorCode ierr;
   PetscMatStashSpace space;
   PetscInt n = stash->n,bs = stash->bs,bs2 = bs*bs,cnt,*row,*col,*perm,rowstart,i;
   PetscScalar **valptr;
@@ -755,7 +741,6 @@ static PetscErrorCode MatStashSortCompress_Private(MatStash *stash,InsertMode in
 
 static PetscErrorCode MatStashBlockTypeSetUp(MatStash *stash)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (stash->blocktype == MPI_DATATYPE_NULL) {
@@ -810,7 +795,6 @@ static PetscErrorCode MatStashBTSSend_Private(MPI_Comm comm,const PetscMPIInt ta
 {
   MatStash *stash = (MatStash*)ctx;
   MatStashHeader *hdr = (MatStashHeader*)sdata;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(rank != stash->sendranks[rankid],comm,PETSC_ERR_PLIB,"BTS Send rank %d does not match sendranks[%d] %d",rank,rankid,stash->sendranks[rankid]);
@@ -828,7 +812,6 @@ static PetscErrorCode MatStashBTSRecv_Private(MPI_Comm comm,const PetscMPIInt ta
   MatStash *stash = (MatStash*)ctx;
   MatStashHeader *hdr = (MatStashHeader*)rdata;
   MatStashFrame *frame;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSegBufferGet(stash->segrecvframe,1,&frame));
@@ -955,7 +938,6 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat,MatStash *stash,PetscInt 
 
 static PetscErrorCode MatStashScatterGetMesg_BTS(MatStash *stash,PetscMPIInt *n,PetscInt **row,PetscInt **col,PetscScalar **val,PetscInt *flg)
 {
-  PetscErrorCode ierr;
   MatStashBlock *block;
 
   PetscFunctionBegin;
@@ -994,7 +976,6 @@ static PetscErrorCode MatStashScatterGetMesg_BTS(MatStash *stash,PetscMPIInt *n,
 
 static PetscErrorCode MatStashScatterEnd_BTS(MatStash *stash)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Waitall(stash->nsendranks,stash->sendreqs,MPI_STATUSES_IGNORE));
@@ -1028,7 +1009,6 @@ static PetscErrorCode MatStashScatterEnd_BTS(MatStash *stash)
 
 PetscErrorCode MatStashScatterDestroy_BTS(MatStash *stash)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSegBufferDestroy(&stash->segsendblocks));

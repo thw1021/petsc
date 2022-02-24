@@ -14,7 +14,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BQNKLS(Tao tao)
 {
   TAO_BNK        *bnk;
   TAO_BQNK       *bqnk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoCreate_BQNK(tao));

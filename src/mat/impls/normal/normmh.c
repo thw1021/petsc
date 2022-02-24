@@ -19,7 +19,6 @@ PetscErrorCode MatScaleHermitian_Normal(Mat inA,PetscScalar scale)
 PetscErrorCode MatDiagonalScaleHermitian_Normal(Mat inA,Vec left,Vec right)
 {
   Mat_Normal     *a = (Mat_Normal*)inA->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (left) {
@@ -44,7 +43,6 @@ PetscErrorCode MatDiagonalScaleHermitian_Normal(Mat inA,Vec left,Vec right)
 PetscErrorCode MatMultHermitian_Normal(Mat N,Vec x,Vec y)
 {
   Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
   Vec            in;
 
   PetscFunctionBegin;
@@ -68,7 +66,6 @@ PetscErrorCode MatMultHermitian_Normal(Mat N,Vec x,Vec y)
 PetscErrorCode MatMultHermitianAdd_Normal(Mat N,Vec v1,Vec v2,Vec v3)
 {
   Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
   Vec            in;
 
   PetscFunctionBegin;
@@ -95,7 +92,6 @@ PetscErrorCode MatMultHermitianAdd_Normal(Mat N,Vec v1,Vec v2,Vec v3)
 PetscErrorCode MatMultHermitianTranspose_Normal(Mat N,Vec x,Vec y)
 {
   Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
   Vec            in;
 
   PetscFunctionBegin;
@@ -119,7 +115,6 @@ PetscErrorCode MatMultHermitianTranspose_Normal(Mat N,Vec x,Vec y)
 PetscErrorCode MatMultHermitianTransposeAdd_Normal(Mat N,Vec v1,Vec v2,Vec v3)
 {
   Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
   Vec            in;
 
   PetscFunctionBegin;
@@ -146,7 +141,6 @@ PetscErrorCode MatMultHermitianTransposeAdd_Normal(Mat N,Vec v1,Vec v2,Vec v3)
 PetscErrorCode MatDestroyHermitian_Normal(Mat N)
 {
   Mat_Normal     *Na = (Mat_Normal*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&Na->A));
@@ -167,7 +161,6 @@ PetscErrorCode MatGetDiagonalHermitian_Normal(Mat N,Vec v)
 {
   Mat_Normal        *Na = (Mat_Normal*)N->data;
   Mat               A   = Na->A;
-  PetscErrorCode    ierr;
   PetscInt          i,j,rstart,rend,nnz;
   const PetscInt    *cols;
   PetscScalar       *diag,*work,*values;
@@ -222,7 +215,6 @@ PetscErrorCode MatNormalGetMatHermitian_Normal(Mat A,Mat *M)
 @*/
 PetscErrorCode MatNormalHermitianGetMat(Mat A,Mat *M)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -252,7 +244,6 @@ PetscErrorCode MatNormalHermitianGetMat(Mat A,Mat *M)
 @*/
 PetscErrorCode  MatCreateNormalHermitian(Mat A,Mat *N)
 {
-  PetscErrorCode ierr;
   PetscInt       m,n;
   Mat_Normal     *Na;
   VecType        vtype;

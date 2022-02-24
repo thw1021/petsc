@@ -17,7 +17,6 @@ typedef struct {
 
 static PetscErrorCode DMTSDestroy_DMLocal(DMTS tdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(tdm->data));
@@ -26,7 +25,6 @@ static PetscErrorCode DMTSDestroy_DMLocal(DMTS tdm)
 
 static PetscErrorCode DMTSDuplicate_DMLocal(DMTS oldtdm, DMTS tdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(tdm, (DMTS_Local **) &tdm->data));
@@ -36,7 +34,6 @@ static PetscErrorCode DMTSDuplicate_DMLocal(DMTS oldtdm, DMTS tdm)
 
 static PetscErrorCode DMLocalTSGetContext(DM dm, DMTS tdm, DMTS_Local **dmlocalts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *dmlocalts = NULL;
@@ -55,7 +52,6 @@ static PetscErrorCode TSComputeIFunction_DMLocal(TS ts, PetscReal time, Vec X, V
   DM             dm;
   Vec            locX, locX_t, locF;
   DMTS_Local    *dmlocalts = (DMTS_Local *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -91,7 +87,6 @@ static PetscErrorCode TSComputeRHSFunction_DMLocal(TS ts, PetscReal time, Vec X,
   DM             dm;
   Vec            locX, locF;
   DMTS_Local    *dmlocalts = (DMTS_Local *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -131,7 +126,6 @@ static PetscErrorCode TSComputeIJacobian_DMLocal(TS ts, PetscReal time, Vec X, V
   DM             dm;
   Vec            locX, locX_t;
   DMTS_Local    *dmlocalts = (DMTS_Local *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -213,7 +207,6 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal,
 {
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -246,7 +239,6 @@ PetscErrorCode DMTSSetIFunctionLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
 {
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -281,7 +273,6 @@ PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
 {
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -315,7 +306,6 @@ PetscErrorCode DMTSSetRHSFunctionLocal(DM dm, PetscErrorCode (*func)(DM, PetscRe
 {
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -348,7 +338,6 @@ PetscErrorCode DMTSCreateRHSMassMatrix(DM dm)
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
   const char    *prefix;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -383,7 +372,6 @@ PetscErrorCode DMTSCreateRHSMassMatrixLumped(DM dm)
 {
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -411,7 +399,6 @@ PetscErrorCode DMTSDestroyRHSMassMatrix(DM dm)
 {
   DMTS           tdm;
   DMTS_Local    *dmlocalts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);

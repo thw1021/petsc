@@ -20,7 +20,6 @@ static PetscErrorCode KSPPGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 */
 static PetscErrorCode KSPSetUp_PGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetUp_GMRES(ksp));
@@ -48,7 +47,6 @@ static PetscErrorCode KSPPGMRESCycle(PetscInt *itcount,KSP ksp)
 {
   KSP_PGMRES     *pgmres = (KSP_PGMRES*)(ksp->data);
   PetscReal      res_norm,res,newnorm;
-  PetscErrorCode ierr;
   PetscInt       it     = 0,j,k;
   PetscBool      hapend = PETSC_FALSE;
 
@@ -204,7 +202,6 @@ static PetscErrorCode KSPPGMRESCycle(PetscInt *itcount,KSP ksp)
 */
 static PetscErrorCode KSPSolve_PGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       its,itcount;
   KSP_PGMRES     *pgmres    = (KSP_PGMRES*)ksp->data;
   PetscBool      guess_zero = ksp->guess_zero;
@@ -233,7 +230,6 @@ static PetscErrorCode KSPSolve_PGMRES(KSP ksp)
 
 static PetscErrorCode KSPDestroy_PGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPDestroy_GMRES(ksp));
@@ -256,7 +252,6 @@ static PetscErrorCode KSPDestroy_PGMRES(KSP ksp)
 static PetscErrorCode KSPPGMRESBuildSoln(PetscScalar *nrs,Vec vguess,Vec vdest,KSP ksp,PetscInt it)
 {
   PetscScalar    tt;
-  PetscErrorCode ierr;
   PetscInt       k,j;
   KSP_PGMRES     *pgmres = (KSP_PGMRES*)(ksp->data);
 
@@ -317,7 +312,6 @@ static PetscErrorCode KSPPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool *h
   PetscInt       j;
   PetscReal      hapbnd;
   KSP_PGMRES     *pgmres = (KSP_PGMRES*)(ksp->data);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   hh = HH(0,it);   /* pointer to beginning of column to update */
@@ -401,7 +395,6 @@ static PetscErrorCode KSPPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool *h
 PetscErrorCode KSPBuildSolution_PGMRES(KSP ksp,Vec ptr,Vec *result)
 {
   KSP_PGMRES     *pgmres = (KSP_PGMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ptr) {
@@ -424,7 +417,6 @@ PetscErrorCode KSPBuildSolution_PGMRES(KSP ksp,Vec ptr,Vec *result)
 
 PetscErrorCode KSPSetFromOptions_PGMRES(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetFromOptions_GMRES(PetscOptionsObject,ksp));
@@ -435,7 +427,6 @@ PetscErrorCode KSPSetFromOptions_PGMRES(PetscOptionItems *PetscOptionsObject,KSP
 
 PetscErrorCode KSPReset_PGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_GMRES(ksp));
@@ -477,7 +468,6 @@ M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PGMRES(KSP ksp)
 {
   KSP_PGMRES     *pgmres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&pgmres));

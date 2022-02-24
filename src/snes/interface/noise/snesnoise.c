@@ -28,7 +28,6 @@ PetscErrorCode SNESDiffParameterCreate_More(SNES snes,Vec x,void **outneP)
   DIFFPAR_MORE   *neP;
   Vec            w;
   PetscRandom    rctx;  /* random number generator context */
-  PetscErrorCode ierr;
   PetscBool      flg;
   char           noise_file[PETSC_MAX_PATH_LEN];
 
@@ -66,7 +65,6 @@ PetscErrorCode SNESDiffParameterCreate_More(SNES snes,Vec x,void **outneP)
 PetscErrorCode SNESDiffParameterDestroy_More(void *nePv)
 {
   DIFFPAR_MORE   *neP = (DIFFPAR_MORE*)nePv;
-  PetscErrorCode ierr;
   int            err;
 
   PetscFunctionBegin;
@@ -86,7 +84,6 @@ PetscErrorCode SNESDiffParameterCompute_More(SNES snes,void *nePv,Vec x,Vec p,do
   PetscScalar    alpha;
   PetscScalar    fval[7], tab[7][7], eps[7], f = -1;
   double         rerrf = -1., fder2;
-  PetscErrorCode ierr;
   PetscInt       iter, k, i, j,  info;
   PetscInt       nf = 7;         /* number of function evaluations */
   PetscInt       fcount;
@@ -227,7 +224,6 @@ PetscErrorCode JacMatMultCompare(SNES snes,Vec x,Vec p,double hopt)
   Vec            f;
   PetscScalar    alpha;
   PetscReal      yy1n,yy2n,enorm;
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscBool      printv = PETSC_FALSE;
   char           filename[32];
@@ -294,7 +290,6 @@ static PetscInt lin_its_total = 0;
 
 PetscErrorCode SNESNoiseMonitor(SNES snes,PetscInt its,double fnorm,void *dummy)
 {
-  PetscErrorCode ierr;
   PetscInt       lin_its;
 
   PetscFunctionBegin;

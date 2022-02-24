@@ -58,7 +58,6 @@ static PetscErrorCode SNESComputeMFFunctionCtx(SNES snes,Vec x,Vec f,void *ctx)
 PetscErrorCode  SNESComputeJacobianDefaultColor(SNES snes,Vec x1,Mat J,Mat B,void *ctx)
 {
   MatFDColoring  color = (MatFDColoring)ctx;
-  PetscErrorCode ierr;
   DM             dm;
   MatColoring    mc;
   ISColoring     iscoloring;

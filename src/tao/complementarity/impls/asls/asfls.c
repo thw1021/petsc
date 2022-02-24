@@ -55,7 +55,6 @@
 static PetscErrorCode TaoSetUp_ASFLS(Tao tao)
 {
   TAO_SSLS       *asls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(tao->solution,&tao->gradient));
@@ -82,7 +81,6 @@ static PetscErrorCode Tao_ASLS_FunctionGradient(TaoLineSearch ls, Vec X, PetscRe
 {
   Tao            tao = (Tao)ptr;
   TAO_SSLS       *asls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoComputeConstraints(tao, X, tao->constraints));
@@ -102,7 +100,6 @@ static PetscErrorCode Tao_ASLS_FunctionGradient(TaoLineSearch ls, Vec X, PetscRe
 static PetscErrorCode TaoDestroy_ASFLS(Tao tao)
 {
   TAO_SSLS       *ssls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&ssls->ff));
@@ -130,7 +127,6 @@ static PetscErrorCode TaoSolve_ASFLS(Tao tao)
   TAO_SSLS                     *asls = (TAO_SSLS *)tao->data;
   PetscReal                    psi,ndpsi, normd, innerd, t=0;
   PetscInt                     nf;
-  PetscErrorCode               ierr;
   TaoLineSearchConvergedReason ls_reason;
 
   PetscFunctionBegin;
@@ -296,7 +292,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_ASFLS(Tao tao)
 {
   TAO_SSLS       *asls;
-  PetscErrorCode ierr;
   const char     *armijo_type = TAOLINESEARCHARMIJO;
 
   PetscFunctionBegin;

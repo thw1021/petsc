@@ -329,7 +329,6 @@ static PetscErrorCode DMPlexCellRefinerGetSubcellVertices_Regular(DMPlexCellRefi
 static PetscErrorCode DMPlexTransformView_Regular(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -355,7 +354,6 @@ static PetscErrorCode DMPlexTransformSetUp_Regular(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformDestroy_Regular(DMPlexTransform tr)
 {
   DMPlexRefine_Regular *f = (DMPlexRefine_Regular *) tr->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(f));
@@ -1334,7 +1332,6 @@ static PetscErrorCode DMPlexTransformInitialize_Regular(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Regular(DMPlexTransform tr)
 {
   DMPlexRefine_Regular *f;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

@@ -100,7 +100,6 @@ PetscErrorCode  PetscOpenSocket(const char hostname[],int portnum,int *t)
   struct sockaddr_in sa;
   struct hostent     *hp;
   int                s = 0;
-  PetscErrorCode     ierr;
   PetscBool          flg = PETSC_TRUE;
   static int         refcnt = 0;
 
@@ -178,7 +177,6 @@ PETSC_INTERN PetscErrorCode PetscSocketEstablish(int portnum,int *ss)
   static size_t      MAXHOSTNAME = 100;
   char               myname[MAXHOSTNAME+1];
   int                s;
-  PetscErrorCode     ierr;
   struct sockaddr_in sa;
   struct hostent     *hp;
 
@@ -303,7 +301,6 @@ $    -viewer_socket_port <port>
 @*/
 PetscErrorCode  PetscViewerSocketOpen(MPI_Comm comm,const char machine[],int port,PetscViewer *lab)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,lab));
@@ -314,7 +311,6 @@ PetscErrorCode  PetscViewerSocketOpen(MPI_Comm comm,const char machine[],int por
 
 static PetscErrorCode PetscViewerSetFromOptions_Socket(PetscOptionItems *PetscOptionsObject,PetscViewer v)
 {
-  PetscErrorCode ierr;
   PetscInt       def = -1;
   char           sdef[256];
   PetscBool      tflg;
@@ -379,7 +375,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_Socket(PetscViewer v)
 {
   PetscViewer_Socket *vmatlab;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(v,&vmatlab));
@@ -416,7 +411,6 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Socket(PetscViewer v)
 @*/
 PetscErrorCode  PetscViewerSocketSetConnection(PetscViewer v,const char machine[],int port)
 {
-  PetscErrorCode     ierr;
   PetscMPIInt        rank;
   char               mach[256];
   PetscBool          tflg;

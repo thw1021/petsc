@@ -17,7 +17,6 @@ struct _n_PetscShmComm {
 */
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_ShmComm_Attr_Delete_Fn(MPI_Comm comm,PetscMPIInt keyval,void *val,void *extra_state)
 {
-  PetscErrorCode  ierr;
   PetscShmComm p = (PetscShmComm)val;
 
   PetscFunctionBegin;
@@ -40,7 +39,6 @@ static PetscInt       num_dupped_comms=0;
 static MPI_Comm       shmcomm_dupped_comms[MAX_SHMCOMM_DUPPED_COMMS];
 static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
 {
-  PetscErrorCode   ierr;
   PetscInt         i;
   PetscFunctionBegin;
   for (i=0; i<num_dupped_comms; i++) CHKERRQ(PetscCommDestroy(&shmcomm_dupped_comms[i]));
@@ -69,7 +67,6 @@ static PetscErrorCode PetscShmCommDestroyDuppedComms(void)
 PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
 {
 #ifdef PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY
-  PetscErrorCode   ierr;
   MPI_Group        globgroup,shmgroup;
   PetscMPIInt      *shmranks,i,flg;
   PetscCommCounter *counter;
@@ -148,7 +145,6 @@ PetscErrorCode PetscShmCommGlobalToLocal(PetscShmComm pshmcomm,PetscMPIInt grank
 {
   PetscMPIInt    low,high,t,i;
   PetscBool      flg = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(pshmcomm,1);

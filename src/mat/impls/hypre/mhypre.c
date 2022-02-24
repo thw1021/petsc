@@ -30,7 +30,6 @@ static PetscErrorCode MatSetValues_HYPRE(Mat,PetscInt,const PetscInt[],PetscInt,
 
 static PetscErrorCode MatHYPRE_IJMatrixPreallocate(Mat A_d, Mat A_o, HYPRE_IJMatrix ij)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n_d,n_o;
   const PetscInt *ia_d,*ia_o;
   PetscBool      done_d=PETSC_FALSE,done_o=PETSC_FALSE;
@@ -85,7 +84,6 @@ static PetscErrorCode MatHYPRE_IJMatrixPreallocate(Mat A_d, Mat A_o, HYPRE_IJMat
 
 static PetscErrorCode MatHYPRE_CreateFromMat(Mat A, Mat_HYPRE *hA)
 {
-  PetscErrorCode ierr;
   PetscInt       rstart,rend,cstart,cend;
 
   PetscFunctionBegin;
@@ -129,7 +127,6 @@ static PetscErrorCode MatHYPRE_CreateFromMat(Mat A, Mat_HYPRE *hA)
 
 static PetscErrorCode MatHYPRE_IJMatrixCopy(Mat A, HYPRE_IJMatrix ij)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,rstart,rend,ncols,nr,nc;
   const PetscScalar *values;
   const PetscInt    *cols;
@@ -169,7 +166,6 @@ static PetscErrorCode MatHYPRE_IJMatrixCopy(Mat A, HYPRE_IJMatrix ij)
 
 static PetscErrorCode MatHYPRE_IJMatrixFastCopy_SeqAIJ(Mat A, HYPRE_IJMatrix ij)
 {
-  PetscErrorCode        ierr;
   Mat_SeqAIJ            *pdiag = (Mat_SeqAIJ*)A->data;
   HYPRE_Int             type;
   hypre_ParCSRMatrix    *par_matrix;
@@ -207,7 +203,6 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_SeqAIJ(Mat A, HYPRE_IJMatrix ij)
 
 static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
 {
-  PetscErrorCode        ierr;
   Mat_MPIAIJ            *pA = (Mat_MPIAIJ*)A->data;
   Mat_SeqAIJ            *pdiag,*poffd;
   PetscInt              i,*garray = pA->garray,*jj,cstart,*pjj;
@@ -291,7 +286,6 @@ static PetscErrorCode MatConvert_HYPRE_IS(Mat A, MatType mtype, MatReuse reuse, 
   PetscInt               *ii,*jj,*iptr,*jptr;
   PetscInt               cum,dr,dc,oc,str,stc,nnz,i,jd,jo,M,N;
   HYPRE_Int              type;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)A);
@@ -388,7 +382,6 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
   Mat            M = NULL;
   Mat_HYPRE      *hB;
   MPI_Comm       comm = PetscObjectComm((PetscObject)A);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_REUSE_MATRIX) {
@@ -431,7 +424,6 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
   HYPRE_Int          type;
   PetscMPIInt        size;
   PetscBool          sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)A);
@@ -662,7 +654,6 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
   MPI_Comm           comm = PetscObjectComm((PetscObject)A);
   PetscBool          ismpiaij,isseqaij;
   PetscBool          sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
-  PetscErrorCode     ierr;
   HYPRE_Int          *hdi = NULL,*hdj = NULL,*hoi = NULL,*hoj = NULL;
   PetscInt           *pdi = NULL,*pdj = NULL,*poi = NULL,*poj = NULL;
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
@@ -795,7 +786,6 @@ static PetscErrorCode MatAIJRestoreParCSR_Private(Mat A, hypre_ParCSRMatrix **hA
 {
   hypre_CSRMatrix *hdiag,*hoffd;
   PetscBool       ismpiaij,sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
-  PetscErrorCode  ierr;
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
   PetscBool       iscuda = PETSC_FALSE;
 #endif
@@ -873,7 +863,6 @@ static PetscErrorCode MatPtAPNumeric_AIJ_AIJ_wHYPRE(Mat A,Mat P,Mat C)
 {
   Mat                B;
   hypre_ParCSRMatrix *hA,*hP,*hPtAP = NULL;
-  PetscErrorCode     ierr;
   Mat_Product        *product=C->product;
 
   PetscFunctionBegin;
@@ -892,7 +881,6 @@ static PetscErrorCode MatPtAPNumeric_AIJ_AIJ_wHYPRE(Mat A,Mat P,Mat C)
 
 PETSC_INTERN PetscErrorCode MatPtAPSymbolic_AIJ_AIJ_wHYPRE(Mat A,Mat P,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(C,MATAIJ));
@@ -909,7 +897,6 @@ static PetscErrorCode MatPtAPNumeric_AIJ_HYPRE(Mat A,Mat P,Mat C)
   HYPRE_Int          type;
   MPI_Comm           comm = PetscObjectComm((PetscObject)A);
   PetscBool          ishypre;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)P,MATHYPRE,&ishypre));
@@ -936,7 +923,6 @@ static PetscErrorCode MatPtAPNumeric_HYPRE_HYPRE(Mat A,Mat P,Mat C)
   Mat_HYPRE          *hA,*hP;
   PetscBool          ishypre;
   HYPRE_Int          type;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)P,MATHYPRE,&ishypre));
@@ -980,7 +966,6 @@ static PetscErrorCode MatMatMultNumeric_AIJ_AIJ_wHYPRE(Mat A,Mat B,Mat C)
 {
   Mat                D;
   hypre_ParCSRMatrix *hA,*hB,*hAB = NULL;
-  PetscErrorCode     ierr;
   Mat_Product        *product=C->product;
 
   PetscFunctionBegin;
@@ -999,7 +984,6 @@ static PetscErrorCode MatMatMultNumeric_AIJ_AIJ_wHYPRE(Mat A,Mat B,Mat C)
 
 PETSC_INTERN PetscErrorCode MatMatMultSymbolic_AIJ_AIJ_wHYPRE(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(C,MATAIJ));
@@ -1015,7 +999,6 @@ static PetscErrorCode MatMatMultNumeric_HYPRE_HYPRE(Mat A,Mat B,Mat C)
   Mat_HYPRE          *hA,*hB;
   PetscBool          ishypre;
   HYPRE_Int          type;
-  PetscErrorCode     ierr;
   Mat_Product        *product;
 
   PetscFunctionBegin;
@@ -1048,7 +1031,6 @@ PETSC_INTERN PetscErrorCode MatTransposeMatMatMultNumeric_AIJ_AIJ_AIJ_wHYPRE(Mat
 {
   Mat                E;
   hypre_ParCSRMatrix *hA,*hB,*hC,*hABC = NULL;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAIJGetParCSR_Private(A,&hA));
@@ -1065,7 +1047,6 @@ PETSC_INTERN PetscErrorCode MatTransposeMatMatMultNumeric_AIJ_AIJ_AIJ_wHYPRE(Mat
 
 PETSC_INTERN PetscErrorCode MatTransposeMatMatMultSymbolic_AIJ_AIJ_AIJ_wHYPRE(Mat A,Mat B,Mat C,PetscReal fill,Mat D)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(D,MATAIJ));
@@ -1082,7 +1063,6 @@ static PetscErrorCode MatProductSymbolic_AB_HYPRE(Mat C)
 
 static PetscErrorCode MatProductSetFromOptions_HYPRE_AB(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   PetscBool      Ahypre;
 
@@ -1148,7 +1128,6 @@ static PetscErrorCode MatProductSetFromOptions_HYPRE_PtAP(Mat C)
 
 static PetscErrorCode MatProductSetFromOptions_HYPRE(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -1169,7 +1148,6 @@ static PetscErrorCode MatProductSetFromOptions_HYPRE(Mat C)
 
 static PetscErrorCode MatMultTranspose_HYPRE(Mat A, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatHYPRE_MultKernel_Private(A,1.0,x,0.0,y,PETSC_TRUE));
@@ -1178,7 +1156,6 @@ static PetscErrorCode MatMultTranspose_HYPRE(Mat A, Vec x, Vec y)
 
 static PetscErrorCode MatMult_HYPRE(Mat A, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatHYPRE_MultKernel_Private(A,1.0,x,0.0,y,PETSC_FALSE));
@@ -1187,7 +1164,6 @@ static PetscErrorCode MatMult_HYPRE(Mat A, Vec x, Vec y)
 
 static PetscErrorCode MatMultAdd_HYPRE(Mat A, Vec x, Vec y, Vec z)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (y != z) {
@@ -1199,7 +1175,6 @@ static PetscErrorCode MatMultAdd_HYPRE(Mat A, Vec x, Vec y, Vec z)
 
 static PetscErrorCode MatMultTransposeAdd_HYPRE(Mat A, Vec x, Vec y, Vec z)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (y != z) {
@@ -1215,7 +1190,6 @@ static PetscErrorCode MatHYPRE_MultKernel_Private(Mat A, HYPRE_Complex a, Vec x,
   Mat_HYPRE          *hA = (Mat_HYPRE*)A->data;
   hypre_ParCSRMatrix *parcsr;
   hypre_ParVector    *hx,*hy;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (trans) {
@@ -1245,7 +1219,6 @@ static PetscErrorCode MatHYPRE_MultKernel_Private(Mat A, HYPRE_Complex a, Vec x,
 static PetscErrorCode MatDestroy_HYPRE(Mat A)
 {
   Mat_HYPRE      *hA = (Mat_HYPRE*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecHYPRE_IJVectorDestroy(&hA->x));
@@ -1272,7 +1245,6 @@ static PetscErrorCode MatDestroy_HYPRE(Mat A)
 
 static PetscErrorCode MatSetUp_HYPRE(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatHYPRESetPreallocation(A,PETSC_DEFAULT,NULL,PETSC_DEFAULT,NULL));
@@ -1307,7 +1279,6 @@ static PetscErrorCode MatAssemblyEnd_HYPRE(Mat A, MatAssemblyType mode)
   PetscInt           i,j,rstart,ncols,flg;
   PetscInt           *row,*col;
   PetscScalar        *val;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(mode == MAT_FLUSH_ASSEMBLY,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MAT_FLUSH_ASSEMBLY currently not supported with MATHYPRE");
@@ -1373,7 +1344,6 @@ static PetscErrorCode MatAssemblyEnd_HYPRE(Mat A, MatAssemblyType mode)
 static PetscErrorCode MatGetArray_HYPRE(Mat A, PetscInt size, void **array)
 {
   Mat_HYPRE          *hA = (Mat_HYPRE*)A->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!hA->available,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Temporary space is in use");
@@ -1409,7 +1379,6 @@ static PetscErrorCode MatSetValues_HYPRE(Mat A, PetscInt nr, const PetscInt rows
   PetscInt       *cscr[2];
   PetscInt       i,nzc;
   void           *array = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetArray_HYPRE(A,sizeof(PetscInt)*(2*nc)+sizeof(HYPRE_Complex)*nc*nr,&array));
@@ -1478,7 +1447,6 @@ static PetscErrorCode MatHYPRESetPreallocation_HYPRE(Mat A, PetscInt dnz, const 
   HYPRE_Int      *hdnnz,*honnz;
   PetscInt       i,rs,re,cs,ce,bs;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetBlockSize(A,&bs));
@@ -1582,7 +1550,6 @@ static PetscErrorCode MatHYPRESetPreallocation_HYPRE(Mat A, PetscInt dnz, const 
 @*/
 PetscErrorCode MatHYPRESetPreallocation(Mat A, PetscInt dnz, const PetscInt dnnz[], PetscInt onz, const PetscInt onnz[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1615,7 +1582,6 @@ PETSC_EXTERN PetscErrorCode MatCreateFromParCSR(hypre_ParCSRMatrix *parcsr, MatT
   MPI_Comm       comm;
   PetscInt       rstart,rend,cstart,cend,M,N;
   PetscBool      isseqaij,isseqaijmkl,ismpiaij,isaij,ishyp,isis;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   comm  = hypre_ParCSRMatrixComm(parcsr);
@@ -1763,7 +1729,6 @@ static PetscErrorCode MatHYPREGetParCSR_HYPRE(Mat A, hypre_ParCSRMatrix **parcsr
 */
 PetscErrorCode MatHYPREGetParCSR(Mat A, hypre_ParCSRMatrix **parcsr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1777,7 +1742,6 @@ static PetscErrorCode MatMissingDiagonal_HYPRE(Mat A, PetscBool *missing, PetscI
   hypre_ParCSRMatrix *parcsr;
   hypre_CSRMatrix    *ha;
   PetscInt           rst;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented with non-square diagonal blocks");
@@ -1826,7 +1790,6 @@ static PetscErrorCode MatScale_HYPRE(Mat A, PetscScalar s)
 #if PETSC_PKG_HYPRE_VERSION_LT(2,19,0)
   hypre_CSRMatrix    *ha;
 #endif
-  PetscErrorCode     ierr;
   HYPRE_Complex      hs;
 
   PetscFunctionBegin;
@@ -1867,7 +1830,6 @@ static PetscErrorCode MatZeroRowsColumns_HYPRE(Mat A, PetscInt numRows, const Pe
   hypre_ParCSRMatrix *parcsr;
   HYPRE_Int          *lrows;
   PetscInt           rst,ren,i;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(x || b,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"To be implemented");
@@ -1886,7 +1848,6 @@ static PetscErrorCode MatZeroRowsColumns_HYPRE(Mat A, PetscInt numRows, const Pe
 
 static PetscErrorCode MatZeroEntries_HYPRE_CSRMatrix(hypre_CSRMatrix *ha)
 {
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   if (ha) {
@@ -1911,7 +1872,6 @@ PetscErrorCode MatZeroEntries_HYPRE(Mat A)
     PetscStackCallStandard(HYPRE_IJMatrixSetConstantValues,hA->ij,0.0);
   } else {
     hypre_ParCSRMatrix *parcsr;
-    PetscErrorCode     ierr;
 
     CHKERRQ(MatHYPREGetParCSR_HYPRE(A,&parcsr));
     CHKERRQ(MatZeroEntries_HYPRE_CSRMatrix(hypre_ParCSRMatrixDiag(parcsr)));
@@ -1951,7 +1911,6 @@ static PetscErrorCode MatZeroRows_HYPRE(Mat A,PetscInt N,const PetscInt rows[],P
   hypre_ParCSRMatrix  *parcsr;
   PetscInt            *lrows,len;
   HYPRE_Complex       hdiag;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(x || b,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Does not support to modify the solution and the right hand size");
@@ -1971,7 +1930,6 @@ static PetscErrorCode MatZeroRows_HYPRE(Mat A,PetscInt N,const PetscInt rows[],P
 
 static PetscErrorCode MatAssemblyBegin_HYPRE(Mat mat,MatAssemblyType mode)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (mat->nooffprocentries) PetscFunctionReturn(0);
@@ -1984,7 +1942,6 @@ static PetscErrorCode MatGetRow_HYPRE(Mat A,PetscInt row,PetscInt *nz,PetscInt *
 {
   hypre_ParCSRMatrix  *parcsr;
   HYPRE_Int           hnz;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   /* retrieve the internal matrix */
@@ -1999,7 +1956,6 @@ static PetscErrorCode MatRestoreRow_HYPRE(Mat A,PetscInt row,PetscInt *nz,PetscI
 {
   hypre_ParCSRMatrix  *parcsr;
   HYPRE_Int           hnz;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   /* retrieve the internal matrix */
@@ -2051,7 +2007,6 @@ static PetscErrorCode MatSetOption_HYPRE(Mat A,MatOption op,PetscBool flg)
 
 static PetscErrorCode MatView_HYPRE(Mat A, PetscViewer view)
 {
-  PetscErrorCode     ierr;
   PetscViewerFormat  format;
 
   PetscFunctionBegin;
@@ -2092,7 +2047,6 @@ static PetscErrorCode MatView_HYPRE(Mat A, PetscViewer view)
 static PetscErrorCode MatDuplicate_HYPRE(Mat A,MatDuplicateOption op, Mat *B)
 {
   hypre_ParCSRMatrix *parcsr = NULL;
-  PetscErrorCode     ierr;
   PetscCopyMode      cpmode;
 
   PetscFunctionBegin;
@@ -2110,7 +2064,6 @@ static PetscErrorCode MatDuplicate_HYPRE(Mat A,MatDuplicateOption op, Mat *B)
 static PetscErrorCode MatCopy_HYPRE(Mat A, Mat B, MatStructure str)
 {
   hypre_ParCSRMatrix *acsr,*bcsr;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (str == SAME_NONZERO_PATTERN && A->ops->copy == B->ops->copy) {
@@ -2135,7 +2088,6 @@ static PetscErrorCode MatGetDiagonal_HYPRE(Mat A, Vec d)
   HYPRE_Int          *diag = NULL;
   PetscInt           i;
   PetscBool          cong;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatHasCongruentLayouts(A,&cong));
@@ -2162,7 +2114,6 @@ static PetscErrorCode MatGetDiagonal_HYPRE(Mat A, Vec d)
 
 static PetscErrorCode MatAXPY_HYPRE(Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
@@ -2249,7 +2200,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
 {
   Mat_HYPRE      *hB;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(B,&hB));

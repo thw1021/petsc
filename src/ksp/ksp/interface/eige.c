@@ -12,7 +12,6 @@ static PetscErrorCode MatCreateVecs_KSP(Mat A,Vec *X,Vec *Y)
 {
   Mat_KSP        *ctx;
   Mat            M;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&ctx));
@@ -24,7 +23,6 @@ static PetscErrorCode MatCreateVecs_KSP(Mat A,Vec *X,Vec *Y)
 static PetscErrorCode MatMult_KSP(Mat A,Vec X,Vec Y)
 {
   Mat_KSP        *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&ctx));
@@ -58,7 +56,6 @@ static PetscErrorCode MatMult_KSP(Mat A,Vec X,Vec Y)
 @*/
 PetscErrorCode  KSPComputeOperator(KSP ksp, MatType mattype, Mat *mat)
 {
-  PetscErrorCode ierr;
   PetscInt       N,M,m,n;
   Mat_KSP        ctx;
   Mat            A,Aksp;
@@ -115,7 +112,6 @@ PetscErrorCode  KSPComputeOperator(KSP ksp, MatType mattype, Mat *mat)
 PetscErrorCode  KSPComputeEigenvaluesExplicitly(KSP ksp,PetscInt nmax,PetscReal r[],PetscReal c[])
 {
   Mat               BA;
-  PetscErrorCode    ierr;
   PetscMPIInt       size,rank;
   MPI_Comm          comm;
   PetscScalar       *array;
@@ -259,7 +255,6 @@ static PetscErrorCode PolyEval(PetscInt nroots,const PetscReal *r,const PetscRea
 /* collective on ksp */
 PetscErrorCode KSPPlotEigenContours_Private(KSP ksp,PetscInt neig,const PetscReal *r,const PetscReal *c)
 {
-  PetscErrorCode ierr;
   PetscReal      xmin,xmax,ymin,ymax,*xloc,*yloc,*value,px0,py0,rscale,iscale;
   PetscInt       M,N,i,j;
   PetscMPIInt    rank;

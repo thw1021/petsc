@@ -86,7 +86,6 @@ PetscErrorCode MatNullSpaceGetVecs(MatNullSpace sp,PetscBool *has_const,PetscInt
 @*/
 PetscErrorCode MatNullSpaceCreateRigidBody(Vec coords,MatNullSpace *sp)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscScalar       *v[6],dots[5];
   Vec               vec[6];
@@ -178,7 +177,6 @@ PetscErrorCode MatNullSpaceCreateRigidBody(Vec coords,MatNullSpace *sp)
 @*/
 PetscErrorCode MatNullSpaceView(MatNullSpace sp,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -242,7 +240,6 @@ PetscErrorCode MatNullSpaceView(MatNullSpace sp,PetscViewer viewer)
 PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,const Vec vecs[],MatNullSpace *SP)
 {
   MatNullSpace   sp;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -322,7 +319,6 @@ PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,c
 @*/
 PetscErrorCode  MatNullSpaceDestroy(MatNullSpace *sp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -357,7 +353,6 @@ PetscErrorCode  MatNullSpaceRemove(MatNullSpace sp,Vec vec)
 {
   PetscScalar    sum;
   PetscInt       i,N;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!sp) PetscFunctionReturn(0);
@@ -407,7 +402,6 @@ PetscErrorCode  MatNullSpaceTest(MatNullSpace sp,Mat mat,PetscBool  *isNull)
   PetscScalar    sum;
   PetscReal      nrm,tol = 10. * PETSC_SQRT_MACHINE_EPSILON;
   PetscInt       j,n,N;
-  PetscErrorCode ierr;
   Vec            l,r;
   PetscBool      flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,consistent = PETSC_TRUE;
   PetscViewer    viewer;

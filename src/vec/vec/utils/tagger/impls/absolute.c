@@ -7,7 +7,6 @@ static PetscErrorCode VecTaggerComputeBoxes_Absolute(VecTagger tagger,Vec vec,Pe
   VecTagger_Simple *smpl = (VecTagger_Simple *)tagger->data;
   PetscInt       bs, i;
   VecTaggerBox   *bxs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerGetBlockSize(tagger,&bs));
@@ -37,7 +36,6 @@ static PetscErrorCode VecTaggerComputeBoxes_Absolute(VecTagger tagger,Vec vec,Pe
 @*/
 PetscErrorCode VecTaggerAbsoluteSetBox(VecTagger tagger,VecTaggerBox *box)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerSetBox_Simple(tagger,box));
@@ -61,7 +59,6 @@ PetscErrorCode VecTaggerAbsoluteSetBox(VecTagger tagger,VecTaggerBox *box)
 @*/
 PetscErrorCode VecTaggerAbsoluteGetBox(VecTagger tagger,const VecTaggerBox **box)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerGetBox_Simple(tagger,box));
@@ -70,7 +67,6 @@ PetscErrorCode VecTaggerAbsoluteGetBox(VecTagger tagger,const VecTaggerBox **box
 
 PETSC_INTERN PetscErrorCode VecTaggerCreate_Absolute(VecTagger tagger)
 {
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerCreate_Simple(tagger));
