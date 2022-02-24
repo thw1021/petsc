@@ -5,8 +5,8 @@ PetscErrorCode VecsDestroy(Vecs x)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = VecDestroy(&(x)->v);CHKERRQ(ierr);
-  ierr = PetscFree(x);CHKERRQ(ierr);
+  CHKERRQ(VecDestroy(&(x)->v));
+  CHKERRQ(PetscFree(x));
   PetscFunctionReturn(0);
 }
 
@@ -14,8 +14,8 @@ PetscErrorCode VecsCreateSeq(MPI_Comm comm,PetscInt p,PetscInt m,Vecs *x)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscNew(x);CHKERRQ(ierr);
-  ierr = VecCreateSeq(comm,p*m,&(*x)->v);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(x));
+  CHKERRQ(VecCreateSeq(comm,p*m,&(*x)->v));
   (*x)->n = m;
   PetscFunctionReturn(0);
 }
@@ -24,8 +24,8 @@ PetscErrorCode VecsCreateSeqWithArray(MPI_Comm comm,PetscInt p,PetscInt m,PetscS
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscNew(x);CHKERRQ(ierr);
-  ierr = VecCreateSeqWithArray(comm,1,p*m,a,&(*x)->v);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(x));
+  CHKERRQ(VecCreateSeqWithArray(comm,1,p*m,a,&(*x)->v));
   (*x)->n = m;
   PetscFunctionReturn(0);
 }
@@ -34,9 +34,8 @@ PetscErrorCode VecsDuplicate(Vecs x,Vecs *y)
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscNew(y);CHKERRQ(ierr);
-  ierr = VecDuplicate(x->v,&(*y)->v);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(y));
+  CHKERRQ(VecDuplicate(x->v,&(*y)->v));
   (*y)->n = x->n;
   PetscFunctionReturn(0);
 }
-

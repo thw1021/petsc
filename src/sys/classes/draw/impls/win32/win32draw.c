@@ -688,10 +688,10 @@ static PetscErrorCode PetscDrawGetPopup_Win32(PetscDraw draw,PetscDraw *popup)
   PetscBool       flg  = PETSC_TRUE;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsGetBool(((PetscObject)draw)->options,((PetscObject)draw)->prefix,"-draw_popup",&flg,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetBool(((PetscObject)draw)->options,((PetscObject)draw)->prefix,"-draw_popup",&flg,NULL));
   if (flg) {
-    ierr = PetscDrawCreate(PetscObjectComm((PetscObject)draw),NULL,NULL,win->x,win->y+win->h+36,220,220,popup);CHKERRQ(ierr);
-    ierr = PetscDrawSetType(*popup,PETSC_DRAW_WIN32);CHKERRQ(ierr);
+    CHKERRQ(PetscDrawCreate(PetscObjectComm((PetscObject)draw),NULL,NULL,win->x,win->y+win->h+36,220,220,popup));
+    CHKERRQ(PetscDrawSetType(*popup,PETSC_DRAW_WIN32));
     draw->popup = *popup;
   } else {
     *popup = NULL;
@@ -706,12 +706,12 @@ PETSC_EXTERN PetscErrorCode  PetscDrawCreate_Win32(PetscDraw draw)
   WindowNode      newnode;
 
   PetscFunctionBegin;
-  ierr       = PetscNew(&windraw);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(&windraw));
   draw->data = windraw;
 
   /* the following is temporary fix for initializing a global datastructure */
   if (!g_hWindowListMutex) g_hWindowListMutex = CreateMutex(NULL,FALSE,NULL);
-  ierr = PetscMemcpy(draw->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
+  CHKERRQ(PetscMemcpy(draw->ops,&DvOps,sizeof(DvOps)));
 
   windraw->hReadyEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
   /* makes call to MessageLoopThread to creat window and attach a thread */
@@ -721,7 +721,7 @@ PETSC_EXTERN PetscErrorCode  PetscDrawCreate_Win32(PetscDraw draw)
   CloseHandle(windraw->hReadyEvent);
   WaitForSingleObject(g_hWindowListMutex,INFINITE);
 
-  ierr                   = PetscNew(&newnode);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(&newnode));
   newnode->MouseListHead = NULL;
   newnode->MouseListTail = NULL;
   newnode->wnext         = WindowListHead;
@@ -841,7 +841,7 @@ static PetscErrorCode MouseRecord_Win32(HWND hWnd,PetscDrawButton button)
     while (current) {
       if (current->hWnd == hWnd) {
 
-        ierr            = PetscNew(&newnode);CHKERRQ(ierr);
+        CHKERRQ(PetscNew(&newnode));
         newnode->Button = button;
         GetCursorPos(&mousepos);
         newnode->user.x = mousepos.x;

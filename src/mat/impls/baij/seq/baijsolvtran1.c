@@ -14,12 +14,12 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_1(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   tmp  = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* copy the b into temp work space according to permutation */
   for (i=0; i<n; i++) tmp[i] = b[c[i]];
@@ -47,12 +47,12 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_1(Mat A,Vec bb,Vec xx)
   /* copy tmp into x according to permutation */
   for (i=0; i<n; i++) x[r[i]] = tmp[i];
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
 
-  ierr = PetscLogFlops(2.0*a->nz-A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(PetscLogFlops(2.0*a->nz-A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -69,12 +69,12 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_1_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* copy the b into temp work space according to permutation */
   for (i=0; i<n; i++) t[i] = b[c[i]];
@@ -106,10 +106,10 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_1_inplace(Mat A,Vec bb,Vec xx)
   /* copy t into x according to permutation */
   for (i=0; i<n; i++) x[r[i]] = t[i];
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*(a->nz) - A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*(a->nz) - A->cmap->n));
   PetscFunctionReturn(0);
 }

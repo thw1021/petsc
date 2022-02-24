@@ -15,12 +15,12 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* copy the b into temp work space according to permutation */
   for (i=0; i<n; i++) {
@@ -32,7 +32,7 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N_inplace(Mat A,Vec bb,Vec xx)
   /* forward solve the upper triangular transpose */
   ls = a->solve_work + A->cmap->n;
   for (i=0; i<n; i++) {
-    ierr = PetscArraycpy(ls,t+i*bs,bs);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(ls,t+i*bs,bs));
     PetscKernel_w_gets_transA_times_v(bs,ls,aa+bs2*a->diag[i],t+i*bs);
     v  = aa + bs2*(a->diag[i] + 1);
     vi = aj + a->diag[i] + 1;
@@ -61,11 +61,11 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N_inplace(Mat A,Vec bb,Vec xx)
     }
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*(a->bs2)*(a->nz) - A->rmap->bs*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*(a->bs2)*(a->nz) - A->rmap->bs*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -83,12 +83,12 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* copy the b into temp work space according to permutation */
   for (i=0; i<n; i++) {
@@ -100,7 +100,7 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N(Mat A,Vec bb,Vec xx)
   /* forward solve the upper triangular transpose */
   ls = a->solve_work + A->cmap->n;
   for (i=0; i<n; i++) {
-    ierr = PetscArraycpy(ls,t+i*bs,bs);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(ls,t+i*bs,bs));
     PetscKernel_w_gets_transA_times_v(bs,ls,aa+bs2*diag[i],t+i*bs);
     v  = aa + bs2*(diag[i] - 1);
     vi = aj + diag[i] - 1;
@@ -129,11 +129,10 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N(Mat A,Vec bb,Vec xx)
     }
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*(a->bs2)*(a->nz) - A->rmap->bs*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*(a->bs2)*(a->nz) - A->rmap->bs*A->cmap->n));
   PetscFunctionReturn(0);
 }
-

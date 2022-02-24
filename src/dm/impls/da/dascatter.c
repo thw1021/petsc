@@ -37,10 +37,9 @@ PetscErrorCode  DMDAGetScatter(DM da,VecScatter *gtol,VecScatter *ltol)
   if (gtol) *gtol = dd->gtol;
   if (ltol) {
     if (!dd->ltol) {
-      ierr = DMLocalToLocalCreate_DA(da);CHKERRQ(ierr);
+      CHKERRQ(DMLocalToLocalCreate_DA(da));
     }
     *ltol = dd->ltol;
   }
   PetscFunctionReturn(0);
 }
-

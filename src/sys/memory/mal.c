@@ -38,7 +38,7 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line
     PetscCheckFalse(err == EINVAL,PETSC_COMM_SELF,PETSC_ERR_MEM,"Memkind: invalid 3rd or 4th argument of memkind_posix_memalign()");
     if (err == ENOMEM) PetscInfo(0,"Memkind: fail to request HBW memory %.0f, falling back to normal memory\n",(PetscLogDouble)mem);
     if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
-    if (clear) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
+    if (clear) CHKERRQ(PetscMemzero(*result,mem));
   }
 #else
 #  if defined(PETSC_HAVE_DOUBLE_ALIGN_MALLOC) && (PETSC_MEMALIGN == 8)
@@ -48,13 +48,13 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line
     *result = malloc(mem);
   }
   if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
-  if (PetscLogMemory) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
+  if (PetscLogMemory) CHKERRQ(PetscMemzero(*result,mem));
 
 #  elif defined(PETSC_HAVE_MEMALIGN)
   *result = memalign(PETSC_MEMALIGN,mem);
   if (!*result) return PetscError(PETSC_COMM_SELF,line,func,file,PETSC_ERR_MEM,PETSC_ERROR_INITIAL,"Memory requested %.0f",(PetscLogDouble)mem);
   if (clear || PetscLogMemory) {
-    ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);
+    CHKERRQ(PetscMemzero(*result,mem));
   }
 #  else
   {
@@ -73,7 +73,7 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem,PetscBool clear,int line
     ptr[shift-1] = shift + SHIFT_CLASSID;
     ptr         += shift;
     *result      = (void*)ptr;
-    if (PetscLogMemory) {ierr = PetscMemzero(*result,mem);CHKERRQ(ierr);}
+    if (PetscLogMemory) CHKERRQ(PetscMemzero(*result,mem));
   }
 #  endif
 #endif
@@ -261,10 +261,10 @@ PetscErrorCode PetscMemoryTrace(const char label[])
   static PetscLogDouble oldmem = 0,oldmal = 0;
 
   PetscFunctionBegin;
-  ierr = PetscMemoryGetCurrentUsage(&mem);CHKERRQ(ierr);
-  ierr = PetscMallocGetCurrentUsage(&mal);CHKERRQ(ierr);
+  CHKERRQ(PetscMemoryGetCurrentUsage(&mem));
+  CHKERRQ(PetscMallocGetCurrentUsage(&mal));
 
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"%s High water  %8.3f MB increase %8.3f MB Current %8.3f MB increase %8.3f MB\n",label,mem*1e-6,(mem - oldmem)*1e-6,mal*1e-6,(mal - oldmal)*1e-6);CHKERRQ(ierr);
+  CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"%s High water  %8.3f MB increase %8.3f MB Current %8.3f MB increase %8.3f MB\n",label,mem*1e-6,(mem - oldmem)*1e-6,mal*1e-6,(mal - oldmal)*1e-6));
   oldmem = mem;
   oldmal = mal;
   PetscFunctionReturn(0);
@@ -413,14 +413,14 @@ PetscErrorCode PetscMallocA(int n,PetscBool clear,int lineno,const char *functio
   va_end(Argp);
   if (petscmalloccoalesce) {
     char *p;
-    ierr = (*PetscTrMalloc)(sumbytes,clear,lineno,function,filename,(void**)&p);CHKERRQ(ierr);
+    CHKERRQ((*PetscTrMalloc)(sumbytes,clear,lineno,function,filename,(void**)&p));
     for (i=0; i<n; i++) {
       *ptr[i] = bytes[i] ? p : NULL;
       p = (char*)PetscAddrAlign(p + bytes[i]);
     }
   } else {
     for (i=0; i<n; i++) {
-      ierr = (*PetscTrMalloc)(bytes[i],clear,lineno,function,filename,(void**)ptr[i]);CHKERRQ(ierr);
+      CHKERRQ((*PetscTrMalloc)(bytes[i],clear,lineno,function,filename,(void**)ptr[i]));
     }
   }
   PetscFunctionReturn(0);
@@ -469,11 +469,11 @@ PetscErrorCode PetscFreeA(int n,int lineno,const char *function,const char *file
     while (--n > i) {
       *ptr[n] = NULL;
     }
-    ierr = (*PetscTrFree)(*ptr[n],lineno,function,filename);CHKERRQ(ierr);
+    CHKERRQ((*PetscTrFree)(*ptr[n],lineno,function,filename));
     *ptr[n] = NULL;
   } else {
     while (--n >= 0) {
-      ierr = (*PetscTrFree)(*ptr[n],lineno,function,filename);CHKERRQ(ierr);
+      CHKERRQ((*PetscTrFree)(*ptr[n],lineno,function,filename));
       *ptr[n] = NULL;
     }
   }

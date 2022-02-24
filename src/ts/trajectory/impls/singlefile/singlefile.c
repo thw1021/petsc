@@ -13,14 +13,14 @@ static PetscErrorCode TSTrajectorySet_Singlefile(TSTrajectory tj,TS ts,PetscInt 
 
   PetscFunctionBegin;
   if (stepnum == 0) {
-    ierr = PetscViewerCreate(PetscObjectComm((PetscObject)X),&sf->viewer);CHKERRQ(ierr);
-    ierr = PetscViewerSetType(sf->viewer,PETSCVIEWERBINARY);CHKERRQ(ierr);
-    ierr = PetscViewerFileSetMode(sf->viewer,FILE_MODE_WRITE);CHKERRQ(ierr);
-    ierr = PetscObjectGetName((PetscObject)tj,&filename);CHKERRQ(ierr);
-    ierr = PetscViewerFileSetName(sf->viewer,filename);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerCreate(PetscObjectComm((PetscObject)X),&sf->viewer));
+    CHKERRQ(PetscViewerSetType(sf->viewer,PETSCVIEWERBINARY));
+    CHKERRQ(PetscViewerFileSetMode(sf->viewer,FILE_MODE_WRITE));
+    CHKERRQ(PetscObjectGetName((PetscObject)tj,&filename));
+    CHKERRQ(PetscViewerFileSetName(sf->viewer,filename));
   }
-  ierr = VecView(X,sf->viewer);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryWrite(sf->viewer,&time,1,PETSC_REAL);CHKERRQ(ierr);
+  CHKERRQ(VecView(X,sf->viewer));
+  CHKERRQ(PetscViewerBinaryWrite(sf->viewer,&time,1,PETSC_REAL));
   PetscFunctionReturn(0);
 }
 
@@ -30,8 +30,8 @@ static PetscErrorCode TSTrajectoryDestroy_Singlefile(TSTrajectory tj)
   TSTrajectory_Singlefile *sf = (TSTrajectory_Singlefile*)tj->data;
 
   PetscFunctionBegin;
-  ierr = PetscViewerDestroy(&sf->viewer);CHKERRQ(ierr);
-  ierr = PetscFree(sf);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerDestroy(&sf->viewer));
+  CHKERRQ(PetscFree(sf));
   PetscFunctionReturn(0);
 }
 
@@ -49,7 +49,7 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Singlefile(TSTrajectory tj,TS ts)
   TSTrajectory_Singlefile *sf;
 
   PetscFunctionBegin;
-  ierr = PetscNew(&sf);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(&sf));
   tj->data         = sf;
   tj->ops->set     = TSTrajectorySet_Singlefile;
   tj->ops->get     = NULL;

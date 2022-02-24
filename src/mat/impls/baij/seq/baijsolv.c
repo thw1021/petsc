@@ -15,21 +15,21 @@ PetscErrorCode MatSolve_SeqBAIJ_N_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
-  ierr = PetscArraycpy(t,b+bs*(*r++),bs);CHKERRQ(ierr);
+  CHKERRQ(PetscArraycpy(t,b+bs*(*r++),bs));
   for (i=1; i<n; i++) {
     v    = aa + bs2*ai[i];
     vi   = aj + ai[i];
     nz   = a->diag[i] - ai[i];
     s    = t + bs*i;
-    ierr = PetscArraycpy(s,b+bs*(*r++),bs);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(s,b+bs*(*r++),bs));
     while (nz--) {
       PetscKernel_v_gets_v_minus_A_times_w(bs,s,v,t+bs*(*vi++));
       v += bs2;
@@ -41,20 +41,20 @@ PetscErrorCode MatSolve_SeqBAIJ_N_inplace(Mat A,Vec bb,Vec xx)
     v    = aa + bs2*(a->diag[i] + 1);
     vi   = aj + a->diag[i] + 1;
     nz   = ai[i+1] - a->diag[i] - 1;
-    ierr = PetscArraycpy(ls,t+i*bs,bs);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(ls,t+i*bs,bs));
     while (nz--) {
       PetscKernel_v_gets_v_minus_A_times_w(bs,ls,v,t+bs*(*vi++));
       v += bs2;
     }
     PetscKernel_w_gets_A_times_v(bs,ls,aa+bs2*a->diag[i],t+i*bs);
-    ierr = PetscArraycpy(x + bs*(*c--),t+i*bs,bs);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(x + bs*(*c--),t+i*bs,bs));
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*(a->bs2)*(a->nz) - A->rmap->bs*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*(a->bs2)*(a->nz) - A->rmap->bs*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -71,12 +71,12 @@ PetscErrorCode MatSolve_SeqBAIJ_7_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 7*(*r++);
@@ -151,11 +151,11 @@ PetscErrorCode MatSolve_SeqBAIJ_7_inplace(Mat A,Vec bb,Vec xx)
                           v[27]*s4+v[34]*s5+v[41]*s6+v[48]*s7;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*49*(a->nz) - 7.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*49*(a->nz) - 7.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -172,12 +172,12 @@ PetscErrorCode MatSolve_SeqBAIJ_7(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   idx  = 7*r[0];
@@ -251,11 +251,11 @@ PetscErrorCode MatSolve_SeqBAIJ_7(Mat A,Vec bb,Vec xx)
                           v[27]*s4+v[34]*s5+v[41]*s6+v[48]*s7;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*49*(a->nz) - 7.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*49*(a->nz) - 7.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -272,12 +272,12 @@ PetscErrorCode MatSolve_SeqBAIJ_6_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 6*(*r++);
@@ -346,11 +346,11 @@ PetscErrorCode MatSolve_SeqBAIJ_6_inplace(Mat A,Vec bb,Vec xx)
                           v[23]*s4+v[29]*s5+v[35]*s6;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*36*(a->nz) - 6.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*36*(a->nz) - 6.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -367,12 +367,12 @@ PetscErrorCode MatSolve_SeqBAIJ_6(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   idx  = 6*r[0];
@@ -440,11 +440,11 @@ PetscErrorCode MatSolve_SeqBAIJ_6(Mat A,Vec bb,Vec xx)
                           v[23]*s4+v[29]*s5+v[35]*s6;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*36*(a->nz) - 6.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*36*(a->nz) - 6.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -461,12 +461,12 @@ PetscErrorCode MatSolve_SeqBAIJ_5_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 5*(*r++);
@@ -527,11 +527,11 @@ PetscErrorCode MatSolve_SeqBAIJ_5_inplace(Mat A,Vec bb,Vec xx)
                           v[19]*s4+v[24]*s5;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*25*(a->nz) - 5.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*25*(a->nz) - 5.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -548,12 +548,12 @@ PetscErrorCode MatSolve_SeqBAIJ_5(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   idx  = 5*r[0];
@@ -613,11 +613,11 @@ PetscErrorCode MatSolve_SeqBAIJ_5(Mat A,Vec bb,Vec xx)
                           v[19]*s4+v[24]*s5;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*25*(a->nz) - 5.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*25*(a->nz) - 5.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -634,12 +634,12 @@ PetscErrorCode MatSolve_SeqBAIJ_4_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 4*(*r++);
@@ -690,11 +690,11 @@ PetscErrorCode MatSolve_SeqBAIJ_4_inplace(Mat A,Vec bb,Vec xx)
     x[3+idc] = t[3+idt] = v[3]*s1+v[7]*s2+v[11]*s3+v[15]*s4;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -711,12 +711,12 @@ PetscErrorCode MatSolve_SeqBAIJ_4(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   idx  = 4*r[0];
@@ -766,11 +766,11 @@ PetscErrorCode MatSolve_SeqBAIJ_4(Mat A,Vec bb,Vec xx)
     x[3+idc] = t[3+idt] = v[3]*s1+v[7]*s2+v[11]*s3+v[15]*s4;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -788,12 +788,12 @@ PetscErrorCode MatSolve_SeqBAIJ_4_Demotion(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = (MatScalar*)a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 4*(*r++);
@@ -862,11 +862,11 @@ PetscErrorCode MatSolve_SeqBAIJ_4_Demotion(Mat A,Vec bb,Vec xx)
     x[3+idc] = (PetscScalar)t[3+idt];
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -902,12 +902,12 @@ PetscErrorCode MatSolve_SeqBAIJ_4_SSE_Demotion(Mat A,Vec bb,Vec xx)
   tmpx = &ssealignedspace[offset+4];
   PREFETCH_NTA(aa+16*ai[1]);
 
-  ierr = VecGetArray(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArray(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 4*(*r++);
@@ -1080,11 +1080,11 @@ PetscErrorCode MatSolve_SeqBAIJ_4_SSE_Demotion(Mat A,Vec bb,Vec xx)
     idt -= 4;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArray(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArray(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*16*(a->nz) - 4.0*A->cmap->n));
   SSE_SCOPE_END;
   PetscFunctionReturn(0);
 }
@@ -1104,12 +1104,12 @@ PetscErrorCode MatSolve_SeqBAIJ_3_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 3*(*r++);
@@ -1152,11 +1152,11 @@ PetscErrorCode MatSolve_SeqBAIJ_3_inplace(Mat A,Vec bb,Vec xx)
     x[1+idc] = t[1+idt] = v[1]*s1 + v[4]*s2 + v[7]*s3;
     x[2+idc] = t[2+idt] = v[2]*s1 + v[5]*s2 + v[8]*s3;
   }
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*9*(a->nz) - 3.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*9*(a->nz) - 3.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -1173,12 +1173,12 @@ PetscErrorCode MatSolve_SeqBAIJ_3(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   idx  = 3*r[0];
@@ -1220,11 +1220,11 @@ PetscErrorCode MatSolve_SeqBAIJ_3(Mat A,Vec bb,Vec xx)
     x[1+idc] = t[1+idt] = v[1]*s1 + v[4]*s2 + v[7]*s3;
     x[2+idc] = t[2+idt] = v[2]*s1 + v[5]*s2 + v[8]*s3;
   }
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*9*(a->nz) - 3.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*9*(a->nz) - 3.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -1241,12 +1241,12 @@ PetscErrorCode MatSolve_SeqBAIJ_2_inplace(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   idx  = 2*(*r++);
@@ -1286,11 +1286,11 @@ PetscErrorCode MatSolve_SeqBAIJ_2_inplace(Mat A,Vec bb,Vec xx)
     x[idc]   = t[idt]   = v[0]*s1 + v[2]*s2;
     x[1+idc] = t[1+idt] = v[1]*s1 + v[3]*s2;
   }
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*4*(a->nz) - 2.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*4*(a->nz) - 2.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -1307,12 +1307,12 @@ PetscErrorCode MatSolve_SeqBAIJ_2(Mat A,Vec bb,Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   idx  = 2*r[0];
@@ -1351,11 +1351,11 @@ PetscErrorCode MatSolve_SeqBAIJ_2(Mat A,Vec bb,Vec xx)
     x[idc]   = t[idt]   = v[0]*s1 + v[2]*s2;
     x[1+idc] = t[1+idt] = v[1]*s1 + v[3]*s2;
   }
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*4*(a->nz) - 2.0*A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*4*(a->nz) - 2.0*A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -1374,12 +1374,12 @@ PetscErrorCode MatSolve_SeqBAIJ_1_inplace(Mat A,Vec bb,Vec xx)
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
 
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   t    = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout + (n-1);
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout + (n-1);
 
   /* forward solve the lower triangular */
   t[0] = b[*r++];
@@ -1405,11 +1405,11 @@ PetscErrorCode MatSolve_SeqBAIJ_1_inplace(Mat A,Vec bb,Vec xx)
     x[*c--] = t[i] = aa[diag[i]]*s1;
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*1*(a->nz) - A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*1*(a->nz) - A->cmap->n));
   PetscFunctionReturn(0);
 }
 
@@ -1427,12 +1427,12 @@ PetscErrorCode MatSolve_SeqBAIJ_1(Mat A,Vec bb,Vec xx)
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
 
-  ierr = VecGetArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecGetArray(xx,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(bb,&b));
+  CHKERRQ(VecGetArray(xx,&x));
   tmp  = a->solve_work;
 
-  ierr = ISGetIndices(isrow,&rout);CHKERRQ(ierr); r = rout;
-  ierr = ISGetIndices(iscol,&cout);CHKERRQ(ierr); c = cout;
+  CHKERRQ(ISGetIndices(isrow,&rout)); r = rout;
+  CHKERRQ(ISGetIndices(iscol,&cout)); c = cout;
 
   /* forward solve the lower triangular */
   tmp[0] = b[r[0]];
@@ -1456,11 +1456,10 @@ PetscErrorCode MatSolve_SeqBAIJ_1(Mat A,Vec bb,Vec xx)
     x[c[i]] = tmp[i] = sum*v[nz]; /* v[nz] = aa[adiag[i]] */
   }
 
-  ierr = ISRestoreIndices(isrow,&rout);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(iscol,&cout);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(bb,&b);CHKERRQ(ierr);
-  ierr = VecRestoreArray(xx,&x);CHKERRQ(ierr);
-  ierr = PetscLogFlops(2.0*a->nz - A->cmap->n);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isrow,&rout));
+  CHKERRQ(ISRestoreIndices(iscol,&cout));
+  CHKERRQ(VecRestoreArrayRead(bb,&b));
+  CHKERRQ(VecRestoreArray(xx,&x));
+  CHKERRQ(PetscLogFlops(2.0*a->nz - A->cmap->n));
   PetscFunctionReturn(0);
 }
-

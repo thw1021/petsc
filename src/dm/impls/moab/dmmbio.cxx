@@ -10,24 +10,24 @@ static PetscErrorCode DMMoab_GetWriteOptions_Private(PetscInt fsetid, PetscInt n
   char           wopts_dbg[PETSC_MAX_PATH_LEN];
   PetscFunctionBegin;
 
-  ierr = PetscMalloc1(PETSC_MAX_PATH_LEN, &wopts);CHKERRQ(ierr);
-  ierr = PetscMemzero(&wopts_par, PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
-  ierr = PetscMemzero(&wopts_parid, PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
-  ierr = PetscMemzero(&wopts_dbg, PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(PETSC_MAX_PATH_LEN, &wopts));
+  CHKERRQ(PetscMemzero(&wopts_par, PETSC_MAX_PATH_LEN));
+  CHKERRQ(PetscMemzero(&wopts_parid, PETSC_MAX_PATH_LEN));
+  CHKERRQ(PetscMemzero(&wopts_dbg, PETSC_MAX_PATH_LEN));
 
   // do parallel read unless only one processor
   if (numproc > 1) {
-    ierr = PetscSNPrintf(wopts_par, PETSC_MAX_PATH_LEN, "PARALLEL=%s;", MoabWriteModes[mode]);CHKERRQ(ierr);
+    CHKERRQ(PetscSNPrintf(wopts_par, PETSC_MAX_PATH_LEN, "PARALLEL=%s;", MoabWriteModes[mode]));
     if (fsetid >= 0) {
-      ierr = PetscSNPrintf(wopts_parid, PETSC_MAX_PATH_LEN, "PARALLEL_COMM=%d;", fsetid);CHKERRQ(ierr);
+      CHKERRQ(PetscSNPrintf(wopts_parid, PETSC_MAX_PATH_LEN, "PARALLEL_COMM=%d;", fsetid));
     }
   }
 
   if (dbglevel) {
-    ierr = PetscSNPrintf(wopts_dbg, PETSC_MAX_PATH_LEN, "CPUTIME;DEBUG_IO=%d;", dbglevel);CHKERRQ(ierr);
+    CHKERRQ(PetscSNPrintf(wopts_dbg, PETSC_MAX_PATH_LEN, "CPUTIME;DEBUG_IO=%d;", dbglevel));
   }
 
-  ierr = PetscSNPrintf(wopts, PETSC_MAX_PATH_LEN, "%s%s%s%s%s", wopts_par, wopts_parid, wopts_dbg, (extra_opts ? extra_opts : ""), (dm_opts ? dm_opts : ""));CHKERRQ(ierr);
+  CHKERRQ(PetscSNPrintf(wopts, PETSC_MAX_PATH_LEN, "%s%s%s%s%s", wopts_par, wopts_parid, wopts_dbg, (extra_opts ? extra_opts : ""), (dm_opts ? dm_opts : "")));
   *write_opts = wopts;
   PetscFunctionReturn(0);
 }
@@ -65,7 +65,7 @@ PetscErrorCode DMMoabOutput(DM dm, const char* filename, const char* usrwriteopt
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   dmmoab = (DM_Moab*)(dm)->data;
 
-  ierr = PetscStrendswith(filename, "h5m", &isftype);CHKERRQ(ierr);
+  CHKERRQ(PetscStrendswith(filename, "h5m", &isftype));
 
   /* add mesh loading options specific to the DM */
   if (isftype) {
@@ -84,7 +84,6 @@ PetscErrorCode DMMoabOutput(DM dm, const char* filename, const char* usrwriteopt
 
   /* output file, using parallel write */
   merr = dmmoab->mbiface->write_file(filename, NULL, writeopts, &dmmoab->fileset, 1); MBERRVM(dmmoab->mbiface, "Writing output of DMMoab failed.", merr);
-  ierr = PetscFree(writeopts);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(writeopts));
   PetscFunctionReturn(0);
 }
-

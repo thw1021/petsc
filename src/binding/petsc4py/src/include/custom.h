@@ -46,7 +46,7 @@ PetscLogStageFindId(const char name[], PetscLogStage *stageid)
   if (!(stageLog=petsc_stageLog)) PetscFunctionReturn(0); /* logging is off ? */
   for (s = 0; s < stageLog->numStages; s++) {
     const char *sname = stageLog->stageInfo[s].name;
-    ierr = PetscStrcasecmp(sname, name, &match);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcasecmp(sname, name, &match));
     if (match) { *stageid = s; break; }
   }
   PetscFunctionReturn(0);
@@ -67,7 +67,7 @@ PetscLogClassFindId(const char name[], PetscClassId *classid)
   for (c = 0; c < stageLog->classLog->numClasses; c++) {
     const char *cname = stageLog->classLog->classInfo[c].name;
     PetscClassId id = PetscCLASSID(stageLog,c);
-    ierr = PetscStrcasecmp(cname, name, &match);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcasecmp(cname, name, &match));
     if (match) { *classid = id; break; }
   }
   PetscFunctionReturn(0);
@@ -87,7 +87,7 @@ PetscLogEventFindId(const char name[], PetscLogEvent *eventid)
   if (!(stageLog=petsc_stageLog)) PetscFunctionReturn(0); /* logging is off ? */
   for (e = 0; e < stageLog->eventLog->numEvents; e++) {
     const char *ename = stageLog->eventLog->eventInfo[e].name;
-    ierr = PetscStrcasecmp(ename, name, &match);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcasecmp(ename, name, &match));
     if (match) { *eventid = e; break; }
   }
   PetscFunctionReturn(0);
@@ -151,7 +151,7 @@ PetscLogEventGetPerfInfo(int stage,PetscLogEvent event,PetscEventPerfInfo *info)
   PetscFunctionBegin;
   PetscValidPointer(info,3);
   (void)stage; (void)event; /* unused */
-  ierr = PetscMemzero(info,sizeof(PetscEventPerfInfo));CHKERRQ(ierr);
+  CHKERRQ(PetscMemzero(info,sizeof(PetscEventPerfInfo)));
   PetscFunctionReturn(0);
 }
 #endif
@@ -170,19 +170,19 @@ VecStrideSum(Vec v, PetscInt start, PetscScalar *a)
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidType(v,1);
   PetscValidScalarPointer(a,2);
-  ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
+  CHKERRQ(VecGetBlockSize(v,&bs));
   PetscCheckFalse(start <  0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
                             "Negative start %" PetscInt_FMT,start);
   PetscCheckFalse(start >= bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,
                             "Start of stride subvector (%" PetscInt_FMT ") is too large "
                             "for block size (%" PetscInt_FMT ")",start,bs);
-  ierr = VecGetLocalSize(v,&n);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(v,&x);CHKERRQ(ierr);
+  CHKERRQ(VecGetLocalSize(v,&n));
+  CHKERRQ(VecGetArrayRead(v,&x));
   sum = (PetscScalar)0.0;
   for (i=start; i<n; i+=bs) sum += x[i];
-  ierr = VecRestoreArrayRead(v,&x);CHKERRQ(ierr);
-  ierr = PetscObjectGetComm((PetscObject)v,&comm);CHKERRQ(ierr);
-  ierr = MPI_Allreduce(&sum,a,1,MPIU_SCALAR,MPIU_SUM,comm);CHKERRMPI(ierr);
+  CHKERRQ(VecRestoreArrayRead(v,&x));
+  CHKERRQ(PetscObjectGetComm((PetscObject)v,&comm));
+  CHKERRMPI(MPI_Allreduce(&sum,a,1,MPIU_SCALAR,MPIU_SUM,comm));
   PetscFunctionReturn(0);
 }
 
@@ -211,16 +211,16 @@ PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,Petsc
   PetscValidPointer(sbaij,4);
   PetscValidPointer(is,5);
   *aij = *baij = *sbaij = *is = PETSC_FALSE;
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatMPIAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatSeqAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatMPIAIJSetPreallocation_C",&f));
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatSeqAIJSetPreallocation_C",&f));
   if (f)  {*aij = PETSC_TRUE; goto done;};
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatMPIBAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatSeqBAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatMPIBAIJSetPreallocation_C",&f));
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatSeqBAIJSetPreallocation_C",&f));
   if (f)  {*baij = PETSC_TRUE; goto done;};
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatMPISBAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatSeqSBAIJSetPreallocation_C",&f);CHKERRQ(ierr);}
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatMPISBAIJSetPreallocation_C",&f));
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatSeqSBAIJSetPreallocation_C",&f));
   if (f)  {*sbaij = PETSC_TRUE; goto done;};
-  if (!f) {ierr = PetscObjectQueryFunction((PetscObject)A,"MatISSetPreallocation_C",&f);CHKERRQ(ierr);}
+  if (!f) CHKERRQ(PetscObjectQueryFunction((PetscObject)A,"MatISSetPreallocation_C",&f));
   if (f)  {*is = PETSC_TRUE; goto done;};
  done:
   PetscFunctionReturn(0);
@@ -239,7 +239,7 @@ MatFactorInfoDefaults(PetscBool incomplete,PetscBool cholesky,
   PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidPointer(info,2);
-  ierr = MatFactorInfoInitialize(info);CHKERRQ(ierr);
+  CHKERRQ(MatFactorInfoInitialize(info));
   if (incomplete) {
     info->levels         = (PetscReal)0;
     info->diagonal_fill  = (PetscReal)0;
@@ -304,7 +304,7 @@ KSPConvergenceTestCall(KSP ksp, PetscInt its, PetscReal rnorm, KSPConvergedReaso
                          "iteration number must be nonnegative");
   PetscCheckFalse(rnorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
                          "residual norm must be nonnegative");
-  ierr = (*ksp->converged)(ksp,its,rnorm,reason,ksp->cnvP);CHKERRQ(ierr);
+  CHKERRQ((*ksp->converged)(ksp,its,rnorm,reason,ksp->cnvP));
   PetscFunctionReturn(0);
 }
 
@@ -336,7 +336,7 @@ SNESConvergenceTestCall(SNES snes, PetscInt its,
                          "step norm must be nonnegative");
   PetscCheckFalse(fnorm < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,
                          "function norm must be nonnegative");
-  ierr = (*snes->ops->converged)(snes,its,xnorm,ynorm,fnorm,reason,snes->cnvP);CHKERRQ(ierr);
+  CHKERRQ((*snes->ops->converged)(snes,its,xnorm,ynorm,fnorm,reason,snes->cnvP));
   PetscFunctionReturn(0);
 }
 
@@ -350,8 +350,8 @@ SNESGetUseMFFD(SNES snes,PetscBool *flag)
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidPointer(flag,2);
   *flag = PETSC_FALSE;
-  ierr = SNESGetJacobian(snes,&J,0,&jac,0);CHKERRQ(ierr);
-  if (J) { ierr = PetscObjectTypeCompare((PetscObject)J,MATMFFD,flag);CHKERRQ(ierr); }
+  CHKERRQ(SNESGetJacobian(snes,&J,0,&jac,0));
+  if (J) CHKERRQ(PetscObjectTypeCompare((PetscObject)J,MATMFFD,flag));
   else if (jac == MatMFFDComputeJacobian) *flag = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -370,7 +370,7 @@ SNESSetUseMFFD(SNES snes,PetscBool flag)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
 
-  ierr = SNESGetUseMFFD(snes,&flg);CHKERRQ(ierr);
+  CHKERRQ(SNESGetUseMFFD(snes,&flg));
   if (flg  &&  flag) PetscFunctionReturn(0);
   if (!flg && !flag) PetscFunctionReturn(0);
   if (flg  && !flag) {
@@ -379,30 +379,30 @@ SNESSetUseMFFD(SNES snes,PetscBool flag)
     PetscFunctionReturn(PETSC_ERR_ARG_WRONGSTATE);
   }
 
-  ierr = SNESGetOptionsPrefix(snes,&prefix);CHKERRQ(ierr);
-  ierr = SNESGetFunction(snes,&r,0,&funP);CHKERRQ(ierr);
-  ierr = SNESGetJacobian(snes,&A,&B,0,&jacP);CHKERRQ(ierr);
+  CHKERRQ(SNESGetOptionsPrefix(snes,&prefix));
+  CHKERRQ(SNESGetFunction(snes,&r,0,&funP));
+  CHKERRQ(SNESGetJacobian(snes,&A,&B,0,&jacP));
   if (!r) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"SNESSetFunction() must be called first");
     PetscFunctionReturn(PETSC_ERR_ARG_WRONGSTATE);
   }
-  ierr = MatCreateSNESMF(snes,&J);CHKERRQ(ierr);
-  ierr = MatSetOptionsPrefix(J,prefix);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(J);CHKERRQ(ierr);
+  CHKERRQ(MatCreateSNESMF(snes,&J));
+  CHKERRQ(MatSetOptionsPrefix(J,prefix));
+  CHKERRQ(MatSetFromOptions(J));
   if (!B) {
     KSP       ksp;
     PC        pc;
     PetscBool shell,python;
-    ierr = SNESSetJacobian(snes,J,J,MatMFFDComputeJacobian,jacP);CHKERRQ(ierr);
-    ierr = SNESGetKSP(snes,&ksp);CHKERRQ(ierr);
-    ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&shell);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)pc,PCPYTHON,&python);CHKERRQ(ierr);
-    if (!shell && !python) { ierr = PCSetType(pc,PCNONE);CHKERRQ(ierr); }
+    CHKERRQ(SNESSetJacobian(snes,J,J,MatMFFDComputeJacobian,jacP));
+    CHKERRQ(SNESGetKSP(snes,&ksp));
+    CHKERRQ(KSPGetPC(ksp,&pc));
+    CHKERRQ(PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&shell));
+    CHKERRQ(PetscObjectTypeCompare((PetscObject)pc,PCPYTHON,&python));
+    if (!shell && !python) CHKERRQ(PCSetType(pc,PCNONE));
   } else {
-    ierr = SNESSetJacobian(snes,J,0,0,0);CHKERRQ(ierr);
+    CHKERRQ(SNESSetJacobian(snes,J,0,0,0));
   }
-  ierr = MatDestroy(&J);CHKERRQ(ierr);
+  CHKERRQ(MatDestroy(&J));
 
   PetscFunctionReturn(0);
 }
@@ -416,7 +416,7 @@ SNESGetUseFDColoring(SNES snes,PetscBool *flag)
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidPointer(flag,2);
   *flag = PETSC_FALSE;
-  ierr = SNESGetJacobian(snes,0,0,&jac,0);CHKERRQ(ierr);
+  CHKERRQ(SNESGetJacobian(snes,0,0,&jac,0));
   if (jac == SNESComputeJacobianDefaultColor) *flag = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -434,7 +434,7 @@ SNESSetUseFDColoring(SNES snes,PetscBool flag)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
 
-  ierr = SNESGetUseFDColoring(snes,&flg);CHKERRQ(ierr);
+  CHKERRQ(SNESGetUseFDColoring(snes,&flg));
   if (flg  &&  flag) PetscFunctionReturn(0);
   if (!flg && !flag) PetscFunctionReturn(0);
   if (flg  && !flag) {
@@ -443,14 +443,14 @@ SNESSetUseFDColoring(SNES snes,PetscBool flag)
     PetscFunctionReturn(PETSC_ERR_ARG_WRONGSTATE);
   }
 
-  ierr = SNESGetFunction(snes,NULL,&fun,&funP);CHKERRQ(ierr);
-  ierr = SNESGetJacobian(snes,&A,&B,&jac,&jacP);CHKERRQ(ierr);
-  ierr = SNESSetJacobian(snes,A,B,SNESComputeJacobianDefaultColor,0);CHKERRQ(ierr);
+  CHKERRQ(SNESGetFunction(snes,NULL,&fun,&funP));
+  CHKERRQ(SNESGetJacobian(snes,&A,&B,&jac,&jacP));
+  CHKERRQ(SNESSetJacobian(snes,A,B,SNESComputeJacobianDefaultColor,0));
   {
     DM     dm;
     DMSNES sdm;
-    ierr = SNESGetDM(snes,&dm);CHKERRQ(ierr);
-    ierr = DMGetDMSNES(dm,&sdm);CHKERRQ(ierr);
+    CHKERRQ(SNESGetDM(snes,&dm));
+    CHKERRQ(DMGetDMSNES(dm,&sdm));
     sdm->jacobianctx = NULL;
   }
   PetscFunctionReturn(0);
@@ -472,15 +472,15 @@ DMDACreateND(MPI_Comm comm,
   PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidPointer(dm,18);
-  ierr = DMDACreate(comm,&da);CHKERRQ(ierr);
-  ierr = DMSetDimension(da,dim);CHKERRQ(ierr);
-  ierr = DMDASetDof(da,dof);CHKERRQ(ierr);
-  ierr = DMDASetSizes(da,M,N,P);CHKERRQ(ierr);
-  ierr = DMDASetNumProcs(da,m,n,p);CHKERRQ(ierr);
-  ierr = DMDASetOwnershipRanges(da,lx,ly,lz);CHKERRQ(ierr);
-  ierr = DMDASetBoundaryType(da,bx,by,bz);CHKERRQ(ierr);
-  ierr = DMDASetStencilType(da,stencil_type);CHKERRQ(ierr);
-  ierr = DMDASetStencilWidth(da,stencil_width);CHKERRQ(ierr);
+  CHKERRQ(DMDACreate(comm,&da));
+  CHKERRQ(DMSetDimension(da,dim));
+  CHKERRQ(DMDASetDof(da,dof));
+  CHKERRQ(DMDASetSizes(da,M,N,P));
+  CHKERRQ(DMDASetNumProcs(da,m,n,p));
+  CHKERRQ(DMDASetOwnershipRanges(da,lx,ly,lz));
+  CHKERRQ(DMDASetBoundaryType(da,bx,by,bz));
+  CHKERRQ(DMDASetStencilType(da,stencil_type));
+  CHKERRQ(DMDASetStencilWidth(da,stencil_width));
   *dm = (DM)da;
   PetscFunctionReturn(0);
 }

@@ -57,23 +57,23 @@ PetscErrorCode VecFischer(Vec X, Vec F, Vec L, Vec U, Vec FB)
   PetscValidHeaderSpecific(U, VEC_CLASSID,4);
   PetscValidHeaderSpecific(FB, VEC_CLASSID,5);
 
-  ierr = VecGetOwnershipRange(X, low, high);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(F, low + 1, high + 1);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(L, low + 2, high + 2);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(U, low + 3, high + 3);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(FB, low + 4, high + 4);CHKERRQ(ierr);
+  CHKERRQ(VecGetOwnershipRange(X, low, high));
+  CHKERRQ(VecGetOwnershipRange(F, low + 1, high + 1));
+  CHKERRQ(VecGetOwnershipRange(L, low + 2, high + 2));
+  CHKERRQ(VecGetOwnershipRange(U, low + 3, high + 3));
+  CHKERRQ(VecGetOwnershipRange(FB, low + 4, high + 4));
 
   for (i = 1; i < 4; ++i) {
     PetscCheckFalse(low[0] != low[i] || high[0] != high[i],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vectors must be identically loaded over processors");
   }
 
-  ierr = VecGetArrayRead(X, &x);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(F, &f);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(L, &l);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-  ierr = VecGetArray(FB, &fb);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(X, &x));
+  CHKERRQ(VecGetArrayRead(F, &f));
+  CHKERRQ(VecGetArrayRead(L, &l));
+  CHKERRQ(VecGetArrayRead(U, &u));
+  CHKERRQ(VecGetArray(FB, &fb));
 
-  ierr = VecGetLocalSize(X, &n);CHKERRQ(ierr);
+  CHKERRQ(VecGetLocalSize(X, &n));
 
   for (i = 0; i < n; ++i) {
     xval = PetscRealPart(x[i]); fval = PetscRealPart(f[i]);
@@ -93,11 +93,11 @@ PetscErrorCode VecFischer(Vec X, Vec F, Vec L, Vec U, Vec FB)
     }
   }
 
-  ierr = VecRestoreArrayRead(X, &x);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(F, &f);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(L, &l);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
-  ierr = VecRestoreArray(FB, &fb);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(X, &x));
+  CHKERRQ(VecRestoreArrayRead(F, &f));
+  CHKERRQ(VecRestoreArrayRead(L, &l));
+  CHKERRQ(VecRestoreArrayRead(U, &u));
+  CHKERRQ(VecRestoreArray(FB, &fb));
   PetscFunctionReturn(0);
 }
 
@@ -158,23 +158,23 @@ PetscErrorCode VecSFischer(Vec X, Vec F, Vec L, Vec U, PetscReal mu, Vec FB)
   PetscValidHeaderSpecific(U, VEC_CLASSID,4);
   PetscValidHeaderSpecific(FB, VEC_CLASSID,6);
 
-  ierr = VecGetOwnershipRange(X, low, high);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(F, low + 1, high + 1);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(L, low + 2, high + 2);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(U, low + 3, high + 3);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(FB, low + 4, high + 4);CHKERRQ(ierr);
+  CHKERRQ(VecGetOwnershipRange(X, low, high));
+  CHKERRQ(VecGetOwnershipRange(F, low + 1, high + 1));
+  CHKERRQ(VecGetOwnershipRange(L, low + 2, high + 2));
+  CHKERRQ(VecGetOwnershipRange(U, low + 3, high + 3));
+  CHKERRQ(VecGetOwnershipRange(FB, low + 4, high + 4));
 
   for (i = 1; i < 4; ++i) {
     PetscCheckFalse(low[0] != low[i] || high[0] != high[i],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Vectors must be identically loaded over processors");
   }
 
-  ierr = VecGetArrayRead(X, &x);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(F, &f);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(L, &l);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(U, &u);CHKERRQ(ierr);
-  ierr = VecGetArray(FB, &fb);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(X, &x));
+  CHKERRQ(VecGetArrayRead(F, &f));
+  CHKERRQ(VecGetArrayRead(L, &l));
+  CHKERRQ(VecGetArrayRead(U, &u));
+  CHKERRQ(VecGetArray(FB, &fb));
 
-  ierr = VecGetLocalSize(X, &n);CHKERRQ(ierr);
+  CHKERRQ(VecGetLocalSize(X, &n));
 
   for (i = 0; i < n; ++i) {
     xval = PetscRealPart(*x++); fval = PetscRealPart(*f++);
@@ -195,11 +195,11 @@ PetscErrorCode VecSFischer(Vec X, Vec F, Vec L, Vec U, PetscReal mu, Vec FB)
   }
   x -= n; f -= n; l -=n; u -= n; fb -= n;
 
-  ierr = VecRestoreArrayRead(X, &x);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(F, &f);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(L, &l);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(U, &u);CHKERRQ(ierr);
-  ierr = VecRestoreArray(FB, &fb);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(X, &x));
+  CHKERRQ(VecRestoreArrayRead(F, &f));
+  CHKERRQ(VecRestoreArrayRead(L, &l));
+  CHKERRQ(VecRestoreArrayRead(U, &u));
+  CHKERRQ(VecRestoreArray(FB, &fb));
   PetscFunctionReturn(0);
 }
 
@@ -245,15 +245,15 @@ PetscErrorCode MatDFischer(Mat jac, Vec X, Vec Con, Vec XL, Vec XU, Vec T1, Vec 
   PetscReal          ai,bi,ci,di,ei;
 
   PetscFunctionBegin;
-  ierr = VecGetLocalSize(X,&nn);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(Con,&f);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(XL,&l);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(XU,&u);CHKERRQ(ierr);
-  ierr = VecGetArray(Da,&da);CHKERRQ(ierr);
-  ierr = VecGetArray(Db,&db);CHKERRQ(ierr);
-  ierr = VecGetArray(T1,&t1);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(T2,&t2);CHKERRQ(ierr);
+  CHKERRQ(VecGetLocalSize(X,&nn));
+  CHKERRQ(VecGetArrayRead(X,&x));
+  CHKERRQ(VecGetArrayRead(Con,&f));
+  CHKERRQ(VecGetArrayRead(XL,&l));
+  CHKERRQ(VecGetArrayRead(XU,&u));
+  CHKERRQ(VecGetArray(Da,&da));
+  CHKERRQ(VecGetArray(Db,&db));
+  CHKERRQ(VecGetArray(T1,&t1));
+  CHKERRQ(VecGetArrayRead(T2,&t2));
 
   for (i = 0; i < nn; i++) {
     da[i] = 0.0;
@@ -273,10 +273,10 @@ PetscErrorCode MatDFischer(Mat jac, Vec X, Vec Con, Vec XL, Vec XU, Vec T1, Vec 
     }
   }
 
-  ierr = VecRestoreArray(T1,&t1);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(T2,&t2);CHKERRQ(ierr);
-  ierr = MatMult(jac,T1,T2);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(T2,&t2);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(T1,&t1));
+  CHKERRQ(VecRestoreArrayRead(T2,&t2));
+  CHKERRQ(MatMult(jac,T1,T2));
+  CHKERRQ(VecGetArrayRead(T2,&t2));
 
   for (i = 0; i < nn; i++) {
     if ((PetscRealPart(l[i]) <= PETSC_NINFINITY) && (PetscRealPart(u[i]) >= PETSC_INFINITY)) {
@@ -348,13 +348,13 @@ PetscErrorCode MatDFischer(Mat jac, Vec X, Vec Con, Vec XL, Vec XU, Vec T1, Vec 
     }
   }
 
-  ierr = VecRestoreArray(Da,&da);CHKERRQ(ierr);
-  ierr = VecRestoreArray(Db,&db);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(Con,&f);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(XL,&l);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(XU,&u);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(T2,&t2);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(Da,&da));
+  CHKERRQ(VecRestoreArray(Db,&db));
+  CHKERRQ(VecRestoreArrayRead(X,&x));
+  CHKERRQ(VecRestoreArrayRead(Con,&f));
+  CHKERRQ(VecRestoreArrayRead(XL,&l));
+  CHKERRQ(VecRestoreArrayRead(XU,&u));
+  CHKERRQ(VecRestoreArrayRead(T2,&t2));
   PetscFunctionReturn(0);
 }
 
@@ -393,17 +393,17 @@ PetscErrorCode MatDSFischer(Mat jac, Vec X, Vec Con,Vec XL, Vec XU, PetscReal mu
 
   PetscFunctionBegin;
   if (PetscAbsReal(mu) <= PETSC_MACHINE_EPSILON) {
-    ierr = VecZeroEntries(Dm);CHKERRQ(ierr);
-    ierr = MatDFischer(jac, X, Con, XL, XU, T1, T2, Da, Db);CHKERRQ(ierr);
+    CHKERRQ(VecZeroEntries(Dm));
+    CHKERRQ(MatDFischer(jac, X, Con, XL, XU, T1, T2, Da, Db));
   } else {
-    ierr = VecGetLocalSize(X,&nn);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(X,&x);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(Con,&f);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(XL,&l);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(XU,&u);CHKERRQ(ierr);
-    ierr = VecGetArray(Da,&da);CHKERRQ(ierr);
-    ierr = VecGetArray(Db,&db);CHKERRQ(ierr);
-    ierr = VecGetArray(Dm,&dm);CHKERRQ(ierr);
+    CHKERRQ(VecGetLocalSize(X,&nn));
+    CHKERRQ(VecGetArrayRead(X,&x));
+    CHKERRQ(VecGetArrayRead(Con,&f));
+    CHKERRQ(VecGetArrayRead(XL,&l));
+    CHKERRQ(VecGetArrayRead(XU,&u));
+    CHKERRQ(VecGetArray(Da,&da));
+    CHKERRQ(VecGetArray(Db,&db));
+    CHKERRQ(VecGetArray(Dm,&dm));
 
     for (i = 0; i < nn; ++i) {
       if ((PetscRealPart(l[i]) <= PETSC_NINFINITY) && (PetscRealPart(u[i]) >= PETSC_INFINITY)) {
@@ -453,13 +453,13 @@ PetscErrorCode MatDSFischer(Mat jac, Vec X, Vec Con,Vec XL, Vec XU, PetscReal mu
       }
     }
 
-    ierr = VecRestoreArrayRead(X,&x);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(Con,&f);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(XL,&l);CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(XU,&u);CHKERRQ(ierr);
-    ierr = VecRestoreArray(Da,&da);CHKERRQ(ierr);
-    ierr = VecRestoreArray(Db,&db);CHKERRQ(ierr);
-    ierr = VecRestoreArray(Dm,&dm);CHKERRQ(ierr);
+    CHKERRQ(VecRestoreArrayRead(X,&x));
+    CHKERRQ(VecRestoreArrayRead(Con,&f));
+    CHKERRQ(VecRestoreArrayRead(XL,&l));
+    CHKERRQ(VecRestoreArrayRead(XU,&u));
+    CHKERRQ(VecRestoreArray(Da,&da));
+    CHKERRQ(VecRestoreArray(Db,&db));
+    CHKERRQ(VecRestoreArray(Dm,&dm));
   }
   PetscFunctionReturn(0);
 }
@@ -510,9 +510,9 @@ PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
   PetscScalar   *inarray, *outarray;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayPair(in, out, &inarray, &outarray);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(in, &nlocal);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(in, &mlocal);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayPair(in, out, &inarray, &outarray));
+  CHKERRQ(VecGetLocalSize(in, &nlocal));
+  CHKERRQ(VecGetLocalSize(in, &mlocal));
 
   PetscCheckFalse(nlocal != mlocal,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Input and output vectors need to be of same size.");
   PetscCheckFalse(lb == ub,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Lower bound and upper bound need to be different.");
@@ -526,6 +526,6 @@ PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
     for (i=0; i<nlocal; i++) outarray[i] = ST_InternalPP(inarray[i], lb, ub);
   }
 
-  ierr = VecRestoreArrayPair(in, out, &inarray, &outarray);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayPair(in, out, &inarray, &outarray));
   PetscFunctionReturn(0);
 }

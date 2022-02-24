@@ -23,10 +23,10 @@ PetscErrorCode PetscDrawXiFontFixed(PetscDraw_X *XBWin,int w,int h,PetscDrawXiFo
   PetscErrorCode         ierr;
 
   PetscFunctionBegin;
-  if (!curfont) { ierr = PetscDrawXiInitFonts(XBWin);CHKERRQ(ierr);}
-  ierr = PetscNew(&font);CHKERRQ(ierr);
-  ierr = PetscDrawXiMatchFontSize(font,w,h);CHKERRQ(ierr);
-  ierr = PetscDrawXiLoadFont(XBWin,font);CHKERRQ(ierr);
+  if (!curfont) CHKERRQ(PetscDrawXiInitFonts(XBWin));
+  CHKERRQ(PetscNew(&font));
+  CHKERRQ(PetscDrawXiMatchFontSize(font,w,h));
+  CHKERRQ(PetscDrawXiLoadFont(XBWin,font));
 
   curfont  = font;
   *outfont = curfont;
@@ -102,7 +102,7 @@ static PetscErrorCode PetscDrawXiInitFonts(PetscDraw_X *XBWin)
       PetscErrorCode ierr;
       size_t         len;
 
-      ierr = PetscStrlen(names[i],&len);CHKERRQ(ierr);
+      CHKERRQ(PetscStrlen(names[i],&len));
       if (len != 2) continue;
       names[i][1]       = '\0';
       nfonts[j].w       = info[i].max_bounds.width;

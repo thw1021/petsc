@@ -8,7 +8,7 @@
     PetscErrorCode _7_ierr;                                             \
     PetscInt b1[2],b2[2];                                               \
     b1[0] = -b; b1[1] = b;                                              \
-    _7_ierr = MPIU_Allreduce(b1,b2,2,MPIU_INT,MPI_MAX,a);CHKERRMPI(_7_ierr); \
+    CHKERRMPI(MPIU_Allreduce(b1,b2,2,MPIU_INT,MPI_MAX,a)); \
     PetscCheckFalse(-b2[0] != b2[1],a,PETSC_ERR_ARG_WRONG,"Int value must be same on all processes, argument # %d",c); \
   } while (0)
 
@@ -17,7 +17,7 @@
     PetscErrorCode _7_ierr;                                             \
     PetscMPIInt b1[2],b2[2];                                            \
     b1[0] = -(PetscMPIInt)b; b1[1] = (PetscMPIInt)b;                    \
-    _7_ierr = MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,a);CHKERRMPI(_7_ierr); \
+    CHKERRMPI(MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,a)); \
     PetscCheckFalse(-b2[0] != b2[1],a,PETSC_ERR_ARG_WRONG,"Bool value must be same on all processes, argument # %d",c); \
   } while (0)
 
@@ -27,7 +27,7 @@
     PetscReal b1[3],b2[3];                                              \
     if (PetscIsNanReal(b)) {b1[2] = 1;} else {b1[2] = 0;};              \
     b1[0] = -b; b1[1] = b;                                              \
-    _7_ierr = MPI_Allreduce(b1,b2,3,MPIU_REAL,MPIU_MAX,a);CHKERRMPI(_7_ierr); \
+    CHKERRMPI(MPI_Allreduce(b1,b2,3,MPIU_REAL,MPIU_MAX,a)); \
     PetscCheckFalse(!(b2[2] > 0) && !PetscEqualReal(-b2[0],b2[1]),a,PETSC_ERR_ARG_WRONG,"Real value must be same on all processes, argument # %d",c); \
   } while (0)
 
@@ -66,19 +66,19 @@ PetscErrorCode TSHistoryUpdate(TSHistory tsh, PetscInt id, PetscReal time)
   PetscValidLogicalCollectiveRealComm(tsh->comm,time,3);
   if (tsh->n == tsh->c) { /* reallocation */
     tsh->c += tsh->s;
-    ierr = PetscRealloc(tsh->c*sizeof(*tsh->hist),&tsh->hist);CHKERRQ(ierr);
-    ierr = PetscRealloc(tsh->c*sizeof(*tsh->hist_id),&tsh->hist_id);CHKERRQ(ierr);
+    CHKERRQ(PetscRealloc(tsh->c*sizeof(*tsh->hist),&tsh->hist));
+    CHKERRQ(PetscRealloc(tsh->c*sizeof(*tsh->hist_id),&tsh->hist_id));
   }
   tsh->sorted = (PetscBool)(tsh->sorted && (tsh->n ? time >= tsh->hist[tsh->n-1] : PETSC_TRUE));
 #if defined(PETSC_USE_DEBUG)
   if (tsh->n) { /* id should be unique */
     PetscInt loc,*ids;
 
-    ierr = PetscMalloc1(tsh->n,&ids);CHKERRQ(ierr);
-    ierr = PetscArraycpy(ids,tsh->hist_id,tsh->n);CHKERRQ(ierr);
-    ierr = PetscSortInt(tsh->n,ids);CHKERRQ(ierr);
-    ierr = PetscFindInt(id,tsh->n,ids,&loc);CHKERRQ(ierr);
-    ierr = PetscFree(ids);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(tsh->n,&ids));
+    CHKERRQ(PetscArraycpy(ids,tsh->hist_id,tsh->n));
+    CHKERRQ(PetscSortInt(tsh->n,ids));
+    CHKERRQ(PetscFindInt(id,tsh->n,ids,&loc));
+    CHKERRQ(PetscFree(ids));
     PetscCheckFalse(loc >=0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"History id should be unique");
   }
 #endif
@@ -98,7 +98,7 @@ PetscErrorCode TSHistoryGetTime(TSHistory tsh, PetscBool backward, PetscInt step
   if (!tsh->sorted) {
     PetscErrorCode ierr;
 
-    ierr = PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id);CHKERRQ(ierr);
+    CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
   }
   PetscCheck(step >= 0 && step < (PetscInt)tsh->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %D does not match any in history [0,%D]",step,(PetscInt)tsh->n);
@@ -117,7 +117,7 @@ PetscErrorCode TSHistoryGetTimeStep(TSHistory tsh, PetscBool backward, PetscInt 
   if (!tsh->sorted) {
     PetscErrorCode ierr;
 
-    ierr = PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id);CHKERRQ(ierr);
+    CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
   }
   PetscCheck(step >= 0 && step <= (PetscInt)tsh->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %D does not match any in history [0,%D]",step,(PetscInt)tsh->n);
@@ -134,10 +134,10 @@ PetscErrorCode TSHistoryGetLocFromTime(TSHistory tsh, PetscReal time, PetscInt *
   PetscValidLogicalCollectiveRealComm(tsh->comm,time,2);
   PetscValidIntPointer(loc,3);
   if (!tsh->sorted) {
-    ierr = PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id);CHKERRQ(ierr);
+    CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
   }
-  ierr = PetscFindReal(time,tsh->n,tsh->hist,PETSC_SMALL,loc);CHKERRQ(ierr);
+  CHKERRQ(PetscFindReal(time,tsh->n,tsh->hist,PETSC_SMALL,loc));
   PetscFunctionReturn(0);
 }
 
@@ -150,18 +150,18 @@ PetscErrorCode TSHistorySetHistory(TSHistory tsh, PetscInt n, PetscReal hist[], 
   PetscValidLogicalCollectiveIntComm(tsh->comm,n,2);
   if (n < 0) SETERRQ(tsh->comm,PETSC_ERR_ARG_OUTOFRANGE,"Cannot request a negative size for history storage");
   if (n) PetscValidRealPointer(hist,3);
-  ierr = PetscFree(tsh->hist);CHKERRQ(ierr);
-  ierr = PetscFree(tsh->hist_id);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(tsh->hist));
+  CHKERRQ(PetscFree(tsh->hist_id));
   tsh->n = (size_t) n;
   tsh->c = (size_t) n;
-  ierr = PetscMalloc1(tsh->n,&tsh->hist);CHKERRQ(ierr);
-  ierr = PetscMalloc1(tsh->n,&tsh->hist_id);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(tsh->n,&tsh->hist));
+  CHKERRQ(PetscMalloc1(tsh->n,&tsh->hist_id));
   for (i = 0; i < (PetscInt)tsh->n; i++) {
     tsh->hist[i]    = hist[i];
     tsh->hist_id[i] = hist_id ? hist_id[i] : i;
   }
   if (!sorted) {
-    ierr = PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id);CHKERRQ(ierr);
+    CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
   }
   tsh->sorted = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -183,10 +183,10 @@ PetscErrorCode TSHistoryDestroy(TSHistory *tsh)
 
   PetscFunctionBegin;
   if (!*tsh) PetscFunctionReturn(0);
-  ierr = PetscFree((*tsh)->hist);CHKERRQ(ierr);
-  ierr = PetscFree((*tsh)->hist_id);CHKERRQ(ierr);
-  ierr = PetscCommDestroy(&((*tsh)->comm));CHKERRQ(ierr);
-  ierr = PetscFree((*tsh));CHKERRQ(ierr);
+  CHKERRQ(PetscFree((*tsh)->hist));
+  CHKERRQ(PetscFree((*tsh)->hist_id));
+  CHKERRQ(PetscCommDestroy(&((*tsh)->comm)));
+  CHKERRQ(PetscFree((*tsh)));
   *tsh = NULL;
   PetscFunctionReturn(0);
 }
@@ -199,15 +199,15 @@ PetscErrorCode TSHistoryCreate(MPI_Comm comm, TSHistory *hst)
   PetscFunctionBegin;
   PetscValidPointer(hst,2);
   *hst = NULL;
-  ierr = PetscNew(&tsh);CHKERRQ(ierr);
-  ierr = PetscCommDuplicate(comm,&tsh->comm,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(&tsh));
+  CHKERRQ(PetscCommDuplicate(comm,&tsh->comm,NULL));
 
   tsh->c      = 1024; /* capacity */
   tsh->s      = 1024; /* reallocation size */
   tsh->sorted = PETSC_TRUE;
 
-  ierr = PetscMalloc1(tsh->c,&tsh->hist);CHKERRQ(ierr);
-  ierr = PetscMalloc1(tsh->c,&tsh->hist_id);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(tsh->c,&tsh->hist));
+  CHKERRQ(PetscMalloc1(tsh->c,&tsh->hist_id));
   *hst = tsh;
   PetscFunctionReturn(0);
 }

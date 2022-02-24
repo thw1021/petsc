@@ -29,10 +29,10 @@ PetscErrorCode DMGetCeed(DM dm, Ceed *ceed)
     char        ceedresource[PETSC_MAX_PATH_LEN]; /* libCEED resource specifier */
     const char *prefix;
 
-    ierr = PetscStrcpy(ceedresource, "/cpu/self");CHKERRQ(ierr);
-    ierr = PetscObjectGetOptionsPrefix((PetscObject) dm, &prefix);CHKERRQ(ierr);
-    ierr = PetscOptionsGetString(NULL, prefix, "-dm_ceed", ceedresource, sizeof(ceedresource), NULL);CHKERRQ(ierr);
-    ierr = CeedInit(ceedresource, &dm->ceed);CHKERRQ_CEED(ierr);
+    CHKERRQ(PetscStrcpy(ceedresource, "/cpu/self"));
+    CHKERRQ(PetscObjectGetOptionsPrefix((PetscObject) dm, &prefix));
+    CHKERRQ(PetscOptionsGetString(NULL, prefix, "-dm_ceed", ceedresource, sizeof(ceedresource), NULL));
+    CHKERRQ_CEED(CeedInit(ceedresource, &dm->ceed));
   }
   *ceed = dm->ceed;
   PetscFunctionReturn(0);

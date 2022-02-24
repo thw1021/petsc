@@ -60,7 +60,7 @@ static PetscErrorCode ourshellapplyctx(PC pc,Vec x,Vec y)
 {
   PetscErrorCode ierr = 0;
   void           *ctx;
-  ierr = PCShellGetContext(pc,&ctx);CHKERRQ(ierr);
+  CHKERRQ(PCShellGetContext(pc,&ctx));
   (*(void (*)(PC*,void*,Vec*,Vec*,PetscErrorCode*))(((PetscObject)pc)->fortran_func_pointers[0]))(&pc,ctx,&x,&y,&ierr);CHKERRQ(ierr);
   return 0;
 }
@@ -97,7 +97,7 @@ static PetscErrorCode ourshellsetupctx(PC pc)
 {
   PetscErrorCode ierr = 0;
   void           *ctx;
-  ierr = PCShellGetContext(pc,&ctx);CHKERRQ(ierr);
+  CHKERRQ(PCShellGetContext(pc,&ctx));
   (*(void (*)(PC*,void*,PetscErrorCode*))(((PetscObject)pc)->fortran_func_pointers[4]))(&pc,ctx,&ierr);CHKERRQ(ierr);
   return 0;
 }

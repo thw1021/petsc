@@ -15,7 +15,7 @@ PetscErrorCode  PetscRandomFinalizePackage(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&PetscRandomList);CHKERRQ(ierr);
+  CHKERRQ(PetscFunctionListDestroy(&PetscRandomList));
   PetscRandomPackageInitialized = PETSC_FALSE;
   PetscRandomRegisterAllCalled  = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -40,24 +40,23 @@ PetscErrorCode  PetscRandomInitializePackage(void)
   if (PetscRandomPackageInitialized) PetscFunctionReturn(0);
   PetscRandomPackageInitialized = PETSC_TRUE;
   /* Register Class */
-  ierr = PetscClassIdRegister("PetscRandom",&PETSC_RANDOM_CLASSID);CHKERRQ(ierr);
+  CHKERRQ(PetscClassIdRegister("PetscRandom",&PETSC_RANDOM_CLASSID));
   /* Register Constructors */
-  ierr = PetscRandomRegisterAll();CHKERRQ(ierr);
+  CHKERRQ(PetscRandomRegisterAll());
   /* Process Info */
   {
     PetscClassId  classids[1];
 
     classids[0] = PETSC_RANDOM_CLASSID;
-    ierr = PetscInfoProcessClass("random", 1, classids);CHKERRQ(ierr);
+    CHKERRQ(PetscInfoProcessClass("random", 1, classids));
   }
   /* Process summary exclusions */
-  ierr = PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetString(NULL,NULL,"-log_exclude",logList,sizeof(logList),&opt));
   if (opt) {
-    ierr = PetscStrInList("random",logList,',',&pkg);CHKERRQ(ierr);
-    if (pkg) {ierr = PetscLogEventExcludeClass(PETSC_RANDOM_CLASSID);CHKERRQ(ierr);}
+    CHKERRQ(PetscStrInList("random",logList,',',&pkg));
+    if (pkg) CHKERRQ(PetscLogEventExcludeClass(PETSC_RANDOM_CLASSID));
   }
   /* Register package finalizer */
-  ierr = PetscRegisterFinalize(PetscRandomFinalizePackage);CHKERRQ(ierr);
+  CHKERRQ(PetscRegisterFinalize(PetscRandomFinalizePackage));
   PetscFunctionReturn(0);
 }
-
