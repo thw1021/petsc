@@ -449,17 +449,22 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,const
   sf->nleaves = nleaves;
 
   if (nleaves && ilocal) {
-    PetscInt i;
-    PetscInt minleaf = PETSC_MAX_INT;
-    PetscInt maxleaf = PETSC_MIN_INT;
-    int      contiguous = 1;
-    for (i=0; i<nleaves; i++) {
-      minleaf = PetscMin(minleaf,ilocal[i]);
-      maxleaf = PetscMax(maxleaf,ilocal[i]);
-      contiguous &= (ilocal[i] == i);
-    }
-    sf->minleaf = minleaf;
-    sf->maxleaf = maxleaf;
+    PetscInt *ilocal_sorted;
+    PetscBool unique;
+    PetscBool contiguous;
+
+    /* TODO We could sort ilocal along with iremote, we would need something like PetscSortIntWithArray() but for PetscSFNode.
+    We could then replace sf->mine and sf->remote with the sorted versions and get rid of localmode, remotemode, sf->mine_alloc, sf->remote_alloc */
+    ierr = PetscMalloc1(nleaves,&ilocal_sorted);CHKERRQ(ierr);
+    ierr = PetscArraycpy(ilocal_sorted, ilocal, nleaves);CHKERRQ(ierr);
+    ierr = PetscSortInt(nleaves, ilocal_sorted);CHKERRQ(ierr);
+    ierr = PetscSortedCheckDupsInt(nleaves, ilocal_sorted, &unique);CHKERRQ(ierr);
+    unique = PetscNot(unique);
+    PetscCheck(sf->allow_multi_leaves || unique,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Input ilocal has duplicate entries which is not allowed for this PetscSF");
+    contiguous = (PetscBool) (unique && ilocal_sorted[0] == 0 && ilocal_sorted[nleaves-1] == nleaves-1);
+    sf->minleaf = ilocal_sorted[0];
+    sf->maxleaf = ilocal_sorted[nleaves-1];
+    ierr = PetscFree(ilocal_sorted);CHKERRQ(ierr);
     if (contiguous) {
       if (localmode == PETSC_OWN_POINTER) {
         ierr = PetscFree(ilocal);CHKERRQ(ierr);
