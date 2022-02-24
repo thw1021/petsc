@@ -18,12 +18,10 @@
 @*/
 PetscErrorCode  KSPPythonSetType(KSP ksp,const char pyname[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidCharPointer(pyname,2);
-  ierr = PetscTryMethod(ksp,"KSPPythonSetType_C",(KSP, const char[]),(ksp,pyname));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(ksp,"KSPPythonSetType_C",(KSP, const char[]),(ksp,pyname)));
   PetscFunctionReturn(0);
 }
-
