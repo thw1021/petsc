@@ -49,7 +49,6 @@ PetscErrorCode TSTrajectoryReconstruct_Private(TSTrajectory tj,TS ts,PetscReal t
   const PetscReal *tshhist;
   const PetscInt  *tshhist_id;
   PetscInt        id, cnt, i, tshn;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSHistoryGetLocFromTime(tsh,t,&id));

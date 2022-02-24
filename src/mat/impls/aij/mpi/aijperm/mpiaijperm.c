@@ -84,7 +84,6 @@
 @*/
 PetscErrorCode  MatCreateMPIAIJPERM(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -104,7 +103,6 @@ PetscErrorCode  MatCreateMPIAIJPERM(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt
 PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJPERM(Mat B,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])
 {
   Mat_MPIAIJ     *b = (Mat_MPIAIJ*)B->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMPIAIJSetPreallocation_MPIAIJ(B,d_nz,d_nnz,o_nz,o_nnz));
@@ -115,7 +113,6 @@ PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJPERM(Mat B,PetscInt d_nz,const P
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJPERM(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat            B = *newmat;
 
   PetscFunctionBegin;
@@ -131,7 +128,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJPERM(Mat A,MatType type,MatR
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJPERM(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(A,MATMPIAIJ));

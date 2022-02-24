@@ -11,7 +11,6 @@ typedef struct  {
 static PetscErrorCode PetscViewerDestroy_String(PetscViewer viewer)
 {
   PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (vstr->ownstring) {
@@ -42,7 +41,6 @@ PetscErrorCode  PetscViewerStringSPrintf(PetscViewer viewer,const char format[],
   va_list            Argp;
   size_t             fullLength;
   size_t             shift,cshift;
-  PetscErrorCode     ierr;
   PetscBool          isstring;
   char               tmp[4096];
   PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
@@ -90,7 +88,6 @@ PetscErrorCode  PetscViewerStringSPrintf(PetscViewer viewer,const char format[],
 @*/
 PetscErrorCode  PetscViewerStringOpen(MPI_Comm comm,char string[],size_t len,PetscViewer *lab)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,lab));
@@ -102,7 +99,6 @@ PetscErrorCode  PetscViewerStringOpen(MPI_Comm comm,char string[],size_t len,Pet
 PetscErrorCode PetscViewerGetSubViewer_String(PetscViewer viewer,MPI_Comm comm,PetscViewer *sviewer)
 {
   PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerStringOpen(PETSC_COMM_SELF,vstr->head,vstr->maxlen-vstr->curlen,sviewer));
@@ -111,7 +107,6 @@ PetscErrorCode PetscViewerGetSubViewer_String(PetscViewer viewer,MPI_Comm comm,P
 
 PetscErrorCode PetscViewerRestoreSubViewer_String(PetscViewer viewer,MPI_Comm comm,PetscViewer *sviewer)
 {
-  PetscErrorCode     ierr;
   PetscViewer_String *iviewer = (PetscViewer_String*)(*sviewer)->data;
   PetscViewer_String *vstr    = (PetscViewer_String*)viewer->data;
 
@@ -136,7 +131,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_String(PetscViewer v)
 {
   PetscViewer_String *vstr;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   v->ops->destroy          = PetscViewerDestroy_String;
@@ -173,7 +167,6 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_String(PetscViewer v)
 PetscErrorCode  PetscViewerStringGetStringRead(PetscViewer viewer,const char *string[],size_t *len)
 {
   PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
   PetscBool          isstring;
 
   PetscFunctionBegin;
@@ -209,7 +202,6 @@ PetscErrorCode  PetscViewerStringGetStringRead(PetscViewer viewer,const char *st
 PetscErrorCode  PetscViewerStringSetString(PetscViewer viewer,char string[],size_t len)
 {
   PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
   PetscBool          isstring;
 
   PetscFunctionBegin;
@@ -246,7 +238,6 @@ PetscErrorCode  PetscViewerStringSetString(PetscViewer viewer,char string[],size
 PetscErrorCode  PetscViewerStringSetOwnString(PetscViewer viewer)
 {
   PetscViewer_String *vstr = (PetscViewer_String*)viewer->data;
-  PetscErrorCode     ierr;
   PetscBool          isstring;
 
   PetscFunctionBegin;

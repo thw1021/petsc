@@ -6,7 +6,6 @@ const char *const SNESFASTypes[] = {"MULTIPLICATIVE","ADDITIVE","FULL","KASKADE"
 static PetscErrorCode SNESReset_FAS(SNES snes)
 {
   SNES_FAS       *fas = (SNES_FAS*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESDestroy(&fas->smoothu));
@@ -24,7 +23,6 @@ static PetscErrorCode SNESReset_FAS(SNES snes)
 static PetscErrorCode SNESDestroy_FAS(SNES snes)
 {
   SNES_FAS       *fas = (SNES_FAS*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* recursively resets and then destroys */
@@ -41,7 +39,6 @@ static PetscErrorCode SNESFASSetUpLineSearch_Private(SNES snes, SNES smooth)
   void           *lsprectx,*lspostctx;
   PetscErrorCode (*precheck)(SNESLineSearch,Vec,Vec,PetscBool*,void*);
   PetscErrorCode (*postcheck)(SNESLineSearch,Vec,Vec,Vec,PetscBool*,PetscBool*,void*);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!snes->linesearch) PetscFunctionReturn(0);
@@ -58,7 +55,6 @@ static PetscErrorCode SNESFASSetUpLineSearch_Private(SNES snes, SNES smooth)
 static PetscErrorCode SNESFASCycleSetUpSmoother_Private(SNES snes, SNES smooth)
 {
   SNES_FAS       *fas = (SNES_FAS*) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectCopyFortranFunctionPointers((PetscObject)snes, (PetscObject)smooth));
@@ -81,7 +77,6 @@ static PetscErrorCode SNESFASCycleSetUpSmoother_Private(SNES snes, SNES smooth)
 static PetscErrorCode SNESSetUp_FAS(SNES snes)
 {
   SNES_FAS       *fas = (SNES_FAS*) snes->data;
-  PetscErrorCode ierr;
   PetscInt       dm_levels;
   SNES           next;
   PetscBool      isFine, hasCreateRestriction, hasCreateInjection;
@@ -197,7 +192,6 @@ static PetscErrorCode SNESSetFromOptions_FAS(PetscOptionItems *PetscOptionsObjec
   SNES_FAS       *fas   = (SNES_FAS*) snes->data;
   PetscInt       levels = 1;
   PetscBool      flg    = PETSC_FALSE, upflg = PETSC_FALSE, downflg = PETSC_FALSE, monflg = PETSC_FALSE, galerkinflg = PETSC_FALSE,continuationflg = PETSC_FALSE;
-  PetscErrorCode ierr;
   SNESFASType    fastype;
   const char     *optionsprefix;
   SNESLineSearch linesearch;
@@ -297,7 +291,6 @@ static PetscErrorCode SNESView_FAS(SNES snes, PetscViewer viewer)
   SNES_FAS       *fas = (SNES_FAS*) snes->data;
   PetscBool      isFine,iascii,isdraw;
   PetscInt       i;
-  PetscErrorCode ierr;
   SNES           smoothu, smoothd, levelsnes;
 
   PetscFunctionBegin;
@@ -378,7 +371,6 @@ Defines the action of the downsmoother
  */
 static PetscErrorCode SNESFASDownSmooth_Private(SNES snes, Vec B, Vec X, Vec F, PetscReal *fnorm)
 {
-  PetscErrorCode      ierr;
   SNESConvergedReason reason;
   Vec                 FPC;
   SNES                smoothd;
@@ -413,7 +405,6 @@ Defines the action of the upsmoother
  */
 static PetscErrorCode SNESFASUpSmooth_Private(SNES snes, Vec B, Vec X, Vec F, PetscReal *fnorm)
 {
-  PetscErrorCode      ierr;
   SNESConvergedReason reason;
   Vec                 FPC;
   SNES                smoothu;
@@ -458,7 +449,6 @@ static PetscErrorCode SNESFASUpSmooth_Private(SNES snes, Vec B, Vec X, Vec F, Pe
 @*/
 PetscErrorCode SNESFASCreateCoarseVec(SNES snes,Vec *Xcoarse)
 {
-  PetscErrorCode ierr;
   SNES_FAS       *fas;
 
   PetscFunctionBegin;
@@ -491,7 +481,6 @@ PetscErrorCode SNESFASCreateCoarseVec(SNES snes,Vec *Xcoarse)
 @*/
 PetscErrorCode SNESFASRestrict(SNES fine,Vec Xfine,Vec Xcoarse)
 {
-  PetscErrorCode ierr;
   SNES_FAS       *fas;
 
   PetscFunctionBegin;
@@ -519,7 +508,6 @@ interpolated solution: x^f = I x^c (total solution interpolation
  */
 static PetscErrorCode SNESFASInterpolatedCoarseSolution(SNES snes, Vec X, Vec X_new)
 {
-  PetscErrorCode      ierr;
   Vec                 X_c, B_c;
   SNESConvergedReason reason;
   SNES                next;
@@ -582,7 +570,6 @@ b^c = F^c(Rx) - R(F(x) - b)
  */
 PetscErrorCode SNESFASCoarseCorrection(SNES snes, Vec X, Vec F, Vec X_new)
 {
-  PetscErrorCode      ierr;
   Vec                 X_c, Xo_c, F_c, B_c;
   SNESConvergedReason reason;
   SNES                next;
@@ -659,7 +646,6 @@ static PetscErrorCode SNESFASCycle_Additive(SNES snes, Vec X)
 {
   Vec                  F, B, Xhat;
   Vec                  X_c, Xo_c, F_c, B_c;
-  PetscErrorCode       ierr;
   SNESConvergedReason  reason;
   PetscReal            xnorm, fnorm, ynorm;
   SNESLineSearchReason lsresult;
@@ -751,7 +737,6 @@ x = x + I(x^c - Rx)
 static PetscErrorCode SNESFASCycle_Multiplicative(SNES snes, Vec X)
 {
 
-  PetscErrorCode ierr;
   Vec            F,B;
   SNES           next;
 
@@ -773,7 +758,6 @@ static PetscErrorCode SNESFASCycleSetupPhase_Full(SNES snes)
   SNES           next;
   SNES_FAS       *fas = (SNES_FAS*)snes->data;
   PetscBool      isFine;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* pre-smooth -- just update using the pre-smoother */
@@ -786,7 +770,6 @@ static PetscErrorCode SNESFASCycleSetupPhase_Full(SNES snes)
 
 static PetscErrorCode SNESFASCycle_Full(SNES snes, Vec X)
 {
-  PetscErrorCode ierr;
   Vec            F,B;
   SNES_FAS       *fas = (SNES_FAS*)snes->data;
   PetscBool      isFine;
@@ -837,7 +820,6 @@ static PetscErrorCode SNESFASCycle_Full(SNES snes, Vec X)
 
 static PetscErrorCode SNESFASCycle_Kaskade(SNES snes, Vec X)
 {
-  PetscErrorCode ierr;
   Vec            F,B;
   SNES           next;
 
@@ -865,7 +847,6 @@ const char SNESCitation[] = "@techreport{pbmkbsxt2012,\n"
 
 static PetscErrorCode SNESSolve_FAS(SNES snes)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   Vec            X, F;
   PetscReal      fnorm;
@@ -994,7 +975,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_FAS(SNES snes)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   snes->ops->destroy        = SNESDestroy_FAS;

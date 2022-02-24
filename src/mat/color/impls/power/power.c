@@ -2,7 +2,6 @@
 
 static PetscErrorCode MatColoringApply_Power(MatColoring mc,ISColoring *iscoloring)
 {
-  PetscErrorCode  ierr;
   Mat             m = mc->mat,mp,ms;
   MatColoring     imc;
   PetscInt        i;

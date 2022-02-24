@@ -42,7 +42,6 @@ static PetscErrorCode PetscSplitReductionApply(PetscSplitReduction*);
 */
 static PetscErrorCode  PetscSplitReductionCreate(MPI_Comm comm,PetscSplitReduction **sr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(sr));
@@ -115,7 +114,6 @@ PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void *in,void *out,PetscMPIIn
 @*/
 PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm comm)
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
 
   PetscFunctionBegin;
@@ -164,7 +162,6 @@ PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm comm)
 
 PetscErrorCode PetscSplitReductionEnd(PetscSplitReduction *sr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (sr->state) {
@@ -195,7 +192,6 @@ PetscErrorCode PetscSplitReductionEnd(PetscSplitReduction *sr)
 */
 static PetscErrorCode PetscSplitReductionApply(PetscSplitReduction *sr)
 {
-  PetscErrorCode ierr;
   PetscInt       i,numops = sr->numopsbegin,*reducetype = sr->reducetype;
   PetscScalar    *lvalues = sr->lvalues,*gvalues = sr->gvalues;
   PetscInt       sum_flg  = 0,max_flg = 0, min_flg = 0;
@@ -241,7 +237,6 @@ static PetscErrorCode PetscSplitReductionApply(PetscSplitReduction *sr)
 PetscErrorCode  PetscSplitReductionExtend(PetscSplitReduction *sr)
 {
   struct PetscScalarInt { PetscScalar v; PetscInt i; };
-  PetscErrorCode        ierr;
   PetscInt              maxops   = sr->maxops,*reducetype = sr->reducetype;
   PetscScalar           *lvalues = sr->lvalues,*gvalues = sr->gvalues;
   struct PetscScalarInt *lvalues_mix = (struct PetscScalarInt*)sr->lvalues_mix;
@@ -263,7 +258,6 @@ PetscErrorCode  PetscSplitReductionExtend(PetscSplitReduction *sr)
 
 PetscErrorCode  PetscSplitReductionDestroy(PetscSplitReduction *sr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree6(sr->lvalues,sr->gvalues,sr->reducetype,sr->invecs,sr->lvalues_mix,sr->gvalues_mix));
@@ -282,7 +276,6 @@ PetscMPIInt Petsc_Reduction_keyval = MPI_KEYVAL_INVALID;
 */
 PETSC_EXTERN int MPIAPI Petsc_DelReduction(MPI_Comm comm,int keyval,void* attr_val,void* extra_state)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(PetscInfo(0,"Deleting reduction data in an MPI_Comm %ld\n",(long)comm));
@@ -297,7 +290,6 @@ PETSC_EXTERN int MPIAPI Petsc_DelReduction(MPI_Comm comm,int keyval,void* attr_v
 */
 PetscErrorCode PetscSplitReductionGet(MPI_Comm comm,PetscSplitReduction **sr)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    flag;
 
   PetscFunctionBegin;
@@ -340,7 +332,6 @@ seealso: VecDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot
 @*/
 PetscErrorCode  VecDotBegin(Vec x,Vec y,PetscScalar *result)
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
 
@@ -381,7 +372,6 @@ PetscErrorCode  VecDotBegin(Vec x,Vec y,PetscScalar *result)
 @*/
 PetscErrorCode  VecDotEnd(Vec x,Vec y,PetscScalar *result)
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
 
@@ -426,7 +416,6 @@ PetscErrorCode  VecDotEnd(Vec x,Vec y,PetscScalar *result)
 @*/
 PetscErrorCode  VecTDotBegin(Vec x,Vec y,PetscScalar *result)
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
 
@@ -464,7 +453,6 @@ seealso: VecTDotBegin(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecM
 @*/
 PetscErrorCode  VecTDotEnd(Vec x,Vec y,PetscScalar *result)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*
@@ -494,7 +482,6 @@ PetscErrorCode  VecTDotEnd(Vec x,Vec y,PetscScalar *result)
 @*/
 PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   PetscReal           lresult[2];
   MPI_Comm            comm;
@@ -545,7 +532,6 @@ PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
 @*/
 PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
 
@@ -605,7 +591,6 @@ PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
 @*/
 PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
   int                 i;
@@ -651,7 +636,6 @@ PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[
 @*/
 PetscErrorCode  VecMDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
   int                 i;
@@ -697,7 +681,6 @@ PetscErrorCode  VecMDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 @*/
 PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
-  PetscErrorCode      ierr;
   PetscSplitReduction *sr;
   MPI_Comm            comm;
   int                 i;
@@ -742,7 +725,6 @@ PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result
 @*/
 PetscErrorCode  VecMTDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

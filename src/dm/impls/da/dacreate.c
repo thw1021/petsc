@@ -3,7 +3,6 @@
 
 PetscErrorCode  DMSetFromOptions_DA(PetscOptionItems *PetscOptionsObject,DM da)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd    = (DM_DA*)da->data;
   PetscInt       refine = 0,dim = da->dim,maxnlevels = 100,refx[100],refy[100],refz[100],n,i;
   PetscBool      flg;
@@ -135,7 +134,6 @@ PETSC_INTERN PetscErrorCode DMGetCompatibility_DA(DM,DM,PetscBool*,PetscBool*);
 
 PetscErrorCode DMLoad_DA(DM da,PetscViewer viewer)
 {
-  PetscErrorCode   ierr;
   PetscInt         dim,m,n,p,dof,swidth;
   DMDAStencilType  stencil;
   DMBoundaryType   bx,by,bz;
@@ -176,7 +174,6 @@ PetscErrorCode DMLoad_DA(DM da,PetscViewer viewer)
 PetscErrorCode DMCreateSubDM_DA(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm)
 {
   DM_DA         *da = (DM_DA*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (subdm) {
@@ -226,7 +223,6 @@ PetscErrorCode DMCreateSubDM_DA(DM dm, PetscInt numFields, const PetscInt fields
 PetscErrorCode DMCreateFieldDecomposition_DA(DM dm, PetscInt *len,char ***namelist, IS **islist, DM **dmlist)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)dm->data;
   PetscInt       dof = dd->w;
 
@@ -275,7 +271,6 @@ PetscErrorCode DMCreateFieldDecomposition_DA(DM dm, PetscInt *len,char ***nameli
 PetscErrorCode DMClone_DA(DM dm, DM *newdm)
 {
   DM_DA         *da = (DM_DA *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSetType(*newdm, DMDA));
@@ -304,7 +299,6 @@ static PetscErrorCode DMHasCreateInjection_DA(DM dm, PetscBool *flg)
 
 static PetscErrorCode DMGetDimPoints_DA(DM dm, PetscInt dim, PetscInt *pStart, PetscInt *pEnd)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetDepthStratum(dm, dim, pStart, pEnd));
@@ -313,7 +307,6 @@ static PetscErrorCode DMGetDimPoints_DA(DM dm, PetscInt dim, PetscInt *pStart, P
 
 static PetscErrorCode DMGetNeighbors_DA(DM dm, PetscInt *nranks, const PetscMPIInt *ranks[])
 {
-  PetscErrorCode ierr;
   PetscInt dim;
   DMDAStencilType st;
 
@@ -358,7 +351,6 @@ PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject,PetscViewer);
 
 PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd;
 
   PetscFunctionBegin;
@@ -472,7 +464,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
 @*/
 PetscErrorCode  DMDACreate(MPI_Comm comm, DM *da)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(da,2);

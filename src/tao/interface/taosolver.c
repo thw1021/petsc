@@ -55,7 +55,6 @@ struct _n_TaoMonitorDrawCtx {
 @*/
 PetscErrorCode TaoCreate(MPI_Comm comm, Tao *newtao)
 {
-  PetscErrorCode ierr;
   Tao            tao;
 
   PetscFunctionBegin;
@@ -173,7 +172,6 @@ PetscErrorCode TaoSolve(Tao tao)
 @*/
 PetscErrorCode TaoSetUp(Tao tao)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID,1);
@@ -201,7 +199,6 @@ PetscErrorCode TaoSetUp(Tao tao)
 @*/
 PetscErrorCode TaoDestroy(Tao *tao)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*tao) PetscFunctionReturn(0);
@@ -492,7 +489,6 @@ PetscErrorCode TaoSetFromOptions(Tao tao)
 @*/
 PetscErrorCode  TaoViewFromOptions(Tao A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,TAO_CLASSID,1);
@@ -526,7 +522,6 @@ PetscErrorCode  TaoViewFromOptions(Tao A,PetscObject obj,const char name[])
 @*/
 PetscErrorCode TaoView(Tao tao, PetscViewer viewer)
 {
-  PetscErrorCode      ierr;
   PetscBool           isascii,isstring;
   TaoType             type;
 
@@ -772,7 +767,6 @@ $ ||g(X)|| / ||g(X0)||                <= gttol
 @*/
 PetscErrorCode TaoSetTolerances(Tao tao, PetscReal gatol, PetscReal grtol, PetscReal gttol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -833,7 +827,6 @@ PetscErrorCode TaoSetTolerances(Tao tao, PetscReal gatol, PetscReal grtol, Petsc
 @*/
 PetscErrorCode TaoSetConstraintTolerances(Tao tao, PetscReal catol, PetscReal crtol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -1266,7 +1259,6 @@ PetscErrorCode TaoGetLineSearch(Tao tao, TaoLineSearch *ls)
 @*/
 PetscErrorCode TaoAddLineSearchCounts(Tao tao)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   PetscInt       nfeval,ngeval,nfgeval;
 
@@ -1451,7 +1443,6 @@ $     PetscErrorCode mymonitor(Tao tao,void *mctx)
 @*/
 PetscErrorCode TaoSetMonitor(Tao tao, PetscErrorCode (*func)(Tao, void*), void *ctx,PetscErrorCode (*dest)(void**))
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscBool      identical;
 
@@ -1493,7 +1484,6 @@ PetscErrorCode TaoSetMonitor(Tao tao, PetscErrorCode (*func)(Tao, void*), void *
 PetscErrorCode TaoCancelMonitors(Tao tao)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -1527,7 +1517,6 @@ PetscErrorCode TaoCancelMonitors(Tao tao)
 @*/
 PetscErrorCode TaoMonitorDefault(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       its, tabs;
   PetscReal      fct,gnorm;
   PetscViewer    viewer = (PetscViewer)ctx;
@@ -1579,7 +1568,6 @@ PetscErrorCode TaoMonitorDefault(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoDefaultGMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       its, tabs;
   PetscReal      fct,gnorm,stp,tr;
   PetscViewer    viewer = (PetscViewer)ctx;
@@ -1634,7 +1622,6 @@ PetscErrorCode TaoDefaultGMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoDefaultSMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       its, tabs;
   PetscReal      fct,gnorm;
   PetscViewer    viewer = (PetscViewer)ctx;
@@ -1682,7 +1669,6 @@ PetscErrorCode TaoDefaultSMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoDefaultCMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       its, tabs;
   PetscReal      fct,gnorm;
   PetscViewer    viewer = (PetscViewer)ctx;
@@ -1723,7 +1709,6 @@ PetscErrorCode TaoDefaultCMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoSolutionMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer  = (PetscViewer)ctx;
 
   PetscFunctionBegin;
@@ -1753,7 +1738,6 @@ PetscErrorCode TaoSolutionMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoGradientMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer = (PetscViewer)ctx;
 
   PetscFunctionBegin;
@@ -1783,7 +1767,6 @@ PetscErrorCode TaoGradientMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoStepDirectionMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer = (PetscViewer)ctx;
 
   PetscFunctionBegin;
@@ -1813,7 +1796,6 @@ PetscErrorCode TaoStepDirectionMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoDrawSolutionMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode    ierr;
   TaoMonitorDrawCtx ictx = (TaoMonitorDrawCtx)ctx;
 
   PetscFunctionBegin;
@@ -1843,7 +1825,6 @@ PetscErrorCode TaoDrawSolutionMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoDrawGradientMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode    ierr;
   TaoMonitorDrawCtx ictx = (TaoMonitorDrawCtx)ctx;
 
   PetscFunctionBegin;
@@ -1873,7 +1854,6 @@ PetscErrorCode TaoDrawGradientMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoDrawStepMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer = (PetscViewer)ctx;
 
   PetscFunctionBegin;
@@ -1903,7 +1883,6 @@ PetscErrorCode TaoDrawStepMonitor(Tao tao, void *ctx)
 @*/
 PetscErrorCode TaoResidualMonitor(Tao tao, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer  = (PetscViewer)ctx;
 
   PetscFunctionBegin;
@@ -1947,7 +1926,6 @@ PetscErrorCode TaoDefaultConvergenceTest(Tao tao,void *dummy)
   PetscReal          catol=tao->catol,crtol=tao->crtol;
   PetscReal          fmin=tao->fmin, cnorm=tao->cnorm;
   TaoConvergedReason reason=tao->reason;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2021,7 +1999,6 @@ PetscErrorCode TaoDefaultConvergenceTest(Tao tao,void *dummy)
 
 PetscErrorCode TaoSetOptionsPrefix(Tao tao, const char p[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2055,7 +2032,6 @@ PetscErrorCode TaoSetOptionsPrefix(Tao tao, const char p[])
 @*/
 PetscErrorCode TaoAppendOptionsPrefix(Tao tao, const char p[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2091,7 +2067,6 @@ PetscErrorCode TaoAppendOptionsPrefix(Tao tao, const char p[])
 @*/
 PetscErrorCode TaoGetOptionsPrefix(Tao tao, const char *p[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2131,7 +2106,6 @@ PetscErrorCode TaoGetOptionsPrefix(Tao tao, const char *p[])
 @*/
 PetscErrorCode TaoSetType(Tao tao, TaoType type)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*create_xxx)(Tao);
   PetscBool      issame;
 
@@ -2197,7 +2171,6 @@ $     -tao_type my_solver
 M*/
 PetscErrorCode TaoRegister(const char sname[], PetscErrorCode (*func)(Tao))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoInitializePackage());
@@ -2217,7 +2190,6 @@ PetscErrorCode TaoRegister(const char sname[], PetscErrorCode (*func)(Tao))
 @*/
 PetscErrorCode TaoRegisterDestroy(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TaoList));
@@ -2296,7 +2268,6 @@ PetscErrorCode TaoGetResidualNorm(Tao tao,PetscReal *value)
 @*/
 PetscErrorCode  TaoSetIterationNumber(Tao tao,PetscInt iter)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2352,7 +2323,6 @@ PetscErrorCode  TaoGetTotalIterationNumber(Tao tao,PetscInt *iter)
 @*/
 PetscErrorCode  TaoSetTotalIterationNumber(Tao tao,PetscInt iter)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2535,7 +2505,6 @@ PetscErrorCode TaoGetType(Tao tao,TaoType *type)
 @*/
 PetscErrorCode TaoMonitor(Tao tao, PetscInt its, PetscReal f, PetscReal res, PetscReal cnorm, PetscReal steplength)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -2591,7 +2560,6 @@ PetscErrorCode TaoMonitor(Tao tao, PetscInt its, PetscReal f, PetscReal res, Pet
 @*/
 PetscErrorCode TaoSetConvergenceHistory(Tao tao, PetscReal obj[], PetscReal resid[], PetscReal cnorm[], PetscInt lits[], PetscInt na,PetscBool reset)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2720,7 +2688,6 @@ PetscErrorCode  TaoGetApplicationContext(Tao tao,void *usrP)
 @*/
 PetscErrorCode  TaoSetGradientNorm(Tao tao, Mat M)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2776,7 +2743,6 @@ PetscErrorCode  TaoGetGradientNorm(Tao tao, Mat *M)
 @*/
 PetscErrorCode  TaoGradientNorm(Tao tao, Vec gradient, NormType type, PetscReal *gnorm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -2813,7 +2779,6 @@ PetscErrorCode  TaoGradientNorm(Tao tao, Vec gradient, NormType type, PetscReal 
 @*/
 PetscErrorCode  TaoMonitorDrawCtxCreate(MPI_Comm comm,const char host[],const char label[],int x,int y,int m,int n,PetscInt howoften,TaoMonitorDrawCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
@@ -2837,7 +2802,6 @@ PetscErrorCode  TaoMonitorDrawCtxCreate(MPI_Comm comm,const char host[],const ch
 @*/
 PetscErrorCode  TaoMonitorDrawCtxDestroy(TaoMonitorDrawCtx *ictx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerDestroy(&(*ictx)->viewer));

@@ -18,7 +18,6 @@ typedef struct {
 static PetscErrorCode PCView_Redistribute(PC pc,PetscViewer viewer)
 {
   PC_Redistribute *red = (PC_Redistribute*)pc->data;
-  PetscErrorCode  ierr;
   PetscBool       iascii,isstring;
   PetscInt        ncnt,N;
 
@@ -41,7 +40,6 @@ static PetscErrorCode PCView_Redistribute(PC pc,PetscViewer viewer)
 static PetscErrorCode PCSetUp_Redistribute(PC pc)
 {
   PC_Redistribute          *red = (PC_Redistribute*)pc->data;
-  PetscErrorCode           ierr;
   MPI_Comm                 comm;
   PetscInt                 rstart,rend,i,nz,cnt,*rows,ncnt,dcnt,*drows;
   PetscLayout              map,nmap;
@@ -239,7 +237,6 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
 static PetscErrorCode PCApply_Redistribute(PC pc,Vec b,Vec x)
 {
   PC_Redistribute   *red = (PC_Redistribute*)pc->data;
-  PetscErrorCode    ierr;
   PetscInt          dcnt   = red->dcnt,i;
   const PetscInt    *drows = red->drows;
   PetscScalar       *xwork;
@@ -273,7 +270,6 @@ static PetscErrorCode PCApply_Redistribute(PC pc,Vec b,Vec x)
 static PetscErrorCode PCDestroy_Redistribute(PC pc)
 {
   PC_Redistribute *red = (PC_Redistribute*)pc->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecScatterDestroy(&red->scatter));
@@ -290,7 +286,6 @@ static PetscErrorCode PCDestroy_Redistribute(PC pc)
 
 static PetscErrorCode PCSetFromOptions_Redistribute(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode  ierr;
   PC_Redistribute *red = (PC_Redistribute*)pc->data;
 
   PetscFunctionBegin;
@@ -347,7 +342,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Redistribute(PC pc)
 {
-  PetscErrorCode  ierr;
   PC_Redistribute *red;
   const char      *prefix;
 

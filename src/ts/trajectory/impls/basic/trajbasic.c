@@ -14,7 +14,6 @@ static PetscErrorCode TSTrajectorySet_Basic(TSTrajectory tj,TS ts,PetscInt stepn
   TSTrajectory_Basic *tjbasic = (TSTrajectory_Basic*)tj->data;
   char               filename[PETSC_MAX_PATH_LEN];
   PetscInt           ns,i;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSNPrintf(filename,sizeof(filename),tj->dirfiletemplate,stepnum));
@@ -52,7 +51,6 @@ static PetscErrorCode TSTrajectorySet_Basic(TSTrajectory tj,TS ts,PetscInt stepn
 
 static PetscErrorCode TSTrajectorySetFromOptions_Basic(PetscOptionItems *PetscOptionsObject,TSTrajectory tj)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"TS trajectory options for Basic type"));
@@ -64,7 +62,6 @@ static PetscErrorCode TSTrajectoryGet_Basic(TSTrajectory tj,TS ts,PetscInt stepn
 {
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
   Vec            Sol;
   PetscInt       ns,i;
 
@@ -113,7 +110,6 @@ PetscErrorCode TSTrajectorySetUp_Basic(TSTrajectory tj,TS ts)
 {
   MPI_Comm       comm;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)tj,&comm));
@@ -142,7 +138,6 @@ PetscErrorCode TSTrajectorySetUp_Basic(TSTrajectory tj,TS ts)
 static PetscErrorCode TSTrajectoryDestroy_Basic(TSTrajectory tj)
 {
   TSTrajectory_Basic *tjbasic = (TSTrajectory_Basic*)tj->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerDestroy(&tjbasic->viewer));
@@ -167,7 +162,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Basic(TSTrajectory tj,TS ts)
 {
   TSTrajectory_Basic *tjbasic;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&tjbasic));

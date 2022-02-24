@@ -21,7 +21,6 @@ PetscErrorCode DMPlexOrientPoint(DM dm, PetscInt p, PetscInt o)
   const PetscInt *arr, *cone, *ornt, *support;
   PetscInt       *newcone, *newornt;
   PetscInt        coneSize, c, supportSize, s;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -75,7 +74,6 @@ static PetscErrorCode DMPlexCheckFace_Internal(DM dm, PetscInt *faceFIFO, PetscI
   const PetscInt *support, *coneA, *coneB, *coneOA, *coneOB;
   PetscInt        supportSize, coneSizeA, coneSizeB, posA = -1, posB = -1;
   PetscInt        face, dim, seenA, flippedA, seenB, flippedB, mismatch, c;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   face = faceFIFO[(*fTop)++];
@@ -162,7 +160,6 @@ PetscErrorCode DMPlexOrient(DM dm)
   PetscMPIInt        rank, size, numComponents, comp = 0;
   PetscBool          flg, flg2;
   PetscViewer        viewer = NULL, selfviewer = NULL;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));

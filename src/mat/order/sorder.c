@@ -19,7 +19,6 @@ PetscErrorCode MatGetOrdering_Flow(Mat mat,MatOrderingType type,IS *irow,IS *ico
 
 PETSC_INTERN PetscErrorCode MatGetOrdering_Natural(Mat mat,MatOrderingType type,IS *irow,IS *icol)
 {
-  PetscErrorCode ierr;
   PetscInt       n,i,*ii;
   PetscBool      done;
   MPI_Comm       comm;
@@ -58,7 +57,6 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_Natural(Mat mat,MatOrderingType type,
 */
 PETSC_INTERN PetscErrorCode MatGetOrdering_RowLength(Mat mat,MatOrderingType type,IS *irow,IS *icol)
 {
-  PetscErrorCode ierr;
   PetscInt       n,*permr,*lens,i;
   const PetscInt *ia,*ja;
   PetscBool      done;
@@ -107,7 +105,6 @@ $     -pc_factor_mat_ordering_type my_order
 @*/
 PetscErrorCode  MatOrderingRegister(const char sname[],PetscErrorCode (*function)(Mat,MatOrderingType,IS*,IS*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatInitializePackage());
@@ -165,7 +162,6 @@ $      MATORDERINGEXTERNAL - Use an ordering internal to the factorzation packag
 @*/
 PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
 {
-  PetscErrorCode ierr;
   PetscInt       mmat,nmat,mis;
   PetscErrorCode (*r)(Mat,MatOrderingType,IS*,IS*);
   PetscBool      flg,ismpiaij;

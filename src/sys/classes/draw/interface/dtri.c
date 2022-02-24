@@ -20,7 +20,6 @@
 @*/
 PetscErrorCode  PetscDrawTriangle(PetscDraw draw,PetscReal x1,PetscReal y_1,PetscReal x2,PetscReal y2,PetscReal x3,PetscReal y3,int c1,int c2,int c3)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -52,7 +51,6 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
   PetscBool      isnull;
   PetscReal      xl = 0.0,yl = 0.0,xr = 1.0,yr = 1.0;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
   int            i;
   char           string[32];
 
@@ -96,7 +94,6 @@ typedef struct {
 
 static PetscErrorCode PetscDrawTensorContour_Zoom(PetscDraw win,void *dctx)
 {
-  PetscErrorCode ierr;
   int            i;
   ZoomCtx        *ctx = (ZoomCtx*)dctx;
 
@@ -137,7 +134,6 @@ static PetscErrorCode PetscDrawTensorContour_Zoom(PetscDraw win,void *dctx)
 @*/
 PetscErrorCode  PetscDrawTensorContour(PetscDraw draw,int m,int n,const PetscReal xi[],const PetscReal yi[],PetscReal *v)
 {
-  PetscErrorCode ierr;
   int            N = m*n;
   PetscBool      isnull;
   PetscDraw      popup;
@@ -222,7 +218,6 @@ PetscErrorCode  PetscDrawTensorContour(PetscDraw draw,int m,int n,const PetscRea
 @*/
 PetscErrorCode  PetscDrawTensorContourPatch(PetscDraw draw,int m,int n,PetscReal *x,PetscReal *y,PetscReal min,PetscReal max,PetscReal *v)
 {
-  PetscErrorCode ierr;
   int            c1,c2,c3,c4,i,j;
   PetscReal      x1,x2,x3,x4,y_1,y2,y3,y4;
 

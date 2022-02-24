@@ -6,7 +6,6 @@ static PetscErrorCode estsv(PetscInt n, PetscReal *r, PetscInt ldr, PetscReal *s
   PetscBLASInt   blas1=1, blasn, blasnmi, blasj, blasldr;
   PetscInt       i,j;
   PetscReal      e,temp,w,wm,ynorm,znorm,s,sm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscBLASIntCast(n,&blasn));
@@ -224,7 +223,6 @@ PetscErrorCode gqt(PetscInt n, PetscReal *a, PetscInt lda, PetscReal *b,
                    PetscReal *x, PetscInt *retinfo, PetscInt *retits,
                    PetscReal *z, PetscReal *wa1, PetscReal *wa2)
 {
-  PetscErrorCode ierr;
   PetscReal      f=0.0,p001=0.001,p5=0.5,minusone=-1,delta2=delta*delta;
   PetscInt       iter, j, rednc,info;
   PetscBLASInt   indef;

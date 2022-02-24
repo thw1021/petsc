@@ -56,7 +56,6 @@ PetscErrorCode  DMDASetSizes(DM da, PetscInt M, PetscInt N, PetscInt P)
 PetscErrorCode  DMDASetNumProcs(DM da, PetscInt m, PetscInt n, PetscInt p)
 {
   DM_DA          *dd = (DM_DA*)da->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da, DM_CLASSID, 1,DMDA);
@@ -292,7 +291,6 @@ PetscErrorCode  DMDASetNumLocalSubDomains(DM da,PetscInt Nsub)
 @*/
 PetscErrorCode  DMDASetOffset(DM da, PetscInt xo, PetscInt yo, PetscInt zo, PetscInt Mo, PetscInt No, PetscInt Po)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -558,7 +556,6 @@ static PetscErrorCode DMDACheckOwnershipRanges_Private(DM da,PetscInt M,PetscInt
 @*/
 PetscErrorCode  DMDASetOwnershipRanges(DM da, const PetscInt lx[], const PetscInt ly[], const PetscInt lz[])
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -827,7 +824,6 @@ PetscErrorCode  DMDASetGetMatrix(DM da,PetscErrorCode (*f)(DM, Mat*))
 static PetscErrorCode DMDARefineOwnershipRanges(DM da,PetscBool periodic,PetscInt stencil_width,PetscInt ratio,PetscInt m,const PetscInt lc[],PetscInt lf[])
 {
   PetscInt       i,totalc = 0,remaining,startc = 0,startf = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ratio < 1,PetscObjectComm((PetscObject)da),PETSC_ERR_USER,"Requested refinement ratio %D must be at least 1",ratio);
@@ -869,7 +865,6 @@ static PetscErrorCode DMDARefineOwnershipRanges(DM da,PetscBool periodic,PetscIn
 static PetscErrorCode DMDACoarsenOwnershipRanges(DM da,PetscBool periodic,PetscInt stencil_width,PetscInt ratio,PetscInt m,const PetscInt lf[],PetscInt lc[])
 {
   PetscInt       i,totalf,remaining,startc,startf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ratio < 1,PetscObjectComm((PetscObject)da),PETSC_ERR_USER,"Requested refinement ratio %D must be at least 1",ratio);
@@ -903,7 +898,6 @@ static PetscErrorCode DMDACoarsenOwnershipRanges(DM da,PetscBool periodic,PetscI
 
 PetscErrorCode  DMRefine_DA(DM da,MPI_Comm comm,DM *daref)
 {
-  PetscErrorCode ierr;
   PetscInt       M,N,P,i,dim;
   DM             da2;
   DM_DA          *dd = (DM_DA*)da->data,*dd2;
@@ -1063,7 +1057,6 @@ PetscErrorCode  DMRefine_DA(DM da,MPI_Comm comm,DM *daref)
 
 PetscErrorCode  DMCoarsen_DA(DM dmf, MPI_Comm comm,DM *dmc)
 {
-  PetscErrorCode ierr;
   PetscInt       M,N,P,i,dim;
   DM             dmc2;
   DM_DA          *dd = (DM_DA*)dmf->data,*dd2;
@@ -1227,7 +1220,6 @@ PetscErrorCode  DMCoarsen_DA(DM dmf, MPI_Comm comm,DM *dmc)
 
 PetscErrorCode  DMRefineHierarchy_DA(DM da,PetscInt nlevels,DM daf[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,n,*refx,*refy,*refz;
 
   PetscFunctionBegin;
@@ -1260,7 +1252,6 @@ PetscErrorCode  DMRefineHierarchy_DA(DM da,PetscInt nlevels,DM daf[])
 
 PetscErrorCode  DMCoarsenHierarchy_DA(DM da,PetscInt nlevels,DM dac[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -1277,7 +1268,6 @@ PetscErrorCode  DMCoarsenHierarchy_DA(DM da,PetscInt nlevels,DM dac[])
 
 PetscErrorCode DMDASetGLLCoordinates_1d(DM dm,PetscInt n,PetscReal *nodes)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,xn,q;
   PetscScalar    *xx;
   PetscReal      h;
@@ -1332,7 +1322,6 @@ PetscErrorCode DMDASetGLLCoordinates_1d(DM dm,PetscInt n,PetscReal *nodes)
 @*/
 PetscErrorCode DMDASetGLLCoordinates(DM da,PetscInt n,PetscReal *nodes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (da->dim == 1) {
@@ -1343,7 +1332,6 @@ PetscErrorCode DMDASetGLLCoordinates(DM da,PetscInt n,PetscReal *nodes)
 
 PETSC_INTERN PetscErrorCode DMGetCompatibility_DA(DM da1,DM dm2,PetscBool *compatible,PetscBool *set)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd1 = (DM_DA*)da1->data,*dd2;
   DM             da2;
   DMType         dmtype2;

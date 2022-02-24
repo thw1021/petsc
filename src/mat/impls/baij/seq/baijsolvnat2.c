@@ -9,7 +9,6 @@ PetscErrorCode MatSolve_SeqBAIJ_2_NaturalOrdering_inplace(Mat A,Vec bb,Vec xx)
 {
   Mat_SeqBAIJ       *a = (Mat_SeqBAIJ*)A->data;
   const PetscInt    n  =a->mbs,*vi,*ai=a->i,*aj=a->j,*diag=a->diag;
-  PetscErrorCode    ierr;
   const MatScalar   *aa=a->a,*v;
   PetscScalar       *x,s1,s2,x1,x2;
   const PetscScalar *b;
@@ -68,7 +67,6 @@ PetscErrorCode MatSolve_SeqBAIJ_2_NaturalOrdering(Mat A,Vec bb,Vec xx)
   Mat_SeqBAIJ       *a = (Mat_SeqBAIJ*)A->data;
   const PetscInt    n  = a->mbs,*vi,*ai=a->i,*aj=a->j,*adiag=a->diag;
   PetscInt          i,k,nz,idx,idt,jdx;
-  PetscErrorCode    ierr;
   const MatScalar   *aa=a->a,*v;
   PetscScalar       *x,s1,s2,x1,x2;
   const PetscScalar *b;
@@ -130,7 +128,6 @@ PetscErrorCode MatForwardSolve_SeqBAIJ_2_NaturalOrdering(Mat A,Vec bb,Vec xx)
   Mat_SeqBAIJ       *a = (Mat_SeqBAIJ*)A->data;
   const PetscInt    n  = a->mbs,*vi,*ai=a->i,*aj=a->j;
   PetscInt          i,k,nz,idx,jdx;
-  PetscErrorCode    ierr;
   const MatScalar   *aa=a->a,*v;
   PetscScalar       *x,s1,s2,x1,x2;
   const PetscScalar *b;
@@ -171,7 +168,6 @@ PetscErrorCode MatBackwardSolve_SeqBAIJ_2_NaturalOrdering(Mat A,Vec bb,Vec xx)
   Mat_SeqBAIJ       *a = (Mat_SeqBAIJ*)A->data;
   const PetscInt    n  = a->mbs,*vi,*aj=a->j,*adiag=a->diag;
   PetscInt          i,k,nz,idx,idt;
-  PetscErrorCode    ierr;
   const MatScalar   *aa=a->a,*v;
   PetscScalar       *x,s1,s2,x1,x2;
   const PetscScalar *b;

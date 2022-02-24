@@ -21,7 +21,6 @@
 */
 static PetscErrorCode ConvertToAIJ(MatType intype,MatType *outtype)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   char           const *types[3] = {MATAIJ,MATSEQAIJ,MATMPIAIJ};
   PetscBool      flg;
@@ -40,7 +39,6 @@ static PetscErrorCode ConvertToAIJ(MatType intype,MatType *outtype)
 
 PetscErrorCode DMCreateInterpolation_DA_1D_Q1(DM dac,DM daf,Mat *A)
 {
-  PetscErrorCode         ierr;
   PetscInt               i,i_start,m_f,Mx;
   const PetscInt         *idx_f,*idx_c;
   PetscInt               m_ghost,m_ghost_c;
@@ -181,7 +179,6 @@ PetscErrorCode DMCreateInterpolation_DA_1D_Q1(DM dac,DM daf,Mat *A)
 
 PetscErrorCode DMCreateInterpolation_DA_1D_Q0(DM dac,DM daf,Mat *A)
 {
-  PetscErrorCode         ierr;
   PetscInt               i,i_start,m_f,Mx;
   const PetscInt         *idx_f,*idx_c;
   ISLocalToGlobalMapping ltog_f,ltog_c;
@@ -1064,7 +1061,6 @@ PetscErrorCode DMCreateInterpolation_DA_3D_Q1(DM dac,DM daf,Mat *A)
 
 PetscErrorCode  DMCreateInterpolation_DA(DM dac,DM daf,Mat *A,Vec *scale)
 {
-  PetscErrorCode   ierr;
   PetscInt         dimc,Mc,Nc,Pc,mc,nc,pc,dofc,sc,dimf,Mf,Nf,Pf,mf,nf,pf,doff,sf;
   DMBoundaryType   bxc,byc,bzc,bxf,byf,bzf;
   DMDAStencilType  stc,stf;
@@ -1112,7 +1108,6 @@ PetscErrorCode  DMCreateInterpolation_DA(DM dac,DM daf,Mat *A,Vec *scale)
 
 PetscErrorCode DMCreateInjection_DA_1D(DM dac,DM daf,VecScatter *inject)
 {
-  PetscErrorCode         ierr;
   PetscInt               i,i_start,m_f,Mx,dof;
   const PetscInt         *idx_f;
   ISLocalToGlobalMapping ltog_f;
@@ -1169,7 +1164,6 @@ PetscErrorCode DMCreateInjection_DA_1D(DM dac,DM daf,VecScatter *inject)
 
 PetscErrorCode DMCreateInjection_DA_2D(DM dac,DM daf,VecScatter *inject)
 {
-  PetscErrorCode         ierr;
   PetscInt               i,j,i_start,j_start,m_f,n_f,Mx,My,dof;
   const PetscInt         *idx_c,*idx_f;
   ISLocalToGlobalMapping ltog_f,ltog_c;
@@ -1238,7 +1232,6 @@ PetscErrorCode DMCreateInjection_DA_2D(DM dac,DM daf,VecScatter *inject)
 
 PetscErrorCode DMCreateInjection_DA_3D(DM dac,DM daf,VecScatter *inject)
 {
-  PetscErrorCode         ierr;
   PetscInt               i,j,k,i_start,j_start,k_start,m_f,n_f,p_f,Mx,My,Mz;
   PetscInt               m_ghost,n_ghost,p_ghost,m_ghost_c,n_ghost_c,p_ghost_c;
   PetscInt               i_start_ghost,j_start_ghost,k_start_ghost;
@@ -1323,7 +1316,6 @@ PetscErrorCode DMCreateInjection_DA_3D(DM dac,DM daf,VecScatter *inject)
 
 PetscErrorCode  DMCreateInjection_DA(DM dac,DM daf,Mat *mat)
 {
-  PetscErrorCode  ierr;
   PetscInt        dimc,Mc,Nc,Pc,mc,nc,pc,dofc,sc,dimf,Mf,Nf,Pf,mf,nf,pf,doff,sf;
   DMBoundaryType  bxc,byc,bzc,bxf,byf,bzf;
   DMDAStencilType stc,stf;

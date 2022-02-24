@@ -11,7 +11,6 @@
 PetscErrorCode DMSwarmMigrate_Push_Basic(DM dm,PetscBool remove_sent_points)
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode ierr;
   DMSwarmDataEx  de;
   PetscInt       p,npoints,*rankval,n_points_recv;
   PetscMPIInt    rank,nrank;
@@ -99,7 +98,6 @@ PetscErrorCode DMSwarmMigrate_Push_Basic(DM dm,PetscBool remove_sent_points)
 PetscErrorCode DMSwarmMigrate_DMNeighborScatter(DM dm,DM dmcell,PetscBool remove_sent_points,PetscInt *npoints_prior_migration)
 {
   DM_Swarm          *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode    ierr;
   DMSwarmDataEx     de;
   PetscInt          r,p,npoints,*rankval,n_points_recv;
   PetscMPIInt       rank,_rank;
@@ -185,7 +183,6 @@ PetscErrorCode DMSwarmMigrate_DMNeighborScatter(DM dm,DM dmcell,PetscBool remove
 PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm,PetscBool remove_sent_points)
 {
   DM_Swarm          *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode    ierr;
   PetscInt          p,npoints,npointsg=0,npoints2,npoints2g,*rankval,npoints_prior_migration;
   PetscSF           sfcell = NULL;
   const PetscSFNode *LA_sfcell;
@@ -382,7 +379,6 @@ PetscErrorCode DMSwarmMigrate_CellDMExact(DM dm,PetscBool remove_sent_points)
 PetscErrorCode DMSwarmMigrate_GlobalToLocal_Basic(DM dm,PetscInt *globalsize)
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode ierr;
   DMSwarmDataEx  de;
   PetscInt       p,npoints,*rankval,n_points_recv;
   PetscMPIInt    rank,nrank,negrank;
@@ -612,7 +608,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_DMDABoundingBox(DM dm,PetscInt *globa
 PETSC_EXTERN PetscErrorCode DMSwarmCollect_General(DM dm,PetscErrorCode (*collect)(DM,void*,PetscInt*,PetscInt**),size_t ctx_size,void *ctx,PetscInt *globalsize)
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode ierr;
   DMSwarmDataEx  de;
   PetscInt       p,r,npoints,n_points_recv;
   PetscMPIInt    size,rank;

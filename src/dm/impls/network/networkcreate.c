@@ -4,7 +4,6 @@
 
 PetscErrorCode  DMSetFromOptions_Network(PetscOptionItems *PetscOptionsObject,DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
@@ -26,7 +25,6 @@ extern PetscErrorCode DMClone_Network(DM, DM*);
 
 static PetscErrorCode VecArrayPrint_private(PetscViewer viewer,PetscInt n,const PetscScalar *xv)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -48,7 +46,6 @@ static PetscErrorCode VecArrayPrint_private(PetscViewer viewer,PetscInt n,const 
 
 static PetscErrorCode VecView_Network_Seq(DM networkdm,Vec X,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscInt          e,v,Start,End,offset,nvar,id;
   const PetscScalar *xv;
 
@@ -87,7 +84,6 @@ static PetscErrorCode VecView_Network_Seq(DM networkdm,Vec X,PetscViewer viewer)
 
 static PetscErrorCode VecView_Network_MPI(DM networkdm,Vec X,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,e,v,eStart,eEnd,vStart,vEnd,offset,nvar,len_loc,len,k;
   const PetscScalar *xv;
   MPI_Comm          comm;
@@ -208,7 +204,6 @@ PETSC_EXTERN PetscErrorCode VecView_MPI(Vec,PetscViewer);
 PetscErrorCode VecView_Network(Vec v,PetscViewer viewer)
 {
   DM             dm;
-  PetscErrorCode ierr;
   PetscBool      isseq;
   PetscBool      iascii;
 
@@ -237,7 +232,6 @@ PetscErrorCode VecView_Network(Vec v,PetscViewer viewer)
 
 static PetscErrorCode DMCreateGlobalVector_Network(DM dm,Vec *vec)
 {
-  PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*) dm->data;
 
   PetscFunctionBegin;
@@ -249,7 +243,6 @@ static PetscErrorCode DMCreateGlobalVector_Network(DM dm,Vec *vec)
 
 static PetscErrorCode DMCreateLocalVector_Network(DM dm,Vec *vec)
 {
-  PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*) dm->data;
 
   PetscFunctionBegin;
@@ -260,7 +253,6 @@ static PetscErrorCode DMCreateLocalVector_Network(DM dm,Vec *vec)
 
 PetscErrorCode DMInitialize_Network(DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSetDimension(dm,1));
@@ -294,7 +286,6 @@ PetscErrorCode DMInitialize_Network(DM dm)
 PetscErrorCode DMClone_Network(DM dm, DM *newdm)
 {
   DM_Network     *network = (DM_Network *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   network->refct++;
@@ -319,7 +310,6 @@ M*/
 PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
 {
   DM_Network     *network;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -358,7 +348,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Network(DM dm)
 @*/
 PetscErrorCode DMNetworkCreate(MPI_Comm comm, DM *network)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(network,2);

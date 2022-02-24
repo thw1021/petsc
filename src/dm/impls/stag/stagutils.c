@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode DMStagGetBoundaryTypes(DM dm,DMBoundaryType *boundaryTypeX,DMBoundaryType *boundaryTypeY,DMBoundaryType *boundaryTypeZ)
 {
-  PetscErrorCode        ierr;
   const DM_Stag * const stag  = (DM_Stag*)dm->data;
   PetscInt              dim;
 
@@ -33,7 +32,6 @@ PetscErrorCode DMStagGetBoundaryTypes(DM dm,DMBoundaryType *boundaryTypeX,DMBoun
 
 static PetscErrorCode DMStagGetProductCoordinateArrays_Private(DM dm,void* arrX,void* arrY,void* arrZ,PetscBool read)
 {
-  PetscErrorCode ierr;
   PetscInt       dim,d,dofCheck[DMSTAG_MAX_STRATA],s;
   DM             dmCoord;
   void*          arr[DMSTAG_MAX_DIM];
@@ -120,7 +118,6 @@ static PetscErrorCode DMStagGetProductCoordinateArrays_Private(DM dm,void* arrX,
 @*/
 PetscErrorCode DMStagGetProductCoordinateArrays(DM dm,void* arrX,void* arrY,void* arrZ)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMStagGetProductCoordinateArrays_Private(dm,arrX,arrY,arrZ,PETSC_FALSE));
@@ -146,7 +143,6 @@ PetscErrorCode DMStagGetProductCoordinateArrays(DM dm,void* arrX,void* arrY,void
 @*/
 PetscErrorCode DMStagGetProductCoordinateArraysRead(DM dm,void* arrX,void* arrY,void* arrZ)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMStagGetProductCoordinateArrays_Private(dm,arrX,arrY,arrZ,PETSC_TRUE));
@@ -183,7 +179,6 @@ PetscErrorCode DMStagGetProductCoordinateArraysRead(DM dm,void* arrX,void* arrY,
 @*/
 PETSC_EXTERN PetscErrorCode DMStagGetProductCoordinateLocationSlot(DM dm,DMStagStencilLocation loc,PetscInt *slot)
 {
-  PetscErrorCode ierr;
   DM             dmCoord;
   PetscInt       dim,dofCheck[DMSTAG_MAX_STRATA],s,d;
 
@@ -665,7 +660,6 @@ PetscErrorCode DMStagGetOwnershipRanges(DM dm,const PetscInt *lx[],const PetscIn
 @*/
 PetscErrorCode DMStagCreateCompatibleDMStag(DM dm,PetscInt dof0,PetscInt dof1,PetscInt dof2,PetscInt dof3,DM *newdm)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
@@ -704,7 +698,6 @@ PetscErrorCode DMStagGetLocationSlot(DM dm,DMStagStencilLocation loc,PetscInt c,
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
   if (PetscDefined(USE_DEBUG)) {
-    PetscErrorCode ierr;
     PetscInt       dof;
     CHKERRQ(DMStagGetLocationDOF(dm,loc,&dof));
     PetscCheckFalse(dof < 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Location %s has no dof attached",DMStagStencilLocations[loc]);
@@ -735,7 +728,6 @@ PetscErrorCode DMStagGetLocationSlot(DM dm,DMStagStencilLocation loc,PetscInt c,
 @*/
 PetscErrorCode DMStagMigrateVec(DM dm,Vec vec,DM dmTo,Vec vecTo)
 {
-  PetscErrorCode    ierr;
   DM_Stag * const   stag = (DM_Stag*)dm->data;
   DM_Stag * const   stagTo = (DM_Stag*)dmTo->data;
   PetscInt          nLocalTo,nLocal,dim,i,j,k;
@@ -868,7 +860,6 @@ PetscErrorCode DMStagMigrateVec(DM dm,Vec vec,DM dmTo,Vec vecTo)
 @*/
 PetscErrorCode DMStagPopulateLocalToGlobalInjective(DM dm)
 {
-  PetscErrorCode  ierr;
   PetscInt        dim;
   DM_Stag * const stag  = (DM_Stag*)dm->data;
 
@@ -887,7 +878,6 @@ PetscErrorCode DMStagPopulateLocalToGlobalInjective(DM dm)
 
 static PetscErrorCode DMStagRestoreProductCoordinateArrays_Private(DM dm,void *arrX,void *arrY,void *arrZ,PetscBool read)
 {
-  PetscErrorCode  ierr;
   PetscInt        dim,d;
   void*           arr[DMSTAG_MAX_DIM];
   DM              dmCoord;
@@ -949,7 +939,6 @@ $   }
 @*/
 PetscErrorCode DMStagRestoreProductCoordinateArrays(DM dm,void *arrX,void *arrY,void *arrZ)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMStagRestoreProductCoordinateArrays_Private(dm,arrX,arrY,arrZ,PETSC_FALSE));
@@ -973,7 +962,6 @@ PetscErrorCode DMStagRestoreProductCoordinateArrays(DM dm,void *arrX,void *arrY,
 @*/
 PetscErrorCode DMStagRestoreProductCoordinateArraysRead(DM dm,void *arrX,void *arrY,void *arrZ)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMStagRestoreProductCoordinateArrays_Private(dm,arrX,arrY,arrZ,PETSC_TRUE));
@@ -998,7 +986,6 @@ PetscErrorCode DMStagRestoreProductCoordinateArraysRead(DM dm,void *arrX,void *a
 @*/
 PetscErrorCode DMStagSetBoundaryTypes(DM dm,DMBoundaryType boundaryType0,DMBoundaryType boundaryType1,DMBoundaryType boundaryType2)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag  = (DM_Stag*)dm->data;
   PetscInt        dim;
 
@@ -1030,7 +1017,6 @@ PetscErrorCode DMStagSetBoundaryTypes(DM dm,DMBoundaryType boundaryType0,DMBound
 @*/
 PetscErrorCode DMStagSetCoordinateDMType(DM dm,DMType dmtype)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -1058,7 +1044,6 @@ PetscErrorCode DMStagSetCoordinateDMType(DM dm,DMType dmtype)
 @*/
 PetscErrorCode DMStagSetDOF(DM dm,PetscInt dof0, PetscInt dof1,PetscInt dof2,PetscInt dof3)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
 
@@ -1099,7 +1084,6 @@ PetscErrorCode DMStagSetDOF(DM dm,PetscInt dof0, PetscInt dof1,PetscInt dof2,Pet
 @*/
 PetscErrorCode DMStagSetNumRanks(DM dm,PetscInt nRanks0,PetscInt nRanks1,PetscInt nRanks2)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
 
@@ -1191,7 +1175,6 @@ PetscErrorCode DMStagSetStencilWidth(DM dm,PetscInt stencilWidth)
 @*/
 PetscErrorCode DMStagSetGlobalSizes(DM dm,PetscInt N0,PetscInt N1,PetscInt N2)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
 
@@ -1226,7 +1209,6 @@ PetscErrorCode DMStagSetGlobalSizes(DM dm,PetscInt N0,PetscInt N1,PetscInt N2)
 @*/
 PetscErrorCode DMStagSetOwnershipRanges(DM dm,PetscInt const *lx,PetscInt const *ly,PetscInt const *lz)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   const PetscInt  *lin[3];
   PetscInt        d,dim;
@@ -1275,7 +1257,6 @@ PetscErrorCode DMStagSetOwnershipRanges(DM dm,PetscInt const *lx,PetscInt const 
 @*/
 PetscErrorCode DMStagSetUniformCoordinates(DM dm,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax,PetscReal zmin,PetscReal zmax)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscBool       flg_stag,flg_product;
 
@@ -1365,7 +1346,6 @@ PetscErrorCode DMStagSetUniformCoordinatesExplicit(DM dm,PetscReal xmin,PetscRea
 @*/
 PetscErrorCode DMStagSetUniformCoordinatesProduct(DM dm,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax,PetscReal zmin,PetscReal zmax)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   DM              dmc;
   PetscInt        dim,d,dof0,dof1;
@@ -1462,7 +1442,6 @@ PetscErrorCode DMStagSetUniformCoordinatesProduct(DM dm,PetscReal xmin,PetscReal
 @*/
 PetscErrorCode DMStagVecGetArray(DM dm,Vec vec,void *array)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
   PetscInt        nLocal;
@@ -1511,7 +1490,6 @@ PetscErrorCode DMStagVecGetArray(DM dm,Vec vec,void *array)
 @*/
 PetscErrorCode DMStagVecGetArrayRead(DM dm,Vec vec,void *array)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
   PetscInt        nLocal;
@@ -1555,7 +1533,6 @@ PetscErrorCode DMStagVecGetArrayRead(DM dm,Vec vec,void *array)
 @*/
 PetscErrorCode DMStagVecRestoreArray(DM dm,Vec vec,void *array)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
   PetscInt        nLocal;
@@ -1599,7 +1576,6 @@ PetscErrorCode DMStagVecRestoreArray(DM dm,Vec vec,void *array)
 @*/
 PetscErrorCode DMStagVecRestoreArrayRead(DM dm,Vec vec,void *array)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
   PetscInt        nLocal;

@@ -8,7 +8,6 @@
 
 PETSC_INTERN PetscErrorCode PetscSequentialPhaseBegin_Private(MPI_Comm comm,int ng)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,tag = 0;
   MPI_Status     status;
 
@@ -28,7 +27,6 @@ PETSC_INTERN PetscErrorCode PetscSequentialPhaseBegin_Private(MPI_Comm comm,int 
 
 PETSC_INTERN PetscErrorCode PetscSequentialPhaseEnd_Private(MPI_Comm comm,int ng)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,tag = 0;
   MPI_Status     status;
 
@@ -88,7 +86,6 @@ PetscMPIInt Petsc_Seq_keyval = MPI_KEYVAL_INVALID;
 @*/
 PetscErrorCode  PetscSequentialPhaseBegin(MPI_Comm comm,int ng)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   MPI_Comm       local_comm,*addr_local_comm;
 
@@ -132,7 +129,6 @@ PetscErrorCode  PetscSequentialPhaseBegin(MPI_Comm comm,int ng)
 @*/
 PetscErrorCode  PetscSequentialPhaseEnd(MPI_Comm comm,int ng)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size,flag;
   MPI_Comm       local_comm,*addr_local_comm;
 
@@ -169,7 +165,6 @@ PetscErrorCode  PetscSequentialPhaseEnd(MPI_Comm comm,int ng)
 @*/
 PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   minMaxVal[1] = -minMaxVal[1];
@@ -195,7 +190,6 @@ PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscI
 @*/
 PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm comm, PetscReal minMaxVal[2], PetscReal minMaxValGlobal[2])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   minMaxVal[1] = -minMaxVal[1];

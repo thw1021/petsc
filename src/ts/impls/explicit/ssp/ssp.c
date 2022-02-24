@@ -18,10 +18,9 @@ typedef struct {
 static PetscErrorCode TSSSPGetWorkVectors(TS ts,PetscInt n,Vec **work)
 {
   TS_SSP         *ssp = (TS_SSP*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ssp->workout,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Work vectors already gotten");
+  PetscCheck(!ssp->workout,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Work vectors already gotten");
   if (ssp->nwork < n) {
     if (ssp->nwork > 0) {
       CHKERRQ(VecDestroyVecs(ssp->nwork,&ssp->work));
@@ -39,8 +38,8 @@ static PetscErrorCode TSSSPRestoreWorkVectors(TS ts,PetscInt n,Vec **work)
   TS_SSP *ssp = (TS_SSP*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!ssp->workout,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Work vectors have not been gotten");
-  PetscCheckFalse(*work != ssp->work,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong work vectors checked out");
+  PetscCheck(ssp->workout,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Work vectors have not been gotten");
+  PetscCheck(*work == ssp->work,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong work vectors checked out");
   ssp->workout = PETSC_FALSE;
   *work = NULL;
   PetscFunctionReturn(0);
@@ -60,7 +59,6 @@ static PetscErrorCode TSSSPStep_RK_2(TS ts,PetscReal t0,PetscReal dt,Vec sol)
   TS_SSP         *ssp = (TS_SSP*)ts->data;
   Vec            *work,F;
   PetscInt       i,s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   s    = ssp->nstages;
@@ -94,13 +92,12 @@ static PetscErrorCode TSSSPStep_RK_3(TS ts,PetscReal t0,PetscReal dt,Vec sol)
   Vec            *work,F;
   PetscInt       i,s,n,r;
   PetscReal      c,stage_time;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   s = ssp->nstages;
   n = (PetscInt)(PetscSqrtReal((PetscReal)s)+0.001);
   r = s-n;
-  PetscCheckFalse(n*n != s,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for optimal third order schemes with %d stages, must be a square number at least 4",s);
+  PetscCheck(n*n == s,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for optimal third order schemes with %d stages, must be a square number at least 4",s);
   CHKERRQ(TSSSPGetWorkVectors(ts,3,&work));
   F    = work[2];
   CHKERRQ(VecCopy(sol,work[0]));
@@ -154,7 +151,6 @@ static PetscErrorCode TSSSPStep_RK_10_4(TS ts,PetscReal t0,PetscReal dt,Vec sol)
   Vec             *work,F;
   PetscInt        i;
   PetscReal       stage_time;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSSSPGetWorkVectors(ts,3,&work));
@@ -185,7 +181,6 @@ static PetscErrorCode TSSSPStep_RK_10_4(TS ts,PetscReal t0,PetscReal dt,Vec sol)
 
 static PetscErrorCode TSSetUp_SSP(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSCheckImplicitTerm(ts));
@@ -200,7 +195,6 @@ static PetscErrorCode TSStep_SSP(TS ts)
   Vec            sol  = ts->vec_sol;
   PetscBool      stageok,accept = PETSC_TRUE;
   PetscReal      next_time_step = ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ((*ssp->onestep)(ts,ts->ptime,ts->time_step,sol));
@@ -220,7 +214,6 @@ static PetscErrorCode TSStep_SSP(TS ts)
 static PetscErrorCode TSReset_SSP(TS ts)
 {
   TS_SSP         *ssp = (TS_SSP*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ssp->work) CHKERRQ(VecDestroyVecs(ssp->nwork,&ssp->work));
@@ -232,7 +225,6 @@ static PetscErrorCode TSReset_SSP(TS ts)
 static PetscErrorCode TSDestroy_SSP(TS ts)
 {
   TS_SSP         *ssp = (TS_SSP*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_SSP(ts));
@@ -265,7 +257,6 @@ static PetscErrorCode TSDestroy_SSP(TS ts)
 @*/
 PetscErrorCode TSSSPSetType(TS ts,TSSSPType ssptype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -291,7 +282,6 @@ PetscErrorCode TSSSPSetType(TS ts,TSSSPType ssptype)
 @*/
 PetscErrorCode TSSSPGetType(TS ts,TSSSPType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -318,7 +308,6 @@ PetscErrorCode TSSSPGetType(TS ts,TSSSPType *type)
 @*/
 PetscErrorCode TSSSPSetNumStages(TS ts,PetscInt nstages)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -343,7 +332,6 @@ PetscErrorCode TSSSPSetNumStages(TS ts,PetscInt nstages)
 @*/
 PetscErrorCode TSSSPGetNumStages(TS ts,PetscInt *nstages)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -353,12 +341,12 @@ PetscErrorCode TSSSPGetNumStages(TS ts,PetscInt *nstages)
 
 static PetscErrorCode TSSSPSetType_SSP(TS ts,TSSSPType type)
 {
-  PetscErrorCode ierr,(*r)(TS,PetscReal,PetscReal,Vec);
   TS_SSP         *ssp = (TS_SSP*)ts->data;
+  PetscErrorCode (*r)(TS,PetscReal,PetscReal,Vec);
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListFind(TSSSPList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TS_SSP type %s given",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TS_SSP type %s given",type);
   ssp->onestep = r;
   CHKERRQ(PetscFree(ssp->type_name));
   CHKERRQ(PetscStrallocpy(type,&ssp->type_name));
@@ -394,7 +382,6 @@ static PetscErrorCode TSSetFromOptions_SSP(PetscOptionItems *PetscOptionsObject,
 {
   char           tname[256] = TSSSPRKS2;
   TS_SSP         *ssp       = (TS_SSP*)ts->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -414,7 +401,6 @@ static PetscErrorCode TSView_SSP(TS ts,PetscViewer viewer)
 {
   TS_SSP         *ssp = (TS_SSP*)ts->data;
   PetscBool      ascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&ascii));
@@ -469,7 +455,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_SSP(TS ts)
 {
   TS_SSP         *ssp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSSSPInitializePackage());
@@ -504,7 +489,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_SSP(TS ts)
 @*/
 PetscErrorCode TSSSPInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSSSPPackageInitialized) PetscFunctionReturn(0);
@@ -526,7 +510,6 @@ PetscErrorCode TSSSPInitializePackage(void)
 @*/
 PetscErrorCode TSSSPFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSSSPPackageInitialized = PETSC_FALSE;

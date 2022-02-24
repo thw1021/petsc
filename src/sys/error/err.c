@@ -145,7 +145,6 @@ $    int handler(MPI_Comm comm,int line,char *func,char *file,PetscErrorCode n,i
 PetscErrorCode  PetscPushErrorHandler(PetscErrorCode (*handler)(MPI_Comm comm,int,const char*,const char*,PetscErrorCode,PetscErrorType,const char*,void*),void *ctx)
 {
   EH             neweh;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&neweh));
@@ -170,7 +169,6 @@ PetscErrorCode  PetscPushErrorHandler(PetscErrorCode (*handler)(MPI_Comm comm,in
 PetscErrorCode  PetscPopErrorHandler(void)
 {
   EH             tmp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!eh) PetscFunctionReturn(0);
@@ -438,7 +436,6 @@ PetscErrorCode PetscError(MPI_Comm comm,int line,const char *func,const char *fi
 @*/
 PetscErrorCode  PetscIntView(PetscInt N,const PetscInt idx[],PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   PetscInt       j,i,n = N/20,p = N % 20;
   PetscBool      iascii,isbinary;
@@ -535,7 +532,6 @@ PetscErrorCode  PetscIntView(PetscInt N,const PetscInt idx[],PetscViewer viewer)
 @*/
 PetscErrorCode  PetscRealView(PetscInt N,const PetscReal idx[],PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   PetscInt       j,i,n = N/5,p = N % 5;
   PetscBool      iascii,isbinary;
@@ -640,7 +636,6 @@ PetscErrorCode  PetscRealView(PetscInt N,const PetscReal idx[],PetscViewer viewe
 @*/
 PetscErrorCode  PetscScalarView(PetscInt N,const PetscScalar idx[],PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   PetscInt       j,i,n = N/3,p = N % 3;
   PetscBool      iascii,isbinary;

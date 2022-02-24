@@ -7,7 +7,6 @@
 PetscErrorCode MatDestroy_SeqAIJ_MatMatMatMult(void* data)
 {
   Mat_MatMatMatMult *matmatmatmult = (Mat_MatMatMatMult*)data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&matmatmatmult->BC));
@@ -17,7 +16,6 @@ PetscErrorCode MatDestroy_SeqAIJ_MatMatMatMult(void* data)
 
 PetscErrorCode MatMatMatMultSymbolic_SeqAIJ_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C,PetscReal fill,Mat D)
 {
-  PetscErrorCode    ierr;
   Mat               BC;
   Mat_MatMatMatMult *matmatmatmult;
   char              *alg;
@@ -47,7 +45,6 @@ PetscErrorCode MatMatMatMultSymbolic_SeqAIJ_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C,Pets
 
 PetscErrorCode MatMatMatMultNumeric_SeqAIJ_SeqAIJ_SeqAIJ(Mat A,Mat B,Mat C,Mat D)
 {
-  PetscErrorCode    ierr;
   Mat_MatMatMatMult *matmatmatmult;
   Mat               BC;
 

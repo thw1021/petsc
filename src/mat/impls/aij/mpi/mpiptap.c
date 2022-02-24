@@ -15,7 +15,6 @@
 
 PetscErrorCode MatView_MPIAIJ_PtAP(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
   Mat_APMPI         *ptap;
@@ -43,7 +42,6 @@ PetscErrorCode MatView_MPIAIJ_PtAP(Mat A,PetscViewer viewer)
 
 PetscErrorCode MatDestroy_MPIAIJ_PtAP(void *data)
 {
-  PetscErrorCode      ierr;
   Mat_APMPI           *ptap = (Mat_APMPI*)data;
   Mat_Merge_SeqsToMPI *merge;
 
@@ -98,7 +96,6 @@ PetscErrorCode MatDestroy_MPIAIJ_PtAP(void *data)
 
 PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ_scalable(Mat A,Mat P,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *a=(Mat_MPIAIJ*)A->data,*p=(Mat_MPIAIJ*)P->data;
   Mat_SeqAIJ        *ad=(Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data;
   Mat_SeqAIJ        *ap,*p_loc,*p_oth=NULL,*c_seq;
@@ -591,7 +588,6 @@ static inline PetscErrorCode MatPtAPSymbolicComputeOneRowOfAP_private(Mat A,Mat 
   Mat_SeqAIJ           *ad=(Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data,*p_oth=(Mat_SeqAIJ*)P_oth->data,*pd=(Mat_SeqAIJ*)p->A->data,*po=(Mat_SeqAIJ*)p->B->data;
   PetscInt             *ai,nzi,j,*aj,row,col,*pi,*pj,pnz,nzpi,*p_othcols,k;
   PetscInt             pcstart,pcend,column,offset;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   pcstart = P->cmap->rstart;
@@ -655,7 +651,6 @@ static inline PetscErrorCode MatPtAPNumericComputeOneRowOfAP_private(Mat A,Mat P
   Mat_SeqAIJ           *ad=(Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data,*p_oth=(Mat_SeqAIJ*)P_oth->data,*pd=(Mat_SeqAIJ*)p->A->data,*po=(Mat_SeqAIJ*)p->B->data;
   PetscInt             *ai,nzi,j,*aj,row,col,*pi,pnz,*p_othcols,pcstart,*pj,k,nzpi,offset;
   PetscScalar          ra,*aa,*pa;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   pcstart = P->cmap->rstart;
@@ -722,7 +717,6 @@ PetscErrorCode MatGetBrowsOfAcols_MPIXAIJ(Mat,Mat,PetscInt dof,MatReuse,Mat*);
 
 PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce(Mat A,Mat P,PetscInt dof,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *p=(Mat_MPIAIJ*)P->data,*c=(Mat_MPIAIJ*)C->data;
   Mat_SeqAIJ        *cd,*co,*po=(Mat_SeqAIJ*)p->B->data,*pd=(Mat_SeqAIJ*)p->A->data;
   Mat_APMPI         *ptap;
@@ -876,7 +870,6 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce(Mat A,Mat P,PetscInt dof,
 
 PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ_allatonce(Mat A,Mat P,Mat C)
 {
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
 
@@ -886,7 +879,6 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ_allatonce(Mat A,Mat P,Mat C)
 
 PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce_merged(Mat A,Mat P,PetscInt dof,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *p=(Mat_MPIAIJ*)P->data,*c=(Mat_MPIAIJ*)C->data;
   Mat_SeqAIJ        *cd,*co,*po=(Mat_SeqAIJ*)p->B->data,*pd=(Mat_SeqAIJ*)p->A->data;
   Mat_APMPI         *ptap;
@@ -1022,7 +1014,6 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce_merged(Mat A,Mat P,PetscI
 
 PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ_allatonce_merged(Mat A,Mat P,Mat C)
 {
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
 
@@ -1298,7 +1289,6 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIXAIJ_allatonce(Mat A,Mat P,PetscInt dof
 
 PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_allatonce(Mat A,Mat P,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatPtAPSymbolic_MPIAIJ_MPIXAIJ_allatonce(A,P,1,fill,C));
@@ -1560,7 +1550,6 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIXAIJ_allatonce_merged(Mat A,Mat P,Petsc
 
 PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_allatonce_merged(Mat A,Mat P,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatPtAPSymbolic_MPIAIJ_MPIXAIJ_allatonce_merged(A,P,1,fill,C));
@@ -1934,7 +1923,6 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ(Mat A,Mat P,PetscReal fill,Mat Cmpi
 
 PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ(Mat A,Mat P,Mat C)
 {
-  PetscErrorCode    ierr;
   Mat_MPIAIJ        *a=(Mat_MPIAIJ*)A->data,*p=(Mat_MPIAIJ*)P->data;
   Mat_SeqAIJ        *ad=(Mat_SeqAIJ*)(a->A)->data,*ao=(Mat_SeqAIJ*)(a->B)->data;
   Mat_SeqAIJ        *ap,*p_loc,*p_oth=NULL,*c_seq;
@@ -2050,7 +2038,6 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ(Mat A,Mat P,Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSymbolic_PtAP_MPIAIJ_MPIAIJ(Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_Product         *product = C->product;
   Mat                 A=product->A,P=product->B;
   MatProductAlgorithm alg=product->alg;

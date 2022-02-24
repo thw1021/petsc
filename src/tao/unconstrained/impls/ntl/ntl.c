@@ -40,7 +40,6 @@ static PetscErrorCode TaoSolve_NTL(Tao tao)
   PetscReal                    step = 1.0;
 
   PetscReal                    norm_d = 0.0;
-  PetscErrorCode               ierr;
   PetscInt                     stepType;
   PetscInt                     its;
 
@@ -613,7 +612,6 @@ PetscCheckFalse(PetscIsInfOrNanReal(f) || PetscIsInfOrNanReal(gnorm),PetscObject
 static PetscErrorCode TaoSetUp_NTL(Tao tao)
 {
   TAO_NTL        *tl = (TAO_NTL *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->gradient) CHKERRQ(VecDuplicate(tao->solution, &tao->gradient));
@@ -630,7 +628,6 @@ static PetscErrorCode TaoSetUp_NTL(Tao tao)
 static PetscErrorCode TaoDestroy_NTL(Tao tao)
 {
   TAO_NTL        *tl = (TAO_NTL *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -646,7 +643,6 @@ static PetscErrorCode TaoDestroy_NTL(Tao tao)
 static PetscErrorCode TaoSetFromOptions_NTL(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_NTL        *tl = (TAO_NTL *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Newton trust region with line search method for unconstrained optimization"));
@@ -698,7 +694,6 @@ static PetscErrorCode TaoView_NTL(Tao tao, PetscViewer viewer)
 {
   TAO_NTL        *tl = (TAO_NTL *)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -756,7 +751,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_NTL(Tao tao)
 {
   TAO_NTL        *tl;
-  PetscErrorCode ierr;
   const char     *morethuente_type = TAOLINESEARCHMT;
 
   PetscFunctionBegin;

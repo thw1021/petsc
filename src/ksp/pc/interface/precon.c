@@ -13,7 +13,6 @@ PetscInt      PetscMGLevelId;
 
 PetscErrorCode PCGetDefaultType_Private(PC pc,const char *type[])
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscBool      hasop,flg1,flg2,set,flg3;
 
@@ -68,7 +67,6 @@ PetscErrorCode PCGetDefaultType_Private(PC pc,const char *type[])
 @*/
 PetscErrorCode  PCReset(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -98,7 +96,6 @@ PetscErrorCode  PCReset(PC pc)
 @*/
 PetscErrorCode  PCDestroy(PC *pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*pc) PetscFunctionReturn(0);
@@ -168,7 +165,6 @@ $           D A M D^{-1} z = D b for right preconditioning
 @*/
 PetscErrorCode  PCSetDiagonalScale(PC pc,Vec s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -211,7 +207,6 @@ $           D A M D^{-1} z = D b for right preconditioning
 @*/
 PetscErrorCode  PCDiagonalScaleLeft(PC pc,Vec in,Vec out)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -250,7 +245,6 @@ $           D A M D^{-1} z = D b for right preconditioning
 @*/
 PetscErrorCode  PCDiagonalScaleRight(PC pc,Vec in,Vec out)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -374,7 +368,6 @@ PetscErrorCode  PCGetUseAmat(PC pc,PetscBool *flg)
 PetscErrorCode  PCCreate(MPI_Comm comm,PC *newpc)
 {
   PC             pc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(newpc,2);
@@ -420,7 +413,6 @@ PetscErrorCode  PCCreate(MPI_Comm comm,PC *newpc)
 @*/
 PetscErrorCode  PCApply(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   PetscInt       m,n,mv,nv;
 
   PetscFunctionBegin;
@@ -471,7 +463,6 @@ PetscErrorCode  PCMatApply(PC pc,Mat X,Mat Y)
   Vec            cy, cx;
   PetscInt       m1, M1, m2, M2, n1, N1, n2, N2, m3, M3, n3, N3;
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -533,7 +524,6 @@ PetscErrorCode  PCMatApply(PC pc,Mat X,Mat Y)
 @*/
 PetscErrorCode  PCApplySymmetricLeft(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -573,7 +563,6 @@ PetscErrorCode  PCApplySymmetricLeft(PC pc,Vec x,Vec y)
 @*/
 PetscErrorCode  PCApplySymmetricRight(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -616,7 +605,6 @@ PetscErrorCode  PCApplySymmetricRight(PC pc,Vec x,Vec y)
 @*/
 PetscErrorCode  PCApplyTranspose(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -684,7 +672,6 @@ PetscErrorCode  PCApplyTransposeExists(PC pc,PetscBool  *flg)
 @*/
 PetscErrorCode  PCApplyBAorAB(PC pc,PCSide side,Vec x,Vec y,Vec work)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -767,7 +754,6 @@ PetscErrorCode  PCApplyBAorAB(PC pc,PCSide side,Vec x,Vec y,Vec work)
 @*/
 PetscErrorCode  PCApplyBAorABTranspose(PC pc,PCSide side,Vec x,Vec y,Vec work)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -859,7 +845,6 @@ PetscErrorCode  PCApplyRichardsonExists(PC pc,PetscBool  *exists)
 @*/
 PetscErrorCode  PCApplyRichardson(PC pc,Vec b,Vec y,Vec w,PetscReal rtol,PetscReal abstol, PetscReal dtol,PetscInt its,PetscBool guesszero,PetscInt *outits,PCRichardsonConvergedReason *reason)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -968,7 +953,6 @@ PetscErrorCode PCGetFailedReasonRank(PC pc,PCFailedReason *reason)
 @*/
 PetscErrorCode  PCSetUp(PC pc)
 {
-  PetscErrorCode   ierr;
   const char       *def;
   PetscObjectState matstate, matnonzerostate;
 
@@ -1039,7 +1023,6 @@ PetscErrorCode  PCSetUp(PC pc)
 @*/
 PetscErrorCode  PCSetUpOnBlocks(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1133,7 +1116,6 @@ PetscErrorCode  PCSetModifySubMatrices(PC pc,PetscErrorCode (*func)(PC,PetscInt,
 @*/
 PetscErrorCode  PCModifySubMatrices(PC pc,PetscInt nsub,const IS row[],const IS col[],Mat submat[],void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1174,7 +1156,6 @@ PetscErrorCode  PCModifySubMatrices(PC pc,PetscInt nsub,const IS row[],const IS 
  @*/
 PetscErrorCode  PCSetOperators(PC pc,Mat Amat,Mat Pmat)
 {
-  PetscErrorCode   ierr;
   PetscInt         m1,n1,m2,n2;
 
   PetscFunctionBegin;
@@ -1313,7 +1294,6 @@ $           set size, type, etc of Amat and Pmat
 @*/
 PetscErrorCode  PCGetOperators(PC pc,Mat *Amat,Mat *Pmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1397,7 +1377,6 @@ PetscErrorCode  PCGetOperatorsSet(PC pc,PetscBool  *mat,PetscBool  *pmat)
 @*/
 PetscErrorCode  PCFactorGetMatrix(PC pc,Mat *mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1429,7 +1408,6 @@ PetscErrorCode  PCFactorGetMatrix(PC pc,Mat *mat)
 @*/
 PetscErrorCode  PCSetOptionsPrefix(PC pc,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1458,7 +1436,6 @@ PetscErrorCode  PCSetOptionsPrefix(PC pc,const char prefix[])
 @*/
 PetscErrorCode  PCAppendOptionsPrefix(PC pc,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1488,7 +1465,6 @@ PetscErrorCode  PCAppendOptionsPrefix(PC pc,const char prefix[])
 @*/
 PetscErrorCode  PCGetOptionsPrefix(PC pc,const char *prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1504,7 +1480,6 @@ PetscErrorCode  PCGetOptionsPrefix(PC pc,const char *prefix[])
 */
 PETSC_INTERN PetscErrorCode  PCPreSolveChangeRHS(PC pc,PetscBool *change)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1543,7 +1518,6 @@ PETSC_INTERN PetscErrorCode  PCPreSolveChangeRHS(PC pc,PetscBool *change)
 @*/
 PetscErrorCode PCPreSolve(PC pc,KSP ksp)
 {
-  PetscErrorCode ierr;
   Vec            x,rhs;
 
   PetscFunctionBegin;
@@ -1618,7 +1592,6 @@ PetscErrorCode PCSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP))
 @*/
 PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
 {
-  PetscErrorCode ierr;
   Vec            x,rhs;
 
   PetscFunctionBegin;
@@ -1661,7 +1634,6 @@ PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
 @*/
 PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isbinary;
   PetscInt       classid;
   char           type[256];
@@ -1702,7 +1674,6 @@ PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
 @*/
 PetscErrorCode  PCViewFromOptions(PC A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PC_CLASSID,1);
@@ -1737,7 +1708,6 @@ PetscErrorCode  PCViewFromOptions(PC A,PetscObject obj,const char name[])
 PetscErrorCode  PCView(PC pc,PetscViewer viewer)
 {
   PCType         cstr;
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring,isbinary,isdraw;
 #if defined(PETSC_HAVE_SAWS)
   PetscBool      issaws;
@@ -1876,7 +1846,6 @@ $     -pc_type my_solver
 @*/
 PetscErrorCode  PCRegister(const char sname[],PetscErrorCode (*function)(PC))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCInitializePackage());
@@ -1887,7 +1856,6 @@ PetscErrorCode  PCRegister(const char sname[],PetscErrorCode (*function)(PC))
 static PetscErrorCode MatMult_PC(Mat A,Vec X,Vec Y)
 {
   PC             pc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&pc));
@@ -1919,7 +1887,6 @@ static PetscErrorCode MatMult_PC(Mat A,Vec X,Vec Y)
 @*/
 PetscErrorCode  PCComputeOperator(PC pc,MatType mattype,Mat *mat)
 {
-  PetscErrorCode ierr;
   PetscInt       N,M,m,n;
   Mat            A,Apc;
 
@@ -1963,7 +1930,6 @@ PetscErrorCode  PCComputeOperator(PC pc,MatType mattype,Mat *mat)
 @*/
 PetscErrorCode PCSetCoordinates(PC pc, PetscInt dim, PetscInt nloc, PetscReal coords[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1992,7 +1958,6 @@ PetscErrorCode PCSetCoordinates(PC pc, PetscInt dim, PetscInt nloc, PetscReal co
 @*/
 PetscErrorCode PCGetInterpolations(PC pc,PetscInt *num_levels,Mat *interpolations[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -2022,7 +1987,6 @@ PetscErrorCode PCGetInterpolations(PC pc,PetscInt *num_levels,Mat *interpolation
 @*/
 PetscErrorCode PCGetCoarseOperators(PC pc,PetscInt *num_levels,Mat *coarseOperators[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);

@@ -37,7 +37,6 @@ static const char *NLS_UPDATE[64] = {"step", "reduction", "interpolation"};
 
 static PetscErrorCode TaoSolve_NLS(Tao tao)
 {
-  PetscErrorCode               ierr;
   TAO_NLS                      *nlsP = (TAO_NLS *)tao->data;
   KSPType                      ksp_type;
   PetscBool                    is_nash,is_stcg,is_gltr,is_bfgs,is_jacobi,is_symmetric,sym_set;
@@ -709,7 +708,6 @@ static PetscErrorCode TaoSolve_NLS(Tao tao)
 static PetscErrorCode TaoSetUp_NLS(Tao tao)
 {
   TAO_NLS        *nlsP = (TAO_NLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->gradient) CHKERRQ(VecDuplicate(tao->solution,&tao->gradient));
@@ -727,7 +725,6 @@ static PetscErrorCode TaoSetUp_NLS(Tao tao)
 static PetscErrorCode TaoDestroy_NLS(Tao tao)
 {
   TAO_NLS        *nlsP = (TAO_NLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -744,7 +741,6 @@ static PetscErrorCode TaoDestroy_NLS(Tao tao)
 static PetscErrorCode TaoSetFromOptions_NLS(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_NLS        *nlsP = (TAO_NLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Newton line search method for unconstrained optimization"));
@@ -806,7 +802,6 @@ static PetscErrorCode TaoView_NLS(Tao tao, PetscViewer viewer)
 {
   TAO_NLS        *nlsP = (TAO_NLS *)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -887,7 +882,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_NLS(Tao tao)
 {
   TAO_NLS        *nlsP;
   const char     *morethuente_type = TAOLINESEARCHMT;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(tao,&nlsP));

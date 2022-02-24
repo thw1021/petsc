@@ -41,7 +41,6 @@ do { \
 PetscErrorCode DMPlexCreateCGNSFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 #if defined(PETSC_HAVE_CGNS)
   int cgid = -1;
 #endif

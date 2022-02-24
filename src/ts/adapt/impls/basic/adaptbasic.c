@@ -10,7 +10,6 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt,TS ts,PetscReal h,PetscI
   PetscReal      enorma,enormr;
   PetscReal      safety = adapt->safety;
   PetscReal      hfac_lte,h_lte;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *next_sc = 0;   /* Reuse the same order scheme */

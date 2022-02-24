@@ -3,7 +3,6 @@
 static PetscErrorCode TSRHSSplitGetRHSSplit(TS ts,const char splitname[],TS_RHSSplitLink *isplit)
 {
   PetscBool       found = PETSC_FALSE;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   *isplit = ts->tsrhssplit;
@@ -35,7 +34,6 @@ PetscErrorCode TSRHSSplitSetIS(TS ts,const char splitname[],IS is)
 {
   TS_RHSSplitLink newsplit,next = ts->tsrhssplit;
   char            prefix[128];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -85,7 +83,6 @@ PetscErrorCode TSRHSSplitSetIS(TS ts,const char splitname[],IS is)
 PetscErrorCode TSRHSSplitGetIS(TS ts,const char splitname[],IS *is)
 {
   TS_RHSSplitLink isplit;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -124,7 +121,6 @@ PetscErrorCode TSRHSSplitSetRHSFunction(TS ts,const char splitname[],Vec r,TSRHS
   TS_RHSSplitLink isplit;
   DM              dmc;
   Vec             subvec,ralloc = NULL;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -176,7 +172,6 @@ PetscErrorCode TSRHSSplitSetRHSFunction(TS ts,const char splitname[],Vec r,TSRHS
 PetscErrorCode TSRHSSplitGetSubTS(TS ts,const char splitname[],TS *subts)
 {
   TS_RHSSplitLink isplit;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -212,7 +207,6 @@ PetscErrorCode TSRHSSplitGetSubTSs(TS ts,PetscInt *n,TS *subts[])
 {
   TS_RHSSplitLink ilink = ts->tsrhssplit;
   PetscInt        i = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);

@@ -37,7 +37,6 @@
 PetscErrorCode  KSPGMRESClassicalGramSchmidtOrthogonalization(KSP ksp,PetscInt it)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)(ksp->data);
-  PetscErrorCode ierr;
   PetscInt       j;
   PetscScalar    *hh,*hes,*lhh;
   PetscReal      hnrm, wnrm;

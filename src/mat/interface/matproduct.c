@@ -46,7 +46,6 @@ const char *const MatProductTypes[] = {"UNSPECIFIED","AB","AtB","ABt","PtAP","RA
  * they are dangerous and should be removed in the future */
 static PetscErrorCode MatProductNumeric_PtAP_Unsafe(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            P = product->B,AP = product->Dwork;
 
@@ -61,7 +60,6 @@ static PetscErrorCode MatProductNumeric_PtAP_Unsafe(Mat C)
 
 static PetscErrorCode MatProductSymbolic_PtAP_Unsafe(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A=product->A,P=product->B,AP;
   PetscReal      fill=product->fill;
@@ -95,7 +93,6 @@ static PetscErrorCode MatProductSymbolic_PtAP_Unsafe(Mat C)
 
 static PetscErrorCode MatProductNumeric_RARt_Unsafe(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            R=product->B,RA=product->Dwork;
 
@@ -110,7 +107,6 @@ static PetscErrorCode MatProductNumeric_RARt_Unsafe(Mat C)
 
 static PetscErrorCode MatProductSymbolic_RARt_Unsafe(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A=product->A,R=product->B,RA;
   PetscReal      fill=product->fill;
@@ -141,7 +137,6 @@ static PetscErrorCode MatProductSymbolic_RARt_Unsafe(Mat C)
 
 static PetscErrorCode MatProductNumeric_ABC_Unsafe(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,BC=product->Dwork;
 
@@ -156,7 +151,6 @@ static PetscErrorCode MatProductNumeric_ABC_Unsafe(Mat mat)
 
 static PetscErrorCode MatProductSymbolic_ABC_Unsafe(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            B=product->B,C=product->C,BC;
   PetscReal      fill=product->fill;
@@ -187,7 +181,6 @@ static PetscErrorCode MatProductSymbolic_ABC_Unsafe(Mat mat)
 
 static PetscErrorCode MatProductSymbolic_Unsafe(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
 
   PetscFunctionBegin;
@@ -229,7 +222,6 @@ static PetscErrorCode MatProductSymbolic_Unsafe(Mat mat)
 @*/
 PetscErrorCode MatProductReplaceMats(Mat A,Mat B,Mat C,Mat D)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product;
   PetscBool      flgA = PETSC_TRUE,flgB = PETSC_TRUE,flgC = PETSC_TRUE;
 
@@ -287,7 +279,6 @@ PetscErrorCode MatProductReplaceMats(Mat A,Mat B,Mat C,Mat D)
 
 static PetscErrorCode MatProductNumeric_X_Dense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A = product->A, B = product->B;
   PetscInt       k, K = B->cmap->N;
@@ -363,7 +354,6 @@ static PetscErrorCode MatProductNumeric_X_Dense(Mat C)
 
 static PetscErrorCode MatProductSymbolic_X_Dense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A = product->A, B = product->B;
   PetscBool      isdense;
@@ -392,7 +382,6 @@ static PetscErrorCode MatProductSymbolic_X_Dense(Mat C)
 /* a single driver to query the dispatching */
 static PetscErrorCode MatProductSetFromOptions_Private(Mat mat)
 {
-  PetscErrorCode    ierr;
   Mat_Product       *product = mat->product;
   PetscInt          Am,An,Bm,Bn,Cm,Cn;
   Mat               A = product->A,B = product->B,C = product->C;
@@ -556,7 +545,6 @@ PetscErrorCode MatProductSetFromOptions(Mat mat)
 @*/
 PetscErrorCode MatProductView(Mat mat, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -575,7 +563,6 @@ PetscErrorCode MatProductView(Mat mat, PetscViewer viewer)
  * they are dangerous and should be removed in the future */
 PetscErrorCode MatProductNumeric_AB(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -587,7 +574,6 @@ PetscErrorCode MatProductNumeric_AB(Mat mat)
 
 PetscErrorCode MatProductNumeric_AtB(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -599,7 +585,6 @@ PetscErrorCode MatProductNumeric_AtB(Mat mat)
 
 PetscErrorCode MatProductNumeric_ABt(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -611,7 +596,6 @@ PetscErrorCode MatProductNumeric_ABt(Mat mat)
 
 PetscErrorCode MatProductNumeric_PtAP(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -623,7 +607,6 @@ PetscErrorCode MatProductNumeric_PtAP(Mat mat)
 
 PetscErrorCode MatProductNumeric_RARt(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -635,7 +618,6 @@ PetscErrorCode MatProductNumeric_RARt(Mat mat)
 
 PetscErrorCode MatProductNumeric_ABC(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B,C=product->C;
 
@@ -663,7 +645,6 @@ PetscErrorCode MatProductNumeric_ABC(Mat mat)
 @*/
 PetscErrorCode MatProductNumeric(Mat mat)
 {
-  PetscErrorCode ierr;
   PetscLogEvent  eventtype = -1;
   PetscBool      missing = PETSC_FALSE;
 
@@ -722,7 +703,6 @@ PetscErrorCode MatProductNumeric(Mat mat)
  * they are dangerous and should be removed in the future */
 PetscErrorCode MatProductSymbolic_AB(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -735,7 +715,6 @@ PetscErrorCode MatProductSymbolic_AB(Mat mat)
 
 PetscErrorCode MatProductSymbolic_AtB(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -748,7 +727,6 @@ PetscErrorCode MatProductSymbolic_AtB(Mat mat)
 
 PetscErrorCode MatProductSymbolic_ABt(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B;
 
@@ -761,7 +739,6 @@ PetscErrorCode MatProductSymbolic_ABt(Mat mat)
 
 PetscErrorCode MatProductSymbolic_ABC(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
   Mat            A=product->A,B=product->B,C=product->C;
 
@@ -790,7 +767,6 @@ PetscErrorCode MatProductSymbolic_ABC(Mat mat)
 @*/
 PetscErrorCode MatProductSymbolic(Mat mat)
 {
-  PetscErrorCode ierr;
   PetscLogEvent  eventtype = -1;
   PetscBool      missing = PETSC_FALSE;
 
@@ -883,7 +859,6 @@ PetscErrorCode MatProductSetFill(Mat mat,PetscReal fill)
 @*/
 PetscErrorCode MatProductSetAlgorithm(Mat mat,MatProductAlgorithm alg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -908,7 +883,6 @@ PetscErrorCode MatProductSetAlgorithm(Mat mat,MatProductAlgorithm alg)
 @*/
 PetscErrorCode MatProductSetType(Mat mat,MatProductType productype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -942,7 +916,6 @@ PetscErrorCode MatProductSetType(Mat mat,MatProductType productype)
 @*/
 PetscErrorCode MatProductClear(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = mat->product;
 
   PetscFunctionBegin;
@@ -966,7 +939,6 @@ PetscErrorCode MatProductClear(Mat mat)
 /* Create a supporting struct and attach it to the matrix product */
 PetscErrorCode MatProductCreate_Private(Mat A,Mat B,Mat C,Mat D)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product=NULL;
 
   PetscFunctionBegin;
@@ -1014,7 +986,6 @@ PetscErrorCode MatProductCreate_Private(Mat A,Mat B,Mat C,Mat D)
 @*/
 PetscErrorCode MatProductCreateWithMat(Mat A,Mat B,Mat C,Mat D)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1068,7 +1039,6 @@ PetscErrorCode MatProductCreateWithMat(Mat A,Mat B,Mat C,Mat D)
 @*/
 PetscErrorCode MatProductCreate(Mat A,Mat B,Mat C,Mat *D)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1103,7 +1073,6 @@ typedef struct {
 
 static PetscErrorCode MatDestroy_MatMatMatPrivate(void *data)
 {
-  PetscErrorCode   ierr;
   MatMatMatPrivate *mmdata = (MatMatMatPrivate *)data;
 
   PetscFunctionBegin;
@@ -1115,7 +1084,6 @@ static PetscErrorCode MatDestroy_MatMatMatPrivate(void *data)
 
 static PetscErrorCode MatProductNumeric_ABC_Basic(Mat mat)
 {
-  PetscErrorCode   ierr;
   Mat_Product      *product = mat->product;
   MatMatMatPrivate *mmabc;
 
@@ -1139,7 +1107,6 @@ static PetscErrorCode MatProductNumeric_ABC_Basic(Mat mat)
 
 PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
 {
-  PetscErrorCode   ierr;
   Mat_Product      *product = mat->product;
   Mat              A, B ,C;
   MatProductType   p1,p2;

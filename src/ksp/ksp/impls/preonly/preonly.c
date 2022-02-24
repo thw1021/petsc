@@ -9,7 +9,6 @@ static PetscErrorCode KSPSetUp_PREONLY(KSP ksp)
 
 static PetscErrorCode  KSPSolve_PREONLY(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscBool      diagonalscale;
   PCFailedReason pcreason;
 
@@ -49,7 +48,6 @@ static PetscErrorCode  KSPSolve_PREONLY(KSP ksp)
 
 static PetscErrorCode KSPMatSolve_PREONLY(KSP ksp, Mat B, Mat X)
 {
-  PetscErrorCode ierr;
   PetscBool      diagonalscale;
   PCFailedReason pcreason;
 
@@ -99,7 +97,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_PREONLY(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_NONE,PC_LEFT,3));

@@ -21,7 +21,6 @@
 @*/
 PetscErrorCode PetscIntStackDestroy(PetscIntStack stack)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(stack->stack));
@@ -92,7 +91,6 @@ PetscErrorCode PetscIntStackTop(PetscIntStack stack, int *top)
 PetscErrorCode PetscIntStackPush(PetscIntStack stack, int item)
 {
   int            *array;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   stack->top++;
@@ -147,7 +145,6 @@ PetscErrorCode PetscIntStackPop(PetscIntStack stack, int *item)
 PetscErrorCode PetscIntStackCreate(PetscIntStack *stack)
 {
   PetscIntStack  s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(stack,1);

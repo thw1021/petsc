@@ -15,7 +15,6 @@ typedef struct {
 static PetscErrorCode TSMimexGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 {
   TS_Mimex      *mimex = (TS_Mimex *) ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (X0) {
@@ -31,7 +30,6 @@ static PetscErrorCode TSMimexGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 
 static PetscErrorCode TSMimexRestoreX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (X0)   if (dm && dm != ts->dm) CHKERRQ(DMRestoreNamedGlobalVector(dm, "TSMimex_X0", X0));
@@ -41,7 +39,6 @@ static PetscErrorCode TSMimexRestoreX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 
 static PetscErrorCode TSMimexGetXstarAndG(TS ts, DM dm, Vec *Xstar, Vec *G)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetNamedGlobalVector(dm, "TSMimex_Xstar", Xstar));
@@ -51,7 +48,6 @@ static PetscErrorCode TSMimexGetXstarAndG(TS ts, DM dm, Vec *Xstar, Vec *G)
 
 static PetscErrorCode TSMimexRestoreXstarAndG(TS ts, DM dm, Vec *Xstar, Vec *G)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMRestoreNamedGlobalVector(dm, "TSMimex_Xstar", Xstar));
@@ -69,7 +65,6 @@ static PetscErrorCode SNESTSFormFunction_Mimex(SNES snes, Vec x, Vec y, TS ts)
   DM             dm, dmsave;
   Vec            X0, Xdot;
   PetscReal      shift = 1./ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes, &dm));
@@ -131,7 +126,6 @@ static PetscErrorCode SNESTSFormJacobian_Mimex(SNES snes, Vec x, Mat A, Mat B, T
   DM             dm, dmsave;
   Vec            Xdot;
   PetscReal      shift = 1./ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* th->Xdot has already been computed in SNESTSFormFunction_Mimex (SNES guarantees this) */
@@ -157,7 +151,6 @@ static PetscErrorCode TSStep_Mimex_Split(TS ts)
   const PetscScalar *aupdate;
   PetscScalar       *asol, dt = ts->time_step;
   PetscInt           Nf, f, pStart, pEnd, p;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -223,7 +216,6 @@ static PetscErrorCode TSStep_Mimex_Implicit(TS ts)
   TS_Mimex      *mimex  = (TS_Mimex *) ts->data;
   Vec            sol    = ts->vec_sol;
   Vec            update = mimex->update;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSPreStage(ts, ts->ptime));
@@ -240,7 +232,6 @@ static PetscErrorCode TSStep_Mimex_Implicit(TS ts)
 static PetscErrorCode TSStep_Mimex(TS ts)
 {
   TS_Mimex       *mimex = (TS_Mimex*)ts->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   switch(mimex->version) {
@@ -259,7 +250,6 @@ static PetscErrorCode TSStep_Mimex(TS ts)
 static PetscErrorCode TSSetUp_Mimex(TS ts)
 {
   TS_Mimex       *mimex = (TS_Mimex*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(ts->vec_sol, &mimex->update));
@@ -270,7 +260,6 @@ static PetscErrorCode TSSetUp_Mimex(TS ts)
 static PetscErrorCode TSReset_Mimex(TS ts)
 {
   TS_Mimex       *mimex = (TS_Mimex*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&mimex->update));
@@ -280,7 +269,6 @@ static PetscErrorCode TSReset_Mimex(TS ts)
 
 static PetscErrorCode TSDestroy_Mimex(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_Mimex(ts));
@@ -292,7 +280,6 @@ static PetscErrorCode TSDestroy_Mimex(TS ts)
 static PetscErrorCode TSSetFromOptions_Mimex(PetscOptionItems *PetscOptionsObject, TS ts)
 {
   TS_Mimex      *mimex = (TS_Mimex *) ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "MIMEX ODE solver options"));
@@ -307,7 +294,6 @@ static PetscErrorCode TSView_Mimex(TS ts,PetscViewer viewer)
 {
   TS_Mimex      *mimex = (TS_Mimex *) ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -320,7 +306,6 @@ static PetscErrorCode TSView_Mimex(TS ts,PetscViewer viewer)
 static PetscErrorCode TSInterpolate_Mimex(TS ts,PetscReal t,Vec X)
 {
   PetscReal      alpha = (ts->ptime - t)/ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecAXPBY(ts->vec_sol,1.0-alpha,alpha,X));
@@ -347,7 +332,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Mimex(TS ts)
 {
   TS_Mimex       *mimex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ts->ops->setup           = TSSetUp_Mimex;

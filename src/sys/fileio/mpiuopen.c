@@ -33,7 +33,6 @@
 @*/
 PetscErrorCode  PetscFOpen(MPI_Comm comm,const char name[],const char mode[],FILE **fp)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   FILE           *fd;
   char           fname[PETSC_MAX_PATH_LEN],tname[PETSC_MAX_PATH_LEN];
@@ -82,7 +81,6 @@ PetscErrorCode  PetscFOpen(MPI_Comm comm,const char name[],const char mode[],FIL
 @*/
 PetscErrorCode  PetscFClose(MPI_Comm comm,FILE *fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   int            err;
 
@@ -117,7 +115,6 @@ static char PetscPOpenMachine[128] = "";
 @*/
 PetscErrorCode PetscPClose(MPI_Comm comm,FILE *fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -162,7 +159,6 @@ PetscErrorCode PetscPClose(MPI_Comm comm,FILE *fd)
 @*/
 PetscErrorCode  PetscPOpen(MPI_Comm comm,const char machine[],const char program[],const char mode[],FILE **fp)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   size_t         i,len,cnt;
   char           commandt[PETSC_MAX_PATH_LEN],command[PETSC_MAX_PATH_LEN];
@@ -222,7 +218,6 @@ PetscErrorCode  PetscPOpen(MPI_Comm comm,const char machine[],const char program
 @*/
 PetscErrorCode  PetscPOpenSetMachine(const char machine[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (machine) {

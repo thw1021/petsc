@@ -8,7 +8,6 @@
 PetscErrorCode MatSetUpMultiply_MPIDense(Mat mat)
 {
   Mat_MPIDense   *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Create local vector that is used to scatter into */
@@ -30,7 +29,6 @@ static PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat,PetscInt,const IS[
 
 PetscErrorCode MatCreateSubMatrices_MPIDense(Mat C,PetscInt ismax,const IS isrow[],const IS iscol[],MatReuse scall,Mat *submat[])
 {
-  PetscErrorCode ierr;
   PetscInt       nmax,nstages_local,nstages,i,pos,max_no;
 
   PetscFunctionBegin;
@@ -61,7 +59,6 @@ PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C,PetscInt ismax,const IS
   Mat_MPIDense   *c = (Mat_MPIDense*)C->data;
   Mat            A  = c->A;
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data,*mat;
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,tag0,tag1,idex,end,i;
   PetscInt       N = C->cmap->N,rstart = C->rmap->rstart,count;
   const PetscInt **irow,**icol,*irow_i;
@@ -402,7 +399,6 @@ PetscErrorCode MatCreateSubMatrices_MPIDense_Local(Mat C,PetscInt ismax,const IS
 PETSC_INTERN PetscErrorCode MatScale_MPIDense(Mat inA,PetscScalar alpha)
 {
   Mat_MPIDense   *A = (Mat_MPIDense*)inA->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatScale(A->A,alpha));

@@ -39,7 +39,6 @@
 @*/
 PetscErrorCode  KSPFGMRESSetModifyPC(KSP ksp,PetscErrorCode (*fcn)(KSP,PetscInt,PetscInt,PetscReal,void*),void *ctx,PetscErrorCode (*d)(void*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -101,7 +100,6 @@ PetscErrorCode  KSPFGMRESModifyPCNoChange(KSP ksp,PetscInt total_its,PetscInt lo
 PetscErrorCode  KSPFGMRESModifyPCKSP(KSP ksp,PetscInt total_its,PetscInt loc_its,PetscReal res_norm,void *dummy)
 {
   PC             pc;
-  PetscErrorCode ierr;
   PetscInt       maxits;
   KSP            sub_ksp;
   PetscReal      rtol,abstol,dtol;

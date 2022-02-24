@@ -52,7 +52,6 @@ static PetscBool MatPackageInitialized = PETSC_FALSE;
 PetscErrorCode  MatFinalizePackage(void)
 {
   MatRootName    nnames,names = MatRootNameList;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeDestroy());
@@ -158,7 +157,6 @@ PetscErrorCode  MatInitializePackage(void)
   char           logList[256];
   PetscBool      opt,pkg;
 
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (MatPackageInitialized) PetscFunctionReturn(0);
@@ -458,7 +456,6 @@ PetscErrorCode  MatInitializePackage(void)
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscmat(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatInitializePackage());

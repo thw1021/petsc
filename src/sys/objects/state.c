@@ -102,7 +102,6 @@ PetscErrorCode PetscObjectComposedDataIncreaseInt(PetscObject obj)
 {
   PetscInt         *ar = obj->intcomposeddata,*new_ar,n = obj->int_idmax,new_n;
   PetscObjectState *ir = obj->intcomposedstate,*new_ir;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   new_n = PetscObjectComposedDataMax;
@@ -119,7 +118,6 @@ PetscErrorCode PetscObjectComposedDataIncreaseIntstar(PetscObject obj)
 {
   PetscInt         **ar = obj->intstarcomposeddata,**new_ar,n = obj->intstar_idmax,new_n;
   PetscObjectState *ir  = obj->intstarcomposedstate,*new_ir;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   new_n = PetscObjectComposedDataMax;
@@ -138,7 +136,6 @@ PetscErrorCode PetscObjectComposedDataIncreaseReal(PetscObject obj)
   PetscReal        *ar = obj->realcomposeddata,*new_ar;
   PetscObjectState *ir = obj->realcomposedstate,*new_ir;
   PetscInt         n   = obj->real_idmax,new_n;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   new_n = PetscObjectComposedDataMax;
@@ -156,7 +153,6 @@ PetscErrorCode PetscObjectComposedDataIncreaseRealstar(PetscObject obj)
   PetscReal        **ar = obj->realstarcomposeddata,**new_ar;
   PetscObjectState *ir  = obj->realstarcomposedstate,*new_ir;
   PetscInt         n    = obj->realstar_idmax,new_n;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   new_n = PetscObjectComposedDataMax;
@@ -174,7 +170,6 @@ PetscErrorCode PetscObjectComposedDataIncreaseScalar(PetscObject obj)
   PetscScalar      *ar = obj->scalarcomposeddata,*new_ar;
   PetscObjectState *ir = obj->scalarcomposedstate,*new_ir;
   PetscInt         n   = obj->scalar_idmax,new_n;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   new_n = PetscObjectComposedDataMax;
@@ -192,7 +187,6 @@ PetscErrorCode PetscObjectComposedDataIncreaseScalarstar(PetscObject obj)
   PetscScalar      **ar = obj->scalarstarcomposeddata,**new_ar;
   PetscObjectState *ir  = obj->scalarstarcomposedstate,*new_ir;
   PetscInt         n    = obj->scalarstar_idmax,new_n;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   new_n = PetscObjectComposedDataMax;

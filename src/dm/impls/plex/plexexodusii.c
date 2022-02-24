@@ -45,7 +45,6 @@ PetscViewer PETSC_VIEWER_EXODUSII_(MPI_Comm comm)
 static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *) v->data;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   if (exo->filename) CHKERRQ(PetscViewerASCIIPrintf(viewer, "Filename:    %s\n", exo->filename));
@@ -57,7 +56,6 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
 
 static PetscErrorCode PetscViewerSetFromOptions_ExodusII(PetscOptionItems *PetscOptionsObject, PetscViewer v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "ExodusII PetscViewer Options"));
@@ -74,7 +72,6 @@ static PetscErrorCode PetscViewerSetUp_ExodusII(PetscViewer viewer)
 static PetscErrorCode PetscViewerDestroy_ExodusII(PetscViewer viewer)
 {
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *) viewer->data;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   if (exo->exoid >= 0) {PetscStackCallStandard(ex_close,exo->exoid);}
@@ -94,7 +91,6 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   PetscViewer_ExodusII *exo = (PetscViewer_ExodusII *) viewer->data;
   PetscMPIInt           rank;
   int                   CPU_word_size, IO_word_size, EXO_mode;
-  PetscErrorCode        ierr;
   MPI_Info              mpi_info = MPI_INFO_NULL;
   float                 EXO_version;
 
@@ -202,7 +198,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
 {
   PetscViewer_ExodusII *exo;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(v,&exo));
@@ -257,7 +252,6 @@ PetscErrorCode EXOGetVarIndex_Internal(int exoid, ex_entity_type obj_type, const
   const int      num_suffix = 5;
   char          *suffix[5];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   suffix[0] = (char *) "";
@@ -786,7 +780,6 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   int                exoid,offsetN = 0, offsetZ = 0;
   const char        *vecname;
   PetscInt           step;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) v, &comm));
@@ -837,7 +830,6 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   int                exoid,offsetN = 0, offsetZ = 0;
   const char        *vecname;
   PetscInt           step;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) v, &comm));
@@ -888,7 +880,6 @@ PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, i
   const PetscScalar *varray;
   PetscInt           xs, xe, bs;
   PetscBool          useNatural;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) v, &comm));
@@ -962,7 +953,6 @@ PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, i
   PetscScalar   *varray;
   PetscInt       xs, xe, bs;
   PetscBool      useNatural;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) v, &comm));
@@ -1036,7 +1026,6 @@ PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
   IS                compIS;
   PetscInt         *csSize, *csID;
   PetscInt          numCS, set, csxs = 0;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)v, &comm));
@@ -1134,7 +1123,6 @@ PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
   IS                compIS;
   PetscInt         *csSize, *csID;
   PetscInt          numCS, set, csxs = 0;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)v,&comm));
@@ -1216,7 +1204,6 @@ PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
 @*/
 PetscErrorCode PetscViewerExodusIIGetId(PetscViewer viewer, int *exoid)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -1243,7 +1230,6 @@ PetscErrorCode PetscViewerExodusIIGetId(PetscViewer viewer, int *exoid)
 @*/
 PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer viewer, PetscInt order)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -1270,7 +1256,6 @@ PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer viewer, PetscInt order)
 @*/
 PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer viewer, PetscInt *order)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -1304,7 +1289,6 @@ $    FILE_MODE_APPEND - open existing file for binary output
 @*/
 PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm, exo));
@@ -1335,7 +1319,6 @@ PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFi
 PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 #if defined(PETSC_HAVE_EXODUSII)
   int   CPU_word_size = sizeof(PetscReal), IO_word_size = 0, exoid = -1;
   float version;
@@ -1361,7 +1344,6 @@ PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], 
 static PetscErrorCode ExodusGetCellType_Internal(const char *elem_type, DMPolytopeType *ct)
 {
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *ct = DM_POLYTOPE_UNKNOWN;
@@ -1419,7 +1401,6 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
   Vec            coordinates;
   PetscScalar    *coords;
   PetscInt       coordSize, v;
-  PetscErrorCode ierr;
   /* Read from ex_get_init() */
   char title[PETSC_MAX_PATH_LEN+1];
   int  dim    = 0, dimEmbed = 0, numVertices = 0, numCells = 0, numHybridCells = 0;

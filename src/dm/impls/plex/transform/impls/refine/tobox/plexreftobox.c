@@ -3,7 +3,6 @@
 static PetscErrorCode DMPlexTransformView_ToBox(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -29,7 +28,6 @@ static PetscErrorCode DMPlexTransformSetUp_ToBox(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformDestroy_ToBox(DMPlexTransform tr)
 {
   DMPlexRefine_ToBox *f = (DMPlexRefine_ToBox *) tr->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(f));
@@ -39,7 +37,6 @@ static PetscErrorCode DMPlexTransformDestroy_ToBox(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformGetSubcellOrientation_ToBox(DMPlexTransform tr, DMPolytopeType sct, PetscInt sp, PetscInt so, DMPolytopeType tct, PetscInt r, PetscInt o, PetscInt *rnew, PetscInt *onew)
 {
   PetscBool      convertTensor = PETSC_TRUE;
-  PetscErrorCode ierr;
   static PetscInt tri_seg[]  = {0, 0, 2, 0, 1, 0,
                                 2, 0, 1, 0, 0, 0,
                                 1, 0, 0, 0, 2, 0,
@@ -385,7 +382,6 @@ static PetscErrorCode DMPlexTransformGetSubcellOrientation_ToBox(DMPlexTransform
 static PetscErrorCode DMPlexTransformCellRefine_ToBox(DMPlexTransform tr, DMPolytopeType source, PetscInt p, PetscInt *rt, PetscInt *Nt, DMPolytopeType *target[], PetscInt *size[], PetscInt *cone[], PetscInt *ornt[])
 {
   PetscBool      convertTensor = PETSC_TRUE;
-  PetscErrorCode ierr;
   /* Change tensor edges to segments */
   static DMPolytopeType tedgeT[]  = {DM_POLYTOPE_SEGMENT};
   static PetscInt       tedgeS[]  = {1};
@@ -681,7 +677,6 @@ static PetscErrorCode DMPlexTransformInitialize_ToBox(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_ToBox(DMPlexTransform tr)
 {
   DMPlexRefine_ToBox *f;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

@@ -28,7 +28,6 @@ PetscErrorCode DMPlexCreatePLYFromFile(MPI_Comm comm, const char filename[], Pet
   PetscInt        dim = 2, cdim = 3, Nvp = 0, coordSize, xi = -1, yi = -1, zi = -1, v, c, p;
   PetscMPIInt     rank;
   int             snum, Nv, Nc;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));

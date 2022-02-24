@@ -18,7 +18,6 @@ Level: intermediate
 PetscErrorCode  SNESFASSetType(SNES snes,SNESFASType fastype)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -78,7 +77,6 @@ PetscErrorCode  SNESFASGetType(SNES snes,SNESFASType *fastype)
 @*/
 PetscErrorCode SNESFASSetLevels(SNES snes, PetscInt levels, MPI_Comm *comms)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   const char     *optionsprefix;
   char           tprefix[128];
@@ -208,7 +206,6 @@ PetscErrorCode SNESFASGetCycleSNES(SNES snes,PetscInt level,SNES *lsnes)
 PetscErrorCode SNESFASSetNumberSmoothUp(SNES snes, PetscInt n)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -246,7 +243,6 @@ PetscErrorCode SNESFASSetNumberSmoothUp(SNES snes, PetscInt n)
 PetscErrorCode SNESFASSetNumberSmoothDown(SNES snes, PetscInt n)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -287,7 +283,6 @@ PetscErrorCode SNESFASSetContinuation(SNES snes,PetscBool continuation)
   const char     *optionsprefix;
   char           tprefix[128];
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -328,7 +323,6 @@ PetscErrorCode SNESFASSetContinuation(SNES snes,PetscBool continuation)
 PetscErrorCode SNESFASSetCycles(SNES snes, PetscInt cycles)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   PetscBool      isFine;
 
   PetscFunctionBegin;
@@ -362,7 +356,6 @@ PetscErrorCode SNESFASSetCycles(SNES snes, PetscInt cycles)
 PetscErrorCode SNESFASSetMonitor(SNES snes, PetscViewerAndFormat *vf, PetscBool flg)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   PetscBool      isFine;
   PetscInt       i, levels;
   SNES           levelsnes;
@@ -406,7 +399,6 @@ PetscErrorCode SNESFASSetMonitor(SNES snes, PetscViewerAndFormat *vf, PetscBool 
 PetscErrorCode SNESFASSetLog(SNES snes, PetscBool flg)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   PetscBool      isFine;
   PetscInt       i, levels;
   SNES           levelsnes;
@@ -452,7 +444,6 @@ PetscErrorCode SNESFASCycleCreateSmoother_Private(SNES snes, SNES *smooth)
   SNES_FAS       *fas;
   const char     *optionsprefix;
   char           tprefix[128];
-  PetscErrorCode ierr;
   SNES           nsmooth;
 
   PetscFunctionBegin;
@@ -502,7 +493,6 @@ PetscErrorCode SNESFASCycleCreateSmoother_Private(SNES snes, SNES *smooth)
 PetscErrorCode SNESFASCycleSetCycles(SNES snes, PetscInt cycles)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -788,7 +778,6 @@ PetscErrorCode SNESFASCycleIsFine(SNES snes, PetscBool *flg)
 PetscErrorCode SNESFASSetInterpolation(SNES snes, PetscInt level, Mat mat)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -820,7 +809,6 @@ PetscErrorCode SNESFASSetInterpolation(SNES snes, PetscInt level, Mat mat)
 PetscErrorCode SNESFASGetInterpolation(SNES snes, PetscInt level, Mat *mat)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -858,7 +846,6 @@ PetscErrorCode SNESFASGetInterpolation(SNES snes, PetscInt level, Mat *mat)
 PetscErrorCode SNESFASSetRestriction(SNES snes, PetscInt level, Mat mat)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -890,7 +877,6 @@ PetscErrorCode SNESFASSetRestriction(SNES snes, PetscInt level, Mat mat)
 PetscErrorCode SNESFASGetRestriction(SNES snes, PetscInt level, Mat *mat)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -922,7 +908,6 @@ PetscErrorCode SNESFASGetRestriction(SNES snes, PetscInt level, Mat *mat)
 PetscErrorCode SNESFASSetInjection(SNES snes, PetscInt level, Mat mat)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -955,7 +940,6 @@ PetscErrorCode SNESFASSetInjection(SNES snes, PetscInt level, Mat mat)
 PetscErrorCode SNESFASGetInjection(SNES snes, PetscInt level, Mat *mat)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -986,7 +970,6 @@ PetscErrorCode SNESFASGetInjection(SNES snes, PetscInt level, Mat *mat)
 PetscErrorCode SNESFASSetRScale(SNES snes, PetscInt level, Vec rscale)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -1017,7 +1000,6 @@ PetscErrorCode SNESFASSetRScale(SNES snes, PetscInt level, Vec rscale)
 PetscErrorCode SNESFASGetSmoother(SNES snes, PetscInt level, SNES *smooth)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -1049,7 +1031,6 @@ PetscErrorCode SNESFASGetSmoother(SNES snes, PetscInt level, SNES *smooth)
 PetscErrorCode SNESFASGetSmootherDown(SNES snes, PetscInt level, SNES *smooth)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -1085,7 +1066,6 @@ PetscErrorCode SNESFASGetSmootherDown(SNES snes, PetscInt level, SNES *smooth)
 PetscErrorCode SNESFASGetSmootherUp(SNES snes, PetscInt level, SNES *smooth)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -1120,7 +1100,6 @@ PetscErrorCode SNESFASGetSmootherUp(SNES snes, PetscInt level, SNES *smooth)
 PetscErrorCode SNESFASGetCoarseSolve(SNES snes, SNES *coarse)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
   SNES           levelsnes;
 
   PetscFunctionBegin;
@@ -1155,7 +1134,6 @@ PetscErrorCode SNESFASGetCoarseSolve(SNES snes, SNES *coarse)
 PetscErrorCode SNESFASFullSetDownSweep(SNES snes,PetscBool swp)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -1188,7 +1166,6 @@ PetscErrorCode SNESFASFullSetDownSweep(SNES snes,PetscBool swp)
 PetscErrorCode SNESFASFullSetTotal(SNES snes,PetscBool total)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);

@@ -10,7 +10,6 @@
 static PetscErrorCode SNESNEWTONLSCheckLocalMin_Private(SNES snes,Mat A,Vec F,PetscReal fnorm,PetscBool  *ismin)
 {
   PetscReal      a1;
-  PetscErrorCode ierr;
   PetscBool      hastranspose;
   Vec            W;
 
@@ -49,7 +48,6 @@ static PetscErrorCode SNESNEWTONLSCheckLocalMin_Private(SNES snes,Mat A,Vec F,Pe
 static PetscErrorCode SNESNEWTONLSCheckResidual_Private(SNES snes,Mat A,Vec F,Vec X)
 {
   PetscReal      a1,a2;
-  PetscErrorCode ierr;
   PetscBool      hastranspose;
 
   PetscFunctionBegin;
@@ -133,7 +131,6 @@ static PetscErrorCode SNESNEWTONLSCheckResidual_Private(SNES snes,Mat A,Vec F,Ve
 */
 PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
 {
-  PetscErrorCode       ierr;
   PetscInt             maxits,i,lits;
   SNESLineSearchReason lssucceed;
   PetscReal            fnorm,gnorm,xnorm,ynorm;
@@ -298,7 +295,6 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
  */
 PetscErrorCode SNESSetUp_NEWTONLS(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSetUpMatrices(snes));
@@ -324,7 +320,6 @@ PetscErrorCode SNESReset_NEWTONLS(SNES snes)
  */
 PetscErrorCode SNESDestroy_NEWTONLS(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_NEWTONLS(snes));
@@ -344,7 +339,6 @@ PetscErrorCode SNESDestroy_NEWTONLS(SNES snes)
 */
 static PetscErrorCode SNESView_NEWTONLS(SNES snes,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -394,7 +388,6 @@ static PetscErrorCode SNESSetFromOptions_NEWTONLS(PetscOptionItems *PetscOptions
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONLS(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_NEWTONLS  *neP;
   SNESLineSearch linesearch;
 

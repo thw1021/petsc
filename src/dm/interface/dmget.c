@@ -33,12 +33,10 @@
 @*/
 PetscErrorCode  DMGetLocalVector(DM dm,Vec *g)
 {
-  PetscErrorCode ierr,i;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(g,2);
-  for (i=0; i<DM_MAX_WORK_VECTORS; i++) {
+  for (PetscInt i=0; i<DM_MAX_WORK_VECTORS; i++) {
     if (dm->localin[i]) {
       DM vdm;
 
@@ -54,7 +52,7 @@ PetscErrorCode  DMGetLocalVector(DM dm,Vec *g)
   CHKERRQ(DMCreateLocalVector(dm,g));
 
 alldone:
-  for (i=0; i<DM_MAX_WORK_VECTORS; i++) {
+  for (PetscInt i=0; i<DM_MAX_WORK_VECTORS; i++) {
     if (!dm->localout[i]) {
       dm->localout[i] = *g;
       break;
@@ -82,7 +80,6 @@ alldone:
 @*/
 PetscErrorCode  DMRestoreLocalVector(DM dm,Vec *g)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
 
   PetscFunctionBegin;
@@ -143,7 +140,6 @@ alldone:
 @*/
 PetscErrorCode  DMGetGlobalVector(DM dm,Vec *g)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -191,7 +187,6 @@ alldone:
 @*/
 PetscErrorCode  DMClearGlobalVectors(DM dm)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -230,7 +225,6 @@ PetscErrorCode  DMClearGlobalVectors(DM dm)
 @*/
 PetscErrorCode  DMClearLocalVectors(DM dm)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -271,7 +265,6 @@ PetscErrorCode  DMClearLocalVectors(DM dm)
 @*/
 PetscErrorCode  DMRestoreGlobalVector(DM dm,Vec *g)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
 
   PetscFunctionBegin;
@@ -320,7 +313,6 @@ alldone:
 @*/
 PetscErrorCode DMHasNamedGlobalVector(DM dm,const char *name,PetscBool *exists)
 {
-  PetscErrorCode ierr;
   DMNamedVecLink link;
 
   PetscFunctionBegin;
@@ -359,7 +351,6 @@ PetscErrorCode DMHasNamedGlobalVector(DM dm,const char *name,PetscBool *exists)
 @*/
 PetscErrorCode DMGetNamedGlobalVector(DM dm,const char *name,Vec *X)
 {
-  PetscErrorCode ierr;
   DMNamedVecLink link;
 
   PetscFunctionBegin;
@@ -410,7 +401,6 @@ found:
 @*/
 PetscErrorCode DMRestoreNamedGlobalVector(DM dm,const char *name,Vec *X)
 {
-  PetscErrorCode ierr;
   DMNamedVecLink link;
 
   PetscFunctionBegin;
@@ -459,7 +449,6 @@ PetscErrorCode DMRestoreNamedGlobalVector(DM dm,const char *name,Vec *X)
 @*/
 PetscErrorCode DMHasNamedLocalVector(DM dm,const char *name,PetscBool *exists)
 {
-  PetscErrorCode ierr;
   DMNamedVecLink link;
 
   PetscFunctionBegin;
@@ -498,7 +487,6 @@ PetscErrorCode DMHasNamedLocalVector(DM dm,const char *name,PetscBool *exists)
 @*/
 PetscErrorCode DMGetNamedLocalVector(DM dm,const char *name,Vec *X)
 {
-  PetscErrorCode ierr;
   DMNamedVecLink link;
 
   PetscFunctionBegin;
@@ -549,7 +537,6 @@ found:
 @*/
 PetscErrorCode DMRestoreNamedLocalVector(DM dm,const char *name,Vec *X)
 {
-  PetscErrorCode ierr;
   DMNamedVecLink link;
 
   PetscFunctionBegin;

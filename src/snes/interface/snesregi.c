@@ -45,7 +45,6 @@ const char *const *const SNESFunctionTypes = SNESFunctionTypes_Shifted + 1;
 @*/
 PetscErrorCode  SNESRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (SNESRegisterAllCalled) PetscFunctionReturn(0);
