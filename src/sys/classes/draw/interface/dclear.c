@@ -17,13 +17,12 @@
 @*/
 PetscErrorCode  PetscDrawClear(PetscDraw draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  if (draw->saveonclear) {ierr = PetscDrawSave(draw);CHKERRQ(ierr);}
+  if (draw->saveonclear) CHKERRQ(PetscDrawSave(draw));
   if (draw->ops->clear) {
-    ierr = (*draw->ops->clear)(draw);CHKERRQ(ierr);
+    CHKERRQ((*draw->ops->clear)(draw));
   }
   PetscFunctionReturn(0);
 }
@@ -42,12 +41,11 @@ PetscErrorCode  PetscDrawClear(PetscDraw draw)
 @*/
 PetscErrorCode  PetscDrawBOP(PetscDraw draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
   if (draw->ops->beginpage) {
-    ierr = (*draw->ops->beginpage)(draw);CHKERRQ(ierr);
+    CHKERRQ((*draw->ops->beginpage)(draw));
   }
   PetscFunctionReturn(0);
 }
@@ -65,12 +63,11 @@ PetscErrorCode  PetscDrawBOP(PetscDraw draw)
 @*/
 PetscErrorCode  PetscDrawEOP(PetscDraw draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
   if (draw->ops->endpage) {
-    ierr =  (*draw->ops->endpage)(draw);CHKERRQ(ierr);
+    CHKERRQ((*draw->ops->endpage)(draw));
   }
   PetscFunctionReturn(0);
 }
