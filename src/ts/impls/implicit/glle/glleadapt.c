@@ -53,8 +53,8 @@ PetscErrorCode  TSGLLEAdaptRegister(const char sname[],PetscErrorCode (*function
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = TSGLLEAdaptInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&TSGLLEAdaptList,sname,function);CHKERRQ(ierr);
+  CHKERRQ(TSGLLEAdaptInitializePackage());
+  CHKERRQ(PetscFunctionListAdd(&TSGLLEAdaptList,sname,function));
   PetscFunctionReturn(0);
 }
 
@@ -74,9 +74,9 @@ PetscErrorCode  TSGLLEAdaptRegisterAll(void)
   PetscFunctionBegin;
   if (TSGLLEAdaptRegisterAllCalled) PetscFunctionReturn(0);
   TSGLLEAdaptRegisterAllCalled = PETSC_TRUE;
-  ierr = TSGLLEAdaptRegister(TSGLLEADAPT_NONE,TSGLLEAdaptCreate_None);CHKERRQ(ierr);
-  ierr = TSGLLEAdaptRegister(TSGLLEADAPT_SIZE,TSGLLEAdaptCreate_Size);CHKERRQ(ierr);
-  ierr = TSGLLEAdaptRegister(TSGLLEADAPT_BOTH,TSGLLEAdaptCreate_Both);CHKERRQ(ierr);
+  CHKERRQ(TSGLLEAdaptRegister(TSGLLEADAPT_NONE,TSGLLEAdaptCreate_None));
+  CHKERRQ(TSGLLEAdaptRegister(TSGLLEADAPT_SIZE,TSGLLEAdaptCreate_Size));
+  CHKERRQ(TSGLLEAdaptRegister(TSGLLEADAPT_BOTH,TSGLLEAdaptCreate_Both));
   PetscFunctionReturn(0);
 }
 
@@ -93,7 +93,7 @@ PetscErrorCode  TSGLLEAdaptFinalizePackage(void)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListDestroy(&TSGLLEAdaptList);CHKERRQ(ierr);
+  CHKERRQ(PetscFunctionListDestroy(&TSGLLEAdaptList));
   TSGLLEAdaptPackageInitialized = PETSC_FALSE;
   TSGLLEAdaptRegisterAllCalled  = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -114,9 +114,9 @@ PetscErrorCode  TSGLLEAdaptInitializePackage(void)
   PetscFunctionBegin;
   if (TSGLLEAdaptPackageInitialized) PetscFunctionReturn(0);
   TSGLLEAdaptPackageInitialized = PETSC_TRUE;
-  ierr = PetscClassIdRegister("TSGLLEAdapt",&TSGLLEADAPT_CLASSID);CHKERRQ(ierr);
-  ierr = TSGLLEAdaptRegisterAll();CHKERRQ(ierr);
-  ierr = PetscRegisterFinalize(TSGLLEAdaptFinalizePackage);CHKERRQ(ierr);
+  CHKERRQ(PetscClassIdRegister("TSGLLEAdapt",&TSGLLEADAPT_CLASSID));
+  CHKERRQ(TSGLLEAdaptRegisterAll());
+  CHKERRQ(PetscRegisterFinalize(TSGLLEAdaptFinalizePackage));
   PetscFunctionReturn(0);
 }
 
@@ -125,11 +125,11 @@ PetscErrorCode  TSGLLEAdaptSetType(TSGLLEAdapt adapt,TSGLLEAdaptType type)
   PetscErrorCode ierr,(*r)(TSGLLEAdapt);
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListFind(TSGLLEAdaptList,type,&r);CHKERRQ(ierr);
+  CHKERRQ(PetscFunctionListFind(TSGLLEAdaptList,type,&r));
   PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSGLLEAdapt type \"%s\" given",type);
-  if (((PetscObject)adapt)->type_name) {ierr = (*adapt->ops->destroy)(adapt);CHKERRQ(ierr);}
-  ierr = (*r)(adapt);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)adapt,type);CHKERRQ(ierr);
+  if (((PetscObject)adapt)->type_name) CHKERRQ((*adapt->ops->destroy)(adapt));
+  CHKERRQ((*r)(adapt));
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject)adapt,type));
   PetscFunctionReturn(0);
 }
 
@@ -138,7 +138,7 @@ PetscErrorCode  TSGLLEAdaptSetOptionsPrefix(TSGLLEAdapt adapt,const char prefix[
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)adapt,prefix);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject)adapt,prefix));
   PetscFunctionReturn(0);
 }
 
@@ -148,13 +148,13 @@ PetscErrorCode  TSGLLEAdaptView(TSGLLEAdapt adapt,PetscViewer viewer)
   PetscBool      iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    ierr = PetscObjectPrintClassNamePrefixType((PetscObject)adapt,viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectPrintClassNamePrefixType((PetscObject)adapt,viewer));
     if (adapt->ops->view) {
-      ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = (*adapt->ops->view)(adapt,viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPushTab(viewer));
+      CHKERRQ((*adapt->ops->view)(adapt,viewer));
+      CHKERRQ(PetscViewerASCIIPopTab(viewer));
     }
   }
   PetscFunctionReturn(0);
@@ -168,8 +168,8 @@ PetscErrorCode  TSGLLEAdaptDestroy(TSGLLEAdapt *adapt)
   if (!*adapt) PetscFunctionReturn(0);
   PetscValidHeaderSpecific(*adapt,TSGLLEADAPT_CLASSID,1);
   if (--((PetscObject)(*adapt))->refct > 0) {*adapt = NULL; PetscFunctionReturn(0);}
-  if ((*adapt)->ops->destroy) {ierr = (*(*adapt)->ops->destroy)(*adapt);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(adapt);CHKERRQ(ierr);
+  if ((*adapt)->ops->destroy) CHKERRQ((*(*adapt)->ops->destroy)(*adapt));
+  CHKERRQ(PetscHeaderDestroy(adapt));
   PetscFunctionReturn(0);
 }
 
@@ -182,14 +182,14 @@ PetscErrorCode  TSGLLEAdaptSetFromOptions(PetscOptionItems *PetscOptionsObject,T
   PetscFunctionBegin;
   /* This should use PetscOptionsBegin() if/when this becomes an object used outside of TSGLLE, but currently this
   * function can only be called from inside TSSetFromOptions_GLLE()  */
-  ierr = PetscOptionsHead(PetscOptionsObject,"TSGLLE Adaptivity options");CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsHead(PetscOptionsObject,"TSGLLE Adaptivity options"));
   ierr = PetscOptionsFList("-ts_adapt_type","Algorithm to use for adaptivity","TSGLLEAdaptSetType",TSGLLEAdaptList,
                           ((PetscObject)adapt)->type_name ? ((PetscObject)adapt)->type_name : type,type,sizeof(type),&flg);CHKERRQ(ierr);
   if (flg || !((PetscObject)adapt)->type_name) {
-    ierr = TSGLLEAdaptSetType(adapt,type);CHKERRQ(ierr);
+    CHKERRQ(TSGLLEAdaptSetType(adapt,type));
   }
-  if (adapt->ops->setfromoptions) {ierr = (*adapt->ops->setfromoptions)(PetscOptionsObject,adapt);CHKERRQ(ierr);}
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  if (adapt->ops->setfromoptions) CHKERRQ((*adapt->ops->setfromoptions)(PetscOptionsObject,adapt));
+  CHKERRQ(PetscOptionsTail());
   PetscFunctionReturn(0);
 }
 
@@ -205,7 +205,7 @@ PetscErrorCode  TSGLLEAdaptChoose(TSGLLEAdapt adapt,PetscInt n,const PetscInt or
   PetscValidIntPointer(next_sc,9);
   PetscValidPointer(next_h,10);
   PetscValidBoolPointer(finish,11);
-  ierr = (*adapt->ops->choose)(adapt,n,orders,errors,cost,cur,h,tleft,next_sc,next_h,finish);CHKERRQ(ierr);
+  CHKERRQ((*adapt->ops->choose)(adapt,n,orders,errors,cost,cur,h,tleft,next_sc,next_h,finish));
   PetscFunctionReturn(0);
 }
 
@@ -216,7 +216,7 @@ PetscErrorCode  TSGLLEAdaptCreate(MPI_Comm comm,TSGLLEAdapt *inadapt)
 
   PetscFunctionBegin;
   *inadapt = NULL;
-  ierr     = PetscHeaderCreate(adapt,TSGLLEADAPT_CLASSID,"TSGLLEAdapt","General Linear adaptivity","TS",comm,TSGLLEAdaptDestroy,TSGLLEAdaptView);CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderCreate(adapt,TSGLLEADAPT_CLASSID,"TSGLLEAdapt","General Linear adaptivity","TS",comm,TSGLLEAdaptDestroy,TSGLLEAdaptView));
   *inadapt = adapt;
   PetscFunctionReturn(0);
 }
@@ -230,7 +230,7 @@ static PetscErrorCode TSGLLEAdaptDestroy_JustFree(TSGLLEAdapt adapt)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(adapt->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(adapt->data));
   PetscFunctionReturn(0);
 }
 
@@ -259,7 +259,7 @@ PetscErrorCode  TSGLLEAdaptCreate_None(TSGLLEAdapt adapt)
   TSGLLEAdapt_None *a;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(adapt,&a);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(adapt,&a));
   adapt->data         = (void*)a;
   adapt->ops->choose  = TSGLLEAdaptChoose_None;
   adapt->ops->destroy = TSGLLEAdaptDestroy_JustFree;
@@ -301,7 +301,7 @@ PetscErrorCode  TSGLLEAdaptCreate_Size(TSGLLEAdapt adapt)
   TSGLLEAdapt_Size *a;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(adapt,&a);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(adapt,&a));
   adapt->data         = (void*)a;
   adapt->ops->choose  = TSGLLEAdaptChoose_Size;
   adapt->ops->destroy = TSGLLEAdaptDestroy_JustFree;
@@ -329,8 +329,8 @@ static PetscErrorCode TSGLLEAdaptChoose_Both(TSGLLEAdapt adapt,PetscInt n,const 
     optimal   = PetscPowReal((PetscReal)errors[i],(PetscReal)-1./(safe*orders[i]));
     trial.h   = h*optimal;
     trial.eff = trial.h/cost[i];
-    if (trial.eff > best.eff) {ierr = PetscArraycpy(&best,&trial,1);CHKERRQ(ierr);}
-    if (i == cur) {ierr = PetscArraycpy(&current,&trial,1);CHKERRQ(ierr);}
+    if (trial.eff > best.eff) CHKERRQ(PetscArraycpy(&best,&trial,1));
+    if (i == cur) CHKERRQ(PetscArraycpy(&current,&trial,1));
   }
   /* Only switch orders if the scheme offers significant benefits over the current one.
   When the scheme is not changing, only change step size if it offers significant benefits. */
@@ -364,7 +364,7 @@ PetscErrorCode TSGLLEAdaptCreate_Both(TSGLLEAdapt adapt)
   TSGLLEAdapt_Both *a;
 
   PetscFunctionBegin;
-  ierr = PetscNewLog(adapt,&a);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(adapt,&a));
   adapt->data         = (void*)a;
   adapt->ops->choose  = TSGLLEAdaptChoose_Both;
   adapt->ops->destroy = TSGLLEAdaptDestroy_JustFree;

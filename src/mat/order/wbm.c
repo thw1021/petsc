@@ -43,11 +43,11 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
 #endif
 
   PetscFunctionBegin;
-  ierr = MatGetRowIJ(mat,1,PETSC_TRUE,PETSC_TRUE,&nrow,&ia,&ja,&done);CHKERRQ(ierr);
+  CHKERRQ(MatGetRowIJ(mat,1,PETSC_TRUE,PETSC_TRUE,&nrow,&ia,&ja,&done));
   ncol = nrow;
   nnz  = ia[nrow];
   PetscCheckFalse(!done,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot get rows for matrix");
-  ierr = MatSeqAIJGetArray(mat, &a);CHKERRQ(ierr);
+  CHKERRQ(MatSeqAIJGetArray(mat, &a));
   switch (job) {
   case 1: liw = 4*nrow +   ncol; ldw = 0;break;
   case 2: liw = 2*nrow + 2*ncol; ldw = ncol;break;
@@ -56,7 +56,7 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
   case 5: liw = 3*nrow + 2*ncol; ldw = nrow + 2*ncol + nnz;break;
   }
 
-  ierr = PetscMalloc3(liw,&iw,ldw,&dw,nrow,&perm);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc3(liw,&iw,ldw,&dw,nrow,&perm));
 #if defined(PETSC_HAVE_SUPERLU_DIST)
   ierr = mc64id_dist(icntl);
   PetscCheckFalse(ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"HSL mc64id_dist returned %d",ierr);
@@ -66,12 +66,12 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
   icntl[3] = 0;              /* perform consistency checks [default] */
   ierr = mc64ad_dist(&job, &nrow, &nnz, ia, ja, a, &num, perm, &liw, iw, &ldw, dw, icntl, info);
   PetscCheckFalse(ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"HSL mc64ad_dist returned %d",ierr);
-  ierr = MatRestoreRowIJ(mat, 1, PETSC_TRUE, PETSC_TRUE, NULL, &ia, &ja, &done);CHKERRQ(ierr);
+  CHKERRQ(MatRestoreRowIJ(mat, 1, PETSC_TRUE, PETSC_TRUE, NULL, &ia, &ja, &done));
   for (i = 0; i < nrow; ++i) perm[i]--;
   /* If job == 5, dw[0..ncols] contains the column scaling and dw[ncols..ncols+nrows] contains the row scaling */
-  ierr = ISCreateStride(PETSC_COMM_SELF, nrow, 0, 1, row);CHKERRQ(ierr);
-  ierr = ISCreateGeneral(PETSC_COMM_SELF,nrow,perm,PETSC_COPY_VALUES,col);CHKERRQ(ierr);
-  ierr = PetscFree3(iw,dw,perm);CHKERRQ(ierr);
+  CHKERRQ(ISCreateStride(PETSC_COMM_SELF, nrow, 0, 1, row));
+  CHKERRQ(ISCreateGeneral(PETSC_COMM_SELF,nrow,perm,PETSC_COPY_VALUES,col));
+  CHKERRQ(PetscFree3(iw,dw,perm));
   PetscFunctionReturn(0);
 #else
   SETERRQ(PetscObjectComm((PetscObject) mat), PETSC_ERR_SUP, "WBM using MC64 does not support complex numbers");

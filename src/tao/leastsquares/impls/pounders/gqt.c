@@ -9,8 +9,8 @@ static PetscErrorCode estsv(PetscInt n, PetscReal *r, PetscInt ldr, PetscReal *s
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscBLASIntCast(n,&blasn);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(ldr,&blasldr);CHKERRQ(ierr);
+  CHKERRQ(PetscBLASIntCast(n,&blasn));
+  CHKERRQ(PetscBLASIntCast(ldr,&blasldr));
   for (i=0;i<n;i++) {
     z[i]=0.0;
   }
@@ -46,7 +46,7 @@ static PetscErrorCode estsv(PetscInt n, PetscReal *r, PetscInt ldr, PetscReal *s
         sm += PetscAbs(z[j] + wm * r[i + ldr*j]);
       }
       if (i < n-1) {
-        ierr = PetscBLASIntCast(n-i-1,&blasnmi);CHKERRQ(ierr);
+        CHKERRQ(PetscBLASIntCast(n-i-1,&blasnmi));
         PetscStackCallBLAS("BLASaxpy",BLASaxpy_(&blasnmi, &w, &r[i + ldr*(i+1)], &blasldr, &z[i+1], &blas1));
         PetscStackCallBLAS("BLASasum",s += BLASasum_(&blasnmi, &z[i+1], &blas1));
       }
@@ -76,7 +76,7 @@ static PetscErrorCode estsv(PetscInt n, PetscReal *r, PetscInt ldr, PetscReal *s
         z[j] = z[j] / r[j + ldr*j];
       }
       temp = -z[j];
-      ierr = PetscBLASIntCast(j,&blasj);CHKERRQ(ierr);
+      CHKERRQ(PetscBLASIntCast(j,&blasj));
       PetscStackCallBLAS("BLASaxpy",BLASaxpy_(&blasj,&temp,&r[0+ldr*j],&blas1,z,&blas1));
     }
 
@@ -232,9 +232,9 @@ PetscErrorCode gqt(PetscInt n, PetscReal *a, PetscInt lda, PetscReal *b,
   PetscReal      alpha, anorm, bnorm, parc, parf, parl, pars, par=*retpar,paru, prod, rxnorm, rznorm=0.0, temp, xnorm;
 
   PetscFunctionBegin;
-  ierr = PetscBLASIntCast(n,&blasn);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(lda,&blaslda);CHKERRQ(ierr);
-  ierr = PetscBLASIntCast(lda+1,&blasldap1);CHKERRQ(ierr);
+  CHKERRQ(PetscBLASIntCast(n,&blasn));
+  CHKERRQ(PetscBLASIntCast(lda,&blaslda));
+  CHKERRQ(PetscBLASIntCast(lda+1,&blasldap1));
   parf   = 0.0;
   xnorm  = 0.0;
   rxnorm = 0.0;
@@ -247,7 +247,7 @@ PetscErrorCode gqt(PetscInt n, PetscReal *a, PetscInt lda, PetscReal *b,
   /* Copy the diagonal and save A in its lower triangle */
   PetscStackCallBLAS("BLAScopy",BLAScopy_(&blasn,a,&blasldap1, wa1, &blas1));
   for (j=0;j<n-1;j++) {
-    ierr = PetscBLASIntCast(n - j - 1,&iblas);CHKERRQ(ierr);
+    CHKERRQ(PetscBLASIntCast(n - j - 1,&iblas));
     PetscStackCallBLAS("BLAScopy",BLAScopy_(&iblas,&a[j + lda*(j+1)], &blaslda, &a[j+1 + lda*j], &blas1));
   }
 
@@ -296,7 +296,7 @@ PetscErrorCode gqt(PetscInt n, PetscReal *a, PetscInt lda, PetscReal *b,
     /* Copy the lower triangle of A into its upper triangle and  compute A + par*I */
 
     for (j=0;j<n-1;j++) {
-      ierr = PetscBLASIntCast(n - j - 1,&iblas);CHKERRQ(ierr);
+      CHKERRQ(PetscBLASIntCast(n - j - 1,&iblas));
       PetscStackCallBLAS("BLAScopy",BLAScopy_(&iblas,&a[j+1 + j*lda], &blas1,&a[j + (j+1)*lda], &blaslda));
     }
     for (j=0;j<n;j++) {
@@ -329,7 +329,7 @@ PetscErrorCode gqt(PetscInt n, PetscReal *a, PetscInt lda, PetscReal *b,
       }
 
       /* Compute a direction of negative curvature and use this information to improve pars. */
-      ierr = estsv(n,a,lda,&rznorm,z);CHKERRQ(ierr);CHKMEMQ;
+      CHKERRQ(estsv(n,a,lda,&rznorm,z));CHKMEMQ;
       pars = PetscMax(pars, par-rznorm*rznorm);
 
       /* Compute a negative curvature solution of the form x + alpha*z,  where norm(x+alpha*z)==delta */
@@ -433,10 +433,10 @@ PetscErrorCode gqt(PetscInt n, PetscReal *a, PetscInt lda, PetscReal *b,
       }
       /* Restore the upper triangle of A */
       for (j = 0; j<n; j++) {
-        ierr = PetscBLASIntCast(n - j - 1,&iblas);CHKERRQ(ierr);
+        CHKERRQ(PetscBLASIntCast(n - j - 1,&iblas));
         PetscStackCallBLAS("BLAScopy",BLAScopy_(&iblas,&a[j+1 + j*lda],&blas1, &a[j + (j+1)*lda],&blaslda));
       }
-      ierr = PetscBLASIntCast(lda+1,&iblas);CHKERRQ(ierr);
+      CHKERRQ(PetscBLASIntCast(lda+1,&iblas));
       PetscStackCallBLAS("BLAScopy",BLAScopy_(&blasn,wa1,&blas1,a,&iblas));
       break;
     }

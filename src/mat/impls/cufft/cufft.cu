@@ -25,8 +25,8 @@ PetscErrorCode MatMult_SeqCUFFT(Mat A, Vec x, Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecGetArray(x, &x_array);CHKERRQ(ierr);
-  ierr = VecGetArray(y, &y_array);CHKERRQ(ierr);
+  CHKERRQ(VecGetArray(x, &x_array));
+  CHKERRQ(VecGetArray(y, &y_array));
   if (!cufft->p_forward) {
     cufftResult result;
     /* create a plan, then execute it */
@@ -45,13 +45,13 @@ PetscErrorCode MatMult_SeqCUFFT(Mat A, Vec x, Vec y)
     }
   }
   /* transfer to GPU memory */
-  cerr = cudaMemcpy(devArray, x_array, sizeof(cufftComplex)*dim[ndim], cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  CHKERRCUDA(cudaMemcpy(devArray, x_array, sizeof(cufftComplex)*dim[ndim], cudaMemcpyHostToDevice));
   /* execute transform */
   result = cufftExecC2C(cufft->p_forward, devArray, devArray, CUFFT_FORWARD);CHKERRCUFFT(result);
   /* transfer from GPU memory */
-  cerr = cudaMemcpy(y_array, devArray, sizeof(cufftComplex)*dim[ndim], cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
-  ierr = VecRestoreArray(y, &y_array);CHKERRQ(ierr);
-  ierr = VecRestoreArray(x, &x_array);CHKERRQ(ierr);
+  CHKERRCUDA(cudaMemcpy(y_array, devArray, sizeof(cufftComplex)*dim[ndim], cudaMemcpyDeviceToHost));
+  CHKERRQ(VecRestoreArray(y, &y_array));
+  CHKERRQ(VecRestoreArray(x, &x_array));
   PetscFunctionReturn(0);
 }
 
@@ -66,8 +66,8 @@ PetscErrorCode MatMultTranspose_SeqCUFFT(Mat A, Vec x, Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecGetArray(x, &x_array);CHKERRQ(ierr);
-  ierr = VecGetArray(y, &y_array);CHKERRQ(ierr);
+  CHKERRQ(VecGetArray(x, &x_array));
+  CHKERRQ(VecGetArray(y, &y_array));
   if (!cufft->p_backward) {
     /* create a plan, then execute it */
     switch (ndim) {
@@ -85,13 +85,13 @@ PetscErrorCode MatMultTranspose_SeqCUFFT(Mat A, Vec x, Vec y)
     }
   }
   /* transfer to GPU memory */
-  cerr = cudaMemcpy(devArray, x_array, sizeof(cufftComplex)*dim[ndim], cudaMemcpyHostToDevice);CHKERRCUDA(cerr);
+  CHKERRCUDA(cudaMemcpy(devArray, x_array, sizeof(cufftComplex)*dim[ndim], cudaMemcpyHostToDevice));
   /* execute transform */
   result = cufftExecC2C(cufft->p_forward, devArray, devArray, CUFFT_INVERSE);CHKERRCUFFT(result);
   /* transfer from GPU memory */
-  cerr = cudaMemcpy(y_array, devArray, sizeof(cufftComplex)*dim[ndim], cudaMemcpyDeviceToHost);CHKERRCUDA(cerr);
-  ierr = VecRestoreArray(y, &y_array);CHKERRQ(ierr);
-  ierr = VecRestoreArray(x, &x_array);CHKERRQ(ierr);
+  CHKERRCUDA(cudaMemcpy(y_array, devArray, sizeof(cufftComplex)*dim[ndim], cudaMemcpyDeviceToHost));
+  CHKERRQ(VecRestoreArray(y, &y_array));
+  CHKERRQ(VecRestoreArray(x, &x_array));
   PetscFunctionReturn(0);
 }
 
@@ -103,12 +103,12 @@ PetscErrorCode MatDestroy_SeqCUFFT(Mat A)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(cufft->dim);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(cufft->dim));
   if (cufft->p_forward)  {result = cufftDestroy(cufft->p_forward);CHKERRCUFFT(result);}
   if (cufft->p_backward) {result = cufftDestroy(cufft->p_backward);CHKERRCUFFT(result);}
-  cerr = cudaFree(cufft->devArray);CHKERRCUDA(cerr);
-  ierr = PetscFree(A->data);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)A,0);CHKERRQ(ierr);
+  CHKERRCUDA(cudaFree(cufft->devArray));
+  CHKERRQ(PetscFree(A->data));
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject)A,0));
   PetscFunctionReturn(0);
 }
 
@@ -139,19 +139,19 @@ PetscErrorCode  MatCreateSeqCUFFT(MPI_Comm comm, PetscInt ndim, const PetscInt d
 
   PetscFunctionBegin;
   PetscCheckFalse(ndim < 0,PETSC_COMM_SELF, PETSC_ERR_USER, "ndim %d must be > 0", ndim);
-  ierr = MatCreate(comm, A);CHKERRQ(ierr);
+  CHKERRQ(MatCreate(comm, A));
   m    = 1;
   for (d = 0; d < ndim; ++d) {
     PetscCheckFalse(dim[d] < 0,PETSC_COMM_SELF, PETSC_ERR_USER, "dim[%d]=%d must be > 0", d, dim[d]);
     m *= dim[d];
   }
-  ierr = MatSetSizes(*A, m, m, m, m);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)*A, MATSEQCUFFT);CHKERRQ(ierr);
+  CHKERRQ(MatSetSizes(*A, m, m, m, m));
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject)*A, MATSEQCUFFT));
 
-  ierr       = PetscNewLog(*A,&cufft);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(*A,&cufft));
   (*A)->data = (void*) cufft;
-  ierr       = PetscMalloc1(ndim+1, &cufft->dim);CHKERRQ(ierr);
-  ierr       = PetscArraycpy(cufft->dim, dim, ndim);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(ndim+1, &cufft->dim));
+  CHKERRQ(PetscArraycpy(cufft->dim, dim, ndim));
 
   cufft->ndim       = ndim;
   cufft->p_forward  = 0;
@@ -159,7 +159,7 @@ PetscErrorCode  MatCreateSeqCUFFT(MPI_Comm comm, PetscInt ndim, const PetscInt d
   cufft->dim[ndim]  = m;
 
   /* GPU memory allocation */
-  cerr = cudaMalloc((void**) &cufft->devArray, sizeof(cufftComplex)*m);CHKERRCUDA(cerr);
+  CHKERRCUDA(cudaMalloc((void**) &cufft->devArray, sizeof(cufftComplex)*m));
 
   (*A)->ops->mult          = MatMult_SeqCUFFT;
   (*A)->ops->multtranspose = MatMultTranspose_SeqCUFFT;

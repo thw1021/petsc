@@ -32,11 +32,10 @@ PetscErrorCode  PetscGetArchType(char str[],size_t slen)
 
   PetscFunctionBegin;
 #if defined(PETSC_ARCH)
-  ierr = PetscStrncpy(str,PETSC_ARCH,slen-1);CHKERRQ(ierr);
+  CHKERRQ(PetscStrncpy(str,PETSC_ARCH,slen-1));
   str[slen-1] = 0;
 #else
 #error "$PETSC_ARCH/include/petscconf.h is missing PETSC_ARCH"
 #endif
   PetscFunctionReturn(0);
 }
-

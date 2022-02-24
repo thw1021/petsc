@@ -183,9 +183,9 @@ PetscErrorCode  PetscStrallocpy(const char s[],char *t[])
 
   PetscFunctionBegin;
   if (s) {
-    ierr = PetscStrlen(s,&len);CHKERRQ(ierr);
-    ierr = PetscMalloc1(1+len,&tmp);CHKERRQ(ierr);
-    ierr = PetscStrcpy(tmp,s);CHKERRQ(ierr);
+    CHKERRQ(PetscStrlen(s,&len));
+    CHKERRQ(PetscMalloc1(1+len,&tmp));
+    CHKERRQ(PetscStrcpy(tmp,s));
   }
   *t = tmp;
   PetscFunctionReturn(0);
@@ -220,9 +220,9 @@ PetscErrorCode  PetscStrArrayallocpy(const char *const *list,char ***t)
 
   PetscFunctionBegin;
   while (list[n++]) ;
-  ierr = PetscMalloc1(n+1,t);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(n+1,t));
   for (i=0; i<n; i++) {
-    ierr = PetscStrallocpy(list[i],(*t)+i);CHKERRQ(ierr);
+    CHKERRQ(PetscStrallocpy(list[i],(*t)+i));
   }
   (*t)[n] = NULL;
   PetscFunctionReturn(0);
@@ -252,10 +252,10 @@ PetscErrorCode PetscStrArrayDestroy(char ***list)
   PetscFunctionBegin;
   if (!*list) PetscFunctionReturn(0);
   while ((*list)[n]) {
-    ierr = PetscFree((*list)[n]);CHKERRQ(ierr);
+    CHKERRQ(PetscFree((*list)[n]));
     n++;
   }
-  ierr = PetscFree(*list);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(*list));
   PetscFunctionReturn(0);
 }
 
@@ -285,9 +285,9 @@ PetscErrorCode  PetscStrNArrayallocpy(PetscInt n,const char *const *list,char **
   PetscInt       i;
 
   PetscFunctionBegin;
-  ierr = PetscMalloc1(n,t);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(n,t));
   for (i=0; i<n; i++) {
-    ierr = PetscStrallocpy(list[i],(*t)+i);CHKERRQ(ierr);
+    CHKERRQ(PetscStrallocpy(list[i],(*t)+i));
   }
   PetscFunctionReturn(0);
 }
@@ -317,9 +317,9 @@ PetscErrorCode PetscStrNArrayDestroy(PetscInt n,char ***list)
   PetscFunctionBegin;
   if (!*list) PetscFunctionReturn(0);
   for (i=0; i<n; i++) {
-    ierr = PetscFree((*list)[i]);CHKERRQ(ierr);
+    CHKERRQ(PetscFree((*list)[i]));
   }
-  ierr = PetscFree(*list);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(*list));
   PetscFunctionReturn(0);
 }
 
@@ -455,7 +455,7 @@ PetscErrorCode  PetscStrlcat(char s[],const char t[],size_t n)
   PetscFunctionBegin;
   PetscCheckFalse(t && !n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"String buffer length must be positive");
   if (!t) PetscFunctionReturn(0);
-  ierr = PetscStrlen(t,&len);CHKERRQ(ierr);
+  CHKERRQ(PetscStrlen(t,&len));
   strncat(s,t,n - len);
   s[n-1] = 0;
   PetscFunctionReturn(0);
@@ -584,13 +584,13 @@ PetscErrorCode  PetscStrcasecmp(const char a[],const char b[],PetscBool  *t)
   else {
     char           *aa,*bb;
     PetscErrorCode ierr;
-    ierr = PetscStrallocpy(a,&aa);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(b,&bb);CHKERRQ(ierr);
-    ierr = PetscStrtolower(aa);CHKERRQ(ierr);
-    ierr = PetscStrtolower(bb);CHKERRQ(ierr);
-    ierr = PetscStrcmp(aa,bb,t);CHKERRQ(ierr);
-    ierr = PetscFree(aa);CHKERRQ(ierr);
-    ierr = PetscFree(bb);CHKERRQ(ierr);
+    CHKERRQ(PetscStrallocpy(a,&aa));
+    CHKERRQ(PetscStrallocpy(b,&bb));
+    CHKERRQ(PetscStrtolower(aa));
+    CHKERRQ(PetscStrtolower(bb));
+    CHKERRQ(PetscStrcmp(aa,bb,t));
+    CHKERRQ(PetscFree(aa));
+    CHKERRQ(PetscFree(bb));
     PetscFunctionReturn(0);
   }
 #endif
@@ -758,10 +758,10 @@ PetscErrorCode  PetscStrendswith(const char a[],const char b[],PetscBool *flg)
 
   PetscFunctionBegin;
   *flg = PETSC_FALSE;
-  ierr = PetscStrrstr(a,b,&test);CHKERRQ(ierr);
+  CHKERRQ(PetscStrrstr(a,b,&test));
   if (test) {
-    ierr = PetscStrlen(a,&na);CHKERRQ(ierr);
-    ierr = PetscStrlen(b,&nb);CHKERRQ(ierr);
+    CHKERRQ(PetscStrlen(a,&na));
+    CHKERRQ(PetscStrlen(b,&nb));
     if (a+na-nb == test) *flg = PETSC_TRUE;
   }
   PetscFunctionReturn(0);
@@ -795,7 +795,7 @@ PetscErrorCode  PetscStrbeginswith(const char a[],const char b[],PetscBool *flg)
 
   PetscFunctionBegin;
   *flg = PETSC_FALSE;
-  ierr = PetscStrrstr(a,b,&test);CHKERRQ(ierr);
+  CHKERRQ(PetscStrrstr(a,b,&test));
   if (test && (test == a)) *flg = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -826,7 +826,7 @@ PetscErrorCode  PetscStrendswithwhich(const char a[],const char *const *bs,Petsc
   PetscFunctionBegin;
   *cnt = 0;
   while (bs[*cnt]) {
-    ierr = PetscStrendswith(a,bs[*cnt],&flg);CHKERRQ(ierr);
+    CHKERRQ(PetscStrendswith(a,bs[*cnt],&flg));
     if (flg) PetscFunctionReturn(0);
     *cnt += 1;
   }
@@ -974,8 +974,8 @@ PetscErrorCode  PetscTokenCreate(const char a[],const char b,PetscToken *t)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscNew(t);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(a,&(*t)->array);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(t));
+  CHKERRQ(PetscStrallocpy(a,&(*t)->array));
 
   (*t)->current = (*t)->array;
   (*t)->token   = b;
@@ -1003,8 +1003,8 @@ PetscErrorCode  PetscTokenDestroy(PetscToken *a)
 
   PetscFunctionBegin;
   if (!*a) PetscFunctionReturn(0);
-  ierr = PetscFree((*a)->array);CHKERRQ(ierr);
-  ierr = PetscFree(*a);CHKERRQ(ierr);
+  CHKERRQ(PetscFree((*a)->array));
+  CHKERRQ(PetscFree(*a));
   PetscFunctionReturn(0);
 }
 
@@ -1036,14 +1036,14 @@ PetscErrorCode PetscStrInList(const char str[],const char list[],char sep,PetscB
 
   PetscFunctionBegin;
   *found = PETSC_FALSE;
-  ierr = PetscTokenCreate(list,sep,&token);CHKERRQ(ierr);
-  ierr = PetscTokenFind(token,&item);CHKERRQ(ierr);
+  CHKERRQ(PetscTokenCreate(list,sep,&token));
+  CHKERRQ(PetscTokenFind(token,&item));
   while (item) {
-    ierr = PetscStrcmp(str,item,found);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcmp(str,item,found));
     if (*found) break;
-    ierr = PetscTokenFind(token,&item);CHKERRQ(ierr);
+    CHKERRQ(PetscTokenFind(token,&item));
   }
-  ierr = PetscTokenDestroy(&token);CHKERRQ(ierr);
+  CHKERRQ(PetscTokenDestroy(&token));
   PetscFunctionReturn(0);
 }
 
@@ -1106,79 +1106,79 @@ PetscErrorCode  PetscStrreplace(MPI_Comm comm,const char aa[],char b[],size_t le
   PetscFunctionBegin;
   PetscCheckFalse(!a || !b,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"a and b strings must be nonnull");
   if (aa == b) {
-    ierr = PetscStrallocpy(aa,(char**)&a);CHKERRQ(ierr);
+    CHKERRQ(PetscStrallocpy(aa,(char**)&a));
   }
-  ierr = PetscMalloc1(len,&work);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(len,&work));
 
   /* get values for replaced variables */
-  ierr = PetscStrallocpy(PETSC_ARCH,&r[0]);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(PETSC_DIR,&r[1]);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(PETSC_LIB_DIR,&r[2]);CHKERRQ(ierr);
-  ierr = PetscMalloc1(DISPLAY_LENGTH,&r[3]);CHKERRQ(ierr);
-  ierr = PetscMalloc1(PETSC_MAX_PATH_LEN,&r[4]);CHKERRQ(ierr);
-  ierr = PetscMalloc1(PETSC_MAX_PATH_LEN,&r[5]);CHKERRQ(ierr);
-  ierr = PetscMalloc1(USER_LENGTH,&r[6]);CHKERRQ(ierr);
-  ierr = PetscMalloc1(HOST_LENGTH,&r[7]);CHKERRQ(ierr);
-  ierr = PetscGetDisplay(r[3],DISPLAY_LENGTH);CHKERRQ(ierr);
-  ierr = PetscGetHomeDirectory(r[4],PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
-  ierr = PetscGetWorkingDirectory(r[5],PETSC_MAX_PATH_LEN);CHKERRQ(ierr);
-  ierr = PetscGetUserName(r[6],USER_LENGTH);CHKERRQ(ierr);
-  ierr = PetscGetHostName(r[7],HOST_LENGTH);CHKERRQ(ierr);
+  CHKERRQ(PetscStrallocpy(PETSC_ARCH,&r[0]));
+  CHKERRQ(PetscStrallocpy(PETSC_DIR,&r[1]));
+  CHKERRQ(PetscStrallocpy(PETSC_LIB_DIR,&r[2]));
+  CHKERRQ(PetscMalloc1(DISPLAY_LENGTH,&r[3]));
+  CHKERRQ(PetscMalloc1(PETSC_MAX_PATH_LEN,&r[4]));
+  CHKERRQ(PetscMalloc1(PETSC_MAX_PATH_LEN,&r[5]));
+  CHKERRQ(PetscMalloc1(USER_LENGTH,&r[6]));
+  CHKERRQ(PetscMalloc1(HOST_LENGTH,&r[7]));
+  CHKERRQ(PetscGetDisplay(r[3],DISPLAY_LENGTH));
+  CHKERRQ(PetscGetHomeDirectory(r[4],PETSC_MAX_PATH_LEN));
+  CHKERRQ(PetscGetWorkingDirectory(r[5],PETSC_MAX_PATH_LEN));
+  CHKERRQ(PetscGetUserName(r[6],USER_LENGTH));
+  CHKERRQ(PetscGetHostName(r[7],HOST_LENGTH));
 
   /* replace that are in environment */
-  ierr = PetscOptionsGetenv(comm,"PETSC_LIB_DIR",env,sizeof(env),&flag);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetenv(comm,"PETSC_LIB_DIR",env,sizeof(env),&flag));
   if (flag) {
-    ierr = PetscFree(r[2]);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(env,&r[2]);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(r[2]));
+    CHKERRQ(PetscStrallocpy(env,&r[2]));
   }
 
   /* replace the requested strings */
-  ierr = PetscStrncpy(b,a,len);CHKERRQ(ierr);
+  CHKERRQ(PetscStrncpy(b,a,len));
   while (s[i]) {
-    ierr = PetscStrlen(s[i],&l);CHKERRQ(ierr);
-    ierr = PetscStrstr(b,s[i],&par);CHKERRQ(ierr);
+    CHKERRQ(PetscStrlen(s[i],&l));
+    CHKERRQ(PetscStrstr(b,s[i],&par));
     while (par) {
       *par =  0;
       par += l;
 
-      ierr = PetscStrlen(b,&l1);CHKERRQ(ierr);
-      ierr = PetscStrlen(r[i],&l2);CHKERRQ(ierr);
-      ierr = PetscStrlen(par,&l3);CHKERRQ(ierr);
+      CHKERRQ(PetscStrlen(b,&l1));
+      CHKERRQ(PetscStrlen(r[i],&l2));
+      CHKERRQ(PetscStrlen(par,&l3));
       PetscCheckFalse(l1 + l2 + l3 >= len,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"b len is not long enough to hold new values");
-      ierr = PetscStrncpy(work,b,len);CHKERRQ(ierr);
-      ierr = PetscStrlcat(work,r[i],len);CHKERRQ(ierr);
-      ierr = PetscStrlcat(work,par,len);CHKERRQ(ierr);
-      ierr = PetscStrncpy(b,work,len);CHKERRQ(ierr);
-      ierr = PetscStrstr(b,s[i],&par);CHKERRQ(ierr);
+      CHKERRQ(PetscStrncpy(work,b,len));
+      CHKERRQ(PetscStrlcat(work,r[i],len));
+      CHKERRQ(PetscStrlcat(work,par,len));
+      CHKERRQ(PetscStrncpy(b,work,len));
+      CHKERRQ(PetscStrstr(b,s[i],&par));
     }
     i++;
   }
   i = 0;
   while (r[i]) {
     tfree = (char*)r[i];
-    ierr  = PetscFree(tfree);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(tfree));
     i++;
   }
 
   /* look for any other ${xxx} strings to replace from environmental variables */
-  ierr = PetscStrstr(b,"${",&par);CHKERRQ(ierr);
+  CHKERRQ(PetscStrstr(b,"${",&par));
   while (par) {
     *par  = 0;
     par  += 2;
-    ierr  = PetscStrncpy(work,b,len);CHKERRQ(ierr);
-    ierr  = PetscStrstr(par,"}",&epar);CHKERRQ(ierr);
+    CHKERRQ(PetscStrncpy(work,b,len));
+    CHKERRQ(PetscStrstr(par,"}",&epar));
     *epar = 0;
     epar += 1;
-    ierr  = PetscOptionsGetenv(comm,par,env,sizeof(env),&flag);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsGetenv(comm,par,env,sizeof(env),&flag));
     PetscCheckFalse(!flag,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Substitution string ${%s} not found as environmental variable",par);
-    ierr = PetscStrlcat(work,env,len);CHKERRQ(ierr);
-    ierr = PetscStrlcat(work,epar,len);CHKERRQ(ierr);
-    ierr = PetscStrncpy(b,work,len);CHKERRQ(ierr);
-    ierr = PetscStrstr(b,"${",&par);CHKERRQ(ierr);
+    CHKERRQ(PetscStrlcat(work,env,len));
+    CHKERRQ(PetscStrlcat(work,epar,len));
+    CHKERRQ(PetscStrncpy(b,work,len));
+    CHKERRQ(PetscStrstr(b,"${",&par));
   }
-  ierr = PetscFree(work);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(work));
   if (aa == b) {
-    ierr = PetscFree(a);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(a));
   }
   PetscFunctionReturn(0);
 }
@@ -1211,7 +1211,7 @@ PetscErrorCode PetscEListFind(PetscInt n,const char *const *list,const char *str
   PetscFunctionBegin;
   if (found) *found = PETSC_FALSE;
   for (i=0; i<n; i++) {
-    ierr = PetscStrcasecmp(str,list[i],&matched);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcasecmp(str,list[i],&matched));
     if (matched || !str[0]) {
       if (found) *found = PETSC_TRUE;
       *value = i;
@@ -1249,7 +1249,7 @@ PetscErrorCode PetscEnumFind(const char *const *enumlist,const char *str,PetscEn
   while (enumlist[n++]) PetscCheckFalse(n > 50,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument appears to be wrong or have more than 50 entries");
   PetscCheckFalse(n < 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument must have at least two entries: typename and type prefix");
   n -= 3; /* drop enum name, prefix, and null termination */
-  ierr = PetscEListFind(n,enumlist,str,&evalue,&efound);CHKERRQ(ierr);
+  CHKERRQ(PetscEListFind(n,enumlist,str,&evalue,&efound));
   if (efound) *value = (PetscEnum)evalue;
   if (found) *found = efound;
   PetscFunctionReturn(0);

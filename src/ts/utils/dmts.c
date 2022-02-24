@@ -9,8 +9,8 @@ static PetscErrorCode DMTSDestroy(DMTS *kdm)
   if (!*kdm) PetscFunctionReturn(0);
   PetscValidHeaderSpecific((*kdm),DMTS_CLASSID,1);
   if (--((PetscObject)(*kdm))->refct > 0) {*kdm = NULL; PetscFunctionReturn(0);}
-  if ((*kdm)->ops->destroy) {ierr = ((*kdm)->ops->destroy)(*kdm);CHKERRQ(ierr);}
-  ierr = PetscHeaderDestroy(kdm);CHKERRQ(ierr);
+  if ((*kdm)->ops->destroy) CHKERRQ(((*kdm)->ops->destroy)(*kdm));
+  CHKERRQ(PetscHeaderDestroy(kdm));
   PetscFunctionReturn(0);
 }
 
@@ -19,17 +19,17 @@ PetscErrorCode DMTSLoad(DMTS kdm,PetscViewer viewer)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscViewerBinaryRead(viewer,&kdm->ops->ifunction,1,NULL,PETSC_FUNCTION);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryRead(viewer,&kdm->ops->ifunctionview,1,NULL,PETSC_FUNCTION);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryRead(viewer,&kdm->ops->ifunctionload,1,NULL,PETSC_FUNCTION);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->ifunction,1,NULL,PETSC_FUNCTION));
+  CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->ifunctionview,1,NULL,PETSC_FUNCTION));
+  CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->ifunctionload,1,NULL,PETSC_FUNCTION));
   if (kdm->ops->ifunctionload) {
-    ierr = (*kdm->ops->ifunctionload)(&kdm->ifunctionctx,viewer);CHKERRQ(ierr);
+    CHKERRQ((*kdm->ops->ifunctionload)(&kdm->ifunctionctx,viewer));
   }
-  ierr = PetscViewerBinaryRead(viewer,&kdm->ops->ijacobian,1,NULL,PETSC_FUNCTION);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryRead(viewer,&kdm->ops->ijacobianview,1,NULL,PETSC_FUNCTION);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryRead(viewer,&kdm->ops->ijacobianload,1,NULL,PETSC_FUNCTION);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->ijacobian,1,NULL,PETSC_FUNCTION));
+  CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->ijacobianview,1,NULL,PETSC_FUNCTION));
+  CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->ijacobianload,1,NULL,PETSC_FUNCTION));
   if (kdm->ops->ijacobianload) {
-    ierr = (*kdm->ops->ijacobianload)(&kdm->ijacobianctx,viewer);CHKERRQ(ierr);
+    CHKERRQ((*kdm->ops->ijacobianload)(&kdm->ijacobianctx,viewer));
   }
   PetscFunctionReturn(0);
 }
@@ -40,19 +40,19 @@ PetscErrorCode DMTSView(DMTS kdm,PetscViewer viewer)
   PetscBool      isascii,isbinary;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));
   if (isascii) {
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
     const char *fname;
 
-    ierr = PetscFPTFind(kdm->ops->ifunction,&fname);CHKERRQ(ierr);
+    CHKERRQ(PetscFPTFind(kdm->ops->ifunction,&fname));
     if (fname) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  IFunction used by TS: %s\n",fname);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPrintf(viewer,"  IFunction used by TS: %s\n",fname));
     }
-    ierr = PetscFPTFind(kdm->ops->ijacobian,&fname);CHKERRQ(ierr);
+    CHKERRQ(PetscFPTFind(kdm->ops->ijacobian,&fname));
     if (fname) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  IJacobian function used by TS: %s\n",fname);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPrintf(viewer,"  IJacobian function used by TS: %s\n",fname));
     }
 #endif
   } else if (isbinary) {
@@ -78,20 +78,20 @@ PetscErrorCode DMTSView(DMTS kdm,PetscViewer viewer)
     funcstruct.ifunction         = kdm->ops->ifunction;
     funcviewstruct.ifunctionview = kdm->ops->ifunctionview;
     funcloadstruct.ifunctionload = kdm->ops->ifunctionload;
-    ierr = PetscViewerBinaryWrite(viewer,&funcstruct,1,PETSC_FUNCTION);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryWrite(viewer,&funcviewstruct,1,PETSC_FUNCTION);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryWrite(viewer,&funcloadstruct,1,PETSC_FUNCTION);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerBinaryWrite(viewer,&funcstruct,1,PETSC_FUNCTION));
+    CHKERRQ(PetscViewerBinaryWrite(viewer,&funcviewstruct,1,PETSC_FUNCTION));
+    CHKERRQ(PetscViewerBinaryWrite(viewer,&funcloadstruct,1,PETSC_FUNCTION));
     if (kdm->ops->ifunctionview) {
-      ierr = (*kdm->ops->ifunctionview)(kdm->ifunctionctx,viewer);CHKERRQ(ierr);
+      CHKERRQ((*kdm->ops->ifunctionview)(kdm->ifunctionctx,viewer));
     }
     jacstruct.ijacobian = kdm->ops->ijacobian;
     jacviewstruct.ijacobianview = kdm->ops->ijacobianview;
     jacloadstruct.ijacobianload = kdm->ops->ijacobianload;
-    ierr = PetscViewerBinaryWrite(viewer,&jacstruct,1,PETSC_FUNCTION);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryWrite(viewer,&jacviewstruct,1,PETSC_FUNCTION);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryWrite(viewer,&jacloadstruct,1,PETSC_FUNCTION);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerBinaryWrite(viewer,&jacstruct,1,PETSC_FUNCTION));
+    CHKERRQ(PetscViewerBinaryWrite(viewer,&jacviewstruct,1,PETSC_FUNCTION));
+    CHKERRQ(PetscViewerBinaryWrite(viewer,&jacloadstruct,1,PETSC_FUNCTION));
     if (kdm->ops->ijacobianview) {
-      ierr = (*kdm->ops->ijacobianview)(kdm->ijacobianctx,viewer);CHKERRQ(ierr);
+      CHKERRQ((*kdm->ops->ijacobianview)(kdm->ijacobianctx,viewer));
     }
   }
   PetscFunctionReturn(0);
@@ -102,8 +102,8 @@ static PetscErrorCode DMTSCreate(MPI_Comm comm,DMTS *kdm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = TSInitializePackage();CHKERRQ(ierr);
-  ierr = PetscHeaderCreate(*kdm, DMTS_CLASSID, "DMTS", "DMTS", "DMTS", comm, DMTSDestroy, DMTSView);CHKERRQ(ierr);
+  CHKERRQ(TSInitializePackage());
+  CHKERRQ(PetscHeaderCreate(*kdm, DMTS_CLASSID, "DMTS", "DMTS", "DMTS", comm, DMTSDestroy, DMTSView));
   PetscFunctionReturn(0);
 }
 
@@ -115,7 +115,7 @@ static PetscErrorCode DMCoarsenHook_DMTS(DM dm,DM dmc,void *ctx)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMCopyDMTS(dm,dmc);CHKERRQ(ierr);
+  CHKERRQ(DMCopyDMTS(dm,dmc));
   PetscFunctionReturn(0);
 }
 
@@ -133,7 +133,7 @@ static PetscErrorCode DMSubDomainHook_DMTS(DM dm,DM subdm,void *ctx)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMCopyDMTS(dm,subdm);CHKERRQ(ierr);
+  CHKERRQ(DMCopyDMTS(dm,subdm));
   PetscFunctionReturn(0);
 }
 
@@ -192,7 +192,7 @@ PetscErrorCode DMTSCopy(DMTS kdm,DMTS nkdm)
   */
 
   /* implementation specific copy hooks */
-  if (kdm->ops->duplicate) {ierr = (*kdm->ops->duplicate)(kdm,nkdm);CHKERRQ(ierr);}
+  if (kdm->ops->duplicate) CHKERRQ((*kdm->ops->duplicate)(kdm,nkdm));
   PetscFunctionReturn(0);
 }
 
@@ -222,12 +222,12 @@ PetscErrorCode DMGetDMTS(DM dm,DMTS *tsdm)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   *tsdm = (DMTS) dm->dmts;
   if (!*tsdm) {
-    ierr = PetscInfo(dm,"Creating new DMTS\n");CHKERRQ(ierr);
-    ierr = DMTSCreate(PetscObjectComm((PetscObject)dm),tsdm);CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(dm,"Creating new DMTS\n"));
+    CHKERRQ(DMTSCreate(PetscObjectComm((PetscObject)dm),tsdm));
     dm->dmts = (PetscObject) *tsdm;
     (*tsdm)->originaldm = dm;
-    ierr = DMCoarsenHookAdd(dm,DMCoarsenHook_DMTS,DMRestrictHook_DMTS,NULL);CHKERRQ(ierr);
-    ierr = DMSubDomainHookAdd(dm,DMSubDomainHook_DMTS,DMSubDomainRestrictHook_DMTS,NULL);CHKERRQ(ierr);
+    CHKERRQ(DMCoarsenHookAdd(dm,DMCoarsenHook_DMTS,DMRestrictHook_DMTS,NULL));
+    CHKERRQ(DMSubDomainHookAdd(dm,DMSubDomainHook_DMTS,DMSubDomainRestrictHook_DMTS,NULL));
   }
   PetscFunctionReturn(0);
 }
@@ -254,14 +254,14 @@ PetscErrorCode DMGetDMTSWrite(DM dm,DMTS *tsdm)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&sdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&sdm));
   PetscCheckFalse(!sdm->originaldm,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"DMTS has a NULL originaldm");
   if (sdm->originaldm != dm) {  /* Copy on write */
     DMTS oldsdm = sdm;
-    ierr     = PetscInfo(dm,"Copying DMTS due to write\n");CHKERRQ(ierr);
-    ierr     = DMTSCreate(PetscObjectComm((PetscObject)dm),&sdm);CHKERRQ(ierr);
-    ierr     = DMTSCopy(oldsdm,sdm);CHKERRQ(ierr);
-    ierr     = DMTSDestroy((DMTS*)&dm->dmts);CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(dm,"Copying DMTS due to write\n"));
+    CHKERRQ(DMTSCreate(PetscObjectComm((PetscObject)dm),&sdm));
+    CHKERRQ(DMTSCopy(oldsdm,sdm));
+    CHKERRQ(DMTSDestroy((DMTS*)&dm->dmts));
     dm->dmts = (PetscObject) sdm;
     sdm->originaldm = dm;
   }
@@ -292,11 +292,11 @@ PetscErrorCode DMCopyDMTS(DM dmsrc,DM dmdest)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dmsrc,DM_CLASSID,1);
   PetscValidHeaderSpecific(dmdest,DM_CLASSID,2);
-  ierr         = DMTSDestroy((DMTS*)&dmdest->dmts);CHKERRQ(ierr);
+  CHKERRQ(DMTSDestroy((DMTS*)&dmdest->dmts));
   dmdest->dmts = dmsrc->dmts;
-  ierr         = PetscObjectReference(dmdest->dmts);CHKERRQ(ierr);
-  ierr         = DMCoarsenHookAdd(dmdest,DMCoarsenHook_DMTS,DMRestrictHook_DMTS,NULL);CHKERRQ(ierr);
-  ierr         = DMSubDomainHookAdd(dmdest,DMSubDomainHook_DMTS,DMSubDomainRestrictHook_DMTS,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectReference(dmdest->dmts));
+  CHKERRQ(DMCoarsenHookAdd(dmdest,DMCoarsenHook_DMTS,DMRestrictHook_DMTS,NULL));
+  CHKERRQ(DMSubDomainHookAdd(dmdest,DMSubDomainHook_DMTS,DMSubDomainRestrictHook_DMTS,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -335,7 +335,7 @@ PetscErrorCode DMTSSetIFunction(DM dm,TSIFunction func,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (func) tsdm->ops->ifunction = func;
   if (ctx)  tsdm->ifunctionctx = ctx;
   PetscFunctionReturn(0);
@@ -368,7 +368,7 @@ PetscErrorCode DMTSGetIFunction(DM dm,TSIFunction *func,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (func) *func = tsdm->ops->ifunction;
   if (ctx)  *ctx = tsdm->ifunctionctx;
   PetscFunctionReturn(0);
@@ -409,7 +409,7 @@ PetscErrorCode DMTSSetI2Function(DM dm,TSI2Function fun,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (fun) tsdm->ops->i2function = fun;
   if (ctx) tsdm->i2functionctx   = ctx;
   PetscFunctionReturn(0);
@@ -442,7 +442,7 @@ PetscErrorCode DMTSGetI2Function(DM dm,TSI2Function *fun,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (fun) *fun = tsdm->ops->i2function;
   if (ctx) *ctx = tsdm->i2functionctx;
   PetscFunctionReturn(0);
@@ -486,7 +486,7 @@ PetscErrorCode DMTSSetI2Jacobian(DM dm,TSI2Jacobian jac,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (jac) tsdm->ops->i2jacobian = jac;
   if (ctx) tsdm->i2jacobianctx   = ctx;
   PetscFunctionReturn(0);
@@ -519,7 +519,7 @@ PetscErrorCode DMTSGetI2Jacobian(DM dm,TSI2Jacobian *jac,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (jac) *jac = tsdm->ops->i2jacobian;
   if (ctx) *ctx = tsdm->i2jacobianctx;
   PetscFunctionReturn(0);
@@ -560,7 +560,7 @@ PetscErrorCode DMTSSetRHSFunction(DM dm,TSRHSFunction func,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (func) tsdm->ops->rhsfunction = func;
   if (ctx)  tsdm->rhsfunctionctx = ctx;
   PetscFunctionReturn(0);
@@ -604,7 +604,7 @@ PetscErrorCode DMTSSetTransientVariable(DM dm,TSTransientVariable tvar,void *ctx
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&dmts);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&dmts));
   dmts->ops->transientvar = tvar;
   dmts->transientvarctx = ctx;
   PetscFunctionReturn(0);
@@ -633,7 +633,7 @@ PetscErrorCode DMTSGetTransientVariable(DM dm,TSTransientVariable *tvar,void *ct
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&dmts);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&dmts));
   if (tvar) *tvar = dmts->ops->transientvar;
   if (ctx)  *(void**)ctx = dmts->transientvarctx;
   PetscFunctionReturn(0);
@@ -662,7 +662,7 @@ PetscErrorCode DMTSGetSolutionFunction(DM dm,TSSolutionFunction *func,void **ctx
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (func) *func = tsdm->ops->solution;
   if (ctx)  *ctx  = tsdm->solutionctx;
   PetscFunctionReturn(0);
@@ -702,7 +702,7 @@ PetscErrorCode DMTSSetSolutionFunction(DM dm,TSSolutionFunction func,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (func) tsdm->ops->solution = func;
   if (ctx)  tsdm->solutionctx   = ctx;
   PetscFunctionReturn(0);
@@ -742,7 +742,7 @@ PetscErrorCode DMTSSetForcingFunction(DM dm,TSForcingFunction f,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (f)    tsdm->ops->forcing = f;
   if (ctx)  tsdm->forcingctx   = ctx;
   PetscFunctionReturn(0);
@@ -776,7 +776,7 @@ PetscErrorCode DMTSGetForcingFunction(DM dm,TSForcingFunction *f,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (f)   *f   = tsdm->ops->forcing;
   if (ctx) *ctx = tsdm->forcingctx;
   PetscFunctionReturn(0);
@@ -809,7 +809,7 @@ PetscErrorCode DMTSGetRHSFunction(DM dm,TSRHSFunction *func,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (func) *func = tsdm->ops->rhsfunction;
   if (ctx)  *ctx = tsdm->rhsfunctionctx;
   PetscFunctionReturn(0);
@@ -852,7 +852,7 @@ PetscErrorCode DMTSSetIJacobian(DM dm,TSIJacobian func,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&sdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&sdm));
   if (func) sdm->ops->ijacobian = func;
   if (ctx)  sdm->ijacobianctx   = ctx;
   PetscFunctionReturn(0);
@@ -886,7 +886,7 @@ PetscErrorCode DMTSGetIJacobian(DM dm,TSIJacobian *func,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (func) *func = tsdm->ops->ijacobian;
   if (ctx)  *ctx = tsdm->ijacobianctx;
   PetscFunctionReturn(0);
@@ -927,7 +927,7 @@ PetscErrorCode DMTSSetRHSJacobian(DM dm,TSRHSJacobian func,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   if (func) tsdm->ops->rhsjacobian = func;
   if (ctx)  tsdm->rhsjacobianctx = ctx;
   PetscFunctionReturn(0);
@@ -961,7 +961,7 @@ PetscErrorCode DMTSGetRHSJacobian(DM dm,TSRHSJacobian *func,void **ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTS(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTS(dm,&tsdm));
   if (func) *func = tsdm->ops->rhsjacobian;
   if (ctx)  *ctx = tsdm->rhsjacobianctx;
   PetscFunctionReturn(0);
@@ -988,7 +988,7 @@ PetscErrorCode DMTSSetIFunctionSerialize(DM dm,PetscErrorCode (*view)(void*,Pets
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   tsdm->ops->ifunctionview = view;
   tsdm->ops->ifunctionload = load;
   PetscFunctionReturn(0);
@@ -1015,7 +1015,7 @@ PetscErrorCode DMTSSetIJacobianSerialize(DM dm,PetscErrorCode (*view)(void*,Pets
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  ierr = DMGetDMTSWrite(dm,&tsdm);CHKERRQ(ierr);
+  CHKERRQ(DMGetDMTSWrite(dm,&tsdm));
   tsdm->ops->ijacobianview = view;
   tsdm->ops->ijacobianload = load;
   PetscFunctionReturn(0);

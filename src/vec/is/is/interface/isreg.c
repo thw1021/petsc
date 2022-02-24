@@ -31,10 +31,10 @@ PetscErrorCode  ISCreate(MPI_Comm comm,IS *is)
 
   PetscFunctionBegin;
   PetscValidPointer(is,2);
-  ierr = ISInitializePackage();CHKERRQ(ierr);
+  CHKERRQ(ISInitializePackage());
 
-  ierr = PetscHeaderCreate(*is,IS_CLASSID,"IS","Index Set","IS",comm,ISDestroy,ISView);CHKERRQ(ierr);
-  ierr = PetscLayoutCreate(comm, &(*is)->map);CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderCreate(*is,IS_CLASSID,"IS","Index Set","IS",comm,ISDestroy,ISView));
+  CHKERRQ(PetscLayoutCreate(comm, &(*is)->map));
   PetscFunctionReturn(0);
 }
 
@@ -67,18 +67,18 @@ PetscErrorCode  ISSetType(IS is, ISType method)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject) is, method, &match);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) is, method, &match));
   if (match) PetscFunctionReturn(0);
 
-  ierr = ISRegisterAll();CHKERRQ(ierr);
-  ierr = PetscFunctionListFind(ISList,method,&r);CHKERRQ(ierr);
+  CHKERRQ(ISRegisterAll());
+  CHKERRQ(PetscFunctionListFind(ISList,method,&r));
   PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown IS type: %s", method);
   if (is->ops->destroy) {
-    ierr = (*is->ops->destroy)(is);CHKERRQ(ierr);
+    CHKERRQ((*is->ops->destroy)(is));
     is->ops->destroy = NULL;
   }
-  ierr = (*r)(is);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)is,method);CHKERRQ(ierr);
+  CHKERRQ((*r)(is));
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject)is,method));
   PetscFunctionReturn(0);
 }
 
@@ -105,7 +105,7 @@ PetscErrorCode  ISGetType(IS is, ISType *type)
   PetscValidHeaderSpecific(is, IS_CLASSID,1);
   PetscValidCharPointer(type,2);
   if (!ISRegisterAllCalled) {
-    ierr = ISRegisterAll();CHKERRQ(ierr);
+    CHKERRQ(ISRegisterAll());
   }
   *type = ((PetscObject)is)->type_name;
   PetscFunctionReturn(0);
@@ -154,8 +154,7 @@ PetscErrorCode  ISRegister(const char sname[], PetscErrorCode (*function)(IS))
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = ISInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&ISList,sname,function);CHKERRQ(ierr);
+  CHKERRQ(ISInitializePackage());
+  CHKERRQ(PetscFunctionListAdd(&ISList,sname,function));
   PetscFunctionReturn(0);
 }
-

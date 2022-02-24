@@ -31,8 +31,8 @@ static PetscErrorCode PetscFixSlashN(const char *in, char **out)
   size_t         i,len;
 
   PetscFunctionBegin;
-  ierr = PetscStrallocpy(in,out);CHKERRQ(ierr);
-  ierr = PetscStrlen(*out,&len);CHKERRQ(ierr);
+  CHKERRQ(PetscStrallocpy(in,out));
+  CHKERRQ(PetscStrlen(*out,&len));
   for (i=0; i<len-1; i++) {
     if ((*out)[i] == '\\' && (*out)[i+1] == 'n') {(*out)[i] = ' '; (*out)[i+1] = '\n';}
   }
@@ -85,4 +85,3 @@ PETSC_EXTERN void petscsynchronizedprintf_(MPI_Comm *comm,char* fname,PetscError
 #if defined(__cplusplus)
 }
 #endif
-

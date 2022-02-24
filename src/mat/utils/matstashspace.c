@@ -10,8 +10,8 @@ PetscErrorCode PetscMatStashSpaceGet(PetscInt bs2,PetscInt n,PetscMatStashSpace 
   PetscFunctionBegin;
   if (!n) PetscFunctionReturn(0);
 
-  ierr = PetscMalloc(sizeof(struct _MatStashSpace),&a);CHKERRQ(ierr);
-  ierr = PetscMalloc3(n*bs2,&(a->space_head),n,&a->idx,n,&a->idy);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc(sizeof(struct _MatStashSpace),&a));
+  CHKERRQ(PetscMalloc3(n*bs2,&(a->space_head),n,&a->idx,n,&a->idy));
 
   a->val              = a->space_head;
   a->local_remaining  = n;
@@ -37,15 +37,15 @@ PetscErrorCode PetscMatStashSpaceContiguous(PetscInt bs2,PetscMatStashSpace *spa
   PetscFunctionBegin;
   while ((*space)) {
     a    = (*space)->next;
-    ierr = PetscArraycpy(val,(*space)->val,(*space)->local_used*bs2);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(val,(*space)->val,(*space)->local_used*bs2));
     val += bs2*(*space)->local_used;
-    ierr = PetscArraycpy(idx,(*space)->idx,(*space)->local_used);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(idx,(*space)->idx,(*space)->local_used));
     idx += (*space)->local_used;
-    ierr = PetscArraycpy(idy,(*space)->idy,(*space)->local_used);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(idy,(*space)->idy,(*space)->local_used));
     idy += (*space)->local_used;
 
-    ierr   =  PetscFree3((*space)->space_head,(*space)->idx,(*space)->idy);CHKERRQ(ierr);
-    ierr   =  PetscFree(*space);CHKERRQ(ierr);
+    CHKERRQ(PetscFree3((*space)->space_head,(*space)->idx,(*space)->idy));
+    CHKERRQ(PetscFree(*space));
     *space = a;
   }
   PetscFunctionReturn(0);
@@ -59,8 +59,8 @@ PetscErrorCode PetscMatStashSpaceDestroy(PetscMatStashSpace *space)
   PetscFunctionBegin;
   while (*space) {
     a      = (*space)->next;
-    ierr   = PetscFree3((*space)->space_head,(*space)->idx,(*space)->idy);CHKERRQ(ierr);
-    ierr   = PetscFree((*space));CHKERRQ(ierr);
+    CHKERRQ(PetscFree3((*space)->space_head,(*space)->idx,(*space)->idy));
+    CHKERRQ(PetscFree((*space)));
     *space = a;
   }
   *space = NULL;

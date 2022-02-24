@@ -8,8 +8,8 @@ PetscErrorCode VecTaggerDestroy_Simple(VecTagger tagger)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree (smpl->box);CHKERRQ(ierr);
-  ierr = PetscFree (tagger->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree (smpl->box));
+  CHKERRQ(PetscFree (tagger->data));
   PetscFunctionReturn(0);
 }
 
@@ -24,20 +24,20 @@ PetscErrorCode VecTaggerSetFromOptions_Simple(PetscOptionItems *PetscOptionsObje
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetType((PetscObject)tagger,&name);CHKERRQ(ierr);
-  ierr = VecTaggerGetBlockSize(tagger,&bs);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetType((PetscObject)tagger,&name));
+  CHKERRQ(VecTaggerGetBlockSize(tagger,&bs));
   nvals = 2 * bs;
-  ierr = PetscMalloc1(nvals,&inBoxVals);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(headstring,BUFSIZ,"VecTagger %s options",name);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(funcstring,BUFSIZ,"VecTagger%sSetBox()",name);CHKERRQ(ierr);
-  ierr = PetscOptionsHead(PetscOptionsObject,headstring);CHKERRQ(ierr);
-  ierr = PetscOptionsScalarArray("-vec_tagger_box","lower and upper bounds of the box",funcstring,inBoxVals,&nvals,&set);CHKERRQ(ierr);
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(nvals,&inBoxVals));
+  CHKERRQ(PetscSNPrintf(headstring,BUFSIZ,"VecTagger %s options",name));
+  CHKERRQ(PetscSNPrintf(funcstring,BUFSIZ,"VecTagger%sSetBox()",name));
+  CHKERRQ(PetscOptionsHead(PetscOptionsObject,headstring));
+  CHKERRQ(PetscOptionsScalarArray("-vec_tagger_box","lower and upper bounds of the box",funcstring,inBoxVals,&nvals,&set));
+  CHKERRQ(PetscOptionsTail());
   if (set) {
     PetscCheckFalse(nvals != 2 *bs,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"Expect array of %" PetscInt_FMT " values for -vec_tagger_box, got %" PetscInt_FMT,2 * bs,nvals);
-    ierr = VecTaggerSetBox_Simple(tagger,(VecTaggerBox *)inBoxVals);CHKERRQ(ierr);
+    CHKERRQ(VecTaggerSetBox_Simple(tagger,(VecTaggerBox *)inBoxVals));
   }
-  ierr = PetscFree(inBoxVals);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(inBoxVals));
   PetscFunctionReturn(0);
 }
 
@@ -57,23 +57,23 @@ PetscErrorCode VecTaggerView_Simple(VecTagger tagger, PetscViewer viewer)
   PetscErrorCode   ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscInt bs, i;
     const char *name;
 
-    ierr = PetscObjectGetType((PetscObject)tagger,&name);CHKERRQ(ierr);
-    ierr = VecTaggerGetBlockSize(tagger,&bs);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer," %s box=[",name);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectGetType((PetscObject)tagger,&name));
+    CHKERRQ(VecTaggerGetBlockSize(tagger,&bs));
+    CHKERRQ(PetscViewerASCIIPrintf(viewer," %s box=[",name));
     for (i = 0; i < bs; i++) {
-      if (i) {ierr = PetscViewerASCIIPrintf(viewer,"; ");CHKERRQ(ierr);}
+      if (i) {CHKERRQ(PetscViewerASCIIPrintf(viewer,"; "));}
 #if !defined(PETSC_USE_COMPLEX)
-      ierr = PetscViewerASCIIPrintf(viewer,"%g,%g",(double)smpl->box[i].min,(double)smpl->box[i].max);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPrintf(viewer,"%g,%g",(double)smpl->box[i].min,(double)smpl->box[i].max));
 #else
-      ierr = PetscViewerASCIIPrintf(viewer,"%g+%gi,%g+%gi",(double)PetscRealPart(smpl->box[i].min),(double)PetscImaginaryPart(smpl->box[i].min),(double)PetscRealPart(smpl->box[i].max),(double)PetscImaginaryPart(smpl->box[i].max));CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPrintf(viewer,"%g+%gi,%g+%gi",(double)PetscRealPart(smpl->box[i].min),(double)PetscImaginaryPart(smpl->box[i].min),(double)PetscRealPart(smpl->box[i].max),(double)PetscImaginaryPart(smpl->box[i].max)));
 #endif
     }
-    ierr = PetscViewerASCIIPrintf(viewer,"]\n");CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"]\n"));
   }
   PetscFunctionReturn(0);
 }
@@ -89,9 +89,9 @@ PetscErrorCode VecTaggerSetBox_Simple(VecTagger tagger,VecTaggerBox *box)
   if (box != smpl->box) {
     PetscInt bs, i;
 
-    ierr = VecTaggerGetBlockSize(tagger,&bs);CHKERRQ(ierr);
-    ierr = PetscFree(smpl->box);CHKERRQ(ierr);
-    ierr = PetscMalloc1(bs,&(smpl->box));CHKERRQ(ierr);
+    CHKERRQ(VecTaggerGetBlockSize(tagger,&bs));
+    CHKERRQ(PetscFree(smpl->box));
+    CHKERRQ(PetscMalloc1(bs,&(smpl->box)));
     for (i = 0; i < bs; i++) smpl->box[i] = box[i];
   }
   PetscFunctionReturn(0);
@@ -119,7 +119,7 @@ PetscErrorCode VecTaggerCreate_Simple(VecTagger tagger)
   tagger->ops->setup            = VecTaggerSetUp_Simple;
   tagger->ops->view             = VecTaggerView_Simple;
   tagger->ops->computeis        = VecTaggerComputeIS_FromBoxes;
-  ierr = PetscNewLog(tagger,&smpl);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(tagger,&smpl));
   tagger->data = smpl;
   PetscFunctionReturn(0);
 }

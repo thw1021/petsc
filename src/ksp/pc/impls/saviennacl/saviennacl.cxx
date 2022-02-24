@@ -43,7 +43,7 @@ static PetscErrorCode PCSetUp_SAVIENNACL(PC pc)
   Mat_SeqAIJViennaCL *gpustruct;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)pc->pmat,MATSEQAIJVIENNACL,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)pc->pmat,MATSEQAIJVIENNACL,&flg));
   PetscCheckFalse(!flg,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Currently only handles ViennaCL matrices");
   if (pc->setupcalled != 0) {
     try {
@@ -57,7 +57,7 @@ static PetscErrorCode PCSetUp_SAVIENNACL(PC pc)
     gpustruct = NULL;
     SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"No support for complex arithmetic in SAVIENNACL preconditioner");
 #else
-    ierr      = MatViennaCLCopyToGPU(pc->pmat);CHKERRQ(ierr);
+    CHKERRQ(MatViennaCLCopyToGPU(pc->pmat));
     gpustruct = (Mat_SeqAIJViennaCL*)(pc->pmat->spptr);
 
     viennacl::linalg::amg_tag amg_tag_sa_pmis;
@@ -96,14 +96,14 @@ static PetscErrorCode PCApply_SAVIENNACL(PC pc,Vec x,Vec y)
 
   PetscFunctionBegin;
   /*how to apply a certain fixed number of iterations?*/
-  ierr = PetscObjectTypeCompare((PetscObject)x,VECSEQVIENNACL,&flg1);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)y,VECSEQVIENNACL,&flg2);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)x,VECSEQVIENNACL,&flg1));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)y,VECSEQVIENNACL,&flg2));
   PetscCheckFalse(!(flg1 && flg2),PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP, "Currently only handles ViennaCL vectors");
   if (!sac->SAVIENNACL) {
-    ierr = PCSetUp_SAVIENNACL(pc);CHKERRQ(ierr);
+    CHKERRQ(PCSetUp_SAVIENNACL(pc));
   }
-  ierr = VecViennaCLGetArrayRead(x,&xarray);CHKERRQ(ierr);
-  ierr = VecViennaCLGetArrayWrite(y,&yarray);CHKERRQ(ierr);
+  CHKERRQ(VecViennaCLGetArrayRead(x,&xarray));
+  CHKERRQ(VecViennaCLGetArrayWrite(y,&yarray));
   try {
 #if !defined(PETSC_USE_COMPLEX)
     *yarray = *xarray;
@@ -112,9 +112,9 @@ static PetscErrorCode PCApply_SAVIENNACL(PC pc,Vec x,Vec y)
   } catch(char * ex) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"ViennaCL error: %s", ex);
   }
-  ierr = VecViennaCLRestoreArrayRead(x,&xarray);CHKERRQ(ierr);
-  ierr = VecViennaCLRestoreArrayWrite(y,&yarray);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  CHKERRQ(VecViennaCLRestoreArrayRead(x,&xarray));
+  CHKERRQ(VecViennaCLRestoreArrayWrite(y,&yarray));
+  CHKERRQ(PetscObjectStateIncrease((PetscObject)y));
   PetscFunctionReturn(0);
 }
 /* -------------------------------------------------------------------------- */
@@ -144,7 +144,7 @@ static PetscErrorCode PCDestroy_SAVIENNACL(PC pc)
   /*
       Free the private data structure that was hanging off the PC
   */
-  ierr = PetscFree(pc->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(pc->data));
   PetscFunctionReturn(0);
 }
 
@@ -153,8 +153,8 @@ static PetscErrorCode PCSetFromOptions_SAVIENNACL(PetscOptionItems *PetscOptions
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"SAVIENNACL options");CHKERRQ(ierr);
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SAVIENNACL options"));
+  CHKERRQ(PetscOptionsTail());
   PetscFunctionReturn(0);
 }
 
@@ -179,7 +179,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_SAVIENNACL(PC pc)
      Creates the private data structure for this preconditioner and
      attach it to the PC object.
   */
-  ierr     = PetscNewLog(pc,&sac);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(pc,&sac));
   pc->data = (void*)sac;
 
   /*
@@ -206,4 +206,3 @@ PETSC_EXTERN PetscErrorCode PCCreate_SAVIENNACL(PC pc)
   pc->ops->applysymmetricright = 0;
   PetscFunctionReturn(0);
 }
-

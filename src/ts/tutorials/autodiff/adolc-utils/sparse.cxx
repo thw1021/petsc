@@ -24,14 +24,14 @@ PetscErrorCode PrintSparsity(MPI_Comm comm,PetscInt m,unsigned int **sparsity)
   PetscInt       i,j;
 
   PetscFunctionBegin;
-  ierr = PetscPrintf(comm,"Sparsity pattern:\n");CHKERRQ(ierr);
+  CHKERRQ(PetscPrintf(comm,"Sparsity pattern:\n"));
   for (i=0; i<m ;i++) {
-    ierr = PetscPrintf(comm,"\n %2d: ",i);CHKERRQ(ierr);
+    CHKERRQ(PetscPrintf(comm,"\n %2d: ",i));
     for (j=1; j<= (PetscInt) sparsity[i][0] ;j++) {
-      ierr = PetscPrintf(comm," %2d ",sparsity[i][j]);CHKERRQ(ierr);
+      CHKERRQ(PetscPrintf(comm," %2d ",sparsity[i][j]));
     }
   }
-  ierr = PetscPrintf(comm,"\n\n");CHKERRQ(ierr);
+  CHKERRQ(PetscPrintf(comm,"\n\n"));
   PetscFunctionReturn(0);
 }
 
@@ -58,15 +58,15 @@ PetscErrorCode GenerateSeedMatrix(ISColoring iscoloring,PetscScalar **S)
   const PetscInt *indices;
 
   PetscFunctionBegin;
-  ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
+  CHKERRQ(ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is));
   for (colour=0; colour<p; colour++) {
-    ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
-    ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
+    CHKERRQ(ISGetLocalSize(is[colour],&size));
+    CHKERRQ(ISGetIndices(is[colour],&indices));
     for (j=0; j<size; j++)
       S[indices[j]][colour] = 1.;
-    ierr = ISRestoreIndices(is[colour],&indices);CHKERRQ(ierr);
+    CHKERRQ(ISRestoreIndices(is[colour],&indices));
   }
-  ierr = ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is);CHKERRQ(ierr);
+  CHKERRQ(ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is));
   PetscFunctionReturn(0);
 }
 
@@ -90,17 +90,17 @@ PetscErrorCode GenerateSeedMatrixPlusRecovery(ISColoring iscoloring,PetscScalar 
   const PetscInt *indices;
 
   PetscFunctionBegin;
-  ierr = ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is);CHKERRQ(ierr);
+  CHKERRQ(ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is));
   for (colour=0; colour<p; colour++) {
-    ierr = ISGetLocalSize(is[colour],&size);CHKERRQ(ierr);
-    ierr = ISGetIndices(is[colour],&indices);CHKERRQ(ierr);
+    CHKERRQ(ISGetLocalSize(is[colour],&size));
+    CHKERRQ(ISGetIndices(is[colour],&indices));
     for (j=0; j<size; j++) {
       S[indices[j]][colour] = 1.;
       R[indices[j]] = colour;
     }
-    ierr = ISRestoreIndices(is[colour],&indices);CHKERRQ(ierr);
+    CHKERRQ(ISRestoreIndices(is[colour],&indices));
   }
-  ierr = ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is);CHKERRQ(ierr);
+  CHKERRQ(ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is));
   PetscFunctionReturn(0);
 }
 
@@ -164,7 +164,7 @@ PetscErrorCode RecoverJacobian(Mat A,InsertMode mode,PetscInt m,PetscInt p,Petsc
       if (j != -1) {
         if (a)
           C[i][colour] *= *a;
-        ierr = MatSetValues(A,1,&i,1,&j,&C[i][colour],mode);CHKERRQ(ierr);
+        CHKERRQ(MatSetValues(A,1,&i,1,&j,&C[i][colour],mode));
       }
     }
   }
@@ -198,7 +198,7 @@ PetscErrorCode RecoverJacobianLocal(Mat A,InsertMode mode,PetscInt m,PetscInt p,
       if (j != -1) {
         if (a)
           C[i][colour] *= *a;
-        ierr = MatSetValuesLocal(A,1,&i,1,&j,&C[i][colour],mode);CHKERRQ(ierr);
+        CHKERRQ(MatSetValuesLocal(A,1,&i,1,&j,&C[i][colour],mode));
       }
     }
   }
@@ -228,7 +228,7 @@ PetscErrorCode RecoverDiagonal(Vec diag,InsertMode mode,PetscInt m,PetscScalar *
     colour = (PetscInt)R[i];
     if (a)
       C[i][colour] *= *a;
-    ierr = VecSetValues(diag,1,&i,&C[i][colour],mode);CHKERRQ(ierr);
+    CHKERRQ(VecSetValues(diag,1,&i,&C[i][colour],mode));
   }
   PetscFunctionReturn(0);
 }
@@ -256,7 +256,7 @@ PetscErrorCode RecoverDiagonalLocal(Vec diag,InsertMode mode,PetscInt m,PetscSca
     colour = (PetscInt)R[i];
     if (a)
       C[i][colour] *= *a;
-    ierr = VecSetValuesLocal(diag,1,&i,&C[i][colour],mode);CHKERRQ(ierr);
+    CHKERRQ(VecSetValuesLocal(diag,1,&i,&C[i][colour],mode));
   }
   PetscFunctionReturn(0);
 }
