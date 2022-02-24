@@ -95,7 +95,7 @@ static PetscErrorCode PetscDrawGetSingleton_Null(PetscDraw draw,PetscDraw *sdraw
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscDrawOpenNull(PETSC_COMM_SELF,sdraw);CHKERRQ(ierr);
+  CHKERRQ(PetscDrawOpenNull(PETSC_COMM_SELF,sdraw));
   PetscFunctionReturn(0);
 }
 
@@ -103,7 +103,7 @@ static PetscErrorCode PetscDrawRestoreSingleton_Null(PetscDraw draw,PetscDraw *s
 {
   PetscErrorCode ierr;
   PetscFunctionBegin;
-  ierr = PetscDrawDestroy(sdraw);CHKERRQ(ierr);
+  CHKERRQ(PetscDrawDestroy(sdraw));
   PetscFunctionReturn(0);
 }
 
@@ -162,9 +162,9 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Null(PetscDraw draw)
   draw->coor_yl = 0; draw->coor_yr = 1;
   draw->port_xl = 0; draw->port_xr = 1;
   draw->port_yl = 0; draw->port_yr = 1;
-  ierr = PetscDrawDestroy(&draw->popup);CHKERRQ(ierr);
+  CHKERRQ(PetscDrawDestroy(&draw->popup));
 
-  ierr = PetscMemcpy(draw->ops,&DvOps,sizeof(DvOps));CHKERRQ(ierr);
+  CHKERRQ(PetscMemcpy(draw->ops,&DvOps,sizeof(DvOps)));
   draw->data = NULL;
   PetscFunctionReturn(0);
 }
@@ -186,8 +186,8 @@ PetscErrorCode  PetscDrawOpenNull(MPI_Comm comm,PetscDraw *win)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscDrawCreate(comm,NULL,NULL,0,0,1,1,win);CHKERRQ(ierr);
-  ierr = PetscDrawSetType(*win,PETSC_DRAW_NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscDrawCreate(comm,NULL,NULL,0,0,1,1,win));
+  CHKERRQ(PetscDrawSetType(*win,PETSC_DRAW_NULL));
   PetscFunctionReturn(0);
 }
 
@@ -211,6 +211,6 @@ PetscErrorCode  PetscDrawIsNull(PetscDraw draw,PetscBool *yes)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
   PetscValidBoolPointer(yes,2);
-  ierr = PetscObjectTypeCompare((PetscObject)draw,PETSC_DRAW_NULL,yes);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)draw,PETSC_DRAW_NULL,yes));
   PetscFunctionReturn(0);
 }

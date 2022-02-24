@@ -32,12 +32,12 @@ PetscErrorCode PCLMVMSetMatLMVM(PC pc, Mat B)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
   PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
-  ierr = PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectBaseTypeCompare((PetscObject)B, MATLMVM, &same));
   PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Matrix must be an LMVM-type.");
-  ierr = MatDestroy(&ctx->B);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject)B);CHKERRQ(ierr);
+  CHKERRQ(MatDestroy(&ctx->B));
+  CHKERRQ(PetscObjectReference((PetscObject)B));
   ctx->B = B;
   PetscFunctionReturn(0);
 }
@@ -61,7 +61,7 @@ PetscErrorCode PCLMVMGetMatLMVM(PC pc, Mat *B)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
   PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
   *B = ctx->B;
   PetscFunctionReturn(0);
@@ -87,10 +87,10 @@ PetscErrorCode PCLMVMSetIS(PC pc, IS inactive)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidHeaderSpecific(inactive, IS_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
   PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
-  ierr = PCLMVMClearIS(pc);CHKERRQ(ierr);
-  ierr = PetscObjectReference((PetscObject)inactive);CHKERRQ(ierr);
+  CHKERRQ(PCLMVMClearIS(pc));
+  CHKERRQ(PetscObjectReference((PetscObject)inactive));
   ctx->inactive = inactive;
   PetscFunctionReturn(0);
 }
@@ -113,10 +113,10 @@ PetscErrorCode PCLMVMClearIS(PC pc)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  ierr = PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)pc, PCLMVM, &same));
   PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "PC must be a PCLMVM type.");
   if (ctx->inactive) {
-    ierr = ISDestroy(&ctx->inactive);CHKERRQ(ierr);
+    CHKERRQ(ISDestroy(&ctx->inactive));
   }
   PetscFunctionReturn(0);
 }
@@ -129,20 +129,20 @@ static PetscErrorCode PCApply_LMVM(PC pc,Vec x,Vec y)
 
   PetscFunctionBegin;
   if (ctx->inactive) {
-    ierr = VecZeroEntries(ctx->xwork);CHKERRQ(ierr);
-    ierr = VecGetSubVector(ctx->xwork, ctx->inactive, &xsub);CHKERRQ(ierr);
-    ierr = VecCopy(x, xsub);CHKERRQ(ierr);
-    ierr = VecRestoreSubVector(ctx->xwork, ctx->inactive, &xsub);CHKERRQ(ierr);
+    CHKERRQ(VecZeroEntries(ctx->xwork));
+    CHKERRQ(VecGetSubVector(ctx->xwork, ctx->inactive, &xsub));
+    CHKERRQ(VecCopy(x, xsub));
+    CHKERRQ(VecRestoreSubVector(ctx->xwork, ctx->inactive, &xsub));
   } else {
-    ierr = VecCopy(x, ctx->xwork);CHKERRQ(ierr);
+    CHKERRQ(VecCopy(x, ctx->xwork));
   }
-  ierr = MatSolve(ctx->B, ctx->xwork, ctx->ywork);CHKERRQ(ierr);
+  CHKERRQ(MatSolve(ctx->B, ctx->xwork, ctx->ywork));
   if (ctx->inactive) {
-    ierr = VecGetSubVector(ctx->ywork, ctx->inactive, &ysub);CHKERRQ(ierr);
-    ierr = VecCopy(ysub, y);CHKERRQ(ierr);
-    ierr = VecRestoreSubVector(ctx->ywork, ctx->inactive, &ysub);CHKERRQ(ierr);
+    CHKERRQ(VecGetSubVector(ctx->ywork, ctx->inactive, &ysub));
+    CHKERRQ(VecCopy(ysub, y));
+    CHKERRQ(VecRestoreSubVector(ctx->ywork, ctx->inactive, &ysub));
   } else {
-    ierr = VecCopy(ctx->ywork, y);CHKERRQ(ierr);
+    CHKERRQ(VecCopy(ctx->ywork, y));
   }
   PetscFunctionReturn(0);
 }
@@ -154,10 +154,10 @@ static PetscErrorCode PCReset_LMVM(PC pc)
 
   PetscFunctionBegin;
   if (ctx->xwork) {
-    ierr = VecDestroy(&ctx->xwork);CHKERRQ(ierr);
+    CHKERRQ(VecDestroy(&ctx->xwork));
   }
   if (ctx->ywork) {
-    ierr = VecDestroy(&ctx->ywork);CHKERRQ(ierr);
+    CHKERRQ(VecDestroy(&ctx->ywork));
   }
   PetscFunctionReturn(0);
 }
@@ -170,15 +170,15 @@ static PetscErrorCode PCSetUp_LMVM(PC pc)
   PetscBool      allocated;
 
   PetscFunctionBegin;
-  ierr = MatLMVMIsAllocated(ctx->B, &allocated);CHKERRQ(ierr);
+  CHKERRQ(MatLMVMIsAllocated(ctx->B, &allocated));
   if (!allocated) {
-    ierr = MatCreateVecs(pc->mat, &ctx->xwork, &ctx->ywork);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(ctx->xwork, &n);CHKERRQ(ierr);
-    ierr = VecGetSize(ctx->xwork, &N);CHKERRQ(ierr);
-    ierr = MatSetSizes(ctx->B, n, n, N, N);CHKERRQ(ierr);
-    ierr = MatLMVMAllocate(ctx->B, ctx->xwork, ctx->ywork);CHKERRQ(ierr);
+    CHKERRQ(MatCreateVecs(pc->mat, &ctx->xwork, &ctx->ywork));
+    CHKERRQ(VecGetLocalSize(ctx->xwork, &n));
+    CHKERRQ(VecGetSize(ctx->xwork, &N));
+    CHKERRQ(MatSetSizes(ctx->B, n, n, N, N));
+    CHKERRQ(MatLMVMAllocate(ctx->B, ctx->xwork, ctx->ywork));
   } else {
-    ierr = MatCreateVecs(ctx->B, &ctx->xwork, &ctx->ywork);CHKERRQ(ierr);
+    CHKERRQ(MatCreateVecs(ctx->B, &ctx->xwork, &ctx->ywork));
   }
   PetscFunctionReturn(0);
 }
@@ -190,11 +190,11 @@ static PetscErrorCode PCView_LMVM(PC pc,PetscViewer viewer)
   PetscBool      iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii && ctx->B->assembled) {
-    ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO);CHKERRQ(ierr);
-    ierr = MatView(ctx->B, viewer);CHKERRQ(ierr);
-    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
+    CHKERRQ(MatView(ctx->B, viewer));
+    CHKERRQ(PetscViewerPopFormat(viewer));
   }
   PetscFunctionReturn(0);
 }
@@ -205,7 +205,7 @@ static PetscErrorCode PCSetFromOptions_LMVM(PetscOptionItems* PetscOptionsObject
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatSetFromOptions(ctx->B);CHKERRQ(ierr);
+  CHKERRQ(MatSetFromOptions(ctx->B));
   PetscFunctionReturn(0);
 }
 
@@ -216,14 +216,14 @@ static PetscErrorCode PCDestroy_LMVM(PC pc)
 
   PetscFunctionBegin;
   if (ctx->inactive) {
-    ierr = ISDestroy(&ctx->inactive);CHKERRQ(ierr);
+    CHKERRQ(ISDestroy(&ctx->inactive));
   }
   if (pc->setupcalled) {
-    ierr = VecDestroy(&ctx->xwork);CHKERRQ(ierr);
-    ierr = VecDestroy(&ctx->ywork);CHKERRQ(ierr);
+    CHKERRQ(VecDestroy(&ctx->xwork));
+    CHKERRQ(VecDestroy(&ctx->ywork));
   }
-  ierr = MatDestroy(&ctx->B);CHKERRQ(ierr);
-  ierr = PetscFree(pc->data);CHKERRQ(ierr);
+  CHKERRQ(MatDestroy(&ctx->B));
+  CHKERRQ(PetscFree(pc->data));
   PetscFunctionReturn(0);
 }
 
@@ -242,7 +242,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_LMVM(PC pc)
   PC_LMVM        *ctx;
 
   PetscFunctionBegin;
-  ierr     = PetscNewLog(pc,&ctx);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(pc,&ctx));
   pc->data = (void*)ctx;
 
   pc->ops->reset           = PCReset_LMVM;
@@ -258,11 +258,11 @@ PETSC_EXTERN PetscErrorCode PCCreate_LMVM(PC pc)
   pc->ops->presolve        = NULL;
   pc->ops->postsolve       = NULL;
 
-  ierr = PCSetReusePreconditioner(pc, PETSC_TRUE);CHKERRQ(ierr);
+  CHKERRQ(PCSetReusePreconditioner(pc, PETSC_TRUE));
 
-  ierr = MatCreate(PetscObjectComm((PetscObject)pc), &ctx->B);CHKERRQ(ierr);
-  ierr = MatSetType(ctx->B, MATLMVMBFGS);CHKERRQ(ierr);
-  ierr = PetscObjectIncrementTabLevel((PetscObject)ctx->B, (PetscObject)pc, 1);CHKERRQ(ierr);
-  ierr = MatSetOptionsPrefix(ctx->B, "pc_lmvm_");CHKERRQ(ierr);
+  CHKERRQ(MatCreate(PetscObjectComm((PetscObject)pc), &ctx->B));
+  CHKERRQ(MatSetType(ctx->B, MATLMVMBFGS));
+  CHKERRQ(PetscObjectIncrementTabLevel((PetscObject)ctx->B, (PetscObject)pc, 1));
+  CHKERRQ(MatSetOptionsPrefix(ctx->B, "pc_lmvm_"));
   PetscFunctionReturn(0);
 }

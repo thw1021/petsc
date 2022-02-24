@@ -27,11 +27,11 @@ static PetscErrorCode PetscFortranCallbackFinalize(void)
     FortranCallbackLink next,link = base->subtypes;
     for (; link; link=next) {
       next = link->next;
-      ierr = PetscFree(link->type_name);CHKERRQ(ierr);
-      ierr = PetscFree(link);CHKERRQ(ierr);
+      CHKERRQ(PetscFree(link->type_name));
+      CHKERRQ(PetscFree(link));
     }
   }
-  ierr = PetscFree(_classbase);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(_classbase));
 
   _maxclassid = PETSC_SMALLEST_CLASSID;
   PetscFunctionReturn(0);
@@ -68,11 +68,11 @@ PetscErrorCode PetscFortranCallbackRegister(PetscClassId classid,const char *sub
     PetscClassId        newmax = PETSC_SMALLEST_CLASSID + 2*(PETSC_LARGEST_CLASSID-PETSC_SMALLEST_CLASSID);
     FortranCallbackBase *newbase;
     if (!_classbase) {
-      ierr = PetscRegisterFinalize(PetscFortranCallbackFinalize);CHKERRQ(ierr);
+      CHKERRQ(PetscRegisterFinalize(PetscFortranCallbackFinalize));
     }
-    ierr = PetscCalloc1(newmax-PETSC_SMALLEST_CLASSID,&newbase);CHKERRQ(ierr);
-    ierr = PetscArraycpy(newbase,_classbase,_maxclassid-PETSC_SMALLEST_CLASSID);CHKERRQ(ierr);
-    ierr = PetscFree(_classbase);CHKERRQ(ierr);
+    CHKERRQ(PetscCalloc1(newmax-PETSC_SMALLEST_CLASSID,&newbase));
+    CHKERRQ(PetscArraycpy(newbase,_classbase,_maxclassid-PETSC_SMALLEST_CLASSID));
+    CHKERRQ(PetscFree(_classbase));
 
     _classbase = newbase;
     _maxclassid = newmax;
@@ -82,14 +82,14 @@ PetscErrorCode PetscFortranCallbackRegister(PetscClassId classid,const char *sub
   else {
     for (link=base->subtypes; link; link=link->next) { /* look for either both NULL or matching values (implies both non-NULL) */
       PetscBool match;
-      ierr = PetscStrcmp(subtype,link->type_name,&match);CHKERRQ(ierr);
+      CHKERRQ(PetscStrcmp(subtype,link->type_name,&match));
       if (match) { /* base type or matching subtype */
         goto found;
       }
     }
     /* Not found. Create node and prepend to class' subtype list */
-    ierr = PetscNew(&link);CHKERRQ(ierr);
-    ierr = PetscStrallocpy(subtype,&link->type_name);CHKERRQ(ierr);
+    CHKERRQ(PetscNew(&link));
+    CHKERRQ(PetscStrallocpy(subtype,&link->type_name));
 
     link->max      = PETSC_SMALLEST_FORTRAN_CALLBACK;
     link->next     = base->subtypes;

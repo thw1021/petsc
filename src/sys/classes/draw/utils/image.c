@@ -24,7 +24,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSavePPM(const char filename[],unsigned
   if (palette) {
     int k,p,n = (int)(w*h);
     const unsigned char *colordef;
-    ierr = PetscMalloc1(3*w*h,&rgb);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(3*w*h,&rgb));
     for (k=p=0; k<n; k++) {
       colordef = palette[pixels[k]];
       rgb[p++] = colordef[0];
@@ -35,14 +35,14 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSavePPM(const char filename[],unsigned
     rgb = (unsigned char*)pixels;
   }
   /* open file and write PPM header */
-  ierr = PetscBinaryOpen(filename,FILE_MODE_WRITE,&fd);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(header,sizeof(header),"P6\n%d %d\n255\n%c",(int)w,(int)h,'\0');CHKERRQ(ierr);
-  ierr = PetscStrlen(header,&hdrlen);CHKERRQ(ierr);
-  ierr = PetscBinaryWrite(fd,header,hdrlen,PETSC_CHAR);CHKERRQ(ierr);
+  CHKERRQ(PetscBinaryOpen(filename,FILE_MODE_WRITE,&fd));
+  CHKERRQ(PetscSNPrintf(header,sizeof(header),"P6\n%d %d\n255\n%c",(int)w,(int)h,'\0'));
+  CHKERRQ(PetscStrlen(header,&hdrlen));
+  CHKERRQ(PetscBinaryWrite(fd,header,hdrlen,PETSC_CHAR));
   /* write image data and close file */
-  ierr = PetscBinaryWrite(fd,rgb,3*w*h,PETSC_CHAR);CHKERRQ(ierr);
-  ierr = PetscBinaryClose(fd);CHKERRQ(ierr);
-  if (palette) {ierr = PetscFree(rgb);CHKERRQ(ierr);}
+  CHKERRQ(PetscBinaryWrite(fd,rgb,3*w*h,PETSC_CHAR));
+  CHKERRQ(PetscBinaryClose(fd));
+  if (palette) CHKERRQ(PetscFree(rgb));
   PetscFunctionReturn(0);
 }
 
@@ -76,7 +76,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSavePNG(const char filename[],unsigned
   PetscValidCharPointer(pixels,5);
 
   /* open file and create libpng structures */
-  ierr = PetscFOpen(PETSC_COMM_SELF,filename,"wb",&fp);CHKERRQ(ierr);
+  CHKERRQ(PetscFOpen(PETSC_COMM_SELF,filename,"wb",&fp));
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,NULL,NULL,NULL);
   PetscCheckFalse(!png_ptr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Cannot create PNG context");
   info_ptr = png_create_info_struct(png_ptr);
@@ -109,7 +109,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSavePNG(const char filename[],unsigned
 
   /* destroy libpng structures and close file */
   png_destroy_write_struct(&png_ptr, &info_ptr);
-  ierr = PetscFClose(PETSC_COMM_SELF,fp);CHKERRQ(ierr);
+  CHKERRQ(PetscFClose(PETSC_COMM_SELF,fp));
   PetscFunctionReturn(0);
 }
 
@@ -186,7 +186,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawMovieSaveGIF(const char pattern[],PetscInt 
   if (count < 1) PetscFunctionReturn(0);
 
   for (i = 0; i < count; i++) {
-    ierr = PetscSNPrintf(image,sizeof(image),pattern,(int)i);CHKERRQ(ierr);
+    CHKERRQ(PetscSNPrintf(image,sizeof(image),pattern,(int)i));
     /* open and read image file */
     if ((GifImage = DGifOpenFileName(image, NULL)) == NULL) SETERRGIF("Opening input",image);
     if (DGifSlurp(GifImage) != GIF_OK) SETERRGIF("Reading input",image);
@@ -262,7 +262,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSaveJPG(const char filename[],unsigned
   if (palette) {
     int k,p,n = (int)(w*h);
     const unsigned char *colordef;
-    ierr = PetscMalloc1(3*w*h,&rgbpixels);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(3*w*h,&rgbpixels));
     for (k=p=0; k<n; k++) {
       colordef = palette[pixels[k]];
       rgbpixels[p++] = colordef[0];
@@ -272,7 +272,7 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSaveJPG(const char filename[],unsigned
   } else { /* assume pixels are RGB colors */
     rgbpixels = (unsigned char*)pixels;
   }
-  ierr = PetscFOpen(PETSC_COMM_SELF,filename,"wb",&fp);CHKERRQ(ierr);
+  CHKERRQ(PetscFOpen(PETSC_COMM_SELF,filename,"wb",&fp));
 
   cinfo.err = jpeg_std_error(&jerr);
 #if defined(PETSC_HAVE_SETJMP_H)
@@ -300,8 +300,8 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSaveJPG(const char filename[],unsigned
   jpeg_finish_compress(&cinfo);
   jpeg_destroy_compress(&cinfo);
 
-  ierr = PetscFClose(PETSC_COMM_SELF,fp);CHKERRQ(ierr);
-  if (palette) {ierr = PetscFree(rgbpixels);CHKERRQ(ierr);}
+  CHKERRQ(PetscFClose(PETSC_COMM_SELF,fp));
+  if (palette) CHKERRQ(PetscFree(rgbpixels));
   PetscFunctionReturn(0);
 }
 
@@ -342,7 +342,7 @@ PetscErrorCode PetscDrawImageCheckFormat(const char *ext[])
   /* check the extension matches a supported format */
   PetscValidCharPointer(*ext,1);
   for (k=0; k<sizeof(PetscDrawImageSaveTable)/sizeof(PetscDrawImageSaveTable[0]); k++) {
-    ierr = PetscStrcasecmp(*ext,PetscDrawImageSaveTable[k].extension,&match);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcasecmp(*ext,PetscDrawImageSaveTable[k].extension,&match));
     if (match && PetscDrawImageSaveTable[k].SaveImage) PetscFunctionReturn(0);
   }
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Image extension %s not supported, use .ppm or see PetscDrawSetSave() for what ./configure option you may need",*ext);
@@ -361,12 +361,12 @@ PetscErrorCode PetscDrawImageSave(const char basename[],const char ext[],unsigne
   if (palette) PetscValidCharPointer(palette,3);
   PetscValidCharPointer(pixels,6);
 
-  ierr = PetscDrawImageCheckFormat(&ext);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(filename,sizeof(filename),"%s%s",basename,ext);CHKERRQ(ierr);
+  CHKERRQ(PetscDrawImageCheckFormat(&ext));
+  CHKERRQ(PetscSNPrintf(filename,sizeof(filename),"%s%s",basename,ext));
   for (k=0; k<sizeof(PetscDrawImageSaveTable)/sizeof(PetscDrawImageSaveTable[0]); k++) {
-    ierr = PetscStrcasecmp(ext,PetscDrawImageSaveTable[k].extension,&match);CHKERRQ(ierr);
+    CHKERRQ(PetscStrcasecmp(ext,PetscDrawImageSaveTable[k].extension,&match));
     if (match && PetscDrawImageSaveTable[k].SaveImage) {
-      ierr = PetscDrawImageSaveTable[k].SaveImage(filename,palette,w,h,pixels);CHKERRQ(ierr);
+      CHKERRQ(PetscDrawImageSaveTable[k].SaveImage(filename,palette,w,h,pixels));
       PetscFunctionReturn(0);
     }
   }
@@ -394,18 +394,18 @@ PetscErrorCode PetscDrawMovieSave(const char basename[],PetscInt count,const cha
   if (mvext) PetscValidCharPointer(mvext,5);
   if (count < 1) PetscFunctionReturn(0);
 
-  ierr = PetscStrcasecmp(imext,".gif",&gifinput);CHKERRQ(ierr);
-  ierr = PetscDrawMovieCheckFormat(&mvext);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(input,sizeof(input),"%s/%s_%%d%s",basename,basename,imext);CHKERRQ(ierr);
-  ierr = PetscSNPrintf(output,sizeof(output),"%s%s",basename,mvext);CHKERRQ(ierr);
+  CHKERRQ(PetscStrcasecmp(imext,".gif",&gifinput));
+  CHKERRQ(PetscDrawMovieCheckFormat(&mvext));
+  CHKERRQ(PetscSNPrintf(input,sizeof(input),"%s/%s_%%d%s",basename,basename,imext));
+  CHKERRQ(PetscSNPrintf(output,sizeof(output),"%s%s",basename,mvext));
 
   /* use GIFLIB to generate an intermediate GIF animation */
 #if defined(PETSC_HAVE_GIFLIB)
   if (gifinput) {
     char gifmovie[PETSC_MAX_PATH_LEN];
-    ierr = PetscSNPrintf(gifmovie,sizeof(gifmovie),"%s/%s_movie.gif",basename,basename);CHKERRQ(ierr);
-    ierr = PetscDrawMovieSaveGIF(input,count,gifmovie);CHKERRQ(ierr);
-    ierr = PetscStrcpy(input,gifmovie);CHKERRQ(ierr);
+    CHKERRQ(PetscSNPrintf(gifmovie,sizeof(gifmovie),"%s/%s_movie.gif",basename,basename));
+    CHKERRQ(PetscDrawMovieSaveGIF(input,count,gifmovie));
+    CHKERRQ(PetscStrcpy(input,gifmovie));
   }
 #endif
 
@@ -415,18 +415,18 @@ PetscErrorCode PetscDrawMovieSave(const char basename[],PetscInt count,const cha
     FILE *fd;
     char options[64] = "-loglevel error -y", extraopts[32] = "", framerate[24] = "";
     char command[sizeof(options)+sizeof(extraopts)+sizeof(framerate)+PETSC_MAX_PATH_LEN*2];
-    if (fps > 0) {ierr = PetscSNPrintf(framerate,sizeof(framerate),"-r %d",(int)fps);CHKERRQ(ierr);}
+    if (fps > 0) CHKERRQ(PetscSNPrintf(framerate,sizeof(framerate),"-r %d",(int)fps));
     if (gifinput) {
-      ierr = PetscStrlcat(options," -f gif",sizeof(options));CHKERRQ(ierr);
-      ierr = PetscSNPrintf(extraopts,sizeof(extraopts)," -default_delay %d",(fps > 0) ? 100/(int)fps : 4);CHKERRQ(ierr);
+      CHKERRQ(PetscStrlcat(options," -f gif",sizeof(options)));
+      CHKERRQ(PetscSNPrintf(extraopts,sizeof(extraopts)," -default_delay %d",(fps > 0) ? 100/(int)fps : 4));
     } else {
-      ierr = PetscStrlcat(options," -f image2",sizeof(options));CHKERRQ(ierr);
-      if (fps > 0) {ierr = PetscSNPrintf(extraopts,sizeof(extraopts)," -framerate %d",(int)fps);CHKERRQ(ierr);}
+      CHKERRQ(PetscStrlcat(options," -f image2",sizeof(options)));
+      if (fps > 0) CHKERRQ(PetscSNPrintf(extraopts,sizeof(extraopts)," -framerate %d",(int)fps));
     }
-    if (extraopts[0]) {ierr = PetscStrlcat(options,extraopts,sizeof(options));CHKERRQ(ierr);}
-    ierr = PetscSNPrintf(command,sizeof(command),"ffmpeg %s -i \"%s\" %s \"%s\"",options,input,framerate,output);CHKERRQ(ierr);
-    ierr = PetscPOpen(PETSC_COMM_SELF,NULL,command,"r",&fd);CHKERRQ(ierr);
-    ierr = PetscPClose(PETSC_COMM_SELF,fd);CHKERRQ(ierr);
+    if (extraopts[0]) CHKERRQ(PetscStrlcat(options,extraopts,sizeof(options)));
+    CHKERRQ(PetscSNPrintf(command,sizeof(command),"ffmpeg %s -i \"%s\" %s \"%s\"",options,input,framerate,output));
+    CHKERRQ(PetscPOpen(PETSC_COMM_SELF,NULL,command,"r",&fd));
+    CHKERRQ(PetscPClose(PETSC_COMM_SELF,fd));
   }
 #endif
   PetscFunctionReturn(0);

@@ -26,9 +26,9 @@ static PetscErrorCode PCApply_VPBJacobi(PC pc,Vec x,Vec y)
   const PetscInt    *bsizes;
 
   PetscFunctionBegin;
-  ierr = MatGetVariableBlockSizes(pc->pmat,&nblocks,&bsizes);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(MatGetVariableBlockSizes(pc->pmat,&nblocks,&bsizes));
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<nblocks; i++) {
     bs = bsizes[i];
     switch (bs) {
@@ -92,8 +92,8 @@ static PetscErrorCode PCApply_VPBJacobi(PC pc,Vec x,Vec y)
     ncnt += bsizes[i];
     diag += bsizes[i]*bsizes[i];
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
   PetscFunctionReturn(0);
 }
 
@@ -109,15 +109,15 @@ static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
   const PetscInt *bsizes;
 
   PetscFunctionBegin;
-  ierr = MatGetVariableBlockSizes(pc->pmat,&nblocks,&bsizes);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(pc->pmat,&nlocal,NULL);CHKERRQ(ierr);
+  CHKERRQ(MatGetVariableBlockSizes(pc->pmat,&nblocks,&bsizes));
+  CHKERRQ(MatGetLocalSize(pc->pmat,&nlocal,NULL));
   PetscCheckFalse(nlocal && !nblocks,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatSetVariableBlockSizes() before using PCVPBJACOBI");
   if (!jac->diag) {
     for (i=0; i<nblocks; i++) nsize += bsizes[i]*bsizes[i];
-    ierr = PetscMalloc1(nsize,&jac->diag);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(nsize,&jac->diag));
   }
-  ierr = MatInvertVariableBlockDiagonal(A,nblocks,bsizes,jac->diag);CHKERRQ(ierr);
-  ierr = MatFactorGetError(A,&err);CHKERRQ(ierr);
+  CHKERRQ(MatInvertVariableBlockDiagonal(A,nblocks,bsizes,jac->diag));
+  CHKERRQ(MatFactorGetError(A,&err));
   if (err) pc->failedreason = (PCFailedReason)err;
   pc->ops->apply = PCApply_VPBJacobi;
   PetscFunctionReturn(0);
@@ -132,8 +132,8 @@ static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
   /*
       Free the private data structure that was hanging off the PC
   */
-  ierr = PetscFree(jac->diag);CHKERRQ(ierr);
-  ierr = PetscFree(pc->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(jac->diag));
+  CHKERRQ(PetscFree(pc->data));
   PetscFunctionReturn(0);
 }
 
@@ -176,7 +176,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_VPBJacobi(PC pc)
      Creates the private data structure for this preconditioner and
      attach it to the PC object.
   */
-  ierr     = PetscNewLog(pc,&jac);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(pc,&jac));
   pc->data = (void*)jac;
 
   /*
@@ -202,4 +202,3 @@ PETSC_EXTERN PetscErrorCode PCCreate_VPBJacobi(PC pc)
   pc->ops->applysymmetricright = NULL;
   PetscFunctionReturn(0);
 }
-

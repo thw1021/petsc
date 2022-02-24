@@ -42,12 +42,12 @@ PetscErrorCode  AOView(AO ao,PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
   if (!viewer) {
-    ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)ao),&viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)ao),&viewer));
   }
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
 
-  ierr = PetscObjectPrintClassNamePrefixType((PetscObject)ao,viewer);CHKERRQ(ierr);
-  ierr = (*ao->ops->view)(ao,viewer);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectPrintClassNamePrefixType((PetscObject)ao,viewer));
+  CHKERRQ((*ao->ops->view)(ao,viewer));
   PetscFunctionReturn(0);
 }
 
@@ -70,7 +70,7 @@ PetscErrorCode  AOViewFromOptions(AO ao,PetscObject obj,const char name[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)ao,obj,name);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectViewFromOptions((PetscObject)ao,obj,name));
   PetscFunctionReturn(0);
 }
 
@@ -95,14 +95,14 @@ PetscErrorCode  AODestroy(AO *ao)
   PetscValidHeaderSpecific((*ao),AO_CLASSID,1);
   if (--((PetscObject)(*ao))->refct > 0) {*ao = NULL; PetscFunctionReturn(0);}
   /* if memory was published with SAWs then destroy it */
-  ierr = PetscObjectSAWsViewOff((PetscObject)*ao);CHKERRQ(ierr);
-  ierr = ISDestroy(&(*ao)->isapp);CHKERRQ(ierr);
-  ierr = ISDestroy(&(*ao)->ispetsc);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectSAWsViewOff((PetscObject)*ao));
+  CHKERRQ(ISDestroy(&(*ao)->isapp));
+  CHKERRQ(ISDestroy(&(*ao)->ispetsc));
   /* destroy the internal part */
   if ((*ao)->ops->destroy) {
-    ierr = (*(*ao)->ops->destroy)(*ao);CHKERRQ(ierr);
+    CHKERRQ((*(*ao)->ops->destroy)(*ao));
   }
-  ierr = PetscHeaderDestroy(ao);CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderDestroy(ao));
   PetscFunctionReturn(0);
 }
 
@@ -146,14 +146,14 @@ PetscErrorCode  AOPetscToApplicationIS(AO ao,IS is)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
   PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  ierr = ISToGeneral(is);CHKERRQ(ierr);
+  CHKERRQ(ISToGeneral(is));
   /* we cheat because we know the is is general and that we can change the indices */
-  ierr = ISGetIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(is,&n);CHKERRQ(ierr);
-  ierr = (*ao->ops->petsctoapplication)(ao,n,ia);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
+  CHKERRQ(ISGetIndices(is,(const PetscInt**)&ia));
+  CHKERRQ(ISGetLocalSize(is,&n));
+  CHKERRQ((*ao->ops->petsctoapplication)(ao,n,ia));
+  CHKERRQ(ISRestoreIndices(is,(const PetscInt**)&ia));
   /* updated cached values (sorted, min, max, etc.)*/
-  ierr = ISSetUp_General(is);CHKERRQ(ierr);
+  CHKERRQ(ISSetUp_General(is));
   PetscFunctionReturn(0);
 }
 
@@ -190,14 +190,14 @@ PetscErrorCode  AOApplicationToPetscIS(AO ao,IS is)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
   PetscValidHeaderSpecific(is,IS_CLASSID,2);
-  ierr = ISToGeneral(is);CHKERRQ(ierr);
+  CHKERRQ(ISToGeneral(is));
   /* we cheat because we know the is is general and that we can change the indices */
-  ierr = ISGetIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(is,&n);CHKERRQ(ierr);
-  ierr = (*ao->ops->applicationtopetsc)(ao,n,ia);CHKERRQ(ierr);
-  ierr = ISRestoreIndices(is,(const PetscInt**)&ia);CHKERRQ(ierr);
+  CHKERRQ(ISGetIndices(is,(const PetscInt**)&ia));
+  CHKERRQ(ISGetLocalSize(is,&n));
+  CHKERRQ((*ao->ops->applicationtopetsc)(ao,n,ia));
+  CHKERRQ(ISRestoreIndices(is,(const PetscInt**)&ia));
   /* updated cached values (sorted, min, max, etc.)*/
-  ierr = ISSetUp_General(is);CHKERRQ(ierr);
+  CHKERRQ(ISSetUp_General(is));
   PetscFunctionReturn(0);
 }
 
@@ -234,7 +234,7 @@ PetscErrorCode  AOPetscToApplication(AO ao,PetscInt n,PetscInt ia[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
   if (n) PetscValidIntPointer(ia,3);
-  ierr = (*ao->ops->petsctoapplication)(ao,n,ia);CHKERRQ(ierr);
+  CHKERRQ((*ao->ops->petsctoapplication)(ao,n,ia));
   PetscFunctionReturn(0);
 }
 
@@ -271,7 +271,7 @@ PetscErrorCode  AOApplicationToPetsc(AO ao,PetscInt n,PetscInt ia[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
   if (n) PetscValidIntPointer(ia,3);
-  ierr = (*ao->ops->applicationtopetsc)(ao,n,ia);CHKERRQ(ierr);
+  CHKERRQ((*ao->ops->applicationtopetsc)(ao,n,ia));
   PetscFunctionReturn(0);
 }
 
@@ -307,7 +307,7 @@ PetscErrorCode  AOPetscToApplicationPermuteInt(AO ao, PetscInt block, PetscInt a
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
   PetscValidIntPointer(array,3);
-  ierr = (*ao->ops->petsctoapplicationpermuteint)(ao, block, array);CHKERRQ(ierr);
+  CHKERRQ((*ao->ops->petsctoapplicationpermuteint)(ao, block, array));
   PetscFunctionReturn(0);
 }
 
@@ -343,7 +343,7 @@ PetscErrorCode  AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt a
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
   PetscValidIntPointer(array,3);
-  ierr = (*ao->ops->applicationtopetscpermuteint)(ao, block, array);CHKERRQ(ierr);
+  CHKERRQ((*ao->ops->applicationtopetscpermuteint)(ao, block, array));
   PetscFunctionReturn(0);
 }
 
@@ -379,7 +379,7 @@ PetscErrorCode  AOPetscToApplicationPermuteReal(AO ao, PetscInt block, PetscReal
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
   PetscValidRealPointer(array,3);
-  ierr = (*ao->ops->petsctoapplicationpermutereal)(ao, block, array);CHKERRQ(ierr);
+  CHKERRQ((*ao->ops->petsctoapplicationpermutereal)(ao, block, array));
   PetscFunctionReturn(0);
 }
 
@@ -415,7 +415,7 @@ PetscErrorCode  AOApplicationToPetscPermuteReal(AO ao, PetscInt block, PetscReal
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
   PetscValidRealPointer(array,3);
-  ierr = (*ao->ops->applicationtopetscpermutereal)(ao, block, array);CHKERRQ(ierr);
+  CHKERRQ((*ao->ops->applicationtopetscpermutereal)(ao, block, array));
   PetscFunctionReturn(0);
 }
 
@@ -442,11 +442,11 @@ PetscErrorCode AOSetFromOptions(AO ao)
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
 
   ierr = PetscObjectOptionsBegin((PetscObject)ao);CHKERRQ(ierr);
-  ierr = PetscOptionsFList("-ao_type","AO type","AOSetType",AOList,def,type,256,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsFList("-ao_type","AO type","AOSetType",AOList,def,type,256,&flg));
   if (flg) {
-    ierr = AOSetType(ao,type);CHKERRQ(ierr);
+    CHKERRQ(AOSetType(ao,type));
   } else if (!((PetscObject)ao)->type_name) {
-    ierr = AOSetType(ao,def);CHKERRQ(ierr);
+    CHKERRQ(AOSetType(ao,def));
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -479,14 +479,14 @@ PetscErrorCode AOSetIS(AO ao,IS isapp,IS ispetsc)
   PetscFunctionBegin;
   if (ispetsc) {
     PetscInt napp,npetsc;
-    ierr = ISGetLocalSize(isapp,&napp);CHKERRQ(ierr);
-    ierr = ISGetLocalSize(ispetsc,&npetsc);CHKERRQ(ierr);
+    CHKERRQ(ISGetLocalSize(isapp,&napp));
+    CHKERRQ(ISGetLocalSize(ispetsc,&npetsc));
     PetscCheckFalse(napp != npetsc,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"napp %" PetscInt_FMT " != npetsc %" PetscInt_FMT ". Local IS lengths must match",napp,npetsc);
   }
-  if (isapp) {ierr = PetscObjectReference((PetscObject)isapp);CHKERRQ(ierr);}
-  if (ispetsc) {ierr = PetscObjectReference((PetscObject)ispetsc);CHKERRQ(ierr);}
-  ierr = ISDestroy(&ao->isapp);CHKERRQ(ierr);
-  ierr = ISDestroy(&ao->ispetsc);CHKERRQ(ierr);
+  if (isapp) CHKERRQ(PetscObjectReference((PetscObject)isapp));
+  if (ispetsc) CHKERRQ(PetscObjectReference((PetscObject)ispetsc));
+  CHKERRQ(ISDestroy(&ao->isapp));
+  CHKERRQ(ISDestroy(&ao->ispetsc));
   ao->isapp   = isapp;
   ao->ispetsc = ispetsc;
   PetscFunctionReturn(0);
@@ -519,9 +519,9 @@ PetscErrorCode  AOCreate(MPI_Comm comm,AO *ao)
   PetscFunctionBegin;
   PetscValidPointer(ao,2);
   *ao = NULL;
-  ierr = AOInitializePackage();CHKERRQ(ierr);
+  CHKERRQ(AOInitializePackage());
 
-  ierr = PetscHeaderCreate(aonew,AO_CLASSID,"AO","Application Ordering","AO",comm,AODestroy,AOView);CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderCreate(aonew,AO_CLASSID,"AO","Application Ordering","AO",comm,AODestroy,AOView));
   *ao  = aonew;
   PetscFunctionReturn(0);
 }

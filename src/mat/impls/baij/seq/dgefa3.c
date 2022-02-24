@@ -46,7 +46,7 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_3(MatScalar *a,PetscRea
       if (shift == 0.0) {
         if (allowzeropivot) {
           PetscErrorCode ierr;
-          ierr = PetscInfo(NULL,"Zero pivot, row %" PetscInt_FMT "\n",k-1);CHKERRQ(ierr);
+          CHKERRQ(PetscInfo(NULL,"Zero pivot, row %" PetscInt_FMT "\n",k-1));
           if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
         } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row %" PetscInt_FMT,k-1);
       } else {
@@ -87,7 +87,7 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_3(MatScalar *a,PetscRea
   if (a[12] == 0.0) {
     if (PetscLikely(allowzeropivot)) {
       PetscErrorCode ierr;
-      ierr = PetscInfo(NULL,"Zero pivot, row 2\n");CHKERRQ(ierr);
+      CHKERRQ(PetscInfo(NULL,"Zero pivot, row 2\n"));
       if (zeropivotdetected) *zeropivotdetected = PETSC_TRUE;
     } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot, row 2");
   }
@@ -143,4 +143,3 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_3(MatScalar *a,PetscRea
   }
   PetscFunctionReturn(0);
 }
-

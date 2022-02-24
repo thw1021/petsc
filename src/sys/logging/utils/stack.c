@@ -24,8 +24,8 @@ PetscErrorCode PetscIntStackDestroy(PetscIntStack stack)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(stack->stack);CHKERRQ(ierr);
-  ierr = PetscFree(stack);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(stack->stack));
+  CHKERRQ(PetscFree(stack));
   PetscFunctionReturn(0);
 }
 
@@ -97,9 +97,9 @@ PetscErrorCode PetscIntStackPush(PetscIntStack stack, int item)
   PetscFunctionBegin;
   stack->top++;
   if (stack->top >= stack->max) {
-    ierr = PetscMalloc1(stack->max*2, &array);CHKERRQ(ierr);
-    ierr = PetscArraycpy(array, stack->stack, stack->max);CHKERRQ(ierr);
-    ierr = PetscFree(stack->stack);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(stack->max*2, &array));
+    CHKERRQ(PetscArraycpy(array, stack->stack, stack->max));
+    CHKERRQ(PetscFree(stack->stack));
 
     stack->stack = array;
     stack->max  *= 2;
@@ -151,12 +151,12 @@ PetscErrorCode PetscIntStackCreate(PetscIntStack *stack)
 
   PetscFunctionBegin;
   PetscValidPointer(stack,1);
-  ierr = PetscNew(&s);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(&s));
 
   s->top = -1;
   s->max = 128;
 
-  ierr = PetscCalloc1(s->max, &s->stack);CHKERRQ(ierr);
+  CHKERRQ(PetscCalloc1(s->max, &s->stack));
   *stack = s;
   PetscFunctionReturn(0);
 }

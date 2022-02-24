@@ -131,7 +131,7 @@ PETSC_EXTERN PetscErrorCode PetscKernel_A_gets_inverse_A_15(MatScalar*,PetscInt*
     PetscBLASInt   _bbs;                                                \
     PetscScalar    _one = 1.0,_zero = 0.0;                              \
     PetscErrorCode _ierr;                                               \
-    _ierr = PetscBLASIntCast(bs,&_bbs);CHKERRQ(ierr);                   \
+    _ierr = PetscBLASIntCast(bs,&_bbs);CHKERRQ(_ierr);                  \
     _ierr = PetscArraycpy((W),(A),(bs)*(bs));CHKERRQ(_ierr);            \
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidScalarPointer(A,2)); \
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidScalarPointer(B,3)); \

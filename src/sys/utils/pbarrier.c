@@ -29,12 +29,11 @@ PetscErrorCode  PetscBarrier(PetscObject obj)
 
   PetscFunctionBegin;
   if (obj) PetscValidHeader(obj,1);
-  ierr = PetscLogEventBegin(PETSC_Barrier,obj,0,0,0);CHKERRQ(ierr);
+  CHKERRQ(PetscLogEventBegin(PETSC_Barrier,obj,0,0,0));
   if (obj) {
-    ierr = PetscObjectGetComm(obj,&comm);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectGetComm(obj,&comm));
   } else comm = PETSC_COMM_WORLD;
-  ierr = MPI_Barrier(comm);CHKERRMPI(ierr);
-  ierr = PetscLogEventEnd(PETSC_Barrier,obj,0,0,0);CHKERRQ(ierr);
+  CHKERRMPI(MPI_Barrier(comm));
+  CHKERRQ(PetscLogEventEnd(PETSC_Barrier,obj,0,0,0));
   PetscFunctionReturn(0);
 }
-
