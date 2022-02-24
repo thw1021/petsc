@@ -161,7 +161,6 @@ PetscErrorCode PetscVSNPrintf(char *str,size_t len,const char *format,size_t *fu
   char           *newformat = NULL;
   char           formatbuf[PETSCDEFAULTBUFFERSIZE];
   size_t         newLength;
-  PetscErrorCode ierr;
   int            flen;
 
   PetscFunctionBegin;
@@ -281,7 +280,6 @@ PetscErrorCode PetscVFPrintfDefault(FILE *fd,const char *format,va_list Argp)
   char           str[PETSCDEFAULTBUFFERSIZE];
   char           *buff = str;
   size_t         fullLength;
-  PetscErrorCode ierr;
 #if defined(PETSC_HAVE_VA_COPY)
   va_list        Argpcopy;
 #endif
@@ -325,7 +323,6 @@ PetscErrorCode PetscVFPrintfDefault(FILE *fd,const char *format,va_list Argp)
 @*/
 PetscErrorCode PetscSNPrintf(char *str,size_t len,const char format[],...)
 {
-  PetscErrorCode ierr;
   size_t         fullLength;
   va_list        Argp;
 
@@ -356,7 +353,6 @@ PetscErrorCode PetscSNPrintf(char *str,size_t len,const char format[],...)
 @*/
 PetscErrorCode PetscSNPrintfCount(char *str,size_t len,const char format[],size_t *countused,...)
 {
-  PetscErrorCode ierr;
   va_list        Argp;
 
   PetscFunctionBegin;
@@ -395,7 +391,6 @@ int         petsc_printfqueuelength = 0;
 @*/
 PetscErrorCode PetscSynchronizedPrintf(MPI_Comm comm,const char format[],...)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -463,7 +458,6 @@ PetscErrorCode PetscSynchronizedPrintf(MPI_Comm comm,const char format[],...)
 @*/
 PetscErrorCode PetscSynchronizedFPrintf(MPI_Comm comm,FILE *fp,const char format[],...)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -530,7 +524,6 @@ PetscErrorCode PetscSynchronizedFPrintf(MPI_Comm comm,FILE *fp,const char format
 @*/
 PetscErrorCode PetscSynchronizedFlush(MPI_Comm comm,FILE *fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,tag,i,j,n = 0,dummy = 0;
   char          *message;
   MPI_Status     status;
@@ -600,7 +593,6 @@ PetscErrorCode PetscSynchronizedFlush(MPI_Comm comm,FILE *fd)
 @*/
 PetscErrorCode PetscFPrintf(MPI_Comm comm,FILE* fd,const char format[],...)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -643,7 +635,6 @@ PetscErrorCode PetscFPrintf(MPI_Comm comm,FILE* fd,const char format[],...)
 @*/
 PetscErrorCode PetscPrintf(MPI_Comm comm,const char format[],...)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -664,7 +655,6 @@ PetscErrorCode PetscPrintf(MPI_Comm comm,const char format[],...)
 
 PetscErrorCode PetscHelpPrintfDefault(MPI_Comm comm,const char format[],...)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -706,7 +696,6 @@ PetscErrorCode PetscHelpPrintfDefault(MPI_Comm comm,const char format[],...)
 @*/
 PetscErrorCode PetscSynchronizedFGets(MPI_Comm comm,FILE *fp,size_t len,char string[])
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -729,7 +718,6 @@ int (^SwiftClosure)(const char*) = 0;
 
 PetscErrorCode PetscVFPrintfToString(FILE *fd,const char format[],va_list Argp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (fd != stdout && fd != stderr) { /* handle regular files */
@@ -781,7 +769,6 @@ PetscErrorCode PetscFormatStrip(char *format)
 
 PetscErrorCode PetscFormatRealArray(char buf[],size_t len,const char *fmt,PetscInt n,const PetscReal x[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   size_t         left,count;
   char           *p;

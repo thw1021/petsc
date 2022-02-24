@@ -18,7 +18,6 @@ typedef struct {
 static PetscErrorCode PetscSpaceDestroy_Subspace(PetscSpace sp)
 {
   PetscSpace_Subspace *subsp;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   subsp = (PetscSpace_Subspace *) sp->data;
@@ -43,7 +42,6 @@ static PetscErrorCode PetscSpaceView_Subspace(PetscSpace sp, PetscViewer viewer)
 {
   PetscBool           iascii;
   PetscSpace_Subspace *subsp;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   subsp = (PetscSpace_Subspace *) sp->data;
@@ -104,7 +102,6 @@ static PetscErrorCode PetscSpaceEvaluate_Subspace(PetscSpace sp, PetscInt npoint
   PetscSpace          origsp;
   PetscInt            origDim, subDim, origNc, subNc, subNb, origNb, i, j, k, l, m, n, o;
   PetscReal           *inpoints, *inB = NULL, *inD = NULL, *inH = NULL;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   origsp = subsp->origSpace;
@@ -302,7 +299,6 @@ static PetscErrorCode PetscSpaceEvaluate_Subspace(PetscSpace sp, PetscInt npoint
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Subspace(PetscSpace sp)
 {
   PetscSpace_Subspace *subsp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(sp,&subsp));
@@ -332,7 +328,6 @@ static PetscErrorCode PetscSpaceSetUp_Subspace(PetscSpace sp)
   PetscReal           *allPoints, *allWeights, *B, *V;
   DM                  dm;
   PetscSpace_Subspace *subsp;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   subsp = (PetscSpace_Subspace *) sp->data;
@@ -442,7 +437,6 @@ static PetscErrorCode PetscSpaceSetUp_Subspace(PetscSpace sp)
 static PetscErrorCode PetscSpacePolynomialGetTensor_Subspace(PetscSpace sp, PetscBool *poly)
 {
   PetscSpace_Subspace *subsp = (PetscSpace_Subspace *) sp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *poly = PETSC_FALSE;
@@ -475,7 +469,6 @@ static PetscErrorCode PetscSpacePolynomialGetTensor_Subspace(PetscSpace sp, Pets
 
 static PetscErrorCode PetscSpaceInitialize_Subspace(PetscSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   sp->ops->setup = PetscSpaceSetUp_Subspace;
@@ -493,7 +486,6 @@ PetscErrorCode PetscSpaceCreateSubspace(PetscSpace origSpace, PetscDualSpace dua
   PetscInt            origDim, subDim, origNc, subNc, subNb;
   PetscInt            order;
   DM                  dm;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(origSpace,PETSCSPACE_CLASSID,1);

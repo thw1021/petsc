@@ -3,8 +3,8 @@
 
 static PetscErrorCode MatTransposeAXPY_Private(Mat Y,PetscScalar a,Mat X,MatStructure str,Mat T)
 {
-  PetscErrorCode ierr,(*f)(Mat,Mat*);
   Mat            A,F;
+  PetscErrorCode (*f)(Mat,Mat*);
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQueryFunction((PetscObject)T,"MatTransposeGetMat_C",&f));
@@ -53,7 +53,6 @@ static PetscErrorCode MatTransposeAXPY_Private(Mat Y,PetscScalar a,Mat X,MatStru
  @*/
 PetscErrorCode MatAXPY(Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
-  PetscErrorCode ierr;
   PetscInt       M1,M2,N1,N2;
   PetscInt       m1,m2,n1,n2;
   MatType        t1,t2;
@@ -102,7 +101,6 @@ PetscErrorCode MatAXPY(Mat Y,PetscScalar a,Mat X,MatStructure str)
 
 PetscErrorCode MatAXPY_Basic_Preallocate(Mat Y, Mat X, Mat *B)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*preall)(Mat,Mat,Mat*) = NULL;
 
   PetscFunctionBegin;
@@ -153,7 +151,6 @@ PetscErrorCode MatAXPY_Basic_Preallocate(Mat Y, Mat X, Mat *B)
 
 PetscErrorCode MatAXPY_Basic(Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
-  PetscErrorCode ierr;
   PetscBool      isshell,isdense,isnest;
 
   PetscFunctionBegin;
@@ -224,7 +221,6 @@ PetscErrorCode MatAXPY_Basic(Mat Y,PetscScalar a,Mat X,MatStructure str)
 PetscErrorCode MatAXPY_BasicWithPreallocation(Mat B,Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
   PetscInt          i,start,end,j,ncols,m,n;
-  PetscErrorCode    ierr;
   const PetscInt    *row;
   PetscScalar       *val;
   const PetscScalar *vals;
@@ -293,20 +289,16 @@ PetscErrorCode MatAXPY_BasicWithPreallocation(Mat B,Mat Y,PetscScalar a,Mat X,Ma
  @*/
 PetscErrorCode  MatShift(Mat Y,PetscScalar a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(Y,MAT_CLASSID,1);
-  PetscCheckFalse(!Y->assembled,PetscObjectComm((PetscObject)Y),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
-  PetscCheckFalse(Y->factortype,PetscObjectComm((PetscObject)Y),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  PetscCheck(Y->assembled,PetscObjectComm((PetscObject)Y),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
+  PetscCheck(!Y->factortype,PetscObjectComm((PetscObject)Y),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   MatCheckPreallocated(Y,1);
   if (a == 0.0) PetscFunctionReturn(0);
 
-  if (Y->ops->shift) {
-    CHKERRQ((*Y->ops->shift)(Y,a));
-  } else {
-    CHKERRQ(MatShift_Basic(Y,a));
-  }
+  if (Y->ops->shift) CHKERRQ((*Y->ops->shift)(Y,a));
+  else CHKERRQ(MatShift_Basic(Y,a));
 
   CHKERRQ(PetscObjectStateIncrease((PetscObject)Y));
   PetscFunctionReturn(0);
@@ -314,7 +306,6 @@ PetscErrorCode  MatShift(Mat Y,PetscScalar a)
 
 PetscErrorCode  MatDiagonalSet_Default(Mat Y,Vec D,InsertMode is)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,start,end;
   const PetscScalar *v;
 
@@ -353,7 +344,6 @@ PetscErrorCode  MatDiagonalSet_Default(Mat Y,Vec D,InsertMode is)
 @*/
 PetscErrorCode  MatDiagonalSet(Mat Y,Vec D,InsertMode is)
 {
-  PetscErrorCode ierr;
   PetscInt       matlocal,veclocal;
 
   PetscFunctionBegin;
@@ -361,7 +351,7 @@ PetscErrorCode  MatDiagonalSet(Mat Y,Vec D,InsertMode is)
   PetscValidHeaderSpecific(D,VEC_CLASSID,2);
   CHKERRQ(MatGetLocalSize(Y,&matlocal,NULL));
   CHKERRQ(VecGetLocalSize(D,&veclocal));
-  PetscCheckFalse(matlocal != veclocal,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number local rows of matrix %" PetscInt_FMT " does not match that of vector for diagonal %" PetscInt_FMT,matlocal,veclocal);
+  PetscCheck(matlocal == veclocal,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number local rows of matrix %" PetscInt_FMT " does not match that of vector for diagonal %" PetscInt_FMT,matlocal,veclocal);
   if (Y->ops->diagonalset) {
     CHKERRQ((*Y->ops->diagonalset)(Y,D,is));
   } else {
@@ -388,7 +378,6 @@ PetscErrorCode  MatDiagonalSet(Mat Y,Vec D,InsertMode is)
  @*/
 PetscErrorCode  MatAYPX(Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatScale(Y,a));
@@ -418,7 +407,6 @@ PetscErrorCode  MatAYPX(Mat Y,PetscScalar a,Mat X,MatStructure str)
 @*/
 PetscErrorCode  MatComputeOperator(Mat inmat,MatType mattype,Mat *mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(inmat,MAT_CLASSID,1);
@@ -451,7 +439,6 @@ PetscErrorCode  MatComputeOperator(Mat inmat,MatType mattype,Mat *mat)
 PetscErrorCode  MatComputeOperatorTranspose(Mat inmat,MatType mattype,Mat *mat)
 {
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(inmat,MAT_CLASSID,1);
@@ -482,7 +469,6 @@ PetscErrorCode MatChop(Mat A, PetscReal tol)
   PetscScalar    *newVals;
   PetscInt       *newCols, rStart, rEnd, numRows, maxRows, r, colMax = 0;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectBaseTypeCompareAny((PetscObject)A, &flg, MATSEQDENSE, MATMPIDENSE, ""));

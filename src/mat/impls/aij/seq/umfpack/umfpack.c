@@ -91,7 +91,6 @@ typedef struct {
 
 static PetscErrorCode MatDestroy_UMFPACK(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_UMFPACK    *lu=(Mat_UMFPACK*)A->data;
 
   PetscFunctionBegin;
@@ -113,7 +112,6 @@ static PetscErrorCode MatSolve_UMFPACK_Private(Mat A,Vec b,Vec x,int uflag)
   Mat_SeqAIJ        *a  = (Mat_SeqAIJ*)lu->A->data;
   PetscScalar       *av = a->a,*xa;
   const PetscScalar *ba;
-  PetscErrorCode    ierr;
   PetscInt          *ai = a->i,*aj = a->j,status;
   static PetscBool  cite = PETSC_FALSE;
 
@@ -148,7 +146,6 @@ static PetscErrorCode MatSolve_UMFPACK_Private(Mat A,Vec b,Vec x,int uflag)
 
 static PetscErrorCode MatSolve_UMFPACK(Mat A,Vec b,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* We gave UMFPACK the algebraic transpose (because it assumes column alignment) */
@@ -158,7 +155,6 @@ static PetscErrorCode MatSolve_UMFPACK(Mat A,Vec b,Vec x)
 
 static PetscErrorCode MatSolveTranspose_UMFPACK(Mat A,Vec b,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* We gave UMFPACK the algebraic transpose (because it assumes column alignment) */
@@ -172,7 +168,6 @@ static PetscErrorCode MatLUFactorNumeric_UMFPACK(Mat F,Mat A,const MatFactorInfo
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data;
   PetscInt       *ai = a->i,*aj=a->j,status;
   PetscScalar    *av = a->a;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!A->rmap->n) PetscFunctionReturn(0);
@@ -209,7 +204,6 @@ static PetscErrorCode MatLUFactorSymbolic_UMFPACK(Mat F,Mat A,IS r,IS c,const Ma
 {
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data;
   Mat_UMFPACK    *lu = (Mat_UMFPACK*)(F->data);
-  PetscErrorCode ierr;
   PetscInt       i,*ai = a->i,*aj = a->j,m=A->rmap->n,n=A->cmap->n;
 #if !defined(PETSC_USE_COMPLEX)
   PetscScalar    *av = a->a;
@@ -262,7 +256,6 @@ static PetscErrorCode MatLUFactorSymbolic_UMFPACK(Mat F,Mat A,IS r,IS c,const Ma
 static PetscErrorCode MatView_Info_UMFPACK(Mat A,PetscViewer viewer)
 {
   Mat_UMFPACK    *lu= (Mat_UMFPACK*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* check if matrix is UMFPACK type */
@@ -300,7 +293,6 @@ static PetscErrorCode MatView_Info_UMFPACK(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatView_UMFPACK(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -453,7 +445,6 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_spqr(Mat,MatFactorType,Mat*);
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuiteSparse(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERUMFPACK,MATSEQAIJ,  MAT_FACTOR_LU,MatGetFactor_seqaij_umfpack));

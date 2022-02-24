@@ -250,7 +250,6 @@ static PetscErrorCode xyt_generate(xyt_ADT xyt_handle)
   PetscInt       yt_zero_nnz_0=0;
   PetscBLASInt   i1           = 1,dlen;
   PetscScalar    dm1          = -1.0;
-  PetscErrorCode ierr;
 
   n              =xyt_handle->mvi->n;
   nsep           =xyt_handle->info->nsep;
@@ -553,7 +552,6 @@ static PetscErrorCode do_xyt_solve(xyt_ADT xyt_handle,  PetscScalar *uc)
   PetscScalar    *x       =xyt_handle->info->x;
   PetscScalar    *y       =xyt_handle->info->y;
   PetscBLASInt   i1       = 1,dlen;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   uu_ptr=solve_uu;
@@ -614,7 +612,6 @@ static PetscErrorCode det_separators(xyt_ADT xyt_handle)
   PetscInt       m              =xyt_handle->mvi->m;
   PetscInt       level          =xyt_handle->level;
   PetscInt       shared         =0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dir  = (PetscInt*)malloc(sizeof(PetscInt)*(level+1));

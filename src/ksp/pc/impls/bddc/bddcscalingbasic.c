@@ -13,7 +13,6 @@ static PetscErrorCode PCBDDCScalingReset_Deluxe_Solvers(PCBDDCDeluxeScaling);
 static PetscErrorCode PCBDDCMatTransposeMatSolve_SeqDense(Mat A,Mat B,Mat X)
 {
   Mat_SeqDense      *mat = (Mat_SeqDense*)A->data;
-  PetscErrorCode    ierr;
   const PetscScalar *b;
   PetscScalar       *x;
   PetscInt          n;
@@ -48,7 +47,6 @@ static PetscErrorCode PCBDDCScalingExtension_Basic(PC pc, Vec local_interface_ve
 {
   PC_IS*         pcis = (PC_IS*)pc->data;
   PC_BDDC*       pcbddc = (PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Apply partition of unity */
@@ -64,7 +62,6 @@ static PetscErrorCode PCBDDCScalingExtension_Deluxe(PC pc, Vec x, Vec y)
   PC_IS*              pcis=(PC_IS*)pc->data;
   PC_BDDC*            pcbddc=(PC_BDDC*)pc->data;
   PCBDDCDeluxeScaling deluxe_ctx = pcbddc->deluxe_ctx;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(pcbddc->work_scaling,0.0));
@@ -134,7 +131,6 @@ static PetscErrorCode PCBDDCScalingExtension_Deluxe(PC pc, Vec x, Vec y)
 PetscErrorCode PCBDDCScalingExtension(PC pc, Vec local_interface_vector, Vec global_vector)
 {
   PC_BDDC        *pcbddc=(PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -147,7 +143,6 @@ PetscErrorCode PCBDDCScalingExtension(PC pc, Vec local_interface_vector, Vec glo
 
 static PetscErrorCode PCBDDCScalingRestriction_Basic(PC pc, Vec global_vector, Vec local_interface_vector)
 {
-  PetscErrorCode ierr;
   PC_IS          *pcis = (PC_IS*)pc->data;
 
   PetscFunctionBegin;
@@ -163,7 +158,6 @@ static PetscErrorCode PCBDDCScalingRestriction_Deluxe(PC pc, Vec x, Vec y)
   PC_IS*              pcis=(PC_IS*)pc->data;
   PC_BDDC*            pcbddc=(PC_BDDC*)pc->data;
   PCBDDCDeluxeScaling deluxe_ctx = pcbddc->deluxe_ctx;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   /* get local boundary part of global vector */
@@ -229,7 +223,6 @@ static PetscErrorCode PCBDDCScalingRestriction_Deluxe(PC pc, Vec x, Vec y)
 PetscErrorCode PCBDDCScalingRestriction(PC pc, Vec global_vector, Vec local_interface_vector)
 {
   PC_BDDC        *pcbddc=(PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -244,7 +237,6 @@ PetscErrorCode PCBDDCScalingSetUp(PC pc)
 {
   PC_IS*         pcis=(PC_IS*)pc->data;
   PC_BDDC*       pcbddc=(PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -352,7 +344,6 @@ PetscErrorCode PCBDDCScalingSetUp(PC pc)
 PetscErrorCode PCBDDCScalingDestroy(PC pc)
 {
   PC_BDDC*       pcbddc=(PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pcbddc->deluxe_ctx) {
@@ -368,7 +359,6 @@ static PetscErrorCode PCBDDCScalingCreate_Deluxe(PC pc)
 {
   PC_BDDC*            pcbddc=(PC_BDDC*)pc->data;
   PCBDDCDeluxeScaling deluxe_ctx;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&deluxe_ctx));
@@ -379,7 +369,6 @@ static PetscErrorCode PCBDDCScalingCreate_Deluxe(PC pc)
 static PetscErrorCode PCBDDCScalingDestroy_Deluxe(PC pc)
 {
   PC_BDDC*            pcbddc=(PC_BDDC*)pc->data;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCScalingReset_Deluxe_Solvers(pcbddc->deluxe_ctx));
@@ -390,7 +379,6 @@ static PetscErrorCode PCBDDCScalingDestroy_Deluxe(PC pc)
 static PetscErrorCode PCBDDCScalingReset_Deluxe_Solvers(PCBDDCDeluxeScaling deluxe_ctx)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(deluxe_ctx->idx_simple_B));
@@ -414,7 +402,6 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe(PC pc)
   PC_BDDC             *pcbddc=(PC_BDDC*)pc->data;
   PCBDDCDeluxeScaling deluxe_ctx=pcbddc->deluxe_ctx;
   PCBDDCSubSchurs     sub_schurs=pcbddc->sub_schurs;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   /* reset data structures if the topology has changed */
@@ -477,7 +464,6 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe_Private(PC pc)
   PetscInt               i,max_subset_size,cum,cum2;
   const PetscInt         *idxs;
   PetscBool              newsetup = PETSC_FALSE;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!sub_schurs,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Missing PCBDDCSubSchurs");

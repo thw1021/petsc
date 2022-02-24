@@ -270,7 +270,6 @@ PetscErrorCode  PetscTrFreeDefault(void *aa,int lineno,const char function[],con
   TRSPACE        *head;
   char           *ahead;
   size_t         asize;
-  PetscErrorCode ierr;
   PetscClassId   *nend;
 
   PetscFunctionBegin;
@@ -489,7 +488,6 @@ PetscErrorCode  PetscMemoryView(PetscViewer viewer,const char message[])
 {
   PetscLogDouble allocated,allocatedmax,resident,residentmax,gallocated,gallocatedmax,gresident,gresidentmax,maxgallocated,maxgallocatedmax,maxgresident,maxgresidentmax;
   PetscLogDouble mingallocated,mingallocatedmax,mingresident,mingresidentmax;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -707,7 +705,6 @@ PetscErrorCode  PetscMallocDump(FILE *fp)
 {
   TRSPACE        *head;
   size_t         libAlloc = 0;
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -758,7 +755,6 @@ PetscErrorCode  PetscMallocDump(FILE *fp)
 @*/
 PetscErrorCode PetscMallocViewSet(PetscLogDouble logmin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscLogMalloc = 0;
@@ -810,7 +806,6 @@ PetscErrorCode PetscMallocViewGet(PetscBool *logging)
 @*/
 PetscErrorCode PetscMallocTraceSet(PetscViewer viewer, PetscBool active, PetscLogDouble logmin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!active) {PetscLogMallocTrace = -1; PetscFunctionReturn(0);}
@@ -879,7 +874,6 @@ PetscErrorCode  PetscMallocView(FILE *fp)
   PetscBool      match;
   const char     **shortfunction;
   PetscLogDouble rss;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(MPI_COMM_WORLD,&rank));
@@ -958,7 +952,6 @@ foundit:;
 @*/
 PetscErrorCode PetscMallocSetDebug(PetscBool eachcall, PetscBool initializenan)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(PetscTrMalloc == PetscTrMallocDefault,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot call this routine more than once, it can only be called in PetscInitialize()");

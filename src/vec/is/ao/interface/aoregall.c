@@ -14,7 +14,6 @@ PETSC_EXTERN PetscErrorCode AOCreate_MemoryScalable(AO ao);
 @*/
 PetscErrorCode  AORegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (AORegisterAllCalled) PetscFunctionReturn(0);

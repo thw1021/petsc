@@ -7,7 +7,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqAIJ(Mat A, MatType newtype,Mat
   Mat_SeqAIJ     *b;
   PetscBool      roworiented;
   Mat_SeqBAIJ    *a = (Mat_SeqBAIJ*)A->data;
-  PetscErrorCode ierr;
   PetscInt       bs = A->rmap->bs,*ai = a->i,*aj = a->j,n = A->rmap->N/bs,i,j,k;
   PetscInt       *rowlengths,*rows,*cols,maxlen = 0,ncols;
   MatScalar      *aa = a->a;
@@ -72,7 +71,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqBAIJ(Mat A,MatType newtype,MatR
   Mat            B;
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqBAIJ    *b;
-  PetscErrorCode ierr;
   PetscInt       *ai=a->i,m=A->rmap->N,n=A->cmap->N,i,*rowlengths,bs=PetscAbs(A->rmap->bs);
 
   PetscFunctionBegin;

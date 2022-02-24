@@ -95,7 +95,6 @@ typedef struct {
 
 static PetscErrorCode MatDestroy_KLU(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_KLU    *lu=(Mat_KLU*)A->data;
 
   PetscFunctionBegin;
@@ -177,7 +176,6 @@ static PetscErrorCode MatLUFactorSymbolic_KLU(Mat F,Mat A,IS r,IS c,const MatFac
 {
   Mat_SeqAIJ     *a  = (Mat_SeqAIJ*)A->data;
   Mat_KLU        *lu = (Mat_KLU*)(F->data);
-  PetscErrorCode ierr;
   PetscInt       i,*ai = a->i,*aj = a->j,m=A->rmap->n,n=A->cmap->n;
   const PetscInt *ra,*ca;
 
@@ -235,7 +233,6 @@ static PetscErrorCode MatView_Info_KLU(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatView_KLU(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 

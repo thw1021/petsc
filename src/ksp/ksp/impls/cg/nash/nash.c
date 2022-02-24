@@ -13,7 +13,6 @@ static PetscErrorCode KSPCGSolve_NASH(KSP ksp)
   SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "NASH is not available for complex systems");
 #else
   KSPCG_NASH     *cg = (KSPCG_NASH*)ksp->data;
-  PetscErrorCode ierr;
   Mat            Qmat, Mmat;
   Vec            r, z, p, d;
   PC             pc;
@@ -502,7 +501,6 @@ static PetscErrorCode KSPCGSolve_NASH(KSP ksp)
 
 static PetscErrorCode KSPCGSetUp_NASH(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   /***************************************************************************/
   /* Set work vectors needed by conjugate gradient method and allocate       */
@@ -515,7 +513,6 @@ static PetscErrorCode KSPCGSetUp_NASH(KSP ksp)
 
 static PetscErrorCode KSPCGDestroy_NASH(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /***************************************************************************/
@@ -563,7 +560,6 @@ static PetscErrorCode  KSPCGGetObjFcn_NASH(KSP ksp, PetscReal *o_fcn)
 
 static PetscErrorCode KSPCGSetFromOptions_NASH(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSPCG_NASH     *cg = (KSPCG_NASH*)ksp->data;
 
   PetscFunctionBegin;
@@ -622,7 +618,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_NASH(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSPCG_NASH     *cg;
 
   PetscFunctionBegin;

@@ -41,7 +41,6 @@ static PetscErrorCode KSPAllocateVectors_FCG(KSP ksp, PetscInt nvecsneeded, Pets
 
 static PetscErrorCode    KSPSetUp_FCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_FCG        *fcg = (KSP_FCG*)ksp->data;
   PetscInt       maxit = ksp->max_it;
   const PetscInt nworkstd = 2;
@@ -81,7 +80,6 @@ static PetscErrorCode    KSPSetUp_FCG(KSP ksp)
 
 static PetscErrorCode KSPSolve_FCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,k,idx,mi;
   KSP_FCG        *fcg = (KSP_FCG*)ksp->data;
   PetscScalar    alpha=0.0,beta = 0.0,dpi,s;
@@ -269,7 +267,6 @@ static PetscErrorCode KSPSolve_FCG(KSP ksp)
 
 static PetscErrorCode KSPDestroy_FCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   KSP_FCG        *fcg = (KSP_FCG*)ksp->data;
 
@@ -297,7 +294,6 @@ static PetscErrorCode KSPDestroy_FCG(KSP ksp)
 static PetscErrorCode KSPView_FCG(KSP ksp,PetscViewer viewer)
 {
   KSP_FCG        *fcg = (KSP_FCG*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring;
   const char     *truncstr;
 
@@ -491,7 +487,6 @@ PetscErrorCode KSPFCGGetTruncationType(KSP ksp,KSPFCDTruncationType *truncstrat)
 
 static PetscErrorCode KSPSetFromOptions_FCG(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_FCG        *fcg=(KSP_FCG*)ksp->data;
   PetscInt       mmax,nprealloc;
   PetscBool      flg;
@@ -536,7 +531,6 @@ static PetscErrorCode KSPSetFromOptions_FCG(PetscOptionItems *PetscOptionsObject
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_FCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_FCG        *fcg;
 
   PetscFunctionBegin;

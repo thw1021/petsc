@@ -9,7 +9,6 @@ static PetscErrorCode PetscSectionVecView_ASCII(PetscSection s, Vec v, PetscView
   PetscScalar    *array;
   PetscInt       p, i;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
@@ -83,7 +82,6 @@ PetscErrorCode PetscSectionVecView(PetscSection s, Vec v, PetscViewer viewer)
 {
   PetscBool      isascii;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
@@ -130,7 +128,6 @@ PetscErrorCode VecGetValuesSection(Vec v, PetscSection s, PetscInt point, PetscS
 {
   PetscScalar    *baseArray;
   const PetscInt p = point - s->pStart;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
@@ -171,7 +168,6 @@ PetscErrorCode VecSetValuesSection(Vec v, PetscSection s, PetscInt point, PetscS
   const PetscInt  p           = point - s->pStart;
   const PetscInt  orientation = 0; /* Needs to be included for use in closure operations */
   PetscInt        cDim        = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID, 1);
@@ -257,7 +253,6 @@ PetscErrorCode PetscSectionGetField_Internal(PetscSection section, PetscSection 
 {
   PetscInt      *subIndices;
   PetscInt       Nc, subSize = 0, subOff = 0, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionGetFieldComponents(section, field, &Nc));
@@ -294,7 +289,6 @@ PetscErrorCode PetscSectionGetField_Internal(PetscSection section, PetscSection 
 
 PetscErrorCode PetscSectionRestoreField_Internal(PetscSection section, PetscSection sectionGlobal, Vec v, PetscInt field, PetscInt pStart, PetscInt pEnd, IS *is, Vec *subv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecRestoreSubVector(v, *is, subv));
@@ -321,7 +315,6 @@ PetscErrorCode PetscSectionRestoreField_Internal(PetscSection section, PetscSect
 PetscErrorCode PetscSectionVecNorm(PetscSection s, PetscSection gs, Vec x, NormType type, PetscReal val[])
 {
   PetscInt       Nf, f, pStart, pEnd;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);

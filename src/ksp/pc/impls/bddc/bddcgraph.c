@@ -4,7 +4,6 @@
 
 PetscErrorCode PCBDDCGraphGetDirichletDofsB(PCBDDCGraph graph, IS* dirdofs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (graph->dirdofsB) {
@@ -32,7 +31,6 @@ PetscErrorCode PCBDDCGraphGetDirichletDofsB(PCBDDCGraph graph, IS* dirdofs)
 
 PetscErrorCode PCBDDCGraphGetDirichletDofs(PCBDDCGraph graph, IS* dirdofs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (graph->dirdofs) {
@@ -62,7 +60,6 @@ PetscErrorCode PCBDDCGraphASCIIView(PCBDDCGraph graph, PetscInt verbosity_level,
 {
   PetscInt       i,j,tabs;
   PetscInt*      queue_in_global_numbering;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerASCIIPushSynchronized(viewer));
@@ -164,7 +161,6 @@ PetscErrorCode PCBDDCGraphASCIIView(PCBDDCGraph graph, PetscInt verbosity_level,
 PetscErrorCode PCBDDCGraphRestoreCandidatesIS(PCBDDCGraph graph, PetscInt *n_faces, IS *FacesIS[], PetscInt *n_edges, IS *EdgesIS[], IS *VerticesIS)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (n_faces) {
@@ -195,7 +191,6 @@ PetscErrorCode PCBDDCGraphGetCandidatesIS(PCBDDCGraph graph, PetscInt *n_faces, 
 {
   IS             *ISForFaces,*ISForEdges,ISForVertices;
   PetscInt       i,nfc,nec,nvc,*idx,*mark;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCalloc1(graph->ncc,&mark));
@@ -292,7 +287,6 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
   PetscMPIInt    size;
   PetscInt       i;
   PetscBT        cornerp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* compute connected components locally */
@@ -677,7 +671,6 @@ static inline PetscErrorCode PCBDDCGraphComputeCC_Private(PCBDDCGraph graph,Pets
   PetscBT        touched = graph->touched;
   PetscBool      havecsr = (PetscBool)(!!xadj);
   PetscBool      havesubs = (PetscBool)(!!graph->n_local_subs);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   n = 0;
@@ -758,7 +751,6 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponentsLocal(PCBDDCGraph graph)
 {
   PetscInt       ncc,cum_queue,n;
   PetscMPIInt    commsize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!graph->setupcalled,PetscObjectComm((PetscObject)graph->l2gmap),PETSC_ERR_ORDER,"PCBDDCGraphSetUp should be called first");
@@ -826,7 +818,6 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
   PetscInt       i,j,k,s,total_counts,nodes_touched,is_size;
   PetscMPIInt    commsize;
   PetscBool      same_set,mirrors_found;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(graph->l2gmap,custom_minimal_size,2);
@@ -1187,7 +1178,6 @@ PetscErrorCode PCBDDCGraphSetUp(PCBDDCGraph graph, PetscInt custom_minimal_size,
 
 PetscErrorCode PCBDDCGraphResetCoords(PCBDDCGraph graph)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!graph) PetscFunctionReturn(0);
@@ -1200,7 +1190,6 @@ PetscErrorCode PCBDDCGraphResetCoords(PCBDDCGraph graph)
 
 PetscErrorCode PCBDDCGraphResetCSR(PCBDDCGraph graph)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!graph) PetscFunctionReturn(0);
@@ -1264,7 +1253,6 @@ PetscErrorCode PCBDDCGraphReset(PCBDDCGraph graph)
 PetscErrorCode PCBDDCGraphInit(PCBDDCGraph graph, ISLocalToGlobalMapping l2gmap, PetscInt N, PetscInt maxcount)
 {
   PetscInt       n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(graph,1);
@@ -1302,7 +1290,6 @@ PetscErrorCode PCBDDCGraphInit(PCBDDCGraph graph, ISLocalToGlobalMapping l2gmap,
 
 PetscErrorCode PCBDDCGraphDestroy(PCBDDCGraph* graph)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCGraphResetCSR(*graph));
@@ -1315,7 +1302,6 @@ PetscErrorCode PCBDDCGraphDestroy(PCBDDCGraph* graph)
 PetscErrorCode PCBDDCGraphCreate(PCBDDCGraph *graph)
 {
   PCBDDCGraph    new_graph;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&new_graph));

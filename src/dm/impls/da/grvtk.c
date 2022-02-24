@@ -10,7 +10,6 @@
    scalar-valued fields as opposed to a single vector-valued field */
 static PetscErrorCode DMDAGetFieldsNamed(DM da,PetscBool *fieldsnamed)
 {
-  PetscErrorCode ierr;
   PetscInt       f,bs;
 
   PetscFunctionBegin;
@@ -47,7 +46,6 @@ static PetscErrorCode DMDAVTKWriteAll_VTS(DM da,PetscViewer viewer)
   PetscInt                 dim,mx,my,mz,cdim,bs,boffset,maxnnodes,maxbs,i,j,k,r;
   PetscInt                 rloc[6],(*grloc)[6] = NULL;
   PetscScalar              *array,*array2;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)da,&comm));
@@ -277,7 +275,6 @@ static PetscErrorCode DMDAVTKWriteAll_VTR(DM da,PetscViewer viewer)
   PetscInt                 dim,mx,my,mz,boffset,maxnnodes,maxbs,i,j,k,r;
   PetscInt                 rloc[6],(*grloc)[6] = NULL;
   PetscScalar              *array,*array2;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)da,&comm));
@@ -528,7 +525,6 @@ PetscErrorCode DMDAVTKWriteAll(PetscObject odm,PetscViewer viewer)
 {
   DM             dm = (DM)odm;
   PetscBool      isvtk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);

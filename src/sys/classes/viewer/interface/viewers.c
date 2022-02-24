@@ -24,7 +24,6 @@ struct _n_PetscViewers {
 PetscErrorCode  PetscViewersDestroy(PetscViewers *v)
 {
   int            i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*v) PetscFunctionReturn(0);
@@ -54,7 +53,6 @@ PetscErrorCode  PetscViewersDestroy(PetscViewers *v)
 @*/
 PetscErrorCode  PetscViewersCreate(MPI_Comm comm,PetscViewers *v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(v,2);
@@ -85,7 +83,6 @@ PetscErrorCode  PetscViewersCreate(MPI_Comm comm,PetscViewers *v)
 @*/
 PetscErrorCode  PetscViewersGetViewer(PetscViewers viewers,PetscInt n,PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(viewers,1);
@@ -141,7 +138,6 @@ PetscErrorCode PetscMonitorCompare(PetscErrorCode (*nmon)(void), void *nmctx, Pe
     }
     if (*identical) {
       if (mdestroy) {
-        PetscErrorCode ierr;
         CHKERRQ((*mdestroy)(&nmctx));
       }
     }

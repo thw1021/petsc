@@ -24,7 +24,6 @@
 PetscErrorCode MatDenseGetLocalMatrix(Mat A,Mat *B)
 {
   Mat_MPIDense   *mat = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -44,7 +43,6 @@ PetscErrorCode MatCopy_MPIDense(Mat A, Mat B, MatStructure s)
 {
   Mat_MPIDense   *Amat = (Mat_MPIDense*)A->data;
   Mat_MPIDense   *Bmat = (Mat_MPIDense*)B->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(Amat->A,Bmat->A,s));
@@ -54,7 +52,6 @@ PetscErrorCode MatCopy_MPIDense(Mat A, Mat B, MatStructure s)
 PetscErrorCode MatGetRow_MPIDense(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
   Mat_MPIDense   *mat = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lrow,rstart = A->rmap->rstart,rend = A->rmap->rend;
 
   PetscFunctionBegin;
@@ -67,7 +64,6 @@ PetscErrorCode MatGetRow_MPIDense(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx
 PetscErrorCode MatRestoreRow_MPIDense(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
   Mat_MPIDense   *mat = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lrow,rstart = A->rmap->rstart,rend = A->rmap->rend;
 
   PetscFunctionBegin;
@@ -80,7 +76,6 @@ PetscErrorCode MatRestoreRow_MPIDense(Mat A,PetscInt row,PetscInt *nz,PetscInt *
 PetscErrorCode  MatGetDiagonalBlock_MPIDense(Mat A,Mat *a)
 {
   Mat_MPIDense   *mdn = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       m = A->rmap->n,rstart = A->rmap->rstart;
   PetscScalar    *array;
   MPI_Comm       comm;
@@ -114,7 +109,6 @@ PetscErrorCode  MatGetDiagonalBlock_MPIDense(Mat A,Mat *a)
 PetscErrorCode MatSetValues_MPIDense(Mat mat,PetscInt m,const PetscInt idxm[],PetscInt n,const PetscInt idxn[],const PetscScalar v[],InsertMode addv)
 {
   Mat_MPIDense   *A = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
   PetscInt       i,j,rstart = mat->rmap->rstart,rend = mat->rmap->rend,row;
   PetscBool      roworiented = A->roworiented;
 
@@ -148,7 +142,6 @@ PetscErrorCode MatSetValues_MPIDense(Mat mat,PetscInt m,const PetscInt idxm[],Pe
 PetscErrorCode MatGetValues_MPIDense(Mat mat,PetscInt m,const PetscInt idxm[],PetscInt n,const PetscInt idxn[],PetscScalar v[])
 {
   Mat_MPIDense   *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
   PetscInt       i,j,rstart = mat->rmap->rstart,rend = mat->rmap->rend,row;
 
   PetscFunctionBegin;
@@ -170,7 +163,6 @@ PetscErrorCode MatGetValues_MPIDense(Mat mat,PetscInt m,const PetscInt idxm[],Pe
 static PetscErrorCode MatDenseGetLDA_MPIDense(Mat A,PetscInt *lda)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseGetLDA(a->A,lda));
@@ -181,7 +173,6 @@ static PetscErrorCode MatDenseSetLDA_MPIDense(Mat A,PetscInt lda)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
   PetscBool      iscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!a->A) {
@@ -201,7 +192,6 @@ static PetscErrorCode MatDenseSetLDA_MPIDense(Mat A,PetscInt lda)
 static PetscErrorCode MatDenseGetArray_MPIDense(Mat A,PetscScalar **array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->matinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
@@ -212,7 +202,6 @@ static PetscErrorCode MatDenseGetArray_MPIDense(Mat A,PetscScalar **array)
 static PetscErrorCode MatDenseGetArrayRead_MPIDense(Mat A,const PetscScalar **array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->matinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
@@ -223,7 +212,6 @@ static PetscErrorCode MatDenseGetArrayRead_MPIDense(Mat A,const PetscScalar **ar
 static PetscErrorCode MatDenseGetArrayWrite_MPIDense(Mat A,PetscScalar **array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->matinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
@@ -234,7 +222,6 @@ static PetscErrorCode MatDenseGetArrayWrite_MPIDense(Mat A,PetscScalar **array)
 static PetscErrorCode MatDensePlaceArray_MPIDense(Mat A,const PetscScalar *array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -246,7 +233,6 @@ static PetscErrorCode MatDensePlaceArray_MPIDense(Mat A,const PetscScalar *array
 static PetscErrorCode MatDenseResetArray_MPIDense(Mat A)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -258,7 +244,6 @@ static PetscErrorCode MatDenseResetArray_MPIDense(Mat A)
 static PetscErrorCode MatDenseReplaceArray_MPIDense(Mat A,const PetscScalar *array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -270,7 +255,6 @@ static PetscErrorCode MatDenseReplaceArray_MPIDense(Mat A,const PetscScalar *arr
 static PetscErrorCode MatCreateSubMatrix_MPIDense(Mat A,IS isrow,IS iscol,MatReuse scall,Mat *B)
 {
   Mat_MPIDense      *mat  = (Mat_MPIDense*)A->data,*newmatd;
-  PetscErrorCode    ierr;
   PetscInt          lda,i,j,rstart,rend,nrows,ncols,Ncols,nlrows,nlcols;
   const PetscInt    *irow,*icol;
   const PetscScalar *v;
@@ -340,7 +324,6 @@ static PetscErrorCode MatCreateSubMatrix_MPIDense(Mat A,IS isrow,IS iscol,MatReu
 PetscErrorCode MatDenseRestoreArray_MPIDense(Mat A,PetscScalar **array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseRestoreArray(a->A,array));
@@ -350,7 +333,6 @@ PetscErrorCode MatDenseRestoreArray_MPIDense(Mat A,PetscScalar **array)
 PetscErrorCode MatDenseRestoreArrayRead_MPIDense(Mat A,const PetscScalar **array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseRestoreArrayRead(a->A,array));
@@ -360,7 +342,6 @@ PetscErrorCode MatDenseRestoreArrayRead_MPIDense(Mat A,const PetscScalar **array
 PetscErrorCode MatDenseRestoreArrayWrite_MPIDense(Mat A,PetscScalar **array)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseRestoreArrayWrite(a->A,array));
@@ -370,7 +351,6 @@ PetscErrorCode MatDenseRestoreArrayWrite_MPIDense(Mat A,PetscScalar **array)
 PetscErrorCode MatAssemblyBegin_MPIDense(Mat mat,MatAssemblyType mode)
 {
   Mat_MPIDense   *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
   PetscInt       nstash,reallocs;
 
   PetscFunctionBegin;
@@ -385,7 +365,6 @@ PetscErrorCode MatAssemblyBegin_MPIDense(Mat mat,MatAssemblyType mode)
 PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat,MatAssemblyType mode)
 {
   Mat_MPIDense   *mdn=(Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
   PetscInt       i,*row,*col,flg,j,rstart,ncols;
   PetscMPIInt    n;
   PetscScalar    *val;
@@ -423,7 +402,6 @@ PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat,MatAssemblyType mode)
 
 PetscErrorCode MatZeroEntries_MPIDense(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_MPIDense   *l = (Mat_MPIDense*)A->data;
 
   PetscFunctionBegin;
@@ -434,7 +412,6 @@ PetscErrorCode MatZeroEntries_MPIDense(Mat A)
 PetscErrorCode MatZeroRows_MPIDense(Mat A,PetscInt n,const PetscInt rows[],PetscScalar diag,Vec x,Vec b)
 {
   Mat_MPIDense      *l = (Mat_MPIDense*)A->data;
-  PetscErrorCode    ierr;
   PetscInt          i,len,*lrows;
 
   PetscFunctionBegin;
@@ -472,7 +449,6 @@ PETSC_INTERN PetscErrorCode MatMultTransposeAdd_SeqDense(Mat,Vec,Vec,Vec);
 PetscErrorCode MatMult_MPIDense(Mat mat,Vec xx,Vec yy)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode    ierr;
   const PetscScalar *ax;
   PetscScalar       *ay;
   PetscMemType      axmtype,aymtype;
@@ -491,7 +467,6 @@ PetscErrorCode MatMult_MPIDense(Mat mat,Vec xx,Vec yy)
 PetscErrorCode MatMultAdd_MPIDense(Mat mat,Vec xx,Vec yy,Vec zz)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode    ierr;
   const PetscScalar *ax;
   PetscScalar       *ay;
   PetscMemType      axmtype,aymtype;
@@ -510,7 +485,6 @@ PetscErrorCode MatMultAdd_MPIDense(Mat mat,Vec xx,Vec yy,Vec zz)
 PetscErrorCode MatMultTranspose_MPIDense(Mat A,Vec xx,Vec yy)
 {
   Mat_MPIDense      *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode    ierr;
   const PetscScalar *ax;
   PetscScalar       *ay;
   PetscMemType      axmtype,aymtype;
@@ -530,7 +504,6 @@ PetscErrorCode MatMultTranspose_MPIDense(Mat A,Vec xx,Vec yy)
 PetscErrorCode MatMultTransposeAdd_MPIDense(Mat A,Vec xx,Vec yy,Vec zz)
 {
   Mat_MPIDense      *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode    ierr;
   const PetscScalar *ax;
   PetscScalar       *ay;
   PetscMemType      axmtype,aymtype;
@@ -550,7 +523,6 @@ PetscErrorCode MatMultTransposeAdd_MPIDense(Mat A,Vec xx,Vec yy,Vec zz)
 PetscErrorCode MatGetDiagonal_MPIDense(Mat A,Vec v)
 {
   Mat_MPIDense      *a    = (Mat_MPIDense*)A->data;
-  PetscErrorCode    ierr;
   PetscInt          lda,len,i,n,m = A->rmap->n,radd;
   PetscScalar       *x,zero = 0.0;
   const PetscScalar *av;
@@ -575,7 +547,6 @@ PetscErrorCode MatGetDiagonal_MPIDense(Mat A,Vec v)
 PetscErrorCode MatDestroy_MPIDense(Mat mat)
 {
   Mat_MPIDense   *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
@@ -638,7 +609,6 @@ PETSC_INTERN PetscErrorCode MatView_SeqDense(Mat,PetscViewer);
 static PetscErrorCode MatView_MPIDense_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense*)mat->data;
-  PetscErrorCode    ierr;
   PetscMPIInt       rank;
   PetscViewerType   vtype;
   PetscBool         iascii,isdraw;
@@ -720,7 +690,6 @@ static PetscErrorCode MatView_MPIDense_ASCIIorDraworSocket(Mat mat,PetscViewer v
 
 PetscErrorCode MatView_MPIDense(Mat mat,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii,isbinary,isdraw,issocket;
 
   PetscFunctionBegin;
@@ -741,7 +710,6 @@ PetscErrorCode MatGetInfo_MPIDense(Mat A,MatInfoType flag,MatInfo *info)
 {
   Mat_MPIDense   *mat = (Mat_MPIDense*)A->data;
   Mat            mdn  = mat->A;
-  PetscErrorCode ierr;
   PetscLogDouble isend[5],irecv[5];
 
   PetscFunctionBegin;
@@ -783,7 +751,6 @@ PetscErrorCode MatGetInfo_MPIDense(Mat A,MatInfoType flag,MatInfo *info)
 PetscErrorCode MatSetOption_MPIDense(Mat A,MatOption op,PetscBool flg)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (op) {
@@ -826,7 +793,6 @@ PetscErrorCode MatDiagonalScale_MPIDense(Mat A,Vec ll,Vec rr)
   Mat_MPIDense      *mdn = (Mat_MPIDense*)A->data;
   const PetscScalar *l;
   PetscScalar       x,*v,*vv,*r;
-  PetscErrorCode    ierr;
   PetscInt          i,j,s2a,s3a,s2,s3,m=mdn->A->rmap->n,n=mdn->A->cmap->n,lda;
 
   PetscFunctionBegin;
@@ -870,7 +836,6 @@ PetscErrorCode MatDiagonalScale_MPIDense(Mat A,Vec ll,Vec rr)
 PetscErrorCode MatNorm_MPIDense(Mat A,NormType type,PetscReal *nrm)
 {
   Mat_MPIDense      *mdn = (Mat_MPIDense*)A->data;
-  PetscErrorCode    ierr;
   PetscInt          i,j;
   PetscMPIInt       size;
   PetscReal         sum = 0.0;
@@ -921,7 +886,6 @@ PetscErrorCode MatTranspose_MPIDense(Mat A,MatReuse reuse,Mat *matout)
   Mat_MPIDense   *a    = (Mat_MPIDense*)A->data;
   Mat            B;
   PetscInt       M = A->rmap->N,N = A->cmap->N,m,n,*rwork,rstart = A->rmap->rstart;
-  PetscErrorCode ierr;
   PetscInt       j,i,lda;
   PetscScalar    *v;
 
@@ -959,7 +923,6 @@ PETSC_INTERN PetscErrorCode MatScale_MPIDense(Mat,PetscScalar);
 
 PetscErrorCode MatSetUp_MPIDense(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetUp(A->rmap));
@@ -972,7 +935,6 @@ PetscErrorCode MatSetUp_MPIDense(Mat A)
 
 PetscErrorCode MatAXPY_MPIDense(Mat Y,PetscScalar alpha,Mat X,MatStructure str)
 {
-  PetscErrorCode ierr;
   Mat_MPIDense   *A = (Mat_MPIDense*)Y->data, *B = (Mat_MPIDense*)X->data;
 
   PetscFunctionBegin;
@@ -983,7 +945,6 @@ PetscErrorCode MatAXPY_MPIDense(Mat Y,PetscScalar alpha,Mat X,MatStructure str)
 PetscErrorCode MatConjugate_MPIDense(Mat mat)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatConjugate(a->A));
@@ -993,7 +954,6 @@ PetscErrorCode MatConjugate_MPIDense(Mat mat)
 PetscErrorCode MatRealPart_MPIDense(Mat A)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatRealPart(a->A));
@@ -1003,7 +963,6 @@ PetscErrorCode MatRealPart_MPIDense(Mat A)
 PetscErrorCode MatImaginaryPart_MPIDense(Mat A)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatImaginaryPart(a->A));
@@ -1012,7 +971,6 @@ PetscErrorCode MatImaginaryPart_MPIDense(Mat A)
 
 static PetscErrorCode MatGetColumnVector_MPIDense(Mat A,Vec v,PetscInt col)
 {
-  PetscErrorCode ierr;
   Mat_MPIDense   *a = (Mat_MPIDense*) A->data;
 
   PetscFunctionBegin;
@@ -1026,7 +984,6 @@ PETSC_INTERN PetscErrorCode MatGetColumnReductions_SeqDense(Mat,PetscInt,PetscRe
 
 PetscErrorCode MatGetColumnReductions_MPIDense(Mat A,PetscInt type,PetscReal *reductions)
 {
-  PetscErrorCode ierr;
   PetscInt       i,m,n;
   Mat_MPIDense   *a = (Mat_MPIDense*) A->data;
   PetscReal      *work;
@@ -1062,7 +1019,6 @@ PetscErrorCode MatGetColumnReductions_MPIDense(Mat A,PetscInt type,PetscReal *re
 static PetscErrorCode MatDenseGetColumnVec_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1083,7 +1039,6 @@ static PetscErrorCode MatDenseGetColumnVec_MPIDenseCUDA(Mat A,PetscInt col,Vec *
 static PetscErrorCode MatDenseRestoreColumnVec_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1099,7 +1054,6 @@ static PetscErrorCode MatDenseGetColumnVecRead_MPIDenseCUDA(Mat A,PetscInt col,V
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
   PetscInt       lda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1120,7 +1074,6 @@ static PetscErrorCode MatDenseGetColumnVecRead_MPIDenseCUDA(Mat A,PetscInt col,V
 static PetscErrorCode MatDenseRestoreColumnVecRead_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1136,7 +1089,6 @@ static PetscErrorCode MatDenseRestoreColumnVecRead_MPIDenseCUDA(Mat A,PetscInt c
 static PetscErrorCode MatDenseGetColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1157,7 +1109,6 @@ static PetscErrorCode MatDenseGetColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt col,
 static PetscErrorCode MatDenseRestoreColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1172,7 +1123,6 @@ static PetscErrorCode MatDenseRestoreColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt 
 static PetscErrorCode MatDenseCUDAPlaceArray_MPIDenseCUDA(Mat A, const PetscScalar *a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(l->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1184,7 +1134,6 @@ static PetscErrorCode MatDenseCUDAPlaceArray_MPIDenseCUDA(Mat A, const PetscScal
 static PetscErrorCode MatDenseCUDAResetArray_MPIDenseCUDA(Mat A)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(l->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1196,7 +1145,6 @@ static PetscErrorCode MatDenseCUDAResetArray_MPIDenseCUDA(Mat A)
 static PetscErrorCode MatDenseCUDAReplaceArray_MPIDenseCUDA(Mat A, const PetscScalar *a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(l->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1208,7 +1156,6 @@ static PetscErrorCode MatDenseCUDAReplaceArray_MPIDenseCUDA(Mat A, const PetscSc
 static PetscErrorCode MatDenseCUDAGetArrayWrite_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDAGetArrayWrite(l->A,a));
@@ -1218,7 +1165,6 @@ static PetscErrorCode MatDenseCUDAGetArrayWrite_MPIDenseCUDA(Mat A, PetscScalar 
 static PetscErrorCode MatDenseCUDARestoreArrayWrite_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDARestoreArrayWrite(l->A,a));
@@ -1228,7 +1174,6 @@ static PetscErrorCode MatDenseCUDARestoreArrayWrite_MPIDenseCUDA(Mat A, PetscSca
 static PetscErrorCode MatDenseCUDAGetArrayRead_MPIDenseCUDA(Mat A, const PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDAGetArrayRead(l->A,a));
@@ -1238,7 +1183,6 @@ static PetscErrorCode MatDenseCUDAGetArrayRead_MPIDenseCUDA(Mat A, const PetscSc
 static PetscErrorCode MatDenseCUDARestoreArrayRead_MPIDenseCUDA(Mat A, const PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDARestoreArrayRead(l->A,a));
@@ -1248,7 +1192,6 @@ static PetscErrorCode MatDenseCUDARestoreArrayRead_MPIDenseCUDA(Mat A, const Pet
 static PetscErrorCode MatDenseCUDAGetArray_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDAGetArray(l->A,a));
@@ -1258,7 +1201,6 @@ static PetscErrorCode MatDenseCUDAGetArray_MPIDenseCUDA(Mat A, PetscScalar **a)
 static PetscErrorCode MatDenseCUDARestoreArray_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDARestoreArray(l->A,a));
@@ -1276,7 +1218,6 @@ static PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat,Mat*);
 static PetscErrorCode MatBindToCPU_MPIDenseCUDA(Mat mat,PetscBool bind)
 {
   Mat_MPIDense   *d = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(d->vecinuse,PetscObjectComm((PetscObject)mat),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1319,7 +1260,6 @@ static PetscErrorCode MatBindToCPU_MPIDenseCUDA(Mat mat,PetscBool bind)
 PetscErrorCode MatMPIDenseCUDASetPreallocation(Mat A, PetscScalar *d_data)
 {
   Mat_MPIDense   *d = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscBool      iscuda;
 
   PetscFunctionBegin;
@@ -1343,7 +1283,6 @@ PetscErrorCode MatMPIDenseCUDASetPreallocation(Mat A, PetscScalar *d_data)
 static PetscErrorCode MatSetRandom_MPIDense(Mat x,PetscRandom rctx)
 {
   Mat_MPIDense   *d = (Mat_MPIDense*)x->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetRandom(d->A,rctx));
@@ -1519,7 +1458,6 @@ PetscErrorCode  MatMPIDenseSetPreallocation_MPIDense(Mat mat,PetscScalar *data)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)mat->data;
   PetscBool      iscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->matinuse,PetscObjectComm((PetscObject)mat),PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
@@ -1540,7 +1478,6 @@ PetscErrorCode  MatMPIDenseSetPreallocation_MPIDense(Mat mat,PetscScalar *data)
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIDense(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat            B,C;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMPIAIJGetLocalMat(A,MAT_INITIAL_MATRIX,&C));
@@ -1560,7 +1497,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIDense(Mat A, MatType newtype,Ma
 PetscErrorCode MatConvert_MPIDense_MPIAIJ(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat            B,C;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseGetLocalMatrix(A,&C));
@@ -1620,7 +1556,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIDense_Elemental(Mat A, MatType newtype
 static PetscErrorCode MatDenseGetColumn_MPIDense(Mat A,PetscInt col,PetscScalar **vals)
 {
   Mat_MPIDense   *mat = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseGetColumn(mat->A,col,vals));
@@ -1630,7 +1565,6 @@ static PetscErrorCode MatDenseGetColumn_MPIDense(Mat A,PetscInt col,PetscScalar 
 static PetscErrorCode MatDenseRestoreColumn_MPIDense(Mat A,PetscScalar **vals)
 {
   Mat_MPIDense   *mat = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseRestoreColumn(mat->A,vals));
@@ -1639,7 +1573,6 @@ static PetscErrorCode MatDenseRestoreColumn_MPIDense(Mat A,PetscScalar **vals)
 
 PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIDense(MPI_Comm comm,Mat inmat,PetscInt n,MatReuse scall,Mat *outmat)
 {
-  PetscErrorCode ierr;
   Mat_MPIDense   *mat;
   PetscInt       m,nloc,N;
 
@@ -1673,7 +1606,6 @@ PetscErrorCode MatConvert_MPIDenseCUDA_MPIDense(Mat M,MatType type,MatReuse reus
 {
   Mat            B;
   Mat_MPIDense   *m;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX) {
@@ -1715,7 +1647,6 @@ PetscErrorCode MatConvert_MPIDense_MPIDenseCUDA(Mat M,MatType type,MatReuse reus
 {
   Mat            B;
   Mat_MPIDense   *m;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX) {
@@ -1760,7 +1691,6 @@ PetscErrorCode MatConvert_MPIDense_MPIDenseCUDA(Mat M,MatType type,MatReuse reus
 PetscErrorCode MatDenseGetColumnVec_MPIDense(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1780,7 +1710,6 @@ PetscErrorCode MatDenseGetColumnVec_MPIDense(Mat A,PetscInt col,Vec *v)
 PetscErrorCode MatDenseRestoreColumnVec_MPIDense(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1795,7 +1724,6 @@ PetscErrorCode MatDenseRestoreColumnVec_MPIDense(Mat A,PetscInt col,Vec *v)
 PetscErrorCode MatDenseGetColumnVecRead_MPIDense(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1816,7 +1744,6 @@ PetscErrorCode MatDenseGetColumnVecRead_MPIDense(Mat A,PetscInt col,Vec *v)
 PetscErrorCode MatDenseRestoreColumnVecRead_MPIDense(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1832,7 +1759,6 @@ PetscErrorCode MatDenseRestoreColumnVecRead_MPIDense(Mat A,PetscInt col,Vec *v)
 PetscErrorCode MatDenseGetColumnVecWrite_MPIDense(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1852,7 +1778,6 @@ PetscErrorCode MatDenseGetColumnVecWrite_MPIDense(Mat A,PetscInt col,Vec *v)
 PetscErrorCode MatDenseRestoreColumnVecWrite_MPIDense(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1868,7 +1793,6 @@ PetscErrorCode MatDenseGetSubMatrix_MPIDense(Mat A,PetscInt cbegin,PetscInt cend
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
   Mat_MPIDense   *c;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscBool      setup = PETSC_FALSE;
 
@@ -1908,7 +1832,6 @@ PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A,Mat *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
   Mat_MPIDense   *c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->matinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetSubMatrix() first");
@@ -1935,7 +1858,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_MPIDense(Mat mat)
 {
   Mat_MPIDense   *a;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(mat,&a));
@@ -2013,7 +1935,6 @@ M*/
 #include <petsc/private/deviceimpl.h>
 PETSC_EXTERN PetscErrorCode MatCreate_MPIDenseCUDA(Mat B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
@@ -2075,7 +1996,6 @@ M*/
 @*/
 PetscErrorCode  MatMPIDenseSetPreallocation(Mat B,PetscScalar *data)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
@@ -2105,7 +2025,6 @@ PetscErrorCode  MatMPIDenseSetPreallocation(Mat B,PetscScalar *data)
 @*/
 PetscErrorCode  MatDensePlaceArray(Mat mat,const PetscScalar *array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2135,7 +2054,6 @@ PetscErrorCode  MatDensePlaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode  MatDenseResetArray(Mat mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2165,7 +2083,6 @@ PetscErrorCode  MatDenseResetArray(Mat mat)
 @*/
 PetscErrorCode  MatDenseReplaceArray(Mat mat,const PetscScalar *array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2199,7 +2116,6 @@ PetscErrorCode  MatDenseReplaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode  MatDenseCUDAPlaceArray(Mat mat,const PetscScalar *array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2227,7 +2143,6 @@ PetscErrorCode  MatDenseCUDAPlaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode  MatDenseCUDAResetArray(Mat mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2258,7 +2173,6 @@ PetscErrorCode  MatDenseCUDAResetArray(Mat mat)
 @*/
 PetscErrorCode  MatDenseCUDAReplaceArray(Mat mat,const PetscScalar *array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2288,7 +2202,6 @@ PetscErrorCode  MatDenseCUDAReplaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode MatDenseCUDAGetArrayWrite(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2314,7 +2227,6 @@ PetscErrorCode MatDenseCUDAGetArrayWrite(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDARestoreArrayWrite(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2344,7 +2256,6 @@ PetscErrorCode MatDenseCUDARestoreArrayWrite(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDAGetArrayRead(Mat A, const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2370,7 +2281,6 @@ PetscErrorCode MatDenseCUDAGetArrayRead(Mat A, const PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDARestoreArrayRead(Mat A, const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"MatDenseCUDARestoreArrayRead_C",(Mat,const PetscScalar**),(A,a)));
@@ -2397,7 +2307,6 @@ PetscErrorCode MatDenseCUDARestoreArrayRead(Mat A, const PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDAGetArray(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2423,7 +2332,6 @@ PetscErrorCode MatDenseCUDAGetArray(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDARestoreArray(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2470,7 +2378,6 @@ PetscErrorCode MatDenseCUDARestoreArray(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode  MatCreateDense(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscScalar *data,Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -2520,7 +2427,6 @@ PetscErrorCode  MatCreateDense(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,Pe
 @*/
 PetscErrorCode  MatCreateDenseCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscScalar *data,Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -2547,7 +2453,6 @@ static PetscErrorCode MatDuplicate_MPIDense(Mat A,MatDuplicateOption cpvalues,Ma
 {
   Mat            mat;
   Mat_MPIDense   *a,*oldmat = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *newmat = NULL;
@@ -2576,7 +2481,6 @@ static PetscErrorCode MatDuplicate_MPIDense(Mat A,MatDuplicateOption cpvalues,Ma
 
 PetscErrorCode MatLoad_MPIDense(Mat newMat, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isbinary;
 #if defined(PETSC_HAVE_HDF5)
   PetscBool      ishdf5;
@@ -2606,7 +2510,6 @@ static PetscErrorCode MatEqual_MPIDense(Mat A,Mat B,PetscBool  *flag)
   Mat_MPIDense   *matB = (Mat_MPIDense*)B->data,*matA = (Mat_MPIDense*)A->data;
   Mat            a,b;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   a    = matA->A;
@@ -2618,7 +2521,6 @@ static PetscErrorCode MatEqual_MPIDense(Mat A,Mat B,PetscBool  *flag)
 
 PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
 {
-  PetscErrorCode        ierr;
   Mat_TransMatMultDense *atb = (Mat_TransMatMultDense *)data;
 
   PetscFunctionBegin;
@@ -2630,7 +2532,6 @@ PetscErrorCode MatDestroy_MatTransMatMult_MPIDense_MPIDense(void *data)
 
 PetscErrorCode MatDestroy_MatMatTransMult_MPIDense_MPIDense(void *data)
 {
-  PetscErrorCode        ierr;
   Mat_MatTransMultDense *abt = (Mat_MatTransMultDense *)data;
 
   PetscFunctionBegin;
@@ -2644,7 +2545,6 @@ static PetscErrorCode MatTransposeMatMultNumeric_MPIDense_MPIDense(Mat A,Mat B,M
 {
   Mat_MPIDense          *a=(Mat_MPIDense*)A->data, *b=(Mat_MPIDense*)B->data, *c=(Mat_MPIDense*)C->data;
   Mat_TransMatMultDense *atb;
-  PetscErrorCode        ierr;
   MPI_Comm              comm;
   PetscMPIInt           size,*recvcounts;
   PetscScalar           *carray,*sendbuf;
@@ -2687,7 +2587,6 @@ static PetscErrorCode MatTransposeMatMultNumeric_MPIDense_MPIDense(Mat A,Mat B,M
 
 static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode        ierr;
   MPI_Comm              comm;
   PetscMPIInt           size;
   PetscInt              cm=A->cmap->n,cM,cN=B->cmap->N;
@@ -2727,7 +2626,6 @@ static PetscErrorCode MatTransposeMatMultSymbolic_MPIDense_MPIDense(Mat A,Mat B,
 
 static PetscErrorCode MatMatTransposeMultSymbolic_MPIDense_MPIDense(Mat A, Mat B, PetscReal fill, Mat C)
 {
-  PetscErrorCode        ierr;
   MPI_Comm              comm;
   PetscMPIInt           i, size;
   PetscInt              maxRows, bufsiz;
@@ -2782,7 +2680,6 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Cyclic(Mat A,
 {
   Mat_MPIDense          *a=(Mat_MPIDense*)A->data, *b=(Mat_MPIDense*)B->data, *c=(Mat_MPIDense*)C->data;
   Mat_MatTransMultDense *abt;
-  PetscErrorCode        ierr;
   MPI_Comm              comm;
   PetscMPIInt           rank,size, sendsiz, recvsiz, sendto, recvfrom, recvisfrom;
   PetscScalar           *sendbuf, *recvbuf=NULL, *cv;
@@ -2868,7 +2765,6 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Allgatherv(Ma
 {
   Mat_MPIDense          *a=(Mat_MPIDense*)A->data, *b=(Mat_MPIDense*)B->data, *c=(Mat_MPIDense*)C->data;
   Mat_MatTransMultDense *abt;
-  PetscErrorCode        ierr;
   MPI_Comm              comm;
   PetscMPIInt           size;
   PetscScalar           *cv, *sendbuf, *recvbuf;
@@ -2917,7 +2813,6 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense_Allgatherv(Ma
 static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense(Mat A, Mat B, Mat C)
 {
   Mat_MatTransMultDense *abt;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   MatCheckProduct(C,3);
@@ -2936,7 +2831,6 @@ static PetscErrorCode MatMatTransposeMultNumeric_MPIDense_MPIDense(Mat A, Mat B,
 
 PetscErrorCode MatDestroy_MatMatMult_MPIDense_MPIDense(void *data)
 {
-  PetscErrorCode   ierr;
   Mat_MatMultDense *ab = (Mat_MatMultDense*)data;
 
   PetscFunctionBegin;
@@ -3073,7 +2967,6 @@ static PetscErrorCode MatProductSetFromOptions_MPIDense_ABt(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIDense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;

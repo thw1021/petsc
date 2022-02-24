@@ -50,7 +50,6 @@ $       ifort -fpe0
 @*/
 PetscErrorCode PetscFPTrapPush(PetscFPTrap trap)
 {
-  PetscErrorCode         ierr;
   struct PetscFPTrapLink *link;
 
   PetscFunctionBegin;
@@ -73,7 +72,6 @@ PetscErrorCode PetscFPTrapPush(PetscFPTrap trap)
 @*/
 PetscErrorCode PetscFPTrapPop(void)
 {
-  PetscErrorCode         ierr;
   struct PetscFPTrapLink *link;
 
   PetscFunctionBegin;
@@ -576,7 +574,6 @@ PetscErrorCode  PetscDetermineInitialFPTrap(void)
 #if defined(FE_NOMASK_ENV) || defined PETSC_HAVE_XMMINTRIN_H
   unsigned int   flags;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(FE_NOMASK_ENV)

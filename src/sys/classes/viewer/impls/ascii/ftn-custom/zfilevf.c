@@ -42,7 +42,6 @@ PETSC_EXTERN void petscviewerfilegetname_(PetscViewer *viewer, char* name, Petsc
 
 static PetscErrorCode PetscFixSlashN(const char *in, char **out)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   size_t         len;
 

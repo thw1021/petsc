@@ -9,7 +9,6 @@
 
 PetscErrorCode VecHYPRE_IJVectorCreate(PetscLayout map,VecHYPRE_IJVector *ij)
 {
-  PetscErrorCode    ierr;
   VecHYPRE_IJVector nij;
 
   PetscFunctionBegin;
@@ -29,7 +28,6 @@ PetscErrorCode VecHYPRE_IJVectorCreate(PetscLayout map,VecHYPRE_IJVector *ij)
 
 PetscErrorCode VecHYPRE_IJVectorDestroy(VecHYPRE_IJVector *ij)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*ij) PetscFunctionReturn(0);
@@ -41,7 +39,6 @@ PetscErrorCode VecHYPRE_IJVectorDestroy(VecHYPRE_IJVector *ij)
 
 PetscErrorCode VecHYPRE_IJVectorCopy(Vec v,VecHYPRE_IJVector ij)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *array;
 
   PetscFunctionBegin;
@@ -78,7 +75,6 @@ PetscErrorCode VecHYPRE_IJVectorCopy(Vec v,VecHYPRE_IJVector ij)
 */
 static inline PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_MemoryLocation hmem, PetscScalar **ptr, PetscErrorCode(**res)(Vec,PetscScalar**))
 {
-  PetscErrorCode ierr;
   PetscMemType   mtype;
   MPI_Comm       comm;
 
@@ -134,7 +130,6 @@ static inline PetscErrorCode VecGetArrayForHYPRE(Vec v, int rw, HYPRE_MemoryLoca
 PetscErrorCode VecHYPRE_IJVectorPushVecRead(VecHYPRE_IJVector ij, Vec v)
 {
   HYPRE_Complex  *pv;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,2);
@@ -152,7 +147,6 @@ PetscErrorCode VecHYPRE_IJVectorPushVecRead(VecHYPRE_IJVector ij, Vec v)
 PetscErrorCode VecHYPRE_IJVectorPushVecWrite(VecHYPRE_IJVector ij, Vec v)
 {
   HYPRE_Complex  *pv;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,2);
@@ -170,7 +164,6 @@ PetscErrorCode VecHYPRE_IJVectorPushVecWrite(VecHYPRE_IJVector ij, Vec v)
 PetscErrorCode VecHYPRE_IJVectorPushVec(VecHYPRE_IJVector ij, Vec v)
 {
   HYPRE_Complex  *pv;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,2);
@@ -186,7 +179,6 @@ PetscErrorCode VecHYPRE_IJVectorPushVec(VecHYPRE_IJVector ij, Vec v)
 PetscErrorCode VecHYPRE_IJVectorPopVec(VecHYPRE_IJVector ij)
 {
   HYPRE_Complex  *pv;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!ij->pvec,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Forgot to call VecHYPRE_IJVectorPushVec()");

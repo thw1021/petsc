@@ -15,7 +15,6 @@ static PetscBool PetscViewerPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscViewerFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Petsc_Viewer_keyval != MPI_KEYVAL_INVALID) {
@@ -60,7 +59,6 @@ PetscErrorCode  PetscViewerInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscViewerPackageInitialized) PetscFunctionReturn(0);
@@ -105,7 +103,6 @@ PetscErrorCode  PetscViewerInitializePackage(void)
 @*/
 PetscErrorCode  PetscViewerDestroy(PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*viewer) PetscFunctionReturn(0);
@@ -145,7 +142,6 @@ PetscErrorCode  PetscViewerDestroy(PetscViewer *viewer)
 @*/
 PetscErrorCode PetscViewerAndFormatCreate(PetscViewer viewer, PetscViewerFormat format, PetscViewerAndFormat **vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)viewer));
@@ -171,7 +167,6 @@ PetscErrorCode PetscViewerAndFormatCreate(PetscViewer viewer, PetscViewerFormat 
 @*/
 PetscErrorCode PetscViewerAndFormatDestroy(PetscViewerAndFormat **vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerDestroy(&(*vf)->viewer));
@@ -237,7 +232,6 @@ PetscErrorCode  PetscViewerGetType(PetscViewer viewer,PetscViewerType *type)
 @*/
 PetscErrorCode  PetscViewerSetOptionsPrefix(PetscViewer viewer,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -265,7 +259,6 @@ PetscErrorCode  PetscViewerSetOptionsPrefix(PetscViewer viewer,const char prefix
 @*/
 PetscErrorCode  PetscViewerAppendOptionsPrefix(PetscViewer viewer,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -295,7 +288,6 @@ PetscErrorCode  PetscViewerAppendOptionsPrefix(PetscViewer viewer,const char pre
 @*/
 PetscErrorCode  PetscViewerGetOptionsPrefix(PetscViewer viewer,const char *prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -321,7 +313,6 @@ PetscErrorCode  PetscViewerGetOptionsPrefix(PetscViewer viewer,const char *prefi
 @*/
 PetscErrorCode  PetscViewerSetUp(PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -348,7 +339,6 @@ PetscErrorCode  PetscViewerSetUp(PetscViewer viewer)
 @*/
 PetscErrorCode  PetscViewerViewFromOptions(PetscViewer A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSC_VIEWER_CLASSID,1);
@@ -381,7 +371,6 @@ PetscErrorCode  PetscViewerViewFromOptions(PetscViewer A,PetscObject obj,const c
 @*/
 PetscErrorCode  PetscViewerView(PetscViewer v,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 #if defined(PETSC_HAVE_SAWS)
@@ -453,7 +442,6 @@ PetscErrorCode  PetscViewerView(PetscViewer v,PetscViewer viewer)
 @*/
 PetscErrorCode  PetscViewerRead(PetscViewer viewer, void *data, PetscInt num, PetscInt *count, PetscDataType dtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -510,7 +498,6 @@ PetscErrorCode  PetscViewerRead(PetscViewer viewer, void *data, PetscInt num, Pe
 @*/
 PetscErrorCode  PetscViewerReadable(PetscViewer viewer, PetscBool *flg)
 {
-  PetscErrorCode    ierr;
   PetscFileMode     mode;
   PetscErrorCode    (*f)(PetscViewer,PetscFileMode*) = NULL;
 
@@ -552,7 +539,6 @@ PetscErrorCode  PetscViewerReadable(PetscViewer viewer, PetscBool *flg)
 @*/
 PetscErrorCode  PetscViewerWritable(PetscViewer viewer, PetscBool *flg)
 {
-  PetscErrorCode    ierr;
   PetscFileMode     mode;
   PetscErrorCode    (*f)(PetscViewer,PetscFileMode*) = NULL;
 
@@ -582,7 +568,6 @@ PetscErrorCode  PetscViewerWritable(PetscViewer viewer, PetscBool *flg)
 PetscErrorCode  PetscViewerCheckReadable(PetscViewer viewer)
 {
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -606,7 +591,6 @@ PetscErrorCode  PetscViewerCheckReadable(PetscViewer viewer)
 PetscErrorCode  PetscViewerCheckWritable(PetscViewer viewer)
 {
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);

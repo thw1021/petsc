@@ -5,7 +5,6 @@
 
 PetscErrorCode DMView_GLVis(DM dm, PetscViewer viewer, PetscErrorCode (*DMView_GLVis_ASCII)(DM,PetscViewer))
 {
-  PetscErrorCode ierr;
   PetscBool      isglvis,isascii;
 
   PetscFunctionBegin;

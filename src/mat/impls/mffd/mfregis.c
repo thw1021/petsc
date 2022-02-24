@@ -16,7 +16,6 @@ PETSC_EXTERN PetscErrorCode MatCreateMFFD_WP(MatMFFD);
 @*/
 PetscErrorCode  MatMFFDRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (MatMFFDRegisterAllCalled) PetscFunctionReturn(0);

@@ -5,7 +5,6 @@ static PetscErrorCode DMCreateMatrix_Composite_Nest(DM dm,Mat *J)
 {
   const DM_Composite           *com = (DM_Composite*)dm->data;
   const struct DMCompositeLink *rlink,*clink;
-  PetscErrorCode               ierr;
   IS                           *isg;
   Mat                          *submats;
   PetscInt                     i,j,n;
@@ -175,7 +174,6 @@ static PetscErrorCode DMCreateMatrix_Composite_AIJ(DM dm,Mat *J)
 
 PetscErrorCode DMCreateMatrix_Composite(DM dm,Mat *J)
 {
-  PetscErrorCode         ierr;
   PetscBool              usenest;
   ISLocalToGlobalMapping ltogmap;
 

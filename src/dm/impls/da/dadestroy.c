@@ -7,7 +7,6 @@
 
 PetscErrorCode  DMDestroy_DA(DM da)
 {
-  PetscErrorCode ierr;
   PetscErrorCode i;
   DM_DA          *dd = (DM_DA*)da->data;
 

@@ -28,7 +28,6 @@ static PetscErrorCode  KSPSolve_BCGSL(KSP ksp)
   PetscBLASInt   ldMZ,bierr;
   PetscScalar    utb;
   PetscReal      max_s, pinv_tol;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* set up temporary vectors */
@@ -331,7 +330,6 @@ static PetscErrorCode  KSPSolve_BCGSL(KSP ksp)
 PetscErrorCode  KSPBCGSLSetXRes(KSP ksp, PetscReal delta)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,delta,2);
@@ -395,7 +393,6 @@ PetscErrorCode KSPBCGSLSetUsePseudoinverse(KSP ksp,PetscBool use_pinv)
 PetscErrorCode  KSPBCGSLSetPol(KSP ksp, PetscBool uMROR)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveBool(ksp,uMROR,2);
@@ -440,7 +437,6 @@ PetscErrorCode  KSPBCGSLSetPol(KSP ksp, PetscBool uMROR)
 PetscErrorCode  KSPBCGSLSetEll(KSP ksp, PetscInt ell)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ell < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "KSPBCGSLSetEll: second argument must be positive");
@@ -462,7 +458,6 @@ PetscErrorCode  KSPBCGSLSetEll(KSP ksp, PetscInt ell)
 PetscErrorCode KSPView_BCGSL(KSP ksp, PetscViewer viewer)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      isascii;
 
   PetscFunctionBegin;
@@ -478,7 +473,6 @@ PetscErrorCode KSPView_BCGSL(KSP ksp, PetscViewer viewer)
 PetscErrorCode KSPSetFromOptions_BCGSL(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       this_ell;
   PetscReal      delta;
   PetscBool      flga = PETSC_FALSE, flg;
@@ -523,7 +517,6 @@ PetscErrorCode KSPSetUp_BCGSL(KSP ksp)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
   PetscInt       ell    = bcgsl->ell,ldMZ = ell+1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp, 6+2*ell));
@@ -536,7 +529,6 @@ PetscErrorCode KSPSetUp_BCGSL(KSP ksp)
 PetscErrorCode KSPReset_BCGSL(KSP ksp)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroyVecs(ksp->nwork,&ksp->work));
@@ -547,7 +539,6 @@ PetscErrorCode KSPReset_BCGSL(KSP ksp)
 
 PetscErrorCode KSPDestroy_BCGSL(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_BCGSL(ksp));
@@ -590,7 +581,6 @@ PetscErrorCode KSPDestroy_BCGSL(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_BCGSL(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_BCGSL      *bcgsl;
 
   PetscFunctionBegin;

@@ -9,7 +9,6 @@
  */
 PetscErrorCode PetscCDCreate(PetscInt a_size, PetscCoarsenData **a_out)
 {
-  PetscErrorCode   ierr;
   PetscCoarsenData *ail;
 
   PetscFunctionBegin;
@@ -31,7 +30,6 @@ PetscErrorCode PetscCDCreate(PetscInt a_size, PetscCoarsenData **a_out)
  */
 PetscErrorCode PetscCDDestroy(PetscCoarsenData *ail)
 {
-  PetscErrorCode ierr;
   PetscCDArrNd   *n = &ail->pool_list;
 
   PetscFunctionBegin;
@@ -63,7 +61,6 @@ PetscErrorCode PetscCDSetChuckSize(PetscCoarsenData *ail, PetscInt a_sz)
  */
 PetscErrorCode PetscCDGetNewNode(PetscCoarsenData *ail, PetscCDIntNd **a_out, PetscInt a_id)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *a_out = NULL;                /* squelch -Wmaybe-uninitialized */
@@ -138,7 +135,6 @@ PetscErrorCode PetscCDGetNextPos(const PetscCoarsenData *ail, PetscInt l_idx, Pe
  */
 PetscErrorCode PetscCDAppendID(PetscCoarsenData *ail, PetscInt a_idx, PetscInt a_id)
 {
-  PetscErrorCode ierr;
   PetscCDIntNd   *n,*n2;
 
   PetscFunctionBegin;
@@ -202,7 +198,6 @@ PetscErrorCode PetscCDRemoveNextNode(PetscCoarsenData *ail, PetscInt a_idx,  Pet
  */
 PetscErrorCode PetscCDPrint(const PetscCoarsenData *ail, MPI_Comm comm)
 {
-  PetscErrorCode ierr;
   PetscCDIntNd   *n;
   PetscInt       ii,kk;
   PetscMPIInt    rank;
@@ -296,7 +291,6 @@ PetscErrorCode PetscCDEmptyAt(const PetscCoarsenData *ail, PetscInt a_idx, Petsc
  */
 PetscErrorCode PetscCDGetMIS(PetscCoarsenData *ail, IS *a_mis)
 {
-  PetscErrorCode ierr;
   PetscCDIntNd   *n;
   PetscInt       ii,kk;
   PetscInt       *permute;
@@ -337,7 +331,6 @@ PetscErrorCode PetscCDSetMat(PetscCoarsenData *ail, Mat a_mat)
  */
 PetscErrorCode PetscCDGetASMBlocks(const PetscCoarsenData *ail, const PetscInt a_bs, Mat mat, PetscInt *a_sz, IS **a_local_is)
 {
-  PetscErrorCode ierr;
   PetscCDIntNd   *n;
   PetscInt       lsz,ii,kk,*idxs,jj,s,e,gid;
   IS             *is_loc,is_bcs;
@@ -416,7 +409,6 @@ static int gamg_hem_compare(const void *a, const void *b)
 */
 static PetscErrorCode heavyEdgeMatchAgg(IS perm,Mat a_Gmat,PetscCoarsenData **a_locals_llist)
 {
-  PetscErrorCode   ierr;
   PetscBool        isMPI;
   MPI_Comm         comm;
   PetscInt         sub_it,kk,n,ix,*idx,*ii,iter,Iend,my0;
@@ -1057,7 +1049,6 @@ static PetscErrorCode heavyEdgeMatchAgg(IS perm,Mat a_Gmat,PetscCoarsenData **a_
 */
 static PetscErrorCode MatCoarsenApply_HEM(MatCoarsen coarse)
 {
-  PetscErrorCode ierr;
   Mat            mat = coarse->graph;
 
   PetscFunctionBegin;
@@ -1077,7 +1068,6 @@ static PetscErrorCode MatCoarsenApply_HEM(MatCoarsen coarse)
 
 static PetscErrorCode MatCoarsenView_HEM(MatCoarsen coarse,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscBool      iascii;
 

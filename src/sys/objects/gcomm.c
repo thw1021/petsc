@@ -52,7 +52,6 @@ MPI_Comm  PetscObjectComm(PetscObject obj)
 @*/
 PetscErrorCode  PetscObjectGetComm(PetscObject obj,MPI_Comm *comm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);

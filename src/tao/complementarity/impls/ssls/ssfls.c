@@ -3,7 +3,6 @@
 PetscErrorCode TaoSetUp_SSFLS(Tao tao)
 {
   TAO_SSLS       *ssls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(tao->solution,&tao->gradient));
@@ -31,7 +30,6 @@ static PetscErrorCode TaoSolve_SSFLS(Tao tao)
   PetscReal                    psi, ndpsi, normd, innerd, t=0;
   PetscReal                    delta, rho;
   TaoLineSearchConvergedReason ls_reason;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   /* Assume that Setup has been called!
@@ -99,7 +97,6 @@ static PetscErrorCode TaoSolve_SSFLS(Tao tao)
 PetscErrorCode TaoDestroy_SSFLS(Tao tao)
 {
   TAO_SSLS       *ssls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&ssls->ff));
@@ -128,7 +125,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_SSFLS(Tao tao)
 {
   TAO_SSLS       *ssls;
-  PetscErrorCode ierr;
   const char     *armijo_type = TAOLINESEARCHARMIJO;
 
   PetscFunctionBegin;

@@ -29,14 +29,12 @@ static inline PetscErrorCode PetscLogMPIMessages(PetscInt nsend,PetscSFCount *se
   petsc_irecv_ct += (PetscLogDouble)nrecv;
 
   if (sendtype != MPI_DATATYPE_NULL) {
-    PetscErrorCode    ierr;
     PetscMPIInt       i,typesize;
     CHKERRMPI(MPI_Type_size(sendtype,&typesize));
     for (i=0; i<nsend; i++) petsc_isend_len += (PetscLogDouble)(sendcnts[i]*typesize);
   }
 
   if (recvtype != MPI_DATATYPE_NULL) {
-    PetscErrorCode    ierr;
     PetscMPIInt       i,typesize;
     CHKERRMPI(MPI_Type_size(recvtype,&typesize));
     for (i=0; i<nrecv; i++) petsc_irecv_len += (PetscLogDouble)(recvcnts[i]*typesize);
@@ -48,7 +46,6 @@ static inline PetscErrorCode PetscLogMPIMessages(PetscInt nsend,PetscSFCount *se
 /* Get the communicator with distributed graph topology, which is not cheap to build so we do it on demand (instead of at PetscSFSetUp time) */
 static PetscErrorCode PetscSFGetDistComm_Neighbor(PetscSF sf,PetscSFDirection direction,MPI_Comm *distcomm)
 {
-  PetscErrorCode    ierr;
   PetscSF_Neighbor  *dat = (PetscSF_Neighbor*)sf->data;
   PetscInt          nrootranks,ndrootranks,nleafranks,ndleafranks;
   const PetscMPIInt *rootranks,*leafranks;
@@ -79,7 +76,6 @@ static PetscErrorCode PetscSFGetDistComm_Neighbor(PetscSF sf,PetscSFDirection di
 /*===================================================================================*/
 static PetscErrorCode PetscSFSetUp_Neighbor(PetscSF sf)
 {
-  PetscErrorCode   ierr;
   PetscSF_Neighbor *dat = (PetscSF_Neighbor*)sf->data;
   PetscInt         i,j,nrootranks,ndrootranks,nleafranks,ndleafranks;
   const PetscInt   *rootoffset,*leafoffset;
@@ -130,7 +126,6 @@ static PetscErrorCode PetscSFSetUp_Neighbor(PetscSF sf)
 
 static PetscErrorCode PetscSFReset_Neighbor(PetscSF sf)
 {
-  PetscErrorCode       ierr;
   PetscInt             i;
   PetscSF_Neighbor     *dat = (PetscSF_Neighbor*)sf->data;
 
@@ -149,7 +144,6 @@ static PetscErrorCode PetscSFReset_Neighbor(PetscSF sf)
 
 static PetscErrorCode PetscSFDestroy_Neighbor(PetscSF sf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFReset_Neighbor(sf));
@@ -159,7 +153,6 @@ static PetscErrorCode PetscSFDestroy_Neighbor(PetscSF sf)
 
 static PetscErrorCode PetscSFBcastBegin_Neighbor(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   PetscSF_Neighbor     *dat = (PetscSF_Neighbor*)sf->data;
   MPI_Comm             distcomm = MPI_COMM_NULL;
@@ -185,7 +178,6 @@ static PetscErrorCode PetscSFBcastBegin_Neighbor(PetscSF sf,MPI_Datatype unit,Pe
 
 static inline PetscErrorCode PetscSFLeafToRootBegin_Neighbor(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *out)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   PetscSF_Neighbor     *dat = (PetscSF_Neighbor*)sf->data;
   MPI_Comm             distcomm = MPI_COMM_NULL;
@@ -210,7 +202,6 @@ static inline PetscErrorCode PetscSFLeafToRootBegin_Neighbor(PetscSF sf,MPI_Data
 
 static PetscErrorCode PetscSFReduceBegin_Neighbor(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link = NULL;
 
   PetscFunctionBegin;
@@ -221,7 +212,6 @@ static PetscErrorCode PetscSFReduceBegin_Neighbor(PetscSF sf,MPI_Datatype unit,P
 
 static PetscErrorCode PetscSFFetchAndOpBegin_Neighbor(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,void *rootdata,PetscMemType leafmtype,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link = NULL;
 
   PetscFunctionBegin;
@@ -232,7 +222,6 @@ static PetscErrorCode PetscSFFetchAndOpBegin_Neighbor(PetscSF sf,MPI_Datatype un
 
 static PetscErrorCode PetscSFFetchAndOpEnd_Neighbor(PetscSF sf,MPI_Datatype unit,void *rootdata,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
   MPI_Comm          comm = MPI_COMM_NULL;
   PetscSF_Neighbor  *dat = (PetscSF_Neighbor*)sf->data;
@@ -260,7 +249,6 @@ static PetscErrorCode PetscSFFetchAndOpEnd_Neighbor(PetscSF sf,MPI_Datatype unit
 
 PETSC_INTERN PetscErrorCode PetscSFCreate_Neighbor(PetscSF sf)
 {
-  PetscErrorCode   ierr;
   PetscSF_Neighbor *dat;
 
   PetscFunctionBegin;

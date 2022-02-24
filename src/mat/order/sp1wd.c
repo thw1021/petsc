@@ -7,7 +7,6 @@
 */
 PETSC_INTERN PetscErrorCode MatGetOrdering_1WD(Mat mat,MatOrderingType type,IS *row,IS *col)
 {
-  PetscErrorCode ierr;
   PetscInt       i,*mask,*xls,nblks,*xblk,*ls,nrow,*perm;
   const PetscInt *ia,*ja;
   PetscBool      done;

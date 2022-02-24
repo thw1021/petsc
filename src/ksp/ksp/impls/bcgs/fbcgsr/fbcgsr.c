@@ -11,7 +11,6 @@
 
 static PetscErrorCode KSPSetUp_FBCGSR(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,8));
@@ -20,7 +19,6 @@ static PetscErrorCode KSPSetUp_FBCGSR(KSP ksp)
 
 static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,j,N;
   PetscScalar       tau,sigma,alpha,omega,beta;
   PetscReal         rho;
@@ -210,7 +208,6 @@ static PetscErrorCode  KSPSolve_FBCGSR(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_FBCGSR(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_BCGS       *bcgs;
 
   PetscFunctionBegin;

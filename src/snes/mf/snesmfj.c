@@ -39,7 +39,6 @@
 @*/
 PetscErrorCode  MatMFFDComputeJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY));
@@ -68,7 +67,6 @@ PETSC_EXTERN PetscErrorCode MatMFFDSetBase_MFFD(Mat,Vec,Vec);
 PetscErrorCode MatSNESMFGetSNES(Mat J,SNES *snes)
 {
   MatMFFD        j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(J,&j));
@@ -83,7 +81,6 @@ PetscErrorCode MatSNESMFGetSNES(Mat J,SNES *snes)
 */
 static PetscErrorCode MatAssemblyEnd_SNESMF(Mat J,MatAssemblyType mt)
 {
-  PetscErrorCode ierr;
   MatMFFD        j;
   SNES           snes;
   Vec            u,f;
@@ -116,7 +113,6 @@ static PetscErrorCode MatAssemblyEnd_SNESMF(Mat J,MatAssemblyType mt)
 */
 static PetscErrorCode MatAssemblyEnd_SNESMF_UseBase(Mat J,MatAssemblyType mt)
 {
-  PetscErrorCode ierr;
   MatMFFD        j;
   SNES           snes;
   Vec            u,f;
@@ -137,7 +133,6 @@ static PetscErrorCode MatAssemblyEnd_SNESMF_UseBase(Mat J,MatAssemblyType mt)
 */
 static PetscErrorCode  MatMFFDSetBase_SNESMF(Mat J,Vec U,Vec F)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMFFDSetBase_MFFD(J,U,F));
@@ -182,7 +177,6 @@ static PetscErrorCode  MatSNESMFSetReuseBase_SNESMF(Mat J,PetscBool use)
 @*/
 PetscErrorCode  MatSNESMFSetReuseBase(Mat J,PetscBool use)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(J,MAT_CLASSID,1);
@@ -226,7 +220,6 @@ static PetscErrorCode  MatSNESMFGetReuseBase_SNESMF(Mat J,PetscBool *use)
 @*/
 PetscErrorCode  MatSNESMFGetReuseBase(Mat J,PetscBool *use)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(J,MAT_CLASSID,1);
@@ -276,7 +269,6 @@ PetscErrorCode  MatSNESMFGetReuseBase(Mat J,PetscBool *use)
 @*/
 PetscErrorCode  MatCreateSNESMF(SNES snes,Mat *J)
 {
-  PetscErrorCode ierr;
   PetscInt       n,N;
   MatMFFD        mf;
 

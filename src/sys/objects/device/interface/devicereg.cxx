@@ -32,7 +32,6 @@ PetscErrorCode PetscDeviceFinalizePackage(void)
 @*/
 PetscErrorCode PetscDeviceInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscLikely(PetscDevicePackageInitialized)) PetscFunctionReturn(0);

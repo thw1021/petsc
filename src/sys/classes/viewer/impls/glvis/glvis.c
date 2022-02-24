@@ -45,7 +45,6 @@ typedef struct _n_PetscViewerGLVis *PetscViewerGLVis;
 @*/
 PetscErrorCode PetscViewerGLVisSetPrecision(PetscViewer viewer, PetscInt prec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -55,7 +54,6 @@ PetscErrorCode PetscViewerGLVisSetPrecision(PetscViewer viewer, PetscInt prec)
 
 static PetscErrorCode PetscViewerGLVisSetPrecision_GLVis(PetscViewer viewer, PetscInt prec)
 {
-  PetscErrorCode   ierr;
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
 
   PetscFunctionBegin;
@@ -84,7 +82,6 @@ static PetscErrorCode PetscViewerGLVisSetPrecision_GLVis(PetscViewer viewer, Pet
 @*/
 PetscErrorCode PetscViewerGLVisSetSnapId(PetscViewer viewer, PetscInt id)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -131,7 +128,6 @@ static PetscErrorCode PetscViewerGLVisSetSnapId_GLVis(PetscViewer viewer, PetscI
 @*/
 PetscErrorCode PetscViewerGLVisSetFields(PetscViewer viewer, PetscInt nf, const char* fec_type[], PetscInt dim[], PetscErrorCode(*g2l)(PetscObject,PetscInt,PetscObject[],void*), PetscObject Vfield[], void* ctx, PetscErrorCode(*destroyctx)(void*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -148,7 +144,6 @@ static PetscErrorCode PetscViewerGLVisSetFields_GLVis(PetscViewer viewer, PetscI
 {
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
   PetscInt         i;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(socket->nwindow && socket->nwindow != nfields,PetscObjectComm((PetscObject)viewer),PETSC_ERR_USER,"Cannot set number of fields %" PetscInt_FMT " with number of windows %" PetscInt_FMT,nfields,socket->nwindow);
@@ -179,7 +174,6 @@ static PetscErrorCode PetscViewerGLVisSetFields_GLVis(PetscViewer viewer, PetscI
 static PetscErrorCode PetscViewerGLVisInfoDestroy_Private(void *ptr)
 {
   PetscViewerGLVisInfo info = (PetscViewerGLVisInfo)ptr;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(info->fmt));
@@ -191,7 +185,6 @@ static PetscErrorCode PetscViewerGLVisInfoDestroy_Private(void *ptr)
 static PetscErrorCode PetscViewerGLVisAttachInfo_Private(PetscViewer viewer, PetscViewer window)
 {
   PetscViewerGLVis     socket = (PetscViewerGLVis)viewer->data;
-  PetscErrorCode       ierr;
   PetscContainer       container;
   PetscViewerGLVisInfo info;
 
@@ -241,7 +234,6 @@ static PetscErrorCode PetscViewerGLVisGetNewWindow_Private(PetscViewer viewer,Pe
 PetscErrorCode PetscViewerGLVisPause_Private(PetscViewer viewer)
 {
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (socket->type == PETSC_VIEWER_GLVIS_SOCKET && socket->pause > 0) {
@@ -253,7 +245,6 @@ PetscErrorCode PetscViewerGLVisPause_Private(PetscViewer viewer)
 /* DM specific support */
 PetscErrorCode PetscViewerGLVisSetDM_Private(PetscViewer viewer, PetscObject dm)
 {
-  PetscErrorCode   ierr;
   PetscViewerGLVis socket  = (PetscViewerGLVis)viewer->data;
 
   PetscFunctionBegin;
@@ -274,7 +265,6 @@ PetscErrorCode PetscViewerGLVisSetDM_Private(PetscViewer viewer, PetscObject dm)
 PetscErrorCode PetscViewerGLVisGetDMWindow_Private(PetscViewer viewer,PetscViewer *view)
 {
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(view,2);
@@ -311,7 +301,6 @@ PetscErrorCode PetscViewerGLVisGetDMWindow_Private(PetscViewer viewer,PetscViewe
 PetscErrorCode PetscViewerGLVisRestoreDMWindow_Private(PetscViewer viewer,PetscViewer *view)
 {
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(view,2);
@@ -351,7 +340,6 @@ PetscErrorCode PetscViewerGLVisGetStatus_Private(PetscViewer viewer, PetscViewer
   } else if (socket->status == PETSCVIEWERGLVIS_DISCONNECTED && socket->nwindow) {
     PetscInt       i;
     PetscBool      lconn,conn;
-    PetscErrorCode ierr;
 
     for (i=0,lconn=PETSC_TRUE;i<socket->nwindow;i++)
       if (!socket->window[i])
@@ -395,7 +383,6 @@ PetscErrorCode PetscViewerGLVisGetWindow_Private(PetscViewer viewer,PetscInt wid
 {
   PetscViewerGLVis       socket = (PetscViewerGLVis)viewer->data;
   PetscViewerGLVisStatus status;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(viewer,wid,2);
@@ -455,7 +442,6 @@ PetscErrorCode PetscViewerGLVisGetWindow_Private(PetscViewer viewer,PetscInt wid
 PetscErrorCode PetscViewerGLVisRestoreWindow_Private(PetscViewer viewer,PetscInt wid, PetscViewer* view)
 {
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(viewer,PETSC_VIEWER_CLASSID,1,PETSCVIEWERGLVIS);
@@ -479,7 +465,6 @@ PetscErrorCode PetscViewerGLVisRestoreWindow_Private(PetscViewer viewer,PetscInt
 /* default window appearance in the PETSC_VIEWER_GLVIS_SOCKET case */
 PetscErrorCode PetscViewerGLVisInitWindow_Private(PetscViewer viewer, PetscBool mesh, PetscInt dim, const char *name)
 {
-  PetscErrorCode       ierr;
   PetscViewerGLVisInfo info;
   PetscContainer       container;
 
@@ -551,7 +536,6 @@ static PetscErrorCode PetscViewerDestroy_GLVis(PetscViewer viewer)
 {
   PetscViewerGLVis socket = (PetscViewerGLVis)viewer->data;
   PetscInt         i;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   for (i=0;i<socket->nwindow;i++) {
@@ -578,7 +562,6 @@ static PetscErrorCode PetscViewerDestroy_GLVis(PetscViewer viewer)
 
 static PetscErrorCode PetscViewerSetFromOptions_GLVis(PetscOptionItems *PetscOptionsObject,PetscViewer v)
 {
-  PetscErrorCode   ierr;
   PetscViewerGLVis socket = (PetscViewerGLVis)v->data;
   PetscInt         nsizes = 2, prec = PETSC_DECIDE;
   PetscBool        set;
@@ -614,7 +597,7 @@ static PetscErrorCode PetscViewerFileSetName_GLVis(PetscViewer viewer, const cha
 
     *sport++ = 0;
     CHKERRQ(PetscStrlen(sport,&len));
-    ierr = PetscOptionsStringToInt(sport,&port);CHKERRCONTINUE(ierr);
+    ierr = PetscOptionsStringToInt(sport,&port);
     if (PetscUnlikely(ierr)) {
       socket->port = 19916;
     } else {
@@ -657,7 +640,6 @@ static PetscErrorCode PetscViewerFileSetName_GLVis(PetscViewer viewer, const cha
 PetscErrorCode PetscViewerGLVisOpen(MPI_Comm comm, PetscViewerGLVisType type, const char name[], PetscInt port, PetscViewer *viewer)
 {
   PetscViewerGLVis socket;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,viewer));
@@ -739,7 +721,6 @@ PetscViewer PETSC_VIEWER_GLVIS_(MPI_Comm comm)
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_GLVis(PetscViewer viewer)
 {
   PetscViewerGLVis socket;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(viewer,&socket));
@@ -866,7 +847,6 @@ PetscErrorCode PetscGLVisCollectiveBegin(PETSC_UNUSED MPI_Comm comm,PETSC_UNUSED
 PetscErrorCode PetscGLVisCollectiveEnd(MPI_Comm comm,PetscViewer *win)
 {
   PetscBool      flag,brokenpipe;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   flag = PetscGLVisBrokenPipe;

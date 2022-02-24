@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode  KSPPythonSetType(KSP ksp,const char pyname[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);

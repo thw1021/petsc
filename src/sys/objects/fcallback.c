@@ -18,7 +18,6 @@ static PetscClassId        _maxclassid = PETSC_SMALLEST_CLASSID;
 
 static PetscErrorCode PetscFortranCallbackFinalize(void)
 {
-  PetscErrorCode ierr;
   PetscClassId   i;
 
   PetscFunctionBegin;
@@ -55,7 +54,6 @@ static PetscErrorCode PetscFortranCallbackFinalize(void)
 @*/
 PetscErrorCode PetscFortranCallbackRegister(PetscClassId classid,const char *subtype,PetscFortranCallbackId *id)
 {
-  PetscErrorCode      ierr;
   FortranCallbackBase *base;
   FortranCallbackLink link;
 

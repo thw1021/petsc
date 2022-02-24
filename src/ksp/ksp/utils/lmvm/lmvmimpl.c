@@ -5,7 +5,6 @@
 PetscErrorCode MatReset_LMVM(Mat B, PetscBool destructive)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   lmvm->k = -1;
@@ -34,7 +33,6 @@ PetscErrorCode MatReset_LMVM(Mat B, PetscBool destructive)
 PetscErrorCode MatAllocate_LMVM(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same, allocate = PETSC_FALSE;
   PetscInt          m, n, M, N;
   VecType           type;
@@ -81,7 +79,6 @@ PetscErrorCode MatAllocate_LMVM(Mat B, Vec X, Vec F)
 PetscErrorCode MatUpdateKernel_LMVM(Mat B, Vec S, Vec Y)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscInt          i;
   Vec               Stmp, Ytmp;
 
@@ -112,7 +109,6 @@ PetscErrorCode MatUpdateKernel_LMVM(Mat B, Vec S, Vec Y)
 PetscErrorCode MatUpdate_LMVM(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!lmvm->m) PetscFunctionReturn(0);
@@ -135,7 +131,6 @@ PetscErrorCode MatUpdate_LMVM(Mat B, Vec X, Vec F)
 
 static PetscErrorCode MatMultAdd_LMVM(Mat B, Vec X, Vec Y, Vec Z)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(B, X, Z));
@@ -148,7 +143,6 @@ static PetscErrorCode MatMultAdd_LMVM(Mat B, Vec X, Vec Y, Vec Z)
 static PetscErrorCode MatMult_LMVM(Mat B, Vec X, Vec Y)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   VecCheckSameSize(X, 2, Y, 3);
@@ -167,7 +161,6 @@ static PetscErrorCode MatCopy_LMVM(Mat B, Mat M, MatStructure str)
 {
   Mat_LMVM          *bctx = (Mat_LMVM*)B->data;
   Mat_LMVM          *mctx;
-  PetscErrorCode    ierr;
   PetscInt          i;
   PetscBool         allocatedM;
 
@@ -216,7 +209,6 @@ static PetscErrorCode MatDuplicate_LMVM(Mat B, MatDuplicateOption op, Mat *mat)
 {
   Mat_LMVM          *bctx = (Mat_LMVM*)B->data;
   Mat_LMVM          *mctx;
-  PetscErrorCode    ierr;
   MatType           lmvmType;
   Mat               A;
 
@@ -258,7 +250,6 @@ static PetscErrorCode MatShift_LMVM(Mat B, PetscScalar a)
 static PetscErrorCode MatGetVecs_LMVM(Mat B, Vec *L, Vec *R)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!lmvm->allocated,PetscObjectComm((PetscObject)B), PETSC_ERR_ORDER, "LMVM matrix must be allocated first");
@@ -272,7 +263,6 @@ static PetscErrorCode MatGetVecs_LMVM(Mat B, Vec *L, Vec *R)
 PetscErrorCode MatView_LMVM(Mat B, PetscViewer pv)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         isascii;
   MatType           type;
 
@@ -300,7 +290,6 @@ PetscErrorCode MatView_LMVM(Mat B, PetscViewer pv)
 PetscErrorCode MatSetFromOptions_LMVM(PetscOptionItems *PetscOptionsObject, Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Limited-memory Variable Metric matrix for approximating Jacobians"));
@@ -317,7 +306,6 @@ PetscErrorCode MatSetFromOptions_LMVM(PetscOptionItems *PetscOptionsObject, Mat 
 PetscErrorCode MatSetUp_LMVM(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscInt          m, n, M, N;
   PetscMPIInt       size;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
@@ -352,7 +340,6 @@ PetscErrorCode MatSetUp_LMVM(Mat B)
 PetscErrorCode MatDestroy_LMVM(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (lmvm->allocated) {
@@ -372,7 +359,6 @@ PetscErrorCode MatDestroy_LMVM(Mat B)
 PetscErrorCode MatCreate_LMVM(Mat B)
 {
   Mat_LMVM          *lmvm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(B, &lmvm));

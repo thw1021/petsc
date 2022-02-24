@@ -11,7 +11,6 @@ PETSC_INTERN PetscErrorCode MatZeroRowsMapLocal_Private(Mat A,PetscInt N,const P
   PetscSFNode   *rrows;
   PetscMPIInt    rank, p = 0;
   PetscInt       r, len = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Create SF where leaves are input rows and roots are owned rows */

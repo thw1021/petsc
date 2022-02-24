@@ -40,7 +40,6 @@ PetscLogEvent VEC_HIPCopyFromGPUSome, VEC_HIPCopyToGPUSome;
 @*/
 PetscErrorCode  VecStashGetInfo(Vec vec,PetscInt *nstash,PetscInt *reallocs,PetscInt *bnstash,PetscInt *breallocs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecStashGetInfo_Private(&vec->stash,nstash,reallocs));
@@ -69,7 +68,6 @@ seealso:  VecAssemblyBegin(), VecAssemblyEnd(), VecSetValues(), VecSetValuesLoca
 @*/
 PetscErrorCode  VecSetLocalToGlobalMapping(Vec x,ISLocalToGlobalMapping mapping)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -123,7 +121,6 @@ PetscErrorCode VecGetLocalToGlobalMapping(Vec X,ISLocalToGlobalMapping *mapping)
 @*/
 PetscErrorCode  VecAssemblyBegin(Vec vec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -162,7 +159,6 @@ PetscErrorCode  VecAssemblyBegin(Vec vec)
 @*/
 PetscErrorCode  VecAssemblyEnd(Vec vec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -197,7 +193,6 @@ PetscErrorCode  VecAssemblyEnd(Vec vec)
 @*/
 PetscErrorCode  VecPointwiseMax(Vec w,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -237,7 +232,6 @@ PetscErrorCode  VecPointwiseMax(Vec w,Vec x,Vec y)
 @*/
 PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -276,7 +270,6 @@ PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
 @*/
 PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -315,7 +308,6 @@ PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
 @*/
 PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -358,7 +350,6 @@ PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
 @*/
 PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -389,7 +380,6 @@ PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
 @*/
 PetscErrorCode  VecDestroy(Vec *v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*v) PetscFunctionReturn(0);
@@ -435,7 +425,6 @@ PetscErrorCode  VecDestroy(Vec *v)
 @*/
 PetscErrorCode  VecDuplicateVecs(Vec v,PetscInt m,Vec *V[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -478,7 +467,6 @@ PetscErrorCode  VecDuplicateVecs(Vec v,PetscInt m,Vec *V[])
 @*/
 PetscErrorCode  VecDestroyVecs(PetscInt m,Vec *vv[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(vv,2);
@@ -506,7 +494,6 @@ PetscErrorCode  VecDestroyVecs(PetscInt m,Vec *vv[])
 @*/
 PetscErrorCode  VecViewFromOptions(Vec A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,VEC_CLASSID,1);
@@ -588,7 +575,6 @@ PetscErrorCode  VecViewFromOptions(Vec A,PetscObject obj,const char name[])
 @*/
 PetscErrorCode  VecView(Vec vec,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
   PetscMPIInt       size;
@@ -639,7 +625,6 @@ PETSC_UNUSED static int TV_display_type(const struct _p_Vec *v)
 {
   const PetscScalar *values;
   char              type[32];
-  PetscErrorCode    ierr;
 
   TV_add_row("Local rows", "int", &v->map->n);
   TV_add_row("Global rows", "int", &v->map->N);
@@ -669,7 +654,6 @@ PETSC_UNUSED static int TV_display_type(const struct _p_Vec *v)
 @*/
 PetscErrorCode  VecViewNative(Vec vec,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -697,7 +681,6 @@ PetscErrorCode  VecViewNative(Vec vec,PetscViewer viewer)
 @*/
 PetscErrorCode  VecGetSize(Vec x,PetscInt *size)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -725,7 +708,6 @@ PetscErrorCode  VecGetSize(Vec x,PetscInt *size)
 @*/
 PetscErrorCode  VecGetLocalSize(Vec x,PetscInt *size)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -800,7 +782,6 @@ PetscErrorCode  VecGetOwnershipRange(Vec x,PetscInt *low,PetscInt *high)
 @*/
 PetscErrorCode  VecGetOwnershipRanges(Vec x,const PetscInt *ranges[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -843,7 +824,6 @@ PetscErrorCode  VecGetOwnershipRanges(Vec x,const PetscInt *ranges[])
 @*/
 PetscErrorCode  VecSetOption(Vec x,VecOption op,PetscBool flag)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -858,7 +838,6 @@ PetscErrorCode  VecSetOption(Vec x,VecOption op,PetscBool flag)
 /* may be used by any implementation */
 PetscErrorCode VecDuplicateVecs_Default(Vec w,PetscInt m,Vec *V[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -872,7 +851,6 @@ PetscErrorCode VecDuplicateVecs_Default(Vec w,PetscInt m,Vec *V[])
 
 PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -898,7 +876,6 @@ PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
 @*/
 PetscErrorCode  VecResetArray(Vec vec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -970,7 +947,6 @@ PetscErrorCode  VecResetArray(Vec vec)
 @*/
 PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         isbinary,ishdf5,isadios,isexodusii;
   PetscViewerFormat format;
 
@@ -1017,7 +993,6 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
 @*/
 PetscErrorCode  VecReciprocal(Vec vec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -1103,7 +1078,6 @@ PetscErrorCode VecSetOperation(Vec vec,VecOperation op, void (*f)(void))
 @*/
 PetscErrorCode  VecStashSetInitialSize(Vec vec,PetscInt size,PetscInt bsize)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -1162,7 +1136,6 @@ PetscErrorCode  VecConjugate(Vec x)
 @*/
 PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -1209,7 +1182,6 @@ PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 @*/
 PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 {
-  PetscErrorCode ierr;
   PetscRandom    randObj = NULL;
 
   PetscFunctionBegin;
@@ -1249,7 +1221,6 @@ PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 @*/
 PetscErrorCode  VecZeroEntries(Vec vec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(vec,0));
@@ -1275,7 +1246,6 @@ static PetscErrorCode VecSetTypeFromOptions_Private(PetscOptionItems *PetscOptio
   VecType        defaultType;
   char           typeName[256];
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (((PetscObject)vec)->type_name) defaultType = ((PetscObject)vec)->type_name;
@@ -1363,7 +1333,6 @@ PetscErrorCode  VecSetFromOptions(Vec vec)
 @*/
 PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v, VEC_CLASSID,1);
@@ -1399,7 +1368,6 @@ PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
 @*/
 PetscErrorCode  VecSetBlockSize(Vec v,PetscInt bs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -1431,7 +1399,6 @@ PetscErrorCode  VecSetBlockSize(Vec v,PetscInt bs)
 @*/
 PetscErrorCode  VecGetBlockSize(Vec v,PetscInt *bs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -1460,7 +1427,6 @@ PetscErrorCode  VecGetBlockSize(Vec v,PetscInt *bs)
 @*/
 PetscErrorCode  VecSetOptionsPrefix(Vec v,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -1488,7 +1454,6 @@ PetscErrorCode  VecSetOptionsPrefix(Vec v,const char prefix[])
 @*/
 PetscErrorCode  VecAppendOptionsPrefix(Vec v,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -1518,7 +1483,6 @@ PetscErrorCode  VecAppendOptionsPrefix(Vec v,const char prefix[])
 @*/
 PetscErrorCode  VecGetOptionsPrefix(Vec v,const char *prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -1545,7 +1509,6 @@ PetscErrorCode  VecGetOptionsPrefix(Vec v,const char *prefix[])
 PetscErrorCode  VecSetUp(Vec v)
 {
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -1595,7 +1558,6 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 {
   PetscBool      flgs[4];
   PetscReal      norms[4] = {0.0,0.0,0.0,0.0};
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -1679,7 +1641,6 @@ PetscErrorCode  VecSwap(Vec x,Vec y)
 {
   PetscReal      normxs[4]={0.0,0.0,0.0,0.0},normys[4]={0.0,0.0,0.0,0.0};
   PetscBool      flgxs[4],flgys[4];
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -1731,7 +1692,6 @@ PetscErrorCode  VecSwap(Vec x,Vec y)
 */
 PetscErrorCode VecStashViewFromOptions(Vec obj,PetscObject bobj,const char optionname[])
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscBool         flg;
   PetscViewerFormat format;
@@ -1765,7 +1725,6 @@ PetscErrorCode VecStashViewFromOptions(Vec obj,PetscObject bobj,const char optio
 @*/
 PetscErrorCode  VecStashView(Vec v,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       i,j;
   PetscBool      match;
@@ -1821,7 +1780,6 @@ PetscErrorCode  VecStashView(Vec v,PetscViewer viewer)
 PetscErrorCode PetscOptionsGetVec(PetscOptions options,const char prefix[],const char key[],Vec v,PetscBool *set)
 {
   PetscInt       i,N,rstart,rend;
-  PetscErrorCode ierr;
   PetscScalar    *xx;
   PetscReal      *xreal;
   PetscBool      iset;
@@ -1883,7 +1841,6 @@ PetscErrorCode VecGetLayout(Vec x,PetscLayout *map)
 @*/
 PetscErrorCode VecSetLayout(Vec x,PetscLayout map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1896,7 +1853,6 @@ PetscErrorCode VecSetInf(Vec xin)
   PetscInt       i,n = xin->map->n;
   PetscScalar    *xx;
   PetscScalar    zero=0.0,one=1.0,inf=one/zero;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (xin->ops->set) { /* can be called by a subset of processes, do not use collective routines */
@@ -1929,7 +1885,6 @@ PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
   if (v->boundtocpu == flg) PetscFunctionReturn(0);
   v->boundtocpu = flg;
   if (v->ops->bindtocpu) {
-    PetscErrorCode ierr;
     CHKERRQ((*v->ops->bindtocpu)(v,flg));
   }
 #endif

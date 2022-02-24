@@ -201,7 +201,6 @@ static PetscErrorCode ScatterAndOp(PetscSFLink link,PetscInt count,PetscInt srcS
 template<typename Type,PetscInt BS,PetscInt EQ>
 static PetscErrorCode ScatterAndInsert(PetscSFLink link,PetscInt count,PetscInt srcStart,PetscSFPackOpt srcOpt,const PetscInt *srcIdx,const void *src_,PetscInt dstStart,PetscSFPackOpt dstOpt,const PetscInt *dstIdx,void *dst_)
 {
-  PetscErrorCode          ierr;
   const Type              *src = static_cast<const Type*>(src_);
   Type                    *dst = static_cast<Type*>(dst_);
   DeviceExecutionSpace    exec;
@@ -466,7 +465,6 @@ PetscErrorCode PetscSFFree_Kokkos(PetscMemType mtype,void* ptr)
 /* Destructor when the link uses MPI for communication */
 static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf,PetscSFLink link)
 {
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
@@ -479,7 +477,6 @@ static PetscErrorCode PetscSFLinkDestroy_Kokkos(PetscSF sf,PetscSFLink link)
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_Kokkos(PetscSF PETSC_UNUSED sf,PetscSFLink link,MPI_Datatype unit)
 {
-  PetscErrorCode     ierr;
   PetscInt           nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
   PetscBool          is2Int,is2PetscInt;
 #if defined(PETSC_HAVE_COMPLEX)

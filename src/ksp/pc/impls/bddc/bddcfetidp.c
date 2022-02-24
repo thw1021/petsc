@@ -5,7 +5,6 @@
 static PetscErrorCode MatMult_BDdelta_deluxe_nonred(Mat A, Vec x, Vec y)
 {
   BDdelta_DN     ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&ctx));
@@ -18,7 +17,6 @@ static PetscErrorCode MatMult_BDdelta_deluxe_nonred(Mat A, Vec x, Vec y)
 static PetscErrorCode MatMultTranspose_BDdelta_deluxe_nonred(Mat A, Vec x, Vec y)
 {
   BDdelta_DN     ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&ctx));
@@ -31,7 +29,6 @@ static PetscErrorCode MatMultTranspose_BDdelta_deluxe_nonred(Mat A, Vec x, Vec y
 static PetscErrorCode MatDestroy_BDdelta_deluxe_nonred(Mat A)
 {
   BDdelta_DN     ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&ctx));
@@ -45,7 +42,6 @@ static PetscErrorCode MatDestroy_BDdelta_deluxe_nonred(Mat A)
 PetscErrorCode PCBDDCCreateFETIDPMatContext(PC pc, FETIDPMat_ctx *fetidpmat_ctx)
 {
   FETIDPMat_ctx  newctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&newctx));
@@ -59,7 +55,6 @@ PetscErrorCode PCBDDCCreateFETIDPMatContext(PC pc, FETIDPMat_ctx *fetidpmat_ctx)
 PetscErrorCode PCBDDCCreateFETIDPPCContext(PC pc, FETIDPPC_ctx *fetidppc_ctx)
 {
   FETIDPPC_ctx   newctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&newctx));
@@ -73,7 +68,6 @@ PetscErrorCode PCBDDCCreateFETIDPPCContext(PC pc, FETIDPPC_ctx *fetidppc_ctx)
 PetscErrorCode PCBDDCDestroyFETIDPMat(Mat A)
 {
   FETIDPMat_ctx  mat_ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&mat_ctx));
@@ -105,7 +99,6 @@ PetscErrorCode PCBDDCDestroyFETIDPMat(Mat A)
 PetscErrorCode PCBDDCDestroyFETIDPPC(PC pc)
 {
   FETIDPPC_ctx   pc_ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc,&pc_ctx));
@@ -122,7 +115,6 @@ PetscErrorCode PCBDDCDestroyFETIDPPC(PC pc)
 
 PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
 {
-  PetscErrorCode ierr;
   PC_IS          *pcis=(PC_IS*)fetidpmat_ctx->pc->data;
   PC_BDDC        *pcbddc=(PC_BDDC*)fetidpmat_ctx->pc->data;
   PCBDDCGraph    mat_graph=pcbddc->mat_graph;
@@ -709,7 +701,6 @@ PetscErrorCode PCBDDCSetupFETIDPPCContext(Mat fetimat, FETIDPPC_ctx fetidppc_ctx
   PC_BDDC        *pcbddc = (PC_BDDC*)fetidppc_ctx->pc->data;
   PC_IS          *pcis = (PC_IS*)fetidppc_ctx->pc->data;
   PetscBool      lumped = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(fetimat,&mat_ctx));
@@ -855,7 +846,6 @@ PetscErrorCode FETIDPMatMult_Kernel(Mat fetimat, Vec x, Vec y, PetscBool trans)
   FETIDPMat_ctx  mat_ctx;
   PC_BDDC        *pcbddc;
   PC_IS          *pcis;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(fetimat,&mat_ctx));
@@ -939,7 +929,6 @@ PetscErrorCode FETIDPMatMult_Kernel(Mat fetimat, Vec x, Vec y, PetscBool trans)
 
 PetscErrorCode FETIDPMatMult(Mat fetimat, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(FETIDPMatMult_Kernel(fetimat,x,y,PETSC_FALSE));
@@ -948,7 +937,6 @@ PetscErrorCode FETIDPMatMult(Mat fetimat, Vec x, Vec y)
 
 PetscErrorCode FETIDPMatMultTranspose(Mat fetimat, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(FETIDPMatMult_Kernel(fetimat,x,y,PETSC_TRUE));
@@ -959,7 +947,6 @@ PetscErrorCode FETIDPPCApply_Kernel(PC fetipc, Vec x, Vec y, PetscBool trans)
 {
   FETIDPPC_ctx   pc_ctx;
   PC_IS          *pcis;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(fetipc,&pc_ctx));
@@ -985,7 +972,6 @@ PetscErrorCode FETIDPPCApply_Kernel(PC fetipc, Vec x, Vec y, PetscBool trans)
 
 PetscErrorCode FETIDPPCApply(PC pc, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(FETIDPPCApply_Kernel(pc,x,y,PETSC_FALSE));
@@ -994,7 +980,6 @@ PetscErrorCode FETIDPPCApply(PC pc, Vec x, Vec y)
 
 PetscErrorCode FETIDPPCApplyTranspose(PC pc, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(FETIDPPCApply_Kernel(pc,x,y,PETSC_TRUE));
@@ -1006,7 +991,6 @@ PetscErrorCode FETIDPPCView(PC pc, PetscViewer viewer)
   FETIDPPC_ctx      pc_ctx;
   PetscBool         iascii;
   PetscViewer       sviewer;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));

@@ -116,7 +116,6 @@ typedef struct _TJScheduler {
 
 static PetscErrorCode TurnForwardWithStepsize(TS ts,PetscReal nextstepsize)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* reverse the direction */
@@ -127,7 +126,6 @@ static PetscErrorCode TurnForwardWithStepsize(TS ts,PetscReal nextstepsize)
 static PetscErrorCode TurnForward(TS ts)
 {
   PetscReal      stepsize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* reverse the direction */
@@ -139,7 +137,6 @@ static PetscErrorCode TurnForward(TS ts)
 static PetscErrorCode TurnBackward(TS ts)
 {
   PetscReal      stepsize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ts->trajectory->adjoint_solve_mode) PetscFunctionReturn(0);
@@ -153,7 +150,6 @@ static PetscErrorCode ElementCreate(TS ts,CheckpointType cptype,Stack *stack,Sta
 {
   Vec            X;
   Vec            *Y;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (stack->top < stack->stacksize-1 && stack->container[stack->top+1]) {
@@ -204,7 +200,6 @@ static PetscErrorCode ElementSet(TS ts, Stack *stack, StackElement *e, PetscInt 
   Vec            *Y;
   PetscInt       i;
   PetscReal      timeprev;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (HaveSolution((*e)->cptype)) {
@@ -230,7 +225,6 @@ static PetscErrorCode ElementSet(TS ts, Stack *stack, StackElement *e, PetscInt 
 
 static PetscErrorCode ElementDestroy(Stack *stack,StackElement e)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (stack->use_dram) {
@@ -252,7 +246,6 @@ static PetscErrorCode StackResize(Stack *stack,PetscInt newsize)
 {
   StackElement   *newcontainer;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCalloc1(newsize*sizeof(StackElement),&newcontainer));
@@ -291,7 +284,6 @@ static PetscErrorCode StackTop(Stack *stack,StackElement *e)
 
 static PetscErrorCode StackInit(Stack *stack,PetscInt size,PetscInt ny)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   stack->top  = -1;
@@ -306,7 +298,6 @@ static PetscErrorCode StackInit(Stack *stack,PetscInt size,PetscInt ny)
 static PetscErrorCode StackDestroy(Stack *stack)
 {
   PetscInt       i,n = stack->nallocated;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!stack->container) PetscFunctionReturn(0);
@@ -330,7 +321,6 @@ static PetscErrorCode StackFind(Stack *stack,StackElement *e,PetscInt index)
 static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,PetscReal time,PetscReal timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryWrite(viewer,&stepnum,1,PETSC_INT));
@@ -352,7 +342,6 @@ static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,Pet
 static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,PetscReal *time,PetscReal *timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryRead(viewer,stepnum,1,NULL,PETSC_INT));
@@ -378,7 +367,6 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   StackElement   e = NULL;
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -419,7 +407,6 @@ static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   StackElement   e;
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tj->monitor) {
@@ -510,7 +497,6 @@ static PetscErrorCode DumpSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
   PetscInt       stepnum;
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -538,7 +524,6 @@ static PetscErrorCode LoadSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
   Vec            *Y;
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tj->monitor) {
@@ -563,7 +548,6 @@ static PetscErrorCode UpdateTS(TS ts,Stack *stack,StackElement e,PetscInt stepnu
 {
   Vec            *Y;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* In adjoint mode we do not need to copy solution if the stepnum is the same */
@@ -594,7 +578,6 @@ static PetscErrorCode ReCompute(TS ts,TJScheduler *tjsch,PetscInt stepnumbegin,P
 {
   Stack          *stack = &tjsch->stack;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tjsch->recompute = PETSC_TRUE; /* hints TSTrajectorySet() that it is in recompute mode */
@@ -627,7 +610,6 @@ static PetscErrorCode TopLevelStore(TSTrajectory tj,TS ts,TJScheduler *tjsch,Pet
   Stack          *stack = &tjsch->stack;
   DiskStack      *diskstack = &tjsch->diskstack;
   PetscInt       stridenum;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *done = PETSC_FALSE;
@@ -672,7 +654,6 @@ static PetscErrorCode TSTrajectoryMemorySet_N(TS ts,TJScheduler *tjsch,PetscInt 
   Stack          *stack = &tjsch->stack;
   StackElement   e;
   CheckpointType cptype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* skip the last step */
@@ -714,7 +695,6 @@ static PetscErrorCode TSTrajectoryMemorySet_N_2(TS ts,TJScheduler *tjsch,PetscIn
   Stack          *stack = &tjsch->stack;
   StackElement   e;
   CheckpointType cptype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (stack->top+1 == stack->stacksize) {
@@ -738,7 +718,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_N(TS ts,TJScheduler *tjsch,PetscInt 
   Stack          *stack = &tjsch->stack;
   StackElement   e;
   PetscInt       ns;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* If TSTrajectoryGet() is called after TSAdjointSolve() converges (e.g. outside the while loop in TSAdjointSolve()), skip getting the checkpoint. */
@@ -763,7 +742,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_N_2(TS ts,TJScheduler *tjsch,PetscIn
 {
   Stack          *stack = &tjsch->stack;
   StackElement   e = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(StackFind(stack,&e,stepnum));
@@ -779,7 +757,6 @@ static PetscErrorCode TSTrajectoryMemorySet_TLNR(TSTrajectory tj,TS ts,TJSchedul
   StackElement   e;
   PetscBool      done;
   CheckpointType cptype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!stack->solution_only && stepnum == 0) PetscFunctionReturn(0);
@@ -810,7 +787,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLNR(TSTrajectory tj,TS ts,TJSchedul
   Stack          *stack = &tjsch->stack;
   PetscInt       id,localstepnum,laststridesize;
   StackElement   e;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (stepnum == tjsch->total_steps) {
@@ -1798,7 +1774,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_AOF(TSTrajectory tj,TS ts,TJSchedule
 static PetscErrorCode TSTrajectorySet_Memory(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal time,Vec X)
 {
   TJScheduler *tjsch = (TJScheduler*)tj->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tjsch->recompute) { /* use global stepnum in the forward sweep */
@@ -1855,7 +1830,6 @@ static PetscErrorCode TSTrajectorySet_Memory(TSTrajectory tj,TS ts,PetscInt step
 static PetscErrorCode TSTrajectoryGet_Memory(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal *t)
 {
   TJScheduler *tjsch = (TJScheduler*)tj->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tj->adjoint_solve_mode && stepnum == 0) {
@@ -2013,7 +1987,6 @@ PETSC_UNUSED static PetscErrorCode TSTrajectorySetUseDRAM(TSTrajectory tj,PetscB
 @*/
 PetscErrorCode TSTrajectoryMemorySetType(TSTrajectory tj,TSTrajectoryMemoryType tj_memory_type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(tj,"TSTrajectoryMemorySetType_C",(TSTrajectory,TSTrajectoryMemoryType),(tj,tj_memory_type)));
@@ -2037,7 +2010,6 @@ PetscErrorCode TSTrajectoryMemorySetType(TSTrajectory tj,TSTrajectoryMemoryType 
 @*/
 PetscErrorCode TSTrajectorySetMaxCpsRAM(TSTrajectory tj,PetscInt max_cps_ram)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(tj,"TSTrajectorySetMaxCpsRAM_C",(TSTrajectory,PetscInt),(tj,max_cps_ram)));
@@ -2061,7 +2033,6 @@ PetscErrorCode TSTrajectorySetMaxCpsRAM(TSTrajectory tj,PetscInt max_cps_ram)
 @*/
 PetscErrorCode TSTrajectorySetMaxCpsDisk(TSTrajectory tj,PetscInt max_cps_disk)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(tj,"TSTrajectorySetMaxCpsDisk_C",(TSTrajectory,PetscInt),(tj,max_cps_disk)));
@@ -2085,7 +2056,6 @@ PetscErrorCode TSTrajectorySetMaxCpsDisk(TSTrajectory tj,PetscInt max_cps_disk)
 @*/
 PetscErrorCode TSTrajectorySetMaxUnitsRAM(TSTrajectory tj,PetscInt max_units_ram)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(tj,"TSTrajectorySetMaxUnitsRAM_C",(TSTrajectory,PetscInt),(tj,max_units_ram)));
@@ -2109,7 +2079,6 @@ PetscErrorCode TSTrajectorySetMaxUnitsRAM(TSTrajectory tj,PetscInt max_units_ram
 @*/
 PetscErrorCode TSTrajectorySetMaxUnitsDisk(TSTrajectory tj,PetscInt max_units_disk)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(tj,"TSTrajectorySetMaxUnitsDisk_C",(TSTrajectory,PetscInt),(tj,max_units_disk)));
@@ -2122,7 +2091,6 @@ static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscO
   PetscEnum      etmp;
   PetscInt       max_cps_ram,max_cps_disk,max_units_ram,max_units_disk;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Memory based TS trajectory options"));
@@ -2169,7 +2137,6 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 #endif
   PetscInt       numY,total_steps;
   PetscBool      fixedtimestep;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ts->adapt) {
@@ -2371,7 +2338,6 @@ static PetscErrorCode TSTrajectoryReset_Memory(TSTrajectory tj)
 static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
 {
   TJScheduler    *tjsch = (TJScheduler*)tj->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(StackDestroy(&tjsch->stack));
@@ -2396,7 +2362,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Memory(TSTrajectory tj,TS ts)
 {
   TJScheduler    *tjsch;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tj->ops->set            = TSTrajectorySet_Memory;

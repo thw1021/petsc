@@ -30,7 +30,6 @@ PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps maps[], poin
                                                     PetscInt Nf[], PetscInt Nq, PetscInt grid)
 {
   P4estVertexMaps h_maps;
-  cudaError_t     cerr;
   PetscFunctionBegin;
   h_maps.num_elements = maps[grid].num_elements;
   h_maps.num_face = maps[grid].num_face;
@@ -50,7 +49,6 @@ PETSC_EXTERN PetscErrorCode LandauCUDACreateMatMaps(P4estVertexMaps maps[], poin
 
 PETSC_EXTERN PetscErrorCode LandauCUDADestroyMatMaps(P4estVertexMaps maps[], PetscInt num_grids)
 {
-  cudaError_t     cerr;
   PetscFunctionBegin;
   for (PetscInt grid=0;grid<num_grids;grid++) {
     P4estVertexMaps *d_maps = maps[grid].d_self, h_maps;
@@ -67,13 +65,11 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscIn
                                        PetscReal nu_alpha[], PetscReal nu_beta[], PetscReal a_invMass[], PetscReal a_invJ[],
                                        PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
 {
-  PetscErrorCode  ierr;
   PetscTabulation *Tf;
   PetscReal       *BB,*DD;
   PetscInt        dim,Nb=Nq,szf=sizeof(PetscReal),szs=sizeof(PetscScalar),szi=sizeof(PetscInt);
   PetscInt        h_ip_offset[LANDAU_MAX_GRIDS+1],h_ipf_offset[LANDAU_MAX_GRIDS+1],h_elem_offset[LANDAU_MAX_GRIDS+1],nip,IPfdf_sz,Nf;
   PetscDS         prob;
-  cudaError_t     cerr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(plex, &dim));
@@ -148,7 +144,6 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscIn
 
 PetscErrorCode LandauCUDAStaticDataClear(LandauStaticData *SData_d)
 {
-  cudaError_t     cerr;
 
   PetscFunctionBegin;
   if (SData_d->alpha) {
@@ -719,7 +714,6 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
                                   const PetscScalar a_xarray[], const LandauStaticData *SData_d, const PetscInt num_sub_blocks, const PetscReal shift,
                                   const PetscLogEvent events[], const PetscInt a_mat_offset[], const PetscInt a_species_offset[], Mat subJ[], Mat JacP)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscInt          Nb=Nq,dim,nip_global,num_cells_batch,elem_mat_size_tot;
   PetscInt          *d_numCells, *d_species_offset, *d_mat_offset, *d_ip_offset, *d_ipf_offset, *d_elem_offset;

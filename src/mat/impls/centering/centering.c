@@ -3,7 +3,6 @@
 
 PetscErrorCode MatMult_Centering(Mat A,Vec xx,Vec yy)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *y;
   const PetscScalar *x;
   PetscScalar       sum,mean;
@@ -52,7 +51,6 @@ PetscErrorCode MatMult_Centering(Mat A,Vec xx,Vec yy)
 @*/
 PetscErrorCode MatCreateCentering(MPI_Comm comm,PetscInt n,PetscInt N,Mat *C)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

@@ -16,7 +16,6 @@ typedef struct {
 PetscErrorCode PCDestroy_TFS(PC pc)
 {
   PC_TFS         *tfs = (PC_TFS*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* free the XXT datastructures */
@@ -38,7 +37,6 @@ static PetscErrorCode PCApply_TFS_XXT(PC pc,Vec x,Vec y)
   PC_TFS            *tfs = (PC_TFS*)pc->data;
   PetscScalar       *yy;
   const PetscScalar *xx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(x,&xx));
@@ -54,7 +52,6 @@ static PetscErrorCode PCApply_TFS_XYT(PC pc,Vec x,Vec y)
   PC_TFS            *tfs = (PC_TFS*)pc->data;
   PetscScalar       *yy;
   const PetscScalar *xx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(x,&xx));
@@ -70,7 +67,6 @@ static PetscErrorCode PCTFSLocalMult_TFS(PC pc,PetscScalar *xin,PetscScalar *xou
   PC_TFS         *tfs = (PC_TFS*)pc->data;
   Mat            A    = pc->pmat;
   Mat_MPIAIJ     *a   = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecPlaceArray(tfs->b,xout));
@@ -89,7 +85,6 @@ static PetscErrorCode PCSetUp_TFS(PC pc)
   PC_TFS         *tfs = (PC_TFS*)pc->data;
   Mat            A    = pc->pmat;
   Mat_MPIAIJ     *a   = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
   PetscInt       *localtoglobal,ncol,i;
   PetscBool      ismpiaij;
 
@@ -163,7 +158,6 @@ static PetscErrorCode PCView_TFS(PC pc,PetscViewer viewer)
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_TFS(PC pc)
 {
-  PetscErrorCode ierr;
   PC_TFS         *tfs;
   PetscMPIInt    cmp;
 

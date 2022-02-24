@@ -42,7 +42,6 @@
 @*/
 PETSC_EXTERN PetscErrorCode DMStagCreate2d(MPI_Comm comm, DMBoundaryType bndx,DMBoundaryType bndy, PetscInt M,PetscInt N, PetscInt m,PetscInt n, PetscInt dof0, PetscInt dof1, PetscInt dof2, DMStagStencilType stencilType, PetscInt stencilWidth, const PetscInt lx[], const PetscInt ly[],DM* dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm,dm));
@@ -53,7 +52,6 @@ PETSC_EXTERN PetscErrorCode DMStagCreate2d(MPI_Comm comm, DMBoundaryType bndx,DM
 
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_2d(DM dm,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax)
 {
-  PetscErrorCode ierr;
   DM_Stag        *stagCoord;
   DM             dmCoord;
   Vec            coordLocal;
@@ -130,7 +128,6 @@ static PetscErrorCode DMStagComputeLocationOffsets_2d(DM);
 
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscMPIInt     size,rank;
   PetscInt        i,j,d,entriesPerElementRowGhost,entriesPerCorner,entriesPerFace,entriesPerElementRow;
@@ -1020,7 +1017,6 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_2d(DM dm)
 /* adapted from da2.c */
 static PetscErrorCode DMStagSetUpBuildRankGrid_2d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        m,n;
   PetscMPIInt     rank,size;
@@ -1067,7 +1063,6 @@ static PetscErrorCode DMStagSetUpBuildRankGrid_2d(DM dm)
 
 static PetscErrorCode DMStagSetUpBuildNeighbors_2d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        d,i;
   PetscBool       per[2],first[2],last[2];
@@ -1129,7 +1124,6 @@ static PetscErrorCode DMStagSetUpBuildNeighbors_2d(DM dm)
 
 static PetscErrorCode DMStagSetUpBuildGlobalOffsets_2d(DM dm,PetscInt **pGlobalOffsets)
 {
-  PetscErrorCode        ierr;
   const DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt              *globalOffsets;
   PetscInt              i,j,d,entriesPerFace,count;
@@ -1175,7 +1169,6 @@ static PetscErrorCode DMStagSetUpBuildGlobalOffsets_2d(DM dm,PetscInt **pGlobalO
 
 static PetscErrorCode DMStagComputeLocationOffsets_2d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   const PetscInt  epe = stag->entriesPerElement;
   const PetscInt  epr = stag->nGhost[0]*epe;
@@ -1196,7 +1189,6 @@ static PetscErrorCode DMStagComputeLocationOffsets_2d(DM dm)
 
 PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_2d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        *idxLocal,*idxGlobal,*globalOffsetsRecomputed;
   const PetscInt  *globalOffsets;
@@ -1281,7 +1273,6 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_2d(DM dm)
 
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_2D_AIJ_Assemble(DM dm,Mat A)
 {
-  PetscErrorCode    ierr;
   PetscInt          entries,dof[DMSTAG_MAX_STRATA],epe,stencil_width,N[2],start[2],n[2],n_extra[2];
   DMStagStencilType stencil_type;
   DMBoundaryType    boundary_type[2];

@@ -27,7 +27,6 @@ PetscClassId PETSC_DRAWAXIS_CLASSID = 0;
 PetscErrorCode  PetscDrawAxisCreate(PetscDraw draw,PetscDrawAxis *axis)
 {
   PetscDrawAxis  ad;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -68,7 +67,6 @@ PetscErrorCode  PetscDrawAxisCreate(PetscDraw draw,PetscDrawAxis *axis)
 @*/
 PetscErrorCode  PetscDrawAxisDestroy(PetscDrawAxis *axis)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*axis) PetscFunctionReturn(0);
@@ -130,7 +128,6 @@ PetscErrorCode  PetscDrawAxisSetColors(PetscDrawAxis axis,int ac,int tc,int cc)
 @*/
 PetscErrorCode  PetscDrawAxisSetLabels(PetscDrawAxis axis,const char top[],const char xlabel[],const char ylabel[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
@@ -163,7 +160,6 @@ PetscErrorCode  PetscDrawAxisSetLabels(PetscDrawAxis axis,const char top[],const
 @*/
 PetscErrorCode  PetscDrawAxisSetLimits(PetscDrawAxis axis,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
@@ -273,7 +269,7 @@ PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
   if (axis->xlow == axis->xhigh) {axis->xlow -= .5; axis->xhigh += .5;}
   if (axis->ylow == axis->yhigh) {axis->ylow -= .5; axis->yhigh += .5;}
 
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (rank) goto finally;
 
   /* get cannonical string size */
@@ -368,7 +364,7 @@ PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
 
   CHKERRQ(PetscDrawGetCoordinates(draw,&coors[0],&coors[1],&coors[2],&coors[3]));
 finally:
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   CHKERRMPI(MPI_Bcast(coors,4,MPIU_REAL,0,PetscObjectComm((PetscObject)draw)));
   CHKERRQ(PetscDrawSetCoordinates(draw,coors[0],coors[1],coors[2],coors[3]));
   PetscFunctionReturn(0);
@@ -379,7 +375,6 @@ finally:
 */
 PetscErrorCode PetscStripe0(char *buf)
 {
-  PetscErrorCode ierr;
   size_t         n;
   PetscBool      flg;
   char           *str;
@@ -406,7 +401,6 @@ PetscErrorCode PetscStripe0(char *buf)
 */
 PetscErrorCode PetscStripAllZeros(char *buf)
 {
-  PetscErrorCode ierr;
   size_t         i,n;
 
   PetscFunctionBegin;
@@ -425,7 +419,6 @@ PetscErrorCode PetscStripAllZeros(char *buf)
 */
 PetscErrorCode PetscStripTrailingZeros(char *buf)
 {
-  PetscErrorCode ierr;
   char           *found;
   size_t         i,n,m = PETSC_MAX_INT;
 
@@ -454,7 +447,6 @@ PetscErrorCode PetscStripTrailingZeros(char *buf)
 */
 PetscErrorCode PetscStripInitialZero(char *buf)
 {
-  PetscErrorCode ierr;
   size_t         i,n;
 
   PetscFunctionBegin;
@@ -472,7 +464,6 @@ PetscErrorCode PetscStripInitialZero(char *buf)
 */
 PetscErrorCode PetscStripZeros(char *buf)
 {
-  PetscErrorCode ierr;
   size_t         i,j,n;
 
   PetscFunctionBegin;
@@ -493,7 +484,6 @@ PetscErrorCode PetscStripZeros(char *buf)
 */
 PetscErrorCode PetscStripZerosPlus(char *buf)
 {
-  PetscErrorCode ierr;
   size_t         i,j,n;
 
   PetscFunctionBegin;

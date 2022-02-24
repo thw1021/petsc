@@ -49,7 +49,6 @@ PetscErrorCode DMPatchZoom(DM dm, MatStencil lower, MatStencil upper, MPI_Comm c
   PetscInt        M, N, P, rM, rN, rP, halo = 1, sxb, syb, szb, sxr, syr, szr, exr, eyr, ezr, mxb, myb, mzb, i, j, k, l, q;
   PetscMPIInt     size;
   PetscBool       patchis_offproc = PETSC_TRUE;
-  PetscErrorCode  ierr;
   Vec             X;
 
   PetscFunctionBegin;
@@ -176,7 +175,6 @@ PetscErrorCode DMPatchSolve(DM dm)
   PetscInt       M, N, P, i, j, k, l, m, n, p = 0;
   PetscMPIInt    rank, size;
   PetscInt       debug = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm,&comm));
@@ -291,7 +289,6 @@ PetscErrorCode DMPatchView_ASCII(DM dm, PetscViewer viewer)
   DM_Patch          *mesh = (DM_Patch*) dm->data;
   PetscViewerFormat format;
   const char        *name;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer, &format));
@@ -308,7 +305,6 @@ PetscErrorCode DMPatchView_ASCII(DM dm, PetscViewer viewer)
 PetscErrorCode DMView_Patch(DM dm, PetscViewer viewer)
 {
   PetscBool      iascii, isbinary;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -324,7 +320,6 @@ PetscErrorCode DMView_Patch(DM dm, PetscViewer viewer)
 PetscErrorCode DMDestroy_Patch(DM dm)
 {
   DM_Patch       *mesh = (DM_Patch*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (--mesh->refct > 0) PetscFunctionReturn(0);
@@ -337,7 +332,6 @@ PetscErrorCode DMDestroy_Patch(DM dm)
 PetscErrorCode DMSetUp_Patch(DM dm)
 {
   DM_Patch       *mesh = (DM_Patch*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -348,7 +342,6 @@ PetscErrorCode DMSetUp_Patch(DM dm)
 PetscErrorCode DMCreateGlobalVector_Patch(DM dm, Vec *g)
 {
   DM_Patch       *mesh = (DM_Patch*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -359,7 +352,6 @@ PetscErrorCode DMCreateGlobalVector_Patch(DM dm, Vec *g)
 PetscErrorCode DMCreateLocalVector_Patch(DM dm, Vec *l)
 {
   DM_Patch       *mesh = (DM_Patch*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

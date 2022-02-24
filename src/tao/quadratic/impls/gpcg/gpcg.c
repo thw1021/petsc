@@ -8,7 +8,6 @@ static PetscErrorCode GPCGObjectiveAndGradient(TaoLineSearch,Vec,PetscReal*,Vec,
 static PetscErrorCode TaoDestroy_GPCG(Tao tao)
 {
   TAO_GPCG       *gpcg = (TAO_GPCG *)tao->data;
-  PetscErrorCode ierr;
 
   /* Free allocated memory in GPCG structure */
   PetscFunctionBegin;
@@ -30,7 +29,6 @@ static PetscErrorCode TaoDestroy_GPCG(Tao tao)
 static PetscErrorCode TaoSetFromOptions_GPCG(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_GPCG       *gpcg = (TAO_GPCG *)tao->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -47,7 +45,6 @@ static PetscErrorCode TaoView_GPCG(Tao tao, PetscViewer viewer)
 {
   TAO_GPCG       *gpcg = (TAO_GPCG *)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -67,7 +64,6 @@ static PetscErrorCode GPCGObjectiveAndGradient(TaoLineSearch ls, Vec X, PetscRea
 {
   Tao            tao = (Tao)tptr;
   TAO_GPCG       *gpcg = (TAO_GPCG*)tao->data;
-  PetscErrorCode ierr;
   PetscReal      f1,f2;
 
   PetscFunctionBegin;
@@ -82,7 +78,6 @@ static PetscErrorCode GPCGObjectiveAndGradient(TaoLineSearch ls, Vec X, PetscRea
 /* ---------------------------------------------------------- */
 static PetscErrorCode TaoSetup_GPCG(Tao tao)
 {
-  PetscErrorCode ierr;
   TAO_GPCG       *gpcg = (TAO_GPCG *)tao->data;
 
   PetscFunctionBegin;
@@ -129,7 +124,6 @@ static PetscErrorCode TaoSetup_GPCG(Tao tao)
 static PetscErrorCode TaoSolve_GPCG(Tao tao)
 {
   TAO_GPCG                     *gpcg = (TAO_GPCG *)tao->data;
-  PetscErrorCode               ierr;
   PetscInt                     its;
   PetscReal                    actred,f,f_new,gnorm,gdx,stepsize,xtb;
   PetscReal                    xtHx;
@@ -242,7 +236,6 @@ static PetscErrorCode TaoSolve_GPCG(Tao tao)
 
 static PetscErrorCode GPCGGradProjections(Tao tao)
 {
-  PetscErrorCode                 ierr;
   TAO_GPCG                       *gpcg = (TAO_GPCG *)tao->data;
   PetscInt                       i;
   PetscReal                      actred=-1.0,actred_max=0.0, gAg,gtg=gpcg->gnorm,alpha;
@@ -292,7 +285,6 @@ static PetscErrorCode GPCGGradProjections(Tao tao)
 static PetscErrorCode TaoComputeDual_GPCG(Tao tao, Vec DXL, Vec DXU)
 {
   TAO_GPCG       *gpcg = (TAO_GPCG *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecBoundGradientProjection(tao->gradient, tao->solution, tao->XL, tao->XU, gpcg->Work));
@@ -322,7 +314,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_GPCG(Tao tao)
 {
   TAO_GPCG       *gpcg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetup_GPCG;

@@ -282,7 +282,6 @@ static inline PetscErrorCode PetscSFLinkFinishCommunication(PetscSF sf,PetscSFLi
 */
 static inline PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(PetscSF sf,PetscSFLink link,PetscBool device2host)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
@@ -304,7 +303,6 @@ static inline PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(Pe
 
 static inline PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(PetscSF sf,PetscSFLink link,PetscBool device2host)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscMemTypeDevice(link->leafmtype) && PetscMemTypeHost(link->leafmtype_mpi) && sf->leafbuflen[PETSCSF_REMOTE]) {
@@ -325,7 +323,6 @@ static inline PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(Pe
 /* Make sure root/leafbuf for the remote is ready for MPI */
 static inline PetscErrorCode PetscSFLinkSyncStreamBeforeCallMPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas;
   PetscInt       buflen;
   PetscMemType   mtype;
@@ -385,7 +382,6 @@ static inline PetscErrorCode PetscSFLinkGetRootPackOptAndIndices(PetscSF sf,Pets
     offset = (scope == PETSCSF_LOCAL)? 0 : bas->ioffset[bas->ndiranks];
     if (PetscMemTypeHost(mtype)) {*opt = bas->rootpackopt[scope]; *indices = bas->irootloc + offset;}
     else {
-      PetscErrorCode ierr;
       size_t         size;
       if (bas->rootpackopt[scope]) {
         if (!bas->rootpackopt_d[scope]) {
@@ -426,7 +422,6 @@ static inline PetscErrorCode PetscSFLinkGetLeafPackOptAndIndices(PetscSF sf,Pets
     offset = (scope == PETSCSF_LOCAL)? 0 : sf->roffset[sf->ndranks];
     if (PetscMemTypeHost(mtype)) {*opt = sf->leafpackopt[scope]; *indices = sf->rmine + offset;}
     else {
-      PetscErrorCode ierr;
       size_t         size;
       if (sf->leafpackopt[scope]) {
         if (!sf->leafpackopt_d[scope]) {

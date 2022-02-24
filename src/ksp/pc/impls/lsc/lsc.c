@@ -13,7 +13,6 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
 {
   PC_LSC         *lsc = (PC_LSC*)pc->data;
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (lsc->allocated) PetscFunctionReturn(0);
@@ -37,7 +36,6 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
 {
   PC_LSC         *lsc = (PC_LSC*)pc->data;
   Mat            L,Lp,B,C;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCLSCAllocate_Private(pc));
@@ -69,7 +67,6 @@ static PetscErrorCode PCApply_LSC(PC pc,Vec x,Vec y)
 {
   PC_LSC         *lsc = (PC_LSC*)pc->data;
   Mat            A,B,C;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSchurComplementGetSubMatrices(pc->mat,&A,NULL,&B,&C,NULL));
@@ -92,7 +89,6 @@ static PetscErrorCode PCApply_LSC(PC pc,Vec x,Vec y)
 static PetscErrorCode PCReset_LSC(PC pc)
 {
   PC_LSC         *lsc = (PC_LSC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&lsc->x0));
@@ -106,7 +102,6 @@ static PetscErrorCode PCReset_LSC(PC pc)
 
 static PetscErrorCode PCDestroy_LSC(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_LSC(pc));
@@ -117,7 +112,6 @@ static PetscErrorCode PCDestroy_LSC(PC pc)
 static PetscErrorCode PCSetFromOptions_LSC(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_LSC         *lsc = (PC_LSC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"LSC options"));
@@ -131,7 +125,6 @@ static PetscErrorCode PCSetFromOptions_LSC(PetscOptionItems *PetscOptionsObject,
 static PetscErrorCode PCView_LSC(PC pc,PetscViewer viewer)
 {
   PC_LSC         *jac = (PC_LSC*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -213,7 +206,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_LSC(PC pc)
 {
   PC_LSC         *lsc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&lsc));

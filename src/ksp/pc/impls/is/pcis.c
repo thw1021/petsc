@@ -28,7 +28,6 @@ static PetscErrorCode PCISSetUseStiffnessScaling_IS(PC pc, PetscBool use)
 @*/
 PetscErrorCode PCISSetUseStiffnessScaling(PC pc, PetscBool use)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -39,7 +38,6 @@ PetscErrorCode PCISSetUseStiffnessScaling(PC pc, PetscBool use)
 
 static PetscErrorCode PCISSetSubdomainDiagonalScaling_IS(PC pc, Vec scaling_factors)
 {
-  PetscErrorCode ierr;
   PC_IS          *pcis = (PC_IS*)pc->data;
 
   PetscFunctionBegin;
@@ -79,7 +77,6 @@ static PetscErrorCode PCISSetSubdomainDiagonalScaling_IS(PC pc, Vec scaling_fact
 @*/
 PetscErrorCode PCISSetSubdomainDiagonalScaling(PC pc, Vec scaling_factors)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -95,7 +92,6 @@ static PetscErrorCode PCISSetSubdomainScalingFactor_IS(PC pc, PetscScalar scal)
   PetscFunctionBegin;
   pcis->scaling_factor = scal;
   if (pcis->D) {
-    PetscErrorCode ierr;
 
     CHKERRQ(VecSet(pcis->D,pcis->scaling_factor));
   }
@@ -120,7 +116,6 @@ static PetscErrorCode PCISSetSubdomainScalingFactor_IS(PC pc, PetscScalar scal)
 @*/
 PetscErrorCode PCISSetSubdomainScalingFactor(PC pc, PetscScalar scal)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -418,7 +413,6 @@ PetscErrorCode  PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesol
 PetscErrorCode  PCISDestroy(PC pc)
 {
   PC_IS          *pcis = (PC_IS*)(pc->data);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISDestroy(&pcis->is_B_local));
@@ -466,7 +460,6 @@ PetscErrorCode  PCISDestroy(PC pc)
 PetscErrorCode  PCISCreate(PC pc)
 {
   PC_IS          *pcis = (PC_IS*)(pc->data);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   pcis->n_neigh          = -1;
@@ -496,7 +489,6 @@ PetscErrorCode  PCISCreate(PC pc)
 */
 PetscErrorCode  PCISApplySchur(PC pc, Vec v, Vec vec1_B, Vec vec2_B, Vec vec1_D, Vec vec2_D)
 {
-  PetscErrorCode ierr;
   PC_IS          *pcis = (PC_IS*)(pc->data);
 
   PetscFunctionBegin;
@@ -533,7 +525,6 @@ PetscErrorCode  PCISScatterArrayNToVecB(PetscScalar *array_N, Vec v_B, InsertMod
 {
   PetscInt       i;
   const PetscInt *idex;
-  PetscErrorCode ierr;
   PetscScalar    *array_B;
   PC_IS          *pcis = (PC_IS*)(pc->data);
 
@@ -580,7 +571,6 @@ PetscErrorCode  PCISScatterArrayNToVecB(PetscScalar *array_N, Vec v_B, InsertMod
 */
 PetscErrorCode  PCISApplyInvSchur(PC pc, Vec b, Vec x, Vec vec1_N, Vec vec2_N)
 {
-  PetscErrorCode ierr;
   PC_IS          *pcis = (PC_IS*)(pc->data);
 
   PetscFunctionBegin;

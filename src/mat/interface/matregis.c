@@ -105,7 +105,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_Htool(Mat);
 @*/
 PetscErrorCode  MatRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (MatRegisterAllCalled) PetscFunctionReturn(0);

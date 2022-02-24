@@ -30,7 +30,6 @@ PetscErrorCode DMPlexCreateProcessSF(DM dm, PetscSF sfPoint, IS *processRanks, P
   PetscSFNode       *remotePointsNew;
   PetscInt          *ranks, *ranksNew;
   PetscMPIInt        size;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -85,7 +84,6 @@ PetscErrorCode DMPlexCreateCoarsePointIS(DM dm, IS *fpointIS)
   DMPlexTransform tr;
   PetscInt       *fpoints;
   PetscInt        pStart, pEnd, p, vStart, vEnd, v;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetChart(dm, &pStart, &pEnd));
@@ -119,7 +117,6 @@ PetscErrorCode DMPlexCreateCoarsePointIS(DM dm, IS *fpointIS)
 PetscErrorCode DMPlexSetTransformType(DM dm, DMPlexTransformType type)
 {
   DM_Plex        *mesh = (DM_Plex*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMPLEX);
@@ -300,7 +297,6 @@ PetscErrorCode DMPlexGetRefinementFunction(DM dm, PetscErrorCode (**refinementFu
 PetscErrorCode DMRefine_Plex(DM dm, MPI_Comm comm, DM *rdm)
 {
   PetscBool      isUniform;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetRefinementUniform(dm, &isUniform));
@@ -348,7 +344,6 @@ PetscErrorCode DMRefineHierarchy_Plex(DM dm, PetscInt nlevels, DM rdm[])
   DM             cdm = dm;
   PetscInt       r;
   PetscBool      isUniform, localized;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetRefinementUniform(dm, &isUniform));

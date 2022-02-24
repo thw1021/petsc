@@ -7,7 +7,6 @@
 static PetscErrorCode DMTSConvertPlex(DM dm, DM *plex, PetscBool copy)
 {
   PetscBool      isPlex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) dm, DMPLEX, &isPlex));
@@ -54,7 +53,6 @@ PetscErrorCode DMPlexTSComputeRHSFunctionFVM(DM dm, PetscReal time, Vec locX, Ve
   DM             plex;
   PetscInt       depth;
   PetscFormKey key = {NULL, 0, 0};
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMTSConvertPlex(dm,&plex,PETSC_TRUE));
@@ -93,7 +91,6 @@ PetscErrorCode DMPlexTSComputeBoundary(DM dm, PetscReal time, Vec locX, Vec locX
   DM             plex;
   Vec            faceGeometryFVM = NULL;
   PetscInt       Nf, f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
@@ -140,7 +137,6 @@ PetscErrorCode DMPlexTSComputeIFunctionFEM(DM dm, PetscReal time, Vec locX, Vec 
   DM             plex;
   IS             allcellIS;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
@@ -198,7 +194,6 @@ PetscErrorCode DMPlexTSComputeIJacobianFEM(DM dm, PetscReal time, Vec locX, Vec 
   IS             allcellIS;
   PetscBool      hasJac, hasPrec;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
@@ -259,7 +254,6 @@ PetscErrorCode DMPlexTSComputeRHSFunctionFEM(DM dm, PetscReal time, Vec locX, Ve
   DM             plex;
   IS             allcellIS;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
@@ -316,7 +310,6 @@ PetscErrorCode DMTSCheckResidual(TS ts, DM dm, PetscReal t, Vec u, Vec u_t, Pets
   MPI_Comm       comm;
   Vec            r;
   PetscReal      res;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -372,7 +365,6 @@ PetscErrorCode DMTSCheckJacobian(TS ts, DM dm, PetscReal t, Vec u, Vec u_t, Pets
   MatNullSpace   nullspace;
   PetscReal      dt, shift, slope, intercept;
   PetscBool      hasJac, hasPrec, isLin = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -491,7 +483,6 @@ PetscErrorCode DMTSCheckFromOptions(TS ts, Vec u)
   Vec            sol, u_t;
   PetscReal      t;
   PetscBool      check;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHasName(((PetscObject)ts)->options,((PetscObject)ts)->prefix, "-dmts_check", &check));

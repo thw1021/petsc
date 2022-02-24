@@ -8,7 +8,6 @@ PetscErrorCode MatConvert_Shell(Mat oldmat,MatType newtype,MatReuse reuse,Mat *n
   PetscInt       *dnnz,*onnz,*dnnzu,*onnzu;
   PetscInt       cst,Nbs,mbs,nbs,rbs,cbs;
   PetscInt       im,i,m,n,M,N,*rows,start;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetOwnershipRange(oldmat,&start,NULL));
@@ -76,7 +75,6 @@ PetscErrorCode MatConvert_Shell(Mat oldmat,MatType newtype,MatReuse reuse,Mat *n
 static PetscErrorCode MatGetDiagonal_CF(Mat A,Vec X)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&B));
@@ -88,7 +86,6 @@ static PetscErrorCode MatGetDiagonal_CF(Mat A,Vec X)
 static PetscErrorCode MatMult_CF(Mat A,Vec X,Vec Y)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&B));
@@ -100,7 +97,6 @@ static PetscErrorCode MatMult_CF(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatMultTranspose_CF(Mat A,Vec X,Vec Y)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&B));
@@ -112,7 +108,6 @@ static PetscErrorCode MatMultTranspose_CF(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatDestroy_CF(Mat A)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&B));
@@ -132,7 +127,6 @@ typedef struct {
 
 static PetscErrorCode MatProductDestroy_CF(void *data)
 {
-  PetscErrorCode ierr;
   MatMatCF       *mmcfdata = (MatMatCF*)data;
 
   PetscFunctionBegin;
@@ -146,7 +140,6 @@ static PetscErrorCode MatProductDestroy_CF(void *data)
 
 static PetscErrorCode MatProductNumericPhase_CF(Mat A, Mat B, Mat C, void *data)
 {
-  PetscErrorCode ierr;
   MatMatCF       *mmcfdata = (MatMatCF*)data;
 
   PetscFunctionBegin;
@@ -166,7 +159,6 @@ static PetscErrorCode MatProductNumericPhase_CF(Mat A, Mat B, Mat C, void *data)
 
 static PetscErrorCode MatProductSymbolicPhase_CF(Mat A, Mat B, Mat C, void **data)
 {
-  PetscErrorCode ierr;
   MatMatCF       *mmcfdata;
 
   PetscFunctionBegin;
@@ -197,7 +189,6 @@ static PetscErrorCode MatProductSetFromOptions_CF(Mat D)
   Mat            A,B,Ain;
   void           (*Af)(void) = NULL;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   MatCheckProduct(D,1);
@@ -224,7 +215,6 @@ PetscErrorCode MatConvertFrom_Shell(Mat A,MatType newtype,MatReuse reuse,Mat *B)
 {
   Mat            M;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcmp(newtype,MATSHELL,&flg));

@@ -175,8 +175,6 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSEBAND(Mat B,Mat A,const Ma
   Mat_SeqAIJCUSPARSE           *cusparsestructA = (Mat_SeqAIJCUSPARSE*)A->spptr;
   Mat_SeqAIJCUSPARSEMultStruct *matstructA;
   CsrMatrix                    *matrixA;
-  PetscErrorCode               ierr;
-  cudaError_t                  cerr;
   const PetscInt               n=A->rmap->n, *ic, *r;
   const int                    *ai_d, *aj_d;
   const PetscScalar            *aa_d;
@@ -256,8 +254,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b;
   IS                 isicol;
-  PetscErrorCode     ierr;
-  cudaError_t        cerr;
   const PetscInt     *ic,*ai=a->i,*aj=a->j;
   PetscScalar        *ba_t;
   int                *bi_t;
@@ -387,7 +383,6 @@ PetscErrorCode MatFactorGetSolverType_seqaij_cusparse_band(Mat A,MatSolverType *
 
 PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat A,MatFactorType ftype,Mat *B)
 {
-  PetscErrorCode ierr;
   PetscInt       n = A->rmap->n;
 
   PetscFunctionBegin;
@@ -522,7 +517,6 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSEBAND(Mat A,Vec bb,Vec xx)
   THRUSTARRAY                           *tempGPU = (THRUSTARRAY*)cusparseTriFactors->workVector;
   PetscInt                              n=A->rmap->n, nz=cusparseTriFactors->nnz, Nf=1; // Nf is batch size - not used
   PetscInt                              bw = (int)(2.*(double)n-1.-(double)(PetscSqrtReal(1.+4.*((double)n*(double)n-(double)nz))+PETSC_MACHINE_EPSILON))/2; // quadric formula for bandwidth
-  PetscErrorCode                        ierr;
 
   PetscFunctionBegin;
   if (A->rmap->n == 0) {

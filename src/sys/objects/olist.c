@@ -34,7 +34,6 @@ struct _n_PetscObjectList {
 PetscErrorCode  PetscObjectListRemoveReference(PetscObjectList *fl,const char name[])
 {
   PetscObjectList nlist;
-  PetscErrorCode  ierr;
   PetscBool       match;
 
   PetscFunctionBegin;
@@ -74,7 +73,6 @@ PetscErrorCode  PetscObjectListRemoveReference(PetscObjectList *fl,const char na
 PetscErrorCode  PetscObjectListAdd(PetscObjectList *fl,const char name[],PetscObject obj)
 {
   PetscObjectList olist,nlist,prev;
-  PetscErrorCode  ierr;
   PetscBool       match;
 
   PetscFunctionBegin;
@@ -147,7 +145,6 @@ PetscErrorCode  PetscObjectListAdd(PetscObjectList *fl,const char name[],PetscOb
 PetscErrorCode  PetscObjectListDestroy(PetscObjectList *ifl)
 {
   PetscObjectList tmp,fl = *ifl;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   while (fl) {
@@ -184,7 +181,6 @@ PetscErrorCode  PetscObjectListDestroy(PetscObjectList *ifl)
 @*/
 PetscErrorCode  PetscObjectListFind(PetscObjectList fl,const char name[],PetscObject *obj)
 {
-  PetscErrorCode ierr;
   PetscBool      match;
 
   PetscFunctionBegin;
@@ -252,7 +248,6 @@ PetscErrorCode  PetscObjectListReverseFind(PetscObjectList fl,PetscObject obj,ch
 @*/
 PetscErrorCode  PetscObjectListDuplicate(PetscObjectList fl,PetscObjectList *nl)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while (fl) {

@@ -39,7 +39,6 @@ PetscErrorCode  MatScatterGetVecScatter(Mat mat,VecScatter *scatter)
 
 PetscErrorCode MatDestroy_Scatter(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_Scatter    *scatter = (Mat_Scatter*)mat->data;
 
   PetscFunctionBegin;
@@ -51,7 +50,6 @@ PetscErrorCode MatDestroy_Scatter(Mat mat)
 PetscErrorCode MatMult_Scatter(Mat A,Vec x,Vec y)
 {
   Mat_Scatter    *scatter = (Mat_Scatter*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!scatter->scatter,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Need to first call MatScatterSetScatter()");
@@ -64,7 +62,6 @@ PetscErrorCode MatMult_Scatter(Mat A,Vec x,Vec y)
 PetscErrorCode MatMultAdd_Scatter(Mat A,Vec x,Vec y,Vec z)
 {
   Mat_Scatter    *scatter = (Mat_Scatter*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!scatter->scatter,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Need to first call MatScatterSetScatter()");
@@ -77,7 +74,6 @@ PetscErrorCode MatMultAdd_Scatter(Mat A,Vec x,Vec y,Vec z)
 PetscErrorCode MatMultTranspose_Scatter(Mat A,Vec x,Vec y)
 {
   Mat_Scatter    *scatter = (Mat_Scatter*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!scatter->scatter,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Need to first call MatScatterSetScatter()");
@@ -90,7 +86,6 @@ PetscErrorCode MatMultTranspose_Scatter(Mat A,Vec x,Vec y)
 PetscErrorCode MatMultTransposeAdd_Scatter(Mat A,Vec x,Vec y,Vec z)
 {
   Mat_Scatter    *scatter = (Mat_Scatter*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!scatter->scatter,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Need to first call MatScatterSetScatter()");
@@ -256,7 +251,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_Scatter(Mat A)
 {
   Mat_Scatter    *b;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMemcpy(A->ops,&MatOps_Values,sizeof(struct _MatOps)));
@@ -305,7 +299,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_Scatter(Mat A)
 @*/
 PetscErrorCode  MatCreateScatter(MPI_Comm comm,VecScatter scatter,Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -332,7 +325,6 @@ PetscErrorCode  MatCreateScatter(MPI_Comm comm,VecScatter scatter,Mat *A)
 PetscErrorCode  MatScatterSetVecScatter(Mat mat,VecScatter scatter)
 {
   Mat_Scatter    *mscatter = (Mat_Scatter*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);

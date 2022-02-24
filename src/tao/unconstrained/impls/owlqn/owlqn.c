@@ -7,7 +7,6 @@
 
 static PetscErrorCode ProjDirect_OWLQN(Vec d, Vec g)
 {
-  PetscErrorCode  ierr;
   const PetscReal *gptr;
   PetscReal       *dptr;
   PetscInt        low,high,low1,high1,i;
@@ -30,7 +29,6 @@ static PetscErrorCode ProjDirect_OWLQN(Vec d, Vec g)
 
 static PetscErrorCode ComputePseudoGrad_OWLQN(Vec x, Vec gv, PetscReal lambda)
 {
-  PetscErrorCode  ierr;
   const PetscReal *xptr;
   PetscReal       *gptr;
   PetscInt        low,high,low1,high1,i;
@@ -59,7 +57,6 @@ static PetscErrorCode TaoSolve_OWLQN(Tao tao)
   PetscReal                    f, fold, gdx, gnorm;
   PetscReal                    step = 1.0;
   PetscReal                    delta;
-  PetscErrorCode               ierr;
   PetscInt                     stepType;
   PetscInt                     iter = 0;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
@@ -233,7 +230,6 @@ static PetscErrorCode TaoSetUp_OWLQN(Tao tao)
 {
   TAO_OWLQN      *lmP = (TAO_OWLQN *)tao->data;
   PetscInt       n,N;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Existence of tao->solution checked in TaoSetUp() */
@@ -256,7 +252,6 @@ static PetscErrorCode TaoSetUp_OWLQN(Tao tao)
 static PetscErrorCode TaoDestroy_OWLQN(Tao tao)
 {
   TAO_OWLQN      *lmP = (TAO_OWLQN *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -274,7 +269,6 @@ static PetscErrorCode TaoDestroy_OWLQN(Tao tao)
 static PetscErrorCode TaoSetFromOptions_OWLQN(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_OWLQN      *lmP = (TAO_OWLQN *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Orthant-Wise Limited-memory method for Quasi-Newton unconstrained optimization"));
@@ -289,7 +283,6 @@ static PetscErrorCode TaoView_OWLQN(Tao tao, PetscViewer viewer)
 {
   TAO_OWLQN      *lm = (TAO_OWLQN *)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
@@ -316,7 +309,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_OWLQN(Tao tao)
 {
   TAO_OWLQN      *lmP;
   const char     *owarmijo_type = TAOLINESEARCHOWARMIJO;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetUp_OWLQN;
