@@ -234,13 +234,12 @@ static inline
 PetscErrorCode TaoApplyLineSearch(Tao tao, PetscReal* f, PetscReal *s)
 {
   TaoLineSearchConvergedReason ls_reason;
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidRealPointer(f,2);
   PetscValidRealPointer(s,3);
   CHKERRQ(TaoLineSearchApply(tao->linesearch,tao->solution,f,tao->gradient,tao->stepdirection,s,&ls_reason));
-  if (ls_reason != TAOLINESEARCH_SUCCESS && ls_reason != TAOLINESEARCH_SUCCESS_USER) SETERRQ(PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Linesearch failed");
+  PetscCheck(ls_reason == TAOLINESEARCH_SUCCESS || ls_reason == TAOLINESEARCH_SUCCESS_USER,PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Linesearch failed");
   CHKERRQ(TaoAddLineSearchCounts(tao));
   PetscFunctionReturn(0);
 }
