@@ -546,7 +546,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
       PetscCheckFalse(vorder-test > PETSC_SQRT_MACHINE_EPSILON,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected value for vorder: %g (%D)",vorder,test);
       ord  = 1;
     }
-    PetscAssert(test%ord != 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected number of edge dofs %D connected with nodal dof %D with order %D",test,i,ord);
+    PetscAssert(test%ord != 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected number of edge dofs %" PetscInt_FMT " connected with nodal dof %" PetscInt_FMT " with order %" PetscInt_FMT,test,i,ord);
     for (j=ii[i];j<ii[i+1] && sneighs;j++) {
       if (PetscBTLookup(btbd,jj[j])) {
         bdir = PETSC_TRUE;
