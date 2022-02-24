@@ -35,17 +35,17 @@ int main(int argc,char **argv)
   PetscBool   sametype,flag,symmetric = PETSC_FALSE,skew = PETSC_FALSE,real = PETSC_FALSE,pattern = PETSC_FALSE,aijonly = PETSC_FALSE;
 
   PetscInitialize(&argc,&argv,(char *)0,help);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
   PetscCheckFalse(size != 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
-  ierr = PetscOptionsGetString(NULL,NULL,"-fin",filein,sizeof(filein),&flag);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetString(NULL,NULL,"-fin",filein,sizeof(filein),&flag));
   PetscCheckFalse(!flag,PETSC_COMM_SELF,PETSC_ERR_USER_INPUT,"Please use -fin <filename> to specify the input file name!");
-  ierr = PetscOptionsGetString(NULL,NULL,"-fout",fileout,sizeof(fileout),&flag);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetString(NULL,NULL,"-fout",fileout,sizeof(fileout),&flag));
   PetscCheckFalse(!flag,PETSC_COMM_SELF,PETSC_ERR_USER_INPUT,"Please use -fout <filename> to specify the output file name!");
-  ierr = PetscOptionsGetBool(NULL,NULL,"-aij_only",&aijonly,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetBool(NULL,NULL,"-aij_only",&aijonly,NULL));
 
   /* Read in matrix */
-  ierr = PetscFOpen(PETSC_COMM_SELF,filein,"r",&file);CHKERRQ(ierr);
+  CHKERRQ(PetscFOpen(PETSC_COMM_SELF,filein,"r",&file));
 
   if (mm_read_banner(file, &matcode) != 0)
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Could not process Matrix Market banner.");
@@ -65,11 +65,11 @@ int main(int argc,char **argv)
   if (mm_read_mtx_crd_size(file, &M, &N, &nz))
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Size of sparse matrix is wrong.");
 
-  ierr = mm_write_banner(stdout, matcode);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"M: %d, N: %d, nnz: %d\n",M,N,nz);CHKERRQ(ierr);
+  CHKERRQ(mm_write_banner(stdout, matcode));
+  CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"M: %d, N: %d, nnz: %d\n",M,N,nz));
 
   /* Reseve memory for matrices */
-  ierr = PetscMalloc4(nz,&ia,nz,&ja,nz,&val,M,&rownz);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc4(nz,&ia,nz,&ja,nz,&val,M,&rownz));
   for (i=0; i<M; i++) rownz[i] = 1; /* Since we will add 0.0 to diagonal entries */
 
   /* NOTE: when reading in doubles, ANSI C requires the use of the "l"  */
@@ -93,65 +93,65 @@ int main(int argc,char **argv)
       } else rownz[ia[i]]++;
     }
   }
-  ierr = PetscFClose(PETSC_COMM_SELF,file);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Reading matrix completes.\n");CHKERRQ(ierr);
+  CHKERRQ(PetscFClose(PETSC_COMM_SELF,file));
+  CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"Reading matrix completes.\n"));
 
   /* Create, preallocate, and then assemble the matrix */
-  ierr = MatCreate(PETSC_COMM_SELF,&A);CHKERRQ(ierr);
-  ierr = MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,M,N);CHKERRQ(ierr);
+  CHKERRQ(MatCreate(PETSC_COMM_SELF,&A));
+  CHKERRQ(MatSetSizes(A,PETSC_DECIDE,PETSC_DECIDE,M,N));
 
   if (symmetric && !aijonly) {
-    ierr = MatSetType(A,MATSEQSBAIJ);CHKERRQ(ierr);
-    ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-    ierr = MatSetUp(A);CHKERRQ(ierr);
-    ierr = MatSeqSBAIJSetPreallocation(A,1,0,rownz);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQSBAIJ,&sametype);CHKERRQ(ierr);
+    CHKERRQ(MatSetType(A,MATSEQSBAIJ));
+    CHKERRQ(MatSetFromOptions(A));
+    CHKERRQ(MatSetUp(A));
+    CHKERRQ(MatSeqSBAIJSetPreallocation(A,1,0,rownz));
+    CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATSEQSBAIJ,&sametype));
     PetscCheckFalse(!sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
   } else {
-    ierr = MatSetType(A,MATSEQAIJ);CHKERRQ(ierr);
-    ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-    ierr = MatSetUp(A);CHKERRQ(ierr);
-    ierr = MatSeqAIJSetPreallocation(A,0,rownz);CHKERRQ(ierr);
-    ierr = PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&sametype);CHKERRQ(ierr);
+    CHKERRQ(MatSetType(A,MATSEQAIJ));
+    CHKERRQ(MatSetFromOptions(A));
+    CHKERRQ(MatSetUp(A));
+    CHKERRQ(MatSeqAIJSetPreallocation(A,0,rownz));
+    CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&sametype));
     PetscCheckFalse(!sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
   }
 
   /* Add zero to diagonals, in case the matrix missing diagonals */
   for (j=0; j<M; j++)  {
-    ierr = MatSetValues(A,1,&j,1,&j,&zero,INSERT_VALUES);CHKERRQ(ierr);
+    CHKERRQ(MatSetValues(A,1,&j,1,&j,&zero,INSERT_VALUES));
   }
   /* Add values to the matrix, these correspond to lower triangular part for symmetric or skew matrices */
   for (j=0; j<nz; j++) {
-    ierr = MatSetValues(A,1,&ia[j],1,&ja[j],&val[j],INSERT_VALUES);CHKERRQ(ierr);
+    CHKERRQ(MatSetValues(A,1,&ia[j],1,&ja[j],&val[j],INSERT_VALUES));
   }
 
   /* Add values to upper triangular part for some cases */
   if (symmetric && aijonly) {
     /* MatrixMarket matrix stores symm matrix in lower triangular part. Take its transpose */
     for (j=0; j<nz; j++) {
-      ierr = MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES);CHKERRQ(ierr);
+      CHKERRQ(MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES));
     }
   }
   if (skew) {
     for (j=0; j<nz; j++) {
       val[j] = -val[j];
-      ierr = MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES);CHKERRQ(ierr);
+      CHKERRQ(MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES));
     }
   }
 
-  ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  CHKERRQ(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
+  CHKERRQ(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
 
   /* Write out matrix */
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Writing matrix to binary file %s using PETSc %s format ...\n",fileout,(symmetric && !aijonly)?"SBAIJ":"AIJ");CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,fileout,FILE_MODE_WRITE,&view);CHKERRQ(ierr);
-  ierr = MatView(A,view);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&view);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_SELF,"Writing matrix completes.\n");CHKERRQ(ierr);
+  CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"Writing matrix to binary file %s using PETSc %s format ...\n",fileout,(symmetric && !aijonly)?"SBAIJ":"AIJ"));
+  CHKERRQ(PetscViewerBinaryOpen(PETSC_COMM_SELF,fileout,FILE_MODE_WRITE,&view));
+  CHKERRQ(MatView(A,view));
+  CHKERRQ(PetscViewerDestroy(&view));
+  CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"Writing matrix completes.\n"));
 
-  ierr = PetscFree4(ia,ja,val,rownz);CHKERRQ(ierr);
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = PetscFinalize();CHKERRQ(ierr);
+  CHKERRQ(PetscFree4(ia,ja,val,rownz));
+  CHKERRQ(MatDestroy(&A));
+  CHKERRQ(PetscFinalize());
   return 0;
 }
 

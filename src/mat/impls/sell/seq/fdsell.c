@@ -20,10 +20,10 @@ PetscErrorCode MatGetColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool symm
   *nn = n;
   if (!ia) PetscFunctionReturn(0);
 
-  ierr = PetscCalloc1(n+1,&collengths);CHKERRQ(ierr);
-  ierr = PetscMalloc1(n+1,&cia);CHKERRQ(ierr);
-  ierr = PetscMalloc1(a->nz+1,&cja);CHKERRQ(ierr);
-  ierr = PetscMalloc1(a->nz+1,&cspidx);CHKERRQ(ierr);
+  CHKERRQ(PetscCalloc1(n+1,&collengths));
+  CHKERRQ(PetscMalloc1(n+1,&cia));
+  CHKERRQ(PetscMalloc1(a->nz+1,&cja));
+  CHKERRQ(PetscMalloc1(a->nz+1,&cspidx));
 
   totalslices = A->rmap->n/8+((A->rmap->n & 0x07)?1:0); /* floor(n/8) */
   for (i=0; i<totalslices; i++) { /* loop over slices */
@@ -37,7 +37,7 @@ PetscErrorCode MatGetColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool symm
   for (i=0; i<n; i++) {
     cia[i+1] = cia[i] + collengths[i];
   }
-  ierr = PetscArrayzero(collengths,n);CHKERRQ(ierr);
+  CHKERRQ(PetscArrayzero(collengths,n));
 
   for (i=0; i<totalslices; i++) { /* loop over slices */
     for (j=a->sliidx[i],row=0; j<a->sliidx[i+1]; j++,row=((row+1)&0x07)) {
@@ -51,7 +51,7 @@ PetscErrorCode MatGetColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool symm
     }
   }
 
-  ierr   = PetscFree(collengths);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(collengths));
   *ia    = cia; *ja = cja;
   *spidx = cspidx;
   PetscFunctionReturn(0);
@@ -64,8 +64,8 @@ PetscErrorCode MatRestoreColumnIJ_SeqSELL_Color(Mat A,PetscInt oshift,PetscBool 
   PetscFunctionBegin;
 
   if (!ia) PetscFunctionReturn(0);
-  ierr = PetscFree(*ia);CHKERRQ(ierr);
-  ierr = PetscFree(*ja);CHKERRQ(ierr);
-  ierr = PetscFree(*spidx);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(*ia));
+  CHKERRQ(PetscFree(*ja));
+  CHKERRQ(PetscFree(*spidx));
   PetscFunctionReturn(0);
 }

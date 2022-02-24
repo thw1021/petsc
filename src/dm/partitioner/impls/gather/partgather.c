@@ -9,7 +9,7 @@ static PetscErrorCode PetscPartitionerDestroy_Gather(PetscPartitioner part)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(part->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(part->data));
   PetscFunctionReturn(0);
 }
 
@@ -27,8 +27,8 @@ static PetscErrorCode PetscPartitionerView_Gather(PetscPartitioner part, PetscVi
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  if (iascii) {ierr = PetscPartitionerView_Gather_ASCII(part, viewer);CHKERRQ(ierr);}
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
+  if (iascii) CHKERRQ(PetscPartitionerView_Gather_ASCII(part, viewer));
   PetscFunctionReturn(0);
 }
 
@@ -38,9 +38,9 @@ static PetscErrorCode PetscPartitionerPartition_Gather(PetscPartitioner part, Pe
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = ISCreateStride(PETSC_COMM_SELF, numVertices, 0, 1, partition);CHKERRQ(ierr);
-  ierr = PetscSectionSetDof(partSection,0,numVertices);CHKERRQ(ierr);
-  for (np = 1; np < nparts; ++np) {ierr = PetscSectionSetDof(partSection, np, 0);CHKERRQ(ierr);}
+  CHKERRQ(ISCreateStride(PETSC_COMM_SELF, numVertices, 0, 1, partition));
+  CHKERRQ(PetscSectionSetDof(partSection,0,numVertices));
+  for (np = 1; np < nparts; ++np) CHKERRQ(PetscSectionSetDof(partSection, np, 0));
   PetscFunctionReturn(0);
 }
 
@@ -69,10 +69,9 @@ PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Gather(PetscPartitioner part)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
-  ierr       = PetscNewLog(part, &p);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(part, &p));
   part->data = p;
 
-  ierr = PetscPartitionerInitialize_Gather(part);CHKERRQ(ierr);
+  CHKERRQ(PetscPartitionerInitialize_Gather(part));
   PetscFunctionReturn(0);
 }
-

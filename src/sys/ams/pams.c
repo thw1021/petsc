@@ -72,7 +72,7 @@ PetscErrorCode  PetscSAWsBlock(void)
   while (block) {
     SAWs_Unlock();
     ierr = PetscInfo(NULL,"Blocking on SAWs\n");
-    ierr = PetscSleep(.3);CHKERRQ(ierr);
+    CHKERRQ(PetscSleep(.3));
     SAWs_Lock();
   }
   SAWs_Unlock();
@@ -104,7 +104,7 @@ PetscErrorCode  PetscObjectSAWsBlock(PetscObject obj)
   PetscValidHeader(obj,1);
 
   if (!obj->amspublishblock || !obj->amsmem) PetscFunctionReturn(0);
-  ierr = PetscSAWsBlock();CHKERRQ(ierr);
+  CHKERRQ(PetscSAWsBlock());
   PetscFunctionReturn(0);
 }
 
@@ -140,8 +140,7 @@ PetscErrorCode PetscObjectSAWsViewOff(PetscObject obj)
   PetscFunctionBegin;
   if (obj->classid == PETSC_VIEWER_CLASSID) PetscFunctionReturn(0);
   if (!obj->amsmem) PetscFunctionReturn(0);
-  ierr = PetscSNPrintf(dir,1024,"/PETSc/Objects/%s",obj->name);CHKERRQ(ierr);
+  CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Objects/%s",obj->name));
   PetscStackCallSAWs(SAWs_Delete,(dir));
   PetscFunctionReturn(0);
 }
-

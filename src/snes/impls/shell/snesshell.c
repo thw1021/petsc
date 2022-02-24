@@ -32,7 +32,7 @@ PetscErrorCode  SNESShellSetSolve(SNES snes,PetscErrorCode (*solve)(SNES,Vec))
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
-  ierr = PetscTryMethod(snes,"SNESShellSetSolve_C",(SNES,PetscErrorCode (*)(SNES,Vec)),(snes,solve));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(snes,"SNESShellSetSolve_C",(SNES,PetscErrorCode (*)(SNES,Vec)),(snes,solve)));
   PetscFunctionReturn(0);
 }
 
@@ -47,8 +47,8 @@ PetscErrorCode SNESDestroy_Shell(SNES snes)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = SNESReset_Shell(snes);CHKERRQ(ierr);
-  ierr = PetscFree(snes->data);CHKERRQ(ierr);
+  CHKERRQ(SNESReset_Shell(snes));
+  CHKERRQ(PetscFree(snes->data));
   PetscFunctionReturn(0);
 }
 
@@ -63,7 +63,7 @@ PetscErrorCode SNESSetFromOptions_Shell(PetscOptionItems *PetscOptionsObject,SNE
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsHead(PetscOptionsObject,"SNES Shell options");CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SNES Shell options"));
   PetscFunctionReturn(0);
 }
 
@@ -99,7 +99,7 @@ PetscErrorCode  SNESShellGetContext(SNES snes,void *ctx)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidPointer(ctx,2);
-  ierr = PetscObjectTypeCompare((PetscObject)snes,SNESSHELL,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)snes,SNESSHELL,&flg));
   if (!flg) *(void**)ctx = NULL;
   else      *(void**)ctx = ((SNES_Shell*)(snes->data))->ctx;
   PetscFunctionReturn(0);
@@ -130,7 +130,7 @@ PetscErrorCode  SNESShellSetContext(SNES snes,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)snes,SNESSHELL,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)snes,SNESSHELL,&flg));
   if (flg) shell->ctx = ctx;
   PetscFunctionReturn(0);
 }
@@ -143,7 +143,7 @@ PetscErrorCode SNESSolve_Shell(SNES snes)
   PetscFunctionBegin;
   PetscCheckFalse(!shell->solve,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE,"Must call SNESShellSetSolve() first");
   snes->reason = SNES_CONVERGED_ITS;
-  ierr         = (*shell->solve)(snes,snes->vec_sol);CHKERRQ(ierr);
+  CHKERRQ((*shell->solve)(snes,snes->vec_sol));
   PetscFunctionReturn(0);
 }
 
@@ -182,8 +182,8 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Shell(SNES snes)
 
   snes->alwayscomputesfinalresidual = PETSC_FALSE;
 
-  ierr       = PetscNewLog(snes,&shell);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(snes,&shell));
   snes->data = (void*) shell;
-  ierr       = PetscObjectComposeFunction((PetscObject)snes,"SNESShellSetSolve_C",SNESShellSetSolve_Shell);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)snes,"SNESShellSetSolve_C",SNESShellSetSolve_Shell));
   PetscFunctionReturn(0);
 }

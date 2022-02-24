@@ -8,12 +8,12 @@ static PetscErrorCode DMPlexTransformView_Filter(DMPlexTransform tr, PetscViewer
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
     const char *name;
 
-    ierr = PetscObjectGetName((PetscObject) tr, &name);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Filter transformation %s\n", name ? name : "");CHKERRQ(ierr);
+    CHKERRQ(PetscObjectGetName((PetscObject) tr, &name));
+    CHKERRQ(PetscViewerASCIIPrintf(viewer, "Filter transformation %s\n", name ? name : ""));
   } else {
     SETERRQ(PetscObjectComm((PetscObject) tr), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlexTransform writing", ((PetscObject) viewer)->type_name);
   }
@@ -32,8 +32,8 @@ static PetscErrorCode DMPlexTransformDestroy_Filter(DMPlexTransform tr)
   PetscErrorCode          ierr;
 
   PetscFunctionBegin;
-  ierr = DMLabelDestroy(&f->label);CHKERRQ(ierr);
-  ierr = PetscFree(f);CHKERRQ(ierr);
+  CHKERRQ(DMLabelDestroy(&f->label));
+  CHKERRQ(PetscFree(f));
   PetscFunctionReturn(0);
 }
 
@@ -61,9 +61,9 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Filter(DMPlexTransform tr)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
-  ierr = PetscNewLog(tr, &f);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(tr, &f));
   tr->data = f;
 
-  ierr = DMPlexTransformInitialize_Filter(tr);CHKERRQ(ierr);
+  CHKERRQ(DMPlexTransformInitialize_Filter(tr));
   PetscFunctionReturn(0);
 }

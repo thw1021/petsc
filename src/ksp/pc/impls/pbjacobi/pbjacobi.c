@@ -24,12 +24,12 @@ static PetscErrorCode PCApply_PBJacobi_1(PC pc,Vec x,Vec y)
   PetscScalar       *yy;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) yy[i] = diag[i]*xx[i];
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(m);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(m));
   PetscFunctionReturn(0);
 }
 
@@ -43,17 +43,17 @@ static PetscErrorCode PCApply_PBJacobi_2(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     x0        = xx[2*i]; x1 = xx[2*i+1];
     yy[2*i]   = diag[0]*x0 + diag[2]*x1;
     yy[2*i+1] = diag[1]*x0 + diag[3]*x1;
     diag     += 4;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(6.0*m);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(6.0*m));
   PetscFunctionReturn(0);
 }
 static PetscErrorCode PCApply_PBJacobi_3(PC pc,Vec x,Vec y)
@@ -66,8 +66,8 @@ static PetscErrorCode PCApply_PBJacobi_3(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     x0 = xx[3*i]; x1 = xx[3*i+1]; x2 = xx[3*i+2];
 
@@ -76,9 +76,9 @@ static PetscErrorCode PCApply_PBJacobi_3(PC pc,Vec x,Vec y)
     yy[3*i+2] = diag[2]*x0 + diag[5]*x1 + diag[8]*x2;
     diag     += 9;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(15.0*m);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(15.0*m));
   PetscFunctionReturn(0);
 }
 static PetscErrorCode PCApply_PBJacobi_4(PC pc,Vec x,Vec y)
@@ -91,8 +91,8 @@ static PetscErrorCode PCApply_PBJacobi_4(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     x0 = xx[4*i]; x1 = xx[4*i+1]; x2 = xx[4*i+2]; x3 = xx[4*i+3];
 
@@ -102,9 +102,9 @@ static PetscErrorCode PCApply_PBJacobi_4(PC pc,Vec x,Vec y)
     yy[4*i+3] = diag[3]*x0 + diag[7]*x1 + diag[11]*x2 + diag[15]*x3;
     diag     += 16;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(28.0*m);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(28.0*m));
   PetscFunctionReturn(0);
 }
 static PetscErrorCode PCApply_PBJacobi_5(PC pc,Vec x,Vec y)
@@ -117,8 +117,8 @@ static PetscErrorCode PCApply_PBJacobi_5(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     x0 = xx[5*i]; x1 = xx[5*i+1]; x2 = xx[5*i+2]; x3 = xx[5*i+3]; x4 = xx[5*i+4];
 
@@ -129,9 +129,9 @@ static PetscErrorCode PCApply_PBJacobi_5(PC pc,Vec x,Vec y)
     yy[5*i+4] = diag[4]*x0 + diag[9]*x1 + diag[14]*x2 + diag[19]*x3 + diag[24]*x4;
     diag     += 25;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(45.0*m);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(45.0*m));
   PetscFunctionReturn(0);
 }
 static PetscErrorCode PCApply_PBJacobi_6(PC pc,Vec x,Vec y)
@@ -144,8 +144,8 @@ static PetscErrorCode PCApply_PBJacobi_6(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     x0 = xx[6*i]; x1 = xx[6*i+1]; x2 = xx[6*i+2]; x3 = xx[6*i+3]; x4 = xx[6*i+4]; x5 = xx[6*i+5];
 
@@ -157,9 +157,9 @@ static PetscErrorCode PCApply_PBJacobi_6(PC pc,Vec x,Vec y)
     yy[6*i+5] = diag[5]*x0 + diag[11]*x1 + diag[17]*x2  + diag[23]*x3 + diag[29]*x4 + diag[35]*x5;
     diag     += 36;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(66.0*m);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(66.0*m));
   PetscFunctionReturn(0);
 }
 static PetscErrorCode PCApply_PBJacobi_7(PC pc,Vec x,Vec y)
@@ -172,8 +172,8 @@ static PetscErrorCode PCApply_PBJacobi_7(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     x0 = xx[7*i]; x1 = xx[7*i+1]; x2 = xx[7*i+2]; x3 = xx[7*i+3]; x4 = xx[7*i+4]; x5 = xx[7*i+5]; x6 = xx[7*i+6];
 
@@ -186,9 +186,9 @@ static PetscErrorCode PCApply_PBJacobi_7(PC pc,Vec x,Vec y)
     yy[7*i+6] = diag[6]*x0 + diag[13]*x1 + diag[20]*x2  + diag[27]*x3 + diag[34]*x4 + diag[41]*x5 + diag[48]*x6;
     diag     += 49;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(91.0*m);CHKERRQ(ierr); /* 2*bs2 - bs */
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(91.0*m)); /* 2*bs2 - bs */
   PetscFunctionReturn(0);
 }
 static PetscErrorCode PCApply_PBJacobi_N(PC pc,Vec x,Vec y)
@@ -203,8 +203,8 @@ static PetscErrorCode PCApply_PBJacobi_N(PC pc,Vec x,Vec y)
   const PetscScalar *xx;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     for (ib=0; ib<bs; ib++) {
       PetscScalar rowsum = 0;
@@ -215,9 +215,9 @@ static PetscErrorCode PCApply_PBJacobi_N(PC pc,Vec x,Vec y)
     }
     diag += bs*bs;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops((2.0*bs*bs-bs)*m);CHKERRQ(ierr); /* 2*bs2 - bs */
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops((2.0*bs*bs-bs)*m)); /* 2*bs2 - bs */
   PetscFunctionReturn(0);
 }
 
@@ -231,8 +231,8 @@ static PetscErrorCode PCApplyTranspose_PBJacobi_N(PC pc,Vec x,Vec y)
   PetscScalar       *yy;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&yy);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&xx));
+  CHKERRQ(VecGetArray(y,&yy));
   for (i=0; i<m; i++) {
     for (j=0; j<bs; j++) yy[i*bs+j] = 0.;
     for (j=0; j<bs; j++) {
@@ -242,9 +242,9 @@ static PetscErrorCode PCApplyTranspose_PBJacobi_N(PC pc,Vec x,Vec y)
     }
     diag += bs*bs;
   }
-  ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
-  ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
-  ierr = PetscLogFlops(m*bs*(2*bs-1));CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(x,&xx));
+  CHKERRQ(VecRestoreArray(y,&yy));
+  CHKERRQ(PetscLogFlops(m*bs*(2*bs-1)));
   PetscFunctionReturn(0);
 }
 
@@ -258,12 +258,12 @@ static PetscErrorCode PCSetUp_PBJacobi(PC pc)
   PetscInt       nlocal;
 
   PetscFunctionBegin;
-  ierr = MatInvertBlockDiagonal(A,&jac->diag);CHKERRQ(ierr);
-  ierr = MatFactorGetError(A,&err);CHKERRQ(ierr);
+  CHKERRQ(MatInvertBlockDiagonal(A,&jac->diag));
+  CHKERRQ(MatFactorGetError(A,&err));
   if (err) pc->failedreason = (PCFailedReason)err;
 
-  ierr = MatGetBlockSize(A,&jac->bs);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A,&nlocal,NULL);CHKERRQ(ierr);
+  CHKERRQ(MatGetBlockSize(A,&jac->bs));
+  CHKERRQ(MatGetLocalSize(A,&nlocal,NULL));
   jac->mbs = nlocal/jac->bs;
   switch (jac->bs) {
   case 1:
@@ -303,7 +303,7 @@ static PetscErrorCode PCDestroy_PBJacobi(PC pc)
   /*
       Free the private data structure that was hanging off the PC
   */
-  ierr = PetscFree(pc->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(pc->data));
   PetscFunctionReturn(0);
 }
 
@@ -314,9 +314,9 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
   PetscBool      iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  point-block size %D\n",jac->bs);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"  point-block size %D\n",jac->bs));
   }
   PetscFunctionReturn(0);
 }
@@ -358,7 +358,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_PBJacobi(PC pc)
      Creates the private data structure for this preconditioner and
      attach it to the PC object.
   */
-  ierr     = PetscNewLog(pc,&jac);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(pc,&jac));
   pc->data = (void*)jac;
 
   /*
