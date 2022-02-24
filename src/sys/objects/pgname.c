@@ -26,8 +26,7 @@ PetscErrorCode  PetscObjectGetName(PetscObject obj,const char *name[])
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   PetscValidPointer(name,2);
-  ierr  = PetscObjectName(obj);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectName(obj));
   *name = obj->name;
   PetscFunctionReturn(0);
 }
-

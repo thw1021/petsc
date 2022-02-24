@@ -12,7 +12,7 @@ class WrapperHtool : public htool::VirtualGenerator<PetscScalar> {
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    ierr = kernel(dim,M,N,rows,cols,ptr,ctx);CHKERRABORT(PETSC_COMM_SELF,ierr);
+    CHKERRABORT(PETSC_COMM_SELF,kernel(dim,M,N,rows,cols,ptr,ctx));
     PetscFunctionReturnVoid();
   }
 };

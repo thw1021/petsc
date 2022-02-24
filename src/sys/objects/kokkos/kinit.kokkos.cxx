@@ -29,8 +29,8 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     PetscDeviceContext dctx;
     PetscErrorCode     ierr;
 
-    ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
-    ierr = PetscMPIIntCast(dctx->device->deviceId,&args.device_id);CHKERRQ(ierr);
+    CHKERRQ(PetscDeviceContextGetCurrentContext(&dctx));
+    CHKERRQ(PetscMPIIntCast(dctx->device->deviceId,&args.device_id));
 #endif
 
     args.disable_warnings = !PetscDefined(HAVE_KOKKOS_INIT_WARNINGS);

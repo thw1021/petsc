@@ -61,8 +61,7 @@ PetscErrorCode  PetscDrawOpenX(MPI_Comm comm,const char display[],const char tit
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscDrawCreate(comm,display,title,x,y,w,h,draw);CHKERRQ(ierr);
-  ierr = PetscDrawSetType(*draw,PETSC_DRAW_X);CHKERRQ(ierr);
+  CHKERRQ(PetscDrawCreate(comm,display,title,x,y,w,h,draw));
+  CHKERRQ(PetscDrawSetType(*draw,PETSC_DRAW_X));
   PetscFunctionReturn(0);
 }
-

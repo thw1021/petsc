@@ -28,8 +28,8 @@ static PetscErrorCode PetscSegBufferAlloc_Private(PetscSegBuffer seg,size_t coun
   s = seg->head;
   /* Grow at least fast enough to hold next item, like Fibonacci otherwise (up to 1MB chunks) */
   alloc = PetscMax(s->used+count,PetscMin(1000000/seg->unitbytes+1,s->alloc+s->tailused));
-  ierr  = PetscMalloc(offsetof(struct _PetscSegBufferLink,u)+alloc*seg->unitbytes,&newlink);CHKERRQ(ierr);
-  ierr  = PetscMemzero(newlink,offsetof(struct _PetscSegBufferLink,u));CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc(offsetof(struct _PetscSegBufferLink,u)+alloc*seg->unitbytes,&newlink));
+  CHKERRQ(PetscMemzero(newlink,offsetof(struct _PetscSegBufferLink,u)));
 
   newlink->tailused  = s->used + s->tailused;
   newlink->tail      = s;
@@ -60,9 +60,9 @@ PetscErrorCode PetscSegBufferCreate(size_t unitbytes,size_t expected,PetscSegBuf
   struct _PetscSegBufferLink *head;
 
   PetscFunctionBegin;
-  ierr = PetscNew(seg);CHKERRQ(ierr);
-  ierr = PetscMalloc(offsetof(struct _PetscSegBufferLink,u)+expected*unitbytes,&head);CHKERRQ(ierr);
-  ierr = PetscMemzero(head,offsetof(struct _PetscSegBufferLink,u));CHKERRQ(ierr);
+  CHKERRQ(PetscNew(seg));
+  CHKERRQ(PetscMalloc(offsetof(struct _PetscSegBufferLink,u)+expected*unitbytes,&head));
+  CHKERRQ(PetscMemzero(head,offsetof(struct _PetscSegBufferLink,u)));
 
   head->alloc       = expected;
   (*seg)->unitbytes = unitbytes;
@@ -93,7 +93,7 @@ PetscErrorCode PetscSegBufferGet(PetscSegBuffer seg,size_t count,void *buf)
 
   PetscFunctionBegin;
   s = seg->head;
-  if (PetscUnlikely(s->used + count > s->alloc)) {ierr = PetscSegBufferAlloc_Private(seg,count);CHKERRQ(ierr);}
+  if (PetscUnlikely(s->used + count > s->alloc)) CHKERRQ(PetscSegBufferAlloc_Private(seg,count));
   s = seg->head;
   *(char**)buf = &s->u.array[s->used*seg->unitbytes];
   s->used += count;
@@ -121,10 +121,10 @@ PetscErrorCode PetscSegBufferDestroy(PetscSegBuffer *seg)
   if (!*seg) PetscFunctionReturn(0);
   for (s=(*seg)->head; s;) {
     struct _PetscSegBufferLink *tail = s->tail;
-    ierr = PetscFree(s);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(s));
     s = tail;
   }
-  ierr = PetscFree(*seg);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(*seg));
   PetscFunctionReturn(0);
 }
 
@@ -152,12 +152,12 @@ PetscErrorCode PetscSegBufferExtractTo(PetscSegBuffer seg,void *contig)
   unitbytes = seg->unitbytes;
   s = seg->head;
   ptr  = ((char*)contig) + s->tailused*unitbytes;
-  ierr = PetscMemcpy(ptr,s->u.array,s->used*unitbytes);CHKERRQ(ierr);
+  CHKERRQ(PetscMemcpy(ptr,s->u.array,s->used*unitbytes));
   for (t=s->tail; t;) {
     struct _PetscSegBufferLink *tail = t->tail;
     ptr -= t->used*unitbytes;
-    ierr = PetscMemcpy(ptr,t->u.array,t->used*unitbytes);CHKERRQ(ierr);
-    ierr = PetscFree(t);CHKERRQ(ierr);
+    CHKERRQ(PetscMemcpy(ptr,t->u.array,t->used*unitbytes));
+    CHKERRQ(PetscFree(t));
     t    = tail;
   }
   PetscCheckFalse(ptr != contig,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Tail count does not match");
@@ -193,8 +193,8 @@ PetscErrorCode PetscSegBufferExtractAlloc(PetscSegBuffer seg,void *contiguous)
   PetscFunctionBegin;
   s = seg->head;
 
-  ierr = PetscMalloc((s->used+s->tailused)*seg->unitbytes,&contig);CHKERRQ(ierr);
-  ierr = PetscSegBufferExtractTo(seg,contig);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc((s->used+s->tailused)*seg->unitbytes,&contig));
+  CHKERRQ(PetscSegBufferExtractTo(seg,contig));
   *(void**)contiguous = contig;
   PetscFunctionReturn(0);
 }
@@ -224,11 +224,11 @@ PetscErrorCode PetscSegBufferExtractInPlace(PetscSegBuffer seg,void *contig)
   if (PetscUnlikely(head->tail)) {
     PetscSegBuffer newseg;
 
-    ierr = PetscSegBufferCreate(seg->unitbytes,head->used+head->tailused,&newseg);CHKERRQ(ierr);
-    ierr = PetscSegBufferExtractTo(seg,newseg->head->u.array);CHKERRQ(ierr);
+    CHKERRQ(PetscSegBufferCreate(seg->unitbytes,head->used+head->tailused,&newseg));
+    CHKERRQ(PetscSegBufferExtractTo(seg,newseg->head->u.array));
     seg->head = newseg->head;
     newseg->head = head;
-    ierr = PetscSegBufferDestroy(&newseg);CHKERRQ(ierr);
+    CHKERRQ(PetscSegBufferDestroy(&newseg));
     head = seg->head;
   }
   *(char**)contig = head->u.array;

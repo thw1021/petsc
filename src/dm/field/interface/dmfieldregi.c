@@ -22,9 +22,9 @@ PetscErrorCode  DMFieldRegisterAll(void)
   PetscFunctionBegin;
   if (DMFieldRegisterAllCalled) PetscFunctionReturn(0);
   DMFieldRegisterAllCalled = PETSC_TRUE;
-  ierr = DMFieldRegister(DMFIELDDA,    DMFieldCreate_DA);CHKERRQ(ierr);
-  ierr = DMFieldRegister(DMFIELDDS,    DMFieldCreate_DS);CHKERRQ(ierr);
-  ierr = DMFieldRegister(DMFIELDSHELL, DMFieldCreate_Shell);CHKERRQ(ierr);
+  CHKERRQ(DMFieldRegister(DMFIELDDA,    DMFieldCreate_DA));
+  CHKERRQ(DMFieldRegister(DMFIELDDS,    DMFieldCreate_DS));
+  CHKERRQ(DMFieldRegister(DMFIELDSHELL, DMFieldCreate_Shell));
   PetscFunctionReturn(0);
 }
 
@@ -57,7 +57,6 @@ PetscErrorCode  DMFieldRegister(const char sname[],PetscErrorCode (*function)(DM
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFunctionListAdd(&DMFieldList,sname,function);CHKERRQ(ierr);
+  CHKERRQ(PetscFunctionListAdd(&DMFieldList,sname,function));
   PetscFunctionReturn(0);
 }
-

@@ -64,8 +64,8 @@ PetscErrorCode MatMult_SeqFFTW(Mat A,Vec x,Vec y)
   PetscInt       ndim = fft->ndim,*dim = fft->dim;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&x_array);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&y_array);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&x_array));
+  CHKERRQ(VecGetArray(y,&y_array));
   if (!fftw->p_forward) { /* create a plan, then excute it */
     switch (ndim) {
     case 1:
@@ -135,8 +135,8 @@ PetscErrorCode MatMult_SeqFFTW(Mat A,Vec x,Vec y)
       fftw_execute(fftw->p_forward);
     }
   }
-  ierr = VecRestoreArray(y,&y_array);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(x,&x_array);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(y,&y_array));
+  CHKERRQ(VecRestoreArrayRead(x,&x_array));
   PetscFunctionReturn(0);
 }
 
@@ -166,8 +166,8 @@ PetscErrorCode MatMultTranspose_SeqFFTW(Mat A,Vec x,Vec y)
 #endif
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(x,&x_array);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&y_array);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(x,&x_array));
+  CHKERRQ(VecGetArray(y,&y_array));
   if (!fftw->p_backward) { /* create a plan, then excute it */
     switch (ndim) {
     case 1:
@@ -217,8 +217,8 @@ PetscErrorCode MatMultTranspose_SeqFFTW(Mat A,Vec x,Vec y)
       fftw_execute(fftw->p_backward);
     }
   }
-  ierr = VecRestoreArray(y,&y_array);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(x,&x_array);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(y,&y_array));
+  CHKERRQ(VecRestoreArrayRead(x,&x_array));
   PetscFunctionReturn(0);
 }
 
@@ -242,9 +242,9 @@ PetscErrorCode MatMult_MPIFFTW(Mat A,Vec x,Vec y)
   MPI_Comm       comm;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(x,&x_array);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&y_array);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
+  CHKERRQ(VecGetArrayRead(x,&x_array));
+  CHKERRQ(VecGetArray(y,&y_array));
   if (!fftw->p_forward) { /* create a plan, then excute it */
     switch (ndim) {
     case 1:
@@ -288,8 +288,8 @@ PetscErrorCode MatMult_MPIFFTW(Mat A,Vec x,Vec y)
       fftw_execute(fftw->p_forward);
     }
   }
-  ierr = VecRestoreArray(y,&y_array);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(x,&x_array);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(y,&y_array));
+  CHKERRQ(VecRestoreArrayRead(x,&x_array));
   PetscFunctionReturn(0);
 }
 
@@ -313,9 +313,9 @@ PetscErrorCode MatMultTranspose_MPIFFTW(Mat A,Vec x,Vec y)
   MPI_Comm       comm;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = VecGetArrayRead(x,&x_array);CHKERRQ(ierr);
-  ierr = VecGetArray(y,&y_array);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
+  CHKERRQ(VecGetArrayRead(x,&x_array));
+  CHKERRQ(VecGetArray(y,&y_array));
   if (!fftw->p_backward) { /* create a plan, then excute it */
     switch (ndim) {
     case 1:
@@ -357,8 +357,8 @@ PetscErrorCode MatMultTranspose_MPIFFTW(Mat A,Vec x,Vec y)
       fftw_execute(fftw->p_backward);
     }
   }
-  ierr = VecRestoreArray(y,&y_array);CHKERRQ(ierr);
-  ierr = VecRestoreArrayRead(x,&x_array);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(y,&y_array));
+  CHKERRQ(VecRestoreArrayRead(x,&x_array));
   PetscFunctionReturn(0);
 }
 #endif
@@ -375,8 +375,8 @@ PetscErrorCode MatDestroy_FFTW(Mat A)
   if (fftw->iodims) {
     free(fftw->iodims);
   }
-  ierr = PetscFree(fftw->dim_fftw);CHKERRQ(ierr);
-  ierr = PetscFree(fft->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(fftw->dim_fftw));
+  CHKERRQ(PetscFree(fft->data));
 #if !PetscDefined(HAVE_MPIUNI)
   fftw_mpi_cleanup();
 #endif
@@ -391,10 +391,10 @@ PetscErrorCode VecDestroy_MPIFFTW(Vec v)
   PetscScalar    *array;
 
   PetscFunctionBegin;
-  ierr = VecGetArray(v,&array);CHKERRQ(ierr);
+  CHKERRQ(VecGetArray(v,&array));
   fftw_free((fftw_complex*)array);
-  ierr = VecRestoreArray(v,&array);CHKERRQ(ierr);
-  ierr = VecDestroy_MPI(v);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArray(v,&array));
+  CHKERRQ(VecDestroy_MPI(v));
   PetscFunctionReturn(0);
 }
 #endif
@@ -406,8 +406,8 @@ static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new)
   Mat            A;
 
   PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)fin,"FFTmatrix",(PetscObject*)&A);CHKERRQ(ierr);
-  ierr = MatCreateVecsFFTW_FFTW(A,fin_new,NULL,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectQuery((PetscObject)fin,"FFTmatrix",(PetscObject*)&A));
+  CHKERRQ(MatCreateVecsFFTW_FFTW(A,fin_new,NULL,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -417,8 +417,8 @@ static PetscErrorCode VecDuplicate_FFTW_fout(Vec fout,Vec *fout_new)
   Mat            A;
 
   PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)fout,"FFTmatrix",(PetscObject*)&A);CHKERRQ(ierr);
-  ierr = MatCreateVecsFFTW_FFTW(A,NULL,fout_new,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectQuery((PetscObject)fout,"FFTmatrix",(PetscObject*)&A));
+  CHKERRQ(MatCreateVecsFFTW_FFTW(A,NULL,fout_new,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -428,8 +428,8 @@ static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
   Mat            A;
 
   PetscFunctionBegin;
-  ierr = PetscObjectQuery((PetscObject)bout,"FFTmatrix",(PetscObject*)&A);CHKERRQ(ierr);
-  ierr = MatCreateVecsFFTW_FFTW(A,NULL,NULL,bout_new);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectQuery((PetscObject)bout,"FFTmatrix",(PetscObject*)&A));
+  CHKERRQ(MatCreateVecsFFTW_FFTW(A,NULL,NULL,bout_new));
   PetscFunctionReturn(0);
 }
 #endif
@@ -470,7 +470,7 @@ PetscErrorCode MatCreateVecsFFTW(Mat A,Vec *x,Vec *y,Vec *z)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscUseMethod(A,"MatCreateVecsFFTW_C",(Mat,Vec*,Vec*,Vec*),(A,x,y,z));CHKERRQ(ierr);
+  CHKERRQ(PetscUseMethod(A,"MatCreateVecsFFTW_C",(Mat,Vec*,Vec*,Vec*),(A,x,y,z)));
   PetscFunctionReturn(0);
 }
 
@@ -484,19 +484,19 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidType(A,1);
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
 
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_size(comm, &size));
+  CHKERRMPI(MPI_Comm_rank(comm, &rank));
   if (size == 1) { /* sequential case */
 #if defined(PETSC_USE_COMPLEX)
-    if (fin)  {ierr = VecCreateSeq(PETSC_COMM_SELF,fft->N,fin);CHKERRQ(ierr);}
-    if (fout) {ierr = VecCreateSeq(PETSC_COMM_SELF,fft->N,fout);CHKERRQ(ierr);}
-    if (bout) {ierr = VecCreateSeq(PETSC_COMM_SELF,fft->N,bout);CHKERRQ(ierr);}
+    if (fin)  CHKERRQ(VecCreateSeq(PETSC_COMM_SELF,fft->N,fin));
+    if (fout) CHKERRQ(VecCreateSeq(PETSC_COMM_SELF,fft->N,fout));
+    if (bout) CHKERRQ(VecCreateSeq(PETSC_COMM_SELF,fft->N,bout));
 #else
-    if (fin) {ierr = VecCreateSeq(PETSC_COMM_SELF,fft->n,fin);CHKERRQ(ierr);}
-    if (fout) {ierr = VecCreateSeq(PETSC_COMM_SELF,fft->n,fout);CHKERRQ(ierr);}
-    if (bout) {ierr = VecCreateSeq(PETSC_COMM_SELF,fft->n,bout);CHKERRQ(ierr);}
+    if (fin) CHKERRQ(VecCreateSeq(PETSC_COMM_SELF,fft->n,fin));
+    if (fout) CHKERRQ(VecCreateSeq(PETSC_COMM_SELF,fft->n,fout));
+    if (bout) CHKERRQ(VecCreateSeq(PETSC_COMM_SELF,fft->n,bout));
 #endif
 #if !PetscDefined(HAVE_MPIUNI)
   } else { /* parallel cases */
@@ -522,23 +522,23 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
       alloc_local = fftw_mpi_local_size_1d(dim[0],comm,FFTW_FORWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
       if (fin) {
         data_fin  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr      = VecCreateMPIWithArray(comm,1,local_n0,fft->N,(const PetscScalar*)data_fin,fin);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,local_n0,fft->N,(const PetscScalar*)data_fin,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr      = VecCreateMPIWithArray(comm,1,local_n1,fft->N,(const PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,local_n1,fft->N,(const PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       alloc_local = fftw_mpi_local_size_1d(dim[0],comm,FFTW_BACKWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
       if (bout) {
         data_bout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr      = VecCreateMPIWithArray(comm,1,local_n1,fft->N,(const PetscScalar*)data_bout,bout);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,local_n1,fft->N,(const PetscScalar*)data_bout,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -550,22 +550,22 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
       N1          = 2*dim[0]*(dim[1]/2+1); n1 = 2*local_n0*(dim[1]/2+1);
       if (fin) {
         data_finr = (double*)fftw_malloc(sizeof(double)*alloc_local*2);
-        ierr      = VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_finr,fin);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_finr,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr      = VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (bout) {
         data_boutr = (double*)fftw_malloc(sizeof(double)*alloc_local*2);
-        ierr       = VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_boutr,bout);CHKERRQ(ierr);
-        ierr       = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_boutr,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_bout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -574,22 +574,22 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
       alloc_local = fftw_mpi_local_size_2d(dim[0],dim[1],comm,&local_n0,&local_0_start);
       if (fin) {
         data_fin = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr     = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fin,fin);CHKERRQ(ierr);
-        ierr     = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fin,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr      = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (bout) {
         data_bout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr      = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_bout,bout);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_bout,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_bout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -601,22 +601,22 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
       N1 = 2*dim[0]*dim[1]*(dim[2]/2+1); n1 = 2*local_n0*dim[1]*(dim[2]/2+1);
       if (fin) {
         data_finr = (double*)fftw_malloc(sizeof(double)*alloc_local*2);
-        ierr      = VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_finr,fin);CHKERRQ(ierr);
-        ierr      = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_finr,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout=(fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,n1,N1,(PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,n1,N1,(PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (bout) {
         data_boutr=(double*)fftw_malloc(sizeof(double)*alloc_local*2);
-        ierr = VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_boutr,bout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,(PetscInt)n1,N1,(PetscScalar*)data_boutr,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_bout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -624,22 +624,22 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
       alloc_local = fftw_mpi_local_size_3d(dim[0],dim[1],dim[2],comm,&local_n0,&local_0_start);
       if (fin) {
         data_fin  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fin,fin);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fin,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (bout) {
         data_bout  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_bout,bout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_bout,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_bout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -655,22 +655,22 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
 
       if (fin) {
         data_finr=(double*)fftw_malloc(sizeof(double)*alloc_local*2);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,N1,(PetscScalar*)data_finr,fin);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,N1,(PetscScalar*)data_finr,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout=(fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,N1,(PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,N1,(PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (bout) {
         data_boutr=(double*)fftw_malloc(sizeof(double)*alloc_local*2);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,N1,(PetscScalar*)data_boutr,bout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,N1,(PetscScalar*)data_boutr,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_bout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -678,22 +678,22 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
       alloc_local = fftw_mpi_local_size(fftw->ndim_fftw,fftw->dim_fftw,comm,&local_n0,&local_0_start);
       if (fin) {
         data_fin  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fin,fin);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fin,fin));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fin,"FFTmatrix",(PetscObject)A));
         (*fin)->ops->duplicate = VecDuplicate_FFTW_fin;
         (*fin)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (fout) {
         data_fout = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fout,fout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_fout,fout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*fout,"FFTmatrix",(PetscObject)A));
         (*fout)->ops->duplicate = VecDuplicate_FFTW_fout;
         (*fout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
       if (bout) {
         data_bout  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*alloc_local);
-        ierr = VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_bout,bout);CHKERRQ(ierr);
-        ierr = PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A);CHKERRQ(ierr);
+        CHKERRQ(VecCreateMPIWithArray(comm,1,fft->n,fft->N,(const PetscScalar*)data_bout,bout));
+        CHKERRQ(PetscObjectCompose((PetscObject)*bout,"FFTmatrix",(PetscObject)A));
         (*bout)->ops->duplicate = VecDuplicate_FFTW_bout;
         (*bout)->ops->destroy   = VecDestroy_MPIFFTW;
       }
@@ -740,7 +740,7 @@ PetscErrorCode VecScatterPetscToFFTW(Mat A,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscUseMethod(A,"VecScatterPetscToFFTW_C",(Mat,Vec,Vec),(A,x,y));CHKERRQ(ierr);
+  CHKERRQ(PetscUseMethod(A,"VecScatterPetscToFFTW_C",(Mat,Vec,Vec),(A,x,y)));
   PetscFunctionReturn(0);
 }
 
@@ -756,20 +756,20 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
   IS             list1;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  ierr = VecGetOwnershipRange(y,&low,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
+  CHKERRMPI(MPI_Comm_size(comm, &size));
+  CHKERRMPI(MPI_Comm_rank(comm, &rank));
+  CHKERRQ(VecGetOwnershipRange(y,&low,NULL));
 
   if (size==1) {
-    ierr = VecGetSize(x,&vsize);CHKERRQ(ierr);
-    ierr = VecGetSize(y,&vsize1);CHKERRQ(ierr);
-    ierr = ISCreateStride(PETSC_COMM_SELF,fft->N,0,1,&list1);CHKERRQ(ierr);
-    ierr = VecScatterCreate(x,list1,y,list1,&vecscat);CHKERRQ(ierr);
-    ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-    ierr = ISDestroy(&list1);CHKERRQ(ierr);
+    CHKERRQ(VecGetSize(x,&vsize));
+    CHKERRQ(VecGetSize(y,&vsize1));
+    CHKERRQ(ISCreateStride(PETSC_COMM_SELF,fft->N,0,1,&list1));
+    CHKERRQ(VecScatterCreate(x,list1,y,list1,&vecscat));
+    CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+    CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+    CHKERRQ(VecScatterDestroy(&vecscat));
+    CHKERRQ(ISDestroy(&list1));
 #if !PetscDefined(HAVE_MPIUNI)
   } else {
     Mat_FFTW   *fftw = (Mat_FFTW*)fft->data;
@@ -789,14 +789,14 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_1d(dim[0],comm,FFTW_FORWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = ISCreateStride(comm,local_n0,local_0_start,1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0,low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0,local_0_start,1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0,low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       SETERRQ(comm,PETSC_ERR_SUP,"FFTW does not support parallel 1D real transform");
 #endif
@@ -805,19 +805,19 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_2d(dim[0],dim[1],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0*dim[1],low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1],low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       fftw_mpi_local_size_2d_transposed(dim[0],dim[1]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx1);CHKERRQ(ierr);
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx2);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx1));
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx2));
 
       if (dim[1]%2==0) {
         NM = dim[1]+2;
@@ -834,17 +834,17 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
         }
       }
 
-      ierr = ISCreateGeneral(comm,local_n0*dim[1],indx1,PETSC_COPY_VALUES,&list1);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(comm,local_n0*dim[1],indx2,PETSC_COPY_VALUES,&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1],indx1,PETSC_COPY_VALUES,&list1));
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1],indx2,PETSC_COPY_VALUES,&list2));
 
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
-      ierr = PetscFree(indx1);CHKERRQ(ierr);
-      ierr = PetscFree(indx2);CHKERRQ(ierr);
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
+      CHKERRQ(PetscFree(indx1));
+      CHKERRQ(PetscFree(indx2));
 #endif
       break;
 
@@ -852,21 +852,21 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_3d(dim[0],dim[1],dim[2],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       /* buggy, needs to be fixed. See src/mat/tests/ex158.c */
       SETERRQ(comm,PETSC_ERR_SUP,"FFTW does not support parallel 3D real transform");
       fftw_mpi_local_size_3d_transposed(dim[0],dim[1],dim[2]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx1);CHKERRQ(ierr);
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx2);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx1));
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx2));
 
       if (dim[2]%2==0) NM = dim[2]+2;
       else             NM = dim[2]+1;
@@ -883,16 +883,16 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
         }
       }
 
-      ierr = ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx1,PETSC_COPY_VALUES,&list1);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx2,PETSC_COPY_VALUES,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
-      ierr = PetscFree(indx1);CHKERRQ(ierr);
-      ierr = PetscFree(indx2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx1,PETSC_COPY_VALUES,&list1));
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx2,PETSC_COPY_VALUES,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
+      CHKERRQ(PetscFree(indx1));
+      CHKERRQ(PetscFree(indx2));
 #endif
       break;
 
@@ -900,14 +900,14 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size(fftw->ndim_fftw,fftw->dim_fftw,comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       /* buggy, needs to be fixed. See src/mat/tests/ex158.c */
       SETERRQ(comm,PETSC_ERR_SUP,"FFTW does not support parallel DIM>3 real transform");
@@ -921,8 +921,8 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 
       partial_dim = fftw->partial_dim;
 
-      ierr = PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx1);CHKERRQ(ierr);
-      ierr = PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx2);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx1));
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx2));
 
       if (dim[ndim-1]%2==0) NM = 2;
       else                  NM = 1;
@@ -934,16 +934,16 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
         if (k%dim[ndim-1]==0) j+=NM;
         j++;
       }
-      ierr = ISCreateGeneral(comm,local_n0*partial_dim,indx1,PETSC_COPY_VALUES,&list1);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(comm,local_n0*partial_dim,indx2,PETSC_COPY_VALUES,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
-      ierr = PetscFree(indx1);CHKERRQ(ierr);
-      ierr = PetscFree(indx2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateGeneral(comm,local_n0*partial_dim,indx1,PETSC_COPY_VALUES,&list1));
+      CHKERRQ(ISCreateGeneral(comm,local_n0*partial_dim,indx2,PETSC_COPY_VALUES,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
+      CHKERRQ(PetscFree(indx1));
+      CHKERRQ(PetscFree(indx2));
 #endif
       break;
     }
@@ -976,7 +976,7 @@ PetscErrorCode VecScatterFFTWToPetsc(Mat A,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscUseMethod(A,"VecScatterFFTWToPetsc_C",(Mat,Vec,Vec),(A,x,y));CHKERRQ(ierr);
+  CHKERRQ(PetscUseMethod(A,"VecScatterFFTWToPetsc_C",(Mat,Vec,Vec),(A,x,y)));
   PetscFunctionReturn(0);
 }
 
@@ -991,18 +991,18 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
   IS             list1;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  ierr = VecGetOwnershipRange(x,&low,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
+  CHKERRMPI(MPI_Comm_size(comm, &size));
+  CHKERRMPI(MPI_Comm_rank(comm, &rank));
+  CHKERRQ(VecGetOwnershipRange(x,&low,NULL));
 
   if (size==1) {
-    ierr = ISCreateStride(comm,fft->N,0,1,&list1);CHKERRQ(ierr);
-    ierr = VecScatterCreate(x,list1,y,list1,&vecscat);CHKERRQ(ierr);
-    ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-    ierr = ISDestroy(&list1);CHKERRQ(ierr);
+    CHKERRQ(ISCreateStride(comm,fft->N,0,1,&list1));
+    CHKERRQ(VecScatterCreate(x,list1,y,list1,&vecscat));
+    CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+    CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+    CHKERRQ(VecScatterDestroy(&vecscat));
+    CHKERRQ(ISDestroy(&list1));
 
 #if !PetscDefined(HAVE_MPIUNI)
   } else {
@@ -1022,14 +1022,14 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_1d(dim[0],comm,FFTW_BACKWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = ISCreateStride(comm,local_n1,local_1_start,1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n1,low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n1,local_1_start,1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n1,low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       SETERRQ(comm,PETSC_ERR_SUP,"No support for real parallel 1D FFT");
 #endif
@@ -1038,19 +1038,19 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_2d(dim[0],dim[1],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0*dim[1],low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list2,y,list1,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1],local_0_start*dim[1],1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1],low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list2,y,list1,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       fftw_mpi_local_size_2d_transposed(dim[0],dim[1]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx1);CHKERRQ(ierr);
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx2);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx1));
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1],&indx2));
 
       if (dim[1]%2==0) NM = dim[1]+2;
       else             NM = dim[1]+1;
@@ -1065,36 +1065,36 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
         }
       }
 
-      ierr = ISCreateGeneral(comm,local_n0*dim[1],indx1,PETSC_COPY_VALUES,&list1);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(comm,local_n0*dim[1],indx2,PETSC_COPY_VALUES,&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1],indx1,PETSC_COPY_VALUES,&list1));
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1],indx2,PETSC_COPY_VALUES,&list2));
 
-      ierr = VecScatterCreate(x,list2,y,list1,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
-      ierr = PetscFree(indx1);CHKERRQ(ierr);
-      ierr = PetscFree(indx2);CHKERRQ(ierr);
+      CHKERRQ(VecScatterCreate(x,list2,y,list1,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
+      CHKERRQ(PetscFree(indx1));
+      CHKERRQ(PetscFree(indx2));
 #endif
       break;
     case 3:
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_3d(dim[0],dim[1],dim[2],comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1]*dim[2],local_0_start*dim[1]*dim[2],1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0*dim[1]*dim[2],low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       fftw_mpi_local_size_3d_transposed(dim[0],dim[1],dim[2]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx1);CHKERRQ(ierr);
-      ierr = PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx2);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx1));
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*dim[1]*dim[2],&indx2));
 
       if (dim[2]%2==0) NM = dim[2]+2;
       else             NM = dim[2]+1;
@@ -1111,31 +1111,31 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
         }
       }
 
-      ierr = ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx1,PETSC_COPY_VALUES,&list1);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx2,PETSC_COPY_VALUES,&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx1,PETSC_COPY_VALUES,&list1));
+      CHKERRQ(ISCreateGeneral(comm,local_n0*dim[1]*dim[2],indx2,PETSC_COPY_VALUES,&list2));
 
-      ierr = VecScatterCreate(x,list2,y,list1,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
-      ierr = PetscFree(indx1);CHKERRQ(ierr);
-      ierr = PetscFree(indx2);CHKERRQ(ierr);
+      CHKERRQ(VecScatterCreate(x,list2,y,list1,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
+      CHKERRQ(PetscFree(indx1));
+      CHKERRQ(PetscFree(indx2));
 #endif
       break;
     default:
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size(fftw->ndim_fftw,fftw->dim_fftw,comm,&local_n0,&local_0_start);
 
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1);CHKERRQ(ierr);
-      ierr = ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2);CHKERRQ(ierr);
-      ierr = VecScatterCreate(x,list1,y,list2,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateStride(comm,local_n0*(fftw->partial_dim),local_0_start*(fftw->partial_dim),1,&list1));
+      CHKERRQ(ISCreateStride(comm,local_n0*(fftw->partial_dim),low,1,&list2));
+      CHKERRQ(VecScatterCreate(x,list1,y,list2,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
 #else
       temp = (fftw->dim_fftw)[fftw->ndim_fftw-1];
 
@@ -1147,8 +1147,8 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 
       partial_dim = fftw->partial_dim;
 
-      ierr = PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx1);CHKERRQ(ierr);
-      ierr = PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx2);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx1));
+      CHKERRQ(PetscMalloc1(((PetscInt)local_n0)*partial_dim,&indx2));
 
       if (dim[ndim-1]%2==0) NM = 2;
       else                  NM = 1;
@@ -1160,17 +1160,17 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
         if (k%dim[ndim-1]==0) j+=NM;
         j++;
       }
-      ierr = ISCreateGeneral(comm,local_n0*partial_dim,indx1,PETSC_COPY_VALUES,&list1);CHKERRQ(ierr);
-      ierr = ISCreateGeneral(comm,local_n0*partial_dim,indx2,PETSC_COPY_VALUES,&list2);CHKERRQ(ierr);
+      CHKERRQ(ISCreateGeneral(comm,local_n0*partial_dim,indx1,PETSC_COPY_VALUES,&list1));
+      CHKERRQ(ISCreateGeneral(comm,local_n0*partial_dim,indx2,PETSC_COPY_VALUES,&list2));
 
-      ierr = VecScatterCreate(x,list2,y,list1,&vecscat);CHKERRQ(ierr);
-      ierr = VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-      ierr = VecScatterDestroy(&vecscat);CHKERRQ(ierr);
-      ierr = ISDestroy(&list1);CHKERRQ(ierr);
-      ierr = ISDestroy(&list2);CHKERRQ(ierr);
-      ierr = PetscFree(indx1);CHKERRQ(ierr);
-      ierr = PetscFree(indx2);CHKERRQ(ierr);
+      CHKERRQ(VecScatterCreate(x,list2,y,list1,&vecscat));
+      CHKERRQ(VecScatterBegin(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterEnd(vecscat,x,y,INSERT_VALUES,SCATTER_FORWARD));
+      CHKERRQ(VecScatterDestroy(&vecscat));
+      CHKERRQ(ISDestroy(&list1));
+      CHKERRQ(ISDestroy(&list2));
+      CHKERRQ(PetscFree(indx1));
+      CHKERRQ(PetscFree(indx2));
 #endif
       break;
     }
@@ -1206,9 +1206,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 #endif
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)A,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
+  CHKERRMPI(MPI_Comm_size(comm, &size));
+  CHKERRMPI(MPI_Comm_rank(comm, &rank));
 
 #if !PetscDefined(HAVE_MPIUNI)
   fftw_mpi_init();
@@ -1229,10 +1229,10 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 
   if (size == 1) {
 #if defined(PETSC_USE_COMPLEX)
-    ierr = MatSetSizes(A,fft->N,fft->N,fft->N,fft->N);CHKERRQ(ierr);
+    CHKERRQ(MatSetSizes(A,fft->N,fft->N,fft->N,fft->N));
     fft->n = fft->N;
 #else
-    ierr = MatSetSizes(A,tot_dim,tot_dim,tot_dim,tot_dim);CHKERRQ(ierr);
+    CHKERRQ(MatSetSizes(A,tot_dim,tot_dim,tot_dim,tot_dim));
     fft->n = tot_dim;
 #endif
 #if !PetscDefined(HAVE_MPIUNI)
@@ -1250,19 +1250,19 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 #else
       fftw_mpi_local_size_1d(dim[0],comm,FFTW_FORWARD,FFTW_ESTIMATE,&local_n0,&local_0_start,&local_n1,&local_1_start);
       fft->n = (PetscInt)local_n0;
-      ierr   = MatSetSizes(A,local_n1,fft->n,fft->N,fft->N);CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,local_n1,fft->n,fft->N,fft->N));
 #endif
       break;
     case 2:
 #if defined(PETSC_USE_COMPLEX)
       fftw_mpi_local_size_2d(dim[0],dim[1],comm,&local_n0,&local_0_start);
       fft->n    = (PetscInt)local_n0*dim[1];
-      ierr = MatSetSizes(A,fft->n,fft->n,fft->N,fft->N);CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,fft->n,fft->n,fft->N,fft->N));
 #else
       fftw_mpi_local_size_2d_transposed(dim[0],dim[1]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
       fft->n = 2*(PetscInt)local_n0*(dim[1]/2+1);
-      ierr = MatSetSizes(A,fft->n,fft->n,2*dim[0]*(dim[1]/2+1),2*dim[0]*(dim[1]/2+1));CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,fft->n,fft->n,2*dim[0]*(dim[1]/2+1),2*dim[0]*(dim[1]/2+1)));
 #endif
       break;
     case 3:
@@ -1270,12 +1270,12 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
       fftw_mpi_local_size_3d(dim[0],dim[1],dim[2],comm,&local_n0,&local_0_start);
 
       fft->n = (PetscInt)local_n0*dim[1]*dim[2];
-      ierr = MatSetSizes(A,fft->n,fft->n,fft->N,fft->N);CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,fft->n,fft->n,fft->N,fft->N));
 #else
       fftw_mpi_local_size_3d_transposed(dim[0],dim[1],dim[2]/2+1,comm,&local_n0,&local_0_start,&local_n1,&local_1_start);
 
       fft->n = 2*(PetscInt)local_n0*dim[1]*(dim[2]/2+1);
-      ierr = MatSetSizes(A,fft->n,fft->n,2*dim[0]*dim[1]*(dim[2]/2+1),2*dim[0]*dim[1]*(dim[2]/2+1));CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,fft->n,fft->n,2*dim[0]*dim[1]*(dim[2]/2+1),2*dim[0]*dim[1]*(dim[2]/2+1)));
 #endif
       break;
     default:
@@ -1283,7 +1283,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
       fftw_mpi_local_size(ndim,pdim,comm,&local_n0,&local_0_start);
 
       fft->n = (PetscInt)local_n0*partial_dim;
-      ierr = MatSetSizes(A,fft->n,fft->n,fft->N,fft->N);CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,fft->n,fft->n,fft->N,fft->N));
 #else
       temp = pdim[ndim-1];
 
@@ -1296,21 +1296,21 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 
       pdim[ndim-1] = temp;
 
-      ierr = MatSetSizes(A,fft->n,fft->n,N1,N1);CHKERRQ(ierr);
+      CHKERRQ(MatSetSizes(A,fft->n,fft->n,N1,N1));
 #endif
       break;
     }
 #endif
   }
   free(pdim);
-  ierr      = PetscObjectChangeTypeName((PetscObject)A,MATFFTW);CHKERRQ(ierr);
-  ierr      = PetscNewLog(A,&fftw);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject)A,MATFFTW));
+  CHKERRQ(PetscNewLog(A,&fftw));
   fft->data = (void*)fftw;
 
   fftw->ndim_fftw   = (ptrdiff_t)ndim; /* This is dimension of fft */
   fftw->partial_dim = partial_dim;
 
-  ierr = PetscMalloc1(ndim, &(fftw->dim_fftw));CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(ndim, &(fftw->dim_fftw)));
   if (size == 1) {
 #if defined(PETSC_USE_64BIT_INDICES)
     fftw->iodims = (fftw_iodim64 *) malloc(sizeof(fftw_iodim64) * ndim);
@@ -1338,17 +1338,16 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   A->assembled    = PETSC_TRUE;
   A->preallocated = PETSC_TRUE;
 
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatCreateVecsFFTW_C",MatCreateVecsFFTW_FFTW);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"VecScatterPetscToFFTW_C",VecScatterPetscToFFTW_FFTW);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"VecScatterFFTWToPetsc_C",VecScatterFFTWToPetsc_FFTW);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)A,"MatCreateVecsFFTW_C",MatCreateVecsFFTW_FFTW));
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)A,"VecScatterPetscToFFTW_C",VecScatterPetscToFFTW_FFTW));
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)A,"VecScatterFFTWToPetsc_C",VecScatterFFTWToPetsc_FFTW));
 
   /* get runtime options */
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"FFTW Options","Mat");CHKERRQ(ierr);
-  ierr = PetscOptionsEList("-mat_fftw_plannerflags","Planner Flags","None",plans,4,plans[0],&p_flag,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsEList("-mat_fftw_plannerflags","Planner Flags","None",plans,4,plans[0],&p_flag,&flg));
   if (flg) {
     fftw->p_flag = iplans[p_flag];
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
-

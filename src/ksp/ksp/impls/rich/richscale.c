@@ -25,7 +25,7 @@ PetscErrorCode  KSPRichardsonSetScale(KSP ksp,PetscReal scale)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidLogicalCollectiveReal(ksp,scale,2);
-  ierr = PetscTryMethod(ksp,"KSPRichardsonSetScale_C",(KSP,PetscReal),(ksp,scale));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(ksp,"KSPRichardsonSetScale_C",(KSP,PetscReal),(ksp,scale)));
   PetscFunctionReturn(0);
 }
 
@@ -59,6 +59,6 @@ PetscErrorCode  KSPRichardsonSetSelfScale(KSP ksp,PetscBool scale)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidLogicalCollectiveBool(ksp,scale,2);
-  ierr = PetscTryMethod(ksp,"KSPRichardsonSetSelfScale_C",(KSP,PetscBool),(ksp,scale));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(ksp,"KSPRichardsonSetSelfScale_C",(KSP,PetscBool),(ksp,scale)));
   PetscFunctionReturn(0);
 }

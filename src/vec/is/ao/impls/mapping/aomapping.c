@@ -21,8 +21,8 @@ PetscErrorCode AODestroy_Mapping(AO ao)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree4(aomap->app,aomap->appPerm,aomap->petsc,aomap->petscPerm);CHKERRQ(ierr);
-  ierr = PetscFree(aomap);CHKERRQ(ierr);
+  CHKERRQ(PetscFree4(aomap->app,aomap->appPerm,aomap->petsc,aomap->petscPerm));
+  CHKERRQ(PetscFree(aomap));
   PetscFunctionReturn(0);
 }
 
@@ -35,9 +35,9 @@ PetscErrorCode AOView_Mapping(AO ao, PetscViewer viewer)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)ao), &rank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)ao), &rank));
   if (rank) PetscFunctionReturn(0);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     PetscViewerASCIIPrintf(viewer, "Number of elements in ordering %" PetscInt_FMT "\n", aomap->N);
     PetscViewerASCIIPrintf(viewer, "   App.   PETSc\n");
@@ -241,19 +241,19 @@ PetscErrorCode  AOCreateMapping(MPI_Comm comm,PetscInt napp,const PetscInt myapp
   PetscFunctionBegin;
   PetscValidPointer(aoout,5);
   *aoout = NULL;
-  ierr = AOInitializePackage();CHKERRQ(ierr);
+  CHKERRQ(AOInitializePackage());
 
-  ierr     = PetscHeaderCreate(ao, AO_CLASSID, "AO", "Application Ordering", "AO", comm, AODestroy, AOView);CHKERRQ(ierr);
-  ierr     = PetscNewLog(ao,&aomap);CHKERRQ(ierr);
-  ierr     = PetscMemcpy(ao->ops, &AOps, sizeof(AOps));CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderCreate(ao, AO_CLASSID, "AO", "Application Ordering", "AO", comm, AODestroy, AOView));
+  CHKERRQ(PetscNewLog(ao,&aomap));
+  CHKERRQ(PetscMemcpy(ao->ops, &AOps, sizeof(AOps)));
   ao->data = (void*) aomap;
 
   /* transmit all lengths to all processors */
-  ierr  = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr  = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  ierr  = PetscMalloc2(size, &lens,size,&disp);CHKERRQ(ierr);
+  CHKERRMPI(MPI_Comm_size(comm, &size));
+  CHKERRMPI(MPI_Comm_rank(comm, &rank));
+  CHKERRQ(PetscMalloc2(size, &lens,size,&disp));
   nnapp = napp;
-  ierr  = MPI_Allgather(&nnapp, 1, MPI_INT, lens, 1, MPI_INT, comm);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Allgather(&nnapp, 1, MPI_INT, lens, 1, MPI_INT, comm));
   N     = 0;
   for (i = 0; i < size; i++) {
     disp[i] = N;
@@ -266,27 +266,27 @@ PetscErrorCode  AOCreateMapping(MPI_Comm comm,PetscInt napp,const PetscInt myapp
   /* If mypetsc is 0 then use "natural" numbering */
   if (!mypetsc) {
     start = disp[rank];
-    ierr  = PetscMalloc1(napp+1, &petsc);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(napp+1, &petsc));
     for (i = 0; i < napp; i++) petsc[i] = start + i;
   } else {
     petsc = (PetscInt*)mypetsc;
   }
 
   /* get all indices on all processors */
-  ierr = PetscMalloc4(N, &allapp,N,&appPerm,N,&allpetsc,N,&petscPerm);CHKERRQ(ierr);
-  ierr = MPI_Allgatherv((void*)myapp, napp, MPIU_INT, allapp,   lens, disp, MPIU_INT, comm);CHKERRMPI(ierr);
-  ierr = MPI_Allgatherv((void*)petsc, napp, MPIU_INT, allpetsc, lens, disp, MPIU_INT, comm);CHKERRMPI(ierr);
-  ierr = PetscFree2(lens,disp);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc4(N, &allapp,N,&appPerm,N,&allpetsc,N,&petscPerm));
+  CHKERRMPI(MPI_Allgatherv((void*)myapp, napp, MPIU_INT, allapp,   lens, disp, MPIU_INT, comm));
+  CHKERRMPI(MPI_Allgatherv((void*)petsc, napp, MPIU_INT, allpetsc, lens, disp, MPIU_INT, comm));
+  CHKERRQ(PetscFree2(lens,disp));
 
   /* generate a list of application and PETSc node numbers */
-  ierr = PetscMalloc4(N, &aomap->app,N,&aomap->appPerm,N,&aomap->petsc,N,&aomap->petscPerm);CHKERRQ(ierr);
-  ierr = PetscLogObjectMemory((PetscObject)ao, 4*N * sizeof(PetscInt));CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc4(N, &aomap->app,N,&aomap->appPerm,N,&aomap->petsc,N,&aomap->petscPerm));
+  CHKERRQ(PetscLogObjectMemory((PetscObject)ao, 4*N * sizeof(PetscInt)));
   for (i = 0; i < N; i++) {
     appPerm[i]   = i;
     petscPerm[i] = i;
   }
-  ierr = PetscSortIntWithPermutation(N, allpetsc, petscPerm);CHKERRQ(ierr);
-  ierr = PetscSortIntWithPermutation(N, allapp,   appPerm);CHKERRQ(ierr);
+  CHKERRQ(PetscSortIntWithPermutation(N, allpetsc, petscPerm));
+  CHKERRQ(PetscSortIntWithPermutation(N, allapp,   appPerm));
   /* Form sorted arrays of indices */
   for (i = 0; i < N; i++) {
     aomap->app[i]   = allapp[appPerm[i]];
@@ -312,11 +312,11 @@ PetscErrorCode  AOCreateMapping(MPI_Comm comm,PetscInt napp,const PetscInt myapp
   }
   /* Cleanup */
   if (!mypetsc) {
-    ierr = PetscFree(petsc);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(petsc));
   }
-  ierr = PetscFree4(allapp,appPerm,allpetsc,petscPerm);CHKERRQ(ierr);
+  CHKERRQ(PetscFree4(allapp,appPerm,allpetsc,petscPerm));
 
-  ierr = AOViewFromOptions(ao,NULL,"-ao_view");CHKERRQ(ierr);
+  CHKERRQ(AOViewFromOptions(ao,NULL,"-ao_view"));
 
   *aoout = ao;
   PetscFunctionReturn(0);
@@ -352,22 +352,22 @@ PetscErrorCode  AOCreateMappingIS(IS isapp, IS ispetsc, AO *aoout)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject) isapp, &comm);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(isapp, &napp);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject) isapp, &comm));
+  CHKERRQ(ISGetLocalSize(isapp, &napp));
   if (ispetsc) {
-    ierr = ISGetLocalSize(ispetsc, &npetsc);CHKERRQ(ierr);
+    CHKERRQ(ISGetLocalSize(ispetsc, &npetsc));
     PetscCheckFalse(napp != npetsc,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "Local IS lengths must match");
-    ierr = ISGetIndices(ispetsc, &mypetsc);CHKERRQ(ierr);
+    CHKERRQ(ISGetIndices(ispetsc, &mypetsc));
   } else {
     mypetsc = NULL;
   }
-  ierr = ISGetIndices(isapp, &myapp);CHKERRQ(ierr);
+  CHKERRQ(ISGetIndices(isapp, &myapp));
 
-  ierr = AOCreateMapping(comm, napp, myapp, mypetsc, aoout);CHKERRQ(ierr);
+  CHKERRQ(AOCreateMapping(comm, napp, myapp, mypetsc, aoout));
 
-  ierr = ISRestoreIndices(isapp, &myapp);CHKERRQ(ierr);
+  CHKERRQ(ISRestoreIndices(isapp, &myapp));
   if (ispetsc) {
-    ierr = ISRestoreIndices(ispetsc, &mypetsc);CHKERRQ(ierr);
+    CHKERRQ(ISRestoreIndices(ispetsc, &mypetsc));
   }
   PetscFunctionReturn(0);
 }
