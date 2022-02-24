@@ -334,7 +334,7 @@ PETSC_EXTERN PetscXIOErrorHandler PetscSetXIOErrorHandler(PetscXIOErrorHandler);
   _Petsc_xioerrhdl = PetscSetXIOErrorHandler(PetscXIOErrorHandlerJump);                        \
   if (setjmp(PetscXIOErrorHandlerJumpBuf)) {                                                   \
     _Petsc_xioerr_local = PETSC_TRUE;                                                          \
-    do { CHKERRQ(PetscDrawCollectiveEnd(draw)); }                                              \
+    do { PetscErrorCode ierr_draw_ = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr_draw_); }       \
   }                                                                                            \
   do {} while (0)
 
