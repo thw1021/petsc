@@ -264,6 +264,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
   char           xlabel[256];
   PetscInt       numBins,numBinsOld,numValues,initSize,i,p,bcolor,color;
   PetscMPIInt    rank;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(hist,PETSC_DRAWHG_CLASSID,1);
@@ -313,7 +314,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
       CHKERRQ(PetscDrawAxisSetLabels(hist->axis, title, xlabel, NULL));
     }
     CHKERRQ(PetscDrawAxisDraw(hist->axis));
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     if (rank == 0) { /* Draw bins */
       binLeft  = xmin;
       binRight = xmax;
@@ -322,7 +323,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
       CHKERRQ(PetscDrawLine(draw,binRight,ymin,binRight,bins[0],PETSC_DRAW_BLACK));
       CHKERRQ(PetscDrawLine(draw,binLeft,bins[0],binRight,bins[0],PETSC_DRAW_BLACK));
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   } else {
     numBins    = hist->numBins;
     numBinsOld = hist->numBins;
@@ -366,7 +367,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
       CHKERRQ(PetscDrawAxisSetLabels(hist->axis, title, xlabel, NULL));
     }
     CHKERRQ(PetscDrawAxisDraw(hist->axis));
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     if (rank == 0) { /* Draw bins */
       for (i = 0; i < numBins; i++) {
         binLeft  = xmin + binSize*i;
@@ -379,7 +380,7 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
         if (bcolor > PETSC_DRAW_BASIC_COLORS-1) bcolor = PETSC_DRAW_BLACK+1;
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawHGSetNumberBins(hist,numBinsOld));
   }
 

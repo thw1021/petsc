@@ -17,9 +17,7 @@ PetscErrorCode MatSeqAIJSetTypeFromOptions(Mat A)
   PetscFunctionBegin;
   ierr = PetscObjectOptionsBegin((PetscObject)A);CHKERRQ(ierr);
   CHKERRQ(PetscOptionsFList("-mat_seqaij_type","Matrix SeqAIJ type","MatSeqAIJSetType",MatSeqAIJList,"seqaij",type,256,&flg));
-  if (flg) {
-    CHKERRQ(MatSeqAIJSetType(A,type));
-  }
+  if (flg) CHKERRQ(MatSeqAIJSetType(A,type));
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -1007,7 +1005,8 @@ PetscErrorCode MatView_SeqAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
   /* loop over matrix elements drawing boxes */
   CHKERRQ(MatSeqAIJGetArrayRead(A,&aa));
   if (format != PETSC_VIEWER_DRAW_CONTOUR) {
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    PetscErrorCode ierr;
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* Blue for negative, Cyan for zero and  Red for positive */
     color = PETSC_DRAW_BLUE;
     for (i=0; i<m; i++) {
@@ -1036,13 +1035,14 @@ PetscErrorCode MatView_SeqAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
         CHKERRQ(PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   } else {
     /* use contour shading to indicate magnitude of values */
     /* first determine max of all nonzero values */
-    PetscReal minv = 0.0, maxv = 0.0;
-    PetscInt  nz = a->nz, count = 0;
-    PetscDraw popup;
+    PetscReal      minv = 0.0, maxv = 0.0;
+    PetscInt       nz   = a->nz, count = 0;
+    PetscDraw      popup;
+    PetscErrorCode ierr;
 
     for (i=0; i<nz; i++) {
       if (PetscAbsScalar(aa[i]) > maxv) maxv = PetscAbsScalar(aa[i]);
@@ -1051,7 +1051,7 @@ PetscErrorCode MatView_SeqAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
     CHKERRQ(PetscDrawGetPopup(draw,&popup));
     CHKERRQ(PetscDrawScalePopup(popup,minv,maxv));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     for (i=0; i<m; i++) {
       y_l = m - i - 1.0;
       y_r = y_l + 1.0;
@@ -1063,7 +1063,7 @@ PetscErrorCode MatView_SeqAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
         count++;
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   }
   CHKERRQ(MatSeqAIJRestoreArrayRead(A,&aa));
   PetscFunctionReturn(0);
@@ -3116,10 +3116,9 @@ PetscErrorCode MatAXPY_SeqAIJ(Mat Y,PetscScalar a,Mat X,MatStructure str)
 PETSC_INTERN PetscErrorCode MatConjugate_SeqAIJ(Mat mat)
 {
 #if defined(PETSC_USE_COMPLEX)
-  Mat_SeqAIJ     *aij = (Mat_SeqAIJ*)mat->data;
-  PetscInt       i,nz;
-  PetscScalar    *a;
-  PetscErrorCode ierr;
+  Mat_SeqAIJ  *aij = (Mat_SeqAIJ*)mat->data;
+  PetscInt     i,nz;
+  PetscScalar *a;
 
   PetscFunctionBegin;
   nz = aij->nz;
@@ -5427,8 +5426,8 @@ PetscErrorCode  MatSeqAIJRegisterAll(void)
 /* Change these macros so can be used in void function */
 /* Identical to CHKERRV, except it assigns to *_ierr */
 #undef CHKERRQ
-#define CHKERRQ(ierr) do {                                                                     \
-    PetscErrorCode ierr_msv_mpiaij = (ierr);                                                   \
+#define CHKERRQ(...) do {                                                                      \
+    PetscErrorCode ierr_msv_mpiaij = __VA_ARGS__;                                              \
     if (PetscUnlikely(ierr_msv_mpiaij)) {                                                      \
       *_ierr = PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr_msv_mpiaij,PETSC_ERROR_REPEAT," "); \
       return;                                                                                  \
@@ -5465,14 +5464,14 @@ PETSC_EXTERN void matsetvaluesseqaij_(Mat *AA,PetscInt *mm,const PetscInt im[],P
   for (k=0; k<m; k++) { /* loop over added rows */
     row = im[k];
     if (row < 0) continue;
-    if (PetscUnlikelyDebug(row >= A->rmap->n)) SETERRABORT(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Row too large");
+    PetscCheck(row < A->rmap->n,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Row too large");
     rp   = aj + ai[row]; ap = aa + ai[row];
     rmax = imax[row]; nrow = ailen[row];
     low  = 0;
     high = nrow;
     for (l=0; l<n; l++) { /* loop over added columns */
       if (in[l] < 0) continue;
-      if (PetscUnlikelyDebug(in[l] >= A->cmap->n)) SETERRABORT(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Column too large");
+      PetscCheck(in[l] < A->cmap->n,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Column too large");
       col = in[l];
       if (roworiented) value = v[l + k*n];
       else value = v[k + l*m];
@@ -5497,7 +5496,7 @@ PETSC_EXTERN void matsetvaluesseqaij_(Mat *AA,PetscInt *mm,const PetscInt im[],P
       }
       if (value == 0.0 && ignorezeroentries) goto noinsert;
       if (nonew == 1) goto noinsert;
-      if (nonew == -1) SETERRABORT(PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero in the matrix");
+      PetscCheck(nonew != -1,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero in the matrix");
       MatSeqXAIJReallocateAIJ(A,A->rmap->n,1,nrow,row,col,rmax,aa,ai,aj,rp,ap,imax,nonew,MatScalar);
       N = nrow++ - 1; a->nz++; high++;
       /* shift up all the later entries in this row */

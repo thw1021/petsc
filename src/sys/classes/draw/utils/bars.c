@@ -148,6 +148,7 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
   PetscInt       numValues,i,bcolor,color,idx,*perm,nplot;
   PetscMPIInt    rank;
   char           **labels;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
@@ -201,7 +202,7 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
   CHKERRQ(PetscDrawAxisSetLimits(bar->axis,xmin,xmax,ymin,ymax));
   CHKERRQ(PetscDrawAxisDraw(bar->axis));
 
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (rank == 0) { /* Draw bins */
     for (i=0; i<nplot; i++) {
       idx = (bar->sort ? perm[numValues - i - 1] : i);
@@ -220,7 +221,7 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
       if (bcolor > PETSC_DRAW_BASIC_COLORS-1) bcolor = PETSC_DRAW_BLACK+1;
     }
   }
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   if (bar->sort) CHKERRQ(PetscFree(perm));
 
   CHKERRQ(PetscDrawFlush(draw));

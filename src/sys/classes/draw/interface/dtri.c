@@ -53,6 +53,7 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
   PetscMPIInt    rank;
   int            i;
   char           string[32];
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!popup) PetscFunctionReturn(0);
@@ -65,7 +66,7 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
   CHKERRQ(PetscDrawClear(popup));
   CHKERRQ(PetscDrawSetTitle(popup,"Contour Scale"));
   CHKERRQ(PetscDrawSetCoordinates(popup,xl,yl,xr,yr));
-  CHKERRQ(PetscDrawCollectiveBegin(popup));
+  ierr = PetscDrawCollectiveBegin(popup);CHKERRQ(ierr);
   if (rank == 0) {
     for (i=0; i<10; i++) {
       int c = PetscDrawRealToColor((PetscReal)i/9,0,1);
@@ -80,7 +81,7 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
       CHKERRQ(PetscDrawString(popup,0.2,0.02+i/10.0,PETSC_DRAW_BLACK,string));
     }
   }
-  CHKERRQ(PetscDrawCollectiveEnd(popup));
+  ierr = PetscDrawCollectiveEnd(popup);CHKERRQ(ierr);
   CHKERRQ(PetscDrawFlush(popup));
   CHKERRQ(PetscDrawSave(popup));
   PetscFunctionReturn(0);

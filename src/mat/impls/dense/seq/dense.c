@@ -1538,6 +1538,7 @@ static PetscErrorCode MatView_SeqDense_Draw_Zoom(PetscDraw draw,void *Aa)
   PetscViewer       viewer;
   PetscReal         xl,yl,xr,yr,x_l,x_r,y_l,y_r;
   PetscViewerFormat format;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)A,"Zoomviewer",(PetscObject*)&viewer));
@@ -1547,7 +1548,7 @@ static PetscErrorCode MatView_SeqDense_Draw_Zoom(PetscDraw draw,void *Aa)
   /* Loop over matrix elements drawing boxes */
   CHKERRQ(MatDenseGetArrayRead(A,&v));
   if (format != PETSC_VIEWER_DRAW_CONTOUR) {
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* Blue for negative and Red for positive */
     for (j = 0; j < n; j++) {
       x_l = j; x_r = x_l + 1.0;
@@ -1560,7 +1561,7 @@ static PetscErrorCode MatView_SeqDense_Draw_Zoom(PetscDraw draw,void *Aa)
         CHKERRQ(PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   } else {
     /* use contour shading to indicate magnitude of values */
     /* first determine max of all nonzero values */
@@ -1574,7 +1575,7 @@ static PetscErrorCode MatView_SeqDense_Draw_Zoom(PetscDraw draw,void *Aa)
     CHKERRQ(PetscDrawGetPopup(draw,&popup));
     CHKERRQ(PetscDrawScalePopup(popup,minv,maxv));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     for (j=0; j<n; j++) {
       x_l = j;
       x_r = x_l + 1.0;
@@ -1585,7 +1586,7 @@ static PetscErrorCode MatView_SeqDense_Draw_Zoom(PetscDraw draw,void *Aa)
         CHKERRQ(PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   }
   CHKERRQ(MatDenseRestoreArrayRead(A,&v));
   PetscFunctionReturn(0);
@@ -3052,7 +3053,6 @@ PetscErrorCode  MatSeqDenseSetPreallocation_SeqDense(Mat B,PetscScalar *data)
 PETSC_INTERN PetscErrorCode MatConvert_SeqDense_Elemental(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_elemental;
-  PetscErrorCode    ierr;
   const PetscScalar *array;
   PetscScalar       *v_colwise;
   PetscInt          M=A->rmap->N,N=A->cmap->N,i,j,k,*rows,*cols;

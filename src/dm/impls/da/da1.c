@@ -63,11 +63,12 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
       CHKERRQ(DMView_DA_VTK(da, viewer));
     }
   } else if (isdraw) {
-    PetscDraw draw;
-    double    ymin = -1,ymax = 1,xmin = -1,xmax = dd->M,x;
-    PetscInt  base;
-    char      node[10];
-    PetscBool isnull;
+    PetscDraw      draw;
+    double         ymin = -1,ymax = 1,xmin = -1,xmax = dd->M,x;
+    PetscInt       base;
+    char           node[10];
+    PetscBool      isnull;
+    PetscErrorCode ierr;
 
     CHKERRQ(PetscViewerDrawGetDraw(viewer,0,&draw));
     CHKERRQ(PetscDrawIsNull(draw,&isnull));
@@ -77,7 +78,7 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
     CHKERRQ(PetscDrawClear(draw));
     CHKERRQ(PetscDrawSetCoordinates(draw,xmin,ymin,xmax,ymax));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* first processor draws all node lines */
     if (rank == 0) {
       PetscInt xmin_tmp;
@@ -89,11 +90,11 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
       CHKERRQ(PetscDrawLine(draw,xmin,ymin,xmax,ymin,PETSC_DRAW_BLACK));
       CHKERRQ(PetscDrawLine(draw,xmin,ymax,xmax,ymax,PETSC_DRAW_BLACK));
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* draw my box */
     ymin = 0; ymax = 0.3; xmin = dd->xs / dd->w; xmax = (dd->xe / dd->w)  - 1;
     CHKERRQ(PetscDrawLine(draw,xmin,ymin,xmax,ymin,PETSC_DRAW_RED));
@@ -106,7 +107,7 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
       CHKERRQ(PetscSNPrintf(node,sizeof(node),"%d",(int)base++));
       CHKERRQ(PetscDrawString(draw,x,ymin,PETSC_DRAW_RED,node));
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
     CHKERRQ(PetscDrawFlush(draw));
     CHKERRQ(PetscDrawPause(draw));
     CHKERRQ(PetscDrawSave(draw));

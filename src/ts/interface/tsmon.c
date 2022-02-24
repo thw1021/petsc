@@ -476,12 +476,13 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
   PetscReal         U0,U1,xl,yl,xr,yr,h;
   char              time[32];
   const PetscScalar *U;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)ts),&size));
-  PetscCheckFalse(size != 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only allowed for sequential runs");
+  PetscCheck(size == 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only allowed for sequential runs");
   CHKERRQ(VecGetSize(u,&n));
-  PetscCheckFalse(n != 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only for ODEs with two unknowns");
+  PetscCheck(n == 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only for ODEs with two unknowns");
 
   CHKERRQ(PetscViewerDrawGetDraw(ictx->viewer,0,&draw));
   CHKERRQ(PetscViewerDrawGetDrawAxis(ictx->viewer,0,&axis));
@@ -497,7 +498,7 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
   CHKERRQ(VecRestoreArrayRead(u,&U));
   if ((U0 < xl) || (U1 < yl) || (U0 > xr) || (U1 > yr)) PetscFunctionReturn(0);
 
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   CHKERRQ(PetscDrawPoint(draw,U0,U1,PETSC_DRAW_BLACK));
   if (ictx->showtimestepandtime) {
     CHKERRQ(PetscDrawGetCoordinates(draw,&xl,&yl,&xr,&yr));
@@ -505,7 +506,7 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
     h    = yl + .95*(yr - yl);
     CHKERRQ(PetscDrawStringCentered(draw,.5*(xl+xr),h,PETSC_DRAW_BLACK,time));
   }
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   CHKERRQ(PetscDrawFlush(draw));
   CHKERRQ(PetscDrawPause(draw));
   CHKERRQ(PetscDrawSave(draw));

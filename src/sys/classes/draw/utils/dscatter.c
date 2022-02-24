@@ -282,6 +282,7 @@ PetscErrorCode  PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
   PetscMPIInt    rank;
   PetscBool      isnull;
   PetscDraw      draw;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
@@ -302,7 +303,7 @@ PetscErrorCode  PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
   CHKERRQ(PetscDrawAxisSetLimits(sp->axis,xmin,xmax,ymin,ymax));
   CHKERRQ(PetscDrawAxisDraw(sp->axis));
 
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   if (rank == 0) {
     int i,j,dim=sp->dim,nopts=sp->nopts;
     for (i=0; i<dim; i++) {
@@ -311,7 +312,7 @@ PetscErrorCode  PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
       }
     }
   }
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
 
   CHKERRQ(PetscDrawFlush(draw));
   CHKERRQ(PetscDrawPause(draw));
