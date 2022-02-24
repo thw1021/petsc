@@ -7,7 +7,6 @@ typedef struct {
 
 static PetscErrorCode KSPSetUp_MINRES(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ksp->pc_side == PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"No right preconditioning for KSPMINRES");
@@ -18,7 +17,6 @@ static PetscErrorCode KSPSetUp_MINRES(KSP ksp)
 
 static PetscErrorCode  KSPSolve_MINRES(KSP ksp)
 {
-  PetscErrorCode    ierr;
   PetscInt          i;
   PetscScalar       alpha,beta,ibeta,betaold,eta,c=1.0,ceta,cold=1.0,coold,s=0.0,sold=0.0,soold;
   PetscScalar       rho0,rho1,irho1,rho2,rho3,dp = 0.0;
@@ -206,7 +204,6 @@ M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_MINRES(KSP ksp)
 {
   KSP_MINRES     *minres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_LEFT,3));

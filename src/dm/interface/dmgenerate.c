@@ -40,7 +40,6 @@ PETSC_EXTERN PetscErrorCode DMAdaptLabel_Forest(DM, Vec, DMLabel, DMLabel, DM*);
 @*/
 PetscErrorCode DMGenerateRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (DMGenerateRegisterAllCalled) PetscFunctionReturn(0);
@@ -101,7 +100,6 @@ $     -dm_generator my_generator
 PetscErrorCode DMGenerateRegister(const char sname[], PetscErrorCode (*fnc)(DM, PetscBool, DM*), PetscErrorCode (*rfnc)(DM, PetscReal*, DM*), PetscErrorCode (*alfnc)(DM, Vec, DMLabel, DMLabel, DM*), PetscInt dim)
 {
   DMGeneratorFunctionList entry;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&entry));
@@ -125,7 +123,6 @@ extern PetscBool DMGenerateRegisterAllCalled;
 PetscErrorCode DMGenerateRegisterDestroy(void)
 {
   DMGeneratorFunctionList next, fl;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   next = fl = DMGenerateList;
@@ -164,7 +161,6 @@ PetscErrorCode DMAdaptLabel(DM dm, DMLabel label, DM *dmAdapt)
   const char             *name;
   PetscInt                dim;
   PetscBool               flg, isForest, found = PETSC_FALSE;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -223,7 +219,6 @@ PetscErrorCode DMAdaptMetric(DM dm, Vec metric, DMLabel bdLabel, DMLabel rgLabel
   const char * const      adaptors[3] = {"pragmatic", "mmg", "parmmg"};
   PetscInt                dim;
   PetscBool               flg, found = PETSC_FALSE;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

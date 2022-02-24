@@ -6,7 +6,6 @@ const char *const PetscWeakFormKinds[] = {"objective", "residual_f0", "residual_
 
 static PetscErrorCode PetscChunkBufferCreate(size_t unitbytes, size_t expected, PetscChunkBuffer **buffer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(buffer));
@@ -19,7 +18,6 @@ static PetscErrorCode PetscChunkBufferCreate(size_t unitbytes, size_t expected, 
 
 static PetscErrorCode PetscChunkBufferDuplicate(PetscChunkBuffer *buffer, PetscChunkBuffer **bufferNew)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(bufferNew));
@@ -33,7 +31,6 @@ static PetscErrorCode PetscChunkBufferDuplicate(PetscChunkBuffer *buffer, PetscC
 
 static PetscErrorCode PetscChunkBufferDestroy(PetscChunkBuffer **buffer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree((*buffer)->array));
@@ -43,7 +40,6 @@ static PetscErrorCode PetscChunkBufferDestroy(PetscChunkBuffer **buffer)
 
 static PetscErrorCode PetscChunkBufferCreateChunk(PetscChunkBuffer *buffer, PetscInt size, PetscChunk *chunk)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if ((buffer->size + size)*buffer->unitbytes > buffer->alloc) {
@@ -66,7 +62,6 @@ static PetscErrorCode PetscChunkBufferCreateChunk(PetscChunkBuffer *buffer, Pets
 static PetscErrorCode PetscChunkBufferEnlargeChunk(PetscChunkBuffer *buffer, PetscInt size, PetscChunk *chunk)
 {
   size_t         siz = size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (chunk->size + size > chunk->reserved) {
@@ -100,7 +95,6 @@ static PetscErrorCode PetscChunkBufferEnlargeChunk(PetscChunkBuffer *buffer, Pet
 @*/
 PetscErrorCode PetscFormKeySort(PetscInt n, PetscFormKey arr[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
@@ -113,7 +107,6 @@ PetscErrorCode PetscWeakFormGetFunction_Private(PetscWeakForm wf, PetscHMapForm 
 {
   PetscFormKey   key;
   PetscChunk     chunk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   key.label = label; key.value = value; key.field = f; key.part = part;
@@ -129,7 +122,6 @@ PetscErrorCode PetscWeakFormSetFunction_Private(PetscWeakForm wf, PetscHMapForm 
   PetscFormKey   key;
   PetscChunk     chunk;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   key.label = label; key.value = value; key.field = f; key.part = part;
@@ -154,7 +146,6 @@ PetscErrorCode PetscWeakFormAddFunction_Private(PetscWeakForm wf, PetscHMapForm 
 {
   PetscFormKey   key;
   PetscChunk     chunk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!func) PetscFunctionReturn(0);
@@ -176,7 +167,6 @@ PetscErrorCode PetscWeakFormGetIndexFunction_Private(PetscWeakForm wf, PetscHMap
 {
   PetscFormKey key;
   PetscChunk       chunk;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   key.label = label; key.value = value; key.field = f; key.part = part;
@@ -194,7 +184,6 @@ PetscErrorCode PetscWeakFormSetIndexFunction_Private(PetscWeakForm wf, PetscHMap
 {
   PetscFormKey key;
   PetscChunk       chunk;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (!func) PetscFunctionReturn(0);
@@ -215,7 +204,6 @@ PetscErrorCode PetscWeakFormClearIndexFunction_Private(PetscWeakForm wf, PetscHM
 {
   PetscFormKey key;
   PetscChunk       chunk;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   key.label = label; key.value = value; key.field = f; key.part = part;
@@ -250,7 +238,6 @@ PetscErrorCode PetscWeakFormClearIndexFunction_Private(PetscWeakForm wf, PetscHM
 PetscErrorCode PetscWeakFormCopy(PetscWeakForm wf, PetscWeakForm wfNew)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   wfNew->Nf = wf->Nf;
@@ -278,7 +265,6 @@ PetscErrorCode PetscWeakFormCopy(PetscWeakForm wf, PetscWeakForm wfNew)
 PetscErrorCode PetscWeakFormClear(PetscWeakForm wf)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (f = 0; f < PETSC_NUM_WF; ++f) CHKERRQ(PetscHMapFormClear(wf->form[f]));
@@ -289,7 +275,6 @@ static PetscErrorCode PetscWeakFormRewriteKeys_Internal(PetscWeakForm wf, PetscH
 {
   PetscFormKey  *keys;
   PetscInt       n, i, v, off = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHMapFormGetSize(hmap, &n));
@@ -333,7 +318,6 @@ static PetscErrorCode PetscWeakFormRewriteKeys_Internal(PetscWeakForm wf, PetscH
 PetscErrorCode PetscWeakFormRewriteKeys(PetscWeakForm wf, DMLabel label, PetscInt Nv, const PetscInt values[])
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (f = 0; f < PETSC_NUM_WF; ++f) CHKERRQ(PetscWeakFormRewriteKeys_Internal(wf, wf->form[f], label, Nv, values));
@@ -346,7 +330,6 @@ static PetscErrorCode PetscWeakFormReplaceLabel_Internal(PetscWeakForm wf, Petsc
   PetscInt       n, i, off = 0, maxFuncs = 0;
   void       (**tmpf)();
   const char    *name = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (label) CHKERRQ(PetscObjectGetName((PetscObject) label, &name));
@@ -410,7 +393,6 @@ static PetscErrorCode PetscWeakFormReplaceLabel_Internal(PetscWeakForm wf, Petsc
 PetscErrorCode PetscWeakFormReplaceLabel(PetscWeakForm wf, DMLabel label)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (f = 0; f < PETSC_NUM_WF; ++f) CHKERRQ(PetscWeakFormReplaceLabel_Internal(wf, wf->form[f], label));
@@ -419,7 +401,6 @@ PetscErrorCode PetscWeakFormReplaceLabel(PetscWeakForm wf, DMLabel label)
 
 PetscErrorCode PetscWeakFormClearIndex(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt part, PetscWeakFormKind kind, PetscInt ind)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormClearIndexFunction_Private(wf, wf->form[kind], label, val, f, part, ind));
@@ -432,7 +413,6 @@ PetscErrorCode PetscWeakFormGetObjective(PetscWeakForm wf, DMLabel label, PetscI
                                                        const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                        PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_OBJECTIVE], label, val, f, part, n, (void (***)(void)) obj));
@@ -445,7 +425,6 @@ PetscErrorCode PetscWeakFormSetObjective(PetscWeakForm wf, DMLabel label, PetscI
                                                       const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                       PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_OBJECTIVE], label, val, f, part, n, (void (**)(void)) obj));
@@ -458,7 +437,6 @@ PetscErrorCode PetscWeakFormAddObjective(PetscWeakForm wf, DMLabel label, PetscI
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_OBJECTIVE], label, val, f, part, (void (*)(void)) obj));
@@ -471,7 +449,6 @@ PetscErrorCode PetscWeakFormGetIndexObjective(PetscWeakForm wf, DMLabel label, P
                                                            const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                            PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetIndexFunction_Private(wf, wf->form[PETSC_WF_OBJECTIVE], label, val, f, part, ind, (void (**)(void)) obj));
@@ -484,7 +461,6 @@ PetscErrorCode PetscWeakFormSetIndexObjective(PetscWeakForm wf, DMLabel label, P
                                                           const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                           PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_OBJECTIVE], label, val, f, part, ind, (void (*)(void)) obj));
@@ -503,7 +479,6 @@ PetscErrorCode PetscWeakFormGetResidual(PetscWeakForm wf, DMLabel label, PetscIn
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_F0], label, val, f, part, n0, (void (***)(void)) f0));
@@ -521,7 +496,6 @@ PetscErrorCode PetscWeakFormAddResidual(PetscWeakForm wf, DMLabel label, PetscIn
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_F0], label, val, f, part, (void (*)(void)) f0));
@@ -541,7 +515,6 @@ PetscErrorCode PetscWeakFormSetResidual(PetscWeakForm wf, DMLabel label, PetscIn
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_F0], label, val, f, part, n0, (void (**)(void)) f0));
@@ -561,7 +534,6 @@ PetscErrorCode PetscWeakFormSetIndexResidual(PetscWeakForm wf, DMLabel label, Pe
                                                    const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                    PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_F0], label, val, f, part, i0, (void (*)(void)) f0));
@@ -581,7 +553,6 @@ PetscErrorCode PetscWeakFormGetBdResidual(PetscWeakForm wf, DMLabel label, Petsc
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_BDF0], label, val, f, part, n0, (void (***)(void)) f0));
@@ -599,7 +570,6 @@ PetscErrorCode PetscWeakFormAddBdResidual(PetscWeakForm wf, DMLabel label, Petsc
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_BDF0], label, val, f, part, (void (*)(void)) f0));
@@ -619,7 +589,6 @@ PetscErrorCode PetscWeakFormSetBdResidual(PetscWeakForm wf, DMLabel label, Petsc
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_BDF0], label, val, f, part, n0, (void (**)(void)) f0));
@@ -639,7 +608,6 @@ PetscErrorCode PetscWeakFormSetIndexBdResidual(PetscWeakForm wf, DMLabel label, 
                                                      const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                                                      PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_BDF0], label, val, f, part, i0, (void (*)(void)) f0));
@@ -650,7 +618,6 @@ PetscErrorCode PetscWeakFormSetIndexBdResidual(PetscWeakForm wf, DMLabel label, 
 PetscErrorCode PetscWeakFormHasJacobian(PetscWeakForm wf, PetscBool *hasJac)
 {
   PetscInt       n0, n1, n2, n3;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
@@ -686,7 +653,6 @@ PetscErrorCode PetscWeakFormGetJacobian(PetscWeakForm wf, DMLabel label, PetscIn
                                                      PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_G0], label, val, find, part, n0, (void (***)(void)) g0));
@@ -715,7 +681,6 @@ PetscErrorCode PetscWeakFormAddJacobian(PetscWeakForm wf, DMLabel label, PetscIn
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_G0], label, val, find, part, (void (*)(void)) g0));
@@ -748,7 +713,6 @@ PetscErrorCode PetscWeakFormSetJacobian(PetscWeakForm wf, DMLabel label, PetscIn
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_G0], label, val, find, part, n0, (void (**)(void)) g0));
@@ -781,7 +745,6 @@ PetscErrorCode PetscWeakFormSetIndexJacobian(PetscWeakForm wf, DMLabel label, Pe
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_G0], label, val, find, part, i0, (void (*)(void)) g0));
@@ -794,7 +757,6 @@ PetscErrorCode PetscWeakFormSetIndexJacobian(PetscWeakForm wf, DMLabel label, Pe
 PetscErrorCode PetscWeakFormHasJacobianPreconditioner(PetscWeakForm wf, PetscBool *hasJacPre)
 {
   PetscInt       n0, n1, n2, n3;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
@@ -830,7 +792,6 @@ PetscErrorCode PetscWeakFormGetJacobianPreconditioner(PetscWeakForm wf, DMLabel 
                                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_GP0], label, val, find, part, n0, (void (***)(void)) g0));
@@ -859,7 +820,6 @@ PetscErrorCode PetscWeakFormAddJacobianPreconditioner(PetscWeakForm wf, DMLabel 
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_GP0], label, val, find, part, (void (*)(void)) g0));
@@ -892,7 +852,6 @@ PetscErrorCode PetscWeakFormSetJacobianPreconditioner(PetscWeakForm wf, DMLabel 
                                                                  PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_GP0], label, val, find, part, n0, (void (**)(void)) g0));
@@ -925,7 +884,6 @@ PetscErrorCode PetscWeakFormSetIndexJacobianPreconditioner(PetscWeakForm wf, DML
                                                                  PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_GP0], label, val, find, part, i0, (void (*)(void)) g0));
@@ -938,7 +896,6 @@ PetscErrorCode PetscWeakFormSetIndexJacobianPreconditioner(PetscWeakForm wf, DML
 PetscErrorCode PetscWeakFormHasBdJacobian(PetscWeakForm wf, PetscBool *hasJac)
 {
   PetscInt       n0, n1, n2, n3;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
@@ -974,7 +931,6 @@ PetscErrorCode PetscWeakFormGetBdJacobian(PetscWeakForm wf, DMLabel label, Petsc
                                                        PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_BDG0], label, val, find, part, n0, (void (***)(void)) g0));
@@ -1003,7 +959,6 @@ PetscErrorCode PetscWeakFormAddBdJacobian(PetscWeakForm wf, DMLabel label, Petsc
                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_BDG0], label, val, find, part, (void (*)(void)) g0));
@@ -1036,7 +991,6 @@ PetscErrorCode PetscWeakFormSetBdJacobian(PetscWeakForm wf, DMLabel label, Petsc
                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_BDG0], label, val, find, part, n0, (void (**)(void)) g0));
@@ -1069,7 +1023,6 @@ PetscErrorCode PetscWeakFormSetIndexBdJacobian(PetscWeakForm wf, DMLabel label, 
                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_BDG0], label, val, find, part, i0, (void (*)(void)) g0));
@@ -1082,7 +1035,6 @@ PetscErrorCode PetscWeakFormSetIndexBdJacobian(PetscWeakForm wf, DMLabel label, 
 PetscErrorCode PetscWeakFormHasBdJacobianPreconditioner(PetscWeakForm wf, PetscBool *hasJacPre)
 {
   PetscInt       n0, n1, n2, n3;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
@@ -1118,7 +1070,6 @@ PetscErrorCode PetscWeakFormGetBdJacobianPreconditioner(PetscWeakForm wf, DMLabe
                                                                      PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_BDGP0], label, val, find, part, n0, (void (***)(void)) g0));
@@ -1147,7 +1098,6 @@ PetscErrorCode PetscWeakFormAddBdJacobianPreconditioner(PetscWeakForm wf, DMLabe
                                                                    PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_BDGP0], label, val, find, part, (void (*)(void)) g0));
@@ -1180,7 +1130,6 @@ PetscErrorCode PetscWeakFormSetBdJacobianPreconditioner(PetscWeakForm wf, DMLabe
                                                                    PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_BDGP0], label, val, find, part, n0, (void (**)(void)) g0));
@@ -1213,7 +1162,6 @@ PetscErrorCode PetscWeakFormSetIndexBdJacobianPreconditioner(PetscWeakForm wf, D
                                                                    PetscReal, PetscReal, const PetscReal[], const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_BDGP0], label, val, find, part, i0, (void (*)(void)) g0));
@@ -1226,7 +1174,6 @@ PetscErrorCode PetscWeakFormSetIndexBdJacobianPreconditioner(PetscWeakForm wf, D
 PetscErrorCode PetscWeakFormHasDynamicJacobian(PetscWeakForm wf, PetscBool *hasDynJac)
 {
   PetscInt       n0, n1, n2, n3;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
@@ -1262,7 +1209,6 @@ PetscErrorCode PetscWeakFormGetDynamicJacobian(PetscWeakForm wf, DMLabel label, 
                                                      PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_GT0], label, val, find, part, n0, (void (***)(void)) g0));
@@ -1291,7 +1237,6 @@ PetscErrorCode PetscWeakFormAddDynamicJacobian(PetscWeakForm wf, DMLabel label, 
                                                    PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormAddFunction_Private(wf, wf->form[PETSC_WF_GT0], label, val, find, part, (void (*)(void)) g0));
@@ -1324,7 +1269,6 @@ PetscErrorCode PetscWeakFormSetDynamicJacobian(PetscWeakForm wf, DMLabel label, 
                                                           PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_GT0], label, val, find, part, n0, (void (**)(void)) g0));
@@ -1357,7 +1301,6 @@ PetscErrorCode PetscWeakFormSetIndexDynamicJacobian(PetscWeakForm wf, DMLabel la
                                                           PetscReal, PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]))
 {
   PetscInt       find = f*wf->Nf + g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_GT0], label, val, find, part, i0, (void (*)(void)) g0));
@@ -1370,7 +1313,6 @@ PetscErrorCode PetscWeakFormSetIndexDynamicJacobian(PetscWeakForm wf, DMLabel la
 PetscErrorCode PetscWeakFormGetRiemannSolver(PetscWeakForm wf, DMLabel label, PetscInt val, PetscInt f, PetscInt part, PetscInt *n,
                                              void (***r)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetFunction_Private(wf, wf->form[PETSC_WF_R], label, val, f, part, n, (void (***)(void)) r));
@@ -1381,7 +1323,6 @@ PetscErrorCode PetscWeakFormSetRiemannSolver(PetscWeakForm wf, DMLabel label, Pe
                                              PetscInt n,
                                              void (**r)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetFunction_Private(wf, wf->form[PETSC_WF_R], label, val, f, part, n, (void (**)(void)) r));
@@ -1392,7 +1333,6 @@ PetscErrorCode PetscWeakFormSetIndexRiemannSolver(PetscWeakForm wf, DMLabel labe
                                                   PetscInt i,
                                                   void (*r)(PetscInt, PetscInt, const PetscReal[], const PetscReal[], const PetscScalar[], const PetscScalar[], PetscInt, const PetscScalar[], PetscScalar[], void *))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormSetIndexFunction_Private(wf, wf->form[PETSC_WF_R], label, val, f, part, i, (void (*)(void)) r));
@@ -1459,7 +1399,6 @@ PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm wf, PetscInt Nf)
 PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *wf)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*wf) PetscFunctionReturn(0);
@@ -1477,7 +1416,6 @@ PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *wf)
 static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer viewer, PetscBool splitField, const char tableName[], PetscHMapForm map)
 {
   PetscInt       Nf = wf->Nf, Nk, k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHMapFormGetSize(map, &Nk));
@@ -1556,7 +1494,6 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
 {
   PetscViewerFormat format;
   PetscInt          f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer, &format));
@@ -1585,7 +1522,6 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
 PetscErrorCode PetscWeakFormView(PetscWeakForm wf, PetscViewer v)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
@@ -1616,7 +1552,6 @@ PetscErrorCode PetscWeakFormCreate(MPI_Comm comm, PetscWeakForm *wf)
 {
   PetscWeakForm  p;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(wf, 2);

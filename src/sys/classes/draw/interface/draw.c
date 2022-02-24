@@ -18,7 +18,6 @@ static PetscBool PetscDrawPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscDrawFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscDrawList));
@@ -40,7 +39,6 @@ PetscErrorCode  PetscDrawInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDrawPackageInitialized) PetscFunctionReturn(0);
@@ -99,7 +97,6 @@ PetscErrorCode  PetscDrawInitializePackage(void)
 @*/
 PetscErrorCode  PetscDrawResizeWindow(PetscDraw draw,int w,int h)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -152,7 +149,6 @@ PetscErrorCode  PetscDrawGetWindowSize(PetscDraw draw,int *w,int *h)
 @*/
 PetscErrorCode  PetscDrawCheckResizedWindow(PetscDraw draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -209,7 +205,6 @@ PetscErrorCode  PetscDrawGetTitle(PetscDraw draw,const char *title[])
 @*/
 PetscErrorCode  PetscDrawSetTitle(PetscDraw draw,const char title[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -241,7 +236,6 @@ PetscErrorCode  PetscDrawSetTitle(PetscDraw draw,const char title[])
 @*/
 PetscErrorCode  PetscDrawAppendTitle(PetscDraw draw,const char title[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -269,7 +263,6 @@ PetscErrorCode  PetscDrawAppendTitle(PetscDraw draw,const char title[])
 
 static PetscErrorCode PetscDrawDestroy_Private(PetscDraw draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!draw->ops->save && !draw->ops->getimage) PetscFunctionReturn(0);
@@ -298,7 +291,6 @@ static PetscErrorCode PetscDrawDestroy_Private(PetscDraw draw)
 @*/
 PetscErrorCode  PetscDrawDestroy(PetscDraw *draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*draw) PetscFunctionReturn(0);
@@ -347,7 +339,6 @@ PetscErrorCode  PetscDrawDestroy(PetscDraw *draw)
 @*/
 PetscErrorCode  PetscDrawGetPopup(PetscDraw draw,PetscDraw *popup)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -379,7 +370,6 @@ PetscErrorCode  PetscDrawGetPopup(PetscDraw draw,PetscDraw *popup)
 @*/
 PetscErrorCode  PetscDrawSetDisplay(PetscDraw draw,const char display[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(draw->display));
@@ -400,7 +390,6 @@ PetscErrorCode  PetscDrawSetDisplay(PetscDraw draw,const char display[])
 @*/
 PetscErrorCode  PetscDrawSetDoubleBuffer(PetscDraw draw)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -429,7 +418,6 @@ PetscErrorCode  PetscDrawSetDoubleBuffer(PetscDraw draw)
 @*/
 PetscErrorCode  PetscDrawGetSingleton(PetscDraw draw,PetscDraw *sdraw)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -465,7 +453,6 @@ PetscErrorCode  PetscDrawGetSingleton(PetscDraw draw,PetscDraw *sdraw)
 @*/
 PetscErrorCode  PetscDrawRestoreSingleton(PetscDraw draw,PetscDraw *sdraw)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

@@ -31,7 +31,6 @@ PetscBool PetscLogGpuTraffic = PETSC_FALSE;
 PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *eventLog)
 {
   PetscEventRegLog l;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&l));
@@ -57,7 +56,6 @@ PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *eventLog)
 PetscErrorCode PetscEventRegLogDestroy(PetscEventRegLog eventLog)
 {
   int            e;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (e = 0; e < eventLog->numEvents; e++) {
@@ -83,7 +81,6 @@ PetscErrorCode PetscEventRegLogDestroy(PetscEventRegLog eventLog)
 PetscErrorCode PetscEventPerfLogCreate(PetscEventPerfLog *eventLog)
 {
   PetscEventPerfLog l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&l));
@@ -108,7 +105,6 @@ PetscErrorCode PetscEventPerfLogCreate(PetscEventPerfLog *eventLog)
 @*/
 PetscErrorCode PetscEventPerfLogDestroy(PetscEventPerfLog eventLog)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(eventLog->eventInfo));
@@ -214,7 +210,6 @@ PetscErrorCode PetscEventPerfInfoCopy(PetscEventPerfInfo *eventInfo,PetscEventPe
 PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog eventLog,int size)
 {
   PetscEventPerfInfo *eventInfo;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   while (size > eventLog->maxEvents) {
@@ -296,7 +291,6 @@ PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog,const char ena
   PetscEventRegInfo *eventInfo;
   char              *str;
   int               e;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(ename,2);
@@ -540,7 +534,6 @@ PetscErrorCode  PetscEventRegLogGetEvent(PetscEventRegLog eventLog,const char na
 {
   PetscBool      match;
   int            e;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,2);
@@ -625,7 +618,6 @@ PetscErrorCode PetscLogEventGetPerfInfo(int stage,PetscLogEvent event,PetscEvent
 {
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(info,3);
@@ -642,7 +634,6 @@ PetscErrorCode PetscLogEventGetFlops(PetscLogEvent event,PetscLogDouble *flops)
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!PetscLogPLB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use -log_view or PetscLogDefaultBegin() before calling this routine");
@@ -658,7 +649,6 @@ PetscErrorCode PetscLogEventZeroFlops(PetscLogEvent event)
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -678,7 +668,6 @@ PetscErrorCode PetscLogEventSynchronize(PetscLogEvent event,MPI_Comm comm)
   PetscEventPerfLog eventLog = NULL;
   int               stage;
   PetscLogDouble    time = 0.0;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!PetscLogSyncOn || comm == MPI_COMM_NULL) PetscFunctionReturn(0);
@@ -701,7 +690,6 @@ PetscErrorCode PetscLogEventBeginDefault(PetscLogEvent event,int t,PetscObject o
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -746,7 +734,6 @@ PetscErrorCode PetscLogEventEndDefault(PetscLogEvent event,int t,PetscObject o1,
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -797,7 +784,6 @@ PetscErrorCode PetscLogEventBeginComplete(PetscLogEvent event,int t,PetscObject 
   PetscLogDouble    start,end;
   PetscLogDouble    curTime;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* Dynamically enlarge logging structures */
@@ -857,7 +843,6 @@ PetscErrorCode PetscLogEventEndComplete(PetscLogEvent event,int t,PetscObject o1
   PetscLogDouble    start,end;
   PetscLogDouble    curTime;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* Dynamically enlarge logging structures */
@@ -917,7 +902,6 @@ PetscErrorCode PetscLogEventBeginTrace(PetscLogEvent event,int t,PetscObject o1,
   PetscLogDouble    cur_time;
   PetscMPIInt       rank;
   int               stage,err;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!petsc_tracetime) PetscTime(&petsc_tracetime);
@@ -951,7 +935,6 @@ PetscErrorCode PetscLogEventEndTrace(PetscLogEvent event,int t,PetscObject o1,Pe
   PetscLogDouble    cur_time;
   int               stage,err;
   PetscMPIInt       rank;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   petsc_tracelevel--;
@@ -1001,7 +984,6 @@ PetscErrorCode PetscLogEventSetDof(PetscLogEvent event, PetscInt n, PetscLogDoub
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse((n < 0) || (n > 7),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
@@ -1037,7 +1019,6 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
   PetscStageLog     stageLog;
   PetscEventPerfLog eventLog = NULL;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse((n < 0) || (n > 7),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);

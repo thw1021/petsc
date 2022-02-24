@@ -174,7 +174,6 @@ PetscErrorCode  PetscDrawUtilitySetCmap(const char colormap[],int mapsize,unsign
   PetscInt        id = 0, count = (PetscInt)(sizeof(cmap_name_list)/sizeof(char*));
   PetscBool       reverse = PETSC_FALSE, brighten = PETSC_FALSE;
   PetscReal       beta = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i=0; i<count; i++) cmap_name_list[i] = PetscDrawCmapTable[i].name;

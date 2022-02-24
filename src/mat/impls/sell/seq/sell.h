@@ -55,7 +55,6 @@ typedef struct {
 static inline PetscErrorCode MatSeqXSELLFreeSELL(Mat AA,MatScalar **val,PetscInt **colidx)
 {
   Mat_SeqSELL    *A = (Mat_SeqSELL*) AA->data;
-  PetscErrorCode ierr;
   if (A->singlemalloc) {
     CHKERRQ(PetscFree2(*val,*colidx));
   } else {

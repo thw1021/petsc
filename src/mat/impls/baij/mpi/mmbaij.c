@@ -9,7 +9,6 @@ PetscErrorCode MatSetUpMultiply_MPIBAIJ(Mat mat)
 {
   Mat_MPIBAIJ    *baij = (Mat_MPIBAIJ*)mat->data;
   Mat_SeqBAIJ    *B    = (Mat_SeqBAIJ*)(baij->B->data);
-  PetscErrorCode ierr;
   PetscInt       i,j,*aj = B->j,ec = 0,*garray;
   PetscInt       bs = mat->rmap->bs,*stmp;
   IS             from,to;
@@ -143,7 +142,6 @@ PetscErrorCode MatDisAssemble_MPIBAIJ(Mat A)
   Mat_MPIBAIJ    *baij  = (Mat_MPIBAIJ*)A->data;
   Mat            B      = baij->B,Bnew;
   Mat_SeqBAIJ    *Bbaij = (Mat_SeqBAIJ*)B->data;
-  PetscErrorCode ierr;
   PetscInt       i,j,mbs=Bbaij->mbs,n = A->cmap->N,col,*garray=baij->garray;
   PetscInt       bs2 = baij->bs2,*nz,ec,m = A->rmap->n;
   MatScalar      *a  = Bbaij->a;
@@ -217,7 +215,6 @@ PetscErrorCode MatMPIBAIJDiagonalScaleLocalSetUp(Mat inA,Vec scale)
 {
   Mat_MPIBAIJ    *ina = (Mat_MPIBAIJ*) inA->data; /*access private part of matrix */
   Mat_SeqBAIJ    *B   = (Mat_SeqBAIJ*)ina->B->data;
-  PetscErrorCode ierr;
   PetscInt       bs = inA->rmap->bs,i,n,nt,j,cstart,cend,no,*garray = ina->garray,*lindices;
   PetscInt       *r_rmapd,*r_rmapo;
 
@@ -275,7 +272,6 @@ PetscErrorCode MatMPIBAIJDiagonalScaleLocalSetUp(Mat inA,Vec scale)
 PetscErrorCode  MatMPIBAIJDiagonalScaleLocal(Mat A,Vec scale)
 {
   /* This routine should really be abandoned as it duplicates MatDiagonalScaleLocal */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(A,"MatDiagonalScaleLocal_C",(Mat,Vec),(A,scale)));
@@ -285,7 +281,6 @@ PetscErrorCode  MatMPIBAIJDiagonalScaleLocal(Mat A,Vec scale)
 PetscErrorCode  MatDiagonalScaleLocal_MPIBAIJ(Mat A,Vec scale)
 {
   Mat_MPIBAIJ       *a = (Mat_MPIBAIJ*) A->data; /*access private part of matrix */
-  PetscErrorCode    ierr;
   PetscInt          n,i;
   PetscScalar       *d,*o;
   const PetscScalar *s;

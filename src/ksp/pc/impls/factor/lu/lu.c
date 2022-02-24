@@ -21,7 +21,6 @@ PetscErrorCode PCFactorReorderForNonzeroDiagonal_LU(PC pc,PetscReal z)
 static PetscErrorCode PCSetFromOptions_LU(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_LU          *lu = (PC_LU*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
   PetscReal      tol;
 
@@ -41,7 +40,6 @@ static PetscErrorCode PCSetFromOptions_LU(PetscOptionItems *PetscOptionsObject,P
 
 static PetscErrorCode PCSetUp_LU(PC pc)
 {
-  PetscErrorCode         ierr;
   PC_LU                  *dir = (PC_LU*)pc->data;
   MatSolverType          stype;
   MatFactorError         err;
@@ -150,7 +148,6 @@ static PetscErrorCode PCSetUp_LU(PC pc)
 static PetscErrorCode PCReset_LU(PC pc)
 {
   PC_LU          *dir = (PC_LU*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dir->hdr.inplace && ((PC_Factor*)dir)->fact) CHKERRQ(MatDestroy(&((PC_Factor*)dir)->fact));
@@ -162,7 +159,6 @@ static PetscErrorCode PCReset_LU(PC pc)
 static PetscErrorCode PCDestroy_LU(PC pc)
 {
   PC_LU          *dir = (PC_LU*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_LU(pc));
@@ -175,7 +171,6 @@ static PetscErrorCode PCDestroy_LU(PC pc)
 static PetscErrorCode PCApply_LU(PC pc,Vec x,Vec y)
 {
   PC_LU          *dir = (PC_LU*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -189,7 +184,6 @@ static PetscErrorCode PCApply_LU(PC pc,Vec x,Vec y)
 static PetscErrorCode PCMatApply_LU(PC pc,Mat X,Mat Y)
 {
   PC_LU          *dir = (PC_LU*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -203,7 +197,6 @@ static PetscErrorCode PCMatApply_LU(PC pc,Mat X,Mat Y)
 static PetscErrorCode PCApplyTranspose_LU(PC pc,Vec x,Vec y)
 {
   PC_LU          *dir = (PC_LU*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -254,7 +247,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_LU(PC pc)
 {
-  PetscErrorCode ierr;
   PC_LU          *dir;
 
   PetscFunctionBegin;

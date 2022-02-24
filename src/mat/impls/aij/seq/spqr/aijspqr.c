@@ -17,7 +17,6 @@ static PetscErrorCode MatWrapCholmod_SPQR_seqaij(Mat A,PetscBool values,cholmod_
   PetscInt          n = A->cmap->n, i,j,k,nz;
   SuiteSparse_long  *ci, *cj; /* SuiteSparse_long is the only choice for SPQR */
   PetscBool         vain = PETSC_FALSE,flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)A, MATNORMALHERMITIAN, &flg));
@@ -94,7 +93,6 @@ static PetscErrorCode MatSolve_SPQR_Internal(Mat F, cholmod_dense *cholB, cholmo
 {
   Mat_CHOLMOD    *chol = (Mat_CHOLMOD*)F->data;
   cholmod_dense  *Y_handle = NULL, *QTB_handle = NULL, *Z_handle = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!chol->normal) {
@@ -120,7 +118,6 @@ static PetscErrorCode MatSolve_SPQR(Mat F,Vec B,Vec X)
   cholmod_dense  cholB,*Y_handle = NULL;
   PetscInt       n;
   PetscScalar    *v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecWrapCholmod(B,GET_ARRAY_READ,&cholB));
@@ -140,7 +137,6 @@ static PetscErrorCode MatMatSolve_SPQR(Mat F,Mat B,Mat X)
   cholmod_dense  cholB,*Y_handle = NULL;
   PetscScalar    *v;
   PetscInt       lda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseWrapCholmod(B,GET_ARRAY_READ,&cholB));
@@ -164,7 +160,6 @@ static PetscErrorCode MatSolveTranspose_SPQR_Internal(Mat F, cholmod_dense *chol
 {
   Mat_CHOLMOD    *chol = (Mat_CHOLMOD*)F->data;
   cholmod_dense  *Y_handle = NULL, *RTB_handle = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   RTB_handle = SuiteSparseQR_C_solve(SPQR_RTX_EQUALS_ETB, chol->spqrfact, cholB, chol->common);
@@ -182,7 +177,6 @@ static PetscErrorCode MatSolveTranspose_SPQR(Mat F,Vec B,Vec X)
   cholmod_dense  cholB,*Y_handle = NULL;
   PetscInt       n;
   PetscScalar    *v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecWrapCholmod(B,GET_ARRAY_READ,&cholB));
@@ -202,7 +196,6 @@ static PetscErrorCode MatMatSolveTranspose_SPQR(Mat F,Mat B,Mat X)
   cholmod_dense  cholB,*Y_handle = NULL;
   PetscScalar    *v;
   PetscInt       lda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseWrapCholmod(B,GET_ARRAY_READ,&cholB));
@@ -256,7 +249,6 @@ static PetscErrorCode MatQRFactorNumeric_SPQR(Mat F,Mat A,const MatFactorInfo *i
 PETSC_INTERN PetscErrorCode MatQRFactorSymbolic_SPQR(Mat F,Mat A,IS perm,const MatFactorInfo *info)
 {
   Mat_CHOLMOD    *chol = (Mat_CHOLMOD*)F->data;
-  PetscErrorCode ierr;
   cholmod_sparse cholA;
   PetscBool      aijalloc,valloc;
 
@@ -304,7 +296,6 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_spqr(Mat A,MatFactorType ftype,M
 {
   Mat            B;
   Mat_CHOLMOD    *chol;
-  PetscErrorCode ierr;
   PetscInt       m=A->rmap->n,n=A->cmap->n;
   const char     *prefix;
 

@@ -25,7 +25,6 @@
 @*/
 PetscErrorCode  PetscGetHomeDirectory(char dir[],size_t maxlen)
 {
-  PetscErrorCode ierr;
   const char     *d1;
 
   PetscFunctionBegin;
@@ -55,7 +54,6 @@ PetscErrorCode  PetscGetHomeDirectory(char dir[],size_t maxlen)
 @*/
 PetscErrorCode  PetscFixFilename(const char filein[],char fileout[])
 {
-  PetscErrorCode ierr;
   size_t         i,n;
 
   PetscFunctionBegin;

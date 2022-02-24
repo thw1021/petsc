@@ -107,7 +107,6 @@ static PetscErrorCode KSPAGMRESSchurForm(KSP ksp, PetscBLASInt KspSize, PetscSca
   PetscBLASInt   sdim    = 0;
   PetscInt       i,j;
   PetscBLASInt   info;
-  PetscErrorCode ierr;
   PetscBLASInt   *iwork = agmres->iwork;
   PetscBLASInt   N = MAXKSPSIZE;
   PetscBLASInt   lwork,liwork;
@@ -193,7 +192,6 @@ PetscErrorCode KSPAGMRESComputeDeflationData(KSP ksp)
   PetscScalar    *Sr      = agmres->Sr;
   PetscScalar    alpha, beta;
   PetscInt       i,j;
-  PetscErrorCode ierr;
   PetscInt       max_k = agmres->max_k;     /* size of the non - augmented subspace */
   PetscInt       CurNeig;       /* Current number of extracted eigenvalues */
   PetscInt       N        = MAXKSPSIZE;

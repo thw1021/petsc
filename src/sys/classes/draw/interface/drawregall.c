@@ -27,7 +27,6 @@ PetscBool PetscDrawRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscDrawRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDrawRegisterAllCalled) PetscFunctionReturn(0);

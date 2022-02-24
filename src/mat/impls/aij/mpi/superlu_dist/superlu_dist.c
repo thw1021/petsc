@@ -92,7 +92,6 @@ PetscErrorCode MatSuperluDistGetDiagU_SuperLU_DIST(Mat F,PetscScalar *diagU)
 
 PetscErrorCode MatSuperluDistGetDiagU(Mat F,PetscScalar *diagU)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -114,7 +113,6 @@ static PetscMPIInt Petsc_Superlu_dist_keyval = MPI_KEYVAL_INVALID;
 
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Superlu_dist_keyval_Delete_Fn(MPI_Comm comm,PetscMPIInt keyval,void *attr_val,void *extra_state)
 {
-  PetscErrorCode    ierr;
   PetscSuperLU_DIST *context = (PetscSuperLU_DIST *) attr_val;
 
   PetscFunctionBegin;
@@ -143,7 +141,6 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Superlu_dist_keyval_Delete_Fn(MPI_Comm com
 */
 static PetscErrorCode Petsc_Superlu_dist_keyval_free(void)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    Petsc_Superlu_dist_keyval_temp = Petsc_Superlu_dist_keyval;
 
   PetscFunctionBegin;
@@ -154,7 +151,6 @@ static PetscErrorCode Petsc_Superlu_dist_keyval_free(void)
 
 static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
 {
-  PetscErrorCode   ierr;
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST*)A->data;
 
   PetscFunctionBegin;
@@ -210,7 +206,6 @@ static PetscErrorCode MatDestroy_SuperLU_DIST(Mat A)
 static PetscErrorCode MatSolve_SuperLU_DIST(Mat A,Vec b_mpi,Vec x)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST*)A->data;
-  PetscErrorCode   ierr;
   PetscInt         m=A->rmap->n;
   SuperLUStat_t    stat;
   double           berr[1];
@@ -251,7 +246,6 @@ static PetscErrorCode MatSolve_SuperLU_DIST(Mat A,Vec b_mpi,Vec x)
 static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A,Mat B_mpi,Mat X)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST*)A->data;
-  PetscErrorCode   ierr;
   PetscInt         m=A->rmap->n,nrhs;
   SuperLUStat_t    stat;
   double           berr[1];
@@ -312,7 +306,6 @@ static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A,Mat B_mpi,Mat X)
 */
 static PetscErrorCode MatGetInertia_SuperLU_DIST(Mat F,PetscInt *nneg,PetscInt *nzero,PetscInt *npos)
 {
-  PetscErrorCode   ierr;
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST*)F->data;
   PetscScalar      *diagU=NULL;
   PetscInt         M,i,neg=0,zero=0,pos=0;
@@ -357,7 +350,6 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
   SuperLUStat_t     stat;
   double            *berr=0;
   PetscBool         ismpiaij,isseqaij,flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectBaseTypeCompare((PetscObject)A,MATSEQAIJ,&isseqaij));
@@ -473,7 +465,6 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F,Mat A,IS r,IS c,con
 
 static PetscErrorCode MatCholeskyFactorSymbolic_SuperLU_DIST(Mat F,Mat A,IS r,const MatFactorInfo *info)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatLUFactorSymbolic_SuperLU_DIST(F,A,r,r,info));
@@ -492,7 +483,6 @@ static PetscErrorCode MatView_Info_SuperLU_DIST(Mat A,PetscViewer viewer)
 {
   Mat_SuperLU_DIST       *lu=(Mat_SuperLU_DIST*)A->data;
   superlu_dist_options_t options;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   /* check if matrix is superlu_dist type */
@@ -568,7 +558,6 @@ static PetscErrorCode MatView_Info_SuperLU_DIST(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatView_SuperLU_DIST(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -829,7 +818,6 @@ static PetscErrorCode MatGetFactor_aij_superlu_dist(Mat A,MatFactorType ftype,Ma
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuperLU_DIST(void)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSUPERLU_DIST,MATMPIAIJ,MAT_FACTOR_LU,MatGetFactor_aij_superlu_dist));
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSUPERLU_DIST,MATSEQAIJ,MAT_FACTOR_LU,MatGetFactor_aij_superlu_dist));

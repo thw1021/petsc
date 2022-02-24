@@ -4,7 +4,6 @@
 PetscErrorCode TaoSetFromOptions_SSLS(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_SSLS       *ssls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Semismooth method with a linesearch for complementarity problems"));
@@ -28,7 +27,6 @@ PetscErrorCode Tao_SSLS_Function(TaoLineSearch ls, Vec X, PetscReal *fcn, void *
 {
   Tao            tao = (Tao)ptr;
   TAO_SSLS       *ssls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoComputeConstraints(tao, X, tao->constraints));
@@ -43,7 +41,6 @@ PetscErrorCode Tao_SSLS_FunctionGradient(TaoLineSearch ls, Vec X, PetscReal *fcn
 {
   Tao            tao = (Tao)ptr;
   TAO_SSLS       *ssls = (TAO_SSLS *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoComputeConstraints(tao, X, tao->constraints));

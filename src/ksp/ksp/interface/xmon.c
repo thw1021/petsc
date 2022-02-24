@@ -7,7 +7,6 @@ PetscErrorCode KSPMonitorLGCreate(MPI_Comm comm,const char host[],const char lab
   PetscDraw      draw;
   PetscDrawAxis  axis;
   PetscDrawLG    lg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawCreate(comm,host,label,x,y,m,n,&draw));
@@ -25,7 +24,6 @@ PetscErrorCode KSPMonitorLGCreate(MPI_Comm comm,const char host[],const char lab
 PetscErrorCode KSPMonitorLGRange(KSP ksp,PetscInt n,PetscReal rnorm,void *monctx)
 {
   PetscDrawLG      lg;
-  PetscErrorCode   ierr;
   PetscReal        x,y,per;
   PetscViewer      v = (PetscViewer)monctx;
   static PetscReal prev; /* should be in the context */

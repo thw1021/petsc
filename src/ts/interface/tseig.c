@@ -46,7 +46,6 @@ struct _n_TSMonitorSPEigCtx {
 PetscErrorCode  TSMonitorSPEigCtxCreate(MPI_Comm comm,const char host[],const char label[],int x,int y,int m,int n,PetscInt howoften,TSMonitorSPEigCtx *ctx)
 {
   PetscDraw      win;
-  PetscErrorCode ierr;
   PC             pc;
 
   PetscFunctionBegin;
@@ -81,7 +80,6 @@ PetscErrorCode  TSMonitorSPEigCtxCreate(MPI_Comm comm,const char host[],const ch
 
 static PetscErrorCode TSLinearStabilityIndicator(TS ts, PetscReal xr,PetscReal xi,PetscBool *flg)
 {
-  PetscErrorCode ierr;
   PetscReal      yr,yi;
 
   PetscFunctionBegin;
@@ -94,7 +92,6 @@ static PetscErrorCode TSLinearStabilityIndicator(TS ts, PetscReal xr,PetscReal x
 PetscErrorCode TSMonitorSPEig(TS ts,PetscInt step,PetscReal ptime,Vec v,void *monctx)
 {
   TSMonitorSPEigCtx ctx = (TSMonitorSPEigCtx) monctx;
-  PetscErrorCode    ierr;
   KSP               ksp = ctx->ksp;
   PetscInt          n,N,nits,neig,i,its = 200;
   PetscReal         *r,*c,time_step_save;
@@ -193,7 +190,6 @@ PetscErrorCode TSMonitorSPEig(TS ts,PetscInt step,PetscReal ptime,Vec v,void *mo
 PetscErrorCode  TSMonitorSPEigCtxDestroy(TSMonitorSPEigCtx *ctx)
 {
   PetscDraw      draw;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawSPGetDraw((*ctx)->drawsp,&draw));

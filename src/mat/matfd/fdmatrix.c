@@ -9,7 +9,6 @@
 
 PetscErrorCode  MatFDColoringSetF(MatFDColoring fd,Vec F)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (F) {
@@ -25,7 +24,6 @@ PetscErrorCode  MatFDColoringSetF(MatFDColoring fd,Vec F)
 static PetscErrorCode MatFDColoringView_Draw_Zoom(PetscDraw draw,void *Aa)
 {
   MatFDColoring  fd = (MatFDColoring)Aa;
-  PetscErrorCode ierr;
   PetscInt       i,j,nz,row;
   PetscReal      x,y;
   MatEntry       *Jentry=fd->matentry;
@@ -46,7 +44,6 @@ static PetscErrorCode MatFDColoringView_Draw_Zoom(PetscDraw draw,void *Aa)
 
 static PetscErrorCode MatFDColoringView_Draw(MatFDColoring fd,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isnull;
   PetscDraw      draw;
   PetscReal      xr,yr,xl,yl,h,w;
@@ -96,7 +93,6 @@ static PetscErrorCode MatFDColoringView_Draw(MatFDColoring fd,PetscViewer viewer
 @*/
 PetscErrorCode  MatFDColoringView(MatFDColoring c,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,j;
   PetscBool         isdraw,iascii;
   PetscViewerFormat format;
@@ -227,7 +223,6 @@ PetscErrorCode MatFDColoringSetBlockSize(MatFDColoring matfd,PetscInt brows,Pets
 @*/
 PetscErrorCode MatFDColoringSetUp(Mat mat,ISColoring iscoloring,MatFDColoring color)
 {
-  PetscErrorCode ierr;
   PetscBool      eq;
 
   PetscFunctionBegin;
@@ -408,7 +403,6 @@ PetscErrorCode  MatFDColoringSetType(MatFDColoring matfd,MatMFFDType type)
 
 PetscErrorCode MatFDColoringViewFromOptions(MatFDColoring fd,const char prefix[],const char optionname[])
 {
-  PetscErrorCode    ierr;
   PetscBool         flg;
   PetscViewer       viewer;
   PetscViewerFormat format;
@@ -451,7 +445,6 @@ PetscErrorCode  MatFDColoringCreate(Mat mat,ISColoring iscoloring,MatFDColoring 
 {
   MatFDColoring  c;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
   PetscInt       M,N;
 
   PetscFunctionBegin;
@@ -507,7 +500,6 @@ PetscErrorCode  MatFDColoringCreate(Mat mat,ISColoring iscoloring,MatFDColoring 
 @*/
 PetscErrorCode  MatFDColoringDestroy(MatFDColoring *c)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   MatFDColoring  color = *c;
 
@@ -604,7 +596,6 @@ PetscErrorCode  MatFDColoringGetPerturbedColumns(MatFDColoring coloring,PetscInt
 @*/
 PetscErrorCode  MatFDColoringApply(Mat J,MatFDColoring coloring,Vec x1,void *sctx)
 {
-  PetscErrorCode ierr;
   PetscBool      eq;
 
   PetscFunctionBegin;

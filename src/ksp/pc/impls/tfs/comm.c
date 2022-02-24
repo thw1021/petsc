@@ -66,7 +66,6 @@ PetscErrorCode PCTFS_giop(PetscInt *vals, PetscInt *work, PetscInt n, PetscInt *
   PetscInt   type, dest;
   vfp        fp;
   MPI_Status status;
-  PetscInt   ierr;
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
@@ -144,7 +143,6 @@ PetscErrorCode PCTFS_grop(PetscScalar *vals, PetscScalar *work, PetscInt n, Pets
   PetscInt       type, dest;
   vfp            fp;
   MPI_Status     status;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
@@ -221,7 +219,6 @@ PetscErrorCode PCTFS_grop_hc(PetscScalar *vals, PetscScalar *work, PetscInt n, P
   PetscInt       type, dest;
   vfp            fp;
   MPI_Status     status;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
@@ -284,7 +281,6 @@ PetscErrorCode PCTFS_ssgl_radd(PetscScalar *vals,  PetscScalar *work,  PetscInt 
   PetscInt       edge, type, dest, mask;
   PetscInt       stage_n;
   MPI_Status     status;
-  PetscErrorCode ierr;
   PetscMPIInt    *maxval,flg;
 
   PetscFunctionBegin;
@@ -336,7 +332,6 @@ PetscErrorCode PCTFS_giop_hc(PetscInt *vals, PetscInt *work, PetscInt n, PetscIn
   PetscInt       type, dest;
   vfp            fp;
   MPI_Status     status;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */

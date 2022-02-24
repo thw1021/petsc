@@ -198,7 +198,6 @@ there would be no place to store the both needed results.
 */
 PetscErrorCode  PetscMaxSum(MPI_Comm comm,const PetscInt sizes[],PetscInt *max,PetscInt *sum)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_MPI_REDUCE_SCATTER_BLOCK)
@@ -315,7 +314,6 @@ PETSC_EXTERN void MPIAPI PetscMin_Local(void *in,void *out,PetscMPIInt *cnt,MPI_
 */
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Counter_Attr_Delete_Fn(MPI_Comm comm,PetscMPIInt keyval,void *count_val,void *extra_state)
 {
-  PetscErrorCode        ierr;
   PetscCommCounter      *counter=(PetscCommCounter*)count_val;
   struct PetscCommStash *comms = counter->comms, *pcomm;
 
@@ -345,7 +343,6 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_Counter_Attr_Delete_Fn(MPI_Comm comm,Petsc
 */
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_InnerComm_Attr_Delete_Fn(MPI_Comm comm,PetscMPIInt keyval,void *attr_val,void *extra_state)
 {
-  PetscErrorCode                    ierr;
   union {MPI_Comm comm; void *ptr;} icomm;
 
   PetscFunctionBegin;
@@ -369,7 +366,6 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_InnerComm_Attr_Delete_Fn(MPI_Comm comm,Pet
  */
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_OuterComm_Attr_Delete_Fn(MPI_Comm comm,PetscMPIInt keyval,void *attr_val,void *extra_state)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(PetscInfo(NULL,"Removing reference to PETSc communicator embedded in a user MPI_Comm %ld\n",(long)comm));
@@ -394,7 +390,6 @@ PetscSegBuffer PetscCitationsList;
 
 PetscErrorCode PetscCitationsInitialize(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSegBufferCreate(1,10000,&PetscCitationsList));
@@ -407,7 +402,6 @@ static char programname[PETSC_MAX_PATH_LEN] = ""; /* HP includes entire path in 
 
 PetscErrorCode  PetscSetProgramName(const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(programname,name,sizeof(programname)));
@@ -434,7 +428,6 @@ PetscErrorCode  PetscSetProgramName(const char name[])
 @*/
 PetscErrorCode  PetscGetProgramName(char name[],size_t len)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(name,programname,len));
@@ -491,7 +484,6 @@ PetscErrorCode  PetscGetArgs(int *argc,char ***args)
 PetscErrorCode  PetscGetArguments(char ***args)
 {
   PetscInt       i,argc = PetscGlobalArgc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!PetscInitializeCalled && PetscFinalizeCalled,PETSC_COMM_SELF,PETSC_ERR_ORDER,"You must call after PetscInitialize() but before PetscFinalize()");
@@ -520,7 +512,6 @@ PetscErrorCode  PetscGetArguments(char ***args)
 PetscErrorCode  PetscFreeArguments(char **args)
 {
   PetscInt       i = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!args) PetscFunctionReturn(0);
@@ -1209,7 +1200,6 @@ $       call PetscInitialize(file,ierr)
 @*/
 PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const char help[])
 {
-  PetscErrorCode ierr;
   PetscMPIInt    flag;
   const char     *prog = "Unknown Name";
 
@@ -1251,7 +1241,6 @@ PETSC_INTERN PetscBool   PetscObjectsLog;
 */
 PetscErrorCode  PetscFreeMPIResources(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_REAL___FLOAT128)
@@ -1312,7 +1301,6 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void);
 @*/
 PetscErrorCode  PetscFinalize(void)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       nopt;
   PetscBool      flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,flg3 = PETSC_FALSE;

@@ -25,7 +25,6 @@ static PetscErrorCode NelderMeadSort(TAO_NelderMead *nm)
 /*------------------------------------------------------------*/
 static PetscErrorCode NelderMeadReplace(TAO_NelderMead *nm, PetscInt index, Vec Xmu, PetscReal f)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*  Add new vector's fraction of average */
@@ -43,7 +42,6 @@ static PetscErrorCode NelderMeadReplace(TAO_NelderMead *nm, PetscInt index, Vec 
 /* ---------------------------------------------------------- */
 static PetscErrorCode TaoSetUp_NM(Tao tao)
 {
-  PetscErrorCode ierr;
   TAO_NelderMead *nm = (TAO_NelderMead *)tao->data;
   PetscInt       n;
 
@@ -68,7 +66,6 @@ static PetscErrorCode TaoSetUp_NM(Tao tao)
 static PetscErrorCode TaoDestroy_NM(Tao tao)
 {
   TAO_NelderMead *nm = (TAO_NelderMead*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -88,7 +85,6 @@ static PetscErrorCode TaoDestroy_NM(Tao tao)
 static PetscErrorCode TaoSetFromOptions_NM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_NelderMead *nm = (TAO_NelderMead*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Nelder-Mead options"));
@@ -106,7 +102,6 @@ static PetscErrorCode TaoView_NM(Tao tao,PetscViewer viewer)
 {
   TAO_NelderMead *nm = (TAO_NelderMead*)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -125,7 +120,6 @@ static PetscErrorCode TaoView_NM(Tao tao,PetscViewer viewer)
 /*------------------------------------------------------------*/
 static PetscErrorCode TaoSolve_NM(Tao tao)
 {
-  PetscErrorCode     ierr;
   TAO_NelderMead     *nm = (TAO_NelderMead*)tao->data;
   PetscReal          *x;
   PetscInt           i;
@@ -257,7 +251,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_NM(Tao tao)
 {
   TAO_NelderMead *nm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(tao,&nm));

@@ -5,7 +5,6 @@ PETSC_INTERN PetscErrorCode MatFactorSetUpInPlaceSchur_Private(Mat F)
 {
   Mat              St, S = F->schur;
   MatFactorInfo    info;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetUnfactored(S));
@@ -29,7 +28,6 @@ PETSC_INTERN PetscErrorCode MatFactorSetUpInPlaceSchur_Private(Mat F)
 PETSC_INTERN PetscErrorCode MatFactorUpdateSchurStatus_Private(Mat F)
 {
   Mat            S = F->schur;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch(F->schur_status) {
@@ -58,7 +56,6 @@ PETSC_INTERN PetscErrorCode MatFactorUpdateSchurStatus_Private(Mat F)
 PETSC_INTERN PetscErrorCode MatFactorFactorizeSchurComplement_Private(Mat F)
 {
   MatFactorInfo  info;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(MAT_FactorFactS,F,0,0,0));
@@ -80,7 +77,6 @@ PETSC_INTERN PetscErrorCode MatFactorInvertSchurComplement_Private(Mat F)
   if (S) {
     PetscMPIInt    size;
     PetscBool      isdense,isdensecuda;
-    PetscErrorCode ierr;
 
     CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)S),&size));
     PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)S),PETSC_ERR_SUP,"Not yet implemented");

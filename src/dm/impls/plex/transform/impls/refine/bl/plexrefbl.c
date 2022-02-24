@@ -8,7 +8,6 @@ static PetscErrorCode DMPlexTransformSetUp_BL(DMPlexTransform tr)
   DM               dm;
   DMLabel          active;
   PetscInt         Nc, No, coff, i, ict;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   /* If no label is given, split all tensor cells */
@@ -371,7 +370,6 @@ static PetscErrorCode DMPlexTransformGetSubcellOrientation_BL(DMPlexTransform tr
 {
   DMPlexRefine_BL *bl = (DMPlexRefine_BL *) tr->data;
   const PetscInt   n  = bl->n;
-  PetscErrorCode   ierr;
   PetscInt         tquad_tquad_o[] = { 0,  1, -2, -1,
                                        1,  0, -1, -2,
                                       -2, -1,  0,  1,
@@ -422,7 +420,6 @@ static PetscErrorCode DMPlexTransformGetSubcellOrientation_BL(DMPlexTransform tr
 static PetscErrorCode DMPlexTransformCellTransform_BL(DMPlexTransform tr, DMPolytopeType source, PetscInt p, PetscInt *rt, PetscInt *Nt, DMPolytopeType *target[], PetscInt *size[], PetscInt *cone[], PetscInt *ornt[])
 {
   DMPlexRefine_BL *bl = (DMPlexRefine_BL *) tr->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginHot;
   if (rt) *rt = -1;
@@ -452,7 +449,6 @@ static PetscErrorCode DMPlexTransformMapCoordinates_BL(DMPlexTransform tr, DMPol
 {
   DMPlexRefine_BL *bl = (DMPlexRefine_BL *) tr->data;
   PetscInt         d;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginHot;
   switch (pct) {
@@ -472,7 +468,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_BL(PetscOptionItems *PetscOp
   DMPlexRefine_BL *bl = (DMPlexRefine_BL *) tr->data;
   PetscInt         cells[256], n = 256, i;
   PetscBool        flg;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
@@ -495,7 +490,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_BL(PetscOptionItems *PetscOp
 static PetscErrorCode DMPlexTransformView_BL(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -521,7 +515,6 @@ static PetscErrorCode DMPlexTransformDestroy_BL(DMPlexTransform tr)
 {
   DMPlexRefine_BL *bl = (DMPlexRefine_BL *) tr->data;
   PetscInt         ict;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   for (ict = 0; ict < DM_NUM_POLYTOPES; ++ict) {
@@ -549,7 +542,6 @@ static PetscErrorCode DMPlexTransformInitialize_BL(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_BL(DMPlexTransform tr)
 {
   DMPlexRefine_BL *bl;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

@@ -48,7 +48,6 @@ static char      version[256];
 */
 PetscErrorCode  PetscErrorPrintfInitialize(void)
 {
-  PetscErrorCode ierr;
   PetscBool      use_stdout = PETSC_FALSE,use_none = PETSC_FALSE;
 
   PetscFunctionBegin;

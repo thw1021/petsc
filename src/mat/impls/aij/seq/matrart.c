@@ -10,7 +10,6 @@
 
 PetscErrorCode MatDestroy_SeqAIJ_RARt(void *data)
 {
-  PetscErrorCode ierr;
   Mat_RARt       *rart = (Mat_RARt*)data;
 
   PetscFunctionBegin;
@@ -28,7 +27,6 @@ PetscErrorCode MatDestroy_SeqAIJ_RARt(void *data)
 
 PetscErrorCode MatRARtSymbolic_SeqAIJ_SeqAIJ_colorrart(Mat A,Mat R,PetscReal fill,Mat C)
 {
-  PetscErrorCode       ierr;
   Mat                  P;
   PetscInt             *rti,*rtj;
   Mat_RARt             *rart;
@@ -111,7 +109,6 @@ PetscErrorCode MatRARtSymbolic_SeqAIJ_SeqAIJ_colorrart(Mat A,Mat R,PetscReal fil
 PetscErrorCode MatMatMatMultNumeric_SeqAIJ_SeqAIJ_SeqDense(Mat R,Mat A,Mat B,Mat RAB,PetscScalar *work)
 {
   Mat_SeqAIJ        *a=(Mat_SeqAIJ*)A->data,*r=(Mat_SeqAIJ*)R->data;
-  PetscErrorCode    ierr;
   PetscScalar       r1,r2,r3,r4;
   const PetscScalar *b,*b1,*b2,*b3,*b4;
   MatScalar         *aa,*ra;
@@ -225,7 +222,6 @@ PetscErrorCode MatMatMatMultNumeric_SeqAIJ_SeqAIJ_SeqDense(Mat R,Mat A,Mat B,Mat
 
 PetscErrorCode MatRARtNumeric_SeqAIJ_SeqAIJ_colorrart(Mat A,Mat R,Mat C)
 {
-  PetscErrorCode       ierr;
   Mat_RARt             *rart;
   MatTransposeColoring matcoloring;
   Mat                  Rt,RARt;
@@ -251,7 +247,6 @@ PetscErrorCode MatRARtNumeric_SeqAIJ_SeqAIJ_colorrart(Mat A,Mat R,Mat C)
 
 PetscErrorCode MatRARtSymbolic_SeqAIJ_SeqAIJ_matmattransposemult(Mat A,Mat R,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
   Mat            ARt;
   Mat_RARt       *rart;
   char           *alg;
@@ -288,7 +283,6 @@ PetscErrorCode MatRARtSymbolic_SeqAIJ_SeqAIJ_matmattransposemult(Mat A,Mat R,Pet
 
 PetscErrorCode MatRARtNumeric_SeqAIJ_SeqAIJ_matmattransposemult(Mat A,Mat R,Mat C)
 {
-  PetscErrorCode ierr;
   Mat_RARt       *rart;
 
   PetscFunctionBegin;
@@ -302,7 +296,6 @@ PetscErrorCode MatRARtNumeric_SeqAIJ_SeqAIJ_matmattransposemult(Mat A,Mat R,Mat 
 
 PetscErrorCode MatRARtSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat R,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
   Mat            Rt;
   Mat_RARt       *rart;
 
@@ -325,7 +318,6 @@ PetscErrorCode MatRARtSymbolic_SeqAIJ_SeqAIJ(Mat A,Mat R,PetscReal fill,Mat C)
 
 PetscErrorCode MatRARtNumeric_SeqAIJ_SeqAIJ(Mat A,Mat R,Mat C)
 {
-  PetscErrorCode ierr;
   Mat_RARt       *rart;
 
   PetscFunctionBegin;
@@ -380,7 +372,6 @@ PetscErrorCode MatRARt_SeqAIJ_SeqAIJ(Mat A,Mat R,MatReuse scall,PetscReal fill,M
 /* ------------------------------------------------------------- */
 PetscErrorCode MatProductSymbolic_RARt_SeqAIJ_SeqAIJ(Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_Product         *product = C->product;
   Mat                 A=product->A,R=product->B;
   MatProductAlgorithm alg=product->alg;

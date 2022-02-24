@@ -5,7 +5,6 @@ static PetscErrorCode PCSetUp_ICC(PC pc)
 {
   PC_ICC                 *icc = (PC_ICC*)pc->data;
   IS                     perm = NULL,cperm = NULL;
-  PetscErrorCode         ierr;
   MatInfo                info;
   MatSolverType          stype;
   MatFactorError         err;
@@ -66,7 +65,6 @@ static PetscErrorCode PCSetUp_ICC(PC pc)
 static PetscErrorCode PCReset_ICC(PC pc)
 {
   PC_ICC         *icc = (PC_ICC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&((PC_Factor*)icc)->fact));
@@ -76,7 +74,6 @@ static PetscErrorCode PCReset_ICC(PC pc)
 static PetscErrorCode PCDestroy_ICC(PC pc)
 {
   PC_ICC         *icc = (PC_ICC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_ICC(pc));
@@ -89,7 +86,6 @@ static PetscErrorCode PCDestroy_ICC(PC pc)
 static PetscErrorCode PCApply_ICC(PC pc,Vec x,Vec y)
 {
   PC_ICC         *icc = (PC_ICC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolve(((PC_Factor*)icc)->fact,x,y));
@@ -99,7 +95,6 @@ static PetscErrorCode PCApply_ICC(PC pc,Vec x,Vec y)
 static PetscErrorCode PCMatApply_ICC(PC pc,Mat X,Mat Y)
 {
   PC_ICC         *icc = (PC_ICC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMatSolve(((PC_Factor*)icc)->fact,X,Y));
@@ -108,7 +103,6 @@ static PetscErrorCode PCMatApply_ICC(PC pc,Mat X,Mat Y)
 
 static PetscErrorCode PCApplySymmetricLeft_ICC(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   PC_ICC         *icc = (PC_ICC*)pc->data;
 
   PetscFunctionBegin;
@@ -118,7 +112,6 @@ static PetscErrorCode PCApplySymmetricLeft_ICC(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCApplySymmetricRight_ICC(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   PC_ICC         *icc = (PC_ICC*)pc->data;
 
   PetscFunctionBegin;
@@ -130,7 +123,6 @@ static PetscErrorCode PCSetFromOptions_ICC(PetscOptionItems *PetscOptionsObject,
 {
   PC_ICC         *icc = (PC_ICC*)pc->data;
   PetscBool      flg;
-  PetscErrorCode ierr;
   /* PetscReal      dt[3];*/
 
   PetscFunctionBegin;
@@ -189,7 +181,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_ICC(PC pc)
 {
-  PetscErrorCode ierr;
   PC_ICC         *icc;
 
   PetscFunctionBegin;

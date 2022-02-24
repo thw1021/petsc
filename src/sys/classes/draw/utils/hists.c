@@ -59,7 +59,6 @@ struct _p_PetscDrawHG {
 PetscErrorCode  PetscDrawHGCreate(PetscDraw draw,int bins,PetscDrawHG *hist)
 {
   PetscDrawHG    h;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID,1);
@@ -115,7 +114,6 @@ PetscErrorCode  PetscDrawHGCreate(PetscDraw draw,int bins,PetscDrawHG *hist)
 @*/
 PetscErrorCode  PetscDrawHGSetNumberBins(PetscDrawHG hist, int bins)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(hist,PETSC_DRAWHG_CLASSID,1);
@@ -171,7 +169,6 @@ PetscErrorCode  PetscDrawHGReset(PetscDrawHG hist)
 @*/
 PetscErrorCode  PetscDrawHGDestroy(PetscDrawHG *hist)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*hist) PetscFunctionReturn(0);
@@ -207,7 +204,6 @@ PetscErrorCode  PetscDrawHGAddValue(PetscDrawHG hist, PetscReal value)
   /* Allocate more memory if necessary */
   if (hist->numValues >= hist->maxValues) {
     PetscReal      *tmp;
-    PetscErrorCode ierr;
 
     CHKERRQ(PetscMalloc1(hist->maxValues+CHUNKSIZE, &tmp));
     CHKERRQ(PetscLogObjectMemory((PetscObject)hist, CHUNKSIZE * sizeof(PetscReal)));
@@ -268,7 +264,6 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
   char           xlabel[256];
   PetscInt       numBins,numBinsOld,numValues,initSize,i,p,bcolor,color;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(hist,PETSC_DRAWHG_CLASSID,1);
@@ -407,7 +402,6 @@ PetscErrorCode  PetscDrawHGDraw(PetscDrawHG hist)
 @*/
 PetscErrorCode  PetscDrawHGSave(PetscDrawHG hg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(hg,PETSC_DRAWHG_CLASSID,1);
@@ -431,7 +425,6 @@ PetscErrorCode  PetscDrawHGSave(PetscDrawHG hg)
 PetscErrorCode  PetscDrawHGView(PetscDrawHG hist,PetscViewer viewer)
 {
   PetscReal      xmax,xmin,*bins,*values,binSize,binLeft,binRight,mean,var;
-  PetscErrorCode ierr;
   PetscInt       numBins,numBinsOld,numValues,initSize,i,p;
 
   PetscFunctionBegin;

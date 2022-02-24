@@ -9,7 +9,6 @@
 */
 static PetscErrorCode KSPSetUp_PIPECGRR(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get work vectors needed by PIPECGRR */
@@ -22,7 +21,6 @@ static PetscErrorCode KSPSetUp_PIPECGRR(KSP ksp)
 */
 static PetscErrorCode  KSPSolve_PIPECGRR(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i = 0,replace = 0,totreplaces = 0,nsize;
   PetscScalar    alpha = 0.0,beta = 0.0,gamma = 0.0,gammaold = 0.0,delta = 0.0,alphap = 0.0,betap = 0.0;
   PetscReal      dp = 0.0,nsi = 0.0,sqn = 0.0,Anorm = 0.0,rnp = 0.0,pnp = 0.0,snp = 0.0,unp = 0.0,wnp = 0.0,xnp = 0.0,qnp = 0.0,znp = 0.0,mnz = 5.0,tol = PETSC_SQRT_MACHINE_EPSILON,eps = PETSC_MACHINE_EPSILON;
@@ -278,7 +276,6 @@ static PetscErrorCode  KSPSolve_PIPECGRR(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPECGRR(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_LEFT,2));

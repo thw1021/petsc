@@ -29,7 +29,6 @@ static const char *ptypes[] = {"kway", "rb"};
 static PetscErrorCode PetscPartitionerDestroy_ParMetis(PetscPartitioner part)
 {
   PetscPartitioner_ParMetis *p = (PetscPartitioner_ParMetis *) part->data;
-  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_free(&p->pcomm));
@@ -40,7 +39,6 @@ static PetscErrorCode PetscPartitionerDestroy_ParMetis(PetscPartitioner part)
 static PetscErrorCode PetscPartitionerView_ParMetis_ASCII(PetscPartitioner part, PetscViewer viewer)
 {
   PetscPartitioner_ParMetis *p = (PetscPartitioner_ParMetis *) part->data;
-  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerASCIIPushTab(viewer));
@@ -55,7 +53,6 @@ static PetscErrorCode PetscPartitionerView_ParMetis_ASCII(PetscPartitioner part,
 static PetscErrorCode PetscPartitionerView_ParMetis(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -68,7 +65,6 @@ static PetscErrorCode PetscPartitionerView_ParMetis(PetscPartitioner part, Petsc
 static PetscErrorCode PetscPartitionerSetFromOptions_ParMetis(PetscOptionItems *PetscOptionsObject, PetscPartitioner part)
 {
   PetscPartitioner_ParMetis *p = (PetscPartitioner_ParMetis *) part->data;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "PetscPartitioner ParMetis Options"));
@@ -101,7 +97,6 @@ static PetscErrorCode PetscPartitionerPartition_ParMetis(PetscPartitioner part, 
   PetscInt       v, i, *assignment, *points;
   PetscMPIInt    p, size, rank;
   PetscBool      hasempty = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) part, &comm));
@@ -261,7 +256,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_ParMetis(PetscPartitioner part)
 {
   PetscPartitioner_ParMetis *p;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);

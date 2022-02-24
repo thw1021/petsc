@@ -14,7 +14,6 @@ static PetscBool SNESPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  SNESFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&SNESList));
@@ -38,7 +37,6 @@ PetscErrorCode  SNESInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg,cls;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (SNESPackageInitialized) PetscFunctionReturn(0);
@@ -97,7 +95,6 @@ PetscErrorCode  SNESInitializePackage(void)
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscsnes(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESInitializePackage());

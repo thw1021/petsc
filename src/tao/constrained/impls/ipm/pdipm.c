@@ -15,7 +15,6 @@
 */
 static PetscErrorCode TaoPDIPMEvaluateFunctionsAndJacobians(Tao tao,Vec x)
 {
-  PetscErrorCode ierr;
   TAO_PDIPM      *pdipm=(TAO_PDIPM*)tao->data;
 
   PetscFunctionBegin;
@@ -51,7 +50,6 @@ static PetscErrorCode TaoPDIPMEvaluateFunctionsAndJacobians(Tao tao,Vec x)
 */
 static PetscErrorCode TaoPDIPMUpdateConstraints(Tao tao,Vec x)
 {
-  PetscErrorCode    ierr;
   TAO_PDIPM         *pdipm=(TAO_PDIPM*)tao->data;
   PetscInt          i,offset,offset1,k,xstart;
   PetscScalar       *carr;
@@ -150,7 +148,6 @@ static PetscErrorCode TaoPDIPMUpdateConstraints(Tao tao,Vec x)
 */
 static PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
 {
-  PetscErrorCode    ierr;
   TAO_PDIPM         *pdipm=(TAO_PDIPM*)tao->data;
   const PetscScalar *xl,*xu;
   PetscInt          n,*ixlb,*ixub,*ixfixed,*ixfree,*ixbox,i,low,high,idx;
@@ -233,7 +230,6 @@ static PetscErrorCode TaoPDIPMSetUpBounds(Tao tao)
 */
 static PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
 {
-  PetscErrorCode    ierr;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   PetscScalar       *Xarr,*z,*lambdai;
   PetscInt          i;
@@ -290,7 +286,6 @@ static PetscErrorCode TaoPDIPMInitializeSolution(Tao tao)
 */
 static PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, void *ctx)
 {
-  PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   PetscInt          i,row,cols[2],Jrstart,rjstart,nc,j;
@@ -463,7 +458,6 @@ static PetscErrorCode TaoSNESJacobian_PDIPM(SNES snes,Vec X, Mat J, Mat Jpre, vo
 */
 static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   PetscScalar       *Farr;
@@ -569,7 +563,6 @@ static PetscErrorCode TaoSNESFunction_PDIPM(SNES snes,Vec X,Vec F,void *ctx)
 */
 static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   PetscScalar       *Farr,*tmparr;
@@ -645,7 +638,6 @@ static PetscErrorCode TaoSNESFunction_PDIPM_residual(SNES snes,Vec X,Vec F,void 
 */
 static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
 {
-  PetscErrorCode ierr;
   TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
   KSP            ksp;
   PC             pc;
@@ -707,7 +699,6 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
 */
 PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp)
 {
-  PetscErrorCode ierr;
   Tao            tao;
   TAO_PDIPM      *pdipm;
 
@@ -734,7 +725,6 @@ PetscErrorCode PCPreSolve_PDIPM(PC pc,KSP ksp)
 */
 static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
 {
-  PetscErrorCode    ierr;
   Tao               tao=(Tao)ctx;
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
   SNES              snes;
@@ -827,7 +817,6 @@ static PetscErrorCode SNESLineSearch_PDIPM(SNESLineSearch linesearch,void *ctx)
 */
 PetscErrorCode TaoSolve_PDIPM(Tao tao)
 {
-  PetscErrorCode     ierr;
   TAO_PDIPM          *pdipm = (TAO_PDIPM*)tao->data;
   SNESLineSearch     linesearch; /* SNESLineSearch context */
   Vec                dummy;
@@ -886,7 +875,6 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
 PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
 {
   TAO_PDIPM      *pdipm = (TAO_PDIPM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->constrained = PETSC_TRUE;
@@ -1443,7 +1431,6 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
 PetscErrorCode TaoDestroy_PDIPM(Tao tao)
 {
   TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Freeing Vectors assocaiated with KKT (X) */
@@ -1510,7 +1497,6 @@ PetscErrorCode TaoDestroy_PDIPM(Tao tao)
 PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"PDIPM method for constrained optimization"));
@@ -1539,7 +1525,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_PDIPM(Tao tao)
 {
   TAO_PDIPM      *pdipm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup          = TaoSetup_PDIPM;

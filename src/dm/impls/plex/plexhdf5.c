@@ -18,7 +18,6 @@ static PetscErrorCode DMPlexStorageVersionParseString_Private(DM dm, const char 
   char           *ts;
   PetscInt        i;
   PetscInt        ti[3];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTokenCreate(str, '.', &t));
@@ -75,7 +74,6 @@ static PetscErrorCode DMPlexStorageVersionGet_Private(DM dm, PetscViewer viewer,
   const char      ATTR_NAME[]       = "dmplex_storage_version";
   char           *defaultVersion;
   char           *versionString;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   //TODO string HDF5 attribute handling is terrible and should be redesigned
@@ -89,7 +87,6 @@ static PetscErrorCode DMPlexStorageVersionGet_Private(DM dm, PetscViewer viewer,
 
 static PetscErrorCode DMPlexGetHDF5Name_Private(DM dm, const char *name[])
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (((PetscObject)dm)->name) {
@@ -104,7 +101,6 @@ static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt s
 {
   Vec            stamp;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (seqnum < 0) PetscFunctionReturn(0);
@@ -136,7 +132,6 @@ PetscErrorCode DMSequenceLoad_HDF5_Internal(DM dm, const char *seqname, PetscInt
 {
   Vec            stamp;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (seqnum < 0) PetscFunctionReturn(0);
@@ -170,7 +165,6 @@ static PetscErrorCode DMPlexCreateCutVertexLabel_Private(DM dm, DMLabel cutLabel
   IS              cutcells = NULL;
   const PetscInt *cutc;
   PetscInt        cellHeight, vStart, vEnd, cStart, cEnd, c;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!cutLabel) PetscFunctionReturn(0);
@@ -220,7 +214,6 @@ PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec v, PetscViewer viewer)
   PetscInt                seqnum;
   PetscReal               seqval;
   PetscBool               isseq;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) v, VECSEQ, &isseq));
@@ -352,7 +345,6 @@ PetscErrorCode VecView_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
   PetscObject    isZero;
   const char    *name;
   PetscReal      time;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(v, &dm));
@@ -378,7 +370,6 @@ PetscErrorCode VecView_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
 PetscErrorCode VecView_Plex_HDF5_Native_Internal(Vec v, PetscViewer viewer)
 {
   PetscBool      isseq;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) v, VECSEQ, &isseq));
@@ -395,7 +386,6 @@ PetscErrorCode VecLoad_Plex_HDF5_Internal(Vec v, PetscViewer viewer)
   Vec            locv;
   const char    *name;
   PetscInt       seqnum;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(v, &dm));
@@ -423,7 +413,6 @@ PetscErrorCode VecLoad_Plex_HDF5_Native_Internal(Vec v, PetscViewer viewer)
 {
   DM             dm;
   PetscInt       seqnum;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(v, &dm));
@@ -450,7 +439,6 @@ PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM dm, IS globalPointNumbers, Pe
   PetscInt              dim, pStart, pEnd, p, conesSize = 0, cellsSize = 0, c = 0, s = 0;
   DMPlexStorageVersion  version;
   char                  group[PETSC_MAX_PATH_LEN];
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexStorageVersionSetUpWriting_Private(dm, viewer, &version));
@@ -523,7 +511,6 @@ static PetscErrorCode CreateConesIS_Private(DM dm, PetscInt cStart, PetscInt cEn
   PetscInt       *vertices;
   PetscInt        conesSize = 0;
   PetscInt        dim, numCornersLocal = 0, cell, vStart, vEnd, vExtra = 0, v;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   *numCorners = 0;
@@ -623,7 +610,6 @@ static PetscErrorCode DMPlexWriteTopology_Vertices_HDF5_Static(DM dm, IS globalC
   IS              cellIS;
   PetscInt        dim, depth, cellHeight, c;
   hid_t           fileId, groupId;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5PushGroup(viewer, "/viz"));
@@ -675,7 +661,6 @@ static PetscErrorCode DMPlexCoordinatesView_HDF5_Legacy_Private(DM dm, PetscView
   Vec            coordinates, newcoords;
   PetscReal      lengthScale;
   PetscInt       m, M, bs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetScale(dm, PETSC_UNIT_LENGTH, &lengthScale));
@@ -708,7 +693,6 @@ PetscErrorCode DMPlexCoordinatesView_HDF5_Internal(DM dm, PetscViewer viewer)
   PetscInt        m, M, bs;
   PetscReal       lengthScale;
   const char     *topologydm_name, *coordinatedm_name, *coordinates_name;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   {
@@ -765,7 +749,6 @@ static PetscErrorCode DMPlexWriteCoordinates_Vertices_HDF5_Static(DM dm, PetscVi
   PetscInt         vStart, vEnd, v, bs, N, coordSize, dof, off, d;
   PetscBool        localized, embedded;
   hid_t            fileId, groupId;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
@@ -892,7 +875,6 @@ PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM dm, IS globalPointNumbers, Pets
   PetscInt              numLabels, l;
   DMPlexStorageVersion  version;
   char                  group[PETSC_MAX_PATH_LEN];
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexStorageVersionSetUpWriting_Private(dm, viewer, &version));
@@ -971,7 +953,6 @@ PetscErrorCode DMPlexView_HDF5_Internal(DM dm, PetscViewer viewer)
   IS                globalPointNumbers;
   PetscViewerFormat format;
   PetscBool         viz_geom=PETSC_FALSE, xdmf_topo=PETSC_FALSE, petsc_topo=PETSC_FALSE;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreatePointNumbering(dm, &globalPointNumbers));
@@ -1016,7 +997,6 @@ PetscErrorCode DMPlexSectionView_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
   const char    *topologydm_name;
   const char    *sectiondm_name;
   PetscSection   gsection;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)sectiondm, &comm));
@@ -1066,7 +1046,6 @@ PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, D
   const char     *sectiondm_name;
   const char     *vec_name;
   PetscInt        bs;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Check consistency */
@@ -1131,7 +1110,6 @@ PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM dm, PetscViewer viewer, DM
   PetscBool       includesConstraints;
   Vec             gvec;
   PetscInt        m, bs;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -1209,7 +1187,6 @@ static PetscErrorCode LoadLabelsCtxCreate(DM dm, PetscViewer viewer, PetscSF sfX
 
 static PetscErrorCode LoadLabelsCtxDestroy(LoadLabelsCtx *ctx)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!*ctx) PetscFunctionReturn(0);
@@ -1235,7 +1212,6 @@ static herr_t ReadLabelStratumHDF5_Distribute_Private(IS stratumIS, LoadLabelsCt
   const PetscInt *A_points;
   PetscInt        nX, nC;
   PetscInt        n;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFGetGraph(sfXC, &nX, &nC, NULL, NULL));
@@ -1272,7 +1248,6 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   IS              stratumIS;
   const PetscInt *ind;
   PetscInt        value, N, i;
-  PetscErrorCode  ierr;
 
   CHKERRQ(PetscOptionsStringToInt(vname, &value));
   CHKERRQ(ISCreate(comm, &stratumIS));
@@ -1334,7 +1309,6 @@ PetscErrorCode DMPlexLabelsLoad_HDF5_Internal(DM dm, PetscViewer viewer, PetscSF
   char                  group[PETSC_MAX_PATH_LEN];
   DMPlexStorageVersion  version;
   PetscBool             distributed, hasGroup;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexIsDistributed(dm, &distributed));
@@ -1375,7 +1349,6 @@ PetscErrorCode DMPlexTopologyLoad_HDF5_Internal(DM dm, PetscViewer viewer, Petsc
   PetscMPIInt           size, rank;
   char                  group[PETSC_MAX_PATH_LEN];
   DMPlexStorageVersion  version;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -1479,7 +1452,6 @@ static PetscErrorCode DMPlexCoordinatesLoad_HDF5_Legacy_Private(DM dm, PetscView
   PetscReal       lengthScale;
   PetscInt        spatialDim, N, numVertices, vStart, vEnd, v;
   PetscMPIInt     rank;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank));
@@ -1526,7 +1498,6 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer, Pe
   PetscSF               lsf;
   const char           *topologydm_name;
   char                 *coordinatedm_name, *coordinates_name;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   {
@@ -1569,7 +1540,6 @@ PetscErrorCode DMPlexCoordinatesLoad_HDF5_Internal(DM dm, PetscViewer viewer, Pe
 
 static PetscErrorCode DMPlexLoad_HDF5_Legacy_Private(DM dm, PetscViewer viewer)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTopologyLoad_HDF5_Internal(dm, viewer, NULL));
@@ -1581,7 +1551,6 @@ static PetscErrorCode DMPlexLoad_HDF5_Legacy_Private(DM dm, PetscViewer viewer)
 PetscErrorCode DMPlexLoad_HDF5_Internal(DM dm, PetscViewer viewer)
 {
   PetscSF               sfXC;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   {
@@ -1606,7 +1575,6 @@ static PetscErrorCode DMPlexSectionLoad_HDF5_Internal_CreateDataSF(PetscSection 
   PetscInt        pStart, pEnd, p, m;
   PetscInt       *goffs, *ilocal;
   PetscBool       rootIncludeConstraints, leafIncludeConstraints;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)leafSection, &comm));
@@ -1658,7 +1626,6 @@ PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
   PetscSection   sectionA, sectionB;
   PetscInt       nX, n, i;
   PetscSF        sfAB;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -1828,7 +1795,6 @@ PetscErrorCode DMPlexVecLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM section
   const PetscInt    *ilocal;
   const PetscScalar *src;
   PetscScalar       *dest;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));

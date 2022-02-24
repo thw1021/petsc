@@ -45,7 +45,6 @@ PetscErrorCode DMDACreatePatchIS(DM da,MatStencil *lower,MatStencil *upper,IS *i
   DM_DA          *dd = (DM_DA*)da->data;
   PetscBool      skip_i=PETSC_TRUE, skip_j=PETSC_TRUE, skip_k=PETSC_TRUE;
   PetscBool      valid_j=PETSC_FALSE, valid_k=PETSC_FALSE; /* DMDA has at least 1 dimension */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   M = dd->M; N = dd->N; P = dd->P;
@@ -250,7 +249,6 @@ PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 {
   DM             *da;
   PetscInt       dim,size,i,j,k,idx;
-  PetscErrorCode ierr;
   DMDALocalInfo  info;
   PetscInt       xsize,ysize,zsize;
   PetscInt       xo,yo,zo;
@@ -411,7 +409,6 @@ PetscErrorCode DMDASubDomainDA_Private(DM dm, PetscInt *nlocal, DM **sdm)
 */
 PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM *subdms,VecScatter **iscat,VecScatter **oscat, VecScatter **lscat)
 {
-  PetscErrorCode ierr;
   DMDALocalInfo  info,subinfo;
   DM             subdm;
   MatStencil     upper,lower;
@@ -489,7 +486,6 @@ PetscErrorCode DMCreateDomainDecompositionScatters_DA(DM dm,PetscInt nsubdms,DM 
 
 PetscErrorCode DMDASubDomainIS_Private(DM dm,PetscInt n,DM *subdm,IS **iis,IS **ois)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   DMDALocalInfo  info,subinfo;
   MatStencil     lower,upper;
@@ -529,7 +525,6 @@ PetscErrorCode DMDASubDomainIS_Private(DM dm,PetscInt n,DM *subdm,IS **iis,IS **
 
 PetscErrorCode DMCreateDomainDecomposition_DA(DM dm,PetscInt *len,char ***names,IS **iis,IS **ois,DM **subdm)
 {
-  PetscErrorCode ierr;
   DM             *sdm;
   PetscInt       n,i;
 

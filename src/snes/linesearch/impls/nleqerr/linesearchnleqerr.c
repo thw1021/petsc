@@ -33,7 +33,6 @@ static PetscErrorCode SNESLineSearchReset_NLEQERR(SNESLineSearch linesearch)
 static PetscErrorCode  SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
 {
   PetscBool              changed_y,changed_w;
-  PetscErrorCode         ierr;
   Vec                    X,F,Y,W,G;
   SNES                   snes;
   PetscReal              fnorm, xnorm, ynorm, gnorm, wnorm;
@@ -264,7 +263,6 @@ static PetscErrorCode  SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
 
 PetscErrorCode SNESLineSearchView_NLEQERR(SNESLineSearch linesearch, PetscViewer viewer)
 {
-  PetscErrorCode          ierr;
   PetscBool               iascii;
   SNESLineSearch_NLEQERR *nleqerr;
 
@@ -280,7 +278,6 @@ PetscErrorCode SNESLineSearchView_NLEQERR(SNESLineSearch linesearch, PetscViewer
 
 static PetscErrorCode SNESLineSearchDestroy_NLEQERR(SNESLineSearch linesearch)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(linesearch->data));
@@ -321,7 +318,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_NLEQERR(SNESLineSearch linesearch)
 {
   SNESLineSearch_NLEQERR *nleqerr;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   linesearch->ops->apply          = SNESLineSearchApply_NLEQERR;

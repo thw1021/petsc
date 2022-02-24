@@ -13,7 +13,6 @@ static PetscErrorCode KSPCGSolve_STCG(KSP ksp)
   SETERRQ(PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "STCG is not available for complex systems");
 #else
   KSPCG_STCG     *cg = (KSPCG_STCG*)ksp->data;
-  PetscErrorCode ierr;
   Mat            Qmat, Mmat;
   Vec            r, z, p, d;
   PC             pc;
@@ -522,7 +521,6 @@ static PetscErrorCode KSPCGSolve_STCG(KSP ksp)
 
 static PetscErrorCode KSPCGSetUp_STCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /***************************************************************************/
@@ -535,7 +533,6 @@ static PetscErrorCode KSPCGSetUp_STCG(KSP ksp)
 
 static PetscErrorCode KSPCGDestroy_STCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /***************************************************************************/
@@ -583,7 +580,6 @@ static PetscErrorCode  KSPCGGetObjFcn_STCG(KSP ksp, PetscReal *o_fcn)
 
 static PetscErrorCode KSPCGSetFromOptions_STCG(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSPCG_STCG     *cg = (KSPCG_STCG*)ksp->data;
 
   PetscFunctionBegin;
@@ -640,7 +636,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_STCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSPCG_STCG     *cg;
 
   PetscFunctionBegin;

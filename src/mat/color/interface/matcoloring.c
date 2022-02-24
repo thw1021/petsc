@@ -29,7 +29,6 @@ $     -mat_coloring_type my_color
 @*/
 PetscErrorCode  MatColoringRegister(const char sname[],PetscErrorCode (*function)(MatColoring))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatInitializePackage());
@@ -72,7 +71,6 @@ PetscErrorCode  MatColoringRegister(const char sname[],PetscErrorCode (*function
 PetscErrorCode MatColoringCreate(Mat m,MatColoring *mcptr)
 {
   MatColoring    mc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(m,MAT_CLASSID,1);
@@ -107,7 +105,6 @@ PetscErrorCode MatColoringCreate(Mat m,MatColoring *mcptr)
 @*/
 PetscErrorCode MatColoringDestroy(MatColoring *mc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (--((PetscObject)(*mc))->refct > 0) {*mc = NULL; PetscFunctionReturn(0);}
@@ -140,7 +137,7 @@ PetscErrorCode MatColoringDestroy(MatColoring *mc)
 PetscErrorCode MatColoringSetType(MatColoring mc,MatColoringType type)
 {
   PetscBool      match;
-  PetscErrorCode ierr,(*r)(MatColoring);
+  PetscErrorCode (*r)(MatColoring);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mc,MAT_COLORING_CLASSID,1);
@@ -148,7 +145,7 @@ PetscErrorCode MatColoringSetType(MatColoring mc,MatColoringType type)
   CHKERRQ(PetscObjectTypeCompare((PetscObject)mc,type,&match));
   if (match) PetscFunctionReturn(0);
   CHKERRQ(PetscFunctionListFind(MatColoringList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested MatColoring type %s",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested MatColoring type %s",type);
   if (mc->ops->destroy) {
     CHKERRQ((*(mc)->ops->destroy)(mc));
     mc->ops->destroy = NULL;
@@ -342,7 +339,6 @@ PetscErrorCode MatColoringGetMaxColors(MatColoring mc,PetscInt *maxcolors)
 @*/
 PetscErrorCode MatColoringApply(MatColoring mc,ISColoring *coloring)
 {
-  PetscErrorCode    ierr;
   PetscBool         flg;
   PetscViewerFormat format;
   PetscViewer       viewer;
@@ -394,7 +390,6 @@ PetscErrorCode MatColoringApply(MatColoring mc,ISColoring *coloring)
 @*/
 PetscErrorCode MatColoringView(MatColoring mc,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;

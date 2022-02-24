@@ -6,7 +6,6 @@ static PetscErrorCode DMPlexCreateSectionFields(DM dm, const PetscInt numComp[],
   DMLabel        depthLabel;
   PetscInt       depth, Nf, f, pStart, pEnd;
   PetscBool     *isFE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepth(dm, &depth));
@@ -91,7 +90,6 @@ static PetscErrorCode DMPlexCreateSectionDof(DM dm, DMLabel label[],const PetscI
   PetscInt       depth, cellHeight, pStart = 0, pEnd = 0;
   PetscInt       Nf, f, Nds, n, dim, d, dep, p;
   PetscBool     *isFE, hasCohesive = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -189,7 +187,6 @@ static PetscErrorCode DMPlexCreateSectionBCDof(DM dm, PetscInt numBC, const Pets
   PetscInt       Nf;
   PetscInt       bc;
   PetscSection   aSec;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionGetNumFields(section, &Nf));
@@ -264,7 +261,6 @@ static PetscErrorCode DMPlexCreateSectionBCIndicesField(DM dm, PetscInt numBC,co
   PetscSection   aSec;
   PetscInt      *indices;
   PetscInt       Nf, cdof, maxDof = 0, pStart, pEnd, p, bc, f, d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionGetNumFields(section, &Nf));
@@ -342,7 +338,6 @@ static PetscErrorCode DMPlexCreateSectionBCIndices(DM dm, PetscSection section)
 {
   PetscInt      *indices;
   PetscInt       Nf, maxDof, pStart, pEnd, p, f, d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionGetNumFields(section, &Nf));
@@ -415,7 +410,6 @@ static PetscErrorCode DMPlexCreateSectionBCIndices(DM dm, PetscSection section)
 PetscErrorCode DMPlexCreateSection(DM dm, DMLabel label[], const PetscInt numComp[],const PetscInt numDof[], PetscInt numBC, const PetscInt bcField[], const IS bcComps[], const IS bcPoints[], IS perm, PetscSection *section)
 {
   PetscSection   aSec;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateSectionFields(dm, numComp, section));
@@ -442,7 +436,6 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
   PetscInt      *bcFields, *numComp, *numDof;
   PetscInt       depth, dim, numBC = 0, Nf, Nds, s, bc = 0, f;
   PetscInt       cStart, cEnd, cEndInterior;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetNumFields(dm, &Nf));

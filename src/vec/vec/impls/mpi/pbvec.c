@@ -8,7 +8,6 @@
 PetscErrorCode VecDot_MPI(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDot_Seq(xin,yin,&work));
@@ -20,7 +19,6 @@ PetscErrorCode VecDot_MPI(Vec xin,Vec yin,PetscScalar *z)
 PetscErrorCode VecTDot_MPI(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTDot_Seq(xin,yin,&work));
@@ -33,7 +31,6 @@ extern PetscErrorCode VecView_MPI_Draw(Vec,PetscViewer);
 
 static PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
 {
-  PetscErrorCode ierr;
   Vec_MPI        *v = (Vec_MPI*)vin->data;
 
   PetscFunctionBegin;
@@ -48,7 +45,6 @@ static PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
 
 PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
 {
-  PetscErrorCode ierr;
   Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
   PetscScalar    *array;
 
@@ -89,7 +85,6 @@ PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
 static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
 {
   Vec_MPI        *v = (Vec_MPI*)V->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (op) {
@@ -112,7 +107,6 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
 static PetscErrorCode VecResetArray_MPI(Vec vin)
 {
   Vec_MPI        *v = (Vec_MPI*)vin->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   v->array         = v->unplacedarray;
@@ -129,7 +123,6 @@ static PetscErrorCode VecAssemblySend_MPI_Private(MPI_Comm comm,const PetscMPIIn
   Vec_MPI *x = (Vec_MPI*)X->data;
   VecAssemblyHeader *hdr = (VecAssemblyHeader*)sdata;
   PetscInt bs = X->map->bs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* x->first_assembly_done indicates we are reusing a communication network. In that case, some
@@ -152,7 +145,6 @@ static PetscErrorCode VecAssemblyRecv_MPI_Private(MPI_Comm comm,const PetscMPIIn
   Vec X = (Vec)ctx;
   Vec_MPI *x = (Vec_MPI*)X->data;
   VecAssemblyHeader *hdr = (VecAssemblyHeader*)rdata;
-  PetscErrorCode ierr;
   PetscInt bs = X->map->bs;
   VecAssemblyFrame *frame;
 
@@ -188,7 +180,6 @@ static PetscErrorCode VecAssemblyRecv_MPI_Private(MPI_Comm comm,const PetscMPIIn
 static PetscErrorCode VecAssemblyBegin_MPI_BTS(Vec X)
 {
   Vec_MPI        *x = (Vec_MPI*)X->data;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscInt       i,j,jb,bs;
 
@@ -279,7 +270,6 @@ static PetscErrorCode VecAssemblyEnd_MPI_BTS(Vec X)
   PetscMPIInt npending,*some_indices,r;
   MPI_Status  *some_statuses;
   PetscScalar *xarray;
-  PetscErrorCode ierr;
   VecAssemblyFrame *frame;
 
   PetscFunctionBegin;
@@ -371,7 +361,6 @@ static PetscErrorCode VecAssemblyEnd_MPI_BTS(Vec X)
 PetscErrorCode VecAssemblyReset_MPI(Vec X)
 {
   Vec_MPI *x = (Vec_MPI*)X->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(x->sendreqs));
@@ -390,7 +379,6 @@ PetscErrorCode VecAssemblyReset_MPI(Vec X)
 static PetscErrorCode VecSetFromOptions_MPI(PetscOptionItems *PetscOptionsObject,Vec X)
 {
 #if !defined(PETSC_HAVE_MPIUNI)
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE,set;
 
   PetscFunctionBegin;
@@ -494,7 +482,6 @@ static struct _VecOps DvOps = {
 PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
 {
   Vec_MPI        *s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(v,&s));
@@ -548,7 +535,6 @@ M*/
 
 PetscErrorCode VecCreate_MPI(Vec vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL));
@@ -568,7 +554,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode VecCreate_Standard(Vec v)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -615,7 +600,6 @@ PETSC_EXTERN PetscErrorCode VecCreate_Standard(Vec v)
 @*/
 PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar array[],Vec *vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
@@ -659,7 +643,6 @@ PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Petsc
 @*/
 PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],const PetscScalar array[],Vec *vv)
 {
-  PetscErrorCode         ierr;
   Vec_MPI                *w;
   PetscScalar            *larray;
   IS                     from,to;
@@ -740,7 +723,6 @@ PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,Pets
 @*/
 PetscErrorCode  VecCreateGhost(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],Vec *vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCreateGhostWithArray(comm,n,N,nghost,ghosts,NULL,vv));
@@ -775,7 +757,6 @@ PetscErrorCode  VecCreateGhost(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt ngho
 @*/
 PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -864,7 +845,6 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
 @*/
 PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],const PetscScalar array[],Vec *vv)
 {
-  PetscErrorCode         ierr;
   Vec_MPI                *w;
   PetscScalar            *larray;
   IS                     from,to;
@@ -950,7 +930,6 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
 @*/
 PetscErrorCode  VecCreateGhostBlock(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,PetscInt nghost,const PetscInt ghosts[],Vec *vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCreateGhostBlockWithArray(comm,bs,n,N,nghost,ghosts,NULL,vv));

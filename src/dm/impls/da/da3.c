@@ -226,7 +226,6 @@ PetscErrorCode  DMSetUp_DA_3D(DM da)
   VecScatter       gtol;
   IS               to,from;
   PetscBool        twod;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(stencil_type == DMDA_STENCIL_BOX && (bx == DM_BOUNDARY_MIRROR || by == DM_BOUNDARY_MIRROR || bz == DM_BOUNDARY_MIRROR),PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Mirror boundary and box stencil");
@@ -1433,7 +1432,6 @@ PetscErrorCode  DMSetUp_DA_3D(DM da)
 PetscErrorCode  DMDACreate3d(MPI_Comm comm,DMBoundaryType bx,DMBoundaryType by,DMBoundaryType bz,DMDAStencilType stencil_type,PetscInt M,
                PetscInt N,PetscInt P,PetscInt m,PetscInt n,PetscInt p,PetscInt dof,PetscInt s,const PetscInt lx[],const PetscInt ly[],const PetscInt lz[],DM *da)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDACreate(comm, da));

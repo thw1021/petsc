@@ -61,7 +61,6 @@ PetscErrorCode PCSetFromOptions_BDDC(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscInt       nt,i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"BDDC options"));
@@ -136,7 +135,6 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
 {
   PC_BDDC              *pcbddc = (PC_BDDC*)pc->data;
   PC_IS                *pcis = (PC_IS*)pc->data;
-  PetscErrorCode       ierr;
   PetscBool            isascii;
   PetscSubcomm         subcomm;
   PetscViewer          subviewer;
@@ -293,7 +291,6 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
 static PetscErrorCode PCBDDCSetDiscreteGradient_BDDC(PC pc, Mat G, PetscInt order, PetscInt field, PetscBool global, PetscBool conforming)
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)G));
@@ -333,7 +330,6 @@ static PetscErrorCode PCBDDCSetDiscreteGradient_BDDC(PC pc, Mat G, PetscInt orde
 @*/
 PetscErrorCode PCBDDCSetDiscreteGradient(PC pc, Mat G, PetscInt order, PetscInt field, PetscBool global, PetscBool conforming)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -350,7 +346,6 @@ PetscErrorCode PCBDDCSetDiscreteGradient(PC pc, Mat G, PetscInt order, PetscInt 
 static PetscErrorCode PCBDDCSetDivergenceMat_BDDC(PC pc, Mat divudotp, PetscBool trans, IS vl2l)
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)divudotp));
@@ -388,7 +383,6 @@ static PetscErrorCode PCBDDCSetDivergenceMat_BDDC(PC pc, Mat divudotp, PetscBool
 PetscErrorCode PCBDDCSetDivergenceMat(PC pc, Mat divudotp, PetscBool trans, IS vl2l)
 {
   PetscBool      ismatis;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -405,7 +399,6 @@ PetscErrorCode PCBDDCSetDivergenceMat(PC pc, Mat divudotp, PetscBool trans, IS v
 static PetscErrorCode PCBDDCSetChangeOfBasisMat_BDDC(PC pc, Mat change, PetscBool interior)
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)change));
@@ -432,7 +425,6 @@ static PetscErrorCode PCBDDCSetChangeOfBasisMat_BDDC(PC pc, Mat change, PetscBoo
 @*/
 PetscErrorCode PCBDDCSetChangeOfBasisMat(PC pc, Mat change, PetscBool interior)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -457,7 +449,6 @@ static PetscErrorCode PCBDDCSetPrimalVerticesIS_BDDC(PC pc, IS PrimalVertices)
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)PrimalVertices));
@@ -489,7 +480,6 @@ static PetscErrorCode PCBDDCSetPrimalVerticesIS_BDDC(PC pc, IS PrimalVertices)
 @*/
 PetscErrorCode PCBDDCSetPrimalVerticesIS(PC pc, IS PrimalVertices)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -527,7 +517,6 @@ static PetscErrorCode PCBDDCGetPrimalVerticesIS_BDDC(PC pc, IS *is)
 @*/
 PetscErrorCode PCBDDCGetPrimalVerticesIS(PC pc, IS *is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -540,7 +529,6 @@ static PetscErrorCode PCBDDCSetPrimalVerticesLocalIS_BDDC(PC pc, IS PrimalVertic
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)PrimalVertices));
@@ -571,7 +559,6 @@ static PetscErrorCode PCBDDCSetPrimalVerticesLocalIS_BDDC(PC pc, IS PrimalVertic
 @*/
 PetscErrorCode PCBDDCSetPrimalVerticesLocalIS(PC pc, IS PrimalVertices)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -609,7 +596,6 @@ static PetscErrorCode PCBDDCGetPrimalVerticesLocalIS_BDDC(PC pc, IS *is)
 @*/
 PetscErrorCode PCBDDCGetPrimalVerticesLocalIS(PC pc, IS *is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -648,7 +634,6 @@ static PetscErrorCode PCBDDCSetCoarseningRatio_BDDC(PC pc,PetscInt k)
 @*/
 PetscErrorCode PCBDDCSetCoarseningRatio(PC pc,PetscInt k)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -669,7 +654,6 @@ static PetscErrorCode PCBDDCSetUseExactDirichlet_BDDC(PC pc,PetscBool flg)
 
 PetscErrorCode PCBDDCSetUseExactDirichlet(PC pc,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -689,7 +673,6 @@ static PetscErrorCode PCBDDCSetLevel_BDDC(PC pc,PetscInt level)
 
 PetscErrorCode PCBDDCSetLevel(PC pc,PetscInt level)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -729,7 +712,6 @@ static PetscErrorCode PCBDDCSetLevels_BDDC(PC pc,PetscInt levels)
 @*/
 PetscErrorCode PCBDDCSetLevels(PC pc,PetscInt levels)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -742,7 +724,6 @@ static PetscErrorCode PCBDDCSetDirichletBoundaries_BDDC(PC pc,IS DirichletBounda
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)DirichletBoundaries));
@@ -775,7 +756,6 @@ static PetscErrorCode PCBDDCSetDirichletBoundaries_BDDC(PC pc,IS DirichletBounda
 @*/
 PetscErrorCode PCBDDCSetDirichletBoundaries(PC pc,IS DirichletBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -789,7 +769,6 @@ static PetscErrorCode PCBDDCSetDirichletBoundariesLocal_BDDC(PC pc,IS DirichletB
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)DirichletBoundaries));
@@ -821,7 +800,6 @@ static PetscErrorCode PCBDDCSetDirichletBoundariesLocal_BDDC(PC pc,IS DirichletB
 @*/
 PetscErrorCode PCBDDCSetDirichletBoundariesLocal(PC pc,IS DirichletBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -835,7 +813,6 @@ static PetscErrorCode PCBDDCSetNeumannBoundaries_BDDC(PC pc,IS NeumannBoundaries
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)NeumannBoundaries));
@@ -868,7 +845,6 @@ static PetscErrorCode PCBDDCSetNeumannBoundaries_BDDC(PC pc,IS NeumannBoundaries
 @*/
 PetscErrorCode PCBDDCSetNeumannBoundaries(PC pc,IS NeumannBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -882,7 +858,6 @@ static PetscErrorCode PCBDDCSetNeumannBoundariesLocal_BDDC(PC pc,IS NeumannBound
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)NeumannBoundaries));
@@ -914,7 +889,6 @@ static PetscErrorCode PCBDDCSetNeumannBoundariesLocal_BDDC(PC pc,IS NeumannBound
 @*/
 PetscErrorCode PCBDDCSetNeumannBoundariesLocal(PC pc,IS NeumannBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -953,7 +927,6 @@ static PetscErrorCode PCBDDCGetDirichletBoundaries_BDDC(PC pc,IS *DirichletBound
 @*/
 PetscErrorCode PCBDDCGetDirichletBoundaries(PC pc,IS *DirichletBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -991,7 +964,6 @@ static PetscErrorCode PCBDDCGetDirichletBoundariesLocal_BDDC(PC pc,IS *Dirichlet
 @*/
 PetscErrorCode PCBDDCGetDirichletBoundariesLocal(PC pc,IS *DirichletBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1028,7 +1000,6 @@ static PetscErrorCode PCBDDCGetNeumannBoundaries_BDDC(PC pc,IS *NeumannBoundarie
 @*/
 PetscErrorCode PCBDDCGetNeumannBoundaries(PC pc,IS *NeumannBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1066,7 +1037,6 @@ static PetscErrorCode PCBDDCGetNeumannBoundariesLocal_BDDC(PC pc,IS *NeumannBoun
 @*/
 PetscErrorCode PCBDDCGetNeumannBoundariesLocal(PC pc,IS *NeumannBoundaries)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1079,7 +1049,6 @@ static PetscErrorCode PCBDDCSetLocalAdjacencyGraph_BDDC(PC pc, PetscInt nvtxs,co
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PCBDDCGraph    mat_graph = pcbddc->mat_graph;
   PetscBool      same_data = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!nvtxs) {
@@ -1145,7 +1114,6 @@ static PetscErrorCode PCBDDCSetLocalAdjacencyGraph_BDDC(PC pc, PetscInt nvtxs,co
 PetscErrorCode PCBDDCSetLocalAdjacencyGraph(PC pc,PetscInt nvtxs,const PetscInt xadj[],const PetscInt adjncy[], PetscCopyMode copymode)
 {
   void (*f)(void) = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1168,7 +1136,6 @@ static PetscErrorCode PCBDDCSetDofsSplittingLocal_BDDC(PC pc,PetscInt n_is, IS I
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscInt       i;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pcbddc->n_ISForDofsLocal == n_is) {
@@ -1226,7 +1193,6 @@ static PetscErrorCode PCBDDCSetDofsSplittingLocal_BDDC(PC pc,PetscInt n_is, IS I
 PetscErrorCode PCBDDCSetDofsSplittingLocal(PC pc,PetscInt n_is, IS ISForDofs[])
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1244,7 +1210,6 @@ static PetscErrorCode PCBDDCSetDofsSplitting_BDDC(PC pc,PetscInt n_is, IS ISForD
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PetscInt       i;
   PetscBool      isequal = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pcbddc->n_ISForDofs == n_is) {
@@ -1302,7 +1267,6 @@ static PetscErrorCode PCBDDCSetDofsSplitting_BDDC(PC pc,PetscInt n_is, IS ISForD
 PetscErrorCode PCBDDCSetDofsSplitting(PC pc,PetscInt n_is, IS ISForDofs[])
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1330,7 +1294,6 @@ PetscErrorCode PCBDDCSetDofsSplitting(PC pc,PetscInt n_is, IS ISForDofs[])
 */
 static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
 {
-  PetscErrorCode ierr;
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PC_IS          *pcis = (PC_IS*)(pc->data);
   Vec            used_vec;
@@ -1544,7 +1507,6 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
 */
 static PetscErrorCode PCPostSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
 {
-  PetscErrorCode ierr;
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
 
   PetscFunctionBegin;
@@ -1599,7 +1561,6 @@ PetscErrorCode PCSetUp_BDDC(PC pc)
   PetscBool       computesubschurs;
   PetscBool       computeconstraintsmatrix;
   PetscBool       new_nearnullspace_provided,ismatis,rl;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)pc->pmat,MATIS,&ismatis));
@@ -1906,7 +1867,6 @@ PetscErrorCode PCApply_BDDC(PC pc,Vec r,Vec z)
   PC_BDDC           *pcbddc = (PC_BDDC*)(pc->data);
   Mat               lA = NULL;
   PetscInt          n_B = pcis->n_B, n_D = pcis->n - n_B;
-  PetscErrorCode    ierr;
   const PetscScalar one = 1.0;
   const PetscScalar m_one = -1.0;
   const PetscScalar zero = 0.0;
@@ -2083,7 +2043,6 @@ PetscErrorCode PCApplyTranspose_BDDC(PC pc,Vec r,Vec z)
   PC_BDDC           *pcbddc = (PC_BDDC*)(pc->data);
   Mat               lA = NULL;
   PetscInt          n_B = pcis->n_B, n_D = pcis->n - n_B;
-  PetscErrorCode    ierr;
   const PetscScalar one = 1.0;
   const PetscScalar m_one = -1.0;
   const PetscScalar zero = 0.0;
@@ -2227,7 +2186,6 @@ PetscErrorCode PCReset_BDDC(PC pc)
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PC_IS          *pcis = (PC_IS*)pc->data;
   KSP            kspD,kspR,kspC;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* free BDDC custom data  */
@@ -2276,7 +2234,6 @@ PetscErrorCode PCReset_BDDC(PC pc)
 PetscErrorCode PCDestroy_BDDC(PC pc)
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_BDDC(pc));
@@ -2316,7 +2273,6 @@ static PetscErrorCode PCSetCoordinates_BDDC(PC pc, PetscInt dim, PetscInt nloc, 
 {
   PC_BDDC        *pcbddc = (PC_BDDC*)pc->data;
   PCBDDCGraph    mat_graph = pcbddc->mat_graph;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(mat_graph->coords));
@@ -2344,7 +2300,6 @@ static PetscErrorCode PCBDDCMatFETIDPGetRHS_BDDC(Mat fetidp_mat, Vec standard_rh
   Vec            work;
   PC_IS*         pcis;
   PC_BDDC*       pcbddc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(fetidp_mat,&mat_ctx));
@@ -2455,7 +2410,6 @@ static PetscErrorCode PCBDDCMatFETIDPGetRHS_BDDC(Mat fetidp_mat, Vec standard_rh
 PetscErrorCode PCBDDCMatFETIDPGetRHS(Mat fetidp_mat, Vec standard_rhs, Vec fetidp_flux_rhs)
 {
   FETIDPMat_ctx  mat_ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fetidp_mat,MAT_CLASSID,1);
@@ -2471,7 +2425,6 @@ static PetscErrorCode PCBDDCMatFETIDPGetSolution_BDDC(Mat fetidp_mat, Vec fetidp
   FETIDPMat_ctx  mat_ctx;
   PC_IS*         pcis;
   PC_BDDC*       pcbddc;
-  PetscErrorCode ierr;
   Vec            work;
 
   PetscFunctionBegin;
@@ -2536,7 +2489,6 @@ static PetscErrorCode PCBDDCMatFETIDPGetSolution_BDDC(Mat fetidp_mat, Vec fetidp
 
 static PetscErrorCode PCView_BDDCIPC(PC pc, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   BDDCIPC_ctx    bddcipc_ctx;
   PetscBool      isascii;
 
@@ -2554,7 +2506,6 @@ static PetscErrorCode PCView_BDDCIPC(PC pc, PetscViewer viewer)
 
 static PetscErrorCode PCSetUp_BDDCIPC(PC pc)
 {
-  PetscErrorCode ierr;
   BDDCIPC_ctx    bddcipc_ctx;
   PetscBool      isbddc;
   Vec            vv;
@@ -2580,7 +2531,6 @@ static PetscErrorCode PCSetUp_BDDCIPC(PC pc)
 
 static PetscErrorCode PCApply_BDDCIPC(PC pc, Vec r, Vec x)
 {
-  PetscErrorCode ierr;
   BDDCIPC_ctx    bddcipc_ctx;
   PC_IS          *pcis;
   VecScatter     tmps;
@@ -2599,7 +2549,6 @@ static PetscErrorCode PCApply_BDDCIPC(PC pc, Vec r, Vec x)
 
 static PetscErrorCode PCApplyTranspose_BDDCIPC(PC pc, Vec r, Vec x)
 {
-  PetscErrorCode ierr;
   BDDCIPC_ctx    bddcipc_ctx;
   PC_IS          *pcis;
   VecScatter     tmps;
@@ -2618,7 +2567,6 @@ static PetscErrorCode PCApplyTranspose_BDDCIPC(PC pc, Vec r, Vec x)
 
 static PetscErrorCode PCDestroy_BDDCIPC(PC pc)
 {
-  PetscErrorCode ierr;
   BDDCIPC_ctx    bddcipc_ctx;
 
   PetscFunctionBegin;
@@ -2650,7 +2598,6 @@ static PetscErrorCode PCDestroy_BDDCIPC(PC pc)
 PetscErrorCode PCBDDCMatFETIDPGetSolution(Mat fetidp_mat, Vec fetidp_flux_sol, Vec standard_sol)
 {
   FETIDPMat_ctx  mat_ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fetidp_mat,MAT_CLASSID,1);
@@ -2669,7 +2616,6 @@ static PetscErrorCode PCBDDCCreateFETIDPOperators_BDDC(PC pc, PetscBool fully_re
   FETIDPPC_ctx   fetidppc_ctx;
   PC             newpc;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)pc,&comm));
@@ -2922,7 +2868,6 @@ static PetscErrorCode PCBDDCCreateFETIDPOperators_BDDC(PC pc, PetscBool fully_re
 @*/
 PetscErrorCode PCBDDCCreateFETIDPOperators(PC pc, PetscBool fully_redundant, const char *prefix, Mat *fetidp_mat, PC *fetidp_pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -3016,7 +2961,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
 {
-  PetscErrorCode      ierr;
   PC_BDDC             *pcbddc;
 
   PetscFunctionBegin;
@@ -3104,7 +3048,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
 @*/
 PetscErrorCode PCBDDCInitializePackage(void)
 {
-  PetscErrorCode ierr;
   int            i;
 
   PetscFunctionBegin;
