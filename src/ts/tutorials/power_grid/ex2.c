@@ -41,7 +41,6 @@ typedef struct {
 */
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f,Pmax;
   const PetscScalar *u,*udot;
 
@@ -67,7 +66,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *c
 */
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2],Pmax;
   const PetscScalar *u,*udot;
@@ -97,7 +95,6 @@ static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat
 
 PetscErrorCode PostStep(TS ts)
 {
-  PetscErrorCode ierr;
   Vec            X;
   PetscReal      t;
 

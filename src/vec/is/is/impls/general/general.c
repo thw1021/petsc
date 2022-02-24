@@ -7,7 +7,6 @@
 
 static PetscErrorCode ISDuplicate_General(IS is,IS *newIS)
 {
-  PetscErrorCode ierr;
   IS_General     *sub = (IS_General*)is->data;
   PetscInt       n;
 
@@ -20,7 +19,6 @@ static PetscErrorCode ISDuplicate_General(IS is,IS *newIS)
 static PetscErrorCode ISDestroy_General(IS is)
 {
   IS_General     *is_general = (IS_General*)is->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (is_general->allocated) CHKERRQ(PetscFree(is_general->idx));
@@ -34,7 +32,6 @@ static PetscErrorCode ISCopy_General(IS is,IS isy)
 {
   IS_General     *is_general = (IS_General*)is->data,*isy_general = (IS_General*)isy->data;
   PetscInt       n, N, ny, Ny;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutGetLocalSize(is->map, &n));
@@ -48,7 +45,6 @@ static PetscErrorCode ISCopy_General(IS is,IS isy)
 
 static PetscErrorCode ISOnComm_General(IS is,MPI_Comm comm,PetscCopyMode mode,IS *newis)
 {
-  PetscErrorCode ierr;
   IS_General     *sub = (IS_General*)is->data;
   PetscInt       n;
 
@@ -61,7 +57,6 @@ static PetscErrorCode ISOnComm_General(IS is,MPI_Comm comm,PetscCopyMode mode,IS
 
 static PetscErrorCode ISSetBlockSize_General(IS is,PetscInt bs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetBlockSize(is->map, bs));
@@ -72,7 +67,6 @@ static PetscErrorCode ISContiguousLocal_General(IS is,PetscInt gstart,PetscInt g
 {
   IS_General *sub = (IS_General*)is->data;
   PetscInt   n,i,p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *start  = 0;
@@ -98,7 +92,6 @@ static PetscErrorCode ISLocate_General(IS is,PetscInt key,PetscInt *location)
   IS_General     *sub = (IS_General*)is->data;
   PetscInt       numIdx, i;
   PetscBool      sorted;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutGetLocalSize(is->map,&numIdx));
@@ -144,7 +137,6 @@ static PetscErrorCode ISInvertPermutation_General(IS is,PetscInt nlocal,IS *isou
   const PetscInt *idx = sub->idx;
   PetscMPIInt    size;
   IS             istmp,nistmp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutGetLocalSize(is->map, &n));
@@ -195,7 +187,6 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
   hsize_t         chunksize;
   const PetscInt *ind;
   const char     *isname;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISGetBlockSize(is,&bs));
@@ -337,7 +328,6 @@ static PetscErrorCode ISView_General_HDF5(IS is, PetscViewer viewer)
 static PetscErrorCode ISView_General(IS is,PetscViewer viewer)
 {
   IS_General     *sub = (IS_General*)is->data;
-  PetscErrorCode ierr;
   PetscInt       i,n,*idx = sub->idx;
   PetscBool      iascii,isbinary,ishdf5;
 
@@ -415,7 +405,6 @@ static PetscErrorCode ISSort_General(IS is)
 {
   IS_General     *sub = (IS_General*)is->data;
   PetscInt       n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutGetLocalSize(is->map, &n));
@@ -429,7 +418,6 @@ static PetscErrorCode ISSortRemoveDups_General(IS is)
   PetscLayout    map;
   PetscInt       n;
   PetscBool      sorted;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutGetLocalSize(is->map, &n));
@@ -447,7 +435,6 @@ static PetscErrorCode ISSortRemoveDups_General(IS is)
 
 static PetscErrorCode ISSorted_General(IS is,PetscBool  *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISGetInfo(is,IS_SORTED,IS_LOCAL,PETSC_TRUE,flg));
@@ -492,7 +479,6 @@ PETSC_INTERN PetscErrorCode ISSetUp_General(IS);
 
 PetscErrorCode ISSetUp_General(IS is)
 {
-  PetscErrorCode ierr;
   IS_General     *sub = (IS_General*)is->data;
   const PetscInt *idx = sub->idx;
   PetscInt       n,i,min,max;
@@ -542,7 +528,6 @@ PetscErrorCode ISSetUp_General(IS is)
 @*/
 PetscErrorCode  ISCreateGeneral(MPI_Comm comm,PetscInt n,const PetscInt idx[],PetscCopyMode mode,IS *is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreate(comm,is));
@@ -568,7 +553,6 @@ PetscErrorCode  ISCreateGeneral(MPI_Comm comm,PetscInt n,const PetscInt idx[],Pe
 @*/
 PetscErrorCode  ISGeneralSetIndices(IS is,PetscInt n,const PetscInt idx[],PetscCopyMode mode)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
@@ -581,7 +565,6 @@ PetscErrorCode  ISGeneralSetIndices(IS is,PetscInt n,const PetscInt idx[],PetscC
 PetscErrorCode  ISGeneralSetIndices_General(IS is,PetscInt n,const PetscInt idx[],PetscCopyMode mode)
 {
   PetscLayout    map;
-  PetscErrorCode ierr;
   IS_General     *sub = (IS_General*)is->data;
 
   PetscFunctionBegin;
@@ -639,7 +622,6 @@ $  {11, 14}
 @*/
 PetscErrorCode ISGeneralSetIndicesFromMask(IS is,PetscInt rstart,PetscInt rend,const PetscBool mask[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
@@ -653,7 +635,6 @@ PetscErrorCode ISGeneralSetIndicesFromMask_General(IS is,PetscInt rstart,PetscIn
 {
   PetscInt        i,nidx;
   PetscInt       *idx;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (i=0,nidx=0; i<rend-rstart; i++) if (mask[i]) nidx++;
@@ -673,7 +654,6 @@ static PetscErrorCode ISGeneralFilter_General(IS is, PetscInt start, PetscInt en
   IS_General     *sub = (IS_General*)is->data;
   PetscInt       *idx = sub->idx,*idxnew;
   PetscInt       i,n = is->map->n,nnew = 0,o;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<n; ++i)
@@ -704,7 +684,6 @@ static PetscErrorCode ISGeneralFilter_General(IS is, PetscInt start, PetscInt en
 @*/
 PetscErrorCode ISGeneralFilter(IS is, PetscInt start, PetscInt end)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
@@ -715,7 +694,6 @@ PetscErrorCode ISGeneralFilter(IS is, PetscInt start, PetscInt end)
 
 PETSC_EXTERN PetscErrorCode ISCreate_General(IS is)
 {
-  PetscErrorCode ierr;
   IS_General     *sub;
 
   PetscFunctionBegin;

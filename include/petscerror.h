@@ -336,10 +336,6 @@ MC*/
 .seealso: SETERRQ(), PetscCheck(), PetscAssert(), PetscTraceBackErrorHandler(),
 PetscPushErrorHandler(), PetscError(), CHKMEMQ, CHKERRA()
 M*/
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
-void CHKERRQ(PetscErrorCode);
-void CHKERRV(PetscErrorCode);
-#else
 #define CHKERRQ(...) do {                                                                      \
     PetscErrorCode ierr_q_ = __VA_ARGS__;                                                      \
     if (PetscUnlikely(ierr_q_)) return PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr_q_,PETSC_ERROR_REPEAT," "); \
@@ -351,7 +347,6 @@ void CHKERRV(PetscErrorCode);
       return;                                                                                  \
     }                                                                                          \
   } while (0)
-#endif
 
 /*MC
    CHKERRA - Fortran-only replacement for CHKERRQ in the main program, which aborts immediately
@@ -394,10 +389,6 @@ M*/
 
 .seealso: SETERRABORT(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), SETERRQ(), CHKMEMQ, CHKERRMPI()
 M*/
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
-void CHKERRABORT(MPI_Comm,PetscErrorCode);
-void CHKERRCONTINUE(PetscErrorCode);
-#else
 #define CHKERRABORT(comm,...) do {                                                             \
     PetscErrorCode ierr_abort_ = __VA_ARGS__;                                                  \
     if (PetscUnlikely(ierr_abort_)) {                                                          \
@@ -409,7 +400,6 @@ void CHKERRCONTINUE(PetscErrorCode);
     PetscErrorCode ierr_continue_ = __VA_ARGS__;                                               \
     if (PetscUnlikely(ierr_continue_)) PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr_continue_,PETSC_ERROR_REPEAT," "); \
   } while (0)
-#endif
 
 PETSC_EXTERN PetscErrorCode PetscAbortFindSourceFile_Private(const char*,PetscInt*);
 PETSC_EXTERN PetscBool petscwaitonerrorflg;
@@ -472,9 +462,6 @@ PETSC_EXTERN PetscBool petscindebugger;
 
 .seealso: SETERRMPI(), CHKERRQ(), SETERRQ(), SETERRABORT(), CHKERRABORT(), PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKMEMQ
 M*/
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
-void CHKERRMPI(PetscErrorCode);
-#else
 #define CHKERRMPI(...) \
 do { \
   PetscErrorCode _7_errorcode = __VA_ARGS__; \
@@ -485,7 +472,6 @@ do { \
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s",(int)_7_errorcode,_7_errorstring); \
   } \
 } while (0)
-#endif
 
 #ifdef PETSC_CLANGUAGE_CXX
 
@@ -928,7 +914,7 @@ M*/
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 #define PetscStackCall(name,routine)
-#define PetscStackCallStandard(name,...)
+#define PetscStackCallStandard(func,...)
 #else
 /*
     PetscStackCall - Calls an external library routine or user function after pushing the name of the routine on the stack.

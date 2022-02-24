@@ -8,7 +8,6 @@ static PetscErrorCode testIdentity(DM dm, PetscBool dmIsSimplicial, PetscInt cel
 {
   PetscInt       i, j, dimC, dimR;
   PetscReal      *preimage, *mapped, *inverted;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm,&dimR));

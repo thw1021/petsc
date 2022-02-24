@@ -363,7 +363,6 @@ int main(int argc,char **args)
 /* Data was previously provided in the file data/elem_3d_elast_v_25.tx */
 PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
 {
-  PetscErrorCode ierr;
   PetscScalar    DD[] = {
   0.18981481481481474     ,
   5.27777777777777568E-002,

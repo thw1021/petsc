@@ -211,7 +211,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 {
   PetscInt       i,j,k,Mx,My,Mz,xs,ys,zs,xm,ym,zm;
-  PetscErrorCode ierr;
   PetscReal      lambda,temp1,hx,hy,hz,tempk,tempj;
   PetscScalar    ***x;
 
@@ -280,7 +279,6 @@ PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 PetscErrorCode FormFunctionLocal(SNES snes,Vec localX,Vec F,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,My,Mz,xs,ys,zs,xm,ym,zm;
   PetscReal      two = 2.0,lambda,hx,hy,hz,hxhzdhy,hyhzdhx,hxhydhz,sc;
   PetscScalar    u_north,u_south,u_east,u_west,u_up,u_down,u,u_xx,u_yy,u_zz,***x,***f;
@@ -357,7 +355,6 @@ PetscErrorCode FormFunctionLocal(SNES snes,Vec localX,Vec F,void *ptr)
  */
 PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *ptr)
 {
-  PetscErrorCode ierr;
   Vec            localX;
   DM             da;
 
@@ -396,7 +393,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec X,Mat J,Mat jac,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;  /* user-defined application context */
   Vec            localX;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,My,Mz;
   MatStencil     col[7],row;
   PetscInt       xs,ys,zs,xm,ym,zm;

@@ -14,7 +14,6 @@ static PetscErrorCode    KSPDGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 
 PetscErrorCode  KSPDGMRESSetEigen(KSP ksp,PetscInt nb_eig)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod((ksp),"KSPDGMRESSetEigen_C",(KSP,PetscInt),(ksp,nb_eig)));
@@ -22,7 +21,6 @@ PetscErrorCode  KSPDGMRESSetEigen(KSP ksp,PetscInt nb_eig)
 }
 PetscErrorCode  KSPDGMRESSetMaxEigen(KSP ksp,PetscInt max_neig)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod((ksp),"KSPDGMRESSetMaxEigen_C",(KSP,PetscInt),(ksp,max_neig)));
@@ -30,7 +28,6 @@ PetscErrorCode  KSPDGMRESSetMaxEigen(KSP ksp,PetscInt max_neig)
 }
 PetscErrorCode  KSPDGMRESForce(KSP ksp,PetscBool force)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod((ksp),"KSPDGMRESForce_C",(KSP,PetscBool),(ksp,force)));
@@ -38,7 +35,6 @@ PetscErrorCode  KSPDGMRESForce(KSP ksp,PetscBool force)
 }
 PetscErrorCode  KSPDGMRESSetRatio(KSP ksp,PetscReal ratio)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod((ksp),"KSPDGMRESSetRatio_C",(KSP,PetscReal),(ksp,ratio)));
@@ -46,7 +42,6 @@ PetscErrorCode  KSPDGMRESSetRatio(KSP ksp,PetscReal ratio)
 }
 PetscErrorCode  KSPDGMRESComputeSchurForm(KSP ksp,PetscInt *neig)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod((ksp),"KSPDGMRESComputeSchurForm_C",(KSP, PetscInt*),(ksp, neig)));
@@ -54,7 +49,6 @@ PetscErrorCode  KSPDGMRESComputeSchurForm(KSP ksp,PetscInt *neig)
 }
 PetscErrorCode  KSPDGMRESComputeDeflationData(KSP ksp,PetscInt *curneigh)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod((ksp),"KSPDGMRESComputeDeflationData_C",(KSP,PetscInt*),(ksp,curneigh)));
@@ -62,7 +56,6 @@ PetscErrorCode  KSPDGMRESComputeDeflationData(KSP ksp,PetscInt *curneigh)
 }
 PetscErrorCode  KSPDGMRESApplyDeflation(KSP ksp, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod((ksp),"KSPDGMRESApplyDeflation_C",(KSP, Vec, Vec),(ksp, x, y)));
@@ -71,7 +64,6 @@ PetscErrorCode  KSPDGMRESApplyDeflation(KSP ksp, Vec x, Vec y)
 
 PetscErrorCode  KSPDGMRESImproveEig(KSP ksp, PetscInt neig)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod((ksp), "KSPDGMRESImproveEig_C",(KSP, PetscInt),(ksp, neig)));
@@ -80,7 +72,6 @@ PetscErrorCode  KSPDGMRESImproveEig(KSP ksp, PetscInt neig)
 
 PetscErrorCode  KSPSetUp_DGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
   PetscInt       neig    = dgmres->neig+EIG_OFFSET;
   PetscInt       max_k   = dgmres->max_k+1;
@@ -136,7 +127,6 @@ PetscErrorCode KSPDGMRESCycle(PetscInt *itcount,KSP ksp)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*)(ksp->data);
   PetscReal      res_norm,res,hapbnd,tt;
-  PetscErrorCode ierr;
   PetscInt       it     = 0;
   PetscInt       max_k  = dgmres->max_k;
   PetscBool      hapend = PETSC_FALSE;
@@ -257,7 +247,6 @@ PetscErrorCode KSPDGMRESCycle(PetscInt *itcount,KSP ksp)
 
 PetscErrorCode KSPSolve_DGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,its,itcount;
   KSP_DGMRES     *dgmres    = (KSP_DGMRES*) ksp->data;
   PetscBool      guess_zero = ksp->guess_zero;
@@ -300,7 +289,6 @@ PetscErrorCode KSPSolve_DGMRES(KSP ksp)
 
 PetscErrorCode KSPDestroy_DGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_DGMRES     *dgmres  = (KSP_DGMRES*) ksp->data;
   PetscInt       neig1    = dgmres->neig+EIG_OFFSET;
   PetscInt       max_neig = dgmres->max_neig;
@@ -352,7 +340,6 @@ PetscErrorCode KSPDestroy_DGMRES(KSP ksp)
 static PetscErrorCode KSPDGMRESBuildSoln(PetscScalar *nrs,Vec vs,Vec vdest,KSP ksp,PetscInt it)
 {
   PetscScalar    tt;
-  PetscErrorCode ierr;
   PetscInt       ii,k,j;
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) (ksp->data);
 
@@ -483,7 +470,6 @@ static PetscErrorCode KSPDGMRESGetNewVectors(KSP ksp,PetscInt it)
 PetscErrorCode KSPBuildSolution_DGMRES(KSP ksp,Vec ptr,Vec *result)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ptr) {
@@ -506,7 +492,6 @@ PetscErrorCode KSPBuildSolution_DGMRES(KSP ksp,Vec ptr,Vec *result)
 PetscErrorCode KSPView_DGMRES(KSP ksp,PetscViewer viewer)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii,isharmonic;
 
   PetscFunctionBegin;
@@ -570,7 +555,6 @@ static PetscErrorCode  KSPDGMRESForce_DGMRES(KSP ksp,PetscBool force)
 
 PetscErrorCode KSPSetFromOptions_DGMRES(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       neig;
   PetscInt       max_neig;
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
@@ -597,7 +581,6 @@ PetscErrorCode KSPSetFromOptions_DGMRES(PetscOptionItems *PetscOptionsObject,KSP
 PetscErrorCode  KSPDGMRESComputeDeflationData_DGMRES(KSP ksp, PetscInt *ExtrNeig)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
-  PetscErrorCode ierr;
   PetscInt       i,j, k;
   PetscBLASInt   nr, bmax;
   PetscInt       r = dgmres->r;
@@ -736,7 +719,6 @@ PetscErrorCode  KSPDGMRESComputeDeflationData_DGMRES(KSP ksp, PetscInt *ExtrNeig
 PetscErrorCode  KSPDGMRESComputeSchurForm_DGMRES(KSP ksp, PetscInt *neig)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
-  PetscErrorCode ierr;
   PetscInt       N = dgmres->max_k + 1, n=dgmres->it+1;
   PetscBLASInt   bn;
   PetscReal      *A;
@@ -872,7 +854,6 @@ PetscErrorCode  KSPDGMRESApplyDeflation_DGMRES(KSP ksp, Vec x, Vec y)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
   PetscInt       i, r     = dgmres->r;
-  PetscErrorCode ierr;
   PetscReal      alpha    = 1.0;
   PetscInt       max_neig = dgmres->max_neig;
   PetscBLASInt   br,bmax;
@@ -942,7 +923,6 @@ static PetscErrorCode  KSPDGMRESImproveEig_DGMRES(KSP ksp, PetscInt neig)
   PetscBLASInt lwork;          /* size of the working vector */
   PetscInt     *perm;          /* Permutation vector to sort eigenvalues */
   PetscReal    *wr, *wi, *beta, *modul; /* Real and imaginary part and modul of the eigenvalues of A*/
-  PetscInt     ierr;
   PetscBLASInt NbrEig = 0,nr,bm;
   PetscBLASInt *select;
   PetscBLASInt liwork, *iwork;
@@ -1151,7 +1131,6 @@ static PetscErrorCode  KSPDGMRESImproveEig_DGMRES(KSP ksp, PetscInt neig)
 PETSC_EXTERN PetscErrorCode KSPCreate_DGMRES(KSP ksp)
 {
   KSP_DGMRES     *dgmres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&dgmres));

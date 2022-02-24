@@ -15,7 +15,6 @@
 @*/
 PetscErrorCode DMPlexSetMigrationSF(DM dm, PetscSF migrationSF)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   dm->sfMigration = migrationSF;
   CHKERRQ(PetscObjectReference((PetscObject) migrationSF));
@@ -55,7 +54,6 @@ PetscErrorCode DMPlexGetMigrationSF(DM dm, PetscSF *migrationSF)
 @*/
 PetscErrorCode DMPlexSetGlobalToNaturalSF(DM dm, PetscSF naturalSF)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   dm->sfNatural = naturalSF;
   CHKERRQ(PetscObjectReference((PetscObject) naturalSF));
@@ -111,7 +109,6 @@ PetscErrorCode DMPlexCreateGlobalToNaturalSF(DM dm, PetscSection section, PetscS
   PetscInt       ssize, pStart, pEnd, p, globalSize;
   PetscLayout    map;
   PetscBool      destroyFlag = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -229,7 +226,6 @@ PetscErrorCode DMPlexGlobalToNaturalBegin(DM dm, Vec gv, Vec nv)
   const PetscScalar *inarray;
   PetscScalar       *outarray;
   PetscMPIInt        size;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_GlobalToNaturalBegin,dm,0,0,0));
@@ -271,7 +267,6 @@ PetscErrorCode DMPlexGlobalToNaturalEnd(DM dm, Vec gv, Vec nv)
   const PetscScalar *inarray;
   PetscScalar       *outarray;
   PetscMPIInt        size;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_GlobalToNaturalEnd,dm,0,0,0));
@@ -312,7 +307,6 @@ PetscErrorCode DMPlexNaturalToGlobalBegin(DM dm, Vec nv, Vec gv)
   const PetscScalar *inarray;
   PetscScalar       *outarray;
   PetscMPIInt        size;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_NaturalToGlobalBegin,dm,0,0,0));
@@ -358,7 +352,6 @@ PetscErrorCode DMPlexNaturalToGlobalEnd(DM dm, Vec nv, Vec gv)
   const PetscScalar *inarray;
   PetscScalar       *outarray;
   PetscMPIInt        size;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_NaturalToGlobalEnd,dm,0,0,0));

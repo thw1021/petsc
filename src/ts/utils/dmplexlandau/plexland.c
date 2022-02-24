@@ -28,7 +28,6 @@
 
 static PetscErrorCode LandauMatMult(Mat A, Vec x, Vec y)
 {
-  PetscErrorCode  ierr;
   LandauCtx       *ctx;
   PetscContainer  container;
 
@@ -51,7 +50,6 @@ static PetscErrorCode LandauMatMult(Mat A, Vec x, Vec y)
 // Computes v3 = v2 + A * v1.
 static PetscErrorCode LandauMatMultAdd(Mat A,Vec v1,Vec v2,Vec v3)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "?????");
@@ -62,7 +60,6 @@ static PetscErrorCode LandauMatMultAdd(Mat A,Vec v1,Vec v2,Vec v3)
 
 static PetscErrorCode LandauMatMultTranspose(Mat A, Vec x, Vec y)
 {
-  PetscErrorCode  ierr;
   LandauCtx       *ctx;
   PetscContainer  container;
 
@@ -84,7 +81,6 @@ static PetscErrorCode LandauMatMultTranspose(Mat A, Vec x, Vec y)
 
 static PetscErrorCode LandauMatGetDiagonal(Mat A,Vec x)
 {
-  PetscErrorCode  ierr;
   LandauCtx       *ctx;
   PetscContainer  container;
 
@@ -104,7 +100,6 @@ static PetscErrorCode LandauMatGetDiagonal(Mat A,Vec x)
 static PetscErrorCode LandauGPUMapsDestroy(void *ptr)
 {
   P4estVertexMaps *maps = (P4estVertexMaps*)ptr;
-  PetscErrorCode  ierr;
   PetscFunctionBegin;
   // free device data
   if (maps[0].deviceType != LANDAU_CPU) {
@@ -171,7 +166,6 @@ static PetscErrorCode gamma_m1_f(PetscInt dim, PetscReal time, const PetscReal x
 static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const PetscInt dim, PetscReal shift, void *a_ctx)
 {
   LandauCtx         *ctx = (LandauCtx*)a_ctx;
-  PetscErrorCode    ierr;
   PetscInt          numCells[LANDAU_MAX_GRIDS],Nq,Nb;
   PetscQuadrature   quad;
   PetscReal         Eq_m[LANDAU_MAX_SPECIES]; // could be static data w/o quench (ex2)
@@ -631,7 +625,6 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           }
         }
         if (loc_elem==-1) {
-          PetscErrorCode    ierr2;
           CHKERRQ(PetscPrintf(ctx->comm,"CPU Element matrix\n"));
           for (int d = 0; d < totDim; ++d) {
             for (int f = 0; f < totDim; ++f) CHKERRQ(PetscPrintf(ctx->comm," %12.5e",  PetscRealPart(elemMat[d*totDim + f])));
@@ -953,14 +946,13 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
 
 static PetscErrorCode SetupDS(DM pack, PetscInt dim, PetscInt grid, LandauCtx *ctx)
 {
-  PetscErrorCode  ierr;
   PetscInt        ii,i0;
   char            buf[256];
   PetscSection    section;
 
   PetscFunctionBegin;
   for (ii = ctx->species_offset[grid], i0 = 0 ; ii < ctx->species_offset[grid+1] ; ii++, i0++) {
-    if (ii==0) ierr = PetscSNPrintf(buf, 256, "e");
+    if (ii==0) CHKERRQ(PetscSNPrintf(buf, 256, "e"));
     else CHKERRQ(PetscSNPrintf(buf, 256, "i%D", ii));
     /* Setup Discretization - FEM */
     CHKERRQ(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, NULL, PETSC_DECIDE, &ctx->fe[ii]));
@@ -970,8 +962,8 @@ static PetscErrorCode SetupDS(DM pack, PetscInt dim, PetscInt grid, LandauCtx *c
   CHKERRQ(DMCreateDS(ctx->plex[grid]));
   CHKERRQ(DMGetSection(ctx->plex[grid], &section));
   for (PetscInt ii = ctx->species_offset[grid], i0 = 0 ; ii < ctx->species_offset[grid+1] ; ii++, i0++) {
-    if (ii==0) ierr = PetscSNPrintf(buf, 256, "se");
-    else ierr = PetscSNPrintf(buf, 256, "si%D", ii);
+    if (ii==0) CHKERRQ(PetscSNPrintf(buf, 256, "se"));
+    else CHKERRQ(PetscSNPrintf(buf, 256, "si%D", ii));
     CHKERRQ(PetscSectionSetComponentName(section, i0, 0, buf));
   }
   PetscFunctionReturn(0);
@@ -1046,14 +1038,13 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
 {
   LandauCtx      *ctx = (LandauCtx*)actx;
   PetscErrorCode (*initu[LANDAU_MAX_SPECIES])(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar [], void *);
-  PetscErrorCode ierr,ii,i0;
   PetscInt       dim;
   MaxwellianCtx  *mctxs[LANDAU_MAX_SPECIES], data[LANDAU_MAX_SPECIES];
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
   if (!ctx) CHKERRQ(DMGetApplicationContext(dm, &ctx));
-  for (ii = ctx->species_offset[grid], i0 = 0 ; ii < ctx->species_offset[grid+1] ; ii++, i0++) {
+  for (PetscInt ii = ctx->species_offset[grid], i0 = 0 ; ii < ctx->species_offset[grid+1] ; ii++, i0++) {
     mctxs[i0] = &data[i0];
     data[i0].v_0 = ctx->v_0; // v_0 same for all grids
     data[i0].kT_m = ctx->k*temps[ii]/ctx->masses[ii]; /* kT/m */
@@ -1088,7 +1079,6 @@ PetscErrorCode LandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temp
 static PetscErrorCode LandauSetInitialCondition(DM dm, Vec X, PetscInt grid, PetscInt b_id, void *actx)
 {
   LandauCtx        *ctx = (LandauCtx*)actx;
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (!ctx) CHKERRQ(DMGetApplicationContext(dm, &ctx));
   CHKERRQ(VecZeroEntries(X));
@@ -1105,7 +1095,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
   PetscQuadrature  quad;
   PetscInt         Nq, *Nb, cStart, cEnd, c, dim, qj, k;
   DMLabel          adaptLabel = NULL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   forest = ctx->plex[grid];
@@ -1233,7 +1222,6 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
 // forest goes in (ctx->plex[grid]), plex comes out
 static PetscErrorCode adapt(PetscInt grid, LandauCtx *ctx, Vec *uu)
 {
-  PetscErrorCode  ierr;
   PetscInt        adaptIter;
 
   PetscFunctionBegin;
@@ -1883,7 +1871,6 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
 static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_batch_is_inv[LANDAU_MAX_GRIDS], LandauCtx *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       *idxs=NULL;
   Mat            subM[LANDAU_MAX_GRIDS];
 
@@ -1909,9 +1896,9 @@ static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_ba
     for (int ix=0, ii=ctx->species_offset[grid];ii<ctx->species_offset[grid+1];ii++,ix++) {
       CHKERRQ(PetscDSSetJacobian(prob, ix, ix, g0_fake, NULL, NULL, NULL));
     }
-    ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only");
+    CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only"));
     CHKERRQ(DMCreateMatrix(massDM, &gMat));
-    ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only false");
+    CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only false"));
     CHKERRQ(MatSetOption(gMat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
     CHKERRQ(DMCreateLocalVector(ctx->plex[grid],&tvec));
     CHKERRQ(DMPlexSNESComputeJacobianFEM(massDM, tvec, gMat, gMat, ctx));
@@ -2014,7 +2001,6 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat);
  @*/
 PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char prefix[], Vec *X, Mat *J, DM *pack)
 {
-  PetscErrorCode ierr;
   LandauCtx      *ctx;
   Vec            Xsub[LANDAU_MAX_GRIDS];
   IS             grid_batch_is_inv[LANDAU_MAX_GRIDS];
@@ -2077,10 +2063,10 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   }
   // creat DM & Jac
   CHKERRQ(DMSetApplicationContext(*pack, ctx));
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only"));
   CHKERRQ(DMSetFromOptions(*pack));
   CHKERRQ(DMCreateMatrix(*pack, &ctx->J));
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only false");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only false"));
   CHKERRQ(MatSetOption(ctx->J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
   CHKERRQ(MatSetOption(ctx->J, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE));
   CHKERRQ(PetscObjectSetName((PetscObject)ctx->J, "Jac"));
@@ -2161,15 +2147,12 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
  @*/
 PetscErrorCode LandauDestroyVelocitySpace(DM *dm)
 {
-  PetscErrorCode ierr,ii;
   LandauCtx      *ctx;
   PetscFunctionBegin;
   CHKERRQ(DMGetApplicationContext(*dm, &ctx));
   CHKERRQ(MatDestroy(&ctx->M));
   CHKERRQ(MatDestroy(&ctx->J));
-  for (ii=0;ii<ctx->num_species;ii++) {
-    CHKERRQ(PetscFEDestroy(&ctx->fe[ii]));
-  }
+  for (PetscInt ii=0;ii<ctx->num_species;ii++) CHKERRQ(PetscFEDestroy(&ctx->fe[ii]));
   CHKERRQ(ISDestroy(&ctx->batch_is));
   CHKERRQ(VecDestroy(&ctx->work_vec));
   CHKERRQ(VecScatterDestroy(&ctx->plex_batch));
@@ -2485,7 +2468,6 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat)
   DM             mass_pack,massDM[LANDAU_MAX_GRIDS];
   PetscDS        prob;
   PetscInt       ii,dim,N1=1,N2;
-  PetscErrorCode ierr;
   LandauCtx      *ctx;
   Mat            packM,subM[LANDAU_MAX_GRIDS];
 
@@ -2524,10 +2506,10 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat)
     }
   }
 #endif
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only"));
   CHKERRQ(DMSetFromOptions(mass_pack));
   CHKERRQ(DMCreateMatrix(mass_pack, &packM));
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only false");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only false"));
   CHKERRQ(MatSetOption(packM, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
   CHKERRQ(MatSetOption(packM, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE));
   CHKERRQ(DMDestroy(&mass_pack));
@@ -2599,7 +2581,6 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat)
  @*/
 PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec F, void *actx)
 {
-  PetscErrorCode ierr;
   LandauCtx      *ctx=(LandauCtx*)actx;
   PetscInt       dim;
   DM             pack;
@@ -2677,7 +2658,6 @@ PetscErrorCode LandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t, Vec 
  @*/
 PetscErrorCode LandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_tdummy, PetscReal shift, Mat Amat, Mat Pmat, void *actx)
 {
-  PetscErrorCode ierr;
   LandauCtx      *ctx=NULL;
   PetscInt       dim;
   DM             pack;

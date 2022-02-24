@@ -1,8 +1,26 @@
 static char help[] = "Test MatSetPreallocationCOO and MatSetValuesCOO\n\n";
 
 #include <petscmat.h>
-#define MyMatView(a,b) PetscPrintf(PetscObjectComm((PetscObject)(a)),"LINE %d\n",__LINE__),MatView(a,b);
-#define MyVecView(a,b) PetscPrintf(PetscObjectComm((PetscObject)(a)),"LINE %d\n",__LINE__),VecView(a,b);
+
+static inline PetscErrorCode MyMatView_(int line, Mat m, PetscViewer vwr)
+{
+  PetscFunctionBegin;
+  CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)m),"LINE %d\n",line));
+  CHKERRQ(MatView(m,vwr));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode MyVecView_(int line, Vec v, PetscViewer vwr)
+{
+  PetscFunctionBegin;
+  CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)v),"LINE %d\n",line));
+  CHKERRQ(VecView(v,vwr));
+  PetscFunctionReturn(0);
+}
+
+#define MyMatView(a,b) MyMatView_(__LINE__,a,b)
+#define MyVecView(a,b) MyVecView_(__LINE__,a,b)
+
 int main(int argc,char **args)
 {
   Mat            A,At,AAt;

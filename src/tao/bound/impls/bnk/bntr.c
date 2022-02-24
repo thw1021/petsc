@@ -90,7 +90,6 @@
 
 PetscErrorCode TaoSolve_BNTR(Tao tao)
 {
-  PetscErrorCode               ierr;
   TAO_BNK                      *bnk = (TAO_BNK *)tao->data;
   KSPConvergedReason           ksp_reason;
 
@@ -201,7 +200,6 @@ PetscErrorCode TaoSolve_BNTR(Tao tao)
 /*------------------------------------------------------------*/
 static PetscErrorCode TaoSetUp_BNTR(Tao tao)
 {
-  PetscErrorCode    ierr;
   KSP               ksp;
   PetscVoidFunction valid;
 
@@ -218,7 +216,6 @@ static PetscErrorCode TaoSetUp_BNTR(Tao tao)
 static PetscErrorCode TaoSetFromOptions_BNTR(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoSetFromOptions_BNK(PetscOptionsObject, tao));
@@ -241,7 +238,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BNTR(Tao tao)
 {
   TAO_BNK        *bnk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoCreate_BNK(tao));

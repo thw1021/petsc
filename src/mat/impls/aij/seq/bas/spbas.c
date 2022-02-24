@@ -60,9 +60,8 @@ size_t spbas_memory_requirement(spbas_matrix matrix)
 */
 PetscErrorCode spbas_allocate_pattern(spbas_matrix * result, PetscBool do_values)
 {
-  PetscErrorCode ierr;
-  PetscInt       nrows        = result->nrows;
-  PetscInt       col_idx_type = result->col_idx_type;
+  PetscInt nrows        = result->nrows;
+  PetscInt col_idx_type = result->col_idx_type;
 
   PetscFunctionBegin;
   /* Allocate sparseness pattern */
@@ -95,13 +94,12 @@ spbas_allocate_data:
 */
 PetscErrorCode spbas_allocate_data(spbas_matrix * result)
 {
-  PetscInt       i;
-  PetscInt       nnz   = result->nnz;
-  PetscInt       nrows = result->nrows;
-  PetscInt       r_nnz;
-  PetscErrorCode ierr;
-  PetscBool      do_values  = (result->values) ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool      block_data = result->block_data;
+  PetscInt  i;
+  PetscInt  nnz        = result->nnz;
+  PetscInt  nrows      = result->nrows;
+  PetscInt  r_nnz;
+  PetscBool do_values  = (result->values) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool block_data = result->block_data;
 
   PetscFunctionBegin;
   if (block_data) {
@@ -185,7 +183,6 @@ int spbas_row_order_icol(PetscInt i1, PetscInt i2, PetscInt *irow_in, PetscInt *
 */
 PetscErrorCode spbas_mergesort_icols(PetscInt nrows, PetscInt * irow_in, PetscInt * icol_in,PetscInt col_idx_type, PetscInt *isort)
 {
-  PetscErrorCode ierr;
   PetscInt       istep;       /* Chunk-sizes of already sorted parts of arrays */
   PetscInt       i, i1, i2;   /* Loop counters for (partly) sorted arrays */
   PetscInt       istart, i1end, i2end; /* start of newly sorted array part, end of both  parts */
@@ -254,7 +251,6 @@ PetscErrorCode spbas_compress_pattern(PetscInt *irow_in, PetscInt *icol_in, Pets
   PetscInt        nnz      = irow_in[nrows];
   size_t          mem_orig = (nrows + nnz) * sizeof(PetscInt);
   size_t          mem_compressed;
-  PetscErrorCode  ierr;
   PetscInt        *isort;
   PetscInt        *icols;
   PetscInt        row_nnz;
@@ -363,7 +359,6 @@ PetscErrorCode spbas_compress_pattern(PetscInt *irow_in, PetscInt *icol_in, Pets
 PetscErrorCode spbas_delete(spbas_matrix matrix)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (matrix.block_data) {
@@ -400,7 +395,6 @@ PetscErrorCode spbas_matrix_to_crs(spbas_matrix matrix_A,MatScalar **val_out, Pe
   PetscScalar    *val_A;
   PetscInt       col_idx_type = matrix_A.col_idx_type;
   PetscBool      do_values    = matrix_A.values ? PETSC_TRUE : PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(nrows+1, &irow));
@@ -454,7 +448,6 @@ PetscErrorCode spbas_transpose(spbas_matrix in_matrix, spbas_matrix * result)
   PetscInt       *irow;
   PetscInt       icol0 = 0;
   PetscScalar    * val;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Copy input values */
@@ -550,7 +543,6 @@ PetscErrorCode spbas_mergesort(PetscInt nnz, PetscInt *icol, PetscScalar *val)
   PetscScalar    *vhlp1=NULL;  /* (arrays under construction) */
   PetscInt       *ihlp2;      /* Pointers to previous version of arrays, */
   PetscScalar    *vhlp2=NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(nnz,&ialloc));
@@ -642,7 +634,6 @@ PetscErrorCode spbas_apply_reordering_rows(spbas_matrix *matrix_A, const PetscIn
   PetscInt       **icols;
   PetscBool      do_values = matrix_A->values ? PETSC_TRUE : PETSC_FALSE;
   PetscScalar    **vals    = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(matrix_A->col_idx_type != SPBAS_DIAGONAL_OFFSETS,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS,"must have diagonal offsets in pattern");
@@ -683,7 +674,6 @@ PetscErrorCode spbas_apply_reordering_cols(spbas_matrix *matrix_A,const PetscInt
   PetscInt       *icols;
   PetscBool      do_values = matrix_A->values ? PETSC_TRUE : PETSC_FALSE;
   PetscScalar    *vals     = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(matrix_A->col_idx_type != SPBAS_DIAGONAL_OFFSETS,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "must have diagonal offsets in pattern");
@@ -707,7 +697,6 @@ PetscErrorCode spbas_apply_reordering_cols(spbas_matrix *matrix_A,const PetscInt
 */
 PetscErrorCode spbas_apply_reordering(spbas_matrix *matrix_A, const PetscInt *permutation, const PetscInt * inv_perm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(spbas_apply_reordering_rows(matrix_A, inv_perm));
@@ -719,7 +708,6 @@ PetscErrorCode spbas_pattern_only(PetscInt nrows, PetscInt ncols, PetscInt *ai, 
 {
   spbas_matrix   retval;
   PetscInt       i, j, i0, r_nnz;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Copy input values */
@@ -759,7 +747,6 @@ PetscErrorCode spbas_mark_row_power(PetscInt *iwork,             /* marker-vecto
                                     PetscInt minmrk,             /* lower bound for marked points */
                                     PetscInt maxmrk)             /* upper bound for marked points */
 {
-  PetscErrorCode ierr;
   PetscInt       i,j, nnz;
 
   PetscFunctionBegin;
@@ -801,7 +788,6 @@ PetscErrorCode spbas_power(spbas_matrix in_matrix,PetscInt power, spbas_matrix *
   PetscInt       *iwork;
   PetscInt       marker;
   PetscInt       maxmrk=0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(in_matrix.col_idx_type != SPBAS_DIAGONAL_OFFSETS,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS,"must have diagonal offsets in pattern");
@@ -867,7 +853,7 @@ PetscErrorCode spbas_keep_upper(spbas_matrix * inout_matrix)
   PetscInt jstart;
 
   PetscFunctionBegin;
-  PetscCheckFalse(inout_matrix->block_data,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Not yet for block data matrices");
+  PetscCheck(!inout_matrix->block_data,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Not yet for block data matrices");
   for (i=0; i<inout_matrix->nrows; i++)  {
     for (jstart=0; (jstart<inout_matrix->row_nnz[i]) && (inout_matrix->icols[i][jstart]<0); jstart++) {}
     if (jstart>0) {

@@ -8,7 +8,6 @@ typedef struct {
 static PetscErrorCode TSTrajectorySet_Singlefile(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal time,Vec X)
 {
   TSTrajectory_Singlefile *sf = (TSTrajectory_Singlefile*)tj->data;
-  PetscErrorCode          ierr;
   const char              *filename;
 
   PetscFunctionBegin;
@@ -26,7 +25,6 @@ static PetscErrorCode TSTrajectorySet_Singlefile(TSTrajectory tj,TS ts,PetscInt 
 
 static PetscErrorCode TSTrajectoryDestroy_Singlefile(TSTrajectory tj)
 {
-  PetscErrorCode          ierr;
   TSTrajectory_Singlefile *sf = (TSTrajectory_Singlefile*)tj->data;
 
   PetscFunctionBegin;
@@ -45,7 +43,6 @@ static PetscErrorCode TSTrajectoryDestroy_Singlefile(TSTrajectory tj)
 M*/
 PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Singlefile(TSTrajectory tj,TS ts)
 {
-  PetscErrorCode          ierr;
   TSTrajectory_Singlefile *sf;
 
   PetscFunctionBegin;

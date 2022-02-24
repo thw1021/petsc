@@ -8,7 +8,6 @@ static PetscErrorCode TestGeneral(void)
   const PetscInt idx[] = { 8, 6, 7, -5, 3, 0, 9 };
   PetscInt       n = 7, key = 3, nonkey = 1, keylocation = 4, sortedlocation = 2, location;
   IS             is;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateGeneral(comm,n,idx,PETSC_COPY_VALUES,&is));
@@ -31,7 +30,6 @@ static PetscErrorCode TestBlock(void)
   const PetscInt idx[] = { 8, 6, 7, -5, 3, 0, 9, };
   PetscInt       bs = 5, n = 7, key = 16, nonkey = 7, keylocation = 21, sortedlocation = 11, location;
   IS             is;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateBlock(comm,bs,n,idx,PETSC_COPY_VALUES,&is));
@@ -54,7 +52,6 @@ static PetscErrorCode TestStride(void)
   PetscInt       stride = 7, first = -3, n = 18, key = 39, keylocation = 6;
   PetscInt       nonkey[] = {-2,123}, i, location;
   IS             is;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateStride(comm,n,first,stride,&is));

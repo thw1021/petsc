@@ -12,7 +12,6 @@ static const char *BNK_AS[64] = {"none", "bertsekas"};
 
 PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
 {
-  PetscErrorCode    ierr;
   TAO_BNK           *bnk = (TAO_BNK *)tao->data;
   PC                pc;
   PetscReal         f_min, ftrial, prered, actred, kappa, sigma, resnorm;
@@ -265,7 +264,6 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
 
 PetscErrorCode TaoBNKComputeHessian(Tao tao)
 {
-  PetscErrorCode ierr;
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
 
   PetscFunctionBegin;
@@ -296,7 +294,7 @@ PetscErrorCode TaoBNKComputeHessian(Tao tao)
       CHKERRQ(PetscObjectReference((PetscObject)bnk->H_inactive));
       bnk->Hpre_inactive = bnk->H_inactive;
     } else {
-      ierr = PetscObjectReference((PetscObject)tao->hessian_pre);
+      CHKERRQ(PetscObjectReference((PetscObject)tao->hessian_pre));
       bnk->Hpre_inactive = tao->hessian_pre;
     }
     if (bnk->bfgs_pre) {
@@ -367,7 +365,6 @@ PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
 
 PetscErrorCode TaoBNKBoundStep(Tao tao, PetscInt asType, Vec step)
 {
-  PetscErrorCode               ierr;
   TAO_BNK                      *bnk = (TAO_BNK *)tao->data;
 
   PetscFunctionBegin;
@@ -398,7 +395,6 @@ PetscErrorCode TaoBNKBoundStep(Tao tao, PetscInt asType, Vec step)
 PetscErrorCode TaoBNKTakeCGSteps(Tao tao, PetscBool *terminate)
 {
   TAO_BNK                      *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   *terminate = PETSC_FALSE;
@@ -430,7 +426,6 @@ PetscErrorCode TaoBNKTakeCGSteps(Tao tao, PetscBool *terminate)
 
 PetscErrorCode TaoBNKComputeStep(Tao tao, PetscBool shift, KSPConvergedReason *ksp_reason, PetscInt *step_type)
 {
-  PetscErrorCode    ierr;
   TAO_BNK           *bnk = (TAO_BNK *)tao->data;
   PetscInt          bfgsUpdates = 0;
   PetscInt          kspits;
@@ -561,7 +556,6 @@ PetscErrorCode TaoBNKComputeStep(Tao tao, PetscBool shift, KSPConvergedReason *k
 
 PetscErrorCode TaoBNKRecomputePred(Tao tao, Vec S, PetscReal *prered)
 {
-  PetscErrorCode ierr;
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
 
   PetscFunctionBegin;
@@ -598,7 +592,6 @@ PetscErrorCode TaoBNKRecomputePred(Tao tao, Vec S, PetscReal *prered)
 
 PetscErrorCode TaoBNKSafeguardStep(Tao tao, KSPConvergedReason ksp_reason, PetscInt *stepType)
 {
-  PetscErrorCode ierr;
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   PetscReal      gdx, e_min;
   PetscInt       bfgsUpdates;
@@ -738,7 +731,6 @@ PetscErrorCode TaoBNKSafeguardStep(Tao tao, KSPConvergedReason ksp_reason, Petsc
 PetscErrorCode TaoBNKPerformLineSearch(Tao tao, PetscInt *stepType, PetscReal *steplen, TaoLineSearchConvergedReason *reason)
 {
   TAO_BNK                      *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode               ierr;
   TaoLineSearchConvergedReason ls_reason;
   PetscReal                    e_min, gdx;
   PetscInt                     bfgsUpdates;
@@ -843,7 +835,6 @@ PetscErrorCode TaoBNKPerformLineSearch(Tao tao, PetscInt *stepType, PetscReal *s
 PetscErrorCode TaoBNKUpdateTrustRadius(Tao tao, PetscReal prered, PetscReal actred, PetscInt updateType, PetscInt stepType, PetscBool *accept)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode ierr;
 
   PetscReal      step, kappa;
   PetscReal      gdx, tau_1, tau_2, tau_min, tau_max;
@@ -1036,7 +1027,6 @@ PetscErrorCode TaoBNKAddStepCounts(Tao tao, PetscInt stepType)
 PetscErrorCode TaoSetUp_BNK(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -1126,7 +1116,6 @@ PetscErrorCode TaoSetUp_BNK(Tao tao)
 PetscErrorCode TaoDestroy_BNK(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -1157,7 +1146,6 @@ PetscErrorCode TaoDestroy_BNK(Tao tao)
 PetscErrorCode TaoSetFromOptions_BNK(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Newton-Krylov method for bound constrained optimization"));
@@ -1231,7 +1219,6 @@ PetscErrorCode TaoView_BNK(Tao tao, PetscViewer viewer)
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   PetscInt       nrejects;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -1329,7 +1316,6 @@ PetscErrorCode TaoCreate_BNK(Tao tao)
 {
   TAO_BNK        *bnk;
   const char     *morethuente_type = TAOLINESEARCHMT;
-  PetscErrorCode ierr;
   PC             pc;
 
   PetscFunctionBegin;

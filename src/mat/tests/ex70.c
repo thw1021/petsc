@@ -6,7 +6,6 @@ static PetscScalar MAGIC_NUMBER = 12345;
 
 static PetscErrorCode CheckLocal(Mat A, Mat B, PetscScalar *a, PetscScalar *b)
 {
-  PetscErrorCode ierr;
   PetscBool      wA = PETSC_FALSE, wB = PETSC_FALSE;
   PetscBool      wAv = PETSC_FALSE, wBv = PETSC_FALSE;
   PetscInt       lda,i,j,m,n;
@@ -52,7 +51,6 @@ typedef struct {
 PetscErrorCode proj_destroy(void *ctx)
 {
   proj_data      *userdata = (proj_data*)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!userdata,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing userdata");
@@ -69,7 +67,6 @@ PetscErrorCode proj_mult(Mat S, Vec X, Vec Y)
   Vec            Ax,Ay;
   Vec            Px,Py;
   proj_data      *userdata;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(S,&userdata));
@@ -110,7 +107,6 @@ PetscErrorCode proj_mult(Mat S, Vec X, Vec Y)
 
 PetscErrorCode MyPtShellPMultSymbolic(Mat S, Mat P, Mat PtAP, void** ctx)
 {
-  PetscErrorCode ierr;
   proj_data      *userdata;
 
   PetscFunctionBegin;
@@ -123,7 +119,6 @@ PetscErrorCode MyPtShellPMultSymbolic(Mat S, Mat P, Mat PtAP, void** ctx)
 PetscErrorCode MyPtShellPMultNumeric(Mat S, Mat P, Mat PtAP, void *ctx)
 {
   Mat            A;
-  PetscErrorCode ierr;
   proj_data      *userdata = (proj_data*)ctx;
 
   PetscFunctionBegin;
@@ -144,7 +139,6 @@ PetscErrorCode MyPtShellPMultNumeric(Mat S, Mat P, Mat PtAP, void *ctx)
 
 PetscErrorCode MyRShellRtMultSymbolic(Mat S, Mat R, Mat RARt, void **ctx)
 {
-  PetscErrorCode ierr;
   proj_data      *userdata;
 
   PetscFunctionBegin;
@@ -157,7 +151,6 @@ PetscErrorCode MyRShellRtMultSymbolic(Mat S, Mat R, Mat RARt, void **ctx)
 PetscErrorCode MyRShellRtMultNumeric(Mat S, Mat R, Mat RARt, void *ctx)
 {
   Mat            A;
-  PetscErrorCode ierr;
   proj_data      *userdata = (proj_data*)ctx;
 
   PetscFunctionBegin;
@@ -178,7 +171,6 @@ PetscErrorCode MyRShellRtMultNumeric(Mat S, Mat R, Mat RARt, void *ctx)
 
 PetscErrorCode MyMatShellMatMultNumeric(Mat S, Mat B, Mat C, void *ctx)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;
@@ -189,7 +181,6 @@ PetscErrorCode MyMatShellMatMultNumeric(Mat S, Mat B, Mat C, void *ctx)
 
 PetscErrorCode MyMatTransposeShellMatMultNumeric(Mat S, Mat B, Mat C, void *ctx)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;
@@ -200,7 +191,6 @@ PetscErrorCode MyMatTransposeShellMatMultNumeric(Mat S, Mat B, Mat C, void *ctx)
 
 PetscErrorCode MyMatShellMatTransposeMultNumeric(Mat S, Mat B, Mat C, void *ctx)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;

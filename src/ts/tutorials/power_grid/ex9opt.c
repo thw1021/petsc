@@ -47,7 +47,6 @@ PetscErrorCode FormGradient(Tao,Vec,Vec,void*);
 */
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f,Pmax;
   const PetscScalar *u;
 
@@ -71,7 +70,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 */
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2],Pmax;
   const PetscScalar *u;
@@ -98,7 +96,6 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,AppCtx *ct
 
 static PetscErrorCode RHSJacobianP(TS ts,PetscReal t,Vec X,Mat A,void *ctx0)
 {
-  PetscErrorCode ierr;
   PetscInt       row[] = {0,1},col[]={0};
   PetscScalar    J[2][1];
   AppCtx         *ctx=(AppCtx*)ctx0;
@@ -114,7 +111,6 @@ static PetscErrorCode RHSJacobianP(TS ts,PetscReal t,Vec X,Mat A,void *ctx0)
 
 static PetscErrorCode CostIntegrand(TS ts,PetscReal t,Vec U,Vec R,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *r;
   const PetscScalar *u;
 
@@ -129,7 +125,6 @@ static PetscErrorCode CostIntegrand(TS ts,PetscReal t,Vec U,Vec R,AppCtx *ctx)
 
 static PetscErrorCode DRDUJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDU,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       ru[1];
   const PetscScalar *u;
   PetscInt          row[] = {0},col[] = {0};
@@ -146,7 +141,6 @@ static PetscErrorCode DRDUJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDU,Mat
 
 static PetscErrorCode DRDPJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDP,AppCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroEntries(DRDP));
@@ -157,7 +151,6 @@ static PetscErrorCode DRDPJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDP,App
 
 PetscErrorCode ComputeSensiP(Vec lambda,Vec mu,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *y,sensip;
   const PetscScalar *x;
 
@@ -353,7 +346,6 @@ PetscErrorCode FormFunction(Tao tao,Vec P,PetscReal *f,void *ctx0)
   AppCtx         *ctx = (AppCtx*)ctx0;
   TS             ts = ctx->ts;
   Vec            U;             /* solution will be stored here */
-  PetscErrorCode ierr;
   PetscScalar    *u;
   PetscScalar    *x_ptr;
   Vec            q;
@@ -397,7 +389,6 @@ PetscErrorCode FormGradient(Tao tao,Vec P,Vec G,void *ctx0)
   AppCtx         *ctx = (AppCtx*)ctx0;
   TS             ts = ctx->ts;
   Vec            U;             /* solution will be stored here */
-  PetscErrorCode ierr;
   PetscReal      ftime;
   PetscInt       steps;
   PetscScalar    *u;

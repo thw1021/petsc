@@ -31,7 +31,6 @@ PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec X, Vec DXDT, void* ptr)
   PetscReal         rho_a, mu_a, D_a;
   PetscReal         rho_h, mu_h, D_h;
   PetscReal         a, h, da, dh, d2a, d2h;
-  PetscErrorCode    ierr;
   PetscScalar       *dxdt;
   const PetscScalar *x;
 
@@ -84,7 +83,6 @@ PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec X, Mat J, Mat B, void *ptr)
   const PetscScalar *x;
   PetscScalar       va[4], vh[4];
   PetscInt          ca[4], ch[4], rowa, rowh;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   nb_cells = user->nb_cells;
@@ -143,7 +141,6 @@ PetscErrorCode DomainErrorFunction(TS ts, PetscReal t, Vec Y, PetscBool *accept)
 {
   AppCtx            *user;
   PetscReal         dt;
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscInt          nb_cells, i;
 
@@ -165,7 +162,6 @@ PetscErrorCode DomainErrorFunction(TS ts, PetscReal t, Vec Y, PetscBool *accept)
 
 PetscErrorCode FormInitialState(Vec X, AppCtx* user)
 {
-  PetscErrorCode ierr;
   PetscRandom    R;
 
   PetscFunctionBegin;
@@ -183,7 +179,6 @@ PetscErrorCode FormInitialState(Vec X, AppCtx* user)
 
 PetscErrorCode PrintSolution(Vec X, AppCtx *user)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscInt          i;
   PetscInt          nb_cells = user->nb_cells;

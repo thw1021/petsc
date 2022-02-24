@@ -3,7 +3,6 @@
 
 static PetscErrorCode MatMultEqual_Private(Mat A,Mat B,PetscInt n,PetscBool *flg,PetscInt t,PetscBool add)
 {
-  PetscErrorCode ierr;
   Vec            Ax = NULL,Bx = NULL,s1 = NULL,s2 = NULL,Ay = NULL, By = NULL;
   PetscRandom    rctx;
   PetscReal      r1,r2,tol=PETSC_SQRT_MACHINE_EPSILON;
@@ -97,7 +96,6 @@ static PetscErrorCode MatMultEqual_Private(Mat A,Mat B,PetscInt n,PetscBool *flg
 
 static PetscErrorCode MatMatMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg,PetscBool At,PetscBool Bt)
 {
-  PetscErrorCode ierr;
   Vec            Ax,Bx,Cx,s1,s2,s3;
   PetscRandom    rctx;
   PetscReal      r1,r2,tol=PETSC_SQRT_MACHINE_EPSILON;
@@ -197,7 +195,6 @@ static PetscErrorCode MatMatMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,Petsc
 @*/
 PetscErrorCode MatMultEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultEqual_Private(A,B,n,flg,0,PETSC_FALSE));
@@ -222,7 +219,6 @@ PetscErrorCode MatMultEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode  MatMultAddEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultEqual_Private(A,B,n,flg,0,PETSC_TRUE));
@@ -247,7 +243,6 @@ PetscErrorCode  MatMultAddEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode  MatMultTransposeEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultEqual_Private(A,B,n,flg,1,PETSC_FALSE));
@@ -272,7 +267,6 @@ PetscErrorCode  MatMultTransposeEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode  MatMultTransposeAddEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultEqual_Private(A,B,n,flg,1,PETSC_TRUE));
@@ -297,7 +291,6 @@ PetscErrorCode  MatMultTransposeAddEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode  MatMultHermitianTransposeEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultEqual_Private(A,B,n,flg,2,PETSC_FALSE));
@@ -322,7 +315,6 @@ PetscErrorCode  MatMultHermitianTransposeEqual(Mat A,Mat B,PetscInt n,PetscBool 
 @*/
 PetscErrorCode  MatMultHermitianTransposeAddEqual(Mat A,Mat B,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultEqual_Private(A,B,n,flg,2,PETSC_TRUE));
@@ -348,7 +340,6 @@ PetscErrorCode  MatMultHermitianTransposeAddEqual(Mat A,Mat B,PetscInt n,PetscBo
 @*/
 PetscErrorCode MatMatMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMatMultEqual_Private(A,B,C,n,flg,PETSC_FALSE,PETSC_FALSE));
@@ -374,7 +365,6 @@ PetscErrorCode MatMatMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode MatTransposeMatMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMatMultEqual_Private(A,B,C,n,flg,PETSC_TRUE,PETSC_FALSE));
@@ -400,7 +390,6 @@ PetscErrorCode MatTransposeMatMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *
 @*/
 PetscErrorCode MatMatTransposeMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMatMultEqual_Private(A,B,C,n,flg,PETSC_FALSE,PETSC_TRUE));
@@ -409,7 +398,6 @@ PetscErrorCode MatMatTransposeMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *
 
 static PetscErrorCode MatProjMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,PetscBool rart,PetscBool *flg)
 {
-  PetscErrorCode ierr;
   Vec            x,v1,v2,v3,v4,Cx,Bx;
   PetscReal      norm_abs,norm_rel,tol=PETSC_SQRT_MACHINE_EPSILON;
   PetscInt       i,am,an,bm,bn,cm,cn;
@@ -498,7 +486,6 @@ static PetscErrorCode MatProjMultEqual_Private(Mat A,Mat B,Mat C,PetscInt n,Pets
 @*/
 PetscErrorCode MatPtAPMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatProjMultEqual_Private(A,B,C,n,PETSC_FALSE,flg));
@@ -524,7 +511,6 @@ PetscErrorCode MatPtAPMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode MatRARtMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatProjMultEqual_Private(A,B,C,n,PETSC_TRUE,flg));
@@ -547,7 +533,6 @@ PetscErrorCode MatRARtMultEqual(Mat A,Mat B,Mat C,PetscInt n,PetscBool *flg)
 @*/
 PetscErrorCode MatIsLinear(Mat A,PetscInt n,PetscBool *flg)
 {
-  PetscErrorCode ierr;
   Vec            x,y,s1,s2;
   PetscRandom    rctx;
   PetscScalar    a;

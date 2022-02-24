@@ -22,7 +22,6 @@ static const char *DType_Table[64] = {"preconditioned", "unpreconditioned"};
 @*/
 PetscErrorCode  KSPGLTRGetMinEig(KSP ksp, PetscReal *e_min)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -44,7 +43,6 @@ PetscErrorCode  KSPGLTRGetMinEig(KSP ksp, PetscReal *e_min)
 @*/
 PetscErrorCode  KSPGLTRGetLambda(KSP ksp, PetscReal *lambda)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -61,7 +59,6 @@ static PetscErrorCode KSPCGSolve_GLTR(KSP ksp)
   PetscReal    *t_soln, *t_diag, *t_offd, *e_valu, *e_vect, *e_rwrk;
   PetscBLASInt *e_iblk, *e_splt, *e_iwrk;
 
-  PetscErrorCode ierr;
   Mat            Qmat, Mmat;
   Vec            r, z, p, d;
   PC             pc;
@@ -1191,7 +1188,6 @@ static PetscErrorCode KSPCGSetUp_GLTR(KSP ksp)
 {
   KSPCG_GLTR     *cg = (KSPCG_GLTR*)ksp->data;
   PetscInt       max_its;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /***************************************************************************/
@@ -1222,7 +1218,6 @@ static PetscErrorCode KSPCGSetUp_GLTR(KSP ksp)
 static PetscErrorCode KSPCGDestroy_GLTR(KSP ksp)
 {
   KSPCG_GLTR     *cg = (KSPCG_GLTR*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /***************************************************************************/
@@ -1298,7 +1293,6 @@ static PetscErrorCode  KSPGLTRGetLambda_GLTR(KSP ksp, PetscReal *lambda)
 
 static PetscErrorCode KSPCGSetFromOptions_GLTR(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSPCG_GLTR       *cg = (KSPCG_GLTR*)ksp->data;
 
   PetscFunctionBegin;
@@ -1365,7 +1359,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_GLTR(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSPCG_GLTR       *cg;
 
   PetscFunctionBegin;

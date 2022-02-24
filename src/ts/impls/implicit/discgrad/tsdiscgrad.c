@@ -27,7 +27,6 @@ typedef struct {
 static PetscErrorCode TSDiscGradGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 {
   TS_DiscGrad   *dg = (TS_DiscGrad *) ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (X0) {
@@ -43,7 +42,6 @@ static PetscErrorCode TSDiscGradGetX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 
 static PetscErrorCode TSDiscGradRestoreX0AndXdot(TS ts, DM dm, Vec *X0, Vec *Xdot)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (X0) {
@@ -65,7 +63,6 @@ static PetscErrorCode DMRestrictHook_TSDiscGrad(DM fine, Mat restrct, Vec rscale
 {
   TS             ts = (TS) ctx;
   Vec            X0, Xdot, X0_c, Xdot_c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSDiscGradGetX0AndXdot(ts, fine, &X0, &Xdot));
@@ -89,7 +86,6 @@ static PetscErrorCode DMSubDomainRestrictHook_TSDiscGrad(DM dm, VecScatter gscat
 {
   TS             ts = (TS) ctx;
   Vec            X0, Xdot, X0_sub, Xdot_sub;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSDiscGradGetX0AndXdot(ts, dm, &X0, &Xdot));
@@ -110,7 +106,6 @@ static PetscErrorCode TSSetUp_DiscGrad(TS ts)
 {
   TS_DiscGrad   *dg = (TS_DiscGrad *) ts->data;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dg->X)    CHKERRQ(VecDuplicate(ts->vec_sol, &dg->X));
@@ -126,7 +121,6 @@ static PetscErrorCode TSSetUp_DiscGrad(TS ts)
 static PetscErrorCode TSSetFromOptions_DiscGrad(PetscOptionItems *PetscOptionsObject, TS ts)
 {
   TS_DiscGrad   *dg = (TS_DiscGrad *) ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "Discrete Gradients ODE solver options"));
@@ -140,7 +134,6 @@ static PetscErrorCode TSSetFromOptions_DiscGrad(PetscOptionItems *PetscOptionsOb
 static PetscErrorCode TSView_DiscGrad(TS ts,PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -171,7 +164,6 @@ static PetscErrorCode TSDiscGradUseGonzalez_DiscGrad(TS ts,PetscBool flg)
 static PetscErrorCode TSReset_DiscGrad(TS ts)
 {
   TS_DiscGrad   *dg = (TS_DiscGrad *) ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&dg->X));
@@ -183,7 +175,6 @@ static PetscErrorCode TSReset_DiscGrad(TS ts)
 static PetscErrorCode TSDestroy_DiscGrad(TS ts)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_DiscGrad(ts));
@@ -202,7 +193,6 @@ static PetscErrorCode TSInterpolate_DiscGrad(TS ts, PetscReal t, Vec X)
 {
   TS_DiscGrad   *dg = (TS_DiscGrad*)ts->data;
   PetscReal      dt = t - ts->ptime;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(ts->vec_sol, dg->X));
@@ -214,7 +204,6 @@ static PetscErrorCode TSDiscGrad_SNESSolve(TS ts, Vec b, Vec x)
 {
   SNES           snes;
   PetscInt       nits, lits;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetSNES(ts, &snes));
@@ -234,7 +223,6 @@ static PetscErrorCode TSStep_DiscGrad(TS ts)
   PetscInt       rejections      = 0;
   PetscBool      stageok, accept = PETSC_TRUE;
   PetscReal      next_time_step  = ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetAdapt(ts, &adapt));
@@ -304,7 +292,6 @@ static PetscErrorCode SNESTSFormFunction_DiscGrad(SNES snes, Vec x, Vec y, TS ts
   PetscScalar    F=0, F0=0, Gp;
   Vec            G, SgF;
   DM             dm, dmsave;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes, &dm));
@@ -374,7 +361,6 @@ static PetscErrorCode SNESTSFormJacobian_DiscGrad(SNES snes, Vec x, Mat A, Mat B
   PetscReal      shift = 1/(0.5*ts->time_step);
   Vec            Xdot;
   DM             dm,dmsave;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes, &dm));
@@ -426,7 +412,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_DiscGrad(TS ts)
 {
   TS_DiscGrad       *th;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(DGCitation, &DGCite));
@@ -484,7 +469,6 @@ $ PetscErrorCode func(TS ts, PetscReal time, Vec u, Vec G, void *)
 @*/
 PetscErrorCode TSDiscGradGetFormulation(TS ts, PetscErrorCode (**Sfunc)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (**Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (**Gfunc)(TS, PetscReal, Vec, Vec, void *), void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -520,7 +504,6 @@ $ PetscErrorCode func(TS ts, PetscReal time, Vec u, Vec G, void *)
 @*/
 PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (*Ffunc)(TS, PetscReal, Vec , PetscScalar *, void *), PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *), void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
@@ -548,7 +531,6 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 @*/
 PetscErrorCode TSDiscGradIsGonzalez(TS ts,PetscBool *gonzalez)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -575,7 +557,6 @@ PetscErrorCode TSDiscGradIsGonzalez(TS ts,PetscBool *gonzalez)
 @*/
 PetscErrorCode TSDiscGradUseGonzalez(TS ts,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);

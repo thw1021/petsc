@@ -107,7 +107,6 @@ typedef struct {
 /* Used to read data into the DMNetwork components */
 PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **pbus, Branch **pbranch, PetscInt **pedgelist)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,j,row[1],col[2];
   PetscInt          *edgelist;
   PetscInt          nofgen[9] = {1,1,1,0,0,0,0,0,0}; /* Buses at which generators are incident */
@@ -360,7 +359,6 @@ PetscErrorCode read_data(PetscInt nc, Gen **pgen,Exc **pexc, Load **pload,Bus **
 
 PetscErrorCode SetInitialGuess(DM networkdm, Vec X)
 {
-  PetscErrorCode ierr;
   Bus            *bus;
   Gen            *gen;
   Exc            *exc;
@@ -489,7 +487,6 @@ PetscErrorCode ri2dq(PetscScalar Fr,PetscScalar Fi,PetscScalar delta,PetscScalar
 /* Computes F(t,U,U_t) where F() = 0 is the DAE to be solved. */
 PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *user)
 {
-  PetscErrorCode    ierr;
   DM                networkdm;
   Vec               localX,localXdot,localF;
   PetscInt          vfrom,vto,offsetfrom,offsetto;
@@ -754,7 +751,6 @@ PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,Userctx *use
 */
 PetscErrorCode AlgFunction (SNES snes, Vec X, Vec F, void *ctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX,localF;
   PetscInt       vfrom,vto,offsetfrom,offsetto;

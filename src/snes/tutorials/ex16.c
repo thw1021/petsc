@@ -634,7 +634,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,Field ***x,Mat jacpre,Mat j
   Field          ex[NEB];
   CoordField     ec[NEB];
 
-  PetscErrorCode ierr;
   PetscInt       xs=info->xs,ys=info->ys,zs=info->zs;
   PetscInt       xm=info->xm,ym=info->ym,zm=info->zm;
   PetscInt       xes,yes,zes,xee,yee,zee;
@@ -736,7 +735,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,Field ***x,Field ***f,void 
   Field          ex[NEB];
   CoordField     ec[NEB];
 
-  PetscErrorCode ierr;
   PetscInt       xs=info->xs,ys=info->ys,zs=info->zs;
   PetscInt       xm=info->xm,ym=info->ym,zm=info->zm;
   PetscInt       xes,yes,zes,xee,yee,zee;
@@ -816,7 +814,6 @@ PetscErrorCode NonlinearGS(SNES snes,Vec X,Vec B,void *ptr)
   CoordField     ec[8];
   PetscScalar    pjac[9],pjinv[9];
   PetscScalar    pf[3],py[3];
-  PetscErrorCode ierr;
   PetscInt       xs,ys,zs;
   PetscInt       xm,ym,zm;
   PetscInt       mx,my,mz;
@@ -920,7 +917,6 @@ PetscErrorCode NonlinearGS(SNES snes,Vec X,Vec B,void *ptr)
 
 PetscErrorCode FormCoordinates(DM da,AppCtx *user)
 {
-  PetscErrorCode ierr;
   Vec            coords;
   DM             cda;
   PetscInt       mx,my,mz;
@@ -957,7 +953,6 @@ PetscErrorCode InitialGuess(DM da,AppCtx *user,Vec X)
 {
   PetscInt       i,j,k,xs,ys,zs,xm,ym,zm;
   PetscInt       mx,my,mz;
-  PetscErrorCode ierr;
   Field          ***x;
 
   PetscFunctionBegin;
@@ -989,7 +984,6 @@ PetscErrorCode FormRHS(DM da,AppCtx *user,Vec X)
 {
   PetscInt       i,j,k,xs,ys,zs,xm,ym,zm;
   PetscInt       mx,my,mz;
-  PetscErrorCode ierr;
   Field          ***x;
 
   PetscFunctionBegin;
@@ -1014,7 +1008,6 @@ PetscErrorCode FormRHS(DM da,AppCtx *user,Vec X)
 PetscErrorCode DisplayLine(SNES snes,Vec X)
 {
   PetscInt       r,i,j=0,k=0,xs,xm,ys,ym,zs,zm,mx,my,mz;
-  PetscErrorCode ierr;
   Field          ***x;
   CoordField     ***c;
   DM             da,cda;

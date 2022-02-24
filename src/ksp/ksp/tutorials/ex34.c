@@ -105,7 +105,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       d,dof,i,j,k,mx,my,mz,xm,ym,zm,xs,ys,zs;
   PetscScalar    Hx,Hy,Hz;
   PetscScalar    ****array;
@@ -148,7 +147,6 @@ PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 
 PetscErrorCode ComputeMatrix(KSP ksp, Mat J,Mat jac, void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       dof,i,j,k,d,mx,my,mz,xm,ym,zm,xs,ys,zs,num, numi, numj, numk;
   PetscScalar    v[7],Hx,Hy,Hz,HyHzdHx,HxHzdHy,HxHydHz;
   MatStencil     row, col[7];

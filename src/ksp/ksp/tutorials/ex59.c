@@ -65,7 +65,6 @@ typedef struct {
 
 static PetscErrorCode BuildCSRGraph(DomainData dd, PetscInt **xadj, PetscInt **adjncy)
 {
-  PetscErrorCode ierr;
   PetscInt       *xadj_temp,*adjncy_temp;
   PetscInt       i,j,k,ii,jj,kk,iindex,count_adj;
   PetscInt       istart_csr,iend_csr,jstart_csr,jend_csr,kstart_csr,kend_csr;
@@ -179,7 +178,6 @@ static PetscErrorCode BuildCSRGraph(DomainData dd, PetscInt **xadj, PetscInt **a
 
 static PetscErrorCode ComputeSpecialBoundaryIndices(DomainData dd,IS *dirichlet,IS *neumann)
 {
-  PetscErrorCode ierr;
   IS             temp_dirichlet=0,temp_neumann=0;
   PetscInt       localsize,i,j,k,*indices;
   PetscBool      *touched;
@@ -290,7 +288,6 @@ static PetscErrorCode ComputeSpecialBoundaryIndices(DomainData dd,IS *dirichlet,
 
 static PetscErrorCode ComputeMapping(DomainData dd,ISLocalToGlobalMapping *isg2lmap)
 {
-  PetscErrorCode         ierr;
   DM                     da;
   AO                     ao;
   DMBoundaryType         bx = DM_BOUNDARY_NONE,by = DM_BOUNDARY_NONE, bz = DM_BOUNDARY_NONE;
@@ -335,7 +332,6 @@ static PetscErrorCode ComputeMapping(DomainData dd,ISLocalToGlobalMapping *isg2l
 }
 static PetscErrorCode ComputeSubdomainMatrix(DomainData dd, GLLData glldata, Mat *local_mat)
 {
-  PetscErrorCode ierr;
   PetscInt       localsize,zloc,yloc,xloc,auxnex,auxney,auxnez;
   PetscInt       ie,je,ke,i,j,k,ig,jg,kg,ii,ming;
   PetscInt       *indexg,*cols,*colsg;
@@ -461,7 +457,6 @@ static PetscErrorCode ComputeSubdomainMatrix(DomainData dd, GLLData glldata, Mat
 
 static PetscErrorCode GLLStuffs(DomainData dd, GLLData *glldata)
 {
-  PetscErrorCode ierr;
   PetscReal      *M,si;
   PetscScalar    x,z0,z1,z2,Lpj,Lpr,rhoGLj,rhoGLk;
   PetscBLASInt   pm1,lierr;
@@ -711,7 +706,6 @@ static PetscErrorCode DomainDecomposition(DomainData *dd)
 }
 static PetscErrorCode ComputeMatrix(DomainData dd, Mat *A)
 {
-  PetscErrorCode         ierr;
   GLLData                gll;
   Mat                    local_mat  =0,temp_A=0;
   ISLocalToGlobalMapping matis_map  =0;
@@ -773,7 +767,6 @@ static PetscErrorCode ComputeMatrix(DomainData dd, Mat *A)
 
 static PetscErrorCode ComputeKSPFETIDP(DomainData dd, KSP ksp_bddc, KSP *ksp_fetidp)
 {
-  PetscErrorCode ierr;
   KSP            temp_ksp;
   PC             pc;
 
@@ -813,7 +806,6 @@ static PetscErrorCode ComputeKSPFETIDP(DomainData dd, KSP ksp_bddc, KSP *ksp_fet
 
 static PetscErrorCode ComputeKSPBDDC(DomainData dd,Mat A,KSP *ksp)
 {
-  PetscErrorCode ierr;
   KSP            temp_ksp;
   PC             pc;
   IS             primals,dirichletIS=0,neumannIS=0,*bddc_dofs_splitting;
@@ -931,7 +923,6 @@ static PetscErrorCode ComputeKSPBDDC(DomainData dd,Mat A,KSP *ksp)
 
 static PetscErrorCode InitializeDomainData(DomainData *dd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    sizes,rank;
   PetscInt       factor;
 

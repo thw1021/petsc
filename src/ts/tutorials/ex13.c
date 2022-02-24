@@ -118,7 +118,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
 {
   /* PETSC_UNUSED AppCtx *user=(AppCtx*)ptr; */
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
   PetscReal      two = 2.0,hx,hy,sx,sy;
   PetscScalar    u,uxx,uyy,**uarray,**f;
@@ -188,7 +187,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
 */
 PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat J,Mat Jpre,void *ctx)
 {
-  PetscErrorCode ierr;
   DM             da;
   DMDALocalInfo  info;
   PetscInt       i,j;
@@ -231,7 +229,6 @@ PetscErrorCode FormInitialSolution(DM da,Vec U,void* ptr)
 {
   AppCtx         *user=(AppCtx*)ptr;
   PetscReal      c=user->c;
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   PetscScalar    **u;
   PetscReal      hx,hy,x,y,r;

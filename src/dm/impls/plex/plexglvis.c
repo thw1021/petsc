@@ -15,7 +15,6 @@ static PetscErrorCode DestroyGLVisViewerCtx_Private(void *vctx)
 {
   GLVisViewerCtx *ctx = (GLVisViewerCtx*)vctx;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0;i<ctx->nf;i++) {
@@ -30,7 +29,6 @@ static PetscErrorCode DMPlexSampleGLVisFields_Private(PetscObject oX, PetscInt n
 {
   GLVisViewerCtx *ctx = (GLVisViewerCtx*)vctx;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (f=0;f<nf;f++) {
@@ -55,7 +53,6 @@ PetscErrorCode DMSetUpGLVisViewer_Plex(PetscObject odm, PetscViewer viewer)
   PetscInt       dim,cStart,cEnd,vStart,vEnd;
   GLVisViewerCtx *ctx;
   PetscSection   s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm,&dim));
@@ -243,7 +240,6 @@ static PetscErrorCode DMPlexGetPointMFEMCellID_Internal(DM dm, DMLabel label, Pe
 {
   DMLabel        dlabel;
   PetscInt       depth,csize,pdepth,dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepthLabel(dm,&dlabel));
@@ -271,7 +267,6 @@ static PetscErrorCode DMPlexGetPointMFEMCellID_Internal(DM dm, DMLabel label, Pe
 static PetscErrorCode DMPlexGetPointMFEMVertexIDs_Internal(DM dm, PetscInt p, PetscSection csec, PetscInt *nv, PetscInt vids[])
 {
   PetscInt       dim,sdim,dof = 0,off = 0,i,q,vStart,vEnd,numPoints,*points = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepthStratum(dm,0,&vStart,&vEnd));
@@ -316,7 +311,6 @@ static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
   PetscDTNodeType nodeType   = PETSCDTNODES_GAUSSJACOBI;
   PetscBool       endpoint   = PETSC_TRUE;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)femIn);
@@ -1120,7 +1114,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
 
 PetscErrorCode DMPlexView_GLVis(DM dm, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(DMView_GLVis(dm,viewer,DMPlexView_GLVis_ASCII));
   PetscFunctionReturn(0);

@@ -20,7 +20,6 @@ T*/
 static PetscErrorCode VecLoadIfExists_Private(Vec b,PetscViewer fd,PetscBool *has)
 {
   PetscBool      hdf5=PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)fd,PETSCVIEWERHDF5,&hdf5));

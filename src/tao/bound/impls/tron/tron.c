@@ -7,7 +7,6 @@ static PetscErrorCode TronGradientProjections(Tao,TAO_TRON*);
 static PetscErrorCode TaoDestroy_TRON(Tao tao)
 {
   TAO_TRON       *tron = (TAO_TRON *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&tron->X_New));
@@ -28,7 +27,6 @@ static PetscErrorCode TaoDestroy_TRON(Tao tao)
 static PetscErrorCode TaoSetFromOptions_TRON(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_TRON       *tron = (TAO_TRON *)tao->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -44,7 +42,6 @@ static PetscErrorCode TaoView_TRON(Tao tao, PetscViewer viewer)
 {
   TAO_TRON         *tron = (TAO_TRON *)tao->data;
   PetscBool        isascii;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -58,7 +55,6 @@ static PetscErrorCode TaoView_TRON(Tao tao, PetscViewer viewer)
 /* ---------------------------------------------------------- */
 static PetscErrorCode TaoSetup_TRON(Tao tao)
 {
-  PetscErrorCode ierr;
   TAO_TRON       *tron = (TAO_TRON *)tao->data;
 
   PetscFunctionBegin;
@@ -84,7 +80,6 @@ static PetscErrorCode TaoSetup_TRON(Tao tao)
 static PetscErrorCode TaoSolve_TRON(Tao tao)
 {
   TAO_TRON                     *tron = (TAO_TRON *)tao->data;
-  PetscErrorCode               ierr;
   PetscInt                     its;
   TaoLineSearchConvergedReason ls_reason = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscReal                    prered,actred,delta,f,f_new,rhok,gdx,xdiff,stepsize;
@@ -294,7 +289,6 @@ static PetscErrorCode TaoComputeDual_TRON(Tao tao, Vec DXL, Vec DXU)
 {
 
   TAO_TRON       *tron = (TAO_TRON *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -329,7 +323,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_TRON(Tao tao)
 {
   TAO_TRON       *tron;
-  PetscErrorCode ierr;
   const char     *morethuente_type = TAOLINESEARCHMT;
 
   PetscFunctionBegin;

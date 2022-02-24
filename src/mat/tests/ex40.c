@@ -11,7 +11,6 @@ PetscErrorCode ISAllGatherDisjoint(IS iis, IS** ois)
   IS             *is2,is;
   const PetscInt *idxs;
   PetscInt       i, ls,*sizes;
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBeginUser;

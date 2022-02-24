@@ -295,7 +295,6 @@ int main(int argc,char **args)
 
 PetscErrorCode AssembleMatrix(Mat A,PetscInt m,PetscInt n)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,Ii,J,Istart,Iend;
   PetscScalar    v;
 

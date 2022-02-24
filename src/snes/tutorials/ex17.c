@@ -388,7 +388,6 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 {
   PetscBag       bag;
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -423,7 +422,6 @@ static PetscErrorCode DMPlexDistortGeometry(DM dm)
   PetscScalar   *coords;
   PetscReal      mid = 0.5;
   PetscInt       cdim, d, vStart, vEnd, v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetCoordinateDM(dm, &cdm));
@@ -449,7 +447,6 @@ static PetscErrorCode DMPlexDistortGeometry(DM dm)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -475,7 +472,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   DMLabel          label;
   PetscInt         id, bd;
   PetscInt         dim;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -592,7 +588,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
 
 static PetscErrorCode CreateElasticityNullSpace(DM dm, PetscInt origField, PetscInt field, MatNullSpace *nullspace)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateRigidBody(dm, origField, nullspace));
@@ -608,7 +603,6 @@ PetscErrorCode SetupFE(DM dm, const char name[], PetscErrorCode (*setup)(DM, App
   DMPolytopeType ct;
   PetscBool      simplex;
   PetscInt       dim, cStart;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Create finite element */

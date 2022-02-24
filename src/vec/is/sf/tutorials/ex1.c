@@ -20,7 +20,6 @@ static PetscErrorCode PetscSFViewCustomLocals_Private(PetscSF sf,const PetscInt 
   const PetscSFNode *iremote;
   PetscInt          i,nroots,nleaves,nranks;
   PetscMPIInt       rank;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)sf),&rank));

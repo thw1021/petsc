@@ -28,7 +28,6 @@ PetscErrorCode TSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec u)
 {
   DM             dm;
   PetscInt       i,n = ts->numbermonitors;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -70,7 +69,6 @@ PetscErrorCode TSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec u)
 @*/
 PetscErrorCode  TSMonitorSetFromOptions(TS ts,const char name[],const char help[], const char manual[],PetscErrorCode (*monitor)(TS,PetscInt,PetscReal,Vec,PetscViewerAndFormat*),PetscErrorCode (*monitorsetup)(TS,PetscViewerAndFormat*))
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscViewerFormat format;
   PetscBool         flg;
@@ -125,7 +123,6 @@ $    PetscErrorCode monitor(TS ts,PetscInt steps,PetscReal time,Vec u,void *mctx
 @*/
 PetscErrorCode  TSMonitorSet(TS ts,PetscErrorCode (*monitor)(TS,PetscInt,PetscReal,Vec,void*),void *mctx,PetscErrorCode (*mdestroy)(void**))
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscBool      identical;
 
@@ -159,7 +156,6 @@ PetscErrorCode  TSMonitorSet(TS ts,PetscErrorCode (*monitor)(TS,PetscInt,PetscRe
 @*/
 PetscErrorCode  TSMonitorCancel(TS ts)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -182,7 +178,6 @@ PetscErrorCode  TSMonitorCancel(TS ts)
 @*/
 PetscErrorCode TSMonitorDefault(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer =  vf->viewer;
   PetscBool      iascii,ibinary;
 
@@ -228,7 +223,6 @@ PetscErrorCode TSMonitorDefault(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
 @*/
 PetscErrorCode TSMonitorExtreme(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer =  vf->viewer;
   PetscBool      iascii;
   PetscReal      max,min;
@@ -296,7 +290,6 @@ PetscErrorCode TSMonitorExtreme(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
 PetscErrorCode  TSMonitorLGCtxCreate(MPI_Comm comm,const char host[],const char label[],int x,int y,int m,int n,PetscInt howoften,TSMonitorLGCtx *ctx)
 {
   PetscDraw      draw;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
@@ -313,7 +306,6 @@ PetscErrorCode TSMonitorLGTimeStep(TS ts,PetscInt step,PetscReal ptime,Vec v,voi
 {
   TSMonitorLGCtx ctx = (TSMonitorLGCtx) monctx;
   PetscReal      x   = ptime,y;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (step < 0) PetscFunctionReturn(0); /* -1 indicates an interpolated solution */
@@ -349,7 +341,6 @@ PetscErrorCode TSMonitorLGTimeStep(TS ts,PetscInt step,PetscReal ptime,Vec v,voi
 @*/
 PetscErrorCode  TSMonitorLGCtxDestroy(TSMonitorLGCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if ((*ctx)->transformdestroy) {
@@ -368,7 +359,6 @@ PetscErrorCode  TSMonitorLGCtxDestroy(TSMonitorLGCtx *ctx)
 PetscErrorCode TSMonitorSPCtxCreate(MPI_Comm comm,const char host[],const char label[],int x,int y,int m,int n,PetscInt howoften,PetscInt retain,PetscBool phase,TSMonitorSPCtx *ctx)
 {
   PetscDraw      draw;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
@@ -387,7 +377,6 @@ PetscErrorCode TSMonitorSPCtxCreate(MPI_Comm comm,const char host[],const char l
 */
 PetscErrorCode TSMonitorSPCtxDestroy(TSMonitorSPCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 
@@ -423,7 +412,6 @@ PetscErrorCode TSMonitorSPCtxDestroy(TSMonitorSPCtx *ctx)
 @*/
 PetscErrorCode  TSMonitorDrawSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dummy)
 {
-  PetscErrorCode   ierr;
   TSMonitorDrawCtx ictx = (TSMonitorDrawCtx)dummy;
   PetscDraw        draw;
 
@@ -480,7 +468,6 @@ PetscErrorCode  TSMonitorDrawSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,
 @*/
 PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dummy)
 {
-  PetscErrorCode    ierr;
   TSMonitorDrawCtx  ictx = (TSMonitorDrawCtx)dummy;
   PetscDraw         draw;
   PetscDrawAxis     axis;
@@ -489,12 +476,13 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
   PetscReal         U0,U1,xl,yl,xr,yr,h;
   char              time[32];
   const PetscScalar *U;
+  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)ts),&size));
-  PetscCheckFalse(size != 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only allowed for sequential runs");
+  PetscCheck(size == 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only allowed for sequential runs");
   CHKERRQ(VecGetSize(u,&n));
-  PetscCheckFalse(n != 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only for ODEs with two unknowns");
+  PetscCheck(n == 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Only for ODEs with two unknowns");
 
   CHKERRQ(PetscViewerDrawGetDraw(ictx->viewer,0,&draw));
   CHKERRQ(PetscViewerDrawGetDrawAxis(ictx->viewer,0,&axis));
@@ -510,7 +498,7 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
   CHKERRQ(VecRestoreArrayRead(u,&U));
   if ((U0 < xl) || (U1 < yl) || (U0 > xr) || (U1 > yr)) PetscFunctionReturn(0);
 
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   CHKERRQ(PetscDrawPoint(draw,U0,U1,PETSC_DRAW_BLACK));
   if (ictx->showtimestepandtime) {
     CHKERRQ(PetscDrawGetCoordinates(draw,&xl,&yl,&xr,&yr));
@@ -518,7 +506,7 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
     h    = yl + .95*(yr - yl);
     CHKERRQ(PetscDrawStringCentered(draw,.5*(xl+xr),h,PETSC_DRAW_BLACK,time));
   }
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   CHKERRQ(PetscDrawFlush(draw));
   CHKERRQ(PetscDrawPause(draw));
   CHKERRQ(PetscDrawSave(draw));
@@ -539,7 +527,6 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
 @*/
 PetscErrorCode  TSMonitorDrawCtxDestroy(TSMonitorDrawCtx *ictx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerDestroy(&(*ictx)->viewer));
@@ -568,7 +555,6 @@ PetscErrorCode  TSMonitorDrawCtxDestroy(TSMonitorDrawCtx *ictx)
 @*/
 PetscErrorCode  TSMonitorDrawCtxCreate(MPI_Comm comm,const char host[],const char label[],int x,int y,int m,int n,PetscInt howoften,TSMonitorDrawCtx *ctx)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
@@ -605,7 +591,6 @@ PetscErrorCode  TSMonitorDrawCtxCreate(MPI_Comm comm,const char host[],const cha
 @*/
 PetscErrorCode  TSMonitorDrawSolutionFunction(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dummy)
 {
-  PetscErrorCode   ierr;
   TSMonitorDrawCtx ctx    = (TSMonitorDrawCtx)dummy;
   PetscViewer      viewer = ctx->viewer;
   Vec              work;
@@ -640,7 +625,6 @@ PetscErrorCode  TSMonitorDrawSolutionFunction(TS ts,PetscInt step,PetscReal ptim
 @*/
 PetscErrorCode  TSMonitorDrawError(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dummy)
 {
-  PetscErrorCode   ierr;
   TSMonitorDrawCtx ctx    = (TSMonitorDrawCtx)dummy;
   PetscViewer      viewer = ctx->viewer;
   Vec              work;
@@ -673,7 +657,6 @@ PetscErrorCode  TSMonitorDrawError(TS ts,PetscInt step,PetscReal ptime,Vec u,voi
 @*/
 PetscErrorCode  TSMonitorSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerPushFormat(vf->viewer,vf->format));
@@ -706,7 +689,6 @@ PetscErrorCode  TSMonitorSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,Pets
 @*/
 PetscErrorCode TSMonitorSolutionVTK(TS ts,PetscInt step,PetscReal ptime,Vec u,void *filenametemplate)
 {
-  PetscErrorCode ierr;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscViewer    viewer;
 
@@ -736,7 +718,6 @@ PetscErrorCode TSMonitorSolutionVTK(TS ts,PetscInt step,PetscReal ptime,Vec u,vo
 @*/
 PetscErrorCode TSMonitorSolutionVTKDestroy(void *filenametemplate)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(*(char**)filenametemplate));
@@ -771,7 +752,6 @@ PetscErrorCode TSMonitorSolutionVTKDestroy(void *filenametemplate)
 @*/
 PetscErrorCode  TSMonitorLGSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dctx)
 {
-  PetscErrorCode    ierr;
   TSMonitorLGCtx    ctx = (TSMonitorLGCtx)dctx;
   const PetscScalar *yy;
   Vec               v;
@@ -874,7 +854,6 @@ PetscErrorCode  TSMonitorLGSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,vo
 @*/
 PetscErrorCode  TSMonitorLGSetVariableNames(TS ts,const char * const *names)
 {
-  PetscErrorCode    ierr;
   PetscInt          i;
 
   PetscFunctionBegin;
@@ -902,7 +881,6 @@ PetscErrorCode  TSMonitorLGSetVariableNames(TS ts,const char * const *names)
 @*/
 PetscErrorCode  TSMonitorLGCtxSetVariableNames(TSMonitorLGCtx ctx,const char * const *names)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrArrayDestroy(&ctx->names));
@@ -960,7 +938,6 @@ PetscErrorCode  TSMonitorLGGetVariableNames(TS ts,const char *const **names)
 PetscErrorCode  TSMonitorLGCtxSetDisplayVariables(TSMonitorLGCtx ctx,const char * const *displaynames)
 {
   PetscInt          j = 0,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!ctx->names) PetscFunctionReturn(0);
@@ -1006,7 +983,6 @@ PetscErrorCode  TSMonitorLGCtxSetDisplayVariables(TSMonitorLGCtx ctx,const char 
 PetscErrorCode  TSMonitorLGSetDisplayVariables(TS ts,const char * const *displaynames)
 {
   PetscInt          i;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   for (i=0; i<ts->numbermonitors; i++) {
@@ -1039,7 +1015,6 @@ PetscErrorCode  TSMonitorLGSetDisplayVariables(TS ts,const char * const *display
 PetscErrorCode  TSMonitorLGSetTransform(TS ts,PetscErrorCode (*transform)(void*,Vec,Vec*),PetscErrorCode (*destroy)(void*),void *tctx)
 {
   PetscInt          i;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   for (i=0; i<ts->numbermonitors; i++) {
@@ -1101,7 +1076,6 @@ PetscErrorCode  TSMonitorLGCtxSetTransform(TSMonitorLGCtx ctx,PetscErrorCode (*t
 @*/
 PetscErrorCode  TSMonitorLGError(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dummy)
 {
-  PetscErrorCode    ierr;
   TSMonitorLGCtx    ctx = (TSMonitorLGCtx)dummy;
   const PetscScalar *yy;
   Vec               y;
@@ -1168,7 +1142,6 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
   const PetscScalar *yy;
   PetscReal         *y, *x;
   PetscInt           Np, p, dim = 2;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (step < 0) PetscFunctionReturn(0); /* -1 indicates interpolated solution */
@@ -1247,7 +1220,6 @@ PetscErrorCode TSMonitorError(TS ts,PetscInt step,PetscReal ptime,Vec u,PetscVie
   PetscDS        ds = NULL;
   PetscInt       Nf = -1, f;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -1305,7 +1277,6 @@ PetscErrorCode TSMonitorLGSNESIterations(TS ts,PetscInt n,PetscReal ptime,Vec v,
 {
   TSMonitorLGCtx ctx = (TSMonitorLGCtx) monctx;
   PetscReal      x   = ptime,y;
-  PetscErrorCode ierr;
   PetscInt       its;
 
   PetscFunctionBegin;
@@ -1332,7 +1303,6 @@ PetscErrorCode TSMonitorLGKSPIterations(TS ts,PetscInt n,PetscReal ptime,Vec v,v
 {
   TSMonitorLGCtx ctx = (TSMonitorLGCtx) monctx;
   PetscReal      x   = ptime,y;
-  PetscErrorCode ierr;
   PetscInt       its;
 
   PetscFunctionBegin;
@@ -1373,7 +1343,6 @@ PetscErrorCode TSMonitorLGKSPIterations(TS ts,PetscInt n,PetscReal ptime,Vec v,v
 @*/
 PetscErrorCode  TSMonitorEnvelopeCtxCreate(TS ts,TSMonitorEnvelopeCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
@@ -1404,7 +1373,6 @@ PetscErrorCode  TSMonitorEnvelopeCtxCreate(TS ts,TSMonitorEnvelopeCtx *ctx)
 @*/
 PetscErrorCode  TSMonitorEnvelope(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dctx)
 {
-  PetscErrorCode       ierr;
   TSMonitorEnvelopeCtx ctx = (TSMonitorEnvelopeCtx)dctx;
 
   PetscFunctionBegin;
@@ -1471,7 +1439,6 @@ PetscErrorCode  TSMonitorEnvelopeGetBounds(TS ts,Vec *max,Vec *min)
 @*/
 PetscErrorCode  TSMonitorEnvelopeCtxDestroy(TSMonitorEnvelopeCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&(*ctx)->min));
@@ -1509,7 +1476,6 @@ PetscErrorCode TSDMSwarmMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U,
   PetscReal          m = 1.0, totE = 0., totMom[3] = {0., 0., 0.};
   PetscInt           dim, d, Np, p;
   MPI_Comm           comm;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &sw));

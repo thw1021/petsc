@@ -28,7 +28,6 @@ PetscErrorCode monitor(Tao tao,AppCtx *ctx)
   PetscInt           iterate;
   PetscReal          f,gnorm,cnorm,xdiff;
   TaoConvergedReason reason;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TaoGetSolutionStatus(tao,&iterate,&f,&gnorm,&cnorm,&xdiff,&reason));
@@ -249,7 +248,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec P,PetscReal *f,Vec G,void *ctx0)
   PetscScalar    *x_ptr,*y_ptr;
   Vec            q;
   Mat            qgrad;
-  PetscErrorCode ierr;
 
   CHKERRQ(VecGetArrayRead(P,(const PetscScalar**)&x_ptr));
   ctx->Pm = x_ptr[0];

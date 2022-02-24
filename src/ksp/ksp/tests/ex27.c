@@ -127,7 +127,6 @@ int main(int argc,char **args)
 
 PetscErrorCode PCShellApply_Matinv(PC pc,Vec xin,Vec xout)
 {
-  PetscErrorCode ierr;
   Mat            X;
 
   PetscFunctionBeginUser;

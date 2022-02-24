@@ -7,7 +7,6 @@
 /* Start MPI requests. If use non-GPU aware MPI, we might need to copy data from device buf to host buf */
 static PetscErrorCode PetscSFLinkStartRequests_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode    ierr;
   PetscMPIInt       nreqs;
   MPI_Request       *reqs = NULL;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
@@ -45,7 +44,6 @@ static PetscErrorCode PetscSFLinkStartRequests_MPI(PetscSF sf,PetscSFLink link,P
 
 static PetscErrorCode PetscSFLinkWaitRequests_MPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode       ierr;
   PetscSF_Basic        *bas = (PetscSF_Basic*)sf->data;
   const PetscMemType   rootmtype_mpi = link->rootmtype_mpi,leafmtype_mpi = link->leafmtype_mpi;
   const PetscInt       rootdirect_mpi = link->rootdirect_mpi,leafdirect_mpi = link->leafdirect_mpi;
@@ -79,7 +77,6 @@ static PetscErrorCode PetscSFLinkWaitRequests_MPI(PetscSF sf,PetscSFLink link,Pe
 */
 PetscErrorCode PetscSFLinkCreate_MPI(PetscSF sf,MPI_Datatype unit,PetscMemType xrootmtype,const void *rootdata,PetscMemType xleafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
-  PetscErrorCode    ierr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscInt          i,j,k,nrootreqs,nleafreqs,nreqs;
   PetscSFLink       *p,link;

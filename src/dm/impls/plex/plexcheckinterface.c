@@ -11,7 +11,6 @@ static PetscErrorCode ExchangeArrayByRank_Private(PetscObject obj, MPI_Datatype 
   MPI_Request *sreq, *rreq;
   PetscMPIInt tag, unitsize;
   MPI_Comm comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Type_size(dt, &unitsize));
@@ -55,7 +54,6 @@ static PetscErrorCode ExchangeVecByRank_Private(PetscObject obj, PetscInt nsrank
   const PetscScalar **sarr;
   Vec *rvecs_;
   MPI_Request *sreq, *rreq;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc4(nsranks, &ssize, nsranks, &sarr, nrranks, &rreq, nsranks, &sreq));
@@ -86,7 +84,6 @@ static PetscErrorCode SortByRemote_Private(PetscSF sf, PetscInt *rmine1[], Petsc
   const PetscMPIInt   *ranks;
   const PetscInt      *roffset, *rmine, *rremote;
   PetscInt            n, o, r;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFGetRootRanks(sf, &nranks, &ranks, &roffset, &rmine, &rremote));
@@ -111,7 +108,6 @@ static PetscErrorCode GetRecursiveConeCoordinatesPerRank_Private(DM dm, PetscSF 
   const PetscMPIInt   *ranks;
   const PetscInt      *roffset;
   PetscInt            n, o, r;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinatesLocalSetUp(dm));
@@ -135,7 +131,6 @@ static PetscErrorCode PetscSFComputeMultiRootOriginalNumberingByRank_Private(Pet
   PetscInt            nileaves, niranks;
   const PetscInt      *iroffset, *irmine, *degree;
   PetscInt            i, n, o, r;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFGetGraph(imsf, NULL, &nileaves, NULL, NULL));
@@ -196,7 +191,6 @@ PetscErrorCode DMPlexCheckInterfaceCones(DM dm)
   PetscBool           same;
   PetscBool           verbose=PETSC_FALSE;
   MPI_Comm            comm;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

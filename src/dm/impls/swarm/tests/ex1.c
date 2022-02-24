@@ -13,7 +13,6 @@ typedef struct {
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -50,7 +49,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   const PetscReal *qpoints;
   PetscInt         Ncell, c, Nq, q, dim;
   PetscBool        simplex;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -103,7 +101,6 @@ static PetscErrorCode TestL2Projection(DM dm, DM sw, AppCtx *user)
   Mat              mass;
   Vec              u, rhs, uproj;
   PetscReal        error;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   funcs[0] = linear;

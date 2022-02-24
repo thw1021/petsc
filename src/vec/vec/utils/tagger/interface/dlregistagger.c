@@ -17,7 +17,6 @@ PetscBool VecTaggerRegisterAllCalled;
 @*/
 PetscErrorCode VecTaggerInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (VecTaggerPackageInitialized) PetscFunctionReturn(0);
@@ -40,7 +39,6 @@ PetscErrorCode VecTaggerInitializePackage(void)
 @*/
 PetscErrorCode VecTaggerFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&VecTaggerList));

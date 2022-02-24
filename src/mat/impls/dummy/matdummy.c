@@ -3,7 +3,6 @@
 
 PetscErrorCode MatDestroySubMatrix_Dummy(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_SubSppt    *submatj = (Mat_SubSppt*)C->data;
 
   PetscFunctionBegin;
@@ -14,7 +13,6 @@ PetscErrorCode MatDestroySubMatrix_Dummy(Mat C)
 
 PetscErrorCode MatDestroySubMatrices_Dummy(PetscInt n, Mat *mat[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Destroy dummy submatrices (*mat)[n]...(*mat)[n+nstages-1] used for reuse struct Mat_SubSppt */
@@ -40,7 +38,6 @@ PetscErrorCode MatDestroySubMatrices_Dummy(PetscInt n, Mat *mat[])
 
 PetscErrorCode MatDestroy_Dummy(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectChangeTypeName((PetscObject)A,NULL));
@@ -58,7 +55,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_Dummy(Mat A)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* matrix ops */

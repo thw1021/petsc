@@ -38,7 +38,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -57,7 +56,6 @@ static PetscErrorCode SetInitialCoordinates(DM dmSw)
   PetscBool      simplex;
   PetscReal     *centroid, *coords, *xi0, *v0, *J, *invJ, detJ;
   PetscInt       dim, d, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscRandomCreate(PetscObjectComm((PetscObject) dmSw), &rnd));
@@ -104,7 +102,6 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   AppCtx         *user;
   PetscScalar    *initialConditions;
   PetscInt       dim, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetApplicationContext(dmSw, &user));
@@ -131,7 +128,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
   PetscInt       dim, cStart, cEnd, c, Np = user->particlesPerCell, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -166,7 +162,6 @@ static PetscErrorCode RHSFunction1(TS ts, PetscReal t, Vec V, Vec Xres, void *ct
   const PetscScalar *v;
   PetscScalar       *xres;
   PetscInt          Np, p, dim, d;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* The DM is not currently pushed down to the splits */
@@ -190,7 +185,6 @@ static PetscErrorCode RHSFunction2(TS ts, PetscReal t, Vec X, Vec Vres, void *ct
   const PetscScalar *x;
   PetscScalar       *vres;
   PetscInt          Np, p, dim, d;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* The DM is not currently pushed down to the splits */
@@ -217,7 +211,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t , Vec U, Vec R, vo
   const PetscScalar *u;
   PetscScalar       *r;
   PetscInt          Np, p, dim, d;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -243,7 +236,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
 {
   DM             dm;
   AppCtx        *user;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

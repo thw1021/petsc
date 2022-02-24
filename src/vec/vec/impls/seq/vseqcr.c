@@ -27,7 +27,6 @@
 @*/
 PetscErrorCode  VecCreateSeq(MPI_Comm comm,PetscInt n,Vec *v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCreate(comm,v));

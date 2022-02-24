@@ -592,7 +592,6 @@ PetscErrorCode RhsFunc(TS ts,PetscReal t,Vec Xglobal,Vec F,void *ctx)
 {
   AppCtx         *user = (AppCtx*)ctx;       /* user-defined application context */
   DM             da    = user->da;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
   PetscReal      dhx,dhy;
   Vec            localT;
@@ -709,7 +708,6 @@ PetscErrorCode RhsFunc(TS ts,PetscReal t,Vec Xglobal,Vec F,void *ctx)
 
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec T,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *array;
   MonitorCtx        *user  = (MonitorCtx*)ctx;
   PetscViewer       viewer = user->drawviewer;

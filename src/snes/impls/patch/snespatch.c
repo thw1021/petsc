@@ -19,7 +19,6 @@ static PetscErrorCode SNESPatchComputeResidual_Private(SNES snes, Vec x, Vec F, 
   const PetscInt    *indices;
   const PetscScalar *X;
   PetscScalar       *XWithAll;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
 
@@ -51,7 +50,6 @@ static PetscErrorCode SNESPatchComputeJacobian_Private(SNES snes, Vec x, Mat J, 
   const PetscInt    *indices;
   const PetscScalar *X;
   PetscScalar       *XWithAll;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* scatter from x to patch->patchStateWithAll[pt] */
@@ -79,7 +77,6 @@ static PetscErrorCode PCSetUp_PATCH_Nonlinear(PC pc)
   PC_PATCH       *patch = (PC_PATCH *) pc->data;
   const char     *prefix;
   PetscInt       i, pStart, dof, maxDof = -1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!pc->setupcalled) {
@@ -120,7 +117,6 @@ static PetscErrorCode PCApply_PATCH_Nonlinear(PC pc, PetscInt i, Vec patchRHS, V
 {
   PC_PATCH      *patch = (PC_PATCH *) pc->data;
   PetscInt       pStart, n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   patch->currentPatch = i;
@@ -153,7 +149,6 @@ static PetscErrorCode PCReset_PATCH_Nonlinear(PC pc)
 {
   PC_PATCH      *patch = (PC_PATCH *) pc->data;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (patch->solver) {
@@ -172,7 +167,6 @@ static PetscErrorCode PCDestroy_PATCH_Nonlinear(PC pc)
 {
   PC_PATCH      *patch = (PC_PATCH *) pc->data;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (patch->solver) {
@@ -185,7 +179,6 @@ static PetscErrorCode PCDestroy_PATCH_Nonlinear(PC pc)
 static PetscErrorCode PCUpdateMultiplicative_PATCH_Nonlinear(PC pc, PetscInt i, PetscInt pStart)
 {
   PC_PATCH      *patch = (PC_PATCH *) pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCPatch_ScatterLocal_Private(pc, i + pStart, patch->patchUpdate, patch->localState, ADD_VALUES, SCATTER_REVERSE, SCATTER_INTERIOR));
@@ -199,7 +192,6 @@ static PetscErrorCode SNESSetUp_Patch(SNES snes)
   Mat            dummy;
   Vec            F;
   PetscInt       n, N;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes, &dm));
@@ -218,7 +210,6 @@ static PetscErrorCode SNESSetUp_Patch(SNES snes)
 static PetscErrorCode SNESReset_Patch(SNES snes)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset(patch->pc));
@@ -228,7 +219,6 @@ static PetscErrorCode SNESReset_Patch(SNES snes)
 static PetscErrorCode SNESDestroy_Patch(SNES snes)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_Patch(snes));
@@ -241,7 +231,6 @@ static PetscErrorCode SNESSetFromOptions_Patch(PetscOptionItems *PetscOptionsObj
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
   const char    *prefix;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
@@ -254,7 +243,6 @@ static PetscErrorCode SNESView_Patch(SNES snes,PetscViewer viewer)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -277,7 +265,6 @@ static PetscErrorCode SNESSolve_Patch(SNES snes)
   PetscScalar       *localState   = NULL;
   PetscInt          its = 0;
   PetscReal         xnorm = 0.0, ynorm = 0.0, fnorm = 0.0;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetSolution(snes, &state));
@@ -357,7 +344,6 @@ static PetscErrorCode SNESSolve_Patch(SNES snes)
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_Patch(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_Patch     *patch;
   PC_PATCH       *patchpc;
   SNESLineSearch linesearch;
@@ -401,7 +387,6 @@ PetscErrorCode SNESPatchSetDiscretisationInfo(SNES snes, PetscInt nsubspaces, DM
                                             const PetscInt *subspaceOffsets, PetscInt numGhostBcs, const PetscInt *ghostBcNodes, PetscInt numGlobalBcs, const PetscInt *globalBcNodes)
 {
   SNES_Patch     *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -415,7 +400,6 @@ PetscErrorCode SNESPatchSetDiscretisationInfo(SNES snes, PetscInt nsubspaces, DM
 PetscErrorCode SNESPatchSetComputeOperator(SNES snes, PetscErrorCode (*func)(PC, PetscInt, Vec, Mat, IS, PetscInt, const PetscInt *, const PetscInt *, void *), void *ctx)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCPatchSetComputeOperator(patch->pc, func, ctx));
@@ -425,7 +409,6 @@ PetscErrorCode SNESPatchSetComputeOperator(SNES snes, PetscErrorCode (*func)(PC,
 PetscErrorCode SNESPatchSetComputeFunction(SNES snes, PetscErrorCode (*func)(PC, PetscInt, Vec, Vec, IS, PetscInt, const PetscInt *, const PetscInt *, void *), void *ctx)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCPatchSetComputeFunction(patch->pc, func, ctx));
@@ -435,7 +418,6 @@ PetscErrorCode SNESPatchSetComputeFunction(SNES snes, PetscErrorCode (*func)(PC,
 PetscErrorCode SNESPatchSetConstructType(SNES snes, PCPatchConstructType ctype, PetscErrorCode (*func)(PC, PetscInt *, IS **, IS *, void *), void *ctx)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCPatchSetConstructType(patch->pc, ctype, func, ctx));
@@ -445,7 +427,6 @@ PetscErrorCode SNESPatchSetConstructType(SNES snes, PCPatchConstructType ctype, 
 PetscErrorCode SNESPatchSetCellNumbering(SNES snes, PetscSection cellNumbering)
 {
   SNES_Patch    *patch = (SNES_Patch *) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCPatchSetCellNumbering(patch->pc, cellNumbering));

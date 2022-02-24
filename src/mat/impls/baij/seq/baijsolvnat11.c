@@ -7,7 +7,6 @@
 PetscErrorCode MatSolve_SeqBAIJ_11_NaturalOrdering(Mat A,Vec bb,Vec xx)
 {
   Mat_SeqBAIJ       *a=(Mat_SeqBAIJ*)A->data;
-  PetscErrorCode    ierr;
   const PetscInt    n=a->mbs,*ai=a->i,*aj=a->j,*adiag=a->diag,*vi,bs=A->rmap->bs,bs2=a->bs2;
   PetscInt          i,k,nz,idx,idt,m;
   const MatScalar   *aa=a->a,*v;

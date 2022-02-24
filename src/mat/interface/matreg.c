@@ -27,7 +27,6 @@ PetscFunctionList MatList = NULL;
 */
 PetscErrorCode MatGetRootType_Private(Mat mat, MatType *rootType)
 {
-  PetscErrorCode ierr;
   PetscBool      found = PETSC_FALSE;
   MatRootName    names = MatRootNameList;
   MatType        inType;
@@ -73,9 +72,9 @@ PetscErrorCode MatGetRootType_Private(Mat mat, MatType *rootType)
 @*/
 PetscErrorCode  MatSetType(Mat mat, MatType matype)
 {
-  PetscErrorCode ierr,(*r)(Mat);
   PetscBool      sametype,found,subclass = PETSC_FALSE;
   MatRootName    names = MatRootNameList;
+  PetscErrorCode (*r)(Mat);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -96,11 +95,9 @@ PetscErrorCode  MatSetType(Mat mat, MatType matype)
   if (sametype) PetscFunctionReturn(0);
 
   CHKERRQ(PetscFunctionListFind(MatList,matype,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown Mat type given: %s",matype);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown Mat type given: %s",matype);
 
-  if (mat->assembled && ((PetscObject)mat)->type_name) {
-    CHKERRQ(PetscStrbeginswith(matype,((PetscObject)mat)->type_name,&subclass));
-  }
+  if (mat->assembled && ((PetscObject)mat)->type_name) CHKERRQ(PetscStrbeginswith(matype,((PetscObject)mat)->type_name,&subclass));
   if (subclass) {
     CHKERRQ(MatConvert(mat,matype,MAT_INPLACE_MATRIX,&mat));
     PetscFunctionReturn(0);
@@ -198,7 +195,6 @@ PetscErrorCode MatGetVecType(Mat mat,VecType *vtype)
 @*/
 PetscErrorCode MatSetVecType(Mat mat,VecType vtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -237,7 +233,6 @@ $     -mat_type my_mat
 @*/
 PetscErrorCode  MatRegister(const char sname[],PetscErrorCode (*function)(Mat))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatInitializePackage());
@@ -271,7 +266,6 @@ MatRootName MatRootNameList = NULL;
 @*/
 PetscErrorCode  MatRegisterRootName(const char rname[],const char sname[],const char mname[])
 {
-  PetscErrorCode ierr;
   MatRootName    names;
 
   PetscFunctionBegin;

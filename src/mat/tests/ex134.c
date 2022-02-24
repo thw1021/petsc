@@ -24,7 +24,6 @@ PetscErrorCode Assemble(MPI_Comm comm,PetscInt bs,MatType mtype)
   PetscBool         issbaij;
 #endif
   PetscViewer       viewer;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,&A));

@@ -3,7 +3,6 @@
 
 static PetscErrorCode KSPSetUp_BiCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* check user parameters and functions */
@@ -15,7 +14,6 @@ static PetscErrorCode KSPSetUp_BiCG(KSP ksp)
 
 static PetscErrorCode  KSPSolve_BiCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscBool      diagonalscale;
   PetscScalar    dpi,a=1.0,beta,betaold=1.0,b,ma;
@@ -140,7 +138,6 @@ static PetscErrorCode  KSPSolve_BiCG(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_BiCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_LEFT,3));

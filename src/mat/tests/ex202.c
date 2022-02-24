@@ -15,7 +15,6 @@ PetscErrorCode TestInitialMatrix(void)
   PetscScalar     dot1,dot2,zero = 0.0,one = 1.0,*valsB,*valsC;
   PetscReal       norm;
   PetscRandom     rctx;
-  PetscErrorCode  ierr;
   PetscBool       equal;
 
   PetscFunctionBegin;
@@ -112,7 +111,6 @@ PetscErrorCode TestReuseMatrix(void)
   Mat             subs[2*2],**block;
   PetscInt        i,j;
   PetscRandom     rctx;
-  PetscErrorCode  ierr;
   PetscScalar     zero = 0.0, one = 1.0;
 
   PetscFunctionBegin;

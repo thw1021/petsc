@@ -31,7 +31,6 @@ PetscErrorCode  PetscHeaderCreate_Private(PetscObject h,PetscClassId classid,con
                                           MPI_Comm comm,PetscObjectDestroyFunction destroy,PetscObjectViewFunction view)
 {
   static PetscInt idcnt = 1;
-  PetscErrorCode  ierr;
 #if defined(PETSC_USE_LOG)
   PetscObject     *newPetscObjects;
   PetscInt         newPetscObjectsMaxCounts,i;
@@ -96,8 +95,6 @@ PETSC_INTERN PetscLogDouble PetscMemoryMaximumUsage;
 */
 PetscErrorCode  PetscHeaderDestroy_Private(PetscObject h)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(h,1);
   CHKERRQ(PetscLogObjectDestroy(h));
@@ -166,7 +163,6 @@ PetscErrorCode  PetscHeaderDestroy_Private(PetscObject h)
 @*/
 PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src,PetscObject dest)
 {
-  PetscErrorCode         ierr;
   PetscFortranCallbackId cbtype,numcb[PETSC_FORTRAN_CALLBACK_MAXTYPE];
 
   PetscFunctionBegin;
@@ -208,7 +204,6 @@ PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src,PetscObjec
 @*/
 PetscErrorCode PetscObjectSetFortranCallback(PetscObject obj,PetscFortranCallbackType cbtype,PetscFortranCallbackId *cid,void (*func)(void),void *ctx)
 {
-  PetscErrorCode ierr;
   const char     *subtype = NULL;
 
   PetscFunctionBegin;
@@ -281,7 +276,6 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj,PetscFortranCallbac
 @*/
 PetscErrorCode  PetscObjectsDump(FILE *fd,PetscBool all)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 #if defined(PETSC_USE_DEBUG)
   PetscInt       j,k=0;
@@ -351,14 +345,13 @@ PetscErrorCode  PetscObjectsDump(FILE *fd,PetscBool all)
 @*/
 PetscErrorCode  PetscObjectsView(PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isascii;
   FILE           *fd;
 
   PetscFunctionBegin;
   if (!viewer) viewer = PETSC_VIEWER_STDOUT_WORLD;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
-  PetscCheckFalse(!isascii,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Only supports ASCII viewer");
+  PetscCheck(isascii,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Only supports ASCII viewer");
   CHKERRQ(PetscViewerASCIIGetPointer(viewer,&fd));
   CHKERRQ(PetscObjectsDump(fd,PETSC_TRUE));
   PetscFunctionReturn(0);
@@ -381,12 +374,13 @@ PetscErrorCode  PetscObjectsView(PetscViewer viewer)
 @*/
 PetscErrorCode  PetscObjectsGetObject(const char *name,PetscObject *obj,char **classname)
 {
-  PetscErrorCode ierr;
-  PetscInt       i;
-  PetscObject    h;
-  PetscBool      flg;
+  PetscInt    i;
+  PetscObject h;
+  PetscBool   flg;
 
   PetscFunctionBegin;
+  PetscValidCharPointer(name,1);
+  PetscValidPointer(obj,2);
   *obj = NULL;
   for (i=0; i<PetscObjectsMaxCounts; i++) {
     if ((h = PetscObjects[i])) {
@@ -420,6 +414,7 @@ PetscErrorCode  PetscObjectsGetObject(const char *name,PetscObject *obj,char **c
 PetscErrorCode PetscObjectSetPrintedOptions(PetscObject obj)
 {
   PetscFunctionBegin;
+  PetscValidPointer(obj,1);
   obj->optionsprinted = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -443,10 +438,11 @@ PetscErrorCode PetscObjectSetPrintedOptions(PetscObject obj)
 @*/
 PetscErrorCode PetscObjectInheritPrintedOptions(PetscObject pobj,PetscObject obj)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    prank,size;
+  PetscMPIInt prank,size;
 
   PetscFunctionBegin;
+  PetscValidHeader(pobj,1);
+  PetscValidHeader(obj,2);
   CHKERRMPI(MPI_Comm_rank(pobj->comm,&prank));
   CHKERRMPI(MPI_Comm_size(obj->comm,&size));
   if (size == 1 && prank > 0) obj->optionsprinted = PETSC_TRUE;
@@ -473,7 +469,7 @@ PetscErrorCode PetscObjectAddOptionsHandler(PetscObject obj,PetscErrorCode (*han
 {
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
-  PetscCheckFalse(obj->noptionhandler >= PETSC_MAX_OPTIONS_HANDLER,obj->comm,PETSC_ERR_ARG_OUTOFRANGE,"To many options handlers added");
+  PetscCheck(obj->noptionhandler < PETSC_MAX_OPTIONS_HANDLER,obj->comm,PETSC_ERR_ARG_OUTOFRANGE,"To many options handlers added");
   obj->optionhandler[obj->noptionhandler] = handle;
   obj->optiondestroy[obj->noptionhandler] = destroy;
   obj->optionctx[obj->noptionhandler++]   = ctx;
@@ -495,14 +491,9 @@ PetscErrorCode PetscObjectAddOptionsHandler(PetscObject obj,PetscErrorCode (*han
 @*/
 PetscErrorCode  PetscObjectProcessOptionsHandlers(PetscOptionItems *PetscOptionsObject,PetscObject obj)
 {
-  PetscInt       i;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,2);
-  for (i=0; i<obj->noptionhandler; i++) {
-    CHKERRQ((*obj->optionhandler[i])(PetscOptionsObject,obj,obj->optionctx[i]));
-  }
+  for (PetscInt i=0; i<obj->noptionhandler; i++) CHKERRQ((*obj->optionhandler[i])(PetscOptionsObject,obj,obj->optionctx[i]));
   PetscFunctionReturn(0);
 }
 
@@ -521,15 +512,10 @@ PetscErrorCode  PetscObjectProcessOptionsHandlers(PetscOptionItems *PetscOptions
 @*/
 PetscErrorCode  PetscObjectDestroyOptionsHandlers(PetscObject obj)
 {
-  PetscInt       i;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
-  for (i=0; i<obj->noptionhandler; i++) {
-    if (obj->optiondestroy[i]) {
-      CHKERRQ((*obj->optiondestroy[i])(obj,obj->optionctx[i]));
-    }
+  for (PetscInt i=0; i<obj->noptionhandler; i++) {
+    if (obj->optiondestroy[i]) CHKERRQ((*obj->optiondestroy[i])(obj,obj->optionctx[i]));
   }
   obj->noptionhandler = 0;
   PetscFunctionReturn(0);
@@ -605,14 +591,12 @@ PetscErrorCode  PetscObjectGetReference(PetscObject obj,PetscInt *cnt)
 @*/
 PetscErrorCode  PetscObjectDereference(PetscObject obj)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!obj) PetscFunctionReturn(0);
   PetscValidHeader(obj,1);
-  if (obj->bops->destroy) {
-    CHKERRQ((*obj->bops->destroy)(&obj));
-  } else PetscCheckFalse(!--obj->refct,PETSC_COMM_SELF,PETSC_ERR_SUP,"This PETSc object does not have a generic destroy routine");
+  if (obj->bops->destroy) CHKERRQ((*obj->bops->destroy)(&obj));
+  else PetscCheck(--(obj->refct),PETSC_COMM_SELF,PETSC_ERR_SUP,"This PETSc object does not have a generic destroy routine");
   PetscFunctionReturn(0);
 }
 
@@ -625,13 +609,13 @@ PetscErrorCode PetscObjectGetComm_Petsc(PetscObject obj,MPI_Comm *comm)
 {
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
+  PetscValidPointer(comm,2);
   *comm = obj->comm;
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscObjectRemoveReference(PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -641,14 +625,13 @@ PetscErrorCode PetscObjectRemoveReference(PetscObject obj,const char name[])
 
 PetscErrorCode PetscObjectCompose_Petsc(PetscObject obj,const char name[],PetscObject ptr)
 {
-  PetscErrorCode ierr;
-  char           *tname;
-  PetscBool      skipreference;
-
   PetscFunctionBegin;
   if (ptr) {
+    char      *tname;
+    PetscBool skipreference;
+
     CHKERRQ(PetscObjectListReverseFind(ptr->olist,obj,&tname,&skipreference));
-    PetscCheckFalse(tname && !skipreference,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"An object cannot be composed with an object that was composed with it");
+    if (tname) PetscCheckFalse(skipreference,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"An object cannot be composed with an object that was composed with it");
   }
   CHKERRQ(PetscObjectListAdd(&obj->olist,name,ptr));
   PetscFunctionReturn(0);
@@ -656,8 +639,6 @@ PetscErrorCode PetscObjectCompose_Petsc(PetscObject obj,const char name[],PetscO
 
 PetscErrorCode PetscObjectQuery_Petsc(PetscObject obj,const char name[],PetscObject *ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   CHKERRQ(PetscObjectListFind(obj->olist,name,ptr));
@@ -666,8 +647,6 @@ PetscErrorCode PetscObjectQuery_Petsc(PetscObject obj,const char name[],PetscObj
 
 PetscErrorCode PetscObjectComposeFunction_Petsc(PetscObject obj,const char name[],void (*ptr)(void))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   CHKERRQ(PetscFunctionListAdd(&obj->qlist,name,ptr));
@@ -676,8 +655,6 @@ PetscErrorCode PetscObjectComposeFunction_Petsc(PetscObject obj,const char name[
 
 PetscErrorCode PetscObjectQueryFunction_Petsc(PetscObject obj,const char name[],void (**ptr)(void))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   CHKERRQ(PetscFunctionListFind(obj->qlist,name,ptr));
@@ -716,13 +693,11 @@ PetscErrorCode PetscObjectQueryFunction_Petsc(PetscObject obj,const char name[],
 @*/
 PetscErrorCode  PetscObjectCompose(PetscObject obj,const char name[],PetscObject ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   PetscValidCharPointer(name,2);
   if (ptr) PetscValidHeader(ptr,3);
-  PetscCheckFalse(obj == ptr,PetscObjectComm((PetscObject)obj),PETSC_ERR_SUP,"Cannot compose object with itself");
+  PetscCheck(obj != ptr,PetscObjectComm((PetscObject)obj),PETSC_ERR_SUP,"Cannot compose object with itself");
   CHKERRQ((*obj->bops->compose)(obj,name,ptr));
   PetscFunctionReturn(0);
 }
@@ -748,8 +723,6 @@ PetscErrorCode  PetscObjectCompose(PetscObject obj,const char name[],PetscObject
 @*/
 PetscErrorCode  PetscObjectQuery(PetscObject obj,const char name[],PetscObject *ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   PetscValidCharPointer(name,2);
@@ -787,8 +760,6 @@ M*/
 
 PetscErrorCode  PetscObjectComposeFunction_Private(PetscObject obj,const char name[],void (*fptr)(void))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   PetscValidCharPointer(name,2);
@@ -819,8 +790,6 @@ PetscErrorCode  PetscObjectComposeFunction_Private(PetscObject obj,const char na
 M*/
 PETSC_EXTERN PetscErrorCode PetscObjectQueryFunction_Private(PetscObject obj,const char name[],void (**ptr)(void))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
   PetscValidCharPointer(name,2);
@@ -848,8 +817,6 @@ struct _p_PetscContainer {
 @*/
 PetscErrorCode PetscContainerUserDestroyDefault(void* ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscFree(ctx));
   PetscFunctionReturn(0);
@@ -917,7 +884,6 @@ PetscErrorCode  PetscContainerSetPointer(PetscContainer obj,void *ptr)
 @*/
 PetscErrorCode  PetscContainerDestroy(PetscContainer *obj)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*obj) PetscFunctionReturn(0);
@@ -974,14 +940,10 @@ PetscClassId PETSC_CONTAINER_CLASSID;
 @*/
 PetscErrorCode  PetscContainerCreate(MPI_Comm comm,PetscContainer *container)
 {
-  PetscErrorCode ierr;
-  PetscContainer contain;
-
   PetscFunctionBegin;
   PetscValidPointer(container,2);
   CHKERRQ(PetscSysInitializePackage());
-  CHKERRQ(PetscHeaderCreate(contain,PETSC_CONTAINER_CLASSID,"PetscContainer","Container","Sys",comm,PetscContainerDestroy,NULL));
-  *container = contain;
+  CHKERRQ(PetscHeaderCreate(*container,PETSC_CONTAINER_CLASSID,"PetscContainer","Container","Sys",comm,PetscContainerDestroy,NULL));
   PetscFunctionReturn(0);
 }
 

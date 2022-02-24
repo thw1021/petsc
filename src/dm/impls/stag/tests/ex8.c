@@ -118,7 +118,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode ApplyOperator(Mat A,Vec in,Vec out)
 {
-  PetscErrorCode    ierr;
   DM                dm;
   Vec               inLocal,outLocal;
   PetscScalar       ****arrIn;

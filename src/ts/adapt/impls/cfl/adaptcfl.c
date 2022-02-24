@@ -2,7 +2,6 @@
 
 static PetscErrorCode TSAdaptChoose_CFL(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,PetscReal *next_h,PetscBool *accept,PetscReal *wlte,PetscReal *wltea,PetscReal *wlter)
 {
-  PetscErrorCode  ierr;
   PetscReal       hcfl,cfltimestep,ccfl;
   PetscInt        ncandidates;
   const PetscReal *ccflarray;

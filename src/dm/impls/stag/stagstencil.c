@@ -29,7 +29,6 @@ const char * const DMStagStencilLocations[] = {"NONE","BACK_DOWN_LEFT","BACK_DOW
 @*/
 PetscErrorCode DMStagCreateISFromStencils(DM dm,PetscInt nStencil,DMStagStencil* stencils,IS *is)
 {
-  PetscErrorCode         ierr;
   DMStagStencil          *ss;
   PetscInt               *idx,*idxLocal;
   const PetscInt         *ltogidx;
@@ -116,7 +115,6 @@ PetscErrorCode DMStagCreateISFromStencils(DM dm,PetscInt nStencil,DMStagStencil*
 @*/
 PetscErrorCode DMStagGetLocationDOF(DM dm,DMStagStencilLocation loc,PetscInt *dof)
 {
-  PetscErrorCode        ierr;
   const DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt              dim;
 
@@ -271,7 +269,6 @@ PETSC_INTERN PetscErrorCode DMStagStencilLocationCanonicalize(DMStagStencilLocat
 @*/
 PetscErrorCode DMStagMatGetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMStagStencil *posRow,PetscInt nCol,const DMStagStencil *posCol,PetscScalar *val)
 {
-  PetscErrorCode ierr;
   PetscInt       dim;
   PetscInt       *ir,*ic;
 
@@ -311,7 +308,6 @@ PetscErrorCode DMStagMatGetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMSta
 @*/
 PetscErrorCode DMStagMatSetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMStagStencil *posRow,PetscInt nCol,const DMStagStencil *posCol,const PetscScalar *val,InsertMode insertMode)
 {
-  PetscErrorCode ierr;
   PetscInt       *ir,*ic;
 
   PetscFunctionBegin;
@@ -415,7 +411,6 @@ PetscErrorCode DMStagStencilToIndexLocal(DM dm,PetscInt dim,PetscInt n,const DMS
 @*/
 PetscErrorCode DMStagVecGetValuesStencil(DM dm, Vec vec,PetscInt n,const DMStagStencil *pos,PetscScalar *val)
 {
-  PetscErrorCode    ierr;
   DM_Stag * const   stag = (DM_Stag*)dm->data;
   PetscInt          nLocal,idx;
   PetscInt          *ix;
@@ -460,7 +455,6 @@ PetscErrorCode DMStagVecGetValuesStencil(DM dm, Vec vec,PetscInt n,const DMStagS
 @*/
 PetscErrorCode DMStagVecSetValuesStencil(DM dm,Vec vec,PetscInt n,const DMStagStencil *pos,const PetscScalar *val,InsertMode insertMode)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        nLocal;
   PetscInt        *ix;

@@ -7,7 +7,6 @@ static char help[] = "Test VTK structured (.vts)  and rectilinear (.vtr) viewer 
 /* Helper function to name DMDA fields */
 PetscErrorCode NameFields(DM da,PetscInt dof)
 {
-  PetscErrorCode ierr;
   PetscInt       c;
 
   PetscFunctionBeginUser;
@@ -33,7 +32,6 @@ PetscErrorCode test_3d(const char filename[],PetscInt dof,PetscBool namefields)
   DMDALocalInfo     info;
   PetscScalar       ****va;
   PetscInt          i,j,k,c;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate3d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,P,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof,sw,NULL,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));
@@ -79,7 +77,6 @@ PetscErrorCode test_2d(const char filename[],PetscInt dof,PetscBool namefields)
   DMDALocalInfo     info;
   PetscScalar       ***va;
   PetscInt          i,j,c;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate2d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,PETSC_DECIDE,PETSC_DECIDE,dof,sw,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));
@@ -121,7 +118,6 @@ PetscErrorCode test_3d_compat(const char filename[],PetscInt dof,PetscBool namef
   DMDALocalInfo     info;
   PetscScalar       ***va,****vVectora;
   PetscInt          i,j,k,c;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate3d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,P,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,/* dof:*/1,sw,NULL,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));
@@ -176,7 +172,6 @@ PetscErrorCode test_2d_compat(const char filename[],PetscInt dof,PetscBool namef
   DMDALocalInfo     info;
   PetscScalar       **va,***vVectora;
   PetscInt          i,j,c;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate2d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,PETSC_DECIDE,PETSC_DECIDE,/* dof:*/ 1,sw,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));

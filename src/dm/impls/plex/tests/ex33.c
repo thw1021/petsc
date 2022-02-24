@@ -152,7 +152,6 @@ static PetscErrorCode DMCreateCoordinateDisc(DM dm)
   DMPolytopeType ct;
   PetscInt       dim, dE, cStart;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinateDM(dm, &cdm));
@@ -171,7 +170,6 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 {
   DM             cdm;
   PetscDS        cds;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -225,7 +223,6 @@ static PetscErrorCode CreateDiscretization(DM dm, AppCtx *ctx)
   DMPolytopeType ct;
   PetscInt       dim, cStart;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -247,7 +244,6 @@ static PetscErrorCode CheckVolume(DM dm, AppCtx *ctx)
   Vec            u;
   PetscScalar    result;
   PetscReal      vol, tol = ctx->tol;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetGlobalVector(dm, &u));

@@ -7,7 +7,6 @@
 static PetscErrorCode SplitPath_Private(char path[], char name[])
 {
   char *tmp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrrchr(path,'/',&tmp));
@@ -32,7 +31,6 @@ static PetscErrorCode DMPlexInvertCells_XDMF_Private(DM dm)
 {
   PetscInt       dim, *cones, cHeight, cStart, cEnd, p;
   PetscSection   cs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));

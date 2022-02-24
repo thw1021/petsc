@@ -83,7 +83,6 @@ int main(int argc,char **args)
 PetscErrorCode TestMatZeroRows_Basic(Mat A,IS is,PetscScalar diag)
 {
   Mat            B;
-  PetscErrorCode ierr;
   PetscBool      keepnonzeropattern;
 
   /* Now copy A into B, and test it with MatZeroRows() */
@@ -103,7 +102,6 @@ PetscErrorCode TestMatZeroRows_Basic(Mat A,IS is,PetscScalar diag)
 PetscErrorCode TestMatZeroRows_with_no_allocation(Mat A,IS is,PetscScalar diag)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   /* Now copy A into B, and test it with MatZeroRows() */
   CHKERRQ(MatDuplicate(A,MAT_COPY_VALUES,&B));

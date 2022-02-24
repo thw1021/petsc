@@ -104,7 +104,6 @@ int main(int argc, char **argv)
 
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
-  PetscErrorCode    ierr;
   AppCtx            *user = (AppCtx*)ptr;
   PetscScalar       *f;
   const PetscScalar *x;
@@ -129,7 +128,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 
 static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ptr)
 {
-  PetscErrorCode    ierr;
   AppCtx            *user = (AppCtx*)ptr;
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
@@ -153,7 +151,6 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
 
 static PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec U, Vec Udot, PetscReal a, Mat J,Mat Jpre,void *ctx)
 {
-  PetscErrorCode    ierr;
   AppCtx            *user = (AppCtx *)ctx;
   PetscScalar       v;
   const PetscScalar *x;
@@ -184,7 +181,6 @@ static PetscErrorCode FormInitialSolution(TS ts,Vec U,void *ctx)
   PetscInt       i;
   PetscScalar    *x;
   PetscReal      hx,x_map;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   hx = (user->xright-user->xleft)/(PetscReal)(user->mx-1);

@@ -26,7 +26,6 @@ static PetscBool PCPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PCFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PCList));
@@ -49,7 +48,6 @@ PetscErrorCode  PCInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PCPackageInitialized) PetscFunctionReturn(0);
@@ -134,7 +132,6 @@ static PetscBool KSPPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  KSPFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&KSPList));
@@ -161,7 +158,6 @@ PetscErrorCode KSPInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg,cls;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (KSPPackageInitialized) PetscFunctionReturn(0);
@@ -221,7 +217,6 @@ PetscErrorCode KSPInitializePackage(void)
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscksp(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCInitializePackage());

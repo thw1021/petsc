@@ -14,7 +14,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSavePPM(const char filename[],unsigned
   char           header[32];
   size_t         hdrlen;
   unsigned char  *rgb;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(filename,1);
@@ -330,7 +329,6 @@ PetscErrorCode PetscDrawImageCheckFormat(const char *ext[])
 {
   size_t         k;
   PetscBool      match = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* if extension is empty, return default format to caller */
@@ -353,7 +351,6 @@ PetscErrorCode PetscDrawImageSave(const char basename[],const char ext[],unsigne
   size_t         k;
   PetscBool      match = PETSC_FALSE;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(basename,1);
@@ -386,7 +383,6 @@ PetscErrorCode PetscDrawMovieSave(const char basename[],PetscInt count,const cha
   char           input[PETSC_MAX_PATH_LEN];
   char           output[PETSC_MAX_PATH_LEN];
   PetscBool      gifinput;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(basename,1);

@@ -6,7 +6,6 @@ extern PetscErrorCode  DMSetUp_DA_3D(DM);
 
 PetscErrorCode  DMSetUp_DA(DM da)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;

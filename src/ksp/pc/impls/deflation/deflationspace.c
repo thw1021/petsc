@@ -43,7 +43,6 @@ static PetscErrorCode PCDeflationCreateSpaceWave(MPI_Comm comm,PetscInt m,PetscI
 {
   Mat            defl;
   PetscInt       i,j,k,ilo,ihi,*Iidx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(ncoeffs,&Iidx));
@@ -86,7 +85,6 @@ PetscErrorCode PCDeflationGetSpaceHaar(PC pc,Mat *W,PetscInt size)
   Mat            A,defl;
   PetscInt       i,j,len,ilo,ihi,*Iidx,m,M;
   PetscScalar    *col,val;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Haar basis wavelet, level=size */
@@ -132,7 +130,6 @@ PetscErrorCode PCDeflationGetSpaceWave(PC pc,Mat *W,PetscInt size,PetscInt ncoef
   Mat            A,*H,defl;
   PetscInt       i,m,M,Mdefl,Ndefl;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)pc,&comm));
@@ -169,7 +166,6 @@ PetscErrorCode PCDeflationGetSpaceAggregation(PC pc,Mat *W)
   PetscMPIInt    m;
   PetscScalar    *col;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCGetOperators(pc,&A,NULL));
@@ -207,7 +203,6 @@ PetscErrorCode PCDeflationComputeSpace(PC pc)
   Mat            defl;
   PetscBool      transp=PETSC_TRUE;
   PC_Deflation   *def = (PC_Deflation*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);

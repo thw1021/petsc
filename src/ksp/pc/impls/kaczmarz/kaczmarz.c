@@ -7,7 +7,6 @@ typedef struct {
 
 static PetscErrorCode PCDestroy_Kaczmarz(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(pc->data));
@@ -20,7 +19,6 @@ static PetscErrorCode PCApply_Kaczmarz(PC pc,Vec x,Vec y)
   PetscInt          xs,xe,ys,ye,ncols,i,j;
   const PetscInt    *cols;
   const PetscScalar *vals,*xarray;
-  PetscErrorCode    ierr;
   PetscScalar       r;
   PetscReal         anrm;
   PetscScalar       *yarray;
@@ -81,7 +79,6 @@ static PetscErrorCode PCApply_Kaczmarz(PC pc,Vec x,Vec y)
 PetscErrorCode PCSetFromOptions_Kaczmarz(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Kaczmarz    *jac = (PC_Kaczmarz*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Kaczmarz options"));
@@ -94,7 +91,6 @@ PetscErrorCode PCSetFromOptions_Kaczmarz(PetscOptionItems *PetscOptionsObject,PC
 PetscErrorCode PCView_Kaczmarz(PC pc,PetscViewer viewer)
 {
   PC_Kaczmarz    *jac = (PC_Kaczmarz*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -126,7 +122,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Kaczmarz(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Kaczmarz    *jac;
 
   PetscFunctionBegin;

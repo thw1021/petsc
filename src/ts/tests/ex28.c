@@ -48,7 +48,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 /* Create the mesh for velocity space */
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -68,7 +67,6 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
   PetscBool      simplex;
   PetscReal     *centroid, *coords, *xi0, *v0, *J, *invJ, detJ, *vals;
   PetscInt       dim, d, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rnd));
@@ -128,7 +126,6 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   PetscReal     *vals;
   PetscScalar   *initialConditions;
   PetscInt       dim, d, cStart, cEnd, c, Np, p, n;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetLocalSize(u, &n));
@@ -157,7 +154,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
   PetscInt       dim, cStart, cEnd, c, Np = user->particlesPerCell, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -236,7 +232,6 @@ static PetscErrorCode CheckDistribution(DM dm, PetscReal m, PetscReal n, PetscRe
   PetscReal     *xq, *wq;
   PetscReal      vmin, vmax, neq, veq, Teq;
   PetscInt       Nq = 100, q, cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetBoundingBox(dm, &vmin, &vmax));
@@ -290,7 +285,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   PetscReal          n = 0.0, v = 0.0, E = 0.0, T = 0.0, m = 1.0, cn = 0.0, cv = 0.0, cE = 0.0, pE = 0.0, eqE = 0.0;
   PetscInt           dim, d, Np, Ncp, p, cStart, cEnd, c;
   DM                 dmSw, plex;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetLocalSize(U, &Np));
@@ -360,7 +354,6 @@ static PetscErrorCode HGMonitor(TS ts, PetscInt step, PetscReal t, Vec U, void *
   const PetscScalar *u;
   DM                 sw, dm;
   PetscInt           dim, Np, p;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(0);
@@ -393,7 +386,6 @@ static PetscErrorCode SPMonitor(TS ts, PetscInt step, PetscReal t, Vec U, void *
   PetscReal         *v, *coords;
   PetscInt           Np, p;
   DM                 dmSw;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
 
@@ -428,7 +420,6 @@ static PetscErrorCode KSConv(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx
   PetscReal         *v, *coords, T=0., vel=0., step_cast, w_sum;
   PetscInt           dim, Np, p, cStart, cEnd;
   DM                 sw, plex;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(0);
@@ -475,7 +466,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
 {
   DM             dm;
   AppCtx        *user;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

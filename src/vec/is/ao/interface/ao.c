@@ -37,7 +37,6 @@ PetscLogEvent AO_PetscToApplication, AO_ApplicationToPetsc;
 @*/
 PetscErrorCode  AOView(AO ao,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
@@ -66,7 +65,6 @@ PetscErrorCode  AOView(AO ao,PetscViewer viewer)
 @*/
 PetscErrorCode  AOViewFromOptions(AO ao,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
@@ -88,7 +86,6 @@ PetscErrorCode  AOViewFromOptions(AO ao,PetscObject obj,const char name[])
 @*/
 PetscErrorCode  AODestroy(AO *ao)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*ao) PetscFunctionReturn(0);
@@ -139,7 +136,6 @@ PETSC_INTERN PetscErrorCode ISSetUp_General(IS);
 @*/
 PetscErrorCode  AOPetscToApplicationIS(AO ao,IS is)
 {
-  PetscErrorCode ierr;
   PetscInt       n;
   PetscInt       *ia;
 
@@ -184,7 +180,6 @@ PetscErrorCode  AOPetscToApplicationIS(AO ao,IS is)
 @*/
 PetscErrorCode  AOApplicationToPetscIS(AO ao,IS is)
 {
-  PetscErrorCode ierr;
   PetscInt       n,*ia;
 
   PetscFunctionBegin;
@@ -229,7 +224,6 @@ PetscErrorCode  AOApplicationToPetscIS(AO ao,IS is)
 @*/
 PetscErrorCode  AOPetscToApplication(AO ao,PetscInt n,PetscInt ia[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
@@ -266,7 +260,6 @@ PetscErrorCode  AOPetscToApplication(AO ao,PetscInt n,PetscInt ia[])
 @*/
 PetscErrorCode  AOApplicationToPetsc(AO ao,PetscInt n,PetscInt ia[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao,AO_CLASSID,1);
@@ -302,7 +295,6 @@ PetscErrorCode  AOApplicationToPetsc(AO ao,PetscInt n,PetscInt ia[])
 @*/
 PetscErrorCode  AOPetscToApplicationPermuteInt(AO ao, PetscInt block, PetscInt array[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
@@ -338,7 +330,6 @@ PetscErrorCode  AOPetscToApplicationPermuteInt(AO ao, PetscInt block, PetscInt a
 @*/
 PetscErrorCode  AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt array[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
@@ -374,7 +365,6 @@ PetscErrorCode  AOApplicationToPetscPermuteInt(AO ao, PetscInt block, PetscInt a
 @*/
 PetscErrorCode  AOPetscToApplicationPermuteReal(AO ao, PetscInt block, PetscReal array[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
@@ -410,7 +400,6 @@ PetscErrorCode  AOPetscToApplicationPermuteReal(AO ao, PetscInt block, PetscReal
 @*/
 PetscErrorCode  AOApplicationToPetscPermuteReal(AO ao, PetscInt block, PetscReal array[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ao, AO_CLASSID,1);
@@ -474,7 +463,6 @@ PetscErrorCode AOSetFromOptions(AO ao)
 @*/
 PetscErrorCode AOSetIS(AO ao,IS isapp,IS ispetsc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ispetsc) {
@@ -513,7 +501,6 @@ PetscErrorCode AOSetIS(AO ao,IS isapp,IS ispetsc)
 @*/
 PetscErrorCode  AOCreate(MPI_Comm comm,AO *ao)
 {
-  PetscErrorCode ierr;
   AO             aonew;
 
   PetscFunctionBegin;

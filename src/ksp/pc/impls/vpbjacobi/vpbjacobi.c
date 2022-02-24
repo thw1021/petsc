@@ -16,7 +16,6 @@ typedef struct {
 static PetscErrorCode PCApply_VPBJacobi(PC pc,Vec x,Vec y)
 {
   PC_VPBJacobi      *jac = (PC_VPBJacobi*)pc->data;
-  PetscErrorCode    ierr;
   PetscInt          i,ncnt = 0;
   const MatScalar   *diag = jac->diag;
   PetscInt          ib,jb,bs;
@@ -101,7 +100,6 @@ static PetscErrorCode PCApply_VPBJacobi(PC pc,Vec x,Vec y)
 static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
 {
   PC_VPBJacobi    *jac = (PC_VPBJacobi*)pc->data;
-  PetscErrorCode ierr;
   Mat            A = pc->pmat;
   MatFactorError err;
   PetscInt       i,nsize = 0,nlocal;
@@ -126,7 +124,6 @@ static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
 static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
 {
   PC_VPBJacobi    *jac = (PC_VPBJacobi*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*
@@ -169,7 +166,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_VPBJacobi(PC pc)
 {
   PC_VPBJacobi   *jac;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

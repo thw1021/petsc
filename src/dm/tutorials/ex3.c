@@ -6,7 +6,6 @@ static char help[] = "Tests DMCreateInterpolation() for nonuniform DMDA coordina
 
 PetscErrorCode SetCoordinates1d(DM da)
 {
-  PetscErrorCode ierr;
   PetscInt       i,start,m;
   Vec            local,global;
   PetscScalar    *coors,*coorslocal;
@@ -34,7 +33,6 @@ PetscErrorCode SetCoordinates1d(DM da)
 
 PetscErrorCode SetCoordinates2d(DM da)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,mstart,m,nstart,n;
   Vec            local,global;
   DMDACoor2d     **coors,**coorslocal;
@@ -68,7 +66,6 @@ PetscErrorCode SetCoordinates2d(DM da)
 
 PetscErrorCode SetCoordinates3d(DM da)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,mstart,m,nstart,n,pstart,p,k;
   Vec            local,global;
   DMDACoor3d     ***coors,***coorslocal;

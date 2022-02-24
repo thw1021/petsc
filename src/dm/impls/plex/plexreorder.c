@@ -5,7 +5,6 @@ static PetscErrorCode DMPlexCreateOrderingClosure_Static(DM dm, PetscInt numPoin
 {
   PetscInt      *perm, *iperm;
   PetscInt       depth, d, pStart, pEnd, fStart, fMax, fEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepth(dm, &depth));
@@ -74,7 +73,6 @@ PetscErrorCode DMPlexGetOrdering(DM dm, MatOrderingType otype, DMLabel label, IS
 {
   PetscInt       numCells = 0;
   PetscInt      *start = NULL, *adjacency = NULL, *cperm, *clperm = NULL, *invclperm = NULL, *mask, *xls, pStart, pEnd, c, i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -158,7 +156,6 @@ PetscErrorCode DMPlexPermute(DM dm, IS perm, DM *pdm)
   DM_Plex       *plex = (DM_Plex *) dm->data, *plexNew;
   PetscInt       dim, cdim;
   const char    *name;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

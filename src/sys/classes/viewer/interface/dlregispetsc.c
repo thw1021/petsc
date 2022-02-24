@@ -15,7 +15,6 @@ static PetscBool PetscSysPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscSysFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Petsc_Seq_keyval != MPI_KEYVAL_INVALID) {
@@ -38,7 +37,6 @@ PetscErrorCode  PetscSysInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscSysPackageInitialized) PetscFunctionReturn(0);
@@ -91,7 +89,6 @@ PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petsc(void)
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscsys(void)
 #endif
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

@@ -153,7 +153,6 @@ PetscErrorCode XXT_stats(xxt_ADT xxt_handle)
   PetscInt       fop[] = {NON_UNIFORM,GL_MIN,GL_MAX,GL_ADD};
   PetscInt       vals[9],  work[9];
   PetscScalar    fvals[3], fwork[3];
-  PetscErrorCode ierr;
 
   PCTFS_comm_init();
   check_handle(xxt_handle);
@@ -240,7 +239,6 @@ static PetscErrorCode xxt_generate(xxt_ADT xxt_handle)
   PetscInt       xxt_zero_nnz_0=0;
   PetscBLASInt   i1            = 1,dlen;
   PetscScalar    dm1           = -1.0;
-  PetscErrorCode ierr;
 
   n               = xxt_handle->mvi->n;
   nsep            = xxt_handle->info->nsep;
@@ -481,7 +479,6 @@ static PetscErrorCode do_xxt_solve(xxt_ADT xxt_handle,  PetscScalar *uc)
   PetscScalar    *solve_w  = xxt_handle->info->solve_w;
   PetscScalar    *x        = xxt_handle->info->x;
   PetscBLASInt   i1        = 1,dlen;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   uu_ptr=solve_uu;

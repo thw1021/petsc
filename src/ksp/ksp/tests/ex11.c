@@ -8,7 +8,6 @@ and run with -f underworld32.gz\n\n";
 
 static PetscErrorCode replace_submats(Mat A, IS isu, IS isp)
 {
-  PetscErrorCode ierr;
   Mat            A11,A22,A12,A21;
   Mat            nA11,nA22,nA12,nA21;
   const char     *prefix;
@@ -44,7 +43,6 @@ static PetscErrorCode replace_submats(Mat A, IS isu, IS isp)
 PetscErrorCode LSCLoadTestOperators(Mat *A11,Mat *A12,Mat *A21,Mat *A22,Vec *b1,Vec *b2)
 {
   PetscViewer    viewer;
-  PetscErrorCode ierr;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscBool      flg;
 
@@ -81,7 +79,6 @@ PetscErrorCode LoadTestMatrices(Mat *_A,Vec *_x,Vec *_b,IS *_isu,IS *_isp)
   PetscInt       lnu,lnp,nu,np,i,start_u,end_u,start_p,end_p;
   VecScatter     *vscat;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* fetch test matrices and vectors */
@@ -150,7 +147,6 @@ PetscErrorCode port_lsd_bfbt(void)
   PC             pc_A;
   IS             isu,isp;
   PetscBool      test_fs = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(LoadTestMatrices(&A,&x,&b,&isu,&isp));

@@ -304,7 +304,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar       *s;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i,xs,xn;
 
   PetscFunctionBegin;
@@ -335,7 +334,6 @@ PetscErrorCode TrueSolution(Vec u,AppCtx *appctx)
 {
   PetscScalar       *s;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i,xs,xn;
 
   PetscFunctionBegin;
@@ -363,7 +361,6 @@ PetscErrorCode ComputeObjective(PetscReal t,Vec obj,AppCtx *appctx)
 {
   PetscScalar       *s;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i, xs,xn;
 
   PetscFunctionBegin;
@@ -381,7 +378,6 @@ PetscErrorCode ComputeObjective(PetscReal t,Vec obj,AppCtx *appctx)
 
 PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx          *appctx = (AppCtx*)ctx;
 
   PetscFunctionBegin;
@@ -402,7 +398,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ct
 */
 PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec globalin,Mat A, Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx = (AppCtx*)ctx;
   Vec            Gglobalin;
 
@@ -447,7 +442,6 @@ PetscErrorCode RHSMatrixLaplaciangllDM(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void
   PetscReal      **temp;
   PetscReal      vv;
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       i,xs,xn,l,j;
   PetscInt       *rowsDM;
 
@@ -512,7 +506,6 @@ PetscErrorCode RHSMatrixAdvectiongllDM(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void
 {
   PetscReal      **temp;
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       xs,xn,l,j;
   PetscInt       *rowsDM;
 
@@ -583,7 +576,6 @@ PetscErrorCode RHSMatrixAdvectiongllDM(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void
 PetscErrorCode FormFunctionGradient(Tao tao,Vec IC,PetscReal *f,Vec G,void *ctx)
 {
   AppCtx             *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode     ierr;
   Vec                temp;
   PetscInt           its;
   PetscReal          ff, gnorm, cnorm, xdiff,errex;
@@ -633,7 +625,6 @@ PetscErrorCode MonitorError(Tao tao,void *ctx)
   AppCtx         *appctx = (AppCtx*)ctx;
   Vec            temp;
   PetscReal      nrm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(appctx->dat.ic,&temp));

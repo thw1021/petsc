@@ -22,7 +22,6 @@
 @*/
 PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,PetscInt imax,const IS is_in[],IS is_out[])
 {
-  PetscErrorCode     ierr;
   PetscInt           isz,len,i,j,ival,Nbs;
   const PetscInt     *idx;
 #if defined(PETSC_USE_CTABLE)
@@ -94,7 +93,6 @@ PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,P
 
 PetscErrorCode  ISCompressIndicesSorted(PetscInt n,PetscInt bs,PetscInt imax,const IS is_in[],IS is_out[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,val,len,*nidx,bbs;
   const PetscInt *idx,*idx_local;
   PetscBool      flg,isblock;
@@ -178,7 +176,6 @@ PetscErrorCode  ISCompressIndicesSorted(PetscInt n,PetscInt bs,PetscInt imax,con
 @*/
 PetscErrorCode  ISExpandIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,PetscInt imax,const IS is_in[],IS is_out[])
 {
-  PetscErrorCode ierr;
   PetscInt       len,i,j,k,*nidx;
   const PetscInt *idx;
   PetscInt       maxsz;

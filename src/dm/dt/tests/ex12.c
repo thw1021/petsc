@@ -38,7 +38,6 @@ static PetscErrorCode CheckResidual(PetscWeakForm wf, PetscFormKey key, PetscInt
 {
   PetscPointFunc *f0, *f1;
   PetscInt        n0, n1, i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscWeakFormGetResidual(wf, key.label, key.value, key.field, key.part, &n0, &f0, &n1, &f1));
@@ -56,7 +55,6 @@ static PetscErrorCode TestSetIndex(PetscWeakForm wf)
   const PetscInt   value = 3, field = 1, part = 2;
   PetscFormKey key;
   PetscInt         i, j, k, l;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelCreate(PETSC_COMM_SELF, "Test", &label));
@@ -144,7 +142,6 @@ static PetscErrorCode TestAdd(PetscWeakForm wf)
   const PetscInt   value = 3, field = 1, part = 2;
   PetscFormKey key;
   PetscInt         i, j, k, l;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelCreate(PETSC_COMM_SELF, "Test", &label));
@@ -216,7 +213,6 @@ static PetscErrorCode TestSetIndexAdd(PetscWeakForm wf)
   DMLabel          label;
   const PetscInt   value = 3, field = 1, part = 2;
   PetscFormKey key;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelCreate(PETSC_COMM_SELF, "Test", &label));

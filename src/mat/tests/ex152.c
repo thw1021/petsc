@@ -16,17 +16,18 @@ static const char help[] = "Test ParMETIS handling of negative weights.\n\n";
 #include <petscsys.h>
 #include <parmetis.h>
 
-#define CHKERRQPARMETIS(n) \
-  PetscCheckFalse(n == METIS_ERROR_INPUT,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to wrong inputs and/or options"); \
-  else PetscCheckFalse(n == METIS_ERROR_MEMORY,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to insufficient memory"); \
-  else PetscCheckFalse(n == METIS_ERROR,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS general error"); \
+#define CHKERRQPARMETIS(...) do {                                                              \
+    int metis_ierr = __VA_ARGS__;                                                              \
+    PetscCheck(metis_ierr != METIS_ERROR_INPUT,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to wrong inputs and/or options"); \
+    PetscCheck(metis_ierr != METIS_ERROR_MEMORY,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to insufficient memory"); \
+    PetscCheck(metis_ierr != METIS_ERROR,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS general error"); \
+  } while (0)
 
 int main(int argc, char *argv[])
 {
   PetscErrorCode ierr;
   PetscBool      flg;
   PetscMPIInt    rank, size;
-  int            i, status;
   idx_t          ni,isize,*vtxdist, *xadj, *adjncy, *vwgt, *part;
   idx_t          wgtflag=0, numflag=0, ncon=1, ndims=3, edgecut=0;
   idx_t          options[5];
@@ -57,18 +58,18 @@ int main(int argc, char *argv[])
 
   CHKERRQ(PetscFOpen(PETSC_COMM_SELF,fname,"r",&fp));
 
-  red = fread(vtxdist, sizeof(idx_t), size+1, fp);PetscCheckFalse(red != (size_t) (size+1),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
+  red = fread(vtxdist, sizeof(idx_t), size+1, fp);PetscCheck(red == (size_t) (size+1),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
 
   ni = vtxdist[rank+1]-vtxdist[rank];
 
   CHKERRQ(PetscMalloc1(ni+1,&xadj));
 
-  red = fread(xadj, sizeof(idx_t), ni+1, fp);PetscCheckFalse(red != (size_t) (ni+1),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
+  red = fread(xadj, sizeof(idx_t), ni+1, fp);PetscCheck(red == (size_t) (ni+1),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
 
   CHKERRQ(PetscMalloc1(xadj[ni],&adjncy));
 
-  for (i=0; i<ni; i++) {
-    red = fread(&adjncy[xadj[i]], sizeof(idx_t), xadj[i+1]-xadj[i], fp);PetscCheckFalse(red != (size_t) (xadj[i+1]-xadj[i]),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
+  for (PetscInt i=0; i<ni; i++) {
+    red = fread(&adjncy[xadj[i]], sizeof(idx_t), xadj[i+1]-xadj[i], fp);PetscCheck(red == (size_t) (xadj[i+1]-xadj[i]),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
   }
 
   CHKERRQ(PetscFClose(PETSC_COMM_SELF,fp));
@@ -79,14 +80,14 @@ int main(int argc, char *argv[])
   CHKERRQ(PetscMalloc3(ni*ndims,&xyz,ni,&part,size,&tpwgts));
   CHKERRQ(PetscMalloc1(ni*ndims,&sxyz));
 
-  red = fread(xyz, sizeof(PetscReal), ndims*ni, fp);PetscCheckFalse(red != (size_t) (ndims*ni),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
-  for (i=0; i<ni*ndims; i++) sxyz[i] = (size_t) xyz[i];
+  red = fread(xyz, sizeof(PetscReal), ndims*ni, fp);PetscCheck(red == (size_t) (ndims*ni),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
+  for (PetscInt i=0; i<ni*ndims; i++) sxyz[i] = (size_t) xyz[i];
 
   CHKERRQ(PetscFClose(PETSC_COMM_SELF,fp));
 
   vwgt = NULL;
 
-  for (i = 0; i < size; i++) tpwgts[i] = 1. / size;
+  for (PetscInt i = 0; i < size; i++) tpwgts[i] = 1. / size;
   isize = size;
 
   ubvec[0]   = 1.05;

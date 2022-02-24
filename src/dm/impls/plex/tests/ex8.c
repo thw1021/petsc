@@ -15,7 +15,6 @@ typedef struct {
 
 static PetscErrorCode ReadMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -107,7 +106,6 @@ static PetscErrorCode ChangeCoordinates(DM dm, PetscInt spaceDim, PetscScalar ve
   Vec            coordinates;
   PetscScalar   *coords;
   PetscInt       vStart, vEnd, v, d, coordSize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
@@ -148,7 +146,6 @@ static PetscErrorCode CheckFEMGeometry(DM dm, PetscInt cell, PetscInt spaceDim, 
 {
   PetscReal      v0[3], J[9], invJ[9], detJ;
   PetscInt       d, i, j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexComputeCellGeometryFEM(dm, cell, NULL, v0, J, invJ, &detJ));
@@ -176,7 +173,6 @@ static PetscErrorCode CheckFVMGeometry(DM dm, PetscInt cell, PetscInt spaceDim, 
   PetscReal      tol = PetscMax(10*PETSC_SMALL, 1e-10);
   PetscReal      centroid[3], normal[3], vol;
   PetscInt       d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexComputeCellGeometryFVM(dm, cell, volEx? &vol : NULL, centroidEx? centroid : NULL, normalEx? normal : NULL));
@@ -198,7 +194,6 @@ static PetscErrorCode CheckGaussLaw(DM dm, PetscInt cell)
   PetscReal       normal[3], integral[3] = {0., 0., 0.}, area;
   const PetscInt *cone, *ornt;
   PetscInt        coneSize, f, dim, cdim, d;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -224,7 +219,6 @@ static PetscErrorCode CheckCell(DM dm, PetscInt cell, PetscBool transform, Petsc
   const PetscInt *cone;
   PetscInt        coneSize, c;
   PetscInt        dim, depth, cdim;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepth(dm, &depth));
@@ -459,7 +453,6 @@ static PetscErrorCode CheckCell(DM dm, PetscInt cell, PetscBool transform, Petsc
 static PetscErrorCode TestTriangle(MPI_Comm comm, PetscBool transform)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateReferenceCell(comm, DM_POLYTOPE_TRIANGLE, &dm));
@@ -498,7 +491,6 @@ static PetscErrorCode TestTriangle(MPI_Comm comm, PetscBool transform)
 static PetscErrorCode TestQuadrilateral(MPI_Comm comm, PetscBool transform)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateReferenceCell(comm, DM_POLYTOPE_QUADRILATERAL, &dm));
@@ -537,7 +529,6 @@ static PetscErrorCode TestQuadrilateral(MPI_Comm comm, PetscBool transform)
 static PetscErrorCode TestTetrahedron(MPI_Comm comm, PetscBool transform)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateReferenceCell(comm, DM_POLYTOPE_TETRAHEDRON, &dm));
@@ -562,7 +553,6 @@ static PetscErrorCode TestTetrahedron(MPI_Comm comm, PetscBool transform)
 static PetscErrorCode TestHexahedron(MPI_Comm comm, PetscBool transform)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateReferenceCell(comm, DM_POLYTOPE_HEXAHEDRON, &dm));
@@ -589,7 +579,6 @@ static PetscErrorCode TestHexahedronCurved(MPI_Comm comm)
   DM             dm;
   PetscScalar    coords[24] = {-1.0, -1.0, -1.0,  -1.0,  1.0, -1.0,  1.0, 1.0, -1.0,   1.0, -1.0, -1.0,
                                -1.0, -1.0,  1.1,   1.0, -1.0,  1.0,  1.0, 1.0,  1.1,  -1.0,  1.0,  1.0};
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateReferenceCell(comm, DM_POLYTOPE_HEXAHEDRON, &dm));
@@ -610,7 +599,6 @@ static PetscErrorCode TestHexahedronCurved(MPI_Comm comm)
 static PetscErrorCode TestWedge(MPI_Comm comm, PetscBool transform)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateReferenceCell(comm, DM_POLYTOPE_TRI_PRISM_TENSOR, &dm));

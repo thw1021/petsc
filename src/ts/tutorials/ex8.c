@@ -30,7 +30,6 @@ struct _Problem {
 */
 static PetscErrorCode RoberFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
 
@@ -49,7 +48,6 @@ static PetscErrorCode RoberFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
 
 static PetscErrorCode RoberJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1,2};
   PetscScalar       J[3][3];
   const PetscScalar *x,*xdot;
@@ -75,7 +73,6 @@ static PetscErrorCode RoberJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a
 
 static PetscErrorCode RoberSolution(PetscReal t,Vec X,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscScalar    *x;
 
   PetscFunctionBeginUser;
@@ -111,7 +108,6 @@ typedef struct {
 
 static PetscErrorCode CEDestroy(Problem p)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFree(p->data));
@@ -120,7 +116,6 @@ static PetscErrorCode CEDestroy(Problem p)
 
 static PetscErrorCode CEFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscReal         l = ((CECtx*)ctx)->lambda;
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
@@ -142,7 +137,6 @@ static PetscErrorCode CEFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ct
 static PetscErrorCode CEJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ctx)
 {
   PetscReal         l = ((CECtx*)ctx)->lambda;
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0};
   PetscScalar       J[1][1];
   const PetscScalar *x,*xdot;
@@ -167,7 +161,6 @@ static PetscErrorCode CEJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Ma
 static PetscErrorCode CESolution(PetscReal t,Vec X,void *ctx)
 {
   PetscReal      l = ((CECtx*)ctx)->lambda;
-  PetscErrorCode ierr;
   PetscScalar    *x;
 
   PetscFunctionBeginUser;
@@ -208,7 +201,6 @@ static PetscErrorCode CECreate(Problem p)
 */
 static PetscErrorCode OregoFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
 
@@ -227,7 +219,6 @@ static PetscErrorCode OregoFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
 
 static PetscErrorCode OregoJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1,2};
   PetscScalar       J[3][3];
   const PetscScalar *x,*xdot;
@@ -259,7 +250,6 @@ static PetscErrorCode OregoJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a
 
 static PetscErrorCode OregoSolution(PetscReal t,Vec X,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscScalar    *x;
 
   PetscFunctionBeginUser;
@@ -296,7 +286,6 @@ typedef struct {
 
 static PetscErrorCode MonitorError(TS ts,PetscInt step,PetscReal t,Vec x,void *ctx)
 {
-  PetscErrorCode ierr;
   MonitorCtx     *mon = (MonitorCtx*)ctx;
   PetscReal      h,nrm_x,nrm_exact,nrm_diff;
 

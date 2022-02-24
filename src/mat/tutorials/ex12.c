@@ -24,7 +24,6 @@ T*/
 */
 PetscErrorCode PadMatrix(Mat A,Vec v,PetscScalar c,Mat *B)
 {
-  PetscErrorCode    ierr;
   PetscInt          n,i,*cnt,*indices,nc;
   const PetscInt    *aj;
   const PetscScalar *vv,*aa;

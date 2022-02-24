@@ -20,7 +20,6 @@ static PetscErrorCode PetscDrawXiMatchFontSize(PetscDrawXiFont*,int,int);
 PetscErrorCode PetscDrawXiFontFixed(PetscDraw_X *XBWin,int w,int h,PetscDrawXiFont **outfont)
 {
   static PetscDrawXiFont *curfont = NULL,*font;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   if (!curfont) CHKERRQ(PetscDrawXiInitFonts(XBWin));
@@ -99,7 +98,6 @@ static PetscErrorCode PetscDrawXiInitFonts(PetscDraw_X *XBWin)
     names = XListFontsWithInfo(XBWin->disp,"?x",NFONTS,&cnt,&info);
     j     = 0;
     for (i=0; i<cnt; i++) {
-      PetscErrorCode ierr;
       size_t         len;
 
       CHKERRQ(PetscStrlen(names[i],&len));

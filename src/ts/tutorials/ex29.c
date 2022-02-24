@@ -36,7 +36,6 @@ extern PetscErrorCode FormIFunctionLocal(DMDALocalInfo*,PetscReal,Field**,Field*
 static PetscErrorCode CoefficientCoarsenHook(DM dm, DM dmc,void *ctx)
 {
   Vec            c,cc,ccl;
-  PetscErrorCode ierr;
   Mat            J;
   Vec            vscale;
   DM             cdm,cdmc;
@@ -78,7 +77,6 @@ static PetscErrorCode CoefficientSubDomainRestrictHook(DM dm,DM subdm,void *ctx)
 {
   Vec            c,cc;
   DM             cdm,csubdm;
-  PetscErrorCode ierr;
   VecScatter     *iscat,*oscat,*gscat;
 
   PetscFunctionBegin;
@@ -178,7 +176,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(DM da,void *ctx,Vec X)
 {
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   Field          **x;
   PetscReal      x0,x1;
 
@@ -204,7 +201,6 @@ PetscErrorCode FormInitialGuess(DM da,void *ctx,Vec X)
 PetscErrorCode FormDiffusionCoefficient(DM da,void *ctx,Vec X)
 {
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   Coeff          **x;
   PetscReal      x1,x0;
 
@@ -236,7 +232,6 @@ PetscErrorCode FormDiffusionCoefficient(DM da,void *ctx,Vec X)
 
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,PetscReal ptime,Field **x,Field **xt,Field **f,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscReal      hx,hy,dhx,dhy,hxdhy,hydhx,scale;
   PetscScalar    u,uxx,uyy;

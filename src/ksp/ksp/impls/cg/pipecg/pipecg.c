@@ -9,7 +9,6 @@
 */
 static PetscErrorCode KSPSetUp_PIPECG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get work vectors needed by PIPECG */
@@ -22,7 +21,6 @@ static PetscErrorCode KSPSetUp_PIPECG(KSP ksp)
 */
 static PetscErrorCode  KSPSolve_PIPECG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    alpha = 0.0,beta = 0.0,gamma = 0.0,gammaold = 0.0,delta = 0.0;
   PetscReal      dp    = 0.0;
@@ -189,7 +187,6 @@ PETSC_INTERN PetscErrorCode KSPBuildResidual_CG(KSP,Vec,Vec,Vec*);
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPECG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_LEFT,2));

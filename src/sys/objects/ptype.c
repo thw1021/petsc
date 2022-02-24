@@ -182,7 +182,6 @@ PetscErrorCode  PetscDataTypeGetSize(PetscDataType ptype,size_t *size)
 @*/
 PetscErrorCode  PetscDataTypeFromString(const char*name, PetscDataType *ptype,PetscBool *found)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscEnumFind(PetscDataTypes,name,(PetscEnum*)ptype,found));

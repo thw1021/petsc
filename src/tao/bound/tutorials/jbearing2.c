@@ -190,7 +190,6 @@ static PetscReal p(PetscReal xi, PetscReal ecc)
 
 PetscErrorCode ComputeB(AppCtx* user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscInt       nx,ny,xs,xm,gxs,gxm,ys,ym,gys,gym;
   PetscReal      two=2.0, pi=4.0*atan(1.0);
@@ -228,7 +227,6 @@ PetscErrorCode ComputeB(AppCtx* user)
 PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn,Vec G,void *ptr)
 {
   AppCtx*        user=(AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,kk;
   PetscInt       col[5],row,nx,ny,xs,xm,gxs,gxm,ys,ym,gys,gym;
   PetscReal      one=1.0, two=2.0, six=6.0,pi=4.0*atan(1.0);
@@ -336,7 +334,6 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn,Vec G,void *p
 PetscErrorCode FormHessian(Tao tao,Vec X,Mat hes, Mat Hpre, void *ptr)
 {
   AppCtx*        user=(AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscInt       col[5],row,nx,ny,xs,xm,gxs,gxm,ys,ym,gys,gym;
   PetscReal      one=1.0, two=2.0, six=6.0,pi=4.0*atan(1.0);
@@ -428,7 +425,6 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat hes, Mat Hpre, void *ptr)
 
 PetscErrorCode Monitor(Tao tao, void *ctx)
 {
-  PetscErrorCode     ierr;
   PetscInt           its;
   PetscReal          f,gnorm,cnorm,xdiff;
   TaoConvergedReason reason;
@@ -443,7 +439,6 @@ PetscErrorCode Monitor(Tao tao, void *ctx)
 
 PetscErrorCode ConvergenceTest(Tao tao, void *ctx)
 {
-  PetscErrorCode     ierr;
   PetscInt           its;
   PetscReal          f,gnorm,cnorm,xdiff;
   TaoConvergedReason reason;

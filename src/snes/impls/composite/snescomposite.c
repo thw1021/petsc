@@ -47,7 +47,6 @@ typedef struct {
 
 static PetscErrorCode SNESCompositeApply_Multiplicative(SNES snes,Vec X,Vec B,Vec F,PetscReal *fnorm)
 {
-  PetscErrorCode      ierr;
   SNES_Composite      *jac = (SNES_Composite*)snes->data;
   SNES_CompositeLink  next = jac->head;
   Vec                 FSub;
@@ -114,7 +113,6 @@ static PetscErrorCode SNESCompositeApply_Multiplicative(SNES snes,Vec X,Vec B,Ve
 
 static PetscErrorCode SNESCompositeApply_Additive(SNES snes,Vec X,Vec B,Vec F,PetscReal *fnorm)
 {
-  PetscErrorCode      ierr;
   SNES_Composite      *jac = (SNES_Composite*)snes->data;
   SNES_CompositeLink  next = jac->head;
   Vec                 Y,Xorig;
@@ -188,7 +186,6 @@ static PetscErrorCode SNESCompositeApply_Additive(SNES snes,Vec X,Vec B,Vec F,Pe
  */
 static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes,Vec X,Vec B,Vec F,PetscReal *fnorm)
 {
-  PetscErrorCode      ierr;
   SNES_Composite      *jac = (SNES_Composite*)snes->data;
   SNES_CompositeLink  next = jac->head;
   Vec                 *Xes = jac->Xes,*Fes = jac->Fes;
@@ -318,7 +315,6 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes,Vec X,Vec B,V
 
 static PetscErrorCode SNESSetUp_Composite(SNES snes)
 {
-  PetscErrorCode     ierr;
   DM                 dm;
   SNES_Composite     *jac = (SNES_Composite*)snes->data;
   SNES_CompositeLink next = jac->head;
@@ -387,7 +383,6 @@ static PetscErrorCode SNESSetUp_Composite(SNES snes)
 static PetscErrorCode SNESReset_Composite(SNES snes)
 {
   SNES_Composite     *jac = (SNES_Composite*)snes->data;
-  PetscErrorCode   ierr;
   SNES_CompositeLink next = jac->head;
 
   PetscFunctionBegin;
@@ -411,7 +406,6 @@ static PetscErrorCode SNESReset_Composite(SNES snes)
 static PetscErrorCode SNESDestroy_Composite(SNES snes)
 {
   SNES_Composite     *jac = (SNES_Composite*)snes->data;
-  PetscErrorCode     ierr;
   SNES_CompositeLink next = jac->head,next_tmp;
 
   PetscFunctionBegin;
@@ -429,7 +423,6 @@ static PetscErrorCode SNESDestroy_Composite(SNES snes)
 static PetscErrorCode SNESSetFromOptions_Composite(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   SNES_Composite     *jac = (SNES_Composite*)snes->data;
-  PetscErrorCode     ierr;
   PetscInt           nmax = 8,i;
   SNES_CompositeLink next;
   char               *sneses[8];
@@ -470,7 +463,6 @@ static PetscErrorCode SNESSetFromOptions_Composite(PetscOptionItems *PetscOption
 static PetscErrorCode SNESView_Composite(SNES snes,PetscViewer viewer)
 {
   SNES_Composite     *jac = (SNES_Composite*)snes->data;
-  PetscErrorCode     ierr;
   SNES_CompositeLink next = jac->head;
   PetscBool          iascii;
 
@@ -510,7 +502,6 @@ static PetscErrorCode  SNESCompositeAddSNES_Composite(SNES snes,SNESType type)
 {
   SNES_Composite     *jac;
   SNES_CompositeLink next,ilink;
-  PetscErrorCode     ierr;
   PetscInt           cnt = 0;
   const char         *prefix;
   char               newprefix[20];
@@ -587,7 +578,6 @@ static PetscErrorCode  SNESCompositeGetSNES_Composite(SNES snes,PetscInt n,SNES 
 @*/
 PetscErrorCode  SNESCompositeSetType(SNES snes,SNESCompositeType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -610,7 +600,6 @@ PetscErrorCode  SNESCompositeSetType(SNES snes,SNESCompositeType type)
 @*/
 PetscErrorCode  SNESCompositeAddSNES(SNES snes,SNESType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -636,7 +625,6 @@ PetscErrorCode  SNESCompositeAddSNES(SNES snes,SNESType type)
 @*/
 PetscErrorCode  SNESCompositeGetSNES(SNES snes,PetscInt n,SNES *subsnes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -709,7 +697,6 @@ static PetscErrorCode  SNESCompositeSetDamping_Composite(SNES snes,PetscInt n,Pe
 @*/
 PetscErrorCode  SNESCompositeSetDamping(SNES snes,PetscInt n,PetscReal dmp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -722,7 +709,6 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
   Vec              F,X,B,Y;
   PetscInt         i;
   PetscReal        fnorm = 0.0, xnorm = 0.0, snorm = 0.0;
-  PetscErrorCode   ierr;
   SNESNormSchedule normtype;
   SNES_Composite   *comp = (SNES_Composite*)snes->data;
 
@@ -858,7 +844,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode SNESCreate_Composite(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_Composite *jac;
 
   PetscFunctionBegin;

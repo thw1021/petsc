@@ -50,7 +50,6 @@ PetscErrorCode  PFSet(PF pf,PetscErrorCode (*apply)(void*,PetscInt,const PetscSc
 @*/
 PetscErrorCode  PFDestroy(PF *pf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*pf) PetscFunctionReturn(0);
@@ -86,7 +85,6 @@ PetscErrorCode  PFDestroy(PF *pf)
 PetscErrorCode  PFCreate(MPI_Comm comm,PetscInt dimin,PetscInt dimout,PF *pf)
 {
   PF             newpf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(pf,4);
@@ -127,7 +125,6 @@ PetscErrorCode  PFCreate(MPI_Comm comm,PetscInt dimin,PetscInt dimout,PF *pf)
 @*/
 PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   PetscInt       i,rstart,rend,n,p;
   PetscBool      nox = PETSC_FALSE;
 
@@ -200,7 +197,6 @@ PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
 @*/
 PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
@@ -228,7 +224,6 @@ PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
 @*/
 PetscErrorCode  PFViewFromOptions(PF A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PF_CLASSID,1);
@@ -262,7 +257,6 @@ PetscErrorCode  PFViewFromOptions(PF A,PetscObject obj,const char name[])
 @*/
 PetscErrorCode  PFView(PF pf,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -315,7 +309,6 @@ $     -pf_type my_function
 @*/
 PetscErrorCode  PFRegister(const char sname[],PetscErrorCode (*function)(PF,void*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PFInitializePackage());
@@ -373,8 +366,8 @@ PetscErrorCode  PFGetType(PF pf,PFType *type)
 @*/
 PetscErrorCode  PFSetType(PF pf,PFType type,void *ctx)
 {
-  PetscErrorCode ierr,(*r)(PF,void*);
   PetscBool      match;
+  PetscErrorCode (*r)(PF,void*);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
@@ -388,7 +381,7 @@ PetscErrorCode  PFSetType(PF pf,PFType type,void *ctx)
 
   /* Determine the PFCreateXXX routine for a particular function */
   CHKERRQ(PetscFunctionListFind(PFList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested PF type %s",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested PF type %s",type);
   pf->ops->destroy  = NULL;
   pf->ops->view     = NULL;
   pf->ops->apply    = NULL;
@@ -454,7 +447,6 @@ static PetscBool PFPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PFFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PFList));
@@ -476,7 +468,6 @@ PetscErrorCode  PFInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PFPackageInitialized) PetscFunctionReturn(0);

@@ -3,7 +3,6 @@
 
 PetscErrorCode KSPSetFromOptions_BCGS(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"KSP BCGS Options"));
@@ -13,7 +12,6 @@ PetscErrorCode KSPSetFromOptions_BCGS(PetscOptionItems *PetscOptionsObject,KSP k
 
 PetscErrorCode KSPSetUp_BCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,6));
@@ -22,7 +20,6 @@ PetscErrorCode KSPSetUp_BCGS(KSP ksp)
 
 PetscErrorCode KSPSolve_BCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    rho,rhoold,alpha,beta,omega,omegaold,d1;
   Vec            X,B,V,P,R,RP,T,S;
@@ -156,7 +153,6 @@ PetscErrorCode KSPSolve_BCGS(KSP ksp)
 
 PetscErrorCode KSPBuildSolution_BCGS(KSP ksp,Vec v,Vec *V)
 {
-  PetscErrorCode ierr;
   KSP_BCGS       *bcgs = (KSP_BCGS*)ksp->data;
 
   PetscFunctionBegin;
@@ -179,7 +175,6 @@ PetscErrorCode KSPBuildSolution_BCGS(KSP ksp,Vec v,Vec *V)
 PetscErrorCode KSPReset_BCGS(KSP ksp)
 {
   KSP_BCGS       *cg = (KSP_BCGS*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&cg->guess));
@@ -188,7 +183,6 @@ PetscErrorCode KSPReset_BCGS(KSP ksp)
 
 PetscErrorCode KSPDestroy_BCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_BCGS(ksp));
@@ -215,7 +209,6 @@ PetscErrorCode KSPDestroy_BCGS(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_BCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_BCGS       *bcgs;
 
   PetscFunctionBegin;

@@ -72,7 +72,6 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Triangle(DM boundary, PetscBool inter
   DMLabel              label, label2;
   PetscInt             vStart, vEnd, v, eStart, eEnd, e;
   PetscMPIInt          rank;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)boundary,&comm));
@@ -244,7 +243,6 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_Triangle(DM dm, PetscReal *inmaxVolumes
   DMLabel              label;
   PetscInt             vStart, vEnd, v, gcStart, cStart, cEnd, c, depth, depthGlobal;
   PetscMPIInt          rank;
-  PetscErrorCode       ierr;
   double               *maxVolumes;
 
   PetscFunctionBegin;

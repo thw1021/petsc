@@ -88,7 +88,6 @@ static PetscErrorCode  PetscRandomGetValueReal_Rander48(PetscRandom r, PetscReal
 
 static PetscErrorCode  PetscRandomDestroy_Rander48(PetscRandom r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(r->data));
@@ -126,7 +125,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PetscRandomCreate_Rander48(PetscRandom r)
 {
-  PetscErrorCode       ierr;
   PetscRandom_Rander48 *r48;
 
   PetscFunctionBegin;

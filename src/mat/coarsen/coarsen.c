@@ -32,7 +32,6 @@ $     -mat_coarsen_type my_agg
 @*/
 PetscErrorCode  MatCoarsenRegister(const char sname[],PetscErrorCode (*function)(MatCoarsen))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatInitializePackage());
@@ -95,7 +94,6 @@ $    -mat_coarsen_view
 @*/
 PetscErrorCode  MatCoarsenApply(MatCoarsen coarser)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarser,MAT_COARSEN_CLASSID,1);
@@ -165,7 +163,6 @@ PetscErrorCode MatCoarsenSetStrictAggs(MatCoarsen agg, PetscBool str)
 @*/
 PetscErrorCode  MatCoarsenDestroy(MatCoarsen *agg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*agg) PetscFunctionReturn(0);
@@ -204,7 +201,6 @@ PetscErrorCode  MatCoarsenDestroy(MatCoarsen *agg)
 PetscErrorCode  MatCoarsenCreate(MPI_Comm comm, MatCoarsen *newcrs)
 {
   MatCoarsen     agg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *newcrs = NULL;
@@ -231,7 +227,6 @@ PetscErrorCode  MatCoarsenCreate(MPI_Comm comm, MatCoarsen *newcrs)
 @*/
 PetscErrorCode  MatCoarsenViewFromOptions(MatCoarsen A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_COARSEN_CLASSID,1);
@@ -265,7 +260,6 @@ PetscErrorCode  MatCoarsenViewFromOptions(MatCoarsen A,PetscObject obj,const cha
 @*/
 PetscErrorCode  MatCoarsenView(MatCoarsen agg,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -307,8 +301,8 @@ $      (for instance, mis)
 @*/
 PetscErrorCode  MatCoarsenSetType(MatCoarsen coarser, MatCoarsenType type)
 {
-  PetscErrorCode ierr,(*r)(MatCoarsen);
   PetscBool      match;
+  PetscErrorCode (*r)(MatCoarsen);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(coarser,MAT_COARSEN_CLASSID,1);
@@ -324,7 +318,7 @@ PetscErrorCode  MatCoarsenSetType(MatCoarsen coarser, MatCoarsenType type)
   CHKERRQ(PetscMemzero(coarser->ops,sizeof(struct _MatCoarsenOps)));
 
   CHKERRQ(PetscFunctionListFind(MatCoarsenList,type,&r));
-  PetscCheckFalse(!r,PetscObjectComm((PetscObject)coarser),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown coarsen type %s",type);
+  PetscCheck(r,PetscObjectComm((PetscObject)coarser),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown coarsen type %s",type);
   CHKERRQ((*r)(coarser));
 
   CHKERRQ(PetscFree(((PetscObject)coarser)->type_name));

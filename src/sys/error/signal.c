@@ -199,7 +199,6 @@ PetscErrorCode  PetscSignalHandlerDefault(int sig,void *ptr)
 PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void *ctx)
 {
   struct  SH     *newsh;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!SIGNAL_CLASSID) {
@@ -353,7 +352,6 @@ PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void
 PetscErrorCode  PetscPopSignalHandler(void)
 {
   struct SH      *tmp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!sh) PetscFunctionReturn(0);

@@ -20,7 +20,6 @@ static PetscBool DMPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  DMFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&DMList));
@@ -47,7 +46,6 @@ PetscErrorCode DMInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (DMPackageInitialized) PetscFunctionReturn(0);
@@ -176,7 +174,6 @@ static PetscBool PetscFEPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode PetscFEFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscSpaceList));
@@ -202,7 +199,6 @@ PetscErrorCode PetscFEInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscFEPackageInitialized) PetscFunctionReturn(0);
@@ -253,7 +249,6 @@ static PetscBool PetscFVPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode PetscFVFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscLimiterList));
@@ -277,7 +272,6 @@ PetscErrorCode PetscFVInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscFVPackageInitialized) PetscFunctionReturn(0);
@@ -323,7 +317,6 @@ static PetscBool PetscDSPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode PetscDSFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscDSList));
@@ -345,7 +338,6 @@ PetscErrorCode PetscDSInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDSPackageInitialized) PetscFunctionReturn(0);
@@ -385,7 +377,6 @@ PetscErrorCode PetscDSInitializePackage(void)
 */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscdm(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(AOInitializePackage());

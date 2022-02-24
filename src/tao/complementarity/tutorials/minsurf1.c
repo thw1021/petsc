@@ -143,7 +143,6 @@ int main(int argc, char **argv)
 PetscErrorCode FormConstraints(Tao tao, Vec X, Vec G, void *ptr)
 {
   AppCtx         *user = (AppCtx *) ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,row;
   PetscInt       mx=user->mx, my=user->my;
   PetscReal      hx=1.0/(mx+1),hy=1.0/(my+1), hydhx=hy/hx, hxdhy=hx/hy;
@@ -269,7 +268,6 @@ PetscErrorCode FormConstraints(Tao tao, Vec X, Vec G, void *ptr)
 PetscErrorCode FormJacobian(Tao tao, Vec X, Mat H, Mat tHPre, void *ptr)
 {
   AppCtx            *user = (AppCtx *) ptr;
-  PetscErrorCode    ierr;
   PetscInt          i,j,k,row;
   PetscInt          mx=user->mx, my=user->my;
   PetscInt          col[7];
@@ -420,7 +418,6 @@ PetscErrorCode FormJacobian(Tao tao, Vec X, Mat H, Mat tHPre, void *ptr)
 */
 static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
 {
-  PetscErrorCode  ierr;
   PetscInt        i,j,k,limit=0,maxits=5;
   PetscInt        mx=user->mx,my=user->my;
   PetscInt        bsize=0, lsize=0, tsize=0, rsize=0;
@@ -504,7 +501,6 @@ static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
 */
 static PetscErrorCode MSA_InitialPoint(AppCtx * user, Vec X)
 {
-  PetscErrorCode ierr;
   PetscInt       start=-1,i,j;
   PetscScalar    zero=0.0;
   PetscBool      flg;

@@ -12,7 +12,6 @@ static PetscErrorCode CheckPullback(PetscInt N, PetscInt M, const PetscReal *L, 
   PetscReal       *walloc = NULL;
   const PetscReal *ww = NULL;
   PetscBool       negative = (PetscBool) (k < 0);
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   k = PetscAbsInt(k);

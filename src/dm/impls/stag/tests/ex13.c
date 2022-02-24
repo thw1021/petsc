@@ -94,7 +94,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode Test1(DM dm)
 {
-  PetscErrorCode ierr;
   Vec            vecLocal,vecGlobal,vecGlobalCheck;
   PetscRandom    rctx;
   PetscBool      equal;
@@ -133,7 +132,6 @@ static PetscErrorCode CompareValues(PetscInt i,PetscInt j, PetscInt k, PetscInt 
 
 static PetscErrorCode Test2_1d(DM dm)
 {
-  PetscErrorCode ierr;
   Vec            vecLocal,vecLocalCheck,vecGlobal;
   PetscInt       i,startx,nx,nExtrax,dof0,dof1,c,idxLeft,idxElement;
   PetscScalar    **arr;
@@ -199,7 +197,6 @@ static PetscErrorCode Test2_1d(DM dm)
 
 static PetscErrorCode Test2_2d(DM dm)
 {
-  PetscErrorCode ierr;
   Vec            vecLocal,vecLocalCheck,vecGlobal;
   PetscInt       i,j,startx,starty,nx,ny,nExtrax,nExtray,dof0,dof1,dof2,c,idxLeft,idxDown,idxDownLeft,idxElement;
   PetscScalar    ***arr;
@@ -311,7 +308,6 @@ static PetscErrorCode Test2_2d(DM dm)
 
 static PetscErrorCode Test2_3d(DM dm)
 {
-  PetscErrorCode ierr;
   Vec            vecLocal,vecLocalCheck,vecGlobal;
   PetscInt       i,j,k,startx,starty,startz,nx,ny,nz,nExtrax,nExtray,nExtraz,dof0,dof1,dof2,dof3,c,idxLeft,idxDown,idxDownLeft,idxBackDownLeft,idxBackDown,idxBack,idxBackLeft,idxElement;
   PetscScalar    ****arr;

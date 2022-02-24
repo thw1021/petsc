@@ -28,7 +28,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   DM             dmDist = NULL;
   PetscBool      simplex;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -101,7 +100,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 static PetscErrorCode ScrambleOrientation(DM dm, AppCtx *user)
 {
   PetscInt       h, cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexGetVTKCellHeight(dm, &h));
@@ -115,7 +113,6 @@ static PetscErrorCode ScrambleOrientation(DM dm, AppCtx *user)
 
 static PetscErrorCode TestOrientation(DM dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(ScrambleOrientation(dm, user));
