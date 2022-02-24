@@ -67,7 +67,7 @@ PetscErrorCode  TaoShellGetContext(Tao tao,void *ctx)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidPointer(ctx,2);
-  ierr = PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg));
   if (!flg) *(void**)ctx = NULL;
   else      *(void**)ctx = ((Tao_Shell*)(tao->data))->ctx;
   PetscFunctionReturn(0);
@@ -98,7 +98,7 @@ PetscErrorCode  TaoShellSetContext(Tao tao,void *ctx)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  ierr = PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)tao,TAOSHELL,&flg));
   if (flg) shell->ctx = ctx;
   PetscFunctionReturn(0);
 }
@@ -111,7 +111,7 @@ static PetscErrorCode TaoSolve_Shell(Tao tao)
   PetscFunctionBegin;
   PetscCheckFalse(!shell->solve,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoShellSetSolve() first");
   tao->reason = TAO_CONVERGED_USER;
-  ierr = (*(shell->solve)) (tao);CHKERRQ(ierr);
+  CHKERRQ((*(shell->solve)) (tao));
   PetscFunctionReturn(0);
 }
 
@@ -120,7 +120,7 @@ PetscErrorCode TaoDestroy_Shell(Tao tao)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(tao->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(tao->data));
   PetscFunctionReturn(0);
 }
 
@@ -161,8 +161,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_Shell(Tao tao)
   tao->ops->view = TaoView_Shell;
   tao->ops->solve = TaoSolve_Shell;
 
-  ierr = PetscNewLog(tao,&shell);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(tao,&shell));
   tao->data = (void*)shell;
   PetscFunctionReturn(0);
 }
-

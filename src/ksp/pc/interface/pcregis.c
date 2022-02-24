@@ -124,35 +124,35 @@ PetscErrorCode  PCRegisterAll(void)
   ierr = PCRegister(PCPATCH        ,PCCreate_Patch);CHKERRQ(ierr);
   ierr = PCRegister(PCHMG          ,PCCreate_HMG);CHKERRQ(ierr);
 #if defined(PETSC_HAVE_ML)
-  ierr = PCRegister(PCML           ,PCCreate_ML);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCML           ,PCCreate_ML));
 #endif
 #if defined(PETSC_HAVE_SPAI)
-  ierr = PCRegister(PCSPAI         ,PCCreate_SPAI);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCSPAI         ,PCCreate_SPAI));
 #endif
 #if defined(PETSC_HAVE_HYPRE)
-  ierr = PCRegister(PCHYPRE        ,PCCreate_HYPRE);CHKERRQ(ierr);
-  ierr = PCRegister(PCPFMG         ,PCCreate_PFMG);CHKERRQ(ierr);
-  ierr = PCRegister(PCSYSPFMG      ,PCCreate_SysPFMG);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCHYPRE        ,PCCreate_HYPRE));
+  CHKERRQ(PCRegister(PCPFMG         ,PCCreate_PFMG));
+  CHKERRQ(PCRegister(PCSYSPFMG      ,PCCreate_SysPFMG));
 #endif
 #if !defined(PETSC_USE_COMPLEX)
-  ierr = PCRegister(PCTFS          ,PCCreate_TFS);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCTFS          ,PCCreate_TFS));
 #endif
 #if defined(PETSC_HAVE_VIENNACL)
-  ierr = PCRegister(PCCHOWILUVIENNACL,PCCreate_CHOWILUVIENNACL);CHKERRQ(ierr);
-  ierr = PCRegister(PCROWSCALINGVIENNACL,PCCreate_ROWSCALINGVIENNACL);CHKERRQ(ierr);
-  ierr = PCRegister(PCSAVIENNACL   ,PCCreate_SAVIENNACL);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCCHOWILUVIENNACL,PCCreate_CHOWILUVIENNACL));
+  CHKERRQ(PCRegister(PCROWSCALINGVIENNACL,PCCreate_ROWSCALINGVIENNACL));
+  CHKERRQ(PCRegister(PCSAVIENNACL   ,PCCreate_SAVIENNACL));
 #endif
 #if defined(PETSC_HAVE_PARMS)
-  ierr = PCRegister(PCPARMS        ,PCCreate_PARMS);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCPARMS        ,PCCreate_PARMS));
 #endif
-  ierr = PCRegister(PCBDDC         ,PCCreate_BDDC);CHKERRQ(ierr);
-  ierr = PCRegister(PCLMVM         ,PCCreate_LMVM);CHKERRQ(ierr);
-  ierr = PCRegister(PCDEFLATION    ,PCCreate_Deflation);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCBDDC         ,PCCreate_BDDC));
+  CHKERRQ(PCRegister(PCLMVM         ,PCCreate_LMVM));
+  CHKERRQ(PCRegister(PCDEFLATION    ,PCCreate_Deflation));
 #if defined(PETSC_HAVE_HPDDM) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
-  ierr = PCRegister(PCHPDDM        ,PCCreate_HPDDM);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCHPDDM        ,PCCreate_HPDDM));
 #endif
 #if defined(PETSC_HAVE_H2OPUS)
-  ierr = PCRegister(PCH2OPUS       ,PCCreate_H2OPUS);CHKERRQ(ierr);
+  CHKERRQ(PCRegister(PCH2OPUS       ,PCCreate_H2OPUS));
 #endif
   PetscFunctionReturn(0);
 }

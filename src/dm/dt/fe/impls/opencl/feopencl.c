@@ -8,11 +8,11 @@ static PetscErrorCode PetscFEDestroy_OpenCL(PetscFE fem)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = clReleaseCommandQueue(ocl->queue_id);CHKERRQ(ierr);
+  CHKERRQ(clReleaseCommandQueue(ocl->queue_id));
   ocl->queue_id = 0;
-  ierr = clReleaseContext(ocl->ctx_id);CHKERRQ(ierr);
+  CHKERRQ(clReleaseContext(ocl->ctx_id));
   ocl->ctx_id = 0;
-  ierr = PetscFree(ocl);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(ocl));
   PetscFunctionReturn(0);
 }
 
@@ -56,11 +56,11 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFEGetSpatialDimension(fem, &dim);CHKERRQ(ierr);
-  ierr = PetscFEGetDimension(fem, &N_b);CHKERRQ(ierr);
-  ierr = PetscFEGetNumComponents(fem, &N_c);CHKERRQ(ierr);
-  ierr = PetscFEGetQuadrature(fem, &q);CHKERRQ(ierr);
-  ierr = PetscQuadratureGetData(q, NULL, &qNc, &N_q, &points, &weights);CHKERRQ(ierr);
+  CHKERRQ(PetscFEGetSpatialDimension(fem, &dim));
+  CHKERRQ(PetscFEGetDimension(fem, &N_b));
+  CHKERRQ(PetscFEGetNumComponents(fem, &N_c));
+  CHKERRQ(PetscFEGetQuadrature(fem, &q));
+  CHKERRQ(PetscQuadratureGetData(q, NULL, &qNc, &N_q, &points, &weights));
   PetscCheckFalse(qNc != 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %D components", qNc);
   N_t  = N_b * N_c * N_q * N_bl;
   /* Enable device extension for double precision */
@@ -88,21 +88,21 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
                        &count, numeric_str, N_q*dim);CHKERRSTR(ierr);
   for (p = 0; p < N_q; ++p) {
     for (d = 0; d < dim; ++d) {
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g,\n", &count, points[p*dim+d]);CHKERRSTR(ierr);
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g,\n", &count, points[p*dim+d]));
     }
   }
-  ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count);CHKERRSTR(ierr);
+  CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count));
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
 "  /* Quadrature weights\n"
 "   - (v1,v2,...) */\n"
 "  const %s weights[%d] = {\n",
                        &count, numeric_str, N_q);CHKERRSTR(ierr);
   for (p = 0; p < N_q; ++p) {
-    ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g,\n", &count, weights[p]);CHKERRSTR(ierr);
+    CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g,\n", &count, weights[p]));
   }
-  ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count);CHKERRSTR(ierr);
+  CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count));
   /* Basis Functions */
-  ierr = PetscFEGetCellTabulation(fem, 1, &T);CHKERRQ(ierr);
+  CHKERRQ(PetscFEGetCellTabulation(fem, 1, &T));
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
 "  /* Nodal basis function evaluations\n"
 "    - basis component is fastest varying, the basis function, then point */\n"
@@ -111,11 +111,11 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
   for (p = 0; p < N_q; ++p) {
     for (b = 0; b < N_b; ++b) {
       for (c = 0; c < N_c; ++c) {
-        ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g,\n", &count, T->T[0][(p*N_b + b)*N_c + c]);CHKERRSTR(ierr);
+        CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g,\n", &count, T->T[0][(p*N_b + b)*N_c + c]));
       }
     }
   }
-  ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count);CHKERRSTR(ierr);
+  CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count));
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
 "\n"
 "  /* Nodal basis function derivative evaluations,\n"
@@ -125,19 +125,19 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
   for (p = 0; p < N_q; ++p) {
     for (b = 0; b < N_b; ++b) {
       for (c = 0; c < N_c; ++c) {
-        ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "(%s%d)(", &count, numeric_str, dim);CHKERRSTR(ierr);
+        CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "(%s%d)(", &count, numeric_str, dim));
         for (d = 0; d < dim; ++d) {
           if (d > 0) {
-            ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, ", %g", &count, T->T[1][((p*N_b + b)*dim + d)*N_c + c]);CHKERRSTR(ierr);
+            CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, ", %g", &count, T->T[1][((p*N_b + b)*dim + d)*N_c + c]));
           } else {
-            ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g", &count, T->T[1][((p*N_b + b)*dim + d)*N_c + c]);CHKERRSTR(ierr);
+            CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "%g", &count, T->T[1][((p*N_b + b)*dim + d)*N_c + c]));
           }
         }
-        ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "),\n", &count);CHKERRSTR(ierr);
+        CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "),\n", &count));
       }
     }
   }
-  ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count);CHKERRSTR(ierr);
+  CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "};\n", &count));
   /* Sizes */
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
 "  const int dim    = %d;                           // The spatial dimension\n"
@@ -268,31 +268,31 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
 "\n"
 "      for (int comp = 0; comp < N_comp; ++comp) {\n",
                             &count);CHKERRSTR(ierr);
-  if (useField) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        u[comp] = 0.0;\n", &count);CHKERRSTR(ierr);}
+  if (useField) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        u[comp] = 0.0;\n", &count));}
   if (useFieldDer) {
     switch (dim) {
     case 1:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        gradU[comp].x = 0.0;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        gradU[comp].x = 0.0;\n", &count));break;
     case 2:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        gradU[comp].x = 0.0; gradU[comp].y = 0.0;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        gradU[comp].x = 0.0; gradU[comp].y = 0.0;\n", &count));break;
     case 3:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        gradU[comp].x = 0.0; gradU[comp].y = 0.0; gradU[comp].z = 0.0;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "        gradU[comp].x = 0.0; gradU[comp].y = 0.0; gradU[comp].z = 0.0;\n", &count));break;
     }
   }
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
 "      }\n",
                             &count);CHKERRSTR(ierr);
   if (useFieldAux) {
-    ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      a[0] = 0.0;\n", &count);CHKERRSTR(ierr);
+    CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      a[0] = 0.0;\n", &count));
   }
   if (useFieldDerAux) {
     switch (dim) {
     case 1:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      gradA[0].x = 0.0;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      gradA[0].x = 0.0;\n", &count));break;
     case 2:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      gradA[0].x = 0.0; gradA[0].y = 0.0;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      gradA[0].x = 0.0; gradA[0].y = 0.0;\n", &count));break;
     case 3:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      gradA[0].x = 0.0; gradA[0].y = 0.0; gradA[0].z = 0.0;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      gradA[0].x = 0.0; gradA[0].y = 0.0; gradA[0].z = 0.0;\n", &count));break;
     }
   }
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
@@ -304,7 +304,7 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
 "          const int uidx = cell*N_bt + b;\n"
 "          %s%d   realSpaceDer;\n\n",
                             &count, numeric_str, dim);CHKERRSTR(ierr);
-  if (useField) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"          u[comp] += u_i[uidx]*phi_i[pidx];\n", &count);CHKERRSTR(ierr);}
+  if (useField) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"          u[comp] += u_i[uidx]*phi_i[pidx];\n", &count));}
   if (useFieldDer) {
     switch (dim) {
     case 2:
@@ -330,7 +330,7 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
 "      }\n",
                             &count);CHKERRSTR(ierr);
   if (useFieldAux) {
-    ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"          a[0] += a_i[cell];\n", &count);CHKERRSTR(ierr);
+    CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"          a[0] += a_i[cell];\n", &count));
   }
   /* Calculate residual at quadrature points: Should be generated by an weak form egine */
   ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,
@@ -338,14 +338,14 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
                             &count);CHKERRSTR(ierr);
   switch (op) {
   case LAPLACIAN:
-    if (useF0) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_0[fidx] = 4.0;\n", &count);CHKERRSTR(ierr);}
+    if (useF0) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_0[fidx] = 4.0;\n", &count));}
     if (useF1) {
-      if (useAux) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_1[fidx] = a[0]*gradU[cidx];\n", &count);CHKERRSTR(ierr);}
-      else        {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_1[fidx] = gradU[cidx];\n", &count);CHKERRSTR(ierr);}
+      if (useAux) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_1[fidx] = a[0]*gradU[cidx];\n", &count));}
+      else        {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_1[fidx] = gradU[cidx];\n", &count));}
     }
     break;
   case ELASTICITY:
-    if (useF0) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_0[fidx] = 4.0;\n", &count);CHKERRSTR(ierr);}
+    if (useF0) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail, "      f_0[fidx] = 4.0;\n", &count));}
     if (useF1) {
     switch (dim) {
     case 2:
@@ -384,15 +384,15 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "PDE operator %d is not supported", op);
   }
-  if (useF0) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_0[fidx] *= detJ[cell]*w;\n", &count);CHKERRSTR(ierr);}
+  if (useF0) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_0[fidx] *= detJ[cell]*w;\n", &count));}
   if (useF1) {
     switch (dim) {
     case 1:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_1[fidx].x *= detJ[cell]*w;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_1[fidx].x *= detJ[cell]*w;\n", &count));break;
     case 2:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_1[fidx].x *= detJ[cell]*w; f_1[fidx].y *= detJ[cell]*w;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_1[fidx].x *= detJ[cell]*w; f_1[fidx].y *= detJ[cell]*w;\n", &count));break;
     case 3:
-      ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_1[fidx].x *= detJ[cell]*w; f_1[fidx].y *= detJ[cell]*w; f_1[fidx].z *= detJ[cell]*w;\n", &count);CHKERRSTR(ierr);break;
+      CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"      f_1[fidx].x *= detJ[cell]*w; f_1[fidx].y *= detJ[cell]*w; f_1[fidx].z *= detJ[cell]*w;\n", &count));break;
     }
   }
   /* Thread transpose */
@@ -414,7 +414,7 @@ static PetscErrorCode PetscFEOpenCLGenerateIntegrationCode(PetscFE fem, char **s
 "        %s%d   realSpaceDer;\n\n",
                        &count, numeric_str, dim);CHKERRSTR(ierr);
 
-  if (useF0) {ierr = PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"        e_i += phi_i[pidx]*f_0[fidx];\n", &count);CHKERRSTR(ierr);}
+  if (useF0) {CHKERRSTR(PetscSNPrintfCount(string_tail, end_of_buffer - string_tail,"        e_i += phi_i[pidx]*f_0[fidx];\n", &count));}
   if (useF1) {
     switch (dim) {
     case 2:
@@ -460,20 +460,20 @@ static PetscErrorCode PetscFEOpenCLGetIntegrationKernel(PetscFE fem, PetscBool u
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFEGetSpatialDimension(fem, &dim);CHKERRQ(ierr);
-  ierr = PetscMalloc1(8192, &buffer);CHKERRQ(ierr);
-  ierr = PetscFEGetTileSizes(fem, NULL, &N_bl, NULL, NULL);CHKERRQ(ierr);
-  ierr = PetscFEOpenCLGenerateIntegrationCode(fem, &buffer, 8192, useAux, N_bl);CHKERRQ(ierr);
-  ierr = PetscOptionsHasName(((PetscObject)fem)->options,((PetscObject)fem)->prefix, "-petscfe_opencl_kernel_print", &flg);CHKERRQ(ierr);
-  if (flg) {ierr = PetscPrintf(PetscObjectComm((PetscObject) fem), "OpenCL FE Integration Kernel:\n%s\n", buffer);CHKERRQ(ierr);}
-  ierr = PetscStrlen(buffer,&len);CHKERRQ(ierr);
+  CHKERRQ(PetscFEGetSpatialDimension(fem, &dim));
+  CHKERRQ(PetscMalloc1(8192, &buffer));
+  CHKERRQ(PetscFEGetTileSizes(fem, NULL, &N_bl, NULL, NULL));
+  CHKERRQ(PetscFEOpenCLGenerateIntegrationCode(fem, &buffer, 8192, useAux, N_bl));
+  CHKERRQ(PetscOptionsHasName(((PetscObject)fem)->options,((PetscObject)fem)->prefix, "-petscfe_opencl_kernel_print", &flg));
+  if (flg) CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject) fem), "OpenCL FE Integration Kernel:\n%s\n", buffer));
+  CHKERRQ(PetscStrlen(buffer,&len));
   *ocl_prog = clCreateProgramWithSource(ocl->ctx_id, 1, (const char **) &buffer, &len, &err);CHKERRQ(err);
   err = clBuildProgram(*ocl_prog, 0, NULL, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
     err = clGetProgramBuildInfo(*ocl_prog, ocl->dev_id, CL_PROGRAM_BUILD_LOG, 8192*sizeof(char), &errMsg, NULL);
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Build failed! Log:\n %s", errMsg);
   }
-  ierr = PetscFree(buffer);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(buffer));
   *ocl_kernel = clCreateKernel(*ocl_prog, "integrateElementQuadrature", &ierr);
   PetscFunctionReturn(0);
 }
@@ -503,9 +503,9 @@ static PetscErrorCode PetscFEOpenCLLogResidual(PetscFE fem, PetscLogDouble time,
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLogGetStageLog(&stageLog);CHKERRQ(ierr);
-  ierr = PetscStageLogGetCurrent(stageLog, &stage);CHKERRQ(ierr);
-  ierr = PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog);CHKERRQ(ierr);
+  CHKERRQ(PetscLogGetStageLog(&stageLog));
+  CHKERRQ(PetscStageLogGetCurrent(stageLog, &stage));
+  CHKERRQ(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
     /* Log performance info */
   eventLog->eventInfo[ocl->residualEvent].count++;
   eventLog->eventInfo[ocl->residualEvent].time  += time;
@@ -557,53 +557,53 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscDSGetDiscretization(prob, field, (PetscObject *) &fem);CHKERRQ(ierr);
+  CHKERRQ(PetscDSGetDiscretization(prob, field, (PetscObject *) &fem));
   ocl  = (PetscFE_OpenCL *) fem->data;
-  if (!Ne) {ierr = PetscFEOpenCLLogResidual(fem, 0.0, 0.0);CHKERRQ(ierr); PetscFunctionReturn(0);}
-  ierr = PetscFEGetSpatialDimension(fem, &dim);CHKERRQ(ierr);
-  ierr = PetscFEGetQuadrature(fem, &q);CHKERRQ(ierr);
-  ierr = PetscQuadratureGetData(q, NULL, &qNc, &N_q, &points, &weights);CHKERRQ(ierr);
+  if (!Ne) {CHKERRQ(PetscFEOpenCLLogResidual(fem, 0.0, 0.0)); PetscFunctionReturn(0);}
+  CHKERRQ(PetscFEGetSpatialDimension(fem, &dim));
+  CHKERRQ(PetscFEGetQuadrature(fem, &q));
+  CHKERRQ(PetscQuadratureGetData(q, NULL, &qNc, &N_q, &points, &weights));
   PetscCheckFalse(qNc != 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %D components", qNc);
-  ierr = PetscFEGetDimension(fem, &N_b);CHKERRQ(ierr);
-  ierr = PetscFEGetNumComponents(fem, &N_comp);CHKERRQ(ierr);
-  ierr = PetscDSGetResidual(prob, field, &f0_func, &f1_func);CHKERRQ(ierr);
-  ierr = PetscFEGetTileSizes(fem, NULL, &N_bl, &N_bc, &N_cb);CHKERRQ(ierr);
+  CHKERRQ(PetscFEGetDimension(fem, &N_b));
+  CHKERRQ(PetscFEGetNumComponents(fem, &N_comp));
+  CHKERRQ(PetscDSGetResidual(prob, field, &f0_func, &f1_func));
+  CHKERRQ(PetscFEGetTileSizes(fem, NULL, &N_bl, &N_bc, &N_cb));
   N_bt  = N_b*N_comp;
   N_bst = N_bt*N_q;
   N_t   = N_bst*N_bl;
   PetscCheckFalse(N_bc*N_comp != N_t,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of threads %d should be %d * %d", N_t, N_bc, N_comp);
   /* Calculate layout */
   if (Ne % (N_cb*N_bc)) { /* Remainder cells */
-    ierr = PetscFEIntegrateResidual_Basic(prob, key, Ne, cgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec);CHKERRQ(ierr);
+    CHKERRQ(PetscFEIntegrateResidual_Basic(prob, key, Ne, cgeom, coefficients, coefficients_t, probAux, coefficientsAux, t, elemVec));
     PetscFunctionReturn(0);
   }
-  ierr = PetscFEOpenCLCalculateGrid(fem, Ne, N_cb*N_bc, &x, &y, &z);CHKERRQ(ierr);
+  CHKERRQ(PetscFEOpenCLCalculateGrid(fem, Ne, N_cb*N_bc, &x, &y, &z));
   local_work_size[0]  = N_bc*N_comp;
   local_work_size[1]  = 1;
   local_work_size[2]  = 1;
   global_work_size[0] = x * local_work_size[0];
   global_work_size[1] = y * local_work_size[1];
   global_work_size[2] = z * local_work_size[2];
-  ierr = PetscInfo(fem, "GPU layout grid(%d,%d,%d) block(%d,%d,%d) with %d batches\n", x, y, z, local_work_size[0], local_work_size[1], local_work_size[2], N_cb);CHKERRQ(ierr);
-  ierr = PetscInfo(fem, " N_t: %d, N_cb: %d\n", N_t, N_cb);CHKERRQ(ierr);
+  CHKERRQ(PetscInfo(fem, "GPU layout grid(%d,%d,%d) block(%d,%d,%d) with %d batches\n", x, y, z, local_work_size[0], local_work_size[1], local_work_size[2], N_cb));
+  CHKERRQ(PetscInfo(fem, " N_t: %d, N_cb: %d\n", N_t, N_cb));
   /* Generate code */
   if (probAux) {
     PetscSpace P;
     PetscInt   NfAux, order, f;
 
-    ierr = PetscDSGetNumFields(probAux, &NfAux);CHKERRQ(ierr);
+    CHKERRQ(PetscDSGetNumFields(probAux, &NfAux));
     for (f = 0; f < NfAux; ++f) {
       PetscFE feAux;
 
-      ierr = PetscDSGetDiscretization(probAux, f, (PetscObject *) &feAux);CHKERRQ(ierr);
-      ierr = PetscFEGetBasisSpace(feAux, &P);CHKERRQ(ierr);
-      ierr = PetscSpaceGetDegree(P, &order, NULL);CHKERRQ(ierr);
+      CHKERRQ(PetscDSGetDiscretization(probAux, f, (PetscObject *) &feAux));
+      CHKERRQ(PetscFEGetBasisSpace(feAux, &P));
+      CHKERRQ(PetscSpaceGetDegree(P, &order, NULL));
       PetscCheckFalse(order > 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Can only handle P0 coefficient fields");
     }
   }
-  ierr = PetscFEOpenCLGetIntegrationKernel(fem, useAux, &ocl_prog, &ocl_kernel);CHKERRQ(ierr);
+  CHKERRQ(PetscFEOpenCLGetIntegrationKernel(fem, useAux, &ocl_prog, &ocl_kernel));
   /* Create buffers on the device and send data over */
-  ierr = PetscDataTypeGetSize(ocl->realType, &realSize);CHKERRQ(ierr);
+  CHKERRQ(PetscDataTypeGetSize(ocl->realType, &realSize));
   PetscCheckFalse(cgeom->numPoints > 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only support affine geometry for OpenCL integration right now");
   if (sizeof(PetscReal) != realSize) {
     switch (ocl->realType) {
@@ -611,7 +611,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
     {
       PetscInt c, b, d;
 
-      ierr = PetscMalloc4(Ne*N_bt,&f_coeff,Ne,&f_coeffAux,Ne*dim*dim,&f_invJ,Ne,&f_detJ);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc4(Ne*N_bt,&f_coeff,Ne,&f_coeffAux,Ne*dim*dim,&f_invJ,Ne,&f_detJ));
       for (c = 0; c < Ne; ++c) {
         f_detJ[c] = (float) cgeom->detJ[c];
         for (d = 0; d < dim*dim; ++d) {
@@ -640,7 +640,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
     {
       PetscInt c, b, d;
 
-      ierr = PetscMalloc4(Ne*N_bt,&d_coeff,Ne,&d_coeffAux,Ne*dim*dim,&d_invJ,Ne,&d_detJ);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc4(Ne*N_bt,&d_coeff,Ne,&d_coeffAux,Ne*dim*dim,&d_invJ,Ne,&d_detJ));
       for (c = 0; c < Ne; ++c) {
         d_detJ[c] = (double) cgeom->detJ[c];
         for (d = 0; d < dim*dim; ++d) {
@@ -671,7 +671,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   } else {
     PetscInt c, d;
 
-    ierr = PetscMalloc2(Ne*dim*dim,&r_invJ,Ne,&r_detJ);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc2(Ne*dim*dim,&r_invJ,Ne,&r_detJ));
     for (c = 0; c < Ne; ++c) {
       r_detJ[c] = cgeom->detJ[c];
       for (d = 0; d < dim*dim; ++d) {
@@ -693,13 +693,13 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   o_jacobianDeterminants = clCreateBuffer(ocl->ctx_id, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, Ne         * realSize, oclDetJ,     &ierr);
   o_elemVec              = clCreateBuffer(ocl->ctx_id, CL_MEM_WRITE_ONLY,                       Ne*N_bt    * realSize, NULL,        &ierr);
   /* Kernel launch */
-  ierr = clSetKernelArg(ocl_kernel, 0, sizeof(cl_int), (void*) &N_cb);CHKERRQ(ierr);
-  ierr = clSetKernelArg(ocl_kernel, 1, sizeof(cl_mem), (void*) &o_coefficients);CHKERRQ(ierr);
-  ierr = clSetKernelArg(ocl_kernel, 2, sizeof(cl_mem), (void*) &o_coefficientsAux);CHKERRQ(ierr);
-  ierr = clSetKernelArg(ocl_kernel, 3, sizeof(cl_mem), (void*) &o_jacobianInverses);CHKERRQ(ierr);
-  ierr = clSetKernelArg(ocl_kernel, 4, sizeof(cl_mem), (void*) &o_jacobianDeterminants);CHKERRQ(ierr);
-  ierr = clSetKernelArg(ocl_kernel, 5, sizeof(cl_mem), (void*) &o_elemVec);CHKERRQ(ierr);
-  ierr = clEnqueueNDRangeKernel(ocl->queue_id, ocl_kernel, 3, NULL, global_work_size, local_work_size, 0, NULL, &ocl_ev);CHKERRQ(ierr);
+  CHKERRQ(clSetKernelArg(ocl_kernel, 0, sizeof(cl_int), (void*) &N_cb));
+  CHKERRQ(clSetKernelArg(ocl_kernel, 1, sizeof(cl_mem), (void*) &o_coefficients));
+  CHKERRQ(clSetKernelArg(ocl_kernel, 2, sizeof(cl_mem), (void*) &o_coefficientsAux));
+  CHKERRQ(clSetKernelArg(ocl_kernel, 3, sizeof(cl_mem), (void*) &o_jacobianInverses));
+  CHKERRQ(clSetKernelArg(ocl_kernel, 4, sizeof(cl_mem), (void*) &o_jacobianDeterminants));
+  CHKERRQ(clSetKernelArg(ocl_kernel, 5, sizeof(cl_mem), (void*) &o_elemVec));
+  CHKERRQ(clEnqueueNDRangeKernel(ocl->queue_id, ocl_kernel, 3, NULL, global_work_size, local_work_size, 0, NULL, &ocl_ev));
   /* Read data back from device */
   if (sizeof(PetscReal) != realSize) {
     switch (ocl->realType) {
@@ -708,15 +708,15 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
       float   *elem;
       PetscInt c, b;
 
-      ierr = PetscFree4(f_coeff,f_coeffAux,f_invJ,f_detJ);CHKERRQ(ierr);
-      ierr = PetscMalloc1(Ne*N_bt, &elem);CHKERRQ(ierr);
-      ierr = clEnqueueReadBuffer(ocl->queue_id, o_elemVec, CL_TRUE, 0, Ne*N_bt * realSize, elem, 0, NULL, NULL);CHKERRQ(ierr);
+      CHKERRQ(PetscFree4(f_coeff,f_coeffAux,f_invJ,f_detJ));
+      CHKERRQ(PetscMalloc1(Ne*N_bt, &elem));
+      CHKERRQ(clEnqueueReadBuffer(ocl->queue_id, o_elemVec, CL_TRUE, 0, Ne*N_bt * realSize, elem, 0, NULL, NULL));
       for (c = 0; c < Ne; ++c) {
         for (b = 0; b < N_bt; ++b) {
           elemVec[c*N_bt+b] = (PetscScalar) elem[c*N_bt+b];
         }
       }
-      ierr = PetscFree(elem);CHKERRQ(ierr);
+      CHKERRQ(PetscFree(elem));
     }
     break;
     case PETSC_DOUBLE:
@@ -724,27 +724,27 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
       double  *elem;
       PetscInt c, b;
 
-      ierr = PetscFree4(d_coeff,d_coeffAux,d_invJ,d_detJ);CHKERRQ(ierr);
-      ierr = PetscMalloc1(Ne*N_bt, &elem);CHKERRQ(ierr);
-      ierr = clEnqueueReadBuffer(ocl->queue_id, o_elemVec, CL_TRUE, 0, Ne*N_bt * realSize, elem, 0, NULL, NULL);CHKERRQ(ierr);
+      CHKERRQ(PetscFree4(d_coeff,d_coeffAux,d_invJ,d_detJ));
+      CHKERRQ(PetscMalloc1(Ne*N_bt, &elem));
+      CHKERRQ(clEnqueueReadBuffer(ocl->queue_id, o_elemVec, CL_TRUE, 0, Ne*N_bt * realSize, elem, 0, NULL, NULL));
       for (c = 0; c < Ne; ++c) {
         for (b = 0; b < N_bt; ++b) {
           elemVec[c*N_bt+b] = (PetscScalar) elem[c*N_bt+b];
         }
       }
-      ierr = PetscFree(elem);CHKERRQ(ierr);
+      CHKERRQ(PetscFree(elem));
     }
     break;
     default:
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unsupported PETSc type %d", ocl->realType);
     }
   } else {
-    ierr = PetscFree2(r_invJ,r_detJ);CHKERRQ(ierr);
-    ierr = clEnqueueReadBuffer(ocl->queue_id, o_elemVec, CL_TRUE, 0, Ne*N_bt * realSize, elemVec, 0, NULL, NULL);CHKERRQ(ierr);
+    CHKERRQ(PetscFree2(r_invJ,r_detJ));
+    CHKERRQ(clEnqueueReadBuffer(ocl->queue_id, o_elemVec, CL_TRUE, 0, Ne*N_bt * realSize, elemVec, 0, NULL, NULL));
   }
   /* Log performance */
-  ierr = clGetEventProfilingInfo(ocl_ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &ns_start, NULL);CHKERRQ(ierr);
-  ierr = clGetEventProfilingInfo(ocl_ev, CL_PROFILING_COMMAND_END,   sizeof(cl_ulong), &ns_end,   NULL);CHKERRQ(ierr);
+  CHKERRQ(clGetEventProfilingInfo(ocl_ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &ns_start, NULL));
+  CHKERRQ(clGetEventProfilingInfo(ocl_ev, CL_PROFILING_COMMAND_END,   sizeof(cl_ulong), &ns_end,   NULL));
   f0Flops = 0;
   switch (ocl->op) {
   case LAPLACIAN:
@@ -761,15 +761,15 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
       N_comp*((useF0 ? f0Flops + 2 : 0) + (useF1 ? f1Flops + 2*dim : 0)))
     +
     N_b*((useF0 ? 2 : 0) + (useF1 ? 2*dim*(dim + 1) : 0)));
-  ierr = PetscFEOpenCLLogResidual(fem, (ns_end - ns_start)*1.0e-9, numFlops);CHKERRQ(ierr);
+  CHKERRQ(PetscFEOpenCLLogResidual(fem, (ns_end - ns_start)*1.0e-9, numFlops));
   /* Cleanup */
-  ierr = clReleaseMemObject(o_coefficients);CHKERRQ(ierr);
-  ierr = clReleaseMemObject(o_coefficientsAux);CHKERRQ(ierr);
-  ierr = clReleaseMemObject(o_jacobianInverses);CHKERRQ(ierr);
-  ierr = clReleaseMemObject(o_jacobianDeterminants);CHKERRQ(ierr);
-  ierr = clReleaseMemObject(o_elemVec);CHKERRQ(ierr);
-  ierr = clReleaseKernel(ocl_kernel);CHKERRQ(ierr);
-  ierr = clReleaseProgram(ocl_prog);CHKERRQ(ierr);
+  CHKERRQ(clReleaseMemObject(o_coefficients));
+  CHKERRQ(clReleaseMemObject(o_coefficientsAux));
+  CHKERRQ(clReleaseMemObject(o_jacobianInverses));
+  CHKERRQ(clReleaseMemObject(o_jacobianDeterminants));
+  CHKERRQ(clReleaseMemObject(o_elemVec));
+  CHKERRQ(clReleaseKernel(ocl_kernel));
+  CHKERRQ(clReleaseProgram(ocl_prog));
   PetscFunctionReturn(0);
 }
 
@@ -812,15 +812,15 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_OpenCL(PetscFE fem)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
-  ierr      = PetscNewLog(fem,&ocl);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(fem,&ocl));
   fem->data = ocl;
 
   /* Init Platform */
-  ierr = clGetPlatformIDs(42, platform_ids, &num_platforms);CHKERRQ(ierr);
+  CHKERRQ(clGetPlatformIDs(42, platform_ids, &num_platforms));
   PetscCheckFalse(!num_platforms,PetscObjectComm((PetscObject) fem), PETSC_ERR_SUP, "No OpenCL platform found.");
   ocl->pf_id = platform_ids[0];
   /* Init Device */
-  ierr = clGetDeviceIDs(ocl->pf_id, CL_DEVICE_TYPE_ALL, 42, device_ids, &num_devices);CHKERRQ(ierr);
+  CHKERRQ(clGetDeviceIDs(ocl->pf_id, CL_DEVICE_TYPE_ALL, 42, device_ids, &num_devices));
   PetscCheckFalse(!num_devices,PetscObjectComm((PetscObject) fem), PETSC_ERR_SUP, "No OpenCL device found.");
   ocl->dev_id = device_ids[0];
   /* Create context with one command queue */
@@ -829,11 +829,11 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_OpenCL(PetscFE fem)
   /* Types */
   ocl->realType = PETSC_FLOAT;
   /* Register events */
-  ierr = PetscLogEventRegister("OpenCL FEResidual", PETSCFE_CLASSID, &ocl->residualEvent);CHKERRQ(ierr);
+  CHKERRQ(PetscLogEventRegister("OpenCL FEResidual", PETSCFE_CLASSID, &ocl->residualEvent));
   /* Equation handling */
   ocl->op = LAPLACIAN;
 
-  ierr = PetscFEInitialize_OpenCL(fem);CHKERRQ(ierr);
+  CHKERRQ(PetscFEInitialize_OpenCL(fem));
   PetscFunctionReturn(0);
 }
 

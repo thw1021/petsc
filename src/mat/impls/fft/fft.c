@@ -11,11 +11,11 @@ PetscErrorCode MatDestroy_FFT(Mat A)
 
   PetscFunctionBegin;
   if (fft->matdestroy) {
-    ierr = (fft->matdestroy)(A);CHKERRQ(ierr);
+    CHKERRQ((fft->matdestroy)(A));
   }
-  ierr = PetscFree(fft->dim);CHKERRQ(ierr);
-  ierr = PetscFree(A->data);CHKERRQ(ierr);
-  ierr = PetscObjectChangeTypeName((PetscObject)A,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(fft->dim));
+  CHKERRQ(PetscFree(A->data));
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject)A,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -54,10 +54,10 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
   PetscValidIntPointer(dim,3);
   PetscValidPointer(A,5);
   PetscCheckFalse(ndim < 1,comm,PETSC_ERR_USER,"ndim %" PetscInt_FMT " must be > 0",ndim);
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_size(comm, &size));
 
-  ierr      = MatCreate(comm,&FFT);CHKERRQ(ierr);
-  ierr      = PetscNewLog(FFT,&fft);CHKERRQ(ierr);
+  CHKERRQ(MatCreate(comm,&FFT));
+  CHKERRQ(PetscNewLog(FFT,&fft));
   FFT->data = (void*)fft;
   N         = 1;
   for (i=0; i<ndim; i++) {
@@ -65,15 +65,15 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
     N *= dim[i];
   }
 
-  ierr = PetscMalloc1(ndim,&fft->dim);CHKERRQ(ierr);
-  ierr = PetscArraycpy(fft->dim,dim,ndim);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(ndim,&fft->dim));
+  CHKERRQ(PetscArraycpy(fft->dim,dim,ndim));
 
   fft->ndim = ndim;
   fft->n    = PETSC_DECIDE;
   fft->N    = N;
   fft->data = NULL;
 
-  ierr = MatSetType(FFT,mattype);CHKERRQ(ierr);
+  CHKERRQ(MatSetType(FFT,mattype));
 
   FFT->ops->destroy = MatDestroy_FFT;
 

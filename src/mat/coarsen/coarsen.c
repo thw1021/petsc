@@ -35,8 +35,8 @@ PetscErrorCode  MatCoarsenRegister(const char sname[],PetscErrorCode (*function)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&MatCoarsenList,sname,function);CHKERRQ(ierr);
+  CHKERRQ(MatInitializePackage());
+  CHKERRQ(PetscFunctionListAdd(&MatCoarsenList,sname,function));
   PetscFunctionReturn(0);
 }
 
@@ -103,9 +103,9 @@ PetscErrorCode  MatCoarsenApply(MatCoarsen coarser)
   PetscCheckFalse(!coarser->graph->assembled,PetscObjectComm((PetscObject)coarser),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   PetscCheckFalse(coarser->graph->factortype,PetscObjectComm((PetscObject)coarser),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   PetscCheckFalse(!coarser->ops->apply,PetscObjectComm((PetscObject)coarser),PETSC_ERR_ARG_WRONGSTATE,"Must set type with MatCoarsenSetFromOptions() or MatCoarsenSetType()");
-  ierr = PetscLogEventBegin(MAT_Coarsen,coarser,0,0,0);CHKERRQ(ierr);
-  ierr = (*coarser->ops->apply)(coarser);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(MAT_Coarsen,coarser,0,0,0);CHKERRQ(ierr);
+  CHKERRQ(PetscLogEventBegin(MAT_Coarsen,coarser,0,0,0));
+  CHKERRQ((*coarser->ops->apply)(coarser));
+  CHKERRQ(PetscLogEventEnd(MAT_Coarsen,coarser,0,0,0));
   PetscFunctionReturn(0);
 }
 
@@ -173,14 +173,14 @@ PetscErrorCode  MatCoarsenDestroy(MatCoarsen *agg)
   if (--((PetscObject)(*agg))->refct > 0) {*agg = NULL; PetscFunctionReturn(0);}
 
   if ((*agg)->ops->destroy) {
-    ierr = (*(*agg)->ops->destroy)((*agg));CHKERRQ(ierr);
+    CHKERRQ((*(*agg)->ops->destroy)((*agg)));
   }
 
   if ((*agg)->agg_lists) {
-    ierr = PetscCDDestroy((*agg)->agg_lists);CHKERRQ(ierr);
+    CHKERRQ(PetscCDDestroy((*agg)->agg_lists));
   }
 
-  ierr = PetscHeaderDestroy(agg);CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderDestroy(agg));
   PetscFunctionReturn(0);
 }
 
@@ -209,8 +209,8 @@ PetscErrorCode  MatCoarsenCreate(MPI_Comm comm, MatCoarsen *newcrs)
   PetscFunctionBegin;
   *newcrs = NULL;
 
-  ierr = MatInitializePackage();CHKERRQ(ierr);
-  ierr = PetscHeaderCreate(agg, MAT_COARSEN_CLASSID,"MatCoarsen","Matrix/graph coarsen", "MatCoarsen", comm, MatCoarsenDestroy, MatCoarsenView);CHKERRQ(ierr);
+  CHKERRQ(MatInitializePackage());
+  CHKERRQ(PetscHeaderCreate(agg, MAT_COARSEN_CLASSID,"MatCoarsen","Matrix/graph coarsen", "MatCoarsen", comm, MatCoarsenDestroy, MatCoarsenView));
 
   *newcrs = agg;
   PetscFunctionReturn(0);
@@ -235,7 +235,7 @@ PetscErrorCode  MatCoarsenViewFromOptions(MatCoarsen A,PetscObject obj,const cha
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_COARSEN_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)A,obj,name);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectViewFromOptions((PetscObject)A,obj,name));
   PetscFunctionReturn(0);
 }
 
@@ -271,17 +271,17 @@ PetscErrorCode  MatCoarsenView(MatCoarsen agg,PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(agg,MAT_COARSEN_CLASSID,1);
   if (!viewer) {
-    ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)agg),&viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)agg),&viewer));
   }
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   PetscCheckSameComm(agg,1,viewer,2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  ierr = PetscObjectPrintClassNamePrefixType((PetscObject)agg,viewer);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
+  CHKERRQ(PetscObjectPrintClassNamePrefixType((PetscObject)agg,viewer));
   if (agg->ops->view) {
-    ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = (*agg->ops->view)(agg,viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPushTab(viewer));
+    CHKERRQ((*agg->ops->view)(agg,viewer));
+    CHKERRQ(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(0);
 }
@@ -314,21 +314,21 @@ PetscErrorCode  MatCoarsenSetType(MatCoarsen coarser, MatCoarsenType type)
   PetscValidHeaderSpecific(coarser,MAT_COARSEN_CLASSID,1);
   PetscValidCharPointer(type,2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)coarser,type,&match);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)coarser,type,&match));
   if (match) PetscFunctionReturn(0);
 
   if (coarser->ops->destroy) {
-    ierr = (*coarser->ops->destroy)(coarser);CHKERRQ(ierr);
+    CHKERRQ((*coarser->ops->destroy)(coarser));
     coarser->ops->destroy = NULL;
   }
-  ierr = PetscMemzero(coarser->ops,sizeof(struct _MatCoarsenOps));CHKERRQ(ierr);
+  CHKERRQ(PetscMemzero(coarser->ops,sizeof(struct _MatCoarsenOps)));
 
-  ierr = PetscFunctionListFind(MatCoarsenList,type,&r);CHKERRQ(ierr);
+  CHKERRQ(PetscFunctionListFind(MatCoarsenList,type,&r));
   PetscCheckFalse(!r,PetscObjectComm((PetscObject)coarser),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown coarsen type %s",type);
-  ierr = (*r)(coarser);CHKERRQ(ierr);
+  CHKERRQ((*r)(coarser));
 
-  ierr = PetscFree(((PetscObject)coarser)->type_name);CHKERRQ(ierr);
-  ierr = PetscStrallocpy(type,&((PetscObject)coarser)->type_name);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(((PetscObject)coarser)->type_name));
+  CHKERRQ(PetscStrallocpy(type,&((PetscObject)coarser)->type_name));
   PetscFunctionReturn(0);
 }
 
@@ -413,21 +413,21 @@ PetscErrorCode MatCoarsenSetFromOptions(MatCoarsen coarser)
     def = ((PetscObject)coarser)->type_name;
   }
 
-  ierr = PetscOptionsFList("-mat_coarsen_type","Type of aggregator","MatCoarsenSetType",MatCoarsenList,def,type,256,&flag);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsFList("-mat_coarsen_type","Type of aggregator","MatCoarsenSetType",MatCoarsenList,def,type,256,&flag));
   if (flag) {
-    ierr = MatCoarsenSetType(coarser,type);CHKERRQ(ierr);
+    CHKERRQ(MatCoarsenSetType(coarser,type));
   }
   /*
    Set the type if it was never set.
    */
   if (!((PetscObject)coarser)->type_name) {
-    ierr = MatCoarsenSetType(coarser,def);CHKERRQ(ierr);
+    CHKERRQ(MatCoarsenSetType(coarser,def));
   }
 
   if (coarser->ops->setfromoptions) {
-    ierr = (*coarser->ops->setfromoptions)(PetscOptionsObject,coarser);CHKERRQ(ierr);
+    CHKERRQ((*coarser->ops->setfromoptions)(PetscOptionsObject,coarser));
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  ierr = MatCoarsenViewFromOptions(coarser,NULL,"-mat_coarsen_view");CHKERRQ(ierr);
+  CHKERRQ(MatCoarsenViewFromOptions(coarser,NULL,"-mat_coarsen_view"));
   PetscFunctionReturn(0);
 }

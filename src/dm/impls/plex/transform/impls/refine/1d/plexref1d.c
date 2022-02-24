@@ -8,25 +8,25 @@ static PetscErrorCode DMPlexTransformSetUp_1D(DMPlexTransform tr)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMPlexTransformGetDM(tr, &dm);CHKERRQ(ierr);
-  ierr = DMPlexTransformGetActive(tr, &active);CHKERRQ(ierr);
+  CHKERRQ(DMPlexTransformGetDM(tr, &dm));
+  CHKERRQ(DMPlexTransformGetActive(tr, &active));
   PetscCheckFalse(!active,PetscObjectComm((PetscObject) tr), PETSC_ERR_ARG_WRONGSTATE, "DMPlexTransform must have an adaptation label in order to use 1D algorithm");
   /* Calculate refineType for each cell */
-  ierr = DMLabelCreate(PETSC_COMM_SELF, "Refine Type", &tr->trType);CHKERRQ(ierr);
-  ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
+  CHKERRQ(DMLabelCreate(PETSC_COMM_SELF, "Refine Type", &tr->trType));
+  CHKERRQ(DMPlexGetChart(dm, &pStart, &pEnd));
   for (p = pStart; p < pEnd; ++p) {
     DMLabel        trType = tr->trType;
     DMPolytopeType ct;
     PetscInt       val;
 
-    ierr = DMPlexGetCellType(dm, p, &ct);CHKERRQ(ierr);
+    CHKERRQ(DMPlexGetCellType(dm, p, &ct));
     switch (ct) {
-      case DM_POLYTOPE_POINT: ierr = DMLabelSetValue(trType, p, 0);CHKERRQ(ierr); break;
+      case DM_POLYTOPE_POINT: CHKERRQ(DMLabelSetValue(trType, p, 0)); break;
       case DM_POLYTOPE_SEGMENT:
       case DM_POLYTOPE_POINT_PRISM_TENSOR:
-        ierr = DMLabelGetValue(active, p, &val);CHKERRQ(ierr);
-        if (val == 1) {ierr = DMLabelSetValue(trType, p, val);CHKERRQ(ierr);}
-        else          {ierr = DMLabelSetValue(trType, p, 2);CHKERRQ(ierr);}
+        CHKERRQ(DMLabelGetValue(active, p, &val));
+        if (val == 1) CHKERRQ(DMLabelSetValue(trType, p, val));
+        else          CHKERRQ(DMLabelSetValue(trType, p, 2));
         break;
       default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot handle points of type %s", DMPolytopeTypes[ct]);
     }
@@ -40,13 +40,13 @@ static PetscErrorCode DMPlexTransformGetSubcellOrientation_1D(DMPlexTransform tr
   PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
-  ierr = DMLabelGetValue(tr->trType, sp, &rt);CHKERRQ(ierr);
+  CHKERRQ(DMLabelGetValue(tr->trType, sp, &rt));
   *rnew = r; *onew = o;
   switch (rt) {
     case 1:
-      ierr = DMPlexTransformGetSubcellOrientation_Regular(tr, sct, sp, so, tct, r, o, rnew, onew);CHKERRQ(ierr);
+      CHKERRQ(DMPlexTransformGetSubcellOrientation_Regular(tr, sct, sp, so, tct, r, o, rnew, onew));
       break;
-    default: ierr = DMPlexTransformGetSubcellOrientationIdentity(tr, sct, sp, so, tct, r, o, rnew, onew);CHKERRQ(ierr);
+    default: CHKERRQ(DMPlexTransformGetSubcellOrientationIdentity(tr, sct, sp, so, tct, r, o, rnew, onew));
   }
   PetscFunctionReturn(0);
 }
@@ -59,16 +59,16 @@ static PetscErrorCode DMPlexTransformCellTransform_1D(DMPlexTransform tr, DMPoly
 
   PetscFunctionBeginHot;
   PetscCheckFalse(p < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point argument is invalid");
-  ierr = DMLabelGetValue(trType, p, &val);CHKERRQ(ierr);
+  CHKERRQ(DMLabelGetValue(trType, p, &val));
   if (rt) *rt = val;
   switch (source) {
     case DM_POLYTOPE_POINT:
-      ierr = DMPlexTransformCellRefine_Regular(tr, source, p, NULL, Nt, target, size, cone, ornt);CHKERRQ(ierr);
+      CHKERRQ(DMPlexTransformCellRefine_Regular(tr, source, p, NULL, Nt, target, size, cone, ornt));
       break;
     case DM_POLYTOPE_POINT_PRISM_TENSOR:
     case DM_POLYTOPE_SEGMENT:
-      if (val == 1) {ierr = DMPlexTransformCellRefine_Regular(tr, source, p, NULL, Nt, target, size, cone, ornt);CHKERRQ(ierr);}
-      else          {ierr = DMPlexTransformCellTransformIdentity(tr, source, p, NULL, Nt, target, size, cone, ornt);CHKERRQ(ierr);}
+      if (val == 1) CHKERRQ(DMPlexTransformCellRefine_Regular(tr, source, p, NULL, Nt, target, size, cone, ornt));
+      else          CHKERRQ(DMPlexTransformCellTransformIdentity(tr, source, p, NULL, Nt, target, size, cone, ornt));
       break;
     default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No refinement strategy for %s", DMPolytopeTypes[source]);
   }
@@ -83,17 +83,17 @@ static PetscErrorCode DMPlexTransformSetFromOptions_1D(PetscOptionItems *PetscOp
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
-  ierr = PetscOptionsHead(PetscOptionsObject,"DMPlex Options");CHKERRQ(ierr);
-  ierr = PetscOptionsIntArray("-dm_plex_transform_1d_ref_cell", "Mark cells for refinement", "", cells, &n, &flg);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsHead(PetscOptionsObject,"DMPlex Options"));
+  CHKERRQ(PetscOptionsIntArray("-dm_plex_transform_1d_ref_cell", "Mark cells for refinement", "", cells, &n, &flg));
   if (flg) {
     DMLabel active;
 
-    ierr = DMLabelCreate(PETSC_COMM_SELF, "Adaptation Label", &active);CHKERRQ(ierr);
-    for (i = 0; i < n; ++i) {ierr = DMLabelSetValue(active, cells[i], DM_ADAPT_REFINE);CHKERRQ(ierr);}
-    ierr = DMPlexTransformSetActive(tr, active);CHKERRQ(ierr);
-    ierr = DMLabelDestroy(&active);CHKERRQ(ierr);
+    CHKERRQ(DMLabelCreate(PETSC_COMM_SELF, "Adaptation Label", &active));
+    for (i = 0; i < n; ++i) CHKERRQ(DMLabelSetValue(active, cells[i], DM_ADAPT_REFINE));
+    CHKERRQ(DMPlexTransformSetActive(tr, active));
+    CHKERRQ(DMLabelDestroy(&active));
   }
-  ierr = PetscOptionsTail();CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsTail());
   PetscFunctionReturn(0);
 }
 
@@ -105,16 +105,16 @@ static PetscErrorCode DMPlexTransformView_1D(DMPlexTransform tr, PetscViewer vie
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
     PetscViewerFormat format;
     const char       *name;
 
-    ierr = PetscObjectGetName((PetscObject) tr, &name);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "1D refinement %s\n", name ? name : "");CHKERRQ(ierr);
-    ierr = PetscViewerGetFormat(viewer, &format);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectGetName((PetscObject) tr, &name));
+    CHKERRQ(PetscViewerASCIIPrintf(viewer, "1D refinement %s\n", name ? name : ""));
+    CHKERRQ(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
-      ierr = DMLabelView(tr->trType, viewer);CHKERRQ(ierr);
+      CHKERRQ(DMLabelView(tr->trType, viewer));
     }
   } else {
     SETERRQ(PetscObjectComm((PetscObject) tr), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMPlexTransform writing", ((PetscObject) viewer)->type_name);
@@ -127,7 +127,7 @@ static PetscErrorCode DMPlexTransformDestroy_1D(DMPlexTransform tr)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFree(tr->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(tr->data));
   PetscFunctionReturn(0);
 }
 
@@ -151,9 +151,9 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_1D(DMPlexTransform tr)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
-  ierr = PetscNewLog(tr, &f);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(tr, &f));
   tr->data = f;
 
-  ierr = DMPlexTransformInitialize_1D(tr);CHKERRQ(ierr);
+  CHKERRQ(DMPlexTransformInitialize_1D(tr));
   PetscFunctionReturn(0);
 }

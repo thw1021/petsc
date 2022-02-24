@@ -69,54 +69,54 @@ PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhs
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
 
   /* load the matrix and vector; then destroy the viewer */
-  ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
-  ierr = MatSetFromOptions(A);CHKERRQ(ierr);
-  ierr = MatLoad(A,viewer);CHKERRQ(ierr);
+  CHKERRQ(MatCreate(PETSC_COMM_WORLD,&A));
+  CHKERRQ(MatSetFromOptions(A));
+  CHKERRQ(MatLoad(A,viewer));
   switch (rhstype) {
   case RHS_FILE:
     /* Vectors in the file might a different size than the matrix so we need a
      * Vec whose size hasn't been set yet.  It'll get fixed below.  Otherwise we
      * can create the correct size Vec. */
-    ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
-    ierr = VecLoad(b,viewer);CHKERRQ(ierr);
+    CHKERRQ(VecCreate(PETSC_COMM_WORLD,&b));
+    CHKERRQ(VecLoad(b,viewer));
     break;
   case RHS_ONE:
-    ierr = MatCreateVecs(A,&b,NULL);CHKERRQ(ierr);
-    ierr = VecSet(b,1.0);CHKERRQ(ierr);
+    CHKERRQ(MatCreateVecs(A,&b,NULL));
+    CHKERRQ(VecSet(b,1.0));
     break;
   case RHS_RANDOM:
-    ierr = MatCreateVecs(A,&b,NULL);CHKERRQ(ierr);
-    ierr = VecSetRandom(b,NULL);CHKERRQ(ierr);
+    CHKERRQ(MatCreateVecs(A,&b,NULL));
+    CHKERRQ(VecSetRandom(b,NULL));
     break;
   }
-  ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerDestroy(&viewer));
 
   /* if the loaded matrix is larger than the vector (due to being padded
      to match the block size of the system), then create a new padded vector
    */
-  ierr = MatGetLocalSize(A,NULL,&n1);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(b,&n2);CHKERRQ(ierr);
+  CHKERRQ(MatGetLocalSize(A,NULL,&n1));
+  CHKERRQ(VecGetLocalSize(b,&n2));
   same = (n1 == n2)? PETSC_TRUE : PETSC_FALSE;
-  ierr = MPIU_Allreduce(MPI_IN_PLACE,&same,1,MPIU_BOOL,MPI_LAND,PETSC_COMM_WORLD);CHKERRMPI(ierr);
+  CHKERRMPI(MPIU_Allreduce(MPI_IN_PLACE,&same,1,MPIU_BOOL,MPI_LAND,PETSC_COMM_WORLD));
 
   if (!same) { /* create a new vector b by padding the old one */
-    ierr = VecCreate(PETSC_COMM_WORLD,&b2);CHKERRQ(ierr);
-    ierr = VecSetSizes(b2,n1,PETSC_DECIDE);CHKERRQ(ierr);
-    ierr = VecSetFromOptions(b2);CHKERRQ(ierr);
-    ierr = VecGetOwnershipRange(b,&start,NULL);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(b,&len);CHKERRQ(ierr);
-    ierr = VecGetArrayRead(b,&val);CHKERRQ(ierr);
+    CHKERRQ(VecCreate(PETSC_COMM_WORLD,&b2));
+    CHKERRQ(VecSetSizes(b2,n1,PETSC_DECIDE));
+    CHKERRQ(VecSetFromOptions(b2));
+    CHKERRQ(VecGetOwnershipRange(b,&start,NULL));
+    CHKERRQ(VecGetLocalSize(b,&len));
+    CHKERRQ(VecGetArrayRead(b,&val));
     for (j=0; j<len; j++) {
       idx = start+j;
-      ierr = VecSetValues(b2,1,&idx,val+j,INSERT_VALUES);CHKERRQ(ierr);
+      CHKERRQ(VecSetValues(b2,1,&idx,val+j,INSERT_VALUES));
     }
-    ierr = VecRestoreArrayRead(b,&val);CHKERRQ(ierr);
-    ierr = VecDestroy(&b);CHKERRQ(ierr);
-    ierr = VecAssemblyBegin(b2);CHKERRQ(ierr);
-    ierr = VecAssemblyEnd(b2);CHKERRQ(ierr);
+    CHKERRQ(VecRestoreArrayRead(b,&val));
+    CHKERRQ(VecDestroy(&b));
+    CHKERRQ(VecAssemblyBegin(b2));
+    CHKERRQ(VecAssemblyEnd(b2));
     b    = b2;
   }
-  ierr = VecDuplicate(b,&x);CHKERRQ(ierr);
+  CHKERRQ(VecDuplicate(b,&x));
 
   if (permute) {
     Mat Aperm;
@@ -214,9 +214,9 @@ int main(int argc,char **args)
   ierr = CreateSystem(file[0],rhstype,ordering,permute,&rowperm,&A,&b,&x);CHKERRQ(ierr);
 
   PetscPreLoadStage("KSPSetUp 0");
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  CHKERRQ(KSPCreate(PETSC_COMM_WORLD,&ksp));
+  CHKERRQ(KSPSetOperators(ksp,A,A));
+  CHKERRQ(KSPSetFromOptions(ksp));
 
   /*
     Here we explicitly call KSPSetUp() and KSPSetUpOnBlocks() to
@@ -224,12 +224,12 @@ int main(int argc,char **args)
     These calls are optional, since both will be called within
     KSPSolve() if they haven't been called already.
   */
-  ierr = KSPSetUp(ksp);CHKERRQ(ierr);
-  ierr = KSPSetUpOnBlocks(ksp);CHKERRQ(ierr);
+  CHKERRQ(KSPSetUp(ksp));
+  CHKERRQ(KSPSetUpOnBlocks(ksp));
 
   PetscPreLoadStage("KSPSolve 0");
-  if (trans) {ierr = KSPSolveTranspose(ksp,b,x);CHKERRQ(ierr);}
-  else       {ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);}
+  if (trans) CHKERRQ(KSPSolveTranspose(ksp,b,x));
+  else       CHKERRQ(KSPSolve(ksp,b,x));
 
   if (permute) {ierr = VecPermute(x,rowperm,PETSC_TRUE);CHKERRQ(ierr);}
 
@@ -254,12 +254,12 @@ int main(int argc,char **args)
     These calls are optional, since both will be called within
     KSPSolve() if they haven't been called already.
   */
-  ierr = KSPSetUp(ksp);CHKERRQ(ierr);
-  ierr = KSPSetUpOnBlocks(ksp);CHKERRQ(ierr);
+  CHKERRQ(KSPSetUp(ksp));
+  CHKERRQ(KSPSetUpOnBlocks(ksp));
 
   PetscPreLoadStage("KSPSolve 1");
-  if (trans) {ierr = KSPSolveTranspose(ksp,b,x);CHKERRQ(ierr);}
-  else       {ierr = KSPSolve(ksp,b,x);CHKERRQ(ierr);}
+  if (trans) CHKERRQ(KSPSolveTranspose(ksp,b,x));
+  else       CHKERRQ(KSPSolve(ksp,b,x));
 
   if (permute) {ierr = VecPermute(x,rowperm,PETSC_TRUE);CHKERRQ(ierr);}
 

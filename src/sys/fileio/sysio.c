@@ -212,17 +212,17 @@ PetscErrorCode PetscByteSwap(void *data,PetscDataType pdtype,PetscInt count)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if      (pdtype == PETSC_INT)    {ierr = PetscByteSwapInt((PetscInt*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_ENUM)   {ierr = PetscByteSwapEnum((PetscEnum*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_BOOL)   {ierr = PetscByteSwapBool((PetscBool*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_SCALAR) {ierr = PetscByteSwapScalar((PetscScalar*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_REAL)   {ierr = PetscByteSwapReal((PetscReal*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_COMPLEX){ierr = PetscByteSwapReal((PetscReal*)data,2*count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_INT64)  {ierr = PetscByteSwapInt64((PetscInt64*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_DOUBLE) {ierr = PetscByteSwapDouble((double*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_FLOAT)  {ierr = PetscByteSwapFloat((float*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_SHORT)  {ierr = PetscByteSwapShort((short*)data,count);CHKERRQ(ierr);}
-  else if (pdtype == PETSC_LONG)   {ierr = PetscByteSwapLong((long*)data,count);CHKERRQ(ierr);}
+  if      (pdtype == PETSC_INT)    CHKERRQ(PetscByteSwapInt((PetscInt*)data,count));
+  else if (pdtype == PETSC_ENUM)   CHKERRQ(PetscByteSwapEnum((PetscEnum*)data,count));
+  else if (pdtype == PETSC_BOOL)   CHKERRQ(PetscByteSwapBool((PetscBool*)data,count));
+  else if (pdtype == PETSC_SCALAR) CHKERRQ(PetscByteSwapScalar((PetscScalar*)data,count));
+  else if (pdtype == PETSC_REAL)   CHKERRQ(PetscByteSwapReal((PetscReal*)data,count));
+  else if (pdtype == PETSC_COMPLEX)CHKERRQ(PetscByteSwapReal((PetscReal*)data,2*count));
+  else if (pdtype == PETSC_INT64)  CHKERRQ(PetscByteSwapInt64((PetscInt64*)data,count));
+  else if (pdtype == PETSC_DOUBLE) CHKERRQ(PetscByteSwapDouble((double*)data,count));
+  else if (pdtype == PETSC_FLOAT)  CHKERRQ(PetscByteSwapFloat((float*)data,count));
+  else if (pdtype == PETSC_SHORT)  CHKERRQ(PetscByteSwapShort((short*)data,count));
+  else if (pdtype == PETSC_LONG)   CHKERRQ(PetscByteSwapLong((long*)data,count));
   PetscFunctionReturn(0);
 }
 
@@ -283,14 +283,14 @@ PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,P
   }
   if (type == PETSC_BIT_LOGICAL) m = PetscBTLength(m);
 
-  ierr = PetscDataTypeGetSize(type,&typesize);CHKERRQ(ierr);
+  CHKERRQ(PetscDataTypeGetSize(type,&typesize));
 
 #if defined(PETSC_USE_REAL___FLOAT128)
-  ierr = PetscOptionsGetBool(NULL,NULL,"-binary_read_double",&readdouble,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetBool(NULL,NULL,"-binary_read_double",&readdouble,NULL));
   /* If using __float128 precision we still read in doubles from file */
   if ((type == PETSC_REAL || type == PETSC_COMPLEX) && readdouble) {
     PetscInt cnt = num * ((type == PETSC_REAL) ? 1 : 2);
-    ierr = PetscMalloc1(cnt,&pdouble);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(cnt,&pdouble));
     p = (char*)pdouble;
     typesize /= 2;
   }
@@ -317,18 +317,18 @@ PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,P
   if ((type == PETSC_REAL || type == PETSC_COMPLEX) && readdouble) {
     PetscInt  i, cnt = num * ((type == PETSC_REAL) ? 1 : 2);
     PetscReal *preal = (PetscReal*)data;
-    if (!PetscBinaryBigEndian()) {ierr = PetscByteSwapDouble(pdouble,cnt);CHKERRQ(ierr);}
+    if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwapDouble(pdouble,cnt));
     for (i=0; i<cnt; i++) preal[i] = pdouble[i];
-    ierr = PetscFree(pdouble);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(pdouble));
     PetscFunctionReturn(0);
   }
 #endif
 
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(ptmp,type,num);CHKERRQ(ierr);}
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(ptmp,type,num));
 
   if (type == PETSC_FUNCTION) {
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
-    ierr = PetscDLSym(NULL,fname,(void**)data);CHKERRQ(ierr);
+    CHKERRQ(PetscDLSym(NULL,fname,(void**)data));
 #else
     *(void**)data = NULL;
 #endif
@@ -402,10 +402,10 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
     PetscCheckFalse(!fname,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate space for function name");
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
     PetscCheckFalse(n > 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only binary view a single function at a time");
-    ierr = PetscFPTFind(*(void**)p,&fnametmp);CHKERRQ(ierr);
-    ierr = PetscStrncpy(fname,fnametmp,m);CHKERRQ(ierr);
+    CHKERRQ(PetscFPTFind(*(void**)p,&fnametmp));
+    CHKERRQ(PetscStrncpy(fname,fnametmp,m));
 #else
-    ierr = PetscStrncpy(fname,"",m);CHKERRQ(ierr);
+    CHKERRQ(PetscStrncpy(fname,"",m));
 #endif
     wtype = PETSC_CHAR;
     pp    = (char*)fname;
@@ -413,11 +413,11 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
   }
 
 #if defined(PETSC_USE_REAL___FLOAT128)
-  ierr = PetscOptionsGetBool(NULL,NULL,"-binary_write_double",&writedouble,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsGetBool(NULL,NULL,"-binary_write_double",&writedouble,NULL));
   /* If using __float128 precision we still write in doubles to file */
   if ((type == PETSC_SCALAR || type == PETSC_REAL || type == PETSC_COMPLEX) && writedouble) {
     wtype = PETSC_DOUBLE;
-    ierr = PetscMalloc1(n,&ppp);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(n,&ppp));
     pv = (PetscReal*)pp;
     for (i=0; i<n; i++) {
       ppp[i] = (double) pv[i];
@@ -444,7 +444,7 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
   else if (wtype == PETSC_BIT_LOGICAL) m = PetscBTLength(m)*sizeof(char);
   else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Unknown type");
 
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap((void*)ptmp,wtype,n);CHKERRQ(ierr);}
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap((void*)ptmp,wtype,n));
 
   while (m) {
     wsize = (m < maxblock) ? m : maxblock;
@@ -455,14 +455,14 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
     pp += wsize;
   }
 
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap((void*)ptmp,wtype,n);CHKERRQ(ierr);}
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap((void*)ptmp,wtype,n));
 
   if (type == PETSC_FUNCTION) {
     free(fname);
   }
 #if defined(PETSC_USE_REAL___FLOAT128)
   if ((type == PETSC_SCALAR || type == PETSC_REAL || type == PETSC_COMPLEX) && writedouble) {
-    ierr = PetscFree(ppp);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(ppp));
   }
 #endif
   PetscFunctionReturn(0);
@@ -620,24 +620,24 @@ PetscErrorCode  PetscBinarySynchronizedRead(MPI_Comm comm,int fd,void *data,Pets
     PetscCheckFalse(!fname,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate space for function name");
   }
 
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(comm,&rank));
+  CHKERRMPI(MPI_Comm_size(comm,&size));
   if (rank == 0) {
     ibuf[0] = PetscBinaryRead(fd,data,num,count?&ibuf[1]:NULL,type);
   }
-  ierr = MPI_Bcast(ibuf,2,MPIU_INT,0,comm);CHKERRMPI(ierr);
-  ierr = (PetscErrorCode)ibuf[0];CHKERRQ(ierr);
+  CHKERRMPI(MPI_Bcast(ibuf,2,MPIU_INT,0,comm));
+  CHKERRQ((PetscErrorCode)ibuf[0]);
 
   /* skip MPI call on potentially huge amounts of data when running with one process; this allows the amount of data to basically unlimited in that case */
   if (size > 1) {
-    ierr = PetscDataTypeToMPIDataType(type,&mtype);CHKERRQ(ierr);
-    ierr = MPI_Bcast(data,count?ibuf[1]:num,mtype,0,comm);CHKERRMPI(ierr);
+    CHKERRQ(PetscDataTypeToMPIDataType(type,&mtype));
+    CHKERRMPI(MPI_Bcast(data,count?ibuf[1]:num,mtype,0,comm));
   }
   if (count) *count = ibuf[1];
 
   if (type == PETSC_FUNCTION) {
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
-    ierr = PetscDLLibrarySym(PETSC_COMM_SELF,&PetscDLLibrariesLoaded,NULL,fname,(void**)fptr);CHKERRQ(ierr);
+    CHKERRQ(PetscDLLibrarySym(PETSC_COMM_SELF,&PetscDLLibrariesLoaded,NULL,fname,(void**)fptr));
 #else
     *(void**)fptr = NULL;
 #endif
@@ -683,9 +683,9 @@ PetscErrorCode  PetscBinarySynchronizedWrite(MPI_Comm comm,int fd,const void *p,
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
-    ierr = PetscBinaryWrite(fd,p,n,type);CHKERRQ(ierr);
+    CHKERRQ(PetscBinaryWrite(fd,p,n,type));
   }
   PetscFunctionReturn(0);
 }
@@ -721,9 +721,9 @@ PetscErrorCode  PetscBinarySynchronizedSeek(MPI_Comm comm,int fd,off_t off,Petsc
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
-    ierr = PetscBinarySeek(fd,off,whence,offset);CHKERRQ(ierr);
+    CHKERRQ(PetscBinarySeek(fd,off,whence,offset));
   }
   PetscFunctionReturn(0);
 }
@@ -755,14 +755,14 @@ PETSC_EXTERN PetscMPIInt PetscDataRep_read_conv_fn(void *userbuf, MPI_Datatype d
   PetscMPIInt   ierr;
   size_t        dsize;
 
-  ierr = PetscMPIDataTypeToPetscDataType(datatype,&pdtype);CHKERRQ(ierr);
-  ierr = PetscDataTypeGetSize(pdtype,&dsize);CHKERRQ(ierr);
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(datatype,&pdtype));
+  CHKERRQ(PetscDataTypeGetSize(pdtype,&dsize));
 
   /* offset is given in units of MPI_Datatype */
   userbuf = ((char*)userbuf) + dsize*position;
 
-  ierr = PetscMemcpy(userbuf,filebuf,count*dsize);CHKERRQ(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(userbuf,pdtype,count);CHKERRQ(ierr);}
+  CHKERRQ(PetscMemcpy(userbuf,filebuf,count*dsize));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(userbuf,pdtype,count));
   return ierr;
 }
 
@@ -772,14 +772,14 @@ PetscMPIInt PetscDataRep_write_conv_fn(void *userbuf, MPI_Datatype datatype,Pets
   PetscMPIInt   ierr;
   size_t        dsize;
 
-  ierr = PetscMPIDataTypeToPetscDataType(datatype,&pdtype);CHKERRQ(ierr);
-  ierr = PetscDataTypeGetSize(pdtype,&dsize);CHKERRQ(ierr);
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(datatype,&pdtype));
+  CHKERRQ(PetscDataTypeGetSize(pdtype,&dsize));
 
   /* offset is given in units of MPI_Datatype */
   userbuf = ((char*)userbuf) + dsize*position;
 
-  ierr = PetscMemcpy(filebuf,userbuf,count*dsize);CHKERRQ(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(filebuf,pdtype,count);CHKERRQ(ierr);}
+  CHKERRQ(PetscMemcpy(filebuf,userbuf,count*dsize));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(filebuf,pdtype,count));
   return ierr;
 }
 #endif
@@ -790,10 +790,10 @@ PetscErrorCode MPIU_File_write_all(MPI_File fd,void *data,PetscMPIInt cnt,MPI_Da
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIDataTypeToPetscDataType(dtype,&pdtype);CHKERRQ(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
-  ierr = MPI_File_write_all(fd,data,cnt,dtype,status);CHKERRMPI(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
+  CHKERRMPI(MPI_File_write_all(fd,data,cnt,dtype,status));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
   PetscFunctionReturn(0);
 }
 
@@ -803,9 +803,9 @@ PetscErrorCode MPIU_File_read_all(MPI_File fd,void *data,PetscMPIInt cnt,MPI_Dat
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIDataTypeToPetscDataType(dtype,&pdtype);CHKERRQ(ierr);
-  ierr = MPI_File_read_all(fd,data,cnt,dtype,status);CHKERRMPI(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
+  CHKERRMPI(MPI_File_read_all(fd,data,cnt,dtype,status));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
   PetscFunctionReturn(0);
 }
 
@@ -815,10 +815,10 @@ PetscErrorCode MPIU_File_write_at(MPI_File fd,MPI_Offset off,void *data,PetscMPI
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIDataTypeToPetscDataType(dtype,&pdtype);CHKERRQ(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
-  ierr = MPI_File_write_at(fd,off,data,cnt,dtype,status);CHKERRMPI(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
+  CHKERRMPI(MPI_File_write_at(fd,off,data,cnt,dtype,status));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
   PetscFunctionReturn(0);
 }
 
@@ -828,9 +828,9 @@ PetscErrorCode MPIU_File_read_at(MPI_File fd,MPI_Offset off,void *data,PetscMPII
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIDataTypeToPetscDataType(dtype,&pdtype);CHKERRQ(ierr);
-  ierr = MPI_File_read_at(fd,off,data,cnt,dtype,status);CHKERRMPI(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
+  CHKERRMPI(MPI_File_read_at(fd,off,data,cnt,dtype,status));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
   PetscFunctionReturn(0);
 }
 
@@ -840,10 +840,10 @@ PetscErrorCode MPIU_File_write_at_all(MPI_File fd,MPI_Offset off,void *data,Pets
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIDataTypeToPetscDataType(dtype,&pdtype);CHKERRQ(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
-  ierr = MPI_File_write_at_all(fd,off,data,cnt,dtype,status);CHKERRMPI(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
+  CHKERRMPI(MPI_File_write_at_all(fd,off,data,cnt,dtype,status));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
   PetscFunctionReturn(0);
 }
 
@@ -853,9 +853,9 @@ PetscErrorCode MPIU_File_read_at_all(MPI_File fd,MPI_Offset off,void *data,Petsc
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscMPIDataTypeToPetscDataType(dtype,&pdtype);CHKERRQ(ierr);
-  ierr = MPI_File_read_at_all(fd,off,data,cnt,dtype,status);CHKERRMPI(ierr);
-  if (!PetscBinaryBigEndian()) {ierr = PetscByteSwap(data,pdtype,cnt);CHKERRQ(ierr);}
+  CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
+  CHKERRMPI(MPI_File_read_at_all(fd,off,data,cnt,dtype,status));
+  if (!PetscBinaryBigEndian()) CHKERRQ(PetscByteSwap(data,pdtype,cnt));
   PetscFunctionReturn(0);
 }
 
