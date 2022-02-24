@@ -70,7 +70,6 @@ static PetscErrorCode TSAlpha_StageVecs(TS ts,Vec X)
   PetscReal      Alpha_f = th->Alpha_f;
   PetscReal      Gamma   = th->Gamma;
   PetscReal      Beta    = th->Beta;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* A1 = ... */
@@ -95,7 +94,6 @@ static PetscErrorCode TSAlpha_StageVecs(TS ts,Vec X)
 static PetscErrorCode TSAlpha_SNESSolve(TS ts,Vec b,Vec x)
 {
   PetscInt       nits,lits;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSolve(ts->snes,b,x));
@@ -119,7 +117,6 @@ static PetscErrorCode TSAlpha_Restart(TS ts,PetscBool *initok)
   Vec            X0 = ts->vec_sol, X1, X2 = th->X1;
   Vec            V0 = ts->vec_dot, V1, V2 = th->V1;
   PetscBool      stageok;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(X0,&X1));
@@ -197,7 +194,6 @@ static PetscErrorCode TSStep_Alpha(TS ts)
   PetscInt       rejections = 0;
   PetscBool      stageok,accept = PETSC_TRUE;
   PetscReal      next_time_step = ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(citation,&cited));
@@ -261,7 +257,6 @@ static PetscErrorCode TSEvaluateWLTE_Alpha(TS ts,NormType wnormtype,PetscInt *or
   Vec            Y = th->vec_lte_work[0]; /* Y = X + LTE  */
   Vec            Z = th->vec_lte_work[1]; /* Z = V + LTE  */
   PetscReal      enormX,enormV,enormXa,enormVa,enormXr,enormVr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!th->vec_sol_prev) {*wlte = -1; PetscFunctionReturn(0);}
@@ -299,7 +294,6 @@ static PetscErrorCode TSEvaluateWLTE_Alpha(TS ts,NormType wnormtype,PetscInt *or
 static PetscErrorCode TSRollBack_Alpha(TS ts)
 {
   TS_Alpha       *th = (TS_Alpha*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(th->X0,ts->vec_sol));
@@ -331,7 +325,6 @@ static PetscErrorCode SNESTSFormFunction_Alpha(PETSC_UNUSED SNES snes,Vec X,Vec 
   TS_Alpha       *th = (TS_Alpha*)ts->data;
   PetscReal      ta = th->stage_time;
   Vec            Xa = th->Xa, Va = th->Va, Aa = th->Aa;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSAlpha_StageVecs(ts,X));
@@ -347,7 +340,6 @@ static PetscErrorCode SNESTSFormJacobian_Alpha(PETSC_UNUSED SNES snes,PETSC_UNUS
   PetscReal      ta = th->stage_time;
   Vec            Xa = th->Xa, Va = th->Va, Aa = th->Aa;
   PetscReal      dVdX = th->shift_V, dAdX = th->shift_A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* J,P = Jacobian(ta,Xa,Va,Aa) */
@@ -358,7 +350,6 @@ static PetscErrorCode SNESTSFormJacobian_Alpha(PETSC_UNUSED SNES snes,PETSC_UNUS
 static PetscErrorCode TSReset_Alpha(TS ts)
 {
   TS_Alpha       *th = (TS_Alpha*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&th->X0));
@@ -379,7 +370,6 @@ static PetscErrorCode TSReset_Alpha(TS ts)
 
 static PetscErrorCode TSDestroy_Alpha(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_Alpha(ts));
@@ -395,7 +385,6 @@ static PetscErrorCode TSSetUp_Alpha(TS ts)
 {
   TS_Alpha       *th = (TS_Alpha*)ts->data;
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(ts->vec_sol,&th->X0));
@@ -425,7 +414,6 @@ static PetscErrorCode TSSetUp_Alpha(TS ts)
 static PetscErrorCode TSSetFromOptions_Alpha(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_Alpha       *th = (TS_Alpha*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Generalized-Alpha ODE solver options"));
@@ -448,7 +436,6 @@ static PetscErrorCode TSView_Alpha(TS ts,PetscViewer viewer)
 {
   TS_Alpha       *th = (TS_Alpha*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -461,7 +448,6 @@ static PetscErrorCode TSView_Alpha(TS ts,PetscViewer viewer)
 static PetscErrorCode TSAlpha2SetRadius_Alpha(TS ts,PetscReal radius)
 {
   PetscReal      alpha_m,alpha_f,gamma,beta;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(radius < 0 || radius > 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Radius %g not in range [0,1]",(double)radius);
@@ -516,7 +502,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Alpha2(TS ts)
 {
   TS_Alpha       *th;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ts->ops->reset          = TSReset_Alpha;
@@ -575,7 +560,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha2(TS ts)
 @*/
 PetscErrorCode TSAlpha2SetRadius(TS ts,PetscReal radius)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -623,7 +607,6 @@ PetscErrorCode TSAlpha2SetRadius(TS ts,PetscReal radius)
 @*/
 PetscErrorCode TSAlpha2SetParams(TS ts,PetscReal alpha_m,PetscReal alpha_f,PetscReal gamma,PetscReal beta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -662,7 +645,6 @@ PetscErrorCode TSAlpha2SetParams(TS ts,PetscReal alpha_m,PetscReal alpha_f,Petsc
 @*/
 PetscErrorCode TSAlpha2GetParams(TS ts,PetscReal *alpha_m,PetscReal *alpha_f,PetscReal *gamma,PetscReal *beta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);

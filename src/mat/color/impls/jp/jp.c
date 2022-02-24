@@ -11,7 +11,6 @@ typedef struct {
 
 static PetscErrorCode MatColoringDestroy_JP(MatColoring mc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(mc->data));
@@ -20,7 +19,6 @@ static PetscErrorCode MatColoringDestroy_JP(MatColoring mc)
 
 static PetscErrorCode MatColoringSetFromOptions_JP(PetscOptionItems *PetscOptionsObject,MatColoring mc)
 {
-  PetscErrorCode ierr;
   MC_JP          *jp = (MC_JP*)mc->data;
 
   PetscFunctionBegin;
@@ -33,7 +31,6 @@ static PetscErrorCode MatColoringSetFromOptions_JP(PetscOptionItems *PetscOption
 static PetscErrorCode MCJPGreatestWeight_Private(MatColoring mc,const PetscReal *weights,PetscReal *maxweights)
 {
   MC_JP          *jp = (MC_JP*)mc->data;
-  PetscErrorCode ierr;
   Mat            G=mc->mat,dG,oG;
   PetscBool      isSeq,isMPI;
   Mat_MPIAIJ     *aij;
@@ -137,7 +134,6 @@ static PetscErrorCode MCJPInitialLocalColor_Private(MatColoring mc,PetscInt *lpe
 {
   PetscInt       j,i,s,e,n,bidx,cidx,idx,dist,distance=mc->dist;
   Mat            G=mc->mat,dG,oG;
-  PetscErrorCode ierr;
   PetscInt       *seen;
   PetscInt       *idxbuf;
   PetscBool      *boundary;
@@ -279,7 +275,6 @@ static PetscErrorCode MCJPInitialLocalColor_Private(MatColoring mc,PetscInt *lpe
 static PetscErrorCode MCJPMinColor_Private(MatColoring mc,ISColoringValue maxcolor,const ISColoringValue *colors,ISColoringValue *mincolors)
 {
   MC_JP          *jp = (MC_JP*)mc->data;
-  PetscErrorCode ierr;
   Mat            G=mc->mat,dG,oG;
   PetscBool      isSeq,isMPI;
   Mat_MPIAIJ     *aij;
@@ -413,7 +408,6 @@ static PetscErrorCode MCJPMinColor_Private(MatColoring mc,ISColoringValue maxcol
 
 static PetscErrorCode MatColoringApply_JP(MatColoring mc,ISColoring *iscoloring)
 {
-  PetscErrorCode  ierr;
   MC_JP          *jp = (MC_JP*)mc->data;
   PetscInt        i,nadded,nadded_total,nadded_total_old,ntotal,n,round;
   PetscInt        maxcolor_local=0,maxcolor_global = 0,*lperm;
@@ -511,7 +505,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatColoringCreate_JP(MatColoring mc)
 {
   MC_JP          *jp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(mc,&jp));

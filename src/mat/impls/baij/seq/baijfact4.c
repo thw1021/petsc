@@ -10,7 +10,6 @@ PetscErrorCode MatLUFactorNumeric_SeqBAIJ_N_inplace(Mat C,Mat A,const MatFactorI
 {
   Mat_SeqBAIJ    *a    = (Mat_SeqBAIJ*)A->data,*b = (Mat_SeqBAIJ*)C->data;
   IS             isrow = b->row,isicol = b->icol;
-  PetscErrorCode ierr;
   const PetscInt *r,*ic;
   PetscInt       i,j,n = a->mbs,*bi = b->i,*bj = b->j;
   PetscInt       *ajtmpold,*ajtmp,nz,row,*ai=a->i,*aj=a->j,k,flg;

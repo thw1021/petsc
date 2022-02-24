@@ -61,7 +61,6 @@ PetscErrorCode DMPlexInvertCell(DMPolytopeType cellType, PetscInt cone[])
 PetscErrorCode DMPlexReorderCell(DM dm, PetscInt cell, PetscInt cone[])
 {
   DMPolytopeType cellType;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetCellType(dm, cell, &cellType));
@@ -85,7 +84,6 @@ PetscErrorCode DMPlexReorderCell(DM dm, PetscInt cell, PetscInt cone[])
 PetscErrorCode DMPlexTriangleSetOptions(DM dm, const char *opts)
 {
   DM_Plex       *mesh = (DM_Plex*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -111,7 +109,6 @@ PetscErrorCode DMPlexTriangleSetOptions(DM dm, const char *opts)
 PetscErrorCode DMPlexTetgenSetOptions(DM dm, const char *opts)
 {
   DM_Plex       *mesh = (DM_Plex*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -149,7 +146,6 @@ PetscErrorCode DMPlexGenerate(DM boundary, const char name[], PetscBool interpol
   const char             *suggestions;
   PetscInt                dim;
   PetscBool               flg;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(boundary, DM_CLASSID, 1);

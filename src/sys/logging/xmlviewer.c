@@ -16,7 +16,6 @@ static int XMLSectionDepth            = 0;
 
 PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, const char *desc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!desc) {
@@ -31,7 +30,6 @@ PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, 
 /* Initialize a viewer to XML, and initialize the XMLDepth static parameter */
 PetscErrorCode PetscViewerInitASCII_XML(PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   char           PerfScript[PETSC_MAX_PATH_LEN+40];
 
@@ -48,7 +46,6 @@ PetscErrorCode PetscViewerInitASCII_XML(PetscViewer viewer)
 /* Initialize a viewer to XML, and initialize the XMLDepth static parameter */
 PetscErrorCode PetscViewerFinalASCII_XML(PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerXMLEndSection(viewer, "root"));
@@ -57,7 +54,6 @@ PetscErrorCode PetscViewerFinalASCII_XML(PetscViewer viewer)
 
 PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *name)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   XMLSectionDepth -= 2;
@@ -68,7 +64,6 @@ PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *name)
 
 PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, const char *desc, const char *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!desc) {
@@ -81,7 +76,6 @@ PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, con
 
 PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name, const char *desc, int value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!desc) {
@@ -94,7 +88,6 @@ PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name, const 
 
 PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble value, const char *format)
 {
-  PetscErrorCode ierr;
   char           buffer[1024];
 
   PetscFunctionBegin;

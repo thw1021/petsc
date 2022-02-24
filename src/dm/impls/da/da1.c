@@ -9,7 +9,6 @@
 #include <petscdraw.h>
 static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscBool      iascii,isdraw,isglvis,isbinary;
   DM_DA          *dd = (DM_DA*)da->data;
@@ -139,7 +138,6 @@ PetscErrorCode  DMSetUp_DA_1D(DM da)
   PetscBool        flg1 = PETSC_FALSE, flg2 = PETSC_FALSE;
   PetscMPIInt      rank, size;
   PetscInt         i,*idx,nn,left,xs,xe,x,Xs,Xe,start,m,IXs,IXe;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) da, &comm));
@@ -356,7 +354,6 @@ PetscErrorCode  DMSetUp_DA_1D(DM da)
 @*/
 PetscErrorCode  DMDACreate1d(MPI_Comm comm, DMBoundaryType bx, PetscInt M, PetscInt dof, PetscInt s, const PetscInt lx[], DM *da)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

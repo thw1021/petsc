@@ -59,11 +59,8 @@ PetscErrorCode TSHistoryGetNumSteps(TSHistory tsh, PetscInt *n)
 
 PetscErrorCode TSHistoryUpdate(TSHistory tsh, PetscInt id, PetscReal time)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveIntComm(tsh->comm,id,2);
-  PetscValidLogicalCollectiveRealComm(tsh->comm,time,3);
   if (tsh->n == tsh->c) { /* reallocation */
     tsh->c += tsh->s;
     CHKERRQ(PetscRealloc(tsh->c*sizeof(*tsh->hist),&tsh->hist));
@@ -91,12 +88,9 @@ PetscErrorCode TSHistoryUpdate(TSHistory tsh, PetscInt id, PetscReal time)
 PetscErrorCode TSHistoryGetTime(TSHistory tsh, PetscBool backward, PetscInt step, PetscReal *t)
 {
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveBoolComm(tsh->comm,backward,2);
-  PetscValidLogicalCollectiveIntComm(tsh->comm,step,3);
   if (!t) PetscFunctionReturn(0);
   PetscValidRealPointer(t,4);
   if (!tsh->sorted) {
-    PetscErrorCode ierr;
 
     CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
@@ -110,12 +104,9 @@ PetscErrorCode TSHistoryGetTime(TSHistory tsh, PetscBool backward, PetscInt step
 PetscErrorCode TSHistoryGetTimeStep(TSHistory tsh, PetscBool backward, PetscInt step, PetscReal *dt)
 {
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveBoolComm(tsh->comm,backward,2);
-  PetscValidLogicalCollectiveIntComm(tsh->comm,step,3);
   if (!dt) PetscFunctionReturn(0);
   PetscValidRealPointer(dt,4);
   if (!tsh->sorted) {
-    PetscErrorCode ierr;
 
     CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
@@ -128,10 +119,8 @@ PetscErrorCode TSHistoryGetTimeStep(TSHistory tsh, PetscBool backward, PetscInt 
 
 PetscErrorCode TSHistoryGetLocFromTime(TSHistory tsh, PetscReal time, PetscInt *loc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveRealComm(tsh->comm,time,2);
   PetscValidIntPointer(loc,3);
   if (!tsh->sorted) {
     CHKERRQ(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
@@ -144,10 +133,8 @@ PetscErrorCode TSHistoryGetLocFromTime(TSHistory tsh, PetscReal time, PetscInt *
 PetscErrorCode TSHistorySetHistory(TSHistory tsh, PetscInt n, PetscReal hist[], PetscInt hist_id[], PetscBool sorted)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveIntComm(tsh->comm,n,2);
   if (n < 0) SETERRQ(tsh->comm,PETSC_ERR_ARG_OUTOFRANGE,"Cannot request a negative size for history storage");
   if (n) PetscValidRealPointer(hist,3);
   CHKERRQ(PetscFree(tsh->hist));
@@ -179,7 +166,6 @@ PetscErrorCode TSHistoryGetHistory(TSHistory tsh, PetscInt *n, const PetscReal* 
 
 PetscErrorCode TSHistoryDestroy(TSHistory *tsh)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*tsh) PetscFunctionReturn(0);
@@ -194,7 +180,6 @@ PetscErrorCode TSHistoryDestroy(TSHistory *tsh)
 PetscErrorCode TSHistoryCreate(MPI_Comm comm, TSHistory *hst)
 {
   TSHistory      tsh;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(hst,2);

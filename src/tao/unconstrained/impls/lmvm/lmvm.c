@@ -9,7 +9,6 @@ static PetscErrorCode TaoSolve_LMVM(Tao tao)
   TAO_LMVM                     *lmP = (TAO_LMVM *)tao->data;
   PetscReal                    f, fold, gdx, gnorm;
   PetscReal                    step = 1.0;
-  PetscErrorCode               ierr;
   PetscInt                     stepType = LMVM_STEP_GRAD, nupdates;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
 
@@ -145,7 +144,6 @@ static PetscErrorCode TaoSetUp_LMVM(Tao tao)
 {
   TAO_LMVM       *lmP = (TAO_LMVM *)tao->data;
   PetscInt       n,N;
-  PetscErrorCode ierr;
   PetscBool      is_spd;
 
   PetscFunctionBegin;
@@ -176,7 +174,6 @@ static PetscErrorCode TaoSetUp_LMVM(Tao tao)
 static PetscErrorCode TaoDestroy_LMVM(Tao tao)
 {
   TAO_LMVM       *lmP = (TAO_LMVM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -197,7 +194,6 @@ static PetscErrorCode TaoDestroy_LMVM(Tao tao)
 static PetscErrorCode TaoSetFromOptions_LMVM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_LMVM       *lm = (TAO_LMVM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Limited-memory variable-metric method for unconstrained optimization"));
@@ -214,7 +210,6 @@ static PetscErrorCode TaoView_LMVM(Tao tao, PetscViewer viewer)
   TAO_LMVM       *lm = (TAO_LMVM *)tao->data;
   PetscBool      isascii;
   PetscInt       recycled_its;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
@@ -252,7 +247,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_LMVM(Tao tao)
 {
   TAO_LMVM       *lmP;
   const char     *morethuente_type = TAOLINESEARCHMT;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetUp_LMVM;

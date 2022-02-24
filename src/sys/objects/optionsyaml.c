@@ -28,7 +28,6 @@ static PetscErrorCode PetscParseLayerYAML(PetscOptions options, yaml_document_t 
 {
   MPI_Comm         comm = PetscYAMLGetComm();
   char             name[PETSC_MAX_OPTION_NAME] = "", prefix[PETSC_MAX_OPTION_NAME] = "";
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (node->type == YAML_SCALAR_NODE && !STR(node)[0]) PetscFunctionReturn(0); /* empty */
@@ -221,7 +220,6 @@ PetscErrorCode PetscOptionsInsertFileYAML(MPI_Comm comm,PetscOptions options,con
   char          *yamlString = NULL;
   MPI_Comm       prev;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));

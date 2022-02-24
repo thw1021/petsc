@@ -13,7 +13,6 @@ PetscErrorCode PCBDDCReuseSolversBenignAdapt(PCBDDCReuseSolvers ctx, Vec v, Vec 
 {
   PetscScalar    *array;
   PetscScalar    *array2;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ctx->benign_n) PetscFunctionReturn(0);
@@ -118,7 +117,6 @@ static PetscErrorCode PCBDDCReuseSolvers_Solve_Private(PC pc, Vec rhs, Vec sol, 
 {
   PCBDDCReuseSolvers ctx;
   PetscBool          copy = PETSC_FALSE;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc,&ctx));
@@ -194,7 +192,6 @@ static PetscErrorCode PCBDDCReuseSolvers_Solve_Private(PC pc, Vec rhs, Vec sol, 
 
 static PetscErrorCode PCBDDCReuseSolvers_Correction(PC pc, Vec rhs, Vec sol)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCReuseSolvers_Solve_Private(pc,rhs,sol,PETSC_FALSE,PETSC_TRUE));
@@ -203,7 +200,6 @@ static PetscErrorCode PCBDDCReuseSolvers_Correction(PC pc, Vec rhs, Vec sol)
 
 static PetscErrorCode PCBDDCReuseSolvers_CorrectionTranspose(PC pc, Vec rhs, Vec sol)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCReuseSolvers_Solve_Private(pc,rhs,sol,PETSC_TRUE,PETSC_TRUE));
@@ -212,7 +208,6 @@ static PetscErrorCode PCBDDCReuseSolvers_CorrectionTranspose(PC pc, Vec rhs, Vec
 
 static PetscErrorCode PCBDDCReuseSolvers_Interior(PC pc, Vec rhs, Vec sol)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCReuseSolvers_Solve_Private(pc,rhs,sol,PETSC_FALSE,PETSC_FALSE));
@@ -221,7 +216,6 @@ static PetscErrorCode PCBDDCReuseSolvers_Interior(PC pc, Vec rhs, Vec sol)
 
 static PetscErrorCode PCBDDCReuseSolvers_InteriorTranspose(PC pc, Vec rhs, Vec sol)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCReuseSolvers_Solve_Private(pc,rhs,sol,PETSC_TRUE,PETSC_FALSE));
@@ -232,7 +226,6 @@ static PetscErrorCode PCBDDCReuseSolvers_View(PC pc, PetscViewer viewer)
 {
   PCBDDCReuseSolvers ctx;
   PetscBool          iascii;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc,&ctx));
@@ -250,7 +243,6 @@ static PetscErrorCode PCBDDCReuseSolvers_View(PC pc, PetscViewer viewer)
 static PetscErrorCode PCBDDCReuseSolversReset(PCBDDCReuseSolvers reuse)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&reuse->F));
@@ -284,7 +276,6 @@ static PetscErrorCode PCBDDCComputeExplicitSchur(Mat M, PetscBool issym, MatReus
   PetscReal      fill = 2.0;
   PetscInt       n_I;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)M),&size));
@@ -1974,7 +1965,6 @@ PetscErrorCode PCBDDCSubSchursInit(PCBDDCSubSchurs sub_schurs, const char* prefi
 PetscErrorCode PCBDDCSubSchursCreate(PCBDDCSubSchurs *sub_schurs)
 {
   PCBDDCSubSchurs schurs_ctx;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&schurs_ctx));
@@ -1986,7 +1976,6 @@ PetscErrorCode PCBDDCSubSchursCreate(PCBDDCSubSchurs *sub_schurs)
 PetscErrorCode PCBDDCSubSchursReset(PCBDDCSubSchurs sub_schurs)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!sub_schurs) PetscFunctionReturn(0);
@@ -2029,7 +2018,6 @@ PetscErrorCode PCBDDCSubSchursReset(PCBDDCSubSchurs sub_schurs)
 
 PetscErrorCode PCBDDCSubSchursDestroy(PCBDDCSubSchurs* sub_schurs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCBDDCSubSchursReset(*sub_schurs));
@@ -2040,7 +2028,6 @@ PetscErrorCode PCBDDCSubSchursDestroy(PCBDDCSubSchurs* sub_schurs)
 static inline PetscErrorCode PCBDDCAdjGetNextLayer_Private(PetscInt* queue_tip,PetscInt n_prev,PetscBT touched,PetscInt* xadj,PetscInt* adjncy,PetscInt* n_added)
 {
   PetscInt       i,j,n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   n = 0;

@@ -1497,7 +1497,6 @@ PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm comm, const char filename[], D
   ego            context= NULL, model = NULL;
 #endif
   PetscBool      printModel = PETSC_FALSE, tessModel = PETSC_FALSE, newModel = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(filename, 2);

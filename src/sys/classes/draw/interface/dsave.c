@@ -40,7 +40,6 @@ PetscErrorCode  PetscDrawSetSave(PetscDraw draw,const char filename[])
   const char     *savename = NULL;
   const char     *imageext = NULL;
   char           buf[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -99,7 +98,6 @@ PetscErrorCode  PetscDrawSetSave(PetscDraw draw,const char filename[])
 PetscErrorCode  PetscDrawSetSaveMovie(PetscDraw draw,const char movieext[])
 {
 
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -141,7 +139,6 @@ PetscErrorCode  PetscDrawSetSaveMovie(PetscDraw draw,const char movieext[])
 PetscErrorCode  PetscDrawSetSaveFinalImage(PetscDraw draw,const char filename[])
 {
   char           buf[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -182,7 +179,6 @@ PetscErrorCode  PetscDrawSave(PetscDraw draw)
   unsigned int   w,h;
   unsigned char  *pixels = NULL;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -255,7 +251,6 @@ finally:
 PetscErrorCode PetscDrawSaveMovie(PetscDraw draw)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);

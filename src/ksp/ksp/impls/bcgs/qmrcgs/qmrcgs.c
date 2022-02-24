@@ -12,7 +12,6 @@
 
 static PetscErrorCode KSPSetUp_QMRCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,14));
@@ -23,7 +22,6 @@ static PetscErrorCode KSPSetUp_QMRCGS(KSP ksp)
 
 static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    eta,rho1,rho2,alpha,eta2,omega,beta,cf,cf1,uu;
   Vec            X,B,R,P,PH,V,D2,X2,S,SH,T,D,S2,RP,AX,Z;
@@ -251,7 +249,6 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_QMRCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_BCGS       *bcgs;
   static const char citations[] =
     "@article{chan1994qmrcgs,\n"

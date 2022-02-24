@@ -25,7 +25,6 @@ static PetscErrorCode zero_private(PetscInt dim, PetscReal time, const PetscReal
 @*/
 PetscErrorCode PetscConvEstDestroy(PetscConvEst *ce)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*ce) PetscFunctionReturn(0);
@@ -81,7 +80,6 @@ PetscErrorCode PetscConvEstSetFromOptions(PetscConvEst ce)
 @*/
 PetscErrorCode PetscConvEstView(PetscConvEst ce, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectPrintClassNamePrefixType((PetscObject) ce, viewer));
@@ -130,7 +128,6 @@ PetscErrorCode PetscConvEstGetSolver(PetscConvEst ce, PetscObject *solver)
 @*/
 PetscErrorCode PetscConvEstSetSolver(PetscConvEst ce, PetscObject solver)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ce, PETSC_OBJECT_CLASSID, 1);
@@ -155,7 +152,6 @@ PetscErrorCode PetscConvEstSetSolver(PetscConvEst ce, PetscObject solver)
 PetscErrorCode PetscConvEstSetUp(PetscConvEst ce)
 {
   PetscInt       Nf, f, Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetNumFields(ce->idm, &Nf));
@@ -188,7 +184,6 @@ PetscErrorCode PetscConvEstSetUp(PetscConvEst ce)
 
 PetscErrorCode PetscConvEstComputeInitialGuess(PetscConvEst ce, PetscInt r, DM dm, Vec u)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ce, PETSC_OBJECT_CLASSID, 1);
@@ -200,7 +195,6 @@ PetscErrorCode PetscConvEstComputeInitialGuess(PetscConvEst ce, PetscInt r, DM d
 
 PetscErrorCode PetscConvEstComputeError(PetscConvEst ce, PetscInt r, DM dm, Vec u, PetscReal errors[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ce, PETSC_OBJECT_CLASSID, 1);
@@ -231,7 +225,6 @@ PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst ce, PetscInt r)
 {
   MPI_Comm       comm;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ce->monitor) {
@@ -263,7 +256,6 @@ PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst ce, PetscInt r)
 static PetscErrorCode PetscConvEstSetSNES_Private(PetscConvEst ce, PetscObject solver)
 {
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetClassId(ce->solver, &id));
@@ -274,7 +266,6 @@ static PetscErrorCode PetscConvEstSetSNES_Private(PetscConvEst ce, PetscObject s
 
 static PetscErrorCode PetscConvEstInitGuessSNES_Private(PetscConvEst ce, PetscInt r, DM dm, Vec u)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMProjectFunction(dm, 0.0, ce->initGuess, ce->ctxs, INSERT_VALUES, u));
@@ -283,7 +274,6 @@ static PetscErrorCode PetscConvEstInitGuessSNES_Private(PetscConvEst ce, PetscIn
 
 static PetscErrorCode PetscConvEstComputeErrorSNES_Private(PetscConvEst ce, PetscInt r, DM dm, Vec u, PetscReal errors[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMComputeL2FieldDiff(dm, 0.0, ce->exactSol, ce->ctxs, u, errors));
@@ -294,7 +284,6 @@ static PetscErrorCode PetscConvEstSetJacobianNullspace_Private(PetscConvEst ce, 
 {
   DM             dm;
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes, &dm));
@@ -325,7 +314,6 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
   PetscReal     *x, *y, slope, intercept;
   PetscInt       Nr = ce->Nr, r, f, dim, oldlevel, oldnlev;
   void          *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ce->r != 2.0,PetscObjectComm((PetscObject) ce), PETSC_ERR_SUP, "Only refinement factor 2 is currently supported (not %g)", (double) ce->r);
@@ -484,7 +472,6 @@ based upon the exact solution in the DS, and then fit the result to our model ab
 PetscErrorCode PetscConvEstGetConvRate(PetscConvEst ce, PetscReal alpha[])
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ce->event < 0) CHKERRQ(PetscLogEventRegister("ConvEst Error", PETSC_OBJECT_CLASSID, &ce->event));
@@ -513,7 +500,6 @@ PetscErrorCode PetscConvEstGetConvRate(PetscConvEst ce, PetscReal alpha[])
 PetscErrorCode PetscConvEstRateView(PetscConvEst ce, const PetscReal alpha[], PetscViewer viewer)
 {
   PetscBool      isAscii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &isAscii));
@@ -551,7 +537,6 @@ PetscErrorCode PetscConvEstRateView(PetscConvEst ce, const PetscReal alpha[], Pe
 @*/
 PetscErrorCode PetscConvEstCreate(MPI_Comm comm, PetscConvEst *ce)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ce, 2);

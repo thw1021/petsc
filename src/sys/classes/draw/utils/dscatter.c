@@ -38,7 +38,6 @@ PetscClassId PETSC_DRAWSP_CLASSID = 0;
 PetscErrorCode  PetscDrawSPCreate(PetscDraw draw,int dim,PetscDrawSP *drawsp)
 {
   PetscDrawSP    sp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -89,7 +88,6 @@ PetscErrorCode  PetscDrawSPCreate(PetscDraw draw,int dim,PetscDrawSP *drawsp)
 @*/
 PetscErrorCode  PetscDrawSPSetDimension(PetscDrawSP sp,int dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);
@@ -144,7 +142,6 @@ PetscErrorCode  PetscDrawSPReset(PetscDrawSP sp)
 @*/
 PetscErrorCode  PetscDrawSPDestroy(PetscDrawSP *sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*sp) PetscFunctionReturn(0);
@@ -177,7 +174,6 @@ PetscErrorCode  PetscDrawSPDestroy(PetscDrawSP *sp)
 @*/
 PetscErrorCode  PetscDrawSPAddPoint(PetscDrawSP sp,PetscReal *x,PetscReal *y)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -227,7 +223,6 @@ PetscErrorCode  PetscDrawSPAddPoint(PetscDrawSP sp,PetscReal *x,PetscReal *y)
 @*/
 PetscErrorCode  PetscDrawSPAddPoints(PetscDrawSP sp,int n,PetscReal **xx,PetscReal **yy)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscReal      *x,*y;
 
@@ -284,7 +279,6 @@ PetscErrorCode  PetscDrawSPAddPoints(PetscDrawSP sp,int n,PetscReal **xx,PetscRe
 PetscErrorCode  PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
 {
   PetscReal      xmin,xmax,ymin,ymax;
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscBool      isnull;
   PetscDraw      draw;
@@ -338,7 +332,6 @@ PetscErrorCode  PetscDrawSPDraw(PetscDrawSP sp, PetscBool clear)
 @*/
 PetscErrorCode  PetscDrawSPSave(PetscDrawSP sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSC_DRAWSP_CLASSID,1);

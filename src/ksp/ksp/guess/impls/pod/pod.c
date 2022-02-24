@@ -41,7 +41,6 @@ typedef struct {
 static PetscErrorCode KSPGuessReset_POD(KSPGuess guess)
 {
   KSPGuessPOD    *pod = (KSPGuessPOD*)guess->data;
-  PetscErrorCode ierr;
   PetscLayout    Alay = NULL,vlay = NULL;
   PetscBool      cong;
 
@@ -161,7 +160,6 @@ static PetscErrorCode KSPGuessUpdate_POD(KSPGuess,Vec,Vec);
 static PetscErrorCode KSPGuessFormGuess_POD(KSPGuess guess,Vec b,Vec x)
 {
   KSPGuessPOD    *pod = (KSPGuessPOD*)guess->data;
-  PetscErrorCode ierr;
   PetscScalar    one = 1, zero = 0, *array;
   PetscBLASInt   bN,ione = 1,bNen,lierr;
   PetscInt       i;
@@ -245,7 +243,6 @@ static PetscErrorCode KSPGuessUpdate_POD(KSPGuess guess, Vec b, Vec x)
   PetscReal      toten, parten, reps = 0; /* dlamch? */
   PetscBLASInt   bN,lierr,idummy;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pod->ndots_iallreduce) goto complete_request;
@@ -444,7 +441,6 @@ static PetscErrorCode KSPGuessView_POD(KSPGuess guess,PetscViewer viewer)
 {
   KSPGuessPOD    *pod = (KSPGuessPOD*)guess->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -470,7 +466,6 @@ static PetscErrorCode KSPGuessView_POD(KSPGuess guess,PetscViewer viewer)
 PetscErrorCode KSPGuessCreate_POD(KSPGuess guess)
 {
   KSPGuessPOD    *pod;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(guess,&pod));

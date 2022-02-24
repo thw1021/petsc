@@ -2,7 +2,6 @@
 
 static PetscErrorCode DMDestroy_Product(DM dm)
 {
-  PetscErrorCode ierr;
   DM_Product     *product = (DM_Product*)dm->data;
   PetscInt       d;
 
@@ -28,7 +27,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Product(DM dm)
 {
-  PetscErrorCode ierr;
   DM_Product     *product;
   PetscInt       d;
 

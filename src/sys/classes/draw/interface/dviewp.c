@@ -26,7 +26,6 @@
 @*/
 PetscErrorCode  PetscDrawSetViewPort(PetscDraw draw,PetscReal xl,PetscReal yl,PetscReal xr,PetscReal yr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -92,7 +91,6 @@ PetscErrorCode  PetscDrawGetViewPort(PetscDraw draw,PetscReal *xl,PetscReal *yl,
 @*/
 PetscErrorCode  PetscDrawSplitViewPort(PetscDraw draw)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   PetscInt       n;
   PetscBool      isnull;
@@ -160,7 +158,6 @@ PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDra
   PetscBool          isnull;
   PetscMPIInt        rank;
   PetscReal          *xl,*xr,*yl,*yr,h;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -239,7 +236,6 @@ PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt
   PetscInt           i,j,k,n;
   PetscBool          isnull;
   PetscMPIInt        rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -309,7 +305,6 @@ PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt
 @*/
 PetscErrorCode  PetscDrawViewPortsDestroy(PetscDrawViewPorts *ports)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ports) PetscFunctionReturn(0);
@@ -338,7 +333,6 @@ PetscErrorCode  PetscDrawViewPortsDestroy(PetscDrawViewPorts *ports)
 @*/
 PetscErrorCode  PetscDrawViewPortsSet(PetscDrawViewPorts *ports,PetscInt port)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ports) PetscFunctionReturn(0);

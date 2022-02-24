@@ -13,7 +13,6 @@ static PetscErrorCode ProjWork_OWLQN(Vec w,Vec x,Vec gv,PetscReal *gdx)
 {
   const PetscReal *xptr,*gptr;
   PetscReal       *wptr;
-  PetscErrorCode  ierr;
   PetscInt        low,high,low1,high1,low2,high2,i;
 
   PetscFunctionBegin;
@@ -39,7 +38,6 @@ static PetscErrorCode ProjWork_OWLQN(Vec w,Vec x,Vec gv,PetscReal *gdx)
 static PetscErrorCode TaoLineSearchDestroy_OWArmijo(TaoLineSearch ls)
 {
   TaoLineSearch_OWARMIJO *armP = (TaoLineSearch_OWARMIJO *)ls->data;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(armP->memory));
@@ -54,7 +52,6 @@ static PetscErrorCode TaoLineSearchDestroy_OWArmijo(TaoLineSearch ls)
 static PetscErrorCode TaoLineSearchSetFromOptions_OWArmijo(PetscOptionItems *PetscOptionsObject,TaoLineSearch ls)
 {
   TaoLineSearch_OWARMIJO *armP = (TaoLineSearch_OWARMIJO *)ls->data;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"OWArmijo linesearch options"));
@@ -74,7 +71,6 @@ static PetscErrorCode TaoLineSearchView_OWArmijo(TaoLineSearch ls, PetscViewer p
 {
   TaoLineSearch_OWARMIJO *armP = (TaoLineSearch_OWARMIJO *)ls->data;
   PetscBool              isascii;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)pv, PETSCVIEWERASCII, &isascii));
@@ -121,7 +117,6 @@ static PetscErrorCode TaoLineSearchView_OWArmijo(TaoLineSearch ls, PetscViewer p
 static PetscErrorCode TaoLineSearchApply_OWArmijo(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, Vec s)
 {
   TaoLineSearch_OWARMIJO *armP = (TaoLineSearch_OWARMIJO *)ls->data;
-  PetscErrorCode         ierr;
   PetscInt               i, its=0;
   PetscReal              fact, ref, gdx;
   PetscInt               idx;
@@ -314,7 +309,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_OWArmijo(TaoLineSearch ls)
 {
   TaoLineSearch_OWARMIJO *armP;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ls,TAOLINESEARCH_CLASSID,1);

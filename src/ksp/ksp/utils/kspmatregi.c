@@ -15,7 +15,6 @@ static PetscBool KSPMatRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode KSPMatRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (KSPMatRegisterAllCalled) PetscFunctionReturn(0);

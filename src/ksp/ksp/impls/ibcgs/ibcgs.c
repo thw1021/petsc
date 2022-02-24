@@ -4,7 +4,6 @@
 
 static PetscErrorCode KSPSetUp_IBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscBool      diagonalscale;
 
   PetscFunctionBegin;
@@ -40,7 +39,6 @@ static PetscErrorCode KSPSetUp_IBCGS(KSP ksp)
 #define zn_1 zn
 static PetscErrorCode  KSPSolve_IBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,N;
   PetscReal      rnorm = 0.0,rnormin = 0.0;
 #if defined(PETSC_HAVE_MPI_LONG_DOUBLE) && !defined(PETSC_USE_COMPLEX) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
@@ -325,7 +323,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_IBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

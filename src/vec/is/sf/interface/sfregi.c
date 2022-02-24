@@ -27,7 +27,6 @@ PetscBool         PetscSFRegisterAllCalled;
 @*/
 PetscErrorCode  PetscSFRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscSFRegisterAllCalled) PetscFunctionReturn(0);
@@ -75,7 +74,6 @@ $     -sf_type my_impl
 @*/
 PetscErrorCode  PetscSFRegister(const char name[],PetscErrorCode (*create)(PetscSF))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFInitializePackage());

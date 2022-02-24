@@ -42,7 +42,6 @@ $     -ts_adapt_type my_scheme
 @*/
 PetscErrorCode  TSAdaptRegister(const char sname[],PetscErrorCode (*function)(TSAdapt))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSAdaptInitializePackage());
@@ -61,7 +60,6 @@ PetscErrorCode  TSAdaptRegister(const char sname[],PetscErrorCode (*function)(TS
 @*/
 PetscErrorCode  TSAdaptRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSAdaptRegisterAllCalled) PetscFunctionReturn(0);
@@ -85,7 +83,6 @@ PetscErrorCode  TSAdaptRegisterAll(void)
 @*/
 PetscErrorCode  TSAdaptFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TSAdaptList));
@@ -104,7 +101,6 @@ PetscErrorCode  TSAdaptFinalizePackage(void)
 @*/
 PetscErrorCode  TSAdaptInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSAdaptPackageInitialized) PetscFunctionReturn(0);
@@ -134,7 +130,7 @@ PetscErrorCode  TSAdaptInitializePackage(void)
 PetscErrorCode  TSAdaptSetType(TSAdapt adapt,TSAdaptType type)
 {
   PetscBool      match;
-  PetscErrorCode ierr,(*r)(TSAdapt);
+  PetscErrorCode (*r)(TSAdapt);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -142,7 +138,7 @@ PetscErrorCode  TSAdaptSetType(TSAdapt adapt,TSAdaptType type)
   CHKERRQ(PetscObjectTypeCompare((PetscObject)adapt,type,&match));
   if (match) PetscFunctionReturn(0);
   CHKERRQ(PetscFunctionListFind(TSAdaptList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSAdapt type \"%s\" given",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSAdapt type \"%s\" given",type);
   if (adapt->ops->destroy) CHKERRQ((*adapt->ops->destroy)(adapt));
   CHKERRQ(PetscMemzero(adapt->ops,sizeof(struct _TSAdaptOps)));
   CHKERRQ(PetscObjectChangeTypeName((PetscObject)adapt,type));
@@ -176,7 +172,6 @@ PetscErrorCode TSAdaptGetType(TSAdapt adapt,TSAdaptType *type)
 
 PetscErrorCode  TSAdaptSetOptionsPrefix(TSAdapt adapt,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -213,7 +208,6 @@ PetscErrorCode  TSAdaptSetOptionsPrefix(TSAdapt adapt,const char prefix[])
 @*/
 PetscErrorCode  TSAdaptLoad(TSAdapt adapt,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isbinary;
   char           type[256];
 
@@ -221,19 +215,16 @@ PetscErrorCode  TSAdaptLoad(TSAdapt adapt,PetscViewer viewer)
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));
-  PetscCheckFalse(!isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+  PetscCheck(isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
 
   CHKERRQ(PetscViewerBinaryRead(viewer,type,256,NULL,PETSC_CHAR));
   CHKERRQ(TSAdaptSetType(adapt,type));
-  if (adapt->ops->load) {
-    CHKERRQ((*adapt->ops->load)(adapt,viewer));
-  }
+  if (adapt->ops->load) CHKERRQ((*adapt->ops->load)(adapt,viewer));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode  TSAdaptView(TSAdapt adapt,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii,isbinary,isnone,isglee;
 
   PetscFunctionBegin;
@@ -295,7 +286,6 @@ PetscErrorCode  TSAdaptView(TSAdapt adapt,PetscViewer viewer)
 @*/
 PetscErrorCode  TSAdaptReset(TSAdapt adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -305,7 +295,6 @@ PetscErrorCode  TSAdaptReset(TSAdapt adapt)
 
 PetscErrorCode  TSAdaptDestroy(TSAdapt *adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*adapt) PetscFunctionReturn(0);
@@ -338,7 +327,6 @@ PetscErrorCode  TSAdaptDestroy(TSAdapt *adapt)
 @*/
 PetscErrorCode TSAdaptSetMonitor(TSAdapt adapt,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -429,7 +417,7 @@ PetscErrorCode TSAdaptSetSafety(TSAdapt adapt,PetscReal safety,PetscReal reject_
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
   PetscValidLogicalCollectiveReal(adapt,safety,2);
   PetscValidLogicalCollectiveReal(adapt,reject_safety,3);
-  PetscCheckFalse(safety != PETSC_DEFAULT && safety < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Safety factor %g must be non negative",(double)safety);
+  PetscCheck(safety != PETSC_DEFAULT && safety < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Safety factor %g must be non negative",(double)safety);
   PetscCheckFalse(safety != PETSC_DEFAULT && safety > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Safety factor %g must be less than one",(double)safety);
   PetscCheckFalse(reject_safety != PETSC_DEFAULT && reject_safety < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Reject safety factor %g must be non negative",(double)reject_safety);
   PetscCheckFalse(reject_safety != PETSC_DEFAULT && reject_safety > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Reject safety factor %g must be less than one",(double)reject_safety);
@@ -716,7 +704,6 @@ PetscErrorCode TSAdaptGetStepLimits(TSAdapt adapt,PetscReal *hmin,PetscReal *hma
 */
 PetscErrorCode  TSAdaptSetFromOptions(PetscOptionItems *PetscOptionsObject,TSAdapt adapt)
 {
-  PetscErrorCode ierr;
   char           type[256] = TSADAPTBASIC;
   PetscReal      safety,reject_safety,clip[2],scale,hmin,hmax;
   PetscBool      set,flg;
@@ -783,7 +770,6 @@ PetscErrorCode  TSAdaptSetFromOptions(PetscOptionItems *PetscOptionsObject,TSAda
 @*/
 PetscErrorCode TSAdaptCandidatesClear(TSAdapt adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -894,7 +880,6 @@ PetscErrorCode TSAdaptCandidatesGet(TSAdapt adapt,PetscInt *n,const PetscInt **o
 @*/
 PetscErrorCode TSAdaptChoose(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,PetscReal *next_h,PetscBool *accept)
 {
-  PetscErrorCode ierr;
   PetscInt       ncandidates = adapt->candidates.n;
   PetscInt       scheme = 0;
   PetscReal      wlte = -1.0;
@@ -994,7 +979,6 @@ PetscErrorCode TSAdaptSetTimeStepIncreaseDelay(TSAdapt adapt,PetscInt cnt)
 @*/
 PetscErrorCode TSAdaptCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec Y,PetscBool *accept)
 {
-  PetscErrorCode      ierr;
   SNESConvergedReason snesreason = SNES_CONVERGED_ITERATING;
 
   PetscFunctionBegin;
@@ -1065,7 +1049,6 @@ PetscErrorCode TSAdaptCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec Y,PetscBool
 @*/
 PetscErrorCode  TSAdaptCreate(MPI_Comm comm,TSAdapt *inadapt)
 {
-  PetscErrorCode ierr;
   TSAdapt        adapt;
 
   PetscFunctionBegin;

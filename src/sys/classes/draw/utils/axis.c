@@ -9,7 +9,6 @@
 PetscErrorCode PetscADefLabel(PetscReal val,PetscReal sep,char **p)
 {
   static char    buf[40];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Find the string */
@@ -30,7 +29,6 @@ PetscErrorCode PetscADefLabel(PetscReal val,PetscReal sep,char **p)
 /* Finds "nice" locations for the ticks */
 PetscErrorCode PetscADefTicks(PetscReal low,PetscReal high,int num,int *ntick,PetscReal *tickloc,int maxtick)
 {
-  PetscErrorCode ierr;
   int            i,power;
   PetscReal      x = 0.0,base=0.0,eps;
 
@@ -95,7 +93,6 @@ PetscErrorCode PetscCopysign(PetscReal a,PetscReal b,PetscReal *result)
 PetscErrorCode PetscAGetNice(PetscReal in,PetscReal base,int sign,PetscReal *result)
 {
   PetscReal      etmp,s,s2,m;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCopysign (0.5,(double)sign,&s));
@@ -113,7 +110,6 @@ PetscErrorCode PetscAGetBase(PetscReal vmin,PetscReal vmax,int num,PetscReal *Ba
 {
   PetscReal        base,ftemp,e10;
   static PetscReal base_try[5] = {10.0,5.0,2.0,1.0,0.5};
-  PetscErrorCode   ierr;
   int              i;
 
   PetscFunctionBegin;

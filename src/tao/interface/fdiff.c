@@ -8,7 +8,6 @@
 */
 static PetscErrorCode Fsnes(SNES snes,Vec X,Vec G,void* ctx)
 {
-  PetscErrorCode ierr;
   Tao            tao = (Tao)ctx;
 
   PetscFunctionBegin;
@@ -52,7 +51,6 @@ PetscErrorCode TaoDefaultComputeGradient(Tao tao,Vec Xin,Vec G,void *dummy)
   Vec            X;
   PetscScalar    *g;
   PetscReal      f, f2;
-  PetscErrorCode ierr;
   PetscInt       low,high,N,i;
   PetscBool      flg;
   PetscReal      h=.5*PETSC_SQRT_MACHINE_EPSILON;
@@ -116,7 +114,6 @@ PetscErrorCode TaoDefaultComputeGradient(Tao tao,Vec Xin,Vec G,void *dummy)
 @*/
 PetscErrorCode TaoDefaultComputeHessian(Tao tao,Vec V,Mat H,Mat B,void *dummy)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   DM             dm;
 
@@ -168,7 +165,6 @@ PetscErrorCode TaoDefaultComputeHessian(Tao tao,Vec V,Mat H,Mat B,void *dummy)
 @*/
 PetscErrorCode TaoDefaultComputeHessianColor(Tao tao,Vec V,Mat H,Mat B,void *ctx)
 {
-  PetscErrorCode      ierr;
   MatFDColoring       coloring = (MatFDColoring)ctx;
 
   PetscFunctionBegin;
@@ -186,7 +182,6 @@ PetscErrorCode TaoDefaultComputeHessianMFFD(Tao tao,Vec X,Mat H,Mat B,void *ctx)
 {
   PetscInt       n,N;
   PetscBool      assembled;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(B && B != H,PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Preconditioning Hessian matrix");

@@ -22,7 +22,6 @@ typedef struct {
 @*/
 PetscErrorCode PetscDualSpaceRefinedSetCellSpaces(PetscDualSpace sp, const PetscDualSpace cellSpaces[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -37,7 +36,6 @@ static PetscErrorCode PetscDualSpaceRefinedSetCellSpaces_Refined(PetscDualSpace 
   DM dm;
   PetscInt pStart, pEnd;
   PetscInt cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = sp->dm;
@@ -59,7 +57,6 @@ static PetscErrorCode PetscDualSpaceRefinedSetCellSpaces_Refined(PetscDualSpace 
 static PetscErrorCode PetscDualSpaceDestroy_Refined(PetscDualSpace sp)
 {
   PetscDualSpace_Refined *ref = (PetscDualSpace_Refined *) sp->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject) sp, "PetscDualSpaceRefinedSetCellSpaces_C", NULL));
@@ -74,7 +71,6 @@ static PetscErrorCode PetscDualSpaceSetUp_Refined(PetscDualSpace sp)
   PetscInt h;
   DM dm;
   PetscSection   section;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceGetDM(sp, &dm));
@@ -136,7 +132,6 @@ static PetscErrorCode PetscDualSpaceSetUp_Refined(PetscDualSpace sp)
 
 static PetscErrorCode PetscDualSpaceRefinedView_Ascii(PetscDualSpace sp, PetscViewer viewer)
 {
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   if (sp->dm && sp->pointSpaces) {
@@ -167,7 +162,6 @@ static PetscErrorCode PetscDualSpaceRefinedView_Ascii(PetscDualSpace sp, PetscVi
 static PetscErrorCode PetscDualSpaceView_Refined(PetscDualSpace sp, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -206,7 +200,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Refined(PetscDualSpace sp)
 {
   PetscDualSpace_Refined *ref;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);

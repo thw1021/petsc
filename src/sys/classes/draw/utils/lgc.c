@@ -75,7 +75,6 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
 {
   PetscDrawLG    sp = (PetscDrawLG)spin;
   PetscReal      xmin,xmax,ymin,ymax;
-  PetscErrorCode ierr;
   PetscBool      isnull;
   PetscMPIInt    rank;
   PetscDraw      draw;
@@ -149,7 +148,6 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
 PetscErrorCode  PetscDrawLGCreate(PetscDraw draw,PetscInt dim,PetscDrawLG *outlg)
 {
   PetscDrawLG    lg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -202,7 +200,6 @@ PetscErrorCode  PetscDrawLGCreate(PetscDraw draw,PetscInt dim,PetscDrawLG *outlg
 @*/
 PetscErrorCode  PetscDrawLGSetColors(PetscDrawLG lg,const int colors[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
@@ -233,7 +230,6 @@ PetscErrorCode  PetscDrawLGSetColors(PetscDrawLG lg,const int colors[])
 @*/
 PetscErrorCode  PetscDrawLGSetLegend(PetscDrawLG lg,const char *const *names)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -295,7 +291,6 @@ PetscErrorCode  PetscDrawLGGetDimension(PetscDrawLG lg,PetscInt *dim)
 @*/
 PetscErrorCode  PetscDrawLGSetDimension(PetscDrawLG lg,PetscInt dim)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -385,7 +380,6 @@ PetscErrorCode  PetscDrawLGReset(PetscDrawLG lg)
 @*/
 PetscErrorCode  PetscDrawLGDestroy(PetscDrawLG *lg)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -446,7 +440,6 @@ PetscErrorCode  PetscDrawLGSetUseMarkers(PetscDrawLG lg,PetscBool flg)
 PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
 {
   PetscReal      xmin,xmax,ymin,ymax;
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscDraw      draw;
   PetscBool      isnull;
@@ -519,7 +512,6 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
 @*/
 PetscErrorCode  PetscDrawLGSave(PetscDrawLG lg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
@@ -544,7 +536,6 @@ PetscErrorCode  PetscDrawLGView(PetscDrawLG lg,PetscViewer viewer)
 {
   PetscReal      xmin=lg->xmin, xmax=lg->xmax, ymin=lg->ymin, ymax=lg->ymax;
   PetscInt       i, j, dim = lg->dim, nopts = lg->nopts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
@@ -581,7 +572,6 @@ PetscErrorCode  PetscDrawLGView(PetscDrawLG lg,PetscViewer viewer)
 @*/
 PetscErrorCode  PetscDrawLGSetOptionsPrefix(PetscDrawLG lg,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
@@ -602,7 +592,6 @@ PetscErrorCode  PetscDrawLGSetOptionsPrefix(PetscDrawLG lg,const char prefix[])
 @*/
 PetscErrorCode  PetscDrawLGSetFromOptions(PetscDrawLG lg)
 {
-  PetscErrorCode      ierr;
   PetscBool           usemarkers,set;
   PetscDrawMarkerType markertype;
 

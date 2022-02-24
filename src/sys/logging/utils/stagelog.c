@@ -60,7 +60,6 @@ PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog)
 PetscErrorCode  PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
 {
   PetscBool      empty;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscIntStackEmpty(stageLog->stack, &empty));
@@ -115,7 +114,6 @@ PetscErrorCode  PetscStageLogGetEventPerfLog(PetscStageLog stageLog, int stage, 
 @*/
 PetscErrorCode  PetscStageInfoDestroy(PetscStageInfo *stageInfo)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(stageInfo->name));
@@ -139,7 +137,6 @@ PetscErrorCode  PetscStageInfoDestroy(PetscStageInfo *stageInfo)
 PetscErrorCode  PetscStageLogDestroy(PetscStageLog stageLog)
 {
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!stageLog) PetscFunctionReturn(0);
@@ -174,7 +171,6 @@ PetscErrorCode  PetscStageLogRegister(PetscStageLog stageLog, const char sname[]
 {
   PetscStageInfo *stageInfo;
   int            s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(sname,2);
@@ -247,7 +243,6 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
 {
   int            curStage = 0;
   PetscBool      empty;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
@@ -315,7 +310,6 @@ PetscErrorCode  PetscStageLogPop(PetscStageLog stageLog)
 {
   int            curStage;
   PetscBool      empty;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Record flops/time of current stage */
@@ -534,7 +528,6 @@ PetscErrorCode  PetscStageLogGetStage(PetscStageLog stageLog, const char name[],
 {
   PetscBool      match;
   int            s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,2);
@@ -565,7 +558,6 @@ PetscErrorCode  PetscStageLogGetStage(PetscStageLog stageLog, const char name[],
 PetscErrorCode  PetscStageLogCreate(PetscStageLog *stageLog)
 {
   PetscStageLog  l;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&l));

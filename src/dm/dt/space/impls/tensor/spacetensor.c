@@ -6,7 +6,6 @@ static PetscErrorCode PetscSpaceTensorCreateSubspace(PetscSpace space, PetscInt 
   const char    *prefix;
   const char    *name;
   char           subname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceGetDegree(space, &degree, NULL));
@@ -33,7 +32,6 @@ static PetscErrorCode PetscSpaceSetFromOptions_Tensor(PetscOptionItems *PetscOpt
   PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
   PetscInt           Ns, Nc, i, Nv, deg;
   PetscBool          uniform = PETSC_TRUE;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceGetNumVariables(sp, &Nv));
@@ -101,7 +99,6 @@ static PetscErrorCode PetscSpaceTensorView_Ascii(PetscSpace sp, PetscViewer v)
   PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
   PetscBool          uniform = PETSC_TRUE;
   PetscInt           Ns = tens->numTensSpaces, i, n;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   for (i = 1; i < Ns; i++) {
@@ -121,7 +118,6 @@ static PetscErrorCode PetscSpaceTensorView_Ascii(PetscSpace sp, PetscViewer v)
 static PetscErrorCode PetscSpaceView_Tensor(PetscSpace sp, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -136,7 +132,6 @@ static PetscErrorCode PetscSpaceSetUp_Tensor(PetscSpace sp)
   PetscBool          uniform = PETSC_TRUE;
   PetscInt           deg, maxDeg;
   PetscInt           Ncprod;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (tens->setupCalled) PetscFunctionReturn(0);
@@ -259,7 +254,6 @@ static PetscErrorCode PetscSpaceDestroy_Tensor(PetscSpace sp)
 {
   PetscSpace_Tensor *tens    = (PetscSpace_Tensor *) sp->data;
   PetscInt           Ns, i;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   Ns = tens->numTensSpaces;
@@ -287,7 +281,6 @@ static PetscErrorCode PetscSpaceGetDimension_Tensor(PetscSpace sp, PetscInt *dim
 {
   PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
   PetscInt           i, Ns, d;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceSetUp(sp));
@@ -312,7 +305,6 @@ static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints,
   PetscInt         Ns;
   PetscReal       *lpoints, *sB = NULL, *sD = NULL, *sH = NULL;
   PetscInt         pdim;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (!tens->setupCalled) {
@@ -465,7 +457,6 @@ static PetscErrorCode PetscSpaceEvaluate_Tensor(PetscSpace sp, PetscInt npoints,
 @*/
 PetscErrorCode PetscSpaceTensorSetNumSubspaces(PetscSpace sp, PetscInt numTensSpaces)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -488,7 +479,6 @@ PetscErrorCode PetscSpaceTensorSetNumSubspaces(PetscSpace sp, PetscInt numTensSp
 @*/
 PetscErrorCode PetscSpaceTensorGetNumSubspaces(PetscSpace sp, PetscInt *numTensSpaces)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -511,7 +501,6 @@ PetscErrorCode PetscSpaceTensorGetNumSubspaces(PetscSpace sp, PetscInt *numTensS
 @*/
 PetscErrorCode PetscSpaceTensorSetSubspace(PetscSpace sp, PetscInt s, PetscSpace subsp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -536,7 +525,6 @@ PetscErrorCode PetscSpaceTensorSetSubspace(PetscSpace sp, PetscInt s, PetscSpace
 @*/
 PetscErrorCode PetscSpaceTensorGetSubspace(PetscSpace sp, PetscInt s, PetscSpace *subsp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -549,7 +537,6 @@ static PetscErrorCode PetscSpaceTensorSetNumSubspaces_Tensor(PetscSpace space, P
 {
   PetscSpace_Tensor *tens = (PetscSpace_Tensor *) space->data;
   PetscInt           Ns;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(tens->setupCalled,PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change number of subspaces after setup called");
@@ -579,7 +566,6 @@ static PetscErrorCode PetscSpaceTensorSetSubspace_Tensor(PetscSpace space, Petsc
 {
   PetscSpace_Tensor *tens = (PetscSpace_Tensor *) space->data;
   PetscInt           Ns;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(tens->setupCalled,PetscObjectComm((PetscObject)space),PETSC_ERR_ARG_WRONGSTATE,"Cannot change subspace after setup called");
@@ -597,7 +583,6 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Tensor(PetscSpace sp, PetscInt
   PetscSpace_Tensor *tens = (PetscSpace_Tensor *) sp->data;
   PetscInt         Nc, dim, order, i;
   PetscSpace       bsp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceGetNumVariables(sp, &dim));
@@ -648,7 +633,6 @@ static PetscErrorCode PetscSpaceTensorGetSubspace_Tensor(PetscSpace space, Petsc
 
 static PetscErrorCode PetscSpaceInitialize_Tensor(PetscSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   sp->ops->setfromoptions    = PetscSpaceSetFromOptions_Tensor;
@@ -677,7 +661,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Tensor(PetscSpace sp)
 {
   PetscSpace_Tensor *tens;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);

@@ -24,7 +24,6 @@
 PetscErrorCode  VecCreate(MPI_Comm comm, Vec *vec)
 {
   Vec            v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(vec,2);

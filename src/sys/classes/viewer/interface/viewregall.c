@@ -27,7 +27,6 @@ PetscBool PetscViewerRegisterAllCalled;
 @*/
 PetscErrorCode  PetscViewerRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscViewerRegisterAllCalled) PetscFunctionReturn(0);

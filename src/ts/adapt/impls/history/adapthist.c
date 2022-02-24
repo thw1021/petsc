@@ -7,7 +7,6 @@ typedef struct {
 
 static PetscErrorCode TSAdaptChoose_History(TSAdapt adapt,TS ts,PetscReal h,PetscInt *next_sc,PetscReal *next_h,PetscBool *accept,PetscReal *wlte,PetscReal *wltea,PetscReal *wlter)
 {
-  PetscErrorCode  ierr;
   PetscInt        step;
   TSAdapt_History *thadapt = (TSAdapt_History*)adapt->data;
 
@@ -26,7 +25,6 @@ static PetscErrorCode TSAdaptChoose_History(TSAdapt adapt,TS ts,PetscReal h,Pets
 static PetscErrorCode TSAdaptReset_History(TSAdapt adapt)
 {
   TSAdapt_History *thadapt = (TSAdapt_History*)adapt->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSHistoryDestroy(&thadapt->hist));
@@ -35,7 +33,6 @@ static PetscErrorCode TSAdaptReset_History(TSAdapt adapt)
 
 static PetscErrorCode TSAdaptDestroy_History(TSAdapt adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSAdaptReset_History(adapt));
@@ -49,7 +46,6 @@ PetscErrorCode TSAdaptHistorySetTSHistory(TSAdapt adapt, TSHistory hist, PetscBo
   PetscReal      *hist_t;
   PetscInt       n;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -84,7 +80,6 @@ PetscErrorCode TSAdaptHistoryGetStep(TSAdapt adapt, PetscInt step, PetscReal *t,
 {
   TSAdapt_History *thadapt;
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -118,7 +113,6 @@ PetscErrorCode TSAdaptHistorySetHistory(TSAdapt adapt, PetscInt n, PetscReal his
 {
   TSAdapt_History *thadapt;
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -154,7 +148,6 @@ PetscErrorCode TSAdaptHistorySetHistory(TSAdapt adapt, PetscInt n, PetscReal his
 PetscErrorCode TSAdaptHistorySetTrajectory(TSAdapt adapt, TSTrajectory tj, PetscBool backward)
 {
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
@@ -175,7 +168,6 @@ PetscErrorCode TSAdaptHistorySetTrajectory(TSAdapt adapt, TSTrajectory tj, Petsc
 M*/
 PETSC_EXTERN PetscErrorCode TSAdaptCreate_History(TSAdapt adapt)
 {
-  PetscErrorCode     ierr;
   TSAdapt_History *thadapt;
 
   PetscFunctionBegin;

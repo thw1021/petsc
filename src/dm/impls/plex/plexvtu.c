@@ -26,7 +26,6 @@ typedef PetscReal PetscVTUReal;
 static PetscErrorCode TransferWrite(MPI_Comm comm, PetscViewer viewer,FILE *fp,PetscMPIInt srank,PetscMPIInt root,const void *send,void *recv,PetscMPIInt count,MPI_Datatype mpidatatype,PetscMPIInt tag)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm,&rank));
@@ -51,7 +50,6 @@ static PetscErrorCode TransferWrite(MPI_Comm comm, PetscViewer viewer,FILE *fp,P
 
 static PetscErrorCode DMPlexGetVTKConnectivity(DM dm, PetscBool localized, PieceInfo *piece,PetscVTKInt **oconn,PetscVTKInt **ooffsets,PetscVTKType **otypes)
 {
-  PetscErrorCode ierr;
   PetscSection   coordSection;
   PetscVTKInt    *conn,*offsets;
   PetscVTKType   *types;
@@ -135,7 +133,6 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm,PetscViewer viewer)
   PetscViewerVTKObjectLink link;
   FILE                     *fp;
   PetscMPIInt              rank,size,tag;
-  PetscErrorCode           ierr;
   PetscInt                 dimEmbed,cellHeight,cStart,cEnd,vStart,vEnd,numLabelCells,hasLabel,c,v,r,i;
   PetscBool                localized;
   PieceInfo                piece,*gpiece = NULL;

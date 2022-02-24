@@ -29,7 +29,6 @@
 @*/
 PetscErrorCode  PetscObjectGetNewTag(PetscObject obj,PetscMPIInt *tag)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCommGetNewTag(obj->comm,tag));
@@ -56,7 +55,6 @@ PetscErrorCode  PetscObjectGetNewTag(PetscObject obj,PetscMPIInt *tag)
 @*/
 PetscErrorCode  PetscCommGetNewTag(MPI_Comm comm,PetscMPIInt *tag)
 {
-  PetscErrorCode   ierr;
   PetscCommCounter *counter;
   PetscMPIInt      *maxval,flg;
 
@@ -108,7 +106,6 @@ Level: developer
 @*/
 PetscErrorCode  PetscCommGetComm(MPI_Comm comm_in,MPI_Comm *comm_out)
 {
-  PetscErrorCode   ierr;
   PetscCommCounter *counter;
   PetscMPIInt      flg;
 
@@ -146,7 +143,6 @@ Level: developer
 @*/
 PetscErrorCode PetscCommRestoreComm(MPI_Comm comm_in,MPI_Comm *comm_out)
 {
-  PetscErrorCode        ierr;
   PetscCommCounter      *counter;
   PetscMPIInt           flg;
   struct PetscCommStash *pcomms,*ncomm;
@@ -196,7 +192,6 @@ Level: developer
 @*/
 PetscErrorCode  PetscCommDuplicate(MPI_Comm comm_in,MPI_Comm *comm_out,PetscMPIInt *first_tag)
 {
-  PetscErrorCode   ierr;
   PetscCommCounter *counter;
   PetscMPIInt      *maxval,flg;
 
@@ -269,7 +264,6 @@ PetscErrorCode  PetscCommDuplicate(MPI_Comm comm_in,MPI_Comm *comm_out,PetscMPII
 @*/
 PetscErrorCode  PetscCommDestroy(MPI_Comm *comm)
 {
-  PetscErrorCode   ierr;
   PetscCommCounter *counter;
   PetscMPIInt      flg;
   MPI_Comm         icomm = *comm,ocomm;
@@ -329,7 +323,6 @@ PetscErrorCode  PetscCommDestroy(MPI_Comm *comm)
 @*/
 PetscErrorCode  PetscObjectsListGetGlobalNumbering(MPI_Comm comm, PetscInt len, PetscObject *objlist, PetscInt *count, PetscInt *numbering)
 {
-  PetscErrorCode ierr;
   PetscInt       i, roots, offset;
   PetscMPIInt    size, rank;
 

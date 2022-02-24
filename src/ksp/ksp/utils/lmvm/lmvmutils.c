@@ -21,7 +21,6 @@
 PetscErrorCode MatLMVMUpdate(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -62,7 +61,6 @@ PetscErrorCode MatLMVMUpdate(Mat B, Vec X, Vec F)
 PetscErrorCode MatLMVMClearJ0(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -97,7 +95,6 @@ PetscErrorCode MatLMVMClearJ0(Mat B)
 PetscErrorCode MatLMVMSetJ0Scale(Mat B, PetscReal scale)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -129,7 +126,6 @@ PetscErrorCode MatLMVMSetJ0Scale(Mat B, PetscReal scale)
 PetscErrorCode MatLMVMSetJ0Diag(Mat B, Vec V)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -178,7 +174,6 @@ PetscErrorCode MatLMVMSetJ0Diag(Mat B, Vec V)
 PetscErrorCode MatLMVMSetJ0(Mat B, Mat J0)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -218,7 +213,6 @@ PetscErrorCode MatLMVMSetJ0(Mat B, Mat J0)
 PetscErrorCode MatLMVMSetJ0PC(Mat B, PC J0pc)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -255,7 +249,6 @@ PetscErrorCode MatLMVMSetJ0PC(Mat B, PC J0pc)
 PetscErrorCode MatLMVMSetJ0KSP(Mat B, KSP J0ksp)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -291,7 +284,6 @@ PetscErrorCode MatLMVMSetJ0KSP(Mat B, KSP J0ksp)
 PetscErrorCode MatLMVMGetJ0(Mat B, Mat *J0)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -321,7 +313,6 @@ PetscErrorCode MatLMVMGetJ0(Mat B, Mat *J0)
 PetscErrorCode MatLMVMGetJ0PC(Mat B, PC *J0pc)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -355,7 +346,6 @@ PetscErrorCode MatLMVMGetJ0PC(Mat B, PC *J0pc)
 PetscErrorCode MatLMVMGetJ0KSP(Mat B, KSP *J0ksp)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -387,7 +377,6 @@ PetscErrorCode MatLMVMGetJ0KSP(Mat B, KSP *J0ksp)
 PetscErrorCode MatLMVMApplyJ0Fwd(Mat B, Vec X, Vec Y)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same, hasMult;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
   Mat               Amat, Pmat;
@@ -458,7 +447,6 @@ PetscErrorCode MatLMVMApplyJ0Fwd(Mat B, Vec X, Vec Y)
 PetscErrorCode MatLMVMApplyJ0Inv(Mat B, Vec X, Vec Y)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same, hasSolve;
   MPI_Comm          comm = PetscObjectComm((PetscObject)B);
 
@@ -519,7 +507,6 @@ PetscErrorCode MatLMVMApplyJ0Inv(Mat B, Vec X, Vec Y)
 PetscErrorCode MatLMVMIsAllocated(Mat B, PetscBool *flg)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -552,7 +539,6 @@ PetscErrorCode MatLMVMIsAllocated(Mat B, PetscBool *flg)
 PetscErrorCode MatLMVMAllocate(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -586,7 +572,6 @@ PetscErrorCode MatLMVMAllocate(Mat B, Vec X, Vec F)
 PetscErrorCode MatLMVMResetShift(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -621,7 +606,6 @@ PetscErrorCode MatLMVMResetShift(Mat B)
 PetscErrorCode MatLMVMReset(Mat B, PetscBool destructive)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -659,7 +643,6 @@ PetscErrorCode MatLMVMReset(Mat B, PetscBool destructive)
 PetscErrorCode MatLMVMSetHistorySize(Mat B, PetscInt hist_size)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
   Vec               X, F;
 
@@ -702,7 +685,6 @@ PetscErrorCode MatLMVMSetHistorySize(Mat B, PetscInt hist_size)
 PetscErrorCode MatLMVMGetUpdateCount(Mat B, PetscInt *nupdates)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;
@@ -732,7 +714,6 @@ PetscErrorCode MatLMVMGetUpdateCount(Mat B, PetscInt *nupdates)
 PetscErrorCode MatLMVMGetRejectCount(Mat B, PetscInt *nrejects)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
-  PetscErrorCode    ierr;
   PetscBool         same;
 
   PetscFunctionBegin;

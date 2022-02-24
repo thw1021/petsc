@@ -7,7 +7,6 @@ typedef struct {
 static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
 {
   SNES_KSPONLY   *ksponly = (SNES_KSPONLY*)snes->data;
-  PetscErrorCode ierr;
   PetscInt       lits;
   Vec            Y,X,F;
 
@@ -70,7 +69,6 @@ static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
 
 static PetscErrorCode SNESSetUp_KSPONLY(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSetUpMatrices(snes));
@@ -79,7 +77,6 @@ static PetscErrorCode SNESSetUp_KSPONLY(SNES snes)
 
 static PetscErrorCode SNESDestroy_KSPONLY(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(snes->data));
@@ -99,7 +96,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_KSPONLY(SNES snes)
 {
   SNES_KSPONLY   *ksponly;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   snes->ops->setup          = SNESSetUp_KSPONLY;
@@ -131,7 +127,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_KSPTRANSPOSEONLY(SNES snes)
 {
   SNES_KSPONLY   *kspo;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESCreate_KSPONLY(snes));

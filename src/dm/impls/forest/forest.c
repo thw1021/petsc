@@ -18,7 +18,6 @@ DMForestTypeLink DMForestTypeList;
 static PetscErrorCode DMForestPackageFinalize(void)
 {
   DMForestTypeLink oldLink, link = DMForestTypeList;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   while (link) {
@@ -32,7 +31,6 @@ static PetscErrorCode DMForestPackageFinalize(void)
 
 static PetscErrorCode DMForestPackageInitialize(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (DMForestPackageInitialized) PetscFunctionReturn(0);
@@ -58,7 +56,6 @@ static PetscErrorCode DMForestPackageInitialize(void)
 PetscErrorCode DMForestRegisterType(DMType name)
 {
   DMForestTypeLink link;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMForestPackageInitialize());
@@ -87,7 +84,6 @@ PetscErrorCode DMForestRegisterType(DMType name)
 PetscErrorCode DMIsForest(DM dm, PetscBool *isForest)
 {
   DMForestTypeLink link = DMForestTypeList;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   while (link) {
@@ -134,7 +130,6 @@ PetscErrorCode DMForestTemplate(DM dm, MPI_Comm comm, DM *tdm)
   void                       *ctx;
   PetscErrorCode             (*map)(DM, PetscInt, PetscInt, const PetscReal[], PetscReal[], void*);
   void                       *mapCtx;
-  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -185,7 +180,6 @@ PETSC_EXTERN PetscErrorCode DMClone_Forest(DM dm, DM *newdm)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
   const char     *type;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   forest->refct++;
@@ -199,7 +193,6 @@ PETSC_EXTERN PetscErrorCode DMClone_Forest(DM dm, DM *newdm)
 static PetscErrorCode DMDestroy_Forest(DM dm)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (--forest->refct > 0) PetscFunctionReturn(0);
@@ -234,7 +227,6 @@ static PetscErrorCode DMDestroy_Forest(DM dm)
 PetscErrorCode DMForestSetTopology(DM dm, DMForestTopology topology)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -292,7 +284,6 @@ PetscErrorCode DMForestSetBaseDM(DM dm, DM base)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
   PetscInt       dim, dimEmbed;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -395,7 +386,6 @@ PetscErrorCode DMForestSetAdaptivityForest(DM dm,DM adapt)
   DM_Forest      *forest, *adaptForest, *oldAdaptForest;
   DM             oldAdapt;
   PetscBool      isForest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -449,7 +439,6 @@ PetscErrorCode DMForestSetAdaptivityForest(DM dm,DM adapt)
 PetscErrorCode DMForestGetAdaptivityForest(DM dm, DM *adapt)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -493,7 +482,6 @@ PetscErrorCode DMForestGetAdaptivityForest(DM dm, DM *adapt)
 PetscErrorCode DMForestSetAdaptivityPurpose(DM dm, DMAdaptFlag purpose)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   forest = (DM_Forest*) dm->data;
@@ -563,7 +551,6 @@ PetscErrorCode DMForestSetAdjacencyDimension(DM dm, PetscInt adjDim)
 {
   PetscInt       dim;
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -592,7 +579,6 @@ PetscErrorCode DMForestSetAdjacencyDimension(DM dm, PetscInt adjDim)
 PetscErrorCode DMForestSetAdjacencyCodimension(DM dm, PetscInt adjCodim)
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -648,7 +634,6 @@ PetscErrorCode DMForestGetAdjacencyCodimension(DM dm, PetscInt *adjCodim)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -891,7 +876,6 @@ PetscErrorCode DMForestGetMaximumRefinement(DM dm, PetscInt *maxRefinement)
 PetscErrorCode DMForestSetAdaptivityStrategy(DM dm, DMForestAdaptivityStrategy adaptStrategy)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -952,7 +936,6 @@ PetscErrorCode DMForestGetAdaptivityStrategy(DM dm, DMForestAdaptivityStrategy *
 PetscErrorCode DMForestGetAdaptivitySuccess(DM dm, PetscBool *success)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -991,7 +974,6 @@ PetscErrorCode DMForestSetComputeAdaptivitySF(DM dm, PetscBool computeSF)
 PetscErrorCode DMForestTransferVec(DM dmIn, Vec vecIn, DM dmOut, Vec vecOut, PetscBool useBCs, PetscReal time)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dmIn   ,DM_CLASSID  ,1);
@@ -1007,7 +989,6 @@ PetscErrorCode DMForestTransferVec(DM dmIn, Vec vecIn, DM dmOut, Vec vecOut, Pet
 PetscErrorCode DMForestTransferVecFromBase(DM dm, Vec vecIn, Vec vecOut)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm   ,DM_CLASSID  ,1);
@@ -1070,7 +1051,6 @@ PetscErrorCode DMForestGetComputeAdaptivitySF(DM dm, PetscBool *computeSF)
 PetscErrorCode DMForestGetAdaptivitySF(DM dm, PetscSF *preCoarseToFine, PetscSF *coarseToPreFine)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1212,7 +1192,6 @@ PetscErrorCode DMForestGetCellWeightFactor(DM dm, PetscReal *weightsFactor)
 PetscErrorCode DMForestGetCellChart(DM dm, PetscInt *cStart, PetscInt *cEnd)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1244,7 +1223,6 @@ PetscErrorCode DMForestGetCellChart(DM dm, PetscInt *cStart, PetscInt *cEnd)
 PetscErrorCode DMForestGetCellSF(DM dm, PetscSF *cellSF)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1275,7 +1253,6 @@ PetscErrorCode DMForestGetCellSF(DM dm, PetscSF *cellSF)
 PetscErrorCode DMForestSetAdaptivityLabel(DM dm, DMLabel adaptLabel)
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -1335,7 +1312,6 @@ PetscErrorCode DMForestSetCellWeights(DM dm, PetscReal weights[], PetscCopyMode 
 {
   DM_Forest      *forest = (DM_Forest*) dm->data;
   PetscInt       cStart, cEnd;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -1453,7 +1429,6 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(PetscOptionItems *PetscOptio
   PetscInt                   adjDim, adjCodim, overlap, minRefinement, initRefinement, maxRefinement, grade;
   PetscReal                  weightsFactor;
   DMForestAdaptivityStrategy adaptStrategy;
-  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1569,7 +1544,6 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(PetscOptionItems *PetscOptio
 
 PetscErrorCode DMCreateSubDM_Forest(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (subdm) CHKERRQ(DMClone(dm, subdm));
@@ -1581,7 +1555,6 @@ PetscErrorCode DMRefine_Forest(DM dm, MPI_Comm comm, DM *dmRefined)
 {
   DMLabel        refine;
   DM             fineDM;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetFineDM(dm,&fineDM));
@@ -1607,7 +1580,6 @@ PetscErrorCode DMCoarsen_Forest(DM dm, MPI_Comm comm, DM *dmCoarsened)
 {
   DMLabel        coarsen;
   DM             coarseDM;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   {
@@ -1640,7 +1612,6 @@ PetscErrorCode DMCoarsen_Forest(DM dm, MPI_Comm comm, DM *dmCoarsened)
 PetscErrorCode DMAdaptLabel_Forest(DM dm, PETSC_UNUSED Vec metric, DMLabel label, PETSC_UNUSED DMLabel rgLabel, DM *adaptedDM)
 {
   PetscBool      success;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMForestTemplate(dm,PetscObjectComm((PetscObject)dm),adaptedDM));
@@ -1656,7 +1627,6 @@ PetscErrorCode DMAdaptLabel_Forest(DM dm, PETSC_UNUSED Vec metric, DMLabel label
 
 static PetscErrorCode DMInitialize_Forest(DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMemzero(dm->ops,sizeof(*(dm->ops))));
@@ -1691,7 +1661,6 @@ M*/
 PETSC_EXTERN PetscErrorCode DMCreate_Forest(DM dm)
 {
   DM_Forest      *forest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

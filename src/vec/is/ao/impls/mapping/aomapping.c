@@ -18,7 +18,6 @@ typedef struct {
 PetscErrorCode AODestroy_Mapping(AO ao)
 {
   AO_Mapping     *aomap = (AO_Mapping*) ao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree4(aomap->app,aomap->appPerm,aomap->petsc,aomap->petscPerm));
@@ -32,7 +31,6 @@ PetscErrorCode AOView_Mapping(AO ao, PetscViewer viewer)
   PetscMPIInt    rank;
   PetscInt       i;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)ao), &rank));
@@ -236,7 +234,6 @@ PetscErrorCode  AOCreateMapping(MPI_Comm comm,PetscInt napp,const PetscInt myapp
   PetscMPIInt    size, rank,*lens, *disp,nnapp;
   PetscInt       N, start;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(aoout,5);
@@ -349,7 +346,6 @@ PetscErrorCode  AOCreateMappingIS(IS isapp, IS ispetsc, AO *aoout)
   MPI_Comm       comm;
   const PetscInt *mypetsc, *myapp;
   PetscInt       napp, npetsc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) isapp, &comm));

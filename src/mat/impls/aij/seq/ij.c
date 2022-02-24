@@ -31,7 +31,6 @@
 */
 PetscErrorCode MatToSymmetricIJ_SeqAIJ(PetscInt m,PetscInt *ai,PetscInt *aj,PetscBool lower_triangular,PetscInt shiftin,PetscInt shiftout,PetscInt **iia,PetscInt **jja)
 {
-  PetscErrorCode ierr;
   PetscInt       *work,*ia,*ja,*j,i,nz,row,col;
 
   PetscFunctionBegin;

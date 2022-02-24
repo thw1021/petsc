@@ -53,7 +53,6 @@ const char *const PetscSFDuplicateOptions[] = {"CONFONLY","RANKS","GRAPH","Petsc
 @*/
 PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
 {
-  PetscErrorCode ierr;
   PetscSF        b;
 
   PetscFunctionBegin;
@@ -111,7 +110,6 @@ PetscErrorCode PetscSFCreate(MPI_Comm comm,PetscSF *sf)
 @*/
 PetscErrorCode PetscSFReset(PetscSF sf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -167,8 +165,8 @@ PetscErrorCode PetscSFReset(PetscSF sf)
 @*/
 PetscErrorCode PetscSFSetType(PetscSF sf,PetscSFType type)
 {
-  PetscErrorCode ierr,(*r)(PetscSF);
   PetscBool      match;
+  PetscErrorCode (*r)(PetscSF);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -225,7 +223,6 @@ PetscErrorCode PetscSFGetType(PetscSF sf, PetscSFType *type)
 @*/
 PetscErrorCode PetscSFDestroy(PetscSF *sf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*sf) PetscFunctionReturn(0);
@@ -245,7 +242,6 @@ static PetscErrorCode PetscSFCheckGraphValid_Private(PetscSF sf)
   PetscMPIInt        size;
   const PetscInt    *ilocal;
   const PetscSFNode *iremote;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   if (!sf->graphset || !PetscDefined(USE_DEBUG)) PetscFunctionReturn(0);
@@ -276,7 +272,6 @@ static PetscErrorCode PetscSFCheckGraphValid_Private(PetscSF sf)
 @*/
 PetscErrorCode PetscSFSetUp(PetscSF sf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -429,7 +424,6 @@ during setup in debug mode)
 @*/
 PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,const PetscInt *ilocal,PetscCopyMode localmode,const PetscSFNode *iremote,PetscCopyMode remotemode)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -549,7 +543,6 @@ PetscErrorCode PetscSFSetGraphWithPattern(PetscSF sf,PetscLayout map,PetscSFPatt
   PetscInt       n,N,res[2];
   PetscMPIInt    rank,size;
   PetscSFType    type;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -633,7 +626,6 @@ PetscErrorCode PetscSFSetGraphWithPattern(PetscSF sf,PetscLayout map,PetscSFPatt
 @*/
 PetscErrorCode PetscSFCreateInverseSF(PetscSF sf,PetscSF *isf)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       i,nroots,nleaves,maxlocal,count,*newilocal;
   const PetscInt *ilocal;
@@ -700,7 +692,6 @@ PetscErrorCode PetscSFCreateInverseSF(PetscSF sf,PetscSF *isf)
 PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *newsf)
 {
   PetscSFType    type;
-  PetscErrorCode ierr;
   MPI_Datatype   dtype=MPIU_SCALAR;
 
   PetscFunctionBegin;
@@ -771,7 +762,6 @@ $      if (loc(ilocal) == loc(PETSC_NULL_INTEGER)) then
 @*/
 PetscErrorCode PetscSFGetGraph(PetscSF sf,PetscInt *nroots,PetscInt *nleaves,const PetscInt **ilocal,const PetscSFNode **iremote)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -827,7 +817,6 @@ PetscErrorCode PetscSFGetLeafRange(PetscSF sf,PetscInt *minleaf,PetscInt *maxlea
 @*/
 PetscErrorCode  PetscSFViewFromOptions(PetscSF A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSCSF_CLASSID,1);
@@ -850,7 +839,6 @@ PetscErrorCode  PetscSFViewFromOptions(PetscSF A,PetscObject obj,const char name
 @*/
 PetscErrorCode PetscSFView(PetscSF sf,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -927,7 +915,6 @@ PetscErrorCode PetscSFView(PetscSF sf,PetscViewer viewer)
 @*/
 PetscErrorCode PetscSFGetRootRanks(PetscSF sf,PetscInt *nranks,const PetscMPIInt **ranks,const PetscInt **roffset,const PetscInt **rmine,const PetscInt **rremote)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -965,7 +952,6 @@ PetscErrorCode PetscSFGetRootRanks(PetscSF sf,PetscInt *nranks,const PetscMPIInt
 @*/
 PetscErrorCode PetscSFGetLeafRanks(PetscSF sf,PetscInt *niranks,const PetscMPIInt **iranks,const PetscInt **ioffset,const PetscInt **irootloc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1003,7 +989,6 @@ static PetscBool InList(PetscMPIInt needle,PetscMPIInt n,const PetscMPIInt *list
 @*/
 PetscErrorCode PetscSFSetUpRanks(PetscSF sf,MPI_Group dgroup)
 {
-  PetscErrorCode     ierr;
   PetscTable         table;
   PetscTablePosition pos;
   PetscMPIInt        size,groupsize,*groupranks;
@@ -1110,7 +1095,6 @@ PetscErrorCode PetscSFSetUpRanks(PetscSF sf,MPI_Group dgroup)
 @*/
 PetscErrorCode PetscSFGetGroups(PetscSF sf,MPI_Group *incoming,MPI_Group *outgoing)
 {
-  PetscErrorCode ierr;
   MPI_Group      group = MPI_GROUP_NULL;
 
   PetscFunctionBegin;
@@ -1178,7 +1162,6 @@ PetscErrorCode PetscSFGetGroups(PetscSF sf,MPI_Group *incoming,MPI_Group *outgoi
 @*/
 PetscErrorCode PetscSFGetMultiSF(PetscSF sf,PetscSF *multi)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1278,7 +1261,6 @@ PetscErrorCode PetscSFCreateEmbeddedRootSF(PetscSF sf,PetscInt nselected,const P
   const PetscSFNode *iremote;
   PetscSFNode       *new_iremote;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1365,7 +1347,6 @@ PetscErrorCode PetscSFCreateEmbeddedLeafSF(PetscSF sf,PetscInt nselected,const P
   const PetscInt    *ilocal;
   PetscInt          i,nroots,*leaves,*new_ilocal;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1424,7 +1405,6 @@ PetscErrorCode PetscSFCreateEmbeddedLeafSF(PetscSF sf,PetscInt nselected,const P
 @*/
 PetscErrorCode PetscSFBcastBegin(PetscSF sf,MPI_Datatype unit,const void *rootdata,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode ierr;
   PetscMemType   rootmtype,leafmtype;
 
   PetscFunctionBegin;
@@ -1460,7 +1440,6 @@ PetscErrorCode PetscSFBcastBegin(PetscSF sf,MPI_Datatype unit,const void *rootda
 @*/
 PetscErrorCode PetscSFBcastWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1491,7 +1470,6 @@ PetscErrorCode PetscSFBcastWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMe
 @*/
 PetscErrorCode PetscSFBcastEnd(PetscSF sf,MPI_Datatype unit,const void *rootdata,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1526,7 +1504,6 @@ PetscErrorCode PetscSFBcastEnd(PetscSF sf,MPI_Datatype unit,const void *rootdata
 @*/
 PetscErrorCode PetscSFReduceBegin(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode ierr;
   PetscMemType   rootmtype,leafmtype;
 
   PetscFunctionBegin;
@@ -1562,7 +1539,6 @@ PetscErrorCode PetscSFReduceBegin(PetscSF sf,MPI_Datatype unit,const void *leafd
 @*/
 PetscErrorCode PetscSFReduceWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1593,7 +1569,6 @@ PetscErrorCode PetscSFReduceWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscM
 @*/
 PetscErrorCode PetscSFReduceEnd(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1630,7 +1605,6 @@ PetscErrorCode PetscSFReduceEnd(PetscSF sf,MPI_Datatype unit,const void *leafdat
 @*/
 PetscErrorCode PetscSFFetchAndOpBegin(PetscSF sf,MPI_Datatype unit,void *rootdata,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode ierr;
   PetscMemType   rootmtype,leafmtype,leafupdatemtype;
 
   PetscFunctionBegin;
@@ -1672,7 +1646,6 @@ PetscErrorCode PetscSFFetchAndOpBegin(PetscSF sf,MPI_Datatype unit,void *rootdat
 @*/
 PetscErrorCode PetscSFFetchAndOpWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,void *rootdata,PetscMemType leafmtype,const void *leafdata,PetscMemType leafupdatemtype,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1705,7 +1678,6 @@ PetscErrorCode PetscSFFetchAndOpWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,Pe
 @*/
 PetscErrorCode PetscSFFetchAndOpEnd(PetscSF sf,MPI_Datatype unit,void *rootdata,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1735,7 +1707,6 @@ PetscErrorCode PetscSFFetchAndOpEnd(PetscSF sf,MPI_Datatype unit,void *rootdata,
 @*/
 PetscErrorCode PetscSFComputeDegreeBegin(PetscSF sf,const PetscInt **degree)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1775,7 +1746,6 @@ PetscErrorCode PetscSFComputeDegreeBegin(PetscSF sf,const PetscInt **degree)
 @*/
 PetscErrorCode PetscSFComputeDegreeEnd(PetscSF sf,const PetscInt **degree)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1816,7 +1786,6 @@ PetscErrorCode PetscSFComputeMultiRootOriginalNumbering(PetscSF sf, const PetscI
 {
   PetscSF             msf;
   PetscInt            i, j, k, nroots, nmroots;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -1857,7 +1826,6 @@ PetscErrorCode PetscSFComputeMultiRootOriginalNumbering(PetscSF sf, const PetscI
 @*/
 PetscErrorCode PetscSFGatherBegin(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *multirootdata)
 {
-  PetscErrorCode ierr;
   PetscSF        multi = NULL;
 
   PetscFunctionBegin;
@@ -1887,7 +1855,6 @@ PetscErrorCode PetscSFGatherBegin(PetscSF sf,MPI_Datatype unit,const void *leafd
 @*/
 PetscErrorCode PetscSFGatherEnd(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *multirootdata)
 {
-  PetscErrorCode ierr;
   PetscSF        multi = NULL;
 
   PetscFunctionBegin;
@@ -1916,7 +1883,6 @@ PetscErrorCode PetscSFGatherEnd(PetscSF sf,MPI_Datatype unit,const void *leafdat
 @*/
 PetscErrorCode PetscSFScatterBegin(PetscSF sf,MPI_Datatype unit,const void *multirootdata,void *leafdata)
 {
-  PetscErrorCode ierr;
   PetscSF        multi = NULL;
 
   PetscFunctionBegin;
@@ -1946,7 +1912,6 @@ PetscErrorCode PetscSFScatterBegin(PetscSF sf,MPI_Datatype unit,const void *mult
 @*/
 PetscErrorCode PetscSFScatterEnd(PetscSF sf,MPI_Datatype unit,const void *multirootdata,void *leafdata)
 {
-  PetscErrorCode ierr;
   PetscSF        multi = NULL;
 
   PetscFunctionBegin;
@@ -1961,7 +1926,6 @@ static PetscErrorCode PetscSFCheckLeavesUnique_Private(PetscSF sf)
   PetscInt        i, n, nleaves;
   const PetscInt *ilocal = NULL;
   PetscHSetI      seen;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
@@ -2003,7 +1967,6 @@ static PetscErrorCode PetscSFCheckLeavesUnique_Private(PetscSF sf)
 @*/
 PetscErrorCode PetscSFCompose(PetscSF sfA,PetscSF sfB,PetscSF *sfBA)
 {
-  PetscErrorCode    ierr;
   const PetscSFNode *remotePointsA,*remotePointsB;
   PetscSFNode       *remotePointsBA=NULL,*reorderedRemotePointsA = NULL,*leafdataB;
   const PetscInt    *localPointsA,*localPointsB;
@@ -2094,7 +2057,6 @@ PetscErrorCode PetscSFCompose(PetscSF sfA,PetscSF sfB,PetscSF *sfBA)
 @*/
 PetscErrorCode PetscSFComposeInverse(PetscSF sfA,PetscSF sfB,PetscSF *sfBA)
 {
-  PetscErrorCode    ierr;
   const PetscSFNode *remotePointsA,*remotePointsB;
   PetscSFNode       *remotePointsBA;
   const PetscInt    *localPointsA,*localPointsB;
@@ -2190,7 +2152,6 @@ PetscErrorCode PetscSFCreateLocalSF_Private(PetscSF sf,PetscSF *out)
   PetscInt           i,j,nroots,nleaves,lnleaves,*lilocal;
   PetscSFNode        *liremote;
   PetscSF            lsf;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -2227,7 +2188,6 @@ PetscErrorCode PetscSFCreateLocalSF_Private(PetscSF sf,PetscSF *out)
 /* Similar to PetscSFBcast, but only Bcast to leaves on rank 0 */
 PetscErrorCode PetscSFBcastToZero_Private(PetscSF sf,MPI_Datatype unit,const void *rootdata,void *leafdata)
 {
-  PetscErrorCode     ierr;
   PetscMemType       rootmtype,leafmtype;
 
   PetscFunctionBegin;

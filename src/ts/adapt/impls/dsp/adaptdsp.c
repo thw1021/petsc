@@ -72,7 +72,6 @@ static PetscErrorCode TSAdaptChoose_DSP(TSAdapt adapt,TS ts,PetscReal h,PetscInt
   PetscReal      safety = adapt->safety * (PetscReal)0.9;
   PetscReal      hnew,hfac = PETSC_INFINITY;
   PetscReal      hmin = adapt->dt_min*(1 + PETSC_SQRT_MACHINE_EPSILON);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *next_sc = 0;   /* Reuse the same order scheme */
@@ -175,7 +174,6 @@ static PetscErrorCode TSAdaptChoose_DSP(TSAdapt adapt,TS ts,PetscReal h,PetscInt
 
 static PetscErrorCode TSAdaptDestroy_DSP(TSAdapt adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)adapt,"TSAdaptDSPSetFilter_C",NULL));
@@ -188,7 +186,6 @@ static PetscErrorCode TSAdaptView_DSP(TSAdapt adapt,PetscViewer viewer)
 {
   TSAdapt_DSP    *dsp = (TSAdapt_DSP*)adapt->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -237,7 +234,6 @@ static PetscErrorCode TSAdaptDSPSetFilter_DSP(TSAdapt adapt,const char *name)
   PetscInt          i,count = (PetscInt)(sizeof(filterlist)/sizeof(filterlist[0]));
   struct FilterTab* tab = NULL;
   PetscBool         match;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   for (i=0; i<count; i++) {
@@ -275,7 +271,6 @@ static PetscErrorCode TSAdaptSetFromOptions_DSP(PetscOptionItems *PetscOptionsOb
   PetscReal      pid[3] = {1,0,0};
   PetscInt       i,n;
   PetscBool      set;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<count; i++) names[i] = filterlist[i].name;
@@ -329,7 +324,6 @@ static PetscErrorCode TSAdaptSetFromOptions_DSP(PetscOptionItems *PetscOptionsOb
 @*/
 PetscErrorCode TSAdaptDSPSetFilter(TSAdapt adapt,const char *name)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
   PetscValidCharPointer(name,2);
@@ -357,7 +351,6 @@ PetscErrorCode TSAdaptDSPSetFilter(TSAdapt adapt,const char *name)
 @*/
 PetscErrorCode TSAdaptDSPSetPID(TSAdapt adapt,PetscReal kkI,PetscReal kkP,PetscReal kkD)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adapt,TSADAPT_CLASSID,1);
   PetscValidLogicalCollectiveReal(adapt,kkI,2);
@@ -385,7 +378,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSAdaptCreate_DSP(TSAdapt adapt)
 {
   TSAdapt_DSP    *dsp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(adapt,&dsp));

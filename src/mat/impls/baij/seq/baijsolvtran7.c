@@ -5,7 +5,6 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_7_inplace(Mat A,Vec bb,Vec xx)
 {
   Mat_SeqBAIJ       *a   =(Mat_SeqBAIJ*)A->data;
   IS                iscol=a->col,isrow=a->row;
-  PetscErrorCode    ierr;
   const PetscInt    *r,*c,*rout,*cout;
   const PetscInt    *diag=a->diag,n=a->mbs,*vi,*ai=a->i,*aj=a->j;
   PetscInt          i,nz,idx,idt,ii,ic,ir,oidx;
@@ -114,7 +113,6 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_7_inplace(Mat A,Vec bb,Vec xx)
 PetscErrorCode MatSolveTranspose_SeqBAIJ_7(Mat A,Vec bb,Vec xx)
 {
   Mat_SeqBAIJ       *a=(Mat_SeqBAIJ*)A->data;
-  PetscErrorCode    ierr;
   IS                iscol=a->col,isrow=a->row;
   const PetscInt    n    =a->mbs,*vi,*ai=a->i,*aj=a->j,*diag=a->diag;
   const PetscInt    *r,*c,*rout,*cout;

@@ -3,7 +3,6 @@
 
 static PetscErrorCode DMSNESDestroy(DMSNES *kdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*kdm) PetscFunctionReturn(0);
@@ -16,7 +15,6 @@ static PetscErrorCode DMSNESDestroy(DMSNES *kdm)
 
 PetscErrorCode DMSNESLoad(DMSNES kdm,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryRead(viewer,&kdm->ops->computefunction,1,NULL,PETSC_FUNCTION));
@@ -26,7 +24,6 @@ PetscErrorCode DMSNESLoad(DMSNES kdm,PetscViewer viewer)
 
 PetscErrorCode DMSNESView(DMSNES kdm,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isascii,isbinary;
 
   PetscFunctionBegin;
@@ -62,7 +59,6 @@ PetscErrorCode DMSNESView(DMSNES kdm,PetscViewer viewer)
 
 static PetscErrorCode DMSNESCreate(MPI_Comm comm,DMSNES *kdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESInitializePackage());
@@ -75,7 +71,6 @@ static PetscErrorCode DMSNESCreate(MPI_Comm comm,DMSNES *kdm)
  */
 static PetscErrorCode DMCoarsenHook_DMSNES(DM dm,DM dmc,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCopyDMSNES(dm,dmc));
@@ -94,7 +89,6 @@ static PetscErrorCode DMRestrictHook_DMSNES(DM dm,Mat Restrict,Vec rscale,Mat In
 /* Attaches the DMSNES to the subdomain. */
 static PetscErrorCode DMSubDomainHook_DMSNES(DM dm,DM subdm,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCopyDMSNES(dm,subdm));
@@ -112,7 +106,6 @@ static PetscErrorCode DMSubDomainRestrictHook_DMSNES(DM dm,VecScatter gscat,VecS
 
 static PetscErrorCode DMRefineHook_DMSNES(DM dm,DM dmf,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCopyDMSNES(dm,dmf));
@@ -143,7 +136,6 @@ static PetscErrorCode DMInterpolateHook_DMSNES(DM dm,Mat Interp,DM dmf,void *ctx
 @*/
 PetscErrorCode DMSNESCopy(DMSNES kdm,DMSNES nkdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(kdm,DMSNES_CLASSID,1);
@@ -195,7 +187,6 @@ PetscErrorCode DMSNESCopy(DMSNES kdm,DMSNES nkdm)
 @*/
 PetscErrorCode DMGetDMSNES(DM dm,DMSNES *snesdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -230,7 +221,6 @@ PetscErrorCode DMGetDMSNES(DM dm,DMSNES *snesdm)
 @*/
 PetscErrorCode DMGetDMSNESWrite(DM dm,DMSNES *snesdm)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -268,7 +258,6 @@ PetscErrorCode DMGetDMSNESWrite(DM dm,DMSNES *snesdm)
 @*/
 PetscErrorCode DMCopyDMSNES(DM dmsrc,DM dmdest)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dmsrc,DM_CLASSID,1);
@@ -302,7 +291,6 @@ PetscErrorCode DMCopyDMSNES(DM dmsrc,DM dmdest)
 @*/
 PetscErrorCode DMSNESSetFunction(DM dm,PetscErrorCode (*f)(SNES,Vec,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -330,7 +318,6 @@ PetscErrorCode DMSNESSetFunction(DM dm,PetscErrorCode (*f)(SNES,Vec,Vec,void*),v
 @*/
 PetscErrorCode DMSNESSetMFFunction(DM dm,PetscErrorCode (*f)(SNES,Vec,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -365,7 +352,6 @@ PetscErrorCode DMSNESSetMFFunction(DM dm,PetscErrorCode (*f)(SNES,Vec,Vec,void*)
 @*/
 PetscErrorCode DMSNESGetFunction(DM dm,PetscErrorCode (**f)(SNES,Vec,Vec,void*),void **ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -392,7 +378,6 @@ PetscErrorCode DMSNESGetFunction(DM dm,PetscErrorCode (**f)(SNES,Vec,Vec,void*),
 @*/
 PetscErrorCode DMSNESSetObjective(DM dm,PetscErrorCode (*obj)(SNES,Vec,PetscReal*,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -427,7 +412,6 @@ PetscErrorCode DMSNESSetObjective(DM dm,PetscErrorCode (*obj)(SNES,Vec,PetscReal
 @*/
 PetscErrorCode DMSNESGetObjective(DM dm,PetscErrorCode (**obj)(SNES,Vec,PetscReal*,void*),void **ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -459,7 +443,6 @@ PetscErrorCode DMSNESGetObjective(DM dm,PetscErrorCode (**obj)(SNES,Vec,PetscRea
 @*/
 PetscErrorCode DMSNESSetNGS(DM dm,PetscErrorCode (*f)(SNES,Vec,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -495,7 +478,6 @@ PetscErrorCode DMSNESSetNGS(DM dm,PetscErrorCode (*f)(SNES,Vec,Vec,void*),void *
 @*/
 PetscErrorCode DMSNESGetNGS(DM dm,PetscErrorCode (**f)(SNES,Vec,Vec,void*),void **ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -527,7 +509,6 @@ PetscErrorCode DMSNESGetNGS(DM dm,PetscErrorCode (**f)(SNES,Vec,Vec,void*),void 
 @*/
 PetscErrorCode DMSNESSetJacobian(DM dm,PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -563,7 +544,6 @@ PetscErrorCode DMSNESSetJacobian(DM dm,PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void
 @*/
 PetscErrorCode DMSNESGetJacobian(DM dm,PetscErrorCode (**J)(SNES,Vec,Mat,Mat,void*),void **ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -591,7 +571,6 @@ PetscErrorCode DMSNESGetJacobian(DM dm,PetscErrorCode (**J)(SNES,Vec,Mat,Mat,voi
 @*/
 PetscErrorCode DMSNESSetPicard(DM dm,PetscErrorCode (*b)(SNES,Vec,Vec,void*),PetscErrorCode (*J)(SNES,Vec,Mat,Mat,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;
@@ -622,7 +601,6 @@ PetscErrorCode DMSNESSetPicard(DM dm,PetscErrorCode (*b)(SNES,Vec,Vec,void*),Pet
 @*/
 PetscErrorCode DMSNESGetPicard(DM dm,PetscErrorCode (**b)(SNES,Vec,Vec,void*),PetscErrorCode (**J)(SNES,Vec,Mat,Mat,void*),void **ctx)
 {
-  PetscErrorCode ierr;
   DMSNES         sdm;
 
   PetscFunctionBegin;

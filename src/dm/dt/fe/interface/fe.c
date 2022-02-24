@@ -89,7 +89,6 @@ PetscBool         PetscFERegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode PetscFERegister(const char sname[], PetscErrorCode (*function)(PetscFE))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&PetscFEList, sname, function));
@@ -116,7 +115,6 @@ PetscErrorCode PetscFESetType(PetscFE fem, PetscFEType name)
 {
   PetscErrorCode (*r)(PetscFE);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -153,7 +151,6 @@ PetscErrorCode PetscFESetType(PetscFE fem, PetscFEType name)
 @*/
 PetscErrorCode PetscFEGetType(PetscFE fem, PetscFEType *name)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -180,7 +177,6 @@ PetscErrorCode PetscFEGetType(PetscFE fem, PetscFEType *name)
 @*/
 PetscErrorCode  PetscFEViewFromOptions(PetscFE A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSCFE_CLASSID,1);
@@ -204,7 +200,6 @@ PetscErrorCode  PetscFEViewFromOptions(PetscFE A,PetscObject obj,const char name
 PetscErrorCode PetscFEView(PetscFE fem, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -281,7 +276,6 @@ PetscErrorCode PetscFESetFromOptions(PetscFE fem)
 @*/
 PetscErrorCode PetscFESetUp(PetscFE fem)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -307,7 +301,6 @@ PetscErrorCode PetscFESetUp(PetscFE fem)
 @*/
 PetscErrorCode PetscFEDestroy(PetscFE *fem)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*fem) PetscFunctionReturn(0);
@@ -359,7 +352,6 @@ PetscErrorCode PetscFEDestroy(PetscFE *fem)
 PetscErrorCode PetscFECreate(MPI_Comm comm, PetscFE *fem)
 {
   PetscFE        f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(fem, 2);
@@ -406,7 +398,6 @@ PetscErrorCode PetscFECreate(MPI_Comm comm, PetscFE *fem)
 PetscErrorCode PetscFEGetSpatialDimension(PetscFE fem, PetscInt *dim)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -560,7 +551,6 @@ PetscErrorCode PetscFEGetBasisSpace(PetscFE fem, PetscSpace *sp)
 @*/
 PetscErrorCode PetscFESetBasisSpace(PetscFE fem, PetscSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -610,7 +600,6 @@ PetscErrorCode PetscFEGetDualSpace(PetscFE fem, PetscDualSpace *sp)
 @*/
 PetscErrorCode PetscFESetDualSpace(PetscFE fem, PetscDualSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -661,7 +650,6 @@ PetscErrorCode PetscFEGetQuadrature(PetscFE fem, PetscQuadrature *q)
 PetscErrorCode PetscFESetQuadrature(PetscFE fem, PetscQuadrature q)
 {
   PetscInt       Nc, qNc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -717,7 +705,6 @@ PetscErrorCode PetscFEGetFaceQuadrature(PetscFE fem, PetscQuadrature *q)
 PetscErrorCode PetscFESetFaceQuadrature(PetscFE fem, PetscQuadrature q)
 {
   PetscInt       Nc, qNc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -747,7 +734,6 @@ PetscErrorCode PetscFESetFaceQuadrature(PetscFE fem, PetscQuadrature q)
 PetscErrorCode PetscFECopyQuadrature(PetscFE sfe, PetscFE tfe)
 {
   PetscQuadrature q;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sfe, PETSCFE_CLASSID, 1);
@@ -776,7 +762,6 @@ PetscErrorCode PetscFECopyQuadrature(PetscFE sfe, PetscFE tfe)
 @*/
 PetscErrorCode PetscFEGetNumDof(PetscFE fem, const PetscInt **numDof)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -810,7 +795,6 @@ PetscErrorCode PetscFEGetCellTabulation(PetscFE fem, PetscInt k, PetscTabulation
 {
   PetscInt         npoints;
   const PetscReal *points;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -845,7 +829,6 @@ $ T->T[2] = Hf[((((f*Nq + q)*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at
 @*/
 PetscErrorCode PetscFEGetFaceTabulation(PetscFE fem, PetscInt k, PetscTabulation *Tf)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -903,7 +886,6 @@ $ T->T[0] = Bf[(f*pdim + i)*Nc + c] is the value at point f for basis function i
 @*/
 PetscErrorCode PetscFEGetFaceCentroidTabulation(PetscFE fem, PetscTabulation *Tc)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -961,7 +943,6 @@ PetscErrorCode PetscFECreateTabulation(PetscFE fem, PetscInt nrepl, PetscInt npo
   PetscInt         Nc;   /* Field components */
   PetscInt         cdim; /* Reference coordinate dimension */
   PetscInt         k;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (!npoints || !fem->dualSpace || K < 0) {
@@ -1017,7 +998,6 @@ $ T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p f
 @*/
 PetscErrorCode PetscFEComputeTabulation(PetscFE fem, PetscInt npoints, const PetscReal points[], PetscInt K, PetscTabulation T)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   if (!npoints || !fem->dualSpace || K < 0) PetscFunctionReturn(0);
@@ -1062,7 +1042,6 @@ PetscErrorCode PetscFEComputeTabulation(PetscFE fem, PetscInt npoints, const Pet
 PetscErrorCode PetscTabulationDestroy(PetscTabulation *T)
 {
   PetscInt       k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(T, 1);
@@ -1085,7 +1064,6 @@ PETSC_EXTERN PetscErrorCode PetscFECreatePointTrace(PetscFE fe, PetscInt refPoin
   PetscReal      *xi, *v, *J, detJ;
   const char     *name;
   PetscQuadrature origin, fullQuad, subQuad;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fe,PETSCFE_CLASSID,1);
@@ -1142,7 +1120,6 @@ PetscErrorCode PetscFECreateHeightTrace(PetscFE fe, PetscInt height, PetscFE *tr
   PetscInt       hStart, hEnd;
   PetscDualSpace dsp;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fe,PETSCFE_CLASSID,1);
@@ -1173,7 +1150,6 @@ PetscErrorCode PetscFECreateHeightTrace(PetscFE fe, PetscInt height, PetscFE *tr
 @*/
 PetscErrorCode PetscFEGetDimension(PetscFE fem, PetscInt *dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -1204,7 +1180,6 @@ PetscErrorCode PetscFEGetDimension(PetscFE fem, PetscInt *dim)
 @*/
 PetscErrorCode PetscFEPushforward(PetscFE fe, PetscFEGeom *fegeom, PetscInt Nv, PetscScalar vals[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(PetscDualSpacePushforward(fe->dualSpace, fegeom, Nv, fe->numComponents, vals));
@@ -1233,7 +1208,6 @@ PetscErrorCode PetscFEPushforward(PetscFE fe, PetscFEGeom *fegeom, PetscInt Nv, 
 @*/
 PetscErrorCode PetscFEPushforwardGradient(PetscFE fe, PetscFEGeom *fegeom, PetscInt Nv, PetscScalar vals[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(PetscDualSpacePushforwardGradient(fe->dualSpace, fegeom, Nv, fe->numComponents, vals));
@@ -1262,7 +1236,6 @@ PetscErrorCode PetscFEPushforwardGradient(PetscFE fe, PetscFEGeom *fegeom, Petsc
 @*/
 PetscErrorCode PetscFEPushforwardHessian(PetscFE fe, PetscFEGeom *fegeom, PetscInt Nv, PetscScalar vals[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(PetscDualSpacePushforwardHessian(fe->dualSpace, fegeom, Nv, fe->numComponents, vals));
@@ -1382,7 +1355,6 @@ PetscErrorCode PetscFEIntegrate(PetscDS prob, PetscInt field, PetscInt Ne, Petsc
                                 const PetscScalar coefficients[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscScalar integral[])
 {
   PetscFE        fe;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
@@ -1421,7 +1393,6 @@ PetscErrorCode PetscFEIntegrateBd(PetscDS prob, PetscInt field,
                                   PetscInt Ne, PetscFEGeom *geom, const PetscScalar coefficients[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscScalar integral[])
 {
   PetscFE        fe;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
@@ -1465,7 +1436,6 @@ PetscErrorCode PetscFEIntegrateResidual(PetscDS ds, PetscFormKey key, PetscInt N
                                         const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
@@ -1502,7 +1472,6 @@ PetscErrorCode PetscFEIntegrateBdResidual(PetscDS ds, PetscWeakForm wf, PetscFor
                                           const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
@@ -1539,7 +1508,6 @@ PetscErrorCode PetscFEIntegrateHybridResidual(PetscDS prob, PetscFormKey key, Pe
                                               const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscDS probAux, const PetscScalar coefficientsAux[], PetscReal t, PetscScalar elemVec[])
 {
   PetscFE        fe;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
@@ -1588,7 +1556,6 @@ PetscErrorCode PetscFEIntegrateJacobian(PetscDS ds, PetscFEJacobianType jtype, P
 {
   PetscFE        fe;
   PetscInt       Nf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
@@ -1637,7 +1604,6 @@ PetscErrorCode PetscFEIntegrateBdJacobian(PetscDS ds, PetscWeakForm wf, PetscFor
 {
   PetscFE        fe;
   PetscInt       Nf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
@@ -1687,7 +1653,6 @@ PetscErrorCode PetscFEIntegrateHybridJacobian(PetscDS ds, PetscFEJacobianType jt
 {
   PetscFE        fe;
   PetscInt       Nf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
@@ -1720,7 +1685,6 @@ PetscErrorCode PetscFEGetHeightSubspace(PetscFE fe, PetscInt height, PetscFE *su
   PetscQuadrature subq;
   PetscFEType     fetype;
   PetscInt        dim, Nc;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fe, PETSCFE_CLASSID, 1);
@@ -1791,7 +1755,6 @@ PetscErrorCode PetscFERefine(PetscFE fe, PetscFE *feRef)
   PetscInt         numComp, numSubelements;
   PetscInt         cStart, cEnd, c;
   PetscDualSpace  *cellSpaces;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFEGetBasisSpace(fe, &P));
@@ -1950,7 +1913,6 @@ PetscErrorCode PetscFECreateLagrange(MPI_Comm comm, PetscInt dim, PetscInt Nc, P
   PetscInt        quadPointsPerEdge;
   PetscBool       tensor = isSimplex ? PETSC_FALSE : PETSC_TRUE;
   char            name[64];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Create space */
@@ -2019,7 +1981,6 @@ PetscErrorCode PetscFESetName(PetscFE fe, const char name[])
 {
   PetscSpace     P;
   PetscDualSpace Q;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFEGetBasisSpace(fe, &P));
@@ -2033,7 +1994,6 @@ PetscErrorCode PetscFESetName(PetscFE fe, const char name[])
 PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscInt r, PetscInt q, PetscTabulation T[], PetscFEGeom *fegeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscScalar u[], PetscScalar u_x[], PetscScalar u_t[])
 {
   PetscInt       dOffset = 0, fOffset = 0, f, g;
-  PetscErrorCode ierr;
 
   for (f = 0; f < Nf; ++f) {
     PetscFE          fe;
@@ -2092,7 +2052,6 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
 PetscErrorCode PetscFEEvaluateFieldJets_Hybrid_Internal(PetscDS ds, PetscInt Nf, PetscInt r, PetscInt q, PetscTabulation T[], PetscFEGeom *fegeom, const PetscScalar coefficients[], const PetscScalar coefficients_t[], PetscScalar u[], PetscScalar u_x[], PetscScalar u_t[])
 {
   PetscInt       dOffset = 0, fOffset = 0, f, g;
-  PetscErrorCode ierr;
 
   /* f is the field number in the DS, g is the field number in u[] */
   for (f = 0, g = 0; f < Nf; ++f) {
@@ -2148,7 +2107,6 @@ PetscErrorCode PetscFEEvaluateFaceFields_Internal(PetscDS prob, PetscInt field, 
   PetscFE         fe;
   PetscTabulation Tc;
   PetscInt        b, c;
-  PetscErrorCode  ierr;
 
   if (!prob) return 0;
   CHKERRQ(PetscDSGetDiscretization(prob, field, (PetscObject *) &fe));
@@ -2179,7 +2137,6 @@ PetscErrorCode PetscFEUpdateElementVec_Internal(PetscFE fe, PetscTabulation T, P
   const PetscReal *basis    = &T->T[0][r*Nq*Nb*Nc];
   const PetscReal *basisDer = &T->T[1][r*Nq*Nb*Nc*dEt];
   PetscInt         q, b, c, d;
-  PetscErrorCode   ierr;
 
   for (q = 0; q < Nq; ++q) {
     for (b = 0; b < Nb; ++b) {
@@ -2216,7 +2173,6 @@ PetscErrorCode PetscFEUpdateElementVec_Hybrid_Internal(PetscFE fe, PetscTabulati
   const PetscReal *basis    = &T->T[0][r*Nq*Nb*Nc];
   const PetscReal *basisDer = &T->T[1][r*Nq*Nb*Nc*dE];
   PetscInt         q, b, c, d;
-  PetscErrorCode   ierr;
 
   for (q = 0; q < Nq; ++q) {
     for (b = 0; b < Nb; ++b) {
@@ -2256,7 +2212,6 @@ PetscErrorCode PetscFEUpdateElementMat_Internal(PetscFE feI, PetscFE feJ, PetscI
   const PetscReal *basisJ    = &TJ->T[0][(r*NqJ+q)*NbJ*NcJ];
   const PetscReal *basisDerJ = &TJ->T[1][(r*NqJ+q)*NbJ*NcJ*dE];
   PetscInt         f, fc, g, gc, df, dg;
-  PetscErrorCode   ierr;
 
   for (f = 0; f < NbI; ++f) {
     for (fc = 0; fc < NcI; ++fc) {
@@ -2319,7 +2274,6 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
   const PetscInt   so        = isHybridI ? 0 : s;
   const PetscInt   to        = isHybridJ ? 0 : s;
   PetscInt         f, fc, g, gc, df, dg;
-  PetscErrorCode   ierr;
 
   for (f = 0; f < NbI; ++f) {
     for (fc = 0; fc < NcI; ++fc) {
@@ -2372,7 +2326,6 @@ PetscErrorCode PetscFECreateCellGeometry(PetscFE fe, PetscQuadrature quad, Petsc
   DM              dm;
   PetscQuadrature quadDef;
   PetscInt        dim, cdim, Nq;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFEGetDualSpace(fe, &dsp));
@@ -2396,7 +2349,6 @@ PetscErrorCode PetscFECreateCellGeometry(PetscFE fe, PetscQuadrature quad, Petsc
 
 PetscErrorCode PetscFEDestroyCellGeometry(PetscFE fe, PetscFEGeom *cgeom)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(cgeom->v));

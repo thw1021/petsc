@@ -8,7 +8,6 @@
 PetscErrorCode VecMDot_MPI(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 {
   PetscScalar    awork[128],*work = awork;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nv > 128) {
@@ -25,7 +24,6 @@ PetscErrorCode VecMDot_MPI(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 PetscErrorCode VecMTDot_MPI(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 {
   PetscScalar    awork[128],*work = awork;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nv > 128) {
@@ -44,7 +42,6 @@ PetscErrorCode VecNorm_MPI(Vec xin,NormType type,PetscReal *z)
 {
   PetscReal         sum,work = 0.0;
   const PetscScalar *xx;
-  PetscErrorCode    ierr;
   PetscInt          n   = xin->map->n;
   PetscBLASInt      one = 1,bn = 0;
 
@@ -80,7 +77,6 @@ PetscErrorCode VecNorm_MPI(Vec xin,NormType type,PetscReal *z)
 
 PetscErrorCode VecMax_MPI(Vec xin,PetscInt *idx,PetscReal *z)
 {
-  PetscErrorCode ierr;
   PetscReal      work;
 
   PetscFunctionBegin;
@@ -107,7 +103,6 @@ PetscErrorCode VecMax_MPI(Vec xin,PetscInt *idx,PetscReal *z)
 
 PetscErrorCode VecMin_MPI(Vec xin,PetscInt *idx,PetscReal *z)
 {
-  PetscErrorCode ierr;
   PetscReal      work;
 
   PetscFunctionBegin;

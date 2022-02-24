@@ -22,7 +22,6 @@ typedef struct {
 
 static PetscErrorCode PCApply_Composite_Multiplicative(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode   ierr;
   PC_Composite     *jac = (PC_Composite*)pc->data;
   PC_CompositeLink next = jac->head;
   Mat              mat  = pc->pmat;
@@ -64,7 +63,6 @@ static PetscErrorCode PCApply_Composite_Multiplicative(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCApplyTranspose_Composite_Multiplicative(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode   ierr;
   PC_Composite     *jac = (PC_Composite*)pc->data;
   PC_CompositeLink next = jac->head;
   Mat              mat  = pc->pmat;
@@ -107,7 +105,6 @@ alpha I + R
 */
 static PetscErrorCode PCApply_Composite_Special(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode   ierr;
   PC_Composite     *jac = (PC_Composite*)pc->data;
   PC_CompositeLink next = jac->head;
 
@@ -126,7 +123,6 @@ static PetscErrorCode PCApply_Composite_Special(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCApply_Composite_Additive(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode   ierr;
   PC_Composite     *jac = (PC_Composite*)pc->data;
   PC_CompositeLink next = jac->head;
 
@@ -151,7 +147,6 @@ static PetscErrorCode PCApply_Composite_Additive(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCApplyTranspose_Composite_Additive(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode   ierr;
   PC_Composite     *jac = (PC_Composite*)pc->data;
   PC_CompositeLink next = jac->head;
 
@@ -168,7 +163,6 @@ static PetscErrorCode PCApplyTranspose_Composite_Additive(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCSetUp_Composite(PC pc)
 {
-  PetscErrorCode   ierr;
   PC_Composite     *jac = (PC_Composite*)pc->data;
   PC_CompositeLink next = jac->head;
   DM               dm;
@@ -193,7 +187,6 @@ static PetscErrorCode PCSetUp_Composite(PC pc)
 static PetscErrorCode PCReset_Composite(PC pc)
 {
   PC_Composite     *jac = (PC_Composite*)pc->data;
-  PetscErrorCode   ierr;
   PC_CompositeLink next = jac->head;
 
   PetscFunctionBegin;
@@ -209,7 +202,6 @@ static PetscErrorCode PCReset_Composite(PC pc)
 static PetscErrorCode PCDestroy_Composite(PC pc)
 {
   PC_Composite     *jac = (PC_Composite*)pc->data;
-  PetscErrorCode   ierr;
   PC_CompositeLink next = jac->head,next_tmp;
 
   PetscFunctionBegin;
@@ -227,7 +219,6 @@ static PetscErrorCode PCDestroy_Composite(PC pc)
 static PetscErrorCode PCSetFromOptions_Composite(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Composite     *jac = (PC_Composite*)pc->data;
-  PetscErrorCode   ierr;
   PetscInt         nmax = 8,i;
   PC_CompositeLink next;
   char             *pcs[8];
@@ -259,7 +250,6 @@ static PetscErrorCode PCSetFromOptions_Composite(PetscOptionItems *PetscOptionsO
 static PetscErrorCode PCView_Composite(PC pc,PetscViewer viewer)
 {
   PC_Composite     *jac = (PC_Composite*)pc->data;
-  PetscErrorCode   ierr;
   PC_CompositeLink next = jac->head;
   PetscBool        iascii;
 
@@ -330,7 +320,6 @@ static PetscErrorCode PCCompositeAddPC_Composite(PC pc, PC subpc)
   PetscInt         cnt = 0;
   const char      *prefix;
   char             newprefix[20];
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc, &ilink));
@@ -362,7 +351,6 @@ static PetscErrorCode PCCompositeAddPC_Composite(PC pc, PC subpc)
 static PetscErrorCode PCCompositeAddPCType_Composite(PC pc, PCType type)
 {
   PC             subpc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCCreate(PetscObjectComm((PetscObject)pc), &subpc));
@@ -426,7 +414,6 @@ static PetscErrorCode  PCCompositeGetPC_Composite(PC pc,PetscInt n,PC *subpc)
 @*/
 PetscErrorCode  PCCompositeSetType(PC pc,PCCompositeType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -454,7 +441,6 @@ PetscErrorCode  PCCompositeSetType(PC pc,PCCompositeType type)
 @*/
 PetscErrorCode  PCCompositeGetType(PC pc,PCCompositeType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -477,7 +463,6 @@ PetscErrorCode  PCCompositeGetType(PC pc,PCCompositeType *type)
 @*/
 PetscErrorCode  PCCompositeSpecialSetAlpha(PC pc,PetscScalar alpha)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -501,7 +486,6 @@ PetscErrorCode  PCCompositeSpecialSetAlpha(PC pc,PetscScalar alpha)
 @*/
 PetscErrorCode  PCCompositeAddPCType(PC pc,PCType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -524,7 +508,6 @@ PetscErrorCode  PCCompositeAddPCType(PC pc,PCType type)
 @*/
 PetscErrorCode PCCompositeAddPC(PC pc, PC subpc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -550,7 +533,6 @@ PetscErrorCode PCCompositeAddPC(PC pc, PC subpc)
 @*/
 PetscErrorCode  PCCompositeGetNumberPC(PC pc,PetscInt *num)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -581,7 +563,6 @@ PetscErrorCode  PCCompositeGetNumberPC(PC pc,PetscInt *num)
 @*/
 PetscErrorCode PCCompositeGetPC(PC pc,PetscInt n,PC *subpc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -618,7 +599,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Composite(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Composite   *jac;
 
   PetscFunctionBegin;

@@ -39,7 +39,6 @@ M*/
 @*/
 PetscErrorCode PetscViewerVTKAddField(PetscViewer viewer,PetscObject dm,PetscErrorCode (*PetscViewerVTKWriteFunction)(PetscObject,PetscViewer),PetscInt fieldnum,PetscViewerVTKFieldType fieldtype,PetscBool checkdm,PetscObject vec)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -64,7 +63,6 @@ PetscErrorCode PetscViewerVTKAddField(PetscViewer viewer,PetscObject dm,PetscErr
 @*/
 PetscErrorCode PetscViewerVTKGetDM(PetscViewer viewer,PetscObject *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -75,7 +73,6 @@ PetscErrorCode PetscViewerVTKGetDM(PetscViewer viewer,PetscObject *dm)
 static PetscErrorCode PetscViewerDestroy_VTK(PetscViewer viewer)
 {
   PetscViewer_VTK *vtk = (PetscViewer_VTK*)viewer->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(vtk->filename));
@@ -92,7 +89,6 @@ static PetscErrorCode PetscViewerDestroy_VTK(PetscViewer viewer)
 static PetscErrorCode PetscViewerFlush_VTK(PetscViewer viewer)
 {
   PetscViewer_VTK          *vtk = (PetscViewer_VTK*)viewer->data;
-  PetscErrorCode           ierr;
   PetscViewerVTKObjectLink link,next;
 
   PetscFunctionBegin;
@@ -112,7 +108,6 @@ static PetscErrorCode PetscViewerFlush_VTK(PetscViewer viewer)
 PetscErrorCode  PetscViewerFileSetName_VTK(PetscViewer viewer,const char name[])
 {
   PetscViewer_VTK *vtk = (PetscViewer_VTK*)viewer->data;
-  PetscErrorCode  ierr;
   PetscBool       isvtk,isvts,isvtu,isvtr;
   size_t          len;
 
@@ -175,7 +170,6 @@ PetscErrorCode  PetscViewerVTKAddField_VTK(PetscViewer viewer,PetscObject dm,Pet
 {
   PetscViewer_VTK          *vtk = (PetscViewer_VTK*)viewer->data;
   PetscViewerVTKObjectLink link, tail = vtk->link;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   if (vtk->dm) {
@@ -221,7 +215,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_VTK(PetscViewer v)
 {
   PetscViewer_VTK *vtk;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(v,&vtk));
@@ -268,7 +261,6 @@ $    FILE_MODE_APPEND - open existing file for binary output (not currently supp
 @*/
 PetscErrorCode PetscViewerVTKOpen(MPI_Comm comm,const char name[],PetscFileMode type,PetscViewer *vtk)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,vtk));
@@ -299,7 +291,6 @@ PetscErrorCode PetscViewerVTKOpen(MPI_Comm comm,const char name[],PetscFileMode 
 @*/
 PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data,PetscInt n,MPI_Datatype dtype)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   MPI_Datatype   vdtype=dtype;
 #if defined(PETSC_USE_REAL___FLOAT128)

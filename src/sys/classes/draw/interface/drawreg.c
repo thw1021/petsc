@@ -41,7 +41,6 @@ PetscFunctionList PetscDrawList = NULL;
 @*/
 PetscErrorCode  PetscDrawView(PetscDraw indraw,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isdraw;
 #if defined(PETSC_HAVE_SAWS)
   PetscBool      issaws;
@@ -103,7 +102,6 @@ PetscErrorCode  PetscDrawView(PetscDraw indraw,PetscViewer viewer)
 @*/
 PetscErrorCode  PetscDrawViewFromOptions(PetscDraw A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSC_DRAW_CLASSID,1);
@@ -144,7 +142,6 @@ PetscErrorCode  PetscDrawViewFromOptions(PetscDraw A,PetscObject obj,const char 
 PetscErrorCode  PetscDrawCreate(MPI_Comm comm,const char display[],const char title[],int x,int y,int w,int h,PetscDraw *indraw)
 {
   PetscDraw      draw;
-  PetscErrorCode ierr;
   PetscReal      dpause = 0.0;
   PetscBool      flag;
 
@@ -216,9 +213,9 @@ PetscErrorCode  PetscDrawCreate(MPI_Comm comm,const char display[],const char ti
 @*/
 PetscErrorCode  PetscDrawSetType(PetscDraw draw,PetscDrawType type)
 {
-  PetscErrorCode ierr,(*r)(PetscDraw);
   PetscBool      match;
   PetscBool      flg=PETSC_FALSE;
+  PetscErrorCode (*r)(PetscDraw);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -322,7 +319,6 @@ $     -draw_type my_draw_type
 @*/
 PetscErrorCode  PetscDrawRegister(const char *sname,PetscErrorCode (*function)(PetscDraw))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawInitializePackage());
@@ -346,7 +342,6 @@ PetscErrorCode  PetscDrawRegister(const char *sname,PetscErrorCode (*function)(P
 @*/
 PetscErrorCode  PetscDrawSetOptionsPrefix(PetscDraw draw,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);

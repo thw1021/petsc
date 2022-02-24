@@ -187,7 +187,6 @@ PCTFS_gs_id *PCTFS_gs_init(PetscInt *elms, PetscInt nel, PetscInt level)
   PCTFS_gs_id    *gs;
   MPI_Group      PCTFS_gs_group;
   MPI_Comm       PCTFS_gs_comm;
-  PetscErrorCode ierr;
 
   /* ensure that communication package has been initialized */
   PCTFS_comm_init();
@@ -212,7 +211,6 @@ PCTFS_gs_id *PCTFS_gs_init(PetscInt *elms, PetscInt nel, PetscInt level)
 /******************************************************************************/
 static PCTFS_gs_id *gsi_new(void)
 {
-  PetscErrorCode ierr;
   PCTFS_gs_id    *gs;
   gs   = (PCTFS_gs_id*) malloc(sizeof(PCTFS_gs_id));
   CHKERRABORT(PETSC_COMM_WORLD,PetscMemzero(gs,sizeof(PCTFS_gs_id)));
@@ -229,7 +227,6 @@ static PCTFS_gs_id *gsi_check_args(PetscInt *in_elms, PetscInt nel, PetscInt lev
   PetscInt       vals[sizeof(oprs)/sizeof(oprs[0])-1];
   PetscInt       work[sizeof(oprs)/sizeof(oprs[0])-1];
   PCTFS_gs_id    *gs;
-  PetscErrorCode ierr;
 
   if (!in_elms) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"elms point to nothing!!!\n");
   if (nel<0)    SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"can't have fewer than 0 elms!!!\n");
@@ -382,7 +379,6 @@ static PetscErrorCode gsi_via_bit_mask(PCTFS_gs_id *gs)
   PetscInt       t1;
   PetscInt       **reduce;
   PetscInt       *map;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* totally local removes ... PCTFS_ct_bits == 0 */
@@ -493,7 +489,6 @@ static PetscErrorCode get_ngh_buf(PCTFS_gs_id *gs)
   PetscInt       *ptr1, *ptr2, i_start, negl, nel, *elms;
   PetscInt       oper=GL_B_OR;
   PetscInt       *ptr3, *t_mask, level, ct1, ct2;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* to make life easier */
@@ -654,7 +649,6 @@ static PetscErrorCode set_pairwise(PCTFS_gs_id *gs)
   PetscInt       *pairwise_elm_list, len_pair_list=0;
   PetscInt       *iptr, t1, i_start, nel, *elms;
   PetscInt       ct;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* to make life easier */
@@ -892,7 +886,6 @@ static PetscErrorCode PCTFS_gs_gop_local_in_plus(PCTFS_gs_id *gs,  PetscScalar *
 PetscErrorCode PCTFS_gs_free(PCTFS_gs_id *gs)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_free(&gs->PCTFS_gs_comm));
@@ -954,7 +947,6 @@ PetscErrorCode PCTFS_gs_free(PCTFS_gs_id *gs)
 /******************************************************************************/
 PetscErrorCode PCTFS_gs_gop_vec(PCTFS_gs_id *gs,  PetscScalar *vals,  const char *op,  PetscInt step)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (*op) {
@@ -1119,7 +1111,6 @@ static PetscErrorCode PCTFS_gs_gop_vec_pairwise_plus(PCTFS_gs_id *gs,  PetscScal
   MPI_Request    *msg_ids_in, *msg_ids_out, *ids_in, *ids_out;
   MPI_Status     status;
   PetscBLASInt   i1 = 1,dstep;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* strip and load s */
@@ -1209,7 +1200,6 @@ static PetscErrorCode PCTFS_gs_gop_vec_tree_plus(PCTFS_gs_id *gs,  PetscScalar *
   PetscScalar    *buf, *work;
   PetscInt       op[] = {GL_ADD,0};
   PetscBLASInt   i1   = 1;
-  PetscErrorCode ierr;
   PetscBLASInt   dstep;
 
   PetscFunctionBegin;
@@ -1248,7 +1238,6 @@ static PetscErrorCode PCTFS_gs_gop_vec_tree_plus(PCTFS_gs_id *gs,  PetscScalar *
 /******************************************************************************/
 PetscErrorCode PCTFS_gs_gop_hc(PCTFS_gs_id *gs,  PetscScalar *vals,  const char *op,  PetscInt dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (*op) {
@@ -1303,7 +1292,6 @@ static PetscErrorCode PCTFS_gs_gop_pairwise_plus_hc(PCTFS_gs_id *gs,  PetscScala
   MPI_Request    *msg_ids_in, *msg_ids_out, *ids_in, *ids_out;
   MPI_Status     status;
   PetscInt       i, mask=1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=1; i<dim; i++) { mask<<=1; mask++; }

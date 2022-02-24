@@ -20,7 +20,6 @@ static Mat static_F;
 
 static void CholmodErrorHandler(int status,const char *file,int line,const char *message)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (status > CHOLMOD_OK) {
@@ -130,7 +129,6 @@ static PetscErrorCode MatWrapCholmod_seqsbaij(Mat A,PetscBool values,cholmod_spa
 {
   Mat_SeqSBAIJ   *sbaij = (Mat_SeqSBAIJ*)A->data;
   PetscBool      vallocin = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMemzero(C,sizeof(*C)));
@@ -170,7 +168,6 @@ static PetscErrorCode MatWrapCholmod_seqsbaij(Mat A,PetscBool values,cholmod_spa
 
 PetscErrorCode VecWrapCholmod(Vec X,PetscInt rw,cholmod_dense *Y)
 {
-  PetscErrorCode ierr;
   PetscScalar    *x;
   PetscInt       n;
 
@@ -201,7 +198,6 @@ PetscErrorCode VecWrapCholmod(Vec X,PetscInt rw,cholmod_dense *Y)
 
 PetscErrorCode VecUnWrapCholmod(Vec X,PetscInt rw,cholmod_dense *Y)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   switch (rw) {
@@ -220,7 +216,6 @@ PetscErrorCode VecUnWrapCholmod(Vec X,PetscInt rw,cholmod_dense *Y)
 
 PetscErrorCode MatDenseWrapCholmod(Mat X,PetscInt rw,cholmod_dense *Y)
 {
-  PetscErrorCode ierr;
   PetscScalar    *x;
   PetscInt       m,n,lda;
 
@@ -252,7 +247,6 @@ PetscErrorCode MatDenseWrapCholmod(Mat X,PetscInt rw,cholmod_dense *Y)
 
 PetscErrorCode MatDenseUnWrapCholmod(Mat X,PetscInt rw,cholmod_dense *Y)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   switch (rw) {
@@ -272,7 +266,6 @@ PetscErrorCode MatDenseUnWrapCholmod(Mat X,PetscInt rw,cholmod_dense *Y)
 
 PETSC_INTERN PetscErrorCode  MatDestroy_CHOLMOD(Mat F)
 {
-  PetscErrorCode ierr;
   Mat_CHOLMOD    *chol=(Mat_CHOLMOD*)F->data;
 
   PetscFunctionBegin;
@@ -357,7 +350,6 @@ static PetscErrorCode MatView_Info_CHOLMOD(Mat F,PetscViewer viewer)
 
 PETSC_INTERN PetscErrorCode  MatView_CHOLMOD(Mat F,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -376,7 +368,6 @@ static PetscErrorCode MatSolve_CHOLMOD(Mat F,Vec B,Vec X)
 {
   Mat_CHOLMOD    *chol = (Mat_CHOLMOD*)F->data;
   cholmod_dense  cholB,cholX,*X_handle,*Y_handle = NULL,*E_handle = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   static_F = F;
@@ -395,7 +386,6 @@ static PetscErrorCode MatMatSolve_CHOLMOD(Mat F,Mat B,Mat X)
 {
   Mat_CHOLMOD    *chol = (Mat_CHOLMOD*)F->data;
   cholmod_dense  cholB,cholX,*X_handle,*Y_handle = NULL,*E_handle = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   static_F = F;
@@ -535,7 +525,6 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_cholmod(Mat A,MatFactorType ft
 {
   Mat            B;
   Mat_CHOLMOD    *chol;
-  PetscErrorCode ierr;
   PetscInt       m=A->rmap->n,n=A->cmap->n,bs;
   const char     *prefix;
 

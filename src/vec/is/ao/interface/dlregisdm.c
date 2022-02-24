@@ -13,7 +13,6 @@ static PetscBool AOPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  AOFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&AOList));
@@ -35,7 +34,6 @@ PetscErrorCode  AOInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (AOPackageInitialized) PetscFunctionReturn(0);

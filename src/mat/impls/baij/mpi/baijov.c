@@ -13,7 +13,6 @@ extern PetscErrorCode MatRestoreRow_MPIBAIJ(Mat,PetscInt,PetscInt*,PetscInt**,Pe
 
 PetscErrorCode MatIncreaseOverlap_MPIBAIJ(Mat C,PetscInt imax,IS is[],PetscInt ov)
 {
-  PetscErrorCode ierr;
   PetscInt       i,N=C->cmap->N, bs=C->rmap->bs;
   IS             *is_new;
 
@@ -60,7 +59,6 @@ PetscErrorCode MatIncreaseOverlap_MPIBAIJ_Once(Mat C,PetscInt imax,IS is[])
   Mat_MPIBAIJ    *c = (Mat_MPIBAIJ*)C->data;
   const PetscInt **idx,*idx_i;
   PetscInt       *n,*w3,*w4,**data,len;
-  PetscErrorCode ierr;
   PetscMPIInt    size,rank,tag1,tag2,*w2,*w1,nrqr;
   PetscInt       Mbs,i,j,k,**rbuf,row,nrqs,msz,**outdat,**ptr;
   PetscInt       *ctr,*pa,*tmp,*isz,*isz1,**xdata,**rbuf2,*d_p;
@@ -401,7 +399,6 @@ static PetscErrorCode MatIncreaseOverlap_MPIBAIJ_Receive(Mat C,PetscInt nrqr,Pet
   Mat_MPIBAIJ    *c = (Mat_MPIBAIJ*)C->data;
   Mat            A  = c->A,B = c->B;
   Mat_SeqBAIJ    *a = (Mat_SeqBAIJ*)A->data,*b = (Mat_SeqBAIJ*)B->data;
-  PetscErrorCode ierr;
   PetscInt       rstart,cstart,*ai,*aj,*bi,*bj,*garray,i,j,k;
   PetscInt       row,total_sz,ct,ct1,ct2,ct3,mem_estimate,oct2,l,start,end;
   PetscInt       val,max1,max2,Mbs,no_malloc =0,*tmp,new_estimate,ctr;
@@ -518,7 +515,6 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ(Mat C,PetscInt ismax,const IS isrow[
 {
   IS             *isrow_block,*iscol_block;
   Mat_MPIBAIJ    *c = (Mat_MPIBAIJ*)C->data;
-  PetscErrorCode ierr;
   PetscInt       nmax,nstages_local,nstages,i,pos,max_no,N=C->cmap->N,bs=C->rmap->bs;
   Mat_SeqBAIJ    *subc;
   Mat_SubSppt    *smat;
@@ -589,7 +585,6 @@ PetscErrorCode PetscGetProc(const PetscInt row, const PetscMPIInt size, const Pe
 {
   PetscInt       nGlobalNd = proc_gnode[size];
   PetscMPIInt    fproc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIIntCast((PetscInt)(((float)row * (float)size / (float)nGlobalNd + 0.5)),&fproc));
@@ -612,7 +607,6 @@ PetscErrorCode MatCreateSubMatrices_MPIBAIJ_local(Mat C,PetscInt ismax,const IS 
   Mat_SeqBAIJ    *a = (Mat_SeqBAIJ*)A->data,*b = (Mat_SeqBAIJ*)c->B->data,*subc;
   const PetscInt **icol,**irow;
   PetscInt       *nrow,*ncol,start;
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,tag0,tag2,tag3,tag4,*w1,*w2,*w3,*w4,nrqr;
   PetscInt       **sbuf1,**sbuf2,*sbuf2_i,i,j,k,l,ct1,ct2,**rbuf1,row,proc=-1;
   PetscInt       nrqs=0,msz,**ptr=NULL,*req_size=NULL,*ctr=NULL,*pa,*tmp=NULL,tcol;

@@ -150,7 +150,6 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
 {
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
   Vec            diag,diagsqrt;
-  PetscErrorCode ierr;
   PetscInt       n,i;
   PetscScalar    *x;
   PetscBool      zeroflag = PETSC_FALSE;
@@ -242,7 +241,6 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
 */
 static PetscErrorCode PCSetUp_Jacobi_Symmetric(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
 
   PetscFunctionBegin;
@@ -262,7 +260,6 @@ static PetscErrorCode PCSetUp_Jacobi_Symmetric(PC pc)
 */
 static PetscErrorCode PCSetUp_Jacobi_NonSymmetric(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
 
   PetscFunctionBegin;
@@ -287,7 +284,6 @@ static PetscErrorCode PCSetUp_Jacobi_NonSymmetric(PC pc)
 static PetscErrorCode PCApply_Jacobi(PC pc,Vec x,Vec y)
 {
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!jac->diag) {
@@ -312,7 +308,6 @@ static PetscErrorCode PCApply_Jacobi(PC pc,Vec x,Vec y)
 */
 static PetscErrorCode PCApplySymmetricLeftOrRight_Jacobi(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
 
   PetscFunctionBegin;
@@ -327,7 +322,6 @@ static PetscErrorCode PCApplySymmetricLeftOrRight_Jacobi(PC pc,Vec x,Vec y)
 static PetscErrorCode PCReset_Jacobi(PC pc)
 {
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&jac->diag));
@@ -346,7 +340,6 @@ static PetscErrorCode PCReset_Jacobi(PC pc)
 */
 static PetscErrorCode PCDestroy_Jacobi(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Jacobi(pc));
@@ -367,7 +360,6 @@ static PetscErrorCode PCDestroy_Jacobi(PC pc)
 static PetscErrorCode PCSetFromOptions_Jacobi(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Jacobi      *jac = (PC_Jacobi*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
   PCJacobiType   deflt,type;
 
@@ -388,7 +380,6 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
 {
   PC_Jacobi     *jac = (PC_Jacobi *) pc->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -447,7 +438,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
 {
   PC_Jacobi      *jac;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*
@@ -518,7 +508,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
 @*/
 PetscErrorCode  PCJacobiSetUseAbs(PC pc,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -548,7 +537,6 @@ PetscErrorCode  PCJacobiSetUseAbs(PC pc,PetscBool flg)
 @*/
 PetscErrorCode  PCJacobiGetUseAbs(PC pc,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -578,7 +566,6 @@ PetscErrorCode  PCJacobiGetUseAbs(PC pc,PetscBool *flg)
 @*/
 PetscErrorCode  PCJacobiSetFixDiagonal(PC pc,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -607,7 +594,6 @@ PetscErrorCode  PCJacobiSetFixDiagonal(PC pc,PetscBool flg)
 @*/
 PetscErrorCode  PCJacobiGetFixDiagonal(PC pc,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -634,7 +620,6 @@ PetscErrorCode  PCJacobiGetFixDiagonal(PC pc,PetscBool *flg)
 @*/
 PetscErrorCode  PCJacobiSetType(PC pc,PCJacobiType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -659,7 +644,6 @@ PetscErrorCode  PCJacobiSetType(PC pc,PCJacobiType type)
 @*/
 PetscErrorCode  PCJacobiGetType(PC pc,PCJacobiType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);

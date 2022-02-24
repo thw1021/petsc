@@ -61,7 +61,6 @@ PetscErrorCode DMPlexMetricSetFromOptions(DM dm)
 PetscErrorCode DMPlexMetricSetIsotropic(DM dm, PetscBool isotropic)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -88,7 +87,6 @@ PetscErrorCode DMPlexMetricSetIsotropic(DM dm, PetscBool isotropic)
 PetscErrorCode DMPlexMetricIsIsotropic(DM dm, PetscBool *isotropic)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -117,7 +115,6 @@ PetscErrorCode DMPlexMetricIsIsotropic(DM dm, PetscBool *isotropic)
 PetscErrorCode DMPlexMetricSetUniform(DM dm, PetscBool uniform)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -145,7 +142,6 @@ PetscErrorCode DMPlexMetricSetUniform(DM dm, PetscBool uniform)
 PetscErrorCode DMPlexMetricIsUniform(DM dm, PetscBool *uniform)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -170,7 +166,6 @@ PetscErrorCode DMPlexMetricIsUniform(DM dm, PetscBool *uniform)
 PetscErrorCode DMPlexMetricSetRestrictAnisotropyFirst(DM dm, PetscBool restrictAnisotropyFirst)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -197,7 +192,6 @@ PetscErrorCode DMPlexMetricSetRestrictAnisotropyFirst(DM dm, PetscBool restrictA
 PetscErrorCode DMPlexMetricRestrictAnisotropyFirst(DM dm, PetscBool *restrictAnisotropyFirst)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -225,7 +219,6 @@ PetscErrorCode DMPlexMetricRestrictAnisotropyFirst(DM dm, PetscBool *restrictAni
 PetscErrorCode DMPlexMetricSetNoInsertion(DM dm, PetscBool noInsert)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -255,7 +248,6 @@ PetscErrorCode DMPlexMetricSetNoInsertion(DM dm, PetscBool noInsert)
 PetscErrorCode DMPlexMetricNoInsertion(DM dm, PetscBool *noInsert)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -283,7 +275,6 @@ PetscErrorCode DMPlexMetricNoInsertion(DM dm, PetscBool *noInsert)
 PetscErrorCode DMPlexMetricSetNoSwapping(DM dm, PetscBool noSwap)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -313,7 +304,6 @@ PetscErrorCode DMPlexMetricSetNoSwapping(DM dm, PetscBool noSwap)
 PetscErrorCode DMPlexMetricNoSwapping(DM dm, PetscBool *noSwap)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -341,7 +331,6 @@ PetscErrorCode DMPlexMetricNoSwapping(DM dm, PetscBool *noSwap)
 PetscErrorCode DMPlexMetricSetNoMovement(DM dm, PetscBool noMove)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -371,7 +360,6 @@ PetscErrorCode DMPlexMetricSetNoMovement(DM dm, PetscBool noMove)
 PetscErrorCode DMPlexMetricNoMovement(DM dm, PetscBool *noMove)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -396,7 +384,6 @@ PetscErrorCode DMPlexMetricNoMovement(DM dm, PetscBool *noMove)
 PetscErrorCode DMPlexMetricSetMinimumMagnitude(DM dm, PetscReal h_min)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -424,7 +411,6 @@ PetscErrorCode DMPlexMetricSetMinimumMagnitude(DM dm, PetscReal h_min)
 PetscErrorCode DMPlexMetricGetMinimumMagnitude(DM dm, PetscReal *h_min)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -449,7 +435,6 @@ PetscErrorCode DMPlexMetricGetMinimumMagnitude(DM dm, PetscReal *h_min)
 PetscErrorCode DMPlexMetricSetMaximumMagnitude(DM dm, PetscReal h_max)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -477,7 +462,6 @@ PetscErrorCode DMPlexMetricSetMaximumMagnitude(DM dm, PetscReal h_max)
 PetscErrorCode DMPlexMetricGetMaximumMagnitude(DM dm, PetscReal *h_max)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -504,7 +488,6 @@ PetscErrorCode DMPlexMetricGetMaximumMagnitude(DM dm, PetscReal *h_max)
 PetscErrorCode DMPlexMetricSetMaximumAnisotropy(DM dm, PetscReal a_max)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -532,7 +515,6 @@ PetscErrorCode DMPlexMetricSetMaximumAnisotropy(DM dm, PetscReal a_max)
 PetscErrorCode DMPlexMetricGetMaximumAnisotropy(DM dm, PetscReal *a_max)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -557,7 +539,6 @@ PetscErrorCode DMPlexMetricGetMaximumAnisotropy(DM dm, PetscReal *a_max)
 PetscErrorCode DMPlexMetricSetTargetComplexity(DM dm, PetscReal targetComplexity)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -585,7 +566,6 @@ PetscErrorCode DMPlexMetricSetTargetComplexity(DM dm, PetscReal targetComplexity
 PetscErrorCode DMPlexMetricGetTargetComplexity(DM dm, PetscReal *targetComplexity)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -610,7 +590,6 @@ PetscErrorCode DMPlexMetricGetTargetComplexity(DM dm, PetscReal *targetComplexit
 PetscErrorCode DMPlexMetricSetNormalizationOrder(DM dm, PetscReal p)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -638,7 +617,6 @@ PetscErrorCode DMPlexMetricSetNormalizationOrder(DM dm, PetscReal p)
 PetscErrorCode DMPlexMetricGetNormalizationOrder(DM dm, PetscReal *p)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -671,7 +649,6 @@ PetscErrorCode DMPlexMetricGetNormalizationOrder(DM dm, PetscReal *p)
 PetscErrorCode DMPlexMetricSetGradationFactor(DM dm, PetscReal beta)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -706,7 +683,6 @@ PetscErrorCode DMPlexMetricSetGradationFactor(DM dm, PetscReal beta)
 PetscErrorCode DMPlexMetricGetGradationFactor(DM dm, PetscReal *beta)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -734,7 +710,6 @@ PetscErrorCode DMPlexMetricGetGradationFactor(DM dm, PetscReal *beta)
 PetscErrorCode DMPlexMetricSetVerbosity(DM dm, PetscInt verbosity)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -764,7 +739,6 @@ PetscErrorCode DMPlexMetricSetVerbosity(DM dm, PetscInt verbosity)
 PetscErrorCode DMPlexMetricGetVerbosity(DM dm, PetscInt *verbosity)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -792,7 +766,6 @@ PetscErrorCode DMPlexMetricGetVerbosity(DM dm, PetscInt *verbosity)
 PetscErrorCode DMPlexMetricSetNumIterations(DM dm, PetscInt numIter)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -822,7 +795,6 @@ PetscErrorCode DMPlexMetricSetNumIterations(DM dm, PetscInt numIter)
 PetscErrorCode DMPlexMetricGetNumIterations(DM dm, PetscInt *numIter)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
@@ -836,7 +808,6 @@ PetscErrorCode DMPlexMetricGetNumIterations(DM dm, PetscInt *numIter)
 PetscErrorCode DMPlexP1FieldCreate_Private(DM dm, PetscInt f, PetscInt size, Vec *metric)
 {
   MPI_Comm       comm;
-  PetscErrorCode ierr;
   PetscFE        fe;
   PetscInt       dim;
 
@@ -902,7 +873,6 @@ PetscErrorCode DMPlexMetricCreate(DM dm, PetscInt f, Vec *metric)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
   PetscBool      isotropic, uniform;
-  PetscErrorCode ierr;
   PetscInt       coordDim, Nd;
 
   PetscFunctionBegin;
@@ -949,7 +919,6 @@ PetscErrorCode DMPlexMetricCreate(DM dm, PetscInt f, Vec *metric)
 @*/
 PetscErrorCode DMPlexMetricCreateUniform(DM dm, PetscInt f, PetscReal alpha, Vec *metric)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexMetricSetUniform(dm, PETSC_TRUE));
@@ -993,7 +962,6 @@ static void identity(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 @*/
 PetscErrorCode DMPlexMetricCreateIsotropic(DM dm, PetscInt f, Vec indicator, Vec *metric)
 {
-  PetscErrorCode ierr;
   PetscInt       m, n;
 
   PetscFunctionBegin;
@@ -1037,7 +1005,6 @@ static PetscErrorCode LAPACKsyevFail(PetscInt dim, PetscScalar Mpos[])
 
 static PetscErrorCode DMPlexMetricModify_Private(PetscInt dim, PetscReal h_min, PetscReal h_max, PetscReal a_max, PetscScalar Mp[], PetscScalar *detMp)
 {
-  PetscErrorCode ierr;
   PetscInt       i, j, k;
   PetscReal     *eigs, max_eig, l_min = 1.0/(h_max*h_max), l_max = 1.0/(h_min*h_min), la_min = 1.0/(a_max*a_max);
   PetscScalar   *Mpos;
@@ -1159,7 +1126,6 @@ PetscErrorCode DMPlexMetricEnforceSPD(DM dm, Vec metricIn, PetscBool restrictSiz
 {
   DM             dmDet;
   PetscBool      isotropic, uniform;
-  PetscErrorCode ierr;
   PetscInt       dim, vStart, vEnd, v;
   PetscScalar   *met, *det;
   PetscReal      h_min = 1.0e-30, h_max = 1.0e+30, a_max = 0.0;
@@ -1267,7 +1233,6 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
   MPI_Comm         comm;
   PetscBool        restrictAnisotropyFirst, isotropic, uniform;
   PetscDS          ds;
-  PetscErrorCode   ierr;
   PetscInt         dim, Nd, vStart, vEnd, v, i;
   PetscScalar     *met, *det, integral, constants[1];
   PetscReal        p, h_min = 1.0e-30, h_max = 1.0e+30, a_max = 0.0, factGlob, fact, target, realIntegral;
@@ -1440,7 +1405,6 @@ PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights
 @*/
 PetscErrorCode DMPlexMetricAverage2(DM dm, Vec metric1, Vec metric2, Vec *metricAvg)
 {
-  PetscErrorCode ierr;
   PetscReal      weights[2] = {0.5, 0.5};
   Vec            metrics[2] = {metric1, metric2};
 
@@ -1467,7 +1431,6 @@ PetscErrorCode DMPlexMetricAverage2(DM dm, Vec metric1, Vec metric2, Vec *metric
 @*/
 PetscErrorCode DMPlexMetricAverage3(DM dm, Vec metric1, Vec metric2, Vec metric3, Vec *metricAvg)
 {
-  PetscErrorCode ierr;
   PetscReal      weights[3] = {1.0/3.0, 1.0/3.0, 1.0/3.0};
   Vec            metrics[3] = {metric1, metric2, metric3};
 
@@ -1627,7 +1590,6 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
 PetscErrorCode DMPlexMetricIntersection(DM dm, PetscInt numMetrics, Vec metrics[], Vec *metricInt)
 {
   PetscBool      isotropic, uniform;
-  PetscErrorCode ierr;
   PetscInt       v, i, m, n;
   PetscScalar   *met, *meti;
 
@@ -1702,7 +1664,6 @@ PetscErrorCode DMPlexMetricIntersection(DM dm, PetscInt numMetrics, Vec metrics[
 @*/
 PetscErrorCode DMPlexMetricIntersection2(DM dm, Vec metric1, Vec metric2, Vec *metricInt)
 {
-  PetscErrorCode ierr;
   Vec            metrics[2] = {metric1, metric2};
 
   PetscFunctionBegin;
@@ -1728,7 +1689,6 @@ PetscErrorCode DMPlexMetricIntersection2(DM dm, Vec metric1, Vec metric2, Vec *m
 @*/
 PetscErrorCode DMPlexMetricIntersection3(DM dm, Vec metric1, Vec metric2, Vec metric3, Vec *metricInt)
 {
-  PetscErrorCode ierr;
   Vec            metrics[3] = {metric1, metric2, metric3};
 
   PetscFunctionBegin;

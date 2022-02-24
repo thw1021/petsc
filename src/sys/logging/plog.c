@@ -111,7 +111,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 {
   int            stage;
   PetscBool      opt;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscLogInitializeCalled) PetscFunctionReturn(0);
@@ -143,7 +142,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(petsc_actions));
@@ -277,7 +275,6 @@ PetscErrorCode PetscLogIsActive(PetscBool *isActive)
 @*/
 PetscErrorCode  PetscLogDefaultBegin(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogSet(PetscLogEventBeginDefault, PetscLogEventEndDefault));
@@ -313,7 +310,6 @@ PetscErrorCode  PetscLogDefaultBegin(void)
 @*/
 PetscErrorCode  PetscLogAllBegin(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogSet(PetscLogEventBeginComplete, PetscLogEventEndComplete));
@@ -346,7 +342,6 @@ PetscErrorCode  PetscLogAllBegin(void)
 @*/
 PetscErrorCode  PetscLogTraceBegin(FILE *file)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   petsc_tracefile = file;
@@ -425,7 +420,6 @@ PetscErrorCode  PetscLogStageRegister(const char sname[],PetscLogStage *stage)
 {
   PetscStageLog  stageLog;
   PetscLogEvent  event;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -472,7 +466,6 @@ PetscErrorCode  PetscLogStageRegister(const char sname[],PetscLogStage *stage)
 PetscErrorCode  PetscLogStagePush(PetscLogStage stage)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -510,7 +503,6 @@ PetscErrorCode  PetscLogStagePush(PetscLogStage stage)
 PetscErrorCode  PetscLogStagePop(void)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -534,7 +526,6 @@ PetscErrorCode  PetscLogStagePop(void)
 PetscErrorCode  PetscLogStageSetActive(PetscLogStage stage, PetscBool isActive)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -560,7 +551,6 @@ PetscErrorCode  PetscLogStageSetActive(PetscLogStage stage, PetscBool isActive)
 PetscErrorCode  PetscLogStageGetActive(PetscLogStage stage, PetscBool  *isActive)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -584,7 +574,6 @@ PetscErrorCode  PetscLogStageGetActive(PetscLogStage stage, PetscBool  *isActive
 PetscErrorCode  PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -610,7 +599,6 @@ PetscErrorCode  PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible
 PetscErrorCode  PetscLogStageGetVisible(PetscLogStage stage, PetscBool  *isVisible)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -636,7 +624,6 @@ PetscErrorCode  PetscLogStageGetVisible(PetscLogStage stage, PetscBool  *isVisib
 PetscErrorCode  PetscLogStageGetId(const char name[], PetscLogStage *stage)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -703,7 +690,6 @@ PetscErrorCode  PetscLogEventRegister(const char name[],PetscClassId classid,Pet
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *event = PETSC_DECIDE;
@@ -738,7 +724,6 @@ PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event,PetscBool collecti
 {
   PetscStageLog    stageLog;
   PetscEventRegLog eventRegLog;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -764,7 +749,6 @@ PetscErrorCode  PetscLogEventIncludeClass(PetscClassId classid)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -790,7 +774,6 @@ PetscErrorCode  PetscLogEventExcludeClass(PetscClassId classid)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -828,7 +811,6 @@ PetscErrorCode  PetscLogEventActivate(PetscLogEvent event)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -865,7 +847,6 @@ PetscErrorCode  PetscLogEventDeactivate(PetscLogEvent event)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -902,7 +883,6 @@ PetscErrorCode  PetscLogEventDeactivatePush(PetscLogEvent event)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -939,7 +919,6 @@ PetscErrorCode  PetscLogEventDeactivatePop(PetscLogEvent event)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -965,7 +944,6 @@ PetscErrorCode  PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActiv
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -995,7 +973,6 @@ PetscErrorCode  PetscLogEventActivateClass(PetscClassId classid)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -1020,7 +997,6 @@ PetscErrorCode  PetscLogEventDeactivateClass(PetscClassId classid)
 {
   PetscStageLog  stageLog;
   int            stage;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -1154,7 +1130,6 @@ M*/
 PetscErrorCode  PetscLogEventGetId(const char name[], PetscLogEvent *event)
 {
   PetscStageLog  stageLog;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogGetStageLog(&stageLog));
@@ -1399,7 +1374,6 @@ PetscErrorCode  PetscLogView_CSV(PetscViewer viewer)
 
 static PetscErrorCode PetscLogViewWarnSync(MPI_Comm comm,FILE *fd)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (!PetscLogSyncOn) PetscFunctionReturn(0);
   CHKERRQ(PetscFPrintf(comm, fd, "\n\n"));
@@ -1418,7 +1392,6 @@ static PetscErrorCode PetscLogViewWarnSync(MPI_Comm comm,FILE *fd)
 
 static PetscErrorCode PetscLogViewWarnDebugging(MPI_Comm comm,FILE *fd)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
@@ -1440,7 +1413,6 @@ static PetscErrorCode PetscLogViewWarnDebugging(MPI_Comm comm,FILE *fd)
 static PetscErrorCode PetscLogViewWarnNoGpuAwareMpi(MPI_Comm comm,FILE *fd)
 {
 #if defined(PETSC_HAVE_DEVICE)
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -2023,7 +1995,6 @@ $    Safari - see https://ccm.net/faq/36342-safari-how-to-enable-local-file-acce
 @*/
 PetscErrorCode  PetscLogView(PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         isascii;
   PetscViewerFormat format;
   int               stage, lastStage;
@@ -2070,7 +2041,6 @@ PetscErrorCode  PetscLogView(PetscViewer viewer)
 @*/
 PetscErrorCode PetscLogViewFromOptions(void)
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscBool         flg;
   PetscViewerFormat format;
@@ -2114,7 +2084,6 @@ PetscErrorCode  PetscGetFlops(PetscLogDouble *flops)
 
 PetscErrorCode  PetscLogObjectState(PetscObject obj, const char format[], ...)
 {
-  PetscErrorCode ierr;
   size_t         fullLength;
   va_list        Argp;
 
@@ -2282,7 +2251,6 @@ M*/
 @*/
 PetscErrorCode PetscLogGpuTimeBegin(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!PetscLogPLB) PetscFunctionReturn(0);
@@ -2306,7 +2274,6 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
 @*/
 PetscErrorCode PetscLogGpuTimeEnd(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!PetscLogPLE) PetscFunctionReturn(0);
@@ -2356,7 +2323,6 @@ PetscErrorCode  PetscClassIdRegister(const char name[],PetscClassId *oclass)
 #if defined(PETSC_USE_LOG)
   PetscStageLog  stageLog;
   PetscInt       stage;
-  PetscErrorCode ierr;
 #endif
 
   PetscFunctionBegin;

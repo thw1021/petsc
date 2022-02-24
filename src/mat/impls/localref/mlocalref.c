@@ -38,7 +38,6 @@ static void BlockIndicesExpand(PetscInt n,const PetscInt idx[],PetscInt bs,Petsc
 static PetscErrorCode MatSetValuesBlockedLocal_LocalRef_Block(Mat A,PetscInt nrow,const PetscInt irow[],PetscInt ncol,const PetscInt icol[],const PetscScalar y[],InsertMode addv)
 {
   Mat_LocalRef   *lr = (Mat_LocalRef*)A->data;
-  PetscErrorCode ierr;
   PetscInt       buf[4096],*irowm=NULL,*icolm; /* suppress maybe-uninitialized warning */
 
   PetscFunctionBegin;
@@ -54,7 +53,6 @@ static PetscErrorCode MatSetValuesBlockedLocal_LocalRef_Block(Mat A,PetscInt nro
 static PetscErrorCode MatSetValuesBlockedLocal_LocalRef_Scalar(Mat A,PetscInt nrow,const PetscInt irow[],PetscInt ncol,const PetscInt icol[],const PetscScalar y[],InsertMode addv)
 {
   Mat_LocalRef   *lr = (Mat_LocalRef*)A->data;
-  PetscErrorCode ierr;
   PetscInt       rbs,cbs,buf[4096],*irowm,*icolm;
 
   PetscFunctionBegin;
@@ -72,7 +70,6 @@ static PetscErrorCode MatSetValuesBlockedLocal_LocalRef_Scalar(Mat A,PetscInt nr
 static PetscErrorCode MatSetValuesLocal_LocalRef_Scalar(Mat A,PetscInt nrow,const PetscInt irow[],PetscInt ncol,const PetscInt icol[],const PetscScalar y[],InsertMode addv)
 {
   Mat_LocalRef   *lr = (Mat_LocalRef*)A->data;
-  PetscErrorCode ierr;
   PetscInt       buf[4096],*irowm,*icolm;
 
   PetscFunctionBegin;
@@ -98,7 +95,6 @@ static PetscErrorCode MatSetValuesLocal_LocalRef_Scalar(Mat A,PetscInt nrow,cons
 /* Compose an IS with an ISLocalToGlobalMapping to map from IS source indices to global indices */
 static PetscErrorCode ISL2GCompose(IS is,ISLocalToGlobalMapping ltog,ISLocalToGlobalMapping *cltog)
 {
-  PetscErrorCode ierr;
   const PetscInt *idx;
   PetscInt       m,*idxm;
   PetscInt       bs;
@@ -141,7 +137,6 @@ static PetscErrorCode ISL2GCompose(IS is,ISLocalToGlobalMapping ltog,ISLocalToGl
 
 static PetscErrorCode ISL2GComposeBlock(IS is,ISLocalToGlobalMapping ltog,ISLocalToGlobalMapping *cltog)
 {
-  PetscErrorCode ierr;
   const PetscInt *idx;
   PetscInt       m,*idxm,bs;
 
@@ -165,7 +160,6 @@ static PetscErrorCode ISL2GComposeBlock(IS is,ISLocalToGlobalMapping ltog,ISLoca
 
 static PetscErrorCode MatDestroy_LocalRef(Mat B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(B->data));
@@ -198,7 +192,6 @@ static PetscErrorCode MatDestroy_LocalRef(Mat B)
 @*/
 PetscErrorCode  MatCreateLocalRef(Mat A,IS isrow,IS iscol,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat_LocalRef   *lr;
   Mat            B;
   PetscInt       m,n;

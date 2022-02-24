@@ -9,7 +9,6 @@ static PetscErrorCode DMPlexApplyLimiter_Internal(DM dm, DM dmCell, PetscLimiter
 {
   const PetscInt *children;
   PetscInt        numChildren;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetTreeChildren(dm,face,&numChildren,&children));
@@ -61,7 +60,6 @@ PetscErrorCode DMPlexReconstructGradients_Internal(DM dm, PetscFV fvm, PetscInt 
   PetscScalar       *gr;
   PetscReal         *cellPhi;
   PetscInt           dim, face, cell, field, dof, cStart, cEnd, nFields;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -176,7 +174,6 @@ PetscErrorCode DMPlexReconstructGradientsFVM(DM dm, Vec locX, Vec grad)
   PetscFVCellGeom  *cgeomFVM   = NULL;
   PetscFVFaceGeom  *fgeomFVM   = NULL;
   DM               dmGrad = NULL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDS(dm, &prob));

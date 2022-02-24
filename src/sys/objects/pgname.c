@@ -21,7 +21,6 @@
 @*/
 PetscErrorCode  PetscObjectGetName(PetscObject obj,const char *name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);

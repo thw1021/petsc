@@ -4,7 +4,6 @@
 
 static PetscErrorCode PetscViewerDestroy_Draw(PetscViewer v)
 {
-  PetscErrorCode   ierr;
   PetscInt         i;
   PetscViewer_Draw *vdraw = (PetscViewer_Draw*)v->data;
 
@@ -26,7 +25,6 @@ static PetscErrorCode PetscViewerDestroy_Draw(PetscViewer v)
 
 static PetscErrorCode PetscViewerFlush_Draw(PetscViewer v)
 {
-  PetscErrorCode   ierr;
   PetscInt         i;
   PetscViewer_Draw *vdraw = (PetscViewer_Draw*)v->data;
 
@@ -58,7 +56,6 @@ static PetscErrorCode PetscViewerFlush_Draw(PetscViewer v)
 PetscErrorCode  PetscViewerDrawGetDraw(PetscViewer viewer,PetscInt windownumber,PetscDraw *draw)
 {
   PetscViewer_Draw *vdraw;
-  PetscErrorCode   ierr;
   PetscBool        isdraw;
 
   PetscFunctionBegin;
@@ -123,7 +120,6 @@ PetscErrorCode  PetscViewerDrawGetDraw(PetscViewer viewer,PetscInt windownumber,
 PetscErrorCode  PetscViewerDrawBaseAdd(PetscViewer viewer,PetscInt windownumber)
 {
   PetscViewer_Draw *vdraw;
-  PetscErrorCode   ierr;
   PetscBool        isdraw;
 
   PetscFunctionBegin;
@@ -154,7 +150,6 @@ PetscErrorCode  PetscViewerDrawBaseAdd(PetscViewer viewer,PetscInt windownumber)
 PetscErrorCode  PetscViewerDrawBaseSet(PetscViewer viewer,PetscInt windownumber)
 {
   PetscViewer_Draw *vdraw;
-  PetscErrorCode   ierr;
   PetscBool        isdraw;
 
   PetscFunctionBegin;
@@ -189,7 +184,6 @@ PetscErrorCode  PetscViewerDrawBaseSet(PetscViewer viewer,PetscInt windownumber)
 @*/
 PetscErrorCode  PetscViewerDrawGetDrawLG(PetscViewer viewer,PetscInt windownumber,PetscDrawLG *drawlg)
 {
-  PetscErrorCode   ierr;
   PetscBool        isdraw;
   PetscViewer_Draw *vdraw;
 
@@ -234,7 +228,6 @@ PetscErrorCode  PetscViewerDrawGetDrawLG(PetscViewer viewer,PetscInt windownumbe
 @*/
 PetscErrorCode  PetscViewerDrawGetDrawAxis(PetscViewer viewer,PetscInt windownumber,PetscDrawAxis *drawaxis)
 {
-  PetscErrorCode   ierr;
   PetscBool        isdraw;
   PetscViewer_Draw *vdraw;
 
@@ -260,7 +253,6 @@ PetscErrorCode  PetscViewerDrawGetDrawAxis(PetscViewer viewer,PetscInt windownum
 
 PetscErrorCode  PetscViewerDrawResize(PetscViewer v,int w,int h)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -277,7 +269,6 @@ PetscErrorCode  PetscViewerDrawResize(PetscViewer v,int w,int h)
 
 PetscErrorCode  PetscViewerDrawSetInfo(PetscViewer v,const char display[],const char title[],int x,int y,int w,int h)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -296,7 +287,6 @@ PetscErrorCode  PetscViewerDrawSetInfo(PetscViewer v,const char display[],const 
 
 PetscErrorCode  PetscViewerDrawSetDrawType(PetscViewer v,PetscDrawType drawtype)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -313,7 +303,6 @@ PetscErrorCode  PetscViewerDrawSetDrawType(PetscViewer v,PetscDrawType drawtype)
 
 PetscErrorCode PetscViewerDrawGetDrawType(PetscViewer v,PetscDrawType *drawtype)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -329,7 +318,6 @@ PetscErrorCode PetscViewerDrawGetDrawType(PetscViewer v,PetscDrawType *drawtype)
 
 PetscErrorCode PetscViewerDrawSetTitle(PetscViewer v,const char title[])
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -346,7 +334,6 @@ PetscErrorCode PetscViewerDrawSetTitle(PetscViewer v,const char title[])
 
 PetscErrorCode PetscViewerDrawGetTitle(PetscViewer v,const char *title[])
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -407,7 +394,6 @@ PetscErrorCode PetscViewerDrawGetTitle(PetscViewer v,const char *title[])
 @*/
 PetscErrorCode  PetscViewerDrawOpen(MPI_Comm comm,const char display[],const char title[],int x,int y,int w,int h,PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,viewer));
@@ -420,7 +406,6 @@ PetscErrorCode  PetscViewerDrawOpen(MPI_Comm comm,const char display[],const cha
 
 PetscErrorCode PetscViewerGetSubViewer_Draw(PetscViewer viewer,MPI_Comm comm,PetscViewer *sviewer)
 {
-  PetscErrorCode   ierr;
   PetscMPIInt      rank;
   PetscInt         i;
   PetscViewer_Draw *vdraw = (PetscViewer_Draw*)viewer->data,*svdraw;
@@ -464,7 +449,6 @@ PetscErrorCode PetscViewerGetSubViewer_Draw(PetscViewer viewer,MPI_Comm comm,Pet
 
 PetscErrorCode PetscViewerRestoreSubViewer_Draw(PetscViewer viewer,MPI_Comm comm,PetscViewer *sviewer)
 {
-  PetscErrorCode   ierr;
   PetscMPIInt      rank;
   PetscInt         i;
   PetscViewer_Draw *vdraw = (PetscViewer_Draw*)viewer->data,*svdraw;
@@ -505,7 +489,6 @@ PetscErrorCode PetscViewerRestoreSubViewer_Draw(PetscViewer viewer,MPI_Comm comm
 
 PetscErrorCode PetscViewerSetFromOptions_Draw(PetscOptionItems *PetscOptionsObject,PetscViewer v)
 {
-  PetscErrorCode ierr;
   PetscReal      bounds[16];
   PetscInt       nbounds = 16;
   PetscBool      flg;
@@ -522,7 +505,6 @@ PetscErrorCode PetscViewerSetFromOptions_Draw(PetscOptionItems *PetscOptionsObje
 
 PetscErrorCode PetscViewerView_Draw(PetscViewer viewer,PetscViewer v)
 {
-  PetscErrorCode   ierr;
   PetscDraw        draw;
   PetscInt         i;
   PetscViewer_Draw *vdraw = (PetscViewer_Draw*)viewer->data;
@@ -552,7 +534,6 @@ PetscErrorCode PetscViewerView_Draw(PetscViewer viewer,PetscViewer v)
 M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_Draw(PetscViewer viewer)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
 
   PetscFunctionBegin;
@@ -592,7 +573,6 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Draw(PetscViewer viewer)
 @*/
 PetscErrorCode  PetscViewerDrawClear(PetscViewer viewer)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
   PetscInt         i;
@@ -627,7 +607,6 @@ PetscErrorCode  PetscViewerDrawClear(PetscViewer viewer)
 @*/
 PetscErrorCode  PetscViewerDrawGetPause(PetscViewer viewer,PetscReal *pause)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
   PetscInt         i;
@@ -667,7 +646,6 @@ PetscErrorCode  PetscViewerDrawGetPause(PetscViewer viewer,PetscReal *pause)
 @*/
 PetscErrorCode  PetscViewerDrawSetPause(PetscViewer viewer,PetscReal pause)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
   PetscInt         i;
@@ -701,7 +679,6 @@ PetscErrorCode  PetscViewerDrawSetPause(PetscViewer viewer,PetscReal pause)
 @*/
 PetscErrorCode  PetscViewerDrawSetHold(PetscViewer viewer,PetscBool hold)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -733,7 +710,6 @@ PetscErrorCode  PetscViewerDrawSetHold(PetscViewer viewer,PetscBool hold)
 @*/
 PetscErrorCode  PetscViewerDrawGetHold(PetscViewer viewer,PetscBool *hold)
 {
-  PetscErrorCode   ierr;
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
 
@@ -826,7 +802,6 @@ PetscErrorCode  PetscViewerDrawSetBounds(PetscViewer viewer,PetscInt nbounds,con
 {
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -861,7 +836,6 @@ PetscErrorCode  PetscViewerDrawGetBounds(PetscViewer viewer,PetscInt *nbounds,co
 {
   PetscViewer_Draw *vdraw;
   PetscBool        isdraw;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);

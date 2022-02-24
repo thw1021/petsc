@@ -3,7 +3,6 @@
 static PetscErrorCode SNESSetFromOptions_Anderson(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
-  PetscErrorCode ierr;
   PetscBool      monitor = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -37,7 +36,6 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
   PetscInt            k,k_restart,l,ivec;
   PetscBool           selectRestart;
   SNESConvergedReason reason;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -205,7 +203,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_Anderson(SNES snes)
 {
   SNES_NGMRES    *ngmres;
-  PetscErrorCode ierr;
   SNESLineSearch linesearch;
 
   PetscFunctionBegin;

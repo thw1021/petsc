@@ -5,7 +5,6 @@
 
 static PetscErrorCode PetscViewerFileClose_ASCII(PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscMPIInt       rank;
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data;
   int               err;
@@ -39,7 +38,6 @@ static PetscErrorCode PetscViewerFileClose_ASCII(PetscViewer viewer)
 /* ----------------------------------------------------------------------*/
 PetscErrorCode PetscViewerDestroy_ASCII(PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data;
   PetscViewerLink   *vlink;
   PetscBool         flg;
@@ -95,7 +93,6 @@ PetscErrorCode PetscViewerDestroy_ASCII(PetscViewer viewer)
 PetscErrorCode PetscViewerDestroy_ASCII_SubViewer(PetscViewer viewer)
 {
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerRestoreSubViewer(vascii->bviewer,0,&viewer));
@@ -104,7 +101,6 @@ PetscErrorCode PetscViewerDestroy_ASCII_SubViewer(PetscViewer viewer)
 
 PetscErrorCode PetscViewerFlush_ASCII(PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data;
   int               err;
   MPI_Comm          comm;
@@ -261,7 +257,6 @@ PetscErrorCode  PetscViewerASCIISetTab(PetscViewer viewer,PetscInt tabs)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -294,7 +289,6 @@ PetscErrorCode  PetscViewerASCIIGetTab(PetscViewer viewer,PetscInt *tabs)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -325,7 +319,6 @@ PetscErrorCode  PetscViewerASCIIAddTab(PetscViewer viewer,PetscInt tabs)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -356,7 +349,6 @@ PetscErrorCode  PetscViewerASCIISubtractTab(PetscViewer viewer,PetscInt tabs)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -386,7 +378,6 @@ PetscErrorCode  PetscViewerASCIIPushSynchronized(PetscViewer viewer)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -417,7 +408,6 @@ PetscErrorCode  PetscViewerASCIIPopSynchronized(PetscViewer viewer)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -452,7 +442,6 @@ PetscErrorCode  PetscViewerASCIIPushTab(PetscViewer viewer)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -482,7 +471,6 @@ PetscErrorCode  PetscViewerASCIIPushTab(PetscViewer viewer)
 PetscErrorCode  PetscViewerASCIIPopTab(PetscViewer viewer)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
-  PetscErrorCode    ierr;
   PetscBool         iascii;
 
   PetscFunctionBegin;
@@ -517,7 +505,6 @@ PetscErrorCode  PetscViewerASCIIUseTabs(PetscViewer viewer,PetscBool flg)
 {
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscBool         iascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -559,7 +546,6 @@ PetscErrorCode  PetscViewerASCIIPrintf(PetscViewer viewer,const char format[],..
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
   PetscMPIInt       rank;
   PetscInt          tab,intab = ascii->tab;
-  PetscErrorCode    ierr;
   FILE              *fd = ascii->fd;
   PetscBool         iascii;
   int               err;
@@ -639,7 +625,6 @@ PetscErrorCode  PetscViewerASCIIPrintf(PetscViewer viewer,const char format[],..
 @*/
 PetscErrorCode  PetscViewerFileSetName(PetscViewer viewer,const char name[])
 {
-  PetscErrorCode ierr;
   char           filename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
@@ -668,7 +653,6 @@ PetscErrorCode  PetscViewerFileSetName(PetscViewer viewer,const char name[])
 @*/
 PetscErrorCode  PetscViewerFileGetName(PetscViewer viewer,const char **name)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -688,7 +672,6 @@ PetscErrorCode  PetscViewerFileGetName_ASCII(PetscViewer viewer,const char **nam
 
 PetscErrorCode  PetscViewerFileSetName_ASCII(PetscViewer viewer,const char name[])
 {
-  PetscErrorCode    ierr;
   size_t            len;
   char              fname[PETSC_MAX_PATH_LEN],*gz;
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data;
@@ -761,7 +744,6 @@ PetscErrorCode  PetscViewerFileSetName_ASCII(PetscViewer viewer,const char name[
 
 PetscErrorCode PetscViewerGetSubViewer_ASCII(PetscViewer viewer,MPI_Comm subcomm,PetscViewer *outviewer)
 {
-  PetscErrorCode    ierr;
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data,*ovascii;
 
   PetscFunctionBegin;
@@ -793,7 +775,6 @@ PetscErrorCode PetscViewerGetSubViewer_ASCII(PetscViewer viewer,MPI_Comm subcomm
 
 PetscErrorCode PetscViewerRestoreSubViewer_ASCII(PetscViewer viewer,MPI_Comm comm,PetscViewer *outviewer)
 {
-  PetscErrorCode    ierr;
   PetscViewer_ASCII *ascii  = (PetscViewer_ASCII*)viewer->data;
 
   PetscFunctionBegin;
@@ -810,7 +791,6 @@ PetscErrorCode PetscViewerRestoreSubViewer_ASCII(PetscViewer viewer,MPI_Comm com
 
 PetscErrorCode  PetscViewerView_ASCII(PetscViewer v,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)v->data;
 
   PetscFunctionBegin;
@@ -833,7 +813,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ASCII(PetscViewer viewer)
 {
   PetscViewer_ASCII *vascii;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(viewer,&vascii));
@@ -905,7 +884,6 @@ $ PetscViewerASCIIPopSynchronized(viewer);
 PetscErrorCode  PetscViewerASCIISynchronizedPrintf(PetscViewer viewer,const char format[],...)
 {
   PetscViewer_ASCII *vascii = (PetscViewer_ASCII*)viewer->data;
-  PetscErrorCode    ierr;
   PetscMPIInt       rank;
   PetscInt          tab = vascii->tab;
   MPI_Comm          comm;
@@ -1032,7 +1010,6 @@ PetscErrorCode PetscViewerASCIIRead(PetscViewer viewer,void *data,PetscInt num,P
   PetscInt           i;
   int                ret = 0;
   PetscMPIInt        rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
