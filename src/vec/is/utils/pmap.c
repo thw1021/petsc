@@ -47,11 +47,10 @@ $      PetscLayoutCreateFromSizes(comm,n,N,bs,&layout);
 @*/
 PetscErrorCode PetscLayoutCreate(MPI_Comm comm,PetscLayout *map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscNew(map);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &(*map)->size);CHKERRMPI(ierr);
+  CHKERRQ(PetscNew(map));
+  CHKERRMPI(MPI_Comm_size(comm, &(*map)->size));
   (*map)->comm        = comm;
   (*map)->bs          = -1;
   (*map)->n           = -1;
@@ -100,14 +99,13 @@ $ PetscLayoutCreateFromSizes(comm,n,N,bs,&layout);
 @*/
 PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm comm,PetscInt n,PetscInt N,PetscInt bs,PetscLayout *map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscLayoutCreate(comm, map);CHKERRQ(ierr);
-  ierr = PetscLayoutSetLocalSize(*map, n);CHKERRQ(ierr);
-  ierr = PetscLayoutSetSize(*map, N);CHKERRQ(ierr);
-  ierr = PetscLayoutSetBlockSize(*map, bs);CHKERRQ(ierr);
-  ierr = PetscLayoutSetUp(*map);CHKERRQ(ierr);
+  CHKERRQ(PetscLayoutCreate(comm, map));
+  CHKERRQ(PetscLayoutSetLocalSize(*map, n));
+  CHKERRQ(PetscLayoutSetSize(*map, N));
+  CHKERRQ(PetscLayoutSetBlockSize(*map, bs));
+  CHKERRQ(PetscLayoutSetUp(*map));
   PetscFunctionReturn(0);
 }
 
@@ -131,14 +129,13 @@ PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm comm,PetscInt n,PetscInt N,Pe
 @*/
 PetscErrorCode PetscLayoutDestroy(PetscLayout *map)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*map) PetscFunctionReturn(0);
   if (!(*map)->refcnt--) {
-    if ((*map)->range_alloc) {ierr = PetscFree((*map)->range);CHKERRQ(ierr);}
-    ierr = ISLocalToGlobalMappingDestroy(&(*map)->mapping);CHKERRQ(ierr);
-    ierr = PetscFree((*map));CHKERRQ(ierr);
+    if ((*map)->range_alloc) CHKERRQ(PetscFree((*map)->range));
+    CHKERRQ(ISLocalToGlobalMappingDestroy(&(*map)->mapping));
+    CHKERRQ(PetscFree((*map)));
   }
   *map = NULL;
   PetscFunctionReturn(0);
@@ -168,16 +165,15 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm,const PetscInt range[],
 {
   PetscLayout    map;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  ierr = PetscLayoutCreate(comm, &map);CHKERRQ(ierr);
-  ierr = PetscLayoutSetBlockSize(map, bs);CHKERRQ(ierr);
+  CHKERRMPI(MPI_Comm_rank(comm, &rank));
+  CHKERRQ(PetscLayoutCreate(comm, &map));
+  CHKERRQ(PetscLayoutSetBlockSize(map, bs));
   switch (mode) {
     case PETSC_COPY_VALUES:
-      ierr = PetscMalloc1(map->size+1, &map->range);CHKERRQ(ierr);
-      ierr = PetscArraycpy(map->range, range, map->size+1);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(map->size+1, &map->range));
+      CHKERRQ(PetscArraycpy(map->range, range, map->size+1));
       break;
     case PETSC_USE_POINTER:
       map->range_alloc = PETSC_FALSE;
@@ -191,7 +187,7 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm,const PetscInt range[],
   map->N      = map->range[map->size];
   if (PetscDefined(USE_DEBUG)) {  /* just check that n, N and bs are consistent */
     PetscInt tmp;
-    ierr = MPIU_Allreduce(&map->n,&tmp,1,MPIU_INT,MPI_SUM,map->comm);CHKERRMPI(ierr);
+    CHKERRMPI(MPIU_Allreduce(&map->n,&tmp,1,MPIU_INT,MPI_SUM,map->comm));
     PetscCheckFalse(tmp != map->N,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Sum of local lengths %" PetscInt_FMT " does not equal global length %" PetscInt_FMT ", my local length %" PetscInt_FMT ".\nThe provided PetscLayout is wrong.",tmp,map->N,map->n);
     if (map->bs > 1) {
       PetscCheckFalse(map->n % map->bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Local size %" PetscInt_FMT " must be divisible by blocksize %" PetscInt_FMT,map->n,map->bs);
@@ -239,7 +235,6 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
 {
   PetscMPIInt    rank;
   PetscInt       p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(map->setupcalled && (map->n != map->oldn || map->N != map->oldN),map->comm,PETSC_ERR_ARG_WRONGSTATE,"Layout is already setup with (local=%" PetscInt_FMT ",global=%" PetscInt_FMT "), cannot call setup again with (local=%" PetscInt_FMT ",global=%" PetscInt_FMT ")", map->oldn, map->oldN, map->n, map->N);
@@ -252,16 +247,16 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
     PetscCheckFalse(map->N % map->bs,map->comm,PETSC_ERR_PLIB,"Global size %" PetscInt_FMT " must be divisible by blocksize %" PetscInt_FMT,map->N,map->bs);
   }
 
-  ierr = MPI_Comm_rank(map->comm, &rank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(map->comm, &rank));
   if (map->n > 0) map->n = map->n/PetscAbs(map->bs);
   if (map->N > 0) map->N = map->N/PetscAbs(map->bs);
-  ierr = PetscSplitOwnership(map->comm,&map->n,&map->N);CHKERRQ(ierr);
+  CHKERRQ(PetscSplitOwnership(map->comm,&map->n,&map->N));
   map->n = map->n*PetscAbs(map->bs);
   map->N = map->N*PetscAbs(map->bs);
   if (!map->range) {
-    ierr = PetscMalloc1(map->size+1, &map->range);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1(map->size+1, &map->range));
   }
-  ierr = MPI_Allgather(&map->n, 1, MPIU_INT, map->range+1, 1, MPIU_INT, map->comm);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Allgather(&map->n, 1, MPIU_INT, map->range+1, 1, MPIU_INT, map->comm));
 
   map->range[0] = 0;
   for (p = 2; p <= map->size; p++) map->range[p] += map->range[p-1];
@@ -297,16 +292,15 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
 @*/
 PetscErrorCode PetscLayoutDuplicate(PetscLayout in,PetscLayout *out)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm = in->comm;
 
   PetscFunctionBegin;
-  ierr = PetscLayoutDestroy(out);CHKERRQ(ierr);
-  ierr = PetscLayoutCreate(comm,out);CHKERRQ(ierr);
-  ierr = PetscMemcpy(*out,in,sizeof(struct _n_PetscLayout));CHKERRQ(ierr);
+  CHKERRQ(PetscLayoutDestroy(out));
+  CHKERRQ(PetscLayoutCreate(comm,out));
+  CHKERRQ(PetscMemcpy(*out,in,sizeof(struct _n_PetscLayout)));
   if (in->range) {
-    ierr = PetscMalloc1((*out)->size+1,&(*out)->range);CHKERRQ(ierr);
-    ierr = PetscArraycpy((*out)->range,in->range,(*out)->size+1);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc1((*out)->size+1,&(*out)->range));
+    CHKERRQ(PetscArraycpy((*out)->range,in->range,(*out)->size+1));
   }
   (*out)->refcnt = 0;
   PetscFunctionReturn(0);
@@ -334,11 +328,10 @@ PetscErrorCode PetscLayoutDuplicate(PetscLayout in,PetscLayout *out)
 @*/
 PetscErrorCode PetscLayoutReference(PetscLayout in,PetscLayout *out)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   in->refcnt++;
-  ierr = PetscLayoutDestroy(out);CHKERRQ(ierr);
+  CHKERRQ(PetscLayoutDestroy(out));
   *out = in;
   PetscFunctionReturn(0);
 }
@@ -363,17 +356,16 @@ PetscErrorCode PetscLayoutReference(PetscLayout in,PetscLayout *out)
 @*/
 PetscErrorCode PetscLayoutSetISLocalToGlobalMapping(PetscLayout in,ISLocalToGlobalMapping ltog)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ltog) {
     PetscInt bs;
 
-    ierr = ISLocalToGlobalMappingGetBlockSize(ltog,&bs);CHKERRQ(ierr);
+    CHKERRQ(ISLocalToGlobalMappingGetBlockSize(ltog,&bs));
     PetscCheckFalse(in->bs > 0 && (bs != 1) && in->bs != bs,in->comm,PETSC_ERR_PLIB,"Blocksize of layout %" PetscInt_FMT " must match that of mapping %" PetscInt_FMT " (or the latter must be 1)",in->bs,bs);
-    ierr = PetscObjectReference((PetscObject)ltog);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectReference((PetscObject)ltog));
   }
-  ierr = ISLocalToGlobalMappingDestroy(&in->mapping);CHKERRQ(ierr);
+  CHKERRQ(ISLocalToGlobalMappingDestroy(&in->mapping));
   in->mapping = ltog;
   PetscFunctionReturn(0);
 }
@@ -507,11 +499,10 @@ PetscErrorCode PetscLayoutSetBlockSize(PetscLayout map,PetscInt bs)
   PetscCheckFalse(map->n > 0 && map->n % bs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %" PetscInt_FMT " not compatible with block size %" PetscInt_FMT,map->n,bs);
   if (map->mapping) {
     PetscInt       obs;
-    PetscErrorCode ierr;
 
-    ierr = ISLocalToGlobalMappingGetBlockSize(map->mapping,&obs);CHKERRQ(ierr);
+    CHKERRQ(ISLocalToGlobalMappingGetBlockSize(map->mapping,&obs));
     if (obs > 1) {
-      ierr = ISLocalToGlobalMappingSetBlockSize(map->mapping,bs);CHKERRQ(ierr);
+      CHKERRQ(ISLocalToGlobalMappingSetBlockSize(map->mapping,bs));
     }
   }
   map->bs = bs;
@@ -624,13 +615,11 @@ PetscErrorCode  PetscLayoutGetRanges(PetscLayout map,const PetscInt *range[])
 @*/
 PetscErrorCode PetscLayoutCompare(PetscLayout mapa,PetscLayout mapb,PetscBool *congruent)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *congruent = PETSC_FALSE;
   if (mapa->N == mapb->N && mapa->range && mapb->range && mapa->size == mapb->size) {
-    ierr = PetscArraycmp(mapa->range,mapb->range,mapa->size+1,congruent);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycmp(mapa->range,mapb->range,mapa->size+1,congruent));
   }
   PetscFunctionReturn(0);
 }
-
