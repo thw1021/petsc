@@ -49,7 +49,6 @@ PetscErrorCode Adjoint2(Vec,PetscScalar[],User);
 
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *u;
@@ -66,7 +65,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
 
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscReal         mu   = user->mu;
   PetscInt          rowcol[] = {0,1};
@@ -99,7 +97,6 @@ static PetscErrorCode RHSHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
   PetscScalar       dJdU[2][2][2]={{{0}}};
   PetscInt          i,j,k;
   User              user = (User)ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -130,7 +127,6 @@ static PetscErrorCode RHSHessianProductUP(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
   PetscScalar       *vhv;
   PetscScalar       dJdP[2][2][1]={{{0}}};
   PetscInt          i,j,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -160,7 +156,6 @@ static PetscErrorCode RHSHessianProductPU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
   PetscScalar       *vhv;
   PetscScalar       dJdU[2][1][2]={{{0}}};
   PetscInt          i,j,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -194,7 +189,6 @@ static PetscErrorCode RHSHessianProductPP(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
 
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *u,*udot;
@@ -215,7 +209,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx
 
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user     = (User)ctx;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2];
@@ -241,7 +234,6 @@ static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat
 
 static PetscErrorCode RHSJacobianP(TS ts,PetscReal t,Vec U,Mat A,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          row[] = {0,1},col[]={0};
   PetscScalar       J[2][1];
   const PetscScalar *u;
@@ -267,7 +259,6 @@ static PetscErrorCode IHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr,V
   PetscScalar       dJdU[2][2][2]={{{0}}};
   PetscInt          i,j,k;
   User              user = (User)ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -298,7 +289,6 @@ static PetscErrorCode IHessianProductUP(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr,V
   PetscScalar       *vhv;
   PetscScalar       dJdP[2][2][1]={{{0}}};
   PetscInt          i,j,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -328,7 +318,6 @@ static PetscErrorCode IHessianProductPU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr,V
   PetscScalar       *vhv;
   PetscScalar       dJdU[2][1][2]={{{0}}};
   PetscInt          i,j,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -555,7 +544,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec P,PetscReal *f,Vec G,void *ctx)
   TS                ts = user_ptr->ts;
   PetscScalar       *x_ptr,*g;
   const PetscScalar *y_ptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(P,&y_ptr));
@@ -606,7 +594,6 @@ PetscErrorCode FormHessian(Tao tao,Vec P,Mat H,Mat Hpre,void *ctx)
   PetscScalar    harr[1];
   const PetscInt rows[1] = {0};
   PetscInt       col = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(Adjoint2(P,harr,user_ptr));
@@ -627,7 +614,6 @@ PetscErrorCode Adjoint2(Vec P,PetscScalar arr[],User ctx)
   const PetscScalar *z_ptr;
   PetscScalar       *x_ptr,*y_ptr,dzdp,dzdp2;
   Mat               tlmsen;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* Reset TSAdjoint so that AdjointSetUp will be called again */

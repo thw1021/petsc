@@ -195,7 +195,6 @@ typedef struct {
 
 PetscErrorCode RiemannListAdd(PetscFunctionList *flist,const char *name,RiemannFunction rsolve)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListAdd(flist,name,rsolve));
@@ -204,7 +203,6 @@ PetscErrorCode RiemannListAdd(PetscFunctionList *flist,const char *name,RiemannF
 
 PetscErrorCode RiemannListFind(PetscFunctionList flist,const char *name,RiemannFunction *rsolve)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListFind(flist,name,rsolve));
@@ -214,7 +212,6 @@ PetscErrorCode RiemannListFind(PetscFunctionList flist,const char *name,RiemannF
 
 PetscErrorCode ReconstructListAdd(PetscFunctionList *flist,const char *name,ReconstructFunction r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListAdd(flist,name,r));
@@ -223,7 +220,6 @@ PetscErrorCode ReconstructListAdd(PetscFunctionList *flist,const char *name,Reco
 
 PetscErrorCode ReconstructListFind(PetscFunctionList flist,const char *name,ReconstructFunction *r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListFind(flist,name,r));
@@ -253,7 +249,6 @@ static PetscErrorCode PhysicsCharacteristic_Conservative(void *vctx,PetscInt m,c
 
 static PetscErrorCode PhysicsDestroy_SimpleFree(void *vctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFree(vctx));
@@ -660,7 +655,6 @@ static PetscErrorCode PhysicsSample_Acoustics(void *vctx,PetscInt initial,FVBCTy
   PetscReal      c     = phys->c;
   PetscReal      x0a,x0b,u0a[2],u0b[2],tmp[2];
   PetscReal      X[2][2],Xi[2][2],dummy[2];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   switch (bctype) {
@@ -897,7 +891,6 @@ static PetscErrorCode PhysicsCharacteristic_IsoGas(void *vctx,PetscInt m,const P
 {
   IsoGasCtx      *phys = (IsoGasCtx*)vctx;
   PetscReal      c     = phys->acoustic_speed;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   speeds[0] = u[1]/u[0] - c;
@@ -1053,7 +1046,6 @@ static PetscErrorCode PhysicsCharacteristic_Shallow(void *vctx,PetscInt m,const 
 {
   ShallowCtx     *phys = (ShallowCtx*)vctx;
   PetscReal      c;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   c         = PetscSqrtScalar(u[0]*phys->gravity);
@@ -1109,7 +1101,6 @@ static PetscErrorCode PhysicsCreate_Shallow(FVCtx *ctx)
 static PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx             *ctx = (FVCtx*)vctx;
-  PetscErrorCode    ierr;
   PetscInt          i,j,k,Mx,dof,xs,xm;
   PetscReal         hx,cfl_idt = 0;
   PetscScalar       *x,*f,*slope;
@@ -1226,7 +1217,6 @@ static PetscErrorCode SmallMatMultADB(PetscScalar *C,PetscInt bs,const PetscScal
 static PetscErrorCode FVIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal shift,Mat A,Mat B,void *vctx)
 {
   FVCtx             *ctx = (FVCtx*)vctx;
-  PetscErrorCode    ierr;
   PetscInt          i,j,dof = ctx->physics.dof;
   PetscScalar       *J;
   const PetscScalar *x;
@@ -1261,7 +1251,6 @@ static PetscErrorCode FVIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal shi
 
 static PetscErrorCode FVSample(FVCtx *ctx,DM da,PetscReal time,Vec U)
 {
-  PetscErrorCode ierr;
   PetscScalar    *u,*uj;
   PetscInt       i,j,k,dof,xs,xm,Mx;
 
@@ -1289,7 +1278,6 @@ static PetscErrorCode FVSample(FVCtx *ctx,DM da,PetscReal time,Vec U)
 
 static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscReal         xmin,xmax;
   PetscScalar       sum,tvsum,tvgsum;
   const PetscScalar *x;
@@ -1325,7 +1313,6 @@ static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
 
 static PetscErrorCode SolutionErrorNorms(FVCtx *ctx,DM da,PetscReal t,Vec X,PetscReal *nrm1,PetscReal *nrmsup)
 {
-  PetscErrorCode ierr;
   Vec            Y;
   PetscInt       Mx;
 

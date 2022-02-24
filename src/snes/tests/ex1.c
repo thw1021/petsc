@@ -287,7 +287,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 {
   PetscInt       i,j,row,mx,my;
-  PetscErrorCode ierr;
   PetscReal      lambda,temp1,temp,hx,hy;
   PetscScalar    *x;
 
@@ -341,7 +340,6 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *ptr)
 {
   AppCtx            *user = (AppCtx*)ptr;
   PetscInt          i,j,row,mx,my;
-  PetscErrorCode    ierr;
   PetscReal         two = 2.0,one = 1.0,lambda,hx,hy,hxdhy,hydhx;
   PetscScalar       ut,ub,ul,ur,u,uxx,uyy,sc,*f;
   const PetscScalar *x;
@@ -407,7 +405,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec X,Mat J,Mat jac,void *ptr)
 {
   AppCtx            *user = (AppCtx*)ptr;   /* user-defined applicatin context */
   PetscInt          i,j,row,mx,my,col[5];
-  PetscErrorCode    ierr;
   PetscScalar       two = 2.0,one = 1.0,lambda,v[5],sc;
   const PetscScalar *x;
   PetscReal         hx,hy,hxdhy,hydhx;
@@ -466,7 +463,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec X,Mat J,Mat jac,void *ptr)
 
 PetscErrorCode ConvergenceTest(KSP ksp,PetscInt it,PetscReal nrm,KSPConvergedReason *reason,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *reason = KSP_CONVERGED_ITERATING;
@@ -479,7 +475,6 @@ PetscErrorCode ConvergenceTest(KSP ksp,PetscInt it,PetscReal nrm,KSPConvergedRea
 
 PetscErrorCode ConvergenceDestroy(void* ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscInfo(NULL,"User provided convergence destroy called\n"));
@@ -489,7 +484,6 @@ PetscErrorCode ConvergenceDestroy(void* ctx)
 
 PetscErrorCode postcheck(SNES snes,Vec x,Vec y,Vec w,PetscBool *changed_y,PetscBool *changed_w,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscReal      norm;
   Vec            tmp;
 

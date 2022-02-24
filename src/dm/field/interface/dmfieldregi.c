@@ -17,7 +17,6 @@ PetscFunctionList DMFieldList;
 @*/
 PetscErrorCode  DMFieldRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (DMFieldRegisterAllCalled) PetscFunctionReturn(0);
@@ -54,7 +53,6 @@ $     DMFieldSetType(tagger,"my_impl")
 @*/
 PetscErrorCode  DMFieldRegister(const char sname[],PetscErrorCode (*function)(DMField))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&DMFieldList,sname,function));

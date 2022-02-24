@@ -23,7 +23,6 @@ PetscErrorCode MatCreateLaplacian(Mat A, PetscReal tol, PetscBool weighted, Mat 
   PetscInt       rStart, rEnd, r, colMax = 0;
   PetscInt      *dnnz, *onnz;
   PetscInt       m, n, M, N;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheck(!weighted,PetscObjectComm((PetscObject) A), PETSC_ERR_SUP, "Will get to this soon");
@@ -102,7 +101,6 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_Spectral(Mat A, MatOrderingType type,
 {
   Mat             L;
   const PetscReal eps = 1.0e-12;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreateLaplacian(A, eps, PETSC_FALSE, &L));

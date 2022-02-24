@@ -51,7 +51,6 @@ static PetscErrorCode DMPlexWriteAndReadHDF5(DM dm, const char filename[], const
   const char     savedName[]  = "Mesh";
   const char     loadedName[] = "Mesh_new";
   PetscViewer    v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscViewerHDF5Open(PetscObjectComm((PetscObject) dm), filename, FILE_MODE_WRITE, &v));

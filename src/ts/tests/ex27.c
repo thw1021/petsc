@@ -51,7 +51,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -70,7 +69,6 @@ static PetscErrorCode SetInitialCoordinates(DM sw)
   PetscBool      simplex;
   PetscReal     *centroid, *coords, *velocity, *xi0, *v0, *J, *invJ, detJ, *vals;
   PetscInt       dim, d, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* Randomization for coordinates */
@@ -143,7 +141,6 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   PetscReal     *velocity;
   PetscScalar   *initialConditions;
   PetscInt       dim, d, cStart, cEnd, c, Np, p, n;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetLocalSize(u, &n));
@@ -172,7 +169,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   PetscInt      *cellid;
   PetscInt       dim, cStart, cEnd, c, Np = user->N, p;
   PetscBool      view = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -295,7 +291,6 @@ static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp
   PetscInt  ny = dim > 1 ? nx : 1;
   PetscInt  nz = dim > 2 ? nx : 1;
   PetscInt  i, j, k, d, q, dbg = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   for (d = 0; d < dim; ++d) integral[d] = 0.0;
@@ -345,7 +340,6 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   PetscScalar       *r;
   PetscReal         *velocity;
   PetscInt           dim, Np, p, q;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecZeroEntries(R));
@@ -396,7 +390,6 @@ static PetscErrorCode UpdateSwarm(TS ts)
   PetscScalar *velocity;
   DM sw;
   Vec sol;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &sw));
@@ -414,7 +407,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
 {
   DM             dm;
   AppCtx        *user;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

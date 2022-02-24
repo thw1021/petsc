@@ -37,8 +37,6 @@ static PetscErrorCode DMVecCreateTagName_Moab_Private(moab::Interface *mbiface,c
 @*/
 PetscErrorCode DMMoabCreateVector(DM dm, moab::Tag tag, const moab::Range* range, PetscBool is_global_vec, PetscBool destroy_tag, Vec *vec)
 {
-  PetscErrorCode     ierr;
-
   PetscFunctionBegin;
   PetscCheckFalse(!tag && (!range || range->empty()),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Both tag and range cannot be null.");
 
@@ -63,7 +61,6 @@ PetscErrorCode DMMoabGetVecTag(Vec vec, moab::Tag *tag)
 {
   PetscContainer  moabdata;
   Vec_MOAB        *vmoab;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(tag, 2);
@@ -93,7 +90,6 @@ PetscErrorCode DMMoabGetVecRange(Vec vec, moab::Range *range)
 {
   PetscContainer  moabdata;
   Vec_MOAB        *vmoab;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(range, 2);
@@ -126,7 +122,6 @@ PetscErrorCode  DMMoabVecGetArray(DM dm, Vec vec, void* array)
 {
   DM_Moab        *dmmoab;
   moab::ErrorCode merr;
-  PetscErrorCode  ierr;
   PetscInt        count, i, f;
   moab::Tag       vtag;
   PetscScalar     **varray;
@@ -209,7 +204,6 @@ PetscErrorCode  DMMoabVecRestoreArray(DM dm, Vec vec, void* array)
 {
   DM_Moab        *dmmoab;
   moab::ErrorCode merr;
-  PetscErrorCode  ierr;
   moab::Tag       vtag;
   PetscInt        count, i, f;
   PetscScalar     **varray;
@@ -293,7 +287,6 @@ PetscErrorCode  DMMoabVecGetArrayRead(DM dm, Vec vec, void* array)
 {
   DM_Moab        *dmmoab;
   moab::ErrorCode merr;
-  PetscErrorCode  ierr;
   PetscInt        count, i, f;
   moab::Tag       vtag;
   PetscScalar     **varray;
@@ -370,7 +363,6 @@ PetscErrorCode  DMMoabVecGetArrayRead(DM dm, Vec vec, void* array)
 @*/
 PetscErrorCode  DMMoabVecRestoreArrayRead(DM dm, Vec vec, void* array)
 {
-  PetscErrorCode  ierr;
   PetscScalar     **varray;
   PetscContainer  moabdata;
   Vec_MOAB        *vmoab, *xmoab;
@@ -409,7 +401,6 @@ PetscErrorCode  DMMoabVecRestoreArrayRead(DM dm, Vec vec, void* array)
 
 PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Range* userrange, PetscBool is_global_vec, PetscBool destroy_tag, Vec *vec)
 {
-  PetscErrorCode    ierr;
   moab::ErrorCode   merr;
   PetscBool         is_newtag;
   const moab::Range *range;
@@ -493,18 +484,15 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
     /* Create the PETSc Vector directly and attach our functions accordingly */
     if (!is_global_vec) {
       /* This is an MPI Vector with ghosted padding */
-      ierr = VecCreateGhostBlock((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,
-                                 dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], vec);CHKERRQ(ierr);
-    }
-    else {
+      CHKERRQ(VecCreateGhostBlock((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], vec));
+    } else {
       /* This is an MPI/SEQ Vector */
       CHKERRQ(VecCreate((((PetscObject)dm)->comm), vec));
       CHKERRQ(VecSetSizes(*vec, dmmoab->numFields * dmmoab->nloc, PETSC_DECIDE));
       CHKERRQ(VecSetBlockSize(*vec, dmmoab->bs));
       CHKERRQ(VecSetType(*vec, VECMPI));
     }
-  }
-  else {
+  } else {
     /* Call tag_iterate. This will cause MOAB to allocate memory for the
        tag data if it hasn't already happened */
     merr = mbiface->tag_iterate(tag, range->begin(), range->end(), count, (void*&)data_ptr); MBERRNM(merr);
@@ -519,13 +507,10 @@ PetscErrorCode DMCreateVector_Moab_Private(DM dm, moab::Tag tag, const moab::Ran
         -> else, create a non-ghosted parallel vector */
     if (!is_global_vec) {
       /* This is an MPI Vector with ghosted padding */
-      ierr = VecCreateGhostBlockWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,
-                                          dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], data_ptr, vec);CHKERRQ(ierr);
-    }
-    else {
+      CHKERRQ(VecCreateGhostBlockWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * dmmoab->nloc,dmmoab->numFields * dmmoab->n, dmmoab->nghost, &dmmoab->gsindices[dmmoab->nloc], data_ptr, vec));
+    } else {
       /* This is an MPI Vector without ghosted padding */
-      ierr = VecCreateMPIWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * range->size(),
-                                   PETSC_DECIDE, data_ptr, vec);CHKERRQ(ierr);
+      CHKERRQ(VecCreateMPIWithArray((((PetscObject)dm)->comm), dmmoab->bs, dmmoab->numFields * range->size(),PETSC_DECIDE, data_ptr, vec));
     }
   }
   CHKERRQ(VecSetFromOptions(*vec));
@@ -567,7 +552,6 @@ PetscErrorCode DMVecCreateTagName_Moab_Private(moab::Interface *mbiface, char** 
 #endif
 {
   moab::ErrorCode mberr;
-  PetscErrorCode  ierr;
   PetscInt        n, global_n;
   moab::Tag indexTag;
 
@@ -603,7 +587,6 @@ PetscErrorCode DMVecCreateTagName_Moab_Private(moab::Interface *mbiface, char** 
 
 PETSC_EXTERN PetscErrorCode DMCreateGlobalVector_Moab(DM dm, Vec *gvec)
 {
-  PetscErrorCode  ierr;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
@@ -615,7 +598,6 @@ PETSC_EXTERN PetscErrorCode DMCreateGlobalVector_Moab(DM dm, Vec *gvec)
 
 PETSC_EXTERN PetscErrorCode DMCreateLocalVector_Moab(DM dm, Vec *lvec)
 {
-  PetscErrorCode  ierr;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
@@ -627,7 +609,6 @@ PETSC_EXTERN PetscErrorCode DMCreateLocalVector_Moab(DM dm, Vec *lvec)
 
 PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y)
 {
-  PetscErrorCode ierr;
   DM             dm;
   PetscContainer  moabdata;
   Vec_MOAB        *vmoab;
@@ -651,7 +632,6 @@ PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y)
 PetscErrorCode DMVecUserDestroy_Moab(void *user)
 {
   Vec_MOAB        *vmoab = (Vec_MOAB*)user;
-  PetscErrorCode  ierr;
   moab::ErrorCode merr;
 
   PetscFunctionBegin;
@@ -671,7 +651,6 @@ PetscErrorCode DMVecUserDestroy_Moab(void *user)
 
 PETSC_EXTERN PetscErrorCode  DMGlobalToLocalBegin_Moab(DM dm, Vec g, InsertMode mode, Vec l)
 {
-  PetscErrorCode    ierr;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
@@ -681,7 +660,6 @@ PETSC_EXTERN PetscErrorCode  DMGlobalToLocalBegin_Moab(DM dm, Vec g, InsertMode 
 
 PETSC_EXTERN PetscErrorCode  DMGlobalToLocalEnd_Moab(DM dm, Vec g, InsertMode mode, Vec l)
 {
-  PetscErrorCode    ierr;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
@@ -691,7 +669,6 @@ PETSC_EXTERN PetscErrorCode  DMGlobalToLocalEnd_Moab(DM dm, Vec g, InsertMode mo
 
 PETSC_EXTERN PetscErrorCode  DMLocalToGlobalBegin_Moab(DM dm, Vec l, InsertMode mode, Vec g)
 {
-  PetscErrorCode    ierr;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;
@@ -701,7 +678,6 @@ PETSC_EXTERN PetscErrorCode  DMLocalToGlobalBegin_Moab(DM dm, Vec l, InsertMode 
 
 PETSC_EXTERN PetscErrorCode  DMLocalToGlobalEnd_Moab(DM dm, Vec l, InsertMode mode, Vec g)
 {
-  PetscErrorCode    ierr;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
 
   PetscFunctionBegin;

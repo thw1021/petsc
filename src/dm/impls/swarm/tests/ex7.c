@@ -19,7 +19,6 @@ typedef struct {
 PetscErrorCode MatMultMtM_SeqAIJ(Mat MtM,Vec xx,Vec yy)
 {
   MatShellCtx    *matshellctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(MtM,&matshellctx));
@@ -32,7 +31,6 @@ PetscErrorCode MatMultMtM_SeqAIJ(Mat MtM,Vec xx,Vec yy)
 PetscErrorCode MatMultAddMtM_SeqAIJ(Mat MtM,Vec xx, Vec yy, Vec zz)
 {
   MatShellCtx    *matshellctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(MtM,&matshellctx));
@@ -44,8 +42,7 @@ PetscErrorCode MatMultAddMtM_SeqAIJ(Mat MtM,Vec xx, Vec yy, Vec zz)
 
 PetscErrorCode createSwarm(const DM dm, DM *sw)
 {
-  PetscErrorCode ierr;
-  PetscInt       Nc = 1, dim = 2;
+  PetscInt Nc = 1, dim = 2;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(PETSC_COMM_SELF, sw));
@@ -65,7 +62,6 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
   KSP            ksp;
   Mat            PM_p=NULL,MtM,D;
   Vec            ff;
-  PetscErrorCode ierr;
   PetscInt       Np, timestep = 0, bs, N, M, nzl;
   PetscReal      time = 0.0;
   PetscDataType  dtype;
@@ -75,7 +71,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
   CHKERRQ(KSPCreate(PETSC_COMM_SELF, &ksp));
   CHKERRQ(KSPSetOptionsPrefix(ksp, "ftop_"));
   CHKERRQ(KSPSetFromOptions(ksp));
-  ierr = PetscObjectTypeCompare((PetscObject)ksp,KSPLSQR,&is_lsqr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)ksp,KSPLSQR,&is_lsqr));
   if (!is_lsqr) {
     CHKERRQ(MatGetLocalSize(M_p, &M, &N));
     if (N>M) {
@@ -101,7 +97,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
         CHKERRQ(MatGetRow(matshellctx->MpTrans,i,&nzl,&cols,&vals));
         for (int ii=0 ; ii<nzl ; ii++) dot += PetscSqr(vals[ii]);
         PetscCheckFalse(dot==0.0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Row %D is empty", i);
-        ierr = MatSetValue(D,i,i,dot,INSERT_VALUES);
+        CHKERRQ(MatSetValue(D,i,i,dot,INSERT_VALUES));
       }
       CHKERRQ(MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY));
       CHKERRQ(MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY));
@@ -116,7 +112,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
     PC        pc;
     PetscBool is_bjac;
     CHKERRQ(KSPGetPC(ksp,&pc));
-    ierr = PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&is_bjac);
+    CHKERRQ(PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&is_bjac));
     if (is_bjac) {
       CHKERRQ(DMSwarmCreateMassMatrixSquare(sw, dm, &PM_p));
       CHKERRQ(KSPSetOperators(ksp, M_p, PM_p));
@@ -158,8 +154,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
     CHKERRQ(DMSwarmRestoreField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords));
     CHKERRQ(DMSwarmRestoreField(sw, "w_q", &bs, &dtype, (void**)&wq));
   }
-  ierr = MatDestroy(&PM_p);
-
+  CHKERRQ(MatDestroy(&PM_p));
   PetscFunctionReturn(0);
 }
 
@@ -172,7 +167,6 @@ PetscErrorCode particlesToGrid(const DM dm, DM sw, const PetscInt Np, const Pets
   PetscDataType  dtype;
   Mat            M_p;
   Vec            ff;
-  PetscErrorCode ierr;
   PetscInt       bs,p,zero=0;
 
   PetscFunctionBeginUser;
@@ -231,7 +225,6 @@ PetscErrorCode go()
   PetscReal       lo[3] = {-5,0,-5}, hi[3] = {5,5,5}, h[3], hp[3], *xx_t[MAX_NUM_THRDS], *yy_t[MAX_NUM_THRDS], *wp_t[MAX_NUM_THRDS], solve_time = 0;
   Vec             rho_t[MAX_NUM_THRDS], rhs_t[MAX_NUM_THRDS];
   Mat             M_p_t[MAX_NUM_THRDS];
-  PetscErrorCode  ierr;
 #if defined PETSC_USE_LOG
   PetscLogStage   stage;
   PetscLogEvent   swarm_create_ev, solve_ev, solve_loop_ev;
@@ -298,7 +291,7 @@ PetscErrorCode go()
         yy_t[tid][pp] = lo[1] + hp[1]/2. + pj*hp[1];
         {
           PetscReal x[] = {xx_t[tid][pp],yy_t[tid][pp]};
-          ierr = maxwellian(2, x, 1.0, vol/(PetscReal)Np_t[tid], &wp_t[tid][pp]);
+          CHKERRQ(maxwellian(2, x, 1.0, vol/(PetscReal)Np_t[tid], &wp_t[tid][pp]));
         }
         if (tid==target) { //energy_0 += wp_t[tid][pp]*(PetscSqr(xx_t[tid][pp])+PetscSqr(yy_t[tid][pp]));
           moments_0[0] += wp_t[tid][pp];
@@ -314,34 +307,22 @@ PetscErrorCode go()
   /* Create particle swarm */
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = createSwarm(dm_t[tid], &sw_t[tid]);
-    if (ierr_t) ierr = ierr_t;
+    CHKERRABORT(PETSC_COMM_SELF,createSwarm(dm_t[tid], &sw_t[tid]));
   }
-  CHKERRQ(ierr);
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
-    if (ierr_t) ierr = ierr_t;
+    CHKERRABORT(PETSC_COMM_SELF,particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]));
   }
-  CHKERRQ(ierr);
   /* Project field to particles */
   /*   This gives f_p = M_p^+ M f */
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
-    if (ierr_t) ierr = ierr_t;
+    CHKERRABORT(PETSC_COMM_SELF,VecCopy(rho_t[tid], rhs_t[tid])); /* Identity: M^1 M rho */
   }
-  CHKERRQ(ierr);
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    PetscErrorCode  ierr_t;
-    ierr_t = gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]);
-    if (ierr_t) ierr = ierr_t;
+    CHKERRABORT(PETSC_COMM_SELF,gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]));
   }
-  CHKERRQ(ierr);
   /* Cleanup */
   for (int tid=0; tid<numthreads; tid++) {
     CHKERRQ(MatDestroy(&M_p_t[tid]));
@@ -363,32 +344,20 @@ PetscErrorCode go()
   /* Create particle swarm */
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = createSwarm(dm_t[tid], &sw_t[tid]);
-      if (ierr_t) ierr = ierr_t;
+      CHKERRABORT(PETSC_COMM_SELF,createSwarm(dm_t[tid], &sw_t[tid]));
     }
-    CHKERRQ(ierr);
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]);
-      if (ierr_t) ierr = ierr_t;
+      CHKERRABORT(PETSC_COMM_SELF,particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]));
     }
-    CHKERRQ(ierr);
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = VecCopy(rho_t[tid], rhs_t[tid]); /* Identity: M^1 M rho */
-      if (ierr_t) ierr = ierr_t;
+      CHKERRABORT(PETSC_COMM_SELF,VecCopy(rho_t[tid], rhs_t[tid])); /* Identity: M^1 M rho */
     }
-    CHKERRQ(ierr);
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      PetscErrorCode  ierr_t;
-      ierr_t = gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]);
-      if (ierr_t) ierr = ierr_t;
+      CHKERRABORT(PETSC_COMM_SELF,gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]));
     }
-    CHKERRQ(ierr);
     /* Cleanup */
     for (int tid=0; tid<numthreads; tid++) {
       CHKERRQ(MatDestroy(&M_p_t[tid]));
@@ -410,7 +379,6 @@ PetscErrorCode go()
     CHKERRQ(DMDestroy(&dm_t[tid]));
     CHKERRQ(PetscFree3(xx_t[tid],yy_t[tid],wp_t[tid]));
   }
-
   PetscFunctionReturn(0);
 }
 

@@ -6,7 +6,6 @@ static char help[] = "Tests MatTranspose(), MatNorm(), MatAXPY() and MatAYPX().\
 static PetscErrorCode TransposeAXPY(Mat C,PetscScalar alpha,Mat mat,PetscErrorCode (*f)(Mat,Mat*))
 {
   Mat            D,E,F,G;
-  PetscErrorCode ierr;
   MatType        mtype;
 
   PetscFunctionBegin;

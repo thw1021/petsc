@@ -107,7 +107,6 @@ int main(int argc,char **argv)
 PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 {
   UserContext    *user = (UserContext*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,mx,my,xm,ym,xs,ys;
   PetscScalar    Hx,Hy;
   PetscScalar    **array;
@@ -156,7 +155,6 @@ PetscErrorCode ComputeMatrix(KSP ksp,Mat J,Mat jac,void *ctx)
 {
   UserContext    *user = (UserContext*)ctx;
   PetscReal      centerRho;
-  PetscErrorCode ierr;
   PetscInt       i,j,mx,my,xm,ym,xs,ys;
   PetscScalar    v[5];
   PetscReal      Hx,Hy,HydHx,HxdHy,rho;

@@ -7,7 +7,6 @@ extern PetscErrorCode MatInodeGetInodeSizes_SeqAIJ_Inode(Mat,PetscInt*,PetscInt*
 PetscErrorCode MatView_SeqAIJ_Inode(Mat A,PetscViewer viewer)
 {
   Mat_SeqAIJ        *a=(Mat_SeqAIJ*)A->data;
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -29,7 +28,6 @@ PetscErrorCode MatView_SeqAIJ_Inode(Mat A,PetscViewer viewer)
 PetscErrorCode MatAssemblyEnd_SeqAIJ_Inode(Mat A, MatAssemblyType mode)
 {
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqAIJCheckInode(A));
@@ -39,7 +37,6 @@ PetscErrorCode MatAssemblyEnd_SeqAIJ_Inode(Mat A, MatAssemblyType mode)
 
 PetscErrorCode MatDestroy_SeqAIJ_Inode(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *a=(Mat_SeqAIJ*)A->data;
 
   PetscFunctionBegin;

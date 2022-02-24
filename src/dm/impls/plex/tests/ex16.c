@@ -4,7 +4,6 @@ static char help[] = "Tests for creation of submeshes\n\n";
 
 PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -18,7 +17,6 @@ PetscErrorCode CreateSubmesh(DM dm, PetscBool start, DM *subdm)
 {
   DMLabel        label, map;
   PetscInt       cStart, cEnd, cStartSub, cEndSub, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));

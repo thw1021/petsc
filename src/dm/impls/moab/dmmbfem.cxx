@@ -132,7 +132,6 @@ PetscErrorCode Compute_Lagrange_Basis_1D_Internal(const PetscInt nverts, const P
                                                   PetscReal *jacobian, PetscReal *ijacobian, PetscReal *volume)
 {
   int             i, j;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(jacobian, 9);
@@ -252,7 +251,6 @@ PetscErrorCode Compute_Lagrange_Basis_2D_Internal(const PetscInt nverts, const P
                                                   PetscReal *jacobian, PetscReal *ijacobian, PetscReal *volume)
 {
   PetscInt       i, j, k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(jacobian, 10);
@@ -414,7 +412,6 @@ PetscErrorCode Compute_Lagrange_Basis_3D_Internal(const PetscInt nverts, const P
                                                   PetscReal *jacobian, PetscReal *ijacobian, PetscReal *volume)
 {
   PetscInt       i, j, k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(jacobian, 11);
@@ -632,7 +629,6 @@ PetscErrorCode DMMoabFEMComputeBasis(const PetscInt dim, const PetscInt nverts, 
                                      PetscReal *phypts, PetscReal *jacobian_quadrature_weight_product,
                                      PetscReal *fe_basis, PetscReal **fe_basis_derivatives)
 {
-  PetscErrorCode  ierr;
   PetscInt        npoints,idim;
   bool            compute_der;
   const PetscReal *quadpts, *quadwts;
@@ -653,25 +649,25 @@ PetscErrorCode DMMoabFEMComputeBasis(const PetscInt dim, const PetscInt nverts, 
 
   switch (dim) {
   case 1:
-    ierr = Compute_Lagrange_Basis_1D_Internal(nverts, coordinates, npoints, quadpts, phypts,
-           jacobian_quadrature_weight_product, fe_basis,
-           (compute_der ? fe_basis_derivatives[0] : NULL),
-           jacobian, ijacobian, &volume);CHKERRQ(ierr);
+    CHKERRQ(Compute_Lagrange_Basis_1D_Internal(nverts, coordinates, npoints, quadpts, phypts,
+                                               jacobian_quadrature_weight_product, fe_basis,
+                                               (compute_der ? fe_basis_derivatives[0] : NULL),
+                                               jacobian, ijacobian, &volume));
     break;
   case 2:
-    ierr = Compute_Lagrange_Basis_2D_Internal(nverts, coordinates, npoints, quadpts, phypts,
-           jacobian_quadrature_weight_product, fe_basis,
-           (compute_der ? fe_basis_derivatives[0] : NULL),
-           (compute_der ? fe_basis_derivatives[1] : NULL),
-           jacobian, ijacobian, &volume);CHKERRQ(ierr);
+    CHKERRQ(Compute_Lagrange_Basis_2D_Internal(nverts, coordinates, npoints, quadpts, phypts,
+                                               jacobian_quadrature_weight_product, fe_basis,
+                                               (compute_der ? fe_basis_derivatives[0] : NULL),
+                                               (compute_der ? fe_basis_derivatives[1] : NULL),
+                                               jacobian, ijacobian, &volume));
     break;
   case 3:
-    ierr = Compute_Lagrange_Basis_3D_Internal(nverts, coordinates, npoints, quadpts, phypts,
-           jacobian_quadrature_weight_product, fe_basis,
-           (compute_der ? fe_basis_derivatives[0] : NULL),
-           (compute_der ? fe_basis_derivatives[1] : NULL),
-           (compute_der ? fe_basis_derivatives[2] : NULL),
-           jacobian, ijacobian, &volume);CHKERRQ(ierr);
+    CHKERRQ(Compute_Lagrange_Basis_3D_Internal(nverts, coordinates, npoints, quadpts, phypts,
+                                               jacobian_quadrature_weight_product, fe_basis,
+                                               (compute_der ? fe_basis_derivatives[0] : NULL),
+                                               (compute_der ? fe_basis_derivatives[1] : NULL),
+                                               (compute_der ? fe_basis_derivatives[2] : NULL),
+                                               jacobian, ijacobian, &volume));
     break;
   default:
     SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %D", dim);
@@ -698,7 +694,6 @@ PetscErrorCode DMMoabFEMCreateQuadratureDefault(const PetscInt dim, const PetscI
 {
   PetscReal       *w, *x;
   PetscInt        nc=1;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Create an appropriate quadrature rule to sample basis */
@@ -790,7 +785,6 @@ PetscErrorCode ComputeJacobian_Internal (const PetscInt dim, const PetscInt nver
 {
   PetscInt       i;
   PetscReal      volume=1.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(coordinates, 3);
@@ -927,21 +921,16 @@ PetscErrorCode ComputeJacobian_Internal (const PetscInt dim, const PetscInt nver
 PetscErrorCode FEMComputeBasis_JandF(const PetscInt dim, const PetscInt nverts, const PetscReal *coordinates, const PetscReal *quadrature, PetscReal *phypts,
                                      PetscReal *phibasis, PetscReal *jacobian, PetscReal *ijacobian, PetscReal* volume)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   switch (dim) {
     case 1:
-      ierr = Compute_Lagrange_Basis_1D_Internal(nverts, coordinates, 1, quadrature, phypts,
-            NULL, phibasis, NULL, jacobian, ijacobian, volume);CHKERRQ(ierr);
+      CHKERRQ(Compute_Lagrange_Basis_1D_Internal(nverts, coordinates, 1, quadrature, phypts, NULL, phibasis, NULL, jacobian, ijacobian, volume));
       break;
     case 2:
-      ierr = Compute_Lagrange_Basis_2D_Internal(nverts, coordinates, 1, quadrature, phypts,
-            NULL, phibasis, NULL, NULL, jacobian, ijacobian, volume);CHKERRQ(ierr);
+      CHKERRQ(Compute_Lagrange_Basis_2D_Internal(nverts, coordinates, 1, quadrature, phypts, NULL, phibasis, NULL, NULL, jacobian, ijacobian, volume));
       break;
     case 3:
-      ierr = Compute_Lagrange_Basis_3D_Internal(nverts, coordinates, 1, quadrature, phypts,
-            NULL, phibasis, NULL, NULL, NULL, jacobian, ijacobian, volume);CHKERRQ(ierr);
+      CHKERRQ(Compute_Lagrange_Basis_3D_Internal(nverts, coordinates, 1, quadrature, phypts, NULL, phibasis, NULL, NULL, NULL, jacobian, ijacobian, volume));
       break;
     default:
       SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension; should be in [1,3] : %D", dim);
@@ -976,7 +965,6 @@ PetscErrorCode DMMoabPToRMapping(const PetscInt dim, const PetscInt nverts, cons
   PetscReal       phibasis[8], jacobian[9], ijacobian[9], volume;
   PetscReal       phypts[3] = {0.0, 0.0, 0.0};
   PetscReal       delta[3] = {0.0, 0.0, 0.0};
-  PetscErrorCode  ierr;
   PetscInt        iters=0;
   PetscReal       error=1.0;
 

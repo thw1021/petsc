@@ -31,7 +31,6 @@
 @*/
 PetscErrorCode  PetscOptionsGetenv(MPI_Comm comm,const char name[],char env[],size_t len,PetscBool  *flag)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   char           *str,work[256];
   PetscBool      flg = PETSC_FALSE,spetsc;
@@ -79,7 +78,6 @@ static char PetscDisplay[256];
 
 static PetscErrorCode PetscWorldIsSingleHost(PetscBool  *onehost)
 {
-  PetscErrorCode ierr;
   char           hostname[256],roothostname[256];
   PetscMPIInt    localmatch,allmatch;
   PetscBool      flag;
@@ -100,7 +98,6 @@ static PetscErrorCode PetscWorldIsSingleHost(PetscBool  *onehost)
 
 PetscErrorCode  PetscSetDisplay(void)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   PetscBool      flag,singlehost=PETSC_FALSE;
   char           display[sizeof(PetscDisplay)];
@@ -159,7 +156,6 @@ PetscErrorCode  PetscSetDisplay(void)
 */
 PetscErrorCode  PetscGetDisplay(char display[],size_t n)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(display,PetscDisplay,n));

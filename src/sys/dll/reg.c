@@ -16,7 +16,6 @@ PetscDLLibrary PetscDLLibrariesLoaded = NULL;
 static PetscErrorCode  PetscLoadDynamicLibrary(const char *name,PetscBool  *found)
 {
   char           libs[PETSC_MAX_PATH_LEN],dlib[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(libs,"${PETSC_LIB_DIR}/libpetsc",sizeof(libs)));
@@ -63,7 +62,6 @@ static MPI_Comm PETSC_COMM_WORLD_INNER = 0,PETSC_COMM_SELF_INNER = 0;
 PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
 {
   char           *libname[32];
-  PetscErrorCode ierr;
   PetscInt       nmax,i;
   PetscBool      preload = PETSC_FALSE;
 #if defined(PETSC_HAVE_ELEMENTAL)
@@ -166,7 +164,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void)
 */
 PETSC_INTERN PetscErrorCode PetscFinalize_DynamicLibraries(void)
 {
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -227,7 +224,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscFunctionListAdd_Private(PetscFunctionList *fl,const char name[],void (*fnc)(void))
 {
   PetscFunctionList entry,ne;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!*fl) {
@@ -286,7 +282,6 @@ PETSC_EXTERN PetscErrorCode PetscFunctionListAdd_Private(PetscFunctionList *fl,c
 PetscErrorCode  PetscFunctionListDestroy(PetscFunctionList *fl)
 {
   PetscFunctionList next,entry,tmp = dlallhead;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!*fl) PetscFunctionReturn(0);
@@ -323,7 +318,6 @@ PetscErrorCode  PetscFunctionListDestroy(PetscFunctionList *fl)
 PetscErrorCode  PetscFunctionListPrintAll(void)
 {
   PetscFunctionList tmp = dlallhead;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (tmp) {
@@ -357,7 +351,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscFunctionListFind_Private(PetscFunctionList fl,const char name[],void (**r)(void))
 {
   PetscFunctionList entry = fl;
-  PetscErrorCode    ierr;
   PetscBool         flg;
 
   PetscFunctionBegin;
@@ -390,7 +383,6 @@ PETSC_EXTERN PetscErrorCode PetscFunctionListFind_Private(PetscFunctionList fl,c
 @*/
 PetscErrorCode  PetscFunctionListView(PetscFunctionList list,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -432,7 +424,6 @@ PetscErrorCode  PetscFunctionListView(PetscFunctionList list,PetscViewer viewer)
 @*/
 PetscErrorCode  PetscFunctionListGet(PetscFunctionList list,const char ***array,int *n)
 {
-  PetscErrorCode    ierr;
   PetscInt          count = 0;
   PetscFunctionList klist = list;
 
@@ -475,7 +466,6 @@ PetscErrorCode  PetscFunctionListGet(PetscFunctionList list,const char ***array,
 @*/
 PetscErrorCode  PetscFunctionListPrintTypes(MPI_Comm comm,FILE *fd,const char prefix[],const char name[],const char text[],const char man[],PetscFunctionList list,const char def[],const char newv[])
 {
-  PetscErrorCode ierr;
   char           p[64];
 
   PetscFunctionBegin;
@@ -509,7 +499,6 @@ PetscErrorCode  PetscFunctionListPrintTypes(MPI_Comm comm,FILE *fd,const char pr
 @*/
 PetscErrorCode  PetscFunctionListDuplicate(PetscFunctionList fl,PetscFunctionList *nl)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while (fl) {

@@ -218,7 +218,6 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,AppCtx *user)
 {
   DM             da;
   PetscInt       i,j,mx,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   PetscReal      grashof,dx;
   Field          **x;
 
@@ -266,7 +265,6 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,AppCtx *user)
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,PetscReal ptime,Field **x,Field **xdot,Field **f,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       xints,xinte,yints,yinte,i,j;
   PetscReal      hx,hy,dhx,dhy,hxdhy,hydhx;
   PetscReal      grashof,prandtl,lid;

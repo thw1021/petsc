@@ -10,7 +10,6 @@ static PetscErrorCode PETSCMAPNAME(ISGlobalToLocalMappingApply)(ISLocalToGlobalM
 {
   PetscInt                             i,nf = 0,tmp,start,end,bs;
   PETSCMAPTYPE(ISLocalToGlobalMapping) *map = (PETSCMAPTYPE(ISLocalToGlobalMapping)*)mapping->data;
-  PetscErrorCode                       ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mapping,IS_LTOGM_CLASSID,1);

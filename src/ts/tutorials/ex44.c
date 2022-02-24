@@ -24,7 +24,6 @@ static PetscErrorCode Event(TS ts,PetscReal t,Vec U,PetscScalar *fvalue,void *ct
   AppCtx            *app = (AppCtx*)ctx;
   Vec               V;
   const PetscScalar *u,*v;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* Event for ball height */
@@ -45,7 +44,6 @@ static PetscErrorCode PostEvent(TS ts,PetscInt nevents,PetscInt event_list[],Pet
   Vec            V;
   PetscScalar    *u,*v;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!nevents) PetscFunctionReturn(0);
@@ -71,7 +69,6 @@ static PetscErrorCode I2Function(TS ts,PetscReal t,Vec U,Vec V,Vec A,Vec F,void 
   AppCtx            *app = (AppCtx*)ctx;
   const PetscScalar *u,*v,*a;
   PetscScalar       Res,*f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -94,7 +91,6 @@ static PetscErrorCode I2Jacobian(TS ts,PetscReal t,Vec U,Vec V,Vec A,PetscReal s
   const PetscScalar *u,*v,*a;
   PetscInt          i;
   PetscScalar       Jac;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,&u));

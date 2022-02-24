@@ -12,7 +12,6 @@ static PetscErrorCode CheckGraphNotSet(PetscSF sf)
   PetscInt          nroots,nleaves;
   const PetscInt    *ilocal;
   const PetscSFNode *iremote;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(sf->graphset,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
@@ -32,7 +31,6 @@ static PetscErrorCode CheckGraphEmpty(PetscSF sf)
   const PetscInt    *ilocal;
   const PetscSFNode *iremote;
   PetscInt          minleaf,maxleaf;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote));

@@ -5,7 +5,6 @@
 
 PetscErrorCode ISView_Binary(IS is,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      skipHeader;
   PetscLayout    map;
   PetscInt       tr[2],n,s,N;
@@ -41,7 +40,6 @@ PetscErrorCode ISLoad_HDF5(IS is, PetscViewer viewer)
   hid_t           inttype;    /* int type (H5T_NATIVE_INT or H5T_NATIVE_LLONG) */
   PetscInt       *ind;
   const char     *isname;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheck(((PetscObject)is)->name, PetscObjectComm((PetscObject)is), PETSC_ERR_SUP, "IS name must be given using PetscObjectSetName() before ISLoad() since HDF5 can store multiple objects in a single file");
@@ -59,7 +57,6 @@ PetscErrorCode ISLoad_HDF5(IS is, PetscViewer viewer)
 
 PetscErrorCode ISLoad_Binary(IS is, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isgeneral,skipHeader;
   PetscInt       tr[2],rows,N,n,s,*idx;
   PetscLayout    map;
@@ -105,7 +102,6 @@ PetscErrorCode ISLoad_Binary(IS is, PetscViewer viewer)
 PetscErrorCode ISLoad_Default(IS is, PetscViewer viewer)
 {
   PetscBool      isbinary,ishdf5;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));

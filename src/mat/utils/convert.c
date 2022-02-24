@@ -9,7 +9,6 @@ PETSC_INTERN PetscErrorCode MatConvert_Basic(Mat mat,MatType newtype,MatReuse re
 {
   Mat               M;
   const PetscScalar *vwork;
-  PetscErrorCode    ierr;
   PetscInt          i,rstart,rend,nz;
   const PetscInt    *cwork;
   PetscBool         isSBAIJ;

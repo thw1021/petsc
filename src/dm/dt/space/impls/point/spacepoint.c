@@ -5,7 +5,6 @@ static PetscErrorCode PetscSpacePointView_Ascii(PetscSpace sp, PetscViewer viewe
 {
   PetscSpace_Point *pt = (PetscSpace_Point *) sp->data;
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer, &format));
@@ -23,7 +22,6 @@ static PetscErrorCode PetscSpacePointView_Ascii(PetscSpace sp, PetscViewer viewe
 static PetscErrorCode PetscSpaceView_Point(PetscSpace sp, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -36,7 +34,6 @@ static PetscErrorCode PetscSpaceView_Point(PetscSpace sp, PetscViewer viewer)
 static PetscErrorCode PetscSpaceSetUp_Point(PetscSpace sp)
 {
   PetscSpace_Point *pt = (PetscSpace_Point *) sp->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (!pt->quad->points && sp->degree >= 0) {
@@ -49,7 +46,6 @@ static PetscErrorCode PetscSpaceSetUp_Point(PetscSpace sp)
 static PetscErrorCode PetscSpaceDestroy_Point(PetscSpace sp)
 {
   PetscSpace_Point *pt = (PetscSpace_Point *) sp->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscQuadratureDestroy(&pt->quad));
@@ -70,7 +66,6 @@ static PetscErrorCode PetscSpaceEvaluate_Point(PetscSpace sp, PetscInt npoints, 
 {
   PetscSpace_Point *pt  = (PetscSpace_Point *) sp->data;
   PetscInt          dim = sp->Nv, pdim = pt->quad->numPoints, d, p, i, c;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(npoints != pt->quad->numPoints,PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot evaluate Point space on %d points != %d size", npoints, pt->quad->numPoints);
@@ -119,7 +114,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Point(PetscSpace sp)
 {
   PetscSpace_Point *pt;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -151,7 +145,6 @@ PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Point(PetscSpace sp)
 PetscErrorCode PetscSpacePointSetPoints(PetscSpace sp, PetscQuadrature q)
 {
   PetscSpace_Point *pt = (PetscSpace_Point *) sp->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);

@@ -7,7 +7,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
   PetscInt          i,n;
   const PetscScalar *xx;
   /* */ PetscScalar *ff;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetLocalSize(X,&n));
@@ -27,7 +26,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 PetscErrorCode TestCheckStage(TSAdapt adapt,TS ts,PetscReal t,Vec X,PetscBool *accept)
 {
   PetscInt       step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetStepNumber(ts,&step));
@@ -50,7 +48,6 @@ static PetscErrorCode TestExplicitTS(TS ts,PetscInt order,const char subtype[])
   TSAdapt           adapt;
   PetscInt          step;
   TSConvergedReason reason;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetType(ts,&type));
@@ -111,7 +108,6 @@ static PetscErrorCode TestTSRK(TS ts,TSRKType type)
   PetscBool      rk1,rk3,rk4;
   TSAdaptType    adapttype;
   char           savetype[32];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRKSetType(ts,type));

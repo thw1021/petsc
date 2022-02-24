@@ -12,7 +12,6 @@ static PetscErrorCode PetscSectionView_HDF5_SingleField(PetscSection s, PetscVie
   PetscBool       hasConstraints, includesConstraints;
   IS              dofIS, offIS, cdofIS, coffIS, cindIS;
   PetscInt       *dofs, *offs, *cdofs, *coffs, *cinds, dof, cdof, m, moff, i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)s, &comm));
@@ -91,7 +90,6 @@ static PetscErrorCode PetscSectionView_HDF5_SingleField(PetscSection s, PetscVie
 PetscErrorCode PetscSectionView_HDF5_Internal(PetscSection s, PetscViewer viewer)
 {
   PetscInt        numFields, f;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5PushGroup(viewer, "section"));
@@ -136,7 +134,6 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField_SetConstraintIndices(Pet
   PetscInt       *coffsets;
   PetscSF         sf;
   PetscLayout     layout;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)s, &comm));
@@ -186,7 +183,6 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField(PetscSection s, PetscVie
   IS              dofIS, offIS, cdofIS, coffIS, cindIS;
   const PetscInt *dofs, *offs, *cdofs;
   PetscLayout     map;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)s, &comm));
@@ -281,7 +277,6 @@ PetscErrorCode PetscSectionLoad_HDF5_Internal(PetscSection s, PetscViewer viewer
 {
   MPI_Comm        comm;
   PetscInt        N, n, numFields, f;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)s, &comm));

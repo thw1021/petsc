@@ -5,7 +5,6 @@ const char help[] = "Test MatCreateLocalRef()\n\n";
 
 static PetscErrorCode GetLocalRef(Mat A,IS isrow,IS iscol,Mat *B)
 {
-  PetscErrorCode ierr;
   IS             istmp;
 
   PetscFunctionBegin;

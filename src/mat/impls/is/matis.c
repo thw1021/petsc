@@ -19,7 +19,6 @@ static PetscErrorCode MatISSetUpScatters_Private(Mat);
 static PetscErrorCode MatISContainerDestroyPtAP_Private(void *ptr)
 {
   MatISPtAP      ptap = (MatISPtAP)ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroySubMatrices(ptap->ris1 ? 2 : 1,&ptap->lP));
@@ -40,7 +39,6 @@ static PetscErrorCode MatPtAPNumeric_IS_XAIJ(Mat A, Mat P, Mat C)
   IS             ris[2],cis[2];
   PetscContainer c;
   PetscInt       n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)C,"_MatIS_PtAP",(PetscObject*)&c));
@@ -89,7 +87,6 @@ static PetscErrorCode MatGetNonzeroColumnsLocal_Private(Mat PT,IS *cis)
   PetscInt       dc,stc,oc,ctd,cto;
   PetscBool      ismpiaij,ismpibaij,isseqaij,isseqbaij;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(PT,MAT_CLASSID,1);
@@ -171,7 +168,6 @@ static PetscErrorCode MatPtAPSymbolic_IS_XAIJ(Mat A,Mat P,PetscReal fill,Mat C)
   const PetscInt         *garray;
   PetscInt               ibs,N,dc;
   MPI_Comm               comm;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
@@ -252,7 +248,6 @@ static PetscErrorCode MatPtAPSymbolic_IS_XAIJ(Mat A,Mat P,PetscReal fill,Mat C)
 /* ----------------------------------------- */
 static PetscErrorCode MatProductSymbolic_PtAP_IS_XAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   Mat            A=product->A,P=product->B;
   PetscReal      fill=product->fill;
@@ -272,7 +267,6 @@ static PetscErrorCode MatProductSetFromOptions_IS_XAIJ_PtAP(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_IS_XAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -287,7 +281,6 @@ static PetscErrorCode MatISContainerDestroyFields_Private(void *ptr)
 {
   MatISLocalFields lf = (MatISLocalFields)ptr;
   PetscInt         i;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   for (i=0;i<lf->nr;i++) {
@@ -304,7 +297,6 @@ static PetscErrorCode MatISContainerDestroyFields_Private(void *ptr)
 static PetscErrorCode MatConvert_SeqXAIJ_IS(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
   Mat            B,lB;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse != MAT_REUSE_MATRIX) {
@@ -371,7 +363,6 @@ static PetscErrorCode MatISScaleDisassembling_Private(Mat A)
   PetscInt       i,n,m;
   PetscInt       *ecount,**eneighs;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&m,&ii,&jj,&flg));
@@ -634,7 +625,6 @@ PETSC_INTERN PetscErrorCode MatConvert_XAIJ_IS(Mat A,MatType type,MatReuse reuse
   PetscInt               bs,lc,dr,dc,oc,str,stc,nnz,i,jd,jo,cum;
   PetscBool              flg,ismpiaij,ismpibaij,was_inplace = PETSC_FALSE;
   PetscMPIInt            size;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
@@ -826,7 +816,6 @@ PETSC_INTERN PetscErrorCode MatConvert_Nest_IS(Mat A,MatType type,MatReuse reuse
   PetscInt               *lr,*lc,*l2gidxs;
   PetscInt               i,j,nr,nc,rbs,cbs;
   PetscBool              convert,lreuse,*istrans;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatNestGetSubMats(A,&nr,&nc,&nest));
@@ -1161,7 +1150,6 @@ static PetscErrorCode MatDiagonalScale_IS(Mat A, Vec l, Vec r)
   Vec               ll,rr;
   const PetscScalar *Y,*X;
   PetscScalar       *x,*y;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (l) {
@@ -1200,7 +1188,6 @@ static PetscErrorCode MatGetInfo_IS(Mat A,MatInfoType flag,MatInfo *ginfo)
   MatInfo        info;
   PetscLogDouble isend[6],irecv[6];
   PetscInt       bs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetBlockSize(A,&bs));
@@ -1255,7 +1242,6 @@ static PetscErrorCode MatGetInfo_IS(Mat A,MatInfoType flag,MatInfo *ginfo)
 static PetscErrorCode MatTranspose_IS(Mat A,MatReuse reuse,Mat *B)
 {
   Mat                    C,lC,lA;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX || reuse == MAT_INPLACE_MATRIX) {
@@ -1289,7 +1275,6 @@ static PetscErrorCode MatTranspose_IS(Mat A,MatReuse reuse,Mat *B)
 static PetscErrorCode MatDiagonalSet_IS(Mat A,Vec D,InsertMode insmode)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (D) { /* MatShift_IS pass D = NULL */
@@ -1304,7 +1289,6 @@ static PetscErrorCode MatDiagonalSet_IS(Mat A,Vec D,InsertMode insmode)
 static PetscErrorCode MatShift_IS(Mat A,PetscScalar a)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(is->y,a));
@@ -1314,7 +1298,6 @@ static PetscErrorCode MatShift_IS(Mat A,PetscScalar a)
 
 static PetscErrorCode MatSetValuesLocal_SubMat_IS(Mat A,PetscInt m,const PetscInt *rows, PetscInt n,const PetscInt *cols,const PetscScalar *values,InsertMode addv)
 {
-  PetscErrorCode ierr;
   PetscInt       rows_l[MATIS_MAX_ENTRIES_INSERTION],cols_l[MATIS_MAX_ENTRIES_INSERTION];
 
   PetscFunctionBegin;
@@ -1327,7 +1310,6 @@ static PetscErrorCode MatSetValuesLocal_SubMat_IS(Mat A,PetscInt m,const PetscIn
 
 static PetscErrorCode MatSetValuesBlockedLocal_SubMat_IS(Mat A,PetscInt m,const PetscInt *rows, PetscInt n,const PetscInt *cols,const PetscScalar *values,InsertMode addv)
 {
-  PetscErrorCode ierr;
   PetscInt       rows_l[MATIS_MAX_ENTRIES_INSERTION],cols_l[MATIS_MAX_ENTRIES_INSERTION];
 
   PetscFunctionBegin;
@@ -1344,7 +1326,6 @@ static PetscErrorCode MatCreateSubMatrix_IS(Mat mat,IS irow,IS icol,MatReuse sca
   Mat_IS            *newmatis;
   const PetscInt    *idxs;
   PetscInt          i,m,n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (scall == MAT_REUSE_MATRIX) {
@@ -1492,7 +1473,6 @@ static PetscErrorCode MatCopy_IS(Mat A,Mat B,MatStructure str)
 {
   Mat_IS         *a = (Mat_IS*)A->data,*b;
   PetscBool      ismatis;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)B,MATIS,&ismatis));
@@ -1508,7 +1488,6 @@ static PetscErrorCode MatMissingDiagonal_IS(Mat A,PetscBool  *missing,PetscInt *
   Vec               v;
   const PetscScalar *array;
   PetscInt          i,n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   *missing = PETSC_FALSE;
@@ -1536,7 +1515,6 @@ static PetscErrorCode MatISSetUpSF_IS(Mat B)
   Mat_IS         *matis = (Mat_IS*)(B->data);
   const PetscInt *gidxs;
   PetscInt       nleaves;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (matis->sf) PetscFunctionReturn(0);
@@ -1578,7 +1556,6 @@ static PetscErrorCode MatISSetUpSF_IS(Mat B)
 @*/
 PetscErrorCode MatISStoreL2L(Mat A, PetscBool store)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1591,7 +1568,6 @@ PetscErrorCode MatISStoreL2L(Mat A, PetscBool store)
 static PetscErrorCode MatISStoreL2L_IS(Mat A, PetscBool store)
 {
   Mat_IS         *matis = (Mat_IS*)(A->data);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   matis->storel2l = store;
@@ -1618,7 +1594,6 @@ static PetscErrorCode MatISStoreL2L_IS(Mat A, PetscBool store)
 @*/
 PetscErrorCode MatISFixLocalEmpty(Mat A, PetscBool fix)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1673,7 +1648,6 @@ static PetscErrorCode MatISFixLocalEmpty_IS(Mat A, PetscBool fix)
 @*/
 PetscErrorCode MatISSetPreallocation(Mat B,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
@@ -1687,7 +1661,6 @@ PETSC_EXTERN PetscErrorCode MatISSetPreallocation_IS(Mat B,PetscInt d_nz,const P
 {
   Mat_IS         *matis = (Mat_IS*)(B->data);
   PetscInt       bs,i,nlocalcols;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetUp(B));
@@ -1751,9 +1724,7 @@ PETSC_EXTERN PetscErrorCode MatISSetMPIXAIJPreallocation_Private(Mat A, Mat B, P
     CHKERRQ(ISLocalToGlobalMappingGetIndices(A->cmap->mapping,&global_indices_c));
   } else global_indices_c = global_indices_r;
 
-  if (issbaij) {
-    CHKERRQ(MatGetRowUpperTriangular(matis->A));
-  }
+  if (issbaij) CHKERRQ(MatGetRowUpperTriangular(matis->A));
   /*
      An SF reduce is needed to sum up properly on shared rows.
      Note that generally preallocation is not exact, since it overestimates nonzeros
@@ -1764,9 +1735,7 @@ PETSC_EXTERN PetscErrorCode MatISSetMPIXAIJPreallocation_Private(Mat A, Mat B, P
   CHKERRQ(PetscMalloc1(rows,&row_ownership));
   CHKERRQ(MatGetOwnershipRanges(A,(const PetscInt**)&mat_ranges));
   for (i=0;i<size;i++) {
-    for (j=mat_ranges[i];j<mat_ranges[i+1];j++) {
-      row_ownership[j] = i;
-    }
+    for (j=mat_ranges[i];j<mat_ranges[i+1];j++) row_ownership[j] = i;
   }
   CHKERRQ(MatGetOwnershipRangesColumn(A,(const PetscInt**)&mat_ranges));
 
@@ -1792,7 +1761,7 @@ PETSC_EXTERN PetscErrorCode MatISSetMPIXAIJPreallocation_Private(Mat A, Mat B, P
     const PetscInt *ii,*jj,*jptr;
     PetscBool      done;
     CHKERRQ(MatGetRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&local_rows,&ii,&jj,&done));
-    PetscCheckFalse(!done,PetscObjectComm((PetscObject)(matis->A)),PETSC_ERR_PLIB,"Error in MatGetRowIJ");
+    PetscCheck(done,PetscObjectComm((PetscObject)(matis->A)),PETSC_ERR_PLIB,"Error in MatGetRowIJ");
     jptr = jj;
     for (i=0;i<local_rows;i++) {
       PetscInt index_row = global_indices_r[i];
@@ -1816,7 +1785,7 @@ PETSC_EXTERN PetscErrorCode MatISSetMPIXAIJPreallocation_Private(Mat A, Mat B, P
       }
     }
     CHKERRQ(MatRestoreRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&local_rows,&ii,&jj,&done));
-    PetscCheckFalse(!done,PetscObjectComm((PetscObject)(matis->A)),PETSC_ERR_PLIB,"Error in MatRestoreRowIJ");
+    PetscCheck(done,PetscObjectComm((PetscObject)(matis->A)),PETSC_ERR_PLIB,"Error in MatRestoreRowIJ");
   } else { /* loop over rows and use MatGetRow */
     for (i=0;i<local_rows;i++) {
       const PetscInt *cols;
@@ -1887,9 +1856,7 @@ PETSC_EXTERN PetscErrorCode MatISSetMPIXAIJPreallocation_Private(Mat A, Mat B, P
   CHKERRQ(MatMPIBAIJSetPreallocation(B,bs,0,dnz,0,onz));
   CHKERRQ(MatMPISBAIJSetPreallocation(B,bs,0,dnz,0,onz));
   ierr = MatPreallocateFinalize(dnz,onz);CHKERRQ(ierr);
-  if (issbaij) {
-    CHKERRQ(MatRestoreRowUpperTriangular(matis->A));
-  }
+  if (issbaij) CHKERRQ(MatRestoreRowUpperTriangular(matis->A));
   CHKERRQ(MatSetOption(B,MAT_NEW_NONZERO_ALLOCATION_ERR,PETSC_TRUE));
   PetscFunctionReturn(0);
 }
@@ -1903,7 +1870,6 @@ PETSC_INTERN PetscErrorCode MatConvert_IS_XAIJ(Mat mat, MatType mtype, MatReuse 
   PetscBool         isseqdense,isseqsbaij,isseqaij,isseqbaij;
   PetscMPIInt       size;
   const PetscScalar *array;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size));
@@ -2124,7 +2090,6 @@ general_assembly:
 @*/
 PetscErrorCode MatISGetMPIXAIJ(Mat mat, MatReuse reuse, Mat *newmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2141,7 +2106,6 @@ PetscErrorCode MatISGetMPIXAIJ(Mat mat, MatReuse reuse, Mat *newmat)
 
 static PetscErrorCode MatDuplicate_IS(Mat mat,MatDuplicateOption op,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat_IS         *matis = (Mat_IS*)(mat->data);
   PetscInt       rbs,cbs,m,n,M,N;
   Mat            B,localmat;
@@ -2168,7 +2132,6 @@ static PetscErrorCode MatDuplicate_IS(Mat mat,MatDuplicateOption op,Mat *newmat)
 
 static PetscErrorCode MatIsHermitian_IS(Mat A,PetscReal tol,PetscBool  *flg)
 {
-  PetscErrorCode ierr;
   Mat_IS         *matis = (Mat_IS*)A->data;
   PetscBool      local_sym;
 
@@ -2180,7 +2143,6 @@ static PetscErrorCode MatIsHermitian_IS(Mat A,PetscReal tol,PetscBool  *flg)
 
 static PetscErrorCode MatIsSymmetric_IS(Mat A,PetscReal tol,PetscBool  *flg)
 {
-  PetscErrorCode ierr;
   Mat_IS         *matis = (Mat_IS*)A->data;
   PetscBool      local_sym;
 
@@ -2192,7 +2154,6 @@ static PetscErrorCode MatIsSymmetric_IS(Mat A,PetscReal tol,PetscBool  *flg)
 
 static PetscErrorCode MatIsStructurallySymmetric_IS(Mat A,PetscBool  *flg)
 {
-  PetscErrorCode ierr;
   Mat_IS         *matis = (Mat_IS*)A->data;
   PetscBool      local_sym;
 
@@ -2208,7 +2169,6 @@ static PetscErrorCode MatIsStructurallySymmetric_IS(Mat A,PetscBool  *flg)
 
 static PetscErrorCode MatDestroy_IS(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_IS         *b = (Mat_IS*)A->data;
 
   PetscFunctionBegin;
@@ -2249,7 +2209,6 @@ static PetscErrorCode MatDestroy_IS(Mat A)
 
 static PetscErrorCode MatMult_IS(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   Mat_IS         *is  = (Mat_IS*)A->data;
   PetscScalar    zero = 0.0;
 
@@ -2271,7 +2230,6 @@ static PetscErrorCode MatMult_IS(Mat A,Vec x,Vec y)
 static PetscErrorCode MatMultAdd_IS(Mat A,Vec v1,Vec v2,Vec v3)
 {
   Vec            temp_vec;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin; /*  v3 = v2 + A * v1.*/
   if (v3 != v2) {
@@ -2290,7 +2248,6 @@ static PetscErrorCode MatMultAdd_IS(Mat A,Vec v1,Vec v2,Vec v3)
 static PetscErrorCode MatMultTranspose_IS(Mat A,Vec y,Vec x)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*  scatter the global vector x into the local work vector */
@@ -2310,7 +2267,6 @@ static PetscErrorCode MatMultTranspose_IS(Mat A,Vec y,Vec x)
 static PetscErrorCode MatMultTransposeAdd_IS(Mat A,Vec v1,Vec v2,Vec v3)
 {
   Vec            temp_vec;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin; /*  v3 = v2 + A' * v1.*/
   if (v3 != v2) {
@@ -2329,7 +2285,6 @@ static PetscErrorCode MatMultTransposeAdd_IS(Mat A,Vec v1,Vec v2,Vec v3)
 static PetscErrorCode MatView_IS(Mat A,PetscViewer viewer)
 {
   Mat_IS         *a = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
   PetscViewer    sviewer;
   PetscBool      isascii,view = PETSC_TRUE;
 
@@ -2355,7 +2310,6 @@ static PetscErrorCode MatInvertBlockDiagonal_IS(Mat mat,const PetscScalar **valu
   MPI_Datatype      nodeType;
   const PetscScalar *lv;
   PetscInt          bs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetBlockSize(mat,&bs));
@@ -2382,7 +2336,6 @@ static PetscErrorCode MatISSetUpScatters_Private(Mat A)
   const PetscInt *garray;
   PetscInt       nr,rbs,nc,cbs;
   PetscBool      iscuda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISLocalToGlobalMappingGetSize(A->rmap->mapping,&nr));
@@ -2447,7 +2400,6 @@ static PetscErrorCode MatISSetUpScatters_Private(Mat A)
 
 static PetscErrorCode MatSetLocalToGlobalMapping_IS(Mat A,ISLocalToGlobalMapping rmapping,ISLocalToGlobalMapping cmapping)
 {
-  PetscErrorCode ierr;
   PetscInt       nr,rbs,nc,cbs;
   Mat_IS         *is = (Mat_IS*)A->data;
   PetscBool      cong, same = PETSC_FALSE;
@@ -2539,7 +2491,6 @@ static PetscErrorCode MatSetLocalToGlobalMapping_IS(Mat A,ISLocalToGlobalMapping
 static PetscErrorCode MatSetUp_IS(Mat A)
 {
   ISLocalToGlobalMapping rmap, cmap;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetLocalToGlobalMapping(A,&rmap,&cmap));
@@ -2554,7 +2505,6 @@ static PetscErrorCode MatSetUp_IS(Mat A)
 static PetscErrorCode MatSetValues_IS(Mat mat, PetscInt m,const PetscInt *rows, PetscInt n,const PetscInt *cols, const PetscScalar *values, InsertMode addv)
 {
   Mat_IS         *is = (Mat_IS*)mat->data;
-  PetscErrorCode ierr;
   PetscInt       i,zm,zn;
   PetscInt       rows_l[MATIS_MAX_ENTRIES_INSERTION],cols_l[MATIS_MAX_ENTRIES_INSERTION];
 
@@ -2581,7 +2531,6 @@ static PetscErrorCode MatSetValues_IS(Mat mat, PetscInt m,const PetscInt *rows, 
 static PetscErrorCode MatSetValuesBlocked_IS(Mat mat, PetscInt m,const PetscInt *rows, PetscInt n,const PetscInt *cols, const PetscScalar *values, InsertMode addv)
 {
   Mat_IS         *is = (Mat_IS*)mat->data;
-  PetscErrorCode ierr;
   PetscInt       i,zm,zn;
   PetscInt       rows_l[MATIS_MAX_ENTRIES_INSERTION],cols_l[MATIS_MAX_ENTRIES_INSERTION];
 
@@ -2607,7 +2556,6 @@ static PetscErrorCode MatSetValuesBlocked_IS(Mat mat, PetscInt m,const PetscInt 
 
 static PetscErrorCode MatSetValuesLocal_IS(Mat A,PetscInt m,const PetscInt *rows, PetscInt n,const PetscInt *cols,const PetscScalar *values,InsertMode addv)
 {
-  PetscErrorCode ierr;
   Mat_IS         *is = (Mat_IS*)A->data;
 
   PetscFunctionBegin;
@@ -2621,7 +2569,6 @@ static PetscErrorCode MatSetValuesLocal_IS(Mat A,PetscInt m,const PetscInt *rows
 
 static PetscErrorCode MatSetValuesBlockedLocal_IS(Mat A,PetscInt m,const PetscInt *rows, PetscInt n,const PetscInt *cols,const PetscScalar *values,InsertMode addv)
 {
-  PetscErrorCode ierr;
   Mat_IS         *is = (Mat_IS*)A->data;
 
   PetscFunctionBegin;
@@ -2643,7 +2590,6 @@ static PetscErrorCode MatSetValuesBlockedLocal_IS(Mat A,PetscInt m,const PetscIn
 static PetscErrorCode MatISZeroRowsColumnsLocal_Private(Mat A,PetscInt n,const PetscInt rows[],PetscScalar diag,PetscBool columns)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!n) {
@@ -2676,7 +2622,6 @@ static PetscErrorCode MatZeroRowsColumns_Private_IS(Mat A,PetscInt n,const Petsc
   Mat_IS         *matis = (Mat_IS*)A->data;
   PetscInt       nr,nl,len,i;
   PetscInt       *lrows;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscUnlikelyDebug(columns || diag != 0. || (x && b))) {
@@ -2718,7 +2663,6 @@ static PetscErrorCode MatZeroRowsColumns_Private_IS(Mat A,PetscInt n,const Petsc
 
 static PetscErrorCode MatZeroRows_IS(Mat A,PetscInt n,const PetscInt rows[],PetscScalar diag,Vec x,Vec b)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroRowsColumns_Private_IS(A,n,rows,diag,x,b,PETSC_FALSE));
@@ -2727,7 +2671,6 @@ static PetscErrorCode MatZeroRows_IS(Mat A,PetscInt n,const PetscInt rows[],Pets
 
 static PetscErrorCode MatZeroRowsColumns_IS(Mat A,PetscInt n,const PetscInt rows[],PetscScalar diag,Vec x,Vec b)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroRowsColumns_Private_IS(A,n,rows,diag,x,b,PETSC_TRUE));
@@ -2737,7 +2680,6 @@ static PetscErrorCode MatZeroRowsColumns_IS(Mat A,PetscInt n,const PetscInt rows
 static PetscErrorCode MatAssemblyBegin_IS(Mat A,MatAssemblyType type)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAssemblyBegin(is->A,type));
@@ -2747,7 +2689,6 @@ static PetscErrorCode MatAssemblyBegin_IS(Mat A,MatAssemblyType type)
 static PetscErrorCode MatAssemblyEnd_IS(Mat A,MatAssemblyType type)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAssemblyEnd(is->A,type));
@@ -2904,7 +2845,6 @@ static PetscErrorCode MatISRestoreLocalMat_IS(Mat mat,Mat *local)
 @*/
 PetscErrorCode MatISGetLocalMat(Mat mat,Mat *local)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2928,7 +2868,6 @@ PetscErrorCode MatISGetLocalMat(Mat mat,Mat *local)
 @*/
 PetscErrorCode MatISRestoreLocalMat(Mat mat,Mat *local)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2940,7 +2879,6 @@ PetscErrorCode MatISRestoreLocalMat(Mat mat,Mat *local)
 static PetscErrorCode MatISSetLocalMatType_IS(Mat mat,MatType mtype)
 {
   Mat_IS         *is = (Mat_IS*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (is->A) {
@@ -2966,7 +2904,6 @@ static PetscErrorCode MatISSetLocalMatType_IS(Mat mat,MatType mtype)
 @*/
 PetscErrorCode MatISSetLocalMatType(Mat mat,MatType mtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2978,7 +2915,6 @@ static PetscErrorCode MatISSetLocalMat_IS(Mat mat,Mat local)
 {
   Mat_IS         *is = (Mat_IS*)mat->data;
   PetscInt       nrows,ncols,orows,ocols;
-  PetscErrorCode ierr;
   MatType        mtype,otype;
   PetscBool      sametype = PETSC_TRUE;
 
@@ -3023,7 +2959,6 @@ static PetscErrorCode MatISSetLocalMat_IS(Mat mat,Mat local)
 @*/
 PetscErrorCode MatISSetLocalMat(Mat mat,Mat local)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -3035,7 +2970,6 @@ PetscErrorCode MatISSetLocalMat(Mat mat,Mat local)
 static PetscErrorCode MatZeroEntries_IS(Mat A)
 {
   Mat_IS         *a = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroEntries(a->A));
@@ -3045,7 +2979,6 @@ static PetscErrorCode MatZeroEntries_IS(Mat A)
 static PetscErrorCode MatScale_IS(Mat A,PetscScalar a)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatScale(is->A,a));
@@ -3055,7 +2988,6 @@ static PetscErrorCode MatScale_IS(Mat A,PetscScalar a)
 static PetscErrorCode MatGetDiagonal_IS(Mat A, Vec v)
 {
   Mat_IS         *is = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get diagonal of the local matrix */
@@ -3071,7 +3003,6 @@ static PetscErrorCode MatGetDiagonal_IS(Mat A, Vec v)
 static PetscErrorCode MatSetOption_IS(Mat A,MatOption op,PetscBool flg)
 {
   Mat_IS         *a = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetOption(a->A,op,flg));
@@ -3082,7 +3013,6 @@ static PetscErrorCode MatAXPY_IS(Mat Y,PetscScalar a,Mat X,MatStructure str)
 {
   Mat_IS         *y = (Mat_IS*)Y->data;
   Mat_IS         *x;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscDefined(USE_DEBUG)) {
@@ -3104,7 +3034,6 @@ static PetscErrorCode MatGetLocalSubMatrix_IS(Mat A,IS row,IS col,Mat *submat)
   const PetscInt         *rg,*rl;
   PetscInt               nrg;
   PetscInt               N,M,nrl,i,*idxs;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISLocalToGlobalMappingGetIndices(A->rmap->mapping,&rg));
@@ -3179,7 +3108,6 @@ static PetscErrorCode MatSetFromOptions_IS(PetscOptionItems *PetscOptionsObject,
   Mat_IS         *a = (Mat_IS*)A->data;
   char           type[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"MATIS options"));
@@ -3222,7 +3150,6 @@ static PetscErrorCode MatSetFromOptions_IS(PetscOptionItems *PetscOptionsObject,
 @*/
 PetscErrorCode MatCreateIS(MPI_Comm comm,PetscInt bs,PetscInt m,PetscInt n,PetscInt M,PetscInt N,ISLocalToGlobalMapping rmap,ISLocalToGlobalMapping cmap,Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -3238,7 +3165,6 @@ PetscErrorCode MatCreateIS(MPI_Comm comm,PetscInt bs,PetscInt m,PetscInt n,Petsc
 static PetscErrorCode MatHasOperation_IS(Mat A, MatOperation op, PetscBool *has)
 {
   Mat_IS         *a = (Mat_IS*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *has = PETSC_FALSE;
@@ -3272,7 +3198,6 @@ static PetscErrorCode MatHasOperation_IS(Mat A, MatOperation op, PetscBool *has)
 M*/
 PETSC_EXTERN PetscErrorCode MatCreate_IS(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_IS         *b;
 
   PetscFunctionBegin;

@@ -15,7 +15,6 @@ static PetscErrorCode CheckValuesAIJ(Mat A)
   PetscInt        M,N,rstart,rend,i,j;
   PetscReal       v,w;
   PetscScalar     val;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetSize(A,&M,&N));

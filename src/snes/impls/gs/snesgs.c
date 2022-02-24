@@ -129,7 +129,6 @@ PetscErrorCode SNESNGSGetSweeps(SNES snes, PetscInt * sweeps)
 PetscErrorCode SNESReset_NGS(SNES snes)
 {
   SNES_NGS       *gs = (SNES_NGS*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISColoringDestroy(&gs->coloring));
@@ -138,7 +137,6 @@ PetscErrorCode SNESReset_NGS(SNES snes)
 
 PetscErrorCode SNESDestroy_NGS(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_NGS(snes));
@@ -148,7 +146,6 @@ PetscErrorCode SNESDestroy_NGS(SNES snes)
 
 PetscErrorCode SNESSetUp_NGS(SNES snes)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*f)(SNES,Vec,Vec,void*);
 
   PetscFunctionBegin;
@@ -162,7 +159,6 @@ PetscErrorCode SNESSetUp_NGS(SNES snes)
 PetscErrorCode SNESSetFromOptions_NGS(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   SNES_NGS       *gs = (SNES_NGS*)snes->data;
-  PetscErrorCode ierr;
   PetscInt       sweeps,max_its=PETSC_DEFAULT;
   PetscReal      rtol=PETSC_DEFAULT,atol=PETSC_DEFAULT,stol=PETSC_DEFAULT;
   PetscBool      flg,flg1,flg2,flg3;
@@ -196,7 +192,6 @@ PetscErrorCode SNESSetFromOptions_NGS(PetscOptionItems *PetscOptionsObject,SNES 
 
 PetscErrorCode SNESView_NGS(SNES snes, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*f)(SNES,Vec,Vec,void*);
   SNES_NGS       *gs = (SNES_NGS*)snes->data;
   PetscBool      iascii;
@@ -219,7 +214,6 @@ PetscErrorCode SNESSolve_NGS(SNES snes)
   Vec              B;
   PetscInt         i;
   PetscReal        fnorm;
-  PetscErrorCode   ierr;
   SNESNormSchedule normschedule;
 
   PetscFunctionBegin;
@@ -333,7 +327,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NGS(SNES snes)
 {
   SNES_NGS        *gs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   snes->ops->destroy        = SNESDestroy_NGS;

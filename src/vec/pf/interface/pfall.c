@@ -21,7 +21,6 @@ PETSC_EXTERN PetscErrorCode PFCreate_Matlab(PF,void*);
 @*/
 PetscErrorCode  PFRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PFRegisterAllCalled) PetscFunctionReturn(0);

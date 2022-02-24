@@ -21,7 +21,6 @@ static PetscMPIInt Petsc_ScaLAPACK_keyval = MPI_KEYVAL_INVALID;
 
 static PetscErrorCode Petsc_ScaLAPACK_keyval_free(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscInfo(NULL,"Freeing Petsc_ScaLAPACK_keyval\n"));
@@ -31,7 +30,6 @@ static PetscErrorCode Petsc_ScaLAPACK_keyval_free(void)
 
 static PetscErrorCode MatView_ScaLAPACK(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   Mat_ScaLAPACK     *a = (Mat_ScaLAPACK*)A->data;
   PetscBool         iascii;
   PetscViewerFormat format;
@@ -60,7 +58,6 @@ static PetscErrorCode MatView_ScaLAPACK(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatGetInfo_ScaLAPACK(Mat A,MatInfoType flag,MatInfo *info)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscLogDouble isend[2],irecv[2];
 
@@ -112,7 +109,6 @@ PetscErrorCode MatSetOption_ScaLAPACK(Mat A,MatOption op,PetscBool flg)
 static PetscErrorCode MatSetValues_ScaLAPACK(Mat A,PetscInt nr,const PetscInt *rows,PetscInt nc,const PetscInt *cols,const PetscScalar *vals,InsertMode imode)
 {
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscBLASInt   gridx,gcidx,lridx,lcidx,rsrc,csrc;
 
@@ -142,7 +138,6 @@ static PetscErrorCode MatSetValues_ScaLAPACK(Mat A,PetscInt nr,const PetscInt *r
 
 static PetscErrorCode MatMultXXXYYY_ScaLAPACK(Mat A,PetscBool transpose,PetscScalar beta,const PetscScalar *x,PetscScalar *y)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscScalar    *x2d,*y2d,alpha=1.0;
   const PetscInt *ranges;
@@ -232,7 +227,6 @@ static PetscErrorCode MatMultXXXYYY_ScaLAPACK(Mat A,PetscBool transpose,PetscSca
 
 static PetscErrorCode MatMult_ScaLAPACK(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarray;
   PetscScalar       *yarray;
 
@@ -247,7 +241,6 @@ static PetscErrorCode MatMult_ScaLAPACK(Mat A,Vec x,Vec y)
 
 static PetscErrorCode MatMultTranspose_ScaLAPACK(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarray;
   PetscScalar       *yarray;
 
@@ -262,7 +255,6 @@ static PetscErrorCode MatMultTranspose_ScaLAPACK(Mat A,Vec x,Vec y)
 
 static PetscErrorCode MatMultAdd_ScaLAPACK(Mat A,Vec x,Vec y,Vec z)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarray;
   PetscScalar       *zarray;
 
@@ -278,7 +270,6 @@ static PetscErrorCode MatMultAdd_ScaLAPACK(Mat A,Vec x,Vec y,Vec z)
 
 static PetscErrorCode MatMultTransposeAdd_ScaLAPACK(Mat A,Vec x,Vec y,Vec z)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarray;
   PetscScalar       *zarray;
 
@@ -308,7 +299,6 @@ PetscErrorCode MatMatMultNumeric_ScaLAPACK(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultSymbolic_ScaLAPACK(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetSizes(C,A->rmap->n,B->cmap->n,PETSC_DECIDE,PETSC_DECIDE));
@@ -334,7 +324,6 @@ static PetscErrorCode MatMatTransposeMultNumeric_ScaLAPACK(Mat A,Mat B,Mat C)
 
 static PetscErrorCode MatMatTransposeMultSymbolic_ScaLAPACK(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetSizes(C,A->rmap->n,B->rmap->n,PETSC_DECIDE,PETSC_DECIDE));
@@ -362,7 +351,6 @@ static PetscErrorCode MatProductSetFromOptions_ScaLAPACK_ABt(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_ScaLAPACK(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -381,7 +369,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_ScaLAPACK(Mat C)
 
 static PetscErrorCode MatGetDiagonal_ScaLAPACK(Mat A,Vec D)
 {
-  PetscErrorCode    ierr;
   Mat_ScaLAPACK     *a = (Mat_ScaLAPACK*)A->data;
   PetscScalar       *darray,*d2d,v;
   const PetscInt    *ranges;
@@ -454,7 +441,6 @@ static PetscErrorCode MatGetDiagonal_ScaLAPACK(Mat A,Vec D)
 
 static PetscErrorCode MatDiagonalScale_ScaLAPACK(Mat A,Vec L,Vec R)
 {
-  PetscErrorCode    ierr;
   Mat_ScaLAPACK     *a = (Mat_ScaLAPACK*)A->data;
   const PetscScalar *d;
   const PetscInt    *ranges;
@@ -562,7 +548,6 @@ static PetscErrorCode MatShift_ScaLAPACK(Mat X,PetscScalar alpha)
 
 static PetscErrorCode MatAXPY_ScaLAPACK(Mat Y,PetscScalar alpha,Mat X,MatStructure str)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *x = (Mat_ScaLAPACK*)X->data;
   Mat_ScaLAPACK  *y = (Mat_ScaLAPACK*)Y->data;
   PetscBLASInt   one=1;
@@ -577,7 +562,6 @@ static PetscErrorCode MatAXPY_ScaLAPACK(Mat Y,PetscScalar alpha,Mat X,MatStructu
 
 static PetscErrorCode MatCopy_ScaLAPACK(Mat A,Mat B,MatStructure str)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   Mat_ScaLAPACK  *b = (Mat_ScaLAPACK*)B->data;
 
@@ -592,7 +576,6 @@ static PetscErrorCode MatDuplicate_ScaLAPACK(Mat A,MatDuplicateOption op,Mat *B)
   Mat            Bs;
   MPI_Comm       comm;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data,*b;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
@@ -617,7 +600,6 @@ static PetscErrorCode MatDuplicate_ScaLAPACK(Mat A,MatDuplicateOption op,Mat *B)
 
 static PetscErrorCode MatTranspose_ScaLAPACK(Mat A,MatReuse reuse,Mat *B)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data, *b;
   Mat            Bs = *B;
   PetscBLASInt   one=1;
@@ -653,7 +635,6 @@ static PetscErrorCode MatConjugate_ScaLAPACK(Mat A)
 
 static PetscErrorCode MatHermitianTranspose_ScaLAPACK(Mat A,MatReuse reuse,Mat *B)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data, *b;
   Mat            Bs = *B;
   PetscBLASInt   one=1;
@@ -672,7 +653,6 @@ static PetscErrorCode MatHermitianTranspose_ScaLAPACK(Mat A,MatReuse reuse,Mat *
 
 static PetscErrorCode MatSolve_ScaLAPACK(Mat A,Vec B,Vec X)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscScalar    *x,*x2d;
   const PetscInt *ranges;
@@ -725,7 +705,6 @@ static PetscErrorCode MatSolve_ScaLAPACK(Mat A,Vec B,Vec X)
 
 static PetscErrorCode MatSolveAdd_ScaLAPACK(Mat A,Vec B,Vec Y,Vec X)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolve_ScaLAPACK(A,B,X));
@@ -735,7 +714,6 @@ static PetscErrorCode MatSolveAdd_ScaLAPACK(Mat A,Vec B,Vec Y,Vec X)
 
 static PetscErrorCode MatMatSolve_ScaLAPACK(Mat A,Mat B,Mat X)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK *a = (Mat_ScaLAPACK*)A->data,*b,*x;
   PetscBool      flg1,flg2;
   PetscBLASInt   one=1,info;
@@ -766,7 +744,6 @@ static PetscErrorCode MatMatSolve_ScaLAPACK(Mat A,Mat B,Mat X)
 
 static PetscErrorCode MatLUFactor_ScaLAPACK(Mat A,IS row,IS col,const MatFactorInfo *factorinfo)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscBLASInt   one=1,info;
 
@@ -787,7 +764,6 @@ static PetscErrorCode MatLUFactor_ScaLAPACK(Mat A,IS row,IS col,const MatFactorI
 
 static PetscErrorCode MatLUFactorNumeric_ScaLAPACK(Mat F,Mat A,const MatFactorInfo *info)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(A,F,SAME_NONZERO_PATTERN));
@@ -804,7 +780,6 @@ static PetscErrorCode MatLUFactorSymbolic_ScaLAPACK(Mat F,Mat A,IS r,IS c,const 
 
 static PetscErrorCode MatCholeskyFactor_ScaLAPACK(Mat A,IS perm,const MatFactorInfo *factorinfo)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscBLASInt   one=1,info;
 
@@ -821,7 +796,6 @@ static PetscErrorCode MatCholeskyFactor_ScaLAPACK(Mat A,IS perm,const MatFactorI
 
 static PetscErrorCode MatCholeskyFactorNumeric_ScaLAPACK(Mat F,Mat A,const MatFactorInfo *info)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(A,F,SAME_NONZERO_PATTERN));
@@ -847,7 +821,6 @@ static PetscErrorCode MatGetFactor_scalapack_scalapack(Mat A,MatFactorType ftype
 {
   Mat            B;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -864,7 +837,6 @@ static PetscErrorCode MatGetFactor_scalapack_scalapack(Mat A,MatFactorType ftype
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_ScaLAPACK(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSCALAPACK,MATSCALAPACK,MAT_FACTOR_LU,MatGetFactor_scalapack_scalapack));
@@ -874,7 +846,6 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_ScaLAPACK(void)
 
 static PetscErrorCode MatNorm_ScaLAPACK(Mat A,NormType type,PetscReal *nrm)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscBLASInt   one=1,lwork=0;
   const char     *ntype;
@@ -906,7 +877,6 @@ static PetscErrorCode MatNorm_ScaLAPACK(Mat A,NormType type,PetscReal *nrm)
 static PetscErrorCode MatZeroEntries_ScaLAPACK(Mat A)
 {
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscArrayzero(a->loc,a->lld*a->locc));
@@ -916,7 +886,6 @@ static PetscErrorCode MatZeroEntries_ScaLAPACK(Mat A)
 static PetscErrorCode MatGetOwnershipIS_ScaLAPACK(Mat A,IS *rows,IS *cols)
 {
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode ierr;
   PetscInt       i,n,nb,isrc,nproc,iproc,*idx;
 
   PetscFunctionBegin;
@@ -945,7 +914,6 @@ static PetscErrorCode MatGetOwnershipIS_ScaLAPACK(Mat A,IS *rows,IS *cols)
 
 static PetscErrorCode MatConvert_ScaLAPACK_Dense(Mat A,MatType newtype,MatReuse reuse,Mat *B)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   Mat            Bmpi;
   MPI_Comm       comm;
@@ -1037,7 +1005,6 @@ static PetscErrorCode MatConvert_ScaLAPACK_Dense(Mat A,MatType newtype,MatReuse 
 
 PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat A,MatType newtype,MatReuse reuse,Mat *B)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *b;
   Mat            Bmpi;
   MPI_Comm       comm;
@@ -1087,7 +1054,6 @@ PETSC_INTERN PetscErrorCode MatConvert_Dense_ScaLAPACK(Mat A,MatType newtype,Mat
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_ScaLAPACK(Mat A,MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_scal;
-  PetscErrorCode    ierr;
   PetscInt          M=A->rmap->N,N=A->cmap->N,rstart=A->rmap->rstart,rend=A->rmap->rend,m,n,row,ncols;
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -1122,7 +1088,6 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_ScaLAPACK(Mat A,MatType newtype,MatRe
 PETSC_INTERN PetscErrorCode MatConvert_SBAIJ_ScaLAPACK(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_scal;
-  PetscErrorCode    ierr;
   PetscInt          M=A->rmap->N,N=A->cmap->N,m,n,row,ncols,j,rstart=A->rmap->rstart,rend=A->rmap->rend;
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -1165,7 +1130,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SBAIJ_ScaLAPACK(Mat A, MatType newtype,Ma
 static PetscErrorCode MatScaLAPACKSetPreallocation(Mat A)
 {
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode ierr;
   PetscInt       sz=0;
 
   PetscFunctionBegin;
@@ -1185,7 +1149,6 @@ static PetscErrorCode MatScaLAPACKSetPreallocation(Mat A)
 static PetscErrorCode MatDestroy_ScaLAPACK(Mat A)
 {
   Mat_ScaLAPACK      *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode     ierr;
   Mat_ScaLAPACK_Grid *grid;
   PetscBool          flg;
   MPI_Comm           icomm;
@@ -1214,7 +1177,6 @@ static PetscErrorCode MatDestroy_ScaLAPACK(Mat A)
 
 static inline PetscErrorCode MatScaLAPACKCheckLayout(PetscLayout map)
 {
-  PetscErrorCode ierr;
   const PetscInt *ranges;
   PetscMPIInt    size;
   PetscInt       i,n;
@@ -1233,7 +1195,6 @@ static inline PetscErrorCode MatScaLAPACKCheckLayout(PetscLayout map)
 PetscErrorCode MatSetUp_ScaLAPACK(Mat A)
 {
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
-  PetscErrorCode ierr;
   PetscBLASInt   info=0;
 
   PetscFunctionBegin;
@@ -1262,7 +1223,6 @@ PetscErrorCode MatSetUp_ScaLAPACK(Mat A)
 
 PetscErrorCode MatAssemblyBegin_ScaLAPACK(Mat A,MatAssemblyType type)
 {
-  PetscErrorCode ierr;
   PetscInt       nstash,reallocs;
 
   PetscFunctionBegin;
@@ -1275,7 +1235,6 @@ PetscErrorCode MatAssemblyBegin_ScaLAPACK(Mat A,MatAssemblyType type)
 
 PetscErrorCode MatAssemblyEnd_ScaLAPACK(Mat A,MatAssemblyType type)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
   PetscMPIInt    n;
   PetscInt       i,flg,*row,*col;
@@ -1305,7 +1264,6 @@ PetscErrorCode MatAssemblyEnd_ScaLAPACK(Mat A,MatAssemblyType type)
 
 PetscErrorCode MatLoad_ScaLAPACK(Mat newMat,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   Mat            Adense,As;
   MPI_Comm       comm;
 
@@ -1476,7 +1434,6 @@ static PetscErrorCode MatStashScatterBegin_ScaLAPACK(Mat mat,MatStash *stash,Pet
 {
   PetscInt           *owner,*startv,*starti,tag1=stash->tag1,tag2=stash->tag2,bs2;
   PetscInt           size=stash->size,nsends;
-  PetscErrorCode     ierr;
   PetscInt           count,*sindices,**rindices,i,j,l;
   PetscScalar        **rvalues,*svalues;
   MPI_Comm           comm = stash->comm;
@@ -1625,7 +1582,6 @@ static PetscErrorCode MatStashScatterBegin_ScaLAPACK(Mat mat,MatStash *stash,Pet
 
 static PetscErrorCode MatScaLAPACKSetBlockSizes_ScaLAPACK(Mat A,PetscInt mb,PetscInt nb)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a = (Mat_ScaLAPACK*)A->data;
 
   PetscFunctionBegin;
@@ -1654,7 +1610,6 @@ static PetscErrorCode MatScaLAPACKSetBlockSizes_ScaLAPACK(Mat A,PetscInt mb,Pets
 @*/
 PetscErrorCode MatScaLAPACKSetBlockSizes(Mat A,PetscInt mb,PetscInt nb)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1693,7 +1648,6 @@ static PetscErrorCode MatScaLAPACKGetBlockSizes_ScaLAPACK(Mat A,PetscInt *mb,Pet
 @*/
 PetscErrorCode MatScaLAPACKGetBlockSizes(Mat A,PetscInt *mb,PetscInt *nb)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -1848,7 +1802,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_ScaLAPACK(Mat A)
 @*/
 PetscErrorCode MatCreateScaLAPACK(MPI_Comm comm,PetscInt mb,PetscInt nb,PetscInt M,PetscInt N,PetscInt rsrc,PetscInt csrc,Mat *A)
 {
-  PetscErrorCode ierr;
   Mat_ScaLAPACK  *a;
   PetscInt       m,n;
 

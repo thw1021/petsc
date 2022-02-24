@@ -4,8 +4,7 @@ static char help[] = "Tests MatCreateDenseCUDA(), MatDenseCUDAPlaceArray(), MatD
 
 static PetscErrorCode MatMult_S(Mat S,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
-  Mat            A;
+  Mat A;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(S,&A));
@@ -17,8 +16,7 @@ static PetscBool test_cusparse_transgen = PETSC_FALSE;
 
 static PetscErrorCode MatMultTranspose_S(Mat S,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
-  Mat            A;
+  Mat A;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(S,&A));

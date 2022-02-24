@@ -74,7 +74,6 @@ const char **TaoConvergedReasons = TaoConvergedReasons_Shifted - TAO_DIVERGED_US
 PetscErrorCode TaoRegisterAll(void)
 {
 #if !defined(PETSC_USE_COMPLEX)
-  PetscErrorCode ierr;
 #endif
 
   PetscFunctionBegin;

@@ -191,7 +191,6 @@ static void ConstructGaussQuadrature(PetscInt *ngp,PetscScalar gp_xi[][2],PetscS
 
 static PetscErrorCode DMDAGetElementOwnershipRanges2d(DM da,PetscInt **_lx,PetscInt **_ly)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscInt       proc_I,proc_J;
   PetscInt       cpu_x,cpu_y;
@@ -262,7 +261,6 @@ static PetscErrorCode DMDACoordViewGnuplot2d(DM da,const char prefix[])
   FILE           *fp;
   char           fname[PETSC_MAX_PATH_LEN];
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -302,7 +300,6 @@ static PetscErrorCode DMDAViewGnuplot2d(DM da,Vec fields,const char comment[],co
   PetscInt       si,sj,nx,ny,i,j;
   PetscInt       n_dofs,d;
   PetscScalar    *_fields;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
@@ -551,7 +548,6 @@ static PetscErrorCode AssembleA_Elasticity(Mat A,DM elas_da,DM properties_da,Vec
   Vec                    local_properties;
   GaussPointCoefficients **props;
   PetscScalar            *prop_E,*prop_nu;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   /* setup for coords */
@@ -624,7 +620,6 @@ static PetscErrorCode AssembleF_Elasticity(Vec F,DM elas_da,DM properties_da,Vec
   PetscScalar            *prop_fx,*prop_fy;
   Vec                    local_F;
   ElasticityDOF          **ff;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   /* setup for coords */
@@ -703,7 +698,6 @@ static PetscErrorCode solve_elasticity_2d(PetscInt mx,PetscInt my)
   PetscBool              use_nonsymbc  = PETSC_FALSE;
   PetscBool              no_view       = PETSC_FALSE;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   /* Generate the da for velocity and pressure */
@@ -1036,7 +1030,6 @@ static PetscErrorCode BCApply_EAST(DM da,PetscInt d_idx,PetscScalar bc_val,Mat A
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1104,7 +1097,6 @@ static PetscErrorCode BCApply_WEST(DM da,PetscInt d_idx,PetscScalar bc_val,Mat A
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1162,7 +1154,6 @@ static PetscErrorCode BCApply_WEST(DM da,PetscInt d_idx,PetscScalar bc_val,Mat A
 
 static PetscErrorCode DMDABCApplyCompression(DM elas_da,Mat A,Vec f)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(BCApply_EAST(elas_da,0,-1.0,A,f));
@@ -1176,7 +1167,6 @@ static PetscErrorCode Orthogonalize(PetscInt n,Vec *vecs)
 {
   PetscInt       i,j;
   PetscScalar    dot;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<n; i++) {
@@ -1191,7 +1181,6 @@ static PetscErrorCode Orthogonalize(PetscInt n,Vec *vecs)
 
 static PetscErrorCode DMDABCApplySymmetricCompression(DM elas_da,Mat A,Vec f,IS *dofs,Mat *AA,Vec *ff)
 {
-  PetscErrorCode ierr;
   PetscInt       start,end,m;
   PetscInt       *unconstrained;
   PetscInt       cnt,i;

@@ -15,7 +15,6 @@ extern PetscErrorCode VecView_MPI_HDF5(Vec,PetscViewer);
 
 PetscErrorCode VecPointwiseMax_Seq(Vec win,Vec xin,Vec yin)
 {
-  PetscErrorCode ierr;
   PetscInt       n = win->map->n,i;
   PetscScalar    *ww,*xx,*yy; /* cannot make xx or yy const since might be ww */
 
@@ -35,7 +34,6 @@ PetscErrorCode VecPointwiseMax_Seq(Vec win,Vec xin,Vec yin)
 
 PetscErrorCode VecPointwiseMin_Seq(Vec win,Vec xin,Vec yin)
 {
-  PetscErrorCode ierr;
   PetscInt       n = win->map->n,i;
   PetscScalar    *ww,*xx,*yy; /* cannot make xx or yy const since might be ww */
 
@@ -55,7 +53,6 @@ PetscErrorCode VecPointwiseMin_Seq(Vec win,Vec xin,Vec yin)
 
 PetscErrorCode VecPointwiseMaxAbs_Seq(Vec win,Vec xin,Vec yin)
 {
-  PetscErrorCode ierr;
   PetscInt       n = win->map->n,i;
   PetscScalar    *ww,*xx,*yy; /* cannot make xx or yy const since might be ww */
 
@@ -77,7 +74,6 @@ PetscErrorCode VecPointwiseMaxAbs_Seq(Vec win,Vec xin,Vec yin)
 
 PetscErrorCode VecPointwiseMult_Seq(Vec win,Vec xin,Vec yin)
 {
-  PetscErrorCode ierr;
   PetscInt       n = win->map->n,i;
   PetscScalar    *ww,*xx,*yy; /* cannot make xx or yy const since might be ww */
 
@@ -105,7 +101,6 @@ PetscErrorCode VecPointwiseMult_Seq(Vec win,Vec xin,Vec yin)
 
 PetscErrorCode VecPointwiseDivide_Seq(Vec win,Vec xin,Vec yin)
 {
-  PetscErrorCode ierr;
   PetscInt       n = win->map->n,i;
   PetscScalar    *ww,*xx,*yy; /* cannot make xx or yy const since might be ww */
 
@@ -128,7 +123,6 @@ PetscErrorCode VecPointwiseDivide_Seq(Vec win,Vec xin,Vec yin)
 
 PetscErrorCode VecSetRandom_Seq(Vec xin,PetscRandom r)
 {
-  PetscErrorCode ierr;
   PetscInt       n = xin->map->n,i;
   PetscScalar    *xx;
 
@@ -150,7 +144,6 @@ PetscErrorCode VecConjugate_Seq(Vec xin)
 {
   PetscScalar    *x;
   PetscInt       n = xin->map->n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(xin,&x));
@@ -176,7 +169,6 @@ PetscErrorCode VecCopy_Seq(Vec xin,Vec yin)
 {
   PetscScalar       *ya;
   const PetscScalar *xa;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (xin != yin) {
@@ -192,7 +184,6 @@ PetscErrorCode VecCopy_Seq(Vec xin,Vec yin)
 PetscErrorCode VecSwap_Seq(Vec xin,Vec yin)
 {
   PetscScalar    *ya, *xa;
-  PetscErrorCode ierr;
   PetscBLASInt   one = 1,bn;
 
   PetscFunctionBegin;
@@ -212,7 +203,6 @@ PetscErrorCode VecSwap_Seq(Vec xin,Vec yin)
 PetscErrorCode VecNorm_Seq(Vec xin,NormType type,PetscReal *z)
 {
   const PetscScalar *xx;
-  PetscErrorCode    ierr;
   PetscInt          n = xin->map->n;
   PetscBLASInt      one = 1, bn = 0;
 
@@ -267,7 +257,6 @@ PetscErrorCode VecNorm_Seq(Vec xin,NormType type,PetscReal *z)
 
 PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,n = xin->map->n;
   const char        *name;
   PetscViewerFormat format;
@@ -420,7 +409,6 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
     PetscContainer          glvis_container;
     PetscViewerGLVisVecInfo glvis_vec_info;
     PetscViewerGLVisInfo    glvis_info;
-    PetscErrorCode          ierr;
 
     /* mfem::FiniteElementSpace::Save() */
     CHKERRQ(VecGetBlockSize(xin,&vdim));
@@ -476,7 +464,6 @@ PetscErrorCode VecView_Seq_Draw_LG(Vec xin,PetscViewer v)
   PetscDraw         draw;
   PetscBool         isnull;
   PetscDrawLG       lg;
-  PetscErrorCode    ierr;
   PetscInt          i,c,bs = PetscAbs(xin->map->bs),n = xin->map->n/bs;
   const PetscScalar *xv;
   PetscReal         *xx,*yy,xmin,xmax,h;
@@ -518,7 +505,6 @@ PetscErrorCode VecView_Seq_Draw_LG(Vec xin,PetscViewer v)
 
 PetscErrorCode VecView_Seq_Draw(Vec xin,PetscViewer v)
 {
-  PetscErrorCode    ierr;
   PetscDraw         draw;
   PetscBool         isnull;
 
@@ -541,7 +527,6 @@ PetscErrorCode VecView_Seq_Binary(Vec xin,PetscViewer viewer)
 #include <mat.h>   /* MATLAB include file */
 PetscErrorCode VecView_Seq_Matlab(Vec vec,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscInt          n;
   const PetscScalar *array;
 
@@ -557,7 +542,6 @@ PetscErrorCode VecView_Seq_Matlab(Vec vec,PetscViewer viewer)
 
 PETSC_EXTERN PetscErrorCode VecView_Seq(Vec xin,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isdraw,iascii,issocket,isbinary;
 #if defined(PETSC_HAVE_MATHEMATICA)
   PetscBool      ismathematica;
@@ -624,7 +608,6 @@ PetscErrorCode VecGetValues_Seq(Vec xin,PetscInt ni,const PetscInt ix[],PetscSca
 {
   const PetscScalar *xx;
   PetscInt          i;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(xin,&xx));
@@ -644,7 +627,6 @@ PetscErrorCode VecSetValues_Seq(Vec xin,PetscInt ni,const PetscInt ix[],const Pe
 {
   PetscScalar    *xx;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(xin,&xx));
@@ -675,7 +657,6 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec xin,PetscInt ni,const PetscInt ix[],c
 {
   PetscScalar    *xx,*y = (PetscScalar*)yin;
   PetscInt       i,bs,start,j;
-  PetscErrorCode ierr;
 
   /*
        For optimization could treat bs = 2, 3, 4, 5 as special cases with loop unrolling
@@ -705,7 +686,6 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec xin,PetscInt ni,const PetscInt ix[],c
 PetscErrorCode VecDestroy_Seq(Vec v)
 {
   Vec_Seq        *vs = (Vec_Seq*)v->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
@@ -725,7 +705,6 @@ PetscErrorCode VecSetOption_Seq(Vec v,VecOption op,PetscBool flag)
 
 PetscErrorCode VecDuplicate_Seq(Vec win,Vec *V)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCreate(PetscObjectComm((PetscObject)win),V));
@@ -820,7 +799,6 @@ static struct _VecOps DvOps = {
 PetscErrorCode VecCreate_Seq_Private(Vec v,const PetscScalar array[])
 {
   Vec_Seq        *s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(v,&s));
@@ -873,7 +851,6 @@ PetscErrorCode VecCreate_Seq_Private(Vec v,const PetscScalar array[])
 @*/
 PetscErrorCode  VecCreateSeqWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar array[],Vec *V)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

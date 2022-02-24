@@ -7,7 +7,6 @@ static PetscErrorCode TestOpen(PetscFileMode mode,PetscViewer *viewer)
 {
   const char     *name;
   PetscBool      skipinfo,skipheader,skipoptions;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryOpen(PETSC_COMM_WORLD,"binary.dat",mode,viewer));
@@ -30,7 +29,6 @@ static PetscErrorCode TestWrite(PetscViewer viewer)
   PetscReal      rdata = 42;
   PetscInt       s = PETSC_DETERMINE, t = PETSC_DETERMINE;
   PetscViewer    subviewer;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryWrite(viewer,&idata,1,PETSC_INT));
@@ -65,7 +63,6 @@ static PetscErrorCode TestRead(PetscViewer viewer)
   PetscInt       s = PETSC_DETERMINE, t = PETSC_DETERMINE;
   PetscViewer    subviewer;
   MPI_Comm       comm = PetscObjectComm((PetscObject)viewer);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryRead(viewer,&idata,1,NULL,PETSC_INT));
@@ -110,7 +107,6 @@ static PetscErrorCode TestEOF(PetscViewer viewer)
   char           data;
   PetscInt       count = PETSC_MAX_INT;
   MPI_Comm       comm = PetscObjectComm((PetscObject)viewer);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerRead(viewer,&data,1,&count,PETSC_CHAR));
@@ -121,7 +117,6 @@ static PetscErrorCode TestEOF(PetscViewer viewer)
 static PetscErrorCode TestClose(PetscViewer *viewer)
 {
   PetscFileMode  mode;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerFileGetMode(*viewer,&mode));

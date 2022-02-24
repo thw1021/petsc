@@ -60,9 +60,8 @@ typedef struct {
 
 static PetscErrorCode PCSetUp_SPAI(PC pc)
 {
-  PC_SPAI        *ispai = (PC_SPAI*)pc->data;
-  PetscErrorCode ierr;
-  Mat            AT;
+  PC_SPAI *ispai = (PC_SPAI*)pc->data;
+  Mat      AT;
 
   PetscFunctionBegin;
   init_SPAI();
@@ -92,15 +91,15 @@ static PetscErrorCode PCSetUp_SPAI(PC pc)
   /* int    verbose    */  /* verbose == 0 specifies that SPAI is silent
                               verbose == 1 prints timing and matrix statistics */
 
-  ierr = bspai(ispai->B,&ispai->M,
-               stdout,
-               ispai->epsilon,
-               ispai->nbsteps,
-               ispai->max,
-               ispai->maxnew,
-               ispai->block_size,
-               ispai->cache_size,
-               ispai->verbose);CHKERRQ(ierr);
+  CHKERRQ(bspai(ispai->B,&ispai->M,
+                stdout,
+                ispai->epsilon,
+                ispai->nbsteps,
+                ispai->max,
+                ispai->maxnew,
+                ispai->block_size,
+                ispai->cache_size,
+                ispai->verbose));
 
   CHKERRQ(ConvertMatrixToMat(PetscObjectComm((PetscObject)pc),ispai->M,&ispai->PM));
 
@@ -114,8 +113,7 @@ static PetscErrorCode PCSetUp_SPAI(PC pc)
 
 static PetscErrorCode PCApply_SPAI(PC pc,Vec xx,Vec y)
 {
-  PC_SPAI        *ispai = (PC_SPAI*)pc->data;
-  PetscErrorCode ierr;
+  PC_SPAI *ispai = (PC_SPAI*)pc->data;
 
   PetscFunctionBegin;
   /* Now using PETSc's multiply */
@@ -125,8 +123,7 @@ static PetscErrorCode PCApply_SPAI(PC pc,Vec xx,Vec y)
 
 static PetscErrorCode PCMatApply_SPAI(PC pc,Mat X,Mat Y)
 {
-  PC_SPAI        *ispai = (PC_SPAI*)pc->data;
-  PetscErrorCode ierr;
+  PC_SPAI *ispai = (PC_SPAI*)pc->data;
 
   PetscFunctionBegin;
   /* Now using PETSc's multiply */
@@ -138,8 +135,7 @@ static PetscErrorCode PCMatApply_SPAI(PC pc,Mat X,Mat Y)
 
 static PetscErrorCode PCDestroy_SPAI(PC pc)
 {
-  PetscErrorCode ierr;
-  PC_SPAI        *ispai = (PC_SPAI*)pc->data;
+  PC_SPAI *ispai = (PC_SPAI*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&ispai->PM));
@@ -152,9 +148,8 @@ static PetscErrorCode PCDestroy_SPAI(PC pc)
 
 static PetscErrorCode PCView_SPAI(PC pc,PetscViewer viewer)
 {
-  PC_SPAI        *ispai = (PC_SPAI*)pc->data;
-  PetscErrorCode ierr;
-  PetscBool      iascii;
+  PC_SPAI   *ispai = (PC_SPAI*)pc->data;
+  PetscBool  iascii;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -282,8 +277,6 @@ static PetscErrorCode  PCSPAISetSp_SPAI(PC pc,int sp)
   @*/
 PetscErrorCode  PCSPAISetEpsilon(PC pc,double epsilon1)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetEpsilon_C",(PC,double),(pc,epsilon1)));
   PetscFunctionReturn(0);
@@ -313,8 +306,6 @@ PetscErrorCode  PCSPAISetEpsilon(PC pc,double epsilon1)
 @*/
 PetscErrorCode  PCSPAISetNBSteps(PC pc,int nbsteps1)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetNBSteps_C",(PC,int),(pc,nbsteps1)));
   PetscFunctionReturn(0);
@@ -337,8 +328,6 @@ PetscErrorCode  PCSPAISetNBSteps(PC pc,int nbsteps1)
 @*/
 PetscErrorCode  PCSPAISetMax(PC pc,int max1)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetMax_C",(PC,int),(pc,max1)));
   PetscFunctionReturn(0);
@@ -360,8 +349,6 @@ PetscErrorCode  PCSPAISetMax(PC pc,int max1)
 @*/
 PetscErrorCode  PCSPAISetMaxNew(PC pc,int maxnew1)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetMaxNew_C",(PC,int),(pc,maxnew1)));
   PetscFunctionReturn(0);
@@ -400,8 +387,6 @@ PetscErrorCode  PCSPAISetMaxNew(PC pc,int maxnew1)
 @*/
 PetscErrorCode  PCSPAISetBlockSize(PC pc,int block_size1)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetBlockSize_C",(PC,int),(pc,block_size1)));
   PetscFunctionReturn(0);
@@ -428,8 +413,6 @@ PetscErrorCode  PCSPAISetBlockSize(PC pc,int block_size1)
 @*/
 PetscErrorCode  PCSPAISetCacheSize(PC pc,int cache_size)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetCacheSize_C",(PC,int),(pc,cache_size)));
   PetscFunctionReturn(0);
@@ -453,8 +436,6 @@ PetscErrorCode  PCSPAISetCacheSize(PC pc,int cache_size)
 @*/
 PetscErrorCode  PCSPAISetVerbose(PC pc,int verbose)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetVerbose_C",(PC,int),(pc,verbose)));
   PetscFunctionReturn(0);
@@ -483,8 +464,6 @@ PetscErrorCode  PCSPAISetVerbose(PC pc,int verbose)
 @*/
 PetscErrorCode  PCSPAISetSp(PC pc,int sp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCSPAISetSp_C",(PC,int),(pc,sp)));
   PetscFunctionReturn(0);
@@ -497,7 +476,6 @@ PetscErrorCode  PCSPAISetSp(PC pc,int sp)
 static PetscErrorCode PCSetFromOptions_SPAI(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_SPAI        *ispai = (PC_SPAI*)pc->data;
-  PetscErrorCode ierr;
   int            nbsteps1,max1,maxnew1,block_size1,cache_size,verbose,sp;
   double         epsilon1;
   PetscBool      flg;
@@ -569,8 +547,7 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_SPAI(PC pc)
 {
-  PC_SPAI        *ispai;
-  PetscErrorCode ierr;
+  PC_SPAI *ispai;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&ispai));
@@ -618,7 +595,6 @@ PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A,Mat AT,matrix **B)
   int                     row_indx;
   int                     len,pe,local_indx,start_indx;
   int                     *mapping;
-  PetscErrorCode          ierr;
   const int               *cols;
   const double            *vals;
   int                     n,mnl,nnl,nz,rstart,rend;
@@ -746,7 +722,6 @@ PetscErrorCode ConvertMatToMatrix(MPI_Comm comm, Mat A,Mat AT,matrix **B)
 PetscErrorCode ConvertMatrixToMat(MPI_Comm comm,matrix *B,Mat *PB)
 {
   PetscMPIInt    size,rank;
-  PetscErrorCode ierr;
   int            m,n,M,N;
   int            d_nz,o_nz;
   int            *d_nnz,*o_nnz;
@@ -807,9 +782,8 @@ PetscErrorCode ConvertMatrixToMat(MPI_Comm comm,matrix *B,Mat *PB)
 */
 PetscErrorCode ConvertVectorToVec(MPI_Comm comm,vector *v,Vec *Pv)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size,rank;
-  int            m,M,i,*mnls,*start_indices,*global_indices;
+  PetscMPIInt size,rank;
+  int         m,M,i,*mnls,*start_indices,*global_indices;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(comm,&size));

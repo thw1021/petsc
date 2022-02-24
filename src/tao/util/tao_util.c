@@ -47,7 +47,6 @@ PetscErrorCode VecFischer(Vec X, Vec F, Vec L, Vec U, Vec FB)
   const PetscScalar *x, *f, *l, *u;
   PetscScalar       *fb;
   PetscReal         xval, fval, lval, uval;
-  PetscErrorCode    ierr;
   PetscInt          low[5], high[5], n, i;
 
   PetscFunctionBegin;
@@ -148,7 +147,6 @@ PetscErrorCode VecSFischer(Vec X, Vec F, Vec L, Vec U, PetscReal mu, Vec FB)
   const PetscScalar *x, *f, *l, *u;
   PetscScalar       *fb;
   PetscReal         xval, fval, lval, uval;
-  PetscErrorCode    ierr;
   PetscInt          low[5], high[5], n, i;
 
   PetscFunctionBegin;
@@ -238,7 +236,6 @@ static inline PetscReal fischsnorm(PetscReal a, PetscReal b, PetscReal c)
 @*/
 PetscErrorCode MatDFischer(Mat jac, Vec X, Vec Con, Vec XL, Vec XU, Vec T1, Vec T2, Vec Da, Vec Db)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,nn;
   const PetscScalar *x,*f,*l,*u,*t2;
   PetscScalar       *da,*db,*t1;
@@ -385,7 +382,6 @@ PetscErrorCode MatDFischer(Mat jac, Vec X, Vec Con, Vec XL, Vec XU, Vec T1, Vec 
 @*/
 PetscErrorCode MatDSFischer(Mat jac, Vec X, Vec Con,Vec XL, Vec XU, PetscReal mu,Vec T1, Vec T2,Vec Da, Vec Db, Vec Dm)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,nn;
   const PetscScalar *x, *f, *l, *u;
   PetscScalar       *da, *db, *dm;
@@ -505,7 +501,6 @@ static inline PetscReal ST_InternalPP(PetscScalar in, PetscReal lb, PetscReal ub
 @*/
 PetscErrorCode TaoSoftThreshold(Vec in, PetscReal lb, PetscReal ub, Vec out)
 {
-  PetscErrorCode ierr;
   PetscInt       i, nlocal, mlocal;
   PetscScalar   *inarray, *outarray;
 

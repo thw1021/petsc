@@ -72,7 +72,6 @@ PetscReal         tmax = 20.0;
 /* Saves the solution at each time to a matrix */
 PetscErrorCode SaveSolution(TS ts)
 {
-  PetscErrorCode    ierr;
   AppCtx            *user;
   Vec               X;
   PetscScalar       *mat;
@@ -186,7 +185,6 @@ PetscErrorCode GetWindPower(PetscScalar wm,PetscScalar vw,PetscScalar *Pw,AppCtx
 */
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *user)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f,wm,Pw,*wd;
   const PetscScalar *u,*udot;
   PetscInt          stepnum;

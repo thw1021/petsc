@@ -27,7 +27,6 @@ typedef struct {
 @*/
 PetscErrorCode PCGAMGClassicalSetType(PC pc, PCGAMGClassicalType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -52,7 +51,6 @@ PetscErrorCode PCGAMGClassicalSetType(PC pc, PCGAMGClassicalType type)
 @*/
 PetscErrorCode PCGAMGClassicalGetType(PC pc, PCGAMGClassicalType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -62,7 +60,6 @@ PetscErrorCode PCGAMGClassicalGetType(PC pc, PCGAMGClassicalType *type)
 
 static PetscErrorCode PCGAMGClassicalSetType_GAMG(PC pc, PCGAMGClassicalType type)
 {
-  PetscErrorCode    ierr;
   PC_MG             *mg          = (PC_MG*)pc->data;
   PC_GAMG           *pc_gamg     = (PC_GAMG*)mg->innerctx;
   PC_GAMG_Classical *cls         = (PC_GAMG_Classical*)pc_gamg->subctx;
@@ -95,7 +92,6 @@ PetscErrorCode PCGAMGGraph_Classical(PC pc,Mat A,Mat *G)
   PetscInt          cmax = 0;
   PC_MG             *mg = (PC_MG *)pc->data;
   PC_GAMG           *gamg = (PC_GAMG *)mg->innerctx;
-  PetscErrorCode    ierr;
   PetscInt          *gsparse,*lsparse;
   PetscScalar       *Amax;
   MatType           mtype;
@@ -169,7 +165,6 @@ PetscErrorCode PCGAMGGraph_Classical(PC pc,Mat A,Mat *G)
 
 PetscErrorCode PCGAMGCoarsen_Classical(PC pc,Mat *G,PetscCoarsenData **agg_lists)
 {
-  PetscErrorCode   ierr;
   MatCoarsen       crs;
   MPI_Comm         fcomm = ((PetscObject)pc)->comm;
 
@@ -188,7 +183,6 @@ PetscErrorCode PCGAMGCoarsen_Classical(PC pc,Mat *G,PetscCoarsenData **agg_lists
 
 PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoarsenData *agg_lists,Mat *P)
 {
-  PetscErrorCode    ierr;
   PC_MG             *mg          = (PC_MG*)pc->data;
   PC_GAMG           *gamg        = (PC_GAMG*)mg->innerctx;
   PetscBool         iscoarse,isMPIAIJ,isSEQAIJ;
@@ -452,7 +446,6 @@ PetscErrorCode PCGAMGProlongator_Classical_Direct(PC pc, Mat A, Mat G, PetscCoar
 PetscErrorCode PCGAMGTruncateProlongator_Private(PC pc,Mat *P)
 {
   PetscInt          j,i,ps,pf,pn,pcs,pcf,pcn,idx,cmax;
-  PetscErrorCode    ierr;
   const PetscScalar *pval;
   const PetscInt    *pcol;
   PetscScalar       *pnval;
@@ -569,7 +562,6 @@ PetscErrorCode PCGAMGTruncateProlongator_Private(PC pc,Mat *P)
 
 PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, PetscCoarsenData *agg_lists,Mat *P)
 {
-  PetscErrorCode    ierr;
   Mat               lA,*lAs;
   MatType           mtype;
   Vec               cv;
@@ -824,7 +816,6 @@ PetscErrorCode PCGAMGProlongator_Classical_Standard(PC pc, Mat A, Mat G, PetscCo
 PetscErrorCode PCGAMGOptProlongator_Classical_Jacobi(PC pc,Mat A,Mat *P)
 {
 
-  PetscErrorCode    ierr;
   PetscInt          f,s,n,cf,cs,i,idx;
   PetscInt          *coarserows;
   PetscInt          ncols;
@@ -878,7 +869,6 @@ PetscErrorCode PCGAMGOptProlongator_Classical_Jacobi(PC pc,Mat A,Mat *P)
 
 PetscErrorCode PCGAMGProlongator_Classical(PC pc, Mat A, Mat G, PetscCoarsenData *agg_lists,Mat *P)
 {
-  PetscErrorCode    ierr;
   PetscErrorCode    (*f)(PC,Mat,Mat,PetscCoarsenData*,Mat*);
   PC_MG             *mg          = (PC_MG*)pc->data;
   PC_GAMG           *pc_gamg     = (PC_GAMG*)mg->innerctx;
@@ -893,7 +883,6 @@ PetscErrorCode PCGAMGProlongator_Classical(PC pc, Mat A, Mat G, PetscCoarsenData
 
 PetscErrorCode PCGAMGDestroy_Classical(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg          = (PC_MG*)pc->data;
   PC_GAMG        *pc_gamg     = (PC_GAMG*)mg->innerctx;
 
@@ -910,7 +899,6 @@ PetscErrorCode PCGAMGSetFromOptions_Classical(PetscOptionItems *PetscOptionsObje
   PC_GAMG           *pc_gamg     = (PC_GAMG*)mg->innerctx;
   PC_GAMG_Classical *cls         = (PC_GAMG_Classical*)pc_gamg->subctx;
   char              tname[256];
-  PetscErrorCode    ierr;
   PetscBool         flg;
 
   PetscFunctionBegin;
@@ -941,7 +929,6 @@ PetscErrorCode PCGAMGSetData_Classical(PC pc, Mat A)
 
 PetscErrorCode PCGAMGClassicalFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PCGAMGClassicalPackageInitialized = PETSC_FALSE;
@@ -951,7 +938,6 @@ PetscErrorCode PCGAMGClassicalFinalizePackage(void)
 
 PetscErrorCode PCGAMGClassicalInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PCGAMGClassicalPackageInitialized) PetscFunctionReturn(0);
@@ -968,7 +954,6 @@ PetscErrorCode PCGAMGClassicalInitializePackage(void)
 */
 PetscErrorCode  PCCreateGAMG_Classical(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG             *mg      = (PC_MG*)pc->data;
   PC_GAMG           *pc_gamg = (PC_GAMG*)mg->innerctx;
   PC_GAMG_Classical *pc_gamg_classical;

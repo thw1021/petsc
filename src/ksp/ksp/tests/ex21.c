@@ -8,7 +8,6 @@ T*/
 
 PetscErrorCode Create(MPI_Comm comm,Mat *inA,IS *is0,IS *is1)
 {
-  PetscErrorCode ierr;
   Mat            A;
   PetscInt       r,rend,M;
   PetscMPIInt    rank;
@@ -86,7 +85,6 @@ PetscErrorCode Create(MPI_Comm comm,Mat *inA,IS *is0,IS *is1)
 
 PetscErrorCode Destroy(Mat *A,IS *is0,IS *is1)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatDestroy(A));

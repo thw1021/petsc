@@ -4,7 +4,6 @@ static PetscErrorCode DMPlexTransformView_Extrude(DMPlexTransform tr, PetscViewe
 {
   DMPlexTransform_Extrude *ex = (DMPlexTransform_Extrude *) tr->data;
   PetscBool                isascii;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -29,7 +28,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_Extrude(PetscOptionItems *Pe
   PetscReal                th, normal[3], *thicknesses;
   PetscInt                 nl, Nc;
   PetscBool                tensor, sym, flg;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
@@ -64,7 +62,6 @@ static PetscErrorCode DMPlexTransformSetDimensions_Extrude(DMPlexTransform tr, D
 {
   DMPlexTransform_Extrude *ex = (DMPlexTransform_Extrude *) tr->data;
   PetscInt                 dim;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -79,7 +76,6 @@ static PetscErrorCode DMPlexTransformSetUp_Extrude(DMPlexTransform tr)
   DM                       dm;
   DMPolytopeType           ct;
   PetscInt                 Nl = ex->layers, l, i, ict, Nc, No, coff, ooff;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -372,7 +368,6 @@ static PetscErrorCode DMPlexTransformDestroy_Extrude(DMPlexTransform tr)
 {
   DMPlexTransform_Extrude *ex = (DMPlexTransform_Extrude *) tr->data;
   PetscInt                 ct;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   for (ct = 0; ct < DM_NUM_POLYTOPES; ++ct) {
@@ -416,7 +411,6 @@ static PetscErrorCode DMPlexTransformMapCoordinates_Extrude(DMPlexTransform tr, 
   PetscReal                normal[3] = {0., 0., 0.}, norm;
   PetscBool                computeNormal;
   PetscInt                 dim, dEx = ex->cdimEx, cStart, cEnd, d;
-  PetscErrorCode           ierr;
 
   PetscFunctionBeginHot;
   PetscCheckFalse(pct != DM_POLYTOPE_POINT,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for parent point type %s",DMPolytopeTypes[pct]);
@@ -476,7 +470,6 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Extrude(DMPlexTransform tr)
   DMPlexTransform_Extrude *ex;
   DM                       dm;
   PetscInt                 dim;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -538,7 +531,6 @@ PetscErrorCode DMPlexTransformExtrudeGetLayers(DMPlexTransform tr, PetscInt *lay
 PetscErrorCode DMPlexTransformExtrudeSetLayers(DMPlexTransform tr, PetscInt layers)
 {
   DMPlexTransform_Extrude *ex = (DMPlexTransform_Extrude *) tr->data;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -656,7 +648,6 @@ PetscErrorCode DMPlexTransformExtrudeSetThicknesses(DMPlexTransform tr, PetscInt
 {
   DMPlexTransform_Extrude *ex = (DMPlexTransform_Extrude *) tr->data;
   PetscInt                 t;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

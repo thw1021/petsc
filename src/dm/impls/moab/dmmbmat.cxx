@@ -9,7 +9,6 @@ PETSC_EXTERN PetscErrorCode DMMoab_Compute_NNZ_From_Connectivity(DM, PetscInt*, 
 
 PETSC_EXTERN PetscErrorCode DMCreateMatrix_Moab(DM dm, Mat *J)
 {
-  PetscErrorCode  ierr;
   PetscInt        innz = 0, ionz = 0, nlsiz;
   DM_Moab         *dmmoab = (DM_Moab*)dm->data;
   PetscInt        *nnz = 0, *onz = 0;
@@ -40,7 +39,7 @@ PETSC_EXTERN PetscErrorCode DMCreateMatrix_Moab(DM dm, Mat *J)
   CHKERRQ(MatSetDM(A, dm)); /* set DM reference */
   CHKERRQ(MatSetFromOptions(A));
 
-  PetscCheckFalse(!dmmoab->ltog_map,(((PetscObject)dm)->comm), PETSC_ERR_ORDER, "Cannot create a DMMoab Mat without calling DMSetUp first.");
+  PetscCheck(dmmoab->ltog_map,(((PetscObject)dm)->comm), PETSC_ERR_ORDER, "Cannot create a DMMoab Mat without calling DMSetUp first.");
   CHKERRQ(MatSetLocalToGlobalMapping(A, dmmoab->ltog_map, dmmoab->ltog_map));
 
   /* set preallocation based on different supported Mat types */
@@ -188,7 +187,6 @@ PETSC_EXTERN PetscErrorCode DMMoab_Compute_NNZ_From_Connectivity(DM dm, PetscInt
 
 static PetscErrorCode DMMoabSetBlockFills_Private(PetscInt w, const PetscInt *fill, PetscInt **rfill)
 {
-  PetscErrorCode ierr;
   PetscInt       i, j, *ifill;
 
   PetscFunctionBegin;
@@ -240,7 +238,6 @@ $                         0, 1, 1}
 PetscErrorCode  DMMoabSetBlockFills(DM dm, const PetscInt *dfill, const PetscInt *ofill)
 {
   DM_Moab       *dmmoab = (DM_Moab*)dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

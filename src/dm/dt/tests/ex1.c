@@ -7,7 +7,6 @@ static char help[] = "Tests 1D discretization tools.\n\n";
 
 static PetscErrorCode CheckPoints(const char *name,PetscInt npoints,const PetscReal *points,PetscInt ndegrees,const PetscInt *degrees)
 {
-  PetscErrorCode ierr;
   PetscReal      *B,*D,*D2;
   PetscInt       i,j;
 
@@ -52,7 +51,6 @@ static PetscErrorCode CheckQuadrature(PetscInt npoints, PetscReal alpha, PetscRe
   PetscInt i, j, k;
   PetscReal *Pi, *Pj;
   PetscReal eps;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   eps = PETSC_SMALL;
@@ -100,7 +98,6 @@ static PetscErrorCode CheckQuadrature(PetscInt npoints, PetscReal alpha, PetscRe
 static PetscErrorCode CheckJacobiQuadrature(PetscInt npoints, PetscReal alpha, PetscReal beta, quadratureFunc func, PetscInt nexact)
 {
   PetscReal *x, *w;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc2(npoints, &x, npoints, &w));

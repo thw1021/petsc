@@ -5,7 +5,6 @@ static PetscErrorCode DMPlexTransformSetUp_1D(DMPlexTransform tr)
   DM             dm;
   DMLabel        active;
   PetscInt       pStart, pEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -37,7 +36,6 @@ static PetscErrorCode DMPlexTransformSetUp_1D(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformGetSubcellOrientation_1D(DMPlexTransform tr, DMPolytopeType sct, PetscInt sp, PetscInt so, DMPolytopeType tct, PetscInt r, PetscInt o, PetscInt *rnew, PetscInt *onew)
 {
   PetscInt       rt;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(DMLabelGetValue(tr->trType, sp, &rt));
@@ -55,7 +53,6 @@ static PetscErrorCode DMPlexTransformCellTransform_1D(DMPlexTransform tr, DMPoly
 {
   DMLabel        trType = tr->trType;
   PetscInt       val;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscCheckFalse(p < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point argument is invalid");
@@ -79,7 +76,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_1D(PetscOptionItems *PetscOp
 {
   PetscInt       cells[256], n = 256, i;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
@@ -100,7 +96,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_1D(PetscOptionItems *PetscOp
 static PetscErrorCode DMPlexTransformView_1D(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -124,7 +119,6 @@ static PetscErrorCode DMPlexTransformView_1D(DMPlexTransform tr, PetscViewer vie
 
 static PetscErrorCode DMPlexTransformDestroy_1D(DMPlexTransform tr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(tr->data));
@@ -147,7 +141,6 @@ static PetscErrorCode DMPlexTransformInitialize_1D(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_1D(DMPlexTransform tr)
 {
   DMPlexRefine_1D *f;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

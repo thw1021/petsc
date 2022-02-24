@@ -40,7 +40,6 @@ PetscErrorCode  PetscDrawSetSave(PetscDraw draw,const char filename[])
   const char     *savename = NULL;
   const char     *imageext = NULL;
   char           buf[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -98,9 +97,6 @@ PetscErrorCode  PetscDrawSetSave(PetscDraw draw,const char filename[])
 @*/
 PetscErrorCode  PetscDrawSetSaveMovie(PetscDraw draw,const char movieext[])
 {
-
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
   if (movieext) PetscValidCharPointer(movieext,2);
@@ -141,7 +137,6 @@ PetscErrorCode  PetscDrawSetSaveMovie(PetscDraw draw,const char movieext[])
 PetscErrorCode  PetscDrawSetSaveFinalImage(PetscDraw draw,const char filename[])
 {
   char           buf[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -182,7 +177,6 @@ PetscErrorCode  PetscDrawSave(PetscDraw draw)
   unsigned int   w,h;
   unsigned char  *pixels = NULL;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -255,7 +249,6 @@ finally:
 PetscErrorCode PetscDrawSaveMovie(PetscDraw draw)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -290,7 +283,6 @@ static PetscImageList SAWs_images = NULL;
 
 static PetscErrorCode PetscImageListDestroy(void)
 {
-  PetscErrorCode ierr;
   PetscImageList image = SAWs_images;
 
   PetscFunctionBegin;
@@ -306,9 +298,8 @@ static PetscErrorCode PetscImageListDestroy(void)
 
 static PetscErrorCode PetscImageListAdd(const char filename[],const char ext[],PetscInt count)
 {
-  PetscErrorCode  ierr;
-  PetscImageList  image,oimage = SAWs_images;
-  PetscBool       flg;
+  PetscImageList image,oimage = SAWs_images;
+  PetscBool      flg;
 
   PetscFunctionBegin;
   if (oimage) {
@@ -343,7 +334,6 @@ static PetscErrorCode PetscDrawSave_SAWs(PetscDraw draw)
   PetscImageList image;
   char           body[4096];
   size_t         len = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!draw->savefilename || !draw->saveimageext) PetscFunctionReturn(0);

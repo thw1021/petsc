@@ -167,7 +167,6 @@ PetscErrorCode CreateSimplex_2D(MPI_Comm comm, DM dm)
 {
   PetscInt       depth = 1, testNum  = 0, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -204,7 +203,6 @@ PetscErrorCode CreateSimplex_3D(MPI_Comm comm, DM dm)
 {
   PetscInt       depth = 1, testNum  = 0, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -241,7 +239,6 @@ PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscInt testNum, DM dm)
 {
   PetscInt       depth = 1, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -293,7 +290,6 @@ PetscErrorCode CreateHex_3D(MPI_Comm comm, DM dm)
 {
   PetscInt       depth = 1, testNum  = 0, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -331,7 +327,6 @@ PetscErrorCode CreateHex_3D(MPI_Comm comm, DM dm)
 PetscErrorCode CreateMesh(MPI_Comm comm, PetscInt testNum, AppCtx *user, DM *dm)
 {
   PetscBool      useGenerator = user->useGenerator;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));

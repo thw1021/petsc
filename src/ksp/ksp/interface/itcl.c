@@ -40,7 +40,6 @@
 @*/
 PetscErrorCode  KSPSetOptionsPrefix(KSP ksp,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -70,7 +69,6 @@ PetscErrorCode  KSPSetOptionsPrefix(KSP ksp,const char prefix[])
 @*/
 PetscErrorCode  KSPAppendOptionsPrefix(KSP ksp,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -100,7 +98,6 @@ PetscErrorCode  KSPAppendOptionsPrefix(KSP ksp,const char prefix[])
 PetscErrorCode  KSPSetUseFischerGuess(KSP ksp,PetscInt model,PetscInt size)
 {
   KSPGuess       guess;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -134,7 +131,6 @@ PetscErrorCode  KSPSetUseFischerGuess(KSP ksp,PetscInt model,PetscInt size)
 @*/
 PetscErrorCode  KSPSetGuess(KSP ksp,KSPGuess guess)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -163,7 +159,6 @@ PetscErrorCode  KSPSetGuess(KSP ksp,KSPGuess guess)
 @*/
 PetscErrorCode  KSPGetGuess(KSP ksp,KSPGuess *guess)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -204,7 +199,6 @@ PetscErrorCode  KSPGetGuess(KSP ksp,KSPGuess *guess)
 @*/
 PetscErrorCode  KSPGetOptionsPrefix(KSP ksp,const char *prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -214,7 +208,6 @@ PetscErrorCode  KSPGetOptionsPrefix(KSP ksp,const char *prefix[])
 
 static PetscErrorCode PetscViewerAndFormatCreate_Internal(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -255,7 +248,6 @@ PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char na
   char                  key[PETSC_MAX_PATH_LEN];
   PetscBool             all, flg;
   const char           *prefix = NULL;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcmp(opt, "-all_ksp_monitor", &all));
@@ -694,7 +686,6 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
 @*/
 PetscErrorCode KSPResetFromOptions(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ksp->setfromoptionscalled) CHKERRQ(KSPSetFromOptions(ksp));

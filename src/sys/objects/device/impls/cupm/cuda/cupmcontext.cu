@@ -6,7 +6,6 @@ PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
 {
   static constexpr auto     contextCuda = CUPMContextCuda();
   PetscDeviceContext_(CUDA) *dci;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&dci));
@@ -19,7 +18,6 @@ PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
 PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t *handle)
 {
   PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
@@ -31,7 +29,6 @@ PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t *handle)
 PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t *handle)
 {
   PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);

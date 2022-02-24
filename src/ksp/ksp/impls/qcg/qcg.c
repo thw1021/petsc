@@ -20,7 +20,6 @@ static PetscErrorCode KSPQCGQuadraticRoots(Vec,Vec,PetscReal,PetscReal*,PetscRea
 @*/
 PetscErrorCode  KSPQCGSetTrustRegionRadius(KSP ksp,PetscReal delta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -45,7 +44,6 @@ PetscErrorCode  KSPQCGSetTrustRegionRadius(KSP ksp,PetscReal delta)
 @*/
 PetscErrorCode  KSPQCGGetTrialStepNorm(KSP ksp,PetscReal *tsnorm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -81,7 +79,6 @@ PetscErrorCode  KSPQCGGetTrialStepNorm(KSP ksp,PetscReal *tsnorm)
 @*/
 PetscErrorCode  KSPQCGGetQuadratic(KSP ksp,PetscReal *quadratic)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -105,7 +102,6 @@ PetscErrorCode KSPSolve_QCG(KSP ksp)
   PetscReal      q1,q2,xnorm,step1,step2,rnrm = 0.0,btx,xtax;
   PetscReal      ptasp,rtr,wtasp,bstp;
   PetscReal      dzero = 0.0,bsnrm = 0.0;
-  PetscErrorCode ierr;
   PetscInt       i,maxit;
   PC             pc = ksp->pc;
   PCSide         side;
@@ -277,7 +273,6 @@ PetscErrorCode KSPSolve_QCG(KSP ksp)
 
 PetscErrorCode KSPSetUp_QCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Get work vectors from user code */
@@ -287,7 +282,6 @@ PetscErrorCode KSPSetUp_QCG(KSP ksp)
 
 PetscErrorCode KSPDestroy_QCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)ksp,"KSPQCGGetQuadratic_C",NULL));
@@ -326,7 +320,6 @@ static PetscErrorCode  KSPQCGGetQuadratic_QCG(KSP ksp,PetscReal *quadratic)
 
 PetscErrorCode KSPSetFromOptions_QCG(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscReal      delta;
   KSP_QCG        *cgP = (KSP_QCG*)ksp->data;
   PetscBool      flg;
@@ -390,7 +383,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_QCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_QCG        *cgP;
 
   PetscFunctionBegin;
@@ -435,7 +427,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_QCG(KSP ksp)
 static PetscErrorCode KSPQCGQuadraticRoots(Vec s,Vec p,PetscReal delta,PetscReal *step1,PetscReal *step2)
 {
   PetscReal      dsq,ptp,pts,rad,sts;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDotRealPart(p,s,&pts));

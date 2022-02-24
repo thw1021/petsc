@@ -42,7 +42,6 @@ PetscErrorCode private_DMDALocatePointsIS_2D_Regular(DM dmregular,Vec pos,IS *is
   PetscInt          *cellidx;
   Vec               coor;
   const PetscScalar *_coor;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetCorners(dmregular,&xs,&ys,NULL,&xe,&ye,NULL));
@@ -122,7 +121,6 @@ PetscErrorCode private_DMDALocatePointsIS_3D_Regular(DM dmregular,Vec pos,IS *is
   PetscInt          *cellidx;
   Vec               coor;
   const PetscScalar *_coor;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetCorners(dmregular,&xs,&ys,&zs,&xe,&ye,&ze));
@@ -207,7 +205,6 @@ PetscErrorCode DMLocatePoints_DA_Regular(DM dm,Vec pos,DMPointLocationType ltype
   PetscSFNode    *cells;
   PetscInt       p,bs,dim,npoints,nfound;
   const PetscInt *boxCells;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetBlockSize(pos,&dim));

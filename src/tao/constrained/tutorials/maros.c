@@ -131,13 +131,12 @@ PetscErrorCode main(int argc,char **argv)
 
 PetscErrorCode InitializeProblem(AppCtx *user)
 {
-  PetscErrorCode ierr;
-  PetscViewer    loader;
-  MPI_Comm       comm;
-  PetscInt       nrows,ncols,i;
-  PetscScalar    one=1.0;
-  char           filebase[128];
-  char           filename[128];
+  PetscViewer loader;
+  MPI_Comm    comm;
+  PetscInt    nrows,ncols,i;
+  PetscScalar one = 1.0;
+  char        filebase[128];
+  char        filename[128];
 
   PetscFunctionBegin;
   comm = PETSC_COMM_WORLD;
@@ -163,39 +162,30 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   CHKERRQ(MatLoad(user->H,loader));
   CHKERRQ(PetscViewerDestroy(&loader));
   CHKERRQ(MatGetSize(user->H,&nrows,&ncols));
-  PetscCheckFalse(nrows != user->n,comm,PETSC_ERR_ARG_SIZ,"H: nrows != n");
-  PetscCheckFalse(ncols != user->n,comm,PETSC_ERR_ARG_SIZ,"H: ncols != n");
+  PetscCheck(nrows == user->n,comm,PETSC_ERR_ARG_SIZ,"H: nrows != n");
+  PetscCheck(ncols == user->n,comm,PETSC_ERR_ARG_SIZ,"H: ncols != n");
   CHKERRQ(MatSetFromOptions(user->H));
 
   CHKERRQ(PetscStrncpy(filename,filebase,sizeof(filename)));
   CHKERRQ(PetscStrlcat(filename,"Aeq",sizeof(filename)));
   CHKERRQ(PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,&loader));
-  if (ierr) {
-    user->Aeq = NULL;
-    user->me  = 0;
-  } else {
-    CHKERRQ(MatCreate(comm,&user->Aeq));
-    CHKERRQ(MatLoad(user->Aeq,loader));
-    CHKERRQ(PetscViewerDestroy(&loader));
-    CHKERRQ(MatGetSize(user->Aeq,&nrows,&ncols));
-    PetscCheckFalse(ncols != user->n,comm,PETSC_ERR_ARG_SIZ,"Aeq ncols != H nrows");
-    CHKERRQ(MatSetFromOptions(user->Aeq));
-    user->me = nrows;
-  }
+  CHKERRQ(MatCreate(comm,&user->Aeq));
+  CHKERRQ(MatLoad(user->Aeq,loader));
+  CHKERRQ(PetscViewerDestroy(&loader));
+  CHKERRQ(MatGetSize(user->Aeq,&nrows,&ncols));
+  PetscCheck(ncols == user->n,comm,PETSC_ERR_ARG_SIZ,"Aeq ncols != H nrows");
+  CHKERRQ(MatSetFromOptions(user->Aeq));
+  user->me = nrows;
 
   CHKERRQ(PetscStrncpy(filename,filebase,sizeof(filename)));
   CHKERRQ(PetscStrlcat(filename,"Beq",sizeof(filename)));
   CHKERRQ(PetscViewerBinaryOpen(comm,filename,FILE_MODE_READ,&loader));
-  if (ierr) {
-    user->beq = 0;
-  } else {
-    CHKERRQ(VecCreate(comm,&user->beq));
-    CHKERRQ(VecLoad(user->beq,loader));
-    CHKERRQ(PetscViewerDestroy(&loader));
-    CHKERRQ(VecGetSize(user->beq,&nrows));
-    PetscCheckFalse(nrows != user->me,comm,PETSC_ERR_ARG_SIZ,"Aeq nrows != Beq n");
-    CHKERRQ(VecSetFromOptions(user->beq));
-  }
+  CHKERRQ(VecCreate(comm,&user->beq));
+  CHKERRQ(VecLoad(user->beq,loader));
+  CHKERRQ(PetscViewerDestroy(&loader));
+  CHKERRQ(VecGetSize(user->beq,&nrows));
+  PetscCheck(nrows == user->me,comm,PETSC_ERR_ARG_SIZ,"Aeq nrows != Beq n");
+  CHKERRQ(VecSetFromOptions(user->beq));
 
   user->mi = user->n;
   /* Ain = eye(n,n) */
@@ -206,9 +196,7 @@ PetscErrorCode InitializeProblem(AppCtx *user)
   CHKERRQ(MatMPIAIJSetPreallocation(user->Ain,1,NULL,0,NULL));
   CHKERRQ(MatSeqAIJSetPreallocation(user->Ain,1,NULL));
 
-  for (i=0;i<user->mi;i++) {
-    CHKERRQ(MatSetValues(user->Ain,1,&i,1,&i,&one,INSERT_VALUES));
-  }
+  for (i=0;i<user->mi;i++) CHKERRQ(MatSetValues(user->Ain,1,&i,1,&i,&one,INSERT_VALUES));
   CHKERRQ(MatAssemblyBegin(user->Ain,MAT_FINAL_ASSEMBLY));
   CHKERRQ(MatAssemblyEnd(user->Ain,MAT_FINAL_ASSEMBLY));
   CHKERRQ(MatSetFromOptions(user->Ain));
@@ -225,8 +213,6 @@ PetscErrorCode InitializeProblem(AppCtx *user)
 
 PetscErrorCode DestroyProblem(AppCtx *user)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&user->H));
   CHKERRQ(MatDestroy(&user->Aeq));
@@ -236,11 +222,11 @@ PetscErrorCode DestroyProblem(AppCtx *user)
   CHKERRQ(VecDestroy(&user->d));
   PetscFunctionReturn(0);
 }
+
 PetscErrorCode FormFunctionGradient(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx)
 {
   AppCtx         *user = (AppCtx*)ctx;
   PetscScalar    xtHx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(user->H,x,g));
@@ -260,7 +246,6 @@ PetscErrorCode FormHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
 PetscErrorCode FormInequalityConstraints(Tao tao, Vec x, Vec ci, void *ctx)
 {
   AppCtx         *user = (AppCtx*)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(user->Ain,x,ci));
@@ -270,7 +255,6 @@ PetscErrorCode FormInequalityConstraints(Tao tao, Vec x, Vec ci, void *ctx)
 PetscErrorCode FormEqualityConstraints(Tao tao, Vec x, Vec ce,void *ctx)
 {
   AppCtx         *user = (AppCtx*)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(user->Aeq,x,ce));

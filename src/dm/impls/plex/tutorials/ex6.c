@@ -38,7 +38,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode LoadData2D(DM dm, PetscInt Ni, PetscInt Nj, PetscInt clSize, Vec u, AppCtx *user)
 {
   PetscInt       i, j, f, c;
-  PetscErrorCode ierr;
   PetscScalar *closure;
 
   PetscFunctionBeginUser;
@@ -69,7 +68,6 @@ static PetscErrorCode LoadData2D(DM dm, PetscInt Ni, PetscInt Nj, PetscInt clSiz
 static PetscErrorCode LoadData3D(DM dm, PetscInt Ni, PetscInt Nj, PetscInt Nk, PetscInt clSize, Vec u, AppCtx *user)
 {
   PetscInt       i, j, k, f, c;
-  PetscErrorCode ierr;
   PetscScalar *closure;
 
   PetscFunctionBeginUser;
@@ -107,7 +105,6 @@ static PetscErrorCode CheckPoint(DM dm, Vec u, PetscInt point, AppCtx *user)
   PetscScalar        *a;
   const PetscScalar  *array;
   PetscInt           dof, d;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetLocalSection(dm, &s));
@@ -127,7 +124,6 @@ static PetscErrorCode CheckPoint(DM dm, Vec u, PetscInt point, AppCtx *user)
 static PetscErrorCode ReadData2D(DM dm, Vec u, AppCtx *user)
 {
   PetscInt       cStart, cEnd, cell;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
@@ -161,7 +157,6 @@ static PetscErrorCode ReadData2D(DM dm, Vec u, AppCtx *user)
 static PetscErrorCode ReadData3D(DM dm, Vec u, AppCtx *user)
 {
   PetscInt       cStart, cEnd, cell;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
@@ -199,7 +194,6 @@ static PetscErrorCode SetSymmetries(DM dm, PetscSection s, AppCtx *user)
 {
   PetscInt       dim, f, o, i, j, k, c, d;
   DMLabel        depthLabel;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));

@@ -8,7 +8,6 @@ static PetscErrorCode PetscViewerHDF5GetAbsolutePath_Internal(PetscViewer viewer
   PetscBool      relative = PETSC_FALSE;
   const char     *group;
   char           buf[PETSC_MAX_PATH_LEN] = "";
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5GetGroup(viewer, &group));
@@ -27,7 +26,6 @@ static PetscErrorCode PetscViewerHDF5GetAbsolutePath_Internal(PetscViewer viewer
 static PetscErrorCode PetscViewerHDF5CheckNamedObject_Internal(PetscViewer viewer, PetscObject obj)
 {
   PetscBool      has;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5HasObject(viewer, obj, &has));
@@ -41,7 +39,6 @@ static PetscErrorCode PetscViewerHDF5CheckNamedObject_Internal(PetscViewer viewe
 
 static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscOptionItems *PetscOptionsObject,PetscViewer v)
 {
-  PetscErrorCode   ierr;
   PetscBool        flg = PETSC_FALSE, set;
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*)v->data;
 
@@ -62,7 +59,6 @@ static PetscErrorCode PetscViewerView_HDF5(PetscViewer v,PetscViewer viewer)
 {
   PetscViewer_HDF5  *hdf5 = (PetscViewer_HDF5*)v->data;
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (hdf5->filename) {
@@ -79,7 +75,6 @@ static PetscErrorCode PetscViewerView_HDF5(PetscViewer v,PetscViewer viewer)
 static PetscErrorCode PetscViewerFileClose_HDF5(PetscViewer viewer)
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*)viewer->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(hdf5->filename));
@@ -99,7 +94,6 @@ static PetscErrorCode PetscViewerFlush_HDF5(PetscViewer viewer)
 static PetscErrorCode PetscViewerDestroy_HDF5(PetscViewer viewer)
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscStackCallHDF5(H5Pclose,(hdf5->dxpl_id));
@@ -173,7 +167,6 @@ static PetscErrorCode  PetscViewerHDF5SetBaseDimension2_HDF5(PetscViewer viewer,
 @*/
 PetscErrorCode PetscViewerHDF5SetBaseDimension2(PetscViewer viewer,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -246,7 +239,6 @@ static PetscErrorCode  PetscViewerHDF5SetSPOutput_HDF5(PetscViewer viewer, Petsc
 @*/
 PetscErrorCode PetscViewerHDF5SetSPOutput(PetscViewer viewer,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -297,10 +289,7 @@ static PetscErrorCode  PetscViewerHDF5SetCollective_HDF5(PetscViewer viewer, Pet
     PetscStackCallHDF5(H5Pset_dxpl_mpio,(hdf5->dxpl_id, flg ? H5FD_MPIO_COLLECTIVE : H5FD_MPIO_INDEPENDENT));
   }
 #else
-  if (flg) {
-    PetscErrorCode ierr;
-    CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)viewer), "Warning: PetscViewerHDF5SetCollective(viewer,PETSC_TRUE) is ignored for HDF5 versions prior to 1.10.3 or if built without MPI support\n"));
-  }
+  if (flg) CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)viewer), "Warning: PetscViewerHDF5SetCollective(viewer,PETSC_TRUE) is ignored for HDF5 versions prior to 1.10.3 or if built without MPI support\n"));
 #endif
   PetscFunctionReturn(0);
 }
@@ -333,7 +322,6 @@ static PetscErrorCode  PetscViewerHDF5SetCollective_HDF5(PetscViewer viewer, Pet
 @*/
 PetscErrorCode PetscViewerHDF5SetCollective(PetscViewer viewer,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -381,7 +369,6 @@ static PetscErrorCode  PetscViewerHDF5GetCollective_HDF5(PetscViewer viewer, Pet
 @*/
 PetscErrorCode PetscViewerHDF5GetCollective(PetscViewer viewer,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -395,7 +382,6 @@ static PetscErrorCode  PetscViewerFileSetName_HDF5(PetscViewer viewer, const cha
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
   hid_t             plist_id;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (hdf5->file_id) PetscStackCallHDF5(H5Fclose,(hdf5->file_id));
@@ -416,7 +402,7 @@ static PetscErrorCode  PetscViewerFileSetName_HDF5(PetscViewer viewer, const cha
       CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank));
       if (rank == 0) {
         CHKERRQ(PetscTestFile(hdf5->filename, 'r', &flg));
-        PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"File %s requested for reading does not exist",hdf5->filename);
+        PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"File %s requested for reading does not exist",hdf5->filename);
       }
       CHKERRMPI(MPI_Barrier(PetscObjectComm((PetscObject)viewer)));
     }
@@ -439,7 +425,7 @@ static PetscErrorCode  PetscViewerFileSetName_HDF5(PetscViewer viewer, const cha
   default:
     SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP, "Unsupported file mode %s",PetscFileModes[hdf5->btype]);
   }
-  PetscCheckFalse(hdf5->file_id < 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "H5Fcreate failed for %s", name);
+  PetscCheck(hdf5->file_id >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "H5Fcreate failed for %s", name);
   PetscStackCallHDF5(H5Pclose,(plist_id));
   PetscFunctionReturn(0);
 }
@@ -503,7 +489,6 @@ static PetscErrorCode PetscViewerHDF5GetDefaultTimestepping_HDF5(PetscViewer vie
 @*/
 PetscErrorCode PetscViewerHDF5SetDefaultTimestepping(PetscViewer viewer, PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -531,7 +516,6 @@ PetscErrorCode PetscViewerHDF5SetDefaultTimestepping(PetscViewer viewer, PetscBo
 @*/
 PetscErrorCode PetscViewerHDF5GetDefaultTimestepping(PetscViewer viewer, PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
@@ -553,14 +537,13 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_HDF5(PetscViewer v)
 {
   PetscViewer_HDF5 *hdf5;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
 #if !defined(H5_HAVE_PARALLEL)
   {
     PetscMPIInt size;
     CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
-    PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Cannot use parallel HDF5 viewer since the given HDF5 does not support parallel I/O (H5_HAVE_PARALLEL is unset)");
+    PetscCheck(size <= 1,PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Cannot use parallel HDF5 viewer since the given HDF5 does not support parallel I/O (H5_HAVE_PARALLEL is unset)");
   }
 #endif
 
@@ -628,7 +611,6 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_HDF5(PetscViewer v)
 @*/
 PetscErrorCode  PetscViewerHDF5Open(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *hdf5v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm, hdf5v));
@@ -700,7 +682,6 @@ PetscErrorCode  PetscViewerHDF5PushGroup(PetscViewer viewer, const char name[])
   size_t                    i,len;
   char                      buf[PETSC_MAX_PATH_LEN];
   const char                *gname;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -749,11 +730,10 @@ PetscErrorCode  PetscViewerHDF5PopGroup(PetscViewer viewer)
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
   PetscViewerHDF5GroupList *groupNode;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(!hdf5->groups,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "HDF5 group stack is empty, cannot pop");
+  PetscCheck(hdf5->groups,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "HDF5 group stack is empty, cannot pop");
   groupNode    = hdf5->groups;
   hdf5->groups = hdf5->groups->next;
   CHKERRQ(PetscFree(groupNode->name));
@@ -816,7 +796,6 @@ PetscErrorCode PetscViewerHDF5OpenGroup(PetscViewer viewer, hid_t *fileId, hid_t
   H5O_type_t     type;
   const char     *groupName = NULL, *fileName = NULL;
   PetscBool      writable, has;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerWritable(viewer, &writable));
@@ -825,10 +804,10 @@ PetscErrorCode PetscViewerHDF5OpenGroup(PetscViewer viewer, hid_t *fileId, hid_t
   CHKERRQ(PetscViewerHDF5GetGroup(viewer, &groupName));
   CHKERRQ(PetscViewerHDF5Traverse_Internal(viewer, groupName, writable, &has, &type));
   if (!has) {
-    PetscCheckFalse(!writable,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Group %s does not exist and file %s is not open for writing", groupName, fileName);
+    PetscCheck(writable,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Group %s does not exist and file %s is not open for writing", groupName, fileName);
     else           SETERRQ(PetscObjectComm((PetscObject)viewer), PETSC_ERR_LIB, "HDF5 failed to create group %s although file %s is open for writing", groupName, fileName);
   }
-  PetscCheckFalse(type != H5O_TYPE_GROUP,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Path %s in file %s resolves to something which is not a group", groupName, fileName);
+  PetscCheck(type == H5O_TYPE_GROUP,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Path %s in file %s resolves to something which is not a group", groupName, fileName);
   PetscStackCallHDF5Return(*groupId,H5Gopen2,(file_id, groupName ? groupName : "/", H5P_DEFAULT));
   *fileId  = file_id;
   PetscFunctionReturn(0);
@@ -865,7 +844,7 @@ PetscErrorCode  PetscViewerHDF5PushTimestepping(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping is already pushed");
+  PetscCheck(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping is already pushed");
   hdf5->timestepping = PETSC_TRUE;
   if (hdf5->timestep < 0) hdf5->timestep = 0;
   PetscFunctionReturn(0);
@@ -892,7 +871,7 @@ PetscErrorCode  PetscViewerHDF5PopTimestepping(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   hdf5->timestepping = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -946,7 +925,7 @@ PetscErrorCode PetscViewerHDF5IncrementTimestep(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   ++hdf5->timestep;
   PetscFunctionReturn(0);
 }
@@ -974,8 +953,8 @@ PetscErrorCode  PetscViewerHDF5SetTimestep(PetscViewer viewer, PetscInt timestep
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidLogicalCollectiveInt(viewer, timestep, 2);
-  PetscCheckFalse(timestep < 0,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestep %" PetscInt_FMT " is negative", timestep);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(timestep >= 0,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestep %" PetscInt_FMT " is negative", timestep);
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   hdf5->timestep = timestep;
   PetscFunctionReturn(0);
 }
@@ -1005,7 +984,7 @@ PetscErrorCode  PetscViewerHDF5GetTimestep(PetscViewer viewer, PetscInt *timeste
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidIntPointer(timestep,2);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   *timestep = hdf5->timestep;
   PetscFunctionReturn(0);
 }
@@ -1106,7 +1085,6 @@ PetscErrorCode PetscViewerHDF5WriteAttribute(PetscViewer viewer, const char pare
   char           *parentAbsPath;
   hid_t          h5, dataspace, obj, attribute, dtype;
   PetscBool      has;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1162,7 +1140,6 @@ PetscErrorCode PetscViewerHDF5WriteAttribute(PetscViewer viewer, const char pare
 @*/
 PetscErrorCode PetscViewerHDF5WriteObjectAttribute(PetscViewer viewer, PetscObject obj, const char name[], PetscDataType datatype, const void *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1210,7 +1187,6 @@ PetscErrorCode PetscViewerHDF5ReadAttribute(PetscViewer viewer, const char paren
   char           *parentAbsPath;
   hid_t          h5, obj, attribute, dtype;
   PetscBool      has;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1282,7 +1258,6 @@ PetscErrorCode PetscViewerHDF5ReadAttribute(PetscViewer viewer, const char paren
 @*/
 PetscErrorCode PetscViewerHDF5ReadObjectAttribute(PetscViewer viewer, PetscObject obj, const char name[], PetscDataType datatype, void *defaultValue, void *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1320,7 +1295,6 @@ static PetscErrorCode PetscViewerHDF5Traverse_Internal(PetscViewer viewer, const
   int            n;
   char           **hierarchy;
   char           buf[PETSC_MAX_PATH_LEN]="";
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1396,7 +1370,6 @@ PetscErrorCode PetscViewerHDF5HasGroup(PetscViewer viewer, const char path[], Pe
 {
   H5O_type_t     type;
   char           *abspath;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1434,7 +1407,6 @@ PetscErrorCode PetscViewerHDF5HasDataset(PetscViewer viewer, const char path[], 
 {
   H5O_type_t     type;
   char           *abspath;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1470,14 +1442,13 @@ PetscErrorCode PetscViewerHDF5HasDataset(PetscViewer viewer, const char path[], 
 PetscErrorCode PetscViewerHDF5HasObject(PetscViewer viewer, PetscObject obj, PetscBool *has)
 {
   size_t         len;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidHeader(obj,2);
   PetscValidBoolPointer(has,3);
   CHKERRQ(PetscStrlen(obj->name, &len));
-  PetscCheckFalse(!len,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONG, "Object must be named");
+  PetscCheck(len,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONG, "Object must be named");
   CHKERRQ(PetscViewerHDF5HasDataset(viewer, obj->name, has));
   PetscFunctionReturn(0);
 }
@@ -1505,7 +1476,6 @@ PetscErrorCode PetscViewerHDF5HasObject(PetscViewer viewer, PetscObject obj, Pet
 PetscErrorCode PetscViewerHDF5HasAttribute(PetscViewer viewer, const char parent[], const char name[], PetscBool *has)
 {
   char           *parentAbsPath;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1542,7 +1512,6 @@ PetscErrorCode PetscViewerHDF5HasAttribute(PetscViewer viewer, const char parent
 @*/
 PetscErrorCode PetscViewerHDF5HasObjectAttribute(PetscViewer viewer, PetscObject obj, const char name[], PetscBool *has)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -1558,7 +1527,6 @@ static PetscErrorCode PetscViewerHDF5HasAttribute_Internal(PetscViewer viewer, c
 {
   hid_t          h5;
   htri_t         hhas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5GetFileId(viewer, &h5));

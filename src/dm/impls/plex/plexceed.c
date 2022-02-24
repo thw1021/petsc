@@ -25,24 +25,23 @@
 @*/
 PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, PetscInt *num_cells, PetscInt *cell_size, PetscInt *num_comp, PetscInt *l_size, PetscInt **offsets)
 {
-  PetscErrorCode ierr;
+  PetscDS         ds = NULL;
+  PetscFE         fe;
+  PetscSection    section;
+  PetscInt        dim, ds_field = -1;
+  PetscInt       *restr_indices;
+  const PetscInt *iter_indices;
+  IS              iter_is;
 
   PetscFunctionBeginUser;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscDS      ds = NULL;
-  PetscFE      fe;
-  PetscSection section;
-  PetscInt     dim, ds_field = -1;
-  PetscInt    *restr_indices;
-  const PetscInt *iter_indices;
-  IS           iter_is;
-
   CHKERRQ(DMGetLocalSection(dm, &section));
   CHKERRQ(DMGetDimension(dm, &dim));
   {
-    IS field_is;
+    IS              field_is;
     const PetscInt *fields;
-    PetscInt num_fields;
+    PetscInt        num_fields;
+
     CHKERRQ(DMGetRegionDS(dm, domain_label, &field_is, &ds));
     // Translate dm_field to ds_field
     CHKERRQ(ISGetIndices(field_is, &fields));
@@ -55,17 +54,19 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     }
     CHKERRQ(ISRestoreIndices(field_is, &fields));
   }
-  PetscCheckFalse(ds_field == -1,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Could not find dm_field %D in DS", dm_field);
+  PetscCheck(ds_field != -1,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Could not find dm_field %D in DS", dm_field);
 
   {
     PetscInt depth;
-    DMLabel depth_label;
-    IS depth_is;
+    DMLabel  depth_label;
+    IS       depth_is;
+
     CHKERRQ(DMPlexGetDepth(dm, &depth));
     CHKERRQ(DMPlexGetDepthLabel(dm, &depth_label));
     CHKERRQ(DMLabelGetStratumIS(depth_label, depth - height, &depth_is));
     if (domain_label) {
       IS domain_is;
+
       CHKERRQ(DMLabelGetStratumIS(domain_label, label_value, &domain_is));
       if (domain_is) { // domainIS is non-empty
         CHKERRQ(ISIntersect(depth_is, domain_is, &iter_is));
@@ -88,13 +89,14 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
 
   {
     PetscDualSpace dual_space;
-    PetscInt num_dual_basis_vectors;
+    PetscInt       num_dual_basis_vectors;
+
     CHKERRQ(PetscDSGetDiscretization(ds, ds_field, (PetscObject*)&fe));
     CHKERRQ(PetscFEGetHeightSubspace(fe, height, &fe));
     CHKERRQ(PetscFEGetDualSpace(fe, &dual_space));
     CHKERRQ(PetscDualSpaceGetDimension(dual_space, &num_dual_basis_vectors));
     CHKERRQ(PetscDualSpaceGetNumComponents(dual_space, num_comp));
-    PetscCheckFalse(num_dual_basis_vectors % *num_comp != 0,PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for number of dual basis vectors %D not divisible by %D components", num_dual_basis_vectors, *num_comp);
+    PetscCheck(num_dual_basis_vectors % *num_comp == 0,PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for number of dual basis vectors %D not divisible by %D components", num_dual_basis_vectors, *num_comp);
     *cell_size = num_dual_basis_vectors / *num_comp;
   }
   PetscInt restr_size = (*num_cells)*(*cell_size);
@@ -137,7 +139,7 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
     }
     CHKERRQ(DMPlexRestoreClosureIndices(dm, section, section, c, PETSC_TRUE, &num_indices, &indices, field_offsets, NULL));
   }
-  PetscCheckFalse(cell_offset != restr_size,PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_cells, (*cell_size), cell_offset);
+  PetscCheck(cell_offset == restr_size,PETSC_COMM_SELF, PETSC_ERR_SUP, "Shape mismatch, offsets array of shape (%D, %D) initialized for %D nodes", *num_cells, (*cell_size), cell_offset);
   if (iter_is) CHKERRQ(ISRestoreIndices(iter_is, &iter_indices));
   CHKERRQ(ISDestroy(&iter_is));
 
@@ -166,8 +168,6 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
 @*/
 PetscErrorCode DMPlexGetCeedRestriction(DM dm, DMLabel domain_label, PetscInt label_value, PetscInt height, PetscInt dm_field, CeedElemRestriction *ERestrict)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(ERestrict, 2);

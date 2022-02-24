@@ -15,14 +15,13 @@ static struct {
 
 static PetscErrorCode sourlj(DM dm, Vec X, Mat J, Mat P, void *ptr)
 {
-  PetscErrorCode ierr;
   void (*func)(DM*,Vec*,Mat*,Mat*,void*,PetscErrorCode*),*ctx;
   DMSNES sdm;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDMSNES(dm, &sdm));
   CHKERRQ(PetscObjectGetFortranCallback((PetscObject) sdm, PETSC_FORTRAN_CALLBACK_SUBTYPE, _cb.lj, (PetscVoidFunction *) &func, &ctx));
-  (*func)(&dm, &X, &J, &P, ctx, &ierr);CHKERRQ(ierr);
+  CHKERR_FORTRAN_VOID_FUNCTION((*func)(&dm, &X, &J, &P, ctx, &ierr));
   PetscFunctionReturn(0);
 }
 
@@ -37,14 +36,13 @@ PETSC_EXTERN void dmsnessetjacobianlocal_(DM *dm, void (*jac)(DM*,Vec*,Mat*,Mat*
 
 static PetscErrorCode sourlf(DM dm, Vec X, Vec F, void *ptr)
 {
-  PetscErrorCode ierr;
   void (*func)(DM*,Vec*,Vec*,void*,PetscErrorCode*), *ctx;
   DMSNES sdm;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDMSNES(dm, &sdm));
   CHKERRQ(PetscObjectGetFortranCallback((PetscObject) sdm, PETSC_FORTRAN_CALLBACK_SUBTYPE, _cb.lf, (PetscVoidFunction *) &func, &ctx));
-  (*func)(&dm, &X, &F, ctx, &ierr);CHKERRQ(ierr);
+  CHKERR_FORTRAN_VOID_FUNCTION((*func)(&dm, &X, &F, ctx, &ierr));
   PetscFunctionReturn(0);
 }
 

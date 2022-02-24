@@ -94,7 +94,6 @@ FILE *petsc_history = NULL;
 
 PetscErrorCode  PetscOpenHistoryFile(const char filename[],FILE **fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   char           pfile[PETSC_MAX_PATH_LEN],pname[PETSC_MAX_PATH_LEN],fname[PETSC_MAX_PATH_LEN],date[64];
   char           version[256];
@@ -134,7 +133,6 @@ PetscErrorCode  PetscOpenHistoryFile(const char filename[],FILE **fd)
 
 PETSC_INTERN PetscErrorCode PetscCloseHistoryFile(FILE **fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   char           date[64];
   int            err;
@@ -246,7 +244,6 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   char              string[64];
   MPI_Comm          comm = PETSC_COMM_WORLD;
   PetscBool         flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,flg3 = PETSC_FALSE,flag,hasHelp;
-  PetscErrorCode    ierr;
   PetscReal         si;
   PetscInt          intensity;
   int               i;
@@ -520,7 +517,7 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
     CHKERRQ(PetscInfoSetFromOptions(NULL));
   }
 #endif
-  ierr = PetscDetermineInitialFPTrap();
+  CHKERRQ(PetscDetermineInitialFPTrap());
   flg1 = PETSC_FALSE;
   CHKERRQ(PetscOptionsGetBool(NULL,NULL,"-fp_trap",&flg1,&flag));
   if (flag) CHKERRQ(PetscSetFPTrap((PetscFPTrap)flg1));

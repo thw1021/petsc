@@ -175,7 +175,6 @@ typedef struct {PetscScalar w,u;} Field;
 PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec Xdot,Vec F,void *ptr)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,Mx,xs,xm;
   PetscReal      hx,sx;
   Field          *x,*xdot,*f;
@@ -250,7 +249,6 @@ PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec Xdot,Vec F,void *ptr
 /* ------------------------------------------------------------------- */
 PetscErrorCode FormInitialSolution(DM da,Vec X,PetscReal kappa)
 {
-  PetscErrorCode ierr;
   PetscInt       i,xs,xm,Mx,xgs,xgm;
   Field          *x;
   PetscReal      hx,xx,r,sx;

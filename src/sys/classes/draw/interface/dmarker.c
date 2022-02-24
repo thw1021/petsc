@@ -22,7 +22,6 @@ const char *const PetscDrawMarkerTypes[]     = {"CROSS","POINT","PLUS","CIRCLE",
 @*/
 PetscErrorCode  PetscDrawMarker(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);

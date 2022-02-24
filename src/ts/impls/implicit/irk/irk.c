@@ -68,7 +68,6 @@ PetscErrorCode TSIRKTableauCreate(TS ts,PetscInt nstages,const PetscReal *A,cons
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
   IRKTableau     tab = irk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   irk->order = nstages;
@@ -102,7 +101,6 @@ static PetscErrorCode TSIRKCreate_Gauss(TS ts)
   PetscScalar    *G0,*G1;
   PetscInt       i,j;
   Mat            G0mat,G1mat,Amat;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSIRKGetNumStages(ts,&nstages));
@@ -195,7 +193,6 @@ $     -ts_irk_type my_scheme
 @*/
 PetscErrorCode TSIRKRegister(const char sname[],PetscErrorCode (*function)(TS))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSIRKInitializePackage());
@@ -214,7 +211,6 @@ PetscErrorCode TSIRKRegister(const char sname[],PetscErrorCode (*function)(TS))
 @*/
 PetscErrorCode TSIRKRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSIRKRegisterAllCalled) PetscFunctionReturn(0);
@@ -250,7 +246,6 @@ PetscErrorCode TSIRKRegisterDestroy(void)
 @*/
 PetscErrorCode TSIRKInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSIRKPackageInitialized) PetscFunctionReturn(0);
@@ -270,7 +265,6 @@ PetscErrorCode TSIRKInitializePackage(void)
 @*/
 PetscErrorCode TSIRKFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TSIRKList));
@@ -289,7 +283,6 @@ static PetscErrorCode TSEvaluateStep_IRK(TS ts,PetscInt order,Vec U,PetscBool *d
   PetscScalar    *w = irk->work;
   PetscReal      h;
   PetscInt       j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (irk->status) {
@@ -310,7 +303,6 @@ static PetscErrorCode TSEvaluateStep_IRK(TS ts,PetscInt order,Vec U,PetscBool *d
 static PetscErrorCode TSRollBack_IRK(TS ts)
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(irk->U0,ts->vec_sol));
@@ -329,7 +321,6 @@ static PetscErrorCode TSStep_IRK(TS ts)
   PetscInt        rejections = 0;
   PetscBool       accept = PETSC_TRUE;
   PetscReal       next_time_step = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!ts->steprollback) {
@@ -389,10 +380,9 @@ static PetscErrorCode TSInterpolate_IRK(TS ts,PetscReal itime,Vec U)
   PetscReal       tt,t;
   PetscScalar     *bt;
   const PetscReal *B = irk->tableau->binterp;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSIRK %s does not have an interpolation formula",irk->method_name);
+  PetscCheck(B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSIRK %s does not have an interpolation formula",irk->method_name);
   switch (irk->status) {
   case TS_STEP_INCOMPLETE:
   case TS_STEP_PENDING:
@@ -420,7 +410,6 @@ static PetscErrorCode TSIRKTableauReset(TS ts)
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
   IRKTableau     tab = irk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tab) PetscFunctionReturn(0);
@@ -432,7 +421,6 @@ static PetscErrorCode TSIRKTableauReset(TS ts)
 static PetscErrorCode TSReset_IRK(TS ts)
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSIRKTableauReset(ts));
@@ -458,7 +446,6 @@ static PetscErrorCode TSReset_IRK(TS ts)
 static PetscErrorCode TSIRKGetVecs(TS ts,DM dm,Vec *U)
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (U) {
@@ -471,7 +458,6 @@ static PetscErrorCode TSIRKGetVecs(TS ts,DM dm,Vec *U)
 
 static PetscErrorCode TSIRKRestoreVecs(TS ts,DM dm,Vec *U)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (U) {
@@ -499,7 +485,6 @@ static PetscErrorCode SNESTSFormFunction_IRK(SNES snes,Vec ZC,Vec FC,TS ts)
   Vec               U,*YdotI = irk->YdotI,Ydot = irk->Ydot,*Y = irk->Y;
   PetscReal         h = ts->time_step;
   PetscInt          i,j;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -538,7 +523,6 @@ static PetscErrorCode SNESTSFormJacobian_IRK(SNES snes,Vec ZC,Mat JC,Mat JCpre,T
   Mat             J;
   PetscScalar     *S;
   PetscInt        i,j,bs;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -570,7 +554,6 @@ static PetscErrorCode DMRestrictHook_TSIRK(DM fine,Mat restrct,Vec rscale,Mat in
 {
   TS             ts = (TS)ctx;
   Vec            U,U_c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSIRKGetVecs(ts,fine,&U));
@@ -592,7 +575,6 @@ static PetscErrorCode DMSubDomainRestrictHook_TSIRK(DM dm,VecScatter gscat,VecSc
 {
   TS             ts = (TS)ctx;
   Vec            U,U_c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSIRKGetVecs(ts,dm,&U));
@@ -615,7 +597,6 @@ static PetscErrorCode TSSetUp_IRK(TS ts)
   Vec            R;
   const PetscInt nstages = irk->nstages;
   PetscInt       vsize,bs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!irk->work) {
@@ -665,7 +646,6 @@ static PetscErrorCode TSSetFromOptions_IRK(PetscOptionItems *PetscOptionsObject,
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
   char           tname[256] = TSIRKGAUSS;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"IRK ODE solver options"));
@@ -685,7 +665,6 @@ static PetscErrorCode TSView_IRK(TS ts,PetscViewer viewer)
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -707,7 +686,6 @@ static PetscErrorCode TSView_IRK(TS ts,PetscViewer viewer)
 
 static PetscErrorCode TSLoad_IRK(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   TSAdapt        adapt;
 
@@ -740,7 +718,6 @@ static PetscErrorCode TSLoad_IRK(TS ts,PetscViewer viewer)
 @*/
 PetscErrorCode TSIRKSetType(TS ts,TSIRKType irktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -766,7 +743,6 @@ PetscErrorCode TSIRKSetType(TS ts,TSIRKType irktype)
 @*/
 PetscErrorCode TSIRKGetType(TS ts,TSIRKType *irktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -792,7 +768,6 @@ PetscErrorCode TSIRKGetType(TS ts,TSIRKType *irktype)
 @*/
 PetscErrorCode TSIRKSetNumStages(TS ts,PetscInt nstages)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -815,7 +790,6 @@ PetscErrorCode TSIRKSetNumStages(TS ts,PetscInt nstages)
 @*/
 PetscErrorCode TSIRKGetNumStages(TS ts,PetscInt *nstages)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -836,7 +810,7 @@ static PetscErrorCode TSIRKGetType_IRK(TS ts,TSIRKType *irktype)
 static PetscErrorCode TSIRKSetType_IRK(TS ts,TSIRKType irktype)
 {
   TS_IRK         *irk = (TS_IRK*)ts->data;
-  PetscErrorCode ierr,(*irkcreate)(TS);
+  PetscErrorCode (*irkcreate)(TS);
 
   PetscFunctionBegin;
   if (irk->method_name) {
@@ -844,7 +818,7 @@ static PetscErrorCode TSIRKSetType_IRK(TS ts,TSIRKType irktype)
     CHKERRQ(TSIRKTableauReset(ts));
   }
   CHKERRQ(PetscFunctionListFind(TSIRKList,irktype,&irkcreate));
-  PetscCheckFalse(!irkcreate,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSIRK type \"%s\" given",irktype);
+  PetscCheck(irkcreate,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSIRK type \"%s\" given",irktype);
   CHKERRQ((*irkcreate)(ts));
   CHKERRQ(PetscStrallocpy(irktype,&irk->method_name));
   PetscFunctionReturn(0);
@@ -855,7 +829,7 @@ static PetscErrorCode TSIRKSetNumStages_IRK(TS ts,PetscInt nstages)
   TS_IRK *irk = (TS_IRK*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(nstages<=0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"input argument, %d, out of range",nstages);
+  PetscCheck(nstages>0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"input argument, %d, out of range",nstages);
   irk->nstages = nstages;
   PetscFunctionReturn(0);
 }
@@ -872,7 +846,6 @@ static PetscErrorCode TSIRKGetNumStages_IRK(TS ts,PetscInt *nstages)
 
 static PetscErrorCode TSDestroy_IRK(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_IRK(ts));
@@ -905,7 +878,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_IRK(TS ts)
 {
   TS_IRK         *irk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSIRKInitializePackage());

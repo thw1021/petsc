@@ -37,7 +37,6 @@ typedef struct {
 static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part, PetscBool useND, PetscBool isImprove, IS *partitioning)
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
-  PetscErrorCode           ierr;
   PetscInt                 *locals = NULL;
   Mat                      mat     = part->adj,amat,pmat;
   PetscBool                flg;
@@ -209,7 +208,6 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
 */
 static PetscErrorCode MatPartitioningApplyND_Parmetis(MatPartitioning part, IS *partitioning)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatPartitioningApply_Parmetis_Private(part, PETSC_TRUE, PETSC_FALSE, partitioning));
@@ -221,7 +219,6 @@ static PetscErrorCode MatPartitioningApplyND_Parmetis(MatPartitioning part, IS *
 */
 static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *partitioning)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatPartitioningApply_Parmetis_Private(part, PETSC_FALSE, PETSC_FALSE, partitioning));
@@ -233,7 +230,6 @@ static PetscErrorCode MatPartitioningApply_Parmetis(MatPartitioning part, IS *pa
 */
 static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, IS *partitioning)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatPartitioningApply_Parmetis_Private(part, PETSC_FALSE, PETSC_TRUE, partitioning));
@@ -243,7 +239,6 @@ static PetscErrorCode MatPartitioningImprove_Parmetis(MatPartitioning part, IS *
 PetscErrorCode MatPartitioningView_Parmetis(MatPartitioning part,PetscViewer viewer)
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
-  PetscErrorCode           ierr;
   PetscMPIInt              rank;
   PetscBool                iascii;
 
@@ -330,7 +325,6 @@ PetscErrorCode  MatPartitioningParmetisGetEdgeCut(MatPartitioning part, PetscInt
 
 PetscErrorCode MatPartitioningSetFromOptions_Parmetis(PetscOptionItems *PetscOptionsObject,MatPartitioning part)
 {
-  PetscErrorCode ierr;
   PetscBool      flag = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -350,7 +344,6 @@ PetscErrorCode MatPartitioningSetFromOptions_Parmetis(PetscOptionItems *PetscOpt
 PetscErrorCode MatPartitioningDestroy_Parmetis(MatPartitioning part)
 {
   MatPartitioning_Parmetis *pmetis = (MatPartitioning_Parmetis*)part->data;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(pmetis));
@@ -379,7 +372,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Parmetis(MatPartitioning part)
 {
-  PetscErrorCode           ierr;
   MatPartitioning_Parmetis *pmetis;
 
   PetscFunctionBegin;
@@ -466,7 +458,6 @@ $     The number of rows in mesh is number of cells, the number of columns is th
 @*/
 PetscErrorCode MatMeshToCellGraph(Mat mesh,PetscInt ncommonnodes,Mat *dual)
 {
-  PetscErrorCode ierr;
   PetscInt       *newxadj,*newadjncy;
   PetscInt       numflag=0;
   Mat_MPIAdj     *adj   = (Mat_MPIAdj*)mesh->data,*newadj;

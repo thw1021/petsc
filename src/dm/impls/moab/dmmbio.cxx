@@ -3,7 +3,6 @@
 
 static PetscErrorCode DMMoab_GetWriteOptions_Private(PetscInt fsetid, PetscInt numproc, PetscInt dim, MoabWriteMode mode, PetscInt dbglevel, const char* dm_opts, const char* extra_opts, const char** write_opts)
 {
-  PetscErrorCode ierr;
   char           *wopts;
   char           wopts_par[PETSC_MAX_PATH_LEN];
   char           wopts_parid[PETSC_MAX_PATH_LEN];
@@ -58,7 +57,6 @@ PetscErrorCode DMMoabOutput(DM dm, const char* filename, const char* usrwriteopt
   DM_Moab         *dmmoab;
   const char      *writeopts;
   PetscBool       isftype;
-  PetscErrorCode  ierr;
   moab::ErrorCode merr;
 
   PetscFunctionBegin;
@@ -70,13 +68,11 @@ PetscErrorCode DMMoabOutput(DM dm, const char* filename, const char* usrwriteopt
   /* add mesh loading options specific to the DM */
   if (isftype) {
 #ifdef MOAB_HAVE_MPI
-    ierr = DMMoab_GetWriteOptions_Private(dmmoab->pcomm->get_id(), dmmoab->pcomm->size(), dmmoab->dim, dmmoab->write_mode,
-                                          dmmoab->rw_dbglevel, dmmoab->extra_write_options, usrwriteopts, &writeopts);CHKERRQ(ierr);
+    CHKERRQ(DMMoab_GetWriteOptions_Private(dmmoab->pcomm->get_id(), dmmoab->pcomm->size(), dmmoab->dim, dmmoab->write_mode,dmmoab->rw_dbglevel, dmmoab->extra_write_options, usrwriteopts, &writeopts));
 #else
-    ierr = DMMoab_GetWriteOptions_Private(0, 1, dmmoab->dim, dmmoab->write_mode,
-                                          dmmoab->rw_dbglevel, dmmoab->extra_write_options, usrwriteopts, &writeopts);CHKERRQ(ierr);
+    CHKERRQ(DMMoab_GetWriteOptions_Private(0, 1, dmmoab->dim, dmmoab->write_mode,dmmoab->rw_dbglevel, dmmoab->extra_write_options, usrwriteopts, &writeopts));
 #endif
-    PetscInfo(dm, "Writing file %s with options: %s\n", filename, writeopts);
+    CHKERRQ(PetscInfo(dm, "Writing file %s with options: %s\n", filename, writeopts));
   }
   else {
     writeopts = NULL;

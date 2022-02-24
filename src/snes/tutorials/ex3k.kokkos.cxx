@@ -21,7 +21,6 @@ typedef struct {
 */
 PetscErrorCode FormInitialGuess(Vec x)
 {
-  PetscErrorCode ierr;
   PetscScalar    pfive = .50;
 
   PetscFunctionBeginUser;
@@ -50,7 +49,6 @@ PetscErrorCode CpuFunction(SNES snes,Vec x,Vec r,void *ctx)
   ApplicationCtx *user = (ApplicationCtx*) ctx;
   DM             da    = user->da;
   PetscScalar    *X,*R,*F,d;
-  PetscErrorCode ierr;
   PetscInt       i,M,xs,xm;
   Vec            xl;
 
@@ -89,7 +87,6 @@ using ConstPetscScalarKokkosOffsetView  = Kokkos::Experimental::OffsetView<const
 
 PetscErrorCode KokkosFunction(SNES snes,Vec x,Vec r,void *ctx)
 {
-  PetscErrorCode                       ierr;
   ApplicationCtx                       *user = (ApplicationCtx*) ctx;
   DM                                   da = user->da;
   PetscScalar                          d;
@@ -120,7 +117,6 @@ PetscErrorCode KokkosFunction(SNES snes,Vec x,Vec r,void *ctx)
 
 PetscErrorCode StubFunction(SNES snes ,Vec x,Vec r,void *ctx)
 {
-  PetscErrorCode                       ierr;
   ApplicationCtx                       *user = (ApplicationCtx*) ctx;
   DM                                   da = user->da;
   Vec                                  rk;
@@ -154,7 +150,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *ctx)
 {
   ApplicationCtx *user = (ApplicationCtx*) ctx;
   PetscScalar    *xx,d,A[3];
-  PetscErrorCode ierr;
   PetscInt       i,j[3],M,xs,xm;
   DM             da = user->da;
 

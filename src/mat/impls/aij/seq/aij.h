@@ -146,7 +146,6 @@ typedef struct {
 */
 static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscInt **j,PetscInt **i)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *A = (Mat_SeqAIJ*) AA->data;
   if (A->singlemalloc) {
     CHKERRQ(PetscFree3(*a,*j,*i));

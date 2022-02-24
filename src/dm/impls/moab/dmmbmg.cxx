@@ -23,7 +23,6 @@
 PetscErrorCode DMMoabGenerateHierarchy(DM dm, PetscInt nlevels, PetscInt *ldegrees)
 {
   DM_Moab        *dmmoab;
-  PetscErrorCode  ierr;
   moab::ErrorCode merr;
   PetscInt *pdegrees, ilevel;
   std::vector<moab::EntityHandle> hsets;
@@ -98,7 +97,6 @@ PetscErrorCode DMMoabGenerateHierarchy(DM dm, PetscInt nlevels, PetscInt *ldegre
 @*/
 PETSC_EXTERN PetscErrorCode  DMRefineHierarchy_Moab(DM dm, PetscInt nlevels, DM dmf[])
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
 
   PetscFunctionBegin;
@@ -128,7 +126,6 @@ PETSC_EXTERN PetscErrorCode  DMRefineHierarchy_Moab(DM dm, PetscInt nlevels, DM 
 @*/
 PETSC_EXTERN PetscErrorCode DMCoarsenHierarchy_Moab(DM dm, PetscInt nlevels, DM dmc[])
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
 
   PetscFunctionBegin;
@@ -163,7 +160,6 @@ PETSC_EXTERN PetscErrorCode DMMoab_Compute_NNZ_From_Connectivity(DM, PetscInt*, 
 PETSC_EXTERN PetscErrorCode DMCreateInterpolation_Moab(DM dmp, DM dmc, Mat* interpl, Vec* vec)
 {
   DM_Moab         *dmbp, *dmbc;
-  PetscErrorCode   ierr;
   moab::ErrorCode  merr;
   PetscInt         dim;
   PetscReal        factor;
@@ -416,7 +412,6 @@ PETSC_EXTERN PetscErrorCode DMCreateInjection_Moab(DM dm1, DM dm2, VecScatter* c
 
 static PetscErrorCode DMMoab_UMR_Private(DM dm, MPI_Comm comm, PetscBool refine, DM *dmref)
 {
-  PetscErrorCode  ierr;
   PetscInt        i, dim;
   DM              dm2;
   moab::ErrorCode merr;
@@ -523,8 +518,6 @@ static PetscErrorCode DMMoab_UMR_Private(DM dm, MPI_Comm comm, PetscBool refine,
 @*/
 PETSC_EXTERN PetscErrorCode DMRefine_Moab(DM dm, MPI_Comm comm, DM* dmf)
 {
-  PetscErrorCode  ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
 
@@ -553,11 +546,8 @@ PETSC_EXTERN PetscErrorCode DMRefine_Moab(DM dm, MPI_Comm comm, DM* dmf)
 @*/
 PETSC_EXTERN PetscErrorCode DMCoarsen_Moab(DM dm, MPI_Comm comm, DM* dmc)
 {
-  PetscErrorCode  ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-
   CHKERRQ(DMMoab_UMR_Private(dm, comm, PETSC_FALSE, dmc));
   PetscFunctionReturn(0);
 }

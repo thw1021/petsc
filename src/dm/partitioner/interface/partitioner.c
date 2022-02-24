@@ -20,7 +20,6 @@ PetscErrorCode PetscPartitionerSetType(PetscPartitioner part, PetscPartitionerTy
 {
   PetscErrorCode (*r)(PetscPartitioner);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -80,7 +79,6 @@ PetscErrorCode PetscPartitionerGetType(PetscPartitioner part, PetscPartitionerTy
 @*/
 PetscErrorCode PetscPartitionerViewFromOptions(PetscPartitioner A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSCPARTITIONER_CLASSID,1);
@@ -105,7 +103,6 @@ PetscErrorCode PetscPartitionerView(PetscPartitioner part, PetscViewer v)
 {
   PetscMPIInt    size;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -126,7 +123,6 @@ PetscErrorCode PetscPartitionerView(PetscPartitioner part, PetscViewer v)
 static PetscErrorCode PetscPartitionerGetDefaultType(MPI_Comm comm, const char **defaultType)
 {
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(comm, &size));
@@ -206,7 +202,6 @@ PetscErrorCode PetscPartitionerSetFromOptions(PetscPartitioner part)
 @*/
 PetscErrorCode PetscPartitionerSetUp(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -228,7 +223,6 @@ PetscErrorCode PetscPartitionerSetUp(PetscPartitioner part)
 @*/
 PetscErrorCode PetscPartitionerReset(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -250,7 +244,6 @@ PetscErrorCode PetscPartitionerReset(PetscPartitioner part)
 @*/
 PetscErrorCode PetscPartitionerDestroy(PetscPartitioner *part)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*part) PetscFunctionReturn(0);
@@ -300,7 +293,6 @@ PetscErrorCode PetscPartitionerDestroy(PetscPartitioner *part)
 @*/
 PetscErrorCode PetscPartitionerPartition(PetscPartitioner part, PetscInt nparts, PetscInt numVertices, PetscInt start[], PetscInt adjacency[], PetscSection vertexSection, PetscSection targetSection, PetscSection partSection, IS *partition)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -387,7 +379,6 @@ PetscErrorCode PetscPartitionerCreate(MPI_Comm comm, PetscPartitioner *part)
 {
   PetscPartitioner p;
   const char       *partitionerType = NULL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(part, 2);

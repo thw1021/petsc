@@ -28,7 +28,6 @@ static PetscErrorCode test_3d(PetscInt cells[], PetscBool plex, PetscBool ho)
   PetscScalar    *c;
   PetscInt       nl,i;
   PetscReal      u[3] = {1.0,1.0,1.0}, l[3] = {-1.0,-1.0,-1.0};
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (ho) {

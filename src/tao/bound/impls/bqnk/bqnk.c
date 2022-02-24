@@ -5,7 +5,6 @@ static PetscErrorCode TaoBQNKComputeHessian(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscReal      gnorm2, delta;
 
   PetscFunctionBegin;
@@ -53,7 +52,6 @@ static PetscErrorCode TaoBQNKComputeStep(Tao tao, PetscBool shift, KSPConvergedR
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoBNKComputeStep(tao, shift, ksp_reason, step_type));
@@ -73,7 +71,6 @@ PetscErrorCode TaoSolve_BQNK(Tao tao)
   Mat_LMVM       *J0;
   Mat_SymBrdn    *diag_ctx;
   PetscBool      flg = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->recycle) {
@@ -102,7 +99,6 @@ PetscErrorCode TaoSetUp_BQNK(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscInt       n, N;
   PetscBool      is_lmvm, is_sym, is_spd;
 
@@ -127,7 +123,6 @@ static PetscErrorCode TaoSetFromOptions_BQNK(PetscOptionItems *PetscOptionsObjec
 {
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoSetFromOptions_BNK(PetscOptionsObject,tao));
@@ -143,7 +138,6 @@ static PetscErrorCode TaoView_BQNK(Tao tao, PetscViewer viewer)
 {
   TAO_BNK        *bnk = (TAO_BNK*)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscBool      isascii;
 
   PetscFunctionBegin;
@@ -161,7 +155,6 @@ static PetscErrorCode TaoDestroy_BQNK(Tao tao)
 {
   TAO_BNK        *bnk = (TAO_BNK*)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&bnk->Hpre_inactive));
@@ -176,7 +169,6 @@ PETSC_INTERN PetscErrorCode TaoCreate_BQNK(Tao tao)
 {
   TAO_BNK        *bnk;
   TAO_BQNK       *bqnk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoCreate_BNK(tao));
@@ -219,7 +211,6 @@ PetscErrorCode TaoGetLMVMMatrix(Tao tao, Mat *B)
 {
   TAO_BNK        *bnk = (TAO_BNK*)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -248,7 +239,6 @@ PetscErrorCode TaoSetLMVMMatrix(Tao tao, Mat B)
 {
   TAO_BNK        *bnk = (TAO_BNK*)tao->data;
   TAO_BQNK       *bqnk = (TAO_BQNK*)bnk->ctx;
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;

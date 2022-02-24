@@ -137,7 +137,6 @@ int main(int argc, char **argv)
 PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *fcn,Vec G,void *userCtx)
 {
   AppCtx            *user = (AppCtx *) userCtx;
-  PetscErrorCode    ierr;
   PetscInt          i,j,row;
   PetscInt          mx=user->mx, my=user->my;
   PetscReal         rhx=mx+1, rhy=my+1;
@@ -300,7 +299,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *fcn,Vec G,void *use
 */
 PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
 {
-  PetscErrorCode ierr;
   AppCtx         *user = (AppCtx *) ptr;
 
   PetscFunctionBeginUser;
@@ -322,7 +320,6 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
 */
 PetscErrorCode QuadraticH(AppCtx *user, Vec X, Mat Hessian)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,j,k,row;
   PetscInt          mx=user->mx, my=user->my;
   PetscInt          col[7];
@@ -476,7 +473,6 @@ PetscErrorCode QuadraticH(AppCtx *user, Vec X, Mat Hessian)
 */
 static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,limit=0;
   PetscInt       maxits=5;
   PetscInt       mx=user->mx,my=user->my;
@@ -562,7 +558,6 @@ static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
 static PetscErrorCode MSA_InitialPoint(AppCtx * user, Vec X)
 {
   PetscInt       start=-1,i,j;
-  PetscErrorCode ierr;
   PetscReal      zero=0.0;
   PetscBool      flg;
 

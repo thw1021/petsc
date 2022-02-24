@@ -298,10 +298,7 @@ PetscErrorCode  PetscDLSym(PetscDLHandle handle,const char symbol[],void **value
   *value = *((void**)&dlsymbol);
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
-  if (*value) {
-    PetscErrorCode ierr;
-    CHKERRQ(PetscFPTAdd(*value,symbol));
-  }
+  if (*value) CHKERRQ(PetscFPTAdd(*value,symbol));
 #endif
   return(0);
 }
@@ -336,10 +333,9 @@ PetscErrorCode PetscDLAddr(void (*func)(void), char **name)
 #if defined(PETSC_HAVE_DLADDR)
   dlerror(); /* clear any previous error */
   {
-    Dl_info        info;
-    PetscErrorCode ierr;
+    Dl_info info;
 
-    ierr = dladdr(*(void **) &func, &info);PetscCheckFalse(!ierr,PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
+    PetscCheck(dladdr(*(void **) &func, &info),PETSC_COMM_SELF, PETSC_ERR_LIB, "Failed to lookup symbol: %s", dlerror());
 #ifdef PETSC_HAVE_CXX
     CHKERRQ(PetscDemangleSymbol(info.dli_sname, name));
 #else

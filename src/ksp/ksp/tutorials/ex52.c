@@ -14,7 +14,6 @@ Input parameters include:\n\
 PetscErrorCode printMumpsMemoryInfo(Mat F)
 {
   PetscInt       maxMem, sumMem;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatMumpsGetInfog(F,16,&maxMem));

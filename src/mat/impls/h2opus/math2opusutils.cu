@@ -18,7 +18,6 @@ PETSC_INTERN PetscErrorCode PetscSFGetVectorSF(PetscSF sf, PetscInt nv, PetscInt
   PetscMPIInt       *sranks;
   PetscInt          nranks,nr,nl,vnr,vnl,i,v,j,maxl;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -35,14 +34,12 @@ PETSC_INTERN PetscErrorCode PetscSFGetVectorSF(PetscSF sf, PetscInt nv, PetscInt
   maxl += 1;
   if (ldl == PETSC_DECIDE) ldl = maxl;
   if (ldr == PETSC_DECIDE) ldr = nr;
-  PetscCheckFalse(ldr < nr,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid leading dimension %" PetscInt_FMT " < %" PetscInt_FMT,ldr,nr);
-  PetscCheckFalse(ldl < maxl,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid leading dimension %" PetscInt_FMT " < %" PetscInt_FMT,ldl,maxl);
+  PetscCheck(ldr >= nr,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid leading dimension %" PetscInt_FMT " < %" PetscInt_FMT,ldr,nr);
+  PetscCheck(ldl >= maxl,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid leading dimension %" PetscInt_FMT " < %" PetscInt_FMT,ldl,maxl);
   vnr  = nr*nv;
   vnl  = nl*nv;
   CHKERRQ(PetscMalloc1(vnl,&viremote));
-  if (ilocal) {
-    CHKERRQ(PetscMalloc1(vnl,&vilocal));
-  }
+  if (ilocal) CHKERRQ(PetscMalloc1(vnl,&vilocal));
 
   /* TODO: Should this special SF be available, e.g.
      PetscSFGetRanksSF or similar? */
@@ -70,7 +67,7 @@ PETSC_INTERN PetscErrorCode PetscSFGetVectorSF(PetscSF sf, PetscInt nv, PetscInt
     if (j < 0 || sranks[j] != r) {
       CHKERRQ(PetscFindMPIInt(r,nranks,sranks,&j));
     }
-    PetscCheckFalse(j < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unable to locate neighbor rank %" PetscInt_FMT,r);
+    PetscCheck(j >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unable to locate neighbor rank %" PetscInt_FMT,r);
     for (v=0;v<nv;v++) {
       viremote[v*nl + i].rank  = r;
       viremote[v*nl + i].index = v*ldrs[j] + ii;
@@ -86,8 +83,7 @@ PETSC_INTERN PetscErrorCode PetscSFGetVectorSF(PetscSF sf, PetscInt nv, PetscInt
 
 PETSC_INTERN PetscErrorCode MatDenseGetH2OpusVectorSF(Mat A, PetscSF h2sf, PetscSF *osf)
 {
-  PetscSF        asf;
-  PetscErrorCode ierr;
+  PetscSF asf;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -125,7 +121,6 @@ PETSC_INTERN PetscErrorCode VecSign(Vec v, Vec s)
   const PetscScalar *av;
   PetscScalar       *as;
   PetscInt          i,n;
-  PetscErrorCode    ierr;
 #if defined(PETSC_HAVE_CUDA)
   PetscBool         viscuda,siscuda;
 #endif
@@ -135,7 +130,7 @@ PETSC_INTERN PetscErrorCode VecSign(Vec v, Vec s)
   PetscValidHeaderSpecific(s,VEC_CLASSID,2);
   CHKERRQ(VecGetLocalSize(s,&n));
   CHKERRQ(VecGetLocalSize(v,&i));
-  PetscCheckFalse(i != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Invalid local sizes %" PetscInt_FMT " != %" PetscInt_FMT,i,n);
+  PetscCheck(i == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Invalid local sizes %" PetscInt_FMT " != %" PetscInt_FMT,i,n);
 #if defined(PETSC_HAVE_CUDA)
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)v,&viscuda,VECSEQCUDA,VECMPICUDA,""));
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)s,&siscuda,VECSEQCUDA,VECMPICUDA,""));
@@ -178,10 +173,9 @@ struct StandardBasis_Functor
 PETSC_INTERN PetscErrorCode VecSetDelta(Vec x, PetscInt i)
 {
 #if defined(PETSC_HAVE_CUDA)
-  PetscBool      iscuda;
+  PetscBool iscuda;
 #endif
-  PetscInt       st,en;
-  PetscErrorCode ierr;
+  PetscInt  st,en;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetOwnershipRange(x,&st,&en));
@@ -213,12 +207,11 @@ PETSC_INTERN PetscErrorCode VecSetDelta(Vec x, PetscInt i)
    NORM_1/NORM_INFINITY: A block algorithm for matrix 1-norm estimation, with an application to 1-norm pseudospectra Higham, Nicholas J. and Tisseur, Francoise */
 PETSC_INTERN PetscErrorCode MatApproximateNorm_Private(Mat A, NormType normtype, PetscInt normsamples, PetscReal* n)
 {
-  Vec            x,y,w,z;
-  PetscReal      normz,adot;
-  PetscScalar    dot;
-  PetscInt       i,j,N,jold = -1;
-  PetscErrorCode ierr;
-  PetscBool      boundtocpu = PETSC_TRUE;
+  Vec         x,y,w,z;
+  PetscReal   normz,adot;
+  PetscScalar dot;
+  PetscInt    i,j,N,jold = -1;
+  PetscBool   boundtocpu = PETSC_TRUE;
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_DEVICE)

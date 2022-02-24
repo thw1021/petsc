@@ -21,7 +21,6 @@ static PetscErrorCode MatCreateSubMatrix_MPIAdj_data(Mat adj,IS irows, IS icols,
   PetscSF            sf;
   PetscSFNode       *iremote;
   PetscBool          done;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)adj,&comm));
@@ -140,7 +139,6 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
   PetscMPIInt        issame;
   const PetscInt    *irow_indices,*icol_indices;
   MPI_Comm           scomm_row,scomm_col,scomm_mat;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   nindx = 0;
@@ -208,7 +206,6 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
 
 static PetscErrorCode MatCreateSubMatricesMPI_MPIAdj(Mat mat,PetscInt n, const IS irow[],const IS icol[],MatReuse scall,Mat *submat[])
 {
-  PetscErrorCode     ierr;
   /*get sub-matrices across a sub communicator */
   PetscFunctionBegin;
   CHKERRQ(MatCreateSubMatrices_MPIAdj_Private(mat,n,irow,icol,PETSC_TRUE,scall,submat));
@@ -217,7 +214,6 @@ static PetscErrorCode MatCreateSubMatricesMPI_MPIAdj(Mat mat,PetscInt n, const I
 
 static PetscErrorCode MatCreateSubMatrices_MPIAdj(Mat mat,PetscInt n,const IS irow[],const IS icol[],MatReuse scall,Mat *submat[])
 {
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   /*get sub-matrices based on PETSC_COMM_SELF */
@@ -228,7 +224,6 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj(Mat mat,PetscInt n,const IS ir
 static PetscErrorCode MatView_MPIAdj_ASCII(Mat A,PetscViewer viewer)
 {
   Mat_MPIAdj        *a = (Mat_MPIAdj*)A->data;
-  PetscErrorCode    ierr;
   PetscInt          i,j,m = A->rmap->n;
   const char        *name;
   PetscViewerFormat format;
@@ -262,7 +257,6 @@ static PetscErrorCode MatView_MPIAdj_ASCII(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatView_MPIAdj(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -276,7 +270,6 @@ static PetscErrorCode MatView_MPIAdj(Mat A,PetscViewer viewer)
 static PetscErrorCode MatDestroy_MPIAdj(Mat mat)
 {
   Mat_MPIAdj     *a = (Mat_MPIAdj*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
@@ -304,7 +297,6 @@ static PetscErrorCode MatDestroy_MPIAdj(Mat mat)
 static PetscErrorCode MatSetOption_MPIAdj(Mat A,MatOption op,PetscBool flg)
 {
   Mat_MPIAdj     *a = (Mat_MPIAdj*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (op) {
@@ -325,7 +317,6 @@ static PetscErrorCode MatSetOption_MPIAdj(Mat A,MatOption op,PetscBool flg)
 static PetscErrorCode MatGetRow_MPIAdj(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
   Mat_MPIAdj *a = (Mat_MPIAdj*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   row -= A->rmap->rstart;
@@ -356,7 +347,6 @@ static PetscErrorCode MatRestoreRow_MPIAdj(Mat A,PetscInt row,PetscInt *nz,Petsc
 static PetscErrorCode MatEqual_MPIAdj(Mat A,Mat B,PetscBool * flg)
 {
   Mat_MPIAdj     *a = (Mat_MPIAdj*)A->data,*b = (Mat_MPIAdj*)B->data;
-  PetscErrorCode ierr;
   PetscBool      flag;
 
   PetscFunctionBegin;
@@ -418,7 +408,6 @@ static PetscErrorCode MatRestoreRowIJ_MPIAdj(Mat A,PetscInt oshift,PetscBool sym
 PetscErrorCode  MatConvertFrom_MPIAdj(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
   Mat               B;
-  PetscErrorCode    ierr;
   PetscInt          i,m,N,nzeros = 0,*ia,*ja,len,rstart,cnt,j,*a;
   const PetscInt    *rj;
   const PetscScalar *ra;
@@ -623,7 +612,6 @@ static PetscErrorCode  MatMPIAdjSetPreallocation_MPIAdj(Mat B,PetscInt *i,PetscI
 {
   Mat_MPIAdj     *b = (Mat_MPIAdj*)B->data;
   PetscBool       useedgeweights;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetUp(B->rmap));
@@ -662,7 +650,6 @@ static PetscErrorCode  MatMPIAdjSetPreallocation_MPIAdj(Mat B,PetscInt *i,PetscI
 static PetscErrorCode MatMPIAdjCreateNonemptySubcommMat_MPIAdj(Mat A,Mat *B)
 {
   Mat_MPIAdj     *a = (Mat_MPIAdj*)A->data;
-  PetscErrorCode ierr;
   const PetscInt *ranges;
   MPI_Comm       acomm,bcomm;
   MPI_Group      agroup,bgroup;
@@ -708,7 +695,6 @@ static PetscErrorCode MatMPIAdjCreateNonemptySubcommMat_MPIAdj(Mat A,Mat *B)
 
 PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
 {
-  PetscErrorCode ierr;
   PetscInt       M,N,*II,*J,NZ,nz,m,nzstart,i;
   PetscInt       *Values = NULL;
   Mat_MPIAdj     *adj = (Mat_MPIAdj*)A->data;
@@ -773,7 +759,6 @@ PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
 @*/
 PetscErrorCode MatMPIAdjCreateNonemptySubcommMat(Mat A,Mat *B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -793,7 +778,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
 {
   Mat_MPIAdj     *b;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(B,&b));
@@ -825,7 +809,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
 @*/
 PetscErrorCode  MatMPIAdjToSeq(Mat A,Mat *B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"MatMPIAdjToSeq_C",(Mat,Mat*),(A,B)));
@@ -850,7 +833,6 @@ PetscErrorCode  MatMPIAdjToSeq(Mat A,Mat *B)
 @*/
 PetscErrorCode  MatMPIAdjSetPreallocation(Mat B,PetscInt *i,PetscInt *j,PetscInt *values)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(B,"MatMPIAdjSetPreallocation_C",(Mat,PetscInt*,PetscInt*,PetscInt*),(B,i,j,values)));
@@ -895,7 +877,6 @@ PetscErrorCode  MatMPIAdjSetPreallocation(Mat B,PetscInt *i,PetscInt *j,PetscInt
 @*/
 PetscErrorCode  MatCreateMPIAdj(MPI_Comm comm,PetscInt m,PetscInt N,PetscInt *i,PetscInt *j,PetscInt *values,Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));

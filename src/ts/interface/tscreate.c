@@ -41,7 +41,6 @@ const char *const*TSConvergedReasons = TSConvergedReasons_Shifted + 4;
 PetscErrorCode  TSCreate(MPI_Comm comm, TS *ts)
 {
   TS             t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ts,2);

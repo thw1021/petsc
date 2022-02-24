@@ -24,7 +24,6 @@ PetscErrorCode DMMoabSetFieldVector(DM dm, PetscInt ifield, Vec fvec)
   const PetscScalar *varray;
   PetscScalar *farray;
   moab::ErrorCode merr;
-  PetscErrorCode  ierr;
   std::string tag_name;
 
   PetscFunctionBegin;
@@ -83,7 +82,6 @@ PetscErrorCode DMMoabSetGlobalFieldVector(DM dm, Vec fvec)
   const PetscScalar   *rarray;
   PetscScalar   *varray, *farray;
   moab::ErrorCode merr;
-  PetscErrorCode  ierr;
   PetscInt i, ifield;
   std::string tag_name;
   moab::Range::iterator iter;
@@ -159,7 +157,6 @@ PetscErrorCode DMMoabSetGlobalFieldVector(DM dm, Vec fvec)
 @*/
 PetscErrorCode DMMoabSetFieldNames(DM dm, PetscInt numFields, const char* fields[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   DM_Moab        *dmmoab;
 
@@ -236,7 +233,6 @@ PetscErrorCode DMMoabGetFieldName(DM dm, PetscInt field, const char **fieldName)
 @*/
 PetscErrorCode DMMoabSetFieldName(DM dm, PetscInt field, const char *fieldName)
 {
-  PetscErrorCode ierr;
   DM_Moab        *dmmoab;
 
   PetscFunctionBegin;
@@ -306,7 +302,6 @@ PetscErrorCode DMMoabGetFieldDof(DM dm, moab::EntityHandle point, PetscInt field
 PetscErrorCode DMMoabGetFieldDofs(DM dm, PetscInt npoints, const moab::EntityHandle* points, PetscInt field, PetscInt* dof)
 {
   PetscInt        i;
-  PetscErrorCode  ierr;
   DM_Moab        *dmmoab;
 
   PetscFunctionBegin;
@@ -349,7 +344,6 @@ PetscErrorCode DMMoabGetFieldDofs(DM dm, PetscInt npoints, const moab::EntityHan
 PetscErrorCode DMMoabGetFieldDofsLocal(DM dm, PetscInt npoints, const moab::EntityHandle* points, PetscInt field, PetscInt* dof)
 {
   PetscInt i;
-  PetscErrorCode  ierr;
   DM_Moab        *dmmoab;
 
   PetscFunctionBegin;
@@ -392,7 +386,6 @@ PetscErrorCode DMMoabGetFieldDofsLocal(DM dm, PetscInt npoints, const moab::Enti
 PetscErrorCode DMMoabGetDofs(DM dm, PetscInt npoints, const moab::EntityHandle* points, PetscInt* dof)
 {
   PetscInt        i, field, offset;
-  PetscErrorCode  ierr;
   DM_Moab        *dmmoab;
 
   PetscFunctionBegin;
@@ -437,7 +430,6 @@ PetscErrorCode DMMoabGetDofs(DM dm, PetscInt npoints, const moab::EntityHandle* 
 PetscErrorCode DMMoabGetDofsLocal(DM dm, PetscInt npoints, const moab::EntityHandle* points, PetscInt* dof)
 {
   PetscInt        i, field, offset;
-  PetscErrorCode  ierr;
   DM_Moab        *dmmoab;
 
   PetscFunctionBegin;
@@ -484,7 +476,6 @@ PetscErrorCode DMMoabGetDofsBlocked(DM dm, PetscInt npoints, const moab::EntityH
 {
   PetscInt        i;
   DM_Moab        *dmmoab;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -524,19 +515,15 @@ PetscErrorCode DMMoabGetDofsBlockedLocal(DM dm, PetscInt npoints, const moab::En
 {
   PetscInt        i;
   DM_Moab        *dmmoab;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(points, 3);
   dmmoab = (DM_Moab*)(dm)->data;
 
-  if (!dof) {
-    CHKERRQ(PetscMalloc1(npoints, &dof));
-  }
+  if (!dof) CHKERRQ(PetscMalloc1(npoints, &dof));
 
-  for (i = 0; i < npoints; ++i)
-    dof[i] = dmmoab->lidmap[(PetscInt)points[i] - dmmoab->seqstart];
+  for (i = 0; i < npoints; ++i) dof[i] = dmmoab->lidmap[(PetscInt)points[i] - dmmoab->seqstart];
   PetscFunctionReturn(0);
 }
 

@@ -5,7 +5,6 @@
 PetscErrorCode VecTaggerDestroy_Simple(VecTagger tagger)
 {
   VecTagger_Simple *smpl = (VecTagger_Simple *) tagger->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree (smpl->box));
@@ -21,7 +20,6 @@ PetscErrorCode VecTaggerSetFromOptions_Simple(PetscOptionItems *PetscOptionsObje
   const char     *name;
   PetscBool      set;
   PetscScalar    *inBoxVals;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetType((PetscObject)tagger,&name));
@@ -54,7 +52,6 @@ PetscErrorCode VecTaggerView_Simple(VecTagger tagger, PetscViewer viewer)
 {
   VecTagger_Simple *smpl = (VecTagger_Simple *) tagger->data;
   PetscBool        iascii;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -81,7 +78,6 @@ PetscErrorCode VecTaggerView_Simple(VecTagger tagger, PetscViewer viewer)
 PetscErrorCode VecTaggerSetBox_Simple(VecTagger tagger,VecTaggerBox *box)
 {
   VecTagger_Simple *smpl = (VecTagger_Simple *) tagger->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tagger,VEC_TAGGER_CLASSID,1);
@@ -111,7 +107,6 @@ PetscErrorCode VecTaggerGetBox_Simple(VecTagger tagger,const VecTaggerBox **box)
 PetscErrorCode VecTaggerCreate_Simple(VecTagger tagger)
 {
   VecTagger_Simple *smpl;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   tagger->ops->destroy          = VecTaggerDestroy_Simple;

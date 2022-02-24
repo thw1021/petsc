@@ -16,7 +16,6 @@ PetscErrorCode MyVecDump(const char fname[],PetscBool skippheader,PetscBool usem
   MPI_Comm       comm;
   PetscViewer    viewer;
   PetscBool      ismpiio,isskip;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)x,&comm));
@@ -44,7 +43,6 @@ PetscErrorCode MyVecLoad(const char fname[],PetscBool skippheader,PetscBool usem
   MPI_Comm       comm;
   PetscViewer    viewer;
   PetscBool      ismpiio,isskip;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)x,&comm));
@@ -69,7 +67,6 @@ PetscErrorCode MyVecLoad(const char fname[],PetscBool skippheader,PetscBool usem
 
 PetscErrorCode VecFill(Vec x)
 {
-  PetscErrorCode ierr;
   PetscInt       i,s,e;
 
   PetscFunctionBeginUser;
@@ -87,7 +84,6 @@ PetscErrorCode VecCompare(Vec a,Vec b)
   PetscInt       locmin[2],locmax[2];
   PetscReal      min[2],max[2];
   Vec            ref;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecMin(a,&locmin[0],&min[0]));
@@ -119,7 +115,6 @@ PetscErrorCode VecCompare(Vec a,Vec b)
 
 PetscErrorCode HeaderlessBinaryRead(const char name[])
 {
-  PetscErrorCode ierr;
   int            fdes;
   PetscScalar    buffer[VEC_LEN];
   PetscInt       i;
@@ -157,7 +152,6 @@ PetscErrorCode HeaderlessBinaryRead(const char name[])
 
 PetscErrorCode TestBinary(void)
 {
-  PetscErrorCode ierr;
   Vec            x,y;
   PetscBool      skipheader = PETSC_TRUE;
   PetscBool      usempiio = PETSC_FALSE;
@@ -186,7 +180,6 @@ PetscErrorCode TestBinary(void)
 #if defined(PETSC_HAVE_MPIIO)
 PetscErrorCode TestBinaryMPIIO(void)
 {
-  PetscErrorCode ierr;
   Vec            x,y;
   PetscBool      skipheader = PETSC_TRUE;
   PetscBool      usempiio = PETSC_TRUE;

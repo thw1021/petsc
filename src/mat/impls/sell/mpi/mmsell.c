@@ -20,7 +20,6 @@ PetscErrorCode MatDisAssemble_MPISELL(Mat A)
   Mat_SeqSELL    *Bsell=(Mat_SeqSELL*)B->data;
   PetscInt       i,j,totalslices,N=A->cmap->N,ec,row;
   PetscBool      isnonzero;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* free stuff related to matrix-vec multiply */
@@ -81,7 +80,6 @@ PetscErrorCode MatSetUpMultiply_MPISELL(Mat mat)
 {
   Mat_MPISELL    *sell=(Mat_MPISELL*)mat->data;
   Mat_SeqSELL    *B=(Mat_SeqSELL*)(sell->B->data);
-  PetscErrorCode ierr;
   PetscInt       i,j,*bcolidx=B->colidx,ec=0,*garray,totalslices;
   IS             from,to;
   Vec            gvec;
@@ -216,7 +214,6 @@ static Vec auglydd          = NULL,auglyoo     = NULL; /* work vectors used to s
 PetscErrorCode MatMPISELLDiagonalScaleLocalSetUp(Mat inA,Vec scale)
 {
   Mat_MPISELL    *ina=(Mat_MPISELL*)inA->data; /*access private part of matrix */
-  PetscErrorCode ierr;
   PetscInt       i,n,nt,cstart,cend,no,*garray=ina->garray,*lindices;
   PetscInt       *r_rmapd,*r_rmapo;
 
@@ -269,7 +266,6 @@ PetscErrorCode MatMPISELLDiagonalScaleLocalSetUp(Mat inA,Vec scale)
 PetscErrorCode MatDiagonalScaleLocal_MPISELL(Mat A,Vec scale)
 {
   Mat_MPISELL       *a=(Mat_MPISELL*)A->data; /*access private part of matrix */
-  PetscErrorCode    ierr;
   PetscInt          n,i;
   PetscScalar       *d,*o;
   const PetscScalar *s;

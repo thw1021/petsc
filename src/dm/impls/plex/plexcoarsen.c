@@ -2,7 +2,6 @@
 
 PetscErrorCode DMCoarsen_Plex(DM dm, MPI_Comm comm, DM *dmCoarsened)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dm->coarseMesh) CHKERRQ(DMPlexCoarsen_Internal(dm, NULL, NULL, NULL, &dm->coarseMesh));
@@ -16,7 +15,6 @@ PetscErrorCode DMCoarsenHierarchy_Plex(DM dm, PetscInt nlevels, DM dmCoarsened[]
   DM             rdm = dm;
   PetscInt       c;
   PetscBool      localized;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinatesLocalized(dm, &localized));

@@ -22,7 +22,6 @@
 @*/
 PetscErrorCode  PetscDrawPoint(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -48,7 +47,6 @@ PetscErrorCode  PetscDrawPoint(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
 @*/
 PetscErrorCode  PetscDrawPointPixel(PetscDraw draw,int x,int y,int c)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -77,7 +75,6 @@ PetscErrorCode  PetscDrawPointPixel(PetscDraw draw,int x,int y,int c)
 @*/
 PetscErrorCode  PetscDrawPointSetSize(PetscDraw draw,PetscReal width)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);

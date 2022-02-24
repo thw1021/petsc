@@ -3,7 +3,6 @@
 static PetscErrorCode DMPlexLabelToVolumeConstraint(DM dm, DMLabel adaptLabel, PetscInt cStart, PetscInt cEnd, PetscReal refRatio, PetscReal maxVolumes[])
 {
   PetscInt       dim, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -59,7 +58,6 @@ static PetscErrorCode DMPlexLabelToMetricConstraint(DM dm, DMLabel adaptLabel, P
   PetscScalar    *metric, *eqns;
   const PetscReal coarseRatio = refRatio == PETSC_DEFAULT ? PetscSqr(0.5) : 1/refRatio;
   PetscInt        dim, Nv, Neq, c, v;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexUninterpolate(dm, &udm));
@@ -168,7 +166,6 @@ PetscErrorCode DMPlexRefine_Internal(DM dm, PETSC_UNUSED Vec metric, DMLabel ada
   PetscReal              *maxVolumes;
   PetscInt                dim, cStart, cEnd, c;
   PetscBool               flg, flg2, localized;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinatesLocalized(dm, &localized));
@@ -248,7 +245,6 @@ PetscErrorCode DMPlexCoarsen_Internal(DM dm, PETSC_UNUSED Vec metric, DMLabel ad
   DMLabel        bdLabel = NULL;
   char           bdLabelName[PETSC_MAX_PATH_LEN], rgLabelName[PETSC_MAX_PATH_LEN];
   PetscBool      localized, flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinatesLocalized(dm, &localized));
@@ -272,7 +268,6 @@ PetscErrorCode DMAdaptLabel_Plex(DM dm, PETSC_UNUSED Vec metric, DMLabel adaptLa
   IS              flagIS;
   const PetscInt *flags;
   PetscInt        defFlag, minFlag, maxFlag, numFlags, f;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelGetDefaultValue(adaptLabel, &defFlag));

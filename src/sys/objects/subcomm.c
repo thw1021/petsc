@@ -74,7 +74,6 @@ PetscErrorCode PetscSubcommSetFromOptions(PetscSubcomm psubcomm)
 @*/
 PetscErrorCode PetscSubcommSetOptionsPrefix(PetscSubcomm psubcomm,const char pre[])
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
    if (!pre) {
@@ -100,7 +99,6 @@ PetscErrorCode PetscSubcommSetOptionsPrefix(PetscSubcomm psubcomm,const char pre
 @*/
 PetscErrorCode PetscSubcommView(PetscSubcomm psubcomm,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -142,7 +140,6 @@ PetscErrorCode PetscSubcommView(PetscSubcomm psubcomm,PetscViewer viewer)
 @*/
 PetscErrorCode  PetscSubcommSetNumber(PetscSubcomm psubcomm,PetscInt nsubcomm)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm=psubcomm->parent;
   PetscMPIInt    msub,size;
 
@@ -171,7 +168,6 @@ PetscErrorCode  PetscSubcommSetNumber(PetscSubcomm psubcomm,PetscInt nsubcomm)
 @*/
 PetscErrorCode  PetscSubcommSetType(PetscSubcomm psubcomm,PetscSubcommType subcommtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate()");
@@ -201,7 +197,6 @@ PetscErrorCode  PetscSubcommSetType(PetscSubcomm psubcomm,PetscSubcommType subco
 @*/
 PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt color,PetscMPIInt subrank)
 {
-  PetscErrorCode ierr;
   MPI_Comm       subcomm=0,dupcomm=0,comm=psubcomm->parent;
   PetscMPIInt    size,icolor,duprank,*recvbuf,sendbuf[3],mysubsize,rank,*subsize;
   PetscMPIInt    i,nsubcomm=psubcomm->n;
@@ -266,7 +261,6 @@ PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt colo
 @*/
 PetscErrorCode  PetscSubcommDestroy(PetscSubcomm *psubcomm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*psubcomm) PetscFunctionReturn(0);
@@ -296,7 +290,6 @@ PetscErrorCode  PetscSubcommDestroy(PetscSubcomm *psubcomm)
 @*/
 PetscErrorCode  PetscSubcommCreate(MPI_Comm comm,PetscSubcomm *psubcomm)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
 
   PetscFunctionBegin;
@@ -385,7 +378,6 @@ PetscErrorCode  PetscSubcommGetChild(PetscSubcomm scomm,MPI_Comm *ccomm)
 
 static PetscErrorCode PetscSubcommCreate_contiguous(PetscSubcomm psubcomm)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,*subsize,duprank=-1,subrank=-1;
   PetscMPIInt    np_subcomm,nleftover,i,color=-1,rankstart,nsubcomm=psubcomm->n;
   MPI_Comm       subcomm=0,dupcomm=0,comm=psubcomm->parent;
@@ -457,7 +449,6 @@ static PetscErrorCode PetscSubcommCreate_contiguous(PetscSubcomm psubcomm)
 
 static PetscErrorCode PetscSubcommCreate_interlaced(PetscSubcomm psubcomm)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size,*subsize,duprank,subrank;
   PetscMPIInt    np_subcomm,nleftover,i,j,color,nsubcomm=psubcomm->n;
   MPI_Comm       subcomm=0,dupcomm=0,comm=psubcomm->parent;

@@ -30,7 +30,6 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_Pragmatic_Plex(DM dm, Vec vertexMetric
   PetscInt           d, numCellsNew, numVerticesNew;
   PetscInt           numCornersNew, fStart, fEnd;
   PetscMPIInt        numProcs;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
 
@@ -40,9 +39,9 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_Pragmatic_Plex(DM dm, Vec vertexMetric
   if (bdLabel) {
     CHKERRQ(PetscObjectGetName((PetscObject) bdLabel, &bdLabelName));
     CHKERRQ(PetscStrcmp(bdLabelName, bdName, &flg));
-    PetscCheckFalse(flg,comm, PETSC_ERR_ARG_WRONG, "\"%s\" cannot be used as label for boundary facets", bdLabelName);
+    PetscCheck(!flg,comm, PETSC_ERR_ARG_WRONG, "\"%s\" cannot be used as label for boundary facets", bdLabelName);
   }
-  PetscCheckFalse(rgLabel,comm, PETSC_ERR_ARG_WRONG, "Cannot currently preserve cell tags with Pragmatic");
+  PetscCheck(!rgLabel,comm, PETSC_ERR_ARG_WRONG, "Cannot currently preserve cell tags with Pragmatic");
 #if 0
   /* Check for overlap by looking for cell in the SF */
   if (!overlapped) {

@@ -380,7 +380,6 @@ PetscErrorCode CheckError(Vec u,Vec x,Vec b,PetscInt its,PetscReal tol,PetscLogE
 {
   PetscScalar    none = -1.0;
   PetscReal      norm;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscLogEventBegin(CHECK_ERROR,u,x,b,0));
 
@@ -410,7 +409,6 @@ PetscErrorCode CheckError(Vec u,Vec x,Vec b,PetscInt its,PetscReal tol,PetscLogE
 PetscErrorCode MyKSPMonitor(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
 {
   Vec            x;
-  PetscErrorCode ierr;
 
   /*
      Build the solution vector

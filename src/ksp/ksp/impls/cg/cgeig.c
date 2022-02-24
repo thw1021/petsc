@@ -12,7 +12,6 @@ PetscErrorCode KSPComputeEigenvalues_CG(KSP ksp,PetscInt nmax,PetscReal *r,Petsc
   KSP_CG         *cgP = (KSP_CG*)ksp->data;
   PetscScalar    *d,*e;
   PetscReal      *ee;
-  PetscErrorCode ierr;
   PetscInt       j,n = ksp->its;
 
   PetscFunctionBegin;

@@ -69,7 +69,6 @@ PetscErrorCode RunHasOperationTest()
 {
   Mat A;
   PetscInt matop, nop = sizeof(optenum)/sizeof(PetscInt);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (matop = 0; matop < nop; matop++) {

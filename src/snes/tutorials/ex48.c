@@ -403,7 +403,6 @@ static PetscErrorCode PRangeMinMax(PRange *p,PetscReal min,PetscReal max)
 
 static PetscErrorCode THIDestroy(THI *thi)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!*thi) PetscFunctionReturn(0);
@@ -560,7 +559,6 @@ static PetscErrorCode THIInitializePrm(THI thi,DM da2prm,Vec prm)
 {
   PrmNode        **p;
   PetscInt       i,j,xs,xm,ys,ym,mx,my;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetGhostCorners(da2prm,&ys,&xs,0,&ym,&xm,0));
@@ -578,7 +576,6 @@ static PetscErrorCode THIInitializePrm(THI thi,DM da2prm,Vec prm)
 
 static PetscErrorCode THISetUpDM(THI thi,DM dm)
 {
-  PetscErrorCode  ierr;
   PetscInt        refinelevel,coarsenlevel,level,dim,Mx,My,Mz,mx,my,s;
   DMDAStencilType st;
   DM              da2prm;
@@ -620,7 +617,6 @@ static PetscErrorCode THISetUpDM(THI thi,DM dm)
 static PetscErrorCode DMCoarsenHook_THI(DM dmf,DM dmc,void *ctx)
 {
   THI            thi = (THI)ctx;
-  PetscErrorCode ierr;
   PetscInt       rlevel,clevel;
 
   PetscFunctionBeginUser;
@@ -635,7 +631,6 @@ static PetscErrorCode DMCoarsenHook_THI(DM dmf,DM dmc,void *ctx)
 static PetscErrorCode DMRefineHook_THI(DM dmc,DM dmf,void *ctx)
 {
   THI            thi = (THI)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(THISetUpDM(thi,dmf));
@@ -648,7 +643,6 @@ static PetscErrorCode DMRefineHook_THI(DM dmc,DM dmf,void *ctx)
 
 static PetscErrorCode THIDAGetPrm(DM da,PrmNode ***prm)
 {
-  PetscErrorCode ierr;
   DM             da2prm;
   Vec            X;
 
@@ -663,7 +657,6 @@ static PetscErrorCode THIDAGetPrm(DM da,PrmNode ***prm)
 
 static PetscErrorCode THIDARestorePrm(DM da,PrmNode ***prm)
 {
-  PetscErrorCode ierr;
   DM             da2prm;
   Vec            X;
 
@@ -683,7 +676,6 @@ static PetscErrorCode THIInitial(SNES snes,Vec X,void *ctx)
   PetscReal      hx,hy;
   PrmNode        **prm;
   Node           ***x;
-  PetscErrorCode ierr;
   DM             da;
 
   PetscFunctionBeginUser;
@@ -758,7 +750,6 @@ static PetscErrorCode THIFunctionLocal(DMDALocalInfo *info,Node ***x,Node ***f,T
   PetscInt       xs,ys,xm,ym,zm,i,j,k,q,l;
   PetscReal      hx,hy,etamin,etamax,beta2min,beta2max;
   PrmNode        **prm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   xs = info->zs;
@@ -860,7 +851,6 @@ static PetscErrorCode THIFunctionLocal(DMDALocalInfo *info,Node ***x,Node ***f,T
 
 static PetscErrorCode THIMatrixStatistics(THI thi,Mat B,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscReal      nrm;
   PetscInt       m;
   PetscMPIInt    rank;
@@ -880,7 +870,6 @@ static PetscErrorCode THIMatrixStatistics(THI thi,Mat B,PetscViewer viewer)
 
 static PetscErrorCode THISurfaceStatistics(DM da,Vec X,PetscReal *min,PetscReal *max,PetscReal *mean)
 {
-  PetscErrorCode ierr;
   Node           ***x;
   PetscInt       i,j,xs,ys,zs,xm,ym,zm,mx,my,mz;
   PetscReal      umin = 1e100,umax=-1e100;
@@ -912,7 +901,6 @@ static PetscErrorCode THISolveStatistics(THI thi,SNES snes,PetscInt coarsened,co
   MPI_Comm       comm;
   Vec            X;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)thi,&comm));
@@ -974,7 +962,6 @@ static PetscErrorCode THIJacobianLocal_2D(DMDALocalInfo *info,Node **x,Mat J,Mat
   PetscInt       xs,ys,xm,ym,i,j,q,l,ll;
   PetscReal      hx,hy;
   PrmNode        **prm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   xs = info->ys;
@@ -1048,7 +1035,6 @@ static PetscErrorCode THIJacobianLocal_3D(DMDALocalInfo *info,Node ***x,Mat B,TH
   PetscInt       xs,ys,xm,ym,zm,i,j,k,q,l,ll;
   PetscReal      hx,hy;
   PrmNode        **prm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   xs = info->zs;
@@ -1243,7 +1229,6 @@ static PetscErrorCode THIJacobianLocal_3D(DMDALocalInfo *info,Node ***x,Mat B,TH
 
 static PetscErrorCode THIJacobianLocal_3D_Full(DMDALocalInfo *info,Node ***x,Mat A,Mat B,THI thi)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(THIJacobianLocal_3D(info,x,B,thi,THIASSEMBLY_FULL));
@@ -1252,7 +1237,6 @@ static PetscErrorCode THIJacobianLocal_3D_Full(DMDALocalInfo *info,Node ***x,Mat
 
 static PetscErrorCode THIJacobianLocal_3D_Tridiagonal(DMDALocalInfo *info,Node ***x,Mat A,Mat B,THI thi)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(THIJacobianLocal_3D(info,x,B,thi,THIASSEMBLY_TRIDIAGONAL));
@@ -1261,7 +1245,6 @@ static PetscErrorCode THIJacobianLocal_3D_Tridiagonal(DMDALocalInfo *info,Node *
 
 static PetscErrorCode DMRefineHierarchy_THI(DM dac0,PetscInt nlevels,DM hierarchy[])
 {
-  PetscErrorCode  ierr;
   THI             thi;
   PetscInt        dim,M,N,m,n,s,dof;
   DM              dac,daf;
@@ -1300,7 +1283,6 @@ static PetscErrorCode DMRefineHierarchy_THI(DM dac0,PetscInt nlevels,DM hierarch
 
 static PetscErrorCode DMCreateInterpolation_DA_THI(DM dac,DM daf,Mat *A,Vec *scale)
 {
-  PetscErrorCode ierr;
   PetscInt       dim;
 
   PetscFunctionBeginUser;
@@ -1346,7 +1328,6 @@ static PetscErrorCode DMCreateInterpolation_DA_THI(DM dac,DM daf,Mat *A,Vec *sca
 
 static PetscErrorCode DMCreateMatrix_THI_Tridiagonal(DM da,Mat *J)
 {
-  PetscErrorCode         ierr;
   Mat                    A;
   PetscInt               xm,ym,zm,dim,dof = 2,starts[3],dims[3];
   ISLocalToGlobalMapping ltog;
@@ -1378,7 +1359,6 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM da,Vec X,const char filena
   const PetscInt    dof   = 2;
   Units             units = thi->units;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscMPIInt       rank,size,tag,nn,nmax;
   PetscInt          mx,my,mz,r,range[6];

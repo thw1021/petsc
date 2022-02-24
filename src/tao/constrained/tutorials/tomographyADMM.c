@@ -33,7 +33,6 @@ PetscErrorCode NullJacobian(Tao tao,Vec X,Mat J,Mat Jpre,void *ptr)
 
 static PetscErrorCode TaoShellSolve_SoftThreshold(Tao tao)
 {
-  PetscErrorCode ierr;
   PetscReal      lambda, mu;
   AppCtx         *user;
   Vec            out,work,y,x;
@@ -67,7 +66,6 @@ static PetscErrorCode TaoShellSolve_SoftThreshold(Tao tao)
 PetscErrorCode MisfitObjectiveAndGradient(Tao tao,Vec X,PetscReal *f,Vec g,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Objective  0.5*||Ax-b||_2^2 */
@@ -87,7 +85,6 @@ PetscErrorCode MisfitObjectiveAndGradient(Tao tao,Vec X,PetscReal *f,Vec g,void 
 PetscErrorCode RegularizerObjectiveAndGradient1(Tao tao,Vec X,PetscReal *f_reg,Vec G_reg,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* compute regularizer objective
@@ -111,7 +108,6 @@ PetscErrorCode RegularizerObjectiveAndGradient1(Tao tao,Vec X,PetscReal *f_reg,V
 PetscErrorCode RegularizerObjectiveAndGradient2(Tao tao,Vec X,PetscReal *f_reg,Vec G_reg,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscReal      temp;
 
   PetscFunctionBegin;
@@ -137,7 +133,6 @@ static PetscErrorCode HessianMisfit(Tao tao, Vec x, Mat H, Mat Hpre, void *ptr)
 static PetscErrorCode HessianReg(Tao tao, Vec x, Mat H, Mat Hpre, void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(user->D,x,user->workN));
@@ -156,7 +151,6 @@ static PetscErrorCode HessianReg(Tao tao, Vec x, Mat H, Mat Hpre, void *ptr)
 PetscErrorCode FullObjGrad(Tao tao,Vec X,PetscReal *f,Vec g,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscReal      f_reg;
 
   PetscFunctionBegin;
@@ -280,7 +274,6 @@ PetscErrorCode InitializeUserData(AppCtx *user)
 
 PetscErrorCode DestroyContext(AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&user->A));
