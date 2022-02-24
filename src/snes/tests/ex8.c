@@ -358,7 +358,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -373,7 +372,6 @@ static PetscErrorCode SetupFunctions(DM dm, PetscBool usePoly, PetscInt order, P
                                      PetscErrorCode (**exactFuncDers)(PetscInt, PetscReal, const PetscReal[], const PetscReal[], PetscInt, PetscScalar *, void *), AppCtx *user)
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   user->dir = dir;
@@ -417,7 +415,6 @@ static PetscErrorCode ComputeError(DM dm, PetscErrorCode (**exactFuncs)(PetscInt
 {
   Vec            u;
   PetscReal      n[3] = {1.0, 1.0, 1.0};
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetGlobalVector(dm, &u));
@@ -438,7 +435,6 @@ static PetscErrorCode CheckFunctions(DM dm, PetscInt order, AppCtx *user)
   void            *exactCtxs[3];
   MPI_Comm         comm;
   PetscReal        error, errorDer, tol = PETSC_SMALL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   exactCtxs[0]       = user;
@@ -467,7 +463,6 @@ static PetscErrorCode CheckTransferError(DM fdm, PetscBool usePoly, PetscInt ord
   void            *exactCtxs[3];
   MPI_Comm         comm;
   PetscReal        error, errorDer, tol = PETSC_SMALL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   exactCtxs[0]       = user;
@@ -499,7 +494,6 @@ static PetscErrorCode CheckTransfer(DM dm, InterpType inType, PetscInt order, Ap
   MPI_Comm        comm;
   const char     *testname = "Unknown";
   char            checkname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   exactCtxs[0] = exactCtxs[1] = exactCtxs[2] = user;

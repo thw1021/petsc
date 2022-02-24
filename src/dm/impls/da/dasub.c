@@ -32,7 +32,6 @@
 @*/
 PetscErrorCode  DMDAGetLogicalCoordinate(DM da,PetscScalar x,PetscScalar y,PetscScalar z,PetscInt *II,PetscInt *JJ,PetscInt *KK,PetscScalar *X,PetscScalar *Y,PetscScalar *Z)
 {
-  PetscErrorCode ierr;
   Vec            coors;
   DM             dacoors;
   DMDACoor2d     **c;
@@ -104,7 +103,6 @@ PetscErrorCode  DMDAGetRay(DM da,DMDirection dir,PetscInt gp,Vec *newvec,VecScat
 {
   PetscMPIInt    rank;
   DM_DA          *dd = (DM_DA*)da->data;
-  PetscErrorCode ierr;
   IS             is;
   AO             ao;
   Vec            vec;
@@ -199,7 +197,6 @@ PetscErrorCode  DMDAGetRay(DM da,DMDirection dir,PetscInt gp,Vec *newvec,VecScat
 PetscErrorCode  DMDAGetProcessorSubset(DM da,DMDirection dir,PetscInt gp,MPI_Comm *comm)
 {
   MPI_Group      group,subgroup;
-  PetscErrorCode ierr;
   PetscInt       i,ict,flag,*owners,xs,xm,ys,ym,zs,zm;
   PetscMPIInt    size,*ranks = NULL;
   DM_DA          *dd = (DM_DA*)da->data;
@@ -274,7 +271,6 @@ PetscErrorCode  DMDAGetProcessorSubsets(DM da, DMDirection dir, MPI_Comm *subcom
   PetscInt       *firstPoints;
   PetscMPIInt    size, *subgroupRanks = NULL;
   PetscInt       xs, xm, ys, ym, zs, zm, firstPoint, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da, DM_CLASSID, 1,DMDA);

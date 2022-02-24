@@ -32,7 +32,6 @@ PetscErrorCode PetscSFSetUp_Allgather(PetscSF sf)
 
 static PetscErrorCode PetscSFBcastBegin_Allgather(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode        ierr;
   PetscSFLink           link;
   PetscMPIInt           sendcount;
   MPI_Comm              comm;
@@ -53,7 +52,6 @@ static PetscErrorCode PetscSFBcastBegin_Allgather(PetscSF sf,MPI_Datatype unit,P
 
 static PetscErrorCode PetscSFReduceBegin_Allgather(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode        ierr;
   PetscSFLink           link;
   PetscInt              rstart;
   MPI_Comm              comm;
@@ -90,7 +88,6 @@ static PetscErrorCode PetscSFReduceBegin_Allgather(PetscSF sf,MPI_Datatype unit,
 
 static PetscErrorCode PetscSFBcastToZero_Allgather(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata)
 {
-  PetscErrorCode        ierr;
   PetscSFLink           link;
   PetscMPIInt           rank;
 
@@ -108,7 +105,6 @@ static PetscErrorCode PetscSFBcastToZero_Allgather(PetscSF sf,MPI_Datatype unit,
 
 PETSC_INTERN PetscErrorCode PetscSFCreate_Allgather(PetscSF sf)
 {
-  PetscErrorCode    ierr;
   PetscSF_Allgather *dat = (PetscSF_Allgather*)sf->data;
 
   PetscFunctionBegin;

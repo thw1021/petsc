@@ -24,7 +24,6 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
 {
   Vec_Seq        *s;
   PetscScalar    *array;
-  PetscErrorCode ierr;
   PetscInt       n = PetscMax(V->map->n,V->map->N);
   PetscMPIInt    size;
 

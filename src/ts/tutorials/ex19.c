@@ -76,7 +76,6 @@ struct _n_User {
 
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *x,*xdot;
 
@@ -94,7 +93,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx
 
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2];
   const PetscScalar *x;
@@ -117,7 +115,6 @@ static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat
 
 static PetscErrorCode RegisterMyARK2(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   {
@@ -137,7 +134,6 @@ static PetscErrorCode RegisterMyARK2(void)
 /* Monitor timesteps and use interpolation to output at integer multiples of 0.1 */
 static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscReal         tfinal, dt;
   User              user = (User)ctx;

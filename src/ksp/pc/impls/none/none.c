@@ -6,7 +6,6 @@
 
 PetscErrorCode PCApply_None(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(x,y));
@@ -15,7 +14,6 @@ PetscErrorCode PCApply_None(PC pc,Vec x,Vec y)
 
 PetscErrorCode PCMatApply_None(PC pc,Mat X,Mat Y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(X,Y,SAME_NONZERO_PATTERN));

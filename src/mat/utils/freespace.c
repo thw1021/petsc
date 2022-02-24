@@ -4,7 +4,6 @@
 PetscErrorCode PetscFreeSpaceGet(PetscInt n,PetscFreeSpaceList *list)
 {
   PetscFreeSpaceList a;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&a));
@@ -29,7 +28,6 @@ PetscErrorCode PetscFreeSpaceGet(PetscInt n,PetscFreeSpaceList *list)
 PetscErrorCode PetscFreeSpaceContiguous(PetscFreeSpaceList *head,PetscInt *space)
 {
   PetscFreeSpaceList a;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   while ((*head)) {
@@ -63,7 +61,6 @@ PetscErrorCode PetscFreeSpaceContiguous(PetscFreeSpaceList *head,PetscInt *space
 PetscErrorCode PetscFreeSpaceContiguous_LU(PetscFreeSpaceList *head,PetscInt *space,PetscInt n,PetscInt *bi,PetscInt *bdiag)
 {
   PetscFreeSpaceList a;
-  PetscErrorCode     ierr;
   PetscInt           row,nnz,*bj,*array,total,bi_temp;
   PetscInt           nnzL,nnzU;
 
@@ -140,7 +137,6 @@ PetscErrorCode PetscFreeSpaceContiguous_LU(PetscFreeSpaceList *head,PetscInt *sp
 PetscErrorCode PetscFreeSpaceContiguous_Cholesky(PetscFreeSpaceList *head,PetscInt *space,PetscInt n,PetscInt *ui,PetscInt *udiag)
 {
   PetscFreeSpaceList a;
-  PetscErrorCode     ierr;
   PetscInt           row,nnz,*uj,*array,total;
 
   PetscFunctionBegin;
@@ -172,7 +168,6 @@ PetscErrorCode PetscFreeSpaceContiguous_Cholesky(PetscFreeSpaceList *head,PetscI
 PetscErrorCode PetscFreeSpaceDestroy(PetscFreeSpaceList head)
 {
   PetscFreeSpaceList a;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   while ((head)) {

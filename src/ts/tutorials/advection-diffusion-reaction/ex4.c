@@ -137,7 +137,6 @@ PetscErrorCode IFunction(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr)
 {
   AppCtx         *appctx = (AppCtx*)ptr;
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,Mx,xs,xm;
   PetscReal      hx,sx;
   PetscScalar    rho,c,rhoxx,cxx,cx,rhox,kcxrhox;
@@ -218,7 +217,6 @@ PetscErrorCode IFunction(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr)
 /* ------------------------------------------------------------------- */
 PetscErrorCode InitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,xs,xm,Mx;
   Field          *u;
   PetscReal      hx,x;

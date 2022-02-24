@@ -57,7 +57,6 @@ PetscErrorCode PetscFEGeomCreate(PetscQuadrature quad, PetscInt numCells, PetscI
 @*/
 PetscErrorCode PetscFEGeomDestroy(PetscFEGeom **geom)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*geom) PetscFunctionReturn(0);
@@ -88,7 +87,6 @@ PetscErrorCode PetscFEGeomGetChunk(PetscFEGeom *geom, PetscInt cStart, PetscInt 
 {
   PetscInt       Nq;
   PetscInt       dE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(geom,1);
@@ -134,7 +132,6 @@ PetscErrorCode PetscFEGeomGetChunk(PetscFEGeom *geom, PetscInt cStart, PetscInt 
 @*/
 PetscErrorCode PetscFEGeomRestoreChunk(PetscFEGeom *geom, PetscInt cStart, PetscInt cEnd, PetscFEGeom **chunkGeom)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(*chunkGeom));

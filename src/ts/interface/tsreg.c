@@ -43,7 +43,6 @@ PetscErrorCode  TSSetType(TS ts,TSType type)
 {
   PetscErrorCode (*r)(TS);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID,1);
@@ -127,7 +126,6 @@ PetscErrorCode  TSGetType(TS ts, TSType *type)
 @*/
 PetscErrorCode  TSRegister(const char sname[], PetscErrorCode (*function)(TS))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSInitializePackage());

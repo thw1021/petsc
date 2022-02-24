@@ -25,7 +25,6 @@ static PetscErrorCode  KSPCGSetType_CGNE(KSP ksp,KSPCGType type)
 static PetscErrorCode KSPSetUp_CGNE(KSP ksp)
 {
   KSP_CG         *cgP = (KSP_CG*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       maxit = ksp->max_it;
 
   PetscFunctionBegin;
@@ -60,7 +59,6 @@ static PetscErrorCode KSPSetUp_CGNE(KSP ksp)
 */
 static PetscErrorCode  KSPSolve_CGNE(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,stored_max_it,eigs;
   PetscScalar    dpi,a = 1.0,beta,betaold = 1.0,b = 0,*e = NULL,*d = NULL;
   PetscReal      dp = 0.0;
@@ -231,7 +229,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_CGNE(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_CG         *cg;
 
   PetscFunctionBegin;

@@ -7,7 +7,6 @@ PetscErrorCode MatCholeskyFactorNumeric_SeqSBAIJ_3(Mat C,Mat A,const MatFactorIn
 {
   Mat_SeqSBAIJ   *a   = (Mat_SeqSBAIJ*)A->data,*b = (Mat_SeqSBAIJ*)C->data;
   IS             perm = b->row;
-  PetscErrorCode ierr;
   const PetscInt *ai,*aj,*perm_ptr,mbs=a->mbs,*bi=b->i,*bj=b->j;
   PetscInt       *a2anew,i,j,k,k1,jmin,jmax,*jl,*il,vj,nexti,ili;
   MatScalar      *ba = b->a,*aa,*ap,*dk,*uik;

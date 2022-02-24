@@ -57,7 +57,6 @@ PetscMatrixSampler::PetscMatrixSampler(Mat A)
 
 void PetscMatrixSampler::SetSamplingMat(Mat A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size = 1;
 
   if (A) CHKERRV(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
@@ -147,14 +146,11 @@ void PetscMatrixSampler::SetGPUSampling(bool gpusampling)
 
 PetscMatrixSampler::~PetscMatrixSampler()
 {
-  PetscErrorCode ierr;
-
   CHKERRV(MatDestroy(&A));
 }
 
 void PetscMatrixSampler::sample(H2Opus_Real *x, H2Opus_Real *y, int samples)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm = PetscObjectComm((PetscObject)this->A);
   Mat            X = NULL,Y = NULL;
   PetscInt       M,N,m,n;

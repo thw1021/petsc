@@ -11,7 +11,6 @@ static PetscBool TSPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  TSFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TSList));
@@ -34,7 +33,6 @@ PetscErrorCode  TSInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg,cls;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSPackageInitialized) PetscFunctionReturn(0);
@@ -110,7 +108,6 @@ PetscErrorCode  TSInitializePackage(void)
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscts(void); /*prototype*/
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscts(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSInitializePackage());

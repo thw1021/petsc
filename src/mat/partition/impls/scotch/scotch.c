@@ -36,8 +36,6 @@ typedef struct {
 @*/
 PetscErrorCode MatPartitioningPTScotchSetImbalance(MatPartitioning part,PetscReal imb)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidLogicalCollectiveReal(part,imb,2);
@@ -52,7 +50,7 @@ PetscErrorCode MatPartitioningPTScotchSetImbalance_PTScotch(MatPartitioning part
   PetscFunctionBegin;
   if (imb==PETSC_DEFAULT) scotch->imbalance = 0.01;
   else {
-    PetscCheckFalse(imb<0.0 || imb>1.0,PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_OUTOFRANGE,"Illegal value of imb. Must be in range [0,1]");
+    PetscCheck(imb>=0.0 && imb<=1.0,PetscObjectComm((PetscObject)part),PETSC_ERR_ARG_OUTOFRANGE,"Illegal value of imb. Must be in range [0,1]");
     scotch->imbalance = (double)imb;
   }
   PetscFunctionReturn(0);
@@ -76,8 +74,6 @@ PetscErrorCode MatPartitioningPTScotchSetImbalance_PTScotch(MatPartitioning part
 @*/
 PetscErrorCode MatPartitioningPTScotchGetImbalance(MatPartitioning part,PetscReal *imb)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(imb,2);
@@ -123,8 +119,6 @@ PetscErrorCode MatPartitioningPTScotchGetImbalance_PTScotch(MatPartitioning part
 @*/
 PetscErrorCode MatPartitioningPTScotchSetStrategy(MatPartitioning part,MPPTScotchStrategyType strategy)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidLogicalCollectiveEnum(part,strategy,2);
@@ -165,8 +159,6 @@ PetscErrorCode MatPartitioningPTScotchSetStrategy_PTScotch(MatPartitioning part,
 @*/
 PetscErrorCode MatPartitioningPTScotchGetStrategy(MatPartitioning part,MPPTScotchStrategyType *strategy)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidPointer(strategy,2);
@@ -193,7 +185,6 @@ PetscErrorCode MatPartitioningPTScotchGetStrategy_PTScotch(MatPartitioning part,
 PetscErrorCode MatPartitioningView_PTScotch(MatPartitioning part, PetscViewer viewer)
 {
   MatPartitioning_PTScotch *scotch = (MatPartitioning_PTScotch*)part->data;
-  PetscErrorCode           ierr;
   PetscBool                isascii;
   const char               *str=NULL;
 
@@ -216,7 +207,6 @@ PetscErrorCode MatPartitioningView_PTScotch(MatPartitioning part, PetscViewer vi
 
 PetscErrorCode MatPartitioningSetFromOptions_PTScotch(PetscOptionItems *PetscOptionsObject,MatPartitioning part)
 {
-  PetscErrorCode           ierr;
   PetscBool                flag;
   PetscReal                r;
   MatPartitioning_PTScotch *scotch = (MatPartitioning_PTScotch*)part->data;
@@ -237,7 +227,6 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
 {
   MPI_Comm                 pcomm,comm;
   MatPartitioning_PTScotch *scotch = (MatPartitioning_PTScotch*)part->data;
-  PetscErrorCode           ierr;
   PetscMPIInt              rank;
   Mat                      mat  = part->adj;
   Mat_MPIAdj               *adj = (Mat_MPIAdj*)mat->data;
@@ -276,7 +265,7 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
     CHKERRMPI(MPI_Comm_size(comm,&size));
     log2size = PetscLog2Real(size);
     subd = PetscPowInt(2,log2size);
-    PetscCheckFalse(subd != size,comm,PETSC_ERR_SUP,"Only power of 2 communicator sizes");
+    PetscCheck(subd == size,comm,PETSC_ERR_SUP,"Only power of 2 communicator sizes");
     CHKERRQ(PetscMalloc1(mat->rmap->n,&NDorder));
     CHKERRQ(PetscMalloc3(2*size,&sizes,4*size,&seps,size,&level));
     SCOTCH_ParMETIS_V3_NodeND(mat->rmap->range,adj->i,adj->j,&base,NULL,NDorder,sizes,&comm);
@@ -334,8 +323,8 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
       SCOTCH_Strat    stradat;
 
       CHKERRQ(SCOTCH_dgraphInit(&grafdat,comm));
-      ierr = SCOTCH_dgraphBuild(&grafdat,0,vertlocnbr,vertlocnbr,adj->i,adj->i+1,veloloctab,
-                                NULL,edgelocnbr,edgelocnbr,adj->j,NULL,edloloctab);CHKERRQ(ierr);
+      CHKERRQ(SCOTCH_dgraphBuild(&grafdat,0,vertlocnbr,vertlocnbr,adj->i,adj->i+1,veloloctab,
+                                 NULL,edgelocnbr,edgelocnbr,adj->j,NULL,edloloctab));
 
       if (PetscDefined(USE_DEBUG)) CHKERRQ(SCOTCH_dgraphCheck(&grafdat));
 
@@ -416,8 +405,6 @@ static PetscErrorCode MatPartitioningApply_PTScotch_Private(MatPartitioning part
 
 PetscErrorCode MatPartitioningApply_PTScotch(MatPartitioning part,IS *partitioning)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatPartitioningApply_PTScotch_Private(part,PETSC_FALSE,partitioning));
   PetscFunctionReturn(0);
@@ -425,8 +412,6 @@ PetscErrorCode MatPartitioningApply_PTScotch(MatPartitioning part,IS *partitioni
 
 PetscErrorCode MatPartitioningApplyND_PTScotch(MatPartitioning part,IS *partitioning)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatPartitioningApply_PTScotch_Private(part,PETSC_TRUE,partitioning));
   PetscFunctionReturn(0);
@@ -435,7 +420,6 @@ PetscErrorCode MatPartitioningApplyND_PTScotch(MatPartitioning part,IS *partitio
 PetscErrorCode MatPartitioningDestroy_PTScotch(MatPartitioning part)
 {
   MatPartitioning_PTScotch *scotch = (MatPartitioning_PTScotch*)part->data;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(scotch));
@@ -460,7 +444,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode MatPartitioningCreate_PTScotch(MatPartitioning part)
 {
-  PetscErrorCode           ierr;
   MatPartitioning_PTScotch *scotch;
 
   PetscFunctionBegin;

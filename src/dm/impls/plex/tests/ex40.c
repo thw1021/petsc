@@ -10,7 +10,6 @@ static PetscErrorCode LabelPoints(DM dm)
   DMLabel        label;
   PetscInt       pStart, pEnd, p;
   PetscBool      flg = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsGetBool(NULL, NULL, "-label_mesh", &flg, NULL));
@@ -26,7 +25,6 @@ static PetscErrorCode LabelPoints(DM dm)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));

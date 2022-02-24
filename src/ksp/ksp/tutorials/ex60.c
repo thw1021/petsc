@@ -44,7 +44,6 @@ typedef struct {
 
 PetscErrorCode PCApply_Noise(PC pc,Vec xin,Vec xout)
 {
-  PetscErrorCode ierr;
   PCNoise_Ctx    *ctx;
   PetscReal      nrmin, nrmnoise;
 
@@ -62,7 +61,6 @@ PetscErrorCode PCApply_Noise(PC pc,Vec xin,Vec xout)
 
 PetscErrorCode PCSetup_Noise(PC pc)
 {
-  PetscErrorCode ierr;
   PCNoise_Ctx    *ctx;
 
   PetscFunctionBeginUser;
@@ -74,7 +72,6 @@ PetscErrorCode PCSetup_Noise(PC pc)
 
 PetscErrorCode PCDestroy_Noise(PC pc)
 {
-  PetscErrorCode ierr;
   PCNoise_Ctx    *ctx;
 
   PetscFunctionBeginUser;
@@ -107,7 +104,6 @@ PetscScalar diagFunc3(PetscInt i, PetscInt n)
 
 static PetscErrorCode AssembleDiagonalMatrix(Mat A, PetscScalar (*diagfunc)(PetscInt,PetscInt))
 {
-  PetscErrorCode ierr;
   PetscInt       i,rstart,rend,n;
   PetscScalar    val;
 

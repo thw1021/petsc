@@ -61,7 +61,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJPERM_SeqAIJ(Mat A,MatType type,MatR
 {
   /* This routine is only called to convert a MATAIJPERM to its base PETSc type, */
   /* so we will ignore 'MatType type'. */
-  PetscErrorCode ierr;
   Mat            B       = *newmat;
   Mat_SeqAIJPERM *aijperm=(Mat_SeqAIJPERM*)A->spptr;
 
@@ -95,7 +94,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJPERM_SeqAIJ(Mat A,MatType type,MatR
 
 PetscErrorCode MatDestroy_SeqAIJPERM(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJPERM *aijperm = (Mat_SeqAIJPERM*) A->spptr;
 
   PetscFunctionBegin;
@@ -118,7 +116,6 @@ PetscErrorCode MatDestroy_SeqAIJPERM(Mat A)
 
 PetscErrorCode MatDuplicate_SeqAIJPERM(Mat A, MatDuplicateOption op, Mat *M)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJPERM *aijperm      = (Mat_SeqAIJPERM*) A->spptr;
   Mat_SeqAIJPERM *aijperm_dest;
   PetscBool      perm;
@@ -155,7 +152,6 @@ PetscErrorCode MatDuplicate_SeqAIJPERM(Mat A, MatDuplicateOption op, Mat *M)
 
 PetscErrorCode MatSeqAIJPERM_create_perm(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)(A)->data;
   Mat_SeqAIJPERM *aijperm = (Mat_SeqAIJPERM*) A->spptr;
   PetscInt       m;       /* Number of rows in the matrix. */
@@ -260,7 +256,6 @@ PetscErrorCode MatSeqAIJPERM_create_perm(Mat A)
 
 PetscErrorCode MatAssemblyEnd_SeqAIJPERM(Mat A, MatAssemblyType mode)
 {
-  PetscErrorCode ierr;
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
 
   PetscFunctionBegin;
@@ -288,7 +283,6 @@ PetscErrorCode MatMult_SeqAIJPERM(Mat A,Vec xx,Vec yy)
   const PetscScalar *x;
   PetscScalar       *y;
   const MatScalar   *aa;
-  PetscErrorCode    ierr;
   const PetscInt    *aj,*ai;
 #if !(defined(PETSC_USE_FORTRAN_KERNEL_MULTAIJPERM) && defined(notworking))
   PetscInt          i,j;
@@ -483,7 +477,6 @@ PetscErrorCode MatMultAdd_SeqAIJPERM(Mat A,Vec xx,Vec ww,Vec yy)
   const PetscScalar *x;
   PetscScalar       *y,*w;
   const MatScalar   *aa;
-  PetscErrorCode    ierr;
   const PetscInt    *aj,*ai;
 #if !defined(PETSC_USE_FORTRAN_KERNEL_MULTADDAIJPERM)
   PetscInt i,j;
@@ -632,7 +625,6 @@ PetscErrorCode MatMultAdd_SeqAIJPERM(Mat A,Vec xx,Vec ww,Vec yy)
  * into a SeqAIJPERM one. */
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJPERM(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat            B = *newmat;
   Mat_SeqAIJPERM *aijperm;
   PetscBool      sametype;
@@ -700,7 +692,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJPERM(Mat A,MatType type,MatR
 @*/
 PetscErrorCode  MatCreateSeqAIJPERM(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt nz,const PetscInt nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -712,7 +703,6 @@ PetscErrorCode  MatCreateSeqAIJPERM(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt
 
 PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJPERM(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(A,MATSEQAIJ));

@@ -183,7 +183,6 @@ int main(int Argc,char **Args)
 PetscErrorCode residual(Mat mat,Vec bb,Vec xx,Vec rr)
 {
   PetscInt          i,n1;
-  PetscErrorCode    ierr;
   PetscScalar       *x,*r;
   const PetscScalar *b;
 
@@ -205,7 +204,6 @@ PetscErrorCode residual(Mat mat,Vec bb,Vec xx,Vec rr)
 PetscErrorCode amult(Mat mat,Vec xx,Vec yy)
 {
   PetscInt          i,n1;
-  PetscErrorCode    ierr;
   PetscScalar       *y;
   const PetscScalar *x;
 
@@ -232,7 +230,6 @@ PetscErrorCode apply_pc(PC pc,Vec bb,Vec xx)
 PetscErrorCode gauss_seidel(PC pc,Vec bb,Vec xx,Vec w,PetscReal rtol,PetscReal abstol,PetscReal dtol,PetscInt m,PetscBool guesszero,PetscInt *its,PCRichardsonConvergedReason *reason)
 {
   PetscInt          i,n1;
-  PetscErrorCode    ierr;
   PetscScalar       *x;
   const PetscScalar *b;
 
@@ -257,7 +254,6 @@ PetscErrorCode gauss_seidel(PC pc,Vec bb,Vec xx,Vec w,PetscReal rtol,PetscReal a
 PetscErrorCode jacobi_smoother(PC pc,Vec bb,Vec xx,Vec w,PetscReal rtol,PetscReal abstol,PetscReal dtol,PetscInt m,PetscBool guesszero,PetscInt *its,PCRichardsonConvergedReason *reason)
 {
   PetscInt          i,n,n1;
-  PetscErrorCode    ierr;
   PetscScalar       *r,*x;
   const PetscScalar *b;
 
@@ -287,7 +283,6 @@ PetscErrorCode jacobi_smoother(PC pc,Vec bb,Vec xx,Vec w,PetscReal rtol,PetscRea
 PetscErrorCode interpolate(Mat mat,Vec xx,Vec yy,Vec zz)
 {
   PetscInt          i,n,N,i2;
-  PetscErrorCode    ierr;
   PetscScalar       *y;
   const PetscScalar *x;
 
@@ -310,7 +305,6 @@ PetscErrorCode interpolate(Mat mat,Vec xx,Vec yy,Vec zz)
 PetscErrorCode restrct(Mat mat,Vec rr,Vec bb)
 {
   PetscInt          i,n,N,i2;
-  PetscErrorCode    ierr;
   PetscScalar       *b;
   const PetscScalar *r;
 
@@ -333,7 +327,6 @@ PetscErrorCode Create1dLaplacian(PetscInt n,Mat *mat)
 {
   PetscScalar    mone = -1.0,two = 2.0;
   PetscInt       i,idx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreateSeqAIJ(PETSC_COMM_SELF,n,n,3,NULL,mat));
@@ -353,7 +346,6 @@ PetscErrorCode Create1dLaplacian(PetscInt n,Mat *mat)
 /* --------------------------------------------------------------------- */
 PetscErrorCode CalculateRhs(Vec u)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n;
   PetscReal      h,x = 0.0;
   PetscScalar    uu;
@@ -370,7 +362,6 @@ PetscErrorCode CalculateRhs(Vec u)
 /* --------------------------------------------------------------------- */
 PetscErrorCode CalculateSolution(PetscInt n,Vec *solution)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscReal      h,x = 0.0;
   PetscScalar    uu;
@@ -387,7 +378,6 @@ PetscErrorCode CalculateSolution(PetscInt n,Vec *solution)
 /* --------------------------------------------------------------------- */
 PetscErrorCode CalculateError(Vec solution,Vec u,Vec r,PetscReal *e)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecNorm(r,NORM_2,e+2));

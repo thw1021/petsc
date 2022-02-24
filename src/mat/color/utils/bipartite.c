@@ -3,7 +3,6 @@
 
 PETSC_EXTERN PetscErrorCode MatColoringCreateBipartiteGraph(MatColoring mc,PetscSF *etoc,PetscSF *etor)
 {
-  PetscErrorCode    ierr;
   PetscInt          nentries,ncolentries,idx;
   PetscInt          i,j,rs,re,cs,ce,cn;
   PetscInt          *rowleaf,*colleaf,*rowdata;

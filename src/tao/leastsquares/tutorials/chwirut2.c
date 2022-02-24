@@ -115,7 +115,6 @@ PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
   AppCtx         *user = (AppCtx *)ptr;
   PetscInt       i;
   PetscReal      *x,*f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(X,&x));
@@ -167,7 +166,6 @@ PetscErrorCode EvaluateFunction(Tao tao, Vec X, Vec F, void *ptr)
 PetscErrorCode FormStartingPoint(Vec X)
 {
   PetscReal      *x;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(X,&x));
@@ -408,7 +406,6 @@ PetscErrorCode TaskWorker(AppCtx *user)
   PetscMPIInt    tag=IDLE_TAG;
   PetscInt       index;
   MPI_Status     status;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Send check-in message to rank-0 */
@@ -445,7 +442,6 @@ PetscErrorCode StopWorkers(AppCtx *user)
   PetscInt       checkedin;
   MPI_Status     status;
   PetscReal      f,x[NPARAMETERS];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   checkedin=0;

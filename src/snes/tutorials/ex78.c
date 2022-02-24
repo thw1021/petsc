@@ -118,7 +118,6 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
   DM             da    = (DM) ctx;
   PetscScalar    *xx,*ff;
   PetscReal      h;
-  PetscErrorCode ierr;
   PetscInt       i,M,xs,xm;
   Vec            xlocal;
 
@@ -183,7 +182,6 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
 PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *ctx)
 {
   PetscScalar    *xx,A[3];
-  PetscErrorCode ierr;
   PetscInt       i,M,xs,xm;
   DM             da = (DM) ctx;
   MatStencil     row,cols[3];

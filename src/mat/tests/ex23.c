@@ -651,7 +651,6 @@ PetscErrorCode CheckMat(Mat A, Mat B, PetscBool usemult, const char* func)
 {
   Mat            Bcheck;
   PetscReal      error;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!usemult && B) {
@@ -716,7 +715,6 @@ PetscErrorCode TestMatZeroRows(Mat A, Mat Afull, PetscBool squaretest, IS is, Pe
   PetscInt               rst,ren,i,n,N,d;
   PetscMPIInt            rank;
   PetscBool              miss,haszerorows;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   if (diag == 0.) {

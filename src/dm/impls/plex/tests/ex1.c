@@ -56,7 +56,6 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscBool      testp4est_par = user->testp4est[1];
   PetscMPIInt    rank, size;
   PetscBool      periodic;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(user->createMeshEvent,0,0,0,0));

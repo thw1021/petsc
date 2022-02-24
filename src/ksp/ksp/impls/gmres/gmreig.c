@@ -5,7 +5,6 @@
 PetscErrorCode KSPComputeExtremeSingularValues_GMRES(KSP ksp,PetscReal *emax,PetscReal *emin)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       n = gmres->it + 1,i,N = gmres->max_k + 2;
   PetscBLASInt   bn, bN,lwork, idummy,lierr;
   PetscScalar    *R        = gmres->Rsvd,*work = R + N*N,sdummy = 0;
@@ -45,7 +44,6 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp,PetscInt nmax,PetscReal *r,Pe
 {
 #if !defined(PETSC_USE_COMPLEX)
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       n = gmres->it + 1,N = gmres->max_k + 1,i,*perm;
   PetscBLASInt   bn, bN, lwork, idummy, lierr = -1;
   PetscScalar    *R        = gmres->Rsvd,*work = R + N*N;
@@ -79,7 +77,6 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp,PetscInt nmax,PetscReal *r,Pe
   CHKERRQ(PetscFree(perm));
 #else
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       n  = gmres->it + 1,N = gmres->max_k + 1,i,*perm;
   PetscScalar    *R = gmres->Rsvd,*work = R + N*N,*eigs = work + 5*N,sdummy;
   PetscBLASInt   bn,bN,lwork,idummy,lierr = -1;
@@ -89,7 +86,7 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp,PetscInt nmax,PetscReal *r,Pe
   CHKERRQ(PetscBLASIntCast(N,&bN));
   CHKERRQ(PetscBLASIntCast(5*N,&lwork));
   CHKERRQ(PetscBLASIntCast(N,&idummy));
-  PetscCheckFalse(nmax < n,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_SIZ,"Not enough room in work space r and c for eigenvalues");
+  PetscCheck(nmax >= n,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_SIZ,"Not enough room in work space r and c for eigenvalues");
   *neig = n;
 
   if (!n) PetscFunctionReturn(0);
@@ -119,7 +116,6 @@ PetscErrorCode KSPComputeEigenvalues_GMRES(KSP ksp,PetscInt nmax,PetscReal *r,Pe
 PetscErrorCode KSPComputeRitz_GMRES(KSP ksp,PetscBool ritz,PetscBool small,PetscInt *nrit,Vec S[],PetscReal *tetar,PetscReal *tetai)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       n = gmres->it + 1,N = gmres->max_k + 1,NbrRitz,nb=0;
   PetscInt       i,j,*perm;
   PetscReal      *H,*Q,*Ht;              /* H Hessenberg Matrix and Q matrix of eigenvectors of H*/

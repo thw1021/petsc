@@ -11,7 +11,6 @@ T*/
 
 static PetscErrorCode GetISs(Vec vecs[],IS is[])
 {
-  PetscErrorCode ierr;
   PetscInt       rstart[2],rend[2];
 
   PetscFunctionBegin;
@@ -32,7 +31,6 @@ PetscErrorCode test_view(void)
   PetscReal      val;
   PetscInt       list[]={0,1,2};
   PetscScalar    vals[]={0.720032,0.061794,0.0100223};
-  PetscErrorCode ierr;
   PetscBool      explcit = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -160,7 +158,6 @@ PetscErrorCode gen_test_vector(MPI_Comm comm, PetscInt length, PetscInt start_va
   Vec            v;
   PetscInt       i;
   PetscScalar    vx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(comm, &size));
@@ -196,7 +193,6 @@ PetscErrorCode test_axpy_dot_max(void)
   PetscReal      real,real2;
   PetscScalar    scalar;
   PetscInt       index;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscPrintf(PETSC_COMM_WORLD, "\n\n============== %s ==============\n", PETSC_FUNCTION_NAME));

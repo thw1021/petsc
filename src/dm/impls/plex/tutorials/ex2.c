@@ -18,7 +18,6 @@ static PetscErrorCode zero(PetscInt dim, const PetscReal x[], PetscInt Nc, Petsc
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));

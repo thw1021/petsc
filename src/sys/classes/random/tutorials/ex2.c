@@ -97,7 +97,6 @@ PetscErrorCode stdNormalArray(PetscReal *eps, PetscInt numdim, PetscRandom ran)
   PetscInt       i;
   PetscScalar    u1,u2;
   PetscReal      t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<numdim; i+=2) {
@@ -144,7 +143,6 @@ PetscErrorCode readData(MPI_Comm comm,himaInfo *hinfo)
   PetscInt       i;
   FILE           *fd;
   char           temp[50];
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   PetscReal      *v = hinfo->vol, *t = hinfo->St0;
   PetscInt       num=hinfo->n;

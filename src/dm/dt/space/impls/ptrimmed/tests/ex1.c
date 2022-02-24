@@ -13,7 +13,6 @@ static PetscErrorCode test(PetscInt dim, PetscInt formDegree, PetscInt degree, P
   PetscQuadrature  quad;
   PetscInt         npoints;
   const PetscReal *points;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceCreate(comm, &sp));

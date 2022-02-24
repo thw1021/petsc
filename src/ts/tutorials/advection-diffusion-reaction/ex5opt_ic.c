@@ -31,7 +31,6 @@ PetscErrorCode InitializeLambda(DM da,Vec lambda,Vec U,AppCtx *appctx)
   char           filename[PETSC_MAX_PATH_LEN]="";
   PetscViewer    viewer;
   Vec            Uob;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(U,&Uob));
@@ -51,7 +50,6 @@ PetscErrorCode InitializeLambda(DM da,Vec lambda,Vec U,AppCtx *appctx)
  */
 PetscErrorCode OutputBIN(DM da, const char *filename, PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(PetscObjectComm((PetscObject)da),viewer));
@@ -69,7 +67,6 @@ PetscErrorCode GenerateOBs(TS ts,Vec U,AppCtx *appctx)
   char           filename[PETSC_MAX_PATH_LEN] = "";
   PetscViewer    viewer;
   DM             da;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts,&da));
@@ -83,7 +80,6 @@ PetscErrorCode GenerateOBs(TS ts,Vec U,AppCtx *appctx)
 
 PetscErrorCode InitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;
@@ -116,7 +112,6 @@ PetscErrorCode InitialConditions(DM da,Vec U)
 
 PetscErrorCode PerturbedInitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;
@@ -149,7 +144,6 @@ PetscErrorCode PerturbedInitialConditions(DM da,Vec U)
 
 PetscErrorCode PerturbedInitialConditions2(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;
@@ -182,7 +176,6 @@ PetscErrorCode PerturbedInitialConditions2(DM da,Vec U)
 
 PetscErrorCode PerturbedInitialConditions3(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;
@@ -347,7 +340,6 @@ PetscErrorCode FormFunctionAndGradient(Tao tao,Vec P,PetscReal *f,Vec G,void *ct
   DM             da;
   char           filename[PETSC_MAX_PATH_LEN]="";
   PetscViewer    viewer;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSSetTime(appctx->ts,0.0));

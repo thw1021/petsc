@@ -52,7 +52,6 @@ M*/
 @*/
 PetscErrorCode TSBasicSymplecticRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSBasicSymplecticRegisterAllCalled) PetscFunctionReturn(0);
@@ -88,7 +87,6 @@ PetscErrorCode TSBasicSymplecticRegisterAll(void)
 @*/
 PetscErrorCode TSBasicSymplecticRegisterDestroy(void)
 {
-  PetscErrorCode            ierr;
   BasicSymplecticSchemeLink link;
 
   PetscFunctionBegin;
@@ -113,7 +111,6 @@ PetscErrorCode TSBasicSymplecticRegisterDestroy(void)
 @*/
 PetscErrorCode TSBasicSymplecticInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSBasicSymplecticPackageInitialized) PetscFunctionReturn(0);
@@ -133,7 +130,6 @@ PetscErrorCode TSBasicSymplecticInitializePackage(void)
 @*/
 PetscErrorCode TSBasicSymplecticFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSBasicSymplecticPackageInitialized = PETSC_FALSE;
@@ -164,7 +160,6 @@ PetscErrorCode TSBasicSymplecticRegister(TSRosWType name,PetscInt order,PetscInt
 {
   BasicSymplecticSchemeLink link;
   BasicSymplecticScheme     scheme;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
@@ -211,7 +206,6 @@ static PetscErrorCode TSStep_BasicSymplectic(TS ts)
   PetscBool             stageok;
   PetscReal             next_time_step = ts->time_step;
   PetscInt              iter;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetSubVector(solution,is_q,&q));
@@ -276,7 +270,6 @@ static PetscErrorCode TSSetUp_BasicSymplectic(TS ts)
 {
   TS_BasicSymplectic *bsymp = (TS_BasicSymplectic*)ts->data;
   DM                 dm;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRHSSplitGetIS(ts,"position",&bsymp->is_q));
@@ -301,7 +294,6 @@ static PetscErrorCode TSSetUp_BasicSymplectic(TS ts)
 static PetscErrorCode TSReset_BasicSymplectic(TS ts)
 {
   TS_BasicSymplectic *bsymp = (TS_BasicSymplectic*)ts->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&bsymp->update));
@@ -310,7 +302,6 @@ static PetscErrorCode TSReset_BasicSymplectic(TS ts)
 
 static PetscErrorCode TSDestroy_BasicSymplectic(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_BasicSymplectic(ts));
@@ -321,7 +312,6 @@ static PetscErrorCode TSDestroy_BasicSymplectic(TS ts)
 static PetscErrorCode TSSetFromOptions_BasicSymplectic(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_BasicSymplectic *bsymp = (TS_BasicSymplectic*)ts->data;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Basic symplectic integrator options"));
@@ -353,7 +343,6 @@ static PetscErrorCode TSInterpolate_BasicSymplectic(TS ts,PetscReal t,Vec X)
   TS_BasicSymplectic *bsymp = (TS_BasicSymplectic*)ts->data;
   Vec                update = bsymp->update;
   PetscReal          alpha = (ts->ptime - t)/ts->time_step;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecWAXPY(X,-ts->time_step,update,ts->vec_sol));
@@ -388,7 +377,6 @@ static PetscErrorCode TSComputeLinearStability_BasicSymplectic(TS ts,PetscReal x
 @*/
 PetscErrorCode TSBasicSymplecticSetType(TS ts,TSBasicSymplecticType bsymptype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -409,7 +397,6 @@ PetscErrorCode TSBasicSymplecticSetType(TS ts,TSBasicSymplecticType bsymptype)
 @*/
 PetscErrorCode TSBasicSymplecticGetType(TS ts,TSBasicSymplecticType *bsymptype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -422,7 +409,6 @@ static PetscErrorCode TSBasicSymplecticSetType_BasicSymplectic(TS ts,TSBasicSymp
   TS_BasicSymplectic        *bsymp = (TS_BasicSymplectic*)ts->data;
   BasicSymplecticSchemeLink link;
   PetscBool                 match;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   if (bsymp->scheme) {
@@ -485,7 +471,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_BasicSymplectic(TS ts)
 {
   TS_BasicSymplectic *bsymp;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSBasicSymplecticInitializePackage());

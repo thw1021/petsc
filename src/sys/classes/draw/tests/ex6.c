@@ -33,7 +33,7 @@ static PetscErrorCode DrawFunction(PetscDraw draw,void *ctx)
   CHKERRMPI(MPI_Comm_size(comm,&size));
   CHKERRMPI(MPI_Comm_rank(comm,&rank));
 
-  CHKERRQ(PetscDrawCollectiveBegin(draw));
+  ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
   for (j=rank; j<h; j+=size) {
     for (i=0; i<w; i++) {
       PetscReal x,y,f; int color;
@@ -43,7 +43,7 @@ static PetscErrorCode DrawFunction(PetscDraw draw,void *ctx)
       min = PetscMin(f,min); max = PetscMax(f,max);
     }
   }
-  CHKERRQ(PetscDrawCollectiveEnd(draw));
+  ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
 
   CHKERRQ(PetscDrawGetPopup(draw,&popup));
   CHKERRQ(PetscDrawScalePopup(popup,-8,+8));

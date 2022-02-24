@@ -53,7 +53,6 @@ PetscErrorCode PCTelescopeTestValidSubcomm(MPI_Comm comm_f,MPI_Comm comm_c,Petsc
 {
   PetscInt       valid = 1;
   MPI_Group      group_f,group_c;
-  PetscErrorCode ierr;
   PetscMPIInt    count,k,size_f = 0,size_c = 0,size_c_sum = 0;
   PetscMPIInt    *ranks_f,*ranks_c;
 
@@ -134,7 +133,6 @@ DM private_PCTelescopeGetSubDM(PC_Telescope sred)
 
 PetscErrorCode PCTelescopeSetUp_default(PC pc,PC_Telescope sred)
 {
-  PetscErrorCode ierr;
   PetscInt       m,M,bs,st,ed;
   Vec            x,xred,yred,xtmp;
   Mat            B;
@@ -197,7 +195,6 @@ PetscErrorCode PCTelescopeSetUp_default(PC pc,PC_Telescope sred)
 
 PetscErrorCode PCTelescopeMatCreate_default(PC pc,PC_Telescope sred,MatReuse reuse,Mat *A)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm,subcomm;
   Mat            Bred,B;
   PetscInt       nr,nc,bs;
@@ -236,7 +233,6 @@ PetscErrorCode PCTelescopeMatCreate_default(PC pc,PC_Telescope sred,MatReuse reu
 
 static PetscErrorCode PCTelescopeSubNullSpaceCreate_Telescope(PC pc,PC_Telescope sred,MatNullSpace nullspace,MatNullSpace *sub_nullspace)
 {
-  PetscErrorCode ierr;
   PetscBool      has_const;
   const Vec      *vecs;
   Vec            *sub_vecs = NULL;
@@ -289,7 +285,6 @@ static PetscErrorCode PCTelescopeSubNullSpaceCreate_Telescope(PC pc,PC_Telescope
 
 static PetscErrorCode PCTelescopeMatNullSpaceCreate_default(PC pc,PC_Telescope sred,Mat sub_mat)
 {
-  PetscErrorCode ierr;
   Mat            B;
 
   PetscFunctionBegin;
@@ -326,7 +321,6 @@ static PetscErrorCode PCTelescopeMatNullSpaceCreate_default(PC pc,PC_Telescope s
 static PetscErrorCode PCView_Telescope(PC pc,PetscViewer viewer)
 {
   PC_Telescope   sred = (PC_Telescope)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring;
   PetscViewer    subviewer;
 
@@ -437,7 +431,6 @@ static PetscErrorCode PCView_Telescope(PC pc,PetscViewer viewer)
 static PetscErrorCode PCSetUp_Telescope(PC pc)
 {
   PC_Telescope    sred = (PC_Telescope)pc->data;
-  PetscErrorCode  ierr;
   MPI_Comm        comm,subcomm=0;
   PCTelescopeType sr_type;
 
@@ -600,7 +593,6 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
 static PetscErrorCode PCApply_Telescope(PC pc,Vec x,Vec y)
 {
   PC_Telescope      sred = (PC_Telescope)pc->data;
-  PetscErrorCode    ierr;
   Vec               xtmp,xred,yred;
   PetscInt          i,st,ed;
   VecScatter        scatter;
@@ -656,7 +648,6 @@ static PetscErrorCode PCApply_Telescope(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplyRichardson_Telescope(PC pc,Vec x,Vec y,Vec w,PetscReal rtol,PetscReal abstol, PetscReal dtol,PetscInt its,PetscBool zeroguess,PetscInt *outits,PCRichardsonConvergedReason *reason)
 {
   PC_Telescope      sred = (PC_Telescope)pc->data;
-  PetscErrorCode    ierr;
   Vec               xtmp,yred;
   PetscInt          i,st,ed;
   VecScatter        scatter;
@@ -710,7 +701,6 @@ static PetscErrorCode PCApplyRichardson_Telescope(PC pc,Vec x,Vec y,Vec w,PetscR
 static PetscErrorCode PCReset_Telescope(PC pc)
 {
   PC_Telescope   sred = (PC_Telescope)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISDestroy(&sred->isin));
@@ -729,7 +719,6 @@ static PetscErrorCode PCReset_Telescope(PC pc)
 static PetscErrorCode PCDestroy_Telescope(PC pc)
 {
   PC_Telescope   sred = (PC_Telescope)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Telescope(pc));
@@ -743,7 +732,6 @@ static PetscErrorCode PCDestroy_Telescope(PC pc)
 static PetscErrorCode PCSetFromOptions_Telescope(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Telescope     sred = (PC_Telescope)pc->data;
-  PetscErrorCode   ierr;
   MPI_Comm         comm;
   PetscMPIInt      size;
   PetscBool        flg;
@@ -806,7 +794,6 @@ static PetscErrorCode PCTelescopeSetReductionFactor_Telescope(PC pc,PetscInt fac
 {
   PC_Telescope     red = (PC_Telescope)pc->data;
   PetscMPIInt      size;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size));
@@ -888,7 +875,6 @@ static PetscErrorCode PCTelescopeGetDM_Telescope(PC pc,DM *dm)
 @*/
 PetscErrorCode PCTelescopeGetKSP(PC pc,KSP *subksp)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetKSP_C",(PC,KSP*),(pc,subksp)));
   PetscFunctionReturn(0);
@@ -910,7 +896,6 @@ PetscErrorCode PCTelescopeGetKSP(PC pc,KSP *subksp)
 @*/
 PetscErrorCode PCTelescopeGetReductionFactor(PC pc,PetscInt *fact)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetReductionFactor_C",(PC,PetscInt*),(pc,fact)));
   PetscFunctionReturn(0);
@@ -932,7 +917,6 @@ PetscErrorCode PCTelescopeGetReductionFactor(PC pc,PetscInt *fact)
 @*/
 PetscErrorCode PCTelescopeSetReductionFactor(PC pc,PetscInt fact)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCTelescopeSetReductionFactor_C",(PC,PetscInt),(pc,fact)));
   PetscFunctionReturn(0);
@@ -954,7 +938,6 @@ PetscErrorCode PCTelescopeSetReductionFactor(PC pc,PetscInt fact)
 @*/
 PetscErrorCode PCTelescopeGetIgnoreDM(PC pc,PetscBool *v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetIgnoreDM_C",(PC,PetscBool*),(pc,v)));
   PetscFunctionReturn(0);
@@ -976,7 +959,6 @@ PetscErrorCode PCTelescopeGetIgnoreDM(PC pc,PetscBool *v)
 @*/
 PetscErrorCode PCTelescopeSetIgnoreDM(PC pc,PetscBool v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCTelescopeSetIgnoreDM_C",(PC,PetscBool),(pc,v)));
   PetscFunctionReturn(0);
@@ -998,7 +980,6 @@ PetscErrorCode PCTelescopeSetIgnoreDM(PC pc,PetscBool v)
 @*/
 PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc,PetscBool *v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetUseCoarseDM_C",(PC,PetscBool*),(pc,v)));
   PetscFunctionReturn(0);
@@ -1118,7 +1099,6 @@ PetscErrorCode PCTelescopeGetUseCoarseDM(PC pc,PetscBool *v)
 @*/
 PetscErrorCode PCTelescopeSetUseCoarseDM(PC pc,PetscBool v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCTelescopeSetUseCoarseDM_C",(PC,PetscBool),(pc,v)));
   PetscFunctionReturn(0);
@@ -1140,7 +1120,6 @@ PetscErrorCode PCTelescopeSetUseCoarseDM(PC pc,PetscBool v)
 @*/
 PetscErrorCode PCTelescopeGetIgnoreKSPComputeOperators(PC pc,PetscBool *v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetIgnoreKSPComputeOperators_C",(PC,PetscBool*),(pc,v)));
   PetscFunctionReturn(0);
@@ -1162,7 +1141,6 @@ PetscErrorCode PCTelescopeGetIgnoreKSPComputeOperators(PC pc,PetscBool *v)
 @*/
 PetscErrorCode PCTelescopeSetIgnoreKSPComputeOperators(PC pc,PetscBool v)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCTelescopeSetIgnoreKSPComputeOperators_C",(PC,PetscBool),(pc,v)));
   PetscFunctionReturn(0);
@@ -1184,7 +1162,6 @@ PetscErrorCode PCTelescopeSetIgnoreKSPComputeOperators(PC pc,PetscBool v)
 @*/
 PetscErrorCode PCTelescopeGetDM(PC pc,DM *subdm)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetDM_C",(PC,DM*),(pc,subdm)));
   PetscFunctionReturn(0);
@@ -1205,7 +1182,6 @@ PetscErrorCode PCTelescopeGetDM(PC pc,DM *subdm)
 @*/
 PetscErrorCode PCTelescopeSetSubcommType(PC pc, PetscSubcommType subcommtype)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(pc,"PCTelescopeSetSubcommType_C",(PC,PetscSubcommType),(pc,subcommtype)));
   PetscFunctionReturn(0);
@@ -1228,7 +1204,6 @@ PetscErrorCode PCTelescopeSetSubcommType(PC pc, PetscSubcommType subcommtype)
 @*/
 PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(pc,"PCTelescopeGetSubcommType_C",(PC,PetscSubcommType*),(pc,subcommtype)));
   PetscFunctionReturn(0);
@@ -1376,7 +1351,6 @@ PetscErrorCode PCTelescopeGetSubcommType(PC pc, PetscSubcommType *subcommtype)
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_Telescope(PC pc)
 {
-  PetscErrorCode       ierr;
   struct _PC_Telescope *sred;
 
   PetscFunctionBegin;

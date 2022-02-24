@@ -10,7 +10,6 @@ DMField_Shell;
 PetscErrorCode DMFieldShellGetContext(DMField field, void *ctx)
 {
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -24,7 +23,6 @@ PetscErrorCode DMFieldShellGetContext(DMField field, void *ctx)
 static PetscErrorCode DMFieldDestroy_Shell(DMField field)
 {
   DMField_Shell *shell = (DMField_Shell *) field->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (shell->destroy) CHKERRQ((*(shell->destroy)) (field));
@@ -40,7 +38,6 @@ PetscErrorCode DMFieldShellEvaluateFEDefault(DMField field, IS pointIS, PetscQua
   Vec             pushforward;
   PetscInt        dimC, dim, numPoints, Nq, p, Nc;
   PetscScalar    *pfArray;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   Nc   = field->numComponents;
@@ -250,7 +247,6 @@ static PetscErrorCode DMFieldInitialize_Shell(DMField field)
 PETSC_INTERN PetscErrorCode DMFieldCreate_Shell(DMField field)
 {
   DMField_Shell *shell;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(field,&shell));
@@ -263,7 +259,6 @@ PetscErrorCode DMFieldCreateShell(DM dm, PetscInt numComponents, DMFieldContinui
 {
   DMField        b;
   DMField_Shell  *shell;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);

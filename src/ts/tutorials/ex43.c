@@ -40,7 +40,6 @@ PetscErrorCode Solution(TS ts,PetscReal t,Vec X,void *ctx)
   UserParams     *user = (UserParams*)ctx;
   PetscReal      u,v;
   PetscScalar    *x;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   Exact(t,user->Omega,user->Xi,user->u0,user->v0,&u,&v);
@@ -56,7 +55,6 @@ PetscErrorCode Residual1(TS ts,PetscReal t,Vec U,Vec A,Vec R,void *ctx)
   PetscReal         Omega = user->Omega;
   const PetscScalar *u,*a;
   PetscScalar       *r;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -78,7 +76,6 @@ PetscErrorCode Tangent1(TS ts,PetscReal t,Vec U,Vec A,PetscReal shiftA,Mat J,Mat
   UserParams     *user = (UserParams*)ctx;
   PetscReal      Omega = user->Omega;
   PetscReal      T = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 
@@ -100,7 +97,6 @@ PetscErrorCode Residual2(TS ts,PetscReal t,Vec U,Vec V,Vec A,Vec R,void *ctx)
   PetscReal          Omega = user->Omega, Xi = user->Xi;
   const PetscScalar *u,*v,*a;
   PetscScalar       *r;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -124,7 +120,6 @@ PetscErrorCode Tangent2(TS ts,PetscReal t,Vec U,Vec V,Vec A,PetscReal shiftV,Pet
   UserParams     *user = (UserParams*)ctx;
   PetscReal      Omega = user->Omega, Xi = user->Xi;
   PetscReal      T = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

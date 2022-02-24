@@ -106,7 +106,6 @@ PetscErrorCode PetscDualSpaceTensorPointLexicographic_Internal(PetscInt len, Pet
 @*/
 PetscErrorCode PetscDualSpaceRegister(const char sname[], PetscErrorCode (*function)(PetscDualSpace))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&PetscDualSpaceList, sname, function));
@@ -133,7 +132,6 @@ PetscErrorCode PetscDualSpaceSetType(PetscDualSpace sp, PetscDualSpaceType name)
 {
   PetscErrorCode (*r)(PetscDualSpace);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -170,7 +168,6 @@ PetscErrorCode PetscDualSpaceSetType(PetscDualSpace sp, PetscDualSpaceType name)
 @*/
 PetscErrorCode PetscDualSpaceGetType(PetscDualSpace sp, PetscDualSpaceType *name)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -186,7 +183,6 @@ static PetscErrorCode PetscDualSpaceView_ASCII(PetscDualSpace sp, PetscViewer v)
 {
   PetscViewerFormat format;
   PetscInt          pdim, f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceGetDimension(sp, &pdim));
@@ -228,7 +224,6 @@ static PetscErrorCode PetscDualSpaceView_ASCII(PetscDualSpace sp, PetscViewer v)
 @*/
 PetscErrorCode  PetscDualSpaceViewFromOptions(PetscDualSpace A,PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PETSCDUALSPACE_CLASSID,1);
@@ -252,7 +247,6 @@ PetscErrorCode  PetscDualSpaceViewFromOptions(PetscDualSpace A,PetscObject obj,c
 PetscErrorCode PetscDualSpaceView(PetscDualSpace sp, PetscViewer v)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -341,7 +335,6 @@ PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
 @*/
 PetscErrorCode PetscDualSpaceSetUp(PetscDualSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -357,7 +350,6 @@ PetscErrorCode PetscDualSpaceSetUp(PetscDualSpace sp)
 static PetscErrorCode PetscDualSpaceClearDMData_Internal(PetscDualSpace sp, DM dm)
 {
   PetscInt       pStart = -1, pEnd = -1, depth = -1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dm) PetscFunctionReturn(0);
@@ -411,7 +403,6 @@ PetscErrorCode PetscDualSpaceDestroy(PetscDualSpace *sp)
 {
   PetscInt       dim, f;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*sp) PetscFunctionReturn(0);
@@ -453,7 +444,6 @@ PetscErrorCode PetscDualSpaceDestroy(PetscDualSpace *sp)
 PetscErrorCode PetscDualSpaceCreate(MPI_Comm comm, PetscDualSpace *sp)
 {
   PetscDualSpace s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(sp, 2);
@@ -495,7 +485,6 @@ PetscErrorCode PetscDualSpaceDuplicate(PetscDualSpace sp, PetscDualSpace *spNew)
   DM             dm;
   PetscDualSpaceType type;
   const char     *name;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -555,7 +544,6 @@ PetscErrorCode PetscDualSpaceGetDM(PetscDualSpace sp, DM *dm)
 @*/
 PetscErrorCode PetscDualSpaceSetDM(PetscDualSpace sp, DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -679,7 +667,6 @@ PetscErrorCode PetscDualSpaceSetNumComponents(PetscDualSpace sp, PetscInt Nc)
 PetscErrorCode PetscDualSpaceGetFunctional(PetscDualSpace sp, PetscInt i, PetscQuadrature *functional)
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -707,7 +694,6 @@ PetscErrorCode PetscDualSpaceGetFunctional(PetscDualSpace sp, PetscInt i, PetscQ
 @*/
 PetscErrorCode PetscDualSpaceGetDimension(PetscDualSpace sp, PetscInt *dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -741,7 +727,6 @@ PetscErrorCode PetscDualSpaceGetDimension(PetscDualSpace sp, PetscInt *dim)
 @*/
 PetscErrorCode PetscDualSpaceGetInteriorDimension(PetscDualSpace sp, PetscInt *intdim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -803,7 +788,6 @@ PetscErrorCode PetscDualSpaceGetUniform(PetscDualSpace sp, PetscBool *uniform)
 @*/
 PetscErrorCode PetscDualSpaceGetNumDof(PetscDualSpace sp, const PetscInt **numDof)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -839,7 +823,6 @@ PetscErrorCode PetscDualSpaceSectionCreate_Internal(PetscDualSpace sp, PetscSect
   PetscInt       pStart, pEnd, cStart, cEnd, c, depth, count, i;
   PetscInt       *seen, *perm;
   PetscSection   section;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = sp->dm;
@@ -889,7 +872,6 @@ PetscErrorCode PetscDualSpaceSectionSetUp_Internal(PetscDualSpace sp, PetscSecti
   DM             dm;
   DMLabel        boundary;
   PetscInt       pStart, pEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = sp->dm;
@@ -932,7 +914,6 @@ PetscErrorCode PetscDualSpaceSectionSetUp_Internal(PetscDualSpace sp, PetscSecti
 PetscErrorCode PetscDualSpaceGetSection(PetscDualSpace sp, PetscSection *section)
 {
   PetscInt       pStart, pEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!sp->pointSection) {
@@ -964,7 +945,6 @@ PetscErrorCode PetscDualSpacePushForwardSubspaces_Internal(PetscDualSpace sp, Pe
   PetscSection section;
   PetscInt     dim, s, k;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceGetDM(sp, &dm));
@@ -1027,7 +1007,6 @@ $      PetscInt numComponents, PetscScalar values[], void *ctx)
 @*/
 PetscErrorCode PetscDualSpaceApply(PetscDualSpace sp, PetscInt f, PetscReal time, PetscFEGeom *cgeom, PetscInt numComp, PetscErrorCode (*func)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *), void *ctx, PetscScalar *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1053,7 +1032,6 @@ PetscErrorCode PetscDualSpaceApply(PetscDualSpace sp, PetscInt f, PetscReal time
 @*/
 PetscErrorCode PetscDualSpaceApplyAll(PetscDualSpace sp, const PetscScalar *pointEval, PetscScalar *spValue)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1077,7 +1055,6 @@ PetscErrorCode PetscDualSpaceApplyAll(PetscDualSpace sp, const PetscScalar *poin
 @*/
 PetscErrorCode PetscDualSpaceApplyInterior(PetscDualSpace sp, const PetscScalar *pointEval, PetscScalar *spValue)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1124,7 +1101,6 @@ PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscRe
   PetscScalar     *val;
   PetscInt         dim, dE, qNc, c, Nq, q;
   PetscBool        isAffine;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1171,7 +1147,6 @@ PetscErrorCode PetscDualSpaceApplyAllDefault(PetscDualSpace sp, const PetscScala
 {
   Vec              pointValues, dofValues;
   Mat              allMat;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1212,7 +1187,6 @@ PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const Petsc
 {
   Vec              pointValues, dofValues;
   Mat              intMat;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1251,7 +1225,6 @@ PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const Petsc
 @*/
 PetscErrorCode PetscDualSpaceGetAllData(PetscDualSpace sp, PetscQuadrature *allNodes, Mat *allMat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1296,7 +1269,6 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
   PetscInt        maxNumPoints;
   PetscQuadrature q;
   Mat             A;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceGetNumComponents(sp, &Nc));
@@ -1366,7 +1338,6 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
 @*/
 PetscErrorCode PetscDualSpaceGetInteriorData(PetscDualSpace sp, PetscQuadrature *intNodes, Mat *intMat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1416,7 +1387,6 @@ PetscErrorCode PetscDualSpaceCreateInteriorDataDefault(PetscDualSpace sp, PetscQ
   PetscInt        *nnz;
   PetscQuadrature q;
   Mat             imat;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCDUALSPACE_CLASSID,1);
@@ -1520,7 +1490,6 @@ PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal t
   const PetscReal *points, *weights;
   PetscScalar     *val;
   PetscInt         dimEmbed, qNc, c, Nq, q;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1570,7 +1539,6 @@ PetscErrorCode PetscDualSpaceGetHeightSubspace(PetscDualSpace sp, PetscInt heigh
 {
   PetscInt       depth = -1, cStart, cEnd;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1640,7 +1608,6 @@ PetscErrorCode PetscDualSpaceGetPointSubspace(PetscDualSpace sp, PetscInt point,
 {
   PetscInt       pStart = 0, pEnd = 0, cStart, cEnd;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -1699,7 +1666,6 @@ $ flips[p][ornt][dof # on point] = reversal or not
 @*/
 PetscErrorCode PetscDualSpaceGetSymmetries(PetscDualSpace sp, const PetscInt ****perms, const PetscScalar ****flips)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp,PETSCDUALSPACE_CLASSID,1);
@@ -1826,7 +1792,6 @@ PetscErrorCode PetscDualSpaceTransform(PetscDualSpace dsp, PetscDualSpaceTransfo
 {
   PetscReal Jstar[9] = {0};
   PetscInt dim, v, c, Nk;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
@@ -2059,7 +2024,6 @@ PetscErrorCode PetscDualSpacePullback(PetscDualSpace dsp, PetscFEGeom *fegeom, P
 {
   PetscDualSpaceTransformType trans;
   PetscInt                    k;
-  PetscErrorCode              ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
@@ -2108,7 +2072,6 @@ PetscErrorCode PetscDualSpacePushforward(PetscDualSpace dsp, PetscFEGeom *fegeom
 {
   PetscDualSpaceTransformType trans;
   PetscInt                    k;
-  PetscErrorCode              ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
@@ -2157,7 +2120,6 @@ PetscErrorCode PetscDualSpacePushforwardGradient(PetscDualSpace dsp, PetscFEGeom
 {
   PetscDualSpaceTransformType trans;
   PetscInt                    k;
-  PetscErrorCode              ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
@@ -2206,7 +2168,6 @@ PetscErrorCode PetscDualSpacePushforwardHessian(PetscDualSpace dsp, PetscFEGeom 
 {
   PetscDualSpaceTransformType trans;
   PetscInt                    k;
-  PetscErrorCode              ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);

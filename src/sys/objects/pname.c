@@ -21,7 +21,6 @@
 @*/
 PetscErrorCode  PetscObjectSetName(PetscObject obj,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -55,7 +54,6 @@ PetscErrorCode  PetscObjectSetName(PetscObject obj,const char name[])
 @*/
 PetscErrorCode PetscObjectPrintClassNamePrefixType(PetscObject obj,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   MPI_Comm          comm;
   PetscMPIInt       size;
   PetscViewerFormat format;
@@ -114,7 +112,6 @@ PetscErrorCode PetscObjectPrintClassNamePrefixType(PetscObject obj,PetscViewer v
 @*/
 PetscErrorCode  PetscObjectName(PetscObject obj)
 {
-  PetscErrorCode   ierr;
   PetscCommCounter *counter;
   PetscMPIInt      flg;
   char             name[64];
@@ -139,7 +136,6 @@ PetscErrorCode  PetscObjectName(PetscObject obj)
 
 PetscErrorCode  PetscObjectChangeTypeName(PetscObject obj,const char type_name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);

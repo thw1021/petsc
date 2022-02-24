@@ -28,7 +28,6 @@
 @*/
 PetscErrorCode  ISDifference(IS is1,IS is2,IS *isout)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n1,n2,imin,imax,nout,*iout;
   const PetscInt *i1,*i2;
   PetscBT        mask;
@@ -121,7 +120,6 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
   PetscMPIInt    size;
   const PetscInt *i1,*i2;
   PetscInt       n1,n2,n3, p1,p2, *iout;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is1,IS_CLASSID,1);
@@ -243,7 +241,6 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
 @*/
 PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n1,n2,imin,imax,nout,*iout;
   const PetscInt *i1,*i2;
   PetscBT        mask;
@@ -326,7 +323,6 @@ PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
 @*/
 PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n1,n2,nout,*iout;
   const PetscInt *i1,*i2;
   IS             is1sorted = NULL, is2sorted = NULL;
@@ -401,7 +397,6 @@ PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
 
 PetscErrorCode ISIntersect_Caching_Internal(IS is1, IS is2, IS *isect)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *isect = NULL;
@@ -445,7 +440,6 @@ PetscErrorCode ISIntersect_Caching_Internal(IS is1, IS is2, IS *isect)
 @*/
 PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS *isout)
 {
-  PetscErrorCode ierr;
   PetscInt i,n,N;
   const PetscInt *iidx;
   PetscInt *idx;
@@ -518,7 +512,6 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
 @*/
 PetscErrorCode ISListToPair(MPI_Comm comm, PetscInt listlen, IS islist[], IS *xis, IS *yis)
 {
-  PetscErrorCode ierr;
   PetscInt       ncolors, *colors,i, leni,len,*xinds, *yinds,k,j;
   const PetscInt *indsi;
 
@@ -576,7 +569,6 @@ PetscErrorCode ISListToPair(MPI_Comm comm, PetscInt listlen, IS islist[], IS *xi
  @*/
 PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
 {
-  PetscErrorCode ierr;
   IS             indis = xis, coloris = yis;
   PetscInt       *inds, *colors, llen, ilen, lstart, lend, lcount,l;
   PetscMPIInt    rank, size, llow, lhigh, low, high,color,subsize;
@@ -703,7 +695,6 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
  @*/
 PetscErrorCode ISEmbed(IS a, IS b, PetscBool drop, IS *c)
 {
-  PetscErrorCode             ierr;
   ISLocalToGlobalMapping     ltog;
   ISGlobalToLocalMappingMode gtoltype = IS_GTOLM_DROP;
   PetscInt                   alen, clen, *cindices, *cindices2;
@@ -753,7 +744,6 @@ PetscErrorCode ISEmbed(IS a, IS b, PetscBool drop, IS *c)
  @*/
 PetscErrorCode ISSortPermutation(IS f,PetscBool always,IS *h)
 {
-  PetscErrorCode  ierr;
   const PetscInt  *findices;
   PetscInt        fsize,*hindices,i;
   PetscBool       isincreasing;

@@ -9,7 +9,6 @@ PetscErrorCode DumpCSR(Mat A,PetscInt shift,PetscBool symmetric,PetscBool compre
   PetscInt       i,j,nr,bs = 1;
   const PetscInt *ia,*ja;
   PetscBool      done,isseqbaij,isseqsbaij;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectBaseTypeCompare((PetscObject)A,MATSEQBAIJ,&isseqbaij));

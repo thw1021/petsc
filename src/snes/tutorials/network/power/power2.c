@@ -15,7 +15,6 @@ static char help[] = "This example demonstrates the use of DMNetwork interface w
 
 PetscErrorCode FormFunction_Subnet(DM networkdm,Vec localX, Vec localF,PetscInt nv,PetscInt ne,const PetscInt* vtx,const PetscInt* edges,void* appctx)
 {
-  PetscErrorCode    ierr;
   UserCtx_Power     *User = (UserCtx_Power*)appctx;
   PetscInt          e,v,vfrom,vto;
   const PetscScalar *xarr;
@@ -130,7 +129,6 @@ PetscErrorCode FormFunction_Subnet(DM networkdm,Vec localX, Vec localF,PetscInt 
 
 PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX,localF;
   PetscInt       nv,ne;
@@ -166,7 +164,6 @@ PetscErrorCode FormFunction(SNES snes,Vec X, Vec F,void *appctx)
 
 PetscErrorCode FormJacobian_Subnet(DM networkdm,Vec localX, Mat J, Mat Jpre, PetscInt nv, PetscInt ne, const PetscInt *vtx, const PetscInt *edges, void *appctx)
 {
-  PetscErrorCode    ierr;
   UserCtx_Power     *User=(UserCtx_Power*)appctx;
   PetscInt          e,v,vfrom,vto;
   const PetscScalar *xarr;
@@ -326,7 +323,6 @@ PetscErrorCode FormJacobian_Subnet(DM networkdm,Vec localX, Mat J, Mat Jpre, Pet
 
 PetscErrorCode FormJacobian(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX;
   PetscInt       ne,nv;
@@ -358,7 +354,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
 
 PetscErrorCode SetInitialValues_Subnet(DM networkdm,Vec localX,PetscInt nv,PetscInt ne, const PetscInt *vtx, const PetscInt *edges,void* appctx)
 {
-  PetscErrorCode ierr;
   VERTEX_Power   bus;
   PetscInt       i;
   GEN            gen;
@@ -395,7 +390,6 @@ PetscErrorCode SetInitialValues_Subnet(DM networkdm,Vec localX,PetscInt nv,Petsc
 
 PetscErrorCode SetInitialValues(DM networkdm, Vec X,void* appctx)
 {
-  PetscErrorCode ierr;
   PetscInt       nv,ne;
   const PetscInt *vtx,*edges;
   Vec            localX;

@@ -3,7 +3,6 @@
 
 static PetscErrorCode PCApply_Mat(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(pc->pmat,x,y));
@@ -12,7 +11,6 @@ static PetscErrorCode PCApply_Mat(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCMatApply_Mat(PC pc,Mat X,Mat Y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMatMult(pc->pmat,X,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y));
@@ -21,7 +19,6 @@ static PetscErrorCode PCMatApply_Mat(PC pc,Mat X,Mat Y)
 
 static PetscErrorCode PCApplyTranspose_Mat(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultTranspose(pc->pmat,x,y));

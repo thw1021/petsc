@@ -51,7 +51,6 @@
 @*/
 PetscErrorCode  PetscRandomGetValue(PetscRandom r,PetscScalar *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(r,PETSC_RANDOM_CLASSID,1);
@@ -96,7 +95,6 @@ PetscErrorCode  PetscRandomGetValue(PetscRandom r,PetscScalar *val)
 @*/
 PetscErrorCode  PetscRandomGetValueReal(PetscRandom r,PetscReal *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(r,PETSC_RANDOM_CLASSID,1);
@@ -136,7 +134,6 @@ PetscErrorCode  PetscRandomGetValueReal(PetscRandom r,PetscReal *val)
 @*/
 PetscErrorCode  PetscRandomGetValues(PetscRandom r, PetscInt n, PetscScalar *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(r,PETSC_RANDOM_CLASSID,1);
@@ -176,7 +173,6 @@ PetscErrorCode  PetscRandomGetValues(PetscRandom r, PetscInt n, PetscScalar *val
 @*/
 PetscErrorCode  PetscRandomGetValuesReal(PetscRandom r, PetscInt n, PetscReal *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(r,PETSC_RANDOM_CLASSID,1);

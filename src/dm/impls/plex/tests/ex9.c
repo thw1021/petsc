@@ -92,7 +92,6 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, DM *newdm)
   PetscScalar    vertexCoords[8]     = {-0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.5, 0.5};
   PetscInt       markerPoints[8]     = {2, 1, 3, 1, 4, 1, 5, 1};
   PetscInt       dim = 2, depth = 1, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, &dm));
@@ -117,7 +116,6 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, DM *newdm)
   PetscScalar    vertexCoords[15]    = {0.0, 0.0, -0.5,  0.0, -0.5, 0.0,  1.0, 0.0, 0.0,  0.0, 0.5, 0.0,  0.0, 0.0, 0.5};
   PetscInt       markerPoints[10]    = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1};
   PetscInt       dim = 3, depth = 1, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, &dm));
@@ -142,7 +140,6 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, DM *newdm)
   PetscScalar    vertexCoords[12]    = {-0.5, 0.0, 0.0, 0.0, 0.0, 1.0, -0.5, 1.0, 0.5, 0.0, 0.5, 1.0};
   PetscInt       markerPoints[12]    = {2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1};
   PetscInt       dim = 2, depth = 1, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, &dm));
@@ -169,7 +166,6 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, DM *newdm)
                                           0.5,0.0,0.0, 0.5,1.0,0.0, 0.5,0.0,1.0,  0.5,1.0,1.0};
   PetscInt       markerPoints[24]     = {2,1,3,1,4,1,5,1,6,1,7,1,8,1,9,1,10,1,11,1,12,1,13,1};
   PetscInt       dim = 3, depth = 1, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, &dm));
@@ -188,7 +184,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *newdm)
 {
   PetscInt       dim         = user->dim;
   PetscBool      cellSimplex = user->cellSimplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (dim) {
@@ -241,7 +236,6 @@ static PetscErrorCode TestCone(DM dm, AppCtx *user)
   PetscEventPerfInfo eventInfo;
   MPI_Comm           comm;
   PetscMPIInt        rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -285,7 +279,6 @@ static PetscErrorCode TestTransitiveClosure(DM dm, AppCtx *user)
   PetscEventPerfInfo eventInfo;
   MPI_Comm           comm;
   PetscMPIInt        rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -335,7 +328,6 @@ static PetscErrorCode TestVecClosure(DM dm, PetscBool useIndex, PetscBool useSpe
   PetscEventPerfInfo eventInfo;
   MPI_Comm           comm;
   PetscMPIInt        rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -404,7 +396,6 @@ static PetscErrorCode TestVecClosure(DM dm, PetscBool useIndex, PetscBool useSpe
 
 static PetscErrorCode CleanupContext(AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(user->numComponents));

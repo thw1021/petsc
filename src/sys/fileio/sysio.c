@@ -209,7 +209,6 @@ PetscErrorCode PetscByteSwapFloat(float *buff,PetscInt n)
 
 PetscErrorCode PetscByteSwap(void *data,PetscDataType pdtype,PetscInt count)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if      (pdtype == PETSC_INT)    CHKERRQ(PetscByteSwapInt((PetscInt*)data,count));
@@ -266,7 +265,6 @@ PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,P
 #endif
   void              *ptmp = data;
   char              *fname = NULL;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (count) *count = 0;
@@ -378,7 +376,6 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
   const char     *pp = (char*)p;
   int            err,wsize;
   size_t         m = (size_t)n,maxblock=65536;
-  PetscErrorCode ierr;
   const void     *ptmp = p;
   char           *fname = NULL;
 #if defined(PETSC_USE_REAL___FLOAT128)
@@ -603,7 +600,6 @@ PetscErrorCode  PetscBinarySeek(int fd,off_t off,PetscBinarySeekType whence,off_
 @*/
 PetscErrorCode  PetscBinarySynchronizedRead(MPI_Comm comm,int fd,void *data,PetscInt num,PetscInt *count,PetscDataType type)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   MPI_Datatype   mtype;
   PetscInt       ibuf[2] = {0, 0};
@@ -679,7 +675,6 @@ PetscErrorCode  PetscBinarySynchronizedRead(MPI_Comm comm,int fd,void *data,Pets
 @*/
 PetscErrorCode  PetscBinarySynchronizedWrite(MPI_Comm comm,int fd,const void *p,PetscInt n,PetscDataType type)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -717,7 +712,6 @@ PetscErrorCode  PetscBinarySynchronizedWrite(MPI_Comm comm,int fd,const void *p,
 @*/
 PetscErrorCode  PetscBinarySynchronizedSeek(MPI_Comm comm,int fd,off_t off,PetscBinarySeekType whence,off_t *offset)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
@@ -787,7 +781,6 @@ PetscMPIInt PetscDataRep_write_conv_fn(void *userbuf, MPI_Datatype datatype,Pets
 PetscErrorCode MPIU_File_write_all(MPI_File fd,void *data,PetscMPIInt cnt,MPI_Datatype dtype,MPI_Status *status)
 {
   PetscDataType  pdtype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
@@ -800,7 +793,6 @@ PetscErrorCode MPIU_File_write_all(MPI_File fd,void *data,PetscMPIInt cnt,MPI_Da
 PetscErrorCode MPIU_File_read_all(MPI_File fd,void *data,PetscMPIInt cnt,MPI_Datatype dtype,MPI_Status *status)
 {
   PetscDataType  pdtype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
@@ -812,7 +804,6 @@ PetscErrorCode MPIU_File_read_all(MPI_File fd,void *data,PetscMPIInt cnt,MPI_Dat
 PetscErrorCode MPIU_File_write_at(MPI_File fd,MPI_Offset off,void *data,PetscMPIInt cnt,MPI_Datatype dtype,MPI_Status *status)
 {
   PetscDataType  pdtype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
@@ -825,7 +816,6 @@ PetscErrorCode MPIU_File_write_at(MPI_File fd,MPI_Offset off,void *data,PetscMPI
 PetscErrorCode MPIU_File_read_at(MPI_File fd,MPI_Offset off,void *data,PetscMPIInt cnt,MPI_Datatype dtype,MPI_Status *status)
 {
   PetscDataType  pdtype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
@@ -837,7 +827,6 @@ PetscErrorCode MPIU_File_read_at(MPI_File fd,MPI_Offset off,void *data,PetscMPII
 PetscErrorCode MPIU_File_write_at_all(MPI_File fd,MPI_Offset off,void *data,PetscMPIInt cnt,MPI_Datatype dtype,MPI_Status *status)
 {
   PetscDataType  pdtype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));
@@ -850,7 +839,6 @@ PetscErrorCode MPIU_File_write_at_all(MPI_File fd,MPI_Offset off,void *data,Pets
 PetscErrorCode MPIU_File_read_at_all(MPI_File fd,MPI_Offset off,void *data,PetscMPIInt cnt,MPI_Datatype dtype,MPI_Status *status)
 {
   PetscDataType  pdtype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMPIDataTypeToPetscDataType(dtype,&pdtype));

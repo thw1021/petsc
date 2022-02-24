@@ -12,7 +12,6 @@ static PetscErrorCode redistribute_vec(DM dist_dm, PetscSF sf, Vec *v)
     PetscSection   section, dist_section;
     Vec            dist_v;
     PetscMPIInt    rank, size, p;
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ(VecGetDM(*v, &dm));
@@ -63,7 +62,6 @@ static PetscErrorCode dm_view_geometry(DM dm, Vec cell_geom, Vec face_geom)
     PetscInt           f, start_face, end_face;
     PetscInt           supportSize, offset;
     PetscMPIInt        rank;
-    PetscErrorCode     ierr;
 
     PetscFunctionBegin;
     CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));

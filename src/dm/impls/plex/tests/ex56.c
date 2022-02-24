@@ -51,7 +51,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode CreateMesh(AppCtx *options, DM *newdm)
 {
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(options->comm, &dm));
@@ -66,7 +65,6 @@ static PetscErrorCode CreateMesh(AppCtx *options, DM *newdm)
 static PetscErrorCode SaveMesh(AppCtx *options, DM dm)
 {
   PetscViewer    v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscViewerHDF5Open(PetscObjectComm((PetscObject) dm), options->outfile, FILE_MODE_WRITE, &v));
@@ -87,7 +85,6 @@ static PetscErrorCode LoadMeshLowLevel(AppCtx *options, PetscViewer v, PetscBool
 {
   DM              dm;
   PetscSF         sfXC;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(options->comm, &dm));
@@ -128,7 +125,6 @@ static PetscErrorCode LoadMesh(AppCtx *options, DM *dmnew)
 {
   DM             dm;
   PetscViewer    v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscViewerHDF5Open(options->comm, options->outfile, FILE_MODE_READ, &v));
@@ -161,7 +157,6 @@ static PetscErrorCode LoadMesh(AppCtx *options, DM *dmnew)
 static PetscErrorCode CompareMeshes(AppCtx *options, DM dm0, DM dm1)
 {
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   if (options->compare) {
@@ -182,7 +177,6 @@ static PetscErrorCode MarkBoundaryVertices(DM dm, PetscInt value, DMLabel *label
   IS              points;
   const PetscInt *idx;
   PetscInt        i, n;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMLabelCreate(PetscObjectComm((PetscObject)dm), LABEL_NAME, &l));
@@ -212,7 +206,6 @@ static PetscErrorCode VertexCoordinatesToAll(DM dm, IS vertices, Vec *allCoords)
   Vec             coords, allCoords_;
   VecScatter      sc;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -247,7 +240,6 @@ static PetscErrorCode DMAddBoundaryLabel_GetCoordinateRepresentation(DM dm, Vec 
 {
   DMLabel         label;
   IS              vertices;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MarkBoundaryVertices(dm, LABEL_VALUE, &label));
@@ -268,7 +260,6 @@ static PetscErrorCode DMGetBoundaryLabel_CompareWithCoordinateRepresentation(App
   PetscBool       fail = PETSC_FALSE;
   MPI_Comm        comm;
   PetscMPIInt     rank;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));

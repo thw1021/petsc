@@ -20,7 +20,6 @@ const char       *ISInfos[] = {"SORTED", "UNIQUE", "PERMUTATION", "INTERVAL", "I
 @*/
 PetscErrorCode  ISFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&ISList));
@@ -45,7 +44,6 @@ PetscErrorCode  ISInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ISPackageInitialized) PetscFunctionReturn(0);
@@ -163,7 +161,6 @@ PetscErrorCode  VecInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -285,7 +282,6 @@ PetscErrorCode  VecInitializePackage(void)
 @*/
 PetscErrorCode  VecFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&VecList));
@@ -309,7 +305,6 @@ PetscErrorCode  VecFinalizePackage(void)
  */
 PETSC_EXTERN PetscErrorCode PetscDLLibraryRegister_petscvec(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFInitializePackage());

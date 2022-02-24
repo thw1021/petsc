@@ -55,7 +55,6 @@ static PetscErrorCode ScotchResetRandomSeed()
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));

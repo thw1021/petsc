@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode TaoALMMGetType(Tao tao, TaoALMMType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -49,7 +48,6 @@ PetscErrorCode TaoALMMGetType_Private(Tao tao, TaoALMMType *type)
 @*/
 PetscErrorCode TaoALMMSetType(Tao tao, TaoALMMType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -82,7 +80,6 @@ PetscErrorCode TaoALMMSetType_Private(Tao tao, TaoALMMType type)
 @*/
 PetscErrorCode TaoALMMGetSubsolver(Tao tao, Tao *subsolver)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -113,7 +110,6 @@ PetscErrorCode TaoALMMGetSubsolver_Private(Tao tao, Tao *subsolver)
 @*/
 PetscErrorCode TaoALMMSetSubsolver(Tao tao, Tao subsolver)
 {
-   PetscErrorCode ierr;
 
    PetscFunctionBegin;
    PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -126,7 +122,6 @@ PetscErrorCode TaoALMMSetSubsolver_Private(Tao tao, Tao subsolver)
 {
   TAO_ALMM       *auglag = (TAO_ALMM*)tao->data;
   PetscBool      compatible;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (subsolver == auglag->subsolver) PetscFunctionReturn(0);
@@ -171,7 +166,6 @@ PetscErrorCode TaoALMMSetSubsolver_Private(Tao tao, Tao subsolver)
 @*/
 PetscErrorCode TaoALMMGetMultipliers(Tao tao, Vec *Y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -215,7 +209,6 @@ PetscErrorCode TaoALMMGetMultipliers_Private(Tao tao, Vec *Y)
 @*/
 PetscErrorCode TaoALMMSetMultipliers(Tao tao, Vec Y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -230,7 +223,6 @@ PetscErrorCode TaoALMMSetMultipliers_Private(Tao tao, Vec Y)
   VecType        Ytype;
   PetscInt       Nuser, Neq, Nineq, N;
   PetscBool      same = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* no-op if user provides vector from TaoALMMGetMultipliers() */
@@ -303,7 +295,6 @@ PetscErrorCode TaoALMMSetMultipliers_Private(Tao tao, Vec Y)
 @*/
 PetscErrorCode TaoALMMGetPrimalIS(Tao tao, IS *opt_is, IS *slack_is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);
@@ -342,7 +333,6 @@ PetscErrorCode TaoALMMGetPrimalIS_Private(Tao tao, IS *opt_is, IS *slack_is)
 @*/
 PetscErrorCode TaoALMMGetDualIS(Tao tao, IS *eq_is, IS *ineq_is)
 {
-   PetscErrorCode ierr;
 
    PetscFunctionBegin;
    PetscValidHeaderSpecific(tao, TAO_CLASSID, 1);

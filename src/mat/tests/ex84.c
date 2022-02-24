@@ -6,7 +6,6 @@ static PetscErrorCode MatLoadComputeNorms(Mat data_mat, PetscViewer inp_viewer, 
 {
   Mat            corr_mat;
   PetscInt       M,N;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatLoad(data_mat, inp_viewer));
@@ -39,7 +38,6 @@ static PetscErrorCode MatLoadComputeNorms(Mat data_mat, PetscViewer inp_viewer, 
 static PetscErrorCode GetReader(MPI_Comm comm, const char option[], PetscViewer *r, PetscViewerFormat *fmt)
 {
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsGetViewer(PETSC_COMM_SELF, NULL, NULL, option, r, fmt, &flg));

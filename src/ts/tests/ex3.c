@@ -226,7 +226,6 @@ PetscScalar exact(PetscScalar z,PetscReal t)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,m=appctx->m;
   PetscReal      norm_2,norm_max,h=1.0/(m+1);
   PetscScalar    *u_exact;
@@ -268,7 +267,6 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 
 PetscErrorCode Petsc_KSPSolve(AppCtx *obj)
 {
-  PetscErrorCode ierr;
   KSP            ksp;
   PC             pc;
 
@@ -420,7 +418,6 @@ PetscErrorCode femA(AppCtx *obj,PetscInt nz,PetscScalar *z)
   PetscInt       nli[num_z][2],indx[num_z];
   PetscScalar    dd,dl,zip,zipq,zz,bb,bbb,aij;
   PetscScalar    rquad[num_z][3],dlen[num_z],qdwt[3],add_term;
-  PetscErrorCode ierr;
 
   /*  initializing everything  */
   for (i=0; i < nz; i++) {
@@ -497,7 +494,6 @@ PetscErrorCode rhs(AppCtx *obj,PetscScalar *y, PetscInt nz, PetscScalar *z, Pets
 {
   PetscInt       i,j,js,je,jj;
   PetscScalar    val,g[num_z],btri[num_z][3],add_term;
-  PetscErrorCode ierr;
 
   for (i=0; i < nz-2; i++) {
     for (j=0; j <= 2; j++) btri[i][j]=0.0;
@@ -540,7 +536,6 @@ PetscErrorCode rhs(AppCtx *obj,PetscScalar *y, PetscInt nz, PetscScalar *z, Pets
 
 PetscErrorCode RHSfunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ctx)
 {
-  PetscErrorCode    ierr;
   AppCtx            *obj = (AppCtx*)ctx;
   PetscScalar       soln[num_z];
   const PetscScalar *soln_ptr;

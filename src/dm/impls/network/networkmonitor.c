@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode DMNetworkMonitorCreate(DM network,DMNetworkMonitor *monitorptr)
 {
-  PetscErrorCode   ierr;
   DMNetworkMonitor monitor;
   MPI_Comm         comm;
   PetscMPIInt      size;
@@ -51,7 +50,6 @@ PetscErrorCode DMNetworkMonitorCreate(DM network,DMNetworkMonitor *monitorptr)
 @*/
 PetscErrorCode DMNetworkMonitorDestroy(DMNetworkMonitor *monitor)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while ((*monitor)->firstnode) {
@@ -76,7 +74,6 @@ PetscErrorCode DMNetworkMonitorDestroy(DMNetworkMonitor *monitor)
 @*/
 PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor monitor)
 {
-  PetscErrorCode       ierr;
   DMNetworkMonitorList node;
 
   PetscFunctionBegin;
@@ -124,7 +121,6 @@ PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor monitor)
 @*/
 PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,PetscInt element,PetscInt nodes,PetscInt start,PetscInt blocksize,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax,PetscBool hold)
 {
-  PetscErrorCode       ierr;
   PetscDrawLG          drawlg;
   PetscDrawAxis        axis;
   PetscMPIInt          rank, size;
@@ -192,7 +188,6 @@ PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,Pet
 
 PetscErrorCode DMNetworkMonitorView(DMNetworkMonitor monitor,Vec x)
 {
-  PetscErrorCode      ierr;
   PetscInt            varoffset,i,start;
   const PetscScalar   *xx;
   PetscScalar         *vv;

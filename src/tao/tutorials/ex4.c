@@ -37,7 +37,6 @@ typedef struct _UserCtx
 
 static PetscErrorCode CreateRHS(UserCtx ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* build the rhs d in ctx */
@@ -54,7 +53,6 @@ static PetscErrorCode CreateMatrix(UserCtx ctx)
 #if defined(PETSC_USE_LOG)
   PetscLogStage  stage;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* build the matrix F in ctx */
@@ -107,7 +105,6 @@ static PetscErrorCode CreateMatrix(UserCtx ctx)
 static PetscErrorCode SetupWorkspace(UserCtx ctx)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreateVecs(ctx->F, &ctx->workLeft[0], &ctx->workRight[0]));
@@ -169,7 +166,6 @@ static PetscErrorCode ConfigureContext(UserCtx ctx)
 static PetscErrorCode DestroyContext(UserCtx *ctx)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&((*ctx)->F)));
@@ -192,7 +188,6 @@ static PetscErrorCode DestroyContext(UserCtx *ctx)
 static PetscErrorCode ObjectiveMisfit(Tao tao, Vec x, PetscReal *J, void *_ctx)
 {
   UserCtx        ctx = (UserCtx) _ctx;
-  PetscErrorCode ierr;
   Vec            y;
 
   PetscFunctionBegin;
@@ -208,7 +203,6 @@ static PetscErrorCode ObjectiveMisfit(Tao tao, Vec x, PetscReal *J, void *_ctx)
 static PetscErrorCode GradientMisfit(Tao tao, Vec x, Vec V, void *_ctx)
 {
   UserCtx        ctx = (UserCtx) _ctx;
-  PetscErrorCode ierr;
   Vec            FTFx, FTd;
 
   PetscFunctionBegin;
@@ -225,7 +219,6 @@ static PetscErrorCode GradientMisfit(Tao tao, Vec x, Vec V, void *_ctx)
 static PetscErrorCode HessianMisfit(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
 {
   UserCtx        ctx = (UserCtx) _ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (H != ctx->W) CHKERRQ(MatCopy(ctx->W, H, DIFFERENT_NONZERO_PATTERN));
@@ -240,7 +233,6 @@ static PetscErrorCode ObjectiveMisfitADMM(Tao tao, Vec x, PetscReal *J, void *_c
   UserCtx        ctx = (UserCtx) _ctx;
   PetscReal      mu, workNorm, misfit;
   Vec            z, u, temp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   mu   = ctx->mu;
@@ -265,7 +257,6 @@ static PetscErrorCode GradientMisfitADMM(Tao tao, Vec x, Vec V, void *_ctx)
   UserCtx        ctx = (UserCtx) _ctx;
   PetscReal      mu;
   Vec            z, u, temp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   mu   = ctx->mu;
@@ -285,7 +276,6 @@ static PetscErrorCode GradientMisfitADMM(Tao tao, Vec x, Vec V, void *_ctx)
 static PetscErrorCode HessianMisfitADMM(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
 {
   UserCtx        ctx = (UserCtx) _ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(ctx->W, H, DIFFERENT_NONZERO_PATTERN));
@@ -301,7 +291,6 @@ static PetscErrorCode ObjectiveRegularization(Tao tao, Vec x, PetscReal *J, void
 {
   UserCtx        ctx = (UserCtx) _ctx;
   PetscReal      norm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *J = 0;
@@ -317,7 +306,6 @@ static PetscErrorCode ObjectiveRegularization(Tao tao, Vec x, PetscReal *J, void
 static PetscErrorCode GradientRegularization(Tao tao, Vec x, Vec V, void *_ctx)
 {
   UserCtx        ctx = (UserCtx) _ctx;
-  PetscErrorCode ierr;
   PetscReal      eps = ctx->eps;
 
   PetscFunctionBegin;
@@ -339,7 +327,6 @@ static PetscErrorCode HessianRegularization(Tao tao, Vec x, Mat H, Mat Hpre, voi
   UserCtx        ctx = (UserCtx) _ctx;
   PetscReal      eps = ctx->eps;
   Vec            copy1,copy2,copy3;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ctx->p == NORM_2) {
@@ -392,7 +379,6 @@ static PetscErrorCode ObjectiveRegularizationADMM(Tao tao, Vec z, PetscReal *J, 
   UserCtx        ctx = (UserCtx) _ctx;
   PetscReal      mu, workNorm, reg;
   Vec            x, u, temp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   mu   = ctx->mu;
@@ -417,7 +403,6 @@ static PetscErrorCode GradientRegularizationADMM(Tao tao, Vec z, Vec V, void *_c
   UserCtx        ctx = (UserCtx) _ctx;
   PetscReal      mu;
   Vec            x, u, temp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   mu   = ctx->mu;
@@ -437,7 +422,6 @@ static PetscErrorCode GradientRegularizationADMM(Tao tao, Vec z, Vec V, void *_c
 static PetscErrorCode HessianRegularizationADMM(Tao tao, Vec x, Mat H, Mat Hpre, void *_ctx)
 {
   UserCtx        ctx = (UserCtx) _ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ctx->p == NORM_2) {
@@ -461,7 +445,6 @@ static PetscErrorCode HessianRegularizationADMM(Tao tao, Vec x, Mat H, Mat Hpre,
 static PetscErrorCode ObjectiveComplete(Tao tao, Vec x, PetscReal *J, void *ctx)
 {
   PetscReal      Jm, Jr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ObjectiveMisfit(tao, x, &Jm, ctx));
@@ -475,7 +458,6 @@ static PetscErrorCode ObjectiveComplete(Tao tao, Vec x, PetscReal *J, void *ctx)
 static PetscErrorCode GradientComplete(Tao tao, Vec x, Vec V, void *ctx)
 {
   UserCtx        cntx = (UserCtx) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(GradientMisfit(tao, x, cntx->workRight[2], ctx));
@@ -489,7 +471,6 @@ static PetscErrorCode GradientComplete(Tao tao, Vec x, Vec V, void *ctx)
 static PetscErrorCode HessianComplete(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx)
 {
   Mat            tempH;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDuplicate(H, MAT_SHARE_NONZERO_PATTERN, &tempH));
@@ -505,7 +486,6 @@ static PetscErrorCode HessianComplete(Tao tao, Vec x, Mat H, Mat Hpre, void *ctx
 
 static PetscErrorCode TaoSolveADMM(UserCtx ctx,  Vec x)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscReal      u_norm, r_norm, s_norm, primal, dual, x_norm, z_norm;
   Tao            tao1,tao2;
@@ -589,7 +569,6 @@ static PetscErrorCode TaylorTest(UserCtx ctx, Tao tao, Vec x, PetscReal *C)
   PetscReal      minrate = PETSC_MAX_REAL;
   MPI_Comm       comm = PetscObjectComm((PetscObject)x);
   Vec            g, dx, xhat;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(x, &g));

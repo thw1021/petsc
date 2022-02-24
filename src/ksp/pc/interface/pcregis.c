@@ -81,7 +81,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_H2OPUS(PC);
 @*/
 PetscErrorCode  PCRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PCRegisterAllCalled) PetscFunctionReturn(0);

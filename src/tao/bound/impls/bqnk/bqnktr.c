@@ -3,7 +3,6 @@
 
 static PetscErrorCode TaoSetUp_BQNKTR(Tao tao)
 {
-  PetscErrorCode    ierr;
   KSP               ksp;
   PetscVoidFunction valid;
 
@@ -29,7 +28,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BQNKTR(Tao tao)
 {
   TAO_BNK        *bnk;
   TAO_BQNK       *bqnk;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoCreate_BQNK(tao));

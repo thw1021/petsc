@@ -337,7 +337,6 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscInt testNum, DM *dm)
   DM             idm;
   PetscInt       p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -397,7 +396,6 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, AppCtx *user, DM dm)
 {
   PetscInt       depth = 3, testNum  = user->testNum, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -462,7 +460,6 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscInt testNum, DM *dm)
   DM             idm;
   PetscInt       p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -542,7 +539,6 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscInt testNum, DM *dm)
   DM             idm;
   PetscInt       depth = 3, p;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -651,7 +647,6 @@ static PetscErrorCode CreateFaultLabel(DM dm)
 {
   DMLabel        label;
   PetscInt       dim, h, pStart, pEnd, pMax, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -670,7 +665,6 @@ static PetscErrorCode CreateDiscretization(DM dm, AppCtx *user)
   PetscFE        fe;
   DMLabel        fault;
   PetscInt       dim, Ncf = user->cohesiveFields, f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -709,7 +703,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscBool      cellSimplex  = user->cellSimplex, hasFault, hasFault2, hasParallelFault;
   PetscMPIInt    rank, size;
   DMLabel        matLabel;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -882,7 +875,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 
 static PetscErrorCode TestMesh(DM dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCheckSymmetry(dm));
@@ -894,7 +886,6 @@ static PetscErrorCode TestMesh(DM dm, AppCtx *user)
 static PetscErrorCode TestDiscretization(DM dm, AppCtx *user)
 {
   PetscSection   s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetSection(dm, &s));
@@ -993,7 +984,6 @@ static PetscErrorCode TestAssembly(DM dm, AppCtx *user)
   PetscErrorCode (*initialGuess[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar u[], void *ctx);
   PetscInt         dim, Nf, cMax, cEnd, id;
   PetscMPIInt      rank;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank));

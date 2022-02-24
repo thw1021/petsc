@@ -232,7 +232,6 @@ int main(int argc,char **args)
 PetscErrorCode SampleShellPCCreate(SampleShellPC **shell)
 {
   SampleShellPC  *newctx;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscNew(&newctx));
   newctx->diag = 0;
@@ -262,7 +261,6 @@ PetscErrorCode SampleShellPCSetUp(PC pc,Mat pmat,Vec x)
 {
   SampleShellPC  *shell;
   Vec            diag;
-  PetscErrorCode ierr;
 
   CHKERRQ(PCShellGetContext(pc,&shell));
   CHKERRQ(VecDuplicate(x,&diag));
@@ -292,7 +290,6 @@ PetscErrorCode SampleShellPCSetUp(PC pc,Mat pmat,Vec x)
 PetscErrorCode SampleShellPCApply(PC pc,Vec x,Vec y)
 {
   SampleShellPC  *shell;
-  PetscErrorCode ierr;
 
   CHKERRQ(PCShellGetContext(pc,&shell));
   CHKERRQ(VecPointwiseMult(y,x,shell->diag));
@@ -310,7 +307,6 @@ PetscErrorCode SampleShellPCApply(PC pc,Vec x,Vec y)
 PetscErrorCode SampleShellPCDestroy(PC pc)
 {
   SampleShellPC  *shell;
-  PetscErrorCode ierr;
 
   CHKERRQ(PCShellGetContext(pc,&shell));
   CHKERRQ(VecDestroy(&shell->diag));

@@ -6,7 +6,6 @@
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPISBAIJ(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode    ierr;
   Mat               M;
   Mat_MPIAIJ        *mpimat = (Mat_MPIAIJ*)A->data;
   Mat_SeqAIJ        *Aa     = (Mat_SeqAIJ*)mpimat->A->data,*Ba = (Mat_SeqAIJ*)mpimat->B->data;
@@ -73,7 +72,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPISBAIJ(Mat A, MatType newtype,Ma
 /* contributed by Dahai Guo <dhguo@ncsa.uiuc.edu> April 2011 */
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPISBAIJ(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode    ierr;
   Mat               M;
   Mat_MPIBAIJ       *mpimat = (Mat_MPIBAIJ*)A->data;
   Mat_SeqBAIJ       *Aa     = (Mat_SeqBAIJ*)mpimat->A->data,*Ba = (Mat_SeqBAIJ*)mpimat->B->data;

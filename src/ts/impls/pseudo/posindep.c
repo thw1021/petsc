@@ -50,7 +50,6 @@ typedef struct {
 PetscErrorCode  TSPseudoComputeTimeStep(TS ts,PetscReal *dt)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(TS_PseudoComputeTimeStep,ts,0,0,0));
@@ -113,7 +112,6 @@ PetscErrorCode  TSPseudoVerifyTimeStepDefault(TS ts,Vec update,void *dtctx,Petsc
 PetscErrorCode  TSPseudoVerifyTimeStep(TS ts,Vec update,PetscReal *dt,PetscBool *flag)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *flag = PETSC_TRUE;
@@ -131,7 +129,6 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   PetscInt            nits,lits,reject;
   PetscBool           stepok;
   PetscReal           next_time_step = ts->time_step;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   if (ts->steps == 0) pseudo->dt_initial = ts->time_step;
@@ -183,7 +180,6 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
 static PetscErrorCode TSReset_Pseudo(TS ts)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&pseudo->update));
@@ -194,7 +190,6 @@ static PetscErrorCode TSReset_Pseudo(TS ts)
 
 static PetscErrorCode TSDestroy_Pseudo(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_Pseudo(ts));
@@ -217,7 +212,6 @@ static PetscErrorCode TSPseudoGetXdot(TS ts,Vec X,Vec *Xdot)
   TS_Pseudo         *pseudo = (TS_Pseudo*)ts->data;
   const PetscScalar mdt     = 1.0/ts->time_step,*xnp1,*xn;
   PetscScalar       *xdot;
-  PetscErrorCode    ierr;
   PetscInt          i,n;
 
   PetscFunctionBegin;
@@ -254,7 +248,6 @@ static PetscErrorCode TSPseudoGetXdot(TS ts,Vec X,Vec *Xdot)
 static PetscErrorCode SNESTSFormFunction_Pseudo(SNES snes,Vec X,Vec Y,TS ts)
 {
   Vec            Xdot;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSPseudoGetXdot(ts,X,&Xdot));
@@ -274,7 +267,6 @@ static PetscErrorCode SNESTSFormFunction_Pseudo(SNES snes,Vec X,Vec Y,TS ts)
 static PetscErrorCode SNESTSFormJacobian_Pseudo(SNES snes,Vec X,Mat AA,Mat BB,TS ts)
 {
   Vec            Xdot;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSPseudoGetXdot(ts,X,&Xdot));
@@ -285,7 +277,6 @@ static PetscErrorCode SNESTSFormJacobian_Pseudo(SNES snes,Vec X,Mat AA,Mat BB,TS
 static PetscErrorCode TSSetUp_Pseudo(TS ts)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(ts->vec_sol,&pseudo->update));
@@ -298,7 +289,6 @@ static PetscErrorCode TSSetUp_Pseudo(TS ts)
 static PetscErrorCode TSPseudoMonitorDefault(TS ts,PetscInt step,PetscReal ptime,Vec v,void *dummy)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
-  PetscErrorCode ierr;
   PetscViewer    viewer = (PetscViewer) dummy;
 
   PetscFunctionBegin;
@@ -316,7 +306,6 @@ static PetscErrorCode TSPseudoMonitorDefault(TS ts,PetscInt step,PetscReal ptime
 static PetscErrorCode TSSetFromOptions_Pseudo(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
   PetscViewer    viewer;
 
@@ -340,7 +329,6 @@ static PetscErrorCode TSSetFromOptions_Pseudo(PetscOptionItems *PetscOptionsObje
 
 static PetscErrorCode TSView_Pseudo(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isascii;
 
   PetscFunctionBegin;
@@ -387,7 +375,6 @@ $  func (TS ts,Vec update,void *ctx,PetscReal *newdt,PetscBool  *flag);
 @*/
 PetscErrorCode  TSPseudoSetVerifyTimeStep(TS ts,PetscErrorCode (*dt)(TS,Vec,void*,PetscReal*,PetscBool*),void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -414,7 +401,6 @@ PetscErrorCode  TSPseudoSetVerifyTimeStep(TS ts,PetscErrorCode (*dt)(TS,Vec,void
 @*/
 PetscErrorCode  TSPseudoSetTimeStepIncrement(TS ts,PetscReal inc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -442,7 +428,6 @@ PetscErrorCode  TSPseudoSetTimeStepIncrement(TS ts,PetscReal inc)
 @*/
 PetscErrorCode  TSPseudoSetMaxTimeStep(TS ts,PetscReal maxdt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -472,7 +457,6 @@ $         dt = current_dt*previous_fnorm/current_fnorm.
 @*/
 PetscErrorCode  TSPseudoIncrementDtFromInitialDt(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -509,7 +493,6 @@ $  func (TS ts,PetscReal *newdt,void *ctx);
 @*/
 PetscErrorCode  TSPseudoSetTimeStep(TS ts,PetscErrorCode (*dt)(TS,PetscReal*,void*),void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -617,7 +600,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS ts)
 {
   TS_Pseudo      *pseudo;
-  PetscErrorCode ierr;
   SNES           snes;
   SNESType       stype;
 
@@ -683,7 +665,6 @@ PetscErrorCode  TSPseudoTimeStepDefault(TS ts,PetscReal *newdt,void *dtctx)
 {
   TS_Pseudo      *pseudo = (TS_Pseudo*)ts->data;
   PetscReal      inc = pseudo->dt_increment;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(pseudo->xdot));

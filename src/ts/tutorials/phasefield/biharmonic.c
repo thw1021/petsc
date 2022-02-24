@@ -187,7 +187,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,Mx,xs,xm;
   PetscReal      hx,sx;
   PetscScalar    *x,*f,c,r,l;
@@ -294,7 +293,6 @@ PetscErrorCode FormFunction(TS ts,PetscReal ftime,Vec X,Vec F,void *ptr)
 PetscErrorCode FormJacobian(TS ts,PetscReal ftime,Vec X,Mat A,Mat B,void *ptr)
 {
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,Mx,xs,xm;
   MatStencil     row,cols[5];
   PetscReal      hx,sx;
@@ -380,7 +378,6 @@ PetscErrorCode FormJacobian(TS ts,PetscReal ftime,Vec X,Mat A,Mat B,void *ptr)
 /* ------------------------------------------------------------------- */
 PetscErrorCode FormInitialSolution(DM da,Vec U)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,xs,xm,Mx,N,scale;
   PetscScalar       *u;
   PetscReal         r,hx,x;
@@ -718,7 +715,6 @@ PetscErrorCode  MyMonitor(TS ts,PetscInt step,PetscReal time,Vec U,void *ptr)
 PetscErrorCode  MyDestroy(void **ptr)
 {
   UserCtx        *ctx = *(UserCtx**)ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawViewPortsDestroy(ctx->ports));

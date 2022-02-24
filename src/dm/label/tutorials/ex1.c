@@ -8,7 +8,6 @@ PetscErrorCode ViewLabels(DM dm, PetscViewer viewer)
   DMLabel        label;
   const char    *labelName;
   PetscInt       numLabels, l;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* query the number and name of labels*/
@@ -50,7 +49,6 @@ PetscErrorCode CheckLabelsSame(DMLabel label0, DMLabel label1)
   const char     *name0, *name1;
   PetscBool       same;
   char           *msg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetName((PetscObject)label0, &name0));
@@ -69,7 +67,6 @@ PetscErrorCode CheckLabelsNotSame(DMLabel label0, DMLabel label1)
   const char     *name0, *name1;
   PetscBool       same;
   char           *msg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetName((PetscObject)label0, &name0));
@@ -87,7 +84,6 @@ PetscErrorCode CheckDMLabelsSame(DM dm0, DM dm1)
   const char     *name0, *name1;
   PetscBool       same;
   char           *msg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetName((PetscObject)dm0, &name0));
@@ -106,7 +102,6 @@ PetscErrorCode CheckDMLabelsNotSame(DM dm0, DM dm1)
   const char     *name0, *name1;
   PetscBool       same;
   char           *msg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetName((PetscObject)dm0, &name0));

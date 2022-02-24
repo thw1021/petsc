@@ -46,7 +46,6 @@ static PetscErrorCode  VecMatlabEnginePut_DA2d(PetscObject obj,void *mengine)
 
 PetscErrorCode  DMCreateLocalVector_DA(DM da,Vec *g)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -131,7 +130,6 @@ PetscErrorCode DMDAGetCellPoint(DM dm, PetscInt i, PetscInt j, PetscInt k, Petsc
 {
   const PetscInt dim = dm->dim;
   DMDALocalInfo  info;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1,DMDA);
@@ -218,7 +216,6 @@ PetscErrorCode DMDAGetHeightStratum(DM dm, PetscInt height, PetscInt *pStart, Pe
 {
   const PetscInt dim = dm->dim;
   PetscInt       nC, nV, nXF, nYF, nZF;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pStart) PetscValidIntPointer(pStart,3);
@@ -250,7 +247,6 @@ PetscErrorCode DMDAGetDepthStratum(DM dm, PetscInt depth, PetscInt *pStart, Pets
 {
   const PetscInt dim = dm->dim;
   PetscInt       nC, nV, nXF, nYF, nZF;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pStart) PetscValidIntPointer(pStart,3);
@@ -282,7 +278,6 @@ PetscErrorCode DMDAGetConeSize(DM dm, PetscInt p, PetscInt *coneSize)
 {
   const PetscInt dim = dm->dim;
   PetscInt       nC, nV, nXF, nYF, nZF;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *coneSize = 0;
@@ -311,7 +306,6 @@ PetscErrorCode DMDAGetCone(DM dm, PetscInt p, PetscInt *cone[])
 {
   const PetscInt dim = dm->dim;
   PetscInt       nCx, nCy, nCz, nC, nVx, nVy, nVz, nV, nxF, nyF, nzF, nXF, nYF, nZF;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!cone) CHKERRQ(DMGetWorkArray(dm, 6, MPIU_INT, cone));
@@ -354,7 +348,6 @@ PetscErrorCode DMDAGetCone(DM dm, PetscInt p, PetscInt *cone[])
 
 PetscErrorCode DMDARestoreCone(DM dm, PetscInt p, PetscInt *cone[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetWorkArray(dm, 6, MPIU_INT, cone));
@@ -369,7 +362,6 @@ PetscErrorCode DMDASetVertexCoordinates(DM dm, PetscReal xl, PetscReal xu, Petsc
   PetscScalar   *coords;
   PetscReal      h[3];
   PetscInt       dim, size, M, N, P, nVx, nVy, nVz, nV, vStart, vEnd, v, i, j, k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1,DMDA);
@@ -441,7 +433,6 @@ PetscErrorCode DMDASetVertexCoordinates(DM dm, PetscReal xl, PetscReal xu, Petsc
 @*/
 PetscErrorCode  DMDAGetArray(DM da,PetscBool ghosted,void *vptr)
 {
-  PetscErrorCode ierr;
   PetscInt       j,i,xs,ys,xm,ym,zs,zm;
   char           *iarray_start;
   void           **iptr = (void**)vptr;

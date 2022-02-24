@@ -29,7 +29,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -42,7 +41,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
 static PetscErrorCode CreateAdaptLabel(DM dm, AppCtx *ctx, DMLabel *adaptLabel)
 {
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank));

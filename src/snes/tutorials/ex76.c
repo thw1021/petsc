@@ -347,7 +347,6 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 {
   PetscBag       bag;
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -362,7 +361,6 @@ static PetscErrorCode SetupParameters(AppCtx *user)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -404,7 +402,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   DMLabel          label;
   Parameter       *ctx;
   PetscInt         id;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetLabel(dm, "marker", &label));
@@ -482,7 +479,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   MPI_Comm        comm;
   PetscInt        dim;
   PetscBool       simplex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -522,7 +518,6 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt ofield, PetscInt n
 {
   Vec              vec;
   PetscErrorCode (*funcs[3])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = {zero, zero, zero};
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   PetscCheckFalse(ofield != 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index 1, not %D", ofield);

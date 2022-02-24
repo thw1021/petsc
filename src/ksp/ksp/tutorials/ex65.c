@@ -35,7 +35,6 @@ static PetscErrorCode CreateRestriction(DM,DM,Mat*);
 
 static PetscErrorCode MyDMShellCreate(MPI_Comm comm,DM da,DM *shell)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(DMShellCreate(comm,shell));
   CHKERRQ(DMShellSetContext(*shell,da));
@@ -81,7 +80,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode CreateMatrix(DM shell,Mat *A)
 {
-  PetscErrorCode ierr;
   DM             da;
 
   CHKERRQ(DMShellGetContext(shell,&da));
@@ -92,7 +90,6 @@ static PetscErrorCode CreateMatrix(DM shell,Mat *A)
 static PetscErrorCode CreateInterpolation(DM dm1,DM dm2,Mat *mat,Vec *vec)
 {
   DM             da1,da2;
-  PetscErrorCode ierr;
 
   CHKERRQ(DMShellGetContext(dm1,&da1));
   CHKERRQ(DMShellGetContext(dm2,&da2));
@@ -103,7 +100,6 @@ static PetscErrorCode CreateInterpolation(DM dm1,DM dm2,Mat *mat,Vec *vec)
 static PetscErrorCode CreateRestriction(DM dm1,DM dm2,Mat *mat)
 {
   DM             da1,da2;
-  PetscErrorCode ierr;
   Mat            tmat;
 
   CHKERRQ(DMShellGetContext(dm1,&da1));
@@ -116,7 +112,6 @@ static PetscErrorCode CreateRestriction(DM dm1,DM dm2,Mat *mat)
 
 static PetscErrorCode CreateGlobalVector(DM shell,Vec *x)
 {
-  PetscErrorCode ierr;
   DM             da;
 
   CHKERRQ(DMShellGetContext(shell,&da));
@@ -127,7 +122,6 @@ static PetscErrorCode CreateGlobalVector(DM shell,Vec *x)
 
 static PetscErrorCode CreateLocalVector(DM shell,Vec *x)
 {
-  PetscErrorCode ierr;
   DM             da;
 
   CHKERRQ(DMShellGetContext(shell,&da));
@@ -138,7 +132,6 @@ static PetscErrorCode CreateLocalVector(DM shell,Vec *x)
 
 static PetscErrorCode Refine(DM shell,MPI_Comm comm,DM *dmnew)
 {
-  PetscErrorCode ierr;
   DM             da,dafine;
 
   CHKERRQ(DMShellGetContext(shell,&da));
@@ -149,7 +142,6 @@ static PetscErrorCode Refine(DM shell,MPI_Comm comm,DM *dmnew)
 
 static PetscErrorCode Coarsen(DM shell,MPI_Comm comm,DM *dmnew)
 {
-  PetscErrorCode ierr;
   DM             da,dacoarse;
 
   CHKERRQ(DMShellGetContext(shell,&da));
@@ -162,7 +154,6 @@ static PetscErrorCode Coarsen(DM shell,MPI_Comm comm,DM *dmnew)
 
 static PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       mx,idx[2];
   PetscScalar    h,v[2];
   DM             da,shell;
@@ -183,7 +174,6 @@ static PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 
 static PetscErrorCode ComputeMatrix(KSP ksp,Mat J,Mat jac,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,mx,xm,xs;
   PetscScalar    v[3],h;
   MatStencil     row,col[3];

@@ -30,7 +30,6 @@
 */
 PETSC_EXTERN PetscMPIInt MPIAPI Petsc_DelTmpShared(MPI_Comm comm,PetscMPIInt keyval,void *count_val,void *extra_state)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(PetscInfo(NULL,"Deleting tmp/shared data in an MPI_Comm %ld\n",(long)comm));
@@ -65,7 +64,6 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_DelTmpShared(MPI_Comm comm,PetscMPIInt key
 @*/
 PetscErrorCode  PetscGetTmp(MPI_Comm comm,char dir[],size_t len)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -119,7 +117,6 @@ PetscErrorCode  PetscGetTmp(MPI_Comm comm,char dir[],size_t len)
 @*/
 PetscErrorCode  PetscSharedTmp(MPI_Comm comm,PetscBool  *shared)
 {
-  PetscErrorCode     ierr;
   PetscMPIInt        size,rank,*tagvalp,sum,cnt,i;
   PetscBool          flg,iflg;
   FILE               *fd;
@@ -240,7 +237,6 @@ PetscErrorCode  PetscSharedTmp(MPI_Comm comm,PetscBool  *shared)
 @*/
 PetscErrorCode  PetscSharedWorkingDirectory(MPI_Comm comm,PetscBool  *shared)
 {
-  PetscErrorCode     ierr;
   PetscMPIInt        size,rank,*tagvalp,sum,cnt,i;
   PetscBool          flg,iflg;
   FILE               *fd;
@@ -341,7 +337,6 @@ PetscErrorCode  PetscFileRetrieve(MPI_Comm comm,const char url[],char localname[
 {
   char           buffer[PETSC_MAX_PATH_LEN],*par,*tlocalname,name[PETSC_MAX_PATH_LEN];
   FILE           *fp;
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   size_t         len = 0;
   PetscBool      flg1,flg2,flg3,flg4,download,compressed = PETSC_FALSE;

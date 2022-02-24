@@ -7,7 +7,6 @@ PetscErrorCode CheckMesh(DM dm)
   PetscReal      detJ, J[9], refVol = 1.0;
   PetscReal      vol;
   PetscInt       dim, depth, d, cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -29,7 +28,6 @@ PetscErrorCode CheckMesh(DM dm)
 
 PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));

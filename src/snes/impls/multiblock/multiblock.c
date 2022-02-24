@@ -27,7 +27,6 @@ PetscErrorCode SNESReset_Multiblock(SNES snes)
 {
   SNES_Multiblock *mb    = (SNES_Multiblock*) snes->data;
   BlockDesc       blocks = mb->blocks, next;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   while (blocks) {
@@ -55,7 +54,6 @@ PetscErrorCode SNESDestroy_Multiblock(SNES snes)
 {
   SNES_Multiblock *mb    = (SNES_Multiblock*) snes->data;
   BlockDesc       blocks = mb->blocks, next;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_Multiblock(snes));
@@ -79,7 +77,6 @@ static PetscErrorCode SNESMultiblockSetFieldsRuntime_Private(SNES snes)
   PetscInt        i, nfields;
   PetscBool       flg = PETSC_TRUE;
   char            optionname[128], name[8];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(mb->bs, &ifields));
@@ -107,7 +104,6 @@ static PetscErrorCode SNESMultiblockSetDefaults(SNES snes)
   SNES_Multiblock *mb    = (SNES_Multiblock*) snes->data;
   BlockDesc       blocks = mb->blocks;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!blocks) {
@@ -203,7 +199,6 @@ PetscErrorCode SNESSetUp_Multiblock(SNES snes)
   SNES_Multiblock *mb = (SNES_Multiblock*) snes->data;
   BlockDesc       blocks;
   PetscInt        i, numBlocks;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESMultiblockSetDefaults(snes));
@@ -409,7 +404,6 @@ static PetscErrorCode SNESSetFromOptions_Multiblock(PetscOptionItems *PetscOptio
   PCCompositeType ctype;
   PetscInt        bs;
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SNES Multiblock options"));
@@ -443,7 +437,6 @@ static PetscErrorCode SNESView_Multiblock(SNES snes, PetscViewer viewer)
   SNES_Multiblock *mb    = (SNES_Multiblock*) snes->data;
   BlockDesc       blocks = mb->blocks;
   PetscBool       iascii;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -493,7 +486,6 @@ PetscErrorCode SNESSolve_Multiblock(SNES snes)
   Vec             X, Y, F;
   PetscReal       fnorm;
   PetscInt        maxits, i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -591,7 +583,6 @@ PetscErrorCode SNESMultiblockSetFields_Default(SNES snes, const char name[], Pet
   BlockDesc       newblock, next = mb->blocks;
   char            prefix[128];
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (mb->defined) {
@@ -644,7 +635,6 @@ PetscErrorCode SNESMultiblockSetIS_Default(SNES snes, const char name[], IS is)
   SNES_Multiblock *mb = (SNES_Multiblock*) snes->data;
   BlockDesc       newblock, next = mb->blocks;
   char            prefix[128];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (mb->defined) {
@@ -703,7 +693,6 @@ PetscErrorCode SNESMultiblockGetSubSNES_Default(SNES snes, PetscInt *n, SNES **s
   SNES_Multiblock *mb    = (SNES_Multiblock*) snes->data;
   BlockDesc       blocks = mb->blocks;
   PetscInt        cnt    = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(mb->numBlocks, subsnes));
@@ -720,7 +709,6 @@ PetscErrorCode SNESMultiblockGetSubSNES_Default(SNES snes, PetscInt *n, SNES **s
 PetscErrorCode  SNESMultiblockSetType_Default(SNES snes, PCCompositeType type)
 {
   SNES_Multiblock *mb = (SNES_Multiblock*) snes->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   mb->type = type;
@@ -773,7 +761,6 @@ PetscErrorCode  SNESMultiblockSetType_Default(SNES snes, PCCompositeType type)
 @*/
 PetscErrorCode SNESMultiblockSetFields(SNES snes, const char name[], PetscInt n, const PetscInt *fields)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -806,7 +793,6 @@ PetscErrorCode SNESMultiblockSetFields(SNES snes, const char name[], PetscInt n,
 @*/
 PetscErrorCode SNESMultiblockSetIS(SNES snes, const char name[], IS is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -834,7 +820,6 @@ PetscErrorCode SNESMultiblockSetIS(SNES snes, const char name[], IS is)
 @*/
 PetscErrorCode SNESMultiblockSetType(SNES snes, PCCompositeType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -857,7 +842,6 @@ PetscErrorCode SNESMultiblockSetType(SNES snes, PCCompositeType type)
 @*/
 PetscErrorCode SNESMultiblockSetBlockSize(SNES snes, PetscInt bs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -890,7 +874,6 @@ PetscErrorCode SNESMultiblockSetBlockSize(SNES snes, PetscInt bs)
 @*/
 PetscErrorCode SNESMultiblockGetSubSNES(SNES snes, PetscInt *n, SNES *subsnes[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -910,7 +893,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_Multiblock(SNES snes)
 {
   SNES_Multiblock *mb;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   snes->ops->destroy        = SNESDestroy_Multiblock;

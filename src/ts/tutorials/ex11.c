@@ -269,7 +269,6 @@ static PetscErrorCode PhysicsFunctional_Advect(Model mod,PetscReal time,const Pe
   Physics        phys    = (Physics)ctx;
   Physics_Advect *advect = (Physics_Advect*)phys->data;
   PetscScalar    yexact[1] = {0.0};
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PhysicsSolution_Advect(mod,time,x,yexact,phys));
@@ -280,7 +279,6 @@ static PetscErrorCode PhysicsFunctional_Advect(Model mod,PetscReal time,const Pe
 
 static PetscErrorCode SetUpBC_Advect(DM dm, PetscDS prob, Physics phys)
 {
-  PetscErrorCode ierr;
   const PetscInt inflowids[] = {100,200,300},outflowids[] = {101};
   DMLabel        label;
 
@@ -295,7 +293,6 @@ static PetscErrorCode SetUpBC_Advect(DM dm, PetscDS prob, Physics phys)
 static PetscErrorCode PhysicsCreate_Advect(Model mod,Physics phys,PetscOptionItems *PetscOptionsObject)
 {
   Physics_Advect *advect;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_Advect;
@@ -516,7 +513,6 @@ static PetscErrorCode PhysicsFunctional_SW(Model mod,PetscReal time,const PetscR
 
 static PetscErrorCode SetUpBC_SW(DM dm, PetscDS prob,Physics phys)
 {
-  PetscErrorCode ierr;
   const PetscInt wallids[] = {100,101,200,300};
   DMLabel        label;
 
@@ -530,7 +526,6 @@ static PetscErrorCode PhysicsCreate_SW(Model mod,Physics phys,PetscOptionItems *
 {
   Physics_SW     *sw;
   char           sw_riemann[64] = "rusanov";
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_SW;
@@ -788,7 +783,6 @@ static PetscErrorCode PhysicsFunctional_Euler(Model mod,PetscReal time,const Pet
 
 static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob,Physics phys)
 {
-  PetscErrorCode  ierr;
   Physics_Euler   *eu = (Physics_Euler *) phys->data;
   DMLabel         label;
 
@@ -808,7 +802,6 @@ static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob,Physics phys)
 static PetscErrorCode PhysicsCreate_Euler(Model mod,Physics phys,PetscOptionItems *PetscOptionsObject)
 {
   Physics_Euler   *eu;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_Euler;
@@ -898,7 +891,6 @@ PetscErrorCode CreatePartitionVec(DM dm, DM *dmCell, Vec *partition)
   PetscScalar    *part;
   PetscInt       cStart, cEnd, c;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetCoordinateSection(dm, &coordSection));
@@ -940,7 +932,6 @@ PetscErrorCode CreateMassMatrix(DM dm, Vec *massMatrix, User user)
   PetscScalar       *m;
   const PetscScalar *fgeom, *cgeom, *coords;
   PetscInt          vStart, vEnd, v;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMConvert(dm, DMPLEX, &plex));
@@ -1019,7 +1010,6 @@ static PetscErrorCode ModelSolutionSetDefault(Model mod,SolutionFunction func,vo
 
 static PetscErrorCode ModelFunctionalRegister(Model mod,const char *name,PetscInt *offset,FunctionalFunction func,void *ctx)
 {
-  PetscErrorCode ierr;
   FunctionalLink link,*ptr;
   PetscInt       lastoffset = -1;
 
@@ -1038,7 +1028,6 @@ static PetscErrorCode ModelFunctionalRegister(Model mod,const char *name,PetscIn
 
 static PetscErrorCode ModelFunctionalSetFromOptions(Model mod,PetscOptionItems *PetscOptionsObject)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   FunctionalLink link;
   char           *names[256];
@@ -1082,7 +1071,6 @@ next_name:
 
 static PetscErrorCode FunctionalLinkDestroy(FunctionalLink *link)
 {
-  PetscErrorCode ierr;
   FunctionalLink l,next;
 
   PetscFunctionBeginUser;
@@ -1101,7 +1089,6 @@ static PetscErrorCode FunctionalLinkDestroy(FunctionalLink *link)
 static PetscErrorCode SolutionFunctional(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *modctx)
 {
   Model          mod;
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   mod  = (Model) modctx;
   CHKERRQ((*mod->solution)(mod, time, x, u, mod->solutionctx));
@@ -1113,7 +1100,6 @@ PetscErrorCode SetInitialCondition(DM dm, Vec X, User user)
   PetscErrorCode     (*func[1]) (PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void *ctx);
   void               *ctx[1];
   Model              mod = user->model;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   func[0] = SolutionFunctional;
@@ -1124,7 +1110,6 @@ PetscErrorCode SetInitialCondition(DM dm, Vec X, User user)
 
 static PetscErrorCode OutputVTK(DM dm, const char *filename, PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscViewerCreate(PetscObjectComm((PetscObject)dm), viewer));
@@ -1140,7 +1125,6 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN],*ftable = NULL;
   PetscReal      xnorm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectSetName((PetscObject) X, "u"));
@@ -1255,7 +1239,6 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
 
 static PetscErrorCode initializeTS(DM dm, User user, TS *ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSCreate(PetscObjectComm((PetscObject)dm), ts));
@@ -1285,7 +1268,6 @@ static PetscErrorCode adaptToleranceFVM(PetscFV fvm, TS ts, Vec sol, VecTagger r
   const PetscScalar *pointGeom;
   DMLabel           adaptLabel = NULL;
   IS                refineIS, coarsenIS;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetTime(ts,&time));

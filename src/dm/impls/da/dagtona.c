@@ -28,7 +28,6 @@
 @*/
 PetscErrorCode  DMDAGlobalToNaturalAllCreate(DM da,VecScatter *scatter)
 {
-  PetscErrorCode ierr;
   PetscInt       N;
   IS             from,to;
   Vec            tmplocal,global;
@@ -74,7 +73,6 @@ PetscErrorCode  DMDAGlobalToNaturalAllCreate(DM da,VecScatter *scatter)
 @*/
 PetscErrorCode  DMDANaturalAllToGlobalCreate(DM da,VecScatter *scatter)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
   PetscInt       M,m = dd->Nlocal,start;
   IS             from,to;

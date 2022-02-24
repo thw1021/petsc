@@ -20,7 +20,6 @@
 @*/
 PetscErrorCode VecTaggerOrGetSubs(VecTagger tagger, PetscInt *nsubs, VecTagger **subs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerGetSubs_AndOr(tagger,nsubs,subs));
@@ -43,7 +42,6 @@ PetscErrorCode VecTaggerOrGetSubs(VecTagger tagger, PetscInt *nsubs, VecTagger *
 @*/
 PetscErrorCode VecTaggerOrSetSubs(VecTagger tagger, PetscInt nsubs, VecTagger *subs, PetscCopyMode mode)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerSetSubs_AndOr(tagger,nsubs,subs,mode));
@@ -56,7 +54,6 @@ static PetscErrorCode VecTaggerComputeBoxes_Or(VecTagger tagger,Vec vec,PetscInt
   VecTaggerBox    **subBoxes;
   VecTagger       *subs;
   VecTaggerBox    *bxs;
-  PetscErrorCode  ierr;
   PetscBool       boxlisted;
 
   PetscFunctionBegin;
@@ -116,7 +113,6 @@ static PetscErrorCode VecTaggerComputeIS_Or(VecTagger tagger, Vec vec, IS *is,Pe
   PetscInt       nsubs, i;
   VecTagger      *subs;
   IS             unionIS;
-  PetscErrorCode ierr;
   PetscBool      boxlisted;
 
   PetscFunctionBegin;
@@ -145,7 +141,6 @@ static PetscErrorCode VecTaggerComputeIS_Or(VecTagger tagger, Vec vec, IS *is,Pe
 
 PETSC_INTERN PetscErrorCode VecTaggerCreate_Or(VecTagger tagger)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTaggerCreate_AndOr(tagger));

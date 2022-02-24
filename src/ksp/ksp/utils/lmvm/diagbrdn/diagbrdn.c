@@ -6,7 +6,6 @@ static PetscErrorCode MatSolve_DiagBrdn(Mat B, Vec F, Vec dX)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   VecCheckSameSize(F, 2, dX, 3);
@@ -21,7 +20,6 @@ static PetscErrorCode MatMult_DiagBrdn(Mat B, Vec X, Vec Z)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   VecCheckSameSize(X, 2, Z, 3);
@@ -36,7 +34,6 @@ static PetscErrorCode MatUpdate_DiagBrdn(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscInt          old_k, i, start;
   PetscScalar       yty, ststmp, curvature, ytDy, stDs, ytDs;
   PetscReal         curvtol, sigma, yy_sum, ss_sum, ys_sum, denom;
@@ -345,7 +342,6 @@ static PetscErrorCode MatCopy_DiagBrdn(Mat B, Mat M, MatStructure str)
   Mat_DiagBrdn      *bctx = (Mat_DiagBrdn*)bdata->ctx;
   Mat_LMVM          *mdata = (Mat_LMVM*)M->data;
   Mat_DiagBrdn      *mctx = (Mat_DiagBrdn*)mdata->ctx;
-  PetscErrorCode    ierr;
   PetscInt          i;
 
   PetscFunctionBegin;
@@ -375,7 +371,6 @@ static PetscErrorCode MatView_DiagBrdn(Mat B, PetscViewer pv)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
   PetscBool         isascii;
 
   PetscFunctionBegin;
@@ -395,7 +390,6 @@ static PetscErrorCode MatSetFromOptions_DiagBrdn(PetscOptionItems *PetscOptionsO
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn       *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetFromOptions_LMVM(PetscOptionsObject, B));
@@ -421,7 +415,6 @@ static PetscErrorCode MatReset_DiagBrdn(Mat B, PetscBool destructive)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(ldb->invD, ldb->delta));
@@ -446,7 +439,6 @@ static PetscErrorCode MatAllocate_DiagBrdn(Mat B, Vec X, Vec F)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAllocate_LMVM(B, X, F));
@@ -470,7 +462,6 @@ static PetscErrorCode MatDestroy_DiagBrdn(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (ldb->allocated) {
@@ -495,7 +486,6 @@ static PetscErrorCode MatSetUp_DiagBrdn(Mat B)
 {
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
   Mat_DiagBrdn      *ldb = (Mat_DiagBrdn*)lmvm->ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetUp_LMVM(B));
@@ -519,7 +509,6 @@ PetscErrorCode MatCreate_LMVMDiagBrdn(Mat B)
 {
   Mat_LMVM          *lmvm;
   Mat_DiagBrdn      *ldb;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate_LMVM(B));
@@ -606,7 +595,6 @@ PetscErrorCode MatCreate_LMVMDiagBrdn(Mat B)
 @*/
 PetscErrorCode MatCreateLMVMDiagBroyden(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm, B));

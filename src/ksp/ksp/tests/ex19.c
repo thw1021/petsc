@@ -170,7 +170,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormJacobian_Grid(AppCtx *user,GridCtx *grid,Mat *J)
 {
   Mat                    jac = *J;
-  PetscErrorCode         ierr;
   PetscInt               i,j,row,mx,my,xs,ys,xm,ym,Xs,Ys,Xm,Ym,col[5];
   PetscInt               grow;
   const PetscInt         *ltog;

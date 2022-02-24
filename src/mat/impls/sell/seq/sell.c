@@ -84,7 +84,6 @@ static const char citation[] =
  @*/
 PetscErrorCode MatSeqSELLSetPreallocation(Mat B,PetscInt rlenmax,const PetscInt rlen[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
@@ -98,7 +97,6 @@ PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat B,PetscInt maxallocrow,con
   Mat_SeqSELL    *b;
   PetscInt       i,j,totalslices;
   PetscBool      skipallocation=PETSC_FALSE,realalloc=PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (maxallocrow >= 0 || rlen) realalloc = PETSC_TRUE;
@@ -194,7 +192,6 @@ PetscErrorCode MatGetRow_SeqSELL(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,
   if (nz) *nz = a->rlen[row];
   shift = a->sliidx[row>>3]+(row&0x07);
   if (!a->getrowcols) {
-    PetscErrorCode ierr;
 
     CHKERRQ(PetscMalloc2(a->rlenmax,&a->getrowcols,a->rlenmax,&a->getrowvals));
   }
@@ -222,7 +219,6 @@ PetscErrorCode MatConvert_SeqSELL_SeqAIJ(Mat A, MatType newtype,MatReuse reuse,M
   Mat            B;
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_REUSE_MATRIX) {
@@ -265,7 +261,6 @@ PetscErrorCode MatConvert_SeqAIJ_SeqSELL(Mat A,MatType newtype,MatReuse reuse,Ma
   PetscInt          *ai=a->i,m=A->rmap->N,n=A->cmap->N,i,*rowlengths,row,ncols;
   const PetscInt    *cols;
   const PetscScalar *vals;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
 
@@ -318,7 +313,6 @@ PetscErrorCode MatMult_SeqSELL(Mat A,Vec xx,Vec yy)
   PetscInt          totalslices=a->totalslices;
   const PetscInt    *acolidx=a->colidx;
   PetscInt          i,j;
-  PetscErrorCode    ierr;
 #if defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
   __m512d           vec_x,vec_y,vec_vals;
   __m256i           vec_idx;
@@ -522,7 +516,6 @@ PetscErrorCode MatMultAdd_SeqSELL(Mat A,Vec xx,Vec yy,Vec zz)
   PetscInt          totalslices=a->totalslices;
   const PetscInt    *acolidx=a->colidx;
   PetscInt          i,j;
-  PetscErrorCode    ierr;
 #if defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES)
   __m512d           vec_x,vec_y,vec_vals;
   __m256i           vec_idx;
@@ -686,7 +679,6 @@ PetscErrorCode MatMultTransposeAdd_SeqSELL(Mat A,Vec xx,Vec zz,Vec yy)
   const MatScalar   *aval=a->val;
   const PetscInt    *acolidx=a->colidx;
   PetscInt          i,j,r,row,nnz_in_row,totalslices=a->totalslices;
-  PetscErrorCode    ierr;
 
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
 #pragma disjoint(*x,*y,*aval)
@@ -728,7 +720,6 @@ PetscErrorCode MatMultTransposeAdd_SeqSELL(Mat A,Vec xx,Vec zz,Vec yy)
 
 PetscErrorCode MatMultTranspose_SeqSELL(Mat A,Vec xx,Vec yy)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (A->symmetric) {
@@ -747,7 +738,6 @@ PetscErrorCode MatMissingDiagonal_SeqSELL(Mat A,PetscBool  *missing,PetscInt *d)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
   PetscInt       *diag,i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *missing = PETSC_FALSE;
@@ -773,7 +763,6 @@ PetscErrorCode MatMarkDiagonal_SeqSELL(Mat A)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
   PetscInt       i,j,m=A->rmap->n,shift;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!a->diag) {
@@ -803,7 +792,6 @@ PetscErrorCode MatInvertDiagonal_SeqSELL(Mat A,PetscScalar omega,PetscScalar fsh
   PetscInt       i,*diag,m = A->rmap->n;
   MatScalar      *val = a->val;
   PetscScalar    *idiag,*mdiag;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (a->idiagvalid) PetscFunctionReturn(0);
@@ -845,7 +833,6 @@ PetscErrorCode MatInvertDiagonal_SeqSELL(Mat A,PetscScalar omega,PetscScalar fsh
 PetscErrorCode MatZeroEntries_SeqSELL(Mat A)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscArrayzero(a->val,a->sliidx[a->totalslices]));
@@ -856,7 +843,6 @@ PetscErrorCode MatZeroEntries_SeqSELL(Mat A)
 PetscErrorCode MatDestroy_SeqSELL(Mat A)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
@@ -886,7 +872,6 @@ PetscErrorCode MatDestroy_SeqSELL(Mat A)
 PetscErrorCode MatSetOption_SeqSELL(Mat A,MatOption op,PetscBool flg)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (op) {
@@ -932,7 +917,6 @@ PetscErrorCode MatGetDiagonal_SeqSELL(Mat A,Vec v)
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
   PetscInt       i,j,n,shift;
   PetscScalar    *x,zero=0.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetLocalSize(v,&n));
@@ -967,7 +951,6 @@ PetscErrorCode MatDiagonalScale_SeqSELL(Mat A,Vec ll,Vec rr)
   Mat_SeqSELL       *a=(Mat_SeqSELL*)A->data;
   const PetscScalar *l,*r;
   PetscInt          i,j,m,n,row;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (ll) {
@@ -1057,7 +1040,6 @@ PetscErrorCode MatView_SeqSELL_ASCII(Mat A,PetscViewer viewer)
   PetscInt          i,j,m=A->rmap->n,shift;
   const char        *name;
   PetscViewerFormat format;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer,&format));
@@ -1294,7 +1276,7 @@ PetscErrorCode MatView_SeqSELL_Draw_Zoom(PetscDraw draw,void *Aa)
   /* loop over matrix elements drawing boxes */
 
   if (format != PETSC_VIEWER_DRAW_CONTOUR) {
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     /* Blue for negative, Cyan for zero and  Red for positive */
     color = PETSC_DRAW_BLUE;
     for (i=0; i<m; i++) {
@@ -1326,7 +1308,7 @@ PetscErrorCode MatView_SeqSELL_Draw_Zoom(PetscDraw draw,void *Aa)
         CHKERRQ(PetscDrawRectangle(draw,x_l,y_l,x_r,y_r,color,color,color,color));
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   } else {
     /* use contour shading to indicate magnitude of values */
     /* first determine max of all nonzero values */
@@ -1340,7 +1322,7 @@ PetscErrorCode MatView_SeqSELL_Draw_Zoom(PetscDraw draw,void *Aa)
     CHKERRQ(PetscDrawGetPopup(draw,&popup));
     CHKERRQ(PetscDrawScalePopup(popup,minv,maxv));
 
-    CHKERRQ(PetscDrawCollectiveBegin(draw));
+    ierr = PetscDrawCollectiveBegin(draw);CHKERRQ(ierr);
     for (i=0; i<m; i++) {
       shift = a->sliidx[i>>3]+(i&0x07);
       y_l = m - i - 1.0;
@@ -1353,7 +1335,7 @@ PetscErrorCode MatView_SeqSELL_Draw_Zoom(PetscDraw draw,void *Aa)
         count++;
       }
     }
-    CHKERRQ(PetscDrawCollectiveEnd(draw));
+    ierr = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1364,7 +1346,6 @@ PetscErrorCode MatView_SeqSELL_Draw(Mat A,PetscViewer viewer)
   PetscDraw      draw;
   PetscReal      xr,yr,xl,yl,h,w;
   PetscBool      isnull;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerDrawGetDraw(viewer,0,&draw));
@@ -1384,7 +1365,6 @@ PetscErrorCode MatView_SeqSELL_Draw(Mat A,PetscViewer viewer)
 PetscErrorCode MatView_SeqSELL(Mat A,PetscViewer viewer)
 {
   PetscBool      iascii,isbinary,isdraw;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1405,7 +1385,6 @@ PetscErrorCode MatAssemblyEnd_SeqSELL(Mat A,MatAssemblyType mode)
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
   PetscInt       i,shift,row_in_slice,row,nrow,*cp,lastcol,j,k;
   MatScalar      *vp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (mode == MAT_FLUSH_ASSEMBLY) PetscFunctionReturn(0);
@@ -1484,7 +1463,6 @@ PetscErrorCode MatSetValues_SeqSELL(Mat A,PetscInt m,const PetscInt im[],PetscIn
   PetscInt       shift,i,k,l,low,high,t,ii,row,col,nrow;
   PetscInt       *cp,nonew=a->nonew,lastcol=-1;
   MatScalar      *vp,value;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (k=0; k<m; k++) { /* loop over added rows */
@@ -1552,7 +1530,6 @@ noinsert:;
 
 PetscErrorCode MatCopy_SeqSELL(Mat A,Mat B,MatStructure str)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* If the two matrices have the same copy implementation, use fast copy. */
@@ -1570,7 +1547,6 @@ PetscErrorCode MatCopy_SeqSELL(Mat A,Mat B,MatStructure str)
 
 PetscErrorCode MatSetUp_SeqSELL(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSeqSELLSetPreallocation(A,PETSC_DEFAULT,NULL));
@@ -1608,7 +1584,6 @@ PetscErrorCode MatImaginaryPart_SeqSELL(Mat A)
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data;
   PetscInt       i;
   MatScalar      *aval=a->val;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<a->sliidx[a->totalslices]; i++) aval[i] = PetscImaginaryPart(aval[i]);
@@ -1622,7 +1597,6 @@ PetscErrorCode MatScale_SeqSELL(Mat inA,PetscScalar alpha)
   MatScalar      *aval=a->val;
   PetscScalar    oalpha=alpha;
   PetscBLASInt   one=1,size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscBLASIntCast(a->sliidx[a->totalslices],&size));
@@ -1635,7 +1609,6 @@ PetscErrorCode MatScale_SeqSELL(Mat inA,PetscScalar alpha)
 PetscErrorCode MatShift_SeqSELL(Mat Y,PetscScalar a)
 {
   Mat_SeqSELL    *y=(Mat_SeqSELL*)Y->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!Y->preallocated || !y->nz) {
@@ -1653,7 +1626,6 @@ PetscErrorCode MatSOR_SeqSELL(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
   const PetscScalar *b,*xb;
   PetscInt          n,m=A->rmap->n,i,j,shift;
   const PetscInt    *diag;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   its = its*lits;
@@ -1899,7 +1871,6 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqSELL,
 PetscErrorCode MatStoreValues_SeqSELL(Mat mat)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->nonew,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
@@ -1918,7 +1889,6 @@ PetscErrorCode MatStoreValues_SeqSELL(Mat mat)
 PetscErrorCode MatRetrieveValues_SeqSELL(Mat mat)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->nonew,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
@@ -1942,7 +1912,6 @@ PetscErrorCode MatRetrieveValues_SeqSELL(Mat mat)
  @*/
 PetscErrorCode MatSeqSELLRestoreArray(Mat A,PetscScalar **array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"MatSeqSELLRestoreArray_C",(Mat,PetscScalar**),(A,array)));
@@ -1953,7 +1922,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSELL(Mat B)
 {
   Mat_SeqSELL    *b;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(citation,&cited));
@@ -2003,7 +1971,6 @@ PetscErrorCode MatDuplicateNoCreate_SeqSELL(Mat C,Mat A,MatDuplicateOption cpval
   Mat_SeqSELL    *c = (Mat_SeqSELL*)C->data,*a = (Mat_SeqSELL*)A->data;
   PetscInt       i,m=A->rmap->n;
   PetscInt       totalslices=a->totalslices;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   C->factortype = A->factortype;
@@ -2075,7 +2042,6 @@ PetscErrorCode MatDuplicateNoCreate_SeqSELL(Mat C,Mat A,MatDuplicateOption cpval
 
 PetscErrorCode MatDuplicate_SeqSELL(Mat A,MatDuplicateOption cpvalues,Mat *B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),B));
@@ -2190,7 +2156,6 @@ M*/
  @*/
 PetscErrorCode MatCreateSeqSELL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt maxallocrow,const PetscInt rlen[],Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -2204,7 +2169,6 @@ PetscErrorCode MatEqual_SeqSELL(Mat A,Mat B,PetscBool * flg)
 {
   Mat_SeqSELL    *a=(Mat_SeqSELL*)A->data,*b=(Mat_SeqSELL*)B->data;
   PetscInt       totalslices=a->totalslices;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* If the  matrix dimensions are not equal,or no of nonzeros */

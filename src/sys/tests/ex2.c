@@ -5,7 +5,6 @@ static char help[] = "Tests the signal handler.\n";
 
 int CreateError(int n)
 {
-  PetscErrorCode ierr;
   PetscReal      *x = 0;
   if (!n) {x[0] = 100.; return 0;}
   CHKERRQ(CreateError(n-1));

@@ -83,11 +83,11 @@ int main(int argc,char **argv)
   for (i=0; i<nz; i++) {
     if (pattern) {
       ninput = fscanf(file, "%d %d\n", &ia[i], &ja[i]);
-      PetscCheckFalse(ninput < 2,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
+      PetscCheck(ninput >= 2,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
       val[i] = 1.0;
     } else if (real) {
       ninput = fscanf(file, "%d %d %lg\n", &ia[i], &ja[i], &val[i]);
-      PetscCheckFalse(ninput < 3,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
+      PetscCheck(ninput >= 3,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
     }
     ia[i]--; ja[i]--;     /* adjust from 1-based to 0-based */
     if (ia[i] != ja[i]) { /* already counted the diagonals above */
@@ -110,31 +110,25 @@ int main(int argc,char **argv)
     CHKERRQ(MatSetUp(A));
     CHKERRQ(MatSeqSBAIJSetPreallocation(A,1,0,rownz));
     CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATSEQSBAIJ,&sametype));
-    PetscCheckFalse(!sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
+    PetscCheck(sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
   } else {
     CHKERRQ(MatSetType(A,MATSEQAIJ));
     CHKERRQ(MatSetFromOptions(A));
     CHKERRQ(MatSetUp(A));
     CHKERRQ(MatSeqAIJSetPreallocation(A,0,rownz));
     CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&sametype));
-    PetscCheckFalse(!sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
+    PetscCheck(sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
   }
 
   /* Add zero to diagonals, in case the matrix missing diagonals */
-  for (j=0; j<M; j++)  {
-    CHKERRQ(MatSetValues(A,1,&j,1,&j,&zero,INSERT_VALUES));
-  }
+  for (j=0; j<M; j++)  CHKERRQ(MatSetValues(A,1,&j,1,&j,&zero,INSERT_VALUES));
   /* Add values to the matrix, these correspond to lower triangular part for symmetric or skew matrices */
-  for (j=0; j<nz; j++) {
-    CHKERRQ(MatSetValues(A,1,&ia[j],1,&ja[j],&val[j],INSERT_VALUES));
-  }
+  for (j=0; j<nz; j++) CHKERRQ(MatSetValues(A,1,&ia[j],1,&ja[j],&val[j],INSERT_VALUES));
 
   /* Add values to upper triangular part for some cases */
   if (symmetric && aijonly) {
     /* MatrixMarket matrix stores symm matrix in lower triangular part. Take its transpose */
-    for (j=0; j<nz; j++) {
-      CHKERRQ(MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES));
-    }
+    for (j=0; j<nz; j++) CHKERRQ(MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES));
   }
   if (skew) {
     for (j=0; j<nz; j++) {

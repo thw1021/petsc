@@ -77,7 +77,6 @@ typedef struct {
 
 PetscErrorCode IFunctionView(AppCtx *ctx,PetscViewer v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryWrite(v,&ctx->k,1,PETSC_SCALAR));
@@ -86,7 +85,6 @@ PetscErrorCode IFunctionView(AppCtx *ctx,PetscViewer v)
 
 PetscErrorCode IFunctionLoad(AppCtx **ctx,PetscViewer v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
@@ -99,7 +97,6 @@ PetscErrorCode IFunctionLoad(AppCtx **ctx,PetscViewer v)
 */
 PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *u,*udot;
 
@@ -122,7 +119,6 @@ PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,AppCtx *ctx)
 */
 PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1,2};
   PetscScalar       J[3][3];
   const PetscScalar *u,*udot;
@@ -151,7 +147,6 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat 
 */
 static PetscErrorCode Solution(TS ts,PetscReal t,Vec U,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *uinit;
   PetscScalar       *u,d0,q;
 

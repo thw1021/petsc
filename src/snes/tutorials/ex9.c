@@ -125,7 +125,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode FormExactSolution(DMDALocalInfo *info, Vec u)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscReal      **au, dx, dy, x, y;
   dx = 4.0 / (PetscReal)(info->mx-1);
@@ -144,7 +143,6 @@ PetscErrorCode FormExactSolution(DMDALocalInfo *info, Vec u)
 
 PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu)
 {
-  PetscErrorCode ierr;
   DM             da;
   DMDALocalInfo  info;
   PetscInt       i, j;
@@ -169,7 +167,6 @@ PetscErrorCode FormBounds(SNES snes, Vec Xl, Vec Xu)
 
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **au, PetscScalar **af, void *user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscReal      dx,dy,x,y,ue,un,us,uw;
 
@@ -197,7 +194,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **au, PetscSca
 
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info, PetscScalar **au, Mat A, Mat jac, void *user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,n;
   MatStencil     col[5],row;
   PetscReal      v[5],dx,dy,oxx,oyy;

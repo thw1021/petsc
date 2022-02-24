@@ -326,7 +326,6 @@ int main(int argc,char **argv)
 */
 PetscErrorCode FormInitialGuess(Vec x)
 {
-  PetscErrorCode ierr;
   PetscScalar    pfive = .50;
 
   PetscFunctionBeginUser;
@@ -355,7 +354,6 @@ PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
   ApplicationCtx *user = (ApplicationCtx*) ctx;
   DM             da    = user->da;
   PetscScalar    *xx,*ff,*FF,d;
-  PetscErrorCode ierr;
   PetscInt       i,M,xs,xm;
   Vec            xlocal;
 
@@ -435,7 +433,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *ctx)
 {
   ApplicationCtx *user = (ApplicationCtx*) ctx;
   PetscScalar    *xx,d,A[3];
-  PetscErrorCode ierr;
   PetscInt       i,j[3],M,xs,xm;
   DM             da = user->da;
 
@@ -519,7 +516,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *ctx)
  */
 PetscErrorCode Monitor(SNES snes,PetscInt its,PetscReal fnorm,void *ctx)
 {
-  PetscErrorCode ierr;
   MonitorCtx     *monP = (MonitorCtx*) ctx;
   Vec            x;
 
@@ -571,7 +567,6 @@ PetscErrorCode PreCheck(SNESLineSearch linesearch,Vec xcurrent,Vec y, PetscBool 
  */
 PetscErrorCode PostCheck(SNESLineSearch linesearch,Vec xcurrent,Vec y,Vec x,PetscBool  *changed_y,PetscBool  *changed_x, void * ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,iter,xs,xm;
   StepCheckCtx   *check;
   ApplicationCtx *user;
@@ -642,7 +637,6 @@ PetscErrorCode PostCheck(SNESLineSearch linesearch,Vec xcurrent,Vec y,Vec x,Pets
  */
 PetscErrorCode PostSetSubKSP(SNESLineSearch linesearch,Vec xcurrent,Vec y,Vec x,PetscBool  *changed_y,PetscBool  *changed_x, void * ctx)
 {
-  PetscErrorCode ierr;
   SetSubKSPCtx   *check;
   PetscInt       iter,its,sub_its,maxit;
   KSP            ksp,sub_ksp,*sub_ksps;
@@ -688,7 +682,6 @@ PetscErrorCode PostSetSubKSP(SNESLineSearch linesearch,Vec xcurrent,Vec y,Vec x,
 */
 PetscErrorCode MatrixFreePreconditioner(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   CHKERRQ(VecCopy(x,y));
   return 0;
 }

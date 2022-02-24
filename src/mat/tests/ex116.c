@@ -196,7 +196,7 @@ int main(int argc,char **args)
 */
 PetscErrorCode CkEigenSolutions(PetscInt cklvl,Mat A,PetscInt il,PetscInt iu,PetscReal *eval,Vec *evec,PetscReal *tols)
 {
-  PetscInt  ierr,i,j,nev;
+  PetscInt  i,j,nev;
   Vec       vt1,vt2;    /* tmp vectors */
   PetscReal norm,tmp,dot,norm_max,dot_max;
 

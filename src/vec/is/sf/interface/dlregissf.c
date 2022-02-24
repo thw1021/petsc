@@ -32,7 +32,6 @@ PetscErrorCode PetscSFInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscSFPackageInitialized) PetscFunctionReturn(0);
@@ -85,7 +84,6 @@ PetscErrorCode PetscSFInitializePackage(void)
 @*/
 PetscErrorCode PetscSFFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscSFList));

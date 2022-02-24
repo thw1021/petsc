@@ -10,7 +10,6 @@ Example:
 
 PetscErrorCode Print_memory(PetscLogDouble mem)
 {
-  PetscErrorCode ierr;
   double         max_mem,min_mem;
 
   PetscFunctionBeginUser;
@@ -28,7 +27,6 @@ PetscErrorCode Print_memory(PetscLogDouble mem)
 */
 PetscErrorCode TestMPIDerivedDataType()
 {
-  PetscErrorCode    ierr;
   MPI_Datatype      type1, type2,rtype1,rtype2;
   PetscInt          i,j;
   PetscScalar       buffer[24]; /* An array of 4 rows, 6 cols */

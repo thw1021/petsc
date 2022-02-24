@@ -29,7 +29,6 @@ static PetscErrorCode CreateFE(DM dm)
   PetscBool      isSimplex;
 
   PetscDS        ds;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetCoordinateDM(dm, &cdm));

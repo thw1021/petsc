@@ -16,7 +16,6 @@ PetscErrorCode PCMGMCycle_Private(PC pc,PC_MG_Levels **mglevelsin,PetscBool tran
 {
   PC_MG          *mg = (PC_MG*)pc->data;
   PC_MG_Levels   *mgc,*mglevels = *mglevelsin;
-  PetscErrorCode ierr;
   PetscInt       cycles = (mglevels->level == 1) ? 1 : (PetscInt) mglevels->cycles;
 
   PetscFunctionBegin;
@@ -127,7 +126,6 @@ static PetscErrorCode PCApplyRichardson_MG(PC pc,Vec b,Vec x,Vec w,PetscReal rto
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PC             tpc;
   PetscBool      changeu,changed;
   PetscInt       levels = mglevels[0]->levels,i;
@@ -202,7 +200,6 @@ PetscErrorCode PCReset_MG(PC pc)
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PetscInt       i,c,n;
 
   PetscFunctionBegin;
@@ -288,7 +285,6 @@ static PetscErrorCode CRSetup_Private(PC pc)
 {
   CRContext     *ctx;
   Mat            It;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -304,7 +300,6 @@ static PetscErrorCode CRSetup_Private(PC pc)
 static PetscErrorCode CRApply_Private(PC pc, Vec x, Vec y)
 {
   CRContext     *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -315,7 +310,6 @@ static PetscErrorCode CRApply_Private(PC pc, Vec x, Vec y)
 static PetscErrorCode CRDestroy_Private(PC pc)
 {
   CRContext     *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -329,7 +323,6 @@ static PetscErrorCode CRDestroy_Private(PC pc)
 static PetscErrorCode CreateCR_Private(PC pc, PetscInt l, PC *cr)
 {
   CRContext     *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PCCreate(PetscObjectComm((PetscObject) pc), cr));
@@ -347,7 +340,6 @@ static PetscErrorCode CreateCR_Private(PC pc, PetscInt l, PC *cr)
 
 PetscErrorCode PCMGSetLevels_MG(PC pc,PetscInt levels,MPI_Comm *comms)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg        = (PC_MG*)pc->data;
   MPI_Comm       comm;
   PC_MG_Levels   **mglevels = mg->levels;
@@ -493,7 +485,6 @@ PetscErrorCode PCMGSetLevels_MG(PC pc,PetscInt levels,MPI_Comm *comms)
 @*/
 PetscErrorCode PCMGSetLevels(PC pc,PetscInt levels,MPI_Comm *comms)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -504,7 +495,6 @@ PetscErrorCode PCMGSetLevels(PC pc,PetscInt levels,MPI_Comm *comms)
 
 PetscErrorCode PCDestroy_MG(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
   PetscInt       i,n;
@@ -540,7 +530,6 @@ static PetscErrorCode PCApply_MG_Internal(PC pc,Vec b,Vec x,Mat B,Mat X,PetscBoo
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PC             tpc;
   PetscInt       levels = mglevels[0]->levels,i;
   PetscBool      changeu,changed,matapp;
@@ -642,7 +631,6 @@ static PetscErrorCode PCApply_MG_Internal(PC pc,Vec b,Vec x,Mat B,Mat X,PetscBoo
 
 static PetscErrorCode PCApply_MG(PC pc,Vec b,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCApply_MG_Internal(pc,b,x,NULL,NULL,PETSC_FALSE));
@@ -651,7 +639,6 @@ static PetscErrorCode PCApply_MG(PC pc,Vec b,Vec x)
 
 static PetscErrorCode PCApplyTranspose_MG(PC pc,Vec b,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCApply_MG_Internal(pc,b,x,NULL,NULL,PETSC_TRUE));
@@ -660,7 +647,6 @@ static PetscErrorCode PCApplyTranspose_MG(PC pc,Vec b,Vec x)
 
 static PetscErrorCode PCMatApply_MG(PC pc,Mat b,Mat x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCApply_MG_Internal(pc,NULL,NULL,b,x,PETSC_FALSE));
@@ -669,7 +655,6 @@ static PetscErrorCode PCMatApply_MG(PC pc,Mat b,Mat x)
 
 PetscErrorCode PCSetFromOptions_MG(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode   ierr;
   PetscInt         levels,cycles;
   PetscBool        flg, flg2;
   PC_MG            *mg = (PC_MG*)pc->data;
@@ -782,7 +767,6 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PetscInt       levels = mglevels ? mglevels[0]->levels : 0,i;
   PetscBool      iascii,isbinary,isdraw;
 
@@ -878,7 +862,6 @@ PetscErrorCode PCSetUp_MG(PC pc)
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PetscInt       i,n;
   PC             cpc;
   PetscBool      dump = PETSC_FALSE,opsset,use_amat,missinginterpolate = PETSC_FALSE;
@@ -1314,7 +1297,6 @@ PetscErrorCode PCMGGetLevels_MG(PC pc, PetscInt *levels)
 @*/
 PetscErrorCode PCMGGetLevels(PC pc,PetscInt *levels)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1526,7 +1508,6 @@ PetscErrorCode PCMGSetGalerkin_MG(PC pc,PCMGGalerkinType use)
 @*/
 PetscErrorCode PCMGSetGalerkin(PC pc,PCMGGalerkinType use)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -1618,7 +1599,6 @@ PetscErrorCode PCMGGetAdaptCR_MG(PC pc, PetscBool *cr)
 @*/
 PetscErrorCode PCMGSetAdaptInterpolation(PC pc, PetscBool adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1644,7 +1624,6 @@ PetscErrorCode PCMGSetAdaptInterpolation(PC pc, PetscBool adapt)
 @*/
 PetscErrorCode PCMGGetAdaptInterpolation(PC pc, PetscBool *adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1672,7 +1651,6 @@ PetscErrorCode PCMGGetAdaptInterpolation(PC pc, PetscBool *adapt)
 @*/
 PetscErrorCode PCMGSetAdaptCR(PC pc, PetscBool cr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1698,7 +1676,6 @@ PetscErrorCode PCMGSetAdaptCR(PC pc, PetscBool cr)
 @*/
 PetscErrorCode PCMGGetAdaptCR(PC pc, PetscBool *cr)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1733,7 +1710,6 @@ PetscErrorCode  PCMGSetNumberSmooth(PC pc,PetscInt n)
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PetscInt       i,levels;
 
   PetscFunctionBegin;
@@ -1775,7 +1751,6 @@ PetscErrorCode  PCMGSetDistinctSmoothUp(PC pc)
 {
   PC_MG          *mg        = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
-  PetscErrorCode ierr;
   PetscInt       i,levels;
   KSP            subksp;
 
@@ -1802,7 +1777,6 @@ PetscErrorCode  PCGetInterpolations_MG(PC pc,PetscInt *num_levels,Mat *interpola
   PC_MG_Levels   **mglevels = mg->levels;
   Mat            *mat;
   PetscInt       l;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!mglevels,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must set MG levels before calling");
@@ -1823,7 +1797,6 @@ PetscErrorCode  PCGetCoarseOperators_MG(PC pc,PetscInt *num_levels,Mat *coarseOp
   PC_MG_Levels   **mglevels = mg->levels;
   PetscInt       l;
   Mat            *mat;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!mglevels,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must set MG levels before calling");
@@ -1863,7 +1836,6 @@ $   coarseSp  - A basis for the computed coarse space
 @*/
 PetscErrorCode PCMGRegisterCoarseSpaceConstructor(const char name[], PetscErrorCode (*function)(PC, PetscInt, DM, KSP, PetscInt, const Vec[], Vec **))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCInitializePackage());
@@ -1899,7 +1871,6 @@ $   coarseSp  - A basis for the computed coarse space
 @*/
 PetscErrorCode PCMGGetCoarseSpaceConstructor(const char name[], PetscErrorCode (**function)(PC, PetscInt, DM, KSP, PetscInt, const Vec[], Vec **))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListFind(PCMGCoarseList,name,function));
@@ -1947,7 +1918,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_MG(PC pc)
 {
   PC_MG          *mg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&mg));

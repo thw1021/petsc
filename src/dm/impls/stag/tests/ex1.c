@@ -75,7 +75,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode TestFields(DM dmstag)
 {
-  PetscErrorCode ierr;
   Vec            vecLocal,vecGlobal;
   PetscReal      norm2;
 

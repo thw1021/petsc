@@ -23,7 +23,6 @@ static PetscErrorCode KSPGuessReset_Fischer(KSPGuess guess)
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
   PetscLayout     Alay = NULL,vlay = NULL;
   PetscBool       cong;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   itg->curl = 0;
@@ -95,7 +94,6 @@ static PetscErrorCode KSPGuessSetUp_Fischer(KSPGuess guess)
 static PetscErrorCode KSPGuessDestroy_Fischer(KSPGuess guess)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(itg->alpha));
@@ -114,7 +112,6 @@ static PetscErrorCode KSPGuessDestroy_Fischer(KSPGuess guess)
 static PetscErrorCode KSPGuessFormGuess_Fischer_1(KSPGuess guess,Vec b,Vec x)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
-  PetscErrorCode  ierr;
   PetscInt        i;
 
   PetscFunctionBegin;
@@ -136,7 +133,6 @@ static PetscErrorCode KSPGuessUpdate_Fischer_1(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
   PetscReal       norm;
-  PetscErrorCode  ierr;
   int             curl = itg->curl,i;
 
   PetscFunctionBegin;
@@ -177,7 +173,6 @@ static PetscErrorCode KSPGuessUpdate_Fischer_1(KSPGuess guess, Vec b, Vec x)
 static PetscErrorCode KSPGuessFormGuess_Fischer_2(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
-  PetscErrorCode  ierr;
   PetscInt        i;
 
   PetscFunctionBegin;
@@ -199,7 +194,6 @@ static PetscErrorCode KSPGuessUpdate_Fischer_2(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
   PetscScalar     norm;
-  PetscErrorCode  ierr;
   int             curl = itg->curl,i;
 
   PetscFunctionBegin;
@@ -238,7 +232,6 @@ static PetscErrorCode KSPGuessUpdate_Fischer_2(KSPGuess guess, Vec b, Vec x)
 static PetscErrorCode KSPGuessFormGuess_Fischer_3(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
-  PetscErrorCode  ierr;
   PetscInt        i,j,m;
   PetscReal       *s_values;
   PetscScalar     *corr,*work,*scratch_vec,zero=0.0,one=1.0;
@@ -335,7 +328,6 @@ static PetscErrorCode KSPGuessUpdate_Fischer_3(KSPGuess guess, Vec b, Vec x)
 {
   KSPGuessFischer  *itg = (KSPGuessFischer*)guess->data;
   PetscBool        rotate = itg->curl == itg->maxl ? PETSC_TRUE : PETSC_FALSE;
-  PetscErrorCode   ierr;
   PetscInt         i,j;
   PetscObjectState b_state;
   PetscScalar      *last_column;
@@ -429,7 +421,6 @@ static PetscErrorCode KSPGuessView_Fischer(KSPGuess guess,PetscViewer viewer)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
   PetscBool       isascii;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -458,7 +449,6 @@ static PetscErrorCode KSPGuessView_Fischer(KSPGuess guess,PetscViewer viewer)
 @*/
 PetscErrorCode  KSPGuessFischerSetModel(KSPGuess guess,PetscInt model,PetscInt size)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(guess,KSPGUESS_CLASSID,1);
@@ -470,7 +460,6 @@ PetscErrorCode  KSPGuessFischerSetModel(KSPGuess guess,PetscInt model,PetscInt s
 static PetscErrorCode KSPGuessFischerSetModel_Fischer(KSPGuess guess,PetscInt model,PetscInt size)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (model == 1) {
@@ -540,7 +529,6 @@ static PetscErrorCode KSPGuessFischerSetModel_Fischer(KSPGuess guess,PetscInt mo
 PetscErrorCode KSPGuessCreate_Fischer(KSPGuess guess)
 {
   KSPGuessFischer *fischer;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(guess,&fischer));

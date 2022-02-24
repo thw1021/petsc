@@ -79,7 +79,6 @@ PetscInt GetSize(const char *p)
 
 PetscErrorCode RHSFunction_Hull1972A1(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -94,7 +93,6 @@ PetscErrorCode RHSFunction_Hull1972A1(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode RHSJacobian_Hull1972A1(TS ts, PetscReal t, Vec Y, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value = -1.0;
@@ -110,7 +108,6 @@ PetscErrorCode RHSJacobian_Hull1972A1(TS ts, PetscReal t, Vec Y, Mat A, Mat B, v
 
 PetscErrorCode IFunction_Hull1972A1(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscScalar       *f;
 
@@ -127,7 +124,6 @@ PetscErrorCode IFunction_Hull1972A1(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972A1(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value = a - 1.0;
@@ -145,7 +141,6 @@ PetscErrorCode IJacobian_Hull1972A1(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscScalar       *f;
 
@@ -160,7 +155,6 @@ PetscErrorCode RHSFunction_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode RHSJacobian_Hull1972A2(TS ts, PetscReal t, Vec Y, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value;
@@ -177,7 +171,6 @@ PetscErrorCode RHSJacobian_Hull1972A2(TS ts, PetscReal t, Vec Y, Mat A, Mat B, v
 
 PetscErrorCode IFunction_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -194,7 +187,6 @@ PetscErrorCode IFunction_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value;
@@ -213,7 +205,6 @@ PetscErrorCode IJacobian_Hull1972A2(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972A3(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscScalar       *f;
 
@@ -228,7 +219,6 @@ PetscErrorCode RHSFunction_Hull1972A3(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode RHSJacobian_Hull1972A3(TS ts, PetscReal t, Vec Y, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value = PetscCosReal(t);
@@ -244,7 +234,6 @@ PetscErrorCode RHSJacobian_Hull1972A3(TS ts, PetscReal t, Vec Y, Mat A, Mat B, v
 
 PetscErrorCode IFunction_Hull1972A3(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -261,7 +250,6 @@ PetscErrorCode IFunction_Hull1972A3(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972A3(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value = a - PetscCosReal(t);
@@ -279,7 +267,6 @@ PetscErrorCode IJacobian_Hull1972A3(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972A4(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -294,7 +281,6 @@ PetscErrorCode RHSFunction_Hull1972A4(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode RHSJacobian_Hull1972A4(TS ts, PetscReal t, Vec Y, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value;
@@ -311,7 +297,6 @@ PetscErrorCode RHSJacobian_Hull1972A4(TS ts, PetscReal t, Vec Y, Mat A, Mat B, v
 
 PetscErrorCode IFunction_Hull1972A4(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -328,7 +313,6 @@ PetscErrorCode IFunction_Hull1972A4(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972A4(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value;
@@ -347,7 +331,6 @@ PetscErrorCode IJacobian_Hull1972A4(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972A5(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -362,7 +345,6 @@ PetscErrorCode RHSFunction_Hull1972A5(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode RHSJacobian_Hull1972A5(TS ts, PetscReal t, Vec Y, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value;
@@ -379,7 +361,6 @@ PetscErrorCode RHSJacobian_Hull1972A5(TS ts, PetscReal t, Vec Y, Mat A, Mat B, v
 
 PetscErrorCode IFunction_Hull1972A5(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -396,7 +377,6 @@ PetscErrorCode IFunction_Hull1972A5(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972A5(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row = 0,col = 0;
   PetscScalar       value;
@@ -415,7 +395,6 @@ PetscErrorCode IJacobian_Hull1972A5(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972B1(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -431,7 +410,6 @@ PetscErrorCode RHSFunction_Hull1972B1(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972B1(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -449,7 +427,6 @@ PetscErrorCode IFunction_Hull1972B1(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972B1(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[2] = {0,1};
   PetscScalar       value[2][2];
@@ -469,7 +446,6 @@ PetscErrorCode IJacobian_Hull1972B1(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972B2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -486,7 +462,6 @@ PetscErrorCode RHSFunction_Hull1972B2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972B2(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -505,7 +480,6 @@ PetscErrorCode IFunction_Hull1972B2(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972B2(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[3] = {0,1,2};
   PetscScalar       value[3][3];
@@ -526,7 +500,6 @@ PetscErrorCode IJacobian_Hull1972B2(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972B3(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -543,7 +516,6 @@ PetscErrorCode RHSFunction_Hull1972B3(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972B3(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -562,7 +534,6 @@ PetscErrorCode IFunction_Hull1972B3(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972B3(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[3] = {0,1,2};
   PetscScalar       value[3][3];
@@ -583,7 +554,6 @@ PetscErrorCode IJacobian_Hull1972B3(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972B4(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -600,7 +570,6 @@ PetscErrorCode RHSFunction_Hull1972B4(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972B4(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -619,7 +588,6 @@ PetscErrorCode IFunction_Hull1972B4(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972B4(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[3] = {0,1,2};
   PetscScalar       value[3][3],fac,fac2;
@@ -648,7 +616,6 @@ PetscErrorCode IJacobian_Hull1972B4(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -665,7 +632,6 @@ PetscErrorCode RHSFunction_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -684,7 +650,6 @@ PetscErrorCode IFunction_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[3] = {0,1,2};
   PetscScalar       value[3][3];
@@ -705,7 +670,6 @@ PetscErrorCode IJacobian_Hull1972B5(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -723,7 +687,6 @@ PetscErrorCode RHSFunction_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec F, void *
 
 PetscErrorCode RHSJacobian_Kulikov2013I(TS ts, PetscReal t, Vec Y, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[4] = {0,1,2,3};
   PetscScalar       value[4][4];
@@ -747,7 +710,6 @@ PetscErrorCode RHSJacobian_Kulikov2013I(TS ts, PetscReal t, Vec Y, Mat A, Mat B,
 
 PetscErrorCode IFunction_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
 
@@ -767,7 +729,6 @@ PetscErrorCode IFunction_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F
 
 PetscErrorCode IJacobian_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          row[4] = {0,1,2,3};
   PetscScalar       value[4][4];
@@ -794,7 +755,6 @@ PetscErrorCode IJacobian_Kulikov2013I(TS ts, PetscReal t, Vec Y, Vec Ydot, Petsc
 
 PetscErrorCode RHSFunction_Hull1972C1(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
   PetscInt          N,i;
@@ -815,7 +775,6 @@ PetscErrorCode RHSFunction_Hull1972C1(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972C1(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
   PetscInt          N,i;
@@ -838,7 +797,6 @@ PetscErrorCode IFunction_Hull1972C1(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972C1(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          N,i,col[2];
   PetscScalar       value[2];
@@ -869,7 +827,6 @@ PetscErrorCode IJacobian_Hull1972C1(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972C2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscScalar       *f;
   PetscInt          N,i;
@@ -890,7 +847,6 @@ PetscErrorCode RHSFunction_Hull1972C2(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 
 PetscErrorCode IFunction_Hull1972C2(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
   PetscInt          N,i;
@@ -913,7 +869,6 @@ PetscErrorCode IFunction_Hull1972C2(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, 
 
 PetscErrorCode IJacobian_Hull1972C2(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscInt          N,i,col[2];
   PetscScalar       value[2];
@@ -944,7 +899,6 @@ PetscErrorCode IJacobian_Hull1972C2(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscRe
 
 PetscErrorCode RHSFunction_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
   PetscInt          N,i;
@@ -965,7 +919,6 @@ PetscErrorCode RHSFunction_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec F, void *s
 
 PetscErrorCode IFunction_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F, void *s)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *y;
   PetscInt          N,i;
@@ -988,7 +941,6 @@ PetscErrorCode IFunction_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec Ydot, Vec F,
 
 PetscErrorCode IJacobian_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscReal a, Mat A, Mat B, void *s)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y;
   PetscScalar       value[3];
   PetscInt          N,i,col[3];
@@ -1023,7 +975,6 @@ PetscErrorCode IJacobian_Hull1972C34(TS ts, PetscReal t, Vec Y, Vec Ydot, PetscR
 /* Sets the initial solution for the IVP and sets up the function pointers*/
 PetscErrorCode Initialize(Vec Y, void* s)
 {
-  PetscErrorCode ierr;
   char          *p = (char*) s;
   PetscScalar   *y;
   PetscReal     t0;
@@ -1133,7 +1084,6 @@ PetscErrorCode Initialize(Vec Y, void* s)
 /* Calculates the exact solution to problems that have one */
 PetscErrorCode ExactSolution(Vec Y, void* s, PetscReal t, PetscBool *flag)
 {
-  PetscErrorCode ierr;
   char          *p = (char*) s;
   PetscScalar   *y;
 
@@ -1176,7 +1126,6 @@ PetscErrorCode ExactSolution(Vec Y, void* s, PetscReal t, PetscBool *flag)
 /* Solves the specified ODE and computes the error if exact solution is available */
 PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt maxiter, PetscReal *error, PetscBool *exact_flag)
 {
-  PetscErrorCode  ierr;             /* Error code                             */
   TS              ts;               /* time-integrator                        */
   Vec             Y;                /* Solution vector                        */
   Vec             Yex;              /* Exact solution                         */

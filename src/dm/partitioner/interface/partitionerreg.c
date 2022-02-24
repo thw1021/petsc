@@ -39,7 +39,6 @@ PetscBool         PetscPartitionerRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode PetscPartitionerRegister(const char sname[], PetscErrorCode (*function)(PetscPartitioner))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&PetscPartitionerList, sname, function));
@@ -68,7 +67,6 @@ PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_MatPartitioning(PetscPartitio
 @*/
 PetscErrorCode PetscPartitionerRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscPartitionerRegisterAllCalled) PetscFunctionReturn(0);
@@ -96,7 +94,6 @@ static PetscBool PetscPartitionerPackageInitialized = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscPartitionerFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&PetscPartitionerList));
@@ -116,7 +113,6 @@ PetscErrorCode  PetscPartitionerInitializePackage(void)
 {
   char           logList[256];
   PetscBool      opt,pkg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscPartitionerPackageInitialized) PetscFunctionReturn(0);

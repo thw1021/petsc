@@ -12,7 +12,6 @@ static PetscErrorCode DMAdaptorSimpleErrorIndicator_Private(DMAdaptor, PetscInt,
 
 static PetscErrorCode DMAdaptorTransferSolution_Exact_Private(DMAdaptor adaptor, DM dm, Vec u, DM adm, Vec au, void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMProjectFunction(adm, 0.0, adaptor->exactSol, adaptor->exactCtx, INSERT_ALL_VALUES, au));
@@ -37,7 +36,6 @@ static PetscErrorCode DMAdaptorTransferSolution_Exact_Private(DMAdaptor adaptor,
 PetscErrorCode DMAdaptorCreate(MPI_Comm comm, DMAdaptor *adaptor)
 {
   VecTaggerBox     refineBox, coarsenBox;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(adaptor, 2);
@@ -77,7 +75,6 @@ PetscErrorCode DMAdaptorCreate(MPI_Comm comm, DMAdaptor *adaptor)
 @*/
 PetscErrorCode DMAdaptorDestroy(DMAdaptor *adaptor)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*adaptor) PetscFunctionReturn(0);
@@ -142,7 +139,6 @@ PetscErrorCode DMAdaptorSetFromOptions(DMAdaptor adaptor)
 @*/
 PetscErrorCode DMAdaptorView(DMAdaptor adaptor, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectPrintClassNamePrefixType((PetscObject) adaptor, viewer));
@@ -194,7 +190,6 @@ PetscErrorCode DMAdaptorGetSolver(DMAdaptor adaptor, SNES *snes)
 @*/
 PetscErrorCode DMAdaptorSetSolver(DMAdaptor adaptor, SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(adaptor, DM_CLASSID, 1);
@@ -265,7 +260,6 @@ PetscErrorCode DMAdaptorSetUp(DMAdaptor adaptor)
 {
   PetscDS        prob;
   PetscInt       Nf, f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDS(adaptor->idm, &prob));
@@ -302,7 +296,6 @@ PetscErrorCode DMAdaptorPreAdapt(DMAdaptor adaptor, Vec locX)
   PetscObject    obj;
   PetscClassId   id;
   PetscBool      isForest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMConvert(adaptor->idm, DMPLEX, &plex));
@@ -364,7 +357,6 @@ PetscErrorCode DMAdaptorTransferSolution(DMAdaptor adaptor, DM dm, Vec x, DM adm
   PetscReal      time = 0.0;
   Mat            interp;
   void          *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetApplicationContext(dm, &ctx));
@@ -393,7 +385,6 @@ PetscErrorCode DMAdaptorPostAdapt(DMAdaptor adaptor)
   PetscDS        prob;
   PetscObject    obj;
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDS(adaptor->idm, &prob));
@@ -453,7 +444,6 @@ static PetscErrorCode DMAdaptorComputeErrorIndicator_Private(DMAdaptor adaptor, 
   void           *ctx;
   PetscQuadrature quad;
   PetscInt        dim, d, cdim, Nc;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   *errInd = 0.;
@@ -548,7 +538,6 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
   MPI_Comm       comm;
   PetscInt       numAdapt = adaptor->numSeq, adaptIter;
   PetscInt       dim, coordDim, numFields, cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMViewFromOptions(adaptor->idm, NULL, "-dm_adapt_pre_view"));
@@ -655,7 +644,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
                            const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                            PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 
-      ierr = PetscMalloc(1, &funcs);
+      CHKERRQ(PetscMalloc(1, &funcs));
       funcs[0] = identityFunc;
 
       /*     Setup finite element spaces */
@@ -809,7 +798,6 @@ $ 3) Solve the problem on a hierarchy of adapted meshes generated to satisfy a q
 @*/
 PetscErrorCode DMAdaptorAdapt(DMAdaptor adaptor, Vec x, DMAdaptationStrategy strategy, DM *adm, Vec *ax)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (strategy)

@@ -72,7 +72,6 @@ static PetscErrorCode PetscHBWRealloc(size_t a,int lineno,const char function[],
 
 PETSC_INTERN PetscErrorCode PetscSetUseHBWMalloc_Private(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMallocSet(PetscHBWMalloc,PetscHBWFree,NULL));

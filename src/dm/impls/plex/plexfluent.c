@@ -19,7 +19,6 @@
 PetscErrorCode DMPlexCreateFluentFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
   PetscViewer     viewer;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Create file viewer and build plex */
@@ -35,7 +34,6 @@ PetscErrorCode DMPlexCreateFluentFromFile(MPI_Comm comm, const char filename[], 
 static PetscErrorCode DMPlexCreateFluent_ReadString(PetscViewer viewer, char *buffer, char delim)
 {
   PetscInt ret, i = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   do CHKERRQ(PetscViewerRead(viewer, &(buffer[i++]), 1, &ret, PETSC_CHAR));
@@ -49,7 +47,6 @@ static PetscErrorCode DMPlexCreateFluent_ReadValues(PetscViewer viewer, void *da
   int            fdes=0;
   FILE          *file;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (binary) {
@@ -96,7 +93,6 @@ static PetscErrorCode DMPlexCreateFluent_ReadSection(PetscViewer viewer, FluentS
 {
   char           buffer[PETSC_MAX_PATH_LEN];
   int            snum;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Fast-forward to next section and derive its index */
@@ -236,7 +232,6 @@ PetscErrorCode DMPlexCreateFluent(MPI_Comm comm, PetscViewer viewer, PetscBool i
   PetscScalar   *coords, *coordsIn = NULL;
   PetscSection   coordSection;
   Vec            coordinates;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));

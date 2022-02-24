@@ -62,7 +62,6 @@ static inline PetscInt MinChild(PetscHeap h,PetscInt loc)
 
 PetscErrorCode PetscHeapCreate(PetscInt maxsize,PetscHeap *heap)
 {
-  PetscErrorCode ierr;
   PetscHeap      h;
 
   PetscFunctionBegin;
@@ -153,7 +152,6 @@ PetscErrorCode PetscHeapStash(PetscHeap h,PetscInt id,PetscInt val)
 
 PetscErrorCode PetscHeapUnstash(PetscHeap h)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while (h->stash < h->alloc) {
@@ -166,7 +164,6 @@ PetscErrorCode PetscHeapUnstash(PetscHeap h)
 
 PetscErrorCode PetscHeapDestroy(PetscHeap *heap)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree((*heap)->base));
@@ -176,7 +173,6 @@ PetscErrorCode PetscHeapDestroy(PetscHeap *heap)
 
 PetscErrorCode PetscHeapView(PetscHeap h,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;

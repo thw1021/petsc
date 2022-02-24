@@ -7,7 +7,6 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
   DMLabel        marker;
   PetscInt       cdim, depth, d, pStart, pEnd, p, Nd[4] = {0, 0, 0, 0}, lsize = 0, rmem = 0, imem = 0;
   PetscInt       coneSecMem = 0, coneMem = 0, supportSecMem = 0, supportMem = 0, labelMem = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscPrintf(PETSC_COMM_SELF, "Memory Estimates\n"));

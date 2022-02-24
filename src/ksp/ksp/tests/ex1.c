@@ -5,7 +5,6 @@ static char help[] = "Tests solving linear system on 0 by 0 matrix, and KSPLSQR 
 
 static PetscErrorCode GetConvergenceTestName(PetscErrorCode (*converged)(KSP,PetscInt,PetscReal,KSPConvergedReason*,void*),char name[],size_t n)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (converged == KSPConvergedDefault) {

@@ -27,7 +27,6 @@ PetscErrorCode  DMCompositeSetCoupling(DM dm,PetscErrorCode (*FormCoupleLocation
 {
   DM_Composite   *com = (DM_Composite*)dm->data;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)dm,DMCOMPOSITE,&flg));
@@ -38,7 +37,6 @@ PetscErrorCode  DMCompositeSetCoupling(DM dm,PetscErrorCode (*FormCoupleLocation
 
 PetscErrorCode  DMDestroy_Composite(DM dm)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next, *prev;
   DM_Composite           *com = (DM_Composite*)dm->data;
 
@@ -59,7 +57,6 @@ PetscErrorCode  DMDestroy_Composite(DM dm)
 
 PetscErrorCode  DMView_Composite(DM dm,PetscViewer v)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
   DM_Composite   *com = (DM_Composite*)dm->data;
 
@@ -86,7 +83,6 @@ PetscErrorCode  DMView_Composite(DM dm,PetscViewer v)
 /* --------------------------------------------------------------------------------------*/
 PetscErrorCode  DMSetUp_Composite(DM dm)
 {
-  PetscErrorCode         ierr;
   PetscInt               nprev = 0;
   PetscMPIInt            rank,size;
   DM_Composite           *com  = (DM_Composite*)dm->data;
@@ -140,7 +136,6 @@ PetscErrorCode  DMCompositeGetNumberDM(DM dm,PetscInt *nDM)
 {
   DM_Composite   *com = (DM_Composite*)dm->data;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -178,7 +173,6 @@ PetscErrorCode  DMCompositeGetNumberDM(DM dm,PetscInt *nDM)
 PetscErrorCode  DMCompositeGetAccess(DM dm,Vec gvec,...)
 {
   va_list                Argp;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscInt               readonly;
@@ -245,7 +239,6 @@ PetscErrorCode  DMCompositeGetAccess(DM dm,Vec gvec,...)
 @*/
 PetscErrorCode  DMCompositeGetAccessArray(DM dm,Vec pvec,PetscInt nwanted,const PetscInt *wanted,Vec *vecs)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *link;
   PetscInt               i,wnum;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -310,7 +303,6 @@ DMCompositeGetEntries(), DMCompositeScatter(), DMCompositeGather()
 @*/
 PetscErrorCode  DMCompositeGetLocalAccessArray(DM dm,Vec pvec,PetscInt nwanted,const PetscInt *wanted,Vec *vecs)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *link;
   PetscInt               i,wnum;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -375,7 +367,6 @@ PetscErrorCode  DMCompositeGetLocalAccessArray(DM dm,Vec pvec,PetscInt nwanted,c
 PetscErrorCode  DMCompositeRestoreAccess(DM dm,Vec gvec,...)
 {
   va_list                Argp;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscInt               readonly;
@@ -428,7 +419,6 @@ PetscErrorCode  DMCompositeRestoreAccess(DM dm,Vec gvec,...)
 @*/
 PetscErrorCode  DMCompositeRestoreAccessArray(DM dm,Vec pvec,PetscInt nwanted,const PetscInt *wanted,Vec *vecs)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *link;
   PetscInt               i,wnum;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -482,7 +472,6 @@ DMCompositeScatter(), DMCompositeGather()
 @*/
 PetscErrorCode  DMCompositeRestoreLocalAccessArray(DM dm,Vec pvec,PetscInt nwanted,const PetscInt *wanted,Vec *vecs)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *link;
   PetscInt               i,wnum;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -537,7 +526,6 @@ PetscErrorCode  DMCompositeRestoreLocalAccessArray(DM dm,Vec pvec,PetscInt nwant
 PetscErrorCode  DMCompositeScatter(DM dm,Vec gvec,...)
 {
   va_list                Argp;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   PetscInt               cnt;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -597,7 +585,6 @@ PetscErrorCode  DMCompositeScatter(DM dm,Vec gvec,...)
 @*/
 PetscErrorCode  DMCompositeScatterArray(DM dm,Vec gvec,Vec *lvecs)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   PetscInt               i;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -654,7 +641,6 @@ PetscErrorCode  DMCompositeScatterArray(DM dm,Vec gvec,Vec *lvecs)
 PetscErrorCode  DMCompositeGather(DM dm,InsertMode imode,Vec gvec,...)
 {
   va_list                Argp;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscInt               cnt;
@@ -714,7 +700,6 @@ PetscErrorCode  DMCompositeGather(DM dm,InsertMode imode,Vec gvec,...)
 @*/
 PetscErrorCode  DMCompositeGatherArray(DM dm,InsertMode imode,Vec gvec,Vec *lvecs)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscInt               i;
@@ -766,7 +751,6 @@ PetscErrorCode  DMCompositeGatherArray(DM dm,InsertMode imode,Vec gvec,Vec *lvec
 @*/
 PetscErrorCode  DMCompositeAddDM(DM dmc,DM dm)
 {
-  PetscErrorCode         ierr;
   PetscInt               n,nlocal;
   struct DMCompositeLink *mine,*next;
   Vec                    global,local;
@@ -814,7 +798,6 @@ PETSC_EXTERN PetscErrorCode  VecView_MPI(Vec,PetscViewer);
 PetscErrorCode  VecView_DMComposite(Vec gvec,PetscViewer viewer)
 {
   DM                     dm;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   PetscBool              isdraw;
   DM_Composite           *com;
@@ -858,7 +841,6 @@ PetscErrorCode  VecView_DMComposite(Vec gvec,PetscViewer viewer)
 
 PetscErrorCode  DMCreateGlobalVector_Composite(DM dm,Vec *gvec)
 {
-  PetscErrorCode ierr;
   DM_Composite   *com = (DM_Composite*)dm->data;
 
   PetscFunctionBegin;
@@ -875,7 +857,6 @@ PetscErrorCode  DMCreateGlobalVector_Composite(DM dm,Vec *gvec)
 
 PetscErrorCode  DMCreateLocalVector_Composite(DM dm,Vec *lvec)
 {
-  PetscErrorCode ierr;
   DM_Composite   *com = (DM_Composite*)dm->data;
 
   PetscFunctionBegin;
@@ -917,7 +898,6 @@ PetscErrorCode  DMCreateLocalVector_Composite(DM dm,Vec *lvec)
 @*/
 PetscErrorCode  DMCompositeGetISLocalToGlobalMappings(DM dm,ISLocalToGlobalMapping **ltogs)
 {
-  PetscErrorCode         ierr;
   PetscInt               i,*idx,n,cnt;
   struct DMCompositeLink *next;
   PetscMPIInt            rank;
@@ -1005,7 +985,6 @@ PetscErrorCode  DMCompositeGetISLocalToGlobalMappings(DM dm,ISLocalToGlobalMappi
 @*/
 PetscErrorCode  DMCompositeGetLocalISs(DM dm,IS **is)
 {
-  PetscErrorCode         ierr;
   DM_Composite           *com = (DM_Composite*)dm->data;
   struct DMCompositeLink *link;
   PetscInt               cnt,start;
@@ -1059,7 +1038,6 @@ PetscErrorCode  DMCompositeGetLocalISs(DM dm,IS **is)
 @*/
 PetscErrorCode  DMCompositeGetGlobalISs(DM dm,IS *is[])
 {
-  PetscErrorCode         ierr;
   PetscInt               cnt = 0;
   struct DMCompositeLink *next;
   PetscMPIInt            rank;
@@ -1109,7 +1087,6 @@ PetscErrorCode DMCreateFieldIS_Composite(DM dm, PetscInt *numFields,char ***fiel
   PetscInt       nDM;
   DM             *dms;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCompositeGetNumberDM(dm, &nDM));
@@ -1156,7 +1133,6 @@ PetscErrorCode DMCreateFieldDecomposition_Composite(DM dm, PetscInt *len,char **
 {
   PetscInt       nDM;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreateFieldIS_Composite(dm, len, namelist, islist));
@@ -1196,7 +1172,6 @@ PetscErrorCode DMCreateFieldDecomposition_Composite(DM dm, PetscInt *len,char **
 PetscErrorCode  DMCompositeGetLocalVectors(DM dm,...)
 {
   va_list                Argp;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscBool              flg;
@@ -1241,7 +1216,6 @@ PetscErrorCode  DMCompositeGetLocalVectors(DM dm,...)
 PetscErrorCode  DMCompositeRestoreLocalVectors(DM dm,...)
 {
   va_list                Argp;
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscBool              flg;
@@ -1292,7 +1266,6 @@ PetscErrorCode  DMCompositeGetEntries(DM dm,...)
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -1336,7 +1309,6 @@ PetscErrorCode DMCompositeGetEntriesArray(DM dm,DM dms[])
   DM_Composite           *com = (DM_Composite*)dm->data;
   PetscInt               i;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -1357,7 +1329,6 @@ static PetscErrorCode  DestroyGLVisViewerCtx_Private(void *vctx)
 {
   GLVisViewerCtx *ctx = (GLVisViewerCtx*)vctx;
   PetscInt       i,n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCompositeGetNumberDM(ctx->dm,&n));
@@ -1375,7 +1346,6 @@ static PetscErrorCode  DMCompositeSampleGLVisFields_Private(PetscObject oX, Pets
   Vec            X = (Vec)oX;
   GLVisViewerCtx *ctx = (GLVisViewerCtx*)vctx;
   PetscInt       i,n,cumf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCompositeGetNumberDM(ctx->dm,&n));
@@ -1405,7 +1375,6 @@ static PetscErrorCode  DMSetUpGLVisViewer_Composite(PetscObject odm, PetscViewer
   GLVisViewerCtx *ctx;
   PetscInt       i,n,tnf,*sdim;
   char           **fecs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&ctx));
@@ -1449,7 +1418,6 @@ static PetscErrorCode  DMSetUpGLVisViewer_Composite(PetscObject odm, PetscViewer
 
 PetscErrorCode  DMRefine_Composite(DM dmi,MPI_Comm comm,DM *fine)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dmi->data;
   DM                     dm;
@@ -1475,7 +1443,6 @@ PetscErrorCode  DMRefine_Composite(DM dmi,MPI_Comm comm,DM *fine)
 
 PetscErrorCode  DMCoarsen_Composite(DM dmi,MPI_Comm comm,DM *fine)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   DM_Composite           *com = (DM_Composite*)dmi->data;
   DM                     dm;
@@ -1501,7 +1468,6 @@ PetscErrorCode  DMCoarsen_Composite(DM dmi,MPI_Comm comm,DM *fine)
 
 PetscErrorCode  DMCreateInterpolation_Composite(DM coarse,DM fine,Mat *A,Vec *v)
 {
-  PetscErrorCode         ierr;
   PetscInt               m,n,M,N,nDM,i;
   struct DMCompositeLink *nextc;
   struct DMCompositeLink *nextf;
@@ -1558,7 +1524,6 @@ static PetscErrorCode DMGetLocalToGlobalMapping_Composite(DM dm)
   DM_Composite           *com = (DM_Composite*)dm->data;
   ISLocalToGlobalMapping *ltogs;
   PetscInt               i;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   /* Set the ISLocalToGlobalMapping on the new matrix */
@@ -1571,7 +1536,6 @@ static PetscErrorCode DMGetLocalToGlobalMapping_Composite(DM dm)
 
 PetscErrorCode  DMCreateColoring_Composite(DM dm,ISColoringType ctype,ISColoring *coloring)
 {
-  PetscErrorCode  ierr;
   PetscInt        n,i,cnt;
   ISColoringValue *colors;
   PetscBool       dense  = PETSC_FALSE;
@@ -1616,7 +1580,6 @@ PetscErrorCode  DMCreateColoring_Composite(DM dm,ISColoringType ctype,ISColoring
 
 PetscErrorCode  DMGlobalToLocalBegin_Composite(DM dm,Vec gvec,InsertMode mode,Vec lvec)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   PetscScalar            *garray,*larray;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -1671,7 +1634,6 @@ PetscErrorCode  DMGlobalToLocalEnd_Composite(DM dm,Vec gvec,InsertMode mode,Vec 
 
 PetscErrorCode  DMLocalToGlobalBegin_Composite(DM dm,Vec lvec,InsertMode mode,Vec gvec)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   PetscScalar            *larray,*garray;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -1726,7 +1688,6 @@ PetscErrorCode  DMLocalToGlobalEnd_Composite(DM dm,Vec lvec,InsertMode mode,Vec 
 
 PetscErrorCode  DMLocalToLocalBegin_Composite(DM dm,Vec vec1,InsertMode mode,Vec vec2)
 {
-  PetscErrorCode         ierr;
   struct DMCompositeLink *next;
   PetscScalar            *array1,*array2;
   DM_Composite           *com = (DM_Composite*)dm->data;
@@ -1789,7 +1750,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Composite(DM p)
 {
-  PetscErrorCode ierr;
   DM_Composite   *com;
 
   PetscFunctionBegin;
@@ -1845,7 +1805,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Composite(DM p)
 @*/
 PetscErrorCode  DMCompositeCreate(MPI_Comm comm,DM *packer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(packer,2);

@@ -432,7 +432,6 @@ void Limit3_Koren3(LimitInfo info,const PetscScalar *jL,const PetscScalar *jR,co
 
 PetscErrorCode RiemannListAdd(PetscFunctionList *flist,const char *name,RiemannFunction rsolve)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListAdd(flist,name,rsolve));
@@ -441,7 +440,6 @@ PetscErrorCode RiemannListAdd(PetscFunctionList *flist,const char *name,RiemannF
 
 PetscErrorCode RiemannListFind(PetscFunctionList flist,const char *name,RiemannFunction *rsolve)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListFind(flist,name,rsolve));
@@ -451,7 +449,6 @@ PetscErrorCode RiemannListFind(PetscFunctionList flist,const char *name,RiemannF
 
 PetscErrorCode ReconstructListAdd(PetscFunctionList *flist,const char *name,ReconstructFunction r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListAdd(flist,name,r));
@@ -460,7 +457,6 @@ PetscErrorCode ReconstructListAdd(PetscFunctionList *flist,const char *name,Reco
 
 PetscErrorCode ReconstructListFind(PetscFunctionList flist,const char *name,ReconstructFunction *r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListFind(flist,name,r));
@@ -470,7 +466,6 @@ PetscErrorCode ReconstructListFind(PetscFunctionList flist,const char *name,Reco
 
 PetscErrorCode RiemannListAdd_2WaySplit(PetscFunctionList *flist,const char *name,RiemannFunction_2WaySplit rsolve)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListAdd(flist,name,rsolve));
@@ -479,7 +474,6 @@ PetscErrorCode RiemannListAdd_2WaySplit(PetscFunctionList *flist,const char *nam
 
 PetscErrorCode RiemannListFind_2WaySplit(PetscFunctionList flist,const char *name,RiemannFunction_2WaySplit *rsolve)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListFind(flist,name,rsolve));
@@ -489,7 +483,6 @@ PetscErrorCode RiemannListFind_2WaySplit(PetscFunctionList flist,const char *nam
 
 PetscErrorCode ReconstructListAdd_2WaySplit(PetscFunctionList *flist,const char *name,ReconstructFunction_2WaySplit r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListAdd(flist,name,r));
@@ -498,7 +491,6 @@ PetscErrorCode ReconstructListAdd_2WaySplit(PetscFunctionList *flist,const char 
 
 PetscErrorCode ReconstructListFind_2WaySplit(PetscFunctionList flist,const char *name,ReconstructFunction_2WaySplit *r)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFunctionListFind(flist,name,r));
@@ -509,7 +501,6 @@ PetscErrorCode ReconstructListFind_2WaySplit(PetscFunctionList flist,const char 
 /* --------------------------------- Physics ------- */
 PetscErrorCode PhysicsDestroy_SimpleFree(void *vctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFree(vctx));
@@ -520,7 +511,6 @@ PetscErrorCode PhysicsDestroy_SimpleFree(void *vctx)
 PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm;
   PetscReal      hx,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -618,7 +608,6 @@ PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 
 PetscErrorCode FVSample(FVCtx *ctx,DM da,PetscReal time,Vec U)
 {
-  PetscErrorCode ierr;
   PetscScalar    *u,*uj;
   PetscInt       i,j,k,dof,xs,xm,Mx;
 
@@ -646,7 +635,6 @@ PetscErrorCode FVSample(FVCtx *ctx,DM da,PetscReal time,Vec U)
 
 PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscReal         xmin,xmax;
   PetscScalar       sum,tvsum,tvgsum;
   const PetscScalar *x;

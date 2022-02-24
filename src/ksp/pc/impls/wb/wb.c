@@ -18,7 +18,6 @@ const char *const PCExoticTypes[] = {"face","wirebasket","PCExoticType","PC_Exot
 */
 PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Aglobal,MatReuse reuse,Mat *P)
 {
-  PetscErrorCode         ierr;
   PetscInt               dim,i,j,k,m,n,p,dof,Nint,Nface,Nwire,Nsurf,*Iint,*Isurf,cint = 0,csurf = 0,istart,jstart,kstart,*II,N,c = 0;
   PetscInt               mwidth,nwidth,pwidth,cnt,mp,np,pp,Ntotal,gl[26],*globals,Ng,*IIint,*IIsurf,Nt;
   Mat                    Xint, Xsurf,Xint_tmp;
@@ -325,7 +324,6 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
 */
 PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Aglobal,MatReuse reuse,Mat *P)
 {
-  PetscErrorCode         ierr;
   PetscInt               dim,i,j,k,m,n,p,dof,Nint,Nface,Nwire,Nsurf,*Iint,*Isurf,cint = 0,csurf = 0,istart,jstart,kstart,*II,N,c = 0;
   PetscInt               mwidth,nwidth,pwidth,cnt,mp,np,pp,Ntotal,gl[6],*globals,Ng,*IIint,*IIsurf,Nt;
   Mat                    Xint, Xsurf,Xint_tmp;
@@ -624,7 +622,6 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
 @*/
 PetscErrorCode  PCExoticSetType(PC pc,PCExoticType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -645,7 +642,6 @@ static PetscErrorCode  PCExoticSetType_Exotic(PC pc,PCExoticType type)
 
 PetscErrorCode PCSetUp_Exotic(PC pc)
 {
-  PetscErrorCode ierr;
   Mat            A;
   PC_MG          *mg   = (PC_MG*)pc->data;
   PC_Exotic      *ex   = (PC_Exotic*) mg->innerctx;
@@ -668,7 +664,6 @@ PetscErrorCode PCSetUp_Exotic(PC pc)
 
 PetscErrorCode PCDestroy_Exotic(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg  = (PC_MG*)pc->data;
   PC_Exotic      *ctx = (PC_Exotic*) mg->innerctx;
 
@@ -683,7 +678,6 @@ PetscErrorCode PCDestroy_Exotic(PC pc)
 PetscErrorCode PCView_Exotic(PC pc,PetscViewer viewer)
 {
   PC_MG          *mg = (PC_MG*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
   PC_Exotic      *ctx = (PC_Exotic*) mg->innerctx;
 
@@ -716,7 +710,6 @@ PetscErrorCode PCView_Exotic(PC pc,PetscViewer viewer)
 
 PetscErrorCode PCSetFromOptions_Exotic(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   PC_MG          *mg = (PC_MG*)pc->data;
   PCExoticType   mgctype;
@@ -793,7 +786,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Exotic(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Exotic      *ex;
   PC_MG          *mg;
 

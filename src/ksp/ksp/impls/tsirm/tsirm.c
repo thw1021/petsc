@@ -10,7 +10,6 @@ typedef struct {
 
 static PetscErrorCode KSPSetUp_TSIRM(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_TSIRM      *tsirm = (KSP_TSIRM*)ksp->data;
 
   PetscFunctionBegin;
@@ -42,7 +41,6 @@ static PetscErrorCode KSPSetUp_TSIRM(KSP ksp)
 
 PetscErrorCode KSPSolve_TSIRM(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_TSIRM      *tsirm = (KSP_TSIRM*)ksp->data;
   KSP            sub_ksp;
   PC             pc;
@@ -135,7 +133,6 @@ PetscErrorCode KSPSolve_TSIRM(KSP ksp)
 
 PetscErrorCode KSPSetFromOptions_TSIRM(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_TSIRM      *tsirm = (KSP_TSIRM*)ksp->data;
 
   PetscFunctionBegin;
@@ -151,7 +148,6 @@ PetscErrorCode KSPSetFromOptions_TSIRM(PetscOptionItems *PetscOptionsObject,KSP 
 PetscErrorCode KSPDestroy_TSIRM(KSP ksp)
 {
   KSP_TSIRM       *tsirm = (KSP_TSIRM*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&tsirm->S));
@@ -199,7 +195,6 @@ PetscErrorCode KSPDestroy_TSIRM(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_TSIRM(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_TSIRM      *tsirm;
 
   PetscFunctionBegin;

@@ -17,7 +17,6 @@ typedef struct {
 static PetscErrorCode PCApply_PBJacobi_1(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi       *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode    ierr;
   PetscInt          i,m = jac->mbs;
   const MatScalar   *diag = jac->diag;
   const PetscScalar *xx;
@@ -36,7 +35,6 @@ static PetscErrorCode PCApply_PBJacobi_1(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_2(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi     *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode  ierr;
   PetscInt        i,m = jac->mbs;
   const MatScalar *diag = jac->diag;
   PetscScalar     x0,x1,*yy;
@@ -59,7 +57,6 @@ static PetscErrorCode PCApply_PBJacobi_2(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_3(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi     *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode  ierr;
   PetscInt        i,m = jac->mbs;
   const MatScalar *diag = jac->diag;
   PetscScalar     x0,x1,x2,*yy;
@@ -84,7 +81,6 @@ static PetscErrorCode PCApply_PBJacobi_3(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_4(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi     *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode  ierr;
   PetscInt        i,m = jac->mbs;
   const MatScalar *diag = jac->diag;
   PetscScalar     x0,x1,x2,x3,*yy;
@@ -110,7 +106,6 @@ static PetscErrorCode PCApply_PBJacobi_4(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_5(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi     *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode  ierr;
   PetscInt        i,m = jac->mbs;
   const MatScalar *diag = jac->diag;
   PetscScalar     x0,x1,x2,x3,x4,*yy;
@@ -137,7 +132,6 @@ static PetscErrorCode PCApply_PBJacobi_5(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_6(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi     *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode  ierr;
   PetscInt        i,m = jac->mbs;
   const MatScalar *diag = jac->diag;
   PetscScalar     x0,x1,x2,x3,x4,x5,*yy;
@@ -165,7 +159,6 @@ static PetscErrorCode PCApply_PBJacobi_6(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_7(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi     *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode  ierr;
   PetscInt        i,m = jac->mbs;
   const MatScalar *diag = jac->diag;
   PetscScalar     x0,x1,x2,x3,x4,x5,x6,*yy;
@@ -194,7 +187,6 @@ static PetscErrorCode PCApply_PBJacobi_7(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApply_PBJacobi_N(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi       *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode    ierr;
   PetscInt          i,ib,jb;
   const PetscInt    m = jac->mbs;
   const PetscInt    bs = jac->bs;
@@ -224,7 +216,6 @@ static PetscErrorCode PCApply_PBJacobi_N(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplyTranspose_PBJacobi_N(PC pc,Vec x,Vec y)
 {
   PC_PBJacobi       *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode    ierr;
   PetscInt          i,j,k,m = jac->mbs,bs=jac->bs;
   const MatScalar   *diag = jac->diag;
   const PetscScalar *xx;
@@ -252,7 +243,6 @@ static PetscErrorCode PCApplyTranspose_PBJacobi_N(PC pc,Vec x,Vec y)
 static PetscErrorCode PCSetUp_PBJacobi(PC pc)
 {
   PC_PBJacobi    *jac = (PC_PBJacobi*)pc->data;
-  PetscErrorCode ierr;
   Mat            A = pc->pmat;
   MatFactorError err;
   PetscInt       nlocal;
@@ -297,7 +287,6 @@ static PetscErrorCode PCSetUp_PBJacobi(PC pc)
 /* -------------------------------------------------------------------------- */
 static PetscErrorCode PCDestroy_PBJacobi(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*
@@ -309,7 +298,6 @@ static PetscErrorCode PCDestroy_PBJacobi(PC pc)
 
 static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PC_PBJacobi    *jac = (PC_PBJacobi*)pc->data;
   PetscBool      iascii;
 
@@ -351,7 +339,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_PBJacobi(PC pc)
 {
   PC_PBJacobi    *jac;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

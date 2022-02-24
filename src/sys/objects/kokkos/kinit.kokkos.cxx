@@ -27,7 +27,6 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
 #if (defined(KOKKOS_ENABLE_CUDA) && PetscDefined(HAVE_CUDA)) || (defined(KOKKOS_ENABLE_HIP) && PetscDefined(HAVE_HIP)) || (defined(KOKKOS_ENABLE_SYCL) && PetscDefined(HAVE_SYCL))
     /* Kokkos does not support CUDA and HIP at the same time (but we do :)) */
     PetscDeviceContext dctx;
-    PetscErrorCode     ierr;
 
     CHKERRQ(PetscDeviceContextGetCurrentContext(&dctx));
     CHKERRQ(PetscMPIIntCast(dctx->device->deviceId,&args.device_id));

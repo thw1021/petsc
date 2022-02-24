@@ -72,7 +72,6 @@ static inline void Petsc_memmove2(char *adest, const char *asrc, size_t asize, c
 # else
 static inline void COPYSWAPPY(char *a, char *b, char *t, size_t size)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRABORT(PETSC_COMM_SELF,PetscMemcpy(t, b, size));
   CHKERRABORT(PETSC_COMM_SELF,PetscMemmove(b, a, size));
@@ -82,7 +81,6 @@ static inline void COPYSWAPPY(char *a, char *b, char *t, size_t size)
 
 static inline void COPYSWAPPY2(char *al, char *ar, size_t asize, char *bl, char *br, size_t bsize, char *t)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRABORT(PETSC_COMM_SELF,PetscMemcpy(t, ar, asize));
   CHKERRABORT(PETSC_COMM_SELF,PetscMemmove(ar, al, asize));
@@ -95,7 +93,6 @@ static inline void COPYSWAPPY2(char *al, char *ar, size_t asize, char *bl, char 
 
 static inline void Petsc_memcpy(char *dest, const char *src, size_t size)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRABORT(PETSC_COMM_SELF,PetscMemcpy(dest, src, size));
   PetscFunctionReturnVoid();
@@ -103,7 +100,6 @@ static inline void Petsc_memcpy(char *dest, const char *src, size_t size)
 
 static inline void Petsc_memcpy2(char *adest, const char *asrc, size_t asize, char *bdest, const char *bsrc, size_t bsize)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRABORT(PETSC_COMM_SELF,PetscMemcpy(adest, asrc, asize));
   CHKERRABORT(PETSC_COMM_SELF,PetscMemcpy(bdest, bsrc, bsize));
@@ -112,7 +108,6 @@ static inline void Petsc_memcpy2(char *adest, const char *asrc, size_t asize, ch
 
 static inline void Petsc_memmove(char *dest, const char *src, size_t size)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRABORT(PETSC_COMM_SELF,PetscMemmove(dest, src, size));
   PetscFunctionReturnVoid();
@@ -120,7 +115,6 @@ static inline void Petsc_memmove(char *dest, const char *src, size_t size)
 
 static inline void Petsc_memmove2(char *adest, const char *asrc, size_t asize, char *bdest, const char *bsrc, size_t bsize)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRABORT(PETSC_COMM_SELF,PetscMemmove(adest, asrc, asize));
   CHKERRABORT(PETSC_COMM_SELF,PetscMemmove(bdest, bsrc, bsize));
@@ -204,7 +198,6 @@ static inline PetscErrorCode PetscTimSortMergeLo_Private(char *arr, char *tarr, 
 {
   PetscInt       i = 0, j = mid, k = left, gallopleft = 0, gallopright = 0;
   const PetscInt llen = mid-left;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   Petsc_memcpy(tarr, arr+(left*size), llen*size);
@@ -267,7 +260,6 @@ static inline PetscErrorCode PetscTimSortMergeLoWithArray_Private(char *arr, cha
 {
   PetscInt       i = 0, j = mid, k = left, gallopleft = 0, gallopright = 0;
   const PetscInt llen = mid-left;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   Petsc_memcpy2(atarr, arr+(left*asize), llen*asize, btarr, barr+(left*bsize), llen*bsize);
@@ -333,7 +325,6 @@ static inline PetscErrorCode PetscTimSortMergeHi_Private(char *arr, char *tarr, 
 {
   PetscInt       i = right-mid, j = mid-1, k = right, gallopleft = 0, gallopright = 0;
   const PetscInt rlen = right-mid+1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   Petsc_memcpy(tarr, (arr)+mid*size, rlen*size);
@@ -396,7 +387,6 @@ static inline PetscErrorCode PetscTimSortMergeHiWithArray_Private(char *arr, cha
 {
   PetscInt       i = right-mid, j = mid-1, k = right, gallopleft = 0, gallopright = 0;
   const PetscInt rlen = right-mid+1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   Petsc_memcpy2(atarr, (arr)+mid*asize, rlen*asize, btarr, (barr)+mid*bsize, rlen*bsize);
@@ -557,7 +547,6 @@ static inline PetscErrorCode PetscTimSortResizeBuffer_Private(PetscTimSortBuffer
   if (PetscLikely(newSize <= buff->size)) PetscFunctionReturn(0);
   {
     /* Can't be larger than n, there is merit to simply allocating buff to n to begin with */
-    PetscErrorCode ierr;
     size_t         newMax = PetscMin(newSize*newSize, buff->maxsize);
     CHKERRQ(PetscFree(buff->ptr));
     CHKERRQ(PetscMalloc1(newMax, &buff->ptr));
@@ -573,7 +562,6 @@ static inline PetscErrorCode PetscTimSortForceCollapse_Private(char *arr, size_t
     /* A = stack[i-1], B = stack[i], if A[-1] <= B[0] means sorted */
     if ((*cmp)(arr+(stack[stacksize].start-1)*size, arr+(stack[stacksize].start)*size, ctx) > 0) {
       PetscInt       l, m = stack[stacksize].start, r;
-      PetscErrorCode ierr;
       /* Search A for B[0] insertion */
       CHKERRQ(PetscGallopSearchLeft_Private(arr, size, cmp, ctx, stack[stacksize-1].start, stack[stacksize].start-1, (arr)+(stack[stacksize].start)*size, &l));
       /* Search B for A[-1] insertion */
@@ -599,7 +587,6 @@ static inline PetscErrorCode PetscTimSortForceCollapseWithArray_Private(char *ar
     /* A = stack[i-1], B = stack[i], if A[-1] <= B[0] means sorted */
     if ((*cmp)(arr+(stack[stacksize].start-1)*asize, arr+(stack[stacksize].start)*asize, ctx) > 0) {
       PetscInt       l, m = stack[stacksize].start, r;
-      PetscErrorCode ierr;
       /* Search A for B[0] insertion */
       CHKERRQ(PetscGallopSearchLeft_Private(arr, asize, cmp, ctx, stack[stacksize-1].start, stack[stacksize].start-1, (arr)+(stack[stacksize].start)*asize, &l));
       /* Search B for A[-1] insertion */
@@ -623,7 +610,6 @@ static inline PetscErrorCode PetscTimSortForceCollapseWithArray_Private(char *ar
 static inline PetscErrorCode PetscTimSortMergeCollapse_Private(char *arr, size_t size, CompFunc cmp, void *ctx, PetscTimSortBuffer *buff, PetscTimSortStack *stack, PetscInt *stacksize)
 {
   PetscInt       i = *stacksize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while (i) {
@@ -712,7 +698,6 @@ static inline PetscErrorCode PetscTimSortMergeCollapse_Private(char *arr, size_t
 static inline PetscErrorCode PetscTimSortMergeCollapseWithArray_Private(char *arr, size_t asize, char *barr, size_t bsize, CompFunc cmp, void *ctx, PetscTimSortBuffer *abuff, PetscTimSortBuffer *bbuff, PetscTimSortStack *stack, PetscInt *stacksize)
 {
   PetscInt       i = *stacksize;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while (i) {
@@ -836,7 +821,6 @@ static inline PetscErrorCode PetscTimSortBuildRun_Private(char *arr, char *tarr,
   }
 #if defined(PETSC_USE_DEBUG)
   {
-    PetscErrorCode ierr;
     CHKERRQ(PetscInfo(NULL, "natural run length = %" PetscInt_FMT "\n", ri-runstart+1));
   }
 #endif
@@ -883,7 +867,6 @@ static inline PetscErrorCode PetscTimSortBuildRunWithArray_Private(char *arr, ch
   }
 #if defined(PETSC_USE_DEBUG)
   {
-    PetscErrorCode ierr;
     CHKERRQ(PetscInfo(NULL, "natural run length = %" PetscInt_FMT "\n", ri-runstart+1));
   }
 #endif
@@ -983,7 +966,6 @@ PetscErrorCode PetscTimSort(PetscInt n, void *arr, size_t size, int (*cmp)(const
   PetscInt           stacksize = 0, minrun, runstart = 0, runend = 0;
   PetscTimSortStack  runstack[128];
   PetscTimSortBuffer buff;
-  PetscErrorCode     ierr;
   /* stacksize  = log_phi(n) = log_2(n)/log_2(phi), so 128 is enough for ~5.614e26 elements.
    It is so unlikely that this limit is reached that this is __never__ checked for */
 
@@ -1112,7 +1094,6 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
   PetscInt           stacksize = 0, minrun, runstart = 0, runend = 0;
   PetscTimSortStack  runstack[128];
   PetscTimSortBuffer abuff, bbuff;
-  PetscErrorCode     ierr;
   /* stacksize  = log_phi(n) = log_2(n)/log_2(phi), so 128 is enough for ~5.614e26 elements.
    It is so unlikely that this limit is reached that this is __never__ checked for */
 
@@ -1182,7 +1163,6 @@ PetscErrorCode PetscTimSortWithArray(PetscInt n, void *arr, size_t asize, void *
 @*/
 PetscErrorCode PetscIntSortSemiOrdered(PetscInt n, PetscInt arr[])
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr,2);
@@ -1220,7 +1200,6 @@ PetscErrorCode PetscIntSortSemiOrdered(PetscInt n, PetscInt arr[])
 @*/
 PetscErrorCode PetscIntSortSemiOrderedWithArray(PetscInt n, PetscInt arr1[], PetscInt arr2[])
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr1,2);
@@ -1255,7 +1234,6 @@ PetscErrorCode PetscIntSortSemiOrderedWithArray(PetscInt n, PetscInt arr1[], Pet
 @*/
 PetscErrorCode PetscMPIIntSortSemiOrdered(PetscInt n, PetscMPIInt arr[])
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
@@ -1294,7 +1272,6 @@ PetscErrorCode PetscMPIIntSortSemiOrdered(PetscInt n, PetscMPIInt arr[])
 @*/
 PetscErrorCode PetscMPIIntSortSemiOrderedWithArray(PetscInt n, PetscMPIInt arr1[], PetscMPIInt arr2[])
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidIntPointer(arr1,2);
@@ -1329,7 +1306,6 @@ PetscErrorCode PetscMPIIntSortSemiOrderedWithArray(PetscInt n, PetscMPIInt arr1[
 @*/
 PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
@@ -1366,7 +1342,6 @@ PetscErrorCode PetscRealSortSemiOrdered(PetscInt n, PetscReal arr[])
 @*/
 PetscErrorCode PetscRealSortSemiOrderedWithArrayInt(PetscInt n, PetscReal arr1[], PetscInt arr2[])
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (n <= 1) PetscFunctionReturn(0);
   PetscValidRealPointer(arr1,2);
