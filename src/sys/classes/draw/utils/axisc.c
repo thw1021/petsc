@@ -257,7 +257,6 @@ PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
   PetscBool      isnull;
   PetscErrorCode ierr;
 
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
   CHKERRQ(PetscDrawIsNull(axis->win,&isnull));
