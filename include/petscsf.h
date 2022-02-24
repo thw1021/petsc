@@ -89,6 +89,7 @@ PETSC_EXTERN PetscErrorCode PetscSFGetType(PetscSF,PetscSFType*);
 PETSC_EXTERN PetscErrorCode PetscSFView(PetscSF,PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscSFViewFromOptions(PetscSF,PetscObject,const char[]);
 PETSC_EXTERN PetscErrorCode PetscSFSetUp(PetscSF);
+PETSC_EXTERN PetscErrorCode PetscSFSetAllowMultiLeaves(PetscSF,PetscBool);
 PETSC_EXTERN PetscErrorCode PetscSFSetFromOptions(PetscSF);
 PETSC_EXTERN PetscErrorCode PetscSFDuplicate(PetscSF,PetscSFDuplicateOption,PetscSF*);
 PETSC_EXTERN PetscErrorCode PetscSFWindowSetSyncType(PetscSF,PetscSFWindowSyncType);

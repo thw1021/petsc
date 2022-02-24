@@ -311,6 +311,19 @@ PetscErrorCode PetscSFSetUp(PetscSF sf)
   PetscFunctionReturn(0);
 }
 
+//TODO manpage
+/*
+allow multi-leaves (multiple leaves with the same number)
+*/
+PetscErrorCode PetscSFSetAllowMultiLeaves(PetscSF sf,PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
+  PetscValidLogicalCollectiveBool(sf,flg,2);                        \
+  sf->allow_multi_leaves = flg;
+  PetscFunctionReturn(0);
+}
+
 /*@
    PetscSFSetFromOptions - set PetscSF options using the options database
 
@@ -339,7 +352,7 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
   PetscSFType    deft;
   char           type[256];
   PetscErrorCode ierr;
-  PetscBool      flg;
+  PetscBool      flg, set;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -348,6 +361,11 @@ PetscErrorCode PetscSFSetFromOptions(PetscSF sf)
   ierr = PetscOptionsFList("-sf_type","PetscSF implementation type","PetscSFSetType",PetscSFList,deft,type,sizeof(type),&flg);CHKERRQ(ierr);
   ierr = PetscSFSetType(sf,flg ? type : deft);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-sf_rank_order","sort composite points for gathers and scatters in rank order, gathers are non-deterministic otherwise","PetscSFSetRankOrder",sf->rankorder,&sf->rankorder,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-sf_allow_multi_leaves","allow multi-leaves (multiple leaves with the same number)","PetscSFSetAllowMultiLeaves",sf->allow_multi_leaves,&flg,&set);CHKERRQ(ierr);
+  if (set) {
+    ierr = PetscSFSetAllowMultiLeaves(sf,flg);CHKERRQ(ierr);
+  }
+
  #if defined(PETSC_HAVE_DEVICE)
   {
     char        backendstr[32] = {0};
@@ -460,6 +478,30 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,const
     }
     sf->minleaf = minleaf;
     sf->maxleaf = maxleaf;
+    {
+      PetscInt *ilocal_sorted;
+      PetscBool unique;
+      //PetscBool contiguous_;
+
+      //TODO we could replace sf->mine and sf->remote with the sorted versions and get rid of localmode, remotemode, sf->mine_alloc, sf->remote_alloc
+      ierr = PetscMalloc1(nleaves,&ilocal_sorted);CHKERRQ(ierr);
+      ierr = PetscArraycpy(ilocal_sorted, ilocal, nleaves);CHKERRQ(ierr);
+      //TODO sort with iremote, we will need something like PetscSortIntWithArray() but for PetscSFNode 
+      ierr = PetscSortInt(nleaves, ilocal_sorted);CHKERRQ(ierr);
+      //TODO add PetscSortedCheckDupsInt()
+      ierr = PetscCheckDupsInt(nleaves, ilocal_sorted, &unique);CHKERRQ(ierr);
+      unique = !unique;
+      PetscCheck(sf->allow_multi_leaves || unique,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Input ilocal has duplicate entries which is not allowed for this PetscSF");
+      //contiguous_ = (PetscBool) (unique && ilocal_sorted[0] == 0 && ilocal_sorted[nleaves-1] == nleaves-1);
+      minleaf = ilocal_sorted[0];
+      maxleaf = ilocal_sorted[nleaves-1];
+
+      PetscCheck(minleaf == sf->minleaf, PETSC_COMM_SELF, PETSC_ERR_PLIB, "minleaf == sf->minleaf");
+      PetscCheck(maxleaf == sf->maxleaf, PETSC_COMM_SELF, PETSC_ERR_PLIB, "maxleaf == sf->maxleaf");
+      //TODO contiguous_ is true even if ilocal is permutation of contiguous array
+      //PetscCheck((PetscBool) contiguous_ == contiguous, PETSC_COMM_SELF, PETSC_ERR_PLIB, "contiguous_ == contiguous");
+      ierr = PetscFree(ilocal_sorted);CHKERRQ(ierr);
+    }
     if (contiguous) {
       if (localmode == PETSC_OWN_POINTER) {
         ierr = PetscFree(ilocal);CHKERRQ(ierr);
