@@ -6,7 +6,6 @@ PetscErrorCode CharacteristicView_DA(Characteristic c, PetscViewer viewer)
 {
   Characteristic_DA *da = (Characteristic_DA*) c->data;
   PetscBool         iascii, isstring;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* Pull out field names from DM */
@@ -23,7 +22,6 @@ PetscErrorCode CharacteristicView_DA(Characteristic c, PetscViewer viewer)
 PetscErrorCode CharacteristicDestroy_DA(Characteristic c)
 {
   Characteristic_DA *da = (Characteristic_DA*) c->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(da));
@@ -36,7 +34,6 @@ PetscErrorCode CharacteristicSetUp_DA(Characteristic c)
   MPI_Aint       indices[2];
   MPI_Datatype   oldtypes[2];
   PetscInt       dim, numValues;
-  PetscErrorCode ierr;
 
   CHKERRQ(DMDAGetInfo(c->velocityDA, &dim, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
   if (c->structured) c->numIds = dim;
@@ -69,7 +66,6 @@ PetscErrorCode CharacteristicSetUp_DA(Characteristic c)
 PETSC_EXTERN PetscErrorCode CharacteristicCreate_DA(Characteristic c)
 {
   Characteristic_DA *da;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&da));
@@ -93,7 +89,6 @@ PetscErrorCode DMDAMapCoordsToPeriodicDomain(DM da, PetscScalar *x, PetscScalar 
 {
   DMBoundaryType bx, by;
   PetscInt       dim, gx, gy;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetInfo(da, &dim, &gx, &gy, NULL, NULL, NULL, NULL, NULL, NULL, &bx, &by, NULL, NULL));

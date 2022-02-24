@@ -45,7 +45,6 @@ PetscErrorCode spbas_cholesky_garbage_collect(spbas_matrix *result,         /* I
   PetscInt        nrows         = result->nrows;
   PetscInt        n_alloc_ok    =0;
   PetscInt        n_alloc_ok_max=0;
-  PetscErrorCode  ierr;
   PetscInt        need_already  = 0;
   PetscInt        n_rows_ahead  =0;
   PetscInt        max_need_extra= 0;
@@ -259,7 +258,6 @@ PetscErrorCode spbas_incomplete_cholesky(Mat A, const PetscInt *rip, const Petsc
   MatScalar       *aa=a->a;
   PetscInt        nrows, ncols;
   PetscInt        *max_row_nnz;
-  PetscErrorCode  ierr;
   spbas_matrix    retval;
   PetscScalar     *diag;
   PetscScalar     *val;

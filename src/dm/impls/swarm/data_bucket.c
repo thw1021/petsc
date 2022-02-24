@@ -4,7 +4,6 @@
 PetscErrorCode DMSwarmDataFieldStringInList(const char name[],const PetscInt N,const DMSwarmDataField gfield[],PetscBool *val)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *val = PETSC_FALSE;
@@ -22,7 +21,6 @@ PetscErrorCode DMSwarmDataFieldStringInList(const char name[],const PetscInt N,c
 PetscErrorCode DMSwarmDataFieldStringFindInList(const char name[],const PetscInt N,const DMSwarmDataField gfield[],PetscInt *index)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *index = -1;
@@ -40,7 +38,6 @@ PetscErrorCode DMSwarmDataFieldStringFindInList(const char name[],const PetscInt
 PetscErrorCode DMSwarmDataFieldCreate(const char registration_function[],const char name[],const size_t size,const PetscInt L,DMSwarmDataField *DF)
 {
   DMSwarmDataField df;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&df));
@@ -59,7 +56,6 @@ PetscErrorCode DMSwarmDataFieldCreate(const char registration_function[],const c
 PetscErrorCode DMSwarmDataFieldDestroy(DMSwarmDataField *DF)
 {
   DMSwarmDataField df = *DF;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(df->registration_function));
@@ -74,7 +70,6 @@ PetscErrorCode DMSwarmDataFieldDestroy(DMSwarmDataField *DF)
 PetscErrorCode DMSwarmDataBucketCreate(DMSwarmDataBucket *DB)
 {
   DMSwarmDataBucket db;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&db));
@@ -94,7 +89,6 @@ PetscErrorCode DMSwarmDataBucketDestroy(DMSwarmDataBucket *DB)
 {
   DMSwarmDataBucket db = *DB;
   PetscInt          f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* release fields */
@@ -129,7 +123,6 @@ PetscErrorCode DMSwarmDataBucketRegisterField(DMSwarmDataBucket db,const char re
 {
   PetscBool        val;
   DMSwarmDataField fp;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   /* check we haven't finalised the registration of fields */
@@ -167,7 +160,6 @@ PetscErrorCode DMSwarmDataBucketGetDMSwarmDataFieldByName(DMSwarmDataBucket db,c
 {
   PetscInt       idx;
   PetscBool      found;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataFieldStringInList(name,db->nfields,(const DMSwarmDataField*)db->field,&found));
@@ -179,7 +171,6 @@ PetscErrorCode DMSwarmDataBucketGetDMSwarmDataFieldByName(DMSwarmDataBucket db,c
 
 PetscErrorCode DMSwarmDataBucketQueryDMSwarmDataFieldByName(DMSwarmDataBucket db,const char name[],PetscBool *found)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *found = PETSC_FALSE;
@@ -210,7 +201,6 @@ PetscErrorCode DMSwarmDataFieldSetBlockSize(DMSwarmDataField df,PetscInt blocksi
 
 PetscErrorCode DMSwarmDataFieldSetSize(DMSwarmDataField df,const PetscInt new_L)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(new_L < 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot set size of DMSwarmDataField to be < 0");
@@ -229,7 +219,6 @@ PetscErrorCode DMSwarmDataFieldSetSize(DMSwarmDataField df,const PetscInt new_L)
 
 PetscErrorCode DMSwarmDataFieldZeroBlock(DMSwarmDataField df,const PetscInt start,const PetscInt end)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(start > end,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot zero a block of entries if start(%D) > end(%D)",start,end);
@@ -246,7 +235,6 @@ PetscErrorCode DMSwarmDataBucketSetSizes(DMSwarmDataBucket db,const PetscInt L,c
 {
   PetscInt       current_allocated,new_used,new_unused,new_buffer,new_allocated,f;
   PetscBool      any_active_fields;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(db->finalised == PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"You must call DMSwarmDataBucketFinalize() before DMSwarmDataBucketSetSizes()");
@@ -295,7 +283,6 @@ PetscErrorCode DMSwarmDataBucketSetSizes(DMSwarmDataBucket db,const PetscInt L,c
 PetscErrorCode DMSwarmDataBucketSetInitialSizes(DMSwarmDataBucket db,const PetscInt L,const PetscInt buffer)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataBucketSetSizes(db,L,buffer));
@@ -317,7 +304,6 @@ PetscErrorCode DMSwarmDataBucketGetSizes(DMSwarmDataBucket db,PetscInt *L,PetscI
 
 PetscErrorCode DMSwarmDataBucketGetGlobalSizes(MPI_Comm comm,DMSwarmDataBucket db,PetscInt *L,PetscInt *buffer,PetscInt *allocated)
 {
-  PetscInt ierr;
 
   PetscFunctionBegin;
   if (L) CHKERRMPI(MPI_Allreduce(&db->L,L,1,MPIU_INT,MPI_SUM,comm));
@@ -417,7 +403,6 @@ PetscErrorCode DMSwarmDataFieldRestoreEntries(const DMSwarmDataField gfield,void
 PetscErrorCode DMSwarmDataBucketCopyPoint(const DMSwarmDataBucket xb,const PetscInt pid_x,const DMSwarmDataBucket yb,const PetscInt pid_y)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (f = 0; f < xb->nfields; ++f) {
@@ -440,7 +425,6 @@ PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket DBIn,const Pe
   PetscInt         nfields;
   DMSwarmDataField *fields;
   PetscInt         f,L,buffer,allocated,p;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataBucketCreate(DB));
@@ -462,7 +446,6 @@ PetscErrorCode DMSwarmDataBucketCreateFromSubset(DMSwarmDataBucket DBIn,const Pe
 /* insert into an exisitng location */
 PetscErrorCode DMSwarmDataFieldInsertPoint(const DMSwarmDataField field,const PetscInt index,const void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
@@ -479,7 +462,6 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db,co
 {
   PetscInt       f;
   PetscBool      any_active_fields;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
@@ -510,7 +492,6 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db,co
 /* copy x into y */
 PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x,const DMSwarmDataField field_x,const PetscInt pid_y,const DMSwarmDataField field_y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
@@ -528,7 +509,6 @@ PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x,const DMSwarmDataF
 /* zero only the datafield at this point */
 PetscErrorCode DMSwarmDataFieldZeroPoint(const DMSwarmDataField field,const PetscInt index)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
@@ -544,7 +524,6 @@ PetscErrorCode DMSwarmDataFieldZeroPoint(const DMSwarmDataField field,const Pets
 PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket db,const PetscInt index)
 {
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* check point is valid */
@@ -560,7 +539,6 @@ PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket db,const Petsc
 /* increment */
 PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataBucketSetSizes(db,db->L+1,DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
@@ -570,7 +548,6 @@ PetscErrorCode DMSwarmDataBucketAddPoint(DMSwarmDataBucket db)
 /* decrement */
 PetscErrorCode DMSwarmDataBucketRemovePoint(DMSwarmDataBucket db)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataBucketSetSizes(db,db->L-1,DMSWARM_DATA_BUCKET_BUFFER_DEFAULT));
@@ -582,7 +559,6 @@ PetscErrorCode DMSwarmDataBucketView_stdout(MPI_Comm comm,DMSwarmDataBucket db)
 {
   PetscInt       f;
   double         memory_usage_total,memory_usage_total_local = 0.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscPrintf(comm,"DMSwarmDataBucketView: \n"));
@@ -614,7 +590,6 @@ PetscErrorCode DMSwarmDataBucketView_stdout(MPI_Comm comm,DMSwarmDataBucket db)
 
 PetscErrorCode DMSwarmDataBucketView_Seq(MPI_Comm comm,DMSwarmDataBucket db,const char filename[],DMSwarmDataBucketViewType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (type) {
@@ -634,7 +609,6 @@ PetscErrorCode DMSwarmDataBucketView_Seq(MPI_Comm comm,DMSwarmDataBucket db,cons
 
 PetscErrorCode DMSwarmDataBucketView_MPI(MPI_Comm comm,DMSwarmDataBucket db,const char filename[],DMSwarmDataBucketViewType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (type) {
@@ -655,7 +629,6 @@ PetscErrorCode DMSwarmDataBucketView_MPI(MPI_Comm comm,DMSwarmDataBucket db,cons
 PetscErrorCode DMSwarmDataBucketView(MPI_Comm comm,DMSwarmDataBucket db,const char filename[],DMSwarmDataBucketViewType type)
 {
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(comm,&size));
@@ -671,7 +644,6 @@ PetscErrorCode DMSwarmDataBucketDuplicateFields(DMSwarmDataBucket dbA,DMSwarmDat
 {
   DMSwarmDataBucket db2;
   PetscInt          f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataBucketCreate(&db2));
@@ -700,7 +672,6 @@ PetscErrorCode DMSwarmDataBucketInsertValues(DMSwarmDataBucket db1,DMSwarmDataBu
 {
   PetscInt       n_mp_points1,n_mp_points2;
   PetscInt       n_mp_points1_new,p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSwarmDataBucketGetSizes(db1,&n_mp_points1,NULL,NULL));
@@ -720,7 +691,6 @@ PetscErrorCode DMSwarmDataBucketCreatePackedArray(DMSwarmDataBucket db,size_t *b
   PetscInt       f;
   size_t         sizeof_marker_contents;
   void          *buffer;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   sizeof_marker_contents = 0;
@@ -737,7 +707,6 @@ PetscErrorCode DMSwarmDataBucketCreatePackedArray(DMSwarmDataBucket db,size_t *b
 
 PetscErrorCode DMSwarmDataBucketDestroyPackedArray(DMSwarmDataBucket db,void **buf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (buf) {
@@ -752,7 +721,6 @@ PetscErrorCode DMSwarmDataBucketFillPackedArray(DMSwarmDataBucket db,const Petsc
   PetscInt       f;
   void          *data, *data_p;
   size_t         asize, offset;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   offset = 0;
@@ -773,7 +741,6 @@ PetscErrorCode DMSwarmDataBucketInsertPackedArray(DMSwarmDataBucket db,const Pet
   PetscInt       f;
   void           *data_p;
   size_t         offset;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   offset = 0;

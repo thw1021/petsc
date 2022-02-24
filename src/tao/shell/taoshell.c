@@ -61,7 +61,6 @@ PetscErrorCode TaoShellSetSolve(Tao tao, PetscErrorCode (*solve) (Tao))
 @*/
 PetscErrorCode  TaoShellGetContext(Tao tao,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -93,7 +92,6 @@ PetscErrorCode  TaoShellGetContext(Tao tao,void *ctx)
 PetscErrorCode  TaoShellSetContext(Tao tao,void *ctx)
 {
   Tao_Shell     *shell = (Tao_Shell*)tao->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -106,7 +104,6 @@ PetscErrorCode  TaoShellSetContext(Tao tao,void *ctx)
 static PetscErrorCode TaoSolve_Shell(Tao tao)
 {
   Tao_Shell                    *shell = (Tao_Shell*)tao->data;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->solve,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoShellSetSolve() first");
@@ -117,7 +114,6 @@ static PetscErrorCode TaoSolve_Shell(Tao tao)
 
 PetscErrorCode TaoDestroy_Shell(Tao tao)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(tao->data));
@@ -152,7 +148,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_Shell(Tao tao)
 {
   Tao_Shell      *shell;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->destroy = TaoDestroy_Shell;

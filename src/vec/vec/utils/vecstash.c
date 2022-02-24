@@ -19,7 +19,6 @@
 */
 PetscErrorCode VecStashCreate_Private(MPI_Comm comm,PetscInt bs,VecStash *stash)
 {
-  PetscErrorCode ierr;
   PetscInt       max,*opt,nopt;
   PetscBool      flg;
 
@@ -75,7 +74,6 @@ PetscErrorCode VecStashCreate_Private(MPI_Comm comm,PetscInt bs,VecStash *stash)
 */
 PetscErrorCode VecStashDestroy_Private(VecStash *stash)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree2(stash->array,stash->idx));
@@ -93,7 +91,6 @@ PetscErrorCode VecStashDestroy_Private(VecStash *stash)
 */
 PetscErrorCode VecStashScatterEnd_Private(VecStash *stash)
 {
-  PetscErrorCode ierr;
   PetscInt       nsends=stash->nsends,oldnmax;
   MPI_Status     *send_status;
 
@@ -179,7 +176,6 @@ PetscErrorCode VecStashSetInitialSize_Private(VecStash *stash,PetscInt max)
 */
 PetscErrorCode VecStashExpand_Private(VecStash *stash,PetscInt incr)
 {
-  PetscErrorCode ierr;
   PetscInt       *n_idx,newnmax,bs=stash->bs;
   PetscScalar    *n_array;
 
@@ -224,7 +220,6 @@ PetscErrorCode VecStashExpand_Private(VecStash *stash,PetscInt incr)
 */
 PetscErrorCode VecStashScatterBegin_Private(VecStash *stash,PetscInt *owners)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size = stash->size,tag1=stash->tag1,tag2=stash->tag2;
   PetscInt       *owner,*start,*nprocs,nsends,nreceives;
   PetscInt       nmax,count,*sindices,*rindices,i,j,idx,bs=stash->bs,lastidx;
@@ -334,7 +329,6 @@ PetscErrorCode VecStashScatterBegin_Private(VecStash *stash,PetscInt *owners)
 */
 PetscErrorCode VecStashScatterGetMesg_Private(VecStash *stash,PetscMPIInt *nvals,PetscInt **rows,PetscScalar **vals,PetscInt *flg)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    i = 0; /* dummy value so MPI-Uni doesn't think it is not set */
   PetscInt       *flg_v;
   PetscInt       i1,i2,bs=stash->bs;
@@ -380,7 +374,6 @@ PetscErrorCode VecStashScatterGetMesg_Private(VecStash *stash,PetscMPIInt *nvals
  */
 PetscErrorCode VecStashSortCompress_Private(VecStash *stash)
 {
-  PetscErrorCode ierr;
   PetscInt i,j,bs = stash->bs;
 
   PetscFunctionBegin;
@@ -444,7 +437,6 @@ PetscErrorCode VecStashGetOwnerList_Private(VecStash *stash,PetscLayout map,Pets
   PetscInt       i,bs = stash->bs;
   PetscMPIInt    r;
   PetscSegBuffer seg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(bs != 1 && bs != map->bs,map->comm,PETSC_ERR_PLIB,"Stash block size %" PetscInt_FMT " does not match layout block size %" PetscInt_FMT,bs,map->bs);

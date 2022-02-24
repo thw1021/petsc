@@ -17,7 +17,6 @@
 */
 static PetscErrorCode VecGhostStateSync_Private(Vec g,Vec l)
 {
-  PetscErrorCode   ierr;
   PetscObjectState gstate,lstate;
 
   PetscFunctionBegin;
@@ -68,7 +67,6 @@ $     VecGhostRestoreLocalForm(x,&xlocal);
 @*/
 PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 {
-  PetscErrorCode ierr;
   PetscBool      isseq,ismpi;
 
   PetscFunctionBegin;
@@ -111,7 +109,6 @@ PetscErrorCode  VecGhostGetLocalForm(Vec g,Vec *l)
 @*/
 PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 {
-  PetscErrorCode ierr;
   PetscBool      isseq,ismpi;
 
   PetscFunctionBegin;
@@ -151,7 +148,6 @@ PetscErrorCode VecGhostIsLocalForm(Vec g,Vec l,PetscBool *flg)
 @*/
 PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (*l) {
@@ -203,7 +199,6 @@ PetscErrorCode  VecGhostRestoreLocalForm(Vec g,Vec *l)
 PetscErrorCode  VecGhostUpdateBegin(Vec g,InsertMode insertmode,ScatterMode scattermode)
 {
   Vec_MPI        *v;
-  PetscErrorCode ierr;
   PetscBool      ismpi,isseq;
 
   PetscFunctionBegin;
@@ -268,7 +263,6 @@ PetscErrorCode  VecGhostUpdateBegin(Vec g,InsertMode insertmode,ScatterMode scat
 PetscErrorCode  VecGhostUpdateEnd(Vec g,InsertMode insertmode,ScatterMode scattermode)
 {
   Vec_MPI        *v;
-  PetscErrorCode ierr;
   PetscBool      ismpi;
 
   PetscFunctionBegin;

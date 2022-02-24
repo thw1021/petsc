@@ -13,7 +13,6 @@ static PetscErrorCode TSStep_Euler(TS ts)
   Vec            solution = ts->vec_sol,update = euler->update;
   PetscBool      stageok,accept = PETSC_TRUE;
   PetscReal      next_time_step = ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSPreStage(ts,ts->ptime));
@@ -38,7 +37,6 @@ static PetscErrorCode TSStep_Euler(TS ts)
 static PetscErrorCode TSSetUp_Euler(TS ts)
 {
   TS_Euler       *euler = (TS_Euler*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSCheckImplicitTerm(ts));
@@ -51,7 +49,6 @@ static PetscErrorCode TSSetUp_Euler(TS ts)
 static PetscErrorCode TSReset_Euler(TS ts)
 {
   TS_Euler       *euler = (TS_Euler*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&euler->update));
@@ -60,7 +57,6 @@ static PetscErrorCode TSReset_Euler(TS ts)
 
 static PetscErrorCode TSDestroy_Euler(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_Euler(ts));
@@ -86,7 +82,6 @@ static PetscErrorCode TSInterpolate_Euler(TS ts,PetscReal t,Vec X)
   TS_Euler       *euler = (TS_Euler*)ts->data;
   Vec            update = euler->update;
   PetscReal      alpha = (ts->ptime - t)/ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecWAXPY(X,-ts->time_step,update,ts->vec_sol));
@@ -114,7 +109,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Euler(TS ts)
 {
   TS_Euler       *euler;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ts,&euler));

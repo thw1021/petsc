@@ -57,7 +57,6 @@ static inline void LagrangeBasisDers(PetscInt n,PetscReal t,const PetscReal T[],
 static PetscErrorCode TSBDF_GetVecs(TS ts,DM dm,Vec *Xdot,Vec *Ydot)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dm && dm != ts->dm) {
@@ -73,7 +72,6 @@ static PetscErrorCode TSBDF_GetVecs(TS ts,DM dm,Vec *Xdot,Vec *Ydot)
 static PetscErrorCode TSBDF_RestoreVecs(TS ts,DM dm,Vec *Xdot,Vec *Ydot)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dm && dm != ts->dm) {
@@ -99,7 +97,6 @@ static PetscErrorCode DMRestrictHook_TSBDF(DM fine,Mat restrct,Vec rscale,Mat in
   TS             ts = (TS)ctx;
   Vec            Ydot,Ydot_c;
   Vec            Xdot,Xdot_c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSBDF_GetVecs(ts,fine,&Xdot,&Ydot));
@@ -118,7 +115,6 @@ static PetscErrorCode TSBDF_Advance(TS ts,PetscReal t,Vec X)
   TS_BDF         *bdf = (TS_BDF*)ts->data;
   PetscInt       i,n = (PetscInt)(sizeof(bdf->work)/sizeof(Vec));
   Vec            tail = bdf->work[n-1],tvtail = bdf->tvwork[n-1];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=n-1; i>=2; i--) {
@@ -142,7 +138,6 @@ static PetscErrorCode TSBDF_VecLTE(TS ts,PetscInt order,Vec lte)
   PetscReal      *time = bdf->time;
   Vec            *vecs = bdf->work;
   PetscScalar    a[8],b[8],alpha[8];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   LagrangeBasisDers(n+0,time[0],time,a); a[n] =0;
@@ -160,7 +155,6 @@ static PetscErrorCode TSBDF_Extrapolate(TS ts,PetscInt order,PetscReal t,Vec X)
   PetscReal      *time = bdf->time+1;
   Vec            *vecs = bdf->work+1;
   PetscScalar    alpha[7];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   n = PetscMin(n,bdf->n);
@@ -177,7 +171,6 @@ static PetscErrorCode TSBDF_Interpolate(TS ts,PetscInt order,PetscReal t,Vec X)
   PetscReal      *time = bdf->time;
   Vec            *vecs = bdf->work;
   PetscScalar    alpha[7];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   LagrangeBasisVals(n,t,time,alpha);
@@ -197,7 +190,6 @@ static PetscErrorCode TSBDF_PreSolve(TS ts)
   Vec            V,V0;
   Vec            vecs[7];
   PetscScalar    alpha[7];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSBDF_GetVecs(ts,NULL,&V,&V0));
@@ -215,7 +207,6 @@ static PetscErrorCode TSBDF_PreSolve(TS ts)
 static PetscErrorCode TSBDF_SNESSolve(TS ts,Vec b,Vec x)
 {
   PetscInt       nits,lits;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSBDF_PreSolve(ts));
@@ -229,7 +220,6 @@ static PetscErrorCode TSBDF_SNESSolve(TS ts,Vec b,Vec x)
 static PetscErrorCode TSBDF_Restart(TS ts,PetscBool *accept)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   bdf->k = 1; bdf->n = 0;
@@ -258,7 +248,6 @@ static PetscErrorCode TSStep_BDF(TS ts)
   PetscInt       rejections = 0;
   PetscBool      stageok,accept = PETSC_TRUE;
   PetscReal      next_time_step = ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(citation,&cited));
@@ -309,7 +298,6 @@ static PetscErrorCode TSStep_BDF(TS ts)
 static PetscErrorCode TSInterpolate_BDF(TS ts,PetscReal t,Vec X)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSBDF_Interpolate(ts,bdf->k,t,X));
@@ -322,7 +310,6 @@ static PetscErrorCode TSEvaluateWLTE_BDF(TS ts,NormType wnormtype,PetscInt *orde
   PetscInt       k = bdf->k;
   PetscReal      wltea,wlter;
   Vec            X = bdf->work[0], Y = bdf->vec_lte;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   k = PetscMin(k,bdf->n-1);
@@ -336,7 +323,6 @@ static PetscErrorCode TSEvaluateWLTE_BDF(TS ts,NormType wnormtype,PetscInt *orde
 static PetscErrorCode TSRollBack_BDF(TS ts)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(bdf->work[1],ts->vec_sol));
@@ -350,7 +336,6 @@ static PetscErrorCode SNESTSFormFunction_BDF(SNES snes,Vec X,Vec F,TS ts)
   PetscReal      t = bdf->time[0];
   PetscReal      shift = bdf->shift;
   Vec            V,V0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -378,7 +363,6 @@ static PetscErrorCode SNESTSFormJacobian_BDF(SNES snes,Vec X,Mat J,Mat P,TS ts)
   PetscReal      t = bdf->time[0];
   PetscReal      shift = bdf->shift;
   Vec            V,V0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -397,7 +381,6 @@ static PetscErrorCode TSReset_BDF(TS ts)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
   size_t         i,n = sizeof(bdf->work)/sizeof(Vec);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   bdf->k = bdf->n = 0;
@@ -414,7 +397,6 @@ static PetscErrorCode TSReset_BDF(TS ts)
 
 static PetscErrorCode TSDestroy_BDF(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_BDF(ts));
@@ -429,7 +411,6 @@ static PetscErrorCode TSSetUp_BDF(TS ts)
   TS_BDF         *bdf = (TS_BDF*)ts->data;
   size_t         i,n = sizeof(bdf->work)/sizeof(Vec);
   PetscReal      low,high,two = 2;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSHasTransientVariable(ts,&bdf->transientvar));
@@ -457,7 +438,6 @@ static PetscErrorCode TSSetUp_BDF(TS ts)
 
 static PetscErrorCode TSSetFromOptions_BDF(PetscOptionItems *PetscOptionsObject,TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"BDF ODE solver options"));
@@ -476,7 +456,6 @@ static PetscErrorCode TSView_BDF(TS ts,PetscViewer viewer)
 {
   TS_BDF         *bdf = (TS_BDF*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -520,7 +499,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS ts)
 {
   TS_BDF         *bdf;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ts->ops->reset          = TSReset_BDF;
@@ -568,7 +546,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS ts)
 @*/
 PetscErrorCode TSBDFSetOrder(TS ts,PetscInt order)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -593,7 +570,6 @@ PetscErrorCode TSBDFSetOrder(TS ts,PetscInt order)
 @*/
 PetscErrorCode TSBDFGetOrder(TS ts,PetscInt *order)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);

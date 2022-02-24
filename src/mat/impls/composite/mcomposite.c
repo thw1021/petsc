@@ -34,7 +34,6 @@ typedef struct {
 
 PetscErrorCode MatDestroy_Composite(Mat mat)
 {
-  PetscErrorCode    ierr;
   Mat_Composite     *shell = (Mat_Composite*)mat->data;
   Mat_CompositeLink next   = shell->head,oldnext;
   PetscInt          i;
@@ -74,7 +73,6 @@ PetscErrorCode MatMult_Composite_Multiplicative(Mat A,Vec x,Vec y)
 {
   Mat_Composite     *shell = (Mat_Composite*)A->data;
   Mat_CompositeLink next   = shell->head;
-  PetscErrorCode    ierr;
   Vec               in,out;
   PetscScalar       scale;
   PetscInt          i;
@@ -112,7 +110,6 @@ PetscErrorCode MatMultTranspose_Composite_Multiplicative(Mat A,Vec x,Vec y)
 {
   Mat_Composite     *shell = (Mat_Composite*)A->data;
   Mat_CompositeLink tail   = shell->tail;
-  PetscErrorCode    ierr;
   Vec               in,out;
   PetscScalar       scale;
   PetscInt          i;
@@ -149,7 +146,6 @@ PetscErrorCode MatMultTranspose_Composite_Multiplicative(Mat A,Vec x,Vec y)
 
 PetscErrorCode MatMult_Composite(Mat mat,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   Mat_Composite     *shell = (Mat_Composite*)mat->data;
   Mat_CompositeLink cur = shell->head;
   Vec               in,y2,xin;
@@ -303,7 +299,6 @@ PetscErrorCode MatMultTranspose_Composite(Mat A,Vec x,Vec y)
 {
   Mat_Composite     *shell = (Mat_Composite*)A->data;
   Mat_CompositeLink next   = shell->head;
-  PetscErrorCode    ierr;
   Vec               in,y2 = NULL;
   PetscInt          i;
 
@@ -342,7 +337,6 @@ PetscErrorCode MatMultTranspose_Composite(Mat A,Vec x,Vec y)
 PetscErrorCode MatMultAdd_Composite(Mat A,Vec x,Vec y,Vec z)
 {
   Mat_Composite     *shell = (Mat_Composite*)A->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (y != z) {
@@ -362,7 +356,6 @@ PetscErrorCode MatMultAdd_Composite(Mat A,Vec x,Vec y,Vec z)
 PetscErrorCode MatMultTransposeAdd_Composite(Mat A,Vec x,Vec y, Vec z)
 {
   Mat_Composite     *shell = (Mat_Composite*)A->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (y != z) {
@@ -383,7 +376,6 @@ PetscErrorCode MatGetDiagonal_Composite(Mat A,Vec v)
 {
   Mat_Composite     *shell = (Mat_Composite*)A->data;
   Mat_CompositeLink next   = shell->head;
-  PetscErrorCode    ierr;
   PetscInt          i;
 
   PetscFunctionBegin;
@@ -408,7 +400,6 @@ PetscErrorCode MatGetDiagonal_Composite(Mat A,Vec v)
 PetscErrorCode MatAssemblyEnd_Composite(Mat Y,MatAssemblyType t)
 {
   Mat_Composite  *shell = (Mat_Composite*)Y->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (shell->merge) {
@@ -429,7 +420,6 @@ PetscErrorCode MatScale_Composite(Mat inA,PetscScalar alpha)
 PetscErrorCode MatDiagonalScale_Composite(Mat inA,Vec left,Vec right)
 {
   Mat_Composite  *a = (Mat_Composite*)inA->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (left) {
@@ -454,7 +444,6 @@ PetscErrorCode MatDiagonalScale_Composite(Mat inA,Vec left,Vec right)
 PetscErrorCode MatSetFromOptions_Composite(PetscOptionItems *PetscOptionsObject,Mat A)
 {
   Mat_Composite  *a = (Mat_Composite*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"MATCOMPOSITE options"));
@@ -503,7 +492,6 @@ $       MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);
 @*/
 PetscErrorCode MatCreateComposite(MPI_Comm comm,PetscInt nmat,const Mat *mats,Mat *mat)
 {
-  PetscErrorCode ierr;
   PetscInt       m,n,M,N,i;
 
   PetscFunctionBegin;
@@ -529,7 +517,6 @@ static PetscErrorCode MatCompositeAddMat_Composite(Mat mat,Mat smat)
 {
   Mat_Composite     *shell = (Mat_Composite*)mat->data;
   Mat_CompositeLink ilink,next = shell->head;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(mat,&ilink));
@@ -571,7 +558,6 @@ static PetscErrorCode MatCompositeAddMat_Composite(Mat mat,Mat smat)
 @*/
 PetscErrorCode MatCompositeAddMat(Mat mat,Mat smat)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -614,7 +600,6 @@ static PetscErrorCode MatCompositeSetType_Composite(Mat mat,MatCompositeType typ
 @*/
 PetscErrorCode MatCompositeSetType(Mat mat,MatCompositeType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -650,7 +635,6 @@ static PetscErrorCode MatCompositeGetType_Composite(Mat mat,MatCompositeType *ty
 @*/
 PetscErrorCode MatCompositeGetType(Mat mat,MatCompositeType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -687,7 +671,6 @@ static PetscErrorCode MatCompositeSetMatStructure_Composite(Mat mat,MatStructure
 @*/
 PetscErrorCode MatCompositeSetMatStructure(Mat mat,MatStructure str)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -722,7 +705,6 @@ static PetscErrorCode MatCompositeGetMatStructure_Composite(Mat mat,MatStructure
 @*/
 PetscErrorCode MatCompositeGetMatStructure(Mat mat,MatStructure *str)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -762,7 +744,6 @@ static PetscErrorCode MatCompositeSetMergeType_Composite(Mat mat,MatCompositeMer
 @*/
 PetscErrorCode MatCompositeSetMergeType(Mat mat,MatCompositeMergeType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -775,7 +756,6 @@ static PetscErrorCode MatCompositeMerge_Composite(Mat mat)
 {
   Mat_Composite     *shell = (Mat_Composite*)mat->data;
   Mat_CompositeLink next   = shell->head, prev = shell->tail;
-  PetscErrorCode    ierr;
   Mat               tmat,newmat;
   Vec               left,right;
   PetscScalar       scale;
@@ -855,7 +835,6 @@ static PetscErrorCode MatCompositeMerge_Composite(Mat mat)
 @*/
 PetscErrorCode MatCompositeMerge(Mat mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -890,7 +869,6 @@ static PetscErrorCode MatCompositeGetNumberMat_Composite(Mat mat,PetscInt *nmat)
 @*/
 PetscErrorCode MatCompositeGetNumberMat(Mat mat,PetscInt *nmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -934,7 +912,6 @@ static PetscErrorCode MatCompositeGetMat_Composite(Mat mat,PetscInt i,Mat *Ai)
 @*/
 PetscErrorCode MatCompositeGetMat(Mat mat,PetscInt i,Mat *Ai)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -946,7 +923,6 @@ PetscErrorCode MatCompositeGetMat(Mat mat,PetscInt i,Mat *Ai)
 
 PetscErrorCode MatCompositeSetScalings_Composite(Mat mat,const PetscScalar *scalings)
 {
-  PetscErrorCode ierr;
   Mat_Composite  *shell = (Mat_Composite*)mat->data;
   PetscInt       nmat;
 
@@ -973,7 +949,6 @@ PetscErrorCode MatCompositeSetScalings_Composite(Mat mat,const PetscScalar *scal
 @*/
 PetscErrorCode MatCompositeSetScalings(Mat mat,const PetscScalar *scalings)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -1142,7 +1117,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_Composite(Mat A)
 {
   Mat_Composite  *b;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(A,&b));

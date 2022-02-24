@@ -29,7 +29,6 @@ PetscErrorCode  PetscRandomSetType(PetscRandom rnd, PetscRandomType type)
 {
   PetscErrorCode (*r)(PetscRandom);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(rnd, PETSC_RANDOM_CLASSID,1);
@@ -112,7 +111,6 @@ PetscErrorCode  PetscRandomGetType(PetscRandom rnd, PetscRandomType *type)
 @*/
 PetscErrorCode  PetscRandomRegister(const char sname[], PetscErrorCode (*function)(PetscRandom))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscRandomInitializePackage());
@@ -148,7 +146,6 @@ PETSC_EXTERN PetscErrorCode PetscRandomCreate_CURAND(PetscRandom);
 @*/
 PetscErrorCode  PetscRandomRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscRandomRegisterAllCalled) PetscFunctionReturn(0);

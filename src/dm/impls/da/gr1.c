@@ -31,7 +31,6 @@ PetscErrorCode  DMDASetUniformCoordinates(DM da,PetscReal xmin,PetscReal xmax,Pe
   PetscScalar      *coors;
   PetscReal        hx,hy,hz_;
   PetscInt         i,j,k,M,N,P,istart,isize,jstart,jsize,kstart,ksize,dim,cnt;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
@@ -97,7 +96,6 @@ PetscErrorCode  DMDASetUniformCoordinates(DM da,PetscReal xmin,PetscReal xmax,Pe
 */
 PetscErrorCode DMDASelectFields(DM da,PetscInt *outfields,PetscInt **fields)
 {
-  PetscErrorCode ierr;
   PetscInt       step,ndisplayfields,*displayfields,k,j;
   PetscBool      flg;
 
@@ -143,7 +141,6 @@ found:  displayfields[ndisplayfields++] = j;
 PetscErrorCode VecView_MPI_Draw_DA1d(Vec xin,PetscViewer v)
 {
   DM                da;
-  PetscErrorCode    ierr;
   PetscMPIInt       rank,size,tag;
   PetscInt          i,n,N,dof,istart,isize,j,nbounds;
   MPI_Status        status;

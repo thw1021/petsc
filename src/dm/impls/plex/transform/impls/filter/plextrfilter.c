@@ -3,7 +3,6 @@
 static PetscErrorCode DMPlexTransformView_Filter(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -29,7 +28,6 @@ static PetscErrorCode DMPlexTransformSetUp_Filter(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformDestroy_Filter(DMPlexTransform tr)
 {
   DMPlexTransform_Filter *f = (DMPlexTransform_Filter *) tr->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelDestroy(&f->label));
@@ -57,7 +55,6 @@ static PetscErrorCode DMPlexTransformInitialize_Filter(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Filter(DMPlexTransform tr)
 {
   DMPlexTransform_Filter *f;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

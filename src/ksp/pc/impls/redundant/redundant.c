@@ -22,7 +22,6 @@ typedef struct {
 PetscErrorCode  PCFactorSetShiftType_Redundant(PC pc,MatFactorShiftType shifttype)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (red->ksp) {
@@ -39,7 +38,6 @@ PetscErrorCode  PCFactorSetShiftType_Redundant(PC pc,MatFactorShiftType shifttyp
 static PetscErrorCode PCView_Redundant(PC pc,PetscViewer viewer)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring;
   PetscViewer    subviewer;
 
@@ -69,7 +67,6 @@ static PetscErrorCode PCView_Redundant(PC pc,PetscViewer viewer)
 static PetscErrorCode PCSetUp_Redundant(PC pc)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
   PetscInt       mstart,mend,mlocal,M;
   PetscMPIInt    size;
   MPI_Comm       comm,subcomm;
@@ -188,7 +185,6 @@ static PetscErrorCode PCSetUp_Redundant(PC pc)
 static PetscErrorCode PCApply_Redundant(PC pc,Vec x,Vec y)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
   PetscScalar    *array;
 
   PetscFunctionBegin;
@@ -227,7 +223,6 @@ static PetscErrorCode PCApply_Redundant(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplyTranspose_Redundant(PC pc,Vec x,Vec y)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
   PetscScalar    *array;
 
   PetscFunctionBegin;
@@ -266,7 +261,6 @@ static PetscErrorCode PCApplyTranspose_Redundant(PC pc,Vec x,Vec y)
 static PetscErrorCode PCReset_Redundant(PC pc)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (red->useparallelmat) {
@@ -285,7 +279,6 @@ static PetscErrorCode PCReset_Redundant(PC pc)
 static PetscErrorCode PCDestroy_Redundant(PC pc)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Redundant(pc));
@@ -297,7 +290,6 @@ static PetscErrorCode PCDestroy_Redundant(PC pc)
 
 static PetscErrorCode PCSetFromOptions_Redundant(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
   PC_Redundant   *red = (PC_Redundant*)pc->data;
 
   PetscFunctionBegin;
@@ -331,7 +323,6 @@ static PetscErrorCode PCRedundantSetNumber_Redundant(PC pc,PetscInt nreds)
 @*/
 PetscErrorCode PCRedundantSetNumber(PC pc,PetscInt nredundant)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -343,7 +334,6 @@ PetscErrorCode PCRedundantSetNumber(PC pc,PetscInt nredundant)
 static PetscErrorCode PCRedundantSetScatter_Redundant(PC pc,VecScatter in,VecScatter out)
 {
   PC_Redundant   *red = (PC_Redundant*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)in));
@@ -374,7 +364,6 @@ static PetscErrorCode PCRedundantSetScatter_Redundant(PC pc,VecScatter in,VecSca
 @*/
 PetscErrorCode PCRedundantSetScatter(PC pc,VecScatter in,VecScatter out)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -386,7 +375,6 @@ PetscErrorCode PCRedundantSetScatter(PC pc,VecScatter in,VecScatter out)
 
 static PetscErrorCode PCRedundantGetKSP_Redundant(PC pc,KSP *innerksp)
 {
-  PetscErrorCode ierr;
   PC_Redundant   *red = (PC_Redundant*)pc->data;
   MPI_Comm       comm,subcomm;
   const char     *prefix;
@@ -450,7 +438,6 @@ static PetscErrorCode PCRedundantGetKSP_Redundant(PC pc,KSP *innerksp)
 @*/
 PetscErrorCode PCRedundantGetKSP(PC pc,KSP *innerksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -486,7 +473,6 @@ static PetscErrorCode PCRedundantGetOperators_Redundant(PC pc,Mat *mat,Mat *pmat
 @*/
 PetscErrorCode PCRedundantGetOperators(PC pc,Mat *mat,Mat *pmat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -522,7 +508,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Redundant(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Redundant   *red;
   PetscMPIInt    size;
 

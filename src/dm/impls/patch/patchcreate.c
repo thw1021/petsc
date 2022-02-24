@@ -4,7 +4,6 @@
 PetscErrorCode DMSetFromOptions_Patch(PetscOptionItems *PetscOptionsObject,DM dm)
 {
   /* DM_Patch      *mesh = (DM_Patch*) dm->data; */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
@@ -53,7 +52,6 @@ PetscErrorCode DMInitialize_Patch(DM dm)
 PETSC_EXTERN PetscErrorCode DMCreate_Patch(DM dm)
 {
   DM_Patch       *mesh;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -93,7 +91,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Patch(DM dm)
 @*/
 PetscErrorCode DMPatchCreate(MPI_Comm comm, DM *mesh)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(mesh,2);
@@ -107,7 +104,6 @@ PetscErrorCode DMPatchCreateGrid(MPI_Comm comm, PetscInt dim, MatStencil patchSi
   DM_Patch       *mesh;
   DM             da;
   PetscInt       dof = 1, width = 1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPatchCreate(comm, dm));

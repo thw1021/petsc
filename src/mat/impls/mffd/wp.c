@@ -62,7 +62,6 @@ static PetscErrorCode MatMFFDCompute_WP(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,P
 {
   MatMFFD_WP     *hctx = (MatMFFD_WP*)ctx->hctx;
   PetscReal      normU,norma;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!(ctx->count % ctx->recomputeperiod)) {
@@ -97,7 +96,6 @@ static PetscErrorCode MatMFFDCompute_WP(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,P
 static PetscErrorCode MatMFFDView_WP(MatMFFD ctx,PetscViewer viewer)
 {
   MatMFFD_WP     *hctx = (MatMFFD_WP*)ctx->hctx;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -122,7 +120,6 @@ static PetscErrorCode MatMFFDView_WP(MatMFFD ctx,PetscViewer viewer)
 */
 static PetscErrorCode MatMFFDSetFromOptions_WP(PetscOptionItems *PetscOptionsObject,MatMFFD ctx)
 {
-  PetscErrorCode ierr;
   MatMFFD_WP     *hctx = (MatMFFD_WP*)ctx->hctx;
 
   PetscFunctionBegin;
@@ -145,7 +142,6 @@ static PetscErrorCode MatMFFDSetFromOptions_WP(PetscOptionItems *PetscOptionsObj
 */
 static PetscErrorCode MatMFFDDestroy_WP(MatMFFD ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(ctx->hctx));
@@ -186,7 +182,6 @@ PetscErrorCode  MatMFFDWPSetComputeNormU_P(Mat mat,PetscBool flag)
 @*/
 PetscErrorCode  MatMFFDWPSetComputeNormU(Mat A,PetscBool flag)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -204,7 +199,6 @@ PetscErrorCode  MatMFFDWPSetComputeNormU(Mat A,PetscBool flag)
 */
 PETSC_EXTERN PetscErrorCode MatCreateMFFD_WP(MatMFFD ctx)
 {
-  PetscErrorCode ierr;
   MatMFFD_WP     *hctx;
 
   PetscFunctionBegin;

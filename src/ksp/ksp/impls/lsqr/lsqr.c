@@ -24,7 +24,6 @@ typedef struct {
 
 static PetscErrorCode  VecSquare(Vec v)
 {
-  PetscErrorCode ierr;
   PetscScalar    *x;
   PetscInt       i, n;
 
@@ -38,7 +37,6 @@ static PetscErrorCode  VecSquare(Vec v)
 
 static PetscErrorCode KSPSetUp_LSQR(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_LSQR       *lsqr = (KSP_LSQR*)ksp->data;
   PetscBool      nopreconditioner;
 
@@ -69,7 +67,6 @@ static PetscErrorCode KSPSetUp_LSQR(KSP ksp)
 
 static PetscErrorCode KSPSolve_LSQR(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,size1,size2;
   PetscScalar    rho,rhobar,phi,phibar,theta,c,s,tmp,tau;
   PetscReal      beta,alpha,rnorm;
@@ -244,7 +241,6 @@ static PetscErrorCode KSPSolve_LSQR(KSP ksp)
 PetscErrorCode KSPDestroy_LSQR(KSP ksp)
 {
   KSP_LSQR       *lsqr = (KSP_LSQR*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Free work vectors */
@@ -388,7 +384,6 @@ PetscErrorCode KSPLSQRMonitorResidual_LSQR(KSP ksp, PetscInt n, PetscReal rnorm,
   char              normtype[256];
   PetscInt          tablevel;
   const char        *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetTabLevel((PetscObject) ksp, &tablevel));
@@ -428,7 +423,6 @@ PetscErrorCode KSPLSQRMonitorResidual_LSQR(KSP ksp, PetscInt n, PetscReal rnorm,
 @*/
 PetscErrorCode KSPLSQRMonitorResidual(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -446,7 +440,6 @@ PetscErrorCode KSPLSQRMonitorResidualDrawLG_LSQR(KSP ksp, PetscInt n, PetscReal 
   PetscDrawLG        lg     = vf->lg;
   KSPConvergedReason reason;
   PetscReal          x[2], y[2];
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerPushFormat(viewer, format));
@@ -487,7 +480,6 @@ PetscErrorCode KSPLSQRMonitorResidualDrawLG_LSQR(KSP ksp, PetscInt n, PetscReal 
 @*/
 PetscErrorCode KSPLSQRMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -518,7 +510,6 @@ PetscErrorCode KSPLSQRMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
 PetscErrorCode KSPLSQRMonitorResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
   const char    *names[] = {"residual", "normal eqn residual"};
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -529,7 +520,6 @@ PetscErrorCode KSPLSQRMonitorResidualDrawLGCreate(PetscViewer viewer, PetscViewe
 
 PetscErrorCode KSPSetFromOptions_LSQR(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_LSQR       *lsqr = (KSP_LSQR*)ksp->data;
 
   PetscFunctionBegin;
@@ -544,7 +534,6 @@ PetscErrorCode KSPSetFromOptions_LSQR(PetscOptionItems *PetscOptionsObject,KSP k
 PetscErrorCode KSPView_LSQR(KSP ksp,PetscViewer viewer)
 {
   KSP_LSQR       *lsqr = (KSP_LSQR*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -597,7 +586,6 @@ PetscErrorCode KSPView_LSQR(KSP ksp,PetscViewer viewer)
 @*/
 PetscErrorCode  KSPLSQRConvergedDefault(KSP ksp,PetscInt n,PetscReal rnorm,KSPConvergedReason *reason,void *ctx)
 {
-  PetscErrorCode ierr;
   KSP_LSQR       *lsqr = (KSP_LSQR*)ksp->data;
 
   PetscFunctionBegin;
@@ -657,7 +645,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_LSQR(KSP ksp)
 {
   KSP_LSQR       *lsqr;
   void           *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&lsqr));

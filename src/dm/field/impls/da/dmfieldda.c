@@ -14,7 +14,6 @@ DMField_DA;
 static PetscErrorCode DMFieldDestroy_DA(DMField field)
 {
   DMField_DA     *dafield;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dafield = (DMField_DA *) field->data;
@@ -27,7 +26,6 @@ static PetscErrorCode DMFieldView_DA(DMField field,PetscViewer viewer)
 {
   DMField_DA     *dafield = (DMField_DA *) field->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -194,7 +192,6 @@ static PetscErrorCode DMFieldEvaluate_DA(DMField field, Vec points, PetscDataTyp
   PetscInt       N, n, nc;
   const PetscScalar *array;
   PetscReal (*coordRange)[2];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm      = field->dm;
@@ -231,7 +228,6 @@ static PetscErrorCode DMFieldEvaluateFE_DA(DMField field, IS cellIS, PetscQuadra
   PetscBool      isStride;
   const PetscInt *cells = NULL;
   PetscInt       sfirst = -1, stride = -1, nCells;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dafield = (DMField_DA *) field->data;
@@ -325,7 +321,6 @@ static PetscErrorCode DMFieldEvaluateFV_DA(DMField field, IS cellIS, PetscDataTy
   PetscBool      isStride;
   const PetscInt *cells = NULL;
   PetscInt       sfirst = -1, stride = -1;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dafield = (DMField_DA *) field->data;
@@ -375,7 +370,6 @@ static PetscErrorCode DMFieldGetDegree_DA(DMField field, IS pointIS, PetscInt *m
 {
   DM             dm;
   PetscInt       dim, h, imin;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = field->dm;
@@ -397,7 +391,6 @@ static PetscErrorCode DMFieldCreateDefaultQuadrature_DA(DMField field, IS cellIS
 {
   PetscInt       h, dim, imax, imin;
   DM             dm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = field->dm;
@@ -424,7 +417,6 @@ static PetscErrorCode DMFieldInitialize_DA(DMField field)
   Vec            coords = NULL;
   PetscInt       dim, i, j, k;
   DMField_DA     *dafield = (DMField_DA *) field->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   field->ops->destroy                 = DMFieldDestroy_DA;
@@ -478,7 +470,6 @@ static PetscErrorCode DMFieldInitialize_DA(DMField field)
 PETSC_INTERN PetscErrorCode DMFieldCreate_DA(DMField field)
 {
   DMField_DA     *dafield;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(field,&dafield));
@@ -494,7 +485,6 @@ PetscErrorCode DMFieldCreateDA(DM dm, PetscInt nc, const PetscScalar *cornerValu
   PetscInt       dim, nv, i, j, k;
   PetscInt       half;
   PetscScalar    *cv, *cf, *work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMFieldCreate(dm,nc,DMFIELD_VERTEX,&b));

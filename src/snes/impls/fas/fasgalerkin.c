@@ -38,7 +38,6 @@ PetscErrorCode SNESFASGetGalerkin(SNES snes, PetscBool *flg)
 PetscErrorCode SNESFASSetGalerkin(SNES snes, PetscBool flg)
 {
   SNES_FAS       *fas;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(snes,SNES_CLASSID,1,SNESFAS);
@@ -74,7 +73,6 @@ PetscErrorCode SNESFASGalerkinFunctionDefault(SNES snes, Vec X, Vec F, void *ctx
   SNES_FAS       *prevfas;
   SNES           prevsnes;
   Vec            b_temp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* prolong to the fine level and evaluate there. */

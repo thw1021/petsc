@@ -10,7 +10,6 @@ typedef struct  {
 static PetscErrorCode DMCreateMatrix_Redundant(DM dm,Mat *J)
 {
   DM_Redundant           *red = (DM_Redundant*)dm->data;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltog;
   PetscInt               i,rstart,rend,*cols;
   PetscScalar            *vals;
@@ -45,7 +44,6 @@ static PetscErrorCode DMCreateMatrix_Redundant(DM dm,Mat *J)
 
 static PetscErrorCode DMDestroy_Redundant(DM dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMRedundantSetSize_C",NULL));
@@ -58,7 +56,6 @@ static PetscErrorCode DMDestroy_Redundant(DM dm)
 
 static PetscErrorCode DMCreateGlobalVector_Redundant(DM dm,Vec *gvec)
 {
-  PetscErrorCode         ierr;
   DM_Redundant           *red = (DM_Redundant*)dm->data;
   ISLocalToGlobalMapping ltog;
 
@@ -77,7 +74,6 @@ static PetscErrorCode DMCreateGlobalVector_Redundant(DM dm,Vec *gvec)
 
 static PetscErrorCode DMCreateLocalVector_Redundant(DM dm,Vec *lvec)
 {
-  PetscErrorCode ierr;
   DM_Redundant   *red = (DM_Redundant*)dm->data;
 
   PetscFunctionBegin;
@@ -93,7 +89,6 @@ static PetscErrorCode DMCreateLocalVector_Redundant(DM dm,Vec *lvec)
 
 static PetscErrorCode DMLocalToGlobalBegin_Redundant(DM dm,Vec l,InsertMode imode,Vec g)
 {
-  PetscErrorCode    ierr;
   DM_Redundant      *red = (DM_Redundant*)dm->data;
   const PetscScalar *lv;
   PetscScalar       *gv;
@@ -146,7 +141,6 @@ static PetscErrorCode DMLocalToGlobalEnd_Redundant(DM dm,Vec l,InsertMode imode,
 
 static PetscErrorCode DMGlobalToLocalBegin_Redundant(DM dm,Vec g,InsertMode imode,Vec l)
 {
-  PetscErrorCode    ierr;
   DM_Redundant      *red = (DM_Redundant*)dm->data;
   const PetscScalar *gv;
   PetscScalar       *lv;
@@ -180,7 +174,6 @@ static PetscErrorCode DMSetUp_Redundant(DM dm)
 
 static PetscErrorCode DMView_Redundant(DM dm,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   DM_Redundant   *red = (DM_Redundant*)dm->data;
   PetscBool      iascii;
 
@@ -195,7 +188,6 @@ static PetscErrorCode DMView_Redundant(DM dm,PetscViewer viewer)
 static PetscErrorCode DMCreateColoring_Redundant(DM dm,ISColoringType ctype,ISColoring *coloring)
 {
   DM_Redundant    *red = (DM_Redundant*)dm->data;
-  PetscErrorCode  ierr;
   PetscInt        i,nloc;
   ISColoringValue *colors;
 
@@ -218,7 +210,6 @@ static PetscErrorCode DMCreateColoring_Redundant(DM dm,ISColoringType ctype,ISCo
 
 static PetscErrorCode DMRefine_Redundant(DM dmc,MPI_Comm comm,DM *dmf)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    flag;
   DM_Redundant   *redc = (DM_Redundant*)dmc->data;
 
@@ -234,7 +225,6 @@ static PetscErrorCode DMRefine_Redundant(DM dmc,MPI_Comm comm,DM *dmf)
 
 static PetscErrorCode DMCoarsen_Redundant(DM dmf,MPI_Comm comm,DM *dmc)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    flag;
   DM_Redundant   *redf = (DM_Redundant*)dmf->data;
 
@@ -250,7 +240,6 @@ static PetscErrorCode DMCoarsen_Redundant(DM dmf,MPI_Comm comm,DM *dmc)
 
 static PetscErrorCode DMCreateInterpolation_Redundant(DM dmc,DM dmf,Mat *P,Vec *scale)
 {
-  PetscErrorCode ierr;
   DM_Redundant   *redc = (DM_Redundant*)dmc->data;
   DM_Redundant   *redf = (DM_Redundant*)dmf->data;
   PetscMPIInt    flag;
@@ -290,7 +279,6 @@ static PetscErrorCode DMCreateInterpolation_Redundant(DM dmc,DM dmf,Mat *P,Vec *
 @*/
 PetscErrorCode DMRedundantSetSize(DM dm,PetscMPIInt rank,PetscInt N)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -319,7 +307,6 @@ PetscErrorCode DMRedundantSetSize(DM dm,PetscMPIInt rank,PetscInt N)
 @*/
 PetscErrorCode DMRedundantGetSize(DM dm,PetscMPIInt *rank,PetscInt *N)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -331,7 +318,6 @@ PetscErrorCode DMRedundantGetSize(DM dm,PetscMPIInt *rank,PetscInt *N)
 static PetscErrorCode DMRedundantSetSize_Redundant(DM dm,PetscMPIInt rank,PetscInt N)
 {
   DM_Redundant   *red = (DM_Redundant*)dm->data;
-  PetscErrorCode ierr;
   PetscMPIInt    myrank;
   PetscInt       i,*globals;
 
@@ -380,7 +366,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Redundant(DM dm)
 {
-  PetscErrorCode ierr;
   DM_Redundant   *red;
 
   PetscFunctionBegin;
@@ -428,7 +413,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Redundant(DM dm)
 @*/
 PetscErrorCode DMRedundantCreate(MPI_Comm comm,PetscMPIInt rank,PetscInt N,DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(dm,4);

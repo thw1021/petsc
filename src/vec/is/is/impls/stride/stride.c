@@ -13,7 +13,6 @@ typedef struct {
 static PetscErrorCode ISCopy_Stride(IS is,IS isy)
 {
   IS_Stride      *is_stride = (IS_Stride*)is->data,*isy_stride = (IS_Stride*)isy->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMemcpy(isy_stride,is_stride,sizeof(IS_Stride)));
@@ -22,7 +21,6 @@ static PetscErrorCode ISCopy_Stride(IS is,IS isy)
 
 PetscErrorCode ISDuplicate_Stride(IS is,IS *newIS)
 {
-  PetscErrorCode ierr;
   IS_Stride      *sub = (IS_Stride*)is->data;
 
   PetscFunctionBegin;
@@ -33,7 +31,6 @@ PetscErrorCode ISDuplicate_Stride(IS is,IS *newIS)
 PetscErrorCode ISInvertPermutation_Stride(IS is,PetscInt nlocal,IS *perm)
 {
   PetscBool      isident;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISGetInfo(is,IS_IDENTITY,IS_GLOBAL,PETSC_TRUE,&isident));
@@ -80,7 +77,6 @@ PetscErrorCode  ISStrideGetInfo(IS is,PetscInt *first,PetscInt *step)
 {
   IS_Stride      *sub;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
@@ -97,7 +93,6 @@ PetscErrorCode  ISStrideGetInfo(IS is,PetscInt *first,PetscInt *step)
 
 PetscErrorCode ISDestroy_Stride(IS is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)is,"ISStrideSetStride_C",NULL));
@@ -107,7 +102,6 @@ PetscErrorCode ISDestroy_Stride(IS is)
 
 PetscErrorCode  ISToGeneral_Stride(IS inis)
 {
-  PetscErrorCode ierr;
   const PetscInt *idx;
   PetscInt       n;
 
@@ -142,7 +136,6 @@ PetscErrorCode ISLocate_Stride(IS is,PetscInt key,PetscInt *location)
 PetscErrorCode ISGetIndices_Stride(IS is,const PetscInt *idx[])
 {
   IS_Stride      *sub = (IS_Stride*)is->data;
-  PetscErrorCode ierr;
   PetscInt       i,**dx = (PetscInt**)idx;
 
   PetscFunctionBegin;
@@ -156,7 +149,6 @@ PetscErrorCode ISGetIndices_Stride(IS is,const PetscInt *idx[])
 
 PetscErrorCode ISRestoreIndices_Stride(IS in,const PetscInt *idx[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(*(void**)idx));
@@ -170,7 +162,6 @@ PetscErrorCode ISView_Stride(IS is,PetscViewer viewer)
   PetscMPIInt       rank,size;
   PetscBool         iascii,ibinary;
   PetscViewerFormat fmt;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -272,7 +263,6 @@ static PetscErrorCode ISIntervalLocal_Stride(IS is, PetscBool *flg)
 
 static PetscErrorCode ISOnComm_Stride(IS is,MPI_Comm comm,PetscCopyMode mode,IS *newis)
 {
-  PetscErrorCode ierr;
   IS_Stride      *sub = (IS_Stride*)is->data;
 
   PetscFunctionBegin;
@@ -283,7 +273,6 @@ static PetscErrorCode ISOnComm_Stride(IS is,MPI_Comm comm,PetscCopyMode mode,IS 
 static PetscErrorCode ISSetBlockSize_Stride(IS is,PetscInt bs)
 {
   IS_Stride     *sub = (IS_Stride*)is->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(sub->step != 1 && bs != 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_SIZ,"ISSTRIDE has stride %" PetscInt_FMT ", cannot be blocked of size %" PetscInt_FMT,sub->step,bs);
@@ -350,7 +339,6 @@ static struct _ISOps myops = {
 @*/
 PetscErrorCode  ISStrideSetStride(IS is,PetscInt n,PetscInt first,PetscInt step)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(n < 0,PetscObjectComm((PetscObject)is), PETSC_ERR_ARG_OUTOFRANGE, "Negative length %" PetscInt_FMT " not valid", n);
@@ -361,7 +349,6 @@ PetscErrorCode  ISStrideSetStride(IS is,PetscInt n,PetscInt first,PetscInt step)
 
 PetscErrorCode  ISStrideSetStride_Stride(IS is,PetscInt n,PetscInt first,PetscInt step)
 {
-  PetscErrorCode ierr;
   PetscInt       min,max;
   IS_Stride      *sub = (IS_Stride*)is->data;
   PetscLayout    map;
@@ -408,7 +395,6 @@ PetscErrorCode  ISStrideSetStride_Stride(IS is,PetscInt n,PetscInt first,PetscIn
 @*/
 PetscErrorCode  ISCreateStride(MPI_Comm comm,PetscInt n,PetscInt first,PetscInt step,IS *is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreate(comm,is));
@@ -419,7 +405,6 @@ PetscErrorCode  ISCreateStride(MPI_Comm comm,PetscInt n,PetscInt first,PetscInt 
 
 PETSC_EXTERN PetscErrorCode ISCreate_Stride(IS is)
 {
-  PetscErrorCode ierr;
   IS_Stride      *sub;
 
   PetscFunctionBegin;

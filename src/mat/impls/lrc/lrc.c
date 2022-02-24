@@ -14,7 +14,6 @@ typedef struct {
 static PetscErrorCode MatMult_LRC_kernel(Mat N,Vec x,Vec y,PetscBool transpose)
 {
   Mat_LRC        *Na = (Mat_LRC*)N->data;
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   Mat            U,V;
 
@@ -91,7 +90,6 @@ static PetscErrorCode MatMult_LRC_kernel(Mat N,Vec x,Vec y,PetscBool transpose)
 
 static PetscErrorCode MatMult_LRC(Mat N,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult_LRC_kernel(N,x,y,PETSC_FALSE));
@@ -100,7 +98,6 @@ static PetscErrorCode MatMult_LRC(Mat N,Vec x,Vec y)
 
 static PetscErrorCode MatMultTranspose_LRC(Mat N,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult_LRC_kernel(N,x,y,PETSC_TRUE));
@@ -110,7 +107,6 @@ static PetscErrorCode MatMultTranspose_LRC(Mat N,Vec x,Vec y)
 static PetscErrorCode MatDestroy_LRC(Mat N)
 {
   Mat_LRC        *Na = (Mat_LRC*)N->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&Na->A));
@@ -161,7 +157,6 @@ static PetscErrorCode MatLRCGetMats_LRC(Mat N,Mat *A,Mat *U,Vec *c,Mat *V)
 @*/
 PetscErrorCode MatLRCGetMats(Mat N,Mat *A,Mat *U,Vec *c,Mat *V)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(N,"MatLRCGetMats_C",(Mat,Mat*,Mat*,Vec*,Mat*),(N,A,U,c,V)));
@@ -203,7 +198,6 @@ PetscErrorCode MatLRCGetMats(Mat N,Mat *A,Mat *U,Vec *c,Mat *V)
 @*/
 PetscErrorCode MatCreateLRC(Mat A,Mat U,Vec c,Mat V,Mat *N)
 {
-  PetscErrorCode ierr;
   PetscBool      match;
   PetscInt       m,n,k,m1,n1,k1;
   Mat_LRC        *Na;

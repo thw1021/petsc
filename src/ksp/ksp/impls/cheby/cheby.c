@@ -4,7 +4,6 @@
 static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
 {
   KSP_Chebyshev  *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (cheb->kspest) {
@@ -18,7 +17,6 @@ static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
  */
 static PetscErrorCode KSPChebyshevComputeExtremeEigenvalues_Private(KSP kspest,PetscReal *emin,PetscReal *emax)
 {
-  PetscErrorCode ierr;
   PetscInt       n,neig;
   PetscReal      *re,*im,min,max;
 
@@ -41,7 +39,6 @@ static PetscErrorCode KSPChebyshevComputeExtremeEigenvalues_Private(KSP kspest,P
 static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
 {
   KSP_Chebyshev    *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode   ierr;
   PetscBool        flg;
   Mat              Pmat,Amat;
   PetscObjectId    amatid,    pmatid;
@@ -130,7 +127,6 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
 static PetscErrorCode KSPChebyshevSetEigenvalues_Chebyshev(KSP ksp,PetscReal emax,PetscReal emin)
 {
   KSP_Chebyshev  *chebyshevP = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(emax <= emin,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"Maximum eigenvalue must be larger than minimum: max %g min %g",(double)emax,(double)emin);
@@ -145,7 +141,6 @@ static PetscErrorCode KSPChebyshevSetEigenvalues_Chebyshev(KSP ksp,PetscReal ema
 static PetscErrorCode KSPChebyshevEstEigSet_Chebyshev(KSP ksp,PetscReal a,PetscReal b,PetscReal c,PetscReal d)
 {
   KSP_Chebyshev  *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (a != 0.0 || b != 0.0 || c != 0.0 || d != 0.0) {
@@ -207,7 +202,6 @@ static PetscErrorCode KSPChebyshevEstEigSetUseNoisy_Chebyshev(KSP ksp,PetscBool 
 @*/
 PetscErrorCode  KSPChebyshevSetEigenvalues(KSP ksp,PetscReal emax,PetscReal emin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -252,7 +246,6 @@ PetscErrorCode  KSPChebyshevSetEigenvalues(KSP ksp,PetscReal emax,PetscReal emin
 @*/
 PetscErrorCode KSPChebyshevEstEigSet(KSP ksp,PetscReal a,PetscReal b,PetscReal c,PetscReal d)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -285,7 +278,6 @@ PetscErrorCode KSPChebyshevEstEigSet(KSP ksp,PetscReal a,PetscReal b,PetscReal c
 @*/
 PetscErrorCode KSPChebyshevEstEigSetUseNoisy(KSP ksp,PetscBool use)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -310,7 +302,6 @@ PetscErrorCode KSPChebyshevEstEigSetUseNoisy(KSP ksp,PetscBool use)
 @*/
 PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -332,7 +323,6 @@ static PetscErrorCode KSPChebyshevEstEigGetKSP_Chebyshev(KSP ksp, KSP *kspest)
 static PetscErrorCode KSPSetFromOptions_Chebyshev(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
   KSP_Chebyshev  *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       neigarg = 2, nestarg = 4;
   PetscReal      eminmax[2] = {0., 0.};
   PetscReal      tform[4] = {PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE};
@@ -378,7 +368,6 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(PetscOptionItems *PetscOptions
 static PetscErrorCode KSPSolve_Chebyshev(KSP ksp)
 {
   KSP_Chebyshev  *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       k,kp1,km1,ktmp,i;
   PetscScalar    alpha,omegaprod,mu,omega,Gamma,c[3],scale;
   PetscReal      rnorm = 0.0;
@@ -552,7 +541,6 @@ static PetscErrorCode KSPSolve_Chebyshev(KSP ksp)
 static  PetscErrorCode KSPView_Chebyshev(KSP ksp,PetscViewer viewer)
 {
   KSP_Chebyshev  *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -576,7 +564,6 @@ static  PetscErrorCode KSPView_Chebyshev(KSP ksp,PetscViewer viewer)
 static PetscErrorCode KSPDestroy_Chebyshev(KSP ksp)
 {
   KSP_Chebyshev  *cheb = (KSP_Chebyshev*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPDestroy(&cheb->kspest));
@@ -617,7 +604,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_Chebyshev(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_Chebyshev  *chebyshevP;
 
   PetscFunctionBegin;

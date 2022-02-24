@@ -42,14 +42,13 @@
 #define DEF_PackFunc(Type,BS,EQ) \
   static PetscErrorCode CPPJoin4(Pack,Type,BS,EQ)(PetscSFLink link,PetscInt count,PetscInt start,PetscSFPackOpt opt,const PetscInt *idx,const void *unpacked,void *packed) \
   {                                                                                                          \
-    PetscErrorCode ierr;                                                                                     \
     const Type     *u = (const Type*)unpacked,*u2;                                                           \
     Type           *p = (Type*)packed,*p2;                                                                   \
     PetscInt       i,j,k,X,Y,r,bs=link->bs;                                                                  \
     const PetscInt M = (EQ) ? 1 : bs/BS; /* If EQ, then M=1 enables compiler's const-propagation */          \
     const PetscInt MBS = M*BS; /* MBS=bs. We turn MBS into a compile time const when EQ=1. */                \
     PetscFunctionBegin;                                                                                      \
-    if (!idx) CHKERRQ(PetscArraycpy(p,u+start*MBS,MBS*count));/* idx[] are contiguous */       \
+    if (!idx) CHKERRQ(PetscArraycpy(p,u+start*MBS,MBS*count));/* idx[] are contiguous */                     \
     else if (opt) { /* has optimizations available */                                                        \
       p2 = p;                                                                                                \
       for (r=0; r<opt->n; r++) {                                                                             \
@@ -58,7 +57,7 @@
         Y  = opt->Y[r];                                                                                      \
         for (k=0; k<opt->dz[r]; k++)                                                                         \
           for (j=0; j<opt->dy[r]; j++) {                                                                     \
-            CHKERRQ(PetscArraycpy(p2,u2+(X*Y*k+X*j)*MBS,opt->dx[r]*MBS));                        \
+            CHKERRQ(PetscArraycpy(p2,u2+(X*Y*k+X*j)*MBS,opt->dx[r]*MBS));                                    \
             p2  += opt->dx[r]*MBS;                                                                           \
           }                                                                                                  \
       }                                                                                                      \
@@ -85,7 +84,6 @@
 #define DEF_UnpackFunc(Type,BS,EQ)               \
   static PetscErrorCode CPPJoin4(UnpackAndInsert,Type,BS,EQ)(PetscSFLink link,PetscInt count,PetscInt start,PetscSFPackOpt opt,const PetscInt *idx,void *unpacked,const void *packed) \
   {                                                                                                          \
-    PetscErrorCode ierr;                                                                                     \
     Type           *u = (Type*)unpacked,*u2;                                                                 \
     const Type     *p = (const Type*)packed;                                                                 \
     PetscInt       i,j,k,X,Y,r,bs=link->bs;                                                                  \
@@ -94,7 +92,7 @@
     PetscFunctionBegin;                                                                                      \
     if (!idx) {                                                                                              \
       u += start*MBS;                                                                                        \
-      if (u != p) CHKERRQ(PetscArraycpy(u,p,count*MBS));                                       \
+      if (u != p) CHKERRQ(PetscArraycpy(u,p,count*MBS));                                                     \
     } else if (opt) { /* has optimizations available */                                                      \
       for (r=0; r<opt->n; r++) {                                                                             \
         u2 = u + opt->start[r]*MBS;                                                                          \
@@ -102,7 +100,7 @@
         Y  = opt->Y[r];                                                                                      \
         for (k=0; k<opt->dz[r]; k++)                                                                         \
           for (j=0; j<opt->dy[r]; j++) {                                                                     \
-            CHKERRQ(PetscArraycpy(u2+(X*Y*k+X*j)*MBS,p,opt->dx[r]*MBS));                         \
+            CHKERRQ(PetscArraycpy(u2+(X*Y*k+X*j)*MBS,p,opt->dx[r]*MBS));                                     \
             p   += opt->dx[r]*MBS;                                                                           \
           }                                                                                                  \
       }                                                                                                      \
@@ -183,7 +181,6 @@
 #define DEF_ScatterAndOp(Type,BS,EQ,Opname,Op,OpApply) \
   static PetscErrorCode CPPJoin4(ScatterAnd##Opname,Type,BS,EQ)(PetscSFLink link,PetscInt count,PetscInt srcStart,PetscSFPackOpt srcOpt,const PetscInt *srcIdx,const void *src,PetscInt dstStart,PetscSFPackOpt dstOpt,const PetscInt *dstIdx,void *dst) \
   {                                                                                                          \
-    PetscErrorCode ierr;                                                                                     \
     const Type     *u = (const Type*)src;                                                                    \
     Type           *v = (Type*)dst;                                                                          \
     PetscInt       i,j,k,s,t,X,Y,bs = link->bs;                                                              \
@@ -192,7 +189,7 @@
     PetscFunctionBegin;                                                                                      \
     if (!srcIdx) { /* src is contiguous */                                                                   \
       u += srcStart*MBS;                                                                                     \
-      CHKERRQ(CPPJoin4(UnpackAnd##Opname,Type,BS,EQ)(link,count,dstStart,dstOpt,dstIdx,dst,u));  \
+      CHKERRQ(CPPJoin4(UnpackAnd##Opname,Type,BS,EQ)(link,count,dstStart,dstOpt,dstIdx,dst,u));              \
     } else if (srcOpt && !dstIdx) { /* src is 3D, dst is contiguous */                                       \
       u += srcOpt->start[0]*MBS;                                                                             \
       v += dstStart*MBS;                                                                                     \
@@ -471,7 +468,6 @@ static inline int MPI_Type_dup(MPI_Datatype datatype,MPI_Datatype *newtype)
 
 PetscErrorCode PetscSFLinkDestroy(PetscSF sf,PetscSFLink link)
 {
-  PetscErrorCode    ierr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscInt          i,nreqs = (bas->nrootreqs+sf->nleafreqs)*8;
 
@@ -497,7 +493,6 @@ PetscErrorCode PetscSFLinkDestroy(PetscSF sf,PetscSFLink link)
 
 PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFSetErrorOnUnsupportedOverlap(sf,unit,rootdata,leafdata));
@@ -520,7 +515,6 @@ PetscErrorCode PetscSFLinkCreate(PetscSF sf,MPI_Datatype unit,PetscMemType rootm
 */
 PetscErrorCode PetscSFLinkGetMPIBuffersAndRequests(PetscSF sf,PetscSFLink link,PetscSFDirection direction,void **rootbuf, void **leafbuf,MPI_Request **rootreqs,MPI_Request **leafreqs)
 {
-  PetscErrorCode       ierr;
   PetscSF_Basic        *bas = (PetscSF_Basic*)sf->data;
   PetscInt             i,j,cnt,nrootranks,ndrootranks,nleafranks,ndleafranks;
   const PetscInt       *rootoffset,*leafoffset;
@@ -578,7 +572,6 @@ PetscErrorCode PetscSFLinkGetMPIBuffersAndRequests(PetscSF sf,PetscSFLink link,P
 
 PetscErrorCode PetscSFLinkGetInUse(PetscSF sf,MPI_Datatype unit,const void *rootdata,const void *leafdata,PetscCopyMode cmode,PetscSFLink *mylink)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link,*p;
   PetscSF_Basic     *bas=(PetscSF_Basic*)sf->data;
 
@@ -617,7 +610,6 @@ PetscErrorCode PetscSFLinkReclaim(PetscSF sf,PetscSFLink *mylink)
 /* Error out on unsupported overlapped communications */
 PetscErrorCode PetscSFSetErrorOnUnsupportedOverlap(PetscSF sf,MPI_Datatype unit,const void *rootdata,const void *leafdata)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link,*p;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscBool         match;
@@ -646,7 +638,6 @@ static PetscErrorCode PetscSFLinkMemcpy_Host(PetscSFLink link,PetscMemType dstmt
 
 PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
 {
-  PetscErrorCode ierr;
   PetscInt       nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
   PetscBool      is2Int,is2PetscInt;
   PetscMPIInt    ni,na,nd,combiner;
@@ -907,7 +898,6 @@ PetscErrorCode PetscSFLinkGetFetchAndOpLocal(PetscSFLink link,PetscMemType mtype
 
 static inline PetscErrorCode PetscSFLinkLogFlopsAfterUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,MPI_Op op)
 {
-  PetscErrorCode ierr;
   PetscLogDouble flops;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
@@ -925,7 +915,6 @@ static inline PetscErrorCode PetscSFLinkLogFlopsAfterUnpackRootData(PetscSF sf,P
 static inline PetscErrorCode PetscSFLinkLogFlopsAfterUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope scope,MPI_Op op)
 {
   PetscLogDouble flops;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (op != MPI_REPLACE && link->basicunit == MPIU_SCALAR) { /* op is a reduction on PetscScalars */
@@ -956,7 +945,6 @@ static inline PetscErrorCode PetscSFLinkUnpackDataWithMPIReduceLocal(PetscSF sf,
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_MPI_REDUCE_LOCAL)
   {
-    PetscErrorCode ierr;
     PetscInt       i;
     if (indices) {
       /* Note we use link->unit instead of link->basicunit. When op can be mapped to MPI_SUM etc, it operates on
@@ -978,7 +966,6 @@ static inline PetscErrorCode PetscSFLinkScatterDataWithMPIReduceLocal(PetscSF sf
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_MPI_REDUCE_LOCAL)
   {
-    PetscErrorCode ierr;
     PetscInt       i,disp;
     if (!srcIdx) {
       CHKERRQ(PetscSFLinkUnpackDataWithMPIReduceLocal(sf,link,count,dstStart,dstIdx,dst,(const char*)src+srcStart*link->unitbytes,op));
@@ -1012,7 +999,6 @@ static inline PetscErrorCode PetscSFLinkScatterDataWithMPIReduceLocal(PetscSF sf
  */
 PetscErrorCode PetscSFLinkPackRootData_Private(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *rootdata)
 {
-  PetscErrorCode   ierr;
   const PetscInt   *rootindices = NULL;
   PetscInt         count,start;
   PetscErrorCode   (*Pack)(PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,void*) = NULL;
@@ -1033,7 +1019,6 @@ PetscErrorCode PetscSFLinkPackRootData_Private(PetscSF sf,PetscSFLink link,Petsc
 /* Pack leafdata to leafbuf */
 PetscErrorCode PetscSFLinkPackLeafData_Private(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *leafdata)
 {
-  PetscErrorCode   ierr;
   const PetscInt   *leafindices = NULL;
   PetscInt         count,start;
   PetscErrorCode   (*Pack)(PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,const void*,void*) = NULL;
@@ -1054,7 +1039,6 @@ PetscErrorCode PetscSFLinkPackLeafData_Private(PetscSF sf,PetscSFLink link,Petsc
 /* Pack rootdata to rootbuf, which are in the same memory space */
 PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *rootdata)
 {
-  PetscErrorCode   ierr;
   PetscSF_Basic    *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
@@ -1070,7 +1054,6 @@ PetscErrorCode PetscSFLinkPackRootData(PetscSF sf,PetscSFLink link,PetscSFScope 
 /* Pack leafdata to leafbuf, which are in the same memory space */
 PetscErrorCode PetscSFLinkPackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope scope,const void *leafdata)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (scope == PETSCSF_REMOTE) {
@@ -1085,7 +1068,6 @@ PetscErrorCode PetscSFLinkPackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope 
 
 PetscErrorCode PetscSFLinkUnpackRootData_Private(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode   ierr;
   const PetscInt   *rootindices = NULL;
   PetscInt         count,start;
   PetscSF_Basic    *bas = (PetscSF_Basic*)sf->data;
@@ -1110,7 +1092,6 @@ PetscErrorCode PetscSFLinkUnpackRootData_Private(PetscSF sf,PetscSFLink link,Pet
 
 PetscErrorCode PetscSFLinkUnpackLeafData_Private(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode   ierr;
   const PetscInt   *leafindices = NULL;
   PetscInt         count,start;
   PetscErrorCode   (*UnpackAndOp)(PetscSFLink,PetscInt,PetscInt,PetscSFPackOpt,const PetscInt*,void*,const void*) = NULL;
@@ -1134,7 +1115,6 @@ PetscErrorCode PetscSFLinkUnpackLeafData_Private(PetscSF sf,PetscSFLink link,Pet
 /* Unpack rootbuf to rootdata, which are in the same memory space */
 PetscErrorCode PetscSFLinkUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode   ierr;
   PetscSF_Basic    *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
@@ -1151,7 +1131,6 @@ PetscErrorCode PetscSFLinkUnpackRootData(PetscSF sf,PetscSFLink link,PetscSFScop
 /* Unpack leafbuf to leafdata for remote (common case) or local (rare case when rootmtype != leafmtype) */
 PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScope scope,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(PETSCSF_Unpack,sf,0,0,0));
@@ -1167,7 +1146,6 @@ PetscErrorCode PetscSFLinkUnpackLeafData(PetscSF sf,PetscSFLink link,PetscSFScop
 /* FetchAndOp rootdata with rootbuf, it is a kind of Unpack on rootdata, except it also updates rootbuf */
 PetscErrorCode PetscSFLinkFetchAndOpRemote(PetscSF sf,PetscSFLink link,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode     ierr;
   const PetscInt     *rootindices = NULL;
   PetscInt           count,start;
   PetscSF_Basic      *bas = (PetscSF_Basic*)sf->data;
@@ -1190,7 +1168,6 @@ PetscErrorCode PetscSFLinkFetchAndOpRemote(PetscSF sf,PetscSFLink link,void *roo
 
 PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirection direction,void *rootdata,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   const PetscInt       *rootindices = NULL,*leafindices = NULL;
   PetscInt             count,rootstart,leafstart;
   PetscSF_Basic        *bas = (PetscSF_Basic*)sf->data;
@@ -1253,7 +1230,6 @@ PetscErrorCode PetscSFLinkScatterLocal(PetscSF sf,PetscSFLink link,PetscSFDirect
 /* Fetch rootdata to leafdata and leafupdate locally */
 PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *rootdata,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   const PetscInt       *rootindices = NULL,*leafindices = NULL;
   PetscInt             count,rootstart,leafstart;
   PetscSF_Basic        *bas = (PetscSF_Basic*)sf->data;
@@ -1288,7 +1264,6 @@ PetscErrorCode PetscSFLinkFetchAndOpLocal(PetscSF sf,PetscSFLink link,void *root
 */
 PetscErrorCode PetscSFCreatePackOpt(PetscInt n,const PetscInt *offset,const PetscInt *idx,PetscSFPackOpt *out)
 {
-  PetscErrorCode ierr;
   PetscInt       r,p,start,i,j,k,dx,dy,dz,dydz,m,X,Y;
   PetscBool      optimizable = PETSC_TRUE;
   PetscSFPackOpt opt;
@@ -1365,7 +1340,6 @@ finish:
 
 static inline PetscErrorCode PetscSFDestroyPackOpt(PetscSF sf,PetscMemType mtype,PetscSFPackOpt *out)
 {
-  PetscErrorCode ierr;
   PetscSFPackOpt opt = *out;
 
   PetscFunctionBegin;
@@ -1379,7 +1353,6 @@ static inline PetscErrorCode PetscSFDestroyPackOpt(PetscSF sf,PetscMemType mtype
 
 PetscErrorCode PetscSFSetUpPackFields(PetscSF sf)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
   PetscInt       i,j;
 
@@ -1444,7 +1417,6 @@ PetscErrorCode PetscSFSetUpPackFields(PetscSF sf)
 
 PetscErrorCode PetscSFResetPackFields(PetscSF sf)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
   PetscInt       i;
 

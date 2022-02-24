@@ -40,7 +40,6 @@ public:
 
   PETSC_NODISCARD PetscErrorCode create(value_type *obj) const noexcept
   {
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ(PetscNew(obj));
@@ -49,7 +48,6 @@ public:
 
   PETSC_NODISCARD PetscErrorCode destroy(value_type &obj) const noexcept
   {
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ((*obj->ops->destroy)(obj));
@@ -59,7 +57,6 @@ public:
 
   PETSC_NODISCARD PetscErrorCode reset(value_type &obj) const noexcept
   {
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ(this->destroy(obj));
@@ -225,7 +222,6 @@ inline PetscBool operator<=(const ObjectPool<T,Allocator> &l, const ObjectPool<T
 template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::finalizer_() noexcept
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while (!stack_.empty()) {
@@ -242,7 +238,6 @@ inline PetscErrorCode ObjectPool<T,Allocator>::finalizer_() noexcept
 template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::staticFinalizer_(void *obj) noexcept
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(static_cast<ObjectPool<T,Allocator>*>(obj)->finalizer_());
@@ -252,7 +247,6 @@ inline PetscErrorCode ObjectPool<T,Allocator>::staticFinalizer_(void *obj) noexc
 template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::registerFinalize_() noexcept
 {
-  PetscErrorCode ierr;
   PetscContainer contain;
 
   PetscFunctionBegin;
@@ -272,7 +266,6 @@ inline PetscErrorCode ObjectPool<T,Allocator>::registerFinalize_() noexcept
 template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::get(value_type &obj) noexcept
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(registerFinalize_());
@@ -288,7 +281,6 @@ inline PetscErrorCode ObjectPool<T,Allocator>::get(value_type &obj) noexcept
 template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::reclaim(value_type &&obj) noexcept
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscLikely(registered_)) {

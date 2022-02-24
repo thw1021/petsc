@@ -48,7 +48,6 @@ PetscBool        petscindebugger  = PETSC_FALSE;
 @*/
 PetscErrorCode  PetscSetDebugTerminal(const char terminal[])
 {
-  PetscErrorCode ierr;
   PetscBool      xterm;
 
   PetscFunctionBegin;
@@ -84,7 +83,6 @@ PetscErrorCode  PetscSetDebugTerminal(const char terminal[])
 @*/
 PetscErrorCode  PetscSetDebugger(const char debugger[],PetscBool usedebugterminal)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (debugger) {
@@ -105,7 +103,6 @@ PetscErrorCode  PetscSetDebugger(const char debugger[],PetscBool usedebugtermina
 @*/
 PetscErrorCode  PetscSetDefaultDebugger(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_DEBUGGER)
@@ -123,7 +120,6 @@ static PetscErrorCode PetscCheckDebugger_Private(const char defaultDbg[], const 
 {
   PetscBool      exists;
   char           *f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrstr(string, defaultDbg, &f));
@@ -150,7 +146,6 @@ PetscErrorCode  PetscSetDebuggerFromString(const char *string)
   const char     *debugger = NULL;
   PetscBool      useterminal     = PETSC_TRUE;
   char           *f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrstr(string, "noxterm", &f));

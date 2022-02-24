@@ -6,7 +6,6 @@
 PetscErrorCode PCFactorSetUpMatSolverType_Factor(PC pc)
 {
   PC_Factor      *icc = (PC_Factor*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!pc->pmat,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"You can only call this routine after the matrix object has been provided to the solver, for example with KSPSetOperators() or SNESSetJacobian()");
@@ -78,7 +77,6 @@ PetscErrorCode  PCFactorSetFill_Factor(PC pc,PetscReal fill)
 PetscErrorCode  PCFactorSetMatOrderingType_Factor(PC pc,MatOrderingType ordering)
 {
   PC_Factor      *dir = (PC_Factor*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -131,7 +129,6 @@ PetscErrorCode  PCFactorGetShiftType_Factor(PC pc,MatFactorShiftType *type)
 PetscErrorCode  PCFactorSetLevels_Factor(PC pc,PetscInt levels)
 {
   PC_Factor      *ilu = (PC_Factor*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!pc->setupcalled) ilu->info.levels = levels;
@@ -187,7 +184,6 @@ PetscErrorCode  PCFactorGetMatrix_Factor(PC pc,Mat *mat)
 
 PetscErrorCode  PCFactorSetMatSolverType_Factor(PC pc,MatSolverType stype)
 {
-  PetscErrorCode ierr;
   PC_Factor      *lu = (PC_Factor*)pc->data;
 
   PetscFunctionBegin;
@@ -226,7 +222,6 @@ PetscErrorCode  PCFactorSetColumnPivot_Factor(PC pc,PetscReal dtcol)
 PetscErrorCode  PCSetFromOptions_Factor(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Factor         *factor = (PC_Factor*)pc->data;
-  PetscErrorCode    ierr;
   PetscBool         flg,set;
   char              tname[256], solvertype[64];
   PetscFunctionList ordlist;
@@ -281,7 +276,6 @@ PetscErrorCode  PCSetFromOptions_Factor(PetscOptionItems *PetscOptionsObject,PC 
 PetscErrorCode PCView_Factor(PC pc,PetscViewer viewer)
 {
   PC_Factor       *factor = (PC_Factor*)pc->data;
-  PetscErrorCode  ierr;
   PetscBool       isstring,iascii,canuseordering;
   MatInfo         info;
   MatOrderingType ordering;

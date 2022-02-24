@@ -21,7 +21,6 @@ typedef struct {
 static PetscErrorCode PetscPartitionerDestroy_Chaco(PetscPartitioner part)
 {
   PetscPartitioner_Chaco *p = (PetscPartitioner_Chaco *) part->data;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(p));
@@ -37,7 +36,6 @@ static PetscErrorCode PetscPartitionerView_Chaco_ASCII(PetscPartitioner part, Pe
 static PetscErrorCode PetscPartitionerView_Chaco(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -201,7 +199,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Chaco(PetscPartitioner part)
 {
   PetscPartitioner_Chaco *p;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);

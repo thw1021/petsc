@@ -17,7 +17,6 @@ static PetscErrorCode PCSetUp_CP(PC pc)
 {
   PC_CP          *cp = (PC_CP*)pc->data;
   PetscInt       i,j,*colcnt;
-  PetscErrorCode ierr;
   PetscBool      flg;
   Mat_SeqAIJ     *aij = (Mat_SeqAIJ*)pc->pmat->data;
 
@@ -65,7 +64,6 @@ static PetscErrorCode PCSetUp_CP(PC pc)
 static PetscErrorCode PCApply_CP(PC pc,Vec bb,Vec xx)
 {
   PC_CP          *cp = (PC_CP*)pc->data;
-  PetscErrorCode ierr;
   PetscScalar    *b,*x,xt;
   PetscInt       i,j;
 
@@ -97,7 +95,6 @@ static PetscErrorCode PCApply_CP(PC pc,Vec bb,Vec xx)
 static PetscErrorCode PCReset_CP(PC pc)
 {
   PC_CP          *cp = (PC_CP*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(cp->d));
@@ -109,7 +106,6 @@ static PetscErrorCode PCReset_CP(PC pc)
 static PetscErrorCode PCDestroy_CP(PC pc)
 {
   PC_CP          *cp = (PC_CP*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_CP(pc));
@@ -168,7 +164,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_CP(PC pc)
 {
   PC_CP          *cp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&cp));

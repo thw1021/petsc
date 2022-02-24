@@ -8,7 +8,6 @@
 
 PetscErrorCode DMCreateCoordinateDM_DA(DM dm, DM *cdm)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(DMDACreateCompatibleDMDA(dm,dm->dim,cdm));
   PetscFunctionReturn(0);
@@ -21,7 +20,6 @@ PetscErrorCode DMCreateCoordinateField_DA(DM dm, DMField *field)
   PetscInt       dim;
   PetscInt       i, j;
   DM             cdm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm,&dim));
@@ -59,7 +57,6 @@ PetscErrorCode DMCreateCoordinateField_DA(DM dm, DMField *field)
 @*/
 PetscErrorCode  DMDASetFieldName(DM da,PetscInt nf,const char name[])
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -117,7 +114,6 @@ PetscErrorCode  DMDAGetFieldNames(DM da,const char * const **names)
 @*/
 PetscErrorCode  DMDASetFieldNames(DM da,const char * const *names)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
   char           **fieldname;
   PetscInt       nf = 0;
@@ -187,7 +183,6 @@ PetscErrorCode  DMDAGetFieldName(DM da,PetscInt nf,const char **name)
 @*/
 PetscErrorCode DMDASetCoordinateName(DM dm,PetscInt nf,const char name[])
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)dm->data;
 
   PetscFunctionBegin;
@@ -284,7 +279,6 @@ PetscErrorCode  DMDAGetCorners(DM da,PetscInt *x,PetscInt *y,PetscInt *z,PetscIn
 PetscErrorCode DMGetLocalBoundingIndices_DMDA(DM dm, PetscReal lmin[], PetscReal lmax[])
 {
   DMDALocalInfo  info;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetLocalInfo(dm, &info));
@@ -304,7 +298,6 @@ PetscErrorCode DMGetLocalBoundingIndices_DMDA(DM dm, PetscReal lmin[], PetscReal
 @*/
 PetscErrorCode DMDAGetReducedDMDA(DM da,PetscInt nfields,DM *nda)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDACreateCompatibleDMDA(da,nfields,nda));
@@ -329,7 +322,6 @@ PetscErrorCode DMDAGetReducedDMDA(DM da,PetscInt nfields,DM *nda)
 @*/
 PetscErrorCode  DMDACreateCompatibleDMDA(DM da,PetscInt nfields,DM *nda)
 {
-  PetscErrorCode   ierr;
   DM_DA            *dd = (DM_DA*)da->data;
   PetscInt         s,m,n,p,M,N,P,dim,Mo,No,Po;
   const PetscInt   *lx,*ly,*lz;
@@ -399,7 +391,6 @@ PetscErrorCode  DMDACreateCompatibleDMDA(DM da,PetscInt nfields,DM *nda)
 @*/
 PetscErrorCode DMDAGetCoordinateArray(DM dm,void *xc)
 {
-  PetscErrorCode ierr;
   DM             cdm;
   Vec            x;
 
@@ -428,7 +419,6 @@ PetscErrorCode DMDAGetCoordinateArray(DM dm,void *xc)
 @*/
 PetscErrorCode DMDARestoreCoordinateArray(DM dm,void *xc)
 {
-  PetscErrorCode ierr;
   DM             cdm;
   Vec            x;
 

@@ -3,7 +3,6 @@
 
 PetscErrorCode MatMultASPIN(Mat m,Vec X,Vec Y)
 {
-  PetscErrorCode ierr;
   void           *ctx;
   SNES           snes;
   PetscInt       n,i;
@@ -51,7 +50,6 @@ PetscErrorCode MatMultASPIN(Mat m,Vec X,Vec Y)
 
 static PetscErrorCode SNESDestroy_ASPIN(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESDestroy(&snes->npc));
@@ -103,7 +101,6 @@ static PetscErrorCode SNESDestroy_ASPIN(SNES snes)
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_ASPIN(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES           npc;
   KSP            ksp;
   PC             pc;

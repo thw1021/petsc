@@ -24,7 +24,6 @@ PetscLogEvent PETSC_Barrier;
 @*/
 PetscErrorCode  PetscBarrier(PetscObject obj)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;

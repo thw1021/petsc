@@ -12,7 +12,6 @@ const char *const DMFieldContinuities[] = {
 
 PETSC_INTERN PetscErrorCode DMFieldCreate(DM dm,PetscInt numComponents,DMFieldContinuity continuity,DMField *field)
 {
-  PetscErrorCode ierr;
   DMField        b;
 
   PetscFunctionBegin;
@@ -43,7 +42,6 @@ PETSC_INTERN PetscErrorCode DMFieldCreate(DM dm,PetscInt numComponents,DMFieldCo
 @*/
 PetscErrorCode DMFieldDestroy(DMField *field)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*field) PetscFunctionReturn(0);
@@ -70,7 +68,6 @@ PetscErrorCode DMFieldDestroy(DMField *field)
 @*/
 PetscErrorCode DMFieldView(DMField field,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
 
   PetscFunctionBegin;
@@ -116,8 +113,8 @@ PetscErrorCode DMFieldView(DMField field,PetscViewer viewer)
 @*/
 PetscErrorCode DMFieldSetType(DMField field,DMFieldType type)
 {
-  PetscErrorCode ierr,(*r)(DMField);
   PetscBool      match;
+  PetscErrorCode (*r)(DMField);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -127,11 +124,10 @@ PetscErrorCode DMFieldSetType(DMField field,DMFieldType type)
   if (match) PetscFunctionReturn(0);
 
   CHKERRQ(PetscFunctionListFind(DMFieldList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested DMField type %s",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested DMField type %s",type);
   /* Destroy the previous private DMField context */
-  if (field->ops->destroy) {
-    CHKERRQ((*(field)->ops->destroy)(field));
-  }
+  if (field->ops->destroy) CHKERRQ((*(field)->ops->destroy)(field));
+
   CHKERRQ(PetscMemzero(field->ops,sizeof(*field->ops)));
   CHKERRQ(PetscObjectChangeTypeName((PetscObject)field,type));
   field->ops->create = r;
@@ -156,7 +152,6 @@ PetscErrorCode DMFieldSetType(DMField field,DMFieldType type)
 @*/
 PetscErrorCode  DMFieldGetType(DMField field, DMFieldType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field, DMFIELD_CLASSID,1);
@@ -245,7 +240,6 @@ PetscErrorCode DMFieldGetDM(DMField field, DM *dm)
 @*/
 PetscErrorCode DMFieldEvaluate(DMField field, Vec points, PetscDataType datatype, void *B, void *D, void *H)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -291,7 +285,6 @@ PetscErrorCode DMFieldEvaluate(DMField field, Vec points, PetscDataType datatype
 @*/
 PetscErrorCode DMFieldEvaluateFE(DMField field, IS cellIS, PetscQuadrature points, PetscDataType datatype, void *B, void *D, void *H)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -335,7 +328,6 @@ PetscErrorCode DMFieldEvaluateFE(DMField field, IS cellIS, PetscQuadrature point
 @*/
 PetscErrorCode DMFieldEvaluateFV(DMField field, IS cellIS, PetscDataType datatype, void *B, void *D, void *H)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -369,7 +361,6 @@ PetscErrorCode DMFieldEvaluateFV(DMField field, IS cellIS, PetscDataType datatyp
 @*/
 PetscErrorCode DMFieldGetDegree(DMField field, IS cellIS, PetscInt *minDegree, PetscInt *maxDegree)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -405,7 +396,6 @@ PetscErrorCode DMFieldGetDegree(DMField field, IS cellIS, PetscInt *minDegree, P
 @*/
 PetscErrorCode DMFieldCreateDefaultQuadrature(DMField field, IS pointIS, PetscQuadrature *quad)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -444,7 +434,6 @@ PetscErrorCode DMFieldCreateFEGeom(DMField field, IS pointIS, PetscQuadrature qu
   PetscInt       nPoints;
   PetscInt       maxDegree;
   PetscFEGeom    *g;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(field,DMFIELD_CLASSID,1);
@@ -527,7 +516,7 @@ PetscErrorCode DMFieldCreateFEGeom(DMField field, IS pointIS, PetscQuadrature qu
   CHKERRQ(DMFieldGetDegree(field,pointIS,NULL,&maxDegree));
   g->isAffine = (maxDegree <= 1) ? PETSC_TRUE : PETSC_FALSE;
   if (faceData) {
-    PetscCheckFalse(!field->ops->computeFaceData,PETSC_COMM_SELF, PETSC_ERR_PLIB, "DMField implementation does not compute face data");
+    PetscCheck(field->ops->computeFaceData,PETSC_COMM_SELF, PETSC_ERR_PLIB, "DMField implementation does not compute face data");
     CHKERRQ((*field->ops->computeFaceData) (field, pointIS, quad, g));
   }
   *geom = g;

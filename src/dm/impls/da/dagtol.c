@@ -6,7 +6,6 @@
 
 PetscErrorCode  DMGlobalToLocalBegin_DA(DM da,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -19,7 +18,6 @@ PetscErrorCode  DMGlobalToLocalBegin_DA(DM da,Vec g,InsertMode mode,Vec l)
 
 PetscErrorCode  DMGlobalToLocalEnd_DA(DM da,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -32,7 +30,6 @@ PetscErrorCode  DMGlobalToLocalEnd_DA(DM da,Vec g,InsertMode mode,Vec l)
 
 PetscErrorCode  DMLocalToGlobalBegin_DA(DM da,Vec l,InsertMode mode,Vec g)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -52,7 +49,6 @@ PetscErrorCode  DMLocalToGlobalBegin_DA(DM da,Vec l,InsertMode mode,Vec g)
 
 PetscErrorCode  DMLocalToGlobalEnd_DA(DM da,Vec l,InsertMode mode,Vec g)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -87,7 +83,6 @@ extern PetscErrorCode DMDAGetNatural_Private(DM,PetscInt*,IS*);
 */
 PetscErrorCode DMDAGlobalToNatural_Create(DM da)
 {
-  PetscErrorCode ierr;
   PetscInt       m,start,Nlocal;
   IS             from,to;
   Vec            global;
@@ -143,7 +138,6 @@ PetscErrorCode DMDAGlobalToNatural_Create(DM da)
 @*/
 PetscErrorCode  DMDAGlobalToNaturalBegin(DM da,Vec g,InsertMode mode,Vec n)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -186,7 +180,6 @@ PetscErrorCode  DMDAGlobalToNaturalBegin(DM da,Vec g,InsertMode mode,Vec n)
 @*/
 PetscErrorCode  DMDAGlobalToNaturalEnd(DM da,Vec g,InsertMode mode,Vec n)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -226,7 +219,6 @@ PetscErrorCode  DMDAGlobalToNaturalEnd(DM da,Vec g,InsertMode mode,Vec n)
 @*/
 PetscErrorCode  DMDANaturalToGlobalBegin(DM da,Vec n,InsertMode mode,Vec g)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -269,7 +261,6 @@ PetscErrorCode  DMDANaturalToGlobalBegin(DM da,Vec n,InsertMode mode,Vec g)
 @*/
 PetscErrorCode  DMDANaturalToGlobalEnd(DM da,Vec n,InsertMode mode,Vec g)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;

@@ -28,7 +28,6 @@ typedef struct {
 PetscErrorCode VecView_MPI_Draw_DA2d_Zoom(PetscDraw draw,void *ctx)
 {
   ZoomCtx           *zctx = (ZoomCtx*)ctx;
-  PetscErrorCode    ierr;
   PetscInt          m,n,i,j,k,dof,id,c1,c2,c3,c4;
   PetscReal         min,max,x1,x2,x3,x4,y_1,y2,y3,y4;
   const PetscScalar *xy,*v;
@@ -115,7 +114,6 @@ PetscErrorCode VecView_MPI_Draw_DA2d_Zoom(PetscDraw draw,void *ctx)
 PetscErrorCode VecView_MPI_Draw_DA2d(Vec xin,PetscViewer viewer)
 {
   DM                 da,dac,dag;
-  PetscErrorCode     ierr;
   PetscInt           N,s,M,w,ncoors = 4;
   const PetscInt     *lx,*ly;
   PetscReal          coors[4];
@@ -314,7 +312,6 @@ PetscErrorCode VecView_MPI_Draw_DA2d(Vec xin,PetscViewer viewer)
 static PetscErrorCode VecGetHDF5ChunkSize(DM_DA *da, Vec xin, PetscInt dimension, PetscInt timestep, hsize_t *chunkDims)
 {
   PetscMPIInt    comm_size;
-  PetscErrorCode ierr;
   hsize_t        chunk_size, target_size, dim;
   hsize_t        vec_size = sizeof(PetscScalar)*da->M*da->N*da->P*da->w;
   hsize_t        avg_local_vec_size,KiB = 1024,MiB = KiB*KiB,GiB = MiB*KiB,min_size = MiB;
@@ -429,7 +426,6 @@ PetscErrorCode VecView_MPI_HDF5_DA(Vec xin,PetscViewer viewer)
   PetscInt          timestep=PETSC_MIN_INT, dimension;
   const PetscScalar *x;
   const char        *vecname;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerHDF5OpenGroup(viewer, &file_id, &group));
@@ -584,7 +580,6 @@ extern PetscErrorCode VecView_MPI_Draw_DA1d(Vec,PetscViewer);
 #if defined(PETSC_HAVE_MPIIO)
 static PetscErrorCode DMDAArrayMPIIO(DM da,PetscViewer viewer,Vec xin,PetscBool write)
 {
-  PetscErrorCode    ierr;
   MPI_File          mfdes;
   PetscMPIInt       gsizes[4],lsizes[4],lstarts[4],asiz,dof;
   MPI_Datatype      view;
@@ -652,7 +647,6 @@ static PetscErrorCode DMDAArrayMPIIO(DM da,PetscViewer viewer,Vec xin,PetscBool 
 PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
 {
   DM                da;
-  PetscErrorCode    ierr;
   PetscInt          dim;
   Vec               natural;
   PetscBool         isdraw,isvtk,isglvis;
@@ -778,7 +772,6 @@ PetscErrorCode VecLoad_HDF5_DA(Vec xin, PetscViewer viewer)
 {
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
   DM             da;
-  PetscErrorCode ierr;
   int            dim,rdim;
   hsize_t        dims[6]={0},count[6]={0},offset[6]={0};
   PetscBool      dim2=PETSC_FALSE,timestepping=PETSC_FALSE;
@@ -900,7 +893,6 @@ PetscErrorCode VecLoad_HDF5_DA(Vec xin, PetscViewer viewer)
 PetscErrorCode VecLoad_Binary_DA(Vec xin, PetscViewer viewer)
 {
   DM             da;
-  PetscErrorCode ierr;
   Vec            natural;
   const char     *prefix;
   PetscInt       bs;
@@ -939,7 +931,6 @@ PetscErrorCode VecLoad_Binary_DA(Vec xin, PetscViewer viewer)
 
 PetscErrorCode  VecLoad_Default_DA(Vec xin, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   DM             da;
   PetscBool      isbinary;
 #if defined(PETSC_HAVE_HDF5)

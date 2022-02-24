@@ -3,7 +3,6 @@
 
 static PetscErrorCode OutputBIN(MPI_Comm comm,const char *filename,PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,viewer));
@@ -18,7 +17,6 @@ static PetscErrorCode TSTrajectorySet_Visualization(TSTrajectory tj,TS ts,PetscI
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
   PetscReal      tprev;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;

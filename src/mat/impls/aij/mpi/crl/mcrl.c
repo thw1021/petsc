@@ -17,7 +17,6 @@
 
 PetscErrorCode MatDestroy_MPIAIJCRL(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_AIJCRL     *aijcrl = (Mat_AIJCRL*) A->spptr;
 
   PetscFunctionBegin;
@@ -44,7 +43,6 @@ PetscErrorCode MatMPIAIJCRL_create_aijcrl(Mat A)
   PetscInt       *aj     = Aij->j,*bj = Bij->j; /* From the CSR representation; points to the beginning  of each row. */
   PetscInt       i, j,rmax = 0,*icols, *ailen = Aij->ilen, *bilen = Bij->ilen;
   PetscScalar    *aa = Aij->a,*ba = Bij->a,*acols,*array;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* determine the row with the most columns */
@@ -90,7 +88,6 @@ PetscErrorCode MatMPIAIJCRL_create_aijcrl(Mat A)
 
 PetscErrorCode MatAssemblyEnd_MPIAIJCRL(Mat A, MatAssemblyType mode)
 {
-  PetscErrorCode ierr;
   Mat_MPIAIJ     *a   = (Mat_MPIAIJ*)A->data;
   Mat_SeqAIJ     *Aij = (Mat_SeqAIJ*)(a->A->data), *Bij = (Mat_SeqAIJ*)(a->A->data);
 
@@ -116,7 +113,6 @@ extern PetscErrorCode MatDuplicate_AIJCRL(Mat,MatDuplicateOption,Mat*);
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCRL(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode ierr;
   Mat            B = *newmat;
   Mat_AIJCRL     *aijcrl;
 
@@ -176,7 +172,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCRL(Mat A,MatType type,MatRe
 @*/
 PetscErrorCode  MatCreateMPIAIJCRL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt nz,const PetscInt nnz[],PetscInt onz,const PetscInt onnz[],Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -188,7 +183,6 @@ PetscErrorCode  MatCreateMPIAIJCRL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt 
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJCRL(Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetType(A,MATMPIAIJ));

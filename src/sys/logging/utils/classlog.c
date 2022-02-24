@@ -22,7 +22,6 @@
 PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 {
   PetscClassRegLog l;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&l));
@@ -51,7 +50,6 @@ PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
 {
   int            c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (c = 0; c < classLog->numClasses; c++) {
@@ -76,7 +74,6 @@ PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
 @*/
 PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(c->name));
@@ -98,7 +95,6 @@ PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 {
   PetscClassPerfLog l;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&l));
@@ -126,7 +122,6 @@ PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 @*/
 PetscErrorCode PetscClassPerfLogDestroy(PetscClassPerfLog classLog)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(classLog->classInfo));
@@ -174,7 +169,6 @@ PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
 PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
 {
   PetscClassPerfInfo *classInfo;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   while (size > classLog->maxClasses) {
@@ -213,7 +207,6 @@ PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cn
   PetscClassRegInfo *classInfo;
   char              *str;
   int               c;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(cname,2);
@@ -277,7 +270,6 @@ PetscErrorCode PetscLogObjCreateDefault(PetscObject obj)
   PetscLogDouble    start, end;
   int               oclass = 0;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* Record stage info */
@@ -350,7 +342,6 @@ PetscErrorCode PetscLogObjDestroyDefault(PetscObject obj)
   PetscLogDouble    start, end;
   int               oclass = 0;
   int               stage;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   /* Record stage info */

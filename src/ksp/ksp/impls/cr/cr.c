@@ -3,7 +3,6 @@
 
 static PetscErrorCode KSPSetUp_CR(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ksp->pc_side == PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no right preconditioning for KSPCR");
@@ -14,7 +13,6 @@ static PetscErrorCode KSPSetUp_CR(KSP ksp)
 
 static PetscErrorCode  KSPSolve_CR(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i = 0;
   PetscReal      dp;
   PetscScalar    ai, bi;
@@ -161,7 +159,6 @@ static PetscErrorCode  KSPSolve_CR(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_CR(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_PRECONDITIONED,PC_LEFT,3));

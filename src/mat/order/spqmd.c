@@ -8,7 +8,6 @@
 PETSC_INTERN PetscErrorCode MatGetOrdering_QMD(Mat mat,MatOrderingType type,IS *row,IS *col)
 {
   PetscInt       i,  *deg,*marker,*rchset,*nbrhd,*qsize,*qlink,nofsub,*iperm,nrow,*perm;
-  PetscErrorCode ierr;
   const PetscInt *ia,*ja;
   PetscBool      done;
 

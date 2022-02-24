@@ -11,7 +11,6 @@ PetscErrorCode VecDot_Seq(Vec xin,Vec yin,PetscScalar *z)
 {
   const PetscScalar *ya,*xa;
   PetscBLASInt      one = 1,bn = 0;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscBLASIntCast(xin->map->n,&bn));
@@ -31,7 +30,6 @@ PetscErrorCode VecTDot_Seq(Vec xin,Vec yin,PetscScalar *z)
 {
   const PetscScalar *ya,*xa;
   PetscBLASInt      one = 1,bn = 0;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscBLASIntCast(xin->map->n,&bn));
@@ -48,7 +46,6 @@ PetscErrorCode VecTDot_Seq(Vec xin,Vec yin,PetscScalar *z)
 
 PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha)
 {
-  PetscErrorCode ierr;
   PetscBLASInt   one = 1,bn;
 
   PetscFunctionBegin;
@@ -67,7 +64,6 @@ PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha)
 
 PetscErrorCode VecAXPY_Seq(Vec yin,PetscScalar alpha,Vec xin)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarray;
   PetscScalar       *yarray;
   PetscBLASInt      one = 1,bn;
@@ -88,7 +84,6 @@ PetscErrorCode VecAXPY_Seq(Vec yin,PetscScalar alpha,Vec xin)
 
 PetscErrorCode VecAXPBY_Seq(Vec yin,PetscScalar a,PetscScalar b,Vec xin)
 {
-  PetscErrorCode    ierr;
   PetscInt          n = yin->map->n,i;
   const PetscScalar *xx;
   PetscScalar       *yy;
@@ -120,7 +115,6 @@ PetscErrorCode VecAXPBY_Seq(Vec yin,PetscScalar a,PetscScalar b,Vec xin)
 
 PetscErrorCode VecAXPBYPCZ_Seq(Vec zin,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec xin,Vec yin)
 {
-  PetscErrorCode    ierr;
   PetscInt          n = zin->map->n,i;
   const PetscScalar *yy,*xx;
   PetscScalar       *zz;

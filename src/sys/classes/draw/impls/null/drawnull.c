@@ -93,7 +93,6 @@ static PetscErrorCode PetscDrawStringBoxed_Null(PetscDraw draw,PetscReal sxl,Pet
 
 static PetscErrorCode PetscDrawGetSingleton_Null(PetscDraw draw,PetscDraw *sdraw)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscDrawOpenNull(PETSC_COMM_SELF,sdraw));
   PetscFunctionReturn(0);
@@ -101,7 +100,6 @@ static PetscErrorCode PetscDrawGetSingleton_Null(PetscDraw draw,PetscDraw *sdraw
 
 static PetscErrorCode PetscDrawRestoreSingleton_Null(PetscDraw draw,PetscDraw *sdraw)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscDrawDestroy(sdraw));
   PetscFunctionReturn(0);
@@ -155,7 +153,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Null(PetscDraw);
 
 PETSC_EXTERN PetscErrorCode PetscDrawCreate_Null(PetscDraw draw)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   draw->pause   = 0;
   draw->coor_xl = 0; draw->coor_xr = 1;
@@ -183,7 +180,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawCreate_Null(PetscDraw draw)
 @*/
 PetscErrorCode  PetscDrawOpenNull(MPI_Comm comm,PetscDraw *win)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawCreate(comm,NULL,NULL,0,0,1,1,win));
@@ -206,7 +202,6 @@ PetscErrorCode  PetscDrawOpenNull(MPI_Comm comm,PetscDraw *win)
 @*/
 PetscErrorCode  PetscDrawIsNull(PetscDraw draw,PetscBool *yes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);

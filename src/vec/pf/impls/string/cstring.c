@@ -8,7 +8,6 @@
 
 static PetscErrorCode PFView_String(void *value,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -21,7 +20,6 @@ static PetscErrorCode PFView_String(void *value,PetscViewer viewer)
 
 static PetscErrorCode PFDestroy_String(void *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(value));
@@ -46,7 +44,6 @@ static PetscErrorCode PFDestroy_String(void *value)
 PetscErrorCode  PFStringCreateFunction(PF pf,char *string,void **f)
 {
 #if defined(PETSC_HAVE_DYNAMIC_LIBRARIES)
-  PetscErrorCode ierr;
   char           task[1024],tmp[256],lib[PETSC_MAX_PATH_LEN],username[64];
   FILE           *fd;
   PetscBool      tmpshared,wdshared,keeptmpfiles = PETSC_FALSE;
@@ -95,7 +92,6 @@ PetscErrorCode  PFStringCreateFunction(PF pf,char *string,void **f)
 
 static PetscErrorCode PFSetFromOptions_String(PetscOptionItems *PetscOptionsObject,PF pf)
 {
-  PetscErrorCode ierr;
   PetscBool      flag;
   char           value[PETSC_MAX_PATH_LEN];
   PetscErrorCode (*f)(void*,PetscInt,const PetscScalar*,PetscScalar*) = NULL;
@@ -115,7 +111,6 @@ typedef PetscErrorCode (*FCN)(void*,PetscInt,const PetscScalar*,PetscScalar*); /
 
 PETSC_EXTERN PetscErrorCode PFCreate_String(PF pf,void *value)
 {
-  PetscErrorCode ierr;
   FCN            f = NULL;
 
   PetscFunctionBegin;

@@ -21,7 +21,6 @@
 
 PetscErrorCode PetscGetVersion(char version[], size_t len)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if (PETSC_VERSION_RELEASE == 1)

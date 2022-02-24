@@ -13,7 +13,6 @@ static const char *CG_Table[64] = {"fr", "pr", "prp", "hs", "dy"};
 static PetscErrorCode TaoSolve_CG(Tao tao)
 {
   TAO_CG                       *cgP = (TAO_CG*)tao->data;
-  PetscErrorCode               ierr;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscReal                    step=1.0,f,gnorm,gnorm2,delta,gd,ginner,beta;
   PetscReal                    gd_old,gnorm2_old,f_old;
@@ -202,7 +201,6 @@ static PetscErrorCode TaoSolve_CG(Tao tao)
 static PetscErrorCode TaoSetUp_CG(Tao tao)
 {
   TAO_CG         *cgP = (TAO_CG*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tao->gradient) CHKERRQ(VecDuplicate(tao->solution,&tao->gradient));
@@ -215,7 +213,6 @@ static PetscErrorCode TaoSetUp_CG(Tao tao)
 static PetscErrorCode TaoDestroy_CG(Tao tao)
 {
   TAO_CG         *cgP = (TAO_CG*) tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -230,7 +227,6 @@ static PetscErrorCode TaoDestroy_CG(Tao tao)
 static PetscErrorCode TaoSetFromOptions_CG(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_CG         *cgP = (TAO_CG*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoLineSearchSetFromOptions(tao->linesearch));
@@ -247,7 +243,6 @@ static PetscErrorCode TaoView_CG(Tao tao, PetscViewer viewer)
 {
   PetscBool      isascii;
   TAO_CG         *cgP = (TAO_CG*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
@@ -285,7 +280,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_CG(Tao tao)
 {
   TAO_CG         *cgP;
   const char     *morethuente_type = TAOLINESEARCHMT;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetUp_CG;

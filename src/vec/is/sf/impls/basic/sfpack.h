@@ -385,7 +385,6 @@ static inline PetscErrorCode PetscSFLinkGetRootPackOptAndIndices(PetscSF sf,Pets
     offset = (scope == PETSCSF_LOCAL)? 0 : bas->ioffset[bas->ndiranks];
     if (PetscMemTypeHost(mtype)) {*opt = bas->rootpackopt[scope]; *indices = bas->irootloc + offset;}
     else {
-      PetscErrorCode ierr;
       size_t         size;
       if (bas->rootpackopt[scope]) {
         if (!bas->rootpackopt_d[scope]) {
@@ -426,7 +425,6 @@ static inline PetscErrorCode PetscSFLinkGetLeafPackOptAndIndices(PetscSF sf,Pets
     offset = (scope == PETSCSF_LOCAL)? 0 : sf->roffset[sf->ndranks];
     if (PetscMemTypeHost(mtype)) {*opt = sf->leafpackopt[scope]; *indices = sf->rmine + offset;}
     else {
-      PetscErrorCode ierr;
       size_t         size;
       if (sf->leafpackopt[scope]) {
         if (!sf->leafpackopt_d[scope]) {

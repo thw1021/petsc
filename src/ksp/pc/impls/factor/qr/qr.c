@@ -8,7 +8,6 @@
 
 static PetscErrorCode PCSetUp_QR(PC pc)
 {
-  PetscErrorCode         ierr;
   PC_QR                  *dir = (PC_QR*)pc->data;
   MatSolverType          stype;
   MatFactorError         err;
@@ -74,7 +73,6 @@ static PetscErrorCode PCSetUp_QR(PC pc)
 static PetscErrorCode PCReset_QR(PC pc)
 {
   PC_QR          *dir = (PC_QR*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dir->hdr.inplace && ((PC_Factor*)dir)->fact) CHKERRQ(MatDestroy(&((PC_Factor*)dir)->fact));
@@ -85,7 +83,6 @@ static PetscErrorCode PCReset_QR(PC pc)
 static PetscErrorCode PCDestroy_QR(PC pc)
 {
   PC_QR          *dir = (PC_QR*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_QR(pc));
@@ -99,7 +96,6 @@ static PetscErrorCode PCApply_QR(PC pc,Vec x,Vec y)
 {
   PC_QR          *dir = (PC_QR*)pc->data;
   Mat            fact;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   fact = dir->hdr.inplace ? pc->pmat : ((PC_Factor*)dir)->fact;
@@ -111,7 +107,6 @@ static PetscErrorCode PCMatApply_QR(PC pc,Mat X,Mat Y)
 {
   PC_QR          *dir = (PC_QR*)pc->data;
   Mat            fact;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   fact = dir->hdr.inplace ? pc->pmat : ((PC_Factor*)dir)->fact;
@@ -123,7 +118,6 @@ static PetscErrorCode PCApplyTranspose_QR(PC pc,Vec x,Vec y)
 {
   PC_QR          *dir = (PC_QR*)pc->data;
   Mat            fact;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   fact = dir->hdr.inplace ? pc->pmat : ((PC_Factor*)dir)->fact;
@@ -152,7 +146,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_QR(PC pc)
 {
-  PetscErrorCode ierr;
   PC_QR          *dir;
 
   PetscFunctionBegin;

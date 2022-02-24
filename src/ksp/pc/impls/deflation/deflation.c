@@ -44,7 +44,6 @@ static PetscErrorCode PCDeflationSetInitOnly_Deflation(PC pc,PetscBool flg)
 @*/
 PetscErrorCode PCDeflationSetInitOnly(PC pc,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -81,7 +80,6 @@ static PetscErrorCode PCDeflationSetLevels_Deflation(PC pc,PetscInt current,Pets
 @*/
 PetscErrorCode PCDeflationSetLevels(PC pc,PetscInt max)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -120,7 +118,6 @@ static PetscErrorCode PCDeflationSetReductionFactor_Deflation(PC pc,PetscInt red
 @*/
 PetscErrorCode PCDeflationSetReductionFactor(PC pc,PetscInt red)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -166,7 +163,6 @@ static PetscErrorCode PCDeflationSetCorrectionFactor_Deflation(PC pc,PetscScalar
 @*/
 PetscErrorCode PCDeflationSetCorrectionFactor(PC pc,PetscScalar fact)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -210,7 +206,6 @@ static PetscErrorCode PCDeflationSetSpaceToCompute_Deflation(PC pc,PCDeflationSp
 @*/
 PetscErrorCode PCDeflationSetSpaceToCompute(PC pc,PCDeflationSpaceType type,PetscInt size)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -223,7 +218,6 @@ PetscErrorCode PCDeflationSetSpaceToCompute(PC pc,PCDeflationSpaceType type,Pets
 static PetscErrorCode PCDeflationSetSpace_Deflation(PC pc,Mat W,PetscBool transpose)
 {
   PC_Deflation   *def = (PC_Deflation*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* possibly allows W' = Wt (which is valid but not tested) */
@@ -263,7 +257,6 @@ static PetscErrorCode PCDeflationSetSpace_Deflation(PC pc,Mat W,PetscBool transp
 @*/
 PetscErrorCode PCDeflationSetSpace(PC pc,Mat W,PetscBool transpose)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -276,7 +269,6 @@ PetscErrorCode PCDeflationSetSpace(PC pc,Mat W,PetscBool transpose)
 static PetscErrorCode PCDeflationSetProjectionNullSpaceMat_Deflation(PC pc,Mat mat)
 {
   PC_Deflation     *def = (PC_Deflation*)pc->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)mat));
@@ -301,7 +293,6 @@ static PetscErrorCode PCDeflationSetProjectionNullSpaceMat_Deflation(PC pc,Mat m
 @*/
 PetscErrorCode  PCDeflationSetProjectionNullSpaceMat(PC pc,Mat mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -313,7 +304,6 @@ PetscErrorCode  PCDeflationSetProjectionNullSpaceMat(PC pc,Mat mat)
 static PetscErrorCode PCDeflationSetCoarseMat_Deflation(PC pc,Mat mat)
 {
   PC_Deflation     *def = (PC_Deflation*)pc->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)mat));
@@ -338,7 +328,6 @@ static PetscErrorCode PCDeflationSetCoarseMat_Deflation(PC pc,Mat mat)
 @*/
 PetscErrorCode  PCDeflationSetCoarseMat(PC pc,Mat mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -373,7 +362,6 @@ static PetscErrorCode PCDeflationGetCoarseKSP_Deflation(PC pc,KSP *ksp)
 @*/
 PetscErrorCode  PCDeflationGetCoarseKSP(PC pc,KSP *ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -408,7 +396,6 @@ static PetscErrorCode PCDeflationGetPC_Deflation(PC pc,PC *apc)
 @*/
 PetscErrorCode PCDeflationGetPC(PC pc,PC *apc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -426,7 +413,6 @@ static PetscErrorCode PCPreSolve_Deflation(PC pc,KSP ksp,Vec b, Vec x)
   Mat              A;
   Vec              r,w1,w2;
   PetscBool        nonzero;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   w1 = def->workcoarse[0];
@@ -466,7 +452,6 @@ static PetscErrorCode PCApply_Deflation(PC pc,Vec r,Vec z)
   PC_Deflation     *def = (PC_Deflation*)pc->data;
   Mat              A;
   Vec              u,w1,w2;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   w1 = def->workcoarse[0];
@@ -504,7 +489,6 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
   MatCompositeType ctype;
   MPI_Comm         comm;
   char             prefix[128]="";
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (pc->setupcalled) PetscFunctionReturn(0);
@@ -736,7 +720,6 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
 static PetscErrorCode PCReset_Deflation(PC pc)
 {
   PC_Deflation      *def = (PC_Deflation*)pc->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&def->work));
@@ -752,7 +735,6 @@ static PetscErrorCode PCReset_Deflation(PC pc)
 
 static PetscErrorCode PCDestroy_Deflation(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Deflation(pc));
@@ -797,7 +779,6 @@ static PetscErrorCode PCView_Deflation(PC pc,PetscViewer viewer)
 static PetscErrorCode PCSetFromOptions_Deflation(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Deflation      *def = (PC_Deflation*)pc->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Deflation options"));
@@ -897,7 +878,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_Deflation(PC pc)
 {
   PC_Deflation   *def;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&def));

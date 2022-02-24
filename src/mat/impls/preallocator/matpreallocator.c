@@ -12,7 +12,6 @@ typedef struct {
 PetscErrorCode MatDestroy_Preallocator(Mat A)
 {
   Mat_Preallocator *p = (Mat_Preallocator *) A->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatStashDestroy_Private(&A->stash));
@@ -28,7 +27,6 @@ PetscErrorCode MatSetUp_Preallocator(Mat A)
 {
   Mat_Preallocator *p = (Mat_Preallocator *) A->data;
   PetscInt          m, bs, mbs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetUp(A->rmap));
@@ -48,7 +46,6 @@ PetscErrorCode MatSetValues_Preallocator(Mat A, PetscInt m, const PetscInt *rows
 {
   Mat_Preallocator *p = (Mat_Preallocator *) A->data;
   PetscInt          rStart, rEnd, r, cStart, cEnd, c, bs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetBlockSize(A, &bs));
@@ -86,7 +83,6 @@ PetscErrorCode MatSetValues_Preallocator(Mat A, PetscInt m, const PetscInt *rows
 PetscErrorCode MatAssemblyBegin_Preallocator(Mat A, MatAssemblyType type)
 {
   PetscInt       nstash, reallocs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatStashScatterBegin_Private(A, &A->stash, A->rmap->range));
@@ -102,7 +98,6 @@ PetscErrorCode MatAssemblyEnd_Preallocator(Mat A, MatAssemblyType type)
   PetscInt         i, j, rstart, ncols, flg;
   PetscMPIInt      n;
   Mat_Preallocator *p = (Mat_Preallocator *) A->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   p->nooffproc = PETSC_TRUE;
@@ -144,7 +139,6 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
 {
   Mat_Preallocator *p = (Mat_Preallocator *) mat->data;
   PetscInt          bs;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCheck(!p->used,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"MatPreallocatorPreallocate() can only be used once for a give MatPreallocator object. Consider using MatDuplicate() after preallocation.");
@@ -233,7 +227,6 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
 @*/
 PetscErrorCode MatPreallocatorPreallocate(Mat mat, PetscBool fill, Mat A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
@@ -260,7 +253,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_Preallocator(Mat A)
 {
   Mat_Preallocator *p;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(A, &p));

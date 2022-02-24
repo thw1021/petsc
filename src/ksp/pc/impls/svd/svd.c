@@ -35,7 +35,6 @@ typedef enum {READ=1, WRITE=2, READ_WRITE=3} AccessMode;
 static PetscErrorCode PCSetUp_SVD(PC pc)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
   PetscScalar    *a,*u,*v,*d,*work;
   PetscBLASInt   nb,lwork;
   PetscInt       i,n;
@@ -147,7 +146,6 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
 static PetscErrorCode PCSVDGetVec(PC pc,PCSide side,AccessMode amode,Vec x,Vec *xred)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -184,7 +182,6 @@ static PetscErrorCode PCSVDGetVec(PC pc,PCSide side,AccessMode amode,Vec x,Vec *
 static PetscErrorCode PCSVDRestoreVec(PC pc,PCSide side,AccessMode amode,Vec x,Vec *xred)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -225,7 +222,6 @@ static PetscErrorCode PCApply_SVD(PC pc,Vec x,Vec y)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
   Vec            work = jac->work,xred,yred;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCSVDGetVec(pc,PC_RIGHT,READ,x,&xred));
@@ -250,7 +246,6 @@ static PetscErrorCode PCApplyTranspose_SVD(PC pc,Vec x,Vec y)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
   Vec            work = jac->work,xred,yred;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCSVDGetVec(pc,PC_LEFT,READ,x,&xred));
@@ -266,7 +261,6 @@ static PetscErrorCode PCApplyTranspose_SVD(PC pc,Vec x,Vec y)
 static PetscErrorCode PCReset_SVD(PC pc)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDestroy(&jac->A));
@@ -294,7 +288,6 @@ static PetscErrorCode PCReset_SVD(PC pc)
 static PetscErrorCode PCDestroy_SVD(PC pc)
 {
   PC_SVD         *jac = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_SVD(pc));
@@ -305,7 +298,6 @@ static PetscErrorCode PCDestroy_SVD(PC pc)
 
 static PetscErrorCode PCSetFromOptions_SVD(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
   PC_SVD         *jac = (PC_SVD*)pc->data;
   PetscBool      flg,set;
 
@@ -328,7 +320,6 @@ static PetscErrorCode PCSetFromOptions_SVD(PetscOptionItems *PetscOptionsObject,
 static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
 {
   PC_SVD         *svd = (PC_SVD*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -371,7 +362,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_SVD(PC pc)
 {
   PC_SVD         *jac;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

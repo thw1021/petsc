@@ -42,7 +42,6 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
   PetscScalar    pintd, *intc, *intn;
   MPI_Comm       comm;
   PetscInt       Nf, Nv;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) snes, &comm));
@@ -94,7 +93,6 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
 PetscErrorCode SNESConvergedCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *ctx)
 {
   PetscBool      monitorIntegral = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESConvergedDefault(snes, it, xnorm, gnorm, f, reason, ctx));
@@ -131,7 +129,6 @@ PetscErrorCode SNESConvergedCorrectPressure(SNES snes, PetscInt it, PetscReal xn
 static PetscErrorCode DMSNESConvertPlex(DM dm, DM *plex, PetscBool copy)
 {
   PetscBool      isPlex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) dm, DMPLEX, &isPlex));
@@ -171,7 +168,6 @@ static PetscErrorCode DMSNESConvertPlex(DM dm, DM *plex, PetscBool copy)
 @*/
 PetscErrorCode DMInterpolationCreate(MPI_Comm comm, DMInterpolationInfo *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ctx, 2);
@@ -293,7 +289,6 @@ PetscErrorCode DMInterpolationGetDof(DMInterpolationInfo ctx, PetscInt *dof)
 @*/
 PetscErrorCode DMInterpolationAddPoints(DMInterpolationInfo ctx, PetscInt n, PetscReal points[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ctx->dim < 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
@@ -326,7 +321,6 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscScalar       *a;
   PetscInt          p, q, i;
   PetscMPIInt       rank, size;
-  PetscErrorCode    ierr;
   Vec               pointVec;
   PetscSF           cellSF;
   PetscLayout       layout;
@@ -477,7 +471,6 @@ PetscErrorCode DMInterpolationGetCoordinates(DMInterpolationInfo ctx, Vec *coord
 @*/
 PetscErrorCode DMInterpolationGetVector(DMInterpolationInfo ctx, Vec *v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(v, 2);
@@ -504,7 +497,6 @@ PetscErrorCode DMInterpolationGetVector(DMInterpolationInfo ctx, Vec *v)
 @*/
 PetscErrorCode DMInterpolationRestoreVector(DMInterpolationInfo ctx, Vec *v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(v, 2);
@@ -519,7 +511,6 @@ static inline PetscErrorCode DMInterpolate_Triangle_Private(DMInterpolationInfo 
   const PetscScalar *coords;
   PetscScalar    *a;
   PetscInt       p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc3(ctx->dim,&v0,ctx->dim*ctx->dim,&J,ctx->dim*ctx->dim,&invJ));
@@ -555,7 +546,6 @@ static inline PetscErrorCode DMInterpolate_Tetrahedron_Private(DMInterpolationIn
   const PetscScalar *coords;
   PetscScalar    *a;
   PetscInt       p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc3(ctx->dim,&v0,ctx->dim*ctx->dim,&J,ctx->dim*ctx->dim,&invJ));
@@ -605,7 +595,6 @@ static inline PetscErrorCode QuadMap_Private(SNES snes, Vec Xref, Vec Xreal, voi
   const PetscScalar g_01      = y2 - y1 - y3 + y0;
   const PetscScalar *ref;
   PetscScalar       *real;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(Xref,  &ref));
@@ -638,7 +627,6 @@ static inline PetscErrorCode QuadJacobian_Private(SNES snes, Vec Xref, Mat J, Ma
   const PetscScalar f_01      = x2 - x1 - x3 + x0;
   const PetscScalar g_01      = y2 - y1 - y3 + y0;
   const PetscScalar *ref;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(Xref,  &ref));
@@ -674,7 +662,6 @@ static inline PetscErrorCode DMInterpolate_Quad_Private(DMInterpolationInfo ctx,
   PetscReal          xir[2] = {0., 0.};
   PetscInt           Nf, p;
   const PetscInt     dof = ctx->dof;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetNumFields(dm, &Nf));
@@ -805,7 +792,6 @@ static inline PetscErrorCode HexMap_Private(SNES snes, Vec Xref, Vec Xreal, void
   const PetscScalar h_012     = z6 - z0 + z1 - z2 + z3 + z4 - z5 - z7;
   const PetscScalar *ref;
   PetscScalar       *real;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(Xref,  &ref));
@@ -865,7 +851,6 @@ static inline PetscErrorCode HexJacobian_Private(SNES snes, Vec Xref, Mat J, Mat
   const PetscScalar g_xyz     = y6 - y0 + y1 - y2 + y3 + y4 - y5 - y7;
   const PetscScalar h_xyz     = z6 - z0 + z1 - z2 + z3 + z4 - z5 - z7;
   const PetscScalar *ref;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(Xref,  &ref));
@@ -906,7 +891,6 @@ static inline PetscErrorCode DMInterpolate_Hex_Private(DMInterpolationInfo ctx, 
   const PetscScalar *coords;
   PetscScalar    *a;
   PetscInt       p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinatesLocal(dm, &coordsLocal));
@@ -1002,7 +986,6 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
   PetscDS        ds;
   PetscInt       n, p, Nf, field;
   PetscBool      useDS = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
@@ -1100,7 +1083,6 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
 @*/
 PetscErrorCode DMInterpolationDestroy(DMInterpolationInfo *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(ctx, 1);
@@ -1139,7 +1121,6 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
   const PetscScalar *r;
   PetscReal         *lnorms, *norms;
   PetscInt           numFields, f, pStart, pEnd, p;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,4);
@@ -1180,7 +1161,6 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
 PetscErrorCode DMPlexGetAllCells_Internal(DM plex, IS *cellIS)
 {
   PetscInt       depth;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetDepth(plex, &depth));
@@ -1212,7 +1192,6 @@ PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, void *user)
   DM             plex;
   IS             allcellIS;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESConvertPlex(dm, &plex, PETSC_TRUE));
@@ -1251,7 +1230,6 @@ PetscErrorCode DMSNESComputeResidual(DM dm, Vec X, Vec F, void *user)
   DM             plex;
   IS             allcellIS;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESConvertPlex(dm, &plex, PETSC_TRUE));
@@ -1332,7 +1310,6 @@ PetscErrorCode DMSNESComputeResidual(DM dm, Vec X, Vec F, void *user)
 PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *user)
 {
   DM             plex;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESConvertPlex(dm,&plex,PETSC_TRUE));
@@ -1365,7 +1342,6 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *use
   DM             plex;
   IS             allcellIS;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESConvertPlex(dm, &plex, PETSC_TRUE));
@@ -1454,7 +1430,6 @@ PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP,void
   IS             allcellIS;
   PetscBool      hasJac, hasPrec;
   PetscInt       Nds, s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESConvertPlex(dm, &plex, PETSC_TRUE));
@@ -1504,7 +1479,6 @@ struct _DMSNESJacobianMFCtx
 static PetscErrorCode DMSNESJacobianMF_Destroy_Private(Mat A)
 {
   struct _DMSNESJacobianMFCtx *ctx;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A, &ctx));
@@ -1518,7 +1492,6 @@ static PetscErrorCode DMSNESJacobianMF_Destroy_Private(Mat A)
 static PetscErrorCode DMSNESJacobianMF_Mult_Private(Mat A, Vec Y, Vec Z)
 {
   struct _DMSNESJacobianMFCtx *ctx;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A, &ctx));
@@ -1550,7 +1523,6 @@ PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, void *user, Mat *J)
 {
   struct _DMSNESJacobianMFCtx *ctx;
   PetscInt                     n, N;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject) dm), J));
@@ -1593,7 +1565,6 @@ static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, V
   PetscErrorCode (*bfun)(DM,Vec,void*);
   PetscErrorCode (*jfun)(DM,Vec,Mat,Mat,void*);
   void           *bctx,*jctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)ovl,"_DM_Overlap_HPDDM_MATIS",(PetscObject*)&pJ));
@@ -1641,7 +1612,6 @@ static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, V
 @*/
 PetscErrorCode DMPlexSetSNESLocalFEM(DM dm, void *boundaryctx, void *residualctx, void *jacobianctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESSetBoundaryLocal(dm,DMPlexSNESComputeBoundaryFEM,boundaryctx));
@@ -1677,7 +1647,6 @@ PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, P
   PetscReal        *err;
   MPI_Comm          comm;
   PetscInt          Nf, f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -1763,7 +1732,6 @@ PetscErrorCode DMSNESCheckResidual(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
   MPI_Comm       comm;
   Vec            r;
   PetscReal      res;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -1815,7 +1783,6 @@ PetscErrorCode DMSNESCheckJacobian(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
   MatNullSpace   nullspace;
   PetscReal      slope, intercept;
   PetscBool      hasJac, hasPrec, isLin = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
@@ -1913,7 +1880,6 @@ PetscErrorCode DMSNESCheckJacobian(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
 
 PetscErrorCode DMSNESCheck_Internal(SNES snes, DM dm, Vec u)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMSNESCheckDiscretization(snes, dm, 0.0, u, -1.0, NULL));
@@ -1938,7 +1904,6 @@ PetscErrorCode DMSNESCheckFromOptions(SNES snes, Vec u)
   DM             dm;
   Vec            sol;
   PetscBool      check;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHasName(((PetscObject)snes)->options,((PetscObject)snes)->prefix, "-dmsnes_check", &check));

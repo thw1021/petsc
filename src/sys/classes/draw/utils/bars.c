@@ -36,7 +36,6 @@ PetscClassId PETSC_DRAWBAR_CLASSID = 0;
 PetscErrorCode  PetscDrawBarCreate(PetscDraw draw,PetscDrawBar *bar)
 {
   PetscDrawBar   h;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -83,7 +82,6 @@ PetscErrorCode  PetscDrawBarCreate(PetscDraw draw,PetscDrawBar *bar)
 @*/
 PetscErrorCode  PetscDrawBarSetData(PetscDrawBar bar,PetscInt bins,const PetscReal data[],const char *const *labels)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
@@ -115,7 +113,6 @@ PetscErrorCode  PetscDrawBarSetData(PetscDrawBar bar,PetscInt bins,const PetscRe
 @*/
 PetscErrorCode  PetscDrawBarDestroy(PetscDrawBar *bar)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*bar) PetscFunctionReturn(0);
@@ -150,7 +147,6 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
   PetscReal      xmin,xmax,ymin,ymax,*values,binLeft,binRight;
   PetscInt       numValues,i,bcolor,color,idx,*perm,nplot;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
   char           **labels;
 
   PetscFunctionBegin;
@@ -246,7 +242,6 @@ PetscErrorCode  PetscDrawBarDraw(PetscDrawBar bar)
 @*/
 PetscErrorCode  PetscDrawBarSave(PetscDrawBar bar)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(bar,PETSC_DRAWBAR_CLASSID,1);
@@ -389,7 +384,6 @@ PetscErrorCode  PetscDrawBarGetDraw(PetscDrawBar bar,PetscDraw *draw)
 @*/
 PetscErrorCode  PetscDrawBarSetFromOptions(PetscDrawBar bar)
 {
-  PetscErrorCode ierr;
   PetscBool      set;
 
   PetscFunctionBegin;

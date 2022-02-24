@@ -9,7 +9,6 @@
 static PetscErrorCode PetscPythonFindExecutable(char pythonexe[],size_t len)
 {
   PetscBool      flag;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get the path for the Python interpreter executable */
@@ -29,7 +28,6 @@ static PetscErrorCode PetscPythonFindLibraryName(const char pythonexe[],const ch
   char           command[2*PETSC_MAX_PATH_LEN];
   FILE           *fp = NULL;
   char           *eol;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* call Python to find out the name of the Python dynamic library */
@@ -59,7 +57,6 @@ static PetscErrorCode PetscPythonFindLibrary(const char pythonexe[],char pythonl
   const char     cmdline5[] = "-c 'import os, sysconfig; import sys;print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),\"libpython\"+sys.version[:3]+\".so\"))'";
 
   PetscBool      found = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_PYTHON_LIB)
@@ -120,7 +117,6 @@ static void      (*PyErr_Restore)(PyObject*,PyObject*,PyObject*);
 
 static PetscErrorCode PetscPythonLoadLibrary(const char pythonlib[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* open the Python dynamic library */
@@ -187,7 +183,6 @@ PetscErrorCode  PetscPythonFinalize(void)
 PetscErrorCode  PetscPythonInitialize(const char pyexe[],const char pylib[])
 {
   PyObject       *module = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscBeganPython) PetscFunctionReturn(0);
@@ -292,7 +287,6 @@ PetscErrorCode (*PetscPythonMonitorSet_C)(PetscObject,const char[]) = NULL;
 @*/
 PetscErrorCode PetscPythonMonitorSet(PetscObject obj, const char url[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);

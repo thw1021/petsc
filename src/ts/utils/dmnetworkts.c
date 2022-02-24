@@ -13,7 +13,6 @@
 */
 PetscErrorCode  TSMonitorLGCtxNetworkDestroy(TSMonitorLGCtxNetwork *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -28,7 +27,6 @@ PetscErrorCode  TSMonitorLGCtxNetworkDestroy(TSMonitorLGCtxNetwork *ctx)
 PetscErrorCode  TSMonitorLGCtxNetworkCreate(TS ts,const char host[],const char label[],int x,int y,int m,int n,PetscInt howoften,TSMonitorLGCtxNetwork *ctx)
 {
   PetscDraw      draw;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   DM             dm;
   PetscInt       i,Start,End,e,nvar;
@@ -108,7 +106,6 @@ PetscErrorCode  TSMonitorLGCtxNetworkCreate(TS ts,const char host[],const char l
 */
 PetscErrorCode  TSMonitorLGCtxNetworkSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,void *dctx)
 {
-  PetscErrorCode        ierr;
   TSMonitorLGCtxNetwork ctx = (TSMonitorLGCtxNetwork)dctx;
   const PetscScalar     *xv;
   PetscScalar           *yv;

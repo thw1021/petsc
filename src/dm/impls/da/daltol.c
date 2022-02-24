@@ -16,7 +16,6 @@
 */
 PetscErrorCode  DMLocalToLocalCreate_DA(DM da)
 {
-  PetscErrorCode ierr;
   PetscInt       *idx,left,j,count,up,down,i,bottom,top,k,dim=da->dim;
   DM_DA          *dd = (DM_DA*)da->data;
 
@@ -89,7 +88,6 @@ PetscErrorCode  DMLocalToLocalCreate_DA(DM da)
 */
 PetscErrorCode  DMLocalToLocalBegin_DA(DM da,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;
@@ -126,7 +124,6 @@ PetscErrorCode  DMLocalToLocalBegin_DA(DM da,Vec g,InsertMode mode,Vec l)
 */
 PetscErrorCode  DMLocalToLocalEnd_DA(DM da,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)da->data;
 
   PetscFunctionBegin;

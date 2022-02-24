@@ -28,7 +28,6 @@ PetscErrorCode  PetscHasExternalPackage(const char pkg[], PetscBool *has)
 {
   char                  pkgstr[128], *loc;
   size_t                cnt;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSNPrintfCount(pkgstr,sizeof(pkgstr),":%s:",&cnt,pkg));

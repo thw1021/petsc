@@ -174,7 +174,6 @@ PetscErrorCode PetscScalarAddressToFortran(PetscObject obj,PetscInt align,PetscS
 */
 PetscErrorCode PetscScalarAddressFromFortran(PetscObject obj,PetscScalar *base,size_t addr,PetscInt N,PetscScalar **lx)
 {
-  PetscErrorCode ierr;
   PetscInt       shift;
   PetscContainer container;
   PetscScalar    *tlx;

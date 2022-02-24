@@ -5,7 +5,6 @@
 
 static PetscErrorCode TaoLineSearchDestroy_GPCG(TaoLineSearch ls)
 {
-  PetscErrorCode     ierr;
   TaoLineSearch_GPCG *ctx = (TaoLineSearch_GPCG *)ls->data;
 
   PetscFunctionBegin;
@@ -21,7 +20,6 @@ static PetscErrorCode TaoLineSearchDestroy_GPCG(TaoLineSearch ls)
 static PetscErrorCode TaoLineSearchView_GPCG(TaoLineSearch ls, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -35,7 +33,6 @@ static PetscErrorCode TaoLineSearchView_GPCG(TaoLineSearch ls, PetscViewer viewe
 static PetscErrorCode TaoLineSearchApply_GPCG(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, Vec s)
 {
   TaoLineSearch_GPCG *neP = (TaoLineSearch_GPCG *)ls->data;
-  PetscErrorCode     ierr;
   PetscInt           i;
   PetscBool          g_computed=PETSC_FALSE; /* to prevent extra gradient computation */
   PetscReal          d1,finit,actred,prered,rho, gdx;
@@ -203,7 +200,6 @@ static PetscErrorCode TaoLineSearchApply_GPCG(TaoLineSearch ls, Vec x, PetscReal
 M*/
 PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_GPCG(TaoLineSearch ls)
 {
-  PetscErrorCode     ierr;
   TaoLineSearch_GPCG *neP;
 
   PetscFunctionBegin;

@@ -7,7 +7,6 @@
 
 static PetscErrorCode KSPSetUp_FBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,8));
@@ -18,7 +17,6 @@ static PetscErrorCode KSPSetUp_FBCGS(KSP ksp)
 
 static PetscErrorCode  KSPSolve_FBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    rho,rhoold,alpha,beta,omega,omegaold,d1;
   Vec            X,B,V,P,R,RP,T,S,P2,S2;
@@ -173,7 +171,6 @@ static PetscErrorCode  KSPSolve_FBCGS(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_FBCGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_BCGS       *bcgs;
 
   PetscFunctionBegin;
