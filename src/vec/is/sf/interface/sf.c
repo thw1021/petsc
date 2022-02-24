@@ -416,21 +416,31 @@ during setup in debug mode)
    Level: intermediate
 
    Notes:
-   In Fortran you must use PETSC_COPY_VALUES for localmode and remotemode
+   In Fortran you must use PETSC_COPY_VALUES for localmode and remotemode.
 
-   This object does not necessarily encode a true star forest in the graph theoretic sense, since leaf
-   indices are not required to be unique. Some functions, however, rely on unique leaf indices (checked in debug mode).
+   Leaf indices in ilocal must be unique, otherwise an error occurs.
+
+   If localmode is PETSC_OWN_POINTER or PETSC_COPY_VALUES, a sorted copy of ilocal is stored and the same permutation is applied to iremote;
+   this means the user-provided array passed to ilocal/iremote gets shuffled if localmode/remotemode is PETSC_OWN_POINTER, respectively.
+   If localmode is PETSC_USE_POINTER, ilocal is kept as it is so leaves are not sorted in the resulting PetscSF.
 
    Developer Notes:
+   Even if localmode is PETSC_USE_POINTER, the sorting is done to check for duplicates and contiguousness and to find minleaf/maxleaf,
+   but the sorted array is dropped.
+
    Local indices which are the identity permutation in the range [0,nleaves) are discarded as they
    encode contiguous storage. In such case, if localmode is PETSC_OWN_POINTER, the memory is deallocated as it is not
    needed.
 
 .seealso: PetscSFCreate(), PetscSFView(), PetscSFGetGraph()
 @*/
-PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,const PetscInt *ilocal,PetscCopyMode localmode,const PetscSFNode *iremote,PetscCopyMode remotemode)
+PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,PetscInt *ilocal,PetscCopyMode localmode,PetscSFNode *iremote,PetscCopyMode remotemode)
 {
-  PetscErrorCode ierr;
+  PetscInt       *tlocal      = NULL;
+  PetscSFNode    *tremote     = NULL;
+  PetscBool       unique      = PETSC_TRUE;
+  PetscBool       contiguous  = PETSC_TRUE;
+  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -438,6 +448,7 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,const
   if (nleaves > 0) PetscValidPointer(iremote,6);
   PetscCheckFalse(nroots  < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nroots %" PetscInt_FMT ", cannot be negative",nroots);
   PetscCheckFalse(nleaves < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nleaves %" PetscInt_FMT ", cannot be negative",nleaves);
+  PetscCheckFalse(remotemode == PETSC_USE_POINTER && remotemode != localmode,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"If remotemode is PETSC_USE_POINTER, localmode must be PETSC_USE_POINTER as well");
 
   if (sf->nroots >= 0) { /* Reset only if graph already set */
     ierr = PetscSFReset(sf);CHKERRQ(ierr);
@@ -448,65 +459,57 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,const
   sf->nroots  = nroots;
   sf->nleaves = nleaves;
 
+  if (localmode == PETSC_OWN_POINTER) {
+    tlocal = ilocal;
+  } else if (ilocal) {
+    ierr = PetscMalloc1(nleaves,&tlocal);CHKERRQ(ierr);
+    ierr = PetscArraycpy(tlocal,ilocal,nleaves);CHKERRQ(ierr);
+  }
+  if (remotemode == PETSC_OWN_POINTER) {
+    tremote = iremote;
+  } else {
+    ierr = PetscMalloc1(nleaves,&tremote);CHKERRQ(ierr);
+    ierr = PetscArraycpy(tremote,iremote,nleaves);CHKERRQ(ierr);
+  }
+
   if (nleaves && ilocal) {
-    PetscInt i;
-    PetscInt minleaf = PETSC_MAX_INT;
-    PetscInt maxleaf = PETSC_MIN_INT;
-    int      contiguous = 1;
-    for (i=0; i<nleaves; i++) {
-      minleaf = PetscMin(minleaf,ilocal[i]);
-      maxleaf = PetscMax(maxleaf,ilocal[i]);
-      contiguous &= (ilocal[i] == i);
-    }
-    sf->minleaf = minleaf;
-    sf->maxleaf = maxleaf;
-    if (contiguous) {
-      if (localmode == PETSC_OWN_POINTER) {
-        ierr = PetscFree(ilocal);CHKERRQ(ierr);
-      }
-      ilocal = NULL;
-    }
+    PetscSFNode   work;
+
+    ierr = PetscSortIntWithDataArray(nleaves, tlocal, tremote, sizeof(PetscSFNode), &work);CHKERRQ(ierr);
+    ierr = PetscSortedCheckDupsInt(nleaves, tlocal, &unique);CHKERRQ(ierr);
+    unique = PetscNot(unique);
+    PetscCheck(sf->allow_multi_leaves || unique,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Input ilocal has duplicate entries which is not allowed for this PetscSF");
+    sf->minleaf = tlocal[0];
+    sf->maxleaf = tlocal[nleaves-1];
+    contiguous = (PetscBool) (unique && tlocal[0] == 0 && tlocal[nleaves-1] == nleaves-1);
   } else {
     sf->minleaf = 0;
     sf->maxleaf = nleaves - 1;
   }
 
-  if (ilocal) {
-    switch (localmode) {
-    case PETSC_COPY_VALUES:
-      ierr = PetscMalloc1(nleaves,&sf->mine_alloc);CHKERRQ(ierr);
-      ierr = PetscArraycpy(sf->mine_alloc,ilocal,nleaves);CHKERRQ(ierr);
-      sf->mine = sf->mine_alloc;
-      break;
-    case PETSC_OWN_POINTER:
-      sf->mine_alloc = (PetscInt*)ilocal;
-      sf->mine       = sf->mine_alloc;
-      break;
-    case PETSC_USE_POINTER:
-      sf->mine_alloc = NULL;
-      sf->mine       = (PetscInt*)ilocal;
-      break;
-    default: SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_ARG_OUTOFRANGE,"Unknown localmode");
+  if (localmode == PETSC_USE_POINTER) {
+    ierr = PetscFree(tlocal);CHKERRQ(ierr);
+    if (contiguous && remotemode != PETSC_USE_POINTER) {
+      sf->mine        = NULL;
+    } else {
+      sf->mine        = ilocal;
     }
+    sf->mine_alloc    = NULL;
+  } else {
+    if (contiguous) {
+      ierr = PetscFree(tlocal);CHKERRQ(ierr);
+    }
+    sf->mine          = tlocal;
+    sf->mine_alloc    = tlocal;
   }
-
-  switch (remotemode) {
-  case PETSC_COPY_VALUES:
-    ierr = PetscMalloc1(nleaves,&sf->remote_alloc);CHKERRQ(ierr);
-    ierr = PetscArraycpy(sf->remote_alloc,iremote,nleaves);CHKERRQ(ierr);
-    sf->remote = sf->remote_alloc;
-    break;
-  case PETSC_OWN_POINTER:
-    sf->remote_alloc = (PetscSFNode*)iremote;
-    sf->remote       = sf->remote_alloc;
-    break;
-  case PETSC_USE_POINTER:
-    sf->remote_alloc = NULL;
-    sf->remote       = (PetscSFNode*)iremote;
-    break;
-  default: SETERRQ(PetscObjectComm((PetscObject)sf),PETSC_ERR_ARG_OUTOFRANGE,"Unknown remotemode");
+  if (remotemode == PETSC_USE_POINTER) {
+    ierr = PetscFree(tremote);CHKERRQ(ierr);
+    sf->remote        = iremote;
+    sf->remote_alloc  = NULL;
+  } else {
+    sf->remote        = tremote;
+    sf->remote_alloc  = tremote;
   }
-
   ierr = PetscLogEventEnd(PETSCSF_SetGraph,sf,0,0,0);CHKERRQ(ierr);
   sf->graphset = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -718,7 +721,7 @@ PetscErrorCode PetscSFDuplicate(PetscSF sf,PetscSFDuplicateOption opt,PetscSF *n
       const PetscInt    *ilocal;
       const PetscSFNode *iremote;
       ierr = PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote);CHKERRQ(ierr);
-      ierr = PetscSFSetGraph(*newsf,nroots,nleaves,ilocal,PETSC_COPY_VALUES,iremote,PETSC_COPY_VALUES);CHKERRQ(ierr);
+      ierr = PetscSFSetGraph(*newsf,nroots,nleaves,(PetscInt*)ilocal,PETSC_COPY_VALUES,(PetscSFNode*)iremote,PETSC_COPY_VALUES);CHKERRQ(ierr);
     } else {
       ierr = PetscSFSetGraphWithPattern(*newsf,sf->map,sf->pattern);CHKERRQ(ierr);
     }
